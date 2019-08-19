@@ -20,10 +20,8 @@ package fake
 
 import (
 	clientset "github.com/convox/convox/pkg/atom/pkg/client/clientset/versioned"
-	convoxv1 "github.com/convox/convox/pkg/atom/pkg/client/clientset/versioned/typed/convox/v1"
-	fakeconvoxv1 "github.com/convox/convox/pkg/atom/pkg/client/clientset/versioned/typed/convox/v1/fake"
-	convoxv2 "github.com/convox/convox/pkg/atom/pkg/client/clientset/versioned/typed/convox/v2"
-	fakeconvoxv2 "github.com/convox/convox/pkg/atom/pkg/client/clientset/versioned/typed/convox/v2/fake"
+	atomv1 "github.com/convox/convox/pkg/atom/pkg/client/clientset/versioned/typed/atom/v1"
+	fakeatomv1 "github.com/convox/convox/pkg/atom/pkg/client/clientset/versioned/typed/atom/v1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -73,17 +71,12 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 
 var _ clientset.Interface = &Clientset{}
 
-// ConvoxV1 retrieves the ConvoxV1Client
-func (c *Clientset) ConvoxV1() convoxv1.ConvoxV1Interface {
-	return &fakeconvoxv1.FakeConvoxV1{Fake: &c.Fake}
+// AtomV1 retrieves the AtomV1Client
+func (c *Clientset) AtomV1() atomv1.AtomV1Interface {
+	return &fakeatomv1.FakeAtomV1{Fake: &c.Fake}
 }
 
-// ConvoxV2 retrieves the ConvoxV2Client
-func (c *Clientset) ConvoxV2() convoxv2.ConvoxV2Interface {
-	return &fakeconvoxv2.FakeConvoxV2{Fake: &c.Fake}
-}
-
-// Convox retrieves the ConvoxV2Client
-func (c *Clientset) Convox() convoxv2.ConvoxV2Interface {
-	return &fakeconvoxv2.FakeConvoxV2{Fake: &c.Fake}
+// Atom retrieves the AtomV1Client
+func (c *Clientset) Atom() atomv1.AtomV1Interface {
+	return &fakeatomv1.FakeAtomV1{Fake: &c.Fake}
 }

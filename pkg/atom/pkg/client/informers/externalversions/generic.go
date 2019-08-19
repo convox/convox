@@ -21,8 +21,7 @@ package externalversions
 import (
 	"fmt"
 
-	v1 "github.com/convox/convox/pkg/atom/pkg/apis/convox/v1"
-	v2 "github.com/convox/convox/pkg/atom/pkg/apis/convox/v2"
+	v1 "github.com/convox/convox/pkg/atom/pkg/apis/atom/v1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -53,15 +52,11 @@ func (f *genericInformer) Lister() cache.GenericLister {
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
-	// Group=convox.com, Version=v1
+	// Group=atom.convox.com, Version=v1
 	case v1.SchemeGroupVersion.WithResource("atoms"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Convox().V1().Atoms().Informer()}, nil
-
-		// Group=convox.com, Version=v2
-	case v2.SchemeGroupVersion.WithResource("atoms"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Convox().V2().Atoms().Informer()}, nil
-	case v2.SchemeGroupVersion.WithResource("atomversions"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Convox().V2().AtomVersions().Informer()}, nil
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Atom().V1().Atoms().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("atomversions"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Atom().V1().AtomVersions().Informer()}, nil
 
 	}
 

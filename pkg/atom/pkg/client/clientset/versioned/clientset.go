@@ -19,8 +19,7 @@ limitations under the License.
 package versioned
 
 import (
-	convoxv1 "github.com/convox/convox/pkg/atom/pkg/client/clientset/versioned/typed/convox/v1"
-	convoxv2 "github.com/convox/convox/pkg/atom/pkg/client/clientset/versioned/typed/convox/v2"
+	atomv1 "github.com/convox/convox/pkg/atom/pkg/client/clientset/versioned/typed/atom/v1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -28,34 +27,27 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
-	ConvoxV1() convoxv1.ConvoxV1Interface
-	ConvoxV2() convoxv2.ConvoxV2Interface
+	AtomV1() atomv1.AtomV1Interface
 	// Deprecated: please explicitly pick a version if possible.
-	Convox() convoxv2.ConvoxV2Interface
+	Atom() atomv1.AtomV1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	convoxV1 *convoxv1.ConvoxV1Client
-	convoxV2 *convoxv2.ConvoxV2Client
+	atomV1 *atomv1.AtomV1Client
 }
 
-// ConvoxV1 retrieves the ConvoxV1Client
-func (c *Clientset) ConvoxV1() convoxv1.ConvoxV1Interface {
-	return c.convoxV1
+// AtomV1 retrieves the AtomV1Client
+func (c *Clientset) AtomV1() atomv1.AtomV1Interface {
+	return c.atomV1
 }
 
-// ConvoxV2 retrieves the ConvoxV2Client
-func (c *Clientset) ConvoxV2() convoxv2.ConvoxV2Interface {
-	return c.convoxV2
-}
-
-// Deprecated: Convox retrieves the default version of ConvoxClient.
+// Deprecated: Atom retrieves the default version of AtomClient.
 // Please explicitly pick a version.
-func (c *Clientset) Convox() convoxv2.ConvoxV2Interface {
-	return c.convoxV2
+func (c *Clientset) Atom() atomv1.AtomV1Interface {
+	return c.atomV1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -74,11 +66,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	}
 	var cs Clientset
 	var err error
-	cs.convoxV1, err = convoxv1.NewForConfig(&configShallowCopy)
-	if err != nil {
-		return nil, err
-	}
-	cs.convoxV2, err = convoxv2.NewForConfig(&configShallowCopy)
+	cs.atomV1, err = atomv1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
@@ -94,8 +82,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 // panics if there is an error in the config.
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
-	cs.convoxV1 = convoxv1.NewForConfigOrDie(c)
-	cs.convoxV2 = convoxv2.NewForConfigOrDie(c)
+	cs.atomV1 = atomv1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -104,8 +91,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
-	cs.convoxV1 = convoxv1.New(c)
-	cs.convoxV2 = convoxv2.New(c)
+	cs.atomV1 = atomv1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

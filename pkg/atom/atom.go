@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	ca "github.com/convox/convox/pkg/atom/pkg/apis/convox/v2"
-	cv "github.com/convox/convox/pkg/atom/pkg/client/clientset/versioned"
+	aa "github.com/convox/convox/pkg/atom/pkg/apis/atom/v1"
+	av "github.com/convox/convox/pkg/atom/pkg/client/clientset/versioned"
 	"github.com/convox/convox/pkg/templater"
 	"github.com/gobuffalo/packr"
 	"github.com/pkg/errors"
@@ -33,12 +33,12 @@ var (
 
 type Client struct {
 	config *rest.Config
-	convox cv.Interface
+	atom   av.Interface
 	k8s    kubernetes.Interface
 }
 
 func New(cfg *rest.Config) (*Client, error) {
-	cc, err := cv.NewForConfig(cfg)
+	ac, err := av.NewForConfig(cfg)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -49,8 +49,8 @@ func New(cfg *rest.Config) (*Client, error) {
 	}
 
 	c := &Client{
+		atom:   ac,
 		config: cfg,
-		convox: cc,
 		k8s:    kc,
 	}
 
@@ -133,11 +133,11 @@ func (c *Client) Apply(ns, name string, release string, template []byte, timeout
 		}
 	}
 
-	v, err := c.convox.ConvoxV2().AtomVersions(ns).Create(&ca.AtomVersion{
+	v, err := c.atom.AtomV1().AtomVersions(ns).Create(&aa.AtomVersion{
 		ObjectMeta: am.ObjectMeta{
 			Name: fmt.Sprintf("%s-%d", name, time.Now().UTC().UnixNano()),
 		},
-		Spec: ca.AtomVersionSpec{
+		Spec: aa.AtomVersionSpec{
 			Release:  release,
 			Template: template,
 		},
@@ -146,10 +146,10 @@ func (c *Client) Apply(ns, name string, release string, template []byte, timeout
 		return errors.WithStack(err)
 	}
 
-	a, err := c.convox.ConvoxV2().Atoms(ns).Get(name, am.GetOptions{})
+	a, err := c.atom.AtomV1().Atoms(ns).Get(name, am.GetOptions{})
 	switch {
 	case ae.IsNotFound(err):
-		a, err = c.convox.ConvoxV2().Atoms(ns).Create(&ca.Atom{
+		a, err = c.atom.AtomV1().Atoms(ns).Create(&aa.Atom{
 			ObjectMeta: am.ObjectMeta{
 				Name: name,
 			},
@@ -167,7 +167,7 @@ func (c *Client) Apply(ns, name string, release string, template []byte, timeout
 	a.Spec.ProgressDeadlineSeconds = timeout
 	a.Status = "Pending"
 
-	if _, err := c.convox.ConvoxV2().Atoms(ns).Update(a); err != nil {
+	if _, err := c.atom.AtomV1().Atoms(ns).Update(a); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -175,7 +175,7 @@ func (c *Client) Apply(ns, name string, release string, template []byte, timeout
 }
 
 func (c *Client) Status(ns, name string) (string, string, error) {
-	a, err := c.convox.ConvoxV2().Atoms(ns).Get(name, am.GetOptions{})
+	a, err := c.atom.AtomV1().Atoms(ns).Get(name, am.GetOptions{})
 	if ae.IsNotFound(err) {
 		return "", "", nil
 	}
@@ -186,7 +186,7 @@ func (c *Client) Status(ns, name string) (string, string, error) {
 	release := ""
 
 	if a.Spec.CurrentVersion != "" {
-		v, err := c.convox.ConvoxV2().AtomVersions(ns).Get(a.Spec.CurrentVersion, am.GetOptions{})
+		v, err := c.atom.AtomV1().AtomVersions(ns).Get(a.Spec.CurrentVersion, am.GetOptions{})
 		if err != nil {
 			return "", "", err
 		}
@@ -199,7 +199,7 @@ func (c *Client) Status(ns, name string) (string, string, error) {
 
 func (c *Client) Wait(ns, name string) error {
 	for {
-		a, err := c.convox.ConvoxV2().Atoms(ns).Get(name, am.GetOptions{})
+		a, err := c.atom.AtomV1().Atoms(ns).Get(name, am.GetOptions{})
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -213,17 +213,17 @@ func (c *Client) Wait(ns, name string) error {
 	}
 }
 
-func (c *Client) apply(a *ca.Atom) error {
+func (c *Client) apply(a *aa.Atom) error {
 	var err error
 
 	a.Status = "Building"
 
-	a, err = c.convox.ConvoxV2().Atoms(a.Namespace).Update(a)
+	a, err = c.atom.AtomV1().Atoms(a.Namespace).Update(a)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	v, err := c.convox.ConvoxV2().AtomVersions(a.Namespace).Get(a.Spec.CurrentVersion, am.GetOptions{})
+	v, err := c.atom.AtomV1().AtomVersions(a.Namespace).Get(a.Spec.CurrentVersion, am.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -249,7 +249,7 @@ func (c *Client) apply(a *ca.Atom) error {
 	a.Started = am.Now()
 	a.Status = "Running"
 
-	a, err = c.convox.ConvoxV2().Atoms(a.Namespace).Update(a)
+	a, err = c.atom.AtomV1().Atoms(a.Namespace).Update(a)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -257,7 +257,7 @@ func (c *Client) apply(a *ca.Atom) error {
 	return nil
 }
 
-func (c *Client) check(a *ca.Atom) (bool, error) {
+func (c *Client) check(a *aa.Atom) (bool, error) {
 	cfg := *c.config
 
 	cfg.APIPath = "/apis"
@@ -316,8 +316,8 @@ func (c *Client) check(a *ca.Atom) (bool, error) {
 	return true, nil
 }
 
-func (c *Client) rollback(a *ca.Atom) error {
-	v, err := c.convox.ConvoxV2().AtomVersions(a.Namespace).Get(a.Spec.PreviousVersion, am.GetOptions{})
+func (c *Client) rollback(a *aa.Atom) error {
+	v, err := c.atom.AtomV1().AtomVersions(a.Namespace).Get(a.Spec.PreviousVersion, am.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -334,7 +334,7 @@ func (c *Client) rollback(a *ca.Atom) error {
 	a.Started = am.Now()
 	a.Status = "Rollback"
 
-	a, err = c.convox.ConvoxV2().Atoms(a.Namespace).Update(a)
+	a, err = c.atom.AtomV1().Atoms(a.Namespace).Update(a)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -342,12 +342,12 @@ func (c *Client) rollback(a *ca.Atom) error {
 	return nil
 }
 
-func (c *Client) status(a *ca.Atom, status string) error {
+func (c *Client) status(a *aa.Atom, status string) error {
 	var err error
 
-	a.Status = ca.AtomStatus(status)
+	a.Status = aa.AtomStatus(status)
 
-	a, err = c.convox.ConvoxV2().Atoms(a.Namespace).Update(a)
+	a, err = c.atom.AtomV1().Atoms(a.Namespace).Update(a)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -437,8 +437,8 @@ func applyTemplate(data []byte, filter string) ([]byte, error) {
 	return out, nil
 }
 
-func extractConditions(data []byte) ([]ca.AtomCondition, error) {
-	cs := []ca.AtomCondition{}
+func extractConditions(data []byte) ([]aa.AtomCondition, error) {
+	cs := []aa.AtomCondition{}
 
 	parts := bytes.Split(data, []byte("---\n"))
 
@@ -460,19 +460,19 @@ func extractConditions(data []byte) ([]ca.AtomCondition, error) {
 		if ac, ok := o.Metadata.Annotations["atom.conditions"]; ok {
 			acps := strings.Split(ac, ",")
 
-			acs := map[string]ca.AtomConditionMatch{}
+			acs := map[string]aa.AtomConditionMatch{}
 
 			for _, acp := range acps {
 				if acpps := strings.SplitN(acp, "=", 2); len(acpps) == 2 {
 					if vps := strings.SplitN(acpps[1], "/", 2); len(vps) == 2 {
-						acs[acpps[0]] = ca.AtomConditionMatch{Status: vps[0], Reason: vps[1]}
+						acs[acpps[0]] = aa.AtomConditionMatch{Status: vps[0], Reason: vps[1]}
 					} else {
-						acs[acpps[0]] = ca.AtomConditionMatch{Status: vps[0]}
+						acs[acpps[0]] = aa.AtomConditionMatch{Status: vps[0]}
 					}
 				}
 			}
 
-			cs = append(cs, ca.AtomCondition{
+			cs = append(cs, aa.AtomCondition{
 				ApiVersion: o.ApiVersion,
 				Conditions: acs,
 				Kind:       o.Kind,
