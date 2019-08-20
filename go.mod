@@ -29,6 +29,7 @@ require (
 	github.com/onsi/gomega v1.5.0 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pkg/errors v0.8.1
+	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/stretchr/testify v1.3.0
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 	golang.org/x/net v0.0.0-20190812203447-cdfb69ac37fc // indirect

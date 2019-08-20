@@ -1,12 +1,11 @@
 package structs
 
 import (
-	"context"
 	"io"
 )
 
 type Provider interface {
-	Initialize(opts ProviderOptions) error
+	// Initialize(opts ProviderOptions) error
 
 	AppCancel(name string) error
 	AppCreate(name string, opts AppCreateOptions) (*App, error)
@@ -80,6 +79,9 @@ type Provider interface {
 	SystemMetrics(opts MetricsOptions) (Metrics, error)
 	SystemProcesses(opts SystemProcessesOptions) (Processes, error)
 	SystemReleases() (Releases, error)
+	SystemUninstall(name string, w io.Writer, opts SystemUninstallOptions) error
+	SystemUpdate(opts SystemUpdateOptions) error
+
 	SystemResourceCreate(kind string, opts ResourceCreateOptions) (*Resource, error)
 	SystemResourceDelete(name string) error
 	SystemResourceGet(name string) (*Resource, error)
@@ -88,10 +90,8 @@ type Provider interface {
 	SystemResourceTypes() (ResourceTypes, error)
 	SystemResourceUnlink(name, app string) (*Resource, error)
 	SystemResourceUpdate(name string, opts ResourceUpdateOptions) (*Resource, error)
-	SystemUninstall(name string, w io.Writer, opts SystemUninstallOptions) error
-	SystemUpdate(opts SystemUpdateOptions) error
 
-	WithContext(ctx context.Context) Provider
+	// WithContext(ctx context.Context) Provider
 
 	Workers() error
 }
