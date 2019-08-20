@@ -16,10 +16,12 @@ var (
 )
 
 func (p *Provider) SystemGet() (*structs.System, error) {
-	status, err := p.Engine.SystemStatus()
-	if err != nil {
-		return nil, err
-	}
+	status := "running"
+
+	// status, err := p.Engine.SystemStatus()
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	// ss, _, err := p.atom.Status(p.Namespace, "system")
 	// if err != nil {
