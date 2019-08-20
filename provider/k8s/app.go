@@ -23,7 +23,7 @@ func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*struc
 	params := map[string]interface{}{
 		"Name":      name,
 		"Namespace": p.AppNamespace(name),
-		"Rack":      p.Rack,
+		"Rack":      p.Name,
 	}
 
 	data, err := p.RenderTemplate("app/app", params)
@@ -31,7 +31,7 @@ func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*struc
 		return nil, err
 	}
 
-	if err := p.ApplyWait(p.AppNamespace(name), "app", "", data, fmt.Sprintf("system=convox,provider=k8s,rack=%s,app=%s", p.Rack, name), 30); err != nil {
+	if err := p.ApplyWait(p.AppNamespace(name), "app", "", data, fmt.Sprintf("system=convox,provider=k8s,rack=%s,app=%s", p.Name, name), 30); err != nil {
 		return nil, err
 	}
 
@@ -69,7 +69,7 @@ func (p *Provider) AppGet(name string) (*structs.App, error) {
 
 func (p *Provider) AppList() (structs.Apps, error) {
 	ns, err := p.Cluster.CoreV1().Namespaces().List(am.ListOptions{
-		LabelSelector: fmt.Sprintf("system=convox,rack=%s,type=app", p.Rack),
+		LabelSelector: fmt.Sprintf("system=convox,rack=%s,type=app", p.Name),
 	})
 	if err != nil {
 		return nil, err
@@ -100,11 +100,9 @@ func (p *Provider) AppMetrics(name string, opts structs.MetricsOptions) (structs
 func (p *Provider) AppNamespace(app string) string {
 	switch app {
 	case "system":
-		return "convox-system"
-	case "rack":
-		return p.Rack
+		return p.Namespace
 	default:
-		return fmt.Sprintf("%s-%s", p.Rack, app)
+		return fmt.Sprintf("%s-%s", p.Name, app)
 	}
 }
 

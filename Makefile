@@ -1,6 +1,6 @@
 .PHONY: all build clean clean-package compress dev-aws package release test
 
-commands = atom router
+commands = api atom router
 
 binaries = $(addprefix $(GOPATH)/bin/, $(commands))
 sources  = $(shell find . -name '*.go')
@@ -17,10 +17,6 @@ clean-package:
 
 compress: $(binaries)
 	upx-ucl -1 $^
-
-dev-aws: release
-	echo "release = \"$(version)\"" > terraform/rack/aws/terraform.tfvars
-	cd terraform/rack/aws && terraform apply
 
 package:
 	$(GOPATH)/bin/packr

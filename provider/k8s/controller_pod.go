@@ -32,7 +32,7 @@ func NewPodController(p *Provider) (*PodController, error) {
 		start:    time.Now().UTC(),
 	}
 
-	c, err := kctl.NewController(p.Rack, "convox-k8s-pod", pc)
+	c, err := kctl.NewController(p.Namespace, "convox-k8s-pod", pc)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func (c *PodController) Client() kubernetes.Interface {
 }
 
 func (c *PodController) ListOptions(opts *am.ListOptions) {
-	opts.LabelSelector = fmt.Sprintf("system=convox,rack=%s", c.Provider.Rack)
+	opts.LabelSelector = fmt.Sprintf("system=convox,rack=%s", c.Provider.Name)
 	// opts.ResourceVersion = ""
 }
 

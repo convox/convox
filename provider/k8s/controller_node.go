@@ -22,7 +22,7 @@ func NewNodeController(p *Provider) (*NodeController, error) {
 		Provider: p,
 	}
 
-	c, err := kctl.NewController(p.Rack, "convox-k8s-node", pc)
+	c, err := kctl.NewController(p.Namespace, "convox-k8s-node", pc)
 	if err != nil {
 		return nil, err
 	}

@@ -128,7 +128,7 @@ func (p *Provider) serviceInstall(app, release, service string) error {
 		return err
 	}
 
-	if err := p.Apply(p.AppNamespace(app), fmt.Sprintf("service.%s", service), r.Id, data, fmt.Sprintf("system=convox,provider=k8s,rack=%s,app=%s,release=%s", p.Rack, app, r.Id), 30); err != nil {
+	if err := p.Apply(p.AppNamespace(app), fmt.Sprintf("service.%s", service), r.Id, data, fmt.Sprintf("system=convox,provider=k8s,rack=%s,app=%s,release=%s", p.Name, app, r.Id), 30); err != nil {
 		return err
 	}
 

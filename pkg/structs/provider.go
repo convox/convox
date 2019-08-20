@@ -1,11 +1,12 @@
 package structs
 
 import (
+	context "context"
 	"io"
 )
 
 type Provider interface {
-	// Initialize(opts ProviderOptions) error
+	Initialize(opts ProviderOptions) error
 
 	AppCancel(name string) error
 	AppCreate(name string, opts AppCreateOptions) (*App, error)
@@ -91,7 +92,7 @@ type Provider interface {
 	SystemResourceUnlink(name, app string) (*Resource, error)
 	SystemResourceUpdate(name string, opts ResourceUpdateOptions) (*Resource, error)
 
-	// WithContext(ctx context.Context) Provider
+	WithContext(ctx context.Context) Provider
 
 	Workers() error
 }

@@ -21,18 +21,20 @@ func (p *Provider) SystemGet() (*structs.System, error) {
 		return nil, err
 	}
 
-	ss, _, err := p.atom.Status(p.Rack, "system")
-	if err != nil {
-		return nil, err
-	}
+	// ss, _, err := p.atom.Status(p.Namespace, "system")
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	switch status {
-	case "running", "unknown":
-		status = common.AtomStatus(ss)
-	}
+	// status = "running"
+
+	// switch status {
+	// case "running", "unknown":
+	// 	status = common.AtomStatus(ss)
+	// }
 
 	s := &structs.System{
-		Name:     p.Rack,
+		Name:     p.Name,
 		Provider: p.Provider,
 		Status:   status,
 		Version:  p.Version,
@@ -60,7 +62,7 @@ func (p *Provider) SystemMetrics(opts structs.MetricsOptions) (structs.Metrics, 
 }
 
 func (p *Provider) SystemProcesses(opts structs.SystemProcessesOptions) (structs.Processes, error) {
-	pds, err := p.Cluster.CoreV1().Pods(p.Rack).List(am.ListOptions{})
+	pds, err := p.Cluster.CoreV1().Pods(p.Namespace).List(am.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -162,9 +164,9 @@ func (p *Provider) SystemUpdate(opts structs.SystemUpdateOptions) error {
 }
 
 func (p *Provider) systemUpdate(version string) error {
-	if err := p.initializeAtom(); err != nil {
-		return err
-	}
+	// if err := p.initializeAtom(); err != nil {
+	// 	return err
+	// }
 
 	return nil
 }

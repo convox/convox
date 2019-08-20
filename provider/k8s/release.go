@@ -126,7 +126,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		"Manifest":  m,
 		"Name":      a.Name,
 		"Namespace": p.AppNamespace(a.Name),
-		"Rack":      p.Rack,
+		"Rack":      p.Name,
 		"Release":   r,
 		"Services":  sps,
 		"Volumes":   vs,
@@ -228,7 +228,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 			"MaxUnavailable": 100 - min,
 			"Namespace":      p.AppNamespace(a.Name),
 			"Password":       p.Password,
-			"Rack":           p.Rack,
+			"Rack":           p.Name,
 			"Release":        r,
 			"Replicas":       replicas,
 			"Service":        s,
@@ -256,7 +256,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		params := map[string]interface{}{
 			"App":       a,
 			"Namespace": p.AppNamespace(a.Name),
-			"Rack":      p.Rack,
+			"Rack":      p.Name,
 			"Release":   r,
 			"Service":   s,
 			"Timer":     t,
@@ -278,7 +278,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 
 	timeout := int32(common.DefaultInt(opts.Timeout, 1800))
 
-	if err := p.Apply(p.AppNamespace(app), "app", r.Id, tdata, fmt.Sprintf("system=convox,provider=k8s,rack=%s,app=%s,release=%s", p.Rack, app, r.Id), timeout); err != nil {
+	if err := p.Apply(p.AppNamespace(app), "app", r.Id, tdata, fmt.Sprintf("system=convox,provider=k8s,rack=%s,app=%s,release=%s", p.Name, app, r.Id), timeout); err != nil {
 		return err
 	}
 
@@ -365,7 +365,7 @@ func (p *Provider) releaseMarshal(r *structs.Release) *ca.Release {
 			Name:      strings.ToLower(r.Id),
 			Labels: map[string]string{
 				"system": "convox",
-				"rack":   p.Rack,
+				"rack":   p.Name,
 				"app":    r.App,
 			},
 		},

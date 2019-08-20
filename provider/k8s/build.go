@@ -51,9 +51,9 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 		"BUILD_GENERATION":  "2",
 		"BUILD_ID":          b.Id,
 		"BUILD_MANIFEST":    common.DefaultString(opts.Manifest, "convox.yml"),
-		"BUILD_RACK":        p.Rack,
+		"BUILD_RACK":        p.Name,
 		"BUILD_URL":         url,
-		"RACK_URL":          fmt.Sprintf("https://convox:%s@api.%s.svc.cluster.local:5443", p.Password, p.Rack),
+		"RACK_URL":          fmt.Sprintf("https://convox:%s@api.%s.svc.cluster.local:5443", p.Password, p.Namespace),
 	}
 
 	repo, _, err := p.Engine.RepositoryHost(app)
@@ -537,7 +537,7 @@ func (p *Provider) buildMarshal(b *structs.Build) *ca.Build {
 			Name:      strings.ToLower(b.Id),
 			Labels: map[string]string{
 				"system": "convox",
-				"rack":   p.Rack,
+				"rack":   p.Name,
 				"app":    b.App,
 			},
 		},

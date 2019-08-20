@@ -48,8 +48,12 @@ github.com/containerd/continuity/pathdriver
 github.com/containerd/continuity/syscallx
 # github.com/convox/logger v0.0.0-20180522214415-e39179955b52
 github.com/convox/logger
+# github.com/convox/stdapi v0.0.0-20190708203955-b81b71b6a680
+github.com/convox/stdapi
 # github.com/convox/stdcli v0.0.0-20190326115454-b78bee159e98
 github.com/convox/stdcli
+# github.com/convox/stdsdk v0.0.0-20190422120437-3e80a397e377
+github.com/convox/stdsdk
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
 # github.com/docker/distribution v2.7.1+incompatible
@@ -130,6 +134,14 @@ github.com/google/gofuzz
 github.com/googleapis/gnostic/OpenAPIv2
 github.com/googleapis/gnostic/compiler
 github.com/googleapis/gnostic/extensions
+# github.com/gorilla/context v1.1.1
+github.com/gorilla/context
+# github.com/gorilla/mux v1.7.3
+github.com/gorilla/mux
+# github.com/gorilla/securecookie v1.1.1
+github.com/gorilla/securecookie
+# github.com/gorilla/sessions v1.1.3
+github.com/gorilla/sessions
 # github.com/gorilla/websocket v1.4.0
 github.com/gorilla/websocket
 # github.com/gregjones/httpcache v0.0.0-20170728041850-787624de3eb7
@@ -178,6 +190,8 @@ github.com/pmezard/go-difflib/difflib
 github.com/rogpeppe/go-internal/modfile
 github.com/rogpeppe/go-internal/module
 github.com/rogpeppe/go-internal/semver
+# github.com/sebest/xff v0.0.0-20160910043805-6c115e0ffa35
+github.com/sebest/xff
 # github.com/sirupsen/logrus v1.4.2
 github.com/sirupsen/logrus
 # github.com/spf13/pflag v1.0.3

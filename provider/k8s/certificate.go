@@ -17,12 +17,12 @@ func (p *Provider) CertificateApply(app, service string, port int, id string) er
 }
 
 func (p *Provider) CertificateCreate(pub, key string, opts structs.CertificateCreateOptions) (*structs.Certificate, error) {
-	s, err := p.Cluster.CoreV1().Secrets(p.Rack).Create(&ac.Secret{
+	s, err := p.Cluster.CoreV1().Secrets(p.Namespace).Create(&ac.Secret{
 		ObjectMeta: am.ObjectMeta{
 			GenerateName: "cert-",
 			Labels: map[string]string{
 				"system": "convox",
-				"rack":   p.Rack,
+				"rack":   p.Name,
 				"type":   "certificate",
 			},
 		},
@@ -45,7 +45,7 @@ func (p *Provider) CertificateCreate(pub, key string, opts structs.CertificateCr
 }
 
 func (p *Provider) CertificateDelete(id string) error {
-	if err := p.Cluster.CoreV1().Secrets(p.Rack).Delete(id, nil); err != nil {
+	if err := p.Cluster.CoreV1().Secrets(p.Namespace).Delete(id, nil); err != nil {
 		return err
 	}
 
@@ -63,9 +63,9 @@ func (p *Provider) CertificateGenerate(domains []string) (*structs.Certificate, 
 }
 
 func (p *Provider) CertificateList() (structs.Certificates, error) {
-	ss, err := p.Cluster.CoreV1().Secrets(p.Rack).List(am.ListOptions{
+	ss, err := p.Cluster.CoreV1().Secrets(p.Namespace).List(am.ListOptions{
 		FieldSelector: "type=kubernetes.io/tls",
-		LabelSelector: fmt.Sprintf("system=convox,rack=%s,type=certificate", p.Rack),
+		LabelSelector: fmt.Sprintf("system=convox,rack=%s,type=certificate", p.Name),
 	})
 	if err != nil {
 		return nil, err
@@ -86,7 +86,7 @@ func (p *Provider) CertificateList() (structs.Certificates, error) {
 }
 
 // func (p *Provider) caCertificate() (*tls.Certificate, error) {
-//   c, err := p.Cluster.CoreV1().Secrets(p.Rack).Get("ca", am.GetOptions{})
+//   c, err := p.Cluster.CoreV1().Secrets(p.Namespace).Get("ca", am.GetOptions{})
 //   if ae.IsNotFound(err) {
 //     return p.generateCACertificate()
 //   }

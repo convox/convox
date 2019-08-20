@@ -100,7 +100,7 @@ type dockerConfigAuth struct {
 }
 
 func (p *Provider) dockerConfigLoad(secret string) (*dockerConfig, error) {
-	s, err := p.Cluster.CoreV1().Secrets(p.Rack).Get(secret, am.GetOptions{})
+	s, err := p.Cluster.CoreV1().Secrets(p.Namespace).Get(secret, am.GetOptions{})
 	if ae.IsNotFound(err) {
 		return &dockerConfig{}, nil
 	}
@@ -134,14 +134,14 @@ func (p *Provider) dockerConfigSave(secret string, dc *dockerConfig) error {
 		".dockerconfigjson": data,
 	}
 
-	s, err := p.Cluster.CoreV1().Secrets(p.Rack).Get(secret, am.GetOptions{})
+	s, err := p.Cluster.CoreV1().Secrets(p.Namespace).Get(secret, am.GetOptions{})
 	if ae.IsNotFound(err) {
-		_, err := p.Cluster.CoreV1().Secrets(p.Rack).Create(&ac.Secret{
+		_, err := p.Cluster.CoreV1().Secrets(p.Namespace).Create(&ac.Secret{
 			ObjectMeta: am.ObjectMeta{
 				Name: "registries",
 				Labels: map[string]string{
 					"system": "convox",
-					"rack":   p.Rack,
+					"rack":   p.Name,
 				},
 			},
 			Type: ac.SecretTypeDockerConfigJson,
@@ -152,7 +152,7 @@ func (p *Provider) dockerConfigSave(secret string, dc *dockerConfig) error {
 
 	s.Data = sd
 
-	_, err = p.Cluster.CoreV1().Secrets(p.Rack).Update(s)
+	_, err = p.Cluster.CoreV1().Secrets(p.Namespace).Update(s)
 	if err != nil {
 		return err
 	}

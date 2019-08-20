@@ -27,8 +27,8 @@ func (p *Provider) convoxClient() (cv.Interface, error) {
 func (p *Provider) systemEnvironment(app, release string) (map[string]string, error) {
 	senv := map[string]string{
 		"APP":      app,
-		"RACK":     p.Rack,
-		"RACK_URL": fmt.Sprintf("https://convox:%s@api.%s.svc.cluster.local:5443", p.Password, p.Rack),
+		"RACK":     p.Name,
+		"RACK_URL": fmt.Sprintf("https://convox:%s@api.%s.svc.cluster.local:5443", p.Password, p.Namespace),
 		"RELEASE":  release,
 	}
 
@@ -127,7 +127,7 @@ func (p *Provider) volumeFrom(app, service, v string) string {
 
 func (p *Provider) volumeName(app, v string) string {
 	hash := sha256.Sum256([]byte(v))
-	name := fmt.Sprintf("%s-%s-%x", p.Rack, app, hash[0:20])
+	name := fmt.Sprintf("%s-%s-%x", p.Name, app, hash[0:20])
 	if len(name) > 63 {
 		name = name[0:62]
 	}

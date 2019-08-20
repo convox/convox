@@ -25,7 +25,7 @@ func NewEventController(p *Provider) (*EventController, error) {
 		start:    am.NewTime(time.Now().UTC()),
 	}
 
-	c, err := kctl.NewController(p.Rack, "convox-k8s-event", pc)
+	c, err := kctl.NewController(p.Namespace, "convox-k8s-event", pc)
 	if err != nil {
 		return nil, err
 	}

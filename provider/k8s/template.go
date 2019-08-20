@@ -35,7 +35,7 @@ func (p *Provider) templateHelpers() template.FuncMap {
 		"domains": func(app string, s manifest.Service) []string {
 			ds := []string{
 				p.Engine.ServiceHost(app, s),
-				fmt.Sprintf("%s.%s.%s.convox", s.Name, app, p.Rack),
+				fmt.Sprintf("%s.%s.%s.convox", s.Name, app, p.Name),
 			}
 			for _, d := range s.Domains {
 				ds = append(ds, d)

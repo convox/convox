@@ -147,10 +147,10 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 		return nil, err
 	}
 
-	ns, err := p.Cluster.CoreV1().Namespaces().Get(p.Rack, am.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
+	// ns, err := p.Cluster.CoreV1().Namespaces().Get(p.Namespace, am.GetOptions{})
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	release := common.DefaultString(opts.Release, "")
 
@@ -166,12 +166,12 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 	pd, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Create(&ac.Pod{
 		ObjectMeta: am.ObjectMeta{
 			Annotations: map[string]string{
-				"iam.amazonaws.com/role": ns.ObjectMeta.Annotations["convox.aws.role"],
+				// "iam.amazonaws.com/role": ns.ObjectMeta.Annotations["convox.aws.role"],
 			},
 			GenerateName: fmt.Sprintf("%s-", service),
 			Labels: map[string]string{
 				"app":     app,
-				"rack":    p.Rack,
+				"rack":    p.Name,
 				"release": release,
 				"service": service,
 				"system":  "convox",
@@ -301,7 +301,7 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 			}
 
 			for _, l := range s.Links {
-				env[fmt.Sprintf("%s_URL", envName(l))] = fmt.Sprintf("https://%s.%s.%s", l, app, p.Rack)
+				env[fmt.Sprintf("%s_URL", envName(l))] = fmt.Sprintf("https://%s.%s.%s", l, app, p.Name)
 			}
 
 			for _, r := range s.Resources {

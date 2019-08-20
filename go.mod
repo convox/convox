@@ -6,7 +6,9 @@ require (
 	github.com/Microsoft/hcsshim v0.8.7-0.20190801035247-8694eade7dd3 // indirect
 	github.com/aws/aws-sdk-go v1.21.10
 	github.com/convox/logger v0.0.0-20180522214415-e39179955b52
+	github.com/convox/stdapi v0.0.0-20190708203955-b81b71b6a680
 	github.com/convox/stdcli v0.0.0-20190326115454-b78bee159e98
+	github.com/convox/stdsdk v0.0.0-20190422120437-3e80a397e377
 	github.com/docker/docker v1.4.2-0.20190710153559-aa8249ae1b8b
 	github.com/docker/spdystream v0.0.0-20160310174837-449fdfce4d96 // indirect
 	github.com/dustin/go-humanize v1.0.0
@@ -34,6 +36,7 @@ require (
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 	golang.org/x/net v0.0.0-20190812203447-cdfb69ac37fc // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
+	google.golang.org/appengine v1.4.0 // indirect
 	gopkg.in/inf.v0 v0.9.0 // indirect
 	gopkg.in/yaml.v2 v2.2.2
 	k8s.io/api v0.0.0-20190118113203-912cbe2bfef3

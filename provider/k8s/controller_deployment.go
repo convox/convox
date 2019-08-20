@@ -25,7 +25,7 @@ func NewDeploymentController(p *Provider) (*DeploymentController, error) {
 		Provider: p,
 	}
 
-	c, err := kctl.NewController(p.Rack, "convox-k8s-deployment", pc)
+	c, err := kctl.NewController(p.Namespace, "convox-k8s-deployment", pc)
 	if err != nil {
 		return nil, err
 	}
