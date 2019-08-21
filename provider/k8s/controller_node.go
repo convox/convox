@@ -103,7 +103,7 @@ func (c *NodeController) updateRouterScale() error {
 	min := len(ns.Items)
 	max := min
 
-	as, err := c.Provider.Cluster.AutoscalingV1().HorizontalPodAutoscalers("convox-system").Get("router", am.GetOptions{})
+	as, err := c.Provider.Cluster.AutoscalingV1().HorizontalPodAutoscalers(c.Provider.Namespace).Get("router", am.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -111,7 +111,7 @@ func (c *NodeController) updateRouterScale() error {
 	as.Spec.MinReplicas = options.Int32(1)
 	as.Spec.MaxReplicas = int32(max)
 
-	if _, err := c.Provider.Cluster.AutoscalingV1().HorizontalPodAutoscalers("convox-system").Update(as); err != nil {
+	if _, err := c.Provider.Cluster.AutoscalingV1().HorizontalPodAutoscalers(c.Provider.Namespace).Update(as); err != nil {
 		return err
 	}
 

@@ -8,6 +8,7 @@ require (
 	github.com/aws/aws-sdk-go v1.21.10
 	github.com/convox/exec v0.0.0-20180905012044-cc13d277f897
 	github.com/convox/logger v0.0.0-20180522214415-e39179955b52
+	github.com/convox/rack v0.0.0-20190808190803-82103e2d6ca5 // indirect
 	github.com/convox/stdapi v0.0.0-20190708203955-b81b71b6a680
 	github.com/convox/stdcli v0.0.0-20190326115454-b78bee159e98
 	github.com/convox/stdsdk v0.0.0-20190422120437-3e80a397e377
@@ -35,8 +36,12 @@ require (
 	github.com/onsi/gomega v1.5.0 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pkg/errors v0.8.1
+	github.com/segmentio/analytics-go v3.0.1+incompatible // indirect
+	github.com/segmentio/backo-go v0.0.0-20160424052352-204274ad699c // indirect
 	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/stretchr/testify v1.3.0
+	github.com/stvp/rollbar v0.5.1 // indirect
+	github.com/xtgo/uuid v0.0.0-20140804021211-a0b114877d4c // indirect
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 	golang.org/x/net v0.0.0-20190812203447-cdfb69ac37fc // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
