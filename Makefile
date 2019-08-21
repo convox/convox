@@ -1,6 +1,6 @@
 .PHONY: all build clean clean-package compress dev-aws package release test
 
-commands = api atom router
+commands = api atom build router
 
 binaries = $(addprefix $(GOPATH)/bin/, $(commands))
 sources  = $(shell find . -name '*.go')

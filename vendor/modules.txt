@@ -65,6 +65,8 @@ github.com/containerd/continuity/fs
 github.com/containerd/continuity/sysx
 github.com/containerd/continuity/pathdriver
 github.com/containerd/continuity/syscallx
+# github.com/convox/exec v0.0.0-20180905012044-cc13d277f897
+github.com/convox/exec
 # github.com/convox/logger v0.0.0-20180522214415-e39179955b52
 github.com/convox/logger
 # github.com/convox/stdapi v0.0.0-20190708203955-b81b71b6a680
@@ -190,8 +192,6 @@ github.com/json-iterator/go
 github.com/kballard/go-shellquote
 # github.com/konsorten/go-windows-terminal-sequences v1.0.2
 github.com/konsorten/go-windows-terminal-sequences
-# github.com/mattn/go-runewidth v0.0.4
-github.com/mattn/go-runewidth
 # github.com/miekg/dns v1.1.15
 github.com/miekg/dns
 # github.com/mitchellh/go-homedir v1.1.0
@@ -268,8 +268,6 @@ google.golang.org/grpc/status
 google.golang.org/grpc/internal
 google.golang.org/grpc/connectivity
 google.golang.org/grpc/grpclog
-# gopkg.in/cheggaaa/pb.v1 v1.0.28
-gopkg.in/cheggaaa/pb.v1
 # gopkg.in/inf.v0 v0.9.0
 gopkg.in/inf.v0
 # gopkg.in/yaml.v2 v2.2.2
@@ -422,11 +420,3 @@ k8s.io/client-go/util/connrotation
 k8s.io/client-go/tools/clientcmd/api/v1
 # k8s.io/kube-openapi v0.0.0-20190709113604-33be087ad058
 k8s.io/kube-openapi/pkg/util/proto
-# k8s.io/metrics v0.0.0-20181204004050-3d8dd1c3a53c
-k8s.io/metrics/pkg/client/clientset_generated/clientset
-k8s.io/metrics/pkg/client/clientset_generated/clientset/typed/metrics/v1alpha1
-k8s.io/metrics/pkg/client/clientset_generated/clientset/typed/metrics/v1beta1
-k8s.io/metrics/pkg/apis/metrics/v1alpha1
-k8s.io/metrics/pkg/client/clientset_generated/clientset/scheme
-k8s.io/metrics/pkg/apis/metrics/v1beta1
-k8s.io/metrics/pkg/apis/metrics

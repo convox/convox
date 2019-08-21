@@ -6,6 +6,7 @@ require (
 	github.com/Microsoft/hcsshim v0.8.7-0.20190801035247-8694eade7dd3 // indirect
 	github.com/PuerkitoBio/goquery v1.5.0
 	github.com/aws/aws-sdk-go v1.21.10
+	github.com/convox/exec v0.0.0-20180905012044-cc13d277f897
 	github.com/convox/logger v0.0.0-20180522214415-e39179955b52
 	github.com/convox/stdapi v0.0.0-20190708203955-b81b71b6a680
 	github.com/convox/stdcli v0.0.0-20190326115454-b78bee159e98
@@ -14,7 +15,6 @@ require (
 	github.com/docker/spdystream v0.0.0-20160310174837-449fdfce4d96 // indirect
 	github.com/dustin/go-humanize v1.0.0
 	github.com/elazarl/goproxy v0.0.0-20170405201442-c4fc26588b6e // indirect
-	github.com/fatih/color v1.7.0 // indirect
 	github.com/fsouza/go-dockerclient v1.4.2
 	github.com/gobuffalo/packr v1.30.1
 	github.com/gobwas/glob v0.2.3
@@ -29,8 +29,6 @@ require (
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/json-iterator/go v1.1.7 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
-	github.com/mattn/go-colorable v0.1.2 // indirect
-	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/miekg/dns v1.1.15
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/onsi/ginkgo v1.8.0 // indirect
@@ -43,12 +41,10 @@ require (
 	golang.org/x/net v0.0.0-20190812203447-cdfb69ac37fc // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	google.golang.org/appengine v1.4.0 // indirect
-	gopkg.in/cheggaaa/pb.v1 v1.0.28
 	gopkg.in/inf.v0 v0.9.0 // indirect
 	gopkg.in/yaml.v2 v2.2.2
 	k8s.io/api v0.0.0-20190118113203-912cbe2bfef3
 	k8s.io/apimachinery v0.0.0-20190223001710-c182ff3b9841
 	k8s.io/client-go v0.0.0-20190117233410-4022682532b3
 	k8s.io/kube-openapi v0.0.0-20190709113604-33be087ad058 // indirect
-	k8s.io/metrics v0.0.0-20181204004050-3d8dd1c3a53c
 )
