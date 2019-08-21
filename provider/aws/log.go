@@ -113,7 +113,7 @@ func (p *Provider) ProcessLogs(app, pid string, opts structs.LogsOptions) (io.Re
 }
 
 func (p *Provider) SystemLogs(opts structs.LogsOptions) (io.ReadCloser, error) {
-	return common.CloudWatchLogsSubscribe(p.Context(), p.CloudWatchLogs, p.appLogGroup("rack"), "", opts)
+	return common.CloudWatchLogsSubscribe(p.Context(), p.CloudWatchLogs, p.appLogGroup("system"), "", opts)
 }
 
 func (p *Provider) appLogGroup(app string) string {
