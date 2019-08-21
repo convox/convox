@@ -2,11 +2,12 @@ package k8s
 
 import (
 	"context"
-	"fmt"
+	"os"
 	"os/exec"
 	"time"
 
 	"github.com/convox/convox/pkg/atom"
+	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/pkg/templater"
@@ -16,7 +17,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	metrics "k8s.io/metrics/pkg/client/clientset_generated/clientset"
 )
 
 type Engine interface {
@@ -35,12 +35,13 @@ type Engine interface {
 }
 
 type Provider struct {
-	Config    *rest.Config
-	Cluster   kubernetes.Interface
-	ID        string
-	Image     string
-	Engine    Engine
-	Metrics   metrics.Interface
+	Config  *rest.Config
+	Cluster kubernetes.Interface
+	Domain  string
+	// ID        string
+	Engine Engine
+	Image  string
+	// Metrics   metrics.Interface
 	Name      string
 	Namespace string
 	Password  string
@@ -55,7 +56,9 @@ type Provider struct {
 	templater *templater.Templater
 }
 
-func New(namespace string) (*Provider, error) {
+func FromEnv() (*Provider, error) {
+	namespace := os.Getenv("NAMESPACE")
+
 	c, err := restConfig()
 	if err != nil {
 		return nil, err
@@ -71,18 +74,25 @@ func New(namespace string) (*Provider, error) {
 		return nil, err
 	}
 
-	fmt.Printf("namespace: %+v\n", namespace)
-
 	ns, err := kc.CoreV1().Namespaces().Get(namespace, am.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
 
 	p := &Provider{
+		Config:    c,
 		Cluster:   kc,
+		Domain:    os.Getenv("DOMAIN"),
+		Image:     os.Getenv("IMAGE"),
 		Name:      ns.Labels["rack"],
-		Namespace: namespace,
+		Namespace: ns.Name,
+		Password:  os.Getenv("PASSWORD"),
+		Provider:  common.CoalesceString(os.Getenv("PROVIDER"), "k8s"),
+		Socket:    common.CoalesceString(os.Getenv("SOCKET"), "/var/run/docker.sock"),
+		Storage:   common.CoalesceString(os.Getenv("STORAGE"), "/var/storage"),
+		Version:   common.CoalesceString(os.Getenv("VERSION"), "dev"),
 		atom:      ac,
+		ctx:       context.Background(),
 		logger:    logger.New("ns=k8s"),
 	}
 
@@ -205,9 +215,9 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 	return log.Success()
 }
 
-// func (p *Provider) Context() context.Context {
-// 	return p.ctx
-// }
+func (p *Provider) Context() context.Context {
+	return p.ctx
+}
 
 func (p *Provider) WithContext(ctx context.Context) structs.Provider {
 	pp := *p

@@ -5,22 +5,20 @@ import (
 	"os"
 
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/convox/provider/aws"
 	"github.com/convox/convox/provider/k8s"
 )
 
 var Mock = &structs.MockProvider{}
 
-// FromEnv returns a new Provider from env vars
 func FromEnv() (structs.Provider, error) {
-	return FromName(os.Getenv("PROVIDER"))
-}
+	name := os.Getenv("PROVIDER")
 
-func FromName(name string) (structs.Provider, error) {
 	switch name {
-	// case "aws":
-	//   return aws.FromEnv()
+	case "aws":
+		return aws.FromEnv()
 	case "k8s":
-		return k8s.New(os.Getenv("NAMESPACE"))
+		return k8s.FromEnv()
 	// case "local":
 	//   return local.FromEnv()
 	case "test":
