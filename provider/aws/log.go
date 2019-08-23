@@ -117,7 +117,7 @@ func (p *Provider) SystemLogs(opts structs.LogsOptions) (io.ReadCloser, error) {
 }
 
 func (p *Provider) appLogGroup(app string) string {
-	return fmt.Sprintf("%s-%s", p.Name, app)
+	return fmt.Sprintf("/convox/%s/%s", p.Name, app)
 }
 
 func (p *Provider) createLogGroup(app string) error {

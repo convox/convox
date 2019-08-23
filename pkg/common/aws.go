@@ -536,7 +536,7 @@ func writeLogEvents(w io.Writer, events []*cloudwatchlogs.FilteredLogEvent, opts
 			prefix = fmt.Sprintf("%s %s ", t.Format(time.RFC3339), *e.LogStreamName)
 		}
 
-		line := fmt.Sprintf("%s%s\n", prefix, *e.Message)
+		line := fmt.Sprintf("%s%s\n", prefix, strings.TrimSuffix(*e.Message, "\n"))
 
 		if _, err := w.Write([]byte(line)); err != nil {
 			return 0, err
