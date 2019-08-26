@@ -6,7 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - uses: convox/ci@master
+      - uses: docker://convox/ci@master
         with:
           action: create-image
           image: convox/convox
