@@ -12,3 +12,8 @@ jobs:
       - uses: actions/docker/tag@master
         with:
           args: convox convox/convox --no-latest
+      - uses: actions/docker/login@master
+        with:
+          env:
+            DOCKER_USERNAME: ${{secrets.DOCKER_USERNAME}}
+            DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
