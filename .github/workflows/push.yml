@@ -6,7 +6,3 @@ jobs:
     runs-on: ubuntu-latest
   steps:
     - uses: actions/checkout@v1
-    - uses: actions/docker/cli@master
-      args: build -t convox .
-    - uses: actions/docker/tag@master
-      args: convox convox/convox --no-latest
