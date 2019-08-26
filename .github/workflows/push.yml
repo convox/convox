@@ -7,4 +7,4 @@ jobs:
     steps:
       - uses: docker://convox/ci:master
         with:
-          args: docker/build convox/convox
+          args: docker-build convox/convox
