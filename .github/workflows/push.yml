@@ -6,9 +6,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - uses: convox/ci/docker/build@master
+      - uses: convox/ci@master
         with:
+          action: create-image
           image: convox/convox
-      - uses: convox/ci/docker/push@master
-        with:
-          image: convox/convox
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
