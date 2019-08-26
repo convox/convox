@@ -1,0 +1,9 @@
+name: push
+on:
+  - push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v1
+    - run: docker build . -t convox/convox:${{github.ref}}
