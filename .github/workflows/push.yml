@@ -9,3 +9,6 @@ jobs:
       - uses: convox/ci/docker/build@master
         with:
           image: convox/convox
+      - uses: convox/ci/docker/push@master
+        with:
+          image: convox/convox
