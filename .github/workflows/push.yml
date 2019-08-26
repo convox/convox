@@ -5,6 +5,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: docker://convox/ci:master
+      - uses: actions/checkout@v1
+      - uses: convox/ci/docker/build@master
         with:
-          args: docker-build convox/convox
+          image: convox/convox
