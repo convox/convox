@@ -32,6 +32,9 @@ func (p *Provider) templateHelpers() template.FuncMap {
 		"base64": func(s string) string {
 			return string(base64.StdEncoding.EncodeToString([]byte(s)))
 		},
+		"coalesce": func(ss ...string) string {
+			return common.CoalesceString(ss...)
+		},
 		"domains": func(app string, s manifest.Service) []string {
 			ds := []string{
 				p.Engine.ServiceHost(app, s),
