@@ -160,12 +160,16 @@ func (p *Provider) streamProcessLogs(w io.WriteCloser, app, pid string, opts str
 		lopts.SinceTime = &since
 	}
 
+	service := ""
+
 	for {
 		pp, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Get(pid, am.GetOptions{})
 		if err != nil {
 			fmt.Printf("err: %+v\n", err)
 			break
 		}
+
+		service = pp.Labels["service"]
 
 		if pp.Status.Phase != "Pending" {
 			break
@@ -206,7 +210,7 @@ func (p *Provider) streamProcessLogs(w io.WriteCloser, app, pid string, opts str
 			lopts.SinceTime = &since
 
 			if common.DefaultBool(opts.Prefix, false) {
-				prefix = fmt.Sprintf("%s %s ", ts.Format(time.RFC3339), fmt.Sprintf("service/foo/%s", pid))
+				prefix = fmt.Sprintf("%s %s ", ts.Format(time.RFC3339), fmt.Sprintf("service/%s/%s", service, pid))
 			}
 
 			fmt.Fprintf(w, "%s%s\n", prefix, strings.TrimSuffix(parts[1], "\n"))
