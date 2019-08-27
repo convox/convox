@@ -74,6 +74,7 @@ spec:
         volumeMounts:
         - mountPath: /var/lib/mysql
           name: data
+          subPath: mysql
       volumes:
       - name: data
         persistentVolumeClaim:
