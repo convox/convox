@@ -1,9 +1,11 @@
 package k8s
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/options"
@@ -138,7 +140,85 @@ func (p *Provider) ProcessList(app string, opts structs.ProcessListOptions) (str
 }
 
 func (p *Provider) ProcessLogs(app, pid string, opts structs.LogsOptions) (io.ReadCloser, error) {
-	return nil, fmt.Errorf("unimplemented")
+	r, w := io.Pipe()
+
+	go p.streamProcessLogs(w, app, pid, opts)
+
+	return r, nil
+}
+
+func (p *Provider) streamProcessLogs(w io.WriteCloser, app, pid string, opts structs.LogsOptions) {
+	defer w.Close()
+
+	lopts := &ac.PodLogOptions{
+		Follow:     true,
+		Timestamps: true,
+	}
+
+	if opts.Since != nil {
+		since := am.NewTime(time.Now().UTC().Add(*opts.Since))
+		lopts.SinceTime = &since
+	}
+
+	for {
+		pp, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Get(pid, am.GetOptions{})
+		if err != nil {
+			fmt.Printf("err: %+v\n", err)
+			break
+		}
+
+		if pp.Status.Phase != "Pending" {
+			break
+		}
+
+		time.Sleep(1 * time.Second)
+	}
+
+	for {
+		r, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).GetLogs(pid, lopts).Stream()
+		if err != nil {
+			fmt.Printf("err: %+v\n", err)
+			break
+		}
+
+		s := bufio.NewScanner(r)
+
+		s.Buffer(make([]byte, ScannerStartSize), ScannerMaxSize)
+
+		for s.Scan() {
+			line := s.Text()
+
+			parts := strings.SplitN(line, " ", 2)
+			if len(parts) != 2 {
+				fmt.Printf("err: short line\n")
+				continue
+			}
+
+			ts, err := time.Parse(time.RFC3339Nano, parts[0])
+			if err != nil {
+				fmt.Printf("err: %+v\n", err)
+				continue
+			}
+
+			prefix := ""
+
+			since := am.NewTime(ts)
+			lopts.SinceTime = &since
+
+			if common.DefaultBool(opts.Prefix, false) {
+				prefix = fmt.Sprintf("%s %s ", ts.Format(time.RFC3339), fmt.Sprintf("service/foo/%s", pid))
+			}
+
+			fmt.Fprintf(w, "%s%s\n", prefix, strings.TrimSuffix(parts[1], "\n"))
+		}
+
+		if err := s.Err(); err != nil {
+			fmt.Printf("err: %+v\n", err)
+			continue
+		}
+
+		return
+	}
 }
 
 func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOptions) (*structs.Process, error) {

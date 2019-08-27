@@ -1,7 +1,6 @@
 package aws
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net/url"
@@ -80,6 +79,10 @@ func (p *Provider) BuildLogs(app, id string, opts structs.LogsOptions) (io.ReadC
 		return nil, err
 	}
 
+	fmt.Printf("b.Status: %+v\n", b.Status)
+
+	opts.Since = nil
+
 	switch b.Status {
 	case "running":
 		return p.ProcessLogs(app, b.Process, opts)
@@ -98,19 +101,19 @@ func (p *Provider) BuildLogs(app, id string, opts structs.LogsOptions) (io.ReadC
 	}
 }
 
-func (p *Provider) ProcessLogs(app, pid string, opts structs.LogsOptions) (io.ReadCloser, error) {
-	ps, err := p.ProcessGet(app, pid)
-	if err != nil {
-		return nil, err
-	}
+// func (p *Provider) ProcessLogs(app, pid string, opts structs.LogsOptions) (io.ReadCloser, error) {
+// 	ps, err := p.ProcessGet(app, pid)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	key := fmt.Sprintf("service/%s/%s", ps.Name, pid)
+// 	key := fmt.Sprintf("service/%s/%s", ps.Name, pid)
 
-	ctx, cancel := context.WithCancel(p.Context())
-	go p.watchForProcessTermination(ctx, app, pid, cancel)
+// 	ctx, cancel := context.WithCancel(p.Context())
+// 	go p.watchForProcessTermination(ctx, app, pid, cancel)
 
-	return common.CloudWatchLogsSubscribe(ctx, p.CloudWatchLogs, p.appLogGroup(app), key, opts)
-}
+// 	return common.CloudWatchLogsSubscribe(ctx, p.CloudWatchLogs, p.appLogGroup(app), key, opts)
+// }
 
 func (p *Provider) SystemLogs(opts structs.LogsOptions) (io.ReadCloser, error) {
 	return common.CloudWatchLogsSubscribe(p.Context(), p.CloudWatchLogs, p.appLogGroup("system"), "", opts)
