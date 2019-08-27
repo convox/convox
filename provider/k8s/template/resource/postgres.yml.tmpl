@@ -75,7 +75,7 @@ spec:
         - name: POSTGRES_PASSWORD
           value: "{{.Password}}"
         volumeMounts:
-        - mountPath: /var/lib/postgresql/data
+        - mountPath: /var/lib/postgresql
           name: data
       volumes:
       - name: data
