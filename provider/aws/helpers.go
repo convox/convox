@@ -13,7 +13,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	cv "github.com/convox/convox/provider/aws/pkg/client/clientset/versioned"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -29,10 +28,6 @@ func (p *Provider) appRegistry(app string) (string, error) {
 	}
 
 	return registry, nil
-}
-
-func (p *Provider) convoxClient() (cv.Interface, error) {
-	return cv.NewForConfig(p.Config)
 }
 
 func (p *Provider) stackOutputs(stack string) (map[string]string, error) {

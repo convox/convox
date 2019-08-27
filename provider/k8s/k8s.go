@@ -28,7 +28,7 @@ type Engine interface {
 	ReleasePromote(app, id string, opts structs.ReleasePromoteOptions) error
 	RepositoryAuth(app string) (string, string, error)
 	RepositoryHost(app string) (string, bool, error)
-	ResourceRender(app string, r manifest.Resource) ([]byte, error)
+	// ResourceRender(app string, r manifest.Resource) ([]byte, error)
 	Resolver() (string, error)
 	ServiceHost(app string, s manifest.Service) string
 	// SystemAnnotations(service string) map[string]string

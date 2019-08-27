@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"sort"
@@ -165,10 +166,15 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 	items = append(items, data)
 
 	for _, r := range m.Resources {
-		data, err := p.Engine.ResourceRender(app, r)
+		data, err := p.resourceRender(app, r)
 		if err != nil {
 			return err
 		}
+
+		// data, err := p.Engine.ResourceRender(app, r)
+		// if err != nil {
+		// 	return err
+		// }
 
 		items = append(items, data)
 	}
@@ -406,4 +412,17 @@ func (p *Provider) releaseUnmarshal(kr *ca.Release) (*structs.Release, error) {
 	}
 
 	return r, nil
+}
+
+func (p *Provider) resourceRender(app string, r manifest.Resource) ([]byte, error) {
+	params := map[string]interface{}{
+		"App":        app,
+		"Namespace":  p.AppNamespace(app),
+		"Name":       r.Name,
+		"Parameters": r.Options,
+		"Password":   fmt.Sprintf("%x", sha256.Sum256([]byte(p.Name)))[0:30],
+		"Rack":       p.Name,
+	}
+
+	return p.RenderTemplate(fmt.Sprintf("resource/%s", r.Type), params)
 }
