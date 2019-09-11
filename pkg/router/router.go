@@ -74,6 +74,13 @@ func New() (*Router, error) {
 		}
 
 		r.cache = c
+	case "redis":
+		c, err := NewCacheRedis(os.Getenv("REDIS_ADDR"))
+		if err != nil {
+			return nil, err
+		}
+
+		r.cache = c
 	default:
 		r.cache = NewCacheMemory()
 	}
@@ -86,6 +93,9 @@ func New() (*Router, error) {
 		}
 
 		r.storage = s
+	case "redis":
+		addr := os.Getenv("REDIS_ADDR")
+		fmt.Printf("addr: %+v\n", addr)
 	default:
 		r.storage = NewStorageMemory()
 	}

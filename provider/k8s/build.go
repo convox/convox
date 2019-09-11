@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -368,7 +369,29 @@ func (p *Provider) BuildImport(app string, r io.Reader) (*structs.Build, error) 
 }
 
 func (p *Provider) BuildLogs(app, id string, opts structs.LogsOptions) (io.ReadCloser, error) {
-	return nil, fmt.Errorf("unimplemented")
+	b, err := p.BuildGet(app, id)
+	if err != nil {
+		return nil, err
+	}
+
+	opts.Since = nil
+
+	switch b.Status {
+	case "running":
+		return p.ProcessLogs(app, b.Process, opts)
+	default:
+		u, err := url.Parse(b.Logs)
+		if err != nil {
+			return nil, err
+		}
+
+		switch u.Scheme {
+		case "object":
+			return p.ObjectFetch(u.Hostname(), u.Path)
+		default:
+			return nil, fmt.Errorf("unable to read logs for build: %s", id)
+		}
+	}
 }
 
 func (p *Provider) BuildList(app string, opts structs.BuildListOptions) (structs.Builds, error) {
@@ -463,9 +486,11 @@ func (p *Provider) buildAuth(b *structs.Build) ([]byte, error) {
 			return nil, err
 		}
 
-		auth[repo] = authEntry{
-			Username: user,
-			Password: pass,
+		if user != "" {
+			auth[repo] = authEntry{
+				Username: user,
+				Password: pass,
+			}
 		}
 	}
 

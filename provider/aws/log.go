@@ -3,7 +3,6 @@ package aws
 import (
 	"fmt"
 	"io"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -71,34 +70,6 @@ func (p *Provider) Log(app, stream string, ts time.Time, message string) error {
 
 func (p *Provider) AppLogs(name string, opts structs.LogsOptions) (io.ReadCloser, error) {
 	return common.CloudWatchLogsSubscribe(p.Context(), p.CloudWatchLogs, p.appLogGroup(name), "", opts)
-}
-
-func (p *Provider) BuildLogs(app, id string, opts structs.LogsOptions) (io.ReadCloser, error) {
-	b, err := p.BuildGet(app, id)
-	if err != nil {
-		return nil, err
-	}
-
-	fmt.Printf("b.Status: %+v\n", b.Status)
-
-	opts.Since = nil
-
-	switch b.Status {
-	case "running":
-		return p.ProcessLogs(app, b.Process, opts)
-	default:
-		u, err := url.Parse(b.Logs)
-		if err != nil {
-			return nil, err
-		}
-
-		switch u.Scheme {
-		case "object":
-			return p.ObjectFetch(u.Hostname(), u.Path)
-		default:
-			return nil, fmt.Errorf("unable to read logs for build: %s", id)
-		}
-	}
 }
 
 // func (p *Provider) ProcessLogs(app, pid string, opts structs.LogsOptions) (io.ReadCloser, error) {
