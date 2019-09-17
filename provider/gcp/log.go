@@ -72,8 +72,15 @@ Iteration:
 
 				prefix := ""
 
+				pod := entry.Labels["container.googleapis.com/pod_name"]
+				service := "unknown"
+
+				if pp := strings.Split(pod, "-"); len(pp) > 2 {
+					service = strings.Join(pp[0:len(pp)-2], "-")
+				}
+
 				if common.DefaultBool(opts.Prefix, false) {
-					prefix = fmt.Sprintf("%s service/%s/%s ", entry.Timestamp.Format(time.RFC3339), "unknown", entry.Labels["container.googleapis.com/pod_name"])
+					prefix = fmt.Sprintf("%s service/%s/%s ", entry.Timestamp.Format(time.RFC3339), service, pod)
 				}
 
 				switch t := entry.Payload.(type) {
