@@ -20,6 +20,7 @@ type Provider struct {
 	Bucket   string
 	Key      []byte
 	Project  string
+	Region   string
 	Registry string
 
 	LogAdmin *logadmin.Client
@@ -38,6 +39,7 @@ func FromEnv() (*Provider, error) {
 		Provider: k,
 		Bucket:   os.Getenv("BUCKET"),
 		Project:  os.Getenv("PROJECT"),
+		Region:   os.Getenv("REGION"),
 		Registry: os.Getenv("REGISTRY"),
 	}
 

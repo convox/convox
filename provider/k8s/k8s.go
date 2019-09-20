@@ -10,6 +10,7 @@ import (
 	"github.com/convox/convox/pkg/atom"
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/manifest"
+	"github.com/convox/convox/pkg/metrics"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/pkg/templater"
 	"github.com/convox/logger"
@@ -24,26 +25,23 @@ import (
 type Engine interface {
 	AppIdles(app string) (bool, error)
 	AppStatus(app string) (string, error)
+	Heartbeat() (map[string]interface{}, error)
 	Log(app, stream string, ts time.Time, message string) error
 	ReleasePromote(app, id string, opts structs.ReleasePromoteOptions) error
 	RepositoryAuth(app string) (string, string, error)
 	RepositoryHost(app string) (string, bool, error)
-	// ResourceRender(app string, r manifest.Resource) ([]byte, error)
 	Resolver() (string, error)
 	ServiceHost(app string, s manifest.Service) string
-	// SystemAnnotations(service string) map[string]string
 	SystemHost() string
 	SystemStatus() (string, error)
 }
 
 type Provider struct {
-	Config  *rest.Config
-	Cluster kubernetes.Interface
-	Domain  string
-	// ID        string
-	Engine Engine
-	Image  string
-	// Metrics   metrics.Interface
+	Config    *rest.Config
+	Cluster   kubernetes.Interface
+	Domain    string
+	Engine    Engine
+	Image     string
 	Name      string
 	Namespace string
 	Password  string
@@ -55,6 +53,7 @@ type Provider struct {
 	atom      *atom.Client
 	ctx       context.Context
 	logger    *logger.Logger
+	metrics   *metrics.Metrics
 	templater *templater.Templater
 }
 
@@ -102,6 +101,7 @@ func FromEnv() (*Provider, error) {
 		atom:      ac,
 		ctx:       context.Background(),
 		logger:    logger.New("ns=k8s"),
+		metrics:   metrics.New("https://metrics.convox.com/metrics/rack"),
 	}
 
 	p.templater = templater.New(packr.NewBox("../k8s/template"), p.templateHelpers())
@@ -132,68 +132,8 @@ func restConfig() (*rest.Config, error) {
 	return c, nil
 }
 
-// func FromEnv() (*Provider, error) {
-// 	// hack to make glog stop complaining about flag parsing
-// 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-// 	_ = fs.Parse([]string{})
-// 	flag.CommandLine = fs
-// 	runtime.ErrorHandlers = []func(error){}
-
-// 	p := &Provider{
-// 		ID:       os.Getenv("ID"),
-// 		Image:    os.Getenv("IMAGE"),
-// 		Password: os.Getenv("PASSWORD"),
-// 		Provider: os.Getenv("PROVIDER"),
-// 		Rack:     os.Getenv("RACK"),
-// 		Socket:   common.CoalesceString(os.Getenv("SOCKET"), "/var/run/docker.sock"),
-// 		Storage:  os.Getenv("STORAGE"),
-// 		Version:  os.Getenv("VERSION"),
-// 		ctx:      context.Background(),
-// 		logger:   logger.Discard,
-// 	}
-
-// 	p.templater = templater.New(packr.NewBox("../k8s/template"), p.templateHelpers())
-
-// 	if cfg, err := rest.InClusterConfig(); err == nil {
-// 		p.logger = logger.New("ns=k8s")
-
-// 		p.Config = cfg
-
-// 		ac, err := atom.New(cfg)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-
-// 		p.atom = ac
-
-// 		kc, err := kubernetes.NewForConfig(cfg)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-
-// 		p.Cluster = kc
-
-// 		mc, err := metrics.NewForConfig(cfg)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-
-// 		p.Metrics = mc
-// 	}
-
-// 	if p.ID == "" {
-// 		p.ID, _ = dockerSystemId()
-// 	}
-
-// 	return p, nil
-// }
-
 func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 	log := p.logger.At("Initialize")
-
-	// if err := p.initializeAtom(); err != nil {
-	// 	return log.Error(err)
-	// }
 
 	dc, err := NewDeploymentController(p)
 	if err != nil {
@@ -220,6 +160,8 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 	go nc.Run()
 	go pc.Run()
 
+	go common.Tick(1*time.Hour, p.heartbeat)
+
 	return log.Success()
 }
 
@@ -233,23 +175,46 @@ func (p *Provider) WithContext(ctx context.Context) structs.Provider {
 	return &pp
 }
 
-// func (p *Provider) initializeAtom() error {
-// 	params := map[string]interface{}{
-// 		"Version": p.Version,
-// 	}
+func (p *Provider) heartbeat() error {
+	as, err := p.AppList()
+	if err != nil {
+		return err
+	}
 
-// 	data, err := p.RenderTemplate("atom", params)
-// 	if err != nil {
-// 		return err
-// 	}
+	ns, err := p.Cluster.CoreV1().Nodes().List(am.ListOptions{})
+	if err != nil {
+		return err
+	}
 
-// 	cmd := exec.Command("kubectl", "apply", "-f", "-")
+	ks, err := p.Cluster.CoreV1().Namespaces().Get("kube-system", am.GetOptions{})
+	if err != nil {
+		return err
+	}
 
-// 	cmd.Stdin = bytes.NewReader(data)
+	// "instance_type":  "",
+	// "region": ""
 
-// 	if out, err := cmd.CombinedOutput(); err != nil {
-// 		return errors.New(strings.TrimSpace(string(out)))
-// 	}
+	ms := map[string]interface{}{
+		"id":             ks.UID,
+		"app_count":      len(as),
+		"generation":     "3",
+		"instance_count": len(ns.Items),
+		"provider":       p.Provider,
+		"version":        p.Version,
+	}
 
-// 	return nil
-// }
+	hs, err := p.Engine.Heartbeat()
+	if err != nil {
+		return err
+	}
+
+	for k, v := range hs {
+		ms[k] = v
+	}
+
+	if err := p.metrics.Post("heartbeat", hs); err != nil {
+		return err
+	}
+
+	return nil
+}
