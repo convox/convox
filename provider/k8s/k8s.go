@@ -212,7 +212,7 @@ func (p *Provider) heartbeat() error {
 		ms[k] = v
 	}
 
-	if err := p.metrics.Post("heartbeat", hs); err != nil {
+	if err := p.metrics.Post("heartbeat", ms); err != nil {
 		return err
 	}
 
