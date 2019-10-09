@@ -131,20 +131,22 @@ func (c *AtomController) Update(prev, cur interface{}) error {
 			return errors.WithStack(err)
 		}
 	case "Rollback":
-		if deadline := am.NewTime(time.Now().UTC().Add(-1 * time.Duration(ca.Spec.ProgressDeadlineSeconds) * time.Second)); ca.Started.Before(&deadline) {
-			c.atom.status(ca, "Failed")
-			return nil
-		}
+		// just mark it reverted, can get wedged if trying to ensure rollback
+		c.atom.status(ca, "Reverted")
+		// if deadline := am.NewTime(time.Now().UTC().Add(-1 * time.Duration(ca.Spec.ProgressDeadlineSeconds) * time.Second)); ca.Started.Before(&deadline) {
+		// 	c.atom.status(ca, "Reverted")
+		// 	return nil
+		// }
 
-		success, err := c.atom.check(ca)
-		if err != nil {
-			c.atom.status(ca, "Failed")
-			return errors.WithStack(err)
-		}
+		// success, err := c.atom.check(ca)
+		// if err != nil {
+		// 	c.atom.status(ca, "Failed")
+		// 	return errors.WithStack(err)
+		// }
 
-		if success {
-			c.atom.status(ca, "Reverted")
-		}
+		// if success {
+		// 	c.atom.status(ca, "Reverted")
+		// }
 	case "Running":
 		if deadline := am.NewTime(time.Now().UTC().Add(-1 * time.Duration(ca.Spec.ProgressDeadlineSeconds) * time.Second)); ca.Started.Before(&deadline) {
 			c.atom.status(ca, "Deadline")

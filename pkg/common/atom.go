@@ -3,7 +3,7 @@ package common
 func AtomStatus(status string) string {
 	switch status {
 	case "Failed":
-		return "failed"
+		return "running"
 	case "Rollback":
 		return "rollback"
 	case "Deadline", "Error", "Pending", "Running":
