@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"cloud.google.com/go/logging"
 	"cloud.google.com/go/logging/logadmin"
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/structs"
@@ -17,6 +18,26 @@ import (
 var sequenceTokens sync.Map
 
 func (p *Provider) Log(app, stream string, ts time.Time, message string) error {
+	logger := p.Logging.Logger("system")
+
+	fmt.Printf("app: %+v\n", app)
+	fmt.Printf("stream: %+v\n", stream)
+	fmt.Printf("message: %+v\n", message)
+
+	logger.Log(logging.Entry{
+		Labels: map[string]string{
+			"container.googleapis.com/namespace_name": p.AppNamespace(app),
+			"stream": stream,
+		},
+		Payload:  message,
+		Severity: logging.Info,
+	})
+
+	if err := logger.Flush(); err != nil {
+		fmt.Printf("err: %+v\n", err)
+		return err
+	}
+
 	return nil
 }
 
@@ -34,7 +55,6 @@ func (p *Provider) SystemLogs(opts structs.LogsOptions) (io.ReadCloser, error) {
 
 func (p *Provider) logFilter(ctx context.Context, w io.WriteCloser, filter string, opts structs.LogsOptions) {
 	defer w.Close()
-	defer fmt.Println("finishing logs")
 
 	var since time.Time
 
@@ -45,13 +65,11 @@ func (p *Provider) logFilter(ctx context.Context, w io.WriteCloser, filter strin
 Iteration:
 
 	for {
-		fmt.Printf("since: %+v\n", since)
 		it := p.LogAdmin.Entries(ctx, logadmin.Filter(fmt.Sprintf("%s AND timestamp > %q", filter, since.Format("2006-01-02T15:04:05.999999999Z"))))
 
 		for {
 			// check for closed writer
 			if _, err := w.Write([]byte{}); err != nil {
-				fmt.Println("closed writer")
 				return
 			}
 
@@ -61,7 +79,6 @@ Iteration:
 			default:
 				entry, err := it.Next()
 				if err == iterator.Done {
-					fmt.Println("iterator done")
 					time.Sleep(2 * time.Second)
 					continue Iteration
 				}
@@ -80,7 +97,11 @@ Iteration:
 				}
 
 				if common.DefaultBool(opts.Prefix, false) {
-					prefix = fmt.Sprintf("%s service/%s/%s ", entry.Timestamp.Format(time.RFC3339), service, pod)
+					if strings.HasSuffix(entry.LogName, "/main") {
+						prefix = fmt.Sprintf("%s service/%s/%s ", entry.Timestamp.Format(time.RFC3339), service, pod)
+					} else {
+						prefix = fmt.Sprintf("%s %s ", entry.Timestamp.Format(time.RFC3339), entry.Labels["stream"])
+					}
 				}
 
 				switch t := entry.Payload.(type) {

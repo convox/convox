@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"os"
 
+	"cloud.google.com/go/logging"
 	"cloud.google.com/go/logging/logadmin"
 	"cloud.google.com/go/storage"
 	"github.com/convox/convox/pkg/structs"
@@ -24,6 +25,7 @@ type Provider struct {
 	Registry string
 
 	LogAdmin *logadmin.Client
+	Logging  *logging.Client
 	Storage  *storage.Client
 
 	templater *templater.Templater
@@ -79,6 +81,13 @@ func (p *Provider) WithContext(ctx context.Context) structs.Provider {
 
 func (p *Provider) initializeGcpServices() error {
 	ctx := context.Background()
+
+	l, err := logging.NewClient(ctx, p.Project)
+	if err != nil {
+		return err
+	}
+
+	p.Logging = l
 
 	la, err := logadmin.NewClient(ctx, p.Project)
 	if err != nil {
