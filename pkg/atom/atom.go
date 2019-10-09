@@ -174,6 +174,29 @@ func (c *Client) Apply(ns, name string, release string, template []byte, timeout
 	return nil
 }
 
+func (c *Client) Cancel(ns, name string) error {
+	a, err := c.atom.AtomV1().Atoms(ns).Get(name, am.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("a.Status: %+v\n", a.Status)
+
+	switch a.Status {
+	case "Pending", "Running":
+	default:
+		return nil
+	}
+
+	a.Status = "Rollback"
+
+	if _, err := c.atom.AtomV1().Atoms(ns).Update(a); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (c *Client) Status(ns, name string) (string, string, error) {
 	a, err := c.atom.AtomV1().Atoms(ns).Get(name, am.GetOptions{})
 	if ae.IsNotFound(err) {

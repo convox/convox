@@ -12,7 +12,15 @@ import (
 )
 
 func (p *Provider) AppCancel(name string) error {
-	return fmt.Errorf("unimplemented")
+	if _, err := p.AppGet(name); err != nil {
+		return err
+	}
+
+	if err := p.atom.Cancel(p.AppNamespace(name), "app"); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*structs.App, error) {
