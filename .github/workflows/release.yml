@@ -1,0 +1,19 @@
+name: release
+on:
+  push:
+    branches: ["*"]
+    tags: ["*"]
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout
+      uses: actions/checkout@v1
+    - name: build
+      run: docker build -t docker.pkg.github.com/convox/convox/convox:$(echo ${GITHUB_REF} | awk -F/ '{print $3}') .
+    - name: login
+      run: docker login docker.pkg.github.com --username convox --password "${GITHUB_TOKEN}"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: push
+      run: docker push docker.pkg.github.com/convox/convox/convox:$(echo ${GITHUB_REF} | awk -F/ '{print $3}')
