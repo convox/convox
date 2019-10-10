@@ -28,7 +28,7 @@ type Engine interface {
 	Heartbeat() (map[string]interface{}, error)
 	IngressAnnotations(app string) (map[string]string, error)
 	Log(app, stream string, ts time.Time, message string) error
-	ReleasePromote(app, id string, opts structs.ReleasePromoteOptions) error
+	ManifestValidate(m *manifest.Manifest) error
 	RepositoryAuth(app string) (string, string, error)
 	RepositoryHost(app string) (string, bool, error)
 	Resolver() (string, error)

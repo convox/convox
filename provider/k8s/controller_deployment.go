@@ -141,7 +141,7 @@ func (c *DeploymentController) deploymentRollback(d *ae.Deployment) error {
 	if rollback := d.ObjectMeta.Annotations["convox.rollback"]; rollback != "" {
 		c.deploymentLog(d, fmt.Sprintf("Rolling back to %s", rollback))
 
-		if err := c.Provider.Engine.ReleasePromote(app, rollback, structs.ReleasePromoteOptions{}); err != nil {
+		if err := c.Provider.ReleasePromote(app, rollback, structs.ReleasePromoteOptions{}); err != nil {
 			fmt.Printf("err = %+v\n", err)
 			return err
 		}
