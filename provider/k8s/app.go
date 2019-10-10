@@ -132,6 +132,7 @@ func (p *Provider) appFromNamespace(ns ac.Namespace) (*structs.App, error) {
 		Generation: "2",
 		Name:       name,
 		Release:    release,
+		Router:     p.Router,
 		Status:     status,
 	}
 
