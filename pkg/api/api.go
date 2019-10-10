@@ -28,6 +28,10 @@ func NewWithProvider(p structs.Provider) *Server {
 		panic(err)
 	}
 
+	if err := p.Start(); err != nil {
+		panic(err)
+	}
+
 	s := &Server{
 		Provider: p,
 		Server:   stdapi.New("api", "api"),

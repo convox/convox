@@ -1,4 +1,4 @@
-.PHONY: all build clean clean-package compress dev-aws package release test
+.PHONY: all build clean clean-package compress generate mocks package release test
 
 commands = api atom build router
 
@@ -17,6 +17,17 @@ clean-package:
 
 compress: $(binaries)
 	upx-ucl -1 $^
+
+generate:
+	go run cmd/generate/main.go controllers > pkg/api/controllers.go
+	go run cmd/generate/main.go routes > pkg/api/routes.go
+	go run cmd/generate/main.go sdk > sdk/methods.go
+	make -C pkg/atom generate
+	make -C provider/k8s generate
+
+mocks: generate
+	make -C pkg/atom mocks
+	make -C pkg/structs mocks
 
 package:
 	$(GOPATH)/bin/packr

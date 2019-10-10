@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    app: app1
+    name: app1
+    provider: k8s
+    rack: name1
+    system: convox
+    type: app
+  name: name1-app1
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app: app1
+    provider: k8s
+    rack: name1
+    system: convox
+  name: app1
+  namespace: name1-app1
+spec:
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          scope: system
+          system: convox
+  podSelector: {}

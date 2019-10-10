@@ -7,6 +7,7 @@ import (
 
 type Provider interface {
 	Initialize(opts ProviderOptions) error
+	Start() error
 
 	AppCancel(name string) error
 	AppCreate(name string, opts AppCreateOptions) (*App, error)

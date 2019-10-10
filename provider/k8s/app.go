@@ -16,7 +16,7 @@ func (p *Provider) AppCancel(name string) error {
 		return err
 	}
 
-	if err := p.atom.Cancel(p.AppNamespace(name), "app"); err != nil {
+	if err := p.Atom.Cancel(p.AppNamespace(name), "app"); err != nil {
 		return err
 	}
 
@@ -28,6 +28,58 @@ func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*struc
 		return nil, err
 	}
 
+	// ns := &ac.Namespace{
+	// 	ObjectMeta: am.ObjectMeta{
+	// 		Name: p.AppNamespace(name),
+	// 		Labels: map[string]string{
+	// 			"name": name,
+	// 			"type": "app",
+	// 		},
+	// 	},
+	// }
+
+	// if _, err := p.Cluster.CoreV1().Namespaces().Create(ns); err != nil {
+	// 	return nil, err
+	// }
+
+	// for {
+	// 	ns, err := p.Cluster.CoreV1().Namespaces().Get(ns.Name, am.GetOptions{})
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+
+	// 	fmt.Printf("ns: %+v\n", ns)
+
+	// 	break
+	// }
+
+	// np := &an.NetworkPolicy{
+	// 	ObjectMeta: am.ObjectMeta{
+	// 		Name: name,
+	// 	},
+	// 	Spec: an.NetworkPolicySpec{
+	// 		PodSelector: am.LabelSelector{},
+	// 		Ingress: []an.NetworkPolicyIngressRule{
+	// 			an.NetworkPolicyIngressRule{
+	// 				From: []an.NetworkPolicyPeer{
+	// 					an.NetworkPolicyPeer{
+	// 						NamespaceSelector: &am.LabelSelector{
+	// 							MatchLabels: map[string]string{
+	// 								"system": "convox",
+	// 								"scope":  "system",
+	// 							},
+	// 						},
+	// 					},
+	// 				},
+	// 			},
+	// 		},
+	// 	},
+	// }
+
+	// if _, err := p.Cluster.NetworkingV1().NetworkPolicies(ns.Name).Create(np); err != nil {
+	// 	return nil, err
+	// }
+
 	params := map[string]interface{}{
 		"Name":      name,
 		"Namespace": p.AppNamespace(name),
@@ -38,6 +90,8 @@ func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*struc
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Printf("string(data): %+v\n", string(data))
 
 	if err := p.ApplyWait(p.AppNamespace(name), "app", "", data, fmt.Sprintf("system=convox,provider=k8s,rack=%s,app=%s", p.Name, name), 30); err != nil {
 		return nil, err
@@ -59,6 +113,7 @@ func (p *Provider) AppDelete(name string) error {
 }
 
 func (p *Provider) AppGet(name string) (*structs.App, error) {
+	fmt.Printf("p.AppNamespace(name): %+v\n", p.AppNamespace(name))
 	ns, err := p.Cluster.CoreV1().Namespaces().Get(p.AppNamespace(name), am.GetOptions{})
 	if ae.IsNotFound(err) {
 		return nil, fmt.Errorf("app not found: %s", name)
@@ -121,7 +176,7 @@ func (p *Provider) AppUpdate(name string, opts structs.AppUpdateOptions) error {
 func (p *Provider) appFromNamespace(ns ac.Namespace) (*structs.App, error) {
 	name := common.CoalesceString(ns.Labels["app"], ns.Labels["name"])
 
-	as, release, err := p.atom.Status(ns.Name, "app")
+	as, release, err := p.Atom.Status(ns.Name, "app")
 	if err != nil {
 		return nil, err
 	}

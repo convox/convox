@@ -38,6 +38,7 @@ type Engine interface {
 }
 
 type Provider struct {
+	Atom      atom.Interface
 	Config    *rest.Config
 	Cluster   kubernetes.Interface
 	Domain    string
@@ -52,7 +53,6 @@ type Provider struct {
 	Storage   string
 	Version   string
 
-	atom      *atom.Client
 	ctx       context.Context
 	logger    *logger.Logger
 	metrics   *metrics.Metrics
@@ -68,17 +68,17 @@ func FromEnv() (*Provider, error) {
 
 	namespace := os.Getenv("NAMESPACE")
 
-	c, err := restConfig()
+	rc, err := restConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	ac, err := atom.New(c)
+	kc, err := kubernetes.NewForConfig(rc)
 	if err != nil {
 		return nil, err
 	}
 
-	kc, err := kubernetes.NewForConfig(c)
+	ac, err := atom.New(rc)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +89,8 @@ func FromEnv() (*Provider, error) {
 	}
 
 	p := &Provider{
-		Config:    c,
+		Atom:      ac,
+		Config:    rc,
 		Cluster:   kc,
 		Domain:    os.Getenv("DOMAIN"),
 		Image:     os.Getenv("IMAGE"),
@@ -101,41 +102,29 @@ func FromEnv() (*Provider, error) {
 		Socket:    common.CoalesceString(os.Getenv("SOCKET"), "/var/run/docker.sock"),
 		Storage:   common.CoalesceString(os.Getenv("STORAGE"), "/var/storage"),
 		Version:   common.CoalesceString(os.Getenv("VERSION"), "dev"),
-		atom:      ac,
-		ctx:       context.Background(),
-		logger:    logger.New("ns=k8s"),
-		metrics:   metrics.New("https://metrics.convox.com/metrics/rack"),
 	}
 
-	p.templater = templater.New(packr.NewBox("../k8s/template"), p.templateHelpers())
+	if err := p.Initialize(structs.ProviderOptions{}); err != nil {
+		return nil, err
+	}
 
 	return p, nil
 }
 
-func restConfig() (*rest.Config, error) {
-	if c, err := rest.InClusterConfig(); err == nil {
-		return c, nil
-	}
-
-	data, err := exec.Command("kubectl", "config", "view", "--raw").CombinedOutput()
-	if err != nil {
-		return nil, err
-	}
-
-	cfg, err := clientcmd.NewClientConfigFromBytes(data)
-	if err != nil {
-		return nil, err
-	}
-
-	c, err := cfg.ClientConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	return c, nil
+func (p *Provider) Context() context.Context {
+	return p.ctx
 }
 
 func (p *Provider) Initialize(opts structs.ProviderOptions) error {
+	p.ctx = context.Background()
+	p.logger = logger.New("ns=k8s")
+	p.metrics = metrics.New("https://metrics.convox.com/metrics/rack")
+	p.templater = templater.New(packr.NewBox("../k8s/template"), p.templateHelpers())
+
+	return nil
+}
+
+func (p *Provider) Start() error {
 	log := p.logger.At("Initialize")
 
 	dc, err := NewDeploymentController(p)
@@ -166,10 +155,6 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 	go common.Tick(1*time.Hour, p.heartbeat)
 
 	return log.Success()
-}
-
-func (p *Provider) Context() context.Context {
-	return p.ctx
 }
 
 func (p *Provider) WithContext(ctx context.Context) structs.Provider {
@@ -220,4 +205,27 @@ func (p *Provider) heartbeat() error {
 	}
 
 	return nil
+}
+
+func restConfig() (*rest.Config, error) {
+	if c, err := rest.InClusterConfig(); err == nil {
+		return c, nil
+	}
+
+	data, err := exec.Command("kubectl", "config", "view", "--raw").CombinedOutput()
+	if err != nil {
+		return nil, err
+	}
+
+	cfg, err := clientcmd.NewClientConfigFromBytes(data)
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := cfg.ClientConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	return c, nil
 }

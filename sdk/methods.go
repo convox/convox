@@ -750,6 +750,11 @@ func (c *Client) ServiceUpdate(app string, name string, opts structs.ServiceUpda
 	return err
 }
 
+func (c *Client) Start() error {
+	err := fmt.Errorf("not available via api")
+	return err
+}
+
 func (c *Client) SystemGet() (*structs.System, error) {
 	var err error
 

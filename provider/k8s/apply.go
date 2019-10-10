@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/convox/convox/pkg/atom"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -17,11 +16,7 @@ func (p *Provider) Apply(namespace, name, version string, data []byte, labels st
 		return err
 	}
 
-	if p.atom != nil {
-		return p.atom.Apply(namespace, name, version, ldata, timeout)
-	}
-
-	return atom.Apply(namespace, name, version, ldata, timeout)
+	return p.Atom.Apply(namespace, name, version, ldata, timeout)
 }
 
 func (p *Provider) ApplyWait(namespace, name, version string, data []byte, labels string, timeout int32) error {
@@ -33,11 +28,7 @@ func (p *Provider) ApplyWait(namespace, name, version string, data []byte, label
 }
 
 func (p *Provider) AtomWait(namespace, name string) error {
-	if p.atom != nil {
-		return p.atom.Wait(namespace, name)
-	}
-
-	return atom.Wait(namespace, name)
+	return p.Atom.Wait(namespace, name)
 }
 
 func Apply(data []byte, args ...string) error {

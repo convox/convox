@@ -4,6 +4,7 @@ var routes = map[string]string{}
 
 func init() {
 	routes["Initialize"] = ""
+	routes["Start"] = ""
 	routes["AppCancel"] = "POST /apps/{name}/cancel"
 	routes["AppCreate"] = "POST /apps"
 	routes["AppDelete"] = "DELETE /apps/{name}"

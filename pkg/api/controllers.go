@@ -1114,6 +1114,10 @@ func (s *Server) ServiceUpdate(c *stdapi.Context) error {
 	return c.RenderOK()
 }
 
+func (s *Server) Start(c *stdapi.Context) error {
+	return stdapi.Errorf(404, "not available via api")
+}
+
 func (s *Server) SystemGet(c *stdapi.Context) error {
 	if err := s.hook("SystemGetValidate", c); err != nil {
 		return err
