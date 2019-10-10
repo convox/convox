@@ -26,6 +26,7 @@ type Engine interface {
 	AppIdles(app string) (bool, error)
 	AppStatus(app string) (string, error)
 	Heartbeat() (map[string]interface{}, error)
+	IngressAnnotations(app string) (map[string]string, error)
 	Log(app, stream string, ts time.Time, message string) error
 	ReleasePromote(app, id string, opts structs.ReleasePromoteOptions) error
 	RepositoryAuth(app string) (string, string, error)

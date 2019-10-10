@@ -121,16 +121,22 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		vs = append(vs, s)
 	}
 
+	ias, err := p.Engine.IngressAnnotations(app)
+	if err != nil {
+		return err
+	}
+
 	params := map[string]interface{}{
-		"App":       a,
-		"Idles":     common.DefaultBool(opts.Idle, idles),
-		"Manifest":  m,
-		"Name":      a.Name,
-		"Namespace": p.AppNamespace(a.Name),
-		"Rack":      p.Name,
-		"Release":   r,
-		"Services":  sps,
-		"Volumes":   vs,
+		"App":                a,
+		"IngressAnnotations": ias,
+		"Idles":              common.DefaultBool(opts.Idle, idles),
+		"Manifest":           m,
+		"Name":               a.Name,
+		"Namespace":          p.AppNamespace(a.Name),
+		"Rack":               p.Name,
+		"Release":            r,
+		"Services":           sps,
+		"Volumes":            vs,
 	}
 
 	data, err := p.RenderTemplate("app/app", params)

@@ -10,6 +10,9 @@ metadata:
     {{ range .Services }}
     convox.ingress.service.{{.Name}}.3000.protocol: {{.Port.Scheme}}
     {{ end }}
+    {{ range $k, $v := .IngressAnnotations }}
+    {{$k}}: {{ safe $v }}
+    {{ end }}
 spec:
   tls:
   - hosts:
