@@ -74,8 +74,10 @@ spec:
           value: app
         - name: POSTGRES_PASSWORD
           value: "{{.Password}}"
+        - name: PGDATA
+          value: /var/lib/postgresql/data/data
         volumeMounts:
-        - mountPath: /var/lib/postgresql
+        - mountPath: /var/lib/postgresql/data
           name: data
       volumes:
       - name: data
