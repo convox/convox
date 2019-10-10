@@ -1,18 +1,11 @@
 package k8s
 
 import (
-	"bytes"
 	"fmt"
 	"io"
-	"os/exec"
 
-	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/structs"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-var (
-	systemTemplates = []string{"custom", "metrics", "rack", "router"}
 )
 
 func (p *Provider) SystemGet() (*structs.System, error) {
@@ -46,13 +39,7 @@ func (p *Provider) SystemGet() (*structs.System, error) {
 }
 
 func (p *Provider) SystemInstall(w io.Writer, opts structs.SystemInstallOptions) (string, error) {
-	version := common.DefaultString(opts.Version, "dev")
-
-	if err := p.systemUpdate(version); err != nil {
-		return "", err
-	}
-
-	return "", nil
+	return "", fmt.Errorf("unimplemented")
 }
 
 func (p *Provider) SystemLogs(opts structs.LogsOptions) (io.ReadCloser, error) {
@@ -111,64 +98,6 @@ func (p *Provider) SystemUninstall(name string, w io.Writer, opts structs.System
 	return fmt.Errorf("unimplemented")
 }
 
-func (p *Provider) SystemTemplate(version string) ([]byte, error) {
-	params := map[string]interface{}{
-		"Version": version,
-	}
-
-	ts := [][]byte{}
-
-	for _, st := range systemTemplates {
-		data, err := p.RenderTemplate(fmt.Sprintf("system/%s", st), params)
-		if err != nil {
-			return nil, err
-		}
-
-		ldata, err := ApplyLabels(data, "system=convox,provider=k8s")
-		if err != nil {
-			return nil, err
-		}
-
-		ts = append(ts, ldata)
-	}
-
-	return bytes.Join(ts, []byte("---\n")), nil
-}
-
-func (p *Provider) SystemTemplateLocal(provider, version string) ([]byte, error) {
-	data, err := exec.Command("go", "run", "cmd/template/main.go", provider, version).CombinedOutput()
-	if err != nil {
-		return nil, err
-	}
-
-	return data, nil
-}
-
-func (p *Provider) SystemTemplateRemote(provider, version string) ([]byte, error) {
-	template := fmt.Sprintf("https://convox.s3.amazonaws.com/release/%s/provider/%s/k8s/rack.yml", version, provider)
-
-	data, err := common.Get(template)
-	if err != nil {
-		return nil, err
-	}
-
-	return data, nil
-}
-
 func (p *Provider) SystemUpdate(opts structs.SystemUpdateOptions) error {
-	version := common.DefaultString(opts.Version, p.Version)
-
-	if err := p.systemUpdate(version); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (p *Provider) systemUpdate(version string) error {
-	// if err := p.initializeAtom(); err != nil {
-	// 	return err
-	// }
-
-	return nil
+	return fmt.Errorf("unimplemented")
 }

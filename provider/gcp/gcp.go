@@ -52,7 +52,7 @@ func FromEnv() (*Provider, error) {
 
 	p.Key = key
 
-	p.templater = templater.New(packr.NewBox("../aws/template"), p.templateHelpers())
+	p.templater = templater.New(packr.NewBox("../gcp/template"), p.templateHelpers())
 
 	k.Engine = p
 

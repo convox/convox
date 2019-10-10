@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -46,15 +45,6 @@ func (p *Provider) watchForProcessTermination(ctx context.Context, app, pid stri
 			}
 		}
 	}
-}
-
-func cloudformationErrorNoUpdates(err error) bool {
-	if ae, ok := err.(awserr.Error); ok {
-		if ae.Code() == "ValidationError" && strings.Contains(ae.Message(), "No updates are to be performed") {
-			return true
-		}
-	}
-	return false
 }
 
 func kubectl(args ...string) error {

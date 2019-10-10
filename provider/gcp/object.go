@@ -114,29 +114,6 @@ func (p *Provider) objectKey(app, key string) string {
 	return fmt.Sprintf("%s/%s", app, strings.TrimPrefix(key, "/"))
 }
 
-// func (p *Provider) objectPresignedURL(o *structs.Object, duration time.Duration) (string, error) {
-//   ou, err := url.Parse(o.Url)
-//   if err != nil {
-//     return "", err
-//   }
-
-//   if ou.Scheme != "object" {
-//     return "", fmt.Errorf("url is not an object: %s", o.Url)
-//   }
-
-//   req, _ := p.S3.GetObjectRequest(&s3.GetObjectInput{
-//     Bucket: aws.String(p.Bucket),
-//     Key:    aws.String(p.objectKey(ou.Hostname(), ou.Path)),
-//   })
-
-//   su, err := req.Presign(duration)
-//   if err != nil {
-//     return "", err
-//   }
-
-//   return su, nil
-// }
-
 func generateTempKey() (string, error) {
 	data := make([]byte, 1024)
 
