@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -206,7 +207,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		b = bb
 	}
 
-	senv, err := p.systemEnvironment(app, r.Id)
+	sysenv, err := p.systemEnvironment(app, r.Id)
 	if err != nil {
 		return err
 	}
@@ -230,11 +231,19 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 
 		replicas := common.CoalesceInt(sc[s.Name], s.Scale.Count.Min)
 
+		svcenv := e
+
+		if _, ok := svcenv["PORT"]; !ok {
+			if s.Port.Port > 0 {
+				svcenv["PORT"] = strconv.Itoa(s.Port.Port)
+			}
+		}
+
 		params := map[string]interface{}{
 			"App":            a,
 			"Build":          b,
 			"Development":    common.DefaultBool(opts.Development, false),
-			"Env":            e,
+			"Env":            svcenv,
 			"Manifest":       m,
 			"MaxSurge":       max,
 			"MaxUnavailable": 100 - min,
@@ -244,7 +253,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 			"Release":        r,
 			"Replicas":       replicas,
 			"Service":        s,
-			"SystemEnv":      senv,
+			"SystemEnv":      sysenv,
 		}
 
 		if ip, err := p.Engine.Resolver(); err == nil {
