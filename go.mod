@@ -9,7 +9,6 @@ require (
 	github.com/aws/aws-sdk-go v1.21.10
 	github.com/convox/exec v0.0.0-20180905012044-cc13d277f897
 	github.com/convox/logger v0.0.0-20180522214415-e39179955b52
-	github.com/convox/rack v0.0.0-20191009130420-3e960392a5de // indirect
 	github.com/convox/stdapi v0.0.0-20190708203955-b81b71b6a680
 	github.com/convox/stdsdk v0.0.0-20190422120437-3e80a397e377
 	github.com/docker/docker v1.4.2-0.20190710153559-aa8249ae1b8b
