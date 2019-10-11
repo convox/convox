@@ -3,7 +3,7 @@ kind: Namespace
 metadata:
   annotations:
     convox.com/lock: false
-    convox.com/params: '{"Test":"foo"}'
+    convox.com/params: '{"Test":"bar"}'
   labels:
     app: app1
     name: app1

@@ -53,7 +53,7 @@ func requireYamlFixture(t *testing.T, d1 []byte, filename string) {
 	r2, err := reformatYaml(d2)
 	require.NoError(t, err)
 
-	require.Equal(t, string(r1), string(r2))
+	require.Equal(t, string(r2), string(r1))
 }
 
 func testProvider(t *testing.T, fn func(*k8s.Provider)) {
@@ -65,7 +65,7 @@ func testProvider(t *testing.T, fn func(*k8s.Provider)) {
 		Cluster:   c,
 		Domain:    "domain1",
 		Engine:    &TestEngine{},
-		Name:      "name1",
+		Name:      "rack1",
 		Namespace: "ns1",
 		Provider:  "test",
 	}

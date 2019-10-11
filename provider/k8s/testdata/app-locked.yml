@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   annotations:
-    convox.com/lock: false
+    convox.com/lock: true
     convox.com/params: '{"Test":"foo"}'
   labels:
     app: app1

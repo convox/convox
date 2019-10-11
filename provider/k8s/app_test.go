@@ -5,8 +5,10 @@ import (
 	"testing"
 
 	"github.com/convox/convox/pkg/atom"
+	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/k8s"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	ac "k8s.io/api/core/v1"
@@ -20,10 +22,10 @@ func TestAppCancel(t *testing.T) {
 		aa := p.Atom.(*atom.MockInterface)
 		kk := p.Cluster.(*fake.Clientset)
 
-		require.NoError(t, appCreate(kk, "name1", "app1"))
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
 
-		aa.On("Status", "name1-app1", "app").Return("Running", "R1234567", nil).Once()
-		aa.On("Cancel", "name1-app1", "app").Return(nil).Once()
+		aa.On("Status", "rack1-app1", "app").Return("Running", "R1234567", nil).Once()
+		aa.On("Cancel", "rack1-app1", "app").Return(nil).Once()
 
 		err := p.AppCancel("app1")
 		require.NoError(t, err)
@@ -42,10 +44,10 @@ func TestAppCancelError(t *testing.T) {
 		aa := p.Atom.(*atom.MockInterface)
 		kk := p.Cluster.(*fake.Clientset)
 
-		require.NoError(t, appCreate(kk, "name1", "app1"))
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
 
-		aa.On("Status", "name1-app1", "app").Return("Running", "R1234567", nil).Once()
-		aa.On("Cancel", "name1-app1", "app").Return(fmt.Errorf("err1")).Once()
+		aa.On("Status", "rack1-app1", "app").Return("Running", "R1234567", nil).Once()
+		aa.On("Cancel", "rack1-app1", "app").Return(fmt.Errorf("err1")).Once()
 
 		err := p.AppCancel("app1")
 		require.EqualError(t, err, "err1")
@@ -57,10 +59,10 @@ func TestAppCancelInvalidState(t *testing.T) {
 		aa := p.Atom.(*atom.MockInterface)
 		kk := p.Cluster.(*fake.Clientset)
 
-		require.NoError(t, appCreate(kk, "name1", "app1"))
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
 
-		aa.On("Status", "name1-app1", "app").Return("Rollback", "R1234567", nil).Once()
-		aa.On("Cancel", "name1-app1", "app").Return(nil).Once()
+		aa.On("Status", "rack1-app1", "app").Return("Rollback", "R1234567", nil).Once()
+		aa.On("Cancel", "rack1-app1", "app").Return(nil).Once()
 
 		err := p.AppCancel("app1")
 		require.NoError(t, err)
@@ -70,22 +72,19 @@ func TestAppCancelInvalidState(t *testing.T) {
 func TestAppCreate(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		aa := p.Atom.(*atom.MockInterface)
-		kk := p.Cluster.(*fake.Clientset)
 
-		aa.On("Apply", "name1-app1", "app", "", mock.Anything, int32(30)).Return(nil).Once().Run(func(args mock.Arguments) {
+		aa.On("Apply", "rack1-app1", "app", "", mock.Anything, int32(30)).Return(nil).Once().Run(func(args mock.Arguments) {
 			requireYamlFixture(t, args.Get(3).([]byte), "app.yml")
-			require.NoError(t, appCreate(kk, "name1", "app1"))
 		})
 
-		aa.On("Wait", "name1-app1", "app").Return(nil).Once()
-		aa.On("Status", "name1-app1", "app").Return("Running", "R1234567", nil).Once()
+		aa.On("Status", "rack1-app1", "app").Return("Running", "R1234567", nil).Twice()
 
 		a, err := p.AppCreate("app1", structs.AppCreateOptions{})
 		require.NoError(t, err)
 		require.NotNil(t, a)
 
-		require.Equal(t, "2", a.Generation)
-		require.Equal(t, "app1", a.Name)
+		assert.Equal(t, "2", a.Generation)
+		assert.Equal(t, "app1", a.Name)
 	})
 }
 
@@ -94,15 +93,15 @@ func TestAppDelete(t *testing.T) {
 		aa := p.Atom.(*atom.MockInterface)
 		kk := p.Cluster.(*fake.Clientset)
 
-		require.NoError(t, appCreate(kk, "name1", "app1"))
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
 
-		aa.On("Status", "name1-app1", "app").Return("Running", "R1234567", nil).Once()
+		aa.On("Status", "rack1-app1", "app").Return("Running", "R1234567", nil).Once()
 
 		err := p.AppDelete("app1")
 		require.NoError(t, err)
 
-		_, err = kk.CoreV1().Namespaces().Get("name1-app1", am.GetOptions{})
-		require.EqualError(t, err, `namespaces "name1-app1" not found`)
+		_, err = kk.CoreV1().Namespaces().Get("rack1-app1", am.GetOptions{})
+		require.EqualError(t, err, `namespaces "rack1-app1" not found`)
 	})
 }
 
@@ -113,12 +112,166 @@ func TestAppDeleteMissingApp(t *testing.T) {
 	})
 }
 
+func TestAppGet(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		aa := p.Atom.(*atom.MockInterface)
+		kk := p.Cluster.(*fake.Clientset)
+
+		aa.On("Status", "rack1-app1", "app").Return("Success", "R1234567", nil).Once()
+
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		a, err := p.AppGet("app1")
+		require.NoError(t, err)
+
+		assert.Equal(t, "2", a.Generation)
+		assert.Equal(t, false, a.Locked)
+		assert.Equal(t, "app1", a.Name)
+		assert.Equal(t, "R1234567", a.Release)
+		assert.Equal(t, "", a.Router)
+		assert.Equal(t, "running", a.Status)
+	})
+}
+
+func TestAppGetMissing(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		a, err := p.AppGet("app1")
+		require.EqualError(t, err, "app not found: app1")
+		require.Nil(t, a)
+	})
+}
+
+func TestAppGetUpdating(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		aa := p.Atom.(*atom.MockInterface)
+		kk := p.Cluster.(*fake.Clientset)
+
+		aa.On("Status", "rack1-app1", "app").Return("Running", "", nil).Once()
+
+		ns := &ac.Namespace{
+			ObjectMeta: am.ObjectMeta{
+				Name: "rack1-app1",
+			},
+		}
+		_, err := kk.CoreV1().Namespaces().Create(ns)
+		require.NoError(t, err)
+
+		a, err := p.AppGet("app1")
+		require.NoError(t, err)
+		require.Equal(t, "updating", a.Status)
+	})
+}
+
+func TestAppList(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		aa := p.Atom.(*atom.MockInterface)
+		kk := p.Cluster.(*fake.Clientset)
+
+		aa.On("Status", "rack1-app1", "app").Return("Success", "R1234567", nil).Once()
+		aa.On("Status", "rack1-app2", "app").Return("Running", "R2345678", nil).Once()
+
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		require.NoError(t, appCreate(kk, "rack1", "app2"))
+
+		as, err := p.AppList()
+		require.NoError(t, err)
+		require.Equal(t, 2, len(as))
+
+		assert.Equal(t, "2", as[0].Generation)
+		assert.Equal(t, false, as[0].Locked)
+		assert.Equal(t, "app1", as[0].Name)
+		assert.Equal(t, "R1234567", as[0].Release)
+		assert.Equal(t, "", as[0].Router)
+		assert.Equal(t, "running", as[0].Status)
+
+		assert.Equal(t, "2", as[1].Generation)
+		assert.Equal(t, false, as[1].Locked)
+		assert.Equal(t, "app2", as[1].Name)
+		assert.Equal(t, "R2345678", as[1].Release)
+		assert.Equal(t, "", as[1].Router)
+		assert.Equal(t, "updating", as[1].Status)
+	})
+}
+
+func TestAppLogs(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		r, err := p.AppLogs("app1", structs.LogsOptions{})
+		require.EqualError(t, err, "unimplemented")
+		require.Nil(t, r)
+	})
+}
+
+func TestAppMetrics(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		ms, err := p.AppMetrics("app1", structs.MetricsOptions{})
+		require.EqualError(t, err, "unimplemented")
+		require.Nil(t, ms)
+	})
+}
+
+func TestAppNamespace(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		ns := p.AppNamespace("app1")
+		require.Equal(t, "rack1-app1", ns)
+	})
+}
+
+func TestAppUpdateLocked(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		aa := p.Atom.(*atom.MockInterface)
+		kk := p.Cluster.(*fake.Clientset)
+
+		aa.On("Apply", "rack1-app1", "app", "", mock.Anything, int32(30)).Return(nil).Once().Run(func(args mock.Arguments) {
+			requireYamlFixture(t, args.Get(3).([]byte), "app-locked.yml")
+		})
+
+		aa.On("Status", "rack1-app1", "app").Return("Success", "", nil).Twice()
+
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		err := p.AppUpdate("app1", structs.AppUpdateOptions{Lock: options.Bool(true)})
+		require.NoError(t, err)
+	})
+}
+
+func TestAppUpdateParameters(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		aa := p.Atom.(*atom.MockInterface)
+		kk := p.Cluster.(*fake.Clientset)
+
+		aa.On("Apply", "rack1-app1", "app", "", mock.Anything, int32(30)).Return(nil).Once().Run(func(args mock.Arguments) {
+			requireYamlFixture(t, args.Get(3).([]byte), "app-params.yml")
+		})
+
+		aa.On("Status", "rack1-app1", "app").Return("Success", "", nil).Twice()
+
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		err := p.AppUpdate("app1", structs.AppUpdateOptions{Parameters: map[string]string{"Test": "bar"}})
+		require.NoError(t, err)
+	})
+}
+
+func TestAppUpdateExistingRelease(t *testing.T) {
+	t.Skip("implement after testing releases")
+}
+
+func TestAppUpdateMissing(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		err := p.AppUpdate("app1", structs.AppUpdateOptions{Lock: options.Bool(true)})
+		require.EqualError(t, err, "app not found: app1")
+	})
+}
+
 func appCreate(c kubernetes.Interface, rack, name string) error {
 	_, err := c.CoreV1().Namespaces().Create(&ac.Namespace{
 		ObjectMeta: am.ObjectMeta{
 			Name: fmt.Sprintf("%s-%s", rack, name),
 			Labels: map[string]string{
-				"name": name,
+				"name":   name,
+				"rack":   rack,
+				"system": "convox",
+				"type":   "app",
 			},
 		},
 	})
