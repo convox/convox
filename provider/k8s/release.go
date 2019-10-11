@@ -83,6 +83,31 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		return err
 	}
 
+	items := [][]byte{}
+
+	idles, err := p.Engine.AppIdles(a.Name)
+	if err != nil {
+		return err
+	}
+
+	params := map[string]interface{}{
+		"App":        a,
+		"Idles":      common.DefaultBool(opts.Idle, idles),
+		"Locked":     a.Locked,
+		"Name":       a.Name,
+		"Namespace":  p.AppNamespace(a.Name),
+		"Parameters": a.Parameters,
+		"Rack":       p.Name,
+	}
+
+	data, err := p.RenderTemplate("app/app", params)
+	if err != nil {
+		return err
+	}
+
+	items = append(items, data)
+
+	if id != "" {
 	m, r, err := common.ReleaseManifest(p, app, id)
 	if err != nil {
 		return err
@@ -90,13 +115,6 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 
 	e := structs.Environment{}
 	e.Load([]byte(r.Env))
-
-	items := [][]byte{}
-
-	idles, err := p.Engine.AppIdles(a.Name)
-	if err != nil {
-		return err
-	}
 
 	sps := manifest.Services{}
 
@@ -127,7 +145,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		return err
 	}
 
-	params := map[string]interface{}{
+	params = map[string]interface{}{
 		"App":                a,
 		"IngressAnnotations": ias,
 		"Idles":              common.DefaultBool(opts.Idle, idles),
@@ -139,13 +157,6 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		"Services":           sps,
 		"Volumes":            vs,
 	}
-
-	data, err := p.RenderTemplate("app/app", params)
-	if err != nil {
-		return err
-	}
-
-	items = append(items, data)
 
 	if ca, err := p.Cluster.CoreV1().Secrets("convox-system").Get("ca", am.GetOptions{}); err == nil {
 		params["CA"] = base64.StdEncoding.EncodeToString(ca.Data["tls.crt"])
@@ -294,12 +305,13 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 
 		items = append(items, data)
 	}
+}
 
 	tdata := bytes.Join(items, []byte("---\n"))
 
 	timeout := int32(common.DefaultInt(opts.Timeout, 1800))
 
-	if err := p.Apply(p.AppNamespace(app), "app", r.Id, tdata, fmt.Sprintf("system=convox,provider=k8s,rack=%s,app=%s,release=%s", p.Name, app, r.Id), timeout); err != nil {
+	if err := p.Apply(p.AppNamespace(app), "app", id, tdata, fmt.Sprintf("system=convox,provider=k8s,rack=%s,app=%s,release=%s", p.Name, app, id), timeout); err != nil {
 		return err
 	}
 

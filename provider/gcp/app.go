@@ -2,53 +2,28 @@ package gcp
 
 import (
 	"github.com/convox/convox/pkg/structs"
+	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*structs.App, error) {
-	a, err := p.Provider.AppCreate(name, opts)
+func (p *Provider) AppGet(name string) (*structs.App, error) {
+	a, err := p.Provider.AppGet(name)
 	if err != nil {
 		return nil, err
 	}
 
-	// res, err := p.ECR.CreateRepository(&ecr.CreateRepositoryInput{
-	// 	RepositoryName: aws.String(fmt.Sprintf("%s/%s", p.Name, name)),
-	// })
-	// if err != nil {
-	// 	return nil, err
-	// }
+	switch a.Parameters["Router"] {
+	case "dedicated":
+		ing, err := p.Cluster.ExtensionsV1beta1().Ingresses(p.AppNamespace(a.Name)).Get(a.Name, am.GetOptions{})
+		if err != nil {
+			return nil, err
+		}
 
-	// ns, err := p.Provider.Cluster.CoreV1().Namespaces().Get(p.AppNamespace(name), am.GetOptions{})
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// if ns.ObjectMeta.Annotations == nil {
-	// 	ns.ObjectMeta.Annotations = map[string]string{}
-	// }
-
-	// ns.ObjectMeta.Annotations["convox.registry"] = *res.Repository.RepositoryUri
-
-	// if _, err := p.Provider.Cluster.CoreV1().Namespaces().Update(ns); err != nil {
-	// 	return nil, err
-	// }
+		if len(ing.Status.LoadBalancer.Ingress) > 0 {
+			a.Router = ing.Status.LoadBalancer.Ingress[0].IP
+		}
+	}
 
 	return a, nil
-}
-
-func (p *Provider) AppDelete(name string) error {
-	// _, err := p.ECR.DeleteRepository(&ecr.DeleteRepositoryInput{
-	// 	Force:          aws.Bool(true),
-	// 	RepositoryName: aws.String(fmt.Sprintf("%s/%s", p.Name, name)),
-	// })
-	// if err != nil {
-	// 	switch common.AwsErrorCode(err) {
-	// 	case "RepositoryNotFoundException":
-	// 	default:
-	// 		return err
-	// 	}
-	// }
-
-	return p.Provider.AppDelete(name)
 }
 
 func (p *Provider) AppIdles(name string) (bool, error) {

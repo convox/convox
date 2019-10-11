@@ -1,5 +1,19 @@
 package gcp
 
 func (p *Provider) IngressAnnotations(app string) (map[string]string, error) {
-	return map[string]string{"kubernetes.io/ingress.class": "convox"}, nil
+	a, err := p.AppGet(app)
+	if err != nil {
+		return nil, err
+	}
+
+	ans := map[string]string{
+		"kubernetes.io/ingress.class": "convox",
+	}
+
+	switch a.Parameters["Router"] {
+	case "dedicated":
+		ans["kubernetes.io/ingress.class"] = "gce"
+	}
+
+	return ans, nil
 }

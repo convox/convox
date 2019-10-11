@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"github.com/convox/convox/pkg/common"
+	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	ac "k8s.io/api/core/v1"
 	ae "k8s.io/apimachinery/pkg/api/errors"
@@ -29,12 +30,30 @@ func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*struc
 		return nil, err
 	}
 
+	ns := &ac.Namespace{
+		ObjectMeta: am.ObjectMeta{
+			Name: p.AppNamespace(name),
+			Labels: map[string]string{
+				"name": name,
+				"type": "app",
+			},
+		},
+	}
+
+	if _, err := p.Cluster.CoreV1().Namespaces().Create(ns); err != nil {
+		return nil, err
+	}
+
 	a := &structs.App{
 		Name:       name,
 		Parameters: p.Engine.AppParameters(),
 	}
 
-	if err := p.appApply(a); err != nil {
+	if err := p.appUpdate(a); err != nil {
+		return nil, err
+	}
+
+	if err := p.ReleasePromote(a.Name, "", structs.ReleasePromoteOptions{Timeout: options.Int(30)}); err != nil {
 		return nil, err
 	}
 
@@ -47,8 +66,13 @@ func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*struc
 }
 
 func (p *Provider) AppDelete(name string) error {
-	if _, err := p.AppGet(name); err != nil {
+	a, err := p.AppGet(name)
+	if err != nil {
 		return err
+	}
+
+	if a.Locked {
+		return fmt.Errorf("app is locked: %s", name)
 	}
 
 	if err := p.Cluster.CoreV1().Namespaces().Delete(p.AppNamespace(name), nil); err != nil {
@@ -124,45 +148,17 @@ func (p *Provider) AppUpdate(name string, opts structs.AppUpdateOptions) error {
 		a.Locked = *opts.Lock
 	}
 
-	dps := p.Engine.AppParameters()
-
 	if opts.Parameters != nil {
-		for k, v := range opts.Parameters {
-			if _, ok := dps[k]; !ok {
-				return fmt.Errorf("invalid parameter: %s", k)
-			}
-
-			a.Parameters[k] = v
-		}
-	}
-
-	if err := p.appApply(a); err != nil {
-		return err
-	}
-
-	if a.Release != "" {
-		if err := p.ReleasePromote(a.Name, a.Release, structs.ReleasePromoteOptions{}); err != nil {
+		if err := p.appParametersUpdate(a, opts.Parameters); err != nil {
 			return err
 		}
 	}
 
-	return nil
-}
-
-func (p *Provider) appApply(a *structs.App) error {
-	params := map[string]interface{}{
-		"Name":      a.Name,
-		"Namespace": p.AppNamespace(a.Name),
-		"Params":    a.Parameters,
-		"Rack":      p.Name,
-	}
-
-	data, err := p.RenderTemplate("app/app", params)
-	if err != nil {
+	if err := p.appUpdate(a); err != nil {
 		return err
 	}
 
-	if err := p.ApplyWait(p.AppNamespace(a.Name), "app", "", data, fmt.Sprintf("system=convox,provider=k8s,rack=%s,app=%s", p.Name, a.Name), 30); err != nil {
+	if err := p.ReleasePromote(a.Name, a.Release, structs.ReleasePromoteOptions{Timeout: options.Int(30)}); err != nil {
 		return err
 	}
 
@@ -178,6 +174,10 @@ func (p *Provider) appFromNamespace(ns ac.Namespace) (*structs.App, error) {
 	}
 
 	status := common.AtomStatus(as)
+
+	if ns.Annotations == nil {
+		ns.Annotations = map[string]string{}
+	}
 
 	a := &structs.App{
 		Generation: "2",
@@ -226,6 +226,46 @@ func (p *Provider) appNameValidate(name string) error {
 
 	if _, err := p.Cluster.CoreV1().Namespaces().Get(p.AppNamespace(name), am.GetOptions{}); !ae.IsNotFound(err) {
 		return fmt.Errorf("app already exists: %s", name)
+	}
+
+	return nil
+}
+
+func (p *Provider) appParametersUpdate(a *structs.App, params map[string]string) error {
+	defs := p.Engine.AppParameters()
+
+	for k, v := range params {
+		if _, ok := defs[k]; !ok {
+			return fmt.Errorf("invalid parameter: %s", k)
+		}
+
+		a.Parameters[k] = v
+	}
+
+	return nil
+}
+
+func (p *Provider) appUpdate(a *structs.App) error {
+	ns, err := p.Cluster.CoreV1().Namespaces().Get(p.AppNamespace(a.Name), am.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	if ns.Annotations == nil {
+		ns.Annotations = map[string]string{}
+	}
+
+	ns.Annotations["convox.com/lock"] = fmt.Sprintf("%t", a.Locked)
+
+	data, err := json.Marshal(a.Parameters)
+	if err != nil {
+		return err
+	}
+
+	ns.Annotations["convox.com/params"] = string(data)
+
+	if _, err := p.Cluster.CoreV1().Namespaces().Update(ns); err != nil {
+		return err
 	}
 
 	return nil
