@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"reflect"
+	"time"
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/options"
@@ -266,6 +268,19 @@ func (p *Provider) appUpdate(a *structs.App) error {
 
 	if _, err := p.Cluster.CoreV1().Namespaces().Update(ns); err != nil {
 		return err
+	}
+
+	for {
+		nsn, err := p.Cluster.CoreV1().Namespaces().Get(ns.Name, am.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		if reflect.DeepEqual(nsn.Annotations, ns.Annotations) {
+			break
+		}
+
+		time.Sleep(1 * time.Second)
 	}
 
 	return nil
