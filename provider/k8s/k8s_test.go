@@ -2,12 +2,15 @@ package k8s_test
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/convox/convox/pkg/atom"
+	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/k8s"
 	"github.com/stretchr/testify/require"
@@ -61,8 +64,10 @@ func testProvider(t *testing.T, fn func(*k8s.Provider)) {
 		Atom:      a,
 		Cluster:   c,
 		Domain:    "domain1",
+		Engine:    &TestEngine{},
 		Name:      "name1",
 		Namespace: "ns1",
+		Provider:  "test",
 	}
 
 	err := p.Initialize(structs.ProviderOptions{})
@@ -86,4 +91,59 @@ func testProviderManual(t *testing.T, fn func(*k8s.Provider, *fake.Clientset)) {
 	}
 
 	fn(p, c)
+}
+
+type TestEngine struct {
+}
+
+func (tr *TestEngine) AppIdles(app string) (bool, error) {
+	return false, nil
+}
+
+func (te *TestEngine) AppParameters() map[string]string {
+	return map[string]string{"Test": "foo"}
+}
+
+func (te *TestEngine) AppStatus(app string) (string, error) {
+	return "statusing", nil
+}
+
+func (te *TestEngine) Heartbeat() (map[string]interface{}, error) {
+	return map[string]interface{}{"foo": "bar"}, nil
+}
+
+func (te *TestEngine) IngressAnnotations(app string) (map[string]string, error) {
+	return map[string]string{"ann1": "val1"}, nil
+}
+
+func (te *TestEngine) Log(app, stream string, ts time.Time, message string) error {
+	return nil
+}
+
+func (te *TestEngine) ManifestValidate(m *manifest.Manifest) error {
+	return nil
+}
+
+func (te *TestEngine) RepositoryAuth(app string) (string, string, error) {
+	return "un1", "pw1", nil
+}
+
+func (te *TestEngine) RepositoryHost(app string) (string, bool, error) {
+	return "repo1", true, nil
+}
+
+func (te *TestEngine) Resolver() (string, error) {
+	return "", fmt.Errorf("no resolver")
+}
+
+func (te *TestEngine) ServiceHost(app string, s manifest.Service) string {
+	return "service.host"
+}
+
+func (te *TestEngine) SystemHost() string {
+	return "system.host"
+}
+
+func (te *TestEngine) SystemStatus() (string, error) {
+	return "amazing", nil
 }

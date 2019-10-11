@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 
@@ -28,22 +29,21 @@ func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*struc
 		return nil, err
 	}
 
-	params := map[string]interface{}{
-		"Name":      name,
-		"Namespace": p.AppNamespace(name),
-		"Rack":      p.Name,
+	a := &structs.App{
+		Name:       name,
+		Parameters: p.Engine.AppParameters(),
 	}
 
-	data, err := p.RenderTemplate("app/app", params)
+	if err := p.appApply(a); err != nil {
+		return nil, err
+	}
+
+	a, err := p.AppGet(name)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := p.ApplyWait(p.AppNamespace(name), "app", "", data, fmt.Sprintf("system=convox,provider=k8s,rack=%s,app=%s", p.Name, name), 30); err != nil {
-		return nil, err
-	}
-
-	return p.AppGet(name)
+	return a, nil
 }
 
 func (p *Provider) AppDelete(name string) error {
@@ -115,7 +115,58 @@ func (p *Provider) AppNamespace(app string) string {
 }
 
 func (p *Provider) AppUpdate(name string, opts structs.AppUpdateOptions) error {
-	return fmt.Errorf("unimplemented")
+	a, err := p.AppGet(name)
+	if err != nil {
+		return err
+	}
+
+	if opts.Lock != nil {
+		a.Locked = *opts.Lock
+	}
+
+	dps := p.Engine.AppParameters()
+
+	if opts.Parameters != nil {
+		for k, v := range opts.Parameters {
+			if _, ok := dps[k]; !ok {
+				return fmt.Errorf("invalid parameter: %s", k)
+			}
+
+			a.Parameters[k] = v
+		}
+	}
+
+	if err := p.appApply(a); err != nil {
+		return err
+	}
+
+	if a.Release != "" {
+		if err := p.ReleasePromote(a.Name, a.Release, structs.ReleasePromoteOptions{}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (p *Provider) appApply(a *structs.App) error {
+	params := map[string]interface{}{
+		"Name":      a.Name,
+		"Namespace": p.AppNamespace(a.Name),
+		"Params":    a.Parameters,
+		"Rack":      p.Name,
+	}
+
+	data, err := p.RenderTemplate("app/app", params)
+	if err != nil {
+		return err
+	}
+
+	if err := p.ApplyWait(p.AppNamespace(a.Name), "app", "", data, fmt.Sprintf("system=convox,provider=k8s,rack=%s,app=%s", p.Name, a.Name), 30); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (p *Provider) appFromNamespace(ns ac.Namespace) (*structs.App, error) {
@@ -130,11 +181,34 @@ func (p *Provider) appFromNamespace(ns ac.Namespace) (*structs.App, error) {
 
 	a := &structs.App{
 		Generation: "2",
+		Locked:     ns.Annotations["convox.com/lock"] == "true",
 		Name:       name,
 		Release:    release,
 		Router:     p.Router,
 		Status:     status,
 	}
+
+	var params map[string]string
+
+	if data, ok := ns.Annotations["convox.com/params"]; ok && data > "" {
+		if err := json.Unmarshal([]byte(data), &params); err != nil {
+			return nil, err
+		}
+	}
+
+	if params == nil {
+		params = map[string]string{}
+	}
+
+	defparams := p.Engine.AppParameters()
+
+	for k, v := range defparams {
+		if _, ok := params[k]; !ok {
+			params[k] = v
+		}
+	}
+
+	a.Parameters = params
 
 	switch ns.Status.Phase {
 	case "Terminating":

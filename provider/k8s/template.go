@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"sort"
@@ -72,6 +73,13 @@ func (p *Provider) templateHelpers() template.FuncMap {
 				return "", err
 			}
 			return fmt.Sprintf("%s:%s.%s", repo, s.Name, r.Build), nil
+		},
+		"json": func(v interface{}) (string, error) {
+			data, err := json.Marshal(v)
+			if err != nil {
+				return "", err
+			}
+			return string(data), nil
 		},
 		"lower": func(s string) string {
 			return strings.ToLower(s)
