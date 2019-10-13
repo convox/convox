@@ -2,7 +2,6 @@ package k8s
 
 import (
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 
@@ -27,8 +26,8 @@ func (p *Provider) CertificateCreate(pub, key string, opts structs.CertificateCr
 			},
 		},
 		Data: map[string][]byte{
-			"tls.crt": []byte(base64.StdEncoding.EncodeToString([]byte(pub + common.DefaultString(opts.Chain, "")))),
-			"tls.key": []byte(base64.StdEncoding.EncodeToString([]byte(key))),
+			"tls.crt": []byte(fmt.Sprintf("%s\n%s", pub, common.DefaultString(opts.Chain, ""))),
+			"tls.key": []byte(key),
 		},
 		Type: "kubernetes.io/tls",
 	})
@@ -98,17 +97,12 @@ func (p *Provider) CertificateList() (structs.Certificates, error) {
 }
 
 func (p *Provider) certificateFromSecret(s *ac.Secret) (*structs.Certificate, error) {
-	cert, ok := s.Data["tls.crt"]
+	crt, ok := s.Data["tls.crt"]
 	if !ok {
 		return nil, fmt.Errorf("invalid certificate: %s", s.ObjectMeta.Name)
 	}
 
-	data, err := base64.StdEncoding.DecodeString(string(cert))
-	if err != nil {
-		return nil, err
-	}
-
-	pb, _ := pem.Decode(data)
+	pb, _ := pem.Decode(crt)
 
 	if pb.Type != "CERTIFICATE" {
 		return nil, fmt.Errorf("invalid certificate: %s", s.ObjectMeta.Name)

@@ -48,8 +48,6 @@ github.com/convox/exec v0.0.0-20180905012044-cc13d277f897 h1:8SnSpocZ8I5RlRo8NFK
 github.com/convox/exec v0.0.0-20180905012044-cc13d277f897/go.mod h1:GAxysqvg1ZSl42aLnvLXmFkXkacF4AGql5ZKT7s1DGc=
 github.com/convox/logger v0.0.0-20180522214415-e39179955b52 h1:HTaloo6by+4NE1A1mRYprWzsOy1PGH2tPGfgZ60dyHU=
 github.com/convox/logger v0.0.0-20180522214415-e39179955b52/go.mod h1:IcbSD+Pq+bQV2z/otiMCHLAYBrDR/jPFopFatrWjlMM=
-github.com/convox/rack v0.0.0-20191009130420-3e960392a5de h1:TpX6qZLEqpO+Yd+fQ5TSw69CIlXn2S5fNgtvfA9tCnE=
-github.com/convox/rack v0.0.0-20191009130420-3e960392a5de/go.mod h1:2dMGMyJnGzN0JlFFyaXzm+hK47fzNAhBvU9uqJy47jg=
 github.com/convox/stdapi v0.0.0-20190708203955-b81b71b6a680 h1:IRgaDO4+YanUYcvBlXkzJrgwFh/3BcQOYoI5gEUz2wQ=
 github.com/convox/stdapi v0.0.0-20190708203955-b81b71b6a680/go.mod h1:NkUGoKf5tAaHq7MW02AF9mSXSIHCZJ0ZG8+NqRI5t38=
 github.com/convox/stdsdk v0.0.0-20190422120437-3e80a397e377 h1:PuSJ72MD0mYsMCTvTQ1YydIbQUWtEykNHyweI/vA0PY=

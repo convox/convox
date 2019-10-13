@@ -9,7 +9,6 @@ import (
 
 	"github.com/convox/convox/pkg/atom"
 	"github.com/convox/convox/pkg/common"
-	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/metrics"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/pkg/templater"
@@ -21,22 +20,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
-
-type Engine interface {
-	AppIdles(app string) (bool, error)
-	AppParameters() map[string]string
-	AppStatus(app string) (string, error)
-	Heartbeat() (map[string]interface{}, error)
-	IngressAnnotations(app string) (map[string]string, error)
-	Log(app, stream string, ts time.Time, message string) error
-	ManifestValidate(m *manifest.Manifest) error
-	RepositoryAuth(app string) (string, string, error)
-	RepositoryHost(app string) (string, bool, error)
-	Resolver() (string, error)
-	ServiceHost(app string, s manifest.Service) string
-	SystemHost() string
-	SystemStatus() (string, error)
-}
 
 type Provider struct {
 	Atom      atom.Interface
