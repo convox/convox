@@ -12,7 +12,11 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/convox/convox/pkg/manifest"
+	"github.com/convox/convox/pkg/structs"
 	cv "github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned"
+	ae "k8s.io/apimachinery/pkg/api/errors"
+	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -22,6 +26,79 @@ const (
 
 func (p *Provider) convoxClient() (cv.Interface, error) {
 	return cv.NewForConfig(p.Config)
+}
+
+func (p *Provider) ingressSecrets(a *structs.App, ss manifest.Services) (map[string]string, error) {
+	domains := map[string]bool{}
+
+	for _, s := range ss {
+		for _, d := range s.Domains {
+			domains[d] = false
+		}
+	}
+
+	cs, err := p.CertificateList()
+	if err != nil {
+		return nil, err
+	}
+
+	sort.Slice(cs, func(i, j int) bool { return cs[i].Expiration.After(cs[i].Expiration) })
+
+	secrets := map[string]string{}
+
+	for _, c := range cs {
+		count := 0
+
+		for _, d := range c.Domains {
+			if v, ok := domains[d]; ok && !v {
+				domains[d] = true
+				count++
+			}
+		}
+
+		if count > 0 {
+			for _, d := range c.Domains {
+				secrets[d] = c.Id
+			}
+		}
+	}
+
+	for d, matched := range domains {
+		if !matched {
+			c, err := p.CertificateGenerate([]string{d})
+			if err != nil {
+				return nil, err
+			}
+
+			secrets[d] = c.Id
+		}
+	}
+
+	ids := map[string]bool{}
+
+	for _, id := range secrets {
+		ids[id] = true
+	}
+
+	for id := range ids {
+		if _, err := p.Cluster.CoreV1().Secrets(p.AppNamespace(a.Name)).Get(id, am.GetOptions{}); ae.IsNotFound(err) {
+
+			kc, err := p.Cluster.CoreV1().Secrets(p.Namespace).Get(id, am.GetOptions{})
+			if err != nil {
+				return nil, err
+			}
+
+			kc.ObjectMeta.Namespace = p.AppNamespace(a.Name)
+			kc.ResourceVersion = ""
+			kc.UID = ""
+
+			if _, err := p.Cluster.CoreV1().Secrets(p.AppNamespace(a.Name)).Create(kc); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return secrets, nil
 }
 
 func (p *Provider) systemEnvironment(app, release string) (map[string]string, error) {
