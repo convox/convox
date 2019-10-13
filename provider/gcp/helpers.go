@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	// gv "github.com/GoogleCloudPlatform/gke-managed-certs/pkg/clientgen/clientset/versioned"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -26,6 +27,10 @@ func (p *Provider) appRegistry(app string) (string, error) {
 
 	return registry, nil
 }
+
+// func (p *Provider) gkeManagedCertsClient() (gv.Interface, error) {
+// 	return gv.NewForConfig(p.Config)
+// }
 
 func (p *Provider) watchForProcessTermination(ctx context.Context, app, pid string, cancel func()) {
 	defer cancel()

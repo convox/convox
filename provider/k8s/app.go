@@ -182,7 +182,7 @@ func (p *Provider) appFromNamespace(ns ac.Namespace) (*structs.App, error) {
 	}
 
 	a := &structs.App{
-		Generation: "2",
+		Generation: "3",
 		Locked:     ns.Annotations["convox.com/lock"] == "true",
 		Name:       name,
 		Release:    release,

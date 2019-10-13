@@ -11,6 +11,16 @@ import (
 // Environment is of type map used to store environment variables.
 type Environment map[string]string
 
+func NewEnvironment(data []byte) (Environment, error) {
+	e := Environment{}
+
+	if err := e.Load(data); err != nil {
+		return nil, err
+	}
+
+	return e, nil
+}
+
 func (e Environment) Load(data []byte) error {
 	scanner := bufio.NewScanner(bytes.NewReader(data))
 

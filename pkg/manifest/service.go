@@ -159,3 +159,15 @@ func (s Service) Autoscale() bool {
 
 	return false
 }
+
+func (ss Services) Routable() Services {
+	rss := Services{}
+
+	for _, s := range ss {
+		if s.Port.Port > 0 {
+			rss = append(rss, s)
+		}
+	}
+
+	return rss
+}

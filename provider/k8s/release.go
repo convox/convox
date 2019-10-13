@@ -15,6 +15,7 @@ import (
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	ca "github.com/convox/convox/provider/k8s/pkg/apis/convox/v1"
+	v1 "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -85,227 +86,86 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 
 	items := [][]byte{}
 
-	idles, err := p.Engine.AppIdles(a.Name)
-	if err != nil {
-		return err
-	}
-
-	params := map[string]interface{}{
-		"App":        a,
-		"Idles":      common.DefaultBool(opts.Idle, idles),
-		"Locked":     a.Locked,
-		"Name":       a.Name,
-		"Namespace":  p.AppNamespace(a.Name),
-		"Parameters": a.Parameters,
-		"Rack":       p.Name,
-	}
-
-	data, err := p.RenderTemplate("app/app", params)
+	// app
+	data, err := p.releaseTemplateApp(a, opts)
 	if err != nil {
 		return err
 	}
 
 	items = append(items, data)
+
+	// ca
+	if ca, err := p.Cluster.CoreV1().Secrets("convox-system").Get("ca", am.GetOptions{}); err == nil {
+		data, err := p.releaseTemplateCA(a, ca)
+		if err != nil {
+			return err
+		}
+
+		items = append(items, data)
+	}
 
 	if id != "" {
-	m, r, err := common.ReleaseManifest(p, app, id)
-	if err != nil {
-		return err
-	}
-
-	e := structs.Environment{}
-	e.Load([]byte(r.Env))
-
-	sps := manifest.Services{}
-
-	for _, s := range m.Services {
-		if s.Port.Port > 0 {
-			sps = append(sps, s)
+		m, r, err := common.ReleaseManifest(p, app, id)
+		if err != nil {
+			return err
 		}
-	}
 
-	vsh := map[string]bool{}
+		e, err := structs.NewEnvironment([]byte(r.Env))
+		if err != nil {
+			return err
+		}
 
-	for _, s := range m.Services {
-		for _, v := range p.volumeSources(app, s.Name, s.Volumes) {
-			if !systemVolume(v) {
-				vsh[v] = true
+		// ingress
+		if rss := m.Services.Routable(); len(rss) > 0 {
+			data, err := p.releaseTemplateIngress(a, rss, opts)
+			if err != nil {
+				return err
 			}
-		}
-	}
 
-	vs := []string{}
-
-	for s := range vsh {
-		vs = append(vs, s)
-	}
-
-	ias, err := p.Engine.IngressAnnotations(app)
-	if err != nil {
-		return err
-	}
-
-	params = map[string]interface{}{
-		"App":                a,
-		"IngressAnnotations": ias,
-		"Idles":              common.DefaultBool(opts.Idle, idles),
-		"Manifest":           m,
-		"Name":               a.Name,
-		"Namespace":          p.AppNamespace(a.Name),
-		"Rack":               p.Name,
-		"Release":            r,
-		"Services":           sps,
-		"Volumes":            vs,
-	}
-
-	if ca, err := p.Cluster.CoreV1().Secrets("convox-system").Get("ca", am.GetOptions{}); err == nil {
-		params["CA"] = base64.StdEncoding.EncodeToString(ca.Data["tls.crt"])
-
-		data, err := p.RenderTemplate("app/ca", params)
-		if err != nil {
-			return err
+			items = append(items, data)
 		}
 
-		items = append(items, data)
-	}
-
-	data, err = p.RenderTemplate("app/ingress", params)
-	if err != nil {
-		return err
-	}
-
-	items = append(items, data)
-
-	data, err = p.RenderTemplate("app/volumes", params)
-	if err != nil {
-		return err
-	}
-
-	items = append(items, data)
-
-	for _, r := range m.Resources {
-		data, err := p.resourceRender(app, r)
-		if err != nil {
-			return err
-		}
-
-		// data, err := p.Engine.ResourceRender(app, r)
-		// if err != nil {
-		// 	return err
-		// }
-
-		items = append(items, data)
-	}
-
-	ss, err := p.ServiceList(app)
-	if err != nil {
-		return err
-	}
-
-	sc := map[string]int{}
-
-	for _, s := range ss {
-		sc[s.Name] = s.Count
-	}
-
-	var b *structs.Build
-
-	if r.Build != "" {
-		bb, err := p.BuildGet(app, r.Build)
-		if err != nil {
-			return err
-		}
-		b = bb
-	}
-
-	sysenv, err := p.systemEnvironment(app, r.Id)
-	if err != nil {
-		return err
-	}
-
-	for _, s := range m.Services {
-		min := 50
-		max := 200
-
-		if s.Agent.Enabled || s.Singleton {
-			min = 0
-			max = 100
-		}
-
-		if opts.Min != nil {
-			min = *opts.Min
-		}
-
-		if opts.Max != nil {
-			max = *opts.Max
-		}
-
-		replicas := common.CoalesceInt(sc[s.Name], s.Scale.Count.Min)
-
-		svcenv := e
-
-		if _, ok := svcenv["PORT"]; !ok {
-			if s.Port.Port > 0 {
-				svcenv["PORT"] = strconv.Itoa(s.Port.Port)
+		// resources
+		for _, r := range m.Resources {
+			data, err := p.releaseTemplateResource(a, r)
+			if err != nil {
+				return err
 			}
+
+			items = append(items, data)
 		}
 
-		params := map[string]interface{}{
-			"App":            a,
-			"Build":          b,
-			"Development":    common.DefaultBool(opts.Development, false),
-			"Env":            svcenv,
-			"Manifest":       m,
-			"MaxSurge":       max,
-			"MaxUnavailable": 100 - min,
-			"Namespace":      p.AppNamespace(a.Name),
-			"Password":       p.Password,
-			"Rack":           p.Name,
-			"Release":        r,
-			"Replicas":       replicas,
-			"Service":        s,
-			"SystemEnv":      sysenv,
+		// services
+		data, err := p.releaseTemplateServices(a, e, r, m.Services, opts)
+		if err != nil {
+			return err
 		}
 
-		if ip, err := p.Engine.Resolver(); err == nil {
-			params["Resolver"] = ip
+		items = append(items, data)
+
+		// timers
+		for _, t := range m.Timers {
+			s, err := m.Service(t.Service)
+			if err != nil {
+				return err
+			}
+
+			data, err := p.releaseTemplateTimer(a, r, s, t)
+			if err != nil {
+				return err
+			}
+
+			items = append(items, data)
 		}
 
-		data, err := p.RenderTemplate("app/service", params)
+		// volumes
+		data, err = p.releaseTemplateVolumes(a, m.Services)
 		if err != nil {
 			return err
 		}
 
 		items = append(items, data)
 	}
-
-	for _, t := range m.Timers {
-		s, err := m.Service(t.Service)
-		if err != nil {
-			return err
-		}
-
-		params := map[string]interface{}{
-			"App":       a,
-			"Namespace": p.AppNamespace(a.Name),
-			"Rack":      p.Name,
-			"Release":   r,
-			"Service":   s,
-			"Timer":     t,
-		}
-
-		if ip, err := p.Engine.Resolver(); err == nil {
-			params["Resolver"] = ip
-		}
-
-		data, err = p.RenderTemplate("app/timer", params)
-		if err != nil {
-			return err
-		}
-
-		items = append(items, data)
-	}
-}
 
 	tdata := bytes.Join(items, []byte("---\n"))
 
@@ -411,6 +271,210 @@ func (p *Provider) releaseMarshal(r *structs.Release) *ca.Release {
 	}
 }
 
+func (p *Provider) releaseTemplateApp(a *structs.App, opts structs.ReleasePromoteOptions) ([]byte, error) {
+	params := map[string]interface{}{
+		"Locked":     a.Locked,
+		"Name":       a.Name,
+		"Namespace":  p.AppNamespace(a.Name),
+		"Parameters": a.Parameters,
+	}
+
+	data, err := p.RenderTemplate("app/app", params)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
+func (p *Provider) releaseTemplateCA(a *structs.App, ca *v1.Secret) ([]byte, error) {
+	params := map[string]interface{}{
+		"CA":        base64.StdEncoding.EncodeToString(ca.Data["tls.crt"]),
+		"Namespace": p.AppNamespace(a.Name),
+	}
+
+	data, err := p.RenderTemplate("app/ca", params)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
+func (p *Provider) releaseTemplateIngress(a *structs.App, ss manifest.Services, opts structs.ReleasePromoteOptions) ([]byte, error) {
+	ans, err := p.Engine.IngressAnnotations(a.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	idles, err := p.Engine.AppIdles(a.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	params := map[string]interface{}{
+		"Annotations": ans,
+		"App":         a.Name,
+		"Idles":       common.DefaultBool(opts.Idle, idles),
+		"Namespace":   p.AppNamespace(a.Name),
+		"Services":    ss,
+	}
+
+	data, err := p.RenderTemplate("app/ingress", params)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
+func (p *Provider) releaseTemplateResource(a *structs.App, r manifest.Resource) ([]byte, error) {
+	params := map[string]interface{}{
+		"App":        a.Name,
+		"Namespace":  p.AppNamespace(a.Name),
+		"Name":       r.Name,
+		"Parameters": r.Options,
+		"Password":   fmt.Sprintf("%x", sha256.Sum256([]byte(p.Name)))[0:30],
+		"Rack":       p.Name,
+	}
+
+	data, err := p.RenderTemplate(fmt.Sprintf("resource/%s", r.Type), params)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
+func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment, r *structs.Release, ss manifest.Services, opts structs.ReleasePromoteOptions) ([]byte, error) {
+	items := [][]byte{}
+
+	pss, err := p.ServiceList(a.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	sc := map[string]int{}
+
+	for _, s := range pss {
+		sc[s.Name] = s.Count
+	}
+
+	sysenv, err := p.systemEnvironment(a.Name, r.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, s := range ss {
+		min := 50
+		max := 200
+
+		if s.Agent.Enabled || s.Singleton {
+			min = 0
+			max = 100
+		}
+
+		if opts.Min != nil {
+			min = *opts.Min
+		}
+
+		if opts.Max != nil {
+			max = *opts.Max
+		}
+
+		replicas := common.CoalesceInt(sc[s.Name], s.Scale.Count.Min)
+
+		svcenv := e
+
+		if _, ok := svcenv["PORT"]; !ok {
+			if s.Port.Port > 0 {
+				svcenv["PORT"] = strconv.Itoa(s.Port.Port)
+			}
+		}
+
+		params := map[string]interface{}{
+			"App":            a,
+			"Env":            svcenv,
+			"MaxSurge":       max,
+			"MaxUnavailable": 100 - min,
+			"Namespace":      p.AppNamespace(a.Name),
+			"Password":       p.Password,
+			"Rack":           p.Name,
+			"Release":        r,
+			"Replicas":       replicas,
+			"Service":        s,
+			"SystemEnv":      sysenv,
+		}
+
+		if ip, err := p.Engine.Resolver(); err == nil {
+			params["Resolver"] = ip
+		}
+
+		data, err := p.RenderTemplate("app/service", params)
+		if err != nil {
+			return nil, err
+		}
+
+		items = append(items, data)
+	}
+
+	return bytes.Join(items, []byte("---\n")), nil
+}
+
+func (p *Provider) releaseTemplateTimer(a *structs.App, r *structs.Release, s *manifest.Service, t manifest.Timer) ([]byte, error) {
+	params := map[string]interface{}{
+		"App":       a,
+		"Namespace": p.AppNamespace(a.Name),
+		"Rack":      p.Name,
+		"Release":   r,
+		"Service":   s,
+		"Timer":     t,
+	}
+
+	if ip, err := p.Engine.Resolver(); err == nil {
+		params["Resolver"] = ip
+	}
+
+	data, err := p.RenderTemplate("app/timer", params)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
+func (p *Provider) releaseTemplateVolumes(a *structs.App, ss manifest.Services) ([]byte, error) {
+	vsh := map[string]bool{}
+
+	for _, s := range ss {
+		for _, v := range p.volumeSources(a.Name, s.Name, s.Volumes) {
+			if !systemVolume(v) {
+				vsh[v] = true
+			}
+		}
+	}
+
+	vs := []string{}
+
+	for s := range vsh {
+		vs = append(vs, s)
+	}
+
+	params := map[string]interface{}{
+		"App":       a.Name,
+		"Namespace": p.AppNamespace(a.Name),
+		"Rack":      p.Name,
+		"Volumes":   vs,
+	}
+
+	data, err := p.RenderTemplate("app/volumes", params)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
 func (p *Provider) releaseUnmarshal(kr *ca.Release) (*structs.Release, error) {
 	created, err := time.Parse(common.SortableTime, kr.Spec.Created)
 	if err != nil {
@@ -439,17 +503,4 @@ func (p *Provider) releaseUnmarshal(kr *ca.Release) (*structs.Release, error) {
 	}
 
 	return r, nil
-}
-
-func (p *Provider) resourceRender(app string, r manifest.Resource) ([]byte, error) {
-	params := map[string]interface{}{
-		"App":        app,
-		"Namespace":  p.AppNamespace(app),
-		"Name":       r.Name,
-		"Parameters": r.Options,
-		"Password":   fmt.Sprintf("%x", sha256.Sum256([]byte(p.Name)))[0:30],
-		"Rack":       p.Name,
-	}
-
-	return p.RenderTemplate(fmt.Sprintf("resource/%s", r.Type), params)
 }

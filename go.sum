@@ -48,6 +48,8 @@ github.com/convox/exec v0.0.0-20180905012044-cc13d277f897 h1:8SnSpocZ8I5RlRo8NFK
 github.com/convox/exec v0.0.0-20180905012044-cc13d277f897/go.mod h1:GAxysqvg1ZSl42aLnvLXmFkXkacF4AGql5ZKT7s1DGc=
 github.com/convox/logger v0.0.0-20180522214415-e39179955b52 h1:HTaloo6by+4NE1A1mRYprWzsOy1PGH2tPGfgZ60dyHU=
 github.com/convox/logger v0.0.0-20180522214415-e39179955b52/go.mod h1:IcbSD+Pq+bQV2z/otiMCHLAYBrDR/jPFopFatrWjlMM=
+github.com/convox/rack v0.0.0-20191009130420-3e960392a5de h1:TpX6qZLEqpO+Yd+fQ5TSw69CIlXn2S5fNgtvfA9tCnE=
+github.com/convox/rack v0.0.0-20191009130420-3e960392a5de/go.mod h1:2dMGMyJnGzN0JlFFyaXzm+hK47fzNAhBvU9uqJy47jg=
 github.com/convox/stdapi v0.0.0-20190708203955-b81b71b6a680 h1:IRgaDO4+YanUYcvBlXkzJrgwFh/3BcQOYoI5gEUz2wQ=
 github.com/convox/stdapi v0.0.0-20190708203955-b81b71b6a680/go.mod h1:NkUGoKf5tAaHq7MW02AF9mSXSIHCZJ0ZG8+NqRI5t38=
 github.com/convox/stdsdk v0.0.0-20190422120437-3e80a397e377 h1:PuSJ72MD0mYsMCTvTQ1YydIbQUWtEykNHyweI/vA0PY=
@@ -730,6 +732,7 @@ k8s.io/klog v1.0.0 h1:Pt+yjF5aB1xDSVbau4VsWe+dQNzA0qv1LlXdC2dF6Q8=
 k8s.io/klog v1.0.0/go.mod h1:4Bi6QPql/J/LkTDqv7R/cd3hPo4k2DG6Ptcz060Ez5I=
 k8s.io/kube-openapi v0.0.0-20190816220812-743ec37842bf h1:EYm5AW/UUDbnmnI+gK0TJDVK9qPLhM+sRHYanNKw0EQ=
 k8s.io/kube-openapi v0.0.0-20190816220812-743ec37842bf/go.mod h1:1TqjTSzOxsLGIKfj0lK8EeCP7K1iUG65v09OM0/WG5E=
+k8s.io/kubernetes v1.13.0 h1:qTfB+u5M92k2fCCCVP2iuhgwwSOv1EkAkvQY1tQODD8=
 k8s.io/kubernetes v1.13.0/go.mod h1:ocZa8+6APFNC2tX1DZASIbocyYT5jHzqFVsY5aoB7Jk=
 modernc.org/cc v1.0.0/go.mod h1:1Sk4//wdnYJiUIxnW8ddKpaOJCF37yAdqYnkxUpaYxw=
 modernc.org/golex v1.0.0/go.mod h1:b/QX9oBD/LhixY6NDh+IdGv17hgB+51fET1i2kPSmvk=

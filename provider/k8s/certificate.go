@@ -53,13 +53,25 @@ func (p *Provider) CertificateDelete(id string) error {
 }
 
 func (p *Provider) CertificateGenerate(domains []string) (*structs.Certificate, error) {
-	// pub, key, err := p.generateCertificate(domains)
-	// if err != nil {
-	//   return nil, err
-	// }
+	switch len(domains) {
+	case 0:
+		return nil, fmt.Errorf("must specify a domain")
+	case 1:
+	default:
+		return nil, fmt.Errorf("must specify only one domain")
+	}
 
-	// return p.CertificateCreate(string(pub), string(key), structs.CertificateCreateOptions{})
-	return nil, fmt.Errorf("unimplemented")
+	c, err := common.CertificateSelfSigned(domains[0])
+	if err != nil {
+		return nil, err
+	}
+
+	pub, key, err := common.CertificateParts(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return p.CertificateCreate(string(pub), string(key), structs.CertificateCreateOptions{})
 }
 
 func (p *Provider) CertificateList() (structs.Certificates, error) {
@@ -84,33 +96,6 @@ func (p *Provider) CertificateList() (structs.Certificates, error) {
 
 	return cs, nil
 }
-
-// func (p *Provider) caCertificate() (*tls.Certificate, error) {
-//   c, err := p.Cluster.CoreV1().Secrets(p.Namespace).Get("ca", am.GetOptions{})
-//   if ae.IsNotFound(err) {
-//     return p.generateCACertificate()
-//   }
-//   if err != nil {
-//     return nil, err
-//   }
-
-//   crt, err := base64.StdEncoding.DecodeString(string(c.Data["tls.crt"]))
-//   if err != nil {
-//     return nil, err
-//   }
-
-//   key, err := base64.StdEncoding.DecodeString(string(c.Data["tls.key"]))
-//   if err != nil {
-//     return nil, err
-//   }
-
-//   ca, err := tls.X509KeyPair(crt, key)
-//   if err != nil {
-//     return nil, err
-//   }
-
-//   return &ca, nil
-// }
 
 func (p *Provider) certificateFromSecret(s *ac.Secret) (*structs.Certificate, error) {
 	cert, ok := s.Data["tls.crt"]

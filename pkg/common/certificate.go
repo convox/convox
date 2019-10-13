@@ -1,6 +1,7 @@
 package common
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
@@ -57,6 +58,23 @@ func CertificateCA(host string, ca *tls.Certificate) (*tls.Certificate, error) {
 	}
 
 	return &cert, nil
+}
+
+func CertificateParts(c *tls.Certificate) ([]byte, []byte, error) {
+	pub := [][]byte{}
+
+	for _, crt := range c.Certificate {
+		pub = append(pub, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: crt}))
+	}
+
+	pk, ok := c.PrivateKey.(*rsa.PrivateKey)
+	if !ok {
+		return nil, nil, fmt.Errorf("invalid private key")
+	}
+
+	key := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(pk)})
+
+	return bytes.Join(pub, []byte("\n")), key, nil
 }
 
 func CertificateSelfSigned(host string) (*tls.Certificate, error) {

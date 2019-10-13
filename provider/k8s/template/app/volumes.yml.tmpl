@@ -4,7 +4,7 @@ kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   namespace: {{$.Namespace}}
-  name: {{ volumeName $.App.Name . }}
+  name: {{ volumeName $.App . }}
 spec:
   accessModes:
   - ReadWriteMany
@@ -15,6 +15,6 @@ spec:
     matchLabels:
       system: convox
       rack: {{$.Rack}}
-      app: {{$.App.Name}}
-      volume: {{ volumeName $.App.Name . }}
+      app: {{$.App}}
+      volume: {{ volumeName $.App . }}
 {{ end }}

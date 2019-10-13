@@ -1,29 +1,28 @@
-{{ if .Services }}
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   namespace: {{.Namespace}}
-  name: {{.App.Name}}
+  name: {{.App}}
   annotations:
     alb.ingress.kubernetes.io/scheme: internet-facing
     convox.idles: "{{.Idles}}"
     {{ range .Services }}
     convox.ingress.service.{{.Name}}.3000.protocol: {{.Port.Scheme}}
     {{ end }}
-    {{ range $k, $v := .IngressAnnotations }}
+    {{ range $k, $v := .Annotations }}
     {{$k}}: {{ safe $v }}
     {{ end }}
 spec:
   tls:
   - hosts:
     {{ range .Services }}
-    {{ range (domains $.App.Name .) }}
+    {{ range (domains $.App .) }}
     - {{ safe . }}
     {{ end }}
     {{ end }}
   rules:
     {{ range $s := .Services }}
-    {{ range (domains $.App.Name .) }}
+    {{ range (domains $.App .) }}
     - host: {{ safe . }}
       http:
         paths:
@@ -32,4 +31,3 @@ spec:
             servicePort: 3000
     {{ end }}
     {{ end }}
-{{ end }}
