@@ -1051,6 +1051,20 @@ func (_m *MockProvider) ServiceList(app string) (Services, error) {
 	return r0, r1
 }
 
+// ServiceRestart provides a mock function with given fields: app, name
+func (_m *MockProvider) ServiceRestart(app string, name string) error {
+	ret := _m.Called(app, name)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = rf(app, name)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // ServiceUpdate provides a mock function with given fields: app, name, opts
 func (_m *MockProvider) ServiceUpdate(app string, name string, opts ServiceUpdateOptions) error {
 	ret := _m.Called(app, name, opts)

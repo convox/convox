@@ -2,6 +2,8 @@ package k8s
 
 import (
 	"fmt"
+	"strconv"
+	"time"
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/structs"
@@ -77,6 +79,66 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 	}
 
 	return ss, nil
+}
+
+func (p *Provider) ServiceRestart(app, name string) error {
+	m, _, err := common.AppManifest(p, app)
+	if err != nil {
+		return err
+	}
+
+	s, err := m.Service(name)
+	if err != nil {
+		return err
+	}
+
+	if s.Agent.Enabled {
+		return p.serviceRestartDaemonset(app, name)
+	}
+
+	return p.serviceRestartDeployment(app, name)
+}
+
+func (p *Provider) serviceRestartDaemonset(app, name string) error {
+	ds := p.Cluster.ExtensionsV1beta1().DaemonSets(p.AppNamespace(app))
+
+	s, err := ds.Get(name, am.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	if s.Spec.Template.Annotations == nil {
+		s.Spec.Template.Annotations = map[string]string{}
+	}
+
+	s.Spec.Template.Annotations["convox.com/restart"] = strconv.FormatInt(time.Now().UTC().UnixNano(), 10)
+
+	if _, err := ds.Update(s); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *Provider) serviceRestartDeployment(app, name string) error {
+	ds := p.Cluster.ExtensionsV1beta1().Deployments(p.AppNamespace(app))
+
+	s, err := ds.Get(name, am.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	if s.Spec.Template.Annotations == nil {
+		s.Spec.Template.Annotations = map[string]string{}
+	}
+
+	s.Spec.Template.Annotations["convox.com/restart"] = strconv.FormatInt(time.Now().UTC().UnixNano(), 10)
+
+	if _, err := ds.Update(s); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (p *Provider) ServiceUpdate(app, name string, opts structs.ServiceUpdateOptions) error {
