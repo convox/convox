@@ -12,10 +12,9 @@ jobs:
     - name: version
       run: |
         VERSION=$(echo ${GITHUB_REF} | awk -F/ '{print $3}')
-        echo ${VERSION}
         echo "::set-env name=VERSION::${VERSION}"
     - name: build
-      run: echo ${VERSION} && docker build -t docker.pkg.github.com/convox/convox/convox:${VERSION} .
+      run: docker build -t docker.pkg.github.com/convox/convox/convox:${VERSION} .
     - name: login
       run: docker login docker.pkg.github.com --username convox --password "${GITHUB_TOKEN}"
       env:
