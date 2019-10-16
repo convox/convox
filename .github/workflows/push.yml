@@ -12,10 +12,10 @@ jobs:
     - name: version
       run: echo ${GITHUB_REF} | awk -F/ '{print $3}' > ${GITHUB_WORKSPACE}/VERSION && cat ${GITHUB_WORKSPACE}/VERSION
     - name: build
-      run: docker build -t docker.pkg.github.com/convox/convox/convox:$(echo ${GITHUB_REF} | awk -F/ '{print $3}') .
+      run: docker build -t docker.pkg.github.com/convox/convox/convox:$(cat ${GITHUB_WORKSPACE}/VERSION)
     - name: login
       run: docker login docker.pkg.github.com --username convox --password "${GITHUB_TOKEN}"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: push
-      run: docker push docker.pkg.github.com/convox/convox/convox:$(echo ${GITHUB_REF} | awk -F/ '{print $3}')
+      run: docker push docker.pkg.github.com/convox/convox/convox:$(cat ${GITHUB_WORKSPACE}/VERSION)
