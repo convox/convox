@@ -18,7 +18,7 @@ data "google_client_config" "current" {}
 
 data "google_container_engine_versions" "available" {
   location       = data.google_client_config.current.region
-  version_prefix = "1.13."
+  version_prefix = "1.14."
 }
 
 resource "random_string" "password" {
