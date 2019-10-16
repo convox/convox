@@ -6,7 +6,7 @@ func AtomStatus(status string) string {
 		return "running"
 	case "Rollback":
 		return "rollback"
-	case "Deadline", "Error", "Pending", "Running":
+	case "Building", "Deadline", "Error", "Pending", "Running":
 		return "updating"
 	default:
 		return "running"
