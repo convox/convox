@@ -24,6 +24,10 @@ resource "null_resource" "crd" {
       "KUBECONFIG" : var.kubeconfig,
     }
   }
+
+  triggers = {
+    template = filesha256("${path.module}/crd.yml")
+  }
 }
 
 resource "kubernetes_cluster_role" "api" {
