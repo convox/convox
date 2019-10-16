@@ -9,6 +9,8 @@ jobs:
     steps:
     - name: checkout
       uses: actions/checkout@v1
+    - name: version
+      run: echo ${GITHUB_REF} | awk -F/ '{print $3}' > ${GITHUB_WORKSPACE}/VERSION && cat ${GITHUB_WORKSPACE}/VERSION
     - name: build
       run: docker build -t docker.pkg.github.com/convox/convox/convox:$(echo ${GITHUB_REF} | awk -F/ '{print $3}') .
     - name: login
