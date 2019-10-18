@@ -15,6 +15,7 @@ spec:
   selector:
     service: {{.Service.Name}}
     release: {{.Release.Id}}
+    type: service
   ports:
     - name: main
       port: 3000
