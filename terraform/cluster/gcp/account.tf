@@ -16,12 +16,12 @@ resource "google_project_iam_member" "nodes-monitoring" {
   member = "serviceAccount:${google_service_account.nodes.email}"
 }
 
-# resource "google_project_iam_member" "nodes-storage" {
-#   depends_on = ["google_project_service.cloudresourcemanager"]
+resource "google_project_iam_member" "nodes-storage" {
+  depends_on = ["google_project_service.cloudresourcemanager"]
 
-#   role   = "roles/storage.admin"
-#   member = "serviceAccount:${google_service_account.nodes.email}"
-# }
+  role   = "roles/storage.admin"
+  member = "serviceAccount:${google_service_account.nodes.email}"
+}
 
 # resource "google_project_iam_member" "nodes-token-creator" {
 #   depends_on = ["google_project_service.cloudresourcemanager"]

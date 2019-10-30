@@ -24,6 +24,10 @@ locals {
 module "k8s" {
   source = "../k8s"
 
+  providers = {
+    kubernetes = kubernetes
+  }
+
   domain     = var.domain
   kubeconfig = var.kubeconfig
   name       = var.name

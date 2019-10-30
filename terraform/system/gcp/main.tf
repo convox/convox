@@ -10,6 +10,12 @@ provider "google-beta" {
   version = "~> 2.18"
 }
 
+provider "kubernetes" {
+  version = "~> 1.9"
+
+  config_path = module.cluster.kubeconfig
+}
+
 data "http" "releases" {
   url = "https://api.github.com/repos/convox/convox/releases"
 }
@@ -35,7 +41,8 @@ module "rack" {
   source = "../../rack/gcp"
 
   providers = {
-    google = google
+    kubernetes = kubernetes
+    google     = google
   }
 
   domain        = var.domain

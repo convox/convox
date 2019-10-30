@@ -11,7 +11,7 @@ provider "google" {
 }
 
 provider "kubernetes" {
-  version = "~> 1.8"
+  version = "~> 1.9"
 
   config_path = var.kubeconfig
 }
@@ -33,7 +33,8 @@ module "api" {
   source = "../../api/gcp"
 
   providers = {
-    google = google
+    google     = google
+    kubernetes = kubernetes
   }
 
   domain        = var.domain
@@ -49,8 +50,8 @@ module "router" {
   source = "../../router/gcp"
 
   providers = {
-    kubernetes = kubernetes
     google     = google
+    kubernetes = kubernetes
   }
 
   name      = var.name
