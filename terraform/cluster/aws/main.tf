@@ -24,7 +24,12 @@ data "aws_ami" "node" {
 }
 
 resource "aws_cloudformation_stack" "nodes" {
-  depends_on = [aws_internet_gateway.nodes]
+  depends_on = [
+    aws_internet_gateway.nodes,
+    aws_security_group.nodes,
+    aws_subnet.public,
+    aws_subnet.private,
+  ]
 
   capabilities  = ["CAPABILITY_IAM"]
   on_failure    = "DELETE"
