@@ -11,7 +11,7 @@ provider "external" {
 }
 
 provider "kubernetes" {
-  version = "~> 1.8"
+  version = "~> 1.9"
 
   config_path = var.kubeconfig
 }
@@ -41,7 +41,8 @@ module "api" {
   kubeconfig = var.kubeconfig
   name       = var.name
   namespace  = module.k8s.namespace
-  nodes_role = var.nodes_role
+  oidc_arn   = var.oidc_arn
+  oidc_sub   = var.oidc_sub
   release    = var.release
   router     = module.router.endpoint
 }
@@ -56,8 +57,9 @@ module "router" {
 
   name               = var.name
   namespace          = module.k8s.namespace
-  nodes_role         = var.nodes_role
   nodes_security     = var.nodes_security
+  oidc_arn           = var.oidc_arn
+  oidc_sub           = var.oidc_sub
   release            = var.release
   subnets            = var.subnets_public
   target_group_http  = var.target_group_http

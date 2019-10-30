@@ -114,7 +114,7 @@ Resources:
         Fn::Base64: !Sub |
           #!/bin/bash -xe
           /etc/eks/bootstrap.sh ${Cluster}
-          iptables --append PREROUTING --protocol tcp --destination 169.254.169.254 --dport 80 --in-interface eni+ --jump DNAT --table nat --to-destination `curl 169.254.169.254/latest/meta-data/local-ipv4`:8181
+          iptables --insert FORWARD 1 --in-interface eni+ --destination 169.254.169.254/32 --jump DROP
           /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource Nodes --region ${AWS::Region}
   Nodes:
     Type: AWS::AutoScaling::AutoScalingGroup

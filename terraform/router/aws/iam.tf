@@ -1,16 +1,24 @@
-data "aws_iam_policy_document" "nodes-assume" {
+data "aws_iam_policy_document" "assume_router" {
   statement {
-    actions = ["sts:AssumeRole"]
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+    effect  = "Allow"
+
+    condition {
+      test     = "StringEquals"
+      variable = var.oidc_sub
+      values   = ["system:serviceaccount:${var.namespace}:router"]
+    }
+
     principals {
-      type        = "AWS"
-      identifiers = [var.nodes_role]
+      identifiers = [var.oidc_arn]
+      type        = "Federated"
     }
   }
 }
 
 resource "aws_iam_role" "router" {
   name               = "${var.name}-router"
-  assume_role_policy = data.aws_iam_policy_document.nodes-assume.json
+  assume_role_policy = data.aws_iam_policy_document.assume_router.json
   path               = "/convox/"
   tags               = local.tags
 }

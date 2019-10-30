@@ -1,11 +1,26 @@
-data "aws_iam_policy_document" "api_assume" {
+data "aws_iam_policy_document" "assume_logs" {
   statement {
-    actions = ["sts:AssumeRole"]
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+    effect  = "Allow"
+
+    condition {
+      test     = "StringEquals"
+      variable = var.oidc_sub
+      values   = ["system:serviceaccount:${var.namespace}:fluentd"]
+    }
+
     principals {
-      type        = "AWS"
-      identifiers = [var.nodes_role]
+      identifiers = [var.oidc_arn]
+      type        = "Federated"
     }
   }
+}
+
+resource "aws_iam_role" "logs" {
+  name               = "${var.name}-logs"
+  assume_role_policy = data.aws_iam_policy_document.assume_logs.json
+  path               = "/convox/"
+  tags               = local.tags
 }
 
 data "aws_iam_policy_document" "logs" {
@@ -29,13 +44,6 @@ data "aws_iam_policy_document" "logs" {
       "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/convox/*"
     ]
   }
-}
-
-resource "aws_iam_role" "logs" {
-  name               = "${var.name}-logs"
-  assume_role_policy = data.aws_iam_policy_document.api_assume.json
-  path               = "/convox/"
-  tags               = local.tags
 }
 
 resource "aws_iam_role_policy" "logs" {

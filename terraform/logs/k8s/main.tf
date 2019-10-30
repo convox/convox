@@ -40,6 +40,8 @@ resource "kubernetes_service_account" "fluentd" {
   metadata {
     namespace = var.namespace
     name      = "fluentd"
+
+    annotations = var.annotations
   }
 }
 

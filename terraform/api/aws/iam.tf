@@ -1,11 +1,26 @@
-data "aws_iam_policy_document" "api_assume" {
+data "aws_iam_policy_document" "assume_api" {
   statement {
-    actions = ["sts:AssumeRole"]
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+    effect  = "Allow"
+
+    condition {
+      test     = "StringEquals"
+      variable = var.oidc_sub
+      values   = ["system:serviceaccount:${var.namespace}:api"]
+    }
+
     principals {
-      type        = "AWS"
-      identifiers = [var.nodes_role]
+      identifiers = [var.oidc_arn]
+      type        = "Federated"
     }
   }
+}
+
+resource "aws_iam_role" "api" {
+  name               = "${var.name}-api"
+  assume_role_policy = data.aws_iam_policy_document.assume_api.json
+  path               = "/convox/"
+  tags               = local.tags
 }
 
 data "aws_iam_policy_document" "logs" {
@@ -36,13 +51,6 @@ data "aws_iam_policy_document" "storage" {
       "${aws_s3_bucket.storage.arn}/*",
     ]
   }
-}
-
-resource "aws_iam_role" "api" {
-  name               = "${var.name}-api"
-  assume_role_policy = data.aws_iam_policy_document.api_assume.json
-  path               = "/convox/"
-  tags               = local.tags
 }
 
 resource "aws_iam_role_policy_attachment" "api_ecr" {

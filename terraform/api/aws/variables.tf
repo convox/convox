@@ -14,7 +14,11 @@ variable "namespace" {
   type = "string"
 }
 
-variable "nodes_role" {
+variable "oidc_arn" {
+  type = "string"
+}
+
+variable "oidc_sub" {
   type = "string"
 }
 

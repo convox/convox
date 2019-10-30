@@ -3,7 +3,7 @@ terraform {
 }
 
 provider "kubernetes" {
-  version = "~> 1.8"
+  version = "~> 1.9"
 }
 
 resource "kubernetes_cluster_role" "router" {
@@ -66,6 +66,8 @@ resource "kubernetes_service_account" "router" {
   metadata {
     namespace = var.namespace
     name      = "router"
+
+    annotations = var.annotations
   }
 }
 

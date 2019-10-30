@@ -3,7 +3,11 @@ terraform {
 }
 
 provider "google" {
-  version = "~> 2.12"
+  version = "~> 2.18"
+}
+
+provider "google-beta" {
+  version = "~> 2.18"
 }
 
 provider "local" {
@@ -21,12 +25,16 @@ data "google_container_engine_versions" "available" {
   version_prefix = "1.14."
 }
 
+data "google_project" "current" {}
+
 resource "random_string" "password" {
   length  = 64
   special = true
 }
 
 resource "google_container_cluster" "rack" {
+  provider = "google-beta"
+
   name     = var.name
   location = data.google_client_config.current.region
 
@@ -37,6 +45,10 @@ resource "google_container_cluster" "rack" {
 
   ip_allocation_policy {
     use_ip_aliases = true
+  }
+
+  workload_identity_config {
+    identity_namespace = "${data.google_project.current.project_id}.svc.id.goog"
   }
 
   master_auth {
@@ -50,6 +62,8 @@ resource "google_container_cluster" "rack" {
 }
 
 resource "google_container_node_pool" "rack" {
+  provider = "google-beta"
+
   name       = "${google_container_cluster.rack.name}-nodes-${var.node_type}"
   location   = google_container_cluster.rack.location
   cluster    = google_container_cluster.rack.name
@@ -61,6 +75,10 @@ resource "google_container_node_pool" "rack" {
 
     metadata = {
       disable-legacy-endpoints = "true"
+    }
+
+    workload_metadata_config {
+      node_metadata = "GKE_METADATA_SERVER"
     }
 
     service_account = google_service_account.nodes.email
@@ -128,16 +146,3 @@ resource "kubernetes_cluster_role_binding" "client" {
     name = "client"
   }
 }
-
-# module "logs" {
-#   source = "../../logs/gcp"
-
-#   providers = {
-#     google     = google
-#     kubernetes = kubernetes.direct
-#   }
-
-#   cluster   = var.name
-#   name      = var.name
-#   namespace = "kube-system"
-# }

@@ -3,13 +3,11 @@ terraform {
 }
 
 provider "google" {
-  version = "~> 2.12"
+  version = "~> 2.18"
 }
 
-provider "kubernetes" {
-  version = "~> 1.8"
-
-  config_path = module.cluster.kubeconfig
+provider "google-beta" {
+  version = "~> 2.18"
 }
 
 data "http" "releases" {
@@ -25,7 +23,8 @@ module "cluster" {
   source = "../../cluster/gcp"
 
   providers = {
-    google = google
+    google      = google
+    google-beta = google-beta
   }
 
   name      = var.name
@@ -36,8 +35,7 @@ module "rack" {
   source = "../../rack/gcp"
 
   providers = {
-    google     = google
-    kubernetes = kubernetes
+    google = google
   }
 
   domain        = var.domain

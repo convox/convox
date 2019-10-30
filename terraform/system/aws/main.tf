@@ -7,7 +7,7 @@ provider "aws" {
 }
 
 provider "kubernetes" {
-  version = "~> 1.8"
+  version = "~> 1.9"
 
   config_path = module.cluster.kubeconfig
 }
@@ -34,6 +34,21 @@ module "cluster" {
   ssh_key   = var.ssh_key
 }
 
+module "logs" {
+  source = "../../logs/aws"
+
+  providers = {
+    aws        = aws
+    kubernetes = kubernetes
+  }
+
+  cluster   = module.cluster.id
+  namespace = "kube-system"
+  name      = var.name
+  oidc_arn  = module.cluster.oidc_arn
+  oidc_sub  = module.cluster.oidc_sub
+}
+
 module "rack" {
   source = "../../rack/aws"
 
@@ -42,11 +57,13 @@ module "rack" {
     kubernetes = kubernetes
   }
 
+  cluster            = module.cluster.id
   domain             = var.domain
   kubeconfig         = module.cluster.kubeconfig
   name               = var.name
-  nodes_role         = module.cluster.nodes_role
   nodes_security     = module.cluster.nodes_security
+  oidc_arn           = module.cluster.oidc_arn
+  oidc_sub           = module.cluster.oidc_sub
   release            = local.release
   subnets_private    = module.cluster.subnets_private
   subnets_public     = module.cluster.subnets_public

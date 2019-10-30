@@ -33,8 +33,7 @@ module "api" {
   source = "../../api/gcp"
 
   providers = {
-    google     = google
-    kubernetes = kubernetes
+    google = google
   }
 
   domain        = var.domain
@@ -50,8 +49,8 @@ module "router" {
   source = "../../router/gcp"
 
   providers = {
-    google     = google
     kubernetes = kubernetes
+    google     = google
   }
 
   name      = var.name

@@ -4,8 +4,6 @@ terraform {
 
 provider "kubernetes" {
   version = "~> 1.8"
-
-  config_path = var.kubeconfig
 }
 
 provider "null" {

@@ -3,9 +3,7 @@ terraform {
 }
 
 provider "kubernetes" {
-  version = "~> 1.8"
-
-  config_path = var.kubeconfig
+  version = "~> 1.9"
 }
 
 provider "random" {
@@ -64,6 +62,8 @@ resource "kubernetes_service_account" "api" {
   metadata {
     namespace = var.namespace
     name      = "api"
+
+    annotations = var.annotations
   }
 }
 

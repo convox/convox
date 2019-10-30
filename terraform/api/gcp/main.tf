@@ -24,10 +24,6 @@ locals {
 module "k8s" {
   source = "../k8s"
 
-  providers = {
-    kubernetes = kubernetes
-  }
-
   domain     = var.domain
   kubeconfig = var.kubeconfig
   name       = var.name
@@ -35,7 +31,8 @@ module "k8s" {
   release    = var.release
 
   annotations = {
-    "cloud.google.com/service-account" : google_service_account.api.email
+    "cloud.google.com/service-account" : google_service_account.api.email,
+    "iam.gke.io/gcp-service-account" : google_service_account.api.email,
   }
 
   env = {

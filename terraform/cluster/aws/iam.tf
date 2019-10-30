@@ -1,3 +1,9 @@
+resource "aws_iam_openid_connect_provider" "cluster" {
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = ["9E99A48A9960B14926BB7F3B02E22DA2B0AB7280"]
+  url             = "${aws_eks_cluster.cluster.identity.0.oidc.0.issuer}"
+}
+
 data "aws_iam_policy_document" "assume_ec2" {
   statement {
     actions = ["sts:AssumeRole"]
@@ -16,6 +22,24 @@ data "aws_iam_policy_document" "assume_eks" {
     principals {
       type        = "Service"
       identifiers = ["eks.amazonaws.com"]
+    }
+  }
+}
+
+data "aws_iam_policy_document" "assume_service" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+    effect  = "Allow"
+
+    condition {
+      test     = "StringEquals"
+      variable = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
+      values   = ["system:serviceaccount:kube-system:aws-node"]
+    }
+
+    principals {
+      identifiers = ["${aws_iam_openid_connect_provider.cluster.arn}"]
+      type        = "Federated"
     }
   }
 }

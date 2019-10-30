@@ -6,6 +6,10 @@ provider "google" {
   version = "~> 2.12"
 }
 
+provider "kubernetes" {
+  version = "~> 1.9"
+}
+
 locals {
   tags = {
     System = "convox"

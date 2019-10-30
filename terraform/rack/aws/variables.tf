@@ -1,3 +1,7 @@
+variable "cluster" {
+  type = "string"
+}
+
 variable "domain" {
   type = "string"
 }
@@ -10,11 +14,15 @@ variable "name" {
   type = "string"
 }
 
-variable "nodes_role" {
+variable "nodes_security" {
   type = "string"
 }
 
-variable "nodes_security" {
+variable "oidc_arn" {
+  type = "string"
+}
+
+variable "oidc_sub" {
   type = "string"
 }
 

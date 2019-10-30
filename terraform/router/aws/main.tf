@@ -7,7 +7,7 @@ provider "aws" {
 }
 
 provider "kubernetes" {
-  version = "~> 1.8"
+  version = "~> 1.9"
 }
 
 locals {
@@ -31,6 +31,7 @@ module "k8s" {
   release   = var.release
 
   annotations = {
+    "eks.amazonaws.com/role-arn" : aws_iam_role.router.arn,
     "iam.amazonaws.com/role" : aws_iam_role.router.arn,
   }
 

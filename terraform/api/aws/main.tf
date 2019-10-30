@@ -3,13 +3,11 @@ terraform {
 }
 
 provider "aws" {
-  version = "~> 2.22"
+  version = "~> 2.33"
 }
 
 provider "kubernetes" {
-  version = "~> 1.8"
-
-  config_path = var.kubeconfig
+  version = "1.9"
 }
 
 data "aws_caller_identity" "current" {}
@@ -36,6 +34,7 @@ module "k8s" {
   release    = var.release
 
   annotations = {
+    "eks.amazonaws.com/role-arn" : aws_iam_role.api.arn,
     "iam.amazonaws.com/role" : aws_iam_role.api.arn,
   }
 

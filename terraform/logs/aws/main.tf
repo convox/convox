@@ -7,7 +7,7 @@ provider "aws" {
 }
 
 provider "kubernetes" {
-  version = "~> 1.8"
+  version = "~> 1.9"
 }
 
 data "aws_caller_identity" "current" {}
@@ -33,6 +33,7 @@ module "k8s" {
   target    = file("${path.module}/target.conf")
 
   annotations = {
+    "eks.amazonaws.com/role-arn" : aws_iam_role.logs.arn,
     "iam.amazonaws.com/role" = aws_iam_role.logs.arn
   }
 
