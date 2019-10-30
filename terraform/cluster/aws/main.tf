@@ -53,6 +53,11 @@ resource "aws_eks_cluster" "cluster" {
     security_group_ids      = [aws_security_group.cluster.id]
     subnet_ids              = concat(aws_subnet.public.*.id)
   }
+
+  depends_on = [
+    "aws_iam_role_policy_attachment.cluster_eks_cluster",
+    "aws_iam_role_policy_attachment.cluster_eks_service",
+  ]
 }
 
 resource "null_resource" "after_cluster" {
