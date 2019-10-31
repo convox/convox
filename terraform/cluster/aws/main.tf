@@ -25,6 +25,7 @@ data "aws_ami" "node" {
 
 resource "aws_cloudformation_stack" "nodes" {
   depends_on = [
+    aws_iam_role.nodes,
     aws_internet_gateway.nodes,
     aws_security_group.nodes,
     aws_subnet.public,
