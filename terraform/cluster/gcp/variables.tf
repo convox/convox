@@ -5,3 +5,7 @@ variable "name" {
 variable "node_type" {
   type = string
 }
+
+variable "services" {
+  default = ""
+}

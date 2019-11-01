@@ -16,6 +16,14 @@ provider "kubernetes" {
   config_path = module.cluster.kubeconfig
 }
 
+module "project" {
+  source = "./project"
+
+  providers = {
+    google = google
+  }
+}
+
 data "http" "releases" {
   url = "https://api.github.com/repos/convox/convox/releases"
 }
@@ -35,6 +43,7 @@ module "cluster" {
 
   name      = var.name
   node_type = var.node_type
+  services  = module.project.services
 }
 
 module "rack" {
