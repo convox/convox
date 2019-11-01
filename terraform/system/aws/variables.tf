@@ -2,10 +2,6 @@ variable "cidr" {
   default = "10.1.0.0/16"
 }
 
-variable "domain" {
-  type = "string"
-}
-
 variable "name" {
   type = "string"
 }

@@ -58,7 +58,6 @@ module "rack" {
   }
 
   cluster            = module.cluster.id
-  domain             = var.domain
   kubeconfig         = module.cluster.kubeconfig
   name               = var.name
   nodes_security     = module.cluster.nodes_security

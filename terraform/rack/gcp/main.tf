@@ -23,7 +23,7 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
-  domain     = var.domain
+  domain     = module.router.endpoint
   kubeconfig = var.kubeconfig
   name       = var.name
   release    = var.release
@@ -37,7 +37,7 @@ module "api" {
     kubernetes = kubernetes
   }
 
-  domain        = var.domain
+  domain        = module.router.endpoint
   kubeconfig    = var.kubeconfig
   name          = var.name
   namespace     = module.k8s.namespace

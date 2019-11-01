@@ -6,6 +6,10 @@ provider "aws" {
   version = "~> 2.22"
 }
 
+provider "http" {
+  version = "~> 1.1"
+}
+
 provider "kubernetes" {
   version = "~> 1.9"
 }
@@ -76,4 +80,8 @@ resource "kubernetes_service" "router" {
       service = "router"
     }
   }
+}
+
+data "http" "alias" {
+  url = "https://alias.convox.com/alias/${aws_alb.router.dns_name}"
 }

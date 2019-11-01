@@ -2,10 +2,6 @@ variable "credentials" {
   default = "~/.config/gcloud/terraform.json"
 }
 
-variable "domain" {
-  type = "string"
-}
-
 variable "kubeconfig" {
   type = "string"
 }

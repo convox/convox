@@ -6,6 +6,10 @@ provider "google" {
   version = "~> 2.12"
 }
 
+provider "http" {
+  version = "~> 1.1"
+}
+
 provider "kubernetes" {
   version = "~> 1.9"
 }
@@ -61,4 +65,8 @@ resource "kubernetes_service" "router" {
       service = "router"
     }
   }
+}
+
+data "http" "alias" {
+  url = "https://alias.convox.com/alias/${kubernetes_service.router.load_balancer_ingress.0.ip}"
 }

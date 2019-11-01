@@ -2,10 +2,6 @@ variable "cluster" {
   type = "string"
 }
 
-variable "domain" {
-  type = "string"
-}
-
 variable "kubeconfig" {
   type = "string"
 }

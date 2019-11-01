@@ -45,7 +45,6 @@ module "rack" {
     google     = google
   }
 
-  domain        = var.domain
   kubeconfig    = module.cluster.kubeconfig
   name          = var.name
   nodes_account = module.cluster.nodes_account

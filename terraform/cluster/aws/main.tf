@@ -97,7 +97,7 @@ resource "local_file" "kubeconfig" {
     null_resource.after_cluster,
   ]
 
-  filename = pathexpand("~/.kube/config.${var.name}")
+  filename = pathexpand("~/.kube/config.aws.${var.name}")
   content = templatefile("${path.module}/kubeconfig.tpl", {
     ca       = aws_eks_cluster.cluster.certificate_authority.0.data
     cluster  = aws_eks_cluster.cluster.id

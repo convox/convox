@@ -102,7 +102,7 @@ resource "local_file" "kubeconfig" {
     google_container_node_pool.rack,
   ]
 
-  filename = pathexpand("~/.kube/config.${var.name}")
+  filename = pathexpand("~/.kube/config.gcp.${var.name}")
   content = templatefile("${path.module}/kubeconfig.tpl", {
     ca                 = google_container_cluster.rack.master_auth.0.cluster_ca_certificate
     endpoint           = google_container_cluster.rack.endpoint
