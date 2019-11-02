@@ -34,8 +34,8 @@ module "cluster" {
   ssh_key   = var.ssh_key
 }
 
-module "logs" {
-  source = "../../logs/aws"
+module "fluentd" {
+  source = "../../fluentd/aws"
 
   providers = {
     aws        = aws

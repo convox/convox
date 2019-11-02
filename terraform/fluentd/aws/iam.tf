@@ -1,4 +1,4 @@
-data "aws_iam_policy_document" "assume_logs" {
+data "aws_iam_policy_document" "assume_fluentd" {
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
     effect  = "Allow"
@@ -16,14 +16,14 @@ data "aws_iam_policy_document" "assume_logs" {
   }
 }
 
-resource "aws_iam_role" "logs" {
-  name               = "${var.name}-logs"
-  assume_role_policy = data.aws_iam_policy_document.assume_logs.json
+resource "aws_iam_role" "fluentd" {
+  name               = "${var.name}-fluentd"
+  assume_role_policy = data.aws_iam_policy_document.assume_fluentd.json
   path               = "/convox/"
   tags               = local.tags
 }
 
-data "aws_iam_policy_document" "logs" {
+data "aws_iam_policy_document" "fluentd" {
   statement {
     actions = [
       "logs:CreateLogGroup",
@@ -46,8 +46,8 @@ data "aws_iam_policy_document" "logs" {
   }
 }
 
-resource "aws_iam_role_policy" "logs" {
-  name   = "logs"
-  role   = aws_iam_role.logs.name
-  policy = data.aws_iam_policy_document.logs.json
+resource "aws_iam_role_policy" "fluentd" {
+  name   = "fluentd"
+  role   = aws_iam_role.fluentd.name
+  policy = data.aws_iam_policy_document.fluentd.json
 }

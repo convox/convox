@@ -26,8 +26,8 @@ module "k8s" {
   target     = file("${path.module}/target.conf")
 
   annotations = {
-    "cloud.google.com/service-account" : google_service_account.logs.email,
-    "iam.gke.io/gcp-service-account" : google_service_account.logs.email,
+    "cloud.google.com/service-account" : google_service_account.fluentd.email,
+    "iam.gke.io/gcp-service-account" : google_service_account.fluentd.email,
   }
 
   # env = {

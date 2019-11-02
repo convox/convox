@@ -33,8 +33,8 @@ module "k8s" {
   target    = file("${path.module}/target.conf")
 
   annotations = {
-    "eks.amazonaws.com/role-arn" : aws_iam_role.logs.arn,
-    "iam.amazonaws.com/role" = aws_iam_role.logs.arn
+    "eks.amazonaws.com/role-arn" : aws_iam_role.fluentd.arn,
+    "iam.amazonaws.com/role" = aws_iam_role.fluentd.arn
   }
 
   env = {
