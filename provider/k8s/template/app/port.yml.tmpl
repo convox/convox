@@ -11,7 +11,7 @@ metadata:
   labels:
     service: {{.Service.Name}}
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     service: {{.Service.Name}}
     release: {{.Release.Id}}
