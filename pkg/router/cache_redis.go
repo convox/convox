@@ -2,6 +2,7 @@ package router
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 
 	"github.com/go-redis/redis"
@@ -12,10 +13,19 @@ type CacheRedis struct {
 	redis *redis.Client
 }
 
-func NewCacheRedis(addr string) (*CacheRedis, error) {
+func NewCacheRedis(addr, password string, secure bool) (*CacheRedis, error) {
 	fmt.Printf("ns=cache.redis at=new addr=%s\n", addr)
 
-	rc := redis.NewClient(&redis.Options{Addr: addr})
+	opts := &redis.Options{
+		Addr:     addr,
+		Password: password,
+	}
+
+	if secure {
+		opts.TLSConfig = &tls.Config{}
+	}
+
+	rc := redis.NewClient(opts)
 
 	if _, err := rc.Ping().Result(); err != nil {
 		return nil, err

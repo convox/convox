@@ -75,7 +75,7 @@ func New() (*Router, error) {
 
 		r.cache = c
 	case "redis":
-		c, err := NewCacheRedis(os.Getenv("REDIS_ADDR"))
+		c, err := NewCacheRedis(os.Getenv("REDIS_ADDR"), os.Getenv("REDIS_AUTH"), os.Getenv("REDIS_SECURE") == "true")
 		if err != nil {
 			return nil, err
 		}

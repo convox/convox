@@ -246,7 +246,7 @@ resource "kubernetes_service" "api" {
 resource "kubernetes_ingress" "api" {
   metadata {
     namespace = var.namespace
-    name      = var.name
+    name      = "api"
 
     annotations = {
       "convox.idles" : "true"
