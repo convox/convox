@@ -33,6 +33,28 @@ module "cluster" {
   region    = var.region
 }
 
+module "elasticsearch" {
+  source = "../../elasticsearch/k8s"
+
+  providers = {
+    kubernetes = kubernetes
+  }
+
+  namespace = "kube-system"
+}
+
+module "fluentd" {
+  source = "../../fluentd/do"
+
+  providers = {
+    kubernetes = kubernetes
+  }
+
+  cluster   = var.name
+  namespace = "kube-system"
+  name      = var.name
+}
+
 module "rack" {
   source = "../../rack/do"
 
