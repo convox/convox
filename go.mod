@@ -14,6 +14,7 @@ require (
 	github.com/docker/docker v1.4.2-0.20190710153559-aa8249ae1b8b
 	github.com/docker/spdystream v0.0.0-20160310174837-449fdfce4d96 // indirect
 	github.com/dustin/go-humanize v1.0.0
+	github.com/elastic/go-elasticsearch/v6 v6.8.2
 	github.com/elazarl/goproxy v0.0.0-20170405201442-c4fc26588b6e // indirect
 	github.com/fsouza/go-dockerclient v1.4.2
 	github.com/go-redis/redis v6.15.2+incompatible
