@@ -1,4 +1,4 @@
-.PHONY: all build clean clean-package compress generate mocks package release test
+.PHONY: all build clean clean-package compress generate generate-k8s generate-provider mocks package release test
 
 commands = api atom build router
 
@@ -18,16 +18,23 @@ clean-package:
 compress: $(binaries)
 	upx-ucl -1 $^
 
-generate:
-	go run cmd/generate/main.go controllers > pkg/api/controllers.go
-	go run cmd/generate/main.go routes > pkg/api/routes.go
-	go run cmd/generate/main.go sdk > sdk/methods.go
+generate: generate-provider generate-k8s
+
+generate-k8s:
 	make -C pkg/atom generate
 	make -C provider/k8s generate
 
-mocks: generate
+generate-provider:
+	go run cmd/generate/main.go controllers > pkg/api/controllers.go
+	go run cmd/generate/main.go routes > pkg/api/routes.go
+	go run cmd/generate/main.go sdk > sdk/methods.go
+
+mocks: generate-provider
 	make -C pkg/atom mocks
 	make -C pkg/structs mocks
+	mockery -case underscore -dir pkg/start -outpkg sdk -output pkg/mock/start -name Interface
+	mockery -case underscore -dir sdk -outpkg sdk -output pkg/mock/sdk -name Interface
+	mockery -case underscore -dir vendor/github.com/convox/stdcli -outpkg stdcli -output pkg/mock/stdcli -name Executor
 
 package:
 	$(GOPATH)/bin/packr

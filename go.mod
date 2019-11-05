@@ -7,10 +7,17 @@ require (
 	github.com/Microsoft/hcsshim v0.8.7-0.20190801035247-8694eade7dd3 // indirect
 	github.com/PuerkitoBio/goquery v1.5.0
 	github.com/aws/aws-sdk-go v1.21.10
+	github.com/convox/changes v0.0.0-20191105034405-8c0df759a3b3
 	github.com/convox/exec v0.0.0-20180905012044-cc13d277f897
+	github.com/convox/hid v0.0.0-20180912192857-c67381b7ffff
 	github.com/convox/logger v0.0.0-20180522214415-e39179955b52
+	github.com/convox/rack v0.0.0-20191023140332-e19fce33f6c3 // indirect
 	github.com/convox/stdapi v0.0.0-20190708203955-b81b71b6a680
+	github.com/convox/stdcli v0.0.0-20190326115454-b78bee159e98
 	github.com/convox/stdsdk v0.0.0-20190422120437-3e80a397e377
+	github.com/convox/u2f v0.0.0-20180912192910-a73404142726
+	github.com/convox/version v0.0.0-20160822184233-ffefa0d565d2
+	github.com/creack/pty v1.1.9
 	github.com/docker/docker v1.4.2-0.20190710153559-aa8249ae1b8b
 	github.com/docker/spdystream v0.0.0-20160310174837-449fdfce4d96 // indirect
 	github.com/dustin/go-humanize v1.0.0
@@ -21,11 +28,13 @@ require (
 	github.com/gobuffalo/packr v1.30.1
 	github.com/gobwas/glob v0.2.3
 	github.com/golang/groupcache v0.0.0-20160516000752-02826c3e7903 // indirect
+	github.com/gorilla/mux v1.7.3
 	github.com/gorilla/websocket v1.4.0
 	github.com/gregjones/httpcache v0.0.0-20170728041850-787624de3eb7 // indirect
 	github.com/headzoo/surf v1.0.0
 	github.com/headzoo/ut v0.0.0-20181013193318-a13b5a7a02ca // indirect
 	github.com/imdario/mergo v0.3.7 // indirect
+	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/miekg/dns v1.1.15
 	github.com/onsi/ginkgo v1.8.0 // indirect
@@ -35,6 +44,7 @@ require (
 	github.com/stretchr/testify v1.3.0
 	golang.org/x/crypto v0.0.0-20191029031824-8986dd9e96cf
 	golang.org/x/net v0.0.0-20191101175033-0deb6923b6d9 // indirect
+	golang.org/x/sys v0.0.0-20191104094858-e8c54fb511f6 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	google.golang.org/api v0.9.0
 	gopkg.in/inf.v0 v0.9.0 // indirect
