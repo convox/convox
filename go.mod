@@ -11,7 +11,6 @@ require (
 	github.com/convox/exec v0.0.0-20180905012044-cc13d277f897
 	github.com/convox/hid v0.0.0-20180912192857-c67381b7ffff
 	github.com/convox/logger v0.0.0-20180522214415-e39179955b52
-	github.com/convox/rack v0.0.0-20191023140332-e19fce33f6c3 // indirect
 	github.com/convox/stdapi v0.0.0-20190708203955-b81b71b6a680
 	github.com/convox/stdcli v0.0.0-20190326115454-b78bee159e98
 	github.com/convox/stdsdk v0.0.0-20190422120437-3e80a397e377

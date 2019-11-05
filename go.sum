@@ -54,8 +54,6 @@ github.com/convox/inotify v0.0.0-20170313035821-b56f5149b5c6 h1:bigLg74wAp2d11va
 github.com/convox/inotify v0.0.0-20170313035821-b56f5149b5c6/go.mod h1:JOi7Az72uBLT9D2Qv/6FbUbC9W420st0MMIUgVYUyd0=
 github.com/convox/logger v0.0.0-20180522214415-e39179955b52 h1:HTaloo6by+4NE1A1mRYprWzsOy1PGH2tPGfgZ60dyHU=
 github.com/convox/logger v0.0.0-20180522214415-e39179955b52/go.mod h1:IcbSD+Pq+bQV2z/otiMCHLAYBrDR/jPFopFatrWjlMM=
-github.com/convox/rack v0.0.0-20191023140332-e19fce33f6c3 h1:ldQHJVSEAMKwYQ8GEFNJ/HJRDi+Z3ZF8CU8cD4fZCM0=
-github.com/convox/rack v0.0.0-20191023140332-e19fce33f6c3/go.mod h1:2dMGMyJnGzN0JlFFyaXzm+hK47fzNAhBvU9uqJy47jg=
 github.com/convox/stdapi v0.0.0-20190708203955-b81b71b6a680 h1:IRgaDO4+YanUYcvBlXkzJrgwFh/3BcQOYoI5gEUz2wQ=
 github.com/convox/stdapi v0.0.0-20190708203955-b81b71b6a680/go.mod h1:NkUGoKf5tAaHq7MW02AF9mSXSIHCZJ0ZG8+NqRI5t38=
 github.com/convox/stdcli v0.0.0-20190326115454-b78bee159e98 h1:jSUPA5xGpERhDUevVwj8YPXhIbKq+YJPXpF8U9M4p1o=
