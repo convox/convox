@@ -22,7 +22,9 @@ resource "digitalocean_kubernetes_cluster" "rack" {
   node_pool {
     name       = "rack"
     size       = var.node_type
-    node_count = 3
+    auto_scale = true
+    min_nodes  = 1
+    max_nodes  = 10
   }
 }
 
@@ -38,7 +40,7 @@ resource "local_file" "kubeconfig" {
     token    = digitalocean_kubernetes_cluster.rack.kube_config[0].token
   })
 
-  lifecycle {
-    ignore_changes = [content]
-  }
+  # lifecycle {
+  #   ignore_changes = [content]
+  # }
 }
