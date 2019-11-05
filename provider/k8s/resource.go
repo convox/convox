@@ -3,6 +3,7 @@ package k8s
 import (
 	"fmt"
 	"io"
+	"net/url"
 	"os/exec"
 
 	"github.com/convox/convox/pkg/structs"
@@ -16,36 +17,25 @@ func (p *Provider) ResourceConsole(app, name string, rw io.ReadWriter, opts stru
 		return err
 	}
 
-	switch r.Type {
-	case "postgres":
-		return resourceConsoleCommand(rw, opts, "psql", r.Url)
-	default:
-		return fmt.Errorf("can not export resources of type: %s", r.Type)
-	}
-}
-
-func resourceConsoleCommand(rw io.ReadWriter, opts structs.ResourceConsoleOptions, command string, args ...string) error {
-	cmd := exec.Command(command, args...)
-
-	size := &pty.Winsize{}
-
-	if opts.Height != nil {
-		size.Rows = uint16(*opts.Height)
-	}
-
-	if opts.Width != nil {
-		size.Cols = uint16(*opts.Width)
-	}
-
-	fd, err := pty.StartWithSize(cmd, size)
+	cn, err := parseResourceURL(r.Url)
 	if err != nil {
 		return err
 	}
 
-	go io.Copy(fd, rw)
-	io.Copy(rw, fd)
+	fmt.Printf("cn: %+v\n", cn)
 
-	return nil
+	switch r.Type {
+	case "memcached":
+		return resourceConsoleCommand(rw, opts, "telnet", cn.Host, cn.Port)
+	case "mysql":
+		return resourceConsoleCommand(rw, opts, "mysql", "-h", cn.Host, "-P", cn.Port, "-u", cn.Username, fmt.Sprintf("-p%s", cn.Password), "-D", cn.Database)
+	case "postgres":
+		return resourceConsoleCommand(rw, opts, "psql", r.Url)
+	case "redis":
+		return resourceConsoleCommand(rw, opts, "redis-cli", "-u", r.Url)
+	default:
+		return fmt.Errorf("console not available for resources of type: %s", r.Type)
+	}
 }
 
 func (p *Provider) ResourceExport(app, name string) (io.ReadCloser, error) {
@@ -55,32 +45,13 @@ func (p *Provider) ResourceExport(app, name string) (io.ReadCloser, error) {
 	}
 
 	switch r.Type {
+	case "mysql":
+		return resourceExportMysql(r)
 	case "postgres":
 		return resourceExportPostgres(r)
 	default:
-		return nil, fmt.Errorf("can not export resources of type: %s", r.Type)
+		return nil, fmt.Errorf("export not available for resources of type: %s", r.Type)
 	}
-}
-
-func resourceExportCommand(w io.WriteCloser, command string, args ...string) {
-	defer w.Close()
-
-	cmd := exec.Command(command, args...)
-
-	cmd.Stdout = w
-	cmd.Stderr = w
-
-	if err := cmd.Run(); err != nil {
-		fmt.Fprintf(w, "ERROR: could not export: %v\n", err)
-	}
-}
-
-func resourceExportPostgres(r *structs.Resource) (io.ReadCloser, error) {
-	rr, ww := io.Pipe()
-
-	go resourceExportCommand(ww, "pg_dump", "--no-acl", "--no-owner", r.Url)
-
-	return rr, nil
 }
 
 func (p *Provider) ResourceGet(app, name string) (*structs.Resource, error) {
@@ -117,25 +88,13 @@ func (p *Provider) ResourceImport(app, name string, r io.Reader) error {
 	}
 
 	switch rr.Type {
+	case "mysql":
+		return resourceImportMysql(rr, r)
 	case "postgres":
 		return resourceImportPostgres(rr, r)
 	default:
-		return fmt.Errorf("can not import resources of type: %s", rr.Type)
+		return fmt.Errorf("import not available for resources of type: %s", rr.Type)
 	}
-}
-
-func resourceImportPostgres(rr *structs.Resource, r io.Reader) error {
-	cmd := exec.Command("psql", rr.Url)
-
-	cmd.Stdin = r
-
-	data, err := cmd.CombinedOutput()
-	fmt.Printf("string(data): %+v\n", string(data))
-	if err != nil {
-		return fmt.Errorf("ERROR: import failed")
-	}
-
-	return nil
 }
 
 func (p *Provider) ResourceList(app string) (structs.Resources, error) {
@@ -192,4 +151,126 @@ func (p *Provider) SystemResourceUnlink(name, app string) (*structs.Resource, er
 
 func (p *Provider) SystemResourceUpdate(name string, opts structs.ResourceUpdateOptions) (*structs.Resource, error) {
 	return nil, fmt.Errorf("unimplemented")
+}
+
+type resourceConnection struct {
+	Database string
+	Host     string
+	Password string
+	Port     string
+	Username string
+}
+
+func parseResourceURL(url_ string) (*resourceConnection, error) {
+	u, err := url.Parse(url_)
+	if err != nil {
+		return nil, err
+	}
+
+	cn := &resourceConnection{
+		Host:     u.Hostname(),
+		Port:     u.Port(),
+		Username: u.User.Username(),
+	}
+
+	if pw, ok := u.User.Password(); ok {
+		cn.Password = pw
+	}
+
+	if len(u.Path) > 0 {
+		cn.Database = u.Path[1:]
+	}
+
+	return cn, nil
+}
+
+func resourceConsoleCommand(rw io.ReadWriter, opts structs.ResourceConsoleOptions, command string, args ...string) error {
+	cmd := exec.Command(command, args...)
+
+	size := &pty.Winsize{}
+
+	if opts.Height != nil {
+		size.Rows = uint16(*opts.Height)
+	}
+
+	if opts.Width != nil {
+		size.Cols = uint16(*opts.Width)
+	}
+
+	fd, err := pty.StartWithSize(cmd, size)
+	if err != nil {
+		return err
+	}
+
+	go io.Copy(fd, rw)
+	io.Copy(rw, fd)
+
+	return nil
+}
+
+func resourceExportCommand(w io.WriteCloser, command string, args ...string) {
+	defer w.Close()
+
+	cmd := exec.Command(command, args...)
+
+	cmd.Stdout = w
+	cmd.Stderr = w
+
+	if err := cmd.Run(); err != nil {
+		fmt.Fprintf(w, "ERROR: could not export: %v\n", err)
+	}
+}
+
+func resourceExportMysql(r *structs.Resource) (io.ReadCloser, error) {
+	cn, err := parseResourceURL(r.Url)
+	if err != nil {
+		return nil, err
+	}
+
+	rr, ww := io.Pipe()
+
+	go resourceExportCommand(ww, "mysqldump", "-h", cn.Host, "-P", cn.Port, "-u", cn.Username, fmt.Sprintf("-p%s", cn.Password), cn.Database)
+
+	return rr, nil
+}
+
+func resourceExportPostgres(r *structs.Resource) (io.ReadCloser, error) {
+	rr, ww := io.Pipe()
+
+	go resourceExportCommand(ww, "pg_dump", "--no-acl", "--no-owner", r.Url)
+
+	return rr, nil
+}
+
+func resourceImportMysql(rr *structs.Resource, r io.Reader) error {
+	cn, err := parseResourceURL(rr.Url)
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.Command("mysql", "-h", cn.Host, "-P", cn.Port, "-u", cn.Username, fmt.Sprintf("-p%s", cn.Password), "-D", cn.Database)
+
+	cmd.Stdin = r
+
+	data, err := cmd.CombinedOutput()
+	fmt.Printf("string(data): %+v\n", string(data))
+	if err != nil {
+		return fmt.Errorf("ERROR: import failed")
+	}
+
+	return nil
+}
+
+func resourceImportPostgres(rr *structs.Resource, r io.Reader) error {
+	cmd := exec.Command("psql", rr.Url)
+
+	cmd.Stdin = r
+
+	data, err := cmd.CombinedOutput()
+	fmt.Printf("string(data): %+v\n", string(data))
+	if err != nil {
+		return fmt.Errorf("ERROR: import failed")
+	}
+
+	return nil
 }

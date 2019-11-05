@@ -185,8 +185,6 @@ func ResourcesConsole(rack sdk.Interface, c *stdcli.Context) error {
 		opts.Width = options.Int(w)
 	}
 
-	fmt.Printf("opts: %+v\n", opts)
-
 	restore := c.TerminalRaw()
 	defer restore()
 
