@@ -44,7 +44,7 @@ release:
 	docker push convox/convox:$(version)
 
 test:
-	env PROVIDER=test go test -covermode atomic -coverprofile coverage.txt ./...
+	env PROVIDER=test go test -covermode atomic -coverprofile coverage.txt -mod=vendor ./...
 
 $(binaries): $(GOPATH)/bin/%: $(sources)
 	go install -mod=vendor --ldflags="-s -w" ./cmd/$*
