@@ -982,6 +982,43 @@ func (_m *MockProvider) ReleasePromote(app string, id string, opts ReleasePromot
 	return r0
 }
 
+// ResourceConsole provides a mock function with given fields: app, name, rw, opts
+func (_m *MockProvider) ResourceConsole(app string, name string, rw io.ReadWriter, opts ResourceConsoleOptions) error {
+	ret := _m.Called(app, name, rw, opts)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string, io.ReadWriter, ResourceConsoleOptions) error); ok {
+		r0 = rf(app, name, rw, opts)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ResourceExport provides a mock function with given fields: app, name
+func (_m *MockProvider) ResourceExport(app string, name string) (io.ReadCloser, error) {
+	ret := _m.Called(app, name)
+
+	var r0 io.ReadCloser
+	if rf, ok := ret.Get(0).(func(string, string) io.ReadCloser); ok {
+		r0 = rf(app, name)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(io.ReadCloser)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, string) error); ok {
+		r1 = rf(app, name)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ResourceGet provides a mock function with given fields: app, name
 func (_m *MockProvider) ResourceGet(app string, name string) (*Resource, error) {
 	ret := _m.Called(app, name)
@@ -1003,6 +1040,20 @@ func (_m *MockProvider) ResourceGet(app string, name string) (*Resource, error) 
 	}
 
 	return r0, r1
+}
+
+// ResourceImport provides a mock function with given fields: app, name, r
+func (_m *MockProvider) ResourceImport(app string, name string, r io.Reader) error {
+	ret := _m.Called(app, name, r)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string, io.Reader) error); ok {
+		r0 = rf(app, name, r)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // ResourceList provides a mock function with given fields: app

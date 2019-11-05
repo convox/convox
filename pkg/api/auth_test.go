@@ -5,10 +5,10 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/convox/logger"
 	"github.com/convox/convox/pkg/api"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/sdk"
+	"github.com/convox/logger"
 	"github.com/convox/stdsdk"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -17,6 +17,7 @@ import (
 func TestAuthentication(t *testing.T) {
 	p := &structs.MockProvider{}
 	p.On("Initialize", mock.Anything).Return(nil)
+	p.On("Start").Return(nil)
 
 	s := api.NewWithProvider(p)
 	s.Logger = logger.Discard

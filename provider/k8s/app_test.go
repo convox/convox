@@ -83,7 +83,7 @@ func TestAppCreate(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, a)
 
-		assert.Equal(t, "2", a.Generation)
+		assert.Equal(t, "3", a.Generation)
 		assert.Equal(t, "app1", a.Name)
 	})
 }
@@ -124,7 +124,7 @@ func TestAppGet(t *testing.T) {
 		a, err := p.AppGet("app1")
 		require.NoError(t, err)
 
-		assert.Equal(t, "2", a.Generation)
+		assert.Equal(t, "3", a.Generation)
 		assert.Equal(t, false, a.Locked)
 		assert.Equal(t, "app1", a.Name)
 		assert.Equal(t, "R1234567", a.Release)
@@ -174,17 +174,18 @@ func TestAppList(t *testing.T) {
 		require.NoError(t, appCreate(kk, "rack1", "app2"))
 
 		as, err := p.AppList()
+		fmt.Printf("as: %+v\n", as)
 		require.NoError(t, err)
 		require.Equal(t, 2, len(as))
 
-		assert.Equal(t, "2", as[0].Generation)
+		assert.Equal(t, "3", as[0].Generation)
 		assert.Equal(t, false, as[0].Locked)
 		assert.Equal(t, "app1", as[0].Name)
 		assert.Equal(t, "R1234567", as[0].Release)
 		assert.Equal(t, "", as[0].Router)
 		assert.Equal(t, "running", as[0].Status)
 
-		assert.Equal(t, "2", as[1].Generation)
+		assert.Equal(t, "3", as[1].Generation)
 		assert.Equal(t, false, as[1].Locked)
 		assert.Equal(t, "app2", as[1].Name)
 		assert.Equal(t, "R2345678", as[1].Release)

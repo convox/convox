@@ -1035,6 +1035,56 @@ func (s *Server) ReleasePromote(c *stdapi.Context) error {
 	return c.RenderOK()
 }
 
+func (s *Server) ResourceConsole(c *stdapi.Context) error {
+	if err := s.hook("ResourceConsoleValidate", c); err != nil {
+		return err
+	}
+
+	app := c.Var("app")
+	name := c.Var("name")
+	rw := c
+
+	var opts structs.ResourceConsoleOptions
+	if err := stdapi.UnmarshalOptions(c.Request(), &opts); err != nil {
+		return err
+	}
+
+	err := s.provider(c).WithContext(c.Context()).ResourceConsole(app, name, rw, opts)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Server) ResourceExport(c *stdapi.Context) error {
+	if err := s.hook("ResourceExportValidate", c); err != nil {
+		return err
+	}
+
+	app := c.Var("app")
+	name := c.Var("name")
+
+	v, err := s.provider(c).WithContext(c.Context()).ResourceExport(app, name)
+	if err != nil {
+		return err
+	}
+
+	if c, ok := interface{}(v).(io.Closer); ok {
+		defer c.Close()
+	}
+
+	if _, err := io.Copy(c, v); err != nil {
+		return err
+	}
+
+	if vs, ok := interface{}(v).(Sortable); ok {
+		sort.Slice(v, vs.Less)
+	}
+
+	return nil
+}
+
 func (s *Server) ResourceGet(c *stdapi.Context) error {
 	if err := s.hook("ResourceGetValidate", c); err != nil {
 		return err
@@ -1053,6 +1103,23 @@ func (s *Server) ResourceGet(c *stdapi.Context) error {
 	}
 
 	return c.RenderJSON(v)
+}
+
+func (s *Server) ResourceImport(c *stdapi.Context) error {
+	if err := s.hook("ResourceImportValidate", c); err != nil {
+		return err
+	}
+
+	app := c.Var("app")
+	name := c.Var("name")
+	r := c
+
+	err := s.provider(c).WithContext(c.Context()).ResourceImport(app, name, r)
+	if err != nil {
+		return err
+	}
+
+	return c.RenderOK()
 }
 
 func (s *Server) ResourceList(c *stdapi.Context) error {

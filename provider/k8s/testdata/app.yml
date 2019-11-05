@@ -30,6 +30,5 @@ spec:
   - from:
     - namespaceSelector:
         matchLabels:
-          scope: system
           system: convox
   podSelector: {}

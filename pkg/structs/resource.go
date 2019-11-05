@@ -39,6 +39,11 @@ func (rps ResourceParameters) Less(i, j int) bool {
 	return rps[i].Name < rps[j].Name
 }
 
+type ResourceConsoleOptions struct {
+	Height *int `header:"Height"`
+	Width  *int `header:"Width"`
+}
+
 type ResourceCreateOptions struct {
 	Name       *string           `param:"name"`
 	Parameters map[string]string `param:"parameters"`

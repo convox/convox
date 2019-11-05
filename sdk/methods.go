@@ -701,6 +701,45 @@ func (c *Client) ReleasePromote(app string, id string, opts structs.ReleasePromo
 	return err
 }
 
+func (c *Client) ResourceConsole(app string, name string, rw io.ReadWriter, opts structs.ResourceConsoleOptions) error {
+	var err error
+
+	ro, err := stdsdk.MarshalOptions(opts)
+	if err != nil {
+		return err
+	}
+
+	ro.Body = rw
+
+	r, err := c.Websocket(fmt.Sprintf("/apps/%s/resources/%s/console", app, name), ro)
+	if err != nil {
+		return err
+	}
+
+	if _, err := io.Copy(rw, r); err != nil {
+		return err
+	}
+
+	return err
+}
+
+func (c *Client) ResourceExport(app string, name string) (io.ReadCloser, error) {
+	var err error
+
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+
+	var v io.ReadCloser
+
+	res, err := c.GetStream(fmt.Sprintf("/apps/%s/resources/%s/data", app, name), ro)
+	if err != nil {
+		return nil, err
+	}
+
+	v = res.Body
+
+	return v, err
+}
+
 func (c *Client) ResourceGet(app string, name string) (*structs.Resource, error) {
 	var err error
 
@@ -711,6 +750,18 @@ func (c *Client) ResourceGet(app string, name string) (*structs.Resource, error)
 	err = c.Get(fmt.Sprintf("/apps/%s/resources/%s", app, name), ro, &v)
 
 	return v, err
+}
+
+func (c *Client) ResourceImport(app string, name string, r io.Reader) error {
+	var err error
+
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+
+	ro.Body = r
+
+	err = c.Put(fmt.Sprintf("/apps/%s/resources/%s/data", app, name), ro, nil)
+
+	return err
 }
 
 func (c *Client) ResourceList(app string) (structs.Resources, error) {

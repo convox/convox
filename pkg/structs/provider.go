@@ -69,7 +69,10 @@ type Provider interface {
 	ReleaseList(app string, opts ReleaseListOptions) (Releases, error)
 	ReleasePromote(app, id string, opts ReleasePromoteOptions) error
 
+	ResourceConsole(app, name string, rw io.ReadWriter, opts ResourceConsoleOptions) error
+	ResourceExport(app, name string) (io.ReadCloser, error)
 	ResourceGet(app, name string) (*Resource, error)
+	ResourceImport(app, name string, r io.Reader) error
 	ResourceList(app string) (Resources, error)
 
 	ServiceList(app string) (Services, error)

@@ -6,9 +6,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/convox/logger"
 	"github.com/convox/convox/pkg/api"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/logger"
 	"github.com/convox/stdsdk"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -17,6 +17,7 @@ import (
 func testServer(t *testing.T, fn func(*stdsdk.Client, *structs.MockProvider)) {
 	p := &structs.MockProvider{}
 	p.On("Initialize", mock.Anything).Return(nil)
+	p.On("Start").Return(nil)
 	p.On("WithContext", mock.Anything).Return(p).Maybe()
 
 	s := api.NewWithProvider(p)
