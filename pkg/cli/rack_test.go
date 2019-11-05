@@ -2,12 +2,6 @@ package cli_test
 
 import (
 	"fmt"
-	"io"
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
-	"net/url"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -15,8 +9,6 @@ import (
 	mocksdk "github.com/convox/convox/pkg/mock/sdk"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
-	"github.com/convox/convox/provider"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -68,65 +60,6 @@ func TestRackInternal(t *testing.T) {
 			"Status    running",
 			"Version   20180901000000",
 		})
-	})
-}
-
-func TestRackInstall(t *testing.T) {
-	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			require.Equal(t, "/auth", r.URL.Path)
-			user, pass, _ := r.BasicAuth()
-			require.Equal(t, "convox", user)
-			require.Equal(t, "password", pass)
-		}))
-
-		tsu, err := url.Parse(ts.URL)
-		require.NoError(t, err)
-
-		opts := structs.SystemInstallOptions{
-			Name:       options.String("foo"),
-			Parameters: map[string]string{},
-			Version:    options.String("bar"),
-		}
-		provider.Mock.On("SystemInstall", mock.Anything, opts).Once().Return(fmt.Sprintf("https://convox:password@%s", tsu.Host), nil).Run(func(args mock.Arguments) {
-			w := args.Get(0).(io.Writer)
-			fmt.Fprintf(w, "line1\n")
-			fmt.Fprintf(w, "line2\n")
-		})
-
-		res, err := testExecute(e, "rack install test -n foo -v bar", nil)
-		require.NoError(t, err)
-		require.Equal(t, 0, res.Code)
-		res.RequireStderr(t, []string{""})
-		res.RequireStdout(t, []string{
-			"line1",
-			"line2",
-		})
-
-		data, err := ioutil.ReadFile(filepath.Join(e.Settings, "auth"))
-		require.NoError(t, err)
-		require.Equal(t, fmt.Sprintf("{\n  \"%s\": \"password\"\n}", tsu.Host), string(data))
-
-		data, err = ioutil.ReadFile(filepath.Join(e.Settings, "host"))
-		require.NoError(t, err)
-		require.Equal(t, tsu.Host, string(data))
-	})
-}
-
-func TestRackInstallError(t *testing.T) {
-	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		opts := structs.SystemInstallOptions{
-			Name:       options.String("foo"),
-			Parameters: map[string]string{},
-			Version:    options.String("bar"),
-		}
-		provider.Mock.On("SystemInstall", mock.Anything, opts).Return("", fmt.Errorf("err1"))
-
-		res, err := testExecute(e, "rack install test -n foo -v bar", nil)
-		require.NoError(t, err)
-		require.Equal(t, 1, res.Code)
-		res.RequireStderr(t, []string{"ERROR: err1"})
-		res.RequireStdout(t, []string{""})
 	})
 }
 
@@ -373,53 +306,6 @@ func TestRackScaleUpdateError(t *testing.T) {
 		require.Equal(t, 1, res.Code)
 		res.RequireStderr(t, []string{"ERROR: err1"})
 		res.RequireStdout(t, []string{"Scaling rack... "})
-	})
-}
-
-func TestRackUninstall(t *testing.T) {
-	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		opts := structs.SystemUninstallOptions{
-			Force: options.Bool(true),
-		}
-		provider.Mock.On("SystemUninstall", "foo", mock.Anything, opts).Once().Return(nil).Run(func(args mock.Arguments) {
-			w := args.Get(1).(io.Writer)
-			fmt.Fprintf(w, "line1\n")
-			fmt.Fprintf(w, "line2\n")
-		})
-
-		res, err := testExecute(e, "rack uninstall test foo --force", nil)
-		require.NoError(t, err)
-		require.Equal(t, 0, res.Code)
-		res.RequireStderr(t, []string{""})
-		res.RequireStdout(t, []string{
-			"line1",
-			"line2",
-		})
-	})
-}
-
-func TestRackUninstallError(t *testing.T) {
-	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		opts := structs.SystemUninstallOptions{
-			Force: options.Bool(true),
-		}
-		provider.Mock.On("SystemUninstall", "foo", mock.Anything, opts).Return(fmt.Errorf("err1"))
-
-		res, err := testExecute(e, "rack uninstall test foo --force", nil)
-		require.NoError(t, err)
-		require.Equal(t, 1, res.Code)
-		res.RequireStderr(t, []string{"ERROR: err1"})
-		res.RequireStdout(t, []string{""})
-	})
-}
-
-func TestRackUninstallWithoutForce(t *testing.T) {
-	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		res, err := testExecute(e, "rack uninstall test foo", nil)
-		require.NoError(t, err)
-		require.Equal(t, 1, res.Code)
-		res.RequireStderr(t, []string{"ERROR: must use --force for non-interactive uninstall"})
-		res.RequireStdout(t, []string{""})
 	})
 }
 

@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/convox/exec"
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/start"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/exec"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -74,7 +74,7 @@ func TestStart2(t *testing.T) {
 }
 
 func TestStart2Options(t *testing.T) {
-	helpers.ProviderWaitDuration = 1
+	common.ProviderWaitDuration = 1
 
 	p := &structs.MockProvider{}
 
