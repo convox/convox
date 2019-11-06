@@ -6,6 +6,10 @@ variable "domain" {
   type = "string"
 }
 
+variable "elasticsearch" {
+  type = "string"
+}
+
 variable "kubeconfig" {
   type = "string"
 }
