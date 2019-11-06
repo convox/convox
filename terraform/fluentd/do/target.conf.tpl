@@ -13,7 +13,7 @@
 		host ${elasticsearch}
 		port 9200
 		target_index_key index
-		type_name fluentd
+		type_name _doc
 		logstash_format true
 		<buffer>
 			flush_interval 1
