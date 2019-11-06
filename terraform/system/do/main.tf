@@ -31,6 +31,7 @@ module "cluster" {
   name      = var.name
   node_type = var.node_type
   region    = var.region
+  token     = var.token
 }
 
 module "elasticsearch" {

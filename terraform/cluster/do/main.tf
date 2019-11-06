@@ -14,10 +14,23 @@ provider "random" {
   version = "~> 2.2"
 }
 
+data "http" "kubernetes_versions" {
+  url = "https://api.digitalocean.com/v2/kubernetes/options"
+
+  request_headers = {
+    Authorization = "Bearer ${var.token}"
+  }
+}
+
+locals {
+  kubernetes_desired = "1.14"
+  kubernetes_slug    = [for v in jsondecode(data.http.kubernetes_versions.body).options.versions : v.slug if length(regexall("^${local.kubernetes_desired}\\.", v.kubernetes_version)) > 0].0
+}
+
 resource "digitalocean_kubernetes_cluster" "rack" {
   name    = var.name
   region  = var.region
-  version = "1.14.8-do.0"
+  version = local.kubernetes_slug
 
   node_pool {
     name       = "rack"
@@ -39,8 +52,4 @@ resource "local_file" "kubeconfig" {
     endpoint = digitalocean_kubernetes_cluster.rack.endpoint
     token    = digitalocean_kubernetes_cluster.rack.kube_config[0].token
   })
-
-  # lifecycle {
-  #   ignore_changes = [content]
-  # }
 }

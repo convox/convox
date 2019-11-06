@@ -21,3 +21,7 @@ variable "release" {
 variable "secret_key" {
   type = "string"
 }
+
+variable "token" {
+  type = "string"
+}
