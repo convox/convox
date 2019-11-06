@@ -34,16 +34,6 @@ module "cluster" {
   token     = var.token
 }
 
-module "elasticsearch" {
-  source = "../../elasticsearch/k8s"
-
-  providers = {
-    kubernetes = kubernetes
-  }
-
-  namespace = "kube-system"
-}
-
 module "fluentd" {
   source = "../../fluentd/do"
 
@@ -51,9 +41,10 @@ module "fluentd" {
     kubernetes = kubernetes
   }
 
-  cluster   = var.name
-  namespace = "kube-system"
-  name      = var.name
+  cluster       = var.name
+  elasticsearch = module.rack.elasticsearch
+  namespace     = "kube-system"
+  name          = var.name
 }
 
 module "rack" {

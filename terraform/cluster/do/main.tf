@@ -42,9 +42,7 @@ resource "digitalocean_kubernetes_cluster" "rack" {
 }
 
 resource "local_file" "kubeconfig" {
-  depends_on = [
-    digitalocean_kubernetes_cluster.rack,
-  ]
+  depends_on = [digitalocean_kubernetes_cluster.rack]
 
   filename = pathexpand("~/.kube/config.do.${var.name}")
   content = templatefile("${path.module}/kubeconfig.tpl", {

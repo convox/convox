@@ -36,7 +36,7 @@ module "k8s" {
 
   env = {
     BUCKET            = digitalocean_spaces_bucket.storage.name
-    ELASTICSEARCH_URL = "http://elasticsearch.kube-system.svc.cluster.local:9200"
+    ELASTICSEARCH_URL = var.elasticsearch
     PROVIDER          = "do"
     REGION            = var.region
     REGISTRY          = "registry.${var.domain}"

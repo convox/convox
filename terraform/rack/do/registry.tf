@@ -5,9 +5,10 @@ resource "random_string" "suffix" {
 }
 
 resource "digitalocean_spaces_bucket" "registry" {
-  name   = "${var.name}-registry-${random_string.suffix.result}"
-  region = var.region
-  acl    = "private"
+  name          = "${var.name}-registry-${random_string.suffix.result}"
+  region        = var.region
+  acl           = "private"
+  force_destroy = true
 }
 
 resource "random_string" "secret" {
