@@ -1,10 +1,9 @@
-.PHONY: all build clean clean-package compress generate generate-k8s generate-provider mocks package release test
+.PHONY: all build clean clean-package compress dev generate generate-k8s generate-provider mocks package release test
 
 commands = api atom build router
 
 binaries = $(addprefix $(GOPATH)/bin/, $(commands))
 sources  = $(shell find . -name '*.go')
-version := dev-$(shell date +%Y%m%d%H%M%S)
 
 all: build
 
@@ -17,6 +16,13 @@ clean-package:
 
 compress: $(binaries)
 	upx-ucl -1 $^
+
+dev:
+	test -n "$(RACK)" # RACK
+	docker build -t convox/convox:master .
+	docker push convox/convox:master
+	kubectl rollout restart deployment/api -n $(RACK)-system
+	kubectl rollout status deployment/api -n $(RACK)-system
 
 generate: generate-provider generate-k8s
 
@@ -40,8 +46,11 @@ package:
 	$(GOPATH)/bin/packr
 
 release:
-	docker build -t convox/convox:$(version) .
-	docker push convox/convox:$(version)
+	test -n "$(VERSION)" # VERSION
+	git tag $(VERSION) -m $(VERSION)
+	git push
+	docker build -t convox/convox:$(VERSION) .
+	docker push convox/convox:$(VERSION)
 
 test:
 	env PROVIDER=test go test -covermode atomic -coverprofile coverage.txt -mod=vendor ./...
