@@ -14,10 +14,19 @@ jobs:
         VERSION=$(echo ${GITHUB_REF} | awk -F/ '{print $3}')
         echo "::set-env name=VERSION::${VERSION}"
     - name: build
-      run: docker build -t docker.pkg.github.com/convox/convox/convox:${VERSION} .
+      run: docker build -t convox/convox:${VERSION} .
     - name: login
-      run: docker login docker.pkg.github.com --username convox --password "${GITHUB_TOKEN}"
+      run: docker login --username "${DOCKER_USERNAME}" --password "${DOCKER_PASSWORD}"
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
     - name: push
-      run: docker push docker.pkg.github.com/convox/convox/convox:${VERSION}
+      run: docker push convox/convox:${VERSION}
+    # - name: build
+    #   run: docker build -t docker.pkg.github.com/convox/convox/convox:${VERSION} .
+    # - name: push
+    #   run: docker login docker.pkg.github.com --username convox --password "${GITHUB_TOKEN}"
+    #   env:
+    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    # - name: push
+    #   run: docker push docker.pkg.github.com/convox/convox/convox:${VERSION}
