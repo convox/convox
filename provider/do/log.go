@@ -32,6 +32,23 @@ type elasticSearchResult struct {
 }
 
 func (p *Provider) Log(app, stream string, ts time.Time, message string) error {
+	index := fmt.Sprintf("convox.%s.%s", p.Name, app)
+
+	body := map[string]interface{}{
+		"log":        fmt.Sprintf("%s\n", message),
+		"stream":     stream,
+		"@timestamp": ts.Format(time.RFC3339Nano),
+	}
+
+	data, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+
+	if _, err := p.Elastic.Index(index, bytes.NewReader(data)); err != nil {
+		return err
+	}
+
 	return nil
 }
 
