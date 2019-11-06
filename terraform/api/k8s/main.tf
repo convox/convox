@@ -81,6 +81,7 @@ resource "kubernetes_deployment" "api" {
   spec {
     min_ready_seconds      = 3
     revision_history_limit = 0
+    replicas               = 2
 
     selector {
       match_labels = {
