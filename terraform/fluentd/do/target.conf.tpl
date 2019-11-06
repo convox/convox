@@ -3,14 +3,14 @@
 		@type record_transformer
 		enable_ruby true
 		<record>
-			index convox.${record["kubernetes"]["namespace_labels"]["rack"]}.${record["kubernetes"]["namespace_labels"]["app"]}
-			stream service.${record["kubernetes"]["labels"]["service"]}.${record["kubernetes"]["pod_name"]}
+			index convox.$${record["kubernetes"]["namespace_labels"]["rack"]}.$${record["kubernetes"]["namespace_labels"]["app"]}
+			stream service.$${record["kubernetes"]["labels"]["service"]}.$${record["kubernetes"]["pod_name"]}
 		</record>
 	</filter>
 
 	<match **>
 		@type elasticsearch
-		host elasticsearch.kube-system.svc.cluster.local
+		host ${elasticsearch}
 		port 9200
 		target_index_key index
 		type_name fluentd

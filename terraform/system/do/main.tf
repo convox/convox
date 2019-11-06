@@ -41,9 +41,10 @@ module "fluentd" {
     kubernetes = kubernetes
   }
 
-  cluster   = var.name
-  namespace = "kube-system"
-  name      = var.name
+  cluster       = var.name
+  elasticsearch = module.rack.elasticsearch
+  namespace     = "kube-system"
+  name          = var.name
 }
 
 module "rack" {
