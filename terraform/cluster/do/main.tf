@@ -33,7 +33,7 @@ resource "digitalocean_kubernetes_cluster" "rack" {
   version = local.kubernetes_slug
 
   node_pool {
-    name       = "rack"
+    name       = "${var.name}-node"
     size       = var.node_type
     auto_scale = true
     min_nodes  = 1
