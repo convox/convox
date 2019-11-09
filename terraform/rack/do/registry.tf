@@ -107,10 +107,26 @@ resource "kubernetes_deployment" "registry" {
         volume {
           name = "registry"
 
-          host_path {
-            path = "/var/lib/registry"
+          persistent_volume_claim {
+            claim_name = kubernetes_persistent_volume_claim.registry.metadata.0.name
           }
         }
+      }
+    }
+  }
+}
+
+resource "kubernetes_persistent_volume_claim" "registry" {
+  metadata {
+    namespace = module.k8s.namespace
+    name      = "registry"
+  }
+
+  spec {
+    access_modes = ["ReadWriteOnce"]
+    resources {
+      requests = {
+        storage = var.registry_disk
       }
     }
   }

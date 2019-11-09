@@ -55,10 +55,11 @@ module "rack" {
     kubernetes   = kubernetes
   }
 
-  access_id  = var.access_id
-  kubeconfig = module.cluster.kubeconfig
-  name       = var.name
-  region     = var.region
-  release    = local.release
-  secret_key = var.secret_key
+  access_id     = var.access_id
+  kubeconfig    = module.cluster.kubeconfig
+  name          = var.name
+  region        = var.region
+  registry_disk = var.registry_disk
+  release       = local.release
+  secret_key    = var.secret_key
 }
