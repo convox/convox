@@ -14,6 +14,10 @@ variable "region" {
   type = "string"
 }
 
+variable "registry_disk" {
+  type = "string"
+}
+
 variable "release" {
   default = ""
 }
