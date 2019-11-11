@@ -3,11 +3,11 @@ terraform {
 }
 
 provider "google" {
-  version = "~> 2.18"
+  version = "~> 2.19"
 }
 
 provider "google-beta" {
-  version = "~> 2.18"
+  version = "~> 2.19"
 }
 
 provider "local" {
@@ -42,10 +42,6 @@ resource "google_container_cluster" "rack" {
   initial_node_count       = 1
   logging_service          = "logging.googleapis.com"
   min_master_version       = data.google_container_engine_versions.available.latest_master_version
-
-  ip_allocation_policy {
-    use_ip_aliases = true
-  }
 
   workload_identity_config {
     identity_namespace = "${data.google_project.current.project_id}.svc.id.goog"
