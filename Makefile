@@ -49,8 +49,6 @@ release:
 	test -n "$(VERSION)" # VERSION
 	git tag $(VERSION) -m $(VERSION)
 	git push
-	docker build -t convox/convox:$(VERSION) .
-	docker push convox/convox:$(VERSION)
 
 test:
 	env PROVIDER=test go test -covermode atomic -coverprofile coverage.txt -mod=vendor ./...
