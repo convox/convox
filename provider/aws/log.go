@@ -1,8 +1,10 @@
 package aws
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -39,7 +41,7 @@ func (p *Provider) Log(app, stream string, ts time.Time, message string) error {
 
 	for {
 		res, err := p.CloudWatchLogs.PutLogEvents(req)
-		switch common.AwsErrorCode(err) {
+		switch awsErrorCode(err) {
 		case "ResourceNotFoundException":
 			if strings.Contains(err.Error(), "log group") {
 				if err := p.createLogGroup(app); err != nil {
@@ -69,25 +71,11 @@ func (p *Provider) Log(app, stream string, ts time.Time, message string) error {
 }
 
 func (p *Provider) AppLogs(name string, opts structs.LogsOptions) (io.ReadCloser, error) {
-	return common.CloudWatchLogsSubscribe(p.Context(), p.CloudWatchLogs, p.appLogGroup(name), "", opts)
+	return p.subscribeLogs(p.Context(), p.appLogGroup(name), "", opts)
 }
 
-// func (p *Provider) ProcessLogs(app, pid string, opts structs.LogsOptions) (io.ReadCloser, error) {
-// 	ps, err := p.ProcessGet(app, pid)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	key := fmt.Sprintf("service/%s/%s", ps.Name, pid)
-
-// 	ctx, cancel := context.WithCancel(p.Context())
-// 	go p.watchForProcessTermination(ctx, app, pid, cancel)
-
-// 	return common.CloudWatchLogsSubscribe(ctx, p.CloudWatchLogs, p.appLogGroup(app), key, opts)
-// }
-
 func (p *Provider) SystemLogs(opts structs.LogsOptions) (io.ReadCloser, error) {
-	return common.CloudWatchLogsSubscribe(p.Context(), p.CloudWatchLogs, p.appLogGroup("system"), "", opts)
+	return p.subscribeLogs(p.Context(), p.appLogGroup("system"), "", opts)
 }
 
 func (p *Provider) appLogGroup(app string) string {
@@ -138,4 +126,125 @@ func (p *Provider) nextSequenceToken(group, stream string) (string, error) {
 	}
 
 	return *res.LogStreams[0].UploadSequenceToken, nil
+}
+
+func (p *Provider) streamLogs(ctx context.Context, w io.WriteCloser, group, stream string, opts structs.LogsOptions) error {
+	defer w.Close()
+
+	req := &cloudwatchlogs.FilterLogEventsInput{
+		LogGroupName: aws.String(group),
+	}
+
+	if opts.Filter != nil {
+		req.FilterPattern = aws.String(*opts.Filter)
+	}
+
+	follow := common.DefaultBool(opts.Follow, true)
+
+	var start int64
+
+	if opts.Since != nil {
+		start = time.Now().UTC().Add((*opts.Since)*-1).UnixNano() / int64(time.Millisecond)
+		req.StartTime = aws.Int64(start)
+	}
+
+	if stream != "" {
+		req.LogStreamNames = []*string{aws.String(stream)}
+	} else {
+		req.Interleaved = aws.Bool(true)
+	}
+
+	seen := map[string]bool{}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+			// check for closed writer
+			if _, err := w.Write([]byte{}); err != nil {
+				return err
+			}
+
+			res, err := p.CloudWatchLogs.FilterLogEvents(req)
+			if err != nil {
+				switch awsErrorCode(err) {
+				case "ThrottlingException", "ResourceNotFoundException":
+					time.Sleep(1 * time.Second)
+					continue
+				default:
+					return err
+				}
+			}
+
+			es := []*cloudwatchlogs.FilteredLogEvent{}
+
+			for _, e := range res.Events {
+				if !seen[*e.EventId] {
+					es = append(es, e)
+					seen[*e.EventId] = true
+				}
+
+				if e.Timestamp != nil && *e.Timestamp > start {
+					start = *e.Timestamp
+				}
+			}
+
+			sort.Slice(es, func(i, j int) bool { return *es[i].Timestamp < *es[j].Timestamp })
+
+			if _, err := writeLogEvents(w, es, opts); err != nil {
+				return err
+			}
+
+			req.NextToken = res.NextToken
+
+			if res.NextToken == nil {
+				if !follow {
+					return nil
+				}
+
+				req.StartTime = aws.Int64(start)
+			}
+		}
+	}
+}
+
+func (p *Provider) subscribeLogs(ctx context.Context, group, stream string, opts structs.LogsOptions) (io.ReadCloser, error) {
+	r, w := io.Pipe()
+
+	go p.streamLogs(ctx, w, group, stream, opts)
+
+	return r, nil
+}
+
+func writeLogEvents(w io.Writer, events []*cloudwatchlogs.FilteredLogEvent, opts structs.LogsOptions) (int64, error) {
+	if len(events) == 0 {
+		return 0, nil
+	}
+
+	latest := int64(0)
+
+	for _, e := range events {
+		if *e.Timestamp > latest {
+			latest = *e.Timestamp
+		}
+
+		prefix := ""
+
+		if common.DefaultBool(opts.Prefix, false) {
+			sec := *e.Timestamp / 1000
+			nsec := (*e.Timestamp % 1000) * 1000
+			t := time.Unix(sec, nsec).UTC()
+
+			prefix = fmt.Sprintf("%s %s ", t.Format(time.RFC3339), *e.LogStreamName)
+		}
+
+		line := fmt.Sprintf("%s%s\n", prefix, strings.TrimSuffix(*e.Message, "\n"))
+
+		if _, err := w.Write([]byte(line)); err != nil {
+			return 0, err
+		}
+	}
+
+	return latest, nil
 }

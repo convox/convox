@@ -5,7 +5,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecr"
-	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/structs"
 
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,7 +47,7 @@ func (p *Provider) AppDelete(name string) error {
 		RepositoryName: aws.String(fmt.Sprintf("%s/%s", p.Name, name)),
 	})
 	if err != nil {
-		switch common.AwsErrorCode(err) {
+		switch awsErrorCode(err) {
 		case "RepositoryNotFoundException":
 		default:
 			return err
