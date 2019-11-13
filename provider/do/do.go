@@ -12,7 +12,6 @@ import (
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/k8s"
 	"github.com/elastic/go-elasticsearch/v6"
-	"k8s.io/apimachinery/pkg/util/runtime"
 )
 
 type Provider struct {
@@ -60,8 +59,6 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 	if err := p.Provider.Initialize(opts); err != nil {
 		return err
 	}
-
-	runtime.ErrorHandlers = []func(error){}
 
 	return nil
 }

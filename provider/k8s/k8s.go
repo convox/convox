@@ -105,6 +105,8 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 	p.metrics = metrics.New("https://metrics.convox.com/metrics/rack")
 	p.templater = templater.New(packr.NewBox("../k8s/template"), p.templateHelpers())
 
+	runtime.ErrorHandlers = []func(error){}
+
 	return nil
 }
 

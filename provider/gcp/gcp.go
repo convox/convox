@@ -12,7 +12,6 @@ import (
 	"github.com/convox/convox/pkg/templater"
 	"github.com/convox/convox/provider/k8s"
 	"github.com/gobuffalo/packr"
-	"k8s.io/apimachinery/pkg/util/runtime"
 )
 
 type Provider struct {
@@ -67,8 +66,6 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 	if err := p.Provider.Initialize(opts); err != nil {
 		return err
 	}
-
-	runtime.ErrorHandlers = []func(error){}
 
 	return nil
 }

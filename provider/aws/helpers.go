@@ -90,12 +90,21 @@ func (p *Provider) watchForProcessTermination(ctx context.Context, app, pid stri
 	}
 }
 
+func awsErrorCode(err error) string {
+	if ae, ok := err.(awserr.Error); ok {
+		return ae.Code()
+	}
+
+	return ""
+}
+
 func cloudformationErrorNoUpdates(err error) bool {
 	if ae, ok := err.(awserr.Error); ok {
 		if ae.Code() == "ValidationError" && strings.Contains(ae.Message(), "No updates are to be performed") {
 			return true
 		}
 	}
+
 	return false
 }
 

@@ -19,34 +19,13 @@ import (
 	"github.com/convox/convox/pkg/templater"
 	"github.com/convox/convox/provider/k8s"
 	"github.com/gobuffalo/packr"
-	"k8s.io/apimachinery/pkg/util/runtime"
 )
 
 type Provider struct {
 	*k8s.Provider
 
-	// AccountId      string
-	// AdminUser      string
-	// AutoscalerRole string
-	// BalancerSecurity     string
 	Bucket string
-	// Cluster string
-	// Domain string
-	// EventQueue string
-	// EventTopic string
-	// NodesRole  string
 	Region string
-	// RackRole   string
-	// RouterCache   string
-	// RouterHosts   string
-	// RouterRole    string
-	// RouterTargets string
-	// RouterTargetGroup80  string
-	// RouterTargetGroup443 string
-	// StackId string
-	// SubnetsPublic        []string
-	// SubnetsPrivate       []string
-	// Vpc                  string
 
 	CloudFormation cloudformationiface.CloudFormationAPI
 	CloudWatchLogs cloudwatchlogsiface.CloudWatchLogsAPI
@@ -66,8 +45,7 @@ func FromEnv() (*Provider, error) {
 	p := &Provider{
 		Provider: k,
 		Bucket:   os.Getenv("BUCKET"),
-		// Domain:   os.Getenv("DOMAIN"),
-		Region: os.Getenv("AWS_REGION"),
+		Region:   os.Getenv("AWS_REGION"),
 	}
 
 	p.templater = templater.New(packr.NewBox("../aws/template"), p.templateHelpers())
@@ -77,61 +55,14 @@ func FromEnv() (*Provider, error) {
 	return p, nil
 }
 
-// func FromEnv() (*Provider, error) {
-// 	kp, err := k8s.FromEnv()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	p := &Provider{
-// 		Provider:   kp,
-// 		Region:     os.Getenv("AWS_REGION"),
-// 		BaseDomain: "example.org",
-// 	}
-
-// 	p.templater = templater.New(packr.NewBox("../kaws/template"), p.templateHelpers())
-
-// 	kp.Engine = p
-
-// 	return p, nil
-// }
-
 func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 	if err := p.initializeAwsServices(); err != nil {
 		return err
 	}
 
-	// os, err := p.stackOutputs(p.Name)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// p.applyOutputs(os)
-
-	// if err := p.initializeIamRoles(); err != nil {
-	// 	return err
-	// }
-
 	if err := p.Provider.Initialize(opts); err != nil {
 		return err
 	}
-
-	runtime.ErrorHandlers = []func(error){}
-
-	// nc, err := NewNodeController(p)
-	// if err != nil {
-	//   return err
-	// }
-
-	// stc, err := NewStackController(p)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// go nc.Run()
-	// go stc.Run()
-
-	// go p.workerEvents()
 
 	return nil
 }
@@ -141,33 +72,6 @@ func (p *Provider) WithContext(ctx context.Context) structs.Provider {
 	pp.Provider = pp.Provider.WithContext(ctx).(*k8s.Provider)
 	return &pp
 }
-
-// func (p *Provider) applyOutputs(outputs map[string]string) {
-// 	p.Provider.Socket = "/var/run/docker.sock"
-// 	p.Provider.Version = outputs["Version"]
-
-// 	// p.AccountId = outputs["AccountId"]
-// 	// p.AdminUser = outputs["AdminUser"]
-// 	// p.AutoscalerRole = outputs["AutoscalerRole"]
-// 	// p.BalancerSecurity = outputs["BalancerSecurity"]
-// 	// p.BaseDomain = outputs["BaseDomain"]
-// 	p.Bucket = outputs["RackBucket"]
-// 	// p.Cluster = outputs["Cluster"]
-// 	// p.EventQueue = outputs["EventQueue"]
-// 	// p.EventTopic = outputs["EventTopic"]
-// 	// p.NodesRole = outputs["NodesRole"]
-// 	// p.RackRole = outputs["RackRole"]
-// 	// p.RouterCache = outputs["RouterCache"]
-// 	// p.RouterHosts = outputs["RouterHosts"]
-// 	// p.RouterRole = outputs["RouterRole"]
-// 	// p.RouterTargets = outputs["RouterTargets"]
-// 	// p.RouterTargetGroup80 = outputs["RouterTargetGroup80"]
-// 	// p.RouterTargetGroup443 = outputs["RouterTargetGroup443"]
-// 	// p.StackId = outputs["StackId"]
-// 	// p.SubnetsPublic = strings.Split(outputs["VpcPublicSubnets"], ",")
-// 	// p.SubnetsPrivate = strings.Split(outputs["VpcPrivateSubnets"], ",")
-// 	// p.Vpc = outputs["Vpc"]
-// }
 
 func (p *Provider) initializeAwsServices() error {
 	s, err := session.NewSession()
@@ -183,15 +87,3 @@ func (p *Provider) initializeAwsServices() error {
 
 	return nil
 }
-
-// func (p *Provider) initializeIamRoles() error {
-// 	if err := kubectl("patch", "deployment/api", "-n", p.Namespace, "-p", fmt.Sprintf(`{"spec":{"template":{"metadata":{"annotations":{"iam.amazonaws.com/role":%q}}}}}`, p.RackRole)); err != nil {
-// 		return err
-// 	}
-
-// 	if err := kubectl("patch", "deployment/router", "-n", "convox-system", "-p", fmt.Sprintf(`{"spec":{"template":{"metadata":{"annotations":{"iam.amazonaws.com/role":%q}}}}}`, p.RouterRole)); err != nil {
-// 		return err
-// 	}
-
-// 	return nil
-// }
