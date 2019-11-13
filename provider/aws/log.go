@@ -107,6 +107,14 @@ func (p *Provider) createLogStream(group, stream string) error {
 		return err
 	}
 
+	_, err = p.CloudWatchLogs.PutRetentionPolicy(&cloudwatchlogs.PutRetentionPolicyInput{
+		LogGroupName:    aws.String(group),
+		RetentionInDays: aws.Int64(7),
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
