@@ -6,6 +6,10 @@ provider "digitalocean" {
   version = "~> 1.9"
 }
 
+provider "http" {
+  version = "~> 1.1"
+}
+
 provider "kubernetes" {
   version = "~> 1.9"
 }

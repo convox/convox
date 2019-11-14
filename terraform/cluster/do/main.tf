@@ -6,6 +6,10 @@ provider "digitalocean" {
   version = "~> 1.11"
 }
 
+provider "http" {
+  version = "~> 1.1"
+}
+
 provider "local" {
   version = "~> 1.3"
 }
