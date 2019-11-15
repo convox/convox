@@ -18,6 +18,8 @@ type Provider interface {
 	AppMetrics(name string, opts MetricsOptions) (Metrics, error)
 	AppUpdate(name string, opts AppUpdateOptions) error
 
+	BalancerList(app string) (Balancers, error)
+
 	BuildCreate(app, url string, opts BuildCreateOptions) (*Build, error)
 	BuildExport(app, id string, w io.Writer) error
 	BuildGet(app, id string) (*Build, error)

@@ -1,3 +1,10 @@
+balancers:
+  main:
+    service: api
+    ports:
+      3000:
+        protocol: TCP
+        port: 1000
 environment:
   - DEVELOPMENT=true
   - GLOBAL=true

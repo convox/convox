@@ -11,6 +11,7 @@ func (s *Server) setupRoutes(r stdapi.Router) {
 	r.Route("SOCKET", "/apps/{name}/logs", s.AppLogs)
 	r.Route("GET", "/apps/{name}/metrics", s.AppMetrics)
 	r.Route("PUT", "/apps/{name}", s.AppUpdate)
+	r.Route("GET", "/apps/{app}/balancers", s.BalancerList)
 	r.Route("POST", "/apps/{app}/builds", s.BuildCreate)
 	r.Route("GET", "/apps/{app}/builds/{id}.tgz", s.BuildExport)
 	r.Route("GET", "/apps/{app}/builds/{id}", s.BuildGet)

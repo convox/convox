@@ -10,6 +10,19 @@ import (
 
 func TestManifestLoad(t *testing.T) {
 	n := &manifest.Manifest{
+		Balancers: manifest.Balancers{
+			manifest.Balancer{
+				Name: "main",
+				Ports: manifest.BalancerPorts{
+					manifest.BalancerPort{
+						Protocol: "TCP",
+						Source:   3000,
+						Target:   1000,
+					},
+				},
+				Service: "api",
+			},
+		},
 		Environment: manifest.Environment{
 			"DEVELOPMENT=true",
 			"GLOBAL=true",
@@ -216,7 +229,14 @@ func TestManifestLoad(t *testing.T) {
 		},
 	}
 
-	attrs := []string{"services.proxy.environment",
+	attrs := []string{
+		"balancers",
+		"balancers.main",
+		"balancers.main.ports",
+		"balancers.main.ports.3000",
+		"balancers.main.ports.3000.port",
+		"balancers.main.ports.3000.protocol",
+		"balancers.main.service",
 		"environment",
 		"params",
 		"params.Foo",
@@ -269,6 +289,7 @@ func TestManifestLoad(t *testing.T) {
 		"services.proxy",
 		"services.proxy.command",
 		"services.proxy.domain",
+		"services.proxy.environment",
 		"services.proxy.health",
 		"services.proxy.image",
 		"services.proxy.port",

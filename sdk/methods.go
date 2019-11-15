@@ -118,6 +118,18 @@ func (c *Client) AppUpdate(name string, opts structs.AppUpdateOptions) error {
 	return err
 }
 
+func (c *Client) BalancerList(app string) (structs.Balancers, error) {
+	var err error
+
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+
+	var v structs.Balancers
+
+	err = c.Get(fmt.Sprintf("/apps/%s/balancers", app), ro, &v)
+
+	return v, err
+}
+
 func (c *Client) BuildCreate(app string, url string, opts structs.BuildCreateOptions) (*structs.Build, error) {
 	var err error
 

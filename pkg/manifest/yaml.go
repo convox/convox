@@ -21,6 +21,38 @@ type NameSetter interface {
 	SetName(name string) error
 }
 
+func (v Balancers) MarshalYAML() (interface{}, error) {
+	return marshalMapSlice(v)
+}
+
+func (v *Balancers) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	return unmarshalMapSlice(unmarshal, v)
+}
+
+func (v *Balancer) SetName(name string) error {
+	v.Name = name
+	return nil
+}
+
+func (v BalancerPorts) MarshalYAML() (interface{}, error) {
+	return marshalMapSlice(v)
+}
+
+func (v *BalancerPorts) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	return unmarshalMapSlice(unmarshal, v)
+}
+
+func (v *BalancerPort) SetName(name string) error {
+	i, err := strconv.Atoi(name)
+	if err != nil {
+		return err
+	}
+
+	v.Source = i
+
+	return nil
+}
+
 func (v *Environment) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var w interface{}
 
