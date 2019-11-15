@@ -8,4 +8,4 @@ generate:
 
 mocks:
 	rm -f mock_Interface.go
-	mockery -inpkg -name Interface
+	go run ../../vendor/github.com/vektra/mockery/cmd/mockery/mockery.go -inpkg -name Interface

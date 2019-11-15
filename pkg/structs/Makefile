@@ -2,4 +2,4 @@
 
 mocks:
 	rm -f mock_Provider.go
-	mockery -inpkg -name Provider
+	go run ../../vendor/github.com/vektra/mockery/cmd/mockery/mockery.go -inpkg -name Provider

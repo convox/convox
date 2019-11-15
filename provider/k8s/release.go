@@ -115,6 +115,16 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 			return err
 		}
 
+		// balancers
+		for _, b := range m.Balancers {
+			data, err := p.releaseTemplateBalancer(a, r, b)
+			if err != nil {
+				return err
+			}
+
+			items = append(items, data)
+		}
+
 		// ingress
 		if rss := m.Services.Routable(); len(rss) > 0 {
 			data, err := p.releaseTemplateIngress(a, rss, opts)
@@ -280,6 +290,21 @@ func (p *Provider) releaseTemplateApp(a *structs.App, opts structs.ReleasePromot
 	}
 
 	data, err := p.RenderTemplate("app/app", params)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
+func (p *Provider) releaseTemplateBalancer(a *structs.App, r *structs.Release, b manifest.Balancer) ([]byte, error) {
+	params := map[string]interface{}{
+		"Balancer":  b,
+		"Namespace": p.AppNamespace(a.Name),
+		"Release":   r,
+	}
+
+	data, err := p.RenderTemplate("app/balancer", params)
 	if err != nil {
 		return nil, err
 	}

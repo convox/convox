@@ -176,6 +176,25 @@ func (s *Server) AppUpdate(c *stdapi.Context) error {
 	return c.RenderOK()
 }
 
+func (s *Server) BalancerList(c *stdapi.Context) error {
+	if err := s.hook("BalancerListValidate", c); err != nil {
+		return err
+	}
+
+	app := c.Var("app")
+
+	v, err := s.provider(c).WithContext(c.Context()).BalancerList(app)
+	if err != nil {
+		return err
+	}
+
+	if vs, ok := interface{}(v).(Sortable); ok {
+		sort.Slice(v, vs.Less)
+	}
+
+	return c.RenderJSON(v)
+}
+
 func (s *Server) BuildCreate(c *stdapi.Context) error {
 	if err := s.hook("BuildCreateValidate", c); err != nil {
 		return err

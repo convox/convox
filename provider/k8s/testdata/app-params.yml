@@ -13,22 +13,3 @@ metadata:
     system: convox
     type: app
   name: rack1-app1
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  labels:
-    app: app1
-    provider: k8s
-    rack: rack1
-    release: ""
-    system: convox
-  name: app1
-  namespace: rack1-app1
-spec:
-  ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          system: convox
-  podSelector: {}

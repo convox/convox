@@ -13,6 +13,7 @@ func init() {
 	routes["AppLogs"] = "SOCKET /apps/{name}/logs"
 	routes["AppMetrics"] = "GET /apps/{name}/metrics"
 	routes["AppUpdate"] = "PUT /apps/{name}"
+	routes["BalancerList"] = "GET /apps/{app}/balancers"
 	routes["BuildCreate"] = "POST /apps/{app}/builds"
 	routes["BuildExport"] = "GET /apps/{app}/builds/{id}.tgz"
 	routes["BuildGet"] = "GET /apps/{app}/builds/{id}"

@@ -17,6 +17,7 @@ var (
 )
 
 type Manifest struct {
+	Balancers   Balancers   `yaml:"balancers,omitempty"`
 	Environment Environment `yaml:"environment,omitempty"`
 	Params      Params      `yaml:"params,omitempty"`
 	Resources   Resources   `yaml:"resources,omitempty"`

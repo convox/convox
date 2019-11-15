@@ -298,6 +298,9 @@ github.com/stretchr/objx
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/mock
 github.com/stretchr/testify/require
+# github.com/vektra/mockery v0.0.0-20181123154057-e78b021dcbb5
+github.com/vektra/mockery/cmd/mockery
+github.com/vektra/mockery/mockery
 # go.opencensus.io v0.22.0
 go.opencensus.io
 go.opencensus.io/internal

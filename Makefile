@@ -38,9 +38,9 @@ generate-provider:
 mocks: generate-provider
 	make -C pkg/atom mocks
 	make -C pkg/structs mocks
-	mockery -case underscore -dir pkg/start -outpkg sdk -output pkg/mock/start -name Interface
-	mockery -case underscore -dir sdk -outpkg sdk -output pkg/mock/sdk -name Interface
-	mockery -case underscore -dir vendor/github.com/convox/stdcli -outpkg stdcli -output pkg/mock/stdcli -name Executor
+	go run vendor/github.com/vektra/mockery/cmd/mockery/mockery.go -case underscore -dir pkg/start -outpkg sdk -output pkg/mock/start -name Interface
+	go run vendor/github.com/vektra/mockery/cmd/mockery/mockery.go -case underscore -dir sdk -outpkg sdk -output pkg/mock/sdk -name Interface
+	go run vendor/github.com/vektra/mockery/cmd/mockery/mockery.go -case underscore -dir vendor/github.com/convox/stdcli -outpkg stdcli -output pkg/mock/stdcli -name Executor
 
 package:
 	$(GOPATH)/bin/packr

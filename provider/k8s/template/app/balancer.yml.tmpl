@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: {{.Namespace}}
+  name: balancer-{{.Balancer.Name}}
+  labels:
+    balancer: {{.Balancer.Name}}
+    service: {{.Balancer.Service}}
+    type: balancer
+spec:
+  type: LoadBalancer
+  selector:
+    service: {{.Balancer.Service}}
+    release: {{.Release.Id}}
+    type: service
+  ports:
+    {{ range .Balancer.Ports }}
+    - name: "{{.Source}}"
+      port: {{.Source}}
+      protocol: {{.Protocol}}
+      targetPort: {{.Target}}
+    {{ end }}
