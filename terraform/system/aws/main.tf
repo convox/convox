@@ -6,6 +6,10 @@ provider "aws" {
   version = "~> 2.22"
 }
 
+provider "http" {
+  version = "~> 1.1"
+}
+
 provider "kubernetes" {
   version = "~> 1.9"
 

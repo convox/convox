@@ -3,7 +3,11 @@ terraform {
 }
 
 provider "digitalocean" {
-  version = "~> 1.9"
+  version = "~> 1.11"
+}
+
+provider "http" {
+  version = "~> 1.1"
 }
 
 provider "local" {
