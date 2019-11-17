@@ -113,10 +113,10 @@ resource "kubernetes_deployment" "api" {
           "scheduler.alpha.kubernetes.io/critical-pod" : ""
         })
 
-        labels = {
+        labels = merge(var.labels, {
           system  = "convox"
           service = "api"
-        }
+        })
       }
 
       spec {
