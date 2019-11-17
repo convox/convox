@@ -17,7 +17,16 @@ resource "random_string" "password" {
 
 resource "null_resource" "crd" {
   provisioner "local-exec" {
+    when    = "create"
     command = "kubectl apply -f ${path.module}/crd.yml"
+    environment = {
+      "KUBECONFIG" : var.kubeconfig,
+    }
+  }
+
+  provisioner "local-exec" {
+    when    = "destroy"
+    command = "kubectl delete -f ${path.module}/crd.yml"
     environment = {
       "KUBECONFIG" : var.kubeconfig,
     }
