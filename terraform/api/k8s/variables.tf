@@ -1,4 +1,4 @@
-variable annotations {
+variable "annotations" {
   default = {}
 }
 
@@ -12,6 +12,10 @@ variable "env" {
 
 variable "kubeconfig" {
   type = "string"
+}
+
+variable "labels" {
+  default = {}
 }
 
 variable "name" {

@@ -12,7 +12,16 @@ provider "null" {
 
 resource "null_resource" "crd" {
   provisioner "local-exec" {
+    when    = "create"
     command = "kubectl apply -f ${path.module}/crd.yml"
+    environment = {
+      "KUBECONFIG" : var.kubeconfig,
+    }
+  }
+
+  provisioner "local-exec" {
+    when    = "destroy"
+    command = "kubectl delete -f ${path.module}/crd.yml"
     environment = {
       "KUBECONFIG" : var.kubeconfig,
     }
@@ -22,6 +31,7 @@ resource "null_resource" "crd" {
     template = filesha256("${path.module}/crd.yml")
   }
 }
+
 resource "kubernetes_cluster_role" "atom" {
   metadata {
     name = "atom"
