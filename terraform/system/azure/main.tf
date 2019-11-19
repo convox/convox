@@ -35,12 +35,10 @@ module "cluster" {
     azurerm = azurerm
   }
 
-  app_id         = data.azurerm_client_config.current.client_id
   name           = var.name
   node_type      = var.node_type
   region         = var.region
   resource_group = azurerm_resource_group.rack.name
-  tenant         = data.azurerm_client_config.current.tenant_id
 }
 
 # module "identity" {

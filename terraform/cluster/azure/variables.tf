@@ -1,7 +1,3 @@
-variable "app_id" {
-  type = string
-}
-
 variable "name" {
   type = string
 }
@@ -15,9 +11,5 @@ variable "region" {
 }
 
 variable "resource_group" {
-  type = string
-}
-
-variable "tenant" {
   type = string
 }
