@@ -259,7 +259,7 @@ resource "kubernetes_ingress" "api" {
     name      = "api"
 
     annotations = {
-      "convox.idles" : "true"
+      "convox.idles" : "false"
       "convox.ingress.service.api.5443.protocol" : "https"
     }
 
