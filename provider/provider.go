@@ -6,6 +6,7 @@ import (
 
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/aws"
+	"github.com/convox/convox/provider/azure"
 	"github.com/convox/convox/provider/do"
 	"github.com/convox/convox/provider/gcp"
 	"github.com/convox/convox/provider/k8s"
@@ -19,6 +20,8 @@ func FromEnv() (structs.Provider, error) {
 	switch name {
 	case "aws":
 		return aws.FromEnv()
+	case "azure":
+		return azure.FromEnv()
 	case "do":
 		return do.FromEnv()
 	case "gcp":
