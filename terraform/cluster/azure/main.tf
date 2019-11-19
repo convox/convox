@@ -60,8 +60,8 @@ resource "azurerm_kubernetes_cluster" "rack" {
   }
 
   service_principal {
-    client_id     = var.app_id
-    client_secret = var.password
+    client_id     = azuread_service_principal.cluster.application_id
+    client_secret = azuread_service_principal_password.cluster.value
   }
 }
 

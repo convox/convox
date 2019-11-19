@@ -21,6 +21,8 @@ locals {
   release = coalesce(var.release, local.current)
 }
 
+data "azurerm_client_config" "current" {}
+
 resource "azurerm_resource_group" "rack" {
   name     = var.name
   location = var.region
@@ -33,36 +35,13 @@ module "cluster" {
     azurerm = azurerm
   }
 
-  app_id         = var.app_id
+  app_id         = data.azurerm_client_config.current.client_id
   name           = var.name
   node_type      = var.node_type
-  password       = var.password
   region         = var.region
   resource_group = azurerm_resource_group.rack.name
-  tenant         = var.tenant
+  tenant         = data.azurerm_client_config.current.tenant_id
 }
-
-# module "elasticsearch" {
-#   source = "../../elasticsearch/k8s"
-
-#   providers = {
-#     kubernetes = kubernetes
-#   }
-
-#   namespace = "kube-system"
-# }
-
-# module "fluentd" {
-#   source = "../../fluentd/do"
-
-#   providers = {
-#     kubernetes = kubernetes
-#   }
-
-#   cluster   = var.name
-#   namespace = "kube-system"
-#   name      = var.name
-# }
 
 # module "identity" {
 #   source = "./identity"

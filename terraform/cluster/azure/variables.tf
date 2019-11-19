@@ -10,10 +10,6 @@ variable "node_type" {
   type = string
 }
 
-variable "password" {
-  type = string
-}
-
 variable "region" {
   type = string
 }
