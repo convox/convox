@@ -2,6 +2,10 @@ variable "name" {
   type = "string"
 }
 
+variable "network" {
+  type = "string"
+}
+
 variable "node_type" {
   default = "n1-standard-1"
 }

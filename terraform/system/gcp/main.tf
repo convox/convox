@@ -64,6 +64,7 @@ module "rack" {
   }
 
   name          = var.name
+  network       = module.cluster.network
   nodes_account = module.cluster.nodes_account
   release       = local.release
 }

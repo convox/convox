@@ -49,5 +49,6 @@ module "router" {
 
   name      = var.name
   namespace = module.k8s.namespace
+  network   = var.network
   release   = var.release
 }
