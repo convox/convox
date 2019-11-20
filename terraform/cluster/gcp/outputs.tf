@@ -1,10 +1,21 @@
-output "kubeconfig" {
-  depends_on = [
-    local_file.kubeconfig,
-    kubernetes_cluster_role_binding.client,
-    google_container_node_pool.rack,
-  ]
-  value = local_file.kubeconfig.filename
+output "ca" {
+  depends_on = [google_container_cluster.rack]
+  value      = base64decode(google_container_cluster.rack.master_auth.0.cluster_ca_certificate)
+}
+
+output "client_certificate" {
+  depends_on = [google_container_cluster.rack]
+  value      = base64decode(google_container_cluster.rack.master_auth.0.client_certificate)
+}
+
+output "client_key" {
+  depends_on = [google_container_cluster.rack]
+  value      = base64decode(google_container_cluster.rack.master_auth.0.client_key)
+}
+
+output "endpoint" {
+  depends_on = [google_container_cluster.rack]
+  value      = "https://${google_container_cluster.rack.endpoint}"
 }
 
 output "nodes_account" {

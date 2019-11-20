@@ -3,6 +3,7 @@ package k8s
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
 	"os/exec"
 	"time"
@@ -107,6 +108,10 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 
 	runtime.ErrorHandlers = []func(error){}
 
+	if err := p.initializeTemplates(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -149,6 +154,19 @@ func (p *Provider) WithContext(ctx context.Context) structs.Provider {
 	return &pp
 }
 
+func (p *Provider) applySystemTemplate(name string, params map[string]interface{}) error {
+	data, err := p.RenderTemplate(fmt.Sprintf("system/%s", name), nil)
+	if err != nil {
+		return err
+	}
+
+	if err := Apply(data); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (p *Provider) heartbeat() error {
 	as, err := p.AppList()
 	if err != nil {
@@ -164,9 +182,6 @@ func (p *Provider) heartbeat() error {
 	if err != nil {
 		return err
 	}
-
-	// "instance_type":  "",
-	// "region": ""
 
 	ms := map[string]interface{}{
 		"id":             ks.UID,
@@ -187,6 +202,18 @@ func (p *Provider) heartbeat() error {
 	}
 
 	if err := p.metrics.Post("heartbeat", ms); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *Provider) initializeTemplates() error {
+	if err := p.applySystemTemplate("atom", nil); err != nil {
+		return err
+	}
+
+	if err := p.applySystemTemplate("crd", nil); err != nil {
 		return err
 	}
 

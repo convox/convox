@@ -2,7 +2,7 @@ variable "access_id" {
   type = "string"
 }
 
-variable "kubeconfig" {
+variable "cluster" {
   type = "string"
 }
 

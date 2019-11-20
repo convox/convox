@@ -13,7 +13,15 @@ provider "http" {
 provider "kubernetes" {
   version = "~> 1.9"
 
-  config_path = module.cluster.kubeconfig
+  cluster_ca_certificate = module.cluster.ca
+  host                   = module.cluster.endpoint
+  token                  = data.aws_eks_cluster_auth.cluster.token
+
+  load_config_file = false
+}
+
+data "aws_eks_cluster_auth" "cluster" {
+  name = module.cluster.id
 }
 
 data "http" "releases" {
@@ -62,7 +70,6 @@ module "rack" {
   }
 
   cluster            = module.cluster.id
-  kubeconfig         = module.cluster.kubeconfig
   name               = var.name
   nodes_security     = module.cluster.nodes_security
   oidc_arn           = module.cluster.oidc_arn

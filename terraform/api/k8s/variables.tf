@@ -10,10 +10,6 @@ variable "env" {
   default = {}
 }
 
-variable "kubeconfig" {
-  type = "string"
-}
-
 variable "labels" {
   default = {}
 }

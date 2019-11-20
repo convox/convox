@@ -8,8 +8,6 @@ provider "azurerm" {
 
 provider "kubernetes" {
   version = "~> 1.9"
-
-  config_path = var.kubeconfig
 }
 
 module "k8s" {
@@ -19,10 +17,9 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
-  domain     = module.router.endpoint
-  kubeconfig = var.kubeconfig
-  name       = var.name
-  release    = var.release
+  domain  = module.router.endpoint
+  name    = var.name
+  release = var.release
 }
 
 module "api" {
@@ -34,7 +31,6 @@ module "api" {
   }
 
   domain         = module.router.endpoint
-  kubeconfig     = var.kubeconfig
   name           = var.name
   namespace      = module.k8s.namespace
   region         = var.region

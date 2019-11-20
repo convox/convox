@@ -1,3 +1,0 @@
-variable "kubeconfig" {
-  type = string
-}
