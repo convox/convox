@@ -2,7 +2,7 @@
 
 ## Standard Load Balancer
 
-Each Rack contains a built-in HTTP/HTTPS load balancer.
+Each Rack contains a built-in HTTPS load balancer.
 
 For an app named `myapp` with a `convox.yml` like this:
 
