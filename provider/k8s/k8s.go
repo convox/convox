@@ -209,6 +209,10 @@ func (p *Provider) heartbeat() error {
 }
 
 func (p *Provider) initializeTemplates() error {
+	if os.Getenv("TEST") == "true" {
+		return nil
+	}
+
 	if err := p.applySystemTemplate("atom", nil); err != nil {
 		return err
 	}
