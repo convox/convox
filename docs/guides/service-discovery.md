@@ -18,8 +18,8 @@ You would see a `convox services` output similar to this:
 
     $ convox services
     SERVICE  DOMAIN                                PORTS
-    web      web.myapp.0a1b2c3d4e5f.convox.cloud   443:3000
     auth     auth.myapp.0a1b2c3d4e5f.convox.cloud  443:5000
+    web      web.myapp.0a1b2c3d4e5f.convox.cloud   443:3000
 
 The `web` service could reach the `auth` service using `https://auth.myapp.0a1b2c3d4e5f.convox.cloud:443`
 
@@ -40,8 +40,8 @@ You would see a `convox services` output similar to this:
 
     $ convox services
     SERVICE  DOMAIN                               PORTS
-    web      web.myapp.0a1b2c3d4e5f.convox.cloud  443:3000
     auth     auth.convox-myapp.svc.cluster.local  5000:5000
+    web      web.myapp.0a1b2c3d4e5f.convox.cloud  443:3000
 
 The `web` service could reach the `auth` service using `http://auth.convox-myapp.svc.cluster.local:5000`
 
