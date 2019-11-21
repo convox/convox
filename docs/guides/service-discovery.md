@@ -57,7 +57,7 @@ also work for contacting the `auth` service:
 * `http://auth.convox-myapp:5000` for other apps on the same Rack.
 
 > The `convox` portion of the internal hostnames in the examples above is the name of the Rack.
-> You can find the name of a Rack using `convox rack`
+> You can find the name of a Rack using `convox rack`.
 
 ## Individual Processes
 
