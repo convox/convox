@@ -25,7 +25,7 @@ The `web` service could reach the `auth` service using `https://auth.myapp.0a1b2
 
 > Note that both of these services are available to the public internet.
 
-#### Internal Services
+### Internal Services
 
 You can make a service accessible only inside the Rack by setting its `internal` attribute to `true`.
 
