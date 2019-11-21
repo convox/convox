@@ -18,10 +18,10 @@ Convox will automatically set up HTTP load balancing to this service when it is 
 
 ### SSL Termination
 
-Convox will automatically configure SSL for the external services of your app. An SSL
-certificate will be automatically acquired using [Lets Encrypt](https://letsencrypt.org/)
+Convox will automatically configure SSL for the external services of your app using a certificate from
+[Lets Encrypt](https://letsencrypt.org/).
 
-> Convox will automatically redirect HTTP requests on port 80 to HTTPS on port 443 using an HTTP 301 redirect.
+> Convox will redirect HTTP requests on port 80 to HTTPS on port 443 using an HTTP 301 redirect.
 
 ### End-to-End Encryption
 
