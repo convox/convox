@@ -2,7 +2,7 @@
 
 ## Standard Load Balancer
 
-Each Rack contains a built-in HTTP/HTTPS load balancer.
+Each Rack contains a built-in HTTPS load balancer.
 
 For an app named `myapp` with a `convox.yml` like this:
 
@@ -24,6 +24,44 @@ Convox will automatically configure SSL for the external services of your app us
 [Lets Encrypt](https://letsencrypt.org/).
 
 > Convox will redirect HTTP requests on port 80 to HTTPS on port 443 using an HTTP 301 redirect.
+
+## Custom Domains
+
+You can configure a custom domain for your service in `convox.yml`:
+
+    services:
+      web:
+        domain: myapp.example.org
+        port: 3000
+
+### Dynamic Configuration
+
+You can make your custom domain configurable per-deployment using environment interpolation:
+
+    services:
+      web:
+        domain: ${DOMAIN}
+
+In this example  your application would use a standard Rack hostname by default, but could be
+configured to use a custom domain with the `DOMAIN` environment variable:
+
+    $ convox env set DOMAIN=myapp-staging.example.org -a myapp-staging
+    $ convox env set DOMAIN=myapp.example.org -a myapp-production
+
+### DNS Configuration
+
+You will need to alias your custom domain to your Rack's router endpoint. You can find this with `convox rack`:
+
+    $ convox rack
+    Name      convox
+    Provider  gcp
+    Router    0a1b2c3d4e5f.convox.cloud
+    Status    running
+    Version   master
+
+In this example you would set up the following DNS entry:
+
+    myapp.example.org CNAME 0a1b2c3d4e5f.convox.cloud
 
 ### End-to-End Encryption
 
