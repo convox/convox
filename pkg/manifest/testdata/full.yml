@@ -5,6 +5,7 @@ balancers:
       3000:
         protocol: TCP
         port: 1000
+      3001: 5000
 environment:
   - DEVELOPMENT=true
   - GLOBAL=true

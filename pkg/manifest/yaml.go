@@ -53,6 +53,30 @@ func (v *BalancerPort) SetName(name string) error {
 	return nil
 }
 
+func (v *BalancerPort) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var w interface{}
+
+	if err := unmarshal(&w); err != nil {
+		return err
+	}
+
+	switch t := w.(type) {
+	case map[interface{}]interface{}:
+		type balancerPort BalancerPort
+		var bp balancerPort
+		if err := remarshal(w, &bp); err != nil {
+			return err
+		}
+		v.Protocol = bp.Protocol
+		v.Target = bp.Target
+	case int:
+		v.Protocol = "TCP"
+		v.Target = t
+	}
+
+	return nil
+}
+
 func (v *Environment) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var w interface{}
 
