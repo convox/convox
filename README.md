@@ -1,13 +1,11 @@
 # Convox
 
-[Convox](https://github.com/convox/convox) is an open-source PaaS based on Kubernetes.
+[Convox](https://github.com/convox/convox) is an open-source PaaS based on Kubernetes available for multiple infrastructure providers.
 
-For more information you can check out the following resources:
-
-- [Homepage](https://convox.com)
-- [Getting Started](https://docs.convox.com/introduction/getting-started)
-- [Community Forums](https://community.convox.com/)
-- [FAQ](https://docs.convox.com/introduction/faq)
+* Amazon Web Services
+* Digital Ocean
+* Google Cloud
+* Microsoft Azure
 
 ## Installation
 
@@ -15,13 +13,22 @@ See the README in the [install](install) subdirectory for installation instructi
 
 ## Features
 
-* [Build and Release Management](https://docs.convox.com/deployment/builds)
+* [Release Management](https://docs.convox.com/deployment/builds)
 * [Secrets Management](https://docs.convox.com/application/environment)
-* [Resource Management](https://docs.convox.com/use-cases/resources) \(Postgres/Redis/etc..\)
+* [Load Balancing](docs/guides/load-balancing.md) (automatic SSL)
+* [Service Discovery](docs/guides/service-discovery.md)
+* [Resource Management](https://docs.convox.com/use-cases/resources) \(Postgres, Redis, etc\)
 * [Automated Rollbacks](https://docs.convox.com/deployment/rolling-back)
 * [Autoscaling](https://docs.convox.com/deployment/scaling)
-* [Timers/Cron Jobs](https://docs.convox.com/application/timers)
+* [Scheduled Runs](https://docs.convox.com/application/timers) (cron)
 * [One-off Commands](https://docs.convox.com/management/one-off-commands)
+
+## Resources
+
+- [Homepage](https://convox.com)
+- [Getting Started](https://docs.convox.com/introduction/getting-started)
+- [Community Forums](https://community.convox.com/)
+- [FAQ](https://docs.convox.com/introduction/faq)
 
 ## License
 

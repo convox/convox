@@ -29,6 +29,7 @@ func (p *Provider) SystemGet() (*structs.System, error) {
 	// }
 
 	s := &structs.System{
+		Domain:   p.Domain,
 		Name:     p.Name,
 		Provider: p.Provider,
 		Status:   status,
