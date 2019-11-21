@@ -25,7 +25,7 @@ Convox will automatically configure SSL for the external services of your app us
 
 > Convox will redirect HTTP requests on port 80 to HTTPS on port 443 using an HTTP 301 redirect.
 
-## Custom Domains
+### Custom Domains
 
 You can configure a custom domain for your service in `convox.yml`:
 
@@ -34,7 +34,7 @@ You can configure a custom domain for your service in `convox.yml`:
         domain: myapp.example.org
         port: 3000
 
-### Dynamic Configuration
+#### Dynamic Configuration
 
 You can make your custom domain configurable per-deployment using environment interpolation:
 
@@ -48,7 +48,7 @@ configured to use a custom domain with the `DOMAIN` environment variable:
     $ convox env set DOMAIN=myapp-staging.example.org -a myapp-staging
     $ convox env set DOMAIN=myapp.example.org -a myapp-production
 
-### DNS Configuration
+#### DNS Configuration
 
 You will need to alias your custom domain to your Rack's router endpoint. You can find this with `convox rack`:
 
