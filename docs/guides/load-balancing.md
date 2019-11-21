@@ -10,11 +10,13 @@ For an app named `myapp` with a `convox.yml` like this:
       web:
         port: 3000
 
-Convox will automatically set up HTTP load balancing to this service when it is deployed.
+Convox will automatically set up HTTPS load balancing to this service when it is deployed.
 
     $ convox services
     SERVICE  DOMAIN                               PORTS
     web      web.myapp.0a1b2c3d4e5f.convox.cloud  443:3000
+
+You can then access the `web` service of this application using `https://web.myapp.0a1b2c3d4e5f.convox.cloud`
 
 ### SSL Termination
 
