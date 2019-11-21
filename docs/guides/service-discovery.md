@@ -47,8 +47,17 @@ You would see a `convox services` output similar to this:
 
 The `web` service could reach the `auth` service using `http://auth.convox-myapp.svc.cluster.local:5000`
 
-> Note that the internal `auth` service is no longer receiving automatic HTTPS termination. If you want this connection
-> to be encrypted you would need to terminate HTTPS inside your service.
+> Note that the internal `auth` service is no longer receiving automatic HTTPS termination. If you want this
+> connection to be encrypted you would need to terminate HTTPS inside your service.
+
+DNS search suffixes are automatically configured for internal hostnames on a Rack. The following URLs would
+also work for contacting the `auth` service:
+
+* `http://auth:5000` for services on the same app.
+* `http://auth.convox-myapp:5000` for other apps on the same Rack.
+
+> The `convox` portion of the internal hostnames in the examples above is the name of the Rack.
+> You can find the name of a Rack using `convox rack`
 
 ## Individual Processes
 
