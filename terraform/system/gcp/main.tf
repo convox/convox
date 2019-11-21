@@ -17,7 +17,12 @@ provider "http" {
 provider "kubernetes" {
   version = "~> 1.9"
 
-  config_path = module.cluster.kubeconfig
+  client_certificate     = module.cluster.client_certificate
+  client_key             = module.cluster.client_key
+  cluster_ca_certificate = module.cluster.ca
+  host                   = module.cluster.endpoint
+
+  load_config_file = false
 }
 
 module "project" {
@@ -58,8 +63,8 @@ module "rack" {
     google     = google
   }
 
-  kubeconfig    = module.cluster.kubeconfig
   name          = var.name
+  network       = module.cluster.network
   nodes_account = module.cluster.nodes_account
   release       = local.release
 }

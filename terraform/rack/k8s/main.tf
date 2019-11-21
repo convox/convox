@@ -28,15 +28,3 @@ resource "kubernetes_config_map" "rack" {
     DOMAIN = var.domain
   }
 }
-
-module "atom" {
-  source = "../../atom/k8s"
-
-  providers = {
-    kubernetes = kubernetes
-  }
-
-  kubeconfig = var.kubeconfig
-  namespace  = kubernetes_namespace.system.metadata.0.name
-  release    = var.release
-}

@@ -13,7 +13,11 @@ provider "http" {
 provider "kubernetes" {
   version = "~> 1.9"
 
-  config_path = module.cluster.kubeconfig
+  cluster_ca_certificate = module.cluster.ca
+  host                   = module.cluster.endpoint
+  token                  = module.cluster.token
+
+  load_config_file = false
 }
 
 data "http" "releases" {
@@ -45,7 +49,7 @@ module "fluentd" {
     kubernetes = kubernetes
   }
 
-  cluster       = var.name
+  cluster       = module.cluster.name
   elasticsearch = module.rack.elasticsearch
   namespace     = "kube-system"
   name          = var.name
@@ -60,7 +64,7 @@ module "rack" {
   }
 
   access_id     = var.access_id
-  kubeconfig    = module.cluster.kubeconfig
+  cluster       = module.cluster.name
   name          = var.name
   region        = var.region
   registry_disk = var.registry_disk

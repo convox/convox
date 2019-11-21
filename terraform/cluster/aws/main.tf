@@ -66,12 +66,6 @@ resource "aws_eks_cluster" "cluster" {
   ]
 }
 
-resource "null_resource" "after_cluster" {
-  provisioner "local-exec" {
-    command = "sleep 30"
-  }
-}
-
 resource "local_file" "kubeconfig" {
   depends_on = [
     aws_cloudformation_stack.nodes,
@@ -94,7 +88,6 @@ resource "local_file" "kubeconfig" {
     aws_security_group_rule.nodes_ingress_internal,
     aws_security_group_rule.nodes_ingress_mtu,
     aws_security_group_rule.nodes_ingress_traffic,
-    null_resource.after_cluster,
   ]
 
   filename = pathexpand("~/.kube/config.aws.${var.name}")
@@ -142,7 +135,6 @@ resource "kubernetes_config_map" "auth" {
     aws_security_group_rule.nodes_ingress_internal,
     aws_security_group_rule.nodes_ingress_mtu,
     aws_security_group_rule.nodes_ingress_traffic,
-    null_resource.after_cluster,
   ]
 
   provider = kubernetes.direct

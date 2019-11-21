@@ -1,11 +1,16 @@
-output "id" {
-  depends_on = [local_file.kubeconfig, kubernetes_config_map.auth]
-  value      = aws_eks_cluster.cluster.id
+output "ca" {
+  depends_on = [kubernetes_config_map.auth]
+  value      = base64decode(aws_eks_cluster.cluster.certificate_authority.0.data)
 }
 
-output "kubeconfig" {
-  depends_on = [local_file.kubeconfig, kubernetes_config_map.auth]
-  value      = local_file.kubeconfig.filename
+output "endpoint" {
+  depends_on = [kubernetes_config_map.auth]
+  value      = aws_eks_cluster.cluster.endpoint
+}
+
+output "id" {
+  depends_on = [kubernetes_config_map.auth]
+  value      = aws_eks_cluster.cluster.id
 }
 
 output "nodes_security" {

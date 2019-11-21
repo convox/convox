@@ -20,10 +20,6 @@ var sequenceTokens sync.Map
 func (p *Provider) Log(app, stream string, ts time.Time, message string) error {
 	logger := p.Logging.Logger("system")
 
-	fmt.Printf("app: %+v\n", app)
-	fmt.Printf("stream: %+v\n", stream)
-	fmt.Printf("message: %+v\n", message)
-
 	logger.Log(logging.Entry{
 		Labels: map[string]string{
 			"container.googleapis.com/namespace_name": p.AppNamespace(app),

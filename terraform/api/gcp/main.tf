@@ -8,8 +8,6 @@ provider "google" {
 
 provider "kubernetes" {
   version = "~> 1.8"
-
-  config_path = var.kubeconfig
 }
 
 data "google_client_config" "current" {}
@@ -28,11 +26,10 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
-  domain     = var.domain
-  kubeconfig = var.kubeconfig
-  name       = var.name
-  namespace  = var.namespace
-  release    = var.release
+  domain    = var.domain
+  name      = var.name
+  namespace = var.namespace
+  release   = var.release
 
   annotations = {
     "cloud.google.com/service-account" : google_service_account.api.email,

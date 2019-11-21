@@ -27,11 +27,10 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
-  domain     = var.domain
-  kubeconfig = var.kubeconfig
-  name       = var.name
-  namespace  = var.namespace
-  release    = var.release
+  domain    = var.domain
+  name      = var.name
+  namespace = var.namespace
+  release   = var.release
 
   annotations = {
     "eks.amazonaws.com/role-arn" : aws_iam_role.api.arn,

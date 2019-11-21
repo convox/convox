@@ -51,7 +51,7 @@ release:
 	git push
 
 test:
-	env PROVIDER=test go test -covermode atomic -coverprofile coverage.txt -mod=vendor ./...
+	env TEST=true go test -covermode atomic -coverprofile coverage.txt -mod=vendor ./...
 
 $(binaries): $(GOPATH)/bin/%: $(sources)
 	go install -mod=vendor --ldflags="-s -w" ./cmd/$*

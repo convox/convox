@@ -37,6 +37,7 @@ resource "google_container_cluster" "rack" {
 
   name     = var.name
   location = data.google_client_config.current.region
+  network  = google_compute_network.rack.name
 
   remove_default_node_pool = true
   initial_node_count       = 1
@@ -46,6 +47,8 @@ resource "google_container_cluster" "rack" {
   workload_identity_config {
     identity_namespace = "${data.google_project.current.project_id}.svc.id.goog"
   }
+
+  ip_allocation_policy {}
 
   master_auth {
     username = "gcloud"

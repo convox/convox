@@ -52,8 +52,6 @@ func FromEnv() (*Provider, error) {
 		Workspace:      os.Getenv("WORKSPACE"),
 	}
 
-	fmt.Printf("p: %+v\n", p)
-
 	k.Engine = p
 
 	return p, nil

@@ -1,12 +1,8 @@
-variable "credentials" {
-  default = "~/.config/gcloud/terraform.json"
-}
-
-variable "kubeconfig" {
+variable "name" {
   type = "string"
 }
 
-variable "name" {
+variable "network" {
   type = "string"
 }
 

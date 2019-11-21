@@ -9,7 +9,12 @@ provider "http" {
 provider "kubernetes" {
   version = "~> 1.9"
 
-  config_path = module.cluster.kubeconfig
+  client_certificate     = module.cluster.client_certificate
+  client_key             = module.cluster.client_key
+  cluster_ca_certificate = module.cluster.ca
+  host                   = module.cluster.endpoint
+
+  load_config_file = false
 }
 
 data "http" "releases" {
@@ -41,16 +46,6 @@ module "cluster" {
   resource_group = azurerm_resource_group.rack.name
 }
 
-# module "identity" {
-#   source = "./identity"
-
-#   providers = {
-#     kubernetes = kubernetes
-#   }
-
-#   kubeconfig = module.cluster.kubeconfig
-# }
-
 module "rack" {
   source = "../../rack/azure"
 
@@ -59,8 +54,6 @@ module "rack" {
     kubernetes = kubernetes
   }
 
-  # identity       = module.identity.id
-  kubeconfig     = module.cluster.kubeconfig
   name           = var.name
   region         = var.region
   release        = local.release
