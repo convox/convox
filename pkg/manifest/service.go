@@ -160,14 +160,26 @@ func (s Service) Autoscale() bool {
 	return false
 }
 
-func (ss Services) Routable() Services {
-	rss := Services{}
+func (ss Services) External() Services {
+	return ss.Filter(func(s Service) bool {
+		return !s.Internal
+	})
+}
+
+func (ss Services) Filter(fn func(s Service) bool) Services {
+	fss := Services{}
 
 	for _, s := range ss {
-		if s.Port.Port > 0 {
-			rss = append(rss, s)
+		if fn(s) {
+			fss = append(fss, s)
 		}
 	}
 
-	return rss
+	return fss
+}
+
+func (ss Services) Routable() Services {
+	return ss.Filter(func(s Service) bool {
+		return s.Port.Port > 0
+	})
 }
