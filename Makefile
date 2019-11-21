@@ -48,7 +48,7 @@ package:
 release:
 	test -n "$(VERSION)" # VERSION
 	git tag $(VERSION) -m $(VERSION)
-	git push
+	git push origin refs/tags/$(VERSION)
 
 test:
 	env TEST=true go test -covermode atomic -coverprofile coverage.txt -mod=vendor ./...
