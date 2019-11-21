@@ -51,7 +51,7 @@ For a `convox.yml` like this:
         service: web
         ports:
           5000: 3000
-          5001: 3000
+          5001: 3001
     services:
       web:
         port: 3000
@@ -65,6 +65,6 @@ Convox will configure a dedicated load balancer for each entry in the `balancers
 You could then access this application using the following URLs:
 
 * `http://1.2.3.4:5000`
-* `http://1.2.3.4:5001`
+* `tcp://1.2.3.4:5001`
 
 > Note that Convox will not configure SSL termination for ports on a custom load balancer.
