@@ -18,7 +18,7 @@ spec:
     type: service
   ports:
     - name: main
-      port: 3000
+      port: {{.Service.Port.Port}}
       protocol: TCP
       targetPort: {{.Service.Port.Port}}
 {{ end }}

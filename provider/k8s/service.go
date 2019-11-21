@@ -6,11 +6,19 @@ import (
 	"time"
 
 	"github.com/convox/convox/pkg/common"
+	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// TODO finish
+func (p *Provider) ServiceHost(app string, s manifest.Service) string {
+	if s.Internal {
+		return fmt.Sprintf("%s.%s-%s.svc.cluster.local", s.Name, p.Name, app)
+	} else {
+		return fmt.Sprintf("%s.%s.%s", s.Name, app, p.Domain)
+	}
+}
+
 func (p *Provider) ServiceList(app string) (structs.Services, error) {
 	lopts := am.ListOptions{
 		LabelSelector: fmt.Sprintf("app=%s,type=service", app),
@@ -58,7 +66,6 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 			// if err != nil {
 			//   return nil, err
 			// }
-
 			ms, err := m.Service(d.ObjectMeta.Name)
 			if err != nil {
 				return nil, err
@@ -72,7 +79,13 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 			//   s.Domain += fmt.Sprintf(".%s", domain)
 			// }
 
-			s.Ports = append(s.Ports, structs.ServicePort{Balancer: 443, Container: int(cs[0].Ports[0].ContainerPort)})
+			cp := int(cs[0].Ports[0].ContainerPort)
+
+			if ms.Internal {
+				s.Ports = append(s.Ports, structs.ServicePort{Balancer: cp, Container: cp})
+			} else {
+				s.Ports = append(s.Ports, structs.ServicePort{Balancer: 443, Container: cp})
+			}
 		}
 
 		ss = append(ss, s)

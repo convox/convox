@@ -126,7 +126,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		}
 
 		// ingress
-		if rss := m.Services.Routable(); len(rss) > 0 {
+		if rss := m.Services.Routable().External(); len(rss) > 0 {
 			data, err := p.releaseTemplateIngress(a, rss, opts)
 			if err != nil {
 				return err

@@ -7,7 +7,7 @@ metadata:
     alb.ingress.kubernetes.io/scheme: internet-facing
     convox.idles: "{{.Idles}}"
     {{ range .Services }}
-    convox.ingress.service.{{.Name}}.3000.protocol: {{.Port.Scheme}}
+    convox.ingress.service.{{.Name}}.{{.Port.Port}}.protocol: {{.Port.Scheme}}
     {{ end }}
     {{ range $k, $v := .Annotations }}
     {{$k}}: {{ safe $v }}
@@ -31,6 +31,6 @@ spec:
         paths:
         - backend:
             serviceName: {{$s.Name}}
-            servicePort: 3000
+            servicePort: {{$s.Port.Port}}
     {{ end }}
     {{ end }}
