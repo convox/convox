@@ -44,11 +44,10 @@ resource "azurerm_kubernetes_cluster" "rack" {
   dns_prefix          = var.name
   kubernetes_version  = data.azurerm_kubernetes_service_versions.available.latest_version
 
-  agent_pool_profile {
+  default_node_pool {
     name            = "default"
-    count           = 3
+    node_count      = 3
     vm_size         = var.node_type
-    os_type         = "Linux"
     os_disk_size_gb = 30
   }
 
