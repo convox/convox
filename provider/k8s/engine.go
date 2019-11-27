@@ -15,6 +15,7 @@ type Engine interface {
 	IngressSecrets(app string) ([]string, error)
 	Log(app, stream string, ts time.Time, message string) error
 	ManifestValidate(m *manifest.Manifest) error
+	RegistryAuth(host, username, password string) (string, string, error)
 	RepositoryAuth(app string) (string, string, error)
 	RepositoryHost(app string) (string, bool, error)
 	Resolver() (string, error)

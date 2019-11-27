@@ -114,7 +114,6 @@ Resources:
         Fn::Base64: !Sub |
           #!/bin/bash -xe
           /etc/eks/bootstrap.sh ${Cluster}
-          iptables --insert FORWARD 1 --in-interface eni+ --destination 169.254.169.254/32 --jump DROP
           /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource Nodes --region ${AWS::Region}
   Nodes:
     Type: AWS::AutoScaling::AutoScalingGroup

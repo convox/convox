@@ -39,6 +39,12 @@ func (p *Provider) RegistryAdd(server, username, password string) (*structs.Regi
 	return r, nil
 }
 
+// override this function to provider infrastructure-specific authentication, such as
+// token swapping for ecr
+func (p *Provider) RegistryAuth(host, username, password string) (string, string, error) {
+	return username, password, nil
+}
+
 func (p *Provider) RegistryList() (structs.Registries, error) {
 	dc, err := p.dockerConfigLoad("registries")
 	if err != nil {

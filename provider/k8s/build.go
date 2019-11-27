@@ -469,9 +469,14 @@ func (p *Provider) buildAuth(b *structs.Build) ([]byte, error) {
 	}
 
 	for _, r := range rs {
+		un, pw, err := p.Engine.RegistryAuth(r.Server, r.Username, r.Password)
+		if err != nil {
+			return nil, err
+		}
+
 		auth[r.Server] = authEntry{
-			Username: r.Username,
-			Password: r.Password,
+			Username: un,
+			Password: pw,
 		}
 	}
 
