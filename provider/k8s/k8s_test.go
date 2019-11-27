@@ -128,6 +128,10 @@ func (te *TestEngine) ManifestValidate(m *manifest.Manifest) error {
 	return nil
 }
 
+func (te *TestEngine) RegistryAuth(host, username, password string) (string, string, error) {
+	return username, password, nil
+}
+
 func (te *TestEngine) RepositoryAuth(app string) (string, string, error) {
 	return "un1", "pw1", nil
 }
