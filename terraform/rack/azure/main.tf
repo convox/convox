@@ -3,7 +3,7 @@ terraform {
 }
 
 provider "azurerm" {
-  varsion = "~> 1.36"
+  varsion = "~> 1.37"
 }
 
 provider "kubernetes" {

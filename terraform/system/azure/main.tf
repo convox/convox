@@ -1,5 +1,5 @@
 provider "azurerm" {
-  version = "~> 1.36"
+  version = "~> 1.37"
 }
 
 provider "http" {
