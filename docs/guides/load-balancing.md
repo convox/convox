@@ -55,7 +55,7 @@ You will need to alias your custom domain to your Rack's router endpoint. You ca
     $ convox rack
     Name      convox
     Provider  gcp
-    Router    0a1b2c3d4e5f.convox.cloud
+    Router    router.0a1b2c3d4e5f.convox.cloud
     Status    running
     Version   master
 
