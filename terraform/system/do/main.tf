@@ -13,9 +13,10 @@ provider "http" {
 provider "kubernetes" {
   version = "~> 1.10"
 
+  client_certificate     = module.cluster.client_certificate
+  client_key             = module.cluster.client_key
   cluster_ca_certificate = module.cluster.ca
   host                   = module.cluster.endpoint
-  token                  = module.cluster.token
 
   load_config_file = false
 }
