@@ -1,5 +1,5 @@
 provider "kubernetes" {
-  version = "~> 1.9"
+  version = "~> 1.10"
 }
 
 resource "kubernetes_service" "cluster" {

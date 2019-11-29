@@ -7,7 +7,7 @@ provider "google" {
 }
 
 provider "kubernetes" {
-  version = "~> 1.8"
+  version = "~> 1.10"
 }
 
 data "google_client_config" "current" {}

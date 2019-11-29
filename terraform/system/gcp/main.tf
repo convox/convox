@@ -15,7 +15,7 @@ provider "http" {
 }
 
 provider "kubernetes" {
-  version = "~> 1.9"
+  version = "~> 1.10"
 
   client_certificate     = module.cluster.client_certificate
   client_key             = module.cluster.client_key

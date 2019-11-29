@@ -3,7 +3,7 @@ terraform {
 }
 
 provider "digitalocean" {
-  version = "~> 1.9"
+  version = "~> 1.11"
 }
 
 provider "http" {
@@ -11,7 +11,7 @@ provider "http" {
 }
 
 provider "kubernetes" {
-  version = "~> 1.9"
+  version = "~> 1.10"
 }
 
 locals {

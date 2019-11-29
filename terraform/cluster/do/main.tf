@@ -50,8 +50,9 @@ resource "local_file" "kubeconfig" {
 
   filename = pathexpand("~/.kube/config.do.${var.name}")
   content = templatefile("${path.module}/kubeconfig.tpl", {
-    ca       = digitalocean_kubernetes_cluster.rack.kube_config[0].cluster_ca_certificate
-    endpoint = digitalocean_kubernetes_cluster.rack.endpoint
-    token    = digitalocean_kubernetes_cluster.rack.kube_config[0].token
+    ca                 = digitalocean_kubernetes_cluster.rack.kube_config[0].cluster_ca_certificate
+    client_certificate = base64encode(digitalocean_kubernetes_cluster.rack.kube_config[0].client_certificate)
+    client_key         = base64encode(digitalocean_kubernetes_cluster.rack.kube_config[0].client_key)
+    endpoint           = digitalocean_kubernetes_cluster.rack.endpoint
   })
 }
