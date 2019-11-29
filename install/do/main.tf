@@ -39,7 +39,7 @@ variable "token" {
 }
 
 provider "digitalocean" {
-  version = "~> 1.9"
+  version = "~> 1.11"
 
   token = var.token
 

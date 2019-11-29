@@ -11,7 +11,7 @@ provider "http" {
 }
 
 provider "kubernetes" {
-  version = "~> 1.9"
+  version = "~> 1.10"
 }
 
 locals {
