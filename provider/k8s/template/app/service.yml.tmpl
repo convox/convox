@@ -18,7 +18,9 @@ metadata:
   namespace: {{.Namespace}}
   name: {{.Service.Name}}
   annotations:
+    {{ if not .Service.Agent.Enabled }}
     atom.conditions: Available=True,Progressing=True/NewReplicaSetAvailable
+    {{ end }}
   labels:
     app: {{.App.Name}}
     type: service
@@ -61,7 +63,7 @@ spec:
         nameservers:
           - "{{ . }}"
       {{ end }}
-      {{ if .Service.Agent.Ports }}
+      {{ if .Service.Agent.Enabled }}
       hostNetwork: true
       {{ end }}
       shareProcessNamespace: {{.Service.Init}}
@@ -74,6 +76,10 @@ spec:
         {{ end }}
         {{ end }}
         env:
+        - name: INSTANCE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
         {{ range .Service.Links }}
         - name: {{ envname . }}_URL
           value: https://{{.}}.{{$.App.Name}}.{{$.Rack}}
@@ -104,14 +110,16 @@ spec:
         {{ end }}
         ports:
         {{ with .Service.Port.Port }}
-          - containerPort: {{.}}
+          - name: main
+            containerPort: {{.}}
         {{ end }}
-        {{ if .Service.Agent.Enabled }}
-        {{ range .Service.Agent.Ports }}
-          - containerPort: {{.Port}}
-            hostPort: {{.Port}}
+        {{ range .Service.Ports }}
+          - name: port-{{.Port}}
+            containerPort: {{.Port}}
             protocol: {{ upper .Protocol }}
-        {{ end }}
+            {{ if $.Service.Agent.Enabled }}
+            hostPort: {{.Port}}
+            {{ end }}
         {{ end }}
         resources:
           requests:

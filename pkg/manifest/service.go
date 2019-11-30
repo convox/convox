@@ -10,37 +10,32 @@ import (
 type Service struct {
 	Name string `yaml:"-"`
 
-	Agent       ServiceAgent   `yaml:"agent,omitempty"`
-	Build       ServiceBuild   `yaml:"build,omitempty"`
-	Command     string         `yaml:"command,omitempty"`
-	Domains     ServiceDomains `yaml:"domain,omitempty"`
-	Drain       int            `yaml:"drain,omitempty"`
-	Environment Environment    `yaml:"environment,omitempty"`
-	Health      ServiceHealth  `yaml:"health,omitempty"`
-	Image       string         `yaml:"image,omitempty"`
-	Init        bool           `yaml:"init,omitempty"`
-	Internal    bool           `yaml:"internal,omitempty"`
-	Links       []string       `yaml:"links,omitempty"`
-	Port        ServicePort    `yaml:"port,omitempty"`
-	Privileged  bool           `yaml:"privileged,omitempty"`
-	Resources   []string       `yaml:"resources,omitempty"`
-	Scale       ServiceScale   `yaml:"scale,omitempty"`
-	Singleton   bool           `yaml:"singleton,omitempty"`
-	Sticky      bool           `yaml:"sticky,omitempty"`
-	Test        string         `yaml:"test,omitempty"`
-	Volumes     []string       `yaml:"volumes,omitempty"`
+	Agent       ServiceAgent          `yaml:"agent,omitempty"`
+	Build       ServiceBuild          `yaml:"build,omitempty"`
+	Command     string                `yaml:"command,omitempty"`
+	Domains     ServiceDomains        `yaml:"domain,omitempty"`
+	Drain       int                   `yaml:"drain,omitempty"`
+	Environment Environment           `yaml:"environment,omitempty"`
+	Health      ServiceHealth         `yaml:"health,omitempty"`
+	Image       string                `yaml:"image,omitempty"`
+	Init        bool                  `yaml:"init,omitempty"`
+	Internal    bool                  `yaml:"internal,omitempty"`
+	Links       []string              `yaml:"links,omitempty"`
+	Port        ServicePortScheme     `yaml:"port,omitempty"`
+	Ports       []ServicePortProtocol `yaml:"ports,omitempty"`
+	Privileged  bool                  `yaml:"privileged,omitempty"`
+	Resources   []string              `yaml:"resources,omitempty"`
+	Scale       ServiceScale          `yaml:"scale,omitempty"`
+	Singleton   bool                  `yaml:"singleton,omitempty"`
+	Sticky      bool                  `yaml:"sticky,omitempty"`
+	Test        string                `yaml:"test,omitempty"`
+	Volumes     []string              `yaml:"volumes,omitempty"`
 }
 
 type Services []Service
 
 type ServiceAgent struct {
-	Enabled bool               `yaml:"enabled,omitempty"`
-	Ports   []ServiceAgentPort `yaml:"ports,omitempty"`
-}
-
-type ServiceAgentPort struct {
-	Port     int    `yaml:"port,omitempty"`
-	Protocol string `yaml:"protocol,omitempty"`
+	Enabled bool `yaml:"enabled,omitempty"`
 }
 
 type ServiceBuild struct {
@@ -58,7 +53,12 @@ type ServiceHealth struct {
 	Timeout  int
 }
 
-type ServicePort struct {
+type ServicePortProtocol struct {
+	Port     int    `yaml:"port,omitempty"`
+	Protocol string `yaml:"protocol,omitempty"`
+}
+
+type ServicePortScheme struct {
 	Port   int    `yaml:"port,omitempty"`
 	Scheme string `yaml:"scheme,omitempty"`
 }

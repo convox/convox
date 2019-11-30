@@ -142,47 +142,9 @@ func (v *ServiceAgent) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	case bool:
 		v.Enabled = t
 	case map[interface{}]interface{}:
-		v.Enabled = true
-
-		if pis, ok := t["ports"].([]interface{}); ok {
-			for _, pi := range pis {
-				var p ServiceAgentPort
-				if err := remarshal(pi, &p); err != nil {
-					return err
-				}
-				v.Ports = append(v.Ports, p)
-			}
-		}
+		return fmt.Errorf("agent ports are now specified at the service level")
 	default:
 		return fmt.Errorf("could not parse agent: %+v", w)
-	}
-
-	return nil
-}
-
-func (v *ServiceAgentPort) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var w interface{}
-
-	if err := unmarshal(&w); err != nil {
-		return err
-	}
-
-	switch t := w.(type) {
-	case string:
-		ps := strings.Split(t, "/")
-		pi, err := strconv.Atoi(ps[0])
-		if err != nil {
-			return err
-		}
-		v.Port = pi
-		if len(ps) > 1 {
-			v.Protocol = ps[1]
-		}
-	case int:
-		v.Port = t
-		v.Protocol = "tcp"
-	default:
-		return fmt.Errorf("invalid port: %s", t)
 	}
 
 	return nil
@@ -284,7 +246,35 @@ func (v *ServiceHealth) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-func (v *ServicePort) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (v *ServicePortProtocol) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var w interface{}
+
+	if err := unmarshal(&w); err != nil {
+		return err
+	}
+
+	switch t := w.(type) {
+	case string:
+		ps := strings.Split(t, "/")
+		pi, err := strconv.Atoi(ps[0])
+		if err != nil {
+			return err
+		}
+		v.Port = pi
+		if len(ps) > 1 {
+			v.Protocol = ps[1]
+		}
+	case int:
+		v.Port = t
+		v.Protocol = "tcp"
+	default:
+		return fmt.Errorf("invalid port: %s", t)
+	}
+
+	return nil
+}
+
+func (v *ServicePortScheme) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var w interface{}
 
 	if err := unmarshal(&w); err != nil {
@@ -342,7 +332,7 @@ func (v *ServicePort) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-func (v ServicePort) MarshalYAML() (interface{}, error) {
+func (v ServicePortScheme) MarshalYAML() (interface{}, error) {
 	if v.Port == 0 {
 		return nil, nil
 	}
