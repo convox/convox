@@ -66,8 +66,12 @@ func TestManifestLoad(t *testing.T) {
 					Interval: 10,
 					Timeout:  9,
 				},
-				Init:      true,
-				Port:      manifest.ServicePort{Port: 1000, Scheme: "http"},
+				Init: true,
+				Port: manifest.ServicePortScheme{Port: 1000, Scheme: "http"},
+				Ports: []manifest.ServicePortProtocol{
+					manifest.ServicePortProtocol{Port: 2000, Protocol: "tcp"},
+					manifest.ServicePortProtocol{Port: 3000, Protocol: "udp"},
+				},
 				Resources: []string{"database"},
 				Scale: manifest.ServiceScale{
 					Count:  manifest.ServiceScaleCount{Min: 3, Max: 10},
@@ -92,7 +96,7 @@ func TestManifestLoad(t *testing.T) {
 				Environment: []string{
 					"SECRET",
 				},
-				Port: manifest.ServicePort{Port: 2000, Scheme: "https"},
+				Port: manifest.ServicePortScheme{Port: 2000, Scheme: "https"},
 				Scale: manifest.ServiceScale{
 					Count:  manifest.ServiceScaleCount{Min: 1, Max: 1},
 					Cpu:    512,
@@ -115,7 +119,7 @@ func TestManifestLoad(t *testing.T) {
 					Path:     "/",
 					Timeout:  3,
 				},
-				Port: manifest.ServicePort{Port: 3000, Scheme: "https"},
+				Port: manifest.ServicePortScheme{Port: 3000, Scheme: "https"},
 				Scale: manifest.ServiceScale{
 					Count:  manifest.ServiceScaleCount{Min: 0, Max: 0},
 					Cpu:    256,
@@ -195,7 +199,7 @@ func TestManifestLoad(t *testing.T) {
 				Environment: []string{
 					"SECRET",
 				},
-				Port: manifest.ServicePort{Port: 2000, Scheme: "https"},
+				Port: manifest.ServicePortScheme{Port: 2000, Scheme: "https"},
 				Scale: manifest.ServiceScale{
 					Count:  manifest.ServiceScaleCount{Min: 1, Max: 1},
 					Cpu:    512,
@@ -207,11 +211,6 @@ func TestManifestLoad(t *testing.T) {
 				Name: "agent",
 				Agent: manifest.ServiceAgent{
 					Enabled: true,
-					Ports: []manifest.ServiceAgentPort{
-						{Port: 5000, Protocol: "udp"},
-						{Port: 5001, Protocol: "tcp"},
-						{Port: 5002, Protocol: "tcp"},
-					},
 				},
 				Build: manifest.ServiceBuild{
 					Manifest: "Dockerfile",
@@ -223,6 +222,11 @@ func TestManifestLoad(t *testing.T) {
 					Path:     "/",
 					Interval: 5,
 					Timeout:  4,
+				},
+				Ports: []manifest.ServicePortProtocol{
+					{Port: 5000, Protocol: "udp"},
+					{Port: 5001, Protocol: "tcp"},
+					{Port: 5002, Protocol: "tcp"},
 				},
 				Scale: manifest.ServiceScale{
 					Count:  manifest.ServiceScaleCount{Min: 1, Max: 1},
@@ -254,7 +258,7 @@ func TestManifestLoad(t *testing.T) {
 		"services",
 		"services.agent",
 		"services.agent.agent",
-		"services.agent.agent.ports",
+		"services.agent.ports",
 		"services.api",
 		"services.api.build",
 		"services.api.build.manifest",
@@ -265,6 +269,7 @@ func TestManifestLoad(t *testing.T) {
 		"services.api.health.interval",
 		"services.api.init",
 		"services.api.port",
+		"services.api.ports",
 		"services.api.resources",
 		"services.api.scale",
 		"services.api.test",

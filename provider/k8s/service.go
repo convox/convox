@@ -8,6 +8,7 @@ import (
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
+	v1 "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -22,11 +23,6 @@ func (p *Provider) ServiceHost(app string, s manifest.Service) string {
 func (p *Provider) ServiceList(app string) (structs.Services, error) {
 	lopts := am.ListOptions{
 		LabelSelector: fmt.Sprintf("app=%s,type=service", app),
-	}
-
-	ds, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).List(lopts)
-	if err != nil {
-		return nil, err
 	}
 
 	a, err := p.AppGet(app)
@@ -45,6 +41,11 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 
 	ss := structs.Services{}
 
+	ds, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).List(lopts)
+	if err != nil {
+		return nil, err
+	}
+
 	for _, d := range ds.Items {
 		cs := d.Spec.Template.Spec.Containers
 
@@ -52,40 +53,43 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 			return nil, fmt.Errorf("unexpected containers for service: %s", d.ObjectMeta.Name)
 		}
 
-		// fmt.Printf("d.Spec = %+v\n", d.Spec)
-		// fmt.Printf("d.Status = %+v\n", d.Status)
-
-		s := structs.Service{
-			Count: int(common.DefaultInt32(d.Spec.Replicas, 0)),
-			Name:  d.ObjectMeta.Name,
-			Ports: []structs.ServicePort{},
+		ms, err := m.Service(d.ObjectMeta.Name)
+		if err != nil {
+			return nil, err
 		}
 
-		if len(cs[0].Ports) == 1 {
-			// i, err := p.Cluster.ExtensionsV1beta1().Ingresses(p.AppNamespace(app)).Get(app, am.GetOptions{})
-			// if err != nil {
-			//   return nil, err
-			// }
-			ms, err := m.Service(d.ObjectMeta.Name)
-			if err != nil {
-				return nil, err
-			}
+		s := structs.Service{
+			Count:  int(common.DefaultInt32(d.Spec.Replicas, 0)),
+			Domain: p.Engine.ServiceHost(app, *ms),
+			Name:   d.ObjectMeta.Name,
+			Ports:  serviceContainerPorts(cs[0], ms.Internal),
+		}
 
-			s.Domain = p.Engine.ServiceHost(app, *ms)
+		ss = append(ss, s)
+	}
 
-			// s.Domain = fmt.Sprintf("%s.%s", p.Engine.ServiceHost(app, s.Name), common.CoalesceString(i.Annotations["convox.domain"], i.Labels["rack"]))
+	dss, err := p.Cluster.AppsV1().DaemonSets(p.AppNamespace(app)).List(lopts)
+	if err != nil {
+		return nil, err
+	}
 
-			// if domain, ok := i.Annotations["convox.domain"]; ok {
-			//   s.Domain += fmt.Sprintf(".%s", domain)
-			// }
+	for _, d := range dss.Items {
+		cs := d.Spec.Template.Spec.Containers
 
-			cp := int(cs[0].Ports[0].ContainerPort)
+		if len(cs) != 1 || cs[0].Name != "main" {
+			return nil, fmt.Errorf("unexpected containers for service: %s", d.ObjectMeta.Name)
+		}
 
-			if ms.Internal {
-				s.Ports = append(s.Ports, structs.ServicePort{Balancer: cp, Container: cp})
-			} else {
-				s.Ports = append(s.Ports, structs.ServicePort{Balancer: 443, Container: cp})
-			}
+		ms, err := m.Service(d.ObjectMeta.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		s := structs.Service{
+			Count:  int(d.Status.NumberReady),
+			Domain: p.Engine.ServiceHost(app, *ms),
+			Name:   d.ObjectMeta.Name,
+			Ports:  serviceContainerPorts(cs[0], ms.Internal),
 		}
 
 		ss = append(ss, s)
@@ -198,7 +202,7 @@ func (p *Provider) serviceInstall(app, release, service string) error {
 		"Service":   s,
 	}
 
-	data, err := p.RenderTemplate("app/port", params)
+	data, err := p.RenderTemplate("app/ports", params)
 	if err != nil {
 		return err
 	}
@@ -208,4 +212,18 @@ func (p *Provider) serviceInstall(app, release, service string) error {
 	}
 
 	return nil
+}
+
+func serviceContainerPorts(c v1.Container, internal bool) []structs.ServicePort {
+	ps := []structs.ServicePort{}
+
+	for _, cp := range c.Ports {
+		if cp.Name == "main" && !internal {
+			ps = append(ps, structs.ServicePort{Balancer: 443, Container: int(cp.ContainerPort)})
+		} else {
+			ps = append(ps, structs.ServicePort{Container: int(cp.ContainerPort)})
+		}
+	}
+
+	return ps
 }

@@ -47,9 +47,9 @@ func Services(rack sdk.Interface, c *stdcli.Context) error {
 		ports := []string{}
 
 		for _, p := range s.Ports {
-			port := fmt.Sprintf("%d", p.Balancer)
+			port := fmt.Sprintf("%d", p.Container)
 
-			if p.Container != 0 {
+			if p.Balancer != 0 {
 				port = fmt.Sprintf("%d:%d", p.Balancer, p.Container)
 			}
 

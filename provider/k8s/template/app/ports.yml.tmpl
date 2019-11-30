@@ -17,8 +17,16 @@ spec:
     release: {{.Release.Id}}
     type: service
   ports:
+    {{ with .Service.Port }}
     - name: main
-      port: {{.Service.Port.Port}}
+      port: {{.Port}}
       protocol: TCP
-      targetPort: {{.Service.Port.Port}}
+      targetPort: {{.Port}}
+    {{ end }}
+    {{ range .Service.Ports }}
+    - name: port-{{.Port}}
+      port: {{.Port}}
+      protocol: {{ upper .Protocol }}
+      targetPort: {{.Port}}
+    {{ end }}
 {{ end }}
