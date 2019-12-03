@@ -1,11 +1,11 @@
 variable "cluster" {
-  type = "string"
+  type = string
 }
 
 variable "namespace" {
-  type = "string"
+  type = string
 }
 
 variable "name" {
-  type = "string"
+  type = string
 }

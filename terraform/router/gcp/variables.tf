@@ -1,15 +1,15 @@
 variable "name" {
-  type = "string"
+  type = string
 }
 
 variable "namespace" {
-  type = "string"
+  type = string
 }
 
 variable "network" {
-  type = "string"
+  type = string
 }
 
 variable "release" {
-  type = "string"
+  type = string
 }

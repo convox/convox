@@ -1,27 +1,27 @@
 variable "access_id" {
-  type = "string"
+  type = string
 }
 
 variable "cluster" {
-  type = "string"
+  type = string
 }
 
 variable "name" {
-  type = "string"
+  type = string
 }
 
 variable "region" {
-  type = "string"
+  type = string
 }
 
 variable "registry_disk" {
-  type = "string"
+  type = string
 }
 
 variable "release" {
-  type = "string"
+  type = string
 }
 
 variable "secret_key" {
-  type = "string"
+  type = string
 }

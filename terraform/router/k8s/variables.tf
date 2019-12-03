@@ -1,17 +1,17 @@
 variable "annotations" {
-  type    = "map"
+  type    = map
   default = {}
 }
 
 variable "env" {
-  type    = "map"
+  type    = map
   default = {}
 }
 
 variable "namespace" {
-  type = "string"
+  type = string
 }
 
 variable "release" {
-  type = "string"
+  type = string
 }

@@ -1,9 +1,9 @@
 variable "name" {
-  type = "string"
+  type = string
 }
 
 variable "network" {
-  type = "string"
+  type = string
 }
 
 variable "node_type" {
@@ -11,7 +11,7 @@ variable "node_type" {
 }
 
 variable "nodes_account" {
-  type = "string"
+  type = string
 }
 
 variable "region" {
@@ -19,5 +19,5 @@ variable "region" {
 }
 
 variable "release" {
-  type = "string"
+  type = string
 }

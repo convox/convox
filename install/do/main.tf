@@ -1,6 +1,6 @@
 variable "access_id" {
   description = "spaces access id"
-  type        = "string"
+  type        = string
 }
 
 variable "name" {
@@ -30,12 +30,12 @@ variable "registry_disk" {
 
 variable "secret_key" {
   description = "spaces secret key"
-  type        = "string"
+  type        = string
 }
 
 variable "token" {
   description = "digital ocean api token"
-  type        = "string"
+  type        = string
 }
 
 provider "digitalocean" {

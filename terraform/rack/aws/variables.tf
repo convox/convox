@@ -1,25 +1,25 @@
 variable "cluster" {
-  type = "string"
+  type = string
 }
 
 variable "name" {
-  type = "string"
+  type = string
 }
 
 variable "nodes_security" {
-  type = "string"
+  type = string
 }
 
 variable "oidc_arn" {
-  type = "string"
+  type = string
 }
 
 variable "oidc_sub" {
-  type = "string"
+  type = string
 }
 
 variable "release" {
-  type = "string"
+  type = string
 }
 
 variable "subnets_private" {
@@ -31,10 +31,10 @@ variable "subnets_public" {
 }
 
 variable "target_group_http" {
-  type = "string"
+  type = string
 }
 
 variable "target_group_https" {
-  type = "string"
+  type = string
 }
 

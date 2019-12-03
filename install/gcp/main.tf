@@ -15,7 +15,7 @@ variable "node_type" {
 
 variable "project" {
   description = "id of gcp project in which to install the rack"
-  type        = "string"
+  type        = string
 }
 
 variable "release" {
