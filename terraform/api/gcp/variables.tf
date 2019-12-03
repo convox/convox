@@ -1,23 +1,23 @@
 variable "domain" {
-  type = "string"
+  type = string
 }
 
 variable "name" {
-  type = "string"
+  type = string
 }
 
 variable "namespace" {
-  type = "string"
+  type = string
 }
 
 variable "nodes_account" {
-  type = "string"
+  type = string
 }
 
 variable "release" {
-  type = "string"
+  type = string
 }
 
 variable "router" {
-  type = "string"
+  type = string
 }

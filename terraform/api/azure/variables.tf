@@ -1,31 +1,31 @@
 variable "domain" {
-  type = "string"
+  type = string
 }
 
 variable "name" {
-  type = "string"
+  type = string
 }
 
 variable "namespace" {
-  type = "string"
+  type = string
 }
 
 variable "region" {
-  type = "string"
+  type = string
 }
 
 variable "release" {
-  type = "string"
+  type = string
 }
 
 variable "resource_group" {
-  type = "string"
+  type = string
 }
 
 variable "router" {
-  type = "string"
+  type = string
 }
 
 variable "workspace" {
-  type = "string"
+  type = string
 }

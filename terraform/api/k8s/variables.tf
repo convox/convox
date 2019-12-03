@@ -3,7 +3,7 @@ variable "annotations" {
 }
 
 variable "domain" {
-  type = "string"
+  type = string
 }
 
 variable "env" {
@@ -15,15 +15,15 @@ variable "labels" {
 }
 
 variable "name" {
-  type = "string"
+  type = string
 }
 
 variable "namespace" {
-  type = "string"
+  type = string
 }
 
 variable "release" {
-  type = "string"
+  type = string
 }
 
 variable "socket" {

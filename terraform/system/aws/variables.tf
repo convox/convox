@@ -3,7 +3,7 @@ variable "cidr" {
 }
 
 variable "name" {
-  type = "string"
+  type = string
 }
 
 variable "node_type" {

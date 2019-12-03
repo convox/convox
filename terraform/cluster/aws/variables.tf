@@ -7,7 +7,7 @@ variable "kubernetes_version" {
 }
 
 variable "name" {
-  type = "string"
+  type = string
 }
 
 variable "node_type" {

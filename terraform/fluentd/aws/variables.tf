@@ -1,19 +1,19 @@
 variable "cluster" {
-  type = "string"
+  type = string
 }
 
 variable "namespace" {
-  type = "string"
+  type = string
 }
 
 variable "name" {
-  type = "string"
+  type = string
 }
 
 variable "oidc_arn" {
-  type = "string"
+  type = string
 }
 
 variable "oidc_sub" {
-  type = "string"
+  type = string
 }

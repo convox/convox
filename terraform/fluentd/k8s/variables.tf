@@ -7,17 +7,17 @@ variable "env" {
 }
 
 variable "cluster" {
-  type = "string"
+  type = string
 }
 
 variable "image" {
-  type = "string"
+  type = string
 }
 
 variable "namespace" {
-  type = "string"
+  type = string
 }
 
 variable "target" {
-  type = "string"
+  type = string
 }

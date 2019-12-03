@@ -1,13 +1,13 @@
 variable "name" {
-  type = "string"
+  type = string
 }
 
 variable "node_type" {
-  type = "string"
+  type = string
 }
 
 variable "region" {
-  type = "string"
+  type = string
 }
 
 variable "release" {
