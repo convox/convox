@@ -415,17 +415,29 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 
 		replicas := common.CoalesceInt(sc[s.Name], s.Scale.Count.Min)
 
-		svcenv := e
+		env := map[string]string{}
 
-		if _, ok := svcenv["PORT"]; !ok {
+		for k, v := range sysenv {
+			env[k] = v
+		}
+
+		for k, v := range s.EnvironmentDefaults() {
+			env[k] = v
+		}
+
+		for k, v := range e {
+			env[k] = v
+		}
+
+		if _, ok := env["PORT"]; !ok {
 			if s.Port.Port > 0 {
-				svcenv["PORT"] = strconv.Itoa(s.Port.Port)
+				env["PORT"] = strconv.Itoa(s.Port.Port)
 			}
 		}
 
 		params := map[string]interface{}{
 			"App":            a,
-			"Env":            svcenv,
+			"Environment":    env,
 			"MaxSurge":       max,
 			"MaxUnavailable": 100 - min,
 			"Namespace":      p.AppNamespace(a.Name),
@@ -434,7 +446,6 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 			"Release":        r,
 			"Replicas":       replicas,
 			"Service":        s,
-			"SystemEnv":      sysenv,
 		}
 
 		if ip, err := p.Engine.Resolver(); err == nil {

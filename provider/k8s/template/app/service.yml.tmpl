@@ -8,7 +8,7 @@ metadata:
     service: {{.Service.Name}}
 type: Opaque
 data:
-  {{ range env .SystemEnv .Service.EnvironmentDefaults .Env }}
+  {{ range env .Environment }}
   {{.Key}}: {{ safe (base64 .Value) }}
   {{ end }}
 ---
