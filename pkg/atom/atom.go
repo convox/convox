@@ -352,13 +352,16 @@ func (c *Client) rollback(a *aa.Atom) error {
 
 	time.Sleep(1 * time.Second)
 
-	a.Spec.CurrentVersion = v.Name
-	a.Spec.PreviousVersion = ""
-	a.Started = am.Now()
-	a.Status = "Rollback"
-
-	a, err = c.atom.AtomV1().Atoms(a.Namespace).Update(a)
+	an, err := c.atom.AtomV1().Atoms(a.Namespace).Get(a.Name, am.GetOptions{})
 	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	an.Spec.CurrentVersion = v.Name
+	an.Spec.PreviousVersion = ""
+	an.Started = am.Now()
+
+	if _, err = c.atom.AtomV1().Atoms(a.Namespace).Update(a); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -370,8 +373,7 @@ func (c *Client) status(a *aa.Atom, status string) error {
 
 	a.Status = aa.AtomStatus(status)
 
-	a, err = c.atom.AtomV1().Atoms(a.Namespace).Update(a)
-	if err != nil {
+	if _, err = c.atom.AtomV1().Atoms(a.Namespace).Update(a); err != nil {
 		return errors.WithStack(err)
 	}
 
