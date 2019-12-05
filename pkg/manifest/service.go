@@ -20,7 +20,6 @@ type Service struct {
 	Image       string                `yaml:"image,omitempty"`
 	Init        bool                  `yaml:"init,omitempty"`
 	Internal    bool                  `yaml:"internal,omitempty"`
-	Links       []string              `yaml:"links,omitempty"`
 	Port        ServicePortScheme     `yaml:"port,omitempty"`
 	Ports       []ServicePortProtocol `yaml:"ports,omitempty"`
 	Privileged  bool                  `yaml:"privileged,omitempty"`

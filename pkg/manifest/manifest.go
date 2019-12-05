@@ -2,7 +2,6 @@ package manifest
 
 import (
 	"fmt"
-	"io"
 	"math/rand"
 	"sort"
 	"strings"
@@ -63,7 +62,7 @@ func Load(data []byte, env map[string]string) (*Manifest, error) {
 		return nil, err
 	}
 
-	if err := m.ValidateEnv(); err != nil {
+	if err := m.Validate(); err != nil {
 		return nil, err
 	}
 
@@ -80,6 +79,68 @@ func (m *Manifest) Agents() []string {
 	}
 
 	return a
+}
+
+func (m *Manifest) ApplyDefaults() error {
+	for i, s := range m.Services {
+		if s.Build.Path == "" && s.Image == "" {
+			m.Services[i].Build.Path = "."
+		}
+
+		if m.Services[i].Build.Path != "" && s.Build.Manifest == "" {
+			m.Services[i].Build.Manifest = "Dockerfile"
+		}
+
+		if s.Drain == 0 {
+			m.Services[i].Drain = 30
+		}
+
+		if s.Health.Path == "" {
+			m.Services[i].Health.Path = "/"
+		}
+
+		if s.Health.Interval == 0 {
+			m.Services[i].Health.Interval = 5
+		}
+
+		if s.Health.Grace == 0 {
+			m.Services[i].Health.Grace = m.Services[i].Health.Interval
+		}
+
+		if s.Health.Timeout == 0 {
+			m.Services[i].Health.Timeout = m.Services[i].Health.Interval - 1
+		}
+
+		if s.Port.Port > 0 && s.Port.Scheme == "" {
+			m.Services[i].Port.Scheme = "http"
+		}
+
+		sp := fmt.Sprintf("services.%s.scale", s.Name)
+
+		// if no scale attributes set
+		if len(m.AttributesByPrefix(sp)) == 0 {
+			m.Services[i].Scale.Count = ServiceScaleCount{Min: 1, Max: 1}
+		}
+
+		// if no explicit count attribute set yet has multiple scale attributes other than count
+		if !m.AttributeExists(fmt.Sprintf("%s.count", sp)) && len(m.AttributesByPrefix(sp)) > 1 {
+			m.Services[i].Scale.Count = ServiceScaleCount{Min: 1, Max: 1}
+		}
+
+		if m.Services[i].Scale.Cpu == 0 {
+			m.Services[i].Scale.Cpu = DefaultCpu
+		}
+
+		if m.Services[i].Scale.Memory == 0 {
+			m.Services[i].Scale.Memory = DefaultMem
+		}
+
+		if !m.AttributeExists(fmt.Sprintf("services.%s.sticky", s.Name)) {
+			m.Services[i].Sticky = true
+		}
+	}
+
+	return nil
 }
 
 func (m *Manifest) Attributes() []string {
@@ -106,7 +167,7 @@ func (m *Manifest) AttributesByPrefix(prefix string) []string {
 	return attrs
 }
 
-func (m *Manifest) AttributeSet(name string) bool {
+func (m *Manifest) AttributeExists(name string) bool {
 	return m.attributes[name]
 }
 
@@ -114,25 +175,33 @@ func (m *Manifest) Env() map[string]string {
 	return m.env
 }
 
-// used only for tests
-func (m *Manifest) SetAttributes(attrs []string) {
-	m.attributes = map[string]bool{}
-
-	for _, a := range attrs {
-		m.attributes[a] = true
-	}
-}
-
-// used only for tests
-func (m *Manifest) SetEnv(env map[string]string) {
-	m.env = env
-}
-
+// CombineEnv calculates the final environment of each service
+// and filters m.env to the union of all service env vars
+// defined in the manifest
 func (m *Manifest) CombineEnv() error {
 	for i, s := range m.Services {
 		me := make([]string, len(m.Environment))
 		copy(me, m.Environment)
 		m.Services[i].Environment = append(me, s.Environment...)
+	}
+
+	keys := map[string]bool{}
+
+	for _, s := range m.Services {
+		env, err := m.ServiceEnvironment(s.Name)
+		if err != nil {
+			return err
+		}
+
+		for k := range env {
+			keys[k] = true
+		}
+	}
+
+	for k := range m.env {
+		if !keys[k] {
+			delete(m.env, k)
+		}
 	}
 
 	return nil
@@ -195,95 +264,16 @@ func (m *Manifest) ServiceEnvironment(service string) (map[string]string, error)
 	return env, nil
 }
 
-// ValidateEnv returns an error if required env vars for a service are not available
-// It also filters m.env to the union of all service env vars defined in the manifest
-func (m *Manifest) ValidateEnv() error {
-	keys := map[string]bool{}
+// used only for tests
+func (m *Manifest) SetAttributes(attrs []string) {
+	m.attributes = map[string]bool{}
 
-	for _, s := range m.Services {
-		env, err := m.ServiceEnvironment(s.Name)
-		if err != nil {
-			return err
-		}
-
-		for k := range env {
-			keys[k] = true
-		}
+	for _, a := range attrs {
+		m.attributes[a] = true
 	}
-
-	for k := range m.env {
-		if !keys[k] {
-			delete(m.env, k)
-		}
-	}
-
-	return nil
 }
 
-func (m *Manifest) ApplyDefaults() error {
-	for i, s := range m.Services {
-		if s.Build.Path == "" && s.Image == "" {
-			m.Services[i].Build.Path = "."
-		}
-
-		if m.Services[i].Build.Path != "" && s.Build.Manifest == "" {
-			m.Services[i].Build.Manifest = "Dockerfile"
-		}
-
-		if s.Drain == 0 {
-			m.Services[i].Drain = 30
-		}
-
-		if s.Health.Path == "" {
-			m.Services[i].Health.Path = "/"
-		}
-
-		if s.Health.Interval == 0 {
-			m.Services[i].Health.Interval = 5
-		}
-
-		if s.Health.Grace == 0 {
-			m.Services[i].Health.Grace = m.Services[i].Health.Interval
-		}
-
-		if s.Health.Timeout == 0 {
-			m.Services[i].Health.Timeout = m.Services[i].Health.Interval - 1
-		}
-
-		if s.Port.Port > 0 && s.Port.Scheme == "" {
-			m.Services[i].Port.Scheme = "http"
-		}
-
-		sp := fmt.Sprintf("services.%s.scale", s.Name)
-
-		// if no scale attributes set
-		if len(m.AttributesByPrefix(sp)) == 0 {
-			m.Services[i].Scale.Count = ServiceScaleCount{Min: 1, Max: 1}
-		}
-
-		// if no explicit count attribute set yet has multiple scale attributes other than count
-		if !m.AttributeSet(fmt.Sprintf("%s.count", sp)) && len(m.AttributesByPrefix(sp)) > 1 {
-			m.Services[i].Scale.Count = ServiceScaleCount{Min: 1, Max: 1}
-		}
-
-		if m.Services[i].Scale.Cpu == 0 {
-			m.Services[i].Scale.Cpu = DefaultCpu
-		}
-
-		if m.Services[i].Scale.Memory == 0 {
-			m.Services[i].Scale.Memory = DefaultMem
-		}
-
-		if !m.AttributeSet(fmt.Sprintf("services.%s.sticky", s.Name)) {
-			m.Services[i].Sticky = true
-		}
-	}
-
-	return nil
-}
-
-func message(w io.Writer, format string, args ...interface{}) {
-	if w != nil {
-		w.Write([]byte(fmt.Sprintf(format, args...) + "\n"))
-	}
+// used only for tests
+func (m *Manifest) SetEnv(env map[string]string) {
+	m.env = env
 }
