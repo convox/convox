@@ -140,7 +140,7 @@ func (te *TestEngine) RepositoryHost(app string) (string, bool, error) {
 	return "repo1", true, nil
 }
 
-func (te *TestEngine) Resolver() (string, error) {
+func (te *TestEngine) ResolverHost() (string, error) {
 	return "", fmt.Errorf("no resolver")
 }
 
