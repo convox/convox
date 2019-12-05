@@ -80,10 +80,6 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
-        {{ range .Service.Links }}
-        - name: {{ envname . }}_URL
-          value: https://{{.}}.{{$.App.Name}}.{{$.Rack}}
-        {{ end }}
         {{ range .Service.Resources }}
         - name: {{ envname . }}_URL
           valueFrom:

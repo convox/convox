@@ -329,7 +329,6 @@ func TestManifestLoad(t *testing.T) {
 
 	// env processing that normally happens as part of load
 	require.NoError(t, n.CombineEnv())
-	require.NoError(t, n.ValidateEnv())
 
 	m, err := testdataManifest("full", env)
 	require.NoError(t, err)
@@ -388,7 +387,6 @@ func TestManifestLoadSimple(t *testing.T) {
 
 	// env processing that normally happens as part of load
 	require.NoError(t, n.CombineEnv())
-	require.NoError(t, n.ValidateEnv())
 
 	m, err := testdataManifest("simple", map[string]string{"REQUIRED": "test"})
 	require.NoError(t, err)
@@ -414,6 +412,7 @@ func TestManifestLoadInvalid(t *testing.T) {
 
 	m, err = testdataManifest("invalid.2", map[string]string{})
 	require.NotNil(t, m)
+	require.NoError(t, err)
 	require.Len(t, m.Services, 0)
 }
 
