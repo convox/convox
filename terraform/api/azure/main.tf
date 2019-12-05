@@ -65,6 +65,7 @@ module "k8s" {
     PROVIDER              = "azure"
     REGION                = var.region
     REGISTRY              = azurerm_container_registry.registry.login_server
+    RESOLVER              = var.resolver
     RESOURCE_GROUP        = var.resource_group
     ROUTER                = var.router
     STORAGE_ACCOUNT       = azurerm_storage_account.storage.name

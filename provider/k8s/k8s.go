@@ -33,6 +33,7 @@ type Provider struct {
 	Namespace string
 	Password  string
 	Provider  string
+	Resolver  string
 	Router    string
 	Socket    string
 	Storage   string
@@ -83,6 +84,7 @@ func FromEnv() (*Provider, error) {
 		Namespace: ns.Name,
 		Password:  os.Getenv("PASSWORD"),
 		Provider:  common.CoalesceString(os.Getenv("PROVIDER"), "k8s"),
+		Resolver:  os.Getenv("RESOLVER"),
 		Router:    os.Getenv("ROUTER"),
 		Socket:    common.CoalesceString(os.Getenv("SOCKET"), "/var/run/docker.sock"),
 		Storage:   common.CoalesceString(os.Getenv("STORAGE"), "/var/storage"),

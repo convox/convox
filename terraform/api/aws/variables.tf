@@ -22,6 +22,10 @@ variable "release" {
   type = string
 }
 
+variable "resolver" {
+  type = string
+}
+
 variable "router" {
   type = string
 }

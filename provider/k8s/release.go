@@ -448,7 +448,7 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 			"Service":        s,
 		}
 
-		if ip, err := p.Engine.Resolver(); err == nil {
+		if ip, err := p.Engine.ResolverHost(); err == nil {
 			params["Resolver"] = ip
 		}
 
@@ -473,7 +473,7 @@ func (p *Provider) releaseTemplateTimer(a *structs.App, r *structs.Release, s *m
 		"Timer":     t,
 	}
 
-	if ip, err := p.Engine.Resolver(); err == nil {
+	if ip, err := p.Engine.ResolverHost(); err == nil {
 		params["Resolver"] = ip
 	}
 

@@ -43,6 +43,7 @@ module "k8s" {
     PROVIDER = "gcp"
     REGION   = data.google_client_config.current.region
     REGISTRY = data.google_container_registry_repository.registry.repository_url
+    RESOLVER = var.resolver
     ROUTER   = var.router
     SOCKET   = "/var/run/docker.sock"
   }

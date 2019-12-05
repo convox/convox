@@ -40,6 +40,7 @@ module "api" {
   oidc_arn  = var.oidc_arn
   oidc_sub  = var.oidc_sub
   release   = var.release
+  resolver  = module.router.resolver
   router    = module.router.endpoint
 }
 

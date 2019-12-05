@@ -227,3 +227,30 @@ resource "kubernetes_horizontal_pod_autoscaler" "router" {
     ignore_changes = [spec[0].min_replicas, spec[0].max_replicas]
   }
 }
+
+resource "kubernetes_service" "resolver" {
+  metadata {
+    namespace = var.namespace
+    name      = "resolver"
+  }
+
+  spec {
+    type = "ClusterIP"
+
+    port {
+      name        = "dns-udp"
+      port        = 53
+      protocol    = "UDP"
+      target_port = 5454
+    }
+
+    selector = {
+      system  = "convox"
+      service = "router"
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [metadata[0].annotations]
+  }
+}

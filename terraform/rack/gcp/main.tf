@@ -36,6 +36,7 @@ module "api" {
   namespace     = module.k8s.namespace
   nodes_account = var.nodes_account
   release       = var.release
+  resolver      = module.router.resolver
   router        = module.router.endpoint
 }
 
