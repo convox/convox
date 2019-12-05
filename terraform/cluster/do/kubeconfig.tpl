@@ -15,5 +15,4 @@ preferences: {}
 users:
 - name: do
   user:
-    client-certificate-data: ${client_certificate}
-    client-key-data: ${client_key}
+    token: ${token}
