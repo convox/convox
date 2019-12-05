@@ -101,6 +101,14 @@ func (c *AtomController) Update(prev, cur interface{}) error {
 		return errors.WithStack(err)
 	}
 
+	if pa.Spec.CurrentVersion != ca.Spec.CurrentVersion {
+		c.atomEvent(ca, "CurrentVersion", fmt.Sprintf("%s => %s", pa.Spec.CurrentVersion, ca.Spec.CurrentVersion))
+	}
+
+	if pa.Status != ca.Status {
+		c.atomEvent(ca, "Status", fmt.Sprintf("%s => %s", pa.Status, ca.Status))
+	}
+
 	switch ca.Status {
 	case "Failed", "Reverted", "Success":
 		if pa.ResourceVersion == ca.ResourceVersion {
@@ -110,43 +118,29 @@ func (c *AtomController) Update(prev, cur interface{}) error {
 
 	fmt.Printf("atom: %s/%s (%s)\n", ca.Namespace, ca.Name, ca.Status)
 
-	// if ca.Spec.Current != pa.Spec.Current {
-	//   fmt.Printf("atom changed: %s/%s\n", ca.Namespace, ca.Name)
-
-	//   return nil
-	// }
-
 	switch ca.Status {
 	case "Cancelled", "Deadline", "Error":
-		if err := c.atom.rollback(ca); err != nil {
-			c.atom.status(ca, "Failed")
-			return errors.WithStack(err)
-		}
+		c.atom.status(ca, "Rollback")
 	case "Cleanup":
 		ca.Spec.PreviousVersion = ""
 		c.atom.status(ca, "Success")
 	case "Pending":
+		c.atomEvent(ca, "Promote", fmt.Sprintf("Promoting to %s", ca.Spec.CurrentVersion))
+
 		if err := c.atom.apply(ca); err != nil {
-			c.atom.status(ca, "Rollback")
+			c.atom.status(ca, "Error")
 			return errors.WithStack(err)
 		}
 	case "Rollback":
+		c.atomEvent(ca, "Rollback", fmt.Sprintf("Rolling back to %s", ca.Spec.PreviousVersion))
+
+		if err := c.atom.rollback(ca); err != nil {
+			c.atom.status(ca, "Failed")
+			return errors.WithStack(err)
+		}
+
 		// just mark it reverted, can get wedged if trying to ensure rollback
 		c.atom.status(ca, "Reverted")
-		// if deadline := am.NewTime(time.Now().UTC().Add(-1 * time.Duration(ca.Spec.ProgressDeadlineSeconds) * time.Second)); ca.Started.Before(&deadline) {
-		// 	c.atom.status(ca, "Reverted")
-		// 	return nil
-		// }
-
-		// success, err := c.atom.check(ca)
-		// if err != nil {
-		// 	c.atom.status(ca, "Failed")
-		// 	return errors.WithStack(err)
-		// }
-
-		// if success {
-		// 	c.atom.status(ca, "Reverted")
-		// }
 	case "Running":
 		if deadline := am.NewTime(time.Now().UTC().Add(-1 * time.Duration(ca.Spec.ProgressDeadlineSeconds) * time.Second)); ca.Started.Before(&deadline) {
 			c.atom.status(ca, "Deadline")
@@ -162,6 +156,38 @@ func (c *AtomController) Update(prev, cur interface{}) error {
 		if success {
 			c.atom.status(ca, "Cleanup")
 		}
+	}
+
+	return nil
+}
+
+func (c *AtomController) atomEvent(a *ct.Atom, reason, message string) error {
+	ts := am.Now()
+
+	e := &ac.Event{
+		Count:          1,
+		Message:        message,
+		Reason:         reason,
+		FirstTimestamp: ts,
+		LastTimestamp:  ts,
+		Type:           "Normal",
+		InvolvedObject: ac.ObjectReference{
+			APIVersion: "atom.convox.com/v1",
+			Kind:       "Atom",
+			Name:       a.Name,
+			Namespace:  a.Namespace,
+			UID:        a.UID,
+		},
+		ObjectMeta: am.ObjectMeta{
+			GenerateName: fmt.Sprintf("%s-", a.Name),
+		},
+		Source: ac.EventSource{
+			Component: "convox.atom",
+		},
+	}
+
+	if _, err := c.kubernetes.CoreV1().Events(a.Namespace).Create(e); err != nil {
+		return err
 	}
 
 	return nil

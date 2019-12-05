@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/convox/convox/pkg/kctl"
@@ -78,7 +79,6 @@ func (c *EventController) Add(obj interface{}) error {
 	kind := fmt.Sprintf("%s/%s", e.InvolvedObject.APIVersion, e.InvolvedObject.Kind)
 
 	switch kind {
-	case "/Node":
 	case "apps/v1/Deployment":
 		d, err := c.Provider.Cluster.ExtensionsV1beta1().Deployments(o.Namespace).Get(o.Name, am.GetOptions{ResourceVersion: o.ResourceVersion})
 		if err != nil {
@@ -98,6 +98,17 @@ func (c *EventController) Add(obj interface{}) error {
 
 		if app := rs.ObjectMeta.Labels["app"]; app != "" {
 			if err := c.Provider.systemLog(app, rs.Name, e.LastTimestamp.Time, e.Message); err != nil {
+				return err
+			}
+		}
+	case "atom.convox.com/v1/Atom":
+		ns, err := c.Provider.Cluster.CoreV1().Namespaces().Get(e.Namespace, am.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		if app := ns.ObjectMeta.Labels["app"]; app != "" {
+			if err := c.Provider.systemLog(app, fmt.Sprintf("atom/%s", strings.ReplaceAll(e.InvolvedObject.Name, ".", "/")), e.LastTimestamp.Time, fmt.Sprintf("%s: %s", e.Reason, e.Message)); err != nil {
 				return err
 			}
 		}
