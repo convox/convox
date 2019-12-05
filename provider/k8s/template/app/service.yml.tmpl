@@ -62,6 +62,12 @@ spec:
       dnsConfig:
         nameservers:
           - "{{ . }}"
+        searches:
+          - "{{$.App.Name}}.{{$.Rack}}.local"
+          - "{{$.Namespace}}.svc.cluster.local"
+          - "{{$.Rack}}.local"
+          - "svc.cluster.local"
+          - "cluster.local"
       {{ end }}
       {{ if .Service.Agent.Enabled }}
       hostNetwork: true
