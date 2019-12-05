@@ -447,11 +447,11 @@ func (v *ServiceScaleCount) UnmarshalYAML(unmarshal func(interface{}) error) err
 		}
 	case map[interface{}]interface{}:
 		if min := t["min"]; min != nil {
-			switch min.(type) {
+			switch u := min.(type) {
 			case int:
-				v.Min = min.(int)
+				v.Min = u
 			case string:
-				mins, err := strconv.Atoi(min.(string))
+				mins, err := strconv.Atoi(u)
 				if err != nil {
 					return err
 				}
@@ -461,11 +461,11 @@ func (v *ServiceScaleCount) UnmarshalYAML(unmarshal func(interface{}) error) err
 			}
 		}
 		if max := t["max"]; max != nil {
-			switch max.(type) {
+			switch u := max.(type) {
 			case int:
-				v.Max = max.(int)
+				v.Max = u
 			case string:
-				maxs, err := strconv.Atoi(max.(string))
+				maxs, err := strconv.Atoi(u)
 				if err != nil {
 					return err
 				}
