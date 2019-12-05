@@ -350,24 +350,14 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 			return nil, err
 		}
 
-		env := map[string]string{}
-
 		senv, err := p.systemEnvironment(app, release)
 		if err != nil {
 			return nil, err
 		}
 
+		env := map[string]string{}
+
 		for k, v := range senv {
-			env[k] = v
-		}
-
-		e := structs.Environment{}
-
-		if err := e.Load([]byte(r.Env)); err != nil {
-			return nil, err
-		}
-
-		for k, v := range e {
 			env[k] = v
 		}
 
@@ -382,10 +372,6 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 
 			for k, v := range s.EnvironmentDefaults() {
 				env[k] = v
-			}
-
-			for _, l := range s.Links {
-				env[fmt.Sprintf("%s_URL", envName(l))] = fmt.Sprintf("https://%s.%s.%s", l, app, p.Name)
 			}
 
 			for _, r := range s.Resources {
@@ -419,6 +405,16 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 					MountPath: to,
 				})
 			}
+		}
+
+		e := structs.Environment{}
+
+		if err := e.Load([]byte(r.Env)); err != nil {
+			return nil, err
+		}
+
+		for k, v := range e {
+			env[k] = v
 		}
 
 		for k, v := range env {
