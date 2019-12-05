@@ -63,10 +63,15 @@ resource "google_container_cluster" "rack" {
 resource "google_container_node_pool" "rack" {
   provider = "google-beta"
 
-  name       = "${google_container_cluster.rack.name}-nodes-${var.node_type}"
-  location   = google_container_cluster.rack.location
-  cluster    = google_container_cluster.rack.name
-  node_count = 1
+  name               = "${google_container_cluster.rack.name}-nodes-${var.node_type}"
+  location           = google_container_cluster.rack.location
+  cluster            = google_container_cluster.rack.name
+  initial_node_count = 1
+
+  autoscaling {
+    min_node_count = 1
+    max_node_count = 1000
+  }
 
   node_config {
     preemptible  = true
