@@ -56,12 +56,10 @@ resource "kubernetes_service" "router" {
   }
 
   spec {
-    external_traffic_policy = "Local"
-    type                    = "NodePort"
+    type = "LoadBalancer"
 
     port {
       name        = "http"
-      node_port   = 32000
       port        = 80
       protocol    = "TCP"
       target_port = 80
@@ -69,7 +67,6 @@ resource "kubernetes_service" "router" {
 
     port {
       name        = "https"
-      node_port   = 32001
       port        = 443
       protocol    = "TCP"
       target_port = 443
@@ -83,5 +80,5 @@ resource "kubernetes_service" "router" {
 }
 
 data "http" "alias" {
-  url = "https://alias.convox.com/alias/${aws_alb.router.dns_name}"
+  url = "https://alias.convox.com/alias/${kubernetes_service.router.load_balancer_ingress.0.hostname}"
 }

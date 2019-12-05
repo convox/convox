@@ -43,7 +43,6 @@ module "cluster" {
   cidr      = var.cidr
   name      = var.name
   node_type = var.node_type
-  ssh_key   = var.ssh_key
 }
 
 module "fluentd" {
@@ -69,14 +68,9 @@ module "rack" {
     kubernetes = kubernetes
   }
 
-  cluster            = module.cluster.id
-  name               = var.name
-  nodes_security     = module.cluster.nodes_security
-  oidc_arn           = module.cluster.oidc_arn
-  oidc_sub           = module.cluster.oidc_sub
-  release            = local.release
-  subnets_private    = module.cluster.subnets_private
-  subnets_public     = module.cluster.subnets_public
-  target_group_http  = module.cluster.target_group_http
-  target_group_https = module.cluster.target_group_https
+  cluster  = module.cluster.id
+  name     = var.name
+  oidc_arn = module.cluster.oidc_arn
+  oidc_sub = module.cluster.oidc_sub
+  release  = local.release
 }

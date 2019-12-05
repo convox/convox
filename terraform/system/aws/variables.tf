@@ -17,7 +17,3 @@ variable "release" {
 variable "region" {
   default = "us-east-1"
 }
-
-variable "ssh_key" {
-  default = ""
-}
