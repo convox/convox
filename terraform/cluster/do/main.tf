@@ -45,6 +45,18 @@ resource "digitalocean_kubernetes_cluster" "rack" {
   }
 }
 
+provider "kubernetes" {
+  version = "~> 1.10"
+
+  alias = "direct"
+
+  load_config_file = false
+
+  cluster_ca_certificate = "${base64decode(digitalocean_kubernetes_cluster.rack.master_auth.0.cluster_ca_certificate)}"
+  host                   = "https://${digitalocean_kubernetes_cluster.rack.endpoint}"
+  token                  = digitalocean_kubernetes_cluster.rack.kube_config[0].master_auth.0.token
+}
+
 resource "local_file" "kubeconfig" {
   depends_on = [digitalocean_kubernetes_cluster.rack]
 
