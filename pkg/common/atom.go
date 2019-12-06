@@ -2,13 +2,15 @@ package common
 
 func AtomStatus(status string) string {
 	switch status {
-	case "Failed":
-		return "running"
-	case "Rollback":
+	case "Cancelled", "Deadline", "Error", "Rollback":
 		return "rollback"
-	case "Building", "Deadline", "Error", "Pending", "Running":
-		return "updating"
-	default:
+	case "Failure", "Reverted", "Running", "":
 		return "running"
+	case "Pending", "Updating":
+		return "updating"
+	case "Success", "Failed": // legacy
+		return "running"
+	default:
+		return "unknown"
 	}
 }
