@@ -7,6 +7,7 @@ import (
 	ct "github.com/convox/convox/pkg/atom/pkg/apis/atom/v1"
 	cv "github.com/convox/convox/pkg/atom/pkg/client/clientset/versioned"
 	ic "github.com/convox/convox/pkg/atom/pkg/client/informers/externalversions/atom/v1"
+	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/kctl"
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
@@ -101,60 +102,62 @@ func (c *AtomController) Update(prev, cur interface{}) error {
 		return errors.WithStack(err)
 	}
 
-	if pa.Spec.CurrentVersion != ca.Spec.CurrentVersion {
-		c.atomEvent(ca, "CurrentVersion", fmt.Sprintf("%s => %s", pa.Spec.CurrentVersion, ca.Spec.CurrentVersion))
-	}
-
 	if pa.Status != ca.Status {
-		c.atomEvent(ca, "Status", fmt.Sprintf("%s => %s", pa.Status, ca.Status))
+		c.atomEvent(ca, "Status", fmt.Sprintf("%s => %s", common.CoalesceString(string(pa.Status), "None"), ca.Status))
+		fmt.Printf("ns=atom.controller at=update atom=\"%s/%s\" event=status from=%q to=%q\n", ca.Namespace, ca.Name, pa.Status, ca.Status)
 	}
 
 	switch ca.Status {
-	case "Failed", "Reverted", "Success":
-		if pa.ResourceVersion == ca.ResourceVersion {
-			return nil
-		}
+	case "Failure", "Reverted", "Running":
+		return nil
+	case "Failed", "Success": // legacy
+		return nil
 	}
-
-	fmt.Printf("atom: %s/%s (%s)\n", ca.Namespace, ca.Name, ca.Status)
 
 	switch ca.Status {
 	case "Cancelled", "Deadline", "Error":
-		c.atom.status(ca, "Rollback")
-	case "Cleanup":
-		ca.Spec.PreviousVersion = ""
-		c.atom.status(ca, "Success")
-	case "Pending":
-		c.atomEvent(ca, "Promote", fmt.Sprintf("Promoting to %s", ca.Spec.CurrentVersion))
-
-		if err := c.atom.apply(ca); err != nil {
-			c.atom.status(ca, "Error")
-			return errors.WithStack(err)
-		}
-	case "Rollback":
-		c.atomEvent(ca, "Rollback", fmt.Sprintf("Rolling back to %s", ca.Spec.PreviousVersion))
-
 		if err := c.atom.rollback(ca); err != nil {
-			c.atom.status(ca, "Failed")
+			c.atomStatus(ca, "Failure")
 			return errors.WithStack(err)
 		}
 
-		// just mark it reverted, can get wedged if trying to ensure rollback
-		c.atom.status(ca, "Reverted")
-	case "Running":
+		c.atomStatus(ca, "Rollback")
+	case "Pending":
+		if err := c.atom.apply(ca); err != nil {
+			c.atomStatus(ca, "Error")
+			return err
+		}
+
+		c.atomStatus(ca, "Updating")
+	case "Rollback":
 		if deadline := am.NewTime(time.Now().UTC().Add(-1 * time.Duration(ca.Spec.ProgressDeadlineSeconds) * time.Second)); ca.Started.Before(&deadline) {
-			c.atom.status(ca, "Deadline")
+			c.atomStatus(ca, "Failure")
 			return nil
 		}
 
-		success, err := c.atom.check(ca)
+		success, err := c.atom.check(ca.Namespace, ca.Spec.CurrentVersion)
 		if err != nil {
-			c.atom.status(ca, "Error")
+			c.atomStatus(ca, "Failure")
 			return errors.WithStack(err)
 		}
 
 		if success {
-			c.atom.status(ca, "Cleanup")
+			c.atomStatus(ca, "Reverted")
+		}
+	case "Updating":
+		if deadline := am.NewTime(time.Now().UTC().Add(-1 * time.Duration(ca.Spec.ProgressDeadlineSeconds) * time.Second)); ca.Started.Before(&deadline) {
+			c.atomStatus(ca, "Deadline")
+			return nil
+		}
+
+		success, err := c.atom.check(ca.Namespace, ca.Spec.CurrentVersion)
+		if err != nil {
+			c.atomStatus(ca, "Error")
+			return errors.WithStack(err)
+		}
+
+		if success {
+			c.atomStatus(ca, "Running")
 		}
 	}
 
@@ -187,7 +190,18 @@ func (c *AtomController) atomEvent(a *ct.Atom, reason, message string) error {
 	}
 
 	if _, err := c.kubernetes.CoreV1().Events(a.Namespace).Create(e); err != nil {
-		return err
+		return errors.WithStack(err)
+	}
+
+	return nil
+}
+
+func (c *AtomController) atomStatus(a *ct.Atom, status string) error {
+	_, err := c.atom.update(a, func(aa *ct.Atom) {
+		aa.Status = ct.AtomStatus(status)
+	})
+	if err != nil {
+		return errors.WithStack(err)
 	}
 
 	return nil

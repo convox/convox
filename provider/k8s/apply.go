@@ -19,18 +19,6 @@ func (p *Provider) Apply(namespace, name, version string, data []byte, labels st
 	return p.Atom.Apply(namespace, name, version, ldata, timeout)
 }
 
-func (p *Provider) ApplyWait(namespace, name, version string, data []byte, labels string, timeout int32) error {
-	if err := p.Apply(namespace, name, version, data, labels, timeout); err != nil {
-		return err
-	}
-
-	return p.AtomWait(namespace, name)
-}
-
-func (p *Provider) AtomWait(namespace, name string) error {
-	return p.Atom.Wait(namespace, name)
-}
-
 func Apply(data []byte, args ...string) error {
 	ka := append([]string{"apply", "-f", "-"}, args...)
 

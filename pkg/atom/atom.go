@@ -2,6 +2,7 @@ package atom
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -69,7 +70,7 @@ func Apply(namespace, name, release string, template []byte, timeout int32) erro
 
 	if err := exec.Command("kubectl", "get", fmt.Sprintf("ns/%s", namespace)).Run(); err != nil {
 		if err := kubectlApplyTemplate("namespace.yml.tmpl", params); err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 
 		for {
@@ -83,53 +84,24 @@ func Apply(namespace, name, release string, template []byte, timeout int32) erro
 
 	data, err := templates.Render("version.yml.tmpl", params)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	if data, err := kubectlCreate(data); err != nil {
-		return fmt.Errorf("could not create atom version for %s/%s: %s", name, release, strings.TrimSpace(string(data)))
+		return errors.WithStack(fmt.Errorf("could not create atom version for %s/%s: %s", name, release, strings.TrimSpace(string(data))))
 	}
 
 	if err := kubectlApplyTemplate("atom.yml.tmpl", params); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	return nil
 }
 
-func Wait(namespace, name string) error {
-	for {
-		data, err := exec.Command("kubectl", "get", fmt.Sprintf("atom/%s", name), "-n", namespace, "-o", "jsonpath={.status}").CombinedOutput()
-		if err != nil {
-			return errors.WithStack(err)
-		}
-
-		switch string(data) {
-		case "Success":
-			return nil
-		case "Failure":
-			return errors.WithStack(fmt.Errorf("atom failed"))
-		}
-	}
-}
-
 func (c *Client) Apply(ns, name string, release string, template []byte, timeout int32) error {
 	if _, err := c.k8s.CoreV1().Namespaces().Get(ns, am.GetOptions{}); ae.IsNotFound(err) {
-		_, err := c.k8s.CoreV1().Namespaces().Create(&ac.Namespace{
-			ObjectMeta: am.ObjectMeta{
-				Name: ns,
-			},
-		})
-		if err != nil {
+		if err := c.createNamespace(ns); err != nil {
 			return errors.WithStack(err)
-		}
-
-		for {
-			if ns, err := c.k8s.CoreV1().Namespaces().Get(ns, am.GetOptions{}); err == nil && ns != nil {
-				break
-			}
-
-			time.Sleep(1 * time.Second)
 		}
 	}
 
@@ -177,21 +149,19 @@ func (c *Client) Apply(ns, name string, release string, template []byte, timeout
 func (c *Client) Cancel(ns, name string) error {
 	a, err := c.atom.AtomV1().Atoms(ns).Get(name, am.GetOptions{})
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
-
-	fmt.Printf("a.Status: %+v\n", a.Status)
 
 	switch a.Status {
-	case "Pending", "Running":
+	case "Updating":
 	default:
-		return nil
+		return errors.WithStack(fmt.Errorf("not currently updating"))
 	}
 
-	a.Status = "Rollback"
+	a.Status = "Cancelled"
 
 	if _, err := c.atom.AtomV1().Atoms(ns).Update(a); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	return nil
@@ -211,7 +181,7 @@ func (c *Client) Status(ns, name string) (string, string, error) {
 	if a.Spec.CurrentVersion != "" {
 		v, err := c.atom.AtomV1().AtomVersions(ns).Get(a.Spec.CurrentVersion, am.GetOptions{})
 		if err != nil {
-			return "", "", err
+			return "", "", errors.WithStack(err)
 		}
 
 		release = v.Spec.Release
@@ -220,73 +190,59 @@ func (c *Client) Status(ns, name string) (string, string, error) {
 	return string(a.Status), release, nil
 }
 
-func (c *Client) Wait(ns, name string) error {
-	for {
-		a, err := c.atom.AtomV1().Atoms(ns).Get(name, am.GetOptions{})
-		if err != nil {
-			return errors.WithStack(err)
-		}
-
-		switch a.Status {
-		case "Success":
-			return nil
-		case "Failure":
-			return errors.WithStack(fmt.Errorf("atom failed"))
-		}
-	}
-}
-
 func (c *Client) apply(a *aa.Atom) error {
-	var err error
+	fmt.Printf("ns=atom at=apply atom=\"%s/%s\" version=%q\n", a.Namespace, a.Name, a.Spec.CurrentVersion)
 
-	a.Status = "Building"
-
-	a, err = c.atom.AtomV1().Atoms(a.Namespace).Update(a)
-	if err != nil {
-		return errors.WithStack(err)
+	if a.Spec.CurrentVersion == "" {
+		return nil
 	}
 
-	v, err := c.atom.AtomV1().AtomVersions(a.Namespace).Get(a.Spec.CurrentVersion, am.GetOptions{})
+	ua, err := c.update(a, func(ua *aa.Atom) {
+		ua.Started = am.Now()
+	})
 	if err != nil {
 		return err
 	}
 
-	cs, err := extractConditions(v.Spec.Template)
+	av, err := c.atom.AtomV1().AtomVersions(ua.Namespace).Get(ua.Spec.CurrentVersion, am.GetOptions{})
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	a.Spec.Conditions = cs
+	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(fmt.Sprintf("%s.%s", ua.Namespace, ua.Name))))[0:60]
 
-	fmt.Printf("string(v.Spec.Template) = %+v\n", string(v.Spec.Template))
-
-	out, err := applyTemplate(v.Spec.Template, fmt.Sprintf("atom=%s.%s", a.Namespace, a.Name))
-	fmt.Printf("string(out) = %+v\n", string(out))
-	fmt.Printf("err = %+v\n", err)
-	if err != nil {
-		return errors.WithStack(errors.New(strings.TrimSpace(string(out))))
-	}
-
-	time.Sleep(1 * time.Second)
-
-	a.Started = am.Now()
-	a.Status = "Running"
-
-	a, err = c.atom.AtomV1().Atoms(a.Namespace).Update(a)
-	if err != nil {
+	if out, err := applyTemplate(av.Spec.Template, fmt.Sprintf("atom=%s", hash)); err != nil {
+		fmt.Println(string(av.Spec.Template))
+		fmt.Println(string(out))
 		return errors.WithStack(err)
 	}
 
 	return nil
 }
 
-func (c *Client) check(a *aa.Atom) (bool, error) {
+func (c *Client) check(ns, version string) (bool, error) {
+	fmt.Printf("ns=atom at=check ns=%q version=%q\n", ns, version)
+
+	if version == "" {
+		return true, nil
+	}
+
 	cfg := *c.config
 
 	cfg.APIPath = "/apis"
 	cfg.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: scheme.Codecs}
 
-	for _, c := range a.Spec.Conditions {
+	v, err := c.atom.AtomV1().AtomVersions(ns).Get(version, am.GetOptions{})
+	if err != nil {
+		return false, errors.WithStack(err)
+	}
+
+	cs, err := extractConditions(v.Spec.Template)
+	if err != nil {
+		return false, errors.WithStack(err)
+	}
+
+	for _, c := range cs {
 		gv, err := schema.ParseGroupVersion(c.ApiVersion)
 		if err != nil {
 			return false, errors.WithStack(err)
@@ -339,46 +295,104 @@ func (c *Client) check(a *aa.Atom) (bool, error) {
 	return true, nil
 }
 
+func (c *Client) createNamespace(ns string) error {
+	_, err := c.k8s.CoreV1().Namespaces().Create(&ac.Namespace{
+		ObjectMeta: am.ObjectMeta{
+			Name: ns,
+		},
+	})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	for {
+		if ns, err := c.k8s.CoreV1().Namespaces().Get(ns, am.GetOptions{}); err == nil && ns != nil {
+			break
+		}
+
+		time.Sleep(1 * time.Second)
+	}
+
+	return nil
+}
+
 func (c *Client) rollback(a *aa.Atom) error {
-	v, err := c.atom.AtomV1().AtomVersions(a.Namespace).Get(a.Spec.PreviousVersion, am.GetOptions{})
+	ua, err := c.update(a, func(ua *aa.Atom) {
+		ua.Spec.CurrentVersion = a.Spec.PreviousVersion
+		ua.Spec.PreviousVersion = ""
+	})
 	if err != nil {
 		return err
 	}
 
-	out, err := applyTemplate(v.Spec.Template, fmt.Sprintf("atom=%s.%s", a.Namespace, a.Name))
-	if err != nil {
-		return errors.WithStack(errors.New(strings.TrimSpace(string(out))))
-	}
-
-	time.Sleep(1 * time.Second)
-
-	an, err := c.atom.AtomV1().Atoms(a.Namespace).Get(a.Name, am.GetOptions{})
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	an.Spec.CurrentVersion = v.Name
-	an.Spec.PreviousVersion = ""
-	an.Started = am.Now()
-
-	if _, err = c.atom.AtomV1().Atoms(a.Namespace).Update(a); err != nil {
-		return errors.WithStack(err)
+	if err := c.apply(ua); err != nil {
+		return err
 	}
 
 	return nil
 }
 
-func (c *Client) status(a *aa.Atom, status string) error {
-	var err error
-
-	a.Status = aa.AtomStatus(status)
-
-	if _, err = c.atom.AtomV1().Atoms(a.Namespace).Update(a); err != nil {
-		return errors.WithStack(err)
+// use a callback for updates so we can fetch a fresh atom and update
+// immediately
+func (c *Client) update(a *aa.Atom, fn func(ua *aa.Atom)) (*aa.Atom, error) {
+	ua, err := c.atom.AtomV1().Atoms(a.Namespace).Get(a.Name, am.GetOptions{})
+	if err != nil {
+		return nil, errors.WithStack(err)
 	}
 
-	return nil
+	fn(ua)
+
+	fa, err := c.atom.AtomV1().Atoms(a.Namespace).Update(ua)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return fa, nil
 }
+
+// func (c *Client) rollback(a *aa.Atom) error {
+// 	v, err := c.atom.AtomV1().AtomVersions(a.Namespace).Get(a.Spec.PreviousVersion, am.GetOptions{})
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	out, err := applyTemplate(v.Spec.Template, fmt.Sprintf("atom=%s.%s", a.Namespace, a.Name))
+// 	if err != nil {
+// 		return errors.WithStack(errors.New(strings.TrimSpace(string(out))))
+// 	}
+
+// 	time.Sleep(1 * time.Second)
+
+// 	an, err := c.atom.AtomV1().Atoms(a.Namespace).Get(a.Name, am.GetOptions{})
+// 	if err != nil {
+// 		return errors.WithStack(err)
+// 	}
+
+// 	an.Spec.CurrentVersion = v.Name
+// 	an.Spec.PreviousVersion = ""
+// 	an.Started = am.Now()
+
+// 	if _, err = c.atom.AtomV1().Atoms(a.Namespace).Update(a); err != nil {
+// 		return errors.WithStack(err)
+// 	}
+
+// 	return nil
+// }
+
+// func (c *Client) status(ns, name, status string) error {
+// 	a, err := c.atom.AtomV1().Atoms(ns).Get(name, am.GetOptions{})
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	a.Status = aa.AtomStatus(status)
+
+// 	if _, err := c.atom.AtomV1().Atoms(a.Namespace).Update(a); err != nil {
+// 		return errors.WithStack(err)
+// 	}
+
+// 	return nil
+// }
 
 func applyLabels(data []byte, labels map[string]string) ([]byte, error) {
 	var v map[string]interface{}
@@ -533,11 +547,11 @@ func kubectlCreate(data []byte, args ...string) ([]byte, error) {
 func kubectlApplyTemplate(template string, params map[string]interface{}) error {
 	data, err := templates.Render(template, params)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	if out, err := kubectlApply(data); err != nil {
-		return errors.New(strings.TrimSpace(string(out)))
+		return errors.WithStack(errors.New(strings.TrimSpace(string(out))))
 	}
 
 	return nil
