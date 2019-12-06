@@ -51,13 +51,9 @@ module "router" {
     kubernetes = kubernetes
   }
 
-  name               = var.name
-  namespace          = module.k8s.namespace
-  nodes_security     = var.nodes_security
-  oidc_arn           = var.oidc_arn
-  oidc_sub           = var.oidc_sub
-  release            = var.release
-  subnets            = var.subnets_public
-  target_group_http  = var.target_group_http
-  target_group_https = var.target_group_https
+  name      = var.name
+  namespace = module.k8s.namespace
+  oidc_arn  = var.oidc_arn
+  oidc_sub  = var.oidc_sub
+  release   = var.release
 }

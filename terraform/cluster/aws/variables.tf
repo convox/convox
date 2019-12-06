@@ -13,7 +13,3 @@ variable "name" {
 variable "node_type" {
   default = "t3.small"
 }
-
-variable "ssh_key" {
-  default = ""
-}
