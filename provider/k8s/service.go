@@ -14,7 +14,7 @@ import (
 
 func (p *Provider) ServiceHost(app string, s manifest.Service) string {
 	if s.Internal {
-		return fmt.Sprintf("%s.%s-%s.svc.cluster.local", s.Name, p.Name, app)
+		return fmt.Sprintf("%s.%s.%s.local", s.Name, app, p.Name)
 	} else {
 		return fmt.Sprintf("%s.%s.%s", s.Name, app, p.Domain)
 	}

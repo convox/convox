@@ -37,6 +37,7 @@ module "api" {
   namespace     = module.k8s.namespace
   region        = var.region
   release       = var.release
+  resolver      = module.router.resolver
   router        = module.router.endpoint
   secret        = random_string.secret.result
   secret_key    = var.secret_key

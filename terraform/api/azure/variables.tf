@@ -18,6 +18,10 @@ variable "release" {
   type = string
 }
 
+variable "resolver" {
+  type = string
+}
+
 variable "resource_group" {
   type = string
 }

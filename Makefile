@@ -22,7 +22,11 @@ dev:
 	docker build -t convox/convox:master .
 	docker push convox/convox:master
 	kubectl rollout restart deployment/api -n $(RACK)-system
+	kubectl rollout restart deployment/atom -n $(RACK)-system
+	kubectl rollout restart deployment/router -n $(RACK)-system
 	kubectl rollout status deployment/api -n $(RACK)-system
+	kubectl rollout status deployment/atom -n $(RACK)-system
+	kubectl rollout status deployment/router -n $(RACK)-system
 
 generate: generate-provider generate-k8s
 

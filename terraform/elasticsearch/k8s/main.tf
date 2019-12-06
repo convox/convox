@@ -2,25 +2,7 @@ provider "kubernetes" {
   version = "~> 1.10"
 }
 
-resource "kubernetes_service" "cluster" {
-  metadata {
-    namespace = var.namespace
-    name      = "elasticsearch-cluster"
-  }
-
-  spec {
-    selector = {
-      service = "elasticsearch"
-    }
-
-    port {
-      name = "transport"
-      port = 9300
-    }
-  }
-}
-
-resource "kubernetes_service" "http" {
+resource "kubernetes_service" "elasticsearch" {
   metadata {
     namespace = var.namespace
     name      = "elasticsearch"
@@ -34,6 +16,11 @@ resource "kubernetes_service" "http" {
     port {
       name = "http"
       port = 9200
+    }
+
+    port {
+      name = "transport"
+      port = 9300
     }
   }
 }

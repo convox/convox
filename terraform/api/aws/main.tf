@@ -41,6 +41,7 @@ module "k8s" {
     AWS_REGION = data.aws_region.current.name
     BUCKET     = aws_s3_bucket.storage.id
     PROVIDER   = "aws"
+    RESOLVER   = var.resolver
     ROUTER     = var.router
     SOCKET     = "/var/run/docker.sock"
   }

@@ -37,6 +37,7 @@ module "k8s" {
     PROVIDER          = "do"
     REGION            = var.region
     REGISTRY          = "registry.${var.domain}"
+    RESOLVER          = var.resolver
     ROUTER            = var.router
     SECRET            = var.secret
     SPACES_ACCESS     = var.access_id
