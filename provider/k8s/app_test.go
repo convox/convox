@@ -24,7 +24,7 @@ func TestAppCancel(t *testing.T) {
 
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 
-		aa.On("Status", "rack1-app1", "app").Return("Running", "R1234567", nil).Once()
+		aa.On("Status", "rack1-app1", "app").Return("Updating", "R1234567", nil).Once()
 		aa.On("Cancel", "rack1-app1", "app").Return(nil).Once()
 
 		err := p.AppCancel("app1")
@@ -46,7 +46,7 @@ func TestAppCancelError(t *testing.T) {
 
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 
-		aa.On("Status", "rack1-app1", "app").Return("Running", "R1234567", nil).Once()
+		aa.On("Status", "rack1-app1", "app").Return("Updating", "R1234567", nil).Once()
 		aa.On("Cancel", "rack1-app1", "app").Return(fmt.Errorf("err1")).Once()
 
 		err := p.AppCancel("app1")
@@ -77,7 +77,7 @@ func TestAppCreate(t *testing.T) {
 			requireYamlFixture(t, args.Get(3).([]byte), "app.yml")
 		})
 
-		aa.On("Status", "rack1-app1", "app").Return("Running", "R1234567", nil).Twice()
+		aa.On("Status", "rack1-app1", "app").Return("Updating", "R1234567", nil).Twice()
 
 		a, err := p.AppCreate("app1", structs.AppCreateOptions{})
 		require.NoError(t, err)
@@ -95,7 +95,7 @@ func TestAppDelete(t *testing.T) {
 
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 
-		aa.On("Status", "rack1-app1", "app").Return("Running", "R1234567", nil).Once()
+		aa.On("Status", "rack1-app1", "app").Return("Updating", "R1234567", nil).Once()
 
 		err := p.AppDelete("app1")
 		require.NoError(t, err)
@@ -117,7 +117,7 @@ func TestAppGet(t *testing.T) {
 		aa := p.Atom.(*atom.MockInterface)
 		kk := p.Cluster.(*fake.Clientset)
 
-		aa.On("Status", "rack1-app1", "app").Return("Success", "R1234567", nil).Once()
+		aa.On("Status", "rack1-app1", "app").Return("Running", "R1234567", nil).Once()
 
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 
@@ -146,7 +146,7 @@ func TestAppGetUpdating(t *testing.T) {
 		aa := p.Atom.(*atom.MockInterface)
 		kk := p.Cluster.(*fake.Clientset)
 
-		aa.On("Status", "rack1-app1", "app").Return("Running", "", nil).Once()
+		aa.On("Status", "rack1-app1", "app").Return("Updating", "", nil).Once()
 
 		ns := &ac.Namespace{
 			ObjectMeta: am.ObjectMeta{
@@ -167,8 +167,8 @@ func TestAppList(t *testing.T) {
 		aa := p.Atom.(*atom.MockInterface)
 		kk := p.Cluster.(*fake.Clientset)
 
-		aa.On("Status", "rack1-app1", "app").Return("Success", "R1234567", nil).Once()
-		aa.On("Status", "rack1-app2", "app").Return("Running", "R2345678", nil).Once()
+		aa.On("Status", "rack1-app1", "app").Return("Running", "R1234567", nil).Once()
+		aa.On("Status", "rack1-app2", "app").Return("Updating", "R2345678", nil).Once()
 
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 		require.NoError(t, appCreate(kk, "rack1", "app2"))
@@ -226,7 +226,7 @@ func TestAppUpdateLocked(t *testing.T) {
 			requireYamlFixture(t, args.Get(3).([]byte), "app-locked.yml")
 		})
 
-		aa.On("Status", "rack1-app1", "app").Return("Success", "", nil).Twice()
+		aa.On("Status", "rack1-app1", "app").Return("Running", "", nil).Twice()
 
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 
@@ -244,7 +244,7 @@ func TestAppUpdateParameters(t *testing.T) {
 			requireYamlFixture(t, args.Get(3).([]byte), "app-params.yml")
 		})
 
-		aa.On("Status", "rack1-app1", "app").Return("Success", "", nil).Twice()
+		aa.On("Status", "rack1-app1", "app").Return("Running", "", nil).Twice()
 
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 
