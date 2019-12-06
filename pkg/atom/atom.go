@@ -350,50 +350,6 @@ func (c *Client) update(a *aa.Atom, fn func(ua *aa.Atom)) (*aa.Atom, error) {
 	return fa, nil
 }
 
-// func (c *Client) rollback(a *aa.Atom) error {
-// 	v, err := c.atom.AtomV1().AtomVersions(a.Namespace).Get(a.Spec.PreviousVersion, am.GetOptions{})
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	out, err := applyTemplate(v.Spec.Template, fmt.Sprintf("atom=%s.%s", a.Namespace, a.Name))
-// 	if err != nil {
-// 		return errors.WithStack(errors.New(strings.TrimSpace(string(out))))
-// 	}
-
-// 	time.Sleep(1 * time.Second)
-
-// 	an, err := c.atom.AtomV1().Atoms(a.Namespace).Get(a.Name, am.GetOptions{})
-// 	if err != nil {
-// 		return errors.WithStack(err)
-// 	}
-
-// 	an.Spec.CurrentVersion = v.Name
-// 	an.Spec.PreviousVersion = ""
-// 	an.Started = am.Now()
-
-// 	if _, err = c.atom.AtomV1().Atoms(a.Namespace).Update(a); err != nil {
-// 		return errors.WithStack(err)
-// 	}
-
-// 	return nil
-// }
-
-// func (c *Client) status(ns, name, status string) error {
-// 	a, err := c.atom.AtomV1().Atoms(ns).Get(name, am.GetOptions{})
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	a.Status = aa.AtomStatus(status)
-
-// 	if _, err := c.atom.AtomV1().Atoms(a.Namespace).Update(a); err != nil {
-// 		return errors.WithStack(err)
-// 	}
-
-// 	return nil
-// }
-
 func applyLabels(data []byte, labels map[string]string) ([]byte, error) {
 	var v map[string]interface{}
 
