@@ -1,9 +1,17 @@
-# Convox Rack on AWS
+# Convox on AWS
 
 ## Initial Setup
 
 - [Install the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html)
 - [Configure the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html)
+
+## Configuration
+
+### Environment Variables
+
+- `AWS_DEFAULT_REGION` (required)
+- `AWS_ACCESS_KEY_ID` (required)
+- `AWS_SECRET_ACCESS_KEY` (required)
 
 ## Install Convox
 

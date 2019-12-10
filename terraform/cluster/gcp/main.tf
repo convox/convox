@@ -33,7 +33,7 @@ resource "random_string" "password" {
 }
 
 resource "google_container_cluster" "rack" {
-  provider = "google-beta"
+  provider = google-beta
 
   name     = var.name
   location = data.google_client_config.current.region
@@ -61,7 +61,7 @@ resource "google_container_cluster" "rack" {
 }
 
 resource "google_container_node_pool" "rack" {
-  provider = "google-beta"
+  provider = google-beta
 
   name               = "${google_container_cluster.rack.name}-nodes-${var.node_type}"
   location           = google_container_cluster.rack.location
@@ -126,14 +126,14 @@ provider "kubernetes" {
 
   load_config_file = false
 
-  cluster_ca_certificate = "${base64decode(google_container_cluster.rack.master_auth.0.cluster_ca_certificate)}"
+  cluster_ca_certificate = base64decode(google_container_cluster.rack.master_auth.0.cluster_ca_certificate)
   host                   = "https://${google_container_cluster.rack.endpoint}"
   username               = "gcloud"
   password               = random_string.password.result
 }
 
 resource "kubernetes_cluster_role_binding" "client" {
-  provider = "kubernetes.direct"
+  provider = kubernetes.direct
 
   metadata {
     name = "client-binding"

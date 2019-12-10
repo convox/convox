@@ -10,7 +10,27 @@ provider "local" {
   version = "~> 1.3"
 }
 
+provider "null" {
+  version = "~> 2.1"
+}
+
+resource "null_resource" "delay_cluster" {
+  provisioner "local-exec" {
+    command = "sleep 15"
+  }
+  triggers = {
+    "eks_cluster" = aws_iam_role_policy_attachment.cluster_eks_cluster.id,
+    "eks_service" = aws_iam_role_policy_attachment.cluster_eks_service.id,
+  }
+}
+
 resource "aws_eks_cluster" "cluster" {
+  depends_on = [
+    aws_iam_role_policy_attachment.cluster_eks_cluster,
+    aws_iam_role_policy_attachment.cluster_eks_service,
+    null_resource.delay_cluster,
+  ]
+
   name     = var.name
   role_arn = aws_iam_role.cluster.arn
 
@@ -20,18 +40,23 @@ resource "aws_eks_cluster" "cluster" {
     security_group_ids      = [aws_security_group.cluster.id]
     subnet_ids              = concat(aws_subnet.public.*.id)
   }
-
-  depends_on = [
-    "aws_iam_role_policy_attachment.cluster_eks_cluster",
-    "aws_iam_role_policy_attachment.cluster_eks_service",
-  ]
 }
 
 resource "aws_eks_node_group" "cluster" {
   depends_on = [
-    "aws_iam_role_policy_attachment.nodes_ecr",
-    "aws_iam_role_policy_attachment.nodes_eks_cni",
-    "aws_iam_role_policy_attachment.nodes_eks_worker",
+    aws_eks_cluster.cluster,
+    aws_iam_openid_connect_provider.cluster,
+    aws_iam_role_policy_attachment.cluster_eks_cluster,
+    aws_iam_role_policy_attachment.cluster_eks_service,
+    aws_iam_role_policy_attachment.nodes_ecr,
+    aws_iam_role_policy_attachment.nodes_eks_cni,
+    aws_iam_role_policy_attachment.nodes_eks_worker,
+    aws_route.private-default,
+    aws_route.public-default,
+    aws_route_table.private,
+    aws_route_table.public,
+    aws_route_table_association.private,
+    aws_route_table_association.public,
   ]
 
   count = 3
@@ -56,17 +81,6 @@ resource "aws_eks_node_group" "cluster" {
 resource "local_file" "kubeconfig" {
   depends_on = [
     aws_eks_node_group.cluster,
-    aws_iam_role_policy_attachment.cluster_eks_cluster,
-    aws_iam_role_policy_attachment.cluster_eks_service,
-    aws_iam_role_policy_attachment.nodes_ecr,
-    aws_iam_role_policy_attachment.nodes_eks_cni,
-    aws_iam_role_policy_attachment.nodes_eks_worker,
-    aws_route.private-default,
-    aws_route.public-default,
-    aws_route_table.private,
-    aws_route_table.public,
-    aws_route_table_association.private,
-    aws_route_table_association.public,
   ]
 
   filename = pathexpand("~/.kube/config.aws.${var.name}")

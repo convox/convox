@@ -12,7 +12,15 @@
 - Give it the **Project Owner** role
 - Select key type **JSON**
 - Click **Create**
-- Download the credential file to `~/.config/gcloud/terraform.json`
+- Download the credential file
+
+## Configuration
+
+### Environment Variables
+
+- `GOOGLE_CREDENTIALS` (path or contents of the credentials file)
+- `GOOGLE_PROJECT` (required)
+- `GOOGLE_REGION` (required)
 
 ## Install Convox
 
