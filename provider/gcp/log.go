@@ -15,6 +15,10 @@ import (
 	"google.golang.org/api/iterator"
 )
 
+const (
+	logTimeFormat = "2006-01-02T15:04:05.999999999Z"
+)
+
 var sequenceTokens sync.Map
 
 func (p *Provider) Log(app, stream string, ts time.Time, message string) error {
@@ -58,10 +62,19 @@ func (p *Provider) logFilter(ctx context.Context, w io.WriteCloser, filter strin
 		since = time.Now().UTC().Add(-1 * *opts.Since)
 	}
 
+	now := time.Now().UTC()
+	follow := common.DefaultBool(opts.Follow, true)
+
 Iteration:
 
 	for {
-		it := p.LogAdmin.Entries(ctx, logadmin.Filter(fmt.Sprintf("%s AND timestamp > %q", filter, since.Format("2006-01-02T15:04:05.999999999Z"))))
+		where := fmt.Sprintf("%s AND timestamp > %q", filter, since.Format(logTimeFormat))
+
+		if !follow {
+			where = fmt.Sprintf("%s AND timestamp < %q", where, now.Format(logTimeFormat))
+		}
+
+		it := p.LogAdmin.Entries(ctx, logadmin.Filter(where))
 
 		for {
 			// check for closed writer
@@ -75,6 +88,9 @@ Iteration:
 			default:
 				entry, err := it.Next()
 				if err == iterator.Done {
+					if !follow {
+						return
+					}
 					time.Sleep(2 * time.Second)
 					continue Iteration
 				}
