@@ -67,6 +67,8 @@ func (p *Provider) SystemLogs(opts structs.LogsOptions) (io.ReadCloser, error) {
 func (p *Provider) streamLogs(ctx context.Context, w io.WriteCloser, index string, opts structs.LogsOptions) {
 	defer w.Close()
 
+	follow := common.DefaultBool(opts.Follow, true)
+	now := time.Now().UTC()
 	since := time.Time{}
 
 	if opts.Since != nil {
@@ -83,12 +85,18 @@ func (p *Provider) streamLogs(ctx context.Context, w io.WriteCloser, index strin
 		case <-ctx.Done():
 			return
 		default:
+			timestamp := map[string]interface{}{
+				"gt": since.UTC().Format(time.RFC3339),
+			}
+
+			if !follow {
+				timestamp["lt"] = now.Format(time.RFC3339)
+			}
+
 			body := map[string]interface{}{
 				"query": map[string]interface{}{
 					"range": map[string]interface{}{
-						"@timestamp": map[string]interface{}{
-							"gt": since.UTC().Format(time.RFC3339),
-						},
+						"@timestamp": timestamp,
 					},
 				},
 			}
@@ -126,6 +134,10 @@ func (p *Provider) streamLogs(ctx context.Context, w io.WriteCloser, index strin
 			sort.Slice(sres.Hits.Hits, func(i, j int) bool {
 				return sres.Hits.Hits[i].Source.Timestamp.Before(sres.Hits.Hits[j].Source.Timestamp)
 			})
+
+			if len(sres.Hits.Hits) == 0 && !follow {
+				return
+			}
 
 			for _, log := range sres.Hits.Hits {
 				prefix := ""
