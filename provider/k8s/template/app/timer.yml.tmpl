@@ -6,10 +6,12 @@ metadata:
   name: timer-{{.Timer.Name}}
 spec:
   schedule: "{{.Timer.Schedule}}"
+  concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 1
   jobTemplate:
     spec:
+      backoffLimit: 0
       # ttlSecondsAfterFinished: 60
       template:
         metadata:
