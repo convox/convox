@@ -19,7 +19,7 @@
 ### Environment Variables
 
 - `GOOGLE_CREDENTIALS` (path or contents of the credentials file)
-- `GOOGLE_PROJECT` (required)
+- `GOOGLE_PROJECT` (project id in which to install)
 - `GOOGLE_REGION` (required)
 
 ## Install Convox
