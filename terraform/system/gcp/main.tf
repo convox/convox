@@ -3,11 +3,17 @@ terraform {
 }
 
 provider "google" {
-  version = "~> 2.18"
+  version = "~> 2.19"
+
+  project = module.project.id
+  region  = module.project.region
 }
 
 provider "google-beta" {
-  version = "~> 2.18"
+  version = "~> 2.19"
+
+  project = module.project.id
+  region  = module.project.region
 }
 
 provider "http" {
@@ -27,10 +33,6 @@ provider "kubernetes" {
 
 module "project" {
   source = "./project"
-
-  providers = {
-    google = google
-  }
 }
 
 data "http" "releases" {
@@ -52,7 +54,6 @@ module "cluster" {
 
   name      = var.name
   node_type = var.node_type
-  services  = module.project.services
 }
 
 module "rack" {

@@ -39,6 +39,11 @@ resource "kubernetes_deployment" "atom" {
   metadata {
     namespace = var.namespace
     name      = "atom"
+
+    labels = {
+      service = "atom"
+      system  = "convox"
+    }
   }
 
   spec {

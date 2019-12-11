@@ -77,6 +77,11 @@ resource "kubernetes_deployment" "router" {
   metadata {
     namespace = var.namespace
     name      = "router"
+
+    labels = {
+      service = "router"
+      system  = "convox"
+    }
   }
 
   spec {

@@ -1,3 +1,4 @@
+.env
 install
 terraform
 terraform.tfvars

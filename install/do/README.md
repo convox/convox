@@ -1,4 +1,4 @@
-# Convox Rack on Digital Ocean
+# Convox on Digital Ocean
 
 ## Initial Setup
 
@@ -6,6 +6,14 @@
 - Go to https://cloud.digitalocean.com/account/api/tokens
 - Generate a new **Personal Access Token** and **Spaces Access Key**
 - Note these credentials
+
+## Configuration
+
+### Template Variables
+
+- `access_id` (required)
+- `secret_key` (required)
+- `token` (required)
 
 ## Install Convox
 

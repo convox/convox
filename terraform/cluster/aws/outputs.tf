@@ -1,22 +1,24 @@
 output "ca" {
-  depends_on = [kubernetes_config_map.auth]
+  depends_on = [aws_eks_node_group.cluster]
   value      = base64decode(aws_eks_cluster.cluster.certificate_authority.0.data)
 }
 
 output "endpoint" {
-  depends_on = [kubernetes_config_map.auth]
+  depends_on = [aws_eks_node_group.cluster]
   value      = aws_eks_cluster.cluster.endpoint
 }
 
 output "id" {
-  depends_on = [kubernetes_config_map.auth]
+  depends_on = [aws_eks_node_group.cluster]
   value      = aws_eks_cluster.cluster.id
 }
 
 output "oidc_arn" {
-  value = aws_iam_openid_connect_provider.cluster.arn
+  depends_on = [aws_eks_node_group.cluster]
+  value      = aws_iam_openid_connect_provider.cluster.arn
 }
 
 output "oidc_sub" {
-  value = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
+  depends_on = [aws_eks_node_group.cluster]
+  value      = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
 }

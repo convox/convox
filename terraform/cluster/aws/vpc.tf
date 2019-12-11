@@ -47,14 +47,14 @@ resource "aws_route_table" "public" {
 }
 
 resource "aws_route" "public-default" {
+  depends_on = [
+    aws_internet_gateway.nodes,
+    aws_route_table.public,
+  ]
+
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = aws_internet_gateway.nodes.id
   route_table_id         = aws_route_table.public.id
-
-  depends_on = [
-    "aws_internet_gateway.nodes",
-    "aws_route_table.public",
-  ]
 }
 
 resource "aws_route_table_association" "public" {
@@ -110,16 +110,16 @@ resource "aws_route_table" "private" {
 }
 
 resource "aws_route" "private-default" {
+  depends_on = [
+    aws_internet_gateway.nodes,
+    aws_route_table.private,
+  ]
+
   count = 3
 
   destination_cidr_block = "0.0.0.0/0"
   nat_gateway_id         = aws_nat_gateway.private[count.index].id
   route_table_id         = aws_route_table.private[count.index].id
-
-  depends_on = [
-    "aws_internet_gateway.nodes",
-    "aws_route_table.private",
-  ]
 }
 
 resource "aws_route_table_association" "private" {
