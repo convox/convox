@@ -65,6 +65,14 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 			Ports:  serviceContainerPorts(cs[0], ms.Internal),
 		}
 
+		if v := cs[0].Resources.Requests.Cpu(); v != nil {
+			s.Cpu = int(v.MilliValue())
+		}
+
+		if v := cs[0].Resources.Requests.Memory(); v != nil {
+			s.Memory = int(v.Value() / (1024 * 1024)) // Mi
+		}
+
 		ss = append(ss, s)
 	}
 
