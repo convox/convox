@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -391,11 +390,6 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 		sc[s.Name] = s.Count
 	}
 
-	sysenv, err := p.systemEnvironment(a.Name, r.Id)
-	if err != nil {
-		return nil, err
-	}
-
 	for _, s := range ss {
 		min := 50
 		max := 200
@@ -415,24 +409,9 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 
 		replicas := common.CoalesceInt(sc[s.Name], s.Scale.Count.Min)
 
-		env := map[string]string{}
-
-		for k, v := range sysenv {
-			env[k] = v
-		}
-
-		for k, v := range s.EnvironmentDefaults() {
-			env[k] = v
-		}
-
-		for k, v := range e {
-			env[k] = v
-		}
-
-		if _, ok := env["PORT"]; !ok {
-			if s.Port.Port > 0 {
-				env["PORT"] = strconv.Itoa(s.Port.Port)
-			}
+		env, err := p.environment(a, r, s, e)
+		if err != nil {
+			return nil, err
 		}
 
 		params := map[string]interface{}{
