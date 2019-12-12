@@ -128,12 +128,7 @@ func (p *Provider) environment(a *structs.App, r *structs.Release, s manifest.Se
 		}
 	}
 
-	senv, err := p.serviceEnvironment(a, s)
-	if err != nil {
-		return nil, err
-	}
-
-	for k, v := range senv {
+	for k, v := range p.serviceEnvironment(a, s) {
 		env[k] = v
 	}
 
@@ -167,7 +162,7 @@ func (p *Provider) releaseEnvironment(a *structs.App, r *structs.Release) map[st
 	}
 }
 
-func (p *Provider) serviceEnvironment(a *structs.App, s manifest.Service) (map[string]string, error) {
+func (p *Provider) serviceEnvironment(a *structs.App, s manifest.Service) map[string]string {
 	env := map[string]string{
 		"SERVICE": s.Name,
 	}
@@ -176,16 +171,7 @@ func (p *Provider) serviceEnvironment(a *structs.App, s manifest.Service) (map[s
 		env["PORT"] = strconv.Itoa(s.Port.Port)
 	}
 
-	for _, r := range s.Resources {
-		cm, err := p.Cluster.CoreV1().ConfigMaps(p.AppNamespace(a.Name)).Get(fmt.Sprintf("resource-%s", r), am.GetOptions{})
-		if err != nil {
-			return nil, err
-		}
-
-		env[fmt.Sprintf("%s_URL", envName(r))] = cm.Data["URL"]
-	}
-
-	return env, nil
+	return env
 }
 
 func (p *Provider) systemEnvironment() map[string]string {

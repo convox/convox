@@ -376,6 +376,15 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 				env[k] = v
 			}
 
+			for _, r := range s.Resources {
+				cm, err := p.Cluster.CoreV1().ConfigMaps(p.AppNamespace(a.Name)).Get(fmt.Sprintf("resource-%s", r), am.GetOptions{})
+				if err != nil {
+					return nil, err
+				}
+
+				env[fmt.Sprintf("%s_URL", envName(r))] = cm.Data["URL"]
+			}
+
 			repo, _, err := p.Engine.RepositoryHost(app)
 			if err != nil {
 				return nil, err
