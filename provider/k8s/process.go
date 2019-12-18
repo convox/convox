@@ -309,12 +309,12 @@ func (p *Provider) ProcessWait(app, pid string) (int, error) {
 }
 
 func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec, error) {
-	if release == "" {
-		a, err := p.AppGet(app)
-		if err != nil {
-			return nil, err
-		}
+	a, err := p.AppGet(app)
+	if err != nil {
+		return nil, err
+	}
 
+	if release == "" {
 		release = a.Release
 	}
 
@@ -350,16 +350,13 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 			return nil, err
 		}
 
-		senv, err := p.systemEnvironment(app, release)
-		if err != nil {
+		e := structs.Environment{}
+
+		if err := e.Load([]byte(r.Env)); err != nil {
 			return nil, err
 		}
 
 		env := map[string]string{}
-
-		for k, v := range senv {
-			env[k] = v
-		}
 
 		if s, _ := m.Service(service); s != nil {
 			if s.Command != "" {
@@ -370,17 +367,13 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 				c.Args = parts
 			}
 
-			for k, v := range s.EnvironmentDefaults() {
-				env[k] = v
+			ee, err := p.environment(a, r, *s, e)
+			if err != nil {
+				return nil, err
 			}
 
-			for _, r := range s.Resources {
-				cm, err := p.Cluster.CoreV1().ConfigMaps(p.AppNamespace(app)).Get(fmt.Sprintf("resource-%s", r), am.GetOptions{})
-				if err != nil {
-					return nil, err
-				}
-
-				env[fmt.Sprintf("%s_URL", envName(r))] = cm.Data["URL"]
+			for k, v := range ee {
+				env[k] = v
 			}
 
 			repo, _, err := p.Engine.RepositoryHost(app)
@@ -389,6 +382,22 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 			}
 
 			c.Image = fmt.Sprintf("%s:%s.%s", repo, service, r.Build)
+
+			for _, r := range s.Resources {
+				k := fmt.Sprintf("%s_URL", envName(r))
+
+				if _, ok := env[k]; !ok {
+					c.Env = append(c.Env, ac.EnvVar{
+						Name: k,
+						ValueFrom: &ac.EnvVarSource{
+							ConfigMapKeyRef: &ac.ConfigMapKeySelector{
+								LocalObjectReference: ac.LocalObjectReference{Name: fmt.Sprintf("resource-%s", r)},
+								Key:                  "URL",
+							},
+						},
+					})
+				}
+			}
 
 			for _, v := range p.volumeSources(app, s.Name, s.Volumes) {
 				vs = append(vs, p.podVolume(app, v))
@@ -405,16 +414,6 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 					MountPath: to,
 				})
 			}
-		}
-
-		e := structs.Environment{}
-
-		if err := e.Load([]byte(r.Env)); err != nil {
-			return nil, err
-		}
-
-		for k, v := range e {
-			env[k] = v
 		}
 
 		for k, v := range env {

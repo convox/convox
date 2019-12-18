@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/convox/convox/pkg/manifest"
@@ -101,30 +102,83 @@ func (p *Provider) ingressSecrets(a *structs.App, ss manifest.Services) (map[str
 	return secrets, nil
 }
 
-func (p *Provider) systemEnvironment(app, release string) (map[string]string, error) {
-	senv := map[string]string{
-		"APP":      app,
-		"RACK":     p.Name,
-		"RACK_URL": fmt.Sprintf("https://convox:%s@api.%s.svc.cluster.local:5443", p.Password, p.Namespace),
-		"RELEASE":  release,
+func (p *Provider) environment(a *structs.App, r *structs.Release, s manifest.Service, e structs.Environment) (map[string]string, error) {
+	env := map[string]string{}
+
+	for k, v := range p.systemEnvironment() {
+		env[k] = v
 	}
 
-	r, err := p.ReleaseGet(app, release)
-	if err != nil {
-		return nil, err
+	for k, v := range p.appEnvironment(a) {
+		env[k] = v
+	}
+
+	for k, v := range p.releaseEnvironment(a, r) {
+		env[k] = v
 	}
 
 	if r.Build != "" {
-		b, err := p.BuildGet(app, r.Build)
+		b, err := p.BuildGet(a.Name, r.Build)
 		if err != nil {
 			return nil, err
 		}
 
-		senv["BUILD"] = b.Id
-		senv["BUILD_DESCRIPTION"] = b.Description
+		for k, v := range p.buildEnvironment(a, b) {
+			env[k] = v
+		}
 	}
 
-	return senv, nil
+	for k, v := range p.serviceEnvironment(a, s) {
+		env[k] = v
+	}
+
+	for k, v := range s.EnvironmentDefaults() {
+		env[k] = v
+	}
+
+	for k, v := range e {
+		env[k] = v
+	}
+
+	return env, nil
+}
+
+func (p *Provider) appEnvironment(a *structs.App) map[string]string {
+	return map[string]string{
+		"APP": a.Name,
+	}
+}
+
+func (p *Provider) buildEnvironment(a *structs.App, b *structs.Build) map[string]string {
+	return map[string]string{
+		"BUILD":             b.Id,
+		"BUILD_DESCRIPTION": b.Description,
+	}
+}
+
+func (p *Provider) releaseEnvironment(a *structs.App, r *structs.Release) map[string]string {
+	return map[string]string{
+		"RELEASE": r.Id,
+	}
+}
+
+func (p *Provider) serviceEnvironment(a *structs.App, s manifest.Service) map[string]string {
+	env := map[string]string{
+		"SERVICE": s.Name,
+	}
+
+	if s.Port.Port > 0 {
+		env["PORT"] = strconv.Itoa(s.Port.Port)
+	}
+
+	return env
+}
+
+func (p *Provider) systemEnvironment() map[string]string {
+	return map[string]string{
+		"RACK":     p.Name,
+		"RACK_URL": fmt.Sprintf("https://convox:%s@api.%s.svc.cluster.local:5443", p.Password, p.Namespace),
+	}
 }
 
 func dockerSystemId() (string, error) {
