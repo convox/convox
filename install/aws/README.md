@@ -22,6 +22,6 @@
 
 ## Convox CLI Setup
 
-- [Install the Convox CLI](../../docs/guides/installation.md#cli)
+- [Install the Convox CLI](../../docs/guides/installation/cli.md)
 - Run `export RACK_URL=$(terraform output rack_url)`
 - Run `convox rack` to ensure that your CLI is connected to your new Rack
