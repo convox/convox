@@ -13,6 +13,18 @@ jobs:
       run: |
         VERSION=$(echo ${{ github.ref }} | awk -F/ '{print $3}')
         echo "::set-env name=VERSION::${VERSION}"
+    - name: release
+      id: release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ env.VERSION }}
+        release_name: "${{ env.VERSION }}"
+    - name: tools
+      run: make tools
+    - name: cli
+      run: make -C cmd/convox build
     - name: build
       run: docker build -t convox/convox:${VERSION} .
     - name: login
@@ -22,10 +34,21 @@ jobs:
         DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
     - name: push
       run: docker push convox/convox:${VERSION}
-    - name: release
-      uses: actions/create-release@v1
+    - name: release-cli-linux
+      uses: actions/upload-release-asset@v1.0.1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ env.VERSION }}
-        release_name: "${{ env.VERSION }}"
+        upload_url: ${{ steps.release.outputs.upload_url }}
+        asset_path: ./cmd/convox/pkg/convox-linux-amd64
+        asset_name: convox-linux
+        asset_content_type: application/octet-stream
+    - name: release-cli-macos
+      uses: actions/upload-release-asset@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.release.outputs.upload_url }}
+        asset_path: ./cmd/convox/pkg/convox-darwin-10.6-amd64
+        asset_name: convox-macos
+        asset_content_type: application/octet-stream

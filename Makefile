@@ -1,4 +1,4 @@
-.PHONY: all build clean clean-package compress dev generate generate-k8s generate-provider mocks package release test
+.PHONY: all build clean clean-package compress dev generate generate-k8s generate-provider mocks package release test tools
 
 commands = api atom build router
 
@@ -56,6 +56,9 @@ release:
 
 test:
 	env TEST=true go test -covermode atomic -coverprofile coverage.txt -mod=vendor ./...
+
+tools:
+	go install -mod=vendor ./vendor/github.com/karalabe/xgo
 
 $(binaries): $(GOPATH)/bin/%: $(sources)
 	go install -mod=vendor --ldflags="-s -w" ./cmd/$*
