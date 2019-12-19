@@ -3,6 +3,7 @@
 package convox
 
 import (
+	_ "github.com/karalabe/xgo"
 	_ "github.com/vektra/mockery/cmd/mockery"
 	_ "k8s.io/code-generator/cmd/client-gen"
 	_ "k8s.io/code-generator/cmd/conversion-gen"

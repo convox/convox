@@ -2,8 +2,9 @@
 
 ## Initial Setup
 
-- [Install the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html)
-- [Configure the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html)
+- Create an IAM user with the `AdministratorAccess` policy
+- Create Access Credentials for this IAM user 
+- Note these credentials
 
 ## Configuration
 
@@ -21,6 +22,6 @@
 
 ## Convox CLI Setup
 
-- [Install the Convox CLI](https://docs.convox.com/introduction/installation)
+- [Install the Convox CLI](../../docs/guides/installation/cli.md)
 - Run `export RACK_URL=$(terraform output rack_url)`
 - Run `convox rack` to ensure that your CLI is connected to your new Rack

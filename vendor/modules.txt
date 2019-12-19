@@ -284,6 +284,8 @@ github.com/jmespath/go-jmespath
 github.com/joho/godotenv
 # github.com/json-iterator/go v1.1.7
 github.com/json-iterator/go
+# github.com/karalabe/xgo v0.0.0-20191115072854-c5ccff8648a7
+github.com/karalabe/xgo
 # github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 github.com/kballard/go-shellquote
 # github.com/konsorten/go-windows-terminal-sequences v1.0.2
