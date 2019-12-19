@@ -1,6 +1,6 @@
-# Rack Installer
+# Convox Installer
 
-Convox uses [Terraform](https://www.terraform.io/) to install Racks.
+Convox uses [Terraform](https://www.terraform.io/) for installation.
 
 Go into the relevant subdirectory of this repository and follow the instructions in the README
 
