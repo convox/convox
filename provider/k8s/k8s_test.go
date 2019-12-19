@@ -104,10 +104,6 @@ func (te *TestEngine) AppParameters() map[string]string {
 	return map[string]string{"Test": "foo"}
 }
 
-func (te *TestEngine) AppStatus(app string) (string, error) {
-	return "statusing", nil
-}
-
 func (te *TestEngine) Heartbeat() (map[string]interface{}, error) {
 	return map[string]interface{}{"foo": "bar"}, nil
 }

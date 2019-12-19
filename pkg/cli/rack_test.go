@@ -9,6 +9,7 @@ import (
 	mocksdk "github.com/convox/convox/pkg/mock/sdk"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -120,7 +121,7 @@ func TestRackParamsError(t *testing.T) {
 
 func TestRackParamsSet(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("SystemGet").Return(fxSystem(), nil)
+		i.On("SystemGet").Return(fxSystem(), nil).Once()
 		opts := structs.SystemUpdateOptions{
 			Parameters: map[string]string{
 				"Foo": "bar",
@@ -128,12 +129,20 @@ func TestRackParamsSet(t *testing.T) {
 			},
 		}
 		i.On("SystemUpdate", opts).Return(nil)
+		i.On("SystemGet").Return(fxSystemUpdating(), nil).Twice()
+		i.On("SystemGet").Return(fxSystem(), nil)
+		i.On("SystemLogs", mock.Anything).Return(testLogs(fxLogsSystem()), nil)
 
 		res, err := testExecute(e, "rack params set Foo=bar Baz=qux", nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
-		res.RequireStdout(t, []string{"Updating parameters... OK"})
+		res.RequireStdout(t, []string{
+			"Updating parameters... ",
+			"TIME system/aws/component log1",
+			"TIME system/aws/component log2",
+			"OK",
+		})
 	})
 }
 
@@ -157,15 +166,23 @@ func TestRackParamsSetError(t *testing.T) {
 }
 
 func TestRackParamsSetClassic(t *testing.T) {
-	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("SystemGet").Return(fxSystemClassic(), nil)
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystemClassic(), nil).Once()
 		i.On("AppParametersSet", "name", map[string]string{"Foo": "bar", "Baz": "qux"}).Return(nil)
+		i.On("SystemGet").Return(fxSystemUpdating(), nil).Twice()
+		i.On("SystemGet").Return(fxSystem(), nil)
+		i.On("SystemLogs", mock.Anything).Return(testLogs(fxLogsSystem()), nil)
 
 		res, err := testExecute(e, "rack params set Foo=bar Baz=qux", nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
-		res.RequireStdout(t, []string{"Updating parameters... OK"})
+		res.RequireStdout(t, []string{
+			"Updating parameters... ",
+			"TIME system/aws/component log1",
+			"TIME system/aws/component log2",
+			"OK",
+		})
 	})
 }
 
@@ -310,14 +327,22 @@ func TestRackScaleUpdateError(t *testing.T) {
 }
 
 func TestRackUpdate(t *testing.T) {
-	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("SystemUpdate", structs.SystemUpdateOptions{Version: options.String("version1")}).Return(nil)
+		i.On("SystemGet").Return(fxSystemUpdating(), nil).Twice()
+		i.On("SystemGet").Return(fxSystem(), nil)
+		i.On("SystemLogs", mock.Anything).Return(testLogs(fxLogsSystem()), nil)
 
 		res, err := testExecute(e, "rack update version1", nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
-		res.RequireStdout(t, []string{"Updating to version1... OK"})
+		res.RequireStdout(t, []string{
+			"Updating to version1... ",
+			"TIME system/aws/component log1",
+			"TIME system/aws/component log2",
+			"OK",
+		})
 	})
 }
 
@@ -330,49 +355,5 @@ func TestRackUpdateError(t *testing.T) {
 		require.Equal(t, 1, res.Code)
 		res.RequireStderr(t, []string{"ERROR: err1"})
 		res.RequireStdout(t, []string{"Updating to version1... "})
-	})
-}
-
-func TestRackWait(t *testing.T) {
-	testClientWait(t, 100*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
-		opts := structs.LogsOptions{
-			Prefix: options.Bool(true),
-			Since:  options.Duration(5 * time.Second),
-		}
-		i.On("SystemLogs", opts).Return(testLogs(fxLogsSystem()), nil).Once()
-		i.On("SystemGet").Return(&structs.System{Status: "updating"}, nil).Twice()
-		i.On("SystemGet").Return(fxSystem(), nil)
-
-		res, err := testExecute(e, "rack wait", nil)
-		require.NoError(t, err)
-		require.Equal(t, 0, res.Code)
-		res.RequireStderr(t, []string{""})
-		res.RequireStdout(t, []string{
-			"Waiting for rack... ",
-			fxLogsSystem()[0],
-			fxLogsSystem()[1],
-			"OK",
-		})
-	})
-}
-
-func TestRackWaitError(t *testing.T) {
-	testClientWait(t, 100*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
-		opts := structs.LogsOptions{
-			Prefix: options.Bool(true),
-			Since:  options.Duration(5 * time.Second),
-		}
-		i.On("SystemLogs", opts).Return(testLogs(fxLogsSystem()), nil).Once()
-		i.On("SystemGet").Return(nil, fmt.Errorf("err1"))
-
-		res, err := testExecute(e, "rack wait", nil)
-		require.NoError(t, err)
-		require.Equal(t, 1, res.Code)
-		res.RequireStderr(t, []string{"ERROR: err1"})
-		res.RequireStdout(t, []string{
-			"Waiting for rack... ",
-			fxLogsSystem()[0],
-			fxLogsSystem()[1],
-		})
 	})
 }

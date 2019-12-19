@@ -26,6 +26,16 @@ func fxAppGeneration1() *structs.App {
 	}
 }
 
+func fxAppRelease3() *structs.App {
+	return &structs.App{
+		Name:       "app1",
+		Generation: "2",
+		Parameters: fxParameters(),
+		Release:    "release3",
+		Status:     "running",
+	}
+}
+
 func fxAppRouter() *structs.App {
 	return &structs.App{
 		Name:       "app1",
@@ -34,6 +44,19 @@ func fxAppRouter() *structs.App {
 		Release:    "release1",
 		Router:     "router1",
 		Status:     "running",
+	}
+}
+
+func fxAppParameters() *structs.App {
+	return &structs.App{
+		Name:       "app1",
+		Generation: "2",
+		Parameters: map[string]string{
+			"Foo": "bar",
+			"Baz": "qux",
+		},
+		Release: "release1",
+		Status:  "running",
 	}
 }
 
@@ -218,7 +241,7 @@ func fxResource() *structs.Resource {
 	return &structs.Resource{
 		Name:       "resource1",
 		Parameters: map[string]string{"k1": "v1", "k2": "v2", "Url": "https://other.example.org/path"},
-		Status:     "status",
+		Status:     "running",
 		Type:       "type",
 		Url:        "https://example.org/path",
 		Apps:       structs.Apps{*fxApp(), *fxApp()},
@@ -232,6 +255,17 @@ func fxResourceType() structs.ResourceType {
 			{Default: "def1", Description: "desc1", Name: "Param1"},
 			{Default: "def2", Description: "desc2", Name: "Param2"},
 		},
+	}
+}
+
+func fxResourceUpdating() *structs.Resource {
+	return &structs.Resource{
+		Name:       "resource1",
+		Parameters: map[string]string{"k1": "v1", "k2": "v2", "Url": "https://other.example.org/path"},
+		Status:     "updating",
+		Type:       "type",
+		Url:        "https://example.org/path",
+		Apps:       structs.Apps{*fxApp(), *fxApp()},
 	}
 }
 
@@ -300,5 +334,20 @@ func fxSystemInternal() *structs.System {
 		Status:     "running",
 		Type:       "type",
 		Version:    "20180901000000",
+	}
+}
+
+func fxSystemUpdating() *structs.System {
+	return &structs.System{
+		Count:      1,
+		Domain:     "domain",
+		Name:       "name",
+		Outputs:    map[string]string{"k1": "v1", "k2": "v2"},
+		Parameters: map[string]string{"Autoscale": "Yes", "ParamFoo": "value1", "ParamOther": "value2"},
+		Provider:   "provider",
+		Region:     "region",
+		Status:     "updating",
+		Type:       "type",
+		Version:    "21000101000000",
 	}
 }

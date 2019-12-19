@@ -18,7 +18,7 @@ func init() {
 	})
 
 	register("ssl update", "update certificate for an app", SslUpdate, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagRack, flagApp, flagWait},
+		Flags:    []stdcli.Flag{flagRack, flagApp},
 		Usage:    "<process:port> <certificate>",
 		Validate: stdcli.Args(2),
 	})
@@ -95,10 +95,8 @@ func SslUpdate(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	if c.Bool("wait") {
-		if err := common.WaitForAppRunning(rack, app(c)); err != nil {
-			return err
-		}
+	if err := common.WaitForAppRunning(rack, app(c)); err != nil {
+		return err
 	}
 
 	return c.OK()

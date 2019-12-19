@@ -1,0 +1,12 @@
+{
+  "generation": "2",
+  "name": "app1",
+  "release": "release1",
+  "sleep": false,
+  "status": "running",
+  "parameters": {
+    "Foo": "bar",
+    "Baz": "qux"
+  }
+}
+

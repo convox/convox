@@ -101,6 +101,10 @@ func (p *Provider) AppGet(name string) (*structs.App, error) {
 	return a, nil
 }
 
+func (p *Provider) AppIdles(name string) (bool, error) {
+	return false, nil
+}
+
 func (p *Provider) AppList() (structs.Apps, error) {
 	ns, err := p.Cluster.CoreV1().Namespaces().List(am.ListOptions{
 		LabelSelector: fmt.Sprintf("system=convox,rack=%s,type=app", p.Name),
@@ -138,6 +142,10 @@ func (p *Provider) AppNamespace(app string) string {
 	default:
 		return fmt.Sprintf("%s-%s", p.Name, app)
 	}
+}
+
+func (p *Provider) AppParameters() map[string]string {
+	return map[string]string{}
 }
 
 func (p *Provider) AppUpdate(name string, opts structs.AppUpdateOptions) error {
@@ -204,9 +212,17 @@ func (p *Provider) appFromNamespace(ns ac.Namespace) (*structs.App, error) {
 
 	defparams := p.Engine.AppParameters()
 
+	// set parameter default values
 	for k, v := range defparams {
 		if _, ok := params[k]; !ok {
 			params[k] = v
+		}
+	}
+
+	// filter out invalid parameters
+	for k := range params {
+		if _, ok := defparams[k]; !ok {
+			delete(params, k)
 		}
 	}
 

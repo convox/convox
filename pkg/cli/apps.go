@@ -31,13 +31,13 @@ func init() {
 	})
 
 	register("apps create", "create an app", AppsCreate, stdcli.CommandOptions{
-		Flags:    append(stdcli.OptionFlags(structs.AppCreateOptions{}), flagRack, flagWait),
+		Flags:    append(stdcli.OptionFlags(structs.AppCreateOptions{}), flagRack),
 		Usage:    "[name]",
 		Validate: stdcli.ArgsMax(1),
 	})
 
 	register("apps delete", "delete an app", AppsDelete, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagRack, flagWait},
+		Flags:    []stdcli.Flag{flagRack},
 		Usage:    "<app>",
 		Validate: stdcli.Args(1),
 	})
@@ -81,18 +81,12 @@ func init() {
 	})
 
 	register("apps params set", "set app parameters", AppsParamsSet, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagApp, flagRack, flagWait},
+		Flags:    []stdcli.Flag{flagApp, flagRack},
 		Usage:    "<Key=Value> [Key=Value]...",
 		Validate: stdcli.ArgsMin(1),
 	})
 
 	register("apps unlock", "disable termination protection", AppsUnlock, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagApp, flagRack},
-		Usage:    "[app]",
-		Validate: stdcli.ArgsMax(1),
-	})
-
-	register("apps wait", "wait for an app to finish updating", AppsWait, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagApp, flagRack},
 		Usage:    "[app]",
 		Validate: stdcli.ArgsMax(1),
@@ -117,7 +111,7 @@ func Apps(rack sdk.Interface, c *stdcli.Context) error {
 func AppsCancel(rack sdk.Interface, c *stdcli.Context) error {
 	app := coalesce(c.Arg(0), app(c))
 
-	c.Startf("Cancelling <app>%s</app>", app)
+	c.Startf("Cancelling deployment of <app>%s</app>", app)
 
 	if err := rack.AppCancel(app); err != nil {
 		return err
@@ -141,10 +135,8 @@ func AppsCreate(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	if c.Bool("wait") {
-		if err := common.WaitForAppRunning(rack, app); err != nil {
-			return err
-		}
+	if err := common.WaitForAppRunning(rack, app); err != nil {
+		return err
 	}
 
 	return c.OK()
@@ -159,10 +151,8 @@ func AppsDelete(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	if c.Bool("wait") {
-		if err := common.WaitForAppDeleted(rack, c, app); err != nil {
-			return err
-		}
+	if err := common.WaitForAppDeleted(rack, c, app); err != nil {
+		return err
 	}
 
 	return c.OK()
@@ -328,22 +318,20 @@ func AppsParamsSet(rack sdk.Interface, c *stdcli.Context) error {
 		}
 	}
 
-	if c.Bool("wait") {
-		c.Writef("\n")
+	c.Writef("\n")
 
-		if err := common.WaitForAppWithLogs(rack, c, app(c)); err != nil {
-			return err
-		}
+	if err := common.WaitForAppWithLogs(rack, c, app(c)); err != nil {
+		return err
+	}
 
-		a, err := rack.AppGet(app(c))
-		if err != nil {
-			return err
-		}
+	a, err := rack.AppGet(app(c))
+	if err != nil {
+		return err
+	}
 
-		for k, v := range opts.Parameters {
-			if a.Parameters[k] != v {
-				return fmt.Errorf("rollback")
-			}
+	for k, v := range opts.Parameters {
+		if a.Parameters[k] != v {
+			return fmt.Errorf("rollback")
 		}
 	}
 
@@ -356,20 +344,6 @@ func AppsUnlock(rack sdk.Interface, c *stdcli.Context) error {
 	c.Startf("Unlocking <app>%s</app>", app)
 
 	if err := rack.AppUpdate(app, structs.AppUpdateOptions{Lock: options.Bool(false)}); err != nil {
-		return err
-	}
-
-	return c.OK()
-}
-
-func AppsWait(rack sdk.Interface, c *stdcli.Context) error {
-	app := coalesce(c.Arg(0), app(c))
-
-	c.Startf("Waiting for app")
-
-	c.Writef("\n")
-
-	if err := common.WaitForAppWithLogs(rack, c, app); err != nil {
 		return err
 	}
 
@@ -436,6 +410,36 @@ func appExport(rack sdk.Interface, c *stdcli.Context, app string, w io.Writer) e
 
 			c.OK()
 		}
+	}
+
+	rs, err := rack.ResourceList(app)
+	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(filepath.Join(tmp, "resources"), 0700); err != nil {
+		return err
+	}
+
+	for _, r := range rs {
+		c.Startf("Exporting resource <resource>%s</resource>", r.Name)
+
+		fd, err := os.OpenFile(filepath.Join(tmp, "resources", fmt.Sprintf("%s.tgz", r.Name)), os.O_CREATE|os.O_WRONLY, 0600)
+		if err != nil {
+			return err
+		}
+		defer fd.Close()
+
+		rr, err := rack.ResourceExport(app, r.Name)
+		if err != nil {
+			return err
+		}
+
+		if _, err := io.Copy(fd, rr); err != nil {
+			return err
+		}
+
+		c.OK()
 	}
 
 	c.Startf("Packaging export")
@@ -545,6 +549,39 @@ func appImport(rack sdk.Interface, c *stdcli.Context, app string, r io.Reader) e
 		}
 
 		c.OK()
+	}
+
+	if _, err := os.Stat(filepath.Join(tmp, "resources")); !os.IsNotExist(err) {
+		err = filepath.Walk(filepath.Join(tmp, "resources"), func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
+			if info.IsDir() {
+				return nil
+			}
+
+			name := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+
+			c.Startf("Importing resource <resource>%s</resource>", name)
+
+			fd, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+
+			if err := rack.ResourceImport(app, name, fd); err != nil {
+				return err
+			}
+			if err != nil {
+				return err
+			}
+
+			return c.OK()
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	if len(a.Parameters) > 0 {

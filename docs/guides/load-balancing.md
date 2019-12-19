@@ -16,7 +16,7 @@ Convox will automatically set up HTTPS load balancing to this Service when it is
     SERVICE  DOMAIN                               PORTS
     web      web.myapp.0a1b2c3d4e5f.convox.cloud  443:3000
 
-You can then access the `web` Service of this application using `https://web.myapp.0a1b2c3d4e5f.convox.cloud`
+You can then access the `web` Service of this App using `https://web.myapp.0a1b2c3d4e5f.convox.cloud`
 
 ### SSL Termination
 
@@ -42,7 +42,7 @@ You can make your custom domain configurable per-deployment using environment in
       web:
         domain: ${DOMAIN}
 
-In this example  your application would use a standard Rack hostname by default, but could be
+In this example  your App would use a standard Rack hostname by default, but could be
 configured to use a custom domain with the `DOMAIN` environment variable:
 
     $ convox env set DOMAIN=myapp-staging.example.org -a myapp-staging
@@ -65,22 +65,21 @@ In this example you would set up the following DNS entry:
 
 ### End-to-End Encryption
 
-In the example above, a connection to your application would be HTTPS between the user and the Rack's load
-balancer and then HTTP between the load balancer and the application.
+In the example above, a connection to your App would be HTTPS between the user and the Rack's load
+balancer and then HTTP between the load balancer and the App.
 
-If you would like this connection to be encrypted all the way to your application you must configure your
-application to listen for HTTPS on its defined port and update your `convox.yml`:
+If you would like this connection to be encrypted all the way to your App you must configure your
+App to listen for HTTPS on its defined port and update your `convox.yml`:
 
     services:
       web:
         port: https:3000
 
-> It is permissible to use a self-signed certificate between the Rack load balancer and your application.
+> It is permissible to use a self-signed certificate between the Rack load balancer and your App.
 
 ## Custom Load Balancers
 
-If your application needs to expose arbitrary TCP ports to the outside world, you can configure custom
-load balancers.
+If your App needs to expose arbitrary TCP ports to the outside world, you can configure custom [Balancers](../reference/app/primitives/balancer.md).
 
 For a `convox.yml` like this:
 
@@ -111,7 +110,7 @@ You could then access this Service using the following endpoints:
 * `tcp://1.2.3.4:5001`
 * `tcp://1.2.3.4:5002`
 
-> Note that Convox will not configure SSL termination for ports on a custom load balancer.
+> Note that Convox will not configure SSL termination for ports on a custom [Balancer](../reference/app/primitives/balancer.md).
 
 ## Hybrid Load Balancing
 
@@ -147,5 +146,5 @@ And you could access the Service using the following endpoints:
 * `http://1.2.3.4:6000`
 * `tcp://1.2.4.5:6001`
 
-> Note that port 4000 on this Service is exposed through both the standard and custom load 
-> balancers. SSL termination is not provided on the custom load balancer.
+> Note that port 4000 on this Service is exposed through both the standard and custom load balancers.
+> SSL termination is not provided on the custom [Balancer](../reference/app/primitives/balancer.md).

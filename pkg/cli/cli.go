@@ -22,7 +22,6 @@ var (
 	flagId       = stdcli.BoolFlag("id", "", "put logs on stderr, release id on stdout")
 	flagNoFollow = stdcli.BoolFlag("no-follow", "", "do not follow logs")
 	flagRack     = stdcli.StringFlag("rack", "r", "rack name")
-	flagWait     = stdcli.BoolFlag("wait", "w", "wait for completion")
 )
 
 func New(name, version string) *Engine {
@@ -38,6 +37,7 @@ func New(name, version string) *Engine {
 	e.Writer.Tags["rack"] = stdcli.RenderColors(26)
 	e.Writer.Tags["process"] = stdcli.RenderColors(27)
 	e.Writer.Tags["release"] = stdcli.RenderColors(24)
+	e.Writer.Tags["resource"] = stdcli.RenderColors(33)
 	e.Writer.Tags["service"] = stdcli.RenderColors(33)
 	e.Writer.Tags["setting"] = stdcli.RenderColors(246)
 	e.Writer.Tags["system"] = stdcli.RenderColors(15)

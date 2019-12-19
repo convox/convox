@@ -1,10 +1,12 @@
 # Agents
 
-Agents are specialized services that run a single process on each cluster instance.
+Agents are specialized [Services](../reference/app/primitives/service.md) that run a single
+[Process](../reference/app/primitives/process.md) on each [Instance](../reference/app/primitives/instance.md).
 
 ## Configuration
 
-You can define any given Service as an Agent by setting its `agent` attribute to `true`
+You can define any [Service](../reference/app/primitives/service.md) as an Agent by setting
+its `agent` attribute to `true`
 
     services:
       telemetry:
@@ -12,9 +14,10 @@ You can define any given Service as an Agent by setting its `agent` attribute to
 
 ### Communicating with an Agent
 
-Often it is useful for other Services to communicate with an agent running on its instance.
+Often it is useful for other [Processes](../reference/app/primitives/process.md) to communicate
+with an Agent running on its [Instance](../reference/app/primitives/instance.md).
 
-You can declare ports that will be available to communicate with an agent using the `ports` attribute:
+You can declare ports that will be available to communicate with an Agent using the `ports` attribute:
 
     services:
       telemetry:
@@ -23,13 +26,15 @@ You can declare ports that will be available to communicate with an agent using 
           - 8125/udp
           - 8126
 
-> Agents will listen on the IP address of the underlying instance. This means that you can not deploy
-> two agents on the same Rack that listen on the same port.
+> Agents will listen on the IP address of the underlying [Instance](../reference/app/primitives/instance.md).
+> This means that you can not deploy two Agents on the same Rack that listen on the same port.
 
-Each Service will have the IP of its instance available in the `INSTANCE_IP` environment variable.
+Each [Process](../reference/app/primitives/process.md) will have the IP address of its
+[Instance](../reference/app/primitives/instance.md) available in the `INSTANCE_IP` environment variable.
 
-In the example above, other Services can communicate with the `telemetry` agent running on its instance
-using the following endpoints:
+In the example above, any [Process](../reference/app/primitives/service.md) on the same Rack can communicate
+with the `telemetry` Agent running on its [Instance](../reference/app/primitives/instance.md) using the
+following endpoints:
 
 * `udp://$INSTANCE_IP:8125`
 * `tcp://$INSTANCE_IP:8126`
