@@ -18,7 +18,7 @@ func init() {
 	})
 
 	register("instances keyroll", "roll ssh key on instances", InstancesKeyroll, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagRack, flagWait},
+		Flags:    []stdcli.Flag{flagRack},
 		Validate: stdcli.Args(0),
 	})
 
@@ -55,12 +55,10 @@ func InstancesKeyroll(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	if c.Bool("wait") {
-		c.Writef("\n")
+	c.Writef("\n")
 
-		if err := common.WaitForRackWithLogs(rack, c); err != nil {
-			return err
-		}
+	if err := common.WaitForRackWithLogs(rack, c); err != nil {
+		return err
 	}
 
 	return c.OK()

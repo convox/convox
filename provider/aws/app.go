@@ -56,17 +56,3 @@ func (p *Provider) AppDelete(name string) error {
 
 	return p.Provider.AppDelete(name)
 }
-
-func (p *Provider) AppIdles(name string) (bool, error) {
-	return false, nil
-}
-
-func (p *Provider) AppParameters() map[string]string {
-	return map[string]string{
-		"Router": "shared",
-	}
-}
-
-func (p *Provider) AppStatus(name string) (string, error) {
-	return "running", nil
-}

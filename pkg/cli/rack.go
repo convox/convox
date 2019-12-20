@@ -32,7 +32,7 @@ func init() {
 	})
 
 	register("rack params set", "set rack parameters", RackParamsSet, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagRack, flagWait},
+		Flags:    []stdcli.Flag{flagRack},
 		Usage:    "<Key=Value> [Key=Value]...",
 		Validate: stdcli.ArgsMin(1),
 	})
@@ -57,13 +57,8 @@ func init() {
 	})
 
 	register("rack update", "update the rack", RackUpdate, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagRack, flagWait},
-		Validate: stdcli.ArgsMax(1),
-	})
-
-	register("rack wait", "wait for rack to finish updating", RackWait, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagRack},
-		Validate: stdcli.Args(0),
+		Validate: stdcli.ArgsMax(1),
 	})
 }
 
@@ -174,12 +169,10 @@ func RackParamsSet(rack sdk.Interface, c *stdcli.Context) error {
 		}
 	}
 
-	if c.Bool("wait") {
-		c.Writef("\n")
+	c.Writef("\n")
 
-		if err := common.WaitForRackWithLogs(rack, c); err != nil {
-			return err
-		}
+	if err := common.WaitForRackWithLogs(rack, c); err != nil {
+		return err
 	}
 
 	return c.OK()
@@ -287,20 +280,6 @@ func RackUpdate(rack sdk.Interface, c *stdcli.Context) error {
 	if err := rack.SystemUpdate(structs.SystemUpdateOptions{Version: options.String(target)}); err != nil {
 		return err
 	}
-
-	if c.Bool("wait") {
-		c.Writef("\n")
-
-		if err := common.WaitForRackWithLogs(rack, c); err != nil {
-			return err
-		}
-	}
-
-	return c.OK()
-}
-
-func RackWait(rack sdk.Interface, c *stdcli.Context) error {
-	c.Startf("Waiting for rack")
 
 	c.Writef("\n")
 

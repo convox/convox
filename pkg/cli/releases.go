@@ -30,12 +30,12 @@ func init() {
 	})
 
 	register("releases promote", "promote a release", ReleasesPromote, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagApp, flagRack, flagWait},
+		Flags:    []stdcli.Flag{flagApp, flagRack},
 		Validate: stdcli.ArgsMax(1),
 	})
 
 	register("releases rollback", "copy an old release forward and promote it", ReleasesRollback, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagApp, flagId, flagRack, flagWait},
+		Flags:    []stdcli.Flag{flagApp, flagId, flagRack},
 		Validate: stdcli.Args(1),
 	})
 }
@@ -156,21 +156,19 @@ func releasePromote(rack sdk.Interface, c *stdcli.Context, app, id string) error
 		return err
 	}
 
-	if c.Bool("wait") {
-		c.Writef("\n")
+	c.Writef("\n")
 
-		if err := common.WaitForAppWithLogs(rack, c, app); err != nil {
-			return err
-		}
+	if err := common.WaitForAppWithLogs(rack, c, app); err != nil {
+		return err
+	}
 
-		a, err = rack.AppGet(app)
-		if err != nil {
-			return err
-		}
+	a, err = rack.AppGet(app)
+	if err != nil {
+		return err
+	}
 
-		if a.Release != id {
-			return fmt.Errorf("rollback")
-		}
+	if a.Release != id {
+		return fmt.Errorf("rollback")
 	}
 
 	return c.OK()
@@ -209,21 +207,19 @@ func ReleasesRollback(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	if c.Bool("wait") {
-		c.Writef("\n")
+	c.Writef("\n")
 
-		if err := common.WaitForAppWithLogs(rack, c, app(c)); err != nil {
-			return err
-		}
+	if err := common.WaitForAppWithLogs(rack, c, app(c)); err != nil {
+		return err
+	}
 
-		a, err := rack.AppGet(app(c))
-		if err != nil {
-			return err
-		}
+	a, err := rack.AppGet(app(c))
+	if err != nil {
+		return err
+	}
 
-		if a.Release != rn.Id {
-			return fmt.Errorf("rollback")
-		}
+	if a.Release != rn.Id {
+		return fmt.Errorf("rollback")
 	}
 
 	if c.Bool("id") {

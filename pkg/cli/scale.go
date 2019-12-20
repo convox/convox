@@ -12,7 +12,7 @@ import (
 
 func init() {
 	register("scale", "scale a service", Scale, stdcli.CommandOptions{
-		Flags: append(stdcli.OptionFlags(structs.ServiceUpdateOptions{}), flagApp, flagRack, flagWait),
+		Flags: append(stdcli.OptionFlags(structs.ServiceUpdateOptions{}), flagApp, flagRack),
 		Usage: "<service>",
 		Validate: func(c *stdcli.Context) error {
 			if c.Value("count") != nil || c.Value("cpu") != nil || c.Value("memory") != nil {
@@ -55,12 +55,10 @@ func Scale(rack sdk.Interface, c *stdcli.Context) error {
 			}
 		}
 
-		if c.Bool("wait") {
-			c.Writef("\n")
+		c.Writef("\n")
 
-			if err := common.WaitForAppWithLogs(rack, c, app(c)); err != nil {
-				return err
-			}
+		if err := common.WaitForAppWithLogs(rack, c, app(c)); err != nil {
+			return err
 		}
 
 		return c.OK()

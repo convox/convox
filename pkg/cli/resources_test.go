@@ -169,9 +169,9 @@ func TestRackResources(t *testing.T) {
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
-			"NAME       TYPE  STATUS",
-			"resource1  type  status",
-			"resource1  type  status",
+			"NAME       TYPE  STATUS ",
+			"resource1  type  running",
+			"resource1  type  running",
 		})
 	})
 }
@@ -194,6 +194,9 @@ func TestRackResourcesCreate(t *testing.T) {
 		i.On("SystemGet").Return(fxSystem(), nil)
 		opts := structs.ResourceCreateOptions{Name: options.String("name1"), Parameters: map[string]string{"Foo": "bar", "Baz": "quux"}}
 		i.On("SystemResourceCreate", "type1", opts).Return(fxResource(), nil)
+		i.On("SystemResourceGet", "resource1").Return(fxResource(), nil).Once()
+		i.On("SystemResourceGet", "resource1").Return(fxResourceUpdating(), nil).Twice()
+		i.On("SystemResourceGet", "resource1").Return(fxResource(), nil)
 
 		res, err := testExecute(e, "rack resources create type1 -n name1 Foo=bar Baz=quux", nil)
 		require.NoError(t, err)
@@ -222,6 +225,9 @@ func TestRackResourcesCreateClassic(t *testing.T) {
 		i.On("SystemGet").Return(fxSystemClassic(), nil)
 		opts := structs.ResourceCreateOptions{Name: options.String("name1"), Parameters: map[string]string{"Foo": "bar", "Baz": "quux"}}
 		i.On("ResourceCreateClassic", "type1", opts).Return(fxResource(), nil)
+		i.On("SystemResourceGetClassic", "resource1").Return(fxResource(), nil).Once()
+		i.On("SystemResourceGetClassic", "resource1").Return(fxResourceUpdating(), nil).Twice()
+		i.On("SystemResourceGetClassic", "resource1").Return(fxResource(), nil)
 
 		res, err := testExecute(e, "rack resources create type1 -n name1 Foo=bar Baz=quux", nil)
 		require.NoError(t, err)
@@ -235,6 +241,9 @@ func TestRackResourcesDelete(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("SystemResourceDelete", "resource1").Return(nil)
+		i.On("SystemResourceGet", "resource1").Return(fxResource(), nil).Once()
+		i.On("SystemResourceGet", "resource1").Return(fxResourceUpdating(), nil).Twice()
+		i.On("SystemResourceGet", "resource1").Return(nil, fmt.Errorf("no such resource"))
 
 		res, err := testExecute(e, "rack resources delete resource1", nil)
 		require.NoError(t, err)
@@ -269,7 +278,7 @@ func TestRackResourcesInfo(t *testing.T) {
 		res.RequireStdout(t, []string{
 			"Name     resource1",
 			"Type     type",
-			"Status   status",
+			"Status   running",
 			"Options  Url=https://other.example.org/path",
 			"         k1=v1",
 			"         k2=v2",
@@ -296,6 +305,9 @@ func TestRackResourcesLink(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("SystemResourceLink", "resource1", "app1").Return(fxResource(), nil)
+		i.On("SystemResourceGet", "resource1").Return(fxResource(), nil).Once()
+		i.On("SystemResourceGet", "resource1").Return(fxResourceUpdating(), nil).Twice()
+		i.On("SystemResourceGet", "resource1").Return(fxResource(), nil)
 
 		res, err := testExecute(e, "rack resources link resource1 -a app1", nil)
 		require.NoError(t, err)
@@ -437,6 +449,9 @@ func TestRackResourcesUnlink(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("SystemResourceUnlink", "resource1", "app1").Return(fxResource(), nil)
+		i.On("SystemResourceGet", "resource1").Return(fxResource(), nil).Once()
+		i.On("SystemResourceGet", "resource1").Return(fxResourceUpdating(), nil).Twice()
+		i.On("SystemResourceGet", "resource1").Return(fxResource(), nil)
 
 		res, err := testExecute(e, "rack resources unlink resource1 -a app1", nil)
 		require.NoError(t, err)
@@ -464,6 +479,9 @@ func TestRackResourcesUpdate(t *testing.T) {
 		i.On("SystemGet").Return(fxSystem(), nil)
 		opts := structs.ResourceUpdateOptions{Parameters: map[string]string{"Foo": "bar", "Baz": "quux"}}
 		i.On("SystemResourceUpdate", "resource1", opts).Return(fxResource(), nil)
+		i.On("SystemResourceGet", "resource1").Return(fxResource(), nil).Once()
+		i.On("SystemResourceGet", "resource1").Return(fxResourceUpdating(), nil).Twice()
+		i.On("SystemResourceGet", "resource1").Return(fxResource(), nil)
 
 		res, err := testExecute(e, "rack resources update resource1 Foo=bar Baz=quux", nil)
 		require.NoError(t, err)
@@ -492,6 +510,9 @@ func TestRackResourcesUpdateClassic(t *testing.T) {
 		i.On("SystemGet").Return(fxSystemClassic(), nil)
 		opts := structs.ResourceUpdateOptions{Parameters: map[string]string{"Foo": "bar", "Baz": "quux"}}
 		i.On("ResourceUpdateClassic", "resource1", opts).Return(fxResource(), nil)
+		i.On("SystemResourceGetClassic", "resource1").Return(fxResource(), nil).Once()
+		i.On("SystemResourceGetClassic", "resource1").Return(fxResourceUpdating(), nil).Twice()
+		i.On("SystemResourceGetClassic", "resource1").Return(fxResource(), nil)
 
 		res, err := testExecute(e, "rack resources update resource1 Foo=bar Baz=quux", nil)
 		require.NoError(t, err)

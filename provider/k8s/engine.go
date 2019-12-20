@@ -9,7 +9,6 @@ import (
 type Engine interface {
 	AppIdles(app string) (bool, error)
 	AppParameters() map[string]string
-	AppStatus(app string) (string, error)
 	Heartbeat() (map[string]interface{}, error)
 	IngressAnnotations(app string) (map[string]string, error)
 	IngressSecrets(app string) ([]string, error)

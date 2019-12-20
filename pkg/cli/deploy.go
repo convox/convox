@@ -11,7 +11,7 @@ import (
 
 func init() {
 	register("deploy", "create and promote a build", Deploy, stdcli.CommandOptions{
-		Flags:    append(stdcli.OptionFlags(structs.BuildCreateOptions{}), flagApp, flagId, flagRack, flagWait),
+		Flags:    append(stdcli.OptionFlags(structs.BuildCreateOptions{}), flagApp, flagId, flagRack),
 		Usage:    "[dir]",
 		Validate: stdcli.ArgsMax(1),
 	})

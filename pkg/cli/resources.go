@@ -78,7 +78,6 @@ func init() {
 	register("rack resources create", "create a resource", RackResourcesCreate, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
 			flagRack,
-			flagWait,
 			stdcli.StringFlag("name", "n", "resource name"),
 		},
 		Invisible: true,
@@ -87,7 +86,7 @@ func init() {
 	})
 
 	register("rack resources delete", "delete a resource", RackResourcesDelete, stdcli.CommandOptions{
-		Flags:     []stdcli.Flag{flagRack, flagWait},
+		Flags:     []stdcli.Flag{flagRack},
 		Invisible: true,
 		Usage:     "<name>",
 		Validate:  stdcli.Args(1),
@@ -101,7 +100,7 @@ func init() {
 	})
 
 	register("rack resources link", "link a resource to an app", RackResourcesLink, stdcli.CommandOptions{
-		Flags:     []stdcli.Flag{flagApp, flagRack, flagWait},
+		Flags:     []stdcli.Flag{flagApp, flagRack},
 		Invisible: true,
 		Usage:     "<resource>",
 		Validate:  stdcli.Args(1),
@@ -132,14 +131,14 @@ func init() {
 	})
 
 	register("rack resources update", "update resource options", RackResourcesUpdate, stdcli.CommandOptions{
-		Flags:     []stdcli.Flag{flagRack, flagWait},
+		Flags:     []stdcli.Flag{flagRack},
 		Invisible: true,
 		Usage:     "<name> [Option=Value]...",
 		Validate:  stdcli.ArgsMin(1),
 	})
 
 	register("rack resources unlink", "unlink a resource from an app", RackResourcesUnlink, stdcli.CommandOptions{
-		Flags:     []stdcli.Flag{flagApp, flagRack, flagWait},
+		Flags:     []stdcli.Flag{flagApp, flagRack},
 		Invisible: true,
 		Usage:     "<resource>",
 		Validate:  stdcli.Args(1),
@@ -421,10 +420,8 @@ func RackResourcesCreate(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	if c.Bool("wait") {
-		if err := waitForResourceRunning(rack, c, r.Name); err != nil {
-			return err
-		}
+	if err := waitForResourceRunning(rack, c, r.Name); err != nil {
+		return err
 	}
 
 	return c.OK(r.Name)
@@ -447,10 +444,8 @@ func RackResourcesDelete(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	if c.Bool("wait") {
-		if err := waitForResourceDeleted(rack, c, c.Arg(0)); err != nil {
-			return err
-		}
+	if err := waitForResourceDeleted(rack, c, c.Arg(0)); err != nil {
+		return err
 	}
 
 	return c.OK()
@@ -528,10 +523,8 @@ func RackResourcesLink(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	if c.Bool("wait") {
-		if err := waitForResourceRunning(rack, c, resource); err != nil {
-			return err
-		}
+	if err := waitForResourceRunning(rack, c, resource); err != nil {
+		return err
 	}
 
 	return c.OK()
@@ -681,10 +674,8 @@ func RackResourcesUnlink(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	if c.Bool("wait") {
-		if err := waitForResourceRunning(rack, c, resource); err != nil {
-			return err
-		}
+	if err := waitForResourceRunning(rack, c, resource); err != nil {
+		return err
 	}
 
 	return c.OK()
@@ -725,10 +716,8 @@ func RackResourcesUpdate(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	if c.Bool("wait") {
-		if err := waitForResourceRunning(rack, c, resource); err != nil {
-			return err
-		}
+	if err := waitForResourceRunning(rack, c, resource); err != nil {
+		return err
 	}
 
 	return c.OK()
