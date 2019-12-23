@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/structs"
 	ac "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -56,7 +55,7 @@ func (p *Provider) InstanceList() (structs.Instances, error) {
 		}
 
 		is = append(is, structs.Instance{
-			Id:        common.CoalesceString(n.Spec.ProviderID, n.ObjectMeta.Name),
+			Id:        n.ObjectMeta.Name,
 			PrivateIp: private,
 			Processes: len(pds.Items),
 			PublicIp:  public,
