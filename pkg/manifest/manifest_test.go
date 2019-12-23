@@ -66,7 +66,7 @@ func TestManifestLoad(t *testing.T) {
 					Interval: 10,
 					Timeout:  9,
 				},
-				Init: true,
+				Init: false,
 				Port: manifest.ServicePortScheme{Port: 1000, Scheme: "http"},
 				Ports: []manifest.ServicePortProtocol{
 					manifest.ServicePortProtocol{Port: 2000, Protocol: "tcp"},
@@ -93,6 +93,7 @@ func TestManifestLoad(t *testing.T) {
 					Timeout:  4,
 				},
 				Image: "ubuntu:16.04",
+				Init: true,
 				Environment: []string{
 					"SECRET",
 				},
@@ -119,6 +120,7 @@ func TestManifestLoad(t *testing.T) {
 					Path:     "/",
 					Timeout:  3,
 				},
+				Init: true,
 				Port: manifest.ServicePortScheme{Port: 3000, Scheme: "https"},
 				Scale: manifest.ServiceScale{
 					Count:  manifest.ServiceScaleCount{Min: 0, Max: 0},
@@ -142,6 +144,7 @@ func TestManifestLoad(t *testing.T) {
 					Path:     "/",
 					Timeout:  4,
 				},
+				Init: true,
 				Scale: manifest.ServiceScale{
 					Count:  manifest.ServiceScaleCount{Min: 1, Max: 1},
 					Cpu:    256,
@@ -163,6 +166,7 @@ func TestManifestLoad(t *testing.T) {
 					Path:     "/",
 					Timeout:  4,
 				},
+				Init: true,
 				Scale: manifest.ServiceScale{
 					Count:  manifest.ServiceScaleCount{Min: 1, Max: 5},
 					Cpu:    256,
@@ -196,6 +200,7 @@ func TestManifestLoad(t *testing.T) {
 					Timeout:  4,
 				},
 				Image: "ubuntu:16.04",
+				Init: true,
 				Environment: []string{
 					"SECRET",
 				},
@@ -223,6 +228,7 @@ func TestManifestLoad(t *testing.T) {
 					Interval: 5,
 					Timeout:  4,
 				},
+				Init: true,
 				Ports: []manifest.ServicePortProtocol{
 					{Port: 5000, Protocol: "udp"},
 					{Port: 5001, Protocol: "tcp"},
@@ -372,6 +378,7 @@ func TestManifestLoadSimple(t *testing.T) {
 					Path:     "/",
 					Timeout:  4,
 				},
+				Init: true,
 				Scale: manifest.ServiceScale{
 					Count:  manifest.ServiceScaleCount{Min: 1, Max: 1},
 					Cpu:    256,

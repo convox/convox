@@ -29,7 +29,7 @@ services:
       - SECRET
     health:
       interval: 10
-    init: true
+    init: false
     resources:
       - database
     port: 1000
