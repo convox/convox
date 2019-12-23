@@ -554,7 +554,7 @@ func TestAppsParamsSetError(t *testing.T) {
 }
 
 func TestAppsParamsSetClassic(t *testing.T) {
-	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("SystemGet").Return(fxSystemClassic(), nil)
 		i.On("AppParametersSet", "app1", map[string]string{"Foo": "bar", "Baz": "qux"}).Return(nil)
 		i.On("AppGet", "app1").Return(fxAppUpdating(), nil).Twice()
