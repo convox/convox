@@ -214,11 +214,13 @@ func ResourcesExport(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
+	c.Startf("Exporting resource data")
+
 	if _, err := io.Copy(w, r); err != nil {
 		return err
 	}
 
-	return nil
+	return c.OK()
 }
 
 func ResourcesImport(rack sdk.Interface, c *stdcli.Context) error {
@@ -235,7 +237,7 @@ func ResourcesImport(rack sdk.Interface, c *stdcli.Context) error {
 		r = c.Reader()
 	}
 
-	c.Startf("Importing data")
+	c.Startf("Importing resource data")
 
 	if err := rack.ResourceImport(app(c), c.Arg(0), r); err != nil {
 		return err
