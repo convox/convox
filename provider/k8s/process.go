@@ -564,7 +564,7 @@ func processFromPod(pd ac.Pod) (*structs.Process, error) {
 		Command:  shellquote.Join(cs[0].Args...),
 		Host:     "",
 		Image:    cs[0].Image,
-		Instance: "",
+		Instance: pd.Spec.NodeName,
 		Name:     pd.ObjectMeta.Labels["service"],
 		Release:  pd.ObjectMeta.Labels["release"],
 		Started:  pd.CreationTimestamp.Time,
