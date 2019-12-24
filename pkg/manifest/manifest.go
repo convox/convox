@@ -111,6 +111,10 @@ func (m *Manifest) ApplyDefaults() error {
 			m.Services[i].Health.Timeout = m.Services[i].Health.Interval - 1
 		}
 
+		if !m.AttributeExists(fmt.Sprintf("services.%s.init", s.Name)) {
+			m.Services[i].Init = true
+		}
+
 		if s.Port.Port > 0 && s.Port.Scheme == "" {
 			m.Services[i].Port.Scheme = "http"
 		}
