@@ -120,7 +120,7 @@ func TestRackParamsError(t *testing.T) {
 }
 
 func TestRackParamsSet(t *testing.T) {
-	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("SystemGet").Return(fxSystem(), nil).Once()
 		opts := structs.SystemUpdateOptions{
 			Parameters: map[string]string{
