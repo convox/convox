@@ -97,7 +97,7 @@ func TestScaleUpdateError(t *testing.T) {
 }
 
 func TestScaleUpdateClassic(t *testing.T) {
-	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("SystemGet").Return(fxSystemClassic(), nil)
 		i.On("FormationUpdate", "app1", "web", structs.ServiceUpdateOptions{Count: options.Int(3), Cpu: options.Int(5), Memory: options.Int(10)}).Return(nil)
 		i.On("AppGet", "app1").Return(fxAppUpdating(), nil).Twice()
