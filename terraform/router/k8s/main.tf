@@ -162,11 +162,6 @@ resource "kubernetes_deployment" "router" {
             value = "router.${var.namespace}.svc.cluster.local"
           }
 
-          env {
-            name  = "AUTOCERT"
-            value = "true"
-          }
-
           dynamic "env" {
             for_each = var.env
 
@@ -243,7 +238,7 @@ resource "kubernetes_service" "resolver" {
     type = "ClusterIP"
 
     port {
-      name        = "dns-udp"
+      name        = "dns"
       port        = 53
       protocol    = "UDP"
       target_port = 5454

@@ -26,6 +26,10 @@ variable "release" {
   type = string
 }
 
+variable "replicas" {
+  default = 2
+}
+
 variable "socket" {
   default = "/var/run/docker.sock"
 }

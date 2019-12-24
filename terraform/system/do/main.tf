@@ -43,13 +43,12 @@ module "cluster" {
 }
 
 module "fluentd" {
-  source = "../../fluentd/do"
+  source = "../../fluentd/elasticsearch"
 
   providers = {
     kubernetes = kubernetes
   }
 
-  cluster       = module.cluster.name
   elasticsearch = module.rack.elasticsearch
   namespace     = "kube-system"
   name          = var.name

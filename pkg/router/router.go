@@ -68,7 +68,7 @@ func New() (*Router, error) {
 
 	switch os.Getenv("CACHE") {
 	case "dynamodb":
-		c, err := NewCacheDynamo(os.Getenv("ROUTER_CACHE"))
+		c, err := NewCacheDynamo(os.Getenv("DYNAMODB_CACHE"))
 		if err != nil {
 			return nil, err
 		}
@@ -87,7 +87,7 @@ func New() (*Router, error) {
 
 	switch os.Getenv("STORAGE") {
 	case "dynamodb":
-		s, err := NewStorageDynamo(os.Getenv("ROUTER_HOSTS"), os.Getenv("ROUTER_TARGETS"))
+		s, err := NewStorageDynamo(os.Getenv("DYNAMODB_HOSTS"), os.Getenv("DYNAMODB_TARGETS"))
 		if err != nil {
 			return nil, err
 		}
