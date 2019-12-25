@@ -36,6 +36,22 @@ Set up `*.convox` to be resolved by the local Rack's DNS server
 
 - TBD
 
+## CA Trust (optional)
+
+To remove browser warnings about untrusted certificates for local applications
+you can trust the Rack's CA certificate.
+
+This certificate is generated on your local machine and is unique to your Rack.
+
+### MacOS
+
+- `kubectl get secret/ca -n convox-system -o jsonpath="{.data.tls\.crt}" | base64 -d > /tmp/ca`
+- `sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain /tmp/ca`
+
+### Linux
+
+- TBD
+
 ## Convox CLI Setup
 
 - [Install the Convox CLI](../../docs/guides/installation/cli.md)
