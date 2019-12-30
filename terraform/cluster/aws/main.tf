@@ -14,6 +14,10 @@ provider "null" {
   version = "~> 2.1"
 }
 
+locals {
+  oidc_sub = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
+}
+
 resource "null_resource" "delay_cluster" {
   provisioner "local-exec" {
     command = "sleep 15"
@@ -75,6 +79,7 @@ resource "aws_eks_node_group" "cluster" {
 
   lifecycle {
     create_before_destroy = true
+    ignore_changes        = [scaling_config[0].desired_size]
   }
 }
 

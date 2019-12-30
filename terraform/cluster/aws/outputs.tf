@@ -20,5 +20,5 @@ output "oidc_arn" {
 
 output "oidc_sub" {
   depends_on = [aws_eks_node_group.cluster]
-  value      = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
+  value      = local.oidc_sub
 }
