@@ -9,9 +9,10 @@ provider "kubernetes" {
 resource "kubernetes_namespace" "system" {
   metadata {
     labels = {
+      app    = "system"
       rack   = var.name
       system = "convox"
-      app    = "system"
+      type   = "rack"
     }
 
     name = "${var.name}-system"

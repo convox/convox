@@ -71,7 +71,7 @@ func currentEndpoint(c *stdcli.Context, rack_ string) (string, error) {
 	}
 
 	if strings.HasPrefix(rack_, "local/") {
-		return fmt.Sprintf("https://rack.%s", strings.SplitN(rack_, "/", 2)[1]), nil
+		return fmt.Sprintf("https://api.%s", strings.SplitN(rack_, "/", 2)[1]), nil
 	}
 
 	host, err := currentHost(c)
@@ -195,10 +195,12 @@ func localRacks(c *stdcli.Context) ([]rack, error) {
 
 		for _, nsr := range nsrs {
 			if strings.HasPrefix(nsr, "namespace/") {
-				racks = append(racks, rack{
-					Name:   fmt.Sprintf("local/%s", strings.TrimPrefix(nsr, "namespace/")),
-					Status: "running",
-				})
+				if name, err := c.Execute("kubectl", "get", nsr, "-o", "jsonpath={.metadata.labels.rack}"); err == nil {
+					racks = append(racks, rack{
+						Name:   fmt.Sprintf("local/%s", strings.TrimSpace(string(name))),
+						Status: "running",
+					})
+				}
 			}
 		}
 	}

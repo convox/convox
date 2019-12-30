@@ -127,7 +127,20 @@ func (b *BackendKubernetes) IdleGet(target string) (bool, error) {
 	fmt.Printf("ns=backend.k8s at=idle.get target=%q\n", target)
 
 	if service, namespace, ok := parseTarget(target); ok {
-		return b.idled[fmt.Sprintf("%s/%s", namespace, service)], nil
+		key := fmt.Sprintf("%s/%s", namespace, service)
+
+		if idle, ok := b.idled[key]; ok {
+			return idle, nil
+		}
+
+		d, err := b.cluster.ExtensionsV1beta1().Deployments(namespace).Get(service, am.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+
+		b.idled[key] = (d.Spec.Replicas == nil || int(*d.Spec.Replicas) == 0)
+
+		return b.idled[key], nil
 	}
 
 	return true, nil
