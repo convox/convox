@@ -60,6 +60,20 @@ func testProvider(t *testing.T, fn func(*k8s.Provider)) {
 	a := &atom.MockInterface{}
 	c := fake.NewSimpleClientset()
 
+	_, err := c.CoreV1().Namespaces().Create(&ac.Namespace{
+		ObjectMeta: am.ObjectMeta{
+			Name: "ns1",
+			Labels: map[string]string{
+				"app":    "system",
+				"rack":   "rack1",
+				"system": "convox",
+				"type":   "rack",
+			},
+			UID: "uid1",
+		},
+	})
+	require.NoError(t, err)
+
 	p := &k8s.Provider{
 		Atom:      a,
 		Cluster:   c,
@@ -70,7 +84,7 @@ func testProvider(t *testing.T, fn func(*k8s.Provider)) {
 		Provider:  "test",
 	}
 
-	err := p.Initialize(structs.ProviderOptions{})
+	err = p.Initialize(structs.ProviderOptions{})
 	require.NoError(t, err)
 
 	_, err = c.CoreV1().Namespaces().Create(&ac.Namespace{ObjectMeta: am.ObjectMeta{Name: "test"}})
