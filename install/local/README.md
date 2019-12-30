@@ -51,7 +51,7 @@ This certificate is generated on your local machine and is unique to your Rack.
 ### MacOS
 
 - `kubectl get secret/ca -n convox-system -o jsonpath="{.data.tls\.crt}" | base64 -d > /tmp/ca`
-- `sudo security add-trusted-cert -d -r trustRoot -k ~/Library/Keychains/login.keychain-db /tmp/ca`
+- `sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain /tmp/ca`
 
 ### Ubuntu
 
