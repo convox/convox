@@ -281,10 +281,16 @@ func (p *Provider) releaseMarshal(r *structs.Release) *ca.Release {
 }
 
 func (p *Provider) releaseTemplateApp(a *structs.App, opts structs.ReleasePromoteOptions) ([]byte, error) {
+	owner, err := p.Cluster.CoreV1().Namespaces().Get(p.Namespace, am.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
 	params := map[string]interface{}{
 		"Locked":     a.Locked,
 		"Name":       a.Name,
 		"Namespace":  p.AppNamespace(a.Name),
+		"Owner":      owner,
 		"Parameters": a.Parameters,
 	}
 

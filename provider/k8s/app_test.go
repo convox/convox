@@ -174,7 +174,6 @@ func TestAppList(t *testing.T) {
 		require.NoError(t, appCreate(kk, "rack1", "app2"))
 
 		as, err := p.AppList()
-		fmt.Printf("as: %+v\n", as)
 		require.NoError(t, err)
 		require.Equal(t, 2, len(as))
 
@@ -269,6 +268,7 @@ func appCreate(c kubernetes.Interface, rack, name string) error {
 		ObjectMeta: am.ObjectMeta{
 			Name: fmt.Sprintf("%s-%s", rack, name),
 			Labels: map[string]string{
+				"app":    name,
 				"name":   name,
 				"rack":   rack,
 				"system": "convox",

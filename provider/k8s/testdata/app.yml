@@ -13,3 +13,10 @@ metadata:
     system: convox
     type: app
   name: rack1-app1
+  ownerReferences:
+  - apiVersion: v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: Namespace
+    name: ns1
+    uid: uid1
