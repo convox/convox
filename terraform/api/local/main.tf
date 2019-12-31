@@ -20,11 +20,12 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
-  domain    = var.domain
-  name      = var.name
-  namespace = var.namespace
-  release   = var.release
-  replicas  = 1
+  authentication = false
+  domain         = var.domain
+  name           = var.name
+  namespace      = var.namespace
+  release        = var.release
+  replicas       = 1
 
   annotations = {}
 

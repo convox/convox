@@ -2,6 +2,10 @@ variable "annotations" {
   default = {}
 }
 
+variable "authentication" {
+  default = true
+}
+
 variable "domain" {
   type = string
 }

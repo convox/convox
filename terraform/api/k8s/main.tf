@@ -125,7 +125,7 @@ resource "kubernetes_deployment" "api" {
 
           env {
             name  = "PASSWORD"
-            value = random_string.password.result
+            value = var.authentication ? random_string.password.result : ""
           }
 
           env {

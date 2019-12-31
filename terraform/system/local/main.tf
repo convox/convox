@@ -10,6 +10,10 @@ provider "kubernetes" {
   version = "~> 1.10"
 }
 
+locals {
+  platform_filename = "/tmp/convox.platform"
+}
+
 data "http" "releases" {
   url = "https://api.github.com/repos/convox/convox/releases"
 }
@@ -19,6 +23,18 @@ locals {
   release = coalesce(var.release, local.current)
 }
 
+resource "null_resource" "platform" {
+  provisioner "local-exec" {
+    command = "uname -s > ${local.platform_filename}"
+  }
+}
+
+data "local_file" "platform" {
+  depends_on = [null_resource.platform]
+
+  filename = local.platform_filename
+}
+
 module "rack" {
   source = "../../rack/local"
 
@@ -26,6 +42,7 @@ module "rack" {
     kubernetes = kubernetes
   }
 
-  name    = var.name
-  release = local.release
+  name     = var.name
+  platform = data.local_file.platform.content
+  release  = local.release
 }
