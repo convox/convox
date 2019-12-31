@@ -1,7 +1,3 @@
-variable "cluster" {
-  type = string
-}
-
 variable "elasticsearch" {
   type = string
 }

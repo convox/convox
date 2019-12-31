@@ -32,6 +32,7 @@ module "k8s" {
   release   = var.release
 
   env = {
+    AUTOCERT     = "true"
     CACHE        = "redis"
     REDIS_ADDR   = "${digitalocean_database_cluster.cache.private_host}:${digitalocean_database_cluster.cache.port}"
     REDIS_AUTH   = digitalocean_database_cluster.cache.password

@@ -38,6 +38,7 @@ func TestRacks(t *testing.T) {
 
 		me := &mockstdcli.Executor{}
 		me.On("Execute", "kubectl", "get", "ns", "--selector=system=convox,type=rack", "--output=name").Return([]byte("namespace/dev\n"), nil)
+		me.On("Execute", "kubectl", "get", "namespace/dev", "-o", "jsonpath={.metadata.labels.rack}").Return([]byte("dev\n"), nil)
 		e.Executor = me
 
 		res, err := testExecute(e, "racks", nil)

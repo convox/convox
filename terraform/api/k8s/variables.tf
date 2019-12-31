@@ -2,6 +2,10 @@ variable "annotations" {
   default = {}
 }
 
+variable "authentication" {
+  default = true
+}
+
 variable "domain" {
   type = string
 }
@@ -24,6 +28,10 @@ variable "namespace" {
 
 variable "release" {
   type = string
+}
+
+variable "replicas" {
+  default = 2
 }
 
 variable "socket" {

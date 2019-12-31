@@ -10,6 +10,7 @@ import (
 	"github.com/convox/convox/provider/do"
 	"github.com/convox/convox/provider/gcp"
 	"github.com/convox/convox/provider/k8s"
+	"github.com/convox/convox/provider/local"
 )
 
 var Mock = &structs.MockProvider{}
@@ -28,8 +29,8 @@ func FromEnv() (structs.Provider, error) {
 		return gcp.FromEnv()
 	case "k8s":
 		return k8s.FromEnv()
-	// case "local":
-	//   return local.FromEnv()
+	case "local":
+		return local.FromEnv()
 	case "test":
 		return Mock, nil
 	case "":

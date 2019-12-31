@@ -32,6 +32,7 @@ module "k8s" {
   release   = var.release
 
   env = {
+    AUTOCERT   = "true"
     CACHE      = "redis"
     REDIS_ADDR = "${google_redis_instance.cache.host}:${google_redis_instance.cache.port}"
   }

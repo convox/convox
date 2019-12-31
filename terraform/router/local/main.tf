@@ -2,10 +2,6 @@ terraform {
   required_version = ">= 0.12.0"
 }
 
-provider "aws" {
-  version = "~> 2.22"
-}
-
 provider "http" {
   version = "~> 1.1"
 }
@@ -14,14 +10,15 @@ provider "kubernetes" {
   version = "~> 1.10"
 }
 
+provider "tls" {
+  version = "~> 2.1"
+}
+
 locals {
   tags = {
     System = "convox"
     Rack   = var.name
   }
-}
-
-data "aws_region" "current" {
 }
 
 module "k8s" {
@@ -34,19 +31,35 @@ module "k8s" {
   namespace = var.namespace
   release   = var.release
 
-  annotations = {
-    "eks.amazonaws.com/role-arn" : aws_iam_role.router.arn,
-    "iam.amazonaws.com/role" : aws_iam_role.router.arn,
+  env = {
+    CACHE = "memory"
+  }
+}
+
+resource "kubernetes_service" "resolver-external" {
+  metadata {
+    namespace = var.namespace
+    name      = "resolver-external"
   }
 
-  env = {
-    AUTOCERT         = "true"
-    AWS_REGION       = data.aws_region.current.name
-    CACHE            = "dynamodb"
-    DYNAMODB_CACHE   = aws_dynamodb_table.cache.name
-    DYNAMODB_HOSTS   = aws_dynamodb_table.hosts.name
-    DYNAMODB_TARGETS = aws_dynamodb_table.targets.name
-    STORAGE          = "dynamodb"
+  spec {
+    type = var.platform == "Linux" ? "ClusterIP" : "LoadBalancer"
+
+    port {
+      name        = "dns"
+      port        = 53
+      protocol    = "UDP"
+      target_port = 5453
+    }
+
+    selector = {
+      system  = "convox"
+      service = "router"
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [metadata[0].annotations]
   }
 }
 
@@ -57,7 +70,7 @@ resource "kubernetes_service" "router" {
   }
 
   spec {
-    type = "LoadBalancer"
+    type = var.platform == "Linux" ? "ClusterIP" : "LoadBalancer"
 
     port {
       name        = "http"
@@ -78,8 +91,8 @@ resource "kubernetes_service" "router" {
       service = "router"
     }
   }
-}
 
-data "http" "alias" {
-  url = "https://alias.convox.com/alias/${kubernetes_service.router.load_balancer_ingress.0.hostname}"
+  lifecycle {
+    ignore_changes = [metadata[0].annotations]
+  }
 }

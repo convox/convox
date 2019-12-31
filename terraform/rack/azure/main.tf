@@ -37,8 +37,7 @@ module "api" {
   release        = var.release
   resource_group = var.resource_group
   router         = module.router.endpoint
-  # secret     = random_string.secret.result
-  workspace = var.workspace
+  workspace      = var.workspace
 }
 
 module "router" {

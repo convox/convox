@@ -76,6 +76,8 @@ func TestVersionNoSystemMultipleLocal(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		me := &mockstdcli.Executor{}
 		me.On("Execute", "kubectl", "get", "ns", "--selector=system=convox,type=rack", "--output=name").Return([]byte("namespace/dev\nnamespace/dev2\n"), nil)
+		me.On("Execute", "kubectl", "get", "namespace/dev", "-o", "jsonpath={.metadata.labels.rack}").Return([]byte("dev\n"), nil)
+		me.On("Execute", "kubectl", "get", "namespace/dev2", "-o", "jsonpath={.metadata.labels.rack}").Return([]byte("dev2\n"), nil)
 		e.Executor = me
 
 		res, err := testExecute(e, "version", nil)
@@ -93,6 +95,7 @@ func TestVersionNoSystemSingleLocal(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		me := &mockstdcli.Executor{}
 		me.On("Execute", "kubectl", "get", "ns", "--selector=system=convox,type=rack", "--output=name").Return([]byte("namespace/dev\n"), nil)
+		me.On("Execute", "kubectl", "get", "namespace/dev", "-o", "jsonpath={.metadata.labels.rack}").Return([]byte("dev\n"), nil)
 		e.Executor = me
 
 		i.On("SystemGet").Return(fxSystemLocal(), nil)

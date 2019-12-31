@@ -64,7 +64,7 @@ resource "kubernetes_deployment" "api" {
   spec {
     min_ready_seconds      = 3
     revision_history_limit = 0
-    replicas               = 2
+    replicas               = var.replicas
 
     selector {
       match_labels = {
@@ -125,7 +125,7 @@ resource "kubernetes_deployment" "api" {
 
           env {
             name  = "PASSWORD"
-            value = random_string.password.result
+            value = var.authentication ? random_string.password.result : ""
           }
 
           env {
