@@ -43,6 +43,6 @@ module "rack" {
   }
 
   name     = var.name
-  platform = data.local_file.platform.content
+  platform = trimspace(data.local_file.platform.content)
   release  = local.release
 }
