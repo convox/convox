@@ -18,6 +18,7 @@
 - `microk8s.enable dns storage`
 - `mkdir -p ~/.kube`
 - `microk8s.config > ~/.kube/config`
+- `sudo snap restart microk8s`
 
 ## Install Convox
 
