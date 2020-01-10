@@ -33,8 +33,4 @@ module "k8s" {
     "cloud.google.com/service-account" : google_service_account.fluentd.email,
     "iam.gke.io/gcp-service-account" : google_service_account.fluentd.email,
   }
-
-  # env = {
-  #   AWS_REGION = data.aws_region.current.name
-  # }
 }

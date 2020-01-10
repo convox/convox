@@ -9,7 +9,7 @@ resource "kubernetes_deployment" "registry" {
     name      = "registry"
 
     labels = {
-      serivce = "registry"
+      service = "registry"
     }
   }
 
@@ -112,6 +112,7 @@ resource "kubernetes_service" "registry" {
     }
   }
 }
+
 resource "kubernetes_ingress" "registry" {
   metadata {
     namespace = module.k8s.namespace

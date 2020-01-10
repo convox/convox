@@ -22,7 +22,7 @@ resource "kubernetes_deployment" "registry" {
     name      = "registry"
 
     labels = {
-      serivce = "registry"
+      service = "registry"
     }
   }
 
