@@ -36,12 +36,21 @@ module "k8s" {
   release   = var.release
 
   env = {
-    AUTOCERT     = "true"
-    CACHE        = "redis"
-    REDIS_ADDR   = "${azurerm_redis_cache.cache.hostname}:${azurerm_redis_cache.cache.ssl_port}"
-    REDIS_AUTH   = azurerm_redis_cache.cache.primary_access_key
-    REDIS_SECURE = "true"
+    AUTOCERT   = "true"
+    CACHE      = "redis"
+    REDIS_ADDR = module.redis.addr
   }
+}
+
+module "redis" {
+  source = "../../redis/k8s"
+
+  providers = {
+    kubernetes = kubernetes
+  }
+
+  name      = "router"
+  namespace = var.namespace
 }
 
 resource "kubernetes_service" "router" {
