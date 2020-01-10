@@ -35,6 +35,7 @@ module "api" {
   namespace      = module.k8s.namespace
   region         = var.region
   release        = var.release
+  resolver       = module.router.resolver
   resource_group = var.resource_group
   router         = module.router.endpoint
   workspace      = var.workspace

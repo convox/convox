@@ -15,7 +15,7 @@ variable "release" {
 
 variable "region" {
   description = "region in which to install the rack"
-  default     = "nyc3"
+  default     = "eastus"
 }
 
 provider "azurerm" {
