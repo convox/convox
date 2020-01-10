@@ -31,8 +31,8 @@ resource "random_string" "suffix" {
 
 resource "azurerm_log_analytics_workspace" "rack" {
   name                = "${var.name}-${random_string.suffix.result}"
-  location            = "${data.azurerm_resource_group.system.location}"
-  resource_group_name = "${data.azurerm_resource_group.system.name}"
+  location            = data.azurerm_resource_group.system.location
+  resource_group_name = data.azurerm_resource_group.system.name
   sku                 = "PerGB2018"
   retention_in_days   = 30
 }
