@@ -32,12 +32,21 @@ module "k8s" {
   release   = var.release
 
   env = {
-    AUTOCERT     = "true"
-    CACHE        = "redis"
-    REDIS_ADDR   = "${digitalocean_database_cluster.cache.private_host}:${digitalocean_database_cluster.cache.port}"
-    REDIS_AUTH   = digitalocean_database_cluster.cache.password
-    REDIS_SECURE = "true"
+    AUTOCERT   = "true"
+    CACHE      = "redis"
+    REDIS_ADDR = module.redis.addr
   }
+}
+
+module "redis" {
+  source = "../../redis/k8s"
+
+  providers = {
+    kubernetes = kubernetes
+  }
+
+  name      = "router"
+  namespace = var.namespace
 }
 
 resource "kubernetes_service" "router" {

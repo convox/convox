@@ -34,8 +34,19 @@ module "k8s" {
   env = {
     AUTOCERT   = "true"
     CACHE      = "redis"
-    REDIS_ADDR = "${google_redis_instance.cache.host}:${google_redis_instance.cache.port}"
+    REDIS_ADDR = module.redis.addr
   }
+}
+
+module "redis" {
+  source = "../../redis/k8s"
+
+  providers = {
+    kubernetes = kubernetes
+  }
+
+  name      = "router"
+  namespace = var.namespace
 }
 
 resource "kubernetes_service" "router" {
