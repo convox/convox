@@ -17,6 +17,10 @@ resource "kubernetes_namespace" "system" {
 
     name = "${var.name}-system"
   }
+
+  timeouts {
+    delete = "30m"
+  }
 }
 
 resource "kubernetes_config_map" "rack" {
