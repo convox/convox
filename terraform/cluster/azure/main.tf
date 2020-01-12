@@ -49,8 +49,9 @@ resource "azurerm_kubernetes_cluster" "rack" {
   default_node_pool {
     enable_auto_scaling = true
     name                = "default"
-    min_count           = 1
+    min_count           = 2
     max_count           = 100
+    node_count          = 3
     vm_size             = var.node_type
     os_disk_size_gb     = 30
   }
@@ -65,6 +66,10 @@ resource "azurerm_kubernetes_cluster" "rack" {
   service_principal {
     client_id     = azuread_service_principal.cluster.application_id
     client_secret = azuread_service_principal_password.cluster.value
+  }
+
+  lifecycle {
+    ignore_changes = [default_node_pool[0].node_count]
   }
 }
 
