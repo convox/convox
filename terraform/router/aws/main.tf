@@ -39,7 +39,7 @@ module "k8s" {
     "iam.amazonaws.com/role" : aws_iam_role.router.arn,
   }
 
-  env = {
+  env = merge(var.env, {
     AUTOCERT         = "true"
     AWS_REGION       = data.aws_region.current.name
     CACHE            = "dynamodb"
@@ -47,7 +47,7 @@ module "k8s" {
     DYNAMODB_HOSTS   = aws_dynamodb_table.hosts.name
     DYNAMODB_TARGETS = aws_dynamodb_table.targets.name
     STORAGE          = "dynamodb"
-  }
+  })
 }
 
 resource "kubernetes_service" "router" {

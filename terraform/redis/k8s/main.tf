@@ -10,7 +10,7 @@ locals {
 resource "kubernetes_persistent_volume_claim" "data" {
   metadata {
     namespace = var.namespace
-    name      = "redis-${var.name}-data"
+    name      = "${var.name}-data"
 
     labels = {
       system = "convox"
@@ -30,7 +30,7 @@ resource "kubernetes_persistent_volume_claim" "data" {
 resource "kubernetes_deployment" "redis" {
   metadata {
     namespace = var.namespace
-    name      = "redis-${var.name}"
+    name      = var.name
 
     labels = {
       system = "convox"
@@ -43,20 +43,22 @@ resource "kubernetes_deployment" "redis" {
 
     selector {
       match_labels = {
-        name   = var.name
-        scope  = "system"
-        system = "convox"
-        type   = "redis"
+        name    = var.name
+        scope   = "system"
+        service = var.name
+        system  = "convox"
+        type    = "redis"
       }
     }
 
     template {
       metadata {
         labels = {
-          name   = var.name
-          scope  = "system"
-          system = "convox"
-          type   = "redis"
+          name    = var.name
+          scope   = "system"
+          service = var.name
+          system  = "convox"
+          type    = "redis"
         }
       }
 
@@ -92,7 +94,7 @@ resource "kubernetes_deployment" "redis" {
 resource "kubernetes_service" "redis" {
   metadata {
     namespace = var.namespace
-    name      = "redis-${var.name}"
+    name      = var.name
 
     labels = {
       name   = var.name

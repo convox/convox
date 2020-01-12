@@ -1,3 +1,7 @@
+variable "env" {
+  default = {}
+}
+
 variable "name" {
   type = string
 }
@@ -11,9 +15,5 @@ variable "region" {
 }
 
 variable "release" {
-  type = string
-}
-
-variable "resource_group" {
   type = string
 }
