@@ -40,6 +40,17 @@ module "api" {
   router        = module.router.endpoint
 }
 
+module "redis" {
+  source = "../../redis/k8s"
+
+  providers = {
+    kubernetes = kubernetes
+  }
+
+  name      = "redis"
+  namespace = module.k8s.namespace
+}
+
 module "router" {
   source = "../../router/gcp"
 
@@ -52,4 +63,9 @@ module "router" {
   namespace = module.k8s.namespace
   network   = var.network
   release   = var.release
+
+  env = {
+    CACHE      = "redis"
+    REDIS_ADDR = module.redis.addr
+  }
 }

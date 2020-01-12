@@ -41,6 +41,17 @@ module "api" {
   workspace      = var.workspace
 }
 
+module "redis" {
+  source = "../../redis/k8s"
+
+  providers = {
+    kubernetes = kubernetes
+  }
+
+  name      = "redis"
+  namespace = module.k8s.namespace
+}
+
 module "router" {
   source = "../../router/azure"
 
@@ -49,9 +60,13 @@ module "router" {
     kubernetes = kubernetes
   }
 
-  name           = var.name
-  namespace      = module.k8s.namespace
-  region         = var.region
-  release        = var.release
-  resource_group = var.resource_group
+  name      = var.name
+  namespace = module.k8s.namespace
+  region    = var.region
+  release   = var.release
+
+  env = {
+    CACHE      = "redis"
+    REDIS_ADDR = module.redis.addr
+  }
 }

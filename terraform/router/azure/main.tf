@@ -21,10 +21,6 @@ locals {
   }
 }
 
-data "azurerm_resource_group" "rack" {
-  name = var.resource_group
-}
-
 module "k8s" {
   source = "../k8s"
 
@@ -35,22 +31,9 @@ module "k8s" {
   namespace = var.namespace
   release   = var.release
 
-  env = {
-    AUTOCERT   = "true"
-    CACHE      = "redis"
-    REDIS_ADDR = module.redis.addr
-  }
-}
-
-module "redis" {
-  source = "../../redis/k8s"
-
-  providers = {
-    kubernetes = kubernetes
-  }
-
-  name      = "router"
-  namespace = var.namespace
+  env = merge(var.env, {
+    AUTOCERT = "true"
+  })
 }
 
 resource "kubernetes_service" "router" {
