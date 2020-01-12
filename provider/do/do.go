@@ -25,8 +25,8 @@ type Provider struct {
 	SpacesEndpoint string
 	SpacesSecret   string
 
-	Elastic *elasticsearch.Client
-	S3      s3iface.S3API
+	elastic *elasticsearch.Client
+	s3      s3iface.S3API
 }
 
 func FromEnv() (*Provider, error) {
@@ -75,7 +75,7 @@ func (p *Provider) initializeDOServices() error {
 		return err
 	}
 
-	p.Elastic = es
+	p.elastic = es
 
 	s, err := session.NewSession(&aws.Config{
 		Region:      aws.String(p.Region),
@@ -85,7 +85,7 @@ func (p *Provider) initializeDOServices() error {
 		return err
 	}
 
-	p.S3 = s3.New(s, &aws.Config{
+	p.s3 = s3.New(s, &aws.Config{
 		Endpoint: aws.String(p.SpacesEndpoint),
 	})
 

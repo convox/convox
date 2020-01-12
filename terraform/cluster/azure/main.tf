@@ -38,6 +38,8 @@ resource "azurerm_log_analytics_workspace" "rack" {
 }
 
 resource "azurerm_kubernetes_cluster" "rack" {
+  depends_on = [azurerm_role_assignment.cluster-contributor]
+
   name                = var.name
   location            = data.azurerm_resource_group.system.location
   resource_group_name = data.azurerm_resource_group.system.name
@@ -45,10 +47,12 @@ resource "azurerm_kubernetes_cluster" "rack" {
   kubernetes_version  = data.azurerm_kubernetes_service_versions.available.latest_version
 
   default_node_pool {
-    name            = "default"
-    node_count      = 3
-    vm_size         = var.node_type
-    os_disk_size_gb = 30
+    enable_auto_scaling = true
+    name                = "default"
+    min_count           = 1
+    max_count           = 100
+    vm_size             = var.node_type
+    os_disk_size_gb     = 30
   }
 
   addon_profile {

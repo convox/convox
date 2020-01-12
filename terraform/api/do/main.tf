@@ -17,6 +17,28 @@ locals {
   }
 }
 
+module "elasticsearch" {
+  source = "../../elasticsearch/k8s"
+
+  providers = {
+    kubernetes = kubernetes
+  }
+
+  namespace = var.namespace
+}
+
+module "fluentd" {
+  source = "../../fluentd/elasticsearch"
+
+  providers = {
+    kubernetes = kubernetes
+  }
+
+  elasticsearch = module.elasticsearch.host
+  namespace     = var.namespace
+  name          = var.name
+}
+
 module "k8s" {
   source = "../k8s"
 
@@ -33,7 +55,7 @@ module "k8s" {
 
   env = {
     BUCKET            = digitalocean_spaces_bucket.storage.name
-    ELASTICSEARCH_URL = var.elasticsearch
+    ELASTICSEARCH_URL = module.elasticsearch.url
     PROVIDER          = "do"
     REGION            = var.region
     REGISTRY          = "registry.${var.domain}"

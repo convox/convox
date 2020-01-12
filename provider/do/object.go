@@ -24,7 +24,7 @@ func (p *Provider) ObjectDelete(app, key string) error {
 		return fmt.Errorf("object not found: %s", key)
 	}
 
-	_, err = p.S3.DeleteObject(&s3.DeleteObjectInput{
+	_, err = p.s3.DeleteObject(&s3.DeleteObjectInput{
 		Bucket: aws.String(p.Bucket),
 		Key:    aws.String(p.objectKey(app, key)),
 	})
@@ -36,7 +36,7 @@ func (p *Provider) ObjectDelete(app, key string) error {
 }
 
 func (p *Provider) ObjectExists(app, key string) (bool, error) {
-	_, err := p.S3.HeadObject(&s3.HeadObjectInput{
+	_, err := p.s3.HeadObject(&s3.HeadObjectInput{
 		Bucket: aws.String(p.Bucket),
 		Key:    aws.String(p.objectKey(app, key)),
 	})
@@ -52,7 +52,7 @@ func (p *Provider) ObjectExists(app, key string) (bool, error) {
 
 // ObjectFetch fetches an Object
 func (p *Provider) ObjectFetch(app, key string) (io.ReadCloser, error) {
-	res, err := p.S3.GetObject(&s3.GetObjectInput{
+	res, err := p.s3.GetObject(&s3.GetObjectInput{
 		Bucket: aws.String(p.Bucket),
 		Key:    aws.String(p.objectKey(app, key)),
 	})
@@ -67,7 +67,7 @@ func (p *Provider) ObjectFetch(app, key string) (io.ReadCloser, error) {
 }
 
 func (p *Provider) ObjectList(app, prefix string) ([]string, error) {
-	res, err := p.S3.ListObjectsV2(&s3.ListObjectsV2Input{
+	res, err := p.s3.ListObjectsV2(&s3.ListObjectsV2Input{
 		Bucket:    aws.String(p.Bucket),
 		Delimiter: aws.String("/"),
 		Prefix:    aws.String(p.objectKey(app, prefix)),
@@ -95,7 +95,7 @@ func (p *Provider) ObjectStore(app, key string, r io.Reader, opts structs.Object
 		key = k
 	}
 
-	up := s3manager.NewUploaderWithClient(p.S3)
+	up := s3manager.NewUploaderWithClient(p.s3)
 
 	req := &s3manager.UploadInput{
 		Bucket: aws.String(p.Bucket),
@@ -137,7 +137,7 @@ func (p *Provider) objectKey(app, key string) string {
 //     return "", fmt.Errorf("url is not an object: %s", o.Url)
 //   }
 
-//   req, _ := p.S3.GetObjectRequest(&s3.GetObjectInput{
+//   req, _ := p.s3.GetObjectRequest(&s3.GetObjectInput{
 //     Bucket: aws.String(p.Bucket),
 //     Key:    aws.String(p.objectKey(ou.Hostname(), ou.Path)),
 //   })
