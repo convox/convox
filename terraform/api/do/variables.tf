@@ -6,10 +6,6 @@ variable "domain" {
   type = string
 }
 
-variable "elasticsearch" {
-  type = string
-}
-
 variable "name" {
   type = string
 }

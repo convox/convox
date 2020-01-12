@@ -30,27 +30,16 @@ module "api" {
     kubernetes   = kubernetes
   }
 
-  access_id     = var.access_id
-  elasticsearch = module.elasticsearch.url
-  domain        = module.router.endpoint
-  name          = var.name
-  namespace     = module.k8s.namespace
-  region        = var.region
-  release       = var.release
-  resolver      = module.router.resolver
-  router        = module.router.endpoint
-  secret        = random_string.secret.result
-  secret_key    = var.secret_key
-}
-
-module "elasticsearch" {
-  source = "../../elasticsearch/k8s"
-
-  providers = {
-    kubernetes = kubernetes
-  }
-
-  namespace = module.k8s.namespace
+  access_id  = var.access_id
+  domain     = module.router.endpoint
+  name       = var.name
+  namespace  = module.k8s.namespace
+  region     = var.region
+  release    = var.release
+  resolver   = module.router.resolver
+  router     = module.router.endpoint
+  secret     = random_string.secret.result
+  secret_key = var.secret_key
 }
 
 module "router" {

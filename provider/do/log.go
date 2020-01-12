@@ -45,7 +45,7 @@ func (p *Provider) Log(app, stream string, ts time.Time, message string) error {
 		return err
 	}
 
-	if _, err := p.Elastic.Index(index, bytes.NewReader(data)); err != nil {
+	if _, err := p.elastic.Index(index, bytes.NewReader(data)); err != nil {
 		return err
 	}
 
@@ -107,10 +107,10 @@ func (p *Provider) streamLogs(ctx context.Context, w io.WriteCloser, index strin
 				return
 			}
 
-			res, err := p.Elastic.Search(
-				p.Elastic.Search.WithIndex(index),
-				p.Elastic.Search.WithSize(5000),
-				p.Elastic.Search.WithBody(bytes.NewReader(data)),
+			res, err := p.elastic.Search(
+				p.elastic.Search.WithIndex(index),
+				p.elastic.Search.WithSize(5000),
+				p.elastic.Search.WithBody(bytes.NewReader(data)),
 			)
 			if err != nil {
 				fmt.Printf("err: %+v\n", err)

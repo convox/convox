@@ -137,6 +137,7 @@ func (c *Client) Apply(ns, name string, release string, template []byte, timeout
 
 	a.Spec.CurrentVersion = v.Name
 	a.Spec.ProgressDeadlineSeconds = timeout
+	a.Started = am.Now()
 	a.Status = "Pending"
 
 	if _, err := c.atom.AtomV1().Atoms(ns).Update(a); err != nil {

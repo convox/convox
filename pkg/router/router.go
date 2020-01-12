@@ -16,6 +16,7 @@ import (
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/miekg/dns"
+	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
 )
 
@@ -237,7 +238,13 @@ func (r *Router) generateCertificateAutocert(m *autocert.Manager) func(*tls.Clie
 			return common.CertificateSelfSigned("convox")
 		}
 
-		return m.GetCertificate(hello)
+		c, err := m.GetCertificate(hello)
+		if err != nil {
+			fmt.Printf("err: %+v\n", err)
+			return nil, err
+		}
+
+		return c, nil
 	}
 }
 
@@ -356,6 +363,7 @@ func (r *Router) setupHTTPAutocert() error {
 
 	ln, err := tls.Listen("tcp", fmt.Sprintf(":443"), &tls.Config{
 		GetCertificate: r.generateCertificateAutocert(m),
+		NextProtos:     []string{"h2", "http/1.1", acme.ALPNProto},
 	})
 	if err != nil {
 		return err
