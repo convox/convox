@@ -232,10 +232,10 @@ resource "kubernetes_ingress" "api" {
     namespace = var.namespace
     name      = "api"
 
-    annotations = {
+    annotations = merge({
       "convox.idles" : "false"
       "convox.ingress.service.api.5443.protocol" : "https"
-    }
+    }, var.annotations)
 
     labels = {
       system  = "convox"
