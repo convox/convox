@@ -1,7 +1,7 @@
 #!/bin/bash
 set -ex -o pipefail
 
-source $(dirname $0)/env.sh
+cd install/${PROVIDER}
 
-convox rack install ${PROVIDER} --name ${RACK_NAME} --version ${VERSION} ${ARGS}
-convox instances
+terraform init
+terraform apply -var name=${RACK_NAME} -var release=${VERSION} -auto-approve
