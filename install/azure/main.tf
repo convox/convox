@@ -5,7 +5,7 @@ variable "name" {
 
 variable "node_type" {
   description = "machine type of the cluster nodes"
-  default     = "Standard_D1_v2"
+  default     = "Standard_D2_v3"
 }
 
 variable "release" {
