@@ -1,6 +1,6 @@
 #!/bin/bash
 set -ex -o pipefail
 
-source $(dirname $0)/env.sh
+cd install/${PROVIDER}
 
-convox rack uninstall ${PROVIDER} ${RACK_NAME} --force
+terraform destroy -var name=${RACK_NAME} -auto-approve -lock=false
