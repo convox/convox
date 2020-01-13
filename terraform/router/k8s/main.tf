@@ -19,13 +19,13 @@ resource "kubernetes_cluster_role" "router" {
 
   rule {
     api_groups = ["extensions"]
-    resources  = ["ingresses"]
+    resources  = ["deployments", "ingresses"]
     verbs      = ["get", "list", "watch", ]
   }
 
   rule {
     api_groups = ["extensions"]
-    resources  = ["ingresses/status"]
+    resources  = ["deployments/scale", "ingresses/status"]
     verbs      = ["update"]
   }
 
