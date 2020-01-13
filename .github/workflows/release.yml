@@ -14,7 +14,7 @@ jobs:
     - name: changelog
       id: changelog
       run: |
-        changelog=$(git log --pretty="* %s" `git describe --abbrev=0 --tags \`git describe --abbrev=0 \`HEAD`...`git describe --abbrev=0`)
+        changelog=$(git log --pretty="* %s" ...$(git describe --abbrev=0 HEAD~))
         echo ${changelog}
         changelog="${changelog//'%'/'%25'}"
         changelog="${changelog//$'\n'/'%0A'}"
