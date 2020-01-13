@@ -14,6 +14,10 @@ provider "local" {
   version = "~> 1.3"
 }
 
+provider "null" {
+  version = "~> 2.1"
+}
+
 provider "random" {
   version = "~> 2.2"
 }
@@ -45,8 +49,17 @@ resource "digitalocean_kubernetes_cluster" "rack" {
   }
 }
 
+resource "null_resource" "delay_token" {
+  provisioner "local-exec" {
+    command = "sleep 30"
+  }
+  triggers = {
+    token = digitalocean_kubernetes_cluster.rack.kube_config[0].token
+  }
+}
+
 resource "local_file" "kubeconfig" {
-  depends_on = [digitalocean_kubernetes_cluster.rack]
+  depends_on = [digitalocean_kubernetes_cluster.rack, null_resource.delay_token]
 
   filename = pathexpand("~/.kube/config.do.${var.name}")
   content = templatefile("${path.module}/kubeconfig.tpl", {

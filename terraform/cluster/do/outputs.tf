@@ -14,6 +14,6 @@ output "name" {
 }
 
 output "token" {
-  depends_on = [digitalocean_kubernetes_cluster.rack]
+  depends_on = [digitalocean_kubernetes_cluster.rack, null_resource.delay_token]
   value      = digitalocean_kubernetes_cluster.rack.kube_config[0].token
 }
