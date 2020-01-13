@@ -1,4 +1,4 @@
-.PHONY: all build clean clean-package compress dev generate generate-k8s generate-provider mocks package release test tools
+.PHONY: all build clean clean-package compress dev docs generate generate-k8s generate-provider mocks package release test tools
 
 commands = api atom build router
 
@@ -27,6 +27,10 @@ dev:
 	kubectl rollout status deployment/api -n $(RACK)-system
 	kubectl rollout status deployment/atom -n $(RACK)-system
 	kubectl rollout status deployment/router -n $(RACK)-system
+
+docs:
+	test -n "$(VERSION)" # VERSION
+	aws s3 sync docs/ s3://convox-docs/$(VERSION) --delete
 
 generate: generate-provider generate-k8s
 
