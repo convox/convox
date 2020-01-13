@@ -49,7 +49,7 @@ resource "azurerm_kubernetes_cluster" "rack" {
   default_node_pool {
     enable_auto_scaling = true
     name                = "default"
-    min_count           = 2
+    min_count           = 3
     max_count           = 100
     node_count          = 3
     vm_size             = var.node_type
