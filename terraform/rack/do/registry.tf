@@ -160,10 +160,6 @@ resource "kubernetes_ingress" "registry" {
     namespace = module.k8s.namespace
     name      = "registry"
 
-    annotations = {
-      "convox.idles" : "true"
-    }
-
     labels = {
       system  = "convox"
       service = "registry"
