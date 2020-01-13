@@ -27,7 +27,9 @@ module "k8s" {
   release        = var.release
   replicas       = 1
 
-  annotations = {}
+  annotations = {
+    "convox.idles" : "true"
+  }
 
   env = {
     PROVIDER = "local"
