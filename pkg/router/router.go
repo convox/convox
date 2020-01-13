@@ -197,6 +197,8 @@ func (r *Router) Route(host string) (string, error) {
 	return "", fmt.Errorf("no backends available")
 }
 
+// if the target will idle make sure it has the system=convox label
+// so the controller can watch it
 func (r *Router) TargetAdd(host, target string, idles bool) error {
 	fmt.Printf("ns=router at=target.add host=%q target=%q\n", host, target)
 
