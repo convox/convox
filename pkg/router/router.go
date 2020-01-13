@@ -238,6 +238,14 @@ func (r *Router) generateCertificateAutocert(m *autocert.Manager) func(*tls.Clie
 			return common.CertificateSelfSigned("convox")
 		}
 
+		ts, err := r.storage.TargetList(hello.ServerName)
+		if err != nil {
+			return nil, err
+		}
+		if len(ts) == 0 {
+			return nil, fmt.Errorf("unknown host")
+		}
+
 		c, err := m.GetCertificate(hello)
 		if err != nil {
 			fmt.Printf("err: %+v\n", err)
