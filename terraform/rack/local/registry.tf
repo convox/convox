@@ -10,6 +10,7 @@ resource "kubernetes_deployment" "registry" {
 
     labels = {
       service = "registry"
+      system  = "convox"
     }
   }
 
