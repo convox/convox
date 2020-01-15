@@ -1,4 +1,4 @@
-# CLI Installation
+# Command Line Interface
 
 ## Linux
 

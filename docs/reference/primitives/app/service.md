@@ -10,47 +10,52 @@ Services can be scaled to a static count or autoscaled in a range based on metri
 
 A Service is defined in [`convox.yml`](../convox.yml.md).
 
-    services:
-      web:
-        port: 5000
+```
+services:
+  web:
+    build: .
+    health: /check
+    port: 5000
+    scale: 3
+```
 
----
-
-    services:
-      web:
-        agent: false
-        build: .
-        command: bin/web
-        domain: ${WEB_HOST}
-        drain: 10
-        environment:
-          - FOO
-          - BAR=qux
-        health:
-          grace: 10
-          interval: 5
-          path: /check
-          timeout: 3
-        internal: false
-        port: 5000
-        ports:
-          - 5001
-          - 5002
-        privileged: false
-        scale:
-          count: 1-3
-          cpu: 128
-          memory: 512
-          targets:
-            cpu: 50
-            memory: 80
-        singleton: false
-        sticky: true
-        test: make test
-        volumes:
-          - /shared
-
-### Attributes
+```
+services:
+  web:
+    agent: false
+    build:
+      manifest: Dockerfile
+      path: .
+    command: bin/web
+    domain: ${WEB_HOST}
+    drain: 10
+    environment:
+      - FOO
+      - BAR=qux
+    health:
+      grace: 10
+      interval: 5
+      path: /check
+      timeout: 3
+    internal: false
+    port: 5000
+    ports:
+      - 5001
+      - 5002
+    privileged: false
+    scale:
+      count: 1-3
+      cpu: 128
+      memory: 512
+      targets:
+        cpu: 50
+        memory: 80
+    singleton: false
+    sticky: true
+    test: make test
+    volumes:
+      - /shared
+```
 
 | Attribute     | Type       | Default             | Description                                                                                                                         |
 | ------------- | ---------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
@@ -66,7 +71,7 @@ A Service is defined in [`convox.yml`](../convox.yml.md).
 | `port`        | string     |                     | The port that the default Rack balancer will use to [route incoming traffic](../../../guides/load-balancing.md)                     |
 | `ports`       | list       |                     | A list of ports available for internal [service discovery](../../../guides/service-discovery.md) or custom [Balancers](balancer.md) |
 | `privileged`  | boolean    | true                | Set to `false` to prevent [Processes](process.md) of this Service from running as root inside their container                       |
-| `scale`       | map        | 1                   | Horizontal scaling definition (see below)                                                                                           |
+| `scale`       | map        | 1                   | Define scaling parameters (see below)                                                                                               |
 | `singleton`   | boolean    | false               | Set to `true` to prevent extra [Processes](process.md) of this Service from being started during deployments                        |
 | `sticky`      | boolean    | false               | Set to `true` to enable [sticky sessions](../../../guides/sticky-sessions.md)                                                       |
 | `test`        | string     |                     | A command to run to test this Service when running `convox test`                                                                    |
@@ -74,18 +79,16 @@ A Service is defined in [`convox.yml`](../convox.yml.md).
 
 > Environment variables **must** be declared to be populated for a Service.
 
-#### build
-
-Specifying `build` as a string will set the `path` and leave the other values as defaults.
+### build
 
 | Attribute  | Type   | Default    | Description                                                   |
 | ---------- | ------ | ---------- | ------------------------------------------------------------- |
 | `manifest` | string | Dockerfile | The filename of the Dockerfile                                |
 | `path`     | string | .          | The path (relative to `convox.yml`) to build for this Service |
 
-#### health
+> Specifying `build` as a string will set the `path` and leave the other values as defaults.
 
-Specifying `health` as a string will set the `path` and leave the other values as defaults.
+### health
 
 | Attribute  | Type   | Default | Description                                                                                      |
 | ---------- | ------ | ------- | ------------------------------------------------------------------------------------------------ |
@@ -94,9 +97,9 @@ Specifying `health` as a string will set the `path` and leave the other values a
 | `path`     | string | /       | The path to request for health checks                                                            |
 | `timeout`  | number | 4       | The number of seconds to wait for a successful response                                          |
 
-#### scale
+> Specifying `health` as a string will set the `path` and leave the other values as defaults.
 
-Specifying `scale` as a number will set the `count` and leave the other values as defaults.
+### scale
 
 | Attribute | Type   | Default | Description                                                                                                   |
 | --------- | ------ | ------- | ------------------------------------------------------------------------------------------------------------- |
@@ -105,7 +108,9 @@ Specifying `scale` as a number will set the `count` and leave the other values a
 | `memory`  | number | 256     | The number of MB of RAM to reserve for [Processes](process.md) of this Service                                |
 | `targets` | map    |         | Target metrics to trigger autoscaling                                                                         |
 
-#### scale.targets
+> Specifying `scale` as a number will set the `count` and leave the other values as defaults.
+
+### scale.targets
 
 | Attribute | Type   | Default | Description                                                                                |
 | --------- | ------ | ------- | ------------------------------------------------------------------------------------------ |
@@ -123,7 +128,7 @@ Specifying `scale` as a number will set the `count` and leave the other values a
 
 ### Scaling a Service
 
-    $ convox scale web --count 3 --cpu 256 --memory 1024 -a myapp
+    $ convox scale web --count 3 --cpu 256 --memory 1024 -a myapp`1
     Scaling web... OK
 
 ### Restarting a Service

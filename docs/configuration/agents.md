@@ -1,6 +1,6 @@
 # Agents
 
-Agents are specialized [Services](../reference/app/primitives/service.md) that run a single
+Agents are specialized [Services](../reference/primitives/app/service.md) that run a single
 [Process](../reference/app/primitives/process.md) on each [Instance](../reference/app/primitives/instance.md).
 
 ## Configuration
