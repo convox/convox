@@ -12,17 +12,8 @@ List apps
 
     $ convox apps
     APP          STATUS   RELEASE
-    console      running  RMHPPYFOMID
-    datadog      running  RHNIJALRNTB
-    django       running
-    docs         running  ROCHMCOUESG
-    dummy        running  RBINGDLMQJS
-    dummy-1      running
-    nodejs       running  RCRLBREFPBX
-    rails        running
-    testenvvars  running  RHXSPWHDFLH
-    timer        running  RBNDYOXPUMN
-    travis-ci    running
+    myapp        running  RABCDEFGHI
+    myapp2       running  RIHGFEDCBA
 
 ## apps cancel
 
@@ -35,7 +26,7 @@ Cancel an app update
 ### Examples
 
     $ convox apps cancel
-    Cancelling deployment of mynewapp... OK
+    Cancelling deployment of myapp... OK
 
 ## apps create
 
@@ -47,8 +38,8 @@ Create an app
 
 ### Examples
 
-    $ convox apps create mynewapp
-    Creating mynewapp... OK
+    $ convox apps create myapp
+    Creating myapp... OK
 
 ## apps delete
 
@@ -60,7 +51,7 @@ Delete an app
 
 ### Examples
 
-    $ convox apps delete mynewapp
+    $ convox apps delete myapp
 
 ## apps export
 
@@ -72,11 +63,12 @@ Export an app
 
 ### Examples
 
-    $ convox apps export --file mynewapp.tgz
-    Exporting app mynewapp... OK
+    $ convox apps export --file myapp.tgz
+    Exporting app myapp... OK
     Exporting env... OK
-    Exporting build BPNDBAJXEGW... OK
+    Exporting build BABCDEFGHI... OK
     Exporting resource database... OK
+    Packaging export... OK
 
 ## apps import
 
@@ -88,11 +80,12 @@ Import an app
 
 ### Examples
 
-    $ convox apps import --file mynewapp.tgz
-    Importing app mynewapp... OK
-    Importing env... OK
-    Importing build BPNDBAJXEGW... OK
-    Importing resource database... OK    
+    $ convox apps import myapp2 --file myapp.tgz
+    Creating app myapp2... OK
+    Importing build... OK, RIHGFEDCBA
+    Importing env... OK, RJIHGFEDCB
+    Promoting RJIHGFEDCB... OK
+    Importing resource database... OK   
 
 ## apps info
 
@@ -105,11 +98,11 @@ Get information about an app
 ### Examples
 
     $ convox apps info
-    Name        mynewapp
+    Name        myapp
     Status      running
     Generation  2
     Locked      false
-    Release     RCRLBREFPBX
+    Release     RABCDEFGHI
 
 ## apps lock
 
@@ -122,7 +115,7 @@ Enable termination protection
 ### Examples
 
     $ convox apps lock
-    Locking mynewapp... OK
+    Locking myapp... OK
 
 ## apps params
 
@@ -162,19 +155,19 @@ Set app parameters
 
     $ convox apps params set LogRetention=3
     Updating parameters...
-    2020-01-16T14:51:50Z system/cloudformation aws/cfm test-nodejs UPDATE_IN_PROGRESS test-mynewapp User Initiated
+    2020-01-16T14:51:50Z system/cloudformation aws/cfm test-nodejs UPDATE_IN_PROGRESS test-myapp User Initiated
     2020-01-16T14:51:54Z system/cloudformation aws/cfm test-nodejs UPDATE_IN_PROGRESS LogGroup
     2020-01-16T14:51:54Z system/cloudformation aws/cfm test-nodejs UPDATE_IN_PROGRESS ResourceDatabase
     2020-01-16T14:51:55Z system/cloudformation aws/cfm test-nodejs UPDATE_COMPLETE LogGroup
     2020-01-16T14:51:55Z system/cloudformation aws/cfm test-nodejs UPDATE_COMPLETE ResourceDatabase
     2020-01-16T14:51:58Z system/cloudformation aws/cfm test-nodejs UPDATE_IN_PROGRESS ServiceWeb
     2020-01-16T14:51:59Z system/cloudformation aws/cfm test-nodejs UPDATE_COMPLETE ServiceWeb
-    2020-01-16T14:52:01Z system/cloudformation aws/cfm test-nodejs UPDATE_COMPLETE_CLEANUP_IN_PROGRESS test-mynewapp
+    2020-01-16T14:52:01Z system/cloudformation aws/cfm test-nodejs UPDATE_COMPLETE_CLEANUP_IN_PROGRESS test-myapp
     2020-01-16T14:52:04Z system/cloudformation aws/cfm test-nodejs UPDATE_IN_PROGRESS ServiceWeb
     2020-01-16T14:52:04Z system/cloudformation aws/cfm test-nodejs UPDATE_COMPLETE ServiceWeb
     2020-01-16T14:52:05Z system/cloudformation aws/cfm test-nodejs UPDATE_IN_PROGRESS ResourceDatabase
     2020-01-16T14:52:05Z system/cloudformation aws/cfm test-nodejs UPDATE_COMPLETE ResourceDatabase
-    2020-01-16T14:52:06Z system/cloudformation aws/cfm test-nodejs UPDATE_COMPLETE test-mynewapp
+    2020-01-16T14:52:06Z system/cloudformation aws/cfm test-nodejs UPDATE_COMPLETE test-myapp
     OK
 
 
@@ -189,4 +182,4 @@ Disable termination protection
 ### Examples
 
     $ convox apps unlock
-    Unlocking mynewapp... OK
+    Unlocking myapp... OK
