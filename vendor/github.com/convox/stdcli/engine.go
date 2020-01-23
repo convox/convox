@@ -3,10 +3,7 @@ package stdcli
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"strings"
-
-	homedir "github.com/mitchellh/go-homedir"
 )
 
 type Engine struct {
@@ -74,21 +71,4 @@ func (e *Engine) ExecuteContext(ctx context.Context, args []string) int {
 	}
 
 	return 0
-}
-
-func (e *Engine) settingFile(name string) (string, error) {
-	if dir := e.Settings; dir != "" {
-		return filepath.Join(dir, name), nil
-	}
-
-	home, err := homedir.Dir()
-	if err != nil {
-		return "", err
-	}
-
-	return filepath.Join(home, fmt.Sprintf(".%s", e.Name), name), nil
-}
-
-func (e *Engine) localSettingDir() string {
-	return fmt.Sprintf(".%s", e.Name)
 }

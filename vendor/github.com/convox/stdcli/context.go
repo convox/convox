@@ -160,6 +160,10 @@ func (c *Context) SettingDelete(name string) error {
 	return c.engine.SettingDelete(name)
 }
 
+func (c *Context) SettingDirectory(name string) (string, error) {
+	return c.engine.SettingDirectory(name)
+}
+
 func (c *Context) SettingRead(name string) (string, error) {
 	return c.engine.SettingRead(name)
 }
