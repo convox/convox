@@ -318,7 +318,7 @@ func fxSystemLocal() *structs.System {
 		Name:     "convox",
 		Provider: "local",
 		Status:   "running",
-		Version:  "dev",
+		Version:  "dev1",
 	}
 }
 

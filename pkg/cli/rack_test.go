@@ -7,6 +7,7 @@ import (
 
 	"github.com/convox/convox/pkg/cli"
 	mocksdk "github.com/convox/convox/pkg/mock/sdk"
+	mockstdcli "github.com/convox/convox/pkg/mock/stdcli"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/stretchr/testify/mock"
@@ -328,32 +329,50 @@ func TestRackScaleUpdateError(t *testing.T) {
 
 func TestRackUpdate(t *testing.T) {
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("SystemUpdate", structs.SystemUpdateOptions{Version: options.String("version1")}).Return(nil)
-		i.On("SystemGet").Return(fxSystemUpdating(), nil).Twice()
-		i.On("SystemGet").Return(fxSystem(), nil)
-		i.On("SystemLogs", mock.Anything).Return(testLogs(fxLogsSystem()), nil)
+		require.NoError(t, testLocalRack(e, "dev1", "local", "https://host1"))
 
-		res, err := testExecute(e, "rack update version1", nil)
+		me := e.Executor.(*mockstdcli.Executor)
+		me.On("Terminal", "terraform", "init", "-upgrade").Return(nil)
+		me.On("Terminal", "terraform", "apply", "-auto-approve").Return(nil)
+
+		res, err := testExecute(e, "rack update dev1", nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
-			"Updating to version1... ",
-			"TIME system/aws/component log1",
-			"TIME system/aws/component log2",
 			"OK",
 		})
+
+		me.AssertExpectations(t)
 	})
 }
 
 func TestRackUpdateError(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("SystemUpdate", structs.SystemUpdateOptions{Version: options.String("version1")}).Return(fmt.Errorf("err1"))
+		require.NoError(t, testLocalRack(e, "dev1", "local", "https://host1"))
 
-		res, err := testExecute(e, "rack update version1", nil)
+		me := e.Executor.(*mockstdcli.Executor)
+		me.On("Terminal", "terraform", "init", "-upgrade").Return(nil)
+		me.On("Terminal", "terraform", "apply", "-auto-approve").Return(fmt.Errorf("err1"))
+
+		res, err := testExecute(e, "rack update dev1", nil)
 		require.NoError(t, err)
 		require.Equal(t, 1, res.Code)
 		res.RequireStderr(t, []string{"ERROR: err1"})
-		res.RequireStdout(t, []string{"Updating to version1... "})
+		res.RequireStdout(t, []string{""})
+
+		me.AssertExpectations(t)
+	})
+}
+
+func TestRackUpdateUnknown(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		require.NoError(t, testLocalRack(e, "dev1", "local", "https://host1"))
+
+		res, err := testExecute(e, "rack update dev2", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		res.RequireStderr(t, []string{"ERROR: could not find rack: dev2"})
+		res.RequireStdout(t, []string{""})
 	})
 }

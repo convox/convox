@@ -10,7 +10,6 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"runtime"
@@ -77,47 +76,21 @@ func currentEndpoint(c *stdcli.Context, rack_ string) (string, error) {
 		return e, nil
 	}
 
-	if strings.HasPrefix(rack_, "local/") {
-		return fmt.Sprintf("https://api.%s", strings.SplitN(rack_, "/", 2)[1]), nil
-	}
-
 	host, err := currentHost(c)
 	if err != nil {
 		return "", err
 	}
 
-	if host == "" {
-		if !localRackRunning(c) {
-			return "", fmt.Errorf("no racks found, try `convox login`")
-		}
-
-		var r *rack
-
-		if cr := currentRack(c, ""); cr != "" {
-			r, err = matchRack(c, cr)
-			if err != nil {
-				return "", err
-			}
-		} else {
-			r, err = matchRack(c, "local/")
-			if err != nil {
-				return "", err
-			}
-		}
-
-		if r == nil {
-			return "", fmt.Errorf("no racks found, try `convox login`")
-		}
-
-		return fmt.Sprintf("https://rack.%s", strings.SplitN(r.Name, "/", 2)[1]), nil
+	if pw := os.Getenv("CONVOX_PASSWORD"); host != "" && pw != "" {
+		return fmt.Sprintf("https://convox:%s@%s", url.QueryEscape(pw), host), nil
 	}
 
-	pw, err := currentPassword(c, host)
+	r, err := matchRack(c, currentRack(c, host))
 	if err != nil {
 		return "", err
 	}
 
-	return fmt.Sprintf("https://convox:%s@%s", url.QueryEscape(pw), host), nil
+	return r.Url, nil
 }
 
 func currentRack(c *stdcli.Context, host string) string {
@@ -408,24 +381,20 @@ func tag(name, value string) string {
 }
 
 func terraform(c *stdcli.Context, dir string, env map[string]string, args ...string) error {
-	cmd := exec.Command("terraform", args...)
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	defer os.Chdir(wd)
 
-	cmd.Dir = dir
-	cmd.Stdout = c.Writer().Stdout
-	cmd.Stderr = c.Writer().Stderr
-
-	// ch := make(chan os.Signal, 1)
+	if err := os.Chdir(dir); err != nil {
+		return err
+	}
 
 	signal.Ignore(os.Interrupt)
 	defer signal.Reset(os.Interrupt)
 
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-
-	// go terraformSignalHandler(ch, cmd)
-
-	if err := cmd.Wait(); err != nil {
+	if err := c.Terminal("terraform", args...); err != nil {
 		return err
 	}
 

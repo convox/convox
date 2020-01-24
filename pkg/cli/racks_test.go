@@ -19,6 +19,8 @@ import (
 
 func TestRacks(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		require.NoError(t, testLocalRack(e, "dev1", "local", "https://host1"))
+
 		r := mux.NewRouter()
 
 		r.HandleFunc("/racks", func(w http.ResponseWriter, r *http.Request) {
@@ -36,23 +38,16 @@ func TestRacks(t *testing.T) {
 		err = ioutil.WriteFile(filepath.Join(e.Settings, "host"), []byte(tsu.Host), 0644)
 		require.NoError(t, err)
 
-		me := &mockstdcli.Executor{}
-		me.On("Execute", "kubectl", "get", "ns", "--selector=system=convox,type=rack", "--output=name").Return([]byte("namespace/dev\n"), nil)
-		me.On("Execute", "kubectl", "get", "namespace/dev", "-o", "jsonpath={.metadata.labels.rack}").Return([]byte("dev\n"), nil)
-		e.Executor = me
-
 		res, err := testExecute(e, "racks", nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
 			"NAME        STATUS  ",
-			"local/dev   running ",
+			"dev1        running ",
 			"test/foo    running ",
 			"test/other  updating",
 		})
-
-		me.AssertExpectations(t)
 	})
 }
 
