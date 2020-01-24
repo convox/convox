@@ -64,17 +64,3 @@ func (_m *MockInterface) Status(ns string, name string) (string, string, error) 
 
 	return r0, r1, r2
 }
-
-// Wait provides a mock function with given fields: ns, name
-func (_m *MockInterface) Wait(ns string, name string) error {
-	ret := _m.Called(ns, name)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(string, string) error); ok {
-		r0 = rf(ns, name)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
