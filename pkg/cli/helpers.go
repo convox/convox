@@ -71,7 +71,7 @@ func currentPassword(c *stdcli.Context, host string) (string, error) {
 	return c.SettingReadKey("auth", host)
 }
 
-func currentEndpoint(c *stdcli.Context, rack_ string) (string, error) {
+func currentEndpoint(c *stdcli.Context) (string, error) {
 	if e := os.Getenv("RACK_URL"); e != "" {
 		return e, nil
 	}
@@ -257,22 +257,25 @@ func matchRack(c *stdcli.Context, name string) (*rack, error) {
 		}
 	}
 
-	if len(matches) > 1 {
-		if name == "" {
+	if name == "" {
+		switch len(matches) {
+		case 0:
+			return nil, fmt.Errorf("no racks found")
+		case 1:
+			return &matches[0], nil
+		default:
 			return nil, fmt.Errorf("multiple racks detected, use `convox switch` to select one")
 		}
+	}
+
+	switch len(matches) {
+	case 0:
+		return nil, fmt.Errorf("could not find rack: %s", name)
+	case 1:
+		return &matches[0], nil
+	default:
 		return nil, fmt.Errorf("ambiguous rack name: %s", name)
 	}
-
-	if len(matches) == 1 {
-		return &matches[0], nil
-	}
-
-	if name == "" {
-		return nil, fmt.Errorf("no racks found")
-	}
-
-	return nil, fmt.Errorf("could not find rack: %s", name)
 }
 
 func racks(c *stdcli.Context) ([]rack, error) {

@@ -41,6 +41,11 @@ func (e *Engine) currentClient(c *stdcli.Context) sdk.Interface {
 		return e.Client
 	}
 
+	// url, err := currentEndpoint(c)
+	// if err != nil {
+	// 	c.Fail(err)
+	// }
+
 	host, err := currentHost(c)
 	if err != nil {
 		c.Fail(err)
@@ -51,9 +56,9 @@ func (e *Engine) currentClient(c *stdcli.Context) sdk.Interface {
 		c.Fail(err)
 	}
 
-	if r == nil {
-		return nil
-	}
+	// if r == nil {
+	// 	return nil
+	// }
 
 	sc, err := sdk.New(r.Url)
 	if err != nil {

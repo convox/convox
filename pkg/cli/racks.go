@@ -6,7 +6,7 @@ import (
 )
 
 func init() {
-	register("racks", "list available racks", Racks, stdcli.CommandOptions{
+	registerWithoutProvider("racks", "list available racks", Racks, stdcli.CommandOptions{
 		Validate: stdcli.Args(0),
 	})
 }

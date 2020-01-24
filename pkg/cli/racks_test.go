@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -17,7 +16,65 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRacks(t *testing.T) {
+func TestRacksNone(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		res, err := testExecute(e, "racks", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{
+			"NAME  STATUS",
+		})
+	})
+}
+
+func TestRacksLocal(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		require.NoError(t, testLocalRack(e, "dev1", "local", "https://host1"))
+
+		res, err := testExecute(e, "racks", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{
+			"NAME  STATUS ",
+			"dev1  running",
+		})
+	})
+}
+
+func TestRacksRemote(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		r := mux.NewRouter()
+
+		r.HandleFunc("/racks", func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte(`[
+				{"name":"foo","organization":{"name":"test"},"status":"running"},
+				{"name":"other","organization":{"name":"test"},"status":"updating"}
+			]`))
+		}).Methods("GET")
+
+		ts := httptest.NewTLSServer(r)
+
+		tsu, err := url.Parse(ts.URL)
+		require.NoError(t, err)
+
+		err = ioutil.WriteFile(filepath.Join(e.Settings, "host"), []byte(tsu.Host), 0644)
+		require.NoError(t, err)
+
+		res, err := testExecute(e, "racks", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{
+			"NAME        STATUS  ",
+			"test/foo    running ",
+			"test/other  updating",
+		})
+	})
+}
+
+func TestRacksLocalAndRemote(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		require.NoError(t, testLocalRack(e, "dev1", "local", "https://host1"))
 
@@ -48,46 +105,6 @@ func TestRacks(t *testing.T) {
 			"test/foo    running ",
 			"test/other  updating",
 		})
-	})
-}
-
-func TestRacksLocalDisable(t *testing.T) {
-	orig := os.Getenv("CONVOX_LOCAL")
-	os.Setenv("CONVOX_LOCAL", "disable")
-	defer os.Setenv("CONVOX_LOCAL", orig)
-
-	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		r := mux.NewRouter()
-
-		r.HandleFunc("/racks", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte(`[
-				{"name":"foo","organization":{"name":"test"},"status":"running"},
-				{"name":"other","organization":{"name":"test"},"status":"updating"}
-			]`))
-		}).Methods("GET")
-
-		ts := httptest.NewTLSServer(r)
-
-		tsu, err := url.Parse(ts.URL)
-		require.NoError(t, err)
-
-		err = ioutil.WriteFile(filepath.Join(e.Settings, "host"), []byte(tsu.Host), 0644)
-		require.NoError(t, err)
-
-		me := &mockstdcli.Executor{}
-		e.Executor = me
-
-		res, err := testExecute(e, "racks", nil)
-		require.NoError(t, err)
-		require.Equal(t, 0, res.Code)
-		res.RequireStderr(t, []string{""})
-		res.RequireStdout(t, []string{
-			"NAME        STATUS  ",
-			"test/foo    running ",
-			"test/other  updating",
-		})
-
-		me.AssertExpectations(t)
 	})
 }
 
