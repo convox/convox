@@ -40,7 +40,7 @@ func TestSwitch(t *testing.T) {
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{"Switched to test/foo"})
 
-		data, err := ioutil.ReadFile(filepath.Join(e.Settings, "racks"))
+		data, err := ioutil.ReadFile(filepath.Join(e.Settings, "switch"))
 		require.NoError(t, err)
 		require.Equal(t, fmt.Sprintf("{\n  \"%s\": \"test/foo\"\n}", tsu.Host), string(data))
 	})

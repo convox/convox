@@ -14,9 +14,7 @@ import (
 
 func TestVersion(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		me := &mockstdcli.Executor{}
-		me.On("Execute", "kubectl", "get", "ns", "--selector=system=convox,type=rack", "--output=name").Return([]byte("namespace/dev\n"), nil)
-		e.Executor = me
+		require.NoError(t, testLocalRack(e, "dev1", "local", "https://host1"))
 
 		err := ioutil.WriteFile(filepath.Join(e.Settings, "host"), []byte("host1"), 0644)
 		require.NoError(t, err)
@@ -36,9 +34,7 @@ func TestVersion(t *testing.T) {
 
 func TestVersionError(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		me := &mockstdcli.Executor{}
-		me.On("Execute", "kubectl", "get", "ns", "--selector=system=convox,type=rack", "--output=name").Return([]byte("namespace/dev\n"), nil)
-		e.Executor = me
+		require.NoError(t, testLocalRack(e, "dev1", "local", "https://host1"))
 
 		err := ioutil.WriteFile(filepath.Join(e.Settings, "host"), []byte("host1"), 0644)
 		require.NoError(t, err)
@@ -93,10 +89,7 @@ func TestVersionNoSystemMultipleLocal(t *testing.T) {
 
 func TestVersionNoSystemSingleLocal(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		me := &mockstdcli.Executor{}
-		me.On("Execute", "kubectl", "get", "ns", "--selector=system=convox,type=rack", "--output=name").Return([]byte("namespace/dev\n"), nil)
-		me.On("Execute", "kubectl", "get", "namespace/dev", "-o", "jsonpath={.metadata.labels.rack}").Return([]byte("dev\n"), nil)
-		e.Executor = me
+		require.NoError(t, testLocalRack(e, "dev1", "local", "https://api.dev.convox"))
 
 		i.On("SystemGet").Return(fxSystemLocal(), nil)
 
@@ -106,7 +99,7 @@ func TestVersionNoSystemSingleLocal(t *testing.T) {
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
 			"client: test",
-			"server: dev (rack.dev)",
+			"server: dev1 (api.dev.convox)",
 		})
 	})
 }

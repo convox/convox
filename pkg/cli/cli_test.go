@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"github.com/convox/convox/pkg/cli"
 	"github.com/convox/convox/pkg/common"
 	mocksdk "github.com/convox/convox/pkg/mock/sdk"
+	mockstdcli "github.com/convox/convox/pkg/mock/stdcli"
 	"github.com/convox/convox/pkg/structs"
 	shellquote "github.com/kballard/go-shellquote"
 	"github.com/stretchr/testify/require"
@@ -93,6 +95,26 @@ func testExecuteContext(ctx context.Context, e *cli.Engine, cmd string, stdin io
 	}
 
 	return res, nil
+}
+
+func testLocalRack(e *cli.Engine, name, provider, api string) error {
+	dir := filepath.Join(e.Settings, "racks", name)
+
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return err
+	}
+
+	if err := ioutil.WriteFile(filepath.Join(dir, "main.tf"), []byte{}, 0600); err != nil {
+		return err
+	}
+
+	data := []byte(fmt.Sprintf(`{"api":{"value":%q},"provider":{"value":%q}}`, api, provider))
+
+	me := &mockstdcli.Executor{}
+	me.On("Execute", "terraform", "output", "-json").Return(data, nil)
+	e.Executor = me
+
+	return nil
 }
 
 func testLogs(logs []string) io.ReadCloser {

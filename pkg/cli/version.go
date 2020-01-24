@@ -17,13 +17,7 @@ func init() {
 func Version(rack sdk.Interface, c *stdcli.Context) error {
 	c.Writef("client: <info>%s</info>\n", c.Version())
 
-	host, err := currentHost(c)
-	if err != nil {
-		c.Writef("server: <info>none</info>\n")
-		return nil
-	}
-
-	ep, err := currentEndpoint(c, currentRack(c, host))
+	ep, err := currentEndpoint(c)
 	if err != nil {
 		c.Writef("server: <info>none</info>\n")
 		return nil

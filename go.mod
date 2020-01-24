@@ -19,7 +19,7 @@ require (
 	github.com/convox/hid v0.0.0-20180912192857-c67381b7ffff
 	github.com/convox/logger v0.0.0-20180522214415-e39179955b52
 	github.com/convox/stdapi v0.0.0-20190708203955-b81b71b6a680
-	github.com/convox/stdcli v0.0.0-20190326115454-b78bee159e98
+	github.com/convox/stdcli v0.0.0-20200122204822-238a68a930fd
 	github.com/convox/stdsdk v0.0.0-20190422120437-3e80a397e377
 	github.com/convox/u2f v0.0.0-20180912192910-a73404142726
 	github.com/convox/version v0.0.0-20160822184233-ffefa0d565d2
@@ -50,9 +50,9 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/stretchr/testify v1.3.0
 	github.com/vektra/mockery v0.0.0-20181123154057-e78b021dcbb5
-	golang.org/x/crypto v0.0.0-20191117063200-497ca9f6d64f
+	golang.org/x/crypto v0.0.0-20200117160349-530e935923ad
 	golang.org/x/net v0.0.0-20191101175033-0deb6923b6d9 // indirect
-	golang.org/x/sys v0.0.0-20191104094858-e8c54fb511f6 // indirect
+	golang.org/x/sys v0.0.0-20200122134326-e047566fdf82 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	google.golang.org/api v0.9.0
 	gopkg.in/inf.v0 v0.9.0 // indirect

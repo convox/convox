@@ -3,6 +3,8 @@ package cli
 import (
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -11,14 +13,17 @@ import (
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
-
-	cv "github.com/convox/version"
 )
 
 func init() {
 	register("rack", "get information about the rack", Rack, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagRack},
 		Validate: stdcli.Args(0),
+	})
+
+	registerWithoutProvider("rack install", "install a new rack", RackInstall, stdcli.CommandOptions{
+		Usage:    "<provider> <name>",
+		Validate: stdcli.Args(2),
 	})
 
 	register("rack logs", "get logs for the rack", RackLogs, stdcli.CommandOptions{
@@ -56,9 +61,14 @@ func init() {
 		Validate: stdcli.Args(0),
 	})
 
-	register("rack update", "update the rack", RackUpdate, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagRack},
-		Validate: stdcli.ArgsMax(1),
+	registerWithoutProvider("rack uninstall", "uninstall a rack", RackUninstall, stdcli.CommandOptions{
+		Usage:    "<name>",
+		Validate: stdcli.Args(1),
+	})
+
+	registerWithoutProvider("rack update", "update a rack", RackUpdate, stdcli.CommandOptions{
+		Usage:    "<name>",
+		Validate: stdcli.Args(1),
 	})
 }
 
@@ -89,6 +99,61 @@ func Rack(rack sdk.Interface, c *stdcli.Context) error {
 	i.Add("Version", s.Version)
 
 	return i.Print()
+}
+
+func RackInstall(rack sdk.Interface, c *stdcli.Context) error {
+	provider := c.Arg(0)
+	name := c.Arg(1)
+
+	env, err := terraformEnv(provider)
+	if err != nil {
+		return err
+	}
+
+	vars, err := terraformVars(provider)
+	if err != nil {
+		return err
+	}
+
+	dir, err := c.SettingDirectory(fmt.Sprintf("racks/%s", name))
+	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return err
+	}
+
+	tf := filepath.Join(dir, "main.tf")
+
+	if _, err := os.Stat(tf); !os.IsNotExist(err) {
+		return fmt.Errorf("rack name in use: %s", name)
+	}
+
+	params := map[string]interface{}{
+		"Name":     name,
+		"Provider": provider,
+		"Release":  "",
+		"Vars":     vars,
+	}
+
+	if err := terraformWriteTemplate(tf, params); err != nil {
+		return err
+	}
+
+	if err := terraform(c, dir, env, "init"); err != nil {
+		return err
+	}
+
+	if err := terraform(c, dir, env, "apply", "-auto-approve"); err != nil {
+		return err
+	}
+
+	if err := switchRack(c, name); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func RackLogs(rack sdk.Interface, c *stdcli.Context) error {
@@ -253,39 +318,98 @@ func RackScale(rack sdk.Interface, c *stdcli.Context) error {
 	return i.Print()
 }
 
-func RackUpdate(rack sdk.Interface, c *stdcli.Context) error {
-	target := c.Arg(0)
+func RackUninstall(rack sdk.Interface, c *stdcli.Context) error {
+	name := c.Arg(0)
 
-	// if no version specified, find the next version
-	if target == "" {
-		s, err := rack.SystemGet()
-		if err != nil {
-			return err
-		}
-
-		if s.Version == "dev" {
-			target = "dev"
-		} else {
-			v, err := cv.Next(s.Version)
-			if err != nil {
-				return err
-			}
-
-			target = v
-		}
-	}
-
-	c.Startf("Updating to <release>%s</release>", target)
-
-	if err := rack.SystemUpdate(structs.SystemUpdateOptions{Version: options.String(target)}); err != nil {
+	r, err := matchRack(c, name)
+	if err != nil {
 		return err
 	}
 
-	c.Writef("\n")
+	if r.Remote {
+		return rackUninstallRemote(c, name)
+	}
 
-	if err := common.WaitForRackWithLogs(rack, c); err != nil {
+	env, err := terraformEnv(r.Provider)
+	if err != nil {
+		return err
+	}
+
+	dir, err := c.SettingDirectory(fmt.Sprintf("racks/%s", name))
+	if err != nil {
+		return err
+	}
+
+	if err := terraform(c, dir, env, "init", "-upgrade"); err != nil {
+		return err
+	}
+
+	if err := terraform(c, dir, env, "destroy", "-auto-approve"); err != nil {
+		return err
+	}
+
+	if err := os.RemoveAll(dir); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func RackUpdate(rack sdk.Interface, c *stdcli.Context) error {
+	name := c.Arg(0)
+
+	r, err := matchRack(c, name)
+	if err != nil {
+		return err
+	}
+
+	if r.Remote {
+		return rackUpdateRemote(c, name)
+	}
+
+	env, err := terraformEnv(r.Provider)
+	if err != nil {
+		return err
+	}
+
+	vars, err := terraformVars(r.Provider)
+	if err != nil {
+		return err
+	}
+
+	dir, err := c.SettingDirectory(fmt.Sprintf("racks/%s", name))
+	if err != nil {
+		return err
+	}
+
+	tf := filepath.Join(dir, "main.tf")
+
+	params := map[string]interface{}{
+		"Name":     name,
+		"Provider": r.Provider,
+		"Release":  "",
+		"Vars":     vars,
+	}
+
+	if err := terraformWriteTemplate(tf, params); err != nil {
+		return err
+	}
+
+	if err := terraform(c, dir, env, "init", "-upgrade"); err != nil {
+		return err
+	}
+
+	if err := terraform(c, dir, env, "apply", "-auto-approve"); err != nil {
 		return err
 	}
 
 	return c.OK()
+}
+
+func rackUninstallRemote(c *stdcli.Context, name string) error {
+	return fmt.Errorf("uninstalling remote racks not yet supported")
+}
+
+func rackUpdateRemote(c *stdcli.Context, name string) error {
+	return fmt.Errorf("updating remote racks not yet supported")
 }
