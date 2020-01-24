@@ -32,6 +32,8 @@ resource "aws_eks_cluster" "cluster" {
   depends_on = [
     aws_iam_role_policy_attachment.cluster_eks_cluster,
     aws_iam_role_policy_attachment.cluster_eks_service,
+    aws_subnet.private,
+    aws_subnet.public,
     null_resource.delay_cluster,
   ]
 
