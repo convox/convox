@@ -2,6 +2,10 @@ package cli_test
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -42,6 +46,45 @@ func TestRackError(t *testing.T) {
 		require.Equal(t, 1, res.Code)
 		res.RequireStderr(t, []string{"ERROR: err1"})
 		res.RequireStdout(t, []string{""})
+	})
+}
+
+func TestRackInstall(t *testing.T) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		me := &mockstdcli.Executor{}
+		me.On("Terminal", "terraform", "init").Return(nil)
+		me.On("Terminal", "terraform", "apply", "-auto-approve").Return(nil)
+		e.Executor = me
+
+		res, err := testExecute(e, "rack install local dev1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{""})
+
+		dir := filepath.Join(e.Settings, "racks", "dev1")
+		tf := filepath.Join(dir, "main.tf")
+
+		_, err = os.Stat(dir)
+		require.NoError(t, err)
+		_, err = os.Stat(tf)
+		require.NoError(t, err)
+
+		tfdata, err := ioutil.ReadFile(tf)
+		require.NoError(t, err)
+
+		testdata, err := ioutil.ReadFile("testdata/terraform.local.tf")
+		require.NoError(t, err)
+
+		require.Equal(t, strings.Trim(string(tfdata), "\n"), strings.Trim(string(testdata), "\n"))
+
+		res, err = testExecute(e, "switch", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{"dev1"})
+
+		me.AssertExpectations(t)
 	})
 }
 
@@ -324,6 +367,41 @@ func TestRackScaleUpdateError(t *testing.T) {
 		require.Equal(t, 1, res.Code)
 		res.RequireStderr(t, []string{"ERROR: err1"})
 		res.RequireStdout(t, []string{"Scaling rack... "})
+	})
+}
+
+func TestRackUninstall(t *testing.T) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		require.NoError(t, testLocalRack(e, "dev1", "local", "https://host1"))
+
+		me := e.Executor.(*mockstdcli.Executor)
+		me.On("Terminal", "terraform", "init", "-upgrade").Return(nil)
+		me.On("Terminal", "terraform", "destroy", "-auto-approve").Return(nil)
+
+		res, err := testExecute(e, "rack uninstall dev1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{""})
+
+		dir := filepath.Join(e.Settings, "convox", "racks", "dev1")
+
+		_, err = os.Stat(dir)
+		require.True(t, os.IsNotExist(err))
+
+		me.AssertExpectations(t)
+	})
+}
+
+func TestRackUninstallUnknown(t *testing.T) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		require.NoError(t, testLocalRack(e, "dev1", "local", "https://host1"))
+
+		res, err := testExecute(e, "rack uninstall dev2", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		res.RequireStderr(t, []string{"ERROR: could not find rack: dev2"})
+		res.RequireStdout(t, []string{""})
 	})
 }
 

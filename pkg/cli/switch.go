@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"encoding/json"
-
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
 )
@@ -19,31 +17,23 @@ func Switch(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	if rack := c.Arg(0); rack != "" {
-		r, err := matchRack(c, rack)
-		if err != nil {
-			return err
-		}
+	name := c.Arg(0)
 
-		rs := hostRacks(c)
-
-		rs[host] = r.Name
-
-		data, err := json.MarshalIndent(rs, "", "  ")
-		if err != nil {
-			return err
-		}
-
-		if err := c.SettingWrite("switch", string(data)); err != nil {
-			return err
-		}
-
-		c.Writef("Switched to <rack>%s</rack>\n", r.Name)
-
+	if name == "" {
+		c.Writef("%s\n", currentRack(c, host))
 		return nil
 	}
 
-	c.Writef("%s\n", currentRack(c, host))
+	r, err := matchRack(c, name)
+	if err != nil {
+		return err
+	}
+
+	if err := switchRack(c, r.Name); err != nil {
+		return err
+	}
+
+	c.Writef("Switched to <rack>%s</rack>\n", r.Name)
 
 	return nil
 }

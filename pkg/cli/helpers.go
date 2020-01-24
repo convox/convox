@@ -379,6 +379,28 @@ func requireEnv(vars ...string) (map[string]string, error) {
 	return env, nil
 }
 
+func switchRack(c *stdcli.Context, name string) error {
+	rs := hostRacks(c)
+
+	host, err := currentHost(c)
+	if err != nil {
+		return err
+	}
+
+	rs[host] = name
+
+	data, err := json.MarshalIndent(rs, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	if err := c.SettingWrite("switch", string(data)); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func tag(name, value string) string {
 	return fmt.Sprintf("<%s>%s</%s>", name, value, name)
 }
@@ -448,9 +470,9 @@ func terraformWriteTemplate(filename string, params map[string]interface{}) erro
 
 			name    = "{{.Name}}"
 			release = "{{.Release}}"
-			{{ range $k, $v := .Vars }}
+			{{- range $k, $v := .Vars }}
 			{{$k}} = "{{$v}}"
-			{{ end }}
+			{{- end }}
 		}
 
 		output "api" {
@@ -459,8 +481,8 @@ func terraformWriteTemplate(filename string, params map[string]interface{}) erro
 
 		output "provider" {
 			value = "{{.Provider}}"
-		}
-	`)
+		}`,
+	)
 	if err != nil {
 		return err
 	}

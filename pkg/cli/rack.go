@@ -149,6 +149,10 @@ func RackInstall(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
+	if err := switchRack(c, name); err != nil {
+		return err
+	}
+
 	return nil
 }
 
