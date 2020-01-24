@@ -34,6 +34,17 @@ module "api" {
   secret    = random_string.secret.result
 }
 
+resource "kubernetes_namespace" "system" {
+  metadata {
+    labels = {
+      system = "convox"
+      type   = "system"
+    }
+
+    name = "convox-system"
+  }
+}
+
 module "router" {
   source = "../../router/local"
 
@@ -42,7 +53,7 @@ module "router" {
   }
 
   name      = var.name
-  namespace = module.k8s.namespace
+  namespace = kubernetes_namespace.system.metadata.0.name
   platform  = var.platform
   release   = var.release
 }

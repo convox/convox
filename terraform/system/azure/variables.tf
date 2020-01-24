@@ -3,11 +3,11 @@ variable "name" {
 }
 
 variable "node_type" {
-  type = string
+  default = "Standard_D2_v3"
 }
 
 variable "region" {
-  type = string
+  default = "eastus"
 }
 
 variable "release" {
