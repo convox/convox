@@ -67,6 +67,7 @@ resource "google_container_node_pool" "rack" {
   location           = google_container_cluster.rack.location
   cluster            = google_container_cluster.rack.name
   initial_node_count = 1
+  version            = data.google_container_engine_versions.available.latest_master_version
 
   autoscaling {
     min_node_count = 1

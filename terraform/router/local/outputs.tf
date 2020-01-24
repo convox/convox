@@ -1,5 +1,5 @@
 output "endpoint" {
-  value = var.name
+  value = "${var.name}.convox"
 }
 
 output "resolver" {

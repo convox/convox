@@ -7,15 +7,15 @@ variable "name" {
 }
 
 variable "node_type" {
-  type = string
+  default = "s-1vcpu-2gb"
 }
 
 variable "region" {
-  type = string
+  default = "nyc3"
 }
 
 variable "registry_disk" {
-  type = string
+  default = "50Gi"
 }
 
 variable "release" {
