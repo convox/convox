@@ -34,7 +34,7 @@ func Switch(rack sdk.Interface, c *stdcli.Context) error {
 			return err
 		}
 
-		if err := c.SettingWrite("racks", string(data)); err != nil {
+		if err := c.SettingWrite("switch", string(data)); err != nil {
 			return err
 		}
 

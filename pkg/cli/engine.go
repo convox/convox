@@ -46,20 +46,22 @@ func (e *Engine) currentClient(c *stdcli.Context) sdk.Interface {
 		c.Fail(err)
 	}
 
-	r := currentRack(c, host)
-
-	endpoint, err := currentEndpoint(c, r)
+	r, err := matchRack(c, currentRack(c, host))
 	if err != nil {
 		c.Fail(err)
 	}
 
-	sc, err := sdk.New(endpoint)
+	if r == nil {
+		return nil
+	}
+
+	sc, err := sdk.New(r.Url)
 	if err != nil {
 		c.Fail(err)
 	}
 
 	sc.Authenticator = authenticator(c)
-	sc.Rack = r
+	sc.Rack = r.Name
 	sc.Session = currentSession(c)
 
 	return sc
