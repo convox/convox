@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"os"
+
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
 )
@@ -41,10 +43,13 @@ func (e *Engine) currentClient(c *stdcli.Context) sdk.Interface {
 		return e.Client
 	}
 
-	// url, err := currentEndpoint(c)
-	// if err != nil {
-	// 	c.Fail(err)
-	// }
+	if url := os.Getenv("RACK_URL"); url != "" {
+		sc, err := sdk.New(url)
+		if err != nil {
+			c.Fail(err)
+		}
+		return sc
+	}
 
 	host, err := currentHost(c)
 	if err != nil {
