@@ -80,27 +80,7 @@
 
 				<div class="d-flex flex-row justify-content-center" style="height:100%">
 					<nav id="toc" class="sidebar d-none d-lg-block">
-						<ul class="nav nav-pills flex-column">
-							<div id="search">
-								<input type="text" class="form-control" placeholder="Search" id="search-query" oninput="queryChange();" onblur="queryClose();">
-								<div id="search-hits" style="display: none;">
-								</div>
-							</div>
-							{{ range $c := .Documents.Categories }}
-								<div class="category">{{.Name}}</div>
-								<ul class="documents">
-									{{ template "toc" (params "Active" $.Slug "Documents" $.Documents "Slug" $c.Slug "Index" 0)}}
-								</ul>
-							{{ end }}
-							{{ range $c := .Categories }}
-								<div class="category">{{.Name}}</div>
-								<ul class="documents">
-									{{ range .Documents }}
-										<li><a {{ if and (eq $.Slug .Slug) (eq $.Category $c.Slug) }}class="active"{{ end }} href="/{{$c.Slug}}/{{.Slug}}">{{.Title}}</a></li>
-									{{ end }}
-								</ul>
-							{{ end }}
-						</ul>
+						{{ template "toc" . }}
 					</nav>
 
 					<main role="main" class="flex-column col">
@@ -190,10 +170,34 @@
 {{ end }}
 
 {{ define "toc" }}
+	<ul class="nav nav-pills flex-column">
+		<div id="search">
+			<input type="text" class="form-control" placeholder="Search" id="search-query" oninput="queryChange();" onblur="queryClose();">
+			<div id="search-hits" style="display: none;">
+			</div>
+		</div>
+		{{ range $c := .Documents.Categories }}
+			<div class="category">{{.Name}}</div>
+			<ul class="documents">
+				{{ template "toc-children" (params "Active" $.Slug "Documents" $.Documents "Slug" $c.Slug "Index" 0)}}
+			</ul>
+		{{ end }}
+		{{ range $c := .Categories }}
+			<div class="category">{{.Name}}</div>
+			<ul class="documents">
+				{{ range .Documents }}
+					<li><a {{ if and (eq $.Slug .Slug) (eq $.Category $c.Slug) }}class="active"{{ end }} href="/{{$c.Slug}}/{{.Slug}}">{{.Title}}</a></li>
+				{{ end }}
+			</ul>
+		{{ end }}
+	</ul>
+{{ end }}
+
+{{ define "toc-children" }}
 	{{ range .Documents.Children .Slug }}
 		<li><a id="{{ slugid .Slug }}" style="padding-left:{{ indent $.Index }}px" class="dropdown-item {{ if eq .Slug $.Active }}active{{ end }}" href="/{{.Slug}}">{{.Title}}</a></li>
 		{{ if expand .Slug $.Active }}
-			{{ template "toc" (params "Active" $.Active "Documents" $.Documents "Index" (inc $.Index) "Slug" .Slug) }}
+			{{ template "toc-children" (params "Active" $.Active "Documents" $.Documents "Index" (inc $.Index) "Slug" .Slug) }}
 		{{ end }}
 	{{ end }}
 {{ end }}

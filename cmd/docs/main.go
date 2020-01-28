@@ -58,6 +58,7 @@ func run() error {
 	s.Router.Static("/assets", packr.NewBox("./public/assets"))
 
 	s.Route("GET", "/", index)
+	s.Route("GET", "/toc/{slug:.*}", toc)
 	s.Route("GET", "/{slug:.*}", doc)
 
 	stdapi.LoadTemplates(packr.NewBox("./templates"), helpers)
@@ -174,4 +175,13 @@ func doc(c *stdapi.Context) error {
 	}
 
 	return c.RenderTemplate("page", params)
+}
+
+func toc(c *stdapi.Context) error {
+	params := map[string]interface{}{
+		"Documents": documents,
+		"Slug":      c.Var("slug"),
+	}
+
+	return c.RenderTemplate("toc", params)
 }

@@ -1,6 +1,7 @@
 $(window).ready(function () {
   $("a").each(hijackLocalLink);
 
+  scrollActiveToc();
   addHeadingAnchors();
 });
 
@@ -30,13 +31,13 @@ function hijackLocalLink(i, a) {
 
 function loadDocument(href) {
   $('nav#toc a').blur().removeClass('active');
+  var url = new URL(href);
+  console.log('url', url);
+  $.get('/toc' + url.pathname, function (data) {
+    $('nav#toc').html(data);
+    scrollActiveToc();
+  });
   $.get(href + '?partial', function (data) {
-    $('nav#toc a').each(function (i, a) {
-      if (a.href == href) {
-        $(a).addClass('active');
-        $(a).get(0).scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    })
     $('main').html(data);
     $('main').scrollTop(0);
     $('main a').each(hijackLocalLink);
@@ -64,4 +65,11 @@ function queryClose() {
 
 function queryShow() {
   $('#search-hits').show(200);
+}
+
+function scrollActiveToc() {
+  var active = $('nav#toc a.active').get(0);
+  if (active) {
+    active.scrollIntoView({ block: 'center' });
+  }
 }
