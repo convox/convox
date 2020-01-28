@@ -1,5 +1,5 @@
 provider "google" {
-  version = "~> 2.18"
+  version = "~> 3.5.0"
 
   alias = "direct"
 }
