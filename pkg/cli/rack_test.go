@@ -73,7 +73,46 @@ func TestRackInstall(t *testing.T) {
 		tfdata, err := ioutil.ReadFile(tf)
 		require.NoError(t, err)
 
-		testdata, err := ioutil.ReadFile("testdata/terraform.local.tf")
+		testdata, err := ioutil.ReadFile("testdata/terraform/dev1.tf")
+		require.NoError(t, err)
+
+		require.Equal(t, strings.Trim(string(tfdata), "\n"), strings.Trim(string(testdata), "\n"))
+
+		res, err = testExecute(e, "switch", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{"dev1"})
+
+		me.AssertExpectations(t)
+	})
+}
+
+func TestRackInstallArgs(t *testing.T) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		me := &mockstdcli.Executor{}
+		me.On("Terminal", "terraform", "init").Return(nil)
+		me.On("Terminal", "terraform", "apply", "-auto-approve").Return(nil)
+		e.Executor = me
+
+		res, err := testExecute(e, "rack install local dev1 foo=bar baz=qux", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{""})
+
+		dir := filepath.Join(e.Settings, "racks", "dev1")
+		tf := filepath.Join(dir, "main.tf")
+
+		_, err = os.Stat(dir)
+		require.NoError(t, err)
+		_, err = os.Stat(tf)
+		require.NoError(t, err)
+
+		tfdata, err := ioutil.ReadFile(tf)
+		require.NoError(t, err)
+
+		testdata, err := ioutil.ReadFile("testdata/terraform/dev1.args.tf")
 		require.NoError(t, err)
 
 		require.Equal(t, strings.Trim(string(tfdata), "\n"), strings.Trim(string(testdata), "\n"))
@@ -417,9 +456,71 @@ func TestRackUpdate(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
-		res.RequireStdout(t, []string{
-			"OK",
-		})
+		res.RequireStdout(t, []string{""})
+
+		dir := filepath.Join(e.Settings, "racks", "dev1")
+		tf := filepath.Join(dir, "main.tf")
+
+		_, err = os.Stat(dir)
+		require.NoError(t, err)
+		_, err = os.Stat(tf)
+		require.NoError(t, err)
+
+		tfdata, err := ioutil.ReadFile(tf)
+		require.NoError(t, err)
+
+		testdata, err := ioutil.ReadFile("testdata/terraform/dev1.tf")
+		require.NoError(t, err)
+
+		require.Equal(t, strings.Trim(string(tfdata), "\n"), strings.Trim(string(testdata), "\n"))
+
+		me.AssertExpectations(t)
+	})
+}
+
+func TestRackUpdateArgs(t *testing.T) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		require.NoError(t, testLocalRack(e, "dev1", "local", "https://host1"))
+
+		me := e.Executor.(*mockstdcli.Executor)
+
+		me.On("Terminal", "terraform", "init").Return(nil).Once()
+		me.On("Terminal", "terraform", "apply", "-auto-approve").Return(nil).Once()
+
+		res, err := testExecute(e, "rack install local dev2 foo=bar baz=qux", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{""})
+
+		tf := filepath.Join(e.Settings, "racks", "dev2", "main.tf")
+
+		fmt.Printf("tf: %+v\n", tf)
+
+		tfdata, err := ioutil.ReadFile(tf)
+		require.NoError(t, err)
+
+		testdata, err := ioutil.ReadFile("testdata/terraform/dev2.args.tf")
+		require.NoError(t, err)
+
+		require.Equal(t, strings.Trim(string(testdata), "\n"), strings.Trim(string(tfdata), "\n"))
+
+		me.On("Terminal", "terraform", "init", "-upgrade").Return(nil).Once()
+		me.On("Terminal", "terraform", "apply", "-auto-approve").Return(nil).Once()
+
+		res, err = testExecute(e, "rack update dev2 foo= other=side", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{""})
+
+		tfdata2, err := ioutil.ReadFile(tf)
+		require.NoError(t, err)
+
+		testdata2, err := ioutil.ReadFile("testdata/terraform/dev2.update.tf")
+		require.NoError(t, err)
+
+		require.Equal(t, strings.Trim(string(tfdata2), "\n"), strings.Trim(string(testdata2), "\n"))
 
 		me.AssertExpectations(t)
 	})

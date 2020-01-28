@@ -22,8 +22,8 @@ func init() {
 	})
 
 	registerWithoutProvider("rack install", "install a new rack", RackInstall, stdcli.CommandOptions{
-		Usage:    "<provider> <name>",
-		Validate: stdcli.Args(2),
+		Usage:    "<provider> <name> [option=value]...",
+		Validate: stdcli.ArgsMin(2),
 	})
 
 	register("rack logs", "get logs for the rack", RackLogs, stdcli.CommandOptions{
@@ -67,8 +67,8 @@ func init() {
 	})
 
 	registerWithoutProvider("rack update", "update a rack", RackUpdate, stdcli.CommandOptions{
-		Usage:    "<name>",
-		Validate: stdcli.Args(1),
+		Usage:    "<name> [option=value]...",
+		Validate: stdcli.ArgsMin(1),
 	})
 }
 
@@ -110,11 +110,6 @@ func RackInstall(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	vars, err := terraformVars(provider)
-	if err != nil {
-		return err
-	}
-
 	dir, err := c.SettingDirectory(fmt.Sprintf("racks/%s", name))
 	if err != nil {
 		return err
@@ -122,6 +117,20 @@ func RackInstall(rack sdk.Interface, c *stdcli.Context) error {
 
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return err
+	}
+
+	vars, err := terraformProviderVars(provider)
+	if err != nil {
+		return err
+	}
+
+	ov, err := terraformOptionVars(dir, c.Args[2:])
+	if err != nil {
+		return err
+	}
+
+	for k, v := range ov {
+		vars[k] = v
 	}
 
 	tf := filepath.Join(dir, "main.tf")
@@ -133,7 +142,6 @@ func RackInstall(rack sdk.Interface, c *stdcli.Context) error {
 	params := map[string]interface{}{
 		"Name":     name,
 		"Provider": provider,
-		"Release":  "",
 		"Vars":     vars,
 	}
 
@@ -367,19 +375,28 @@ func RackUpdate(rack sdk.Interface, c *stdcli.Context) error {
 		return rackUpdateRemote(c, name)
 	}
 
+	dir, err := c.SettingDirectory(fmt.Sprintf("racks/%s", name))
+	if err != nil {
+		return err
+	}
+
 	env, err := terraformEnv(r.Provider)
 	if err != nil {
 		return err
 	}
 
-	vars, err := terraformVars(r.Provider)
+	vars, err := terraformProviderVars(r.Provider)
 	if err != nil {
 		return err
 	}
 
-	dir, err := c.SettingDirectory(fmt.Sprintf("racks/%s", name))
+	ov, err := terraformOptionVars(dir, c.Args[1:])
 	if err != nil {
 		return err
+	}
+
+	for k, v := range ov {
+		vars[k] = v
 	}
 
 	tf := filepath.Join(dir, "main.tf")
@@ -387,7 +404,6 @@ func RackUpdate(rack sdk.Interface, c *stdcli.Context) error {
 	params := map[string]interface{}{
 		"Name":     name,
 		"Provider": r.Provider,
-		"Release":  "",
 		"Vars":     vars,
 	}
 
@@ -403,7 +419,7 @@ func RackUpdate(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	return c.OK()
+	return nil
 }
 
 func rackUninstallRemote(c *stdcli.Context, name string) error {

@@ -404,7 +404,6 @@ func switchRack(c *stdcli.Context, name string) error {
 func tag(name, value string) string {
 	return fmt.Sprintf("<%s>%s</%s>", name, value, name)
 }
-
 func terraform(c *stdcli.Context, dir string, env map[string]string, args ...string) error {
 	wd, err := os.Getwd()
 	if err != nil {
@@ -439,7 +438,45 @@ func terraformEnv(provider string) (map[string]string, error) {
 	}
 }
 
-func terraformVars(provider string) (map[string]string, error) {
+func terraformOptionVars(dir string, args []string) (map[string]string, error) {
+	vars := map[string]string{}
+
+	vf := filepath.Join(dir, "vars.json")
+
+	if _, err := os.Stat(vf); !os.IsNotExist(err) {
+		data, err := ioutil.ReadFile(vf)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := json.Unmarshal(data, &vars); err != nil {
+			return nil, err
+		}
+	}
+
+	for _, arg := range args {
+		parts := strings.Split(arg, "=")
+		k := strings.TrimSpace(parts[0])
+		if v := strings.TrimSpace(parts[1]); v != "" {
+			vars[k] = v
+		} else {
+			delete(vars, k)
+		}
+	}
+
+	data, err := json.MarshalIndent(vars, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+
+	if err := ioutil.WriteFile(vf, data, 0600); err != nil {
+		return nil, err
+	}
+
+	return vars, nil
+}
+
+func terraformProviderVars(provider string) (map[string]string, error) {
 	switch provider {
 	case "do":
 		env, err := requireEnv("DIGITALOCEAN_ACCESS_ID", "DIGITALOCEAN_SECRET_KEY", "DIGITALOCEAN_TOKEN")
@@ -449,11 +486,28 @@ func terraformVars(provider string) (map[string]string, error) {
 		vars := map[string]string{
 			"access_id":  env["DIGITALOCEAN_ACCESS_ID"],
 			"secret_key": env["DIGITALOCEAN_SECRET_KEY"],
+			"release":    "",
 			"token":      env["DIGITALOCEAN_TOKEN"],
 		}
 		return vars, nil
 	default:
-		return map[string]string{}, nil
+		vars := map[string]string{
+			"release": "",
+		}
+		return vars, nil
+	}
+}
+
+func terraformTemplateHelpers() template.FuncMap {
+	return template.FuncMap{
+		"keys": func(h map[string]string) []string {
+			ks := []string{}
+			for k := range h {
+				ks = append(ks, k)
+			}
+			sort.Strings(ks)
+			return ks
+		},
 	}
 }
 
@@ -464,14 +518,14 @@ func terraformWriteTemplate(filename string, params map[string]interface{}) erro
 		params["Source"] = fmt.Sprintf("github.com/convox/convox//terraform/system/%s", params["Provider"])
 	}
 
-	t, err := template.New("main").Parse(`
+	t, err := template.New("main").Funcs(terraformTemplateHelpers()).Parse(`
 		module "system" {
 			source = "{{.Source}}"
 
-			name    = "{{.Name}}"
-			release = "{{.Release}}"
-			{{- range $k, $v := .Vars }}
-			{{$k}} = "{{$v}}"
+			name = "{{.Name}}"
+
+			{{- range (keys .Vars) }}
+			{{.}} = "{{index $.Vars .}}"
 			{{- end }}
 		}
 
