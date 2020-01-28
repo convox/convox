@@ -1,9 +1,5 @@
-terraform {
-  required_version = ">= 0.12.0"
-}
-
 provider "google" {
-  version = "~> 2.12"
+  version = "~> 3.5.0"
 }
 
 provider "http" {

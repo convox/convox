@@ -1,13 +1,9 @@
-terraform {
-  required_version = ">= 0.12.0"
-}
-
 provider "google" {
-  version = "~> 2.19"
+  version = "~> 3.5.0"
 }
 
 provider "google-beta" {
-  version = "~> 2.19"
+  version = "~> 3.5.0"
 }
 
 provider "local" {
@@ -19,11 +15,6 @@ provider "random" {
 }
 
 data "google_client_config" "current" {}
-
-data "google_container_engine_versions" "available" {
-  location       = data.google_client_config.current.region
-  version_prefix = "1.14."
-}
 
 data "google_project" "current" {}
 
@@ -41,8 +32,10 @@ resource "google_container_cluster" "rack" {
 
   remove_default_node_pool = true
   initial_node_count       = 1
-  logging_service          = "logging.googleapis.com"
-  min_master_version       = data.google_container_engine_versions.available.latest_master_version
+
+  release_channel {
+    channel = "REGULAR"
+  }
 
   workload_identity_config {
     identity_namespace = "${data.google_project.current.project_id}.svc.id.goog"
@@ -67,7 +60,6 @@ resource "google_container_node_pool" "rack" {
   location           = google_container_cluster.rack.location
   cluster            = google_container_cluster.rack.name
   initial_node_count = 1
-  version            = data.google_container_engine_versions.available.latest_master_version
 
   autoscaling {
     min_node_count = 1
