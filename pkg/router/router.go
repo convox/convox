@@ -234,18 +234,25 @@ func (r *Router) Upstream() (string, error) {
 	return fmt.Sprintf("%s:53", cc.Servers[0]), nil
 }
 
+func (r *Router) autocertHostPolicy(ctx context.Context, host string) error {
+	ts, err := r.storage.TargetList(host)
+	if err != nil {
+		return err
+	}
+	if len(ts) == 0 {
+		return fmt.Errorf("unknown host")
+	}
+
+	// work around chrome's agressive CT caching
+	time.Sleep(5 * time.Second)
+
+	return nil
+}
+
 func (r *Router) generateCertificateAutocert(m *autocert.Manager) func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
 	return func(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
 		if hello.ServerName == "" {
 			return common.CertificateSelfSigned("convox")
-		}
-
-		ts, err := r.storage.TargetList(hello.ServerName)
-		if err != nil {
-			return nil, err
-		}
-		if len(ts) == 0 {
-			return nil, fmt.Errorf("unknown host")
 		}
 
 		c, err := m.GetCertificate(hello)
@@ -367,8 +374,9 @@ func (r *Router) setupHTTP() error {
 
 func (r *Router) setupHTTPAutocert() error {
 	m := &autocert.Manager{
-		Cache:  r.cache,
-		Prompt: autocert.AcceptTOS,
+		Cache:      r.cache,
+		HostPolicy: r.autocertHostPolicy,
+		Prompt:     autocert.AcceptTOS,
 	}
 
 	ln, err := tls.Listen("tcp", fmt.Sprintf(":443"), &tls.Config{
