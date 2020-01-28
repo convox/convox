@@ -1,0 +1,7 @@
+#!/bin/bash
+
+if [ "$DEVELOPMENT" == "true" ]; then
+  exec watchexec -e go,md -r -s SIGTERM "make $GOPATH/bin/docs && $GOPATH/bin/docs"
+else
+  exec $GOPATH/bin/docs
+fi

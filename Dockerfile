@@ -26,31 +26,39 @@ COPY . .
 
 RUN make build
 
-# ## package #####################################################################
+## package #####################################################################
 
-# FROM golang:1.12 AS package
+FROM golang:1.12 AS package
 
-# RUN apt-get update && apt-get -y install upx-ucl
+RUN apt-get update && apt-get -y install upx-ucl
 
-# RUN go get -u github.com/gobuffalo/packr/packr
+RUN go get -u github.com/gobuffalo/packr/packr
 
-# WORKDIR /usr/src/convox
+WORKDIR /usr/src/convox
 
-# COPY --from=development /usr/src/convox .
+COPY --from=development /usr/src/convox .
 
-# RUN make package build compress
+RUN make package build compress
 
-# ## production ##################################################################
+## production ##################################################################
 
-# FROM ubuntu:18.04
+FROM ubuntu:18.04
 
-# RUN apt-get -qq update && apt-get -qq -y install curl
+RUN apt-get -qq update && apt-get -qq -y install curl
 
-# RUN curl -Ls https://storage.googleapis.com/kubernetes-release/release/v1.13.0/bin/linux/amd64/kubectl -o /usr/bin/kubectl && \
-#   chmod +x /usr/bin/kubectl
+RUN curl -Ls https://storage.googleapis.com/kubernetes-release/release/v1.13.0/bin/linux/amd64/kubectl -o /usr/bin/kubectl && \
+  chmod +x /usr/bin/kubectl
 
-# ENV DEVELOPMENT=false
+ENV DEVELOPMENT=false
+ENV GOPATH=/go
+ENV PATH=$GOPATH/bin:$PATH
 
-# WORKDIR /rack
+WORKDIR /app
 
-# COPY --from=package /go/bin/router /usr/bin/
+COPY --from=package /go/bin/api    $GOPATH/bin/
+COPY --from=package /go/bin/atom   $GOPATH/bin/
+COPY --from=package /go/bin/build  $GOPATH/bin/
+COPY --from=package /go/bin/docs   $GOPATH/bin/
+COPY --from=package /go/bin/router $GOPATH/bin/
+
+COPY --from=package /usr/src/convox/bin/docs bin/docs
