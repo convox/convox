@@ -33,11 +33,21 @@ resource "aws_iam_role" "cluster" {
 }
 
 resource "aws_iam_role_policy_attachment" "cluster_eks_cluster" {
+  depends_on = [
+    aws_subnet.private,
+    aws_subnet.public,
+  ]
+
   role       = aws_iam_role.cluster.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
 }
 
 resource "aws_iam_role_policy_attachment" "cluster_eks_service" {
+  depends_on = [
+    aws_subnet.private,
+    aws_subnet.public,
+  ]
+
   role       = aws_iam_role.cluster.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSServicePolicy"
 }
