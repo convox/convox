@@ -7,25 +7,25 @@ locals {
   port = "6379"
 }
 
-resource "kubernetes_persistent_volume_claim" "data" {
-  metadata {
-    namespace = var.namespace
-    name      = "${var.name}-data"
+# resource "kubernetes_persistent_volume_claim" "data" {
+#   metadata {
+#     namespace = var.namespace
+#     name      = "${var.name}-data"
 
-    labels = {
-      system = "convox"
-    }
-  }
+#     labels = {
+#       system = "convox"
+#     }
+#   }
 
-  spec {
-    access_modes = ["ReadWriteOnce"]
-    resources {
-      requests = {
-        storage = var.disk
-      }
-    }
-  }
-}
+#   spec {
+#     access_modes = ["ReadWriteOnce"]
+#     resources {
+#       requests = {
+#         storage = var.disk
+#       }
+#     }
+#   }
+# }
 
 resource "kubernetes_deployment" "redis" {
   metadata {
@@ -73,19 +73,19 @@ resource "kubernetes_deployment" "redis" {
             protocol       = "TCP"
           }
 
-          volume_mount {
-            name       = "data"
-            mount_path = "/data"
-          }
+          # volume_mount {
+          #   name       = "data"
+          #   mount_path = "/data"
+          # }
         }
 
-        volume {
-          name = "data"
+        # volume {
+        #   name = "data"
 
-          persistent_volume_claim {
-            claim_name = kubernetes_persistent_volume_claim.data.metadata.0.name
-          }
-        }
+        #   persistent_volume_claim {
+        #     claim_name = kubernetes_persistent_volume_claim.data.metadata.0.name
+        #   }
+        # }
       }
     }
   }
