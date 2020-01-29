@@ -101,19 +101,13 @@ Iteration:
 
 				prefix := ""
 
-				pod := entry.Labels["container.googleapis.com/pod_name"]
-				service := "unknown"
+				labels := entry.Resource.GetLabels()
 
-				if pp := strings.Split(pod, "-"); len(pp) > 2 {
-					service = strings.Join(pp[0:len(pp)-2], "-")
-				}
+				typ := common.CoalesceString(entry.Labels["k8s-pod/type"], "unknown")
+				name := common.CoalesceString(entry.Labels["k8s-pod/name"], "unknown")
 
 				if common.DefaultBool(opts.Prefix, false) {
-					if strings.HasSuffix(entry.LogName, "/main") {
-						prefix = fmt.Sprintf("%s service/%s/%s ", entry.Timestamp.Format(time.RFC3339), service, pod)
-					} else {
-						prefix = fmt.Sprintf("%s %s ", entry.Timestamp.Format(time.RFC3339), entry.Labels["stream"])
-					}
+					prefix = fmt.Sprintf("%s %s/%s/%s ", entry.Timestamp.Format(time.RFC3339), typ, name, labels["pod_name"])
 				}
 
 				switch t := entry.Payload.(type) {
@@ -132,5 +126,11 @@ Iteration:
 }
 
 func (p *Provider) logFilters(app string) string {
-	return fmt.Sprintf(`labels."container.googleapis.com/namespace_name" = %q`, p.AppNamespace(app))
+	filters := []string{
+		`resource.type="k8s_container"`,
+		fmt.Sprintf(`resource.labels.cluster_name=%q`, p.Name),
+		fmt.Sprintf(`resource.labels.namespace_name=%q`, p.AppNamespace(app)),
+	}
+
+	return strings.Join(filters, " AND ")
 }
