@@ -296,9 +296,12 @@ func racks(c *stdcli.Context) ([]rack, error) {
 	rs = append(rs, rrs...)
 
 	sort.Slice(rs, func(i, j int) bool {
-		if !rs[i].Remote && rs[j].Remote {
+		switch {
+		case !rs[i].Remote && rs[j].Remote:
 			return true
-		} else {
+		case rs[i].Remote && !rs[j].Remote:
+			return false
+		default:
 			return rs[i].Name < rs[j].Name
 		}
 	})
