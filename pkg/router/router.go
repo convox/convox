@@ -315,7 +315,7 @@ func (r *Router) healthTick() error {
 		}
 
 		if _, err = http.Get(fmt.Sprintf("https://%s/convox/health", h)); err != nil {
-			fmt.Printf("ns=router at=health.tick host=%q error=%v", h, err)
+			fmt.Printf("ns=router at=health.tick host=%q error=%v\n", h, err)
 		}
 	}
 
