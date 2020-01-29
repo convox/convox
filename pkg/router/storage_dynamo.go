@@ -1,10 +1,12 @@
 package router
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/convox/convox/pkg/common"
@@ -31,6 +33,43 @@ func NewStorageDynamo(hosts, targets string) (*StorageDynamo, error) {
 	}
 
 	return d, nil
+}
+
+func (s *StorageDynamo) HostList() ([]string, error) {
+	// fmt.Printf("ns=storage.dynamo at=host.list\n")
+
+	ctx := context.Background()
+
+	req := &dynamodb.ScanInput{
+		ProjectionExpression: aws.String("host"),
+		TableName:            aws.String(s.hosts),
+	}
+
+	p := request.Pagination{
+		NewRequest: func() (*request.Request, error) {
+			r, _ := s.ddb.ScanRequest(req)
+			r.SetContext(ctx)
+			return r, nil
+		},
+	}
+
+	hosts := []string{}
+
+	for p.Next() {
+		page := p.Page().(*dynamodb.ScanOutput)
+
+		for _, item := range page.Items {
+			if host := item["host"].S; host != nil {
+				hosts = append(hosts, *host)
+			}
+		}
+	}
+
+	if err := p.Err(); err != nil {
+		return nil, err
+	}
+
+	return hosts, nil
 }
 
 func (s *StorageDynamo) IdleGet(target string) (bool, error) {
@@ -128,7 +167,7 @@ func (s *StorageDynamo) TargetAdd(host, target string, idles bool) error {
 }
 
 func (s *StorageDynamo) TargetList(host string) ([]string, error) {
-	fmt.Printf("ns=storage.dynamo at=target.list\n")
+	// fmt.Printf("ns=storage.dynamo at=target.list\n")
 
 	res, err := s.ddb.GetItem(&dynamodb.GetItemInput{
 		Key:       map[string]*dynamodb.AttributeValue{"host": {S: aws.String(host)}},

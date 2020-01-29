@@ -24,6 +24,21 @@ func NewStorageMemory() *StorageMemory {
 	}
 }
 
+func (s *StorageMemory) HostList() ([]string, error) {
+	// fmt.Printf("ns=storage.memory at=host.list\n")
+
+	hosts := []string{}
+
+	s.routes.Range(func(key, value interface{}) bool {
+		if host, ok := key.(string); ok {
+			hosts = append(hosts, host)
+		}
+		return true
+	})
+
+	return hosts, nil
+}
+
 func (s *StorageMemory) IdleGet(target string) (bool, error) {
 	fmt.Printf("ns=storage.memory at=idle.get target=%q\n", target)
 
@@ -125,6 +140,8 @@ func (s *StorageMemory) TargetAdd(host, target string, idles bool) error {
 }
 
 func (s *StorageMemory) TargetList(host string) ([]string, error) {
+	// fmt.Printf("ns=storage.memory at=target.list\n")
+
 	s.targetLock.Lock()
 	defer s.targetLock.Unlock()
 

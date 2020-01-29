@@ -21,6 +21,7 @@ import (
 )
 
 const (
+	healthTick  = 10 * time.Second
 	idleTick    = 1 * time.Minute
 	idleTimeout = 60 * time.Minute
 )
@@ -95,8 +96,12 @@ func New() (*Router, error) {
 
 		r.storage = s
 	case "redis":
-		addr := os.Getenv("REDIS_ADDR")
-		fmt.Printf("addr: %+v\n", addr)
+		s, err := NewStorageRedis(os.Getenv("REDIS_ADDR"), os.Getenv("REDIS_AUTH"), os.Getenv("REDIS_SECURE") == "true")
+		if err != nil {
+			return nil, err
+		}
+
+		r.storage = s
 	default:
 		r.storage = NewStorageMemory()
 	}
@@ -140,6 +145,7 @@ func (r *Router) Serve() error {
 	go serve(ch, r.HTTP)
 	go serve(ch, r.HTTPS)
 
+	go r.healthTicker()
 	go r.idleTicker()
 
 	return <-ch
@@ -243,9 +249,6 @@ func (r *Router) autocertHostPolicy(ctx context.Context, host string) error {
 		return fmt.Errorf("unknown host")
 	}
 
-	// work around chrome's agressive CT caching
-	time.Sleep(5 * time.Second)
-
 	return nil
 }
 
@@ -288,6 +291,35 @@ func (r *Router) generateCertificateCA(hello *tls.ClientHelloInfo) (*tls.Certifi
 	r.certs.Store(host, *c)
 
 	return c, nil
+}
+
+// try to request every known host on a timer to trigger things like
+// certificate generation before the user gets to them
+func (r *Router) healthTicker() {
+	for range time.Tick(healthTick) {
+		if err := r.healthTick(); err != nil {
+			fmt.Printf("ns=router at=health.ticker error=%v\n", err)
+		}
+	}
+}
+
+func (r *Router) healthTick() error {
+	hs, err := r.storage.HostList()
+	if err != nil {
+		return err
+	}
+
+	for _, h := range hs {
+		if strings.HasSuffix(h, ".local") {
+			continue
+		}
+
+		if _, err = http.Get(fmt.Sprintf("https://%s/convox/health", h)); err != nil {
+			fmt.Printf("ns=router at=health.tick host=%q error=%v", h, err)
+		}
+	}
+
+	return nil
 }
 
 func (r *Router) idleTicker() {
