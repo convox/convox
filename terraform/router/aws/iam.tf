@@ -37,6 +37,7 @@ data "aws_iam_policy_document" "router" {
     resources = [aws_dynamodb_table.hosts.arn]
     actions = [
       "dynamodb:GetItem",
+      "dynamodb:Scan",
       "dynamodb:UpdateItem",
     ]
   }
