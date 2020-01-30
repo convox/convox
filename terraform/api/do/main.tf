@@ -54,16 +54,16 @@ module "k8s" {
   annotations = {}
 
   env = {
-    BUCKET            = digitalocean_spaces_bucket.storage.name
-    ELASTICSEARCH_URL = module.elasticsearch.url
-    PROVIDER          = "do"
-    REGION            = var.region
-    REGISTRY          = "registry.${var.domain}"
-    RESOLVER          = var.resolver
-    ROUTER            = var.router
-    SECRET            = var.secret
-    SPACES_ACCESS     = var.access_id
-    SPACES_ENDPOINT   = "https://${var.region}.digitaloceanspaces.com"
-    SPACES_SECRET     = var.secret_key
+    BUCKET          = digitalocean_spaces_bucket.storage.name
+    ELASTIC_URL     = module.elasticsearch.url
+    PROVIDER        = "do"
+    REGION          = var.region
+    REGISTRY        = "registry.${var.domain}"
+    RESOLVER        = var.resolver
+    ROUTER          = var.router
+    SECRET          = var.secret
+    SPACES_ACCESS   = var.access_id
+    SPACES_ENDPOINT = "https://${var.region}.digitaloceanspaces.com"
+    SPACES_SECRET   = var.secret_key
   }
 }

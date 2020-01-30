@@ -19,6 +19,28 @@ locals {
   }
 }
 
+module "elasticsearch" {
+  source = "../../elasticsearch/k8s"
+
+  providers = {
+    kubernetes = kubernetes
+  }
+
+  namespace = var.namespace
+}
+
+module "fluentd" {
+  source = "../../fluentd/elasticsearch"
+
+  providers = {
+    kubernetes = kubernetes
+  }
+
+  elasticsearch = module.elasticsearch.host
+  namespace     = var.namespace
+  name          = var.name
+}
+
 module "k8s" {
   source = "../k8s"
 
@@ -37,14 +59,15 @@ module "k8s" {
   }
 
   env = {
-    BUCKET   = google_storage_bucket.storage.name
-    KEY      = google_service_account_key.api.private_key
-    PROJECT  = data.google_client_config.current.project,
-    PROVIDER = "gcp"
-    REGION   = data.google_client_config.current.region
-    REGISTRY = data.google_container_registry_repository.registry.repository_url
-    RESOLVER = var.resolver
-    ROUTER   = var.router
-    SOCKET   = "/var/run/docker.sock"
+    BUCKET      = google_storage_bucket.storage.name
+    ELASTIC_URL = module.elasticsearch.url
+    KEY         = google_service_account_key.api.private_key
+    PROJECT     = data.google_client_config.current.project,
+    PROVIDER    = "gcp"
+    REGION      = data.google_client_config.current.region
+    REGISTRY    = data.google_container_registry_repository.registry.repository_url
+    RESOLVER    = var.resolver
+    ROUTER      = var.router
+    SOCKET      = "/var/run/docker.sock"
   }
 }

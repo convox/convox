@@ -5,9 +5,8 @@ import (
 	"encoding/base64"
 	"os"
 
-	"cloud.google.com/go/logging"
-	"cloud.google.com/go/logging/logadmin"
 	"cloud.google.com/go/storage"
+	"github.com/convox/convox/pkg/elastic"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/pkg/templater"
 	"github.com/convox/convox/provider/k8s"
@@ -23,10 +22,8 @@ type Provider struct {
 	Region   string
 	Registry string
 
-	LogAdmin *logadmin.Client
-	Logging  *logging.Client
-	Storage  *storage.Client
-
+	elastic   *elastic.Client
+	storage   *storage.Client
 	templater *templater.Templater
 }
 
@@ -77,28 +74,21 @@ func (p *Provider) WithContext(ctx context.Context) structs.Provider {
 }
 
 func (p *Provider) initializeGcpServices() error {
+	ec, err := elastic.New(os.Getenv("ELASTIC_URL"))
+	if err != nil {
+		return err
+	}
+
+	p.elastic = ec
+
 	ctx := context.Background()
-
-	l, err := logging.NewClient(ctx, p.Project)
-	if err != nil {
-		return err
-	}
-
-	p.Logging = l
-
-	la, err := logadmin.NewClient(ctx, p.Project)
-	if err != nil {
-		return err
-	}
-
-	p.LogAdmin = la
 
 	s, err := storage.NewClient(ctx)
 	if err != nil {
 		return err
 	}
 
-	p.Storage = s
+	p.storage = s
 
 	return nil
 }

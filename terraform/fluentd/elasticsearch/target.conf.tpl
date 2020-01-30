@@ -4,7 +4,7 @@
 		enable_ruby true
 		<record>
 			index convox.$${record["kubernetes"]["namespace_labels"]["rack"]}.$${record["kubernetes"]["namespace_labels"]["app"]}
-			stream service.$${record["kubernetes"]["labels"]["service"]}.$${record["kubernetes"]["pod_name"]}
+			stream $${record["kubernetes"]["labels"]["type"]}.$${record["kubernetes"]["labels"]["name"]}.$${record["kubernetes"]["pod_name"]}
 		</record>
 	</filter>
 
