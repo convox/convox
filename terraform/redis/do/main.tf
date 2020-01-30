@@ -1,5 +1,5 @@
 provider "digitalocean" {
-  version = "~> 1.11"
+  version = "~> 1.13"
 }
 
 resource "random_string" "suffix" {
@@ -17,5 +17,14 @@ resource "digitalocean_database_cluster" "redis" {
 
   lifecycle {
     ignore_changes = [version]
+  }
+}
+
+resource "digitalocean_database_firewall" "redis" {
+  cluster_id = digitalocean_database_cluster.redis.id
+
+  rule {
+    type  = "k8s"
+    value = var.cluster
   }
 }

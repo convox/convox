@@ -1,9 +1,5 @@
-terraform {
-  required_version = ">= 0.12.0"
-}
-
 provider "digitalocean" {
-  version = "~> 1.11"
+  version = "~> 1.13"
 }
 
 provider "http" {
@@ -22,33 +18,23 @@ provider "random" {
   version = "~> 2.2"
 }
 
-data "http" "kubernetes_versions" {
-  url = "https://api.digitalocean.com/v2/kubernetes/options"
-
-  request_headers = {
-    Authorization = "Bearer ${var.token}"
-  }
-}
-
-locals {
-  kubernetes_desired = "1.14"
-  kubernetes_slug    = [for v in jsondecode(data.http.kubernetes_versions.body).options.versions : v.slug if length(regexall("^${local.kubernetes_desired}\\.", v.kubernetes_version)) > 0].0
-}
+data "digitalocean_kubernetes_versions" "available" {}
 
 resource "digitalocean_kubernetes_cluster" "rack" {
   name    = var.name
   region  = var.region
-  version = local.kubernetes_slug
+  version = data.digitalocean_kubernetes_versions.available.latest_version
 
   node_pool {
     name       = "${var.name}-node"
     size       = var.node_type
     auto_scale = true
-    min_nodes  = 1
+    min_nodes  = 2
     max_nodes  = 10
   }
 }
 
+# new tokens sometimes take a few seconds to start working
 resource "null_resource" "delay_token" {
   provisioner "local-exec" {
     command = "sleep 30"

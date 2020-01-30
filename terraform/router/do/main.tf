@@ -1,9 +1,5 @@
-terraform {
-  required_version = ">= 0.12.0"
-}
-
 provider "digitalocean" {
-  version = "~> 1.11"
+  version = "~> 1.13"
 }
 
 provider "http" {
