@@ -68,5 +68,6 @@ module "router" {
   env = {
     CACHE      = "redis"
     REDIS_ADDR = module.redis.addr
+    STORAGE    = "redis"
   }
 }
