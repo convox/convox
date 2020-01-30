@@ -10,7 +10,7 @@ variable "name" {
 
 variable "node_type" {
   description = "machine type of the cluster nodes"
-  default     = "s-1vcpu-2gb"
+  default     = "s-2vcpu-4gb"
 }
 
 variable "release" {
