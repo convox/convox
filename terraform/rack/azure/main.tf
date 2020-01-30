@@ -3,7 +3,7 @@ terraform {
 }
 
 provider "azurerm" {
-  varsion = "~> 1.37"
+  version = "~> 1.37"
 }
 
 provider "kubernetes" {
@@ -42,14 +42,14 @@ module "api" {
 }
 
 module "redis" {
-  source = "../../redis/k8s"
+  source = "../../redis/azure"
 
   providers = {
-    kubernetes = kubernetes
+    azurerm = azurerm
   }
 
-  name      = "redis"
-  namespace = module.k8s.namespace
+  name           = var.name
+  resource_group = var.resource_group
 }
 
 module "router" {
@@ -66,8 +66,10 @@ module "router" {
   release   = var.release
 
   env = {
-    CACHE      = "redis"
-    REDIS_ADDR = module.redis.addr
-    STORAGE    = "redis"
+    CACHE        = "redis"
+    REDIS_ADDR   = module.redis.addr
+    REDIS_AUTH   = module.redis.auth
+    REDIS_SECURE = "true"
+    STORAGE      = "redis"
   }
 }

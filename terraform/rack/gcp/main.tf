@@ -36,14 +36,14 @@ module "api" {
 }
 
 module "redis" {
-  source = "../../redis/k8s"
+  source = "../../redis/gcp"
 
   providers = {
-    kubernetes = kubernetes
+    google = google
   }
 
-  name      = "redis"
-  namespace = module.k8s.namespace
+  name    = var.name
+  network = var.network
 }
 
 module "router" {

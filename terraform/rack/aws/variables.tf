@@ -17,3 +17,7 @@ variable "oidc_sub" {
 variable "release" {
   type = string
 }
+
+variable "subnets" {
+  type = list
+}

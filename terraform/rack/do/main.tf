@@ -43,14 +43,14 @@ module "api" {
 }
 
 module "redis" {
-  source = "../../redis/k8s"
+  source = "../../redis/do"
 
   providers = {
-    kubernetes = kubernetes
+    digitalocean = digitalocean
   }
 
-  name      = "redis"
-  namespace = module.k8s.namespace
+  name   = var.name
+  region = var.region
 }
 
 module "router" {
