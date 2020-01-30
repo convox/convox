@@ -68,8 +68,10 @@ resource "kubernetes_deployment" "api" {
 
     selector {
       match_labels = {
+        name    = "router"
         system  = "convox"
         service = "api"
+        type    = "service"
       }
     }
 

@@ -106,9 +106,12 @@ resource "kubernetes_deployment" "router" {
     template {
       metadata {
         annotations = var.annotations
+
         labels = {
+          name    = "api"
           system  = "convox"
           service = "router"
+          type    = "service"
         }
       }
 

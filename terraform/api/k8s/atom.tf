@@ -72,8 +72,10 @@ resource "kubernetes_deployment" "atom" {
         }
 
         labels = {
+          name    = "atom"
           system  = "convox"
           service = "atom"
+          type    = "service"
         }
       }
 

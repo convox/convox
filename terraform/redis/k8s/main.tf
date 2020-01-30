@@ -58,7 +58,7 @@ resource "kubernetes_deployment" "redis" {
           scope   = "system"
           service = var.name
           system  = "convox"
-          type    = "redis"
+          type    = "resource"
         }
       }
 
