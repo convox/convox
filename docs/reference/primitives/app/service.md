@@ -8,8 +8,6 @@ Services can be scaled to a static count or autoscaled in a range based on metri
 
 ## Definition
 
-A Service is defined in [`convox.yml`](../convox.yml.md).
-
 ```
 services:
   web:
@@ -53,8 +51,6 @@ services:
     singleton: false
     sticky: true
     test: make test
-    volumes:
-      - /shared
 ```
 
 | Attribute     | Type       | Default             | Description                                                                                                                         |
@@ -75,7 +71,6 @@ services:
 | `singleton`   | boolean    | false               | Set to `true` to prevent extra [Processes](process.md) of this Service from being started during deployments                        |
 | `sticky`      | boolean    | false               | Set to `true` to enable [sticky sessions](../../../guides/sticky-sessions.md)                                                       |
 | `test`        | string     |                     | A command to run to test this Service when running `convox test`                                                                    |
-| `volumes`     | list       |                     | A list of directories to share between [Processes](process.md) of this Service                                                      |
 
 > Environment variables **must** be declared to be populated for a Service.
 

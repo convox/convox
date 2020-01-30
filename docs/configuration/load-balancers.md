@@ -1,4 +1,4 @@
-# Load Balancing
+# Load Balancers
 
 ## Standard Load Balancer
 
