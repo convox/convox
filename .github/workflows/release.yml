@@ -18,7 +18,7 @@ jobs:
         echo ${changelog}
         changelog="${changelog//'%'/'%25'}"
         changelog="${changelog//$'\n'/'%0A'}"
-        changelog="${changelog//$'\r'/'%0D'}"  
+        changelog="${changelog//$'\r'/'%0D'}"
         echo "::set-output name=text::${changelog}"
     - name: release
       id: release
@@ -107,6 +107,7 @@ jobs:
         export KUBECONFIG=~/.kube/config.${{ matrix.provider }}.${RACK_NAME}
         set -x
         kubectl get node
+        kubectl describe node
         kubectl get all -n ${RACK_NAME}-system || true
         kubectl logs deployment/api -n ${RACK_NAME}-system || true
         kubectl logs deployment/atom -n ${RACK_NAME}-system || true
