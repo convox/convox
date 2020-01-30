@@ -224,6 +224,10 @@ func localRacks(c *stdcli.Context) ([]rack, error) {
 			status = "running"
 		}
 
+		if _, err := os.Stat(".terraform.tfstate.lock.info"); !os.IsNotExist(err) {
+			status = "updating"
+		}
+
 		if o, ok := output["provider"]; ok {
 			provider = o.Value
 		}
