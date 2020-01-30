@@ -67,8 +67,10 @@ module "router" {
   release   = var.release
 
   env = {
-    CACHE      = "redis"
-    REDIS_ADDR = module.redis.addr
-    STORAGE    = "redis"
+    CACHE        = "redis"
+    REDIS_ADDR   = module.redis.addr
+    REDIS_AUTH   = module.redis.auth
+    REDIS_SECURE = "true"
+    STORAGE      = "redis"
   }
 }

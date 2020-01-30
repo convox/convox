@@ -11,7 +11,11 @@ resource "random_string" "suffix" {
 resource "digitalocean_database_cluster" "redis" {
   name       = "${var.name}-${random_string.suffix.result}"
   engine     = "redis"
+  node_count = 1
   size       = "db-s-1vcpu-1gb"
   region     = var.region
-  node_count = 1
+
+  lifecycle {
+    ignore_changes = [version]
+  }
 }
