@@ -17,9 +17,9 @@ azure)
   export_secret ARM_TENANT_ID
   ;;
 do)
-  export_secret TF_VAR_access_id
-  export_secret TF_VAR_secret_key
-  export_secret TF_VAR_token
+  export_secret DIGITALOCEAN_ACCESS_ID
+  export_secret DIGITALOCEAN_SECRET_KEY
+  export_secret DIGITALOCEAN_TOKEN
   ;;
 gcp)
   export_secret GOOGLE_CREDENTIALS
