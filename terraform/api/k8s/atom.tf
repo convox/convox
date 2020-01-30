@@ -41,8 +41,10 @@ resource "kubernetes_deployment" "atom" {
     name      = "atom"
 
     labels = {
-      service = "atom"
+      name    = "atom"
       system  = "convox"
+      service = "atom"
+      type    = "service"
     }
   }
 
@@ -51,8 +53,10 @@ resource "kubernetes_deployment" "atom" {
 
     selector {
       match_labels = {
+        name    = "atom"
         system  = "convox"
         service = "atom"
+        type    = "service"
       }
     }
 

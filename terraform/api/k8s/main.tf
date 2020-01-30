@@ -56,8 +56,10 @@ resource "kubernetes_deployment" "api" {
     name      = "api"
 
     labels = {
+      name    = "api"
       system  = "convox"
       service = "api"
+      type    = "service"
     }
   }
 
@@ -68,7 +70,7 @@ resource "kubernetes_deployment" "api" {
 
     selector {
       match_labels = {
-        name    = "router"
+        name    = "api"
         system  = "convox"
         service = "api"
         type    = "service"
@@ -90,8 +92,10 @@ resource "kubernetes_deployment" "api" {
         })
 
         labels = merge(var.labels, {
+          name    = "api"
           system  = "convox"
           service = "api"
+          type    = "service"
         })
       }
 

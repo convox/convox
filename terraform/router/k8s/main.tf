@@ -79,8 +79,10 @@ resource "kubernetes_deployment" "router" {
     name      = "router"
 
     labels = {
-      service = "router"
+      name    = "router"
       system  = "convox"
+      service = "router"
+      type    = "service"
     }
   }
 
@@ -90,8 +92,10 @@ resource "kubernetes_deployment" "router" {
 
     selector {
       match_labels = {
+        name    = "router"
         system  = "convox"
         service = "router"
+        type    = "service"
       }
     }
 
@@ -108,7 +112,7 @@ resource "kubernetes_deployment" "router" {
         annotations = var.annotations
 
         labels = {
-          name    = "api"
+          name    = "router"
           system  = "convox"
           service = "router"
           type    = "service"
