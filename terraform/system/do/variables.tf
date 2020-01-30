@@ -7,7 +7,7 @@ variable "name" {
 }
 
 variable "node_type" {
-  default = "s-1vcpu-2gb"
+  default = "s-2vcpu-4gb"
 }
 
 variable "region" {
