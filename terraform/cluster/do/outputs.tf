@@ -8,6 +8,11 @@ output "endpoint" {
   value      = digitalocean_kubernetes_cluster.rack.endpoint
 }
 
+output "id" {
+  depends_on = [digitalocean_kubernetes_cluster.rack]
+  value      = digitalocean_kubernetes_cluster.rack.id
+}
+
 output "name" {
   depends_on = [digitalocean_kubernetes_cluster.rack]
   value      = digitalocean_kubernetes_cluster.rack.name
