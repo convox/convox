@@ -11,9 +11,9 @@ import (
 	"github.com/Azure/azure-storage-file-go/azfile"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
+	"github.com/convox/convox/pkg/elastic"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/k8s"
-	"github.com/elastic/go-elasticsearch/v6"
 	"k8s.io/apimachinery/pkg/util/runtime"
 )
 
@@ -30,7 +30,7 @@ type Provider struct {
 	Subscription   string
 	Workspace      string
 
-	elastic          *elasticsearch.Client
+	elastic          *elastic.Client
 	insightLogs      *operationalinsights.QueryClient
 	storageDirectory *azfile.DirectoryURL
 }
@@ -80,12 +80,12 @@ func (p *Provider) WithContext(ctx context.Context) structs.Provider {
 }
 
 func (p *Provider) initializeAzureServices() error {
-	es, err := elasticsearch.NewDefaultClient()
+	ec, err := elastic.New(os.Getenv("ELASTIC_URL"))
 	if err != nil {
 		return err
 	}
 
-	p.elastic = es
+	p.elastic = ec
 
 	il, err := p.azureInsightLogs()
 	if err != nil {

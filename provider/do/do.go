@@ -9,9 +9,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
+	"github.com/convox/convox/pkg/elastic"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/k8s"
-	"github.com/elastic/go-elasticsearch/v6"
 )
 
 type Provider struct {
@@ -25,7 +25,7 @@ type Provider struct {
 	SpacesEndpoint string
 	SpacesSecret   string
 
-	elastic *elasticsearch.Client
+	elastic *elastic.Client
 	s3      s3iface.S3API
 }
 
@@ -70,12 +70,12 @@ func (p *Provider) WithContext(ctx context.Context) structs.Provider {
 }
 
 func (p *Provider) initializeDOServices() error {
-	es, err := elasticsearch.NewDefaultClient()
+	ec, err := elastic.New(os.Getenv("ELASTIC_URL"))
 	if err != nil {
 		return err
 	}
 
-	p.elastic = es
+	p.elastic = ec
 
 	s, err := session.NewSession(&aws.Config{
 		Region:      aws.String(p.Region),

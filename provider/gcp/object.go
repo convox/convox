@@ -23,7 +23,7 @@ func (p *Provider) ObjectDelete(app, key string) error {
 		return fmt.Errorf("object not found: %s", key)
 	}
 
-	if err := p.Storage.Bucket(p.Bucket).Object(p.objectKey(app, key)).Delete(p.Context()); err != nil {
+	if err := p.storage.Bucket(p.Bucket).Object(p.objectKey(app, key)).Delete(p.Context()); err != nil {
 		return err
 	}
 
@@ -31,7 +31,7 @@ func (p *Provider) ObjectDelete(app, key string) error {
 }
 
 func (p *Provider) ObjectExists(app, key string) (bool, error) {
-	_, err := p.Storage.Bucket(p.Bucket).Object(p.objectKey(app, key)).Attrs(p.Context())
+	_, err := p.storage.Bucket(p.Bucket).Object(p.objectKey(app, key)).Attrs(p.Context())
 	if err == storage.ErrObjectNotExist {
 		return false, nil
 	}
@@ -44,7 +44,7 @@ func (p *Provider) ObjectExists(app, key string) (bool, error) {
 
 // ObjectFetch fetches an Object
 func (p *Provider) ObjectFetch(app, key string) (io.ReadCloser, error) {
-	r, err := p.Storage.Bucket(p.Bucket).Object(p.objectKey(app, key)).NewReader(p.Context())
+	r, err := p.storage.Bucket(p.Bucket).Object(p.objectKey(app, key)).NewReader(p.Context())
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (p *Provider) ObjectFetch(app, key string) (io.ReadCloser, error) {
 func (p *Provider) ObjectList(app, prefix string) ([]string, error) {
 	os := []string{}
 
-	it := p.Storage.Bucket(p.Bucket).Objects(p.Context(), nil)
+	it := p.storage.Bucket(p.Bucket).Objects(p.Context(), nil)
 
 	for {
 		attrs, err := it.Next()
@@ -82,7 +82,7 @@ func (p *Provider) ObjectStore(app, key string, r io.Reader, opts structs.Object
 		key = k
 	}
 
-	o := p.Storage.Bucket(p.Bucket).Object(p.objectKey(app, key))
+	o := p.storage.Bucket(p.Bucket).Object(p.objectKey(app, key))
 
 	w := o.NewWriter(p.Context())
 
