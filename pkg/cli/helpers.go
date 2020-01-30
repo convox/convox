@@ -357,7 +357,7 @@ func remoteRacks(c *stdcli.Context) ([]rack, error) {
 	for _, r := range rs {
 		racks = append(racks, rack{
 			Name:     fmt.Sprintf("%s/%s", r.Organization.Name, r.Name),
-			Provider: r.Provider,
+			Provider: coalesce(r.Provider, "unknown"),
 			Remote:   true,
 			Status:   r.Status,
 			Url:      remote,
