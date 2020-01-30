@@ -1,9 +1,5 @@
-terraform {
-  required_version = ">= 0.12.0"
-}
-
 provider "digitalocean" {
-  version = "~> 1.10"
+  version = "~> 1.13"
 
   spaces_access_id  = var.access_id
   spaces_secret_key = var.secret_key
@@ -43,7 +39,6 @@ module "cluster" {
   name      = var.name
   node_type = var.node_type
   region    = var.region
-  token     = var.token
 }
 
 module "rack" {
@@ -55,7 +50,7 @@ module "rack" {
   }
 
   access_id     = var.access_id
-  cluster       = module.cluster.name
+  cluster       = module.cluster.id
   name          = var.name
   region        = var.region
   registry_disk = var.registry_disk

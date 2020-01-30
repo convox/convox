@@ -1,9 +1,5 @@
-terraform {
-  required_version = ">= 0.12.0"
-}
-
 provider "digitalocean" {
-  version = "~> 1.11"
+  version = "~> 1.13"
 }
 
 provider "kubernetes" {
@@ -49,8 +45,9 @@ module "redis" {
     digitalocean = digitalocean
   }
 
-  name   = var.name
-  region = var.region
+  cluster = var.cluster
+  name    = var.name
+  region  = var.region
 }
 
 module "router" {

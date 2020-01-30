@@ -9,7 +9,3 @@ variable "node_type" {
 variable "region" {
   type = string
 }
-
-variable "token" {
-  type = string
-}
