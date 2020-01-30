@@ -140,5 +140,16 @@ func (s *StorageRedis) TargetRemove(host, target string) error {
 		return err
 	}
 
+	len, err := s.redis.LLen(fmt.Sprintf("router/targets/%s", host)).Result()
+	if err != nil {
+		return err
+	}
+	
+	if len == 0 {
+		if _, err := s.redis.SRem("router/hosts", host).Result(); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
