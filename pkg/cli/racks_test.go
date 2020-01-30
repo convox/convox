@@ -23,7 +23,7 @@ func TestRacksNone(t *testing.T) {
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
-			"NAME  STATUS",
+			"NAME  PROVIDER  STATUS",
 		})
 	})
 }
@@ -37,8 +37,8 @@ func TestRacksLocal(t *testing.T) {
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
-			"NAME  STATUS ",
-			"dev1  running",
+			"NAME  PROVIDER  STATUS ",
+			"dev1  local     running",
 		})
 	})
 }
@@ -49,8 +49,8 @@ func TestRacksRemote(t *testing.T) {
 
 		r.HandleFunc("/racks", func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(`[
-				{"name":"foo","organization":{"name":"test"},"status":"running"},
-				{"name":"other","organization":{"name":"test"},"status":"updating"}
+				{"name":"foo","organization":{"name":"test"},"provider":"prov1","status":"running"},
+				{"name":"other","organization":{"name":"test"},"provider":"prov2","status":"updating"}
 			]`))
 		}).Methods("GET")
 
@@ -67,9 +67,9 @@ func TestRacksRemote(t *testing.T) {
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
-			"NAME        STATUS  ",
-			"test/foo    running ",
-			"test/other  updating",
+			"NAME        PROVIDER  STATUS  ",
+			"test/foo    prov1     running ",
+			"test/other  prov2     updating",
 		})
 	})
 }
@@ -82,7 +82,7 @@ func TestRacksLocalAndRemote(t *testing.T) {
 
 		r.HandleFunc("/racks", func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(`[
-				{"name":"foo","organization":{"name":"test"},"status":"running"},
+				{"name":"foo","organization":{"name":"test"},"provider":"prov1","status":"running"},
 				{"name":"other","organization":{"name":"test"},"status":"updating"}
 			]`))
 		}).Methods("GET")
@@ -100,10 +100,10 @@ func TestRacksLocalAndRemote(t *testing.T) {
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
-			"NAME        STATUS  ",
-			"dev1        running ",
-			"test/foo    running ",
-			"test/other  updating",
+			"NAME        PROVIDER  STATUS  ",
+			"dev1        local     running ",
+			"test/foo    prov1     running ",
+			"test/other  unknown   updating",
 		})
 	})
 }
@@ -134,7 +134,7 @@ func TestRacksError(t *testing.T) {
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
-			"NAME  STATUS",
+			"NAME  PROVIDER  STATUS",
 		})
 	})
 }

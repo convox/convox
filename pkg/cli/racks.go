@@ -17,10 +17,10 @@ func Racks(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	t := c.Table("NAME", "STATUS")
+	t := c.Table("NAME", "PROVIDER", "STATUS")
 
 	for _, r := range rs {
-		t.AddRow(r.Name, r.Status)
+		t.AddRow(r.Name, r.Provider, r.Status)
 	}
 
 	return t.Print()

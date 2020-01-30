@@ -224,6 +224,10 @@ func localRacks(c *stdcli.Context) ([]rack, error) {
 			status = "running"
 		}
 
+		if _, err := os.Stat(".terraform.tfstate.lock.info"); !os.IsNotExist(err) {
+			status = "updating"
+		}
+
 		if o, ok := output["provider"]; ok {
 			provider = o.Value
 		}
@@ -353,7 +357,7 @@ func remoteRacks(c *stdcli.Context) ([]rack, error) {
 	for _, r := range rs {
 		racks = append(racks, rack{
 			Name:     fmt.Sprintf("%s/%s", r.Organization.Name, r.Name),
-			Provider: r.Provider,
+			Provider: coalesce(r.Provider, "unknown"),
 			Remote:   true,
 			Status:   r.Status,
 			Url:      remote,
