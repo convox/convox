@@ -33,7 +33,10 @@ resource "kubernetes_deployment" "redis" {
     name      = var.name
 
     labels = {
+      name   = var.name
+      scope  = "system"
       system = "convox"
+      type   = "resource"
     }
   }
 
@@ -43,22 +46,20 @@ resource "kubernetes_deployment" "redis" {
 
     selector {
       match_labels = {
-        name    = var.name
-        scope   = "system"
-        service = var.name
-        system  = "convox"
-        type    = "redis"
+        name   = var.name
+        scope  = "system"
+        system = "convox"
+        type   = "resource"
       }
     }
 
     template {
       metadata {
         labels = {
-          name    = var.name
-          scope   = "system"
-          service = var.name
-          system  = "convox"
-          type    = "redis"
+          name   = var.name
+          scope  = "system"
+          system = "convox"
+          type   = "resource"
         }
       }
 
