@@ -296,6 +296,8 @@ func (r *Router) generateCertificateCA(hello *tls.ClientHelloInfo) (*tls.Certifi
 // try to request every known host on a timer to trigger things like
 // certificate generation before the user gets to them
 func (r *Router) healthTicker() {
+	time.Sleep(60 * time.Second)
+
 	for range time.Tick(healthTick) {
 		if err := r.healthTick(); err != nil {
 			fmt.Printf("ns=router at=health.ticker error=%v\n", err)
