@@ -22,3 +22,7 @@ output "oidc_sub" {
   depends_on = [aws_eks_node_group.cluster]
   value      = local.oidc_sub
 }
+
+output "subnets" {
+  value = aws_subnet.private.*.id
+}

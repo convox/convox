@@ -43,14 +43,14 @@ module "api" {
 }
 
 module "redis" {
-  source = "../../redis/k8s"
+  source = "../../redis/do"
 
   providers = {
-    kubernetes = kubernetes
+    digitalocean = digitalocean
   }
 
-  name      = "redis"
-  namespace = module.k8s.namespace
+  name   = var.name
+  region = var.region
 }
 
 module "router" {
@@ -67,8 +67,10 @@ module "router" {
   release   = var.release
 
   env = {
-    CACHE      = "redis"
-    REDIS_ADDR = module.redis.addr
-    STORAGE    = "redis"
+    CACHE        = "redis"
+    REDIS_ADDR   = module.redis.addr
+    REDIS_AUTH   = module.redis.auth
+    REDIS_SECURE = "true"
+    STORAGE      = "redis"
   }
 }
