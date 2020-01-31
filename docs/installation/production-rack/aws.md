@@ -29,14 +29,11 @@ You can list all available regions for your account with the following command:
 ### Create IAM User
 
     $ aws iam create-user --user-name convox
+    $ aws iam attach-user-policy --user-name convox --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
     $ aws iam create-access-key --user-name convox
 
 - `AWS_ACCESS_KEY_ID` is `AccessKeyId`
 - `AWS_SECRET_ACCESS_KEY` is `SecretAccessKey`
-
-### Grant Permissions
-
-    $ aws iam attach-user-policy --user-name convox --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
 
 ## Install Rack
 
