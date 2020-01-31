@@ -25,7 +25,7 @@ func (p *Provider) templateHelpers() template.FuncMap {
 			return template.HTML(fmt.Sprintf("%q", s))
 		},
 		"upper": func(s string) string {
-			return upperName(s)
+			return common.UpperName(s)
 		},
 	}
 }

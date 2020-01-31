@@ -25,18 +25,14 @@ require (
 	github.com/convox/version v0.0.0-20160822184233-ffefa0d565d2
 	github.com/creack/pty v1.1.9
 	github.com/docker/docker v1.4.2-0.20190710153559-aa8249ae1b8b
-	github.com/docker/spdystream v0.0.0-20160310174837-449fdfce4d96 // indirect
 	github.com/dustin/go-humanize v1.0.0
 	github.com/elastic/go-elasticsearch/v6 v6.8.2
-	github.com/elazarl/goproxy v0.0.0-20170405201442-c4fc26588b6e // indirect
 	github.com/fsouza/go-dockerclient v1.4.2
 	github.com/go-redis/redis v6.15.2+incompatible
 	github.com/gobuffalo/packr v1.30.1
 	github.com/gobwas/glob v0.2.3
-	github.com/golang/groupcache v0.0.0-20160516000752-02826c3e7903 // indirect
 	github.com/gorilla/mux v1.7.3
 	github.com/gorilla/websocket v1.4.0
-	github.com/gregjones/httpcache v0.0.0-20170728041850-787624de3eb7 // indirect
 	github.com/headzoo/surf v1.0.0
 	github.com/headzoo/ut v0.0.0-20181013193318-a13b5a7a02ca // indirect
 	github.com/imdario/mergo v0.3.7 // indirect
@@ -44,21 +40,16 @@ require (
 	github.com/karalabe/xgo v0.0.0-20191115072854-c5ccff8648a7
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/miekg/dns v1.1.15
-	github.com/onsi/ginkgo v1.8.0 // indirect
-	github.com/onsi/gomega v1.5.0 // indirect
-	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/stretchr/testify v1.3.0
 	github.com/vektra/mockery v0.0.0-20181123154057-e78b021dcbb5
 	golang.org/x/crypto v0.0.0-20200117160349-530e935923ad
 	golang.org/x/net v0.0.0-20191101175033-0deb6923b6d9 // indirect
 	golang.org/x/sys v0.0.0-20200122134326-e047566fdf82 // indirect
-	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	google.golang.org/api v0.9.0
-	gopkg.in/inf.v0 v0.9.0 // indirect
 	gopkg.in/yaml.v2 v2.2.4
-	k8s.io/api v0.0.0-20190118113203-912cbe2bfef3
-	k8s.io/apimachinery v0.0.0-20190223001710-c182ff3b9841
-	k8s.io/client-go v0.0.0-20190117233410-4022682532b3
-	k8s.io/code-generator v0.0.0-20191003035328-700b1226c0bd
+	k8s.io/api v0.16.6
+	k8s.io/apimachinery v0.16.6
+	k8s.io/client-go v0.16.6
+	k8s.io/code-generator v0.16.6
 )

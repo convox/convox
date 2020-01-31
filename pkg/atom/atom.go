@@ -231,7 +231,7 @@ func (c *Client) check(ns, version string) (bool, error) {
 	cfg := *c.config
 
 	cfg.APIPath = "/apis"
-	cfg.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: scheme.Codecs}
+	cfg.NegotiatedSerializer = serializer.WithoutConversionCodecFactory{CodecFactory: scheme.Codecs}
 
 	v, err := c.atom.AtomV1().AtomVersions(ns).Get(version, am.GetOptions{})
 	if err != nil {
