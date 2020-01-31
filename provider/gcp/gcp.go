@@ -8,9 +8,7 @@ import (
 	"cloud.google.com/go/storage"
 	"github.com/convox/convox/pkg/elastic"
 	"github.com/convox/convox/pkg/structs"
-	"github.com/convox/convox/pkg/templater"
 	"github.com/convox/convox/provider/k8s"
-	"github.com/gobuffalo/packr"
 )
 
 type Provider struct {
@@ -22,9 +20,8 @@ type Provider struct {
 	Region   string
 	Registry string
 
-	elastic   *elastic.Client
-	storage   *storage.Client
-	templater *templater.Templater
+	elastic *elastic.Client
+	storage *storage.Client
 }
 
 func FromEnv() (*Provider, error) {
@@ -47,8 +44,6 @@ func FromEnv() (*Provider, error) {
 	}
 
 	p.Key = key
-
-	p.templater = templater.New(packr.NewBox("../gcp/template"), p.templateHelpers())
 
 	k.Engine = p
 
