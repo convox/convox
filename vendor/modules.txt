@@ -50,6 +50,9 @@ github.com/PuerkitoBio/purell
 github.com/PuerkitoBio/urlesc
 # github.com/adrg/xdg v0.2.1
 github.com/adrg/xdg
+# github.com/algolia/algoliasearch-client-go v2.25.0+incompatible
+github.com/algolia/algoliasearch-client-go/algoliasearch
+github.com/algolia/algoliasearch-client-go/algoliasearch/call
 # github.com/andybalholm/cascadia v1.0.0
 github.com/andybalholm/cascadia
 # github.com/aws/aws-sdk-go v1.21.10
@@ -315,8 +318,12 @@ github.com/pmezard/go-difflib/difflib
 github.com/rogpeppe/go-internal/modfile
 github.com/rogpeppe/go-internal/module
 github.com/rogpeppe/go-internal/semver
+# github.com/russross/blackfriday v2.0.0+incompatible
+github.com/russross/blackfriday
 # github.com/sebest/xff v0.0.0-20160910043805-6c115e0ffa35
 github.com/sebest/xff
+# github.com/shurcooL/sanitized_anchor_name v0.0.0-20170918181015-86672fcb3f95
+github.com/shurcooL/sanitized_anchor_name
 # github.com/sirupsen/logrus v1.4.2
 github.com/sirupsen/logrus
 # github.com/spf13/pflag v1.0.5

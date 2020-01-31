@@ -1,6 +1,6 @@
 .PHONY: all build clean clean-package compress dev docs generate generate-k8s generate-provider mocks package release test tools
 
-commands = api atom build router
+commands = api atom build docs router
 
 binaries = $(addprefix $(GOPATH)/bin/, $(commands))
 sources  = $(shell find . -name '*.go')
@@ -19,7 +19,7 @@ compress: $(binaries)
 
 dev:
 	test -n "$(RACK)" # RACK
-	docker build -t convox/convox:master .
+	docker build --target development -t convox/convox:master .
 	docker push convox/convox:master
 	kubectl rollout restart deployment/api -n $(RACK)-system
 	kubectl rollout restart deployment/atom -n $(RACK)-system

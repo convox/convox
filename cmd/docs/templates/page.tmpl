@@ -1,0 +1,21 @@
+{{ define "head" }}
+  <meta property="og:description" content="{{.Description}}">
+  <meta property="og:image" content="https://convox.com/assets/images/logo.png">
+  <meta property="og:site_name" content="Convox Docs">
+  <meta property="og:title" content="{{.Title}}">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="{{.URL}}">
+
+  <meta name="twitter:description" content="{{.Description}}">
+  <meta name="twitter:image" content="https://convox.com/assets/images/logo.png">
+  <meta name="twitter:site" content="@goconvox">
+  <meta name="twitter:title" content="{{.Title}}">
+
+  {{ range .Tags }}
+    <meta property="article:tag" content="{{.}}">
+  {{ end }}
+{{ end }}
+
+{{ define "content" }}
+  {{ template "doc" . }}
+{{ end }}

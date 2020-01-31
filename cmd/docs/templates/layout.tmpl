@@ -1,0 +1,201 @@
+{{ define "main" }}
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<title>Convox Docs</title>
+
+			<meta charset="utf-8">
+			<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+			<link rel="icon" type="image/x-icon" href="/assets/images/favicon.ico" />
+
+			<script src="/assets/jquery.min.js"></script>
+
+			<link rel="stylesheet" href="/assets/bootstrap.css">
+			<script src="/assets/bootstrap.min.js"></script>
+
+			<link rel="stylesheet" href="/assets/fontawesome.css">
+
+			<link rel="stylesheet" href="/assets/docs.css">
+			<script src="/assets/docs.js"></script>
+
+			<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/instantsearch.js@2.10.2/dist/instantsearch.min.css">
+			<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/instantsearch.js@2.10.2/dist/instantsearch-theme-algolia.min.css">
+			<script src="https://cdn.jsdelivr.net/npm/instantsearch.js@2.10.2"></script>
+
+			{{ block "head" . }}{{ end }}
+		</head>
+		<body>
+			<header>
+				<nav class="navbar navbar-expand-md navbar-dark">
+					<div class="container pt-1 pb-1">
+						<a class="navbar-brand" href="/">
+							<img src="/assets/images/logo.png" height="30">
+						</a>
+
+						<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-collapse">
+							<span class="navbar-toggler-icon"></span>
+						</button>
+
+						<div class="collapse navbar-collapse" id="navbar-collapse">
+							<ul class="navbar-nav ml-auto mr-2">
+								<li class="nav-item ml-1 ml-md-4 mr-4 mr-md-0"><a class="nav-link" href="https://convox.com/blog">Blog</a></li>
+								<li class="nav-item ml-1 ml-md-4 mr-4 mr-md-0 active"><a class="nav-link" href="https://docs.convox.com">Documentation</a></li>
+							</ul>
+
+							<ul class="navbar-nav ml-4 d-none d-lg-flex">
+								<li class="nav-item">
+									<a class="btn btn-primary pl-3 pr-3" href="https://console.convox.com/login">
+										<i class="fa fa-user mr-2"></i>
+										Log In
+									</a>
+								</li>
+							</ul>
+						</div>
+					</div>
+				</nav>
+			</header>
+
+			<div class="container" id="primary">
+				<div id="toc-small" class="d-lg-none">
+					<div class="dropdown">
+						<button class="btn btn-light dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+							<span class="title-category-name">{{.CategoryName}}</span> <span class="separator">&raquo;</span> {{.Title}}
+						</button>
+						<div class="dropdown-menu">
+							{{ range $c := .Documents.Categories }}
+								<div class="category">
+									<h6 class="dropdown-header">{{.Name}}</h6>
+									{{ range $.Documents.Children $c.Slug }}
+										<a class="dropdown-item" href="/{{.Slug}}">{{.Title}}</a>
+									{{ end }}
+								</div>
+							{{ end }}
+						</div>
+					</div>
+				</div>
+
+				<div class="d-flex flex-row justify-content-center" style="height:100%">
+					<nav id="toc" class="sidebar d-none d-lg-block">
+						{{ template "toc" . }}
+					</nav>
+
+					<main role="main" class="flex-column col">
+						{{ template "content" . }}
+					</main>
+				</div>
+			</div>
+
+			<nav class="navbar navbar-expand navbar-dark text-light">
+				<div class="container">
+					<ul class="navbar-nav">
+						<li class="nav-item pl-3">
+							&copy; 2019 Convox, Inc. All rights reserved.
+						</li>
+					</ul>
+					<ul class="navbar-nav pr-2">
+						<li class="nav-item mr-4"><a class="nav-link" href="https://docsv2.convox.com">Generation 2</a></li>
+						<li class="nav-item"><a class="nav-link" href="https://convox.com/privacy">Privacy Policy</a></li>
+						<li class="nav-item"><a class="nav-link" href="https://convox.com/terms">Terms of Use</a></li>
+					</ul>
+				</div>
+			</nav>
+
+			{{ if (env "ALGOLIA_APP") }}
+				<script>
+					const search = instantsearch({
+						appId: '{{ env "ALGOLIA_APP" }}',
+						apiKey: '{{ env "ALGOLIA_KEY_SEARCH" }}',
+						indexName: '{{ env "ALGOLIA_INDEX" }}'
+					});
+
+					search.addWidget(
+						instantsearch.widgets.searchBox({
+							container: '#search-query',
+							placeholder: 'Search',
+							reset: false,
+						})
+					);
+
+					search.addWidget(
+						instantsearch.widgets.hits({
+							container: '#search-hits',
+							cssClasses: { root: 'd-block' },
+							templates: {
+								empty: 'No results',
+								item: '{{ "<div class=\"hit-item\"><a href=\"{{url}}\"><div class=\"category-title\">{{category_title}}</div><span class=\"document-title\">{{title}}</span></a></div>" }}'
+							},
+							transformItems(items) {
+								return items.filter(item => item.category_slug != 'gen1');
+							}
+						})
+					);
+
+					search.start();
+				</script>
+			{{ end }}
+
+			{{ with (env "SEGMENT_TOKEN") }}
+				<script>
+					!function(){var analytics=window.analytics=window.analytics||[];if(!analytics.initialize)if(analytics.invoked)window.console&&console.error&&console.error("Segment snippet included twice.");else{analytics.invoked=!0;analytics.methods=["trackSubmit","trackClick","trackLink","trackForm","pageview","identify","reset","group","track","ready","alias","debug","page","once","off","on"];analytics.factory=function(t){return function(){var e=Array.prototype.slice.call(arguments);e.unshift(t);analytics.push(e);return analytics}};for(var t=0;t<analytics.methods.length;t++){var e=analytics.methods[t];analytics[e]=analytics.factory(e)}analytics.load=function(t,e){var n=document.createElement("script");n.type="text/javascript";n.async=!0;n.src="https://cdn.segment.com/analytics.js/v1/"+t+"/analytics.min.js";var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(n,a);analytics._loadOptions=e};analytics.SNIPPET_VERSION="4.1.0";
+					analytics.load("{{.}}");
+					analytics.page();
+					}}();
+				</script>
+			{{ end }}
+		</body>
+	</html>
+{{ end }}
+
+{{ define "doc" }}
+  {{ with .Deprecation }}
+    <div class="block-callout block-show-callout type-warning"><p>{{.}}</p></div>
+  {{ end }}
+
+  {{ if .Body }}
+    <h1 style="float:right; font-size: 1.3em; margin-top: 10px; margin-bottom: 0;" class="title-category-name">
+      {{ join " » " .Breadcrumbs }}
+    </h1>
+  {{ end }}
+
+  {{ .Body }}
+
+  <div id="footer">
+    We welcome
+    <a href="https://github.com/convox/convox/edit/master/docs/{{.Slug}}.md">suggested changes</a>
+    to this document.
+  </div>
+{{ end }}
+
+{{ define "toc" }}
+	<ul class="nav nav-pills flex-column">
+		<div id="search">
+			<input type="text" class="form-control" placeholder="Search" id="search-query" oninput="queryChange();" onblur="queryClose();">
+			<div id="search-hits" style="display: none;">
+			</div>
+		</div>
+		{{ range $c := .Documents.Categories }}
+			<div class="category">{{.Name}}</div>
+			<ul class="documents">
+				{{ template "toc-children" (params "Active" $.Slug "Documents" $.Documents "Slug" $c.Slug "Index" 0)}}
+			</ul>
+		{{ end }}
+		{{ range $c := .Categories }}
+			<div class="category">{{.Name}}</div>
+			<ul class="documents">
+				{{ range .Documents }}
+					<li><a {{ if and (eq $.Slug .Slug) (eq $.Category $c.Slug) }}class="active"{{ end }} href="/{{$c.Slug}}/{{.Slug}}">{{.Title}}</a></li>
+				{{ end }}
+			</ul>
+		{{ end }}
+	</ul>
+{{ end }}
+
+{{ define "toc-children" }}
+	{{ range .Documents.Children .Slug }}
+		<li><a id="{{ slugid .Slug }}" style="padding-left:{{ indent $.Index }}px" class="dropdown-item {{ if eq .Slug $.Active }}active{{ end }}" href="/{{.Slug}}">{{.Title}}</a></li>
+		{{ if expand .Slug $.Active }}
+			{{ template "toc-children" (params "Active" $.Active "Documents" $.Documents "Index" (inc $.Index) "Slug" .Slug) }}
+		{{ end }}
+	{{ end }}
+{{ end }}
