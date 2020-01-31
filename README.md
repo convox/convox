@@ -9,7 +9,9 @@
 
 ## Installation
 
-See the README in the [install](install) subdirectory for installation instructions.
+* [Command Line Interface](docs/installation/cli.md)
+* [Development Rack](docs/installation/development-rack)
+* [Production Rack](docs/installation/production-rack)
 
 ## Features
 
