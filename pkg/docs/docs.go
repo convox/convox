@@ -25,6 +25,7 @@ var (
 		Category{"configuration", "Configuration"},
 		Category{"development", "Development"},
 		Category{"deployment", "Deployment"},
+		Category{"management", "Management"},
 		Category{"reference", "Reference"},
 		Category{"integrations", "Integrations"},
 		Category{"help", "Help"},

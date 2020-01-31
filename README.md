@@ -1,11 +1,18 @@
 # Convox
 
-[Convox](https://github.com/convox/convox) is an open-source PaaS based on Kubernetes available for multiple infrastructure providers.
+Convox is an open-source [PaaS](https://en.wikipedia.org/wiki/Platform_as_a_service) based
+on Kubernetes available for multiple cloud providers.
 
-* Amazon Web Services
-* Digital Ocean
-* Google Cloud
-* Microsoft Azure
+## Supported Clouds
+
+- Amazon Web Services
+- Digital Ocean
+- Google Cloud
+- Microsoft Azure
+
+## Getting Started
+
+- [Introduction](docs/getting-started/introduction.md)
 
 ## Installation
 
@@ -15,23 +22,21 @@
 
 ## Features
 
-* [Release Management](https://docs.convox.com/deployment/builds)
-* [Secrets Management](https://docs.convox.com/application/environment)
-* [Load Balancing](docs/guides/load-balancing.md) (automatic SSL)
-* [Service Discovery](docs/guides/service-discovery.md)
-* [Resource Management](https://docs.convox.com/use-cases/resources) \(Postgres, Redis, etc\)
-* [Automated Rollbacks](https://docs.convox.com/deployment/rolling-back)
-* [Autoscaling](https://docs.convox.com/deployment/scaling)
-* [Scheduled Runs](https://docs.convox.com/application/timers) (cron)
-* [One-off Commands](https://docs.convox.com/management/one-off-commands)
+* [Release Management](docs/deployment/releases.md)
+* [Secrets Management](docs/configuration/environment.md)
+* [Load Balancing](docs/configuration/load-balancers.md) (automatic SSL)
+* [Service Discovery](docs/configuration/service-discovery.md)
+* [Resource Management](docs/reference/primitives/app/resource.md) (Postgres, Redis, etc)
+* [Automated Rollbacks](docs/deployment/rollbacks.md)
+* [Autoscaling](docs/deployment/scaling.md)
+* [Scheduled Runs](docs/reference/primitives/app/timers.md) (cron)
+* [One-off Commands](docs/management/run.md)
 
 ## Resources
 
 - [Homepage](https://convox.com)
-- [Getting Started](https://docs.convox.com/introduction/getting-started)
 - [Community Forums](https://community.convox.com/)
-- [FAQ](https://docs.convox.com/introduction/faq)
 
 ## License
 
-[Apache 2.0](LICENSE)
+- [Apache 2.0](LICENSE)
