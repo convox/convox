@@ -1,6 +1,7 @@
 package kctl
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -25,6 +26,7 @@ type Controller struct {
 
 	errch    chan error
 	recorder record.EventRecorder
+	stopper  chan struct{}
 }
 
 type ControllerHandler interface {
@@ -80,6 +82,7 @@ func (c *Controller) Run(informer cache.SharedInformer, ch chan error) {
 		RetryPeriod:   2 * time.Second,
 		Callbacks: leaderelection.LeaderCallbacks{
 			OnStartedLeading: c.leaderStart(informer),
+			OnStoppedLeading: c.leaderStop,
 		},
 	})
 	if err != nil {
@@ -87,11 +90,13 @@ func (c *Controller) Run(informer cache.SharedInformer, ch chan error) {
 		return
 	}
 
-	go el.Run()
+	ctx := context.Background()
+
+	go el.Run(ctx)
 }
 
-func (c *Controller) leaderStart(informer cache.SharedInformer) func(<-chan struct{}) {
-	return func(stop <-chan struct{}) {
+func (c *Controller) leaderStart(informer cache.SharedInformer) func(ctx context.Context) {
+	return func(ctx context.Context) {
 		fmt.Printf("started leading: %s/%s (%s)\n", c.Namespace, c.Name, c.Identifier)
 
 		informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -104,13 +109,20 @@ func (c *Controller) leaderStart(informer cache.SharedInformer) func(<-chan stru
 			c.errch <- err
 		}
 
-		go informer.Run(stop)
+		c.stopper = make(chan struct{})
 
-		fmt.Printf("stopped leading: %s/%s (%s)\n", c.Namespace, c.Name, c.Identifier)
+		go informer.Run(c.stopper)
+	}
+}
 
-		if err := c.Handler.Stop(); err != nil {
-			c.errch <- err
-		}
+func (c *Controller) leaderStop() {
+	fmt.Printf("stopped leading: %s/%s (%s)\n", c.Namespace, c.Name, c.Identifier)
+
+	close(c.stopper)
+	c.stopper = nil
+
+	if err := c.Handler.Stop(); err != nil {
+		c.errch <- err
 	}
 }
 

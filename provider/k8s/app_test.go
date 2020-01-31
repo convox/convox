@@ -231,6 +231,40 @@ func TestAppUpdateLocked(t *testing.T) {
 
 		err := p.AppUpdate("app1", structs.AppUpdateOptions{Lock: options.Bool(true)})
 		require.NoError(t, err)
+
+		ns, err := p.Cluster.CoreV1().Namespaces().Get("rack1-app1", am.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, "true", ns.Annotations["convox.com/lock"])
+	})
+}
+
+func TestAppUpdateDoesNotOverwriteExisting(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		aa := p.Atom.(*atom.MockInterface)
+		kk := p.Cluster.(*fake.Clientset)
+
+		aa.On("Apply", "rack1-app1", "app", "", mock.Anything, int32(30)).Return(nil).Once().Run(func(args mock.Arguments) {
+			requireYamlFixture(t, args.Get(3).([]byte), "app-locked.yml")
+		}).Once()
+
+		aa.On("Apply", "rack1-app1", "app", "", mock.Anything, int32(30)).Return(nil).Once().Run(func(args mock.Arguments) {
+			requireYamlFixture(t, args.Get(3).([]byte), "app-locked-params.yml")
+		}).Once()
+
+		aa.On("Status", "rack1-app1", "app").Return("Running", "", nil).Times(4)
+
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		err := p.AppUpdate("app1", structs.AppUpdateOptions{Lock: options.Bool(true)})
+		require.NoError(t, err)
+
+		err = p.AppUpdate("app1", structs.AppUpdateOptions{Parameters: map[string]string{"Test": "bar"}})
+		require.NoError(t, err)
+
+		ns, err := p.Cluster.CoreV1().Namespaces().Get("rack1-app1", am.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, "true", ns.Annotations["convox.com/lock"])
+		require.Equal(t, `{"Test":"bar"}`, ns.Annotations["convox.com/params"])
 	})
 }
 
@@ -249,6 +283,10 @@ func TestAppUpdateParameters(t *testing.T) {
 
 		err := p.AppUpdate("app1", structs.AppUpdateOptions{Parameters: map[string]string{"Test": "bar"}})
 		require.NoError(t, err)
+
+		ns, err := p.Cluster.CoreV1().Namespaces().Get("rack1-app1", am.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, `{"Test":"bar"}`, ns.Annotations["convox.com/params"])
 	})
 }
 
@@ -266,7 +304,8 @@ func TestAppUpdateMissing(t *testing.T) {
 func appCreate(c kubernetes.Interface, rack, name string) error {
 	_, err := c.CoreV1().Namespaces().Create(&ac.Namespace{
 		ObjectMeta: am.ObjectMeta{
-			Name: fmt.Sprintf("%s-%s", rack, name),
+			Name:        fmt.Sprintf("%s-%s", rack, name),
+			Annotations: map[string]string{"convox.com/lock": "false"},
 			Labels: map[string]string{
 				"app":    name,
 				"name":   name,

@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"reflect"
-	"time"
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/options"
@@ -13,6 +11,7 @@ import (
 	ac "k8s.io/api/core/v1"
 	ae "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func (p *Provider) AppCancel(name string) error {
@@ -35,6 +34,10 @@ func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*struc
 	ns := &ac.Namespace{
 		ObjectMeta: am.ObjectMeta{
 			Name: p.AppNamespace(name),
+			Annotations: map[string]string{
+				"convox.com/lock":   "false",
+				"convox.com/params": "{}",
+			},
 			Labels: map[string]string{
 				"name": name,
 				"type": "app",
@@ -264,39 +267,23 @@ func (p *Provider) appParametersUpdate(a *structs.App, params map[string]string)
 }
 
 func (p *Provider) appUpdate(a *structs.App) error {
-	ns, err := p.Cluster.CoreV1().Namespaces().Get(p.AppNamespace(a.Name), am.GetOptions{})
+	params, err := json.Marshal(a.Parameters)
 	if err != nil {
 		return err
 	}
 
-	if ns.Annotations == nil {
-		ns.Annotations = map[string]string{}
+	patches := []Patch{
+		{Op: "add", Path: "/metadata/annotations/convox.com~1lock", Value: fmt.Sprintf("%t", a.Locked)},
+		{Op: "add", Path: "/metadata/annotations/convox.com~1params", Value: string(params)},
 	}
 
-	ns.Annotations["convox.com/lock"] = fmt.Sprintf("%t", a.Locked)
-
-	data, err := json.Marshal(a.Parameters)
+	patch, err := json.Marshal(patches)
 	if err != nil {
 		return err
 	}
 
-	ns.Annotations["convox.com/params"] = string(data)
-
-	if _, err := p.Cluster.CoreV1().Namespaces().Update(ns); err != nil {
+	if _, err := p.Cluster.CoreV1().Namespaces().Patch(p.AppNamespace(a.Name), types.JSONPatchType, patch); err != nil {
 		return err
-	}
-
-	for {
-		nsn, err := p.Cluster.CoreV1().Namespaces().Get(ns.Name, am.GetOptions{})
-		if err != nil {
-			return err
-		}
-
-		if reflect.DeepEqual(nsn.Annotations, ns.Annotations) {
-			break
-		}
-
-		time.Sleep(1 * time.Second)
 	}
 
 	return nil

@@ -3,7 +3,7 @@ kind: Namespace
 metadata:
   name: {{.Namespace}}
   annotations:
-    convox.com/lock: {{ .Locked }}
+    convox.com/lock: "{{ .Locked }}"
     convox.com/params: {{ safe (json .Parameters) }}
   labels:
     type: app
