@@ -1,13 +1,14 @@
 package aws
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/convox/convox/pkg/structs"
-
-	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/convox/convox/provider/k8s"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*structs.App, error) {
@@ -23,18 +24,16 @@ func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*struc
 		return nil, err
 	}
 
-	ns, err := p.Provider.Cluster.CoreV1().Namespaces().Get(p.AppNamespace(name), am.GetOptions{})
+	patches := []k8s.Patch{
+		{Op: "add", Path: "/metadata/annotations/convox.com~1registry", Value: *res.Repository.RepositoryUri},
+	}
+
+	patch, err := json.Marshal(patches)
 	if err != nil {
 		return nil, err
 	}
 
-	if ns.ObjectMeta.Annotations == nil {
-		ns.ObjectMeta.Annotations = map[string]string{}
-	}
-
-	ns.ObjectMeta.Annotations["convox.registry"] = *res.Repository.RepositoryUri
-
-	if _, err := p.Provider.Cluster.CoreV1().Namespaces().Update(ns); err != nil {
+	if _, err := p.Cluster.CoreV1().Namespaces().Patch(p.AppNamespace(name), types.JSONPatchType, patch); err != nil {
 		return nil, err
 	}
 

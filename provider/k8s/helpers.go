@@ -25,6 +25,12 @@ const (
 	ScannerMaxSize   = 1024 * 1024
 )
 
+type Patch struct {
+	Op    string      `json:"op"`
+	Path  string      `json:"path"`
+	Value interface{} `json:"value"`
+}
+
 func (p *Provider) convoxClient() (cv.Interface, error) {
 	return cv.NewForConfig(p.Config)
 }
