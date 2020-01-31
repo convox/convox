@@ -10,7 +10,7 @@ If you don’t have an account already, [sign up for Datadog](https://app.datado
 
 You can deploy the datadog agent as a Convox app with a very simple `convox.yml` manifest:
 
-```
+```yml
 services:
   datadog:
     agent: true
@@ -33,21 +33,7 @@ services:
 
 ### Application Metrics
 
-To forward application metrics to Datadog you'll need the host IP address. You can get it with:
+Each [Process](../reference/app/primitives/process.md) will have the IP address of its
+[Instance](../reference/app/primitives/instance.md) available in the `INSTANCE_IP` environment variable.
 
-    $ ip route list match 0/0 | awk '{print $3}'
-
-## Logging Endpoint
-
-To integrate Datadog as a logging endpoint with our [Syslog](/deployment/syslogs) resource:
-
-  * Go to [Syslog-Ng Integration](https://docs.datadoghq.com/integrations/syslog_ng/?tab=datadogussite) to check the forwarding destination.  This currently differs between the US site (`intake.logs.datadoghq.com:10516`) and the EU site (`tcp-intake.logs.datadoghq.eu:443`)
-  * Suggested `Format="INSERT-YOUR-API-KEY-HERE <22>1 {DATE} {GROUP} {SERVICE} {CONTAINER} - [metas ddsource=\"{GROUP}\" ddtags=\"container_id:{CONTAINER}\"] {MESSAGE}"` where you replace `INSERT-YOUR-API-KEY-HERE` with your Datadog API key 😉
-
-For example:
-
-    $ convox rack resources create syslog Format="123457890abcdef1234567890 <22>1 {DATE} {GROUP} {SERVICE} {CONTAINER} - - [metas ddsource=\"{GROUP}\" ddtags=\"container_id:{CONTAINER}\"] {MESSAGE}" Url=tcp+tls://intake.logs.datadoghq.com:10516
-
-Link the created Syslog resource to your app:
-
-    $ convox rack resources link syslog-3785 --app example
+To forward application metrics to Datadog you'll need the host IP address. You can get it by simply referencing `$INSTANCE_IP`.
