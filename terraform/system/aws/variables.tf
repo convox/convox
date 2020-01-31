@@ -17,3 +17,7 @@ variable "release" {
 variable "region" {
   default = "us-east-1"
 }
+
+variable "node_disk" {
+  default = 20
+}

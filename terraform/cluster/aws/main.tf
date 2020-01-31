@@ -68,6 +68,7 @@ resource "aws_eks_node_group" "cluster" {
   count = 3
 
   cluster_name    = aws_eks_cluster.cluster.name
+  disk_size       = var.node_disk
   instance_types  = [var.node_type]
   node_group_name = "${var.name}-${data.aws_availability_zones.available.names[count.index]}"
   node_role_arn   = replace(aws_iam_role.nodes.arn, "role/convox/", "role/") # eks barfs on roles with paths

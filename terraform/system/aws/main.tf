@@ -43,6 +43,7 @@ module "cluster" {
   cidr      = var.cidr
   name      = var.name
   node_type = var.node_type
+  node_disk = var.node_disk
 }
 
 module "fluentd" {
