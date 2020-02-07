@@ -44,9 +44,12 @@ RUN make package build compress
 
 FROM ubuntu:18.04
 
-RUN apt-get -qq update && apt-get -qq -y install curl
+RUN apt-get -qq update && apt-get -qq -y install curl default-mysql-client postgresql-client redis-tools telnet
 
-RUN curl -Ls https://storage.googleapis.com/kubernetes-release/release/v1.13.0/bin/linux/amd64/kubectl -o /usr/bin/kubectl && \
+RUN curl -s https://download.docker.com/linux/static/stable/x86_64/docker-18.03.1-ce.tgz | \
+  tar -C /usr/bin --strip-components 1 -xz
+
+RUN curl -Ls https://storage.googleapis.com/kubernetes-release/release/v1.17.2/bin/linux/amd64/kubectl -o /usr/bin/kubectl && \
   chmod +x /usr/bin/kubectl
 
 ENV DEVELOPMENT=false
