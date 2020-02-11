@@ -117,60 +117,6 @@ Enable termination protection
     $ convox apps lock
     Locking myapp... OK
 
-## apps params
-
-Display app parameters
-
-### Usage
-
-    convox apps params [app]
-
-### Examples
-
-    $ convox apps params
-    FargateServices   No
-    FargateTimers     No
-    IamPolicy
-    InternalDomains   Yes
-    Isolate           No
-    LogBucket         test-logs-jdv3wc1x2s4u
-    LogRetention
-    Private           No
-    Rack              test
-    RackUrl           No
-    RedirectHttps     Yes
-    ResourcePassword  ****
-    TaskTags          No
-    WebFormation      3,256,512
-
-## apps params set
-
-Set app parameters
-
-### Usage
-
-    convox apps params set <Key=Value> [Key=Value]...
-
-### Examples
-
-    $ convox apps params set LogRetention=3
-    Updating parameters...
-    2020-01-16T14:51:50Z system/cloudformation aws/cfm test-nodejs UPDATE_IN_PROGRESS test-myapp User Initiated
-    2020-01-16T14:51:54Z system/cloudformation aws/cfm test-nodejs UPDATE_IN_PROGRESS LogGroup
-    2020-01-16T14:51:54Z system/cloudformation aws/cfm test-nodejs UPDATE_IN_PROGRESS ResourceDatabase
-    2020-01-16T14:51:55Z system/cloudformation aws/cfm test-nodejs UPDATE_COMPLETE LogGroup
-    2020-01-16T14:51:55Z system/cloudformation aws/cfm test-nodejs UPDATE_COMPLETE ResourceDatabase
-    2020-01-16T14:51:58Z system/cloudformation aws/cfm test-nodejs UPDATE_IN_PROGRESS ServiceWeb
-    2020-01-16T14:51:59Z system/cloudformation aws/cfm test-nodejs UPDATE_COMPLETE ServiceWeb
-    2020-01-16T14:52:01Z system/cloudformation aws/cfm test-nodejs UPDATE_COMPLETE_CLEANUP_IN_PROGRESS test-myapp
-    2020-01-16T14:52:04Z system/cloudformation aws/cfm test-nodejs UPDATE_IN_PROGRESS ServiceWeb
-    2020-01-16T14:52:04Z system/cloudformation aws/cfm test-nodejs UPDATE_COMPLETE ServiceWeb
-    2020-01-16T14:52:05Z system/cloudformation aws/cfm test-nodejs UPDATE_IN_PROGRESS ResourceDatabase
-    2020-01-16T14:52:05Z system/cloudformation aws/cfm test-nodejs UPDATE_COMPLETE ResourceDatabase
-    2020-01-16T14:52:06Z system/cloudformation aws/cfm test-nodejs UPDATE_COMPLETE test-myapp
-    OK
-
-
 ## apps unlock
 
 Disable termination protection
