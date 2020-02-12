@@ -14,7 +14,6 @@ import (
 	mockstdcli "github.com/convox/convox/pkg/mock/stdcli"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -206,7 +205,6 @@ func TestRackParamsError(t *testing.T) {
 
 func TestRackParamsSet(t *testing.T) {
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("SystemGet").Return(fxSystem(), nil).Once()
 		opts := structs.SystemUpdateOptions{
 			Parameters: map[string]string{
 				"Foo": "bar",
@@ -214,26 +212,19 @@ func TestRackParamsSet(t *testing.T) {
 			},
 		}
 		i.On("SystemUpdate", opts).Return(nil)
-		i.On("SystemGet").Return(fxSystemUpdating(), nil).Twice()
-		i.On("SystemGet").Return(fxSystem(), nil)
-		i.On("SystemLogs", mock.Anything).Return(testLogs(fxLogsSystem()), nil)
 
 		res, err := testExecute(e, "rack params set Foo=bar Baz=qux", nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
-			"Updating parameters... ",
-			"TIME system/aws/component log1",
-			"TIME system/aws/component log2",
-			"OK",
+			"Updating parameters... OK",
 		})
 	})
 }
 
 func TestRackParamsSetError(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("SystemGet").Return(fxSystem(), nil)
 		opts := structs.SystemUpdateOptions{
 			Parameters: map[string]string{
 				"Foo": "bar",
@@ -241,40 +232,6 @@ func TestRackParamsSetError(t *testing.T) {
 			},
 		}
 		i.On("SystemUpdate", opts).Return(fmt.Errorf("err1"))
-
-		res, err := testExecute(e, "rack params set Foo=bar Baz=qux", nil)
-		require.NoError(t, err)
-		require.Equal(t, 1, res.Code)
-		res.RequireStderr(t, []string{"ERROR: err1"})
-		res.RequireStdout(t, []string{"Updating parameters... "})
-	})
-}
-
-func TestRackParamsSetClassic(t *testing.T) {
-	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("SystemGet").Return(fxSystemClassic(), nil).Once()
-		i.On("AppParametersSet", "name", map[string]string{"Foo": "bar", "Baz": "qux"}).Return(nil)
-		i.On("SystemGet").Return(fxSystemUpdating(), nil).Twice()
-		i.On("SystemGet").Return(fxSystem(), nil)
-		i.On("SystemLogs", mock.Anything).Return(testLogs(fxLogsSystem()), nil)
-
-		res, err := testExecute(e, "rack params set Foo=bar Baz=qux", nil)
-		require.NoError(t, err)
-		require.Equal(t, 0, res.Code)
-		res.RequireStderr(t, []string{""})
-		res.RequireStdout(t, []string{
-			"Updating parameters... ",
-			"TIME system/aws/component log1",
-			"TIME system/aws/component log2",
-			"OK",
-		})
-	})
-}
-
-func TestRackParamsSetClassicError(t *testing.T) {
-	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("SystemGet").Return(fxSystemClassic(), nil)
-		i.On("AppParametersSet", "name", map[string]string{"Foo": "bar", "Baz": "qux"}).Return(fmt.Errorf("err1"))
 
 		res, err := testExecute(e, "rack params set Foo=bar Baz=qux", nil)
 		require.NoError(t, err)
@@ -448,112 +405,45 @@ func TestRackUninstallUnknown(t *testing.T) {
 
 func TestRackUpdate(t *testing.T) {
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
-		require.NoError(t, testLocalRack(e, "dev1", "local", "https://host1"))
+		opts := structs.SystemUpdateOptions{
+			Version: options.String("latest"),
+		}
+		i.On("SystemUpdate", opts).Return(nil)
 
-		me := e.Executor.(*mockstdcli.Executor)
-		me.On("Terminal", "terraform", "init", "-upgrade").Return(nil)
-		me.On("Terminal", "terraform", "apply", "-auto-approve").Return(nil)
-
-		res, err := testExecute(e, "rack update dev1", nil)
+		res, err := testExecute(e, "rack update", nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{""})
-
-		dir := filepath.Join(e.Settings, "racks", "dev1")
-		tf := filepath.Join(dir, "main.tf")
-
-		_, err = os.Stat(dir)
-		require.NoError(t, err)
-		_, err = os.Stat(tf)
-		require.NoError(t, err)
-
-		tfdata, err := ioutil.ReadFile(tf)
-		require.NoError(t, err)
-
-		testdata, err := ioutil.ReadFile("testdata/terraform/dev1.tf")
-		require.NoError(t, err)
-
-		require.Equal(t, strings.Trim(string(tfdata), "\n"), strings.Trim(string(testdata), "\n"))
-
-		me.AssertExpectations(t)
 	})
 }
 
-func TestRackUpdateArgs(t *testing.T) {
+func TestRackUpdateSpecific(t *testing.T) {
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
-		require.NoError(t, testLocalRack(e, "dev1", "local", "https://host1"))
+		opts := structs.SystemUpdateOptions{
+			Version: options.String("ver1"),
+		}
+		i.On("SystemUpdate", opts).Return(nil)
 
-		me := e.Executor.(*mockstdcli.Executor)
-
-		me.On("Terminal", "terraform", "init").Return(nil).Once()
-		me.On("Terminal", "terraform", "apply", "-auto-approve").Return(nil).Once()
-
-		res, err := testExecute(e, "rack install local dev2 foo=bar baz=qux", nil)
+		res, err := testExecute(e, "rack update ver1", nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{""})
-
-		tf := filepath.Join(e.Settings, "racks", "dev2", "main.tf")
-
-		fmt.Printf("tf: %+v\n", tf)
-
-		tfdata, err := ioutil.ReadFile(tf)
-		require.NoError(t, err)
-
-		testdata, err := ioutil.ReadFile("testdata/terraform/dev2.args.tf")
-		require.NoError(t, err)
-
-		require.Equal(t, strings.Trim(string(testdata), "\n"), strings.Trim(string(tfdata), "\n"))
-
-		me.On("Terminal", "terraform", "init", "-upgrade").Return(nil).Once()
-		me.On("Terminal", "terraform", "apply", "-auto-approve").Return(nil).Once()
-
-		res, err = testExecute(e, "rack update dev2 foo= other=side", nil)
-		require.NoError(t, err)
-		require.Equal(t, 0, res.Code)
-		res.RequireStderr(t, []string{""})
-		res.RequireStdout(t, []string{""})
-
-		tfdata2, err := ioutil.ReadFile(tf)
-		require.NoError(t, err)
-
-		testdata2, err := ioutil.ReadFile("testdata/terraform/dev2.update.tf")
-		require.NoError(t, err)
-
-		require.Equal(t, strings.Trim(string(tfdata2), "\n"), strings.Trim(string(testdata2), "\n"))
-
-		me.AssertExpectations(t)
 	})
 }
 
 func TestRackUpdateError(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		require.NoError(t, testLocalRack(e, "dev1", "local", "https://host1"))
+		opts := structs.SystemUpdateOptions{
+			Version: options.String("latest"),
+		}
+		i.On("SystemUpdate", opts).Return(fmt.Errorf("err1"))
 
-		me := e.Executor.(*mockstdcli.Executor)
-		me.On("Terminal", "terraform", "init", "-upgrade").Return(nil)
-		me.On("Terminal", "terraform", "apply", "-auto-approve").Return(fmt.Errorf("err1"))
-
-		res, err := testExecute(e, "rack update dev1", nil)
+		res, err := testExecute(e, "rack update", nil)
 		require.NoError(t, err)
 		require.Equal(t, 1, res.Code)
 		res.RequireStderr(t, []string{"ERROR: err1"})
-		res.RequireStdout(t, []string{""})
-
-		me.AssertExpectations(t)
-	})
-}
-
-func TestRackUpdateUnknown(t *testing.T) {
-	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		require.NoError(t, testLocalRack(e, "dev1", "local", "https://host1"))
-
-		res, err := testExecute(e, "rack update dev2", nil)
-		require.NoError(t, err)
-		require.Equal(t, 1, res.Code)
-		res.RequireStderr(t, []string{"ERROR: could not find rack: dev2"})
 		res.RequireStdout(t, []string{""})
 	})
 }

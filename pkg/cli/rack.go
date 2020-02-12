@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"sort"
-	"strings"
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/options"
@@ -30,12 +29,12 @@ func init() {
 		Validate: stdcli.Args(0),
 	})
 
-	register("rack params", "display rack parameters", RackParams, stdcli.CommandOptions{
+	registerWithoutProvider("rack params", "display rack parameters", RackParams, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagRack},
 		Validate: stdcli.Args(0),
 	})
 
-	register("rack params set", "set rack parameters", RackParamsSet, stdcli.CommandOptions{
+	registerWithoutProvider("rack params set", "set rack parameters", RackParamsSet, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagRack},
 		Usage:    "<Key=Value> [Key=Value]...",
 		Validate: stdcli.ArgsMin(1),
@@ -66,8 +65,9 @@ func init() {
 	})
 
 	registerWithoutProvider("rack update", "update a rack", RackUpdate, stdcli.CommandOptions{
-		Usage:    "<name> [option=value]...",
-		Validate: stdcli.ArgsMin(1),
+		Flags:    []stdcli.Flag{flagRack},
+		Usage:    "[version]",
+		Validate: stdcli.ArgsMax(1),
 	})
 }
 
@@ -135,15 +135,20 @@ func RackLogs(rack sdk.Interface, c *stdcli.Context) error {
 	return nil
 }
 
-func RackParams(rack sdk.Interface, c *stdcli.Context) error {
-	s, err := rack.SystemGet()
+func RackParams(_ sdk.Interface, c *stdcli.Context) error {
+	r, err := rack.Current(c)
+	if err != nil {
+		return err
+	}
+
+	params, err := r.Parameters()
 	if err != nil {
 		return err
 	}
 
 	keys := []string{}
 
-	for k := range s.Parameters {
+	for k := range params {
 		keys = append(keys, k)
 	}
 
@@ -152,47 +157,21 @@ func RackParams(rack sdk.Interface, c *stdcli.Context) error {
 	i := c.Info()
 
 	for _, k := range keys {
-		i.Add(k, s.Parameters[k])
+		i.Add(k, params[k])
 	}
 
 	return i.Print()
 }
 
-func RackParamsSet(rack sdk.Interface, c *stdcli.Context) error {
-	s, err := rack.SystemGet()
+func RackParamsSet(_ sdk.Interface, c *stdcli.Context) error {
+	r, err := rack.Current(c)
 	if err != nil {
 		return err
 	}
 
-	opts := structs.SystemUpdateOptions{
-		Parameters: map[string]string{},
-	}
-
-	for _, arg := range c.Args {
-		parts := strings.SplitN(arg, "=", 2)
-
-		if len(parts) != 2 {
-			return fmt.Errorf("Key=Value expected: %s", arg)
-		}
-
-		opts.Parameters[parts[0]] = parts[1]
-	}
-
 	c.Startf("Updating parameters")
 
-	if s.Version <= "20180708231844" {
-		if err := rack.AppParametersSet(s.Name, opts.Parameters); err != nil {
-			return err
-		}
-	} else {
-		if err := rack.SystemUpdate(opts); err != nil {
-			return err
-		}
-	}
-
-	c.Writef("\n")
-
-	if err := common.WaitForRackWithLogs(rack, c); err != nil {
+	if err := r.Update(argsToOptions(c.Args)); err != nil {
 		return err
 	}
 
@@ -290,14 +269,16 @@ func RackUninstall(_ sdk.Interface, c *stdcli.Context) error {
 }
 
 func RackUpdate(_ sdk.Interface, c *stdcli.Context) error {
-	name := c.Arg(0)
-
-	r, err := rack.Match(c, name)
+	r, err := rack.Current(c)
 	if err != nil {
 		return err
 	}
 
-	if err := r.Update(argsToOptions(c.Args[1:])); err != nil {
+	options := map[string]string{
+		"release": c.Arg(0),
+	}
+
+	if err := r.Update(options); err != nil {
 		return err
 	}
 

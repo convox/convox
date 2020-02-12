@@ -167,6 +167,20 @@ func (t Terraform) Name() string {
 	return t.name
 }
 
+func (t Terraform) Parameters() (map[string]string, error) {
+	dir, err := t.ctx.SettingDirectory(fmt.Sprintf("racks/%s", t.name))
+	if err != nil {
+		return nil, err
+	}
+
+	vars, err := terraformOptionVars(dir, map[string]string{})
+	if err != nil {
+		return nil, err
+	}
+
+	return vars, nil
+}
+
 func (t Terraform) Provider() string {
 	return t.provider
 }

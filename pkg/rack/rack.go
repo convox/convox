@@ -13,6 +13,7 @@ import (
 type Rack interface {
 	Client() (sdk.Interface, error)
 	Name() string
+	Parameters() (map[string]string, error)
 	Provider() string
 	Remote() bool
 	Status() string
@@ -21,6 +22,10 @@ type Rack interface {
 }
 
 func Current(c *stdcli.Context) (Rack, error) {
+	if url := os.Getenv("RACK_URL"); strings.TrimSpace(url) != "" {
+		return LoadDirect(c, url)
+	}
+
 	if name := currentRack(c); name != "" {
 		return Match(c, name)
 	}

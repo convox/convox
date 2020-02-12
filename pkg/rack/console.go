@@ -8,6 +8,8 @@ import (
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/console"
+	"github.com/convox/convox/pkg/options"
+	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
 	"github.com/convox/stdsdk"
@@ -64,6 +66,20 @@ func (c Console) Name() string {
 	return c.name
 }
 
+func (c Console) Parameters() (map[string]string, error) {
+	cc, err := c.Client()
+	if err != nil {
+		return nil, err
+	}
+
+	s, err := cc.SystemGet()
+	if err != nil {
+		return nil, err
+	}
+
+	return s.Parameters, nil
+}
+
 func (c Console) Provider() string {
 	return c.provider
 }
@@ -80,8 +96,29 @@ func (c Console) Uninstall() error {
 	return fmt.Errorf("console uninstall not yet supported")
 }
 
-func (c Console) Update(options map[string]string) error {
-	return fmt.Errorf("console update not yet supported")
+func (c Console) Update(opts map[string]string) error {
+	uopts := structs.SystemUpdateOptions{}
+
+	if v, ok := opts["release"]; ok {
+		uopts.Version = options.String(v)
+	}
+
+	delete(opts, "release")
+
+	if len(opts) > 0 {
+		uopts.Parameters = opts
+	}
+
+	cc, err := c.Client()
+	if err != nil {
+		return err
+	}
+
+	if err := cc.SystemUpdate(uopts); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func consoleClient(c *stdcli.Context, host string) (*sdk.Client, error) {
