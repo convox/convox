@@ -1,5 +1,5 @@
 $(window).ready(function () {
-  $("a").each(hijackLocalLink);
+  // $("a").each(hijackLocalLink);
 
   scrollActiveToc();
   addHeadingAnchors();
