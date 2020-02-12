@@ -10,3 +10,7 @@ services:
       - SEGMENT_TOKEN
     health: /check
     port: https:3000
+    scale:
+      count: 3
+      cpu: 128
+      memory: 256

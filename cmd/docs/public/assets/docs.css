@@ -386,7 +386,7 @@ blockquote {
 	margin-bottom: 0;
 }
 
-blockquote + p {
+blockquote + p, blockquote + pre {
   margin-top: 20px;
 }
 

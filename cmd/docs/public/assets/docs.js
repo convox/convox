@@ -22,6 +22,7 @@ function addHeadingAnchors() {
 function hijackLocalLink(i, a) {
   if (window.location.host == a.host) {
     $(a).on('click', function (e) {
+      if (e.ctrlKey || e.shiftKey || e.metaKey || (e.button && e.button == 1)) return;
       loadDocument(a.href);
       history.pushState({ href: a.href }, '', a.href);
       return (false);
@@ -32,7 +33,6 @@ function hijackLocalLink(i, a) {
 function loadDocument(href) {
   $('nav#toc a').blur().removeClass('active');
   var url = new URL(href);
-  console.log('url', url);
   $.get('/toc' + url.pathname, function (data) {
     $('nav#toc').html(data);
     scrollActiveToc();
