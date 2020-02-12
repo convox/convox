@@ -1,4 +1,4 @@
-# apps
+# apps
 
 ## apps
 
@@ -85,7 +85,7 @@ Import an app
     Importing build... OK, RIHGFEDCBA
     Importing env... OK, RJIHGFEDCB
     Promoting RJIHGFEDCB... OK
-    Importing resource database... OK   
+    Importing resource database... OK
 
 ## apps info
 
