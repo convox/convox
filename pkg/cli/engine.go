@@ -1,8 +1,7 @@
 package cli
 
 import (
-	"os"
-
+	"github.com/convox/convox/pkg/rack"
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
 )
@@ -14,7 +13,17 @@ type Engine struct {
 
 func (e *Engine) Command(command, description string, fn HandlerFunc, opts stdcli.CommandOptions) {
 	wfn := func(c *stdcli.Context) error {
-		return fn(e.currentClient(c), c)
+		r, err := rack.Current(c)
+		if err != nil {
+			return err
+		}
+
+		rc, err := r.Client()
+		if err != nil {
+			return err
+		}
+
+		return fn(rc, c)
 	}
 
 	e.Engine.Command(command, description, wfn, opts)
@@ -36,45 +45,6 @@ func (e *Engine) RegisterCommands() {
 			e.CommandWithoutProvider(c.Command, c.Description, c.Handler, c.Opts)
 		}
 	}
-}
-
-func (e *Engine) currentClient(c *stdcli.Context) sdk.Interface {
-	if e.Client != nil {
-		return e.Client
-	}
-
-	if url := os.Getenv("RACK_URL"); url != "" {
-		sc, err := sdk.New(url)
-		if err != nil {
-			c.Fail(err)
-		}
-		return sc
-	}
-
-	host, err := currentHost(c)
-	if err != nil {
-		c.Fail(err)
-	}
-
-	r, err := matchRack(c, currentRack(c, host))
-	if err != nil {
-		c.Fail(err)
-	}
-
-	// if r == nil {
-	// 	return nil
-	// }
-
-	sc, err := sdk.New(r.Url)
-	if err != nil {
-		c.Fail(err)
-	}
-
-	sc.Authenticator = authenticator(c)
-	sc.Rack = r.Name
-	sc.Session = currentSession(c)
-
-	return sc
 }
 
 var commands = []command{}

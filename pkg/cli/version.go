@@ -1,8 +1,7 @@
 package cli
 
 import (
-	"net/url"
-
+	rck "github.com/convox/convox/pkg/rack"
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
 )
@@ -17,23 +16,23 @@ func init() {
 func Version(rack sdk.Interface, c *stdcli.Context) error {
 	c.Writef("client: <info>%s</info>\n", c.Version())
 
-	ep, err := currentEndpoint(c)
+	r, err := rck.Current(c)
 	if err != nil {
 		c.Writef("server: <info>none</info>\n")
 		return nil
 	}
 
-	s, err := rack.SystemGet()
+	rc, err := r.Client()
 	if err != nil {
 		return err
 	}
 
-	eu, err := url.Parse(ep)
+	s, err := rc.SystemGet()
 	if err != nil {
 		return err
 	}
 
-	c.Writef("server: <info>%s</info> (<info>%s</info>)\n", s.Version, eu.Host)
+	c.Writef("server: <info>%s</info>\n", s.Version)
 
 	return nil
 }

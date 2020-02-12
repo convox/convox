@@ -54,6 +54,7 @@ func TestRackInstall(t *testing.T) {
 		me := &mockstdcli.Executor{}
 		me.On("Terminal", "terraform", "init").Return(nil)
 		me.On("Terminal", "terraform", "apply", "-auto-approve").Return(nil)
+		me.On("Execute", "terraform", "output", "-json").Return([]byte(`{}`), nil)
 		e.Executor = me
 
 		res, err := testExecute(e, "rack install local dev1", nil)
@@ -93,6 +94,7 @@ func TestRackInstallArgs(t *testing.T) {
 		me := &mockstdcli.Executor{}
 		me.On("Terminal", "terraform", "init").Return(nil)
 		me.On("Terminal", "terraform", "apply", "-auto-approve").Return(nil)
+		me.On("Execute", "terraform", "output", "-json").Return([]byte(`{}`), nil)
 		e.Executor = me
 
 		res, err := testExecute(e, "rack install local dev1 foo=bar baz=qux", nil)

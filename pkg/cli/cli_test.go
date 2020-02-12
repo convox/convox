@@ -16,6 +16,7 @@ import (
 	"github.com/convox/convox/pkg/common"
 	mocksdk "github.com/convox/convox/pkg/mock/sdk"
 	mockstdcli "github.com/convox/convox/pkg/mock/stdcli"
+	"github.com/convox/convox/pkg/rack"
 	"github.com/convox/convox/pkg/structs"
 	shellquote "github.com/kballard/go-shellquote"
 	"github.com/stretchr/testify/require"
@@ -48,12 +49,15 @@ func testClientWait(t *testing.T, wait time.Duration, fn func(*cli.Engine, *mock
 
 	e := cli.New("convox", "test")
 
-	e.Client = i
+	rack.TestClient = i
 
 	tmp, err := ioutil.TempDir("", "")
 	require.NoError(t, err)
 	e.Settings = tmp
-	// defer os.RemoveAll(tmp)
+	defer os.RemoveAll(tmp)
+
+	err = ioutil.WriteFile(filepath.Join(tmp, "current"), []byte(`{"type":"test","name":"rack1"}`), 0600)
+	require.NoError(t, err)
 
 	fn(e, i)
 

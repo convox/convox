@@ -10,6 +10,7 @@ import (
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/options"
+	"github.com/convox/convox/pkg/rack"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
@@ -101,7 +102,7 @@ func Rack(rack sdk.Interface, c *stdcli.Context) error {
 	return i.Print()
 }
 
-func RackInstall(rack sdk.Interface, c *stdcli.Context) error {
+func RackInstall(_ sdk.Interface, c *stdcli.Context) error {
 	provider := c.Arg(0)
 	name := c.Arg(1)
 
@@ -157,7 +158,7 @@ func RackInstall(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	if err := switchRack(c, name); err != nil {
+	if _, err := rack.Switch(c, name); err != nil {
 		return err
 	}
 
@@ -326,19 +327,19 @@ func RackScale(rack sdk.Interface, c *stdcli.Context) error {
 	return i.Print()
 }
 
-func RackUninstall(rack sdk.Interface, c *stdcli.Context) error {
+func RackUninstall(_ sdk.Interface, c *stdcli.Context) error {
 	name := c.Arg(0)
 
-	r, err := matchRack(c, name)
+	r, err := rack.Match(c, name)
 	if err != nil {
 		return err
 	}
 
-	if r.Remote {
+	if r.Remote() {
 		return rackUninstallRemote(c, name)
 	}
 
-	env, err := terraformEnv(r.Provider)
+	env, err := terraformEnv(r.Provider())
 	if err != nil {
 		return err
 	}
@@ -363,15 +364,15 @@ func RackUninstall(rack sdk.Interface, c *stdcli.Context) error {
 	return nil
 }
 
-func RackUpdate(rack sdk.Interface, c *stdcli.Context) error {
+func RackUpdate(_ sdk.Interface, c *stdcli.Context) error {
 	name := c.Arg(0)
 
-	r, err := matchRack(c, name)
+	r, err := rack.Match(c, name)
 	if err != nil {
 		return err
 	}
 
-	if r.Remote {
+	if r.Remote() {
 		return rackUpdateRemote(c, name)
 	}
 
@@ -380,12 +381,12 @@ func RackUpdate(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	env, err := terraformEnv(r.Provider)
+	env, err := terraformEnv(r.Provider())
 	if err != nil {
 		return err
 	}
 
-	vars, err := terraformProviderVars(r.Provider)
+	vars, err := terraformProviderVars(r.Provider())
 	if err != nil {
 		return err
 	}
@@ -403,7 +404,7 @@ func RackUpdate(rack sdk.Interface, c *stdcli.Context) error {
 
 	params := map[string]interface{}{
 		"Name":     name,
-		"Provider": r.Provider,
+		"Provider": r.Provider(),
 		"Vars":     vars,
 	}
 
