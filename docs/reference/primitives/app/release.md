@@ -1,10 +1,14 @@
 # Release
 
-A Release is the unit of deployment consisting of a [Build](build.md) and a set of
-environment variables.
+A Release is the atomic unit of deployment consisting of a [Build](build.md) and a set of
+[Environment Variables](../../../configuraton/../configuration/environment.md).
 
 A Release is created every time you create a new [Build](build.md) or
-change the [App](../app.md)'s environment.
+change the [App](../app.md)'s [Environment](../../../configuration/environment.md).
+
+Promoting a Release will begin a [rolling deployment](rolling-updates.md) that will continue
+until the new Release is active on all [Processes](../reference/primitives/app/process.md) or
+has been completely rolled back.
 
 ## Command Line Interface
 
@@ -45,7 +49,7 @@ change the [App](../app.md)'s environment.
 ### Promoting a Release
 
     $ convox releases promote RCDEFGHIJK -a myapp
-    Promoting RCDEFGHIJK... OK
+    Promoting RCDEFGHIJK...
     2019-01-01T00:00:49Z system/k8s/atom/app Status: Running => Pending
     2019-01-01T00:00:51Z system/k8s/web Scaled up replica set web-745f845dc to 1
     2019-01-01T00:00:51Z system/k8s/web-745f845dc Created pod: web-745f845dc-rzl2q
@@ -81,4 +85,4 @@ change the [App](../app.md)'s environment.
     2019-01-01T00:00:56Z system/k8s/web-745f845dc-rzl2q Started container main
     OK
 
-> Rolling back to a previous Release makes a copy of the old Release and promotes the new Release.
+> Rolling back to a previous Release makes a copy of the that Release and promotes the copy.
