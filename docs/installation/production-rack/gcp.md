@@ -46,4 +46,10 @@ The following environment variables are required:
 
 ## Install Rack
 
-    $ convox rack install gcp <name>
+    $ convox rack install gcp <name> [param1=value1]...
+
+### Available Parameters
+
+| Name        | Default         |
+| ----------- | --------------- |
+| `node_type` | `n1-standard-1` |

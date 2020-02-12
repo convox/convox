@@ -43,4 +43,11 @@ The following environment variables are required:
 
 ## Install Rack
 
-    $ convox rack install azure <name>
+    $ convox rack install azure <name> [param1=value1]...
+
+### Available Parameters
+
+| Name        | Default          |
+| ----------- | ---------------- |
+| `node_type` | `Standard_D3_v3` |
+| `region`    | `eastus`         |
