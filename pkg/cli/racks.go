@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"github.com/convox/convox/pkg/rack"
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
 )
@@ -11,8 +12,8 @@ func init() {
 	})
 }
 
-func Racks(rack sdk.Interface, c *stdcli.Context) error {
-	rs, err := racks(c)
+func Racks(_ sdk.Interface, c *stdcli.Context) error {
+	rs, err := rack.List(c)
 	if err != nil {
 		return err
 	}
@@ -20,7 +21,7 @@ func Racks(rack sdk.Interface, c *stdcli.Context) error {
 	t := c.Table("NAME", "PROVIDER", "STATUS")
 
 	for _, r := range rs {
-		t.AddRow(r.Name, r.Provider, r.Status)
+		t.AddRow(r.Name(), r.Provider(), r.Status())
 	}
 
 	return t.Print()

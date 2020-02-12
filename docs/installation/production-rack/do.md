@@ -29,4 +29,12 @@ Go to https://cloud.digitalocean.com/account/api/tokens and generate a new Space
 
 ## Install Rack
 
-    $ convox rack install do <name>
+    $ convox rack install do <name> [param1=value1]...
+
+### Available Parameters
+
+| Name            | Default       |
+| --------------- | ------------- |
+| `node_type`     | `s-2vcpu-4gb` |
+| `region`        | `nyc3`        |
+| `registry_disk` | `50Gi`        |

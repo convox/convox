@@ -37,4 +37,13 @@ You can list all available regions for your account with the following command:
 
 ## Install Rack
 
-    $ convox rack install aws <name>
+    $ convox rack install aws <name> [param1=value1]...
+
+### Available Parameters
+
+| Name        | Default       |
+| ----------- | ------------- |
+| `cidr`      | `10.1.0.0/16` |
+| `node_disk` | `20`          |
+| `node_type` | `t3.small`    |
+| `region`    | `us-east-1`   |

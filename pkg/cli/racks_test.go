@@ -59,7 +59,7 @@ func TestRacksRemote(t *testing.T) {
 		tsu, err := url.Parse(ts.URL)
 		require.NoError(t, err)
 
-		err = ioutil.WriteFile(filepath.Join(e.Settings, "host"), []byte(tsu.Host), 0644)
+		err = ioutil.WriteFile(filepath.Join(e.Settings, "console"), []byte(tsu.Host), 0644)
 		require.NoError(t, err)
 
 		res, err := testExecute(e, "racks", nil)
@@ -92,7 +92,7 @@ func TestRacksLocalAndRemote(t *testing.T) {
 		tsu, err := url.Parse(ts.URL)
 		require.NoError(t, err)
 
-		err = ioutil.WriteFile(filepath.Join(e.Settings, "host"), []byte(tsu.Host), 0644)
+		err = ioutil.WriteFile(filepath.Join(e.Settings, "console"), []byte(tsu.Host), 0644)
 		require.NoError(t, err)
 
 		res, err := testExecute(e, "racks", nil)
