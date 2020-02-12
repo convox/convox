@@ -21,6 +21,10 @@ type Console struct {
 	status   string
 }
 
+func InstallConsole(c *stdcli.Context, name, provider string, options map[string]string) error {
+	return fmt.Errorf("console install not yet supported")
+}
+
 func LoadConsole(c *stdcli.Context, name string) (*Console, error) {
 	rs, err := listConsole(c)
 	if err != nil {
@@ -70,6 +74,14 @@ func (c Console) Remote() bool {
 
 func (c Console) Status() string {
 	return c.status
+}
+
+func (c Console) Uninstall() error {
+	return fmt.Errorf("console uninstall not yet supported")
+}
+
+func (c Console) Update(options map[string]string) error {
+	return fmt.Errorf("console update not yet supported")
 }
 
 func consoleClient(c *stdcli.Context, host string) (*sdk.Client, error) {

@@ -16,6 +16,8 @@ type Rack interface {
 	Provider() string
 	Remote() bool
 	Status() string
+	Uninstall() error
+	Update(map[string]string) error
 }
 
 func Current(c *stdcli.Context) (Rack, error) {
@@ -46,6 +48,17 @@ func Current(c *stdcli.Context) (Rack, error) {
 		return LoadTest(c, attrs["name"])
 	default:
 		return nil, fmt.Errorf("unknown rack type: %s", attrs["type"])
+	}
+}
+
+func Install(c *stdcli.Context, name, provider string, options map[string]string) error {
+	switch len(strings.Split(name, "/")) {
+	case 1:
+		return InstallTerraform(c, name, provider, options)
+	case 2:
+		return InstallConsole(c, name, provider, options)
+	default:
+		return fmt.Errorf("invalid name: %s", name)
 	}
 }
 

@@ -38,3 +38,11 @@ func (t Test) Remote() bool {
 func (t Test) Status() string {
 	return "running"
 }
+
+func (t Test) Uninstall() error {
+	return nil
+}
+
+func (t Test) Update(options map[string]string) error {
+	return nil
+}
