@@ -11,7 +11,7 @@ provider "http" {
 }
 
 provider "kubernetes" {
-  version = "~> 1.10"
+  version = "~> 1.10.0"
 
   cluster_ca_certificate = module.cluster.ca
   host                   = module.cluster.endpoint
