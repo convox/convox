@@ -1,3 +1,3 @@
 output "name" {
-  value = data.local_file.platform.content
+  value = trimspace(data.local_file.platform.content)
 }
