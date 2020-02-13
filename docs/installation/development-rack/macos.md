@@ -31,7 +31,7 @@ Set `*.convox` to be resolved by the local Rack's DNS server.
     $ sudo mkdir -p /etc/resolver
     $ sudo bash -c 'echo "nameserver 127.0.0.1" > /etc/resolver/convox'
 
-## CA Trust (optional)
+## CA Trust
 
 To remove browser warnings about untrusted certificates for local applications
 you can trust the Rack's CA certificate.
