@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"sort"
@@ -25,7 +24,7 @@ type Terraform struct {
 }
 
 func InstallTerraform(c *stdcli.Context, provider, name string, options map[string]string) error {
-	if !terraformInstalled() {
+	if !terraformInstalled(c) {
 		return fmt.Errorf("terraform required")
 	}
 
@@ -359,8 +358,9 @@ func terraformEnv(provider string) (map[string]string, error) {
 	}
 }
 
-func terraformInstalled() bool {
-	return exec.Command("terraform", "version").Run() == nil
+func terraformInstalled(c *stdcli.Context) bool {
+	_, err := c.Execute("terraform", "version")
+	return err == nil
 }
 
 func terraformOptionVars(dir string, options map[string]string) (map[string]string, error) {
