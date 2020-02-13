@@ -448,10 +448,10 @@ func TestManifestValidate(t *testing.T) {
 	require.Nil(t, m)
 
 	errors := []string{
-		"resource name resource1 invalid, can only contain lowercase alpha and dashes",
-		"service name serviceF invalid, can only contain lowercase alpha and dashes",
+		"resource name 1resource invalid, must contain only lowercase alphanumeric and dashes",
+		"service name serviceF invalid, must contain only lowercase alphanumeric and dashes",
 		"service serviceF references a resource that does not exist: foo",
-		"timer name timer_1 invalid, can only contain lowercase alpha and dashes",
+		"timer name timer_1 invalid, must contain only lowercase alphanumeric and dashes",
 		"timer timer_1 references a service that does not exist: someservice",
 	}
 

@@ -6,8 +6,12 @@ import (
 	"strings"
 )
 
+const (
+	ValidNameDescription = "must contain only lowercase alphanumeric and dashes"
+)
+
 var (
-	nameValidator = regexp.MustCompile(`[^a-z-]`)
+	nameValidator = regexp.MustCompile(`^[a-z]{1}[a-z0-9-]*$`)
 )
 
 func (m *Manifest) Validate() []error {
@@ -37,8 +41,8 @@ func (m *Manifest) validateResources() []error {
 	errs := []error{}
 
 	for _, r := range m.Resources {
-		if nameValidator.MatchString(r.Name) {
-			errs = append(errs, fmt.Errorf("resource name %s invalid, can only contain lowercase alpha and dashes", r.Name))
+		if !nameValidator.MatchString(r.Name) {
+			errs = append(errs, fmt.Errorf("resource name %s invalid, %s", r.Name, ValidNameDescription))
 		}
 
 		if strings.TrimSpace(r.Type) == "" {
@@ -53,8 +57,8 @@ func (m *Manifest) validateServices() []error {
 	errs := []error{}
 
 	for _, s := range m.Services {
-		if nameValidator.MatchString(s.Name) {
-			errs = append(errs, fmt.Errorf("service name %s invalid, can only contain lowercase alpha and dashes", s.Name))
+		if !nameValidator.MatchString(s.Name) {
+			errs = append(errs, fmt.Errorf("service name %s invalid, %s", s.Name, ValidNameDescription))
 		}
 
 		for _, r := range s.ResourceMap() {
@@ -73,8 +77,8 @@ func (m *Manifest) validateTimers() []error {
 	errs := []error{}
 
 	for _, t := range m.Timers {
-		if nameValidator.MatchString(t.Name) {
-			errs = append(errs, fmt.Errorf("timer name %s invalid, can only contain lowercase alpha and dashes", t.Name))
+		if !nameValidator.MatchString(t.Name) {
+			errs = append(errs, fmt.Errorf("timer name %s invalid, %s", t.Name, ValidNameDescription))
 		}
 
 		if _, err := m.Service(t.Service); err != nil {

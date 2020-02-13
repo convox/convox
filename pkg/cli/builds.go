@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -102,7 +103,9 @@ func build(rack sdk.Interface, c *stdcli.Context, development bool) (*structs.Bu
 		return nil, err
 	}
 
-	data, err := ioutil.ReadFile(common.DefaultString(opts.Manifest, "convox.yml"))
+	dir := coalesce(c.Arg(0), ".")
+
+	data, err := ioutil.ReadFile(filepath.Join(dir, common.DefaultString(opts.Manifest, "convox.yml")))
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +124,7 @@ func build(rack sdk.Interface, c *stdcli.Context, development bool) (*structs.Bu
 
 	c.Startf("Packaging source")
 
-	data, err = common.Tarball(coalesce(c.Arg(0), "."))
+	data, err = common.Tarball(dir)
 	if err != nil {
 		return nil, err
 	}

@@ -1,5 +1,5 @@
 resources:
-  resource1:
+  1resource:
     type: postgres
 services:
   serviceF:
