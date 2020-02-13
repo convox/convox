@@ -26,7 +26,7 @@ func TestLogin(t *testing.T) {
 		tsu, err := url.Parse(ts.URL)
 		require.NoError(t, err)
 
-		res, err := testExecute(e, fmt.Sprintf("login %s -p password", tsu.Host), nil)
+		res, err := testExecute(e, fmt.Sprintf("login %s -t password", tsu.Host), nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
@@ -51,7 +51,7 @@ func TestLoginError(t *testing.T) {
 		tsu, err := url.Parse(ts.URL)
 		require.NoError(t, err)
 
-		res, err := testExecute(e, fmt.Sprintf("login %s -p password", tsu.Host), nil)
+		res, err := testExecute(e, fmt.Sprintf("login %s -t password", tsu.Host), nil)
 		require.NoError(t, err)
 		require.Equal(t, 1, res.Code)
 		res.RequireStderr(t, []string{"ERROR: invalid login"})

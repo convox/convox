@@ -12,7 +12,7 @@ import (
 func init() {
 	registerWithoutProvider("login", "authenticate with a rack", Login, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
-			stdcli.StringFlag("password", "p", "password"),
+			stdcli.StringFlag("token", "t", "cli token"),
 		},
 		Usage:    "[hostname]",
 		Validate: stdcli.ArgsMax(1),
@@ -27,10 +27,10 @@ func Login(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	password := coalesce(c.String("password"), os.Getenv("CONVOX_PASSWORD"), auth)
+	password := coalesce(c.String("token"), os.Getenv("CONVOX_TOKEN"), auth)
 
 	if password == "" {
-		c.Writef("Password: ")
+		c.Writef("CLI Token: ")
 
 		password, err = c.ReadSecret()
 		if err != nil {
