@@ -2,6 +2,10 @@
 
 ## Initial Setup
 
+### Docker
+
+    $ sudo apt install docker.io
+
 ### Kubernetes
 
     $ snap install microk8s --classic --channel=1.13/stable
@@ -41,3 +45,5 @@ This certificate is generated on your local machine and is unique to your Rack.
     $ kubectl get secret/ca -n convox-system -o jsonpath="{.data.tls\.crt}" | base64 -d > /tmp/ca
     $ sudo mv /tmp/ca /usr/local/share/ca-certificates/convox.crt
     $ sudo update-ca-certificates
+    $ sudo snap restart microk8s
+    $ sudo service docker restart
