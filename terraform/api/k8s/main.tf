@@ -159,9 +159,9 @@ resource "kubernetes_deployment" "api" {
               scheme = "HTTPS"
             }
 
-            failure_threshold     = 3
-            initial_delay_seconds = 15
-            period_seconds        = 5
+            failure_threshold     = 5
+            initial_delay_seconds = 0
+            period_seconds        = 3
             success_threshold     = 1
             timeout_seconds       = 3
           }
@@ -173,8 +173,11 @@ resource "kubernetes_deployment" "api" {
               scheme = "HTTPS"
             }
 
-            period_seconds  = 5
-            timeout_seconds = 3
+            failure_threshold     = 5
+            initial_delay_seconds = 0
+            period_seconds        = 3
+            success_threshold     = 1
+            timeout_seconds       = 3
           }
 
           volume_mount {
