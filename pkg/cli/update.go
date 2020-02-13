@@ -1,14 +1,15 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"runtime"
 
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
-	cv "github.com/convox/version"
-	update "github.com/inconshreveable/go-update"
+	"github.com/inconshreveable/go-update"
 )
 
 func init() {
@@ -19,21 +20,24 @@ func init() {
 }
 
 func Update(rack sdk.Interface, c *stdcli.Context) error {
-	target := c.Arg(0)
-
-	// if no version specified, find the latest version
-	if target == "" {
-		v, err := cv.Latest()
-		if err != nil {
-			return err
-		}
-
-		target = v
+	binary, err := releaseBinary()
+	if err != nil {
+		return err
 	}
 
-	url := fmt.Sprintf("https://s3.amazonaws.com/convox/release/%s/cli/%s/%s", target, runtime.GOOS, executableName())
+	version := c.Arg(0)
 
-	res, err := http.Get(url)
+	if version == "" {
+		v, err := latestRelease()
+		if err != nil {
+			return fmt.Errorf("could not fetch latest release: %s", err)
+		}
+		version = v
+	}
+
+	asset := fmt.Sprintf("https://github.com/convox/convox/releases/download/%s/%s", version, binary)
+
+	res, err := http.Get(asset)
 	if err != nil {
 		return err
 	}
@@ -44,11 +48,45 @@ func Update(rack sdk.Interface, c *stdcli.Context) error {
 
 	defer res.Body.Close()
 
-	c.Startf("Updating to <release>%s</release>", target)
+	c.Startf("Updating to <release>%s</release>", version)
 
 	if err := update.Apply(res.Body, update.Options{}); err != nil {
 		return err
 	}
 
 	return c.OK()
+}
+
+func releaseBinary() (string, error) {
+	switch runtime.GOOS {
+	case "darwin":
+		return "convox-macos", nil
+	case "linux":
+		return "convox-linux", nil
+	default:
+		return "", fmt.Errorf("unknown platform: %s", runtime.GOOS)
+	}
+}
+
+func latestRelease() (string, error) {
+	res, err := http.Get("https://api.github.com/repos/convox/convox/releases/latest")
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return "", err
+	}
+
+	var release struct {
+		Tag string `json:"tag_name"`
+	}
+
+	if err := json.Unmarshal(data, &release); err != nil {
+		return "", err
+	}
+
+	return release.Tag, nil
 }
