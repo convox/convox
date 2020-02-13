@@ -86,11 +86,11 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
-        {{ range .Service.Resources }}
-        - name: {{ envname . }}_URL
+        {{ range .Service.ResourceMap }}
+        - name: "{{.Env}}"
           valueFrom:
             configMapKeyRef:
-              name: resource-{{.}}
+              name: resource-{{ k8sname .Name }}
               key: URL
         {{ end }}
         envFrom:

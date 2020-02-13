@@ -159,6 +159,28 @@ func (s Service) Autoscale() bool {
 	return false
 }
 
+type ServiceResource struct {
+	Name string
+	Env  string
+}
+
+func (s Service) ResourceMap() []ServiceResource {
+	srs := []ServiceResource{}
+
+	for _, r := range s.Resources {
+		parts := strings.SplitN(r, ":", 2)
+
+		switch len(parts) {
+		case 1:
+			srs = append(srs, ServiceResource{Name: parts[0], Env: fmt.Sprintf("%s_URL", strings.Replace(strings.ToUpper(parts[0]), "-", "_", -1))})
+		case 2:
+			srs = append(srs, ServiceResource{Name: parts[0], Env: strings.TrimSpace(parts[1])})
+		}
+	}
+
+	return srs
+}
+
 func (ss Services) External() Services {
 	return ss.Filter(func(s Service) bool {
 		return !s.Internal

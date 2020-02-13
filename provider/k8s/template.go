@@ -64,9 +64,6 @@ func (p *Provider) templateHelpers() template.FuncMap {
 			}
 			return eis
 		},
-		"envname": func(s string) string {
-			return envName(s)
-		},
 		"image": func(a *structs.App, s manifest.Service, r *structs.Release) (string, error) {
 			repo, _, err := p.Engine.RepositoryHost(a.Name)
 			if err != nil {
@@ -80,6 +77,9 @@ func (p *Provider) templateHelpers() template.FuncMap {
 				return "", err
 			}
 			return string(data), nil
+		},
+		"k8sname": func(s string) string {
+			return nameFilter(s)
 		},
 		"lower": func(s string) string {
 			return strings.ToLower(s)

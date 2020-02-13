@@ -7,8 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os/exec"
 	"path"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -23,6 +23,10 @@ import (
 const (
 	ScannerStartSize = 4096
 	ScannerMaxSize   = 1024 * 1024
+)
+
+var (
+	kubernetesNameFilter = regexp.MustCompile(`[^a-z-.]`)
 )
 
 type Patch struct {
@@ -187,23 +191,41 @@ func (p *Provider) systemEnvironment() map[string]string {
 	}
 }
 
-func dockerSystemId() (string, error) {
-	data, err := exec.Command("docker", "system", "info").CombinedOutput()
-	if err != nil {
-		return "", err
+func (p *Provider) volumeFrom(app, service, v string) string {
+	if from := strings.Split(v, ":")[0]; systemVolume(from) {
+		return from
+	} else if strings.Contains(v, ":") {
+		return path.Join("/mnt/volumes", app, "app", from)
+	} else {
+		return path.Join("/mnt/volumes", app, "service", service, from)
 	}
-
-	for _, line := range strings.Split(string(data), "\n") {
-		if strings.HasPrefix(line, "ID: ") {
-			return strings.ToLower(strings.TrimPrefix(line, "ID: ")), nil
-		}
-	}
-
-	return "", fmt.Errorf("could not find docker system id")
 }
 
-func envName(s string) string {
-	return strings.Replace(strings.ToUpper(s), "-", "_", -1)
+func (p *Provider) volumeName(app, v string) string {
+	hash := sha256.Sum256([]byte(v))
+	name := fmt.Sprintf("%s-%s-%x", p.Name, app, hash[0:20])
+	if len(name) > 63 {
+		name = name[0:62]
+	}
+	return name
+}
+
+func (p *Provider) volumeSources(app, service string, vs []string) []string {
+	vsh := map[string]bool{}
+
+	for _, v := range vs {
+		vsh[p.volumeFrom(app, service, v)] = true
+	}
+
+	vsu := []string{}
+
+	for v := range vsh {
+		vsu = append(vsu, v)
+	}
+
+	sort.Strings(vsu)
+
+	return vsu
 }
 
 type imageManifest []struct {
@@ -242,6 +264,10 @@ func extractImageManifest(r io.Reader) (imageManifest, error) {
 	return nil, fmt.Errorf("unable to locate manifest")
 }
 
+func nameFilter(name string) string {
+	return kubernetesNameFilter.ReplaceAllString(name, "")
+}
+
 func systemVolume(v string) bool {
 	switch v {
 	case "/cgroup/":
@@ -260,43 +286,6 @@ func systemVolume(v string) bool {
 		return true
 	}
 	return false
-}
-
-func (p *Provider) volumeFrom(app, service, v string) string {
-	if from := strings.Split(v, ":")[0]; systemVolume(from) {
-		return from
-	} else if strings.Contains(v, ":") {
-		return path.Join("/mnt/volumes", app, "app", from)
-	} else {
-		return path.Join("/mnt/volumes", app, "service", service, from)
-	}
-}
-
-func (p *Provider) volumeName(app, v string) string {
-	hash := sha256.Sum256([]byte(v))
-	name := fmt.Sprintf("%s-%s-%x", p.Name, app, hash[0:20])
-	if len(name) > 63 {
-		name = name[0:62]
-	}
-	return name
-}
-
-func (p *Provider) volumeSources(app, service string, vs []string) []string {
-	vsh := map[string]bool{}
-
-	for _, v := range vs {
-		vsh[p.volumeFrom(app, service, v)] = true
-	}
-
-	vsu := []string{}
-
-	for v := range vsh {
-		vsu = append(vsu, v)
-	}
-
-	sort.Strings(vsu)
-
-	return vsu
 }
 
 func volumeTo(v string) (string, error) {

@@ -62,8 +62,14 @@ func Load(data []byte, env map[string]string) (*Manifest, error) {
 		return nil, err
 	}
 
-	if err := m.Validate(); err != nil {
-		return nil, err
+	if errs := m.Validate(); len(errs) > 0 {
+		messages := []string{}
+
+		for _, err := range errs {
+			messages = append(messages, err.Error())
+		}
+
+		return nil, fmt.Errorf("validation errors:\n%s", strings.Join(messages, "\n"))
 	}
 
 	return &m, nil
@@ -209,6 +215,16 @@ func (m *Manifest) CombineEnv() error {
 	}
 
 	return nil
+}
+
+func (m *Manifest) Resource(name string) (*Resource, error) {
+	for _, r := range m.Resources {
+		if r.Name == name {
+			return &r, nil
+		}
+	}
+
+	return nil, fmt.Errorf("no such resource: %s", name)
 }
 
 func (m *Manifest) Service(name string) (*Service, error) {

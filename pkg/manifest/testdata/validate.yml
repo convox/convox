@@ -1,0 +1,11 @@
+resources:
+  1resource:
+    type: postgres
+services:
+  serviceF:
+    build: .
+    resources:
+      - foo
+timers:
+  timer_1:
+    service: someservice

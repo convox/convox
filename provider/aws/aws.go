@@ -16,9 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
 	"github.com/convox/convox/pkg/structs"
-	"github.com/convox/convox/pkg/templater"
 	"github.com/convox/convox/provider/k8s"
-	"github.com/gobuffalo/packr"
 )
 
 type Provider struct {
@@ -32,8 +30,6 @@ type Provider struct {
 	ECR            ecriface.ECRAPI
 	S3             s3iface.S3API
 	SQS            sqsiface.SQSAPI
-
-	templater *templater.Templater
 }
 
 func FromEnv() (*Provider, error) {
@@ -47,8 +43,6 @@ func FromEnv() (*Provider, error) {
 		Bucket:   os.Getenv("BUCKET"),
 		Region:   os.Getenv("AWS_REGION"),
 	}
-
-	p.templater = templater.New(packr.NewBox("../aws/template"), p.templateHelpers())
 
 	k.Engine = p
 

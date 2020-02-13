@@ -55,12 +55,12 @@ func (p *Provider) ResourceExport(app, name string) (io.ReadCloser, error) {
 }
 
 func (p *Provider) ResourceGet(app, name string) (*structs.Resource, error) {
-	d, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).Get(fmt.Sprintf("resource-%s", name), am.GetOptions{})
+	d, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).Get(fmt.Sprintf("resource-%s", nameFilter(name)), am.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	cm, err := p.Cluster.CoreV1().ConfigMaps(p.AppNamespace(app)).Get(fmt.Sprintf("resource-%s", name), am.GetOptions{})
+	cm, err := p.Cluster.CoreV1().ConfigMaps(p.AppNamespace(app)).Get(fmt.Sprintf("resource-%s", nameFilter(name)), am.GetOptions{})
 	if err != nil {
 		return nil, err
 	}

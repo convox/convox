@@ -34,6 +34,20 @@ For example, a `postgres` resource named `main` (as in the example above) would 
 
 `MAIN_URL=postgres://username:password@host.name:port/database`
 
+### Specifying the environment variable
+
+You can also specify the environment variable that should be used for linking in the `resources` attribute:
+
+    resources:
+      main:
+        type: postgres
+    services:
+      web:
+        resources:
+          - main:DIFFERENT_URL
+
+This example would cause database URL to be injected as `DIFFERENT_URL`
+
 ## Command Line Interface
 
 ### Listing Resources
