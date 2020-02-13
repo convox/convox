@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/convox/convox/sdk"
@@ -87,6 +88,17 @@ func List(c *stdcli.Context) ([]Rack, error) {
 	for _, cr := range crs {
 		rs = append(rs, cr)
 	}
+
+	sort.Slice(rs, func(i, j int) bool {
+		switch {
+		case !rs[i].Remote() && rs[j].Remote():
+			return true
+		case rs[i].Remote() && !rs[j].Remote():
+			return false
+		default:
+			return rs[i].Name() < rs[j].Name()
+		}
+	})
 
 	return rs, nil
 }
