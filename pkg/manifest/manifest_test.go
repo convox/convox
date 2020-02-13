@@ -1,6 +1,8 @@
 package manifest_test
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/convox/convox/pkg/common"
@@ -93,7 +95,7 @@ func TestManifestLoad(t *testing.T) {
 					Timeout:  4,
 				},
 				Image: "ubuntu:16.04",
-				Init: true,
+				Init:  true,
 				Environment: []string{
 					"SECRET",
 				},
@@ -200,7 +202,7 @@ func TestManifestLoad(t *testing.T) {
 					Timeout:  4,
 				},
 				Image: "ubuntu:16.04",
-				Init: true,
+				Init:  true,
 				Environment: []string{
 					"SECRET",
 				},
@@ -439,4 +441,19 @@ func testdataManifest(name string, env map[string]string) (*manifest.Manifest, e
 	}
 
 	return manifest.Load(data, env)
+}
+
+func TestManifestValidate(t *testing.T) {
+	m, err := testdataManifest("validate", map[string]string{})
+	require.Nil(t, m)
+
+	errors := []string{
+		"resource name resource1 invalid, can only contain lowercase alpha and dashes",
+		"service name serviceF invalid, can only contain lowercase alpha and dashes",
+		"service serviceF references a resource that does not exist: foo",
+		"timer name timer_1 invalid, can only contain lowercase alpha and dashes",
+		"timer timer_1 references a service that does not exist: someservice",
+	}
+
+	require.EqualError(t, err, fmt.Sprintf("validation errors:\n%s", strings.Join(errors, "\n")))
 }

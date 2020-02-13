@@ -2,37 +2,87 @@ package manifest
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
-func (m *Manifest) Validate() error {
-	if err := m.validateEnv(); err != nil {
-		return err
-	}
+var (
+	nameValidator = regexp.MustCompile(`[^a-z-]`)
+)
 
-	if err := m.validateResources(); err != nil {
-		return err
-	}
+func (m *Manifest) Validate() []error {
+	errs := []error{}
 
-	return nil
+	errs = append(errs, m.validateEnv()...)
+	errs = append(errs, m.validateResources()...)
+	errs = append(errs, m.validateServices()...)
+	errs = append(errs, m.validateTimers()...)
+
+	return errs
 }
 
-func (m *Manifest) validateEnv() error {
+func (m *Manifest) validateEnv() []error {
+	errs := []error{}
+
 	for _, s := range m.Services {
 		if _, err := m.ServiceEnvironment(s.Name); err != nil {
-			return err
+			errs = append(errs, err)
 		}
 	}
 
-	return nil
+	return errs
 }
 
-func (m *Manifest) validateResources() error {
+func (m *Manifest) validateResources() []error {
+	errs := []error{}
+
 	for _, r := range m.Resources {
+		if nameValidator.MatchString(r.Name) {
+			errs = append(errs, fmt.Errorf("resource name %s invalid, can only contain lowercase alpha and dashes", r.Name))
+		}
+
 		if strings.TrimSpace(r.Type) == "" {
-			return fmt.Errorf("resource %q has blank type", r.Name)
+			errs = append(errs, fmt.Errorf("resource %q has blank type", r.Name))
 		}
 	}
 
-	return nil
+	return errs
+}
+
+func (m *Manifest) validateServices() []error {
+	errs := []error{}
+
+	for _, s := range m.Services {
+		if nameValidator.MatchString(s.Name) {
+			errs = append(errs, fmt.Errorf("service name %s invalid, can only contain lowercase alpha and dashes", s.Name))
+		}
+
+		for _, r := range s.ResourceMap() {
+			if _, err := m.Resource(r.Name); err != nil {
+				if strings.HasPrefix(err.Error(), "no such resource") {
+					errs = append(errs, fmt.Errorf("service %s references a resource that does not exist: %s", s.Name, r.Name))
+				}
+			}
+		}
+	}
+
+	return errs
+}
+
+func (m *Manifest) validateTimers() []error {
+	errs := []error{}
+
+	for _, t := range m.Timers {
+		if nameValidator.MatchString(t.Name) {
+			errs = append(errs, fmt.Errorf("timer name %s invalid, can only contain lowercase alpha and dashes", t.Name))
+		}
+
+		if _, err := m.Service(t.Service); err != nil {
+			if strings.HasPrefix(err.Error(), "no such service") {
+				errs = append(errs, fmt.Errorf("timer %s references a service that does not exist: %s", t.Name, t.Service))
+			}
+		}
+	}
+
+	return errs
 }

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/convox/convox/pkg/common"
+	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/sdk"
@@ -96,6 +97,20 @@ func build(rack sdk.Interface, c *stdcli.Context, development bool) (*structs.Bu
 		return nil, err
 	}
 
+	env, err := common.AppEnvironment(rack, app(c))
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := ioutil.ReadFile(common.DefaultString(opts.Manifest, "convox.yml"))
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := manifest.Load(data, env); err != nil {
+		return nil, err
+	}
+
 	if opts.Description == nil {
 		if err := exec.Command("git", "diff", "--quiet").Run(); err == nil {
 			if data, err := exec.Command("git", "log", "-n", "1", "--pretty=%h %s", "--abbrev=10").CombinedOutput(); err == nil {
@@ -106,7 +121,7 @@ func build(rack sdk.Interface, c *stdcli.Context, development bool) (*structs.Bu
 
 	c.Startf("Packaging source")
 
-	data, err := common.Tarball(coalesce(c.Arg(0), "."))
+	data, err = common.Tarball(coalesce(c.Arg(0), "."))
 	if err != nil {
 		return nil, err
 	}
