@@ -49,9 +49,11 @@ func authenticator(c *stdcli.Context) stdsdk.Authenticator {
 				return nil, err
 			}
 
-			c.Writef("Waiting for security token... ")
+			c.Writef("Waiting for security tokenn... ")
 
 			data, err := token.Authenticate(dres)
+			fmt.Printf("string(data): %+v\n", string(data))
+			fmt.Printf("err: %+v\n", err)
 			if err != nil {
 				return nil, AuthenticationError{err}
 			}
@@ -63,6 +65,9 @@ func authenticator(c *stdcli.Context) stdsdk.Authenticator {
 		}
 
 		var s session
+
+		fmt.Printf("string(body): %+v\n", string(body))
+		fmt.Printf("headers: %+v\n", headers)
 
 		ro := stdsdk.RequestOptions{
 			Body:    bytes.NewReader(body),

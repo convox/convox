@@ -114,8 +114,6 @@ github.com/containerd/continuity/sysx
 github.com/convox/changes
 # github.com/convox/exec v0.0.0-20180905012044-cc13d277f897
 github.com/convox/exec
-# github.com/convox/hid v0.0.0-20180912192857-c67381b7ffff
-github.com/convox/hid
 # github.com/convox/inotify v0.0.0-20170313035821-b56f5149b5c6
 github.com/convox/inotify
 # github.com/convox/logger v0.0.0-20180522214415-e39179955b52
@@ -126,9 +124,6 @@ github.com/convox/stdapi
 github.com/convox/stdcli
 # github.com/convox/stdsdk v0.0.0-20190422120437-3e80a397e377
 github.com/convox/stdsdk
-# github.com/convox/u2f v0.0.0-20180912192910-a73404142726
-github.com/convox/u2f/u2fhid
-github.com/convox/u2f/u2ftoken
 # github.com/convox/version v0.0.0-20160822184233-ffefa0d565d2
 github.com/convox/version
 # github.com/creack/pty v1.1.9
@@ -282,6 +277,8 @@ github.com/jmespath/go-jmespath
 github.com/joho/godotenv
 # github.com/json-iterator/go v1.1.7
 github.com/json-iterator/go
+# github.com/karalabe/hid v1.0.0
+github.com/karalabe/hid
 # github.com/karalabe/xgo v0.0.0-20191115072854-c5ccff8648a7
 github.com/karalabe/xgo
 # github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
@@ -292,6 +289,10 @@ github.com/konsorten/go-windows-terminal-sequences
 github.com/mailru/easyjson/buffer
 github.com/mailru/easyjson/jlexer
 github.com/mailru/easyjson/jwriter
+# github.com/marshallbrekka/go-u2fhost v0.0.0-20200114212649-cc764c209ee9
+github.com/marshallbrekka/go-u2fhost
+github.com/marshallbrekka/go-u2fhost/bytes
+github.com/marshallbrekka/go-u2fhost/hid
 # github.com/mattn/go-ieproxy v0.0.0-20190610004146-91bb50d98149
 github.com/mattn/go-ieproxy
 # github.com/miekg/dns v1.1.15

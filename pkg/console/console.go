@@ -72,6 +72,7 @@ func Authenticator(c *stdcli.Context) stdsdk.Authenticator {
 		}
 
 		if err := cl.Post(m[1], ro, &s); err != nil {
+			fmt.Printf("err: %+v\n", err)
 			return nil, err
 		}
 

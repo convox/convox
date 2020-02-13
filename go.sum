@@ -87,8 +87,6 @@ github.com/convox/changes v0.0.0-20191105034405-8c0df759a3b3 h1:S0AiQtEXMb5jBw4N
 github.com/convox/changes v0.0.0-20191105034405-8c0df759a3b3/go.mod h1:RpXN2RCcOkPSccYY3xrmKPQzJNrGq+9+kbtFcAQpEv8=
 github.com/convox/exec v0.0.0-20180905012044-cc13d277f897 h1:8SnSpocZ8I5RlRo8NFKYrAa6pQYZp+4T/pWyD3GrwIk=
 github.com/convox/exec v0.0.0-20180905012044-cc13d277f897/go.mod h1:GAxysqvg1ZSl42aLnvLXmFkXkacF4AGql5ZKT7s1DGc=
-github.com/convox/hid v0.0.0-20180912192857-c67381b7ffff h1:B+2WWcb+QM8yJL6HyUsYhnazUOBbvKv8kKS7WTmhyRU=
-github.com/convox/hid v0.0.0-20180912192857-c67381b7ffff/go.mod h1:yBM17eJdl/WBU/dv5Ojnu63mNqOlv+tWazdcFIalph4=
 github.com/convox/inotify v0.0.0-20170313035821-b56f5149b5c6 h1:bigLg74wAp2d11vaK4/IkTbN95D5mlSqZ/+/O6YBgtQ=
 github.com/convox/inotify v0.0.0-20170313035821-b56f5149b5c6/go.mod h1:JOi7Az72uBLT9D2Qv/6FbUbC9W420st0MMIUgVYUyd0=
 github.com/convox/logger v0.0.0-20180522214415-e39179955b52 h1:HTaloo6by+4NE1A1mRYprWzsOy1PGH2tPGfgZ60dyHU=
@@ -99,8 +97,6 @@ github.com/convox/stdcli v0.0.0-20200122204822-238a68a930fd h1:xU0A7L467EvnyNrtl
 github.com/convox/stdcli v0.0.0-20200122204822-238a68a930fd/go.mod h1:kLknwv4KTN9f9fZ2DDvG/L9ndXkcijaexIZ0enACvSc=
 github.com/convox/stdsdk v0.0.0-20190422120437-3e80a397e377 h1:PuSJ72MD0mYsMCTvTQ1YydIbQUWtEykNHyweI/vA0PY=
 github.com/convox/stdsdk v0.0.0-20190422120437-3e80a397e377/go.mod h1:y1vtmkDKBkWSQ6e2gPXAyz1NCuWZ2x3vrP/SFeDDNco=
-github.com/convox/u2f v0.0.0-20180912192910-a73404142726 h1:FY8dxqTRVj4lRmNoAkOeYxSnxZ40s64P/yxyVf8NBlo=
-github.com/convox/u2f v0.0.0-20180912192910-a73404142726/go.mod h1:Gw2uoNinY/uxw7+krj5aloiVD0asEaGSwfutlwip/sU=
 github.com/convox/version v0.0.0-20160822184233-ffefa0d565d2 h1:tdp/1KHBnbne0yT1yuKnAdOTBHRue9yQ4oON8rzGgZc=
 github.com/convox/version v0.0.0-20160822184233-ffefa0d565d2/go.mod h1:s8HHEf4LLsmPppeubX/A5bz1JpLYkDXbu+ciuYMTk8A=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
@@ -430,6 +426,8 @@ github.com/json-iterator/go v0.0.0-20180612202835-f2b4162afba3/go.mod h1:+SdeFBv
 github.com/json-iterator/go v1.1.7 h1:KfgG9LzI+pYjr4xvmz/5H4FXjokeP+rlHLhv3iH62Fo=
 github.com/json-iterator/go v1.1.7/go.mod h1:KdQUCv79m/52Kvf8AW2vK1V8akMuk1QjK/uOdHXbAo4=
 github.com/jstemmer/go-junit-report v0.0.0-20190106144839-af01ea7f8024/go.mod h1:6v2b51hI/fHJwM22ozAgKL4VKDeJcHhJFhtBdhmNjmU=
+github.com/karalabe/hid v1.0.0 h1:+/CIMNXhSU/zIJgnIvBD2nKHxS/bnRHhhs9xBryLpPo=
+github.com/karalabe/hid v1.0.0/go.mod h1:Vr51f8rUOLYrfrWDFlV12GGQgM5AT8sVh+2fY4MPeu8=
 github.com/karalabe/xgo v0.0.0-20191115072854-c5ccff8648a7 h1:AYzjK/SHz6m6mg5iuFwkrAhCc14jvCpW9d6frC9iDPE=
 github.com/karalabe/xgo v0.0.0-20191115072854-c5ccff8648a7/go.mod h1:iYGcTYIPUvEWhFo6aKUuLchs+AV4ssYdyuBbQJZGcBk=
 github.com/karrick/godirwalk v1.7.5/go.mod h1:2c9FRhkDxdIbgkOnCEvnSWs71Bhugbl46shStcFDJ34=
@@ -478,6 +476,8 @@ github.com/markbates/safe v1.0.0/go.mod h1:nAqgmRi7cY2nqMc92/bSEeQA+R4OheNU2T1kN
 github.com/markbates/safe v1.0.1/go.mod h1:nAqgmRi7cY2nqMc92/bSEeQA+R4OheNU2T1kNSCBdG0=
 github.com/markbates/sigtx v1.0.0/go.mod h1:QF1Hv6Ic6Ca6W+T+DL0Y/ypborFKyvUY9HmuCD4VeTc=
 github.com/markbates/willie v1.0.9/go.mod h1:fsrFVWl91+gXpx/6dv715j7i11fYPfZ9ZGfH0DQzY7w=
+github.com/marshallbrekka/go-u2fhost v0.0.0-20200114212649-cc764c209ee9 h1:7dYglvg2+WRsvX//65GyQTYJyooO1HYKGVpKBlIAoms=
+github.com/marshallbrekka/go-u2fhost v0.0.0-20200114212649-cc764c209ee9/go.mod h1:U9kRL9P37LGrkikKWuekWsReXRKe2fkZdRSXpI7pP3A=
 github.com/mattn/go-colorable v0.0.9/go.mod h1:9vuHe8Xs5qXnSaW/c/ABM9alt+Vo+STaOChaDxuIBZU=
 github.com/mattn/go-ieproxy v0.0.0-20190610004146-91bb50d98149 h1:HfxbT6/JcvIljmERptWhwa8XzP7H3T+Z2N26gTsaDaA=
 github.com/mattn/go-ieproxy v0.0.0-20190610004146-91bb50d98149/go.mod h1:31jz6HNzdxOmlERGGEc4v/dMssOfmp2p5bT/okiKFFc=
