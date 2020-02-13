@@ -56,7 +56,7 @@ func Login(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	if err := c.SettingWrite("host", hostname); err != nil {
+	if err := c.SettingWrite("console", hostname); err != nil {
 		return err
 	}
 

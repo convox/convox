@@ -36,7 +36,7 @@ func TestLogin(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, fmt.Sprintf("{\n  \"%s\": \"password\"\n}", tsu.Host), string(data))
 
-		data, err = ioutil.ReadFile(filepath.Join(e.Settings, "host"))
+		data, err = ioutil.ReadFile(filepath.Join(e.Settings, "console"))
 		require.NoError(t, err)
 		require.Equal(t, tsu.Host, string(data))
 	})
