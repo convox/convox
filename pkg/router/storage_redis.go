@@ -112,7 +112,17 @@ func (s *StorageRedis) TargetAdd(host, target string, idles bool) error {
 		return err
 	}
 
-	if _, err := s.redis.LPush(fmt.Sprintf("router/targets/%s", host), target).Result(); err != nil {
+	typ, err := s.redis.Type(fmt.Sprintf("router/targets/%s", host)).Result()
+	if err != nil {
+		return err
+	}
+	if typ != "set" {
+		if _, err := s.redis.Del(fmt.Sprintf("router/targets/%s", host)).Result(); err != nil {
+			return err
+		}
+	}
+
+	if _, err := s.redis.SAdd(fmt.Sprintf("router/targets/%s", host), target).Result(); err != nil {
 		return err
 	}
 
@@ -122,7 +132,7 @@ func (s *StorageRedis) TargetAdd(host, target string, idles bool) error {
 func (s *StorageRedis) TargetList(host string) ([]string, error) {
 	// fmt.Printf("ns=storage.redis at=target.list\n")
 
-	ts, err := s.redis.LRange(fmt.Sprintf("router/targets/%s", host), 0, -1).Result()
+	ts, err := s.redis.SMembers(fmt.Sprintf("router/targets/%s", host)).Result()
 	if err == redis.Nil {
 		return []string{}, nil
 	}
@@ -136,15 +146,15 @@ func (s *StorageRedis) TargetList(host string) ([]string, error) {
 func (s *StorageRedis) TargetRemove(host, target string) error {
 	fmt.Printf("ns=storage.redis at=target.remove host=%q target=%q\n", host, target)
 
-	if _, err := s.redis.LRem(fmt.Sprintf("router/targets/%s", host), 1, target).Result(); err != nil {
+	if _, err := s.redis.SRem(fmt.Sprintf("router/targets/%s", host), 1, target).Result(); err != nil {
 		return err
 	}
 
-	len, err := s.redis.LLen(fmt.Sprintf("router/targets/%s", host)).Result()
+	len, err := s.redis.SCard(fmt.Sprintf("router/targets/%s", host)).Result()
 	if err != nil {
 		return err
 	}
-	
+
 	if len == 0 {
 		if _, err := s.redis.SRem("router/hosts", host).Result(); err != nil {
 			return err

@@ -42,7 +42,7 @@ func (c *DeploymentController) ListOptions(opts *am.ListOptions) {
 }
 
 func (c *DeploymentController) Run() {
-	i := ie.NewFilteredDeploymentInformer(c.kc, ac.NamespaceAll, 5*time.Minute, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
+	i := ie.NewFilteredDeploymentInformer(c.kc, ac.NamespaceAll, 1*time.Minute, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
 
 	ch := make(chan error)
 

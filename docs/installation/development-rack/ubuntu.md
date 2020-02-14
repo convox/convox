@@ -42,7 +42,7 @@ you can trust the Rack's CA certificate.
 
 This certificate is generated on your local machine and is unique to your Rack.
 
-    $ kubectl get secret/ca -n convox-system -o jsonpath="{.data.tls\.crt}" | base64 -d > /tmp/ca
+    $ kubectl get secret/ca -n dev-system -o jsonpath="{.data.tls\.crt}" | base64 -d > /tmp/ca
     $ sudo mv /tmp/ca /usr/local/share/ca-certificates/convox.crt
     $ sudo update-ca-certificates
     $ sudo snap restart microk8s

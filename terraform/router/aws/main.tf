@@ -40,13 +40,13 @@ module "k8s" {
   }
 
   env = merge(var.env, {
-    AUTOCERT         = "true"
-    AWS_REGION       = data.aws_region.current.name
-    CACHE            = "dynamodb"
-    DYNAMODB_CACHE   = aws_dynamodb_table.cache.name
-    DYNAMODB_HOSTS   = aws_dynamodb_table.hosts.name
-    DYNAMODB_TARGETS = aws_dynamodb_table.targets.name
-    STORAGE          = "dynamodb"
+    AUTOCERT        = "true"
+    AWS_REGION      = data.aws_region.current.name
+    CACHE           = "dynamodb"
+    DYNAMODB_CACHE  = aws_dynamodb_table.cache.name
+    DYNAMODB_HOSTS  = aws_dynamodb_table.hosts.name
+    DYNAMODB_ROUTES = aws_dynamodb_table.routes.name
+    STORAGE         = "dynamodb"
   })
 }
 

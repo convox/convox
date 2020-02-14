@@ -40,7 +40,7 @@ func (c *DeploymentController) Client() kubernetes.Interface {
 }
 
 func (c *DeploymentController) ListOptions(opts *am.ListOptions) {
-	// opts.LabelSelector = fmt.Sprintf("system=convox,rack=%s", c.Provider.Rack)
+	opts.LabelSelector = fmt.Sprintf("system=convox,rack=%s", c.Provider.Name)
 }
 
 func (c *DeploymentController) Run() {
@@ -51,7 +51,7 @@ func (c *DeploymentController) Run() {
 	go c.Controller.Run(i, ch)
 
 	for err := range ch {
-		fmt.Printf("err = %+v\n", err)
+		fmt.Printf("deployment controller error: %+v\n", err)
 	}
 }
 
@@ -64,23 +64,23 @@ func (c *DeploymentController) Stop() error {
 }
 
 func (c *DeploymentController) Add(obj interface{}) error {
-	// d, err := assertDeployment(obj)
-	// if err != nil {
-	//   return err
-	// }
+	d, err := assertDeployment(obj)
+	if err != nil {
+		return err
+	}
 
-	// fmt.Printf("deployment add: %s/%s\n", d.ObjectMeta.Namespace, d.ObjectMeta.Name)
+	fmt.Printf("deployment add: %s/%s\n", d.ObjectMeta.Namespace, d.ObjectMeta.Name)
 
 	return nil
 }
 
 func (c *DeploymentController) Delete(obj interface{}) error {
-	// d, err := assertDeployment(obj)
-	// if err != nil {
-	//   return err
-	// }
+	d, err := assertDeployment(obj)
+	if err != nil {
+		return err
+	}
 
-	// fmt.Printf("deployment delete: %s/%s\n", d.ObjectMeta.Namespace, d.ObjectMeta.Name)
+	fmt.Printf("deployment delete: %s/%s\n", d.ObjectMeta.Namespace, d.ObjectMeta.Name)
 
 	return nil
 }
@@ -109,19 +109,6 @@ func (c *DeploymentController) Update(prev, cur interface{}) error {
 			}
 		}
 	}
-
-	// if deploymentCondition(cd, "Progressing") == "False" && deploymentCondition(pd, "Progressing") == "True" && deploymentConditionReason(cd, "Progressing") == "ProgressDeadlineExceeded" {
-	//   if err := c.deploymentRollback(cd); err != nil {
-	//     return err
-	//   }
-	// }
-
-	// if deploymentCondition(cd, "Rollback") == "True" && cd.Status.UnavailableReplicas == 0 {
-	//   go func() {
-	//     time.Sleep(10 * time.Second)
-	//     c.setDeploymentCondition(cd, "Rollback", "False", "")
-	//   }()
-	// }
 
 	return nil
 }

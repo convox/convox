@@ -24,10 +24,16 @@ resource "aws_dynamodb_table" "hosts" {
   tags = local.tags
 }
 
-resource "aws_dynamodb_table" "targets" {
-  name         = "${var.name}-targets"
+resource "aws_dynamodb_table" "routes" {
+  name         = "${var.name}-routes"
   billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "target"
+  hash_key     = "host"
+  range_key    = "target"
+
+  attribute {
+    name = "host"
+    type = "S"
+  }
 
   attribute {
     name = "target"
