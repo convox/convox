@@ -139,10 +139,7 @@ func (m *Method) Reader() bool {
 }
 
 func (m *Method) ReturnsValue() bool {
-	if len(m.Returns) == 2 {
-		return true
-	}
-	return false
+	return len(m.Returns) == 2
 }
 
 func (m *Method) Writer() string {

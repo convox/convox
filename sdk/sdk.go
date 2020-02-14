@@ -68,7 +68,7 @@ func (c *Client) Headers() http.Header {
 	h.Set("Version", Version)
 
 	if c.Endpoint.User != nil {
-		h.Set("Authorization", fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s", c.Endpoint.User)))))
+		h.Set("Authorization", fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(c.Endpoint.User.String()))))
 	}
 
 	if c.Rack != "" {

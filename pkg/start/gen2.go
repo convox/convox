@@ -5,12 +5,10 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -298,79 +296,6 @@ func (opts Options2) handleRemoves(pid string, removes []changes.Change) error {
 	}
 
 	return opts.Provider.FilesDelete(opts.App, pid, changes.Files(removes))
-}
-
-func (opts Options2) healthCheck(ctx context.Context, pw prefix.Writer, s manifest.Service, errch chan error, wg *sync.WaitGroup) {
-	rss, err := opts.Provider.ServiceList(opts.App)
-	if err != nil {
-		errch <- err
-		return
-	}
-
-	hostname := ""
-
-	for _, rs := range rss {
-		if rs.Name == s.Name {
-			hostname = rs.Domain
-		}
-	}
-
-	if hostname == "" {
-		errch <- fmt.Errorf("could not find hostname for service: %s", s.Name)
-		return
-	}
-
-	pw.Writef("convox", "starting health check for <service>%s</service> on path <setting>%s</setting> with <setting>%d</setting>s interval, <setting>%d</setting>s grace\n", s.Name, s.Health.Path, s.Health.Interval, s.Health.Grace)
-
-	wg.Done()
-
-	hcu := fmt.Sprintf("https://%s%s", hostname, s.Health.Path)
-
-	grace := time.Duration(s.Health.Grace) * time.Second
-	interval := time.Duration(s.Health.Interval) * time.Second
-
-	if opts.Test {
-		grace = 5 * time.Millisecond
-		interval = 5 * time.Millisecond
-	}
-
-	time.Sleep(grace)
-
-	tick := time.Tick(interval)
-
-	c := &http.Client{
-		Timeout: time.Duration(s.Health.Timeout) * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		},
-	}
-
-	// previous status code
-	var ps int
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-tick:
-			res, err := c.Get(hcu)
-			if err != nil {
-				pw.Writef("convox", "health check <service>%s</service>: <fail>%s</fail>\n", s.Name, err.Error())
-				continue
-			}
-			defer res.Body.Close()
-
-			if res.StatusCode < 200 || res.StatusCode > 399 {
-				pw.Writef("convox", "health check <service>%s</service>: <fail>%d</fail>\n", s.Name, res.StatusCode)
-			} else if res.StatusCode != ps {
-				pw.Writef("convox", "health check <service>%s</service>: <ok>%d</ok>\n", s.Name, res.StatusCode)
-			}
-
-			ps = res.StatusCode
-		}
-	}
 }
 
 func (opts Options2) stopProcess(pid string, wg *sync.WaitGroup) {
