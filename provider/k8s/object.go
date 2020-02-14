@@ -63,11 +63,11 @@ func (p *Provider) ObjectStore(app, key string, r io.Reader, opts structs.Object
 
 	fn := p.objectFilename(app, key)
 
-	if err := os.MkdirAll(filepath.Dir(fn), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(fn), 0700); err != nil {
 		return nil, err
 	}
 
-	fd, err := os.OpenFile(fn, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+	fd, err := os.OpenFile(fn, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	if err != nil {
 		return nil, err
 	}

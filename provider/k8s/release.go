@@ -216,11 +216,7 @@ func (p *Provider) releaseGet(app, id string) (*structs.Release, error) {
 }
 
 func (p *Provider) releaseFork(app string) (*structs.Release, error) {
-	r := &structs.Release{
-		Id:      common.Id("R", 10),
-		App:     app,
-		Created: time.Now().UTC(),
-	}
+	r := structs.NewRelease(app)
 
 	rs, err := p.ReleaseList(app, structs.ReleaseListOptions{Limit: options.Int(1)})
 	if err != nil {

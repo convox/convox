@@ -131,7 +131,7 @@ func Unarchive(r io.Reader, target string) error {
 				return err
 			}
 		case tar.TypeReg:
-			if err := os.MkdirAll(filepath.Dir(file), 0755); err != nil {
+			if err := os.MkdirAll(filepath.Dir(file), 0700); err != nil {
 				return err
 			}
 
