@@ -1,3 +1,5 @@
 .env
 .git
+coverage.txt
 terraform.tfvars
+terraform/platform/convox.platform

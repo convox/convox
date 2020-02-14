@@ -7,12 +7,12 @@ provider "null" {
 }
 
 locals {
-  filename = pathexpand("/tmp/convox.platform")
+  filename = pathexpand("${path.module}/convox.platform")
 }
 
 resource "null_resource" "platform" {
   triggers = {
-    hash = fileexists(local.filename) ? filebase64(local.filename) : "none"
+    hash = fileexists(local.filename) ? filebase64(local.filename) : timestamp()
   }
 
   provisioner "local-exec" {
