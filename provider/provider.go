@@ -9,7 +9,6 @@ import (
 	"github.com/convox/convox/provider/azure"
 	"github.com/convox/convox/provider/do"
 	"github.com/convox/convox/provider/gcp"
-	"github.com/convox/convox/provider/k8s"
 	"github.com/convox/convox/provider/local"
 )
 
@@ -27,8 +26,6 @@ func FromEnv() (structs.Provider, error) {
 		return do.FromEnv()
 	case "gcp":
 		return gcp.FromEnv()
-	case "k8s":
-		return k8s.FromEnv()
 	case "local":
 		return local.FromEnv()
 	case "test":
@@ -37,5 +34,22 @@ func FromEnv() (structs.Provider, error) {
 		return nil, fmt.Errorf("PROVIDER not set")
 	default:
 		return nil, fmt.Errorf("unknown provider: %s", name)
+	}
+}
+
+func Valid(slug string) bool {
+	switch slug {
+	case "aws":
+		return true
+	case "azure":
+		return true
+	case "do":
+		return true
+	case "gcp":
+		return true
+	case "local":
+		return true
+	default:
+		return false
 	}
 }

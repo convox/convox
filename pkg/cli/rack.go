@@ -9,6 +9,7 @@ import (
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/rack"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/convox/provider"
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
 )
@@ -101,11 +102,15 @@ func Rack(rack sdk.Interface, c *stdcli.Context) error {
 }
 
 func RackInstall(_ sdk.Interface, c *stdcli.Context) error {
-	provider := c.Arg(0)
+	slug := c.Arg(0)
 	name := c.Arg(1)
 	args := c.Args[2:]
 
-	if err := rack.Install(c, provider, name, argsToOptions(args)); err != nil {
+	if !provider.Valid(slug) {
+		return fmt.Errorf("unknown provider: %s", slug)
+	}
+
+	if err := rack.Install(c, slug, name, argsToOptions(args)); err != nil {
 		return err
 	}
 
