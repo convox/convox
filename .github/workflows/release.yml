@@ -97,7 +97,7 @@ jobs:
     - name: install
       run: ci/install.sh
     - name: wait
-      run: sleep 300
+      run: sleep 600
     - name: test
       run: ci/test.sh
     - name: debug

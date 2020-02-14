@@ -137,9 +137,9 @@ resource "kubernetes_deployment" "router" {
                 topology_key = "kubernetes.io/hostname"
               }
             }
-
           }
         }
+
         container {
           name              = "main"
           args              = ["router"]
