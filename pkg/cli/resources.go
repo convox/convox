@@ -411,11 +411,12 @@ func RackResourcesCreate(rack sdk.Interface, c *stdcli.Context) error {
 
 	var r *structs.Resource
 
-	if s.Version <= "20180708231844" {
+	switch {
+	case s.Version <= "20180708231844":
 		r, err = rack.ResourceCreateClassic(c.Arg(0), opts)
-	} else if s.Version <= "20190111211123" {
+	case s.Version <= "20190111211123":
 		r, err = rack.SystemResourceCreateClassic(c.Arg(0), opts)
-	} else {
+	default:
 		r, err = rack.SystemResourceCreate(c.Arg(0), opts)
 	}
 	if err != nil {
@@ -707,11 +708,12 @@ func RackResourcesUpdate(rack sdk.Interface, c *stdcli.Context) error {
 
 	resource := c.Arg(0)
 
-	if s.Version <= "20180708231844" {
+	switch {
+	case s.Version <= "20180708231844":
 		_, err = rack.ResourceUpdateClassic(resource, opts)
-	} else if s.Version <= "20190111211123" {
+	case s.Version <= "20190111211123":
 		_, err = rack.SystemResourceUpdateClassic(resource, opts)
-	} else {
+	default:
 		_, err = rack.SystemResourceUpdate(resource, opts)
 	}
 	if err != nil {

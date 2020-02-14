@@ -192,11 +192,14 @@ func (p *Provider) systemEnvironment() map[string]string {
 }
 
 func (p *Provider) volumeFrom(app, service, v string) string {
-	if from := strings.Split(v, ":")[0]; systemVolume(from) {
+	from := strings.Split(v, ":")[0]
+
+	switch {
+	case systemVolume(from):
 		return from
-	} else if strings.Contains(v, ":") {
+	case strings.Contains(v, ":"):
 		return path.Join("/mnt/volumes", app, "app", from)
-	} else {
+	default:
 		return path.Join("/mnt/volumes", app, "service", service, from)
 	}
 }

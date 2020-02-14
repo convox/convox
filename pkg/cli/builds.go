@@ -304,11 +304,12 @@ func BuildsImport(rack sdk.Interface, c *stdcli.Context) error {
 
 	var b *structs.Build
 
-	if s.Version <= "20180416200237" {
+	switch {
+	case s.Version <= "20180416200237":
 		b, err = rack.BuildImportMultipart(app(c), r)
-	} else if s.Version <= "20180708231844" {
+	case s.Version <= "20180708231844":
 		b, err = rack.BuildImportUrl(app(c), r)
-	} else {
+	default:
 		b, err = rack.BuildImport(app(c), r)
 	}
 	if err != nil {
