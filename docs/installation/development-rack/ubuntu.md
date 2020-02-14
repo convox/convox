@@ -35,7 +35,7 @@ Set `*.convox` to be resolved by the local Rack's DNS server.
     $ systemctl daemon-reload
     $ systemctl restart systemd-networkd systemd-resolved
 
-## CA Trust (optional)
+## CA Trust
 
 To remove browser warnings about untrusted certificates for local applications
 you can trust the Rack's CA certificate.
