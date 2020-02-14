@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/marshallbrekka/go-u2fhost"
+	"github.com/ddollar/go-u2fhost"
 )
 
 type authenticationKey struct {

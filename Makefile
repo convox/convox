@@ -1,4 +1,4 @@
-.PHONY: all build clean clean-package compress dev docs generate generate-k8s generate-provider mocks package release test tools
+.PHONY: all build clean clean-package compress dev docs generate generate-k8s generate-provider mocks package release test tools vendor
 
 commands = api atom build docs router
 
@@ -63,6 +63,11 @@ test:
 
 tools:
 	go install -mod=vendor ./vendor/github.com/karalabe/xgo
+
+vendor:
+	go mod vendor
+	go mod tidy
+	go run vendor/github.com/goware/modvendor/main.go -copy="**/*.c **/*.h" -v
 
 $(binaries): $(GOPATH)/bin/%: $(sources)
 	go install -mod=vendor --ldflags="-s -w" ./cmd/$*
