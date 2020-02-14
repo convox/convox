@@ -92,7 +92,7 @@ func (p *Provider) SystemProcesses(opts structs.SystemProcessesOptions) (structs
 }
 
 func (p *Provider) SystemReleases() (structs.Releases, error) {
-	return nil, fmt.Errorf("unimplemented")
+	return nil, fmt.Errorf("release history is unavailable")
 }
 
 func (p *Provider) SystemUninstall(name string, w io.Writer, opts structs.SystemUninstallOptions) error {
@@ -100,5 +100,5 @@ func (p *Provider) SystemUninstall(name string, w io.Writer, opts structs.System
 }
 
 func (p *Provider) SystemUpdate(opts structs.SystemUpdateOptions) error {
-	return fmt.Errorf("unimplemented")
+	return fmt.Errorf("console update not yet supported")
 }
