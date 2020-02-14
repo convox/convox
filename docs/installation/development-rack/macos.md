@@ -38,5 +38,5 @@ you can trust the Rack's CA certificate.
 
 This certificate is generated on your local machine and is unique to your Rack.
 
-    $ kubectl get secret/ca -n convox-system -o jsonpath="{.data.tls\.crt}" | base64 -d > /tmp/ca
+    $ kubectl get secret/ca -n dev-system -o jsonpath="{.data.tls\.crt}" | base64 -d > /tmp/ca
     $ sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain /tmp/ca

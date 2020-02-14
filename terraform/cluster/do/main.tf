@@ -18,7 +18,9 @@ provider "random" {
   version = "~> 2.2"
 }
 
-data "digitalocean_kubernetes_versions" "available" {}
+data "digitalocean_kubernetes_versions" "available" {
+  version_prefix = "1.15."
+}
 
 resource "digitalocean_kubernetes_cluster" "rack" {
   name    = var.name

@@ -2,7 +2,7 @@ package router
 
 import (
 	"fmt"
-	"reflect"
+	"time"
 
 	"github.com/convox/convox/pkg/kctl"
 	ac "k8s.io/api/core/v1"
@@ -42,7 +42,7 @@ func (c *IngressController) ListOptions(opts *am.ListOptions) {
 }
 
 func (c *IngressController) Run() {
-	i := ie.NewFilteredIngressInformer(c.kc, ac.NamespaceAll, 0, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
+	i := ie.NewFilteredIngressInformer(c.kc, ac.NamespaceAll, 1*time.Minute, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
 
 	ch := make(chan error)
 
@@ -69,12 +69,8 @@ func (c *IngressController) Add(obj interface{}) error {
 
 	fmt.Printf("ns=controller.ingress at=add ingress=%s\n", i.ObjectMeta.Name)
 
-	for _, r := range i.Spec.Rules {
-		for _, port := range r.IngressRuleValue.HTTP.Paths {
-			target := rulePathTarget(port, i.ObjectMeta)
-			c.controller.Event(i, ac.EventTypeNormal, "TargetAdd", fmt.Sprintf("%s => %s", r.Host, target))
-			c.router.TargetAdd(r.Host, target, i.ObjectMeta.Annotations["convox.idles"] == "true")
-		}
+	if err := c.syncIngress(i); err != nil {
+		return err
 	}
 
 	if err := c.updateIngressIP(i, "127.0.0.1"); err != nil {
@@ -95,8 +91,8 @@ func (c *IngressController) Delete(obj interface{}) error {
 	for _, r := range i.Spec.Rules {
 		for _, port := range r.IngressRuleValue.HTTP.Paths {
 			target := rulePathTarget(port, i.ObjectMeta)
-			c.controller.Event(i, ac.EventTypeNormal, "TargetDelete", fmt.Sprintf("%s => %s", r.Host, target))
-			c.router.TargetRemove(r.Host, rulePathTarget(port, i.ObjectMeta))
+			// c.controller.Event(i, ac.EventTypeNormal, "TargetDelete", fmt.Sprintf("%s => %s", r.Host, target))
+			c.router.TargetRemove(r.Host, target)
 		}
 	}
 
@@ -104,26 +100,27 @@ func (c *IngressController) Delete(obj interface{}) error {
 }
 
 func (c *IngressController) Update(prev, cur interface{}) error {
-	pi, err := assertIngress(prev)
-	if err != nil {
-		return err
-	}
-
 	ci, err := assertIngress(cur)
 	if err != nil {
 		return err
 	}
 
-	if reflect.DeepEqual(pi.ObjectMeta.Annotations, ci.ObjectMeta.Annotations) && reflect.DeepEqual(pi.Spec, ci.Spec) {
-		return nil
-	}
+	fmt.Printf("ns=controller.ingress at=update ingress=%s\n", ci.ObjectMeta.Name)
 
-	if err := c.Delete(prev); err != nil {
+	if err := c.syncIngress(ci); err != nil {
 		return err
 	}
 
-	if err := c.Add(cur); err != nil {
-		return err
+	return nil
+}
+
+func (c *IngressController) syncIngress(i *ae.Ingress) error {
+	for _, r := range i.Spec.Rules {
+		for _, port := range r.IngressRuleValue.HTTP.Paths {
+			target := rulePathTarget(port, i.ObjectMeta)
+			// c.controller.Event(i, ac.EventTypeNormal, "TargetAdd", fmt.Sprintf("%s => %s", r.Host, target))
+			c.router.TargetAdd(r.Host, target, i.ObjectMeta.Annotations["convox.idles"] == "true")
+		}
 	}
 
 	return nil

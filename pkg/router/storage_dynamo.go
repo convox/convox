@@ -9,17 +9,16 @@ import (
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/convox/convox/pkg/common"
 )
 
 type StorageDynamo struct {
-	ddb     *dynamodb.DynamoDB
-	hosts   string
-	targets string
+	ddb    *dynamodb.DynamoDB
+	hosts  string
+	routes string
 }
 
-func NewStorageDynamo(hosts, targets string) (*StorageDynamo, error) {
-	fmt.Printf("ns=storage.dynamo at=new hosts=%s targets=%s\n", hosts, targets)
+func NewStorageDynamo(hosts, routes string) (*StorageDynamo, error) {
+	fmt.Printf("ns=storage.dynamo at=new hosts=%s routes=%s\n", hosts, routes)
 
 	s, err := session.NewSession()
 	if err != nil {
@@ -27,9 +26,9 @@ func NewStorageDynamo(hosts, targets string) (*StorageDynamo, error) {
 	}
 
 	d := &StorageDynamo{
-		ddb:     dynamodb.New(s),
-		hosts:   hosts,
-		targets: targets,
+		ddb:    dynamodb.New(s),
+		hosts:  hosts,
+		routes: routes,
 	}
 
 	return d, nil
@@ -73,72 +72,23 @@ func (s *StorageDynamo) HostList() ([]string, error) {
 }
 
 func (s *StorageDynamo) IdleGet(target string) (bool, error) {
-	fmt.Printf("ns=storage.dynamo at=idle.get target=%q\n", target)
-
-	res, err := s.ddb.GetItem(&dynamodb.GetItemInput{
-		Key:       map[string]*dynamodb.AttributeValue{"target": {S: aws.String(target)}},
-		TableName: aws.String(s.targets),
-	})
-	if err != nil {
-		return false, err
-	}
-	if res.Item == nil || res.Item["idle"] == nil || res.Item["idle"].S == nil {
-		return false, nil
-	}
-
-	return (*res.Item["idle"].S == "true"), nil
+	return false, nil
 }
 
 func (s *StorageDynamo) IdleSet(target string, idle bool) error {
 	fmt.Printf("ns=storage.dynamo at=idle.get target=%q idle=%t\n", target, idle)
 
-	_, err := s.ddb.UpdateItem(&dynamodb.UpdateItemInput{
-		ExpressionAttributeNames:  map[string]*string{"#idle": aws.String("idle")},
-		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{":idle": {S: aws.String(fmt.Sprintf("%t", idle))}},
-		Key:                       map[string]*dynamodb.AttributeValue{"target": &dynamodb.AttributeValue{S: aws.String(target)}},
-		TableName:                 aws.String(s.targets),
-		UpdateExpression:          aws.String("SET #idle = :idle"),
-	})
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
 func (s *StorageDynamo) RequestBegin(target string) error {
 	fmt.Printf("ns=storage.dynamo at=request.begin target=%q\n", target)
 
-	activity := time.Now().UTC().Format(common.SortableTime)
-
-	_, err := s.ddb.UpdateItem(&dynamodb.UpdateItemInput{
-		ExpressionAttributeNames:  map[string]*string{"#activity": aws.String("activity"), "#active": aws.String("active")},
-		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{":activity": {S: aws.String(activity)}, ":n": {N: aws.String("1")}},
-		Key:                       map[string]*dynamodb.AttributeValue{"target": &dynamodb.AttributeValue{S: aws.String(target)}},
-		TableName:                 aws.String(s.targets),
-		UpdateExpression:          aws.String("SET #activity = :activity ADD #active :n"),
-	})
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
 func (s *StorageDynamo) RequestEnd(target string) error {
 	fmt.Printf("ns=storage.dynamo at=request.end target=%q\n", target)
-
-	activity := time.Now().UTC().Format(common.SortableTime)
-
-	_, err := s.ddb.UpdateItem(&dynamodb.UpdateItemInput{
-		ExpressionAttributeNames:  map[string]*string{"#activity": aws.String("activity"), "#active": aws.String("active")},
-		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{":activity": {S: aws.String(activity)}, ":n": {N: aws.String("-1")}},
-		Key:                       map[string]*dynamodb.AttributeValue{"target": &dynamodb.AttributeValue{S: aws.String(target)}},
-		TableName:                 aws.String(s.targets),
-		UpdateExpression:          aws.String("SET #activity = :activity ADD #active :n"),
-	})
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -152,12 +102,20 @@ func (s *StorageDynamo) Stale(cutoff time.Time) ([]string, error) {
 func (s *StorageDynamo) TargetAdd(host, target string, idles bool) error {
 	fmt.Printf("ns=storage.dynamo at=target.add host=%q target=%q\n", host, target)
 
-	_, err := s.ddb.UpdateItem(&dynamodb.UpdateItemInput{
-		ExpressionAttributeNames:  map[string]*string{"#targets": aws.String("targets")},
-		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{":targets": {SS: []*string{aws.String(target)}}},
-		Key:                       map[string]*dynamodb.AttributeValue{"host": {S: aws.String(host)}},
-		TableName:                 aws.String(s.hosts),
-		UpdateExpression:          aws.String("ADD #targets :targets"),
+	_, err := s.ddb.PutItem(&dynamodb.PutItemInput{
+		Item:      map[string]*dynamodb.AttributeValue{"host": {S: aws.String(host)}},
+		TableName: aws.String(s.hosts),
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = s.ddb.PutItem(&dynamodb.PutItemInput{
+		Item: map[string]*dynamodb.AttributeValue{
+			"host":   {S: aws.String(host)},
+			"target": {S: aws.String(target)},
+		},
+		TableName: aws.String(s.routes),
 	})
 	if err != nil {
 		return err
@@ -169,21 +127,22 @@ func (s *StorageDynamo) TargetAdd(host, target string, idles bool) error {
 func (s *StorageDynamo) TargetList(host string) ([]string, error) {
 	// fmt.Printf("ns=storage.dynamo at=target.list\n")
 
-	res, err := s.ddb.GetItem(&dynamodb.GetItemInput{
-		Key:       map[string]*dynamodb.AttributeValue{"host": {S: aws.String(host)}},
-		TableName: aws.String(s.hosts),
+	res, err := s.ddb.Query(&dynamodb.QueryInput{
+		ExpressionAttributeNames:  map[string]*string{"#host": aws.String("host")},
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{":host": {S: aws.String(host)}},
+		KeyConditionExpression:    aws.String("#host = :host"),
+		TableName:                 aws.String(s.routes),
 	})
 	if err != nil {
 		return nil, err
 	}
-	if res.Item == nil || res.Item["targets"] == nil {
-		return []string{}, nil
-	}
 
 	ts := []string{}
 
-	for _, t := range res.Item["targets"].SS {
-		ts = append(ts, *t)
+	for _, item := range res.Items {
+		if t := item["target"].S; t != nil {
+			ts = append(ts, *t)
+		}
 	}
 
 	return ts, nil
@@ -192,15 +151,32 @@ func (s *StorageDynamo) TargetList(host string) ([]string, error) {
 func (s *StorageDynamo) TargetRemove(host, target string) error {
 	fmt.Printf("ns=storage.dynamo at=target.remove host=%q target=%q\n", host, target)
 
-	_, err := s.ddb.UpdateItem(&dynamodb.UpdateItemInput{
-		ExpressionAttributeNames:  map[string]*string{"#targets": aws.String("targets")},
-		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{":targets": {SS: []*string{aws.String(target)}}},
-		Key:                       map[string]*dynamodb.AttributeValue{"host": {S: aws.String(host)}},
-		TableName:                 aws.String(s.hosts),
-		UpdateExpression:          aws.String("DELETE #targets :targets"),
+	_, err := s.ddb.DeleteItem(&dynamodb.DeleteItemInput{
+		Key: map[string]*dynamodb.AttributeValue{
+			"host":   {S: aws.String(host)},
+			"target": {S: aws.String(target)},
+		},
+		TableName: aws.String(s.routes),
 	})
 	if err != nil {
 		return err
+	}
+
+	ts, err := s.TargetList(host)
+	if err != nil {
+		return err
+	}
+
+	if len(ts) == 0 {
+		_, err := s.ddb.DeleteItem(&dynamodb.DeleteItemInput{
+			Key: map[string]*dynamodb.AttributeValue{
+				"host": {S: aws.String(host)},
+			},
+			TableName: aws.String(s.hosts),
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

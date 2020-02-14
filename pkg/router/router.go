@@ -89,7 +89,7 @@ func New() (*Router, error) {
 
 	switch os.Getenv("STORAGE") {
 	case "dynamodb":
-		s, err := NewStorageDynamo(os.Getenv("DYNAMODB_HOSTS"), os.Getenv("DYNAMODB_TARGETS"))
+		s, err := NewStorageDynamo(os.Getenv("DYNAMODB_HOSTS"), os.Getenv("DYNAMODB_ROUTES"))
 		if err != nil {
 			return nil, err
 		}
@@ -306,6 +306,8 @@ func (r *Router) healthTicker() {
 }
 
 func (r *Router) healthTick() error {
+	hc := common.InsecureHTTPClient()
+
 	hs, err := r.storage.HostList()
 	if err != nil {
 		return err
@@ -316,7 +318,7 @@ func (r *Router) healthTick() error {
 			continue
 		}
 
-		if _, err = http.Get(fmt.Sprintf("https://%s/convox/health", h)); err != nil {
+		if _, err = hc.Get(fmt.Sprintf("https://%s/convox/health", h)); err != nil {
 			fmt.Printf("ns=router at=health.tick host=%q error=%v\n", h, err)
 		}
 	}

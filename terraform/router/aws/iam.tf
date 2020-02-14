@@ -36,17 +36,18 @@ data "aws_iam_policy_document" "router" {
   statement {
     resources = [aws_dynamodb_table.hosts.arn]
     actions = [
-      "dynamodb:GetItem",
+      "dynamodb:DeleteItem",
+      "dynamodb:PutItem",
       "dynamodb:Scan",
-      "dynamodb:UpdateItem",
     ]
   }
 
   statement {
-    resources = [aws_dynamodb_table.targets.arn]
+    resources = [aws_dynamodb_table.routes.arn]
     actions = [
-      "dynamodb:GetItem",
-      "dynamodb:UpdateItem",
+      "dynamodb:DeleteItem",
+      "dynamodb:Query",
+      "dynamodb:PutItem",
     ]
   }
 }

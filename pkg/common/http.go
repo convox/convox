@@ -1,6 +1,7 @@
 package common
 
 import (
+	"crypto/tls"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -20,6 +21,16 @@ func Get(url string) ([]byte, error) {
 	}
 
 	return data, nil
+}
+
+func InsecureHTTPClient() *http.Client {
+	t := NewDefaultTransport()
+
+	t.TLSClientConfig = &tls.Config{
+		InsecureSkipVerify: true,
+	}
+
+	return &http.Client{Transport: t}
 }
 
 func NewDefaultTransport() *http.Transport {
