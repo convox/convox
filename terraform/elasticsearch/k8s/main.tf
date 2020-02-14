@@ -69,6 +69,23 @@ resource "kubernetes_stateful_set" "elasticsearch" {
           fs_group = 1000
         }
 
+        affinity {
+          pod_anti_affinity {
+            preferred_during_scheduling_ignored_during_execution {
+              weight = 100
+              pod_affinity_term {
+                label_selector {
+                  match_labels = {
+                    system  = "convox"
+                    service = "router"
+                  }
+                }
+                topology_key = "kubernetes.io/hostname"
+              }
+            }
+          }
+        }
+
         init_container {
           name              = "init-sysctl"
           image             = "busybox"
