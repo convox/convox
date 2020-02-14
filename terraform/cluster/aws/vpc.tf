@@ -9,6 +9,11 @@ data "aws_availability_zones" "available" {
 }
 
 resource "aws_vpc" "nodes" {
+  depends_on = [
+    aws_iam_role_policy_attachment.cluster_eks_cluster,
+    aws_iam_role_policy_attachment.cluster_eks_service,
+  ]
+
   cidr_block           = var.cidr
   enable_dns_hostnames = true
   enable_dns_support   = true
@@ -47,11 +52,6 @@ resource "aws_route_table" "public" {
 }
 
 resource "aws_route" "public-default" {
-  depends_on = [
-    aws_internet_gateway.nodes,
-    aws_route_table.public,
-  ]
-
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = aws_internet_gateway.nodes.id
   route_table_id         = aws_route_table.public.id
@@ -65,6 +65,11 @@ resource "aws_route_table_association" "public" {
 }
 
 resource "aws_subnet" "private" {
+  depends_on = [
+    aws_iam_role_policy_attachment.cluster_eks_cluster,
+    aws_iam_role_policy_attachment.cluster_eks_service,
+  ]
+
   count = 3
 
   availability_zone = data.aws_availability_zones.available.names[count.index]
