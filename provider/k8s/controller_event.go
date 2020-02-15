@@ -140,7 +140,7 @@ func (c *EventController) Add(obj interface{}) error {
 			}
 		}
 	default:
-		fmt.Printf("  unhandled type: %s: %s\n", kind, e.Message)
+		fmt.Printf("  unhandled event: %s: %s\n", kind, e.Message)
 	}
 
 	return nil

@@ -120,11 +120,6 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 func (p *Provider) Start() error {
 	log := p.logger.At("Initialize")
 
-	dc, err := NewDeploymentController(p)
-	if err != nil {
-		return log.Error(err)
-	}
-
 	ec, err := NewEventController(p)
 	if err != nil {
 		return log.Error(err)
@@ -140,7 +135,6 @@ func (p *Provider) Start() error {
 		return log.Error(err)
 	}
 
-	go dc.Run()
 	go ec.Run()
 	go nc.Run()
 	go pc.Run()

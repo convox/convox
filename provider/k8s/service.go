@@ -184,44 +184,6 @@ func (p *Provider) ServiceUpdate(app, name string, opts structs.ServiceUpdateOpt
 	return nil
 }
 
-func (p *Provider) serviceInstall(app, release, service string) error {
-	a, err := p.AppGet(app)
-	if err != nil {
-		return err
-	}
-
-	m, r, err := common.ReleaseManifest(p, app, release)
-	if err != nil {
-		return err
-	}
-
-	s, err := m.Service(service)
-	if err != nil {
-		return err
-	}
-
-	if s.Port.Port == 0 {
-		return nil
-	}
-
-	params := map[string]interface{}{
-		"Namespace": p.AppNamespace(a.Name),
-		"Release":   r,
-		"Service":   s,
-	}
-
-	data, err := p.RenderTemplate("app/ports", params)
-	if err != nil {
-		return err
-	}
-
-	if err := p.Apply(p.AppNamespace(app), fmt.Sprintf("service.%s", service), r.Id, data, fmt.Sprintf("system=convox,provider=k8s,rack=%s,app=%s,release=%s", p.Name, app, r.Id), 30); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func serviceContainerPorts(c v1.Container, internal bool) []structs.ServicePort {
 	ps := []structs.ServicePort{}
 
