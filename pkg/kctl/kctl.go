@@ -24,7 +24,10 @@ type Controller struct {
 	Name       string
 	Namespace  string
 
+	cancel   context.CancelFunc
+	ctx      context.Context
 	errch    chan error
+	informer cache.SharedInformer
 	recorder record.EventRecorder
 	stopper  chan struct{}
 }
@@ -60,39 +63,9 @@ func (c *Controller) Event(object runtime.Object, eventtype, reason, message str
 
 func (c *Controller) Run(informer cache.SharedInformer, ch chan error) {
 	c.errch = ch
+	c.informer = informer
 
-	eb := record.NewBroadcaster()
-	eb.StartRecordingToSink(&tc.EventSinkImpl{Interface: c.Handler.Client().CoreV1().Events("")})
-
-	c.recorder = eb.NewRecorder(scheme.Scheme, ac.EventSource{Component: c.Name})
-
-	rl := &resourcelock.ConfigMapLock{
-		ConfigMapMeta: am.ObjectMeta{Namespace: c.Namespace, Name: c.Name},
-		Client:        c.Handler.Client().CoreV1(),
-		LockConfig: resourcelock.ResourceLockConfig{
-			Identity:      c.Identifier,
-			EventRecorder: c.recorder,
-		},
-	}
-
-	el, err := leaderelection.NewLeaderElector(leaderelection.LeaderElectionConfig{
-		Lock:          rl,
-		LeaseDuration: 15 * time.Second,
-		RenewDeadline: 10 * time.Second,
-		RetryPeriod:   2 * time.Second,
-		Callbacks: leaderelection.LeaderCallbacks{
-			OnStartedLeading: c.leaderStart(informer),
-			OnStoppedLeading: c.leaderStop,
-		},
-	})
-	if err != nil {
-		ch <- err
-		return
-	}
-
-	ctx := context.Background()
-
-	go el.Run(ctx)
+	go c.start()
 }
 
 func (c *Controller) leaderStart(informer cache.SharedInformer) func(ctx context.Context) {
@@ -124,6 +97,9 @@ func (c *Controller) leaderStop() {
 	if err := c.Handler.Stop(); err != nil {
 		c.errch <- err
 	}
+
+	c.cancel()
+	go c.start()
 }
 
 func (c *Controller) addHandler(obj interface{}) {
@@ -138,11 +114,47 @@ func (c *Controller) deleteHandler(obj interface{}) {
 	}
 }
 
-func (c *Controller) updateHandler(prev, cur interface{}) {
-	// if reflect.DeepEqual(prev, cur) {
-	//   return
-	// }
+func (c *Controller) start() {
+	fmt.Printf("starting elector: %s/%s (%s)\n", c.Namespace, c.Name, c.Identifier)
 
+	eb := record.NewBroadcaster()
+	eb.StartRecordingToSink(&tc.EventSinkImpl{Interface: c.Handler.Client().CoreV1().Events("")})
+
+	c.recorder = eb.NewRecorder(scheme.Scheme, ac.EventSource{Component: c.Name})
+
+	rl := &resourcelock.ConfigMapLock{
+		ConfigMapMeta: am.ObjectMeta{Namespace: c.Namespace, Name: c.Name},
+		Client:        c.Handler.Client().CoreV1(),
+		LockConfig: resourcelock.ResourceLockConfig{
+			Identity:      c.Identifier,
+			EventRecorder: c.recorder,
+		},
+	}
+
+	el, err := leaderelection.NewLeaderElector(leaderelection.LeaderElectionConfig{
+		Lock:          rl,
+		LeaseDuration: 15 * time.Second,
+		RenewDeadline: 10 * time.Second,
+		RetryPeriod:   2 * time.Second,
+		Callbacks: leaderelection.LeaderCallbacks{
+			OnStartedLeading: c.leaderStart(c.informer),
+			OnStoppedLeading: c.leaderStop,
+		},
+	})
+	if err != nil {
+		c.errch <- err
+		return
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	c.ctx = context.Background()
+	c.cancel = cancel
+
+	go el.Run(ctx)
+}
+
+func (c *Controller) updateHandler(prev, cur interface{}) {
 	if err := c.Handler.Update(prev, cur); err != nil {
 		c.errch <- err
 	}
