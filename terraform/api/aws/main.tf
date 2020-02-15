@@ -3,7 +3,7 @@ terraform {
 }
 
 provider "aws" {
-  version = "~> 2.33"
+  version = "~> 2.49"
 }
 
 provider "kubernetes" {

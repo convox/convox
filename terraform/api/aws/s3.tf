@@ -2,7 +2,6 @@ resource "aws_s3_bucket" "storage" {
   acl           = "private"
   bucket_prefix = "${var.name}-storage-"
   force_destroy = true
-  tags          = local.tags
 
   server_side_encryption_configuration {
     rule {

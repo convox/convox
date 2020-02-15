@@ -1,5 +1,5 @@
 provider "aws" {
-  version = "~> 2.22"
+  version = "~> 2.49"
 }
 
 resource "random_string" "suffix" {
