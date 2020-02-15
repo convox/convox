@@ -2,6 +2,6 @@ cluster.name: elasticsearch
 network.host: "0.0.0.0"
 bootstrap.memory_lock: false
 discovery.zen.ping.unicast.hosts: elasticsearch
-discovery.zen.minimum_master_nodes: 1
+discovery.zen.minimum_master_nodes: 2
 xpack.security.enabled: false
 xpack.monitoring.enabled: false

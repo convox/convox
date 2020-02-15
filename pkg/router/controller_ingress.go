@@ -37,7 +37,7 @@ func (c *IngressController) Client() kubernetes.Interface {
 }
 
 func (c *IngressController) Informer() cache.SharedInformer {
-	return ie.NewFilteredIngressInformer(c.kc, ac.NamespaceAll, 1*time.Minute, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
+	return ie.NewFilteredIngressInformer(c.kc, ac.NamespaceAll, 10*time.Second, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
 }
 
 func (c *IngressController) ListOptions(opts *am.ListOptions) {

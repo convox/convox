@@ -45,7 +45,7 @@ resource "kubernetes_stateful_set" "elasticsearch" {
 
   spec {
     service_name = "elasticsearch"
-    replicas     = var.replicas
+    replicas     = 2
 
     selector {
       match_labels = {
