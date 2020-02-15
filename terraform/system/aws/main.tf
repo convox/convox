@@ -25,11 +25,11 @@ data "aws_eks_cluster_auth" "cluster" {
 }
 
 data "http" "releases" {
-  url = "https://api.github.com/repos/convox/convox/releases"
+  url = "https://api.github.com/repos/convox/convox/releases/latest"
 }
 
 locals {
-  current = jsondecode(data.http.releases.body).0.tag_name
+  current = jsondecode(data.http.releases.body).tag_name
   release = coalesce(var.release, local.current)
 }
 
