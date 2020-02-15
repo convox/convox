@@ -76,7 +76,7 @@ func (c *PodController) Add(obj interface{}) error {
 		return err
 	}
 
-	fmt.Printf("pod add %s/%s: %s\n", p.ObjectMeta.Namespace, p.ObjectMeta.Name, p.Status.Phase)
+	fmt.Printf("pod add: %s/%s (%s)\n", p.ObjectMeta.Namespace, p.ObjectMeta.Name, p.Status.Phase)
 
 	switch p.Status.Phase {
 	case "Succeeded", "Failed":
@@ -92,7 +92,7 @@ func (c *PodController) Delete(obj interface{}) error {
 		return err
 	}
 
-	fmt.Printf("pod delete %s/%s: %s\n", p.ObjectMeta.Namespace, p.ObjectMeta.Name, p.Status.Phase)
+	fmt.Printf("pod delete: %s/%s\n", p.ObjectMeta.Namespace, p.ObjectMeta.Name)
 
 	return nil
 }
@@ -113,7 +113,7 @@ func (c *PodController) Update(prev, cur interface{}) error {
 	}
 
 	if pp.Status.Phase != cp.Status.Phase {
-		fmt.Printf("pod update %s/%s: %s => %s\n", cp.ObjectMeta.Namespace, cp.ObjectMeta.Name, pp.Status.Phase, cp.Status.Phase)
+		fmt.Printf("pod update: %s/%s (%s => %s)\n", cp.ObjectMeta.Namespace, cp.ObjectMeta.Name, pp.Status.Phase, cp.Status.Phase)
 	}
 
 	if cp.Status.Phase != pp.Status.Phase {
