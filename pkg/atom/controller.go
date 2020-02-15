@@ -60,15 +60,17 @@ func (c *AtomController) Client() kubernetes.Interface {
 	return c.kubernetes
 }
 
+func (c *AtomController) Informer() cache.SharedInformer {
+	return ic.NewFilteredAtomInformer(c.convox, ac.NamespaceAll, 5*time.Second, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
+}
+
 func (c *AtomController) ListOptions(opts *am.ListOptions) {
 }
 
 func (c *AtomController) Run() {
-	i := ic.NewFilteredAtomInformer(c.convox, ac.NamespaceAll, 5*time.Second, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
-
 	ch := make(chan error)
 
-	go c.controller.Run(i, ch)
+	go c.controller.Run(ch)
 
 	for err := range ch {
 		fmt.Printf("err = %+v\n", err)

@@ -40,16 +40,17 @@ func (c *EventController) Client() kubernetes.Interface {
 	return c.Provider.Cluster
 }
 
+func (c *EventController) Informer() cache.SharedInformer {
+	return ic.NewFilteredEventInformer(c.Provider.Cluster, ac.NamespaceAll, 0, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
+}
+
 func (c *EventController) ListOptions(opts *am.ListOptions) {
-	// opts.LabelSelector = fmt.Sprintf("system=convox,rack=%s", c.Provider.Rack)
 }
 
 func (c *EventController) Run() {
-	i := ic.NewFilteredEventInformer(c.Provider.Cluster, ac.NamespaceAll, 0, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
-
 	ch := make(chan error)
 
-	go c.Controller.Run(i, ch)
+	go c.Controller.Run(ch)
 
 	for err := range ch {
 		fmt.Printf("err = %+v\n", err)

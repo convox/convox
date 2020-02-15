@@ -2,7 +2,6 @@ package k8s
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -16,7 +15,6 @@ import (
 	"github.com/convox/logger"
 	"github.com/gobuffalo/packr"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -46,12 +44,6 @@ type Provider struct {
 }
 
 func FromEnv() (*Provider, error) {
-	// hack to make glog stop complaining about flag parsing
-	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	_ = fs.Parse([]string{})
-	flag.CommandLine = fs
-	runtime.ErrorHandlers = []func(error){}
-
 	namespace := os.Getenv("NAMESPACE")
 
 	rc, err := restConfig()
@@ -107,8 +99,6 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 	p.logger = logger.New("ns=k8s")
 	p.metrics = metrics.New("https://metrics.convox.com/metrics/rack")
 	p.templater = templater.New(packr.NewBox("../k8s/template"), p.templateHelpers())
-
-	runtime.ErrorHandlers = []func(error){}
 
 	if err := p.initializeTemplates(); err != nil {
 		return err

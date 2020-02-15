@@ -1,12 +1,11 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 
 	"github.com/convox/convox/pkg/atom"
-	"k8s.io/apimachinery/pkg/util/runtime"
+	"github.com/convox/convox/pkg/common"
 	"k8s.io/client-go/rest"
 )
 
@@ -17,11 +16,7 @@ func main() {
 }
 
 func run() error {
-	// hack to make glog stop complaining about flag parsing
-	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	_ = fs.Parse([]string{})
-	flag.CommandLine = fs
-	runtime.ErrorHandlers = []func(error){}
+	common.InitializeKlog()
 
 	cfg, err := rest.InClusterConfig()
 	if err != nil {
