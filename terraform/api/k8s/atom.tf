@@ -41,9 +41,11 @@ resource "kubernetes_deployment" "atom" {
     name      = "atom"
 
     labels = {
+      app     = "system"
       name    = "atom"
-      system  = "convox"
+      rack    = var.rack
       service = "atom"
+      system  = "convox"
       type    = "service"
     }
   }
@@ -54,8 +56,8 @@ resource "kubernetes_deployment" "atom" {
     selector {
       match_labels = {
         name    = "atom"
-        system  = "convox"
         service = "atom"
+        system  = "convox"
         type    = "service"
       }
     }
@@ -76,9 +78,11 @@ resource "kubernetes_deployment" "atom" {
         }
 
         labels = {
+          app     = "system"
           name    = "atom"
-          system  = "convox"
+          rack    = var.rack
           service = "atom"
+          system  = "convox"
           type    = "service"
         }
       }

@@ -56,9 +56,9 @@ module "fluentd" {
 
   cluster   = module.cluster.id
   namespace = "kube-system"
-  name      = var.name
   oidc_arn  = module.cluster.oidc_arn
   oidc_sub  = module.cluster.oidc_sub
+  rack      = var.name
 }
 
 module "rack" {

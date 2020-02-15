@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/options"
@@ -145,6 +146,19 @@ func (p *Provider) AppNamespace(app string) string {
 	default:
 		return fmt.Sprintf("%s-%s", p.Name, app)
 	}
+}
+
+func (p *Provider) NamespaceApp(namespace string) (string, error) {
+	ns, err := p.Cluster.CoreV1().Namespaces().Get(namespace, am.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+
+	if app, ok := ns.ObjectMeta.Labels["app"]; ok && strings.TrimSpace(app) != "" {
+		return app, nil
+	}
+
+	return "", fmt.Errorf("could not determine app for namespace: %s", namespace)
 }
 
 func (p *Provider) AppParameters() map[string]string {

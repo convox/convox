@@ -81,63 +81,53 @@ func (c *EventController) Add(obj interface{}) error {
 
 	switch kind {
 	case "apps/v1/Deployment":
-		d, err := c.Provider.Cluster.ExtensionsV1beta1().Deployments(o.Namespace).Get(o.Name, am.GetOptions{ResourceVersion: o.ResourceVersion})
+		app, err := c.Provider.NamespaceApp(o.Namespace)
 		if err != nil {
 			return err
 		}
 
-		if app := d.ObjectMeta.Labels["app"]; app != "" {
-			if err := c.Provider.systemLog(app, d.Name, e.LastTimestamp.Time, e.Message); err != nil {
-				return err
-			}
+		if err := c.Provider.systemLog(app, o.Name, e.LastTimestamp.Time, e.Message); err != nil {
+			return err
 		}
 	case "apps/v1/ReplicaSet":
-		rs, err := c.Provider.Cluster.AppsV1().ReplicaSets(o.Namespace).Get(o.Name, am.GetOptions{ResourceVersion: o.ResourceVersion})
+		app, err := c.Provider.NamespaceApp(o.Namespace)
 		if err != nil {
 			return err
 		}
 
-		if app := rs.ObjectMeta.Labels["app"]; app != "" {
-			if err := c.Provider.systemLog(app, rs.Name, e.LastTimestamp.Time, e.Message); err != nil {
-				return err
-			}
+		if err := c.Provider.systemLog(app, o.Name, e.LastTimestamp.Time, e.Message); err != nil {
+			return err
 		}
 	case "atom.convox.com/v1/Atom":
-		ns, err := c.Provider.Cluster.CoreV1().Namespaces().Get(e.Namespace, am.GetOptions{})
+		app, err := c.Provider.NamespaceApp(o.Namespace)
 		if err != nil {
 			return err
 		}
 
-		if app := ns.ObjectMeta.Labels["app"]; app != "" {
-			if err := c.Provider.systemLog(app, fmt.Sprintf("atom/%s", strings.ReplaceAll(e.InvolvedObject.Name, ".", "/")), e.LastTimestamp.Time, fmt.Sprintf("%s: %s", e.Reason, e.Message)); err != nil {
-				return err
-			}
+		if err := c.Provider.systemLog(app, fmt.Sprintf("atom/%s", strings.ReplaceAll(e.InvolvedObject.Name, ".", "/")), e.LastTimestamp.Time, fmt.Sprintf("%s: %s", e.Reason, e.Message)); err != nil {
+			return err
 		}
 	case "autoscaling/v2beta2/HorizontalPodAutoscaler":
-		a, err := c.Provider.Cluster.AutoscalingV1().HorizontalPodAutoscalers(o.Namespace).Get(o.Name, am.GetOptions{ResourceVersion: o.ResourceVersion})
+		app, err := c.Provider.NamespaceApp(o.Namespace)
 		if err != nil {
 			return err
 		}
 
-		if app := a.ObjectMeta.Labels["app"]; app != "" {
-			if err := c.Provider.systemLog(app, a.Name, e.LastTimestamp.Time, e.Message); err != nil {
-				return err
-			}
+		if err := c.Provider.systemLog(app, o.Name, e.LastTimestamp.Time, e.Message); err != nil {
+			return err
 		}
 	case "v1/ConfigMap":
 	case "v1/Pod":
 		switch e.Reason {
 		case "Killing":
 		default:
-			p, err := c.Provider.Cluster.CoreV1().Pods(o.Namespace).Get(o.Name, am.GetOptions{ResourceVersion: o.ResourceVersion})
+			app, err := c.Provider.NamespaceApp(o.Namespace)
 			if err != nil {
 				return err
 			}
 
-			if app := p.ObjectMeta.Labels["app"]; app != "" {
-				if err := c.Provider.systemLog(app, p.Name, e.LastTimestamp.Time, e.Message); err != nil {
-					return err
-				}
+			if err := c.Provider.systemLog(app, o.Name, e.LastTimestamp.Time, e.Message); err != nil {
+				return err
 			}
 		}
 	default:

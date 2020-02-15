@@ -28,8 +28,8 @@ module "k8s" {
   }
 
   domain    = var.domain
-  name      = var.name
   namespace = var.namespace
+  rack      = var.name
   release   = var.release
 
   annotations = {

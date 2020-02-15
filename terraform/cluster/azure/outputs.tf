@@ -18,6 +18,11 @@ output "endpoint" {
   value      = azurerm_kubernetes_cluster.rack.kube_config.0.host
 }
 
+output "id" {
+  depends_on = [azurerm_kubernetes_cluster.rack]
+  value      = azurerm_kubernetes_cluster.rack.name
+}
+
 output "workspace" {
   value = azurerm_log_analytics_workspace.rack.workspace_id
 }

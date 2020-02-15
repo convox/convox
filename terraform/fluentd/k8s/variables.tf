@@ -2,15 +2,19 @@ variable "annotations" {
   default = {}
 }
 
-variable "env" {
-  default = {}
-}
-
 variable "cluster" {
   type = string
 }
 
+variable "env" {
+  default = {}
+}
+
 variable "image" {
+  type = string
+}
+
+variable "rack" {
   type = string
 }
 

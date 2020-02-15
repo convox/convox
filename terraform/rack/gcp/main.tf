@@ -26,6 +26,7 @@ module "api" {
     kubernetes = kubernetes
   }
 
+  cluster       = var.cluster
   domain        = module.router.endpoint
   name          = var.name
   namespace     = module.k8s.namespace

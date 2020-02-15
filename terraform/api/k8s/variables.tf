@@ -18,11 +18,11 @@ variable "labels" {
   default = {}
 }
 
-variable "name" {
+variable "namespace" {
   type = string
 }
 
-variable "namespace" {
+variable "rack" {
   type = string
 }
 

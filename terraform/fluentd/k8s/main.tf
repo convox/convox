@@ -8,7 +8,7 @@ provider "kubernetes" {
 
 resource "kubernetes_cluster_role" "fluentd" {
   metadata {
-    name = "${var.cluster}-fluentd"
+    name = "${var.rack}-fluentd"
   }
 
   rule {
@@ -20,7 +20,7 @@ resource "kubernetes_cluster_role" "fluentd" {
 
 resource "kubernetes_cluster_role_binding" "fluentd" {
   metadata {
-    name = "${var.cluster}-fluentd"
+    name = "${var.rack}-fluentd"
   }
 
   role_ref {
@@ -62,6 +62,15 @@ resource "kubernetes_daemonset" "fluentd" {
   metadata {
     namespace = var.namespace
     name      = "fluentd"
+
+    labels = {
+      app     = "system"
+      name    = "fluentd"
+      rack    = var.rack
+      service = "fluentd"
+      system  = "convox"
+      type    = "service"
+    }
   }
 
   spec {
@@ -74,7 +83,12 @@ resource "kubernetes_daemonset" "fluentd" {
     template {
       metadata {
         labels = {
+          app     = "system"
+          name    = "fluentd"
+          rack    = var.rack
           service = "fluentd"
+          system  = "convox"
+          type    = "service"
         }
 
         annotations = var.annotations

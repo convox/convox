@@ -2,6 +2,10 @@ variable "access_id" {
   type = string
 }
 
+variable "cluster" {
+  type = string
+}
+
 variable "domain" {
   type = string
 }

@@ -32,6 +32,7 @@ module "k8s" {
   }
 
   namespace = var.namespace
+  rack      = var.name
   release   = var.release
 
   annotations = {

@@ -22,8 +22,8 @@ module "k8s" {
 
   authentication = false
   domain         = var.domain
-  name           = var.name
   namespace      = var.namespace
+  rack           = var.name
   release        = var.release
   replicas       = 1
 

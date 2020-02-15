@@ -17,7 +17,7 @@ data "aws_iam_policy_document" "assume_fluentd" {
 }
 
 resource "aws_iam_role" "fluentd" {
-  name               = "${var.name}-fluentd"
+  name               = "${var.rack}-fluentd"
   assume_role_policy = data.aws_iam_policy_document.assume_fluentd.json
   path               = "/convox/"
   tags               = local.tags
