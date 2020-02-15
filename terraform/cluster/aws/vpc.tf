@@ -12,6 +12,9 @@ resource "aws_vpc" "nodes" {
   depends_on = [
     aws_iam_role_policy_attachment.cluster_eks_cluster,
     aws_iam_role_policy_attachment.cluster_eks_service,
+    aws_iam_role_policy_attachment.nodes_ecr,
+    aws_iam_role_policy_attachment.nodes_eks_cni,
+    aws_iam_role_policy_attachment.nodes_eks_worker,
   ]
 
   cidr_block           = var.cidr
@@ -65,11 +68,6 @@ resource "aws_route_table_association" "public" {
 }
 
 resource "aws_subnet" "private" {
-  depends_on = [
-    aws_iam_role_policy_attachment.cluster_eks_cluster,
-    aws_iam_role_policy_attachment.cluster_eks_service,
-  ]
-
   count = 3
 
   availability_zone = data.aws_availability_zones.available.names[count.index]
