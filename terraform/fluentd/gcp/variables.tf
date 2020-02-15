@@ -6,6 +6,6 @@ variable "namespace" {
   type = string
 }
 
-variable "name" {
+variable "rack" {
   type = string
 }

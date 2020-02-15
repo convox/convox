@@ -54,6 +54,7 @@ module "rack" {
     kubernetes = kubernetes
   }
 
+  cluster        = module.cluster.id
   name           = var.name
   region         = var.region
   release        = local.release

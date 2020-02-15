@@ -64,6 +64,7 @@ module "rack" {
     google     = google
   }
 
+  cluster       = module.cluster.id
   name          = var.name
   network       = module.cluster.network
   nodes_account = module.cluster.nodes_account

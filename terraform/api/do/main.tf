@@ -30,9 +30,10 @@ module "fluentd" {
     kubernetes = kubernetes
   }
 
+  cluster       = var.cluster
   elasticsearch = module.elasticsearch.host
   namespace     = var.namespace
-  name          = var.name
+  rack          = var.name
 }
 
 module "k8s" {
@@ -43,8 +44,8 @@ module "k8s" {
   }
 
   domain    = var.domain
-  name      = var.name
   namespace = var.namespace
+  rack      = var.name
   release   = var.release
 
   annotations = {}

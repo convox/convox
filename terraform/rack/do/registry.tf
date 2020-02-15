@@ -22,7 +22,12 @@ resource "kubernetes_deployment" "registry" {
     name      = "registry"
 
     labels = {
+      app     = "system"
+      name    = "registry"
+      rack    = var.name
       service = "registry"
+      system  = "convox"
+      type    = "service"
     }
   }
 
@@ -32,8 +37,8 @@ resource "kubernetes_deployment" "registry" {
 
     selector {
       match_labels = {
-        system  = "convox"
         service = "registry"
+        system  = "convox"
       }
     }
 
@@ -48,8 +53,12 @@ resource "kubernetes_deployment" "registry" {
     template {
       metadata {
         labels = {
-          system  = "convox"
+          app     = "system"
+          name    = "registry"
+          rack    = var.name
           service = "registry"
+          system  = "convox"
+          type    = "service"
         }
       }
 

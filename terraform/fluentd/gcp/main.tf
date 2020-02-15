@@ -27,6 +27,7 @@ module "k8s" {
   cluster   = var.cluster
   image     = "fluent/fluentd-kubernetes-daemonset:v1.3.1-debian-stackdriver-1.3"
   namespace = var.namespace
+  rack      = var.rack
   target    = file("${path.module}/target.conf")
 
   annotations = {

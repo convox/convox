@@ -74,7 +74,7 @@ func (p *Provider) ProcessLogs(app, pid string, opts structs.LogsOptions) (io.Re
 func (p *Provider) SystemLogs(opts structs.LogsOptions) (io.ReadCloser, error) {
 	r, w := io.Pipe()
 
-	go subscribeLogs(p.Context(), w, "rack", opts)
+	go subscribeLogs(p.Context(), w, "system", opts)
 
 	return r, nil
 }

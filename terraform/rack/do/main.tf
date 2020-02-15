@@ -27,6 +27,7 @@ module "api" {
   }
 
   access_id  = var.access_id
+  cluster    = var.cluster
   domain     = module.router.endpoint
   name       = var.name
   namespace  = module.k8s.namespace

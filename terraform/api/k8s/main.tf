@@ -13,7 +13,7 @@ resource "random_string" "password" {
 
 resource "kubernetes_cluster_role" "api" {
   metadata {
-    name = "${var.name}-api"
+    name = "${var.rack}-api"
   }
 
   rule {
@@ -25,7 +25,7 @@ resource "kubernetes_cluster_role" "api" {
 
 resource "kubernetes_cluster_role_binding" "api" {
   metadata {
-    name = "${var.name}-api"
+    name = "${var.rack}-api"
   }
 
   role_ref {
@@ -56,9 +56,11 @@ resource "kubernetes_deployment" "api" {
     name      = "api"
 
     labels = {
+      app     = "system"
       name    = "api"
-      system  = "convox"
+      rack    = var.rack
       service = "api"
+      system  = "convox"
       type    = "service"
     }
   }
@@ -71,8 +73,8 @@ resource "kubernetes_deployment" "api" {
     selector {
       match_labels = {
         name    = "api"
-        system  = "convox"
         service = "api"
+        system  = "convox"
         type    = "service"
       }
     }
@@ -92,9 +94,11 @@ resource "kubernetes_deployment" "api" {
         })
 
         labels = merge(var.labels, {
+          app     = "system"
           name    = "api"
-          system  = "convox"
+          rack    = var.rack
           service = "api"
+          system  = "convox"
           type    = "service"
         })
       }
@@ -202,7 +206,7 @@ resource "kubernetes_deployment" "api" {
         volume {
           name = "storage"
           host_path {
-            path = "/var/rack/${var.name}/storage"
+            path = "/var/rack/${var.rack}/storage"
           }
         }
       }
