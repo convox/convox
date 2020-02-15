@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/convox/convox/pkg/api"
+	"github.com/convox/convox/pkg/common"
 )
 
 func main() {
@@ -18,6 +19,8 @@ func main() {
 }
 
 func run() error {
+	common.InitializeKlog()
+
 	s, err := api.New()
 	if err != nil {
 		return err

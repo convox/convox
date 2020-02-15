@@ -36,17 +36,19 @@ func (c *IngressController) Client() kubernetes.Interface {
 	return c.kc
 }
 
+func (c *IngressController) Informer() cache.SharedInformer {
+	return ie.NewFilteredIngressInformer(c.kc, ac.NamespaceAll, 1*time.Minute, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
+}
+
 func (c *IngressController) ListOptions(opts *am.ListOptions) {
 	opts.LabelSelector = fmt.Sprintf("system=convox")
 	opts.ResourceVersion = ""
 }
 
 func (c *IngressController) Run() {
-	i := ie.NewFilteredIngressInformer(c.kc, ac.NamespaceAll, 1*time.Minute, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
-
 	ch := make(chan error)
 
-	go c.controller.Run(i, ch)
+	go c.controller.Run(ch)
 
 	for err := range ch {
 		fmt.Printf("err = %+v\n", err)

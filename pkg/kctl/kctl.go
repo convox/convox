@@ -27,13 +27,13 @@ type Controller struct {
 	cancel   context.CancelFunc
 	ctx      context.Context
 	errch    chan error
-	informer cache.SharedInformer
 	recorder record.EventRecorder
 	stopper  chan struct{}
 }
 
 type ControllerHandler interface {
 	Add(interface{}) error
+	Informer() cache.SharedInformer
 	Client() kubernetes.Interface
 	Delete(interface{}) error
 	Start() error
@@ -61,9 +61,8 @@ func (c *Controller) Event(object runtime.Object, eventtype, reason, message str
 	c.recorder.Event(object, eventtype, reason, message)
 }
 
-func (c *Controller) Run(informer cache.SharedInformer, ch chan error) {
+func (c *Controller) Run(ch chan error) {
 	c.errch = ch
-	c.informer = informer
 
 	go c.start()
 }
@@ -71,12 +70,6 @@ func (c *Controller) Run(informer cache.SharedInformer, ch chan error) {
 func (c *Controller) leaderStart(informer cache.SharedInformer) func(ctx context.Context) {
 	return func(ctx context.Context) {
 		fmt.Printf("started leading: %s/%s (%s)\n", c.Namespace, c.Name, c.Identifier)
-
-		informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-			AddFunc:    c.addHandler,
-			DeleteFunc: c.deleteHandler,
-			UpdateFunc: c.updateHandler,
-		})
 
 		if err := c.Handler.Start(); err != nil {
 			c.errch <- err
@@ -131,13 +124,21 @@ func (c *Controller) start() {
 		},
 	}
 
+	informer := c.Handler.Informer()
+
+	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    c.addHandler,
+		DeleteFunc: c.deleteHandler,
+		UpdateFunc: c.updateHandler,
+	})
+
 	el, err := leaderelection.NewLeaderElector(leaderelection.LeaderElectionConfig{
 		Lock:          rl,
 		LeaseDuration: 15 * time.Second,
 		RenewDeadline: 10 * time.Second,
 		RetryPeriod:   2 * time.Second,
 		Callbacks: leaderelection.LeaderCallbacks{
-			OnStartedLeading: c.leaderStart(c.informer),
+			OnStartedLeading: c.leaderStart(informer),
 			OnStoppedLeading: c.leaderStop,
 		},
 	})

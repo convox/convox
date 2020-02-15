@@ -36,16 +36,17 @@ func (c *NodeController) Client() kubernetes.Interface {
 	return c.Provider.Cluster
 }
 
+func (c *NodeController) Informer() cache.SharedInformer {
+	return ic.NewFilteredNodeInformer(c.Provider.Cluster, 0, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
+}
+
 func (c *NodeController) ListOptions(opts *am.ListOptions) {
-	// opts.LabelSelector = fmt.Sprintf("system=convox,rack=%s", c.Provider.Rack)
 }
 
 func (c *NodeController) Run() {
-	i := ic.NewFilteredNodeInformer(c.Provider.Cluster, 0, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
-
 	ch := make(chan error)
 
-	go c.Controller.Run(i, ch)
+	go c.Controller.Run(ch)
 
 	for err := range ch {
 		fmt.Printf("err = %+v\n", err)

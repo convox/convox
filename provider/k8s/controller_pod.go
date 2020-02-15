@@ -42,17 +42,18 @@ func (c *PodController) Client() kubernetes.Interface {
 	return c.Provider.Cluster
 }
 
+func (c *PodController) Informer() cache.SharedInformer {
+	return ic.NewFilteredPodInformer(c.Provider.Cluster, ac.NamespaceAll, 0, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
+}
+
 func (c *PodController) ListOptions(opts *am.ListOptions) {
 	opts.LabelSelector = fmt.Sprintf("system=convox,rack=%s", c.Provider.Name)
-	// opts.ResourceVersion = ""
 }
 
 func (c *PodController) Run() {
-	i := ic.NewFilteredPodInformer(c.Provider.Cluster, ac.NamespaceAll, 0, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
-
 	ch := make(chan error)
 
-	go c.Controller.Run(i, ch)
+	go c.Controller.Run(ch)
 
 	for err := range ch {
 		fmt.Printf("err = %+v\n", err)
@@ -111,7 +112,9 @@ func (c *PodController) Update(prev, cur interface{}) error {
 		return nil
 	}
 
-	fmt.Printf("pod update %s/%s: %s => %s\n", cp.ObjectMeta.Namespace, cp.ObjectMeta.Name, pp.Status.Phase, cp.Status.Phase)
+	if pp.Status.Phase != cp.Status.Phase {
+		fmt.Printf("pod update %s/%s: %s => %s\n", cp.ObjectMeta.Namespace, cp.ObjectMeta.Name, pp.Status.Phase, cp.Status.Phase)
+	}
 
 	if cp.Status.Phase != pp.Status.Phase {
 		switch cp.Status.Phase {
