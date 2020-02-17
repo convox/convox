@@ -160,8 +160,6 @@ resource "kubernetes_deployment" "ingress-nginx" {
   }
 
   spec {
-    replicas = 1
-
     selector {
       match_labels = {
         system  = "convox"
@@ -271,6 +269,26 @@ resource "kubernetes_deployment" "ingress-nginx" {
           }
         }
       }
+    }
+  }
+}
+
+
+resource "kubernetes_horizontal_pod_autoscaler" "router" {
+  metadata {
+    namespace = var.namespace
+    name      = "nginx"
+  }
+
+  spec {
+    min_replicas                      = var.replicas_min
+    max_replicas                      = var.replicas_max
+    target_cpu_utilization_percentage = 90
+
+    scale_target_ref {
+      api_version = "apps/v1"
+      kind        = "Deployment"
+      name        = "ingress-nginx"
     }
   }
 }
