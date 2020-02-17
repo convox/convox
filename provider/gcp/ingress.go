@@ -1,23 +1,13 @@
 package gcp
 
 func (p *Provider) IngressAnnotations(app string) (map[string]string, error) {
-	a, err := p.AppGet(app)
-	if err != nil {
-		return nil, err
-	}
-
 	ans := map[string]string{
-		"kubernetes.io/ingress.class": "convox",
-	}
-
-	switch a.Parameters["Router"] {
-	case "dedicated":
-		ans["kubernetes.io/ingress.class"] = "gce"
+		"cert-manager.io/cluster-issuer": "letsencrypt",
 	}
 
 	return ans, nil
 }
 
-func (p *Provider) IngressSecrets(app string) ([]string, error) {
-	return []string{}, nil
+func (p *Provider) IngressClass() string {
+	return "convox"
 }

@@ -3,9 +3,6 @@ package router
 import (
 	"crypto/tls"
 	"fmt"
-	"net"
-	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -19,11 +16,8 @@ type BackendKubernetes struct {
 	cluster   kubernetes.Interface
 	idled     map[string]bool
 	idledLock sync.Mutex
-	ip        string
 	namespace string
-	prefix    string
 	router    BackendRouter
-	service   string
 }
 
 func NewBackendKubernetes(router BackendRouter, namespace string) (*BackendKubernetes, error) {
@@ -47,38 +41,6 @@ func NewBackendKubernetes(router BackendRouter, namespace string) (*BackendKuber
 
 	b.cluster = kc
 	b.idled = map[string]bool{}
-
-	if parts := strings.Split(os.Getenv("POD_IP"), "."); len(parts) > 2 {
-		b.prefix = fmt.Sprintf("%s.%s.", parts[0], parts[1])
-	}
-
-	fmt.Printf("ns=backend.k8s fn=new at=host.resolve\n")
-
-	if host := os.Getenv("SERVICE_HOST"); host != "" {
-		for {
-			if ips, err := net.LookupIP(host); err == nil && len(ips) > 0 {
-				b.service = ips[0].String()
-				break
-			}
-
-			time.Sleep(1 * time.Second)
-		}
-	}
-
-	fmt.Printf("ns=backend.k8s fn=new at=router.ip\n")
-
-	s, err := kc.CoreV1().Services(b.namespace).Get("router", am.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	if len(s.Status.LoadBalancer.Ingress) > 0 && s.Status.LoadBalancer.Ingress[0].Hostname == "localhost" {
-		b.ip = "127.0.0.1"
-	} else {
-		b.ip = s.Spec.ClusterIP
-	}
-
-	fmt.Printf("ns=backend.k8s fn=new at=done ip=%s prefix=%s service=%s\n", b.ip, b.prefix, b.service)
 
 	return b, nil
 }
@@ -113,14 +75,6 @@ func (b *BackendKubernetes) CA() (*tls.Certificate, error) {
 	}
 
 	return &ca, nil
-}
-
-func (b *BackendKubernetes) ExternalIP() string {
-	return b.ip
-}
-
-func (b *BackendKubernetes) InternalIP() string {
-	return b.service
 }
 
 func (b *BackendKubernetes) IdleGet(target string) (bool, error) {

@@ -246,8 +246,8 @@ resource "kubernetes_ingress" "api" {
     name      = "api"
 
     annotations = merge({
-      "convox.idles" : "false"
-      "convox.ingress.service.api.5443.protocol" : "https"
+      "convox.com/backend-protocol" : "https",
+      "nginx.ingress.kubernetes.io/backend-protocol" : "https",
     }, var.annotations)
 
     labels = {
@@ -258,7 +258,8 @@ resource "kubernetes_ingress" "api" {
 
   spec {
     tls {
-      hosts = ["api.${var.domain}"]
+      hosts       = ["api.${var.domain}"]
+      secret_name = "api-certificate"
     }
 
     rule {

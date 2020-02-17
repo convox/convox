@@ -17,8 +17,8 @@ locals {
   }
 }
 
-module "k8s" {
-  source = "../k8s"
+module "nginx" {
+  source = "../nginx"
 
   providers = {
     kubernetes = kubernetes
@@ -26,11 +26,6 @@ module "k8s" {
 
   namespace = var.namespace
   rack      = var.name
-  release   = var.release
-
-  env = merge(var.env, {
-    AUTOCERT = "true"
-  })
 }
 
 resource "kubernetes_service" "router" {
@@ -46,20 +41,17 @@ resource "kubernetes_service" "router" {
       name        = "http"
       port        = 80
       protocol    = "TCP"
-      target_port = 80
+      target_port = "http"
     }
 
     port {
       name        = "https"
       port        = 443
       protocol    = "TCP"
-      target_port = 443
+      target_port = "https"
     }
 
-    selector = {
-      system  = "convox"
-      service = "router"
-    }
+    selector = module.nginx.selector
   }
 
   lifecycle {

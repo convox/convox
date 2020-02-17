@@ -33,22 +33,23 @@ module "api" {
   namespace  = module.k8s.namespace
   region     = var.region
   release    = var.release
-  resolver   = module.router.resolver
+  resolver   = module.resolver.endpoint
   router     = module.router.endpoint
   secret     = random_string.secret.result
   secret_key = var.secret_key
 }
 
-module "redis" {
-  source = "../../redis/do"
+module "resolver" {
+  source = "../../resolver/do"
 
   providers = {
     digitalocean = digitalocean
+    kubernetes   = kubernetes
   }
 
-  cluster = var.cluster
-  name    = var.name
-  region  = var.region
+  namespace = module.k8s.namespace
+  rack      = var.name
+  release   = var.release
 }
 
 module "router" {
@@ -63,12 +64,4 @@ module "router" {
   namespace = module.k8s.namespace
   region    = var.region
   release   = var.release
-
-  env = {
-    CACHE        = "redis"
-    REDIS_ADDR   = module.redis.addr
-    REDIS_AUTH   = module.redis.auth
-    REDIS_SECURE = "true"
-    STORAGE      = "redis"
-  }
 }

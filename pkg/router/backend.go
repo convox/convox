@@ -6,8 +6,6 @@ import (
 
 type Backend interface {
 	CA() (*tls.Certificate, error)
-	InternalIP() string
-	ExternalIP() string
 	IdleGet(target string) (bool, error)
 	IdleSet(target string, idle bool) error
 	Start() error

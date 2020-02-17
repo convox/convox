@@ -38,8 +38,7 @@ For an app named `myapp` with a `convox.yml` like this:
     services:
       auth:
         internal: true
-        ports:
-          - 5000
+        port: 5000
       web:
         port: 3000
 

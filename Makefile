@@ -1,6 +1,6 @@
 .PHONY: all build clean clean-package compress dev docs generate generate-k8s generate-provider mocks package release test tools vendor
 
-commands = api atom build docs router
+commands = api atom build docs resolver router
 
 binaries = $(addprefix $(GOPATH)/bin/, $(commands))
 sources  = $(shell find . -name '*.go')
@@ -21,12 +21,14 @@ dev:
 	test -n "$(RACK)" # RACK
 	docker build --target development -t convox/convox:master .
 	docker push convox/convox:master
-	kubectl rollout restart deployment/api -n $(RACK)-system
-	kubectl rollout restart deployment/atom -n $(RACK)-system
-	kubectl rollout restart deployment/router -n $(RACK)-system
-	kubectl rollout status deployment/api -n $(RACK)-system
-	kubectl rollout status deployment/atom -n $(RACK)-system
-	kubectl rollout status deployment/router -n $(RACK)-system
+	$(call restart,$(RACK)-system,deployment/api)
+	$(call restart,$(RACK)-system,deployment/atom)
+	$(call restart,$(RACK)-system,deployment/resolver)
+	$(call restart,$(RACK)-system,deployment/router)
+	$(call wait,$(RACK)-system,deployment/api)
+	$(call wait,$(RACK)-system,deployment/atom)
+	$(call wait,$(RACK)-system,deployment/resolver)
+	$(call wait,$(RACK)-system,deployment/router)
 
 docs:
 	test -n "$(VERSION)" # VERSION
@@ -71,3 +73,11 @@ vendor:
 
 $(binaries): $(GOPATH)/bin/%: $(sources)
 	go install -mod=vendor --ldflags="-s -w" ./cmd/$*
+
+define restart
+	kubectl get $(2) -n $(1) >/dev/null 2>&1 && kubectl rollout restart $(2) -n $(1) || true
+endef
+
+define wait
+	kubectl get $(2) -n $(1) >/dev/null 2>&1 && kubectl rollout status $(2) -n $(1) || true
+endef

@@ -48,10 +48,14 @@ module "k8s" {
   rack      = var.name
   release   = var.release
 
-  annotations = {}
+  annotations = {
+    "cert-manager.io/cluster-issuer" = "letsencrypt"
+    "kubernetes.io/ingress.class"    = "nginx"
+  }
 
   env = {
     BUCKET          = digitalocean_spaces_bucket.storage.name
+    CERT_MANAGER    = "true"
     ELASTIC_URL     = module.elasticsearch.url
     PROVIDER        = "do"
     REGION          = var.region

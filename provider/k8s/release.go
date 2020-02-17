@@ -333,31 +333,34 @@ func (p *Provider) releaseTemplateIngress(a *structs.App, ss manifest.Services, 
 		return nil, err
 	}
 
-	iss, err := p.ingressSecrets(a, ss)
-	if err != nil {
-		return nil, err
-	}
-
 	idles, err := p.Engine.AppIdles(a.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	params := map[string]interface{}{
-		"Annotations": ans,
-		"App":         a.Name,
-		"Idles":       common.DefaultBool(opts.Idle, idles),
-		"Namespace":   p.AppNamespace(a.Name),
-		"Secrets":     iss,
-		"Services":    ss,
+	items := [][]byte{}
+
+	for _, s := range ss {
+		params := map[string]interface{}{
+			"Annotations": ans,
+			"App":         a.Name,
+			"Class":       p.Engine.IngressClass(),
+			"Host":        p.Engine.ServiceHost(a.Name, s),
+			"Idles":       common.DefaultBool(opts.Idle, idles),
+			"Namespace":   p.AppNamespace(a.Name),
+			"Rack":        p.Name,
+			"Service":     s,
+		}
+
+		data, err := p.RenderTemplate("app/ingress", params)
+		if err != nil {
+			return nil, err
+		}
+
+		items = append(items, data)
 	}
 
-	data, err := p.RenderTemplate("app/ingress", params)
-	if err != nil {
-		return nil, err
-	}
-
-	return data, nil
+	return bytes.Join(items, []byte("---\n")), nil
 }
 
 func (p *Provider) releaseTemplateResource(a *structs.App, r manifest.Resource) ([]byte, error) {

@@ -31,10 +31,8 @@ var (
 )
 
 type Router struct {
-	DNSExternal Server
-	DNSInternal Server
-	HTTP        Server
-	HTTPS       Server
+	HTTP  Server
+	HTTPS Server
 
 	backend Backend
 	cache   autocert.Cache
@@ -112,12 +110,6 @@ func New() (*Router, error) {
 		return nil, err
 	}
 
-	fmt.Printf("ns=router fn=new at=dns\n")
-
-	if err := r.setupDNS(); err != nil {
-		return nil, err
-	}
-
 	fmt.Printf("ns=router fn=new at=http\n")
 
 	if err := r.setupHTTP(); err != nil {
@@ -129,19 +121,9 @@ func New() (*Router, error) {
 	return r, nil
 }
 
-func (r *Router) RouterIP(internal bool) string {
-	if internal {
-		return r.backend.InternalIP()
-	} else {
-		return r.backend.ExternalIP()
-	}
-}
-
 func (r *Router) Serve() error {
 	ch := make(chan error, 1)
 
-	go serve(ch, r.DNSExternal)
-	go serve(ch, r.DNSInternal)
 	go serve(ch, r.HTTP)
 	go serve(ch, r.HTTPS)
 
@@ -353,33 +335,6 @@ func (r *Router) idleTick() error {
 			fmt.Printf("err = %+v\n", err)
 		}
 	}
-
-	return nil
-}
-
-func (r *Router) setupDNS() error {
-	ce, err := net.ListenPacket("udp", ":5453")
-	if err != nil {
-		return err
-	}
-
-	de, err := NewDNS(ce, r, false)
-	if err != nil {
-		return err
-	}
-
-	ci, err := net.ListenPacket("udp", ":5454")
-	if err != nil {
-		return err
-	}
-
-	di, err := NewDNS(ci, r, true)
-	if err != nil {
-		return err
-	}
-
-	r.DNSExternal = de
-	r.DNSInternal = di
 
 	return nil
 }

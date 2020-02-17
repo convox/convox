@@ -29,9 +29,22 @@ module "api" {
   name      = var.name
   namespace = module.k8s.namespace
   release   = var.release
-  resolver  = module.router.resolver
+  resolver  = module.resolver.endpoint
   router    = module.router.endpoint
   secret    = random_string.secret.result
+}
+
+module "resolver" {
+  source = "../../resolver/local"
+
+  providers = {
+    kubernetes = kubernetes
+  }
+
+  namespace = module.k8s.namespace
+  platform  = var.platform
+  rack      = var.name
+  release   = var.release
 }
 
 module "router" {

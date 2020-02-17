@@ -1,7 +1,3 @@
-terraform {
-  required_version = ">= 0.12.0"
-}
-
 provider "kubernetes" {
   version = "~> 1.10"
 }
@@ -159,20 +155,6 @@ resource "kubernetes_deployment" "router" {
             }
           }
 
-          env {
-            name = "POD_IP"
-            value_from {
-              field_ref {
-                field_path = "status.podIP"
-              }
-            }
-          }
-
-          env {
-            name  = "SERVICE_HOST"
-            value = "router.${var.namespace}.svc.cluster.local"
-          }
-
           dynamic "env" {
             for_each = var.env
 
@@ -190,11 +172,6 @@ resource "kubernetes_deployment" "router" {
           port {
             container_port = "443"
             protocol       = "TCP"
-          }
-
-          port {
-            container_port = "5453"
-            protocol       = "UDP"
           }
 
           resources {
@@ -236,32 +213,5 @@ resource "kubernetes_horizontal_pod_autoscaler" "router" {
 
   lifecycle {
     ignore_changes = [spec[0].min_replicas, spec[0].max_replicas]
-  }
-}
-
-resource "kubernetes_service" "resolver" {
-  metadata {
-    namespace = var.namespace
-    name      = "resolver"
-  }
-
-  spec {
-    type = "ClusterIP"
-
-    port {
-      name        = "dns"
-      port        = 53
-      protocol    = "UDP"
-      target_port = 5454
-    }
-
-    selector = {
-      system  = "convox"
-      service = "router"
-    }
-  }
-
-  lifecycle {
-    ignore_changes = [metadata[0].annotations]
   }
 }

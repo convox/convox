@@ -32,19 +32,21 @@ module "api" {
   namespace     = module.k8s.namespace
   nodes_account = var.nodes_account
   release       = var.release
-  resolver      = module.router.resolver
+  resolver      = module.resolver.endpoint
   router        = module.router.endpoint
 }
 
-module "redis" {
-  source = "../../redis/gcp"
+module "resolver" {
+  source = "../../resolver/gcp"
 
   providers = {
-    google = google
+    google     = google
+    kubernetes = kubernetes
   }
 
-  name    = var.name
-  network = var.network
+  namespace = module.k8s.namespace
+  rack      = var.name
+  release   = var.release
 }
 
 module "router" {
@@ -59,10 +61,4 @@ module "router" {
   namespace = module.k8s.namespace
   network   = var.network
   release   = var.release
-
-  env = {
-    CACHE      = "redis"
-    REDIS_ADDR = module.redis.addr
-    STORAGE    = "redis"
-  }
 }
