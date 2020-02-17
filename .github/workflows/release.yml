@@ -32,11 +32,6 @@ jobs:
         tag_name: ${{ env.VERSION }}
     - name: tools
       run: make tools
-    - name: docs
-      run: make docs VERSION=${VERSION}
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_UPLOAD_ACCESS }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_UPLOAD_SECRET }}
     - name: cli
       run: make -C cmd/convox build
     - name: build

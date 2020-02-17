@@ -1,6 +1,6 @@
-.PHONY: all build clean clean-package compress dev docs generate generate-k8s generate-provider mocks package release test tools vendor
+.PHONY: all build clean clean-package compress dev generate generate-k8s generate-provider mocks package release test tools vendor
 
-commands = api atom build docs resolver router
+commands = api atom build resolver router
 
 binaries = $(addprefix $(GOPATH)/bin/, $(commands))
 sources  = $(shell find . -name '*.go')
@@ -29,10 +29,6 @@ dev:
 	$(call wait,$(RACK)-system,deployment/atom)
 	$(call wait,$(RACK)-system,deployment/resolver)
 	$(call wait,$(RACK)-system,deployment/router)
-
-docs:
-	test -n "$(VERSION)" # VERSION
-	aws s3 sync docs/ s3://convox-docs/$(VERSION) --delete
 
 generate: generate-provider generate-k8s
 
