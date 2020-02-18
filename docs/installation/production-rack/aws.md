@@ -41,7 +41,7 @@ You can list all available regions for your account with the following command:
 
 ## Install Rack
 
-    $ convox rack install aws <name> [param1=value1]...
+    $ convox rack install aws --name=<name> [param1=value1]...
 
 ### Available Parameters
 
