@@ -226,5 +226,5 @@ Promoting a Release starts a rolling deployment:
 
 ## Next steps
 
-While this was a simple example we encourage you to take a look at the Configuration
+While this is a simple example we encourage you to take a look at the Configuration
 section of the docs to see how you can configure a more complex application.
