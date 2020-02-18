@@ -1,8 +1,8 @@
 		module "system" {
-			source = "github.com/convox/convox//terraform/system/local"
+			source = "github.com/convox/convox//terraform/system/local?ref=foo"
 
 			name = "dev1"
-			release = ""
+			release = "foo"
 		}
 
 		output "api" {

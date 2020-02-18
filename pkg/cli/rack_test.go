@@ -13,6 +13,7 @@ import (
 	mocksdk "github.com/convox/convox/pkg/mock/sdk"
 	mockstdcli "github.com/convox/convox/pkg/mock/stdcli"
 	"github.com/convox/convox/pkg/options"
+	"github.com/convox/convox/pkg/rack"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/stretchr/testify/require"
 )
@@ -50,6 +51,8 @@ func TestRackError(t *testing.T) {
 
 func TestRackInstall(t *testing.T) {
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		rack.TestLatest = "foo"
+
 		me := &mockstdcli.Executor{}
 		me.On("Execute", "terraform", "version").Return([]byte{}, nil)
 		me.On("Terminal", "terraform", "init").Return(nil)
@@ -91,6 +94,8 @@ func TestRackInstall(t *testing.T) {
 
 func TestRackInstallArgs(t *testing.T) {
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		rack.TestLatest = "foo"
+
 		me := &mockstdcli.Executor{}
 		me.On("Execute", "terraform", "version").Return([]byte{}, nil)
 		me.On("Terminal", "terraform", "init").Return(nil)

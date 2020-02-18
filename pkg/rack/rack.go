@@ -13,6 +13,10 @@ import (
 	"github.com/convox/stdcli"
 )
 
+var (
+	TestLatest string
+)
+
 type Rack interface {
 	Client() (sdk.Interface, error)
 	Name() string
@@ -71,6 +75,10 @@ func Install(c *stdcli.Context, name, provider string, options map[string]string
 }
 
 func Latest() (string, error) {
+	if TestLatest != "" {
+		return TestLatest, nil
+	}
+
 	res, err := http.Get("https://api.github.com/repos/convox/convox/releases/latest")
 	if err != nil {
 		return "", err
