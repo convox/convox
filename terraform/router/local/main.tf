@@ -37,33 +37,6 @@ module "k8s" {
   }
 }
 
-resource "kubernetes_service" "resolver-external" {
-  metadata {
-    namespace = var.namespace
-    name      = "resolver-external"
-  }
-
-  spec {
-    type = var.platform == "Linux" ? "ClusterIP" : "LoadBalancer"
-
-    port {
-      name        = "dns"
-      port        = 53
-      protocol    = "UDP"
-      target_port = 5453
-    }
-
-    selector = {
-      system  = "convox"
-      service = "router"
-    }
-  }
-
-  lifecycle {
-    ignore_changes = [metadata[0].annotations]
-  }
-}
-
 resource "kubernetes_service" "router" {
   metadata {
     namespace = var.namespace
@@ -87,10 +60,7 @@ resource "kubernetes_service" "router" {
       target_port = 443
     }
 
-    selector = {
-      system  = "convox"
-      service = "router"
-    }
+    selector = module.k8s.selector
   }
 
   lifecycle {

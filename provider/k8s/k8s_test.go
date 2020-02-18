@@ -126,8 +126,8 @@ func (te *TestEngine) IngressAnnotations(app string) (map[string]string, error) 
 	return map[string]string{"ann1": "val1"}, nil
 }
 
-func (te *TestEngine) IngressSecrets(app string) ([]string, error) {
-	return []string{}, nil
+func (te *TestEngine) IngressClass() string {
+	return ""
 }
 
 func (te *TestEngine) Log(app, stream string, ts time.Time, message string) error {

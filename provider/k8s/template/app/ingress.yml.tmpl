@@ -2,35 +2,40 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   namespace: {{.Namespace}}
-  name: {{.App}}
+  name: {{.App}}-{{.Service.Name}}
   annotations:
     alb.ingress.kubernetes.io/scheme: internet-facing
-    convox.idles: "{{.Idles}}"
-    {{ range .Services }}
-    convox.ingress.service.{{.Name}}.{{.Port.Port}}.protocol: {{.Port.Scheme}}
-    {{ end }}
+    convox.com/backend-protocol: "{{.Service.Port.Scheme}}"
+    convox.com/idles: "{{.Idles}}"
+    kubernetes.io/ingress-class: "{{.Class}}"
+    nginx.ingress.kubernetes.io/backend-protocol: "{{.Service.Port.Scheme}}"
     {{ range $k, $v := .Annotations }}
     {{$k}}: {{ safe $v }}
     {{ end }}
 spec:
   tls:
-  {{ range .Services }}
-  {{ range (domains $.App .) }}
   - hosts:
+    - {{ safe .Host }}
+    secretName: cert-{{.Service.Name}}
+  {{ with .Service.Domains }}
+  - hosts:
+    {{ range . }}
     - {{ safe . }}
-    {{ with $s := (index $.Secrets .) }}
-    secretName: {{.}}
     {{ end }}
-  {{ end }}
+    secretName: cert-{{$.Service.Name}}-domains
   {{ end }}
   rules:
-    {{ range $s := .Services }}
-    {{ range (domains $.App .) }}
+    - host: {{ safe .Host }}
+      http:
+        paths:
+        - backend:
+            serviceName: {{$.Service.Name}}
+            servicePort: {{$.Service.Port.Port}}
+    {{ range (domains .App .Service) }}
     - host: {{ safe . }}
       http:
         paths:
         - backend:
-            serviceName: {{$s.Name}}
-            servicePort: {{$s.Port.Port}}
-    {{ end }}
+            serviceName: {{$.Service.Name}}
+            servicePort: {{$.Service.Port.Port}}
     {{ end }}

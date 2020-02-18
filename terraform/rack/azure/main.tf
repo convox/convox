@@ -36,21 +36,23 @@ module "api" {
   namespace      = module.k8s.namespace
   region         = var.region
   release        = var.release
-  resolver       = module.router.resolver
+  resolver       = module.resolver.endpoint
   resource_group = var.resource_group
   router         = module.router.endpoint
   workspace      = var.workspace
 }
 
-module "redis" {
-  source = "../../redis/azure"
+module "resolver" {
+  source = "../../resolver/azure"
 
   providers = {
-    azurerm = azurerm
+    azurerm    = azurerm
+    kubernetes = kubernetes
   }
 
-  name           = var.name
-  resource_group = var.resource_group
+  namespace = module.k8s.namespace
+  rack      = var.name
+  release   = var.release
 }
 
 module "router" {
@@ -65,12 +67,4 @@ module "router" {
   namespace = module.k8s.namespace
   region    = var.region
   release   = var.release
-
-  env = {
-    CACHE        = "redis"
-    REDIS_ADDR   = module.redis.addr
-    REDIS_AUTH   = module.redis.auth
-    REDIS_SECURE = "true"
-    STORAGE      = "redis"
-  }
 }

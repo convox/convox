@@ -28,17 +28,28 @@ func (p *Provider) ReleaseCreate(app string, opts structs.ReleaseCreateOptions) 
 		r.Build = *opts.Build
 	}
 
-	if opts.Env != nil {
-		r.Env = *opts.Env
-	}
-
 	if r.Build != "" {
 		b, err := p.BuildGet(app, r.Build)
 		if err != nil {
 			return nil, err
 		}
 
+		r.Description = b.Description
 		r.Manifest = b.Manifest
+	}
+
+	if opts.Env != nil {
+		desc, err := common.EnvDiff(r.Env, *opts.Env)
+		if err != nil {
+			return nil, err
+		}
+
+		r.Description = fmt.Sprintf("env %s", desc)
+		r.Env = *opts.Env
+	}
+
+	if opts.Description != nil {
+		r.Description = *opts.Description
 	}
 
 	ro, err := p.releaseCreate(r)
@@ -333,31 +344,34 @@ func (p *Provider) releaseTemplateIngress(a *structs.App, ss manifest.Services, 
 		return nil, err
 	}
 
-	iss, err := p.ingressSecrets(a, ss)
-	if err != nil {
-		return nil, err
-	}
-
 	idles, err := p.Engine.AppIdles(a.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	params := map[string]interface{}{
-		"Annotations": ans,
-		"App":         a.Name,
-		"Idles":       common.DefaultBool(opts.Idle, idles),
-		"Namespace":   p.AppNamespace(a.Name),
-		"Secrets":     iss,
-		"Services":    ss,
+	items := [][]byte{}
+
+	for _, s := range ss {
+		params := map[string]interface{}{
+			"Annotations": ans,
+			"App":         a.Name,
+			"Class":       p.Engine.IngressClass(),
+			"Host":        p.Engine.ServiceHost(a.Name, s),
+			"Idles":       common.DefaultBool(opts.Idle, idles),
+			"Namespace":   p.AppNamespace(a.Name),
+			"Rack":        p.Name,
+			"Service":     s,
+		}
+
+		data, err := p.RenderTemplate("app/ingress", params)
+		if err != nil {
+			return nil, err
+		}
+
+		items = append(items, data)
 	}
 
-	data, err := p.RenderTemplate("app/ingress", params)
-	if err != nil {
-		return nil, err
-	}
-
-	return data, nil
+	return bytes.Join(items, []byte("---\n")), nil
 }
 
 func (p *Provider) releaseTemplateResource(a *structs.App, r manifest.Resource) ([]byte, error) {

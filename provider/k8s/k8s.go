@@ -21,21 +21,22 @@ import (
 )
 
 type Provider struct {
-	Atom      atom.Interface
-	Config    *rest.Config
-	Cluster   kubernetes.Interface
-	Domain    string
-	Engine    Engine
-	Image     string
-	Name      string
-	Namespace string
-	Password  string
-	Provider  string
-	Resolver  string
-	Router    string
-	Socket    string
-	Storage   string
-	Version   string
+	Atom        atom.Interface
+	CertManager bool
+	Config      *rest.Config
+	Cluster     kubernetes.Interface
+	Domain      string
+	Engine      Engine
+	Image       string
+	Name        string
+	Namespace   string
+	Password    string
+	Provider    string
+	Resolver    string
+	Router      string
+	Socket      string
+	Storage     string
+	Version     string
 
 	ctx       context.Context
 	logger    *logger.Logger
@@ -67,20 +68,21 @@ func FromEnv() (*Provider, error) {
 	}
 
 	p := &Provider{
-		Atom:      ac,
-		Config:    rc,
-		Cluster:   kc,
-		Domain:    os.Getenv("DOMAIN"),
-		Image:     os.Getenv("IMAGE"),
-		Name:      ns.Labels["rack"],
-		Namespace: ns.Name,
-		Password:  os.Getenv("PASSWORD"),
-		Provider:  common.CoalesceString(os.Getenv("PROVIDER"), "k8s"),
-		Resolver:  os.Getenv("RESOLVER"),
-		Router:    os.Getenv("ROUTER"),
-		Socket:    common.CoalesceString(os.Getenv("SOCKET"), "/var/run/docker.sock"),
-		Storage:   common.CoalesceString(os.Getenv("STORAGE"), "/var/storage"),
-		Version:   common.CoalesceString(os.Getenv("VERSION"), "dev"),
+		Atom:        ac,
+		CertManager: os.Getenv("CERT_MANAGER") == "true",
+		Config:      rc,
+		Cluster:     kc,
+		Domain:      os.Getenv("DOMAIN"),
+		Image:       os.Getenv("IMAGE"),
+		Name:        ns.Labels["rack"],
+		Namespace:   ns.Name,
+		Password:    os.Getenv("PASSWORD"),
+		Provider:    common.CoalesceString(os.Getenv("PROVIDER"), "k8s"),
+		Resolver:    os.Getenv("RESOLVER"),
+		Router:      os.Getenv("ROUTER"),
+		Socket:      common.CoalesceString(os.Getenv("SOCKET"), "/var/run/docker.sock"),
+		Storage:     common.CoalesceString(os.Getenv("STORAGE"), "/var/storage"),
+		Version:     common.CoalesceString(os.Getenv("VERSION"), "dev"),
 	}
 
 	if err := p.Initialize(structs.ProviderOptions{}); err != nil {
@@ -205,6 +207,16 @@ func (p *Provider) initializeTemplates() error {
 
 	if err := p.applySystemTemplate("crd", nil); err != nil {
 		return err
+	}
+
+	if p.CertManager {
+		if err := p.applySystemTemplate("cert-manager", nil); err != nil {
+			return err
+		}
+
+		if err := p.applySystemTemplate("cert-manager-config", nil); err != nil {
+			return err
+		}
 	}
 
 	return nil

@@ -33,16 +33,19 @@ module "k8s" {
   release   = var.release
 
   annotations = {
-    "eks.amazonaws.com/role-arn" : aws_iam_role.api.arn,
-    "iam.amazonaws.com/role" : aws_iam_role.api.arn,
+    "cert-manager.io/cluster-issuer" = "letsencrypt"
+    "eks.amazonaws.com/role-arn"     = aws_iam_role.api.arn
+    "iam.amazonaws.com/role"         = aws_iam_role.api.arn
+    "kubernetes.io/ingress.class"    = "nginx"
   }
 
   env = {
-    AWS_REGION = data.aws_region.current.name
-    BUCKET     = aws_s3_bucket.storage.id
-    PROVIDER   = "aws"
-    RESOLVER   = var.resolver
-    ROUTER     = var.router
-    SOCKET     = "/var/run/docker.sock"
+    AWS_REGION   = data.aws_region.current.name
+    BUCKET       = aws_s3_bucket.storage.id
+    CERT_MANAGER = "true"
+    PROVIDER     = "aws"
+    RESOLVER     = var.resolver
+    ROUTER       = var.router
+    SOCKET       = "/var/run/docker.sock"
   }
 }

@@ -191,11 +191,12 @@ metadata:
   namespace: {{.Namespace}}
   name: {{.Service.Name}}
   annotations:
-    alb.ingress.kubernetes.io/target-type: pod
-    convox.service.ports.{{.Service.Port.Port}}.protocol: {{.Service.Port.Scheme}}
-    cloud.google.com/app-protocols: '{"main":"{{ upper .Service.Port.Scheme }}"}'
+    convox.com/alias: "{{.Service.Name}}.{{.App.Name}}.{{.Rack}}.local"
   labels:
+    app: {{.App.Name}}
     service: {{.Service.Name}}
+    rack: {{.Rack}}
+    system: convox
 spec:
   type: ClusterIP
   selector:

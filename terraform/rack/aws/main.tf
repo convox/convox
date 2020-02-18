@@ -40,8 +40,21 @@ module "api" {
   oidc_arn  = var.oidc_arn
   oidc_sub  = var.oidc_sub
   release   = var.release
-  resolver  = module.router.resolver
+  resolver  = module.resolver.endpoint
   router    = module.router.endpoint
+}
+
+module "resolver" {
+  source = "../../resolver/aws"
+
+  providers = {
+    aws        = aws
+    kubernetes = kubernetes
+  }
+
+  namespace = module.k8s.namespace
+  rack      = var.name
+  release   = var.release
 }
 
 module "router" {

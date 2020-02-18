@@ -110,7 +110,18 @@ func RackInstall(_ sdk.Interface, c *stdcli.Context) error {
 		return fmt.Errorf("unknown provider: %s", slug)
 	}
 
-	if err := rack.Install(c, slug, name, argsToOptions(args)); err != nil {
+	opts := argsToOptions(args)
+
+	if _, ok := opts["release"]; !ok {
+		latest, err := rack.Latest()
+		if err != nil {
+			return err
+		}
+
+		opts["release"] = latest
+	}
+
+	if err := rack.Install(c, slug, name, opts); err != nil {
 		return err
 	}
 
@@ -279,11 +290,20 @@ func RackUpdate(_ sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	options := map[string]string{
+	opts := map[string]string{
 		"release": c.Arg(0),
 	}
 
-	if err := r.Update(options); err != nil {
+	if _, ok := opts["release"]; !ok {
+		latest, err := rack.Latest()
+		if err != nil {
+			return err
+		}
+
+		opts["release"] = latest
+	}
+
+	if err := r.Update(opts); err != nil {
 		return err
 	}
 

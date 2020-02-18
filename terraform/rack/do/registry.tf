@@ -169,6 +169,10 @@ resource "kubernetes_ingress" "registry" {
     namespace = module.k8s.namespace
     name      = "registry"
 
+    annotations = {
+      "cert-manager.io/cluster-issuer" : "letsencrypt"
+    }
+
     labels = {
       system  = "convox"
       service = "registry"
@@ -177,7 +181,8 @@ resource "kubernetes_ingress" "registry" {
 
   spec {
     tls {
-      hosts = ["registry.${module.router.endpoint}"]
+      hosts       = ["registry.${module.router.endpoint}"]
+      secret_name = "registry-certificate"
     }
 
     rule {

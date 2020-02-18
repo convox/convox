@@ -3,12 +3,18 @@ package rack
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"sort"
 	"strings"
 
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
+)
+
+var (
+	TestLatest string
 )
 
 type Rack interface {
@@ -66,6 +72,33 @@ func Install(c *stdcli.Context, name, provider string, options map[string]string
 	default:
 		return fmt.Errorf("invalid name: %s", name)
 	}
+}
+
+func Latest() (string, error) {
+	if TestLatest != "" {
+		return TestLatest, nil
+	}
+
+	res, err := http.Get("https://api.github.com/repos/convox/convox/releases/latest")
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return "", err
+	}
+
+	var release struct {
+		Tag string `json:"tag_name"`
+	}
+
+	if err := json.Unmarshal(data, &release); err != nil {
+		return "", err
+	}
+
+	return release.Tag, nil
 }
 
 func List(c *stdcli.Context) ([]Rack, error) {

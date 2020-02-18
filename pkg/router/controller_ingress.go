@@ -90,6 +90,10 @@ func (c *IngressController) Delete(obj interface{}) error {
 
 	fmt.Printf("ns=controller.ingress at=delete ingress=%s\n", i.ObjectMeta.Name)
 
+	if i.ObjectMeta.Annotations["kubernetes.io/ingress.class"] != "convox" {
+		return nil
+	}
+
 	for _, r := range i.Spec.Rules {
 		for _, port := range r.IngressRuleValue.HTTP.Paths {
 			target := rulePathTarget(port, i.ObjectMeta)
@@ -117,11 +121,15 @@ func (c *IngressController) Update(prev, cur interface{}) error {
 }
 
 func (c *IngressController) syncIngress(i *ae.Ingress) error {
+	if i.ObjectMeta.Annotations["kubernetes.io/ingress.class"] != "convox" {
+		return nil
+	}
+
 	for _, r := range i.Spec.Rules {
 		for _, port := range r.IngressRuleValue.HTTP.Paths {
 			target := rulePathTarget(port, i.ObjectMeta)
 			// c.controller.Event(i, ac.EventTypeNormal, "TargetAdd", fmt.Sprintf("%s => %s", r.Host, target))
-			c.router.TargetAdd(r.Host, target, i.ObjectMeta.Annotations["convox.idles"] == "true")
+			c.router.TargetAdd(r.Host, target, i.ObjectMeta.Annotations["convox.com/idles"] == "true")
 		}
 	}
 
@@ -156,7 +164,7 @@ func assertIngress(v interface{}) (*ae.Ingress, error) {
 func rulePathTarget(port ae.HTTPIngressPath, meta am.ObjectMeta) string {
 	proto := "http"
 
-	if p := meta.Annotations[fmt.Sprintf("convox.ingress.service.%s.%d.protocol", port.Backend.ServiceName, port.Backend.ServicePort.IntVal)]; p != "" {
+	if p := meta.Annotations["convox.com/backend-protocol"]; p != "" {
 		proto = p
 	}
 

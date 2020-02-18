@@ -1,9 +1,13 @@
 package aws
 
 func (p *Provider) IngressAnnotations(app string) (map[string]string, error) {
-	return map[string]string{}, nil
+	as := map[string]string{
+		"cert-manager.io/cluster-issuer": "letsencrypt",
+	}
+
+	return as, nil
 }
 
-func (p *Provider) IngressSecrets(app string) ([]string, error) {
-	return []string{}, nil
+func (p *Provider) IngressClass() string {
+	return "nginx"
 }

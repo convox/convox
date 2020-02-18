@@ -28,7 +28,8 @@ module "k8s" {
   replicas       = 1
 
   annotations = {
-    "convox.idles" : "true"
+    "convox.com/idles"            = "true"
+    "kubernetes.io/ingress.class" = "convox"
   }
 
   env = {

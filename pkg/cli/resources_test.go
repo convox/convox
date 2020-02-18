@@ -28,7 +28,7 @@ func TestResources(t *testing.T) {
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
-			"NAME       TYPE  URL                     ",
+			"NAME       TYPE  URL",
 			"resource1  type  https://example.org/path",
 			"resource1  type  https://example.org/path",
 		})
@@ -169,7 +169,7 @@ func TestRackResources(t *testing.T) {
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
-			"NAME       TYPE  STATUS ",
+			"NAME       TYPE  STATUS",
 			"resource1  type  running",
 			"resource1  type  running",
 		})
@@ -341,8 +341,8 @@ func TestRackResourcesOptions(t *testing.T) {
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
 			"NAME    DEFAULT  DESCRIPTION",
-			"Param1  def1     desc1      ",
-			"Param2  def2     desc2      ",
+			"Param1  def1     desc1",
+			"Param2  def2     desc2",
 		})
 	})
 }
@@ -425,7 +425,7 @@ func TestRackResourcesTypes(t *testing.T) {
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
-			"TYPE ",
+			"TYPE",
 			"type1",
 			"type1",
 		})

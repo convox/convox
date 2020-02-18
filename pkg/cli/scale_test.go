@@ -25,8 +25,8 @@ func TestScale(t *testing.T) {
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
 			"SERVICE   DESIRED  RUNNING  CPU  MEMORY",
-			"service1  1        0        2    3     ",
-			"service1  1        0        2    3     ",
+			"service1  1        0        2    3",
+			"service1  1        0        2    3",
 		})
 	})
 }
@@ -56,8 +56,8 @@ func TestScaleClassic(t *testing.T) {
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
 			"SERVICE   DESIRED  RUNNING  CPU  MEMORY",
-			"service1  1        0        2    3     ",
-			"service1  1        0        2    3     ",
+			"service1  1        0        2    3",
+			"service1  1        0        2    3",
 		})
 	})
 }

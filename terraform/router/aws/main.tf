@@ -24,8 +24,8 @@ locals {
 data "aws_region" "current" {
 }
 
-module "k8s" {
-  source = "../k8s"
+module "nginx" {
+  source = "../nginx"
 
   providers = {
     kubernetes = kubernetes
@@ -33,22 +33,6 @@ module "k8s" {
 
   namespace = var.namespace
   rack      = var.name
-  release   = var.release
-
-  annotations = {
-    "eks.amazonaws.com/role-arn" : aws_iam_role.router.arn,
-    "iam.amazonaws.com/role" : aws_iam_role.router.arn,
-  }
-
-  env = merge(var.env, {
-    AUTOCERT        = "true"
-    AWS_REGION      = data.aws_region.current.name
-    CACHE           = "dynamodb"
-    DYNAMODB_CACHE  = aws_dynamodb_table.cache.name
-    DYNAMODB_HOSTS  = aws_dynamodb_table.hosts.name
-    DYNAMODB_ROUTES = aws_dynamodb_table.routes.name
-    STORAGE         = "dynamodb"
-  })
 }
 
 resource "kubernetes_service" "router" {
@@ -74,10 +58,7 @@ resource "kubernetes_service" "router" {
       target_port = 443
     }
 
-    selector = {
-      system  = "convox"
-      service = "router"
-    }
+    selector = module.nginx.selector
   }
 }
 
