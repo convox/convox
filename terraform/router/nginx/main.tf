@@ -185,7 +185,7 @@ resource "kubernetes_deployment" "ingress-nginx" {
         automount_service_account_token  = true
 
         container {
-          name  = "nginx-ingress-controller"
+          name  = "main"
           image = "quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.26.1"
           args = [
             "/nginx-ingress-controller",

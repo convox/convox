@@ -6,7 +6,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -98,6 +97,14 @@ func build(rack sdk.Interface, c *stdcli.Context, development bool) (*structs.Bu
 		return nil, err
 	}
 
+	if opts.Description == nil {
+		if _, err := c.Execute("git", "diff", "--quiet"); err == nil {
+			if data, err := c.Execute("git", "log", "-n", "1", "--pretty=%h %s", "--abbrev=10"); err == nil {
+				opts.Description = options.String(fmt.Sprintf("build %s", strings.TrimSpace(string(data))))
+			}
+		}
+	}
+
 	env, err := common.AppEnvironment(rack, app(c))
 	if err != nil {
 		return nil, err
@@ -112,14 +119,6 @@ func build(rack sdk.Interface, c *stdcli.Context, development bool) (*structs.Bu
 
 	if _, err := manifest.Load(data, env); err != nil {
 		return nil, err
-	}
-
-	if opts.Description == nil {
-		if err := exec.Command("git", "diff", "--quiet").Run(); err == nil {
-			if data, err := exec.Command("git", "log", "-n", "1", "--pretty=%h %s", "--abbrev=10").CombinedOutput(); err == nil {
-				opts.Description = options.String(fmt.Sprintf("build %s", strings.TrimSpace(string(data))))
-			}
-		}
 	}
 
 	c.Startf("Packaging source")

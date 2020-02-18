@@ -120,7 +120,7 @@ github.com/convox/inotify
 github.com/convox/logger
 # github.com/convox/stdapi v0.0.0-20190708203955-b81b71b6a680
 github.com/convox/stdapi
-# github.com/convox/stdcli v0.0.0-20200122204822-238a68a930fd
+# github.com/convox/stdcli v0.0.0-20200218120900-608b86ac40a1
 github.com/convox/stdcli
 # github.com/convox/stdsdk v0.0.0-20190422120437-3e80a397e377
 github.com/convox/stdsdk
@@ -361,7 +361,7 @@ go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/propagation
 go.opencensus.io/trace/tracestate
-# golang.org/x/crypto v0.0.0-20200117160349-530e935923ad
+# golang.org/x/crypto v0.0.0-20200214034016-1d94cc7ab1c6
 golang.org/x/crypto/acme
 golang.org/x/crypto/acme/autocert
 golang.org/x/crypto/ed25519
@@ -394,7 +394,7 @@ golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
 # golang.org/x/sync v0.0.0-20190423024810-112230192c58
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.0.0-20200122134326-e047566fdf82
+# golang.org/x/sys v0.0.0-20200217220822-9197077df867
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/windows/registry

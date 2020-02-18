@@ -37,7 +37,7 @@ func TestRacksLocal(t *testing.T) {
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
-			"NAME  PROVIDER  STATUS ",
+			"NAME  PROVIDER  STATUS",
 			"dev1  local     running",
 		})
 	})
@@ -67,8 +67,8 @@ func TestRacksRemote(t *testing.T) {
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
-			"NAME        PROVIDER  STATUS  ",
-			"test/foo    prov1     running ",
+			"NAME        PROVIDER  STATUS",
+			"test/foo    prov1     running",
 			"test/other  prov2     updating",
 		})
 	})
@@ -100,9 +100,9 @@ func TestRacksLocalAndRemote(t *testing.T) {
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
-			"NAME        PROVIDER  STATUS  ",
-			"dev1        local     running ",
-			"test/foo    prov1     running ",
+			"NAME        PROVIDER  STATUS",
+			"dev1        local     running",
+			"test/foo    prov1     running",
 			"test/other  unknown   updating",
 		})
 	})

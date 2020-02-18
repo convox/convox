@@ -19,7 +19,7 @@ require (
 	github.com/convox/exec v0.0.0-20180905012044-cc13d277f897
 	github.com/convox/logger v0.0.0-20180522214415-e39179955b52
 	github.com/convox/stdapi v0.0.0-20190708203955-b81b71b6a680
-	github.com/convox/stdcli v0.0.0-20200122204822-238a68a930fd
+	github.com/convox/stdcli v0.0.0-20200218120900-608b86ac40a1
 	github.com/convox/stdsdk v0.0.0-20190422120437-3e80a397e377
 	github.com/convox/version v0.0.0-20160822184233-ffefa0d565d2
 	github.com/creack/pty v1.1.9
@@ -46,9 +46,9 @@ require (
 	github.com/russross/blackfriday v2.0.0+incompatible
 	github.com/stretchr/testify v1.3.0
 	github.com/vektra/mockery v0.0.0-20181123154057-e78b021dcbb5
-	golang.org/x/crypto v0.0.0-20200117160349-530e935923ad
+	golang.org/x/crypto v0.0.0-20200214034016-1d94cc7ab1c6
 	golang.org/x/net v0.0.0-20191101175033-0deb6923b6d9 // indirect
-	golang.org/x/sys v0.0.0-20200122134326-e047566fdf82 // indirect
+	golang.org/x/sys v0.0.0-20200217220822-9197077df867 // indirect
 	google.golang.org/api v0.9.0
 	gopkg.in/yaml.v2 v2.2.4
 	k8s.io/api v0.16.6
