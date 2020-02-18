@@ -11,6 +11,6 @@ services:
     health: /check
     port: https:3000
     scale:
-      count: 3
+      count: 2
       cpu: 128
       memory: 256
