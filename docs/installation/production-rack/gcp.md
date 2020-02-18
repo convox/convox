@@ -7,6 +7,10 @@
 - [Install the Google Cloud CLI](https://cloud.google.com/sdk/docs/#install_the_latest_cloud_tools_version_cloudsdk_current_version)
 - Run `gcloud init`
 
+### Terraform
+
+- Install [Terraform](https://learn.hashicorp.com/terraform/getting-started/install.html)
+
 ### Convox CLI
 
 - [Install the Convox CLI](../cli.md)

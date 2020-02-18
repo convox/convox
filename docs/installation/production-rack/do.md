@@ -2,6 +2,10 @@
 
 ## Initial Setup
 
+### Terraform
+
+- Install [Terraform](https://learn.hashicorp.com/terraform/getting-started/install.html)
+
 ### Convox CLI
 
 - [Install the Convox CLI](../cli.md)

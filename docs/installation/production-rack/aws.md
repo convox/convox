@@ -6,6 +6,10 @@
 
 - [Install the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html)
 
+### Terraform
+
+- Install [Terraform](https://learn.hashicorp.com/terraform/getting-started/install.html)
+
 ### Convox CLI
 
 - [Install the Convox CLI](../cli.md)

@@ -7,6 +7,10 @@
 - [Install the Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest)
 - Run `az login`
 
+### Terraform
+
+- Install [Terraform](https://learn.hashicorp.com/terraform/getting-started/install.html)
+
 ### Convox CLI
 
 - [Install the Convox CLI](../cli.md)

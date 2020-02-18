@@ -12,6 +12,10 @@
 - Go to the Kubernetes tab
 - Enable Kubernetes
 
+### Terraform
+
+- Install [Terraform](https://learn.hashicorp.com/terraform/getting-started/install.html)
+
 ### Convox CLI
 
     $ curl -L https://github.com/convox/convox/releases/latest/download/convox-macos -o /tmp/convox
