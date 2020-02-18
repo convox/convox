@@ -28,7 +28,7 @@ RUN make build
 
 ## package #####################################################################
 
-FROM golang:1.12 AS package
+FROM golang:1.13 AS package
 
 RUN apt-get update && apt-get -y install upx-ucl
 
@@ -58,10 +58,11 @@ ENV PATH=$GOPATH/bin:$PATH
 
 WORKDIR /app
 
-COPY --from=package /go/bin/api    $GOPATH/bin/
-COPY --from=package /go/bin/atom   $GOPATH/bin/
-COPY --from=package /go/bin/build  $GOPATH/bin/
-COPY --from=package /go/bin/docs   $GOPATH/bin/
-COPY --from=package /go/bin/router $GOPATH/bin/
+COPY --from=package /go/bin/api      $GOPATH/bin/
+COPY --from=package /go/bin/atom     $GOPATH/bin/
+COPY --from=package /go/bin/build    $GOPATH/bin/
+COPY --from=package /go/bin/docs     $GOPATH/bin/
+COPY --from=package /go/bin/resolver $GOPATH/bin/
+COPY --from=package /go/bin/router   $GOPATH/bin/
 
 COPY --from=package /usr/src/convox/bin/docs bin/docs
