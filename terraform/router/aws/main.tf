@@ -39,6 +39,10 @@ resource "kubernetes_service" "router" {
   metadata {
     namespace = var.namespace
     name      = "router"
+
+    annotations = {
+      "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout" = "3600"
+    }
   }
 
   spec {
