@@ -1,12 +1,12 @@
 # Troubleshooting
 
-## Local Rack
+## Development Rack
 
 ### Installation
 
 Ensure you have followed the setup instructions for your local OS [here](../installation/development-rack).  Memory requirements for running Docker/Kubernetes locally can often catch people out.
 
-## Cloud Rack
+## Production Rack
 
 ### Installation
 
@@ -17,7 +17,8 @@ One of the majoy advantages of Convox is that it abstracts you from the complexi
 - [Azure](https://status.azure.com/en-us/status)
 - [Digital Ocean](https://status.digitalocean.com/)
 
-And to retry your installation after a few minutes.  If your Rack consistently fails to install into your Cloud provider and there are no relevant issues reported then please raise a [support ticket](/help/support) for us to investigate.
+And to retry your installation after a few minutes.  You can retry the installation by simply running `convox rack update -r <rackname>`.
+If your Rack consistently fails to install into your Cloud provider and there are no relevant issues reported then please raise a [support ticket](/help/support) for us to investigate.
 
 ### Scaling
 
