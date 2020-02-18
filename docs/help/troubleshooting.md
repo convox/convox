@@ -28,8 +28,8 @@ Scaling issues can often arise when you run into quota limits set by your cloud 
 
 ### Health Checks
 
-Any services within your app that expose a port will require a passing health check before receiving traffic.  Deploying a Release of your App that does not pass the health checks will result in a rollback to the previous release.  If this is your first release of a new app, a failing health check will result in a failed deployment.
-Failing health checks will be reported when promoting your release:
+Any Services within your App that expose a port will require a passing [health check](../configuration/health-checks) before receiving traffic.  Deploying a Release of your App that does not pass the health checks will result in a rollback to the previous release.  If this is your first release of a new App, a failing health check will result in a failed deployment.
+Failing health checks will be reported when promoting your Release:
 
     Promoting RABCDEFGHIJ...
     2020-02-15T21:16:50Z system/k8s/atom/app Status: Running => Pending
@@ -43,4 +43,4 @@ Failing health checks will be reported when promoting your release:
     2020-02-15T21:17:09Z system/k8s/web-56f5d77d7-6gx8z Created container main
     2020-02-15T21:17:17Z system/k8s/web-56f5d77d7-6gx8z Readiness probe failed: HTTP probe failed with statuscode: 404
 
-You should ensure that your app is able to responsd to the health check probes to faciliate a successful deployment.
+You should ensure that your App is able to respond to the health check probes to faciliate a successful deployment.
