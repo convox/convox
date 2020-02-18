@@ -68,7 +68,12 @@ func InstallTerraform(c *stdcli.Context, provider, name string, options map[stri
 		"Vars":     vars,
 	}
 
-	if err := terraformWriteTemplate(tf, params); err != nil {
+	release, ok := options["release"]
+	if !ok {
+		return fmt.Errorf("release required")
+	}
+
+	if err := terraformWriteTemplate(tf, release, params); err != nil {
 		return err
 	}
 
@@ -256,7 +261,12 @@ func (t Terraform) Update(options map[string]string) error {
 		"Vars":     vars,
 	}
 
-	if err := terraformWriteTemplate(tf, params); err != nil {
+	release, ok := options["release"]
+	if !ok {
+		return fmt.Errorf("release required")
+	}
+
+	if err := terraformWriteTemplate(tf, release, params); err != nil {
 		return err
 	}
 
@@ -434,11 +444,11 @@ func terraformTemplateHelpers() template.FuncMap {
 	}
 }
 
-func terraformWriteTemplate(filename string, params map[string]interface{}) error {
+func terraformWriteTemplate(filename, release string, params map[string]interface{}) error {
 	if source := os.Getenv("CONVOX_TERRAFORM_SOURCE"); source != "" {
 		params["Source"] = fmt.Sprintf(source, params["Provider"])
 	} else {
-		params["Source"] = fmt.Sprintf("github.com/convox/convox//terraform/system/%s", params["Provider"])
+		params["Source"] = fmt.Sprintf("github.com/convox/convox//terraform/system/%s?ref=%s", params["Provider"], release)
 	}
 
 	t, err := template.New("main").Funcs(terraformTemplateHelpers()).Parse(`
