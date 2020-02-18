@@ -3,7 +3,7 @@
 ## Local Racks
 
 - To retain your local Apps when moving to the new local Rack, you should [export](../reference/cli/apps#apps-export) them all first.  This will create a local archive of all pertinent data for each app you export.
-- Uninstall your old local rack: `convox rack uninstall local`
+- Uninstall your old local rack: `convox rack uninstall local`.  This should be performed with your existing CLI before upgrading that.
 - Deprecate your existing CLI version: `sudo mv /usr/local/bin/convox /usr/local/bin/convox-old`
 - [Install](../installation/cli) the new CLI
 - Install a new [local Rack](../installation/development-rack/)
@@ -17,4 +17,4 @@
 - [Install](../installation/production-rack/) a new Kubernetes-based Rack
 - Create and then [Import](../reference/cli/apps#apps-import) your Apps from your previous exports.
 - Once satisfied that your Apps are running successfully on your new Rack, you can redirect any DNS / custom Domains to your new apps.
-- Then delete and remove your previous Apps and Rack.
+- Then delete and remove your previous Apps and Rack.  This should be performed with the older version of the CLI. `convox-old apps delete <appname>` and `convox-old rack uninstall -r <rackname>` etc.
