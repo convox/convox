@@ -48,6 +48,15 @@ resource "aws_eks_cluster" "cluster" {
   }
 }
 
+resource "null_resource" "delay_node_destroy" {
+  depends_on = [aws_eks_node_group.cluster]
+
+  provisioner "local-exec" {
+    command = "sleep 300"
+    when    = destroy
+  }
+}
+
 resource "aws_eks_node_group" "cluster" {
   depends_on = [
     aws_eks_cluster.cluster,
