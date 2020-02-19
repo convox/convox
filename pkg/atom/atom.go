@@ -98,6 +98,19 @@ func Apply(namespace, name, release string, template []byte, timeout int32) erro
 	return nil
 }
 
+func Initialize() error {
+	data, err := templates.Render("crd.yml.tmpl", nil)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if out, err := kubectlApply(data); err != nil {
+		return fmt.Errorf("could not initialize:\n%s", string(out))
+	}
+
+	return nil
+}
+
 func (c *Client) Apply(ns, name string, release string, template []byte, timeout int32) error {
 	if _, err := c.k8s.CoreV1().Namespaces().Get(ns, am.GetOptions{}); ae.IsNotFound(err) {
 		if err := c.createNamespace(ns); err != nil {

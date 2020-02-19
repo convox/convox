@@ -102,6 +102,10 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 	p.metrics = metrics.New("https://metrics.convox.com/metrics/rack")
 	p.templater = templater.New(packr.NewBox("../k8s/template"), p.templateHelpers())
 
+	if err := atom.Initialize(); err != nil {
+		return err
+	}
+
 	if err := p.initializeTemplates(); err != nil {
 		return err
 	}
@@ -142,13 +146,13 @@ func (p *Provider) WithContext(ctx context.Context) structs.Provider {
 	return &pp
 }
 
-func (p *Provider) applySystemTemplate(name string, params map[string]interface{}) error {
+func (p *Provider) applySystemTemplate(name string, params map[string]interface{}, args ...string) error {
 	data, err := p.RenderTemplate(fmt.Sprintf("system/%s", name), nil)
 	if err != nil {
 		return err
 	}
 
-	if err := Apply(data); err != nil {
+	if err := Apply(data, args...); err != nil {
 		return err
 	}
 
@@ -201,20 +205,16 @@ func (p *Provider) initializeTemplates() error {
 		return nil
 	}
 
-	if err := p.applySystemTemplate("atom", nil); err != nil {
-		return err
-	}
-
 	if err := p.applySystemTemplate("crd", nil); err != nil {
 		return err
 	}
 
 	if p.CertManager {
-		if err := p.applySystemTemplate("cert-manager", nil); err != nil {
+		if err := p.applySystemTemplate("cert-manager", nil, "--validate=false"); err != nil {
 			return err
 		}
 
-		if err := p.applySystemTemplate("cert-manager-config", nil); err != nil {
+		if err := p.applySystemTemplate("cert-manager-config", nil, "--validate=false"); err != nil {
 			return err
 		}
 	}
