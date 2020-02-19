@@ -98,6 +98,10 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 	p.metrics = metrics.New("https://metrics.convox.com/metrics/rack")
 	p.templater = templater.New(packr.NewBox("../k8s/template"), p.templateHelpers())
 
+	if os.Getenv("TEST") == "true" {
+		return nil
+	}
+
 	if err := atom.Initialize(); err != nil {
 		return err
 	}
@@ -191,10 +195,6 @@ func (p *Provider) heartbeat() error {
 }
 
 func (p *Provider) initializeTemplates() error {
-	if os.Getenv("TEST") == "true" {
-		return nil
-	}
-
 	if err := p.applySystemTemplate("crd", nil); err != nil {
 		return err
 	}
