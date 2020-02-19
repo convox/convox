@@ -212,7 +212,7 @@ func (c *Client) apply(a *aa.Atom) error {
 
 	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(fmt.Sprintf("%s.%s", ua.Namespace, ua.Name))))[0:60]
 
-	if out, err := applyTemplate(av.Spec.Template, fmt.Sprintf("atom=%s", hash)); err != nil {
+	if out, err := applyTemplate(a.ObjectMeta.Namespace, av.Spec.Template, fmt.Sprintf("atom=%s", hash)); err != nil {
 		fmt.Println(string(av.Spec.Template))
 		fmt.Println(string(out))
 		return errors.WithStack(err)
@@ -391,7 +391,7 @@ func applyLabels(data []byte, labels map[string]string) ([]byte, error) {
 	return pd, nil
 }
 
-func applyTemplate(data []byte, filter string) ([]byte, error) {
+func applyTemplate(namespace string, data []byte, filter string) ([]byte, error) {
 	rs, err := templateResources(filter)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -412,7 +412,7 @@ func applyTemplate(data []byte, filter string) ([]byte, error) {
 
 	data = bytes.Join(parts, []byte("---\n"))
 
-	args := []string{"--prune", "-l", filter}
+	args := []string{"--prune", "-l", filter, "--namespace", namespace}
 
 	for _, r := range rs {
 		args = append(args, "--prune-whitelist", r)
