@@ -63,7 +63,7 @@ services:
       port: 3000
     scale: 0
     singleton: true
-    sticky: false
+    sticky: true
   bar:
   scaler:
     scale:
