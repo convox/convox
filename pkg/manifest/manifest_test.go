@@ -80,7 +80,7 @@ func TestManifestLoad(t *testing.T) {
 					Cpu:    256,
 					Memory: 512,
 				},
-				Sticky: true,
+				Sticky: false,
 				Test:   "make  test",
 			},
 			manifest.Service{
@@ -105,7 +105,7 @@ func TestManifestLoad(t *testing.T) {
 					Cpu:    512,
 					Memory: 1024,
 				},
-				Sticky: true,
+				Sticky: false,
 			},
 			manifest.Service{
 				Name: "foo",
@@ -130,7 +130,7 @@ func TestManifestLoad(t *testing.T) {
 					Memory: 512,
 				},
 				Singleton: true,
-				Sticky:    false,
+				Sticky:    true,
 			},
 			manifest.Service{
 				Name: "bar",
@@ -152,7 +152,7 @@ func TestManifestLoad(t *testing.T) {
 					Cpu:    256,
 					Memory: 512,
 				},
-				Sticky: true,
+				Sticky: false,
 			},
 			manifest.Service{
 				Name: "scaler",
@@ -188,7 +188,7 @@ func TestManifestLoad(t *testing.T) {
 						},
 					},
 				},
-				Sticky: true,
+				Sticky: false,
 			},
 			manifest.Service{
 				Name:    "inherit",
@@ -212,7 +212,7 @@ func TestManifestLoad(t *testing.T) {
 					Cpu:    512,
 					Memory: 1024,
 				},
-				Sticky: true,
+				Sticky: false,
 			},
 			manifest.Service{
 				Name: "agent",
@@ -241,7 +241,7 @@ func TestManifestLoad(t *testing.T) {
 					Cpu:    256,
 					Memory: 512,
 				},
-				Sticky: true,
+				Sticky: false,
 			},
 		},
 	}
@@ -386,7 +386,7 @@ func TestManifestLoadSimple(t *testing.T) {
 					Cpu:    256,
 					Memory: 512,
 				},
-				Sticky: true,
+				Sticky: false,
 			},
 		},
 	}
