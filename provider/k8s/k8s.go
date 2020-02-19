@@ -85,10 +85,6 @@ func FromEnv() (*Provider, error) {
 		Version:     common.CoalesceString(os.Getenv("VERSION"), "dev"),
 	}
 
-	if err := p.Initialize(structs.ProviderOptions{}); err != nil {
-		return nil, err
-	}
-
 	return p, nil
 }
 
@@ -121,18 +117,12 @@ func (p *Provider) Start() error {
 		return log.Error(err)
 	}
 
-	nc, err := NewNodeController(p)
-	if err != nil {
-		return log.Error(err)
-	}
-
 	pc, err := NewPodController(p)
 	if err != nil {
 		return log.Error(err)
 	}
 
 	go ec.Run()
-	go nc.Run()
 	go pc.Run()
 
 	go common.Tick(1*time.Hour, p.heartbeat)
@@ -146,13 +136,13 @@ func (p *Provider) WithContext(ctx context.Context) structs.Provider {
 	return &pp
 }
 
-func (p *Provider) applySystemTemplate(name string, params map[string]interface{}, args ...string) error {
+func (p *Provider) applySystemTemplate(name string, params map[string]interface{}) error {
 	data, err := p.RenderTemplate(fmt.Sprintf("system/%s", name), nil)
 	if err != nil {
 		return err
 	}
 
-	if err := Apply(data, args...); err != nil {
+	if err := Apply(data); err != nil {
 		return err
 	}
 
@@ -210,16 +200,51 @@ func (p *Provider) initializeTemplates() error {
 	}
 
 	if p.CertManager {
-		if err := p.applySystemTemplate("cert-manager", nil, "--validate=false"); err != nil {
+		if err := p.applySystemTemplate("cert-manager", nil); err != nil {
 			return err
 		}
 
-		if err := p.applySystemTemplate("cert-manager-config", nil, "--validate=false"); err != nil {
-			return err
-		}
+		go p.installCertManagerConfig()
 	}
 
 	return nil
+}
+
+func (p *Provider) installCertManagerConfig() {
+	tick := time.NewTicker(5 * time.Second)
+	defer tick.Stop()
+
+	timeout := time.NewTimer(10 * time.Minute)
+	defer timeout.Stop()
+
+	fmt.Printf("waiting for cert manager webhook deployment\n")
+
+	for {
+		select {
+		case <-tick.C:
+			d, err := p.Cluster.AppsV1().Deployments("cert-manager").Get("cert-manager-webhook", am.GetOptions{})
+			if err != nil {
+				fmt.Printf("could not get cert manager webhook deployment: %s\n", err)
+				continue
+			}
+
+			for _, c := range d.Status.Conditions {
+				if c.Type == "Available" && c.Status == "True" {
+					fmt.Printf("installing cert manager config\n")
+
+					if err := p.applySystemTemplate("cert-manager-config", nil); err != nil {
+						fmt.Printf("could not install cert manager config: %s\n", err)
+						break
+					}
+
+					return
+				}
+			}
+		case <-timeout.C:
+			fmt.Printf("error: timeout installing cluster issuer\n")
+			return
+		}
+	}
 }
 
 func restConfig() (*rest.Config, error) {
