@@ -23,6 +23,10 @@ func run() error {
 		return err
 	}
 
+	if err := atom.Initialize(); err != nil {
+		return err
+	}
+
 	ac, err := atom.NewController(cfg)
 	if err != nil {
 		return err
