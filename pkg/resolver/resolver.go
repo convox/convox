@@ -88,7 +88,19 @@ func (r *Resolver) resolve(typ, host, router string) (string, bool) {
 	if r.ingress.HostExists(host) {
 		switch typ {
 		case "A":
-			return router, true
+			if net.ParseIP(router) != nil {
+				return router, true
+			}
+			ips, err := net.LookupIP(router)
+			if err != nil {
+				fmt.Printf("err: %+v\n", err)
+				return "", true
+			}
+			if len(ips) < 0 {
+				fmt.Printf("no ip found for: %s\n", router)
+				return "", true
+			}
+			return ips[0].String(), true
 		default:
 			return "", true
 		}
@@ -182,11 +194,6 @@ func (r *Resolver) setupRouter() error {
 
 	if is := s.Status.LoadBalancer.Ingress; len(is) > 0 {
 		r.routerExternal = common.CoalesceString(is[0].IP, is[0].Hostname)
-		switch {
-		case is[0].IP != "":
-			r.routerExternal = is[0].IP
-		case is[0].Hostname != "":
-		}
 	}
 
 	return nil
