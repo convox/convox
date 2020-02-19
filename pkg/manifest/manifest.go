@@ -144,10 +144,6 @@ func (m *Manifest) ApplyDefaults() error {
 		if m.Services[i].Scale.Memory == 0 {
 			m.Services[i].Scale.Memory = DefaultMem
 		}
-
-		if !m.AttributeExists(fmt.Sprintf("services.%s.sticky", s.Name)) {
-			m.Services[i].Sticky = true
-		}
 	}
 
 	return nil

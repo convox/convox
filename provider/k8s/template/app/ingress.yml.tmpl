@@ -9,6 +9,10 @@ metadata:
     convox.com/idles: "{{.Idles}}"
     kubernetes.io/ingress-class: "{{.Class}}"
     nginx.ingress.kubernetes.io/backend-protocol: "{{.Service.Port.Scheme}}"
+    {{ if .Service.Sticky }}
+    nginx.ingress.kubernetes.io/affinity: cookie
+    nginx.ingress.kubernetes.io/session-cookie-name: CONVOXSESSION
+    {{ end }}
     {{ range $k, $v := .Annotations }}
     {{$k}}: {{ safe $v }}
     {{ end }}
@@ -29,9 +33,9 @@ spec:
       http:
         paths:
         - backend:
-            serviceName: {{$.Service.Name}}
-            servicePort: {{$.Service.Port.Port}}
-    {{ range (domains .App .Service) }}
+            serviceName: {{.Service.Name}}
+            servicePort: {{.Service.Port.Port}}
+    {{ range .Service.Domains }}
     - host: {{ safe . }}
       http:
         paths:
