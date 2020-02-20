@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/console"
-	"github.com/convox/convox/pkg/options"
-	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
 	"github.com/convox/stdsdk"
@@ -23,7 +22,7 @@ type Console struct {
 	status   string
 }
 
-func InstallConsole(c *stdcli.Context, name, provider string, options map[string]string) error {
+func InstallConsole(c *stdcli.Context, name, provider, version string, options map[string]string) error {
 	return fmt.Errorf("console install not yet supported")
 }
 
@@ -43,14 +42,7 @@ func LoadConsole(c *stdcli.Context, name string) (*Console, error) {
 }
 
 func (c Console) Client() (sdk.Interface, error) {
-	cc, err := consoleClient(c.ctx, c.host)
-	if err != nil {
-		return nil, err
-	}
-
-	cc.Rack = c.name
-
-	return cc, nil
+	return c.client()
 }
 
 func (c Console) MarshalJSON() ([]byte, error) {
@@ -96,26 +88,78 @@ func (c Console) Uninstall() error {
 	return fmt.Errorf("console uninstall not yet supported")
 }
 
-func (c Console) Update(opts map[string]string) error {
-	uopts := structs.SystemUpdateOptions{}
-
-	if v, ok := opts["release"]; ok {
-		uopts.Version = options.String(v)
+func (c Console) UpdateParams(params map[string]string) error {
+	if err := c.updateSupported(); err != nil {
+		return err
 	}
 
-	delete(opts, "release")
-
-	if len(opts) > 0 {
-		uopts.Parameters = opts
-	}
-
-	cc, err := c.Client()
+	d, err := c.direct()
 	if err != nil {
 		return err
 	}
 
-	if err := cc.SystemUpdate(uopts); err != nil {
+	if err := d.UpdateParams(params); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (c Console) UpdateVersion(version string) error {
+	if err := c.updateSupported(); err != nil {
+		return err
+	}
+
+	d, err := c.direct()
+	if err != nil {
+		return err
+	}
+
+	if err := d.UpdateVersion(version); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c Console) client() (*sdk.Client, error) {
+	cc, err := consoleClient(c.ctx, c.host)
+	if err != nil {
+		return nil, err
+	}
+
+	cc.Rack = c.name
+
+	return cc, nil
+}
+
+func (c Console) direct() (*Direct, error) {
+	cc, err := c.client()
+	if err != nil {
+		return nil, err
+	}
+
+	d, err := LoadDirect(cc)
+	if err != nil {
+		return nil, err
+	}
+
+	return d, nil
+}
+
+func (c Console) updateSupported() error {
+	cc, err := c.client()
+	if err != nil {
+		return err
+	}
+
+	s, err := cc.SystemGet()
+	if err != nil {
+		return err
+	}
+
+	if !strings.HasPrefix(s.Version, "20") {
+		return fmt.Errorf("console update of version 3 racks not yet supported")
 	}
 
 	return nil

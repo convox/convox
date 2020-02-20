@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -23,69 +24,32 @@ type Terraform struct {
 	status   string
 }
 
-func InstallTerraform(c *stdcli.Context, provider, name string, options map[string]string) error {
+func InstallTerraform(c *stdcli.Context, provider, name, version string, options map[string]string) error {
 	if !terraformInstalled(c) {
 		return fmt.Errorf("terraform required")
 	}
 
-	env, err := terraformEnv(provider)
+	// env, err := terraformEnv(provider)
+	// if err != nil {
+	// 	return err
+	// }
+
+	t := Terraform{ctx: c, name: name, provider: provider}
+
+	dir, err := t.settingsDirectory()
 	if err != nil {
 		return err
 	}
 
-	dir, err := c.SettingDirectory(fmt.Sprintf("racks/%s", name))
-	if err != nil {
-		return err
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		return fmt.Errorf("rack name in use: %s", name)
 	}
 
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return err
 	}
 
-	vars, err := terraformProviderVars(provider)
-	if err != nil {
-		return err
-	}
-
-	ov, err := terraformOptionVars(dir, options)
-	if err != nil {
-		return err
-	}
-
-	for k, v := range ov {
-		vars[k] = v
-	}
-
-	tf := filepath.Join(dir, "main.tf")
-
-	if _, err := os.Stat(tf); !os.IsNotExist(err) {
-		return fmt.Errorf("rack name in use: %s", name)
-	}
-
-	params := map[string]interface{}{
-		"Name":     name,
-		"Provider": provider,
-		"Vars":     vars,
-	}
-
-	release, ok := options["release"]
-	if !ok {
-		return fmt.Errorf("release required")
-	}
-
-	if err := terraformWriteTemplate(tf, release, params); err != nil {
-		return err
-	}
-
-	if err := terraform(c, dir, env, "init"); err != nil {
-		return err
-	}
-
-	if err := terraform(c, dir, env, "apply", "-auto-approve"); err != nil {
-		return err
-	}
-
-	if _, err := Switch(c, name); err != nil {
+	if err := t.apply(version, options); err != nil {
 		return err
 	}
 
@@ -163,6 +127,10 @@ func (t Terraform) Client() (sdk.Interface, error) {
 	return sdk.New(t.endpoint)
 }
 
+func (t Terraform) Latest() (string, error) {
+	return terraformLatestVersion()
+}
+
 func (t Terraform) MarshalJSON() ([]byte, error) {
 	h := map[string]string{
 		"name": t.name,
@@ -177,15 +145,12 @@ func (t Terraform) Name() string {
 }
 
 func (t Terraform) Parameters() (map[string]string, error) {
-	dir, err := t.ctx.SettingDirectory(fmt.Sprintf("racks/%s", t.name))
+	vars, err := t.vars()
 	if err != nil {
 		return nil, err
 	}
 
-	vars, err := terraformOptionVars(dir, map[string]string{})
-	if err != nil {
-		return nil, err
-	}
+	delete(vars, "release")
 
 	return vars, nil
 }
@@ -228,10 +193,65 @@ func (t Terraform) Uninstall() error {
 	return nil
 }
 
-func (t Terraform) Update(options map[string]string) error {
-	dir, err := t.ctx.SettingDirectory(fmt.Sprintf("racks/%s", t.name))
+func (t Terraform) UpdateParams(params map[string]string) error {
+	vars, err := t.vars()
 	if err != nil {
 		return err
+	}
+
+	release, ok := vars["release"]
+	if !ok {
+		return fmt.Errorf("could not determine current release")
+	}
+
+	for k, v := range params {
+		vars[k] = v
+	}
+
+	if err := t.apply(release, vars); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (t Terraform) UpdateVersion(version string) error {
+	vars, err := t.vars()
+	if err != nil {
+		return err
+	}
+
+	if err := t.apply(version, vars); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (t Terraform) apply(release string, vars map[string]string) error {
+	if release == "" {
+		v, err := terraformLatestVersion()
+		if err != nil {
+			return err
+		}
+		release = v
+	}
+
+	vars["release"] = release
+
+	pv, err := terraformProviderVars(t.provider)
+	if err != nil {
+		return err
+	}
+
+	if err := t.writeVars(vars); err != nil {
+		return err
+	}
+
+	for k, v := range pv {
+		if _, ok := vars[k]; !ok {
+			vars[k] = v
+		}
 	}
 
 	env, err := terraformEnv(t.provider)
@@ -239,18 +259,9 @@ func (t Terraform) Update(options map[string]string) error {
 		return err
 	}
 
-	vars, err := terraformProviderVars(t.provider)
+	dir, err := t.settingsDirectory()
 	if err != nil {
 		return err
-	}
-
-	ov, err := terraformOptionVars(dir, options)
-	if err != nil {
-		return err
-	}
-
-	for k, v := range ov {
-		vars[k] = v
 	}
 
 	tf := filepath.Join(dir, "main.tf")
@@ -259,11 +270,6 @@ func (t Terraform) Update(options map[string]string) error {
 		"Name":     t.name,
 		"Provider": t.provider,
 		"Vars":     vars,
-	}
-
-	release, ok := options["release"]
-	if !ok {
-		return fmt.Errorf("release required")
 	}
 
 	if err := terraformWriteTemplate(tf, release, params); err != nil {
@@ -275,6 +281,71 @@ func (t Terraform) Update(options map[string]string) error {
 	}
 
 	if err := terraform(t.ctx, dir, env, "apply", "-auto-approve"); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (t Terraform) settingsDirectory() (string, error) {
+	return t.ctx.SettingDirectory(fmt.Sprintf("racks/%s", t.name))
+}
+
+func (t Terraform) vars() (map[string]string, error) {
+	vars := map[string]string{}
+
+	vf, err := t.varsFile()
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := os.Stat(vf); !os.IsNotExist(err) {
+		data, err := ioutil.ReadFile(vf)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := json.Unmarshal(data, &vars); err != nil {
+			return nil, err
+		}
+	}
+
+	return vars, nil
+}
+
+func (t Terraform) varsFile() (string, error) {
+	dir, err := t.settingsDirectory()
+	if err != nil {
+		return "", err
+	}
+
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		return "", fmt.Errorf("error loading rack: %s", t.name)
+	}
+
+	vf := filepath.Join(dir, "vars.json")
+
+	return vf, nil
+}
+
+func (t Terraform) writeVars(vars map[string]string) error {
+	for k, v := range vars {
+		if strings.TrimSpace(v) == "" {
+			delete(vars, k)
+		}
+	}
+
+	data, err := json.MarshalIndent(vars, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	vf, err := t.varsFile()
+	if err != nil {
+		return err
+	}
+
+	if err := ioutil.WriteFile(vf, data, 0600); err != nil {
 		return err
 	}
 
@@ -373,40 +444,31 @@ func terraformInstalled(c *stdcli.Context) bool {
 	return err == nil
 }
 
-func terraformOptionVars(dir string, options map[string]string) (map[string]string, error) {
-	vars := map[string]string{}
-
-	vf := filepath.Join(dir, "vars.json")
-
-	if _, err := os.Stat(vf); !os.IsNotExist(err) {
-		data, err := ioutil.ReadFile(vf)
-		if err != nil {
-			return nil, err
-		}
-
-		if err := json.Unmarshal(data, &vars); err != nil {
-			return nil, err
-		}
+func terraformLatestVersion() (string, error) {
+	if TestLatest != "" {
+		return TestLatest, nil
 	}
 
-	for k, v := range options {
-		if strings.TrimSpace(v) != "" {
-			vars[k] = v
-		} else {
-			delete(vars, k)
-		}
-	}
-
-	data, err := json.MarshalIndent(vars, "", "  ")
+	res, err := http.Get("https://api.github.com/repos/convox/convox/releases/latest")
 	if err != nil {
-		return nil, err
+		return "", err
+	}
+	defer res.Body.Close()
+
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return "", err
 	}
 
-	if err := ioutil.WriteFile(vf, data, 0600); err != nil {
-		return nil, err
+	var release struct {
+		Tag string `json:"tag_name"`
 	}
 
-	return vars, nil
+	if err := json.Unmarshal(data, &release); err != nil {
+		return "", err
+	}
+
+	return release.Tag, nil
 }
 
 func terraformProviderVars(provider string) (map[string]string, error) {
@@ -419,15 +481,11 @@ func terraformProviderVars(provider string) (map[string]string, error) {
 		vars := map[string]string{
 			"access_id":  env["DIGITALOCEAN_ACCESS_ID"],
 			"secret_key": env["DIGITALOCEAN_SECRET_KEY"],
-			"release":    "",
 			"token":      env["DIGITALOCEAN_TOKEN"],
 		}
 		return vars, nil
 	default:
-		vars := map[string]string{
-			"release": "",
-		}
-		return vars, nil
+		return map[string]string{}, nil
 	}
 }
 
@@ -444,12 +502,14 @@ func terraformTemplateHelpers() template.FuncMap {
 	}
 }
 
-func terraformWriteTemplate(filename, release string, params map[string]interface{}) error {
+func terraformWriteTemplate(filename, version string, params map[string]interface{}) error {
 	if source := os.Getenv("CONVOX_TERRAFORM_SOURCE"); source != "" {
 		params["Source"] = fmt.Sprintf(source, params["Provider"])
 	} else {
-		params["Source"] = fmt.Sprintf("github.com/convox/convox//terraform/system/%s?ref=%s", params["Provider"], release)
+		params["Source"] = fmt.Sprintf("github.com/convox/convox//terraform/system/%s?ref=%s", params["Provider"], version)
 	}
+
+	params["Release"] = version
 
 	t, err := template.New("main").Funcs(terraformTemplateHelpers()).Parse(`
 		module "system" {

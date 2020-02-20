@@ -21,6 +21,7 @@ func init() {
 	})
 
 	registerWithoutProvider("rack install", "install a new rack", RackInstall, stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{stdcli.StringFlag("version", "v", "rack version")},
 		Usage:    "<provider> <name> [option=value]...",
 		Validate: stdcli.ArgsMin(2),
 	})
@@ -105,6 +106,7 @@ func RackInstall(_ sdk.Interface, c *stdcli.Context) error {
 	slug := c.Arg(0)
 	name := c.Arg(1)
 	args := c.Args[2:]
+	version := c.String("version")
 
 	if !provider.Valid(slug) {
 		return fmt.Errorf("unknown provider: %s", slug)
@@ -112,17 +114,14 @@ func RackInstall(_ sdk.Interface, c *stdcli.Context) error {
 
 	opts := argsToOptions(args)
 
-	if _, ok := opts["release"]; !ok {
-		latest, err := rack.Latest()
-		if err != nil {
-			return err
-		}
-
-		opts["release"] = latest
+	if err := rack.Install(c, slug, name, version, opts); err != nil {
+		return err
 	}
 
-	if err := rack.Install(c, slug, name, opts); err != nil {
-		return err
+	if _, err := rack.Current(c); err != nil {
+		if _, err := rack.Switch(c, name); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -187,7 +186,7 @@ func RackParamsSet(_ sdk.Interface, c *stdcli.Context) error {
 
 	c.Startf("Updating parameters")
 
-	if err := r.Update(argsToOptions(c.Args)); err != nil {
+	if err := r.UpdateParams(argsToOptions(c.Args)); err != nil {
 		return err
 	}
 
@@ -290,30 +289,9 @@ func RackUpdate(_ sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	opts := map[string]string{
-		"release": c.Arg(0),
-	}
-
-	if _, ok := opts["release"]; !ok {
-		latest, err := rack.Latest()
-		if err != nil {
-			return err
-		}
-
-		opts["release"] = latest
-	}
-
-	if err := r.Update(opts); err != nil {
+	if err := r.UpdateVersion(c.Arg(0)); err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func rackUninstallRemote(c *stdcli.Context, name string) error {
-	return fmt.Errorf("uninstalling remote racks not yet supported")
-}
-
-func rackUpdateRemote(c *stdcli.Context, name string) error {
-	return fmt.Errorf("updating remote racks not yet supported")
 }
