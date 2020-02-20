@@ -109,7 +109,8 @@ func (p *Provider) ProcessGet(app, pid string) (*structs.Process, error) {
 
 func (p *Provider) ProcessList(app string, opts structs.ProcessListOptions) (structs.Processes, error) {
 	filters := []string{
-		"type!=resource",
+		"system=convox",
+		"type in (process,service)",
 	}
 
 	if opts.Release != nil {
