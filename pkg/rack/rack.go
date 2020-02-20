@@ -3,8 +3,6 @@ package rack
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"os"
 	"sort"
 	"strings"
@@ -25,12 +23,18 @@ type Rack interface {
 	Remote() bool
 	Status() string
 	Uninstall() error
-	Update(map[string]string) error
+	UpdateParams(map[string]string) error
+	UpdateVersion(string) error
 }
 
 func Current(c *stdcli.Context) (Rack, error) {
 	if url := os.Getenv("RACK_URL"); strings.TrimSpace(url) != "" {
-		return LoadDirect(c, url)
+		client, err := sdk.New(url)
+		if err != nil {
+			return nil, err
+		}
+
+		return LoadDirect(client)
 	}
 
 	if name := currentRack(c); name != "" {
@@ -63,42 +67,15 @@ func Current(c *stdcli.Context) (Rack, error) {
 	}
 }
 
-func Install(c *stdcli.Context, name, provider string, options map[string]string) error {
+func Install(c *stdcli.Context, name, provider, version string, options map[string]string) error {
 	switch len(strings.Split(name, "/")) {
 	case 1:
-		return InstallTerraform(c, name, provider, options)
+		return InstallTerraform(c, name, provider, version, options)
 	case 2:
-		return InstallConsole(c, name, provider, options)
+		return InstallConsole(c, name, provider, version, options)
 	default:
 		return fmt.Errorf("invalid name: %s", name)
 	}
-}
-
-func Latest() (string, error) {
-	if TestLatest != "" {
-		return TestLatest, nil
-	}
-
-	res, err := http.Get("https://api.github.com/repos/convox/convox/releases/latest")
-	if err != nil {
-		return "", err
-	}
-	defer res.Body.Close()
-
-	data, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return "", err
-	}
-
-	var release struct {
-		Tag string `json:"tag_name"`
-	}
-
-	if err := json.Unmarshal(data, &release); err != nil {
-		return "", err
-	}
-
-	return release.Tag, nil
 }
 
 func List(c *stdcli.Context) ([]Rack, error) {

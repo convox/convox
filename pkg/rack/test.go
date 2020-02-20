@@ -1,8 +1,6 @@
 package rack
 
 import (
-	"strings"
-
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/sdk"
@@ -65,33 +63,36 @@ func (t Test) Uninstall() error {
 	return nil
 }
 
-func (t Test) Update(opts map[string]string) error {
+func (t Test) UpdateParams(params map[string]string) error {
 	if TestClient == nil {
 		return nil
 	}
 
-	uopts := structs.SystemUpdateOptions{}
-
-	if v, ok := opts["release"]; ok {
-		if strings.TrimSpace(v) == "" {
-			v = "latest"
-		}
-
-		uopts.Version = options.String(v)
+	opts := structs.SystemUpdateOptions{
+		Parameters: params,
 	}
 
-	delete(opts, "release")
-
-	if len(opts) > 0 {
-		uopts.Parameters = opts
-	}
-
-	cc, err := t.Client()
-	if err != nil {
+	if err := TestClient.SystemUpdate(opts); err != nil {
 		return err
 	}
 
-	if err := cc.SystemUpdate(uopts); err != nil {
+	return nil
+}
+
+func (t Test) UpdateVersion(version string) error {
+	if TestClient == nil {
+		return nil
+	}
+
+	if version == "" {
+		version = "latest"
+	}
+
+	opts := structs.SystemUpdateOptions{
+		Version: options.String(version),
+	}
+
+	if err := TestClient.SystemUpdate(opts); err != nil {
 		return err
 	}
 

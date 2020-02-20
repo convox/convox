@@ -55,9 +55,8 @@ func TestRackInstall(t *testing.T) {
 
 		me := &mockstdcli.Executor{}
 		me.On("Execute", "terraform", "version").Return([]byte{}, nil)
-		me.On("Terminal", "terraform", "init").Return(nil)
+		me.On("Terminal", "terraform", "init", "-upgrade").Return(nil)
 		me.On("Terminal", "terraform", "apply", "-auto-approve").Return(nil)
-		me.On("Execute", "terraform", "output", "-json").Return([]byte(`{}`), nil)
 		e.Executor = me
 
 		res, err := testExecute(e, "rack install local dev1", nil)
@@ -82,11 +81,12 @@ func TestRackInstall(t *testing.T) {
 
 		require.Equal(t, strings.Trim(string(tfdata), "\n"), strings.Trim(string(testdata), "\n"))
 
+		// existing rack should not switch
 		res, err = testExecute(e, "switch", nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
-		res.RequireStdout(t, []string{"dev1"})
+		res.RequireStdout(t, []string{"rack1"})
 
 		me.AssertExpectations(t)
 	})
@@ -98,9 +98,8 @@ func TestRackInstallArgs(t *testing.T) {
 
 		me := &mockstdcli.Executor{}
 		me.On("Execute", "terraform", "version").Return([]byte{}, nil)
-		me.On("Terminal", "terraform", "init").Return(nil)
+		me.On("Terminal", "terraform", "init", "-upgrade").Return(nil)
 		me.On("Terminal", "terraform", "apply", "-auto-approve").Return(nil)
-		me.On("Execute", "terraform", "output", "-json").Return([]byte(`{}`), nil)
 		e.Executor = me
 
 		res, err := testExecute(e, "rack install local dev1 foo=bar baz=qux", nil)
@@ -125,6 +124,47 @@ func TestRackInstallArgs(t *testing.T) {
 
 		require.Equal(t, strings.Trim(string(tfdata), "\n"), strings.Trim(string(testdata), "\n"))
 
+		me.AssertExpectations(t)
+	})
+}
+
+func TestRackInstallSwitch(t *testing.T) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		rack.TestLatest = "foo"
+
+		me := &mockstdcli.Executor{}
+		me.On("Execute", "terraform", "version").Return([]byte{}, nil)
+		me.On("Terminal", "terraform", "init", "-upgrade").Return(nil)
+		me.On("Terminal", "terraform", "apply", "-auto-approve").Return(nil)
+		me.On("Execute", "terraform", "output", "-json").Return([]byte(`{}`), nil)
+		e.Executor = me
+
+		// remove current rack
+		os.Remove(filepath.Join(e.Settings, "current"))
+
+		res, err := testExecute(e, "rack install local dev1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{""})
+
+		dir := filepath.Join(e.Settings, "racks", "dev1")
+		tf := filepath.Join(dir, "main.tf")
+
+		_, err = os.Stat(dir)
+		require.NoError(t, err)
+		_, err = os.Stat(tf)
+		require.NoError(t, err)
+
+		tfdata, err := ioutil.ReadFile(tf)
+		require.NoError(t, err)
+
+		testdata, err := ioutil.ReadFile("testdata/terraform/dev1.tf")
+		require.NoError(t, err)
+
+		require.Equal(t, strings.Trim(string(tfdata), "\n"), strings.Trim(string(testdata), "\n"))
+
+		// no existing rack should switch
 		res, err = testExecute(e, "switch", nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code)
@@ -134,6 +174,41 @@ func TestRackInstallArgs(t *testing.T) {
 		me.AssertExpectations(t)
 	})
 }
+
+func TestRackInstallVersion(t *testing.T) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		me := &mockstdcli.Executor{}
+		me.On("Execute", "terraform", "version").Return([]byte{}, nil)
+		me.On("Terminal", "terraform", "init", "-upgrade").Return(nil)
+		me.On("Terminal", "terraform", "apply", "-auto-approve").Return(nil)
+		e.Executor = me
+
+		res, err := testExecute(e, "rack install local dev1 -v otherver", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{""})
+
+		dir := filepath.Join(e.Settings, "racks", "dev1")
+		tf := filepath.Join(dir, "main.tf")
+
+		_, err = os.Stat(dir)
+		require.NoError(t, err)
+		_, err = os.Stat(tf)
+		require.NoError(t, err)
+
+		tfdata, err := ioutil.ReadFile(tf)
+		require.NoError(t, err)
+
+		testdata, err := ioutil.ReadFile("testdata/terraform/dev1.version.tf")
+		require.NoError(t, err)
+
+		require.Equal(t, strings.Trim(string(tfdata), "\n"), strings.Trim(string(testdata), "\n"))
+
+		me.AssertExpectations(t)
+	})
+}
+
 func TestRackInstallNoTerraform(t *testing.T) {
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
 		me := &mockstdcli.Executor{}

@@ -2,35 +2,27 @@ package rack
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/sdk"
-	"github.com/convox/stdcli"
 	"github.com/convox/version"
 )
 
 type Direct struct {
-	ctx      *stdcli.Context
+	client   *sdk.Client
 	endpoint string
 	name     string
 	provider string
 	status   string
 }
 
-func LoadDirect(c *stdcli.Context, endpoint string) (*Direct, error) {
+func LoadDirect(client *sdk.Client) (*Direct, error) {
 	dr := &Direct{
-		ctx:      c,
-		endpoint: endpoint,
+		client: client,
 	}
 
-	cc, err := dr.Client()
-	if err != nil {
-		return nil, err
-	}
-
-	s, err := cc.SystemGet()
+	s, err := client.SystemGet()
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +35,7 @@ func LoadDirect(c *stdcli.Context, endpoint string) (*Direct, error) {
 }
 
 func (d Direct) Client() (sdk.Interface, error) {
-	return sdk.New(d.endpoint)
+	return d.client, nil
 }
 
 func (d Direct) Name() string {
@@ -80,26 +72,30 @@ func (d Direct) Uninstall() error {
 	return fmt.Errorf("uninstall not supported with RACK_URL")
 }
 
-func (d Direct) Update(opts map[string]string) error {
-	uopts := structs.SystemUpdateOptions{}
-
-	if v, ok := opts["release"]; ok {
-		if strings.TrimSpace(v) == "" {
-			latest, err := version.Latest()
-			if err != nil {
-				return err
-			}
-
-			v = latest
-		}
-
-		uopts.Version = options.String(v)
+func (d Direct) UpdateParams(params map[string]string) error {
+	cc, err := d.Client()
+	if err != nil {
+		return err
 	}
 
-	delete(opts, "release")
+	opts := structs.SystemUpdateOptions{
+		Parameters: params,
+	}
 
-	if len(opts) > 0 {
-		uopts.Parameters = opts
+	if err := cc.SystemUpdate(opts); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d Direct) UpdateVersion(version string) error {
+	if version == "" {
+		v, err := d.latest()
+		if err != nil {
+			return err
+		}
+		version = v
 	}
 
 	cc, err := d.Client()
@@ -107,9 +103,27 @@ func (d Direct) Update(opts map[string]string) error {
 		return err
 	}
 
-	if err := cc.SystemUpdate(uopts); err != nil {
+	opts := structs.SystemUpdateOptions{
+		Version: options.String(version),
+	}
+
+	if err := cc.SystemUpdate(opts); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (d Direct) latest() (string, error) {
+	s, err := d.client.SystemGet()
+	if err != nil {
+		return "", err
+	}
+
+	v, err := version.Next(s.Version)
+	if err != nil {
+		return "", err
+	}
+
+	return v, nil
 }
