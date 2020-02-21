@@ -20,32 +20,57 @@ metadata:
   labels:
     app: {{.App}}
     service: {{.Service.Name}}
-    system: convox
     type: service
 spec:
   tls:
   - hosts:
     - {{ safe .Host }}
     secretName: cert-{{.Service.Name}}
-  {{ with .Service.Domains }}
+  rules:
+  - host: {{ safe .Host }}
+    http:
+      paths:
+      - backend:
+          serviceName: {{.Service.Name}}
+          servicePort: {{.Service.Port.Port}}
+{{ if .Service.Domains }}
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  namespace: {{.Namespace}}
+  name: {{.Service.Name}}-domains
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    convox.com/backend-protocol: "{{.Service.Port.Scheme}}"
+    kubernetes.io/ingress-class: "{{.Class}}"
+    nginx.ingress.kubernetes.io/backend-protocol: "{{.Service.Port.Scheme}}"
+    {{ if .Service.Sticky }}
+    nginx.ingress.kubernetes.io/affinity: cookie
+    nginx.ingress.kubernetes.io/session-cookie-name: CONVOXSESSION
+    {{ end }}
+    {{ range $k, $v := .Annotations }}
+    {{$k}}: {{ safe $v }}
+    {{ end }}
+    cert-manager.io/cluster-issuer: letsencrypt-dns
+  labels:
+    app: {{.App}}
+    service: {{.Service.Name}}
+    type: service
+spec:
+  tls:
   - hosts:
-    {{ range . }}
+    {{ range .Service.Domains }}
     - {{ safe . }}
     {{ end }}
     secretName: cert-{{$.Service.Name}}-domains
-  {{ end }}
   rules:
-    - host: {{ safe .Host }}
-      http:
-        paths:
-        - backend:
-            serviceName: {{.Service.Name}}
-            servicePort: {{.Service.Port.Port}}
-    {{ range .Service.Domains }}
-    - host: {{ safe . }}
-      http:
-        paths:
-        - backend:
-            serviceName: {{$.Service.Name}}
-            servicePort: {{$.Service.Port.Port}}
-    {{ end }}
+  {{ range .Service.Domains }}
+  - host: {{ safe . }}
+    http:
+      paths:
+      - backend:
+          serviceName: {{$.Service.Name}}
+          servicePort: {{$.Service.Port.Port}}
+  {{ end }}
+{{ end }}

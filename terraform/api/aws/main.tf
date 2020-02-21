@@ -33,7 +33,7 @@ module "k8s" {
   release   = var.release
 
   annotations = {
-    "cert-manager.io/cluster-issuer" = "letsencrypt"
+    "cert-manager.io/cluster-issuer" = "letsencrypt-http"
     "eks.amazonaws.com/role-arn"     = aws_iam_role.api.arn
     "iam.amazonaws.com/role"         = aws_iam_role.api.arn
     "kubernetes.io/ingress.class"    = "nginx"

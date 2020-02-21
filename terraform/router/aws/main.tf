@@ -71,6 +71,21 @@ resource "kubernetes_service" "router" {
   }
 }
 
+data "aws_lb" "router" {
+  name = split("-", kubernetes_service.router.load_balancer_ingress.0.hostname)[0]
+}
+
+resource "aws_lb_listener" "router-resolver" {
+  load_balancer_arn = data.aws_lb.router.arn
+  port              = 53
+  protocol          = "UDP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = var.resolver_target
+  }
+}
+
 data "http" "alias" {
   url = "https://alias.convox.com/alias/${length(kubernetes_service.router.load_balancer_ingress) > 0 ? kubernetes_service.router.load_balancer_ingress.0.hostname : ""}"
 }

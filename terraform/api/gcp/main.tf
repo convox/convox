@@ -57,6 +57,7 @@ module "k8s" {
   annotations = {
     "cert-manager.io/cluster-issuer"   = "letsencrypt"
     "cloud.google.com/service-account" = google_service_account.api.email
+    "cert-manager.io/cluster-issuer"   = "letsencrypt-http"
     "iam.gke.io/gcp-service-account"   = google_service_account.api.email
     "kubernetes.io/ingress.class"      = "nginx"
   }

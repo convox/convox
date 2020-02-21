@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sync"
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/miekg/dns"
@@ -19,12 +20,15 @@ const (
 type Resolver struct {
 	dnsExternal    *DNS
 	dnsInternal    *DNS
+	health         *Health
 	ingress        *Ingress
 	kubernetes     *kubernetes.Clientset
 	namespace      string
 	routerExternal string
 	routerInternal string
 	service        *Service
+	updates        map[string]map[string]bool
+	updatelock     sync.RWMutex
 }
 
 type Server interface {
@@ -37,6 +41,7 @@ func New(namespace string) (*Resolver, error) {
 
 	r := &Resolver{
 		namespace: namespace,
+		updates:   map[string]map[string]bool{},
 	}
 
 	if err := r.setupKubernetes(); err != nil {
@@ -44,6 +49,10 @@ func New(namespace string) (*Resolver, error) {
 	}
 
 	if err := r.setupDNS(); err != nil {
+		return nil, err
+	}
+
+	if err := r.setupHealth(); err != nil {
 		return nil, err
 	}
 
@@ -67,6 +76,7 @@ func (r *Resolver) Serve() error {
 
 	go serve(ch, r.dnsExternal)
 	go serve(ch, r.dnsInternal)
+	go serve(ch, r.health)
 
 	go r.ingress.Start()
 	go r.service.Start()
@@ -77,6 +87,7 @@ func (r *Resolver) Serve() error {
 func (r *Resolver) Shutdown(ctx context.Context) error {
 	_ = r.dnsExternal.Shutdown(ctx)
 	_ = r.dnsInternal.Shutdown(ctx)
+	_ = r.health.Shutdown(ctx)
 
 	r.ingress.Stop()
 	r.service.Stop()
@@ -84,74 +95,133 @@ func (r *Resolver) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func (r *Resolver) resolve(typ, host, router string) (string, bool) {
-	if r.ingress.HostExists(host) {
-		switch typ {
-		case "A":
+func (r *Resolver) resolve(typ, host, router string) ([]string, bool) {
+	switch typ {
+	case "A":
+		if r.ingress.HostExists(host) {
 			if net.ParseIP(router) != nil {
-				return router, true
+				return []string{router}, true
 			}
 			ips, err := net.LookupIP(router)
 			if err != nil {
 				fmt.Printf("err: %+v\n", err)
-				return "", true
+				return nil, true
 			}
 			if len(ips) < 0 {
 				fmt.Printf("no ip found for: %s\n", router)
-				return "", true
+				return nil, true
 			}
-			return ips[0].String(), true
-		default:
-			return "", true
+			ipss := make([]string, len(ips))
+			for i := range ips {
+				ipss[i] = ips[i].String()
+			}
+			return ipss, true
+		}
+	case "TXT":
+		r.updatelock.RLock()
+		defer r.updatelock.RUnlock()
+
+		if vh, ok := r.updates[fmt.Sprintf("%s.", host)]; ok {
+			values := []string{}
+			for k := range vh {
+				values = append(values, k)
+			}
+			return values, true
 		}
 	}
 
-	if ip, ok := r.service.IP(host); ok {
-		switch typ {
-		case "A":
-			return ip, true
-		default:
-			return "", true
-		}
-	}
-
-	return "", false
+	return nil, false
 }
 
-func (r *Resolver) resolveExternal(typ, host string) (string, bool) {
+func (r *Resolver) resolveExternal(typ, host string) ([]string, bool) {
+	switch typ {
+	// case "SOA":
+	// 	r.updatelock.RLock()
+	// 	defer r.updatelock.RUnlock()
+
+	// 	if _, ok := r.updates[fmt.Sprintf("%s.", host)]; ok {
+	// 		return nil, true
+	// 	}
+	case "TXT":
+		r.updatelock.RLock()
+		defer r.updatelock.RUnlock()
+
+		if vh, ok := r.updates[fmt.Sprintf("%s.", host)]; ok {
+			values := []string{}
+			for k := range vh {
+				values = append(values, k)
+			}
+			return values, true
+		}
+
+		return nil, true
+	}
+
 	return r.resolve(typ, host, r.routerExternal)
 }
 
-func (r *Resolver) resolveInternal(typ, host string) (string, bool) {
+func (r *Resolver) resolveInternal(typ, host string) ([]string, bool) {
+	if ip, ok := r.service.IP(host); ok {
+		switch typ {
+		case "A":
+			return []string{ip}, true
+		default:
+			return nil, true
+		}
+	}
+
 	return r.resolve(typ, host, r.routerInternal)
 }
 
+func (r *Resolver) update(typ, host string, values []string) error {
+	fmt.Printf("ns=resolver at=update type=%s host=%q values=%v\n", typ, host, values)
+
+	switch typ {
+	case "TXT":
+		r.updatelock.Lock()
+		defer r.updatelock.Unlock()
+		if _, ok := r.updates[host]; !ok {
+			r.updates[host] = map[string]bool{}
+		}
+		for _, value := range values {
+			r.updates[host][value] = true
+		}
+	}
+
+	return nil
+}
+
 func (r *Resolver) setupDNS() error {
-	upstream := r.upstream()
-
-	ce, err := net.ListenPacket("udp", ":5453")
+	de, err := NewDNS("udp", ":5453")
 	if err != nil {
 		return err
 	}
 
-	de, err := NewDNS(ce, r.resolveExternal, upstream)
-	if err != nil {
-		return err
-	}
+	de.Resolver = r.resolveExternal
 
 	r.dnsExternal = de
 
-	ci, err := net.ListenPacket("udp", ":5454")
+	di, err := NewDNS("udp", ":5454")
 	if err != nil {
 		return err
 	}
 
-	di, err := NewDNS(ci, r.resolveInternal, upstream)
-	if err != nil {
-		return err
-	}
+	di.Resolver = r.resolveInternal
+	di.Updater = r.update
+	di.Upstream = r.upstream()
 
 	r.dnsInternal = di
+
+	return nil
+}
+
+func (r *Resolver) setupHealth() error {
+	h, err := NewHealth(":5452")
+	if err != nil {
+		return err
+	}
+
+	r.health = h
 
 	return nil
 }

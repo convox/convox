@@ -6192,6 +6192,8 @@ spec:
           args:
           - --v=2
           - --cluster-resource-namespace=$(POD_NAMESPACE)
+          - --dns01-recursive-nameservers={{.Resolver}}:53
+          # - --dns01-recursive-nameservers-only
           - --leader-election-namespace=kube-system
           - --webhook-namespace=$(POD_NAMESPACE)
           - --webhook-ca-secret=cert-manager-webhook-ca

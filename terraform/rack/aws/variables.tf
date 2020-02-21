@@ -18,6 +18,10 @@ variable "release" {
   type = string
 }
 
+variable "resolver_target" {
+  type = string
+}
+
 variable "subnets" {
   type = list
 }

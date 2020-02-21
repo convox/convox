@@ -226,7 +226,11 @@ func (p *Provider) initializeTemplates() error {
 	}
 
 	if p.CertManager {
-		if err := p.applySystemTemplate("cert-manager", nil); err != nil {
+		params := map[string]interface{}{
+			"Resolver": p.Resolver,
+		}
+
+		if err := p.applySystemTemplate("cert-manager", params); err != nil {
 			return errors.WithStack(err)
 		}
 
@@ -258,7 +262,11 @@ func (p *Provider) installCertManagerConfig() {
 				if c.Type == "Available" && c.Status == "True" {
 					fmt.Printf("installing cert manager letsencrypt config\n")
 
-					if err := p.applySystemTemplate("cert-manager-letsencrypt", nil); err != nil {
+					params := map[string]interface{}{
+						"Resolver": p.Resolver,
+					}
+
+					if err := p.applySystemTemplate("cert-manager-letsencrypt", params); err != nil {
 						fmt.Printf("could not install cert manager letsencrypt config: %s\n", err)
 						break
 					}
