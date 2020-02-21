@@ -11,7 +11,6 @@ import (
 
 type Direct struct {
 	client   sdk.Interface
-	endpoint string
 	name     string
 	provider string
 	status   string
