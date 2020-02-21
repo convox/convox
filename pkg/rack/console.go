@@ -11,7 +11,6 @@ import (
 	"github.com/convox/convox/pkg/console"
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
-	"github.com/convox/stdsdk"
 )
 
 type Console struct {
@@ -122,13 +121,11 @@ func (c Console) UpdateVersion(version string) error {
 	return nil
 }
 
-func (c Console) client() (*sdk.Client, error) {
-	cc, err := consoleClient(c.ctx, c.host)
+func (c Console) client() (*console.Client, error) {
+	cc, err := consoleClient(c.ctx, c.host, c.name)
 	if err != nil {
 		return nil, err
 	}
-
-	cc.Rack = c.name
 
 	return cc, nil
 }
@@ -165,23 +162,20 @@ func (c Console) updateSupported() error {
 	return nil
 }
 
-func consoleClient(c *stdcli.Context, host string) (*sdk.Client, error) {
+func consoleClient(c *stdcli.Context, host, rack string) (*console.Client, error) {
 	pw, err := currentPassword(c, host)
 	if err != nil {
 		return nil, err
 	}
 
-	remote := fmt.Sprintf("https://convox:%s@%s", url.QueryEscape(pw), host)
+	endpoint := fmt.Sprintf("https://convox:%s@%s", url.QueryEscape(pw), host)
 
-	s, err := sdk.New(remote)
+	cc, err := console.NewClient(endpoint, rack, c)
 	if err != nil {
 		return nil, err
 	}
 
-	s.Authenticator = console.Authenticator(c)
-	s.Session = console.Session(c)
-
-	return s, nil
+	return cc, nil
 }
 
 func currentConsole(c *stdcli.Context) (string, error) {
@@ -215,24 +209,14 @@ func listConsole(c *stdcli.Context) ([]Console, error) {
 		return []Console{}, nil
 	}
 
-	p, err := consoleClient(c, host)
+	cc, err := consoleClient(c, host, "")
 	if err != nil {
 		return nil, err
 	}
 
-	var rs []struct {
-		Name         string
-		Organization struct {
-			Name string
-		}
-		Provider string
-		Status   string
-	}
-
-	if err := p.Get("/racks", stdsdk.RequestOptions{}, &rs); err != nil {
-		if _, ok := err.(console.AuthenticationError); ok {
-			return nil, err
-		}
+	rs, err := cc.RackList()
+	if err != nil {
+		return nil, err
 	}
 
 	for _, r := range rs {
