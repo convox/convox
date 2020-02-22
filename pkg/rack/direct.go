@@ -10,14 +10,13 @@ import (
 )
 
 type Direct struct {
-	client   *sdk.Client
-	endpoint string
+	client   sdk.Interface
 	name     string
 	provider string
 	status   string
 }
 
-func LoadDirect(client *sdk.Client) (*Direct, error) {
+func LoadDirect(client sdk.Interface) (*Direct, error) {
 	dr := &Direct{
 		client: client,
 	}
