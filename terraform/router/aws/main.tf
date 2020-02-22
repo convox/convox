@@ -42,6 +42,8 @@ resource "kubernetes_service" "router" {
 
     annotations = {
       "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout" = "3600"
+      # "service.beta.kubernetes.io/aws-load-balancer-proxy-protocol"          = "*"
+      "service.beta.kubernetes.io/aws-load-balancer-type" = "nlb"
     }
   }
 

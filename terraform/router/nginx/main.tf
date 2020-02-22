@@ -9,7 +9,8 @@ resource "kubernetes_config_map" "nginx-configuration" {
   }
 
   data = {
-    "proxy-body-size" : "0"
+    "proxy-body-size" = "0"
+    # "use-proxy-protocol" = "true"
   }
 }
 
