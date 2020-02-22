@@ -2,7 +2,7 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   namespace: {{.Namespace}}
-  name: {{.App}}-{{.Service.Name}}
+  name: {{.Service.Name}}
   annotations:
     alb.ingress.kubernetes.io/scheme: internet-facing
     convox.com/backend-protocol: "{{.Service.Port.Scheme}}"
@@ -16,6 +16,11 @@ metadata:
     {{ range $k, $v := .Annotations }}
     {{$k}}: {{ safe $v }}
     {{ end }}
+  labels:
+    app: {{.App}}
+    service: {{.Service.Name}}
+    system: convox
+    type: service
 spec:
   tls:
   - hosts:
