@@ -1,6 +1,13 @@
 name: test
 on: pull_request
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout
+      uses: actions/checkout@v1
+    - name: build
+      run: docker build .
   test:
     runs-on: ubuntu-latest
     steps:

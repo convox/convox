@@ -49,7 +49,7 @@ mocks: generate-provider
 	go run vendor/github.com/vektra/mockery/cmd/mockery/mockery.go -case underscore -dir vendor/github.com/convox/stdcli -outpkg stdcli -output pkg/mock/stdcli -name Executor
 
 package:
-	$(GOPATH)/bin/packr
+	go run -mod=vendor vendor/github.com/gobuffalo/packr/packr/main.go
 
 release:
 	test -n "$(VERSION)" # VERSION
@@ -65,7 +65,7 @@ tools:
 vendor:
 	go mod vendor
 	go mod tidy
-	go run vendor/github.com/goware/modvendor/main.go -copy="**/*.c **/*.h" -v
+	go run vendor/github.com/goware/modvendor/main.go -copy="**/*.c **/*.h"
 
 $(binaries): $(GOPATH)/bin/%: $(sources)
 	go install -mod=vendor --ldflags="-s -w" ./cmd/$*

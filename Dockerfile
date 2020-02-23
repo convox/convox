@@ -32,8 +32,6 @@ FROM golang:1.13 AS package
 
 RUN apt-get update && apt-get -y install upx-ucl
 
-RUN go get -u github.com/gobuffalo/packr/packr
-
 WORKDIR /usr/src/convox
 
 COPY --from=development /usr/src/convox .
