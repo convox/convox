@@ -272,6 +272,10 @@ resource "kubernetes_deployment" "ingress-nginx" {
       }
     }
   }
+
+  lifecycle {
+    ignore_changes = [spec[0].replicas]
+  }
 }
 
 
