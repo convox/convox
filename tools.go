@@ -3,6 +3,7 @@
 package convox
 
 import (
+	_ "github.com/gobuffalo/packr/packr"
 	_ "github.com/goware/modvendor"
 	_ "github.com/karalabe/xgo"
 	_ "github.com/vektra/mockery/cmd/mockery"
