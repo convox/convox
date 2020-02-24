@@ -4,7 +4,7 @@ order: 1
 
 # Running Locally
 
-Running your application locally requires a [Development Rack](../instalation/development-rack) to be installed.
+Running your application locally requires a [Development Rack](../installation/development-rack) to be installed.
 
 ## Starting Your Application
 
