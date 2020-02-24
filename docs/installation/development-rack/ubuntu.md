@@ -13,6 +13,7 @@
     $ mkdir -p ~/.kube
     $ microk8s.config > ~/.kube/config
     $ sudo snap restart microk8s
+    $ sudo snap alias microk8s.kubectl kubectl
 
 ### Terraform
 
@@ -35,7 +36,7 @@ Install a local Rack named `dev`.
 Set `*.convox` to be resolved by the local Rack's DNS server.
 
     $ sudo mkdir -p /usr/lib/systemd/resolved.conf.d
-    $ sudo bash -c "printf '[Resolve]\nDNS=$(kubectl get service/resolver-external -n convox-system -o jsonpath="{.spec.clusterIP}")\nDomains=~convox' > /usr/lib/systemd/resolved.conf.d/convox.conf"
+    $ sudo bash -c "printf '[Resolve]\nDNS=$(kubectl get service/resolver-external -n dev-system -o jsonpath="{.spec.clusterIP}")\nDomains=~convox' > /usr/lib/systemd/resolved.conf.d/convox.conf"
     $ systemctl daemon-reload
     $ systemctl restart systemd-networkd systemd-resolved
 
