@@ -3,5 +3,3 @@
 coverage.txt
 terraform.tfvars
 terraform/platform/convox.platform
-terraform.tfstate
-terraform.tfstate.backup
