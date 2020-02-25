@@ -190,7 +190,7 @@ func RackMv(_ sdk.Interface, c *stdcli.Context) error {
 	}
 
 	if !md.Deletable {
-		return fmt.Errorf("rack %s has dependencies and can not be moved")
+		return fmt.Errorf("rack %s has dependencies and can not be moved", from)
 	}
 
 	if _, err := rack.Create(c, to, md); err != nil {
