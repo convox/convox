@@ -34,6 +34,11 @@ func init() {
 		Validate: stdcli.Args(0),
 	})
 
+	registerWithoutProvider("rack mv", "move a rack to or from console", RackMv, stdcli.CommandOptions{
+		Usage:    "<from> <to>",
+		Validate: stdcli.Args(2),
+	})
+
 	registerWithoutProvider("rack params", "display rack parameters", RackParams, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagRack},
 		Validate: stdcli.Args(0),
@@ -166,6 +171,37 @@ func RackLogs(rack sdk.Interface, c *stdcli.Context) error {
 	io.Copy(c, r)
 
 	return nil
+}
+
+func RackMv(_ sdk.Interface, c *stdcli.Context) error {
+	from := c.Arg(0)
+	to := c.Arg(1)
+
+	c.Startf("moving rack <rack>%s</rack> to <rack>%s</rack>", from, to)
+
+	fr, err := rack.Load(c, from)
+	if err != nil {
+		return err
+	}
+
+	md, err := fr.Metadata()
+	if err != nil {
+		return err
+	}
+
+	if !md.Deletable {
+		return fmt.Errorf("rack %s has dependencies and can not be moved")
+	}
+
+	if _, err := rack.Create(c, to, md); err != nil {
+		return err
+	}
+
+	if err := fr.Delete(); err != nil {
+		return err
+	}
+
+	return c.OK()
 }
 
 func RackParams(_ sdk.Interface, c *stdcli.Context) error {

@@ -65,6 +65,19 @@ func (c Console) Client() (sdk.Interface, error) {
 	return c.client()
 }
 
+func (c Console) Delete() error {
+	cc, err := c.client()
+	if err != nil {
+		return err
+	}
+
+	if err := cc.RackDelete(c.name); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (c Console) MarshalJSON() ([]byte, error) {
 	h := map[string]string{
 		"name": c.name,
@@ -72,6 +85,27 @@ func (c Console) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(h)
+}
+
+func (c Console) Metadata() (*Metadata, error) {
+	cc, err := c.client()
+	if err != nil {
+		return nil, err
+	}
+
+	r, err := cc.RackGet(c.name)
+	if err != nil {
+		return nil, err
+	}
+
+	m := &Metadata{
+		Deletable: r.Deletable,
+		Provider:  r.Provider,
+		State:     r.State,
+		Vars:      r.Parameters,
+	}
+
+	return m, nil
 }
 
 func (c Console) Name() string {
@@ -236,8 +270,12 @@ func listConsole(c *stdcli.Context) ([]Console, error) {
 	}
 
 	rs, err := cc.RackList()
-	if err != nil {
+	switch err.(type) {
+	case console.AuthenticationError:
 		return nil, err
+	case nil:
+	default:
+		return []Console{}, nil
 	}
 
 	for _, r := range rs {

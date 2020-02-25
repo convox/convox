@@ -159,6 +159,32 @@ func (t Terraform) Latest() (string, error) {
 	return terraformLatestVersion()
 }
 
+func (t Terraform) Metadata() (*Metadata, error) {
+	dir, err := t.settingsDirectory()
+	if err != nil {
+		return nil, err
+	}
+
+	state, err := ioutil.ReadFile(filepath.Join(dir, "terraform.tfstate"))
+	if err != nil {
+		return nil, err
+	}
+
+	vars, err := t.vars()
+	if err != nil {
+		return nil, err
+	}
+
+	m := &Metadata{
+		Deletable: true,
+		Provider:  t.provider,
+		State:     state,
+		Vars:      vars,
+	}
+
+	return m, nil
+}
+
 func (t Terraform) MarshalJSON() ([]byte, error) {
 	h := map[string]string{
 		"name": t.name,

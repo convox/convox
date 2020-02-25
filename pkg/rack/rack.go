@@ -24,6 +24,8 @@ type Metadata struct {
 
 type Rack interface {
 	Client() (sdk.Interface, error)
+	Delete() error
+	Metadata() (*Metadata, error)
 	Name() string
 	Parameters() (map[string]string, error)
 	Provider() string
@@ -129,6 +131,17 @@ func List(c *stdcli.Context) ([]Rack, error) {
 	})
 
 	return rs, nil
+}
+
+func Load(c *stdcli.Context, name string) (Rack, error) {
+	switch len(strings.Split(name, "/")) {
+	case 1:
+		return LoadTerraform(c, name)
+	case 2:
+		return LoadConsole(c, name)
+	default:
+		return nil, fmt.Errorf("invalid name: %s", name)
+	}
 }
 
 func Match(c *stdcli.Context, name string) (Rack, error) {
