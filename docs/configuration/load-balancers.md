@@ -45,7 +45,7 @@ App to listen for HTTPS on its defined port and update your `convox.yml`:
 
 ## Custom Load Balancers
 
-If your App needs to expose arbitrary TCP ports to the outside world, you can configure custom [Balancers](../reference/app/primitives/balancer.md).
+If your App needs to expose arbitrary TCP ports to the outside world, you can configure custom [Balancers](../reference/primitives/app/balancer.md).
 
 For a `convox.yml` like this:
 
@@ -76,7 +76,7 @@ You could then access this Service using the following endpoints:
 * `tcp://1.2.3.4:5001`
 * `tcp://1.2.3.4:5002`
 
-> Note that Convox will not configure SSL termination for ports on a custom [Balancer](../reference/app/primitives/balancer.md).
+> Note that Convox will not configure SSL termination for ports on a custom [Balancer](../reference/primitives/app/balancer.md).
 
 ## Hybrid Load Balancing
 
@@ -113,4 +113,4 @@ And you could access the Service using the following endpoints:
 * `tcp://1.2.4.5:6001`
 
 > Note that port 4000 on this Service is exposed through both the standard and custom load balancers.
-> SSL termination is not provided on the custom [Balancer](../reference/app/primitives/balancer.md).
+> SSL termination is not provided on the custom [Balancer](../reference/primitives/app/balancer.md).

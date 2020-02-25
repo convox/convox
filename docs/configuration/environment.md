@@ -29,7 +29,7 @@ The `ENCRYPTION_KEY` variable will be available to both services.
 
 ### Service Level
 
-Environment variables can be defined for each [Service](../reference/app/primitives/service.md).
+Environment variables can be defined for each [Service](../reference/primitives/app/service.md).
 
     services:
       web:
@@ -70,14 +70,14 @@ You can set values for your environment variables using `convox env set`:
     Setting ALLOWED_IPS, COOKIE_SECRET, QUEUE... OK
     Release: RABCDEFGHI
 
-Setting environment variables will cause a new [Release](../reference/app/primitives/release.md) to be created. In order to deploy
+Setting environment variables will cause a new [Release](../reference/primitives/app/release.md) to be created. In order to deploy
 your changes you will need to promote this release.
 
     $ convox releases promote RABCDEFGHI
     Promoting RABCDEFGHI... OK
 
 > Environment variables must be defined in the `convox.yml` for their values to be populated on a
-> [Service](../reference/app/primitives/service.md).
+> [Service](../reference/primitives/app/service.md).
 
 ## System Variables
 
@@ -86,9 +86,9 @@ The following environment variables are automatically set by Convox.
 | Name                | Description                                                                                   |
 | ------------------- | --------------------------------------------------------------------------------------------- |
 | `APP`               | Name of the [App](../reference/app.md)                                                        |
-| `BUILD`             | ID of the currently-promoted [Build](../reference/app/primitives/build.md)                    |
-| `BUILD_DESCRIPTION` | Description of the currently-promoted [Build](../reference/app/primitives/build.md)           |
-| `PORT`              | The value of the `port:` attribute for this [Service](../reference/app/primitives/service.md) |
+| `BUILD`             | ID of the currently-promoted [Build](../reference/primitives/app/build.md)                    |
+| `BUILD_DESCRIPTION` | Description of the currently-promoted [Build](../reference/primitives/app/build.md)           |
+| `PORT`              | The value of the `port:` attribute for this [Service](../reference/primitives/app/service.md) |
 | `RACK`              | The name of the [Rack](../reference/rack.md)                                                  |
-| `RELEASE`           | ID of the currently-promoted [Release](../reference/app/primitives/release.md)                |
-| `SERVICE`           | Name of the [Service](../reference/app/primitives/service.md)                                 |
+| `RELEASE`           | ID of the currently-promoted [Release](../reference/primitives/app/release.md)                |
+| `SERVICE`           | Name of the [Service](../reference/primitives/app/service.md)                                 |
