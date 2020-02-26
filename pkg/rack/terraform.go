@@ -61,10 +61,12 @@ func InstallTerraform(c *stdcli.Context, provider, name, version string, options
 	}
 
 	if err := t.init(); err != nil {
+		t.Delete()
 		return err
 	}
 
 	if err := t.apply(); err != nil {
+		t.Delete()
 		return err
 	}
 
