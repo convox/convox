@@ -25,6 +25,26 @@ type Terraform struct {
 	status   string
 }
 
+func CreateTerraform(c *stdcli.Context, name string, md *Metadata) (*Terraform, error) {
+	if !terraformInstalled(c) {
+		return nil, fmt.Errorf("terraform required")
+	}
+
+	t := &Terraform{ctx: c, name: name, provider: md.Provider}
+
+	if err := t.create(md.Vars["release"], md.Vars, md.State); err != nil {
+		t.Delete()
+		return nil, err
+	}
+
+	if err := t.init(); err != nil {
+		t.Delete()
+		return nil, err
+	}
+
+	return t, nil
+}
+
 func InstallTerraform(c *stdcli.Context, provider, name, version string, options map[string]string) error {
 	if !terraformInstalled(c) {
 		return fmt.Errorf("terraform required")
@@ -322,6 +342,7 @@ func (t Terraform) update(release string, vars map[string]string) error {
 			return err
 		}
 		release = v
+
 	}
 
 	vars["release"] = release

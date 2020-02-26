@@ -21,7 +21,10 @@ func init() {
 	})
 
 	registerWithoutProvider("rack install", "install a new rack", RackInstall, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{stdcli.StringFlag("version", "v", "rack version")},
+		Flags: []stdcli.Flag{
+			stdcli.BoolFlag("prepare", "", "prepare the install but don't run it"),
+			stdcli.StringFlag("version", "v", "rack version"),
+		},
 		Usage:    "<provider> <name> [option=value]...",
 		Validate: stdcli.ArgsMin(2),
 	})
@@ -113,6 +116,19 @@ func RackInstall(_ sdk.Interface, c *stdcli.Context) error {
 	}
 
 	opts := argsToOptions(args)
+
+	if c.Bool("prepare") {
+		md := &rack.Metadata{
+			Provider: slug,
+			Vars:     opts,
+		}
+
+		if _, err := rack.Create(c, name, md); err != nil {
+			return err
+		}
+
+		return nil
+	}
 
 	if err := rack.Install(c, slug, name, version, opts); err != nil {
 		return err
