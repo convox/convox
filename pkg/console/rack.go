@@ -70,3 +70,23 @@ func (c *Client) RackList() (Racks, error) {
 
 	return rs, nil
 }
+
+func (c *Client) RackUpdate(name, version string, params map[string]string) error {
+	pdata, err := json.Marshal(params)
+	if err != nil {
+		return err
+	}
+
+	opts := stdsdk.RequestOptions{
+		Params: stdsdk.Params{
+			"params":  string(pdata),
+			"version": version,
+		},
+	}
+
+	if err := c.Put(fmt.Sprintf("/racks/%s", name), opts, nil); err != nil {
+		return err
+	}
+
+	return nil
+}
