@@ -4,7 +4,7 @@ A Balancer accepts incoming traffic and balances it between the [Processes](proc
 
 ## Definition
 
-A Balancer is defined in [`convox.yml`](../convox.yml.md).
+A Balancer is defined in [`convox.yml`](../../../configuration/convox.yml.md).
 
     balancers:
       ingress:
