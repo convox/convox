@@ -372,6 +372,10 @@ func (t Terraform) update(release string, vars map[string]string) error {
 
 	}
 
+	if vars == nil {
+		vars = map[string]string{}
+	}
+
 	vars["release"] = release
 
 	pv, err := terraformProviderVars(t.provider)
