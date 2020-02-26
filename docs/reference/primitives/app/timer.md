@@ -12,7 +12,7 @@ A Timer is defined in [`convox.yml`](../../../configuration/convox.yml.md).
     timers:
       cleanup:
         command: bin/cleanup
-        schedule: "0 3 * * ? *"
+        schedule: "0 3 * * *"
         service: worker
 
 ### Attributes
