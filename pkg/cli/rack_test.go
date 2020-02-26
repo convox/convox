@@ -55,7 +55,7 @@ func TestRackInstall(t *testing.T) {
 
 		me := &mockstdcli.Executor{}
 		me.On("Execute", "terraform", "version").Return([]byte{}, nil)
-		me.On("Terminal", "terraform", "init", "-upgrade").Return(nil)
+		me.On("Terminal", "terraform", "init", "-force-copy", "-upgrade").Return(nil)
 		me.On("Terminal", "terraform", "apply", "-auto-approve").Return(nil)
 		e.Executor = me
 
@@ -98,7 +98,7 @@ func TestRackInstallArgs(t *testing.T) {
 
 		me := &mockstdcli.Executor{}
 		me.On("Execute", "terraform", "version").Return([]byte{}, nil)
-		me.On("Terminal", "terraform", "init", "-upgrade").Return(nil)
+		me.On("Terminal", "terraform", "init", "-force-copy", "-upgrade").Return(nil)
 		me.On("Terminal", "terraform", "apply", "-auto-approve").Return(nil)
 		e.Executor = me
 
@@ -134,7 +134,7 @@ func TestRackInstallSwitch(t *testing.T) {
 
 		me := &mockstdcli.Executor{}
 		me.On("Execute", "terraform", "version").Return([]byte{}, nil)
-		me.On("Terminal", "terraform", "init", "-upgrade").Return(nil)
+		me.On("Terminal", "terraform", "init", "-force-copy", "-upgrade").Return(nil)
 		me.On("Terminal", "terraform", "apply", "-auto-approve").Return(nil)
 		me.On("Execute", "terraform", "output", "-json").Return([]byte(`{}`), nil)
 		e.Executor = me
@@ -179,7 +179,7 @@ func TestRackInstallVersion(t *testing.T) {
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
 		me := &mockstdcli.Executor{}
 		me.On("Execute", "terraform", "version").Return([]byte{}, nil)
-		me.On("Terminal", "terraform", "init", "-upgrade").Return(nil)
+		me.On("Terminal", "terraform", "init", "-force-copy", "-upgrade").Return(nil)
 		me.On("Terminal", "terraform", "apply", "-auto-approve").Return(nil)
 		e.Executor = me
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -36,20 +37,15 @@ func InstallTerraform(c *stdcli.Context, provider, name, version string, options
 
 	t := Terraform{ctx: c, name: name, provider: provider}
 
-	dir, err := t.settingsDirectory()
-	if err != nil {
+	if err := t.create(version, options, nil); err != nil {
 		return err
 	}
 
-	if _, err := os.Stat(dir); !os.IsNotExist(err) {
-		return fmt.Errorf("rack name in use: %s", name)
-	}
-
-	if err := os.MkdirAll(dir, 0700); err != nil {
+	if err := t.init(); err != nil {
 		return err
 	}
 
-	if err := t.apply(version, options); err != nil {
+	if err := t.apply(); err != nil {
 		return err
 	}
 
@@ -127,6 +123,19 @@ func (t Terraform) Client() (sdk.Interface, error) {
 	return sdk.New(t.endpoint)
 }
 
+func (t Terraform) Delete() error {
+	dir, err := t.settingsDirectory()
+	if err != nil {
+		return err
+	}
+
+	if err := os.RemoveAll(dir); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (t Terraform) Latest() (string, error) {
 	return terraformLatestVersion()
 }
@@ -186,7 +195,7 @@ func (t Terraform) Uninstall() error {
 		return err
 	}
 
-	if err := os.RemoveAll(dir); err != nil {
+	if err := t.Delete(); err != nil {
 		return err
 	}
 
@@ -208,7 +217,15 @@ func (t Terraform) UpdateParams(params map[string]string) error {
 		vars[k] = v
 	}
 
-	if err := t.apply(release, vars); err != nil {
+	if err := t.update(release, vars); err != nil {
+		return err
+	}
+
+	if err := t.init(); err != nil {
+		return err
+	}
+
+	if err := t.apply(); err != nil {
 		return err
 	}
 
@@ -221,14 +238,84 @@ func (t Terraform) UpdateVersion(version string) error {
 		return err
 	}
 
-	if err := t.apply(version, vars); err != nil {
+	if err := t.update(version, vars); err != nil {
+		return err
+	}
+
+	if err := t.init(); err != nil {
+		return err
+	}
+
+	if err := t.apply(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (t Terraform) apply(release string, vars map[string]string) error {
+func (t Terraform) apply() error {
+	dir, err := t.settingsDirectory()
+	if err != nil {
+		return err
+	}
+
+	env, err := terraformEnv(t.provider)
+	if err != nil {
+		return err
+	}
+
+	if err := terraform(t.ctx, dir, env, "apply", "-auto-approve"); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (t Terraform) create(release string, vars map[string]string, state []byte) error {
+	dir, err := t.settingsDirectory()
+	if err != nil {
+		return err
+	}
+
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		return fmt.Errorf("rack name in use: %s", t.name)
+	}
+
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return err
+	}
+
+	if err := t.update(release, vars); err != nil {
+		return err
+	}
+
+	if state != nil {
+		if err := ioutil.WriteFile(filepath.Join(dir, "terraform.tfstate"), state, 0644); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (t Terraform) init() error {
+	dir, err := t.settingsDirectory()
+	if err != nil {
+		return err
+	}
+
+	if err := terraform(t.ctx, dir, nil, "init", "-force-copy", "-upgrade"); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (t Terraform) settingsDirectory() (string, error) {
+	return t.ctx.SettingDirectory(fmt.Sprintf("racks/%s", t.name))
+}
+
+func (t Terraform) update(release string, vars map[string]string) error {
 	if release == "" {
 		v, err := terraformLatestVersion()
 		if err != nil {
@@ -254,11 +341,6 @@ func (t Terraform) apply(release string, vars map[string]string) error {
 		}
 	}
 
-	env, err := terraformEnv(t.provider)
-	if err != nil {
-		return err
-	}
-
 	dir, err := t.settingsDirectory()
 	if err != nil {
 		return err
@@ -276,19 +358,13 @@ func (t Terraform) apply(release string, vars map[string]string) error {
 		return err
 	}
 
-	if err := terraform(t.ctx, dir, env, "init", "-upgrade"); err != nil {
-		return err
-	}
-
-	if err := terraform(t.ctx, dir, env, "apply", "-auto-approve"); err != nil {
-		return err
+	if backend := os.Getenv("CONVOX_TERRAFORM_BACKEND"); backend != "" {
+		if err := terraformWriteBackend(filepath.Join(dir, "backend.tf"), backend); err != nil {
+			return err
+		}
 	}
 
 	return nil
-}
-
-func (t Terraform) settingsDirectory() (string, error) {
-	return t.ctx.SettingDirectory(fmt.Sprintf("racks/%s", t.name))
 }
 
 func (t Terraform) vars() (map[string]string, error) {
@@ -500,6 +576,49 @@ func terraformTemplateHelpers() template.FuncMap {
 			return ks
 		},
 	}
+}
+
+func terraformWriteBackend(filename, backend string) error {
+	u, err := url.Parse(backend)
+	if err != nil {
+		return err
+	}
+
+	pw, _ := u.User.Password()
+
+	params := map[string]interface{}{
+		"Address":  fmt.Sprintf("https://%s%s", u.Host, u.Path),
+		"Password": pw,
+	}
+
+	t, err := template.New("main").Funcs(terraformTemplateHelpers()).Parse(`
+		terraform {
+			backend "http" {
+				address        = "{{.Address}}/state"
+				password       = "{{.Password}}"
+				lock_address   = "{{.Address}}/lock"
+				lock_method    = "POST"
+				unlock_address = "{{.Address}}/lock"
+				unlock_method  = "DELETE"
+				skip_cert_verification = true
+			}
+		}`,
+	)
+	if err != nil {
+		return err
+	}
+
+	fd, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer fd.Close()
+
+	if err := t.Execute(fd, params); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func terraformWriteTemplate(filename, version string, params map[string]interface{}) error {
