@@ -1,26 +1,29 @@
 # Timer
 
-A Timer spawns a [Process](process.md) on a schedule. The schedule is defined using `cron` syntax. A Timer is the equivalent of issuing a [convox run](../../cli/run.md) command but on a defined schedule. An [App](../app.md) can have multiple Timers defined.
+A Timer spawns a [Process](process.md) on a schedule that is defined using [cron syntax](https://www.freebsd.org/cgi/man.cgi?crontab).
 
 ## Definition
 
 A Timer is defined in [`convox.yml`](../../../configuration/convox.yml.md).
 
+    services:
+      worker:
+        build: ./worker
     timers:
       cleanup:
-        schedule: "0 3 * * ? *"
         command: bin/cleanup
+        schedule: "0 3 * * ? *"
         service: worker
 
 ### Attributes
 
-| Name       | Required | Description                                                                                                                                                     |
-| ---------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `schedule` | **yes**  | A cron formatted schedule for spawning the [Process](process.md). All times are UTC                                                                             |
-| `command`  | **yes**  | The command to execute once the [Process](process.md) starts                                                                                                    |
-| `service`  | **yes**  | The name of the [Service](service.md) as defined in your [`convox.yml`](../../../configuration/convox.yml.md) whose configuration is used to launch the process |
+| Name       | Required | Description                                                                                |
+| ---------- | -------- | ------------------------------------------------------------------------------------------ |
+| `command`  | **yes**  | The command to execute once the [Process](process.md) starts                               |
+| `schedule` | **yes**  | A cron formatted schedule for spawning the [Process](process.md). All times are UTC        |
+| `service`  | **yes**  | The name of the [Service](service.md) that will be used to spawn the [Process](process.md) |
 
-### Cron expression format
+### Cron Expression Format
 
 Cron expressions use the following format. All times are UTC.
 
@@ -29,42 +32,33 @@ Cron expressions use the following format. All times are UTC.
 |  .-------------- hour (0 - 23)
 |  |  .----------- day-of-month (1 - 31)
 |  |  |  .-------- month (1 - 12) OR JAN,FEB,MAR,APR ...
-|  |  |  |  .----- day-of-week (1 - 7) OR SUN,MON,TUE,WED,THU,FRI,SAT
-|  |  |  |  |  .-- year (1970 - 2199)
-|  |  |  |  |  |
-*  *  *  *  *  *
+|  |  |  |  .----- day-of-week (0 - 6) OR SUN,MON,TUE,WED,THU,FRI,SAT
+|  |  |  |  |
+*  *  *  *  *
 ```
 
-### Examples
+### Using a Template Service
 
-#### Dedicated Service
-
-Two [Services](service.md), `web` is normally running, `worker` is not (scaled to 0). The `cleanup` timer will spawn a new [Process](process.md) using the configuration of `worker` once per minute, run the command `bin/cleanup` inside it, and terminate on completion.
+Timers can run against any [Service](service.md), even one that is scaled to zero. You can use this to create a
+template [Service](service.md) for your Timers.
 
     services:
       web:
         build: .
-        command: bin/webserver
-      worker:
-        build: ./worker
+        command: bin/web
+        port: 5000
+      jobs:
+        build: ./jobs
         scale: 
           count: 0
     timers:
       cleanup:
         command: bin/cleanup
-        schedule: "*/1 * * * ?"
-        service: worker
+        schedule: "*/2 * * * *"
+        service: jobs
 
-#### Existing Service
+On this [App](..) the `jobs` [Service](service.md) is scaled to zero and not running any durable
+[Processes](process.md).
 
-One [Service](service.md) `web` is normally running. The `cleanup` timer will spawn a new [Process](process.md) using the configuration of `web` one per minute, run the command `bin/cleanup` inside it, and terminate on completion.
-
-    services:
-      web:
-        build: .
-        command: bin/webserver
-    timers:
-      cleanup:
-        command: bin/cleanup
-        schedule: "*/1 * * * ?"
-        service: web
+The `cleanup` Timer will spawn a [Process](process.md) of the `jobs` [Service](service.md) to run
+`bin/cleanup` once every two minutes.
