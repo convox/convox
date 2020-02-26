@@ -600,7 +600,6 @@ func terraformWriteBackend(filename, backend string) error {
 				lock_method    = "POST"
 				unlock_address = "{{.Address}}/lock"
 				unlock_method  = "DELETE"
-				skip_cert_verification = true
 			}
 		}`,
 	)
