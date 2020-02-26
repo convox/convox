@@ -21,6 +21,27 @@ type Console struct {
 	status   string
 }
 
+func CreateConsole(c *stdcli.Context, name string, md *Metadata) (*Console, error) {
+	host, err := currentConsole(c)
+	if err != nil {
+		return nil, err
+	}
+
+	cc, err := consoleClient(c, host, "")
+	if err != nil {
+		return nil, err
+	}
+
+	r, err := cc.RackCreate(name, md.Provider, md.State, md.Vars)
+	if err != nil {
+		return nil, err
+	}
+
+	cr := &Console{ctx: c, name: name, provider: r.Provider, status: r.Status}
+
+	return cr, nil
+}
+
 func InstallConsole(c *stdcli.Context, name, provider, version string, options map[string]string) error {
 	return fmt.Errorf("console install not yet supported")
 }
