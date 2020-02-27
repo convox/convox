@@ -57,3 +57,4 @@ The following environment variables are required:
 | Name        | Default         |
 | ----------- | --------------- |
 | `node_type` | `n1-standard-1` |
+| `region`    | `us-east1`      |
