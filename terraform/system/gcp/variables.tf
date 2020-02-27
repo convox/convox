@@ -6,6 +6,10 @@ variable "node_type" {
   default = "n1-standard-1"
 }
 
+variable "region" {
+  default = "us-east1"
+}
+
 variable "release" {
   default = ""
 }
