@@ -21,13 +21,6 @@ The following environment variables are required:
 
 - `GOOGLE_CREDENTIALS`
 - `GOOGLE_PROJECT`
-- `GOOGLE_REGION`
-
-### Select Region
-
-    $ gcloud compute regions list
-
-- `GOOGLE_REGION` is a region `NAME` from the list
 
 ### Create Project
 

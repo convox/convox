@@ -50,10 +50,9 @@ func InstallTerraform(c *stdcli.Context, provider, name, version string, options
 		return fmt.Errorf("terraform required")
 	}
 
-	// env, err := terraformEnv(provider)
-	// if err != nil {
-	// 	return err
-	// }
+	if _, err := terraformEnv(provider); err != nil {
+		return err
+	}
 
 	t := Terraform{ctx: c, name: name, provider: provider}
 
@@ -483,6 +482,18 @@ func listTerraform(c *stdcli.Context) ([]Terraform, error) {
 	return ts, nil
 }
 
+func optionalEnv(vars ...string) map[string]string {
+	env := map[string]string{}
+
+	for _, k := range vars {
+		if v := os.Getenv(k); v != "" {
+			env[k] = v
+		}
+	}
+
+	return env
+}
+
 func requireEnv(vars ...string) (map[string]string, error) {
 	env := map[string]string{}
 	missing := []string{}
@@ -526,11 +537,20 @@ func terraform(c *stdcli.Context, dir string, env map[string]string, args ...str
 func terraformEnv(provider string) (map[string]string, error) {
 	switch provider {
 	case "aws":
-		return requireEnv("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY")
+		env, err := requireEnv("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY")
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range optionalEnv("AWS_SESSION_TOKEN") {
+			env[k] = v
+		}
+		return env, nil
 	case "azure":
 		return requireEnv("ARM_CLIENT_ID", "ARM_CLIENT_SECRET", "ARM_SUBSCRIPTION_ID", "ARM_TENANT_ID")
+	case "do":
+		return requireEnv("DIGITALOCEAN_ACCESS_ID", "DIGITALOCEAN_SECRET_KEY", "DIGITALOCEAN_TOKEN")
 	case "gcp":
-		return requireEnv("GOOGLE_CREDENTIALS", "GOOGLE_PROJECT", "GOOGLE_REGION")
+		return requireEnv("GOOGLE_CREDENTIALS", "GOOGLE_PROJECT")
 	default:
 		return map[string]string{}, nil
 	}
@@ -571,14 +591,10 @@ func terraformLatestVersion() (string, error) {
 func terraformProviderVars(provider string) (map[string]string, error) {
 	switch provider {
 	case "do":
-		env, err := requireEnv("DIGITALOCEAN_ACCESS_ID", "DIGITALOCEAN_SECRET_KEY", "DIGITALOCEAN_TOKEN")
-		if err != nil {
-			return nil, err
-		}
 		vars := map[string]string{
-			"access_id":  env["DIGITALOCEAN_ACCESS_ID"],
-			"secret_key": env["DIGITALOCEAN_SECRET_KEY"],
-			"token":      env["DIGITALOCEAN_TOKEN"],
+			"access_id":  os.Getenv("DIGITALOCEAN_ACCESS_ID"),
+			"secret_key": os.Getenv("DIGITALOCEAN_SECRET_KEY"),
+			"token":      os.Getenv("DIGITALOCEAN_TOKEN"),
 		}
 		return vars, nil
 	default:
