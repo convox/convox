@@ -118,6 +118,8 @@ func RackInstall(_ sdk.Interface, c *stdcli.Context) error {
 	opts := argsToOptions(args)
 
 	if c.Bool("prepare") {
+		opts["release"] = version
+
 		md := &rack.Metadata{
 			Provider: slug,
 			Vars:     opts,
