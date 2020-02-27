@@ -608,8 +608,9 @@ func terraformWriteBackend(filename, backend string) error {
 	pw, _ := u.User.Password()
 
 	params := map[string]interface{}{
-		"Address":  fmt.Sprintf("https://%s%s", u.Host, u.Path),
-		"Password": pw,
+		"Address":    fmt.Sprintf("https://%s%s", u.Host, u.Path),
+		"Password":   pw,
+		"SkipVerify": fmt.Sprintf("%t", os.Getenv("CONVOX_TERRAFORM_BACKEND_INSECURE") == "true"),
 	}
 
 	t, err := template.New("main").Funcs(terraformTemplateHelpers()).Parse(`
@@ -621,6 +622,7 @@ func terraformWriteBackend(filename, backend string) error {
 				lock_method    = "POST"
 				unlock_address = "{{.Address}}/lock"
 				unlock_method  = "DELETE"
+				skip_cert_verification = {{.SkipVerify}}
 			}
 		}`,
 	)
