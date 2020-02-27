@@ -7,7 +7,6 @@ export_secret() {
 case "$PROVIDER" in
 aws)
   export_secret AWS_ACCESS_KEY_ID
-  export_secret AWS_DEFAULT_REGION
   export_secret AWS_SECRET_ACCESS_KEY
   ;;
 azure)

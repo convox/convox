@@ -526,7 +526,7 @@ func terraform(c *stdcli.Context, dir string, env map[string]string, args ...str
 func terraformEnv(provider string) (map[string]string, error) {
 	switch provider {
 	case "aws":
-		return requireEnv("AWS_DEFAULT_REGION", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY")
+		return requireEnv("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY")
 	case "azure":
 		return requireEnv("ARM_CLIENT_ID", "ARM_CLIENT_SECRET", "ARM_SUBSCRIPTION_ID", "ARM_TENANT_ID")
 	case "gcp":
