@@ -207,11 +207,11 @@ func (t Terraform) Uninstall() error {
 		return err
 	}
 
-	if err := terraform(t.ctx, dir, env, "init", "-upgrade"); err != nil {
+	if err := terraform(t.ctx, dir, env, "init", "-no-color", "-upgrade"); err != nil {
 		return err
 	}
 
-	if err := terraform(t.ctx, dir, env, "destroy", "-auto-approve"); err != nil {
+	if err := terraform(t.ctx, dir, env, "destroy", "-auto-approve", "-no-color"); err != nil {
 		return err
 	}
 
@@ -284,7 +284,7 @@ func (t Terraform) apply() error {
 		return err
 	}
 
-	if err := terraform(t.ctx, dir, env, "apply", "-auto-approve"); err != nil {
+	if err := terraform(t.ctx, dir, env, "apply", "-auto-approve", "-no-color"); err != nil {
 		return err
 	}
 
@@ -324,7 +324,7 @@ func (t Terraform) init() error {
 		return err
 	}
 
-	if err := terraform(t.ctx, dir, nil, "init", "-force-copy", "-upgrade"); err != nil {
+	if err := terraform(t.ctx, dir, nil, "init", "-force-copy", "-no-color", "-upgrade"); err != nil {
 		return err
 	}
 
