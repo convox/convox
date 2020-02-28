@@ -6,14 +6,14 @@ provider "google" {
   version = "~> 3.5.0"
 
   project = module.project.id
-  region  = module.project.region
+  region  = var.region
 }
 
 provider "google-beta" {
   version = "~> 3.5.0"
 
   project = module.project.id
-  region  = module.project.region
+  region  = var.region
 }
 
 provider "http" {
