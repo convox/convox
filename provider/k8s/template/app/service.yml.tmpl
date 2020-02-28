@@ -124,6 +124,13 @@ spec:
             {{ end }}
         {{ end }}
         resources:
+          limits:
+            {{ with .Service.Scale.Cpu }}
+            cpu: "{{.}}m"
+            {{ end }}
+            {{ with .Service.Scale.Memory }}
+            memory: "{{.}}Mi"
+            {{ end }}
           requests:
             {{ with .Service.Scale.Cpu }}
             cpu: "{{.}}m"
