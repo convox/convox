@@ -170,7 +170,7 @@ You should see logs in the first terminal that show your browser requesting the 
 
 ## Make a change
 
-Edit the file `convox/routes.rb` and add the following line just before the final `end`:
+Edit the file `config/routes.rb` and add the following line just before the final `end`:
 
     get "/test", to: proc { [ 200, {}, ["Hello World!"] ] }
 
