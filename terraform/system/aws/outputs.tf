@@ -2,6 +2,10 @@ output "api" {
   value = module.rack.api
 }
 
-output "router" {
-  value = module.rack.router
+output "endpoint" {
+  value = module.rack.endpoint
+}
+
+output "release" {
+  value = local.release
 }

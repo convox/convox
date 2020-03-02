@@ -2,6 +2,6 @@ output "api" {
   value = module.api.endpoint
 }
 
-output "router" {
+output "endpoint" {
   value = module.router.endpoint
 }
