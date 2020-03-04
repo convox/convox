@@ -38,5 +38,10 @@ module "k8s" {
     RESOLVER = var.resolver
     ROUTER   = var.router
     SECRET   = var.secret
+    STORAGE  = "/var/storage"
+  }
+
+  volumes = {
+    storage = "/var/storage"
   }
 }

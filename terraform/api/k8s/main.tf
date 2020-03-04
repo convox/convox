@@ -50,18 +50,18 @@ resource "kubernetes_service_account" "api" {
   }
 }
 
-resource "kubernetes_persistent_volume_claim" "api_storage" {
+resource "kubernetes_persistent_volume_claim" "api_volume" {
+  count = length(var.volumes)
+
   metadata {
     namespace = var.namespace
-    name      = "api-storage"
+    name      = "api-${keys(var.volumes)[count.index]}"
 
     labels = {
       app     = "system"
-      name    = "api"
       rack    = var.rack
       service = "api"
       system  = "convox"
-      type    = "service"
     }
   }
 
@@ -214,9 +214,14 @@ resource "kubernetes_deployment" "api" {
             mount_path = "/var/run/docker.sock"
           }
 
-          volume_mount {
-            name       = "storage"
-            mount_path = "/var/storage"
+          dynamic "volume_mount" {
+            for_each = var.volumes
+            iterator = volume
+
+            content {
+              name       = volume.key
+              mount_path = volume.value
+            }
           }
         }
 
@@ -228,11 +233,15 @@ resource "kubernetes_deployment" "api" {
           }
         }
 
-        volume {
-          name = "storage"
+        dynamic "volume" {
+          for_each = var.volumes
 
-          persistent_volume_claim {
-            claim_name = kubernetes_persistent_volume_claim.api_storage.metadata.0.name
+          content {
+            name = volume.key
+
+            persistent_volume_claim {
+              claim_name = "api-${volume.key}"
+            }
           }
         }
       }
