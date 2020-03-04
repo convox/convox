@@ -50,6 +50,31 @@ resource "kubernetes_service_account" "api" {
   }
 }
 
+resource "kubernetes_persistent_volume_claim" "api_storage" {
+  metadata {
+    namespace = var.namespace
+    name      = "api-storage"
+
+    labels = {
+      app     = "system"
+      name    = "api"
+      rack    = var.rack
+      service = "api"
+      system  = "convox"
+      type    = "service"
+    }
+  }
+
+  spec {
+    access_modes = ["ReadWriteOnce"]
+    resources {
+      requests = {
+        storage = "5Gi"
+      }
+    }
+  }
+}
+
 resource "kubernetes_deployment" "api" {
   metadata {
     namespace = var.namespace
@@ -205,8 +230,9 @@ resource "kubernetes_deployment" "api" {
 
         volume {
           name = "storage"
-          host_path {
-            path = "/var/rack/${var.rack}/storage"
+
+          persistent_volume_claim {
+            claim_name = kubernetes_persistent_volume_claim.api_storage.metadata.0.name
           }
         }
       }
