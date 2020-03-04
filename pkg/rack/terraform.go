@@ -322,6 +322,10 @@ func (t Terraform) create(release string, vars map[string]string, state []byte) 
 		return err
 	}
 
+	if _, err := terraformEnv(t.provider); err != nil {
+		return err
+	}
+
 	if _, err := os.Stat(dir); !os.IsNotExist(err) {
 		return fmt.Errorf("rack name in use: %s", t.name)
 	}
