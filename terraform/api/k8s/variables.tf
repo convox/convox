@@ -37,3 +37,7 @@ variable "replicas" {
 variable "socket" {
   default = "/var/run/docker.sock"
 }
+
+variable "volumes" {
+  default = {}
+}
