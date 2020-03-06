@@ -36,9 +36,13 @@ App services are no longer sticky by default. Sticky sessions can be enabled in 
 
 ### Timer Syntax
 
-Timers no longer follow the AWS [scheduled events](https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html) syntax where you must have a `?` in either day-of-week or day-of-month column. 
+Timers no longer follow the AWS scheduled events syntax where you must have a `?` in either day-of-week or day-of-month column. 
 
-Timers now follow the standard [cron syntax](https://www.freebsd.org/cgi/man.cgi?query=crontab&sektion=5):
+Timers now follow the standard [cron syntax](https://www.freebsd.org/cgi/man.cgi?query=crontab&sektion=5)
+
+For example a Timer that runs every hour
+
+#### Version 2
 
 ```
 .----------------- minute (0 - 59)
@@ -47,7 +51,19 @@ Timers now follow the standard [cron syntax](https://www.freebsd.org/cgi/man.cgi
 |  |  |  .-------- month (1 - 12) OR JAN,FEB,MAR,APR ...
 |  |  |  |  .----- day-of-week (0 - 6) OR SUN,MON,TUE,WED,THU,FRI,SAT
 |  |  |  |  |
-*  *  *  *  *
+0  *  *  ?  *
+```
+
+#### Version 3
+
+```
+.----------------- minute (0 - 59)
+|  .-------------- hour (0 - 23)
+|  |  .----------- day-of-month (1 - 31)
+|  |  |  .-------- month (1 - 12) OR JAN,FEB,MAR,APR ...
+|  |  |  |  .----- day-of-week (0 - 6) OR SUN,MON,TUE,WED,THU,FRI,SAT
+|  |  |  |  |
+0  *  *  *  *
 ```
 
 You can read more in the [Timer](../reference/primitives/app/timer.md) documentation section
