@@ -64,7 +64,7 @@ services:
 | `health`      | string/map | /                   | Health check definition (see below)                                                                                                 |
 | `image`       | string     |                     | An external Docker image to use for this Service (supercedes `build`)                                                               |
 | `internal`    | boolean    | false               | Set to `true` to make this Service only accessible inside the Rack                                                                  |
-| `port`        | string     |                     | The port that the default Rack balancer will use to [route incoming traffic](../../../configuration/load-balancers)                     |
+| `port`        | string     |                     | The port that the default Rack balancer will use to [route incoming traffic](../../../configuration/load-balancers.md)                     |
 | `ports`       | list       |                     | A list of ports available for internal [service discovery](../../../configuration/service-discovery.md) or custom [Balancers](balancer.md) |
 | `privileged`  | boolean    | true                | Set to `false` to prevent [Processes](process.md) of this Service from running as root inside their container                       |
 | `scale`       | map        | 1                   | Define scaling parameters (see below)                                                                                               |
