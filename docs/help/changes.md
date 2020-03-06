@@ -40,7 +40,7 @@ Timers no longer follow the AWS scheduled events syntax where you must have a `?
 
 Timers now follow the standard [cron syntax](https://www.freebsd.org/cgi/man.cgi?query=crontab&sektion=5)
 
-For example a Timer that runs every hour
+As an example a Timer that runs every hour has changed as follows:
 
 #### Version 2
 

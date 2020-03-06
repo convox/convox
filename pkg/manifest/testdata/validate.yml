@@ -9,3 +9,4 @@ services:
 timers:
   timer_1:
     service: someservice
+    schedule: "0 * * * ?"
