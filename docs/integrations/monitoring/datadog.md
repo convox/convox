@@ -1,10 +1,10 @@
 # Datadog
 
-You can add operational visibility to your [Rack](../reference/primitives/rack) with Datadog.
+You can add operational visibility to your [Rack](../../reference/primitives/rack) with Datadog.
 
 ## Deploy the Datadog Agent
 
-You can deploy the datadog agent as a Convox [App](../reference/primitives/app) with
+You can deploy the datadog agent as a Convox [App](../../reference/primitives/app) with
 a simple `convox.yml`:
 
     services:

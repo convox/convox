@@ -4,7 +4,7 @@ A Timer spawns a [Process](process.md) on a schedule that is defined using [cron
 
 ## Definition
 
-A Timer is defined in [`convox.yml`](../../../configuration/convox.yml.md).
+A Timer is defined in [`convox.yml`](../../../configuration/convox-yml.md).
 
     services:
       worker:

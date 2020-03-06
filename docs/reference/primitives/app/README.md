@@ -1,10 +1,10 @@
 # App
 
-An App is a logical container for [Primitives](app/primitives.md) that are updated together through transactional deployments.
+An App is a logical container for [Primitives](../README.md) that are updated together through transactional deployments.
 
 ## Definition
 
-An App is defined by a single [`convox.yml`](app/convox.yml.md)
+An App is defined by a single [`convox.yml`](../../../../configuration/convox.yml.md)
 
     resources:
       database:

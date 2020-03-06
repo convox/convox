@@ -85,10 +85,10 @@ The following environment variables are automatically set by Convox.
 
 | Name                | Description                                                                                   |
 | ------------------- | --------------------------------------------------------------------------------------------- |
-| `APP`               | Name of the [App](../reference/app.md)                                                        |
+| `APP`               | Name of the [App](../reference/primitives/app)                                                |
 | `BUILD`             | ID of the currently-promoted [Build](../reference/primitives/app/build.md)                    |
 | `BUILD_DESCRIPTION` | Description of the currently-promoted [Build](../reference/primitives/app/build.md)           |
 | `PORT`              | The value of the `port:` attribute for this [Service](../reference/primitives/app/service.md) |
-| `RACK`              | The name of the [Rack](../reference/rack.md)                                                  |
+| `RACK`              | The name of the [Rack](../reference/primitives/rack.md)                                       |
 | `RELEASE`           | ID of the currently-promoted [Release](../reference/primitives/app/release.md)                |
 | `SERVICE`           | Name of the [Service](../reference/primitives/app/service.md)                                 |

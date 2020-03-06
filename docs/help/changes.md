@@ -38,7 +38,7 @@ App services are no longer sticky by default. Sticky sessions can be enabled in 
 
 Timers no longer follow the AWS [scheduled events](https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html) syntax where you must have a `?` in either day-of-week or day-of-month column. 
 
-Timers now follow the standard [cron syntax](https://www.freebsd.org/cgi/man.cgi?crontab):
+Timers now follow the standard [cron syntax](https://www.freebsd.org/cgi/man.cgi?query=crontab&sektion=5):
 
 ```
 .----------------- minute (0 - 59)

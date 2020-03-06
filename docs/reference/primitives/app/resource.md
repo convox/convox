@@ -4,7 +4,7 @@ A Resource is a network-accessible external service.
 
 ## Definition
 
-A Resource is defined in [`convox.yml`](../convox.yml.md) and linked to one or more [Services](service.md).
+A Resource is defined in [`convox.yml`](../../../../configuration/convox.yml.md) and linked to one or more [Services](service.md).
 
     resources:
       main:
@@ -18,10 +18,10 @@ A Resource is defined in [`convox.yml`](../convox.yml.md) and linked to one or m
 
 The following Resource types are currently available:
 
-* [`memcached`](resource/memcached.md)
-* [`mysql`](resource/mysql.md)
-* [`postgres`](resource/postgres.md)
-* [`redis`](resource/redis.md)
+* `memcached`
+* `mysql`
+* `postgres`
+* `redis`
 
 ## Linking
 
