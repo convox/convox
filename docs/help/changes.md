@@ -44,26 +44,15 @@ As an example a Timer that runs every hour has changed as follows:
 
 #### Version 2
 
-```
-.----------------- minute (0 - 59)
-|  .-------------- hour (0 - 23)
-|  |  .----------- day-of-month (1 - 31)
-|  |  |  .-------- month (1 - 12) OR JAN,FEB,MAR,APR ...
-|  |  |  |  .----- day-of-week (0 - 6) OR SUN,MON,TUE,WED,THU,FRI,SAT
-|  |  |  |  |
-0  *  *  ?  *
-```
+    timers:
+      hourlyjob:
+        schedule: 0 * * ? *
 
 #### Version 3
 
-```
-.----------------- minute (0 - 59)
-|  .-------------- hour (0 - 23)
-|  |  .----------- day-of-month (1 - 31)
-|  |  |  .-------- month (1 - 12) OR JAN,FEB,MAR,APR ...
-|  |  |  |  .----- day-of-week (0 - 6) OR SUN,MON,TUE,WED,THU,FRI,SAT
-|  |  |  |  |
-0  *  *  *  *
-```
+    timers:
+      hourlyjob:
+        schedule: 0 * * * *
+
 
 You can read more in the [Timer](../reference/primitives/app/timer.md) documentation section
