@@ -59,9 +59,6 @@ spec:
             imagePullPolicy: IfNotPresent
             resources:
               limits:
-                {{ with .Service.Scale.Cpu }}
-                cpu: "{{.}}m"
-                {{ end }}
                 {{ with .Service.Scale.Memory }}
                 memory: "{{.}}Mi"
                 {{ end }}
