@@ -42,4 +42,4 @@ You will need to alias your custom domain to your Rack's router endpoint. You ca
 
 In this example you would set up the following DNS entry:
 
-    myapp.example.org CNAME 0a1b2c3d4e5f.convox.cloud
+    myapp.example.org CNAME router.0a1b2c3d4e5f.convox.cloud
