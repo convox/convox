@@ -66,7 +66,7 @@ See [Environment Variables](environment.md) for configuration options.
 ## resources
 
 The `resources` section defines network-accessible [Resources](../reference/primitives/app/resource.md)
-such as databases that can be made available to [Services](../references/primitives/app/service.md).
+such as databases that can be made available to [Services](../reference/primitives/app/service.md).
 
     resources:
       database:

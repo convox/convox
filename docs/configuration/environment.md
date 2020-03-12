@@ -6,7 +6,7 @@ for different deployments (i.e. staging and production).
 
 ## Definition
 
-Environment variables that will be used by the application are defined in `convox.yml`:
+Environment variables that will be used by the application are defined in `convox.yml`(convox.yml.md):
 
 ### Application Level
 
@@ -85,10 +85,10 @@ The following environment variables are automatically set by Convox.
 
 | Name                | Description                                                                                   |
 | ------------------- | --------------------------------------------------------------------------------------------- |
-| `APP`               | Name of the [App](../reference/app.md)                                                        |
+| `APP`               | Name of the [App](../reference/primitives/app)                                                |
 | `BUILD`             | ID of the currently-promoted [Build](../reference/primitives/app/build.md)                    |
 | `BUILD_DESCRIPTION` | Description of the currently-promoted [Build](../reference/primitives/app/build.md)           |
 | `PORT`              | The value of the `port:` attribute for this [Service](../reference/primitives/app/service.md) |
-| `RACK`              | The name of the [Rack](../reference/rack.md)                                                  |
+| `RACK`              | The name of the [Rack](../reference/primitives/rack)                                       |
 | `RELEASE`           | ID of the currently-promoted [Release](../reference/primitives/app/release.md)                |
 | `SERVICE`           | Name of the [Service](../reference/primitives/app/service.md)                                 |

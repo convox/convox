@@ -453,6 +453,7 @@ func TestManifestValidate(t *testing.T) {
 		"service serviceF references a resource that does not exist: foo",
 		"timer name timer_1 invalid, must contain only lowercase alphanumeric and dashes",
 		"timer timer_1 references a service that does not exist: someservice",
+		"timer timer_1 invalid, schedule cannot contain ?",
 	}
 
 	require.EqualError(t, err, fmt.Sprintf("validation errors:\n%s", strings.Join(errors, "\n")))

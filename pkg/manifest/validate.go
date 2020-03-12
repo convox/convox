@@ -86,6 +86,10 @@ func (m *Manifest) validateTimers() []error {
 				errs = append(errs, fmt.Errorf("timer %s references a service that does not exist: %s", t.Name, t.Service))
 			}
 		}
+
+		if strings.Contains(t.Schedule, "?") {
+			errs = append(errs, fmt.Errorf("timer %s invalid, schedule cannot contain ?", t.Name))
+		}
 	}
 
 	return errs

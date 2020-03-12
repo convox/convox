@@ -61,4 +61,4 @@ DNS search suffixes are automatically configured for internal hostnames on a Rac
 also work for contacting the `auth` [Service](../reference/primitives/app/service.md):
 
 * `http://auth:5000` for [Services](../reference/primitives/app/service.md) on the same app.
-* `http://auth.myapp:5000` for other [Apps](../reference/app.md) on the same Rack.
+* `http://auth.myapp:5000` for other [Apps](../reference/primitives/app.md) on the same Rack.

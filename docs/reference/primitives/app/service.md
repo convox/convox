@@ -55,7 +55,7 @@ services:
 
 | Attribute     | Type       | Default             | Description                                                                                                                         |
 | ------------- | ---------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `agent`       | boolean    | false               | Set to `true` to declare this Service as an [Agent](../../../guides/agents.md)                                                      |
+| `agent`       | boolean    | false               | Set to `true` to declare this Service as an [Agent](../../../configuration/agents.md)                                                      |
 | `build`       | string/map | .                   | Build definition (see below)                                                                                                        |
 | `command`     | string     | `CMD` of Dockerfile | The command to run to start a [Process](process.md) for this Service                                                                |
 | `domain`      | string     |                     | A custom domain(s) (comma separated) to route to this Service                                                                       |
@@ -64,12 +64,12 @@ services:
 | `health`      | string/map | /                   | Health check definition (see below)                                                                                                 |
 | `image`       | string     |                     | An external Docker image to use for this Service (supercedes `build`)                                                               |
 | `internal`    | boolean    | false               | Set to `true` to make this Service only accessible inside the Rack                                                                  |
-| `port`        | string     |                     | The port that the default Rack balancer will use to [route incoming traffic](../../../guides/load-balancing.md)                     |
-| `ports`       | list       |                     | A list of ports available for internal [service discovery](../../../guides/service-discovery.md) or custom [Balancers](balancer.md) |
+| `port`        | string     |                     | The port that the default Rack balancer will use to [route incoming traffic](../../../configuration/load-balancers.md)                     |
+| `ports`       | list       |                     | A list of ports available for internal [service discovery](../../../configuration/service-discovery.md) or custom [Balancers](balancer.md) |
 | `privileged`  | boolean    | true                | Set to `false` to prevent [Processes](process.md) of this Service from running as root inside their container                       |
 | `scale`       | map        | 1                   | Define scaling parameters (see below)                                                                                               |
 | `singleton`   | boolean    | false               | Set to `true` to prevent extra [Processes](process.md) of this Service from being started during deployments                        |
-| `sticky`      | boolean    | false               | Set to `true` to enable [sticky sessions](../../../guides/sticky-sessions.md)                                                       |
+| `sticky`      | boolean    | false               | Set to `true` to enable sticky sessions                                                      |
 | `test`        | string     |                     | A command to run to test this Service when running `convox test`                                                                    |
 
 > Environment variables **must** be declared to be populated for a Service.

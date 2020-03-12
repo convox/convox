@@ -6,8 +6,8 @@ A Release is the atomic unit of deployment consisting of a [Build](build.md) and
 A Release is created every time you create a new [Build](build.md) or
 change the [App](../app.md)'s [Environment](../../../configuration/environment.md).
 
-Promoting a Release will begin a [rolling deployment](rolling-updates.md) that will continue
-until the new Release is active on all [Processes](../reference/primitives/app/process.md) or
+Promoting a Release will begin a [rolling deployment](../../../deployment/rolling-updates.md)) that will continue
+until the new Release is active on all [Processes](process.md) or
 has been completely rolled back.
 
 ## Command Line Interface

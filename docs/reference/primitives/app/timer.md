@@ -1,6 +1,6 @@
 # Timer
 
-A Timer spawns a [Process](process.md) on a schedule that is defined using [cron syntax](https://www.freebsd.org/cgi/man.cgi?crontab).
+A Timer spawns a [Process](process.md) on a schedule that is defined using [cron syntax](https://www.freebsd.org/cgi/man.cgi?query=crontab&sektion=5).
 
 ## Definition
 
