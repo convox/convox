@@ -627,12 +627,14 @@ func terraformWriteBackend(filename, backend string) error {
 		"Address":    fmt.Sprintf("https://%s%s", u.Host, u.Path),
 		"Password":   pw,
 		"SkipVerify": fmt.Sprintf("%t", os.Getenv("CONVOX_TERRAFORM_BACKEND_INSECURE") == "true"),
+		"Username":   u.User.Username(),
 	}
 
 	t, err := template.New("main").Funcs(terraformTemplateHelpers()).Parse(`
 		terraform {
 			backend "http" {
 				address        = "{{.Address}}/state"
+				username       = "{{.Username}}"
 				password       = "{{.Password}}"
 				lock_address   = "{{.Address}}/lock"
 				lock_method    = "POST"
