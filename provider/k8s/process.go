@@ -345,7 +345,7 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 		},
 	})
 
-	if release != "" {
+	if service != "build" && release != "" {
 		m, r, err := common.ReleaseManifest(p, app, release)
 		if err != nil {
 			return nil, err
