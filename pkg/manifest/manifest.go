@@ -32,6 +32,25 @@ func init() {
 }
 
 func Load(data []byte, env map[string]string) (*Manifest, error) {
+	m, err := LoadWithoutValidation(data, env)
+	if err != nil {
+		return nil, err
+	}
+
+	if errs := m.Validate(); len(errs) > 0 {
+		messages := []string{}
+
+		for _, err := range errs {
+			messages = append(messages, err.Error())
+		}
+
+		return nil, fmt.Errorf("validation errors:\n%s", strings.Join(messages, "\n"))
+	}
+
+	return m, nil
+}
+
+func LoadWithoutValidation(data []byte, env map[string]string) (*Manifest, error) {
 	var m Manifest
 
 	p, err := interpolate(data, env)
@@ -60,16 +79,6 @@ func Load(data []byte, env map[string]string) (*Manifest, error) {
 
 	if err := m.CombineEnv(); err != nil {
 		return nil, err
-	}
-
-	if errs := m.Validate(); len(errs) > 0 {
-		messages := []string{}
-
-		for _, err := range errs {
-			messages = append(messages, err.Error())
-		}
-
-		return nil, fmt.Errorf("validation errors:\n%s", strings.Join(messages, "\n"))
 	}
 
 	return &m, nil

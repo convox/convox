@@ -82,6 +82,26 @@ func ReleaseManifest(p structs.Provider, app, release string) (*manifest.Manifes
 	return m, r, nil
 }
 
+func ReleaseManifestWithoutValidation(p structs.Provider, app, release string) (*manifest.Manifest, *structs.Release, error) {
+	r, err := p.ReleaseGet(app, release)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	env := structs.Environment{}
+
+	if err := env.Load([]byte(r.Env)); err != nil {
+		return nil, nil, err
+	}
+
+	m, err := manifest.LoadWithoutValidation([]byte(r.Manifest), env)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return m, r, nil
+}
+
 func StreamAppLogs(ctx context.Context, p structs.Provider, w io.Writer, app string) {
 	for {
 		select {
