@@ -49,7 +49,7 @@ func Authenticate(req []byte) ([]byte, error) {
 	}
 
 	for _, d := range ds {
-		go authenticateDevice(ctx, d, areq, ch)
+		go authenticateWait(ctx, d, areq, ch)
 	}
 
 	for range ds {
@@ -78,14 +78,36 @@ func Authenticate(req []byte) ([]byte, error) {
 	return nil, fmt.Errorf("no valid tokens found")
 }
 
-func authenticateDevice(ctx context.Context, d *u2fhost.HidDevice, req authenticationRequest, rch chan tokenResponse) {
+func authenticateWait(ctx context.Context, d *u2fhost.HidDevice, req authenticationRequest, rch chan tokenResponse) {
 	if err := d.Open(); err != nil {
 		rch <- tokenResponse{Error: err}
 		return
 	}
-
 	defer d.Close()
 
+	timeout := time.NewTimer(2 * time.Second)
+	defer timeout.Stop()
+
+	ch := make(chan tokenResponse)
+	refresh := make(chan bool)
+
+	go authenticateDevice(ctx, d, req, ch, refresh)
+
+	for {
+		select {
+		case <-timeout.C:
+			rch <- tokenResponse{Error: fmt.Errorf("timeout")}
+			return
+		case <-refresh:
+			timeout.Reset(2 * time.Second)
+		case res := <-ch:
+			rch <- res
+			return
+		}
+	}
+}
+
+func authenticateDevice(ctx context.Context, d *u2fhost.HidDevice, req authenticationRequest, ch chan tokenResponse, refresh chan bool) {
 	tick := time.NewTicker(250 * time.Millisecond)
 	defer tick.Stop()
 
@@ -102,15 +124,17 @@ func authenticateDevice(ctx context.Context, d *u2fhost.HidDevice, req authentic
 					KeyHandle: k.KeyHandle,
 				}
 
+				refresh <- true
+
 				ares, err := d.Authenticate(areq)
 				switch err.(type) {
 				case *u2fhost.BadKeyHandleError:
 				case *u2fhost.TestOfUserPresenceRequiredError:
 				case nil:
-					rch <- tokenResponse{Response: ares}
+					ch <- tokenResponse{Response: ares}
 					return
 				default:
-					rch <- tokenResponse{Error: err}
+					ch <- tokenResponse{Error: err}
 					return
 				}
 			}
