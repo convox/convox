@@ -14,7 +14,7 @@ var (
 	nameValidator = regexp.MustCompile(`^[a-z]{1}[a-z0-9-]*$`)
 )
 
-func (m *Manifest) Validate() []error {
+func (m *Manifest) validate() []error {
 	errs := []error{}
 
 	errs = append(errs, m.validateEnv()...)

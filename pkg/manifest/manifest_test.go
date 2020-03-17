@@ -440,7 +440,16 @@ func testdataManifest(name string, env map[string]string) (*manifest.Manifest, e
 		return nil, err
 	}
 
-	return manifest.Load(data, env)
+	m, err := manifest.Load(data, env)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := m.Validate(); err != nil {
+		return nil, err
+	}
+
+	return m, nil
 }
 
 func TestManifestValidate(t *testing.T) {
