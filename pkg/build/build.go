@@ -210,6 +210,10 @@ func (bb *Build) buildGeneration2(dir string) error {
 		return err
 	}
 
+	if err := m.Validate(); err != nil {
+		return err
+	}
+
 	prefix := fmt.Sprintf("%s/%s", bb.Rack, bb.App)
 
 	builds := map[string]manifest.ServiceBuild{}

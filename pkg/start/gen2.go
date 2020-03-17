@@ -91,6 +91,10 @@ func (s *Start) Start2(ctx context.Context, w io.Writer, opts Options2) error {
 		return errors.WithStack(err)
 	}
 
+	if err := m.Validate(); err != nil {
+		return err
+	}
+
 	services := map[string]bool{}
 
 	if opts.Services == nil {

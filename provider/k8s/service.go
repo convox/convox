@@ -34,7 +34,7 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 		return structs.Services{}, nil
 	}
 
-	m, _, err := common.ReleaseManifestWithoutValidation(p, app, a.Release)
+	m, _, err := common.ReleaseManifest(p, app, a.Release)
 	if err != nil {
 		return nil, err
 	}
