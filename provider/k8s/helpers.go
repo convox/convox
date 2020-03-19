@@ -15,7 +15,6 @@ import (
 
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
-	cv "github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned"
 	ae "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -33,10 +32,6 @@ type Patch struct {
 	Op    string      `json:"op"`
 	Path  string      `json:"path"`
 	Value interface{} `json:"value"`
-}
-
-func (p *Provider) convoxClient() (cv.Interface, error) {
-	return cv.NewForConfig(p.Config)
 }
 
 func (p *Provider) ingressSecrets(a *structs.App, ss manifest.Services) (map[string]string, error) {
