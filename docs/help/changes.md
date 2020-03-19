@@ -2,6 +2,10 @@
 
 This document outlines the changes from Version 2 (date-based version) Racks to Version 3.x Racks.
 
+## Overview of Rack differences
+
+![](rack-versions.png)
+
 ## Apps
 
 ### Agent Ports
