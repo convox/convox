@@ -207,9 +207,9 @@ spec:
     service: {{.Service.Name}}
     type: service
   ports:
-    {{ with .Service.Port }}
+    {{ with .Service.Port.Port }}
     - name: main
-      port: {{.Port}}
+      port: {{.}}
       protocol: TCP
       targetPort: main
     {{ end }}
