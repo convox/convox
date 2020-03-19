@@ -12,6 +12,7 @@ import (
 	"github.com/convox/convox/pkg/metrics"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/pkg/templater"
+	cv "github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned"
 	"github.com/convox/logger"
 	"github.com/gobuffalo/packr"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,6 +25,7 @@ type Provider struct {
 	Atom        atom.Interface
 	CertManager bool
 	Config      *rest.Config
+	Convox      cv.Interface
 	Cluster     kubernetes.Interface
 	Domain      string
 	Engine      Engine
@@ -67,10 +69,16 @@ func FromEnv() (*Provider, error) {
 		return nil, err
 	}
 
+	cc, err := cv.NewForConfig(rc)
+	if err != nil {
+		return nil, err
+	}
+
 	p := &Provider{
 		Atom:        ac,
 		CertManager: os.Getenv("CERT_MANAGER") == "true",
 		Config:      rc,
+		Convox:      cc,
 		Cluster:     kc,
 		Domain:      os.Getenv("DOMAIN"),
 		Image:       os.Getenv("IMAGE"),

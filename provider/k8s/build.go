@@ -508,12 +508,7 @@ func (p *Provider) buildAuth(b *structs.Build) ([]byte, error) {
 }
 
 func (p *Provider) buildCreate(b *structs.Build) (*structs.Build, error) {
-	c, err := p.convoxClient()
-	if err != nil {
-		return nil, err
-	}
-
-	kb, err := c.ConvoxV1().Builds(p.AppNamespace(b.App)).Create(p.buildMarshal(b))
+	kb, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(b.App)).Create(p.buildMarshal(b))
 	if err != nil {
 		return nil, err
 	}
@@ -522,12 +517,7 @@ func (p *Provider) buildCreate(b *structs.Build) (*structs.Build, error) {
 }
 
 func (p *Provider) buildGet(app, id string) (*structs.Build, error) {
-	c, err := p.convoxClient()
-	if err != nil {
-		return nil, err
-	}
-
-	kb, err := c.ConvoxV1().Builds(p.AppNamespace(app)).Get(strings.ToLower(id), am.GetOptions{})
+	kb, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(app)).Get(strings.ToLower(id), am.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -536,12 +526,7 @@ func (p *Provider) buildGet(app, id string) (*structs.Build, error) {
 }
 
 func (p *Provider) buildList(app string) (structs.Builds, error) {
-	c, err := p.convoxClient()
-	if err != nil {
-		return nil, err
-	}
-
-	kbs, err := c.ConvoxV1().Builds(p.AppNamespace(app)).List(am.ListOptions{})
+	kbs, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(app)).List(am.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -614,12 +599,7 @@ func (p *Provider) buildUnmarshal(kb *ca.Build) (*structs.Build, error) {
 }
 
 func (p *Provider) buildUpdate(b *structs.Build) (*structs.Build, error) {
-	c, err := p.convoxClient()
-	if err != nil {
-		return nil, err
-	}
-
-	kbo, err := c.ConvoxV1().Builds(p.AppNamespace(b.App)).Get(strings.ToLower(b.Id), am.GetOptions{})
+	kbo, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(b.App)).Get(strings.ToLower(b.Id), am.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -628,7 +608,7 @@ func (p *Provider) buildUpdate(b *structs.Build) (*structs.Build, error) {
 
 	kbn.ObjectMeta = kbo.ObjectMeta
 
-	kb, err := c.ConvoxV1().Builds(p.AppNamespace(b.App)).Update(kbn)
+	kb, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(b.App)).Update(kbn)
 	if err != nil {
 		return nil, err
 	}

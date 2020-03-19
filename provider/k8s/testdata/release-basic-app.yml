@@ -1,0 +1,189 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    convox.com/lock: "false"
+    convox.com/params: '{"Test":"foo"}'
+  labels:
+    app: app1
+    name: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    system: convox
+    type: app
+  name: rack1-app1
+  ownerReferences:
+  - apiVersion: v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: Namespace
+    name: ns1
+    uid: uid1
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    ann1: val1
+    convox.com/backend-protocol: http
+    convox.com/idles: "false"
+    kubernetes.io/ingress-class: ""
+    nginx.ingress.kubernetes.io/backend-protocol: http
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    service: web
+    system: convox
+    type: service
+  name: web
+  namespace: rack1-app1
+spec:
+  rules:
+  - host: service.host
+    http:
+      paths:
+      - backend:
+          serviceName: web
+          servicePort: 5000
+  tls:
+  - hosts:
+    - service.host
+    secretName: cert-web
+---
+apiVersion: v1
+data:
+  APP: YXBwMQ==
+  BUILD: QlVJTEQx
+  BUILD_DESCRIPTION: ""
+  FOO: YmFy
+  PORT: NTAwMA==
+  RACK: cmFjazE=
+  RACK_URL: aHR0cHM6Ly9jb252b3g6QGFwaS5uczEuc3ZjLmNsdXN0ZXIubG9jYWw6NTQ0Mw==
+  RELEASE: UkVMRUFTRTI=
+  SERVICE: d2Vi
+kind: Secret
+metadata:
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    service: web
+    system: convox
+    type: env
+  name: env-web
+  namespace: rack1-app1
+type: Opaque
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    atom.conditions: Available=True,Progressing=True/NewReplicaSetAvailable
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    service: web
+    system: convox
+    type: service
+  name: web
+  namespace: rack1-app1
+spec:
+  minReadySeconds: 1
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: app1
+      rack: rack1
+      service: web
+      system: convox
+  strategy:
+    rollingUpdate:
+      maxSurge: 200%
+      maxUnavailable: 50%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: app1
+        name: web
+        rack: rack1
+        release: RELEASE2
+        service: web
+        system: convox
+        type: service
+    spec:
+      containers:
+      - env:
+        - name: INSTANCE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        envFrom:
+        - secretRef:
+            name: env-web
+        image: repo1:web.build1
+        imagePullPolicy: IfNotPresent
+        name: main
+        ports:
+        - containerPort: 5000
+          name: main
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 5000
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 4
+        resources:
+          limits:
+            memory: 512Mi
+          requests:
+            cpu: 256m
+            memory: 512Mi
+        volumeMounts:
+        - mountPath: /etc/convox
+          name: ca
+      shareProcessNamespace: true
+      volumes:
+      - configMap:
+          name: ca
+          optional: true
+        name: ca
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    convox.com/alias: web.app1.rack1.local
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    service: web
+    system: convox
+  name: web
+  namespace: rack1-app1
+spec:
+  ports:
+  - name: main
+    port: 5000
+    protocol: TCP
+    targetPort: main
+  selector:
+    service: web
+    type: service
+  type: ClusterIP
+---
+null

@@ -1,0 +1,7 @@
+ended: 20200101.000000.000000000
+manifest:
+  services:
+    web:
+      build: .
+      port: 5000
+started: 20200101.000000.000000000

@@ -199,12 +199,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 }
 
 func (p *Provider) releaseCreate(r *structs.Release) (*structs.Release, error) {
-	c, err := p.convoxClient()
-	if err != nil {
-		return nil, err
-	}
-
-	kr, err := c.ConvoxV1().Releases(p.AppNamespace(r.App)).Create(p.releaseMarshal(r))
+	kr, err := p.Convox.ConvoxV1().Releases(p.AppNamespace(r.App)).Create(p.releaseMarshal(r))
 	if err != nil {
 		return nil, err
 	}
@@ -213,12 +208,7 @@ func (p *Provider) releaseCreate(r *structs.Release) (*structs.Release, error) {
 }
 
 func (p *Provider) releaseGet(app, id string) (*structs.Release, error) {
-	c, err := p.convoxClient()
-	if err != nil {
-		return nil, err
-	}
-
-	kr, err := c.ConvoxV1().Releases(p.AppNamespace(app)).Get(strings.ToLower(id), am.GetOptions{})
+	kr, err := p.Convox.ConvoxV1().Releases(p.AppNamespace(app)).Get(strings.ToLower(id), am.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -243,12 +233,7 @@ func (p *Provider) releaseFork(app string) (*structs.Release, error) {
 }
 
 func (p *Provider) releaseList(app string) (structs.Releases, error) {
-	c, err := p.convoxClient()
-	if err != nil {
-		return nil, err
-	}
-
-	krs, err := c.ConvoxV1().Releases(p.AppNamespace(app)).List(am.ListOptions{})
+	krs, err := p.Convox.ConvoxV1().Releases(p.AppNamespace(app)).List(am.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

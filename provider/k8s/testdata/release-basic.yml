@@ -1,0 +1,9 @@
+build: build1
+created: 20200101.000000.000000000
+env:
+  FOO: bar
+manifest:
+  services:
+    web:
+      build: .
+      port: 5000

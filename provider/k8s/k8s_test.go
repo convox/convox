@@ -13,6 +13,7 @@ import (
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/k8s"
+	cvfake "github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned/fake"
 	"github.com/stretchr/testify/require"
 	yaml "gopkg.in/yaml.v2"
 	ac "k8s.io/api/core/v1"
@@ -59,6 +60,7 @@ func requireYamlFixture(t *testing.T, d1 []byte, filename string) {
 func testProvider(t *testing.T, fn func(*k8s.Provider)) {
 	a := &atom.MockInterface{}
 	c := fake.NewSimpleClientset()
+	cc := cvfake.NewSimpleClientset()
 
 	_, err := c.CoreV1().Namespaces().Create(&ac.Namespace{
 		ObjectMeta: am.ObjectMeta{
@@ -77,6 +79,7 @@ func testProvider(t *testing.T, fn func(*k8s.Provider)) {
 	p := &k8s.Provider{
 		Atom:      a,
 		Cluster:   c,
+		Convox:    cc,
 		Domain:    "domain1",
 		Engine:    &TestEngine{},
 		Name:      "rack1",
