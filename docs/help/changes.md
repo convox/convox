@@ -4,7 +4,13 @@ This document outlines the changes from Version 2 (date-based version) Racks to 
 
 ## Overview of Rack differences
 
-![](rack-versions.png)
+| "Version 2" Racks  | "Version 3" Racks  |
+|:-:|:-:|
+| Version numbers look like `20200302115619` <br>(reverse date format, start with a 2)  | Version numbers look like `3.0.8` <br> (Semantic versioning, start with a 3)  |
+| Runs on ECS (AWS) only  | Runs on: EKS (AWS),<br>GKE (Google Cloud),<br>AKS (Azure),<br>Managed Kubernetes (Digital Ocean)<br>so far...  |
+| Supported for Pro & Enterprise Customers  | Active Development  |
+| Console based install<br>CLI based install, management and uninstall  | Console based install, management and uninstall<br>CLI based install, management and uninstall  |
+| Runs Gen1 and Gen2 apps  | Runs Generation 2 Apps  |
 
 ## Apps
 
