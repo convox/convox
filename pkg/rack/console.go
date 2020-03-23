@@ -41,8 +41,8 @@ func CreateConsole(c *stdcli.Context, name string, md *Metadata) (*Console, erro
 	return cr, nil
 }
 
-func InstallConsole(c *stdcli.Context, name, provider, version string, options map[string]string) error {
-	return fmt.Errorf("console install not yet supported")
+func InstallConsole(c *stdcli.Context, provider, name, version string, options map[string]string) error {
+	return fmt.Errorf("console install from cli not yet supported")
 }
 
 func LoadConsole(c *stdcli.Context, name string) (*Console, error) {
