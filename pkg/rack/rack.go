@@ -157,7 +157,7 @@ func Match(c *stdcli.Context, name string) (Rack, error) {
 			return r, nil
 		}
 
-		if strings.Index(r.Name(), name) != -1 {
+		if strings.Contains(r.Name(), name) {
 			matches = append(matches, r)
 		}
 	}
