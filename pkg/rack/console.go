@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"strings"
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/console"
@@ -65,6 +64,19 @@ func (c Console) Client() (sdk.Interface, error) {
 	return c.client()
 }
 
+func (c Console) Delete() error {
+	cc, err := c.client()
+	if err != nil {
+		return err
+	}
+
+	if err := cc.RackDelete(c.name); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (c Console) MarshalJSON() ([]byte, error) {
 	h := map[string]string{
 		"name": c.name,
@@ -72,6 +84,27 @@ func (c Console) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(h)
+}
+
+func (c Console) Metadata() (*Metadata, error) {
+	cc, err := c.client()
+	if err != nil {
+		return nil, err
+	}
+
+	r, err := cc.RackGet(c.name)
+	if err != nil {
+		return nil, err
+	}
+
+	m := &Metadata{
+		Deletable: r.Deletable,
+		Provider:  r.Provider,
+		State:     r.State,
+		Vars:      r.Parameters,
+	}
+
+	return m, nil
 }
 
 func (c Console) Name() string {
@@ -109,10 +142,38 @@ func (c Console) Uninstall() error {
 }
 
 func (c Console) UpdateParams(params map[string]string) error {
-	if err := c.updateSupported(); err != nil {
+	cu, err := c.consoleUpdateSupported()
+	if err != nil {
+		return err
+	}
+	if !cu {
+		return c.updateParamsDirect(params)
+	}
+
+	cc, err := c.client()
+	if err != nil {
 		return err
 	}
 
+	r, err := cc.RackGet(c.name)
+	if err != nil {
+		return err
+	}
+
+	version := r.Parameters["release"]
+
+	if version == "" {
+		return fmt.Errorf("current version invalid")
+	}
+
+	if err := cc.RackUpdate(c.name, version, params); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c Console) updateParamsDirect(params map[string]string) error {
 	d, err := c.direct()
 	if err != nil {
 		return err
@@ -126,10 +187,35 @@ func (c Console) UpdateParams(params map[string]string) error {
 }
 
 func (c Console) UpdateVersion(version string) error {
-	if err := c.updateSupported(); err != nil {
+	cu, err := c.consoleUpdateSupported()
+	if err != nil {
+		return err
+	}
+	if !cu {
+		return c.updateVersionDirect(version)
+	}
+
+	if version == "" {
+		v, err := terraformLatestVersion()
+		if err != nil {
+			return err
+		}
+		version = v
+	}
+
+	cc, err := c.client()
+	if err != nil {
 		return err
 	}
 
+	if err := cc.RackUpdate(c.name, version, nil); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c Console) updateVersionDirect(version string) error {
 	d, err := c.direct()
 	if err != nil {
 		return err
@@ -165,22 +251,22 @@ func (c Console) direct() (*Direct, error) {
 	return d, nil
 }
 
-func (c Console) updateSupported() error {
+func (c Console) consoleUpdateSupported() (bool, error) {
 	cc, err := c.client()
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	s, err := cc.SystemGet()
+	r, err := cc.RackGet(c.name)
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	if !strings.HasPrefix(s.Version, "20") {
-		return fmt.Errorf("console update of version 3 racks not yet supported")
+	if r.State == nil {
+		return false, nil
 	}
 
-	return nil
+	return true, nil
 }
 
 func consoleClient(c *stdcli.Context, host, rack string) (*console.Client, error) {
@@ -236,8 +322,12 @@ func listConsole(c *stdcli.Context) ([]Console, error) {
 	}
 
 	rs, err := cc.RackList()
-	if err != nil {
+	switch err.(type) {
+	case console.AuthenticationError:
 		return nil, err
+	case nil:
+	default:
+		return []Console{}, nil
 	}
 
 	for _, r := range rs {

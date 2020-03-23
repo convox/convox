@@ -37,6 +37,14 @@ func (d Direct) Client() (sdk.Interface, error) {
 	return d.client, nil
 }
 
+func (d Direct) Delete() error {
+	return fmt.Errorf("can not delete a rack with RACK_URL")
+}
+
+func (d Direct) Metadata() (*Metadata, error) {
+	return nil, fmt.Errorf("metadata not available with RACK_URL")
+}
+
 func (d Direct) Name() string {
 	return d.name
 }

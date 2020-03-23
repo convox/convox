@@ -159,6 +159,32 @@ func (t Terraform) Latest() (string, error) {
 	return terraformLatestVersion()
 }
 
+func (t Terraform) Metadata() (*Metadata, error) {
+	dir, err := t.settingsDirectory()
+	if err != nil {
+		return nil, err
+	}
+
+	state, err := ioutil.ReadFile(filepath.Join(dir, "terraform.tfstate"))
+	if err != nil {
+		return nil, err
+	}
+
+	vars, err := t.vars()
+	if err != nil {
+		return nil, err
+	}
+
+	m := &Metadata{
+		Deletable: true,
+		Provider:  t.provider,
+		State:     state,
+		Vars:      vars,
+	}
+
+	return m, nil
+}
+
 func (t Terraform) MarshalJSON() ([]byte, error) {
 	h := map[string]string{
 		"name": t.name,
@@ -296,6 +322,10 @@ func (t Terraform) create(release string, vars map[string]string, state []byte) 
 		return err
 	}
 
+	if _, err := terraformEnv(t.provider); err != nil {
+		return err
+	}
+
 	if _, err := os.Stat(dir); !os.IsNotExist(err) {
 		return fmt.Errorf("rack name in use: %s", t.name)
 	}
@@ -342,6 +372,10 @@ func (t Terraform) update(release string, vars map[string]string) error {
 		}
 		release = v
 
+	}
+
+	if vars == nil {
+		vars = map[string]string{}
 	}
 
 	vars["release"] = release

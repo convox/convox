@@ -25,6 +25,21 @@ func (t Test) Client() (sdk.Interface, error) {
 	return TestClient, nil
 }
 
+func (t Test) Delete() error {
+	return nil
+}
+
+func (t Test) Metadata() (*Metadata, error) {
+	m := &Metadata{
+		State: []byte("state"),
+		Vars: map[string]string{
+			"var1": "val1",
+		},
+	}
+
+	return m, nil
+}
+
 func (t Test) Name() string {
 	return t.name
 }
