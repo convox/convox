@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/convox/convox/pkg/kctl"
+	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ic "k8s.io/client-go/informers/core/v1"
@@ -30,7 +31,7 @@ func NewPodController(p *Provider) (*PodController, error) {
 
 	c, err := kctl.NewController(p.Namespace, "convox-k8s-pod", pc)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	pc.Controller = c
@@ -73,7 +74,7 @@ func (c *PodController) Stop() error {
 func (c *PodController) Add(obj interface{}) error {
 	p, err := assertPod(obj)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	fmt.Printf("pod add: %s/%s (%s)\n", p.ObjectMeta.Namespace, p.ObjectMeta.Name, p.Status.Phase)
@@ -89,7 +90,7 @@ func (c *PodController) Add(obj interface{}) error {
 func (c *PodController) Delete(obj interface{}) error {
 	p, err := assertPod(obj)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	fmt.Printf("pod delete: %s/%s\n", p.ObjectMeta.Namespace, p.ObjectMeta.Name)
@@ -100,12 +101,12 @@ func (c *PodController) Delete(obj interface{}) error {
 func (c *PodController) Update(prev, cur interface{}) error {
 	pp, err := assertPod(prev)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	cp, err := assertPod(cur)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	if reflect.DeepEqual(pp.Status, cp.Status) {
@@ -130,7 +131,7 @@ func (c *PodController) cleanupPod(p *ac.Pod) error {
 	time.Sleep(5 * time.Second)
 
 	if err := c.Client().CoreV1().Pods(p.ObjectMeta.Namespace).Delete(p.ObjectMeta.Name, nil); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	return nil
@@ -139,7 +140,7 @@ func (c *PodController) cleanupPod(p *ac.Pod) error {
 func assertPod(v interface{}) (*ac.Pod, error) {
 	p, ok := v.(*ac.Pod)
 	if !ok {
-		return nil, fmt.Errorf("could not assert pod for type: %T", v)
+		return nil, errors.WithStack(fmt.Errorf("could not assert pod for type: %T", v))
 	}
 
 	return p, nil

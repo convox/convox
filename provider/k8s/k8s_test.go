@@ -14,6 +14,7 @@ import (
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/k8s"
 	cvfake "github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned/fake"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	yaml "gopkg.in/yaml.v2"
 	ac "k8s.io/api/core/v1"
@@ -30,12 +31,12 @@ func reformatYaml(data []byte) ([]byte, error) {
 		var v interface{}
 
 		if err := yaml.Unmarshal(part, &v); err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		data, err := yaml.Marshal(v)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		rms = append(rms, data)
@@ -154,7 +155,7 @@ func (te *TestEngine) RepositoryHost(app string) (string, bool, error) {
 }
 
 func (te *TestEngine) ResolverHost() (string, error) {
-	return "", fmt.Errorf("no resolver")
+	return "", errors.WithStack(fmt.Errorf("no resolver"))
 }
 
 func (te *TestEngine) ServiceHost(app string, s manifest.Service) string {

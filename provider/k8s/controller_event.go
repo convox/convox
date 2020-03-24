@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/convox/convox/pkg/kctl"
+	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ic "k8s.io/client-go/informers/core/v1"
@@ -28,7 +29,7 @@ func NewEventController(p *Provider) (*EventController, error) {
 
 	c, err := kctl.NewController(p.Namespace, "convox-k8s-event", pc)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	pc.Controller = c
@@ -68,7 +69,7 @@ func (c *EventController) Stop() error {
 func (c *EventController) Add(obj interface{}) error {
 	e, err := assertEvent(obj)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	if e.LastTimestamp.Before(&c.start) {
@@ -83,38 +84,38 @@ func (c *EventController) Add(obj interface{}) error {
 	case "apps/v1/Deployment":
 		app, err := c.Provider.NamespaceApp(o.Namespace)
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 
 		if err := c.Provider.systemLog(app, o.Name, e.LastTimestamp.Time, e.Message); err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 	case "apps/v1/ReplicaSet":
 		app, err := c.Provider.NamespaceApp(o.Namespace)
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 
 		if err := c.Provider.systemLog(app, o.Name, e.LastTimestamp.Time, e.Message); err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 	case "atom.convox.com/v1/Atom":
 		app, err := c.Provider.NamespaceApp(o.Namespace)
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 
 		if err := c.Provider.systemLog(app, fmt.Sprintf("atom/%s", strings.ReplaceAll(e.InvolvedObject.Name, ".", "/")), e.LastTimestamp.Time, fmt.Sprintf("%s: %s", e.Reason, e.Message)); err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 	case "autoscaling/v2beta2/HorizontalPodAutoscaler":
 		app, err := c.Provider.NamespaceApp(o.Namespace)
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 
 		if err := c.Provider.systemLog(app, o.Name, e.LastTimestamp.Time, e.Message); err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 	case "v1/ConfigMap":
 	case "v1/Pod":
@@ -123,11 +124,11 @@ func (c *EventController) Add(obj interface{}) error {
 		default:
 			app, err := c.Provider.NamespaceApp(o.Namespace)
 			if err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 
 			if err := c.Provider.systemLog(app, o.Name, e.LastTimestamp.Time, e.Message); err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 		}
 	default:
@@ -148,7 +149,7 @@ func (c *EventController) Update(prev, cur interface{}) error {
 func assertEvent(v interface{}) (*ac.Event, error) {
 	e, ok := v.(*ac.Event)
 	if !ok {
-		return nil, fmt.Errorf("could not assert deployment for type: %T", v)
+		return nil, errors.WithStack(fmt.Errorf("could not assert deployment for type: %T", v))
 	}
 
 	return e, nil

@@ -8,6 +8,7 @@ import (
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/k8s"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -316,5 +317,5 @@ func appCreate(c kubernetes.Interface, rack, name string) error {
 		},
 	})
 
-	return err
+	return errors.WithStack(err)
 }

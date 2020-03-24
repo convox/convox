@@ -15,6 +15,7 @@ import (
 
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/pkg/errors"
 	ae "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -45,7 +46,7 @@ func (p *Provider) ingressSecrets(a *structs.App, ss manifest.Services) (map[str
 
 	cs, err := p.CertificateList()
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	sort.Slice(cs, func(i, j int) bool { return cs[i].Expiration.After(cs[i].Expiration) })
@@ -73,7 +74,7 @@ func (p *Provider) ingressSecrets(a *structs.App, ss manifest.Services) (map[str
 		if !matched {
 			c, err := p.CertificateGenerate([]string{d})
 			if err != nil {
-				return nil, err
+				return nil, errors.WithStack(err)
 			}
 
 			secrets[d] = c.Id
@@ -91,7 +92,7 @@ func (p *Provider) ingressSecrets(a *structs.App, ss manifest.Services) (map[str
 
 			kc, err := p.Cluster.CoreV1().Secrets(p.Namespace).Get(id, am.GetOptions{})
 			if err != nil {
-				return nil, err
+				return nil, errors.WithStack(err)
 			}
 
 			kc.ObjectMeta.Namespace = p.AppNamespace(a.Name)
@@ -99,7 +100,7 @@ func (p *Provider) ingressSecrets(a *structs.App, ss manifest.Services) (map[str
 			kc.UID = ""
 
 			if _, err := p.Cluster.CoreV1().Secrets(p.AppNamespace(a.Name)).Create(kc); err != nil {
-				return nil, err
+				return nil, errors.WithStack(err)
 			}
 		}
 	}
@@ -125,7 +126,7 @@ func (p *Provider) environment(a *structs.App, r *structs.Release, s manifest.Se
 	if r.Build != "" {
 		b, err := p.BuildGet(a.Name, r.Build)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		for k, v := range p.buildEnvironment(a, b) {
@@ -241,25 +242,25 @@ func extractImageManifest(r io.Reader) (imageManifest, error) {
 			break
 		}
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		if mh.Name == "manifest.json" {
 			var mdata bytes.Buffer
 
 			if _, err := io.Copy(&mdata, mtr); err != nil {
-				return nil, err
+				return nil, errors.WithStack(err)
 			}
 
 			if err := json.Unmarshal(mdata.Bytes(), &manifest); err != nil {
-				return nil, err
+				return nil, errors.WithStack(err)
 			}
 
 			return manifest, nil
 		}
 	}
 
-	return nil, fmt.Errorf("unable to locate manifest")
+	return nil, errors.WithStack(fmt.Errorf("unable to locate manifest"))
 }
 
 func nameFilter(name string) string {
@@ -293,6 +294,6 @@ func volumeTo(v string) (string, error) {
 	case 2:
 		return parts[1], nil
 	default:
-		return "", fmt.Errorf("invalid volume %q", v)
+		return "", errors.WithStack(fmt.Errorf("invalid volume %q", v))
 	}
 }

@@ -4,8 +4,9 @@ import (
 	"fmt"
 
 	"github.com/convox/convox/pkg/structs"
+	"github.com/pkg/errors"
 )
 
 func (p *Provider) EventSend(action string, opts structs.EventSendOptions) error {
-	return fmt.Errorf("unimplemented")
+	return errors.WithStack(fmt.Errorf("unimplemented"))
 }

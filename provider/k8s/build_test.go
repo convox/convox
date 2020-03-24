@@ -6,6 +6,7 @@ import (
 
 	ca "github.com/convox/convox/provider/k8s/pkg/apis/convox/v1"
 	cv "github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned"
+	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -13,7 +14,7 @@ import (
 func buildCreate(kc cv.Interface, ns, id, fixture string) error {
 	spec, err := buildFixture(fixture)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	b := &ca.Build{
@@ -24,7 +25,7 @@ func buildCreate(kc cv.Interface, ns, id, fixture string) error {
 	}
 
 	if _, err := kc.ConvoxV1().Builds(ns).Create(b); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	return nil
@@ -33,7 +34,7 @@ func buildCreate(kc cv.Interface, ns, id, fixture string) error {
 func buildFixture(name string) (*ca.BuildSpec, error) {
 	data, err := ioutil.ReadFile(fmt.Sprintf("testdata/build-%s.yml", name))
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	var fixture struct {
@@ -43,12 +44,12 @@ func buildFixture(name string) (*ca.BuildSpec, error) {
 	}
 
 	if err := yaml.Unmarshal(data, &fixture); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	mdata, err := yaml.Marshal(fixture.Manifest)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	s := &ca.BuildSpec{

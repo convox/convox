@@ -12,12 +12,13 @@ import (
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
 	shellquote "github.com/kballard/go-shellquote"
+	"github.com/pkg/errors"
 )
 
 func (p *Provider) RenderTemplate(name string, params map[string]interface{}) ([]byte, error) {
 	data, err := p.templater.Render(fmt.Sprintf("%s.yml.tmpl", name), params)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return common.FormatYAML(data)
@@ -67,14 +68,14 @@ func (p *Provider) templateHelpers() template.FuncMap {
 		"image": func(a *structs.App, s manifest.Service, r *structs.Release) (string, error) {
 			repo, _, err := p.Engine.RepositoryHost(a.Name)
 			if err != nil {
-				return "", err
+				return "", errors.WithStack(err)
 			}
 			return fmt.Sprintf("%s:%s.%s", repo, s.Name, r.Build), nil
 		},
 		"json": func(v interface{}) (string, error) {
 			data, err := json.Marshal(v)
 			if err != nil {
-				return "", err
+				return "", errors.WithStack(err)
 			}
 			return string(data), nil
 		},

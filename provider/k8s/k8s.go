@@ -15,6 +15,7 @@ import (
 	cv "github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned"
 	"github.com/convox/logger"
 	"github.com/gobuffalo/packr"
+	"github.com/pkg/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -51,27 +52,27 @@ func FromEnv() (*Provider, error) {
 
 	rc, err := restConfig()
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	kc, err := kubernetes.NewForConfig(rc)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	ac, err := atom.New(rc)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	ns, err := kc.CoreV1().Namespaces().Get(namespace, am.GetOptions{})
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	cc, err := cv.NewForConfig(rc)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	p := &Provider{
@@ -111,11 +112,11 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 	}
 
 	if err := atom.Initialize(); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	if err := p.initializeTemplates(); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	return nil
@@ -126,12 +127,12 @@ func (p *Provider) Start() error {
 
 	ec, err := NewEventController(p)
 	if err != nil {
-		return log.Error(err)
+		return errors.WithStack(log.Error(err))
 	}
 
 	pc, err := NewPodController(p)
 	if err != nil {
-		return log.Error(err)
+		return errors.WithStack(log.Error(err))
 	}
 
 	go ec.Run()
@@ -151,11 +152,11 @@ func (p *Provider) WithContext(ctx context.Context) structs.Provider {
 func (p *Provider) applySystemTemplate(name string, params map[string]interface{}) error {
 	data, err := p.RenderTemplate(fmt.Sprintf("system/%s", name), nil)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	if err := Apply(data); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	return nil
@@ -164,17 +165,17 @@ func (p *Provider) applySystemTemplate(name string, params map[string]interface{
 func (p *Provider) heartbeat() error {
 	as, err := p.AppList()
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	ns, err := p.Cluster.CoreV1().Nodes().List(am.ListOptions{})
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	ks, err := p.Cluster.CoreV1().Namespaces().Get("kube-system", am.GetOptions{})
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	ms := map[string]interface{}{
@@ -188,7 +189,7 @@ func (p *Provider) heartbeat() error {
 
 	hs, err := p.Engine.Heartbeat()
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	for k, v := range hs {
@@ -196,7 +197,7 @@ func (p *Provider) heartbeat() error {
 	}
 
 	if err := p.metrics.Post("heartbeat", ms); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	return nil
@@ -204,12 +205,12 @@ func (p *Provider) heartbeat() error {
 
 func (p *Provider) initializeTemplates() error {
 	if err := p.applySystemTemplate("crd", nil); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	if p.CertManager {
 		if err := p.applySystemTemplate("cert-manager", nil); err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 
 		go p.installCertManagerConfig()
@@ -262,17 +263,17 @@ func restConfig() (*rest.Config, error) {
 
 	data, err := exec.Command("kubectl", "config", "view", "--raw").CombinedOutput()
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	cfg, err := clientcmd.NewClientConfigFromBytes(data)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	c, err := cfg.ClientConfig()
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return c, nil
