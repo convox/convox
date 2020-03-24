@@ -51,6 +51,7 @@ type Document struct {
 	Body        []byte
 	Description string
 	Order       int
+	Path        string
 	Slug        string
 	Tags        []string
 	Title       string
@@ -219,6 +220,7 @@ func parseDocument(path string, data []byte) (*Document, error) {
 	slug := strings.TrimSuffix(strings.Replace(name, ".", "-", -1), "/README")
 
 	d := &Document{
+		Path: path,
 		Slug: slug,
 	}
 
