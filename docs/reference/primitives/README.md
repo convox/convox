@@ -1,9 +1,9 @@
 # Primitives
 
-Primitives are the building blocks available to build an [App](app) on Convox.
+Primitives are the building blocks available to build an [App](app) on Convox. Apps are deployed and run on your [Rack](rack), the platform overlaid on your cloud infrastructure.
 
 Primitives can be easily composed to provide useful functionality that lets you
-focus on the things that make your [App](../app.md) unique.
+focus on the things that make your [App](app) unique.
 
 ## App Primitives
 
@@ -35,6 +35,8 @@ focus on the things that make your [App](../app.md) unique.
 | Table     | Indexable rows of key/value data            |
 
 ## Rack Primitives
+
+[Racks](rack) contain a couple of simple primitives, that enable the Convox processes and your own services to run seamlessly.
 
 | Primitive                    | Description                                                         |
 |:-----------------------------|:--------------------------------------------------------------------|

@@ -2,15 +2,37 @@
 
 This document outlines the changes from Version 2 (date-based version) Racks to Version 3.x Racks.
 
-## Overview of Rack differences
+## Racks
 
-| "Version 2" Racks  | "Version 3" Racks  |
-|:-:|:-:|
-| Version numbers look like `20200302115619` <br>(reverse date format, start with a 2)  | Version numbers look like `3.0.8` <br> (Semantic versioning, start with a 3)  |
-| Runs on ECS (AWS) only  | Runs on: EKS (AWS),<br>GKE (Google Cloud),<br>AKS (Azure),<br>Managed Kubernetes (Digital Ocean)<br>so far...  |
-| Supported for Pro & Enterprise Customers  | Active Development  |
-| Console based install<br>CLI based install, management and uninstall  | Console based install, management and uninstall<br>CLI based install, management and uninstall  |
-| Runs Gen1 and Gen2 apps  | Runs Generation 2 Apps  |
+### Versioning
+
+- "Version 2" Racks have versions like `20200302115619` (reverse date format, start with a 2)
+- "Version 3" Racks have versions like `3.0.8` (Semantic versioning, start with a 3)
+
+### Underling Infrastructure
+
+- v2 Racks run on ECS (AWS) only
+- v3 Racks run on:
+  - EKS (AWS),
+  - GKE (Google Cloud),
+  - AKS (Azure),
+  - Managed Kubernetes (Digital Ocean)
+  - so far...
+
+### Development status
+
+- v2 Racks are supported for Pro & Enterprise Customers
+- v3 Racks are under active development
+
+### Console and CLI Support
+
+- v2 Racks have Console based install and CLI based install, management and uninstall
+- v3 Racks have Console based install, management and uninstall and CLI based install, management and uninstall
+
+### App Generation Support
+
+- v2 Racks run Gen1 and Gen2 apps
+- v3 Racks run Generation 2 Apps
 
 ## Apps
 
