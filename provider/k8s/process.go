@@ -11,6 +11,7 @@ import (
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	shellquote "github.com/kballard/go-shellquote"
+	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -23,29 +24,29 @@ func (p *Provider) ProcessExec(app, pid, command string, rw io.ReadWriter, opts 
 
 	cp, err := shellquote.Split(command)
 	if err != nil {
-		return 0, err
+		return 0, errors.WithStack(err)
 	}
 
 	if common.DefaultBool(opts.Entrypoint, false) {
 		ps, err := p.ProcessGet(app, pid)
 		if err != nil {
-			return 0, err
+			return 0, errors.WithStack(err)
 		}
 
 		r, err := p.ReleaseGet(app, ps.Release)
 		if err != nil {
-			return 0, err
+			return 0, errors.WithStack(err)
 		}
 
 		b, err := p.BuildGet(app, r.Build)
 		if err != nil {
-			return 0, err
+			return 0, errors.WithStack(err)
 		}
 
 		if b.Entrypoint != "" {
 			ep, err := shellquote.Split(b.Entrypoint)
 			if err != nil {
-				return 0, err
+				return 0, errors.WithStack(err)
 			}
 
 			cp = append(ep, cp...)
@@ -65,7 +66,7 @@ func (p *Provider) ProcessExec(app, pid, command string, rw io.ReadWriter, opts 
 
 	e, err := remotecommand.NewSPDYExecutor(p.Config, "POST", req.URL())
 	if err != nil {
-		return 0, err
+		return 0, errors.WithStack(err)
 	}
 
 	inr, inw := io.Pipe()
@@ -87,7 +88,7 @@ func (p *Provider) ProcessExec(app, pid, command string, rw io.ReadWriter, opts 
 		return ee.ExitStatus(), nil
 	}
 	if err != nil {
-		return 0, err
+		return 0, errors.WithStack(err)
 	}
 
 	return 0, nil
@@ -96,12 +97,12 @@ func (p *Provider) ProcessExec(app, pid, command string, rw io.ReadWriter, opts 
 func (p *Provider) ProcessGet(app, pid string) (*structs.Process, error) {
 	pd, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Get(pid, am.GetOptions{})
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	ps, err := processFromPod(*pd)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return ps, nil
@@ -123,7 +124,7 @@ func (p *Provider) ProcessList(app string, opts structs.ProcessListOptions) (str
 
 	pds, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).List(am.ListOptions{LabelSelector: strings.Join(filters, ",")})
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	pss := structs.Processes{}
@@ -131,7 +132,7 @@ func (p *Provider) ProcessList(app string, opts structs.ProcessListOptions) (str
 	for _, pd := range pds.Items {
 		ps, err := processFromPod(pd)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		pss = append(pss, *ps)
@@ -229,7 +230,7 @@ func (p *Provider) streamProcessLogs(w io.WriteCloser, app, pid string, opts str
 func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOptions) (*structs.Process, error) {
 	s, err := p.podSpecFromRunOptions(app, service, opts)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	// ns, err := p.Cluster.CoreV1().Namespaces().Get(p.Namespace, am.GetOptions{})
@@ -242,7 +243,7 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 	if release == "" {
 		a, err := p.AppGet(app)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		release = a.Release
@@ -267,12 +268,12 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 		Spec: *s,
 	})
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	ps, err := p.ProcessGet(app, pd.ObjectMeta.Name)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return ps, nil
@@ -280,7 +281,7 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 
 func (p *Provider) ProcessStop(app, pid string) error {
 	if err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Delete(pid, nil); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	return nil
@@ -290,18 +291,18 @@ func (p *Provider) ProcessWait(app, pid string) (int, error) {
 	for {
 		pd, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Get(pid, am.GetOptions{})
 		if err != nil {
-			return 0, err
+			return 0, errors.WithStack(err)
 		}
 
 		cs := pd.Status.ContainerStatuses
 
 		if len(cs) != 1 || cs[0].Name != "main" {
-			return 0, fmt.Errorf("unexpected containers for pid: %s", pid)
+			return 0, errors.WithStack(fmt.Errorf("unexpected containers for pid: %s", pid))
 		}
 
 		if t := cs[0].State.Terminated; t != nil {
 			if err := p.ProcessStop(app, pid); err != nil {
-				return 0, err
+				return 0, errors.WithStack(err)
 			}
 
 			return int(t.ExitCode), nil
@@ -312,7 +313,7 @@ func (p *Provider) ProcessWait(app, pid string) (int, error) {
 func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec, error) {
 	a, err := p.AppGet(app)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	if release == "" {
@@ -348,13 +349,13 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 	if service != "build" && release != "" {
 		m, r, err := common.ReleaseManifest(p, app, release)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		e := structs.Environment{}
 
 		if err := e.Load([]byte(r.Env)); err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		env := map[string]string{}
@@ -363,14 +364,14 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 			if s.Command != "" {
 				parts, err := shellquote.Split(s.Command)
 				if err != nil {
-					return nil, err
+					return nil, errors.WithStack(err)
 				}
 				c.Args = parts
 			}
 
 			ee, err := p.environment(a, r, *s, e)
 			if err != nil {
-				return nil, err
+				return nil, errors.WithStack(err)
 			}
 
 			for k, v := range ee {
@@ -379,7 +380,7 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 
 			repo, _, err := p.Engine.RepositoryHost(app)
 			if err != nil {
-				return nil, err
+				return nil, errors.WithStack(err)
 			}
 
 			c.Image = fmt.Sprintf("%s:%s.%s", repo, service, r.Build)
@@ -405,7 +406,7 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 			for _, v := range s.Volumes {
 				to, err := volumeTo(v)
 				if err != nil {
-					return nil, err
+					return nil, errors.WithStack(err)
 				}
 
 				c.VolumeMounts = append(c.VolumeMounts, ac.VolumeMount{
@@ -449,13 +450,13 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.ProcessRunOptions) (*ac.PodSpec, error) {
 	s, err := p.podSpecFromService(app, service, common.DefaultString(opts.Release, ""))
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	if opts.Command != nil {
 		parts, err := shellquote.Split(*opts.Command)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 		s.Containers[0].Args = parts
 	}
@@ -484,7 +485,7 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 		for _, v := range vs {
 			to, err := volumeTo(v)
 			if err != nil {
-				return nil, err
+				return nil, errors.WithStack(err)
 			}
 
 			s.Containers[0].VolumeMounts = append(s.Containers[0].VolumeMounts, ac.VolumeMount{
@@ -524,7 +525,7 @@ func processFromPod(pd ac.Pod) (*structs.Process, error) {
 	cs := pd.Spec.Containers
 
 	if len(cs) != 1 || cs[0].Name != "main" {
-		return nil, fmt.Errorf("unexpected containers for pid: %s", pd.ObjectMeta.Name)
+		return nil, errors.WithStack(fmt.Errorf("unexpected containers for pid: %s", pd.ObjectMeta.Name))
 	}
 
 	status := "unknown"

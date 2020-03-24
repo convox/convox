@@ -9,6 +9,7 @@ import (
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
 	ae "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,11 +18,11 @@ import (
 
 func (p *Provider) AppCancel(name string) error {
 	if _, err := p.AppGet(name); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	if err := p.Atom.Cancel(p.AppNamespace(name), "app"); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	return nil
@@ -29,7 +30,7 @@ func (p *Provider) AppCancel(name string) error {
 
 func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*structs.App, error) {
 	if err := p.appNameValidate(name); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	ns := &ac.Namespace{
@@ -47,7 +48,7 @@ func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*struc
 	}
 
 	if _, err := p.Cluster.CoreV1().Namespaces().Create(ns); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	a := &structs.App{
@@ -56,16 +57,16 @@ func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*struc
 	}
 
 	if err := p.appUpdate(a); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	if err := p.ReleasePromote(a.Name, "", structs.ReleasePromoteOptions{Timeout: options.Int(30)}); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	a, err := p.AppGet(name)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return a, nil
@@ -74,15 +75,15 @@ func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*struc
 func (p *Provider) AppDelete(name string) error {
 	a, err := p.AppGet(name)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	if a.Locked {
-		return fmt.Errorf("app is locked: %s", name)
+		return errors.WithStack(fmt.Errorf("app is locked: %s", name))
 	}
 
 	if err := p.Cluster.CoreV1().Namespaces().Delete(p.AppNamespace(name), nil); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	return nil
@@ -91,15 +92,15 @@ func (p *Provider) AppDelete(name string) error {
 func (p *Provider) AppGet(name string) (*structs.App, error) {
 	ns, err := p.Cluster.CoreV1().Namespaces().Get(p.AppNamespace(name), am.GetOptions{})
 	if ae.IsNotFound(err) {
-		return nil, fmt.Errorf("app not found: %s", name)
+		return nil, errors.WithStack(fmt.Errorf("app not found: %s", name))
 	}
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	a, err := p.appFromNamespace(*ns)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return a, nil
@@ -114,7 +115,7 @@ func (p *Provider) AppList() (structs.Apps, error) {
 		LabelSelector: fmt.Sprintf("system=convox,rack=%s,type=app", p.Name),
 	})
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	as := structs.Apps{}
@@ -122,7 +123,7 @@ func (p *Provider) AppList() (structs.Apps, error) {
 	for _, n := range ns.Items {
 		a, err := p.appFromNamespace(n)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		as = append(as, *a)
@@ -132,11 +133,11 @@ func (p *Provider) AppList() (structs.Apps, error) {
 }
 
 func (p *Provider) AppLogs(name string, opts structs.LogsOptions) (io.ReadCloser, error) {
-	return nil, fmt.Errorf("unimplemented")
+	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
 }
 
 func (p *Provider) AppMetrics(name string, opts structs.MetricsOptions) (structs.Metrics, error) {
-	return nil, fmt.Errorf("unimplemented")
+	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
 }
 
 func (p *Provider) AppNamespace(app string) string {
@@ -151,14 +152,14 @@ func (p *Provider) AppNamespace(app string) string {
 func (p *Provider) NamespaceApp(namespace string) (string, error) {
 	ns, err := p.Cluster.CoreV1().Namespaces().Get(namespace, am.GetOptions{})
 	if err != nil {
-		return "", err
+		return "", errors.WithStack(err)
 	}
 
 	if app, ok := ns.ObjectMeta.Labels["app"]; ok && strings.TrimSpace(app) != "" {
 		return app, nil
 	}
 
-	return "", fmt.Errorf("could not determine app for namespace: %s", namespace)
+	return "", errors.WithStack(fmt.Errorf("could not determine app for namespace: %s", namespace))
 }
 
 func (p *Provider) AppParameters() map[string]string {
@@ -168,7 +169,7 @@ func (p *Provider) AppParameters() map[string]string {
 func (p *Provider) AppUpdate(name string, opts structs.AppUpdateOptions) error {
 	a, err := p.AppGet(name)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	if opts.Lock != nil {
@@ -177,16 +178,16 @@ func (p *Provider) AppUpdate(name string, opts structs.AppUpdateOptions) error {
 
 	if opts.Parameters != nil {
 		if err := p.appParametersUpdate(a, opts.Parameters); err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 	}
 
 	if err := p.appUpdate(a); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	if err := p.ReleasePromote(a.Name, a.Release, structs.ReleasePromoteOptions{Timeout: options.Int(30)}); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	return nil
@@ -197,7 +198,7 @@ func (p *Provider) appFromNamespace(ns ac.Namespace) (*structs.App, error) {
 
 	as, release, err := p.Atom.Status(ns.Name, "app")
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	status := common.AtomStatus(as)
@@ -219,7 +220,7 @@ func (p *Provider) appFromNamespace(ns ac.Namespace) (*structs.App, error) {
 
 	if data, ok := ns.Annotations["convox.com/params"]; ok && data > "" {
 		if err := json.Unmarshal([]byte(data), &params); err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 	}
 
@@ -256,11 +257,11 @@ func (p *Provider) appFromNamespace(ns ac.Namespace) (*structs.App, error) {
 func (p *Provider) appNameValidate(name string) error {
 	switch name {
 	case "rack", "system":
-		return fmt.Errorf("app name is reserved")
+		return errors.WithStack(fmt.Errorf("app name is reserved"))
 	}
 
 	if _, err := p.Cluster.CoreV1().Namespaces().Get(p.AppNamespace(name), am.GetOptions{}); !ae.IsNotFound(err) {
-		return fmt.Errorf("app already exists: %s", name)
+		return errors.WithStack(fmt.Errorf("app already exists: %s", name))
 	}
 
 	return nil
@@ -271,7 +272,7 @@ func (p *Provider) appParametersUpdate(a *structs.App, params map[string]string)
 
 	for k, v := range params {
 		if _, ok := defs[k]; !ok {
-			return fmt.Errorf("invalid parameter: %s", k)
+			return errors.WithStack(fmt.Errorf("invalid parameter: %s", k))
 		}
 
 		a.Parameters[k] = v
@@ -283,7 +284,7 @@ func (p *Provider) appParametersUpdate(a *structs.App, params map[string]string)
 func (p *Provider) appUpdate(a *structs.App) error {
 	params, err := json.Marshal(a.Parameters)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	patches := []Patch{
@@ -293,11 +294,11 @@ func (p *Provider) appUpdate(a *structs.App) error {
 
 	patch, err := json.Marshal(patches)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	if _, err := p.Cluster.CoreV1().Namespaces().Patch(p.AppNamespace(a.Name), types.JSONPatchType, patch); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	return nil

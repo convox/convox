@@ -4,6 +4,7 @@ import (
 	"io"
 	"io/ioutil"
 
+	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
@@ -25,11 +26,11 @@ func (p *Provider) FilesDelete(app, pid string, files []string) error {
 
 	exec, err := remotecommand.NewSPDYExecutor(p.Config, "POST", req.URL())
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	if err := exec.Stream(remotecommand.StreamOptions{Stdout: ioutil.Discard}); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	return nil
@@ -48,7 +49,7 @@ func (p *Provider) FilesDownload(app, pid, file string) (io.Reader, error) {
 
 	exec, err := remotecommand.NewSPDYExecutor(p.Config, "POST", req.URL())
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	r, w := io.Pipe()
@@ -74,11 +75,11 @@ func (p *Provider) FilesUpload(app, pid string, r io.Reader) error {
 
 	exec, err := remotecommand.NewSPDYExecutor(p.Config, "POST", req.URL())
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	if err := exec.Stream(remotecommand.StreamOptions{Stdin: r}); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	return nil

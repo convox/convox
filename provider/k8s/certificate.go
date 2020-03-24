@@ -7,12 +7,13 @@ import (
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (p *Provider) CertificateApply(app, service string, port int, id string) error {
-	return fmt.Errorf("unimplemented")
+	return errors.WithStack(fmt.Errorf("unimplemented"))
 }
 
 func (p *Provider) CertificateCreate(pub, key string, opts structs.CertificateCreateOptions) (*structs.Certificate, error) {
@@ -32,12 +33,12 @@ func (p *Provider) CertificateCreate(pub, key string, opts structs.CertificateCr
 		Type: "kubernetes.io/tls",
 	})
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	c, err := p.certificateFromSecret(s)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return c, nil
@@ -45,7 +46,7 @@ func (p *Provider) CertificateCreate(pub, key string, opts structs.CertificateCr
 
 func (p *Provider) CertificateDelete(id string) error {
 	if err := p.Cluster.CoreV1().Secrets(p.Namespace).Delete(id, nil); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	return nil
@@ -54,20 +55,20 @@ func (p *Provider) CertificateDelete(id string) error {
 func (p *Provider) CertificateGenerate(domains []string) (*structs.Certificate, error) {
 	switch len(domains) {
 	case 0:
-		return nil, fmt.Errorf("must specify a domain")
+		return nil, errors.WithStack(fmt.Errorf("must specify a domain"))
 	case 1:
 	default:
-		return nil, fmt.Errorf("must specify only one domain")
+		return nil, errors.WithStack(fmt.Errorf("must specify only one domain"))
 	}
 
 	c, err := common.CertificateSelfSigned(domains[0])
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	pub, key, err := common.CertificateParts(c)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return p.CertificateCreate(string(pub), string(key), structs.CertificateCreateOptions{})
@@ -79,7 +80,7 @@ func (p *Provider) CertificateList() (structs.Certificates, error) {
 		LabelSelector: fmt.Sprintf("system=convox,rack=%s,type=certificate", p.Name),
 	})
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	cs := structs.Certificates{}
@@ -87,7 +88,7 @@ func (p *Provider) CertificateList() (structs.Certificates, error) {
 	for _, s := range ss.Items {
 		c, err := p.certificateFromSecret(&s)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		cs = append(cs, *c)
@@ -99,22 +100,22 @@ func (p *Provider) CertificateList() (structs.Certificates, error) {
 func (p *Provider) certificateFromSecret(s *ac.Secret) (*structs.Certificate, error) {
 	crt, ok := s.Data["tls.crt"]
 	if !ok {
-		return nil, fmt.Errorf("invalid certificate: %s", s.ObjectMeta.Name)
+		return nil, errors.WithStack(fmt.Errorf("invalid certificate: %s", s.ObjectMeta.Name))
 	}
 
 	pb, _ := pem.Decode(crt)
 
 	if pb.Type != "CERTIFICATE" {
-		return nil, fmt.Errorf("invalid certificate: %s", s.ObjectMeta.Name)
+		return nil, errors.WithStack(fmt.Errorf("invalid certificate: %s", s.ObjectMeta.Name))
 	}
 
 	cs, err := x509.ParseCertificates(pb.Bytes)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	if len(cs) < 1 {
-		return nil, fmt.Errorf("invalid certificate: %s", s.ObjectMeta.Name)
+		return nil, errors.WithStack(fmt.Errorf("invalid certificate: %s", s.ObjectMeta.Name))
 	}
 
 	c := &structs.Certificate{

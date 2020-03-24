@@ -2,10 +2,11 @@ package k8s
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -13,7 +14,7 @@ import (
 func (p *Provider) Apply(namespace, name, version string, data []byte, labels string, timeout int32) error {
 	ldata, err := ApplyLabels(data, labels)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	return p.Atom.Apply(namespace, name, version, ldata, timeout)
@@ -28,7 +29,7 @@ func Apply(data []byte, args ...string) error {
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return errors.New(strings.TrimSpace(string(out)))
+		return errors.WithStack(errors.New(strings.TrimSpace(string(out))))
 	}
 
 	return nil
@@ -42,7 +43,7 @@ func ApplyLabels(data []byte, labels string) ([]byte, error) {
 	for i := range parts {
 		dp, err := applyLabels(parts[i], ls)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		parts[i] = dp
@@ -55,7 +56,7 @@ func applyLabels(data []byte, labels map[string]string) ([]byte, error) {
 	var v map[string]interface{}
 
 	if err := yaml.Unmarshal(data, &v); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	if len(v) == 0 {
@@ -77,15 +78,15 @@ func applyLabels(data []byte, labels map[string]string) ([]byte, error) {
 			t["labels"] = u
 			v["metadata"] = t
 		default:
-			return nil, fmt.Errorf("unknown labels type: %T", u)
+			return nil, errors.WithStack(fmt.Errorf("unknown labels type: %T", u))
 		}
 	default:
-		return nil, fmt.Errorf("unknown metadata type: %T", t)
+		return nil, errors.WithStack(fmt.Errorf("unknown metadata type: %T", t))
 	}
 
 	pd, err := yaml.Marshal(v)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return pd, nil

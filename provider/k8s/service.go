@@ -8,6 +8,7 @@ import (
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -27,7 +28,7 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 
 	a, err := p.AppGet(app)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	if a.Release == "" {
@@ -36,26 +37,26 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 
 	m, _, err := common.ReleaseManifest(p, app, a.Release)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	ss := structs.Services{}
 
 	ds, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).List(lopts)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	for _, d := range ds.Items {
 		cs := d.Spec.Template.Spec.Containers
 
 		if len(cs) != 1 || cs[0].Name != "main" {
-			return nil, fmt.Errorf("unexpected containers for service: %s", d.ObjectMeta.Name)
+			return nil, errors.WithStack(fmt.Errorf("unexpected containers for service: %s", d.ObjectMeta.Name))
 		}
 
 		ms, err := m.Service(d.ObjectMeta.Name)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		s := structs.Service{
@@ -78,19 +79,19 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 
 	dss, err := p.Cluster.AppsV1().DaemonSets(p.AppNamespace(app)).List(lopts)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	for _, d := range dss.Items {
 		cs := d.Spec.Template.Spec.Containers
 
 		if len(cs) != 1 || cs[0].Name != "main" {
-			return nil, fmt.Errorf("unexpected containers for service: %s", d.ObjectMeta.Name)
+			return nil, errors.WithStack(fmt.Errorf("unexpected containers for service: %s", d.ObjectMeta.Name))
 		}
 
 		ms, err := m.Service(d.ObjectMeta.Name)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		s := structs.Service{
@@ -109,12 +110,12 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 func (p *Provider) ServiceRestart(app, name string) error {
 	m, _, err := common.AppManifest(p, app)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	s, err := m.Service(name)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	if s.Agent.Enabled {
@@ -129,7 +130,7 @@ func (p *Provider) serviceRestartDaemonset(app, name string) error {
 
 	s, err := ds.Get(name, am.GetOptions{})
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	if s.Spec.Template.Annotations == nil {
@@ -139,7 +140,7 @@ func (p *Provider) serviceRestartDaemonset(app, name string) error {
 	s.Spec.Template.Annotations["convox.com/restart"] = strconv.FormatInt(time.Now().UTC().UnixNano(), 10)
 
 	if _, err := ds.Update(s); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	return nil
@@ -150,7 +151,7 @@ func (p *Provider) serviceRestartDeployment(app, name string) error {
 
 	s, err := ds.Get(name, am.GetOptions{})
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	if s.Spec.Template.Annotations == nil {
@@ -160,7 +161,7 @@ func (p *Provider) serviceRestartDeployment(app, name string) error {
 	s.Spec.Template.Annotations["convox.com/restart"] = strconv.FormatInt(time.Now().UTC().UnixNano(), 10)
 
 	if _, err := ds.Update(s); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	return nil
@@ -169,7 +170,7 @@ func (p *Provider) serviceRestartDeployment(app, name string) error {
 func (p *Provider) ServiceUpdate(app, name string, opts structs.ServiceUpdateOptions) error {
 	d, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).Get(name, am.GetOptions{})
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	if opts.Count != nil {
@@ -178,7 +179,7 @@ func (p *Provider) ServiceUpdate(app, name string, opts structs.ServiceUpdateOpt
 	}
 
 	if _, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).Update(d); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	return nil

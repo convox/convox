@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/convox/convox/pkg/structs"
+	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
 	ae "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,7 +16,7 @@ import (
 func (p *Provider) RegistryAdd(server, username, password string) (*structs.Registry, error) {
 	dc, err := p.dockerConfigLoad("registries")
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	if dc.Auths == nil {
@@ -27,7 +28,7 @@ func (p *Provider) RegistryAdd(server, username, password string) (*structs.Regi
 	}
 
 	if err := p.dockerConfigSave("registries", dc); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	r := &structs.Registry{
@@ -48,7 +49,7 @@ func (p *Provider) RegistryAuth(host, username, password string) (string, string
 func (p *Provider) RegistryList() (structs.Registries, error) {
 	dc, err := p.dockerConfigLoad("registries")
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	rs := structs.Registries{}
@@ -57,12 +58,12 @@ func (p *Provider) RegistryList() (structs.Registries, error) {
 		for host, auth := range dc.Auths {
 			data, err := base64.StdEncoding.DecodeString(auth.Auth)
 			if err != nil {
-				return nil, err
+				return nil, errors.WithStack(err)
 			}
 
 			parts := strings.SplitN(string(data), ":", 2)
 			if len(parts) != 2 {
-				return nil, fmt.Errorf("invalid auth for registry: %s", host)
+				return nil, errors.WithStack(fmt.Errorf("invalid auth for registry: %s", host))
 			}
 
 			rs = append(rs, structs.Registry{
@@ -79,19 +80,19 @@ func (p *Provider) RegistryList() (structs.Registries, error) {
 func (p *Provider) RegistryRemove(server string) error {
 	dc, err := p.dockerConfigLoad("registries")
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	if dc.Auths == nil {
-		return fmt.Errorf("no such registry: %s", server)
+		return errors.WithStack(fmt.Errorf("no such registry: %s", server))
 	}
 	if _, ok := dc.Auths[server]; !ok {
-		return fmt.Errorf("no such registry: %s", server)
+		return errors.WithStack(fmt.Errorf("no such registry: %s", server))
 	}
 
 	delete(dc.Auths, server)
 
 	if err := p.dockerConfigSave("registries", dc); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	return nil
@@ -111,20 +112,20 @@ func (p *Provider) dockerConfigLoad(secret string) (*dockerConfig, error) {
 		return &dockerConfig{}, nil
 	}
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	if s.Type != ac.SecretTypeDockerConfigJson {
-		return nil, fmt.Errorf("invalid type for secret: %s", secret)
+		return nil, errors.WithStack(fmt.Errorf("invalid type for secret: %s", secret))
 	}
 	data, ok := s.Data[".dockerconfigjson"]
 	if !ok {
-		return nil, fmt.Errorf("invalid data for secret: %s", secret)
+		return nil, errors.WithStack(fmt.Errorf("invalid data for secret: %s", secret))
 	}
 
 	var dc dockerConfig
 
 	if err := json.Unmarshal(data, &dc); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return &dc, nil
@@ -133,7 +134,7 @@ func (p *Provider) dockerConfigLoad(secret string) (*dockerConfig, error) {
 func (p *Provider) dockerConfigSave(secret string, dc *dockerConfig) error {
 	data, err := json.Marshal(dc)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	sd := map[string][]byte{
@@ -153,14 +154,14 @@ func (p *Provider) dockerConfigSave(secret string, dc *dockerConfig) error {
 			Type: ac.SecretTypeDockerConfigJson,
 			Data: sd,
 		})
-		return err
+		return errors.WithStack(err)
 	}
 
 	s.Data = sd
 
 	_, err = p.Cluster.CoreV1().Secrets(p.Namespace).Update(s)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	return nil

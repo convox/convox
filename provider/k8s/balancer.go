@@ -4,19 +4,20 @@ import (
 	"fmt"
 
 	"github.com/convox/convox/pkg/structs"
+	"github.com/pkg/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (p *Provider) BalancerList(app string) (structs.Balancers, error) {
 	if _, err := p.AppGet(app); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	ss, err := p.Cluster.CoreV1().Services(p.AppNamespace(app)).List(am.ListOptions{
 		LabelSelector: fmt.Sprintf("system=convox,type=balancer,app=%s", app),
 	})
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	bs := structs.Balancers{}

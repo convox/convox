@@ -8,18 +8,19 @@ import (
 
 	"github.com/convox/convox/pkg/structs"
 	"github.com/creack/pty"
+	"github.com/pkg/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (p *Provider) ResourceConsole(app, name string, rw io.ReadWriter, opts structs.ResourceConsoleOptions) error {
 	r, err := p.ResourceGet(app, name)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	cn, err := parseResourceURL(r.Url)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	fmt.Printf("cn: %+v\n", cn)
@@ -34,14 +35,14 @@ func (p *Provider) ResourceConsole(app, name string, rw io.ReadWriter, opts stru
 	case "redis":
 		return resourceConsoleCommand(rw, opts, "redis-cli", "-u", r.Url)
 	default:
-		return fmt.Errorf("console not available for resources of type: %s", r.Type)
+		return errors.WithStack(fmt.Errorf("console not available for resources of type: %s", r.Type))
 	}
 }
 
 func (p *Provider) ResourceExport(app, name string) (io.ReadCloser, error) {
 	r, err := p.ResourceGet(app, name)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	switch r.Type {
@@ -50,19 +51,19 @@ func (p *Provider) ResourceExport(app, name string) (io.ReadCloser, error) {
 	case "postgres":
 		return resourceExportPostgres(r)
 	default:
-		return nil, fmt.Errorf("export not available for resources of type: %s", r.Type)
+		return nil, errors.WithStack(fmt.Errorf("export not available for resources of type: %s", r.Type))
 	}
 }
 
 func (p *Provider) ResourceGet(app, name string) (*structs.Resource, error) {
 	d, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).Get(fmt.Sprintf("resource-%s", nameFilter(name)), am.GetOptions{})
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	cm, err := p.Cluster.CoreV1().ConfigMaps(p.AppNamespace(app)).Get(fmt.Sprintf("resource-%s", nameFilter(name)), am.GetOptions{})
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	status := "running"
@@ -84,7 +85,7 @@ func (p *Provider) ResourceGet(app, name string) (*structs.Resource, error) {
 func (p *Provider) ResourceImport(app, name string, r io.Reader) error {
 	rr, err := p.ResourceGet(app, name)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	switch rr.Type {
@@ -93,7 +94,7 @@ func (p *Provider) ResourceImport(app, name string, r io.Reader) error {
 	case "postgres":
 		return resourceImportPostgres(rr, r)
 	default:
-		return fmt.Errorf("import not available for resources of type: %s", rr.Type)
+		return errors.WithStack(fmt.Errorf("import not available for resources of type: %s", rr.Type))
 	}
 }
 
@@ -104,7 +105,7 @@ func (p *Provider) ResourceList(app string) (structs.Resources, error) {
 
 	ds, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).List(lopts)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	rs := structs.Resources{}
@@ -112,7 +113,7 @@ func (p *Provider) ResourceList(app string) (structs.Resources, error) {
 	for _, d := range ds.Items {
 		r, err := p.ResourceGet(app, d.ObjectMeta.Labels["resource"])
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		rs = append(rs, *r)
@@ -122,19 +123,19 @@ func (p *Provider) ResourceList(app string) (structs.Resources, error) {
 }
 
 func (p *Provider) SystemResourceCreate(kind string, opts structs.ResourceCreateOptions) (*structs.Resource, error) {
-	return nil, fmt.Errorf("unimplemented")
+	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
 }
 
 func (p *Provider) SystemResourceDelete(name string) error {
-	return fmt.Errorf("unimplemented")
+	return errors.WithStack(fmt.Errorf("unimplemented"))
 }
 
 func (p *Provider) SystemResourceGet(name string) (*structs.Resource, error) {
-	return nil, fmt.Errorf("unimplemented")
+	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
 }
 
 func (p *Provider) SystemResourceLink(name, app string) (*structs.Resource, error) {
-	return nil, fmt.Errorf("unimplemented")
+	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
 }
 
 func (p *Provider) SystemResourceList() (structs.Resources, error) {
@@ -142,15 +143,15 @@ func (p *Provider) SystemResourceList() (structs.Resources, error) {
 }
 
 func (p *Provider) SystemResourceTypes() (structs.ResourceTypes, error) {
-	return nil, fmt.Errorf("unimplemented")
+	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
 }
 
 func (p *Provider) SystemResourceUnlink(name, app string) (*structs.Resource, error) {
-	return nil, fmt.Errorf("unimplemented")
+	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
 }
 
 func (p *Provider) SystemResourceUpdate(name string, opts structs.ResourceUpdateOptions) (*structs.Resource, error) {
-	return nil, fmt.Errorf("unimplemented")
+	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
 }
 
 type resourceConnection struct {
@@ -164,7 +165,7 @@ type resourceConnection struct {
 func parseResourceURL(url_ string) (*resourceConnection, error) {
 	u, err := url.Parse(url_)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	cn := &resourceConnection{
@@ -199,7 +200,7 @@ func resourceConsoleCommand(rw io.ReadWriter, opts structs.ResourceConsoleOption
 
 	fd, err := pty.StartWithSize(cmd, size)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	go io.Copy(fd, rw)
@@ -224,7 +225,7 @@ func resourceExportCommand(w io.WriteCloser, command string, args ...string) {
 func resourceExportMysql(r *structs.Resource) (io.ReadCloser, error) {
 	cn, err := parseResourceURL(r.Url)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	rr, ww := io.Pipe()
@@ -245,7 +246,7 @@ func resourceExportPostgres(r *structs.Resource) (io.ReadCloser, error) {
 func resourceImportMysql(rr *structs.Resource, r io.Reader) error {
 	cn, err := parseResourceURL(rr.Url)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	cmd := exec.Command("mysql", "-h", cn.Host, "-P", cn.Port, "-u", cn.Username, fmt.Sprintf("-p%s", cn.Password), "-D", cn.Database)
@@ -255,7 +256,7 @@ func resourceImportMysql(rr *structs.Resource, r io.Reader) error {
 	data, err := cmd.CombinedOutput()
 	fmt.Printf("string(data): %+v\n", string(data))
 	if err != nil {
-		return fmt.Errorf("ERROR: import failed")
+		return errors.WithStack(fmt.Errorf("ERROR: import failed"))
 	}
 
 	return nil
@@ -269,7 +270,7 @@ func resourceImportPostgres(rr *structs.Resource, r io.Reader) error {
 	data, err := cmd.CombinedOutput()
 	fmt.Printf("string(data): %+v\n", string(data))
 	if err != nil {
-		return fmt.Errorf("ERROR: import failed")
+		return errors.WithStack(fmt.Errorf("ERROR: import failed"))
 	}
 
 	return nil

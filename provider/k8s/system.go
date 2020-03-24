@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/convox/convox/pkg/structs"
+	"github.com/pkg/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -40,21 +41,21 @@ func (p *Provider) SystemGet() (*structs.System, error) {
 }
 
 func (p *Provider) SystemInstall(w io.Writer, opts structs.SystemInstallOptions) (string, error) {
-	return "", fmt.Errorf("unimplemented")
+	return "", errors.WithStack(fmt.Errorf("unimplemented"))
 }
 
 func (p *Provider) SystemLogs(opts structs.LogsOptions) (io.ReadCloser, error) {
-	return nil, fmt.Errorf("unimplemented")
+	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
 }
 
 func (p *Provider) SystemMetrics(opts structs.MetricsOptions) (structs.Metrics, error) {
-	return nil, fmt.Errorf("unimplemented")
+	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
 }
 
 func (p *Provider) SystemProcesses(opts structs.SystemProcessesOptions) (structs.Processes, error) {
 	pds, err := p.Cluster.CoreV1().Pods(p.Namespace).List(am.ListOptions{})
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	pss := structs.Processes{}
@@ -62,7 +63,7 @@ func (p *Provider) SystemProcesses(opts structs.SystemProcessesOptions) (structs
 	for _, pd := range pds.Items {
 		ps, err := processFromPod(pd)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		ps.App = "rack"
@@ -73,13 +74,13 @@ func (p *Provider) SystemProcesses(opts structs.SystemProcessesOptions) (structs
 
 	pds, err = p.Cluster.CoreV1().Pods("convox-system").List(am.ListOptions{})
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	for _, pd := range pds.Items {
 		ps, err := processFromPod(pd)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		ps.App = "system"
@@ -92,13 +93,13 @@ func (p *Provider) SystemProcesses(opts structs.SystemProcessesOptions) (structs
 }
 
 func (p *Provider) SystemReleases() (structs.Releases, error) {
-	return nil, fmt.Errorf("release history is unavailable")
+	return nil, errors.WithStack(fmt.Errorf("release history is unavailable"))
 }
 
 func (p *Provider) SystemUninstall(name string, w io.Writer, opts structs.SystemUninstallOptions) error {
-	return fmt.Errorf("unimplemented")
+	return errors.WithStack(fmt.Errorf("unimplemented"))
 }
 
 func (p *Provider) SystemUpdate(opts structs.SystemUpdateOptions) error {
-	return fmt.Errorf("console update not yet supported")
+	return errors.WithStack(fmt.Errorf("console update not yet supported"))
 }

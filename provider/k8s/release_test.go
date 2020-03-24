@@ -13,6 +13,7 @@ import (
 	ca "github.com/convox/convox/provider/k8s/pkg/apis/convox/v1"
 	cv "github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned"
 	cvfake "github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned/fake"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	yaml "gopkg.in/yaml.v2"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +43,7 @@ func TestReleasePromote(t *testing.T) {
 func releaseApply(aa *atom.MockInterface, ns, id, atom, fixture string) error {
 	data, err := ioutil.ReadFile(fmt.Sprintf("testdata/release-%s.yml", fixture))
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	aa.On("Apply", ns, atom, id, data, int32(1800)).Return(nil).Once()
@@ -53,7 +54,7 @@ func releaseApply(aa *atom.MockInterface, ns, id, atom, fixture string) error {
 func releaseCreate(kc cv.Interface, ns, id, fixture string) error {
 	spec, err := releaseFixture(fixture)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	r := &ca.Release{
@@ -64,7 +65,7 @@ func releaseCreate(kc cv.Interface, ns, id, fixture string) error {
 	}
 
 	if _, err := kc.ConvoxV1().Releases(ns).Create(r); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	return nil
@@ -73,7 +74,7 @@ func releaseCreate(kc cv.Interface, ns, id, fixture string) error {
 func releaseFixture(name string) (*ca.ReleaseSpec, error) {
 	data, err := ioutil.ReadFile(fmt.Sprintf("testdata/release-%s.yml", name))
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	var fixture struct {
@@ -84,7 +85,7 @@ func releaseFixture(name string) (*ca.ReleaseSpec, error) {
 	}
 
 	if err := yaml.Unmarshal(data, &fixture); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	ep := []string{}
@@ -97,7 +98,7 @@ func releaseFixture(name string) (*ca.ReleaseSpec, error) {
 
 	mdata, err := yaml.Marshal(fixture.Manifest)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	s := &ca.ReleaseSpec{

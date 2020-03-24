@@ -14,6 +14,7 @@ import (
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	ca "github.com/convox/convox/provider/k8s/pkg/apis/convox/v1"
+	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -21,7 +22,7 @@ import (
 func (p *Provider) ReleaseCreate(app string, opts structs.ReleaseCreateOptions) (*structs.Release, error) {
 	r, err := p.releaseFork(app)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	if opts.Build != nil {
@@ -31,7 +32,7 @@ func (p *Provider) ReleaseCreate(app string, opts structs.ReleaseCreateOptions) 
 	if r.Build != "" {
 		b, err := p.BuildGet(app, r.Build)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		r.Description = b.Description
@@ -41,7 +42,7 @@ func (p *Provider) ReleaseCreate(app string, opts structs.ReleaseCreateOptions) 
 	if opts.Env != nil {
 		desc, err := common.EnvDiff(r.Env, *opts.Env)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		r.Description = fmt.Sprintf("env %s", desc)
@@ -54,7 +55,7 @@ func (p *Provider) ReleaseCreate(app string, opts structs.ReleaseCreateOptions) 
 
 	ro, err := p.releaseCreate(r)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return ro, nil
@@ -63,7 +64,7 @@ func (p *Provider) ReleaseCreate(app string, opts structs.ReleaseCreateOptions) 
 func (p *Provider) ReleaseGet(app, id string) (*structs.Release, error) {
 	r, err := p.releaseGet(app, id)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return r, nil
@@ -71,12 +72,12 @@ func (p *Provider) ReleaseGet(app, id string) (*structs.Release, error) {
 
 func (p *Provider) ReleaseList(app string, opts structs.ReleaseListOptions) (structs.Releases, error) {
 	if _, err := p.AppGet(app); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	rs, err := p.releaseList(app)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	sort.Slice(rs, func(i, j int) bool { return rs[j].Created.Before(rs[i].Created) })
@@ -91,7 +92,7 @@ func (p *Provider) ReleaseList(app string, opts structs.ReleaseListOptions) (str
 func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOptions) error {
 	a, err := p.AppGet(app)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	items := [][]byte{}
@@ -99,7 +100,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 	// app
 	data, err := p.releaseTemplateApp(a, opts)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	items = append(items, data)
@@ -108,7 +109,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 	if ca, err := p.Cluster.CoreV1().Secrets("convox-system").Get("ca", am.GetOptions{}); err == nil {
 		data, err := p.releaseTemplateCA(a, ca)
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 
 		items = append(items, data)
@@ -117,19 +118,19 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 	if id != "" {
 		m, r, err := common.ReleaseManifest(p, app, id)
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 
 		e, err := structs.NewEnvironment([]byte(r.Env))
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 
 		// balancers
 		for _, b := range m.Balancers {
 			data, err := p.releaseTemplateBalancer(a, r, b)
 			if err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 
 			items = append(items, data)
@@ -139,7 +140,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		if rss := m.Services.Routable().External(); len(rss) > 0 {
 			data, err := p.releaseTemplateIngress(a, rss, opts)
 			if err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 
 			items = append(items, data)
@@ -149,7 +150,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		for _, r := range m.Resources {
 			data, err := p.releaseTemplateResource(a, r)
 			if err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 
 			items = append(items, data)
@@ -158,7 +159,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		// services
 		data, err := p.releaseTemplateServices(a, e, r, m.Services, opts)
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 
 		items = append(items, data)
@@ -167,12 +168,12 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		for _, t := range m.Timers {
 			s, err := m.Service(t.Service)
 			if err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 
 			data, err := p.releaseTemplateTimer(a, r, s, t)
 			if err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 
 			items = append(items, data)
@@ -181,7 +182,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		// volumes
 		data, err = p.releaseTemplateVolumes(a, m.Services)
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 
 		items = append(items, data)
@@ -192,7 +193,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 	timeout := int32(common.DefaultInt(opts.Timeout, 1800))
 
 	if err := p.Apply(p.AppNamespace(app), "app", id, tdata, fmt.Sprintf("system=convox,provider=k8s,rack=%s,app=%s,release=%s", p.Name, app, id), timeout); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	return nil
@@ -201,7 +202,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 func (p *Provider) releaseCreate(r *structs.Release) (*structs.Release, error) {
 	kr, err := p.Convox.ConvoxV1().Releases(p.AppNamespace(r.App)).Create(p.releaseMarshal(r))
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return p.releaseUnmarshal(kr)
@@ -210,7 +211,7 @@ func (p *Provider) releaseCreate(r *structs.Release) (*structs.Release, error) {
 func (p *Provider) releaseGet(app, id string) (*structs.Release, error) {
 	kr, err := p.Convox.ConvoxV1().Releases(p.AppNamespace(app)).Get(strings.ToLower(id), am.GetOptions{})
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return p.releaseUnmarshal(kr)
@@ -221,7 +222,7 @@ func (p *Provider) releaseFork(app string) (*structs.Release, error) {
 
 	rs, err := p.ReleaseList(app, structs.ReleaseListOptions{Limit: options.Int(1)})
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	if len(rs) > 0 {
@@ -235,7 +236,7 @@ func (p *Provider) releaseFork(app string) (*structs.Release, error) {
 func (p *Provider) releaseList(app string) (structs.Releases, error) {
 	krs, err := p.Convox.ConvoxV1().Releases(p.AppNamespace(app)).List(am.ListOptions{})
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	rs := structs.Releases{}
@@ -243,7 +244,7 @@ func (p *Provider) releaseList(app string) (structs.Releases, error) {
 	for _, kr := range krs.Items {
 		r, err := p.releaseUnmarshal(&kr)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		rs = append(rs, *r)
@@ -275,7 +276,7 @@ func (p *Provider) releaseMarshal(r *structs.Release) *ca.Release {
 func (p *Provider) releaseTemplateApp(a *structs.App, opts structs.ReleasePromoteOptions) ([]byte, error) {
 	owner, err := p.Cluster.CoreV1().Namespaces().Get(p.Namespace, am.GetOptions{})
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	params := map[string]interface{}{
@@ -288,7 +289,7 @@ func (p *Provider) releaseTemplateApp(a *structs.App, opts structs.ReleasePromot
 
 	data, err := p.RenderTemplate("app/app", params)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return data, nil
@@ -303,7 +304,7 @@ func (p *Provider) releaseTemplateBalancer(a *structs.App, r *structs.Release, b
 
 	data, err := p.RenderTemplate("app/balancer", params)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return data, nil
@@ -317,7 +318,7 @@ func (p *Provider) releaseTemplateCA(a *structs.App, ca *v1.Secret) ([]byte, err
 
 	data, err := p.RenderTemplate("app/ca", params)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return data, nil
@@ -326,12 +327,12 @@ func (p *Provider) releaseTemplateCA(a *structs.App, ca *v1.Secret) ([]byte, err
 func (p *Provider) releaseTemplateIngress(a *structs.App, ss manifest.Services, opts structs.ReleasePromoteOptions) ([]byte, error) {
 	ans, err := p.Engine.IngressAnnotations(a.Name)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	idles, err := p.Engine.AppIdles(a.Name)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	items := [][]byte{}
@@ -350,7 +351,7 @@ func (p *Provider) releaseTemplateIngress(a *structs.App, ss manifest.Services, 
 
 		data, err := p.RenderTemplate("app/ingress", params)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		items = append(items, data)
@@ -371,7 +372,7 @@ func (p *Provider) releaseTemplateResource(a *structs.App, r manifest.Resource) 
 
 	data, err := p.RenderTemplate(fmt.Sprintf("resource/%s", r.Type), params)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return data, nil
@@ -382,7 +383,7 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 
 	pss, err := p.ServiceList(a.Name)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	sc := map[string]int{}
@@ -412,7 +413,7 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 
 		env, err := p.environment(a, r, s, e)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		params := map[string]interface{}{
@@ -434,7 +435,7 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 
 		data, err := p.RenderTemplate("app/service", params)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		items = append(items, data)
@@ -459,7 +460,7 @@ func (p *Provider) releaseTemplateTimer(a *structs.App, r *structs.Release, s *m
 
 	data, err := p.RenderTemplate("app/timer", params)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return data, nil
@@ -491,7 +492,7 @@ func (p *Provider) releaseTemplateVolumes(a *structs.App, ss manifest.Services) 
 
 	data, err := p.RenderTemplate("app/volumes", params)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return data, nil
@@ -500,7 +501,7 @@ func (p *Provider) releaseTemplateVolumes(a *structs.App, ss manifest.Services) 
 func (p *Provider) releaseUnmarshal(kr *ca.Release) (*structs.Release, error) {
 	created, err := time.Parse(common.SortableTime, kr.Spec.Created)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	r := &structs.Release{
