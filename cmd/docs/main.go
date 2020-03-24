@@ -5,7 +5,6 @@ import (
 	"html/template"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/convox/convox/pkg/docs"
 	"github.com/convox/stdapi"
@@ -44,15 +43,9 @@ func main() {
 func run() error {
 	s := stdapi.New("docs", "docs.convox")
 
-	// ds, err := docs.LoadGithub("convox", "convox", "docs", "master")
-	// fmt.Printf("ds: %+v\n", ds)
-	// fmt.Printf("err: %+v\n", err)
-
 	if err := loadDocuments(); err != nil {
 		return err
 	}
-
-	// go loadDocumentsInterval(2 * time.Minute)
 
 	s.Router.Static("/assets/images", packr.NewBox("./public/images"))
 	s.Router.Static("/assets", packr.NewBox("./public/assets"))
@@ -62,16 +55,6 @@ func run() error {
 	s.Route("GET", "/{slug:.*}", doc)
 
 	stdapi.LoadTemplates(packr.NewBox("./templates"), helpers)
-
-	// docs.Files = packr.NewBox("../../docs")
-
-	// if err := docs.LoadCategories(categorySlugs...); err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// if err := docs.UploadIndex(); err != nil {
-	// 	log.Printf("error: %s", err)
-	// }
 
 	if err := s.Listen("https", ":3000"); err != nil {
 		return err
@@ -145,14 +128,6 @@ func loadDocuments() error {
 	return nil
 }
 
-func loadDocumentsInterval(interval time.Duration) {
-	for range time.Tick(interval) {
-		if err := loadDocuments(); err != nil {
-			fmt.Printf("err: %+v\n", err)
-		}
-	}
-}
-
 func doc(c *stdapi.Context) error {
 	params := map[string]interface{}{
 		"Documents": documents,
@@ -168,6 +143,7 @@ func doc(c *stdapi.Context) error {
 	params["Body"] = template.HTML(d.Body)
 	params["Breadcrumbs"] = documents.Breadcrumbs(d.Slug)
 	params["Category"] = d.Category()
+	params["Path"] = d.Path
 	params["Slug"] = d.Slug
 
 	if c.Ajax() {
