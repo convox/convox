@@ -25,8 +25,8 @@ The following Resource types are currently available:
 
 ## Linking
 
-Linking a Resource to a [Service](service.md) causes an environment variable to be injected into [Processes](process.md)
-of that [Service](service.md) based on the name of the Resource.
+Linking a Resource to a [Service](../service.md) causes an environment variable to be injected into [Processes](../process.md)
+of that [Service](../service.md) based on the name of the Resource.
 
 The URL presented by this environment variable will contain everything you need to connect, including authentication details.
 
