@@ -1,6 +1,6 @@
 # Build
 
-A Build is a compiled version of the code for each [Service](service.md) of an [App](../../app.md).
+A Build is a compiled version of the code for each [Service](service.md) of an [App](../app).
 
 Convox uses `docker` to compile code into a Build.
 

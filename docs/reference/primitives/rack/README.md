@@ -57,10 +57,7 @@ Where provider is currently one of `aws`, `azure`, `do`, `gcp`, or `local`.
     $ convox rack logs -r myrack
     ...
 
-### Scaling a Rack
-
 ### Uninstalling a Rack
 
     $ convox rack uninstall myrack
-
 
