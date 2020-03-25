@@ -2,6 +2,25 @@
 
 This document outlines the changes from Version 2 (date-based version) Racks to Version 3.x Racks.
 
+## Racks
+
+### Generation 1
+
+Generation 1 Apps are no longer supported
+
+### Infrastructure Providers
+
+#### Version 2
+
+* AWS (ECS)
+
+#### Version 3
+
+* AWS (EKS)
+* Digital Ocean
+* Google Cloud
+* Microsoft Azure
+
 ## Apps
 
 ### Agent Ports
