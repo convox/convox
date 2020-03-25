@@ -1,15 +1,14 @@
 # Changes
 
-This document outlines the changes from the older Racks to Version 3.x Racks.
+This document outlines the changes from Version 2 (date-based version) Racks to Version 3.x Racks.
 
 ## Racks
 
-### Versioning
+### Generation 1
 
-- "Version 2" Racks are versioned like `20200302115619` (reverse date format, start with a 2)
-- "Version 3" Racks are versioned like `3.0.0` (Semantic versioning, start with a 3)
+Generation 1 Apps are no longer supported
 
-### Supported Infrastructure Providers
+### Infrastructure Providers
 
 #### Version 2
 
@@ -21,10 +20,6 @@ This document outlines the changes from the older Racks to Version 3.x Racks.
 * Digital Ocean
 * Google Cloud
 * Microsoft Azure
-
-### Generation 1 Support
-
-Version 3 Racks no longer support Generation 1 apps
 
 ## Apps
 
