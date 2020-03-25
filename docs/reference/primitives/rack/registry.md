@@ -1,6 +1,6 @@
 # Registry
 
-A reference to an external private Docker registry that you can reference in your [Builds](../app/build.md).
+A Registry is a set of stored credentials for a private Docker registry that can be referenced during a [Build](../app/build.md).
 
 ## Adding Registries
 

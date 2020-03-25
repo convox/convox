@@ -1,6 +1,6 @@
 # Instance
 
-An instance provides capacity for running [Processes](../app/process.md)
+An Instance provides capacity for running [Processes](../app/process.md)
 
 ## List Instances
 

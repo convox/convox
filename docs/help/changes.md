@@ -9,30 +9,22 @@ This document outlines the changes from the older Racks to Version 3.x Racks.
 - "Version 2" Racks are versioned like `20200302115619` (reverse date format, start with a 2)
 - "Version 3" Racks are versioned like `3.0.0` (Semantic versioning, start with a 3)
 
-### Underling Infrastructure
+### Supported Infrastructure Providers
 
-- v2 Racks run on ECS (AWS) only
-- v3 Racks run on:
-  - EKS (AWS),
-  - GKE (Google Cloud),
-  - AKS (Azure),
-  - Managed Kubernetes (Digital Ocean)
-  - so far...
+#### Version 2
 
-### Development status
+* AWS (ECS)
 
-- v2 Racks are supported for Pro & Enterprise Customers
-- v3 Racks are under active development
+#### Version 3
 
-### Console and CLI Support
+* AWS (EKS)
+* Digital Ocean
+* Google Cloud
+* Microsoft Azure
 
-- v2 Racks have Console based install and CLI based install, management and uninstall
-- v3 Racks have Console based install, management and uninstall and CLI based install, management and uninstall
+### Generation 1 Support
 
-### App Generation Support
-
-- v2 Racks run Gen1 (configured by `docker-compose.yml`) and Gen2 apps (configured by `convox.yml`)
-- v3 Racks run Generation 2 Apps
+Version 3 Racks no longer support Generation 1 apps
 
 ## Apps
 
