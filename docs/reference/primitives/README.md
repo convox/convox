@@ -36,8 +36,6 @@ focus on the things that make your [App](app) unique.
 
 ## Rack Primitives
 
-[Racks](rack) contain a couple of simple primitives, that enable the Convox processes and your own services to run seamlessly.
-
 | Primitive                    | Description                                                         |
 |:-----------------------------|:--------------------------------------------------------------------|
 | [Instance](rack/instance.md) | Node that provides capacity for running [Processes](app/process.md) |

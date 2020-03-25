@@ -1,13 +1,13 @@
 # Changes
 
-This document outlines the changes from Version 2 (date-based version) Racks to Version 3.x Racks.
+This document outlines the changes from the older Racks to Version 3.x Racks.
 
 ## Racks
 
 ### Versioning
 
-- "Version 2" Racks have versions like `20200302115619` (reverse date format, start with a 2)
-- "Version 3" Racks have versions like `3.0.8` (Semantic versioning, start with a 3)
+- "Version 2" Racks are versioned like `20200302115619` (reverse date format, start with a 2)
+- "Version 3" Racks are versioned like `3.0.0` (Semantic versioning, start with a 3)
 
 ### Underling Infrastructure
 
@@ -31,7 +31,7 @@ This document outlines the changes from Version 2 (date-based version) Racks to 
 
 ### App Generation Support
 
-- v2 Racks run Gen1 and Gen2 apps
+- v2 Racks run Gen1 (configured by `docker-compose.yml`) and Gen2 apps (configured by `convox.yml`)
 - v3 Racks run Generation 2 Apps
 
 ## Apps

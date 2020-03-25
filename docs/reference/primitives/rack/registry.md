@@ -1,6 +1,6 @@
 # Registry
 
-External Docker image repository.  When you install a [Rack](../rack) an internal Registry is created for use by the Rack.  You can add external private Registries to use when refering to private images in your [Build](../app/build.md)
+A reference to an external private Docker registry that you can reference in your [Builds](../app/build.md).
 
 ## Adding Registries
 
