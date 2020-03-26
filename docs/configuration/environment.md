@@ -6,7 +6,7 @@ for different deployments (i.e. staging and production).
 
 ## Definition
 
-Environment variables that will be used by the application are defined in `convox.yml`(convox.yml.md):
+Environment variables that will be used by the application are defined in [`convox.yml`](convox-yml.md):
 
 ### Application Level
 

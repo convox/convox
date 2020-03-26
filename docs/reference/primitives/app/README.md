@@ -4,7 +4,7 @@ An App is a logical container for [Primitives](../README.md) that are updated to
 
 ## Definition
 
-An App is defined by a single [`convox.yml`](../../../configuration/convox.yml.md)
+An App is defined by a single [`convox.yml`](../../../configuration/convox-yml.md)
 
     resources:
       database:

@@ -8,7 +8,7 @@ Convox allows you to easily scale any [Service](../reference/primitives/app/serv
  
 ## Initial Defaults
 
-You can specify the scale for any [Service](../reference/primitives/app/service.md) in your [convox.yml](../configuration/convox.yml.md)
+You can specify the scale for any [Service](../reference/primitives/app/service.md) in your [convox.yml](../configuration/convox-yml.md)
 
     services:
       web:
