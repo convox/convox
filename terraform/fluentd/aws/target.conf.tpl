@@ -3,14 +3,14 @@
 		@type record_transformer
 		enable_ruby true
 		<record>
-			group_name /convox/${record["kubernetes"]["namespace_labels"]["rack"]}/${record["kubernetes"]["namespace_labels"]["app"]}
-			stream_name service/${record["kubernetes"]["labels"]["service"]}/${record["kubernetes"]["pod_name"]}
+			group_name /convox/$${record["kubernetes"]["namespace_labels"]["rack"]}/$${record["kubernetes"]["namespace_labels"]["app"]}
+			stream_name service/$${record["kubernetes"]["labels"]["service"]}/$${record["kubernetes"]["pod_name"]}
 		</record>
 	</filter>
 
 	<match **>
 		@type cloudwatch_logs
-		region us-east-1
+		region ${region}
 		auto_create_stream true
 		retention_in_days 7
 		log_group_name_key group_name

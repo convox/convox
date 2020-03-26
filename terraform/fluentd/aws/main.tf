@@ -31,7 +31,7 @@ module "k8s" {
   image     = "fluent/fluentd-kubernetes-daemonset:v1.7.3-debian-cloudwatch-1.0"
   namespace = var.namespace
   rack      = var.rack
-  target    = file("${path.module}/target.conf")
+  target    = templatefile("${path.module}/target.conf.tpl", { region = data.aws_region.current.name })
 
   annotations = {
     "eks.amazonaws.com/role-arn" : aws_iam_role.fluentd.arn,
