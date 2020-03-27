@@ -6,7 +6,7 @@ Convox uses `docker` to compile code into a Build.
 
 ## Definition
 
-You can define the location to build for each [Service](service.md) in [`convox.yml`](../convox.yml.md).
+You can define the location to build for each [Service](service.md) in [`convox.yml`](../convox-yml.md).
 
     services:
       api:
