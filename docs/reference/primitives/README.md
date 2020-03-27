@@ -14,7 +14,7 @@ focus on the things that make your [App](app) unique.
 | [Object](app/object.md)     | Blob/file storage                                                                            |
 | [Process](app/process.md)   | Running containers created by running a command on a [Release](app/build.md)                 |
 | [Release](app/release.md)   | Units of deployment consisting of a [Build](app/build.md) and a set of environment variables |
-| [Resource](app/resource.md) | Network-accessible external services (e.g. Postgres)                                         |
+| [Resource](app/resource) | Network-accessible external services (e.g. Postgres)                                         |
 | [Service](app/service.md)   | Horizontally-scalable collections of durable [Processes](app/process.md)                     |
 | [Timer](app/timer.md)       | Runs one-off [Processes](app/process.md) on a scheduled interval                             |
 
