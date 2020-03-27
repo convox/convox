@@ -2,7 +2,7 @@
 
 ## Definition
 
-A Memcached Resource is defined in [`convox.yml`](../../../../configuration/convox.yml.md) and linked to one or more [Services](../service.md).
+A Memcached Resource is defined in [`convox.yml`](../../../../configuration/convox-yml.md) and linked to one or more [Services](../service.md).
 
     resources:
       main:

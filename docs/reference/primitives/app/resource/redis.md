@@ -2,7 +2,7 @@
 
 ## Definition
 
-A Redis Resource is defined in [`convox.yml`](../../../../configuration/convox.yml.md) and linked to one or more [Services](../service.md).
+A Redis Resource is defined in [`convox.yml`](../../../../configuration/convox-yml.md) and linked to one or more [Services](../service.md).
 
     resources:
       main:
