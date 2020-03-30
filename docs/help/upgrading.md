@@ -1,4 +1,4 @@
-# Migrating from previous Convox racks
+# Upgrading
 
 ## Local Racks
 
