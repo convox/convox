@@ -44,6 +44,14 @@ module "api" {
   router    = module.router.endpoint
 }
 
+module "metrics" {
+  source = "../../metrics/k8s"
+
+  providers = {
+    kubernetes = kubernetes
+  }
+}
+
 module "resolver" {
   source = "../../resolver/aws"
 
