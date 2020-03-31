@@ -86,7 +86,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
-        {{ range .Service.ResourceMap }}
+        {{ range $.Resources }}
         - name: "{{.Env}}"
           valueFrom:
             configMapKeyRef:

@@ -56,15 +56,374 @@ spec:
 ---
 apiVersion: v1
 data:
+  URL: postgres://app:6630abdb8bba553e3e48555e302e51@resource-four.rack1-app1.svc.cluster.local:5432/app?sslmode=disable
+kind: ConfigMap
+metadata:
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    resource: four
+    system: convox
+    type: resource
+  name: resource-four
+  namespace: rack1-app1
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    resource: four
+    system: convox
+  name: resource-four
+  namespace: rack1-app1
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    atom.conditions: Available=True,Progressing=True/NewReplicaSetAvailable
+  labels:
+    app: app1
+    kind: postgres
+    name: four
+    provider: k8s
+    rack: rack1
+    release: release2
+    resource: four
+    system: convox
+    type: resource
+  name: resource-four
+  namespace: rack1-app1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app1
+      rack: rack1
+      resource: four
+      system: convox
+  template:
+    metadata:
+      labels:
+        app: app1
+        rack: rack1
+        resource: four
+        system: convox
+        type: resource
+    spec:
+      containers:
+      - env:
+        - name: POSTGRES_DB
+          value: app
+        - name: POSTGRES_USER
+          value: app
+        - name: POSTGRES_PASSWORD
+          value: 6630abdb8bba553e3e48555e302e51
+        - name: PGDATA
+          value: /var/lib/postgresql/data/data
+        image: postgres:10.5
+        imagePullPolicy: IfNotPresent
+        name: postgres
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: data
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: resource-four
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    resource: four
+    system: convox
+    type: resource
+  name: resource-four
+  namespace: rack1-app1
+spec:
+  ports:
+  - port: 5432
+  selector:
+    app: app1
+    rack: rack1
+    resource: four
+    system: convox
+  type: NodePort
+---
+apiVersion: v1
+data:
+  URL: postgres://app:6630abdb8bba553e3e48555e302e51@resource-one.rack1-app1.svc.cluster.local:5432/app?sslmode=disable
+kind: ConfigMap
+metadata:
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    resource: one
+    system: convox
+    type: resource
+  name: resource-one
+  namespace: rack1-app1
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    resource: one
+    system: convox
+  name: resource-one
+  namespace: rack1-app1
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    atom.conditions: Available=True,Progressing=True/NewReplicaSetAvailable
+  labels:
+    app: app1
+    kind: postgres
+    name: one
+    provider: k8s
+    rack: rack1
+    release: release2
+    resource: one
+    system: convox
+    type: resource
+  name: resource-one
+  namespace: rack1-app1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app1
+      rack: rack1
+      resource: one
+      system: convox
+  template:
+    metadata:
+      labels:
+        app: app1
+        rack: rack1
+        resource: one
+        system: convox
+        type: resource
+    spec:
+      containers:
+      - env:
+        - name: POSTGRES_DB
+          value: app
+        - name: POSTGRES_USER
+          value: app
+        - name: POSTGRES_PASSWORD
+          value: 6630abdb8bba553e3e48555e302e51
+        - name: PGDATA
+          value: /var/lib/postgresql/data/data
+        image: postgres:10.5
+        imagePullPolicy: IfNotPresent
+        name: postgres
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: data
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: resource-one
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    resource: one
+    system: convox
+    type: resource
+  name: resource-one
+  namespace: rack1-app1
+spec:
+  ports:
+  - port: 5432
+  selector:
+    app: app1
+    rack: rack1
+    resource: one
+    system: convox
+  type: NodePort
+---
+apiVersion: v1
+data:
+  URL: value
+kind: ConfigMap
+metadata:
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    resource: three
+    system: convox
+    type: resource
+  name: resource-three
+  namespace: rack1-app1
+---
+apiVersion: v1
+data:
+  URL: mysql://root:6630abdb8bba553e3e48555e302e51@resource-two.rack1-app1.svc.cluster.local:3306/app
+kind: ConfigMap
+metadata:
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    resource: two
+    system: convox
+    type: resource
+  name: resource-two
+  namespace: rack1-app1
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    resource: two
+    system: convox
+  name: resource-two
+  namespace: rack1-app1
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    atom.conditions: Available=True,Progressing=True/NewReplicaSetAvailable
+  labels:
+    app: app1
+    kind: mysql
+    provider: k8s
+    rack: rack1
+    release: release2
+    resource: two
+    system: convox
+    type: resource
+  name: resource-two
+  namespace: rack1-app1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app1
+      rack: rack1
+      resource: two
+      system: convox
+  template:
+    metadata:
+      labels:
+        app: app1
+        rack: rack1
+        resource: two
+        system: convox
+        type: resource
+    spec:
+      containers:
+      - env:
+        - name: MYSQL_DATABASE
+          value: app
+        - name: MYSQL_ROOT_PASSWORD
+          value: 6630abdb8bba553e3e48555e302e51
+        image: mysql:5.7.23
+        imagePullPolicy: IfNotPresent
+        name: mysql
+        ports:
+        - containerPort: 3306
+        volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: data
+          subPath: mysql
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: resource-two
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    resource: two
+    system: convox
+    type: resource
+  name: resource-two
+  namespace: rack1-app1
+spec:
+  ports:
+  - port: 3306
+  selector:
+    app: app1
+    rack: rack1
+    resource: two
+    system: convox
+  type: NodePort
+---
+apiVersion: v1
+data:
   APP: YXBwMQ==
   BUILD: QlVJTEQx
   BUILD_DESCRIPTION: ""
   FOO: YmFy
+  FOUR_URL: ""
   PORT: NTAwMA==
   RACK: cmFjazE=
   RACK_URL: aHR0cHM6Ly9jb252b3g6QGFwaS5uczEuc3ZjLmNsdXN0ZXIubG9jYWw6NTQ0Mw==
   RELEASE: UkVMRUFTRTI=
   SERVICE: d2Vi
+  THREE_URL: dmFsdWU=
 kind: Secret
 metadata:
   labels:
@@ -126,6 +485,26 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
+        - name: ONE_URL
+          valueFrom:
+            configMapKeyRef:
+              key: URL
+              name: resource-one
+        - name: OTHER_URL
+          valueFrom:
+            configMapKeyRef:
+              key: URL
+              name: resource-two
+        - name: THREE_URL
+          valueFrom:
+            configMapKeyRef:
+              key: URL
+              name: resource-three
+        - name: FOUR_URL
+          valueFrom:
+            configMapKeyRef:
+              key: URL
+              name: resource-four
         envFrom:
         - secretRef:
             name: env-web
@@ -185,5 +564,84 @@ spec:
     service: web
     type: service
   type: ClusterIP
+---
+null
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    system: convox
+  name: timer-test
+  namespace: rack1-app1
+spec:
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        metadata:
+          labels:
+            app: app1
+            name: test
+            rack: rack1
+            release: RELEASE2
+            service: web
+            system: convox
+            type: timer
+        spec:
+          containers:
+          - args:
+            - bin/test
+            env:
+            - name: ONE_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: URL
+                  name: resource-one
+            - name: OTHER_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: URL
+                  name: resource-two
+            - name: THREE_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: URL
+                  name: resource-three
+            - name: FOUR_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: URL
+                  name: resource-four
+            envFrom:
+            - secretRef:
+                name: env-web
+            image: repo1:web.build1
+            imagePullPolicy: IfNotPresent
+            name: main
+            resources:
+              limits:
+                memory: 512Mi
+              requests:
+                cpu: 256m
+                memory: 512Mi
+            volumeMounts:
+            - mountPath: /etc/convox
+              name: ca
+          restartPolicy: Never
+          shareProcessNamespace: true
+          volumes:
+          - configMap:
+              name: ca
+              optional: true
+            name: ca
+  schedule: '*/5 * * * *'
+  successfulJobsHistoryLimit: 1
 ---
 null
