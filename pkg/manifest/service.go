@@ -172,7 +172,7 @@ func (s Service) ResourceMap() []ServiceResource {
 
 		switch len(parts) {
 		case 1:
-			srs = append(srs, ServiceResource{Name: parts[0], Env: fmt.Sprintf("%s_URL", strings.Replace(strings.ToUpper(parts[0]), "-", "_", -1))})
+			srs = append(srs, ServiceResource{Name: parts[0], Env: Resource{Name: parts[0]}.DefaultEnv()})
 		case 2:
 			srs = append(srs, ServiceResource{Name: parts[0], Env: strings.TrimSpace(parts[1])})
 		}

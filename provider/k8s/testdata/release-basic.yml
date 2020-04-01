@@ -2,8 +2,29 @@ build: build1
 created: 20200101.000000.000000000
 env:
   FOO: bar
+  THREE_URL: value
+  FOUR_URL: ""
 manifest:
+  resources:
+    one:
+      type: postgres
+    two:
+      type: mysql
+    three:
+      type: postgres
+    four:
+      type: postgres
   services:
     web:
       build: .
       port: 5000
+      resources:
+        - one
+        - two:OTHER_URL
+        - three
+        - four
+  timers:
+    test:
+      command: bin/test
+      schedule: "*/5 * * * *"
+      service: web

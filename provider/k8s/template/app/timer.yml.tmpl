@@ -45,7 +45,7 @@ spec:
               - {{ safe . }}
             {{ end }}
             env:
-            {{ range .Service.ResourceMap }}
+            {{ range $.Resources }}
             - name: "{{.Env}}"
               valueFrom:
                 configMapKeyRef:

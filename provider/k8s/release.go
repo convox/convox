@@ -148,7 +148,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 
 		// resources
 		for _, r := range m.Resources {
-			data, err := p.releaseTemplateResource(a, r)
+			data, err := p.releaseTemplateResource(a, e, r)
 			if err != nil {
 				return errors.WithStack(err)
 			}
@@ -171,7 +171,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 				return errors.WithStack(err)
 			}
 
-			data, err := p.releaseTemplateTimer(a, r, s, t)
+			data, err := p.releaseTemplateTimer(a, e, r, s, t)
 			if err != nil {
 				return errors.WithStack(err)
 			}
@@ -360,7 +360,11 @@ func (p *Provider) releaseTemplateIngress(a *structs.App, ss manifest.Services, 
 	return bytes.Join(items, []byte("---\n")), nil
 }
 
-func (p *Provider) releaseTemplateResource(a *structs.App, r manifest.Resource) ([]byte, error) {
+func (p *Provider) releaseTemplateResource(a *structs.App, e structs.Environment, r manifest.Resource) ([]byte, error) {
+	if url := strings.TrimSpace(e[r.DefaultEnv()]); url != "" {
+		return p.releaseTemplateResourceMasked(a, r, url)
+	}
+
 	params := map[string]interface{}{
 		"App":        a.Name,
 		"Namespace":  p.AppNamespace(a.Name),
@@ -371,6 +375,23 @@ func (p *Provider) releaseTemplateResource(a *structs.App, r manifest.Resource) 
 	}
 
 	data, err := p.RenderTemplate(fmt.Sprintf("resource/%s", r.Type), params)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return data, nil
+}
+
+func (p *Provider) releaseTemplateResourceMasked(a *structs.App, r manifest.Resource, url string) ([]byte, error) {
+	params := map[string]interface{}{
+		"App":       a.Name,
+		"Namespace": p.AppNamespace(a.Name),
+		"Name":      r.Name,
+		"Rack":      p.Name,
+		"Url":       url,
+	}
+
+	data, err := p.RenderTemplate("resource/masked", params)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -426,6 +447,7 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 			"Rack":           p.Name,
 			"Release":        r,
 			"Replicas":       replicas,
+			"Resources":      s.ResourceMap(),
 			"Service":        s,
 		}
 
@@ -444,12 +466,13 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 	return bytes.Join(items, []byte("---\n")), nil
 }
 
-func (p *Provider) releaseTemplateTimer(a *structs.App, r *structs.Release, s *manifest.Service, t manifest.Timer) ([]byte, error) {
+func (p *Provider) releaseTemplateTimer(a *structs.App, e structs.Environment, r *structs.Release, s *manifest.Service, t manifest.Timer) ([]byte, error) {
 	params := map[string]interface{}{
 		"App":       a,
 		"Namespace": p.AppNamespace(a.Name),
 		"Rack":      p.Name,
 		"Release":   r,
+		"Resources": s.ResourceMap(),
 		"Service":   s,
 		"Timer":     t,
 	}
