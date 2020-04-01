@@ -2,6 +2,14 @@ resources:
   1resource:
     type: postgres
 services:
+  deployment-invalid-low:
+    deployment:
+      minimum: -1
+      maximum: 99
+  deployment-invalid-high:
+    deployment:
+      minimum: 101
+      maximum: 201
   serviceF:
     build: .
     resources:

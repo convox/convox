@@ -25,6 +25,9 @@ services:
       manifest: Dockerfile
       path: .
     command: bin/web
+    deployment:
+      minimum: 25
+      maximum: 100
     domain: ${WEB_HOST}
     drain: 10
     environment:
@@ -53,24 +56,25 @@ services:
     test: make test
 ```
 
-| Attribute     | Type       | Default             | Description                                                                                                                         |
-| ------------- | ---------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Attribute     | Type       | Default             | Description                                                                                                                                |
+| ------------- | ---------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | `agent`       | boolean    | false               | Set to `true` to declare this Service as an [Agent](../../../configuration/agents.md)                                                      |
-| `build`       | string/map | .                   | Build definition (see below)                                                                                                        |
-| `command`     | string     | `CMD` of Dockerfile | The command to run to start a [Process](process.md) for this Service                                                                |
-| `domain`      | string     |                     | A custom domain(s) (comma separated) to route to this Service                                                                       |
-| `drain`       | number     |                     | The number of seconds to wait for connections to drain when terminating a [Process](process.md) of this Service                     |
-| `environment` | list       |                     | A list of environment variables (with optional defaults) to populate from the [Release](release.md) environment                     |
-| `health`      | string/map | /                   | Health check definition (see below)                                                                                                 |
-| `image`       | string     |                     | An external Docker image to use for this Service (supercedes `build`)                                                               |
-| `internal`    | boolean    | false               | Set to `true` to make this Service only accessible inside the Rack                                                                  |
+| `build`       | string/map | .                   | Build definition (see below)                                                                                                               |
+| `command`     | string     | `CMD` of Dockerfile | The command to run to start a [Process](process.md) for this Service                                                                       |
+| `deployment`  | map        |                     | Manual control over deployment parameters                                                                                                  |
+| `domain`      | string     |                     | A custom domain(s) (comma separated) to route to this Service                                                                              |
+| `drain`       | number     |                     | The number of seconds to wait for connections to drain when terminating a [Process](process.md) of this Service                            |
+| `environment` | list       |                     | A list of environment variables (with optional defaults) to populate from the [Release](release.md) environment                            |
+| `health`      | string/map | /                   | Health check definition (see below)                                                                                                        |
+| `image`       | string     |                     | An external Docker image to use for this Service (supercedes `build`)                                                                      |
+| `internal`    | boolean    | false               | Set to `true` to make this Service only accessible inside the Rack                                                                         |
 | `port`        | string     |                     | The port that the default Rack balancer will use to [route incoming traffic](../../../configuration/load-balancers.md)                     |
 | `ports`       | list       |                     | A list of ports available for internal [service discovery](../../../configuration/service-discovery.md) or custom [Balancers](balancer.md) |
-| `privileged`  | boolean    | true                | Set to `false` to prevent [Processes](process.md) of this Service from running as root inside their container                       |
-| `scale`       | map        | 1                   | Define scaling parameters (see below)                                                                                               |
-| `singleton`   | boolean    | false               | Set to `true` to prevent extra [Processes](process.md) of this Service from being started during deployments                        |
-| `sticky`      | boolean    | false               | Set to `true` to enable sticky sessions                                                      |
-| `test`        | string     |                     | A command to run to test this Service when running `convox test`                                                                    |
+| `privileged`  | boolean    | true                | Set to `false` to prevent [Processes](process.md) of this Service from running as root inside their container                              |
+| `scale`       | map        | 1                   | Define scaling parameters (see below)                                                                                                      |
+| `singleton`   | boolean    | false               | Set to `true` to prevent extra [Processes](process.md) of this Service from being started during deployments                               |
+| `sticky`      | boolean    | false               | Set to `true` to enable sticky sessions                                                                                                    |
+| `test`        | string     |                     | A command to run to test this Service when running `convox test`                                                                           |
 
 > Environment variables **must** be declared to be populated for a Service.
 
@@ -82,6 +86,13 @@ services:
 | `path`     | string | .          | The path (relative to `convox.yml`) to build for this Service |
 
 > Specifying `build` as a string will set the `path` and leave the other values as defaults.
+
+### deployment
+
+| Attribute | Type   | Default | Description                                                                      |
+| --------- | ------ | ------- | -------------------------------------------------------------------------------- |
+| `maximum` | number | 200     | The maximum percentage of Processes to allow during rolling deploys              |
+| `minimum` | number | 50      | The minimum percentage of healthy Processes to keep alive during rolling deploys |
 
 ### health
 

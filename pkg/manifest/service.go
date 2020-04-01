@@ -13,6 +13,7 @@ type Service struct {
 	Agent       ServiceAgent          `yaml:"agent,omitempty"`
 	Build       ServiceBuild          `yaml:"build,omitempty"`
 	Command     string                `yaml:"command,omitempty"`
+	Deployment  ServiceDeployment     `yaml:"deployment,omitempty"`
 	Domains     ServiceDomains        `yaml:"domain,omitempty"`
 	Drain       int                   `yaml:"drain,omitempty"`
 	Environment Environment           `yaml:"environment,omitempty"`
@@ -41,6 +42,11 @@ type ServiceBuild struct {
 	Args     []string `yaml:"args,omitempty"`
 	Manifest string   `yaml:"manifest,omitempty"`
 	Path     string   `yaml:"path,omitempty"`
+}
+
+type ServiceDeployment struct {
+	Maximum int `yaml:"maximum,omitempty"`
+	Minimum int `yaml:"minimum,omitempty"`
 }
 
 type ServiceDomains []string

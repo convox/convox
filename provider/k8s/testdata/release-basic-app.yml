@@ -418,6 +418,327 @@ data:
   BUILD_DESCRIPTION: ""
   FOO: YmFy
   FOUR_URL: ""
+  RACK: cmFjazE=
+  RACK_URL: aHR0cHM6Ly9jb252b3g6QGFwaS5uczEuc3ZjLmNsdXN0ZXIubG9jYWw6NTQ0Mw==
+  RELEASE: UkVMRUFTRTI=
+  SERVICE: YWdlbnQ=
+  THREE_URL: dmFsdWU=
+kind: Secret
+metadata:
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    service: agent
+    system: convox
+    type: env
+  name: env-agent
+  namespace: rack1-app1
+type: Opaque
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  annotations: null
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    service: agent
+    system: convox
+    type: service
+  name: agent
+  namespace: rack1-app1
+spec:
+  minReadySeconds: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: app1
+      rack: rack1
+      service: agent
+      system: convox
+  template:
+    metadata:
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ""
+      labels:
+        app: app1
+        name: agent
+        rack: rack1
+        release: RELEASE2
+        service: agent
+        system: convox
+        type: service
+    spec:
+      containers:
+      - env:
+        - name: INSTANCE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        envFrom:
+        - secretRef:
+            name: env-agent
+        image: repo1:agent.build1
+        imagePullPolicy: IfNotPresent
+        name: main
+        ports:
+        - containerPort: 8125
+          hostPort: 8125
+          name: port-8125
+          protocol: UDP
+        - containerPort: 8126
+          hostPort: 8126
+          name: port-8126
+          protocol: TCP
+        resources:
+          limits:
+            memory: 512Mi
+          requests:
+            cpu: 256m
+            memory: 512Mi
+        volumeMounts:
+        - mountPath: /etc/convox
+          name: ca
+      hostNetwork: true
+      shareProcessNamespace: true
+      volumes:
+      - configMap:
+          name: ca
+          optional: true
+        name: ca
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    convox.com/alias: agent.app1.rack1.local
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    service: agent
+    system: convox
+  name: agent
+  namespace: rack1-app1
+spec:
+  ports:
+  - name: port-8125
+    port: 8125
+    protocol: UDP
+    targetPort: 8125
+  - name: port-8126
+    port: 8126
+    protocol: TCP
+    targetPort: 8126
+  selector:
+    service: agent
+    type: service
+  type: ClusterIP
+---
+apiVersion: v1
+data:
+  APP: YXBwMQ==
+  BUILD: QlVJTEQx
+  BUILD_DESCRIPTION: ""
+  FOO: YmFy
+  FOUR_URL: ""
+  RACK: cmFjazE=
+  RACK_URL: aHR0cHM6Ly9jb252b3g6QGFwaS5uczEuc3ZjLmNsdXN0ZXIubG9jYWw6NTQ0Mw==
+  RELEASE: UkVMRUFTRTI=
+  SERVICE: ZGVwbG95bWVudA==
+  THREE_URL: dmFsdWU=
+kind: Secret
+metadata:
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    service: deployment
+    system: convox
+    type: env
+  name: env-deployment
+  namespace: rack1-app1
+type: Opaque
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    atom.conditions: Available=True,Progressing=True/NewReplicaSetAvailable
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    service: deployment
+    system: convox
+    type: service
+  name: deployment
+  namespace: rack1-app1
+spec:
+  minReadySeconds: 1
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: app1
+      rack: rack1
+      service: deployment
+      system: convox
+  strategy:
+    rollingUpdate:
+      maxSurge: 10%
+      maxUnavailable: 75%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: app1
+        name: deployment
+        rack: rack1
+        release: RELEASE2
+        service: deployment
+        system: convox
+        type: service
+    spec:
+      containers:
+      - env:
+        - name: INSTANCE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        envFrom:
+        - secretRef:
+            name: env-deployment
+        image: repo1:deployment.build1
+        imagePullPolicy: IfNotPresent
+        name: main
+        ports: null
+        resources:
+          limits:
+            memory: 512Mi
+          requests:
+            cpu: 256m
+            memory: 512Mi
+        volumeMounts:
+        - mountPath: /etc/convox
+          name: ca
+      shareProcessNamespace: true
+      volumes:
+      - configMap:
+          name: ca
+          optional: true
+        name: ca
+---
+apiVersion: v1
+data:
+  APP: YXBwMQ==
+  BUILD: QlVJTEQx
+  BUILD_DESCRIPTION: ""
+  FOO: YmFy
+  FOUR_URL: ""
+  RACK: cmFjazE=
+  RACK_URL: aHR0cHM6Ly9jb252b3g6QGFwaS5uczEuc3ZjLmNsdXN0ZXIubG9jYWw6NTQ0Mw==
+  RELEASE: UkVMRUFTRTI=
+  SERVICE: c2luZ2xldG9u
+  THREE_URL: dmFsdWU=
+kind: Secret
+metadata:
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    service: singleton
+    system: convox
+    type: env
+  name: env-singleton
+  namespace: rack1-app1
+type: Opaque
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    atom.conditions: Available=True,Progressing=True/NewReplicaSetAvailable
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    service: singleton
+    system: convox
+    type: service
+  name: singleton
+  namespace: rack1-app1
+spec:
+  minReadySeconds: 1
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: app1
+      rack: rack1
+      service: singleton
+      system: convox
+  strategy:
+    rollingUpdate:
+      maxSurge: 0%
+      maxUnavailable: 100%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: app1
+        name: singleton
+        rack: rack1
+        release: RELEASE2
+        service: singleton
+        system: convox
+        type: service
+    spec:
+      containers:
+      - env:
+        - name: INSTANCE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        envFrom:
+        - secretRef:
+            name: env-singleton
+        image: repo1:singleton.build1
+        imagePullPolicy: IfNotPresent
+        name: main
+        ports: null
+        resources:
+          limits:
+            memory: 512Mi
+          requests:
+            cpu: 256m
+            memory: 512Mi
+        volumeMounts:
+        - mountPath: /etc/convox
+          name: ca
+      shareProcessNamespace: true
+      volumes:
+      - configMap:
+          name: ca
+          optional: true
+        name: ca
+---
+apiVersion: v1
+data:
+  APP: YXBwMQ==
+  BUILD: QlVJTEQx
+  BUILD_DESCRIPTION: ""
+  FOO: YmFy
+  FOUR_URL: ""
   PORT: NTAwMA==
   RACK: cmFjazE=
   RACK_URL: aHR0cHM6Ly9jb252b3g6QGFwaS5uczEuc3ZjLmNsdXN0ZXIubG9jYWw6NTQ0Mw==
@@ -465,7 +786,7 @@ spec:
       system: convox
   strategy:
     rollingUpdate:
-      maxSurge: 200%
+      maxSurge: 100%
       maxUnavailable: 50%
     type: RollingUpdate
   template:

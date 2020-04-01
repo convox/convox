@@ -23,6 +23,20 @@ manifest:
         - two:OTHER_URL
         - three
         - four
+    deployment:
+      build: .
+      deployment:
+        minimum: 25
+        maximum: 110
+    agent:
+      agent: true
+      build: .
+      ports:
+        - 8125/udp
+        - 8126
+    singleton:
+      build: .
+      singleton: true
   timers:
     test:
       command: bin/test
