@@ -18,6 +18,6 @@ A Redis Resource can have the following options configured for it (default value
 
     resources:
       main:
-        type: memcached
+        type: redis
         options:
           version: 4.0.10
