@@ -22,6 +22,9 @@ services:
     build:
       manifest: Dockerfile2
       path: api
+    deployment:
+      minimum: 25
+      maximum: 110
     domain: foo.example.org
     environment:
       - DEFAULT=test

@@ -61,6 +61,22 @@ func (m *Manifest) validateServices() []error {
 			errs = append(errs, fmt.Errorf("service name %s invalid, %s", s.Name, ValidNameDescription))
 		}
 
+		if s.Deployment.Minimum < 0 {
+			errs = append(errs, fmt.Errorf("service %s deployment minimum can not be less than 0", s.Name))
+		}
+
+		if s.Deployment.Minimum > 100 {
+			errs = append(errs, fmt.Errorf("service %s deployment minimum can not be greater than 100", s.Name))
+		}
+
+		if s.Deployment.Maximum < 100 {
+			errs = append(errs, fmt.Errorf("service %s deployment maximum can not be less than 100", s.Name))
+		}
+
+		if s.Deployment.Maximum > 200 {
+			errs = append(errs, fmt.Errorf("service %s deployment maximum can not be greater than 200", s.Name))
+		}
+
 		for _, r := range s.ResourceMap() {
 			if _, err := m.Resource(r.Name); err != nil {
 				if strings.HasPrefix(err.Error(), "no such resource") {

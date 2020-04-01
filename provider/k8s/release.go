@@ -414,13 +414,8 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 	}
 
 	for _, s := range ss {
-		min := 50
-		max := 200
-
-		if s.Agent.Enabled || s.Singleton {
-			min = 0
-			max = 100
-		}
+		min := s.Deployment.Minimum
+		max := s.Deployment.Maximum
 
 		if opts.Min != nil {
 			min = *opts.Min
@@ -440,7 +435,7 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 		params := map[string]interface{}{
 			"App":            a,
 			"Environment":    env,
-			"MaxSurge":       max,
+			"MaxSurge":       max - 100,
 			"MaxUnavailable": 100 - min,
 			"Namespace":      p.AppNamespace(a.Name),
 			"Password":       p.Password,
