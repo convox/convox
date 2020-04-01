@@ -35,7 +35,7 @@ on Kubernetes available for multiple cloud providers.
 ## Resources
 
 - [Homepage](https://convox.com)
-- [Community Forums](https://community.convox.com/)
+- [Stack Overflow](https://stackoverflow.com/questions/tagged/convox)
 
 ## License
 

@@ -2,7 +2,7 @@
 
 ## Community Support
 
-Community support is available on the [Convox Community](https://community.convox.com) forums.
+Community support is available on [Stack Overflow](https://stackoverflow.com/questions/tagged/convox).
 
 ## Commercial Support
 
