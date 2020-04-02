@@ -34,9 +34,23 @@ For example, a `postgres` resource named `main` (as in the example above) would 
 
 `MAIN_URL=postgres://username:password@host.name:port/database`
 
-## Resource Overlays
+## Overlays
 
-See the [documentation](../../../deployment/resource-overlays.md) on how to replace the default Resource with an external managed Resource in appropriate environments.
+By default, any Resources you define will be satisfied by starting a containerized version on your [Rack](../reference/primitives/rack).  This allows you to get up and running as quickly as possible and also provides a low cost solution and more effective usage of your Rack.  
+
+In your production environment, or for particular usage requirements, you may wish to replace the containerised Resources with a managed cloud service for durability.  For instance, on AWS you may wish to utilise RDS to provide you with a Database, or on GCP you may wish to use Memorystore in place of a containerised Redis instance.
+
+Resource Overlays provide you with a simple and effective way to maintain the cheaper and efficient containerised Resources on the environments you wish, whilst easily switching them out for the cloud-provider managed services on those environments that require them.
+
+If you wish to replace any of those containerised Resources on a Rack, to stop them being initiated, you can manually set a matching environment variable is on your [App](../reference/primitives/app).  The corresponding Resource will then not be started by Convox on that Rack.
+
+```sh
+$ convox env set MAIN_URL=postgres://username:password@postgres–instance1.123456789012.us-east-1.rds.amazonaws.com:5432/database -r production-rack
+Setting MAIN_URL... OK
+Release: RABCDEFGHI
+```
+
+By doing this, a containerised `main` resource will now no longer be started on the `production-rack` for this app.  The service will instead communicate with the managed database instead.  
 
 ### Specifying the environment variable
 
