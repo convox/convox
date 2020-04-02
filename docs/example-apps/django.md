@@ -41,7 +41,7 @@ Starting from the [python:3](https://hub.docker.com/_/python/) image, the [Docke
 
 The [convox.yml](https://github.com/convox-examples/django/blob/master/convox.yml) file explains how to run the application. This file has two sections.
 
-1. Resources: These are network-attached dependencies of your application. In this case we have a single resource which is a postgres database. When [running locally](https://docs.convox.com/development/running-locally) Convox will automatically startup up a container running Postgres and will inject a ```DATABASE_URL``` environment variable into your application container that points to the Postgres database. When your application is [deployed](https://docs.convox.com/deployment/deploying-to-convox) to production Convox will startup an RDS postgres database for your application to use. 
+1. Resources: These are network-attached dependencies of your application. In this case we have a single resource which is a postgres database. When deployed Convox will automatically startup up a container running Postgres and will inject a ```DATABASE_URL``` environment variable into your application container that points to the Postgres database.
 
 2. Services: This is where we define our application(s). In this case we have a single application called ```web``` which is built from our dockerfile, executes the [Gunicorn](https://gunicorn.org/) web server, and uses the postgres resource for a database. You will also notice we have an [environment](https://docs.convox.com/management/environment) section where we are setting a default secret key for development. In a production application you may have additional services defined for things like Celery task workers.
 
