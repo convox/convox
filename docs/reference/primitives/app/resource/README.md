@@ -34,6 +34,10 @@ For example, a `postgres` resource named `main` (as in the example above) would 
 
 `MAIN_URL=postgres://username:password@host.name:port/database`
 
+## Resource Overlays
+
+See the [documentation](../../../deployment/resource-overlays.md) on how to replace the default Resource with an external managed Resource in appropriate environments.
+
 ### Specifying the environment variable
 
 You can also specify the environment variable that should be used for linking in the `resources` attribute:
