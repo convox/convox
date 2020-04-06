@@ -1,23 +1,5 @@
 # rack
 
-## racks
-
-List available racks
-
-### Usage
-
-    convox racks
-
-### Examples
-
-    $ convox racks
-    NAME               STATUS
-    acme/azure         running
-    acme/test          running
-    acme/production    running
-    acme/staging       running
-    local/convox       running
-
 ## rack
 
 Get information about the rack
@@ -36,6 +18,22 @@ Get information about the rack
     Status    running
     Version   20200116125110-20200116
 
+## rack install
+
+Install a new Rack
+
+### Usage
+
+    convox rack install <provider> <name> [option=value]...
+
+### Examples
+
+    $ convox rack install local dev
+    ...
+
+    $ convox rack install aws production region=eu-west-1 node_type=t3.large
+    ...
+
 ## rack logs
 
 Get logs for the rack
@@ -52,6 +50,58 @@ Get logs for the rack
     2020-02-10T13:38:04Z service/web/a55eb25e-90f5-4301-99fd-e35c91128592 ns=provider.aws at=SystemGet state=success elapsed=331.824
     2020-02-10T13:38:04Z service/web/a55eb25e-90f5-4301-99fd-e35c91128592 id=f492a0dce931 ns=api at=SystemGet method="GET" path="/system" response=200 elapsed=332.219
     ...
+
+## rack mv
+
+Move locally installed Racks to be managed by a organization within a Console installation, or move an organization's Rack back down to be managed locally.
+
+### Usage
+
+    convox rack mv <from> <to>
+
+### Examples
+
+    $ convox rack mv dev acme/dev
+    moving rack dev to acme/dev... OK
+
+    $ convox rack mv acme/dev dev
+    moving rack acme/dev to dev... OK
+
+## rack params
+
+List Rack parameters.  (Currently unused for v3 Racks)
+
+### Usage
+
+    convox rack params
+
+### Examples
+
+    $ convox rack params
+
+
+    $ convox rack params -r version-2-rack
+    Ami
+    ApiCount                     2
+    ApiMemory                    256
+    ApiRouter                    ELB
+    Autoscale                    No
+    ...
+    Version                      20200402141528
+    VolumeSize                   50
+
+## rack params set
+
+Set new values against a Rack parameter.  (Currently unused for v3 Racks)
+
+### Usage
+
+    convox rack params set <Key=Value> [Key=Value]...
+
+### Examples
+
+    $ convox rack params set Autoscale=Yes -r version-2-rack
+    Updating rack parameters... OK
 
 ## rack ps
 
@@ -85,3 +135,41 @@ List rack processes
     redis-77b4f65c55-nbx89   system  redis          running  3.0.0.beta44  2 weeks ago
     router-846b84d544-ndz76  rack    router         running  3.0.0.beta44  2 weeks ago  router
     router-846b84d544-ndz76  system  router         running  3.0.0.beta44  2 weeks ago  router
+
+## rack uninstall
+
+Uninstalls a Rack
+
+### Usage
+
+    convox rack uninstall <name>
+
+### Examples
+
+    $ convox rack uninstall my-rack
+    Upgrading modules...
+    Downloading github.com/convox/convox?ref=3.0.15 for system...
+    ...
+    Destroy complete! Resources: 35 destroyed.
+
+## rack update
+
+Updates a Rack to a new version.
+
+### Usage
+
+    convox rack update [version]
+
+### Examples
+
+    $ convox rack update
+    Upgrading modules...
+    Downloading github.com/convox/convox?ref=3.0.15 for system...
+    ...
+    Apply complete! Resources: 1 added, 4 changed, 1 destroyed.
+
+    Outputs:
+
+    api = https://convox:password@api.dev.convox
+    provider = local
+    OK
