@@ -2,7 +2,7 @@
 
 ## login
 
-Authenticate your CLI with a Rack or Console installation
+Authenticate your CLI with a Console installation
 
 ### Usage
 

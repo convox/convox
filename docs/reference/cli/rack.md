@@ -53,7 +53,7 @@ Get logs for the rack
 
 ## rack mv
 
-Move locally installed Racks to be managed by a organization within a Console installation, or move an organization's Rack back down to be managed locally.
+Transfer the management of a Rack from an individual user to an organization or vice versa.
 
 ### Usage
 
@@ -66,42 +66,6 @@ Move locally installed Racks to be managed by a organization within a Console in
 
     $ convox rack mv acme/dev dev
     moving rack acme/dev to dev... OK
-
-## rack params
-
-List Rack parameters.  (Currently unused for v3 Racks)
-
-### Usage
-
-    convox rack params
-
-### Examples
-
-    $ convox rack params
-
-
-    $ convox rack params -r version-2-rack
-    Ami
-    ApiCount                     2
-    ApiMemory                    256
-    ApiRouter                    ELB
-    Autoscale                    No
-    ...
-    Version                      20200402141528
-    VolumeSize                   50
-
-## rack params set
-
-Set new values against a Rack parameter.  (Currently unused for v3 Racks)
-
-### Usage
-
-    convox rack params set <Key=Value> [Key=Value]...
-
-### Examples
-
-    $ convox rack params set Autoscale=Yes -r version-2-rack
-    Updating rack parameters... OK
 
 ## rack ps
 

@@ -117,50 +117,6 @@ Enable termination protection
     $ convox apps lock
     Locking myapp... OK
 
-## apps params
-
-Display app parameters.  (Currently unused for v3 Racks)
-
-### Usage
-
-    convox apps params [app]
-
-### Examples
-
-    $ convox apps params
-
-
-    $ convox apps params -a my-app -r version-2-rack
-    FargateServices   No
-    FargateTimers     No
-    IamPolicy
-    InternalDomains   Yes
-    Isolate           No
-    LogBucket         my-app-logs-11z00ad8o4933
-    LogRetention
-    Private           No
-    Rack              version-2-rack
-    RackUrl           Yes
-    RedirectHttps     Yes
-    ResourcePassword  ****
-    TaskTags          No
-    WebFormation      5,64,2000
-    WorkerFormation   1,128,500
-    
-
-## apps params set
-
-Set app parameters.  (Currently unused for v3 Racks)
-
-### Usage
-
-    convox apps params set <Key=Value> [Key=Value]...
-
-### Examples
-
-    $ convox apps params set LogRetention=14 -a my-app -r version-2-rack
-    Setting app parameter... OK
-
 ## apps unlock
 
 Disable termination protection
