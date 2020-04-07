@@ -29,6 +29,9 @@ order: 1
           - database
           - queue
         test: make test
+        deployment:
+          minimum: 50
+          maximum: 200
       web:
         build: .
         command: bin/web
