@@ -18,7 +18,7 @@ A MySQL Resource can have the following options configured for it (default value
 
     resources:
       main:
-        type: memcached
+        type: mysql
         options:
           version: 5.7.23
           storage: 10
