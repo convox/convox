@@ -32,6 +32,8 @@ resource "aws_eks_cluster" "cluster" {
   depends_on = [
     aws_iam_role_policy_attachment.cluster_eks_cluster,
     aws_iam_role_policy_attachment.cluster_eks_service,
+    aws_route_table_association.private,
+    aws_route_table_association.public,
     aws_subnet.private,
     aws_subnet.public,
     null_resource.delay_cluster,
@@ -57,12 +59,6 @@ resource "aws_eks_node_group" "cluster" {
     aws_iam_role_policy_attachment.nodes_ecr,
     aws_iam_role_policy_attachment.nodes_eks_cni,
     aws_iam_role_policy_attachment.nodes_eks_worker,
-    aws_route.private-default,
-    aws_route.public-default,
-    aws_route_table.private,
-    aws_route_table.public,
-    aws_route_table_association.private,
-    aws_route_table_association.public,
   ]
 
   count = 3
@@ -70,9 +66,9 @@ resource "aws_eks_node_group" "cluster" {
   cluster_name    = aws_eks_cluster.cluster.name
   disk_size       = var.node_disk
   instance_types  = [var.node_type]
-  node_group_name = "${var.name}-${data.aws_availability_zones.available.names[count.index]}"
+  node_group_name = "${var.name}-${data.aws_availability_zones.available.names[count.index]}${var.private ? "" : "-public"}"
   node_role_arn   = replace(aws_iam_role.nodes.arn, "role/convox/", "role/") # eks barfs on roles with paths
-  subnet_ids      = [aws_subnet.private[count.index].id]
+  subnet_ids      = [var.private ? aws_subnet.private[count.index].id : aws_subnet.public[count.index].id]
 
   scaling_config {
     desired_size = 1

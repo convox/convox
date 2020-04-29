@@ -6,8 +6,16 @@ variable "name" {
   type = string
 }
 
+variable "node_disk" {
+  default = 20
+}
+
 variable "node_type" {
   default = "t3.small"
+}
+
+variable "private" {
+  default = true
 }
 
 variable "release" {
@@ -16,8 +24,4 @@ variable "release" {
 
 variable "region" {
   default = "us-east-1"
-}
-
-variable "node_disk" {
-  default = 20
 }
