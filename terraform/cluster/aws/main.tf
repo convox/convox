@@ -59,6 +59,12 @@ resource "aws_eks_node_group" "cluster" {
     aws_iam_role_policy_attachment.nodes_ecr,
     aws_iam_role_policy_attachment.nodes_eks_cni,
     aws_iam_role_policy_attachment.nodes_eks_worker,
+    aws_route.private-default,
+    aws_route.public-default,
+    aws_route_table.private,
+    aws_route_table.public,
+    aws_route_table_association.private,
+    aws_route_table_association.public,
   ]
 
   count = 3
