@@ -2,7 +2,7 @@
 
 ## Definition
 
-A MySQK Resource is defined in [`convox.yml`](../../../../configuration/convox-yml.md) and linked to one or more [Services](../service.md).
+A MySQL Resource is defined in [`convox.yml`](../../../../configuration/convox-yml.md) and linked to one or more [Services](../service.md).
 
     resources:
       main:
@@ -18,7 +18,7 @@ A MySQL Resource can have the following options configured for it (default value
 
     resources:
       main:
-        type: memcached
+        type: mysql
         options:
           version: 5.7.23
           storage: 10
