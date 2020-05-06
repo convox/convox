@@ -6,7 +6,15 @@
 
 			<meta charset="utf-8">
 			<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
+			<meta name="description" content="Convox makes it easy to deploy and manage your applications in the cloud. Built on Docker and Kubernetes, Convox provides a complete solution for local development, CI/CD, and autoscaling">
+			<meta property="og:image" content="https://convox.com/images/logos/convox_social_logo.png">
+			<meta name="twitter:site" content="@goconvox">
+			<meta name="twitter:creator" content="@goconvox">
+			<meta property="og:type" content="website">
+			<meta property="og:url" content="https://docs.convox.com/">
+			<meta property="og:title" content="Convox Platform as a Service">
+			<meta property="og:site_name" content="Convox Platform as a Service">
+			<meta property="og:description" content="Convox makes it easy to deploy and manage your applications in the cloud. Built on Docker and Kubernetes, Convox provides a complete solution for local development, CI/CD, and autoscaling">
 			<link rel="icon" type="image/x-icon" href="/assets/images/favicon.ico" />
 
 			<script src="/assets/jquery.min.js"></script>
@@ -18,7 +26,14 @@
 
 			<link rel="stylesheet" href="/assets/docs.css">
 			<script src="/assets/docs.js"></script>
-
+			{{ with (env "SEGMENT_TOKEN") }}
+				<script>
+					!function(){var analytics=window.analytics=window.analytics||[];if(!analytics.initialize)if(analytics.invoked)window.console&&console.error&&console.error("Segment snippet included twice.");else{analytics.invoked=!0;analytics.methods=["trackSubmit","trackClick","trackLink","trackForm","pageview","identify","reset","group","track","ready","alias","debug","page","once","off","on"];analytics.factory=function(t){return function(){var e=Array.prototype.slice.call(arguments);e.unshift(t);analytics.push(e);return analytics}};for(var t=0;t<analytics.methods.length;t++){var e=analytics.methods[t];analytics[e]=analytics.factory(e)}analytics.load=function(t,e){var n=document.createElement("script");n.type="text/javascript";n.async=!0;n.src="https://cdn.segment.com/analytics.js/v1/"+t+"/analytics.min.js";var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(n,a);analytics._loadOptions=e};analytics.SNIPPET_VERSION="4.1.0";
+						analytics.load("{{.}}");
+						analytics.page();
+					}}();
+				</script>
+			{{ end }}
 			<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/instantsearch.js@2.10.2/dist/instantsearch.min.css">
 			<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/instantsearch.js@2.10.2/dist/instantsearch-theme-algolia.min.css">
 			<script src="https://cdn.jsdelivr.net/npm/instantsearch.js@2.10.2"></script>
