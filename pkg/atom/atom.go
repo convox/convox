@@ -111,7 +111,7 @@ func Initialize() error {
 	return nil
 }
 
-func (c *Client) Apply(ns, name string, release string, template []byte, timeout int32) error {
+func (c *Client) Apply(ns, name, release string, template []byte, timeout int32) error {
 	if _, err := c.k8s.CoreV1().Namespaces().Get(ns, am.GetOptions{}); ae.IsNotFound(err) {
 		if err := c.createNamespace(ns); err != nil {
 			return errors.WithStack(err)
