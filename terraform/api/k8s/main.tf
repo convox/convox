@@ -50,31 +50,6 @@ resource "kubernetes_service_account" "api" {
   }
 }
 
-resource "kubernetes_persistent_volume_claim" "api_volume" {
-  count = length(var.volumes)
-
-  metadata {
-    namespace = var.namespace
-    name      = "api-${keys(var.volumes)[count.index]}"
-
-    labels = {
-      app     = "system"
-      rack    = var.rack
-      service = "api"
-      system  = "convox"
-    }
-  }
-
-  spec {
-    access_modes = ["ReadWriteOnce"]
-    resources {
-      requests = {
-        storage = "5Gi"
-      }
-    }
-  }
-}
-
 resource "kubernetes_deployment" "api" {
   metadata {
     namespace = var.namespace

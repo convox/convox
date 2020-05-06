@@ -111,7 +111,7 @@ func Initialize() error {
 	return nil
 }
 
-func (c *Client) Apply(ns, name string, release string, template []byte, timeout int32) error {
+func (c *Client) Apply(ns, name, release string, template []byte, timeout int32) error {
 	if _, err := c.k8s.CoreV1().Namespaces().Get(ns, am.GetOptions{}); ae.IsNotFound(err) {
 		if err := c.createNamespace(ns); err != nil {
 			return errors.WithStack(err)
@@ -432,6 +432,8 @@ func applyTemplate(namespace string, data []byte, filter string) ([]byte, error)
 	}
 
 	out, err := kubectlApply(data, args...)
+	fmt.Printf("string(out): %+v\n", string(out))
+	fmt.Printf("err: %+v\n", err)
 	if err != nil {
 		if !strings.Contains(string(out), "is immutable") {
 			return out, errors.WithStack(err)
