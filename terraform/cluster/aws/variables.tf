@@ -10,10 +10,14 @@ variable "name" {
   type = string
 }
 
+variable "node_disk" {
+  default = 20
+}
+
 variable "node_type" {
   default = "t3.small"
 }
 
-variable "node_disk" {
-  default = 20
+variable "private" {
+  default = true
 }

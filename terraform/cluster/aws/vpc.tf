@@ -35,9 +35,10 @@ resource "aws_internet_gateway" "nodes" {
 resource "aws_subnet" "public" {
   count = 3
 
-  availability_zone = data.aws_availability_zones.available.names[count.index]
-  cidr_block        = cidrsubnet(var.cidr, 4, count.index)
-  vpc_id            = aws_vpc.nodes.id
+  availability_zone       = data.aws_availability_zones.available.names[count.index]
+  cidr_block              = cidrsubnet(var.cidr, 4, count.index)
+  map_public_ip_on_launch = ! var.private
+  vpc_id                  = aws_vpc.nodes.id
 
   tags = merge(local.tags, {
     Name = "${var.name} public ${count.index}"
@@ -68,7 +69,7 @@ resource "aws_route_table_association" "public" {
 }
 
 resource "aws_subnet" "private" {
-  count = 3
+  count = var.private ? 3 : 0
 
   availability_zone = data.aws_availability_zones.available.names[count.index]
   cidr_block        = cidrsubnet(var.cidr, 2, count.index + 1)
@@ -82,7 +83,7 @@ resource "aws_subnet" "private" {
 }
 
 resource "aws_eip" "nat" {
-  count = 3
+  count = var.private ? 3 : 0
 
   vpc = true
 
@@ -92,7 +93,7 @@ resource "aws_eip" "nat" {
 }
 
 resource "aws_nat_gateway" "private" {
-  count = 3
+  count = var.private ? 3 : 0
 
   allocation_id = aws_eip.nat[count.index].id
   subnet_id     = aws_subnet.public[count.index].id
@@ -103,7 +104,7 @@ resource "aws_nat_gateway" "private" {
 }
 
 resource "aws_route_table" "private" {
-  count = 3
+  count = var.private ? 3 : 0
 
   vpc_id = aws_vpc.nodes.id
 
@@ -118,7 +119,7 @@ resource "aws_route" "private-default" {
     aws_route_table.private,
   ]
 
-  count = 3
+  count = var.private ? 3 : 0
 
   destination_cidr_block = "0.0.0.0/0"
   nat_gateway_id         = aws_nat_gateway.private[count.index].id
@@ -126,7 +127,7 @@ resource "aws_route" "private-default" {
 }
 
 resource "aws_route_table_association" "private" {
-  count = 3
+  count = var.private ? 3 : 0
 
   route_table_id = aws_route_table.private[count.index].id
   subnet_id      = aws_subnet.private[count.index].id
