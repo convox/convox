@@ -9,17 +9,16 @@ exclude_patterns = [
 ]
 
 [[analyzers]]
+  name = "docker"
+  enabled = true
+
+[[analyzers]]
   name = "go"
   enabled = true
 
   [analyzers.meta]
     dependencies_vendored = true
     import_path = "github.com/convox/convox"
-
-
-[[analyzers]]
-  name = "docker"
-  enabled = true
 
 [[analyzers]]
   name = "terraform"
