@@ -117,20 +117,6 @@ func (c *AtomController) Update(prev, cur interface{}) error {
 	}
 
 	switch ca.Status {
-	case "Cancelled", "Deadline", "Error":
-		if err := c.atom.rollback(ca); err != nil {
-			c.atomStatus(ca, "Failure")
-			return errors.WithStack(err)
-		}
-
-		c.atomStatus(ca, "Rollback")
-	case "Pending":
-		if err := c.atom.apply(ca); err != nil {
-			c.atomStatus(ca, "Error")
-			return err
-		}
-
-		c.atomStatus(ca, "Updating")
 	case "Rollback":
 		if deadline := am.NewTime(time.Now().UTC().Add(-1 * time.Duration(ca.Spec.ProgressDeadlineSeconds) * time.Second)); ca.Started.Before(&deadline) {
 			c.atomStatus(ca, "Failure")
@@ -161,6 +147,27 @@ func (c *AtomController) Update(prev, cur interface{}) error {
 		if success {
 			c.atomStatus(ca, "Running")
 		}
+	}
+
+	if ca.Status == pa.Status {
+		return nil
+	}
+
+	switch ca.Status {
+	case "Cancelled", "Deadline", "Error":
+		if err := c.atom.rollback(ca); err != nil {
+			c.atomStatus(ca, "Failure")
+			return errors.WithStack(err)
+		}
+
+		c.atomStatus(ca, "Rollback")
+	case "Pending":
+		if err := c.atom.apply(ca); err != nil {
+			c.atomStatus(ca, "Error")
+			return err
+		}
+
+		c.atomStatus(ca, "Updating")
 	}
 
 	return nil
@@ -198,15 +205,13 @@ func (c *AtomController) atomEvent(a *ct.Atom, reason, message string) error {
 	return nil
 }
 
-func (c *AtomController) atomStatus(a *ct.Atom, status string) error {
+func (c *AtomController) atomStatus(a *ct.Atom, status string) {
 	_, err := c.atom.update(a, func(aa *ct.Atom) {
 		aa.Status = ct.AtomStatus(status)
 	})
 	if err != nil {
-		return errors.WithStack(err)
+		fmt.Printf("ns=atom.controller at=status.update atom=\"%s/%s\" status=%s error=%q\n", a.Namespace, a.Name, status, err)
 	}
-
-	return nil
 }
 
 func assertAtom(v interface{}) (*ct.Atom, error) {

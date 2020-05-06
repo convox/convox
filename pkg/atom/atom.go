@@ -432,6 +432,8 @@ func applyTemplate(namespace string, data []byte, filter string) ([]byte, error)
 	}
 
 	out, err := kubectlApply(data, args...)
+	fmt.Printf("string(out): %+v\n", string(out))
+	fmt.Printf("err: %+v\n", err)
 	if err != nil {
 		if !strings.Contains(string(out), "is immutable") {
 			return out, errors.WithStack(err)

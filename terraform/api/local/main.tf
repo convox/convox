@@ -42,6 +42,6 @@ module "k8s" {
   }
 
   volumes = {
-    storage = "/var/storage"
+    storage-local = "/var/storage"
   }
 }

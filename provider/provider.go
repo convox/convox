@@ -10,6 +10,7 @@ import (
 	"github.com/convox/convox/provider/do"
 	"github.com/convox/convox/provider/gcp"
 	"github.com/convox/convox/provider/local"
+	"github.com/convox/convox/provider/metal"
 )
 
 var Mock = &structs.MockProvider{}
@@ -28,6 +29,8 @@ func FromEnv() (structs.Provider, error) {
 		return gcp.FromEnv()
 	case "local":
 		return local.FromEnv()
+	case "metal":
+		return metal.FromEnv()
 	case "test":
 		return Mock, nil
 	case "":
@@ -48,6 +51,8 @@ func Valid(slug string) bool {
 	case "gcp":
 		return true
 	case "local":
+		return true
+	case "metal":
 		return true
 	default:
 		return false
