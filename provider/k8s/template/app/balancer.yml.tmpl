@@ -3,6 +3,8 @@ kind: Service
 metadata:
   namespace: {{.Namespace}}
   name: balancer-{{.Balancer.Name}}
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: 3600
   labels:
     balancer: {{.Balancer.Name}}
     service: {{.Balancer.Service}}
