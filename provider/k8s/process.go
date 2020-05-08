@@ -100,7 +100,7 @@ func (p *Provider) ProcessGet(app, pid string) (*structs.Process, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	ps, err := processFromPod(*pd)
+	ps, err := p.processFromPod(*pd)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -130,7 +130,7 @@ func (p *Provider) ProcessList(app string, opts structs.ProcessListOptions) (str
 	pss := structs.Processes{}
 
 	for _, pd := range pds.Items {
-		ps, err := processFromPod(pd)
+		ps, err := p.processFromPod(pd)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -519,7 +519,7 @@ func (p *Provider) podVolume(app, from string) ac.Volume {
 	return v
 }
 
-func processFromPod(pd ac.Pod) (*structs.Process, error) {
+func (p *Provider) processFromPod(pd ac.Pod) (*structs.Process, error) {
 	cs := pd.Spec.Containers
 
 	if len(cs) != 1 || cs[0].Name != "main" {
@@ -567,6 +567,10 @@ func processFromPod(pd ac.Pod) (*structs.Process, error) {
 		Release:  pd.ObjectMeta.Labels["release"],
 		Started:  pd.CreationTimestamp.Time,
 		Status:   status,
+	}
+
+	if ps.App == "system" {
+		ps.Release = p.Version
 	}
 
 	return ps, nil

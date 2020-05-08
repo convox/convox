@@ -48,7 +48,7 @@ type ProcessRunOptions struct {
 }
 
 func (p *Process) sortKey() string {
-	return fmt.Sprintf("%s-%s", p.Name, p.Id)
+	return fmt.Sprintf("%s-%s-%s", p.App, p.Name, p.Id)
 }
 
 func (ps Processes) Less(i, j int) bool {
