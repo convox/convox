@@ -3,7 +3,9 @@ package k8s
 import (
 	"fmt"
 	"io"
+	"sort"
 
+	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/pkg/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,7 +55,15 @@ func (p *Provider) SystemMetrics(opts structs.MetricsOptions) (structs.Metrics, 
 }
 
 func (p *Provider) SystemProcesses(opts structs.SystemProcessesOptions) (structs.Processes, error) {
-	pds, err := p.Cluster.CoreV1().Pods(p.Namespace).List(am.ListOptions{})
+	ns := p.Namespace
+
+	if common.DefaultBool(opts.All, false) {
+		ns = ""
+	}
+
+	pds, err := p.Cluster.CoreV1().Pods(ns).List(am.ListOptions{
+		LabelSelector: fmt.Sprintf("system=convox,rack=%s,service", p.Name),
+	})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -61,33 +71,15 @@ func (p *Provider) SystemProcesses(opts structs.SystemProcessesOptions) (structs
 	pss := structs.Processes{}
 
 	for _, pd := range pds.Items {
-		ps, err := processFromPod(pd)
+		ps, err := p.processFromPod(pd)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
 
-		ps.App = "rack"
-		ps.Release = p.Version
-
 		pss = append(pss, *ps)
 	}
 
-	pds, err = p.Cluster.CoreV1().Pods("convox-system").List(am.ListOptions{})
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	for _, pd := range pds.Items {
-		ps, err := processFromPod(pd)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-
-		ps.App = "system"
-		ps.Release = p.Version
-
-		pss = append(pss, *ps)
-	}
+	sort.Slice(pss, pss.Less)
 
 	return pss, nil
 }
