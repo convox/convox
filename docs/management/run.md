@@ -38,3 +38,9 @@ This can be useful for debugging a running [Process](../reference/primitives/app
 
     $ convox exec web-6844dc6f45-9wdss bash
     root@web#
+
+You can also use a [Service](../reference/primitives/app/service.md) name with `convox exec` to select
+a random [Process](../reference/primitives/app/process.md) of that Service.
+
+    $ convox exec web bash
+    root@web#
