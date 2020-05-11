@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"math/rand"
 	"strings"
 	"time"
 
@@ -20,6 +21,16 @@ import (
 )
 
 func (p *Provider) ProcessExec(app, pid, command string, rw io.ReadWriter, opts structs.ProcessExecOptions) (int, error) {
+	pss, err := p.ProcessList(app, structs.ProcessListOptions{Service: options.String(pid)})
+	if err != nil {
+		return 0, err
+	}
+
+	// if pid is a service name, pick one at random
+	if len(pss) > 0 {
+		pid = pss[rand.Intn(len(pss))].Id
+	}
+
 	req := p.Cluster.CoreV1().RESTClient().Post().Resource("pods").Name(pid).Namespace(p.AppNamespace(app)).SubResource("exec").Param("container", "main")
 
 	cp, err := shellquote.Split(command)

@@ -6,7 +6,7 @@ Execute a command in a running process
 
 ### Usage
 
-    convox exec <pid> <command>
+    convox exec <pid-or-service> <command>
 
 ### Examples
 
