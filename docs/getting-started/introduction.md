@@ -28,10 +28,10 @@ identical to production.
 We recommend you follow these tutorials in this order:
 
 * [Create a free Convox account](#create-a-free-convox-account)
-* [Install the Convox CLI and login](#install-the-convox-cli-and-login)
+* [Install the Convox CLI and Login](#install-the-convox-cli-and-login)
 * [Install a Runtime Integration for the Cloud of Your Choice](#install-a-runtime-integration-for-the-cloud-of-your-choice)
 * [Install a Rack](#install-a-rack)
-* [Deploy a sample app](#deploy-a-sample-app)
+* [Deploy a Sample App](#deploy-a-sample-app)
 * [Make a Code Change and Redeploy](#make-a-code-change-and-redeploy)
 * [Perform a Rollback](#perform-a-rollback)
 
@@ -39,7 +39,7 @@ We recommend you follow these tutorials in this order:
 
 To create a Convox account simply go [here](https://console.convox.com/signup). We recommend using your company email address if you have one, and using your actual company name as the organization name. You can invite your colleagues to your organization later. 
 
-## Install the Convox CLI and login
+## Install the Convox CLI and Login
 
 To install the Convox CLI follow the instructions for your operating system:
 
@@ -57,21 +57,15 @@ To install the Convox CLI follow the instructions for your operating system:
 
 Once you have installed the CLI you can login to your Convox account by copying the login command from the web console
 
-![CLI Login](images/CLI_tutorial_login.png)
-
 If you ever need to login into the CLI again you can generate a new CLI key by going to the [account page](https://console.convox.com/account) and clicking on `Reset CLI Key` which will generate a new key and login command.
 
 ## Install a Runtime Integration for the Cloud of Your Choice
 
-Convox currently supports AWS, Google Cloud, Digital Ocean, and Microsoft Azure. In order to install a Convox Rack you will need a runtime integration. If you click on the integrations link in the web console and the click on the plus sign in the runtime section you can select your cloud and create an integration. All integrations use a specific security role that is created just for Convox and can be removed at anytime. In order to create this role you will need an account for you cloud provider that has sufficient permissions which is typically some equivalent of an administrator role.
-
-![Runtime Integration](images/runtime_tutorial.png)
+Convox currently supports AWS, Google Cloud, Digital Ocean, and Microsoft Azure. In order to install a Convox Rack you will need a runtime integration. If you click on the integrations link in the web console and the click on the plus sign in the runtime section you can select your cloud and create an integration. All integrations use a specific security role that is created just for Convox and can be removed at anytime. In order to create this role you will need an account for your cloud provider that has sufficient permissions which is typically some equivalent of an administrator role.
 
 ## Install a Rack
 
-Once you have runtime integration setup it's time to create your first Rack! Click on the Racks link in the web console and then click the "+" sign. From here you can select the runtime integration you just created and install a Rack. Rack installation typically takes between 5-20 minutes depending on the cloud provider. If you click on the Rack as it is been installed you can follow along with the Rack creation progress.
-
-[IMAGE]
+Once you have runtime integration setup it's time to create your first Rack! Click on the Racks link in the web console and then click the cloud Install button. You can give your Rack a name like `dev` and select the region you want to install it in. From here you can select the runtime integration you just created and install a Rack. Rack installation typically takes between 5-20 minutes depending on the cloud provider. If you click on the Rack as it is been installed you can follow along with the Rack creation progress.
 
 ## Deploy a Sample App
 
@@ -101,6 +95,18 @@ This `convox.yml` defines a global [Environment Variable](../configuration/envir
 
 Before you can deploy for the first time you need to create an empty [App](../reference/primitives/app) to deploy to.
 
+First we can verify that we are logged into our organization and are able to connect to our Rack by listing the current Racks with the `convox racks` command
+
+    $ convox racks
+    NAME               PROVIDER  STATUS
+    dev                aws       running
+
+Then we can connect to the Rack we just created with `convox switch`
+
+    $ convox switch dev
+
+Now we can create an empty app in our Rack with `convox apps create`
+
     $ convox apps create
 
 By default the app will be created using the name of the current directory. If you wish to call your app something else you can specify the name with
@@ -122,7 +128,7 @@ By default the app will be created using the name of the current directory. If y
     Step 1/5 : FROM node:10.16.3-alpine
     ..........
 
-> The very first time you deploy a new app into a Rack can take 15+ minutes depending on the size of the app but subsequent deploys will be much faster
+> The very first time you deploy a new app into a Rack can take a few minutes depending on the size of the app but subsequent deploys will be much faster
 
 Once the deployment has completed you can verify the app is running by running the `convox services` command in the terminal to get the URL(s) for all running services:
 
@@ -136,11 +142,11 @@ In your browser navigate to the hostname shown for the `web` service.
 
 Edit the file [`app.js`](https://github.com/convox-examples/nodejs/blob/master/app.js) in your local directory and modify the line that says:
 
-`res.end('Hello Convox!\nI\'m: ' + process.env.APP + '\nBuild:' + process.env.BUILD + '\nRelease: ' + process.env.RELEASE + '\nrunning on: ' + process.env.RACK);`
+`res.end('Hello Convox!\nI\'m: ' ...`
 
 to instead say:
 
-`res.end('Hello World!\nI\'m: ' + process.env.APP + '\nBuild:' + process.env.BUILD + '\nRelease: ' + process.env.RELEASE + '\nrunning on: ' + process.env.RACK);`
+`res.end('Hello World!\nI\'m: ' ...`
 
 and then save the file. 
 
@@ -170,6 +176,6 @@ You can now rollback to your previous release with `convox releases rollback`
 
 Once the rollback is complete refresh your browser and you should see the `Hello World!` message has been reverted to `Hello Convox!`
 
-Hopefully this small example has given you an idea of how easy and powerful Convox is. As a next step let's get your first custom app configured and deployed by following the [App Configuration Guide](app-configuration.md)
+Hopefully this small example has given you an idea of how easy and powerful Convox is. As a next step let's get your first custom app configured and deployed by following the [App Configuration Guide](../configuration/convox-yml.md)
 
 
