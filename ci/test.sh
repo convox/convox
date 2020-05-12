@@ -31,7 +31,7 @@ convox instances
 convox rack
 convox rack logs --no-follow --since 30m
 convox rack logs --no-follow --since 30m | grep service/
-convox rack ps | grep rack
+convox rack ps | grep system
 
 # registries
 convox registries
@@ -71,6 +71,7 @@ convox releases promote $release -a httpd
 endpoint=$(convox api get /apps/httpd/services | jq -r '.[] | select(.name == "web") | .domain')
 fetch https://$endpoint | grep "It works"
 sleep 30
+convox rack ps -a | grep httpd
 convox logs -a httpd --no-follow --since 10m | grep service/web
 releaser=$(convox releases rollback $release -a httpd --id)
 convox ps -a httpd | grep $releaser
