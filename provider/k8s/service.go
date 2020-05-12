@@ -126,7 +126,7 @@ func (p *Provider) ServiceRestart(app, name string) error {
 }
 
 func (p *Provider) serviceRestartDaemonset(app, name string) error {
-	ds := p.Cluster.ExtensionsV1beta1().DaemonSets(p.AppNamespace(app))
+	ds := p.Cluster.AppsV1().DaemonSets(p.AppNamespace(app))
 
 	s, err := ds.Get(name, am.GetOptions{})
 	if err != nil {
@@ -147,7 +147,7 @@ func (p *Provider) serviceRestartDaemonset(app, name string) error {
 }
 
 func (p *Provider) serviceRestartDeployment(app, name string) error {
-	ds := p.Cluster.ExtensionsV1beta1().Deployments(p.AppNamespace(app))
+	ds := p.Cluster.AppsV1().Deployments(p.AppNamespace(app))
 
 	s, err := ds.Get(name, am.GetOptions{})
 	if err != nil {

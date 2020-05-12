@@ -5,10 +5,10 @@ import (
 	"time"
 
 	"github.com/convox/convox/pkg/kctl"
+	aa "k8s.io/api/apps/v1"
 	ac "k8s.io/api/core/v1"
-	ae "k8s.io/api/extensions/v1beta1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ie "k8s.io/client-go/informers/extensions/v1beta1"
+	ia "k8s.io/client-go/informers/apps/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 )
@@ -37,7 +37,7 @@ func (c *DeploymentController) Client() kubernetes.Interface {
 }
 
 func (c *DeploymentController) Informer() cache.SharedInformer {
-	return ie.NewFilteredDeploymentInformer(c.kc, ac.NamespaceAll, 1*time.Minute, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
+	return ia.NewFilteredDeploymentInformer(c.kc, ac.NamespaceAll, 1*time.Minute, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
 }
 
 func (c *DeploymentController) ListOptions(opts *am.ListOptions) {
@@ -104,7 +104,7 @@ func (c *DeploymentController) Update(prev, cur interface{}) error {
 	return nil
 }
 
-func (c *DeploymentController) syncDeployment(d *ae.Deployment) error {
+func (c *DeploymentController) syncDeployment(d *aa.Deployment) error {
 	if d.Spec.Replicas == nil {
 		return c.backend.IdleUpdate(d.Namespace, d.Name, true)
 	}
@@ -112,8 +112,8 @@ func (c *DeploymentController) syncDeployment(d *ae.Deployment) error {
 	return c.backend.IdleUpdate(d.Namespace, d.Name, *d.Spec.Replicas == 0)
 }
 
-func assertDeployment(v interface{}) (*ae.Deployment, error) {
-	d, ok := v.(*ae.Deployment)
+func assertDeployment(v interface{}) (*aa.Deployment, error) {
+	d, ok := v.(*aa.Deployment)
 	if !ok {
 		return nil, fmt.Errorf("could not assert deployment for type: %T", v)
 	}
