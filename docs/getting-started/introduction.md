@@ -2,27 +2,6 @@
 
 Convox is an open-source Platform as a Service that you can install on your own infrastructure.
 
-## Supported Platforms
-
-* Amazon Web Services
-* Digital Ocean
-* Google Cloud
-* Microsoft Azure
-
-## Racks
-
-Each time you install Convox you end up with a new [Rack](../reference/primitives/rack).
-
-A Rack is an isolated set of computing resources, network infrastructure, and storage that can contain
-one or more [Apps](../reference/primitives/app).
-
-You can use multiple Racks to isolate different environments, different customers, or different business units.
-
-Many users have two Racks, one for staging and one for production.
-
-You can also run a Rack on your local development workstation to develop your app in an enviornment nearly
-identical to production.
-
 ## First Steps
 
 We recommend you follow these tutorials in this order:
@@ -37,7 +16,7 @@ We recommend you follow these tutorials in this order:
 
 ## Create a free Convox account
 
-To create a Convox account simply go [here](https://console.convox.com/signup). We recommend using your company email address if you have one, and using your actual company name as the organization name. You can invite your colleagues to your organization later. 
+To create a Convox account simply signup [here](https://console.convox.com/signup). We recommend using your company email address if you have one, and using your actual company name as the organization name. You can invite your colleagues to the organization later. 
 
 ## Install the Convox CLI and Login
 
@@ -64,6 +43,18 @@ If you ever need to login into the CLI again you can generate a new CLI key by g
 Convox currently supports AWS, Google Cloud, Digital Ocean, and Microsoft Azure. In order to install a Convox Rack you will need a runtime integration. If you click on the integrations link in the web console and the click on the plus sign in the runtime section you can select your cloud and create an integration. All integrations use a specific security role that is created just for Convox and can be removed at anytime. In order to create this role you will need an account for your cloud provider that has sufficient permissions which is typically some equivalent of an administrator role.
 
 ## Install a Rack
+
+Each time you install Convox you end up with a new [Rack](../reference/primitives/rack).
+
+A Rack is an isolated set of computing resources, network infrastructure, and storage that can contain
+one or more [Apps](../reference/primitives/app).
+
+You can use multiple Racks to isolate different environments, different customers, or different business units.
+
+Many users have two Racks, one for staging and one for production.
+
+You can also run a Rack on your local development workstation to develop your app in an enviornment nearly
+identical to production.
 
 Once you have runtime integration setup it's time to create your first Rack! Click on the Racks link in the web console and then click the cloud Install button. You can give your Rack a name like `dev` and select the region you want to install it in. From here you can select the runtime integration you just created and install a Rack. Rack installation typically takes between 5-20 minutes depending on the cloud provider. If you click on the Rack as it is been installed you can follow along with the Rack creation progress.
 
@@ -99,7 +90,7 @@ First we can verify that we are logged into our organization and are able to con
 
     $ convox racks
     NAME               PROVIDER  STATUS
-    dev                aws       running
+    org/dev            aws       running
 
 Then we can connect to the Rack we just created with `convox switch`
 
@@ -160,7 +151,7 @@ Once the deployment is complete wait a few seconds and then reload your browser 
 
 ### Perform a Rollback
 
-One of the great features of Convox is nearly instantaneous rollbacks. Convox performs a rollback by maintaining images of all previous [`Releases`](../reference/primitives/app/release.md). You can view a list of all the release for your app with the `convox releases command`
+One of the great features of Convox is nearly instantaneous rollbacks. Convox performs a rollback by maintaining the history and state of all previous [`Releases`](../reference/primitives/app/release.md). You can view a list of all the releases for your app with the `convox releases command`
 
     $ convox releases
     ID           STATUS  BUILD        CREATED        DESCRIPTION
@@ -174,7 +165,7 @@ You can now rollback to your previous release with `convox releases rollback`
     Promoting RSPAOICEBER... 
     ...
 
-Once the rollback is complete refresh your browser and you should see the `Hello World!` message has been reverted to `Hello Convox!`
+Once the rollback is complete, refresh your browser and you should see the `Hello World!` message has been reverted to `Hello Convox!`
 
 Hopefully this small example has given you an idea of how easy and powerful Convox is. As a next step let's get your first custom app configured and deployed by following the [App Configuration Guide](../configuration/convox-yml.md)
 
