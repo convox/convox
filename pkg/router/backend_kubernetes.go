@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	ae "k8s.io/api/extensions/v1beta1"
+	aa "k8s.io/api/autoscaling/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -87,7 +87,7 @@ func (b *BackendKubernetes) IdleGet(target string) (bool, error) {
 			return idle, nil
 		}
 
-		d, err := b.cluster.ExtensionsV1beta1().Deployments(namespace).Get(service, am.GetOptions{})
+		d, err := b.cluster.AppsV1().Deployments(namespace).Get(service, am.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -123,15 +123,15 @@ func (b *BackendKubernetes) idle(target string) error {
 	fmt.Printf("ns=backend.k8s at=idle target=%q\n", target)
 
 	if service, namespace, ok := parseTarget(target); ok {
-		scale := &ae.Scale{
+		scale := &aa.Scale{
 			ObjectMeta: am.ObjectMeta{
 				Namespace: namespace,
 				Name:      service,
 			},
-			Spec: ae.ScaleSpec{Replicas: 0},
+			Spec: aa.ScaleSpec{Replicas: 0},
 		}
 
-		if _, err := b.cluster.ExtensionsV1beta1().Deployments(namespace).UpdateScale(service, scale); err != nil {
+		if _, err := b.cluster.AppsV1().Deployments(namespace).UpdateScale(service, scale); err != nil {
 			fmt.Printf("ns=backend.k8s at=idle target=%q error=%q\n", target, err)
 		}
 	}
@@ -143,15 +143,15 @@ func (b *BackendKubernetes) unidle(target string) error {
 	fmt.Printf("ns=backend.k8s at=unidle target=%q state=unidling\n", target)
 
 	if service, namespace, ok := parseTarget(target); ok {
-		scale := &ae.Scale{
+		scale := &aa.Scale{
 			ObjectMeta: am.ObjectMeta{
 				Namespace: namespace,
 				Name:      service,
 			},
-			Spec: ae.ScaleSpec{Replicas: 1},
+			Spec: aa.ScaleSpec{Replicas: 1},
 		}
 
-		if _, err := b.cluster.ExtensionsV1beta1().Deployments(namespace).UpdateScale(service, scale); err != nil {
+		if _, err := b.cluster.AppsV1().Deployments(namespace).UpdateScale(service, scale); err != nil {
 			fmt.Printf("ns=backend.k8s at=unidle target=%q error=%q\n", target, err)
 		}
 
