@@ -59,6 +59,10 @@ resource "aws_route" "public-default" {
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = aws_internet_gateway.nodes.id
   route_table_id         = aws_route_table.public.id
+
+  timeouts {
+    create = "5m"
+  }
 }
 
 resource "aws_route_table_association" "public" {
@@ -124,6 +128,10 @@ resource "aws_route" "private-default" {
   destination_cidr_block = "0.0.0.0/0"
   nat_gateway_id         = aws_nat_gateway.private[count.index].id
   route_table_id         = aws_route_table.private[count.index].id
+
+  timeouts {
+    create = "5m"
+  }
 }
 
 resource "aws_route_table_association" "private" {
