@@ -47,8 +47,8 @@ func run() error {
 		return err
 	}
 
-	s.Router.Static("/assets/images", packr.NewBox("./public/images"))
 	s.Router.Static("/assets", packr.NewBox("./public/assets"))
+	s.Router.Static("/images", packr.NewBox("./public/images"))
 
 	s.Route("GET", "/", index)
 	s.Route("GET", "/toc/{slug:.*}", toc)

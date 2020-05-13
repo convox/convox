@@ -3,11 +3,11 @@ services:
     command: bin/docs
     domain: ${HOST}
     environment:
-      - ALGOLIA_APP
-      - ALGOLIA_INDEX
-      - ALGOLIA_KEY_ADMIN
-      - ALGOLIA_KEY_SEARCH
-      - SEGMENT_TOKEN
+      - ALGOLIA_APP=
+      - ALGOLIA_INDEX=
+      - ALGOLIA_KEY_ADMIN=
+      - ALGOLIA_KEY_SEARCH=
+      - SEGMENT_TOKEN=
     health: /check
     port: https:3000
     scale:
