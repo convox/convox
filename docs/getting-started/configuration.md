@@ -8,7 +8,7 @@ In order to deploy an app on Convox you will need two things
 
 ## Dockerfile
 
-If you have not already containerized your application it's a relatively straightforward process. You can start by cloning a Dockerfile from one of our [example apps](https://github.com/convox-examples/). If we don't have a Dockerfile for your chosen language or framework you can check the [Docker Hub](https://hub.docker.com/) to find a public image to use as a starting point. We also have a [guide](../configuration/dockerfile) for optimizing your Dockerfile to improve things like caching and build times.
+If you have not already containerized your application it is a relatively straightforward process. You can start by cloning a Dockerfile from one of our [example apps](https://github.com/convox-examples/). If we don't have a Dockerfile for your chosen language or framework you can check the [Docker Hub](https://hub.docker.com/) to find a public image to use as a starting point. We also have a [guide](../configuration/dockerfile) for optimizing your Dockerfile to improve things like caching and build times.
 
 ## Convox.yml
 
