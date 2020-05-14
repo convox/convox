@@ -34,6 +34,16 @@ module "api" {
   secret    = random_string.secret.result
 }
 
+module "metrics" {
+  source = "../../metrics/k8s"
+
+  providers = {
+    kubernetes = kubernetes
+  }
+
+  args = ["--kubelet-insecure-tls"]
+}
+
 module "resolver" {
   source = "../../resolver/local"
 

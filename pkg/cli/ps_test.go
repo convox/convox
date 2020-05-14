@@ -19,9 +19,9 @@ func TestPs(t *testing.T) {
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
-			"ID    SERVICE  STATUS   RELEASE   STARTED     COMMAND",
-			"pid1  name     running  release1  2 days ago  command",
-			"pid1  name     pending  release1  2 days ago  command",
+			"ID    SERVICE  STATUS   RELEASE   CPU    MEM    STARTED     COMMAND",
+			"pid1  name     running  release1  89.0%  387MB  2 days ago  command",
+			"pid2  name     pending  release1  --     --     2 days ago  command",
 		})
 	})
 }
@@ -50,7 +50,9 @@ func TestPsInfo(t *testing.T) {
 			"Id        pid1",
 			"App       app1",
 			"Command   command",
+			"Cpu       89.0%",
 			"Instance  instance",
+			"Memory    387MB",
 			"Release   release1",
 			"Service   name",
 			"Started   2 days ago",

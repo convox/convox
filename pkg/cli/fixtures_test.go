@@ -164,11 +164,11 @@ func fxProcess() *structs.Process {
 		Id:       "pid1",
 		App:      "app1",
 		Command:  "command",
-		Cpu:      1.0,
+		Cpu:      0.89,
 		Host:     "host",
 		Image:    "image",
 		Instance: "instance",
-		Memory:   2.0,
+		Memory:   387.0,
 		Name:     "name",
 		Ports:    []string{"1000", "2000"},
 		Release:  "release1",
@@ -178,21 +178,14 @@ func fxProcess() *structs.Process {
 }
 
 func fxProcessPending() *structs.Process {
-	return &structs.Process{
-		Id:       "pid1",
-		App:      "app1",
-		Command:  "command",
-		Cpu:      1.0,
-		Host:     "host",
-		Image:    "image",
-		Instance: "instance",
-		Memory:   2.0,
-		Name:     "name",
-		Ports:    []string{"1000", "2000"},
-		Release:  "release1",
-		Started:  time.Now().UTC().Add(-49 * time.Hour),
-		Status:   "pending",
-	}
+	ps := fxProcess()
+
+	ps.Cpu = 0
+	ps.Id = "pid2"
+	ps.Memory = 0
+	ps.Status = "pending"
+
+	return ps
 }
 
 func fxRegistry() *structs.Registry {

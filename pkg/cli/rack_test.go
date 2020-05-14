@@ -382,9 +382,9 @@ func TestRackPs(t *testing.T) {
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
-			"ID    APP   SERVICE  STATUS   RELEASE   STARTED     COMMAND",
-			"pid1  app1  name     running  release1  2 days ago  command",
-			"pid1  app1  name     pending  release1  2 days ago  command",
+			"ID    APP   SERVICE  STATUS   RELEASE   CPU    MEM    STARTED     COMMAND",
+			"pid1  app1  name     running  release1  89.0%  387MB  2 days ago  command",
+			"pid2  app1  name     pending  release1  --     --     2 days ago  command",
 		})
 	})
 }
@@ -410,9 +410,9 @@ func TestRackPsAll(t *testing.T) {
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
-			"ID    APP   SERVICE  STATUS   RELEASE   STARTED     COMMAND",
-			"pid1  app1  name     running  release1  2 days ago  command",
-			"pid1  app1  name     pending  release1  2 days ago  command",
+			"ID    APP   SERVICE  STATUS   RELEASE   CPU    MEM    STARTED     COMMAND",
+			"pid1  app1  name     running  release1  89.0%  387MB  2 days ago  command",
+			"pid2  app1  name     pending  release1  --     --     2 days ago  command",
 		})
 	})
 }

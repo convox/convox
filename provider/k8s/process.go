@@ -14,6 +14,7 @@ import (
 	shellquote "github.com/kballard/go-shellquote"
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
@@ -582,6 +583,27 @@ func (p *Provider) processFromPod(pd ac.Pod) (*structs.Process, error) {
 
 	if ps.App == "system" {
 		ps.Release = p.Version
+	}
+
+	pm, err := p.Metrics.MetricsV1beta1().PodMetricses(pd.Namespace).Get(pd.Name, am.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, pmc := range pm.Containers {
+		if pmc.Name != "main" {
+			continue
+		}
+
+		if cr := cs[0].Resources.Requests.Cpu(); cr != nil {
+			if cpu, ok := pmc.Usage["cpu"]; ok {
+				ps.Cpu = float64(cpu.MilliValue()) / float64(cr.MilliValue())
+			}
+		}
+
+		if mem, ok := pmc.Usage["memory"]; ok {
+			ps.Memory = float64(mem.ScaledValue(resource.Mega))
+		}
 	}
 
 	return ps, nil

@@ -20,6 +20,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	mv "k8s.io/metrics/pkg/client/clientset/versioned"
 )
 
 type Provider struct {
@@ -31,6 +32,7 @@ type Provider struct {
 	Domain      string
 	Engine      Engine
 	Image       string
+	Metrics     mv.Interface
 	Name        string
 	Namespace   string
 	Password    string
@@ -43,7 +45,7 @@ type Provider struct {
 
 	ctx       context.Context
 	logger    *logger.Logger
-	metrics   *metrics.Metrics
+	metrics   string
 	templater *templater.Templater
 }
 
@@ -75,6 +77,11 @@ func FromEnv() (*Provider, error) {
 		return nil, errors.WithStack(err)
 	}
 
+	mc, err := mv.NewForConfig(rc)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
 	p := &Provider{
 		Atom:        ac,
 		CertManager: os.Getenv("CERT_MANAGER") == "true",
@@ -83,6 +90,7 @@ func FromEnv() (*Provider, error) {
 		Cluster:     kc,
 		Domain:      os.Getenv("DOMAIN"),
 		Image:       os.Getenv("IMAGE"),
+		Metrics:     mc,
 		Name:        ns.Labels["rack"],
 		Namespace:   ns.Name,
 		Password:    os.Getenv("PASSWORD"),
@@ -104,7 +112,6 @@ func (p *Provider) Context() context.Context {
 func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 	p.ctx = context.Background()
 	p.logger = logger.New("ns=k8s")
-	p.metrics = metrics.New("https://metrics.convox.com/metrics/rack")
 	p.templater = templater.New(packr.NewBox("../k8s/template"), p.templateHelpers())
 
 	if os.Getenv("TEST") == "true" {
@@ -196,7 +203,9 @@ func (p *Provider) heartbeat() error {
 		ms[k] = v
 	}
 
-	if err := p.metrics.Post("heartbeat", ms); err != nil {
+	mc := metrics.New("https://metrics.convox.com/metrics/rack")
+
+	if err := mc.Post("heartbeat", ms); err != nil {
 		return errors.WithStack(err)
 	}
 

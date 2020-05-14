@@ -259,10 +259,10 @@ func RackPs(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	t := c.Table("ID", "APP", "SERVICE", "STATUS", "RELEASE", "STARTED", "COMMAND")
+	t := c.Table("ID", "APP", "SERVICE", "STATUS", "RELEASE", "CPU", "MEM", "STARTED", "COMMAND")
 
 	for _, p := range ps {
-		t.AddRow(p.Id, p.App, p.Name, p.Status, p.Release, common.Ago(p.Started), p.Command)
+		t.AddRow(p.Id, p.App, p.Name, p.Status, p.Release, p.CpuString(), p.MemoryString(), common.Ago(p.Started), p.Command)
 	}
 
 	return t.Print()

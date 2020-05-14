@@ -56,4 +56,5 @@ require (
 	k8s.io/client-go v0.16.6
 	k8s.io/code-generator v0.16.6
 	k8s.io/klog v1.0.0
+	k8s.io/metrics v0.16.6
 )

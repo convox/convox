@@ -142,6 +142,7 @@ resource "kubernetes_deployment" "metrics" {
         service_account_name            = kubernetes_service_account.metrics.metadata.0.name
 
         container {
+          args              = var.args
           name              = "metrics-server"
           image             = "k8s.gcr.io/metrics-server-amd64:v0.3.6"
           image_pull_policy = "Always"
