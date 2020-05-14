@@ -1,4 +1,4 @@
-# Rack Management
+# CLI Rack Management
 
 ## Updating a Rack
 
