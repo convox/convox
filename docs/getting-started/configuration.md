@@ -12,7 +12,7 @@ If you have not already containerized your application it is a relatively straig
 
 ## Convox.yml
 
-Once you have your Dockerfile ready to go you need to create a convox.yml file. The convox.yml is a manifest that describes the components that make up your application. If you are familiar with using a docker-compose file you should find the convox.yml format to be very familiar. The Convox manifest is based on the docker-compose structure and format but has some distinct differences that allow you to manage many of the features of Convox. This guide will walk you through the basic components of the Convox manifest but you can find a complete specification [here](../configuration/convox-yml.md).
+Once you have your Dockerfile ready to go you need to create a convox.yml file. This file is a manifest that describes the components that make up your application. If you are familiar with using a docker-compose file you should find the convox.yml format to be very familiar. The Convox manifest is based on the docker-compose structure and format but has some distinct differences that allow you to manage many of the features of Convox. This guide will walk you through the basic components of the Convox manifest but you can find a complete specification [here](../configuration/convox-yml.md).
 
 The Convox manifest has four major components of which only `services` is required. They are:
 
