@@ -1,0 +1,3 @@
+variable "args" {
+  default = []
+}

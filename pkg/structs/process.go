@@ -47,6 +47,22 @@ type ProcessRunOptions struct {
 	Width       *int              `header:"Width"`
 }
 
+func (p *Process) CpuString() string {
+	if p.Cpu == 0 && p.Memory == 0 {
+		return "--"
+	}
+
+	return fmt.Sprintf("%0.1f%%", p.Cpu*100)
+}
+
+func (p *Process) MemoryString() string {
+	if p.Cpu == 0 && p.Memory == 0 {
+		return "--"
+	}
+
+	return fmt.Sprintf("%0.0fMB", p.Memory)
+}
+
 func (p *Process) sortKey() string {
 	return fmt.Sprintf("%s-%s-%s", p.App, p.Name, p.Id)
 }

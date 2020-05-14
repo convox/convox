@@ -36,10 +36,10 @@ func Ps(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	t := c.Table("ID", "SERVICE", "STATUS", "RELEASE", "STARTED", "COMMAND")
+	t := c.Table("ID", "SERVICE", "STATUS", "RELEASE", "CPU", "MEM", "STARTED", "COMMAND")
 
 	for _, p := range ps {
-		t.AddRow(p.Id, p.Name, p.Status, p.Release, common.Ago(p.Started), p.Command)
+		t.AddRow(p.Id, p.Name, p.Status, p.Release, p.CpuString(), p.MemoryString(), common.Ago(p.Started), p.Command)
 	}
 
 	return t.Print()
@@ -56,7 +56,9 @@ func PsInfo(rack sdk.Interface, c *stdcli.Context) error {
 	i.Add("Id", ps.Id)
 	i.Add("App", ps.App)
 	i.Add("Command", ps.Command)
+	i.Add("Cpu", ps.CpuString())
 	i.Add("Instance", ps.Instance)
+	i.Add("Memory", ps.MemoryString())
 	i.Add("Release", ps.Release)
 	i.Add("Service", ps.Name)
 	i.Add("Started", common.Ago(ps.Started))
