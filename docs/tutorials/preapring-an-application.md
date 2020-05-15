@@ -4,7 +4,7 @@ In order to deploy an app on Convox you will need two things
 
 * A Dockerfile
 
-* A Convox.yml manifest
+* A convox.yml manifest
 
 ## Dockerfile
 
@@ -12,7 +12,7 @@ If you have not already containerized your application it is a relatively straig
 
 ## Convox.yml
 
-Once you have your Dockerfile ready to go you need to create a convox.yml file. This file is a manifest that describes the components that make up your application. If you are familiar with using a docker-compose file you should find the convox.yml format to be very familiar. The Convox manifest is based on the docker-compose structure and format but has some distinct differences that allow you to manage many of the features of Convox. This guide will walk you through the basic components of the Convox manifest but you can find a complete specification [here](../configuration/convox-yml.md).
+Once you have your Dockerfile ready to go you need to create a convox.yml file. This file is a manifest that describes the components that make up your application. If you are familiar with using a docker-compose file you should find the convox.yml format to be very familiar. This guide will walk you through the basic components of the Convox manifest but you can find a complete specification [here](../configuration/convox-yml.md).
 
 The Convox manifest has four major components of which only `services` is required. They are:
 
@@ -26,7 +26,7 @@ The Convox manifest has four major components of which only `services` is requir
 
 ### Environment
 
-The environment section is where you can define any global environment variables that will be made available to any service in your application. You can also define service specific environment variables in the service definitions. Environment variables must specified in the manifest before they can be set and you can optionally set a default value for an environment variable in the manifest. Environment variables are generally used for environment specific configuration and secrets management and for this reason we generally recommend setting default values that would be appropriate for things like local development and storing your actual production values with `convox env set` or the convox environment control panel in the web console for each specific deployment of your app.
+The environment section is where you can define any global environment variables that will be made available to any service in your application. Environment variables are generally used for environment specific configuration and secrets management and for this reason we generally recommend setting default values that would be appropriate for things like local development and storing your actual production values with `convox env set` or the convox environment control panel in the web console for each specific deployment of your app.
 
 ### Resources
 
@@ -75,7 +75,7 @@ timers:
 
 A few things to note here are that the web service specifies an internal port of 8001 which will be exposed externally on 443. The web service will also be made available on the domain(s) specified in the the DOMAIN environment variable and Convox will automatically provision a SSL [certificate](https://docs.convox.com/configuration/load-balancers#ssl-termination) for the specified domain. The worker service on the other hand does not expose any external ports. The worker service also uses a unique startup command while the web service uses the command specified within the Dockerfile. Hopefully this gives you a sense of what a typical convox.yml might look like for a production application.
 
-## Going From Docker-Compose to Convox.yml
+## Going From Docker-Compose to convox.yml
 
 If you are already using `docker-compose.yml` for your application moving to a `conovx.yml` is a relatively straightforward process. As an example take a look at the following `docker-compose.yml`
 

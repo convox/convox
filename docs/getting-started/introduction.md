@@ -77,7 +77,7 @@ One of the easiest ways to get familiar with Convox is to clone one of our sampl
     services:
       web:
         build: .
-        port: ${PORT}
+        port: 3000
 
 This `convox.yml` defines a global [Environment Variable](../configuration/environment.md) named `port` and one [Service](../reference/primitives/app/service.md) named `web`. Each
 [Process](../reference/primitives/app/process.md) of this Service will listen on the specified port. This app is a very simple example but the options availble for [`convox.yml`](../configuration/convox-yml.md) allow you to specify very complex apps made up of many [Services](../reference/primitives/app/service.md) and [Resources](../reference/primitives/app/resource)
