@@ -1,3 +1,7 @@
+---
+order: 1
+---
+
 # Configuring Your App for Convox
 
 In order to deploy an app on Convox you will need two things
