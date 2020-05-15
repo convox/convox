@@ -36,6 +36,8 @@ To install the Convox CLI follow the instructions for your operating system:
 
 Once you have installed the CLI you can login to your Convox account by copying the login command from the web console
 
+![CLI Login](/images/CLI_tutorial_login.png)
+
 If you ever need to login into the CLI again you can generate a new CLI key by going to the [account page](https://console.convox.com/account) and clicking on `Reset CLI Key` which will generate a new key and login command.
 
 ## Install a Runtime Integration for the Cloud of Your Choice
@@ -57,6 +59,8 @@ You can also run a Rack on your local development workstation to develop your ap
 identical to production.
 
 Once you have runtime integration setup it's time to create your first Rack! Click on the Racks link in the web console and then click the cloud Install button. You can give your Rack a name like `dev` and select the region you want to install it in. From here you can select the runtime integration you just created and install a Rack. Rack installation typically takes between 5-20 minutes depending on the cloud provider. If you click on the Rack as it is been installed you can follow along with the Rack creation progress.
+
+![Rack Install](/images/runtime_tutorial.png)
 
 ## Deploy a Sample App
 
