@@ -51,7 +51,7 @@ order: 1
         image: awesome/metrics
     timers:
       cleanup:
-        schedule: "0 3 * * ? *"
+        schedule: "0 3 * * * *"
         command: bin/cleanup
         service: worker
 
@@ -107,7 +107,7 @@ that run periodically on a set interval.
 
     timers:
       cleanup:
-        schedule: "0 3 * * ? *"
+        schedule: "0 3 * * * *"
         command: bin/cleanup
         service: worker
 
