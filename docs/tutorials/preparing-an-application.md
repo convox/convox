@@ -4,11 +4,11 @@ order: 1
 
 # Preparing An Application
 
-In order to deploy an app on Convox you will need two things
+In order to deploy you app on Convox you will need two things
 
-* A Dockerfile
+* A `Dockerfile`
 
-* A convox.yml manifest
+* A `convox.yml` manifest
 
 ## Dockerfile
 
@@ -38,7 +38,7 @@ Resources are network-accessible external services. Most often, resources are da
 
 ### Services
 
-Services are the heart of your app. Services are scalable processes defined by a Dockerfile. Services can expose a port or set of ports and can be manual or automatically scaled. The most typical example of a service would be a web application such as a Ruby, Django, NodeJS or Go app that is accessed via an https connection. By default services are publically accessible but Convox also supports internal services that can only be accessed by other services running in the same Racks which can be useful for things like internal APIs. Convox also supports special use case services such as [agents](https://docs.convox.com/configuration/agents) and [singletons](https://docs.convox.com/reference/primitives/app/service). You can read the full specification for services [here](https://docs.convox.com/reference/primitives/app/service).
+Services are the heart of your app. Services are scalable processes defined by a Dockerfile. Services can expose a port or set of ports and can be manual or automatically scaled. The most typical example of a service would be a web application such as a Ruby, Django, NodeJS or Go app that is accessed via an https connection. By default services with ports are publicly accessible but Convox also supports internal services that can only be accessed by other services running in the same Racks which can be useful for things like internal APIs. Convox also supports special use case services such as [agents](https://docs.convox.com/configuration/agents) and [singletons](https://docs.convox.com/reference/primitives/app/service). You can read the full specification for services [here](https://docs.convox.com/reference/primitives/app/service).
 
 ### Timers
 
@@ -79,9 +79,9 @@ timers:
 
 A few things to note here are that the web service specifies an internal port of 8001 which will be exposed externally on 443. The web service will also be made available on the domain(s) specified in the the DOMAIN environment variable and Convox will automatically provision a SSL [certificate](https://docs.convox.com/configuration/load-balancers#ssl-termination) for the specified domain. The worker service on the other hand does not expose any external ports. The worker service also uses a unique startup command while the web service uses the command specified within the Dockerfile. Hopefully this gives you a sense of what a typical convox.yml might look like for a production application.
 
-## Going From Docker-Compose to convox.yml
+## Going From docker-compose.yml to convox.yml
 
-If you are already using `docker-compose.yml` for your application moving to a `conovx.yml` is a relatively straightforward process. As an example take a look at the following `docker-compose.yml`
+If you are already using `docker-compose.yml` for your application moving to a `convox.yml` is a relatively straightforward process. As an example take a look at the following `docker-compose.yml`
 
 ```
 version: '2'
@@ -153,11 +153,8 @@ services:
       - postgres
 ```
 
-Here you can see how we have turned the Redis and Postgres services into resources, which can be accessed by the other services. As we mentioned above by default those resources will be run in containers backed by durable storage but if you would prefer to use a cloud provider service you can do so using [resource overlays](https://docs.convox.com/reference/primitives/app/resource#overlays). We have also removed the links directive as services in a Rack are able to communicate each other using our built-in [service discovery](https://docs.convox.com/configuration/service-discovery). Otherwise, you will find the manifests to be nearly identical.
+Here you can see how we have turned the Redis and Postgres services into resources, which can be accessed by the other services. As we mentioned above, those resources will be run in containers backed by durable storage (by default) but if you would prefer to use a cloud provider service you can do so using [resource overlays](https://docs.convox.com/reference/primitives/app/resource#overlays). We have also removed the links directive as services in a Rack are able to communicate each other using our built-in [service discovery](https://docs.convox.com/configuration/service-discovery). Otherwise, you will find the manifests to be nearly identical.
 
 ## Next steps
 
-* Learn more about [deploying changes](../deployment/deploying-changes)
-* Learn more about [scaling](../deployment/scaling)
-* Create a [review workflow](https://console-docs.convox.com/console/workflows#review-workflows) to automatically create a review app every time you open a pull request
-* Create a [deployment workflow](https://console-docs.convox.com/console/workflows#deployment-workflows) to automatically deploy your app every time you merge to master
+* Check out: [Deploying an Application](deploying-an-application.md)

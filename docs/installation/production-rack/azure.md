@@ -1,5 +1,5 @@
 # Microsoft Azure
-
+> Please note that these are instructions for installing a Rack via the command line. The easiest way to install a Rack is with the [Convox Web Console](https://console.convox.com)
 ## Initial Setup
 
 ### Azure CLI

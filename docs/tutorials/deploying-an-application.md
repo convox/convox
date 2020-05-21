@@ -14,14 +14,14 @@ We recommend following the [getting started guide](/getting-started/introduction
 
 ## Verify installation
 
-Verify that your development Rack is running with `convox rack`:
+Verify that your production Rack is running with `convox rack`:
 
     $ convox rack
-    Name     dev
+    Name     production
     Provider do
-    Router   router.dev.convox
+    Router   router.production.convox
     Status   running
-    Version  3.0.0
+    Version  3.0.18
 
 ## Get an example applicaton
 
@@ -44,7 +44,7 @@ Verify that your development Rack is running with `convox rack`:
             build: .
             port: 3000
 
-This `convox.yml` defines one [Service](../reference/primitives/app/service.md) named `web`. Each
+This `convox.yml` defines one [Service](../reference/primitives/app/service.md) named `web` that will be built from the [Dockerfile](https://github.com/convox-examples/nodejs/blob/master/Dockerfile) in the repo. Each
 [Process](../reference/primitives/app/process.md) of this Service will listen on port `3000`.
 
 ## Deploy the application
@@ -119,17 +119,17 @@ Once this completes, you can deploy the code:
 
 
 > CLI commands that are specific to an app either take an `-a appname` option or can infer the app
-> name from the name of the local directory; in this case `rails`
+> name from the name of the local directory; in this case `nodejs`
 
 ## View the application in a browser
 
-In another terminal navigate to the directory where you cloned the example app and run `convox services`:
+You can get the URL for your running serivces with the `convox services` command:
 
     $ convox services
     SERVICE  DOMAIN                               PORTS
     web      web.nodejs.0a1b2c3d4e5f.convox.cloud  443:3000
 
-In your browser navigate the the hostname shown for the `web` service.
+In your browser navigate the the hostname shown for the `web` service. (i.e. `https://web.nodejs.0a1b2c3d4e5f.convox.cloud/`)
 
 ## List the processes of the application
 
@@ -201,5 +201,7 @@ Promoting a Release starts a rolling deployment:
 
 ## Next steps
 
-While this is a simple example we encourage you to take a look at the Configuration
-section of the docs to see how you can configure a more complex application.
+* Learn more about [deploying changes](../deployment/deploying-changes)
+* Learn more about [scaling](../deployment/scaling)
+* Create a [review workflow](https://console-docs.convox.com/console/workflows#review-workflows) to automatically create a review app every time you open a pull request
+* Create a [deployment workflow](https://console-docs.convox.com/console/workflows#deployment-workflows) to automatically deploy your app every time you merge to master

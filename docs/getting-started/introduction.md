@@ -171,6 +171,6 @@ You can now rollback to your previous release with `convox releases rollback`
 
 Once the rollback is complete, refresh your browser and you should see the `Hello World!` message has been reverted to `Hello Convox!`
 
-Hopefully this small example has given you an idea of how easy and powerful Convox is. As a next step let's get your first custom app configured and deployed by following the [App Configuration Guide](../tutorials/preapring-an-application.md)
+Hopefully this small example has given you an idea of how easy and powerful Convox is. As a next step let's get your first custom app configured and deployed by following the [App Configuration Guide](../tutorials/preparing-an-application.md)
 
 
