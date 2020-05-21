@@ -123,13 +123,13 @@ Once this completes, you can deploy the code:
 
 ## View the application in a browser
 
-You can get the URL for your running serivces with the `convox services` command:
+You can get the URL for your running services with the `convox services` command:
 
     $ convox services
     SERVICE  DOMAIN                               PORTS
     web      web.nodejs.0a1b2c3d4e5f.convox.cloud  443:3000
 
-In your browser navigate the the hostname shown for the `web` service. (i.e. `https://web.nodejs.0a1b2c3d4e5f.convox.cloud/`)
+In your browser navigate to the hostname shown for the `web` service. (i.e. `https://web.nodejs.0a1b2c3d4e5f.convox.cloud/`)
 
 ## List the processes of the application
 
