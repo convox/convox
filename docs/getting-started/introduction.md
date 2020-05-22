@@ -36,6 +36,8 @@ To install the Convox CLI follow the instructions for your operating system:
 
 Once you have installed the CLI you can login to your Convox account by copying the login command from the web console
 
+![CLI Login](/images/CLI_tutorial_login.png)
+
 If you ever need to login into the CLI again you can generate a new CLI key by going to the [account page](https://console.convox.com/account) and clicking on `Reset CLI Key` which will generate a new key and login command.
 
 ## Install a Runtime Integration for the Cloud of Your Choice
@@ -58,6 +60,8 @@ identical to production.
 
 Once you have runtime integration setup it's time to create your first Rack! Click on the Racks link in the web console and then click the cloud Install button. You can give your Rack a name like `dev` and select the region you want to install it in. From here you can select the runtime integration you just created and install a Rack. Rack installation typically takes between 5-20 minutes depending on the cloud provider. If you click on the Rack as it is been installed you can follow along with the Rack creation progress.
 
+![Rack Install](/images/runtime_tutorial.png)
+
 ## Deploy a Sample App
 
 One of the easiest ways to get familiar with Convox is to clone one of our sample apps. For this tutorial we will use a simple [Node.js app](https://github.com/convox-examples/nodejs) that you can clone from our [example repository](https://github.com/convox-examples)
@@ -77,7 +81,7 @@ One of the easiest ways to get familiar with Convox is to clone one of our sampl
     services:
       web:
         build: .
-        port: ${PORT}
+        port: 3000
 
 This `convox.yml` defines a global [Environment Variable](../configuration/environment.md) named `port` and one [Service](../reference/primitives/app/service.md) named `web`. Each
 [Process](../reference/primitives/app/process.md) of this Service will listen on the specified port. This app is a very simple example but the options availble for [`convox.yml`](../configuration/convox-yml.md) allow you to specify very complex apps made up of many [Services](../reference/primitives/app/service.md) and [Resources](../reference/primitives/app/resource)
@@ -167,6 +171,6 @@ You can now rollback to your previous release with `convox releases rollback`
 
 Once the rollback is complete, refresh your browser and you should see the `Hello World!` message has been reverted to `Hello Convox!`
 
-Hopefully this small example has given you an idea of how easy and powerful Convox is. As a next step let's get your first custom app configured and deployed by following the [App Configuration Guide](../configuration/convox-yml.md)
+Hopefully this small example has given you an idea of how easy and powerful Convox is. As a next step let's get your first custom app configured and deployed by following the [App Configuration Guide](../tutorials/preparing-an-application.md)
 
 
