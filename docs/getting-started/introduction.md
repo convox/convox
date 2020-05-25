@@ -40,6 +40,10 @@ Once you have installed the CLI you can login to your Convox account by copying 
 
 If you ever need to login into the CLI again you can generate a new CLI key by going to the [account page](https://console.convox.com/account) and clicking on `Reset CLI Key` which will generate a new key and login command.
 
+Alternatively if you have access to the CLI key and do not wish to reset it, you can run the following and enter your CLI key on the prompt.
+
+$ convox login console.convox.com
+
 ## Install a Runtime Integration for the Cloud of Your Choice
 
 Convox currently supports AWS, Google Cloud, Digital Ocean, and Microsoft Azure. In order to install a Convox Rack you will need a runtime integration. If you click on the integrations link in the web console and the click on the plus sign in the runtime section you can select your cloud and create an integration. All integrations use a specific security role that is created just for Convox and can be removed at anytime. In order to create this role you will need an account for your cloud provider that has sufficient permissions which is typically some equivalent of an administrator role.
