@@ -35,10 +35,6 @@ data "aws_iam_policy_document" "assume_eks" {
   }
 }
 
-data "aws_iam_policy_document" "assume_elb" {
-
-}
-
 resource "aws_iam_role" "cluster" {
   assume_role_policy = data.aws_iam_policy_document.assume_eks.json
   name               = "${var.name}-cluster"
