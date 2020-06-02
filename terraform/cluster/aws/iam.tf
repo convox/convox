@@ -24,6 +24,19 @@ data "aws_iam_policy_document" "assume_eks" {
       identifiers = ["eks.amazonaws.com"]
     }
   }
+  
+  statement {
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["elasticloadbalancing.amazonaws.com"]
+    }
+  }
+}
+
+data "aws_iam_policy_document" "assume_elb" {
+
 }
 
 resource "aws_iam_role" "cluster" {
@@ -35,6 +48,11 @@ resource "aws_iam_role" "cluster" {
 resource "aws_iam_role_policy_attachment" "cluster_eks_cluster" {
   role       = aws_iam_role.cluster.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+}
+
+resource "aws_iam_role_policy_attachment" "cluster_eks_service" {
+  role       = aws_iam_role.cluster.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSServicePolicy"
 }
 
 resource "aws_iam_role_policy_attachment" "cluster_eks_service" {
