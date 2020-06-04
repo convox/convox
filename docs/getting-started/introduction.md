@@ -108,9 +108,9 @@ Now we can create an empty app in our Rack with `convox apps create`
 
     $ convox apps create
 
-By default the app will be created using the name of the current directory. If you wish to call your app something else you can specify the name with
+By default the app will be created using the name of the current directory. If you wish to call your app something else you can specify the name as an argument
 
-    $ convox apps create --name [name]
+    $ convox apps create [name]
 
 > CLI commands that are specific to an app either take an `-a appname` option or can infer the app
 > name from the name of the local directory; in this case `nodejs`
