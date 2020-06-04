@@ -1,0 +1,22 @@
+groups:
+  - name: cluster
+    rules:
+      - record: convox:cluster:cpu:reservation
+        expr: sum(kube_pod_container_resource_requests_cpu_cores) / sum(kube_node_status_capacity_cpu_cores)
+      - record: convox:cluster:cpu:utilization
+        expr: sum(rate(container_cpu_usage_seconds_total{container_name="",pod_name!=""}[2m])) / sum(machine_cpu_cores)
+      - record: convox:cluster:mem:reservation
+        expr: sum(kube_pod_container_resource_requests_memory_bytes) / sum(kube_node_status_capacity_memory_bytes)
+      - record: convox:cluster:mem:utilization
+        expr: sum(container_memory_usage_bytes{container_name="",pod_name!=""}) / sum(machine_memory_bytes)
+  - name: system
+    rules:
+      - record: convox:system:cpu:utilization
+        expr: sum (rate(container_cpu_usage_seconds_total[2m]) * on (pod) group_left(label_rack) kube_pod_labels{label_rack=""})
+  - name: app
+    rules:
+      - record: convox:app:cpu:utilization
+        expr: |
+          sum by (label_rack,label_app) (
+            rate(container_cpu_usage_seconds_total[2m]) * on (pod) group_left(label_rack,label_app) kube_pod_labels{label_rack!=""}
+          )

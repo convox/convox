@@ -39,6 +39,16 @@ module "api" {
   secret       = random_string.secret.result
 }
 
+module "prometheus" {
+  source = "../../prometheus/k8s"
+
+  namespace = module.k8s.namespace
+
+  providers = {
+    kubernetes = kubernetes
+  }
+}
+
 module "resolver" {
   source = "../../resolver/metal"
 

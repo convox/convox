@@ -52,6 +52,16 @@ module "metrics" {
   }
 }
 
+module "prometheus" {
+  source = "../../prometheus/k8s"
+
+  namespace = module.k8s.namespace
+
+  providers = {
+    kubernetes = kubernetes
+  }
+}
+
 module "resolver" {
   source = "../../resolver/aws"
 
