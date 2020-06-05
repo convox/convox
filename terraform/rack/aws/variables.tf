@@ -21,3 +21,7 @@ variable "release" {
 variable "subnets" {
   type = list
 }
+
+variable "whitelist" {
+  default = ["0.0.0.0/0"]
+}

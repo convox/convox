@@ -25,3 +25,7 @@ variable "release" {
 variable "secret_key" {
   type = string
 }
+
+variable "whitelist" {
+  default = ["0.0.0.0/0"]
+}

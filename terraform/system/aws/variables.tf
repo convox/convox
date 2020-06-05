@@ -25,3 +25,7 @@ variable "release" {
 variable "region" {
   default = "us-east-1"
 }
+
+variable "whitelist" {
+  default = "0.0.0.0/0"
+}

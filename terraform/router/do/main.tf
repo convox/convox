@@ -37,6 +37,8 @@ resource "kubernetes_service" "router" {
   spec {
     type = "LoadBalancer"
 
+    load_balancer_source_ranges = var.whitelist
+
     port {
       name        = "http"
       port        = 80

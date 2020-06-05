@@ -93,5 +93,5 @@ func (p *Provider) SystemUninstall(name string, w io.Writer, opts structs.System
 }
 
 func (p *Provider) SystemUpdate(opts structs.SystemUpdateOptions) error {
-	return errors.WithStack(fmt.Errorf("console update not yet supported"))
+	return errors.WithStack(fmt.Errorf("self update not supported"))
 }

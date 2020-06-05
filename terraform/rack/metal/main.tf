@@ -61,4 +61,5 @@ module "router" {
   name      = var.name
   namespace = module.k8s.namespace
   release   = var.release
+  whitelist = var.whitelist
 }

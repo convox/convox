@@ -29,3 +29,7 @@ variable "secret_key" {
 variable "token" {
   type = string
 }
+
+variable "whitelist" {
+  default = "0.0.0.0/0"
+}

@@ -30,7 +30,8 @@ module "rack" {
     kubernetes = kubernetes
   }
 
-  name     = var.name
-  platform = module.platform.name
-  release  = local.release
+  name      = var.name
+  platform  = module.platform.name
+  release   = local.release
+  whitelist = split(",", var.whitelist)
 }

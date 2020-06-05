@@ -13,3 +13,7 @@ variable "registry_disk" {
 variable "release" {
   type = string
 }
+
+variable "whitelist" {
+  default = ["0.0.0.0/0"]
+}

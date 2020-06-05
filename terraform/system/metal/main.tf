@@ -30,5 +30,6 @@ module "rack" {
   name          = var.name
   release       = local.release
   registry_disk = var.registry_disk
+  whitelist     = split(",", var.whitelist)
 }
 

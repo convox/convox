@@ -78,4 +78,5 @@ module "router" {
   oidc_arn  = var.oidc_arn
   oidc_sub  = var.oidc_sub
   release   = var.release
+  whitelist = var.whitelist
 }
