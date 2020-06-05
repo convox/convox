@@ -67,4 +67,5 @@ module "router" {
   namespace = module.k8s.namespace
   region    = var.region
   release   = var.release
+  whitelist = var.whitelist
 }

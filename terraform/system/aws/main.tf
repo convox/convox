@@ -72,10 +72,11 @@ module "rack" {
     kubernetes = kubernetes
   }
 
-  cluster  = module.cluster.id
-  name     = var.name
-  oidc_arn = module.cluster.oidc_arn
-  oidc_sub = module.cluster.oidc_sub
-  release  = local.release
-  subnets  = module.cluster.subnets
+  cluster   = module.cluster.id
+  name      = var.name
+  oidc_arn  = module.cluster.oidc_arn
+  oidc_sub  = module.cluster.oidc_sub
+  release   = local.release
+  subnets   = module.cluster.subnets
+  whitelist = split(",", var.whitelist)
 }
