@@ -24,15 +24,6 @@ data "aws_iam_policy_document" "assume_eks" {
       identifiers = ["eks.amazonaws.com"]
     }
   }
-  
-  statement {
-    actions = ["sts:AssumeRole"]
-
-    principals {
-      type        = "Service"
-      identifiers = ["elasticloadbalancing.amazonaws.com"]
-    }
-  }
 }
 
 resource "aws_iam_role" "cluster" {
@@ -49,6 +40,11 @@ resource "aws_iam_role_policy_attachment" "cluster_eks_cluster" {
 resource "aws_iam_role_policy_attachment" "cluster_eks_service" {
   role       = aws_iam_role.cluster.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSServicePolicy"
+}
+
+resource "aws_iam_role_policy_attachment" "cluster_ec2_readonly" {
+  role       = aws_iam_role.cluster.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess"
 }
 
 resource "aws_iam_role" "nodes" {
