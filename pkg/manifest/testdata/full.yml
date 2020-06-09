@@ -90,3 +90,16 @@ services:
       - 5000/udp
       - 5001
       - 5002/tcp
+timers:
+  alpha:
+    command: bin/alpha
+    service: api
+    schedule: "*/1 * * * ? *"
+  bravo:
+    command: bin/bravo
+    service: api
+    schedule: "*/1 * * * ?"
+  charlie:
+    command: bin/charlie
+    service: api
+    schedule: "*/1 * * * *"
