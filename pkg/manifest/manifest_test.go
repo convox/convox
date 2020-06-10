@@ -272,6 +272,26 @@ func TestManifestLoad(t *testing.T) {
 				Sticky: false,
 			},
 		},
+		Timers: manifest.Timers{
+			manifest.Timer{
+				Command:  "bin/alpha",
+				Name:     "alpha",
+				Schedule: "*/1 * * * *",
+				Service:  "api",
+			},
+			manifest.Timer{
+				Command:  "bin/bravo",
+				Name:     "bravo",
+				Schedule: "*/1 * * * *",
+				Service:  "api",
+			},
+			manifest.Timer{
+				Command:  "bin/charlie",
+				Name:     "charlie",
+				Schedule: "*/1 * * * *",
+				Service:  "api",
+			},
+		},
 	}
 
 	attrs := []string{
@@ -359,6 +379,19 @@ func TestManifestLoad(t *testing.T) {
 		"services.scaler.scale.targets.custom.AWS/SQS/ApproximateNumberOfMessagesVisible.value",
 		"services.scaler.scale.targets.memory",
 		"services.scaler.scale.targets.requests",
+		"timers",
+		"timers.alpha",
+		"timers.alpha.command",
+		"timers.alpha.schedule",
+		"timers.alpha.service",
+		"timers.bravo",
+		"timers.bravo.command",
+		"timers.bravo.schedule",
+		"timers.bravo.service",
+		"timers.charlie",
+		"timers.charlie.command",
+		"timers.charlie.schedule",
+		"timers.charlie.service",
 	}
 
 	env := map[string]string{"FOO": "bar", "SECRET": "shh", "OTHERGLOBAL": "test"}
@@ -501,7 +534,6 @@ func TestManifestValidate(t *testing.T) {
 		"service serviceF references a resource that does not exist: foo",
 		"timer name timer_1 invalid, must contain only lowercase alphanumeric and dashes",
 		"timer timer_1 references a service that does not exist: someservice",
-		"timer timer_1 invalid, schedule cannot contain ?",
 	}
 
 	require.EqualError(t, err, fmt.Sprintf("validation errors:\n%s", strings.Join(errors, "\n")))

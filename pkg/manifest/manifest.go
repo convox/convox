@@ -54,6 +54,10 @@ func Load(data []byte, env map[string]string) (*Manifest, error) {
 		m.env[k] = v
 	}
 
+	if err := m.ApplyCompatibility(); err != nil {
+		return nil, err
+	}
+
 	if err := m.ApplyDefaults(); err != nil {
 		return nil, err
 	}
@@ -75,6 +79,28 @@ func (m *Manifest) Agents() []string {
 	}
 
 	return a
+}
+
+func (m *Manifest) ApplyCompatibility() error {
+	for i := range m.Timers {
+		parts := strings.Fields(m.Timers[i].Schedule)
+
+		// v3 uses only 5 fields for schedules
+		if len(parts) > 5 {
+			parts = parts[0:5]
+		}
+
+		// replace ? with * from v2 aws syntax
+		for j := range parts {
+			if strings.TrimSpace(parts[j]) == "?" {
+				parts[j] = "*"
+			}
+		}
+
+		m.Timers[i].Schedule = strings.Join(parts, " ")
+	}
+
+	return nil
 }
 
 func (m *Manifest) ApplyDefaults() error {
