@@ -1,5 +1,5 @@
 locals {
-  arn_prefix = "${data.aws_region.current.name == "us-gov-east-1" || data.aws_region.current.name == "us-gov-west-1" ? "aws-us-gov" : "aws"}"
+  arn_prefix = "${substr(data.aws_region.current.name, 0, 6)  == "us-gov" ? "aws-us-gov" : "aws"}"
 }
 
 data "aws_iam_policy_document" "assume_api" {
