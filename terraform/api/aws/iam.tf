@@ -1,3 +1,7 @@
+locals {
+  arn_prefix = "${data.aws_region.current.name == "us-gov-east-1" || data.aws_region.current.name == "us-gov-west-1" ? "aws-us-gov" : "aws"}"
+}
+
 data "aws_iam_policy_document" "assume_api" {
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
@@ -34,8 +38,8 @@ data "aws_iam_policy_document" "logs" {
       "logs:PutRetentionPolicy",
     ]
     resources = [
-      "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:${var.name}-*",
-      "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/convox/${var.name}/*",
+      "arn:${local.arn_prefix}:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:${var.name}-*",
+      "arn:${local.arn_prefix}:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/convox/${var.name}/*",
     ]
   }
 }
@@ -57,7 +61,7 @@ data "aws_iam_policy_document" "storage" {
 
 resource "aws_iam_role_policy_attachment" "api_ecr" {
   role       = aws_iam_role.api.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"
+  policy_arn = "arn:${local.arn_prefix}:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"
 }
 
 resource "aws_iam_role_policy" "api_logs" {

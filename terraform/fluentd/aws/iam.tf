@@ -1,3 +1,7 @@
+locals {
+  arn_prefix = "${data.aws_region.current.name == "us-gov-east-1" || data.aws_region.current.name == "us-gov-west-1" ? "aws-us-gov" : "aws"}"
+}
+
 data "aws_iam_policy_document" "assume_fluentd" {
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
@@ -30,7 +34,7 @@ data "aws_iam_policy_document" "fluentd" {
       "logs:DescribeLogGroups",
     ]
     resources = [
-      "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:*"
+      "arn:${local.arn_prefix}:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:*"
     ]
   }
 
@@ -41,7 +45,7 @@ data "aws_iam_policy_document" "fluentd" {
       "logs:PutLogEvents",
     ]
     resources = [
-      "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/convox/*"
+      "arn:${local.arn_prefix}:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/convox/*"
     ]
   }
 }
