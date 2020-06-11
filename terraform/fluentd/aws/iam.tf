@@ -1,5 +1,5 @@
 locals {
-  arn_prefix = "${substr(data.aws_region.current.name, 0, 6)  == "us-gov" ? "aws-us-gov" : "aws"}"
+  partition = "${substr(data.aws_region.current.name, 0, 6)  == "us-gov" ? "aws-us-gov" : "aws"}"
 }
 
 data "aws_iam_policy_document" "assume_fluentd" {
@@ -34,7 +34,7 @@ data "aws_iam_policy_document" "fluentd" {
       "logs:DescribeLogGroups",
     ]
     resources = [
-      "arn:${local.arn_prefix}:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:*"
+      "arn:${local.partition}:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:*"
     ]
   }
 
@@ -45,7 +45,7 @@ data "aws_iam_policy_document" "fluentd" {
       "logs:PutLogEvents",
     ]
     resources = [
-      "arn:${local.arn_prefix}:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/convox/*"
+      "arn:${local.partition}:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/convox/*"
     ]
   }
 }

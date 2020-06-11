@@ -1,5 +1,5 @@
 locals {
-  arn_prefix = "${substr(data.aws_region.current.name, 0, 6)  == "us-gov" ? "aws-us-gov" : "aws"}"
+  partition = "${substr(data.aws_region.current.name, 0, 6)  == "us-gov" ? "aws-us-gov" : "aws"}"
 }
 
 resource "aws_iam_openid_connect_provider" "cluster" {
@@ -38,17 +38,17 @@ resource "aws_iam_role" "cluster" {
 
 resource "aws_iam_role_policy_attachment" "cluster_eks_cluster" {
   role       = aws_iam_role.cluster.name
-  policy_arn = "arn:${local.arn_prefix}:iam::aws:policy/AmazonEKSClusterPolicy"
+  policy_arn = "arn:${local.partition}:iam::aws:policy/AmazonEKSClusterPolicy"
 }
 
 resource "aws_iam_role_policy_attachment" "cluster_eks_service" {
   role       = aws_iam_role.cluster.name
-  policy_arn = "arn:${local.arn_prefix}:iam::aws:policy/AmazonEKSServicePolicy"
+  policy_arn = "arn:${local.partition}:iam::aws:policy/AmazonEKSServicePolicy"
 }
 
 resource "aws_iam_role_policy_attachment" "cluster_ec2_readonly" {
   role       = aws_iam_role.cluster.name
-  policy_arn = "arn:${local.arn_prefix}:iam::aws:policy/AmazonEC2ReadOnlyAccess"
+  policy_arn = "arn:${local.partition}:iam::aws:policy/AmazonEC2ReadOnlyAccess"
 }
 
 resource "aws_iam_role" "nodes" {
@@ -59,15 +59,15 @@ resource "aws_iam_role" "nodes" {
 
 resource "aws_iam_role_policy_attachment" "nodes_ecr" {
   role       = aws_iam_role.nodes.name
-  policy_arn = "arn:${local.arn_prefix}:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  policy_arn = "arn:${local.partition}:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
 resource "aws_iam_role_policy_attachment" "nodes_eks_cni" {
   role       = aws_iam_role.nodes.name
-  policy_arn = "arn:${local.arn_prefix}:iam::aws:policy/AmazonEKS_CNI_Policy"
+  policy_arn = "arn:${local.partition}:iam::aws:policy/AmazonEKS_CNI_Policy"
 }
 
 resource "aws_iam_role_policy_attachment" "nodes_eks_worker" {
   role       = aws_iam_role.nodes.name
-  policy_arn = "arn:${local.arn_prefix}:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+  policy_arn = "arn:${local.partition}:iam::aws:policy/AmazonEKSWorkerNodePolicy"
 }
