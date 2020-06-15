@@ -20,13 +20,6 @@ Sometimes the Cloud providers will have internal issues which can prevent certai
 A failed Rack install should either be able to continued with, or be uninstalled successfully as required.  You can retry the installation by simply running `convox rack update -r <rackname>`.
 If your Rack consistently fails to install into your Cloud provider and there are no relevant issues reported then please raise a [support ticket](/help/support) for us to investigate.
 
-Sometimes, a failed Rack install cannot be uninstalled due to cloud provider issues.  In this instance, it is best to remove any remaining resources yourself before re-attempting the Rack install.
-
-- AWS: Delete the EKS cluster for your Rack (if it exists). You may have to delete any node groups attached to it first.  Delete the VPC created for your Rack. AWS will inform you if there are any child resources that need to be deleted first.
-- Azure:
-- Digital Ocean:
-- Google Cloud:
-
 ## I get an error when I deploy my app to Convox
 
 Sometimes the errors that come back from Kubernetes and/or the cloud providers are useful, sometimes they're more obtuse.
