@@ -43,6 +43,15 @@ data "aws_iam_policy_document" "logs" {
 data "aws_iam_policy_document" "storage" {
   statement {
     actions = [
+      "s3:ListBucket",
+    ]
+    resources = [
+      aws_s3_bucket.storage.arn,
+    ]
+  }
+
+  statement {
+    actions = [
       "s3:DeleteObject",
       "s3:HeadObject",
       "s3:GetObject",
