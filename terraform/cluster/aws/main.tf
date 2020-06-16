@@ -18,6 +18,8 @@ locals {
   oidc_sub = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
 }
 
+data "aws_region" "current" {}
+
 resource "null_resource" "delay_cluster" {
   provisioner "local-exec" {
     command = "sleep 15"
