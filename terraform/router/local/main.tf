@@ -46,7 +46,7 @@ resource "kubernetes_service" "router" {
   spec {
     type = var.platform == "Linux" ? "ClusterIP" : "LoadBalancer"
 
-    load_balancer_source_ranges = var.whitelist
+    load_balancer_source_ranges = var.platform == "Linux" ? null : var.whitelist
 
     port {
       name        = "http"
