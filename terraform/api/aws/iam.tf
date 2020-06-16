@@ -1,6 +1,4 @@
-locals {
-  partition = "${substr(data.aws_region.current.name, 0, 6)  == "us-gov" ? "aws-us-gov" : "aws"}"
-}
+data "aws_partition" "current" {}
 
 data "aws_iam_policy_document" "assume_api" {
   statement {
@@ -38,8 +36,8 @@ data "aws_iam_policy_document" "logs" {
       "logs:PutRetentionPolicy",
     ]
     resources = [
-      "arn:${local.partition}:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:${var.name}-*",
-      "arn:${local.partition}:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/convox/${var.name}/*",
+      "arn:${data.aws_partition.current.partition}:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:${var.name}-*",
+      "arn:${data.aws_partition.current.partition}:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/convox/${var.name}/*",
     ]
   }
 }
@@ -61,7 +59,7 @@ data "aws_iam_policy_document" "storage" {
 
 resource "aws_iam_role_policy_attachment" "api_ecr" {
   role       = aws_iam_role.api.name
-  policy_arn = "arn:${local.partition}:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"
+  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"
 }
 
 resource "aws_iam_role_policy" "api_logs" {
