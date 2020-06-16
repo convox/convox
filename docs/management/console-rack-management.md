@@ -25,20 +25,21 @@ You can transfer the Rack state to the Console by using the `rack mv` command.  
 
 The Rack will now appear in the Convox Console and your teammates with access and logged into the same organization will now see the Rack from their own CLI, and be able to interact and perform updates against the Rack from their own CLI or from the Console.
 
-> Due to an underlying issue with the way that AWS manages permissions when installing Racks, AWS-based Racks unfortunately need a further step before being able to be moved effectively. We have a longstanding bug report open with AWS to resolve this.
-> 
+### Moving an AWS Rack
+
+Due to an underlying issue with the way that AWS manages permissions when installing Racks, AWS-based Racks unfortunately need a further step before being able to be moved effectively. We have a longstanding bug report open with AWS to resolve this.
+
 - First, go to your IAM console within AWS and find and note the ARN of the ConsoleRole (it will look like `arn:aws:iam::YOURACCOUNTID:role/convox-YOURORGID-ConsoleRole-0000000000`)
 - On your local machine, point `kubectl` at the EKS cluster with `export KUBECONFIG=~/.kube/config.aws.RACKNAME` (replacing `RACKNAME` with the name of your Rack)
 - run `kubectl edit configmap/aws-auth -n kube-system`
 - Add a new item to mapRoles that looks like this
 
-```
     - rolearn: arn:aws:iam::YOURACCOUNTID:role/convox-YOURORGID-ConsoleRole-0000000000
       username: convox-console
       groups:
       - system:masters
-```
-> where the `rolearn` value is replaced with the full ARN of their ConsoleRole that you noted from the first step.
+
+where the `rolearn` value is replaced with the full ARN of their ConsoleRole that you noted from the first step.
 
 ## Moving your Rack from the Console
 
