@@ -15,6 +15,7 @@ type Rack struct {
 	Provider     string
 	Status       string
 	State        []byte
+	Version      string
 }
 
 type Racks []Rack

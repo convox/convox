@@ -160,13 +160,11 @@ func (c Console) UpdateParams(params map[string]string) error {
 		return err
 	}
 
-	version := r.Parameters["release"]
-
-	if version == "" {
+	if r.Version == "" {
 		return fmt.Errorf("current version invalid")
 	}
 
-	if err := cc.RackUpdate(c.name, version, params); err != nil {
+	if err := cc.RackUpdate(c.name, r.Version, params); err != nil {
 		return err
 	}
 
