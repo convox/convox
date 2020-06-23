@@ -2,19 +2,16 @@
 
 Custom domains allow you to route one or more domains to a [Service](../reference/primitives/app/service.md).
 
-## Definition
+## Definition examples
 
     services:
-      web:
+      simpleweb:
         domain: myapp.example.org
+      ...
+      complexweb:
+        domain: subdomain1.example.org,subdomain2.example.org,somethingelse.test.com
 
-### Wildcard Domains
-
-    services:
-      web:
-        domain: "*.example.org"
-
-> YAML requires strings beginning with `*` to be enclosed in quotes.
+Multiple domains should be comma separated.  Due to limitations in the LetsEncrypt validation method for SSL certificates, wildcard domains are not currently supported.
 
 ### Dynamic Configuration
 
