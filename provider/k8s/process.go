@@ -569,7 +569,7 @@ func (p *Provider) processFromPod(pd ac.Pod) (*structs.Process, error) {
 
 	ports := []string{}
 	for _, p := range cs[0].Ports {
-		ports = append(ports, fmt.Sprintf("%d:%d", &p.HostPort, &p.ContainerPort))
+		ports = append(ports, fmt.Sprintf("%d:%d", p.HostPort, p.ContainerPort))
 	}
 
 	ps := &structs.Process{

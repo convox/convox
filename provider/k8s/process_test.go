@@ -2,10 +2,16 @@ package k8s_test
 
 import (
 	"strings"
+	"testing"
 
+	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/convox/provider/k8s"
+	
+	"github.com/stretchr/testify/require"
 	ac "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 func processCreate(c kubernetes.Interface, ns, name, labels string) error {
@@ -24,6 +30,10 @@ func processCreate(c kubernetes.Interface, ns, name, labels string) error {
 		Spec: ac.PodSpec{
 			Containers: []ac.Container{
 				{Name: "main"},
+				{Ports: []ac.ContainerPort{
+					{HostPort: 123},
+					{ContainerPort: 4567},
+				},},
 			},
 		},
 	}
@@ -33,4 +43,21 @@ func processCreate(c kubernetes.Interface, ns, name, labels string) error {
 	}
 
 	return nil
+}
+
+func TestProcessList(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk := p.Cluster.(*fake.Clientset)
+
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		require.NoError(t, processCreate(kk, "ns1", "process10", "system=convox,rack=rack1,app=app1,service=service1"))
+
+		output, err := p.ProcessList("app1", structs.ProcessListOptions{})
+
+		require.NoError(t, err)
+		require.Len(t, output, 1)
+		require.Len(t, output[0].Ports, 1)
+		require.Equal(t, output[0].Ports[0], "123:4567")
+	})
 }
