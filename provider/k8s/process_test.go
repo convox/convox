@@ -6,7 +6,6 @@ import (
 
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/k8s"
-
 	"github.com/stretchr/testify/require"
 	ac "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
