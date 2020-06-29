@@ -567,6 +567,11 @@ func (p *Provider) processFromPod(pd ac.Pod) (*structs.Process, error) {
 		}
 	}
 
+	ports := []string{}
+	for _, p := range cs[0].Ports {
+		ports = append(ports, fmt.Sprintf("%d:%d", p.HostPort, p.ContainerPort))
+	}
+
 	ps := &structs.Process{
 		Id:       pd.ObjectMeta.Name,
 		App:      pd.ObjectMeta.Labels["app"],
@@ -575,6 +580,7 @@ func (p *Provider) processFromPod(pd ac.Pod) (*structs.Process, error) {
 		Image:    cs[0].Image,
 		Instance: pd.Spec.NodeName,
 		Name:     pd.ObjectMeta.Labels["service"],
+		Ports:    ports,
 		Release:  pd.ObjectMeta.Labels["release"],
 		Started:  pd.CreationTimestamp.Time,
 		Status:   status,
