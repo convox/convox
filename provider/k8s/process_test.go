@@ -55,13 +55,21 @@ func TestProcessList(t *testing.T) {
 
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 
-		require.NoError(t, processCreate(kk, "ns1", "process10", "system=convox,rack=rack1,app=app1,service=service1"))
+		require.NoError(t, processCreate(kk, "rack1-app1", "process1", "system=convox,rack=rack1,app=app1,service=service1,type=service"))
+		require.NoError(t, processCreate(kk, "rack1-app1", "process2", "system=convox,rack=rack1,app=app1,service=service2,type=process"))
 
-		output, err := p.ProcessList("app1", structs.ProcessListOptions{})
-
+		pss, err := p.ProcessList("app1", structs.ProcessListOptions{})
 		require.NoError(t, err)
-		require.Len(t, output, 1)
-		require.Len(t, output[0].Ports, 1)
-		require.Equal(t, output[0].Ports[0], "123:4567")
+		require.Len(t, pss, 2)
+
+		require.Equal(t, "process1", pss[0].Id)
+		require.Len(t, pss[0].Ports, 1)
+		require.Equal(t, "123:4567", pss[0].Ports[0])
+		require.Equal(t, "service1", pss[0].Name)
+
+		require.Equal(t, "process2", pss[1].Id)
+		require.Len(t, pss[1].Ports, 1)
+		require.Equal(t, "123:4567", pss[1].Ports[0])
+		require.Equal(t, "service2", pss[1].Name)
 	})
 }
