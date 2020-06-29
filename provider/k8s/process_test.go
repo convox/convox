@@ -6,7 +6,7 @@ import (
 
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/k8s"
-	
+
 	"github.com/stretchr/testify/require"
 	ac "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,11 +29,15 @@ func processCreate(c kubernetes.Interface, ns, name, labels string) error {
 		ObjectMeta: om,
 		Spec: ac.PodSpec{
 			Containers: []ac.Container{
-				{Name: "main"},
-				{Ports: []ac.ContainerPort{
-					{HostPort: 123},
-					{ContainerPort: 4567},
-				},},
+				{
+					Name: "main",
+					Ports: []ac.ContainerPort{
+						{
+							ContainerPort: 4567,
+							HostPort:      123,
+						},
+					},
+				},
 			},
 		},
 	}
