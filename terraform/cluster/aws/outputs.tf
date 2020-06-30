@@ -23,6 +23,14 @@ output "oidc_sub" {
   value      = local.oidc_sub
 }
 
+output "route_table_public" {
+  value = aws_route_table.public.id
+}
+
 output "subnets" {
   value = aws_subnet.private.*.id
+}
+
+output "vpc" {
+  value = aws_vpc.nodes.id
 }
