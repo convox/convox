@@ -59,7 +59,7 @@ module "k8s" {
     ELASTIC_URL     = module.elasticsearch.url
     PROVIDER        = "do"
     REGION          = var.region
-    REGISTRY        = "registry.${var.domain}"
+    REGISTRY        = digitalocean_container_registry.registry.endpoint
     RESOLVER        = var.resolver
     ROUTER          = var.router
     SECRET          = var.secret
