@@ -18,7 +18,7 @@ A Postgres Resource can have the following options configured for it (default va
 
     resources:
       main:
-        type: memcached
+        type: postgres
         options:
           version: 10.5
           storage: 10
