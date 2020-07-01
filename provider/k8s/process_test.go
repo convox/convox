@@ -15,10 +15,10 @@ import (
 )
 
 func processCreate(c kubernetes.Interface, ns, name, labels string) error {
-	return processCreatePorts(c, ns, name, labels, 123, 4567, "127.0.0.1")
+	return processCreatePorts(c, ns, name, labels,  "127.0.0.1", 123, 4567)
 }
 
-func processCreatePorts(c kubernetes.Interface, ns, name, labels string, hostPort int32, containerPort int32, podIp string) error {
+func processCreatePorts(c kubernetes.Interface, ns, name, labels, podIp string, hostPort, containerPort int32) error {
 	om := am.ObjectMeta{
 		Labels: map[string]string{},
 		Name:   name,
