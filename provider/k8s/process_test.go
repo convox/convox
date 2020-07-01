@@ -15,7 +15,7 @@ import (
 )
 
 func processCreate(c kubernetes.Interface, ns, name, labels string) error {
-	return processCreatePorts(c, ns, name, labels,  "127.0.0.1", 123, 4567)
+	return processCreatePorts(c, ns, name, labels, "127.0.0.1", 123, 4567)
 }
 
 func processCreatePorts(c kubernetes.Interface, ns, name, labels, podIp string, hostPort, containerPort int32) error {
@@ -62,9 +62,9 @@ func TestProcessList(t *testing.T) {
 
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 
-		require.NoError(t, processCreatePorts(kk, "rack1-app1", "process1", "system=convox,rack=rack1,app=app1,service=service1,type=service",  "1.2.3.4", 111, 2222,))
-		require.NoError(t, processCreatePorts(kk, "rack1-app1", "process2", "system=convox,rack=rack1,app=app1,service=service2,type=process", "5.6.7.8", 333, 4444, ))
-		require.NoError(t, processCreatePorts(kk, "rack1-app1", "process3", "system=convox,rack=rack1,app=app1,service=service2,type=process",  "9.10.11.12", 0, 5555,))
+		require.NoError(t, processCreatePorts(kk, "rack1-app1", "process1", "system=convox,rack=rack1,app=app1,service=service1,type=service", "1.2.3.4", 111, 2222))
+		require.NoError(t, processCreatePorts(kk, "rack1-app1", "process2", "system=convox,rack=rack1,app=app1,service=service2,type=process", "5.6.7.8", 333, 4444))
+		require.NoError(t, processCreatePorts(kk, "rack1-app1", "process3", "system=convox,rack=rack1,app=app1,service=service2,type=process", "9.10.11.12", 0, 5555))
 
 		pss, err := p.ProcessList("app1", structs.ProcessListOptions{})
 		require.NoError(t, err)
