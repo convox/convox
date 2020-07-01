@@ -6,6 +6,7 @@ import (
 
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/k8s"
+
 	"github.com/stretchr/testify/require"
 	ac "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,7 +15,7 @@ import (
 )
 
 func processCreate(c kubernetes.Interface, ns, name, labels string) error {
-	return processCreatePorts(c,ns,name,labels, 123, 4567, "127.0.0.1")
+	return processCreatePorts(c, ns, name, labels, 123, 4567, "127.0.0.1")
 }
 
 func processCreatePorts(c kubernetes.Interface, ns, name, labels string, hostPort int32, containerPort int32, podIp string) error {
@@ -39,8 +40,8 @@ func processCreatePorts(c kubernetes.Interface, ns, name, labels string, hostPor
 					Name: "main",
 					Ports: []ac.ContainerPort{
 						{
-							ContainerPort: 	containerPort,
-							HostPort:		hostPort,
+							ContainerPort: containerPort,
+							HostPort:      hostPort,
 						},
 					},
 				},
