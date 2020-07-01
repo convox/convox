@@ -569,14 +569,18 @@ func (p *Provider) processFromPod(pd ac.Pod) (*structs.Process, error) {
 
 	ports := []string{}
 	for _, p := range cs[0].Ports {
-		ports = append(ports, fmt.Sprintf("%d:%d", p.HostPort, p.ContainerPort))
+		if p.HostPort == 0 {
+			ports = append(ports, fmt.Sprint(p.ContainerPort))
+		} else {
+			ports = append(ports, fmt.Sprintf("%d:%d", p.HostPort, p.ContainerPort))
+		}
 	}
 
 	ps := &structs.Process{
 		Id:       pd.ObjectMeta.Name,
 		App:      pd.ObjectMeta.Labels["app"],
 		Command:  shellquote.Join(cs[0].Args...),
-		Host:     "",
+		Host:     pd.Status.PodIP,
 		Image:    cs[0].Image,
 		Instance: pd.Spec.NodeName,
 		Name:     pd.ObjectMeta.Labels["service"],
