@@ -74,7 +74,7 @@ resource "aws_eks_node_group" "cluster" {
   cluster_name    = aws_eks_cluster.cluster.name
   disk_size       = var.node_disk
   instance_types  = [var.node_type]
-  node_group_name = "${var.name}-${data.aws_availability_zones.available.names[count.index]}${var.private ? "" : "-public"}"
+  node_group_name = "${var.name}-${data.aws_availability_zones.available.names[count.index]}-${replace(var.node_type, ".", "-")}${var.private ? "" : "-public"}"
   node_role_arn   = replace(aws_iam_role.nodes.arn, "role/convox/", "role/") # eks barfs on roles with paths
   subnet_ids      = [var.private ? aws_subnet.private[count.index].id : aws_subnet.public[count.index].id]
 
