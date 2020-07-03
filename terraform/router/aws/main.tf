@@ -42,13 +42,14 @@ resource "kubernetes_service" "router" {
 
     annotations = {
       "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout" = "3600"
-      # "service.beta.kubernetes.io/aws-load-balancer-proxy-protocol"          = "*"
+    #  "service.beta.kubernetes.io/aws-load-balancer-proxy-protocol"          = "*"
       "service.beta.kubernetes.io/aws-load-balancer-type" = "nlb"
     }
   }
 
   spec {
     type = "LoadBalancer"
+    external_traffic_policy = "Local"
 
     load_balancer_source_ranges = var.whitelist
 
@@ -73,3 +74,4 @@ resource "kubernetes_service" "router" {
 data "http" "alias" {
   url = "https://alias.convox.com/alias/${length(kubernetes_service.router.load_balancer_ingress) > 0 ? kubernetes_service.router.load_balancer_ingress.0.hostname : ""}"
 }
+
