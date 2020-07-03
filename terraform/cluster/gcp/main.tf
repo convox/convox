@@ -67,11 +67,16 @@ resource "google_container_node_pool" "rack" {
   }
 
   node_config {
-    preemptible  = true
     machine_type = var.node_type
+    preemptible  = var.preemptible
 
     metadata = {
       disable-legacy-endpoints = "true"
+    }
+
+    upgrade_settings {
+      max_surge       = 1
+      max_unavailable = 1
     }
 
     workload_metadata_config {

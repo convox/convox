@@ -48,7 +48,8 @@ The following environment variables are required:
 
 ### Available Parameters
 
-| Name        | Default         |
-| ----------- | --------------- |
-| `node_type` | `n1-standard-1` |
-| `region`    | `us-east1`      |
+| Name          | Default         | Description                                                                              |
+| ------------- | --------------- | ---------------------------------------------------------------------------------------- |
+| `node_type`   | `n1-standard-1` | Node instance type                                                                       |
+| `preemptible` | `true`          | Use [preemptible](https://cloud.google.com/compute/docs/instances/preemptible) instances |
+| `region`      | `us-east1`      | GCP Region                                                                               |
