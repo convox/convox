@@ -74,11 +74,6 @@ resource "google_container_node_pool" "rack" {
       disable-legacy-endpoints = "true"
     }
 
-    upgrade_settings {
-      max_surge       = 1
-      max_unavailable = 1
-    }
-
     workload_metadata_config {
       node_metadata = "GKE_METADATA_SERVER"
     }
@@ -91,6 +86,11 @@ resource "google_container_node_pool" "rack" {
       "https://www.googleapis.com/auth/logging.write",
       "https://www.googleapis.com/auth/monitoring",
     ]
+  }
+
+  upgrade_settings {
+    max_surge       = 1
+    max_unavailable = 1
   }
 
   lifecycle {
