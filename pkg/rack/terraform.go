@@ -13,6 +13,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
 )
@@ -174,6 +175,8 @@ func (t Terraform) Metadata() (*Metadata, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	vars["name"] = common.CoalesceString(vars["name"], t.name)
 
 	m := &Metadata{
 		Deletable: true,
@@ -378,6 +381,7 @@ func (t Terraform) update(release string, vars map[string]string) error {
 		vars = map[string]string{}
 	}
 
+	vars["name"] = common.CoalesceString(vars["name"], t.name)
 	vars["release"] = release
 
 	pv, err := terraformProviderVars(t.provider)
@@ -707,8 +711,6 @@ func terraformWriteTemplate(filename, version string, params map[string]interfac
 	t, err := template.New("main").Funcs(terraformTemplateHelpers()).Parse(`
 		module "system" {
 			source = "{{.Source}}"
-
-			name = "{{.Name}}"
 
 			{{- range (keys .Vars) }}
 			{{.}} = "{{index $.Vars .}}"

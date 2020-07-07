@@ -1,9 +1,8 @@
 		module "system" {
 			source = "github.com/convox/convox//terraform/system/local"
-
-			name = "dev2"
 			baz = "qux"
 			foo = "bar"
+			name = "dev2"
 			release = ""
 		}
 
