@@ -207,6 +207,8 @@ func (t Terraform) Parameters() (map[string]string, error) {
 		return nil, err
 	}
 
+	delete(vars, "name")
+	delete(vars, "region")
 	delete(vars, "release")
 
 	return vars, nil
