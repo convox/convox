@@ -67,8 +67,8 @@ resource "google_container_node_pool" "rack" {
   }
 
   node_config {
-    preemptible  = true
     machine_type = var.node_type
+    preemptible  = var.preemptible
 
     metadata = {
       disable-legacy-endpoints = "true"
@@ -86,6 +86,11 @@ resource "google_container_node_pool" "rack" {
       "https://www.googleapis.com/auth/logging.write",
       "https://www.googleapis.com/auth/monitoring",
     ]
+  }
+
+  upgrade_settings {
+    max_surge       = 1
+    max_unavailable = 1
   }
 
   lifecycle {

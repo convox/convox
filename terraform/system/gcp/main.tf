@@ -52,8 +52,9 @@ module "cluster" {
     google-beta = google-beta
   }
 
-  name      = var.name
-  node_type = var.node_type
+  name        = var.name
+  node_type   = var.node_type
+  preemptible = var.preemptible
 }
 
 module "rack" {
