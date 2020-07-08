@@ -12,6 +12,7 @@ metadata:
     type: balancer
 spec:
   type: LoadBalancer
+  externalTrafficPolicy: Local
   selector:
     service: {{.Balancer.Service}}
     release: {{.Release.Id}}
