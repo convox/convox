@@ -1,5 +1,5 @@
 provider "kubernetes" {
-  version = "~> 1.10"
+  version = "~> 1.11"
 }
 
 resource "kubernetes_config_map" "nginx-configuration" {

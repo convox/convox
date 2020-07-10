@@ -7,7 +7,7 @@ provider "aws" {
 }
 
 provider "kubernetes" {
-  version = "~> 1.10"
+  version = "~> 1.11"
 }
 
 module "k8s" {

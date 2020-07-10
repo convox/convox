@@ -7,7 +7,7 @@ provider "aws" {
 }
 
 provider "kubernetes" {
-  version = "~> 1.10"
+  version = "~> 1.11"
 }
 
 data "aws_caller_identity" "current" {}

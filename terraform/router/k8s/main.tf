@@ -1,5 +1,5 @@
 provider "kubernetes" {
-  version = "~> 1.10"
+  version = "~> 1.11"
 }
 
 resource "kubernetes_cluster_role" "router" {

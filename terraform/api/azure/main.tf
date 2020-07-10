@@ -11,7 +11,7 @@ provider "azurerm" {
 }
 
 provider "kubernetes" {
-  version = "~> 1.10"
+  version = "~> 1.11"
 }
 
 provider "template" {
