@@ -1,13 +1,9 @@
-terraform {
-  required_version = ">= 0.12.0"
-}
-
 provider "http" {
   version = "~> 1.1"
 }
 
 provider "kubernetes" {
-  version = "~> 1.10"
+  version = "~> 1.11"
 }
 
 provider "tls" {

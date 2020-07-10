@@ -118,7 +118,7 @@ resource "local_file" "kubeconfig" {
 }
 
 provider "kubernetes" {
-  version = "~> 1.10"
+  version = "~> 1.11"
 
   alias = "direct"
 

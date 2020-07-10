@@ -11,7 +11,7 @@ provider "http" {
 }
 
 provider "kubernetes" {
-  version = "~> 1.10"
+  version = "~> 1.11"
 }
 
 locals {
@@ -48,7 +48,7 @@ resource "kubernetes_service" "router" {
   }
 
   spec {
-    type = "LoadBalancer"
+    type                    = "LoadBalancer"
     external_traffic_policy = "Local"
 
     load_balancer_source_ranges = var.whitelist

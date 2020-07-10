@@ -1,7 +1,3 @@
-terraform {
-  required_version = ">= 0.12.0"
-}
-
 provider "aws" {
   version = "~> 2.49"
 
@@ -13,7 +9,7 @@ provider "http" {
 }
 
 provider "kubernetes" {
-  version = "~> 1.10.0"
+  version = "~> 1.11"
 
   cluster_ca_certificate = module.cluster.ca
   host                   = module.cluster.endpoint
