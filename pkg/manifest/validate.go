@@ -2,6 +2,7 @@ package manifest
 
 import (
 	"fmt"
+	"net"
 	"regexp"
 	"strings"
 )
@@ -17,10 +18,46 @@ var (
 func (m *Manifest) validate() []error {
 	errs := []error{}
 
+	errs = append(errs, m.validateBalancers()...)
 	errs = append(errs, m.validateEnv()...)
 	errs = append(errs, m.validateResources()...)
 	errs = append(errs, m.validateServices()...)
 	errs = append(errs, m.validateTimers()...)
+
+	return errs
+}
+
+func (m *Manifest) validateBalancers() []error {
+	errs := []error{}
+
+	for _, b := range m.Balancers {
+		if len(b.Ports) == 0 {
+			errs = append(errs, fmt.Errorf("balancer %s has no ports", b.Name))
+		}
+
+		if b.Service == "" {
+			errs = append(errs, fmt.Errorf("balancer %s has blank service", b.Name))
+		} else {
+			serviceFound := false
+
+			for _, s := range m.Services {
+				if s.Name == b.Service {
+					serviceFound = true
+					break
+				}
+			}
+
+			if !serviceFound {
+				errs = append(errs, fmt.Errorf("balancer %s refers to unknown service %s", b.Name, b.Service))
+			}
+		}
+
+		for _, w := range b.Whitelist {
+			if _, _, err := net.ParseCIDR(w); err != nil {
+				errs = append(errs, fmt.Errorf("balancer %s whitelist %s is not a valid cidr range", b.Name, w))
+			}
+		}
+	}
 
 	return errs
 }

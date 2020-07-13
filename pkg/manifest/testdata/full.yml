@@ -6,6 +6,12 @@ balancers:
         protocol: TCP
         port: 1000
       3001: 5000
+  alternate:
+    service: foo
+    ports:
+      4000: 4001
+    whitelist:
+      - 127.0.0.0/24
 environment:
   - DEVELOPMENT=true
   - GLOBAL=true

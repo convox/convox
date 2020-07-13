@@ -5,6 +5,12 @@ env:
   THREE_URL: value
   FOUR_URL: ""
 manifest:
+  balancers:
+    alpha:
+      service: web
+      ports:
+        80: 5000
+      whitelist: 127.0.0.0/16
   resources:
     one:
       type: postgres

@@ -15,13 +15,16 @@ A Balancer is defined in [`convox.yml`](../../../configuration/convox-yml.md).
       mqtt:
         ports:
           - 8883
+        whitelist:
+          - 192.168.0.0/16
 
 ### Attributes
 
-| Name      | Required | Description                                                                                                                                                                                            |
-| --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `ports`   | **yes**  | A map of ports in the format `listen:forward` where `listen` is the port that the balancer will listen on and `forward` is the port that the traffic will be forwarded to on the [Service](service.md) |
-| `service` | **yes**  | The name of the service that will receive the traffic                                                                                                                                                  |
+| Name        | Required | Description                                                                                                                                                                                            |
+| ----------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ports`     | **yes**  | A map of ports in the format `listen:forward` where `listen` is the port that the balancer will listen on and `forward` is the port that the traffic will be forwarded to on the [Service](service.md) |
+| `service`   | **yes**  | The name of the service that will receive the traffic                                                                                                                                                  |
+| `whitelist` | no       | A list of CIDR ranges from which to limit inbound traffic to this balancer                                                                                                                             |
 
 ## Command Line Interface
 
