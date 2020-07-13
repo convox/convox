@@ -3,8 +3,9 @@ package manifest
 type Balancer struct {
 	Name string `yaml:"-"`
 
-	Ports   BalancerPorts `yaml:"ports,omitempty"`
-	Service string        `yaml:"service,omitempty"`
+	Ports     BalancerPorts     `yaml:"ports,omitempty"`
+	Service   string            `yaml:"service,omitempty"`
+	Whitelist BalancerWhitelist `yaml:"whitelist,omitempty"`
 }
 
 type Balancers []Balancer
@@ -17,3 +18,5 @@ type BalancerPort struct {
 }
 
 type BalancerPorts []BalancerPort
+
+type BalancerWhitelist []string

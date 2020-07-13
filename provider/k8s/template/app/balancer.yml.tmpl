@@ -13,6 +13,12 @@ metadata:
 spec:
   type: LoadBalancer
   externalTrafficPolicy: Local
+  {{ with .Balancer.Whitelist }}
+  loadBalancerSourceRanges:
+  {{ range . }}
+  - "{{.}}"
+  {{ end }}
+  {{ end }}
   selector:
     service: {{.Balancer.Service}}
     release: {{.Release.Id}}

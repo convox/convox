@@ -29,6 +29,18 @@ func TestManifestLoad(t *testing.T) {
 				},
 				Service: "api",
 			},
+			manifest.Balancer{
+				Name: "alternate",
+				Ports: manifest.BalancerPorts{
+					manifest.BalancerPort{
+						Protocol: "TCP",
+						Source:   4000,
+						Target:   4001,
+					},
+				},
+				Service:   "foo",
+				Whitelist: []string{"127.0.0.0/24"},
+			},
 		},
 		Environment: manifest.Environment{
 			"DEVELOPMENT=true",
@@ -296,6 +308,11 @@ func TestManifestLoad(t *testing.T) {
 
 	attrs := []string{
 		"balancers",
+		"balancers.alternate",
+		"balancers.alternate.ports",
+		"balancers.alternate.ports.4000",
+		"balancers.alternate.service",
+		"balancers.alternate.whitelist",
 		"balancers.main",
 		"balancers.main.ports",
 		"balancers.main.ports.3000",
@@ -525,6 +542,10 @@ func TestManifestValidate(t *testing.T) {
 	require.Nil(t, m)
 
 	errors := []string{
+		"balancer alpha has no ports",
+		"balancer alpha has blank service",
+		"balancer alpha whitelist 1.1.1.1 is not a valid cidr range",
+		"balancer bravo refers to unknown service nosuch",
 		"resource name 1resource invalid, must contain only lowercase alphanumeric and dashes",
 		"service deployment-invalid-low deployment minimum can not be less than 0",
 		"service deployment-invalid-low deployment maximum can not be less than 100",

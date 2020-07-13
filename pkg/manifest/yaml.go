@@ -77,6 +77,33 @@ func (v *BalancerPort) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
+func (v *BalancerWhitelist) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var w interface{}
+
+	if err := unmarshal(&w); err != nil {
+		return err
+	}
+
+	switch t := w.(type) {
+	case []interface{}:
+		*v = []string{}
+		for _, s := range t {
+			switch st := s.(type) {
+			case string:
+				*v = append(*v, st)
+			default:
+				return fmt.Errorf("unknown type for balancer whitelist: %T", t)
+			}
+		}
+	case string:
+		*v = []string{t}
+	default:
+		return fmt.Errorf("unknown type for balancer whitelist: %T", t)
+	}
+
+	return nil
+}
+
 func (v *Environment) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var w interface{}
 
