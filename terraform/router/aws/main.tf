@@ -48,8 +48,8 @@ resource "kubernetes_service" "router" {
   }
 
   spec {
+    external_traffic_policy = "Cluster"
     type                    = "LoadBalancer"
-    external_traffic_policy = "Local"
 
     load_balancer_source_ranges = var.whitelist
 

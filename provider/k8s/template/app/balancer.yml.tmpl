@@ -12,7 +12,7 @@ metadata:
     type: balancer
 spec:
   type: LoadBalancer
-  externalTrafficPolicy: Local
+  externalTrafficPolicy: Cluster
   {{ with .Balancer.Whitelist }}
   loadBalancerSourceRanges:
   {{ range . }}
