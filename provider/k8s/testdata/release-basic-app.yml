@@ -39,7 +39,7 @@ metadata:
   name: balancer-alpha
   namespace: rack1-app1
 spec:
-  externalTrafficPolicy: Local
+  externalTrafficPolicy: Cluster
   loadBalancerSourceRanges:
   - 127.0.0.0/16
   ports:
