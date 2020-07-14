@@ -2,6 +2,7 @@ package rack
 
 import (
 	"fmt"
+	"net/url"
 
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
@@ -39,6 +40,10 @@ func (d Direct) Client() (sdk.Interface, error) {
 
 func (d Direct) Delete() error {
 	return fmt.Errorf("can not delete a rack with RACK_URL")
+}
+
+func (d Direct) Endpoint() (*url.URL, error) {
+	return nil, fmt.Errorf("endpoint not available with RACK_URL")
 }
 
 func (d Direct) Metadata() (*Metadata, error) {

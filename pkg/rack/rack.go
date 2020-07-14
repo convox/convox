@@ -3,6 +3,7 @@ package rack
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"sort"
 	"strings"
@@ -25,6 +26,7 @@ type Metadata struct {
 type Rack interface {
 	Client() (sdk.Interface, error)
 	Delete() error
+	Endpoint() (*url.URL, error)
 	Metadata() (*Metadata, error)
 	Name() string
 	Parameters() (map[string]string, error)

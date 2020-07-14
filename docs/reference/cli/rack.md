@@ -13,10 +13,9 @@ Get information about the rack
     $ convox rack
     Name      test
     Provider  aws
-    Region    us-east-1
-    Router    test-Router-UABCD12E63F45-1234567890.us-east-1.elb.amazonaws.com
+    Router    router.0a1b2c3d4e5f.convox.cloud
     Status    running
-    Version   20200116125110-20200116
+    Version   3.0.0
 
 ## rack install
 
@@ -33,6 +32,36 @@ Install a new Rack
 
     $ convox rack install aws production region=eu-west-1 node_type=t3.large
     ...
+
+## rack kubeconfig
+
+Output a Kubernetes configuration file for connecting to the underlying cluster
+
+### Usage
+
+    convox rack kubeconfig
+
+### Examples
+
+    $ convox rack kubeconfig
+    apiVersion: v1
+    clusters:
+    - cluster:
+        server: https://api.0a1b2c3d4e5f.convox.cloud/kubernetes/
+    name: kubernetes
+    contexts:
+    - context:
+        cluster: kubernetes
+        user: proxy
+    name: proxy@kubernetes
+    current-context: proxy@kubernetes
+    kind: Config
+    preferences: {}
+    users:
+    - name: proxy
+    user:
+        username: convox
+        password: abcdefghijklmnopqrstuvwxyz
 
 ## rack logs
 

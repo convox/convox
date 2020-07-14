@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"strings"
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/options"
@@ -156,6 +157,40 @@ func RackInstall(_ sdk.Interface, c *stdcli.Context) error {
 }
 
 func RackKubeconfig(_ sdk.Interface, c *stdcli.Context) error {
+	r, err := rack.Current(c)
+	if err != nil {
+		return err
+	}
+
+	ep, err := r.Endpoint()
+	if err != nil {
+		return err
+	}
+
+	pw, _ := ep.User.Password()
+
+	data := strings.TrimSpace(fmt.Sprintf(`
+apiVersion: v1
+clusters:
+- cluster:
+    server: %s://%s/kubernetes/
+  name: rack
+contexts:
+- context:
+    cluster: rack
+    user: convox
+  name: convox@rack
+current-context: convox@rack
+kind: Config
+users:
+- name: convox
+  user:
+    username: "%s"
+    password: "%s"
+	`, ep.Scheme, ep.Host, ep.User.Username(), pw))
+
+	fmt.Println(data)
+
 	return nil
 }
 

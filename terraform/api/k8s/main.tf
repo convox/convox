@@ -243,6 +243,13 @@ resource "kubernetes_service" "api" {
       protocol    = "TCP"
     }
 
+    port {
+      name        = "kubernetes"
+      port        = 8001
+      target_port = 8001
+      protocol    = "TCP"
+    }
+
     selector = {
       system  = "convox"
       service = "api"
@@ -280,6 +287,44 @@ resource "kubernetes_ingress" "api" {
           backend {
             service_name = kubernetes_service.api.metadata.0.name
             service_port = 5443
+          }
+        }
+      }
+    }
+  }
+}
+
+resource "kubernetes_ingress" "kubernetes" {
+  metadata {
+    namespace = var.namespace
+    name      = "kubernetes"
+
+    annotations = merge({
+      "nginx.ingress.kubernetes.io/use-regex" : "true",
+    }, var.annotations)
+
+    labels = {
+      system  = "convox"
+      service = "api"
+    }
+  }
+
+  spec {
+    tls {
+      hosts       = ["api.${var.domain}"]
+      secret_name = "api-certificate"
+    }
+
+    rule {
+      host = "api.${var.domain}"
+
+      http {
+        path {
+          path = "/kubernetes/.*"
+
+          backend {
+            service_name = kubernetes_service.api.metadata.0.name
+            service_port = 8001
           }
         }
       }

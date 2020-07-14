@@ -1,6 +1,7 @@
 package rack
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -75,6 +76,19 @@ func (c Console) Delete() error {
 	}
 
 	return nil
+}
+
+func (c Console) Endpoint() (*url.URL, error) {
+	pw, err := currentPassword(c.ctx, c.host)
+	if err != nil {
+		return nil, err
+	}
+
+	username := base64.StdEncoding.EncodeToString([]byte(c.name))
+
+	endpoint := fmt.Sprintf("https://%s:%s@%s", string(username), url.QueryEscape(pw), c.host)
+
+	return url.Parse(endpoint)
 }
 
 func (c Console) MarshalJSON() ([]byte, error) {
