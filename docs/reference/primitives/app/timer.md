@@ -28,12 +28,12 @@ A Timer is defined in [`convox.yml`](../../../configuration/convox-yml.md).
 Cron expressions use the following format. All times are UTC.
 
 ```
-.----------------- minute (0 - 59)
-|  .-------------- hour (0 - 23)
-|  |  .----------- day-of-month (1 - 31)
-|  |  |  .-------- month (1 - 12) OR JAN,FEB,MAR,APR ...
-|  |  |  |  .----- day-of-week (0 - 6) OR SUN,MON,TUE,WED,THU,FRI,SAT
-|  |  |  |  |  .-- year
+.------------------ minute (0 - 59)
+|  .--------------- hour (0 - 23)
+|  |  .------------ day-of-month (1 - 31)
+|  |  |  .--------- month (1 - 12) OR JAN,FEB,MAR,APR ...
+|  |  |  |  .------ day-of-week (0 - 6) OR SUN,MON,TUE,WED,THU,FRI,SAT
+|  |  |  |  |  .--- year (1970 – 2199)
 |  |  |  |  |  |
 *  *  *  *  *  *
 ```
