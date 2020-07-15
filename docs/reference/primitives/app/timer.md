@@ -12,7 +12,7 @@ A Timer is defined in [`convox.yml`](../../../configuration/convox-yml.md).
     timers:
       cleanup:
         command: bin/cleanup
-        schedule: "0 3 * * *"
+        schedule: "0 3 * * * *"
         service: worker
 
 ### Attributes
@@ -33,8 +33,9 @@ Cron expressions use the following format. All times are UTC.
 |  |  .----------- day-of-month (1 - 31)
 |  |  |  .-------- month (1 - 12) OR JAN,FEB,MAR,APR ...
 |  |  |  |  .----- day-of-week (0 - 6) OR SUN,MON,TUE,WED,THU,FRI,SAT
-|  |  |  |  |
-*  *  *  *  *
+|  |  |  |  |  .-- year
+|  |  |  |  |  |
+*  *  *  *  *  *
 ```
 
 ### Using a Template Service
@@ -54,7 +55,7 @@ template [Service](service.md) for your Timers.
     timers:
       cleanup:
         command: bin/cleanup
-        schedule: "*/2 * * * *"
+        schedule: "*/2 * * * * *"
         service: jobs
 
 On this [App](..) the `jobs` [Service](service.md) is scaled to zero and not running any durable
