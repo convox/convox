@@ -29,6 +29,11 @@ func init() {
 		Validate: stdcli.ArgsMin(2),
 	})
 
+	registerWithoutProvider("rack kubeconfig", "generate kubeconfig for rack", RackKubeconfig, stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagRack},
+		Validate: stdcli.Args(0),
+	})
+
 	register("rack logs", "get logs for the rack", RackLogs, stdcli.CommandOptions{
 		Flags:    append(stdcli.OptionFlags(structs.LogsOptions{}), flagNoFollow, flagRack),
 		Validate: stdcli.Args(0),
@@ -147,6 +152,10 @@ func RackInstall(_ sdk.Interface, c *stdcli.Context) error {
 		}
 	}
 
+	return nil
+}
+
+func RackKubeconfig(_ sdk.Interface, c *stdcli.Context) error {
 	return nil
 }
 

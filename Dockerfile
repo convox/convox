@@ -61,6 +61,5 @@ COPY --from=package /go/bin/atom     $GOPATH/bin/
 COPY --from=package /go/bin/build    $GOPATH/bin/
 COPY --from=package /go/bin/docs     $GOPATH/bin/
 COPY --from=package /go/bin/resolver $GOPATH/bin/
-COPY --from=package /go/bin/router   $GOPATH/bin/
 
 COPY --from=package /usr/src/convox/bin/docs bin/docs

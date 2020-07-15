@@ -20,7 +20,7 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
-  authentication = false
+  authentication = true
   domain         = var.domain
   namespace      = var.namespace
   rack           = var.name
@@ -28,17 +28,19 @@ module "k8s" {
   replicas       = 1
 
   annotations = {
-    "convox.com/idles"            = "true"
-    "kubernetes.io/ingress.class" = "convox"
+    "cert-manager.io/cluster-issuer" = "self-signed"
+    "convox.com/idles"               = "true"
+    "kubernetes.io/ingress.class"    = "nginx"
   }
 
   env = {
-    PROVIDER = "local"
-    REGISTRY = "registry.${var.domain}"
-    RESOLVER = var.resolver
-    ROUTER   = var.router
-    SECRET   = var.secret
-    STORAGE  = "/var/storage"
+    CERT_MANAGER = "true"
+    PROVIDER     = "local"
+    REGISTRY     = "registry.${var.domain}"
+    RESOLVER     = var.resolver
+    ROUTER       = var.router
+    SECRET       = var.secret
+    STORAGE      = "/var/storage"
   }
 
   volumes = {

@@ -1,6 +1,6 @@
 .PHONY: all build clean clean-package compress dev generate generate-k8s generate-provider mocks package release test tools vendor
 
-commands = api atom build docs resolver router
+commands = api atom build docs resolver
 
 binaries = $(addprefix $(GOPATH)/bin/, $(commands))
 sources  = $(shell find . -name '*.go')

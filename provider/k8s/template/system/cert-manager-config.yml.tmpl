@@ -17,3 +17,21 @@ spec:
    - http01:
        ingress:
          class: nginx
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ca
+  namespace: cert-manager
+data:
+  tls.crt: "{{.CaPublic}}"
+  tls.key: "{{.CaPrivate}}"
+---
+apiVersion: cert-manager.io/v1alpha2
+kind: ClusterIssuer
+metadata:
+  name: self-signed
+  namespace: cert-manager
+spec:
+  ca:
+    secretName: ca
