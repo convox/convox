@@ -13,7 +13,3 @@ variable "platform" {
 variable "release" {
   type = string
 }
-
-variable "whitelist" {
-  default = ["0.0.0.0/0"]
-}

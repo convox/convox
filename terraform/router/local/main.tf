@@ -17,20 +17,16 @@ locals {
   }
 }
 
-module "k8s" {
-  source = "../k8s"
+module "nginx" {
+  source = "../nginx"
 
   providers = {
     kubernetes = kubernetes
   }
 
-  namespace = var.namespace
-  rack      = var.name
-  release   = var.release
-
-  env = {
-    CACHE = "memory"
-  }
+  namespace    = var.namespace
+  rack         = var.name
+  replicas_min = 1
 }
 
 resource "kubernetes_service" "router" {
@@ -41,8 +37,6 @@ resource "kubernetes_service" "router" {
 
   spec {
     type = var.platform == "Linux" ? "ClusterIP" : "LoadBalancer"
-
-    load_balancer_source_ranges = var.platform == "Linux" ? null : var.whitelist
 
     port {
       name        = "http"
@@ -58,10 +52,6 @@ resource "kubernetes_service" "router" {
       target_port = 443
     }
 
-    selector = module.k8s.selector
-  }
-
-  lifecycle {
-    ignore_changes = [metadata[0].annotations]
+    selector = module.nginx.selector
   }
 }
