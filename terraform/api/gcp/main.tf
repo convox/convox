@@ -55,6 +55,7 @@ module "k8s" {
   release   = var.release
 
   annotations = {
+    "cert-manager.io/cluster-issuer"   = "letsencrypt"
     "cloud.google.com/service-account" = google_service_account.api.email
     "iam.gke.io/gcp-service-account"   = google_service_account.api.email
     "kubernetes.io/ingress.class"      = "nginx"
