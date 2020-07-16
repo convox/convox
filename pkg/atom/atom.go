@@ -33,8 +33,8 @@ var (
 )
 
 type Client struct {
+	Atom   av.Interface
 	config *rest.Config
-	atom   av.Interface
 	k8s    kubernetes.Interface
 }
 
@@ -50,7 +50,7 @@ func New(cfg *rest.Config) (*Client, error) {
 	}
 
 	c := &Client{
-		atom:   ac,
+		Atom:   ac,
 		config: cfg,
 		k8s:    kc,
 	}
@@ -118,7 +118,7 @@ func (c *Client) Apply(ns, name, release string, template []byte, timeout int32)
 		}
 	}
 
-	v, err := c.atom.AtomV1().AtomVersions(ns).Create(&aa.AtomVersion{
+	v, err := c.Atom.AtomV1().AtomVersions(ns).Create(&aa.AtomVersion{
 		ObjectMeta: am.ObjectMeta{
 			Name: fmt.Sprintf("%s-%d", name, time.Now().UTC().UnixNano()),
 		},
@@ -131,10 +131,10 @@ func (c *Client) Apply(ns, name, release string, template []byte, timeout int32)
 		return errors.WithStack(err)
 	}
 
-	a, err := c.atom.AtomV1().Atoms(ns).Get(name, am.GetOptions{})
+	a, err := c.Atom.AtomV1().Atoms(ns).Get(name, am.GetOptions{})
 	switch {
 	case ae.IsNotFound(err):
-		a, err = c.atom.AtomV1().Atoms(ns).Create(&aa.Atom{
+		a, err = c.Atom.AtomV1().Atoms(ns).Create(&aa.Atom{
 			ObjectMeta: am.ObjectMeta{
 				Name: name,
 			},
@@ -153,7 +153,7 @@ func (c *Client) Apply(ns, name, release string, template []byte, timeout int32)
 	a.Started = am.Now()
 	a.Status = "Pending"
 
-	if _, err := c.atom.AtomV1().Atoms(ns).Update(a); err != nil {
+	if _, err := c.Atom.AtomV1().Atoms(ns).Update(a); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -161,20 +161,21 @@ func (c *Client) Apply(ns, name, release string, template []byte, timeout int32)
 }
 
 func (c *Client) Cancel(ns, name string) error {
-	a, err := c.atom.AtomV1().Atoms(ns).Get(name, am.GetOptions{})
+	a, err := c.Atom.AtomV1().Atoms(ns).Get(name, am.GetOptions{})
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
 	switch a.Status {
+	case "Rollback":
+		a.Status = "Failure"
 	case "Updating":
+		a.Status = "Cancelled"
 	default:
 		return errors.WithStack(fmt.Errorf("not currently updating"))
 	}
 
-	a.Status = "Cancelled"
-
-	if _, err := c.atom.AtomV1().Atoms(ns).Update(a); err != nil {
+	if _, err := c.Atom.AtomV1().Atoms(ns).Update(a); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -182,7 +183,7 @@ func (c *Client) Cancel(ns, name string) error {
 }
 
 func (c *Client) Status(ns, name string) (string, string, error) {
-	a, err := c.atom.AtomV1().Atoms(ns).Get(name, am.GetOptions{})
+	a, err := c.Atom.AtomV1().Atoms(ns).Get(name, am.GetOptions{})
 	if ae.IsNotFound(err) {
 		return "", "", nil
 	}
@@ -193,7 +194,7 @@ func (c *Client) Status(ns, name string) (string, string, error) {
 	release := ""
 
 	if a.Spec.CurrentVersion != "" {
-		v, err := c.atom.AtomV1().AtomVersions(ns).Get(a.Spec.CurrentVersion, am.GetOptions{})
+		v, err := c.Atom.AtomV1().AtomVersions(ns).Get(a.Spec.CurrentVersion, am.GetOptions{})
 		if err != nil {
 			return "", "", errors.WithStack(err)
 		}
@@ -218,7 +219,7 @@ func (c *Client) apply(a *aa.Atom) error {
 		return err
 	}
 
-	av, err := c.atom.AtomV1().AtomVersions(ua.Namespace).Get(ua.Spec.CurrentVersion, am.GetOptions{})
+	av, err := c.Atom.AtomV1().AtomVersions(ua.Namespace).Get(ua.Spec.CurrentVersion, am.GetOptions{})
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -246,7 +247,7 @@ func (c *Client) check(ns, version string) (bool, error) {
 	cfg.APIPath = "/apis"
 	cfg.NegotiatedSerializer = serializer.WithoutConversionCodecFactory{CodecFactory: scheme.Codecs}
 
-	v, err := c.atom.AtomV1().AtomVersions(ns).Get(version, am.GetOptions{})
+	v, err := c.Atom.AtomV1().AtomVersions(ns).Get(version, am.GetOptions{})
 	if err != nil {
 		return false, errors.WithStack(err)
 	}
@@ -349,14 +350,14 @@ func (c *Client) rollback(a *aa.Atom) error {
 // use a callback for updates so we can fetch a fresh atom and update
 // immediately
 func (c *Client) update(a *aa.Atom, fn func(ua *aa.Atom)) (*aa.Atom, error) {
-	ua, err := c.atom.AtomV1().Atoms(a.Namespace).Get(a.Name, am.GetOptions{})
+	ua, err := c.Atom.AtomV1().Atoms(a.Namespace).Get(a.Name, am.GetOptions{})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	fn(ua)
 
-	fa, err := c.atom.AtomV1().Atoms(a.Namespace).Update(ua)
+	fa, err := c.Atom.AtomV1().Atoms(a.Namespace).Update(ua)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
