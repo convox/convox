@@ -129,7 +129,7 @@ resource "kubernetes_ingress" "registry" {
 
     annotations = {
       "convox.com/idles"            = "true"
-      "kubernetes.io/ingress.class" = "convox"
+      "kubernetes.io/ingress.class" = "nginx"
     }
 
     labels = {
