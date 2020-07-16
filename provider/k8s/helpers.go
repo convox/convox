@@ -16,6 +16,7 @@ import (
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/pkg/errors"
+	ac "k8s.io/api/core/v1"
 	ae "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -265,6 +266,20 @@ func extractImageManifest(r io.Reader) (imageManifest, error) {
 
 func nameFilter(name string) string {
 	return kubernetesNameFilter.ReplaceAllString(name, "")
+}
+
+func primaryContainer(cs []ac.Container, app string) (*ac.Container, error) {
+	if len(cs) != 1 {
+		return nil, fmt.Errorf("no containers found")
+	}
+
+	switch cs[0].Name {
+	case app, "main":
+	default:
+		return nil, fmt.Errorf("unexpected container name")
+	}
+
+	return &(cs[0]), nil
 }
 
 func systemVolume(v string) bool {

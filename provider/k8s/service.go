@@ -48,10 +48,9 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 	}
 
 	for _, d := range ds.Items {
-		cs := d.Spec.Template.Spec.Containers
-
-		if len(cs) != 1 || cs[0].Name != "main" {
-			return nil, errors.WithStack(fmt.Errorf("unexpected containers for service: %s", d.ObjectMeta.Name))
+		c, err := primaryContainer(d.Spec.Template.Spec.Containers, app)
+		if err != nil {
+			return nil, err
 		}
 
 		ms, err := m.Service(d.ObjectMeta.Name)
@@ -63,14 +62,14 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 			Count:  int(common.DefaultInt32(d.Spec.Replicas, 0)),
 			Domain: p.Engine.ServiceHost(app, *ms),
 			Name:   d.ObjectMeta.Name,
-			Ports:  serviceContainerPorts(cs[0], ms.Internal),
+			Ports:  serviceContainerPorts(*c, ms.Internal),
 		}
 
-		if v := cs[0].Resources.Requests.Cpu(); v != nil {
+		if v := c.Resources.Requests.Cpu(); v != nil {
 			s.Cpu = int(v.MilliValue())
 		}
 
-		if v := cs[0].Resources.Requests.Memory(); v != nil {
+		if v := c.Resources.Requests.Memory(); v != nil {
 			s.Memory = int(v.Value() / (1024 * 1024)) // Mi
 		}
 
@@ -83,10 +82,9 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 	}
 
 	for _, d := range dss.Items {
-		cs := d.Spec.Template.Spec.Containers
-
-		if len(cs) != 1 || cs[0].Name != "main" {
-			return nil, errors.WithStack(fmt.Errorf("unexpected containers for service: %s", d.ObjectMeta.Name))
+		c, err := primaryContainer(d.Spec.Template.Spec.Containers, app)
+		if err != nil {
+			return nil, err
 		}
 
 		ms, err := m.Service(d.ObjectMeta.Name)
@@ -98,7 +96,7 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 			Count:  int(d.Status.NumberReady),
 			Domain: p.Engine.ServiceHost(app, *ms),
 			Name:   d.ObjectMeta.Name,
-			Ports:  serviceContainerPorts(cs[0], ms.Internal),
+			Ports:  serviceContainerPorts(*c, ms.Internal),
 		}
 
 		ss = append(ss, s)

@@ -72,7 +72,7 @@ func processCreatePorts(c kubernetes.Interface, ns, name, labels, podIp string, 
 		Spec: ac.PodSpec{
 			Containers: []ac.Container{
 				{
-					Name: "main",
+					Name: om.Labels["app"],
 					Ports: []ac.ContainerPort{
 						{
 							ContainerPort: containerPort,

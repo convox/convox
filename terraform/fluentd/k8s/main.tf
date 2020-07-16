@@ -111,7 +111,7 @@ resource "kubernetes_daemonset" "fluentd" {
         }
 
         container {
-          name  = "main"
+          name  = "system"
           image = var.image
 
           env {

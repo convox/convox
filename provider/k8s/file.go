@@ -11,13 +11,13 @@ import (
 )
 
 func (p *Provider) FilesDelete(app, pid string, files []string) error {
-	req := p.Cluster.CoreV1().RESTClient().Post().Resource("pods").Name(pid).Namespace(p.AppNamespace(app)).SubResource("exec").Param("container", "main")
+	req := p.Cluster.CoreV1().RESTClient().Post().Resource("pods").Name(pid).Namespace(p.AppNamespace(app)).SubResource("exec").Param("container", app)
 
 	command := []string{"rm", "-f"}
 	command = append(command, files...)
 
 	eo := &ac.PodExecOptions{
-		Container: "main",
+		Container: app,
 		Command:   command,
 		Stdout:    true,
 	}
@@ -37,10 +37,10 @@ func (p *Provider) FilesDelete(app, pid string, files []string) error {
 }
 
 func (p *Provider) FilesDownload(app, pid, file string) (io.Reader, error) {
-	req := p.Cluster.CoreV1().RESTClient().Post().Resource("pods").Name(pid).Namespace(p.AppNamespace(app)).SubResource("exec").Param("container", "main")
+	req := p.Cluster.CoreV1().RESTClient().Post().Resource("pods").Name(pid).Namespace(p.AppNamespace(app)).SubResource("exec").Param("container", app)
 
 	eo := &ac.PodExecOptions{
-		Container: "main",
+		Container: app,
 		Command:   []string{"tar", "-cf", "-", file},
 		Stdout:    true,
 	}
@@ -63,10 +63,10 @@ func (p *Provider) FilesDownload(app, pid, file string) (io.Reader, error) {
 }
 
 func (p *Provider) FilesUpload(app, pid string, r io.Reader) error {
-	req := p.Cluster.CoreV1().RESTClient().Post().Resource("pods").Name(pid).Namespace(p.AppNamespace(app)).SubResource("exec").Param("container", "main")
+	req := p.Cluster.CoreV1().RESTClient().Post().Resource("pods").Name(pid).Namespace(p.AppNamespace(app)).SubResource("exec").Param("container", app)
 
 	eo := &ac.PodExecOptions{
-		Container: "main",
+		Container: app,
 		Command:   []string{"tar", "-C", "/", "-xf", "-"},
 		Stdin:     true,
 	}
