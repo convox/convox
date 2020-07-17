@@ -109,7 +109,7 @@ resource "kubernetes_deployment" "api" {
         share_process_namespace         = true
 
         container {
-          name              = "main"
+          name              = "system"
           args              = ["api"]
           image             = "convox/convox:${var.release}"
           image_pull_policy = "Always"

@@ -516,7 +516,7 @@ spec:
             name: env-agent
         image: repo1:agent.build1
         imagePullPolicy: IfNotPresent
-        name: main
+        name: app1
         ports:
         - containerPort: 8125
           hostPort: 8125
@@ -650,7 +650,7 @@ spec:
             name: env-deployment
         image: repo1:deployment.build1
         imagePullPolicy: IfNotPresent
-        name: main
+        name: app1
         ports: null
         resources:
           limits:
@@ -746,7 +746,7 @@ spec:
             name: env-singleton
         image: repo1:singleton.build1
         imagePullPolicy: IfNotPresent
-        name: main
+        name: app1
         ports: null
         resources:
           limits:
@@ -863,7 +863,7 @@ spec:
             name: env-web
         image: repo1:web.build1
         imagePullPolicy: IfNotPresent
-        name: main
+        name: app1
         ports:
         - containerPort: 5000
           name: main

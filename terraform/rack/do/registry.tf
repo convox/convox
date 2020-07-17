@@ -64,7 +64,7 @@ resource "kubernetes_deployment" "registry" {
 
       spec {
         container {
-          name              = "main"
+          name              = "system"
           image             = "registry:2"
           image_pull_policy = "IfNotPresent"
 

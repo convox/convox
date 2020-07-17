@@ -65,7 +65,7 @@ resource "kubernetes_deployment" "redis" {
 
       spec {
         container {
-          name              = "main"
+          name              = "system"
           image             = "redis:4.0.10"
           image_pull_policy = "IfNotPresent"
 

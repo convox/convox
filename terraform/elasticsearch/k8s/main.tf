@@ -98,7 +98,7 @@ resource "kubernetes_stateful_set" "elasticsearch" {
         }
 
         container {
-          name  = "main"
+          name  = "system"
           image = "docker.elastic.co/elasticsearch/elasticsearch:6.5.0"
 
           env {

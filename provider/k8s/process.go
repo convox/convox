@@ -31,7 +31,7 @@ func (p *Provider) ProcessExec(app, pid, command string, rw io.ReadWriter, opts 
 		pid = pss[rand.Intn(len(pss))].Id
 	}
 
-	req := p.Cluster.CoreV1().RESTClient().Post().Resource("pods").Name(pid).Namespace(p.AppNamespace(app)).SubResource("exec").Param("container", "main")
+	req := p.Cluster.CoreV1().RESTClient().Post().Resource("pods").Name(pid).Namespace(p.AppNamespace(app)).SubResource("exec").Param("container", app)
 
 	cp, err := shellquote.Split(command)
 	if err != nil {
@@ -65,7 +65,7 @@ func (p *Provider) ProcessExec(app, pid, command string, rw io.ReadWriter, opts 
 	}
 
 	eo := &ac.PodExecOptions{
-		Container: "main",
+		Container: app,
 		Command:   cp,
 		Stdin:     true,
 		Stdout:    true,
@@ -307,7 +307,7 @@ func (p *Provider) ProcessWait(app, pid string) (int, error) {
 
 		cs := pd.Status.ContainerStatuses
 
-		if len(cs) != 1 || cs[0].Name != "main" {
+		if len(cs) != 1 || cs[0].Name != app {
 			return 0, errors.WithStack(fmt.Errorf("unexpected containers for pid: %s", pid))
 		}
 
@@ -333,7 +333,7 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 
 	c := ac.Container{
 		Env:           []ac.EnvVar{},
-		Name:          "main",
+		Name:          app,
 		VolumeDevices: []ac.VolumeDevice{},
 		VolumeMounts:  []ac.VolumeMount{},
 	}
@@ -531,10 +531,11 @@ func (p *Provider) podVolume(app, from string) ac.Volume {
 }
 
 func (p *Provider) processFromPod(pd ac.Pod) (*structs.Process, error) {
-	cs := pd.Spec.Containers
+	app := pd.ObjectMeta.Labels["app"]
 
-	if len(cs) != 1 || cs[0].Name != "main" {
-		return nil, errors.WithStack(fmt.Errorf("unexpected containers for pid: %s", pd.ObjectMeta.Name))
+	c, err := primaryContainer(pd.Spec.Containers, pd.ObjectMeta.Labels["app"])
+	if err != nil {
+		return nil, err
 	}
 
 	status := "unknown"
@@ -558,7 +559,7 @@ func (p *Provider) processFromPod(pd ac.Pod) (*structs.Process, error) {
 		}
 	}
 
-	if css := pd.Status.ContainerStatuses; len(css) > 0 && css[0].Name == "main" {
+	if css := pd.Status.ContainerStatuses; len(css) > 0 && css[0].Name == app {
 		if cs := css[0]; cs.State.Waiting != nil {
 			switch cs.State.Waiting.Reason {
 			case "CrashLoopBackOff":
@@ -568,7 +569,7 @@ func (p *Provider) processFromPod(pd ac.Pod) (*structs.Process, error) {
 	}
 
 	ports := []string{}
-	for _, p := range cs[0].Ports {
+	for _, p := range c.Ports {
 		if p.HostPort == 0 {
 			ports = append(ports, fmt.Sprint(p.ContainerPort))
 		} else {
@@ -578,10 +579,10 @@ func (p *Provider) processFromPod(pd ac.Pod) (*structs.Process, error) {
 
 	ps := &structs.Process{
 		Id:       pd.ObjectMeta.Name,
-		App:      pd.ObjectMeta.Labels["app"],
-		Command:  shellquote.Join(cs[0].Args...),
+		App:      app,
+		Command:  shellquote.Join(c.Args...),
 		Host:     pd.Status.PodIP,
-		Image:    cs[0].Image,
+		Image:    c.Image,
 		Instance: pd.Spec.NodeName,
 		Name:     pd.ObjectMeta.Labels["service"],
 		Ports:    ports,

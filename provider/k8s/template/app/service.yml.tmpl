@@ -74,7 +74,7 @@ spec:
       {{ end }}
       shareProcessNamespace: {{.Service.Init}}
       containers:
-      - name: main
+      - name: {{.App.Name}}
         {{ with .Service.Command }}
         args:
         {{ range shellsplit . }}
