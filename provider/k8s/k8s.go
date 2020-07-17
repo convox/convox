@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"math/rand"
 	"os"
 	"os/exec"
 	"time"
@@ -46,6 +47,11 @@ type Provider struct {
 	logger    *logger.Logger
 	metrics   *metrics.Metrics
 	templater *templater.Templater
+	webhooks  []string
+}
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
 }
 
 func FromEnv() (*Provider, error) {
@@ -107,6 +113,7 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 	p.logger = logger.New("ns=k8s")
 	p.metrics = metrics.New("https://metrics.convox.com/metrics/rack")
 	p.templater = templater.New(packr.NewBox("../k8s/template"), p.templateHelpers())
+	p.webhooks = []string{}
 
 	if os.Getenv("TEST") == "true" {
 		return nil
@@ -136,8 +143,14 @@ func (p *Provider) Start() error {
 		return errors.WithStack(log.Error(err))
 	}
 
+	wc, err := NewWebhookController(p)
+	if err != nil {
+		return errors.WithStack(log.Error(err))
+	}
+
 	go ec.Run()
 	go pc.Run()
+	go wc.Run()
 
 	go common.Tick(1*time.Hour, p.heartbeat)
 
@@ -155,8 +168,6 @@ func (p *Provider) applySystemTemplate(name string, params map[string]interface{
 	if err != nil {
 		return errors.WithStack(err)
 	}
-
-	fmt.Println(string(data))
 
 	if err := Apply(data); err != nil {
 		return errors.WithStack(err)

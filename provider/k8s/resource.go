@@ -1,11 +1,14 @@
 package k8s
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/url"
 	"os/exec"
 
+	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/creack/pty"
 	"github.com/pkg/errors"
@@ -123,35 +126,108 @@ func (p *Provider) ResourceList(app string) (structs.Resources, error) {
 }
 
 func (p *Provider) SystemResourceCreate(kind string, opts structs.ResourceCreateOptions) (*structs.Resource, error) {
-	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
+	switch kind {
+	case "webhook":
+		return p.systemResourceCreateWebhook(opts)
+	default:
+		return nil, fmt.Errorf("rack resource type unknown: %s", kind)
+	}
+}
+
+func (p *Provider) systemResourceCreateWebhook(opts structs.ResourceCreateOptions) (*structs.Resource, error) {
+	url, ok := opts.Parameters["Url"]
+	if !ok {
+		return nil, fmt.Errorf("parameter required: Url")
+	}
+
+	key := fmt.Sprintf("%s-%d", url, rand.Int63())
+	name := common.DefaultString(opts.Name, fmt.Sprintf("webhook-%s", fmt.Sprintf("%x", sha256.Sum256([]byte(key)))[0:6]))
+
+	if err := p.webhookCreate(name, url); err != nil {
+		return nil, err
+	}
+
+	return p.SystemResourceGet(name)
 }
 
 func (p *Provider) SystemResourceDelete(name string) error {
-	return errors.WithStack(fmt.Errorf("unimplemented"))
+	r, err := p.SystemResourceGet(name)
+	if err != nil {
+		return err
+	}
+
+	switch r.Type {
+	case "webhook":
+		return p.webhookDelete(r.Name)
+	default:
+		return fmt.Errorf("rack resource type unknown: %s", r.Type)
+	}
 }
 
 func (p *Provider) SystemResourceGet(name string) (*structs.Resource, error) {
-	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
+	rs, err := p.SystemResourceList()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, r := range rs {
+		if r.Name == name {
+			return &r, nil
+		}
+	}
+
+	return nil, fmt.Errorf("no such resource: %s", name)
 }
 
 func (p *Provider) SystemResourceLink(name, app string) (*structs.Resource, error) {
-	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
+	return nil, errors.WithStack(fmt.Errorf("unavailable on v3 racks"))
 }
 
 func (p *Provider) SystemResourceList() (structs.Resources, error) {
-	return structs.Resources{}, nil
+	rs := structs.Resources{}
+
+	ws, err := p.webhookList()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, w := range ws {
+		rs = append(rs, structs.Resource{
+			Name: w.Name,
+			Parameters: map[string]string{
+				"Url": w.URL,
+			},
+			Status: "running",
+			Type:   "webhook",
+		})
+	}
+
+	return rs, nil
 }
 
 func (p *Provider) SystemResourceTypes() (structs.ResourceTypes, error) {
-	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
+	rst := structs.ResourceTypes{
+		structs.ResourceType{
+			Name: "webhook",
+			Parameters: structs.ResourceParameters{
+				structs.ResourceParameter{
+					Default:     "",
+					Description: "url to which to post rack events",
+					Name:        "Url",
+				},
+			},
+		},
+	}
+
+	return rst, nil
 }
 
 func (p *Provider) SystemResourceUnlink(name, app string) (*structs.Resource, error) {
-	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
+	return nil, errors.WithStack(fmt.Errorf("unavailable on v3 racks"))
 }
 
 func (p *Provider) SystemResourceUpdate(name string, opts structs.ResourceUpdateOptions) (*structs.Resource, error) {
-	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
+	return nil, errors.WithStack(fmt.Errorf("unavailable on v3 racks"))
 }
 
 type resourceConnection struct {
