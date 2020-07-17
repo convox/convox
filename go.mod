@@ -28,11 +28,9 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/elastic/go-elasticsearch/v6 v6.8.2
 	github.com/fsouza/go-dockerclient v1.4.2
-	github.com/go-redis/redis v6.15.2+incompatible
 	github.com/gobuffalo/packr v1.30.1
 	github.com/gobwas/glob v0.2.3
 	github.com/gorilla/mux v1.7.3
-	github.com/gorilla/websocket v1.4.0
 	github.com/goware/modvendor v0.1.0
 	github.com/headzoo/surf v1.0.0
 	github.com/headzoo/ut v0.0.0-20181013193318-a13b5a7a02ca // indirect
@@ -46,7 +44,7 @@ require (
 	github.com/russross/blackfriday v2.0.0+incompatible
 	github.com/stretchr/testify v1.3.0
 	github.com/vektra/mockery v0.0.0-20181123154057-e78b021dcbb5
-	golang.org/x/crypto v0.0.0-20200214034016-1d94cc7ab1c6
+	golang.org/x/crypto v0.0.0-20200214034016-1d94cc7ab1c6 // indirect
 	golang.org/x/net v0.0.0-20191101175033-0deb6923b6d9 // indirect
 	golang.org/x/sys v0.0.0-20200217220822-9197077df867 // indirect
 	google.golang.org/api v0.9.0
@@ -56,5 +54,4 @@ require (
 	k8s.io/client-go v0.16.6
 	k8s.io/code-generator v0.16.6
 	k8s.io/klog v1.0.0
-	k8s.io/kubectl v0.16.6
 )
