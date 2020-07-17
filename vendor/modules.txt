@@ -327,6 +327,8 @@ github.com/mitchellh/go-homedir
 github.com/modern-go/concurrent
 # github.com/modern-go/reflect2 v1.0.1
 github.com/modern-go/reflect2
+# github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f
+github.com/mxk/go-flowrate/flowrate
 # github.com/opencontainers/go-digest v1.0.0-rc1
 github.com/opencontainers/go-digest
 # github.com/opencontainers/image-spec v1.0.1
@@ -601,6 +603,7 @@ k8s.io/apimachinery/pkg/util/json
 k8s.io/apimachinery/pkg/util/mergepatch
 k8s.io/apimachinery/pkg/util/naming
 k8s.io/apimachinery/pkg/util/net
+k8s.io/apimachinery/pkg/util/proxy
 k8s.io/apimachinery/pkg/util/remotecommand
 k8s.io/apimachinery/pkg/util/runtime
 k8s.io/apimachinery/pkg/util/sets
@@ -788,6 +791,9 @@ k8s.io/kube-openapi/pkg/generators
 k8s.io/kube-openapi/pkg/generators/rules
 k8s.io/kube-openapi/pkg/util/proto
 k8s.io/kube-openapi/pkg/util/sets
+# k8s.io/kubectl v0.16.6
+k8s.io/kubectl/pkg/proxy
+k8s.io/kubectl/pkg/util
 # k8s.io/utils v0.0.0-20190801114015-581e00157fb1
 k8s.io/utils/buffer
 k8s.io/utils/integer

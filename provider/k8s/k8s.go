@@ -17,6 +17,7 @@ import (
 	"github.com/convox/logger"
 	"github.com/gobuffalo/packr"
 	"github.com/pkg/errors"
+
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -124,7 +125,7 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 }
 
 func (p *Provider) Start() error {
-	log := p.logger.At("Initialize")
+	log := p.logger.At("Start")
 
 	ec, err := NewEventController(p)
 	if err != nil {
@@ -140,6 +141,8 @@ func (p *Provider) Start() error {
 	go pc.Run()
 
 	go common.Tick(1*time.Hour, p.heartbeat)
+
+	go p.startApiProxy()
 
 	return log.Success()
 }
@@ -267,6 +270,19 @@ func (p *Provider) installCertManagerConfig() {
 			fmt.Printf("error: timeout installing cluster issuer\n")
 			return
 		}
+	}
+}
+
+func (p *Provider) startApiProxy() {
+	ap, err := p.apiProxy()
+	if err != nil {
+		fmt.Printf("error: could not create kubernetes proxy listener: %v\n", err)
+		return
+	}
+
+	if err := ap.ListenAndServe("0.0.0.0", 8001); err != nil {
+		fmt.Printf("error: could not start kubernetes proxy listener: %v\n", err)
+		return
 	}
 }
 

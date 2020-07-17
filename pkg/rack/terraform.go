@@ -156,6 +156,10 @@ func (t Terraform) Delete() error {
 	return nil
 }
 
+func (t Terraform) Endpoint() (*url.URL, error) {
+	return url.Parse(t.endpoint)
+}
+
 func (t Terraform) Latest() (string, error) {
 	return terraformLatestVersion()
 }

@@ -1,6 +1,8 @@
 package rack
 
 import (
+	"net/url"
+
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/sdk"
@@ -27,6 +29,10 @@ func (t Test) Client() (sdk.Interface, error) {
 
 func (t Test) Delete() error {
 	return nil
+}
+
+func (t Test) Endpoint() (*url.URL, error) {
+	return url.Parse("https://foo:bar@example.org")
 }
 
 func (t Test) Metadata() (*Metadata, error) {

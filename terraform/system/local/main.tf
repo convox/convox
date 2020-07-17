@@ -32,5 +32,5 @@ module "rack" {
 
   name     = var.name
   platform = module.platform.name
-  release  = local.release
+  release  = "master"
 }
