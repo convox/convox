@@ -69,6 +69,8 @@ func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*struc
 		return nil, errors.WithStack(err)
 	}
 
+	p.EventSend("app:create", structs.EventSendOptions{Data: map[string]string{"name": name}})
+
 	return a, nil
 }
 

@@ -58,6 +58,8 @@ func (p *Provider) ReleaseCreate(app string, opts structs.ReleaseCreateOptions) 
 		return nil, errors.WithStack(err)
 	}
 
+	p.EventSend("release:create", structs.EventSendOptions{Data: map[string]string{"app": ro.App, "id": ro.Id}})
+
 	return ro, nil
 }
 
@@ -195,6 +197,8 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 	if err := p.Apply(p.AppNamespace(app), "app", id, tdata, fmt.Sprintf("system=convox,provider=k8s,rack=%s,app=%s,release=%s", p.Name, app, id), timeout); err != nil {
 		return errors.WithStack(err)
 	}
+
+	p.EventSend("release:promote", structs.EventSendOptions{Data: map[string]string{"app": app, "id": id}, Status: options.String("start")})
 
 	return nil
 }
