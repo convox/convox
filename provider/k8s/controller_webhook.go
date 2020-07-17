@@ -24,7 +24,7 @@ func NewWebhookController(p *Provider) (*WebhookController, error) {
 		Provider: p,
 	}
 
-	c, err := kctl.NewController(p.Namespace, "convox-k8s-pod", pc)
+	c, err := kctl.NewController(p.Namespace, "convox-k8s-webhook", pc)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
