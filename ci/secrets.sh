@@ -1,7 +1,7 @@
 #!/bin/bash
 
 export_secret() {
-	echo "::set-env name=${1}::$(echo $SECRETS | jq -r ".${1}")"
+	echo "::set-env name=${2:-$1}::$(echo $SECRETS | jq -r ".${1}")"
 }
 
 case "$PROVIDER" in
@@ -17,6 +17,7 @@ azure)
   ;;
 do)
   export_secret DIGITALOCEAN_ACCESS_ID
+  export_secret DIGITALOCEAN_REGION TF_VAR_region
   export_secret DIGITALOCEAN_SECRET_KEY
   export_secret DIGITALOCEAN_TOKEN
   ;;
