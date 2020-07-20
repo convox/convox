@@ -245,17 +245,6 @@ func (p *Provider) installCertManagerConfig() {
 
 	fmt.Printf("waiting for cert manager webhook deployment\n")
 
-	cas, err := p.Cluster.CoreV1().Secrets(p.Namespace).Get("ca", am.GetOptions{})
-	if err != nil {
-		fmt.Printf("error: could not fetch ca secret: %v\n", err)
-		return
-	}
-
-	params := map[string]interface{}{
-		"CaPublic":  base64.StdEncoding.EncodeToString(cas.Data["tls.crt"]),
-		"CaPrivate": base64.StdEncoding.EncodeToString(cas.Data["tls.key"]),
-	}
-
 	for {
 		select {
 		case <-tick.C:
@@ -267,11 +256,26 @@ func (p *Provider) installCertManagerConfig() {
 
 			for _, c := range d.Status.Conditions {
 				if c.Type == "Available" && c.Status == "True" {
-					fmt.Printf("installing cert manager config\n")
+					fmt.Printf("installing cert manager letsencrypt config\n")
 
-					if err := p.applySystemTemplate("cert-manager-config", params); err != nil {
-						fmt.Printf("could not install cert manager config: %s\n", err)
+					if err := p.applySystemTemplate("cert-manager-letsencrypt", nil); err != nil {
+						fmt.Printf("could not install cert manager letsencrypt config: %s\n", err)
 						break
+					}
+
+					if cas, err := p.Cluster.CoreV1().Secrets(p.Namespace).Get("ca", am.GetOptions{}); err == nil {
+						params := map[string]interface{}{
+							"CaPublic":  base64.StdEncoding.EncodeToString(cas.Data["tls.crt"]),
+							"CaPrivate": base64.StdEncoding.EncodeToString(cas.Data["tls.key"]),
+						}
+
+						fmt.Printf("installing cert manager letsencrypt config\n")
+
+						if err := p.applySystemTemplate("cert-manager-self-signed", params); err != nil {
+							fmt.Printf("could not install cert manager letsencrypt config: %s\n", err)
+							break
+						}
+
 					}
 
 					return
