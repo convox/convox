@@ -17,6 +17,7 @@ spec:
    - http01:
        ingress:
          class: nginx
+{{ if .CaPublic }}
 ---
 apiVersion: v1
 kind: Secret
@@ -35,3 +36,4 @@ metadata:
 spec:
   ca:
     secretName: ca
+{{ end }}
