@@ -165,6 +165,8 @@ resource "kubernetes_service" "registry" {
   }
 }
 resource "kubernetes_ingress" "registry" {
+  wait_for_load_balancer = true
+
   metadata {
     namespace = module.k8s.namespace
     name      = "registry"
