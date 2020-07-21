@@ -38,9 +38,10 @@ func buildFixture(name string) (*ca.BuildSpec, error) {
 	}
 
 	var fixture struct {
-		Ended    string
-		Manifest interface{}
-		Started  string
+		Description string
+		Ended       string
+		Manifest    interface{}
+		Started     string
 	}
 
 	if err := yaml.Unmarshal(data, &fixture); err != nil {
@@ -53,9 +54,10 @@ func buildFixture(name string) (*ca.BuildSpec, error) {
 	}
 
 	s := &ca.BuildSpec{
-		Ended:    fixture.Ended,
-		Manifest: string(mdata),
-		Started:  fixture.Started,
+		Description: fixture.Description,
+		Ended:       fixture.Ended,
+		Manifest:    string(mdata),
+		Started:     fixture.Started,
 	}
 
 	return s, nil

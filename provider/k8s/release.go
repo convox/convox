@@ -269,10 +269,11 @@ func (p *Provider) releaseMarshal(r *structs.Release) *ca.Release {
 			},
 		},
 		Spec: ca.ReleaseSpec{
-			Build:    r.Build,
-			Created:  r.Created.Format(common.SortableTime),
-			Env:      r.Env,
-			Manifest: r.Manifest,
+			Build:       r.Build,
+			Created:     r.Created.Format(common.SortableTime),
+			Description: r.Description,
+			Env:         r.Env,
+			Manifest:    r.Manifest,
 		},
 	}
 }
@@ -527,12 +528,13 @@ func (p *Provider) releaseUnmarshal(kr *ca.Release) (*structs.Release, error) {
 	}
 
 	r := &structs.Release{
-		App:      kr.ObjectMeta.Labels["app"],
-		Build:    kr.Spec.Build,
-		Created:  created,
-		Env:      kr.Spec.Env,
-		Id:       strings.ToUpper(kr.ObjectMeta.Name),
-		Manifest: kr.Spec.Manifest,
+		App:         kr.ObjectMeta.Labels["app"],
+		Build:       kr.Spec.Build,
+		Created:     created,
+		Description: kr.Spec.Description,
+		Env:         kr.Spec.Env,
+		Id:          strings.ToUpper(kr.ObjectMeta.Name),
+		Manifest:    kr.Spec.Manifest,
 	}
 
 	if len(r.Env) == 0 {

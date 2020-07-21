@@ -57,8 +57,9 @@ type ReleaseList struct {
 }
 
 type ReleaseSpec struct {
-	Build    string `json:"build"`
-	Created  string `json:"created"`
-	Env      string `json:"env"`
-	Manifest string `json:"manifest"`
+	Build       string `json:"build"`
+	Created     string `json:"created"`
+	Description string `json:"description"`
+	Env         string `json:"env"`
+	Manifest    string `json:"manifest"`
 }
