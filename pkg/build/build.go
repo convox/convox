@@ -28,6 +28,7 @@ type Options struct {
 	App         string
 	Auth        string
 	Cache       bool
+	CacheFrom   string
 	Development bool
 	EnvWrapper  bool
 	Generation  string
@@ -176,13 +177,14 @@ func (bb *Build) login() error {
 	for host, entry := range auth {
 		buf := &bytes.Buffer{}
 
-		err := bb.Exec.Stream(buf, strings.NewReader(entry.Password), "docker", "login", "-u", entry.Username, "--password-stdin", host)
+		bb.Printf("Authenticating %s: ", host)
 
-		bb.Printf("Authenticating %s: %s\n", host, strings.TrimSpace(buf.String()))
-
-		if err != nil {
+		if err := bb.Exec.Stream(buf, strings.NewReader(entry.Password), "docker", "login", "-u", entry.Username, "--password-stdin", host); err != nil {
+			bb.Printf("%s\n", strings.TrimSpace(buf.String()))
 			return err
 		}
+
+		bb.Printf("OK\n")
 	}
 
 	return nil
@@ -217,6 +219,7 @@ func (bb *Build) buildGeneration2(dir string) error {
 	prefix := fmt.Sprintf("%s/%s", bb.Rack, bb.App)
 
 	builds := map[string]manifest.ServiceBuild{}
+	caches := map[string]string{}
 	pulls := map[string]bool{}
 	pushes := map[string]string{}
 	tags := map[string][]string{}
@@ -235,13 +238,17 @@ func (bb *Build) buildGeneration2(dir string) error {
 
 		if bb.Push != "" {
 			pushes[to] = fmt.Sprintf("%s:%s.%s", bb.Push, s.Name, bb.Id)
+
+			if bb.CacheFrom != "" {
+				caches[hash] = fmt.Sprintf("%s:%s.%s", bb.Push, s.Name, bb.CacheFrom)
+			}
 		}
 	}
 
 	for hash, b := range builds {
 		bb.Printf("Building: %s\n", b.Path)
 
-		if err := bb.build(filepath.Join(dir, b.Path), b.Manifest, hash, env); err != nil {
+		if err := bb.build(filepath.Join(dir, b.Path), b.Manifest, hash, env, caches[hash]); err != nil {
 			return err
 		}
 	}

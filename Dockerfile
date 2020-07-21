@@ -4,7 +4,7 @@ FROM golang:1.13 AS development
 
 RUN apt-get update && apt-get -y install default-mysql-client postgresql-client redis-tools telnet
 
-RUN curl -s https://download.docker.com/linux/static/stable/x86_64/docker-18.03.1-ce.tgz | \
+RUN curl -s https://download.docker.com/linux/static/stable/x86_64/docker-19.03.9.tgz | \
   tar -C /usr/bin --strip-components 1 -xz
 
 RUN curl -Ls https://storage.googleapis.com/kubernetes-release/release/v1.17.3/bin/linux/amd64/kubectl -o /usr/bin/kubectl && \

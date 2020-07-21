@@ -14,6 +14,7 @@ var (
 	flagApp         string
 	flagAuth        string
 	flagCache       string
+	flagCacheFrom   string
 	flagDevelopment string
 	flagEnvWrapper  string
 	flagGeneration  string
@@ -44,6 +45,7 @@ func execute() error {
 	fs.StringVar(&flagApp, "app", "example", "app name")
 	fs.StringVar(&flagAuth, "auth", "", "docker auth data (json)")
 	fs.StringVar(&flagCache, "cache", "true", "use docker cache")
+	fs.StringVar(&flagCacheFrom, "cache-from", "", "use a registry image as a cache source")
 	fs.StringVar(&flagDevelopment, "development", "false", "create a development build")
 	fs.StringVar(&flagEnvWrapper, "env-wrapper", "false", "wrap with convox-env")
 	fs.StringVar(&flagGeneration, "generation", "", "app generation")
@@ -64,6 +66,10 @@ func execute() error {
 
 	if v := os.Getenv("BUILD_AUTH"); v != "" {
 		flagAuth = v
+	}
+
+	if v := os.Getenv("BUILD_CACHE_FROM"); v != "" {
+		flagCacheFrom = v
 	}
 
 	if v := os.Getenv("BUILD_DEVELOPMENT"); v != "" {
@@ -102,6 +108,7 @@ func execute() error {
 		App:         flagApp,
 		Auth:        flagAuth,
 		Cache:       flagCache == "true",
+		CacheFrom:   flagCacheFrom,
 		Development: flagDevelopment == "true",
 		EnvWrapper:  flagEnvWrapper == "true",
 		Generation:  flagGeneration,
