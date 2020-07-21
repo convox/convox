@@ -37,7 +37,7 @@ func TestBuildGeneration2(t *testing.T) {
 		require.NoError(t, err)
 		p.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil)
 		p.On("ReleaseGet", "app1", "release1").Return(fxRelease(), nil)
-		e.On("Run", mock.Anything, "docker", "build", "-t", "e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445", "-f", "Dockerfile", "--network", "host", ".").Return(nil).Run(func(args mock.Arguments) {
+		e.On("Run", mock.Anything, "docker", "build", "-t", "e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445", "-f", "Dockerfile", "--network", "host", "--build-arg", "BUILDKIT_INLINE_CACHE=1", ".").Return(nil).Run(func(args mock.Arguments) {
 			fmt.Fprintf(args.Get(0).(io.Writer), "build1\nbuild2\n")
 		})
 		e.On("Execute", "docker", "inspect", "e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445", "--format", "{{json .Config.Entrypoint}}").Return([]byte("[]"), nil)
@@ -102,7 +102,7 @@ func TestBuildGeneration2Development(t *testing.T) {
 		require.NoError(t, err)
 		p.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil)
 		p.On("ReleaseGet", "app1", "release1").Return(fxRelease(), nil)
-		e.On("Run", mock.Anything, "docker", "build", "-t", "e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445", "-f", "Dockerfile", "--network", "host", "--target", "development", ".").Return(nil).Run(func(args mock.Arguments) {
+		e.On("Run", mock.Anything, "docker", "build", "-t", "e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445", "-f", "Dockerfile", "--network", "host", "--build-arg", "BUILDKIT_INLINE_CACHE=1", "--target", "development", ".").Return(nil).Run(func(args mock.Arguments) {
 			fmt.Fprintf(args.Get(0).(io.Writer), "build1\nbuild2\n")
 		})
 		e.On("Execute", "docker", "inspect", "e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445", "--format", "{{json .Config.Entrypoint}}").Return([]byte("[]"), nil)
@@ -162,7 +162,7 @@ func TestBuildGeneration2Entrypoint(t *testing.T) {
 		require.NoError(t, err)
 		p.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil)
 		p.On("ReleaseGet", "app1", "release1").Return(fxRelease(), nil)
-		e.On("Run", mock.Anything, "docker", "build", "-t", "e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445", "-f", "Dockerfile", "--network", "host", ".").Return(nil).Run(func(args mock.Arguments) {
+		e.On("Run", mock.Anything, "docker", "build", "-t", "e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445", "-f", "Dockerfile", "--network", "host", "--build-arg", "BUILDKIT_INLINE_CACHE=1", ".").Return(nil).Run(func(args mock.Arguments) {
 			fmt.Fprintf(args.Get(0).(io.Writer), "build1\nbuild2\n")
 		})
 		e.On("Execute", "docker", "inspect", "e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445", "--format", "{{json .Config.Entrypoint}}").Return([]byte("[\"bin/entry\"]"), nil)
@@ -280,7 +280,7 @@ func TestBuildGeneration2Options(t *testing.T) {
 		// p.On("BuildUpdate", "app1", "build1", structs.BuildUpdateOptions{Manifest: options.String(string(mdata))}).Return(fxBuildStarted(), nil).Once()
 		p.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil)
 		p.On("ReleaseGet", "app1", "release1").Return(fxRelease(), nil)
-		e.On("Run", mock.Anything, "docker", "build", "--no-cache", "-t", "c67c8080ff5483672fe18cfb54f4710ddcc920b3575810ad05dbe1a4", "-f", "Dockerfile2", "--network", "host", "--build-arg", "FOO=bar", ".").Return(nil).Run(func(args mock.Arguments) {
+		e.On("Run", mock.Anything, "docker", "build", "--no-cache", "-t", "c67c8080ff5483672fe18cfb54f4710ddcc920b3575810ad05dbe1a4", "-f", "Dockerfile2", "--network", "host", "--build-arg", "BUILDKIT_INLINE_CACHE=1", "--build-arg", "FOO=bar", ".").Return(nil).Run(func(args mock.Arguments) {
 			fmt.Fprintf(args.Get(0).(io.Writer), "build1\nbuild2\n")
 		})
 		e.On("Execute", "docker", "inspect", "c67c8080ff5483672fe18cfb54f4710ddcc920b3575810ad05dbe1a4", "--format", "{{json .Config.Entrypoint}}").Return([]byte("[]"), nil)
@@ -294,7 +294,7 @@ func TestBuildGeneration2Options(t *testing.T) {
 		p.On("ObjectStore", "app1", "build/build1/logs", mock.Anything, structs.ObjectStoreOptions{}).Return(fxObject(), nil).Run(func(args mock.Arguments) {
 			data, err := ioutil.ReadAll(args.Get(2).(io.Reader))
 			require.NoError(t, err)
-			require.Equal(t, "Authenticating host1: login-success\nBuilding: .\nbuild1\nbuild2\nRunning: docker tag c67c8080ff5483672fe18cfb54f4710ddcc920b3575810ad05dbe1a4 rack1/app1:web.build1\nInjecting: convox-env\nRunning: docker tag rack1/app1:web.build1 push1:web.build1\nRunning: docker push push1:web.build1\n", string(data))
+			require.Equal(t, "Authenticating host1: OK\nBuilding: .\nbuild1\nbuild2\nRunning: docker tag c67c8080ff5483672fe18cfb54f4710ddcc920b3575810ad05dbe1a4 rack1/app1:web.build1\nInjecting: convox-env\nRunning: docker tag rack1/app1:web.build1 push1:web.build1\nRunning: docker push push1:web.build1\n", string(data))
 		})
 		p.On("BuildUpdate", "app1", "build1", mock.Anything).Return(fxBuildStarted(), nil).Run(func(args mock.Arguments) {
 			opts := args.Get(2).(structs.BuildUpdateOptions)
@@ -316,7 +316,7 @@ func TestBuildGeneration2Options(t *testing.T) {
 
 		require.Equal(t,
 			[]string{
-				"Authenticating host1: login-success",
+				"Authenticating host1: OK",
 				"Building: .",
 				"build1",
 				"build2",
