@@ -258,6 +258,8 @@ resource "kubernetes_service" "api" {
 }
 
 resource "kubernetes_ingress" "api" {
+  wait_for_load_balancer = true
+
   metadata {
     namespace = var.namespace
     name      = "api"
@@ -295,6 +297,8 @@ resource "kubernetes_ingress" "api" {
 }
 
 resource "kubernetes_ingress" "kubernetes" {
+  wait_for_load_balancer = true
+
   metadata {
     namespace = var.namespace
     name      = "kubernetes"
