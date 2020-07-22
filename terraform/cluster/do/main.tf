@@ -19,7 +19,7 @@ provider "random" {
 }
 
 data "digitalocean_kubernetes_versions" "available" {
-  version_prefix = "1.15."
+  version_prefix = "1.17."
 }
 
 resource "digitalocean_kubernetes_cluster" "rack" {

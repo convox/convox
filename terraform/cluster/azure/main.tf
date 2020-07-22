@@ -20,7 +20,7 @@ data "azurerm_resource_group" "system" {
 
 data "azurerm_kubernetes_service_versions" "available" {
   location       = var.region
-  version_prefix = "1.14."
+  version_prefix = "1.17."
 }
 
 resource "random_string" "suffix" {
