@@ -1,11 +1,5 @@
 data "aws_partition" "current" {}
 
-resource "aws_iam_openid_connect_provider" "cluster" {
-  client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = ["9e99a48a9960b14926bb7f3b02e22da2b0ab7280"]
-  url             = aws_eks_cluster.cluster.identity.0.oidc.0.issuer
-}
-
 data "aws_iam_policy_document" "assume_ec2" {
   statement {
     actions = ["sts:AssumeRole"]
@@ -68,4 +62,21 @@ resource "aws_iam_role_policy_attachment" "nodes_eks_cni" {
 resource "aws_iam_role_policy_attachment" "nodes_eks_worker" {
   role       = aws_iam_role.nodes.name
   policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+}
+
+
+resource "null_resource" "iam" {
+  depends_on = [
+    aws_iam_role_policy_attachment.cluster_ec2_readonly,
+    aws_iam_role_policy_attachment.cluster_eks_cluster,
+    aws_iam_role_policy_attachment.cluster_eks_service,
+    aws_iam_role_policy_attachment.nodes_ecr,
+    aws_iam_role_policy_attachment.nodes_eks_cni,
+    aws_iam_role_policy_attachment.nodes_eks_worker,
+  ]
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = "sleep 300"
+  }
 }
