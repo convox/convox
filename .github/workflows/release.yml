@@ -3,6 +3,7 @@ on:
   push:
     branches-ignore: ["*"]
     tags: ["*"]
+  workflow_dispatch:
 jobs:
   release:
     runs-on: ubuntu-latest
