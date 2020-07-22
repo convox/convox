@@ -447,7 +447,7 @@ apiVersion: v1
 data:
   APP: YXBwMQ==
   BUILD: QlVJTEQx
-  BUILD_DESCRIPTION: ""
+  BUILD_DESCRIPTION: Zm9v
   FOO: YmFy
   FOUR_URL: ""
   RACK: cmFjazE=
@@ -576,7 +576,7 @@ apiVersion: v1
 data:
   APP: YXBwMQ==
   BUILD: QlVJTEQx
-  BUILD_DESCRIPTION: ""
+  BUILD_DESCRIPTION: Zm9v
   FOO: YmFy
   FOUR_URL: ""
   RACK: cmFjazE=
@@ -672,7 +672,7 @@ apiVersion: v1
 data:
   APP: YXBwMQ==
   BUILD: QlVJTEQx
-  BUILD_DESCRIPTION: ""
+  BUILD_DESCRIPTION: Zm9v
   FOO: YmFy
   FOUR_URL: ""
   RACK: cmFjazE=
@@ -768,7 +768,7 @@ apiVersion: v1
 data:
   APP: YXBwMQ==
   BUILD: QlVJTEQx
-  BUILD_DESCRIPTION: ""
+  BUILD_DESCRIPTION: Zm9v
   FOO: YmFy
   FOUR_URL: ""
   PORT: NTAwMA==
