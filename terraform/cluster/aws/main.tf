@@ -57,12 +57,29 @@ resource "aws_eks_cluster" "cluster" {
 
   name     = var.name
   role_arn = aws_iam_role.cluster.arn
+  version  = "1.17"
 
   vpc_config {
     endpoint_public_access  = true
     endpoint_private_access = false
     security_group_ids      = [aws_security_group.cluster.id]
     subnet_ids              = concat(aws_subnet.public.*.id)
+  }
+}
+
+resource "null_resource" "delay_cluster_removal" {
+  depends_on = [
+    aws_eks_cluster.cluster
+    aws_iam_role_policy_attachment.cluster_eks_cluster,
+    aws_iam_role_policy_attachment.cluster_eks_service,
+    aws_iam_role_policy_attachment.nodes_ecr,
+    aws_iam_role_policy_attachment.nodes_eks_cni,
+    aws_iam_role_policy_attachment.nodes_eks_worker,
+  ]
+
+  provisioner "local-exec" {
+    when    = "destroy"
+    command = "sleep 60"
   }
 }
 
