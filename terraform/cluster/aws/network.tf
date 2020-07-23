@@ -140,3 +140,35 @@ resource "aws_route_table_association" "private" {
   route_table_id = aws_route_table.private[count.index].id
   subnet_id      = aws_subnet.private[count.index].id
 }
+
+resource "aws_security_group" "cluster" {
+  name        = "${var.name}-cluster"
+  description = "${var.name} cluster"
+  vpc_id      = aws_vpc.nodes.id
+
+  tags = merge(local.tags, {
+    Name = "${var.name}-cluster"
+  })
+}
+
+resource "null_resource" "network" {
+  depends_on = [
+    aws_internet_gateway.nodes,
+    aws_nat_gateway.private,
+    aws_route.private-default,
+    aws_route.public-default,
+    aws_route_table.private,
+    aws_route_table.public,
+    aws_route_table_association.private,
+    aws_route_table_association.public,
+    aws_security_group.cluster,
+    aws_subnet.private,
+    aws_subnet.public,
+    aws_vpc.nodes,
+  ]
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = "sleep 300"
+  }
+}

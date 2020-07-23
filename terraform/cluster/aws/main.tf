@@ -38,6 +38,7 @@ resource "null_resource" "delay_cluster" {
   provisioner "local-exec" {
     command = "sleep 15"
   }
+
   triggers = {
     "eks_cluster" = aws_iam_role_policy_attachment.cluster_eks_cluster.id,
     "eks_service" = aws_iam_role_policy_attachment.cluster_eks_service.id,
@@ -46,13 +47,9 @@ resource "null_resource" "delay_cluster" {
 
 resource "aws_eks_cluster" "cluster" {
   depends_on = [
-    aws_iam_role_policy_attachment.cluster_eks_cluster,
-    aws_iam_role_policy_attachment.cluster_eks_service,
-    aws_route_table_association.private,
-    aws_route_table_association.public,
-    aws_subnet.private,
-    aws_subnet.public,
     null_resource.delay_cluster,
+    null_resource.iam,
+    null_resource.network,
   ]
 
   name     = var.name
@@ -67,37 +64,16 @@ resource "aws_eks_cluster" "cluster" {
   }
 }
 
-resource "null_resource" "delay_cluster_removal" {
-  depends_on = [
-    aws_eks_cluster.cluster
-    aws_iam_role_policy_attachment.cluster_eks_cluster,
-    aws_iam_role_policy_attachment.cluster_eks_service,
-    aws_iam_role_policy_attachment.nodes_ecr,
-    aws_iam_role_policy_attachment.nodes_eks_cni,
-    aws_iam_role_policy_attachment.nodes_eks_worker,
-  ]
-
-  provisioner "local-exec" {
-    when    = "destroy"
-    command = "sleep 60"
-  }
+resource "aws_iam_openid_connect_provider" "cluster" {
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = ["9e99a48a9960b14926bb7f3b02e22da2b0ab7280"]
+  url             = aws_eks_cluster.cluster.identity.0.oidc.0.issuer
 }
 
 resource "aws_eks_node_group" "cluster" {
   depends_on = [
     aws_eks_cluster.cluster,
     aws_iam_openid_connect_provider.cluster,
-    aws_iam_role_policy_attachment.cluster_eks_cluster,
-    aws_iam_role_policy_attachment.cluster_eks_service,
-    aws_iam_role_policy_attachment.nodes_ecr,
-    aws_iam_role_policy_attachment.nodes_eks_cni,
-    aws_iam_role_policy_attachment.nodes_eks_worker,
-    aws_route.private-default,
-    aws_route.public-default,
-    aws_route_table.private,
-    aws_route_table.public,
-    aws_route_table_association.private,
-    aws_route_table_association.public,
   ]
 
   count = 3
