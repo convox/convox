@@ -25,7 +25,12 @@ provider "null" {
 }
 
 locals {
-  oidc_sub = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
+  availability_zones = slice(data.aws_availability_zones.available.names, 0, 2)
+  oidc_sub           = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
+}
+
+data "aws_availability_zones" "available" {
+  state = "available"
 }
 
 data "aws_eks_cluster_auth" "cluster" {
@@ -70,20 +75,83 @@ resource "aws_iam_openid_connect_provider" "cluster" {
   url             = aws_eks_cluster.cluster.identity.0.oidc.0.issuer
 }
 
+resource "random_id" "node_group" {
+  byte_length = 8
+
+  keepers = {
+    node_disk = var.node_disk
+    node_type = var.node_type
+    private   = var.private
+  }
+}
+
+# the node group section is copy-pasted to allow for rolling restarts. when using count or for_each
+# the dependency chain does not allow them to begin their destruction at different times
+
 resource "aws_eks_node_group" "cluster" {
   depends_on = [
     aws_eks_cluster.cluster,
     aws_iam_openid_connect_provider.cluster,
   ]
 
-  count = 3
+  cluster_name    = aws_eks_cluster.cluster.name
+  disk_size       = random_id.node_group.keepers.node_disk
+  instance_types  = [random_id.node_group.keepers.node_type]
+  node_group_name = "${var.name}-${data.aws_availability_zones.available.names[0]}-${random_id.node_group.hex}"
+  node_role_arn   = replace(aws_iam_role.nodes.arn, "role/convox/", "role/") # eks barfs on roles with paths
+  subnet_ids      = [var.private ? aws_subnet.private[0].id : aws_subnet.public[0].id]
+
+  scaling_config {
+    desired_size = 1
+    min_size     = 1
+    max_size     = 100
+  }
+
+  lifecycle {
+    create_before_destroy = true
+    ignore_changes        = [scaling_config[0].desired_size]
+  }
+}
+
+resource "aws_eks_node_group" "cluster1" {
+  depends_on = [
+    aws_eks_cluster.cluster,
+    aws_eks_node_group.cluster,
+    aws_iam_openid_connect_provider.cluster,
+  ]
 
   cluster_name    = aws_eks_cluster.cluster.name
-  disk_size       = var.node_disk
-  instance_types  = [var.node_type]
-  node_group_name = "${var.name}-${data.aws_availability_zones.available.names[count.index]}-${replace(var.node_type, ".", "-")}${var.private ? "" : "-public"}"
+  disk_size       = random_id.node_group.keepers.node_disk
+  instance_types  = [random_id.node_group.keepers.node_type]
+  node_group_name = "${var.name}-${data.aws_availability_zones.available.names[1]}-${random_id.node_group.hex}"
   node_role_arn   = replace(aws_iam_role.nodes.arn, "role/convox/", "role/") # eks barfs on roles with paths
-  subnet_ids      = [var.private ? aws_subnet.private[count.index].id : aws_subnet.public[count.index].id]
+  subnet_ids      = [var.private ? aws_subnet.private[1].id : aws_subnet.public[1].id]
+
+  scaling_config {
+    desired_size = 1
+    min_size     = 1
+    max_size     = 100
+  }
+
+  lifecycle {
+    create_before_destroy = true
+    ignore_changes        = [scaling_config[0].desired_size]
+  }
+}
+
+resource "aws_eks_node_group" "cluster2" {
+  depends_on = [
+    aws_eks_cluster.cluster,
+    aws_eks_node_group.cluster1,
+    aws_iam_openid_connect_provider.cluster,
+  ]
+
+  cluster_name    = aws_eks_cluster.cluster.name
+  disk_size       = random_id.node_group.keepers.node_disk
+  instance_types  = [random_id.node_group.keepers.node_type]
+  node_group_name = "${var.name}-${data.aws_availability_zones.available.names[2]}-${random_id.node_group.hex}"
+  node_role_arn   = replace(aws_iam_role.nodes.arn, "role/convox/", "role/") # eks barfs on roles with paths
+  subnet_ids      = [var.private ? aws_subnet.private[2].id : aws_subnet.public[2].id]
 
   scaling_config {
     desired_size = 1
