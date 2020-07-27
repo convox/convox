@@ -13,6 +13,7 @@ metadata:
     nginx.ingress.kubernetes.io/affinity: cookie
     nginx.ingress.kubernetes.io/session-cookie-name: CONVOXSESSION
     {{ end }}
+    nginx.ingress.kubernetes.io/ssl-redirect: "{{.Service.Tls.Redirect}}"
     {{ range $k, $v := .Annotations }}
     {{$k}}: {{ safe $v }}
     {{ end }}

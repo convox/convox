@@ -29,6 +29,7 @@ type Service struct {
 	Singleton   bool                  `yaml:"singleton,omitempty"`
 	Sticky      bool                  `yaml:"sticky,omitempty"`
 	Test        string                `yaml:"test,omitempty"`
+	Tls         ServiceTls            `yaml:"tls,omitempty"`
 	Volumes     []string              `yaml:"volumes,omitempty"`
 }
 
@@ -95,6 +96,10 @@ type ServiceScaleTargets struct {
 	Custom   ServiceScaleMetrics
 	Memory   int
 	Requests int
+}
+
+type ServiceTls struct {
+	Redirect bool
 }
 
 func (s Service) BuildHash(key string) string {

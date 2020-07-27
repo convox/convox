@@ -98,6 +98,9 @@ func TestManifestLoad(t *testing.T) {
 				},
 				Sticky: false,
 				Test:   "make  test",
+				Tls: manifest.ServiceTls{
+					Redirect: false,
+				},
 			},
 			manifest.Service{
 				Name:    "proxy",
@@ -126,6 +129,9 @@ func TestManifestLoad(t *testing.T) {
 					Memory: 1024,
 				},
 				Sticky: false,
+				Tls: manifest.ServiceTls{
+					Redirect: true,
+				},
 			},
 			manifest.Service{
 				Name: "foo",
@@ -155,6 +161,9 @@ func TestManifestLoad(t *testing.T) {
 				},
 				Singleton: true,
 				Sticky:    true,
+				Tls: manifest.ServiceTls{
+					Redirect: true,
+				},
 			},
 			manifest.Service{
 				Name: "bar",
@@ -181,6 +190,9 @@ func TestManifestLoad(t *testing.T) {
 					Memory: 512,
 				},
 				Sticky: false,
+				Tls: manifest.ServiceTls{
+					Redirect: true,
+				},
 			},
 			manifest.Service{
 				Name: "scaler",
@@ -221,6 +233,9 @@ func TestManifestLoad(t *testing.T) {
 					},
 				},
 				Sticky: false,
+				Tls: manifest.ServiceTls{
+					Redirect: true,
+				},
 			},
 			manifest.Service{
 				Name:    "inherit",
@@ -249,6 +264,9 @@ func TestManifestLoad(t *testing.T) {
 					Memory: 1024,
 				},
 				Sticky: false,
+				Tls: manifest.ServiceTls{
+					Redirect: true,
+				},
 			},
 			manifest.Service{
 				Name: "agent",
@@ -282,6 +300,9 @@ func TestManifestLoad(t *testing.T) {
 					Memory: 512,
 				},
 				Sticky: false,
+				Tls: manifest.ServiceTls{
+					Redirect: true,
+				},
 			},
 		},
 		Timers: manifest.Timers{
@@ -349,6 +370,8 @@ func TestManifestLoad(t *testing.T) {
 		"services.api.resources",
 		"services.api.scale",
 		"services.api.test",
+		"services.api.tls",
+		"services.api.tls.redirect",
 		"services.bar",
 		"services.foo",
 		"services.foo.command",
@@ -472,6 +495,9 @@ func TestManifestLoadSimple(t *testing.T) {
 					Memory: 512,
 				},
 				Sticky: false,
+				Tls: manifest.ServiceTls{
+					Redirect: true,
+				},
 			},
 		},
 	}
