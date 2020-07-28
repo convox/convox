@@ -11,7 +11,7 @@ $ convox rack kubeconfig /tmp/myrack-config
 $ export KUBECONTROL=/tmp/myrack-config
 ```
 
-This will export the proxy configuration to a temporary file and then point your local Kubecontrol at that location so you can connect to your Rack's cluster. You will need to perform this step before you can execute any Kubectl commands against your cluster.
+This will export the proxy configuration to a temporary file and then point your local Kubectl environment at that location so you can connect to your Rack's cluster. You will need to perform this step before you can execute any Kubectl commands against your cluster.
 
 ## Deploy the Datadog Agent
 
