@@ -4,7 +4,7 @@ You can add operational visibility to your [Rack](../../reference/primitives/rac
 
 ## Configure Kubectl to Point at Your Rack
 
-Convox allows you to securely connect your Kubectl to your Convox created Kubernetes cluster by exporting a [Kubeconfig](https://docs.convox.com/reference/cli/rack#rack-kubeconfig) that will connect you to a Kubernetes API Proxy running inside your Rack. This allows you to use Kubectl without directly exposing the credentials for your Kubernetes cluster. For example if your Rack is called `myrack` you could point your local Kubectl to your Rack cluster as follows
+Convox allows you to securely connect your Kubectl to your Convox created Kubernetes cluster by exporting a [Kubeconfig](../../reference/cli/rack#rack-kubeconfig) that will connect you to a Kubernetes API Proxy running inside your Rack. This allows you to use Kubectl without directly exposing the credentials for your Kubernetes cluster. For example if your Rack is called `myrack` you could point your local Kubectl to your Rack cluster as follows
 
 ```
 $ convox rack kubeconfig /tmp/myrack-config
@@ -15,11 +15,11 @@ This will export the proxy configuration to a temporary file and then point your
 
 ## Deploy the Datadog Agent
 
-Once you have Kubectl pointing at your Rack you can deploy the datadog agent as a Kubernetes Daemonset. The following is based on the DataDog [Documentation](https://docs.datadoghq.com/agent/kubernetes/?tab=daemonset) so please refer back there for any specific tweaks you may want to make.
+Once you have Kubectl pointing at your Rack you can deploy the datadog agent as a Kubernetes Daemonset. The following is based on the [DataDog Documentation](https://docs.datadoghq.com/agent/kubernetes/?tab=daemonset) so please refer back there for any specific tweaks you may want to make.
 
 ## Configure Agent Permissions
 
-The following commands will create the necessary roles in your cluster for the DataDog Agent to monitor your cluster and your [Apps](../../reference/primitives/app/app.md)
+The following commands will create the necessary roles in your cluster for the DataDog Agent to monitor your cluster and your [Apps](../../reference/primitives/apps.md)
 
 ```
 $ kubectl apply -f "https://raw.githubusercontent.com/DataDog/datadog-agent/master/Dockerfiles/manifests/rbac/clusterrole.yaml"
