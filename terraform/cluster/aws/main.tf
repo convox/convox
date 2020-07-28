@@ -28,6 +28,10 @@ locals {
   oidc_sub = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
 }
 
+data "aws_availability_zones" "available" {
+  state = "available"
+}
+
 data "aws_eks_cluster_auth" "cluster" {
   name = aws_eks_cluster.cluster.id
 }
@@ -70,6 +74,17 @@ resource "aws_iam_openid_connect_provider" "cluster" {
   url             = aws_eks_cluster.cluster.identity.0.oidc.0.issuer
 }
 
+resource "random_id" "node_group" {
+  byte_length = 8
+
+  keepers = {
+    node_disk = var.node_disk
+    node_type = var.node_type
+    private   = var.private
+    role_arn  = replace(aws_iam_role.nodes.arn, "role/convox/", "role/") # eks barfs on roles with paths
+  }
+}
+
 resource "aws_eks_node_group" "cluster" {
   depends_on = [
     aws_eks_cluster.cluster,
@@ -79,10 +94,10 @@ resource "aws_eks_node_group" "cluster" {
   count = 3
 
   cluster_name    = aws_eks_cluster.cluster.name
-  disk_size       = var.node_disk
-  instance_types  = [var.node_type]
-  node_group_name = "${var.name}-${data.aws_availability_zones.available.names[count.index]}-${replace(var.node_type, ".", "-")}${var.private ? "" : "-public"}"
-  node_role_arn   = replace(aws_iam_role.nodes.arn, "role/convox/", "role/") # eks barfs on roles with paths
+  disk_size       = random_id.node_group.keepers.node_disk
+  instance_types  = [random_id.node_group.keepers.node_type]
+  node_group_name = "${var.name}-${data.aws_availability_zones.available.names[count.index]}-${random_id.node_group.hex}"
+  node_role_arn   = random_id.node_group.keepers.role_arn
   subnet_ids      = [var.private ? aws_subnet.private[count.index].id : aws_subnet.public[count.index].id]
 
   scaling_config {
