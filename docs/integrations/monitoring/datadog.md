@@ -2,24 +2,24 @@
 
 You can add operational visibility to your [Rack](../../reference/primitives/rack) with Datadog.
 
-## Configure Kubectl to Point at Your Rack
+## Configure kubectl to Point at Your Rack
 
-Convox allows you to securely connect your Kubectl to your Convox created Kubernetes cluster by exporting a [Kubeconfig](../../reference/cli/rack#rack-kubeconfig) that will connect you to a Kubernetes API Proxy running inside your Rack. This allows you to use Kubectl without directly exposing the credentials for your Kubernetes cluster. For example if your Rack is called `myrack` you could point your local Kubectl to your Rack cluster as follows
+Convox allows you to securely connect your `kubectl` to your Convox created Kubernetes cluster by exporting a [kubeconfig](../../reference/cli/rack#rack-kubeconfig) that will connect you to a Kubernetes API Proxy running inside your Rack. This allows you to use `kubectl` without directly exposing the credentials for your Kubernetes cluster. For example if your Rack is called `myrack` you could point your local `kubectl` to your Rack cluster as follows
 
 ```
-$ convox rack kubeconfig /tmp/myrack-config
-$ export KUBECONTROL=/tmp/myrack-config
+$ convox rack kubeconfig > /tmp/myrack-config
+$ export KUBECONFIG=/tmp/myrack-config
 ```
 
-This will export the proxy configuration to a temporary file and then point your local Kubectl environment at that location so you can connect to your Rack's cluster. You will need to perform this step before you can execute any Kubectl commands against your cluster.
+This will export the proxy configuration to a temporary file and then point your local `kubectl` environment at that location so you can connect to your Rack's cluster. You will need to perform this step before you can execute any `kubectl` commands against your cluster.
 
 ## Deploy the Datadog Agent
 
-Once you have Kubectl pointing at your Rack you can deploy the datadog agent as a Kubernetes Daemonset. The following is based on the [DataDog Documentation](https://docs.datadoghq.com/agent/kubernetes/?tab=daemonset) so please refer back there for any specific tweaks you may want to make.
+Once you have `kubectl` pointing at your Rack you can deploy the datadog agent as a Kubernetes Daemonset. The following is based on the [Datadog Documentation](https://docs.datadoghq.com/agent/kubernetes/?tab=daemonset) so please refer back there for any specific tweaks you may want to make.
 
 ## Configure Agent Permissions
 
-The following commands will create the necessary roles in your cluster for the DataDog Agent to monitor your cluster and your [Apps](../../reference/primitives/apps.md)
+The following commands will create the necessary roles in your cluster for the Datadog Agent to monitor your cluster and your [Apps](../../reference/primitives/apps.md)
 
 ```
 $ kubectl apply -f "https://raw.githubusercontent.com/DataDog/datadog-agent/master/Dockerfiles/manifests/rbac/clusterrole.yaml"
@@ -32,13 +32,13 @@ $ kubectl apply -f "https://raw.githubusercontent.com/DataDog/datadog-agent/mast
 
 ## Store Your API Key as a Kubernetes Secret
 
-Retrieve your [API Key](https://app.datadoghq.com/account/settings#api) from the DataDog console and store it as a secret in your cluster by replacing `<DATADOG_API_KEY>` with your API key and running the following command.
+Retrieve your [API Key](https://app.datadoghq.com/account/settings#api) from the Datadog console and store it as a secret in your cluster by replacing `<DATADOG_API_KEY>` with your API key and running the following command.
 
 ```
 $ kubectl create secret generic datadog-secret --from-literal api-key="<DATADOG_API_KEY>" --namespace="default"
 ```
 
-You will then need to grab the Base64 encoded version of your API key to put in the DataDog Agent configuration file. You can retrieve the Base64 encoded value by running
+You will then need to grab the Base64 encoded version of your API key to put in the Datadog Agent configuration file. You can retrieve the Base64 encoded value by running
 
 `$ kubectl get secret datadog-secret -o yaml`
 
@@ -61,9 +61,9 @@ type: Opaque
 
 ```
 
-## Create a DataDog Agent Manifest
+## Create a Datadog Agent Manifest
 
-DataDog has several example manifests
+Datadog has several example manifests
 - [Manifest with Logs, APM, process, metrics collection enabled.](https://docs.datadoghq.com/resources/yaml/datadog-agent-all-features.yaml)
 - [Manifest with Logs, APM, and metrics collection enabled.](https://docs.datadoghq.com/resources/yaml/datadog-agent-logs-apm.yaml)
 - [Manifest with Logs and metrics collection enabled.](https://docs.datadoghq.com/resources/yaml/datadog-agent-logs.yaml)
@@ -92,7 +92,7 @@ We also recommend adding the following to the environment section of the Daemons
 - name: DD_CONTAINER_EXCLUDE
   value: "name:datadog-agent"
 ```
-to remove extra noise from the DataDog Agent itself.
+to remove extra noise from the Datadog Agent itself.
 
 ## Create the Daemonset
 
@@ -110,7 +110,7 @@ $ kubectl get daemonset
 
 Once your `DESIRED` `CURRENT` and `READY` counts are all equal your Agents should be up and running. To make any changes to your Agent configuration simply modify your manifest and repeat the steps above.
 
-For further customization and troubleshooting please refer to the [DataDog Docs](https://docs.datadoghq.com/agent/kubernetes/?tab=daemonset)
+For further customization and troubleshooting please refer to the [Datadog Docs](https://docs.datadoghq.com/agent/kubernetes/?tab=daemonset)
 
 ## Metrics and Traces
 
