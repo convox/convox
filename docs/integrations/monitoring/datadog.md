@@ -71,7 +71,7 @@ DataDog has several example manifests
 - [Manifest with Network Performance Monitoring enabled](https://docs.datadoghq.com/resources/yaml/datadog-agent-npm.yaml)
 - [Vanilla manifest with just metrics collection enabled.](https://docs.datadoghq.com/resources/yaml/datadog-agent-vanilla.yaml)
 
-Whichever one these you use as your starting point you will need to put the Base64 encoded key from the previous step in the section at the top where it says
+Whichever one of these examples you use as your starting point, you will need to insert the Base64 encoded key from the previous step in the section at the top where it says:
 
 ```
 # Source: datadog/templates/secrets.yaml
