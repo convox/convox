@@ -1166,7 +1166,7 @@ spec:
                 name: env-web
             image: repo1:web.build1
             imagePullPolicy: IfNotPresent
-            name: main
+            name: app1
             resources:
               limits:
                 memory: 512Mi
