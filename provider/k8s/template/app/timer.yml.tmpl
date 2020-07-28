@@ -39,7 +39,7 @@ spec:
           restartPolicy: Never
           shareProcessNamespace: {{.Service.Init}}
           containers:
-          - name: main
+          - name: {{.App.Name}}
             args:
             {{ range shellsplit .Timer.Command }}
               - {{ safe . }}
