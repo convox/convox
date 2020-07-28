@@ -47,6 +47,8 @@ services:
       - 3000/udp
     scale: 3-10
     test: make ${BAR} test
+    tls:
+      redirect: false
   proxy: &proxy
     command: bash
     domain:

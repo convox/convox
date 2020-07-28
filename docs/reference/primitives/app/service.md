@@ -54,6 +54,8 @@ services:
     singleton: false
     sticky: true
     test: make test
+    tls:
+      redirect: true
 ```
 
 | Attribute     | Type       | Default             | Description                                                                                                                                |
@@ -75,6 +77,7 @@ services:
 | `singleton`   | boolean    | false               | Set to `true` to prevent extra [Processes](process.md) of this Service from being started during deployments                               |
 | `sticky`      | boolean    | false               | Set to `true` to enable sticky sessions                                                                                                    |
 | `test`        | string     |                     | A command to run to test this Service when running `convox test`                                                                           |
+| `tls`         | map        |                     | TLS-related configuration                                                                                                                  |
 
 > Environment variables **must** be declared to be populated for a Service.
 
@@ -123,6 +126,11 @@ services:
 | `cpu`     | number |         | The percentage of CPU utilization to target for [Processes](process.md) of this Service    |
 | `memory`  | number |         | The percentage of memory utilization to target for [Processes](process.md) of this Service |
 
+### tls
+
+| Attribute  | Type    | Default | Description                                                                          |
+| ---------- | ------- | ------- | ------------------------------------------------------------------------------------ |
+| `redirect` | boolean | true    | Whether or not HTTP requests should be redirected to HTTPS using a 308 response code |
 
 ## Command Line Interface
 

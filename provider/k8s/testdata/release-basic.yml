@@ -29,6 +29,16 @@ manifest:
         - two:OTHER_URL
         - three
         - four
+    web2:
+      build: .
+      port: 5000
+      resources:
+        - one
+        - two:OTHER_URL
+        - three
+        - four
+      tls:
+        redirect: false
     deployment:
       build: .
       deployment:

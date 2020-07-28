@@ -176,6 +176,10 @@ func (m *Manifest) ApplyDefaults() error {
 		if m.Services[i].Scale.Memory == 0 {
 			m.Services[i].Scale.Memory = DefaultMem
 		}
+
+		if !m.AttributeExists(fmt.Sprintf("services.%s.tls.redirect", s.Name)) {
+			m.Services[i].Tls.Redirect = true
+		}
 	}
 
 	return nil

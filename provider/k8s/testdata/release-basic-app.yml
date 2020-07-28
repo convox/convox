@@ -63,6 +63,7 @@ metadata:
     convox.com/idles: "false"
     kubernetes.io/ingress-class: ""
     nginx.ingress.kubernetes.io/backend-protocol: http
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
   labels:
     app: app1
     provider: k8s
@@ -85,6 +86,40 @@ spec:
   - hosts:
     - service.host
     secretName: cert-web
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    ann1: val1
+    convox.com/backend-protocol: http
+    convox.com/idles: "false"
+    kubernetes.io/ingress-class: ""
+    nginx.ingress.kubernetes.io/backend-protocol: http
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    service: web2
+    system: convox
+    type: service
+  name: web2
+  namespace: rack1-app1
+spec:
+  rules:
+  - host: service.host
+    http:
+      paths:
+      - backend:
+          serviceName: web2
+          servicePort: 5000
+  tls:
+  - hosts:
+    - service.host
+    secretName: cert-web2
 ---
 apiVersion: v1
 data:
@@ -915,6 +950,160 @@ spec:
     targetPort: main
   selector:
     service: web
+    type: service
+  type: ClusterIP
+---
+apiVersion: v1
+data:
+  APP: YXBwMQ==
+  BUILD: QlVJTEQx
+  BUILD_DESCRIPTION: Zm9v
+  FOO: YmFy
+  FOUR_URL: ""
+  PORT: NTAwMA==
+  RACK: cmFjazE=
+  RACK_URL: aHR0cHM6Ly9jb252b3g6QGFwaS5uczEuc3ZjLmNsdXN0ZXIubG9jYWw6NTQ0Mw==
+  RELEASE: UkVMRUFTRTI=
+  SERVICE: d2ViMg==
+  THREE_URL: dmFsdWU=
+kind: Secret
+metadata:
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    service: web2
+    system: convox
+    type: env
+  name: env-web2
+  namespace: rack1-app1
+type: Opaque
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    atom.conditions: Available=True,Progressing=True/NewReplicaSetAvailable
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    service: web2
+    system: convox
+    type: service
+  name: web2
+  namespace: rack1-app1
+spec:
+  minReadySeconds: 1
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: app1
+      rack: rack1
+      service: web2
+      system: convox
+  strategy:
+    rollingUpdate:
+      maxSurge: 100%
+      maxUnavailable: 50%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: app1
+        name: web2
+        rack: rack1
+        release: RELEASE2
+        service: web2
+        system: convox
+        type: service
+    spec:
+      containers:
+      - env:
+        - name: INSTANCE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: ONE_URL
+          valueFrom:
+            configMapKeyRef:
+              key: URL
+              name: resource-one
+        - name: OTHER_URL
+          valueFrom:
+            configMapKeyRef:
+              key: URL
+              name: resource-two
+        - name: THREE_URL
+          valueFrom:
+            configMapKeyRef:
+              key: URL
+              name: resource-three
+        - name: FOUR_URL
+          valueFrom:
+            configMapKeyRef:
+              key: URL
+              name: resource-four
+        envFrom:
+        - secretRef:
+            name: env-web2
+        image: repo1:web2.build1
+        imagePullPolicy: IfNotPresent
+        name: app1
+        ports:
+        - containerPort: 5000
+          name: main
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 5000
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 4
+        resources:
+          limits:
+            memory: 512Mi
+          requests:
+            cpu: 256m
+            memory: 512Mi
+        volumeMounts:
+        - mountPath: /etc/convox
+          name: ca
+      shareProcessNamespace: true
+      volumes:
+      - configMap:
+          name: ca
+          optional: true
+        name: ca
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    convox.com/alias: web2.app1.rack1.local
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    service: web2
+    system: convox
+  name: web2
+  namespace: rack1-app1
+spec:
+  ports:
+  - name: main
+    port: 5000
+    protocol: TCP
+    targetPort: main
+  selector:
+    service: web2
     type: service
   type: ClusterIP
 ---
