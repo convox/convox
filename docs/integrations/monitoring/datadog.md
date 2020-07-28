@@ -86,7 +86,7 @@ data:
   api-key: PUT_YOUR_BASE64_ENCODED_API_KEY_HERE
 ```
 
-We also recommend adding the following to the environment section of the daeomonset spec:
+We also recommend adding the following to the environment section of the Daemonset spec:
 
 ```
 - name: DD_CONTAINER_EXCLUDE
