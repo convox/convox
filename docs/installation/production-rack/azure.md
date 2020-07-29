@@ -52,7 +52,8 @@ The following environment variables are required:
 
 ### Available Parameters
 
-| Name        | Default          |
-| ----------- | ---------------- |
-| `node_type` | `Standard_D3_v3` |
-| `region`    | `eastus`         |
+| Name        | Default          | Description                                                           |
+| ----------- | ---------------- | --------------------------------------------------------------------- |
+| `node_type` | `Standard_D3_v3` | Node instance type                                                    |
+| `region`    | `eastus`         | Azure region                                                          |
+| `syslog`    |                  | Forward logs to a syslog endpoint (e.g. `tcp+tls://example.org:1234`) |
