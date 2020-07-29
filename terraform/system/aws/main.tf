@@ -58,6 +58,7 @@ module "fluentd" {
   oidc_arn  = module.cluster.oidc_arn
   oidc_sub  = module.cluster.oidc_sub
   rack      = var.name
+  syslog    = var.syslog
 }
 
 module "rack" {

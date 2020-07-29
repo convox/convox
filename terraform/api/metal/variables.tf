@@ -29,3 +29,7 @@ variable "router" {
 variable "secret" {
   type = string
 }
+
+variable "syslog" {
+  default = ""
+}

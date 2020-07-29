@@ -26,6 +26,10 @@ variable "release" {
   type = string
 }
 
+variable "syslog" {
+  default = ""
+}
+
 variable "whitelist" {
   default = ["0.0.0.0/0"]
 }

@@ -41,3 +41,7 @@ variable "secret" {
 variable "secret_key" {
   type = string
 }
+
+variable "syslog" {
+  default = ""
+}

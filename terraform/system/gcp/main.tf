@@ -70,5 +70,6 @@ module "rack" {
   network       = module.cluster.network
   nodes_account = module.cluster.nodes_account
   release       = local.release
+  syslog        = var.syslog
   whitelist     = split(",", var.whitelist)
 }

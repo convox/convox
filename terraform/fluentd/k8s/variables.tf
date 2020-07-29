@@ -22,6 +22,10 @@ variable "namespace" {
   type = string
 }
 
+variable "syslog" {
+  default = ""
+}
+
 variable "target" {
   type = string
 }

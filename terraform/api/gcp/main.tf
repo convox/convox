@@ -40,6 +40,7 @@ module "fluentd" {
   elasticsearch = module.elasticsearch.host
   namespace     = var.namespace
   rack          = var.name
+  syslog        = var.syslog
 }
 
 module "k8s" {

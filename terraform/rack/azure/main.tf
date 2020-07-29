@@ -39,6 +39,7 @@ module "api" {
   resolver       = module.resolver.endpoint
   resource_group = var.resource_group
   router         = module.router.endpoint
+  syslog         = var.syslog
   workspace      = var.workspace
 }
 

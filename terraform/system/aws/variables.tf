@@ -26,6 +26,10 @@ variable "region" {
   default = "us-east-1"
 }
 
+variable "syslog" {
+  default = ""
+}
+
 variable "whitelist" {
   default = "0.0.0.0/0"
 }
