@@ -126,9 +126,18 @@ func (c Console) Name() string {
 }
 
 func (c Console) Parameters() (map[string]string, error) {
-	cc, err := c.Client()
+	cc, err := c.client()
 	if err != nil {
 		return nil, err
+	}
+
+	r, err := cc.RackGet(c.name)
+	if err != nil {
+		return nil, err
+	}
+
+	if r.Parameters != nil {
+		return r.Parameters, nil
 	}
 
 	s, err := cc.SystemGet()
