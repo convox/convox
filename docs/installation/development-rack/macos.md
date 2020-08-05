@@ -24,6 +24,11 @@
 
 ## Installation
 
+Make sure that the contexts of your `kubectl` are set to `docker-desktop`. If not, just run:
+
+    $ kubectl config use-context docker-desktop
+    
+
 Install a local Rack named `dev`.
 
     $ convox rack install local dev
