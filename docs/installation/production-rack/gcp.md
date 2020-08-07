@@ -53,3 +53,4 @@ The following environment variables are required:
 | `node_type`   | `n1-standard-1` | Node instance type                                                                       |
 | `preemptible` | `true`          | Use [preemptible](https://cloud.google.com/compute/docs/instances/preemptible) instances |
 | `region`      | `us-east1`      | GCP Region                                                                               |
+| `syslog`      |                 | Forward logs to a syslog endpoint (e.g. `tcp+tls://example.org:1234`)                    |

@@ -29,3 +29,7 @@ variable "resolver" {
 variable "router" {
   type = string
 }
+
+variable "syslog" {
+  default = ""
+}

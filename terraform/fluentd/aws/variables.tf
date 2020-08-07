@@ -17,3 +17,7 @@ variable "oidc_arn" {
 variable "oidc_sub" {
   type = string
 }
+
+variable "syslog" {
+  default = ""
+}

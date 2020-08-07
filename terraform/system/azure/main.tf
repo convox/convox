@@ -59,6 +59,7 @@ module "rack" {
   region         = var.region
   release        = local.release
   resource_group = azurerm_resource_group.rack.name
+  syslog         = var.syslog
   whitelist      = split(",", var.whitelist)
   workspace      = module.cluster.workspace
 }

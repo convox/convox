@@ -111,12 +111,18 @@ resource "kubernetes_daemonset" "fluentd" {
         }
 
         container {
-          name  = "system"
-          image = var.image
+          name              = "system"
+          image             = var.image
+          image_pull_policy = "Always"
 
           env {
             name  = "CLUSTER_NAME"
             value = var.cluster
+          }
+
+          env {
+            name  = "TARGET_HASH"
+            value = sha256(var.target)
           }
 
           dynamic "env" {

@@ -34,6 +34,10 @@ variable "router" {
   type = string
 }
 
+variable "syslog" {
+  default = ""
+}
+
 variable "workspace" {
   type = string
 }

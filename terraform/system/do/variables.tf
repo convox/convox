@@ -26,6 +26,10 @@ variable "secret_key" {
   type = string
 }
 
+variable "syslog" {
+  default = ""
+}
+
 variable "token" {
   type = string
 }

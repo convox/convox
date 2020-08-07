@@ -28,14 +28,19 @@ module "k8s" {
   }
 
   cluster   = var.cluster
-  image     = "fluent/fluentd-kubernetes-daemonset:v1.7.3-debian-cloudwatch-1.0"
+  image     = "convox/fluentd:1.7"
   namespace = var.namespace
   rack      = var.rack
-  target    = templatefile("${path.module}/target.conf.tpl", { region = data.aws_region.current.name })
+
+  target = templatefile("${path.module}/target.conf.tpl", {
+    rack   = var.rack,
+    region = data.aws_region.current.name,
+    syslog = compact(split(",", var.syslog)),
+  })
 
   annotations = {
-    "eks.amazonaws.com/role-arn" : aws_iam_role.fluentd.arn,
-    "iam.amazonaws.com/role" = aws_iam_role.fluentd.arn
+    "eks.amazonaws.com/role-arn" = aws_iam_role.fluentd.arn,
+    "iam.amazonaws.com/role"     = aws_iam_role.fluentd.arn
   }
 
   env = {

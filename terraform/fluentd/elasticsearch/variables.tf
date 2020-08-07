@@ -13,3 +13,7 @@ variable "namespace" {
 variable "rack" {
   type = string
 }
+
+variable "syslog" {
+  default = ""
+}

@@ -14,8 +14,13 @@ module "k8s" {
   }
 
   cluster   = var.cluster
-  image     = "fluent/fluentd-kubernetes-daemonset:v1.7-debian-elasticsearch6-1"
+  image     = "convox/fluentd:1.7"
   namespace = var.namespace
   rack      = var.rack
-  target    = templatefile("${path.module}/target.conf.tpl", { elasticsearch = var.elasticsearch })
+
+  target = templatefile("${path.module}/target.conf.tpl", {
+    elasticsearch = var.elasticsearch,
+    rack          = var.rack,
+    syslog        = compact(split(",", var.syslog)),
+  })
 }

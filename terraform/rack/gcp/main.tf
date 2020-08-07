@@ -34,6 +34,7 @@ module "api" {
   release       = var.release
   resolver      = module.resolver.endpoint
   router        = module.router.endpoint
+  syslog        = var.syslog
 }
 
 module "resolver" {

@@ -37,6 +37,7 @@ module "api" {
   resolver     = module.resolver.endpoint
   router       = module.router.endpoint
   secret       = random_string.secret.result
+  syslog       = var.syslog
 }
 
 module "resolver" {
