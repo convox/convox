@@ -37,11 +37,12 @@ The following environment variables are required:
 
 ### Available Parameters
 
-| Name        | Default       | Description                                                           |
-| ----------- | ------------- | --------------------------------------------------------------------- |
-| `cidr`      | `10.1.0.0/16` | CIDR range for VPC                                                    |
-| `node_disk` | `20`          | Node disk size in GB                                                  |
-| `node_type` | `t3.small`    | Node instance type                                                    |
-| `private`   | `true`        | Put nodes in private subnets behind NAT gateways                      |
-| `region`    | `us-east-1`   | AWS Region                                                            |
-| `syslog`    |               | Forward logs to a syslog endpoint (e.g. `tcp+tls://example.org:1234`) |
+| Name        | Default       | Description                                                             |
+| ----------- | ------------- | ----------------------------------------------------------------------- |
+| `cidr`      | `10.1.0.0/16` | CIDR range for VPC                                                      |
+| `node_disk` | `20`          | Node disk size in GB                                                    |
+| `node_type` | `t3.small`    | Node instance type                                                      |
+| `private`   | `true`        | Put nodes in private subnets behind NAT gateways                        |
+| `region`    | `us-east-1`   | AWS Region                                                              |
+| `syslog`    |               | Forward logs to a syslog endpoint (e.g. `tcp+tls://example.org:1234`)   |
+| `whitelist` | `0.0.0.0/0`   | Comma delimited list of CIDR Ranges that are allowed to access the Rack |

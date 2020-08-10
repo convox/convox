@@ -52,8 +52,9 @@ The following environment variables are required:
 
 ### Available Parameters
 
-| Name        | Default          | Description                                                           |
-| ----------- | ---------------- | --------------------------------------------------------------------- |
-| `node_type` | `Standard_D3_v3` | Node instance type                                                    |
-| `region`    | `eastus`         | Azure region                                                          |
-| `syslog`    |                  | Forward logs to a syslog endpoint (e.g. `tcp+tls://example.org:1234`) |
+| Name        | Default          | Description                                                             |
+| ----------- | ---------------- | ----------------------------------------------------------------------- |
+| `node_type` | `Standard_D3_v3` | Node instance type                                                      |
+| `region`    | `eastus`         | Azure region                                                            |
+| `syslog`    |                  | Forward logs to a syslog endpoint (e.g. `tcp+tls://example.org:1234`)   |
+| `whitelist` | `0.0.0.0/0`      | Comma delimited list of CIDR Ranges that are allowed to access the Rack |

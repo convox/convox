@@ -54,3 +54,4 @@ The following environment variables are required:
 | `preemptible` | `true`          | Use [preemptible](https://cloud.google.com/compute/docs/instances/preemptible) instances |
 | `region`      | `us-east1`      | GCP Region                                                                               |
 | `syslog`      |                 | Forward logs to a syslog endpoint (e.g. `tcp+tls://example.org:1234`)                    |
+| `whitelist`   | `0.0.0.0/0`     | Comma delimited list of CIDR Ranges that are allowed to access the Rack                  |
