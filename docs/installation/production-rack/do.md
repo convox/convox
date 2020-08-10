@@ -44,4 +44,3 @@ Go to https://cloud.digitalocean.com/account/api/tokens and generate a new Space
 | `region`        | `nyc3`        | Digital Ocean region                                                    |
 | `registry_disk` | `50Gi`        | Registry disk size                                                      |
 | `syslog`        |               | Forward logs to a syslog endpoint (e.g. `tcp+tls://example.org:1234`)   |
-| `whitelist`     | `0.0.0.0/0`   | Comma delimited list of CIDR Ranges that are allowed to access the Rack |
