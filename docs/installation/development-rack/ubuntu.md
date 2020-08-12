@@ -9,6 +9,7 @@
 ### Kubernetes
 
     $ snap install microk8s --classic --channel=1.13/stable
+    $ microk8s.start
     $ microk8s.enable dns storage
     $ mkdir -p ~/.kube
     $ microk8s.config > ~/.kube/config
