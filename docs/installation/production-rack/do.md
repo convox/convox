@@ -38,9 +38,9 @@ Go to https://cloud.digitalocean.com/account/api/tokens and generate a new Space
 
 ### Available Parameters
 
-| Name            | Default       | Description                                                           |
-| --------------- | ------------- | --------------------------------------------------------------------- |
-| `node_type`     | `s-2vcpu-4gb` | Node instance type                                                    |
-| `region`        | `nyc3`        | Digital Ocean region                                                  |
-| `registry_disk` | `50Gi`        | Registry disk size                                                    |
-| `syslog`        |               | Forward logs to a syslog endpoint (e.g. `tcp+tls://example.org:1234`) |
+| Name            | Default       | Description                                                             |
+| --------------- | ------------- | ----------------------------------------------------------------------- |
+| `node_type`     | `s-2vcpu-4gb` | Node instance type                                                      |
+| `region`        | `nyc3`        | Digital Ocean region                                                    |
+| `registry_disk` | `50Gi`        | Registry disk size                                                      |
+| `syslog`        |               | Forward logs to a syslog endpoint (e.g. `tcp+tls://example.org:1234`)   |
