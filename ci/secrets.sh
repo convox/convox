@@ -18,9 +18,9 @@ azure)
   export_secret ARM_TENANT_ID
   ;;
 do)
-  export_secret DIGITALOCEAN_ACCESS_ID
+  export_secret DIGITALOCEAN_ACCESS_ID SPACES_ACCESS_KEY_ID
   export_secret DIGITALOCEAN_REGION REGION
-  export_secret DIGITALOCEAN_SECRET_KEY
+  export_secret DIGITALOCEAN_SECRET_KEY SPACES_SECRET_ACCESS_KEY
   export_secret DIGITALOCEAN_TOKEN
   ;;
 gcp)

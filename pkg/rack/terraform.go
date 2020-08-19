@@ -390,19 +390,8 @@ func (t Terraform) update(release string, vars map[string]string) error {
 	vars["name"] = common.CoalesceString(vars["name"], t.name)
 	vars["release"] = release
 
-	pv, err := terraformProviderVars(t.provider)
-	if err != nil {
-		return err
-	}
-
 	if err := t.writeVars(vars); err != nil {
 		return err
-	}
-
-	for k, v := range pv {
-		if _, ok := vars[k]; !ok {
-			vars[k] = v
-		}
 	}
 
 	dir, err := t.settingsDirectory()
@@ -592,7 +581,7 @@ func terraformEnv(provider string) (map[string]string, error) {
 	case "azure":
 		return requireEnv("ARM_CLIENT_ID", "ARM_CLIENT_SECRET", "ARM_SUBSCRIPTION_ID", "ARM_TENANT_ID")
 	case "do":
-		return requireEnv("DIGITALOCEAN_ACCESS_ID", "DIGITALOCEAN_SECRET_KEY", "DIGITALOCEAN_TOKEN")
+		return requireEnv("DIGITALOCEAN_TOKEN", "SPACES_ACCESS_KEY_ID", "SPACES_SECRET_ACCESS_KEY")
 	case "gcp":
 		return requireEnv("GOOGLE_CREDENTIALS", "GOOGLE_PROJECT")
 	default:
@@ -630,20 +619,6 @@ func terraformLatestVersion() (string, error) {
 	}
 
 	return release.Tag, nil
-}
-
-func terraformProviderVars(provider string) (map[string]string, error) {
-	switch provider {
-	case "do":
-		vars := map[string]string{
-			"access_id":  os.Getenv("DIGITALOCEAN_ACCESS_ID"),
-			"secret_key": os.Getenv("DIGITALOCEAN_SECRET_KEY"),
-			"token":      os.Getenv("DIGITALOCEAN_TOKEN"),
-		}
-		return vars, nil
-	default:
-		return map[string]string{}, nil
-	}
 }
 
 func terraformTemplateHelpers() template.FuncMap {
