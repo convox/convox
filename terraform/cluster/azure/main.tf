@@ -14,10 +14,6 @@ provider "random" {
   version = "~> 2.2"
 }
 
-data "azurerm_resource_group" "system" {
-  name = var.resource_group
-}
-
 data "azurerm_kubernetes_service_versions" "available" {
   location       = var.region
   version_prefix = "1.17."
@@ -31,18 +27,22 @@ resource "random_string" "suffix" {
 
 resource "azurerm_log_analytics_workspace" "rack" {
   name                = "${var.name}-${random_string.suffix.result}"
-  location            = data.azurerm_resource_group.system.location
-  resource_group_name = data.azurerm_resource_group.system.name
+  location            = var.region
+  resource_group_name = var.name
   sku                 = "PerGB2018"
   retention_in_days   = 30
+
+  tags = {
+    resource_group_id = var.resource_group
+  }
 }
 
 resource "azurerm_kubernetes_cluster" "rack" {
   depends_on = [azurerm_role_assignment.cluster-contributor]
 
   name                = var.name
-  location            = data.azurerm_resource_group.system.location
-  resource_group_name = data.azurerm_resource_group.system.name
+  location            = var.region
+  resource_group_name = var.name
   dns_prefix          = var.name
   kubernetes_version  = data.azurerm_kubernetes_service_versions.available.latest_version
 

@@ -22,7 +22,7 @@ resource "azuread_service_principal_password" "api" {
 }
 
 resource "azurerm_role_assignment" "principal_api_contributor" {
-  scope                = data.azurerm_resource_group.rack.id
+  scope                = var.resource_group
   role_definition_name = "Contributor"
   principal_id         = azuread_service_principal.api.id
 }
