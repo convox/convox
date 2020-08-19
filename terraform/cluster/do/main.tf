@@ -1,6 +1,13 @@
-provider "digitalocean" {
-  version = "~> 1.13"
+terraform {
+  required_providers {
+    digitalocean = {
+      source  = "digitalocean/digitalocean"
+      version = "~> 1.13"
+    }
+  }
 }
+
+provider "digitalocean" {}
 
 provider "http" {
   version = "~> 1.1"

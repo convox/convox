@@ -1,10 +1,13 @@
-provider "digitalocean" {
-  version = "~> 1.13"
-
-  spaces_access_id  = var.access_id
-  spaces_secret_key = var.secret_key
-  token             = var.token
+terraform {
+  required_providers {
+    digitalocean = {
+      source  = "digitalocean/digitalocean"
+      version = "~> 1.13"
+    }
+  }
 }
+
+provider "digitalocean" {}
 
 provider "http" {
   version = "~> 1.1"
