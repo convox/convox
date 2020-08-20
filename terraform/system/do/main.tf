@@ -7,7 +7,10 @@ terraform {
   }
 }
 
-provider "digitalocean" {}
+provider "digitalocean" {
+  spaces_access_id  = var.access_id
+  spaces_secret_key = var.secret_key
+}
 
 provider "http" {
   version = "~> 1.1"
