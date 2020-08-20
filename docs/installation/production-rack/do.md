@@ -15,22 +15,22 @@
 
 The following environment variables are required:
 
+- `DIGITALOCEAN_ACCESS_ID`
+- `DIGITALOCEAN_SECRET_KEY`
 - `DIGITALOCEAN_TOKEN`
-- `SPACES_ACCESS_KEY_ID`
-- `SPACES_SECRET_ACCESS_KEY`
 
 ### Create Token
 
 Go to https://cloud.digitalocean.com/account/api/tokens and generate a new Personal Access Token.
 
 - `DIGITALOCEAN_TOKEN` is the token you just created
-
+  
 ### Create Spaces Access Key
 
 Go to https://cloud.digitalocean.com/account/api/tokens and generate a new Spaces Access Key.
 
-- `SPACES_ACCESS_KEY_ID` is the resulting Key
-- `SPACES_SECRET_ACCESS_KEY` is the Secret
+- `DIGITALOCEAN_ACCESS_ID` is the resulting Key
+- `DIGITALOCEAN_SECRET_KEY` is the Secret
 
 ## Install Rack
 
