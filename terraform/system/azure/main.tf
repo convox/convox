@@ -43,7 +43,7 @@ module "cluster" {
   name           = var.name
   node_type      = var.node_type
   region         = var.region
-  resource_group = azurerm_resource_group.rack.name
+  resource_group = azurerm_resource_group.rack.id
 }
 
 module "rack" {
@@ -58,7 +58,7 @@ module "rack" {
   name           = var.name
   region         = var.region
   release        = local.release
-  resource_group = azurerm_resource_group.rack.name
+  resource_group = azurerm_resource_group.rack.id
   syslog         = var.syslog
   whitelist      = split(",", var.whitelist)
   workspace      = module.cluster.workspace

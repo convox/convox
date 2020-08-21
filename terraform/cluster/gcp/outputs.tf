@@ -53,10 +53,5 @@ output "network" {
 }
 
 output "nodes_account" {
-  depends_on = [
-    google_project_service.cloudresourcemanager,
-    google_project_service.redis,
-  ]
-
   value = google_service_account.nodes.email
 }

@@ -28,10 +28,6 @@ locals {
 
 data "azurerm_client_config" "current" {}
 
-data "azurerm_resource_group" "rack" {
-  name = var.resource_group
-}
-
 data "azurerm_subscription" "current" {}
 
 resource "random_string" "suffix" {
@@ -95,7 +91,7 @@ module "k8s" {
     REGION                = var.region
     REGISTRY              = azurerm_container_registry.registry.login_server
     RESOLVER              = var.resolver
-    RESOURCE_GROUP        = var.resource_group
+    RESOURCE_GROUP        = var.name
     ROUTER                = var.router
     STORAGE_ACCOUNT       = azurerm_storage_account.storage.name
     STORAGE_SHARE         = azurerm_storage_share.storage.name

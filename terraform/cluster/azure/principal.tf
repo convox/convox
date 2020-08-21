@@ -22,7 +22,7 @@ resource "azuread_service_principal_password" "cluster" {
 }
 
 resource "azurerm_role_assignment" "cluster-contributor" {
-  scope                = data.azurerm_resource_group.system.id
+  scope                = var.resource_group
   role_definition_name = "Contributor"
   principal_id         = azuread_service_principal.cluster.id
 }
