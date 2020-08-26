@@ -26,6 +26,7 @@ func Update(rack sdk.Interface, c *stdcli.Context) error {
 	}
 
 	version := c.Arg(0)
+	current := c.Version()
 
 	if version == "" {
 		v, err := latestRelease()
@@ -33,6 +34,11 @@ func Update(rack sdk.Interface, c *stdcli.Context) error {
 			return fmt.Errorf("could not fetch latest release: %s", err)
 		}
 		version = v
+	}
+
+	if (version == current) {
+		c.Writef("No update to be performed... ")
+		return c.OK()
 	}
 
 	asset := fmt.Sprintf("https://github.com/convox/convox/releases/download/%s/%s", version, binary)
