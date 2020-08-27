@@ -37,7 +37,7 @@ func Update(rack sdk.Interface, c *stdcli.Context) error {
 	}
 
 	if (version == current) {
-		c.Writef("Already on requested version <release>%s</release>", version)
+		c.Writef("Already on requested version <release>%s</release>\n", version)
 		return nil
 	}
 
