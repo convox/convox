@@ -37,8 +37,8 @@ func Update(rack sdk.Interface, c *stdcli.Context) error {
 	}
 
 	if (version == current) {
-		c.Writef("No update to be performed... ")
-		return c.OK()
+		c.Writef("Already on requested version <release>%s</release>", version)
+		return nil
 	}
 
 	asset := fmt.Sprintf("https://github.com/convox/convox/releases/download/%s/%s", version, binary)
