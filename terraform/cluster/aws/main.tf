@@ -26,6 +26,8 @@ provider "null" {
 
 locals {
   oidc_sub = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
+  gpu_type = substr(var.node_type, 0, 1) == "g" || substr(var.node_type, 0, 1) == "p"
+  arm_type = substr(var.node_type, 0, 2) == "a1" || substr(var.node_type, 0, 3) == "c6g" || substr(var.node_type, 0, 3) == "m6g" || substr(var.node_type, 0, 3) == "r6g"
 }
 
 data "aws_availability_zones" "available" {
@@ -93,6 +95,7 @@ resource "aws_eks_node_group" "cluster" {
 
   count = 3
 
+  ami_type        = local.gpu_type ? "AL2_x86_64_GPU" : local.arm_type ? "AL2_ARM_64" : "AL2_x86_64"
   cluster_name    = aws_eks_cluster.cluster.name
   disk_size       = random_id.node_group.keepers.node_disk
   instance_types  = [random_id.node_group.keepers.node_type]
