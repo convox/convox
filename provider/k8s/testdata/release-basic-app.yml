@@ -1141,6 +1141,10 @@ spec:
           - args:
             - bin/test
             env:
+            - name: INSTANCE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
             - name: ONE_URL
               valueFrom:
                 configMapKeyRef:
