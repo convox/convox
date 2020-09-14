@@ -45,6 +45,10 @@ spec:
               - {{ safe . }}
             {{ end }}
             env:
+            - name: INSTANCE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP              
             {{ range $.Resources }}
             - name: "{{.Env}}"
               valueFrom:
