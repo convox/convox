@@ -10,14 +10,11 @@ import (
 )
 
 var fxCapacity = structs.Capacity{
-	ClusterCPU:     1,
-	ClusterMemory:  2,
-	InstanceCPU:    3,
-	InstanceMemory: 4,
-	ProcessCount:   5,
-	ProcessCPU:     6,
-	ProcessMemory:  7,
-	ProcessWidth:   8,
+	ClusterCPU:    1,
+	ClusterMemory: 2,
+	ProcessCount:  5,
+	ProcessCPU:    6,
+	ProcessMemory: 7,
 }
 
 func TestCapacityGet(t *testing.T) {
