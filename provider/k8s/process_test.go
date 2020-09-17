@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	ac "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
@@ -49,11 +50,7 @@ func TestProcessList(t *testing.T) {
 	})
 }
 
-func processCreate(c kubernetes.Interface, ns, name, labels string) error {
-	return processCreatePorts(c, ns, name, labels, "127.0.0.1", 123, 4567)
-}
-
-func processCreatePorts(c kubernetes.Interface, ns, name, labels, podIp string, hostPort, containerPort int32) error {
+func processCreator(c kubernetes.Interface, ns, name, labels string, fn func(p *ac.Pod)) error {
 	om := am.ObjectMeta{
 		Labels: map[string]string{},
 		Name:   name,
@@ -66,22 +63,17 @@ func processCreatePorts(c kubernetes.Interface, ns, name, labels, podIp string, 
 
 	p := &ac.Pod{
 		ObjectMeta: om,
-		Status: ac.PodStatus{
-			PodIP: podIp,
-		},
 		Spec: ac.PodSpec{
 			Containers: []ac.Container{
 				{
 					Name: om.Labels["app"],
-					Ports: []ac.ContainerPort{
-						{
-							ContainerPort: containerPort,
-							HostPort:      hostPort,
-						},
-					},
 				},
 			},
 		},
+	}
+
+	if fn != nil {
+		fn(p)
 	}
 
 	if _, err := c.CoreV1().Pods(ns).Create(p); err != nil {
@@ -89,4 +81,29 @@ func processCreatePorts(c kubernetes.Interface, ns, name, labels, podIp string, 
 	}
 
 	return nil
+}
+
+func processCreate(c kubernetes.Interface, ns, name, labels string) error {
+	return processCreator(c, ns, name, labels, nil)
+}
+
+func processCreatePorts(c kubernetes.Interface, ns, name, labels, ip string, hostPort, containerPort int32) error {
+	return processCreator(c, ns, name, labels, func(p *ac.Pod) {
+		p.Status = ac.PodStatus{PodIP: ip}
+
+		for i := range p.Spec.Containers {
+			p.Spec.Containers[i].Ports = []ac.ContainerPort{{ContainerPort: containerPort, HostPort: hostPort}}
+		}
+	})
+}
+
+func processCreateResources(c kubernetes.Interface, ns, name, labels, cpu, mem string) error {
+	return processCreator(c, ns, name, labels, func(p *ac.Pod) {
+		for i := range p.Spec.Containers {
+			p.Spec.Containers[i].Resources.Requests = ac.ResourceList{
+				ac.ResourceCPU:    resource.MustParse(cpu),
+				ac.ResourceMemory: resource.MustParse(mem),
+			}
+		}
+	})
 }
