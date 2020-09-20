@@ -33,7 +33,7 @@ The following environment variables are required:
 
 ## Install Rack
 
-    $ convox rack install aws <name> [param1=value1]...
+    $ convox rack install aws --name <name> [param1=value1]...
 
 ### Available Parameters
 
