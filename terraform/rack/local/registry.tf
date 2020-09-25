@@ -130,8 +130,9 @@ resource "kubernetes_ingress" "registry" {
     name      = "registry"
 
     annotations = {
-      "convox.com/idles"            = "true"
-      "kubernetes.io/ingress.class" = "nginx"
+      "cert-manager.io/cluster-issuer" = "self-signed"
+      "convox.com/idles"               = "true"
+      "kubernetes.io/ingress.class"    = "nginx"
     }
 
     labels = {
@@ -142,7 +143,8 @@ resource "kubernetes_ingress" "registry" {
 
   spec {
     tls {
-      hosts = ["registry.${module.router.endpoint}"]
+      hosts       = ["registry.${module.router.endpoint}"]
+      secret_name = "registry-certificate"
     }
 
     rule {
