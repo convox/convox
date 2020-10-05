@@ -225,20 +225,6 @@ func (c *Client) Websocket(path string, opts RequestOptions) (io.ReadCloser, err
 	return r, nil
 }
 
-func keepalive(ctx context.Context, ws *websocket.Conn) {
-	t := time.NewTicker(5 * time.Second)
-	defer t.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-t.C:
-			ws.WriteMessage(websocket.PingMessage, []byte{})
-		}
-	}
-}
-
 func copyToWebsocket(ctx context.Context, ws *websocket.Conn, r io.Reader) {
 	if r == nil {
 		return
@@ -289,6 +275,20 @@ func copyFromWebsocket(ctx context.Context, w io.WriteCloser, ws *websocket.Conn
 			default:
 				return
 			}
+		}
+	}
+}
+
+func keepalive(ctx context.Context, ws *websocket.Conn) {
+	t := time.NewTicker(5 * time.Second)
+	defer t.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			ws.WriteMessage(websocket.PingMessage, []byte{})
 		}
 	}
 }
