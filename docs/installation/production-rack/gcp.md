@@ -50,7 +50,7 @@ The following environment variables are required:
 
 | Name                 | Default         | Description                                                                              |
 | -------------------- | --------------- | ---------------------------------------------------------------------------------------- |
-| `max_node_pool_size` | `100`           | Maximum number of Nodes in your Rack                                                     |
+| `max_node_pool_size` | `1000`           | Maximum number of Nodes in your Rack                                                     |
 | `node_type`          | `n1-standard-1` | Node instance type                                                                       |
 | `preemptible`        | `true`          | Use [preemptible](https://cloud.google.com/compute/docs/instances/preemptible) instances |
 | `region`             | `us-east1`      | GCP Region                                                                               |

@@ -40,7 +40,7 @@ Go to https://cloud.digitalocean.com/account/api/tokens and generate a new Space
 
 | Name                 | Default       | Description                                                             |
 | -------------------- | ------------- | ----------------------------------------------------------------------- |
-| `max_node_pool_size` | `100`         | Maximum number of Nodes in your Rack                                    |
+| `max_node_pool_size` | `10`         | Maximum number of Nodes in your Rack                                    |
 | `node_type`          | `s-2vcpu-4gb` | Node instance type                                                      |
 | `region`             | `nyc3`        | Digital Ocean region                                                    |
 | `registry_disk`      | `50Gi`        | Registry disk size                                                      |
