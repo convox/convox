@@ -133,7 +133,7 @@ services:
 
 | Attribute  | Type    | Default | Description                                                                                      |
 | ---------- | ------- | ------- | ------------------------------------------------------------------------------------------------ |
-| `grace`    | number  | 30      | The number of seconds to wait for a [Processes](process.md) to gracefully exit before killing it |
+| `grace`    | number  | 30      | The number of seconds to wait for [Processes](process.md) to gracefully exit before killing them |
 
 ### tls
 
