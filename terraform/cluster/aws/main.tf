@@ -93,7 +93,7 @@ resource "aws_eks_node_group" "cluster" {
     aws_iam_openid_connect_provider.cluster,
   ]
 
-  count = 3
+  count = var.node_group_count
 
   ami_type        = local.gpu_type ? "AL2_x86_64_GPU" : local.arm_type ? "AL2_ARM_64" : "AL2_x86_64"
   cluster_name    = aws_eks_cluster.cluster.name
@@ -106,7 +106,7 @@ resource "aws_eks_node_group" "cluster" {
   scaling_config {
     desired_size = 1
     min_size     = 1
-    max_size     = 100
+    max_size     = var.max_node_group_size
   }
 
   lifecycle {

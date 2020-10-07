@@ -39,7 +39,7 @@ resource "digitalocean_kubernetes_cluster" "rack" {
     size       = var.node_type
     auto_scale = true
     min_nodes  = 2
-    max_nodes  = 10
+    max_nodes  = var.max_node_pool_size
   }
 }
 

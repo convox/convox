@@ -63,7 +63,7 @@ resource "google_container_node_pool" "rack" {
 
   autoscaling {
     min_node_count = 1
-    max_node_count = 1000
+    max_node_count = var.max_node_pool_size
   }
 
   node_config {
