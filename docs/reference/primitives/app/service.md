@@ -53,6 +53,8 @@ services:
         memory: 80
     singleton: false
     sticky: true
+    termination:
+      grace: 45
     test: make test
     tls:
       redirect: true
@@ -76,6 +78,7 @@ services:
 | `scale`       | map        | 1                   | Define scaling parameters (see below)                                                                                                      |
 | `singleton`   | boolean    | false               | Set to `true` to prevent extra [Processes](process.md) of this Service from being started during deployments                               |
 | `sticky`      | boolean    | false               | Set to `true` to enable sticky sessions                                                                                                    |
+| `termination` | map        |                     | Termination related configuration                                                                                                                  |
 | `test`        | string     |                     | A command to run to test this Service when running `convox test`                                                                           |
 | `tls`         | map        |                     | TLS-related configuration                                                                                                                  |
 
@@ -125,6 +128,12 @@ services:
 | --------- | ------ | ------- | ------------------------------------------------------------------------------------------ |
 | `cpu`     | number |         | The percentage of CPU utilization to target for [Processes](process.md) of this Service    |
 | `memory`  | number |         | The percentage of memory utilization to target for [Processes](process.md) of this Service |
+
+### termination
+
+| Attribute  | Type    | Default | Description                                                                                      |
+| ---------- | ------- | ------- | ------------------------------------------------------------------------------------------------ |
+| `grace`    | number  | 30      | The number of seconds to wait for a [Processes](process.md) to gracefully exit before killing it |
 
 ### tls
 

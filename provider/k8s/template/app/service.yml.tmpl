@@ -73,6 +73,7 @@ spec:
       hostNetwork: true
       {{ end }}
       shareProcessNamespace: {{.Service.Init}}
+      terminationGracePeriodSeconds: {{$.Service.Termination.Grace}}
       containers:
       - name: {{.App.Name}}
         {{ with .Service.Command }}

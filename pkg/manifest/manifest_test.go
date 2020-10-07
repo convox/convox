@@ -98,6 +98,9 @@ func TestManifestLoad(t *testing.T) {
 				},
 				Sticky: false,
 				Test:   "make  test",
+				Termination: manifest.ServiceTermination{
+					Grace: 45,
+				},
 				Tls: manifest.ServiceTls{
 					Redirect: false,
 				},
@@ -129,6 +132,9 @@ func TestManifestLoad(t *testing.T) {
 					Memory: 1024,
 				},
 				Sticky: false,
+				Termination: manifest.ServiceTermination{
+					Grace: 30,
+				},
 				Tls: manifest.ServiceTls{
 					Redirect: true,
 				},
@@ -161,6 +167,9 @@ func TestManifestLoad(t *testing.T) {
 				},
 				Singleton: true,
 				Sticky:    true,
+				Termination: manifest.ServiceTermination{
+					Grace: 30,
+				},
 				Tls: manifest.ServiceTls{
 					Redirect: true,
 				},
@@ -190,6 +199,9 @@ func TestManifestLoad(t *testing.T) {
 					Memory: 512,
 				},
 				Sticky: false,
+				Termination: manifest.ServiceTermination{
+					Grace: 30,
+				},
 				Tls: manifest.ServiceTls{
 					Redirect: true,
 				},
@@ -233,6 +245,9 @@ func TestManifestLoad(t *testing.T) {
 					},
 				},
 				Sticky: false,
+				Termination: manifest.ServiceTermination{
+					Grace: 30,
+				},
 				Tls: manifest.ServiceTls{
 					Redirect: true,
 				},
@@ -264,6 +279,9 @@ func TestManifestLoad(t *testing.T) {
 					Memory: 1024,
 				},
 				Sticky: false,
+				Termination: manifest.ServiceTermination{
+					Grace: 30,
+				},
 				Tls: manifest.ServiceTls{
 					Redirect: true,
 				},
@@ -300,6 +318,9 @@ func TestManifestLoad(t *testing.T) {
 					Memory: 512,
 				},
 				Sticky: false,
+				Termination: manifest.ServiceTermination{
+					Grace: 30,
+				},
 				Tls: manifest.ServiceTls{
 					Redirect: true,
 				},
@@ -370,6 +391,8 @@ func TestManifestLoad(t *testing.T) {
 		"services.api.resources",
 		"services.api.scale",
 		"services.api.test",
+		"services.api.termination",
+		"services.api.termination.grace",
 		"services.api.tls",
 		"services.api.tls.redirect",
 		"services.bar",
@@ -495,6 +518,9 @@ func TestManifestLoadSimple(t *testing.T) {
 					Memory: 512,
 				},
 				Sticky: false,
+				Termination: manifest.ServiceTermination{
+					Grace: 30,
+				},
 				Tls: manifest.ServiceTls{
 					Redirect: true,
 				},

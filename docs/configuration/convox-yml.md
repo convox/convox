@@ -28,6 +28,8 @@ order: 1
         resources:
           - database
           - queue
+        termination:
+          grace: 45
         test: make test
         deployment:
           minimum: 50

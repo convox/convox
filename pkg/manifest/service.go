@@ -28,6 +28,7 @@ type Service struct {
 	Scale       ServiceScale          `yaml:"scale,omitempty"`
 	Singleton   bool                  `yaml:"singleton,omitempty"`
 	Sticky      bool                  `yaml:"sticky,omitempty"`
+	Termination ServiceTermination    `yaml:"termination,omitempty"`
 	Test        string                `yaml:"test,omitempty"`
 	Tls         ServiceTls            `yaml:"tls,omitempty"`
 	Volumes     []string              `yaml:"volumes,omitempty"`
@@ -96,6 +97,10 @@ type ServiceScaleTargets struct {
 	Custom   ServiceScaleMetrics
 	Memory   int
 	Requests int
+}
+
+type ServiceTermination struct {
+	Grace int `yaml:"grace,omitempty"`
 }
 
 type ServiceTls struct {
