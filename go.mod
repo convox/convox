@@ -20,7 +20,7 @@ require (
 	github.com/convox/logger v0.0.0-20180522214415-e39179955b52
 	github.com/convox/stdapi v0.0.0-20190708203955-b81b71b6a680
 	github.com/convox/stdcli v0.0.0-20200218120900-608b86ac40a1
-	github.com/convox/stdsdk v0.0.0-20190422120437-3e80a397e377
+	github.com/convox/stdsdk v0.0.0-20201005151143-fb7f05286eea
 	github.com/convox/version v0.0.0-20160822184233-ffefa0d565d2
 	github.com/creack/pty v1.1.9
 	github.com/ddollar/go-u2fhost v0.0.0-20200214123511-3ca2df7a0b44
@@ -31,6 +31,7 @@ require (
 	github.com/gobuffalo/packr v1.30.1
 	github.com/gobwas/glob v0.2.3
 	github.com/gorilla/mux v1.7.3
+	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/goware/modvendor v0.1.0
 	github.com/headzoo/surf v1.0.0
 	github.com/headzoo/ut v0.0.0-20181013193318-a13b5a7a02ca // indirect
