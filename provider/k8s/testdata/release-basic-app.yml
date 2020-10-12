@@ -572,6 +572,7 @@ spec:
           name: ca
       hostNetwork: true
       shareProcessNamespace: true
+      terminationGracePeriodSeconds: 30
       volumes:
       - configMap:
           name: ca
@@ -697,6 +698,7 @@ spec:
         - mountPath: /etc/convox
           name: ca
       shareProcessNamespace: true
+      terminationGracePeriodSeconds: 30
       volumes:
       - configMap:
           name: ca
@@ -793,6 +795,7 @@ spec:
         - mountPath: /etc/convox
           name: ca
       shareProcessNamespace: true
+      terminationGracePeriodSeconds: 30
       volumes:
       - configMap:
           name: ca
@@ -922,6 +925,7 @@ spec:
         - mountPath: /etc/convox
           name: ca
       shareProcessNamespace: true
+      terminationGracePeriodSeconds: 30
       volumes:
       - configMap:
           name: ca
@@ -1076,6 +1080,7 @@ spec:
         - mountPath: /etc/convox
           name: ca
       shareProcessNamespace: true
+      terminationGracePeriodSeconds: 30
       volumes:
       - configMap:
           name: ca
