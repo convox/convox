@@ -272,13 +272,16 @@ func (p *Provider) appNameValidate(name string) error {
 func (p *Provider) appParametersUpdate(a *structs.App, params map[string]string) error {
 	defs := p.Engine.AppParameters()
 
+	var invalidParameters []string
 	for k, v := range params {
 		if _, ok := defs[k]; !ok {
-			return errors.WithStack(fmt.Errorf("invalid parameter: %s", k))
+			invalidParameters = append(invalidParameters, k)
+		} else {
+			a.Parameters[k] = v
 		}
-
-		a.Parameters[k] = v
 	}
+
+	fmt.Print("Skipping invalid parameters: %s ...", strings.join(invalidParameters, ", ")
 
 	return nil
 }
