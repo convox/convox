@@ -281,7 +281,7 @@ func (p *Provider) appParametersUpdate(a *structs.App, params map[string]string)
 		}
 	}
 
-	fmt.Print("Skipping invalid parameters: %s ...", strings.Join(invalidParameters, ", "))
+	fmt.Printf("Skipping invalid parameters: %s ...", strings.Join(invalidParameters, ", "))
 
 	return nil
 }
