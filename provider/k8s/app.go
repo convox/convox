@@ -272,16 +272,16 @@ func (p *Provider) appNameValidate(name string) error {
 func (p *Provider) appParametersUpdate(a *structs.App, params map[string]string) error {
 	defs := p.Engine.AppParameters()
 
-	var invalidParameters []string
+	var redundantParameters []string
 	for k, v := range params {
 		if _, ok := defs[k]; !ok {
-			invalidParameters = append(invalidParameters, k)
+			redundantParameters = append(redundantParameters, k)
 		} else {
 			a.Parameters[k] = v
 		}
 	}
 
-	fmt.Printf("Skipping invalid parameters: %s ...", strings.Join(invalidParameters, ", "))
+	fmt.Printf("Skipping redundant parameters: %s ...", strings.Join(redundantParameters, ", "))
 
 	return nil
 }
