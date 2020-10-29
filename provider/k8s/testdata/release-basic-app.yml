@@ -63,6 +63,10 @@ metadata:
     convox.com/idles: "false"
     kubernetes.io/ingress-class: ""
     nginx.ingress.kubernetes.io/backend-protocol: http
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/server-snippet: "keepalive_timeout 60s; grpc_read_timeout 60s; grpc_send_timeout 60s; client_body_timeout 60s;"
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
   labels:
     app: app1
@@ -97,6 +101,10 @@ metadata:
     convox.com/idles: "false"
     kubernetes.io/ingress-class: ""
     nginx.ingress.kubernetes.io/backend-protocol: http
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/server-snippet: "keepalive_timeout 60s; grpc_read_timeout 60s; grpc_send_timeout 60s; client_body_timeout 60s;"
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
   labels:
     app: app1

@@ -56,6 +56,7 @@ services:
     termination:
       grace: 45
     test: make test
+    timeout: 180
     tls:
       redirect: true
 ```
@@ -78,8 +79,9 @@ services:
 | `scale`       | map        | 1                   | Define scaling parameters (see below)                                                                                                      |
 | `singleton`   | boolean    | false               | Set to `true` to prevent extra [Processes](process.md) of this Service from being started during deployments                               |
 | `sticky`      | boolean    | false               | Set to `true` to enable sticky sessions                                                                                                    |
-| `termination` | map        |                     | Termination related configuration                                                                                                                  |
+| `termination` | map        |                     | Termination related configuration                                                                                                          |
 | `test`        | string     |                     | A command to run to test this Service when running `convox test`                                                                           |
+| `timeout`     | number     | 60                  | Timeout period (in seconds) for reading/writing requests to/from your service                                                              |
 | `tls`         | map        |                     | TLS-related configuration                                                                                                                  |
 
 > Environment variables **must** be declared to be populated for a Service.

@@ -101,6 +101,7 @@ func TestManifestLoad(t *testing.T) {
 				Termination: manifest.ServiceTermination{
 					Grace: 45,
 				},
+				Timeout: 60,
 				Tls: manifest.ServiceTls{
 					Redirect: false,
 				},
@@ -135,6 +136,7 @@ func TestManifestLoad(t *testing.T) {
 				Termination: manifest.ServiceTermination{
 					Grace: 30,
 				},
+				Timeout: 60,
 				Tls: manifest.ServiceTls{
 					Redirect: true,
 				},
@@ -170,6 +172,7 @@ func TestManifestLoad(t *testing.T) {
 				Termination: manifest.ServiceTermination{
 					Grace: 30,
 				},
+				Timeout: 3600,
 				Tls: manifest.ServiceTls{
 					Redirect: true,
 				},
@@ -202,6 +205,7 @@ func TestManifestLoad(t *testing.T) {
 				Termination: manifest.ServiceTermination{
 					Grace: 30,
 				},
+				Timeout: 60,
 				Tls: manifest.ServiceTls{
 					Redirect: true,
 				},
@@ -248,6 +252,7 @@ func TestManifestLoad(t *testing.T) {
 				Termination: manifest.ServiceTermination{
 					Grace: 30,
 				},
+				Timeout: 60,
 				Tls: manifest.ServiceTls{
 					Redirect: true,
 				},
@@ -282,6 +287,7 @@ func TestManifestLoad(t *testing.T) {
 				Termination: manifest.ServiceTermination{
 					Grace: 30,
 				},
+				Timeout: 60,
 				Tls: manifest.ServiceTls{
 					Redirect: true,
 				},
@@ -321,6 +327,7 @@ func TestManifestLoad(t *testing.T) {
 				Termination: manifest.ServiceTermination{
 					Grace: 30,
 				},
+				Timeout: 60,
 				Tls: manifest.ServiceTls{
 					Redirect: true,
 				},
@@ -409,6 +416,7 @@ func TestManifestLoad(t *testing.T) {
 		"services.foo.scale",
 		"services.foo.singleton",
 		"services.foo.sticky",
+		"services.foo.timeout",
 		"services.inherit",
 		"services.inherit.command",
 		"services.inherit.domain",
@@ -521,6 +529,7 @@ func TestManifestLoadSimple(t *testing.T) {
 				Termination: manifest.ServiceTermination{
 					Grace: 30,
 				},
+				Timeout: 60,
 				Tls: manifest.ServiceTls{
 					Redirect: true,
 				},
