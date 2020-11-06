@@ -77,6 +77,7 @@ services:
     scale: 0
     singleton: true
     sticky: true
+    timeout: 3600
   bar:
   scaler:
     scale:

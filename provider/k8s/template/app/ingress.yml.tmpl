@@ -9,6 +9,14 @@ metadata:
     convox.com/idles: "{{.Idles}}"
     kubernetes.io/ingress-class: "{{.Class}}"
     nginx.ingress.kubernetes.io/backend-protocol: "{{.Service.Port.Scheme}}"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "{{.Service.Timeout}}"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "{{.Service.Timeout}}"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "{{.Service.Timeout}}"
+    nginx.ingress.kubernetes.io/server-snippet: |
+        keepalive_timeout {{.Service.Timeout}}s;
+        grpc_read_timeout {{.Service.Timeout}}s;
+        grpc_send_timeout {{.Service.Timeout}}s;
+        client_body_timeout {{.Service.Timeout}}s;
     {{ if .Service.Sticky }}
     nginx.ingress.kubernetes.io/affinity: cookie
     nginx.ingress.kubernetes.io/session-cookie-name: CONVOXSESSION

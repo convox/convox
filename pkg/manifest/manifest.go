@@ -181,6 +181,10 @@ func (m *Manifest) ApplyDefaults() error {
 			m.Services[i].Termination.Grace = 30
 		}
 
+		if s.Timeout == 0 {
+			m.Services[i].Timeout = 60
+		}
+
 		if !m.AttributeExists(fmt.Sprintf("services.%s.tls.redirect", s.Name)) {
 			m.Services[i].Tls.Redirect = true
 		}

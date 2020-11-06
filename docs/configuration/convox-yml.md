@@ -31,6 +31,7 @@ order: 1
         termination:
           grace: 45
         test: make test
+        timeout: 120
         deployment:
           minimum: 50
           maximum: 200

@@ -30,6 +30,7 @@ type Service struct {
 	Sticky      bool                  `yaml:"sticky,omitempty"`
 	Termination ServiceTermination    `yaml:"termination,omitempty"`
 	Test        string                `yaml:"test,omitempty"`
+	Timeout     int                   `yaml:"timeout,omitempty"`
 	Tls         ServiceTls            `yaml:"tls,omitempty"`
 	Volumes     []string              `yaml:"volumes,omitempty"`
 }
