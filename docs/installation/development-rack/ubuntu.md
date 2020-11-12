@@ -28,6 +28,8 @@
 
 ## Installation
 
+> Make sure that your `kubectl` points at your local microk8s setup.  Ensure that if your `KUBECONFIG` env var is set, it is pointing at a config file that contains your local context.  By default as per the above instructions, your local config will be copied into `~/.kube/config`.
+
 Install a local Rack named `dev`.
 
     $ convox rack install local dev
