@@ -25,6 +25,10 @@ resources:
       size: db.t2.large
 services:
   api:
+    annotations:
+      - eks.amazonaws.com/role-arn=arn:aws:iam::123456789012:role/eksctl-irptest-addon-iamsa-default-my-serviceaccount-Role1-UCGG6NDYZ3UE
+      - test.other.com/annotation=myothervalue
+      - string.test.com/annotation="thishasquotes"
     build:
       manifest: Dockerfile2
       path: api

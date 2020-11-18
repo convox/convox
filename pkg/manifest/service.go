@@ -11,6 +11,7 @@ type Service struct {
 	Name string `yaml:"-"`
 
 	Agent       ServiceAgent          `yaml:"agent,omitempty"`
+	Annotations ServiceAnnotations    `yaml:"annotations,omitempty"`
 	Build       ServiceBuild          `yaml:"build,omitempty"`
 	Command     string                `yaml:"command,omitempty"`
 	Deployment  ServiceDeployment     `yaml:"deployment,omitempty"`
@@ -40,6 +41,8 @@ type Services []Service
 type ServiceAgent struct {
 	Enabled bool `yaml:"enabled,omitempty"`
 }
+
+type ServiceAnnotations []string
 
 type ServiceBuild struct {
 	Args     []string `yaml:"args,omitempty"`
@@ -179,6 +182,17 @@ func (s Service) Autoscale() bool {
 type ServiceResource struct {
 	Name string
 	Env  string
+}
+
+func (s Service) AnnotationsMap() map[string]string {
+	annotations := map[string]string{}
+
+	for _, a := range s.Annotations {
+		parts := strings.SplitN(a, "=", 2)
+		annotations[parts[0]] = parts[1]
+	}
+
+	return annotations
 }
 
 func (s Service) ResourceMap() []ServiceResource {

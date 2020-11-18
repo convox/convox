@@ -24,7 +24,7 @@ func (p *Provider) RenderTemplate(name string, params map[string]interface{}) ([
 	return common.FormatYAML(data)
 }
 
-type envItem struct {
+type kvItem struct {
 	Key   string
 	Value string
 }
@@ -47,23 +47,23 @@ func (p *Provider) templateHelpers() template.FuncMap {
 			}
 			return ds
 		},
-		"env": func(envs ...map[string]string) []envItem {
-			env := map[string]string{}
-			for _, e := range envs {
+		"keyValue": func(inputItems ...map[string]string) []kvItem {
+			kv := map[string]string{}
+			for _, e := range inputItems {
 				for k, v := range e {
-					env[k] = v
+					kv[k] = v
 				}
 			}
-			ks := []string{}
-			for k := range env {
-				ks = append(ks, k)
+			keys := []string{}
+			for k := range kv {
+				keys = append(keys, k)
 			}
-			sort.Strings(ks)
-			eis := []envItem{}
-			for _, k := range ks {
-				eis = append(eis, envItem{Key: k, Value: env[k]})
+			sort.Strings(keys)
+			sorted := []kvItem{}
+			for _, k := range keys {
+				sorted = append(sorted, kvItem{Key: k, Value: kv[k]})
 			}
-			return eis
+			return sorted
 		},
 		"image": func(a *structs.App, s manifest.Service, r *structs.Release) (string, error) {
 			repo, _, err := p.Engine.RepositoryHost(a.Name)
@@ -84,6 +84,9 @@ func (p *Provider) templateHelpers() template.FuncMap {
 		},
 		"lower": func(s string) string {
 			return strings.ToLower(s)
+		},
+		"quoteEscape": func(s string) string {
+			return strings.Replace(s, "\"", "\\\"", -1)
 		},
 		"safe": func(s string) template.HTML {
 			return template.HTML(fmt.Sprintf("%q", s))

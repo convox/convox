@@ -520,6 +520,21 @@ metadata:
   namespace: rack1-app1
 type: Opaque
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations: null
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    service: agent
+    system: convox
+    type: serviceaccount
+  name: serviceaccount-agent
+  namespace: rack1-app1
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -543,6 +558,7 @@ spec:
       rack: rack1
       service: agent
       system: convox
+  serviceAccountName: serviceaccount-agent
   template:
     metadata:
       annotations:
@@ -650,6 +666,21 @@ metadata:
   namespace: rack1-app1
 type: Opaque
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations: null
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    service: deployment
+    system: convox
+    type: serviceaccount
+  name: serviceaccount-deployment
+  namespace: rack1-app1
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -675,6 +706,7 @@ spec:
       rack: rack1
       service: deployment
       system: convox
+  serviceAccountName: serviceaccount-deployment
   strategy:
     rollingUpdate:
       maxSurge: 10%
@@ -682,6 +714,7 @@ spec:
     type: RollingUpdate
   template:
     metadata:
+      annotations: null
       labels:
         app: app1
         name: deployment
@@ -747,6 +780,21 @@ metadata:
   namespace: rack1-app1
 type: Opaque
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations: null
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    service: singleton
+    system: convox
+    type: serviceaccount
+  name: serviceaccount-singleton
+  namespace: rack1-app1
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -772,6 +820,7 @@ spec:
       rack: rack1
       service: singleton
       system: convox
+  serviceAccountName: serviceaccount-singleton
   strategy:
     rollingUpdate:
       maxSurge: 0%
@@ -779,6 +828,7 @@ spec:
     type: RollingUpdate
   template:
     metadata:
+      annotations: null
       labels:
         app: app1
         name: singleton
@@ -845,6 +895,21 @@ metadata:
   namespace: rack1-app1
 type: Opaque
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations: null
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    service: web
+    system: convox
+    type: serviceaccount
+  name: serviceaccount-web
+  namespace: rack1-app1
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -870,6 +935,7 @@ spec:
       rack: rack1
       service: web
       system: convox
+  serviceAccountName: serviceaccount-web
   strategy:
     rollingUpdate:
       maxSurge: 100%
@@ -877,6 +943,7 @@ spec:
     type: RollingUpdate
   template:
     metadata:
+      annotations: null
       labels:
         app: app1
         name: web
@@ -1000,6 +1067,21 @@ metadata:
   namespace: rack1-app1
 type: Opaque
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations: null
+  labels:
+    app: app1
+    provider: k8s
+    rack: rack1
+    release: release2
+    service: web2
+    system: convox
+    type: serviceaccount
+  name: serviceaccount-web2
+  namespace: rack1-app1
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -1025,6 +1107,7 @@ spec:
       rack: rack1
       service: web2
       system: convox
+  serviceAccountName: serviceaccount-web2
   strategy:
     rollingUpdate:
       maxSurge: 100%
@@ -1032,6 +1115,7 @@ spec:
     type: RollingUpdate
   template:
     metadata:
+      annotations: null
       labels:
         app: app1
         name: web2
