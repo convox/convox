@@ -4,6 +4,7 @@ terraform {
 
 provider "aws" {
   version = "~> 3.0"
+}
 
 provider "external" {
   version = "~> 1.2"
