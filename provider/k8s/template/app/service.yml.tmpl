@@ -39,7 +39,6 @@ metadata:
     type: service
     service: {{.Service.Name}}
 spec:
-  serviceAccountName: serviceaccount-{{.Service.Name}}
   selector:
     matchLabels:
       system: convox
@@ -89,6 +88,7 @@ spec:
       {{ if .Service.Agent.Enabled }}
       hostNetwork: true
       {{ end }}
+      serviceAccountName: serviceaccount-{{.Service.Name}}
       shareProcessNamespace: {{.Service.Init}}
       terminationGracePeriodSeconds: {{$.Service.Termination.Grace}}
       containers:

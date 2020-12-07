@@ -558,7 +558,6 @@ spec:
       rack: rack1
       service: agent
       system: convox
-  serviceAccountName: serviceaccount-agent
   template:
     metadata:
       annotations:
@@ -603,6 +602,7 @@ spec:
         - mountPath: /etc/convox
           name: ca
       hostNetwork: true
+      serviceAccountName: serviceaccount-agent
       shareProcessNamespace: true
       terminationGracePeriodSeconds: 30
       volumes:
@@ -706,7 +706,6 @@ spec:
       rack: rack1
       service: deployment
       system: convox
-  serviceAccountName: serviceaccount-deployment
   strategy:
     rollingUpdate:
       maxSurge: 10%
@@ -746,6 +745,7 @@ spec:
         volumeMounts:
         - mountPath: /etc/convox
           name: ca
+      serviceAccountName: serviceaccount-deployment
       shareProcessNamespace: true
       terminationGracePeriodSeconds: 30
       volumes:
@@ -820,7 +820,6 @@ spec:
       rack: rack1
       service: singleton
       system: convox
-  serviceAccountName: serviceaccount-singleton
   strategy:
     rollingUpdate:
       maxSurge: 0%
@@ -860,6 +859,7 @@ spec:
         volumeMounts:
         - mountPath: /etc/convox
           name: ca
+      serviceAccountName: serviceaccount-singleton
       shareProcessNamespace: true
       terminationGracePeriodSeconds: 30
       volumes:
@@ -935,7 +935,6 @@ spec:
       rack: rack1
       service: web
       system: convox
-  serviceAccountName: serviceaccount-web
   strategy:
     rollingUpdate:
       maxSurge: 100%
@@ -1007,6 +1006,7 @@ spec:
         volumeMounts:
         - mountPath: /etc/convox
           name: ca
+      serviceAccountName: serviceaccount-web
       shareProcessNamespace: true
       terminationGracePeriodSeconds: 30
       volumes:
@@ -1107,7 +1107,6 @@ spec:
       rack: rack1
       service: web2
       system: convox
-  serviceAccountName: serviceaccount-web2
   strategy:
     rollingUpdate:
       maxSurge: 100%
@@ -1179,6 +1178,7 @@ spec:
         volumeMounts:
         - mountPath: /etc/convox
           name: ca
+      serviceAccountName: serviceaccount-web2
       shareProcessNamespace: true
       terminationGracePeriodSeconds: 30
       volumes:
