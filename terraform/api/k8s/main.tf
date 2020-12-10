@@ -267,6 +267,8 @@ resource "kubernetes_ingress" "api" {
     annotations = merge({
       "convox.com/backend-protocol" : "https",
       "nginx.ingress.kubernetes.io/backend-protocol" : "https",
+      "nginx.ingress.kubernetes.io/proxy-read-timeout" : "99999",
+      "nginx.ingress.kubernetes.io/proxy-send-timeout" : "99999",
     }, var.annotations)
 
     labels = {
