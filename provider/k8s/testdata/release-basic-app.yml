@@ -532,7 +532,7 @@ metadata:
     service: agent
     system: convox
     type: serviceaccount
-  name: serviceaccount-agent
+  name: agent
   namespace: rack1-app1
 ---
 apiVersion: apps/v1
@@ -602,7 +602,7 @@ spec:
         - mountPath: /etc/convox
           name: ca
       hostNetwork: true
-      serviceAccountName: serviceaccount-agent
+      serviceAccountName: agent
       shareProcessNamespace: true
       terminationGracePeriodSeconds: 30
       volumes:
@@ -678,7 +678,7 @@ metadata:
     service: deployment
     system: convox
     type: serviceaccount
-  name: serviceaccount-deployment
+  name: deployment
   namespace: rack1-app1
 ---
 apiVersion: apps/v1
@@ -745,7 +745,7 @@ spec:
         volumeMounts:
         - mountPath: /etc/convox
           name: ca
-      serviceAccountName: serviceaccount-deployment
+      serviceAccountName: deployment
       shareProcessNamespace: true
       terminationGracePeriodSeconds: 30
       volumes:
@@ -792,7 +792,7 @@ metadata:
     service: singleton
     system: convox
     type: serviceaccount
-  name: serviceaccount-singleton
+  name: singleton
   namespace: rack1-app1
 ---
 apiVersion: apps/v1
@@ -859,7 +859,7 @@ spec:
         volumeMounts:
         - mountPath: /etc/convox
           name: ca
-      serviceAccountName: serviceaccount-singleton
+      serviceAccountName: singleton
       shareProcessNamespace: true
       terminationGracePeriodSeconds: 30
       volumes:
@@ -907,7 +907,7 @@ metadata:
     service: web
     system: convox
     type: serviceaccount
-  name: serviceaccount-web
+  name: web
   namespace: rack1-app1
 ---
 apiVersion: apps/v1
@@ -1006,7 +1006,7 @@ spec:
         volumeMounts:
         - mountPath: /etc/convox
           name: ca
-      serviceAccountName: serviceaccount-web
+      serviceAccountName: web
       shareProcessNamespace: true
       terminationGracePeriodSeconds: 30
       volumes:
@@ -1079,7 +1079,7 @@ metadata:
     service: web2
     system: convox
     type: serviceaccount
-  name: serviceaccount-web2
+  name: web2
   namespace: rack1-app1
 ---
 apiVersion: apps/v1
@@ -1178,7 +1178,7 @@ spec:
         volumeMounts:
         - mountPath: /etc/convox
           name: ca
-      serviceAccountName: serviceaccount-web2
+      serviceAccountName: web2
       shareProcessNamespace: true
       terminationGracePeriodSeconds: 30
       volumes:
