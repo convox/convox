@@ -18,6 +18,8 @@ order: 1
         type: redis
     services:
       api:
+        annotations:
+          - test.annotation.org/value=foobar
         build: .
         command: bin/api
         environment:

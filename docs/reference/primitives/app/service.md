@@ -21,6 +21,8 @@ services:
 services:
   web:
     agent: false
+    annotations:
+      - test.annotation.org/value=foobar
     build:
       manifest: Dockerfile
       path: .
@@ -64,6 +66,7 @@ services:
 | Attribute     | Type       | Default             | Description                                                                                                                                |
 | ------------- | ---------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | `agent`       | boolean    | false               | Set to `true` to declare this Service as an [Agent](../../../configuration/agents.md)                                                      |
+| `annotations` | list       |                     | A list of annotation keys and values to populate the metadata for the deployed pods and their serviceaccounts                              |
 | `build`       | string/map | .                   | Build definition (see below)                                                                                                               |
 | `command`     | string     | `CMD` of Dockerfile | The command to run to start a [Process](process.md) for this Service                                                                       |
 | `deployment`  | map        |                     | Manual control over deployment parameters                                                                                                  |
