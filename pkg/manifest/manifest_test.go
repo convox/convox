@@ -62,6 +62,10 @@ func TestManifestLoad(t *testing.T) {
 		Services: manifest.Services{
 			manifest.Service{
 				Name: "api",
+				Annotations: []string{
+					"eks.amazonaws.com/role-arn=arn:aws:iam::123456789012:role/eksctl-irptest-addon-iamsa-default-my-serviceaccount-Role1-UCGG6NDYZ3UE",
+					"test.other.com/annotation=myothervalue",
+					"string.test.com/annotation=\"thishasquotes\""},
 				Build: manifest.ServiceBuild{
 					Manifest: "Dockerfile2",
 					Path:     "api",
@@ -382,6 +386,7 @@ func TestManifestLoad(t *testing.T) {
 		"services.agent.agent",
 		"services.agent.ports",
 		"services.api",
+		"services.api.annotations",
 		"services.api.build",
 		"services.api.build.manifest",
 		"services.api.build.path",

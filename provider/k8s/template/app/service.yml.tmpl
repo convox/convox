@@ -8,9 +8,22 @@ metadata:
     service: {{.Service.Name}}
 type: Opaque
 data:
-  {{ range env .Environment }}
+  {{ range keyValue .Environment }}
   {{.Key}}: {{ safe (base64 .Value) }}
   {{ end }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    {{ range keyValue .Annotations }}
+    {{.Key}}: "{{ quoteEscape .Value}}"
+    {{ end }}
+  namespace: {{.Namespace}}
+  name: {{.Service.Name}}
+  labels:
+    service: {{.Service.Name}}
+    type: serviceaccount
 ---
 apiVersion: apps/v1
 kind: {{ if .Service.Agent.Enabled }} DaemonSet {{ else }} Deployment {{ end }}
@@ -44,10 +57,13 @@ spec:
   revisionHistoryLimit: 1
   template:
     metadata:
-      {{ if .Service.Agent.Enabled }}
       annotations:
+        {{ if .Service.Agent.Enabled }}
         scheduler.alpha.kubernetes.io/critical-pod: ""
-      {{ end }}
+        {{ end }}
+        {{ range keyValue .Annotations }}
+        {{.Key}}: "{{ quoteEscape .Value}}"
+        {{ end }}
       labels:
         system: convox
         rack: {{.Rack}}
@@ -72,6 +88,7 @@ spec:
       {{ if .Service.Agent.Enabled }}
       hostNetwork: true
       {{ end }}
+      serviceAccountName: {{.Service.Name}}
       shareProcessNamespace: {{.Service.Init}}
       terminationGracePeriodSeconds: {{$.Service.Termination.Grace}}
       containers:

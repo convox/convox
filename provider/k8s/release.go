@@ -438,6 +438,7 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 		}
 
 		params := map[string]interface{}{
+			"Annotations":    s.AnnotationsMap(),
 			"App":            a,
 			"Environment":    env,
 			"MaxSurge":       max - 100,
