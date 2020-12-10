@@ -24,10 +24,11 @@
 
 ## Installation
 
-Make sure that the contexts of your `kubectl` are set to `docker-desktop`. If not, just run:
+> Make sure that your `kubectl` points at your local docker setup.  Ensure that if your `KUBECONFIG` env var is set, it is pointing at a config file that contains your desktop context.  By default, your local context will be installed into `~/.kube/config`.
+
+Also ensure that the context is indeed set to `docker-desktop`. If not, just run:
 
     $ kubectl config use-context docker-desktop
-    
 
 Install a local Rack named `dev`.
 
