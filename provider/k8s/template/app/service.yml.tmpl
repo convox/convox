@@ -20,7 +20,7 @@ metadata:
     {{.Key}}: "{{ quoteEscape .Value}}"
     {{ end }}
   namespace: {{.Namespace}}
-  name: serviceaccount-{{.Service.Name}}
+  name: {{.Service.Name}}
   labels:
     service: {{.Service.Name}}
     type: serviceaccount
@@ -88,7 +88,7 @@ spec:
       {{ if .Service.Agent.Enabled }}
       hostNetwork: true
       {{ end }}
-      serviceAccountName: serviceaccount-{{.Service.Name}}
+      serviceAccountName: {{.Service.Name}}
       shareProcessNamespace: {{.Service.Init}}
       terminationGracePeriodSeconds: {{$.Service.Termination.Grace}}
       containers:
