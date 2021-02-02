@@ -189,6 +189,11 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: {{.Service.Name}}
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: {{.Service.Scale.Cooldown.Down}}
+    scaleUp:
+      stabilizationWindowSeconds: {{.Service.Scale.Cooldown.Up}}
   minReplicas: {{.Service.Scale.Count.Min}}
   maxReplicas: {{.Service.Scale.Count.Max}}
   metrics:
