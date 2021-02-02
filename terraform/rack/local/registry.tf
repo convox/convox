@@ -51,9 +51,10 @@ resource "kubernetes_deployment" "registry" {
 
       spec {
         container {
-          name              = "system"
-          image             = "registry:2"
-          image_pull_policy = "IfNotPresent"
+          name                = "system"
+          image               = "registry:2"
+          image_pull_policy   = "IfNotPresent"
+          priority_class_name = "system-cluster-critical"
 
           env {
             name  = "REGISTRY_HTTP_SECRET"

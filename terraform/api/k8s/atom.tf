@@ -91,6 +91,7 @@ resource "kubernetes_deployment" "atom" {
         automount_service_account_token = true
         share_process_namespace         = true
         service_account_name            = "atom"
+        priority_class_name             = "system-cluster-critical"
 
         container {
           name              = "system"

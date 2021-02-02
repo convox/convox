@@ -248,6 +248,7 @@ resource "kubernetes_deployment" "autoscaler" {
       spec {
         automount_service_account_token = true
         service_account_name            = "cluster-autoscaler"
+        priority_class_name             = "system-cluster-critical"
 
         container {
           image             = "k8s.gcr.io/cluster-autoscaler:v1.14.7"
