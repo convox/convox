@@ -234,6 +234,13 @@ resource "kubernetes_deployment" "ingress-nginx" {
             container_port = 443
           }
 
+          resources {
+            requests {
+              cpu    = "100m"
+              memory = "90Mi"
+            }
+          }
+
           liveness_probe {
             initial_delay_seconds = 10
             period_seconds        = 10
