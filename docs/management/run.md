@@ -6,7 +6,7 @@ for starting a shell for debugging purposes or running administrative commands s
 ## Spawning a new Process
 
 Using `convox run` will start a new [Process](../reference/primitives/app/process.md) of the specified
-[Service](../reference/primitives/app/service.md) on a Convox node and run your command inside the new Process.
+[Service](../reference/primitives/app/service.md) on your current Rack and run your command inside the new Process.
 
 ### Running Interactively
 
