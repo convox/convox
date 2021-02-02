@@ -171,7 +171,7 @@ func (m *Manifest) ApplyDefaults() error {
 		}
 
 		// if no explicit cooldown attribute set yet has scale attributes other than cooldown
-		if !m.AttributeSet(fmt.Sprintf("%s.cooldown", sp)) && len(m.AttributesByPrefix(sp)) >= 1 {
+		if !m.AttributeExists(fmt.Sprintf("%s.cooldown", sp)) && len(m.AttributesByPrefix(sp)) >= 1 {
 			m.Services[i].Scale.Cooldown = ServiceScaleCooldown{Down: 60, Up: 60}
 		}
 
