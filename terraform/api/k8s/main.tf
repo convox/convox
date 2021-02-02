@@ -107,6 +107,7 @@ resource "kubernetes_deployment" "api" {
         automount_service_account_token = true
         service_account_name            = kubernetes_service_account.api.metadata.0.name
         share_process_namespace         = true
+        priority_class_name             = "system-cluster-critical"
 
         container {
           name              = "system"
