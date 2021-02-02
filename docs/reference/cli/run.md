@@ -12,3 +12,8 @@ Execute a command in a new process
 
     $ convox run web sh
     /usr/src/app #
+
+Run against a specific release:
+
+    $ convox run --release RABCDEFGHIJ web sh
+    /usr/src/app #
