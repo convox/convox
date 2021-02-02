@@ -47,6 +47,9 @@ services:
       - 5002
     privileged: false
     scale:
+      cooldown:
+        down: 180
+        up: 30
       count: 1-3
       cpu: 128
       memory: 512
@@ -118,14 +121,24 @@ services:
 
 ### scale
 
-| Attribute | Type   | Default | Description                                                                                                   |
-| --------- | ------ | ------- | ------------------------------------------------------------------------------------------------------------- |
-| `count`   | number | 1       | The number of [Processes](process.md) to run for this Service. For autoscaling use a range, e.g. `1-5`        |
-| `cpu`     | number | 128     | The number of CPU units to reserve for [Processes](process.md) of this Service where 1024 units is a full CPU |
-| `memory`  | number | 256     | The number of MB of RAM to reserve for [Processes](process.md) of this Service                                |
-| `targets` | map    |         | Target metrics to trigger autoscaling                                                                         |
+| Attribute  | Type       | Default | Description                                                                                                   |
+| ---------- | ---------- | ------- | ------------------------------------------------------------------------------------------------------------- |
+| `cooldown` | number/map | 60      | The cooldown period between scaling events to control how aggressive your service scales down/up              |
+| `count`    | number     | 1       | The number of [Processes](process.md) to run for this Service. For autoscaling use a range, e.g. `1-5`        |
+| `cpu`      | number     | 128     | The number of CPU units to reserve for [Processes](process.md) of this Service where 1024 units is a full CPU |
+| `memory`   | number     | 256     | The number of MB of RAM to reserve for [Processes](process.md) of this Service                                |
+| `targets`  | map        |         | Target metrics to trigger autoscaling                                                                         |
 
 > Specifying `scale` as a number will set the `count` and leave the other values as defaults.
+
+### scale.cooldown
+
+| Attribute | Type   | Default | Description                                                                                |
+| --------- | ------ | ------- | ------------------------------------------------------------------------------------------ |
+| `down`    | number | 60      | Sets the cooldown period between scaling events after a scale down event has occurred      |
+| `up`      | number | 60      | Sets the cooldown period between scaling events after a scale up event has occurred        |
+
+> Specifying `cooldown` as a number will set the cooldown period for both scaling directions at the same time.
 
 ### scale.targets
 
