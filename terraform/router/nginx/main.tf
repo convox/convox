@@ -1,7 +1,3 @@
-provider "kubernetes" {
-  version = "~> 1.11"
-}
-
 resource "kubernetes_config_map" "nginx-configuration" {
   metadata {
     namespace = var.namespace

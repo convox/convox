@@ -1,19 +1,23 @@
 terraform {
   required_providers {
     azuread = {
-      source = "hashicorp/azuread"
+      source  = "hashicorp/azuread"
+      version = "~> 0.7"
     }
     azurerm = {
-      source = "hashicorp/azurerm"
+      source  = "hashicorp/azurerm"
+      version = "~> 1.37"
     }
     kubernetes = {
-      source = "hashicorp/kubernetes"
+      source  = "hashicorp/kubernetes"
+      version = "~> 1.11"
     }
     random = {
       source = "hashicorp/random"
     }
     template = {
-      source = "hashicorp/template"
+      source  = "hashicorp/template"
+      version = "~> 2.1"
     }
   }
   required_version = ">= 0.13"

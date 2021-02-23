@@ -1,15 +1,3 @@
-terraform {
-  required_version = ">= 0.12.0"
-}
-
-provider "aws" {
-  version = "~> 2.49"
-}
-
-provider "kubernetes" {
-  version = "~> 1.11"
-}
-
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 

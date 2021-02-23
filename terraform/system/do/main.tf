@@ -1,30 +1,9 @@
-terraform {
-  required_providers {
-    digitalocean = {
-      source  = "digitalocean/digitalocean"
-      version = "~> 1.13"
-    }
-    http = {
-      source = "hashicorp/http"
-    }
-    kubernetes = {
-      source = "hashicorp/kubernetes"
-    }
-  }
-}
-
 provider "digitalocean" {
   spaces_access_id  = var.access_id
   spaces_secret_key = var.secret_key
 }
 
-provider "http" {
-  version = "~> 1.1"
-}
-
 provider "kubernetes" {
-  version = "~> 1.11"
-
   cluster_ca_certificate = module.cluster.ca
   host                   = module.cluster.endpoint
   token                  = module.cluster.token

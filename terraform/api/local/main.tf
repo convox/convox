@@ -1,11 +1,3 @@
-terraform {
-  required_version = ">= 0.12.0"
-}
-
-provider "kubernetes" {
-  version = "~> 1.11"
-}
-
 locals {
   tags = {
     System = "convox"
