@@ -1,7 +1,3 @@
-provider "kubernetes" {
-  version = "~> 1.11"
-}
-
 resource "kubernetes_cluster_role" "aggregated_metrics" {
   metadata {
     name = "system:aggregated-metrics-reader"

@@ -1,7 +1,3 @@
-provider "kubernetes" {
-  version = "~> 1.11"
-}
-
 resource "kubernetes_cluster_role" "fluentd" {
   metadata {
     name = "${var.rack}-fluentd"

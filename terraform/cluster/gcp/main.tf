@@ -1,19 +1,3 @@
-provider "google" {
-  version = "~> 3.5.0"
-}
-
-provider "google-beta" {
-  version = "~> 3.5.0"
-}
-
-provider "local" {
-  version = "~> 1.3"
-}
-
-provider "random" {
-  version = "~> 2.2"
-}
-
 data "google_client_config" "current" {}
 
 data "google_project" "current" {}
