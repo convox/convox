@@ -4,6 +4,9 @@ terraform {
       source  = "digitalocean/digitalocean"
       version = "~> 1.13"
     }
+    kubernetes = {
+      source = "hashicorp/kubernetes"
+    }
   }
 }
 

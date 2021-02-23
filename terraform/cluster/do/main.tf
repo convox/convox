@@ -4,6 +4,18 @@ terraform {
       source  = "digitalocean/digitalocean"
       version = "~> 1.13"
     }
+    http = {
+      source = "hashicorp/http"
+    }
+    local = {
+      source = "hashicorp/local"
+    }
+    null = {
+      source = "hashicorp/null"
+    }
+    random = {
+      source = "hashicorp/random"
+    }
   }
 }
 
