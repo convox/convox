@@ -19,5 +19,5 @@ curl -Ls https://storage.googleapis.com/kubernetes-release/release/v1.13.0/bin/l
 	sudo mv /tmp/kubectl /usr/bin/kubectl && sudo chmod +x /usr/bin/kubectl
 
 # install terraform
-curl -L https://releases.hashicorp.com/terraform/0.12.16/terraform_0.12.16_linux_amd64.zip -o terraform.zip && \
+curl -L https://releases.hashicorp.com/terraform/0.13.2/terraform_0.13.2_linux_amd64.zip -o terraform.zip && \
 	unzip terraform.zip -d /tmp && sudo mv /tmp/terraform /usr/bin/terraform && rm terraform.zip
