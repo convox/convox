@@ -1,19 +1,3 @@
-terraform {
-  required_version = ">= 0.12.0"
-}
-
-provider "azurerm" {
-  version = "~> 1.37"
-}
-
-provider "local" {
-  version = "~> 1.3"
-}
-
-provider "random" {
-  version = "~> 2.2"
-}
-
 data "azurerm_kubernetes_service_versions" "available" {
   location       = var.region
   version_prefix = "1.17."

@@ -1,18 +1,3 @@
-terraform {
-  required_providers {
-    digitalocean = {
-      source  = "digitalocean/digitalocean"
-      version = "~> 1.13"
-    }
-  }
-}
-
-provider "digitalocean" {}
-
-provider "kubernetes" {
-  version = "~> 1.11"
-}
-
 locals {
   tags = {
     System = "convox"

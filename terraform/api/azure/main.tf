@@ -1,23 +1,3 @@
-terraform {
-  required_version = ">= 0.12.0"
-}
-
-provider "azuread" {
-  version = "~> 0.7"
-}
-
-provider "azurerm" {
-  version = "~> 1.37"
-}
-
-provider "kubernetes" {
-  version = "~> 1.11"
-}
-
-provider "template" {
-  version = "~> 2.1"
-}
-
 locals {
   prefix = format("%.12s", replace(lower(var.name), "/[^a-z0-9]/", ""))
   tags = {

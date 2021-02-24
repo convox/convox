@@ -1,7 +1,3 @@
-provider "kubernetes" {
-  version = "~> 1.11"
-}
-
 locals {
   tags = {
     System = "convox"

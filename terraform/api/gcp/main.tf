@@ -1,15 +1,3 @@
-terraform {
-  required_version = ">= 0.12.0"
-}
-
-provider "google" {
-  version = "~> 3.5.0"
-}
-
-provider "kubernetes" {
-  version = "~> 1.11"
-}
-
 data "google_client_config" "current" {}
 
 locals {

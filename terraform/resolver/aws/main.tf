@@ -1,15 +1,3 @@
-terraform {
-  required_version = ">= 0.12.0"
-}
-
-provider "aws" {
-  version = "~> 2.49"
-}
-
-provider "kubernetes" {
-  version = "~> 1.11"
-}
-
 module "k8s" {
   source = "../k8s"
 

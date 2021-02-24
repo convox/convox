@@ -1,7 +1,3 @@
-provider "kubernetes" {
-  version = "~> 1.11"
-}
-
 resource "kubernetes_service" "elasticsearch" {
   metadata {
     namespace = var.namespace

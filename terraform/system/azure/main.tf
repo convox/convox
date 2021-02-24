@@ -1,14 +1,4 @@
-provider "azurerm" {
-  version = "~> 1.37"
-}
-
-provider "http" {
-  version = "~> 1.1"
-}
-
 provider "kubernetes" {
-  version = "~> 1.11"
-
   client_certificate     = module.cluster.client_certificate
   client_key             = module.cluster.client_key
   cluster_ca_certificate = module.cluster.ca

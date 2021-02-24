@@ -1,19 +1,3 @@
-terraform {
-  required_version = ">= 0.12.0"
-}
-
-provider "aws" {
-  version = "~> 2.49"
-}
-
-provider "http" {
-  version = "~> 1.1"
-}
-
-provider "kubernetes" {
-  version = "~> 1.11"
-}
-
 locals {
   tags = {
     System = "convox"

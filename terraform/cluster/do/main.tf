@@ -1,30 +1,3 @@
-terraform {
-  required_providers {
-    digitalocean = {
-      source  = "digitalocean/digitalocean"
-      version = "~> 1.13"
-    }
-  }
-}
-
-provider "digitalocean" {}
-
-provider "http" {
-  version = "~> 1.1"
-}
-
-provider "local" {
-  version = "~> 1.3"
-}
-
-provider "null" {
-  version = "~> 2.1"
-}
-
-provider "random" {
-  version = "~> 2.2"
-}
-
 data "digitalocean_kubernetes_versions" "available" {
   version_prefix = "1.17."
 }
