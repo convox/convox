@@ -126,6 +126,7 @@ func fxInstance() *structs.Instance {
 		PublicIp:  "public",
 		Status:    "status",
 		Started:   time.Now().UTC().Add(-48 * time.Hour),
+		Type:      "type1",
 	}
 }
 

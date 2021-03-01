@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/fsouza/go-dockerclient"
+	docker "github.com/fsouza/go-dockerclient"
 )
 
 type Instance struct {
@@ -18,6 +18,7 @@ type Instance struct {
 	PublicIp  string    `json:"public-ip"`
 	Status    string    `json:"status"`
 	Started   time.Time `json:"started"`
+	Type      string    `json:"type"`
 }
 
 type Instances []Instance

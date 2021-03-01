@@ -19,9 +19,9 @@ func TestInstances(t *testing.T) {
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
-			"ID         STATUS  STARTED     PS  CPU     MEM     PUBLIC  PRIVATE",
-			"instance1  status  2 days ago  3   42.30%  71.80%  public  private",
-			"instance1  status  2 days ago  3   42.30%  71.80%  public  private",
+			"ID         TYPE   STATUS  STARTED     PS  CPU     MEM     PUBLIC  PRIVATE",
+			"instance1  type1  status  2 days ago  3   42.30%  71.80%  public  private",
+			"instance1  type1  status  2 days ago  3   42.30%  71.80%  public  private",
 		})
 	})
 }

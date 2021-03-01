@@ -211,8 +211,27 @@ resource "kubernetes_role_binding" "autoscaler" {
   }
 }
 
+resource "kubernetes_config_map" "autoscaler_priority" {
+  metadata {
+    name      = "cluster-autoscaler-priority-expander"
+    namespace = "kube-system"
+  }
+
+  data = {
+    priorities = <<-EOF
+      10: 
+        - ".*"
+      20:
+        - ".*${var.name}-spot-.*"
+    EOF
+  }
+}
+
 resource "kubernetes_deployment" "autoscaler" {
-  depends_on = [aws_iam_role_policy.autoscaler_autoscale]
+  depends_on = [
+    aws_iam_role_policy.autoscaler_autoscale,
+    kubernetes_config_map.autoscaler_priority,
+  ]
 
   metadata {
     name      = "cluster-autoscaler"
@@ -251,7 +270,7 @@ resource "kubernetes_deployment" "autoscaler" {
         priority_class_name             = "system-cluster-critical"
 
         container {
-          image             = "k8s.gcr.io/cluster-autoscaler:v1.14.7"
+          image             = "k8s.gcr.io/autoscaling/cluster-autoscaler:v1.17.4"
           image_pull_policy = "Always"
           name              = "cluster-autoscaler"
 
@@ -261,7 +280,8 @@ resource "kubernetes_deployment" "autoscaler" {
             "--stderrthreshold=info",
             "--cloud-provider=aws",
             "--skip-nodes-with-local-storage=false",
-            "--expander=least-waste",
+            "--expander=priority",
+            "--max-node-provision-time=5m",
             "--node-group-auto-discovery=asg:tag=k8s.io/cluster-autoscaler/enabled,k8s.io/cluster-autoscaler/${aws_eks_cluster.cluster.name}",
             "--balance-similar-node-groups",
             "--skip-nodes-with-system-pods=false",

@@ -7,9 +7,10 @@ provider "kubernetes" {
 }
 
 locals {
-  oidc_sub = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
-  gpu_type = substr(var.node_type, 0, 1) == "g" || substr(var.node_type, 0, 1) == "p"
-  arm_type = substr(var.node_type, 0, 2) == "a1" || substr(var.node_type, 0, 3) == "c6g" || substr(var.node_type, 0, 3) == "m6g" || substr(var.node_type, 0, 3) == "r6g"
+  arm_type   = substr(var.node_type, 0, 2) == "a1" || substr(var.node_type, 0, 3) == "c6g" || substr(var.node_type, 0, 3) == "m6g" || substr(var.node_type, 0, 3) == "r6g"
+  gpu_type   = substr(var.node_type, 0, 1) == "g" || substr(var.node_type, 0, 1) == "p"
+  oidc_sub   = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
+  spot_types = split(",", var.spot_types)
 }
 
 data "aws_availability_zones" "available" {
@@ -69,6 +70,17 @@ resource "random_id" "node_group" {
   }
 }
 
+resource "random_id" "spot_group" {
+  byte_length = 8
+
+  keepers = {
+    node_disk  = var.node_disk
+    private    = var.private
+    role_arn   = replace(aws_iam_role.nodes.arn, "role/convox/", "role/") # eks barfs on roles with paths
+    spot_types = join(",", local.spot_types)
+  }
+}
+
 resource "aws_eks_node_group" "cluster" {
   depends_on = [
     aws_eks_cluster.cluster,
@@ -83,6 +95,34 @@ resource "aws_eks_node_group" "cluster" {
   instance_types  = [random_id.node_group.keepers.node_type]
   node_group_name = "${var.name}-${data.aws_availability_zones.available.names[count.index]}-${random_id.node_group.hex}"
   node_role_arn   = random_id.node_group.keepers.role_arn
+  subnet_ids      = [var.private ? aws_subnet.private[count.index].id : aws_subnet.public[count.index].id]
+
+  scaling_config {
+    desired_size = 1
+    min_size     = 1
+    max_size     = 100
+  }
+
+  lifecycle {
+    create_before_destroy = true
+    ignore_changes        = [scaling_config[0].desired_size]
+  }
+}
+
+resource "aws_eks_node_group" "cluster_spot" {
+  depends_on = [
+    aws_eks_cluster.cluster,
+    aws_iam_openid_connect_provider.cluster,
+  ]
+
+  count = length(local.spot_types) > 0 ? 3 : 0
+
+  capacity_type   = "SPOT"
+  cluster_name    = aws_eks_cluster.cluster.name
+  disk_size       = random_id.spot_group.keepers.node_disk
+  instance_types  = local.spot_types
+  node_group_name = "${var.name}-spot-${data.aws_availability_zones.available.names[count.index]}-${random_id.spot_group.hex}"
+  node_role_arn   = random_id.spot_group.keepers.role_arn
   subnet_ids      = [var.private ? aws_subnet.private[count.index].id : aws_subnet.public[count.index].id]
 
   scaling_config {
