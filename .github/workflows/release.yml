@@ -106,6 +106,10 @@ jobs:
             provider: aws
             rack_params: "node_type=t4g.small"
             suffix: arm64
+          - job: aws-gpu
+            provider: aws
+            rack_params: "node_type=g4dn.xlarge"
+            suffix: gpu
           - job: do
             provider: do
           - job: gcp
