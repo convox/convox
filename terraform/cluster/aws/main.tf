@@ -9,7 +9,7 @@ provider "kubernetes" {
 locals {
   oidc_sub           = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
   gpu_type           = substr(var.node_type, 0, 1) == "g" || substr(var.node_type, 0, 1) == "p"
-  arm_type           = substr(var.node_type, 0, 2) == "a1" || substr(var.node_type, 0, 3) == "c6g" || substr(var.node_type, 0, 3) == "m6g" || substr(var.node_type, 0, 3) == "r6g"
+  arm_type           = substr(var.node_type, 0, 2) == "a1" || substr(var.node_type, 0, 3) == "c6g" || substr(var.node_type, 0, 3) == "m6g" || substr(var.node_type, 0, 3) == "r6g" || substr(var.node_type, 0, 3) == "t4g"
   availability_zones = var.availability_zones != "" ? compact(split(",", var.availability_zones)) : data.aws_availability_zones.available.names
 }
 
