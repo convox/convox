@@ -1,3 +1,7 @@
+provider "azurerm" {
+  features {}
+}
+
 provider "kubernetes" {
   client_certificate     = module.cluster.client_certificate
   client_key             = module.cluster.client_key
