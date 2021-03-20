@@ -4,13 +4,6 @@ set -ex -o pipefail
 # install utilities
 sudo apt-get update && sudo apt-get -y install jq unzip
 
-# install aws cli
-sudo apt-get -y install awscli
-
-# install aws-iam-authenticator
-curl -Ls https://amazon-eks.s3-us-west-2.amazonaws.com/1.12.7/2019-03-27/bin/linux/amd64/aws-iam-authenticator -o /tmp/aws-iam-authenticator && \
-	sudo mv /tmp/aws-iam-authenticator /usr/bin/aws-iam-authenticator && sudo chmod +x /usr/bin/aws-iam-authenticator
-
 # install docker
 curl -s https://download.docker.com/linux/static/stable/x86_64/docker-18.09.6.tgz | sudo tar -C /usr/bin --strip-components 1 -xz
 
