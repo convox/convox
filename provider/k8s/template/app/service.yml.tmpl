@@ -123,7 +123,7 @@ spec:
           valueFrom:
             secretKeyRef:
               name: env-{{$.Service.Name}}
-              key: {{ envKey . }}
+              key: "{{ envKey . }}"
         {{ end }}
         image: {{ image .App .Service .Release }}
         imagePullPolicy: IfNotPresent
