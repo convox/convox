@@ -111,11 +111,18 @@ spec:
               name: resource-{{ k8sname .Name }}
               key: URL
         {{ end }}
+        {{ range defaultEnvs }}
+        - name: "{{ envKey . }}"
+          valueFrom:
+            secretKeyRef:
+              name: env-{{$.Service.Name}}
+              key: {{ envKey . }}
+        {{ end }}
         {{ range .Service.Environment }}
         - name: "{{ envKey . }}"
           valueFrom:
             secretKeyRef:
-              name: env-{{.Service.Name}}
+              name: env-{{$.Service.Name}}
               key: {{ envKey . }}
         {{ end }}
         image: {{ image .App .Service .Release }}

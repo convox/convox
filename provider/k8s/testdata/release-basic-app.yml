@@ -577,9 +577,41 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
-        envFrom:
-        - secretRef:
-            name: env-agent
+        - name: APP
+          valueFrom:
+            secretKeyRef:
+              key: APP
+              name: env-agent
+        - name: BUILD
+          valueFrom:
+            secretKeyRef:
+              key: BUILD
+              name: env-agent
+        - name: BUILD_DESCRIPTION
+          valueFrom:
+            secretKeyRef:
+              key: BUILD_DESCRIPTION
+              name: env-agent
+        - name: RACK
+          valueFrom:
+            secretKeyRef:
+              key: RACK
+              name: env-agent
+        - name: RACK_URL
+          valueFrom:
+            secretKeyRef:
+              key: RACK_URL
+              name: env-agent
+        - name: RELEASE
+          valueFrom:
+            secretKeyRef:
+              key: RELEASE
+              name: env-agent
+        - name: SERVICE
+          valueFrom:
+            secretKeyRef:
+              key: SERVICE
+              name: env-agent
         image: repo1:agent.build1
         imagePullPolicy: IfNotPresent
         name: app1
@@ -729,9 +761,41 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
-        envFrom:
-        - secretRef:
-            name: env-deployment
+        - name: APP
+          valueFrom:
+            secretKeyRef:
+              key: APP
+              name: env-deployment
+        - name: BUILD
+          valueFrom:
+            secretKeyRef:
+              key: BUILD
+              name: env-deployment
+        - name: BUILD_DESCRIPTION
+          valueFrom:
+            secretKeyRef:
+              key: BUILD_DESCRIPTION
+              name: env-deployment
+        - name: RACK
+          valueFrom:
+            secretKeyRef:
+              key: RACK
+              name: env-deployment
+        - name: RACK_URL
+          valueFrom:
+            secretKeyRef:
+              key: RACK_URL
+              name: env-deployment
+        - name: RELEASE
+          valueFrom:
+            secretKeyRef:
+              key: RELEASE
+              name: env-deployment
+        - name: SERVICE
+          valueFrom:
+            secretKeyRef:
+              key: SERVICE
+              name: env-deployment
         image: repo1:deployment.build1
         imagePullPolicy: IfNotPresent
         name: app1
@@ -843,9 +907,41 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
-        envFrom:
-        - secretRef:
-            name: env-singleton
+        - name: APP
+          valueFrom:
+            secretKeyRef:
+              key: APP
+              name: env-singleton
+        - name: BUILD
+          valueFrom:
+            secretKeyRef:
+              key: BUILD
+              name: env-singleton
+        - name: BUILD_DESCRIPTION
+          valueFrom:
+            secretKeyRef:
+              key: BUILD_DESCRIPTION
+              name: env-singleton
+        - name: RACK
+          valueFrom:
+            secretKeyRef:
+              key: RACK
+              name: env-singleton
+        - name: RACK_URL
+          valueFrom:
+            secretKeyRef:
+              key: RACK_URL
+              name: env-singleton
+        - name: RELEASE
+          valueFrom:
+            secretKeyRef:
+              key: RELEASE
+              name: env-singleton
+        - name: SERVICE
+          valueFrom:
+            secretKeyRef:
+              key: SERVICE
+              name: env-singleton
         image: repo1:singleton.build1
         imagePullPolicy: IfNotPresent
         name: app1
@@ -978,9 +1074,41 @@ spec:
             configMapKeyRef:
               key: URL
               name: resource-four
-        envFrom:
-        - secretRef:
-            name: env-web
+        - name: APP
+          valueFrom:
+            secretKeyRef:
+              key: APP
+              name: env-web
+        - name: BUILD
+          valueFrom:
+            secretKeyRef:
+              key: BUILD
+              name: env-web
+        - name: BUILD_DESCRIPTION
+          valueFrom:
+            secretKeyRef:
+              key: BUILD_DESCRIPTION
+              name: env-web
+        - name: RACK
+          valueFrom:
+            secretKeyRef:
+              key: RACK
+              name: env-web
+        - name: RACK_URL
+          valueFrom:
+            secretKeyRef:
+              key: RACK_URL
+              name: env-web
+        - name: RELEASE
+          valueFrom:
+            secretKeyRef:
+              key: RELEASE
+              name: env-web
+        - name: SERVICE
+          valueFrom:
+            secretKeyRef:
+              key: SERVICE
+              name: env-web
         image: repo1:web.build1
         imagePullPolicy: IfNotPresent
         name: app1
@@ -1150,9 +1278,41 @@ spec:
             configMapKeyRef:
               key: URL
               name: resource-four
-        envFrom:
-        - secretRef:
-            name: env-web2
+        - name: APP
+          valueFrom:
+            secretKeyRef:
+              key: APP
+              name: env-web2
+        - name: BUILD
+          valueFrom:
+            secretKeyRef:
+              key: BUILD
+              name: env-web2
+        - name: BUILD_DESCRIPTION
+          valueFrom:
+            secretKeyRef:
+              key: BUILD_DESCRIPTION
+              name: env-web2
+        - name: RACK
+          valueFrom:
+            secretKeyRef:
+              key: RACK
+              name: env-web2
+        - name: RACK_URL
+          valueFrom:
+            secretKeyRef:
+              key: RACK_URL
+              name: env-web2
+        - name: RELEASE
+          valueFrom:
+            secretKeyRef:
+              key: RELEASE
+              name: env-web2
+        - name: SERVICE
+          valueFrom:
+            secretKeyRef:
+              key: SERVICE
+              name: env-web2
         image: repo1:web2.build1
         imagePullPolicy: IfNotPresent
         name: app1
@@ -1270,9 +1430,41 @@ spec:
                 configMapKeyRef:
                   key: URL
                   name: resource-four
-            envFrom:
-            - secretRef:
-                name: env-web
+            - name: APP
+              valueFrom:
+                secretKeyRef:
+                  key: APP
+                  name: env-web
+            - name: BUILD
+              valueFrom:
+                secretKeyRef:
+                  key: BUILD
+                  name: env-web
+            - name: BUILD_DESCRIPTION
+              valueFrom:
+                secretKeyRef:
+                  key: BUILD_DESCRIPTION
+                  name: env-web
+            - name: RACK
+              valueFrom:
+                secretKeyRef:
+                  key: RACK
+                  name: env-web
+            - name: RACK_URL
+              valueFrom:
+                secretKeyRef:
+                  key: RACK_URL
+                  name: env-web
+            - name: RELEASE
+              valueFrom:
+                secretKeyRef:
+                  key: RELEASE
+                  name: env-web
+            - name: SERVICE
+              valueFrom:
+                secretKeyRef:
+                  key: SERVICE
+                  name: env-web
             image: repo1:web.build1
             imagePullPolicy: IfNotPresent
             name: app1

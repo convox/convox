@@ -37,6 +37,9 @@ func (p *Provider) templateHelpers() template.FuncMap {
 		"coalesce": func(ss ...string) string {
 			return common.CoalesceString(ss...)
 		},
+		"defaultEnvs": func() []string {
+			return []string{"APP", "BUILD", "BUILD_DESCRIPTION", "RACK", "RACK_URL", "RELEASE", "SERVICE"}
+		},
 		"domains": func(app string, s manifest.Service) []string {
 			ds := []string{
 				p.Engine.ServiceHost(app, s),
