@@ -47,6 +47,9 @@ func (p *Provider) templateHelpers() template.FuncMap {
 			}
 			return ds
 		},
+		"envKey": func(envDefinition string) string {
+			return strings.Split(envDefinition, "=")[0]
+		},
 		"keyValue": func(inputItems ...map[string]string) []kvItem {
 			kv := map[string]string{}
 			for _, e := range inputItems {
