@@ -499,13 +499,10 @@ data:
   APP: YXBwMQ==
   BUILD: QlVJTEQx
   BUILD_DESCRIPTION: Zm9v
-  FOO: YmFy
-  FOUR_URL: ""
   RACK: cmFjazE=
   RACK_URL: aHR0cHM6Ly9jb252b3g6QGFwaS5uczEuc3ZjLmNsdXN0ZXIubG9jYWw6NTQ0Mw==
   RELEASE: UkVMRUFTRTI=
   SERVICE: YWdlbnQ=
-  THREE_URL: dmFsdWU=
 kind: Secret
 metadata:
   labels:
@@ -577,41 +574,9 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
-        - name: APP
-          valueFrom:
-            secretKeyRef:
-              key: APP
-              name: env-agent
-        - name: BUILD
-          valueFrom:
-            secretKeyRef:
-              key: BUILD
-              name: env-agent
-        - name: BUILD_DESCRIPTION
-          valueFrom:
-            secretKeyRef:
-              key: BUILD_DESCRIPTION
-              name: env-agent
-        - name: RACK
-          valueFrom:
-            secretKeyRef:
-              key: RACK
-              name: env-agent
-        - name: RACK_URL
-          valueFrom:
-            secretKeyRef:
-              key: RACK_URL
-              name: env-agent
-        - name: RELEASE
-          valueFrom:
-            secretKeyRef:
-              key: RELEASE
-              name: env-agent
-        - name: SERVICE
-          valueFrom:
-            secretKeyRef:
-              key: SERVICE
-              name: env-agent
+        envFrom:
+        - secretRef:
+            name: env-agent
         image: repo1:agent.build1
         imagePullPolicy: IfNotPresent
         name: app1
@@ -677,13 +642,10 @@ data:
   APP: YXBwMQ==
   BUILD: QlVJTEQx
   BUILD_DESCRIPTION: Zm9v
-  FOO: YmFy
-  FOUR_URL: ""
   RACK: cmFjazE=
   RACK_URL: aHR0cHM6Ly9jb252b3g6QGFwaS5uczEuc3ZjLmNsdXN0ZXIubG9jYWw6NTQ0Mw==
   RELEASE: UkVMRUFTRTI=
   SERVICE: ZGVwbG95bWVudA==
-  THREE_URL: dmFsdWU=
 kind: Secret
 metadata:
   labels:
@@ -761,41 +723,9 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
-        - name: APP
-          valueFrom:
-            secretKeyRef:
-              key: APP
-              name: env-deployment
-        - name: BUILD
-          valueFrom:
-            secretKeyRef:
-              key: BUILD
-              name: env-deployment
-        - name: BUILD_DESCRIPTION
-          valueFrom:
-            secretKeyRef:
-              key: BUILD_DESCRIPTION
-              name: env-deployment
-        - name: RACK
-          valueFrom:
-            secretKeyRef:
-              key: RACK
-              name: env-deployment
-        - name: RACK_URL
-          valueFrom:
-            secretKeyRef:
-              key: RACK_URL
-              name: env-deployment
-        - name: RELEASE
-          valueFrom:
-            secretKeyRef:
-              key: RELEASE
-              name: env-deployment
-        - name: SERVICE
-          valueFrom:
-            secretKeyRef:
-              key: SERVICE
-              name: env-deployment
+        envFrom:
+        - secretRef:
+            name: env-deployment
         image: repo1:deployment.build1
         imagePullPolicy: IfNotPresent
         name: app1
@@ -823,13 +753,10 @@ data:
   APP: YXBwMQ==
   BUILD: QlVJTEQx
   BUILD_DESCRIPTION: Zm9v
-  FOO: YmFy
-  FOUR_URL: ""
   RACK: cmFjazE=
   RACK_URL: aHR0cHM6Ly9jb252b3g6QGFwaS5uczEuc3ZjLmNsdXN0ZXIubG9jYWw6NTQ0Mw==
   RELEASE: UkVMRUFTRTI=
   SERVICE: c2luZ2xldG9u
-  THREE_URL: dmFsdWU=
 kind: Secret
 metadata:
   labels:
@@ -907,41 +834,9 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
-        - name: APP
-          valueFrom:
-            secretKeyRef:
-              key: APP
-              name: env-singleton
-        - name: BUILD
-          valueFrom:
-            secretKeyRef:
-              key: BUILD
-              name: env-singleton
-        - name: BUILD_DESCRIPTION
-          valueFrom:
-            secretKeyRef:
-              key: BUILD_DESCRIPTION
-              name: env-singleton
-        - name: RACK
-          valueFrom:
-            secretKeyRef:
-              key: RACK
-              name: env-singleton
-        - name: RACK_URL
-          valueFrom:
-            secretKeyRef:
-              key: RACK_URL
-              name: env-singleton
-        - name: RELEASE
-          valueFrom:
-            secretKeyRef:
-              key: RELEASE
-              name: env-singleton
-        - name: SERVICE
-          valueFrom:
-            secretKeyRef:
-              key: SERVICE
-              name: env-singleton
+        envFrom:
+        - secretRef:
+            name: env-singleton
         image: repo1:singleton.build1
         imagePullPolicy: IfNotPresent
         name: app1
@@ -969,14 +864,11 @@ data:
   APP: YXBwMQ==
   BUILD: QlVJTEQx
   BUILD_DESCRIPTION: Zm9v
-  FOO: YmFy
-  FOUR_URL: ""
   PORT: NTAwMA==
   RACK: cmFjazE=
   RACK_URL: aHR0cHM6Ly9jb252b3g6QGFwaS5uczEuc3ZjLmNsdXN0ZXIubG9jYWw6NTQ0Mw==
   RELEASE: UkVMRUFTRTI=
   SERVICE: d2Vi
-  THREE_URL: dmFsdWU=
 kind: Secret
 metadata:
   labels:
@@ -1074,41 +966,9 @@ spec:
             configMapKeyRef:
               key: URL
               name: resource-four
-        - name: APP
-          valueFrom:
-            secretKeyRef:
-              key: APP
-              name: env-web
-        - name: BUILD
-          valueFrom:
-            secretKeyRef:
-              key: BUILD
-              name: env-web
-        - name: BUILD_DESCRIPTION
-          valueFrom:
-            secretKeyRef:
-              key: BUILD_DESCRIPTION
-              name: env-web
-        - name: RACK
-          valueFrom:
-            secretKeyRef:
-              key: RACK
-              name: env-web
-        - name: RACK_URL
-          valueFrom:
-            secretKeyRef:
-              key: RACK_URL
-              name: env-web
-        - name: RELEASE
-          valueFrom:
-            secretKeyRef:
-              key: RELEASE
-              name: env-web
-        - name: SERVICE
-          valueFrom:
-            secretKeyRef:
-              key: SERVICE
-              name: env-web
+        envFrom:
+        - secretRef:
+            name: env-web
         image: repo1:web.build1
         imagePullPolicy: IfNotPresent
         name: app1
@@ -1173,14 +1033,11 @@ data:
   APP: YXBwMQ==
   BUILD: QlVJTEQx
   BUILD_DESCRIPTION: Zm9v
-  FOO: YmFy
-  FOUR_URL: ""
   PORT: NTAwMA==
   RACK: cmFjazE=
   RACK_URL: aHR0cHM6Ly9jb252b3g6QGFwaS5uczEuc3ZjLmNsdXN0ZXIubG9jYWw6NTQ0Mw==
   RELEASE: UkVMRUFTRTI=
   SERVICE: d2ViMg==
-  THREE_URL: dmFsdWU=
 kind: Secret
 metadata:
   labels:
@@ -1278,41 +1135,9 @@ spec:
             configMapKeyRef:
               key: URL
               name: resource-four
-        - name: APP
-          valueFrom:
-            secretKeyRef:
-              key: APP
-              name: env-web2
-        - name: BUILD
-          valueFrom:
-            secretKeyRef:
-              key: BUILD
-              name: env-web2
-        - name: BUILD_DESCRIPTION
-          valueFrom:
-            secretKeyRef:
-              key: BUILD_DESCRIPTION
-              name: env-web2
-        - name: RACK
-          valueFrom:
-            secretKeyRef:
-              key: RACK
-              name: env-web2
-        - name: RACK_URL
-          valueFrom:
-            secretKeyRef:
-              key: RACK_URL
-              name: env-web2
-        - name: RELEASE
-          valueFrom:
-            secretKeyRef:
-              key: RELEASE
-              name: env-web2
-        - name: SERVICE
-          valueFrom:
-            secretKeyRef:
-              key: SERVICE
-              name: env-web2
+        envFrom:
+        - secretRef:
+            name: env-web2
         image: repo1:web2.build1
         imagePullPolicy: IfNotPresent
         name: app1
@@ -1430,41 +1255,9 @@ spec:
                 configMapKeyRef:
                   key: URL
                   name: resource-four
-            - name: APP
-              valueFrom:
-                secretKeyRef:
-                  key: APP
-                  name: env-web
-            - name: BUILD
-              valueFrom:
-                secretKeyRef:
-                  key: BUILD
-                  name: env-web
-            - name: BUILD_DESCRIPTION
-              valueFrom:
-                secretKeyRef:
-                  key: BUILD_DESCRIPTION
-                  name: env-web
-            - name: RACK
-              valueFrom:
-                secretKeyRef:
-                  key: RACK
-                  name: env-web
-            - name: RACK_URL
-              valueFrom:
-                secretKeyRef:
-                  key: RACK_URL
-                  name: env-web
-            - name: RELEASE
-              valueFrom:
-                secretKeyRef:
-                  key: RELEASE
-                  name: env-web
-            - name: SERVICE
-              valueFrom:
-                secretKeyRef:
-                  key: SERVICE
-                  name: env-web
+            envFrom:
+            - secretRef:
+                name: env-web
             image: repo1:web.build1
             imagePullPolicy: IfNotPresent
             name: app1
