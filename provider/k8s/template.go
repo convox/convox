@@ -37,8 +37,24 @@ func (p *Provider) templateHelpers() template.FuncMap {
 		"coalesce": func(ss ...string) string {
 			return common.CoalesceString(ss...)
 		},
-		"getEnv": func(serviceEnvs []string) []string {
+		"getEnv": func(serviceEnvs []string, allEnvs map[string]string) []string {
 			defaultEnvs := []string{"APP", "BUILD", "BUILD_DESCRIPTION", "RACK", "RACK_URL", "RELEASE", "SERVICE"}
+			wildcardPresent := false
+			for i, v := range serviceEnvs {
+				if v == "*" {
+					wildcardPresent = true
+					copy(serviceEnvs[i:], serviceEnvs[i+1:])
+					serviceEnvs[len(serviceEnvs)-1] = ""
+					serviceEnvs = serviceEnvs[:len(serviceEnvs)-1]
+					break
+				}
+			}
+			if wildcardPresent {
+				for key, _ := range allEnvs {
+					serviceEnvs = append(serviceEnvs, key)
+				}
+				return serviceEnvs
+			}
 			return append(serviceEnvs, defaultEnvs...)
 		},
 		"domains": func(app string, s manifest.Service) []string {
@@ -129,14 +145,6 @@ func (p *Provider) templateHelpers() template.FuncMap {
 		},
 		"volumeTo": func(v string) (string, error) {
 			return volumeTo(v)
-		},
-		"wildcardIn": func(values []string) bool {
-			for _, v := range values {
-				if v == "*" {
-					return true
-				}
-			}
-			return false
 		},
 	}
 }
