@@ -111,13 +111,9 @@ spec:
               name: resource-{{ k8sname .Name }}
               key: URL
         {{ end }}
-        {{ range getEnv .Service.Environment $.Environment }}
-        - name: "{{ envKey . }}"
-          valueFrom:
-            secretKeyRef:
-              name: env-{{$.Service.Name}}
-              key: "{{ envKey . }}"
-        {{ end }}
+        envFrom:
+         - secretRef:
+             name: env-{{.Service.Name}}
         image: {{ image .App .Service .Release }}
         imagePullPolicy: IfNotPresent
         {{ with .Service.Port.Port }}
