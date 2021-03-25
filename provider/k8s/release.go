@@ -468,20 +468,15 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 }
 
 func (p *Provider) releaseTemplateTimer(a *structs.App, e structs.Environment, r *structs.Release, s *manifest.Service, t manifest.Timer) ([]byte, error) {
-	env, err := p.environment(a, r, s, e)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
 
 	params := map[string]interface{}{
-		"App":         a,
-		"Environment": env,
-		"Namespace":   p.AppNamespace(a.Name),
-		"Rack":        p.Name,
-		"Release":     r,
-		"Resources":   s.ResourceMap(),
-		"Service":     s,
-		"Timer":       t,
+		"App":       a,
+		"Namespace": p.AppNamespace(a.Name),
+		"Rack":      p.Name,
+		"Release":   r,
+		"Resources": s.ResourceMap(),
+		"Service":   s,
+		"Timer":     t,
 	}
 
 	if ip, err := p.Engine.ResolverHost(); err == nil {
