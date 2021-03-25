@@ -111,18 +111,12 @@ spec:
               name: resource-{{ k8sname .Name }}
               key: URL
         {{ end }}
-        {{ if wildcardIn .Service.Environment }}
-        envFrom:
-        - secretRef:
-            name: env-{{.Service.Name}}
-        {{ else }}
-        {{ range getEnv .Service.Environment }}
+        {{ range getEnv .Service.Environment $.Environment }}
         - name: "{{ envKey . }}"
           valueFrom:
             secretKeyRef:
               name: env-{{$.Service.Name}}
               key: "{{ envKey . }}"
-        {{ end }}
         {{ end }}
         image: {{ image .App .Service .Release }}
         imagePullPolicy: IfNotPresent
