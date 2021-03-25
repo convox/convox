@@ -111,7 +111,7 @@ spec:
               name: resource-{{ k8sname .Name }}
               key: URL
         {{ end }}
-        {{ if wildcardIn range .Service.Environment }}
+        {{ if wildcardIn .Service.Environment }}
         envFrom:
         - secretRef:
             name: env-{{.Service.Name}}
