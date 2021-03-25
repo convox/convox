@@ -129,6 +129,14 @@ func (p *Provider) templateHelpers() template.FuncMap {
 		"volumeTo": func(v string) (string, error) {
 			return volumeTo(v)
 		},
+		"wildcardIn": func(values []string) bool {
+			for _, v := range values {
+				if v == "*" {
+					return true
+				}
+			}
+			return false
+		},
 	}
 }
 
