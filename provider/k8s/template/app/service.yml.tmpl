@@ -116,14 +116,7 @@ spec:
         - secretRef:
             name: env-{{.Service.Name}}
         {{ else }}
-        {{ range defaultEnvs }}
-        - name: "{{ envKey . }}"
-          valueFrom:
-            secretKeyRef:
-              name: env-{{$.Service.Name}}
-              key: {{ envKey . }}
-        {{ end }}
-        {{ range .Service.Environment }}
+        {{ range getEnv .Service.Environment }}
         - name: "{{ envKey . }}"
           valueFrom:
             secretKeyRef:

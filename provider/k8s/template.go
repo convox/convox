@@ -37,8 +37,9 @@ func (p *Provider) templateHelpers() template.FuncMap {
 		"coalesce": func(ss ...string) string {
 			return common.CoalesceString(ss...)
 		},
-		"defaultEnvs": func() []string {
-			return []string{"APP", "BUILD", "BUILD_DESCRIPTION", "RACK", "RACK_URL", "RELEASE", "SERVICE"}
+		"getEnv": func(serviceEnvs []string) []string {
+			defaultEnvs := []string{"APP", "BUILD", "BUILD_DESCRIPTION", "RACK", "RACK_URL", "RELEASE", "SERVICE"}
+			return append(serviceEnvs, defaultEnvs...)
 		},
 		"domains": func(app string, s manifest.Service) []string {
 			ds := []string{
