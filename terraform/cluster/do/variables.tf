@@ -1,3 +1,7 @@
+variable "max_node_pool_size" {
+  default = 10
+}
+
 variable "name" {
   type = string
 }

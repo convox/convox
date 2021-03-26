@@ -52,8 +52,9 @@ The following environment variables are required:
 
 ### Available Parameters
 
-| Name        | Default          | Description                                                             |
-| ----------- | ---------------- | ----------------------------------------------------------------------- |
-| `node_type` | `Standard_D3_v3` | Node instance type                                                      |
-| `region`    | `eastus`         | Azure region                                                            |
-| `syslog`    |                  | Forward logs to a syslog endpoint (e.g. `tcp+tls://example.org:1234`)   |
+| Name                 | Default          | Description                                                             |
+| -------------------- | ---------------- | ----------------------------------------------------------------------- |
+| `max_node_pool_size` | `100`            | Maximum number of Nodes in your Rack                                                      |
+| `node_type`          | `Standard_D3_v3` | Node instance type                                                      |
+| `region`             | `eastus`         | Azure region                                                            |
+| `syslog`             |                  | Forward logs to a syslog endpoint (e.g. `tcp+tls://example.org:1234`)   |
