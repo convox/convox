@@ -122,7 +122,7 @@ func (p *Provider) ProcessGet(app, pid string) (*structs.Process, error) {
 func (p *Provider) ProcessList(app string, opts structs.ProcessListOptions) (structs.Processes, error) {
 	filters := []string{
 		"system=convox",
-		"type in (process,service)",
+		"type in (process,service,timer)",
 	}
 
 	if opts.Release != nil {
