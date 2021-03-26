@@ -23,6 +23,8 @@ manifest:
   services:
     web:
       build: .
+      environment:
+        - FOO
       port: 5000
       resources:
         - one
@@ -31,6 +33,8 @@ manifest:
         - four
     web2:
       build: .
+      environment:
+        - FOO2=value
       port: 5000
       resources:
         - one

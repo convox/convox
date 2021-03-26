@@ -112,8 +112,8 @@ spec:
               key: URL
         {{ end }}
         envFrom:
-         - secretRef:
-             name: env-{{.Service.Name}}
+        - secretRef:
+            name: env-{{.Service.Name}}
         image: {{ image .App .Service .Release }}
         imagePullPolicy: IfNotPresent
         {{ with .Service.Port.Port }}

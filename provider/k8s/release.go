@@ -468,7 +468,6 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 }
 
 func (p *Provider) releaseTemplateTimer(a *structs.App, e structs.Environment, r *structs.Release, s *manifest.Service, t manifest.Timer) ([]byte, error) {
-
 	params := map[string]interface{}{
 		"App":       a,
 		"Namespace": p.AppNamespace(a.Name),

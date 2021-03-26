@@ -148,9 +148,12 @@ func (p *Provider) environment(a *structs.App, r *structs.Release, s manifest.Se
 			env[k] = v
 		}
 	} else {
-		for k, v := range e {
-			if strings.Contains(s.EnvironmentKeys(), k) {
-				env[k] = v
+		for _, envname := range strings.Split(s.EnvironmentKeys(), ",") {
+			for k, v := range e {
+				if k == envname {
+					env[k] = v
+					break
+				}
 			}
 		}
 	}
