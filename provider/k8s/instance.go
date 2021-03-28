@@ -62,6 +62,7 @@ func (p *Provider) InstanceList() (structs.Instances, error) {
 			PublicIp:  public,
 			Started:   n.CreationTimestamp.Time,
 			Status:    status,
+			Type:      n.ObjectMeta.Labels["node.kubernetes.io/instance-type"],
 		})
 	}
 

@@ -39,10 +39,10 @@ func Instances(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	t := c.Table("ID", "STATUS", "STARTED", "PS", "CPU", "MEM", "PUBLIC", "PRIVATE")
+	t := c.Table("ID", "TYPE", "STATUS", "STARTED", "PS", "CPU", "MEM", "PUBLIC", "PRIVATE")
 
 	for _, i := range is {
-		t.AddRow(i.Id, i.Status, common.Ago(i.Started), fmt.Sprintf("%d", i.Processes), common.Percent(i.Cpu), common.Percent(i.Memory), i.PublicIp, i.PrivateIp)
+		t.AddRow(i.Id, i.Type, i.Status, common.Ago(i.Started), fmt.Sprintf("%d", i.Processes), common.Percent(i.Cpu), common.Percent(i.Memory), i.PublicIp, i.PrivateIp)
 	}
 
 	return t.Print()
