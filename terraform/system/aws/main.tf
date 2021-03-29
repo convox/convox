@@ -30,11 +30,12 @@ module "cluster" {
     aws = aws
   }
 
-  cidr      = var.cidr
-  name      = var.name
-  node_disk = var.node_disk
-  node_type = var.node_type
-  private   = var.private
+  availability_zones = var.availability_zones
+  cidr               = var.cidr
+  name               = var.name
+  node_disk          = var.node_disk
+  node_type          = var.node_type
+  private            = var.private
 }
 
 module "fluentd" {
