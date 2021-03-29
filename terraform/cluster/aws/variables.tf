@@ -2,6 +2,10 @@ variable "cidr" {
   default = "10.1.0.0/16"
 }
 
+variable "exclude_zones" {
+  default = ""
+}
+
 variable "kubernetes_version" {
   default = "1.13"
 }

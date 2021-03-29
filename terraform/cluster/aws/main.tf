@@ -13,7 +13,8 @@ locals {
 }
 
 data "aws_availability_zones" "available" {
-  state = "available"
+  state         = "available"
+  exclude_names = compact(split(",", var.exclude_zones))
 }
 
 data "aws_eks_cluster_auth" "cluster" {
