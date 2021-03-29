@@ -31,9 +31,9 @@ resource "aws_internet_gateway" "nodes" {
 resource "aws_subnet" "public" {
   count = 3
 
-  availability_zone       = data.aws_availability_zones.available.names[count.index]
+  availability_zone       = local.availability_zones[count.index]
   cidr_block              = cidrsubnet(var.cidr, 4, count.index)
-  map_public_ip_on_launch = ! var.private
+  map_public_ip_on_launch = !var.private
   vpc_id                  = aws_vpc.nodes.id
 
   tags = merge(local.tags, {
@@ -71,7 +71,7 @@ resource "aws_route_table_association" "public" {
 resource "aws_subnet" "private" {
   count = var.private ? 3 : 0
 
-  availability_zone = data.aws_availability_zones.available.names[count.index]
+  availability_zone = local.availability_zones[count.index]
   cidr_block        = cidrsubnet(var.cidr, 2, count.index + 1)
   vpc_id            = aws_vpc.nodes.id
 

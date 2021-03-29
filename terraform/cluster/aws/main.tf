@@ -7,14 +7,14 @@ provider "kubernetes" {
 }
 
 locals {
-  oidc_sub = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
-  gpu_type = substr(var.node_type, 0, 1) == "g" || substr(var.node_type, 0, 1) == "p"
-  arm_type = substr(var.node_type, 0, 2) == "a1" || substr(var.node_type, 0, 3) == "c6g" || substr(var.node_type, 0, 3) == "m6g" || substr(var.node_type, 0, 3) == "r6g"
+  oidc_sub           = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
+  gpu_type           = substr(var.node_type, 0, 1) == "g" || substr(var.node_type, 0, 1) == "p"
+  arm_type           = substr(var.node_type, 0, 2) == "a1" || substr(var.node_type, 0, 3) == "c6g" || substr(var.node_type, 0, 3) == "m6g" || substr(var.node_type, 0, 3) == "r6g"
+  availability_zones = var.availability_zones != "" ? compact(split(",", var.availability_zones)) : data.aws_availability_zones.available.names
 }
 
 data "aws_availability_zones" "available" {
-  state         = "available"
-  exclude_names = compact(split(",", var.exclude_zones))
+  state = "available"
 }
 
 data "aws_eks_cluster_auth" "cluster" {
@@ -82,7 +82,7 @@ resource "aws_eks_node_group" "cluster" {
   cluster_name    = aws_eks_cluster.cluster.name
   disk_size       = random_id.node_group.keepers.node_disk
   instance_types  = [random_id.node_group.keepers.node_type]
-  node_group_name = "${var.name}-${data.aws_availability_zones.available.names[count.index]}-${random_id.node_group.hex}"
+  node_group_name = "${var.name}-${local.availability_zones[count.index]}-${random_id.node_group.hex}"
   node_role_arn   = random_id.node_group.keepers.role_arn
   subnet_ids      = [var.private ? aws_subnet.private[count.index].id : aws_subnet.public[count.index].id]
 
