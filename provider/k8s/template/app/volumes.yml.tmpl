@@ -11,10 +11,5 @@ spec:
   resources:
     requests:
       storage: 10Gi
-  selector:
-    matchLabels:
-      system: convox
-      rack: {{$.Rack}}
-      app: {{$.App}}
-      volume: {{ volumeName $.App . }}
+  storageClassName: convox-volumes-storage-class
 {{ end }}

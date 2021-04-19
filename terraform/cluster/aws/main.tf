@@ -110,3 +110,19 @@ resource "local_file" "kubeconfig" {
     endpoint = aws_eks_cluster.cluster.endpoint
   })
 }
+
+resource "kubernetes_storage_class" "volumes_storage_class" {
+  metadata {
+    name = "convox-volumes-storage-class"
+    annotations = {
+      "storageclass.kubernetes.io/is-default-class" = "true"
+    }
+  }
+  storage_provisioner = "efs.csi.aws.com"
+  reclaim_policy      = "Retain"
+
+  depends_on = [
+    aws_eks_node_group.cluster,
+  ]
+}
+
