@@ -100,7 +100,7 @@ resource "kubernetes_deployment" "atom" {
           image_pull_policy = "Always"
 
           resources {
-            requests {
+            requests = {
               cpu    = "32m"
               memory = "32Mi"
             }
