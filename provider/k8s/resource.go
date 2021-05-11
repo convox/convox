@@ -29,6 +29,8 @@ func (p *Provider) ResourceConsole(app, name string, rw io.ReadWriter, opts stru
 	fmt.Printf("cn: %+v\n", cn)
 
 	switch r.Type {
+	case "mariadb":
+		return resourceConsoleCommand(rw, opts, "mysql", "-h", cn.Host, "-P", cn.Port, "-u", cn.Username, fmt.Sprintf("-p%s", cn.Password), "-D", cn.Database)
 	case "memcached":
 		return resourceConsoleCommand(rw, opts, "telnet", cn.Host, cn.Port)
 	case "mysql":
@@ -49,6 +51,8 @@ func (p *Provider) ResourceExport(app, name string) (io.ReadCloser, error) {
 	}
 
 	switch r.Type {
+	case "mariadb":
+		return resourceExportMysql(r)
 	case "mysql":
 		return resourceExportMysql(r)
 	case "postgres":
@@ -92,6 +96,8 @@ func (p *Provider) ResourceImport(app, name string, r io.Reader) error {
 	}
 
 	switch rr.Type {
+	case "mariadb":
+		return resourceImportMysql(rr, r)
 	case "mysql":
 		return resourceImportMysql(rr, r)
 	case "postgres":
