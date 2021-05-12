@@ -4,14 +4,16 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - name: checkout
-      uses: actions/checkout@v1
-    - name: build
-      run: docker build .
+      - name: checkout
+        uses: actions/checkout@v1
+      - name: version
+        run: docker version
+      - name: build
+        run: docker buildx build .
   test:
     runs-on: ubuntu-latest
     steps:
-    - name: checkout
-      uses: actions/checkout@v1
-    - name: test
-      run: make test
+      - name: checkout
+        uses: actions/checkout@v1
+      - name: test
+        run: make test
