@@ -9,7 +9,7 @@ jobs:
       - name: builder
         run: docker buildx create --use --name builder
       - name: build
-        run: docker buildx build --platform linux/amd64,linux/arm64 --load .
+        run: docker buildx build --platform linux/amd64,linux/arm64 .
   test:
     runs-on: ubuntu-latest
     steps:
