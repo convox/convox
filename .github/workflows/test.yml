@@ -6,10 +6,10 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v1
-      - name: version
-        run: docker version
+      - name: builder
+        run: docker buildx create --use --name builder
       - name: build
-        run: docker buildx build --platform linux/amd64,linux/arm64 .
+        run: docker buildx build --platform linux/amd64,linux/arm64 --load .
   test:
     runs-on: ubuntu-latest
     steps:
