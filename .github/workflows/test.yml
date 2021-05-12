@@ -9,7 +9,7 @@ jobs:
       - name: version
         run: docker version
       - name: build
-        run: docker buildx build .
+        run: docker buildx build --platform linux/amd64,linux/arm64 .
   test:
     runs-on: ubuntu-latest
     steps:
