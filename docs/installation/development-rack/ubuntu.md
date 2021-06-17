@@ -15,6 +15,7 @@
     $ microk8s.config > ~/.kube/config
     $ sudo snap restart microk8s
     $ sudo snap alias microk8s.kubectl kubectl
+    $ sudo iptables -P FORWARD ACCEPT
 
 ### Terraform
 
