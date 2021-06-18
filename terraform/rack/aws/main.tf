@@ -57,10 +57,11 @@ module "router" {
     kubernetes = kubernetes
   }
 
-  name      = var.name
-  namespace = module.k8s.namespace
-  oidc_arn  = var.oidc_arn
-  oidc_sub  = var.oidc_sub
-  release   = var.release
-  whitelist = var.whitelist
+  idle_timeout = var.idle_timeout
+  name         = var.name
+  namespace    = module.k8s.namespace
+  oidc_arn     = var.oidc_arn
+  oidc_sub     = var.oidc_sub
+  release      = var.release
+  whitelist    = var.whitelist
 }

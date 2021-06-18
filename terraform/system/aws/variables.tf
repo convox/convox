@@ -6,6 +6,16 @@ variable "cidr" {
   default = "10.1.0.0/16"
 }
 
+variable "idle_timeout" {
+  type = number
+  default = 3600
+
+  validation {
+    condition     = var.idle_timeout > 0 && var.idle_timeout < 4001
+    error_message = "The idle_timeout must be a value between 1 and 4000"
+  }
+}
+
 variable "name" {
   type = string
 }

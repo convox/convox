@@ -41,6 +41,7 @@ The following environment variables are required:
 | -------------------- | ------------- | ------------------------------------------------------------------------------------------ |
 | `availability_zones` |               | Specify a list of AZ names (minimum 3) to override the random automatic selection from AWS |
 | `cidr`               | `10.1.0.0/16` | CIDR range for VPC                                                                         |
+| `idle_timeout`       | `3600`        | Idle timeout value (in seconds) for the Rack Load Balancer                                 |
 | `node_disk`          | `20`          | Node disk size in GB                                                                       |
 | `node_type`          | `t3.small`    | Node instance type                                                                         |
 | `private`            | `true`        | Put nodes in private subnets behind NAT gateways                                           |
