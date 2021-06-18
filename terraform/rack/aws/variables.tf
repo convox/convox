@@ -3,7 +3,7 @@ variable "cluster" {
 }
 
 variable "idle_timeout" {
-  type = "number"
+  type = number
 }
 
 variable "name" {
