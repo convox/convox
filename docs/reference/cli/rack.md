@@ -114,6 +114,27 @@ List rack processes
     api-9749b7ccb-cg4hr      rack    api            running  3.0.0.beta44  2 weeks ago  api
     atom-578cd48bfb-6tm7g    rack    atom           running  3.0.0.beta44  2 weeks ago  atom
     atom-578cd48bfb-6tm7g    system  atom           running  3.0.0.beta44  2 weeks ago  atom
+    router-846b84d544-ndz76  rack    router         running  3.0.0.beta44  2 weeks ago  router
+    router-846b84d544-ndz76  system  router         running  3.0.0.beta44  2 weeks ago  router
+
+## rack ps --all
+
+List rack processes as well as essential system ones running on the Rack
+
+### Usage
+
+    convox rack ps --all
+
+### Examples
+
+    $ convox rack ps --all
+    ID                       APP     SERVICE        STATUS   RELEASE       STARTED      COMMAND
+    api-9749b7ccb-29zh5      system  api            running  3.0.0.beta44  2 weeks ago  api
+    api-9749b7ccb-29zh5      rack    api            running  3.0.0.beta44  2 weeks ago  api
+    api-9749b7ccb-cg4hr      system  api            running  3.0.0.beta44  2 weeks ago  api
+    api-9749b7ccb-cg4hr      rack    api            running  3.0.0.beta44  2 weeks ago  api
+    atom-578cd48bfb-6tm7g    rack    atom           running  3.0.0.beta44  2 weeks ago  atom
+    atom-578cd48bfb-6tm7g    system  atom           running  3.0.0.beta44  2 weeks ago  atom
     elasticsearch-0          rack    elasticsearch  running  3.0.0.beta44  2 weeks ago
     elasticsearch-0          system  elasticsearch  running  3.0.0.beta44  2 weeks ago
     elasticsearch-1          rack    elasticsearch  running  3.0.0.beta44  2 weeks ago
