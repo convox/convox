@@ -2,6 +2,8 @@
 
 ## Initial Setup
 
+> **_NOTE:_**:  Currently, we guarantee support for Ubuntu up to version 18.04. Newer versions of Ubuntu have yet to be fully supported.
+
 ### Docker
 
     $ sudo apt install docker.io
