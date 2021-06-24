@@ -23,3 +23,17 @@ This will export the proxy configuration to a temporary file and then point your
 In this way, you can produce a kubeconfig file for all the Racks you require and simply change which file your `kubectl` command refers to to change which Rack it talks to.
 
 If you remove a user's access to your Convox organization, then they will also lose access to the underlying Kubernetes infrastructure, which is important from a security point of view.
+
+## Useful Commands
+
+### See the node metrics as reported by k8s
+
+```sh
+$ kubectl top node
+```
+
+### View the memory consumption and CPU time consumed by your services
+
+```sh
+$ kubectl top pod -l system=convox,app!=system --all-namespaces
+```
