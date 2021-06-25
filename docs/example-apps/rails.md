@@ -1,31 +1,31 @@
 # Rails
 
-You can find an example Rails app [here](https://github.com/convox-examples/rails).  You can clone this repository locally to run and experiment with it.
+We have provided an [example Rails app](https://github.com/convox-examples/rails) that you can deploy using Convox. To give this a try, start by cloning this repository.
 
 ### Preparing your environment
 
-Before we begin you will need to install the `convox` CLI and a development Rack:
+Let's begin with installing the `convox` CLI and a deploying a development Rack.  Use the documentation links below to execute these initial steps:
 
 * [Command Line Interface](../installation/cli.md)
 * [Development Rack](../installation/development-rack)
 
 ### Preparing your application
 
-To deploy your rails application in your local rack your need to make a few changes to it. 
+Now that we have the `convox` CLI installed and we've deployed our development Rack, next is preparing our rails application. Before we deploy the application to our local development Rack, we'll need to make a few changes:
 
 **1.** Starting from the [ruby:3.0.0](https://hub.docker.com/_/ruby/) image, the `Dockerfile` defines the steps necessary to turn the application code into an image that is ready to run. 
 
-[This](https://github.com/convox-examples/rails/blob/master/Dockerfile) `Dockerfile` has 3 steps and they are executed in a particular order to take advantage of Docker's build caching behavior.
+This [Dockerfile](https://github.com/convox-examples/rails/blob/master/Dockerfile) has 3 steps that must be executed in a particular order to take advantage of Docker's build caching behavior:
 
-1. `bundle install` and `yarn install` are run to install dependencies after copying just the files needed to run these commands. This will ensure that the output these commands are cached unless one of these files changes.
+1. After copying over the files needed to run them, `bundle install` and `yarn install` are ran to install the application dependencies. When this happens, it will ensure that the command output is cached, unless one of these files changes.
 
-2. The application source is copied over. These files will change frequently so this step of the build will very rarely be cached.
+2. Next, the application source is copied over. These files will change frequently, so this step of the build will very rarely be cached.
 
-3. Finally, after setting the appropriate environment variables the assets are precompiled.
+3. Finally after setting the appropriate environment variables, the assets are precompiled.
 
-To run your application you will need a Dockerfile. 
+To run your application, you will need a Dockerfile, so let's walk through that process: 
 
-1. Create a file in the root of your project with the name `Dockerfile` the content of our [example](https://github.com/convox-examples/rails). Notice that ours uses ruby-3.0 as a base image, if you need a different version feel free to change the version on the first line of the file to a valid ruby Docker image.
+1. Create a file in the root of your project with the name `Dockerfile` the content of our [example app](https://github.com/convox-examples/rails). Notice that ours uses ruby-3.0 as a base image, so if you need a different version, feel free to change the version on the first line of the file to a suitable ruby Docker image.
 
 **2.** The `convox.yml` manifest explains how to run the application. The manifest for this application has two sections:
 
@@ -33,11 +33,11 @@ To run your application you will need a Dockerfile.
 
 2. Services: These are the web-facing services of the application. This application has a single service named `web` which is built from the local directory.
 
-Because the resource named `database` appears in the `links:` section of this service it will receive an environment variable named `DATABASE_URL` with connection details.
+Because the resource named `database` appears in the `links:` section of this service, it will receive an environment variable named `DATABASE_URL` with the connection details.
 
-Create a file in the root of your project with the name `convox.yml` and the following content
+Create a file in the root of your project with the name `convox.yml` and the following content:
 
-Check [convox.yml](https://docs.convox.com/configuration/convox-yml) to see all the possible configurations.
+> Note: Check [convox.yml](https://docs.convox.com/configuration/convox-yml) to see all the possible configurations.
 
 ```
 resources: # Here we are creating a database resource to use in our application.
@@ -54,9 +54,9 @@ services:
       - database
 ```
 
-**3.** To stop Docker from loading unnecessary files you should define a [.dockerignore](https://docs.docker.com/engine/reference/builder/#dockerignore-file) file. Create a file in the root of your project with the name `.dockerignore` and the content of our [example](https://github.com/convox-examples/rails/blob/master/.dockerignore).
+**3.** To stop Docker from loading unnecessary files, you should define a [.dockerignore](https://docs.docker.com/engine/reference/builder/#dockerignore-file) file. Create a file in the root of your project with the name `.dockerignore` and the content of our [example](https://github.com/convox-examples/rails/blob/master/.dockerignore).
 
-**4.** On Rails 6.0+ you need to define any host you will use to access your application. Since Convox generates a host that is different from `localhost` and `0.0.0.0` you need to define it in your application. More information about this configuration [here](https://guides.rubyonrails.org/configuring.html#configuring-middleware).
+**4.** On Rails 6.0+ you will need to define any host will need access to your application. Since Convox generates a host that is different from `localhost` and `0.0.0.0`, you'll need to define it in your application. You can find more information about this configuration [here](https://guides.rubyonrails.org/configuring.html#configuring-middleware).
 
 The URL that Convox automatically generates on your local Rack follows the following format:
 
@@ -79,9 +79,9 @@ Your `database.yml` should look like [this](https://github.com/convox-examples/r
 
 ### Running Locally
 
-Once you are all setup you can switch to your local rack with ```convox switch dev``` and from your project's folder you can start your local application with ```convox start```.
+Once you are all setup, you can switch to your local rack with ```convox switch dev``` and from your project's folder you can start your local application with ```convox start```.
 
-You should now be able to access your application by going to [https://web.rails.convox](https://web.rails.convox). If you renamed anything you may need to modify your local URL. The format is https://[service name].[app name].convox
+You should now be able to access your application by going to [https://web.rails.convox](https://web.rails.convox). If you renamed anything, you may need to modify your local URL. The format is https://[service name].[app name].convox
 
 ### Deploying to production
 
@@ -89,37 +89,39 @@ Install a production Rack on the cloud provider of your choice:
 
 * [Production Rack](../installation/production-rack)
 
-Once you are all set here you can see the name of your production rack
+Once we are all set with installing the production Rack, here are the production deployment steps: 
+
+First, let's take a look at the racks that are available, including the newly created production rack:
 
 ```bash
 convox racks
 ```
 
-And switch your CLI to your production rack
+Next, we'll switch our CLI to use the newly created production rack:
 
 ```bash
 convox switch [rack name]
 ```
 
-Now you can create an empty application in your production rack
+Now, we'll create an empty application inside of the production rack:
 
 ```bash
 convox apps create
 ```
 
-You need to define the secret key for your production application
+Then, we'll need to define the secret key for the production application:
 
 ```
 convox env set SECRET_KEY_BASE="$(rails secret)"
 ```
 
-And you can deploy your application to production
+Now, we can deploy the application to production:
 
 ```bash
 convox deploy
 ```
 
-Finally you can retrieve the URL from your production application with
+Finally, we can retrieve the production deployed application URL with:
 
 ```bash
 convox services
