@@ -1,7 +1,7 @@
-#Monitoring
+# Monitoring
 
 Convox v3 can connect to a host of logging and montioring solutions. You also have access to audit logs from within the Console. 
 
-##Monitoring 
+## Monitoring 
 
-### 1. [Datadog](../integrations/monitoring/datadog.md)
+### 1. [Datadog](../monitoring/datadog.md)
