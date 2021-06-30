@@ -34,8 +34,7 @@ module "metrics" {
   providers = {
     kubernetes = kubernetes
   }
-  
-  set_priority_class = true
+
 }
 
 module "resolver" {

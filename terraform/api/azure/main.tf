@@ -51,7 +51,6 @@ module "k8s" {
   namespace          = var.namespace
   rack               = var.name
   release            = var.release
-  set_priority_class = true
 
   annotations = {
     "kubernetes.io/ingress.class" = "nginx"

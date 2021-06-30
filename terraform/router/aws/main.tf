@@ -17,7 +17,6 @@ module "nginx" {
 
   namespace          = var.namespace
   rack               = var.name
-  set_priority_class = true
 }
 
 resource "kubernetes_service" "router" {
