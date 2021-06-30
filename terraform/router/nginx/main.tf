@@ -180,7 +180,7 @@ resource "kubernetes_deployment" "ingress-nginx" {
         termination_grace_period_seconds = 300
         service_account_name             = "ingress-nginx"
         automount_service_account_token  = true
-        priority_class_name              = "system-cluster-critical"
+        priority_class_name              = var.set_priority_class ? "system-cluster-critical" : null
 
         container {
           name  = "system"

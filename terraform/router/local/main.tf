@@ -12,9 +12,10 @@ module "nginx" {
     kubernetes = kubernetes
   }
 
-  namespace    = var.namespace
-  rack         = var.name
-  replicas_min = 1
+  namespace          = var.namespace
+  rack               = var.name
+  replicas_min       = 1
+  set_priority_class = false
 }
 
 resource "kubernetes_service" "router" {
