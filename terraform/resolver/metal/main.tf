@@ -8,4 +8,5 @@ module "k8s" {
   namespace = var.namespace
   rack      = var.rack
   release   = var.release
+  set_priority_class = true
 }

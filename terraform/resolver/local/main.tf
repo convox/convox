@@ -9,6 +9,7 @@ module "k8s" {
   rack      = var.rack
   release   = var.release
   replicas  = 1
+  set_priority_class = false
 }
 
 resource "kubernetes_service" "resolver-external" {
