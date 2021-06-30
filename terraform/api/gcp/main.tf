@@ -42,7 +42,6 @@ module "k8s" {
   namespace          = var.namespace
   rack               = var.name
   release            = var.release
-  set_priority_class = true
 
   annotations = {
     "cert-manager.io/cluster-issuer"   = "letsencrypt"

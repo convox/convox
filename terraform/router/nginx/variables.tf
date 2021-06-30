@@ -13,3 +13,7 @@ variable "replicas_min" {
 variable "replicas_max" {
   default = 10
 }
+
+variable "set_priority_class" {
+  default = true
+}
