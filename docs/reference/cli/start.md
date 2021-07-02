@@ -6,7 +6,11 @@ Start an application for local development
 
 ### Usage
 
-    convox start [service] [service...]
+    convox start [service] [service...] [options]
+
+### Options
+
+    -m <file.yml> allows to specify an alternative manifest file (convox.yml by default)
 
 ### Examples
 
