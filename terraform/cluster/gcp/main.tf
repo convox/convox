@@ -18,7 +18,7 @@ resource "google_container_cluster" "rack" {
   initial_node_count       = 1
 
   release_channel {
-    channel = "REGULAR"
+    channel = "STABLE"
   }
 
   workload_identity_config {
