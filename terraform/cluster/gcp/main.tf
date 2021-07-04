@@ -21,6 +21,8 @@ resource "google_container_cluster" "rack" {
     channel = "STABLE"
   }
 
+  min_master_version = "1.18"
+
   workload_identity_config {
     identity_namespace = "${data.google_project.current.project_id}.svc.id.goog"
   }
