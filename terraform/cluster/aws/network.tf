@@ -41,6 +41,10 @@ resource "aws_subnet" "public" {
     "kubernetes.io/cluster/${var.name}" : "shared"
     "kubernetes.io/role/elb" : ""
   })
+
+  timeouts {
+    delete = "6h"
+  }
 }
 
 resource "aws_route_table" "public" {
@@ -80,6 +84,10 @@ resource "aws_subnet" "private" {
     "kubernetes.io/cluster/${var.name}" : "shared"
     "kubernetes.io/role/internal-elb" : ""
   })
+
+  timeouts {
+    delete = "6h"
+  }
 }
 
 resource "aws_eip" "nat" {
