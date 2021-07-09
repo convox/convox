@@ -52,7 +52,6 @@ module "gke_auth" {
   project_id           = module.project.id
   cluster_name         = var.name
   location             = var.region
-  use_private_endpoint = true
 }
 
 module "rack" {
