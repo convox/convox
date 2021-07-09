@@ -18,10 +18,8 @@ resource "google_container_cluster" "rack" {
   initial_node_count       = 1
 
   release_channel {
-    channel = "UNSPECIFIED"
+    channel = "REGULAR"
   }
-
-  min_master_version = "1.18.6"
 
   workload_identity_config {
     identity_namespace = "${data.google_project.current.project_id}.svc.id.goog"
@@ -29,14 +27,6 @@ resource "google_container_cluster" "rack" {
 
   ip_allocation_policy {}
 
-  master_auth {
-    username = "gcloud"
-    password = random_string.password.result
-
-    client_certificate_config {
-      issue_client_certificate = true
-    }
-  }
 }
 
 resource "google_container_node_pool" "rack" {
@@ -91,12 +81,7 @@ resource "local_file" "kubeconfig" {
   ]
 
   filename = pathexpand("~/.kube/config.gcp.${var.name}")
-  content = templatefile("${path.module}/kubeconfig.tpl", {
-    ca                 = google_container_cluster.rack.master_auth.0.cluster_ca_certificate
-    endpoint           = google_container_cluster.rack.endpoint
-    client_certificate = google_container_cluster.rack.master_auth.0.client_certificate
-    client_key         = google_container_cluster.rack.master_auth.0.client_key
-  })
+  content  = module.gke_auth.kubeconfig_raw
 
   lifecycle {
     ignore_changes = [content]
@@ -108,10 +93,9 @@ provider "kubernetes" {
 
   load_config_file = false
 
-  cluster_ca_certificate = base64decode(google_container_cluster.rack.master_auth.0.cluster_ca_certificate)
-  host                   = "https://${google_container_cluster.rack.endpoint}"
-  username               = "gcloud"
-  password               = random_string.password.result
+  cluster_ca_certificate = module.gke_auth.cluster_ca_certificate
+  host                   = module.gke_auth.host
+  token                  = module.gke_auth.token
 }
 
 resource "kubernetes_cluster_role_binding" "client" {
