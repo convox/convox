@@ -81,7 +81,7 @@ resource "local_file" "kubeconfig" {
   ]
 
   filename = pathexpand("~/.kube/config.gcp.${var.name}")
-  content  = module.gke_auth.kubeconfig_raw
+  content  = var.kubeconfig_raw
 
   lifecycle {
     ignore_changes = [content]
@@ -93,9 +93,9 @@ provider "kubernetes" {
 
   load_config_file = false
 
-  cluster_ca_certificate = module.gke_auth.cluster_ca_certificate
-  host                   = module.gke_auth.host
-  token                  = module.gke_auth.token
+  cluster_ca_certificate = var.cluster_ca_certificate
+  host                   = var.host
+  token                  = var.token
 }
 
 resource "kubernetes_cluster_role_binding" "client" {
