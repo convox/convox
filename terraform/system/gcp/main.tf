@@ -9,18 +9,11 @@ provider "google-beta" {
 }
 
 provider "kubernetes" {
-  client_certificate     = module.cluster.client_certificate
-  client_key             = module.cluster.client_key
-  cluster_ca_certificate = module.cluster.ca
-  host                   = module.cluster.endpoint
-
-  load_config_file = false
-}
-
-provider "kubernetes" {
   cluster_ca_certificate = module.gke_auth.cluster_ca_certificate
   host                   = module.gke_auth.host
   token                  = module.gke_auth.token
+
+  load_config_file = false
 }
 
 module "project" {
