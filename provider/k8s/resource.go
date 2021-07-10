@@ -21,12 +21,15 @@ func (p *Provider) ResourceConsole(app, name string, rw io.ReadWriter, opts stru
 		return errors.WithStack(err)
 	}
 
-	cn, err := parseResourceURL(r.Url)
+	u, err := p.resourceUrl(app, name)
+	if err != nil {
+		return err
+	}
+
+	cn, err := parseResourceURL(u)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-
-	fmt.Printf("cn: %+v\n", cn)
 
 	switch r.Type {
 	case "memcached":
@@ -34,9 +37,9 @@ func (p *Provider) ResourceConsole(app, name string, rw io.ReadWriter, opts stru
 	case "mysql":
 		return resourceConsoleCommand(rw, opts, "mysql", "-h", cn.Host, "-P", cn.Port, "-u", cn.Username, fmt.Sprintf("-p%s", cn.Password), "-D", cn.Database)
 	case "postgres":
-		return resourceConsoleCommand(rw, opts, "psql", r.Url)
+		return resourceConsoleCommand(rw, opts, "psql", u)
 	case "redis":
-		return resourceConsoleCommand(rw, opts, "redis-cli", "-u", r.Url)
+		return resourceConsoleCommand(rw, opts, "redis-cli", "-u", u)
 	default:
 		return errors.WithStack(fmt.Errorf("console not available for resources of type: %s", r.Type))
 	}
@@ -48,38 +51,62 @@ func (p *Provider) ResourceExport(app, name string) (io.ReadCloser, error) {
 		return nil, errors.WithStack(err)
 	}
 
+	u, err := p.resourceUrl(app, name)
+	if err != nil {
+		return nil, err
+	}
+
 	switch r.Type {
 	case "mysql":
-		return resourceExportMysql(r)
+		return resourceExportMysql(u)
 	case "postgres":
-		return resourceExportPostgres(r)
+		return resourceExportPostgres(u)
 	default:
 		return nil, errors.WithStack(fmt.Errorf("export not available for resources of type: %s", r.Type))
 	}
 }
 
 func (p *Provider) ResourceGet(app, name string) (*structs.Resource, error) {
-	d, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).Get(fmt.Sprintf("resource-%s", nameFilter(name)), am.GetOptions{})
+	m, _, err := common.AppManifest(p, app)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
-	cm, err := p.Cluster.CoreV1().ConfigMaps(p.AppNamespace(app)).Get(fmt.Sprintf("resource-%s", nameFilter(name)), am.GetOptions{})
+	mr, err := m.Resource(name)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
-	status := "running"
-
-	if d.Status.ReadyReplicas < 1 {
-		status = "pending"
+	u, err := p.resourceUrl(app, name)
+	if err != nil {
+		return nil, err
 	}
 
 	r := &structs.Resource{
 		Name:   name,
-		Status: status,
-		Type:   d.ObjectMeta.Labels["kind"],
-		Url:    cm.Data["URL"],
+		Status: "external",
+		Type:   mr.Type,
+		Url:    u,
+	}
+
+	overlay, err := p.resourceOverlay(app, name)
+	if err != nil {
+		return nil, err
+	}
+
+	if overlay {
+		return r, nil
+	}
+
+	d, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).Get(fmt.Sprintf("resource-%s", nameFilter(name)), am.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	if d.Status.ReadyReplicas < 1 {
+		r.Status = "pending"
+	} else {
+		r.Status = "running"
 	}
 
 	return r, nil
@@ -230,6 +257,34 @@ func (p *Provider) SystemResourceUpdate(name string, opts structs.ResourceUpdate
 	return nil, errors.WithStack(fmt.Errorf("unavailable on v3 racks"))
 }
 
+func (p *Provider) resourceOverlay(app, name string) (bool, error) {
+	m, rel, err := common.AppManifest(p, app)
+	if err != nil {
+		return false, err
+	}
+
+	r, err := m.Resource(name)
+	if err != nil {
+		return false, err
+	}
+
+	env, err := structs.NewEnvironment([]byte(rel.Env))
+	if err != nil {
+		return false, err
+	}
+
+	return env[r.DefaultEnv()] != "", nil
+}
+
+func (p *Provider) resourceUrl(app, name string) (string, error) {
+	cm, err := p.Cluster.CoreV1().ConfigMaps(p.AppNamespace(app)).Get(fmt.Sprintf("resource-%s", nameFilter(name)), am.GetOptions{})
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	return cm.Data["URL"], nil
+}
+
 type resourceConnection struct {
 	Database string
 	Host     string
@@ -298,8 +353,8 @@ func resourceExportCommand(w io.WriteCloser, command string, args ...string) {
 	}
 }
 
-func resourceExportMysql(r *structs.Resource) (io.ReadCloser, error) {
-	cn, err := parseResourceURL(r.Url)
+func resourceExportMysql(url string) (io.ReadCloser, error) {
+	cn, err := parseResourceURL(url)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -311,10 +366,10 @@ func resourceExportMysql(r *structs.Resource) (io.ReadCloser, error) {
 	return rr, nil
 }
 
-func resourceExportPostgres(r *structs.Resource) (io.ReadCloser, error) {
+func resourceExportPostgres(url string) (io.ReadCloser, error) {
 	rr, ww := io.Pipe()
 
-	go resourceExportCommand(ww, "pg_dump", "--no-acl", "--no-owner", r.Url)
+	go resourceExportCommand(ww, "pg_dump", "--no-acl", "--no-owner", url)
 
 	return rr, nil
 }
