@@ -1,6 +1,6 @@
 ## development #################################################################
 
-FROM golang:1.13 AS development
+FROM golang:1.16 AS development
 
 RUN apt-get update && apt-get -y install default-mysql-client postgresql-client redis-tools telnet
 
@@ -28,19 +28,19 @@ RUN make build
 
 ## package #####################################################################
 
-FROM golang:1.13 AS package
+FROM golang:1.16 AS package
 
 RUN apt-get update && apt-get -y install upx-ucl
 
 WORKDIR /usr/src/convox
 
-COPY --from=development /usr/src/convox .
+COPY . .
 
 RUN make package build compress
 
 ## production ##################################################################
 
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 
 RUN apt-get -qq update && apt-get -qq -y install curl default-mysql-client postgresql-client redis-tools telnet
 
