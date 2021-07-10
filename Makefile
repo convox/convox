@@ -18,9 +18,10 @@ compress: $(binaries)
 	upx-ucl -1 $^
 
 dev:
+	test -n "$(IMAGE)" # IMAGE
 	test -n "$(RACK)" # RACK
-	docker build --target development -t convox/convox:master .
-	docker push convox/convox:master
+	docker build --target development -t $(IMAGE) .
+	docker push $(IMAGE)
 	$(call restart,$(RACK)-system,deployment/api)
 	$(call restart,$(RACK)-system,deployment/atom)
 	$(call restart,$(RACK)-system,deployment/resolver)
