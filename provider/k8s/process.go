@@ -14,6 +14,7 @@ import (
 	shellquote "github.com/kballard/go-shellquote"
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
@@ -334,6 +335,7 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 	c := ac.Container{
 		Env:           []ac.EnvVar{},
 		Name:          app,
+		Resources:     ac.ResourceRequirements{Requests: ac.ResourceList{}},
 		VolumeDevices: []ac.VolumeDevice{},
 		VolumeMounts:  []ac.VolumeMount{},
 	}
@@ -478,6 +480,14 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 
 	if opts.Image != nil {
 		s.Containers[0].Image = *opts.Image
+	}
+
+	if opts.Cpu != nil {
+		s.Containers[0].Resources.Requests["cpu"] = resource.MustParse(fmt.Sprintf("%dm", *opts.Cpu))
+	}
+
+	if opts.Memory != nil {
+		s.Containers[0].Resources.Requests["memory"] = resource.MustParse(fmt.Sprintf("%dMi", *opts.Memory))
 	}
 
 	if opts.Volumes != nil {

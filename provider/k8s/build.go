@@ -67,6 +67,7 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 
 	ps, err := p.ProcessRun(app, "build", structs.ProcessRunOptions{
 		Command:     options.String(fmt.Sprintf("build -method tgz -cache %t", cache)),
+		Cpu:         options.Int(512),
 		Environment: env,
 		Image:       options.String(p.Image),
 		Volumes: map[string]string{
