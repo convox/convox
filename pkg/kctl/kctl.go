@@ -115,9 +115,9 @@ func (c *Controller) start() {
 
 	c.recorder = eb.NewRecorder(scheme.Scheme, ac.EventSource{Component: c.Name})
 
-	rl := &resourcelock.ConfigMapLock{
-		ConfigMapMeta: am.ObjectMeta{Namespace: c.Namespace, Name: c.Name},
-		Client:        c.Handler.Client().CoreV1(),
+	rl := &resourcelock.LeaseLock{
+		LeaseMeta: am.ObjectMeta{Namespace: c.Namespace, Name: c.Name},
+		Client:    c.Handler.Client().CoordinationV1(),
 		LockConfig: resourcelock.ResourceLockConfig{
 			Identity:      c.Identifier,
 			EventRecorder: c.recorder,
