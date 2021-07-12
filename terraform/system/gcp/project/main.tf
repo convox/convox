@@ -1,3 +1,8 @@
+provider "google.direct" {
+  project = data.google_client_config.current.project
+  region  = data.google_client_config.current.project.region
+}
+
 data "google_client_config" "current" {
   provider = google.direct
 }
