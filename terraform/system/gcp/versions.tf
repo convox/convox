@@ -3,6 +3,7 @@ terraform {
     google = {
       source  = "hashicorp/google"
       version = "~> 3.74.0"
+      configuration_aliases = [ google.direct ]
     }
     google-beta = {
       source  = "hashicorp/google-beta"
