@@ -1,7 +1,3 @@
-provider "google" {
-  alias = "direct"
-}
-
 data "google_client_config" "current" {
   provider = google.direct
 }

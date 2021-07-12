@@ -7,6 +7,8 @@ resource "random_string" "password" {
   special = true
 }
 
+data "google_client_config" "provider" {}
+
 resource "google_container_cluster" "rack" {
   provider = google-beta
 
@@ -74,28 +76,26 @@ resource "google_container_node_pool" "rack" {
   }
 }
 
-resource "local_file" "kubeconfig" {
-  depends_on = [
-    kubernetes_cluster_role_binding.client,
-    google_container_node_pool.rack,
-  ]
+# resource "local_file" "kubeconfig" {
+#   depends_on = [
+#     kubernetes_cluster_role_binding.client,
+#     google_container_node_pool.rack,
+#   ]
 
-  filename = pathexpand("~/.kube/config.gcp.${var.name}")
-  content  = var.kubeconfig_raw
+#   filename = pathexpand("~/.kube/config.gcp.${var.name}")
+#   content  = var.kubeconfig_raw
 
-  lifecycle {
-    ignore_changes = [content]
-  }
-}
+#   lifecycle {
+#     ignore_changes = [content]
+#   }
+# }
 
 provider "kubernetes" {
-  alias = "direct"
-
-  load_config_file = false
-
-  cluster_ca_certificate = var.cluster_ca_certificate
-  host                   = var.host
-  token                  = var.token
+  host  = "https://${data.google_container_cluster.rack.endpoint}"
+  token = data.google_client_config.provider.access_token
+  cluster_ca_certificate = base64decode(
+    data.google_container_cluster.rack.master_auth[0].cluster_ca_certificate,
+  )
 }
 
 resource "kubernetes_cluster_role_binding" "client" {

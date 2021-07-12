@@ -9,9 +9,9 @@ provider "google-beta" {
 }
 
 provider "kubernetes" {
-  cluster_ca_certificate = module.gke_auth.cluster_ca_certificate
-  host                   = module.gke_auth.host
-  token                  = module.gke_auth.token
+  cluster_ca_certificate = base64decode(module.cluster.cluster_ca_certificate)
+  host                   = module.cluster.endpoint
+  token                  = module.cluster.token
 
   load_config_file = false
 }
@@ -40,19 +40,15 @@ module "cluster" {
   name                   = var.name
   node_type              = var.node_type
   preemptible            = var.preemptible
-  cluster_ca_certificate = module.gke_auth.cluster_ca_certificate
-  host                   = module.gke_auth.host
-  token                  = module.gke_auth.token
-  kubeconfig_raw         = module.gke_auth.kubeconfig_raw
 }
 
-module "gke_auth" {
-  source               = "terraform-google-modules/kubernetes-engine/google//modules/auth"
+# module "gke_auth" {
+#   source               = "terraform-google-modules/kubernetes-engine/google//modules/auth"
 
-  project_id           = module.project.id
-  cluster_name         = var.name
-  location             = var.region
-}
+#   project_id           = module.project.id
+#   cluster_name         = var.name
+#   location             = var.region
+# }
 
 module "rack" {
   source = "../../rack/gcp"

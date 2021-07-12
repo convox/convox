@@ -13,16 +13,3 @@ variable "preemptible" {
 variable "services" {
   default = ""
 }
-
-variable "cluster_ca_certificate" {
-  type = string
-}
-variable "host" {
-  type = string
-}
-variable "token" {
-  type = string
-}
-variable "kubeconfig_raw" {
-  type = string
-}

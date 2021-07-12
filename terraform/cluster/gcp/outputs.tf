@@ -28,3 +28,11 @@ output "network" {
 output "nodes_account" {
   value = google_service_account.nodes.email
 }
+
+output "token" {
+  value = google_client_config.provider.access_token
+} 
+
+output "cluster_ca_certificate" {
+  value = google_container_cluster.rack.master_auth[0].cluster_ca_certificate
+}
