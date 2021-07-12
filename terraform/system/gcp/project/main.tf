@@ -3,9 +3,7 @@ provider "google-direct" {
   region  = data.google_client_config.current.project.region
 }
 
-data "google_client_config" "current" {
-  provider = google-direct
-}
+data "google_client_config" "current" {}
 
 resource "google_project_service" "cloudresourcemanager" {
   provider = google-direct
