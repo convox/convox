@@ -38,6 +38,7 @@ type ProcessListOptions struct {
 
 type ProcessRunOptions struct {
 	Command     *string           `header:"Command"`
+	Cpu         *int              `header:"Cpu"`
 	Environment map[string]string `header:"Environment"`
 	Height      *int              `header:"Height"`
 	Image       *string           `header:"Image"`
