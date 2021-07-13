@@ -1,0 +1,48 @@
+name: daily test
+
+env:
+  VERSION: 3.0.48 # @TODO: Automate to get the latest stable tag: https://bit.ly/3krkRNN
+
+on:
+  schedule:
+    - cron:  '0 0/24 * * *'
+  workflow_dispatch:
+
+jobs:
+  test-clouds:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        provider:
+          - aws
+          # - azure
+          - do
+          - gcp
+    steps:
+      - name: checkout
+        uses: actions/checkout@v1
+      - name: name
+        run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")" >> $GITHUB_ENV
+      - name: provider
+        run: echo "PROVIDER=${{ matrix.provider }}" >> $GITHUB_ENV
+      - name: secrets
+        run: ci/secrets.sh
+        env:
+          SECRETS: ${{ toJson(secrets) }}
+      - name: dependencies
+        run: ci/dependencies.sh
+      - name: cli
+        run: ci/cli.sh
+      - name: install
+        run: ci/install.sh
+      - name: wait
+        run: sleep 600
+      - name: test
+        run: ci/test.sh
+      - name: debug
+        run: ci/debug.sh
+        if: always()
+      - name: uninstall
+        run: ci/uninstall.sh
+        if: always()
