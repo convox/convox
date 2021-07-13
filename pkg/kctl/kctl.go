@@ -115,9 +115,9 @@ func (c *Controller) start() {
 
 	c.recorder = eb.NewRecorder(scheme.Scheme, ac.EventSource{Component: c.Name})
 
-	rl := &resourcelock.ConfigMapLock{
-		ConfigMapMeta: am.ObjectMeta{Namespace: c.Namespace, Name: c.Name},
-		Client:        c.Handler.Client().CoreV1(),
+	rl := &resourcelock.LeaseLock{
+		LeaseMeta: am.ObjectMeta{Namespace: c.Namespace, Name: c.Name},
+		Client:    c.Handler.Client().CoordinationV1(),
 		LockConfig: resourcelock.ResourceLockConfig{
 			Identity:      c.Identifier,
 			EventRecorder: c.recorder,
@@ -134,9 +134,9 @@ func (c *Controller) start() {
 
 	el, err := leaderelection.NewLeaderElector(leaderelection.LeaderElectionConfig{
 		Lock:          rl,
-		LeaseDuration: 15 * time.Second,
-		RenewDeadline: 10 * time.Second,
-		RetryPeriod:   2 * time.Second,
+		LeaseDuration: 60 * time.Second,
+		RenewDeadline: 15 * time.Second,
+		RetryPeriod:   5 * time.Second,
 		Callbacks: leaderelection.LeaderCallbacks{
 			OnStartedLeading: c.leaderStart(informer),
 			OnStoppedLeading: c.leaderStop,
