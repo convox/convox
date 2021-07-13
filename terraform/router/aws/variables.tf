@@ -2,6 +2,10 @@ variable "env" {
   default = {}
 }
 
+variable "idle_timeout" {
+  type = number
+}
+
 variable "name" {
   type = string
 }
