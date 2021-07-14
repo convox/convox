@@ -2,7 +2,7 @@ package sdk
 
 {{ range $m := .Methods }}
 	func (c *Client) {{.Name}}({{ args_types . }}) ({{ returns . }}) {
-		{{ if .Route.Method }}
+		{{ if and .Route.Method (not $m.Any) }}
 			var err error
 
 			{{ with .Option }}

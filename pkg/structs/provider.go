@@ -3,6 +3,8 @@ package structs
 import (
 	context "context"
 	"io"
+
+	"github.com/convox/stdapi"
 )
 
 type Provider interface {
@@ -64,6 +66,7 @@ type Provider interface {
 
 	RegistryAdd(server, username, password string) (*Registry, error)
 	RegistryList() (Registries, error)
+	RegistryProxy(ctx *stdapi.Context) error
 	RegistryRemove(server string) error
 
 	ReleaseCreate(app string, opts ReleaseCreateOptions) (*Release, error)

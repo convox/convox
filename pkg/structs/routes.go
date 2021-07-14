@@ -53,6 +53,7 @@ func init() {
 	routes["ReleasePromote"] = "POST /apps/{app}/releases/{id}/promote"
 	routes["RegistryAdd"] = "POST /registries"
 	routes["RegistryList"] = "GET /registries"
+	routes["RegistryProxy"] = "ANY /v2/{path:.*}"
 	routes["RegistryRemove"] = "DELETE /registries/{server:.*}"
 	routes["ResourceConsole"] = "SOCKET /apps/{app}/resources/{name}/console"
 	routes["ResourceExport"] = "GET /apps/{app}/resources/{name}/data"

@@ -77,17 +77,19 @@ func Methods() ([]Method, error) {
 
 		pvm := rePathVars.FindAllStringSubmatch(path, -1)
 
-		for _, pv := range pvm {
-			for _, v := range pv[1:] {
-				found := false
-				for _, a := range args {
-					if a.Name == v {
-						found = true
-						break
+		if method != "ANY" {
+			for _, pv := range pvm {
+				for _, v := range pv[1:] {
+					found := false
+					for _, a := range args {
+						if a.Name == v {
+							found = true
+							break
+						}
 					}
-				}
-				if !found {
-					return nil, fmt.Errorf("path variable not found in args for %s: %s", name, v)
+					if !found {
+						return nil, fmt.Errorf("path variable not found in args for %s: %s", name, v)
+					}
 				}
 			}
 		}
@@ -150,6 +152,10 @@ func (m *Method) Writer() string {
 	}
 
 	return ""
+}
+
+func (m *Method) Any() bool {
+	return m.Route.Method == "ANY"
 }
 
 func (m *Method) Socket() bool {
