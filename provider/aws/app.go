@@ -18,7 +18,7 @@ func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*struc
 	}
 
 	res, err := p.ECR.CreateRepository(&ecr.CreateRepositoryInput{
-		RepositoryName: aws.String(fmt.Sprintf("%s/%s", p.Name, name)),
+		RepositoryName: aws.String(fmt.Sprintf("%s%s", p.RepositoryPrefix(), name)),
 	})
 	if err != nil {
 		return nil, err

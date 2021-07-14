@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/stdapi"
 	"github.com/convox/stdsdk"
 )
 
@@ -646,6 +647,11 @@ func (c *Client) RegistryList() (structs.Registries, error) {
 	err = c.Get(fmt.Sprintf("/registries"), ro, &v)
 
 	return v, err
+}
+
+func (c *Client) RegistryProxy(ctx *stdapi.Context) error {
+	err := fmt.Errorf("not available via api")
+	return err
 }
 
 func (c *Client) RegistryRemove(server string) error {
