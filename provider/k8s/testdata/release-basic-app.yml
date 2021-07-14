@@ -499,13 +499,10 @@ data:
   APP: YXBwMQ==
   BUILD: QlVJTEQx
   BUILD_DESCRIPTION: Zm9v
-  FOO: YmFy
-  FOUR_URL: ""
   RACK: cmFjazE=
   RACK_URL: aHR0cHM6Ly9jb252b3g6QGFwaS5uczEuc3ZjLmNsdXN0ZXIubG9jYWw6NTQ0Mw==
   RELEASE: UkVMRUFTRTI=
   SERVICE: YWdlbnQ=
-  THREE_URL: dmFsdWU=
 kind: Secret
 metadata:
   labels:
@@ -645,13 +642,10 @@ data:
   APP: YXBwMQ==
   BUILD: QlVJTEQx
   BUILD_DESCRIPTION: Zm9v
-  FOO: YmFy
-  FOUR_URL: ""
   RACK: cmFjazE=
   RACK_URL: aHR0cHM6Ly9jb252b3g6QGFwaS5uczEuc3ZjLmNsdXN0ZXIubG9jYWw6NTQ0Mw==
   RELEASE: UkVMRUFTRTI=
   SERVICE: ZGVwbG95bWVudA==
-  THREE_URL: dmFsdWU=
 kind: Secret
 metadata:
   labels:
@@ -759,13 +753,10 @@ data:
   APP: YXBwMQ==
   BUILD: QlVJTEQx
   BUILD_DESCRIPTION: Zm9v
-  FOO: YmFy
-  FOUR_URL: ""
   RACK: cmFjazE=
   RACK_URL: aHR0cHM6Ly9jb252b3g6QGFwaS5uczEuc3ZjLmNsdXN0ZXIubG9jYWw6NTQ0Mw==
   RELEASE: UkVMRUFTRTI=
   SERVICE: c2luZ2xldG9u
-  THREE_URL: dmFsdWU=
 kind: Secret
 metadata:
   labels:
@@ -874,13 +865,11 @@ data:
   BUILD: QlVJTEQx
   BUILD_DESCRIPTION: Zm9v
   FOO: YmFy
-  FOUR_URL: ""
   PORT: NTAwMA==
   RACK: cmFjazE=
   RACK_URL: aHR0cHM6Ly9jb252b3g6QGFwaS5uczEuc3ZjLmNsdXN0ZXIubG9jYWw6NTQ0Mw==
   RELEASE: UkVMRUFTRTI=
   SERVICE: d2Vi
-  THREE_URL: dmFsdWU=
 kind: Secret
 metadata:
   labels:
@@ -1045,14 +1034,12 @@ data:
   APP: YXBwMQ==
   BUILD: QlVJTEQx
   BUILD_DESCRIPTION: Zm9v
-  FOO: YmFy
-  FOUR_URL: ""
+  FOO2: dmFsdWU=
   PORT: NTAwMA==
   RACK: cmFjazE=
   RACK_URL: aHR0cHM6Ly9jb252b3g6QGFwaS5uczEuc3ZjLmNsdXN0ZXIubG9jYWw6NTQ0Mw==
   RELEASE: UkVMRUFTRTI=
   SERVICE: d2ViMg==
-  THREE_URL: dmFsdWU=
 kind: Secret
 metadata:
   labels:

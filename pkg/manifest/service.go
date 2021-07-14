@@ -154,6 +154,15 @@ func (s Service) EnvironmentKeys() string {
 	return strings.Join(keys, ",")
 }
 
+func (s Service) EnvironmentWildcard() bool {
+	for _, e := range s.Environment {
+		if e == "*" {
+			return true
+		}
+	}
+	return false
+}
+
 func (s Service) GetName() string {
 	return s.Name
 }

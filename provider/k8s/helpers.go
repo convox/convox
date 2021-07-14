@@ -143,8 +143,19 @@ func (p *Provider) environment(a *structs.App, r *structs.Release, s manifest.Se
 		env[k] = v
 	}
 
-	for k, v := range e {
-		env[k] = v
+	if s.EnvironmentWildcard() {
+		for k, v := range e {
+			env[k] = v
+		}
+	} else {
+		for _, envname := range strings.Split(s.EnvironmentKeys(), ",") {
+			for k, v := range e {
+				if k == envname {
+					env[k] = v
+					break
+				}
+			}
+		}
 	}
 
 	return env, nil
