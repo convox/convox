@@ -211,6 +211,12 @@ resource "kubernetes_deployment" "api" {
             }
           }
         }
+
+        dns_config {
+          nameservers = [var.resolver]
+        }
+
+        dns_policy = "None"
       }
     }
   }
