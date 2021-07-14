@@ -49,6 +49,7 @@ module "rack" {
   }
 
   cluster        = module.cluster.id
+  image          = var.image
   name           = var.name
   region         = var.region
   release        = local.release

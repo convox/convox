@@ -14,6 +14,10 @@ variable "env" {
   default = {}
 }
 
+variable "image" {
+  type = string
+}
+
 variable "labels" {
   default = {}
 }

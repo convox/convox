@@ -52,6 +52,7 @@ module "rack" {
   }
 
   cluster       = module.cluster.id
+  image         = var.image
   name          = var.name
   network       = module.cluster.network
   nodes_account = module.cluster.nodes_account

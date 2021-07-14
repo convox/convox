@@ -20,6 +20,7 @@ module "api" {
 
   cluster       = var.cluster
   domain        = module.router.endpoint
+  image         = var.image
   name          = var.name
   namespace     = module.k8s.namespace
   nodes_account = var.nodes_account
@@ -37,6 +38,7 @@ module "resolver" {
     kubernetes = kubernetes
   }
 
+  image     = var.image
   namespace = module.k8s.namespace
   rack      = var.name
   release   = var.release

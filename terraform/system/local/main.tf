@@ -20,6 +20,7 @@ module "rack" {
     kubernetes = kubernetes
   }
 
+  image    = var.image
   name     = var.name
   platform = module.platform.name
   release  = local.release

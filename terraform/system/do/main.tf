@@ -42,6 +42,7 @@ module "rack" {
 
   access_id     = var.access_id
   cluster       = module.cluster.id
+  image         = var.image
   name          = var.name
   region        = var.region
   registry_disk = var.registry_disk

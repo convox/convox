@@ -64,6 +64,7 @@ module "rack" {
 
   cluster      = module.cluster.id
   idle_timeout = var.idle_timeout
+  image        = var.image
   name         = var.name
   oidc_arn     = module.cluster.oidc_arn
   oidc_sub     = module.cluster.oidc_sub
