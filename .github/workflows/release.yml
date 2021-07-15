@@ -65,6 +65,7 @@ jobs:
           asset_name: convox-macos
           asset_content_type: application/octet-stream
   ci:
+    if: github.repository == 'convox/convox'
     needs: release
     runs-on: ubuntu-latest
     strategy:
