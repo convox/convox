@@ -15,7 +15,7 @@ data "aws_eks_cluster_auth" "cluster" {
 }
 
 data "http" "releases" {
-  url = "https://api.github.com/repos/convox/convox/releases/latest"
+  url = "https://api.github.com/repos/${var.image}/releases/latest"
 }
 
 locals {
