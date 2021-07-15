@@ -12,7 +12,7 @@
 
 ### Tips for Ubuntu 20.04 Users
 
-As an Unbuntu 20.04 user, in order for the Kubernetes setup below to work as expected, a slight modification to your local `/etc/resolv.conf` file is required. `microk8s` leverages your local DNS configuration to configure DNS resolution in Kubernetes, and the following commands will resolve a bug that is encountered with Kubernetes version 1.13:
+As an Ubuntu 20.04 user, in order to get the Kubernetes steps that follow to work, a slight modification to your local `/etc/resolv.conf` file is required. `microk8s` leverages your local DNS configuration to configure DNS resolution in Kubernetes, and the following commands will provide a workaround to a bug that is encountered with Kubernetes version 1.13:
 
 Make a backup of your `/etc/resolv.conf` file:
 
@@ -33,6 +33,7 @@ These steps allow your local DNS resolver to be manually configured.  Finally, r
     $ systemctl restart daemon-reload
     $ systemctl restart systemd-networkd systemd-resolved
 
+Now, the Kubernetes steps below should work as expected.
 ---
 
 ### Kubernetes
