@@ -16,7 +16,6 @@ var (
 	flagCache       string
 	flagDevelopment string
 	flagEnvWrapper  string
-	flagGeneration  string
 	flagID          string
 	flagManifest    string
 	flagMethod      string
@@ -46,7 +45,6 @@ func execute() error {
 	fs.StringVar(&flagCache, "cache", "true", "use docker cache")
 	fs.StringVar(&flagDevelopment, "development", "false", "create a development build")
 	fs.StringVar(&flagEnvWrapper, "env-wrapper", "false", "wrap with convox-env")
-	fs.StringVar(&flagGeneration, "generation", "", "app generation")
 	fs.StringVar(&flagID, "id", "latest", "build id")
 	fs.StringVar(&flagManifest, "manifest", "", "path to app manifest")
 	fs.StringVar(&flagMethod, "method", "", "source method")
@@ -72,10 +70,6 @@ func execute() error {
 
 	if v := os.Getenv("BUILD_ENV_WRAPPER"); v != "" {
 		flagEnvWrapper = v
-	}
-
-	if v := os.Getenv("BUILD_GENERATION"); v != "" {
-		flagGeneration = v
 	}
 
 	if v := os.Getenv("BUILD_ID"); v != "" {
@@ -104,7 +98,6 @@ func execute() error {
 		Cache:       flagCache == "true",
 		Development: flagDevelopment == "true",
 		EnvWrapper:  flagEnvWrapper == "true",
-		Generation:  flagGeneration,
 		Id:          flagID,
 		Manifest:    flagManifest,
 		Push:        flagPush,
@@ -112,7 +105,12 @@ func execute() error {
 		Source:      flagUrl,
 	}
 
-	b, err := build.New(opts)
+	rack, err := sdk.NewFromEnv()
+	if err != nil {
+		return err
+	}
+
+	b, err := build.New(rack, opts)
 	if err != nil {
 		return err
 	}
