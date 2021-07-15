@@ -33,6 +33,7 @@ func FromEnv() (*Provider, error) {
 }
 
 func (p *Provider) Initialize(opts structs.ProviderOptions) error {
+	opts.IgnorePriorityClass = true
 	if err := p.Provider.Initialize(opts); err != nil {
 		return err
 	}

@@ -130,9 +130,12 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 		return errors.WithStack(err)
 	}
 
-	if err := p.initializePriorityClass(); err != nil {
-		return errors.WithStack(err)
+	if (!opts.IgnorePriorityClass) {
+		if err := p.initializePriorityClass(); err != nil {
+			return errors.WithStack(err)
+		}
 	}
+
 
 	return nil
 }
