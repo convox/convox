@@ -20,7 +20,6 @@ import (
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
-	"github.com/convox/convox/sdk"
 	"github.com/convox/exec"
 )
 
@@ -30,13 +29,13 @@ type Options struct {
 	Cache       bool
 	Development bool
 	EnvWrapper  bool
-	Generation  string
 	Id          string
 	Manifest    string
 	Output      io.Writer
 	Push        string
 	Rack        string
 	Source      string
+	Terminal    bool
 }
 
 type Build struct {
@@ -47,26 +46,14 @@ type Build struct {
 	writer   io.Writer
 }
 
-func New(opts Options) (*Build, error) {
+func New(rack structs.Provider, opts Options) (*Build, error) {
 	b := &Build{Options: opts}
 
 	b.Exec = &exec.Exec{}
 
-	if b.Manifest == "" {
-		switch b.Generation {
-		case "2":
-			b.Manifest = "convox.yml"
-		default:
-			b.Manifest = "docker-compose.yml"
-		}
-	}
+	b.Manifest = common.CoalesceString(b.Manifest, "convox.yml")
 
-	r, err := sdk.NewFromEnv()
-	if err != nil {
-		return nil, err
-	}
-
-	b.Provider = r
+	b.Provider = rack
 
 	b.logs = bytes.Buffer{}
 
@@ -100,45 +87,12 @@ func (bb *Build) execute() error {
 		return err
 	}
 
-	dir, err := ioutil.TempDir("", "")
+	dir, err := bb.prepareSource()
 	if err != nil {
 		return err
 	}
 
-	cwd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
-	if err := os.Chdir(dir); err != nil {
-		return err
-	}
-	defer os.Chdir(cwd)
-
-	u, err := url.Parse(bb.Source)
-	if err != nil {
-		return err
-	}
-
-	if u.Scheme != "object" {
-		return fmt.Errorf("only object:// sources are supported")
-	}
-
-	r, err := bb.Provider.ObjectFetch(u.Host, u.Path)
-	if err != nil {
-		return err
-	}
-
-	gz, err := gzip.NewReader(r)
-	if err != nil {
-		return err
-	}
-
-	if err := common.Unarchive(gz, "."); err != nil {
-		return err
-	}
-
-	data, err := ioutil.ReadFile(bb.Manifest)
+	data, err := ioutil.ReadFile(filepath.Join(dir, bb.Manifest))
 	if err != nil {
 		return err
 	}
@@ -147,13 +101,8 @@ func (bb *Build) execute() error {
 		return err
 	}
 
-	switch bb.Generation {
-	case "2":
-		if err := bb.buildGeneration2("."); err != nil {
-			return err
-		}
-	default:
-		return fmt.Errorf("generation 1 is no longer supported")
+	if err := bb.build(dir); err != nil {
+		return err
 	}
 
 	if err := bb.success(); err != nil {
@@ -161,6 +110,55 @@ func (bb *Build) execute() error {
 	}
 
 	return nil
+}
+
+func (bb *Build) prepareSource() (string, error) {
+	u, err := url.Parse(bb.Source)
+	if err != nil {
+		return "", err
+	}
+
+	switch u.Scheme {
+	case "dir":
+		return u.Path, nil
+	case "object":
+		return bb.prepareSourceObject(u.Host, u.Path)
+	default:
+		return "", fmt.Errorf("unknown source type")
+	}
+}
+
+func (bb *Build) prepareSourceObject(app, key string) (string, error) {
+	dir, err := ioutil.TempDir("", "")
+	if err != nil {
+		return "", err
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	if err := os.Chdir(dir); err != nil {
+		return "", err
+	}
+	defer os.Chdir(cwd)
+
+	r, err := bb.Provider.ObjectFetch(app, key)
+	if err != nil {
+		return "", err
+	}
+
+	gz, err := gzip.NewReader(r)
+	if err != nil {
+		return "", err
+	}
+
+	if err := common.Unarchive(gz, "."); err != nil {
+		return "", err
+	}
+
+	return dir, nil
 }
 
 func (bb *Build) login() error {
@@ -188,7 +186,7 @@ func (bb *Build) login() error {
 	return nil
 }
 
-func (bb *Build) buildGeneration2(dir string) error {
+func (bb *Build) build(dir string) error {
 	config := filepath.Join(dir, bb.Manifest)
 
 	if _, err := os.Stat(config); os.IsNotExist(err) {
@@ -241,7 +239,7 @@ func (bb *Build) buildGeneration2(dir string) error {
 	for hash, b := range builds {
 		bb.Printf("Building: %s\n", b.Path)
 
-		if err := bb.build(filepath.Join(dir, b.Path), b.Manifest, hash, env); err != nil {
+		if err := bb.buildDocker(filepath.Join(dir, b.Path), b.Manifest, hash, env); err != nil {
 			return err
 		}
 	}

@@ -33,10 +33,22 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 	b := structs.NewBuild(app)
 
 	b.Description = common.DefaultString(opts.Description, "")
+	b.Manifest = common.DefaultString(opts.Manifest, "")
 	b.Started = time.Now()
 
 	if _, err := p.buildCreate(b); err != nil {
 		return nil, errors.WithStack(err)
+	}
+
+	if common.DefaultBool(opts.External, false) {
+		b, err := p.BuildGet(app, b.Id)
+		if err != nil {
+			return nil, err
+		}
+
+		b.Repository = fmt.Sprintf("https://convox:%s@api.%s/%s%s", p.Password, p.Domain, p.Engine.RepositoryPrefix(), app)
+
+		return b, nil
 	}
 
 	auth, err := p.buildAuth(b)
