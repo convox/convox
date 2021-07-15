@@ -2,7 +2,7 @@
 
 ## Initial Setup
 
-> **_NOTE:_**:  Ubuntu 20.04 users will need ensure that they are installing the latest version of convox. See more 'Tips' sections below for more details.
+> **_NOTE:_**:  Ubuntu 20.04 users will need to ensure that they are installing the latest version of convox. See the 'Tips' sections below for more details.
 
 ### Docker
 
@@ -12,7 +12,7 @@
 
 ### Tips for Ubuntu 20.04 Users
 
-As an Ubuntu 20.04 user, in order to get the Kubernetes steps that follow to work, a slight modification to your local `/etc/resolv.conf` file is required. `microk8s` leverages your local DNS configuration to configure DNS resolution in Kubernetes, and the following commands will provide a workaround to a bug that is encountered with Kubernetes version 1.13:
+As an Ubuntu 20.04 user, in order to get the Kubernetes steps that follow to work, a slight modification to your local `/etc/resolv.conf` file is required. `microk8s` leverages your local DNS configuration to configure DNS resolution in Kubernetes, and the following commands will provide a workaround to a bug that is encountered with `microk8s` version 1.13:
 
 Make a backup of your `/etc/resolv.conf` file:
 
@@ -85,7 +85,7 @@ The output from this command should return a summary of your rack configuration 
 If it doesn't, most likely you will receive a `504` error, as your local firewall rules are not allowing traffic to be forwarded to microk8s.
 This can be resolved with the following command:
 
-  $ iptables -P FORWARD ACCEPT
+   $ iptables -P FORWARD ACCEPT
 
 Issuing the `convox rack -r dev` command should now provide you with the appropriate output.
 
