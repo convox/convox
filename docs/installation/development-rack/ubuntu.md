@@ -18,11 +18,9 @@ Make a backup of your `/etc/resolv.conf` file:
 
     $ mv /etc/resolv.conf /etc/resolv.conf.orig
 
-Next, make a copy of the original file and name is as follows:
+Important: Create a new configuration file by removing the `trust-ad` option from the options line in the original configuration file:
 
-    $ cp /etc/resolv.conf.orig /etc/resolv.conf.manually-configured
-
-Modify the newly created `/etc/resolv.conf.manually-configured` file by removing the `trust-ad` option from the options line.
+    $ cat /etc/resolv.conf.orig | sed 's/trust-ad//g' > /etc/resolv.conf.manually-configured
 
 Next, create a symbolic link to the newly created `/etc/resolv.conf.manually-configured` file:
 
@@ -34,6 +32,7 @@ These steps allow your local DNS resolver to be manually configured.  Finally, r
     $ systemctl restart systemd-networkd systemd-resolved
 
 Now, the Kubernetes steps below should work as expected.
+
 ---
 
 ### Kubernetes
