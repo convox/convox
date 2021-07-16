@@ -237,6 +237,11 @@ func buildExternal(rack sdk.Interface, c *stdcli.Context, opts structs.BuildCrea
 		Terminal:    true,
 	}
 
+	if c.Bool("id") {
+		bopts.Output = os.Stderr
+		bopts.Terminal = false
+	}
+
 	bb, err := builder.New(rack, bopts)
 	if err != nil {
 		return nil, err
