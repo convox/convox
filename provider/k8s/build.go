@@ -33,7 +33,6 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 	b := structs.NewBuild(app)
 
 	b.Description = common.DefaultString(opts.Description, "")
-	b.Manifest = common.DefaultString(opts.Manifest, "")
 	b.Started = time.Now()
 
 	if _, err := p.buildCreate(b); err != nil {

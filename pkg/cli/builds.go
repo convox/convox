@@ -198,6 +198,11 @@ func buildExternal(rack sdk.Interface, c *stdcli.Context, opts structs.BuildCrea
 		return nil, err
 	}
 
+	b, err := rack.BuildCreate(app(c), "", opts)
+	if err != nil {
+		return nil, err
+	}
+
 	manifest := common.DefaultString(opts.Manifest, "convox.yml")
 
 	data, err := ioutil.ReadFile(filepath.Join(dir, manifest))
@@ -205,10 +210,7 @@ func buildExternal(rack sdk.Interface, c *stdcli.Context, opts structs.BuildCrea
 		return nil, err
 	}
 
-	opts.Manifest = options.String(string(data))
-
-	b, err := rack.BuildCreate(app(c), "", opts)
-	if err != nil {
+	if _, err := rack.BuildUpdate(app(c), b.Id, structs.BuildUpdateOptions{Manifest: options.String(string(data))}); err != nil {
 		return nil, err
 	}
 

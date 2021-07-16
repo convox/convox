@@ -17,6 +17,7 @@ func init() {
 		Flags: []stdcli.Flag{
 			flagRack,
 			flagApp,
+			stdcli.BoolFlag("external", "e", "use external build"),
 			stdcli.StringFlag("manifest", "m", "manifest file"),
 			stdcli.StringFlag("generation", "g", "generation"),
 			stdcli.BoolFlag("no-build", "", "skip build"),
@@ -37,42 +38,11 @@ func Start(rack sdk.Interface, c *stdcli.Context) error {
 		return fmt.Errorf("gen1 is no longer supported")
 	}
 
-	// var p structs.Provider
-
-	// if rack != nil {
-	// 	fmt.Printf("rack: %+v\n", rack)
-	// 	p = rack
-	// }
-
-	// if p == nil {
-	// 	if !localRackRunning(c) {
-	// 		return fmt.Errorf("local rack not found, try `sudo convox rack install local`")
-	// 	}
-
-	// 	r, err := matchRack(c, "local/")
-	// 	if err != nil {
-	// 		if strings.HasPrefix(err.Error(), "ambiguous rack name") {
-	// 			return fmt.Errorf("multiple local racks detected, use `convox switch` to select one")
-	// 		}
-	// 		return err
-	// 	}
-
-	// 	cl, err := sdk.New(fmt.Sprintf("https://rack.%s", strings.TrimPrefix(r.Name, "local/")))
-	// 	if err != nil {
-	// 		return err
-	// 	}
-
-	// 	p = cl
-	// }
-
-	// if p == nil {
-	// 	return fmt.Errorf("could not find local rack")
-	// }
-
 	opts := start.Options2{
 		App:      app(c),
 		Build:    !c.Bool("no-build"),
 		Cache:    !c.Bool("no-cache"),
+		External: c.Bool("external"),
 		Manifest: c.String("manifest"),
 		Provider: rack,
 		Sync:     !c.Bool("no-sync"),
