@@ -13,6 +13,7 @@ import (
 type HandlerFunc func(sdk.Interface, *stdcli.Context) error
 
 var (
+	Image        = "convox/convox"
 	Starter      = start.New()
 	WaitDuration = 5 * time.Second
 )
