@@ -38,10 +38,10 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
-  domain             = var.domain
-  namespace          = var.namespace
-  rack               = var.name
-  release            = var.release
+  domain    = var.domain
+  namespace = var.namespace
+  rack      = var.name
+  release   = var.release
 
   annotations = {
     "cert-manager.io/cluster-issuer"   = "letsencrypt"
