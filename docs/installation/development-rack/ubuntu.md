@@ -84,7 +84,7 @@ The output from this command should return a summary of your rack configuration 
 If it doesn't, most likely you will receive a `504` error, as your local firewall rules are not allowing traffic to be forwarded to microk8s.
 This can be resolved with the following command:
 
-   $ iptables -P FORWARD ACCEPT
+    $ iptables -P FORWARD ACCEPT
 
 Issuing the `convox rack -r dev` command should now provide you with the appropriate output.
 
