@@ -2,11 +2,16 @@ package rack
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/sdk"
+	"github.com/convox/stdcli"
 	"github.com/convox/version"
 )
 
@@ -138,4 +143,49 @@ func (d Direct) latest() (string, error) {
 	}
 
 	return v, nil
+}
+
+func listDirect(c *stdcli.Context) ([]Direct, error) {
+	dir, err := c.SettingDirectory("racks")
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		return []Direct{}, nil
+	}
+
+	subs, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	ds := []Direct{}
+
+	for _, sub := range subs {
+		if sub.IsDir() {
+			continue
+		}
+
+		url, err := ioutil.ReadFile(filepath.Join(dir, sub.Name()))
+		if err != nil {
+			return nil, err
+		}
+
+		sc, err := sdk.New(strings.TrimSpace(string(url)))
+		if err != nil {
+			return nil, err
+		}
+
+		d, err := LoadDirect(sc)
+		if err != nil {
+			return nil, err
+		}
+
+		d.name = sub.Name()
+
+		ds = append(ds, *d)
+	}
+
+	return ds, nil
 }

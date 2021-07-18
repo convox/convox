@@ -112,6 +112,15 @@ func List(c *stdcli.Context) ([]Rack, error) {
 		rs = append(rs, tr)
 	}
 
+	drs, err := listDirect(c)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, dr := range drs {
+		rs = append(rs, dr)
+	}
+
 	crs, err := listConsole(c)
 	if err != nil {
 		return nil, err
