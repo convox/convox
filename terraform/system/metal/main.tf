@@ -17,6 +17,7 @@ module "rack" {
   }
 
   domain        = var.domain
+  image         = var.image
   name          = var.name
   release       = local.release
   registry_disk = var.registry_disk
