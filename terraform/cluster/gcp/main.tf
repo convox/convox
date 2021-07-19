@@ -104,8 +104,6 @@ resource "local_file" "kubeconfig" {
 provider "kubernetes" {
   alias = "direct"
 
-  load_config_file = false
-
   cluster_ca_certificate = base64decode(google_container_cluster.rack.master_auth.0.cluster_ca_certificate)
   host                   = "https://${google_container_cluster.rack.endpoint}"
   username               = "gcloud"

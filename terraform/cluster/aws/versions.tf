@@ -1,24 +1,20 @@
 terraform {
   required_providers {
     aws = {
-      source  = "hashicorp/aws"
-      version = "~> 2.49"
+      source = "hashicorp/aws"
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
-      version = "~> 1.11"
+      version = "~> 2.0"
     }
     local = {
-      source  = "hashicorp/local"
-      version = "~> 1.3"
+      source = "hashicorp/local"
     }
     null = {
-      source  = "hashicorp/null"
-      version = "~> 2.1"
+      source = "hashicorp/null"
     }
     random = {
       source = "hashicorp/random"
     }
   }
-  required_version = ">= 0.12"
 }
