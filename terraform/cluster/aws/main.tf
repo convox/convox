@@ -108,16 +108,3 @@ resource "aws_eks_node_group" "cluster" {
     ignore_changes        = [scaling_config[0].desired_size]
   }
 }
-
-resource "local_file" "kubeconfig" {
-  depends_on = [
-    aws_eks_node_group.cluster,
-  ]
-
-  filename = pathexpand("~/.kube/config.aws.${var.name}")
-  content = templatefile("${path.module}/kubeconfig.tpl", {
-    ca       = aws_eks_cluster.cluster.certificate_authority.0.data
-    cluster  = aws_eks_cluster.cluster.id
-    endpoint = aws_eks_cluster.cluster.endpoint
-  })
-}

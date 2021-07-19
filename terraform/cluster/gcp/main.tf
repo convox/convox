@@ -82,25 +82,6 @@ resource "google_container_node_pool" "rack" {
   }
 }
 
-resource "local_file" "kubeconfig" {
-  depends_on = [
-    kubernetes_cluster_role_binding.client,
-    google_container_node_pool.rack,
-  ]
-
-  filename = pathexpand("~/.kube/config.gcp.${var.name}")
-  content = templatefile("${path.module}/kubeconfig.tpl", {
-    ca                 = google_container_cluster.rack.master_auth.0.cluster_ca_certificate
-    endpoint           = google_container_cluster.rack.endpoint
-    client_certificate = google_container_cluster.rack.master_auth.0.client_certificate
-    client_key         = google_container_cluster.rack.master_auth.0.client_key
-  })
-
-  lifecycle {
-    ignore_changes = [content]
-  }
-}
-
 provider "kubernetes" {
   alias = "direct"
 
