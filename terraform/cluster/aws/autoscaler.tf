@@ -53,6 +53,8 @@ locals {
 }
 
 resource "kubernetes_service_account" "autoscaler" {
+  provider = kubernetes.direct
+
   metadata {
     name      = "cluster-autoscaler"
     namespace = "kube-system"
@@ -65,6 +67,8 @@ resource "kubernetes_service_account" "autoscaler" {
 }
 
 resource "kubernetes_cluster_role" "autoscaler" {
+  provider = kubernetes.direct
+
   metadata {
     name   = "cluster-autoscaler"
     labels = local.autoscaler_labels
@@ -152,6 +156,8 @@ resource "kubernetes_cluster_role" "autoscaler" {
 }
 
 resource "kubernetes_cluster_role_binding" "autoscaler" {
+  provider = kubernetes.direct
+
   metadata {
     name   = "cluster-autoscaler"
     labels = local.autoscaler_labels
@@ -171,6 +177,8 @@ resource "kubernetes_cluster_role_binding" "autoscaler" {
 }
 
 resource "kubernetes_role" "autoscaler" {
+  provider = kubernetes.direct
+
   metadata {
     name      = "cluster-autoscaler"
     namespace = "kube-system"
@@ -192,6 +200,8 @@ resource "kubernetes_role" "autoscaler" {
 }
 
 resource "kubernetes_role_binding" "autoscaler" {
+  provider = kubernetes.direct
+
   metadata {
     name      = "cluster-autoscaler"
     namespace = "kube-system"
@@ -212,6 +222,8 @@ resource "kubernetes_role_binding" "autoscaler" {
 }
 
 resource "kubernetes_deployment" "autoscaler" {
+  provider = kubernetes.direct
+
   depends_on = [aws_iam_role_policy.autoscaler_autoscale]
 
   metadata {
