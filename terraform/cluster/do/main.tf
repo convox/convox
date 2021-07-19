@@ -25,14 +25,3 @@ resource "null_resource" "delay_token" {
     token = digitalocean_kubernetes_cluster.rack.kube_config[0].token
   }
 }
-
-resource "local_file" "kubeconfig" {
-  depends_on = [digitalocean_kubernetes_cluster.rack, null_resource.delay_token]
-
-  filename = pathexpand("~/.kube/config.do.${var.name}")
-  content = templatefile("${path.module}/kubeconfig.tpl", {
-    ca       = digitalocean_kubernetes_cluster.rack.kube_config[0].cluster_ca_certificate
-    endpoint = digitalocean_kubernetes_cluster.rack.endpoint
-    token    = digitalocean_kubernetes_cluster.rack.kube_config[0].token
-  })
-}
