@@ -154,7 +154,7 @@ resource "kubernetes_deployment" "resolver" {
           }
 
           resources {
-            requests {
+            requests = {
               cpu    = "64m"
               memory = "64Mi"
             }

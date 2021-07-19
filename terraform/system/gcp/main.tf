@@ -13,8 +13,6 @@ provider "kubernetes" {
   client_key             = module.cluster.client_key
   cluster_ca_certificate = module.cluster.ca
   host                   = module.cluster.endpoint
-
-  load_config_file = false
 }
 
 module "project" {
