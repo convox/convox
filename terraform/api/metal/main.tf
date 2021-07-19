@@ -44,7 +44,7 @@ module "k8s" {
   resolver  = var.resolver
 
   annotations = {
-    "cert-manager.io/cluster-issuer" = "letsencrypt"
+    "cert-manager.io/cluster-issuer" = "self-signed"
     "kubernetes.io/ingress.class"    = "nginx"
   }
 
