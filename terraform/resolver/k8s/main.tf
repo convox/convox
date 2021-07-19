@@ -123,7 +123,7 @@ resource "kubernetes_deployment" "resolver" {
         container {
           name              = "system"
           args              = ["resolver"]
-          image             = "convox/convox:${var.release}"
+          image             = "${var.image}:${var.release}"
           image_pull_policy = "Always"
 
           env {

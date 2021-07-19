@@ -6,6 +6,10 @@ variable "idle_timeout" {
   type = number
 }
 
+variable "image" {
+  type = string
+}
+
 variable "name" {
   type = string
 }

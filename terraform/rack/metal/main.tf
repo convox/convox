@@ -23,6 +23,7 @@ module "api" {
 
   cert_manager = var.domain != ""
   domain       = local.endpoint
+  image        = var.image
   name         = var.name
   namespace    = module.k8s.namespace
   release      = var.release
@@ -39,6 +40,7 @@ module "resolver" {
     kubernetes = kubernetes
   }
 
+  image     = var.image
   namespace = module.k8s.namespace
   rack      = var.name
   release   = var.release

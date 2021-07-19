@@ -1,5 +1,5 @@
 data "http" "releases" {
-  url = "https://api.github.com/repos/convox/convox/releases/latest"
+  url = "https://api.github.com/repos/${var.image}/releases/latest"
 }
 
 locals {
@@ -17,6 +17,7 @@ module "rack" {
   }
 
   domain        = var.domain
+  image         = var.image
   name          = var.name
   release       = local.release
   registry_disk = var.registry_disk

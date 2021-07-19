@@ -96,7 +96,7 @@ resource "kubernetes_deployment" "atom" {
         container {
           name              = "system"
           args              = ["atom"]
-          image             = "convox/convox:${var.release}"
+          image             = "${var.image}:${var.release}"
           image_pull_policy = "Always"
 
           resources {

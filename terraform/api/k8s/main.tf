@@ -100,10 +100,11 @@ resource "kubernetes_deployment" "api" {
         service_account_name            = kubernetes_service_account.api.metadata.0.name
         share_process_namespace         = true
 
+
         container {
           name              = "system"
           args              = ["api"]
-          image             = "convox/convox:${var.release}"
+          image             = "${var.image}:${var.release}"
           image_pull_policy = "Always"
 
           env {
@@ -113,7 +114,7 @@ resource "kubernetes_deployment" "api" {
 
           env {
             name  = "IMAGE"
-            value = "convox/convox:${var.release}"
+            value = "${var.image}:${var.release}"
           }
 
           env {

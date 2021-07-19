@@ -21,6 +21,7 @@ module "api" {
   access_id  = var.access_id
   cluster    = var.cluster
   domain     = module.router.endpoint
+  image      = var.image
   name       = var.name
   namespace  = module.k8s.namespace
   region     = var.region
@@ -40,6 +41,7 @@ module "resolver" {
     kubernetes   = kubernetes
   }
 
+  image     = var.image
   namespace = module.k8s.namespace
   rack      = var.name
   release   = var.release

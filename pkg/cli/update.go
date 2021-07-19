@@ -36,12 +36,12 @@ func Update(rack sdk.Interface, c *stdcli.Context) error {
 		version = v
 	}
 
-	if (version == current) {
+	if version == current {
 		c.Writef("No update to be performed\n")
 		return nil
 	}
 
-	asset := fmt.Sprintf("https://github.com/convox/convox/releases/download/%s/%s", version, binary)
+	asset := fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", Image, version, binary)
 
 	res, err := http.Get(asset)
 	if err != nil {
@@ -75,7 +75,7 @@ func releaseBinary() (string, error) {
 }
 
 func latestRelease() (string, error) {
-	res, err := http.Get("https://api.github.com/repos/convox/convox/releases/latest")
+	res, err := http.Get(fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", Image))
 	if err != nil {
 		return "", err
 	}

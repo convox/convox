@@ -37,9 +37,11 @@ module "k8s" {
   }
 
   domain    = var.domain
+  image     = var.image
   namespace = var.namespace
   rack      = var.name
   release   = var.release
+  resolver  = var.resolver
 
   annotations = {
     "cert-manager.io/cluster-issuer" = "letsencrypt"
