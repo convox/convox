@@ -49,7 +49,7 @@ module "k8s" {
   }
 
   env = {
-    CERT_MANAGER = var.cert_manager # ? "true" : "false"
+    CERT_MANAGER = "true"
     ELASTIC_URL  = module.elasticsearch.url
     PROVIDER     = "metal"
     REGISTRY     = "registry.${var.domain}"
