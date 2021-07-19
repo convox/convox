@@ -1,29 +1,35 @@
-provider "kubernetes" {
-  cluster_ca_certificate = base64decode(aws_eks_cluster.cluster.certificate_authority.0.data)
-  host                   = aws_eks_cluster.cluster.endpoint
-  token                  = data.aws_eks_cluster_auth.cluster.token
-}
-
-provider "kubernetes" {
-  alias                  = "direct"
-  cluster_ca_certificate = base64decode(aws_eks_cluster.cluster.certificate_authority.0.data)
-  host                   = aws_eks_cluster.cluster.endpoint
-  token                  = data.aws_eks_cluster_auth.cluster.token
-}
-
 locals {
-  oidc_sub           = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
-  gpu_type           = substr(var.node_type, 0, 1) == "g" || substr(var.node_type, 0, 1) == "p"
   arm_type           = substr(var.node_type, 0, 2) == "a1" || substr(var.node_type, 0, 3) == "c6g" || substr(var.node_type, 0, 3) == "m6g" || substr(var.node_type, 0, 3) == "r6g"
   availability_zones = var.availability_zones != "" ? compact(split(",", var.availability_zones)) : data.aws_availability_zones.available.names
-}
+  gpu_type           = substr(var.node_type, 0, 1) == "g" || substr(var.node_type, 0, 1) == "p"
+  oidc_sub           = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
 
-data "aws_availability_zones" "available" {
-  state = "available"
+  tags = {
+    Name = var.name
+  }
 }
 
 data "aws_eks_cluster_auth" "cluster" {
   name = aws_eks_cluster.cluster.id
+}
+
+provider "kubernetes" {
+  cluster_ca_certificate = base64decode(aws_eks_cluster.cluster.certificate_authority.0.data)
+  host                   = aws_eks_cluster.cluster.endpoint
+  token                  = data.aws_eks_cluster_auth.cluster.token
+}
+
+module "autoscaler" {
+  source = "./autoscaler"
+
+  cluster = aws_eks_cluster.cluster
+  openid  = aws_iam_openid_connect_provider.cluster
+  name    = var.name
+  tags    = local.tags
+}
+
+data "aws_availability_zones" "available" {
+  state = "available"
 }
 
 data "aws_region" "current" {}
