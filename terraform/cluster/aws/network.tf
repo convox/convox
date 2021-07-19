@@ -1,9 +1,3 @@
-locals {
-  tags = {
-    Name = var.name
-  }
-}
-
 resource "aws_vpc" "nodes" {
   depends_on = [
     aws_iam_role_policy_attachment.cluster_eks_cluster,
