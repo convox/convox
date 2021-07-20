@@ -1,3 +1,17 @@
+locals {
+  oidc_sub = "${replace(var.openid.url, "https://", "")}:sub"
+}
+
+provider "kubernetes" {
+  cluster_ca_certificate = base64decode(var.cluster.certificate_authority.0.data)
+  host                   = var.cluster.endpoint
+  token                  = data.aws_eks_cluster_auth.cluster.token
+}
+
+data "aws_eks_cluster_auth" "cluster" {
+  name = var.cluster.id
+}
+
 data "aws_iam_policy_document" "assume_autoscaler" {
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
@@ -10,7 +24,7 @@ data "aws_iam_policy_document" "assume_autoscaler" {
     }
 
     principals {
-      identifiers = [aws_iam_openid_connect_provider.cluster.arn]
+      identifiers = [var.openid.arn]
       type        = "Federated"
     }
   }
@@ -20,7 +34,7 @@ resource "aws_iam_role" "autoscaler" {
   name               = "${var.name}-autoscaler"
   assume_role_policy = data.aws_iam_policy_document.assume_autoscaler.json
   path               = "/convox/"
-  tags               = local.tags
+  tags               = var.tags
 }
 
 data "aws_iam_policy_document" "autoscale" {
@@ -262,18 +276,18 @@ resource "kubernetes_deployment" "autoscaler" {
             "--cloud-provider=aws",
             "--skip-nodes-with-local-storage=false",
             "--expander=least-waste",
-            "--node-group-auto-discovery=asg:tag=k8s.io/cluster-autoscaler/enabled,k8s.io/cluster-autoscaler/${aws_eks_cluster.cluster.name}",
+            "--node-group-auto-discovery=asg:tag=k8s.io/cluster-autoscaler/enabled,k8s.io/cluster-autoscaler/${var.cluster.name}",
             "--balance-similar-node-groups",
             "--skip-nodes-with-system-pods=false",
           ]
 
           resources {
-            limits {
+            limits = {
               cpu    = "100m"
               memory = "300Mi"
             }
 
-            requests {
+            requests = {
               cpu    = "100m"
               memory = "300Mi"
             }

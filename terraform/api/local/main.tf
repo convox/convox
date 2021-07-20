@@ -8,10 +8,6 @@ locals {
 module "k8s" {
   source = "../k8s"
 
-  providers = {
-    kubernetes = kubernetes
-  }
-
   authentication     = true
   domain             = var.domain
   namespace          = var.namespace
