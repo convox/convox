@@ -2,7 +2,7 @@
 
 ## Initial Setup
 
-> **_NOTE:_**:  Ubuntu 20.04 users will need to ensure that they are installing the latest version of convox. See the 'Tips' sections below for more details.
+> **_NOTE:_**:  Ubuntu 20.04 users will need to ensure that they are installing the latest version of Convox. See the 'Tips' sections below for more details.
 
 ### Docker
 
@@ -12,7 +12,7 @@
 
 ### Tips for Ubuntu 20.04 Users
 
-> With Convox, local development racks depend on Docker as a container runtime. A local development rack deployment installs `microk8s` with kubernetes 1.13, the latest version of kubernetes that uses Docker. However, kubernetes 1.13 exposes [a bug with the underlying go library](https://github.com/kubernetes/kubernetes/blob/874f0559d9b358f87959ec0bb7645d9cb3d5f7ba/vendor/github.com/miekg/dns/clientconfig.go#L86). In short, the bug checks the `resolv.conf` file for DNS configuration options, and generates an error when the option length is exactly 8 characters.  Although this bug is non-existent in subsequent versions of kubernetes, those versions of kubernetes do not use Docker, which is why we have implemented the following installation workaround.
+> With Convox, local development racks depend on Docker as a container runtime. A local development rack deployment installs `microk8s` with kubernetes 1.13, which is the latest version of kubernetes that uses Docker. However, kubernetes 1.13 exposes [a bug with the underlying go library](https://github.com/kubernetes/kubernetes/blob/874f0559d9b358f87959ec0bb7645d9cb3d5f7ba/vendor/github.com/miekg/dns/clientconfig.go#L86). In short, the bug checks the `resolv.conf` file for DNS configuration options, and generates an error when the option length is exactly 8 characters.  Although this bug is fixed in subsequent versions of kubernetes, those versions of kubernetes do not use Docker, hence the reason why we have implemented the following installation workaround.
 
 ### Installation Workaround
 
