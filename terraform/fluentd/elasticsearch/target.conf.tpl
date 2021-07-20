@@ -7,6 +7,7 @@
 			stream $${record["kubernetes"]["labels"]["type"]}.$${record["kubernetes"]["labels"]["name"]}.$${record["kubernetes"]["pod_name"]}
 			hostname ${rack}.$${record["kubernetes"]["labels"]["app"]}
 			program $${record["kubernetes"]["labels"]["type"]}/$${record["kubernetes"]["labels"]["name"]}/$${record["kubernetes"]["pod_name"]}
+			log $${record["message"]+"\n"}
 		</record>
 	</filter>
 
