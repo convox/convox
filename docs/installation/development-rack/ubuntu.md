@@ -12,7 +12,11 @@
 
 ### Tips for Ubuntu 20.04 Users
 
-As an Ubuntu 20.04 user, in order to get the Kubernetes steps that follow to work, a slight modification to your local `/etc/resolv.conf` file is required. `microk8s` leverages your local DNS configuration to configure DNS resolution in Kubernetes, and the following commands will provide a workaround to a bug that is encountered with `microk8s` version 1.13:
+> With Convox, local development racks depend on Docker as a container runtime. A local development rack deployment installs `microk8s` with kubernetes 1.13, the latest version of kubernetes that uses Docker. However, kubernetes 1.13 exposes [a bug with the underlying go library](https://github.com/kubernetes/kubernetes/blob/874f0559d9b358f87959ec0bb7645d9cb3d5f7ba/vendor/github.com/miekg/dns/clientconfig.go#L86). In short, the bug checks the `resolv.conf` file for DNS configuration options, and generates an error when the option length is exactly 8 characters.  Although this bug is non-existent in subsequent versions of kubernetes, those versions of kubernetes do not use Docker, which is why we have implemented the following installation workaround.
+
+### Installation Workaround
+
+In order to get the kubernetes steps that follow to work, a slight modification to your local `/etc/resolv.conf` file is required. `microk8s` leverages your local DNS configuration to configure DNS resolution in Kubernetes, and the following commands will provide you with a workaround to the problem described above:
 
 Make a backup of your `/etc/resolv.conf` file:
 
