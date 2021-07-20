@@ -14,6 +14,7 @@ module "nginx" {
 
   namespace = var.namespace
   rack      = var.name
+
 }
 
 resource "kubernetes_service" "router" {

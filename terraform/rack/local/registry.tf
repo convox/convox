@@ -50,7 +50,6 @@ resource "kubernetes_deployment" "registry" {
       }
 
       spec {
-        priority_class_name = "system-cluster-critical"
 
         container {
           name              = "system"

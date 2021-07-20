@@ -34,6 +34,7 @@ module "metrics" {
   providers = {
     kubernetes = kubernetes
   }
+
 }
 
 module "resolver" {
