@@ -59,6 +59,7 @@ WORKDIR /app
 COPY --from=package /go/bin/api      $GOPATH/bin/
 COPY --from=package /go/bin/atom     $GOPATH/bin/
 COPY --from=package /go/bin/build    $GOPATH/bin/
+COPY --from=package /go/bin/convox   $GOPATH/bin/
 COPY --from=package /go/bin/docs     $GOPATH/bin/
 COPY --from=package /go/bin/resolver $GOPATH/bin/
 
