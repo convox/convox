@@ -18,6 +18,7 @@ module "k8s" {
   rack               = var.name
   release            = var.release
   replicas           = 1
+  resolver           = var.resolver
   set_priority_class = false
 
   annotations = {
