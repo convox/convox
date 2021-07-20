@@ -16,7 +16,7 @@ The commands you can run with a deploy key are limited to the following for secu
 * `logs`
 * `rack`
 * `racks`
-* `releases promote`
+* `releases promote` (only if you specify the release id to promote)
 * `run`
 
 ## Creating a Deploy Key
