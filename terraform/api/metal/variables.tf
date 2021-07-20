@@ -1,7 +1,3 @@
-variable "cert_manager" {
-  type = bool
-}
-
 variable "domain" {
   type = string
 }

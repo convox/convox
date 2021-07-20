@@ -12,8 +12,7 @@ resource "kubernetes_persistent_volume_claim" "storage" {
   }
 
   spec {
-    access_modes       = ["ReadWriteMany"]
-    storage_class_name = "rook-ceph-shared"
+    access_modes = ["ReadWriteMany"]
 
     resources {
       requests = {
