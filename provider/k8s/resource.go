@@ -60,7 +60,7 @@ func (p *Provider) ResourceExport(app, name string) (io.ReadCloser, error) {
 
 	switch r.Type {
 	case "mariadb":
-		return resourceExportMysql(r)
+		return resourceExportMysql(u)
 	case "mysql":
 		return resourceExportMysql(u)
 	case "postgres":
