@@ -950,6 +950,21 @@ func (s *Server) RegistryList(c *stdapi.Context) error {
 	return c.RenderJSON(v)
 }
 
+func (s *Server) RegistryProxy(c *stdapi.Context) error {
+	if err := s.hook("RegistryProxyValidate", c); err != nil {
+		return err
+	}
+
+	ctx := c
+
+	err := s.provider(c).WithContext(c.Context()).RegistryProxy(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *Server) RegistryRemove(c *stdapi.Context) error {
 	if err := s.hook("RegistryRemoveValidate", c); err != nil {
 		return err

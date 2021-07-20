@@ -17,6 +17,7 @@ type Engine interface {
 	RegistryAuth(host, username, password string) (string, string, error)
 	RepositoryAuth(app string) (string, string, error)
 	RepositoryHost(app string) (string, bool, error)
+	RepositoryPrefix() string
 	ResolverHost() (string, error)
 	ServiceHost(app string, s manifest.Service) string
 	SystemHost() string

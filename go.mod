@@ -44,9 +44,8 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/russross/blackfriday v2.0.0+incompatible
 	github.com/stretchr/testify v1.3.0
-	github.com/vektra/mockery v0.0.0-20181123154057-e78b021dcbb5
+	github.com/vektra/mockery v1.1.2
 	golang.org/x/crypto v0.0.0-20200214034016-1d94cc7ab1c6 // indirect
-	golang.org/x/net v0.0.0-20191101175033-0deb6923b6d9 // indirect
 	golang.org/x/sys v0.0.0-20200217220822-9197077df867 // indirect
 	google.golang.org/api v0.9.0
 	gopkg.in/yaml.v2 v2.2.4

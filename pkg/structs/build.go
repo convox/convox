@@ -14,6 +14,7 @@ type Build struct {
 	Process     string `json:"process"`
 	Release     string `json:"release"`
 	Reason      string `json:"reason"`
+	Repository  string `json:"repository"`
 	Status      string `json:"status"`
 
 	Started time.Time `json:"started"`
@@ -27,6 +28,7 @@ type Builds []Build
 type BuildCreateOptions struct {
 	Description *string `flag:"description,d" param:"description"`
 	Development *bool   `flag:"development" param:"development"`
+	External    *bool   `flag:"external" param:"external"`
 	Manifest    *string `flag:"manifest,m" param:"manifest"`
 	NoCache     *bool   `flag:"no-cache" param:"no-cache"`
 }

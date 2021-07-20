@@ -15,7 +15,7 @@ import (
 	shellquote "github.com/kballard/go-shellquote"
 )
 
-func (bb *Build) build(path, dockerfile string, tag string, env map[string]string) error {
+func (bb *Build) buildDocker(path, dockerfile string, tag string, env map[string]string) error {
 	if path == "" {
 		return fmt.Errorf("must have path to build")
 	}
@@ -41,8 +41,14 @@ func (bb *Build) build(path, dockerfile string, tag string, env map[string]strin
 
 	args = append(args, path)
 
-	if err := bb.Exec.Run(bb.writer, "docker", args...); err != nil {
-		return err
+	if bb.Terminal {
+		if err := bb.Exec.Terminal("docker", args...); err != nil {
+			return err
+		}
+	} else {
+		if err := bb.Exec.Run(bb.writer, "docker", args...); err != nil {
+			return err
+		}
 	}
 
 	data, err := bb.Exec.Execute("docker", "inspect", tag, "--format", "{{json .Config.Entrypoint}}")

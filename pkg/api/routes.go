@@ -48,6 +48,7 @@ func (s *Server) setupRoutes(r stdapi.Router) {
 	r.Route("SOCKET", "/proxy/{host}/{port}", s.Proxy)
 	r.Route("POST", "/registries", s.RegistryAdd)
 	r.Route("GET", "/registries", s.RegistryList)
+	r.Route("ANY", "/v2/{path:.*}", s.RegistryProxy)
 	r.Route("DELETE", "/registries/{server:.*}", s.RegistryRemove)
 	r.Route("POST", "/apps/{app}/releases", s.ReleaseCreate)
 	r.Route("GET", "/apps/{app}/releases/{id}", s.ReleaseGet)

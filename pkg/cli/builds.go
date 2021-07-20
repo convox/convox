@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
+	builder "github.com/convox/convox/pkg/build"
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
@@ -105,6 +108,10 @@ func build(rack sdk.Interface, c *stdcli.Context, development bool) (*structs.Bu
 
 	dir := coalesce(c.Arg(0), ".")
 
+	if c.Bool("external") {
+		return buildExternal(rack, c, opts)
+	}
+
 	c.Startf("Packaging source")
 
 	data, err := common.Tarball(dir)
@@ -181,6 +188,91 @@ func build(rack sdk.Interface, c *stdcli.Context, development bool) (*structs.Bu
 	}
 
 	return b, nil
+}
+
+func buildExternal(rack sdk.Interface, c *stdcli.Context, opts structs.BuildCreateOptions) (*structs.Build, error) {
+	dir := coalesce(c.Arg(0), ".")
+
+	s, err := rack.SystemGet()
+	if err != nil {
+		return nil, err
+	}
+
+	b, err := rack.BuildCreate(app(c), "", opts)
+	if err != nil {
+		return nil, err
+	}
+
+	manifest := common.DefaultString(opts.Manifest, "convox.yml")
+
+	data, err := ioutil.ReadFile(filepath.Join(dir, manifest))
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := rack.BuildUpdate(app(c), b.Id, structs.BuildUpdateOptions{Manifest: options.String(string(data))}); err != nil {
+		return nil, err
+	}
+
+	u, err := url.Parse(b.Repository)
+	if err != nil {
+		return nil, err
+	}
+
+	auth := ""
+	repo := fmt.Sprintf("%s%s", u.Host, u.Path)
+
+	if pass, ok := u.User.Password(); ok {
+		auth = fmt.Sprintf(`{%q: { "Username": %q, "Password": %q } }`, repo, u.User.Username(), pass)
+	}
+
+	bopts := builder.Options{
+		App:         b.App,
+		Auth:        auth,
+		Cache:       !common.DefaultBool(opts.NoCache, false),
+		Development: common.DefaultBool(opts.Development, false),
+		Id:          b.Id,
+		Manifest:    manifest,
+		Push:        repo,
+		Rack:        s.Name,
+		Source:      fmt.Sprintf("dir://%s", dir),
+		Terminal:    true,
+	}
+
+	if c.Bool("id") {
+		bopts.Output = os.Stderr
+		bopts.Terminal = false
+	}
+
+	bb, err := builder.New(rack, bopts)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := bb.Execute(); err != nil {
+		return nil, err
+	}
+
+	ropts := structs.ReleaseCreateOptions{
+		Build:       options.String(b.Id),
+		Description: options.String(b.Description),
+	}
+
+	r, err := rack.ReleaseCreate(b.App, ropts)
+	if err != nil {
+		return nil, err
+	}
+
+	uopts := structs.BuildUpdateOptions{
+		Release: options.String(r.Id),
+	}
+
+	bu, err := rack.BuildUpdate(b.App, b.Id, uopts)
+	if err != nil {
+		return nil, err
+	}
+
+	return bu, nil
 }
 
 func finalizeBuildLogs(rack structs.Provider, c *stdcli.Context, b *structs.Build, count int64) error {
