@@ -101,7 +101,6 @@ resource "kubernetes_deployment" "resolver" {
       spec {
         automount_service_account_token = true
         service_account_name            = "resolver"
-        priority_class_name             = var.set_priority_class ? "system-cluster-critical" : null
 
         affinity {
           pod_anti_affinity {

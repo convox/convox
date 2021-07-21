@@ -109,5 +109,4 @@ type Provider interface {
 
 type ProviderOptions struct {
 	Logs io.Writer
-	IgnorePriorityClass bool
 }

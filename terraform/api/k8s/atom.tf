@@ -91,7 +91,6 @@ resource "kubernetes_deployment" "atom" {
         automount_service_account_token = true
         share_process_namespace         = true
         service_account_name            = "atom"
-        priority_class_name             = var.set_priority_class ? "system-cluster-critical" : null
 
         dynamic "image_pull_secrets" {
           for_each = var.docker_hub_authentication != null ? [var.docker_hub_authentication] : []

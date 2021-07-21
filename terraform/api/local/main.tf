@@ -12,15 +12,14 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
-  authentication     = true
-  domain             = var.domain
-  image              = var.image
-  namespace          = var.namespace
-  rack               = var.name
-  release            = var.release
-  replicas           = 1
-  resolver           = var.resolver
-  set_priority_class = false
+  authentication = true
+  domain         = var.domain
+  image          = var.image
+  namespace      = var.namespace
+  rack           = var.name
+  release        = var.release
+  replicas       = 1
+  resolver       = var.resolver
 
   annotations = {
     "cert-manager.io/cluster-issuer" = "self-signed"

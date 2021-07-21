@@ -3,7 +3,6 @@ package k8s
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"math/rand"
 	"os"
@@ -21,7 +20,6 @@ import (
 	"github.com/pkg/errors"
 
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -130,13 +128,6 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 		return errors.WithStack(err)
 	}
 
-	if (!opts.IgnorePriorityClass) {
-		if err := p.initializePriorityClass(); err != nil {
-			return errors.WithStack(err)
-		}
-	}
-
-
 	return nil
 }
 
@@ -223,23 +214,6 @@ func (p *Provider) heartbeat() error {
 	}
 
 	if err := p.metrics.Post("heartbeat", ms); err != nil {
-		return errors.WithStack(err)
-	}
-
-	return nil
-}
-
-func (p *Provider) initializePriorityClass() error {
-	patches := []Patch{
-		{Op: "add", Path: "/spec/template/spec/priorityClassName", Value: "system-cluster-critical"},
-	}
-
-	patch, err := json.Marshal(patches)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	if _, err := p.Cluster.AppsV1().Deployments(p.Namespace).Patch("api", types.JSONPatchType, patch); err != nil {
 		return errors.WithStack(err)
 	}
 

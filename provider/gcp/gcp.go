@@ -9,10 +9,6 @@ import (
 	"github.com/convox/convox/pkg/elastic"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/k8s"
-	ac "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
-	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type Provider struct {
@@ -59,10 +55,6 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 		return err
 	}
 
-	if err := p.initializeResourceQuotas(); err != nil {
-		return err
-	}
-
 	if err := p.Provider.Initialize(opts); err != nil {
 		return err
 	}
@@ -92,37 +84,6 @@ func (p *Provider) initializeGcpServices() error {
 	}
 
 	p.storage = s
-
-	return nil
-}
-
-func (p *Provider) initializeResourceQuotas() error {
-	_, err := p.Cluster.CoreV1().ResourceQuotas(p.Namespace).Create(&ac.ResourceQuota{
-		ObjectMeta: am.ObjectMeta{
-			Namespace: p.Namespace,
-			Name:      "gcp-critical-pods",
-		},
-		Spec: ac.ResourceQuotaSpec{
-			Hard: ac.ResourceList{
-				"pods": resource.MustParse("1G"),
-			},
-			ScopeSelector: &ac.ScopeSelector{
-				MatchExpressions: []ac.ScopedResourceSelectorRequirement{
-					{
-						ScopeName: "PriorityClass",
-						Operator:  "In",
-						Values: []string{
-							"system-node-critical",
-							"system-cluster-critical",
-						},
-					},
-				},
-			},
-		},
-	})
-	if err != nil && !errors.IsAlreadyExists(err) {
-		return err
-	}
 
 	return nil
 }
