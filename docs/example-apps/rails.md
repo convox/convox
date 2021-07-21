@@ -13,7 +13,7 @@ Let's begin with installing the `convox` CLI and a deploying a development Rack.
 
 Now that we have the `convox` CLI installed and we've deployed our development Rack, next is preparing our rails application. Before we deploy the application to our local development Rack, we'll need to make a few changes:
 
-**1.** Starting from the [ruby:3.0.0](https://hub.docker.com/_/ruby/) image, the `Dockerfile` defines the steps necessary to turn the application code into an image that is ready to run. 
+**1.** Starting from the [ruby:3.0.0](https://hub.docker.com/_/ruby/) image, the `Dockerfile` defines the steps necessary to turn the application code into an image that is ready to run.
 
 This [Dockerfile](https://github.com/convox-examples/rails/blob/master/Dockerfile) has 3 steps that must be executed in a particular order to take advantage of Docker's build caching behavior:
 
@@ -23,7 +23,7 @@ This [Dockerfile](https://github.com/convox-examples/rails/blob/master/Dockerfil
 
 3. Finally after setting the appropriate environment variables, the assets are precompiled.
 
-To run your application, you will need a Dockerfile, so let's walk through that process: 
+To run your application, you will need a Dockerfile, so let's walk through that process:
 
 1. Create a file in the root of your project with the name `Dockerfile` the content of our [example app](https://github.com/convox-examples/rails). Notice that ours uses ruby-3.0 as a base image, so if you need a different version, feel free to change the version on the first line of the file to a suitable ruby Docker image.
 
@@ -48,7 +48,7 @@ services:
   web:
     build: .
     port: 3000 # Here we are opening the port in which our applicatin will run. If we need a different port we change it here
-    environment: # Here we define the environment variables that we will use in our application. 
+    environment: # Here we define the environment variables that we will use in our application.
       - SECRET_KEY_BASE=
     resources: # Here we are linking our service with the resource we want to use. Since our resource is called "database", Convox will create a DATABASE_URL that can be read by our application.
       - database
@@ -78,8 +78,16 @@ By default, the name of your `app` is taken to be the name of the directory you 
 **6.** As mentioned in step **#2**, when you define a resource Convox will create an environment variable with that name for your application to access it. For more information on how it works check it [here](https://docs.convox.com/reference/primitives/app/resource#linking). To use Convox' database resource as in our convox.yml, in your `config/database.yml` add the following line under `default`:
 
  ```  url: <%= ENV['DATABASE_URL'] %>```.
- 
+
 Your `database.yml` should look like [this](https://github.com/convox-examples/rails/blob/master/config/database.yml)
+
+**7.** Given that Convox manages the SSL certificates, we need to disable the rails configuration to force SSL. Please go to `config/environments/production.rb` and comment the line
+
+```
+# config.force_ssl = true
+```
+
+In case of doubt check it [here](https://github.com/convox-examples/rails/blob/master/config/environments/production.rb#L49) in our example.
 
 ### Running Locally
 
@@ -93,7 +101,7 @@ Install a production Rack on the cloud provider of your choice:
 
 * [Production Rack](../installation/production-rack)
 
-Once we are all set with installing the production Rack, here are the production deployment steps: 
+Once we are all set with installing the production Rack, here are the production deployment steps:
 
 First, let's take a look at the racks that are available, including the newly created production rack:
 
