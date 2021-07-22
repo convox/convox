@@ -37,7 +37,6 @@ require (
 	github.com/headzoo/ut v0.0.0-20181013193318-a13b5a7a02ca // indirect
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf
-	github.com/karalabe/xgo v0.0.0-20191115072854-c5ccff8648a7
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/mattn/go-zglob v0.0.1 // indirect
 	github.com/miekg/dns v1.1.25
@@ -54,4 +53,5 @@ require (
 	k8s.io/client-go v0.16.6
 	k8s.io/code-generator v0.16.6
 	k8s.io/klog v1.0.0
+	src.techknowlogick.com/xgo v1.4.1-0.20210712230209-de44cf51083e
 )
