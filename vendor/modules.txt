@@ -48,6 +48,8 @@ github.com/PuerkitoBio/goquery
 github.com/PuerkitoBio/purell
 # github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578
 github.com/PuerkitoBio/urlesc
+# github.com/SpectraLogic/xgo v1.4.1-0.20210416162116-7a91abea524b
+github.com/SpectraLogic/xgo
 # github.com/adrg/xdg v0.2.1
 github.com/adrg/xdg
 # github.com/algolia/algoliasearch-client-go v2.25.0+incompatible
@@ -787,5 +789,3 @@ k8s.io/utils/integer
 k8s.io/utils/trace
 # sigs.k8s.io/yaml v1.1.0
 sigs.k8s.io/yaml
-# src.techknowlogick.com/xgo v1.4.1-0.20210701053408-5f465c2657fd
-src.techknowlogick.com/xgo

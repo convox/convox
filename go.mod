@@ -13,6 +13,7 @@ require (
 	github.com/Azure/go-autorest/autorest/validation v0.2.0 // indirect
 	github.com/Microsoft/hcsshim v0.8.7-0.20190801035247-8694eade7dd3 // indirect
 	github.com/PuerkitoBio/goquery v1.5.0
+	github.com/SpectraLogic/xgo v1.4.1-0.20210416162116-7a91abea524b
 	github.com/algolia/algoliasearch-client-go v2.25.0+incompatible
 	github.com/aws/aws-sdk-go v1.21.10
 	github.com/convox/changes v0.0.0-20191105034405-8c0df759a3b3
@@ -53,5 +54,4 @@ require (
 	k8s.io/client-go v0.16.6
 	k8s.io/code-generator v0.16.6
 	k8s.io/klog v1.0.0
-	src.techknowlogick.com/xgo v1.4.1-0.20210701053408-5f465c2657fd
 )

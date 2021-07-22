@@ -3,6 +3,7 @@
 package convox
 
 import (
+	_ "github.com/SpectraLogic/xgo"
 	_ "github.com/gobuffalo/packr/packr"
 	_ "github.com/goware/modvendor"
 	_ "github.com/vektra/mockery/cmd/mockery"
@@ -18,5 +19,4 @@ import (
 	_ "k8s.io/code-generator/cmd/openapi-gen"
 	_ "k8s.io/code-generator/cmd/register-gen"
 	_ "k8s.io/code-generator/cmd/set-gen"
-	_ "src.techknowlogick.com/xgo"
 )
