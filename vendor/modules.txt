@@ -289,8 +289,6 @@ github.com/joho/godotenv
 github.com/json-iterator/go
 # github.com/karalabe/hid v1.0.0
 github.com/karalabe/hid
-# github.com/karalabe/xgo v0.0.0-20191115072854-c5ccff8648a7
-github.com/karalabe/xgo
 # github.com/karrick/godirwalk v1.10.12
 github.com/karrick/godirwalk
 # github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
@@ -789,3 +787,5 @@ k8s.io/utils/integer
 k8s.io/utils/trace
 # sigs.k8s.io/yaml v1.1.0
 sigs.k8s.io/yaml
+# src.techknowlogick.com/xgo v1.4.1-0.20210712230209-de44cf51083e
+src.techknowlogick.com/xgo
