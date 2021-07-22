@@ -787,5 +787,5 @@ k8s.io/utils/integer
 k8s.io/utils/trace
 # sigs.k8s.io/yaml v1.1.0
 sigs.k8s.io/yaml
-# src.techknowlogick.com/xgo v1.4.1-0.20210712230209-de44cf51083e
+# src.techknowlogick.com/xgo v1.4.1-0.20210701053408-5f465c2657fd
 src.techknowlogick.com/xgo

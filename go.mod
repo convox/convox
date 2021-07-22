@@ -53,5 +53,5 @@ require (
 	k8s.io/client-go v0.16.6
 	k8s.io/code-generator v0.16.6
 	k8s.io/klog v1.0.0
-	src.techknowlogick.com/xgo v1.4.1-0.20210712230209-de44cf51083e
+	src.techknowlogick.com/xgo v1.4.1-0.20210701053408-5f465c2657fd
 )
