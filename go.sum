@@ -55,8 +55,6 @@ github.com/PuerkitoBio/purell v1.1.1/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbt
 github.com/PuerkitoBio/urlesc v0.0.0-20160726150825-5bd2802263f2/go.mod h1:uGdkoq3SwY9Y+13GIhn11/XLaGBb4BfwItxLd5jeuXE=
 github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 h1:d+Bc7a5rLufV/sSk/8dngufqelfh6jnri85riMAaF/M=
 github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578/go.mod h1:uGdkoq3SwY9Y+13GIhn11/XLaGBb4BfwItxLd5jeuXE=
-github.com/SpectraLogic/xgo v1.4.1-0.20210416162116-7a91abea524b h1:fuXqbDYJZRtjlOpdtQjpGYCDK5UP8CMv/Xz8v2lJ3mk=
-github.com/SpectraLogic/xgo v1.4.1-0.20210416162116-7a91abea524b/go.mod h1:nWxfRz2BUxWyKBUlG+xmcEcyjg45gfk9wOF16Se97S8=
 github.com/adrg/xdg v0.2.1 h1:VSVdnH7cQ7V+B33qSJHTCRlNgra1607Q8PzEmnvb2Ic=
 github.com/adrg/xdg v0.2.1/go.mod h1:ZuOshBmzV4Ta+s23hdfFZnBsdzmoR3US0d7ErpqSbTQ=
 github.com/ajg/form v0.0.0-20160822230020-523a5da1a92f/go.mod h1:uL1WgH+h2mgNtvBq0339dVnzXdBETtL2LeUXaIv25UY=
@@ -523,6 +521,8 @@ github.com/opencontainers/runc v0.1.1 h1:GlxAyO6x8rfZYN9Tt0Kti5a/cP41iuiO2yYT0IJ
 github.com/opencontainers/runc v0.1.1/go.mod h1:qT5XzbpPznkRYVz/mWwUaVBUv2rmF59PVA73FjuZG0U=
 github.com/opencontainers/runtime-spec v0.0.0-20190207185410-29686dbc5559/go.mod h1:jwyrGlmzljRJv/Fgzds9SsS/C5hL+LL3ko9hs6T5lQ0=
 github.com/opencontainers/runtime-tools v0.0.0-20181011054405-1d69bd0f9c39/go.mod h1:r3f7wjNzSs2extwzU3Y+6pKfobzPh+kKFJ3ofN+3nfs=
+github.com/panther-labs/xgo v0.0.0-20210617145408-593a78c2b4cb h1:l/44o/Zel0gDpHt1qGrNqzotYgEl9LIUbJSaxLL6B+s=
+github.com/panther-labs/xgo v0.0.0-20210617145408-593a78c2b4cb/go.mod h1:KiI82LvaoOinCYAWFledsdE3OgmG+dH5rR5Y4MVAbUY=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
 github.com/peterbourgon/diskv v2.0.1+incompatible/go.mod h1:uqqh8zWWbv1HBMNONnaR/tNboyR3/BZd58JJSHlUSCU=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=

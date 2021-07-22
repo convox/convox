@@ -61,7 +61,7 @@ test:
 	env TEST=true go test -covermode atomic -coverprofile coverage.txt -mod=vendor ./...
 
 tools:
-	go install -mod=vendor ./vendor/github.com/SpectraLogic/xgo
+	go install -mod=vendor ./vendor/github.com/panther-labs/xgo
 
 vendor:
 	go mod vendor

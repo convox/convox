@@ -1,4 +1,6 @@
-# xgo - Go CGO cross compiler
+# xgo - Go CGO cross compiler (forked from https://github.com/techknowlogick/xgo)
+
+THIS IS UNSUPPORTED! THIS IS A FORK OF https://github.com/techknowlogick/xgo TO FIX BUGS
 
 Although Go strives to be a cross platform language, cross compilation from one
 platform to another is not as simple as it could be, as you need the Go sources

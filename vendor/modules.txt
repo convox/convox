@@ -48,8 +48,6 @@ github.com/PuerkitoBio/goquery
 github.com/PuerkitoBio/purell
 # github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578
 github.com/PuerkitoBio/urlesc
-# github.com/SpectraLogic/xgo v1.4.1-0.20210416162116-7a91abea524b
-github.com/SpectraLogic/xgo
 # github.com/adrg/xdg v0.2.1
 github.com/adrg/xdg
 # github.com/algolia/algoliasearch-client-go v2.25.0+incompatible
@@ -327,6 +325,8 @@ github.com/opencontainers/image-spec/specs-go/v1
 # github.com/opencontainers/runc v0.1.1
 github.com/opencontainers/runc/libcontainer/system
 github.com/opencontainers/runc/libcontainer/user
+# github.com/panther-labs/xgo v0.0.0-20210617145408-593a78c2b4cb
+github.com/panther-labs/xgo
 # github.com/pkg/errors v0.8.1
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0

@@ -255,6 +255,7 @@ func compile(image string, config *ConfigFlags, flags *BuildFlags, folder string
 	locals, mounts, paths := []string{}, []string{}, []string{}
 	var usesModules bool
 	if strings.HasPrefix(config.Repository, string(filepath.Separator)) || strings.HasPrefix(config.Repository, ".") {
+		// Determine if this is a module-based repository
 		if _, err := os.Stat(config.Repository + "/go.mod"); err == nil {
 			usesModules = true
 		}

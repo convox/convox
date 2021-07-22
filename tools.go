@@ -3,9 +3,9 @@
 package convox
 
 import (
-	_ "github.com/SpectraLogic/xgo"
 	_ "github.com/gobuffalo/packr/packr"
 	_ "github.com/goware/modvendor"
+	_ "github.com/panther-labs/xgo"
 	_ "github.com/vektra/mockery/cmd/mockery"
 	_ "k8s.io/code-generator"
 	_ "k8s.io/code-generator/cmd/client-gen"
