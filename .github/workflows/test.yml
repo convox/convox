@@ -19,3 +19,13 @@ jobs:
         uses: actions/checkout@v1
       - name: test
         run: make test
+  tooling:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v1
+      - name: tools
+        run: make tools
+      - name: cli
+        run: make -C cmd/convox build
+
