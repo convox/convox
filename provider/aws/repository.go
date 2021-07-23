@@ -1,5 +1,7 @@
 package aws
 
+import "fmt"
+
 func (p *Provider) RepositoryAuth(app string) (string, string, error) {
 	host, _, err := p.RepositoryHost(app)
 	if err != nil {
@@ -16,4 +18,8 @@ func (p *Provider) RepositoryHost(app string) (string, bool, error) {
 	}
 
 	return registry, true, nil
+}
+
+func (p *Provider) RepositoryPrefix() string {
+	return fmt.Sprintf("%s/", p.Name)
 }

@@ -1,12 +1,18 @@
 package k8s
 
 import (
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"strings"
 
+	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/stdapi"
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
 	ae "k8s.io/apimachinery/pkg/api/errors"
@@ -75,6 +81,55 @@ func (p *Provider) RegistryList() (structs.Registries, error) {
 	}
 
 	return rs, nil
+}
+
+func (p *Provider) RegistryProxy(c *stdapi.Context) error {
+	path := c.Var("path")
+
+	if path == "" {
+		c.Response().Header().Add("Docker-Distribution-Api-Version", "registry/2.0")
+		return nil
+	}
+
+	app, err := p.registryApp(path)
+	if err != nil {
+		return registryError(err)
+	}
+
+	user, pass, err := p.Engine.RepositoryAuth(app)
+	if err != nil {
+		return registryError(err)
+	}
+
+	host, _, err := p.Engine.RepositoryHost(app)
+	if err != nil {
+		return registryError(err)
+	}
+
+	u, err := url.Parse(fmt.Sprintf("https://%s", host))
+	if err != nil {
+		registryError(err)
+	}
+
+	u.Path = fmt.Sprintf("/v2/%s", path)
+	u.RawQuery = c.Request().URL.RawQuery
+
+	proxy := httputil.ReverseProxy{
+		Director: func(r *http.Request) {
+			r.Host = u.Host
+			r.URL = u
+			r.SetBasicAuth(user, pass)
+		},
+	}
+
+	t := common.NewDefaultTransport()
+	t.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+
+	proxy.Transport = t
+
+	proxy.ServeHTTP(c.Response(), c.Request())
+
+	return nil
 }
 
 func (p *Provider) RegistryRemove(server string) error {
@@ -165,4 +220,18 @@ func (p *Provider) dockerConfigSave(secret string, dc *dockerConfig) error {
 	}
 
 	return nil
+}
+
+func (p *Provider) registryApp(path string) (string, error) {
+	app := strings.Split(strings.TrimPrefix(path, p.Engine.RepositoryPrefix()), "/")[0]
+
+	if _, err := p.AppGet(app); err != nil {
+		return "", err
+	}
+
+	return app, nil
+}
+
+func registryError(err error) error {
+	return stdapi.Errorf(403, fmt.Sprintf(`{"errors":[{"message":%q}]}`, err.Error()))
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/convox/convox/pkg/build"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/convox/sdk"
 	"github.com/convox/exec"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -19,13 +21,12 @@ import (
 
 func TestBuildGeneration2(t *testing.T) {
 	opts := build.Options{
-		App:        "app1",
-		Auth:       "{}",
-		Cache:      true,
-		Generation: "2",
-		Id:         "build1",
-		Rack:       "rack1",
-		Source:     "object://app1/object.tgz",
+		App:    "app1",
+		Auth:   "{}",
+		Cache:  true,
+		Id:     "build1",
+		Rack:   "rack1",
+		Source: "object://app1/object.tgz",
 	}
 
 	testBuild(t, opts, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
@@ -37,7 +38,7 @@ func TestBuildGeneration2(t *testing.T) {
 		require.NoError(t, err)
 		p.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil)
 		p.On("ReleaseGet", "app1", "release1").Return(fxRelease(), nil)
-		e.On("Run", mock.Anything, "docker", "build", "-t", "e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445", "-f", "Dockerfile", "--network", "host", ".").Return(nil).Run(func(args mock.Arguments) {
+		e.On("Run", mock.Anything, "docker", "build", "-t", "e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445", "-f", mock.MatchedBy(matchTempdirFile("Dockerfile")), "--network", "host", mock.MatchedBy(matchTempdir)).Return(nil).Run(func(args mock.Arguments) {
 			fmt.Fprintf(args.Get(0).(io.Writer), "build1\nbuild2\n")
 		})
 		e.On("Execute", "docker", "inspect", "e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445", "--format", "{{json .Config.Entrypoint}}").Return([]byte("[]"), nil)
@@ -87,7 +88,6 @@ func TestBuildGeneration2Development(t *testing.T) {
 		Auth:        "{}",
 		Cache:       true,
 		Development: true,
-		Generation:  "2",
 		Id:          "build1",
 		Rack:        "rack1",
 		Source:      "object://app1/object.tgz",
@@ -102,7 +102,7 @@ func TestBuildGeneration2Development(t *testing.T) {
 		require.NoError(t, err)
 		p.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil)
 		p.On("ReleaseGet", "app1", "release1").Return(fxRelease(), nil)
-		e.On("Run", mock.Anything, "docker", "build", "-t", "e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445", "-f", "Dockerfile", "--network", "host", "--target", "development", ".").Return(nil).Run(func(args mock.Arguments) {
+		e.On("Run", mock.Anything, "docker", "build", "-t", "e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445", "-f", mock.MatchedBy(matchTempdirFile("Dockerfile")), "--network", "host", "--target", "development", mock.MatchedBy(matchTempdir)).Return(nil).Run(func(args mock.Arguments) {
 			fmt.Fprintf(args.Get(0).(io.Writer), "build1\nbuild2\n")
 		})
 		e.On("Execute", "docker", "inspect", "e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445", "--format", "{{json .Config.Entrypoint}}").Return([]byte("[]"), nil)
@@ -144,13 +144,12 @@ func TestBuildGeneration2Development(t *testing.T) {
 
 func TestBuildGeneration2Entrypoint(t *testing.T) {
 	opts := build.Options{
-		App:        "app1",
-		Auth:       "{}",
-		Cache:      true,
-		Generation: "2",
-		Id:         "build1",
-		Rack:       "rack1",
-		Source:     "object://app1/object.tgz",
+		App:    "app1",
+		Auth:   "{}",
+		Cache:  true,
+		Id:     "build1",
+		Rack:   "rack1",
+		Source: "object://app1/object.tgz",
 	}
 
 	testBuild(t, opts, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
@@ -162,7 +161,7 @@ func TestBuildGeneration2Entrypoint(t *testing.T) {
 		require.NoError(t, err)
 		p.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil)
 		p.On("ReleaseGet", "app1", "release1").Return(fxRelease(), nil)
-		e.On("Run", mock.Anything, "docker", "build", "-t", "e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445", "-f", "Dockerfile", "--network", "host", ".").Return(nil).Run(func(args mock.Arguments) {
+		e.On("Run", mock.Anything, "docker", "build", "-t", "e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445", "-f", mock.MatchedBy(matchTempdirFile("Dockerfile")), "--network", "host", mock.MatchedBy(matchTempdir)).Return(nil).Run(func(args mock.Arguments) {
 			fmt.Fprintf(args.Get(0).(io.Writer), "build1\nbuild2\n")
 		})
 		e.On("Execute", "docker", "inspect", "e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445", "--format", "{{json .Config.Entrypoint}}").Return([]byte("[\"bin/entry\"]"), nil)
@@ -209,13 +208,12 @@ func TestBuildGeneration2Entrypoint(t *testing.T) {
 
 func TestBuildGeneration2Failure(t *testing.T) {
 	opts := build.Options{
-		App:        "app1",
-		Auth:       "{}",
-		Cache:      true,
-		Generation: "2",
-		Id:         "build1",
-		Rack:       "rack1",
-		Source:     "object://app1/object.tgz",
+		App:    "app1",
+		Auth:   "{}",
+		Cache:  true,
+		Id:     "build1",
+		Rack:   "rack1",
+		Source: "object://app1/object.tgz",
 	}
 
 	testBuild(t, opts, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
@@ -256,7 +254,6 @@ func TestBuildGeneration2Options(t *testing.T) {
 		Cache:       false,
 		Development: true,
 		EnvWrapper:  true,
-		Generation:  "2",
 		Id:          "build1",
 		Manifest:    "convox2.yml",
 		Push:        "push1",
@@ -280,7 +277,7 @@ func TestBuildGeneration2Options(t *testing.T) {
 		// p.On("BuildUpdate", "app1", "build1", structs.BuildUpdateOptions{Manifest: options.String(string(mdata))}).Return(fxBuildStarted(), nil).Once()
 		p.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil)
 		p.On("ReleaseGet", "app1", "release1").Return(fxRelease(), nil)
-		e.On("Run", mock.Anything, "docker", "build", "--no-cache", "-t", "c67c8080ff5483672fe18cfb54f4710ddcc920b3575810ad05dbe1a4", "-f", "Dockerfile2", "--network", "host", "--build-arg", "FOO=bar", ".").Return(nil).Run(func(args mock.Arguments) {
+		e.On("Run", mock.Anything, "docker", "build", "--no-cache", "-t", "c67c8080ff5483672fe18cfb54f4710ddcc920b3575810ad05dbe1a4", "-f", mock.MatchedBy(matchTempdirFile("Dockerfile2")), "--network", "host", "--build-arg", "FOO=bar", mock.MatchedBy(matchTempdir)).Return(nil).Run(func(args mock.Arguments) {
 			fmt.Fprintf(args.Get(0).(io.Writer), "build1\nbuild2\n")
 		})
 		e.On("Execute", "docker", "inspect", "c67c8080ff5483672fe18cfb54f4710ddcc920b3575810ad05dbe1a4", "--format", "{{json .Config.Entrypoint}}").Return([]byte("[]"), nil)
@@ -367,6 +364,19 @@ func fxRelease2() *structs.Release {
 	}
 }
 
+func matchTempdir(arg string) bool {
+	return strings.HasPrefix(arg, os.TempDir())
+}
+
+func matchTempdirFile(name string) func(string) bool {
+	return func(arg string) bool {
+		if !matchTempdir(arg) {
+			return false
+		}
+		return strings.HasSuffix(arg, fmt.Sprintf("/%s", name))
+	}
+}
+
 func testBuild(t *testing.T, opts build.Options, fn func(*build.Build, *structs.MockProvider, *exec.MockInterface, *bytes.Buffer)) {
 	e := &exec.MockInterface{}
 	p := &structs.MockProvider{}
@@ -375,7 +385,10 @@ func testBuild(t *testing.T, opts build.Options, fn func(*build.Build, *structs.
 
 	opts.Output = buf
 
-	b, err := build.New(opts)
+	rack, err := sdk.NewFromEnv()
+	require.NoError(t, err)
+
+	b, err := build.New(rack, opts)
 	require.NoError(t, err)
 
 	b.Exec = e

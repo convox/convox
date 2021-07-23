@@ -20,6 +20,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/convox/changes"
+	builder "github.com/convox/convox/pkg/build"
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/options"
@@ -42,6 +43,7 @@ type Options2 struct {
 	App      string
 	Build    bool
 	Cache    bool
+	External bool
 	Manifest string
 	Provider structs.Provider
 	Services []string
@@ -110,53 +112,24 @@ func (s *Start) Start2(ctx context.Context, w io.Writer, opts Options2) error {
 	pw := prefixWriter(w, services)
 
 	if opts.Build {
-		pw.Writef("build", "uploading source\n")
-
-		data, err := common.Tarball(".")
-		if err != nil {
-			return errors.WithStack(err)
+		bopts := structs.BuildCreateOptions{
+			Development: options.Bool(true),
+			External:    options.Bool(opts.External),
 		}
-
-		o, err := opts.Provider.ObjectStore(opts.App, "", bytes.NewReader(data), structs.ObjectStoreOptions{})
-		if err != nil {
-			return errors.WithStack(err)
-		}
-
-		pw.Writef("build", "starting build\n")
-
-		bopts := structs.BuildCreateOptions{Development: options.Bool(true)}
 
 		if opts.Manifest != "" {
 			bopts.Manifest = options.String(opts.Manifest)
 		}
 
-		b, err := opts.Provider.BuildCreate(opts.App, o.Url, bopts)
+		b, err := opts.buildCreate(ctx, &pw, bopts)
 		if err != nil {
-			return errors.WithStack(err)
-		}
-
-		logs, err := opts.Provider.BuildLogs(opts.App, b.Id, structs.LogsOptions{})
-		if err != nil {
-			return errors.WithStack(err)
-		}
-
-		bo := pw.Writer("build")
-
-		go io.Copy(bo, logs)
-
-		if err := opts.waitForBuild(ctx, b.Id); err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 
 		select {
 		case <-ctx.Done():
 			return nil
 		default:
-		}
-
-		b, err = opts.Provider.BuildGet(opts.App, b.Id)
-		if err != nil {
-			return errors.WithStack(err)
 		}
 
 		popts := structs.ReleasePromoteOptions{
@@ -219,6 +192,133 @@ func (s *Start) Start2(ctx context.Context, w io.Writer, opts Options2) error {
 	}
 
 	return nil
+}
+
+func (opts Options2) buildCreate(ctx context.Context, pw *prefix.Writer, bopts structs.BuildCreateOptions) (*structs.Build, error) {
+	if opts.External {
+		return opts.buildCreateExternal(ctx, pw, bopts)
+	}
+
+	pw.Writef("build", "uploading source\n")
+
+	data, err := common.Tarball(".")
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	o, err := opts.Provider.ObjectStore(opts.App, "", bytes.NewReader(data), structs.ObjectStoreOptions{})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	pw.Writef("build", "starting build\n")
+
+	b, err := opts.Provider.BuildCreate(opts.App, o.Url, bopts)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	logs, err := opts.Provider.BuildLogs(opts.App, b.Id, structs.LogsOptions{})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	bo := pw.Writer("build")
+
+	go io.Copy(bo, logs)
+
+	if err := opts.waitForBuild(ctx, b.Id); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	b, err = opts.Provider.BuildGet(opts.App, b.Id)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return b, nil
+}
+
+func (opts Options2) buildCreateExternal(ctx context.Context, pw *prefix.Writer, bopts structs.BuildCreateOptions) (*structs.Build, error) {
+	dir := "."
+
+	s, err := opts.Provider.SystemGet()
+	if err != nil {
+		return nil, err
+	}
+
+	bopts.External = options.Bool(true)
+
+	b, err := opts.Provider.BuildCreate(opts.App, "", bopts)
+	if err != nil {
+		return nil, err
+	}
+
+	manifest := common.CoalesceString(opts.Manifest, "convox.yml")
+
+	data, err := ioutil.ReadFile(filepath.Join(dir, manifest))
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := opts.Provider.BuildUpdate(b.App, b.Id, structs.BuildUpdateOptions{Manifest: options.String(string(data))}); err != nil {
+		return nil, err
+	}
+
+	u, err := url.Parse(b.Repository)
+	if err != nil {
+		return nil, err
+	}
+
+	auth := ""
+	repo := fmt.Sprintf("%s%s", u.Host, u.Path)
+
+	if pass, ok := u.User.Password(); ok {
+		auth = fmt.Sprintf(`{%q: { "Username": %q, "Password": %q } }`, repo, u.User.Username(), pass)
+	}
+
+	bbopts := builder.Options{
+		App:         b.App,
+		Auth:        auth,
+		Cache:       opts.Cache,
+		Development: true,
+		Id:          b.Id,
+		Manifest:    manifest,
+		Push:        repo,
+		Rack:        s.Name,
+		Source:      fmt.Sprintf("dir://%s", dir),
+		Terminal:    true,
+	}
+
+	bb, err := builder.New(opts.Provider, bbopts)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := bb.Execute(); err != nil {
+		return nil, err
+	}
+
+	ropts := structs.ReleaseCreateOptions{
+		Build:       options.String(b.Id),
+		Description: options.String(b.Description),
+	}
+
+	r, err := opts.Provider.ReleaseCreate(b.App, ropts)
+	if err != nil {
+		return nil, err
+	}
+
+	uopts := structs.BuildUpdateOptions{
+		Release: options.String(r.Id),
+	}
+
+	bu, err := opts.Provider.BuildUpdate(b.App, b.Id, uopts)
+	if err != nil {
+		return nil, err
+	}
+
+	return bu, nil
 }
 
 func (opts Options2) handleAdds(pid, remote string, adds []changes.Change) error {

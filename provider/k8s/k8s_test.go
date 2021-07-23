@@ -154,6 +154,10 @@ func (te *TestEngine) RepositoryHost(app string) (string, bool, error) {
 	return "repo1", true, nil
 }
 
+func (te *TestEngine) RepositoryPrefix() string {
+	return ""
+}
+
 func (te *TestEngine) ResolverHost() (string, error) {
 	return "", errors.WithStack(fmt.Errorf("no resolver"))
 }
