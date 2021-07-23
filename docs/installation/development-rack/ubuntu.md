@@ -4,7 +4,7 @@
 
 > **_NOTE:_**:  Ubuntu 20.04 users will need to ensure that they are installing the latest version of Convox. See the 'Tips' sections below for more details.
 
-### Docker
+## Docker
 
     $ sudo apt install docker.io
 
@@ -37,9 +37,67 @@ These steps allow your local DNS resolver to be manually configured.  Finally, r
 
 Now, the Kubernetes steps below should work as expected.
 
+### Workaround Script
+
+For your convenience, we've provided the following script to assist you with the steps above.  Copy and paste this script into a file called `convox-workaround.sh`, then run this script as the `root` user with: `bash convox-workaround.sh` at the command line:
+
+```
+#!/usr/bin/env bash
+# ------------------------------------------------------------------
+#  Ubuntu 20.04 'workaround' script
+# ------------------------------------------------------------------
+RESOLV_CONF=/etc/resolv.conf
+RESOLV_ORIG=/etc/resolv.conf.orig
+RESOLV_MAN=/etc/resolv.conf.manually-configured
+
+# Root execution Check
+if [ "$EUID" -ne 0 ]; then 
+  echo "ERROR: Please run this script as root. Exiting."
+  exit
+fi
+
+# Add iptables rule
+iptables -P FORWARD ACCEPT
+
+# Make a backup copy of your /etc/resolv.conf file.
+if [ -f "$RESOLV_CONF" ]; then
+  mv $RESOLV_CONF $RESOLV_ORIG
+else
+  echo "ERROR: The $RESOLV_CONF file was not found. Exiting."
+  exit
+fi
+
+# Create the manually configured version of the resolv.conf file.
+if [ -f "$RESOLV_CONF_ORIG" ]; then
+  cat $RESOLV_ORIG | sed 's/trust-ad//g' > $RESOLV_MAN
+else
+  echo "ERROR: The $RESOLV_CONF_ORIG file was not found. Exiting."
+  exit
+fi
+
+# Create a symbolic link to the manually configured file.
+if [ -f "$RESOLV_MAN" ]; then
+  ln -s $RESOLV_MAN $RESOLV_CONF
+else
+  echo "ERROR: The $RESOLV_MAN file was not found. Exiting."
+  exit
+fi
+
+# Restart DNS-related services
+systemctl restart daemon-reload
+
+if systemctl is-active --quiet systemd-networkd; then
+  systemctl restart systemd-networkd
+fi
+
+if systemctl is-active --quiet systemd-resolved; then
+  systemctl restart systemd-resolved
+fi
+```
+
 ---
 
-### Kubernetes
+## Kubernetes
 
     $ snap install microk8s --classic --channel=1.13/stable
     $ microk8s.start
@@ -49,11 +107,11 @@ Now, the Kubernetes steps below should work as expected.
     $ sudo snap restart microk8s
     $ sudo snap alias microk8s.kubectl kubectl
 
-### Terraform
+## Terraform
 
 - Install [Terraform](https://learn.hashicorp.com/terraform/getting-started/install.html)
 
-### Convox CLI
+## Convox CLI
 
     $ curl -L https://github.com/convox/convox/releases/latest/download/convox-linux -o /tmp/convox
     $ sudo mv /tmp/convox /usr/local/bin/convox
@@ -66,6 +124,28 @@ Now, the Kubernetes steps below should work as expected.
 Install a local Rack named `dev`.
 
     $ convox rack install local dev
+
+## DNS Setup
+
+Set `*.convox` to be resolved by the local Rack's DNS server.
+
+    $ sudo mkdir -p /usr/lib/systemd/resolved.conf.d
+    $ sudo bash -c "printf '[Resolve]\nDNS=$(kubectl get service/resolver-external -n dev-system -o jsonpath="{.spec.clusterIP}")\nDomains=~convox' > /usr/lib/systemd/resolved.conf.d/convox.conf"
+    $ systemctl daemon-reload
+    $ systemctl restart systemd-networkd systemd-resolved
+
+## CA Trust
+
+To remove browser warnings about untrusted certificates for local applications
+you can trust the Rack's CA certificate.
+
+This certificate is generated on your local machine and is unique to your Rack.
+
+    $ kubectl get secret/ca -n dev-system -o jsonpath="{.data.tls\.crt}" | base64 -d > /tmp/ca
+    $ sudo mv /tmp/ca /usr/local/share/ca-certificates/convox.crt
+    $ sudo update-ca-certificates
+    $ sudo snap restart microk8s
+    $ sudo service docker restart
 
 --- 
 
@@ -93,25 +173,3 @@ This can be resolved with the following command:
 Issuing the `convox rack -r dev` command should now provide you with the appropriate output.
 
 ---
-
-## DNS Setup
-
-Set `*.convox` to be resolved by the local Rack's DNS server.
-
-    $ sudo mkdir -p /usr/lib/systemd/resolved.conf.d
-    $ sudo bash -c "printf '[Resolve]\nDNS=$(kubectl get service/resolver-external -n dev-system -o jsonpath="{.spec.clusterIP}")\nDomains=~convox' > /usr/lib/systemd/resolved.conf.d/convox.conf"
-    $ systemctl daemon-reload
-    $ systemctl restart systemd-networkd systemd-resolved
-
-## CA Trust
-
-To remove browser warnings about untrusted certificates for local applications
-you can trust the Rack's CA certificate.
-
-This certificate is generated on your local machine and is unique to your Rack.
-
-    $ kubectl get secret/ca -n dev-system -o jsonpath="{.data.tls\.crt}" | base64 -d > /tmp/ca
-    $ sudo mv /tmp/ca /usr/local/share/ca-certificates/convox.crt
-    $ sudo update-ca-certificates
-    $ sudo snap restart microk8s
-    $ sudo service docker restart
