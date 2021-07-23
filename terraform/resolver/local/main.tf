@@ -5,6 +5,7 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
+  image     = var.image
   namespace = var.namespace
   rack      = var.rack
   release   = var.release

@@ -35,6 +35,8 @@ jobs:
         run: make tools
       - name: cli
         run: make -C cmd/convox build
+        env:
+          IMAGE: ${{ github.repository }}
       - name: build
         run: docker build -t convox/convox:${VERSION} .
       - name: login

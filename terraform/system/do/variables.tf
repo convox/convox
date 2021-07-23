@@ -2,6 +2,10 @@ variable "access_id" {
   type = string
 }
 
+variable "image" {
+  default = "convox/convox"
+}
+
 variable "name" {
   type = string
 }

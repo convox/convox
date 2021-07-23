@@ -19,6 +19,7 @@ module "api" {
   }
 
   domain    = module.router.endpoint
+  image     = var.image
   name      = var.name
   namespace = module.k8s.namespace
   oidc_arn  = var.oidc_arn
@@ -45,6 +46,7 @@ module "resolver" {
     kubernetes = kubernetes
   }
 
+  image     = var.image
   namespace = module.k8s.namespace
   rack      = var.name
   release   = var.release

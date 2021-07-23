@@ -12,7 +12,7 @@ provider "kubernetes" {
 }
 
 data "http" "releases" {
-  url = "https://api.github.com/repos/convox/convox/releases/latest"
+  url = "https://api.github.com/repos/${var.image}/releases/latest"
 }
 
 locals {
@@ -49,6 +49,7 @@ module "rack" {
   }
 
   cluster        = module.cluster.id
+  image          = var.image
   name           = var.name
   region         = var.region
   release        = local.release

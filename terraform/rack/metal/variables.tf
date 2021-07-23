@@ -2,6 +2,10 @@ variable "domain" {
   default = ""
 }
 
+variable "image" {
+  type = string
+}
+
 variable "name" {
   type = string
 }

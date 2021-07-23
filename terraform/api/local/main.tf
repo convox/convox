@@ -14,6 +14,7 @@ module "k8s" {
 
   authentication     = true
   domain             = var.domain
+  image              = var.image
   namespace          = var.namespace
   rack               = var.name
   release            = var.release
