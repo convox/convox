@@ -325,8 +325,6 @@ github.com/opencontainers/image-spec/specs-go/v1
 # github.com/opencontainers/runc v0.1.1
 github.com/opencontainers/runc/libcontainer/system
 github.com/opencontainers/runc/libcontainer/user
-# github.com/panther-labs/xgo v0.0.0-20210617145408-593a78c2b4cb
-github.com/panther-labs/xgo
 # github.com/pkg/errors v0.8.1
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
@@ -789,3 +787,5 @@ k8s.io/utils/integer
 k8s.io/utils/trace
 # sigs.k8s.io/yaml v1.1.0
 sigs.k8s.io/yaml
+# src.techknowlogick.com/xgo v1.4.1-0.20210723043645-34f3a8e66114
+src.techknowlogick.com/xgo

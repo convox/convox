@@ -55,6 +55,7 @@ var (
 	crossArgs   = flag.String("depsargs", "", "CGO dependency configure arguments")
 	targets     = flag.String("targets", "*/*", "Comma separated targets to build for")
 	dockerImage = flag.String("image", "", "Use custom docker image instead of official distribution")
+	forwardSsh  = flag.Bool("ssh", false, "Enable ssh agent forwarding")
 )
 
 // ConfigFlags is a simple set of flags to define the environment and dependencies.
@@ -67,6 +68,7 @@ type ConfigFlags struct {
 	Dependencies string   // CGO dependencies (configure/make based archives)
 	Arguments    string   // CGO dependency configure arguments
 	Targets      []string // Targets to build for
+	ForwardSsh   bool     // Enable ssh agent forwarding
 }
 
 // Command line arguments to pass to go build
@@ -175,6 +177,7 @@ func main() {
 		Dependencies: *crossDeps,
 		Arguments:    *crossArgs,
 		Targets:      strings.Split(*targets, ","),
+		ForwardSsh:   *forwardSsh,
 	}
 	flags := &BuildFlags{
 		Verbose:  *buildVerbose,
@@ -255,20 +258,31 @@ func compile(image string, config *ConfigFlags, flags *BuildFlags, folder string
 	locals, mounts, paths := []string{}, []string{}, []string{}
 	var usesModules bool
 	if strings.HasPrefix(config.Repository, string(filepath.Separator)) || strings.HasPrefix(config.Repository, ".") {
-		// Determine if this is a module-based repository
 		if _, err := os.Stat(config.Repository + "/go.mod"); err == nil {
 			usesModules = true
-		}
-
-		// Iterate over all the local libs and export the mount points
-		if os.Getenv("GOPATH") == "" && !usesModules {
-			log.Fatalf("No $GOPATH is set or forwarded to xgo")
 		}
 		if !usesModules {
 			// Resolve the repository import path from the file path
 			config.Repository = resolveImportPath(config.Repository)
 
-			for _, gopath := range strings.Split(os.Getenv("GOPATH"), string(os.PathListSeparator)) {
+			if _, err := os.Stat(config.Repository + "/go.mod"); err == nil {
+				usesModules = true
+			}
+		}
+
+		gopathEnv := os.Getenv("GOPATH")
+		if gopathEnv == "" && !usesModules {
+			log.Printf("No $GOPATH is set - defaulting to %s", build.Default.GOPATH)
+			gopathEnv = build.Default.GOPATH
+		}
+
+		// Iterate over all the local libs and export the mount points
+		if gopathEnv == "" && !usesModules {
+			log.Fatalf("No $GOPATH is set or forwarded to xgo")
+		}
+		if !usesModules {
+
+			for _, gopath := range strings.Split(gopathEnv, string(os.PathListSeparator)) {
 				// Since docker sandboxes volumes, resolve any symlinks manually
 				sources := filepath.Join(gopath, "src")
 				filepath.Walk(sources, func(path string, info os.FileInfo, err error) error {
@@ -335,10 +349,19 @@ func compile(image string, config *ConfigFlags, flags *BuildFlags, folder string
 		"-e", fmt.Sprintf("FLAG_TRIMPATH=%v", flags.Trimpath),
 		"-e", "TARGETS=" + strings.Replace(strings.Join(config.Targets, " "), "*", ".", -1),
 		"-e", fmt.Sprintf("GOPROXY=%s", os.Getenv("GOPROXY")),
+		"-e", fmt.Sprintf("GOPRIVATE=%s", os.Getenv("GOPRIVATE")),
+	}
+	if config.ForwardSsh && os.Getenv("SSH_AUTH_SOCK") != "" {
+		// Keep stdin open and allocate pseudo tty
+		args = append(args, "-i", "-t")
+		// Mount ssh agent socket
+		args = append(args, "-v", fmt.Sprintf("%[1]s:%[1]s", os.Getenv("SSH_AUTH_SOCK")))
+		// Set ssh agent socket environment variable
+		args = append(args, "-e", fmt.Sprintf("SSH_AUTH_SOCK=%s", os.Getenv("SSH_AUTH_SOCK")))
 	}
 	if usesModules {
 		args = append(args, []string{"-e", "GO111MODULE=on"}...)
-		args = append(args, []string{"-v", os.Getenv("GOPATH") + ":/go"}...)
+		args = append(args, []string{"-v", build.Default.GOPATH + ":/go"}...)
 
 		// Map this repository to the /source folder
 		absRepository, err := filepath.Abs(config.Repository)
@@ -364,7 +387,12 @@ func compile(image string, config *ConfigFlags, flags *BuildFlags, folder string
 	}
 
 	args = append(args, []string{image, config.Repository}...)
-	return run(exec.Command("docker", args...))
+
+	cmd := exec.Command("docker", args...)
+	if config.ForwardSsh {
+		cmd.Stdin = os.Stdin
+	}
+	return run(cmd)
 }
 
 // compileContained cross builds a requested package according to the given build
