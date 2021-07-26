@@ -38,14 +38,14 @@ jobs:
         env:
           IMAGE: ${{ github.repository }}
       - name: build
-        run: docker build -t convox/convox:${VERSION} .
+        run: docker build -t ${{ github.repository }}:${VERSION} .
       - name: login
         run: docker login --username "${DOCKER_USERNAME}" --password "${DOCKER_PASSWORD}"
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       - name: push
-        run: docker push convox/convox:${VERSION}
+        run: docker push ${{ github.repository }}:${VERSION}
       - name: release-cli-linux
         uses: actions/upload-release-asset@v1.0.1
         env:
@@ -65,6 +65,7 @@ jobs:
           asset_name: convox-macos
           asset_content_type: application/octet-stream
   ci:
+    if: github.repository == 'convox/convox'
     needs: release
     runs-on: ubuntu-latest
     strategy:
