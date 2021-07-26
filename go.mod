@@ -40,7 +40,6 @@ require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/mattn/go-zglob v0.0.1 // indirect
 	github.com/miekg/dns v1.1.25
-	github.com/panther-labs/xgo v0.0.0-20210617145408-593a78c2b4cb
 	github.com/pkg/errors v0.8.1
 	github.com/russross/blackfriday v2.0.0+incompatible
 	github.com/stretchr/testify v1.3.0
