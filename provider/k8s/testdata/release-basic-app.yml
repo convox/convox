@@ -426,6 +426,7 @@ metadata:
   labels:
     app: app1
     kind: mysql
+    name: two
     provider: k8s
     rack: rack1
     release: release2
