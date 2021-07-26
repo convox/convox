@@ -4,6 +4,9 @@ terraform {
       source  = "hashicorp/kubernetes"
       version = "~> 1.11"
     }
+    helm = {
+      source = "hashicorp/helm"
+    }
     random = {
       source = "hashicorp/random"
     }

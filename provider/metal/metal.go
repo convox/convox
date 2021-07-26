@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/convox/convox/pkg/elastic"
+	"github.com/convox/convox/pkg/loki"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/k8s"
 )
@@ -18,7 +18,7 @@ type Provider struct {
 	SpacesEndpoint string
 	SpacesSecret   string
 
-	elastic *elastic.Client
+	loki *loki.Client
 }
 
 func FromEnv() (*Provider, error) {
@@ -57,12 +57,12 @@ func (p *Provider) WithContext(ctx context.Context) structs.Provider {
 }
 
 func (p *Provider) initializeMetalServices() error {
-	ec, err := elastic.New(os.Getenv("ELASTIC_URL"))
+	lc, err := loki.New(os.Getenv("LOKI_URL"))
 	if err != nil {
 		return err
 	}
 
-	p.elastic = ec
+	p.loki = lc
 
 	return nil
 }

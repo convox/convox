@@ -5,18 +5,19 @@ import (
 	"io"
 	"time"
 
+	"github.com/convox/convox/pkg/loki"
+	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 )
 
 func (p *Provider) Log(app, stream string, ts time.Time, message string) error {
-	index := fmt.Sprintf("convox.%s.%s", p.Name, app)
-
 	tags := map[string]string{
+		"rack":   p.Name,
 		"app":    app,
 		"stream": stream,
 	}
 
-	if err := p.elastic.Write(index, ts, message, tags); err != nil {
+	if err := p.loki.Post(tags, ts, message); err != nil {
 		return err
 	}
 
@@ -24,11 +25,13 @@ func (p *Provider) Log(app, stream string, ts time.Time, message string) error {
 }
 
 func (p *Provider) AppLogs(name string, opts structs.LogsOptions) (io.ReadCloser, error) {
-	r, w := io.Pipe()
+	topts := loki.TailOptions{}
 
-	go p.elastic.Stream(p.Context(), w, fmt.Sprintf("convox.%s.%s", p.Name, name), opts)
+	if opts.Since != nil {
+		topts.Start = options.Time(time.Now().UTC().Add(*opts.Since * -1))
+	}
 
-	return r, nil
+	return p.loki.Tail(fmt.Sprintf(`{app=%q}`, name), topts)
 }
 
 func (p *Provider) SystemLogs(opts structs.LogsOptions) (io.ReadCloser, error) {

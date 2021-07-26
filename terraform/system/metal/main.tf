@@ -9,10 +9,17 @@ locals {
 
 provider "kubernetes" {}
 
+provider "helm" {
+  kubernetes {
+    config_path = "~/.kube/config"
+  }
+}
+
 module "rack" {
   source = "../../rack/metal"
 
   providers = {
+    helm       = helm
     kubernetes = kubernetes
   }
 
