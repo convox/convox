@@ -151,11 +151,11 @@ func streamWebsocket(w io.WriteCloser, ws *websocket.Conn) {
 		}
 
 		for _, s := range logs.Streams {
-			switch {
-			case s.Labels["stream"] != "":
-				writeStreamNamed(w, s)
-			default:
+			switch s.Labels["stream"] {
+			case "stdout", "stderr":
 				writeStreamCri(w, s)
+			default:
+				writeStreamNamed(w, s)
 			}
 		}
 	}
