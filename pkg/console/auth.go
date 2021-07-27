@@ -90,6 +90,6 @@ func (c *Client) authenticator(cl *stdsdk.Client, res *http.Response) (http.Head
 }
 
 func (c *Client) session(cl *sdk.Client) string {
-	sid, _ := c.handler.SettingReadKey("session", cl.Endpoint.Host)
+	sid, _ := c.handler.SettingReadKey("session", cl.Client.Endpoint.Host)
 	return sid
 }

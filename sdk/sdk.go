@@ -7,6 +7,7 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -61,14 +62,18 @@ func NewFromEnv() (*Client, error) {
 	return New(os.Getenv("RACK_URL"))
 }
 
+func (c *Client) Endpoint() (*url.URL, error) {
+	return c.Client.Endpoint, nil
+}
+
 func (c *Client) Headers() http.Header {
 	h := http.Header{}
 
 	h.Set("User-Agent", fmt.Sprintf("convox.go/%s", Version))
 	h.Set("Version", Version)
 
-	if c.Endpoint.User != nil {
-		h.Set("Authorization", fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(c.Endpoint.User.String()))))
+	if c.Client.Endpoint.User != nil {
+		h.Set("Authorization", fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(c.Client.Endpoint.User.String()))))
 	}
 
 	if c.Rack != "" {

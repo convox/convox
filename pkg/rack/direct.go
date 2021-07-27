@@ -43,7 +43,7 @@ func (d Direct) Delete() error {
 }
 
 func (d Direct) Endpoint() (*url.URL, error) {
-	return nil, fmt.Errorf("endpoint not available with RACK_URL")
+	return d.client.Endpoint()
 }
 
 func (d Direct) Metadata() (*Metadata, error) {
