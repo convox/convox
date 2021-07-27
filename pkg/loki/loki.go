@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -153,7 +152,7 @@ func streamWebsocket(w io.WriteCloser, ws *websocket.Conn) {
 		for _, s := range logs.Streams {
 			switch s.Labels["stream"] {
 			case "stdout", "stderr":
-				writeStreamCri(w, s)
+				writeStreamContainer(w, s)
 			default:
 				writeStreamNamed(w, s)
 			}
@@ -161,21 +160,9 @@ func streamWebsocket(w io.WriteCloser, ws *websocket.Conn) {
 	}
 }
 
-func writeStreamCri(w io.Writer, s Stream) {
+func writeStreamContainer(w io.Writer, s Stream) {
 	for _, e := range s.Entries {
-		parts := strings.SplitN(e.Line, " ", 4)
-
-		if len(parts) < 4 {
-			return
-		}
-
-		out := fmt.Sprintf("%s %s/%s/%s %s", e.Timestamp.Format(time.RFC3339), s.Labels["type"], s.Labels["name"], s.Labels["pod"], parts[3])
-
-		fmt.Fprint(w, out)
-
-		if parts[2] == "F" {
-			fmt.Fprint(w, "\n")
-		}
+		fmt.Fprintf(w, "%s %s/%s/%s %s\n", e.Timestamp.Format(time.RFC3339), s.Labels["type"], s.Labels["name"], s.Labels["pod"], e.Line)
 	}
 }
 
