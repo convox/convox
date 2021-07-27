@@ -20,6 +20,15 @@ resource "helm_release" "loki" {
     name  = "loki.persistence.size"
     value = "1Gi"
   }
+
+  # set {
+  #   name  = "promtail.pipelineStages[0]"
+  #   value = "[{ cri : {} }]"
+  # }
+
+  values = [
+    "{ promtail: { pipelineStages: [ cri: {} ] } }"
+  ]
 }
 
 module "k8s" {
