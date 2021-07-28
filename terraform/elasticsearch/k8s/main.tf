@@ -180,7 +180,7 @@ resource "kubernetes_stateful_set" "elasticsearch" {
         access_modes = ["ReadWriteOnce"]
 
         resources {
-          requests = {
+          requests {
             storage = "5Gi"
           }
         }

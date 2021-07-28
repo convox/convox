@@ -138,7 +138,7 @@ resource "kubernetes_persistent_volume_claim" "registry" {
   spec {
     access_modes = ["ReadWriteOnce"]
     resources {
-      requests = {
+      requests {
         storage = var.registry_disk
       }
     }

@@ -232,7 +232,7 @@ resource "kubernetes_deployment" "ingress-nginx" {
           }
 
           resources {
-            requests = {
+            requests {
               cpu    = "100m"
               memory = "90Mi"
             }
