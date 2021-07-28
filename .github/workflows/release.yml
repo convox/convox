@@ -42,14 +42,14 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
       - name: build
-        run: docker buildx build --platform linux/amd64,linux/arm64 -t ${{ github.repository }}:${VERSION} .
+        run: docker buildx build --platform linux/amd64,linux/arm64 -t ${{ github.repository }}:${{ env.VERSION }} .
       - name: login
         run: docker login --username "${DOCKER_USERNAME}" --password "${DOCKER_PASSWORD}"
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       - name: push
-        run: docker push ${{ github.repository }}:${VERSION}
+        run: docker push ${{ github.repository }}:${{ env.VERSION }}
       - name: release-cli-linux
         uses: actions/upload-release-asset@v1.0.1
         env:
