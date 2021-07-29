@@ -21,16 +21,15 @@ module "api" {
     kubernetes = kubernetes
   }
 
-  cert_manager = var.domain != ""
-  domain       = local.endpoint
-  image        = var.image
-  name         = var.name
-  namespace    = module.k8s.namespace
-  release      = var.release
-  resolver     = module.resolver.endpoint
-  router       = module.router.endpoint
-  secret       = random_string.secret.result
-  syslog       = var.syslog
+  domain    = local.endpoint
+  image     = var.image
+  name      = var.name
+  namespace = module.k8s.namespace
+  release   = var.release
+  resolver  = module.resolver.endpoint
+  router    = module.router.endpoint
+  secret    = random_string.secret.result
+  syslog    = var.syslog
 }
 
 module "resolver" {

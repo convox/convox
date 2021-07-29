@@ -44,12 +44,12 @@ module "k8s" {
   resolver  = var.resolver
 
   annotations = {
-    "cert-manager.io/cluster-issuer" = "letsencrypt"
+    "cert-manager.io/cluster-issuer" = "self-signed"
     "kubernetes.io/ingress.class"    = "nginx"
   }
 
   env = {
-    CERT_MANAGER = var.cert_manager # ? "true" : "false"
+    CERT_MANAGER = "true"
     ELASTIC_URL  = module.elasticsearch.url
     PROVIDER     = "metal"
     REGISTRY     = "registry.${var.domain}"
