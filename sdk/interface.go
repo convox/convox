@@ -2,6 +2,7 @@ package sdk
 
 import (
 	"io"
+	"net/url"
 
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/stdsdk"
@@ -12,6 +13,9 @@ type Interface interface {
 
 	// raw http
 	Get(string, stdsdk.RequestOptions, interface{}) error
+
+	// endpoint
+	Endpoint() (*url.URL, error)
 
 	// backwards compatibility
 	AppParametersGet(string) (map[string]string, error)
