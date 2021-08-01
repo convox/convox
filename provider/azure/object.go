@@ -161,7 +161,7 @@ func (p *Provider) storageMkdir(file string) error {
 	for _, name := range parts[0 : len(parts)-1] {
 		dir = dir.NewDirectoryURL(name)
 
-		if _, err := dir.Create(ctx, azfile.Metadata{}); err != nil {
+		if _, err := dir.Create(ctx, azfile.Metadata{}, azfile.SMBProperties{}); err != nil {
 			if azerr, ok := err.(azfile.StorageError); ok {
 				if azerr.ServiceCode() == "ResourceAlreadyExists" {
 					continue

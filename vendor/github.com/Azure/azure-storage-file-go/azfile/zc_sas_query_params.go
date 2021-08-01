@@ -35,12 +35,13 @@ func FormatTimesForSASSigning(startTime, expiryTime time.Time) (string, string) 
 	return ss, se
 }
 
+const SASTimeFormat = "2006-01-02T15:04:05Z"
 // SASTimeFormats represents the format of a SAS start or expiry time. Use it when formatting/parsing a time.Time.
-var SASTimeFormats = []string{"2006-01-02T15:04:05Z", "2006-01-02T15:04Z", "2006-01-02"} // ISO 8601 formats, please refer to https://docs.microsoft.com/en-us/rest/api/storageservices/constructing-a-service-sas for more details.
+var SASTimeFormats = []string{"2006-01-02T15:04:05.0000000Z", SASTimeFormat, "2006-01-02T15:04Z", "2006-01-02"} // ISO 8601 formats, please refer to https://docs.microsoft.com/en-us/rest/api/storageservices/constructing-a-service-sas for more details.
 
 // formatSASTimeWithDefaultFormat format time with ISO 8601 in "yyyy-MM-ddTHH:mm:ssZ".
 func formatSASTimeWithDefaultFormat(t *time.Time) string {
-	return formatSASTime(t, SASTimeFormats[0]) // By default, "yyyy-MM-ddTHH:mm:ssZ" is used
+	return formatSASTime(t, SASTimeFormat) // By default, "yyyy-MM-ddTHH:mm:ssZ" is used
 }
 
 // formatSASTime format time with given format, use ISO 8601 in "yyyy-MM-ddTHH:mm:ssZ" by default.
@@ -48,7 +49,7 @@ func formatSASTime(t *time.Time, format string) string {
 	if format != "" {
 		return t.Format(format)
 	}
-	return t.Format(SASTimeFormats[0]) // By default, "yyyy-MM-ddTHH:mm:ssZ" is used
+	return t.Format(SASTimeFormat) // By default, "yyyy-MM-ddTHH:mm:ssZ" is used
 }
 
 // parseSASTimeString try to parse sas time string.
