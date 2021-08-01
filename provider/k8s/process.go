@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"math/rand"
@@ -107,7 +108,7 @@ func (p *Provider) ProcessExec(app, pid, command string, rw io.ReadWriter, opts 
 }
 
 func (p *Provider) ProcessGet(app, pid string) (*structs.Process, error) {
-	pd, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Get(pid, am.GetOptions{})
+	pd, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Get(context.Background(), pid, am.GetOptions{})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -134,7 +135,7 @@ func (p *Provider) ProcessList(app string, opts structs.ProcessListOptions) (str
 		filters = append(filters, fmt.Sprintf("service=%s", *opts.Service))
 	}
 
-	pds, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).List(am.ListOptions{LabelSelector: strings.Join(filters, ",")})
+	pds, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).List(context.Background(), am.ListOptions{LabelSelector: strings.Join(filters, ",")})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -177,7 +178,7 @@ func (p *Provider) streamProcessLogs(w io.WriteCloser, app, pid string, opts str
 	service := ""
 
 	for {
-		pp, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Get(pid, am.GetOptions{})
+		pp, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Get(context.Background(), pid, am.GetOptions{})
 		if err != nil {
 			fmt.Printf("err: %+v\n", err)
 			break
@@ -193,7 +194,7 @@ func (p *Provider) streamProcessLogs(w io.WriteCloser, app, pid string, opts str
 	}
 
 	for {
-		r, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).GetLogs(pid, lopts).Stream()
+		r, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).GetLogs(pid, lopts).Stream(context.Background())
 		if err != nil {
 			fmt.Printf("err: %+v\n", err)
 			break
@@ -261,7 +262,7 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 		release = a.Release
 	}
 
-	pd, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Create(&ac.Pod{
+	pd, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Create(context.Background(), &ac.Pod{
 		ObjectMeta: am.ObjectMeta{
 			Annotations: map[string]string{
 				// "iam.amazonaws.com/role": ns.ObjectMeta.Annotations["convox.aws.role"],
@@ -278,7 +279,7 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 			},
 		},
 		Spec: *s,
-	})
+	}, am.CreateOptions{})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -292,7 +293,7 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 }
 
 func (p *Provider) ProcessStop(app, pid string) error {
-	if err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Delete(pid, nil); err != nil {
+	if err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Delete(context.Background(), pid, am.DeleteOptions{}); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -301,7 +302,7 @@ func (p *Provider) ProcessStop(app, pid string) error {
 
 func (p *Provider) ProcessWait(app, pid string) (int, error) {
 	for {
-		pd, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Get(pid, am.GetOptions{})
+		pd, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Get(context.Background(), pid, am.GetOptions{})
 		if err != nil {
 			return 0, errors.WithStack(err)
 		}

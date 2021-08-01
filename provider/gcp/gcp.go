@@ -97,7 +97,7 @@ func (p *Provider) initializeGcpServices() error {
 }
 
 func (p *Provider) initializeResourceQuotas() error {
-	_, err := p.Cluster.CoreV1().ResourceQuotas(p.Namespace).Create(&ac.ResourceQuota{
+	_, err := p.Cluster.CoreV1().ResourceQuotas(p.Namespace).Create(context.Background(), &ac.ResourceQuota{
 		ObjectMeta: am.ObjectMeta{
 			Namespace: p.Namespace,
 			Name:      "gcp-critical-pods",
@@ -119,7 +119,7 @@ func (p *Provider) initializeResourceQuotas() error {
 				},
 			},
 		},
-	})
+	}, am.CreateOptions{})
 	if err != nil && !errors.IsAlreadyExists(err) {
 		return err
 	}

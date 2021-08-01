@@ -1,6 +1,7 @@
 package atom_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/convox/convox/pkg/atom"
@@ -20,12 +21,12 @@ func TestCancel(t *testing.T) {
 		require.NoError(t, atomCreate(fac, "ns1", "atom3", "Other"))
 
 		require.NoError(t, ac.Cancel("ns1", "atom1"))
-		a, err := fac.AtomV1().Atoms("ns1").Get("atom1", am.GetOptions{})
+		a, err := fac.AtomV1().Atoms("ns1").Get(context.Background(), "atom1", am.GetOptions{})
 		require.NoError(t, err)
 		require.Equal(t, aa.AtomStatus("Cancelled"), a.Status)
 
 		require.NoError(t, ac.Cancel("ns1", "atom2"))
-		a, err = fac.AtomV1().Atoms("ns1").Get("atom2", am.GetOptions{})
+		a, err = fac.AtomV1().Atoms("ns1").Get(context.Background(), "atom2", am.GetOptions{})
 		require.NoError(t, err)
 		require.Equal(t, aa.AtomStatus("Failure"), a.Status)
 
@@ -35,12 +36,12 @@ func TestCancel(t *testing.T) {
 }
 
 func atomCreate(ac av.Interface, namespace, name, status string) error {
-	_, err := ac.AtomV1().Atoms(namespace).Create(&aa.Atom{
+	_, err := ac.AtomV1().Atoms(namespace).Create(context.Background(), &aa.Atom{
 		ObjectMeta: am.ObjectMeta{
 			Name: name,
 		},
 		Status: aa.AtomStatus(status),
-	})
+	}, am.CreateOptions{})
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,7 @@
 package k8s_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -44,7 +45,7 @@ func TestSystemResourceCreate(t *testing.T) {
 
 		fc := p.Cluster.(*fake.Clientset)
 
-		cm, err := fc.CoreV1().ConfigMaps(p.Namespace).Get("webhooks", am.GetOptions{})
+		cm, err := fc.CoreV1().ConfigMaps(p.Namespace).Get(context.Background(), "webhooks", am.GetOptions{})
 		require.NoError(t, err)
 		require.NotNil(t, cm)
 
@@ -64,7 +65,7 @@ func TestSystemResourceDelete(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, r)
 
-		cm, err := fc.CoreV1().ConfigMaps(p.Namespace).Get("webhooks", am.GetOptions{})
+		cm, err := fc.CoreV1().ConfigMaps(p.Namespace).Get(context.Background(), "webhooks", am.GetOptions{})
 		require.NoError(t, err)
 		require.NotNil(t, cm)
 		require.Equal(t, map[string]string{r.Name: "https://example.org"}, cm.Data)
@@ -81,7 +82,7 @@ func TestSystemResourceDelete(t *testing.T) {
 		require.EqualError(t, err, fmt.Sprintf("no such resource: %s", r.Name))
 		require.Nil(t, r3)
 
-		cm2, err := fc.CoreV1().ConfigMaps(p.Namespace).Get("webhooks", am.GetOptions{})
+		cm2, err := fc.CoreV1().ConfigMaps(p.Namespace).Get(context.Background(), "webhooks", am.GetOptions{})
 		require.NoError(t, err)
 		require.NotNil(t, cm2)
 		require.Equal(t, map[string]string{}, cm2.Data)
@@ -102,7 +103,7 @@ func TestSystemResourceGet(t *testing.T) {
 			},
 		}
 
-		_, err := fc.CoreV1().ConfigMaps(p.Namespace).Create(cm)
+		_, err := fc.CoreV1().ConfigMaps(p.Namespace).Create(context.Background(), cm, am.CreateOptions{})
 		require.NoError(t, err)
 
 		r, err := p.SystemResourceGet("wh1")
@@ -131,7 +132,7 @@ func TestSystemResourceList(t *testing.T) {
 			},
 		}
 
-		_, err := fc.CoreV1().ConfigMaps(p.Namespace).Create(cm)
+		_, err := fc.CoreV1().ConfigMaps(p.Namespace).Create(context.Background(), cm, am.CreateOptions{})
 		require.NoError(t, err)
 
 		rs, err := p.SystemResourceList()

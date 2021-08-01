@@ -3,6 +3,7 @@ package k8s
 import (
 	"archive/tar"
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
@@ -89,9 +90,9 @@ func (p *Provider) ingressSecrets(a *structs.App, ss manifest.Services) (map[str
 	}
 
 	for id := range ids {
-		if _, err := p.Cluster.CoreV1().Secrets(p.AppNamespace(a.Name)).Get(id, am.GetOptions{}); ae.IsNotFound(err) {
+		if _, err := p.Cluster.CoreV1().Secrets(p.AppNamespace(a.Name)).Get(context.Background(), id, am.GetOptions{}); ae.IsNotFound(err) {
 
-			kc, err := p.Cluster.CoreV1().Secrets(p.Namespace).Get(id, am.GetOptions{})
+			kc, err := p.Cluster.CoreV1().Secrets(p.Namespace).Get(context.Background(), id, am.GetOptions{})
 			if err != nil {
 				return nil, errors.WithStack(err)
 			}
@@ -100,7 +101,7 @@ func (p *Provider) ingressSecrets(a *structs.App, ss manifest.Services) (map[str
 			kc.ResourceVersion = ""
 			kc.UID = ""
 
-			if _, err := p.Cluster.CoreV1().Secrets(p.AppNamespace(a.Name)).Create(kc); err != nil {
+			if _, err := p.Cluster.CoreV1().Secrets(p.AppNamespace(a.Name)).Create(context.Background(), kc, am.CreateOptions{}); err != nil {
 				return nil, errors.WithStack(err)
 			}
 		}

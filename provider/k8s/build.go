@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -521,7 +522,7 @@ func (p *Provider) buildAuth(b *structs.Build) ([]byte, error) {
 }
 
 func (p *Provider) buildCreate(b *structs.Build) (*structs.Build, error) {
-	kb, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(b.App)).Create(p.buildMarshal(b))
+	kb, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(b.App)).Create(context.Background(), p.buildMarshal(b), am.CreateOptions{})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -530,7 +531,7 @@ func (p *Provider) buildCreate(b *structs.Build) (*structs.Build, error) {
 }
 
 func (p *Provider) buildGet(app, id string) (*structs.Build, error) {
-	kb, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(app)).Get(strings.ToLower(id), am.GetOptions{})
+	kb, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(app)).Get(context.Background(), strings.ToLower(id), am.GetOptions{})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -539,7 +540,7 @@ func (p *Provider) buildGet(app, id string) (*structs.Build, error) {
 }
 
 func (p *Provider) buildList(app string) (structs.Builds, error) {
-	kbs, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(app)).List(am.ListOptions{})
+	kbs, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(app)).List(context.Background(), am.ListOptions{})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -612,7 +613,7 @@ func (p *Provider) buildUnmarshal(kb *ca.Build) (*structs.Build, error) {
 }
 
 func (p *Provider) buildUpdate(b *structs.Build) (*structs.Build, error) {
-	kbo, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(b.App)).Get(strings.ToLower(b.Id), am.GetOptions{})
+	kbo, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(b.App)).Get(context.Background(), strings.ToLower(b.Id), am.GetOptions{})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -621,7 +622,7 @@ func (p *Provider) buildUpdate(b *structs.Build) (*structs.Build, error) {
 
 	kbn.ObjectMeta = kbo.ObjectMeta
 
-	kb, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(b.App)).Update(kbn)
+	kb, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(b.App)).Update(context.Background(), kbn, am.UpdateOptions{})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

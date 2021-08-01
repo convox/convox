@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -47,7 +48,7 @@ func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*struc
 		},
 	}
 
-	if _, err := p.Cluster.CoreV1().Namespaces().Create(ns); err != nil {
+	if _, err := p.Cluster.CoreV1().Namespaces().Create(context.Background(), ns, am.CreateOptions{}); err != nil {
 		return nil, errors.WithStack(err)
 	}
 
@@ -84,7 +85,7 @@ func (p *Provider) AppDelete(name string) error {
 		return errors.WithStack(fmt.Errorf("app is locked: %s", name))
 	}
 
-	if err := p.Cluster.CoreV1().Namespaces().Delete(p.AppNamespace(name), nil); err != nil {
+	if err := p.Cluster.CoreV1().Namespaces().Delete(context.Background(), p.AppNamespace(name), am.DeleteOptions{}); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -92,7 +93,7 @@ func (p *Provider) AppDelete(name string) error {
 }
 
 func (p *Provider) AppGet(name string) (*structs.App, error) {
-	ns, err := p.Cluster.CoreV1().Namespaces().Get(p.AppNamespace(name), am.GetOptions{})
+	ns, err := p.Cluster.CoreV1().Namespaces().Get(context.Background(), p.AppNamespace(name), am.GetOptions{})
 	if ae.IsNotFound(err) {
 		return nil, errors.WithStack(fmt.Errorf("app not found: %s", name))
 	}
@@ -113,7 +114,7 @@ func (p *Provider) AppIdles(name string) (bool, error) {
 }
 
 func (p *Provider) AppList() (structs.Apps, error) {
-	ns, err := p.Cluster.CoreV1().Namespaces().List(am.ListOptions{
+	ns, err := p.Cluster.CoreV1().Namespaces().List(context.Background(), am.ListOptions{
 		LabelSelector: fmt.Sprintf("system=convox,rack=%s,type=app", p.Name),
 	})
 	if err != nil {
@@ -152,7 +153,7 @@ func (p *Provider) AppNamespace(app string) string {
 }
 
 func (p *Provider) NamespaceApp(namespace string) (string, error) {
-	ns, err := p.Cluster.CoreV1().Namespaces().Get(namespace, am.GetOptions{})
+	ns, err := p.Cluster.CoreV1().Namespaces().Get(context.Background(), namespace, am.GetOptions{})
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
@@ -262,7 +263,7 @@ func (p *Provider) appNameValidate(name string) error {
 		return errors.WithStack(fmt.Errorf("app name is reserved"))
 	}
 
-	if _, err := p.Cluster.CoreV1().Namespaces().Get(p.AppNamespace(name), am.GetOptions{}); !ae.IsNotFound(err) {
+	if _, err := p.Cluster.CoreV1().Namespaces().Get(context.Background(), p.AppNamespace(name), am.GetOptions{}); !ae.IsNotFound(err) {
 		return errors.WithStack(fmt.Errorf("app already exists: %s", name))
 	}
 
@@ -302,7 +303,7 @@ func (p *Provider) appUpdate(a *structs.App) error {
 		return errors.WithStack(err)
 	}
 
-	if _, err := p.Cluster.CoreV1().Namespaces().Patch(p.AppNamespace(a.Name), types.JSONPatchType, patch); err != nil {
+	if _, err := p.Cluster.CoreV1().Namespaces().Patch(context.Background(), p.AppNamespace(a.Name), types.JSONPatchType, patch, am.PatchOptions{}); err != nil {
 		return errors.WithStack(err)
 	}
 
