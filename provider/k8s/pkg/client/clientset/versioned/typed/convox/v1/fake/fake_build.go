@@ -21,6 +21,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	convoxv1 "github.com/convox/convox/provider/k8s/pkg/apis/convox/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -41,7 +43,7 @@ var buildsResource = schema.GroupVersionResource{Group: "convox.com", Version: "
 var buildsKind = schema.GroupVersionKind{Group: "convox.com", Version: "v1", Kind: "Build"}
 
 // Get takes name of the build, and returns the corresponding build object, and an error if there is any.
-func (c *FakeBuilds) Get(name string, options v1.GetOptions) (result *convoxv1.Build, err error) {
+func (c *FakeBuilds) Get(ctx context.Context, name string, options v1.GetOptions) (result *convoxv1.Build, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(buildsResource, c.ns, name), &convoxv1.Build{})
 
@@ -52,7 +54,7 @@ func (c *FakeBuilds) Get(name string, options v1.GetOptions) (result *convoxv1.B
 }
 
 // List takes label and field selectors, and returns the list of Builds that match those selectors.
-func (c *FakeBuilds) List(opts v1.ListOptions) (result *convoxv1.BuildList, err error) {
+func (c *FakeBuilds) List(ctx context.Context, opts v1.ListOptions) (result *convoxv1.BuildList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(buildsResource, buildsKind, c.ns, opts), &convoxv1.BuildList{})
 
@@ -74,14 +76,14 @@ func (c *FakeBuilds) List(opts v1.ListOptions) (result *convoxv1.BuildList, err 
 }
 
 // Watch returns a watch.Interface that watches the requested builds.
-func (c *FakeBuilds) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeBuilds) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(buildsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a build and creates it.  Returns the server's representation of the build, and an error, if there is any.
-func (c *FakeBuilds) Create(build *convoxv1.Build) (result *convoxv1.Build, err error) {
+func (c *FakeBuilds) Create(ctx context.Context, build *convoxv1.Build, opts v1.CreateOptions) (result *convoxv1.Build, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(buildsResource, c.ns, build), &convoxv1.Build{})
 
@@ -92,7 +94,7 @@ func (c *FakeBuilds) Create(build *convoxv1.Build) (result *convoxv1.Build, err 
 }
 
 // Update takes the representation of a build and updates it. Returns the server's representation of the build, and an error, if there is any.
-func (c *FakeBuilds) Update(build *convoxv1.Build) (result *convoxv1.Build, err error) {
+func (c *FakeBuilds) Update(ctx context.Context, build *convoxv1.Build, opts v1.UpdateOptions) (result *convoxv1.Build, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(buildsResource, c.ns, build), &convoxv1.Build{})
 
@@ -103,7 +105,7 @@ func (c *FakeBuilds) Update(build *convoxv1.Build) (result *convoxv1.Build, err 
 }
 
 // Delete takes name of the build and deletes it. Returns an error if one occurs.
-func (c *FakeBuilds) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeBuilds) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(buildsResource, c.ns, name), &convoxv1.Build{})
 
@@ -111,15 +113,15 @@ func (c *FakeBuilds) Delete(name string, options *v1.DeleteOptions) error {
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeBuilds) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(buildsResource, c.ns, listOptions)
+func (c *FakeBuilds) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(buildsResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &convoxv1.BuildList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched build.
-func (c *FakeBuilds) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *convoxv1.Build, err error) {
+func (c *FakeBuilds) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *convoxv1.Build, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(buildsResource, c.ns, name, pt, data, subresources...), &convoxv1.Build{})
 

@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"time"
@@ -130,7 +131,7 @@ func (c *PodController) Update(prev, cur interface{}) error {
 func (c *PodController) cleanupPod(p *ac.Pod) error {
 	time.Sleep(5 * time.Second)
 
-	if err := c.Client().CoreV1().Pods(p.ObjectMeta.Namespace).Delete(p.ObjectMeta.Name, nil); err != nil {
+	if err := c.Client().CoreV1().Pods(p.ObjectMeta.Namespace).Delete(context.Background(), p.ObjectMeta.Name, am.DeleteOptions{}); err != nil {
 		return errors.WithStack(err)
 	}
 

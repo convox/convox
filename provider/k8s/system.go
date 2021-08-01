@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"sort"
@@ -61,7 +62,7 @@ func (p *Provider) SystemProcesses(opts structs.SystemProcessesOptions) (structs
 		ns = ""
 	}
 
-	pds, err := p.Cluster.CoreV1().Pods(ns).List(am.ListOptions{
+	pds, err := p.Cluster.CoreV1().Pods(ns).List(context.Background(), am.ListOptions{
 		LabelSelector: fmt.Sprintf("system=convox,rack=%s,service", p.Name),
 	})
 	if err != nil {

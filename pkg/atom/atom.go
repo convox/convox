@@ -2,6 +2,7 @@ package atom
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -112,13 +113,13 @@ func Initialize() error {
 }
 
 func (c *Client) Apply(ns, name, release string, template []byte, timeout int32) error {
-	if _, err := c.k8s.CoreV1().Namespaces().Get(ns, am.GetOptions{}); ae.IsNotFound(err) {
+	if _, err := c.k8s.CoreV1().Namespaces().Get(context.Background(), ns, am.GetOptions{}); ae.IsNotFound(err) {
 		if err := c.createNamespace(ns); err != nil {
 			return errors.WithStack(err)
 		}
 	}
 
-	v, err := c.Atom.AtomV1().AtomVersions(ns).Create(&aa.AtomVersion{
+	v, err := c.Atom.AtomV1().AtomVersions(ns).Create(context.Background(), &aa.AtomVersion{
 		ObjectMeta: am.ObjectMeta{
 			Name: fmt.Sprintf("%s-%d", name, time.Now().UTC().UnixNano()),
 		},
@@ -126,19 +127,19 @@ func (c *Client) Apply(ns, name, release string, template []byte, timeout int32)
 			Release:  release,
 			Template: template,
 		},
-	})
+	}, am.CreateOptions{})
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	a, err := c.Atom.AtomV1().Atoms(ns).Get(name, am.GetOptions{})
+	a, err := c.Atom.AtomV1().Atoms(ns).Get(context.Background(), name, am.GetOptions{})
 	switch {
 	case ae.IsNotFound(err):
-		a, err = c.Atom.AtomV1().Atoms(ns).Create(&aa.Atom{
+		a, err = c.Atom.AtomV1().Atoms(ns).Create(context.Background(), &aa.Atom{
 			ObjectMeta: am.ObjectMeta{
 				Name: name,
 			},
-		})
+		}, am.CreateOptions{})
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -153,7 +154,7 @@ func (c *Client) Apply(ns, name, release string, template []byte, timeout int32)
 	a.Started = am.Now()
 	a.Status = "Pending"
 
-	if _, err := c.Atom.AtomV1().Atoms(ns).Update(a); err != nil {
+	if _, err := c.Atom.AtomV1().Atoms(ns).Update(context.Background(), a, am.UpdateOptions{}); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -161,7 +162,7 @@ func (c *Client) Apply(ns, name, release string, template []byte, timeout int32)
 }
 
 func (c *Client) Cancel(ns, name string) error {
-	a, err := c.Atom.AtomV1().Atoms(ns).Get(name, am.GetOptions{})
+	a, err := c.Atom.AtomV1().Atoms(ns).Get(context.Background(), name, am.GetOptions{})
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -175,7 +176,7 @@ func (c *Client) Cancel(ns, name string) error {
 		return errors.WithStack(fmt.Errorf("not currently updating"))
 	}
 
-	if _, err := c.Atom.AtomV1().Atoms(ns).Update(a); err != nil {
+	if _, err := c.Atom.AtomV1().Atoms(ns).Update(context.Background(), a, am.UpdateOptions{}); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -183,7 +184,7 @@ func (c *Client) Cancel(ns, name string) error {
 }
 
 func (c *Client) Status(ns, name string) (string, string, error) {
-	a, err := c.Atom.AtomV1().Atoms(ns).Get(name, am.GetOptions{})
+	a, err := c.Atom.AtomV1().Atoms(ns).Get(context.Background(), name, am.GetOptions{})
 	if ae.IsNotFound(err) {
 		return "", "", nil
 	}
@@ -194,7 +195,7 @@ func (c *Client) Status(ns, name string) (string, string, error) {
 	release := ""
 
 	if a.Spec.CurrentVersion != "" {
-		v, err := c.Atom.AtomV1().AtomVersions(ns).Get(a.Spec.CurrentVersion, am.GetOptions{})
+		v, err := c.Atom.AtomV1().AtomVersions(ns).Get(context.Background(), a.Spec.CurrentVersion, am.GetOptions{})
 		if err != nil {
 			return "", "", errors.WithStack(err)
 		}
@@ -219,7 +220,7 @@ func (c *Client) apply(a *aa.Atom) error {
 		return err
 	}
 
-	av, err := c.Atom.AtomV1().AtomVersions(ua.Namespace).Get(ua.Spec.CurrentVersion, am.GetOptions{})
+	av, err := c.Atom.AtomV1().AtomVersions(ua.Namespace).Get(context.Background(), ua.Spec.CurrentVersion, am.GetOptions{})
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -247,7 +248,7 @@ func (c *Client) check(ns, version string) (bool, error) {
 	cfg.APIPath = "/apis"
 	cfg.NegotiatedSerializer = serializer.WithoutConversionCodecFactory{CodecFactory: scheme.Codecs}
 
-	v, err := c.Atom.AtomV1().AtomVersions(ns).Get(version, am.GetOptions{})
+	v, err := c.Atom.AtomV1().AtomVersions(ns).Get(context.Background(), version, am.GetOptions{})
 	if err != nil {
 		return false, errors.WithStack(err)
 	}
@@ -270,7 +271,7 @@ func (c *Client) check(ns, version string) (bool, error) {
 			return false, errors.WithStack(err)
 		}
 
-		data, err := rc.Get().Namespace(c.Namespace).Name(c.Name).VersionedParams(&am.GetOptions{}, scheme.ParameterCodec).Resource(fmt.Sprintf("%ss", strings.ToLower(c.Kind))).Do().Raw()
+		data, err := rc.Get().Namespace(c.Namespace).Name(c.Name).VersionedParams(&am.GetOptions{}, scheme.ParameterCodec).Resource(fmt.Sprintf("%ss", strings.ToLower(c.Kind))).Do(context.Background()).Raw()
 		if err != nil {
 			return false, errors.WithStack(err)
 		}
@@ -311,17 +312,17 @@ func (c *Client) check(ns, version string) (bool, error) {
 }
 
 func (c *Client) createNamespace(ns string) error {
-	_, err := c.k8s.CoreV1().Namespaces().Create(&ac.Namespace{
+	_, err := c.k8s.CoreV1().Namespaces().Create(context.Background(), &ac.Namespace{
 		ObjectMeta: am.ObjectMeta{
 			Name: ns,
 		},
-	})
+	}, am.CreateOptions{})
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
 	for {
-		if ns, err := c.k8s.CoreV1().Namespaces().Get(ns, am.GetOptions{}); err == nil && ns != nil {
+		if ns, err := c.k8s.CoreV1().Namespaces().Get(context.Background(), ns, am.GetOptions{}); err == nil && ns != nil {
 			break
 		}
 
@@ -350,14 +351,14 @@ func (c *Client) rollback(a *aa.Atom) error {
 // use a callback for updates so we can fetch a fresh atom and update
 // immediately
 func (c *Client) update(a *aa.Atom, fn func(ua *aa.Atom)) (*aa.Atom, error) {
-	ua, err := c.Atom.AtomV1().Atoms(a.Namespace).Get(a.Name, am.GetOptions{})
+	ua, err := c.Atom.AtomV1().Atoms(a.Namespace).Get(context.Background(), a.Name, am.GetOptions{})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	fn(ua)
 
-	fa, err := c.Atom.AtomV1().Atoms(a.Namespace).Update(ua)
+	fa, err := c.Atom.AtomV1().Atoms(a.Namespace).Update(context.Background(), ua, am.UpdateOptions{})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

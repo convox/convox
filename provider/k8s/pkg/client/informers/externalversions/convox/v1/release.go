@@ -21,6 +21,7 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	time "time"
 
 	convoxv1 "github.com/convox/convox/provider/k8s/pkg/apis/convox/v1"
@@ -63,13 +64,13 @@ func NewFilteredReleaseInformer(client versioned.Interface, namespace string, re
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ConvoxV1().Releases(namespace).List(options)
+				return client.ConvoxV1().Releases(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ConvoxV1().Releases(namespace).Watch(options)
+				return client.ConvoxV1().Releases(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&convoxv1.Release{},

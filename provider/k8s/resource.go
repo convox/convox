@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"context"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -102,7 +103,7 @@ func (p *Provider) ResourceGet(app, name string) (*structs.Resource, error) {
 		return r, nil
 	}
 
-	d, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).Get(fmt.Sprintf("resource-%s", nameFilter(name)), am.GetOptions{})
+	d, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).Get(context.Background(), fmt.Sprintf("resource-%s", nameFilter(name)), am.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +140,7 @@ func (p *Provider) ResourceList(app string) (structs.Resources, error) {
 		LabelSelector: fmt.Sprintf("app=%s,type=resource", app),
 	}
 
-	ds, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).List(lopts)
+	ds, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).List(context.Background(), lopts)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -283,7 +284,7 @@ func (p *Provider) resourceOverlay(app, name string) (bool, error) {
 }
 
 func (p *Provider) resourceUrl(app, name string) (string, error) {
-	cm, err := p.Cluster.CoreV1().ConfigMaps(p.AppNamespace(app)).Get(fmt.Sprintf("resource-%s", nameFilter(name)), am.GetOptions{})
+	cm, err := p.Cluster.CoreV1().ConfigMaps(p.AppNamespace(app)).Get(context.Background(), fmt.Sprintf("resource-%s", nameFilter(name)), am.GetOptions{})
 	if err != nil {
 		return "", errors.WithStack(err)
 	}

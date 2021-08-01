@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"context"
 	"strings"
 
 	"github.com/convox/convox/pkg/structs"
@@ -10,7 +11,7 @@ import (
 )
 
 func (p *Provider) CapacityGet() (*structs.Capacity, error) {
-	ns, err := p.Cluster.CoreV1().Nodes().List(am.ListOptions{})
+	ns, err := p.Cluster.CoreV1().Nodes().List(context.Background(), am.ListOptions{})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -27,7 +28,7 @@ func (p *Provider) CapacityGet() (*structs.Capacity, error) {
 		"type in (process,service)",
 	}
 
-	ps, err := p.Cluster.CoreV1().Pods("").List(am.ListOptions{LabelSelector: strings.Join(filters, ",")})
+	ps, err := p.Cluster.CoreV1().Pods("").List(context.Background(), am.ListOptions{LabelSelector: strings.Join(filters, ",")})
 	if err != nil {
 		return nil, err
 	}

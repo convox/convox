@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/k8s"
+	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -33,7 +35,7 @@ func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*struc
 		return nil, err
 	}
 
-	if _, err := p.Cluster.CoreV1().Namespaces().Patch(p.AppNamespace(name), types.JSONPatchType, patch); err != nil {
+	if _, err := p.Cluster.CoreV1().Namespaces().Patch(context.Background(), p.AppNamespace(name), types.JSONPatchType, patch, am.PatchOptions{}); err != nil {
 		return nil, err
 	}
 

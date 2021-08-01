@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
@@ -108,7 +109,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 	items = append(items, data)
 
 	// ca
-	if ca, err := p.Cluster.CoreV1().Secrets("convox-system").Get("ca", am.GetOptions{}); err == nil {
+	if ca, err := p.Cluster.CoreV1().Secrets("convox-system").Get(context.Background(), "ca", am.GetOptions{}); err == nil {
 		data, err := p.releaseTemplateCA(a, ca)
 		if err != nil {
 			return errors.WithStack(err)
@@ -204,7 +205,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 }
 
 func (p *Provider) releaseCreate(r *structs.Release) (*structs.Release, error) {
-	kr, err := p.Convox.ConvoxV1().Releases(p.AppNamespace(r.App)).Create(p.releaseMarshal(r))
+	kr, err := p.Convox.ConvoxV1().Releases(p.AppNamespace(r.App)).Create(context.Background(), p.releaseMarshal(r), am.CreateOptions{})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -213,7 +214,7 @@ func (p *Provider) releaseCreate(r *structs.Release) (*structs.Release, error) {
 }
 
 func (p *Provider) releaseGet(app, id string) (*structs.Release, error) {
-	kr, err := p.Convox.ConvoxV1().Releases(p.AppNamespace(app)).Get(strings.ToLower(id), am.GetOptions{})
+	kr, err := p.Convox.ConvoxV1().Releases(p.AppNamespace(app)).Get(context.Background(), strings.ToLower(id), am.GetOptions{})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -238,7 +239,7 @@ func (p *Provider) releaseFork(app string) (*structs.Release, error) {
 }
 
 func (p *Provider) releaseList(app string) (structs.Releases, error) {
-	krs, err := p.Convox.ConvoxV1().Releases(p.AppNamespace(app)).List(am.ListOptions{})
+	krs, err := p.Convox.ConvoxV1().Releases(p.AppNamespace(app)).List(context.Background(), am.ListOptions{})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -279,7 +280,7 @@ func (p *Provider) releaseMarshal(r *structs.Release) *ca.Release {
 }
 
 func (p *Provider) releaseTemplateApp(a *structs.App, opts structs.ReleasePromoteOptions) ([]byte, error) {
-	owner, err := p.Cluster.CoreV1().Namespaces().Get(p.Namespace, am.GetOptions{})
+	owner, err := p.Cluster.CoreV1().Namespaces().Get(context.Background(), p.Namespace, am.GetOptions{})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -539,7 +540,7 @@ func (p *Provider) releaseUnmarshal(kr *ca.Release) (*structs.Release, error) {
 	}
 
 	if len(r.Env) == 0 {
-		if s, err := p.Cluster.CoreV1().Secrets(p.AppNamespace(r.App)).Get(fmt.Sprintf("release-%s", kr.ObjectMeta.Name), am.GetOptions{}); err == nil {
+		if s, err := p.Cluster.CoreV1().Secrets(p.AppNamespace(r.App)).Get(context.Background(), fmt.Sprintf("release-%s", kr.ObjectMeta.Name), am.GetOptions{}); err == nil {
 			e := structs.Environment{}
 
 			for k, v := range s.Data {

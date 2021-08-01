@@ -21,6 +21,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	atomv1 "github.com/convox/convox/pkg/atom/pkg/apis/atom/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -41,7 +43,7 @@ var atomsResource = schema.GroupVersionResource{Group: "atom.convox.com", Versio
 var atomsKind = schema.GroupVersionKind{Group: "atom.convox.com", Version: "v1", Kind: "Atom"}
 
 // Get takes name of the atom, and returns the corresponding atom object, and an error if there is any.
-func (c *FakeAtoms) Get(name string, options v1.GetOptions) (result *atomv1.Atom, err error) {
+func (c *FakeAtoms) Get(ctx context.Context, name string, options v1.GetOptions) (result *atomv1.Atom, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(atomsResource, c.ns, name), &atomv1.Atom{})
 
@@ -52,7 +54,7 @@ func (c *FakeAtoms) Get(name string, options v1.GetOptions) (result *atomv1.Atom
 }
 
 // List takes label and field selectors, and returns the list of Atoms that match those selectors.
-func (c *FakeAtoms) List(opts v1.ListOptions) (result *atomv1.AtomList, err error) {
+func (c *FakeAtoms) List(ctx context.Context, opts v1.ListOptions) (result *atomv1.AtomList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(atomsResource, atomsKind, c.ns, opts), &atomv1.AtomList{})
 
@@ -74,14 +76,14 @@ func (c *FakeAtoms) List(opts v1.ListOptions) (result *atomv1.AtomList, err erro
 }
 
 // Watch returns a watch.Interface that watches the requested atoms.
-func (c *FakeAtoms) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeAtoms) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(atomsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a atom and creates it.  Returns the server's representation of the atom, and an error, if there is any.
-func (c *FakeAtoms) Create(atom *atomv1.Atom) (result *atomv1.Atom, err error) {
+func (c *FakeAtoms) Create(ctx context.Context, atom *atomv1.Atom, opts v1.CreateOptions) (result *atomv1.Atom, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(atomsResource, c.ns, atom), &atomv1.Atom{})
 
@@ -92,7 +94,7 @@ func (c *FakeAtoms) Create(atom *atomv1.Atom) (result *atomv1.Atom, err error) {
 }
 
 // Update takes the representation of a atom and updates it. Returns the server's representation of the atom, and an error, if there is any.
-func (c *FakeAtoms) Update(atom *atomv1.Atom) (result *atomv1.Atom, err error) {
+func (c *FakeAtoms) Update(ctx context.Context, atom *atomv1.Atom, opts v1.UpdateOptions) (result *atomv1.Atom, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(atomsResource, c.ns, atom), &atomv1.Atom{})
 
@@ -104,7 +106,7 @@ func (c *FakeAtoms) Update(atom *atomv1.Atom) (result *atomv1.Atom, err error) {
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeAtoms) UpdateStatus(atom *atomv1.Atom) (*atomv1.Atom, error) {
+func (c *FakeAtoms) UpdateStatus(ctx context.Context, atom *atomv1.Atom, opts v1.UpdateOptions) (*atomv1.Atom, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceAction(atomsResource, "status", c.ns, atom), &atomv1.Atom{})
 
@@ -115,7 +117,7 @@ func (c *FakeAtoms) UpdateStatus(atom *atomv1.Atom) (*atomv1.Atom, error) {
 }
 
 // Delete takes name of the atom and deletes it. Returns an error if one occurs.
-func (c *FakeAtoms) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeAtoms) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(atomsResource, c.ns, name), &atomv1.Atom{})
 
@@ -123,15 +125,15 @@ func (c *FakeAtoms) Delete(name string, options *v1.DeleteOptions) error {
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeAtoms) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(atomsResource, c.ns, listOptions)
+func (c *FakeAtoms) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(atomsResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &atomv1.AtomList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched atom.
-func (c *FakeAtoms) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *atomv1.Atom, err error) {
+func (c *FakeAtoms) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *atomv1.Atom, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(atomsResource, c.ns, name, pt, data, subresources...), &atomv1.Atom{})
 

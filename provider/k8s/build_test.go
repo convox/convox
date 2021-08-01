@@ -1,6 +1,7 @@
 package k8s_test
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 
@@ -24,7 +25,7 @@ func buildCreate(kc cv.Interface, ns, id, fixture string) error {
 		Spec: *spec,
 	}
 
-	if _, err := kc.ConvoxV1().Builds(ns).Create(b); err != nil {
+	if _, err := kc.ConvoxV1().Builds(ns).Create(context.Background(), b, am.CreateOptions{}); err != nil {
 		return errors.WithStack(err)
 	}
 

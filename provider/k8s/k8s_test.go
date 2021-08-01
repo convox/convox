@@ -2,6 +2,7 @@ package k8s_test
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -63,7 +64,7 @@ func testProvider(t *testing.T, fn func(*k8s.Provider)) {
 	c := fake.NewSimpleClientset()
 	cc := cvfake.NewSimpleClientset()
 
-	_, err := c.CoreV1().Namespaces().Create(&ac.Namespace{
+	_, err := c.CoreV1().Namespaces().Create(context.Background(), &ac.Namespace{
 		ObjectMeta: am.ObjectMeta{
 			Name: "ns1",
 			Labels: map[string]string{
@@ -74,7 +75,7 @@ func testProvider(t *testing.T, fn func(*k8s.Provider)) {
 			},
 			UID: "uid1",
 		},
-	})
+	}, am.CreateOptions{})
 	require.NoError(t, err)
 
 	p := &k8s.Provider{
@@ -91,7 +92,7 @@ func testProvider(t *testing.T, fn func(*k8s.Provider)) {
 	err = p.Initialize(structs.ProviderOptions{})
 	require.NoError(t, err)
 
-	_, err = c.CoreV1().Namespaces().Create(&ac.Namespace{ObjectMeta: am.ObjectMeta{Name: "test"}})
+	_, err = c.CoreV1().Namespaces().Create(context.Background(), &ac.Namespace{ObjectMeta: am.ObjectMeta{Name: "test"}}, am.CreateOptions{})
 	require.NoError(t, err)
 
 	os.Setenv("NAMESPACE", "test")

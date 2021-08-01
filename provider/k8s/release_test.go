@@ -1,6 +1,7 @@
 package k8s_test
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"sort"
@@ -119,7 +120,7 @@ func releaseCreate(kc cv.Interface, ns, id, fixture string) error {
 		Spec: *spec,
 	}
 
-	if _, err := kc.ConvoxV1().Releases(ns).Create(r); err != nil {
+	if _, err := kc.ConvoxV1().Releases(ns).Create(context.Background(), r, am.CreateOptions{}); err != nil {
 		return errors.WithStack(err)
 	}
 
