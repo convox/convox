@@ -13,6 +13,182 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/query"
 )
 
+const opActivateType = "ActivateType"
+
+// ActivateTypeRequest generates a "aws/request.Request" representing the
+// client's request for the ActivateType operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See ActivateType for more information on using the ActivateType
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the ActivateTypeRequest method.
+//    req, resp := client.ActivateTypeRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/ActivateType
+func (c *CloudFormation) ActivateTypeRequest(input *ActivateTypeInput) (req *request.Request, output *ActivateTypeOutput) {
+	op := &request.Operation{
+		Name:       opActivateType,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &ActivateTypeInput{}
+	}
+
+	output = &ActivateTypeOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// ActivateType API operation for AWS CloudFormation.
+//
+// Activates a public third-party extension, making it available for use in
+// stack templates. For more information, see Using public extensions (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/registry-public.html)
+// in the CloudFormation User Guide.
+//
+// Once you have activated a public third-party extension in your account and
+// region, use SetTypeConfiguration (AWSCloudFormation/latest/APIReference/API_SetTypeConfiguration.html)
+// to specify configuration properties for the extension. For more information,
+// see Configuring extensions at the account level (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/registry-register.html#registry-set-configuration)
+// in the CloudFormation User Guide.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS CloudFormation's
+// API operation ActivateType for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeCFNRegistryException "CFNRegistryException"
+//   An error occurred during a CloudFormation registry operation.
+//
+//   * ErrCodeTypeNotFoundException "TypeNotFoundException"
+//   The specified extension does not exist in the CloudFormation registry.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/ActivateType
+func (c *CloudFormation) ActivateType(input *ActivateTypeInput) (*ActivateTypeOutput, error) {
+	req, out := c.ActivateTypeRequest(input)
+	return out, req.Send()
+}
+
+// ActivateTypeWithContext is the same as ActivateType with the addition of
+// the ability to pass a context and additional request options.
+//
+// See ActivateType for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudFormation) ActivateTypeWithContext(ctx aws.Context, input *ActivateTypeInput, opts ...request.Option) (*ActivateTypeOutput, error) {
+	req, out := c.ActivateTypeRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opBatchDescribeTypeConfigurations = "BatchDescribeTypeConfigurations"
+
+// BatchDescribeTypeConfigurationsRequest generates a "aws/request.Request" representing the
+// client's request for the BatchDescribeTypeConfigurations operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See BatchDescribeTypeConfigurations for more information on using the BatchDescribeTypeConfigurations
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the BatchDescribeTypeConfigurationsRequest method.
+//    req, resp := client.BatchDescribeTypeConfigurationsRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/BatchDescribeTypeConfigurations
+func (c *CloudFormation) BatchDescribeTypeConfigurationsRequest(input *BatchDescribeTypeConfigurationsInput) (req *request.Request, output *BatchDescribeTypeConfigurationsOutput) {
+	op := &request.Operation{
+		Name:       opBatchDescribeTypeConfigurations,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &BatchDescribeTypeConfigurationsInput{}
+	}
+
+	output = &BatchDescribeTypeConfigurationsOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// BatchDescribeTypeConfigurations API operation for AWS CloudFormation.
+//
+// Returns configuration data for the specified CloudFormation extensions, from
+// the CloudFormation registry for the account and region.
+//
+// For more information, see Configuring extensions at the account level (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/registry-register.html#registry-set-configuration)
+// in the CloudFormation User Guide.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS CloudFormation's
+// API operation BatchDescribeTypeConfigurations for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeTypeConfigurationNotFoundException "TypeConfigurationNotFoundException"
+//   The specified extension configuration cannot be found.
+//
+//   * ErrCodeCFNRegistryException "CFNRegistryException"
+//   An error occurred during a CloudFormation registry operation.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/BatchDescribeTypeConfigurations
+func (c *CloudFormation) BatchDescribeTypeConfigurations(input *BatchDescribeTypeConfigurationsInput) (*BatchDescribeTypeConfigurationsOutput, error) {
+	req, out := c.BatchDescribeTypeConfigurationsRequest(input)
+	return out, req.Send()
+}
+
+// BatchDescribeTypeConfigurationsWithContext is the same as BatchDescribeTypeConfigurations with the addition of
+// the ability to pass a context and additional request options.
+//
+// See BatchDescribeTypeConfigurations for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudFormation) BatchDescribeTypeConfigurationsWithContext(ctx aws.Context, input *BatchDescribeTypeConfigurationsInput, opts ...request.Option) (*BatchDescribeTypeConfigurationsOutput, error) {
+	req, out := c.BatchDescribeTypeConfigurationsRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
 const opCancelUpdateStack = "CancelUpdateStack"
 
 // CancelUpdateStackRequest generates a "aws/request.Request" representing the
@@ -148,12 +324,12 @@ func (c *CloudFormation) ContinueUpdateRollbackRequest(input *ContinueUpdateRoll
 // stack to a working state (the UPDATE_ROLLBACK_COMPLETE state), and then try
 // to update the stack again.
 //
-// A stack goes into the UPDATE_ROLLBACK_FAILED state when AWS CloudFormation
-// cannot roll back all changes after a failed stack update. For example, you
-// might have a stack that is rolling back to an old database instance that
-// was deleted outside of AWS CloudFormation. Because AWS CloudFormation doesn't
-// know the database was deleted, it assumes that the database instance still
-// exists and attempts to roll back to it, causing the update rollback to fail.
+// A stack goes into the UPDATE_ROLLBACK_FAILED state when CloudFormation cannot
+// roll back all changes after a failed stack update. For example, you might
+// have a stack that is rolling back to an old database instance that was deleted
+// outside of CloudFormation. Because CloudFormation doesn't know the database
+// was deleted, it assumes that the database instance still exists and attempts
+// to roll back to it, causing the update rollback to fail.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -236,23 +412,27 @@ func (c *CloudFormation) CreateChangeSetRequest(input *CreateChangeSetInput) (re
 // review the changes before executing them. You can create a change set for
 // a stack that doesn't exist or an existing stack. If you create a change set
 // for a stack that doesn't exist, the change set shows all of the resources
-// that AWS CloudFormation will create. If you create a change set for an existing
-// stack, AWS CloudFormation compares the stack's information with the information
+// that CloudFormation will create. If you create a change set for an existing
+// stack, CloudFormation compares the stack's information with the information
 // that you submit in the change set and lists the differences. Use change sets
-// to understand which resources AWS CloudFormation will create or change, and
-// how it will change resources in an existing stack, before you create or update
+// to understand which resources CloudFormation will create or change, and how
+// it will change resources in an existing stack, before you create or update
 // a stack.
 //
 // To create a change set for a stack that doesn't exist, for the ChangeSetType
 // parameter, specify CREATE. To create a change set for an existing stack,
-// specify UPDATE for the ChangeSetType parameter. After the CreateChangeSet
-// call successfully completes, AWS CloudFormation starts creating the change
-// set. To check the status of the change set or to review it, use the DescribeChangeSet
-// action.
+// specify UPDATE for the ChangeSetType parameter. To create a change set for
+// an import operation, specify IMPORT for the ChangeSetType parameter. After
+// the CreateChangeSet call successfully completes, CloudFormation starts creating
+// the change set. To check the status of the change set or to review it, use
+// the DescribeChangeSet action.
 //
 // When you are satisfied with the changes the change set will make, execute
-// the change set by using the ExecuteChangeSet action. AWS CloudFormation doesn't
+// the change set by using the ExecuteChangeSet action. CloudFormation doesn't
 // make changes until you execute the change set.
+//
+// To create a change set for the entire stack hierachy, set IncludeNestedStacks
+// to True.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -273,7 +453,7 @@ func (c *CloudFormation) CreateChangeSetRequest(input *CreateChangeSetInput) (re
 //   The quota for the resource has already been reached.
 //
 //   For information on resource and stack limitations, see Limits (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cloudformation-limits.html)
-//   in the AWS CloudFormation User Guide.
+//   in the CloudFormation User Guide.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/CreateChangeSet
 func (c *CloudFormation) CreateChangeSet(input *CreateChangeSetInput) (*CreateChangeSetOutput, error) {
@@ -357,7 +537,7 @@ func (c *CloudFormation) CreateStackRequest(input *CreateStackInput) (req *reque
 //   The quota for the resource has already been reached.
 //
 //   For information on resource and stack limitations, see Limits (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cloudformation-limits.html)
-//   in the AWS CloudFormation User Guide.
+//   in the CloudFormation User Guide.
 //
 //   * ErrCodeAlreadyExistsException "AlreadyExistsException"
 //   The resource with the name requested already exists.
@@ -436,9 +616,9 @@ func (c *CloudFormation) CreateStackInstancesRequest(input *CreateStackInstances
 // CreateStackInstances API operation for AWS CloudFormation.
 //
 // Creates stack instances for the specified accounts, within the specified
-// regions. A stack instance refers to a stack in a specific account and region.
-// Accounts and Regions are required parameters—you must specify at least
-// one account and one region.
+// Regions. A stack instance refers to a stack in a specific account and Region.
+// You must specify at least one value for either Accounts or DeploymentTargets,
+// and you must specify at least one value for Regions.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -469,7 +649,7 @@ func (c *CloudFormation) CreateStackInstancesRequest(input *CreateStackInstances
 //   The quota for the resource has already been reached.
 //
 //   For information on resource and stack limitations, see Limits (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cloudformation-limits.html)
-//   in the AWS CloudFormation User Guide.
+//   in the CloudFormation User Guide.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/CreateStackInstances
 func (c *CloudFormation) CreateStackInstances(input *CreateStackInstancesInput) (*CreateStackInstancesOutput, error) {
@@ -557,7 +737,7 @@ func (c *CloudFormation) CreateStackSetRequest(input *CreateStackSetInput) (req 
 //   The quota for the resource has already been reached.
 //
 //   For information on resource and stack limitations, see Limits (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cloudformation-limits.html)
-//   in the AWS CloudFormation User Guide.
+//   in the CloudFormation User Guide.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/CreateStackSet
 func (c *CloudFormation) CreateStackSet(input *CreateStackSetInput) (*CreateStackSetOutput, error) {
@@ -576,6 +756,96 @@ func (c *CloudFormation) CreateStackSet(input *CreateStackSetInput) (*CreateStac
 // for more information on using Contexts.
 func (c *CloudFormation) CreateStackSetWithContext(ctx aws.Context, input *CreateStackSetInput, opts ...request.Option) (*CreateStackSetOutput, error) {
 	req, out := c.CreateStackSetRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opDeactivateType = "DeactivateType"
+
+// DeactivateTypeRequest generates a "aws/request.Request" representing the
+// client's request for the DeactivateType operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See DeactivateType for more information on using the DeactivateType
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the DeactivateTypeRequest method.
+//    req, resp := client.DeactivateTypeRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/DeactivateType
+func (c *CloudFormation) DeactivateTypeRequest(input *DeactivateTypeInput) (req *request.Request, output *DeactivateTypeOutput) {
+	op := &request.Operation{
+		Name:       opDeactivateType,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &DeactivateTypeInput{}
+	}
+
+	output = &DeactivateTypeOutput{}
+	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(query.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
+	return
+}
+
+// DeactivateType API operation for AWS CloudFormation.
+//
+// Deactivates a public extension that was previously activated in this account
+// and region.
+//
+// Once deactivated, an extension cannot be used in any CloudFormation operation.
+// This includes stack update operations where the stack template includes the
+// extension, even if no updates are being made to the extension. In addition,
+// deactivated extensions are not automatically updated if a new version of
+// the extension is released.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS CloudFormation's
+// API operation DeactivateType for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeCFNRegistryException "CFNRegistryException"
+//   An error occurred during a CloudFormation registry operation.
+//
+//   * ErrCodeTypeNotFoundException "TypeNotFoundException"
+//   The specified extension does not exist in the CloudFormation registry.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/DeactivateType
+func (c *CloudFormation) DeactivateType(input *DeactivateTypeInput) (*DeactivateTypeOutput, error) {
+	req, out := c.DeactivateTypeRequest(input)
+	return out, req.Send()
+}
+
+// DeactivateTypeWithContext is the same as DeactivateType with the addition of
+// the ability to pass a context and additional request options.
+//
+// See DeactivateType for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudFormation) DeactivateTypeWithContext(ctx aws.Context, input *DeactivateTypeInput, opts ...request.Option) (*DeactivateTypeOutput, error) {
+	req, out := c.DeactivateTypeRequest(input)
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
@@ -629,8 +899,13 @@ func (c *CloudFormation) DeleteChangeSetRequest(input *DeleteChangeSetInput) (re
 // Deletes the specified change set. Deleting change sets ensures that no one
 // executes the wrong change set.
 //
-// If the call successfully completes, AWS CloudFormation successfully deleted
-// the change set.
+// If the call successfully completes, CloudFormation successfully deleted the
+// change set.
+//
+// If IncludeNestedStacks specifies True during the creation of the nested change
+// set, then DeleteChangeSet will delete all change sets that belong to the
+// stacks hierarchy and will also delete all change sets for nested stacks with
+// the status of REVIEW_IN_PROGRESS.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -793,7 +1068,7 @@ func (c *CloudFormation) DeleteStackInstancesRequest(input *DeleteStackInstances
 
 // DeleteStackInstances API operation for AWS CloudFormation.
 //
-// Deletes stack instances for the specified accounts, in the specified regions.
+// Deletes stack instances for the specified accounts, in the specified Regions.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -930,6 +1205,104 @@ func (c *CloudFormation) DeleteStackSetWithContext(ctx aws.Context, input *Delet
 	return out, req.Send()
 }
 
+const opDeregisterType = "DeregisterType"
+
+// DeregisterTypeRequest generates a "aws/request.Request" representing the
+// client's request for the DeregisterType operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See DeregisterType for more information on using the DeregisterType
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the DeregisterTypeRequest method.
+//    req, resp := client.DeregisterTypeRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/DeregisterType
+func (c *CloudFormation) DeregisterTypeRequest(input *DeregisterTypeInput) (req *request.Request, output *DeregisterTypeOutput) {
+	op := &request.Operation{
+		Name:       opDeregisterType,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &DeregisterTypeInput{}
+	}
+
+	output = &DeregisterTypeOutput{}
+	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(query.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
+	return
+}
+
+// DeregisterType API operation for AWS CloudFormation.
+//
+// Marks an extension or extension version as DEPRECATED in the CloudFormation
+// registry, removing it from active use. Deprecated extensions or extension
+// versions cannot be used in CloudFormation operations.
+//
+// To deregister an entire extension, you must individually deregister all active
+// versions of that extension. If an extension has only a single active version,
+// deregistering that version results in the extension itself being deregistered
+// and marked as deprecated in the registry.
+//
+// You cannot deregister the default version of an extension if there are other
+// active version of that extension. If you do deregister the default version
+// of an extension, the textensionype itself is deregistered as well and marked
+// as deprecated.
+//
+// To view the deprecation status of an extension or extension version, use
+// DescribeType (https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_DescribeType.html).
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS CloudFormation's
+// API operation DeregisterType for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeCFNRegistryException "CFNRegistryException"
+//   An error occurred during a CloudFormation registry operation.
+//
+//   * ErrCodeTypeNotFoundException "TypeNotFoundException"
+//   The specified extension does not exist in the CloudFormation registry.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/DeregisterType
+func (c *CloudFormation) DeregisterType(input *DeregisterTypeInput) (*DeregisterTypeOutput, error) {
+	req, out := c.DeregisterTypeRequest(input)
+	return out, req.Send()
+}
+
+// DeregisterTypeWithContext is the same as DeregisterType with the addition of
+// the ability to pass a context and additional request options.
+//
+// See DeregisterType for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudFormation) DeregisterTypeWithContext(ctx aws.Context, input *DeregisterTypeInput, opts ...request.Option) (*DeregisterTypeOutput, error) {
+	req, out := c.DeregisterTypeRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
 const opDescribeAccountLimits = "DescribeAccountLimits"
 
 // DescribeAccountLimitsRequest generates a "aws/request.Request" representing the
@@ -961,6 +1334,12 @@ func (c *CloudFormation) DescribeAccountLimitsRequest(input *DescribeAccountLimi
 		Name:       opDescribeAccountLimits,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
+		Paginator: &request.Paginator{
+			InputTokens:     []string{"NextToken"},
+			OutputTokens:    []string{"NextToken"},
+			LimitToken:      "",
+			TruncationToken: "",
+		},
 	}
 
 	if input == nil {
@@ -974,10 +1353,10 @@ func (c *CloudFormation) DescribeAccountLimitsRequest(input *DescribeAccountLimi
 
 // DescribeAccountLimits API operation for AWS CloudFormation.
 //
-// Retrieves your account's AWS CloudFormation limits, such as the maximum number
+// Retrieves your account's CloudFormation limits, such as the maximum number
 // of stacks that you can create in your account. For more information about
-// account limits, see AWS CloudFormation Limits (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cloudformation-limits.html)
-// in the AWS CloudFormation User Guide.
+// account limits, see CloudFormation Limits (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cloudformation-limits.html)
+// in the CloudFormation User Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -1005,6 +1384,58 @@ func (c *CloudFormation) DescribeAccountLimitsWithContext(ctx aws.Context, input
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
+}
+
+// DescribeAccountLimitsPages iterates over the pages of a DescribeAccountLimits operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See DescribeAccountLimits method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a DescribeAccountLimits operation.
+//    pageNum := 0
+//    err := client.DescribeAccountLimitsPages(params,
+//        func(page *cloudformation.DescribeAccountLimitsOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
+func (c *CloudFormation) DescribeAccountLimitsPages(input *DescribeAccountLimitsInput, fn func(*DescribeAccountLimitsOutput, bool) bool) error {
+	return c.DescribeAccountLimitsPagesWithContext(aws.BackgroundContext(), input, fn)
+}
+
+// DescribeAccountLimitsPagesWithContext same as DescribeAccountLimitsPages except
+// it takes a Context and allows setting request options on the pages.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudFormation) DescribeAccountLimitsPagesWithContext(ctx aws.Context, input *DescribeAccountLimitsInput, fn func(*DescribeAccountLimitsOutput, bool) bool, opts ...request.Option) error {
+	p := request.Pagination{
+		NewRequest: func() (*request.Request, error) {
+			var inCpy *DescribeAccountLimitsInput
+			if input != nil {
+				tmp := *input
+				inCpy = &tmp
+			}
+			req, _ := c.DescribeAccountLimitsRequest(inCpy)
+			req.SetContext(ctx)
+			req.ApplyOptions(opts...)
+			return req, nil
+		},
+	}
+
+	for p.Next() {
+		if !fn(p.Page().(*DescribeAccountLimitsOutput), !p.HasNextPage()) {
+			break
+		}
+	}
+
+	return p.Err()
 }
 
 const opDescribeChangeSet = "DescribeChangeSet"
@@ -1051,10 +1482,10 @@ func (c *CloudFormation) DescribeChangeSetRequest(input *DescribeChangeSetInput)
 
 // DescribeChangeSet API operation for AWS CloudFormation.
 //
-// Returns the inputs for the change set and a list of changes that AWS CloudFormation
+// Returns the inputs for the change set and a list of changes that CloudFormation
 // will make if you execute the change set. For more information, see Updating
 // Stacks Using Change Sets (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-updating-stacks-changesets.html)
-// in the AWS CloudFormation User Guide.
+// in the CloudFormation User Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -1085,6 +1516,96 @@ func (c *CloudFormation) DescribeChangeSet(input *DescribeChangeSetInput) (*Desc
 // for more information on using Contexts.
 func (c *CloudFormation) DescribeChangeSetWithContext(ctx aws.Context, input *DescribeChangeSetInput, opts ...request.Option) (*DescribeChangeSetOutput, error) {
 	req, out := c.DescribeChangeSetRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opDescribePublisher = "DescribePublisher"
+
+// DescribePublisherRequest generates a "aws/request.Request" representing the
+// client's request for the DescribePublisher operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See DescribePublisher for more information on using the DescribePublisher
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the DescribePublisherRequest method.
+//    req, resp := client.DescribePublisherRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/DescribePublisher
+func (c *CloudFormation) DescribePublisherRequest(input *DescribePublisherInput) (req *request.Request, output *DescribePublisherOutput) {
+	op := &request.Operation{
+		Name:       opDescribePublisher,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &DescribePublisherInput{}
+	}
+
+	output = &DescribePublisherOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// DescribePublisher API operation for AWS CloudFormation.
+//
+// Returns information about a CloudFormation extension publisher.
+//
+// If you do not supply a PublisherId, and you have registered as an extension
+// publisher, DescribePublisher returns information about your own publisher
+// account.
+//
+// For more information on registering as a publisher, see:
+//
+//    * RegisterPublisher (https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_RegisterPublisher.html)
+//
+//    * Publishing extensions to make them available for public use (https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/publish-extension.html)
+//    in the CloudFormation CLI User Guide
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS CloudFormation's
+// API operation DescribePublisher for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeCFNRegistryException "CFNRegistryException"
+//   An error occurred during a CloudFormation registry operation.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/DescribePublisher
+func (c *CloudFormation) DescribePublisher(input *DescribePublisherInput) (*DescribePublisherOutput, error) {
+	req, out := c.DescribePublisherRequest(input)
+	return out, req.Send()
+}
+
+// DescribePublisherWithContext is the same as DescribePublisher with the addition of
+// the ability to pass a context and additional request options.
+//
+// See DescribePublisher for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudFormation) DescribePublisherWithContext(ctx aws.Context, input *DescribePublisherInput, opts ...request.Option) (*DescribePublisherOutput, error) {
+	req, out := c.DescribePublisherRequest(input)
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
@@ -1228,7 +1749,7 @@ func (c *CloudFormation) DescribeStackEventsRequest(input *DescribeStackEventsIn
 //
 // Returns all stack related events for a specified stack in reverse chronological
 // order. For more information about a stack's event history, go to Stacks (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/concept-stack.html)
-// in the AWS CloudFormation User Guide.
+// in the CloudFormation User Guide.
 //
 // You can list events for stacks that have failed to create or have been deleted
 // by specifying the unique stack identifier (stack ID).
@@ -1304,10 +1825,12 @@ func (c *CloudFormation) DescribeStackEventsPagesWithContext(ctx aws.Context, in
 		},
 	}
 
-	cont := true
-	for p.Next() && cont {
-		cont = fn(p.Page().(*DescribeStackEventsOutput), !p.HasNextPage())
+	for p.Next() {
+		if !fn(p.Page().(*DescribeStackEventsOutput), !p.HasNextPage()) {
+			break
+		}
 	}
+
 	return p.Err()
 }
 
@@ -1356,7 +1879,7 @@ func (c *CloudFormation) DescribeStackInstanceRequest(input *DescribeStackInstan
 // DescribeStackInstance API operation for AWS CloudFormation.
 //
 // Returns the stack instance that's associated with the specified stack set,
-// AWS account, and region.
+// account, and Region.
 //
 // For a list of stack instances that are associated with a specific stack set,
 // use ListStackInstances.
@@ -1526,7 +2049,7 @@ func (c *CloudFormation) DescribeStackResourceDriftsRequest(input *DescribeStack
 //
 // Returns drift information for the resources that have been checked for drift
 // in the specified stack. This includes actual and expected configuration values
-// for resources where AWS CloudFormation detects configuration drift.
+// for resources where CloudFormation detects configuration drift.
 //
 // For a given stack, there will be one StackResourceDrift for each stack resource
 // that has been checked for drift. Resources that have not yet been checked
@@ -1608,10 +2131,12 @@ func (c *CloudFormation) DescribeStackResourceDriftsPagesWithContext(ctx aws.Con
 		},
 	}
 
-	cont := true
-	for p.Next() && cont {
-		cont = fn(p.Page().(*DescribeStackResourceDriftsOutput), !p.HasNextPage())
+	for p.Next() {
+		if !fn(p.Page().(*DescribeStackResourceDriftsOutput), !p.HasNextPage()) {
+			break
+		}
 	}
+
 	return p.Err()
 }
 
@@ -1659,10 +2184,10 @@ func (c *CloudFormation) DescribeStackResourcesRequest(input *DescribeStackResou
 
 // DescribeStackResources API operation for AWS CloudFormation.
 //
-// Returns AWS resource descriptions for running and deleted stacks. If StackName
-// is specified, all the associated resources that are part of the stack are
-// returned. If PhysicalResourceId is specified, the associated resources of
-// the stack that the resource belongs to are returned.
+// Returns Amazon Web Services resource descriptions for running and deleted
+// stacks. If StackName is specified, all the associated resources that are
+// part of the stack are returned. If PhysicalResourceId is specified, the associated
+// resources of the stack that the resource belongs to are returned.
 //
 // Only the first 100 resources will be returned. If your stack has more resources
 // than this, you should use ListStackResources instead.
@@ -1673,7 +2198,7 @@ func (c *CloudFormation) DescribeStackResourcesRequest(input *DescribeStackResou
 // You must specify either StackName or PhysicalResourceId, but not both. In
 // addition, you can specify LogicalResourceId to filter the returned result.
 // For more information about resources, the LogicalResourceId and PhysicalResourceId,
-// go to the AWS CloudFormation User Guide (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/).
+// go to the CloudFormation User Guide (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/).
 //
 // A ValidationError is returned if you specify both StackName and PhysicalResourceId
 // in the same request.
@@ -1993,11 +2518,186 @@ func (c *CloudFormation) DescribeStacksPagesWithContext(ctx aws.Context, input *
 		},
 	}
 
-	cont := true
-	for p.Next() && cont {
-		cont = fn(p.Page().(*DescribeStacksOutput), !p.HasNextPage())
+	for p.Next() {
+		if !fn(p.Page().(*DescribeStacksOutput), !p.HasNextPage()) {
+			break
+		}
 	}
+
 	return p.Err()
+}
+
+const opDescribeType = "DescribeType"
+
+// DescribeTypeRequest generates a "aws/request.Request" representing the
+// client's request for the DescribeType operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See DescribeType for more information on using the DescribeType
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the DescribeTypeRequest method.
+//    req, resp := client.DescribeTypeRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/DescribeType
+func (c *CloudFormation) DescribeTypeRequest(input *DescribeTypeInput) (req *request.Request, output *DescribeTypeOutput) {
+	op := &request.Operation{
+		Name:       opDescribeType,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &DescribeTypeInput{}
+	}
+
+	output = &DescribeTypeOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// DescribeType API operation for AWS CloudFormation.
+//
+// Returns detailed information about an extension that has been registered.
+//
+// If you specify a VersionId, DescribeType returns information about that specific
+// extension version. Otherwise, it returns information about the default extension
+// version.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS CloudFormation's
+// API operation DescribeType for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeCFNRegistryException "CFNRegistryException"
+//   An error occurred during a CloudFormation registry operation.
+//
+//   * ErrCodeTypeNotFoundException "TypeNotFoundException"
+//   The specified extension does not exist in the CloudFormation registry.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/DescribeType
+func (c *CloudFormation) DescribeType(input *DescribeTypeInput) (*DescribeTypeOutput, error) {
+	req, out := c.DescribeTypeRequest(input)
+	return out, req.Send()
+}
+
+// DescribeTypeWithContext is the same as DescribeType with the addition of
+// the ability to pass a context and additional request options.
+//
+// See DescribeType for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudFormation) DescribeTypeWithContext(ctx aws.Context, input *DescribeTypeInput, opts ...request.Option) (*DescribeTypeOutput, error) {
+	req, out := c.DescribeTypeRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opDescribeTypeRegistration = "DescribeTypeRegistration"
+
+// DescribeTypeRegistrationRequest generates a "aws/request.Request" representing the
+// client's request for the DescribeTypeRegistration operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See DescribeTypeRegistration for more information on using the DescribeTypeRegistration
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the DescribeTypeRegistrationRequest method.
+//    req, resp := client.DescribeTypeRegistrationRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/DescribeTypeRegistration
+func (c *CloudFormation) DescribeTypeRegistrationRequest(input *DescribeTypeRegistrationInput) (req *request.Request, output *DescribeTypeRegistrationOutput) {
+	op := &request.Operation{
+		Name:       opDescribeTypeRegistration,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &DescribeTypeRegistrationInput{}
+	}
+
+	output = &DescribeTypeRegistrationOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// DescribeTypeRegistration API operation for AWS CloudFormation.
+//
+// Returns information about an extension's registration, including its current
+// status and type and version identifiers.
+//
+// When you initiate a registration request using RegisterType , you can then
+// use DescribeTypeRegistration to monitor the progress of that registration
+// request.
+//
+// Once the registration request has completed, use DescribeType to return detailed
+// information about an extension.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS CloudFormation's
+// API operation DescribeTypeRegistration for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeCFNRegistryException "CFNRegistryException"
+//   An error occurred during a CloudFormation registry operation.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/DescribeTypeRegistration
+func (c *CloudFormation) DescribeTypeRegistration(input *DescribeTypeRegistrationInput) (*DescribeTypeRegistrationOutput, error) {
+	req, out := c.DescribeTypeRegistrationRequest(input)
+	return out, req.Send()
+}
+
+// DescribeTypeRegistrationWithContext is the same as DescribeTypeRegistration with the addition of
+// the ability to pass a context and additional request options.
+//
+// See DescribeTypeRegistration for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudFormation) DescribeTypeRegistrationWithContext(ctx aws.Context, input *DescribeTypeRegistrationInput, opts ...request.Option) (*DescribeTypeRegistrationOutput, error) {
+	req, out := c.DescribeTypeRegistrationRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
 }
 
 const opDetectStackDrift = "DetectStackDrift"
@@ -2047,8 +2747,8 @@ func (c *CloudFormation) DetectStackDriftRequest(input *DetectStackDriftInput) (
 // Detects whether a stack's actual configuration differs, or has drifted, from
 // it's expected configuration, as defined in the stack template and any values
 // specified as template parameters. For each resource in the stack that supports
-// drift detection, AWS CloudFormation compares the actual configuration of
-// the resource with its expected template configuration. Only resource properties
+// drift detection, CloudFormation compares the actual configuration of the
+// resource with its expected template configuration. Only resource properties
 // explicitly defined in the stack template are checked for drift. A stack is
 // considered to have drifted if one or more of its resources differ from their
 // expected template configurations. For more information, see Detecting Unregulated
@@ -2066,8 +2766,8 @@ func (c *CloudFormation) DetectStackDriftRequest(input *DetectStackDriftInput) (
 // detection operation has completed, use DescribeStackResourceDrifts to return
 // drift information about the stack and its resources.
 //
-// When detecting drift on a stack, AWS CloudFormation does not detect drift
-// on any nested stacks belonging to that stack. Perform DetectStackDrift directly
+// When detecting drift on a stack, CloudFormation does not detect drift on
+// any nested stacks belonging to that stack. Perform DetectStackDrift directly
 // on the nested stack itself.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -2145,7 +2845,7 @@ func (c *CloudFormation) DetectStackResourceDriftRequest(input *DetectStackResou
 // Returns information about whether a resource's actual configuration differs,
 // or has drifted, from it's expected configuration, as defined in the stack
 // template and any values specified as template parameters. This information
-// includes actual and expected property values for resources in which AWS CloudFormation
+// includes actual and expected property values for resources in which CloudFormation
 // detects drift. Only resource properties explicitly defined in the stack template
 // are checked for drift. For more information about stack and resource drift,
 // see Detecting Unregulated Configuration Changes to Stacks and Resources (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-stack-drift.html).
@@ -2181,6 +2881,124 @@ func (c *CloudFormation) DetectStackResourceDrift(input *DetectStackResourceDrif
 // for more information on using Contexts.
 func (c *CloudFormation) DetectStackResourceDriftWithContext(ctx aws.Context, input *DetectStackResourceDriftInput, opts ...request.Option) (*DetectStackResourceDriftOutput, error) {
 	req, out := c.DetectStackResourceDriftRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opDetectStackSetDrift = "DetectStackSetDrift"
+
+// DetectStackSetDriftRequest generates a "aws/request.Request" representing the
+// client's request for the DetectStackSetDrift operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See DetectStackSetDrift for more information on using the DetectStackSetDrift
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the DetectStackSetDriftRequest method.
+//    req, resp := client.DetectStackSetDriftRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/DetectStackSetDrift
+func (c *CloudFormation) DetectStackSetDriftRequest(input *DetectStackSetDriftInput) (req *request.Request, output *DetectStackSetDriftOutput) {
+	op := &request.Operation{
+		Name:       opDetectStackSetDrift,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &DetectStackSetDriftInput{}
+	}
+
+	output = &DetectStackSetDriftOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// DetectStackSetDrift API operation for AWS CloudFormation.
+//
+// Detect drift on a stack set. When CloudFormation performs drift detection
+// on a stack set, it performs drift detection on the stack associated with
+// each stack instance in the stack set. For more information, see How CloudFormation
+// Performs Drift Detection on a Stack Set (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-drift.html).
+//
+// DetectStackSetDrift returns the OperationId of the stack set drift detection
+// operation. Use this operation id with DescribeStackSetOperation to monitor
+// the progress of the drift detection operation. The drift detection operation
+// may take some time, depending on the number of stack instances included in
+// the stack set, as well as the number of resources included in each stack.
+//
+// Once the operation has completed, use the following actions to return drift
+// information:
+//
+//    * Use DescribeStackSet to return detailed information about the stack
+//    set, including detailed information about the last completed drift operation
+//    performed on the stack set. (Information about drift operations that are
+//    in progress is not included.)
+//
+//    * Use ListStackInstances to return a list of stack instances belonging
+//    to the stack set, including the drift status and last drift time checked
+//    of each instance.
+//
+//    * Use DescribeStackInstance to return detailed information about a specific
+//    stack instance, including its drift status and last drift time checked.
+//
+// For more information on performing a drift detection operation on a stack
+// set, see Detecting Unmanaged Changes in Stack Sets (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-drift.html).
+//
+// You can only run a single drift detection operation on a given stack set
+// at one time.
+//
+// To stop a drift detection stack set operation, use StopStackSetOperation .
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS CloudFormation's
+// API operation DetectStackSetDrift for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeInvalidOperationException "InvalidOperationException"
+//   The specified operation isn't valid.
+//
+//   * ErrCodeOperationInProgressException "OperationInProgressException"
+//   Another operation is currently in progress for this stack set. Only one operation
+//   can be performed for a stack set at a given time.
+//
+//   * ErrCodeStackSetNotFoundException "StackSetNotFoundException"
+//   The specified stack set doesn't exist.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/DetectStackSetDrift
+func (c *CloudFormation) DetectStackSetDrift(input *DetectStackSetDriftInput) (*DetectStackSetDriftOutput, error) {
+	req, out := c.DetectStackSetDriftRequest(input)
+	return out, req.Send()
+}
+
+// DetectStackSetDriftWithContext is the same as DetectStackSetDrift with the addition of
+// the ability to pass a context and additional request options.
+//
+// See DetectStackSetDrift for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudFormation) DetectStackSetDriftWithContext(ctx aws.Context, input *DetectStackSetDriftInput, opts ...request.Option) (*DetectStackSetDriftOutput, error) {
+	req, out := c.DetectStackSetDriftRequest(input)
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
@@ -2231,8 +3049,8 @@ func (c *CloudFormation) EstimateTemplateCostRequest(input *EstimateTemplateCost
 // EstimateTemplateCost API operation for AWS CloudFormation.
 //
 // Returns the estimated monthly cost of a template. The return value is an
-// AWS Simple Monthly Calculator URL with a query string that describes the
-// resources required to run the template.
+// Amazon Web Services Simple Monthly Calculator URL with a query string that
+// describes the resources required to run the template.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -2308,17 +3126,19 @@ func (c *CloudFormation) ExecuteChangeSetRequest(input *ExecuteChangeSetInput) (
 // ExecuteChangeSet API operation for AWS CloudFormation.
 //
 // Updates a stack using the input information that was provided when the specified
-// change set was created. After the call successfully completes, AWS CloudFormation
+// change set was created. After the call successfully completes, CloudFormation
 // starts updating the stack. Use the DescribeStacks action to view the status
 // of the update.
 //
-// When you execute a change set, AWS CloudFormation deletes all other change
-// sets associated with the stack because they aren't valid for the updated
-// stack.
+// When you execute a change set, CloudFormation deletes all other change sets
+// associated with the stack because they aren't valid for the updated stack.
 //
-// If a stack policy is associated with the stack, AWS CloudFormation enforces
-// the policy during the update. You can't specify a temporary stack policy
-// that overrides the current policy.
+// If a stack policy is associated with the stack, CloudFormation enforces the
+// policy during the update. You can't specify a temporary stack policy that
+// overrides the current policy.
+//
+// To create a change set for the entire stack hierachy, IncludeNestedStacks
+// must have been set to True.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -2617,6 +3437,114 @@ func (c *CloudFormation) GetTemplateSummaryWithContext(ctx aws.Context, input *G
 	return out, req.Send()
 }
 
+const opImportStacksToStackSet = "ImportStacksToStackSet"
+
+// ImportStacksToStackSetRequest generates a "aws/request.Request" representing the
+// client's request for the ImportStacksToStackSet operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See ImportStacksToStackSet for more information on using the ImportStacksToStackSet
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the ImportStacksToStackSetRequest method.
+//    req, resp := client.ImportStacksToStackSetRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/ImportStacksToStackSet
+func (c *CloudFormation) ImportStacksToStackSetRequest(input *ImportStacksToStackSetInput) (req *request.Request, output *ImportStacksToStackSetOutput) {
+	op := &request.Operation{
+		Name:       opImportStacksToStackSet,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &ImportStacksToStackSetInput{}
+	}
+
+	output = &ImportStacksToStackSetOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// ImportStacksToStackSet API operation for AWS CloudFormation.
+//
+// Import existing stacks into a new stack sets. Use the stack import operation
+// to import up to 10 stacks into a new stack set in the same account as the
+// source stack or in a different administrator account and Region, by specifying
+// the stack ID of the stack you intend to import.
+//
+// ImportStacksToStackSet is only supported by self-managed permissions.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS CloudFormation's
+// API operation ImportStacksToStackSet for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeLimitExceededException "LimitExceededException"
+//   The quota for the resource has already been reached.
+//
+//   For information on resource and stack limitations, see Limits (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cloudformation-limits.html)
+//   in the CloudFormation User Guide.
+//
+//   * ErrCodeStackSetNotFoundException "StackSetNotFoundException"
+//   The specified stack set doesn't exist.
+//
+//   * ErrCodeInvalidOperationException "InvalidOperationException"
+//   The specified operation isn't valid.
+//
+//   * ErrCodeOperationInProgressException "OperationInProgressException"
+//   Another operation is currently in progress for this stack set. Only one operation
+//   can be performed for a stack set at a given time.
+//
+//   * ErrCodeOperationIdAlreadyExistsException "OperationIdAlreadyExistsException"
+//   The specified operation ID already exists.
+//
+//   * ErrCodeStackNotFoundException "StackNotFoundException"
+//   The specified stack ARN doesn’t exist or stack doesn’t exist corresponding
+//   to the ARN in input.
+//
+//   * ErrCodeStaleRequestException "StaleRequestException"
+//   Another operation has been performed on this stack set since the specified
+//   operation was performed.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/ImportStacksToStackSet
+func (c *CloudFormation) ImportStacksToStackSet(input *ImportStacksToStackSetInput) (*ImportStacksToStackSetOutput, error) {
+	req, out := c.ImportStacksToStackSetRequest(input)
+	return out, req.Send()
+}
+
+// ImportStacksToStackSetWithContext is the same as ImportStacksToStackSet with the addition of
+// the ability to pass a context and additional request options.
+//
+// See ImportStacksToStackSet for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudFormation) ImportStacksToStackSetWithContext(ctx aws.Context, input *ImportStacksToStackSetInput, opts ...request.Option) (*ImportStacksToStackSetOutput, error) {
+	req, out := c.ImportStacksToStackSetRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
 const opListChangeSets = "ListChangeSets"
 
 // ListChangeSetsRequest generates a "aws/request.Request" representing the
@@ -2648,6 +3576,12 @@ func (c *CloudFormation) ListChangeSetsRequest(input *ListChangeSetsInput) (req 
 		Name:       opListChangeSets,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
+		Paginator: &request.Paginator{
+			InputTokens:     []string{"NextToken"},
+			OutputTokens:    []string{"NextToken"},
+			LimitToken:      "",
+			TruncationToken: "",
+		},
 	}
 
 	if input == nil {
@@ -2662,8 +3596,8 @@ func (c *CloudFormation) ListChangeSetsRequest(input *ListChangeSetsInput) (req 
 // ListChangeSets API operation for AWS CloudFormation.
 //
 // Returns the ID and status of each active change set for a stack. For example,
-// AWS CloudFormation lists change sets that are in the CREATE_IN_PROGRESS or
-// CREATE_PENDING state.
+// CloudFormation lists change sets that are in the CREATE_IN_PROGRESS or CREATE_PENDING
+// state.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -2691,6 +3625,58 @@ func (c *CloudFormation) ListChangeSetsWithContext(ctx aws.Context, input *ListC
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
+}
+
+// ListChangeSetsPages iterates over the pages of a ListChangeSets operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListChangeSets method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListChangeSets operation.
+//    pageNum := 0
+//    err := client.ListChangeSetsPages(params,
+//        func(page *cloudformation.ListChangeSetsOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
+func (c *CloudFormation) ListChangeSetsPages(input *ListChangeSetsInput, fn func(*ListChangeSetsOutput, bool) bool) error {
+	return c.ListChangeSetsPagesWithContext(aws.BackgroundContext(), input, fn)
+}
+
+// ListChangeSetsPagesWithContext same as ListChangeSetsPages except
+// it takes a Context and allows setting request options on the pages.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudFormation) ListChangeSetsPagesWithContext(ctx aws.Context, input *ListChangeSetsInput, fn func(*ListChangeSetsOutput, bool) bool, opts ...request.Option) error {
+	p := request.Pagination{
+		NewRequest: func() (*request.Request, error) {
+			var inCpy *ListChangeSetsInput
+			if input != nil {
+				tmp := *input
+				inCpy = &tmp
+			}
+			req, _ := c.ListChangeSetsRequest(inCpy)
+			req.SetContext(ctx)
+			req.ApplyOptions(opts...)
+			return req, nil
+		},
+	}
+
+	for p.Next() {
+		if !fn(p.Page().(*ListChangeSetsOutput), !p.HasNextPage()) {
+			break
+		}
+	}
+
+	return p.Err()
 }
 
 const opListExports = "ListExports"
@@ -2743,12 +3729,12 @@ func (c *CloudFormation) ListExportsRequest(input *ListExportsInput) (req *reque
 
 // ListExports API operation for AWS CloudFormation.
 //
-// Lists all exported output values in the account and region in which you call
+// Lists all exported output values in the account and Region in which you call
 // this action. Use this action to see the exported output values that you can
 // import into other stacks. To import values, use the Fn::ImportValue (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-importvalue.html)
 // function.
 //
-// For more information, see AWS CloudFormation Export Stack Output Values (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-stack-exports.html).
+// For more information, see CloudFormation Export Stack Output Values (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-stack-exports.html).
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -2821,10 +3807,12 @@ func (c *CloudFormation) ListExportsPagesWithContext(ctx aws.Context, input *Lis
 		},
 	}
 
-	cont := true
-	for p.Next() && cont {
-		cont = fn(p.Page().(*ListExportsOutput), !p.HasNextPage())
+	for p.Next() {
+		if !fn(p.Page().(*ListExportsOutput), !p.HasNextPage()) {
+			break
+		}
 	}
+
 	return p.Err()
 }
 
@@ -2957,10 +3945,12 @@ func (c *CloudFormation) ListImportsPagesWithContext(ctx aws.Context, input *Lis
 		},
 	}
 
-	cont := true
-	for p.Next() && cont {
-		cont = fn(p.Page().(*ListImportsOutput), !p.HasNextPage())
+	for p.Next() {
+		if !fn(p.Page().(*ListImportsOutput), !p.HasNextPage()) {
+			break
+		}
 	}
+
 	return p.Err()
 }
 
@@ -2995,6 +3985,12 @@ func (c *CloudFormation) ListStackInstancesRequest(input *ListStackInstancesInpu
 		Name:       opListStackInstances,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
+		Paginator: &request.Paginator{
+			InputTokens:     []string{"NextToken"},
+			OutputTokens:    []string{"NextToken"},
+			LimitToken:      "MaxResults",
+			TruncationToken: "",
+		},
 	}
 
 	if input == nil {
@@ -3010,7 +4006,7 @@ func (c *CloudFormation) ListStackInstancesRequest(input *ListStackInstancesInpu
 //
 // Returns summary information about stack instances that are associated with
 // the specified stack set. You can filter for stack instances that are associated
-// with a specific AWS account name or region.
+// with a specific account name or Region, or that have a specific status.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -3043,6 +4039,58 @@ func (c *CloudFormation) ListStackInstancesWithContext(ctx aws.Context, input *L
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
+}
+
+// ListStackInstancesPages iterates over the pages of a ListStackInstances operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListStackInstances method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListStackInstances operation.
+//    pageNum := 0
+//    err := client.ListStackInstancesPages(params,
+//        func(page *cloudformation.ListStackInstancesOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
+func (c *CloudFormation) ListStackInstancesPages(input *ListStackInstancesInput, fn func(*ListStackInstancesOutput, bool) bool) error {
+	return c.ListStackInstancesPagesWithContext(aws.BackgroundContext(), input, fn)
+}
+
+// ListStackInstancesPagesWithContext same as ListStackInstancesPages except
+// it takes a Context and allows setting request options on the pages.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudFormation) ListStackInstancesPagesWithContext(ctx aws.Context, input *ListStackInstancesInput, fn func(*ListStackInstancesOutput, bool) bool, opts ...request.Option) error {
+	p := request.Pagination{
+		NewRequest: func() (*request.Request, error) {
+			var inCpy *ListStackInstancesInput
+			if input != nil {
+				tmp := *input
+				inCpy = &tmp
+			}
+			req, _ := c.ListStackInstancesRequest(inCpy)
+			req.SetContext(ctx)
+			req.ApplyOptions(opts...)
+			return req, nil
+		},
+	}
+
+	for p.Next() {
+		if !fn(p.Page().(*ListStackInstancesOutput), !p.HasNextPage()) {
+			break
+		}
+	}
+
+	return p.Err()
 }
 
 const opListStackResources = "ListStackResources"
@@ -3171,10 +4219,12 @@ func (c *CloudFormation) ListStackResourcesPagesWithContext(ctx aws.Context, inp
 		},
 	}
 
-	cont := true
-	for p.Next() && cont {
-		cont = fn(p.Page().(*ListStackResourcesOutput), !p.HasNextPage())
+	for p.Next() {
+		if !fn(p.Page().(*ListStackResourcesOutput), !p.HasNextPage()) {
+			break
+		}
 	}
+
 	return p.Err()
 }
 
@@ -3209,6 +4259,12 @@ func (c *CloudFormation) ListStackSetOperationResultsRequest(input *ListStackSet
 		Name:       opListStackSetOperationResults,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
+		Paginator: &request.Paginator{
+			InputTokens:     []string{"NextToken"},
+			OutputTokens:    []string{"NextToken"},
+			LimitToken:      "MaxResults",
+			TruncationToken: "",
+		},
 	}
 
 	if input == nil {
@@ -3260,6 +4316,58 @@ func (c *CloudFormation) ListStackSetOperationResultsWithContext(ctx aws.Context
 	return out, req.Send()
 }
 
+// ListStackSetOperationResultsPages iterates over the pages of a ListStackSetOperationResults operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListStackSetOperationResults method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListStackSetOperationResults operation.
+//    pageNum := 0
+//    err := client.ListStackSetOperationResultsPages(params,
+//        func(page *cloudformation.ListStackSetOperationResultsOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
+func (c *CloudFormation) ListStackSetOperationResultsPages(input *ListStackSetOperationResultsInput, fn func(*ListStackSetOperationResultsOutput, bool) bool) error {
+	return c.ListStackSetOperationResultsPagesWithContext(aws.BackgroundContext(), input, fn)
+}
+
+// ListStackSetOperationResultsPagesWithContext same as ListStackSetOperationResultsPages except
+// it takes a Context and allows setting request options on the pages.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudFormation) ListStackSetOperationResultsPagesWithContext(ctx aws.Context, input *ListStackSetOperationResultsInput, fn func(*ListStackSetOperationResultsOutput, bool) bool, opts ...request.Option) error {
+	p := request.Pagination{
+		NewRequest: func() (*request.Request, error) {
+			var inCpy *ListStackSetOperationResultsInput
+			if input != nil {
+				tmp := *input
+				inCpy = &tmp
+			}
+			req, _ := c.ListStackSetOperationResultsRequest(inCpy)
+			req.SetContext(ctx)
+			req.ApplyOptions(opts...)
+			return req, nil
+		},
+	}
+
+	for p.Next() {
+		if !fn(p.Page().(*ListStackSetOperationResultsOutput), !p.HasNextPage()) {
+			break
+		}
+	}
+
+	return p.Err()
+}
+
 const opListStackSetOperations = "ListStackSetOperations"
 
 // ListStackSetOperationsRequest generates a "aws/request.Request" representing the
@@ -3291,6 +4399,12 @@ func (c *CloudFormation) ListStackSetOperationsRequest(input *ListStackSetOperat
 		Name:       opListStackSetOperations,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
+		Paginator: &request.Paginator{
+			InputTokens:     []string{"NextToken"},
+			OutputTokens:    []string{"NextToken"},
+			LimitToken:      "MaxResults",
+			TruncationToken: "",
+		},
 	}
 
 	if input == nil {
@@ -3339,6 +4453,58 @@ func (c *CloudFormation) ListStackSetOperationsWithContext(ctx aws.Context, inpu
 	return out, req.Send()
 }
 
+// ListStackSetOperationsPages iterates over the pages of a ListStackSetOperations operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListStackSetOperations method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListStackSetOperations operation.
+//    pageNum := 0
+//    err := client.ListStackSetOperationsPages(params,
+//        func(page *cloudformation.ListStackSetOperationsOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
+func (c *CloudFormation) ListStackSetOperationsPages(input *ListStackSetOperationsInput, fn func(*ListStackSetOperationsOutput, bool) bool) error {
+	return c.ListStackSetOperationsPagesWithContext(aws.BackgroundContext(), input, fn)
+}
+
+// ListStackSetOperationsPagesWithContext same as ListStackSetOperationsPages except
+// it takes a Context and allows setting request options on the pages.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudFormation) ListStackSetOperationsPagesWithContext(ctx aws.Context, input *ListStackSetOperationsInput, fn func(*ListStackSetOperationsOutput, bool) bool, opts ...request.Option) error {
+	p := request.Pagination{
+		NewRequest: func() (*request.Request, error) {
+			var inCpy *ListStackSetOperationsInput
+			if input != nil {
+				tmp := *input
+				inCpy = &tmp
+			}
+			req, _ := c.ListStackSetOperationsRequest(inCpy)
+			req.SetContext(ctx)
+			req.ApplyOptions(opts...)
+			return req, nil
+		},
+	}
+
+	for p.Next() {
+		if !fn(p.Page().(*ListStackSetOperationsOutput), !p.HasNextPage()) {
+			break
+		}
+	}
+
+	return p.Err()
+}
+
 const opListStackSets = "ListStackSets"
 
 // ListStackSetsRequest generates a "aws/request.Request" representing the
@@ -3370,6 +4536,12 @@ func (c *CloudFormation) ListStackSetsRequest(input *ListStackSetsInput) (req *r
 		Name:       opListStackSets,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
+		Paginator: &request.Paginator{
+			InputTokens:     []string{"NextToken"},
+			OutputTokens:    []string{"NextToken"},
+			LimitToken:      "MaxResults",
+			TruncationToken: "",
+		},
 	}
 
 	if input == nil {
@@ -3385,6 +4557,18 @@ func (c *CloudFormation) ListStackSetsRequest(input *ListStackSetsInput) (req *r
 //
 // Returns summary information about stack sets that are associated with the
 // user.
+//
+//    * [Self-managed permissions] If you set the CallAs parameter to SELF while
+//    signed in to your account, ListStackSets returns all self-managed stack
+//    sets in your account.
+//
+//    * [Service-managed permissions] If you set the CallAs parameter to SELF
+//    while signed in to the organization's management account, ListStackSets
+//    returns all stack sets in the management account.
+//
+//    * [Service-managed permissions] If you set the CallAs parameter to DELEGATED_ADMIN
+//    while signed in to your member account, ListStackSets returns all stack
+//    sets with service-managed permissions in the management account.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -3412,6 +4596,58 @@ func (c *CloudFormation) ListStackSetsWithContext(ctx aws.Context, input *ListSt
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
+}
+
+// ListStackSetsPages iterates over the pages of a ListStackSets operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListStackSets method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListStackSets operation.
+//    pageNum := 0
+//    err := client.ListStackSetsPages(params,
+//        func(page *cloudformation.ListStackSetsOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
+func (c *CloudFormation) ListStackSetsPages(input *ListStackSetsInput, fn func(*ListStackSetsOutput, bool) bool) error {
+	return c.ListStackSetsPagesWithContext(aws.BackgroundContext(), input, fn)
+}
+
+// ListStackSetsPagesWithContext same as ListStackSetsPages except
+// it takes a Context and allows setting request options on the pages.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudFormation) ListStackSetsPagesWithContext(ctx aws.Context, input *ListStackSetsInput, fn func(*ListStackSetsOutput, bool) bool, opts ...request.Option) error {
+	p := request.Pagination{
+		NewRequest: func() (*request.Request, error) {
+			var inCpy *ListStackSetsInput
+			if input != nil {
+				tmp := *input
+				inCpy = &tmp
+			}
+			req, _ := c.ListStackSetsRequest(inCpy)
+			req.SetContext(ctx)
+			req.ApplyOptions(opts...)
+			return req, nil
+		},
+	}
+
+	for p.Next() {
+		if !fn(p.Page().(*ListStackSetsOutput), !p.HasNextPage()) {
+			break
+		}
+	}
+
+	return p.Err()
 }
 
 const opListStacks = "ListStacks"
@@ -3541,11 +4777,792 @@ func (c *CloudFormation) ListStacksPagesWithContext(ctx aws.Context, input *List
 		},
 	}
 
-	cont := true
-	for p.Next() && cont {
-		cont = fn(p.Page().(*ListStacksOutput), !p.HasNextPage())
+	for p.Next() {
+		if !fn(p.Page().(*ListStacksOutput), !p.HasNextPage()) {
+			break
+		}
 	}
+
 	return p.Err()
+}
+
+const opListTypeRegistrations = "ListTypeRegistrations"
+
+// ListTypeRegistrationsRequest generates a "aws/request.Request" representing the
+// client's request for the ListTypeRegistrations operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See ListTypeRegistrations for more information on using the ListTypeRegistrations
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the ListTypeRegistrationsRequest method.
+//    req, resp := client.ListTypeRegistrationsRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/ListTypeRegistrations
+func (c *CloudFormation) ListTypeRegistrationsRequest(input *ListTypeRegistrationsInput) (req *request.Request, output *ListTypeRegistrationsOutput) {
+	op := &request.Operation{
+		Name:       opListTypeRegistrations,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+		Paginator: &request.Paginator{
+			InputTokens:     []string{"NextToken"},
+			OutputTokens:    []string{"NextToken"},
+			LimitToken:      "MaxResults",
+			TruncationToken: "",
+		},
+	}
+
+	if input == nil {
+		input = &ListTypeRegistrationsInput{}
+	}
+
+	output = &ListTypeRegistrationsOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// ListTypeRegistrations API operation for AWS CloudFormation.
+//
+// Returns a list of registration tokens for the specified extension(s).
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS CloudFormation's
+// API operation ListTypeRegistrations for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeCFNRegistryException "CFNRegistryException"
+//   An error occurred during a CloudFormation registry operation.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/ListTypeRegistrations
+func (c *CloudFormation) ListTypeRegistrations(input *ListTypeRegistrationsInput) (*ListTypeRegistrationsOutput, error) {
+	req, out := c.ListTypeRegistrationsRequest(input)
+	return out, req.Send()
+}
+
+// ListTypeRegistrationsWithContext is the same as ListTypeRegistrations with the addition of
+// the ability to pass a context and additional request options.
+//
+// See ListTypeRegistrations for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudFormation) ListTypeRegistrationsWithContext(ctx aws.Context, input *ListTypeRegistrationsInput, opts ...request.Option) (*ListTypeRegistrationsOutput, error) {
+	req, out := c.ListTypeRegistrationsRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+// ListTypeRegistrationsPages iterates over the pages of a ListTypeRegistrations operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListTypeRegistrations method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListTypeRegistrations operation.
+//    pageNum := 0
+//    err := client.ListTypeRegistrationsPages(params,
+//        func(page *cloudformation.ListTypeRegistrationsOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
+func (c *CloudFormation) ListTypeRegistrationsPages(input *ListTypeRegistrationsInput, fn func(*ListTypeRegistrationsOutput, bool) bool) error {
+	return c.ListTypeRegistrationsPagesWithContext(aws.BackgroundContext(), input, fn)
+}
+
+// ListTypeRegistrationsPagesWithContext same as ListTypeRegistrationsPages except
+// it takes a Context and allows setting request options on the pages.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudFormation) ListTypeRegistrationsPagesWithContext(ctx aws.Context, input *ListTypeRegistrationsInput, fn func(*ListTypeRegistrationsOutput, bool) bool, opts ...request.Option) error {
+	p := request.Pagination{
+		NewRequest: func() (*request.Request, error) {
+			var inCpy *ListTypeRegistrationsInput
+			if input != nil {
+				tmp := *input
+				inCpy = &tmp
+			}
+			req, _ := c.ListTypeRegistrationsRequest(inCpy)
+			req.SetContext(ctx)
+			req.ApplyOptions(opts...)
+			return req, nil
+		},
+	}
+
+	for p.Next() {
+		if !fn(p.Page().(*ListTypeRegistrationsOutput), !p.HasNextPage()) {
+			break
+		}
+	}
+
+	return p.Err()
+}
+
+const opListTypeVersions = "ListTypeVersions"
+
+// ListTypeVersionsRequest generates a "aws/request.Request" representing the
+// client's request for the ListTypeVersions operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See ListTypeVersions for more information on using the ListTypeVersions
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the ListTypeVersionsRequest method.
+//    req, resp := client.ListTypeVersionsRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/ListTypeVersions
+func (c *CloudFormation) ListTypeVersionsRequest(input *ListTypeVersionsInput) (req *request.Request, output *ListTypeVersionsOutput) {
+	op := &request.Operation{
+		Name:       opListTypeVersions,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+		Paginator: &request.Paginator{
+			InputTokens:     []string{"NextToken"},
+			OutputTokens:    []string{"NextToken"},
+			LimitToken:      "MaxResults",
+			TruncationToken: "",
+		},
+	}
+
+	if input == nil {
+		input = &ListTypeVersionsInput{}
+	}
+
+	output = &ListTypeVersionsOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// ListTypeVersions API operation for AWS CloudFormation.
+//
+// Returns summary information about the versions of an extension.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS CloudFormation's
+// API operation ListTypeVersions for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeCFNRegistryException "CFNRegistryException"
+//   An error occurred during a CloudFormation registry operation.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/ListTypeVersions
+func (c *CloudFormation) ListTypeVersions(input *ListTypeVersionsInput) (*ListTypeVersionsOutput, error) {
+	req, out := c.ListTypeVersionsRequest(input)
+	return out, req.Send()
+}
+
+// ListTypeVersionsWithContext is the same as ListTypeVersions with the addition of
+// the ability to pass a context and additional request options.
+//
+// See ListTypeVersions for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudFormation) ListTypeVersionsWithContext(ctx aws.Context, input *ListTypeVersionsInput, opts ...request.Option) (*ListTypeVersionsOutput, error) {
+	req, out := c.ListTypeVersionsRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+// ListTypeVersionsPages iterates over the pages of a ListTypeVersions operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListTypeVersions method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListTypeVersions operation.
+//    pageNum := 0
+//    err := client.ListTypeVersionsPages(params,
+//        func(page *cloudformation.ListTypeVersionsOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
+func (c *CloudFormation) ListTypeVersionsPages(input *ListTypeVersionsInput, fn func(*ListTypeVersionsOutput, bool) bool) error {
+	return c.ListTypeVersionsPagesWithContext(aws.BackgroundContext(), input, fn)
+}
+
+// ListTypeVersionsPagesWithContext same as ListTypeVersionsPages except
+// it takes a Context and allows setting request options on the pages.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudFormation) ListTypeVersionsPagesWithContext(ctx aws.Context, input *ListTypeVersionsInput, fn func(*ListTypeVersionsOutput, bool) bool, opts ...request.Option) error {
+	p := request.Pagination{
+		NewRequest: func() (*request.Request, error) {
+			var inCpy *ListTypeVersionsInput
+			if input != nil {
+				tmp := *input
+				inCpy = &tmp
+			}
+			req, _ := c.ListTypeVersionsRequest(inCpy)
+			req.SetContext(ctx)
+			req.ApplyOptions(opts...)
+			return req, nil
+		},
+	}
+
+	for p.Next() {
+		if !fn(p.Page().(*ListTypeVersionsOutput), !p.HasNextPage()) {
+			break
+		}
+	}
+
+	return p.Err()
+}
+
+const opListTypes = "ListTypes"
+
+// ListTypesRequest generates a "aws/request.Request" representing the
+// client's request for the ListTypes operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See ListTypes for more information on using the ListTypes
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the ListTypesRequest method.
+//    req, resp := client.ListTypesRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/ListTypes
+func (c *CloudFormation) ListTypesRequest(input *ListTypesInput) (req *request.Request, output *ListTypesOutput) {
+	op := &request.Operation{
+		Name:       opListTypes,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+		Paginator: &request.Paginator{
+			InputTokens:     []string{"NextToken"},
+			OutputTokens:    []string{"NextToken"},
+			LimitToken:      "MaxResults",
+			TruncationToken: "",
+		},
+	}
+
+	if input == nil {
+		input = &ListTypesInput{}
+	}
+
+	output = &ListTypesOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// ListTypes API operation for AWS CloudFormation.
+//
+// Returns summary information about extension that have been registered with
+// CloudFormation.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS CloudFormation's
+// API operation ListTypes for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeCFNRegistryException "CFNRegistryException"
+//   An error occurred during a CloudFormation registry operation.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/ListTypes
+func (c *CloudFormation) ListTypes(input *ListTypesInput) (*ListTypesOutput, error) {
+	req, out := c.ListTypesRequest(input)
+	return out, req.Send()
+}
+
+// ListTypesWithContext is the same as ListTypes with the addition of
+// the ability to pass a context and additional request options.
+//
+// See ListTypes for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudFormation) ListTypesWithContext(ctx aws.Context, input *ListTypesInput, opts ...request.Option) (*ListTypesOutput, error) {
+	req, out := c.ListTypesRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+// ListTypesPages iterates over the pages of a ListTypes operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListTypes method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListTypes operation.
+//    pageNum := 0
+//    err := client.ListTypesPages(params,
+//        func(page *cloudformation.ListTypesOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
+func (c *CloudFormation) ListTypesPages(input *ListTypesInput, fn func(*ListTypesOutput, bool) bool) error {
+	return c.ListTypesPagesWithContext(aws.BackgroundContext(), input, fn)
+}
+
+// ListTypesPagesWithContext same as ListTypesPages except
+// it takes a Context and allows setting request options on the pages.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudFormation) ListTypesPagesWithContext(ctx aws.Context, input *ListTypesInput, fn func(*ListTypesOutput, bool) bool, opts ...request.Option) error {
+	p := request.Pagination{
+		NewRequest: func() (*request.Request, error) {
+			var inCpy *ListTypesInput
+			if input != nil {
+				tmp := *input
+				inCpy = &tmp
+			}
+			req, _ := c.ListTypesRequest(inCpy)
+			req.SetContext(ctx)
+			req.ApplyOptions(opts...)
+			return req, nil
+		},
+	}
+
+	for p.Next() {
+		if !fn(p.Page().(*ListTypesOutput), !p.HasNextPage()) {
+			break
+		}
+	}
+
+	return p.Err()
+}
+
+const opPublishType = "PublishType"
+
+// PublishTypeRequest generates a "aws/request.Request" representing the
+// client's request for the PublishType operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See PublishType for more information on using the PublishType
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the PublishTypeRequest method.
+//    req, resp := client.PublishTypeRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/PublishType
+func (c *CloudFormation) PublishTypeRequest(input *PublishTypeInput) (req *request.Request, output *PublishTypeOutput) {
+	op := &request.Operation{
+		Name:       opPublishType,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &PublishTypeInput{}
+	}
+
+	output = &PublishTypeOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// PublishType API operation for AWS CloudFormation.
+//
+// Publishes the specified extension to the CloudFormation registry as a public
+// extension in this region. Public extensions are available for use by all
+// CloudFormation users. For more information on publishing extensions, see
+// Publishing extensions to make them available for public use (https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/publish-extension.html)
+// in the CloudFormation CLI User Guide.
+//
+// To publish an extension, you must be registered as a publisher with CloudFormation.
+// For more information, see RegisterPublisher (https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_RegisterPublisher.html).
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS CloudFormation's
+// API operation PublishType for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeCFNRegistryException "CFNRegistryException"
+//   An error occurred during a CloudFormation registry operation.
+//
+//   * ErrCodeTypeNotFoundException "TypeNotFoundException"
+//   The specified extension does not exist in the CloudFormation registry.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/PublishType
+func (c *CloudFormation) PublishType(input *PublishTypeInput) (*PublishTypeOutput, error) {
+	req, out := c.PublishTypeRequest(input)
+	return out, req.Send()
+}
+
+// PublishTypeWithContext is the same as PublishType with the addition of
+// the ability to pass a context and additional request options.
+//
+// See PublishType for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudFormation) PublishTypeWithContext(ctx aws.Context, input *PublishTypeInput, opts ...request.Option) (*PublishTypeOutput, error) {
+	req, out := c.PublishTypeRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opRecordHandlerProgress = "RecordHandlerProgress"
+
+// RecordHandlerProgressRequest generates a "aws/request.Request" representing the
+// client's request for the RecordHandlerProgress operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See RecordHandlerProgress for more information on using the RecordHandlerProgress
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the RecordHandlerProgressRequest method.
+//    req, resp := client.RecordHandlerProgressRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/RecordHandlerProgress
+func (c *CloudFormation) RecordHandlerProgressRequest(input *RecordHandlerProgressInput) (req *request.Request, output *RecordHandlerProgressOutput) {
+	op := &request.Operation{
+		Name:       opRecordHandlerProgress,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &RecordHandlerProgressInput{}
+	}
+
+	output = &RecordHandlerProgressOutput{}
+	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(query.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
+	return
+}
+
+// RecordHandlerProgress API operation for AWS CloudFormation.
+//
+// Reports progress of a resource handler to CloudFormation.
+//
+// Reserved for use by the CloudFormation CLI (https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/what-is-cloudformation-cli.html).
+// Do not use this API in your code.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS CloudFormation's
+// API operation RecordHandlerProgress for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeInvalidStateTransitionException "InvalidStateTransition"
+//   Error reserved for use by the CloudFormation CLI (https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/what-is-cloudformation-cli.html).
+//   CloudFormation does not return this error to users.
+//
+//   * ErrCodeOperationStatusCheckFailedException "ConditionalCheckFailed"
+//   Error reserved for use by the CloudFormation CLI (https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/what-is-cloudformation-cli.html).
+//   CloudFormation does not return this error to users.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/RecordHandlerProgress
+func (c *CloudFormation) RecordHandlerProgress(input *RecordHandlerProgressInput) (*RecordHandlerProgressOutput, error) {
+	req, out := c.RecordHandlerProgressRequest(input)
+	return out, req.Send()
+}
+
+// RecordHandlerProgressWithContext is the same as RecordHandlerProgress with the addition of
+// the ability to pass a context and additional request options.
+//
+// See RecordHandlerProgress for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudFormation) RecordHandlerProgressWithContext(ctx aws.Context, input *RecordHandlerProgressInput, opts ...request.Option) (*RecordHandlerProgressOutput, error) {
+	req, out := c.RecordHandlerProgressRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opRegisterPublisher = "RegisterPublisher"
+
+// RegisterPublisherRequest generates a "aws/request.Request" representing the
+// client's request for the RegisterPublisher operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See RegisterPublisher for more information on using the RegisterPublisher
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the RegisterPublisherRequest method.
+//    req, resp := client.RegisterPublisherRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/RegisterPublisher
+func (c *CloudFormation) RegisterPublisherRequest(input *RegisterPublisherInput) (req *request.Request, output *RegisterPublisherOutput) {
+	op := &request.Operation{
+		Name:       opRegisterPublisher,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &RegisterPublisherInput{}
+	}
+
+	output = &RegisterPublisherOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// RegisterPublisher API operation for AWS CloudFormation.
+//
+// Registers your account as a publisher of public extensions in the CloudFormation
+// registry. Public extensions are available for use by all CloudFormation users.
+// This publisher ID applies to your account in all Regions.
+//
+// For information on requirements for registering as a public extension publisher,
+// see Registering your account to publish CloudFormation extensions (https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/publish-extension.html#publish-extension-prereqs)
+// in the CloudFormation CLI User Guide.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS CloudFormation's
+// API operation RegisterPublisher for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeCFNRegistryException "CFNRegistryException"
+//   An error occurred during a CloudFormation registry operation.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/RegisterPublisher
+func (c *CloudFormation) RegisterPublisher(input *RegisterPublisherInput) (*RegisterPublisherOutput, error) {
+	req, out := c.RegisterPublisherRequest(input)
+	return out, req.Send()
+}
+
+// RegisterPublisherWithContext is the same as RegisterPublisher with the addition of
+// the ability to pass a context and additional request options.
+//
+// See RegisterPublisher for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudFormation) RegisterPublisherWithContext(ctx aws.Context, input *RegisterPublisherInput, opts ...request.Option) (*RegisterPublisherOutput, error) {
+	req, out := c.RegisterPublisherRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opRegisterType = "RegisterType"
+
+// RegisterTypeRequest generates a "aws/request.Request" representing the
+// client's request for the RegisterType operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See RegisterType for more information on using the RegisterType
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the RegisterTypeRequest method.
+//    req, resp := client.RegisterTypeRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/RegisterType
+func (c *CloudFormation) RegisterTypeRequest(input *RegisterTypeInput) (req *request.Request, output *RegisterTypeOutput) {
+	op := &request.Operation{
+		Name:       opRegisterType,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &RegisterTypeInput{}
+	}
+
+	output = &RegisterTypeOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// RegisterType API operation for AWS CloudFormation.
+//
+// Registers an extension with the CloudFormation service. Registering an extension
+// makes it available for use in CloudFormation templates in your account, and
+// includes:
+//
+//    * Validating the extension schema
+//
+//    * Determining which handlers, if any, have been specified for the extension
+//
+//    * Making the extension available for use in your account
+//
+// For more information on how to develop extensions and ready them for registeration,
+// see Creating Resource Providers (https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/resource-types.html)
+// in the CloudFormation CLI User Guide.
+//
+// You can have a maximum of 50 resource extension versions registered at a
+// time. This maximum is per account and per region. Use DeregisterType (AWSCloudFormation/latest/APIReference/API_DeregisterType.html)
+// to deregister specific extension versions if necessary.
+//
+// Once you have initiated a registration request using RegisterType , you can
+// use DescribeTypeRegistration to monitor the progress of the registration
+// request.
+//
+// Once you have registered a private extension in your account and region,
+// use SetTypeConfiguration (AWSCloudFormation/latest/APIReference/API_SetTypeConfiguration.html)
+// to specify configuration properties for the extension. For more information,
+// see Configuring extensions at the account level (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/registry-register.html#registry-set-configuration)
+// in the CloudFormation User Guide.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS CloudFormation's
+// API operation RegisterType for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeCFNRegistryException "CFNRegistryException"
+//   An error occurred during a CloudFormation registry operation.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/RegisterType
+func (c *CloudFormation) RegisterType(input *RegisterTypeInput) (*RegisterTypeOutput, error) {
+	req, out := c.RegisterTypeRequest(input)
+	return out, req.Send()
+}
+
+// RegisterTypeWithContext is the same as RegisterType with the addition of
+// the ability to pass a context and additional request options.
+//
+// See RegisterType for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudFormation) RegisterTypeWithContext(ctx aws.Context, input *RegisterTypeInput, opts ...request.Option) (*RegisterTypeOutput, error) {
+	req, out := c.RegisterTypeRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
 }
 
 const opSetStackPolicy = "SetStackPolicy"
@@ -3623,6 +5640,183 @@ func (c *CloudFormation) SetStackPolicyWithContext(ctx aws.Context, input *SetSt
 	return out, req.Send()
 }
 
+const opSetTypeConfiguration = "SetTypeConfiguration"
+
+// SetTypeConfigurationRequest generates a "aws/request.Request" representing the
+// client's request for the SetTypeConfiguration operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See SetTypeConfiguration for more information on using the SetTypeConfiguration
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the SetTypeConfigurationRequest method.
+//    req, resp := client.SetTypeConfigurationRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/SetTypeConfiguration
+func (c *CloudFormation) SetTypeConfigurationRequest(input *SetTypeConfigurationInput) (req *request.Request, output *SetTypeConfigurationOutput) {
+	op := &request.Operation{
+		Name:       opSetTypeConfiguration,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &SetTypeConfigurationInput{}
+	}
+
+	output = &SetTypeConfigurationOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// SetTypeConfiguration API operation for AWS CloudFormation.
+//
+// Specifies the configuration data for a registered CloudFormation extension,
+// in the given account and region.
+//
+// To view the current configuration data for an extension, refer to the ConfigurationSchema
+// element of DescribeType (AWSCloudFormation/latest/APIReference/API_DescribeType.html).
+// For more information, see Configuring extensions at the account level (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/registry-register.html#registry-set-configuration)
+// in the CloudFormation User Guide.
+//
+// It is strongly recommended that you use dynamic references to restrict sensitive
+// configuration definitions, such as third-party credentials. For more details
+// on dynamic references, see Using dynamic references to specify template values
+// (https://docs.aws.amazon.com/) in the CloudFormation User Guide.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS CloudFormation's
+// API operation SetTypeConfiguration for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeCFNRegistryException "CFNRegistryException"
+//   An error occurred during a CloudFormation registry operation.
+//
+//   * ErrCodeTypeNotFoundException "TypeNotFoundException"
+//   The specified extension does not exist in the CloudFormation registry.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/SetTypeConfiguration
+func (c *CloudFormation) SetTypeConfiguration(input *SetTypeConfigurationInput) (*SetTypeConfigurationOutput, error) {
+	req, out := c.SetTypeConfigurationRequest(input)
+	return out, req.Send()
+}
+
+// SetTypeConfigurationWithContext is the same as SetTypeConfiguration with the addition of
+// the ability to pass a context and additional request options.
+//
+// See SetTypeConfiguration for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudFormation) SetTypeConfigurationWithContext(ctx aws.Context, input *SetTypeConfigurationInput, opts ...request.Option) (*SetTypeConfigurationOutput, error) {
+	req, out := c.SetTypeConfigurationRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opSetTypeDefaultVersion = "SetTypeDefaultVersion"
+
+// SetTypeDefaultVersionRequest generates a "aws/request.Request" representing the
+// client's request for the SetTypeDefaultVersion operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See SetTypeDefaultVersion for more information on using the SetTypeDefaultVersion
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the SetTypeDefaultVersionRequest method.
+//    req, resp := client.SetTypeDefaultVersionRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/SetTypeDefaultVersion
+func (c *CloudFormation) SetTypeDefaultVersionRequest(input *SetTypeDefaultVersionInput) (req *request.Request, output *SetTypeDefaultVersionOutput) {
+	op := &request.Operation{
+		Name:       opSetTypeDefaultVersion,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &SetTypeDefaultVersionInput{}
+	}
+
+	output = &SetTypeDefaultVersionOutput{}
+	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(query.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
+	return
+}
+
+// SetTypeDefaultVersion API operation for AWS CloudFormation.
+//
+// Specify the default version of an extension. The default version of an extension
+// will be used in CloudFormation operations.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS CloudFormation's
+// API operation SetTypeDefaultVersion for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeCFNRegistryException "CFNRegistryException"
+//   An error occurred during a CloudFormation registry operation.
+//
+//   * ErrCodeTypeNotFoundException "TypeNotFoundException"
+//   The specified extension does not exist in the CloudFormation registry.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/SetTypeDefaultVersion
+func (c *CloudFormation) SetTypeDefaultVersion(input *SetTypeDefaultVersionInput) (*SetTypeDefaultVersionOutput, error) {
+	req, out := c.SetTypeDefaultVersionRequest(input)
+	return out, req.Send()
+}
+
+// SetTypeDefaultVersionWithContext is the same as SetTypeDefaultVersion with the addition of
+// the ability to pass a context and additional request options.
+//
+// See SetTypeDefaultVersion for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudFormation) SetTypeDefaultVersionWithContext(ctx aws.Context, input *SetTypeDefaultVersionInput, opts ...request.Option) (*SetTypeDefaultVersionOutput, error) {
+	req, out := c.SetTypeDefaultVersionRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
 const opSignalResource = "SignalResource"
 
 // SignalResourceRequest generates a "aws/request.Request" representing the
@@ -3670,8 +5864,8 @@ func (c *CloudFormation) SignalResourceRequest(input *SignalResourceInput) (req 
 //
 // Sends a signal to the specified resource with a success or failure status.
 // You can use the SignalResource API in conjunction with a creation policy
-// or update policy. AWS CloudFormation doesn't proceed with a stack creation
-// or update until resources receive the required number of signals or the timeout
+// or update policy. CloudFormation doesn't proceed with a stack creation or
+// update until resources receive the required number of signals or the timeout
 // period is exceeded. The SignalResource API is useful in cases where you want
 // to send signals from anywhere other than an Amazon EC2 instance.
 //
@@ -3784,6 +5978,114 @@ func (c *CloudFormation) StopStackSetOperation(input *StopStackSetOperationInput
 // for more information on using Contexts.
 func (c *CloudFormation) StopStackSetOperationWithContext(ctx aws.Context, input *StopStackSetOperationInput, opts ...request.Option) (*StopStackSetOperationOutput, error) {
 	req, out := c.StopStackSetOperationRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opTestType = "TestType"
+
+// TestTypeRequest generates a "aws/request.Request" representing the
+// client's request for the TestType operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See TestType for more information on using the TestType
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the TestTypeRequest method.
+//    req, resp := client.TestTypeRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/TestType
+func (c *CloudFormation) TestTypeRequest(input *TestTypeInput) (req *request.Request, output *TestTypeOutput) {
+	op := &request.Operation{
+		Name:       opTestType,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &TestTypeInput{}
+	}
+
+	output = &TestTypeOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// TestType API operation for AWS CloudFormation.
+//
+// Tests a registered extension to make sure it meets all necessary requirements
+// for being published in the CloudFormation registry.
+//
+//    * For resource types, this includes passing all contracts tests defined
+//    for the type.
+//
+//    * For modules, this includes determining if the module's model meets all
+//    necessary requirements.
+//
+// For more information, see Testing your public extension prior to publishing
+// (https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/publish-extension.html#publish-extension-testing)
+// in the CloudFormation CLI User Guide.
+//
+// If you do not specify a version, CloudFormation uses the default version
+// of the extension in your account and region for testing.
+//
+// To perform testing, CloudFormation assumes the execution role specified when
+// the type was registered. For more information, see RegisterType (AWSCloudFormation/latest/APIReference/API_RegisterType.html).
+//
+// Once you've initiated testing on an extension using TestType, you can use
+// DescribeType (https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_DescribeType.html)
+// to monitor the current test status and test status description for the extension.
+//
+// An extension must have a test status of PASSED before it can be published.
+// For more information, see Publishing extensions to make them available for
+// public use (https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/resource-type-publish.html)
+// in the CloudFormation CLI User Guide.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS CloudFormation's
+// API operation TestType for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeCFNRegistryException "CFNRegistryException"
+//   An error occurred during a CloudFormation registry operation.
+//
+//   * ErrCodeTypeNotFoundException "TypeNotFoundException"
+//   The specified extension does not exist in the CloudFormation registry.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/cloudformation-2010-05-15/TestType
+func (c *CloudFormation) TestType(input *TestTypeInput) (*TestTypeOutput, error) {
+	req, out := c.TestTypeRequest(input)
+	return out, req.Send()
+}
+
+// TestTypeWithContext is the same as TestType with the addition of
+// the ability to pass a context and additional request options.
+//
+// See TestType for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudFormation) TestTypeWithContext(ctx aws.Context, input *TestTypeInput, opts ...request.Option) (*TestTypeOutput, error) {
+	req, out := c.TestTypeRequest(input)
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
@@ -3925,10 +6227,10 @@ func (c *CloudFormation) UpdateStackInstancesRequest(input *UpdateStackInstances
 // UpdateStackInstances API operation for AWS CloudFormation.
 //
 // Updates the parameter values for stack instances for the specified accounts,
-// within the specified regions. A stack instance refers to a stack in a specific
-// account and region.
+// within the specified Regions. A stack instance refers to a stack in a specific
+// account and Region.
 //
-// You can only update stack instances in regions and accounts where they already
+// You can only update stack instances in Regions and accounts where they already
 // exist; to create additional stack instances, use CreateStackInstances (https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_CreateStackInstances.html).
 //
 // During stack set updates, any parameters overridden for a stack instance
@@ -4038,7 +6340,7 @@ func (c *CloudFormation) UpdateStackSetRequest(input *UpdateStackSetInput) (req 
 // UpdateStackSet API operation for AWS CloudFormation.
 //
 // Updates the stack set, and associated stack instances in the specified accounts
-// and regions.
+// and Regions.
 //
 // Even if the stack set operation created by updating the stack set fails (completely
 // or partially, below or above a specified failure tolerance), the stack set
@@ -4142,10 +6444,10 @@ func (c *CloudFormation) UpdateTerminationProtectionRequest(input *UpdateTermina
 // Updates termination protection for the specified stack. If a user attempts
 // to delete a stack with termination protection enabled, the operation fails
 // and the stack remains unchanged. For more information, see Protecting a Stack
-// From Being Deleted (AWSCloudFormation/latest/UserGuide/using-cfn-protect-stacks.html)
-// in the AWS CloudFormation User Guide.
+// From Being Deleted (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-protect-stacks.html)
+// in the CloudFormation User Guide.
 //
-// For nested stacks (AWSCloudFormation/latest/UserGuide/using-cfn-nested-stacks.html),
+// For nested stacks (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-nested-stacks.html),
 // termination protection is set on the root stack and cannot be changed directly
 // on the nested stack.
 //
@@ -4221,10 +6523,10 @@ func (c *CloudFormation) ValidateTemplateRequest(input *ValidateTemplateInput) (
 
 // ValidateTemplate API operation for AWS CloudFormation.
 //
-// Validates a specified template. AWS CloudFormation first checks if the template
-// is valid JSON. If it isn't, AWS CloudFormation checks if the template is
-// valid YAML. If both these checks fail, AWS CloudFormation returns a template
-// validation error.
+// Validates a specified template. CloudFormation first checks if the template
+// is valid JSON. If it isn't, CloudFormation checks if the template is valid
+// YAML. If both these checks fail, CloudFormation returns a template validation
+// error.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -4254,17 +6556,17 @@ func (c *CloudFormation) ValidateTemplateWithContext(ctx aws.Context, input *Val
 	return out, req.Send()
 }
 
-// Structure that contains the results of the account gate function which AWS
-// CloudFormation invokes, if present, before proceeding with a stack set operation
-// in an account and region.
+// Structure that contains the results of the account gate function which CloudFormation
+// invokes, if present, before proceeding with a stack set operation in an account
+// and Region.
 //
-// For each account and region, AWS CloudFormation lets you specify a Lamdba
-// function that encapsulates any requirements that must be met before CloudFormation
-// can proceed with a stack set operation in that account and region. CloudFormation
+// For each account and Region, CloudFormation lets you specify a Lamdba function
+// that encapsulates any requirements that must be met before CloudFormation
+// can proceed with a stack set operation in that account and Region. CloudFormation
 // invokes the function each time a stack set operation is requested for that
-// account and region; if the function returns FAILED, CloudFormation cancels
-// the operation in that account and region, and sets the stack set operation
-// result status for that account and region to FAILED.
+// account and Region; if the function returns FAILED, CloudFormation cancels
+// the operation in that account and Region, and sets the stack set operation
+// result status for that account and Region to FAILED.
 //
 // For more information, see Configuring a target account gate (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-account-gating.html).
 type AccountGateResult struct {
@@ -4273,28 +6575,27 @@ type AccountGateResult struct {
 	// The status of the account gate function.
 	//
 	//    * SUCCEEDED: The account gate function has determined that the account
-	//    and region passes any requirements for a stack set operation to occur.
-	//    AWS CloudFormation proceeds with the stack operation in that account and
-	//    region.
+	//    and Region passes any requirements for a stack set operation to occur.
+	//    CloudFormation proceeds with the stack operation in that account and Region.
 	//
 	//    * FAILED: The account gate function has determined that the account and
-	//    region does not meet the requirements for a stack set operation to occur.
+	//    Region does not meet the requirements for a stack set operation to occur.
 	//    AWS CloudFormation cancels the stack set operation in that account and
-	//    region, and sets the stack set operation result status for that account
-	//    and region to FAILED.
+	//    Region, and sets the stack set operation result status for that account
+	//    and Region to FAILED.
 	//
-	//    * SKIPPED: AWS CloudFormation has skipped calling the account gate function
-	//    for this account and region, for one of the following reasons: An account
-	//    gate function has not been specified for the account and region. AWS CloudFormation
-	//    proceeds with the stack set operation in this account and region. The
+	//    * SKIPPED: CloudFormation has skipped calling the account gate function
+	//    for this account and Region, for one of the following reasons: An account
+	//    gate function has not been specified for the account and Region. CloudFormation
+	//    proceeds with the stack set operation in this account and Region. The
 	//    AWSCloudFormationStackSetExecutionRole of the stack set adminstration
-	//    account lacks permissions to invoke the function. AWS CloudFormation proceeds
-	//    with the stack set operation in this account and region. Either no action
-	//    is necessary, or no action is possible, on the stack. AWS CloudFormation
-	//    skips the stack set operation in this account and region.
+	//    account lacks permissions to invoke the function. CloudFormation proceeds
+	//    with the stack set operation in this account and Region. Either no action
+	//    is necessary, or no action is possible, on the stack. CloudFormation skips
+	//    the stack set operation in this account and Region.
 	Status *string `type:"string" enum:"AccountGateStatus"`
 
-	// The reason for the account gate status assigned to this account and region
+	// The reason for the account gate status assigned to this account and Region
 	// for the stack set operation.
 	StatusReason *string `type:"string"`
 }
@@ -4321,13 +6622,25 @@ func (s *AccountGateResult) SetStatusReason(v string) *AccountGateResult {
 	return s
 }
 
-// The AccountLimit data type. For more information about account limits, see
-// AWS CloudFormation Limits (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cloudformation-limits.html)
-// in the AWS CloudFormation User Guide.
+// The AccountLimit data type.
+//
+// CloudFormation has the following limits per account:
+//
+//    * Number of concurrent resources
+//
+//    * Number of stacks
+//
+//    * Number of stack outputs
+//
+// For more information about these account limits, and other CloudFormation
+// limits, see CloudFormation Limits (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cloudformation-limits.html)
+// in the CloudFormation User Guide.
 type AccountLimit struct {
 	_ struct{} `type:"structure"`
 
 	// The name of the account limit.
+	//
+	// Values: ConcurrentResourcesLimit | StackLimit | StackOutputsLimit
 	Name *string `type:"string"`
 
 	// The value that is associated with the account limit name.
@@ -4356,15 +6669,383 @@ func (s *AccountLimit) SetValue(v int64) *AccountLimit {
 	return s
 }
 
+type ActivateTypeInput struct {
+	_ struct{} `type:"structure"`
+
+	// Whether to automatically update the extension in this account and region
+	// when a new minor version is published by the extension publisher. Major versions
+	// released by the publisher must be manually updated.
+	//
+	// The default is true.
+	AutoUpdate *bool `type:"boolean"`
+
+	// The name of the IAM execution role to use to activate the extension.
+	ExecutionRoleArn *string `min:"1" type:"string"`
+
+	// Contains logging configuration information for an extension.
+	LoggingConfig *LoggingConfig `type:"structure"`
+
+	// The major version of this extension you want to activate, if multiple major
+	// versions are available. The default is the latest major version. CloudFormation
+	// uses the latest available minor version of the major version selected.
+	//
+	// You can specify MajorVersion or VersionBump, but not both.
+	MajorVersion *int64 `min:"1" type:"long"`
+
+	// The Amazon Resource Number (ARN) of the public extension.
+	//
+	// Conditional: You must specify PublicTypeArn, or TypeName, Type, and PublisherId.
+	PublicTypeArn *string `type:"string"`
+
+	// The ID of the extension publisher.
+	//
+	// Conditional: You must specify PublicTypeArn, or TypeName, Type, and PublisherId.
+	PublisherId *string `min:"1" type:"string"`
+
+	// The extension type.
+	//
+	// Conditional: You must specify PublicTypeArn, or TypeName, Type, and PublisherId.
+	Type *string `type:"string" enum:"ThirdPartyType"`
+
+	// The name of the extension.
+	//
+	// Conditional: You must specify PublicTypeArn, or TypeName, Type, and PublisherId.
+	TypeName *string `min:"10" type:"string"`
+
+	// An alias to assign to the public extension, in this account and region. If
+	// you specify an alias for the extension, CloudFormation treats the alias as
+	// the extension type name within this account and region. You must use the
+	// alias to refer to the extension in your templates, API calls, and CloudFormation
+	// console.
+	//
+	// An extension alias must be unique within a given account and region. You
+	// can activate the same public resource multiple times in the same account
+	// and region, using different type name aliases.
+	TypeNameAlias *string `min:"10" type:"string"`
+
+	// Manually updates a previously-activated type to a new major or minor version,
+	// if available. You can also use this parameter to update the value of AutoUpdate.
+	//
+	//    * MAJOR: CloudFormation updates the extension to the newest major version,
+	//    if one is available.
+	//
+	//    * MINOR: CloudFormation updates the extension to the newest minor version,
+	//    if one is available.
+	VersionBump *string `type:"string" enum:"VersionBump"`
+}
+
+// String returns the string representation
+func (s ActivateTypeInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ActivateTypeInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *ActivateTypeInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "ActivateTypeInput"}
+	if s.ExecutionRoleArn != nil && len(*s.ExecutionRoleArn) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("ExecutionRoleArn", 1))
+	}
+	if s.MajorVersion != nil && *s.MajorVersion < 1 {
+		invalidParams.Add(request.NewErrParamMinValue("MajorVersion", 1))
+	}
+	if s.PublisherId != nil && len(*s.PublisherId) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("PublisherId", 1))
+	}
+	if s.TypeName != nil && len(*s.TypeName) < 10 {
+		invalidParams.Add(request.NewErrParamMinLen("TypeName", 10))
+	}
+	if s.TypeNameAlias != nil && len(*s.TypeNameAlias) < 10 {
+		invalidParams.Add(request.NewErrParamMinLen("TypeNameAlias", 10))
+	}
+	if s.LoggingConfig != nil {
+		if err := s.LoggingConfig.Validate(); err != nil {
+			invalidParams.AddNested("LoggingConfig", err.(request.ErrInvalidParams))
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetAutoUpdate sets the AutoUpdate field's value.
+func (s *ActivateTypeInput) SetAutoUpdate(v bool) *ActivateTypeInput {
+	s.AutoUpdate = &v
+	return s
+}
+
+// SetExecutionRoleArn sets the ExecutionRoleArn field's value.
+func (s *ActivateTypeInput) SetExecutionRoleArn(v string) *ActivateTypeInput {
+	s.ExecutionRoleArn = &v
+	return s
+}
+
+// SetLoggingConfig sets the LoggingConfig field's value.
+func (s *ActivateTypeInput) SetLoggingConfig(v *LoggingConfig) *ActivateTypeInput {
+	s.LoggingConfig = v
+	return s
+}
+
+// SetMajorVersion sets the MajorVersion field's value.
+func (s *ActivateTypeInput) SetMajorVersion(v int64) *ActivateTypeInput {
+	s.MajorVersion = &v
+	return s
+}
+
+// SetPublicTypeArn sets the PublicTypeArn field's value.
+func (s *ActivateTypeInput) SetPublicTypeArn(v string) *ActivateTypeInput {
+	s.PublicTypeArn = &v
+	return s
+}
+
+// SetPublisherId sets the PublisherId field's value.
+func (s *ActivateTypeInput) SetPublisherId(v string) *ActivateTypeInput {
+	s.PublisherId = &v
+	return s
+}
+
+// SetType sets the Type field's value.
+func (s *ActivateTypeInput) SetType(v string) *ActivateTypeInput {
+	s.Type = &v
+	return s
+}
+
+// SetTypeName sets the TypeName field's value.
+func (s *ActivateTypeInput) SetTypeName(v string) *ActivateTypeInput {
+	s.TypeName = &v
+	return s
+}
+
+// SetTypeNameAlias sets the TypeNameAlias field's value.
+func (s *ActivateTypeInput) SetTypeNameAlias(v string) *ActivateTypeInput {
+	s.TypeNameAlias = &v
+	return s
+}
+
+// SetVersionBump sets the VersionBump field's value.
+func (s *ActivateTypeInput) SetVersionBump(v string) *ActivateTypeInput {
+	s.VersionBump = &v
+	return s
+}
+
+type ActivateTypeOutput struct {
+	_ struct{} `type:"structure"`
+
+	// The Amazon Resource Number (ARN) of the activated extension, in this account
+	// and region.
+	Arn *string `type:"string"`
+}
+
+// String returns the string representation
+func (s ActivateTypeOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ActivateTypeOutput) GoString() string {
+	return s.String()
+}
+
+// SetArn sets the Arn field's value.
+func (s *ActivateTypeOutput) SetArn(v string) *ActivateTypeOutput {
+	s.Arn = &v
+	return s
+}
+
+// [Service-managed permissions] Describes whether StackSets automatically deploys
+// to Organizations accounts that are added to a target organization or organizational
+// unit (OU).
+type AutoDeployment struct {
+	_ struct{} `type:"structure"`
+
+	// If set to true, StackSets automatically deploys additional stack instances
+	// to Organizations accounts that are added to a target organization or organizational
+	// unit (OU) in the specified Regions. If an account is removed from a target
+	// organization or OU, StackSets deletes stack instances from the account in
+	// the specified Regions.
+	Enabled *bool `type:"boolean"`
+
+	// If set to true, stack resources are retained when an account is removed from
+	// a target organization or OU. If set to false, stack resources are deleted.
+	// Specify only if Enabled is set to True.
+	RetainStacksOnAccountRemoval *bool `type:"boolean"`
+}
+
+// String returns the string representation
+func (s AutoDeployment) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s AutoDeployment) GoString() string {
+	return s.String()
+}
+
+// SetEnabled sets the Enabled field's value.
+func (s *AutoDeployment) SetEnabled(v bool) *AutoDeployment {
+	s.Enabled = &v
+	return s
+}
+
+// SetRetainStacksOnAccountRemoval sets the RetainStacksOnAccountRemoval field's value.
+func (s *AutoDeployment) SetRetainStacksOnAccountRemoval(v bool) *AutoDeployment {
+	s.RetainStacksOnAccountRemoval = &v
+	return s
+}
+
+// Detailed information concerning an error generated during the setting of
+// configuration data for a CloudFormation extension.
+type BatchDescribeTypeConfigurationsError struct {
+	_ struct{} `type:"structure"`
+
+	// The error code.
+	ErrorCode *string `min:"3" type:"string"`
+
+	// The error message.
+	ErrorMessage *string `min:"1" type:"string"`
+
+	// Identifying information for the configuration of a CloudFormation extension.
+	TypeConfigurationIdentifier *TypeConfigurationIdentifier `type:"structure"`
+}
+
+// String returns the string representation
+func (s BatchDescribeTypeConfigurationsError) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s BatchDescribeTypeConfigurationsError) GoString() string {
+	return s.String()
+}
+
+// SetErrorCode sets the ErrorCode field's value.
+func (s *BatchDescribeTypeConfigurationsError) SetErrorCode(v string) *BatchDescribeTypeConfigurationsError {
+	s.ErrorCode = &v
+	return s
+}
+
+// SetErrorMessage sets the ErrorMessage field's value.
+func (s *BatchDescribeTypeConfigurationsError) SetErrorMessage(v string) *BatchDescribeTypeConfigurationsError {
+	s.ErrorMessage = &v
+	return s
+}
+
+// SetTypeConfigurationIdentifier sets the TypeConfigurationIdentifier field's value.
+func (s *BatchDescribeTypeConfigurationsError) SetTypeConfigurationIdentifier(v *TypeConfigurationIdentifier) *BatchDescribeTypeConfigurationsError {
+	s.TypeConfigurationIdentifier = v
+	return s
+}
+
+type BatchDescribeTypeConfigurationsInput struct {
+	_ struct{} `type:"structure"`
+
+	// The list of identifiers for the desired extension configurations.
+	//
+	// TypeConfigurationIdentifiers is a required field
+	TypeConfigurationIdentifiers []*TypeConfigurationIdentifier `min:"1" type:"list" required:"true"`
+}
+
+// String returns the string representation
+func (s BatchDescribeTypeConfigurationsInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s BatchDescribeTypeConfigurationsInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *BatchDescribeTypeConfigurationsInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "BatchDescribeTypeConfigurationsInput"}
+	if s.TypeConfigurationIdentifiers == nil {
+		invalidParams.Add(request.NewErrParamRequired("TypeConfigurationIdentifiers"))
+	}
+	if s.TypeConfigurationIdentifiers != nil && len(s.TypeConfigurationIdentifiers) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("TypeConfigurationIdentifiers", 1))
+	}
+	if s.TypeConfigurationIdentifiers != nil {
+		for i, v := range s.TypeConfigurationIdentifiers {
+			if v == nil {
+				continue
+			}
+			if err := v.Validate(); err != nil {
+				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "TypeConfigurationIdentifiers", i), err.(request.ErrInvalidParams))
+			}
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetTypeConfigurationIdentifiers sets the TypeConfigurationIdentifiers field's value.
+func (s *BatchDescribeTypeConfigurationsInput) SetTypeConfigurationIdentifiers(v []*TypeConfigurationIdentifier) *BatchDescribeTypeConfigurationsInput {
+	s.TypeConfigurationIdentifiers = v
+	return s
+}
+
+type BatchDescribeTypeConfigurationsOutput struct {
+	_ struct{} `type:"structure"`
+
+	// A list of information concerning any errors generated during the setting
+	// of the specified configurations.
+	Errors []*BatchDescribeTypeConfigurationsError `type:"list"`
+
+	// A list of any of the specified extension configurations from the CloudFormation
+	// registry.
+	TypeConfigurations []*TypeConfigurationDetails `type:"list"`
+
+	// A list of any of the specified extension configurations that CloudFormation
+	// could not process for any reason.
+	UnprocessedTypeConfigurations []*TypeConfigurationIdentifier `type:"list"`
+}
+
+// String returns the string representation
+func (s BatchDescribeTypeConfigurationsOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s BatchDescribeTypeConfigurationsOutput) GoString() string {
+	return s.String()
+}
+
+// SetErrors sets the Errors field's value.
+func (s *BatchDescribeTypeConfigurationsOutput) SetErrors(v []*BatchDescribeTypeConfigurationsError) *BatchDescribeTypeConfigurationsOutput {
+	s.Errors = v
+	return s
+}
+
+// SetTypeConfigurations sets the TypeConfigurations field's value.
+func (s *BatchDescribeTypeConfigurationsOutput) SetTypeConfigurations(v []*TypeConfigurationDetails) *BatchDescribeTypeConfigurationsOutput {
+	s.TypeConfigurations = v
+	return s
+}
+
+// SetUnprocessedTypeConfigurations sets the UnprocessedTypeConfigurations field's value.
+func (s *BatchDescribeTypeConfigurationsOutput) SetUnprocessedTypeConfigurations(v []*TypeConfigurationIdentifier) *BatchDescribeTypeConfigurationsOutput {
+	s.UnprocessedTypeConfigurations = v
+	return s
+}
+
 // The input for the CancelUpdateStack action.
 type CancelUpdateStackInput struct {
 	_ struct{} `type:"structure"`
 
 	// A unique identifier for this CancelUpdateStack request. Specify this token
-	// if you plan to retry requests so that AWS CloudFormation knows that you're
-	// not attempting to cancel an update on a stack with the same name. You might
-	// retry CancelUpdateStack requests to ensure that AWS CloudFormation successfully
-	// received them.
+	// if you plan to retry requests so that CloudFormation knows that you're not
+	// attempting to cancel an update on a stack with the same name. You might retry
+	// CancelUpdateStack requests to ensure that CloudFormation successfully received
+	// them.
 	ClientRequestToken *string `min:"1" type:"string"`
 
 	// The name or the unique stack ID that is associated with the stack.
@@ -4425,16 +7106,16 @@ func (s CancelUpdateStackOutput) GoString() string {
 	return s.String()
 }
 
-// The Change structure describes the changes AWS CloudFormation will perform
-// if you execute the change set.
+// The Change structure describes the changes CloudFormation will perform if
+// you execute the change set.
 type Change struct {
 	_ struct{} `type:"structure"`
 
-	// A ResourceChange structure that describes the resource and action that AWS
-	// CloudFormation will perform.
+	// A ResourceChange structure that describes the resource and action that CloudFormation
+	// will perform.
 	ResourceChange *ResourceChange `type:"structure"`
 
-	// The type of entity that AWS CloudFormation changes. Currently, the only entity
+	// The type of entity that CloudFormation changes. Currently, the only entity
 	// type is Resource.
 	Type *string `type:"string" enum:"ChangeType"`
 }
@@ -4480,10 +7161,19 @@ type ChangeSetSummary struct {
 
 	// If the change set execution status is AVAILABLE, you can execute the change
 	// set. If you can’t execute the change set, the status indicates why. For
-	// example, a change set might be in an UNAVAILABLE state because AWS CloudFormation
+	// example, a change set might be in an UNAVAILABLE state because CloudFormation
 	// is still creating it or in an OBSOLETE state because the stack was already
 	// updated.
 	ExecutionStatus *string `type:"string" enum:"ExecutionStatus"`
+
+	// Specifies the current setting of IncludeNestedStacks for the change set.
+	IncludeNestedStacks *bool `type:"boolean"`
+
+	// The parent change set ID.
+	ParentChangeSetId *string `min:"1" type:"string"`
+
+	// The root change set ID.
+	RootChangeSetId *string `min:"1" type:"string"`
 
 	// The ID of the stack with which the change set is associated.
 	StackId *string `type:"string"`
@@ -4496,7 +7186,7 @@ type ChangeSetSummary struct {
 	Status *string `type:"string" enum:"ChangeSetStatus"`
 
 	// A description of the change set's status. For example, if your change set
-	// is in the FAILED state, AWS CloudFormation shows the error message.
+	// is in the FAILED state, CloudFormation shows the error message.
 	StatusReason *string `type:"string"`
 }
 
@@ -4540,6 +7230,24 @@ func (s *ChangeSetSummary) SetExecutionStatus(v string) *ChangeSetSummary {
 	return s
 }
 
+// SetIncludeNestedStacks sets the IncludeNestedStacks field's value.
+func (s *ChangeSetSummary) SetIncludeNestedStacks(v bool) *ChangeSetSummary {
+	s.IncludeNestedStacks = &v
+	return s
+}
+
+// SetParentChangeSetId sets the ParentChangeSetId field's value.
+func (s *ChangeSetSummary) SetParentChangeSetId(v string) *ChangeSetSummary {
+	s.ParentChangeSetId = &v
+	return s
+}
+
+// SetRootChangeSetId sets the RootChangeSetId field's value.
+func (s *ChangeSetSummary) SetRootChangeSetId(v string) *ChangeSetSummary {
+	s.RootChangeSetId = &v
+	return s
+}
+
 // SetStackId sets the StackId field's value.
 func (s *ChangeSetSummary) SetStackId(v string) *ChangeSetSummary {
 	s.StackId = &v
@@ -4569,29 +7277,28 @@ type ContinueUpdateRollbackInput struct {
 	_ struct{} `type:"structure"`
 
 	// A unique identifier for this ContinueUpdateRollback request. Specify this
-	// token if you plan to retry requests so that AWS CloudFormation knows that
-	// you're not attempting to continue the rollback to a stack with the same name.
-	// You might retry ContinueUpdateRollback requests to ensure that AWS CloudFormation
+	// token if you plan to retry requests so that CloudFormationknows that you're
+	// not attempting to continue the rollback to a stack with the same name. You
+	// might retry ContinueUpdateRollback requests to ensure that CloudFormation
 	// successfully received them.
 	ClientRequestToken *string `min:"1" type:"string"`
 
-	// A list of the logical IDs of the resources that AWS CloudFormation skips
-	// during the continue update rollback operation. You can specify only resources
-	// that are in the UPDATE_FAILED state because a rollback failed. You can't
-	// specify resources that are in the UPDATE_FAILED state for other reasons,
-	// for example, because an update was cancelled. To check why a resource update
-	// failed, use the DescribeStackResources action, and view the resource status
-	// reason.
+	// A list of the logical IDs of the resources that CloudFormation skips during
+	// the continue update rollback operation. You can specify only resources that
+	// are in the UPDATE_FAILED state because a rollback failed. You can't specify
+	// resources that are in the UPDATE_FAILED state for other reasons, for example,
+	// because an update was cancelled. To check why a resource update failed, use
+	// the DescribeStackResources action, and view the resource status reason.
 	//
-	// Specify this property to skip rolling back resources that AWS CloudFormation
+	// Specify this property to skip rolling back resources that CloudFormation
 	// can't successfully roll back. We recommend that you troubleshoot (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/troubleshooting.html#troubleshooting-errors-update-rollback-failed)
-	// resources before skipping them. AWS CloudFormation sets the status of the
-	// specified resources to UPDATE_COMPLETE and continues to roll back the stack.
-	// After the rollback is complete, the state of the skipped resources will be
-	// inconsistent with the state of the resources in the stack template. Before
-	// performing another stack update, you must update the stack or resources to
-	// be consistent with each other. If you don't, subsequent stack updates might
-	// fail, and the stack will become unrecoverable.
+	// resources before skipping them. CloudFormation sets the status of the specified
+	// resources to UPDATE_COMPLETE and continues to roll back the stack. After
+	// the rollback is complete, the state of the skipped resources will be inconsistent
+	// with the state of the resources in the stack template. Before performing
+	// another stack update, you must update the stack or resources to be consistent
+	// with each other. If you don't, subsequent stack updates might fail, and the
+	// stack will become unrecoverable.
 	//
 	// Specify the minimum number of resources required to successfully roll back
 	// your stack. For example, a failed resource update might cause dependent resources
@@ -4609,17 +7316,17 @@ type ContinueUpdateRollbackInput struct {
 	// hierarchy (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-updating-stacks-continueupdaterollback.html#nested-stacks).
 	ResourcesToSkip []*string `type:"list"`
 
-	// The Amazon Resource Name (ARN) of an AWS Identity and Access Management (IAM)
-	// role that AWS CloudFormation assumes to roll back the stack. AWS CloudFormation
-	// uses the role's credentials to make calls on your behalf. AWS CloudFormation
-	// always uses this role for all future operations on the stack. As long as
-	// users have permission to operate on the stack, AWS CloudFormation uses this
-	// role even if the users don't have permission to pass it. Ensure that the
-	// role grants least privilege.
+	// The Amazon Resource Name (ARN) of an Identity and Access Management (IAM)
+	// role that CloudFormation assumes to roll back the stack. CloudFormation uses
+	// the role's credentials to make calls on your behalf. CloudFormation always
+	// uses this role for all future operations on the stack. As long as users have
+	// permission to operate on the stack, CloudFormation uses this role even if
+	// the users don't have permission to pass it. Ensure that the role grants least
+	// privilege.
 	//
-	// If you don't specify a value, AWS CloudFormation uses the role that was previously
-	// associated with the stack. If no role is available, AWS CloudFormation uses
-	// a temporary session that is generated from your user credentials.
+	// If you don't specify a value, CloudFormation uses the role that was previously
+	// associated with the stack. If no role is available, CloudFormation uses a
+	// temporary session that is generated from your user credentials.
 	RoleARN *string `min:"20" type:"string"`
 
 	// The name or the unique ID of the stack that you want to continue rolling
@@ -4709,18 +7416,18 @@ func (s ContinueUpdateRollbackOutput) GoString() string {
 type CreateChangeSetInput struct {
 	_ struct{} `type:"structure"`
 
-	// In some cases, you must explicity acknowledge that your stack template contains
-	// certain capabilities in order for AWS CloudFormation to create the stack.
+	// In some cases, you must explicitly acknowledge that your stack template contains
+	// certain capabilities in order for CloudFormation to create the stack.
 	//
 	//    * CAPABILITY_IAM and CAPABILITY_NAMED_IAM Some stack templates might include
-	//    resources that can affect permissions in your AWS account; for example,
-	//    by creating new AWS Identity and Access Management (IAM) users. For those
-	//    stacks, you must explicitly acknowledge this by specifying one of these
-	//    capabilities. The following IAM resources require you to specify either
-	//    the CAPABILITY_IAM or CAPABILITY_NAMED_IAM capability. If you have IAM
-	//    resources, you can specify either capability. If you have IAM resources
-	//    with custom names, you must specify CAPABILITY_NAMED_IAM. If you don't
-	//    specify either of these capabilities, AWS CloudFormation returns an InsufficientCapabilities
+	//    resources that can affect permissions in your account; for example, by
+	//    creating new Identity and Access Management (IAM) users. For those stacks,
+	//    you must explicitly acknowledge this by specifying one of these capabilities.
+	//    The following IAM resources require you to specify either the CAPABILITY_IAM
+	//    or CAPABILITY_NAMED_IAM capability. If you have IAM resources, you can
+	//    specify either capability. If you have IAM resources with custom names,
+	//    you must specify CAPABILITY_NAMED_IAM. If you don't specify either of
+	//    these capabilities, CloudFormation returns an InsufficientCapabilities
 	//    error. If your stack template contains these resources, we recommend that
 	//    you review all permissions associated with them and edit their permissions
 	//    if necessary. AWS::IAM::AccessKey (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-iam-accesskey.html)
@@ -4730,7 +7437,7 @@ type CreateChangeSetInput struct {
 	//    AWS::IAM::Role (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html)
 	//    AWS::IAM::User (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-iam-user.html)
 	//    AWS::IAM::UserToGroupAddition (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-iam-addusertogroup.html)
-	//    For more information, see Acknowledging IAM Resources in AWS CloudFormation
+	//    For more information, see Acknowledging IAM Resources in CloudFormation
 	//    Templates (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-template.html#capabilities).
 	//
 	//    * CAPABILITY_AUTO_EXPAND Some template contain macros. Macros perform
@@ -4743,14 +7450,14 @@ type CreateChangeSetInput struct {
 	//    template, without first reviewing the resulting changes in a change set,
 	//    you must acknowledge this capability. This includes the AWS::Include (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/create-reusable-transform-function-snippets-and-add-to-your-template-with-aws-include-transform.html)
 	//    and AWS::Serverless (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/transform-aws-serverless.html)
-	//    transforms, which are macros hosted by AWS CloudFormation. This capacity
-	//    does not apply to creating change sets, and specifying it when creating
-	//    change sets has no effect. Also, change sets do not currently support
-	//    nested stacks. If you want to create a stack from a stack template that
-	//    contains macros and nested stacks, you must create or update the stack
-	//    directly from the template using the CreateStack or UpdateStack action,
-	//    and specifying this capability. For more information on macros, see Using
-	//    AWS CloudFormation Macros to Perform Custom Processing on Templates (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-macros.html).
+	//    transforms, which are macros hosted by CloudFormation. This capacity does
+	//    not apply to creating change sets, and specifying it when creating change
+	//    sets has no effect. If you want to create a stack from a stack template
+	//    that contains macros and nested stacks, you must create or update the
+	//    stack directly from the template using the CreateStack or UpdateStack
+	//    action, and specifying this capability. For more information on macros,
+	//    see Using CloudFormation Macros to Perform Custom Processing on Templates
+	//    (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-macros.html).
 	Capabilities []*string `type:"list"`
 
 	// The name of the change set. The name must be unique among all change sets
@@ -4765,30 +7472,36 @@ type CreateChangeSetInput struct {
 
 	// The type of change set operation. To create a change set for a new stack,
 	// specify CREATE. To create a change set for an existing stack, specify UPDATE.
+	// To create a change set for an import operation, specify IMPORT.
 	//
-	// If you create a change set for a new stack, AWS Cloudformation creates a
-	// stack with a unique stack ID, but no template or resources. The stack will
-	// be in the REVIEW_IN_PROGRESS (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-describing-stacks.html#d0e11995)
+	// If you create a change set for a new stack, CloudFormation creates a stack
+	// with a unique stack ID, but no template or resources. The stack will be in
+	// the REVIEW_IN_PROGRESS (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-describing-stacks.html#d0e11995)
 	// state until you execute the change set.
 	//
-	// By default, AWS CloudFormation specifies UPDATE. You can't use the UPDATE
-	// type to create a change set for a new stack or the CREATE type to create
-	// a change set for an existing stack.
+	// By default, CloudFormation specifies UPDATE. You can't use the UPDATE type
+	// to create a change set for a new stack or the CREATE type to create a change
+	// set for an existing stack.
 	ChangeSetType *string `type:"string" enum:"ChangeSetType"`
 
 	// A unique identifier for this CreateChangeSet request. Specify this token
-	// if you plan to retry requests so that AWS CloudFormation knows that you're
-	// not attempting to create another change set with the same name. You might
-	// retry CreateChangeSet requests to ensure that AWS CloudFormation successfully
-	// received them.
+	// if you plan to retry requests so that CloudFormation knows that you're not
+	// attempting to create another change set with the same name. You might retry
+	// CreateChangeSet requests to ensure that CloudFormation successfully received
+	// them.
 	ClientToken *string `min:"1" type:"string"`
 
 	// A description to help you identify this change set.
 	Description *string `min:"1" type:"string"`
 
+	// Creates a change set for the all nested stacks specified in the template.
+	// The default behavior of this action is set to False. To include nested sets
+	// in a change set, specify True.
+	IncludeNestedStacks *bool `type:"boolean"`
+
 	// The Amazon Resource Names (ARNs) of Amazon Simple Notification Service (Amazon
-	// SNS) topics that AWS CloudFormation associates with the stack. To remove
-	// all associated notification topics, specify an empty list.
+	// SNS) topics that CloudFormation associates with the stack. To remove all
+	// associated notification topics, specify an empty list.
 	NotificationARNs []*string `type:"list"`
 
 	// A list of Parameter structures that specify input parameters for the change
@@ -4799,55 +7512,57 @@ type CreateChangeSetInput struct {
 	// execute this change set, such as AWS::EC2::Instance, AWS::EC2::*, or Custom::MyCustomInstance.
 	//
 	// If the list of resource types doesn't include a resource type that you're
-	// updating, the stack update fails. By default, AWS CloudFormation grants permissions
-	// to all resource types. AWS Identity and Access Management (IAM) uses this
-	// parameter for condition keys in IAM policies for AWS CloudFormation. For
-	// more information, see Controlling Access with AWS Identity and Access Management
-	// (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-template.html)
-	// in the AWS CloudFormation User Guide.
+	// updating, the stack update fails. By default, CloudFormation grants permissions
+	// to all resource types. Identity and Access Management (IAM) uses this parameter
+	// for condition keys in IAM policies for CloudFormation. For more information,
+	// see Controlling Access with Identity and Access Management (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-template.html)
+	// in the CloudFormation User Guide.
 	ResourceTypes []*string `type:"list"`
 
-	// The Amazon Resource Name (ARN) of an AWS Identity and Access Management (IAM)
-	// role that AWS CloudFormation assumes when executing the change set. AWS CloudFormation
-	// uses the role's credentials to make calls on your behalf. AWS CloudFormation
+	// The resources to import into your stack.
+	ResourcesToImport []*ResourceToImport `type:"list"`
+
+	// The Amazon Resource Name (ARN) of an Identity and Access Management (IAM)
+	// role that CloudFormation assumes when executing the change set. CloudFormation
+	// uses the role's credentials to make calls on your behalf. CloudFormation
 	// uses this role for all future operations on the stack. As long as users have
-	// permission to operate on the stack, AWS CloudFormation uses this role even
-	// if the users don't have permission to pass it. Ensure that the role grants
-	// least privilege.
+	// permission to operate on the stack, CloudFormation uses this role even if
+	// the users don't have permission to pass it. Ensure that the role grants least
+	// privilege.
 	//
-	// If you don't specify a value, AWS CloudFormation uses the role that was previously
-	// associated with the stack. If no role is available, AWS CloudFormation uses
-	// a temporary session that is generated from your user credentials.
+	// If you don't specify a value, CloudFormation uses the role that was previously
+	// associated with the stack. If no role is available, CloudFormation uses a
+	// temporary session that is generated from your user credentials.
 	RoleARN *string `min:"20" type:"string"`
 
-	// The rollback triggers for AWS CloudFormation to monitor during stack creation
+	// The rollback triggers for CloudFormation to monitor during stack creation
 	// and updating operations, and for the specified monitoring period afterwards.
 	RollbackConfiguration *RollbackConfiguration `type:"structure"`
 
 	// The name or the unique ID of the stack for which you are creating a change
-	// set. AWS CloudFormation generates the change set by comparing this stack's
-	// information with the information that you submit, such as a modified template
-	// or different parameter input values.
+	// set. CloudFormation generates the change set by comparing this stack's information
+	// with the information that you submit, such as a modified template or different
+	// parameter input values.
 	//
 	// StackName is a required field
 	StackName *string `min:"1" type:"string" required:"true"`
 
-	// Key-value pairs to associate with this stack. AWS CloudFormation also propagates
+	// Key-value pairs to associate with this stack. CloudFormation also propagates
 	// these tags to resources in the stack. You can specify a maximum of 50 tags.
 	Tags []*Tag `type:"list"`
 
 	// A structure that contains the body of the revised template, with a minimum
-	// length of 1 byte and a maximum length of 51,200 bytes. AWS CloudFormation
-	// generates the change set by comparing this template with the template of
-	// the stack that you specified.
+	// length of 1 byte and a maximum length of 51,200 bytes. CloudFormation generates
+	// the change set by comparing this template with the template of the stack
+	// that you specified.
 	//
 	// Conditional: You must specify only TemplateBody or TemplateURL.
 	TemplateBody *string `min:"1" type:"string"`
 
 	// The location of the file that contains the revised template. The URL must
-	// point to a template (max size: 460,800 bytes) that is located in an S3 bucket.
-	// AWS CloudFormation generates the change set by comparing this template with
-	// the stack that you specified.
+	// point to a template (max size: 460,800 bytes) that is located in an S3 bucket
+	// or a Systems Manager document. CloudFormation generates the change set by
+	// comparing this template with the stack that you specified.
 	//
 	// Conditional: You must specify only TemplateBody or TemplateURL.
 	TemplateURL *string `min:"1" type:"string"`
@@ -4896,6 +7611,16 @@ func (s *CreateChangeSetInput) Validate() error {
 	}
 	if s.TemplateURL != nil && len(*s.TemplateURL) < 1 {
 		invalidParams.Add(request.NewErrParamMinLen("TemplateURL", 1))
+	}
+	if s.ResourcesToImport != nil {
+		for i, v := range s.ResourcesToImport {
+			if v == nil {
+				continue
+			}
+			if err := v.Validate(); err != nil {
+				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "ResourcesToImport", i), err.(request.ErrInvalidParams))
+			}
+		}
 	}
 	if s.RollbackConfiguration != nil {
 		if err := s.RollbackConfiguration.Validate(); err != nil {
@@ -4949,6 +7674,12 @@ func (s *CreateChangeSetInput) SetDescription(v string) *CreateChangeSetInput {
 	return s
 }
 
+// SetIncludeNestedStacks sets the IncludeNestedStacks field's value.
+func (s *CreateChangeSetInput) SetIncludeNestedStacks(v bool) *CreateChangeSetInput {
+	s.IncludeNestedStacks = &v
+	return s
+}
+
 // SetNotificationARNs sets the NotificationARNs field's value.
 func (s *CreateChangeSetInput) SetNotificationARNs(v []*string) *CreateChangeSetInput {
 	s.NotificationARNs = v
@@ -4964,6 +7695,12 @@ func (s *CreateChangeSetInput) SetParameters(v []*Parameter) *CreateChangeSetInp
 // SetResourceTypes sets the ResourceTypes field's value.
 func (s *CreateChangeSetInput) SetResourceTypes(v []*string) *CreateChangeSetInput {
 	s.ResourceTypes = v
+	return s
+}
+
+// SetResourcesToImport sets the ResourcesToImport field's value.
+func (s *CreateChangeSetInput) SetResourcesToImport(v []*ResourceToImport) *CreateChangeSetInput {
+	s.ResourcesToImport = v
 	return s
 }
 
@@ -5046,18 +7783,18 @@ func (s *CreateChangeSetOutput) SetStackId(v string) *CreateChangeSetOutput {
 type CreateStackInput struct {
 	_ struct{} `type:"structure"`
 
-	// In some cases, you must explicity acknowledge that your stack template contains
-	// certain capabilities in order for AWS CloudFormation to create the stack.
+	// In some cases, you must explicitly acknowledge that your stack template contains
+	// certain capabilities in order for CloudFormation to create the stack.
 	//
 	//    * CAPABILITY_IAM and CAPABILITY_NAMED_IAM Some stack templates might include
-	//    resources that can affect permissions in your AWS account; for example,
-	//    by creating new AWS Identity and Access Management (IAM) users. For those
-	//    stacks, you must explicitly acknowledge this by specifying one of these
-	//    capabilities. The following IAM resources require you to specify either
-	//    the CAPABILITY_IAM or CAPABILITY_NAMED_IAM capability. If you have IAM
-	//    resources, you can specify either capability. If you have IAM resources
-	//    with custom names, you must specify CAPABILITY_NAMED_IAM. If you don't
-	//    specify either of these capabilities, AWS CloudFormation returns an InsufficientCapabilities
+	//    resources that can affect permissions in your account; for example, by
+	//    creating new Identity and Access Management (IAM) users. For those stacks,
+	//    you must explicitly acknowledge this by specifying one of these capabilities.
+	//    The following IAM resources require you to specify either the CAPABILITY_IAM
+	//    or CAPABILITY_NAMED_IAM capability. If you have IAM resources, you can
+	//    specify either capability. If you have IAM resources with custom names,
+	//    you must specify CAPABILITY_NAMED_IAM. If you don't specify either of
+	//    these capabilities, CloudFormation returns an InsufficientCapabilities
 	//    error. If your stack template contains these resources, we recommend that
 	//    you review all permissions associated with them and edit their permissions
 	//    if necessary. AWS::IAM::AccessKey (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-iam-accesskey.html)
@@ -5067,7 +7804,7 @@ type CreateStackInput struct {
 	//    AWS::IAM::Role (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html)
 	//    AWS::IAM::User (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-iam-user.html)
 	//    AWS::IAM::UserToGroupAddition (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-iam-addusertogroup.html)
-	//    For more information, see Acknowledging IAM Resources in AWS CloudFormation
+	//    For more information, see Acknowledging IAM Resources in CloudFormation
 	//    Templates (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-template.html#capabilities).
 	//
 	//    * CAPABILITY_AUTO_EXPAND Some template contain macros. Macros perform
@@ -5080,22 +7817,21 @@ type CreateStackInput struct {
 	//    template, without first reviewing the resulting changes in a change set,
 	//    you must acknowledge this capability. This includes the AWS::Include (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/create-reusable-transform-function-snippets-and-add-to-your-template-with-aws-include-transform.html)
 	//    and AWS::Serverless (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/transform-aws-serverless.html)
-	//    transforms, which are macros hosted by AWS CloudFormation. Change sets
-	//    do not currently support nested stacks. If you want to create a stack
-	//    from a stack template that contains macros and nested stacks, you must
-	//    create the stack directly from the template using this capability. You
-	//    should only create stacks directly from a stack template that contains
+	//    transforms, which are macros hosted by CloudFormation. If you want to
+	//    create a stack from a stack template that contains macros and nested stacks,
+	//    you must create the stack directly from the template using this capability.
+	//    You should only create stacks directly from a stack template that contains
 	//    macros if you know what processing the macro performs. Each macro relies
 	//    on an underlying Lambda service function for processing stack templates.
 	//    Be aware that the Lambda function owner can update the function operation
-	//    without AWS CloudFormation being notified. For more information, see Using
-	//    AWS CloudFormation Macros to Perform Custom Processing on Templates (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-macros.html).
+	//    without CloudFormation being notified. For more information, see Using
+	//    CloudFormation Macros to Perform Custom Processing on Templates (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-macros.html).
 	Capabilities []*string `type:"list"`
 
 	// A unique identifier for this CreateStack request. Specify this token if you
-	// plan to retry requests so that AWS CloudFormation knows that you're not attempting
+	// plan to retry requests so that CloudFormation knows that you're not attempting
 	// to create a stack with the same name. You might retry CreateStack requests
-	// to ensure that AWS CloudFormation successfully received them.
+	// to ensure that CloudFormation successfully received them.
 	//
 	// All events triggered by a given stack operation are assigned the same client
 	// request token, which you can use to track operations. For example, if you
@@ -5119,8 +7855,8 @@ type CreateStackInput struct {
 	// attempts to delete a stack with termination protection enabled, the operation
 	// fails and the stack remains unchanged. For more information, see Protecting
 	// a Stack From Being Deleted (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-protect-stacks.html)
-	// in the AWS CloudFormation User Guide. Termination protection is disabled
-	// on stacks by default.
+	// in the CloudFormation User Guide. Termination protection is disabled on stacks
+	// by default.
 	//
 	// For nested stacks (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-nested-stacks.html),
 	// termination protection is set on the root stack and cannot be changed directly
@@ -5147,38 +7883,37 @@ type CreateStackInput struct {
 	// The template resource types that you have permissions to work with for this
 	// create stack action, such as AWS::EC2::Instance, AWS::EC2::*, or Custom::MyCustomInstance.
 	// Use the following syntax to describe template resource types: AWS::* (for
-	// all AWS resource), Custom::* (for all custom resources), Custom::logical_ID
-	// (for a specific custom resource), AWS::service_name::* (for all resources
-	// of a particular AWS service), and AWS::service_name::resource_logical_ID
-	// (for a specific AWS resource).
+	// all Amazon Web Services resources), Custom::* (for all custom resources),
+	// Custom::logical_ID (for a specific custom resource), AWS::service_name::*
+	// (for all resources of a particular Amazon Web Services service), and AWS::service_name::resource_logical_ID
+	// (for a specific Amazon Web Services resource).
 	//
 	// If the list of resource types doesn't include a resource that you're creating,
-	// the stack creation fails. By default, AWS CloudFormation grants permissions
-	// to all resource types. AWS Identity and Access Management (IAM) uses this
-	// parameter for AWS CloudFormation-specific condition keys in IAM policies.
-	// For more information, see Controlling Access with AWS Identity and Access
-	// Management (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-template.html).
+	// the stack creation fails. By default, CloudFormation grants permissions to
+	// all resource types. Identity and Access Management (IAM) uses this parameter
+	// for CloudFormation-specific condition keys in IAM policies. For more information,
+	// see Controlling Access with Identity and Access Management (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-template.html).
 	ResourceTypes []*string `type:"list"`
 
-	// The Amazon Resource Name (ARN) of an AWS Identity and Access Management (IAM)
-	// role that AWS CloudFormation assumes to create the stack. AWS CloudFormation
-	// uses the role's credentials to make calls on your behalf. AWS CloudFormation
-	// always uses this role for all future operations on the stack. As long as
-	// users have permission to operate on the stack, AWS CloudFormation uses this
-	// role even if the users don't have permission to pass it. Ensure that the
-	// role grants least privilege.
+	// The Amazon Resource Name (ARN) of an Identity and Access Management (IAM)
+	// role that CloudFormation assumes to create the stack. CloudFormation uses
+	// the role's credentials to make calls on your behalf. CloudFormation always
+	// uses this role for all future operations on the stack. As long as users have
+	// permission to operate on the stack, CloudFormation uses this role even if
+	// the users don't have permission to pass it. Ensure that the role grants least
+	// privilege.
 	//
-	// If you don't specify a value, AWS CloudFormation uses the role that was previously
-	// associated with the stack. If no role is available, AWS CloudFormation uses
-	// a temporary session that is generated from your user credentials.
+	// If you don't specify a value, CloudFormation uses the role that was previously
+	// associated with the stack. If no role is available, CloudFormation uses a
+	// temporary session that is generated from your user credentials.
 	RoleARN *string `min:"20" type:"string"`
 
-	// The rollback triggers for AWS CloudFormation to monitor during stack creation
+	// The rollback triggers for CloudFormation to monitor during stack creation
 	// and updating operations, and for the specified monitoring period afterwards.
 	RollbackConfiguration *RollbackConfiguration `type:"structure"`
 
 	// The name that is associated with the stack. The name must be unique in the
-	// region in which you are creating the stack.
+	// Region in which you are creating the stack.
 	//
 	// A stack name can contain only alphanumeric characters (case sensitive) and
 	// hyphens. It must start with an alphabetic character and cannot be longer
@@ -5189,17 +7924,17 @@ type CreateStackInput struct {
 
 	// Structure containing the stack policy body. For more information, go to Prevent
 	// Updates to Stack Resources (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/protect-stack-resources.html)
-	// in the AWS CloudFormation User Guide. You can specify either the StackPolicyBody
+	// in the CloudFormation User Guide. You can specify either the StackPolicyBody
 	// or the StackPolicyURL parameter, but not both.
 	StackPolicyBody *string `min:"1" type:"string"`
 
 	// Location of a file containing the stack policy. The URL must point to a policy
-	// (maximum size: 16 KB) located in an S3 bucket in the same region as the stack.
+	// (maximum size: 16 KB) located in an S3 bucket in the same Region as the stack.
 	// You can specify either the StackPolicyBody or the StackPolicyURL parameter,
 	// but not both.
 	StackPolicyURL *string `min:"1" type:"string"`
 
-	// Key-value pairs to associate with this stack. AWS CloudFormation also propagates
+	// Key-value pairs to associate with this stack. CloudFormation also propagates
 	// these tags to the resources created in the stack. A maximum number of 50
 	// tags can be specified.
 	Tags []*Tag `type:"list"`
@@ -5207,16 +7942,16 @@ type CreateStackInput struct {
 	// Structure containing the template body with a minimum length of 1 byte and
 	// a maximum length of 51,200 bytes. For more information, go to Template Anatomy
 	// (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html)
-	// in the AWS CloudFormation User Guide.
+	// in the CloudFormation User Guide.
 	//
 	// Conditional: You must specify either the TemplateBody or the TemplateURL
 	// parameter, but not both.
 	TemplateBody *string `min:"1" type:"string"`
 
 	// Location of file containing the template body. The URL must point to a template
-	// (max size: 460,800 bytes) that is located in an Amazon S3 bucket. For more
-	// information, go to the Template Anatomy (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html)
-	// in the AWS CloudFormation User Guide.
+	// (max size: 460,800 bytes) that is located in an Amazon S3 bucket or a Systems
+	// Manager document. For more information, go to the Template Anatomy (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html)
+	// in the CloudFormation User Guide.
 	//
 	// Conditional: You must specify either the TemplateBody or the TemplateURL
 	// parameter, but not both.
@@ -5392,18 +8127,40 @@ func (s *CreateStackInput) SetTimeoutInMinutes(v int64) *CreateStackInput {
 type CreateStackInstancesInput struct {
 	_ struct{} `type:"structure"`
 
-	// The names of one or more AWS accounts that you want to create stack instances
-	// in the specified region(s) for.
+	// [Self-managed permissions] The names of one or more accounts that you want
+	// to create stack instances in the specified Region(s) for.
 	//
-	// Accounts is a required field
-	Accounts []*string `type:"list" required:"true"`
+	// You can specify Accounts or DeploymentTargets, but not both.
+	Accounts []*string `type:"list"`
+
+	// [Service-managed permissions] Specifies whether you are acting as an account
+	// administrator in the organization's management account or as a delegated
+	// administrator in a member account.
+	//
+	// By default, SELF is specified. Use SELF for stack sets with self-managed
+	// permissions.
+	//
+	//    * If you are signed in to the management account, specify SELF.
+	//
+	//    * If you are signed in to a delegated administrator account, specify DELEGATED_ADMIN.
+	//    Your account must be registered as a delegated administrator in the management
+	//    account. For more information, see Register a delegated administrator
+	//    (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-delegated-admin.html)
+	//    in the CloudFormation User Guide.
+	CallAs *string `type:"string" enum:"CallAs"`
+
+	// [Service-managed permissions] The Organizations accounts for which to create
+	// stack instances in the specified Regions.
+	//
+	// You can specify Accounts or DeploymentTargets, but not both.
+	DeploymentTargets *DeploymentTargets `type:"structure"`
 
 	// The unique identifier for this stack set operation.
 	//
-	// The operation ID also functions as an idempotency token, to ensure that AWS
-	// CloudFormation performs the stack set operation only once, even if you retry
-	// the request multiple times. You might retry stack set operation requests
-	// to ensure that AWS CloudFormation successfully received them.
+	// The operation ID also functions as an idempotency token, to ensure that CloudFormation
+	// performs the stack set operation only once, even if you retry the request
+	// multiple times. You might retry stack set operation requests to ensure that
+	// CloudFormation successfully received them.
 	//
 	// If you don't specify an operation ID, the SDK generates one automatically.
 	//
@@ -5411,27 +8168,27 @@ type CreateStackInstancesInput struct {
 	// instances whose status is OUTDATED.
 	OperationId *string `min:"1" type:"string" idempotencyToken:"true"`
 
-	// Preferences for how AWS CloudFormation performs this stack set operation.
+	// Preferences for how CloudFormation performs this stack set operation.
 	OperationPreferences *StackSetOperationPreferences `type:"structure"`
 
 	// A list of stack set parameters whose values you want to override in the selected
 	// stack instances.
 	//
 	// Any overridden parameter values will be applied to all stack instances in
-	// the specified accounts and regions. When specifying parameters and their
-	// values, be aware of how AWS CloudFormation sets parameter values during stack
+	// the specified accounts and Regions. When specifying parameters and their
+	// values, be aware of how CloudFormation sets parameter values during stack
 	// instance operations:
 	//
 	//    * To override the current value for a parameter, include the parameter
 	//    and specify its value.
 	//
-	//    * To leave a parameter set to its present value, you can do one of the
-	//    following: Do not include the parameter in the list. Include the parameter
-	//    and specify UsePreviousValue as true. (You cannot specify both a value
-	//    and set UsePreviousValue to true.)
+	//    * To leave an overridden parameter set to its present value, include the
+	//    parameter and specify UsePreviousValue as true. (You cannot specify both
+	//    a value and set UsePreviousValue to true.)
 	//
-	//    * To set all overridden parameter back to the values specified in the
-	//    stack set, specify a parameter list but do not include any parameters.
+	//    * To set an overridden parameter back to the value specified in the stack
+	//    set, specify a parameter list but do not include the parameter in the
+	//    list.
 	//
 	//    * To leave all parameters set to their present values, do not specify
 	//    this property at all.
@@ -5444,8 +8201,8 @@ type CreateStackInstancesInput struct {
 	// to update the stack set template.
 	ParameterOverrides []*Parameter `type:"list"`
 
-	// The names of one or more regions where you want to create stack instances
-	// using the specified AWS account(s).
+	// The names of one or more Regions where you want to create stack instances
+	// using the specified accounts.
 	//
 	// Regions is a required field
 	Regions []*string `type:"list" required:"true"`
@@ -5470,9 +8227,6 @@ func (s CreateStackInstancesInput) GoString() string {
 // Validate inspects the fields of the type to determine if they are valid.
 func (s *CreateStackInstancesInput) Validate() error {
 	invalidParams := request.ErrInvalidParams{Context: "CreateStackInstancesInput"}
-	if s.Accounts == nil {
-		invalidParams.Add(request.NewErrParamRequired("Accounts"))
-	}
 	if s.OperationId != nil && len(*s.OperationId) < 1 {
 		invalidParams.Add(request.NewErrParamMinLen("OperationId", 1))
 	}
@@ -5481,6 +8235,11 @@ func (s *CreateStackInstancesInput) Validate() error {
 	}
 	if s.StackSetName == nil {
 		invalidParams.Add(request.NewErrParamRequired("StackSetName"))
+	}
+	if s.DeploymentTargets != nil {
+		if err := s.DeploymentTargets.Validate(); err != nil {
+			invalidParams.AddNested("DeploymentTargets", err.(request.ErrInvalidParams))
+		}
 	}
 	if s.OperationPreferences != nil {
 		if err := s.OperationPreferences.Validate(); err != nil {
@@ -5497,6 +8256,18 @@ func (s *CreateStackInstancesInput) Validate() error {
 // SetAccounts sets the Accounts field's value.
 func (s *CreateStackInstancesInput) SetAccounts(v []*string) *CreateStackInstancesInput {
 	s.Accounts = v
+	return s
+}
+
+// SetCallAs sets the CallAs field's value.
+func (s *CreateStackInstancesInput) SetCallAs(v string) *CreateStackInstancesInput {
+	s.CallAs = &v
+	return s
+}
+
+// SetDeploymentTargets sets the DeploymentTargets field's value.
+func (s *CreateStackInstancesInput) SetDeploymentTargets(v *DeploymentTargets) *CreateStackInstancesInput {
+	s.DeploymentTargets = v
 	return s
 }
 
@@ -5587,22 +8358,47 @@ type CreateStackSetInput struct {
 	// to control which users or groups can manage specific stack sets within the
 	// same administrator account. For more information, see Prerequisites: Granting
 	// Permissions for Stack Set Operations (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-prereqs.html)
-	// in the AWS CloudFormation User Guide.
+	// in the CloudFormation User Guide.
 	AdministrationRoleARN *string `min:"20" type:"string"`
 
-	// In some cases, you must explicity acknowledge that your stack set template
-	// contains certain capabilities in order for AWS CloudFormation to create the
-	// stack set and related stack instances.
+	// Describes whether StackSets automatically deploys to Organizations accounts
+	// that are added to the target organization or organizational unit (OU). Specify
+	// only if PermissionModel is SERVICE_MANAGED.
+	AutoDeployment *AutoDeployment `type:"structure"`
+
+	// [Service-managed permissions] Specifies whether you are acting as an account
+	// administrator in the organization's management account or as a delegated
+	// administrator in a member account.
+	//
+	// By default, SELF is specified. Use SELF for stack sets with self-managed
+	// permissions.
+	//
+	//    * To create a stack set with service-managed permissions while signed
+	//    in to the management account, specify SELF.
+	//
+	//    * To create a stack set with service-managed permissions while signed
+	//    in to a delegated administrator account, specify DELEGATED_ADMIN. Your
+	//    account must be registered as a delegated admin in the management account.
+	//    For more information, see Register a delegated administrator (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-delegated-admin.html)
+	//    in the CloudFormation User Guide.
+	//
+	// Stack sets with service-managed permissions are created in the management
+	// account, including stack sets that are created by delegated administrators.
+	CallAs *string `type:"string" enum:"CallAs"`
+
+	// In some cases, you must explicitly acknowledge that your stack set template
+	// contains certain capabilities in order for CloudFormation to create the stack
+	// set and related stack instances.
 	//
 	//    * CAPABILITY_IAM and CAPABILITY_NAMED_IAM Some stack templates might include
-	//    resources that can affect permissions in your AWS account; for example,
-	//    by creating new AWS Identity and Access Management (IAM) users. For those
-	//    stack sets, you must explicitly acknowledge this by specifying one of
-	//    these capabilities. The following IAM resources require you to specify
-	//    either the CAPABILITY_IAM or CAPABILITY_NAMED_IAM capability. If you have
-	//    IAM resources, you can specify either capability. If you have IAM resources
+	//    resources that can affect permissions in your account; for example, by
+	//    creating new Identity and Access Management (IAM) users. For those stack
+	//    sets, you must explicitly acknowledge this by specifying one of these
+	//    capabilities. The following IAM resources require you to specify either
+	//    the CAPABILITY_IAM or CAPABILITY_NAMED_IAM capability. If you have IAM
+	//    resources, you can specify either capability. If you have IAM resources
 	//    with custom names, you must specify CAPABILITY_NAMED_IAM. If you don't
-	//    specify either of these capabilities, AWS CloudFormation returns an InsufficientCapabilities
+	//    specify either of these capabilities, CloudFormation returns an InsufficientCapabilities
 	//    error. If your stack template contains these resources, we recommend that
 	//    you review all permissions associated with them and edit their permissions
 	//    if necessary. AWS::IAM::AccessKey (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-iam-accesskey.html)
@@ -5612,28 +8408,27 @@ type CreateStackSetInput struct {
 	//    AWS::IAM::Role (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html)
 	//    AWS::IAM::User (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-iam-user.html)
 	//    AWS::IAM::UserToGroupAddition (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-iam-addusertogroup.html)
-	//    For more information, see Acknowledging IAM Resources in AWS CloudFormation
+	//    For more information, see Acknowledging IAM Resources in CloudFormation
 	//    Templates (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-template.html#capabilities).
 	//
-	//    * CAPABILITY_AUTO_EXPAND Some templates contain macros. If your stack
-	//    template contains one or more macros, and you choose to create a stack
-	//    directly from the processed template, without first reviewing the resulting
-	//    changes in a change set, you must acknowledge this capability. For more
-	//    information, see Using AWS CloudFormation Macros to Perform Custom Processing
-	//    on Templates (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-macros.html).
-	//    Stack sets do not currently support macros in stack templates. (This includes
-	//    the AWS::Include (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/create-reusable-transform-function-snippets-and-add-to-your-template-with-aws-include-transform.html)
+	//    * CAPABILITY_AUTO_EXPAND Some templates reference macros. If your stack
+	//    set template references one or more macros, you must create the stack
+	//    set directly from the processed template, without first reviewing the
+	//    resulting changes in a change set. To create the stack set directly, you
+	//    must acknowledge this capability. For more information, see Using CloudFormation
+	//    Macros to Perform Custom Processing on Templates (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-macros.html).
+	//    Stack sets with service-managed permissions do not currently support the
+	//    use of macros in templates. (This includes the AWS::Include (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/create-reusable-transform-function-snippets-and-add-to-your-template-with-aws-include-transform.html)
 	//    and AWS::Serverless (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/transform-aws-serverless.html)
-	//    transforms, which are macros hosted by AWS CloudFormation.) Even if you
-	//    specify this capability, if you include a macro in your template the stack
-	//    set operation will fail.
+	//    transforms, which are macros hosted by CloudFormation.) Even if you specify
+	//    this capability for a stack set with service-managed permissions, if you
+	//    reference a macro in your template the stack set operation will fail.
 	Capabilities []*string `type:"list"`
 
 	// A unique identifier for this CreateStackSet request. Specify this token if
-	// you plan to retry requests so that AWS CloudFormation knows that you're not
-	// attempting to create another stack set with the same name. You might retry
-	// CreateStackSet requests to ensure that AWS CloudFormation successfully received
-	// them.
+	// you plan to retry requests so that CloudFormation knows that you're not attempting
+	// to create another stack set with the same name. You might retry CreateStackSet
+	// requests to ensure that CloudFormation successfully received them.
 	//
 	// If you don't specify an operation ID, the SDK generates one automatically.
 	ClientRequestToken *string `min:"1" type:"string" idempotencyToken:"true"`
@@ -5643,7 +8438,7 @@ type CreateStackSetInput struct {
 	Description *string `min:"1" type:"string"`
 
 	// The name of the IAM execution role to use to create the stack set. If you
-	// do not specify an execution role, AWS CloudFormation uses the AWSCloudFormationStackSetExecutionRole
+	// do not specify an execution role, CloudFormation uses the AWSCloudFormationStackSetExecutionRole
 	// role for the stack set operation.
 	//
 	// Specify an IAM role only if you are using customized execution roles to control
@@ -5653,8 +8448,24 @@ type CreateStackSetInput struct {
 	// The input parameters for the stack set template.
 	Parameters []*Parameter `type:"list"`
 
+	// Describes how the IAM roles required for stack set operations are created.
+	// By default, SELF-MANAGED is specified.
+	//
+	//    * With self-managed permissions, you must create the administrator and
+	//    execution roles required to deploy to target accounts. For more information,
+	//    see Grant Self-Managed Stack Set Permissions (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-prereqs-self-managed.html).
+	//
+	//    * With service-managed permissions, StackSets automatically creates the
+	//    IAM roles required to deploy to accounts managed by Organizations. For
+	//    more information, see Grant Service-Managed Stack Set Permissions (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-prereqs-service-managed.html).
+	PermissionModel *string `type:"string" enum:"PermissionModels"`
+
+	// The stack ID you are importing into a new stack set. Specify the Amazon Resource
+	// Number (ARN) of the stack.
+	StackId *string `type:"string"`
+
 	// The name to associate with the stack set. The name must be unique in the
-	// region where you create your stack set.
+	// Region where you create your stack set.
 	//
 	// A stack name can contain only alphanumeric characters (case-sensitive) and
 	// hyphens. It must start with an alphabetic character and can't be longer than
@@ -5664,19 +8475,19 @@ type CreateStackSetInput struct {
 	StackSetName *string `type:"string" required:"true"`
 
 	// The key-value pairs to associate with this stack set and the stacks created
-	// from it. AWS CloudFormation also propagates these tags to supported resources
+	// from it. CloudFormation also propagates these tags to supported resources
 	// that are created in the stacks. A maximum number of 50 tags can be specified.
 	//
-	// If you specify tags as part of a CreateStackSet action, AWS CloudFormation
-	// checks to see if you have the required IAM permission to tag resources. If
-	// you don't, the entire CreateStackSet action fails with an access denied error,
-	// and the stack set is not created.
+	// If you specify tags as part of a CreateStackSet action, CloudFormation checks
+	// to see if you have the required IAM permission to tag resources. If you don't,
+	// the entire CreateStackSet action fails with an access denied error, and the
+	// stack set is not created.
 	Tags []*Tag `type:"list"`
 
 	// The structure that contains the template body, with a minimum length of 1
 	// byte and a maximum length of 51,200 bytes. For more information, see Template
 	// Anatomy (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html)
-	// in the AWS CloudFormation User Guide.
+	// in the CloudFormation User Guide.
 	//
 	// Conditional: You must specify either the TemplateBody or the TemplateURL
 	// parameter, but not both.
@@ -5684,8 +8495,9 @@ type CreateStackSetInput struct {
 
 	// The location of the file that contains the template body. The URL must point
 	// to a template (maximum size: 460,800 bytes) that's located in an Amazon S3
-	// bucket. For more information, see Template Anatomy (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html)
-	// in the AWS CloudFormation User Guide.
+	// bucket or a Systems Manager document. For more information, see Template
+	// Anatomy (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html)
+	// in the CloudFormation User Guide.
 	//
 	// Conditional: You must specify either the TemplateBody or the TemplateURL
 	// parameter, but not both.
@@ -5749,6 +8561,18 @@ func (s *CreateStackSetInput) SetAdministrationRoleARN(v string) *CreateStackSet
 	return s
 }
 
+// SetAutoDeployment sets the AutoDeployment field's value.
+func (s *CreateStackSetInput) SetAutoDeployment(v *AutoDeployment) *CreateStackSetInput {
+	s.AutoDeployment = v
+	return s
+}
+
+// SetCallAs sets the CallAs field's value.
+func (s *CreateStackSetInput) SetCallAs(v string) *CreateStackSetInput {
+	s.CallAs = &v
+	return s
+}
+
 // SetCapabilities sets the Capabilities field's value.
 func (s *CreateStackSetInput) SetCapabilities(v []*string) *CreateStackSetInput {
 	s.Capabilities = v
@@ -5776,6 +8600,18 @@ func (s *CreateStackSetInput) SetExecutionRoleName(v string) *CreateStackSetInpu
 // SetParameters sets the Parameters field's value.
 func (s *CreateStackSetInput) SetParameters(v []*Parameter) *CreateStackSetInput {
 	s.Parameters = v
+	return s
+}
+
+// SetPermissionModel sets the PermissionModel field's value.
+func (s *CreateStackSetInput) SetPermissionModel(v string) *CreateStackSetInput {
+	s.PermissionModel = &v
+	return s
+}
+
+// SetStackId sets the StackId field's value.
+func (s *CreateStackSetInput) SetStackId(v string) *CreateStackSetInput {
+	s.StackId = &v
 	return s
 }
 
@@ -5824,6 +8660,81 @@ func (s CreateStackSetOutput) GoString() string {
 func (s *CreateStackSetOutput) SetStackSetId(v string) *CreateStackSetOutput {
 	s.StackSetId = &v
 	return s
+}
+
+type DeactivateTypeInput struct {
+	_ struct{} `type:"structure"`
+
+	// The Amazon Resource Name (ARN) for the extension, in this account and region.
+	//
+	// Conditional: You must specify either Arn, or TypeName and Type.
+	Arn *string `type:"string"`
+
+	// The extension type.
+	//
+	// Conditional: You must specify either Arn, or TypeName and Type.
+	Type *string `type:"string" enum:"ThirdPartyType"`
+
+	// The type name of the extension, in this account and region. If you specified
+	// a type name alias when enabling the extension, use the type name alias.
+	//
+	// Conditional: You must specify either Arn, or TypeName and Type.
+	TypeName *string `min:"10" type:"string"`
+}
+
+// String returns the string representation
+func (s DeactivateTypeInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeactivateTypeInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *DeactivateTypeInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "DeactivateTypeInput"}
+	if s.TypeName != nil && len(*s.TypeName) < 10 {
+		invalidParams.Add(request.NewErrParamMinLen("TypeName", 10))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetArn sets the Arn field's value.
+func (s *DeactivateTypeInput) SetArn(v string) *DeactivateTypeInput {
+	s.Arn = &v
+	return s
+}
+
+// SetType sets the Type field's value.
+func (s *DeactivateTypeInput) SetType(v string) *DeactivateTypeInput {
+	s.Type = &v
+	return s
+}
+
+// SetTypeName sets the TypeName field's value.
+func (s *DeactivateTypeInput) SetTypeName(v string) *DeactivateTypeInput {
+	s.TypeName = &v
+	return s
+}
+
+type DeactivateTypeOutput struct {
+	_ struct{} `type:"structure"`
+}
+
+// String returns the string representation
+func (s DeactivateTypeOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeactivateTypeOutput) GoString() string {
+	return s.String()
 }
 
 // The input for the DeleteChangeSet action.
@@ -5902,9 +8813,9 @@ type DeleteStackInput struct {
 	_ struct{} `type:"structure"`
 
 	// A unique identifier for this DeleteStack request. Specify this token if you
-	// plan to retry requests so that AWS CloudFormation knows that you're not attempting
+	// plan to retry requests so that CloudFormation knows that you're not attempting
 	// to delete a stack with the same name. You might retry DeleteStack requests
-	// to ensure that AWS CloudFormation successfully received them.
+	// to ensure that CloudFormation successfully received them.
 	//
 	// All events triggered by a given stack operation are assigned the same client
 	// request token, which you can use to track operations. For example, if you
@@ -5919,20 +8830,20 @@ type DeleteStackInput struct {
 	ClientRequestToken *string `min:"1" type:"string"`
 
 	// For stacks in the DELETE_FAILED state, a list of resource logical IDs that
-	// are associated with the resources you want to retain. During deletion, AWS
-	// CloudFormation deletes the stack but does not delete the retained resources.
+	// are associated with the resources you want to retain. During deletion, CloudFormation
+	// deletes the stack but does not delete the retained resources.
 	//
 	// Retaining resources is useful when you cannot delete a resource, such as
 	// a non-empty S3 bucket, but you want to delete the stack.
 	RetainResources []*string `type:"list"`
 
-	// The Amazon Resource Name (ARN) of an AWS Identity and Access Management (IAM)
-	// role that AWS CloudFormation assumes to delete the stack. AWS CloudFormation
-	// uses the role's credentials to make calls on your behalf.
+	// The Amazon Resource Name (ARN) of an Identity and Access Management (IAM)
+	// role that CloudFormation assumes to delete the stack. CloudFormation uses
+	// the role's credentials to make calls on your behalf.
 	//
-	// If you don't specify a value, AWS CloudFormation uses the role that was previously
-	// associated with the stack. If no role is available, AWS CloudFormation uses
-	// a temporary session that is generated from your user credentials.
+	// If you don't specify a value, CloudFormation uses the role that was previously
+	// associated with the stack. If no role is available, CloudFormation uses a
+	// temporary session that is generated from your user credentials.
 	RoleARN *string `min:"20" type:"string"`
 
 	// The name or the unique stack ID that is associated with the stack.
@@ -5997,28 +8908,51 @@ func (s *DeleteStackInput) SetStackName(v string) *DeleteStackInput {
 type DeleteStackInstancesInput struct {
 	_ struct{} `type:"structure"`
 
-	// The names of the AWS accounts that you want to delete stack instances for.
+	// [Self-managed permissions] The names of the accounts that you want to delete
+	// stack instances for.
 	//
-	// Accounts is a required field
-	Accounts []*string `type:"list" required:"true"`
+	// You can specify Accounts or DeploymentTargets, but not both.
+	Accounts []*string `type:"list"`
+
+	// [Service-managed permissions] Specifies whether you are acting as an account
+	// administrator in the organization's management account or as a delegated
+	// administrator in a member account.
+	//
+	// By default, SELF is specified. Use SELF for stack sets with self-managed
+	// permissions.
+	//
+	//    * If you are signed in to the management account, specify SELF.
+	//
+	//    * If you are signed in to a delegated administrator account, specify DELEGATED_ADMIN.
+	//    Your account must be registered as a delegated administrator in the management
+	//    account. For more information, see Register a delegated administrator
+	//    (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-delegated-admin.html)
+	//    in the CloudFormation User Guide.
+	CallAs *string `type:"string" enum:"CallAs"`
+
+	// [Service-managed permissions] The Organizations accounts from which to delete
+	// stack instances.
+	//
+	// You can specify Accounts or DeploymentTargets, but not both.
+	DeploymentTargets *DeploymentTargets `type:"structure"`
 
 	// The unique identifier for this stack set operation.
 	//
 	// If you don't specify an operation ID, the SDK generates one automatically.
 	//
-	// The operation ID also functions as an idempotency token, to ensure that AWS
-	// CloudFormation performs the stack set operation only once, even if you retry
-	// the request multiple times. You can retry stack set operation requests to
-	// ensure that AWS CloudFormation successfully received them.
+	// The operation ID also functions as an idempotency token, to ensure that CloudFormation
+	// performs the stack set operation only once, even if you retry the request
+	// multiple times. You can retry stack set operation requests to ensure that
+	// CloudFormation successfully received them.
 	//
 	// Repeating this stack set operation with a new operation ID retries all stack
 	// instances whose status is OUTDATED.
 	OperationId *string `min:"1" type:"string" idempotencyToken:"true"`
 
-	// Preferences for how AWS CloudFormation performs this stack set operation.
+	// Preferences for how CloudFormation performs this stack set operation.
 	OperationPreferences *StackSetOperationPreferences `type:"structure"`
 
-	// The regions where you want to delete stack set instances.
+	// The Regions where you want to delete stack set instances.
 	//
 	// Regions is a required field
 	Regions []*string `type:"list" required:"true"`
@@ -6052,9 +8986,6 @@ func (s DeleteStackInstancesInput) GoString() string {
 // Validate inspects the fields of the type to determine if they are valid.
 func (s *DeleteStackInstancesInput) Validate() error {
 	invalidParams := request.ErrInvalidParams{Context: "DeleteStackInstancesInput"}
-	if s.Accounts == nil {
-		invalidParams.Add(request.NewErrParamRequired("Accounts"))
-	}
 	if s.OperationId != nil && len(*s.OperationId) < 1 {
 		invalidParams.Add(request.NewErrParamMinLen("OperationId", 1))
 	}
@@ -6066,6 +8997,11 @@ func (s *DeleteStackInstancesInput) Validate() error {
 	}
 	if s.StackSetName == nil {
 		invalidParams.Add(request.NewErrParamRequired("StackSetName"))
+	}
+	if s.DeploymentTargets != nil {
+		if err := s.DeploymentTargets.Validate(); err != nil {
+			invalidParams.AddNested("DeploymentTargets", err.(request.ErrInvalidParams))
+		}
 	}
 	if s.OperationPreferences != nil {
 		if err := s.OperationPreferences.Validate(); err != nil {
@@ -6082,6 +9018,18 @@ func (s *DeleteStackInstancesInput) Validate() error {
 // SetAccounts sets the Accounts field's value.
 func (s *DeleteStackInstancesInput) SetAccounts(v []*string) *DeleteStackInstancesInput {
 	s.Accounts = v
+	return s
+}
+
+// SetCallAs sets the CallAs field's value.
+func (s *DeleteStackInstancesInput) SetCallAs(v string) *DeleteStackInstancesInput {
+	s.CallAs = &v
+	return s
+}
+
+// SetDeploymentTargets sets the DeploymentTargets field's value.
+func (s *DeleteStackInstancesInput) SetDeploymentTargets(v *DeploymentTargets) *DeleteStackInstancesInput {
+	s.DeploymentTargets = v
 	return s
 }
 
@@ -6155,6 +9103,22 @@ func (s DeleteStackOutput) GoString() string {
 type DeleteStackSetInput struct {
 	_ struct{} `type:"structure"`
 
+	// [Service-managed permissions] Specifies whether you are acting as an account
+	// administrator in the organization's management account or as a delegated
+	// administrator in a member account.
+	//
+	// By default, SELF is specified. Use SELF for stack sets with self-managed
+	// permissions.
+	//
+	//    * If you are signed in to the management account, specify SELF.
+	//
+	//    * If you are signed in to a delegated administrator account, specify DELEGATED_ADMIN.
+	//    Your account must be registered as a delegated administrator in the management
+	//    account. For more information, see Register a delegated administrator
+	//    (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-delegated-admin.html)
+	//    in the CloudFormation User Guide.
+	CallAs *string `type:"string" enum:"CallAs"`
+
 	// The name or unique ID of the stack set that you're deleting. You can obtain
 	// this value by running ListStackSets.
 	//
@@ -6185,6 +9149,12 @@ func (s *DeleteStackSetInput) Validate() error {
 	return nil
 }
 
+// SetCallAs sets the CallAs field's value.
+func (s *DeleteStackSetInput) SetCallAs(v string) *DeleteStackSetInput {
+	s.CallAs = &v
+	return s
+}
+
 // SetStackSetName sets the StackSetName field's value.
 func (s *DeleteStackSetInput) SetStackSetName(v string) *DeleteStackSetInput {
 	s.StackSetName = &v
@@ -6202,6 +9172,157 @@ func (s DeleteStackSetOutput) String() string {
 
 // GoString returns the string representation
 func (s DeleteStackSetOutput) GoString() string {
+	return s.String()
+}
+
+// [Service-managed permissions] The Organizations accounts to which StackSets
+// deploys. StackSets does not deploy stack instances to the organization management
+// account, even if the organization management account is in your organization
+// or in an OU in your organization.
+//
+// For update operations, you can specify either Accounts or OrganizationalUnitIds.
+// For create and delete operations, specify OrganizationalUnitIds.
+type DeploymentTargets struct {
+	_ struct{} `type:"structure"`
+
+	// The names of one or more accounts for which you want to deploy stack set
+	// updates.
+	Accounts []*string `type:"list"`
+
+	// Returns the value of the AccountsUrl property.
+	AccountsUrl *string `min:"1" type:"string"`
+
+	// The organization root ID or organizational unit (OU) IDs to which StackSets
+	// deploys.
+	OrganizationalUnitIds []*string `type:"list"`
+}
+
+// String returns the string representation
+func (s DeploymentTargets) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeploymentTargets) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *DeploymentTargets) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "DeploymentTargets"}
+	if s.AccountsUrl != nil && len(*s.AccountsUrl) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("AccountsUrl", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetAccounts sets the Accounts field's value.
+func (s *DeploymentTargets) SetAccounts(v []*string) *DeploymentTargets {
+	s.Accounts = v
+	return s
+}
+
+// SetAccountsUrl sets the AccountsUrl field's value.
+func (s *DeploymentTargets) SetAccountsUrl(v string) *DeploymentTargets {
+	s.AccountsUrl = &v
+	return s
+}
+
+// SetOrganizationalUnitIds sets the OrganizationalUnitIds field's value.
+func (s *DeploymentTargets) SetOrganizationalUnitIds(v []*string) *DeploymentTargets {
+	s.OrganizationalUnitIds = v
+	return s
+}
+
+type DeregisterTypeInput struct {
+	_ struct{} `type:"structure"`
+
+	// The Amazon Resource Name (ARN) of the extension.
+	//
+	// Conditional: You must specify either TypeName and Type, or Arn.
+	Arn *string `type:"string"`
+
+	// The kind of extension.
+	//
+	// Conditional: You must specify either TypeName and Type, or Arn.
+	Type *string `type:"string" enum:"RegistryType"`
+
+	// The name of the extension.
+	//
+	// Conditional: You must specify either TypeName and Type, or Arn.
+	TypeName *string `min:"10" type:"string"`
+
+	// The ID of a specific version of the extension. The version ID is the value
+	// at the end of the Amazon Resource Name (ARN) assigned to the extension version
+	// when it is registered.
+	VersionId *string `min:"1" type:"string"`
+}
+
+// String returns the string representation
+func (s DeregisterTypeInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeregisterTypeInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *DeregisterTypeInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "DeregisterTypeInput"}
+	if s.TypeName != nil && len(*s.TypeName) < 10 {
+		invalidParams.Add(request.NewErrParamMinLen("TypeName", 10))
+	}
+	if s.VersionId != nil && len(*s.VersionId) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("VersionId", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetArn sets the Arn field's value.
+func (s *DeregisterTypeInput) SetArn(v string) *DeregisterTypeInput {
+	s.Arn = &v
+	return s
+}
+
+// SetType sets the Type field's value.
+func (s *DeregisterTypeInput) SetType(v string) *DeregisterTypeInput {
+	s.Type = &v
+	return s
+}
+
+// SetTypeName sets the TypeName field's value.
+func (s *DeregisterTypeInput) SetTypeName(v string) *DeregisterTypeInput {
+	s.TypeName = &v
+	return s
+}
+
+// SetVersionId sets the VersionId field's value.
+func (s *DeregisterTypeInput) SetVersionId(v string) *DeregisterTypeInput {
+	s.VersionId = &v
+	return s
+}
+
+type DeregisterTypeOutput struct {
+	_ struct{} `type:"structure"`
+}
+
+// String returns the string representation
+func (s DeregisterTypeOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeregisterTypeOutput) GoString() string {
 	return s.String()
 }
 
@@ -6246,7 +9367,7 @@ func (s *DescribeAccountLimitsInput) SetNextToken(v string) *DescribeAccountLimi
 type DescribeAccountLimitsOutput struct {
 	_ struct{} `type:"structure"`
 
-	// An account limit structure that contain a list of AWS CloudFormation account
+	// An account limit structure that contain a list of CloudFormation account
 	// limits and their values.
 	AccountLimits []*AccountLimit `type:"list"`
 
@@ -6360,8 +9481,8 @@ type DescribeChangeSetOutput struct {
 	// The name of the change set.
 	ChangeSetName *string `min:"1" type:"string"`
 
-	// A list of Change structures that describes the resources AWS CloudFormation
-	// changes if you execute the change set.
+	// A list of Change structures that describes the resources CloudFormation changes
+	// if you execute the change set.
 	Changes []*Change `type:"list"`
 
 	// The start time when the change set was created, in UTC.
@@ -6372,10 +9493,13 @@ type DescribeChangeSetOutput struct {
 
 	// If the change set execution status is AVAILABLE, you can execute the change
 	// set. If you can’t execute the change set, the status indicates why. For
-	// example, a change set might be in an UNAVAILABLE state because AWS CloudFormation
+	// example, a change set might be in an UNAVAILABLE state because CloudFormation
 	// is still creating it or in an OBSOLETE state because the stack was already
 	// updated.
 	ExecutionStatus *string `type:"string" enum:"ExecutionStatus"`
+
+	// Verifies if IncludeNestedStacks is set to True.
+	IncludeNestedStacks *bool `type:"boolean"`
 
 	// If the output exceeds 1 MB, a string that identifies the next page of changes.
 	// If there is no additional page, this value is null.
@@ -6391,9 +9515,17 @@ type DescribeChangeSetOutput struct {
 	// data type.
 	Parameters []*Parameter `type:"list"`
 
-	// The rollback triggers for AWS CloudFormation to monitor during stack creation
+	// Specifies the change set ID of the parent change set in the current nested
+	// change set hierarchy.
+	ParentChangeSetId *string `min:"1" type:"string"`
+
+	// The rollback triggers for CloudFormation to monitor during stack creation
 	// and updating operations, and for the specified monitoring period afterwards.
 	RollbackConfiguration *RollbackConfiguration `type:"structure"`
+
+	// Specifies the change set ID of the root change set in the current nested
+	// change set hierarchy.
+	RootChangeSetId *string `min:"1" type:"string"`
 
 	// The ARN of the stack that is associated with the change set.
 	StackId *string `type:"string"`
@@ -6406,7 +9538,7 @@ type DescribeChangeSetOutput struct {
 	Status *string `type:"string" enum:"ChangeSetStatus"`
 
 	// A description of the change set's status. For example, if your attempt to
-	// create a change set failed, AWS CloudFormation shows the error message.
+	// create a change set failed, CloudFormation shows the error message.
 	StatusReason *string `type:"string"`
 
 	// If you execute the change set, the tags that will be associated with the
@@ -6466,6 +9598,12 @@ func (s *DescribeChangeSetOutput) SetExecutionStatus(v string) *DescribeChangeSe
 	return s
 }
 
+// SetIncludeNestedStacks sets the IncludeNestedStacks field's value.
+func (s *DescribeChangeSetOutput) SetIncludeNestedStacks(v bool) *DescribeChangeSetOutput {
+	s.IncludeNestedStacks = &v
+	return s
+}
+
 // SetNextToken sets the NextToken field's value.
 func (s *DescribeChangeSetOutput) SetNextToken(v string) *DescribeChangeSetOutput {
 	s.NextToken = &v
@@ -6484,9 +9622,21 @@ func (s *DescribeChangeSetOutput) SetParameters(v []*Parameter) *DescribeChangeS
 	return s
 }
 
+// SetParentChangeSetId sets the ParentChangeSetId field's value.
+func (s *DescribeChangeSetOutput) SetParentChangeSetId(v string) *DescribeChangeSetOutput {
+	s.ParentChangeSetId = &v
+	return s
+}
+
 // SetRollbackConfiguration sets the RollbackConfiguration field's value.
 func (s *DescribeChangeSetOutput) SetRollbackConfiguration(v *RollbackConfiguration) *DescribeChangeSetOutput {
 	s.RollbackConfiguration = v
+	return s
+}
+
+// SetRootChangeSetId sets the RootChangeSetId field's value.
+func (s *DescribeChangeSetOutput) SetRootChangeSetId(v string) *DescribeChangeSetOutput {
+	s.RootChangeSetId = &v
 	return s
 }
 
@@ -6520,14 +9670,106 @@ func (s *DescribeChangeSetOutput) SetTags(v []*Tag) *DescribeChangeSetOutput {
 	return s
 }
 
+type DescribePublisherInput struct {
+	_ struct{} `type:"structure"`
+
+	// The ID of the extension publisher.
+	//
+	// If you do not supply a PublisherId, and you have registered as an extension
+	// publisher, DescribePublisher returns information about your own publisher
+	// account.
+	PublisherId *string `min:"1" type:"string"`
+}
+
+// String returns the string representation
+func (s DescribePublisherInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DescribePublisherInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *DescribePublisherInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "DescribePublisherInput"}
+	if s.PublisherId != nil && len(*s.PublisherId) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("PublisherId", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetPublisherId sets the PublisherId field's value.
+func (s *DescribePublisherInput) SetPublisherId(v string) *DescribePublisherInput {
+	s.PublisherId = &v
+	return s
+}
+
+type DescribePublisherOutput struct {
+	_ struct{} `type:"structure"`
+
+	// The type of account used as the identity provider when registering this publisher
+	// with CloudFormation.
+	IdentityProvider *string `type:"string" enum:"IdentityProvider"`
+
+	// The ID of the extension publisher.
+	PublisherId *string `min:"1" type:"string"`
+
+	// The URL to the publisher's profile with the identity provider.
+	PublisherProfile *string `type:"string"`
+
+	// Whether the publisher is verified. Currently, all registered publishers are
+	// verified.
+	PublisherStatus *string `type:"string" enum:"PublisherStatus"`
+}
+
+// String returns the string representation
+func (s DescribePublisherOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DescribePublisherOutput) GoString() string {
+	return s.String()
+}
+
+// SetIdentityProvider sets the IdentityProvider field's value.
+func (s *DescribePublisherOutput) SetIdentityProvider(v string) *DescribePublisherOutput {
+	s.IdentityProvider = &v
+	return s
+}
+
+// SetPublisherId sets the PublisherId field's value.
+func (s *DescribePublisherOutput) SetPublisherId(v string) *DescribePublisherOutput {
+	s.PublisherId = &v
+	return s
+}
+
+// SetPublisherProfile sets the PublisherProfile field's value.
+func (s *DescribePublisherOutput) SetPublisherProfile(v string) *DescribePublisherOutput {
+	s.PublisherProfile = &v
+	return s
+}
+
+// SetPublisherStatus sets the PublisherStatus field's value.
+func (s *DescribePublisherOutput) SetPublisherStatus(v string) *DescribePublisherOutput {
+	s.PublisherStatus = &v
+	return s
+}
+
 type DescribeStackDriftDetectionStatusInput struct {
 	_ struct{} `type:"structure"`
 
 	// The ID of the drift detection results of this operation.
 	//
-	// AWS CloudFormation generates new results, with a new drift detection ID,
-	// each time this operation is run. However, the number of drift results AWS
-	// CloudFormation retains for any given stack, and for how long, may vary.
+	// CloudFormation generates new results, with a new drift detection ID, each
+	// time this operation is run. However, the number of drift results CloudFormation
+	// retains for any given stack, and for how long, may vary.
 	//
 	// StackDriftDetectionId is a required field
 	StackDriftDetectionId *string `min:"1" type:"string" required:"true"`
@@ -6573,13 +9815,13 @@ type DescribeStackDriftDetectionStatusOutput struct {
 	//    * DETECTION_COMPLETE: The stack drift detection operation has successfully
 	//    completed for all resources in the stack that support drift detection.
 	//    (Resources that do not currently support stack detection remain unchecked.)
-	//    If you specified logical resource IDs for AWS CloudFormation to use as
-	//    a filter for the stack drift detection operation, only the resources with
-	//    those logical IDs are checked for drift.
+	//    If you specified logical resource IDs for CloudFormation to use as a filter
+	//    for the stack drift detection operation, only the resources with those
+	//    logical IDs are checked for drift.
 	//
 	//    * DETECTION_FAILED: The stack drift detection operation has failed for
 	//    at least one resource in the stack. Results will be available for resources
-	//    on which AWS CloudFormation successfully completed drift detection.
+	//    on which CloudFormation successfully completed drift detection.
 	//
 	//    * DETECTION_IN_PROGRESS: The stack drift detection operation is currently
 	//    in progress.
@@ -6597,8 +9839,8 @@ type DescribeStackDriftDetectionStatusOutput struct {
 
 	// The ID of the drift detection results of this operation.
 	//
-	// AWS CloudFormation generates new results, with a new drift detection ID,
-	// each time this operation is run. However, the number of reports AWS CloudFormation
+	// CloudFormation generates new results, with a new drift detection ID, each
+	// time this operation is run. However, the number of reports CloudFormation
 	// retains for any given stack, and for how long, may vary.
 	//
 	// StackDriftDetectionId is a required field
@@ -6610,8 +9852,8 @@ type DescribeStackDriftDetectionStatusOutput struct {
 	//    A stack is considered to have drifted if one or more of its resources
 	//    have drifted.
 	//
-	//    * NOT_CHECKED: AWS CloudFormation has not checked if the stack differs
-	//    from its expected template configuration.
+	//    * NOT_CHECKED: CloudFormation has not checked if the stack differs from
+	//    its expected template configuration.
 	//
 	//    * IN_SYNC: The stack's actual configuration matches its expected template
 	//    configuration.
@@ -6773,12 +10015,28 @@ func (s *DescribeStackEventsOutput) SetStackEvents(v []*StackEvent) *DescribeSta
 type DescribeStackInstanceInput struct {
 	_ struct{} `type:"structure"`
 
-	// The ID of an AWS account that's associated with this stack instance.
+	// [Service-managed permissions] Specifies whether you are acting as an account
+	// administrator in the organization's management account or as a delegated
+	// administrator in a member account.
+	//
+	// By default, SELF is specified. Use SELF for stack sets with self-managed
+	// permissions.
+	//
+	//    * If you are signed in to the management account, specify SELF.
+	//
+	//    * If you are signed in to a delegated administrator account, specify DELEGATED_ADMIN.
+	//    Your account must be registered as a delegated administrator in the management
+	//    account. For more information, see Register a delegated administrator
+	//    (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-delegated-admin.html)
+	//    in the CloudFormation User Guide.
+	CallAs *string `type:"string" enum:"CallAs"`
+
+	// The ID of an account that's associated with this stack instance.
 	//
 	// StackInstanceAccount is a required field
 	StackInstanceAccount *string `type:"string" required:"true"`
 
-	// The name of a region that's associated with this stack instance.
+	// The name of a Region that's associated with this stack instance.
 	//
 	// StackInstanceRegion is a required field
 	StackInstanceRegion *string `type:"string" required:"true"`
@@ -6817,6 +10075,12 @@ func (s *DescribeStackInstanceInput) Validate() error {
 		return invalidParams
 	}
 	return nil
+}
+
+// SetCallAs sets the CallAs field's value.
+func (s *DescribeStackInstanceInput) SetCallAs(v string) *DescribeStackInstanceInput {
+	s.CallAs = &v
+	return s
 }
 
 // SetStackInstanceAccount sets the StackInstanceAccount field's value.
@@ -6889,7 +10153,7 @@ type DescribeStackResourceDriftsInput struct {
 	//    * IN_SYNC: The resources's actual configuration matches its expected template
 	//    configuration.
 	//
-	//    * NOT_CHECKED: AWS CloudFormation does not currently return this value.
+	//    * NOT_CHECKED: CloudFormation does not currently return this value.
 	StackResourceDriftStatusFilters []*string `min:"1" type:"list"`
 }
 
@@ -6963,7 +10227,7 @@ type DescribeStackResourceDriftsOutput struct {
 
 	// Drift information for the resources that have been checked for drift in the
 	// specified stack. This includes actual and expected configuration values for
-	// resources where AWS CloudFormation detects drift.
+	// resources where CloudFormation detects drift.
 	//
 	// For a given stack, there will be one StackResourceDrift for each stack resource
 	// that has been checked for drift. Resources that have not yet been checked
@@ -7095,7 +10359,7 @@ type DescribeStackResourcesInput struct {
 	LogicalResourceId *string `type:"string"`
 
 	// The name or unique identifier that corresponds to a physical instance ID
-	// of a resource supported by AWS CloudFormation.
+	// of a resource supported by CloudFormation.
 	//
 	// For example, for an Amazon Elastic Compute Cloud (EC2) instance, PhysicalResourceId
 	// corresponds to the InstanceId. You can pass the EC2 InstanceId to DescribeStackResources
@@ -7178,6 +10442,22 @@ func (s *DescribeStackResourcesOutput) SetStackResources(v []*StackResource) *De
 type DescribeStackSetInput struct {
 	_ struct{} `type:"structure"`
 
+	// [Service-managed permissions] Specifies whether you are acting as an account
+	// administrator in the organization's management account or as a delegated
+	// administrator in a member account.
+	//
+	// By default, SELF is specified. Use SELF for stack sets with self-managed
+	// permissions.
+	//
+	//    * If you are signed in to the management account, specify SELF.
+	//
+	//    * If you are signed in to a delegated administrator account, specify DELEGATED_ADMIN.
+	//    Your account must be registered as a delegated administrator in the management
+	//    account. For more information, see Register a delegated administrator
+	//    (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-delegated-admin.html)
+	//    in the CloudFormation User Guide.
+	CallAs *string `type:"string" enum:"CallAs"`
+
 	// The name or unique ID of the stack set whose description you want.
 	//
 	// StackSetName is a required field
@@ -7207,6 +10487,12 @@ func (s *DescribeStackSetInput) Validate() error {
 	return nil
 }
 
+// SetCallAs sets the CallAs field's value.
+func (s *DescribeStackSetInput) SetCallAs(v string) *DescribeStackSetInput {
+	s.CallAs = &v
+	return s
+}
+
 // SetStackSetName sets the StackSetName field's value.
 func (s *DescribeStackSetInput) SetStackSetName(v string) *DescribeStackSetInput {
 	s.StackSetName = &v
@@ -7215,6 +10501,22 @@ func (s *DescribeStackSetInput) SetStackSetName(v string) *DescribeStackSetInput
 
 type DescribeStackSetOperationInput struct {
 	_ struct{} `type:"structure"`
+
+	// [Service-managed permissions] Specifies whether you are acting as an account
+	// administrator in the organization's management account or as a delegated
+	// administrator in a member account.
+	//
+	// By default, SELF is specified. Use SELF for stack sets with self-managed
+	// permissions.
+	//
+	//    * If you are signed in to the management account, specify SELF.
+	//
+	//    * If you are signed in to a delegated administrator account, specify DELEGATED_ADMIN.
+	//    Your account must be registered as a delegated administrator in the management
+	//    account. For more information, see Register a delegated administrator
+	//    (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-delegated-admin.html)
+	//    in the CloudFormation User Guide.
+	CallAs *string `type:"string" enum:"CallAs"`
 
 	// The unique ID of the stack set operation.
 	//
@@ -7254,6 +10556,12 @@ func (s *DescribeStackSetOperationInput) Validate() error {
 		return invalidParams
 	}
 	return nil
+}
+
+// SetCallAs sets the CallAs field's value.
+func (s *DescribeStackSetOperationInput) SetCallAs(v string) *DescribeStackSetOperationInput {
+	s.CallAs = &v
+	return s
 }
 
 // SetOperationId sets the OperationId field's value.
@@ -7402,6 +10710,594 @@ func (s *DescribeStacksOutput) SetStacks(v []*Stack) *DescribeStacksOutput {
 	return s
 }
 
+type DescribeTypeInput struct {
+	_ struct{} `type:"structure"`
+
+	// The Amazon Resource Name (ARN) of the extension.
+	//
+	// Conditional: You must specify either TypeName and Type, or Arn.
+	Arn *string `type:"string"`
+
+	// The version number of a public third-party extension.
+	PublicVersionNumber *string `min:"5" type:"string"`
+
+	// The publisher ID of the extension publisher.
+	//
+	// Extensions provided by Amazon are not assigned a publisher ID.
+	PublisherId *string `min:"1" type:"string"`
+
+	// The kind of extension.
+	//
+	// Conditional: You must specify either TypeName and Type, or Arn.
+	Type *string `type:"string" enum:"RegistryType"`
+
+	// The name of the extension.
+	//
+	// Conditional: You must specify either TypeName and Type, or Arn.
+	TypeName *string `min:"10" type:"string"`
+
+	// The ID of a specific version of the extension. The version ID is the value
+	// at the end of the Amazon Resource Name (ARN) assigned to the extension version
+	// when it is registered.
+	//
+	// If you specify a VersionId, DescribeType returns information about that specific
+	// extension version. Otherwise, it returns information about the default extension
+	// version.
+	VersionId *string `min:"1" type:"string"`
+}
+
+// String returns the string representation
+func (s DescribeTypeInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DescribeTypeInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *DescribeTypeInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "DescribeTypeInput"}
+	if s.PublicVersionNumber != nil && len(*s.PublicVersionNumber) < 5 {
+		invalidParams.Add(request.NewErrParamMinLen("PublicVersionNumber", 5))
+	}
+	if s.PublisherId != nil && len(*s.PublisherId) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("PublisherId", 1))
+	}
+	if s.TypeName != nil && len(*s.TypeName) < 10 {
+		invalidParams.Add(request.NewErrParamMinLen("TypeName", 10))
+	}
+	if s.VersionId != nil && len(*s.VersionId) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("VersionId", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetArn sets the Arn field's value.
+func (s *DescribeTypeInput) SetArn(v string) *DescribeTypeInput {
+	s.Arn = &v
+	return s
+}
+
+// SetPublicVersionNumber sets the PublicVersionNumber field's value.
+func (s *DescribeTypeInput) SetPublicVersionNumber(v string) *DescribeTypeInput {
+	s.PublicVersionNumber = &v
+	return s
+}
+
+// SetPublisherId sets the PublisherId field's value.
+func (s *DescribeTypeInput) SetPublisherId(v string) *DescribeTypeInput {
+	s.PublisherId = &v
+	return s
+}
+
+// SetType sets the Type field's value.
+func (s *DescribeTypeInput) SetType(v string) *DescribeTypeInput {
+	s.Type = &v
+	return s
+}
+
+// SetTypeName sets the TypeName field's value.
+func (s *DescribeTypeInput) SetTypeName(v string) *DescribeTypeInput {
+	s.TypeName = &v
+	return s
+}
+
+// SetVersionId sets the VersionId field's value.
+func (s *DescribeTypeInput) SetVersionId(v string) *DescribeTypeInput {
+	s.VersionId = &v
+	return s
+}
+
+type DescribeTypeOutput struct {
+	_ struct{} `type:"structure"`
+
+	// The Amazon Resource Name (ARN) of the extension.
+	Arn *string `type:"string"`
+
+	// Whether CloudFormation automatically updates the extension in this account
+	// and region when a new minor version is published by the extension publisher.
+	// Major versions released by the publisher must be manually updated. For more
+	// information, see Activating public extensions for use in your account (AWSCloudFormation/latest/UserGuide/registry-public.html#registry-public-enable)
+	// in the CloudFormation User Guide.
+	AutoUpdate *bool `type:"boolean"`
+
+	// A JSON string that represent the current configuration data for the extension
+	// in this account and region.
+	//
+	// To set the configuration data for an extension, use SetTypeConfiguration
+	// (https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_SetTypeConfiguration.html).
+	// For more information, see Configuring extensions at the account level (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/registry-register.html#registry-set-configuration)
+	// in the CloudFormation User Guide.
+	ConfigurationSchema *string `min:"1" type:"string"`
+
+	// The ID of the default version of the extension. The default version is used
+	// when the extension version is not specified.
+	//
+	// This applies only to private extensions you have registered in your account.
+	// For public extensions, both those provided by Amazon and published by third
+	// parties, CloudFormation returns null. For more information, see RegisterType
+	// (https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_RegisterType.html).
+	//
+	// To set the default version of an extension, use SetTypeDefaultVersion .
+	DefaultVersionId *string `min:"1" type:"string"`
+
+	// The deprecation status of the extension version.
+	//
+	// Valid values include:
+	//
+	//    * LIVE: The extension is activated or registered and can be used in CloudFormation
+	//    operations, dependent on its provisioning behavior and visibility scope.
+	//
+	//    * DEPRECATED: The extension has been deactivated or deregistered and can
+	//    no longer be used in CloudFormation operations.
+	//
+	// For public third-party extensions, CloudFormation returns null.
+	DeprecatedStatus *string `type:"string" enum:"DeprecatedStatus"`
+
+	// The description of the extension.
+	Description *string `min:"1" type:"string"`
+
+	// The URL of a page providing detailed documentation for this extension.
+	DocumentationUrl *string `type:"string"`
+
+	// The Amazon Resource Name (ARN) of the IAM execution role used to register
+	// the extension. This applies only to private extensions you have registered
+	// in your account. For more information, see RegisterType (https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_RegisterType.html).
+	//
+	// If the registered extension calls any Amazon Web Services APIs, you must
+	// create an IAM execution role (https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html)
+	// that includes the necessary permissions to call those Amazon Web Services
+	// APIs, and provision that execution role in your account. CloudFormation then
+	// assumes that execution role to provide your extension with the appropriate
+	// credentials.
+	ExecutionRoleArn *string `min:"1" type:"string"`
+
+	// Whether or not the extension is activated in the account and region.
+	//
+	// This only applies to public third-party extensions. For all other extensions,
+	// CloudFormation returns null.
+	IsActivated *bool `type:"boolean"`
+
+	// Whether the specified extension version is set as the default version.
+	//
+	// This applies only to private extensions you have registered in your account,
+	// and extensions published by Amazon. For public third-party extensions, whether
+	// or not they are activated in your account, CloudFormation returns null.
+	IsDefaultVersion *bool `type:"boolean"`
+
+	// When the specified extension version was registered. This applies only to:
+	//
+	//    * Private extensions you have registered in your account. For more information,
+	//    see RegisterType (https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_RegisterType.html).
+	//
+	//    * Public extensions you have activated in your account with auto-update
+	//    specified. For more information, see ActivateType (https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_ActivateType.html).
+	LastUpdated *time.Time `type:"timestamp"`
+
+	// The latest version of a public extension that is available for use.
+	//
+	// This only applies if you specify a public extension, and you do not specify
+	// a version. For all other requests, CloudFormation returns null.
+	LatestPublicVersion *string `min:"5" type:"string"`
+
+	// Contains logging configuration information for private extensions. This applies
+	// only to private extensions you have registered in your account. For public
+	// extensions, both those provided by Amazon and published by third parties,
+	// CloudFormation returns null. For more information, see RegisterType (https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_RegisterType.html).
+	LoggingConfig *LoggingConfig `type:"structure"`
+
+	// For public extensions that have been activated for this account and region,
+	// the Amazon Resource Name (ARN) of the public extension.
+	OriginalTypeArn *string `type:"string"`
+
+	// For public extensions that have been activated for this account and region,
+	// the type name of the public extension.
+	//
+	// If you specified a TypeNameAlias when enabling the extension in this account
+	// and region, CloudFormation treats that alias as the extension's type name
+	// within the account and region, not the type name of the public extension.
+	// For more information, see Specifying aliases to refer to extensions (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/registry-public.html#registry-public-enable-alias)
+	// in the CloudFormation User Guide.
+	OriginalTypeName *string `min:"10" type:"string"`
+
+	// For resource type extensions, the provisioning behavior of the resource type.
+	// CloudFormation determines the provisioning type during registration, based
+	// on the types of handlers in the schema handler package submitted.
+	//
+	// Valid values include:
+	//
+	//    * FULLY_MUTABLE: The resource type includes an update handler to process
+	//    updates to the type during stack update operations.
+	//
+	//    * IMMUTABLE: The resource type does not include an update handler, so
+	//    the type cannot be updated and must instead be replaced during stack update
+	//    operations.
+	//
+	//    * NON_PROVISIONABLE: The resource type does not include all of the following
+	//    handlers, and therefore cannot actually be provisioned. create read delete
+	ProvisioningType *string `type:"string" enum:"ProvisioningType"`
+
+	// The version number of a public third-party extension.
+	//
+	// This applies only if you specify a public extension you have activated in
+	// your account, or specify a public extension without specifying a version.
+	// For all other extensions, CloudFormation returns null.
+	PublicVersionNumber *string `min:"5" type:"string"`
+
+	// The publisher ID of the extension publisher.
+	//
+	// This applies only to public third-party extensions. For private registered
+	// extensions, and extensions provided by Amazon, CloudFormation returns null.
+	PublisherId *string `min:"1" type:"string"`
+
+	// For extensions that are modules, the public third-party extensions that must
+	// be activated in your account in order for the module itself to be activated.
+	RequiredActivatedTypes []*RequiredActivatedType `type:"list"`
+
+	// The schema that defines the extension.
+	//
+	// For more information on extension schemas, see Resource Provider Schema (https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/resource-type-schema.html)
+	// in the CloudFormation CLI User Guide.
+	Schema *string `min:"1" type:"string"`
+
+	// The URL of the source code for the extension.
+	SourceUrl *string `type:"string"`
+
+	// When the specified private extension version was registered or activated
+	// in your account.
+	TimeCreated *time.Time `type:"timestamp"`
+
+	// The kind of extension.
+	Type *string `type:"string" enum:"RegistryType"`
+
+	// The name of the extension.
+	//
+	// If the extension is a public third-party type you have activated with a type
+	// name alias, CloudFormation returns the type name alias. For more information,
+	// see ActivateType (https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_ActivateType.html).
+	TypeName *string `min:"10" type:"string"`
+
+	// The contract test status of the registered extension version. To return the
+	// extension test status of a specifc extension version, you must specify VersionId.
+	//
+	// This applies only to registered private extension versions. CloudFormation
+	// does not return this information for public extensions, whether or not they
+	// are activated in your account.
+	//
+	//    * PASSED: The extension has passed all its contract tests. An extension
+	//    must have a test status of PASSED before it can be published. For more
+	//    information, see Publishing extensions to make them available for public
+	//    use (https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/resource-type-publish.html)
+	//    in the CloudFormation Command Line Interface User Guide.
+	//
+	//    * FAILED: The extension has failed one or more contract tests.
+	//
+	//    * IN_PROGRESS: Contract tests are currently being performed on the extension.
+	//
+	//    * NOT_TESTED: Contract tests have not been performed on the extension.
+	TypeTestsStatus *string `type:"string" enum:"TypeTestsStatus"`
+
+	// The description of the test status. To return the extension test status of
+	// a specifc extension version, you must specify VersionId.
+	//
+	// This applies only to registered private extension versions. CloudFormation
+	// does not return this information for public extensions, whether or not they
+	// are activated in your account.
+	TypeTestsStatusDescription *string `min:"1" type:"string"`
+
+	// The scope at which the extension is visible and usable in CloudFormation
+	// operations.
+	//
+	// Valid values include:
+	//
+	//    * PRIVATE: The extension is only visible and usable within the account
+	//    in which it is registered. CloudFormation marks any extensions you register
+	//    as PRIVATE.
+	//
+	//    * PUBLIC: The extension is publically visible and usable within any Amazon
+	//    account.
+	Visibility *string `type:"string" enum:"Visibility"`
+}
+
+// String returns the string representation
+func (s DescribeTypeOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DescribeTypeOutput) GoString() string {
+	return s.String()
+}
+
+// SetArn sets the Arn field's value.
+func (s *DescribeTypeOutput) SetArn(v string) *DescribeTypeOutput {
+	s.Arn = &v
+	return s
+}
+
+// SetAutoUpdate sets the AutoUpdate field's value.
+func (s *DescribeTypeOutput) SetAutoUpdate(v bool) *DescribeTypeOutput {
+	s.AutoUpdate = &v
+	return s
+}
+
+// SetConfigurationSchema sets the ConfigurationSchema field's value.
+func (s *DescribeTypeOutput) SetConfigurationSchema(v string) *DescribeTypeOutput {
+	s.ConfigurationSchema = &v
+	return s
+}
+
+// SetDefaultVersionId sets the DefaultVersionId field's value.
+func (s *DescribeTypeOutput) SetDefaultVersionId(v string) *DescribeTypeOutput {
+	s.DefaultVersionId = &v
+	return s
+}
+
+// SetDeprecatedStatus sets the DeprecatedStatus field's value.
+func (s *DescribeTypeOutput) SetDeprecatedStatus(v string) *DescribeTypeOutput {
+	s.DeprecatedStatus = &v
+	return s
+}
+
+// SetDescription sets the Description field's value.
+func (s *DescribeTypeOutput) SetDescription(v string) *DescribeTypeOutput {
+	s.Description = &v
+	return s
+}
+
+// SetDocumentationUrl sets the DocumentationUrl field's value.
+func (s *DescribeTypeOutput) SetDocumentationUrl(v string) *DescribeTypeOutput {
+	s.DocumentationUrl = &v
+	return s
+}
+
+// SetExecutionRoleArn sets the ExecutionRoleArn field's value.
+func (s *DescribeTypeOutput) SetExecutionRoleArn(v string) *DescribeTypeOutput {
+	s.ExecutionRoleArn = &v
+	return s
+}
+
+// SetIsActivated sets the IsActivated field's value.
+func (s *DescribeTypeOutput) SetIsActivated(v bool) *DescribeTypeOutput {
+	s.IsActivated = &v
+	return s
+}
+
+// SetIsDefaultVersion sets the IsDefaultVersion field's value.
+func (s *DescribeTypeOutput) SetIsDefaultVersion(v bool) *DescribeTypeOutput {
+	s.IsDefaultVersion = &v
+	return s
+}
+
+// SetLastUpdated sets the LastUpdated field's value.
+func (s *DescribeTypeOutput) SetLastUpdated(v time.Time) *DescribeTypeOutput {
+	s.LastUpdated = &v
+	return s
+}
+
+// SetLatestPublicVersion sets the LatestPublicVersion field's value.
+func (s *DescribeTypeOutput) SetLatestPublicVersion(v string) *DescribeTypeOutput {
+	s.LatestPublicVersion = &v
+	return s
+}
+
+// SetLoggingConfig sets the LoggingConfig field's value.
+func (s *DescribeTypeOutput) SetLoggingConfig(v *LoggingConfig) *DescribeTypeOutput {
+	s.LoggingConfig = v
+	return s
+}
+
+// SetOriginalTypeArn sets the OriginalTypeArn field's value.
+func (s *DescribeTypeOutput) SetOriginalTypeArn(v string) *DescribeTypeOutput {
+	s.OriginalTypeArn = &v
+	return s
+}
+
+// SetOriginalTypeName sets the OriginalTypeName field's value.
+func (s *DescribeTypeOutput) SetOriginalTypeName(v string) *DescribeTypeOutput {
+	s.OriginalTypeName = &v
+	return s
+}
+
+// SetProvisioningType sets the ProvisioningType field's value.
+func (s *DescribeTypeOutput) SetProvisioningType(v string) *DescribeTypeOutput {
+	s.ProvisioningType = &v
+	return s
+}
+
+// SetPublicVersionNumber sets the PublicVersionNumber field's value.
+func (s *DescribeTypeOutput) SetPublicVersionNumber(v string) *DescribeTypeOutput {
+	s.PublicVersionNumber = &v
+	return s
+}
+
+// SetPublisherId sets the PublisherId field's value.
+func (s *DescribeTypeOutput) SetPublisherId(v string) *DescribeTypeOutput {
+	s.PublisherId = &v
+	return s
+}
+
+// SetRequiredActivatedTypes sets the RequiredActivatedTypes field's value.
+func (s *DescribeTypeOutput) SetRequiredActivatedTypes(v []*RequiredActivatedType) *DescribeTypeOutput {
+	s.RequiredActivatedTypes = v
+	return s
+}
+
+// SetSchema sets the Schema field's value.
+func (s *DescribeTypeOutput) SetSchema(v string) *DescribeTypeOutput {
+	s.Schema = &v
+	return s
+}
+
+// SetSourceUrl sets the SourceUrl field's value.
+func (s *DescribeTypeOutput) SetSourceUrl(v string) *DescribeTypeOutput {
+	s.SourceUrl = &v
+	return s
+}
+
+// SetTimeCreated sets the TimeCreated field's value.
+func (s *DescribeTypeOutput) SetTimeCreated(v time.Time) *DescribeTypeOutput {
+	s.TimeCreated = &v
+	return s
+}
+
+// SetType sets the Type field's value.
+func (s *DescribeTypeOutput) SetType(v string) *DescribeTypeOutput {
+	s.Type = &v
+	return s
+}
+
+// SetTypeName sets the TypeName field's value.
+func (s *DescribeTypeOutput) SetTypeName(v string) *DescribeTypeOutput {
+	s.TypeName = &v
+	return s
+}
+
+// SetTypeTestsStatus sets the TypeTestsStatus field's value.
+func (s *DescribeTypeOutput) SetTypeTestsStatus(v string) *DescribeTypeOutput {
+	s.TypeTestsStatus = &v
+	return s
+}
+
+// SetTypeTestsStatusDescription sets the TypeTestsStatusDescription field's value.
+func (s *DescribeTypeOutput) SetTypeTestsStatusDescription(v string) *DescribeTypeOutput {
+	s.TypeTestsStatusDescription = &v
+	return s
+}
+
+// SetVisibility sets the Visibility field's value.
+func (s *DescribeTypeOutput) SetVisibility(v string) *DescribeTypeOutput {
+	s.Visibility = &v
+	return s
+}
+
+type DescribeTypeRegistrationInput struct {
+	_ struct{} `type:"structure"`
+
+	// The identifier for this registration request.
+	//
+	// This registration token is generated by CloudFormation when you initiate
+	// a registration request using RegisterType .
+	//
+	// RegistrationToken is a required field
+	RegistrationToken *string `min:"1" type:"string" required:"true"`
+}
+
+// String returns the string representation
+func (s DescribeTypeRegistrationInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DescribeTypeRegistrationInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *DescribeTypeRegistrationInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "DescribeTypeRegistrationInput"}
+	if s.RegistrationToken == nil {
+		invalidParams.Add(request.NewErrParamRequired("RegistrationToken"))
+	}
+	if s.RegistrationToken != nil && len(*s.RegistrationToken) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("RegistrationToken", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetRegistrationToken sets the RegistrationToken field's value.
+func (s *DescribeTypeRegistrationInput) SetRegistrationToken(v string) *DescribeTypeRegistrationInput {
+	s.RegistrationToken = &v
+	return s
+}
+
+type DescribeTypeRegistrationOutput struct {
+	_ struct{} `type:"structure"`
+
+	// The description of the extension registration request.
+	Description *string `min:"1" type:"string"`
+
+	// The current status of the extension registration request.
+	ProgressStatus *string `type:"string" enum:"RegistrationStatus"`
+
+	// The Amazon Resource Name (ARN) of the extension being registered.
+	//
+	// For registration requests with a ProgressStatus of other than COMPLETE, this
+	// will be null.
+	TypeArn *string `type:"string"`
+
+	// The Amazon Resource Name (ARN) of this specific version of the extension
+	// being registered.
+	//
+	// For registration requests with a ProgressStatus of other than COMPLETE, this
+	// will be null.
+	TypeVersionArn *string `type:"string"`
+}
+
+// String returns the string representation
+func (s DescribeTypeRegistrationOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DescribeTypeRegistrationOutput) GoString() string {
+	return s.String()
+}
+
+// SetDescription sets the Description field's value.
+func (s *DescribeTypeRegistrationOutput) SetDescription(v string) *DescribeTypeRegistrationOutput {
+	s.Description = &v
+	return s
+}
+
+// SetProgressStatus sets the ProgressStatus field's value.
+func (s *DescribeTypeRegistrationOutput) SetProgressStatus(v string) *DescribeTypeRegistrationOutput {
+	s.ProgressStatus = &v
+	return s
+}
+
+// SetTypeArn sets the TypeArn field's value.
+func (s *DescribeTypeRegistrationOutput) SetTypeArn(v string) *DescribeTypeRegistrationOutput {
+	s.TypeArn = &v
+	return s
+}
+
+// SetTypeVersionArn sets the TypeVersionArn field's value.
+func (s *DescribeTypeRegistrationOutput) SetTypeVersionArn(v string) *DescribeTypeRegistrationOutput {
+	s.TypeVersionArn = &v
+	return s
+}
+
 type DetectStackDriftInput struct {
 	_ struct{} `type:"structure"`
 
@@ -7460,9 +11356,9 @@ type DetectStackDriftOutput struct {
 
 	// The ID of the drift detection results of this operation.
 	//
-	// AWS CloudFormation generates new results, with a new drift detection ID,
-	// each time this operation is run. However, the number of drift results AWS
-	// CloudFormation retains for any given stack, and for how long, may vary.
+	// CloudFormation generates new results, with a new drift detection ID, each
+	// time this operation is run. However, the number of drift results CloudFormation
+	// retains for any given stack, and for how long, may vary.
 	//
 	// StackDriftDetectionId is a required field
 	StackDriftDetectionId *string `min:"1" type:"string" required:"true"`
@@ -7566,6 +11462,122 @@ func (s *DetectStackResourceDriftOutput) SetStackResourceDrift(v *StackResourceD
 	return s
 }
 
+type DetectStackSetDriftInput struct {
+	_ struct{} `type:"structure"`
+
+	// [Service-managed permissions] Specifies whether you are acting as an account
+	// administrator in the organization's management account or as a delegated
+	// administrator in a member account.
+	//
+	// By default, SELF is specified. Use SELF for stack sets with self-managed
+	// permissions.
+	//
+	//    * If you are signed in to the management account, specify SELF.
+	//
+	//    * If you are signed in to a delegated administrator account, specify DELEGATED_ADMIN.
+	//    Your account must be registered as a delegated administrator in the management
+	//    account. For more information, see Register a delegated administrator
+	//    (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-delegated-admin.html)
+	//    in the CloudFormation User Guide.
+	CallAs *string `type:"string" enum:"CallAs"`
+
+	// The ID of the stack set operation.
+	OperationId *string `min:"1" type:"string" idempotencyToken:"true"`
+
+	// The user-specified preferences for how CloudFormation performs a stack set
+	// operation.
+	//
+	// For more information on maximum concurrent accounts and failure tolerance,
+	// see Stack set operation options (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-concepts.html#stackset-ops-options).
+	OperationPreferences *StackSetOperationPreferences `type:"structure"`
+
+	// The name of the stack set on which to perform the drift detection operation.
+	//
+	// StackSetName is a required field
+	StackSetName *string `type:"string" required:"true"`
+}
+
+// String returns the string representation
+func (s DetectStackSetDriftInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DetectStackSetDriftInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *DetectStackSetDriftInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "DetectStackSetDriftInput"}
+	if s.OperationId != nil && len(*s.OperationId) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("OperationId", 1))
+	}
+	if s.StackSetName == nil {
+		invalidParams.Add(request.NewErrParamRequired("StackSetName"))
+	}
+	if s.OperationPreferences != nil {
+		if err := s.OperationPreferences.Validate(); err != nil {
+			invalidParams.AddNested("OperationPreferences", err.(request.ErrInvalidParams))
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetCallAs sets the CallAs field's value.
+func (s *DetectStackSetDriftInput) SetCallAs(v string) *DetectStackSetDriftInput {
+	s.CallAs = &v
+	return s
+}
+
+// SetOperationId sets the OperationId field's value.
+func (s *DetectStackSetDriftInput) SetOperationId(v string) *DetectStackSetDriftInput {
+	s.OperationId = &v
+	return s
+}
+
+// SetOperationPreferences sets the OperationPreferences field's value.
+func (s *DetectStackSetDriftInput) SetOperationPreferences(v *StackSetOperationPreferences) *DetectStackSetDriftInput {
+	s.OperationPreferences = v
+	return s
+}
+
+// SetStackSetName sets the StackSetName field's value.
+func (s *DetectStackSetDriftInput) SetStackSetName(v string) *DetectStackSetDriftInput {
+	s.StackSetName = &v
+	return s
+}
+
+type DetectStackSetDriftOutput struct {
+	_ struct{} `type:"structure"`
+
+	// The ID of the drift detection stack set operation.
+	//
+	// you can use this operation id with DescribeStackSetOperation to monitor the
+	// progress of the drift detection operation.
+	OperationId *string `min:"1" type:"string"`
+}
+
+// String returns the string representation
+func (s DetectStackSetDriftOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DetectStackSetDriftOutput) GoString() string {
+	return s.String()
+}
+
+// SetOperationId sets the OperationId field's value.
+func (s *DetectStackSetDriftOutput) SetOperationId(v string) *DetectStackSetDriftOutput {
+	s.OperationId = &v
+	return s
+}
+
 // The input for an EstimateTemplateCost action.
 type EstimateTemplateCostInput struct {
 	_ struct{} `type:"structure"`
@@ -7576,16 +11588,16 @@ type EstimateTemplateCostInput struct {
 	// Structure containing the template body with a minimum length of 1 byte and
 	// a maximum length of 51,200 bytes. (For more information, go to Template Anatomy
 	// (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html)
-	// in the AWS CloudFormation User Guide.)
+	// in the CloudFormation User Guide.)
 	//
 	// Conditional: You must pass TemplateBody or TemplateURL. If both are passed,
 	// only TemplateBody is used.
 	TemplateBody *string `min:"1" type:"string"`
 
 	// Location of file containing the template body. The URL must point to a template
-	// that is located in an Amazon S3 bucket. For more information, go to Template
-	// Anatomy (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html)
-	// in the AWS CloudFormation User Guide.
+	// that is located in an Amazon S3 bucket or a Systems Manager document. For
+	// more information, go to Template Anatomy (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html)
+	// in the CloudFormation User Guide.
 	//
 	// Conditional: You must pass TemplateURL or TemplateBody. If both are passed,
 	// only TemplateBody is used.
@@ -7640,8 +11652,8 @@ func (s *EstimateTemplateCostInput) SetTemplateURL(v string) *EstimateTemplateCo
 type EstimateTemplateCostOutput struct {
 	_ struct{} `type:"structure"`
 
-	// An AWS Simple Monthly Calculator URL with a query string that describes the
-	// resources required to run the template.
+	// An Amazon Web Services Simple Monthly Calculator URL with a query string
+	// that describes the resources required to run the template.
 	Url *string `type:"string"`
 }
 
@@ -7672,10 +11684,10 @@ type ExecuteChangeSetInput struct {
 	ChangeSetName *string `min:"1" type:"string" required:"true"`
 
 	// A unique identifier for this ExecuteChangeSet request. Specify this token
-	// if you plan to retry requests so that AWS CloudFormation knows that you're
-	// not attempting to execute a change set to update a stack with the same name.
-	// You might retry ExecuteChangeSet requests to ensure that AWS CloudFormation
-	// successfully received them.
+	// if you plan to retry requests so that CloudFormation knows that you're not
+	// attempting to execute a change set to update a stack with the same name.
+	// You might retry ExecuteChangeSet requests to ensure that CloudFormation successfully
+	// received them.
 	ClientRequestToken *string `min:"1" type:"string"`
 
 	// If you specified the name of a change set, specify the stack name or ID (ARN)
@@ -7839,7 +11851,7 @@ type GetStackPolicyOutput struct {
 
 	// Structure containing the stack policy body. (For more information, go to
 	// Prevent Updates to Stack Resources (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/protect-stack-resources.html)
-	// in the AWS CloudFormation User Guide.)
+	// in the CloudFormation User Guide.)
 	StackPolicyBody *string `min:"1" type:"string"`
 }
 
@@ -7863,7 +11875,7 @@ func (s *GetStackPolicyOutput) SetStackPolicyBody(v string) *GetStackPolicyOutpu
 type GetTemplateInput struct {
 	_ struct{} `type:"structure"`
 
-	// The name or Amazon Resource Name (ARN) of a change set for which AWS CloudFormation
+	// The name or Amazon Resource Name (ARN) of a change set for which CloudFormation
 	// returns the associated template. If you specify a name, you must also specify
 	// the StackName.
 	ChangeSetName *string `min:"1" type:"string"`
@@ -7879,13 +11891,12 @@ type GetTemplateInput struct {
 	// Default: There is no default value.
 	StackName *string `type:"string"`
 
-	// For templates that include transforms, the stage of the template that AWS
-	// CloudFormation returns. To get the user-submitted template, specify Original.
-	// To get the template after AWS CloudFormation has processed all transforms,
-	// specify Processed.
+	// For templates that include transforms, the stage of the template that CloudFormation
+	// returns. To get the user-submitted template, specify Original. To get the
+	// template after CloudFormation has processed all transforms, specify Processed.
 	//
 	// If the template doesn't include transforms, Original and Processed return
-	// the same template. By default, AWS CloudFormation specifies Original.
+	// the same template. By default, CloudFormation specifies Processed.
 	TemplateStage *string `type:"string" enum:"TemplateStage"`
 }
 
@@ -7936,16 +11947,16 @@ type GetTemplateOutput struct {
 
 	// The stage of the template that you can retrieve. For stacks, the Original
 	// and Processed templates are always available. For change sets, the Original
-	// template is always available. After AWS CloudFormation finishes creating
-	// the change set, the Processed template becomes available.
+	// template is always available. After CloudFormation finishes creating the
+	// change set, the Processed template becomes available.
 	StagesAvailable []*string `type:"list"`
 
 	// Structure containing the template body. (For more information, go to Template
 	// Anatomy (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html)
-	// in the AWS CloudFormation User Guide.)
+	// in the CloudFormation User Guide.)
 	//
-	// AWS CloudFormation returns the same template that was used when the stack
-	// was created.
+	// CloudFormation returns the same template that was used when the stack was
+	// created.
 	TemplateBody *string `min:"1" type:"string"`
 }
 
@@ -7975,6 +11986,22 @@ func (s *GetTemplateOutput) SetTemplateBody(v string) *GetTemplateOutput {
 type GetTemplateSummaryInput struct {
 	_ struct{} `type:"structure"`
 
+	// [Service-managed permissions] Specifies whether you are acting as an account
+	// administrator in the organization's management account or as a delegated
+	// administrator in a member account.
+	//
+	// By default, SELF is specified. Use SELF for stack sets with self-managed
+	// permissions.
+	//
+	//    * If you are signed in to the management account, specify SELF.
+	//
+	//    * If you are signed in to a delegated administrator account, specify DELEGATED_ADMIN.
+	//    Your account must be registered as a delegated administrator in the management
+	//    account. For more information, see Register a delegated administrator
+	//    (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-delegated-admin.html)
+	//    in the CloudFormation User Guide.
+	CallAs *string `type:"string" enum:"CallAs"`
+
 	// The name or the stack ID that is associated with the stack, which are not
 	// always interchangeable. For running stacks, you can specify either the stack's
 	// name or its unique stack ID. For deleted stack, you must specify the unique
@@ -7993,16 +12020,17 @@ type GetTemplateSummaryInput struct {
 	// Structure containing the template body with a minimum length of 1 byte and
 	// a maximum length of 51,200 bytes. For more information about templates, see
 	// Template Anatomy (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html)
-	// in the AWS CloudFormation User Guide.
+	// in the CloudFormation User Guide.
 	//
 	// Conditional: You must specify only one of the following parameters: StackName,
 	// StackSetName, TemplateBody, or TemplateURL.
 	TemplateBody *string `min:"1" type:"string"`
 
 	// Location of file containing the template body. The URL must point to a template
-	// (max size: 460,800 bytes) that is located in an Amazon S3 bucket. For more
-	// information about templates, see Template Anatomy (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html)
-	// in the AWS CloudFormation User Guide.
+	// (max size: 460,800 bytes) that is located in an Amazon S3 bucket or a Systems
+	// Manager document. For more information about templates, see Template Anatomy
+	// (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html)
+	// in the CloudFormation User Guide.
 	//
 	// Conditional: You must specify only one of the following parameters: StackName,
 	// StackSetName, TemplateBody, or TemplateURL.
@@ -8036,6 +12064,12 @@ func (s *GetTemplateSummaryInput) Validate() error {
 		return invalidParams
 	}
 	return nil
+}
+
+// SetCallAs sets the CallAs field's value.
+func (s *GetTemplateSummaryInput) SetCallAs(v string) *GetTemplateSummaryInput {
+	s.CallAs = &v
+	return s
 }
 
 // SetStackName sets the StackName field's value.
@@ -8072,8 +12106,8 @@ type GetTemplateSummaryOutput struct {
 	// your template; otherwise, those actions return an InsufficientCapabilities
 	// error.
 	//
-	// For more information, see Acknowledging IAM Resources in AWS CloudFormation
-	// Templates (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-template.html#capabilities).
+	// For more information, see Acknowledging IAM Resources in CloudFormation Templates
+	// (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-template.html#capabilities).
 	Capabilities []*string `type:"list"`
 
 	// The list of resources that generated the values in the Capabilities response
@@ -8093,12 +12127,18 @@ type GetTemplateSummaryOutput struct {
 	// parameter.
 	Parameters []*ParameterDeclaration `type:"list"`
 
+	// A list of resource identifier summaries that describe the target resources
+	// of an import operation and the properties you can provide during the import
+	// to identify the target resources. For example, BucketName is a possible identifier
+	// property for an AWS::S3::Bucket resource.
+	ResourceIdentifierSummaries []*ResourceIdentifierSummary `type:"list"`
+
 	// A list of all the template resource types that are defined in the template,
 	// such as AWS::EC2::Instance, AWS::Dynamo::Table, and Custom::MyCustomInstance.
 	ResourceTypes []*string `type:"list"`
 
-	// The AWS template format version, which identifies the capabilities of the
-	// template.
+	// The Amazon Web Services template format version, which identifies the capabilities
+	// of the template.
 	Version *string `type:"string"`
 }
 
@@ -8148,6 +12188,12 @@ func (s *GetTemplateSummaryOutput) SetParameters(v []*ParameterDeclaration) *Get
 	return s
 }
 
+// SetResourceIdentifierSummaries sets the ResourceIdentifierSummaries field's value.
+func (s *GetTemplateSummaryOutput) SetResourceIdentifierSummaries(v []*ResourceIdentifierSummary) *GetTemplateSummaryOutput {
+	s.ResourceIdentifierSummaries = v
+	return s
+}
+
 // SetResourceTypes sets the ResourceTypes field's value.
 func (s *GetTemplateSummaryOutput) SetResourceTypes(v []*string) *GetTemplateSummaryOutput {
 	s.ResourceTypes = v
@@ -8157,6 +12203,127 @@ func (s *GetTemplateSummaryOutput) SetResourceTypes(v []*string) *GetTemplateSum
 // SetVersion sets the Version field's value.
 func (s *GetTemplateSummaryOutput) SetVersion(v string) *GetTemplateSummaryOutput {
 	s.Version = &v
+	return s
+}
+
+type ImportStacksToStackSetInput struct {
+	_ struct{} `type:"structure"`
+
+	// By default, SELF is specified. Use SELF for stack sets with self-managed
+	// permissions.
+	//
+	//    * If you are signed in to the management account, specify SELF.
+	//
+	//    * For service managed stack sets, specify DELEGATED_ADMIN.
+	CallAs *string `type:"string" enum:"CallAs"`
+
+	// A unique, user defined, identifier for the stack set operation.
+	OperationId *string `min:"1" type:"string" idempotencyToken:"true"`
+
+	// The user-specified preferences for how CloudFormation performs a stack set
+	// operation.
+	//
+	// For more information on maximum concurrent accounts and failure tolerance,
+	// see Stack set operation options (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-concepts.html#stackset-ops-options).
+	OperationPreferences *StackSetOperationPreferences `type:"structure"`
+
+	// The IDs of the stacks you are importing into a stack set. You import up to
+	// 10 stacks per stack set at a time.
+	//
+	// StackIds is a required field
+	StackIds []*string `type:"list" required:"true"`
+
+	// The name of the stack set. The name must be unique in the Region where you
+	// create your stack set.
+	//
+	// StackSetName is a required field
+	StackSetName *string `type:"string" required:"true"`
+}
+
+// String returns the string representation
+func (s ImportStacksToStackSetInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ImportStacksToStackSetInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *ImportStacksToStackSetInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "ImportStacksToStackSetInput"}
+	if s.OperationId != nil && len(*s.OperationId) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("OperationId", 1))
+	}
+	if s.StackIds == nil {
+		invalidParams.Add(request.NewErrParamRequired("StackIds"))
+	}
+	if s.StackSetName == nil {
+		invalidParams.Add(request.NewErrParamRequired("StackSetName"))
+	}
+	if s.OperationPreferences != nil {
+		if err := s.OperationPreferences.Validate(); err != nil {
+			invalidParams.AddNested("OperationPreferences", err.(request.ErrInvalidParams))
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetCallAs sets the CallAs field's value.
+func (s *ImportStacksToStackSetInput) SetCallAs(v string) *ImportStacksToStackSetInput {
+	s.CallAs = &v
+	return s
+}
+
+// SetOperationId sets the OperationId field's value.
+func (s *ImportStacksToStackSetInput) SetOperationId(v string) *ImportStacksToStackSetInput {
+	s.OperationId = &v
+	return s
+}
+
+// SetOperationPreferences sets the OperationPreferences field's value.
+func (s *ImportStacksToStackSetInput) SetOperationPreferences(v *StackSetOperationPreferences) *ImportStacksToStackSetInput {
+	s.OperationPreferences = v
+	return s
+}
+
+// SetStackIds sets the StackIds field's value.
+func (s *ImportStacksToStackSetInput) SetStackIds(v []*string) *ImportStacksToStackSetInput {
+	s.StackIds = v
+	return s
+}
+
+// SetStackSetName sets the StackSetName field's value.
+func (s *ImportStacksToStackSetInput) SetStackSetName(v string) *ImportStacksToStackSetInput {
+	s.StackSetName = &v
+	return s
+}
+
+type ImportStacksToStackSetOutput struct {
+	_ struct{} `type:"structure"`
+
+	// The unique identifier for the stack set operation.
+	OperationId *string `min:"1" type:"string"`
+}
+
+// String returns the string representation
+func (s ImportStacksToStackSetOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ImportStacksToStackSetOutput) GoString() string {
+	return s.String()
+}
+
+// SetOperationId sets the OperationId field's value.
+func (s *ImportStacksToStackSetOutput) SetOperationId(v string) *ImportStacksToStackSetOutput {
+	s.OperationId = &v
 	return s
 }
 
@@ -8324,8 +12491,8 @@ func (s *ListExportsOutput) SetNextToken(v string) *ListExportsOutput {
 type ListImportsInput struct {
 	_ struct{} `type:"structure"`
 
-	// The name of the exported output value. AWS CloudFormation returns the stack
-	// names that are importing this value.
+	// The name of the exported output value. CloudFormation returns the stack names
+	// that are importing this value.
 	//
 	// ExportName is a required field
 	ExportName *string `type:"string" required:"true"`
@@ -8409,6 +12576,25 @@ func (s *ListImportsOutput) SetNextToken(v string) *ListImportsOutput {
 type ListStackInstancesInput struct {
 	_ struct{} `type:"structure"`
 
+	// [Service-managed permissions] Specifies whether you are acting as an account
+	// administrator in the organization's management account or as a delegated
+	// administrator in a member account.
+	//
+	// By default, SELF is specified. Use SELF for stack sets with self-managed
+	// permissions.
+	//
+	//    * If you are signed in to the management account, specify SELF.
+	//
+	//    * If you are signed in to a delegated administrator account, specify DELEGATED_ADMIN.
+	//    Your account must be registered as a delegated administrator in the management
+	//    account. For more information, see Register a delegated administrator
+	//    (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-delegated-admin.html)
+	//    in the CloudFormation User Guide.
+	CallAs *string `type:"string" enum:"CallAs"`
+
+	// The status that stack instances are filtered by.
+	Filters []*StackInstanceFilter `type:"list"`
+
 	// The maximum number of results to be returned with a single call. If the number
 	// of available results exceeds this maximum, the response includes a NextToken
 	// value that you can assign to the NextToken request parameter to get the next
@@ -8422,10 +12608,10 @@ type ListStackInstancesInput struct {
 	// response object's NextToken parameter is set to null.
 	NextToken *string `min:"1" type:"string"`
 
-	// The name of the AWS account that you want to list stack instances for.
+	// The name of the account that you want to list stack instances for.
 	StackInstanceAccount *string `type:"string"`
 
-	// The name of the region where you want to list stack instances.
+	// The name of the Region where you want to list stack instances.
 	StackInstanceRegion *string `type:"string"`
 
 	// The name or unique ID of the stack set that you want to list stack instances
@@ -8457,11 +12643,33 @@ func (s *ListStackInstancesInput) Validate() error {
 	if s.StackSetName == nil {
 		invalidParams.Add(request.NewErrParamRequired("StackSetName"))
 	}
+	if s.Filters != nil {
+		for i, v := range s.Filters {
+			if v == nil {
+				continue
+			}
+			if err := v.Validate(); err != nil {
+				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "Filters", i), err.(request.ErrInvalidParams))
+			}
+		}
+	}
 
 	if invalidParams.Len() > 0 {
 		return invalidParams
 	}
 	return nil
+}
+
+// SetCallAs sets the CallAs field's value.
+func (s *ListStackInstancesInput) SetCallAs(v string) *ListStackInstancesInput {
+	s.CallAs = &v
+	return s
+}
+
+// SetFilters sets the Filters field's value.
+func (s *ListStackInstancesInput) SetFilters(v []*StackInstanceFilter) *ListStackInstancesInput {
+	s.Filters = v
+	return s
 }
 
 // SetMaxResults sets the MaxResults field's value.
@@ -8627,6 +12835,22 @@ func (s *ListStackResourcesOutput) SetStackResourceSummaries(v []*StackResourceS
 type ListStackSetOperationResultsInput struct {
 	_ struct{} `type:"structure"`
 
+	// [Service-managed permissions] Specifies whether you are acting as an account
+	// administrator in the organization's management account or as a delegated
+	// administrator in a member account.
+	//
+	// By default, SELF is specified. Use SELF for stack sets with self-managed
+	// permissions.
+	//
+	//    * If you are signed in to the management account, specify SELF.
+	//
+	//    * If you are signed in to a delegated administrator account, specify DELEGATED_ADMIN.
+	//    Your account must be registered as a delegated administrator in the management
+	//    account. For more information, see Register a delegated administrator
+	//    (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-delegated-admin.html)
+	//    in the CloudFormation User Guide.
+	CallAs *string `type:"string" enum:"CallAs"`
+
 	// The maximum number of results to be returned with a single call. If the number
 	// of available results exceeds this maximum, the response includes a NextToken
 	// value that you can assign to the NextToken request parameter to get the next
@@ -8687,6 +12911,12 @@ func (s *ListStackSetOperationResultsInput) Validate() error {
 	return nil
 }
 
+// SetCallAs sets the CallAs field's value.
+func (s *ListStackSetOperationResultsInput) SetCallAs(v string) *ListStackSetOperationResultsInput {
+	s.CallAs = &v
+	return s
+}
+
 // SetMaxResults sets the MaxResults field's value.
 func (s *ListStackSetOperationResultsInput) SetMaxResults(v int64) *ListStackSetOperationResultsInput {
 	s.MaxResults = &v
@@ -8721,7 +12951,7 @@ type ListStackSetOperationResultsOutput struct {
 	NextToken *string `min:"1" type:"string"`
 
 	// A list of StackSetOperationResultSummary structures that contain information
-	// about the specified operation results, for accounts and regions that are
+	// about the specified operation results, for accounts and Regions that are
 	// included in the operation.
 	Summaries []*StackSetOperationResultSummary `type:"list"`
 }
@@ -8750,6 +12980,22 @@ func (s *ListStackSetOperationResultsOutput) SetSummaries(v []*StackSetOperation
 
 type ListStackSetOperationsInput struct {
 	_ struct{} `type:"structure"`
+
+	// [Service-managed permissions] Specifies whether you are acting as an account
+	// administrator in the organization's management account or as a delegated
+	// administrator in a member account.
+	//
+	// By default, SELF is specified. Use SELF for stack sets with self-managed
+	// permissions.
+	//
+	//    * If you are signed in to the management account, specify SELF.
+	//
+	//    * If you are signed in to a delegated administrator account, specify DELEGATED_ADMIN.
+	//    Your account must be registered as a delegated administrator in the management
+	//    account. For more information, see Register a delegated administrator
+	//    (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-delegated-admin.html)
+	//    in the CloudFormation User Guide.
+	CallAs *string `type:"string" enum:"CallAs"`
 
 	// The maximum number of results to be returned with a single call. If the number
 	// of available results exceeds this maximum, the response includes a NextToken
@@ -8798,6 +13044,12 @@ func (s *ListStackSetOperationsInput) Validate() error {
 		return invalidParams
 	}
 	return nil
+}
+
+// SetCallAs sets the CallAs field's value.
+func (s *ListStackSetOperationsInput) SetCallAs(v string) *ListStackSetOperationsInput {
+	s.CallAs = &v
+	return s
 }
 
 // SetMaxResults sets the MaxResults field's value.
@@ -8857,6 +13109,22 @@ func (s *ListStackSetOperationsOutput) SetSummaries(v []*StackSetOperationSummar
 type ListStackSetsInput struct {
 	_ struct{} `type:"structure"`
 
+	// [Service-managed permissions] Specifies whether you are acting as an account
+	// administrator in the management account or as a delegated administrator in
+	// a member account.
+	//
+	// By default, SELF is specified. Use SELF for stack sets with self-managed
+	// permissions.
+	//
+	//    * If you are signed in to the management account, specify SELF.
+	//
+	//    * If you are signed in to a delegated administrator account, specify DELEGATED_ADMIN.
+	//    Your account must be registered as a delegated administrator in the management
+	//    account. For more information, see Register a delegated administrator
+	//    (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-delegated-admin.html)
+	//    in the CloudFormation User Guide.
+	CallAs *string `type:"string" enum:"CallAs"`
+
 	// The maximum number of results to be returned with a single call. If the number
 	// of available results exceeds this maximum, the response includes a NextToken
 	// value that you can assign to the NextToken request parameter to get the next
@@ -8898,6 +13166,12 @@ func (s *ListStackSetsInput) Validate() error {
 		return invalidParams
 	}
 	return nil
+}
+
+// SetCallAs sets the CallAs field's value.
+func (s *ListStackSetsInput) SetCallAs(v string) *ListStackSetsInput {
+	s.CallAs = &v
+	return s
 }
 
 // SetMaxResults sets the MaxResults field's value.
@@ -9037,6 +13311,607 @@ func (s *ListStacksOutput) SetStackSummaries(v []*StackSummary) *ListStacksOutpu
 	return s
 }
 
+type ListTypeRegistrationsInput struct {
+	_ struct{} `type:"structure"`
+
+	// The maximum number of results to be returned with a single call. If the number
+	// of available results exceeds this maximum, the response includes a NextToken
+	// value that you can assign to the NextToken request parameter to get the next
+	// set of results.
+	MaxResults *int64 `min:"1" type:"integer"`
+
+	// If the previous paginated request didn't return all of the remaining results,
+	// the response object's NextToken parameter value is set to a token. To retrieve
+	// the next set of results, call this action again and assign that token to
+	// the request object's NextToken parameter. If there are no remaining results,
+	// the previous response object's NextToken parameter is set to null.
+	NextToken *string `min:"1" type:"string"`
+
+	// The current status of the extension registration request.
+	//
+	// The default is IN_PROGRESS.
+	RegistrationStatusFilter *string `type:"string" enum:"RegistrationStatus"`
+
+	// The kind of extension.
+	//
+	// Conditional: You must specify either TypeName and Type, or Arn.
+	Type *string `type:"string" enum:"RegistryType"`
+
+	// The Amazon Resource Name (ARN) of the extension.
+	//
+	// Conditional: You must specify either TypeName and Type, or Arn.
+	TypeArn *string `type:"string"`
+
+	// The name of the extension.
+	//
+	// Conditional: You must specify either TypeName and Type, or Arn.
+	TypeName *string `min:"10" type:"string"`
+}
+
+// String returns the string representation
+func (s ListTypeRegistrationsInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ListTypeRegistrationsInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *ListTypeRegistrationsInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "ListTypeRegistrationsInput"}
+	if s.MaxResults != nil && *s.MaxResults < 1 {
+		invalidParams.Add(request.NewErrParamMinValue("MaxResults", 1))
+	}
+	if s.NextToken != nil && len(*s.NextToken) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("NextToken", 1))
+	}
+	if s.TypeName != nil && len(*s.TypeName) < 10 {
+		invalidParams.Add(request.NewErrParamMinLen("TypeName", 10))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetMaxResults sets the MaxResults field's value.
+func (s *ListTypeRegistrationsInput) SetMaxResults(v int64) *ListTypeRegistrationsInput {
+	s.MaxResults = &v
+	return s
+}
+
+// SetNextToken sets the NextToken field's value.
+func (s *ListTypeRegistrationsInput) SetNextToken(v string) *ListTypeRegistrationsInput {
+	s.NextToken = &v
+	return s
+}
+
+// SetRegistrationStatusFilter sets the RegistrationStatusFilter field's value.
+func (s *ListTypeRegistrationsInput) SetRegistrationStatusFilter(v string) *ListTypeRegistrationsInput {
+	s.RegistrationStatusFilter = &v
+	return s
+}
+
+// SetType sets the Type field's value.
+func (s *ListTypeRegistrationsInput) SetType(v string) *ListTypeRegistrationsInput {
+	s.Type = &v
+	return s
+}
+
+// SetTypeArn sets the TypeArn field's value.
+func (s *ListTypeRegistrationsInput) SetTypeArn(v string) *ListTypeRegistrationsInput {
+	s.TypeArn = &v
+	return s
+}
+
+// SetTypeName sets the TypeName field's value.
+func (s *ListTypeRegistrationsInput) SetTypeName(v string) *ListTypeRegistrationsInput {
+	s.TypeName = &v
+	return s
+}
+
+type ListTypeRegistrationsOutput struct {
+	_ struct{} `type:"structure"`
+
+	// If the request doesn't return all of the remaining results, NextToken is
+	// set to a token. To retrieve the next set of results, call this action again
+	// and assign that token to the request object's NextToken parameter. If the
+	// request returns all results, NextToken is set to null.
+	NextToken *string `min:"1" type:"string"`
+
+	// A list of extension registration tokens.
+	//
+	// Use DescribeTypeRegistration to return detailed information about a type
+	// registration request.
+	RegistrationTokenList []*string `type:"list"`
+}
+
+// String returns the string representation
+func (s ListTypeRegistrationsOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ListTypeRegistrationsOutput) GoString() string {
+	return s.String()
+}
+
+// SetNextToken sets the NextToken field's value.
+func (s *ListTypeRegistrationsOutput) SetNextToken(v string) *ListTypeRegistrationsOutput {
+	s.NextToken = &v
+	return s
+}
+
+// SetRegistrationTokenList sets the RegistrationTokenList field's value.
+func (s *ListTypeRegistrationsOutput) SetRegistrationTokenList(v []*string) *ListTypeRegistrationsOutput {
+	s.RegistrationTokenList = v
+	return s
+}
+
+type ListTypeVersionsInput struct {
+	_ struct{} `type:"structure"`
+
+	// The Amazon Resource Name (ARN) of the extension for which you want version
+	// summary information.
+	//
+	// Conditional: You must specify either TypeName and Type, or Arn.
+	Arn *string `type:"string"`
+
+	// The deprecation status of the extension versions that you want to get summary
+	// information about.
+	//
+	// Valid values include:
+	//
+	//    * LIVE: The extension version is registered and can be used in CloudFormation
+	//    operations, dependent on its provisioning behavior and visibility scope.
+	//
+	//    * DEPRECATED: The extension version has been deregistered and can no longer
+	//    be used in CloudFormation operations.
+	//
+	// The default is LIVE.
+	DeprecatedStatus *string `type:"string" enum:"DeprecatedStatus"`
+
+	// The maximum number of results to be returned with a single call. If the number
+	// of available results exceeds this maximum, the response includes a NextToken
+	// value that you can assign to the NextToken request parameter to get the next
+	// set of results.
+	MaxResults *int64 `min:"1" type:"integer"`
+
+	// If the previous paginated request didn't return all of the remaining results,
+	// the response object's NextToken parameter value is set to a token. To retrieve
+	// the next set of results, call this action again and assign that token to
+	// the request object's NextToken parameter. If there are no remaining results,
+	// the previous response object's NextToken parameter is set to null.
+	NextToken *string `min:"1" type:"string"`
+
+	// The publisher ID of the extension publisher.
+	//
+	// Extensions published by Amazon are not assigned a publisher ID.
+	PublisherId *string `min:"1" type:"string"`
+
+	// The kind of the extension.
+	//
+	// Conditional: You must specify either TypeName and Type, or Arn.
+	Type *string `type:"string" enum:"RegistryType"`
+
+	// The name of the extension for which you want version summary information.
+	//
+	// Conditional: You must specify either TypeName and Type, or Arn.
+	TypeName *string `min:"10" type:"string"`
+}
+
+// String returns the string representation
+func (s ListTypeVersionsInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ListTypeVersionsInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *ListTypeVersionsInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "ListTypeVersionsInput"}
+	if s.MaxResults != nil && *s.MaxResults < 1 {
+		invalidParams.Add(request.NewErrParamMinValue("MaxResults", 1))
+	}
+	if s.NextToken != nil && len(*s.NextToken) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("NextToken", 1))
+	}
+	if s.PublisherId != nil && len(*s.PublisherId) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("PublisherId", 1))
+	}
+	if s.TypeName != nil && len(*s.TypeName) < 10 {
+		invalidParams.Add(request.NewErrParamMinLen("TypeName", 10))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetArn sets the Arn field's value.
+func (s *ListTypeVersionsInput) SetArn(v string) *ListTypeVersionsInput {
+	s.Arn = &v
+	return s
+}
+
+// SetDeprecatedStatus sets the DeprecatedStatus field's value.
+func (s *ListTypeVersionsInput) SetDeprecatedStatus(v string) *ListTypeVersionsInput {
+	s.DeprecatedStatus = &v
+	return s
+}
+
+// SetMaxResults sets the MaxResults field's value.
+func (s *ListTypeVersionsInput) SetMaxResults(v int64) *ListTypeVersionsInput {
+	s.MaxResults = &v
+	return s
+}
+
+// SetNextToken sets the NextToken field's value.
+func (s *ListTypeVersionsInput) SetNextToken(v string) *ListTypeVersionsInput {
+	s.NextToken = &v
+	return s
+}
+
+// SetPublisherId sets the PublisherId field's value.
+func (s *ListTypeVersionsInput) SetPublisherId(v string) *ListTypeVersionsInput {
+	s.PublisherId = &v
+	return s
+}
+
+// SetType sets the Type field's value.
+func (s *ListTypeVersionsInput) SetType(v string) *ListTypeVersionsInput {
+	s.Type = &v
+	return s
+}
+
+// SetTypeName sets the TypeName field's value.
+func (s *ListTypeVersionsInput) SetTypeName(v string) *ListTypeVersionsInput {
+	s.TypeName = &v
+	return s
+}
+
+type ListTypeVersionsOutput struct {
+	_ struct{} `type:"structure"`
+
+	// If the request doesn't return all of the remaining results, NextToken is
+	// set to a token. To retrieve the next set of results, call this action again
+	// and assign that token to the request object's NextToken parameter. If the
+	// request returns all results, NextToken is set to null.
+	NextToken *string `min:"1" type:"string"`
+
+	// A list of TypeVersionSummary structures that contain information about the
+	// specified extension's versions.
+	TypeVersionSummaries []*TypeVersionSummary `type:"list"`
+}
+
+// String returns the string representation
+func (s ListTypeVersionsOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ListTypeVersionsOutput) GoString() string {
+	return s.String()
+}
+
+// SetNextToken sets the NextToken field's value.
+func (s *ListTypeVersionsOutput) SetNextToken(v string) *ListTypeVersionsOutput {
+	s.NextToken = &v
+	return s
+}
+
+// SetTypeVersionSummaries sets the TypeVersionSummaries field's value.
+func (s *ListTypeVersionsOutput) SetTypeVersionSummaries(v []*TypeVersionSummary) *ListTypeVersionsOutput {
+	s.TypeVersionSummaries = v
+	return s
+}
+
+type ListTypesInput struct {
+	_ struct{} `type:"structure"`
+
+	// The deprecation status of the extension that you want to get summary information
+	// about.
+	//
+	// Valid values include:
+	//
+	//    * LIVE: The extension is registered for use in CloudFormation operations.
+	//
+	//    * DEPRECATED: The extension has been deregistered and can no longer be
+	//    used in CloudFormation operations.
+	DeprecatedStatus *string `type:"string" enum:"DeprecatedStatus"`
+
+	// Filter criteria to use in determining which extensions to return.
+	//
+	// If you specify a filter, CloudFormation ignores any specified Visibility
+	// value when returning the list of types.
+	Filters *TypeFilters `type:"structure"`
+
+	// The maximum number of results to be returned with a single call. If the number
+	// of available results exceeds this maximum, the response includes a NextToken
+	// value that you can assign to the NextToken request parameter to get the next
+	// set of results.
+	MaxResults *int64 `min:"1" type:"integer"`
+
+	// If the previous paginated request didn't return all of the remaining results,
+	// the response object's NextToken parameter value is set to a token. To retrieve
+	// the next set of results, call this action again and assign that token to
+	// the request object's NextToken parameter. If there are no remaining results,
+	// the previous response object's NextToken parameter is set to null.
+	NextToken *string `min:"1" type:"string"`
+
+	// For resource types, the provisioning behavior of the resource type. CloudFormation
+	// determines the provisioning type during registration, based on the types
+	// of handlers in the schema handler package submitted.
+	//
+	// Valid values include:
+	//
+	//    * FULLY_MUTABLE: The resource type includes an update handler to process
+	//    updates to the type during stack update operations.
+	//
+	//    * IMMUTABLE: The resource type does not include an update handler, so
+	//    the type cannot be updated and must instead be replaced during stack update
+	//    operations.
+	//
+	//    * NON_PROVISIONABLE: The resource type does not include create, read,
+	//    and delete handlers, and therefore cannot actually be provisioned.
+	//
+	// The default is FULLY_MUTABLE.
+	ProvisioningType *string `type:"string" enum:"ProvisioningType"`
+
+	// The type of extension.
+	Type *string `type:"string" enum:"RegistryType"`
+
+	// The scope at which the extensions are visible and usable in CloudFormation
+	// operations.
+	//
+	// Valid values include:
+	//
+	//    * PRIVATE: Extensions that are visible and usable within this account
+	//    and region. This includes: Private extensions you have registered in this
+	//    account and region. Public extensions that you have activated in this
+	//    account and region.
+	//
+	//    * PUBLIC: Extensions that are publicly visible and available to be activated
+	//    within any Amazon account. This includes extensions from Amazon, as well
+	//    as third-party publishers.
+	//
+	// The default is PRIVATE.
+	Visibility *string `type:"string" enum:"Visibility"`
+}
+
+// String returns the string representation
+func (s ListTypesInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ListTypesInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *ListTypesInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "ListTypesInput"}
+	if s.MaxResults != nil && *s.MaxResults < 1 {
+		invalidParams.Add(request.NewErrParamMinValue("MaxResults", 1))
+	}
+	if s.NextToken != nil && len(*s.NextToken) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("NextToken", 1))
+	}
+	if s.Filters != nil {
+		if err := s.Filters.Validate(); err != nil {
+			invalidParams.AddNested("Filters", err.(request.ErrInvalidParams))
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetDeprecatedStatus sets the DeprecatedStatus field's value.
+func (s *ListTypesInput) SetDeprecatedStatus(v string) *ListTypesInput {
+	s.DeprecatedStatus = &v
+	return s
+}
+
+// SetFilters sets the Filters field's value.
+func (s *ListTypesInput) SetFilters(v *TypeFilters) *ListTypesInput {
+	s.Filters = v
+	return s
+}
+
+// SetMaxResults sets the MaxResults field's value.
+func (s *ListTypesInput) SetMaxResults(v int64) *ListTypesInput {
+	s.MaxResults = &v
+	return s
+}
+
+// SetNextToken sets the NextToken field's value.
+func (s *ListTypesInput) SetNextToken(v string) *ListTypesInput {
+	s.NextToken = &v
+	return s
+}
+
+// SetProvisioningType sets the ProvisioningType field's value.
+func (s *ListTypesInput) SetProvisioningType(v string) *ListTypesInput {
+	s.ProvisioningType = &v
+	return s
+}
+
+// SetType sets the Type field's value.
+func (s *ListTypesInput) SetType(v string) *ListTypesInput {
+	s.Type = &v
+	return s
+}
+
+// SetVisibility sets the Visibility field's value.
+func (s *ListTypesInput) SetVisibility(v string) *ListTypesInput {
+	s.Visibility = &v
+	return s
+}
+
+type ListTypesOutput struct {
+	_ struct{} `type:"structure"`
+
+	// If the request doesn't return all of the remaining results, NextToken is
+	// set to a token. To retrieve the next set of results, call this action again
+	// and assign that token to the request object's NextToken parameter. If the
+	// request returns all results, NextToken is set to null.
+	NextToken *string `min:"1" type:"string"`
+
+	// A list of TypeSummary structures that contain information about the specified
+	// extensions.
+	TypeSummaries []*TypeSummary `type:"list"`
+}
+
+// String returns the string representation
+func (s ListTypesOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ListTypesOutput) GoString() string {
+	return s.String()
+}
+
+// SetNextToken sets the NextToken field's value.
+func (s *ListTypesOutput) SetNextToken(v string) *ListTypesOutput {
+	s.NextToken = &v
+	return s
+}
+
+// SetTypeSummaries sets the TypeSummaries field's value.
+func (s *ListTypesOutput) SetTypeSummaries(v []*TypeSummary) *ListTypesOutput {
+	s.TypeSummaries = v
+	return s
+}
+
+// Contains logging configuration information for an extension.
+type LoggingConfig struct {
+	_ struct{} `type:"structure"`
+
+	// The Amazon CloudWatch log group to which CloudFormation sends error logging
+	// information when invoking the extension's handlers.
+	//
+	// LogGroupName is a required field
+	LogGroupName *string `min:"1" type:"string" required:"true"`
+
+	// The ARN of the role that CloudFormation should assume when sending log entries
+	// to CloudWatch logs.
+	//
+	// LogRoleArn is a required field
+	LogRoleArn *string `min:"1" type:"string" required:"true"`
+}
+
+// String returns the string representation
+func (s LoggingConfig) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s LoggingConfig) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *LoggingConfig) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "LoggingConfig"}
+	if s.LogGroupName == nil {
+		invalidParams.Add(request.NewErrParamRequired("LogGroupName"))
+	}
+	if s.LogGroupName != nil && len(*s.LogGroupName) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("LogGroupName", 1))
+	}
+	if s.LogRoleArn == nil {
+		invalidParams.Add(request.NewErrParamRequired("LogRoleArn"))
+	}
+	if s.LogRoleArn != nil && len(*s.LogRoleArn) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("LogRoleArn", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetLogGroupName sets the LogGroupName field's value.
+func (s *LoggingConfig) SetLogGroupName(v string) *LoggingConfig {
+	s.LogGroupName = &v
+	return s
+}
+
+// SetLogRoleArn sets the LogRoleArn field's value.
+func (s *LoggingConfig) SetLogRoleArn(v string) *LoggingConfig {
+	s.LogRoleArn = &v
+	return s
+}
+
+// Contains information about the module from which the resource was created,
+// if the resource was created from a module included in the stack template.
+//
+// For more information on modules, see Using modules to encapsulate and reuse
+// resource configurations (AWSCloudFormation/latest/UserGuide/modules.html)
+// in the CloudFormation User Guide.
+type ModuleInfo struct {
+	_ struct{} `type:"structure"`
+
+	// A concantenated list of the logical IDs of the module or modules containing
+	// the resource. Modules are listed starting with the inner-most nested module,
+	// and separated by /.
+	//
+	// In the following example, the resource was created from a module, moduleA,
+	// that is nested inside a parent module, moduleB.
+	//
+	// moduleA/moduleB
+	//
+	// For more information, see Referencing resources in a module (AWSCloudFormation/latest/UserGuide/modules.html#module-ref-resources)
+	// in the CloudFormation User Guide.
+	LogicalIdHierarchy *string `type:"string"`
+
+	// A concantenated list of the the module type or types containing the resource.
+	// Module types are listed starting with the inner-most nested module, and separated
+	// by /.
+	//
+	// In the following example, the resource was created from a module of type
+	// AWS::First::Example::MODULE, that is nested inside a parent module of type
+	// AWS::Second::Example::MODULE.
+	//
+	// AWS::First::Example::MODULE/AWS::Second::Example::MODULE
+	TypeHierarchy *string `type:"string"`
+}
+
+// String returns the string representation
+func (s ModuleInfo) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ModuleInfo) GoString() string {
+	return s.String()
+}
+
+// SetLogicalIdHierarchy sets the LogicalIdHierarchy field's value.
+func (s *ModuleInfo) SetLogicalIdHierarchy(v string) *ModuleInfo {
+	s.LogicalIdHierarchy = &v
+	return s
+}
+
+// SetTypeHierarchy sets the TypeHierarchy field's value.
+func (s *ModuleInfo) SetTypeHierarchy(v string) *ModuleInfo {
+	s.TypeHierarchy = &v
+	return s
+}
+
 // The Output data type.
 type Output struct {
 	_ struct{} `type:"structure"`
@@ -9093,8 +13968,8 @@ type Parameter struct {
 	_ struct{} `type:"structure"`
 
 	// The key associated with the parameter. If you don't specify a key and value
-	// for a particular parameter, AWS CloudFormation uses the default value that
-	// is specified in your template.
+	// for a particular parameter, CloudFormation uses the default value that is
+	// specified in your template.
 	ParameterKey *string `type:"string"`
 
 	// The input value associated with the parameter.
@@ -9145,8 +14020,8 @@ func (s *Parameter) SetUsePreviousValue(v bool) *Parameter {
 	return s
 }
 
-// A set of criteria that AWS CloudFormation uses to validate parameter values.
-// Although other constraints might be defined in the stack template, AWS CloudFormation
+// A set of criteria that CloudFormation uses to validate parameter values.
+// Although other constraints might be defined in the stack template, CloudFormation
 // returns only the AllowedValues property.
 type ParameterConstraints struct {
 	_ struct{} `type:"structure"`
@@ -9182,10 +14057,10 @@ type ParameterDeclaration struct {
 	Description *string `min:"1" type:"string"`
 
 	// Flag that indicates whether the parameter value is shown as plain text in
-	// logs and in the AWS Management Console.
+	// logs and in the Management Console.
 	NoEcho *bool `type:"boolean"`
 
-	// The criteria that AWS CloudFormation uses to validate parameter values.
+	// The criteria that CloudFormation uses to validate parameter values.
 	ParameterConstraints *ParameterConstraints `type:"structure"`
 
 	// The name that is associated with the parameter.
@@ -9241,11 +14116,10 @@ func (s *ParameterDeclaration) SetParameterType(v string) *ParameterDeclaration 
 	return s
 }
 
-// Context information that enables AWS CloudFormation to uniquely identify
-// a resource. AWS CloudFormation uses context key-value pairs in cases where
-// a resource's logical and physical IDs are not enough to uniquely identify
-// that resource. Each context key-value pair specifies a resource that contains
-// the targeted resource.
+// Context information that enables CloudFormation to uniquely identify a resource.
+// CloudFormation uses context key-value pairs in cases where a resource's logical
+// and physical IDs are not enough to uniquely identify that resource. Each
+// context key-value pair specifies a resource that contains the targeted resource.
 type PhysicalResourceIdContextKeyValuePair struct {
 	_ struct{} `type:"structure"`
 
@@ -9355,28 +14229,590 @@ func (s *PropertyDifference) SetPropertyPath(v string) *PropertyDifference {
 	return s
 }
 
-// The ResourceChange structure describes the resource and the action that AWS
-// CloudFormation will perform on it if you execute this change set.
+type PublishTypeInput struct {
+	_ struct{} `type:"structure"`
+
+	// The Amazon Resource Number (ARN) of the extension.
+	//
+	// Conditional: You must specify Arn, or TypeName and Type.
+	Arn *string `type:"string"`
+
+	// The version number to assign to this version of the extension.
+	//
+	// Use the following format, and adhere to semantic versioning when assigning
+	// a version number to your extension:
+	//
+	// MAJOR.MINOR.PATCH
+	//
+	// For more information, see Semantic Versioning 2.0.0 (https://semver.org/).
+	//
+	// If you do not specify a version number, CloudFormation increments the version
+	// number by one minor version release.
+	//
+	// The first time you publish a type, CloudFormation sets the version number
+	// to 1.0.0, regardless of the value you specify.
+	PublicVersionNumber *string `min:"5" type:"string"`
+
+	// The type of the extension.
+	//
+	// Conditional: You must specify Arn, or TypeName and Type.
+	Type *string `type:"string" enum:"ThirdPartyType"`
+
+	// The name of the extension.
+	//
+	// Conditional: You must specify Arn, or TypeName and Type.
+	TypeName *string `min:"10" type:"string"`
+}
+
+// String returns the string representation
+func (s PublishTypeInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PublishTypeInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *PublishTypeInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "PublishTypeInput"}
+	if s.PublicVersionNumber != nil && len(*s.PublicVersionNumber) < 5 {
+		invalidParams.Add(request.NewErrParamMinLen("PublicVersionNumber", 5))
+	}
+	if s.TypeName != nil && len(*s.TypeName) < 10 {
+		invalidParams.Add(request.NewErrParamMinLen("TypeName", 10))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetArn sets the Arn field's value.
+func (s *PublishTypeInput) SetArn(v string) *PublishTypeInput {
+	s.Arn = &v
+	return s
+}
+
+// SetPublicVersionNumber sets the PublicVersionNumber field's value.
+func (s *PublishTypeInput) SetPublicVersionNumber(v string) *PublishTypeInput {
+	s.PublicVersionNumber = &v
+	return s
+}
+
+// SetType sets the Type field's value.
+func (s *PublishTypeInput) SetType(v string) *PublishTypeInput {
+	s.Type = &v
+	return s
+}
+
+// SetTypeName sets the TypeName field's value.
+func (s *PublishTypeInput) SetTypeName(v string) *PublishTypeInput {
+	s.TypeName = &v
+	return s
+}
+
+type PublishTypeOutput struct {
+	_ struct{} `type:"structure"`
+
+	// The Amazon Resource Number (ARN) assigned to the public extension upon publication.
+	PublicTypeArn *string `type:"string"`
+}
+
+// String returns the string representation
+func (s PublishTypeOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PublishTypeOutput) GoString() string {
+	return s.String()
+}
+
+// SetPublicTypeArn sets the PublicTypeArn field's value.
+func (s *PublishTypeOutput) SetPublicTypeArn(v string) *PublishTypeOutput {
+	s.PublicTypeArn = &v
+	return s
+}
+
+type RecordHandlerProgressInput struct {
+	_ struct{} `type:"structure"`
+
+	// Reserved for use by the CloudFormation CLI (https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/what-is-cloudformation-cli.html).
+	//
+	// BearerToken is a required field
+	BearerToken *string `min:"1" type:"string" required:"true"`
+
+	// Reserved for use by the CloudFormation CLI (https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/what-is-cloudformation-cli.html).
+	ClientRequestToken *string `min:"1" type:"string"`
+
+	// Reserved for use by the CloudFormation CLI (https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/what-is-cloudformation-cli.html).
+	CurrentOperationStatus *string `type:"string" enum:"OperationStatus"`
+
+	// Reserved for use by the CloudFormation CLI (https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/what-is-cloudformation-cli.html).
+	ErrorCode *string `type:"string" enum:"HandlerErrorCode"`
+
+	// Reserved for use by the CloudFormation CLI (https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/what-is-cloudformation-cli.html).
+	//
+	// OperationStatus is a required field
+	OperationStatus *string `type:"string" required:"true" enum:"OperationStatus"`
+
+	// Reserved for use by the CloudFormation CLI (https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/what-is-cloudformation-cli.html).
+	ResourceModel *string `min:"1" type:"string"`
+
+	// Reserved for use by the CloudFormation CLI (https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/what-is-cloudformation-cli.html).
+	StatusMessage *string `type:"string"`
+}
+
+// String returns the string representation
+func (s RecordHandlerProgressInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s RecordHandlerProgressInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *RecordHandlerProgressInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "RecordHandlerProgressInput"}
+	if s.BearerToken == nil {
+		invalidParams.Add(request.NewErrParamRequired("BearerToken"))
+	}
+	if s.BearerToken != nil && len(*s.BearerToken) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("BearerToken", 1))
+	}
+	if s.ClientRequestToken != nil && len(*s.ClientRequestToken) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("ClientRequestToken", 1))
+	}
+	if s.OperationStatus == nil {
+		invalidParams.Add(request.NewErrParamRequired("OperationStatus"))
+	}
+	if s.ResourceModel != nil && len(*s.ResourceModel) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("ResourceModel", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetBearerToken sets the BearerToken field's value.
+func (s *RecordHandlerProgressInput) SetBearerToken(v string) *RecordHandlerProgressInput {
+	s.BearerToken = &v
+	return s
+}
+
+// SetClientRequestToken sets the ClientRequestToken field's value.
+func (s *RecordHandlerProgressInput) SetClientRequestToken(v string) *RecordHandlerProgressInput {
+	s.ClientRequestToken = &v
+	return s
+}
+
+// SetCurrentOperationStatus sets the CurrentOperationStatus field's value.
+func (s *RecordHandlerProgressInput) SetCurrentOperationStatus(v string) *RecordHandlerProgressInput {
+	s.CurrentOperationStatus = &v
+	return s
+}
+
+// SetErrorCode sets the ErrorCode field's value.
+func (s *RecordHandlerProgressInput) SetErrorCode(v string) *RecordHandlerProgressInput {
+	s.ErrorCode = &v
+	return s
+}
+
+// SetOperationStatus sets the OperationStatus field's value.
+func (s *RecordHandlerProgressInput) SetOperationStatus(v string) *RecordHandlerProgressInput {
+	s.OperationStatus = &v
+	return s
+}
+
+// SetResourceModel sets the ResourceModel field's value.
+func (s *RecordHandlerProgressInput) SetResourceModel(v string) *RecordHandlerProgressInput {
+	s.ResourceModel = &v
+	return s
+}
+
+// SetStatusMessage sets the StatusMessage field's value.
+func (s *RecordHandlerProgressInput) SetStatusMessage(v string) *RecordHandlerProgressInput {
+	s.StatusMessage = &v
+	return s
+}
+
+type RecordHandlerProgressOutput struct {
+	_ struct{} `type:"structure"`
+}
+
+// String returns the string representation
+func (s RecordHandlerProgressOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s RecordHandlerProgressOutput) GoString() string {
+	return s.String()
+}
+
+type RegisterPublisherInput struct {
+	_ struct{} `type:"structure"`
+
+	// Whether you accept the Terms and Conditions (https://cloudformation-registry-documents.s3.amazonaws.com/Terms_and_Conditions_for_AWS_CloudFormation_Registry_Publishers.pdf)
+	// for publishing extensions in the CloudFormation registry. You must accept
+	// the terms and conditions in order to register to publish public extensions
+	// to the CloudFormation registry.
+	//
+	// The default is false.
+	AcceptTermsAndConditions *bool `type:"boolean"`
+
+	// If you are using a Bitbucket or GitHub account for identity verification,
+	// the Amazon Resource Name (ARN) for your connection to that account.
+	//
+	// For more information, see Registering your account to publish CloudFormation
+	// extensions (https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/publish-extension.html#publish-extension-prereqs)
+	// in the CloudFormation CLI User Guide.
+	ConnectionArn *string `min:"1" type:"string"`
+}
+
+// String returns the string representation
+func (s RegisterPublisherInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s RegisterPublisherInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *RegisterPublisherInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "RegisterPublisherInput"}
+	if s.ConnectionArn != nil && len(*s.ConnectionArn) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("ConnectionArn", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetAcceptTermsAndConditions sets the AcceptTermsAndConditions field's value.
+func (s *RegisterPublisherInput) SetAcceptTermsAndConditions(v bool) *RegisterPublisherInput {
+	s.AcceptTermsAndConditions = &v
+	return s
+}
+
+// SetConnectionArn sets the ConnectionArn field's value.
+func (s *RegisterPublisherInput) SetConnectionArn(v string) *RegisterPublisherInput {
+	s.ConnectionArn = &v
+	return s
+}
+
+type RegisterPublisherOutput struct {
+	_ struct{} `type:"structure"`
+
+	// The ID assigned this account by CloudFormation for publishing extensions.
+	PublisherId *string `min:"1" type:"string"`
+}
+
+// String returns the string representation
+func (s RegisterPublisherOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s RegisterPublisherOutput) GoString() string {
+	return s.String()
+}
+
+// SetPublisherId sets the PublisherId field's value.
+func (s *RegisterPublisherOutput) SetPublisherId(v string) *RegisterPublisherOutput {
+	s.PublisherId = &v
+	return s
+}
+
+type RegisterTypeInput struct {
+	_ struct{} `type:"structure"`
+
+	// A unique identifier that acts as an idempotency key for this registration
+	// request. Specifying a client request token prevents CloudFormation from generating
+	// more than one version of an extension from the same registeration request,
+	// even if the request is submitted multiple times.
+	ClientRequestToken *string `min:"1" type:"string"`
+
+	// The Amazon Resource Name (ARN) of the IAM role for CloudFormation to assume
+	// when invoking the extension.
+	//
+	// For CloudFormation to assume the specified execution role, the role must
+	// contain a trust relationship with the CloudFormation service principle (resources.cloudformation.amazonaws.com).
+	// For more information on adding trust relationships, see Modifying a role
+	// trust policy (IAM/latest/UserGuide/roles-managingrole-editing-console.html#roles-managingrole_edit-trust-policy)
+	// in the Identity and Access Management User Guide.
+	//
+	// If your extension calls Amazon Web Services APIs in any of its handlers,
+	// you must create an IAM execution role (https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html)
+	// that includes the necessary permissions to call those Amazon Web Services
+	// APIs, and provision that execution role in your account. When CloudFormation
+	// needs to invoke the resource type handler, CloudFormation assumes this execution
+	// role to create a temporary session token, which it then passes to the resource
+	// type handler, thereby supplying your resource type with the appropriate credentials.
+	ExecutionRoleArn *string `min:"1" type:"string"`
+
+	// Specifies logging configuration information for an extension.
+	LoggingConfig *LoggingConfig `type:"structure"`
+
+	// A url to the S3 bucket containing the extension project package that contains
+	// the neccessary files for the extension you want to register.
+	//
+	// For information on generating a schema handler package for the extension
+	// you want to register, see submit (https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/resource-type-cli-submit.html)
+	// in the CloudFormation CLI User Guide.
+	//
+	// The user registering the extension must be able to access the package in
+	// the S3 bucket. That is, the user needs to have GetObject (https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html)
+	// permissions for the schema handler package. For more information, see Actions,
+	// Resources, and Condition Keys for Amazon S3 (https://docs.aws.amazon.com/IAM/latest/UserGuide/list_amazons3.html)
+	// in the Identity and Access Management User Guide.
+	//
+	// SchemaHandlerPackage is a required field
+	SchemaHandlerPackage *string `min:"1" type:"string" required:"true"`
+
+	// The kind of extension.
+	Type *string `type:"string" enum:"RegistryType"`
+
+	// The name of the extension being registered.
+	//
+	// We recommend that extension names adhere to the following patterns:
+	//
+	//    * For resource types, company_or_organization::service::type.
+	//
+	//    * For modules, company_or_organization::service::type::MODULE.
+	//
+	// The following organization namespaces are reserved and cannot be used in
+	// your extension names:
+	//
+	//    * Alexa
+	//
+	//    * AMZN
+	//
+	//    * Amazon
+	//
+	//    * AWS
+	//
+	//    * Custom
+	//
+	//    * Dev
+	//
+	// TypeName is a required field
+	TypeName *string `min:"10" type:"string" required:"true"`
+}
+
+// String returns the string representation
+func (s RegisterTypeInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s RegisterTypeInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *RegisterTypeInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "RegisterTypeInput"}
+	if s.ClientRequestToken != nil && len(*s.ClientRequestToken) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("ClientRequestToken", 1))
+	}
+	if s.ExecutionRoleArn != nil && len(*s.ExecutionRoleArn) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("ExecutionRoleArn", 1))
+	}
+	if s.SchemaHandlerPackage == nil {
+		invalidParams.Add(request.NewErrParamRequired("SchemaHandlerPackage"))
+	}
+	if s.SchemaHandlerPackage != nil && len(*s.SchemaHandlerPackage) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("SchemaHandlerPackage", 1))
+	}
+	if s.TypeName == nil {
+		invalidParams.Add(request.NewErrParamRequired("TypeName"))
+	}
+	if s.TypeName != nil && len(*s.TypeName) < 10 {
+		invalidParams.Add(request.NewErrParamMinLen("TypeName", 10))
+	}
+	if s.LoggingConfig != nil {
+		if err := s.LoggingConfig.Validate(); err != nil {
+			invalidParams.AddNested("LoggingConfig", err.(request.ErrInvalidParams))
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetClientRequestToken sets the ClientRequestToken field's value.
+func (s *RegisterTypeInput) SetClientRequestToken(v string) *RegisterTypeInput {
+	s.ClientRequestToken = &v
+	return s
+}
+
+// SetExecutionRoleArn sets the ExecutionRoleArn field's value.
+func (s *RegisterTypeInput) SetExecutionRoleArn(v string) *RegisterTypeInput {
+	s.ExecutionRoleArn = &v
+	return s
+}
+
+// SetLoggingConfig sets the LoggingConfig field's value.
+func (s *RegisterTypeInput) SetLoggingConfig(v *LoggingConfig) *RegisterTypeInput {
+	s.LoggingConfig = v
+	return s
+}
+
+// SetSchemaHandlerPackage sets the SchemaHandlerPackage field's value.
+func (s *RegisterTypeInput) SetSchemaHandlerPackage(v string) *RegisterTypeInput {
+	s.SchemaHandlerPackage = &v
+	return s
+}
+
+// SetType sets the Type field's value.
+func (s *RegisterTypeInput) SetType(v string) *RegisterTypeInput {
+	s.Type = &v
+	return s
+}
+
+// SetTypeName sets the TypeName field's value.
+func (s *RegisterTypeInput) SetTypeName(v string) *RegisterTypeInput {
+	s.TypeName = &v
+	return s
+}
+
+type RegisterTypeOutput struct {
+	_ struct{} `type:"structure"`
+
+	// The identifier for this registration request.
+	//
+	// Use this registration token when calling DescribeTypeRegistration , which
+	// returns information about the status and IDs of the extension registration.
+	RegistrationToken *string `min:"1" type:"string"`
+}
+
+// String returns the string representation
+func (s RegisterTypeOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s RegisterTypeOutput) GoString() string {
+	return s.String()
+}
+
+// SetRegistrationToken sets the RegistrationToken field's value.
+func (s *RegisterTypeOutput) SetRegistrationToken(v string) *RegisterTypeOutput {
+	s.RegistrationToken = &v
+	return s
+}
+
+// For extensions that are modules, a public third-party extension that must
+// be activated in your account in order for the module itself to be activated.
+//
+// For more information, see Activating public modules for use in your account
+// (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/modules.html#module-enabling)
+// in the CloudFormation User Guide.
+type RequiredActivatedType struct {
+	_ struct{} `type:"structure"`
+
+	// The type name of the public extension.
+	//
+	// If you specified a TypeNameAlias when enabling the extension in this account
+	// and region, CloudFormation treats that alias as the extension's type name
+	// within the account and region, not the type name of the public extension.
+	// For more information, see Specifying aliases to refer to extensions (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/registry-public.html#registry-public-enable-alias)
+	// in the CloudFormation User Guide.
+	OriginalTypeName *string `min:"10" type:"string"`
+
+	// The publisher ID of the extension publisher.
+	PublisherId *string `min:"1" type:"string"`
+
+	// A list of the major versions of the extension type that the macro supports.
+	SupportedMajorVersions []*int64 `type:"list"`
+
+	// An alias assigned to the public extension, in this account and region. If
+	// you specify an alias for the extension, CloudFormation treats the alias as
+	// the extension type name within this account and region. You must use the
+	// alias to refer to the extension in your templates, API calls, and CloudFormation
+	// console.
+	TypeNameAlias *string `min:"10" type:"string"`
+}
+
+// String returns the string representation
+func (s RequiredActivatedType) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s RequiredActivatedType) GoString() string {
+	return s.String()
+}
+
+// SetOriginalTypeName sets the OriginalTypeName field's value.
+func (s *RequiredActivatedType) SetOriginalTypeName(v string) *RequiredActivatedType {
+	s.OriginalTypeName = &v
+	return s
+}
+
+// SetPublisherId sets the PublisherId field's value.
+func (s *RequiredActivatedType) SetPublisherId(v string) *RequiredActivatedType {
+	s.PublisherId = &v
+	return s
+}
+
+// SetSupportedMajorVersions sets the SupportedMajorVersions field's value.
+func (s *RequiredActivatedType) SetSupportedMajorVersions(v []*int64) *RequiredActivatedType {
+	s.SupportedMajorVersions = v
+	return s
+}
+
+// SetTypeNameAlias sets the TypeNameAlias field's value.
+func (s *RequiredActivatedType) SetTypeNameAlias(v string) *RequiredActivatedType {
+	s.TypeNameAlias = &v
+	return s
+}
+
+// The ResourceChange structure describes the resource and the action that CloudFormation
+// will perform on it if you execute this change set.
 type ResourceChange struct {
 	_ struct{} `type:"structure"`
 
-	// The action that AWS CloudFormation takes on the resource, such as Add (adds
-	// a new resource), Modify (changes a resource), or Remove (deletes a resource).
+	// The action that CloudFormation takes on the resource, such as Add (adds a
+	// new resource), Modify (changes a resource), Remove (deletes a resource),
+	// Import (imports a resource), or Dynamic (exact action for the resource cannot
+	// be determined).
 	Action *string `type:"string" enum:"ChangeAction"`
 
+	// The change set ID of the nested change set.
+	ChangeSetId *string `min:"1" type:"string"`
+
 	// For the Modify action, a list of ResourceChangeDetail structures that describes
-	// the changes that AWS CloudFormation will make to the resource.
+	// the changes that CloudFormation will make to the resource.
 	Details []*ResourceChangeDetail `type:"list"`
 
 	// The resource's logical ID, which is defined in the stack's template.
 	LogicalResourceId *string `type:"string"`
 
+	// Contains information about the module from which the resource was created,
+	// if the resource was created from a module included in the stack template.
+	ModuleInfo *ModuleInfo `type:"structure"`
+
 	// The resource's physical ID (resource name). Resources that you are adding
 	// don't have physical IDs because they haven't been created.
 	PhysicalResourceId *string `type:"string"`
 
-	// For the Modify action, indicates whether AWS CloudFormation will replace
-	// the resource by creating a new one and deleting the old one. This value depends
+	// For the Modify action, indicates whether CloudFormation will replace the
+	// resource by creating a new one and deleting the old one. This value depends
 	// on the value of the RequiresRecreation property in the ResourceTargetDefinition
 	// structure. For example, if the RequiresRecreation field is Always and the
 	// Evaluation field is Static, Replacement is True. If the RequiresRecreation
@@ -9388,7 +14824,7 @@ type ResourceChange struct {
 	// Never.
 	Replacement *string `type:"string" enum:"Replacement"`
 
-	// The type of AWS CloudFormation resource, such as AWS::S3::Bucket.
+	// The type of CloudFormation resource, such as AWS::S3::Bucket.
 	ResourceType *string `min:"1" type:"string"`
 
 	// For the Modify action, indicates which resource attribute is triggering this
@@ -9413,6 +14849,12 @@ func (s *ResourceChange) SetAction(v string) *ResourceChange {
 	return s
 }
 
+// SetChangeSetId sets the ChangeSetId field's value.
+func (s *ResourceChange) SetChangeSetId(v string) *ResourceChange {
+	s.ChangeSetId = &v
+	return s
+}
+
 // SetDetails sets the Details field's value.
 func (s *ResourceChange) SetDetails(v []*ResourceChangeDetail) *ResourceChange {
 	s.Details = v
@@ -9422,6 +14864,12 @@ func (s *ResourceChange) SetDetails(v []*ResourceChangeDetail) *ResourceChange {
 // SetLogicalResourceId sets the LogicalResourceId field's value.
 func (s *ResourceChange) SetLogicalResourceId(v string) *ResourceChange {
 	s.LogicalResourceId = &v
+	return s
+}
+
+// SetModuleInfo sets the ModuleInfo field's value.
+func (s *ResourceChange) SetModuleInfo(v *ModuleInfo) *ResourceChange {
+	s.ModuleInfo = v
 	return s
 }
 
@@ -9450,7 +14898,7 @@ func (s *ResourceChange) SetScope(v []*string) *ResourceChange {
 }
 
 // For a resource with Modify as the action, the ResourceChange structure describes
-// the changes AWS CloudFormation will make to that resource.
+// the changes CloudFormation will make to that resource.
 type ResourceChangeDetail struct {
 	_ struct{} `type:"structure"`
 
@@ -9480,19 +14928,19 @@ type ResourceChangeDetail struct {
 	//
 	//    * Automatic entities are AWS::CloudFormation::Stack resource types, which
 	//    are also known as nested stacks. If you made no changes to the AWS::CloudFormation::Stack
-	//    resource, AWS CloudFormation sets the ChangeSource to Automatic because
-	//    the nested stack's template might have changed. Changes to a nested stack's
-	//    template aren't visible to AWS CloudFormation until you run an update
-	//    on the parent stack.
+	//    resource, CloudFormation sets the ChangeSource to Automatic because the
+	//    nested stack's template might have changed. Changes to a nested stack's
+	//    template aren't visible to CloudFormation until you run an update on the
+	//    parent stack.
 	ChangeSource *string `type:"string" enum:"ChangeSource"`
 
-	// Indicates whether AWS CloudFormation can determine the target value, and
-	// whether the target value will change before you execute a change set.
+	// Indicates whether CloudFormation can determine the target value, and whether
+	// the target value will change before you execute a change set.
 	//
-	// For Static evaluations, AWS CloudFormation can determine that the target
-	// value will change, and its value. For example, if you directly modify the
-	// InstanceType property of an EC2 instance, AWS CloudFormation knows that this
-	// property value will change, and its value, so this is a Static evaluation.
+	// For Static evaluations, CloudFormation can determine that the target value
+	// will change, and its value. For example, if you directly modify the InstanceType
+	// property of an EC2 instance, CloudFormation knows that this property value
+	// will change, and its value, so this is a Static evaluation.
 	//
 	// For Dynamic evaluations, cannot determine the target value because it depends
 	// on the result of an intrinsic function, such as a Ref or Fn::GetAtt intrinsic
@@ -9503,7 +14951,7 @@ type ResourceChangeDetail struct {
 	// physical ID, so all references to that resource will also be updated.
 	Evaluation *string `type:"string" enum:"EvaluationType"`
 
-	// A ResourceTargetDefinition structure that describes the field that AWS CloudFormation
+	// A ResourceTargetDefinition structure that describes the field that CloudFormation
 	// will change and whether the resource will be recreated.
 	Target *ResourceTargetDefinition `type:"structure"`
 }
@@ -9542,7 +14990,54 @@ func (s *ResourceChangeDetail) SetTarget(v *ResourceTargetDefinition) *ResourceC
 	return s
 }
 
-// The field that AWS CloudFormation will change, such as the name of a resource's
+// Describes the target resources of a specific type in your import template
+// (for example, all AWS::S3::Bucket resources) and the properties you can provide
+// during the import to identify resources of that type.
+type ResourceIdentifierSummary struct {
+	_ struct{} `type:"structure"`
+
+	// The logical IDs of the target resources of the specified ResourceType, as
+	// defined in the import template.
+	LogicalResourceIds []*string `min:"1" type:"list"`
+
+	// The resource properties you can provide during the import to identify your
+	// target resources. For example, BucketName is a possible identifier property
+	// for AWS::S3::Bucket resources.
+	ResourceIdentifiers []*string `type:"list"`
+
+	// The template resource type of the target resources, such as AWS::S3::Bucket.
+	ResourceType *string `min:"1" type:"string"`
+}
+
+// String returns the string representation
+func (s ResourceIdentifierSummary) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ResourceIdentifierSummary) GoString() string {
+	return s.String()
+}
+
+// SetLogicalResourceIds sets the LogicalResourceIds field's value.
+func (s *ResourceIdentifierSummary) SetLogicalResourceIds(v []*string) *ResourceIdentifierSummary {
+	s.LogicalResourceIds = v
+	return s
+}
+
+// SetResourceIdentifiers sets the ResourceIdentifiers field's value.
+func (s *ResourceIdentifierSummary) SetResourceIdentifiers(v []*string) *ResourceIdentifierSummary {
+	s.ResourceIdentifiers = v
+	return s
+}
+
+// SetResourceType sets the ResourceType field's value.
+func (s *ResourceIdentifierSummary) SetResourceType(v string) *ResourceIdentifierSummary {
+	s.ResourceType = &v
+	return s
+}
+
+// The field that CloudFormation will change, such as the name of a resource's
 // property, and whether the resource will be recreated.
 type ResourceTargetDefinition struct {
 	_ struct{} `type:"structure"`
@@ -9559,7 +15054,7 @@ type ResourceTargetDefinition struct {
 	// property causes the resource to be recreated. The value can be Never, Always,
 	// or Conditionally. To determine the conditions for a Conditionally recreation,
 	// see the update behavior for that property (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html)
-	// in the AWS CloudFormation User Guide.
+	// in the CloudFormation User Guide.
 	RequiresRecreation *string `type:"string" enum:"RequiresRecreation"`
 }
 
@@ -9591,13 +15086,91 @@ func (s *ResourceTargetDefinition) SetRequiresRecreation(v string) *ResourceTarg
 	return s
 }
 
-// Structure containing the rollback triggers for AWS CloudFormation to monitor
+// Describes the target resource of an import operation.
+type ResourceToImport struct {
+	_ struct{} `type:"structure"`
+
+	// The logical ID of the target resource as specified in the template.
+	//
+	// LogicalResourceId is a required field
+	LogicalResourceId *string `type:"string" required:"true"`
+
+	// A key-value pair that identifies the target resource. The key is an identifier
+	// property (for example, BucketName for AWS::S3::Bucket resources) and the
+	// value is the actual property value (for example, MyS3Bucket).
+	//
+	// ResourceIdentifier is a required field
+	ResourceIdentifier map[string]*string `min:"1" type:"map" required:"true"`
+
+	// The type of resource to import into your stack, such as AWS::S3::Bucket.
+	// For a list of supported resource types, see Resources that support import
+	// operations (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resource-import-supported-resources.html)
+	// in the CloudFormation User Guide.
+	//
+	// ResourceType is a required field
+	ResourceType *string `min:"1" type:"string" required:"true"`
+}
+
+// String returns the string representation
+func (s ResourceToImport) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ResourceToImport) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *ResourceToImport) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "ResourceToImport"}
+	if s.LogicalResourceId == nil {
+		invalidParams.Add(request.NewErrParamRequired("LogicalResourceId"))
+	}
+	if s.ResourceIdentifier == nil {
+		invalidParams.Add(request.NewErrParamRequired("ResourceIdentifier"))
+	}
+	if s.ResourceIdentifier != nil && len(s.ResourceIdentifier) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("ResourceIdentifier", 1))
+	}
+	if s.ResourceType == nil {
+		invalidParams.Add(request.NewErrParamRequired("ResourceType"))
+	}
+	if s.ResourceType != nil && len(*s.ResourceType) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("ResourceType", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetLogicalResourceId sets the LogicalResourceId field's value.
+func (s *ResourceToImport) SetLogicalResourceId(v string) *ResourceToImport {
+	s.LogicalResourceId = &v
+	return s
+}
+
+// SetResourceIdentifier sets the ResourceIdentifier field's value.
+func (s *ResourceToImport) SetResourceIdentifier(v map[string]*string) *ResourceToImport {
+	s.ResourceIdentifier = v
+	return s
+}
+
+// SetResourceType sets the ResourceType field's value.
+func (s *ResourceToImport) SetResourceType(v string) *ResourceToImport {
+	s.ResourceType = &v
+	return s
+}
+
+// Structure containing the rollback triggers for CloudFormation to monitor
 // during stack creation and updating operations, and for the specified monitoring
 // period afterwards.
 //
-// Rollback triggers enable you to have AWS CloudFormation monitor the state
-// of your application during stack creation and updating, and to roll back
-// that operation if the application breaches the threshold of any of the alarms
+// Rollback triggers enable you to have CloudFormation monitor the state of
+// your application during stack creation and updating, and to roll back that
+// operation if the application breaches the threshold of any of the alarms
 // you've specified. For more information, see Monitor and Roll Back Stack Operations
 // (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-rollback-triggers.html).
 type RollbackConfiguration struct {
@@ -9624,11 +15197,11 @@ type RollbackConfiguration struct {
 
 	// The triggers to monitor during stack creation or update actions.
 	//
-	// By default, AWS CloudFormation saves the rollback triggers specified for
-	// a stack and applies them to any subsequent update operations for the stack,
-	// unless you specify otherwise. If you do specify rollback triggers for this
-	// parameter, those triggers replace any list of triggers previously specified
-	// for the stack. This means:
+	// By default, CloudFormation saves the rollback triggers specified for a stack
+	// and applies them to any subsequent update operations for the stack, unless
+	// you specify otherwise. If you do specify rollback triggers for this parameter,
+	// those triggers replace any list of triggers previously specified for the
+	// stack. This means:
 	//
 	//    * To use the rollback triggers previously specified for this stack, if
 	//    any, don't specify this parameter.
@@ -9689,9 +15262,9 @@ func (s *RollbackConfiguration) SetRollbackTriggers(v []*RollbackTrigger) *Rollb
 	return s
 }
 
-// A rollback trigger AWS CloudFormation monitors during creation and updating
-// of stacks. If any of the alarms you specify goes to ALARM state during the
-// stack operation or within the specified monitoring period afterwards, CloudFormation
+// A rollback trigger CloudFormation monitors during creation and updating of
+// stacks. If any of the alarms you specify goes to ALARM state during the stack
+// operation or within the specified monitoring period afterwards, CloudFormation
 // rolls back the entire stack operation.
 type RollbackTrigger struct {
 	_ struct{} `type:"structure"`
@@ -9761,12 +15334,12 @@ type SetStackPolicyInput struct {
 
 	// Structure containing the stack policy body. For more information, go to Prevent
 	// Updates to Stack Resources (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/protect-stack-resources.html)
-	// in the AWS CloudFormation User Guide. You can specify either the StackPolicyBody
+	// in the CloudFormation User Guide. You can specify either the StackPolicyBody
 	// or the StackPolicyURL parameter, but not both.
 	StackPolicyBody *string `min:"1" type:"string"`
 
 	// Location of a file containing the stack policy. The URL must point to a policy
-	// (maximum size: 16 KB) located in an S3 bucket in the same region as the stack.
+	// (maximum size: 16 KB) located in an S3 bucket in the same Region as the stack.
 	// You can specify either the StackPolicyBody or the StackPolicyURL parameter,
 	// but not both.
 	StackPolicyURL *string `min:"1" type:"string"`
@@ -9833,6 +15406,227 @@ func (s SetStackPolicyOutput) GoString() string {
 	return s.String()
 }
 
+type SetTypeConfigurationInput struct {
+	_ struct{} `type:"structure"`
+
+	// The configuration data for the extension, in this account and region.
+	//
+	// The configuration data must be formatted as JSON, and validate against the
+	// schema returned in the ConfigurationSchema response element of API_DescribeType
+	// (AWSCloudFormation/latest/APIReference/API_DescribeType.html). For more information,
+	// see Defining account-level configuration data for an extension (https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/resource-type-model.html#resource-type-howto-configuration)
+	// in the CloudFormation CLI User Guide.
+	//
+	// Configuration is a required field
+	Configuration *string `min:"1" type:"string" required:"true"`
+
+	// An alias by which to refer to this extension configuration data.
+	//
+	// Conditional: Specifying a configuration alias is required when setting a
+	// configuration for a resource type extension.
+	ConfigurationAlias *string `min:"1" type:"string"`
+
+	// The type of extension.
+	//
+	// Conditional: You must specify ConfigurationArn, or Type and TypeName.
+	Type *string `type:"string" enum:"ThirdPartyType"`
+
+	// The Amazon Resource Name (ARN) for the extension, in this account and region.
+	//
+	// For public extensions, this will be the ARN assigned when you activate the
+	// type (https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_ActivateType.html)
+	// in this account and region. For private extensions, this will be the ARN
+	// assigned when you register the type (https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_RegisterType.html)
+	// in this account and region.
+	//
+	// Do not include the extension versions suffix at the end of the ARN. You can
+	// set the configuration for an extension, but not for a specific extension
+	// version.
+	TypeArn *string `type:"string"`
+
+	// The name of the extension.
+	//
+	// Conditional: You must specify ConfigurationArn, or Type and TypeName.
+	TypeName *string `min:"10" type:"string"`
+}
+
+// String returns the string representation
+func (s SetTypeConfigurationInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s SetTypeConfigurationInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *SetTypeConfigurationInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "SetTypeConfigurationInput"}
+	if s.Configuration == nil {
+		invalidParams.Add(request.NewErrParamRequired("Configuration"))
+	}
+	if s.Configuration != nil && len(*s.Configuration) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Configuration", 1))
+	}
+	if s.ConfigurationAlias != nil && len(*s.ConfigurationAlias) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("ConfigurationAlias", 1))
+	}
+	if s.TypeName != nil && len(*s.TypeName) < 10 {
+		invalidParams.Add(request.NewErrParamMinLen("TypeName", 10))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetConfiguration sets the Configuration field's value.
+func (s *SetTypeConfigurationInput) SetConfiguration(v string) *SetTypeConfigurationInput {
+	s.Configuration = &v
+	return s
+}
+
+// SetConfigurationAlias sets the ConfigurationAlias field's value.
+func (s *SetTypeConfigurationInput) SetConfigurationAlias(v string) *SetTypeConfigurationInput {
+	s.ConfigurationAlias = &v
+	return s
+}
+
+// SetType sets the Type field's value.
+func (s *SetTypeConfigurationInput) SetType(v string) *SetTypeConfigurationInput {
+	s.Type = &v
+	return s
+}
+
+// SetTypeArn sets the TypeArn field's value.
+func (s *SetTypeConfigurationInput) SetTypeArn(v string) *SetTypeConfigurationInput {
+	s.TypeArn = &v
+	return s
+}
+
+// SetTypeName sets the TypeName field's value.
+func (s *SetTypeConfigurationInput) SetTypeName(v string) *SetTypeConfigurationInput {
+	s.TypeName = &v
+	return s
+}
+
+type SetTypeConfigurationOutput struct {
+	_ struct{} `type:"structure"`
+
+	// The Amazon Resource Name (ARN) for the configuration data, in this account
+	// and region.
+	//
+	// Conditional: You must specify ConfigurationArn, or Type and TypeName.
+	ConfigurationArn *string `type:"string"`
+}
+
+// String returns the string representation
+func (s SetTypeConfigurationOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s SetTypeConfigurationOutput) GoString() string {
+	return s.String()
+}
+
+// SetConfigurationArn sets the ConfigurationArn field's value.
+func (s *SetTypeConfigurationOutput) SetConfigurationArn(v string) *SetTypeConfigurationOutput {
+	s.ConfigurationArn = &v
+	return s
+}
+
+type SetTypeDefaultVersionInput struct {
+	_ struct{} `type:"structure"`
+
+	// The Amazon Resource Name (ARN) of the extension for which you want version
+	// summary information.
+	//
+	// Conditional: You must specify either TypeName and Type, or Arn.
+	Arn *string `type:"string"`
+
+	// The kind of extension.
+	//
+	// Conditional: You must specify either TypeName and Type, or Arn.
+	Type *string `type:"string" enum:"RegistryType"`
+
+	// The name of the extension.
+	//
+	// Conditional: You must specify either TypeName and Type, or Arn.
+	TypeName *string `min:"10" type:"string"`
+
+	// The ID of a specific version of the extension. The version ID is the value
+	// at the end of the Amazon Resource Name (ARN) assigned to the extension version
+	// when it is registered.
+	VersionId *string `min:"1" type:"string"`
+}
+
+// String returns the string representation
+func (s SetTypeDefaultVersionInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s SetTypeDefaultVersionInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *SetTypeDefaultVersionInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "SetTypeDefaultVersionInput"}
+	if s.TypeName != nil && len(*s.TypeName) < 10 {
+		invalidParams.Add(request.NewErrParamMinLen("TypeName", 10))
+	}
+	if s.VersionId != nil && len(*s.VersionId) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("VersionId", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetArn sets the Arn field's value.
+func (s *SetTypeDefaultVersionInput) SetArn(v string) *SetTypeDefaultVersionInput {
+	s.Arn = &v
+	return s
+}
+
+// SetType sets the Type field's value.
+func (s *SetTypeDefaultVersionInput) SetType(v string) *SetTypeDefaultVersionInput {
+	s.Type = &v
+	return s
+}
+
+// SetTypeName sets the TypeName field's value.
+func (s *SetTypeDefaultVersionInput) SetTypeName(v string) *SetTypeDefaultVersionInput {
+	s.TypeName = &v
+	return s
+}
+
+// SetVersionId sets the VersionId field's value.
+func (s *SetTypeDefaultVersionInput) SetVersionId(v string) *SetTypeDefaultVersionInput {
+	s.VersionId = &v
+	return s
+}
+
+type SetTypeDefaultVersionOutput struct {
+	_ struct{} `type:"structure"`
+}
+
+// String returns the string representation
+func (s SetTypeDefaultVersionOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s SetTypeDefaultVersionOutput) GoString() string {
+	return s.String()
+}
+
 // The input for the SignalResource action.
 type SignalResourceInput struct {
 	_ struct{} `type:"structure"`
@@ -9850,7 +15644,7 @@ type SignalResourceInput struct {
 	StackName *string `min:"1" type:"string" required:"true"`
 
 	// The status of the signal, which is either success or failure. A failure signal
-	// causes AWS CloudFormation to immediately fail the stack creation or update.
+	// causes CloudFormation to immediately fail the stack creation or update.
 	//
 	// Status is a required field
 	Status *string `type:"string" required:"true" enum:"ResourceSignalStatus"`
@@ -9980,7 +15774,7 @@ type Stack struct {
 	// termination protection is set on the root stack and cannot be changed directly
 	// on the nested stack. For more information, see Protecting a Stack From Being
 	// Deleted (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-protect-stacks.html)
-	// in the AWS CloudFormation User Guide.
+	// in the CloudFormation User Guide.
 	EnableTerminationProtection *bool `type:"boolean"`
 
 	// The time the stack was last updated. This field will only be returned if
@@ -10001,23 +15795,23 @@ type Stack struct {
 	// the root stack is also the parent stack.
 	//
 	// For more information, see Working with Nested Stacks (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-nested-stacks.html)
-	// in the AWS CloudFormation User Guide.
+	// in the CloudFormation User Guide.
 	ParentId *string `type:"string"`
 
-	// The Amazon Resource Name (ARN) of an AWS Identity and Access Management (IAM)
-	// role that is associated with the stack. During a stack operation, AWS CloudFormation
+	// The Amazon Resource Name (ARN) of an Identity and Access Management (IAM)
+	// role that is associated with the stack. During a stack operation, CloudFormation
 	// uses this role's credentials to make calls on your behalf.
 	RoleARN *string `min:"20" type:"string"`
 
-	// The rollback triggers for AWS CloudFormation to monitor during stack creation
+	// The rollback triggers for CloudFormation to monitor during stack creation
 	// and updating operations, and for the specified monitoring period afterwards.
 	RollbackConfiguration *RollbackConfiguration `type:"structure"`
 
 	// For nested stacks--stacks created as resources for another stack--the stack
-	// ID of the the top-level stack to which the nested stack ultimately belongs.
+	// ID of the top-level stack to which the nested stack ultimately belongs.
 	//
 	// For more information, see Working with Nested Stacks (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-nested-stacks.html)
-	// in the AWS CloudFormation User Guide.
+	// in the CloudFormation User Guide.
 	RootId *string `type:"string"`
 
 	// Unique identifier of the stack.
@@ -10203,8 +15997,8 @@ type StackDriftInformation struct {
 	//    A stack is considered to have drifted if one or more of its resources
 	//    have drifted.
 	//
-	//    * NOT_CHECKED: AWS CloudFormation has not checked if the stack differs
-	//    from its expected template configuration.
+	//    * NOT_CHECKED: CloudFormation has not checked if the stack differs from
+	//    its expected template configuration.
 	//
 	//    * IN_SYNC: The stack's actual configuration matches its expected template
 	//    configuration.
@@ -10255,8 +16049,8 @@ type StackDriftInformationSummary struct {
 	//    A stack is considered to have drifted if one or more of its resources
 	//    have drifted.
 	//
-	//    * NOT_CHECKED: AWS CloudFormation has not checked if the stack differs
-	//    from its expected template configuration.
+	//    * NOT_CHECKED: CloudFormation has not checked if the stack differs from
+	//    its expected template configuration.
 	//
 	//    * IN_SYNC: The stack's actual configuration matches its expected template
 	//    configuration.
@@ -10328,9 +16122,9 @@ type StackEvent struct {
 	// Success/failure message associated with the resource.
 	ResourceStatusReason *string `type:"string"`
 
-	// Type of resource. (For more information, go to AWS Resource Types Reference
-	// (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html)
-	// in the AWS CloudFormation User Guide.)
+	// Type of resource. (For more information, go to Amazon Web Services Resource
+	// Types Reference (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html)
+	// in the CloudFormation User Guide.)
 	ResourceType *string `min:"1" type:"string"`
 
 	// The unique ID name of the instance of the stack.
@@ -10425,28 +16219,58 @@ func (s *StackEvent) SetTimestamp(v time.Time) *StackEvent {
 	return s
 }
 
-// An AWS CloudFormation stack, in a specific account and region, that's part
-// of a stack set operation. A stack instance is a reference to an attempted
-// or actual stack in a given account within a given region. A stack instance
-// can exist without a stack—for example, if the stack couldn't be created
-// for some reason. A stack instance is associated with only one stack set.
-// Each stack instance contains the ID of its associated stack set, as well
-// as the ID of the actual stack and the stack status.
+// An CloudFormation stack, in a specific account and Region, that's part of
+// a stack set operation. A stack instance is a reference to an attempted or
+// actual stack in a given account within a given Region. A stack instance can
+// exist without a stack—for example, if the stack couldn't be created for
+// some reason. A stack instance is associated with only one stack set. Each
+// stack instance contains the ID of its associated stack set, as well as the
+// ID of the actual stack and the stack status.
 type StackInstance struct {
 	_ struct{} `type:"structure"`
 
-	// The name of the AWS account that the stack instance is associated with.
+	// [Self-managed permissions] The name of the account that the stack instance
+	// is associated with.
 	Account *string `type:"string"`
+
+	// Status of the stack instance's actual configuration compared to the expected
+	// template and parameter configuration of the stack set to which it belongs.
+	//
+	//    * DRIFTED: The stack differs from the expected template and parameter
+	//    configuration of the stack set to which it belongs. A stack instance is
+	//    considered to have drifted if one or more of the resources in the associated
+	//    stack have drifted.
+	//
+	//    * NOT_CHECKED: CloudFormation has not checked if the stack instance differs
+	//    from its expected stack set configuration.
+	//
+	//    * IN_SYNC: The stack instance's actual configuration matches its expected
+	//    stack set configuration.
+	//
+	//    * UNKNOWN: This value is reserved for future use.
+	DriftStatus *string `type:"string" enum:"StackDriftStatus"`
+
+	// Most recent time when CloudFormation performed a drift detection operation
+	// on the stack instance. This value will be NULL for any stack instance on
+	// which drift detection has not yet been performed.
+	LastDriftCheckTimestamp *time.Time `type:"timestamp"`
+
+	// [Service-managed permissions] The organization root ID or organizational
+	// unit (OU) IDs that you specified for DeploymentTargets (https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_DeploymentTargets.html).
+	OrganizationalUnitId *string `type:"string"`
 
 	// A list of parameters from the stack set template whose values have been overridden
 	// in this stack instance.
 	ParameterOverrides []*Parameter `type:"list"`
 
-	// The name of the AWS region that the stack instance is associated with.
+	// The name of the Region that the stack instance is associated with.
 	Region *string `type:"string"`
 
 	// The ID of the stack instance.
 	StackId *string `type:"string"`
+
+	// The detailed status of the stack instance.
+	StackInstanceStatus *StackInstanceComprehensiveStatus `type:"structure"`
 
 	// The name or unique ID of the stack set that the stack instance is associated
 	// with.
@@ -10490,6 +16314,24 @@ func (s *StackInstance) SetAccount(v string) *StackInstance {
 	return s
 }
 
+// SetDriftStatus sets the DriftStatus field's value.
+func (s *StackInstance) SetDriftStatus(v string) *StackInstance {
+	s.DriftStatus = &v
+	return s
+}
+
+// SetLastDriftCheckTimestamp sets the LastDriftCheckTimestamp field's value.
+func (s *StackInstance) SetLastDriftCheckTimestamp(v time.Time) *StackInstance {
+	s.LastDriftCheckTimestamp = &v
+	return s
+}
+
+// SetOrganizationalUnitId sets the OrganizationalUnitId field's value.
+func (s *StackInstance) SetOrganizationalUnitId(v string) *StackInstance {
+	s.OrganizationalUnitId = &v
+	return s
+}
+
 // SetParameterOverrides sets the ParameterOverrides field's value.
 func (s *StackInstance) SetParameterOverrides(v []*Parameter) *StackInstance {
 	s.ParameterOverrides = v
@@ -10505,6 +16347,12 @@ func (s *StackInstance) SetRegion(v string) *StackInstance {
 // SetStackId sets the StackId field's value.
 func (s *StackInstance) SetStackId(v string) *StackInstance {
 	s.StackId = &v
+	return s
+}
+
+// SetStackInstanceStatus sets the StackInstanceStatus field's value.
+func (s *StackInstance) SetStackInstanceStatus(v *StackInstanceComprehensiveStatus) *StackInstance {
+	s.StackInstanceStatus = v
 	return s
 }
 
@@ -10526,18 +16374,139 @@ func (s *StackInstance) SetStatusReason(v string) *StackInstance {
 	return s
 }
 
+// The detailed status of the stack instance.
+type StackInstanceComprehensiveStatus struct {
+	_ struct{} `type:"structure"`
+
+	//    * CANCELLED: The operation in the specified account and Region has been
+	//    cancelled. This is either because a user has stopped the stack set operation,
+	//    or because the failure tolerance of the stack set operation has been exceeded.
+	//
+	//    * FAILED: The operation in the specified account and Region failed. If
+	//    the stack set operation fails in enough accounts within a Region, the
+	//    failure tolerance for the stack set operation as a whole might be exceeded.
+	//
+	//    * INOPERABLE: A DeleteStackInstances operation has failed and left the
+	//    stack in an unstable state. Stacks in this state are excluded from further
+	//    UpdateStackSet operations. You might need to perform a DeleteStackInstances
+	//    operation, with RetainStacks set to true, to delete the stack instance,
+	//    and then delete the stack manually.
+	//
+	//    * PENDING: The operation in the specified account and Region has yet to
+	//    start.
+	//
+	//    * RUNNING: The operation in the specified account and Region is currently
+	//    in progress.
+	//
+	//    * SUCCEEDED: The operation in the specified account and Region completed
+	//    successfully.
+	DetailedStatus *string `type:"string" enum:"StackInstanceDetailedStatus"`
+}
+
+// String returns the string representation
+func (s StackInstanceComprehensiveStatus) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s StackInstanceComprehensiveStatus) GoString() string {
+	return s.String()
+}
+
+// SetDetailedStatus sets the DetailedStatus field's value.
+func (s *StackInstanceComprehensiveStatus) SetDetailedStatus(v string) *StackInstanceComprehensiveStatus {
+	s.DetailedStatus = &v
+	return s
+}
+
+// The status that stack instances are filtered by.
+type StackInstanceFilter struct {
+	_ struct{} `type:"structure"`
+
+	// The type of filter to apply.
+	Name *string `type:"string" enum:"StackInstanceFilterName"`
+
+	// The status to filter by.
+	Values *string `min:"6" type:"string"`
+}
+
+// String returns the string representation
+func (s StackInstanceFilter) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s StackInstanceFilter) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *StackInstanceFilter) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "StackInstanceFilter"}
+	if s.Values != nil && len(*s.Values) < 6 {
+		invalidParams.Add(request.NewErrParamMinLen("Values", 6))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetName sets the Name field's value.
+func (s *StackInstanceFilter) SetName(v string) *StackInstanceFilter {
+	s.Name = &v
+	return s
+}
+
+// SetValues sets the Values field's value.
+func (s *StackInstanceFilter) SetValues(v string) *StackInstanceFilter {
+	s.Values = &v
+	return s
+}
+
 // The structure that contains summary information about a stack instance.
 type StackInstanceSummary struct {
 	_ struct{} `type:"structure"`
 
-	// The name of the AWS account that the stack instance is associated with.
+	// [Self-managed permissions] The name of the account that the stack instance
+	// is associated with.
 	Account *string `type:"string"`
 
-	// The name of the AWS region that the stack instance is associated with.
+	// Status of the stack instance's actual configuration compared to the expected
+	// template and parameter configuration of the stack set to which it belongs.
+	//
+	//    * DRIFTED: The stack differs from the expected template and parameter
+	//    configuration of the stack set to which it belongs. A stack instance is
+	//    considered to have drifted if one or more of the resources in the associated
+	//    stack have drifted.
+	//
+	//    * NOT_CHECKED: CloudFormation has not checked if the stack instance differs
+	//    from its expected stack set configuration.
+	//
+	//    * IN_SYNC: The stack instance's actual configuration matches its expected
+	//    stack set configuration.
+	//
+	//    * UNKNOWN: This value is reserved for future use.
+	DriftStatus *string `type:"string" enum:"StackDriftStatus"`
+
+	// Most recent time when CloudFormation performed a drift detection operation
+	// on the stack instance. This value will be NULL for any stack instance on
+	// which drift detection has not yet been performed.
+	LastDriftCheckTimestamp *time.Time `type:"timestamp"`
+
+	// [Service-managed permissions] The organization root ID or organizational
+	// unit (OU) IDs that you specified for DeploymentTargets (https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_DeploymentTargets.html).
+	OrganizationalUnitId *string `type:"string"`
+
+	// The name of the Region that the stack instance is associated with.
 	Region *string `type:"string"`
 
 	// The ID of the stack instance.
 	StackId *string `type:"string"`
+
+	// The detailed status of the stack instance.
+	StackInstanceStatus *StackInstanceComprehensiveStatus `type:"structure"`
 
 	// The name or unique ID of the stack set that the stack instance is associated
 	// with.
@@ -10580,6 +16549,24 @@ func (s *StackInstanceSummary) SetAccount(v string) *StackInstanceSummary {
 	return s
 }
 
+// SetDriftStatus sets the DriftStatus field's value.
+func (s *StackInstanceSummary) SetDriftStatus(v string) *StackInstanceSummary {
+	s.DriftStatus = &v
+	return s
+}
+
+// SetLastDriftCheckTimestamp sets the LastDriftCheckTimestamp field's value.
+func (s *StackInstanceSummary) SetLastDriftCheckTimestamp(v time.Time) *StackInstanceSummary {
+	s.LastDriftCheckTimestamp = &v
+	return s
+}
+
+// SetOrganizationalUnitId sets the OrganizationalUnitId field's value.
+func (s *StackInstanceSummary) SetOrganizationalUnitId(v string) *StackInstanceSummary {
+	s.OrganizationalUnitId = &v
+	return s
+}
+
 // SetRegion sets the Region field's value.
 func (s *StackInstanceSummary) SetRegion(v string) *StackInstanceSummary {
 	s.Region = &v
@@ -10589,6 +16576,12 @@ func (s *StackInstanceSummary) SetRegion(v string) *StackInstanceSummary {
 // SetStackId sets the StackId field's value.
 func (s *StackInstanceSummary) SetStackId(v string) *StackInstanceSummary {
 	s.StackId = &v
+	return s
+}
+
+// SetStackInstanceStatus sets the StackInstanceStatus field's value.
+func (s *StackInstanceSummary) SetStackInstanceStatus(v *StackInstanceComprehensiveStatus) *StackInstanceSummary {
+	s.StackInstanceStatus = v
 	return s
 }
 
@@ -10628,8 +16621,12 @@ type StackResource struct {
 	// LogicalResourceId is a required field
 	LogicalResourceId *string `type:"string" required:"true"`
 
+	// Contains information about the module from which the resource was created,
+	// if the resource was created from a module included in the stack template.
+	ModuleInfo *ModuleInfo `type:"structure"`
+
 	// The name or unique identifier that corresponds to a physical instance ID
-	// of a resource supported by AWS CloudFormation.
+	// of a resource supported by CloudFormation.
 	PhysicalResourceId *string `type:"string"`
 
 	// Current status of the resource.
@@ -10640,9 +16637,9 @@ type StackResource struct {
 	// Success/failure message associated with the resource.
 	ResourceStatusReason *string `type:"string"`
 
-	// Type of resource. (For more information, go to AWS Resource Types Reference
-	// (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html)
-	// in the AWS CloudFormation User Guide.)
+	// Type of resource. (For more information, go to Amazon Web Services Resource
+	// Types Reference (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html)
+	// in the CloudFormation User Guide.)
 	//
 	// ResourceType is a required field
 	ResourceType *string `min:"1" type:"string" required:"true"`
@@ -10684,6 +16681,12 @@ func (s *StackResource) SetDriftInformation(v *StackResourceDriftInformation) *S
 // SetLogicalResourceId sets the LogicalResourceId field's value.
 func (s *StackResource) SetLogicalResourceId(v string) *StackResource {
 	s.LogicalResourceId = &v
+	return s
+}
+
+// SetModuleInfo sets the ModuleInfo field's value.
+func (s *StackResource) SetModuleInfo(v *ModuleInfo) *StackResource {
+	s.ModuleInfo = v
 	return s
 }
 
@@ -10754,11 +16757,15 @@ type StackResourceDetail struct {
 
 	// The content of the Metadata attribute declared for the resource. For more
 	// information, see Metadata Attribute (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-attribute-metadata.html)
-	// in the AWS CloudFormation User Guide.
+	// in the CloudFormation User Guide.
 	Metadata *string `type:"string"`
 
+	// Contains information about the module from which the resource was created,
+	// if the resource was created from a module included in the stack template.
+	ModuleInfo *ModuleInfo `type:"structure"`
+
 	// The name or unique identifier that corresponds to a physical instance ID
-	// of a resource supported by AWS CloudFormation.
+	// of a resource supported by CloudFormation.
 	PhysicalResourceId *string `type:"string"`
 
 	// Current status of the resource.
@@ -10769,9 +16776,9 @@ type StackResourceDetail struct {
 	// Success/failure message associated with the resource.
 	ResourceStatusReason *string `type:"string"`
 
-	// Type of resource. ((For more information, go to AWS Resource Types Reference
-	// (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html)
-	// in the AWS CloudFormation User Guide.)
+	// Type of resource. ((For more information, go to Amazon Web Services Resource
+	// Types Reference (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html)
+	// in the CloudFormation User Guide.)
 	//
 	// ResourceType is a required field
 	ResourceType *string `min:"1" type:"string" required:"true"`
@@ -10823,6 +16830,12 @@ func (s *StackResourceDetail) SetMetadata(v string) *StackResourceDetail {
 	return s
 }
 
+// SetModuleInfo sets the ModuleInfo field's value.
+func (s *StackResourceDetail) SetModuleInfo(v *ModuleInfo) *StackResourceDetail {
+	s.ModuleInfo = v
+	return s
+}
+
 // SetPhysicalResourceId sets the PhysicalResourceId field's value.
 func (s *StackResourceDetail) SetPhysicalResourceId(v string) *StackResourceDetail {
 	s.PhysicalResourceId = &v
@@ -10861,9 +16874,9 @@ func (s *StackResourceDetail) SetStackName(v string) *StackResourceDetail {
 
 // Contains the drift information for a resource that has been checked for drift.
 // This includes actual and expected property values for resources in which
-// AWS CloudFormation has detected drift. Only resource properties explicitly
-// defined in the stack template are checked for drift. For more information,
-// see Detecting Unregulated Configuration Changes to Stacks and Resources (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-stack-drift.html).
+// CloudFormation has detected drift. Only resource properties explicitly defined
+// in the stack template are checked for drift. For more information, see Detecting
+// Unregulated Configuration Changes to Stacks and Resources (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-stack-drift.html).
 //
 // Resources that do not currently support drift detection cannot be checked.
 // For a list of resources that support drift detection, see Resources that
@@ -10893,15 +16906,19 @@ type StackResourceDrift struct {
 	// LogicalResourceId is a required field
 	LogicalResourceId *string `type:"string" required:"true"`
 
+	// Contains information about the module from which the resource was created,
+	// if the resource was created from a module included in the stack template.
+	ModuleInfo *ModuleInfo `type:"structure"`
+
 	// The name or unique identifier that corresponds to a physical instance ID
-	// of a resource supported by AWS CloudFormation.
+	// of a resource supported by CloudFormation.
 	PhysicalResourceId *string `type:"string"`
 
-	// Context information that enables AWS CloudFormation to uniquely identify
-	// a resource. AWS CloudFormation uses context key-value pairs in cases where
-	// a resource's logical and physical IDs are not enough to uniquely identify
-	// that resource. Each context key-value pair specifies a unique resource that
-	// contains the targeted resource.
+	// Context information that enables CloudFormation to uniquely identify a resource.
+	// CloudFormation uses context key-value pairs in cases where a resource's logical
+	// and physical IDs are not enough to uniquely identify that resource. Each
+	// context key-value pair specifies a unique resource that contains the targeted
+	// resource.
 	PhysicalResourceIdContext []*PhysicalResourceIdContextKeyValuePair `type:"list"`
 
 	// A collection of the resource properties whose actual values differ from their
@@ -10931,12 +16948,12 @@ type StackResourceDrift struct {
 	//    * IN_SYNC: The resources's actual configuration matches its expected template
 	//    configuration.
 	//
-	//    * NOT_CHECKED: AWS CloudFormation does not currently return this value.
+	//    * NOT_CHECKED: CloudFormation does not currently return this value.
 	//
 	// StackResourceDriftStatus is a required field
 	StackResourceDriftStatus *string `type:"string" required:"true" enum:"StackResourceDriftStatus"`
 
-	// Time at which AWS CloudFormation performed drift detection on the stack resource.
+	// Time at which CloudFormation performed drift detection on the stack resource.
 	//
 	// Timestamp is a required field
 	Timestamp *time.Time `type:"timestamp" required:"true"`
@@ -10967,6 +16984,12 @@ func (s *StackResourceDrift) SetExpectedProperties(v string) *StackResourceDrift
 // SetLogicalResourceId sets the LogicalResourceId field's value.
 func (s *StackResourceDrift) SetLogicalResourceId(v string) *StackResourceDrift {
 	s.LogicalResourceId = &v
+	return s
+}
+
+// SetModuleInfo sets the ModuleInfo field's value.
+func (s *StackResourceDrift) SetModuleInfo(v *ModuleInfo) *StackResourceDrift {
+	s.ModuleInfo = v
 	return s
 }
 
@@ -11017,8 +17040,8 @@ func (s *StackResourceDrift) SetTimestamp(v time.Time) *StackResourceDrift {
 type StackResourceDriftInformation struct {
 	_ struct{} `type:"structure"`
 
-	// When AWS CloudFormation last checked if the resource had drifted from its
-	// expected configuration.
+	// When CloudFormation last checked if the resource had drifted from its expected
+	// configuration.
 	LastCheckTimestamp *time.Time `type:"timestamp"`
 
 	// Status of the resource's actual configuration compared to its expected configuration
@@ -11028,7 +17051,7 @@ type StackResourceDriftInformation struct {
 	//
 	//    * MODIFIED: The resource differs from its expected configuration.
 	//
-	//    * NOT_CHECKED: AWS CloudFormation has not checked if the resource differs
+	//    * NOT_CHECKED: CloudFormation has not checked if the resource differs
 	//    from its expected configuration. Any resources that do not currently support
 	//    drift detection have a status of NOT_CHECKED. For more information, see
 	//    Resources that Support Drift Detection (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-stack-drift-resource-list.html).
@@ -11066,8 +17089,8 @@ func (s *StackResourceDriftInformation) SetStackResourceDriftStatus(v string) *S
 type StackResourceDriftInformationSummary struct {
 	_ struct{} `type:"structure"`
 
-	// When AWS CloudFormation last checked if the resource had drifted from its
-	// expected configuration.
+	// When CloudFormation last checked if the resource had drifted from its expected
+	// configuration.
 	LastCheckTimestamp *time.Time `type:"timestamp"`
 
 	// Status of the resource's actual configuration compared to its expected configuration
@@ -11077,7 +17100,7 @@ type StackResourceDriftInformationSummary struct {
 	//
 	//    * MODIFIED: The resource differs from its expected configuration.
 	//
-	//    * NOT_CHECKED: AWS CloudFormation has not checked if the resource differs
+	//    * NOT_CHECKED: CloudFormation has not checked if the resource differs
 	//    from its expected configuration. Any resources that do not currently support
 	//    drift detection have a status of NOT_CHECKED. For more information, see
 	//    Resources that Support Drift Detection (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-stack-drift-resource-list.html).
@@ -11085,7 +17108,7 @@ type StackResourceDriftInformationSummary struct {
 	//    included in ResourcesToSkip will also have a status of NOT_CHECKED. For
 	//    more information on skipping resources during rollback operations, see
 	//    Continue Rolling Back an Update (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-updating-stacks-continueupdaterollback.html)
-	//    in the AWS CloudFormation User Guide.
+	//    in the CloudFormation User Guide.
 	//
 	//    * IN_SYNC: The resources's actual configuration matches its expected configuration.
 	//
@@ -11135,6 +17158,10 @@ type StackResourceSummary struct {
 	// LogicalResourceId is a required field
 	LogicalResourceId *string `type:"string" required:"true"`
 
+	// Contains information about the module from which the resource was created,
+	// if the resource was created from a module included in the stack template.
+	ModuleInfo *ModuleInfo `type:"structure"`
+
 	// The name or unique identifier that corresponds to a physical instance ID
 	// of the resource.
 	PhysicalResourceId *string `type:"string"`
@@ -11147,9 +17174,9 @@ type StackResourceSummary struct {
 	// Success/failure message associated with the resource.
 	ResourceStatusReason *string `type:"string"`
 
-	// Type of resource. (For more information, go to AWS Resource Types Reference
-	// (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html)
-	// in the AWS CloudFormation User Guide.)
+	// Type of resource. (For more information, go to Amazon Web Services Resource
+	// Types Reference (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html)
+	// in the CloudFormation User Guide.)
 	//
 	// ResourceType is a required field
 	ResourceType *string `min:"1" type:"string" required:"true"`
@@ -11183,6 +17210,12 @@ func (s *StackResourceSummary) SetLogicalResourceId(v string) *StackResourceSumm
 	return s
 }
 
+// SetModuleInfo sets the ModuleInfo field's value.
+func (s *StackResourceSummary) SetModuleInfo(v *ModuleInfo) *StackResourceSummary {
+	s.ModuleInfo = v
+	return s
+}
+
 // SetPhysicalResourceId sets the PhysicalResourceId field's value.
 func (s *StackResourceSummary) SetPhysicalResourceId(v string) *StackResourceSummary {
 	s.PhysicalResourceId = &v
@@ -11208,7 +17241,7 @@ func (s *StackResourceSummary) SetResourceType(v string) *StackResourceSummary {
 }
 
 // A structure that contains information about a stack set. A stack set enables
-// you to provision stacks into AWS accounts and across regions by using a single
+// you to provision stacks into accounts and across Regions by using a single
 // CloudFormation template. In the stack set, you specify the template to use,
 // as well as any parameters and capabilities that the template requires.
 type StackSet struct {
@@ -11220,14 +17253,19 @@ type StackSet struct {
 	// Use customized administrator roles to control which users or groups can manage
 	// specific stack sets within the same administrator account. For more information,
 	// see Prerequisites: Granting Permissions for Stack Set Operations (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-prereqs.html)
-	// in the AWS CloudFormation User Guide.
+	// in the CloudFormation User Guide.
 	AdministrationRoleARN *string `min:"20" type:"string"`
 
+	// [Service-managed permissions] Describes whether StackSets automatically deploys
+	// to Organizations accounts that are added to a target organization or organizational
+	// unit (OU).
+	AutoDeployment *AutoDeployment `type:"structure"`
+
 	// The capabilities that are allowed in the stack set. Some stack set templates
-	// might include resources that can affect permissions in your AWS account—for
-	// example, by creating new AWS Identity and Access Management (IAM) users.
-	// For more information, see Acknowledging IAM Resources in AWS CloudFormation
-	// Templates. (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-template.html#capabilities)
+	// might include resources that can affect permissions in your account—for
+	// example, by creating new Identity and Access Management (IAM) users. For
+	// more information, see Acknowledging IAM Resources in CloudFormation Templates.
+	// (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-template.html#capabilities)
 	Capabilities []*string `type:"list"`
 
 	// A description of the stack set that you specify when the stack set is created
@@ -11240,11 +17278,33 @@ type StackSet struct {
 	// groups can include in their stack sets.
 	ExecutionRoleName *string `min:"1" type:"string"`
 
+	// [Service-managed permissions] The organization root ID or organizational
+	// unit (OU) IDs that you specified for DeploymentTargets (https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_DeploymentTargets.html).
+	OrganizationalUnitIds []*string `type:"list"`
+
 	// A list of input parameters for a stack set.
 	Parameters []*Parameter `type:"list"`
 
+	// Describes how the IAM roles required for stack set operations are created.
+	//
+	//    * With self-managed permissions, you must create the administrator and
+	//    execution roles required to deploy to target accounts. For more information,
+	//    see Grant Self-Managed Stack Set Permissions (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-prereqs-self-managed.html).
+	//
+	//    * With service-managed permissions, StackSets automatically creates the
+	//    IAM roles required to deploy to accounts managed by Organizations. For
+	//    more information, see Grant Service-Managed Stack Set Permissions (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-prereqs-service-managed.html).
+	PermissionModel *string `type:"string" enum:"PermissionModels"`
+
 	// The Amazon Resource Number (ARN) of the stack set.
 	StackSetARN *string `type:"string"`
+
+	// Detailed information about the drift status of the stack set.
+	//
+	// For stack sets, contains information about the last completed drift operation
+	// performed on the stack set. Information about drift operations currently
+	// in progress is not included.
+	StackSetDriftDetectionDetails *StackSetDriftDetectionDetails `type:"structure"`
 
 	// The ID of the stack set.
 	StackSetId *string `type:"string"`
@@ -11280,6 +17340,12 @@ func (s *StackSet) SetAdministrationRoleARN(v string) *StackSet {
 	return s
 }
 
+// SetAutoDeployment sets the AutoDeployment field's value.
+func (s *StackSet) SetAutoDeployment(v *AutoDeployment) *StackSet {
+	s.AutoDeployment = v
+	return s
+}
+
 // SetCapabilities sets the Capabilities field's value.
 func (s *StackSet) SetCapabilities(v []*string) *StackSet {
 	s.Capabilities = v
@@ -11298,15 +17364,33 @@ func (s *StackSet) SetExecutionRoleName(v string) *StackSet {
 	return s
 }
 
+// SetOrganizationalUnitIds sets the OrganizationalUnitIds field's value.
+func (s *StackSet) SetOrganizationalUnitIds(v []*string) *StackSet {
+	s.OrganizationalUnitIds = v
+	return s
+}
+
 // SetParameters sets the Parameters field's value.
 func (s *StackSet) SetParameters(v []*Parameter) *StackSet {
 	s.Parameters = v
 	return s
 }
 
+// SetPermissionModel sets the PermissionModel field's value.
+func (s *StackSet) SetPermissionModel(v string) *StackSet {
+	s.PermissionModel = &v
+	return s
+}
+
 // SetStackSetARN sets the StackSetARN field's value.
 func (s *StackSet) SetStackSetARN(v string) *StackSet {
 	s.StackSetARN = &v
+	return s
+}
+
+// SetStackSetDriftDetectionDetails sets the StackSetDriftDetectionDetails field's value.
+func (s *StackSet) SetStackSetDriftDetectionDetails(v *StackSetDriftDetectionDetails) *StackSet {
+	s.StackSetDriftDetectionDetails = v
 	return s
 }
 
@@ -11340,6 +17424,145 @@ func (s *StackSet) SetTemplateBody(v string) *StackSet {
 	return s
 }
 
+// Detailed information about the drift status of the stack set.
+//
+// For stack sets, contains information about the last completed drift operation
+// performed on the stack set. Information about drift operations in-progress
+// is not included.
+//
+// For stack set operations, includes information about drift operations currently
+// being performed on the stack set.
+//
+// For more information, see Detecting Unmanaged Changes in Stack Sets (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-drift.html)
+// in the CloudFormation User Guide.
+type StackSetDriftDetectionDetails struct {
+	_ struct{} `type:"structure"`
+
+	// The status of the stack set drift detection operation.
+	//
+	//    * COMPLETED: The drift detection operation completed without failing on
+	//    any stack instances.
+	//
+	//    * FAILED: The drift detection operation exceeded the specified failure
+	//    tolerance.
+	//
+	//    * PARTIAL_SUCCESS: The drift detection operation completed without exceeding
+	//    the failure tolerance for the operation.
+	//
+	//    * IN_PROGRESS: The drift detection operation is currently being performed.
+	//
+	//    * STOPPED: The user has cancelled the drift detection operation.
+	DriftDetectionStatus *string `type:"string" enum:"StackSetDriftDetectionStatus"`
+
+	// Status of the stack set's actual configuration compared to its expected template
+	// and parameter configuration. A stack set is considered to have drifted if
+	// one or more of its stack instances have drifted from their expected template
+	// and parameter configuration.
+	//
+	//    * DRIFTED: One or more of the stack instances belonging to the stack set
+	//    stack differs from the expected template and parameter configuration.
+	//    A stack instance is considered to have drifted if one or more of the resources
+	//    in the associated stack have drifted.
+	//
+	//    * NOT_CHECKED: CloudFormation has not checked the stack set for drift.
+	//
+	//    * IN_SYNC: All of the stack instances belonging to the stack set stack
+	//    match from the expected template and parameter configuration.
+	DriftStatus *string `type:"string" enum:"StackSetDriftStatus"`
+
+	// The number of stack instances that have drifted from the expected template
+	// and parameter configuration of the stack set. A stack instance is considered
+	// to have drifted if one or more of the resources in the associated stack do
+	// not match their expected configuration.
+	DriftedStackInstancesCount *int64 `type:"integer"`
+
+	// The number of stack instances for which the drift detection operation failed.
+	FailedStackInstancesCount *int64 `type:"integer"`
+
+	// The number of stack instances that are currently being checked for drift.
+	InProgressStackInstancesCount *int64 `type:"integer"`
+
+	// The number of stack instances which match the expected template and parameter
+	// configuration of the stack set.
+	InSyncStackInstancesCount *int64 `type:"integer"`
+
+	// Most recent time when CloudFormation performed a drift detection operation
+	// on the stack set. This value will be NULL for any stack set on which drift
+	// detection has not yet been performed.
+	LastDriftCheckTimestamp *time.Time `type:"timestamp"`
+
+	// The total number of stack instances belonging to this stack set.
+	//
+	// The total number of stack instances is equal to the total of:
+	//
+	//    * Stack instances that match the stack set configuration.
+	//
+	//    * Stack instances that have drifted from the stack set configuration.
+	//
+	//    * Stack instances where the drift detection operation has failed.
+	//
+	//    * Stack instances currently being checked for drift.
+	TotalStackInstancesCount *int64 `type:"integer"`
+}
+
+// String returns the string representation
+func (s StackSetDriftDetectionDetails) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s StackSetDriftDetectionDetails) GoString() string {
+	return s.String()
+}
+
+// SetDriftDetectionStatus sets the DriftDetectionStatus field's value.
+func (s *StackSetDriftDetectionDetails) SetDriftDetectionStatus(v string) *StackSetDriftDetectionDetails {
+	s.DriftDetectionStatus = &v
+	return s
+}
+
+// SetDriftStatus sets the DriftStatus field's value.
+func (s *StackSetDriftDetectionDetails) SetDriftStatus(v string) *StackSetDriftDetectionDetails {
+	s.DriftStatus = &v
+	return s
+}
+
+// SetDriftedStackInstancesCount sets the DriftedStackInstancesCount field's value.
+func (s *StackSetDriftDetectionDetails) SetDriftedStackInstancesCount(v int64) *StackSetDriftDetectionDetails {
+	s.DriftedStackInstancesCount = &v
+	return s
+}
+
+// SetFailedStackInstancesCount sets the FailedStackInstancesCount field's value.
+func (s *StackSetDriftDetectionDetails) SetFailedStackInstancesCount(v int64) *StackSetDriftDetectionDetails {
+	s.FailedStackInstancesCount = &v
+	return s
+}
+
+// SetInProgressStackInstancesCount sets the InProgressStackInstancesCount field's value.
+func (s *StackSetDriftDetectionDetails) SetInProgressStackInstancesCount(v int64) *StackSetDriftDetectionDetails {
+	s.InProgressStackInstancesCount = &v
+	return s
+}
+
+// SetInSyncStackInstancesCount sets the InSyncStackInstancesCount field's value.
+func (s *StackSetDriftDetectionDetails) SetInSyncStackInstancesCount(v int64) *StackSetDriftDetectionDetails {
+	s.InSyncStackInstancesCount = &v
+	return s
+}
+
+// SetLastDriftCheckTimestamp sets the LastDriftCheckTimestamp field's value.
+func (s *StackSetDriftDetectionDetails) SetLastDriftCheckTimestamp(v time.Time) *StackSetDriftDetectionDetails {
+	s.LastDriftCheckTimestamp = &v
+	return s
+}
+
+// SetTotalStackInstancesCount sets the TotalStackInstancesCount field's value.
+func (s *StackSetDriftDetectionDetails) SetTotalStackInstancesCount(v int64) *StackSetDriftDetectionDetails {
+	s.TotalStackInstancesCount = &v
+	return s
+}
+
 // The structure that contains information about a stack set operation.
 type StackSetOperation struct {
 	_ struct{} `type:"structure"`
@@ -11356,19 +17579,23 @@ type StackSetOperation struct {
 	// Use customized administrator roles to control which users or groups can manage
 	// specific stack sets within the same administrator account. For more information,
 	// see Define Permissions for Multiple Administrators (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-prereqs.html)
-	// in the AWS CloudFormation User Guide.
+	// in the CloudFormation User Guide.
 	AdministrationRoleARN *string `min:"20" type:"string"`
 
 	// The time at which the operation was initiated. Note that the creation times
 	// for the stack set operation might differ from the creation time of the individual
-	// stacks themselves. This is because AWS CloudFormation needs to perform preparatory
-	// work for the operation, such as dispatching the work to the requested regions,
+	// stacks themselves. This is because CloudFormation needs to perform preparatory
+	// work for the operation, such as dispatching the work to the requested Regions,
 	// before actually creating the first stacks.
 	CreationTimestamp *time.Time `type:"timestamp"`
 
+	// [Service-managed permissions] The Organizations accounts affected by the
+	// stack operation.
+	DeploymentTargets *DeploymentTargets `type:"structure"`
+
 	// The time at which the stack set operation ended, across all accounts and
-	// regions specified. Note that this doesn't necessarily mean that the stack
-	// set operation was successful, or even attempted, in each account or region.
+	// Regions specified. Note that this doesn't necessarily mean that the stack
+	// set operation was successful, or even attempted, in each account or Region.
 	EndTimestamp *time.Time `type:"timestamp"`
 
 	// The name of the IAM execution role used to create or update the stack set.
@@ -11380,7 +17607,7 @@ type StackSetOperation struct {
 	// The unique ID of a stack set operation.
 	OperationId *string `min:"1" type:"string"`
 
-	// The preferences for how AWS CloudFormation performs this stack set operation.
+	// The preferences for how CloudFormation performs this stack set operation.
 	OperationPreferences *StackSetOperationPreferences `type:"structure"`
 
 	// For stack set operations of action type DELETE, specifies whether to remove
@@ -11389,6 +17616,17 @@ type StackSetOperation struct {
 	// stack to a new stack set.
 	RetainStacks *bool `type:"boolean"`
 
+	// Detailed information about the drift status of the stack set. This includes
+	// information about drift operations currently being performed on the stack
+	// set.
+	//
+	// this information will only be present for stack set operations whose Action
+	// type is DETECT_DRIFT.
+	//
+	// For more information, see Detecting Unmanaged Changes in Stack Sets (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-drift.html)
+	// in the CloudFormation User Guide.
+	StackSetDriftDetectionDetails *StackSetDriftDetectionDetails `type:"structure"`
+
 	// The ID of the stack set.
 	StackSetId *string `type:"string"`
 
@@ -11396,11 +17634,16 @@ type StackSetOperation struct {
 	//
 	//    * FAILED: The operation exceeded the specified failure tolerance. The
 	//    failure tolerance value that you've set for an operation is applied for
-	//    each region during stack create and update operations. If the number of
-	//    failed stacks within a region exceeds the failure tolerance, the status
-	//    of the operation in the region is set to FAILED. This in turn sets the
-	//    status of the operation as a whole to FAILED, and AWS CloudFormation cancels
-	//    the operation in any remaining regions.
+	//    each Region during stack create and update operations. If the number of
+	//    failed stacks within a Region exceeds the failure tolerance, the status
+	//    of the operation in the Region is set to FAILED. This in turn sets the
+	//    status of the operation as a whole to FAILED, and CloudFormation cancels
+	//    the operation in any remaining Regions.
+	//
+	//    * QUEUED: [Service-managed permissions] For automatic deployments that
+	//    require a sequence of operations, the operation is queued to be performed.
+	//    For more information, see the stack set operation status codes (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-concepts.html#stackset-status-codes)
+	//    in the CloudFormation User Guide.
 	//
 	//    * RUNNING: The operation is currently being performed.
 	//
@@ -11441,6 +17684,12 @@ func (s *StackSetOperation) SetCreationTimestamp(v time.Time) *StackSetOperation
 	return s
 }
 
+// SetDeploymentTargets sets the DeploymentTargets field's value.
+func (s *StackSetOperation) SetDeploymentTargets(v *DeploymentTargets) *StackSetOperation {
+	s.DeploymentTargets = v
+	return s
+}
+
 // SetEndTimestamp sets the EndTimestamp field's value.
 func (s *StackSetOperation) SetEndTimestamp(v time.Time) *StackSetOperation {
 	s.EndTimestamp = &v
@@ -11471,6 +17720,12 @@ func (s *StackSetOperation) SetRetainStacks(v bool) *StackSetOperation {
 	return s
 }
 
+// SetStackSetDriftDetectionDetails sets the StackSetDriftDetectionDetails field's value.
+func (s *StackSetOperation) SetStackSetDriftDetectionDetails(v *StackSetDriftDetectionDetails) *StackSetOperation {
+	s.StackSetDriftDetectionDetails = v
+	return s
+}
+
 // SetStackSetId sets the StackSetId field's value.
 func (s *StackSetOperation) SetStackSetId(v string) *StackSetOperation {
 	s.StackSetId = &v
@@ -11483,38 +17738,42 @@ func (s *StackSetOperation) SetStatus(v string) *StackSetOperation {
 	return s
 }
 
-// The user-specified preferences for how AWS CloudFormation performs a stack
-// set operation.
+// The user-specified preferences for how CloudFormation performs a stack set
+// operation.
 //
 // For more information on maximum concurrent accounts and failure tolerance,
 // see Stack set operation options (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-concepts.html#stackset-ops-options).
 type StackSetOperationPreferences struct {
 	_ struct{} `type:"structure"`
 
-	// The number of accounts, per region, for which this operation can fail before
-	// AWS CloudFormation stops the operation in that region. If the operation is
-	// stopped in a region, AWS CloudFormation doesn't attempt the operation in
-	// any subsequent regions.
+	// The number of accounts, per Region, for which this operation can fail before
+	// CloudFormation stops the operation in that Region. If the operation is stopped
+	// in a Region, CloudFormation doesn't attempt the operation in any subsequent
+	// Regions.
 	//
 	// Conditional: You must specify either FailureToleranceCount or FailureTolerancePercentage
 	// (but not both).
+	//
+	// By default, 0 is specified.
 	FailureToleranceCount *int64 `type:"integer"`
 
-	// The percentage of accounts, per region, for which this stack operation can
-	// fail before AWS CloudFormation stops the operation in that region. If the
-	// operation is stopped in a region, AWS CloudFormation doesn't attempt the
-	// operation in any subsequent regions.
+	// The percentage of accounts, per Region, for which this stack operation can
+	// fail before CloudFormation stops the operation in that Region. If the operation
+	// is stopped in a Region, CloudFormation doesn't attempt the operation in any
+	// subsequent Regions.
 	//
 	// When calculating the number of accounts based on the specified percentage,
-	// AWS CloudFormation rounds down to the next whole number.
+	// CloudFormation rounds down to the next whole number.
 	//
 	// Conditional: You must specify either FailureToleranceCount or FailureTolerancePercentage,
 	// but not both.
+	//
+	// By default, 0 is specified.
 	FailureTolerancePercentage *int64 `type:"integer"`
 
 	// The maximum number of accounts in which to perform this operation at one
-	// time. This is dependent on the value of FailureToleranceCount—MaxConcurrentCount
-	// is at most one more than the FailureToleranceCount .
+	// time. This is dependent on the value of FailureToleranceCount. MaxConcurrentCount
+	// is at most one more than the FailureToleranceCount.
 	//
 	// Note that this setting lets you specify the maximum for operations. For large
 	// deployments, under certain circumstances the actual number of accounts acted
@@ -11522,13 +17781,15 @@ type StackSetOperationPreferences struct {
 	//
 	// Conditional: You must specify either MaxConcurrentCount or MaxConcurrentPercentage,
 	// but not both.
+	//
+	// By default, 1 is specified.
 	MaxConcurrentCount *int64 `min:"1" type:"integer"`
 
 	// The maximum percentage of accounts in which to perform this operation at
 	// one time.
 	//
 	// When calculating the number of accounts based on the specified percentage,
-	// AWS CloudFormation rounds down to the next whole number. This is true except
+	// CloudFormation rounds down to the next whole number. This is true except
 	// in cases where rounding down would result is zero. In this case, CloudFormation
 	// sets the number as one instead.
 	//
@@ -11538,9 +17799,15 @@ type StackSetOperationPreferences struct {
 	//
 	// Conditional: You must specify either MaxConcurrentCount or MaxConcurrentPercentage,
 	// but not both.
+	//
+	// By default, 1 is specified.
 	MaxConcurrentPercentage *int64 `min:"1" type:"integer"`
 
-	// The order of the regions in where you want to perform the stack operation.
+	// The concurrency type of deploying StackSets operations in Regions, could
+	// be in parallel or one Region at a time.
+	RegionConcurrencyType *string `type:"string" enum:"RegionConcurrencyType"`
+
+	// The order of the Regions in where you want to perform the stack operation.
 	RegionOrder []*string `type:"list"`
 }
 
@@ -11594,6 +17861,12 @@ func (s *StackSetOperationPreferences) SetMaxConcurrentPercentage(v int64) *Stac
 	return s
 }
 
+// SetRegionConcurrencyType sets the RegionConcurrencyType field's value.
+func (s *StackSetOperationPreferences) SetRegionConcurrencyType(v string) *StackSetOperationPreferences {
+	s.RegionConcurrencyType = &v
+	return s
+}
+
 // SetRegionOrder sets the RegionOrder field's value.
 func (s *StackSetOperationPreferences) SetRegionOrder(v []*string) *StackSetOperationPreferences {
 	s.RegionOrder = v
@@ -11601,38 +17874,42 @@ func (s *StackSetOperationPreferences) SetRegionOrder(v []*string) *StackSetOper
 }
 
 // The structure that contains information about a specified operation's results
-// for a given account in a given region.
+// for a given account in a given Region.
 type StackSetOperationResultSummary struct {
 	_ struct{} `type:"structure"`
 
-	// The name of the AWS account for this operation result.
+	// [Self-managed permissions] The name of the account for this operation result.
 	Account *string `type:"string"`
 
-	// The results of the account gate function AWS CloudFormation invokes, if present,
+	// The results of the account gate function CloudFormation invokes, if present,
 	// before proceeding with stack set operations in an account
 	AccountGateResult *AccountGateResult `type:"structure"`
 
-	// The name of the AWS region for this operation result.
+	// [Service-managed permissions] The organization root ID or organizational
+	// unit (OU) IDs that you specified for DeploymentTargets (https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_DeploymentTargets.html).
+	OrganizationalUnitId *string `type:"string"`
+
+	// The name of the Region for this operation result.
 	Region *string `type:"string"`
 
 	// The result status of the stack set operation for the given account in the
-	// given region.
+	// given Region.
 	//
-	//    * CANCELLED: The operation in the specified account and region has been
+	//    * CANCELLED: The operation in the specified account and Region has been
 	//    cancelled. This is either because a user has stopped the stack set operation,
 	//    or because the failure tolerance of the stack set operation has been exceeded.
 	//
-	//    * FAILED: The operation in the specified account and region failed. If
-	//    the stack set operation fails in enough accounts within a region, the
+	//    * FAILED: The operation in the specified account and Region failed. If
+	//    the stack set operation fails in enough accounts within a Region, the
 	//    failure tolerance for the stack set operation as a whole might be exceeded.
 	//
-	//    * RUNNING: The operation in the specified account and region is currently
+	//    * RUNNING: The operation in the specified account and Region is currently
 	//    in progress.
 	//
-	//    * PENDING: The operation in the specified account and region has yet to
+	//    * PENDING: The operation in the specified account and Region has yet to
 	//    start.
 	//
-	//    * SUCCEEDED: The operation in the specified account and region completed
+	//    * SUCCEEDED: The operation in the specified account and Region completed
 	//    successfully.
 	Status *string `type:"string" enum:"StackSetOperationResultStatus"`
 
@@ -11659,6 +17936,12 @@ func (s *StackSetOperationResultSummary) SetAccount(v string) *StackSetOperation
 // SetAccountGateResult sets the AccountGateResult field's value.
 func (s *StackSetOperationResultSummary) SetAccountGateResult(v *AccountGateResult) *StackSetOperationResultSummary {
 	s.AccountGateResult = v
+	return s
+}
+
+// SetOrganizationalUnitId sets the OrganizationalUnitId field's value.
+func (s *StackSetOperationResultSummary) SetOrganizationalUnitId(v string) *StackSetOperationResultSummary {
+	s.OrganizationalUnitId = &v
 	return s
 }
 
@@ -11692,14 +17975,14 @@ type StackSetOperationSummary struct {
 
 	// The time at which the operation was initiated. Note that the creation times
 	// for the stack set operation might differ from the creation time of the individual
-	// stacks themselves. This is because AWS CloudFormation needs to perform preparatory
-	// work for the operation, such as dispatching the work to the requested regions,
+	// stacks themselves. This is because CloudFormation needs to perform preparatory
+	// work for the operation, such as dispatching the work to the requested Regions,
 	// before actually creating the first stacks.
 	CreationTimestamp *time.Time `type:"timestamp"`
 
 	// The time at which the stack set operation ended, across all accounts and
-	// regions specified. Note that this doesn't necessarily mean that the stack
-	// set operation was successful, or even attempted, in each account or region.
+	// Regions specified. Note that this doesn't necessarily mean that the stack
+	// set operation was successful, or even attempted, in each account or Region.
 	EndTimestamp *time.Time `type:"timestamp"`
 
 	// The unique ID of the stack set operation.
@@ -11709,11 +17992,16 @@ type StackSetOperationSummary struct {
 	//
 	//    * FAILED: The operation exceeded the specified failure tolerance. The
 	//    failure tolerance value that you've set for an operation is applied for
-	//    each region during stack create and update operations. If the number of
-	//    failed stacks within a region exceeds the failure tolerance, the status
-	//    of the operation in the region is set to FAILED. This in turn sets the
-	//    status of the operation as a whole to FAILED, and AWS CloudFormation cancels
-	//    the operation in any remaining regions.
+	//    each Region during stack create and update operations. If the number of
+	//    failed stacks within a Region exceeds the failure tolerance, the status
+	//    of the operation in the Region is set to FAILED. This in turn sets the
+	//    status of the operation as a whole to FAILED, and CloudFormation cancels
+	//    the operation in any remaining Regions.
+	//
+	//    * QUEUED: [Service-managed permissions] For automatic deployments that
+	//    require a sequence of operations, the operation is queued to be performed.
+	//    For more information, see the stack set operation status codes (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-concepts.html#stackset-status-codes)
+	//    in the CloudFormation User Guide.
 	//
 	//    * RUNNING: The operation is currently being performed.
 	//
@@ -11771,9 +18059,48 @@ func (s *StackSetOperationSummary) SetStatus(v string) *StackSetOperationSummary
 type StackSetSummary struct {
 	_ struct{} `type:"structure"`
 
+	// [Service-managed permissions] Describes whether StackSets automatically deploys
+	// to Organizations accounts that are added to a target organizational unit
+	// (OU).
+	AutoDeployment *AutoDeployment `type:"structure"`
+
 	// A description of the stack set that you specify when the stack set is created
 	// or updated.
 	Description *string `min:"1" type:"string"`
+
+	// Status of the stack set's actual configuration compared to its expected template
+	// and parameter configuration. A stack set is considered to have drifted if
+	// one or more of its stack instances have drifted from their expected template
+	// and parameter configuration.
+	//
+	//    * DRIFTED: One or more of the stack instances belonging to the stack set
+	//    stack differs from the expected template and parameter configuration.
+	//    A stack instance is considered to have drifted if one or more of the resources
+	//    in the associated stack have drifted.
+	//
+	//    * NOT_CHECKED: CloudFormation has not checked the stack set for drift.
+	//
+	//    * IN_SYNC: All of the stack instances belonging to the stack set stack
+	//    match from the expected template and parameter configuration.
+	//
+	//    * UNKNOWN: This value is reserved for future use.
+	DriftStatus *string `type:"string" enum:"StackDriftStatus"`
+
+	// Most recent time when CloudFormation performed a drift detection operation
+	// on the stack set. This value will be NULL for any stack set on which drift
+	// detection has not yet been performed.
+	LastDriftCheckTimestamp *time.Time `type:"timestamp"`
+
+	// Describes how the IAM roles required for stack set operations are created.
+	//
+	//    * With self-managed permissions, you must create the administrator and
+	//    execution roles required to deploy to target accounts. For more information,
+	//    see Grant Self-Managed Stack Set Permissions (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-prereqs-self-managed.html).
+	//
+	//    * With service-managed permissions, StackSets automatically creates the
+	//    IAM roles required to deploy to accounts managed by Organizations. For
+	//    more information, see Grant Service-Managed Stack Set Permissions (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-prereqs-service-managed.html).
+	PermissionModel *string `type:"string" enum:"PermissionModels"`
 
 	// The ID of the stack set.
 	StackSetId *string `type:"string"`
@@ -11795,9 +18122,33 @@ func (s StackSetSummary) GoString() string {
 	return s.String()
 }
 
+// SetAutoDeployment sets the AutoDeployment field's value.
+func (s *StackSetSummary) SetAutoDeployment(v *AutoDeployment) *StackSetSummary {
+	s.AutoDeployment = v
+	return s
+}
+
 // SetDescription sets the Description field's value.
 func (s *StackSetSummary) SetDescription(v string) *StackSetSummary {
 	s.Description = &v
+	return s
+}
+
+// SetDriftStatus sets the DriftStatus field's value.
+func (s *StackSetSummary) SetDriftStatus(v string) *StackSetSummary {
+	s.DriftStatus = &v
+	return s
+}
+
+// SetLastDriftCheckTimestamp sets the LastDriftCheckTimestamp field's value.
+func (s *StackSetSummary) SetLastDriftCheckTimestamp(v time.Time) *StackSetSummary {
+	s.LastDriftCheckTimestamp = &v
+	return s
+}
+
+// SetPermissionModel sets the PermissionModel field's value.
+func (s *StackSetSummary) SetPermissionModel(v string) *StackSetSummary {
+	s.PermissionModel = &v
 	return s
 }
 
@@ -11846,14 +18197,14 @@ type StackSummary struct {
 	// the root stack is also the parent stack.
 	//
 	// For more information, see Working with Nested Stacks (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-nested-stacks.html)
-	// in the AWS CloudFormation User Guide.
+	// in the CloudFormation User Guide.
 	ParentId *string `type:"string"`
 
 	// For nested stacks--stacks created as resources for another stack--the stack
-	// ID of the the top-level stack to which the nested stack ultimately belongs.
+	// ID of the top-level stack to which the nested stack ultimately belongs.
 	//
 	// For more information, see Working with Nested Stacks (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-nested-stacks.html)
-	// in the AWS CloudFormation User Guide.
+	// in the CloudFormation User Guide.
 	RootId *string `type:"string"`
 
 	// Unique stack identifier.
@@ -11955,6 +18306,22 @@ func (s *StackSummary) SetTemplateDescription(v string) *StackSummary {
 type StopStackSetOperationInput struct {
 	_ struct{} `type:"structure"`
 
+	// [Service-managed permissions] Specifies whether you are acting as an account
+	// administrator in the organization's management account or as a delegated
+	// administrator in a member account.
+	//
+	// By default, SELF is specified. Use SELF for stack sets with self-managed
+	// permissions.
+	//
+	//    * If you are signed in to the management account, specify SELF.
+	//
+	//    * If you are signed in to a delegated administrator account, specify DELEGATED_ADMIN.
+	//    Your account must be registered as a delegated administrator in the management
+	//    account. For more information, see Register a delegated administrator
+	//    (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-delegated-admin.html)
+	//    in the CloudFormation User Guide.
+	CallAs *string `type:"string" enum:"CallAs"`
+
 	// The ID of the stack operation.
 	//
 	// OperationId is a required field
@@ -11996,6 +18363,12 @@ func (s *StopStackSetOperationInput) Validate() error {
 	return nil
 }
 
+// SetCallAs sets the CallAs field's value.
+func (s *StopStackSetOperationInput) SetCallAs(v string) *StopStackSetOperationInput {
+	s.CallAs = &v
+	return s
+}
+
 // SetOperationId sets the OperationId field's value.
 func (s *StopStackSetOperationInput) SetOperationId(v string) *StopStackSetOperationInput {
 	s.OperationId = &v
@@ -12023,13 +18396,13 @@ func (s StopStackSetOperationOutput) GoString() string {
 }
 
 // The Tag type enables you to specify a key-value pair that can be used to
-// store information about an AWS CloudFormation stack.
+// store information about an CloudFormation stack.
 type Tag struct {
 	_ struct{} `type:"structure"`
 
 	// Required. A string used to identify this tag. You can specify a maximum of
-	// 128 characters for a tag key. Tags owned by Amazon Web Services (AWS) have
-	// the reserved prefix: aws:.
+	// 128 characters for a tag key. Tags owned by Amazon Web Services (Amazon Web
+	// Services) have the reserved prefix: aws:.
 	//
 	// Key is a required field
 	Key *string `min:"1" type:"string" required:"true"`
@@ -12137,22 +18510,691 @@ func (s *TemplateParameter) SetParameterKey(v string) *TemplateParameter {
 	return s
 }
 
+type TestTypeInput struct {
+	_ struct{} `type:"structure"`
+
+	// The Amazon Resource Number (ARN) of the extension.
+	//
+	// Conditional: You must specify Arn, or TypeName and Type.
+	Arn *string `type:"string"`
+
+	// The S3 bucket to which CloudFormation delivers the contract test execution
+	// logs.
+	//
+	// CloudFormation delivers the logs by the time contract testing has completed
+	// and the extension has been assigned a test type status of PASSED or FAILED.
+	//
+	// The user calling TestType must be able to access items in the specified S3
+	// bucket. Specifically, the user needs the following permissions:
+	//
+	//    * GetObject
+	//
+	//    * PutObject
+	//
+	// For more information, see Actions, Resources, and Condition Keys for Amazon
+	// S3 (https://docs.aws.amazon.com/service-authorization/latest/reference/list_amazons3.html)
+	// in the Amazon Web Services Identity and Access Management User Guide.
+	LogDeliveryBucket *string `min:"3" type:"string"`
+
+	// The type of the extension to test.
+	//
+	// Conditional: You must specify Arn, or TypeName and Type.
+	Type *string `type:"string" enum:"ThirdPartyType"`
+
+	// The name of the extension to test.
+	//
+	// Conditional: You must specify Arn, or TypeName and Type.
+	TypeName *string `min:"10" type:"string"`
+
+	// The version of the extension to test.
+	//
+	// You can specify the version id with either Arn, or with TypeName and Type.
+	//
+	// If you do not specify a version, CloudFormation uses the default version
+	// of the extension in this account and region for testing.
+	VersionId *string `min:"1" type:"string"`
+}
+
+// String returns the string representation
+func (s TestTypeInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s TestTypeInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *TestTypeInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "TestTypeInput"}
+	if s.LogDeliveryBucket != nil && len(*s.LogDeliveryBucket) < 3 {
+		invalidParams.Add(request.NewErrParamMinLen("LogDeliveryBucket", 3))
+	}
+	if s.TypeName != nil && len(*s.TypeName) < 10 {
+		invalidParams.Add(request.NewErrParamMinLen("TypeName", 10))
+	}
+	if s.VersionId != nil && len(*s.VersionId) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("VersionId", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetArn sets the Arn field's value.
+func (s *TestTypeInput) SetArn(v string) *TestTypeInput {
+	s.Arn = &v
+	return s
+}
+
+// SetLogDeliveryBucket sets the LogDeliveryBucket field's value.
+func (s *TestTypeInput) SetLogDeliveryBucket(v string) *TestTypeInput {
+	s.LogDeliveryBucket = &v
+	return s
+}
+
+// SetType sets the Type field's value.
+func (s *TestTypeInput) SetType(v string) *TestTypeInput {
+	s.Type = &v
+	return s
+}
+
+// SetTypeName sets the TypeName field's value.
+func (s *TestTypeInput) SetTypeName(v string) *TestTypeInput {
+	s.TypeName = &v
+	return s
+}
+
+// SetVersionId sets the VersionId field's value.
+func (s *TestTypeInput) SetVersionId(v string) *TestTypeInput {
+	s.VersionId = &v
+	return s
+}
+
+type TestTypeOutput struct {
+	_ struct{} `type:"structure"`
+
+	// The Amazon Resource Number (ARN) of the extension.
+	TypeVersionArn *string `type:"string"`
+}
+
+// String returns the string representation
+func (s TestTypeOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s TestTypeOutput) GoString() string {
+	return s.String()
+}
+
+// SetTypeVersionArn sets the TypeVersionArn field's value.
+func (s *TestTypeOutput) SetTypeVersionArn(v string) *TestTypeOutput {
+	s.TypeVersionArn = &v
+	return s
+}
+
+// Detailed information concerning the specification of a CloudFormation extension
+// in a given account and region.
+//
+// For more information, see Configuring extensions at the account level (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/registry-register.html#registry-set-configuration)
+// in the CloudFormation User Guide.
+type TypeConfigurationDetails struct {
+	_ struct{} `type:"structure"`
+
+	// The alias specified for this configuration, if one was specified when the
+	// configuration was set.
+	Alias *string `min:"1" type:"string"`
+
+	// The Amazon Resource Name (ARN) for the configuration data, in this account
+	// and region.
+	Arn *string `type:"string"`
+
+	// A JSON string specifying the configuration data for the extension, in this
+	// account and region.
+	//
+	// If a configuration has not been set for a specified extension, CloudFormation
+	// returns {}.
+	Configuration *string `min:"1" type:"string"`
+
+	// Whether or not this configuration data is the default configuration for the
+	// extension.
+	IsDefaultConfiguration *bool `type:"boolean"`
+
+	// When the configuration data was last updated for this extension.
+	//
+	// If a configuration has not been set for a specified extension, CloudFormation
+	// returns null.
+	LastUpdated *time.Time `type:"timestamp"`
+
+	// The Amazon Resource Name (ARN) for the extension, in this account and region.
+	//
+	// For public extensions, this will be the ARN assigned when you activate the
+	// type (https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_ActivateType.html)
+	// in this account and region. For private extensions, this will be the ARN
+	// assigned when you register the type (https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_RegisterType.html)
+	// in this account and region.
+	TypeArn *string `type:"string"`
+
+	// The name of the extension.
+	TypeName *string `min:"10" type:"string"`
+}
+
+// String returns the string representation
+func (s TypeConfigurationDetails) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s TypeConfigurationDetails) GoString() string {
+	return s.String()
+}
+
+// SetAlias sets the Alias field's value.
+func (s *TypeConfigurationDetails) SetAlias(v string) *TypeConfigurationDetails {
+	s.Alias = &v
+	return s
+}
+
+// SetArn sets the Arn field's value.
+func (s *TypeConfigurationDetails) SetArn(v string) *TypeConfigurationDetails {
+	s.Arn = &v
+	return s
+}
+
+// SetConfiguration sets the Configuration field's value.
+func (s *TypeConfigurationDetails) SetConfiguration(v string) *TypeConfigurationDetails {
+	s.Configuration = &v
+	return s
+}
+
+// SetIsDefaultConfiguration sets the IsDefaultConfiguration field's value.
+func (s *TypeConfigurationDetails) SetIsDefaultConfiguration(v bool) *TypeConfigurationDetails {
+	s.IsDefaultConfiguration = &v
+	return s
+}
+
+// SetLastUpdated sets the LastUpdated field's value.
+func (s *TypeConfigurationDetails) SetLastUpdated(v time.Time) *TypeConfigurationDetails {
+	s.LastUpdated = &v
+	return s
+}
+
+// SetTypeArn sets the TypeArn field's value.
+func (s *TypeConfigurationDetails) SetTypeArn(v string) *TypeConfigurationDetails {
+	s.TypeArn = &v
+	return s
+}
+
+// SetTypeName sets the TypeName field's value.
+func (s *TypeConfigurationDetails) SetTypeName(v string) *TypeConfigurationDetails {
+	s.TypeName = &v
+	return s
+}
+
+// Identifying information for the configuration of a CloudFormation extension.
+type TypeConfigurationIdentifier struct {
+	_ struct{} `type:"structure"`
+
+	// The type of extension.
+	Type *string `type:"string" enum:"ThirdPartyType"`
+
+	// The Amazon Resource Name (ARN) for the extension, in this account and region.
+	//
+	// For public extensions, this will be the ARN assigned when you activate the
+	// type (https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_ActivateType.html)
+	// in this account and region. For private extensions, this will be the ARN
+	// assigned when you register the type (https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_RegisterType.html)
+	// in this account and region.
+	TypeArn *string `type:"string"`
+
+	// The alias specified for this configuration, if one was specified when the
+	// configuration was set.
+	TypeConfigurationAlias *string `min:"1" type:"string"`
+
+	// The Amazon Resource Name (ARN) for the configuration, in this account and
+	// region.
+	TypeConfigurationArn *string `type:"string"`
+
+	// The name of the extension type to which this configuration applies.
+	TypeName *string `min:"10" type:"string"`
+}
+
+// String returns the string representation
+func (s TypeConfigurationIdentifier) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s TypeConfigurationIdentifier) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *TypeConfigurationIdentifier) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "TypeConfigurationIdentifier"}
+	if s.TypeConfigurationAlias != nil && len(*s.TypeConfigurationAlias) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("TypeConfigurationAlias", 1))
+	}
+	if s.TypeName != nil && len(*s.TypeName) < 10 {
+		invalidParams.Add(request.NewErrParamMinLen("TypeName", 10))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetType sets the Type field's value.
+func (s *TypeConfigurationIdentifier) SetType(v string) *TypeConfigurationIdentifier {
+	s.Type = &v
+	return s
+}
+
+// SetTypeArn sets the TypeArn field's value.
+func (s *TypeConfigurationIdentifier) SetTypeArn(v string) *TypeConfigurationIdentifier {
+	s.TypeArn = &v
+	return s
+}
+
+// SetTypeConfigurationAlias sets the TypeConfigurationAlias field's value.
+func (s *TypeConfigurationIdentifier) SetTypeConfigurationAlias(v string) *TypeConfigurationIdentifier {
+	s.TypeConfigurationAlias = &v
+	return s
+}
+
+// SetTypeConfigurationArn sets the TypeConfigurationArn field's value.
+func (s *TypeConfigurationIdentifier) SetTypeConfigurationArn(v string) *TypeConfigurationIdentifier {
+	s.TypeConfigurationArn = &v
+	return s
+}
+
+// SetTypeName sets the TypeName field's value.
+func (s *TypeConfigurationIdentifier) SetTypeName(v string) *TypeConfigurationIdentifier {
+	s.TypeName = &v
+	return s
+}
+
+// Filter criteria to use in determining which extensions to return.
+type TypeFilters struct {
+	_ struct{} `type:"structure"`
+
+	// The category of extensions to return.
+	//
+	//    * REGISTERED: Private extensions that have been registered for this account
+	//    and region.
+	//
+	//    * ACTIVATED: Public extensions that have been activated for this account
+	//    and region.
+	//
+	//    * THIRD-PARTY: Extensions available for use from publishers other than
+	//    Amazon. This includes: Private extensions registered in the account. Public
+	//    extensions from publishers other than Amazon, whether activated or not.
+	//
+	//    * AWS-TYPES: Extensions available for use from Amazon.
+	Category *string `type:"string" enum:"Category"`
+
+	// The id of the publisher of the extension.
+	//
+	// Extensions published by Amazon are not assigned a publisher ID. Use the AWS-TYPES
+	// category to specify a list of types published by Amazon.
+	PublisherId *string `min:"1" type:"string"`
+
+	// A prefix to use as a filter for results.
+	TypeNamePrefix *string `min:"1" type:"string"`
+}
+
+// String returns the string representation
+func (s TypeFilters) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s TypeFilters) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *TypeFilters) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "TypeFilters"}
+	if s.PublisherId != nil && len(*s.PublisherId) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("PublisherId", 1))
+	}
+	if s.TypeNamePrefix != nil && len(*s.TypeNamePrefix) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("TypeNamePrefix", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetCategory sets the Category field's value.
+func (s *TypeFilters) SetCategory(v string) *TypeFilters {
+	s.Category = &v
+	return s
+}
+
+// SetPublisherId sets the PublisherId field's value.
+func (s *TypeFilters) SetPublisherId(v string) *TypeFilters {
+	s.PublisherId = &v
+	return s
+}
+
+// SetTypeNamePrefix sets the TypeNamePrefix field's value.
+func (s *TypeFilters) SetTypeNamePrefix(v string) *TypeFilters {
+	s.TypeNamePrefix = &v
+	return s
+}
+
+// Contains summary information about the specified CloudFormation extension.
+type TypeSummary struct {
+	_ struct{} `type:"structure"`
+
+	// The ID of the default version of the extension. The default version is used
+	// when the extension version is not specified.
+	//
+	// This applies only to private extensions you have registered in your account.
+	// For public extensions, both those provided by Amazon and published by third
+	// parties, CloudFormation returns null. For more information, see RegisterType
+	// (https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_RegisterType.html).
+	//
+	// To set the default version of an extension, use SetTypeDefaultVersion .
+	DefaultVersionId *string `min:"1" type:"string"`
+
+	// The description of the extension.
+	Description *string `min:"1" type:"string"`
+
+	// Whether or not the extension is activated for this account and region.
+	//
+	// This applies only to third-party public extensions. Extensions published
+	// by Amazon are activated by default.
+	IsActivated *bool `type:"boolean"`
+
+	// When the specified extension version was registered. This applies only to:
+	//
+	//    * Private extensions you have registered in your account. For more information,
+	//    see RegisterType (https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_RegisterType.html).
+	//
+	//    * Public extensions you have activated in your account with auto-update
+	//    specified. For more information, see ActivateType (https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_ActivateType.html).
+	//
+	// For all other extension types, CloudFormation returns null.
+	LastUpdated *time.Time `type:"timestamp"`
+
+	// For public extensions that have been activated for this account and region,
+	// the latest version of the public extension that is available. For any extensions
+	// other than activated third-arty extensions, CloudFormation returns null.
+	//
+	// How you specified AutoUpdate when enabling the extension affects whether
+	// CloudFormation automatically updates the extention in this account and region
+	// when a new version is released. For more information, see Setting CloudFormation
+	// to automatically use new versions of extensions (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/registry-public.html#registry-public-enable-auto)
+	// in the CloudFormation User Guide.
+	LatestPublicVersion *string `min:"5" type:"string"`
+
+	// For public extensions that have been activated for this account and region,
+	// the type name of the public extension.
+	//
+	// If you specified a TypeNameAlias when enabling the extension in this account
+	// and region, CloudFormation treats that alias as the extension's type name
+	// within the account and region, not the type name of the public extension.
+	// For more information, see Specifying aliases to refer to extensions (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/registry-public.html#registry-public-enable-alias)
+	// in the CloudFormation User Guide.
+	OriginalTypeName *string `min:"10" type:"string"`
+
+	// For public extensions that have been activated for this account and region,
+	// the version of the public extension to be used for CloudFormation operations
+	// in this account and region.
+	//
+	// How you specified AutoUpdate when enabling the extension affects whether
+	// CloudFormation automatically updates the extention in this account and region
+	// when a new version is released. For more information, see Setting CloudFormation
+	// to automatically use new versions of extensions (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/registry-public.html#registry-public-enable-auto)
+	// in the CloudFormation User Guide.
+	PublicVersionNumber *string `min:"5" type:"string"`
+
+	// The ID of the extension publisher, if the extension is published by a third
+	// party. Extensions published by Amazon do not return a publisher ID.
+	PublisherId *string `min:"1" type:"string"`
+
+	// The service used to verify the publisher identity.
+	//
+	// For more information, see Registering your account to publish CloudFormation
+	// extensions (https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/publish-extension.html)
+	// in the CFN-CLI User Guide for Extension Development.
+	PublisherIdentity *string `type:"string" enum:"IdentityProvider"`
+
+	// The publisher name, as defined in the public profile for that publisher in
+	// the service used to verify the publisher identity.
+	PublisherName *string `min:"1" type:"string"`
+
+	// The kind of extension.
+	Type *string `type:"string" enum:"RegistryType"`
+
+	// The Amazon Resource Name (ARN) of the extension.
+	TypeArn *string `type:"string"`
+
+	// The name of the extension.
+	//
+	// If you specified a TypeNameAlias when you activate this extension (https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_ActivateType.html)
+	// in your account and region, CloudFormation considers that alias as the type
+	// name.
+	TypeName *string `min:"10" type:"string"`
+}
+
+// String returns the string representation
+func (s TypeSummary) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s TypeSummary) GoString() string {
+	return s.String()
+}
+
+// SetDefaultVersionId sets the DefaultVersionId field's value.
+func (s *TypeSummary) SetDefaultVersionId(v string) *TypeSummary {
+	s.DefaultVersionId = &v
+	return s
+}
+
+// SetDescription sets the Description field's value.
+func (s *TypeSummary) SetDescription(v string) *TypeSummary {
+	s.Description = &v
+	return s
+}
+
+// SetIsActivated sets the IsActivated field's value.
+func (s *TypeSummary) SetIsActivated(v bool) *TypeSummary {
+	s.IsActivated = &v
+	return s
+}
+
+// SetLastUpdated sets the LastUpdated field's value.
+func (s *TypeSummary) SetLastUpdated(v time.Time) *TypeSummary {
+	s.LastUpdated = &v
+	return s
+}
+
+// SetLatestPublicVersion sets the LatestPublicVersion field's value.
+func (s *TypeSummary) SetLatestPublicVersion(v string) *TypeSummary {
+	s.LatestPublicVersion = &v
+	return s
+}
+
+// SetOriginalTypeName sets the OriginalTypeName field's value.
+func (s *TypeSummary) SetOriginalTypeName(v string) *TypeSummary {
+	s.OriginalTypeName = &v
+	return s
+}
+
+// SetPublicVersionNumber sets the PublicVersionNumber field's value.
+func (s *TypeSummary) SetPublicVersionNumber(v string) *TypeSummary {
+	s.PublicVersionNumber = &v
+	return s
+}
+
+// SetPublisherId sets the PublisherId field's value.
+func (s *TypeSummary) SetPublisherId(v string) *TypeSummary {
+	s.PublisherId = &v
+	return s
+}
+
+// SetPublisherIdentity sets the PublisherIdentity field's value.
+func (s *TypeSummary) SetPublisherIdentity(v string) *TypeSummary {
+	s.PublisherIdentity = &v
+	return s
+}
+
+// SetPublisherName sets the PublisherName field's value.
+func (s *TypeSummary) SetPublisherName(v string) *TypeSummary {
+	s.PublisherName = &v
+	return s
+}
+
+// SetType sets the Type field's value.
+func (s *TypeSummary) SetType(v string) *TypeSummary {
+	s.Type = &v
+	return s
+}
+
+// SetTypeArn sets the TypeArn field's value.
+func (s *TypeSummary) SetTypeArn(v string) *TypeSummary {
+	s.TypeArn = &v
+	return s
+}
+
+// SetTypeName sets the TypeName field's value.
+func (s *TypeSummary) SetTypeName(v string) *TypeSummary {
+	s.TypeName = &v
+	return s
+}
+
+// Contains summary information about a specific version of a CloudFormation
+// extension.
+type TypeVersionSummary struct {
+	_ struct{} `type:"structure"`
+
+	// The Amazon Resource Name (ARN) of the extension version.
+	Arn *string `type:"string"`
+
+	// The description of the extension version.
+	Description *string `min:"1" type:"string"`
+
+	// Whether the specified extension version is set as the default version.
+	//
+	// This applies only to private extensions you have registered in your account,
+	// and extensions published by Amazon. For public third-party extensions, whether
+	// or not they are activated in your account, CloudFormation returns null.
+	IsDefaultVersion *bool `type:"boolean"`
+
+	// For public extensions that have been activated for this account and region,
+	// the version of the public extension to be used for CloudFormation operations
+	// in this account and region. For any extensions other than activated third-arty
+	// extensions, CloudFormation returns null.
+	//
+	// How you specified AutoUpdate when enabling the extension affects whether
+	// CloudFormation automatically updates the extention in this account and region
+	// when a new version is released. For more information, see Setting CloudFormation
+	// to automatically use new versions of extensions (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/registry-public.html#registry-public-enable-auto)
+	// in the CloudFormation User Guide.
+	PublicVersionNumber *string `min:"5" type:"string"`
+
+	// When the version was registered.
+	TimeCreated *time.Time `type:"timestamp"`
+
+	// The kind of extension.
+	Type *string `type:"string" enum:"RegistryType"`
+
+	// The name of the extension.
+	TypeName *string `min:"10" type:"string"`
+
+	// The ID of a specific version of the extension. The version ID is the value
+	// at the end of the Amazon Resource Name (ARN) assigned to the extension version
+	// when it is registered.
+	VersionId *string `min:"1" type:"string"`
+}
+
+// String returns the string representation
+func (s TypeVersionSummary) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s TypeVersionSummary) GoString() string {
+	return s.String()
+}
+
+// SetArn sets the Arn field's value.
+func (s *TypeVersionSummary) SetArn(v string) *TypeVersionSummary {
+	s.Arn = &v
+	return s
+}
+
+// SetDescription sets the Description field's value.
+func (s *TypeVersionSummary) SetDescription(v string) *TypeVersionSummary {
+	s.Description = &v
+	return s
+}
+
+// SetIsDefaultVersion sets the IsDefaultVersion field's value.
+func (s *TypeVersionSummary) SetIsDefaultVersion(v bool) *TypeVersionSummary {
+	s.IsDefaultVersion = &v
+	return s
+}
+
+// SetPublicVersionNumber sets the PublicVersionNumber field's value.
+func (s *TypeVersionSummary) SetPublicVersionNumber(v string) *TypeVersionSummary {
+	s.PublicVersionNumber = &v
+	return s
+}
+
+// SetTimeCreated sets the TimeCreated field's value.
+func (s *TypeVersionSummary) SetTimeCreated(v time.Time) *TypeVersionSummary {
+	s.TimeCreated = &v
+	return s
+}
+
+// SetType sets the Type field's value.
+func (s *TypeVersionSummary) SetType(v string) *TypeVersionSummary {
+	s.Type = &v
+	return s
+}
+
+// SetTypeName sets the TypeName field's value.
+func (s *TypeVersionSummary) SetTypeName(v string) *TypeVersionSummary {
+	s.TypeName = &v
+	return s
+}
+
+// SetVersionId sets the VersionId field's value.
+func (s *TypeVersionSummary) SetVersionId(v string) *TypeVersionSummary {
+	s.VersionId = &v
+	return s
+}
+
 // The input for an UpdateStack action.
 type UpdateStackInput struct {
 	_ struct{} `type:"structure"`
 
-	// In some cases, you must explicity acknowledge that your stack template contains
-	// certain capabilities in order for AWS CloudFormation to update the stack.
+	// In some cases, you must explicitly acknowledge that your stack template contains
+	// certain capabilities in order for CloudFormation to update the stack.
 	//
 	//    * CAPABILITY_IAM and CAPABILITY_NAMED_IAM Some stack templates might include
-	//    resources that can affect permissions in your AWS account; for example,
-	//    by creating new AWS Identity and Access Management (IAM) users. For those
-	//    stacks, you must explicitly acknowledge this by specifying one of these
-	//    capabilities. The following IAM resources require you to specify either
-	//    the CAPABILITY_IAM or CAPABILITY_NAMED_IAM capability. If you have IAM
-	//    resources, you can specify either capability. If you have IAM resources
-	//    with custom names, you must specify CAPABILITY_NAMED_IAM. If you don't
-	//    specify either of these capabilities, AWS CloudFormation returns an InsufficientCapabilities
+	//    resources that can affect permissions in your account; for example, by
+	//    creating new Identity and Access Management (IAM) users. For those stacks,
+	//    you must explicitly acknowledge this by specifying one of these capabilities.
+	//    The following IAM resources require you to specify either the CAPABILITY_IAM
+	//    or CAPABILITY_NAMED_IAM capability. If you have IAM resources, you can
+	//    specify either capability. If you have IAM resources with custom names,
+	//    you must specify CAPABILITY_NAMED_IAM. If you don't specify either of
+	//    these capabilities, CloudFormation returns an InsufficientCapabilities
 	//    error. If your stack template contains these resources, we recommend that
 	//    you review all permissions associated with them and edit their permissions
 	//    if necessary. AWS::IAM::AccessKey (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-iam-accesskey.html)
@@ -12162,7 +19204,7 @@ type UpdateStackInput struct {
 	//    AWS::IAM::Role (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html)
 	//    AWS::IAM::User (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-iam-user.html)
 	//    AWS::IAM::UserToGroupAddition (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-iam-addusertogroup.html)
-	//    For more information, see Acknowledging IAM Resources in AWS CloudFormation
+	//    For more information, see Acknowledging IAM Resources in CloudFormation
 	//    Templates (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-template.html#capabilities).
 	//
 	//    * CAPABILITY_AUTO_EXPAND Some template contain macros. Macros perform
@@ -12175,22 +19217,21 @@ type UpdateStackInput struct {
 	//    template, without first reviewing the resulting changes in a change set,
 	//    you must acknowledge this capability. This includes the AWS::Include (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/create-reusable-transform-function-snippets-and-add-to-your-template-with-aws-include-transform.html)
 	//    and AWS::Serverless (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/transform-aws-serverless.html)
-	//    transforms, which are macros hosted by AWS CloudFormation. Change sets
-	//    do not currently support nested stacks. If you want to update a stack
-	//    from a stack template that contains macros and nested stacks, you must
-	//    update the stack directly from the template using this capability. You
-	//    should only update stacks directly from a stack template that contains
+	//    transforms, which are macros hosted by CloudFormation. If you want to
+	//    update a stack from a stack template that contains macros and nested stacks,
+	//    you must update the stack directly from the template using this capability.
+	//    You should only update stacks directly from a stack template that contains
 	//    macros if you know what processing the macro performs. Each macro relies
 	//    on an underlying Lambda service function for processing stack templates.
 	//    Be aware that the Lambda function owner can update the function operation
-	//    without AWS CloudFormation being notified. For more information, see Using
-	//    AWS CloudFormation Macros to Perform Custom Processing on Templates (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-macros.html).
+	//    without CloudFormation being notified. For more information, see Using
+	//    CloudFormation Macros to Perform Custom Processing on Templates (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-macros.html).
 	Capabilities []*string `type:"list"`
 
 	// A unique identifier for this UpdateStack request. Specify this token if you
-	// plan to retry requests so that AWS CloudFormation knows that you're not attempting
+	// plan to retry requests so that CloudFormation knows that you're not attempting
 	// to update a stack with the same name. You might retry UpdateStack requests
-	// to ensure that AWS CloudFormation successfully received them.
+	// to ensure that CloudFormation successfully received them.
 	//
 	// All events triggered by a given stack operation are assigned the same client
 	// request token, which you can use to track operations. For example, if you
@@ -12205,7 +19246,7 @@ type UpdateStackInput struct {
 	ClientRequestToken *string `min:"1" type:"string"`
 
 	// Amazon Simple Notification Service topic Amazon Resource Names (ARNs) that
-	// AWS CloudFormation associates with the stack. Specify an empty list to remove
+	// CloudFormation associates with the stack. Specify an empty list to remove
 	// all notification topics.
 	NotificationARNs []*string `type:"list"`
 
@@ -12218,27 +19259,26 @@ type UpdateStackInput struct {
 	// update stack action, such as AWS::EC2::Instance, AWS::EC2::*, or Custom::MyCustomInstance.
 	//
 	// If the list of resource types doesn't include a resource that you're updating,
-	// the stack update fails. By default, AWS CloudFormation grants permissions
-	// to all resource types. AWS Identity and Access Management (IAM) uses this
-	// parameter for AWS CloudFormation-specific condition keys in IAM policies.
-	// For more information, see Controlling Access with AWS Identity and Access
-	// Management (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-template.html).
+	// the stack update fails. By default, CloudFormation grants permissions to
+	// all resource types. Identity and Access Management (IAM) uses this parameter
+	// for CloudFormation-specific condition keys in IAM policies. For more information,
+	// see Controlling Access with Identity and Access Management (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-template.html).
 	ResourceTypes []*string `type:"list"`
 
-	// The Amazon Resource Name (ARN) of an AWS Identity and Access Management (IAM)
-	// role that AWS CloudFormation assumes to update the stack. AWS CloudFormation
-	// uses the role's credentials to make calls on your behalf. AWS CloudFormation
-	// always uses this role for all future operations on the stack. As long as
-	// users have permission to operate on the stack, AWS CloudFormation uses this
-	// role even if the users don't have permission to pass it. Ensure that the
-	// role grants least privilege.
+	// The Amazon Resource Name (ARN) of an Identity and Access Management (IAM)
+	// role that CloudFormation assumes to update the stack. CloudFormation uses
+	// the role's credentials to make calls on your behalf. CloudFormation always
+	// uses this role for all future operations on the stack. As long as users have
+	// permission to operate on the stack, CloudFormation uses this role even if
+	// the users don't have permission to pass it. Ensure that the role grants least
+	// privilege.
 	//
-	// If you don't specify a value, AWS CloudFormation uses the role that was previously
-	// associated with the stack. If no role is available, AWS CloudFormation uses
-	// a temporary session that is generated from your user credentials.
+	// If you don't specify a value, CloudFormation uses the role that was previously
+	// associated with the stack. If no role is available, CloudFormation uses a
+	// temporary session that is generated from your user credentials.
 	RoleARN *string `min:"20" type:"string"`
 
-	// The rollback triggers for AWS CloudFormation to monitor during stack creation
+	// The rollback triggers for CloudFormation to monitor during stack creation
 	// and updating operations, and for the specified monitoring period afterwards.
 	RollbackConfiguration *RollbackConfiguration `type:"structure"`
 
@@ -12266,7 +19306,7 @@ type UpdateStackInput struct {
 
 	// Location of a file containing the temporary overriding stack policy. The
 	// URL must point to a policy (max size: 16KB) located in an S3 bucket in the
-	// same region as the stack. You can specify either the StackPolicyDuringUpdateBody
+	// same Region as the stack. You can specify either the StackPolicyDuringUpdateBody
 	// or the StackPolicyDuringUpdateURL parameter, but not both.
 	//
 	// If you want to update protected resources, specify a temporary overriding
@@ -12275,7 +19315,7 @@ type UpdateStackInput struct {
 	StackPolicyDuringUpdateURL *string `min:"1" type:"string"`
 
 	// Location of a file containing the updated stack policy. The URL must point
-	// to a policy (max size: 16KB) located in an S3 bucket in the same region as
+	// to a policy (max size: 16KB) located in an S3 bucket in the same Region as
 	// the stack. You can specify either the StackPolicyBody or the StackPolicyURL
 	// parameter, but not both.
 	//
@@ -12284,28 +19324,28 @@ type UpdateStackInput struct {
 	// stack policy, the current policy that is associated with the stack is unchanged.
 	StackPolicyURL *string `min:"1" type:"string"`
 
-	// Key-value pairs to associate with this stack. AWS CloudFormation also propagates
+	// Key-value pairs to associate with this stack. CloudFormation also propagates
 	// these tags to supported resources in the stack. You can specify a maximum
 	// number of 50 tags.
 	//
-	// If you don't specify this parameter, AWS CloudFormation doesn't modify the
-	// stack's tags. If you specify an empty value, AWS CloudFormation removes all
-	// associated tags.
+	// If you don't specify this parameter, CloudFormation doesn't modify the stack's
+	// tags. If you specify an empty value, CloudFormation removes all associated
+	// tags.
 	Tags []*Tag `type:"list"`
 
 	// Structure containing the template body with a minimum length of 1 byte and
 	// a maximum length of 51,200 bytes. (For more information, go to Template Anatomy
 	// (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html)
-	// in the AWS CloudFormation User Guide.)
+	// in the CloudFormation User Guide.)
 	//
 	// Conditional: You must specify only one of the following parameters: TemplateBody,
 	// TemplateURL, or set the UsePreviousTemplate to true.
 	TemplateBody *string `min:"1" type:"string"`
 
 	// Location of file containing the template body. The URL must point to a template
-	// that is located in an Amazon S3 bucket. For more information, go to Template
-	// Anatomy (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html)
-	// in the AWS CloudFormation User Guide.
+	// that is located in an Amazon S3 bucket or a Systems Manager document. For
+	// more information, go to Template Anatomy (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html)
+	// in the CloudFormation User Guide.
 	//
 	// Conditional: You must specify only one of the following parameters: TemplateBody,
 	// TemplateURL, or set the UsePreviousTemplate to true.
@@ -12480,44 +19520,70 @@ func (s *UpdateStackInput) SetUsePreviousTemplate(v bool) *UpdateStackInput {
 type UpdateStackInstancesInput struct {
 	_ struct{} `type:"structure"`
 
-	// The names of one or more AWS accounts for which you want to update parameter
-	// values for stack instances. The overridden parameter values will be applied
-	// to all stack instances in the specified accounts and regions.
+	// [Self-managed permissions] The names of one or more accounts for which you
+	// want to update parameter values for stack instances. The overridden parameter
+	// values will be applied to all stack instances in the specified accounts and
+	// Regions.
 	//
-	// Accounts is a required field
-	Accounts []*string `type:"list" required:"true"`
+	// You can specify Accounts or DeploymentTargets, but not both.
+	Accounts []*string `type:"list"`
+
+	// [Service-managed permissions] Specifies whether you are acting as an account
+	// administrator in the organization's management account or as a delegated
+	// administrator in a member account.
+	//
+	// By default, SELF is specified. Use SELF for stack sets with self-managed
+	// permissions.
+	//
+	//    * If you are signed in to the management account, specify SELF.
+	//
+	//    * If you are signed in to a delegated administrator account, specify DELEGATED_ADMIN.
+	//    Your account must be registered as a delegated administrator in the management
+	//    account. For more information, see Register a delegated administrator
+	//    (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-delegated-admin.html)
+	//    in the CloudFormation User Guide.
+	CallAs *string `type:"string" enum:"CallAs"`
+
+	// [Service-managed permissions] The Organizations accounts for which you want
+	// to update parameter values for stack instances. If your update targets OUs,
+	// the overridden parameter values only apply to the accounts that are currently
+	// in the target OUs and their child OUs. Accounts added to the target OUs and
+	// their child OUs in the future won't use the overridden values.
+	//
+	// You can specify Accounts or DeploymentTargets, but not both.
+	DeploymentTargets *DeploymentTargets `type:"structure"`
 
 	// The unique identifier for this stack set operation.
 	//
-	// The operation ID also functions as an idempotency token, to ensure that AWS
-	// CloudFormation performs the stack set operation only once, even if you retry
-	// the request multiple times. You might retry stack set operation requests
-	// to ensure that AWS CloudFormation successfully received them.
+	// The operation ID also functions as an idempotency token, to ensure that CloudFormation
+	// performs the stack set operation only once, even if you retry the request
+	// multiple times. You might retry stack set operation requests to ensure that
+	// CloudFormation successfully received them.
 	//
 	// If you don't specify an operation ID, the SDK generates one automatically.
 	OperationId *string `min:"1" type:"string" idempotencyToken:"true"`
 
-	// Preferences for how AWS CloudFormation performs this stack set operation.
+	// Preferences for how CloudFormation performs this stack set operation.
 	OperationPreferences *StackSetOperationPreferences `type:"structure"`
 
 	// A list of input parameters whose values you want to update for the specified
 	// stack instances.
 	//
 	// Any overridden parameter values will be applied to all stack instances in
-	// the specified accounts and regions. When specifying parameters and their
-	// values, be aware of how AWS CloudFormation sets parameter values during stack
+	// the specified accounts and Regions. When specifying parameters and their
+	// values, be aware of how CloudFormation sets parameter values during stack
 	// instance update operations:
 	//
 	//    * To override the current value for a parameter, include the parameter
 	//    and specify its value.
 	//
-	//    * To leave a parameter set to its present value, you can do one of the
-	//    following: Do not include the parameter in the list. Include the parameter
-	//    and specify UsePreviousValue as true. (You cannot specify both a value
-	//    and set UsePreviousValue to true.)
+	//    * To leave an overridden parameter set to its present value, include the
+	//    parameter and specify UsePreviousValue as true. (You cannot specify both
+	//    a value and set UsePreviousValue to true.)
 	//
-	//    * To set all overridden parameter back to the values specified in the
-	//    stack set, specify a parameter list but do not include any parameters.
+	//    * To set an overridden parameter back to the value specified in the stack
+	//    set, specify a parameter list but do not include the parameter in the
+	//    list.
 	//
 	//    * To leave all parameters set to their present values, do not specify
 	//    this property at all.
@@ -12535,9 +19601,9 @@ type UpdateStackInstancesInput struct {
 	// new parameter, you can then override the parameter value using UpdateStackInstances.
 	ParameterOverrides []*Parameter `type:"list"`
 
-	// The names of one or more regions in which you want to update parameter values
+	// The names of one or more Regions in which you want to update parameter values
 	// for stack instances. The overridden parameter values will be applied to all
-	// stack instances in the specified accounts and regions.
+	// stack instances in the specified accounts and Regions.
 	//
 	// Regions is a required field
 	Regions []*string `type:"list" required:"true"`
@@ -12561,9 +19627,6 @@ func (s UpdateStackInstancesInput) GoString() string {
 // Validate inspects the fields of the type to determine if they are valid.
 func (s *UpdateStackInstancesInput) Validate() error {
 	invalidParams := request.ErrInvalidParams{Context: "UpdateStackInstancesInput"}
-	if s.Accounts == nil {
-		invalidParams.Add(request.NewErrParamRequired("Accounts"))
-	}
 	if s.OperationId != nil && len(*s.OperationId) < 1 {
 		invalidParams.Add(request.NewErrParamMinLen("OperationId", 1))
 	}
@@ -12572,6 +19635,11 @@ func (s *UpdateStackInstancesInput) Validate() error {
 	}
 	if s.StackSetName == nil {
 		invalidParams.Add(request.NewErrParamRequired("StackSetName"))
+	}
+	if s.DeploymentTargets != nil {
+		if err := s.DeploymentTargets.Validate(); err != nil {
+			invalidParams.AddNested("DeploymentTargets", err.(request.ErrInvalidParams))
+		}
 	}
 	if s.OperationPreferences != nil {
 		if err := s.OperationPreferences.Validate(); err != nil {
@@ -12588,6 +19656,18 @@ func (s *UpdateStackInstancesInput) Validate() error {
 // SetAccounts sets the Accounts field's value.
 func (s *UpdateStackInstancesInput) SetAccounts(v []*string) *UpdateStackInstancesInput {
 	s.Accounts = v
+	return s
+}
+
+// SetCallAs sets the CallAs field's value.
+func (s *UpdateStackInstancesInput) SetCallAs(v string) *UpdateStackInstancesInput {
+	s.CallAs = &v
+	return s
+}
+
+// SetDeploymentTargets sets the DeploymentTargets field's value.
+func (s *UpdateStackInstancesInput) SetDeploymentTargets(v *DeploymentTargets) *UpdateStackInstancesInput {
+	s.DeploymentTargets = v
 	return s
 }
 
@@ -12671,21 +19751,21 @@ func (s *UpdateStackOutput) SetStackId(v string) *UpdateStackOutput {
 type UpdateStackSetInput struct {
 	_ struct{} `type:"structure"`
 
-	// The accounts in which to update associated stack instances. If you specify
-	// accounts, you must also specify the regions in which to update stack set
-	// instances.
+	// [Self-managed permissions] The accounts in which to update associated stack
+	// instances. If you specify accounts, you must also specify the Regions in
+	// which to update stack set instances.
 	//
 	// To update all the stack instances associated with this stack set, do not
 	// specify the Accounts or Regions properties.
 	//
 	// If the stack set update includes changes to the template (that is, if the
 	// TemplateBody or TemplateURL properties are specified), or the Parameters
-	// property, AWS CloudFormation marks all stack instances with a status of OUTDATED
-	// prior to updating the stack instances in the specified accounts and regions.
+	// property, CloudFormation marks all stack instances with a status of OUTDATED
+	// prior to updating the stack instances in the specified accounts and Regions.
 	// If the stack set update does not include changes to the template or parameters,
-	// AWS CloudFormation updates the stack instances in the specified accounts
-	// and regions, while leaving all other stack instances with their existing
-	// stack instance status.
+	// CloudFormation updates the stack instances in the specified accounts and
+	// Regions, while leaving all other stack instances with their existing stack
+	// instance status.
 	Accounts []*string `type:"list"`
 
 	// The Amazon Resource Number (ARN) of the IAM role to use to update this stack
@@ -12695,26 +19775,49 @@ type UpdateStackSetInput struct {
 	// to control which users or groups can manage specific stack sets within the
 	// same administrator account. For more information, see Granting Permissions
 	// for Stack Set Operations (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-prereqs.html)
-	// in the AWS CloudFormation User Guide.
+	// in the CloudFormation User Guide.
 	//
 	// If you specified a customized administrator role when you created the stack
 	// set, you must specify a customized administrator role, even if it is the
 	// same customized administrator role used with this stack set previously.
 	AdministrationRoleARN *string `min:"20" type:"string"`
 
-	// In some cases, you must explicity acknowledge that your stack template contains
-	// certain capabilities in order for AWS CloudFormation to update the stack
-	// set and its associated stack instances.
+	// [Service-managed permissions] Describes whether StackSets automatically deploys
+	// to Organizations accounts that are added to a target organization or organizational
+	// unit (OU).
+	//
+	// If you specify AutoDeployment, do not specify DeploymentTargets or Regions.
+	AutoDeployment *AutoDeployment `type:"structure"`
+
+	// [Service-managed permissions] Specifies whether you are acting as an account
+	// administrator in the organization's management account or as a delegated
+	// administrator in a member account.
+	//
+	// By default, SELF is specified. Use SELF for stack sets with self-managed
+	// permissions.
+	//
+	//    * If you are signed in to the management account, specify SELF.
+	//
+	//    * If you are signed in to a delegated administrator account, specify DELEGATED_ADMIN.
+	//    Your account must be registered as a delegated administrator in the management
+	//    account. For more information, see Register a delegated administrator
+	//    (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-delegated-admin.html)
+	//    in the CloudFormation User Guide.
+	CallAs *string `type:"string" enum:"CallAs"`
+
+	// In some cases, you must explicitly acknowledge that your stack template contains
+	// certain capabilities in order for CloudFormation to update the stack set
+	// and its associated stack instances.
 	//
 	//    * CAPABILITY_IAM and CAPABILITY_NAMED_IAM Some stack templates might include
-	//    resources that can affect permissions in your AWS account; for example,
-	//    by creating new AWS Identity and Access Management (IAM) users. For those
-	//    stacks sets, you must explicitly acknowledge this by specifying one of
-	//    these capabilities. The following IAM resources require you to specify
-	//    either the CAPABILITY_IAM or CAPABILITY_NAMED_IAM capability. If you have
-	//    IAM resources, you can specify either capability. If you have IAM resources
+	//    resources that can affect permissions in your account; for example, by
+	//    creating new Identity and Access Management (IAM) users. For those stacks
+	//    sets, you must explicitly acknowledge this by specifying one of these
+	//    capabilities. The following IAM resources require you to specify either
+	//    the CAPABILITY_IAM or CAPABILITY_NAMED_IAM capability. If you have IAM
+	//    resources, you can specify either capability. If you have IAM resources
 	//    with custom names, you must specify CAPABILITY_NAMED_IAM. If you don't
-	//    specify either of these capabilities, AWS CloudFormation returns an InsufficientCapabilities
+	//    specify either of these capabilities, CloudFormation returns an InsufficientCapabilities
 	//    error. If your stack template contains these resources, we recommend that
 	//    you review all permissions associated with them and edit their permissions
 	//    if necessary. AWS::IAM::AccessKey (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-iam-accesskey.html)
@@ -12724,73 +19827,100 @@ type UpdateStackSetInput struct {
 	//    AWS::IAM::Role (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html)
 	//    AWS::IAM::User (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-iam-user.html)
 	//    AWS::IAM::UserToGroupAddition (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-iam-addusertogroup.html)
-	//    For more information, see Acknowledging IAM Resources in AWS CloudFormation
+	//    For more information, see Acknowledging IAM Resources in CloudFormation
 	//    Templates (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-template.html#capabilities).
 	//
-	//    * CAPABILITY_AUTO_EXPAND Some templates contain macros. If your stack
-	//    template contains one or more macros, and you choose to update a stack
-	//    directly from the processed template, without first reviewing the resulting
-	//    changes in a change set, you must acknowledge this capability. For more
-	//    information, see Using AWS CloudFormation Macros to Perform Custom Processing
-	//    on Templates (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-macros.html).
-	//    Stack sets do not currently support macros in stack templates. (This includes
-	//    the AWS::Include (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/create-reusable-transform-function-snippets-and-add-to-your-template-with-aws-include-transform.html)
+	//    * CAPABILITY_AUTO_EXPAND Some templates reference macros. If your stack
+	//    set template references one or more macros, you must update the stack
+	//    set directly from the processed template, without first reviewing the
+	//    resulting changes in a change set. To update the stack set directly, you
+	//    must acknowledge this capability. For more information, see Using CloudFormation
+	//    Macros to Perform Custom Processing on Templates (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-macros.html).
+	//    Stack sets with service-managed permissions do not currently support the
+	//    use of macros in templates. (This includes the AWS::Include (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/create-reusable-transform-function-snippets-and-add-to-your-template-with-aws-include-transform.html)
 	//    and AWS::Serverless (http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/transform-aws-serverless.html)
-	//    transforms, which are macros hosted by AWS CloudFormation.) Even if you
-	//    specify this capability, if you include a macro in your template the stack
-	//    set operation will fail.
+	//    transforms, which are macros hosted by CloudFormation.) Even if you specify
+	//    this capability for a stack set with service-managed permissions, if you
+	//    reference a macro in your template the stack set operation will fail.
 	Capabilities []*string `type:"list"`
+
+	// [Service-managed permissions] The Organizations accounts in which to update
+	// associated stack instances.
+	//
+	// To update all the stack instances associated with this stack set, do not
+	// specify DeploymentTargets or Regions.
+	//
+	// If the stack set update includes changes to the template (that is, if TemplateBody
+	// or TemplateURL is specified), or the Parameters, CloudFormation marks all
+	// stack instances with a status of OUTDATED prior to updating the stack instances
+	// in the specified accounts and Regions. If the stack set update does not include
+	// changes to the template or parameters, CloudFormation updates the stack instances
+	// in the specified accounts and Regions, while leaving all other stack instances
+	// with their existing stack instance status.
+	DeploymentTargets *DeploymentTargets `type:"structure"`
 
 	// A brief description of updates that you are making.
 	Description *string `min:"1" type:"string"`
 
 	// The name of the IAM execution role to use to update the stack set. If you
-	// do not specify an execution role, AWS CloudFormation uses the AWSCloudFormationStackSetExecutionRole
+	// do not specify an execution role, CloudFormation uses the AWSCloudFormationStackSetExecutionRole
 	// role for the stack set operation.
 	//
 	// Specify an IAM role only if you are using customized execution roles to control
 	// which stack resources users and groups can include in their stack sets.
 	//
-	// If you specify a customized execution role, AWS CloudFormation uses that
-	// role to update the stack. If you do not specify a customized execution role,
-	// AWS CloudFormation performs the update using the role previously associated
-	// with the stack set, so long as you have permissions to perform operations
-	// on the stack set.
+	// If you specify a customized execution role, CloudFormation uses that role
+	// to update the stack. If you do not specify a customized execution role, CloudFormation
+	// performs the update using the role previously associated with the stack set,
+	// so long as you have permissions to perform operations on the stack set.
 	ExecutionRoleName *string `min:"1" type:"string"`
 
 	// The unique ID for this stack set operation.
 	//
-	// The operation ID also functions as an idempotency token, to ensure that AWS
-	// CloudFormation performs the stack set operation only once, even if you retry
-	// the request multiple times. You might retry stack set operation requests
-	// to ensure that AWS CloudFormation successfully received them.
+	// The operation ID also functions as an idempotency token, to ensure that CloudFormation
+	// performs the stack set operation only once, even if you retry the request
+	// multiple times. You might retry stack set operation requests to ensure that
+	// CloudFormation successfully received them.
 	//
-	// If you don't specify an operation ID, AWS CloudFormation generates one automatically.
+	// If you don't specify an operation ID, CloudFormation generates one automatically.
 	//
 	// Repeating this stack set operation with a new operation ID retries all stack
 	// instances whose status is OUTDATED.
 	OperationId *string `min:"1" type:"string" idempotencyToken:"true"`
 
-	// Preferences for how AWS CloudFormation performs this stack set operation.
+	// Preferences for how CloudFormation performs this stack set operation.
 	OperationPreferences *StackSetOperationPreferences `type:"structure"`
 
 	// A list of input parameters for the stack set template.
 	Parameters []*Parameter `type:"list"`
 
-	// The regions in which to update associated stack instances. If you specify
-	// regions, you must also specify accounts in which to update stack set instances.
+	// Describes how the IAM roles required for stack set operations are created.
+	// You cannot modify PermissionModel if there are stack instances associated
+	// with your stack set.
+	//
+	//    * With self-managed permissions, you must create the administrator and
+	//    execution roles required to deploy to target accounts. For more information,
+	//    see Grant Self-Managed Stack Set Permissions (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-prereqs-self-managed.html).
+	//
+	//    * With service-managed permissions, StackSets automatically creates the
+	//    IAM roles required to deploy to accounts managed by Organizations. For
+	//    more information, see Grant Service-Managed Stack Set Permissions (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-prereqs-service-managed.html).
+	PermissionModel *string `type:"string" enum:"PermissionModels"`
+
+	// The Regions in which to update associated stack instances. If you specify
+	// Regions, you must also specify accounts in which to update stack set instances.
 	//
 	// To update all the stack instances associated with this stack set, do not
 	// specify the Accounts or Regions properties.
 	//
 	// If the stack set update includes changes to the template (that is, if the
 	// TemplateBody or TemplateURL properties are specified), or the Parameters
-	// property, AWS CloudFormation marks all stack instances with a status of OUTDATED
-	// prior to updating the stack instances in the specified accounts and regions.
+	// property, CloudFormation marks all stack instances with a status of OUTDATED
+	// prior to updating the stack instances in the specified accounts and Regions.
 	// If the stack set update does not include changes to the template or parameters,
-	// AWS CloudFormation updates the stack instances in the specified accounts
-	// and regions, while leaving all other stack instances with their existing
-	// stack instance status.
+	// CloudFormation updates the stack instances in the specified accounts and
+	// Regions, while leaving all other stack instances with their existing stack
+	// instance status.
 	Regions []*string `type:"list"`
 
 	// The name or unique ID of the stack set that you want to update.
@@ -12799,14 +19929,14 @@ type UpdateStackSetInput struct {
 	StackSetName *string `type:"string" required:"true"`
 
 	// The key-value pairs to associate with this stack set and the stacks created
-	// from it. AWS CloudFormation also propagates these tags to supported resources
+	// from it. CloudFormation also propagates these tags to supported resources
 	// that are created in the stacks. You can specify a maximum number of 50 tags.
 	//
 	// If you specify tags for this parameter, those tags replace any list of tags
 	// that are currently associated with this stack set. This means:
 	//
-	//    * If you don't specify this parameter, AWS CloudFormation doesn't modify
-	//    the stack's tags.
+	//    * If you don't specify this parameter, CloudFormation doesn't modify the
+	//    stack's tags.
 	//
 	//    * If you specify any tags using this parameter, you must specify all the
 	//    tags that you want associated with this stack set, even tags you've specifed
@@ -12815,13 +19945,13 @@ type UpdateStackSetInput struct {
 	//    list of tags are removed from the stack set, and therefore from the stacks
 	//    and resources as well.
 	//
-	//    * If you specify an empty value, AWS CloudFormation removes all currently
+	//    * If you specify an empty value, CloudFormation removes all currently
 	//    associated tags.
 	//
-	// If you specify new tags as part of an UpdateStackSet action, AWS CloudFormation
+	// If you specify new tags as part of an UpdateStackSet action, CloudFormation
 	// checks to see if you have the required IAM permission to tag resources. If
 	// you omit tags that are currently associated with the stack set from the list
-	// of tags you specify, AWS CloudFormation assumes that you want to remove those
+	// of tags you specify, CloudFormation assumes that you want to remove those
 	// tags from the stack set, and checks to see if you have permission to untag
 	// resources. If you don't have the necessary permission(s), the entire UpdateStackSet
 	// action fails with an access denied error, and the stack set is not updated.
@@ -12830,7 +19960,7 @@ type UpdateStackSetInput struct {
 	// The structure that contains the template body, with a minimum length of 1
 	// byte and a maximum length of 51,200 bytes. For more information, see Template
 	// Anatomy (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html)
-	// in the AWS CloudFormation User Guide.
+	// in the CloudFormation User Guide.
 	//
 	// Conditional: You must specify only one of the following parameters: TemplateBody
 	// or TemplateURL—or set UsePreviousTemplate to true.
@@ -12838,8 +19968,9 @@ type UpdateStackSetInput struct {
 
 	// The location of the file that contains the template body. The URL must point
 	// to a template (maximum size: 460,800 bytes) that is located in an Amazon
-	// S3 bucket. For more information, see Template Anatomy (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html)
-	// in the AWS CloudFormation User Guide.
+	// S3 bucket or a Systems Manager document. For more information, see Template
+	// Anatomy (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html)
+	// in the CloudFormation User Guide.
 	//
 	// Conditional: You must specify only one of the following parameters: TemplateBody
 	// or TemplateURL—or set UsePreviousTemplate to true.
@@ -12887,6 +20018,11 @@ func (s *UpdateStackSetInput) Validate() error {
 	if s.TemplateURL != nil && len(*s.TemplateURL) < 1 {
 		invalidParams.Add(request.NewErrParamMinLen("TemplateURL", 1))
 	}
+	if s.DeploymentTargets != nil {
+		if err := s.DeploymentTargets.Validate(); err != nil {
+			invalidParams.AddNested("DeploymentTargets", err.(request.ErrInvalidParams))
+		}
+	}
 	if s.OperationPreferences != nil {
 		if err := s.OperationPreferences.Validate(); err != nil {
 			invalidParams.AddNested("OperationPreferences", err.(request.ErrInvalidParams))
@@ -12921,9 +20057,27 @@ func (s *UpdateStackSetInput) SetAdministrationRoleARN(v string) *UpdateStackSet
 	return s
 }
 
+// SetAutoDeployment sets the AutoDeployment field's value.
+func (s *UpdateStackSetInput) SetAutoDeployment(v *AutoDeployment) *UpdateStackSetInput {
+	s.AutoDeployment = v
+	return s
+}
+
+// SetCallAs sets the CallAs field's value.
+func (s *UpdateStackSetInput) SetCallAs(v string) *UpdateStackSetInput {
+	s.CallAs = &v
+	return s
+}
+
 // SetCapabilities sets the Capabilities field's value.
 func (s *UpdateStackSetInput) SetCapabilities(v []*string) *UpdateStackSetInput {
 	s.Capabilities = v
+	return s
+}
+
+// SetDeploymentTargets sets the DeploymentTargets field's value.
+func (s *UpdateStackSetInput) SetDeploymentTargets(v *DeploymentTargets) *UpdateStackSetInput {
+	s.DeploymentTargets = v
 	return s
 }
 
@@ -12954,6 +20108,12 @@ func (s *UpdateStackSetInput) SetOperationPreferences(v *StackSetOperationPrefer
 // SetParameters sets the Parameters field's value.
 func (s *UpdateStackSetInput) SetParameters(v []*Parameter) *UpdateStackSetInput {
 	s.Parameters = v
+	return s
+}
+
+// SetPermissionModel sets the PermissionModel field's value.
+func (s *UpdateStackSetInput) SetPermissionModel(v string) *UpdateStackSetInput {
+	s.PermissionModel = &v
 	return s
 }
 
@@ -13102,16 +20262,16 @@ type ValidateTemplateInput struct {
 	// Structure containing the template body with a minimum length of 1 byte and
 	// a maximum length of 51,200 bytes. For more information, go to Template Anatomy
 	// (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html)
-	// in the AWS CloudFormation User Guide.
+	// in the CloudFormation User Guide.
 	//
 	// Conditional: You must pass TemplateURL or TemplateBody. If both are passed,
 	// only TemplateBody is used.
 	TemplateBody *string `min:"1" type:"string"`
 
 	// Location of file containing the template body. The URL must point to a template
-	// (max size: 460,800 bytes) that is located in an Amazon S3 bucket. For more
-	// information, go to Template Anatomy (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html)
-	// in the AWS CloudFormation User Guide.
+	// (max size: 460,800 bytes) that is located in an Amazon S3 bucket or a Systems
+	// Manager document. For more information, go to Template Anatomy (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html)
+	// in the CloudFormation User Guide.
 	//
 	// Conditional: You must pass TemplateURL or TemplateBody. If both are passed,
 	// only TemplateBody is used.
@@ -13166,8 +20326,8 @@ type ValidateTemplateOutput struct {
 	// your template; otherwise, those actions return an InsufficientCapabilities
 	// error.
 	//
-	// For more information, see Acknowledging IAM Resources in AWS CloudFormation
-	// Templates (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-template.html#capabilities).
+	// For more information, see Acknowledging IAM Resources in CloudFormation Templates
+	// (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-template.html#capabilities).
 	Capabilities []*string `type:"list"`
 
 	// The list of resources that generated the values in the Capabilities response
@@ -13235,6 +20395,31 @@ const (
 	AccountGateStatusSkipped = "SKIPPED"
 )
 
+// AccountGateStatus_Values returns all elements of the AccountGateStatus enum
+func AccountGateStatus_Values() []string {
+	return []string{
+		AccountGateStatusSucceeded,
+		AccountGateStatusFailed,
+		AccountGateStatusSkipped,
+	}
+}
+
+const (
+	// CallAsSelf is a CallAs enum value
+	CallAsSelf = "SELF"
+
+	// CallAsDelegatedAdmin is a CallAs enum value
+	CallAsDelegatedAdmin = "DELEGATED_ADMIN"
+)
+
+// CallAs_Values returns all elements of the CallAs enum
+func CallAs_Values() []string {
+	return []string{
+		CallAsSelf,
+		CallAsDelegatedAdmin,
+	}
+}
+
 const (
 	// CapabilityCapabilityIam is a Capability enum value
 	CapabilityCapabilityIam = "CAPABILITY_IAM"
@@ -13246,6 +20431,39 @@ const (
 	CapabilityCapabilityAutoExpand = "CAPABILITY_AUTO_EXPAND"
 )
 
+// Capability_Values returns all elements of the Capability enum
+func Capability_Values() []string {
+	return []string{
+		CapabilityCapabilityIam,
+		CapabilityCapabilityNamedIam,
+		CapabilityCapabilityAutoExpand,
+	}
+}
+
+const (
+	// CategoryRegistered is a Category enum value
+	CategoryRegistered = "REGISTERED"
+
+	// CategoryActivated is a Category enum value
+	CategoryActivated = "ACTIVATED"
+
+	// CategoryThirdParty is a Category enum value
+	CategoryThirdParty = "THIRD_PARTY"
+
+	// CategoryAwsTypes is a Category enum value
+	CategoryAwsTypes = "AWS_TYPES"
+)
+
+// Category_Values returns all elements of the Category enum
+func Category_Values() []string {
+	return []string{
+		CategoryRegistered,
+		CategoryActivated,
+		CategoryThirdParty,
+		CategoryAwsTypes,
+	}
+}
+
 const (
 	// ChangeActionAdd is a ChangeAction enum value
 	ChangeActionAdd = "Add"
@@ -13255,7 +20473,24 @@ const (
 
 	// ChangeActionRemove is a ChangeAction enum value
 	ChangeActionRemove = "Remove"
+
+	// ChangeActionImport is a ChangeAction enum value
+	ChangeActionImport = "Import"
+
+	// ChangeActionDynamic is a ChangeAction enum value
+	ChangeActionDynamic = "Dynamic"
 )
+
+// ChangeAction_Values returns all elements of the ChangeAction enum
+func ChangeAction_Values() []string {
+	return []string{
+		ChangeActionAdd,
+		ChangeActionModify,
+		ChangeActionRemove,
+		ChangeActionImport,
+		ChangeActionDynamic,
+	}
+}
 
 const (
 	// ChangeSetStatusCreatePending is a ChangeSetStatus enum value
@@ -13267,12 +20502,35 @@ const (
 	// ChangeSetStatusCreateComplete is a ChangeSetStatus enum value
 	ChangeSetStatusCreateComplete = "CREATE_COMPLETE"
 
+	// ChangeSetStatusDeletePending is a ChangeSetStatus enum value
+	ChangeSetStatusDeletePending = "DELETE_PENDING"
+
+	// ChangeSetStatusDeleteInProgress is a ChangeSetStatus enum value
+	ChangeSetStatusDeleteInProgress = "DELETE_IN_PROGRESS"
+
 	// ChangeSetStatusDeleteComplete is a ChangeSetStatus enum value
 	ChangeSetStatusDeleteComplete = "DELETE_COMPLETE"
+
+	// ChangeSetStatusDeleteFailed is a ChangeSetStatus enum value
+	ChangeSetStatusDeleteFailed = "DELETE_FAILED"
 
 	// ChangeSetStatusFailed is a ChangeSetStatus enum value
 	ChangeSetStatusFailed = "FAILED"
 )
+
+// ChangeSetStatus_Values returns all elements of the ChangeSetStatus enum
+func ChangeSetStatus_Values() []string {
+	return []string{
+		ChangeSetStatusCreatePending,
+		ChangeSetStatusCreateInProgress,
+		ChangeSetStatusCreateComplete,
+		ChangeSetStatusDeletePending,
+		ChangeSetStatusDeleteInProgress,
+		ChangeSetStatusDeleteComplete,
+		ChangeSetStatusDeleteFailed,
+		ChangeSetStatusFailed,
+	}
+}
 
 const (
 	// ChangeSetTypeCreate is a ChangeSetType enum value
@@ -13280,7 +20538,19 @@ const (
 
 	// ChangeSetTypeUpdate is a ChangeSetType enum value
 	ChangeSetTypeUpdate = "UPDATE"
+
+	// ChangeSetTypeImport is a ChangeSetType enum value
+	ChangeSetTypeImport = "IMPORT"
 )
+
+// ChangeSetType_Values returns all elements of the ChangeSetType enum
+func ChangeSetType_Values() []string {
+	return []string{
+		ChangeSetTypeCreate,
+		ChangeSetTypeUpdate,
+		ChangeSetTypeImport,
+	}
+}
 
 const (
 	// ChangeSourceResourceReference is a ChangeSource enum value
@@ -13299,10 +20569,44 @@ const (
 	ChangeSourceAutomatic = "Automatic"
 )
 
+// ChangeSource_Values returns all elements of the ChangeSource enum
+func ChangeSource_Values() []string {
+	return []string{
+		ChangeSourceResourceReference,
+		ChangeSourceParameterReference,
+		ChangeSourceResourceAttribute,
+		ChangeSourceDirectModification,
+		ChangeSourceAutomatic,
+	}
+}
+
 const (
 	// ChangeTypeResource is a ChangeType enum value
 	ChangeTypeResource = "Resource"
 )
+
+// ChangeType_Values returns all elements of the ChangeType enum
+func ChangeType_Values() []string {
+	return []string{
+		ChangeTypeResource,
+	}
+}
+
+const (
+	// DeprecatedStatusLive is a DeprecatedStatus enum value
+	DeprecatedStatusLive = "LIVE"
+
+	// DeprecatedStatusDeprecated is a DeprecatedStatus enum value
+	DeprecatedStatusDeprecated = "DEPRECATED"
+)
+
+// DeprecatedStatus_Values returns all elements of the DeprecatedStatus enum
+func DeprecatedStatus_Values() []string {
+	return []string{
+		DeprecatedStatusLive,
+		DeprecatedStatusDeprecated,
+	}
+}
 
 const (
 	// DifferenceTypeAdd is a DifferenceType enum value
@@ -13315,6 +20619,15 @@ const (
 	DifferenceTypeNotEqual = "NOT_EQUAL"
 )
 
+// DifferenceType_Values returns all elements of the DifferenceType enum
+func DifferenceType_Values() []string {
+	return []string{
+		DifferenceTypeAdd,
+		DifferenceTypeRemove,
+		DifferenceTypeNotEqual,
+	}
+}
+
 const (
 	// EvaluationTypeStatic is a EvaluationType enum value
 	EvaluationTypeStatic = "Static"
@@ -13322,6 +20635,14 @@ const (
 	// EvaluationTypeDynamic is a EvaluationType enum value
 	EvaluationTypeDynamic = "Dynamic"
 )
+
+// EvaluationType_Values returns all elements of the EvaluationType enum
+func EvaluationType_Values() []string {
+	return []string{
+		EvaluationTypeStatic,
+		EvaluationTypeDynamic,
+	}
+}
 
 const (
 	// ExecutionStatusUnavailable is a ExecutionStatus enum value
@@ -13343,6 +20664,106 @@ const (
 	ExecutionStatusObsolete = "OBSOLETE"
 )
 
+// ExecutionStatus_Values returns all elements of the ExecutionStatus enum
+func ExecutionStatus_Values() []string {
+	return []string{
+		ExecutionStatusUnavailable,
+		ExecutionStatusAvailable,
+		ExecutionStatusExecuteInProgress,
+		ExecutionStatusExecuteComplete,
+		ExecutionStatusExecuteFailed,
+		ExecutionStatusObsolete,
+	}
+}
+
+const (
+	// HandlerErrorCodeNotUpdatable is a HandlerErrorCode enum value
+	HandlerErrorCodeNotUpdatable = "NotUpdatable"
+
+	// HandlerErrorCodeInvalidRequest is a HandlerErrorCode enum value
+	HandlerErrorCodeInvalidRequest = "InvalidRequest"
+
+	// HandlerErrorCodeAccessDenied is a HandlerErrorCode enum value
+	HandlerErrorCodeAccessDenied = "AccessDenied"
+
+	// HandlerErrorCodeInvalidCredentials is a HandlerErrorCode enum value
+	HandlerErrorCodeInvalidCredentials = "InvalidCredentials"
+
+	// HandlerErrorCodeAlreadyExists is a HandlerErrorCode enum value
+	HandlerErrorCodeAlreadyExists = "AlreadyExists"
+
+	// HandlerErrorCodeNotFound is a HandlerErrorCode enum value
+	HandlerErrorCodeNotFound = "NotFound"
+
+	// HandlerErrorCodeResourceConflict is a HandlerErrorCode enum value
+	HandlerErrorCodeResourceConflict = "ResourceConflict"
+
+	// HandlerErrorCodeThrottling is a HandlerErrorCode enum value
+	HandlerErrorCodeThrottling = "Throttling"
+
+	// HandlerErrorCodeServiceLimitExceeded is a HandlerErrorCode enum value
+	HandlerErrorCodeServiceLimitExceeded = "ServiceLimitExceeded"
+
+	// HandlerErrorCodeNotStabilized is a HandlerErrorCode enum value
+	HandlerErrorCodeNotStabilized = "NotStabilized"
+
+	// HandlerErrorCodeGeneralServiceException is a HandlerErrorCode enum value
+	HandlerErrorCodeGeneralServiceException = "GeneralServiceException"
+
+	// HandlerErrorCodeServiceInternalError is a HandlerErrorCode enum value
+	HandlerErrorCodeServiceInternalError = "ServiceInternalError"
+
+	// HandlerErrorCodeNetworkFailure is a HandlerErrorCode enum value
+	HandlerErrorCodeNetworkFailure = "NetworkFailure"
+
+	// HandlerErrorCodeInternalFailure is a HandlerErrorCode enum value
+	HandlerErrorCodeInternalFailure = "InternalFailure"
+
+	// HandlerErrorCodeInvalidTypeConfiguration is a HandlerErrorCode enum value
+	HandlerErrorCodeInvalidTypeConfiguration = "InvalidTypeConfiguration"
+)
+
+// HandlerErrorCode_Values returns all elements of the HandlerErrorCode enum
+func HandlerErrorCode_Values() []string {
+	return []string{
+		HandlerErrorCodeNotUpdatable,
+		HandlerErrorCodeInvalidRequest,
+		HandlerErrorCodeAccessDenied,
+		HandlerErrorCodeInvalidCredentials,
+		HandlerErrorCodeAlreadyExists,
+		HandlerErrorCodeNotFound,
+		HandlerErrorCodeResourceConflict,
+		HandlerErrorCodeThrottling,
+		HandlerErrorCodeServiceLimitExceeded,
+		HandlerErrorCodeNotStabilized,
+		HandlerErrorCodeGeneralServiceException,
+		HandlerErrorCodeServiceInternalError,
+		HandlerErrorCodeNetworkFailure,
+		HandlerErrorCodeInternalFailure,
+		HandlerErrorCodeInvalidTypeConfiguration,
+	}
+}
+
+const (
+	// IdentityProviderAwsMarketplace is a IdentityProvider enum value
+	IdentityProviderAwsMarketplace = "AWS_Marketplace"
+
+	// IdentityProviderGitHub is a IdentityProvider enum value
+	IdentityProviderGitHub = "GitHub"
+
+	// IdentityProviderBitbucket is a IdentityProvider enum value
+	IdentityProviderBitbucket = "Bitbucket"
+)
+
+// IdentityProvider_Values returns all elements of the IdentityProvider enum
+func IdentityProvider_Values() []string {
+	return []string{
+		IdentityProviderAwsMarketplace,
+		IdentityProviderGitHub,
+		IdentityProviderBitbucket,
+	}
+}
+
 const (
 	// OnFailureDoNothing is a OnFailure enum value
 	OnFailureDoNothing = "DO_NOTHING"
@@ -13353,6 +20774,143 @@ const (
 	// OnFailureDelete is a OnFailure enum value
 	OnFailureDelete = "DELETE"
 )
+
+// OnFailure_Values returns all elements of the OnFailure enum
+func OnFailure_Values() []string {
+	return []string{
+		OnFailureDoNothing,
+		OnFailureRollback,
+		OnFailureDelete,
+	}
+}
+
+const (
+	// OperationStatusPending is a OperationStatus enum value
+	OperationStatusPending = "PENDING"
+
+	// OperationStatusInProgress is a OperationStatus enum value
+	OperationStatusInProgress = "IN_PROGRESS"
+
+	// OperationStatusSuccess is a OperationStatus enum value
+	OperationStatusSuccess = "SUCCESS"
+
+	// OperationStatusFailed is a OperationStatus enum value
+	OperationStatusFailed = "FAILED"
+)
+
+// OperationStatus_Values returns all elements of the OperationStatus enum
+func OperationStatus_Values() []string {
+	return []string{
+		OperationStatusPending,
+		OperationStatusInProgress,
+		OperationStatusSuccess,
+		OperationStatusFailed,
+	}
+}
+
+const (
+	// PermissionModelsServiceManaged is a PermissionModels enum value
+	PermissionModelsServiceManaged = "SERVICE_MANAGED"
+
+	// PermissionModelsSelfManaged is a PermissionModels enum value
+	PermissionModelsSelfManaged = "SELF_MANAGED"
+)
+
+// PermissionModels_Values returns all elements of the PermissionModels enum
+func PermissionModels_Values() []string {
+	return []string{
+		PermissionModelsServiceManaged,
+		PermissionModelsSelfManaged,
+	}
+}
+
+const (
+	// ProvisioningTypeNonProvisionable is a ProvisioningType enum value
+	ProvisioningTypeNonProvisionable = "NON_PROVISIONABLE"
+
+	// ProvisioningTypeImmutable is a ProvisioningType enum value
+	ProvisioningTypeImmutable = "IMMUTABLE"
+
+	// ProvisioningTypeFullyMutable is a ProvisioningType enum value
+	ProvisioningTypeFullyMutable = "FULLY_MUTABLE"
+)
+
+// ProvisioningType_Values returns all elements of the ProvisioningType enum
+func ProvisioningType_Values() []string {
+	return []string{
+		ProvisioningTypeNonProvisionable,
+		ProvisioningTypeImmutable,
+		ProvisioningTypeFullyMutable,
+	}
+}
+
+const (
+	// PublisherStatusVerified is a PublisherStatus enum value
+	PublisherStatusVerified = "VERIFIED"
+
+	// PublisherStatusUnverified is a PublisherStatus enum value
+	PublisherStatusUnverified = "UNVERIFIED"
+)
+
+// PublisherStatus_Values returns all elements of the PublisherStatus enum
+func PublisherStatus_Values() []string {
+	return []string{
+		PublisherStatusVerified,
+		PublisherStatusUnverified,
+	}
+}
+
+const (
+	// RegionConcurrencyTypeSequential is a RegionConcurrencyType enum value
+	RegionConcurrencyTypeSequential = "SEQUENTIAL"
+
+	// RegionConcurrencyTypeParallel is a RegionConcurrencyType enum value
+	RegionConcurrencyTypeParallel = "PARALLEL"
+)
+
+// RegionConcurrencyType_Values returns all elements of the RegionConcurrencyType enum
+func RegionConcurrencyType_Values() []string {
+	return []string{
+		RegionConcurrencyTypeSequential,
+		RegionConcurrencyTypeParallel,
+	}
+}
+
+const (
+	// RegistrationStatusComplete is a RegistrationStatus enum value
+	RegistrationStatusComplete = "COMPLETE"
+
+	// RegistrationStatusInProgress is a RegistrationStatus enum value
+	RegistrationStatusInProgress = "IN_PROGRESS"
+
+	// RegistrationStatusFailed is a RegistrationStatus enum value
+	RegistrationStatusFailed = "FAILED"
+)
+
+// RegistrationStatus_Values returns all elements of the RegistrationStatus enum
+func RegistrationStatus_Values() []string {
+	return []string{
+		RegistrationStatusComplete,
+		RegistrationStatusInProgress,
+		RegistrationStatusFailed,
+	}
+}
+
+const (
+	// RegistryTypeResource is a RegistryType enum value
+	RegistryTypeResource = "RESOURCE"
+
+	// RegistryTypeModule is a RegistryType enum value
+	RegistryTypeModule = "MODULE"
+)
+
+// RegistryType_Values returns all elements of the RegistryType enum
+func RegistryType_Values() []string {
+	return []string{
+		RegistryTypeResource,
+		RegistryTypeModule,
+	}
+}
 
 const (
 	// ReplacementTrue is a Replacement enum value
@@ -13365,6 +20923,15 @@ const (
 	ReplacementConditional = "Conditional"
 )
 
+// Replacement_Values returns all elements of the Replacement enum
+func Replacement_Values() []string {
+	return []string{
+		ReplacementTrue,
+		ReplacementFalse,
+		ReplacementConditional,
+	}
+}
+
 const (
 	// RequiresRecreationNever is a RequiresRecreation enum value
 	RequiresRecreationNever = "Never"
@@ -13375,6 +20942,15 @@ const (
 	// RequiresRecreationAlways is a RequiresRecreation enum value
 	RequiresRecreationAlways = "Always"
 )
+
+// RequiresRecreation_Values returns all elements of the RequiresRecreation enum
+func RequiresRecreation_Values() []string {
+	return []string{
+		RequiresRecreationNever,
+		RequiresRecreationConditionally,
+		RequiresRecreationAlways,
+	}
+}
 
 const (
 	// ResourceAttributeProperties is a ResourceAttribute enum value
@@ -13396,6 +20972,18 @@ const (
 	ResourceAttributeTags = "Tags"
 )
 
+// ResourceAttribute_Values returns all elements of the ResourceAttribute enum
+func ResourceAttribute_Values() []string {
+	return []string{
+		ResourceAttributeProperties,
+		ResourceAttributeMetadata,
+		ResourceAttributeCreationPolicy,
+		ResourceAttributeUpdatePolicy,
+		ResourceAttributeDeletionPolicy,
+		ResourceAttributeTags,
+	}
+}
+
 const (
 	// ResourceSignalStatusSuccess is a ResourceSignalStatus enum value
 	ResourceSignalStatusSuccess = "SUCCESS"
@@ -13403,6 +20991,14 @@ const (
 	// ResourceSignalStatusFailure is a ResourceSignalStatus enum value
 	ResourceSignalStatusFailure = "FAILURE"
 )
+
+// ResourceSignalStatus_Values returns all elements of the ResourceSignalStatus enum
+func ResourceSignalStatus_Values() []string {
+	return []string{
+		ResourceSignalStatusSuccess,
+		ResourceSignalStatusFailure,
+	}
+}
 
 const (
 	// ResourceStatusCreateInProgress is a ResourceStatus enum value
@@ -13434,7 +21030,47 @@ const (
 
 	// ResourceStatusUpdateComplete is a ResourceStatus enum value
 	ResourceStatusUpdateComplete = "UPDATE_COMPLETE"
+
+	// ResourceStatusImportFailed is a ResourceStatus enum value
+	ResourceStatusImportFailed = "IMPORT_FAILED"
+
+	// ResourceStatusImportComplete is a ResourceStatus enum value
+	ResourceStatusImportComplete = "IMPORT_COMPLETE"
+
+	// ResourceStatusImportInProgress is a ResourceStatus enum value
+	ResourceStatusImportInProgress = "IMPORT_IN_PROGRESS"
+
+	// ResourceStatusImportRollbackInProgress is a ResourceStatus enum value
+	ResourceStatusImportRollbackInProgress = "IMPORT_ROLLBACK_IN_PROGRESS"
+
+	// ResourceStatusImportRollbackFailed is a ResourceStatus enum value
+	ResourceStatusImportRollbackFailed = "IMPORT_ROLLBACK_FAILED"
+
+	// ResourceStatusImportRollbackComplete is a ResourceStatus enum value
+	ResourceStatusImportRollbackComplete = "IMPORT_ROLLBACK_COMPLETE"
 )
+
+// ResourceStatus_Values returns all elements of the ResourceStatus enum
+func ResourceStatus_Values() []string {
+	return []string{
+		ResourceStatusCreateInProgress,
+		ResourceStatusCreateFailed,
+		ResourceStatusCreateComplete,
+		ResourceStatusDeleteInProgress,
+		ResourceStatusDeleteFailed,
+		ResourceStatusDeleteComplete,
+		ResourceStatusDeleteSkipped,
+		ResourceStatusUpdateInProgress,
+		ResourceStatusUpdateFailed,
+		ResourceStatusUpdateComplete,
+		ResourceStatusImportFailed,
+		ResourceStatusImportComplete,
+		ResourceStatusImportInProgress,
+		ResourceStatusImportRollbackInProgress,
+		ResourceStatusImportRollbackFailed,
+		ResourceStatusImportRollbackComplete,
+	}
+}
 
 const (
 	// StackDriftDetectionStatusDetectionInProgress is a StackDriftDetectionStatus enum value
@@ -13446,6 +21082,15 @@ const (
 	// StackDriftDetectionStatusDetectionComplete is a StackDriftDetectionStatus enum value
 	StackDriftDetectionStatusDetectionComplete = "DETECTION_COMPLETE"
 )
+
+// StackDriftDetectionStatus_Values returns all elements of the StackDriftDetectionStatus enum
+func StackDriftDetectionStatus_Values() []string {
+	return []string{
+		StackDriftDetectionStatusDetectionInProgress,
+		StackDriftDetectionStatusDetectionFailed,
+		StackDriftDetectionStatusDetectionComplete,
+	}
+}
 
 const (
 	// StackDriftStatusDrifted is a StackDriftStatus enum value
@@ -13461,6 +21106,60 @@ const (
 	StackDriftStatusNotChecked = "NOT_CHECKED"
 )
 
+// StackDriftStatus_Values returns all elements of the StackDriftStatus enum
+func StackDriftStatus_Values() []string {
+	return []string{
+		StackDriftStatusDrifted,
+		StackDriftStatusInSync,
+		StackDriftStatusUnknown,
+		StackDriftStatusNotChecked,
+	}
+}
+
+const (
+	// StackInstanceDetailedStatusPending is a StackInstanceDetailedStatus enum value
+	StackInstanceDetailedStatusPending = "PENDING"
+
+	// StackInstanceDetailedStatusRunning is a StackInstanceDetailedStatus enum value
+	StackInstanceDetailedStatusRunning = "RUNNING"
+
+	// StackInstanceDetailedStatusSucceeded is a StackInstanceDetailedStatus enum value
+	StackInstanceDetailedStatusSucceeded = "SUCCEEDED"
+
+	// StackInstanceDetailedStatusFailed is a StackInstanceDetailedStatus enum value
+	StackInstanceDetailedStatusFailed = "FAILED"
+
+	// StackInstanceDetailedStatusCancelled is a StackInstanceDetailedStatus enum value
+	StackInstanceDetailedStatusCancelled = "CANCELLED"
+
+	// StackInstanceDetailedStatusInoperable is a StackInstanceDetailedStatus enum value
+	StackInstanceDetailedStatusInoperable = "INOPERABLE"
+)
+
+// StackInstanceDetailedStatus_Values returns all elements of the StackInstanceDetailedStatus enum
+func StackInstanceDetailedStatus_Values() []string {
+	return []string{
+		StackInstanceDetailedStatusPending,
+		StackInstanceDetailedStatusRunning,
+		StackInstanceDetailedStatusSucceeded,
+		StackInstanceDetailedStatusFailed,
+		StackInstanceDetailedStatusCancelled,
+		StackInstanceDetailedStatusInoperable,
+	}
+}
+
+const (
+	// StackInstanceFilterNameDetailedStatus is a StackInstanceFilterName enum value
+	StackInstanceFilterNameDetailedStatus = "DETAILED_STATUS"
+)
+
+// StackInstanceFilterName_Values returns all elements of the StackInstanceFilterName enum
+func StackInstanceFilterName_Values() []string {
+	return []string{
+		StackInstanceFilterNameDetailedStatus,
+	}
+}
+
 const (
 	// StackInstanceStatusCurrent is a StackInstanceStatus enum value
 	StackInstanceStatusCurrent = "CURRENT"
@@ -13471,6 +21170,15 @@ const (
 	// StackInstanceStatusInoperable is a StackInstanceStatus enum value
 	StackInstanceStatusInoperable = "INOPERABLE"
 )
+
+// StackInstanceStatus_Values returns all elements of the StackInstanceStatus enum
+func StackInstanceStatus_Values() []string {
+	return []string{
+		StackInstanceStatusCurrent,
+		StackInstanceStatusOutdated,
+		StackInstanceStatusInoperable,
+	}
+}
 
 const (
 	// StackResourceDriftStatusInSync is a StackResourceDriftStatus enum value
@@ -13486,6 +21194,64 @@ const (
 	StackResourceDriftStatusNotChecked = "NOT_CHECKED"
 )
 
+// StackResourceDriftStatus_Values returns all elements of the StackResourceDriftStatus enum
+func StackResourceDriftStatus_Values() []string {
+	return []string{
+		StackResourceDriftStatusInSync,
+		StackResourceDriftStatusModified,
+		StackResourceDriftStatusDeleted,
+		StackResourceDriftStatusNotChecked,
+	}
+}
+
+const (
+	// StackSetDriftDetectionStatusCompleted is a StackSetDriftDetectionStatus enum value
+	StackSetDriftDetectionStatusCompleted = "COMPLETED"
+
+	// StackSetDriftDetectionStatusFailed is a StackSetDriftDetectionStatus enum value
+	StackSetDriftDetectionStatusFailed = "FAILED"
+
+	// StackSetDriftDetectionStatusPartialSuccess is a StackSetDriftDetectionStatus enum value
+	StackSetDriftDetectionStatusPartialSuccess = "PARTIAL_SUCCESS"
+
+	// StackSetDriftDetectionStatusInProgress is a StackSetDriftDetectionStatus enum value
+	StackSetDriftDetectionStatusInProgress = "IN_PROGRESS"
+
+	// StackSetDriftDetectionStatusStopped is a StackSetDriftDetectionStatus enum value
+	StackSetDriftDetectionStatusStopped = "STOPPED"
+)
+
+// StackSetDriftDetectionStatus_Values returns all elements of the StackSetDriftDetectionStatus enum
+func StackSetDriftDetectionStatus_Values() []string {
+	return []string{
+		StackSetDriftDetectionStatusCompleted,
+		StackSetDriftDetectionStatusFailed,
+		StackSetDriftDetectionStatusPartialSuccess,
+		StackSetDriftDetectionStatusInProgress,
+		StackSetDriftDetectionStatusStopped,
+	}
+}
+
+const (
+	// StackSetDriftStatusDrifted is a StackSetDriftStatus enum value
+	StackSetDriftStatusDrifted = "DRIFTED"
+
+	// StackSetDriftStatusInSync is a StackSetDriftStatus enum value
+	StackSetDriftStatusInSync = "IN_SYNC"
+
+	// StackSetDriftStatusNotChecked is a StackSetDriftStatus enum value
+	StackSetDriftStatusNotChecked = "NOT_CHECKED"
+)
+
+// StackSetDriftStatus_Values returns all elements of the StackSetDriftStatus enum
+func StackSetDriftStatus_Values() []string {
+	return []string{
+		StackSetDriftStatusDrifted,
+		StackSetDriftStatusInSync,
+		StackSetDriftStatusNotChecked,
+	}
+}
+
 const (
 	// StackSetOperationActionCreate is a StackSetOperationAction enum value
 	StackSetOperationActionCreate = "CREATE"
@@ -13495,7 +21261,20 @@ const (
 
 	// StackSetOperationActionDelete is a StackSetOperationAction enum value
 	StackSetOperationActionDelete = "DELETE"
+
+	// StackSetOperationActionDetectDrift is a StackSetOperationAction enum value
+	StackSetOperationActionDetectDrift = "DETECT_DRIFT"
 )
+
+// StackSetOperationAction_Values returns all elements of the StackSetOperationAction enum
+func StackSetOperationAction_Values() []string {
+	return []string{
+		StackSetOperationActionCreate,
+		StackSetOperationActionUpdate,
+		StackSetOperationActionDelete,
+		StackSetOperationActionDetectDrift,
+	}
+}
 
 const (
 	// StackSetOperationResultStatusPending is a StackSetOperationResultStatus enum value
@@ -13514,6 +21293,17 @@ const (
 	StackSetOperationResultStatusCancelled = "CANCELLED"
 )
 
+// StackSetOperationResultStatus_Values returns all elements of the StackSetOperationResultStatus enum
+func StackSetOperationResultStatus_Values() []string {
+	return []string{
+		StackSetOperationResultStatusPending,
+		StackSetOperationResultStatusRunning,
+		StackSetOperationResultStatusSucceeded,
+		StackSetOperationResultStatusFailed,
+		StackSetOperationResultStatusCancelled,
+	}
+}
+
 const (
 	// StackSetOperationStatusRunning is a StackSetOperationStatus enum value
 	StackSetOperationStatusRunning = "RUNNING"
@@ -13529,7 +21319,22 @@ const (
 
 	// StackSetOperationStatusStopped is a StackSetOperationStatus enum value
 	StackSetOperationStatusStopped = "STOPPED"
+
+	// StackSetOperationStatusQueued is a StackSetOperationStatus enum value
+	StackSetOperationStatusQueued = "QUEUED"
 )
+
+// StackSetOperationStatus_Values returns all elements of the StackSetOperationStatus enum
+func StackSetOperationStatus_Values() []string {
+	return []string{
+		StackSetOperationStatusRunning,
+		StackSetOperationStatusSucceeded,
+		StackSetOperationStatusFailed,
+		StackSetOperationStatusStopping,
+		StackSetOperationStatusStopped,
+		StackSetOperationStatusQueued,
+	}
+}
 
 const (
 	// StackSetStatusActive is a StackSetStatus enum value
@@ -13538,6 +21343,14 @@ const (
 	// StackSetStatusDeleted is a StackSetStatus enum value
 	StackSetStatusDeleted = "DELETED"
 )
+
+// StackSetStatus_Values returns all elements of the StackSetStatus enum
+func StackSetStatus_Values() []string {
+	return []string{
+		StackSetStatusActive,
+		StackSetStatusDeleted,
+	}
+}
 
 const (
 	// StackStatusCreateInProgress is a StackStatus enum value
@@ -13590,7 +21403,50 @@ const (
 
 	// StackStatusReviewInProgress is a StackStatus enum value
 	StackStatusReviewInProgress = "REVIEW_IN_PROGRESS"
+
+	// StackStatusImportInProgress is a StackStatus enum value
+	StackStatusImportInProgress = "IMPORT_IN_PROGRESS"
+
+	// StackStatusImportComplete is a StackStatus enum value
+	StackStatusImportComplete = "IMPORT_COMPLETE"
+
+	// StackStatusImportRollbackInProgress is a StackStatus enum value
+	StackStatusImportRollbackInProgress = "IMPORT_ROLLBACK_IN_PROGRESS"
+
+	// StackStatusImportRollbackFailed is a StackStatus enum value
+	StackStatusImportRollbackFailed = "IMPORT_ROLLBACK_FAILED"
+
+	// StackStatusImportRollbackComplete is a StackStatus enum value
+	StackStatusImportRollbackComplete = "IMPORT_ROLLBACK_COMPLETE"
 )
+
+// StackStatus_Values returns all elements of the StackStatus enum
+func StackStatus_Values() []string {
+	return []string{
+		StackStatusCreateInProgress,
+		StackStatusCreateFailed,
+		StackStatusCreateComplete,
+		StackStatusRollbackInProgress,
+		StackStatusRollbackFailed,
+		StackStatusRollbackComplete,
+		StackStatusDeleteInProgress,
+		StackStatusDeleteFailed,
+		StackStatusDeleteComplete,
+		StackStatusUpdateInProgress,
+		StackStatusUpdateCompleteCleanupInProgress,
+		StackStatusUpdateComplete,
+		StackStatusUpdateRollbackInProgress,
+		StackStatusUpdateRollbackFailed,
+		StackStatusUpdateRollbackCompleteCleanupInProgress,
+		StackStatusUpdateRollbackComplete,
+		StackStatusReviewInProgress,
+		StackStatusImportInProgress,
+		StackStatusImportComplete,
+		StackStatusImportRollbackInProgress,
+		StackStatusImportRollbackFailed,
+		StackStatusImportRollbackComplete,
+	}
+}
 
 const (
 	// TemplateStageOriginal is a TemplateStage enum value
@@ -13599,3 +21455,83 @@ const (
 	// TemplateStageProcessed is a TemplateStage enum value
 	TemplateStageProcessed = "Processed"
 )
+
+// TemplateStage_Values returns all elements of the TemplateStage enum
+func TemplateStage_Values() []string {
+	return []string{
+		TemplateStageOriginal,
+		TemplateStageProcessed,
+	}
+}
+
+const (
+	// ThirdPartyTypeResource is a ThirdPartyType enum value
+	ThirdPartyTypeResource = "RESOURCE"
+
+	// ThirdPartyTypeModule is a ThirdPartyType enum value
+	ThirdPartyTypeModule = "MODULE"
+)
+
+// ThirdPartyType_Values returns all elements of the ThirdPartyType enum
+func ThirdPartyType_Values() []string {
+	return []string{
+		ThirdPartyTypeResource,
+		ThirdPartyTypeModule,
+	}
+}
+
+const (
+	// TypeTestsStatusPassed is a TypeTestsStatus enum value
+	TypeTestsStatusPassed = "PASSED"
+
+	// TypeTestsStatusFailed is a TypeTestsStatus enum value
+	TypeTestsStatusFailed = "FAILED"
+
+	// TypeTestsStatusInProgress is a TypeTestsStatus enum value
+	TypeTestsStatusInProgress = "IN_PROGRESS"
+
+	// TypeTestsStatusNotTested is a TypeTestsStatus enum value
+	TypeTestsStatusNotTested = "NOT_TESTED"
+)
+
+// TypeTestsStatus_Values returns all elements of the TypeTestsStatus enum
+func TypeTestsStatus_Values() []string {
+	return []string{
+		TypeTestsStatusPassed,
+		TypeTestsStatusFailed,
+		TypeTestsStatusInProgress,
+		TypeTestsStatusNotTested,
+	}
+}
+
+const (
+	// VersionBumpMajor is a VersionBump enum value
+	VersionBumpMajor = "MAJOR"
+
+	// VersionBumpMinor is a VersionBump enum value
+	VersionBumpMinor = "MINOR"
+)
+
+// VersionBump_Values returns all elements of the VersionBump enum
+func VersionBump_Values() []string {
+	return []string{
+		VersionBumpMajor,
+		VersionBumpMinor,
+	}
+}
+
+const (
+	// VisibilityPublic is a Visibility enum value
+	VisibilityPublic = "PUBLIC"
+
+	// VisibilityPrivate is a Visibility enum value
+	VisibilityPrivate = "PRIVATE"
+)
+
+// Visibility_Values returns all elements of the Visibility enum
+func Visibility_Values() []string {
+	return []string{
+		VisibilityPublic,
+		VisibilityPrivate,
+	}
+}

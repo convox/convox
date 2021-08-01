@@ -15,7 +15,7 @@ require (
 	github.com/Microsoft/hcsshim v0.8.7-0.20190801035247-8694eade7dd3 // indirect
 	github.com/PuerkitoBio/goquery v1.5.0
 	github.com/algolia/algoliasearch-client-go v2.25.0+incompatible
-	github.com/aws/aws-sdk-go v1.21.10
+	github.com/aws/aws-sdk-go v1.40.12
 	github.com/convox/changes v0.0.0-20191105034405-8c0df759a3b3
 	github.com/convox/exec v0.0.0-20180905012044-cc13d277f897
 	github.com/convox/logger v0.0.0-20180522214415-e39179955b52
@@ -44,7 +44,7 @@ require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/mattn/go-zglob v0.0.1 // indirect
 	github.com/miekg/dns v1.1.25
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.1
 	github.com/russross/blackfriday v2.0.0+incompatible
 	github.com/stretchr/testify v1.6.1
 	github.com/vektra/mockery v1.1.2
@@ -52,7 +52,7 @@ require (
 	golang.org/x/net v0.0.0-20210726213435-c6fcb2dbf985 // indirect
 	google.golang.org/api v0.52.0
 	google.golang.org/genproto v0.0.0-20210729151513-df9385d47c1b // indirect
-	gopkg.in/yaml.v2 v2.2.4
+	gopkg.in/yaml.v2 v2.2.8
 	k8s.io/api v0.16.6
 	k8s.io/apimachinery v0.16.6
 	k8s.io/client-go v0.16.6
