@@ -1,6 +1,6 @@
 module github.com/convox/convox
 
-go 1.12
+go 1.16
 
 require (
 	cloud.google.com/go v0.38.0
@@ -32,14 +32,14 @@ require (
 	github.com/gobwas/glob v0.2.3
 	github.com/gorilla/mux v1.7.3
 	github.com/gorilla/websocket v1.4.2 // indirect
-	github.com/goware/modvendor v0.1.0
+	github.com/goware/modvendor v0.3.0
 	github.com/headzoo/surf v1.0.0
 	github.com/headzoo/ut v0.0.0-20181013193318-a13b5a7a02ca // indirect
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf
 	github.com/karalabe/xgo v0.0.0-20191115072854-c5ccff8648a7
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
-	github.com/mattn/go-zglob v0.0.1 // indirect
+	github.com/mattn/go-zglob v0.0.3 // indirect
 	github.com/miekg/dns v1.1.25
 	github.com/pkg/errors v0.8.1
 	github.com/russross/blackfriday v2.0.0+incompatible

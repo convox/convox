@@ -17,6 +17,10 @@ var (
 	flags       = flag.NewFlagSet("modvendor", flag.ExitOnError)
 	copyPatFlag = flags.String("copy", "", "copy files matching glob pattern to ./vendor/ (ie. modvendor -copy=\"**/*.c **/*.h **/*.proto\")")
 	verboseFlag = flags.Bool("v", false, "verbose output")
+	includeFlag = flags.String(
+		"include",
+		"",
+		`specifies additional directories to copy into ./vendor/ which are not specified in ./vendor/modules.txt. Multiple directories can be included by comma separation e.g. -include:github.com/a/b/dir1,github.com/a/b/dir1/dir2`)
 )
 
 type Mod struct {
@@ -55,6 +59,7 @@ func main() {
 		fmt.Println("Whoops, -copy argument is empty, nothing to copy.")
 		os.Exit(1)
 	}
+	additionalDirsToInclude := strings.Split(*includeFlag, ",")
 
 	// Parse/process modules.txt file of pkgs
 	f, _ := os.Open(modtxtPath)
@@ -70,6 +75,9 @@ func main() {
 
 		if line[0] == 35 {
 			s := strings.Split(line, " ")
+			if (len(s) != 6 && len(s) != 3) || s[1] == "explicit" {
+				continue
+			}
 
 			mod = &Mod{
 				ImportPath: s[1],
@@ -96,6 +104,12 @@ func main() {
 
 			// Build list of files to module path source to project vendor folder
 			mod.VendorList = buildModVendorList(copyPat, mod)
+			// Append directories we need to also include which may not be in vendor/modules.txt.
+			for _, dir := range additionalDirsToInclude {
+				if strings.HasPrefix(dir, mod.ImportPath) {
+					mod.Pkgs = append(mod.Pkgs, dir)
+				}
+			}
 
 			modules = append(modules, mod)
 
