@@ -43,7 +43,7 @@ resource "aws_eks_cluster" "cluster" {
 
   name     = var.name
   role_arn = aws_iam_role.cluster.arn
-  version  = "1.17"
+  version  = "1.20"
 
   vpc_config {
     endpoint_public_access  = true
