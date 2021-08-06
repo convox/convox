@@ -62,13 +62,15 @@ module "rack" {
     kubernetes = kubernetes
   }
 
-  cluster      = module.cluster.id
-  idle_timeout = var.idle_timeout
-  image        = var.image
-  name         = var.name
-  oidc_arn     = module.cluster.oidc_arn
-  oidc_sub     = module.cluster.oidc_sub
-  release      = local.release
-  subnets      = module.cluster.subnets
-  whitelist    = split(",", var.whitelist)
+  cluster             = module.cluster.id
+  docker_hub_username = var.docker_hub_username
+  docker_hub_password = var.docker_hub_password
+  idle_timeout        = var.idle_timeout
+  image               = var.image
+  name                = var.name
+  oidc_arn            = module.cluster.oidc_arn
+  oidc_sub            = module.cluster.oidc_sub
+  release             = local.release
+  subnets             = module.cluster.subnets
+  whitelist           = split(",", var.whitelist)
 }

@@ -141,7 +141,7 @@ resource "kubernetes_deployment" "metrics" {
         container {
           name              = "metrics-server"
           image             = "k8s.gcr.io/metrics-server-amd64:v0.3.6"
-          image_pull_policy = "Always"
+          image_pull_policy = "IfNotPresent"
 
           volume_mount {
             name       = "tmp-dir"

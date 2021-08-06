@@ -109,7 +109,7 @@ resource "kubernetes_daemonset" "fluentd" {
         container {
           name              = "system"
           image             = var.image
-          image_pull_policy = "Always"
+          image_pull_policy = "IfNotPresent"
 
           env {
             name  = "CLUSTER_NAME"

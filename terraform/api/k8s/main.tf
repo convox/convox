@@ -97,6 +97,7 @@ resource "kubernetes_deployment" "api" {
 
       spec {
         automount_service_account_token = true
+        image_pull_secrets { name = var.docker_hub_authentication }
         service_account_name            = kubernetes_service_account.api.metadata.0.name
         share_process_namespace         = true
 
@@ -105,7 +106,7 @@ resource "kubernetes_deployment" "api" {
           name              = "system"
           args              = ["api"]
           image             = "${var.image}:${var.release}"
-          image_pull_policy = "Always"
+          image_pull_policy = "IfNotPresent"
 
           env {
             name  = "DOMAIN"

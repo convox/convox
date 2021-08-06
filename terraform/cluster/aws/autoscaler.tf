@@ -252,7 +252,7 @@ resource "kubernetes_deployment" "autoscaler" {
 
         container {
           image             = "k8s.gcr.io/cluster-autoscaler:v1.14.7"
-          image_pull_policy = "Always"
+          image_pull_policy = "IfNotPresent"
           name              = "cluster-autoscaler"
 
           command = [
