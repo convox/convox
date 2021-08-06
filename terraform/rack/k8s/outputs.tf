@@ -5,5 +5,5 @@ output "namespace" {
 
 output "docker_hub_authentication" {
   depends_on = [kubernetes_secret.docker_hub_authentication]
-  value      = kubernetes_secret.docker_hub_authentication.metadata[0].name
+  value      = kubernetes_secret.docker_hub_authentication[0].metadata[0].name
 }

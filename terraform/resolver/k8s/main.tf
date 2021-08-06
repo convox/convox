@@ -120,13 +120,13 @@ resource "kubernetes_deployment" "resolver" {
           }
         }
 
+        image_pull_secrets { name = var.docker_hub_authentication }
+
         container {
           name               = "system"
           args               = ["resolver"]
           image              = "${var.image}:${var.release}"
           image_pull_policy  = "IfNotPresent"
-          image_pull_secrets = var.docker_hub_authentication != "" ? [{ name = var.docker_hub_authentication }] : null
-
 
           env {
             name = "NAMESPACE"
