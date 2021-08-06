@@ -102,10 +102,11 @@ resource "kubernetes_deployment" "api" {
 
 
         container {
-          name              = "system"
-          args              = ["api"]
-          image             = "${var.image}:${var.release}"
-          image_pull_policy = "Always"
+          name               = "system"
+          args               = ["api"]
+          image              = "${var.image}:${var.release}"
+          image_pull_policy  = "IfNotPresent"
+          image_pull_secrets = var.docker_hub_authentication != "" ? [{ name = var.docker_hub_authentication }] : null
 
           env {
             name  = "DOMAIN"

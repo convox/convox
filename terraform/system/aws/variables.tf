@@ -6,6 +6,14 @@ variable "cidr" {
   default = "10.1.0.0/16"
 }
 
+variable "docker_hub_username" {
+  default = ""
+}
+
+variable "docker_hub_password" {
+  default = ""
+}
+
 variable "idle_timeout" {
   type    = number
   default = 3600

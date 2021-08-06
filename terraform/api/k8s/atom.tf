@@ -94,10 +94,12 @@ resource "kubernetes_deployment" "atom" {
         priority_class_name             = var.set_priority_class ? "system-cluster-critical" : null
 
         container {
-          name              = "system"
-          args              = ["atom"]
-          image             = "${var.image}:${var.release}"
-          image_pull_policy = "Always"
+          name               = "system"
+          args               = ["atom"]
+          image              = "${var.image}:${var.release}"
+          image_pull_policy  = "IfNotPresent"
+          image_pull_secrets = var.docker_hub_authentication != "" ? [{ name = var.docker_hub_authentication }] : null
+
 
           resources {
             requests {
