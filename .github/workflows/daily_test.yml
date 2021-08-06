@@ -1,7 +1,7 @@
 name: daily test
 
 env:
-  VERSION: 3.0.48 # @TODO: Automate to get the latest stable tag: https://bit.ly/3krkRNN
+  VERSION: 3.0.49 # @TODO: Automate to get the latest stable tag: https://bit.ly/3krkRNN
 
 on:
   schedule:
@@ -17,8 +17,8 @@ jobs:
         provider:
           - aws
           # - azure
-          - do
-          - gcp
+          #- do
+          #- gcp
     steps:
       - name: checkout
         uses: actions/checkout@v1
