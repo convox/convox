@@ -17,9 +17,9 @@ jobs:
       fail-fast: false
       matrix:
         provider:
-          - aws
+          #- aws
           # - azure
-          - do
+          #- do
           - gcp
     steps:
       - name: checkout
