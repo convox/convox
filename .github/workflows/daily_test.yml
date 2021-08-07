@@ -18,8 +18,8 @@ jobs:
         provider:
           - aws
           # - azure
-          #- do
-          #- gcp
+          - do
+          - gcp
     steps:
       - name: checkout
         uses: actions/checkout@v1
