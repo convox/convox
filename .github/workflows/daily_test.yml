@@ -37,7 +37,7 @@ jobs:
       - name: cli
         run: ci/cli.sh
       - name: cli-update
-        run: convox update 
+        run: sudo convox update 
       - name: install
         run: ci/install.sh
       - name: wait
