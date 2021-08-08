@@ -1,7 +1,8 @@
 name: daily test
 
 env:
-  VERSION: 3.0.48 # @TODO: Automate to get the latest stable tag: https://bit.ly/3krkRNN
+  VERSION: 3.0.49 # @TODO: Automate to get the latest stable tag: https://bit.ly/3krkRNN
+                  # NOTE: convox update is run below so test are run on latest release
 
 on:
   schedule:
@@ -34,6 +35,8 @@ jobs:
         run: ci/dependencies.sh
       - name: cli
         run: ci/cli.sh
+      - name: cli-update
+        run: sudo convox update 
       - name: install
         run: ci/install.sh
       - name: wait
