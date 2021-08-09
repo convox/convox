@@ -16,6 +16,8 @@ module "rack" {
     kubernetes = kubernetes
   }
 
+  docker_hub_username = var.docker_hub_username
+  docker_hub_password = var.docker_hub_password
   domain        = var.domain
   image         = var.image
   name          = var.name

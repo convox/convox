@@ -37,6 +37,7 @@ module "fluentd" {
   elasticsearch = module.elasticsearch.host
   namespace     = var.namespace
   rack          = var.name
+  resolver                  = var.resolver
   syslog        = var.syslog
 }
 
@@ -47,6 +48,7 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
+  docker_hub_authentication = var.docker_hub_authentication
   domain    = var.domain
   image     = var.image
   namespace = var.namespace
