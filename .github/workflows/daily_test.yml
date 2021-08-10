@@ -1,7 +1,7 @@
 name: daily test
 
 env:
-  VERSION: 3.0.49 # @TODO: Automate to get the latest stable tag: https://bit.ly/3krkRNN
+  VERSION: 3.0.50 # @TODO: Automate to get the latest stable tag: https://bit.ly/3krkRNN
                   # NOTE: convox update is run below so test are run on latest release
 
 on:
@@ -17,16 +17,13 @@ jobs:
       matrix:
         provider:
           - aws
-          # - azure
-          - do
-          - gcp
     steps:
       - name: checkout
         uses: actions/checkout@v1
       - name: name
-        run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")" >> $GITHUB_ENV
+        run: echo "RACK_NAME=convox-ci" >> $GITHUB_ENV
       - name: provider
-        run: echo "PROVIDER=${{ matrix.provider }}" >> $GITHUB_ENV
+        run: echo "PROVIDER=aws" >> $GITHUB_ENV
       - name: secrets
         run: ci/secrets.sh
         env:
@@ -37,15 +34,10 @@ jobs:
         run: ci/cli.sh
       - name: cli-update
         run: sudo convox update 
-      - name: install
-        run: ci/install.sh
-      - name: wait
-        run: sleep 600
+      - name: cli-config
+        run: convox login console.convox.com -t ${{ secrets.CONVOX_CLI_TOKEN }}
       - name: test
         run: ci/test.sh
       - name: debug
         run: ci/debug.sh
-        if: always()
-      - name: uninstall
-        run: ci/uninstall.sh
         if: always()
