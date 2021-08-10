@@ -5,6 +5,7 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
+  docker_hub_authentication = var.docker_hub_authentication
   image     = var.image
   namespace = var.namespace
   rack      = var.rack

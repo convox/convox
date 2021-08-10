@@ -93,7 +93,12 @@ resource "kubernetes_deployment" "atom" {
         service_account_name            = "atom"
         priority_class_name             = var.set_priority_class ? "system-cluster-critical" : null
 
-        image_pull_secrets { name = var.docker_hub_authentication }
+        dynamic "image_pull_secrets" {
+          for_each = var.docker_hub_authentication != null ? [var.docker_hub_authentication] : []
+          content {
+            name = var.docker_hub_authentication
+          }
+        }
 
         container {
           name               = "system"

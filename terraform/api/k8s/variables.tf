@@ -7,6 +7,7 @@ variable "authentication" {
 }
 
 variable "docker_hub_authentication" {
+  default = null
   type = string
 }
 

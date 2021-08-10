@@ -120,8 +120,12 @@ resource "kubernetes_deployment" "resolver" {
           }
         }
 
-        image_pull_secrets { name = var.docker_hub_authentication }
-
+        dynamic "image_pull_secrets" {
+          for_each = var.docker_hub_authentication != null ? [var.docker_hub_authentication] : []
+          content {
+            name = var.docker_hub_authentication
+          }
+        }
         container {
           name               = "system"
           args               = ["resolver"]

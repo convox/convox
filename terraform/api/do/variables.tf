@@ -6,6 +6,10 @@ variable "cluster" {
   type = string
 }
 
+variable "docker_hub_authentication" {
+  type = string
+}
+
 variable "domain" {
   type = string
 }
