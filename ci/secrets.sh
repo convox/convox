@@ -4,6 +4,7 @@ export_secret() {
   echo "${2:-$1}=$(echo $SECRETS | jq -r ".${1}")" >> $GITHUB_ENV
 }
 
+export_secret CONVOX_CLI_TOKEN 
 case "$PROVIDER" in
 aws)
   export_secret AWS_ACCESS_KEY_ID

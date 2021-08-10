@@ -23,6 +23,9 @@ set -ex
 
 provider=$(convox api get /system | jq -r .provider)
 
+# cleanup failed run
+convox apps delete httpd || true
+
 # cli
 convox version
 
