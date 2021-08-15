@@ -7,9 +7,9 @@ module "k8s" {
 
   docker_hub_username = var.docker_hub_username
   docker_hub_password = var.docker_hub_password
-  domain  = module.router.endpoint
-  name    = var.name
-  release = var.release
+  domain              = module.router.endpoint
+  name                = var.name
+  release             = var.release
 }
 
 module "api" {
@@ -21,7 +21,6 @@ module "api" {
   }
 
   cluster       = var.cluster
-  docker_hub_authentication = module.k8s.docker_hub_authentication
   domain        = module.router.endpoint
   image         = var.image
   name          = var.name
@@ -41,7 +40,6 @@ module "resolver" {
     kubernetes = kubernetes
   }
 
-  docker_hub_authentication = module.k8s.docker_hub_authentication
   image     = var.image
   namespace = module.k8s.namespace
   rack      = var.name

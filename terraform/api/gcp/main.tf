@@ -38,13 +38,12 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
-  docker_hub_authentication = var.docker_hub_authentication
   domain    = var.domain
   image     = var.image
   namespace = var.namespace
   rack      = var.name
   release   = var.release
-  resolver                  = var.resolver
+  resolver  = var.resolver
 
 
   annotations = {

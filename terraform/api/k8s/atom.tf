@@ -92,13 +92,6 @@ resource "kubernetes_deployment" "atom" {
         share_process_namespace         = true
         service_account_name            = "atom"
 
-        dynamic "image_pull_secrets" {
-          for_each = var.docker_hub_authentication != null ? [var.docker_hub_authentication] : []
-          content {
-            name = var.docker_hub_authentication
-          }
-        }
-
         container {
           name              = "system"
           args              = ["atom"]

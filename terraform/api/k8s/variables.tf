@@ -6,11 +6,6 @@ variable "authentication" {
   default = true
 }
 
-variable "docker_hub_authentication" {
-  default = null
-  type = string
-}
-
 variable "domain" {
   type = string
 }

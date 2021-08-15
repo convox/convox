@@ -20,16 +20,15 @@ module "api" {
     kubernetes = kubernetes
   }
 
-  docker_hub_authentication = module.k8s.docker_hub_authentication
-  domain                    = module.router.endpoint
-  image                     = var.image
-  name                      = var.name
-  namespace                 = module.k8s.namespace
-  oidc_arn                  = var.oidc_arn
-  oidc_sub                  = var.oidc_sub
-  release                   = var.release
-  resolver                  = module.resolver.endpoint
-  router                    = module.router.endpoint
+  domain    = module.router.endpoint
+  image     = var.image
+  name      = var.name
+  namespace = module.k8s.namespace
+  oidc_arn  = var.oidc_arn
+  oidc_sub  = var.oidc_sub
+  release   = var.release
+  resolver  = module.resolver.endpoint
+  router    = module.router.endpoint
 }
 
 module "metrics" {
@@ -49,11 +48,10 @@ module "resolver" {
     kubernetes = kubernetes
   }
 
-  docker_hub_authentication = module.k8s.docker_hub_authentication
-  image                     = var.image
-  namespace                 = module.k8s.namespace
-  rack                      = var.name
-  release                   = var.release
+  image     = var.image
+  namespace = module.k8s.namespace
+  rack      = var.name
+  release   = var.release
 }
 
 module "router" {

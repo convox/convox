@@ -25,25 +25,3 @@ resource "kubernetes_config_map" "rack" {
     DOMAIN = var.domain
   }
 }
-
-resource "kubernetes_secret" "docker_hub_authentication" {
-  count = var.docker_hub_username != "" ? 1 : 0
-  metadata {
-    namespace = kubernetes_namespace.system.metadata.0.name
-    name = "docker-hub-authentication"
-  }
-
-  data = {
-    ".dockerconfigjson" = <<DOCKER
-{
-  "auths": {
-    "https://index.docker.io/v2/": {
-      "auth": "${base64encode("${var.docker_hub_username}:${var.docker_hub_password}")}"
-    }
-  }
-}
-DOCKER
-  }
-
-  type = "kubernetes.io/dockerconfigjson"
-}
