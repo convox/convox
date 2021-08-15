@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/convox/convox/pkg/cli"
+	"github.com/convox/convox/pkg/rack"
 )
 
 var (
@@ -14,6 +15,7 @@ var (
 func main() {
 	if image != "" {
 		cli.Image = image
+		rack.Image = image
 	}
 
 	c := cli.New("convox", version)

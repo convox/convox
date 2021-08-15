@@ -610,7 +610,7 @@ func terraformLatestVersion() (string, error) {
 		return TestLatest, nil
 	}
 
-	res, err := http.Get("https://api.github.com/repos/convox/convox/releases/latest")
+	res, err := http.Get(fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", Image))
 	if err != nil {
 		return "", err
 	}
@@ -709,7 +709,7 @@ func terraformWriteTemplate(filename, version string, params map[string]interfac
 	if source := os.Getenv("CONVOX_TERRAFORM_SOURCE"); source != "" {
 		params["Source"] = fmt.Sprintf(source, params["Provider"])
 	} else {
-		params["Source"] = fmt.Sprintf("github.com/convox/convox//terraform/system/%s?ref=%s", params["Provider"], version)
+		params["Source"] = fmt.Sprintf("github.com/%s//terraform/system/%s?ref=%s", Image, params["Provider"], version)
 	}
 
 	params["Release"] = version

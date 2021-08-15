@@ -13,6 +13,7 @@ import (
 )
 
 var (
+	Image      = "convox/convox"
 	TestLatest string
 )
 
