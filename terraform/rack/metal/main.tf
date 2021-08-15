@@ -9,11 +9,9 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
-  docker_hub_username = var.docker_hub_username
-  docker_hub_password = var.docker_hub_password
-  domain              = module.router.endpoint
-  name                = var.name
-  release             = var.release
+  domain  = module.router.endpoint
+  name    = var.name
+  release = var.release
 }
 
 module "api" {

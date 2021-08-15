@@ -52,8 +52,6 @@ module "rack" {
   }
 
   cluster       = module.cluster.id
-  docker_hub_username = var.docker_hub_username
-  docker_hub_password = var.docker_hub_password
   image         = var.image
   name          = var.name
   network       = module.cluster.network

@@ -2,14 +2,6 @@ variable "cluster" {
   type = string
 }
 
-variable "docker_hub_username" {
-  default = ""
-}
-
-variable "docker_hub_password" {
-  default = ""
-}
-
 variable "idle_timeout" {
   type = number
 }
@@ -35,7 +27,7 @@ variable "release" {
 }
 
 variable "subnets" {
-  type = list
+  type = list(any)
 }
 
 variable "whitelist" {

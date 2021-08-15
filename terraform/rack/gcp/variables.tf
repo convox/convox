@@ -2,14 +2,6 @@ variable "cluster" {
   type = string
 }
 
-variable "docker_hub_username" {
-  default = ""
-}
-
-variable "docker_hub_password" {
-  default = ""
-}
-
 variable "image" {
   type = string
 }
