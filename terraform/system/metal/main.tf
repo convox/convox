@@ -8,7 +8,7 @@ locals {
 }
 
 provider "kubernetes" {
-  config_path = "~/.kube/config"
+  config_paths = split(":", var.kubeconfig)
 }
 
 module "rack" {

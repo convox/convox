@@ -492,6 +492,14 @@ func (t Terraform) writeVars(vars map[string]string) error {
 	return nil
 }
 
+func kubeconfig() string {
+	if os.Getenv("TEST") == "true" {
+		return "~/.kube/config"
+	}
+
+	return common.CoalesceString(os.Getenv("KUBECONFIG"), "~/.kube/config")
+}
+
 func listTerraform(c *stdcli.Context) ([]Terraform, error) {
 	dir, err := c.SettingDirectory("racks")
 	if err != nil {
@@ -639,6 +647,11 @@ func terraformProviderVars(provider string) (map[string]string, error) {
 			"access_id":  os.Getenv("DIGITALOCEAN_ACCESS_ID"),
 			"secret_key": os.Getenv("DIGITALOCEAN_SECRET_KEY"),
 			"token":      os.Getenv("DIGITALOCEAN_TOKEN"),
+		}
+		return vars, nil
+	case "local", "metal":
+		vars := map[string]string{
+			"kubeconfig": kubeconfig(),
 		}
 		return vars, nil
 	default:

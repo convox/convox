@@ -1,5 +1,6 @@
 		module "system" {
 			source = "github.com/convox/convox//terraform/system/local?ref=foo"
+			kubeconfig = "~/.kube/config"
 			name = "dev1"
 			release = "foo"
 		}
