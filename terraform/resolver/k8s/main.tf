@@ -127,10 +127,10 @@ resource "kubernetes_deployment" "resolver" {
           }
         }
         container {
-          name               = "system"
-          args               = ["resolver"]
-          image              = "${var.image}:${var.release}"
-          image_pull_policy  = "IfNotPresent"
+          name              = "system"
+          args              = ["resolver"]
+          image             = "${var.image}:${var.release}"
+          image_pull_policy = "Always"
 
           env {
             name = "NAMESPACE"

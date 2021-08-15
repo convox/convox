@@ -101,10 +101,10 @@ resource "kubernetes_deployment" "atom" {
         }
 
         container {
-          name               = "system"
-          args               = ["atom"]
-          image              = "${var.image}:${var.release}"
-          image_pull_policy  = "IfNotPresent"
+          name              = "system"
+          args              = ["atom"]
+          image             = "${var.image}:${var.release}"
+          image_pull_policy = "Always"
 
           resources {
             requests {

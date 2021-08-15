@@ -112,7 +112,7 @@ resource "kubernetes_deployment" "api" {
           name              = "system"
           args              = ["api"]
           image             = "${var.image}:${var.release}"
-          image_pull_policy = "IfNotPresent"
+          image_pull_policy = "Always"
 
           env {
             name  = "DOMAIN"
