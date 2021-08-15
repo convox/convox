@@ -7,11 +7,13 @@ locals {
   release = coalesce(var.release, local.current)
 }
 
-provider "kubernetes" {}
+provider "kubernetes" {
+  config_paths = split(":", var.kubeconfig)
+}
 
 provider "helm" {
   kubernetes {
-    config_path = "~/.kube/config"
+    config_paths = split(":", var.kubeconfig)
   }
 }
 
