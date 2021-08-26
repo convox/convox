@@ -18,10 +18,10 @@ variable "idle_timeout" {
   type    = number
   default = 3600
 
-  validation {
-    condition     = var.idle_timeout > 0 && var.idle_timeout < 4001
-    error_message = "The idle_timeout must be a value between 1 and 4000."
-  }
+  # validation {
+  #   condition     = var.idle_timeout > 0 && var.idle_timeout < 4001
+  #   error_message = "The idle_timeout must be a value between 1 and 4000."
+  # }
 }
 
 variable "image" {
