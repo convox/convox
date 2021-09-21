@@ -1,3 +1,9 @@
+---
+title: "Node.js"
+draft: false
+slug: Node.js
+url: /example-apps/nodejs
+---
 # Node.js
 
 Our example node.js app can be found [here](https://github.com/convox-examples/nodejs).  You can clone this locally to run and experiment with.
@@ -8,8 +14,8 @@ The following is a step-by-step walkthrough of how the app was configured and wh
 
 Before we begin you will need to install the `convox` CLI and a development Rack:
 
-* [Command Line Interface](../installation/cli.md)
-* [Development Rack](../installation/development-rack)
+* [Command Line Interface](/installation/cli)
+* [Development Rack](/installation/development-rack)
 
 Once you are all setup you can switch to your local rack with ```convox switch [rack name]``` and start your local application with ```convox start``` (make sure you are in the root directory).
 
@@ -31,7 +37,7 @@ The [convox.yml](https://github.com/convox-examples/rails/blob/master/convox.yml
 
 Install a production Rack on the cloud provider of your choice:
 
-* [Production Rack](../installation/production-rack)
+* [Production Rack](/installation/production-rack)
 
 Once you are all set here you can see the name of your production rack
 

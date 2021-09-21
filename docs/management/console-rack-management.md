@@ -1,3 +1,9 @@
+---
+title: "Console Rack Management"
+draft: false
+slug: Console Rack Management
+url: /management/console-rack-management
+---
 # Console Rack Management
 
 ## Console vs Locally Managed Racks
@@ -9,20 +15,20 @@ When you install a Rack from your CLI, the Terraform state (and subsequently the
 ## Moving your Rack to the Console
 
 A CLI installed Rack will just have a Rack name with no organization prefix:
-
+```html
     $ convox racks
     NAME               PROVIDER  STATUS
     staging            gcp       running
-
+```
 You can transfer the Rack state to the Console by using the `rack mv` command.  Use the organization name you created in the Console as the prefix before the Rack name you wish to move to:
-
+```html
     $ convox rack mv staging acme/staging
     moving rack staging to acme/staging
 
     $ convox racks
     NAME               PROVIDER  STATUS
     acme/staging       gcp       running
-
+```
 The Rack will now appear in the Convox Console and your teammates with access and logged into the same organization will now see the Rack from their own CLI, and be able to interact and perform updates against the Rack from their own CLI or from the Console.
 
 ### Moving an AWS Rack
@@ -44,12 +50,12 @@ Due to an underlying issue with the way that AWS manages permissions when instal
 ## Moving your Rack from the Console
 
 You can move any Console-managed Rack back to being locally managed only with the same command:
-
+```html
     $ convox rack mv acme/staging staging
     moving rack acme/staging to staging
 
     $ convox racks
     NAME               PROVIDER  STATUS
     staging            gcp       running
-
+```
 Terraform state will be transferred to your local machine for exclusive management.

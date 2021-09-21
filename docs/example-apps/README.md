@@ -1,3 +1,9 @@
+---
+title: "Example Apps"
+draft: false
+slug: Example Apps
+url: /example-apps
+---
 # Example Apps
 
 All of our example apps can be found in [this Github organization](https://github.com/convox-examples/).  Over time we will add to them with further languages and frameworks.  We welcome submissions of further projects or requests for specific examples.

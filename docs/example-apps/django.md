@@ -1,3 +1,9 @@
+---
+title: "Django"
+draft: false
+slug: Django
+url: /example-apps/django
+---
 # Django
 
 Our example Django app can be found [here](https://github.com/convox-examples/django).
@@ -8,8 +14,8 @@ The following is a step-by-step walkthrough of how the app was configured and wh
 
 Before we begin you will need to install the `convox` CLI and a development Rack:
 
-* [Command Line Interface](../installation/cli.md)
-* [Development Rack](../installation/development-rack)
+* [Command Line Interface](/installation/cli)
+* [Development Rack](/installation/development-rack)
 
 Once you are all setup you can switch to your local rack with ```convox switch [rack name]``` and start your local application with ```convox start``` (make sure you are in the root directory).
 
@@ -43,13 +49,13 @@ The [convox.yml](https://github.com/convox-examples/django/blob/master/convox.ym
 
 1. Resources: These are network-attached dependencies of your application. In this case we have a single resource which is a postgres database. When deployed Convox will automatically startup up a container running Postgres and will inject a ```DATABASE_URL``` environment variable into your application container that points to the Postgres database.
 
-2. Services: This is where we define our application(s). In this case we have a single application called ```web``` which is built from our dockerfile, executes the [Gunicorn](https://gunicorn.org/) web server, and uses the postgres resource for a database. You will also notice we have an [environment](https://docs.convox.com/management/environment) section where we are setting a default secret key for development. In a production application you may have additional services defined for things like Celery task workers.
+2. Services: This is where we define our application(s). In this case we have a single application called ```web``` which is built from our dockerfile, executes the [Gunicorn](https://gunicorn.org/) web server, and uses the postgres resource for a database. You will also notice we have an [environment](/configuration/environment) section where we are setting a default secret key for development. In a production application you may have additional services defined for things like Celery task workers.
 
 ### Deploying to production
 
 Install a production Rack on the cloud provider of your choice:
 
-* [Production Rack](../installation/production-rack)
+* [Production Rack](/installation/production-rack)
 
 Once you are all set here you can see the name of your production rack
 

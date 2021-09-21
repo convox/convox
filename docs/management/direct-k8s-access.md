@@ -1,3 +1,9 @@
+---
+title: "Direct Kubernetes Access"
+draft: false
+slug: Direct Kubernetes Access
+url: /management/direct-k8s-access
+---
 # Direct Kubernetes Access
 
 Convox makes managing and operating your Kubernetes cluster extremely easy and simple by abstracting a lot of the unnecessary complexities away.  We know, however, that there may be times that you will want to dive deeper and access the Kubernetes primitives and resources yourself.  This could be deep debugging of an edge-case networking issue, examination of an underlying cloud infrastructure issue, gaining a deeper understanding of how everything ties together, or simply to install a Kubernetes native component or plugin directly.
@@ -6,7 +12,7 @@ Convox provides an API proxy to Kubernetes that runs on your Rack which allows y
 
 ## Configure kubectl to Point at Your Rack
 
-Convox allows you to securely connect your `kubectl` to your Convox created Kubernetes cluster by exporting a [kubeconfig](../../reference/cli/rack#rack-kubeconfig) that will connect you to a Kubernetes API Proxy running inside your Rack. This allows you to use `kubectl` without directly exposing the credentials for your Kubernetes cluster. For example if your Rack is called `myrack` you could point your local `kubectl` to your Rack cluster as follows
+Convox allows you to securely connect your `kubectl` to your Convox created Kubernetes cluster by exporting a [kubeconfig](/reference/cli/rack#rack-kubeconfig) that will connect you to a Kubernetes API Proxy running inside your Rack. This allows you to use `kubectl` without directly exposing the credentials for your Kubernetes cluster. For example if your Rack is called `myrack` you could point your local `kubectl` to your Rack cluster as follows
 
 ```sh
 $ convox switch myrack

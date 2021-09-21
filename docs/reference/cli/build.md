@@ -1,3 +1,9 @@
+---
+title: "build"
+draft: false
+slug: build
+url: /reference/cli/build
+---
 # build
 
 ## build
@@ -5,11 +11,11 @@
 Create a build
 
 ### Usage
-
+```html
     convox build [dir]
-
+```
 ### Examples
-
+```html
     $ convox build --no-cache --description "My latest build" 
     Packaging source... OK
     Uploading source... OK
@@ -23,3 +29,4 @@ Create a build
     Running: docker push 1234567890.dkr.ecr.us-east-1.amazonaws.com/test-regis-1mjiluel3aiv3:web.BABCDEFGHI
     Build:   BABCDEFGHI
     Release: RABCDEFGHI
+```

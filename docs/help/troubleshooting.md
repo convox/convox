@@ -1,8 +1,14 @@
+---
+title: "Troubleshooting"
+draft: false
+slug: Troubleshooting
+url: /help/troubleshooting
+---
 # Troubleshooting
 
 ## I got an error while installing Convox locally
 
-Ensure you have followed the setup instructions for your local OS [here](../installation/development-rack).  Memory requirements for running Docker/Kubernetes locally can often catch people out.
+Ensure you have followed the setup instructions for your local OS [here](/installation/development-rack).  Memory requirements for running Docker/Kubernetes locally can often catch people out.
 
 If you have an existing DNS service running on port 53 on your machine, that can conflict when trying to set up the local DNS resolution for your development Rack. Disabling the service during installation and forwarding traffic for `*.convox` domains should help.
 
@@ -39,9 +45,9 @@ Convox uses LetsEncrypt to automatically and seamlessly provision SSL certificat
 
 ### Health Checks
 
-Any Services within your App that expose a port will require a passing [health check](../configuration/health-checks) before receiving traffic.  Deploying a Release of your App that does not pass the health checks will result in a rollback to the previous release.  If this is your first release of a new App, a failing health check will result in a failed deployment.
+Any Services within your App that expose a port will require a passing [health check](/configuration/health-checks) before receiving traffic.  Deploying a Release of your App that does not pass the health checks will result in a rollback to the previous release.  If this is your first release of a new App, a failing health check will result in a failed deployment.
 Failing health checks will be reported when promoting your Release:
-
+```html
     Promoting RABCDEFGHIJ...
     2020-02-15T21:16:50Z system/k8s/atom/app Status: Running => Pending
     2020-02-15T21:16:53Z system/k8s/atom/app Status: Pending => Updating
@@ -53,7 +59,7 @@ Failing health checks will be reported when promoting your Release:
     2020-02-15T21:17:09Z system/k8s/web-56f5d77d7-6gx8z Started container main
     2020-02-15T21:17:09Z system/k8s/web-56f5d77d7-6gx8z Created container main
     2020-02-15T21:17:17Z system/k8s/web-56f5d77d7-6gx8z Readiness probe failed: HTTP probe failed with statuscode: 404
-
+```
 You should ensure that your App is able to respond to the health check probes to faciliate a successful deployment.
 
 ## My app deployed but I cannot access it

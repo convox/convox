@@ -1,26 +1,29 @@
 ---
-order: 2
+title: "Dockerfile"
+draft: false
+slug: Dockerfile
+url: /configuration/dockerfile
 ---
 
 # Dockerfile
 
-The `Dockerfile` describes the steps used to create a [Build](../reference/primitives/app/build.md) from your
+The `Dockerfile` describes the steps used to create a [Build](/reference/primitives/app/build) from your
 application code.
-
+```html
     FROM ubuntu:18.04
     COPY . .
     RUN ["deps", "install"]
     CMD ["bin/start"]
-
+```
 ## Common Directives
 
 | Directive | Description                                      |
 | --------- | ------------------------------------------------ |
-| `FROM`    | defines the base image                           |
-| `COPY`    | add files from the local directory tree          |
-| `RUN`     | execute a command                                |
-| `CMD`     | defines the default command to run on this image |
-| `ARG`     | define build variables                           |
+| **FROM**    | defines the base image                           |
+| **COPY**    | add files from the local directory tree          |
+| **RUN**     | execute a command                                |
+| **CMD**     | defines the default command to run on this image |
+| **ARG**     | define build variables                           |
 
 ## Optimizing Build Times
 
@@ -28,7 +31,7 @@ Each line of a `Dockerfile` will be cached as long as files referenced by it are
 to cache expensive steps such as dependency installation by selectively copying files before running commands.
 
 The following example selectively copies only the files needed to run `npm` before installing dependencies.
-
+```html
     FROM nodejs
 
     COPY package.json package-lock.json .
@@ -36,7 +39,7 @@ The following example selectively copies only the files needed to run `npm` befo
 
     COPY . .
     CMD ["npm", "start"]
-
+```
 The `npm install` will be cached on successive builds unless `package.json` or `package-lock.json` is changed.
 
 ## Build Variables
@@ -50,15 +53,15 @@ deployments.
 > in the resulting image.
 
 You can declare build variables using the `ARG` directive with an optional default value:
-
+```html
     ARG COPYRIGHT=2020
     ARG RUBY_VERSION
-
-Values for these variables will be read from the [Environment](environment.md) at build time:
-
+```
+Values for these variables will be read from the [Environment](/configuration/environment) at build time:
+```html
     $ convox env set RUBY_VERSION=2.6.4
-
+```
 ## See Also
 
 - [Dockerfile: Best Practices](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/)
-- [Private Registries](private-registries.md)
+- [Private Registries](/configuration/private-registries)

@@ -1,3 +1,9 @@
+---
+title: "rack"
+draft: false
+slug: rack
+url: /reference/cli/rack
+---
 # rack
 
 ## rack
@@ -5,44 +11,44 @@
 Get information about the rack
 
 ### Usage
-
+```html
     convox rack
-
+```
 ### Examples
-
+```html
     $ convox rack
     Name      test
     Provider  aws
     Router    router.0a1b2c3d4e5f.convox.cloud
     Status    running
     Version   3.0.0
-
+```
 ## rack install
 
 Install a new Rack
 
 ### Usage
-
+```html
     convox rack install <provider> <name> [option=value]...
-
+```
 ### Examples
-
+```html
     $ convox rack install local dev
     ...
 
     $ convox rack install aws production region=eu-west-1 node_type=t3.large
     ...
-
+```
 ## rack kubeconfig
 
 Output a Kubernetes configuration file for connecting to the underlying cluster
 
 ### Usage
-
+```html
     convox rack kubeconfig
-
+```
 ### Examples
-
+```html
     $ convox rack kubeconfig
     apiVersion: v1
     clusters:
@@ -62,50 +68,50 @@ Output a Kubernetes configuration file for connecting to the underlying cluster
     user:
         username: convox
         password: abcdefghijklmnopqrstuvwxyz
-
+```
 ## rack logs
 
 Get logs for the rack
 
 ### Usage
-
+```html
     convox rack logs
-
+```
 ### Examples
-
+```html
     $ convox rack logs
     2020-02-10T13:37:22Z service/web/a55eb25e-90f5-4301-99fd-e35c91128592 ns=provider.aws at=SystemGet state=success elapsed=275.683
     2020-02-10T13:37:22Z service/web/a55eb25e-90f5-4301-99fd-e35c91128592 id=8d3ec85dc324 ns=api at=SystemGet method="GET" path="/system" response=200 elapsed=276.086
     2020-02-10T13:38:04Z service/web/a55eb25e-90f5-4301-99fd-e35c91128592 ns=provider.aws at=SystemGet state=success elapsed=331.824
     2020-02-10T13:38:04Z service/web/a55eb25e-90f5-4301-99fd-e35c91128592 id=f492a0dce931 ns=api at=SystemGet method="GET" path="/system" response=200 elapsed=332.219
     ...
-
+```
 ## rack mv
 
 Transfer the management of a Rack from an individual user to an organization or vice versa.
 
 ### Usage
-
+```html
     convox rack mv <from> <to>
-
+```
 ### Examples
-
+```html
     $ convox rack mv dev acme/dev
     moving rack dev to acme/dev... OK
 
     $ convox rack mv acme/dev dev
     moving rack acme/dev to dev... OK
-
+```
 ## rack ps
 
 List rack processes
 
 ### Usage
-
+```html
     convox rack ps
-
+```
 ### Examples
-
+```html
     $ convox rack ps
     ID                       APP     SERVICE        STATUS   RELEASE       STARTED      COMMAND
     api-9749b7ccb-29zh5      system  api            running  3.0.0.beta44  2 weeks ago  api
@@ -116,17 +122,17 @@ List rack processes
     atom-578cd48bfb-6tm7g    system  atom           running  3.0.0.beta44  2 weeks ago  atom
     router-846b84d544-ndz76  rack    router         running  3.0.0.beta44  2 weeks ago  router
     router-846b84d544-ndz76  system  router         running  3.0.0.beta44  2 weeks ago  router
-
+```
 ## rack ps --all
 
 List rack processes as well as essential system ones running on the Rack
 
 ### Usage
-
+```html
     convox rack ps --all
-
+```
 ### Examples
-
+```html
     $ convox rack ps --all
     ID                       APP     SERVICE        STATUS   RELEASE       STARTED      COMMAND
     api-9749b7ccb-29zh5      system  api            running  3.0.0.beta44  2 weeks ago  api
@@ -149,33 +155,33 @@ List rack processes as well as essential system ones running on the Rack
     redis-77b4f65c55-nbx89   system  redis          running  3.0.0.beta44  2 weeks ago
     router-846b84d544-ndz76  rack    router         running  3.0.0.beta44  2 weeks ago  router
     router-846b84d544-ndz76  system  router         running  3.0.0.beta44  2 weeks ago  router
-
+```
 ## rack uninstall
 
 Uninstalls a Rack
 
 ### Usage
-
+```html
     convox rack uninstall <name>
-
+```
 ### Examples
-
+```html
     $ convox rack uninstall my-rack
     Upgrading modules...
     Downloading github.com/convox/convox?ref=3.0.15 for system...
     ...
     Destroy complete! Resources: 35 destroyed.
-
+```
 ## rack update
 
 Updates a Rack to a new version.
 
 ### Usage
-
+```html
     convox rack update [version]
-
+```
 ### Examples
-
+```html
     $ convox rack update
     Upgrading modules...
     Downloading github.com/convox/convox?ref=3.0.15 for system...
@@ -187,3 +193,4 @@ Updates a Rack to a new version.
     api = https://convox:password@api.dev.convox
     provider = local
     OK
+```

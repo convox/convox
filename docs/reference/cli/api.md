@@ -1,3 +1,9 @@
+---
+title: "api"
+draft: false
+slug: api
+url: /reference/cli/api
+---
 # api
 
 ## api get
@@ -5,11 +11,11 @@
 Query the Rack API
 
 ### Usage
-
+```html
     convox api get <path>
-
+```
 ### Examples
-
+```html
     $ convox api get /apps
     [
       {
@@ -21,3 +27,4 @@ Query the Rack API
         "status": "running"
       }
     ]
+```
