@@ -46,8 +46,10 @@ jobs:
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}        
-      - name: build
-        run: docker buildx build --platform linux/amd64,linux/arm64 -t ${{ github.repository }}:${{ env.VERSION }} --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max .
+      - name: build-amd64
+        run: docker buildx build --platform linux/amd64 -t ${{ github.repository }}:${{ env.VERSION }} --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max .
+      - name: build-arm64
+        run: docker buildx build --platform linux/arm64 -t ${{ github.repository }}:${{ env.VERSION }}-arm64 --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max .        
       - name: release-cli-linux
         uses: actions/upload-release-asset@v1.0.1
         env:
