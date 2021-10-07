@@ -6,6 +6,8 @@ Ensure you have followed the setup instructions for your local OS [here](../inst
 
 If you have an existing DNS service running on port 53 on your machine, that can conflict when trying to set up the local DNS resolution for your development Rack. Disabling the service during installation and forwarding traffic for `*.convox` domains should help.
 
+If you have a proccess running on port 80 or 443 on your machine, that can conflict when trying to set up the Load Balancer for your development Rack. Disabling the service or using a different port will fix the problem.
+
 ## I got an error while installing Convox in my cloud provider
 
 The error message is usually quite informative.  If you have existing resources running in your cloud provider and you are near your account limits, a Rack install can sometimes breach those limits, requiring you to request an increase in the appropriate resource (IP addresses, CPU allowances etc). Once your limit has been increased, the Rack should install successfully.
