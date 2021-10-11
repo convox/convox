@@ -16,7 +16,7 @@ module "k8s" {
   }
 
   cluster   = var.cluster
-  image     = "convox/fluentd:1.7"
+  image     = "convox/fluentd:1.7.1"
   namespace = var.namespace
   rack      = var.rack
 
