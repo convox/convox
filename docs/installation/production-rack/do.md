@@ -40,7 +40,7 @@ Go to https://cloud.digitalocean.com/account/api/tokens and generate a new Space
 
 | Name            | Default       | Description                                                             |
 | --------------- | ------------- | ----------------------------------------------------------------------- |
-| `node_type`     | `s-2vcpu-4gb` | Node instance type                                                      |
-| `region`        | `nyc3`        | Digital Ocean region                                                    |
+| `node_type`     | `s-2vcpu-4gb` | [Node instance type](https://slugs.do-api.dev/)                         |
+| `region`        | `nyc3`        | [Digital Ocean region](https://slugs.do-api.dev/)                       |
 | `registry_disk` | `50Gi`        | Registry disk size                                                      |
 | `syslog`        |               | Forward logs to a syslog endpoint (e.g. `tcp+tls://example.org:1234`)   |
