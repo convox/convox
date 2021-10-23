@@ -5,9 +5,13 @@ provider "aws" {
 provider "kubernetes" {
   cluster_ca_certificate = module.cluster.ca
   host                   = module.cluster.endpoint
-  token                  = data.aws_eks_cluster_auth.cluster.token
 
   load_config_file = false
+  exec {
+    api_version = "client.authentication.k8s.io/v1alpha1"
+    args        = ["eks", "get-token", "--cluster-name", var.name]
+    command     = "aws"
+  }
 }
 
 data "aws_eks_cluster_auth" "cluster" {
@@ -32,6 +36,7 @@ module "cluster" {
 
   availability_zones = var.availability_zones
   cidr               = var.cidr
+  k8s_version        = var.k8s_version
   name               = var.name
   node_disk          = var.node_disk
   node_type          = var.node_type

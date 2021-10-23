@@ -1,9 +1,13 @@
 provider "kubernetes" {
   cluster_ca_certificate = base64decode(aws_eks_cluster.cluster.certificate_authority.0.data)
   host                   = aws_eks_cluster.cluster.endpoint
-  token                  = data.aws_eks_cluster_auth.cluster.token
 
   load_config_file = false
+  exec {
+    api_version = "client.authentication.k8s.io/v1alpha1"
+    args        = ["eks", "get-token", "--cluster-name", var.name]
+    command     = "aws"
+  }
 }
 
 locals {
@@ -43,7 +47,7 @@ resource "aws_eks_cluster" "cluster" {
 
   name     = var.name
   role_arn = aws_iam_role.cluster.arn
-  version  = "1.17"
+  version  = var.k8s_version
 
   vpc_config {
     endpoint_public_access  = true
@@ -85,6 +89,7 @@ resource "aws_eks_node_group" "cluster" {
   node_group_name = "${var.name}-${local.availability_zones[count.index]}-${random_id.node_group.hex}"
   node_role_arn   = random_id.node_group.keepers.role_arn
   subnet_ids      = [var.private ? aws_subnet.private[count.index].id : aws_subnet.public[count.index].id]
+  version         = var.k8s_version
 
   scaling_config {
     desired_size = 1
