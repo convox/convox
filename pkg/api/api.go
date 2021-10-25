@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"reflect"
 
 	"github.com/convox/convox/pkg/structs"
@@ -25,6 +26,7 @@ func New() (*Server, error) {
 
 func NewWithProvider(p structs.Provider) *Server {
 	if err := p.Initialize(structs.ProviderOptions{}); err != nil {
+		fmt.Printf("error initializing provider %s\n", err)
 		panic(err)
 	}
 

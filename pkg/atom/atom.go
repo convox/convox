@@ -105,7 +105,7 @@ func Initialize() error {
 	}
 
 	if out, err := kubectlApply(data); err != nil {
-		return fmt.Errorf("could not initialize:\n%s", string(out))
+		return fmt.Errorf("could not initialize:\n%s\n%s", string(out), err)
 	}
 
 	return nil
