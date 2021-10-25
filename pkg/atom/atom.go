@@ -500,6 +500,7 @@ func extractConditions(data []byte) ([]aa.AtomCondition, error) {
 func kubectlApply(data []byte, args ...string) ([]byte, error) {
 	ka := append([]string{"apply", "-f", "-"}, args...)
 
+	fmt.Printf("applying kubectl \n %s", ka)
 	cmd := exec.Command("kubectl", ka...)
 
 	cmd.Stdin = bytes.NewReader(data)

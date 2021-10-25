@@ -19,11 +19,11 @@ data "http" "releases" {
 }
 
 locals {
-  current  = jsondecode(data.http.releases.body).tag_name
-  release  = coalesce(var.release, local.current)
-  gpu_type = substr(var.node_type, 0, 1) == "g" || substr(var.node_type, 0, 1) == "p"
   arm_type = substr(var.node_type, 0, 2) == "a1" || substr(var.node_type, 0, 3) == "c6g" || substr(var.node_type, 0, 3) == "m6g" || substr(var.node_type, 0, 3) == "r6g" || substr(var.node_type, 0, 3) == "t4g"
-  image    = local.arm_type ? format("%s-%s", var.image, "arm64"): var.image
+  current  = jsondecode(data.http.releases.body).tag_name
+  gpu_type = substr(var.node_type, 0, 1) == "g" || substr(var.node_type, 0, 1) == "p"
+  image    = var.image
+  release  = local.arm_type ? format("%s-%s", coalesce(var.release, local.current)) : coalesce(var.release, local.current)
 }
 
 module "cluster" {

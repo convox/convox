@@ -123,19 +123,21 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 	}
 
 	if err := atom.Initialize(); err != nil {
+		fmt.Printf("error atom.Initialize atom %s\n", err)
 		return errors.WithStack(err)
 	}
 
 	if err := p.initializeTemplates(); err != nil {
+		fmt.Printf("error initializeTemplates %s\n", err)
 		return errors.WithStack(err)
 	}
 
-	if (!opts.IgnorePriorityClass) {
+	if !opts.IgnorePriorityClass {
 		if err := p.initializePriorityClass(); err != nil {
+			fmt.Printf("error IgnorePriorityClass %s\n", err)
 			return errors.WithStack(err)
 		}
 	}
-
 
 	return nil
 }
