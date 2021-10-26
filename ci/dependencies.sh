@@ -14,3 +14,6 @@ curl -Ls https://storage.googleapis.com/kubernetes-release/release/v1.13.0/bin/l
 # install terraform
 curl -L https://releases.hashicorp.com/terraform/0.13.2/terraform_0.13.2_linux_amd64.zip -o terraform.zip && \
 	unzip terraform.zip -d /tmp && sudo mv /tmp/terraform /usr/bin/terraform && rm terraform.zip
+
+# install latest aws cli
+pip install --upgrade awscli

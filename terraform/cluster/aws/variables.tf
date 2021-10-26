@@ -14,8 +14,9 @@ variable "gpu_type" {
   default = false
 }
 
-variable "kubernetes_version" {
-  default = "1.13"
+variable "k8s_version" {
+  type = string
+  default = "1.18"
 }
 
 variable "name" {

@@ -1,6 +1,6 @@
 data "azurerm_kubernetes_service_versions" "available" {
   location       = var.region
-  version_prefix = "1.17."
+  version_prefix = "${var.k8s_version}."
 }
 
 resource "random_string" "suffix" {
