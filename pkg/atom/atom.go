@@ -105,7 +105,7 @@ func Initialize() error {
 	}
 
 	if out, err := kubectlApply(data); err != nil {
-		return fmt.Errorf("could not initialize:\n%s\n%s", string(out), err)
+		return fmt.Errorf("could not initialize:\n%s", string(out))
 	}
 
 	return nil
@@ -500,7 +500,6 @@ func extractConditions(data []byte) ([]aa.AtomCondition, error) {
 func kubectlApply(data []byte, args ...string) ([]byte, error) {
 	ka := append([]string{"apply", "-f", "-"}, args...)
 
-	fmt.Printf("applying kubectl \n %s", ka)
 	cmd := exec.Command("kubectl", ka...)
 
 	cmd.Stdin = bytes.NewReader(data)
