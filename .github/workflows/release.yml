@@ -49,7 +49,7 @@ jobs:
       - name: build-amd64
         run: docker buildx build --platform linux/amd64 -t ${{ github.repository }}:${{ env.VERSION }} --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max .
       - name: build-arm64
-        run: docker buildx build --platform linux/arm64 -t ${{ github.repository }}:${{ env.VERSION }}-arm64 --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max -f Dockerfile.arm64 .
+        run: docker buildx build --platform linux/arm64 -t ${{ github.repository }}:${{ env.VERSION }}-arm64 --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max --build-arg DOCKER_ARCH=aarch64 --build-arg KUBECTL_ARCH=arm64 .
       - name: release-cli-linux
         uses: actions/upload-release-asset@v1.0.1
         env:
