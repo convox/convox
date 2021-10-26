@@ -33,6 +33,16 @@ All the necessary Go tool-chains, C cross compilers and platform headers/librari
 have been assembled into a single Docker container, which can then be called as if
 a single command to compile a Go package to various platforms and architectures.
 
+## Supporters
+
+Thanks to the following projects for supporting XGO
+
+* [Gitea](https://gitea.io/) - A painless self-hosted Git service.
+* [Offen](https://www.offen.dev/) - The fair and lightweight alternative to common web analytics tools.
+* [Vikunja](https://vikunja.io/) - The to-do app to organize your life.
+
+You too can [sponsor](https://github.com/sponsors/techknowlogick/) this project to ensure its continued maintenance.
+
 ## Installation
 
 Although you could build the container manually, it is available as an automatic
@@ -44,6 +54,10 @@ To prevent having to remember a potentially complex Docker command every time,
 a lightweight Go wrapper was written on top of it.
 
     go get src.techknowlogick.com/xgo
+
+For go >= 1.17, `go get` is deprecated, so you'll have to use this command:
+    
+    go install src.techknowlogick.com/xgo@latest
 
 ## Usage
 
