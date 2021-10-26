@@ -23,7 +23,7 @@ locals {
   current  = jsondecode(data.http.releases.body).tag_name
   gpu_type = substr(var.node_type, 0, 1) == "g" || substr(var.node_type, 0, 1) == "p"
   image    = var.image
-  release  = local.arm_type ? format("%s-%s", coalesce(var.release, local.current)) : coalesce(var.release, local.current)
+  release  = local.arm_type ? format("%s-%s", coalesce(var.release, local.current), "arm64") : coalesce(var.release, local.current)
 }
 
 module "cluster" {
