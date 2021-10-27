@@ -56,6 +56,7 @@ module "fluentd" {
     kubernetes = kubernetes
   }
 
+  arm_type  = local.arm_type
   cluster   = module.cluster.id
   namespace = "kube-system"
   oidc_arn  = module.cluster.oidc_arn
