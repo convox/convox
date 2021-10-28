@@ -94,22 +94,24 @@ jobs:
       fail-fast: false
       matrix:
         jobs:
-          # - aws
+          - aws
           - aws-arm64
-          # - do
-          # - gcp
+          - do
+          - gcp
           # - azure
         include:
-          # - job: aws
-          #   provider: aws
+          - job: aws
+            provider: aws
           - job: aws-arm64
             provider: aws
-            rack_params: "node_type=tg4.small"
+            rack_params: "node_type=t4g.small"
             suffix: arm64
-          # - job: do
-          #   provider: do
-          # - job: gcp
-          #   provider: gcp
+          - job: do
+            provider: do
+          - job: gcp
+            provider: gcp
+          # - job: azure
+          #   provider: azure
     steps:
       - name: checkout
         uses: actions/checkout@v1
