@@ -93,7 +93,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jobs:
+        job:
           - aws
           - aws-arm64
           - do
