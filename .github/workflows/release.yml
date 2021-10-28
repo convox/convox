@@ -93,22 +93,30 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        provider:
+        jobs:
           # - aws
-          # - azure
+          - aws-arm64
           # - do
           # - gcp
-          - aws-arm64
+          # - azure
         include:
-          - provider: aws-arm64
-            rack_params: node_type=tg4.small
+          # - job: aws
+          #   provider: aws
+          - job: aws-arm64
+            provider: aws
+            rack_params: "node_type=tg4.small"
+            suffix: arm64
+          # - job: do
+          #   provider: do
+          # - job: gcp
+          #   provider: gcp
     steps:
       - name: checkout
         uses: actions/checkout@v1
       - name: version
         run: echo "VERSION=$(echo ${{ github.ref }} | awk -F/ '{print $3}')" >> $GITHUB_ENV
       - name: name
-        run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")" >> $GITHUB_ENV
+        run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")${{ matrix.suffix }}" >> $GITHUB_ENV
       - name: provider
         run: echo "PROVIDER=${{ matrix.provider }}" >> $GITHUB_ENV
       - name: rack-params
