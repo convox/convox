@@ -1,0 +1,51 @@
+name: rack-install
+on:
+  workflow_dispatch:
+    inputs:
+        params:
+          description: "rack params. e.g node_type=t4g.small"
+          required: false
+        release:
+          description: "release hash/tag"
+          required: true
+        provider:
+          description: "provider to install the rack"
+          required: true
+        suffix:
+          description: "rack name suffix"
+          required: false
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v1
+      - name: version
+        run: echo "VERSION=${{ github.event.inputs.release }}" >> $GITHUB_ENV
+      - name: name
+        run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")${{ github.events.inputs.suffix }}" >> $GITHUB_ENV
+      - name: provider
+        run: echo "PROVIDER=${{ github.event.inputs.provider }}" >> $GITHUB_ENV
+      - name: rack-params
+        run: echo "RACK_PARAMS=${{ github.event.inputs.params }}" >> $GITHUB_ENV
+      - name: secrets
+        run: ci/secrets.sh
+        env:
+          SECRETS: ${{ toJson(secrets) }}
+      - name: dependencies
+        run: ci/dependencies.sh
+      - name: cli
+        run: ci/cli.sh
+      - name: install
+        run: ci/install.sh
+      - name: wait
+        run: sleep 600
+      - name: test
+        run: ci/test.sh
+      - name: debug
+        run: ci/debug.sh
+        if: always()
+      - name: uninstall
+        run: ci/uninstall.sh
+        if: always()
