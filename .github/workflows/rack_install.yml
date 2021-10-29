@@ -24,7 +24,7 @@ jobs:
       - name: version
         run: echo "VERSION=${{ github.event.inputs.release }}" >> $GITHUB_ENV
       - name: name
-        run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")${{ github.events.inputs.suffix }}" >> $GITHUB_ENV
+        run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")${{ github.event.inputs.suffix }}" >> $GITHUB_ENV
       - name: provider
         run: echo "PROVIDER=${{ github.event.inputs.provider }}" >> $GITHUB_ENV
       - name: rack-params
