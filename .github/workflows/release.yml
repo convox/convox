@@ -95,16 +95,16 @@ jobs:
       matrix:
         job:
           - aws
-          - aws-arm64
+          # - aws-arm64
           - do
           - gcp
           # - azure
         include:
           - job: aws
             provider: aws
-          - job: aws-arm64
-            provider: aws
-            rack_params: "node_type=t4g.small"
+          # - job: aws-arm64
+          #   provider: aws
+          #   rack_params: "node_type=t4g.small"
             suffix: arm64
           - job: do
             provider: do
