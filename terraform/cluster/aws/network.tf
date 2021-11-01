@@ -61,7 +61,7 @@ resource "aws_route" "public-default" {
   route_table_id         = aws_route_table.public.id
 
   timeouts {
-    create = "5m"
+    create = "10m"
   }
 }
 
@@ -134,7 +134,7 @@ resource "aws_route" "private-default" {
   route_table_id         = aws_route_table.private[count.index].id
 
   timeouts {
-    create = "5m"
+    create = "10m"
   }
 }
 
