@@ -135,6 +135,7 @@ jobs:
         run: ci/install.sh
       - name: update
         run: ci/update.sh
+        if: always()
       - name: wait
         run: sleep 600
       - name: test
