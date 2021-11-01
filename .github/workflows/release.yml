@@ -133,6 +133,8 @@ jobs:
         run: ci/cli.sh
       - name: install
         run: ci/install.sh
+      - name: update
+        run: ci/update.sh
       - name: wait
         run: sleep 600
       - name: test
