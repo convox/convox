@@ -36,6 +36,13 @@ resource "null_resource" "delay_cluster" {
   }
 }
 
+resource "null_resource" "wait_k8s_api" {
+  provisioner "local-exec" {
+    command = "sleep 60"
+  }
+
+}
+
 resource "aws_eks_cluster" "cluster" {
   depends_on = [
     null_resource.delay_cluster,
