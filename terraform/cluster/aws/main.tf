@@ -41,6 +41,10 @@ resource "null_resource" "wait_k8s_api" {
     command = "sleep 60"
   }
 
+  depends_on = [
+    aws_eks_cluster.cluster
+  ]
+
 }
 
 resource "aws_eks_cluster" "cluster" {

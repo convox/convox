@@ -121,10 +121,23 @@ resource "aws_route_table" "private" {
   })
 }
 
+resource "null_resource" "wait_routes" {
+  provisioner "local-exec" {
+    command = "sleep 30"
+  }
+
+  depends_on = [
+    aws_route_table.private,
+    aws_internet_gateway.nodes
+  ]
+
+}
+
 resource "aws_route" "private-default" {
   depends_on = [
     aws_internet_gateway.nodes,
     aws_route_table.private,
+    null_resource.wait_routes
   ]
 
   count = var.private ? 3 : 0
