@@ -28,7 +28,22 @@ resource "aws_internet_gateway" "nodes" {
   tags = local.tags
 }
 
+resource "null_resource" "wait_vpc_nodes" {
+  provisioner "local-exec" {
+    command = "sleep 30"
+  }
+
+  depends_on = [
+    aws_vpc.nodes
+  ]
+
+}
+
 resource "aws_subnet" "public" {
+  depends_on = [
+    null_resource.wait_vpc_nodes
+  ]
+
   count = 3
 
   availability_zone       = local.availability_zones[count.index]
@@ -73,6 +88,10 @@ resource "aws_route_table_association" "public" {
 }
 
 resource "aws_subnet" "private" {
+  depends_on = [
+    null_resource.wait_vpc_nodes
+  ]
+
   count = var.private ? 3 : 0
 
   availability_zone = local.availability_zones[count.index]
