@@ -12,6 +12,8 @@ module "nginx" {
     kubernetes = kubernetes
   }
 
+  nginx_image        = "quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.26.1"
+  nginx_user         = "33"
   namespace          = var.namespace
   rack               = var.name
   replicas_min       = 1

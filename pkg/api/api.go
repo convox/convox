@@ -102,6 +102,6 @@ func (s *Server) hook(name string, args ...interface{}) error {
 	return nil
 }
 
-func (s *Server) provider(c *stdapi.Context) structs.Provider {
+func (s *Server) provider(_ *stdapi.Context) structs.Provider {
 	return s.Provider
 }

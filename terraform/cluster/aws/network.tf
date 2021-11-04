@@ -28,7 +28,24 @@ resource "aws_internet_gateway" "nodes" {
   tags = local.tags
 }
 
+// workaround for aws eventual consistency API problem
+// https://github.com/hashicorp/terraform-provider-aws/issues/13138
+resource "null_resource" "wait_vpc_nodes" {
+  provisioner "local-exec" {
+    command = "sleep 30"
+  }
+
+  depends_on = [
+    aws_vpc.nodes
+  ]
+
+}
+
 resource "aws_subnet" "public" {
+  depends_on = [
+    null_resource.wait_vpc_nodes
+  ]
+
   count = 3
 
   availability_zone       = local.availability_zones[count.index]
@@ -55,13 +72,29 @@ resource "aws_route_table" "public" {
   })
 }
 
+resource "null_resource" "wait_routes_public" {
+  provisioner "local-exec" {
+    command = "sleep 30"
+  }
+
+  depends_on = [
+    aws_route_table.public,
+    aws_internet_gateway.nodes
+  ]
+
+}
+
 resource "aws_route" "public-default" {
+  depends_on = [
+    null_resource.wait_routes_public
+  ]
+
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = aws_internet_gateway.nodes.id
   route_table_id         = aws_route_table.public.id
 
   timeouts {
-    create = "5m"
+    create = "10m"
   }
 }
 
@@ -73,6 +106,10 @@ resource "aws_route_table_association" "public" {
 }
 
 resource "aws_subnet" "private" {
+  depends_on = [
+    null_resource.wait_vpc_nodes
+  ]
+
   count = var.private ? 3 : 0
 
   availability_zone = local.availability_zones[count.index]
@@ -121,10 +158,25 @@ resource "aws_route_table" "private" {
   })
 }
 
+// workaround for aws eventual consistency API problem
+// https://github.com/hashicorp/terraform-provider-aws/issues/13138
+resource "null_resource" "wait_routes_private" {
+  provisioner "local-exec" {
+    command = "sleep 30"
+  }
+
+  depends_on = [
+    aws_route_table.private,
+    aws_internet_gateway.nodes
+  ]
+
+}
+
 resource "aws_route" "private-default" {
   depends_on = [
     aws_internet_gateway.nodes,
     aws_route_table.private,
+    null_resource.wait_routes_private
   ]
 
   count = var.private ? 3 : 0
@@ -134,7 +186,7 @@ resource "aws_route" "private-default" {
   route_table_id         = aws_route_table.private[count.index].id
 
   timeouts {
-    create = "5m"
+    create = "10m"
   }
 }
 
