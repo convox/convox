@@ -70,7 +70,23 @@ resource "aws_route_table" "public" {
   })
 }
 
+resource "null_resource" "wait_routes_public" {
+  provisioner "local-exec" {
+    command = "sleep 30"
+  }
+
+  depends_on = [
+    aws_route_table.public,
+    aws_internet_gateway.nodes
+  ]
+
+}
+
 resource "aws_route" "public-default" {
+  depends_on = [
+    null_resource.wait_routes_public
+  ]
+
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = aws_internet_gateway.nodes.id
   route_table_id         = aws_route_table.public.id
@@ -140,7 +156,7 @@ resource "aws_route_table" "private" {
   })
 }
 
-resource "null_resource" "wait_routes" {
+resource "null_resource" "wait_routes_private" {
   provisioner "local-exec" {
     command = "sleep 30"
   }
@@ -156,7 +172,7 @@ resource "aws_route" "private-default" {
   depends_on = [
     aws_internet_gateway.nodes,
     aws_route_table.private,
-    null_resource.wait_routes
+    null_resource.wait_routes_private
   ]
 
   count = var.private ? 3 : 0
