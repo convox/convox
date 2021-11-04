@@ -36,6 +36,8 @@ resource "null_resource" "delay_cluster" {
   }
 }
 
+// the cluster API takes some seconds to be available even when aws reports that the cluster is ready
+// https://github.com/terraform-aws-modules/terraform-aws-eks/issues/621
 resource "null_resource" "wait_k8s_api" {
   provisioner "local-exec" {
     command = "sleep 60"

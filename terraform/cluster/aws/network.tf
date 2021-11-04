@@ -28,6 +28,8 @@ resource "aws_internet_gateway" "nodes" {
   tags = local.tags
 }
 
+// workaround for aws eventual consistency API problem
+// https://github.com/hashicorp/terraform-provider-aws/issues/13138
 resource "null_resource" "wait_vpc_nodes" {
   provisioner "local-exec" {
     command = "sleep 30"
@@ -156,6 +158,8 @@ resource "aws_route_table" "private" {
   })
 }
 
+// workaround for aws eventual consistency API problem
+// https://github.com/hashicorp/terraform-provider-aws/issues/13138
 resource "null_resource" "wait_routes_private" {
   provisioner "local-exec" {
     command = "sleep 30"
