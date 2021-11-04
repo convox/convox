@@ -305,7 +305,7 @@ func (c *Client) Request(method, path string, opts RequestOptions) (*http.Reques
 	}
 
 	endpoint := fmt.Sprintf("%s://%s%s%s?%s", c.Endpoint.Scheme, c.Endpoint.Host, c.Endpoint.Path, path, qs)
-	// fmt.Printf("endpoint=%s\n", endpoint)
+
 	req, err := http.NewRequest(method, endpoint, r)
 	if err != nil {
 		return nil, err
