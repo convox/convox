@@ -106,7 +106,7 @@ resource "aws_eks_node_group" "cluster" {
   scaling_config {
     desired_size = 1
     min_size     = 1
-    max_size     = var.high_availability ? 100 : 2
+    max_size     = var.high_availability ? 100 : 3
   }
 
   lifecycle {
