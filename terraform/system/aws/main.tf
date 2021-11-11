@@ -41,6 +41,7 @@ module "cluster" {
   availability_zones = var.availability_zones
   cidr               = var.cidr
   gpu_type           = local.gpu_type
+  high_availability  = var.high_availability
   k8s_version        = var.k8s_version
   name               = var.name
   node_disk          = var.node_disk
