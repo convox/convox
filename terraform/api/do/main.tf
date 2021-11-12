@@ -13,6 +13,7 @@ module "elasticsearch" {
   }
 
   namespace = var.namespace
+  replicas  = var.high_availability ? 2 : 1
 }
 
 module "fluentd" {
@@ -37,12 +38,13 @@ module "k8s" {
   }
 
   docker_hub_authentication = var.docker_hub_authentication
-  domain    = var.domain
-  image     = var.image
-  namespace = var.namespace
-  rack      = var.name
-  release   = var.release
+  domain                    = var.domain
+  image                     = var.image
+  namespace                 = var.namespace
+  rack                      = var.name
+  release                   = var.release
   resolver                  = var.resolver
+  replicas                  = var.high_availability ? 2 : 1
 
 
   annotations = {

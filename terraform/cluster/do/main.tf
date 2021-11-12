@@ -11,8 +11,8 @@ resource "digitalocean_kubernetes_cluster" "rack" {
     name       = "${var.name}-node"
     size       = var.node_type
     auto_scale = true
-    min_nodes  = 2
-    max_nodes  = 10
+    min_nodes  = var.high_availability ? 2 : 1
+    max_nodes  = var.high_availability ? 10 : 3
   }
 }
 
