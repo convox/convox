@@ -48,9 +48,7 @@ The parameters available for your Rack depend on the underlying cloud provider.
 | `node_type`           | `s-2vcpu-4gb` |
 | `region`              | `nyc3`        |
 | `registry_disk`       | `50Gi`        |
-| `high_availability` * | `true`        |
-
-\* Parameter cannot be changed after rack creation
+| `high_availability`   | `true`        |
 
 
 ### Google Cloud
