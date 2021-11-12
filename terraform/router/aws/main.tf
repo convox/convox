@@ -17,8 +17,8 @@ module "nginx" {
 
   namespace    = var.namespace
   rack         = var.name
-  replicas_max = var.high_availability ? 2 : 1
-  replicas_min = var.high_availability ? 10 : 1
+  replicas_max = var.high_availability ? 10 : 1
+  replicas_min = var.high_availability ? 2 : 1
 }
 
 resource "kubernetes_service" "router" {
