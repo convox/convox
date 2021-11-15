@@ -6,7 +6,7 @@ terraform {
     }
     external = {
       source  = "hashicorp/external"
-      version = "~> 1.2"
+      version = "~> 2.1"
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"

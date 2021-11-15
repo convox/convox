@@ -2,7 +2,7 @@ terraform {
   required_providers {
     http = {
       source  = "hashicorp/http"
-      version = "~> 1.1"
+      version = "~> 2.1"
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
@@ -10,7 +10,7 @@ terraform {
     }
     tls = {
       source  = "hashicorp/tls"
-      version = "~> 2.1"
+      version = "~> 3.1"
     }
   }
   required_version = ">= 0.12"
