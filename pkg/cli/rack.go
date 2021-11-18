@@ -287,7 +287,7 @@ func RackParamsSet(_ sdk.Interface, c *stdcli.Context) error {
 
 	args := argsToOptions(c.Args)
 	_, found := args["high_availability"]
-	if found && r.Provider() != "do" {
+	if found {
 		return errors.New("the high_availability parameter is only supported during rack installation")
 	}
 
