@@ -2,7 +2,7 @@ terraform {
   required_providers {
     http = {
       source  = "hashicorp/http"
-      version = "~> 1.1"
+      version = "~> 2.1"
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
