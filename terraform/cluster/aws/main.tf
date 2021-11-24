@@ -11,8 +11,9 @@ provider "kubernetes" {
 }
 
 locals {
-  oidc_sub           = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
-  availability_zones = var.availability_zones != "" ? compact(split(",", var.availability_zones)) : data.aws_availability_zones.available.names
+  availability_zones     = var.availability_zones != "" ? compact(split(",", var.availability_zones)) : data.aws_availability_zones.available.names
+  network_resource_count = var.high_availability ? 3 : 2
+  oidc_sub               = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
 }
 
 data "aws_availability_zones" "available" {
@@ -91,7 +92,7 @@ resource "aws_eks_node_group" "cluster" {
     aws_iam_openid_connect_provider.cluster,
   ]
 
-  count = 3
+  count = var.high_availability ? 3 : 1
 
   ami_type        = var.gpu_type ? "AL2_x86_64_GPU" : var.arm_type ? "AL2_ARM_64" : "AL2_x86_64"
   cluster_name    = aws_eks_cluster.cluster.name
@@ -105,7 +106,7 @@ resource "aws_eks_node_group" "cluster" {
   scaling_config {
     desired_size = 1
     min_size     = 1
-    max_size     = 100
+    max_size     = var.high_availability ? 100 : 3
   }
 
   lifecycle {

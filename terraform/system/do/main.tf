@@ -27,9 +27,10 @@ module "cluster" {
     digitalocean = digitalocean
   }
 
-  name      = var.name
-  node_type = var.node_type
-  region    = var.region
+  high_availability = var.high_availability
+  name              = var.name
+  node_type         = var.node_type
+  region            = var.region
 }
 
 module "rack" {
@@ -40,16 +41,17 @@ module "rack" {
     kubernetes   = kubernetes
   }
 
-  access_id     = var.access_id
-  cluster       = module.cluster.id
+  access_id           = var.access_id
+  cluster             = module.cluster.id
   docker_hub_username = var.docker_hub_username
-  docker_hub_password = var.docker_hub_password  
-  image         = var.image
-  name          = var.name
-  region        = var.region
-  registry_disk = var.registry_disk
-  release       = local.release
-  secret_key    = var.secret_key
-  syslog        = var.syslog
-  whitelist     = split(",", var.whitelist)
+  docker_hub_password = var.docker_hub_password
+  high_availability   = var.high_availability
+  image               = var.image
+  name                = var.name
+  region              = var.region
+  registry_disk       = var.registry_disk
+  release             = local.release
+  secret_key          = var.secret_key
+  syslog              = var.syslog
+  whitelist           = split(",", var.whitelist)
 }

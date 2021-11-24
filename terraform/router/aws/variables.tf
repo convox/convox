@@ -6,6 +6,10 @@ variable "idle_timeout" {
   type = number
 }
 
+variable "high_availability" {
+  default = true
+}
+
 variable "name" {
   type = string
 }

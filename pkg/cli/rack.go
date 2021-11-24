@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"sort"
@@ -284,7 +285,13 @@ func RackParamsSet(_ sdk.Interface, c *stdcli.Context) error {
 
 	c.Startf("Updating parameters")
 
-	if err := r.UpdateParams(argsToOptions(c.Args)); err != nil {
+	args := argsToOptions(c.Args)
+	_, found := args["high_availability"]
+	if found {
+		return errors.New("the high_availability parameter is only supported during rack installation")
+	}
+
+	if err := r.UpdateParams(args); err != nil {
 		return err
 	}
 

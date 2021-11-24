@@ -14,6 +14,10 @@ variable "gpu_type" {
   default = false
 }
 
+variable "high_availability" {
+  default = true
+}
+
 variable "k8s_version" {
   type = string
   default = "1.18"

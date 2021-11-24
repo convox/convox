@@ -7,9 +7,9 @@ module "k8s" {
 
   docker_hub_username = var.docker_hub_username
   docker_hub_password = var.docker_hub_password
-  domain  = module.router.endpoint
-  name    = var.name
-  release = var.release
+  domain              = module.router.endpoint
+  name                = var.name
+  release             = var.release
 }
 
 module "api" {
@@ -20,20 +20,21 @@ module "api" {
     kubernetes   = kubernetes
   }
 
-  access_id  = var.access_id
-  cluster    = var.cluster
+  access_id                 = var.access_id
+  cluster                   = var.cluster
   docker_hub_authentication = module.k8s.docker_hub_authentication
-  domain     = module.router.endpoint
-  image      = var.image
-  name       = var.name
-  namespace  = module.k8s.namespace
-  region     = var.region
-  release    = var.release
-  resolver   = module.resolver.endpoint
-  router     = module.router.endpoint
-  secret     = random_string.secret.result
-  secret_key = var.secret_key
-  syslog     = var.syslog
+  domain                    = module.router.endpoint
+  high_availability         = var.high_availability
+  image                     = var.image
+  name                      = var.name
+  namespace                 = module.k8s.namespace
+  region                    = var.region
+  release                   = var.release
+  resolver                  = module.resolver.endpoint
+  router                    = module.router.endpoint
+  secret                    = random_string.secret.result
+  secret_key                = var.secret_key
+  syslog                    = var.syslog
 }
 
 module "resolver" {
@@ -45,10 +46,11 @@ module "resolver" {
   }
 
   docker_hub_authentication = module.k8s.docker_hub_authentication
-  image     = var.image
-  namespace = module.k8s.namespace
-  rack      = var.name
-  release   = var.release
+  high_availability         = var.high_availability
+  image                     = var.image
+  namespace                 = module.k8s.namespace
+  rack                      = var.name
+  release                   = var.release
 }
 
 module "router" {
@@ -59,9 +61,10 @@ module "router" {
     kubernetes   = kubernetes
   }
 
-  name      = var.name
-  namespace = module.k8s.namespace
-  region    = var.region
-  release   = var.release
-  whitelist = var.whitelist
+  high_availability = var.high_availability
+  name              = var.name
+  namespace         = module.k8s.namespace
+  region            = var.region
+  release           = var.release
+  whitelist         = var.whitelist
 }

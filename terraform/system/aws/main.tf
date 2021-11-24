@@ -41,6 +41,7 @@ module "cluster" {
   availability_zones = var.availability_zones
   cidr               = var.cidr
   gpu_type           = local.gpu_type
+  high_availability  = var.high_availability
   k8s_version        = var.k8s_version
   name               = var.name
   node_disk          = var.node_disk
@@ -76,6 +77,7 @@ module "rack" {
   cluster             = module.cluster.id
   docker_hub_username = var.docker_hub_username
   docker_hub_password = var.docker_hub_password
+  high_availability   = var.high_availability
   idle_timeout        = var.idle_timeout
   image               = local.image
   name                = var.name
