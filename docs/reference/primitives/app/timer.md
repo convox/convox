@@ -1,11 +1,17 @@
+---
+title: "Timer"
+draft: false
+slug: Timer
+url: /reference/primitives/app/timer
+---
 # Timer
 
-A Timer spawns a [Process](process.md) on a schedule that is defined using [cron syntax](https://crontab.guru).
+A Timer spawns a [Process](/reference/primitives/app/process) on a schedule that is defined using [cron syntax](https://crontab.guru).
 
 ## Definition
 
-A Timer is defined in [`convox.yml`](../../../configuration/convox-yml.md).
-
+A Timer is defined in [`convox.yml`](/configuration/convox-yml).
+```html
     services:
       worker:
         build: ./worker
@@ -14,20 +20,20 @@ A Timer is defined in [`convox.yml`](../../../configuration/convox-yml.md).
         command: bin/cleanup
         schedule: "0 3 * * *"
         service: worker
-
+```
 ### Attributes
 
 | Name       | Required | Description                                                                                |
 | ---------- | -------- | ------------------------------------------------------------------------------------------ |
-| `command`  | **yes**  | The command to execute once the [Process](process.md) starts                               |
-| `schedule` | **yes**  | A cron formatted schedule for spawning the [Process](process.md). All times are UTC        |
-| `service`  | **yes**  | The name of the [Service](service.md) that will be used to spawn the [Process](process.md) |
+| **command**  | **yes**  | The command to execute once the [Process](/reference/primitives/app/process) starts                               |
+| **schedule** | **yes**  | A cron formatted schedule for spawning the [Process](/reference/primitives/app/process). All times are UTC        |
+| **service**  | **yes**  | The name of the [Service](/reference/primitives/app/service) that will be used to spawn the [Process](/reference/primitives/app/process) |
 
 ### Cron Expression Format
 
 Cron expressions use the following format. All times are UTC.
 
-```
+```html
 .----------------- minute (0 - 59)
 |  .-------------- hour (0 - 23)
 |  |  .----------- day-of-month (1 - 31)
@@ -41,9 +47,9 @@ Please notice that the smallest unit of time here is **minute**.
 
 ### Using a Template Service
 
-Timers can run against any [Service](service.md), even one that is scaled to zero. You can use this to create a
-template [Service](service.md) for your Timers.
-
+Timers can run against any [Service](/reference/primitives/app/service), even one that is scaled to zero. You can use this to create a
+template [Service](/reference/primitives/app/service) for your Timers.
+```html
     services:
       web:
         build: .
@@ -58,9 +64,9 @@ template [Service](service.md) for your Timers.
         command: bin/cleanup
         schedule: "*/2 * * * *"
         service: jobs
+```
+On this [App](..) the `jobs` [Service](/reference/primitives/app/service) is scaled to zero and not running any durable
+[Processes](/reference/primitives/app/process).
 
-On this [App](..) the `jobs` [Service](service.md) is scaled to zero and not running any durable
-[Processes](process.md).
-
-The `cleanup` Timer will spawn a [Process](process.md) of the `jobs` [Service](service.md) to run
+The `cleanup` Timer will spawn a [Process](/reference/primitives/app/process) of the `jobs` [Service](/reference/primitives/app/service) to run
 `bin/cleanup` once every two minutes.

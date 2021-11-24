@@ -1,5 +1,8 @@
 ---
-order: 3
+title: "Local Development"
+draft: false
+slug: Local Development
+url: /tutorials/local-development
 ---
 
 # Local Development
@@ -11,32 +14,32 @@ and running your first App on it.
 
 Before we begin you will need to install the `convox` CLI and a development Rack:
 
-* [Command Line Interface](../installation/cli.md)
-* [Development Rack](../installation/development-rack)
+* [Command Line Interface](/installation/cli)
+* [Development Rack](/installation/development-rack)
 
 ## Verify installation
 
 Verify that your development Rack is running with `convox rack`:
-
+```html
     $ convox rack
     Name     dev
     Provider local
     Router   router.dev.convox
     Status   running
     Version  3.0.0
-
+```
 ## Get an example applicaton
 
 ### Clone the Rails example
-
+```html
     $ git clone https://github.com/convox-examples/rails.git
-
+```
 ### Enter the directory with the example application
-
+```html
     $ cd rails
-
+```
 ### Look at the convox.yml
-
+```html
     $ cat convox.yml
     resources:
       database:
@@ -48,14 +51,14 @@ Verify that your development Rack is running with `convox rack`:
         port: 3000
         resources:
           - database
+```
+This `convox.yml` defines one [Service](/reference/primitives/app/service) named `web`. Each
+[Process](/reference/primitives/app/process) of this Service will listen on port `3000` and should
+respond with a successful response to a [health check](/configuration/health-checks) at `GET /health`.
 
-This `convox.yml` defines one [Service](../reference/primitives/app/service.md) named `web`. Each
-[Process](../reference/primitives/app/process.md) of this Service will listen on port `3000` and should
-respond with a successful response to a [health check](../configuration/health-checks.md) at `GET /health`.
-
-This App also has one PostgreSQL [Resource](../reference/primitives/app/resource.md) named `database` which
-is connected to the `web` [Service](../reference/primitives/app/service.md). This will create a PostgreSQL
-database and make its connection information available to the `web` [Processes](../reference/primitives/app/process.md)
+This App also has one PostgreSQL [Resource](/reference/primitives/app/resource) named `database` which
+is connected to the `web` [Service](/reference/primitives/app/service). This will create a PostgreSQL
+database and make its connection information available to the `web` [Processes](/reference/primitives/app/process)
 as the environment variable `DATABASE_URL`.
 
 ## Run the application locally
@@ -64,7 +67,7 @@ You can start an app against your development Rack using `convox start`:
 
 > The first time you run `convox start` on an application will take longer than usual
 > because you won't have anything cached.
-
+```html
     $ convox start
     build  | uploading source
     build  | starting build
@@ -148,51 +151,51 @@ You can start an app against your development Rack using `convox start`:
     web    | Use Ctrl-C to stop
     web    | Started GET "/health" for 10.1.0.1 at 2020-02-11 15:24:11 +0000
     web    | Cannot render console from 10.1.0.1! Allowed networks: 127.0.0.0/127.255.255.255, ::1
-
+```
 ## View the application in a browser
 
 In another terminal navigate to the directory where you cloned the example app and run `convox services`:
-
+```html
     $ convox services
     SERVICE  DOMAIN                PORTS
     web      web.rails.dev.convox  443:3000
-
+```
 Now in your browser navigate to https://web.rails.dev.convox
 
 > If you named your development Rack something other than `dev` this URL will be slightly different for you.
 
 You should see logs in the first terminal that show your browser requesting the index page.
-
+```html
     web    | Processing by Rails::WelcomeController#index as HTML
     web    |   Rendering /usr/local/bundle/gems/railties-6.0.0/lib/rails/templates/rails/welcome/index.html.erb
     web    |   Rendered /usr/local/bundle/gems/railties-6.0.0/lib/rails/templates/rails/welcome/index.html.erb (Duration: 3.8ms | Allocations: 194)
     web    | Completed 200 OK in 8ms (Views: 4.4ms | ActiveRecord: 0.0ms | Allocations: 1053)
-
+```
 ## Make a change
 
 Edit the file `config/routes.rb` and add the following line just before the final `end`:
-
+```html
     get "/test", to: proc { [ 200, {}, ["Hello World!"] ] }
-
+```
 This will cause Rails to respond to `GET /test` requests with `Hello World!`.
 
 You will see the change being synchronized up to your development Rack:
-
+```html
     convox | sync: config/routes.rb to /usr/src/app on web
-
+```
 Now navigate to https://web.rails.dev.convox/test
 
 You can make further changes to this route and it will be synchronized every time you save the file.
 
 ## Run a command
 
-You can use `convox run` to run [one-off commands](../management/run.md) against the App:
-
+You can use `convox run` to run [one-off commands](/management/run) against the App:
+```html
     $ convox run web rake db:migrate test
     Finished in 5.053022s, 0.0000 runs/s, 0.0000 assertions/s.
     0 runs, 0 assertions, 0 failures, 0 errors, 0 skips
-
+```
 ## Deploy the application
 
-See the [Deploying an Application](deploying-an-application.md) guide to deploy this application
+See the [Deploying an Application](/tutorials/deploying-an-application) guide to deploy this application
 to the internet.

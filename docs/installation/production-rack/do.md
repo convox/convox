@@ -1,3 +1,9 @@
+---
+title: "Digital Ocean"
+draft: false
+slug: Digital Ocean
+url: /installation/production-rack/do
+---
 # Digital Ocean
 > Please note that these are instructions for installing a Rack via the command line. The easiest way to install a Rack is with the [Convox Web Console](https://console.convox.com)
 
@@ -9,7 +15,7 @@
 
 ### Convox CLI
 
-- [Install the Convox CLI](../cli.md)
+- [Install the Convox CLI](/installation/cli)
 
 ## Environment
 
@@ -33,14 +39,14 @@ Go to https://cloud.digitalocean.com/account/api/tokens and generate a new Space
 - `DIGITALOCEAN_SECRET_KEY` is the Secret
 
 ## Install Rack
-
+```html
     $ convox rack install do <name> [param1=value1]...
-
+```
 ### Available Parameters
 
-| Name            | Default       | Description                                                             |
-| --------------- | ------------- | ----------------------------------------------------------------------- |
-| `node_type`     | `s-2vcpu-4gb` | [Node instance type](https://slugs.do-api.dev/)                         |
-| `region`        | `nyc3`        | [Digital Ocean region](https://slugs.do-api.dev/)                       |
-| `registry_disk` | `50Gi`        | Registry disk size                                                      |
-| `syslog`        |               | Forward logs to a syslog endpoint (e.g. `tcp+tls://example.org:1234`)   |
+| Name              | Default         | Description                                                             |
+| ------------------| ----------------| ----------------------------------------------------------------------- |
+| **node_type**     | **s-2vcpu-4gb** | [Node instance type](https://slugs.do-api.dev/)                         |
+| **region**        | **nyc3**        | [Digital Ocean region](https://slugs.do-api.dev/)                       |
+| **registry_disk** | **50Gi**        | Registry disk size                                                      |
+| **syslog**        |                 | Forward logs to a syslog endpoint (e.g. **tcp+tls://example.org:1234**) |

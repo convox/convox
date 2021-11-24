@@ -1,3 +1,9 @@
+---
+title: "Rails"
+draft: false
+slug: Rails
+url: /example-apps/rails
+---
 # Rails
 
 We have provided an [example Rails app](https://github.com/convox-examples/rails) that you can deploy using Convox. To give this a try, start by cloning this repository.
@@ -6,8 +12,8 @@ We have provided an [example Rails app](https://github.com/convox-examples/rails
 
 Let's begin with installing the `convox` CLI and a deploying a development Rack.  Use the documentation links below to execute these initial steps:
 
-* [Command Line Interface](../installation/cli.md)
-* [Development Rack](../installation/development-rack)
+* [Command Line Interface](/installation/cli)
+* [Development Rack](/installation/development-rack)
 
 ### Preparing your application
 
@@ -37,9 +43,9 @@ Because the resource named `database` appears in the `links:` section of this se
 
 Create a file in the root of your project with the name `convox.yml` and the following content:
 
-> Note: Check [convox.yml](https://docs.convox.com/configuration/convox-yml) to see all the possible configurations.
+> Note: Check [convox.yml](/configuration/convox-yml) to see all the possible configurations.
 
-```
+```html
 resources: # Here we are creating a database resource to use in our application.
   database:
     type: postgres
@@ -72,10 +78,10 @@ In your `config/development.rb` add:
 
 By default, the name of your `app` is taken to be the name of the directory you are in.  You can use a different app name by adding the `--app/-a` flags to any Convox command.
 
-**5.** Assuming you want to use postgres in your application, in your gemfile add the following line `gem 'pg'`. If you want to use a different database you just need to install the gem and define it on the `resources` section of `convox.yml`. You can find information about the databases we currently natively support [here](https://docs.convox.com/reference/primitives/app/resource#types)
+**5.** Assuming you want to use postgres in your application, in your gemfile add the following line `gem 'pg'`. If you want to use a different database you just need to install the gem and define it on the `resources` section of `convox.yml`. You can find information about the databases we currently natively support [here](/reference/primitives/app/resource#types)
 
 
-**6.** As mentioned in step **#2**, when you define a resource Convox will create an environment variable with that name for your application to access it. For more information on how it works check it [here](https://docs.convox.com/reference/primitives/app/resource#linking). To use Convox' database resource as in our convox.yml, in your `config/database.yml` add the following line under `default`:
+**6.** As mentioned in step **#2**, when you define a resource Convox will create an environment variable with that name for your application to access it. For more information on how it works check it [here](/reference/primitives/app/resource#linking). To use Convox' database resource as in our convox.yml, in your `config/database.yml` add the following line under `default`:
 
  ```  url: <%= ENV['DATABASE_URL'] %>```.
 
@@ -83,7 +89,7 @@ Your `database.yml` should look like [this](https://github.com/convox-examples/r
 
 **7.** Given that Convox manages the SSL certificates, we need to disable the rails configuration to force SSL. Please go to `config/environments/production.rb` and comment the line
 
-```
+```html
 # config.force_ssl = true
 ```
 
@@ -99,7 +105,7 @@ You should now be able to access your application by going to [https://web.rails
 
 Install a production Rack on the cloud provider of your choice:
 
-* [Production Rack](../installation/production-rack)
+* [Production Rack](/installation/production-rack)
 
 Once we are all set with installing the production Rack, here are the production deployment steps:
 
@@ -123,7 +129,7 @@ convox apps create
 
 Then, we'll need to define the secret key for the production application:
 
-```
+```bash
 convox env set SECRET_KEY_BASE="$(rails secret)"
 ```
 

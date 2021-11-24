@@ -1,3 +1,9 @@
+---
+title: "Known Issues"
+draft: false
+slug: Known Issues
+url: /help/known-issues
+---
 # Known Issues
 
 ## Racks

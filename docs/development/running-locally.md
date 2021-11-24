@@ -1,15 +1,18 @@
 ---
-order: 1
+title: "Running Locally"
+draft: false
+slug: Running Locally
+url: /development/running-locally
 ---
 
 # Running Locally
 
-Running your application locally requires a [Development Rack](../installation/development-rack) to be installed.
+Running your application locally requires a [Development Rack](/installation/development-rack) to be installed.
 
 ## Starting Your Application
 
 Once you have a Development Rack, you can go to the directory containing your application code and run `convox start`.
-
+```html
     $ convox start
     build  | uploading source
     build  | starting build
@@ -39,7 +42,7 @@ Once you have a Development Rack, you can go to the directory containing your ap
     web    | Created container main
     web    | make: '/go/bin/web' is up to date.
     web    | ns=web at=listen hostname="web.convox" proto="https" addr=":3000"
-
+```
 ### Code Sync
 
 Convox automatically synchronizes your local changes up to the Development Rack so that you can work
@@ -54,7 +57,7 @@ synchronized.
 
 You can use a build target named `development` in your `Dockerfile` to work locally on an application that will be
 later compiled to a binary and have its source code removed before deploying to production.
-
+```html
     FROM golang:1.13 AS development
     ENV DEVELOPMENT=true
     COPY . .
@@ -65,7 +68,7 @@ later compiled to a binary and have its source code removed before deploying to 
     ENV DEVELOPMENT=false
     COPY --from=development /go/bin/web /app/web
     CMD ["/app/web"]
-
+```
 In this example during `convox start` only the first section of the Dockerfile will be run. This allows you to
 work in a container that contains the full source code where you can set `CMD` to a script that automatically
 recompiles and reloads the application when the source code is changed.

@@ -1,3 +1,9 @@
+---
+title: "Deploy Keys"
+draft: false
+slug: Deploy Keys
+url: /management/deploy-keys
+---
 # Deploy Keys
 
 Deploy keys are limited scope API keys that allow you to run some limited commands from a remote environment (such as continuous integration systems like Jenkins, Travis, CircleCI etc) without needing to store/use/expose your user credentials.  
@@ -29,7 +35,7 @@ Go to the **Deploy Keys** section, give your deploy key a name, and click on **C
 
 ## Using a Deploy Key
 
-In your CI environment, download the latest version of the [Convox CLI](/introduction/installation) and use the deploy key like these examples:
+In your CI environment, download the latest version of the [Convox CLI](/getting-started/introduction#install-the-convox-cli-and-login) and use the deploy key like these examples:
 
 ```sh
 $ env CONVOX_HOST=console.convox.com CONVOX_PASSWORD=<key> convox deploy

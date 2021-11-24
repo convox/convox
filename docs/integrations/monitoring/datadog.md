@@ -1,12 +1,18 @@
+---
+title: "Datadog"
+draft: false
+slug: Datadog
+url: /integrations/monitoring/datadog
+---
 # Datadog
 
-You can add operational visibility to your [Rack](../../reference/primitives/rack) with Datadog.
+You can add operational visibility to your [Rack](/reference/primitives/rack) with Datadog.
 
 ## Configure kubectl to Point at Your Rack
 
-Convox allows you to securely connect your `kubectl` to your Convox created Kubernetes cluster by exporting a [kubeconfig](../../reference/cli/rack#rack-kubeconfig) that will connect you to a Kubernetes API Proxy running inside your Rack. This allows you to use `kubectl` without directly exposing the credentials for your Kubernetes cluster. For example if your Rack is called `myrack` you could point your local `kubectl` to your Rack cluster as follows
+Convox allows you to securely connect your `kubectl` to your Convox created Kubernetes cluster by exporting a [kubeconfig](/reference/cli/rack#rack-kubeconfig) that will connect you to a Kubernetes API Proxy running inside your Rack. This allows you to use `kubectl` without directly exposing the credentials for your Kubernetes cluster. For example if your Rack is called `myrack` you could point your local `kubectl` to your Rack cluster as follows
 
-```
+```html
 $ convox rack kubeconfig > /tmp/myrack-config
 $ export KUBECONFIG=/tmp/myrack-config
 ```
@@ -19,9 +25,9 @@ Once you have `kubectl` pointing at your Rack you can deploy the datadog agent a
 
 ## Configure Agent Permissions
 
-The following commands will create the necessary roles in your cluster for the Datadog Agent to monitor your cluster and your [Apps](../../reference/primitives/apps.md)
+The following commands will create the necessary roles in your cluster for the Datadog Agent to monitor your cluster and your [Apps](/reference/primitives/app)
 
-```
+```html
 $ kubectl apply -f "https://raw.githubusercontent.com/DataDog/datadog-agent/master/Dockerfiles/manifests/rbac/clusterrole.yaml"
 
 $ kubectl apply -f "https://raw.githubusercontent.com/DataDog/datadog-agent/master/Dockerfiles/manifests/rbac/serviceaccount.yaml"
@@ -34,7 +40,7 @@ $ kubectl apply -f "https://raw.githubusercontent.com/DataDog/datadog-agent/mast
 
 Retrieve your [API Key](https://app.datadoghq.com/account/settings#api) from the Datadog console and store it as a secret in your cluster by replacing `<DATADOG_API_KEY>` with your API key and running the following command.
 
-```
+```html
 $ kubectl create secret generic datadog-secret --from-literal api-key="<DATADOG_API_KEY>" --namespace="default"
 ```
 
@@ -44,7 +50,7 @@ You will then need to grab the Base64 encoded version of your API key to put in 
 
 and grabbing the value for `api-key`
 
-```
+```html
 $ kubectl get secret datadog-secret -o yaml
 apiVersion: v1
 data:
@@ -73,7 +79,7 @@ Datadog has several example manifests
 
 Whichever one of these examples you use as your starting point, you will need to insert the Base64 encoded key from the previous step in the section at the top where it says:
 
-```
+```html
 # Source: datadog/templates/secrets.yaml
 # API Key
 apiVersion: v1
@@ -88,7 +94,7 @@ data:
 
 We also recommend adding the following to the environment section of the Daemonset spec:
 
-```
+```html
 - name: DD_CONTAINER_EXCLUDE
   value: "name:datadog-agent"
 ```
@@ -98,13 +104,13 @@ to remove extra noise from the Datadog Agent itself.
 
 If you save your customized Agent Manifest as a file called `datadog-agent.yaml` you can then create the daemonset by running
 
-```
+```html
 $ kubectl apply -f datadog-agent.yaml
 ```
 
 You can verify the daemonset by running
 
-```
+```html
 $ kubectl get daemonset
 ```
 
@@ -118,5 +124,5 @@ In order to use Datadog's APM, Distributed Tracing, or Runtime Metrics you will 
 to connect to the Datadog agent.
 
 The agent configuration above will be listening to `8125/udp` and `8126/tcp` on the instance
-IP address. This IP address will be available to your [Processes](../../reference/primitives/app/process.md)
+IP address. This IP address will be available to your [Processes](/reference/primitives/app/process)
 in the `INSTANCE_IP` environment variable.

@@ -1,3 +1,9 @@
+---
+title: "start"
+draft: false
+slug: start
+url: /reference/cli/start
+---
 # start
 
 ## start
@@ -5,15 +11,15 @@
 Start an application for local development
 
 ### Usage
-
+```html
     convox start [service] [service...] [options]
-
+```
 ### Options
-
+```html
     -m <file.yml> allows to specify an alternative manifest file (convox.yml by default)
-
+```
 ### Examples
-
+```html
     $ convox start
     build  | uploading source
     build  | starting build
@@ -47,5 +53,4 @@ Start an application for local development
     web    | Created container main
     web    | Server running at http://0.0.0.0:3000/
     web    | Started container main
-
-
+```

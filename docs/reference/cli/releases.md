@@ -1,3 +1,9 @@
+---
+title: "releases"
+draft: false
+slug: releases
+url: /reference/cli/releases
+---
 # releases
 
 ## releases
@@ -5,60 +11,60 @@
 List releases for an app
 
 ### Usage
-
+```html
     convox releases
-
+```
 ### Examples
-
+```html
     $ convox releases
     ID          STATUS  BUILD        CREATED         DESCRIPTION
     RIABCDEFGH          BJABCDEFGHI  30 seconds ago
     RABCDEFGHI  active  BABCDEFGHIJ  2 weeks ago
     RBCDEFGHIJ          BBCDEFGHIJK  2 weeks ago
-
+```
 ## releases info
 
 Get information about a release
 
 ### Usage
-
+```html
     convox releases info <release>
-
+```
 ### Examples
-
+```html
     $ convox releases info RABCDEFGHI
     Id           RABCDEFGHI
     Build        BABCDEFGHIJ
     Created      2020-01-22T15:37:38Z
     Description
     Env
-
+```
 ## releases manifest
 
 Get manifest for a release
 
 ### Usage
-
+```html
     convox releases manifest <release>
-
+```
 ### Examples
-
+```html
     $ convox releases manifest RABCDEFGHI
     services:
         web:
             build: .
             port: 3000
-
+```
 ## releases promote
 
 Promote a release
 
 ### Usage
-
+```html
     convox releases promote <release>
-
+```
 ### Examples
-
+```html
     $ convox releases promote RIABCDEFGH
     Promoting RIABCDEFGH...
     2020-02-11T20:55:37Z system/k8s/atom/app Status: Running => Pending
@@ -73,17 +79,17 @@ Promote a release
     2020-02-11T20:55:58Z system/k8s/atom/app Status: Pending => Updating
     2020-02-11T20:55:59Z system/k8s/atom/service/web Status: Running => Pending
     OK
-
+```
 ## releases rollback
 
 Copy an old release forward and promote it
 
 ### Usage
-
+```html
     convox releases rollback <release>
-
+```
 ### Examples
-
+```html
     $ convox releases rollback RABCDEFGHI
     Rolling back to RABCDEFGHI... OK, RHIABCDEFG
     Promoting RHIABCDEFG...
@@ -101,3 +107,4 @@ Copy an old release forward and promote it
     2020-02-11T20:58:33Z system/k8s/atom/app Status: Updating => Running
     2020-02-11T20:58:34Z system/k8s/atom/service/web Status: Updating => Running
     OK
+```

@@ -1,22 +1,28 @@
+---
+title: "Primitives"
+draft: false
+slug: Primitives
+url: /reference/primitives
+---
 # Primitives
 
-Primitives are the building blocks available to build an [App](app) on Convox. Apps are deployed and run on your [Rack](rack), the platform overlaid on your cloud infrastructure.
+Primitives are the building blocks available to build an [App](/reference/primitives/app) on Convox. Apps are deployed and run on your [Rack](/reference/primitives/rack), the platform overlaid on your cloud infrastructure.
 
 Primitives can be easily composed to provide useful functionality that lets you
-focus on the things that make your [App](app) unique.
+focus on the things that make your [App](/reference/primitives/app) unique.
 
 ## App Primitives
 
 | Primitive                   | Description                                                                                  |
 |:----------------------------|:---------------------------------------------------------------------------------------------|
-| [Balancer](app/balancer.md) | Custom TCP load balancers in front of a [Service](app/service.md)                            |
-| [Build](app/build.md)       | Compiled version of a codebase                                                               |
-| [Object](app/object.md)     | Blob/file storage                                                                            |
-| [Process](app/process.md)   | Running containers created by running a command on a [Release](app/build.md)                 |
-| [Release](app/release.md)   | Units of deployment consisting of a [Build](app/build.md) and a set of environment variables |
-| [Resource](app/resource) | Network-accessible external services (e.g. Postgres)                                         |
-| [Service](app/service.md)   | Horizontally-scalable collections of durable [Processes](app/process.md)                     |
-| [Timer](app/timer.md)       | Runs one-off [Processes](app/process.md) on a scheduled interval                             |
+| [Balancer](/reference/primitives/app/balancer) | Custom TCP load balancers in front of a [Service](/reference/primitives/app/service)                            |
+| [Build](/reference/primitives/app/build)       | Compiled version of a codebase                                                               |
+| [Object](/reference/primitives/app/object)     | Blob/file storage                                                                            |
+| [Process](/reference/primitives/app/process)   | Running containers created by running a command on a [Release](/reference/primitives/app/build)                 |
+| [Release](/reference/primitives/app/release)   | Units of deployment consisting of a [Build](/reference/primitives/app/build) and a set of environment variables |
+| [Resource](/reference/primitives/app/resource) | Network-accessible external services (e.g. Postgres)                                         |
+| [Service](/reference/primitives/app/service)   | Horizontally-scalable collections of durable [Processes](/reference/primitives/app/process)                     |
+| [Timer](/reference/primitives/app/timer)       | Runs one-off [Processes](/reference/primitives/app/process) on a scheduled interval                             |
 
 ### Coming Soon
 
@@ -38,5 +44,5 @@ focus on the things that make your [App](app) unique.
 
 | Primitive                    | Description                                                         |
 |:-----------------------------|:--------------------------------------------------------------------|
-| [Instance](rack/instance.md) | Node that provides capacity for running [Processes](app/process.md) |
-| [Registry](rack/registry.md) | External image repository                                           |
+| [Instance](/reference/primitives/rack/instance) | Node that provides capacity for running [Processes](/reference/primitives/app/process) |
+| [Registry](/reference/primitives/rack/registry) | External image repository                                           |

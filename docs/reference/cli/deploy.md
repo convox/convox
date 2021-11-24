@@ -1,3 +1,9 @@
+---
+title: "deploy"
+draft: false
+slug: deploy
+url: /reference/cli/deploy
+---
 # deploy
 
 ## deploy
@@ -5,11 +11,11 @@
 Create and promote a build
 
 ### Usage
-
+```html
     convox deploy [dir]
-
+```
 ### Examples
-
+```html
     $ convox deploy
     Packaging source... OK
     Uploading source... OK
@@ -28,3 +34,4 @@ Create and promote a build
     2020-01-31T15:41:27Z system/cloudformation aws/cfm test-myapp DELETE_COMPLETE ServiceApp
     2020-01-31T15:41:27Z system/cloudformation aws/cfm test-myapp UPDATE_COMPLETE test-myapp
     OK
+```

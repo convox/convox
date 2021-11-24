@@ -1,3 +1,9 @@
+---
+title: "Support"
+draft: false
+slug: Support
+url: /help/support
+---
 # Support
 
 ## Community Support
