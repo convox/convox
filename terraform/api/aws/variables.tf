@@ -6,6 +6,10 @@ variable "domain" {
   type = string
 }
 
+variable "high_availability" {
+  default = true
+}
+
 variable "image" {
   type = string
 }

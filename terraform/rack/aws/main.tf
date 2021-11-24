@@ -22,6 +22,7 @@ module "api" {
 
   docker_hub_authentication = module.k8s.docker_hub_authentication
   domain                    = module.router.endpoint
+  high_availability         = var.high_availability
   image                     = var.image
   name                      = var.name
   namespace                 = module.k8s.namespace
@@ -50,6 +51,7 @@ module "resolver" {
   }
 
   docker_hub_authentication = module.k8s.docker_hub_authentication
+  high_availability         = var.high_availability
   image                     = var.image
   namespace                 = module.k8s.namespace
   rack                      = var.name
@@ -64,11 +66,12 @@ module "router" {
     kubernetes = kubernetes
   }
 
-  idle_timeout = var.idle_timeout
-  name         = var.name
-  namespace    = module.k8s.namespace
-  oidc_arn     = var.oidc_arn
-  oidc_sub     = var.oidc_sub
-  release      = var.release
-  whitelist    = var.whitelist
+  high_availability = var.high_availability
+  idle_timeout      = var.idle_timeout
+  name              = var.name
+  namespace         = module.k8s.namespace
+  oidc_arn          = var.oidc_arn
+  oidc_sub          = var.oidc_sub
+  release           = var.release
+  whitelist         = var.whitelist
 }

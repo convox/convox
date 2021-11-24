@@ -22,6 +22,7 @@ require (
 	github.com/convox/stdcli v0.0.0-20200218120900-608b86ac40a1
 	github.com/convox/stdsdk v0.0.0-20201005151143-fb7f05286eea
 	github.com/convox/version v0.0.0-20160822184233-ffefa0d565d2
+	github.com/crazy-max/xgo v0.7.4
 	github.com/creack/pty v1.1.13
 	github.com/ddollar/go-u2fhost v0.0.0-20200214123511-3ca2df7a0b44
 	github.com/docker/docker v1.4.2-0.20190710153559-aa8249ae1b8b
@@ -37,7 +38,6 @@ require (
 	github.com/headzoo/ut v0.0.0-20181013193318-a13b5a7a02ca // indirect
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf
-	github.com/karalabe/xgo v0.0.0-20191115072854-c5ccff8648a7
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/mattn/go-zglob v0.0.1 // indirect
 	github.com/miekg/dns v1.1.25

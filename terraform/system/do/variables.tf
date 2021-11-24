@@ -10,6 +10,10 @@ variable "docker_hub_password" {
   default = ""
 }
 
+variable "high_availability" {
+  default = true
+}
+
 variable "image" {
   default = "convox/convox"
 }

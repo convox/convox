@@ -124,6 +124,8 @@ github.com/convox/stdcli
 github.com/convox/stdsdk
 # github.com/convox/version v0.0.0-20160822184233-ffefa0d565d2
 github.com/convox/version
+# github.com/crazy-max/xgo v0.7.4
+github.com/crazy-max/xgo
 # github.com/creack/pty v1.1.13
 github.com/creack/pty
 # github.com/davecgh/go-spew v1.1.1
@@ -289,8 +291,6 @@ github.com/joho/godotenv
 github.com/json-iterator/go
 # github.com/karalabe/hid v1.0.0
 github.com/karalabe/hid
-# github.com/karalabe/xgo v0.0.0-20191115072854-c5ccff8648a7
-github.com/karalabe/xgo
 # github.com/karrick/godirwalk v1.10.12
 github.com/karrick/godirwalk
 # github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51

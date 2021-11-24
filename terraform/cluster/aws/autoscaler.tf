@@ -53,6 +53,9 @@ locals {
 }
 
 resource "kubernetes_service_account" "autoscaler" {
+  depends_on = [
+    null_resource.wait_k8s_api
+  ]
   metadata {
     name      = "cluster-autoscaler"
     namespace = "kube-system"
@@ -65,6 +68,9 @@ resource "kubernetes_service_account" "autoscaler" {
 }
 
 resource "kubernetes_cluster_role" "autoscaler" {
+  depends_on = [
+    null_resource.wait_k8s_api
+  ]
   metadata {
     name   = "cluster-autoscaler"
     labels = local.autoscaler_labels
@@ -152,6 +158,9 @@ resource "kubernetes_cluster_role" "autoscaler" {
 }
 
 resource "kubernetes_cluster_role_binding" "autoscaler" {
+  depends_on = [
+    null_resource.wait_k8s_api
+  ]
   metadata {
     name   = "cluster-autoscaler"
     labels = local.autoscaler_labels
@@ -171,6 +180,9 @@ resource "kubernetes_cluster_role_binding" "autoscaler" {
 }
 
 resource "kubernetes_role" "autoscaler" {
+  depends_on = [
+    null_resource.wait_k8s_api
+  ]
   metadata {
     name      = "cluster-autoscaler"
     namespace = "kube-system"
@@ -192,6 +204,9 @@ resource "kubernetes_role" "autoscaler" {
 }
 
 resource "kubernetes_role_binding" "autoscaler" {
+  depends_on = [
+    null_resource.wait_k8s_api
+  ]
   metadata {
     name      = "cluster-autoscaler"
     namespace = "kube-system"
@@ -212,7 +227,10 @@ resource "kubernetes_role_binding" "autoscaler" {
 }
 
 resource "kubernetes_deployment" "autoscaler" {
-  depends_on = [aws_iam_role_policy.autoscaler_autoscale]
+  depends_on = [
+    aws_iam_role_policy.autoscaler_autoscale,
+    null_resource.wait_k8s_api
+  ]
 
   metadata {
     name      = "cluster-autoscaler"
@@ -251,7 +269,7 @@ resource "kubernetes_deployment" "autoscaler" {
         priority_class_name             = "system-cluster-critical"
 
         container {
-          image             = "k8s.gcr.io/cluster-autoscaler:v1.14.7"
+          image             = "k8s.gcr.io/autoscaling/cluster-autoscaler:v1.22.1"
           image_pull_policy = "IfNotPresent"
           name              = "cluster-autoscaler"
 

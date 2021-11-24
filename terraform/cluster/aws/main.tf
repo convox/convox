@@ -1,16 +1,19 @@
 provider "kubernetes" {
   cluster_ca_certificate = base64decode(aws_eks_cluster.cluster.certificate_authority.0.data)
   host                   = aws_eks_cluster.cluster.endpoint
-  token                  = data.aws_eks_cluster_auth.cluster.token
 
   load_config_file = false
+  exec {
+    api_version = "client.authentication.k8s.io/v1alpha1"
+    args        = ["eks", "get-token", "--cluster-name", var.name]
+    command     = "aws"
+  }
 }
 
 locals {
-  oidc_sub           = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
-  gpu_type           = substr(var.node_type, 0, 1) == "g" || substr(var.node_type, 0, 1) == "p"
-  arm_type           = substr(var.node_type, 0, 2) == "a1" || substr(var.node_type, 0, 3) == "c6g" || substr(var.node_type, 0, 3) == "m6g" || substr(var.node_type, 0, 3) == "r6g"
-  availability_zones = var.availability_zones != "" ? compact(split(",", var.availability_zones)) : data.aws_availability_zones.available.names
+  availability_zones     = var.availability_zones != "" ? compact(split(",", var.availability_zones)) : data.aws_availability_zones.available.names
+  network_resource_count = var.high_availability ? 3 : 2
+  oidc_sub               = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
 }
 
 data "aws_availability_zones" "available" {
@@ -34,6 +37,19 @@ resource "null_resource" "delay_cluster" {
   }
 }
 
+// the cluster API takes some seconds to be available even when aws reports that the cluster is ready
+// https://github.com/terraform-aws-modules/terraform-aws-eks/issues/621
+resource "null_resource" "wait_k8s_api" {
+  provisioner "local-exec" {
+    command = "sleep 60"
+  }
+
+  depends_on = [
+    aws_eks_cluster.cluster
+  ]
+
+}
+
 resource "aws_eks_cluster" "cluster" {
   depends_on = [
     null_resource.delay_cluster,
@@ -43,7 +59,7 @@ resource "aws_eks_cluster" "cluster" {
 
   name     = var.name
   role_arn = aws_iam_role.cluster.arn
-  version  = "1.17"
+  version  = var.k8s_version
 
   vpc_config {
     endpoint_public_access  = true
@@ -76,20 +92,21 @@ resource "aws_eks_node_group" "cluster" {
     aws_iam_openid_connect_provider.cluster,
   ]
 
-  count = 3
+  count = var.high_availability ? 3 : 1
 
-  ami_type        = local.gpu_type ? "AL2_x86_64_GPU" : local.arm_type ? "AL2_ARM_64" : "AL2_x86_64"
+  ami_type        = var.gpu_type ? "AL2_x86_64_GPU" : var.arm_type ? "AL2_ARM_64" : "AL2_x86_64"
   cluster_name    = aws_eks_cluster.cluster.name
   disk_size       = random_id.node_group.keepers.node_disk
   instance_types  = [random_id.node_group.keepers.node_type]
   node_group_name = "${var.name}-${local.availability_zones[count.index]}-${random_id.node_group.hex}"
   node_role_arn   = random_id.node_group.keepers.role_arn
   subnet_ids      = [var.private ? aws_subnet.private[count.index].id : aws_subnet.public[count.index].id]
+  version         = var.k8s_version
 
   scaling_config {
     desired_size = 1
     min_size     = 1
-    max_size     = 100
+    max_size     = var.high_availability ? 100 : 3
   }
 
   lifecycle {

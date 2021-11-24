@@ -2,6 +2,10 @@ variable "env" {
   default = {}
 }
 
+variable "high_availability" {
+  default = true
+}
+
 variable "name" {
   type = string
 }

@@ -1,3 +1,7 @@
+variable "arm_type" {
+  default = false
+}
+
 variable "cluster" {
   type = string
 }

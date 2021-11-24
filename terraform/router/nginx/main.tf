@@ -184,7 +184,7 @@ resource "kubernetes_deployment" "ingress-nginx" {
 
         container {
           name  = "system"
-          image = "quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.26.1"
+          image = var.nginx_image
           args = [
             "/nginx-ingress-controller",
             "--configmap=$(POD_NAMESPACE)/nginx-configuration",
@@ -200,7 +200,7 @@ resource "kubernetes_deployment" "ingress-nginx" {
               drop = ["ALL"]
               add  = ["NET_BIND_SERVICE"]
             }
-            run_as_user = 33
+            run_as_user = var.nginx_user
           }
 
           env {

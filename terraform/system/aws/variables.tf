@@ -14,6 +14,10 @@ variable "docker_hub_password" {
   default = ""
 }
 
+variable "high_availability" {
+  default = true
+}
+
 variable "idle_timeout" {
   type    = number
   default = 3600
@@ -26,6 +30,11 @@ variable "idle_timeout" {
 
 variable "image" {
   default = "convox/convox"
+}
+
+variable "k8s_version" {
+  type = string
+  default = "1.18"
 }
 
 variable "name" {

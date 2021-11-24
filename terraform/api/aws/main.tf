@@ -21,6 +21,7 @@ module "k8s" {
   namespace                 = var.namespace
   rack                      = var.name
   release                   = var.release
+  replicas                  = var.high_availability ? 2 : 1
   resolver                  = var.resolver
 
   annotations = {
