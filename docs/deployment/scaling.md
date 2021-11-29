@@ -33,7 +33,7 @@ You can specify the scale for any [Service](/reference/primitives/app/service) i
     NAME  DESIRED  RUNNING  CPU  MEMORY
     web   2        2        256  512
 ```
-### Scaling Horizontally
+### Scaling Count Horizontally
 ```html
     $ convox scale web --count=3
     Scaling web...
@@ -45,6 +45,8 @@ You can specify the scale for any [Service](/reference/primitives/app/service) i
     2020-01-01T00:00:00Z system/k8s/web-65f45567d-c7sdw Started container main
     OK
 ```
+> Changes to `cpu` or `memory` should be done in your `convox.yml`, and a new release of your app deployed.
+
 ## Autoscaling
 
 To use autoscaling you must specify a range for allowable [Process](/reference/primitives/app/process) count and
