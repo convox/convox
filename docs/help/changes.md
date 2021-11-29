@@ -51,6 +51,11 @@ Agent ports are now defined at the service level instead of underneath the `agen
           - 8125/udp
           - 8126/tcp
 ```
+
+### Scaling
+
+On v3 Racks, the `convox scale {service}` CLI command can be used to update the count value only.  Changes to CPU or Memory values will not be enacted.  These values should be changed in the `convox.yml` directly.
+
 ### Sticky Sessions
 
 App services are no longer sticky by default. Sticky sessions can be enabled in `convox.yml`:
