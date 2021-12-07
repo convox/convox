@@ -28,9 +28,6 @@ resource "google_container_cluster" "rack" {
   ip_allocation_policy {}
 
   master_auth {
-    username = "gcloud"
-    password = random_string.password.result
-
     client_certificate_config {
       issue_client_certificate = true
     }
@@ -101,15 +98,16 @@ resource "local_file" "kubeconfig" {
   }
 }
 
+data "google_client_config" "provider" {}
+
 provider "kubernetes" {
   alias = "direct"
 
   load_config_file = false
 
-  cluster_ca_certificate = base64decode(google_container_cluster.rack.master_auth.0.cluster_ca_certificate)
   host                   = "https://${google_container_cluster.rack.endpoint}"
-  username               = "gcloud"
-  password               = random_string.password.result
+  token                  = data.google_client_config.provider.access_token
+  cluster_ca_certificate = base64decode(google_container_cluster.rack.master_auth.0.cluster_ca_certificate)
 }
 
 resource "kubernetes_cluster_role_binding" "client" {
