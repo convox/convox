@@ -9,4 +9,6 @@ resource "google_storage_bucket" "storage" {
 
   bucket_policy_only = true
   force_destroy      = true
+  location           = var.region
+  project            = var.project_id
 }

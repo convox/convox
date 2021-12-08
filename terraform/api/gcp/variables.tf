@@ -26,6 +26,14 @@ variable "nodes_account" {
   type = string
 }
 
+variable "project_id" {
+  type = string
+}
+
+variable "region" {
+  type = string
+}
+
 variable "release" {
   type = string
 }

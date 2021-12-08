@@ -3,11 +3,6 @@ provider "google" {
   region  = var.region
 }
 
-provider "google-beta" {
-  project = module.project.id
-  region  = var.region
-}
-
 provider "kubernetes" {
   client_certificate     = module.cluster.client_certificate
   client_key             = module.cluster.client_key
@@ -34,13 +29,13 @@ module "cluster" {
   source = "../../cluster/gcp"
 
   providers = {
-    google      = google
-    google-beta = google-beta
+    google = google
   }
 
   name        = var.name
   node_type   = var.node_type
   preemptible = var.preemptible
+  project_id  = module.project.id
 }
 
 module "rack" {
@@ -51,14 +46,16 @@ module "rack" {
     google     = google
   }
 
-  cluster       = module.cluster.id
+  cluster             = module.cluster.id
   docker_hub_username = var.docker_hub_username
   docker_hub_password = var.docker_hub_password
-  image         = var.image
-  name          = var.name
-  network       = module.cluster.network
-  nodes_account = module.cluster.nodes_account
-  release       = local.release
-  syslog        = var.syslog
-  whitelist     = split(",", var.whitelist)
+  image               = var.image
+  name                = var.name
+  network             = module.cluster.network
+  nodes_account       = module.cluster.nodes_account
+  project_id          = module.project.id
+  region              = var.region
+  release             = local.release
+  syslog              = var.syslog
+  whitelist           = split(",", var.whitelist)
 }

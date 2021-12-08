@@ -5,22 +5,25 @@ resource "google_service_account" "nodes" {
 resource "google_project_iam_member" "nodes-logging" {
   # depends_on = ["google_project_service.cloudresourcemanager"]
 
-  role   = "roles/logging.logWriter"
-  member = "serviceAccount:${google_service_account.nodes.email}"
+  role    = "roles/logging.logWriter"
+  member  = "serviceAccount:${google_service_account.nodes.email}"
+  project = var.project_id
 }
 
 resource "google_project_iam_member" "nodes-monitoring" {
   # depends_on = ["google_project_service.cloudresourcemanager"]
 
-  role   = "roles/monitoring.metricWriter"
-  member = "serviceAccount:${google_service_account.nodes.email}"
+  role    = "roles/monitoring.metricWriter"
+  member  = "serviceAccount:${google_service_account.nodes.email}"
+  project = var.project_id
 }
 
 resource "google_project_iam_member" "nodes-storage" {
   # depends_on = ["google_project_service.cloudresourcemanager"]
 
-  role   = "roles/storage.admin"
-  member = "serviceAccount:${google_service_account.nodes.email}"
+  role    = "roles/storage.admin"
+  member  = "serviceAccount:${google_service_account.nodes.email}"
+  project = var.project_id
 }
 
 # resource "google_project_iam_member" "nodes-token-creator" {
