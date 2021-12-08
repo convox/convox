@@ -7,8 +7,8 @@ resource "random_string" "suffix" {
 resource "google_storage_bucket" "storage" {
   name = "${var.name}-storage-${random_string.suffix.result}"
 
-  bucket_policy_only = true
-  force_destroy      = true
-  location           = var.region
-  project            = var.project_id
+  force_destroy               = true
+  location                    = var.region
+  project                     = var.project_id
+  uniform_bucket_level_access = true
 }
