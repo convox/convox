@@ -15,7 +15,7 @@ variable "name" {
 }
 
 variable "node_type" {
-  default = "n1-standard-1"
+  default = "n1-standard-2"
 }
 
 variable "preemptible" {
