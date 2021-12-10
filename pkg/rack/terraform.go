@@ -160,7 +160,7 @@ func (t Terraform) Endpoint() (*url.URL, error) {
 	return url.Parse(t.endpoint)
 }
 
-func (t Terraform) Latest() (string, error) {
+func (Terraform) Latest() (string, error) {
 	return terraformLatestVersion()
 }
 
@@ -222,7 +222,7 @@ func (t Terraform) Provider() string {
 	return t.provider
 }
 
-func (t Terraform) Remote() bool {
+func (Terraform) Remote() bool {
 	return false
 }
 
@@ -231,21 +231,16 @@ func (t Terraform) Status() string {
 }
 
 func (t Terraform) Uninstall() error {
-	env, err := terraformEnv(t.provider)
-	if err != nil {
-		return err
-	}
-
 	dir, err := t.ctx.SettingDirectory(fmt.Sprintf("racks/%s", t.name))
 	if err != nil {
 		return err
 	}
 
-	if err := terraform(t.ctx, dir, env, "init", "-no-color", "-upgrade"); err != nil {
+	if err := terraform(t.ctx, dir, "init", "-no-color", "-upgrade"); err != nil {
 		return err
 	}
 
-	if err := terraform(t.ctx, dir, env, "destroy", "-auto-approve", "-no-color", "-refresh=true"); err != nil {
+	if err := terraform(t.ctx, dir, "destroy", "-auto-approve", "-no-color", "-refresh=true"); err != nil {
 		return err
 	}
 
@@ -313,12 +308,7 @@ func (t Terraform) apply() error {
 		return err
 	}
 
-	env, err := terraformEnv(t.provider)
-	if err != nil {
-		return err
-	}
-
-	if err := terraform(t.ctx, dir, env, "apply", "-auto-approve", "-no-color"); err != nil {
+	if err := terraform(t.ctx, dir, "apply", "-auto-approve", "-no-color"); err != nil {
 		return err
 	}
 
@@ -362,7 +352,7 @@ func (t Terraform) init() error {
 		return err
 	}
 
-	if err := terraform(t.ctx, dir, nil, "init", "-force-copy", "-no-color", "-upgrade"); err != nil {
+	if err := terraform(t.ctx, dir, "init", "-force-copy", "-no-color", "-upgrade"); err != nil {
 		return err
 	}
 
@@ -557,7 +547,7 @@ func requireEnv(vars ...string) (map[string]string, error) {
 	return env, nil
 }
 
-func terraform(c *stdcli.Context, dir string, env map[string]string, args ...string) error {
+func terraform(c *stdcli.Context, dir string, args ...string) error {
 	wd, err := os.Getwd()
 	if err != nil {
 		return err
