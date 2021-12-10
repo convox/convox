@@ -245,7 +245,7 @@ func (t Terraform) Uninstall() error {
 		return err
 	}
 
-	if err := terraform(t.ctx, dir, env, "destroy", "-auto-approve", "-no-color"); err != nil {
+	if err := terraform(t.ctx, dir, env, "destroy", "-auto-approve", "-no-color", "-refresh=true"); err != nil {
 		return err
 	}
 
