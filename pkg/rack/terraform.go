@@ -728,7 +728,7 @@ func terraformWriteTemplate(filename, version string, params map[string]interfac
 		}
 
 		output "provider" {
-			value ="{{.Provider}}"
+			value = "{{.Provider}}"
 		}
 
 		output "release" {
