@@ -728,7 +728,11 @@ func terraformWriteTemplate(filename, version string, params map[string]interfac
 		}
 
 		output "provider" {
-			value = "{{.Provider}}"
+			value ="{{.Provider}}"
+		}
+
+		output "release" {
+			value = "{{index .Vars "release"}}"
 		}`,
 	)
 	if err != nil {
