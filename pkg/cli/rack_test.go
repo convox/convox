@@ -506,7 +506,7 @@ func TestRackUninstall(t *testing.T) {
 
 		me := e.Executor.(*mockstdcli.Executor)
 		me.On("Terminal", "terraform", "init", "-no-color", "-upgrade").Return(nil)
-		me.On("Terminal", "terraform", "destroy", "-auto-approve", "-no-color").Return(nil)
+		me.On("Terminal", "terraform", "destroy", "-auto-approve", "-no-color", "-refresh=true").Return(nil)
 
 		res, err := testExecute(e, "rack uninstall dev1", nil)
 		require.NoError(t, err)
