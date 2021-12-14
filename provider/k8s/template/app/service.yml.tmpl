@@ -88,6 +88,8 @@ spec:
       {{ if .Service.Agent.Enabled }}
       hostNetwork: true
       {{ end }}
+      securityContext:
+         fsGroup: 65534
       serviceAccountName: {{.Service.Name}}
       shareProcessNamespace: {{.Service.Init}}
       terminationGracePeriodSeconds: {{$.Service.Termination.Grace}}
