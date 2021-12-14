@@ -745,6 +745,8 @@ spec:
         volumeMounts:
         - mountPath: /etc/convox
           name: ca
+      securityContext:
+         fsGroup: 65534
       serviceAccountName: deployment
       shareProcessNamespace: true
       terminationGracePeriodSeconds: 30
@@ -859,6 +861,8 @@ spec:
         volumeMounts:
         - mountPath: /etc/convox
           name: ca
+      securityContext:
+         fsGroup: 65534
       serviceAccountName: singleton
       shareProcessNamespace: true
       terminationGracePeriodSeconds: 30
@@ -1006,6 +1010,8 @@ spec:
         volumeMounts:
         - mountPath: /etc/convox
           name: ca
+      securityContext:
+         fsGroup: 65534
       serviceAccountName: web
       shareProcessNamespace: true
       terminationGracePeriodSeconds: 30
@@ -1178,6 +1184,8 @@ spec:
         volumeMounts:
         - mountPath: /etc/convox
           name: ca
+      securityContext:
+         fsGroup: 65534
       serviceAccountName: web2
       shareProcessNamespace: true
       terminationGracePeriodSeconds: 30
