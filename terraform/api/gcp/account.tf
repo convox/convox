@@ -9,11 +9,13 @@ resource "google_service_account_key" "api" {
 resource "google_project_iam_member" "api-logging-admin" {
   role   = "roles/logging.admin"
   member = "serviceAccount:${google_service_account.api.email}"
+  project = var.project_id
 }
 
 resource "google_project_iam_member" "api-storage" {
   role   = "roles/storage.admin"
   member = "serviceAccount:${google_service_account.api.email}"
+  project = var.project_id
 }
 
 resource "google_service_account_iam_binding" "api-binding" {

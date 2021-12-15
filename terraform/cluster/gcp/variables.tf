@@ -10,6 +10,10 @@ variable "preemptible" {
   default = true
 }
 
+variable "project_id" {
+  type = string
+}
+
 variable "services" {
   default = ""
 }

@@ -13,3 +13,7 @@
 		output "provider" {
 			value = "local"
 		}
+
+		output "release" {
+			value = "foo"
+		}

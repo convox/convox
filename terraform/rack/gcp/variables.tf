@@ -30,6 +30,10 @@ variable "nodes_account" {
   type = string
 }
 
+variable "project_id" {
+  type = string
+}
+
 variable "region" {
   default = "us-east1"
 }
