@@ -23,24 +23,49 @@ We recommend you follow these tutorials in this order:
 
 ## Create a free Convox account
 
-To create a Convox account simply signup [here](https://console.convox.com/signup). We recommend using your company email address if you have one, and using your actual company name as the organization name. You can invite your colleagues to the organization later. 
+To create a Convox account simply signup [here](https://console.convox.com/signup). We recommend using your company email address if you have one, and using your actual company name as the organization name. You can invite your colleagues to the organization later.
 
 ## Install the Convox CLI and Login
 
 To install the Convox CLI follow the instructions for your operating system:
 
-### macOS
-```html
-    $ curl -L https://github.com/convox/convox/releases/latest/download/convox-macos -o /tmp/convox
-    $ sudo mv /tmp/convox /usr/local/bin/convox
-    $ sudo chmod 755 /usr/local/bin/convox
-```
+
 ### Linux
+
+#### x86_64 / amd64
+
 ```html
     $ curl -L https://github.com/convox/convox/releases/latest/download/convox-linux -o /tmp/convox
     $ sudo mv /tmp/convox /usr/local/bin/convox
     $ sudo chmod 755 /usr/local/bin/convox
 ```
+
+#### arm64
+
+```html
+    $ curl -L https://github.com/convox/convox/releases/latest/download/convox-linux-arm64 -o /tmp/convox
+    $ sudo mv /tmp/convox /usr/local/bin/convox
+    $ sudo chmod 755 /usr/local/bin/convox
+```
+
+### macOS
+
+#### x86_64 / amd64
+
+```html
+    $ curl -L https://github.com/convox/convox/releases/latest/download/convox-macos -o /tmp/convox
+    $ sudo mv /tmp/convox /usr/local/bin/convox
+    $ sudo chmod 755 /usr/local/bin/convox
+```
+
+#### arm64
+
+```html
+    $ curl -L https://github.com/convox/convox/releases/latest/download/convox-macos-arm64 -o /tmp/convox
+    $ sudo mv /tmp/convox /usr/local/bin/convox
+    $ sudo chmod 755 /usr/local/bin/convox
+```
+
 Once you have installed the CLI you can login to your Convox account by copying the login command from the web console
 
 ![CLI Login](/images/documentation/getting-started/introduction/CLI_tutorial_login.png)
@@ -155,7 +180,7 @@ to instead say:
 
 `res.end('Hello World!\nI\'m: ' ...`
 
-and then save the file. 
+and then save the file.
 
 Now, you can re-deploy the app by once again running the deploy command.
 ```html
@@ -171,14 +196,14 @@ One of the great features of Convox is nearly instantaneous rollbacks. Convox pe
 ```html
     $ convox releases
     ID           STATUS  BUILD        CREATED        DESCRIPTION
-    RSBSSIPZIEF  active  BUTQJQRIWUZ  2 minutes ago  
-    RYCWZIXLKQT          BVXIJQDCELS  30 minutes ago     
+    RSBSSIPZIEF  active  BUTQJQRIWUZ  2 minutes ago
+    RYCWZIXLKQT          BVXIJQDCELS  30 minutes ago
 ```
 You can now rollback to your previous release with `convox releases rollback`
 ```html
     $ convox releases rollback RYCWZIXLKQT
     Rolling back to RYCWZIXLKQT... OK, RSPAOICEBER
-    Promoting RSPAOICEBER... 
+    Promoting RSPAOICEBER...
     ...
 ```
 Once the rollback is complete, refresh your browser and you should see the `Hello World!` message has been reverted to `Hello Convox!`

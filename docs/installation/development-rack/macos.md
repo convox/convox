@@ -23,11 +23,23 @@ url: /installation/development-rack/macos
 - Install [Terraform](https://learn.hashicorp.com/terraform/getting-started/install.html)
 
 ### Convox CLI
+
+#### x86_64 / amd64
+
 ```html
     $ curl -L https://github.com/convox/convox/releases/latest/download/convox-macos -o /tmp/convox
     $ sudo mv /tmp/convox /usr/local/bin/convox
     $ sudo chmod 755 /usr/local/bin/convox
 ```
+
+#### arm64
+
+```html
+    $ curl -L https://github.com/convox/convox/releases/latest/download/convox-macos-arm64 -o /tmp/convox
+    $ sudo mv /tmp/convox /usr/local/bin/convox
+    $ sudo chmod 755 /usr/local/bin/convox
+```
+
 ## Installation
 
 > Make sure that your `kubectl` points at your local docker setup.  Ensure that if your `KUBECONFIG` env var is set, it is pointing at a config file that contains your desktop context.  By default, your local context will be installed into `~/.kube/config`.

@@ -61,11 +61,23 @@ Now, the Kubernetes steps below should work as expected.
 - Install [Terraform](https://learn.hashicorp.com/terraform/getting-started/install.html)
 
 ### Convox CLI
+
+### x86_64 / amd64
+
 ```html
     $ curl -L https://github.com/convox/convox/releases/latest/download/convox-linux -o /tmp/convox
     $ sudo mv /tmp/convox /usr/local/bin/convox
     $ sudo chmod 755 /usr/local/bin/convox
 ```
+
+### arm64
+
+```html
+    $ curl -L https://github.com/convox/convox/releases/latest/download/convox-linux-arm64 -o /tmp/convox
+    $ sudo mv /tmp/convox /usr/local/bin/convox
+    $ sudo chmod 755 /usr/local/bin/convox
+```
+
 ## Installation
 
 > Make sure that your `kubectl` points at your local microk8s setup.  Ensure that if your `KUBECONFIG` env var is set, it is pointing at a config file that contains your local context.  By default as per the above instructions, your local config will be copied into `~/.kube/config`.
@@ -75,7 +87,7 @@ Install a local Rack named `dev`.
     $ convox rack install local dev
 ```
 
---- 
+---
 
 ### Tips for Ubuntu 20.04 Users
 
