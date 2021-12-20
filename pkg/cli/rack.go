@@ -88,6 +88,19 @@ func init() {
 	})
 }
 
+func validateParams(params map[string]string) error {
+	if params["high_availability"] != "" {
+		return errors.New("the high_availability parameter is only supported during rack installation")
+	}
+
+	srdown, srup := params["ScheduleRackScaleDown"], params["ScheduleRackScaleUp"]
+	if (srdown == "" || srup == "") && (srdown != "" || srup != "") {
+		return errors.New("to schedule your rack to turn on/off you need both ScheduleRackScaleDown and ScheduleRackScaleUp parameters")
+	}
+
+	return nil
+}
+
 func Rack(rack sdk.Interface, c *stdcli.Context) error {
 	s, err := rack.SystemGet()
 	if err != nil {
@@ -285,13 +298,12 @@ func RackParamsSet(_ sdk.Interface, c *stdcli.Context) error {
 
 	c.Startf("Updating parameters")
 
-	args := argsToOptions(c.Args)
-	_, found := args["high_availability"]
-	if found {
-		return errors.New("the high_availability parameter is only supported during rack installation")
+	params := argsToOptions(c.Args)
+	if err := validateParams(params); err != nil {
+		return err
 	}
 
-	if err := r.UpdateParams(args); err != nil {
+	if err := r.UpdateParams(params); err != nil {
 		return err
 	}
 
