@@ -1,0 +1,10 @@
+az ad app permission add --id 05c75ec2-b538-41c5-997e-2f84ac9d433e\
+  --api 00000003-0000-0000-c000-000000000000 \
+  --api-permissions \
+  1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9=Role
+
+  az ad app permission grant --id 05c75ec2-b538-41c5-997e-2f84ac9d433e \
+  --api 00000003-0000-0000-c000-000000000000 \
+  --consent-type AllPrincipals --scope User.Read
+
+  az ad app permission admin-consent --id 05c75ec2-b538-41c5-997e-2f84ac9d433e
