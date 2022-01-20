@@ -6,27 +6,11 @@ import (
 	"io/ioutil"
 	"net/http"
 	"runtime"
-	"strconv"
-	"strings"
 
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
 	"github.com/inconshreveable/go-update"
 )
-
-type ReleaseVersion struct {
-	Major    int
-	Minor    int
-	Revision int
-}
-
-func (rv *ReleaseVersion) toString() string {
-	return strconv.Itoa(rv.Major) + "." + strconv.Itoa(rv.Minor) + "." + strconv.Itoa(rv.Revision)
-}
-
-func (rv *ReleaseVersion) sameMinor(compare *ReleaseVersion) bool {
-	return (rv.Major == compare.Major) && (rv.Minor == compare.Minor)
-}
 
 func init() {
 	registerWithoutProvider("update", "update the cli", Update, stdcli.CommandOptions{
@@ -45,7 +29,7 @@ func Update(_ sdk.Interface, c *stdcli.Context) error {
 	current := c.Version()
 
 	if version == "" {
-		v, err := latestRelease(current)
+		v, err := latestRelease()
 		if err != nil {
 			return fmt.Errorf("could not fetch latest release: %s", err)
 		}
@@ -90,16 +74,7 @@ func releaseBinary() (string, error) {
 	}
 }
 
-func latestRelease(current string) (string, error) {
-	currentReleaseVersion, err := convertToReleaseVersion(current)
-	if err != nil {
-		return getTheLatestRelease()
-	} else {
-		return getLatestRevisionForCurrentVersion(currentReleaseVersion)
-	}
-}
-
-func getTheLatestRelease() (string, error) {
+func latestRelease() (string, error) {
 	var release struct {
 		Tag string `json:"tag_name"`
 	}
@@ -131,64 +106,3 @@ func getGitHubReleaseData(url string, response interface{}) error {
 	return nil
 }
 
-func getLatestRevisionForCurrentVersion(currentReleaseVersion *ReleaseVersion) (string, error) {
-	page := 1
-	moreReleases := true
-	for moreReleases {
-		var response struct {
-			Releases []struct {
-				Draft      bool   `json:"draft"`
-				Prerelease bool   `json:"prerelease"`
-				Tag        string `json:"tag_name"`
-			}
-		}
-
-		err := getGitHubReleaseData(fmt.Sprintf("https://api.github.com/repos/%s/releases?per_page=100&page=%s", Image, strconv.Itoa(page)), &response)
-		if err != nil {
-			return "", err
-		}
-
-		for _, release := range response.Releases {
-			thisReleaseVersion, err := convertToReleaseVersion(release.Tag)
-			if err != nil {
-				continue
-			} 
-			if !release.Draft && !release.Prerelease && currentReleaseVersion.sameMinor(thisReleaseVersion) {
-				return release.Tag, nil
-			} else {
-				continue
-			}
-		}
-		moreReleases = (len(response.Releases) == 100)
-		page++
-	}
-
-	return "", fmt.Errorf("No published revisions found for this version: " + currentReleaseVersion.toString())
-}
-
-func convertToReleaseVersion(version string) (*ReleaseVersion, error) {
-	release := &ReleaseVersion{}
-	releaseVersion := strings.Split(version, ".")
-	if len(releaseVersion) != 3 {
-		return nil, fmt.Errorf("Version not in Major.Minor.Revision format: %s", version)
-	}
-
-	major, err := strconv.Atoi(releaseVersion[0])
-	if err != nil {
-		return nil, fmt.Errorf("Major not a number: %s", releaseVersion[0])
-	}
-	minor, err := strconv.Atoi(releaseVersion[1])
-	if err != nil {
-		return nil, fmt.Errorf("Minor not a number: %s", releaseVersion[1])
-	}
-	revision, err := strconv.Atoi(releaseVersion[2])
-	if err != nil {
-		return nil, fmt.Errorf("Revision not a number: %s", releaseVersion[2])
-	}
-
-	release.Major = major
-	release.Minor = minor
-	release.Revision = revision
-
-	return release, nil
-}
