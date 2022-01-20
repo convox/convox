@@ -217,7 +217,7 @@ func (c Console) UpdateVersion(version string) error {
 	}
 
 	if version == "" {
-		v, err := terraformLatestVersion()
+		v, err := terraformLatestVersion(version)
 		if err != nil {
 			return err
 		}
