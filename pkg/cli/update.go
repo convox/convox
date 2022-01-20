@@ -35,7 +35,7 @@ func init() {
 	})
 }
 
-func Update(rack sdk.Interface, c *stdcli.Context) error {
+func Update(_ sdk.Interface, c *stdcli.Context) error {
 	binary, err := releaseBinary()
 	if err != nil {
 		return err
@@ -152,12 +152,11 @@ func getLatestRevisionForCurrentVersion(currentReleaseVersion *ReleaseVersion) (
 			thisReleaseVersion, err := convertToReleaseVersion(release.Tag)
 			if err != nil {
 				continue
+			} 
+			if !release.Draft && !release.Prerelease && currentReleaseVersion.sameMinor(thisReleaseVersion) {
+				return release.Tag, nil
 			} else {
-				if !release.Draft && !release.Prerelease && currentReleaseVersion.sameMinor(thisReleaseVersion) {
-					return release.Tag, nil
-				} else {
-					continue
-				}
+				continue
 			}
 		}
 		moreReleases = (len(response.Releases) == 100)
