@@ -143,7 +143,7 @@ func getLatestRevisionForCurrentVersion(currentReleaseVersion *ReleaseVersion) (
 			}
 		}
 
-		err := getGitHubReleaseData(fmt.Sprintf("https://api.github.com/repos/%s/releases?per_page=100&page=", Image)+strconv.Itoa(page), &response)
+		err := getGitHubReleaseData(fmt.Sprintf("https://api.github.com/repos/%s/releases?per_page=100&page=%s", Image, strconv.Itoa(page)), &response)
 		if err != nil {
 			return "", err
 		}
