@@ -380,7 +380,7 @@ func (t Terraform) settingsDirectory() (string, error) {
 
 func (t Terraform) update(release string, vars map[string]string) error {
 	currentVersion := ""
-	if vars != nil && vars["release"] != nil {
+	if vars != nil && vars["release"] != "" {
 		currentVersion = vars["release"]
 	}
 	if release == "" {
