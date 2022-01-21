@@ -42,7 +42,7 @@ variable "name" {
 }
 
 variable "node_capacity_type" {
-  default = "ON_DEMAND"
+  default = "on_demand"
 }
 
 variable "node_disk" {
