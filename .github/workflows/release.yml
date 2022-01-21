@@ -74,7 +74,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.release.outputs.upload_url }}
-          asset_path: ./cmd/convox/pkg/convox-darwin-10.12-amd64
+          asset_path: ./cmd/convox/pkg/convox-darwin-10.16-amd64
           asset_name: convox-macos
           asset_content_type: application/octet-stream
       - name: release-cli-macos-arm64
@@ -83,7 +83,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.release.outputs.upload_url }}
-          asset_path: ./cmd/convox/pkg/convox-darwin-10.12-arm64
+          asset_path: ./cmd/convox/pkg/convox-darwin-10.16-arm64
           asset_name: convox-macos-arm64
           asset_content_type: application/octet-stream
   ci:
