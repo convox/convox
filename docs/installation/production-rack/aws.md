@@ -43,13 +43,13 @@ The following environment variables are required:
 ```
 ### Available Parameters
 
-| Name                 | Default       | Description                                                                                |
-| -------------------- | ------------- | ------------------------------------------------------------------------------------------ |
-| **availability_zones** |               | Specify a list of AZ names (minimum 3) to override the random automatic selection from AWS |
+| Name                   | Default         | Description                                                                                |
+| -----------------------| ----------------|--------------------------------------------------------------------------------------------|
+| **availability_zones** |                 | Specify a list of AZ names (minimum 3) to override the random automatic selection from AWS |
 | **cidr**               | **10.1.0.0/16** | CIDR range for VPC                                                                         |
 | **idle_timeout**       | **3600**        | Idle timeout value (in seconds) for the Rack Load Balancer                                 |
 | **node_disk**          | **20**          | Node disk size in GB                                                                       |
-| **node_type**          | **t3.small**    | Node instance type                                                                         |
+| **node_type**          | **t3.small**    | Node instance type. You can also pass a comma separated list of instance types             |
 | **private**            | **true**        | Put nodes in private subnets behind NAT gateways                                           |
 | **region**             | **us-east-1**   | AWS Region                                                                                 |
-| **syslog**             |               | Forward logs to a syslog endpoint (e.g. **tcp+tls://example.org:1234**)                      |
+| **syslog**             |                 | Forward logs to a syslog endpoint (e.g. **tcp+tls://example.org:1234**)                    |

@@ -95,9 +95,10 @@ resource "aws_eks_node_group" "cluster" {
   count = var.high_availability ? 3 : 1
 
   ami_type        = var.gpu_type ? "AL2_x86_64_GPU" : var.arm_type ? "AL2_ARM_64" : "AL2_x86_64"
+  capacity_type   = var.node_capacity_type
   cluster_name    = aws_eks_cluster.cluster.name
   disk_size       = random_id.node_group.keepers.node_disk
-  instance_types  = [random_id.node_group.keepers.node_type]
+  instance_types  = split(",", random_id.node_group.keepers.node_type)
   node_group_name = "${var.name}-${local.availability_zones[count.index]}-${random_id.node_group.hex}"
   node_role_arn   = random_id.node_group.keepers.role_arn
   subnet_ids      = [var.private ? aws_subnet.private[count.index].id : aws_subnet.public[count.index].id]
