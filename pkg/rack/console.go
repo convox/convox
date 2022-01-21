@@ -215,18 +215,24 @@ func (c Console) UpdateVersion(version string) error {
 	if !cu {
 		return c.updateVersionDirect(version)
 	}
+	
+	cc, err := c.client()
+	if err != nil {
+		return err
+	}
+
+	r, err := cc.RackGet(c.name)
+	if err != nil {
+		return err
+	}
+	currentVersion := r.Version
 
 	if version == "" {
-		v, err := terraformLatestVersion()
+		v, err := terraformLatestVersion(currentVersion)
 		if err != nil {
 			return err
 		}
 		version = v
-	}
-
-	cc, err := c.client()
-	if err != nil {
-		return err
 	}
 
 	if err := cc.RackUpdate(c.name, version, nil); err != nil {
