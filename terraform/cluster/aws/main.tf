@@ -79,10 +79,11 @@ resource "random_id" "node_group" {
   byte_length = 8
 
   keepers = {
-    node_disk = var.node_disk
-    node_type = var.node_type
-    private   = var.private
-    role_arn  = replace(aws_iam_role.nodes.arn, "role/convox/", "role/") # eks barfs on roles with paths
+    node_capacity_type = var.node_capacity_type
+    node_disk          = var.node_disk
+    node_type          = var.node_type
+    private            = var.private
+    role_arn           = replace(aws_iam_role.nodes.arn, "role/convox/", "role/") # eks barfs on roles with paths
   }
 }
 
