@@ -37,13 +37,14 @@ The parameters available for your Rack depend on the underlying cloud provider.
 
 ### Amazon Web Services
 
-| Name                    | Default         |
-|-------------------------|-----------------|
-| **cidr**                | **10.1.0.0/16** |
-| **node_disk**           | **20**          |
-| **node_type**           | **t3.small**    |
-| **region**              | **us-east-1**   |
-| **high_availability** * | **true**        |
+| Name                             | Default         |
+|----------------------------------|-----------------|
+| **cidr**                         | **10.1.0.0/16** |
+| **node_capacity_type**           | **on_demand**   |
+| **node_disk**                    | **20**          |
+| **node_type**                    | **t3.small**    |
+| **region**                       | **us-east-1**   |
+| **high_availability** *          | **true**        |
 
 \* Parameter cannot be changed after rack creation
 

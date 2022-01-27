@@ -41,6 +41,10 @@ variable "name" {
   type = string
 }
 
+variable "node_capacity_type" {
+  default = "on_demand"
+}
+
 variable "node_disk" {
   default = 20
 }
