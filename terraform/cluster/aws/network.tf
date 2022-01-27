@@ -2,9 +2,12 @@ locals {
   tags = {
     Name = var.name
   }
+  vpc_id = var.vpc_id == "" ? aws_vpc.nodes[0].id : var.vpc_id
 }
 
 resource "aws_vpc" "nodes" {
+  count = var.vpc_id == "" ? 1 : 0
+
   depends_on = [
     aws_iam_role_policy_attachment.cluster_eks_cluster,
     aws_iam_role_policy_attachment.cluster_eks_service,
@@ -23,7 +26,7 @@ resource "aws_vpc" "nodes" {
 }
 
 resource "aws_internet_gateway" "nodes" {
-  vpc_id = aws_vpc.nodes.id
+  vpc_id = local.vpc_id
 
   tags = local.tags
 }
@@ -51,7 +54,7 @@ resource "aws_subnet" "public" {
   availability_zone       = local.availability_zones[count.index]
   cidr_block              = cidrsubnet(var.cidr, 4, count.index)
   map_public_ip_on_launch = !var.private
-  vpc_id                  = aws_vpc.nodes.id
+  vpc_id                  = local.vpc_id
 
   tags = merge(local.tags, {
     Name = "${var.name} public ${count.index}"
@@ -65,7 +68,7 @@ resource "aws_subnet" "public" {
 }
 
 resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.nodes.id
+  vpc_id = local.vpc_id
 
   tags = merge(local.tags, {
     Name = "${var.name} public"
@@ -114,7 +117,7 @@ resource "aws_subnet" "private" {
 
   availability_zone = local.availability_zones[count.index]
   cidr_block        = cidrsubnet(var.cidr, 2, count.index + 1)
-  vpc_id            = aws_vpc.nodes.id
+  vpc_id            = local.vpc_id
 
   tags = merge(local.tags, {
     Name = "${var.name} private ${count.index}"
@@ -151,7 +154,7 @@ resource "aws_nat_gateway" "private" {
 resource "aws_route_table" "private" {
   count = var.private ? local.network_resource_count : 0
 
-  vpc_id = aws_vpc.nodes.id
+  vpc_id = local.vpc_id
 
   tags = merge(local.tags, {
     Name = "${var.name} private ${count.index}"
@@ -200,7 +203,7 @@ resource "aws_route_table_association" "private" {
 resource "aws_security_group" "cluster" {
   name        = "${var.name}-cluster"
   description = "${var.name} cluster"
-  vpc_id      = aws_vpc.nodes.id
+  vpc_id      = local.vpc_id
 
   tags = merge(local.tags, {
     Name = "${var.name}-cluster"

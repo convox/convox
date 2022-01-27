@@ -6,6 +6,10 @@ variable "cidr" {
   default = "10.1.0.0/16"
 }
 
+variable "vpc_id" {
+  default = ""
+}
+
 variable "docker_hub_username" {
   default = ""
 }

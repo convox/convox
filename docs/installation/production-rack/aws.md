@@ -55,3 +55,4 @@ The following environment variables are required:
 | **private**            | **true**               | Put nodes in private subnets behind NAT gateways                                                  |
 | **region**             | **us-east-1**          | AWS Region                                                                                        |
 | **syslog**             |                        | Forward logs to a syslog endpoint (e.g. **tcp+tls://example.org:1234**)                           |
+| **vpc_id**             |                        | Use an existing vpc for cluster creation. Make sure to also pass the **cidr** block for the vpc   |

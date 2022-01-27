@@ -45,8 +45,10 @@ The parameters available for your Rack depend on the underlying cloud provider.
 | **node_type**                    | **t3.small**    |
 | **region**                       | **us-east-1**   |
 | **high_availability** *          | **true**        |
+| **vpc_id** **                    |                 |
 
 \* Parameter cannot be changed after rack creation
+\*\* Make sure to also pass the vpc **cidr** block
 
 &nbsp;
 
