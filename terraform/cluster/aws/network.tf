@@ -1,4 +1,5 @@
 locals {
+  internet_gateway_id = var.internet_gateway_id == "" ? aws_internet_gateway.nodes[0].id : var.internet_gateway_id
   tags = {
     Name = var.name
   }
@@ -26,6 +27,7 @@ resource "aws_vpc" "nodes" {
 }
 
 resource "aws_internet_gateway" "nodes" {
+  count  = local.internet_gateway_id == "" ? 1 : 0
   vpc_id = local.vpc_id
 
   tags = local.tags
@@ -93,7 +95,7 @@ resource "aws_route" "public-default" {
   ]
 
   destination_cidr_block = "0.0.0.0/0"
-  gateway_id             = aws_internet_gateway.nodes.id
+  gateway_id             = local.internet_gateway_id
   route_table_id         = aws_route_table.public.id
 
   timeouts {

@@ -39,18 +39,19 @@ module "cluster" {
     aws = aws
   }
 
-  arm_type           = local.arm_type
-  availability_zones = var.availability_zones
-  cidr               = var.cidr
-  gpu_type           = local.gpu_type
-  high_availability  = var.high_availability
-  k8s_version        = var.k8s_version
-  name               = var.name
-  node_capacity_type = upper(var.node_capacity_type)
-  node_disk          = var.node_disk
-  node_type          = var.node_type
-  private            = var.private
-  vpc_id             = var.vpc_id
+  arm_type            = local.arm_type
+  availability_zones  = var.availability_zones
+  cidr                = var.cidr
+  gpu_type            = local.gpu_type
+  high_availability   = var.high_availability
+  internet_gateway_id = var.internet_gateway_id
+  k8s_version         = var.k8s_version
+  name                = var.name
+  node_capacity_type  = upper(var.node_capacity_type)
+  node_disk           = var.node_disk
+  node_type           = var.node_type
+  private             = var.private
+  vpc_id              = var.vpc_id
 }
 
 module "fluentd" {
