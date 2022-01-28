@@ -27,7 +27,7 @@ resource "aws_vpc" "nodes" {
 }
 
 resource "aws_internet_gateway" "nodes" {
-  count  = local.internet_gateway_id == "" ? 1 : 0
+  count  = var.internet_gateway_id == "" ? 1 : 0
   vpc_id = local.vpc_id
 
   tags = local.tags
