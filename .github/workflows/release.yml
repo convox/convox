@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2.4.0
       - name: golang-1.16
         uses: actions/setup-go@v2
         with:
@@ -116,7 +116,7 @@ jobs:
           #   provider: azure
     steps:
       - name: checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2.4.0
       - name: version
         run: echo "VERSION=$(echo ${{ github.ref }} | awk -F/ '{print $3}')" >> $GITHUB_ENV
       - name: name
