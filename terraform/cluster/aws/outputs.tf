@@ -32,5 +32,5 @@ output "subnets" {
 }
 
 output "vpc" {
-  value = aws_vpc.nodes.id
+  value = var.vpc_id == "" ? aws_vpc.nodes[0].id : var.vpc_id
 }

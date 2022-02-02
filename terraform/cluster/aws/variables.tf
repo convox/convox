@@ -18,6 +18,10 @@ variable "high_availability" {
   default = true
 }
 
+variable "internet_gateway_id" {
+  default = ""
+}
+
 variable "k8s_version" {
   type = string
   default = "1.18"
@@ -41,4 +45,8 @@ variable "node_type" {
 
 variable "private" {
   default = true
+}
+
+variable "vpc_id" {
+  default = ""
 }

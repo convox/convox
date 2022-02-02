@@ -32,6 +32,10 @@ variable "image" {
   default = "convox/convox"
 }
 
+variable "internet_gateway_id" {
+  default = ""
+}
+
 variable "k8s_version" {
   type = string
   default = "1.19"
@@ -66,6 +70,10 @@ variable "region" {
 }
 
 variable "syslog" {
+  default = ""
+}
+
+variable "vpc_id" {
   default = ""
 }
 
