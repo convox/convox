@@ -302,7 +302,7 @@ func (p *Provider) releaseTemplateApp(a *structs.App, opts structs.ReleasePromot
 
 func (p *Provider) releaseTemplateBalancer(a *structs.App, r *structs.Release, b manifest.Balancer) ([]byte, error) {
 	params := map[string]interface{}{
-		"Annotations": b.AnnotationsMap,
+		"Annotations": b.AnnotationsMap(),
 		"Balancer":    b,
 		"Namespace":   p.AppNamespace(a.Name),
 		"Release":     r,
