@@ -15,6 +15,7 @@ require (
 	github.com/PuerkitoBio/goquery v1.5.0
 	github.com/algolia/algoliasearch-client-go v2.25.0+incompatible
 	github.com/aws/aws-sdk-go v1.21.10
+	github.com/bearsh/hid v1.4.0 // indirect
 	github.com/convox/changes v0.0.0-20191105034405-8c0df759a3b3
 	github.com/convox/exec v0.0.0-20180905012044-cc13d277f897
 	github.com/convox/logger v0.0.0-20180522214415-e39179955b52
@@ -23,7 +24,6 @@ require (
 	github.com/convox/stdsdk v0.0.0-20201005151143-fb7f05286eea
 	github.com/convox/version v0.0.0-20160822184233-ffefa0d565d2
 	github.com/creack/pty v1.1.13
-	github.com/ddollar/go-u2fhost v0.0.0-20200214123511-3ca2df7a0b44
 	github.com/docker/docker v1.4.2-0.20190710153559-aa8249ae1b8b
 	github.com/dustin/go-humanize v1.0.0
 	github.com/elastic/go-elasticsearch/v6 v6.8.2
@@ -38,6 +38,7 @@ require (
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
+	github.com/marshallbrekka/go-u2fhost v0.0.0-20210111072507-3ccdec8c8105
 	github.com/mattn/go-zglob v0.0.1 // indirect
 	github.com/miekg/dns v1.1.25
 	github.com/pkg/errors v0.8.1

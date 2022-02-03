@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/karalabe/hid"
+	"github.com/bearsh/hid"
 	butil "github.com/marshallbrekka/go-u2fhost/bytes"
 )
 
