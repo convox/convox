@@ -1,6 +1,6 @@
 package hid
 
-import "github.com/karalabe/hid"
+import "github.com/bearsh/hid"
 
 type RawHidDevice struct {
 	Device *hid.DeviceInfo
