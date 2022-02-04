@@ -60,6 +60,7 @@ func (c *Client) authenticator(cl *stdsdk.Client, res *http.Response) (http.Head
 
 		body = data
 		headers["Challenge"] = ares.Header.Get("Challenge")
+		fmt.Println("Challenge header: ", headers["Challenge"])
 	}
 
 	var s session
@@ -70,8 +71,7 @@ func (c *Client) authenticator(cl *stdsdk.Client, res *http.Response) (http.Head
 	}
 
 	if err := cl.Post(m[1], ro, &s); err != nil {
-		fmt.Printf("err: %+v\n", err)
-		return nil, err
+		return nil, AuthenticationError{err}
 	}
 
 	if s.ID == "" {

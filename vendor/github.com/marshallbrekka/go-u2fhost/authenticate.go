@@ -22,6 +22,7 @@ func (dev *HidDevice) Authenticate(req *AuthenticateRequest) (*AuthenticateRespo
 	}
 
 	status, response, err := dev.hidDevice.SendAPDU(u2fCommandAuthenticate, authModifier, 0, request)
+	fmt.Println("status dev.hidDevice.SendAPDU: ", status)
 	if err != nil {
 		return nil, err
 	}
@@ -30,6 +31,7 @@ func (dev *HidDevice) Authenticate(req *AuthenticateRequest) (*AuthenticateRespo
 		response := authenticateResponse(status, response, clientData, req)
 
 		// Clear out the authenticator data if the original request was not webauthn.
+		fmt.Println("Clear out the authenticator data if the original request was not webauthn ", !req.WebAuthn)
 		if !req.WebAuthn {
 			response.AuthenticatorData = ""
 		}
@@ -38,6 +40,7 @@ func (dev *HidDevice) Authenticate(req *AuthenticateRequest) (*AuthenticateRespo
 
 	// If we are in webauthn mode, try a backwards compatible mode for u2f
 	if req.WebAuthn && status == u2fStatusWrongData {
+		fmt.Println("webauthn mode, try a backwards compatible mode for u2f")
 		u2fReq := *req
 		u2fReq.WebAuthn = false
 		u2fReq.AppId = "https://" + req.AppId
@@ -62,12 +65,18 @@ func (dev *HidDevice) Authenticate(req *AuthenticateRequest) (*AuthenticateRespo
 
 func authenticateResponse(status uint16, response, clientData []byte, req *AuthenticateRequest) *AuthenticateResponse {
 	authenticatorData := append(sha256([]byte(req.AppId)), response[0:5]...)
+	// fmt.Println("appId", sha256([]byte(req.AppId)))
+	// fmt.Println("response 0 to 5", response[0:5])
+	// fmt.Println("response", response)
+	// fmt.Println("authenticatorData", authenticatorData)
+
+	fmt.Println("req.WebAuthn: ", req.WebAuthn)
 	if req.WebAuthn {
 		return &AuthenticateResponse{
 			KeyHandle:         req.KeyHandle,
 			ClientData:        websafeEncode(clientData),
-			SignatureData:     base64.StdEncoding.EncodeToString(response[5:]),
-			AuthenticatorData: base64.StdEncoding.EncodeToString(authenticatorData),
+			SignatureData:     websafeEncode(response[5:]),
+			AuthenticatorData: websafeEncode(authenticatorData),
 		}
 	} else {
 		return &AuthenticateResponse{
