@@ -23,6 +23,7 @@ require (
 	github.com/convox/stdcli v0.0.0-20200218120900-608b86ac40a1
 	github.com/convox/stdsdk v0.0.0-20201005151143-fb7f05286eea
 	github.com/convox/version v0.0.0-20160822184233-ffefa0d565d2
+	github.com/crazy-max/xgo v0.10.0
 	github.com/creack/pty v1.1.13
 	github.com/docker/docker v1.4.2-0.20190710153559-aa8249ae1b8b
 	github.com/dustin/go-humanize v1.0.0
