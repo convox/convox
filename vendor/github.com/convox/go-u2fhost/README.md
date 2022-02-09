@@ -1,6 +1,4 @@
 # u2fhost
-[![GoDoc](https://godoc.org/github.com/marshallbrekka/go-u2fhost?status.svg)](http://godoc.org/github.com/marshallbrekka/go-u2fhost) [![CircleCI](https://circleci.com/gh/marshallbrekka/go-u2fhost.svg?style=shield)](https://circleci.com/gh/marshallbrekka/go-u2fhost) [![codecov](https://codecov.io/gh/marshallbrekka/go-u2fhost/branch/master/graph/badge.svg)](https://codecov.io/gh/marshallbrekka/go-u2fhost)
-
 
 A library for using U2F USB devices from Go programs.
 
@@ -158,3 +156,7 @@ Linux packages, therefore, should be built with `-tags=hidraw`.
 Mostly because I wasn't sure what a good high level API would look like, and opted to provide a more general purpose low level API.
 
 That said, in the future I may add a high level API similar to the Javascript U2F API.
+
+# This fork
+
+In order to use this lib with the WebAuthn API, we had to change how it encodes the `SignatureData` and `AuthenticatorData` to use the web safe encode.

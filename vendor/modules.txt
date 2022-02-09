@@ -138,6 +138,11 @@ github.com/convox/changes
 # github.com/convox/exec v0.0.0-20180905012044-cc13d277f897
 ## explicit
 github.com/convox/exec
+# github.com/convox/go-u2fhost v0.0.0-20220209143247-92cf6cb357e9
+## explicit
+github.com/convox/go-u2fhost
+github.com/convox/go-u2fhost/bytes
+github.com/convox/go-u2fhost/hid
 # github.com/convox/inotify v0.0.0-20170313035821-b56f5149b5c6
 github.com/convox/inotify
 # github.com/convox/logger v0.0.0-20180522214415-e39179955b52
@@ -342,11 +347,6 @@ github.com/konsorten/go-windows-terminal-sequences
 github.com/mailru/easyjson/buffer
 github.com/mailru/easyjson/jlexer
 github.com/mailru/easyjson/jwriter
-# github.com/marshallbrekka/go-u2fhost v0.0.0-20210111072507-3ccdec8c8105
-## explicit
-github.com/marshallbrekka/go-u2fhost
-github.com/marshallbrekka/go-u2fhost/bytes
-github.com/marshallbrekka/go-u2fhost/hid
 # github.com/mattn/go-ieproxy v0.0.0-20190610004146-91bb50d98149
 github.com/mattn/go-ieproxy
 # github.com/mattn/go-zglob v0.0.1

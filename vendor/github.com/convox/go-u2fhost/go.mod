@@ -1,4 +1,4 @@
-module github.com/marshallbrekka/go-u2fhost
+module github.com/convox/go-u2fhost
 
 go 1.14
 

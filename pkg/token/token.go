@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/marshallbrekka/go-u2fhost"
+	"github.com/convox/go-u2fhost"
 )
 
 type clientExtension struct {

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	butil "github.com/marshallbrekka/go-u2fhost/bytes"
+	butil "github.com/convox/go-u2fhost/bytes"
 )
 
 // Registers with the device using the RegisterRequest, returning a RegisterResponse.

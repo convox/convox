@@ -92,6 +92,8 @@ github.com/convox/changes v0.0.0-20191105034405-8c0df759a3b3 h1:S0AiQtEXMb5jBw4N
 github.com/convox/changes v0.0.0-20191105034405-8c0df759a3b3/go.mod h1:RpXN2RCcOkPSccYY3xrmKPQzJNrGq+9+kbtFcAQpEv8=
 github.com/convox/exec v0.0.0-20180905012044-cc13d277f897 h1:8SnSpocZ8I5RlRo8NFKYrAa6pQYZp+4T/pWyD3GrwIk=
 github.com/convox/exec v0.0.0-20180905012044-cc13d277f897/go.mod h1:GAxysqvg1ZSl42aLnvLXmFkXkacF4AGql5ZKT7s1DGc=
+github.com/convox/go-u2fhost v0.0.0-20220209143247-92cf6cb357e9 h1:TyKye9jsJjQNfh42OTezRXQ0IvGnMfglqjhHB2HoliI=
+github.com/convox/go-u2fhost v0.0.0-20220209143247-92cf6cb357e9/go.mod h1:W1XPhvChbH/wJ6BcIkrkcI6QaCm8/YE91xeRYgNQtck=
 github.com/convox/inotify v0.0.0-20170313035821-b56f5149b5c6 h1:bigLg74wAp2d11vaK4/IkTbN95D5mlSqZ/+/O6YBgtQ=
 github.com/convox/inotify v0.0.0-20170313035821-b56f5149b5c6/go.mod h1:JOi7Az72uBLT9D2Qv/6FbUbC9W420st0MMIUgVYUyd0=
 github.com/convox/logger v0.0.0-20180522214415-e39179955b52 h1:HTaloo6by+4NE1A1mRYprWzsOy1PGH2tPGfgZ60dyHU=
@@ -493,8 +495,6 @@ github.com/markbates/safe v1.0.0/go.mod h1:nAqgmRi7cY2nqMc92/bSEeQA+R4OheNU2T1kN
 github.com/markbates/safe v1.0.1/go.mod h1:nAqgmRi7cY2nqMc92/bSEeQA+R4OheNU2T1kNSCBdG0=
 github.com/markbates/sigtx v1.0.0/go.mod h1:QF1Hv6Ic6Ca6W+T+DL0Y/ypborFKyvUY9HmuCD4VeTc=
 github.com/markbates/willie v1.0.9/go.mod h1:fsrFVWl91+gXpx/6dv715j7i11fYPfZ9ZGfH0DQzY7w=
-github.com/marshallbrekka/go-u2fhost v0.0.0-20210111072507-3ccdec8c8105 h1:Si3VAYdC1ZtA58UsDXxlkbpF5EMWxoCJP9gn1cYQ+vc=
-github.com/marshallbrekka/go-u2fhost v0.0.0-20210111072507-3ccdec8c8105/go.mod h1:VyqGj5jbZtzHO11cS7rkDh/owr/rNCEM98IhQwWvmXg=
 github.com/mattn/go-colorable v0.0.9/go.mod h1:9vuHe8Xs5qXnSaW/c/ABM9alt+Vo+STaOChaDxuIBZU=
 github.com/mattn/go-ieproxy v0.0.0-20190610004146-91bb50d98149 h1:HfxbT6/JcvIljmERptWhwa8XzP7H3T+Z2N26gTsaDaA=
 github.com/mattn/go-ieproxy v0.0.0-20190610004146-91bb50d98149/go.mod h1:31jz6HNzdxOmlERGGEc4v/dMssOfmp2p5bT/okiKFFc=

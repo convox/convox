@@ -9,7 +9,7 @@ import (
 	"io"
 
 	"github.com/bearsh/hid"
-	butil "github.com/marshallbrekka/go-u2fhost/bytes"
+	butil "github.com/convox/go-u2fhost/bytes"
 )
 
 // The HID message structure is defined at the following url.

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	butil "github.com/marshallbrekka/go-u2fhost/bytes"
+	butil "github.com/convox/go-u2fhost/bytes"
 )
 
 // Authenticates with the device using the AuthenticateRequest,
