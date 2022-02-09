@@ -100,7 +100,6 @@ func (c *Client) Options(path string, opts RequestOptions, out interface{}) erro
 }
 
 func (c *Client) GetStream(path string, opts RequestOptions) (*http.Response, error) {
-	fmt.Println("GetStream called => ", path, opts)
 	req, err := c.Request("GET", path, opts)
 	if err != nil {
 		return nil, err
@@ -121,7 +120,6 @@ func (c *Client) Get(path string, opts RequestOptions, out interface{}) error {
 }
 
 func (c *Client) PostStream(path string, opts RequestOptions) (*http.Response, error) {
-	// fmt.Println("PostStream called => ", path, opts)
 	req, err := c.Request("POST", path, opts)
 	if err != nil {
 		return nil, err
@@ -136,7 +134,6 @@ func (c *Client) PostStream(path string, opts RequestOptions) (*http.Response, e
 }
 
 func (c *Client) Post(path string, opts RequestOptions, out interface{}) error {
-	fmt.Println("Post called => ", path, opts)
 	res, err := c.PostStream(path, opts)
 	if err != nil {
 		return err

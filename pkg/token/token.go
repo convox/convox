@@ -49,7 +49,6 @@ type tokenResponse struct {
 
 func Authenticate(req []byte) ([]byte, error) {
 	ds := u2fhost.Devices()
-	fmt.Println(len(ds), "devices")
 
 	ch := make(chan tokenResponse)
 
@@ -57,10 +56,14 @@ func Authenticate(req []byte) ([]byte, error) {
 	defer cancel()
 
 	var areq authenticationRequest
-
 	if err := json.Unmarshal(req, &areq); err != nil {
 		return nil, err
 	}
+	chbase64, err := fromStdToWebEnconding(areq.PublicKey.Challenge)
+	if err != nil {
+		return nil, err
+	}
+	areq.PublicKey.Challenge = chbase64
 
 	for _, d := range ds {
 		go authenticateWait(ctx, d, areq, ch)
@@ -144,10 +147,11 @@ func authenticateDevice(ctx context.Context, d *u2fhost.HidDevice, req authentic
 					ch <- tokenResponse{Error: err}
 				}
 
+				origin := fmt.Sprintf("https://%s", req.PublicKey.RpID)
 				areq := &u2fhost.AuthenticateRequest{
 					AppId:     req.PublicKey.RpID,
 					Challenge: req.PublicKey.Challenge,
-					Facet:     req.PublicKey.RpID,
+					Facet:     origin,
 					WebAuthn:  true,
 					KeyHandle: base64kh,
 				}

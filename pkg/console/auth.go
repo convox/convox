@@ -60,7 +60,6 @@ func (c *Client) authenticator(cl *stdsdk.Client, res *http.Response) (http.Head
 
 		body = data
 		headers["Challenge"] = ares.Header.Get("Challenge")
-		fmt.Println("Challenge header: ", headers["Challenge"])
 	}
 
 	var s session
