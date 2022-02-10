@@ -138,7 +138,7 @@ github.com/convox/changes
 # github.com/convox/exec v0.0.0-20180905012044-cc13d277f897
 ## explicit
 github.com/convox/exec
-# github.com/convox/go-u2fhost v0.0.0-20220209143247-92cf6cb357e9
+# github.com/convox/go-u2fhost v0.0.0-20220210143516-c133f566e496
 ## explicit
 github.com/convox/go-u2fhost
 github.com/convox/go-u2fhost/bytes

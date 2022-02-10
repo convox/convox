@@ -37,10 +37,10 @@ func (dev *HidDevice) Authenticate(req *AuthenticateRequest) (*AuthenticateRespo
 	}
 
 	// If we are in webauthn mode, try a backwards compatible mode for u2f
+	// but don't turn off the webauthn flag
 	if req.WebAuthn && status == u2fStatusWrongData {
 		u2fReq := *req
-		u2fReq.WebAuthn = false
-		u2fReq.AppId = "https://" + req.AppId
+		u2fReq.AppId = fmt.Sprintf("https://%s", req.AppId)
 		clientData, request, err = authenticateRequest(&u2fReq)
 
 		if err != nil {
@@ -102,7 +102,7 @@ func authenticateRequest(req *AuthenticateRequest) ([]byte, []byte, error) {
 	if req.WebAuthn {
 		client.Type = "webauthn.get"
 	} else {
-		client.Typ = "navigator.id.getAssertion"
+		client.Type = "navigator.id.getAssertion"
 	}
 
 	clientJson, err := json.Marshal(client)

@@ -18,7 +18,7 @@ require (
 	github.com/bearsh/hid v1.4.0 // indirect
 	github.com/convox/changes v0.0.0-20191105034405-8c0df759a3b3
 	github.com/convox/exec v0.0.0-20180905012044-cc13d277f897
-	github.com/convox/go-u2fhost v0.0.0-20220209143247-92cf6cb357e9
+	github.com/convox/go-u2fhost v0.0.0-20220210143516-c133f566e496
 	github.com/convox/logger v0.0.0-20180522214415-e39179955b52
 	github.com/convox/stdapi v0.0.0-20190708203955-b81b71b6a680
 	github.com/convox/stdcli v0.0.0-20200218120900-608b86ac40a1

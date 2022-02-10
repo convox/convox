@@ -92,8 +92,8 @@ github.com/convox/changes v0.0.0-20191105034405-8c0df759a3b3 h1:S0AiQtEXMb5jBw4N
 github.com/convox/changes v0.0.0-20191105034405-8c0df759a3b3/go.mod h1:RpXN2RCcOkPSccYY3xrmKPQzJNrGq+9+kbtFcAQpEv8=
 github.com/convox/exec v0.0.0-20180905012044-cc13d277f897 h1:8SnSpocZ8I5RlRo8NFKYrAa6pQYZp+4T/pWyD3GrwIk=
 github.com/convox/exec v0.0.0-20180905012044-cc13d277f897/go.mod h1:GAxysqvg1ZSl42aLnvLXmFkXkacF4AGql5ZKT7s1DGc=
-github.com/convox/go-u2fhost v0.0.0-20220209143247-92cf6cb357e9 h1:TyKye9jsJjQNfh42OTezRXQ0IvGnMfglqjhHB2HoliI=
-github.com/convox/go-u2fhost v0.0.0-20220209143247-92cf6cb357e9/go.mod h1:W1XPhvChbH/wJ6BcIkrkcI6QaCm8/YE91xeRYgNQtck=
+github.com/convox/go-u2fhost v0.0.0-20220210143516-c133f566e496 h1:GDUeVlb19x8kSQ8lbyEfYpVEc3Idx181VVJX4+FIMKU=
+github.com/convox/go-u2fhost v0.0.0-20220210143516-c133f566e496/go.mod h1:W1XPhvChbH/wJ6BcIkrkcI6QaCm8/YE91xeRYgNQtck=
 github.com/convox/inotify v0.0.0-20170313035821-b56f5149b5c6 h1:bigLg74wAp2d11vaK4/IkTbN95D5mlSqZ/+/O6YBgtQ=
 github.com/convox/inotify v0.0.0-20170313035821-b56f5149b5c6/go.mod h1:JOi7Az72uBLT9D2Qv/6FbUbC9W420st0MMIUgVYUyd0=
 github.com/convox/logger v0.0.0-20180522214415-e39179955b52 h1:HTaloo6by+4NE1A1mRYprWzsOy1PGH2tPGfgZ60dyHU=
