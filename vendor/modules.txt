@@ -160,6 +160,9 @@ github.com/convox/stdsdk
 # github.com/convox/version v0.0.0-20160822184233-ffefa0d565d2
 ## explicit
 github.com/convox/version
+# github.com/crazy-max/xgo v0.10.0
+## explicit
+github.com/crazy-max/xgo
 # github.com/creack/pty v1.1.13
 ## explicit
 github.com/creack/pty
