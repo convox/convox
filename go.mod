@@ -49,7 +49,7 @@ require (
 	golang.org/x/crypto v0.0.0-20200214034016-1d94cc7ab1c6 // indirect
 	golang.org/x/sys v0.0.0-20200217220822-9197077df867 // indirect
 	google.golang.org/api v0.9.0
-	gopkg.in/yaml.v2 v2.2.4
+	gopkg.in/yaml.v2 v2.2.8
 	k8s.io/api v0.16.6
 	k8s.io/apimachinery v0.16.6
 	k8s.io/client-go v0.16.6
