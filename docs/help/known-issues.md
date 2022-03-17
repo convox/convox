@@ -20,4 +20,4 @@ url: /help/known-issues
 ### Local
 
  * Kubernetes >= 1.22 is not supported as it deprecated an Ingress resource name which Convox uses. We are going to deploy a fix, but meanwhile the workaround is to run version <= 1.21. Convox automatically uses a compatible version in remote racks, but you must ensure that you're running <= 1.21 locally.
-   * macOS: Docker Desktop does not allow you to specify the Kubernetes version. The latest Docker Desktop version with Kubernetes <= 1.21 is [Docker Desktop 4.2.0](https://docs.docker.com/desktop/mac/release-notes/#docker-desktop-420) and there are alternatives such as [minikube](https://minikube.sigs.k8s.io/docs/).
+ * macOS: Docker Desktop does not allow you to specify the Kubernetes version. The latest Docker Desktop version with Kubernetes <= 1.21 is [Docker Desktop 4.2.0](https://docs.docker.com/desktop/mac/release-notes/#docker-desktop-420) and there are alternatives such as [minikube](https://minikube.sigs.k8s.io/docs/).
