@@ -16,7 +16,7 @@ url: /installation/development-rack/macos
 - Drag the CPU slider to the halfway point
 - Drag the Memory slider to at least 8GB
 - Go to the Kubernetes tab
-- Enable Kubernetes
+- Enable Kubernetes(there is a known bug when using Kubernetes 1.22+. Please refer to [known-issues](/help/known-issues))
 
 ### Terraform
 
