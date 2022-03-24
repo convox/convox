@@ -15,15 +15,17 @@ require (
 	github.com/PuerkitoBio/goquery v1.5.0
 	github.com/algolia/algoliasearch-client-go v2.25.0+incompatible
 	github.com/aws/aws-sdk-go v1.21.10
+	github.com/bearsh/hid v1.4.0 // indirect
 	github.com/convox/changes v0.0.0-20191105034405-8c0df759a3b3
 	github.com/convox/exec v0.0.0-20180905012044-cc13d277f897
+	github.com/convox/go-u2fhost v0.0.0-20220210143516-c133f566e496
 	github.com/convox/logger v0.0.0-20180522214415-e39179955b52
 	github.com/convox/stdapi v0.0.0-20190708203955-b81b71b6a680
 	github.com/convox/stdcli v0.0.0-20200218120900-608b86ac40a1
 	github.com/convox/stdsdk v0.0.0-20201005151143-fb7f05286eea
 	github.com/convox/version v0.0.0-20160822184233-ffefa0d565d2
+	github.com/crazy-max/xgo v0.10.0
 	github.com/creack/pty v1.1.13
-	github.com/ddollar/go-u2fhost v0.0.0-20200214123511-3ca2df7a0b44
 	github.com/docker/docker v1.4.2-0.20190710153559-aa8249ae1b8b
 	github.com/dustin/go-humanize v1.0.0
 	github.com/elastic/go-elasticsearch/v6 v6.8.2
