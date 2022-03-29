@@ -15,21 +15,26 @@ import (
 
 func TestProxy(t *testing.T) {
 	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
+		var s string
+		for i := 0; len(s) < 1024; i++ {
+			s += strconv.Itoa(i)
+		}
+
 		ro := stdsdk.RequestOptions{
-			Body: strings.NewReader("in"),
+			Body: bytes.NewBufferString(s),
 		}
 		p.On("Proxy", "host", 5000, mock.Anything, structs.ProxyOptions{}).Return(nil).Run(func(args mock.Arguments) {
 			rw := args.Get(2).(io.ReadWriter)
-			rw.Write([]byte("out"))
+			rw.Write([]byte(s))
 			data, err := ioutil.ReadAll(rw)
 			require.NoError(t, err)
-			require.Equal(t, "in", string(data))
+			require.Equal(t, s, string(data))
 		})
 		r, err := c.Websocket("/proxy/host/5000", ro)
 		require.NoError(t, err)
 		data, err := ioutil.ReadAll(r)
 		require.NoError(t, err)
-		require.Equal(t, "out", string(data))
+		require.Equal(t, s, string(data))
 	})
 }
 
