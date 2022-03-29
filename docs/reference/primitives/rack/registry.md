@@ -10,17 +10,20 @@ A Registry is a set of stored credentials for a private Docker registry that can
 
 ## Adding Registries
 ```html
-    $ convox registries add index.docker.io/v1/ user password
+    $ convox registries add registry.example.org user password
     Adding registry... OK
 ```
+
+Use `https://index.docker.io/v1/` for DockerHub.
+
 ## Listing Registries
 ```html
     $ convox registries
     SERVER                       USERNAME
-    index.docker.io/v1/          user
+    registry.example.org          user
 ```
 ## Deleting Registries
 ```html
-    $ convox registries remove index.docker.io/v1/
+    $ convox registries remove registry.example.org
     Removing registry... OK
 ```
