@@ -183,7 +183,8 @@ func (c *Context) Read(data []byte) (int, error) {
 
 	switch t {
 	case websocket.TextMessage:
-		return r.Read(data)
+		n, err := io.CopyBuffer(io.Discard, r, data)
+		return int(n), err
 	case websocket.BinaryMessage:
 		return 0, io.EOF
 	default:
