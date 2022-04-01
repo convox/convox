@@ -663,31 +663,29 @@ func getLatestRevisionForCurrentVersion(currentReleaseVersion *ReleaseVersion) (
 	page := 1
 	moreReleases := true
 	for moreReleases {
-		var response struct {
-			Releases []struct {
-				Draft      bool   `json:"draft"`
-				Prerelease bool   `json:"prerelease"`
-				Tag        string `json:"tag_name"`
-			}
-		}
+		response := []struct {
+			Draft      bool   `json:"draft"`
+			Prerelease bool   `json:"prerelease"`
+			Tag        string `json:"tag_name"`
+		}{}
 
 		err := getGitHubReleaseData(fmt.Sprintf("https://api.github.com/repos/convox/convox/releases?per_page=100&page=%s", strconv.Itoa(page)), &response)
 		if err != nil {
 			return "", err
 		}
 
-		for _, release := range response.Releases {
+		for _, release := range response {
 			thisReleaseVersion, err := convertToReleaseVersion(release.Tag)
 			if err != nil {
 				continue
-			} 
+			}
 			if !release.Draft && !release.Prerelease && currentReleaseVersion.sameMinor(thisReleaseVersion) {
 				return release.Tag, nil
 			} else {
 				continue
 			}
 		}
-		moreReleases = (len(response.Releases) == 100)
+		moreReleases = (len(response) == 100)
 		page++
 	}
 
