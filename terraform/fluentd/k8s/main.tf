@@ -131,11 +131,11 @@ resource "kubernetes_daemonset" "fluentd" {
           }
 
           resources {
-            limits {
+            limits = {
               memory = "200Mi"
             }
 
-            requests {
+            requests = {
               cpu    = "100m"
               memory = "200Mi"
             }

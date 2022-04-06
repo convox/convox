@@ -6,7 +6,6 @@ provider "kubernetes" {
   cluster_ca_certificate = module.cluster.ca
   host                   = module.cluster.endpoint
 
-  load_config_file = false
   exec {
     api_version = "client.authentication.k8s.io/v1alpha1"
     args        = ["eks", "get-token", "--cluster-name", var.name]

@@ -2,7 +2,6 @@ provider "kubernetes" {
   cluster_ca_certificate = base64decode(aws_eks_cluster.cluster.certificate_authority.0.data)
   host                   = aws_eks_cluster.cluster.endpoint
 
-  load_config_file = false
   exec {
     api_version = "client.authentication.k8s.io/v1alpha1"
     args        = ["eks", "get-token", "--cluster-name", var.name]
@@ -41,7 +40,7 @@ resource "null_resource" "delay_cluster" {
 // https://github.com/terraform-aws-modules/terraform-aws-eks/issues/621
 resource "null_resource" "wait_k8s_api" {
   provisioner "local-exec" {
-    command = "sleep 60"
+    command = "sleep 120"
   }
 
   depends_on = [
