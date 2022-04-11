@@ -18,7 +18,7 @@ If you have a process running on port 80 or 443 on your machine, that can confli
 
 Check if DNS is set correctly with `scutil --dns`, the output must show you an entry for `convox` pointing to `127.0.0.1`:
 
-```
+```sh
 % scutil --dns
 
 [...]
@@ -35,7 +35,7 @@ In case you don't see the entry for convox, configure the DNS [here](/installati
 
 You can test if the DNS is working using the `dscacheutil` package, the IP Address must be `127.0.0.1`:
 
-```
+```sh
 % dscacheutil -q host -a name api.dev.convox
 name: api.dev.convox
 ip_address: 127.0.0.1
@@ -45,7 +45,7 @@ Make sure there is no other service using the port 53, 80 or 443 on your system,
 
 If everything is configure properly, try to flush your DNS resolver and access your rack again:
 
-```
+```sh
 % sudo dscacheutil -flushcache
 % sudo killall -HUP mDNSResponder
 ```
@@ -54,7 +54,7 @@ If everything is configure properly, try to flush your DNS resolver and access y
 
 You can configure a DNS entry with scutil, it will create the entry in the resolver and you don't need to create the `/etc/resolver/convox` file:
 
-```
+```sh
 % sudo scutil
 > d.init
 > d.add ServerAddresses * 127.0.0.1
