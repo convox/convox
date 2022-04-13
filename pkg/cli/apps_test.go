@@ -60,14 +60,21 @@ func TestAppsError(t *testing.T) {
 
 func TestAppsCancel(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		fxapp := fxApp()
+		fxrelease := fxRelease()
 		i.On("AppCancel", "app1").Return(nil)
+		i.On("AppGet", "app1").Return(fxapp, nil)
+		i.On("ReleaseList", fxapp.Name, structs.ReleaseListOptions{}).Return(fxReleaseList(), nil)
+		i.On("ReleaseCreate", fxapp.Name, structs.ReleaseCreateOptions{
+			Build: &fxrelease.Build, Description: &fxrelease.Description, Env: &fxrelease.Env},
+		).Return(nil, nil)
 
 		res, err := testExecute(e, "apps cancel app1", nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
-			"Cancelling deployment of app1... OK",
+			"Cancelling deployment of app1... Rewriting last active release... OK",
 		})
 
 		res, err = testExecute(e, "apps cancel -a app1", nil)
@@ -75,7 +82,7 @@ func TestAppsCancel(t *testing.T) {
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
-			"Cancelling deployment of app1... OK",
+			"Cancelling deployment of app1... Rewriting last active release... OK",
 		})
 	})
 }
