@@ -24,7 +24,7 @@ data "http" "releases" {
 locals {
   // var.node_type can be assigned a comma separated list of instance types
   node_type = split(",", var.node_type)[0]
-  arm_type  = local.node_type == "a1" || substr(local.node_type, 0, 3) == "c6g" || substr(local.node_type, 0, 3) == "m6g" || substr(local.node_type, 0, 3) == "r6g" || substr(local.node_type, 0, 3) == "t4g"
+  arm_type  = local.node_type == "a1" || substr(local.node_type, 0, 3) == "c6g" || substr(local.node_type, 0, 3) == "c7g" || substr(local.node_type, 0, 3) == "m6g" || substr(local.node_type, 0, 3) == "r6g" || substr(local.node_type, 0, 3) == "t4g"
   current   = jsondecode(data.http.releases.body).tag_name
   gpu_type  = substr(local.node_type, 0, 1) == "g" || substr(local.node_type, 0, 1) == "p"
   image     = var.image
