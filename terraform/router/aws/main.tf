@@ -15,10 +15,26 @@ module "nginx" {
     kubernetes = kubernetes
   }
 
-  namespace    = var.namespace
-  rack         = var.name
-  replicas_max = var.high_availability ? 10 : 1
-  replicas_min = var.high_availability ? 2 : 1
+  namespace      = var.namespace
+  proxy_protocol = var.proxy_protocol
+  rack           = var.name
+  replicas_max   = var.high_availability ? 10 : 1
+  replicas_min   = var.high_availability ? 2 : 1
+}
+
+resource "null_resource" "set_proxy_protocol" {
+
+  triggers = {
+    proxy_protocol = var.proxy_protocol
+  }
+
+  provisioner "local-exec" {
+    command = "sh ${path.module}/proxy-protocol.sh ${var.name} ${var.proxy_protocol}"
+  }
+
+  depends_on = [
+    kubernetes_service.router
+  ]
 }
 
 resource "kubernetes_service" "router" {
@@ -28,8 +44,7 @@ resource "kubernetes_service" "router" {
 
     annotations = {
       "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout" = "${var.idle_timeout}"
-      # "service.beta.kubernetes.io/aws-load-balancer-proxy-protocol"          = "*"
-      "service.beta.kubernetes.io/aws-load-balancer-type" = "nlb"
+      "service.beta.kubernetes.io/aws-load-balancer-type"                    = "nlb"
     }
   }
 

@@ -5,8 +5,8 @@ resource "kubernetes_config_map" "nginx-configuration" {
   }
 
   data = {
-    "proxy-body-size" = "0"
-    # "use-proxy-protocol" = "true"
+    "proxy-body-size"    = "0"
+    "use-proxy-protocol" = var.proxy_protocol ? "true" : "false"
   }
 }
 
@@ -167,12 +167,13 @@ resource "kubernetes_deployment" "ingress-nginx" {
     template {
       metadata {
         labels = {
-          app     = "system"
-          name    = "ingress-nginx"
-          rack    = var.rack
-          system  = "convox"
-          service = "ingress-nginx"
-          type    = "service"
+          app            = "system"
+          name           = "ingress-nginx"
+          rack           = var.rack
+          system         = "convox"
+          service        = "ingress-nginx"
+          type           = "service"
+          proxy_protocol = var.proxy_protocol
         }
       }
 

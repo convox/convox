@@ -12,6 +12,10 @@ variable "namespace" {
   type = string
 }
 
+variable "proxy_protocol" {
+  default = false
+}
+
 variable "rack" {
   type = string
 }

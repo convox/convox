@@ -26,6 +26,10 @@ variable "oidc_sub" {
   type = string
 }
 
+variable "proxy_protocol" {
+  default = false
+}
+
 variable "release" {
   type = string
 }

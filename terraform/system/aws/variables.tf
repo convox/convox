@@ -61,6 +61,10 @@ variable "private" {
   default = true
 }
 
+variable "proxy_protocol" {
+  default = false
+}
+
 variable "release" {
   default = ""
 }
