@@ -114,7 +114,7 @@ jobs:
           - job: aws-existing-vpc
             provider: aws
             rack_params: "vpc_id=vpc-0f18b6d1265717215 internet_gateway_id=igw-01c3d338eecec02a1 cidr=172.0.0.0/16"
-            suffix: existing-vpc
+            suffix: evpc
           - job: do
             provider: do
           - job: gcp
