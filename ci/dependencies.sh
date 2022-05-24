@@ -1,8 +1,10 @@
 #!/bin/bash
 set -ex -o pipefail
 
-echo "region $REGION"
-echo "aws region $AWS_REGION"
+r=$REGION
+ar=$AWS_REGION
+echo "region $r"
+echo "aws region $ar"
 
 # install utilities
 sudo apt-get update && sudo apt-get -y install jq unzip
