@@ -1,10 +1,11 @@
 #!/bin/bash
 set -ex -o pipefail
 
-r=$REGION
-ar=$AWS_REGION
-echo "region $r"
-echo "aws region $ar"
+
+if [ -z "$AWS_REGION" ]
+then
+ echo "aws region is empty"
+fi
 
 # install utilities
 sudo apt-get update && sudo apt-get -y install jq unzip
