@@ -35,17 +35,17 @@ jobs:
           SECRETS: ${{ toJson(secrets) }}
       - name: dependencies
         run: ci/dependencies.sh
-      - name: cli
-        run: ci/cli.sh
-      - name: install
-        run: ci/install.sh
-      - name: wait
-        run: sleep 600
-      - name: test
-        run: ci/test.sh
-      - name: debug
-        run: ci/debug.sh
-        if: always()
-      - name: uninstall
-        run: ci/uninstall.sh
-        if: always()
+      # - name: cli
+      #   run: ci/cli.sh
+      # - name: install
+      #   run: ci/install.sh
+      # - name: wait
+      #   run: sleep 600
+      # - name: test
+      #   run: ci/test.sh
+      # - name: debug
+      #   run: ci/debug.sh
+      #   if: always()
+      # - name: uninstall
+      #   run: ci/uninstall.sh
+      #   if: always()
