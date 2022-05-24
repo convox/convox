@@ -16,6 +16,10 @@ variable "proxy_protocol" {
   default = false
 }
 
+variable "cloud_provider" {
+  default = ""
+}
+
 variable "rack" {
   type = string
 }

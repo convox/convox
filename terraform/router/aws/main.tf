@@ -15,11 +15,28 @@ module "nginx" {
     kubernetes = kubernetes
   }
 
+  cloud_provider = "aws"
   namespace      = var.namespace
   proxy_protocol = var.proxy_protocol
   rack           = var.name
   replicas_max   = var.high_availability ? 10 : 1
   replicas_min   = var.high_availability ? 2 : 1
+}
+
+resource "kubernetes_config_map" "nginx-configuration" {
+  metadata {
+    namespace = var.namespace
+    name      = "nginx-configuration"
+  }
+
+  data = {
+    "proxy-body-size"    = "0"
+    "use-proxy-protocol" = var.proxy_protocol ? "true" : "false"
+  }
+
+  depends_on = [
+    null_resource.set_proxy_protocol
+  ]
 }
 
 resource "null_resource" "set_proxy_protocol" {
