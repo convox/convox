@@ -7,7 +7,7 @@ export_secret() {
 case "$PROVIDER" in
 aws)
   export_secret AWS_ACCESS_KEY_ID
-  export_secret AWS_REGION # we also want to export AWS_REGION for the aws cli config
+  export_secret AWS_REGION AWS_DEFAULT_REGION # we also want to export AWS_REGION for the aws cli config
   export_secret AWS_REGION REGION
   export_secret AWS_SECRET_ACCESS_KEY
   ;;
