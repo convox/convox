@@ -4,6 +4,8 @@ set -e
 
 export AWS_REGION=us-east-1
 
+echo "the new env $AWS_REGION"
+
 if [ ! -x "$(which jq)" ]
 then
     echo "missing jq binary"
