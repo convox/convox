@@ -37,20 +37,22 @@ The parameters available for your Rack depend on the underlying cloud provider.
 
 ### Amazon Web Services
 
-| Name                             | Default         |
-|----------------------------------|-----------------|
-| **cidr**                         | **10.1.0.0/16** |
-| **internet_gateway_id**          |                 |
-| **node_capacity_type**           | **on_demand**   |
-| **node_disk**                    | **20**          |
-| **node_type**                    | **t3.small**    |
-| **region**                       | **us-east-1**   |
-| **high_availability** *          | **true**        |
-| **proxy_protocol** *             | **false**       |
-| **vpc_id** ***                   |                 |
+| Name                              | Default         |
+|---------------------------------- |-----------------|
+| **cidr**                          | **10.1.0.0/16** |
+| **internet_gateway_id**           |                 |
+| **node_capacity_type**            | **on_demand**   |
+| **node_disk**                     | **20**          |
+| **node_type**                     | **t3.small**    |
+| **region**                        | **us-east-1**   |
+| **high_availability** *           | **true**        |
+| **proxy_protocol** **             | **false**       |
+| **vpc_id** ***                    |                 |
 
 \* Parameter cannot be changed after rack creation
+
 \*\* Setting **proxy_protocol** in an existing rack will require a 5 - 10 minutes downtime window.
+
 \*\*\* To avoid CIDR block collision with existing VPC subnets, please add a new CIDR block to your VPC to separate rack resources. Also, remember to pass the **internet_gateway_id** attached to the VPC. If the VPC doesn't have an IG attached, the rack installation will create one automatically, which will also be destroyed if you delete the rack.
 
 &nbsp;
