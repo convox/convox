@@ -87,6 +87,7 @@ module "rack" {
   name                = var.name
   oidc_arn            = module.cluster.oidc_arn
   oidc_sub            = module.cluster.oidc_sub
+  proxy_protocol      = var.proxy_protocol
   release             = local.release
   subnets             = module.cluster.subnets
   whitelist           = split(",", var.whitelist)

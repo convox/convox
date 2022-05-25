@@ -72,6 +72,7 @@ module "router" {
   namespace         = module.k8s.namespace
   oidc_arn          = var.oidc_arn
   oidc_sub          = var.oidc_sub
+  proxy_protocol    = var.proxy_protocol
   release           = var.release
   whitelist         = var.whitelist
 }
