@@ -20,18 +20,24 @@ then
     exit 1
 fi
 
-sleep 5 # make sure the load-balancer and target groups associated with the router service were already created 
-
-target_groups=$(aws resourcegroupstaggingapi get-resources --tag-filters "Key=kubernetes.io/service-name,Values=$1-system/router" --resource-type-filters "elasticloadbalancing:targetgroup")
-
+target_groups=$(aws --region=$3 resourcegroupstaggingapi get-resources --tag-filters "Key=kubernetes.io/service-name,Values=$1-system/router" --resource-type-filters "elasticloadbalancing:targetgroup")
 target_groups=$(echo $target_groups | jq -r "[.ResourceTagMappingList[] | .ResourceARN] | @sh" | tr -d \')
 
-if [ -z "$target_groups" ]
-then
-  echo "router for rack $1 not found"
-  exit 1
-fi
+seconds=0
+while [ -z "$target_groups" ]
+do
+    seconds=$(($seconds+30))
+    if [ $seconds -ge 600 ]
+    then
+        echo "failed to provision load-balancer for $1"
+        exit 1
+    fi
+    echo "waiting for NLB target-groups..."
+    sleep 30
+    target_groups=$(aws resourcegroupstaggingapi get-resources --tag-filters "Key=kubernetes.io/service-name,Values=$1-system/router" --resource-type-filters "elasticloadbalancing:targetgroup")
+    target_groups=$(echo $target_groups | jq -r "[.ResourceTagMappingList[] | .ResourceARN] | @sh" | tr -d \')
+done
 
 for group in $target_groups; do
-    aws elbv2 modify-target-group-attributes --target-group-arn $group --attributes Key=proxy_protocol_v2.enabled,Value=$2 > /dev/null
+    aws --region=$3 elbv2 modify-target-group-attributes --target-group-arn $group --attributes Key=proxy_protocol_v2.enabled,Value=$2 > /dev/null
 done

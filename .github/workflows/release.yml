@@ -107,6 +107,7 @@ jobs:
         include:
           - job: aws
             provider: aws
+            rack_params: "region=us-east-2"
           - job: aws-arm64
             provider: aws
             rack_params: "node_type=t4g.small proxy_protocol=true"
