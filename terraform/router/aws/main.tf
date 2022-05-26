@@ -46,7 +46,7 @@ resource "null_resource" "set_proxy_protocol" {
   }
 
   provisioner "local-exec" {
-    command = "sh ${path.module}/proxy-protocol.sh ${var.name} ${var.proxy_protocol}"
+    command = "sh ${path.module}/proxy-protocol.sh ${var.name} ${var.proxy_protocol} ${data.aws_region.current.name}"
   }
 
   depends_on = [
