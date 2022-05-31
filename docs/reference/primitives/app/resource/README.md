@@ -24,8 +24,10 @@ A Resource is defined in [`convox.yml`](/configuration/convox-yml) and linked to
 
 The following Resource types are currently available:
 
+* `mariadb`
 * `memcached`
 * `mysql`
+* `postgis`
 * `postgres`
 * `redis`
 
