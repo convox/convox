@@ -9,9 +9,9 @@ url: /deployment/scaling
 Convox allows you to easily scale any [Service](/reference/primitives/app/service) on the following dimensions:
 
 - Horizontal concurrency (number of [Processes](/reference/primitives/app/process))
-- CPU allocation (in CPU units where 1024 units is one full CPU)
+- CPU allocation (in CPU units where 1000 units is one full CPU)
 - Memory allocation (in MB)
- 
+
 ## Initial Defaults
 
 You can specify the scale for any [Service](/reference/primitives/app/service) in your [convox.yml](/configuration/convox-yml)
@@ -20,7 +20,7 @@ You can specify the scale for any [Service](/reference/primitives/app/service) i
       web:
         scale:
           count: 2
-          cpu: 256
+          cpu: 250
           memory: 512
 ```
 > If you specify a static `count` it will only be used on first deploy. Subsequent changes must be made using the `convox` CLI.
@@ -31,7 +31,7 @@ You can specify the scale for any [Service](/reference/primitives/app/service) i
 ```html
     $ convox scale
     NAME  DESIRED  RUNNING  CPU  MEMORY
-    web   2        2        256  512
+    web   2        2        250  512
 ```
 ### Scaling Count Horizontally
 ```html
@@ -60,5 +60,10 @@ target values for CPU and Memory utilization (in percent):
             cpu: 70
             memory: 90
 ```
-The number of [Processes](/reference/primitives/app/process) will be continually adjusted to maintain
-your target metrics.
+The number of [Processes](/reference/primitives/app/process) will be continually adjusted to maintain your target metrics.
+
+You must consider that the targets for CPU and Memory use the pods' limits to calculate the utilization percentage. So if you set the target for CPU as `70` and have two pods, it will trigger the HPA only if the utilization percentage sum divided by the pods' count is bigger than 70%. The desired replicas will be calculated to satisfy the percentage. Being the `currentMetricValue` computed by taking the average of the given metric across all Pods in the HorizontalPodAutoscaler's scale target.
+
+```html
+desiredReplicas = ceil[currentReplicas * ( currentMetricValue / desiredMetricValue )]
+```
