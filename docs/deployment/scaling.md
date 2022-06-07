@@ -62,7 +62,7 @@ target values for CPU and Memory utilization (in percent):
 ```
 The number of [Processes](/reference/primitives/app/process) will be continually adjusted to maintain your target metrics.
 
-You must consider that the targets for CPU and Memory use the pods' limits to calculate the utilization percentage. So if you set the target for CPU as `70` and have two pods, it will trigger the HPA only if the utilization percentage sum divided by the pods' count is bigger than 70%. The desired replicas will be calculated to satisfy the percentage. Being the `currentMetricValue` computed by taking the average of the given metric across all Pods in the HorizontalPodAutoscaler's scale target.
+You must consider that the targets for CPU and Memory use the service replicas limits to calculate the utilization percentage. So if you set the target for CPU as `70` and have two replicas, it will trigger the auto-scale only if the utilization percentage sum divided by the replica's count is bigger than 70%. The desired replicas will be calculated to satisfy the percentage. Being the `currentMetricValue` computed by taking the average of the given metric across all service replicas.
 
 ```html
 desiredReplicas = ceil[currentReplicas * ( currentMetricValue / desiredMetricValue )]
