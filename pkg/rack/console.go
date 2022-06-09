@@ -160,6 +160,14 @@ func (c Console) Status() string {
 	return c.status
 }
 
+func (c Console) Sync() error {
+	cc, err := c.client()
+	if err != nil {
+		return err
+	}
+	return cc.RackSync(c.name)
+}
+
 func (c Console) Uninstall() error {
 	return fmt.Errorf("console uninstall not yet supported")
 }
@@ -205,14 +213,6 @@ func (c Console) updateParamsDirect(params map[string]string) error {
 	}
 
 	return nil
-}
-
-func (c Console) Sync() error {
-	cc, err := c.client()
-	if err != nil {
-		return err
-	}
-	return cc.RackSync(c.name)
 }
 
 func (c Console) UpdateVersion(version string) error {

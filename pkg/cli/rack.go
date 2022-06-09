@@ -77,6 +77,11 @@ func init() {
 		Validate: stdcli.Args(0),
 	})
 
+	register("rack sync", "sync v2 rack API url", RackSync, stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagRack},
+		Validate: stdcli.Args(0),
+	})
+
 	registerWithoutProvider("rack uninstall", "uninstall a rack", RackUninstall, stdcli.CommandOptions{
 		Usage:    "<name>",
 		Validate: stdcli.Args(1),
@@ -86,11 +91,6 @@ func init() {
 		Flags:    []stdcli.Flag{flagRack},
 		Usage:    "[version]",
 		Validate: stdcli.ArgsMax(1),
-	})
-
-	register("rack sync", "sync v2 rack API url", RackSync, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagRack},
-		Validate: stdcli.Args(0),
 	})
 }
 
@@ -391,34 +391,6 @@ func RackScale(rack sdk.Interface, c *stdcli.Context) error {
 	return i.Print()
 }
 
-func RackUninstall(_ sdk.Interface, c *stdcli.Context) error {
-	name := c.Arg(0)
-
-	r, err := rack.Match(c, name)
-	if err != nil {
-		return err
-	}
-
-	if err := r.Uninstall(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func RackUpdate(_ sdk.Interface, c *stdcli.Context) error {
-	r, err := rack.Current(c)
-	if err != nil {
-		return err
-	}
-
-	if err := r.UpdateVersion(c.Arg(0)); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func RackSync(_ sdk.Interface, c *stdcli.Context) error {
 	r, err := rack.Current(c)
 	if err != nil {
@@ -451,4 +423,32 @@ func RackSync(_ sdk.Interface, c *stdcli.Context) error {
 	}
 
 	return fmt.Errorf("sync is only supported for console managed v2 racks")
+}
+
+func RackUninstall(_ sdk.Interface, c *stdcli.Context) error {
+	name := c.Arg(0)
+
+	r, err := rack.Match(c, name)
+	if err != nil {
+		return err
+	}
+
+	if err := r.Uninstall(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func RackUpdate(_ sdk.Interface, c *stdcli.Context) error {
+	r, err := rack.Current(c)
+	if err != nil {
+		return err
+	}
+
+	if err := r.UpdateVersion(c.Arg(0)); err != nil {
+		return err
+	}
+
+	return nil
 }
