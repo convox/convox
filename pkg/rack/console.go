@@ -207,6 +207,14 @@ func (c Console) updateParamsDirect(params map[string]string) error {
 	return nil
 }
 
+func (c Console) Sync() error {
+	cc, err := c.client()
+	if err != nil {
+		return err
+	}
+	return cc.RackSync(c.name)
+}
+
 func (c Console) UpdateVersion(version string) error {
 	cu, err := c.consoleUpdateSupported()
 	if err != nil {
@@ -215,7 +223,6 @@ func (c Console) UpdateVersion(version string) error {
 	if !cu {
 		return c.updateVersionDirect(version)
 	}
-	
 	cc, err := c.client()
 	if err != nil {
 		return err

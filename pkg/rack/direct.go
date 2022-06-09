@@ -131,6 +131,10 @@ func (d Direct) UpdateVersion(version string) error {
 	return nil
 }
 
+func (d Direct) Sync() error {
+	return fmt.Errorf("sync is only supported for console managed v2 racks")
+}
+
 func (d Direct) latest() (string, error) {
 	s, err := d.client.SystemGet()
 	if err != nil {

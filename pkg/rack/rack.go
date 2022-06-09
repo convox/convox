@@ -36,6 +36,7 @@ type Rack interface {
 	Uninstall() error
 	UpdateParams(map[string]string) error
 	UpdateVersion(string) error
+	Sync() error
 }
 
 func Create(c *stdcli.Context, name string, md *Metadata) (Rack, error) {

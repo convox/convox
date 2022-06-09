@@ -171,6 +171,10 @@ func (t Terraform) Delete() error {
 	return nil
 }
 
+func (t Terraform) Sync() error {
+	return fmt.Errorf("sync is only supported for console managed v2 racks")
+}
+
 func (t Terraform) Endpoint() (*url.URL, error) {
 	return url.Parse(t.endpoint)
 }

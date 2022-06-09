@@ -62,6 +62,10 @@ func (c *Client) RackGet(name string) (*Rack, error) {
 	return &r, nil
 }
 
+func (c *Client) RackSync(name string) error {
+	return c.Post(fmt.Sprintf("/racks/%s/sync", name), stdsdk.RequestOptions{}, nil)
+}
+
 func (c *Client) RackList() (Racks, error) {
 	var rs Racks
 
