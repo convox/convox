@@ -4,3 +4,4 @@ coverage.txt
 terraform.tfvars
 terraform/platform/convox.platform
 .DS_Store
+cmd/convox/convox
