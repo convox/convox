@@ -19,6 +19,7 @@ import (
 	ac "k8s.io/api/core/v1"
 	ae "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metricsv1beta1 "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 )
 
 const (
@@ -313,4 +314,28 @@ func volumeTo(v string) (string, error) {
 	default:
 		return "", errors.WithStack(fmt.Errorf("invalid volume %q", v))
 	}
+}
+
+func toCpuCore(millicore int64) float64 {
+	// 1000m (milicores) = 1 core = 1 vCPU = 1 AWS vCPU = 1 GCP Core
+	return float64(millicore) / 1000
+}
+
+func toMemMB(bytes int64) float64 {
+	// 1024*1024 bytes = 1 MiB
+	return float64(bytes) / (1024 * 1024)
+}
+
+func calculatePodCpuAndMem(m *metricsv1beta1.PodMetrics) (cpu float64, mem float64) {
+	if m == nil {
+		return 0, 0
+	}
+
+	cpuTotal := int64(0)
+	memTotal := int64(0)
+	for _, c := range m.Containers {
+		cpuTotal += c.Usage.Cpu().MilliValue()
+		memTotal += c.Usage.Memory().Value()
+	}
+	return toCpuCore(cpuTotal), toMemMB(memTotal)
 }
