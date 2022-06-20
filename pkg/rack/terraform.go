@@ -405,7 +405,6 @@ func (t Terraform) update(release string, vars map[string]string) error {
 		release = v
 
 	}
-	fmt.Println("current version: ", currentVersion)
 
 	if vars == nil {
 		vars = map[string]string{}
