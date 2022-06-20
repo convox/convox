@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/console"
@@ -215,7 +217,7 @@ func (c Console) UpdateVersion(version string) error {
 	if !cu {
 		return c.updateVersionDirect(version)
 	}
-	
+
 	cc, err := c.client()
 	if err != nil {
 		return err
@@ -234,9 +236,29 @@ func (c Console) UpdateVersion(version string) error {
 		}
 		version = v
 	}
+	if err := isSkippingMinor(currentVersion, version); err != nil {
+		return err
+	}
 
 	if err := cc.RackUpdate(c.name, version, nil); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func isSkippingMinor(currentVersion, version string) error {
+	cmv, err := strconv.Atoi(strings.Split(currentVersion, ".")[1])
+	if err != nil {
+		return err
+	}
+	mv, err := strconv.Atoi(strings.Split(version, ".")[1])
+	if err != nil {
+		return err
+	}
+
+	if mv > (cmv + 1) {
+		return fmt.Errorf("you can't skip a minor update, please update to the latest 3.%d.XX and so on before updating to 3.%d.XX", (cmv + 1), mv)
 	}
 
 	return nil
