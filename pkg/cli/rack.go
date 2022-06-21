@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -73,6 +74,11 @@ func init() {
 			stdcli.IntFlag("count", "c", "instance count"),
 			stdcli.StringFlag("type", "t", "instance type"),
 		},
+		Validate: stdcli.Args(0),
+	})
+
+	register("rack sync", "sync v2 rack API url", RackSync, stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagRack},
 		Validate: stdcli.Args(0),
 	})
 
@@ -383,6 +389,40 @@ func RackScale(rack sdk.Interface, c *stdcli.Context) error {
 	i.Add("Type", s.Type)
 
 	return i.Print()
+}
+
+func RackSync(_ sdk.Interface, c *stdcli.Context) error {
+	r, err := rack.Current(c)
+	if err != nil {
+		return err
+	}
+
+	data, err := c.SettingRead("current")
+	if err != nil {
+		return err
+	}
+	var attrs map[string]string
+	if err := json.Unmarshal([]byte(data), &attrs); err != nil {
+		return err
+	}
+
+	if attrs["type"] == "console" {
+		m, err := r.Metadata()
+		if err != nil {
+			return err
+		}
+
+		if m.State == nil { // v2 racks don't have a state file
+			err := r.Sync()
+			if err != nil {
+				return err
+			}
+
+			return c.OK()
+		}
+	}
+
+	return fmt.Errorf("sync is only supported for console managed v2 racks")
 }
 
 func RackUninstall(_ sdk.Interface, c *stdcli.Context) error {

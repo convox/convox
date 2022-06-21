@@ -85,6 +85,10 @@ func (d Direct) Status() string {
 	return d.status
 }
 
+func (d Direct) Sync() error {
+	return fmt.Errorf("sync is only supported for console managed v2 racks")
+}
+
 func (d Direct) Uninstall() error {
 	return fmt.Errorf("uninstall not supported with RACK_URL")
 }

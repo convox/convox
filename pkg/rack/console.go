@@ -162,6 +162,14 @@ func (c Console) Status() string {
 	return c.status
 }
 
+func (c Console) Sync() error {
+	cc, err := c.client()
+	if err != nil {
+		return err
+	}
+	return cc.RackSync(c.name)
+}
+
 func (c Console) Uninstall() error {
 	return fmt.Errorf("console uninstall not yet supported")
 }

@@ -245,6 +245,10 @@ func (t Terraform) Status() string {
 	return t.status
 }
 
+func (t Terraform) Sync() error {
+	return fmt.Errorf("sync is only supported for console managed v2 racks")
+}
+
 func (t Terraform) Uninstall() error {
 	dir, err := t.ctx.SettingDirectory(fmt.Sprintf("racks/%s", t.name))
 	if err != nil {
