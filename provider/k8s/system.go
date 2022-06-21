@@ -81,18 +81,19 @@ func (p *Provider) SystemProcesses(opts structs.SystemProcessesOptions) (structs
 		pss = append(pss, *ps)
 	}
 
-	// ignore error because this api only exists if metrics crds are installed in the k8s
 	ms, err := p.MetricsClient.MetricsV1beta1().PodMetricses(ns).List(am.ListOptions{LabelSelector: labelSelector})
-	if err == nil {
-		metricsByPod := map[string]metricsv1beta1.PodMetrics{}
-		for _, m := range ms.Items {
-			metricsByPod[m.Name] = m
-		}
+	if err != nil {
+		return nil, errors.WithStack(errors.Errorf("failed to fetch pod metrics: %s", err))
+	}
 
-		for i := range pss {
-			if m, has := metricsByPod[pss[i].Id]; has && len(m.Containers) > 0 {
-				pss[i].Cpu, pss[i].Memory = calculatePodCpuAndMem(&m)
-			}
+	metricsByPod := map[string]metricsv1beta1.PodMetrics{}
+	for _, m := range ms.Items {
+		metricsByPod[m.Name] = m
+	}
+
+	for i := range pss {
+		if m, has := metricsByPod[pss[i].Id]; has && len(m.Containers) > 0 {
+			pss[i].Cpu, pss[i].Memory = calculatePodCpuAndMem(&m)
 		}
 	}
 

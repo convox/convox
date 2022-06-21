@@ -331,8 +331,7 @@ func calculatePodCpuAndMem(m *metricsv1beta1.PodMetrics) (cpu float64, mem float
 		return 0, 0
 	}
 
-	cpuTotal := int64(0)
-	memTotal := int64(0)
+	var cpuTotal, memTotal int64
 	for _, c := range m.Containers {
 		cpuTotal += c.Usage.Cpu().MilliValue()
 		memTotal += c.Usage.Memory().Value()
