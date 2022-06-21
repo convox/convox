@@ -5,3 +5,4 @@ terraform.tfvars
 terraform/platform/convox.platform
 .DS_Store
 .vscode/
+cmd/convox/convox

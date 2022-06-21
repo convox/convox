@@ -301,6 +301,20 @@ func (t Terraform) UpdateParams(params map[string]string) error {
 }
 
 func (t Terraform) UpdateVersion(version string) error {
+	if version != "" {
+		r, err := t.Client()
+		if err != nil {
+			return err
+		}
+		s, err := r.SystemGet()
+		if err != nil {
+			return err
+		}
+		if err := isSkippingMinor(s.Version, version); err != nil {
+			return err
+		}
+	}
+
 	vars, err := t.vars()
 	if err != nil {
 		return err
