@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metricsv1beta1 "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 )
 
 func (p *Provider) InstanceKeyroll() error {
@@ -20,12 +21,15 @@ func (p *Provider) InstanceList() (structs.Instances, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	// ms, err := p.Metrics.Metrics().NodeMetricses().List(am.ListOptions{})
-	// if err != nil {
-	//   return nil, err
-	// }
+	ms, err := p.MetricsClient.MetricsV1beta1().NodeMetricses().List(am.ListOptions{})
+	if err != nil {
+		return nil, errors.WithStack(errors.Errorf("failed to fetch node metrics: %s", err))
+	}
 
-	// fmt.Printf("ms = %+v\n", ms)
+	metricsByNode := map[string]metricsv1beta1.NodeMetrics{}
+	for _, m := range ms.Items {
+		metricsByNode[m.ObjectMeta.Name] = m
+	}
 
 	is := structs.Instances{}
 
@@ -55,13 +59,26 @@ func (p *Provider) InstanceList() (structs.Instances, error) {
 			}
 		}
 
+		var cpu, mem float64
+		if m, has := metricsByNode[n.ObjectMeta.Name]; has {
+			cpu = toCpuCore(m.Usage.Cpu().MilliValue())
+			mem = toMemMB(m.Usage.Memory().Value())
+		}
+
+		cpuCapacity := toCpuCore(n.Status.Capacity.Cpu().MilliValue())
+		memCapacity := toMemMB(n.Status.Capacity.Memory().Value())
+
 		is = append(is, structs.Instance{
-			Id:        n.ObjectMeta.Name,
-			PrivateIp: private,
-			Processes: len(pds.Items),
-			PublicIp:  public,
-			Started:   n.CreationTimestamp.Time,
-			Status:    status,
+			Cpu:            cpu,
+			CpuCapacity:    cpuCapacity,
+			Id:             n.ObjectMeta.Name,
+			Memory:         mem,
+			MemoryCapacity: memCapacity,
+			PrivateIp:      private,
+			Processes:      len(pds.Items),
+			PublicIp:       public,
+			Started:        n.CreationTimestamp.Time,
+			Status:         status,
 		})
 	}
 
