@@ -138,7 +138,7 @@ func (p *Provider) ProcessGet(app, pid string) (*structs.Process, error) {
 		if err != nil && !kerr.IsNotFound(err) {
 			return nil, errors.WithStack(errors.Errorf("failed to fetch pod metrics: %s", err))
 		}
-		if len(m.Containers) > 0 {
+		if m != nil && len(m.Containers) > 0 {
 			ps.Cpu, ps.Memory = calculatePodCpuAndMem(m)
 		}
 	}
