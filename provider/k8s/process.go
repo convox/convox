@@ -23,6 +23,20 @@ import (
 	metricsv1beta1 "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 )
 
+func (p *Provider) IsMetricsAvailable() bool {
+	rs, err := p.MetricsClient.Discovery().ServerResourcesForGroupVersion("metrics.k8s.io")
+	if err != nil {
+		return false
+	}
+
+	for _, api := range rs.APIResources {
+		if api.Version == "v1beta1" {
+			return true
+		}
+	}
+	return false
+}
+
 func (p *Provider) ProcessExec(app, pid, command string, rw io.ReadWriter, opts structs.ProcessExecOptions) (int, error) {
 	pss, err := p.ProcessList(app, structs.ProcessListOptions{Service: options.String(pid)})
 	if err != nil {
@@ -119,12 +133,14 @@ func (p *Provider) ProcessGet(app, pid string) (*structs.Process, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	m, err := p.MetricsClient.MetricsV1beta1().PodMetricses(p.AppNamespace(app)).Get(pid, am.GetOptions{})
-	if err != nil && !kerr.IsNotFound(err) {
-		return nil, errors.WithStack(errors.Errorf("failed to fetch pod metrics: %s", err))
-	}
-	if len(m.Containers) > 0 {
-		ps.Cpu, ps.Memory = calculatePodCpuAndMem(m)
+	if p.IsMetricsAvailable() {
+		m, err := p.MetricsClient.MetricsV1beta1().PodMetricses(p.AppNamespace(app)).Get(pid, am.GetOptions{})
+		if err != nil && !kerr.IsNotFound(err) {
+			return nil, errors.WithStack(errors.Errorf("failed to fetch pod metrics: %s", err))
+		}
+		if len(m.Containers) > 0 {
+			ps.Cpu, ps.Memory = calculatePodCpuAndMem(m)
+		}
 	}
 
 	return ps, nil
@@ -160,19 +176,21 @@ func (p *Provider) ProcessList(app string, opts structs.ProcessListOptions) (str
 		pss = append(pss, *ps)
 	}
 
-	ms, err := p.MetricsClient.MetricsV1beta1().PodMetricses(p.AppNamespace(app)).List(am.ListOptions{LabelSelector: strings.Join(filters, ",")})
-	if err != nil {
-		return nil, errors.WithStack(errors.Errorf("failed to fetch pod metrics: %s", err))
-	}
+	if p.IsMetricsAvailable() {
+		ms, err := p.MetricsClient.MetricsV1beta1().PodMetricses(p.AppNamespace(app)).List(am.ListOptions{LabelSelector: strings.Join(filters, ",")})
+		if err != nil {
+			return nil, errors.WithStack(errors.Errorf("failed to fetch pod metrics: %s", err))
+		}
 
-	metricsByPod := map[string]metricsv1beta1.PodMetrics{}
-	for _, m := range ms.Items {
-		metricsByPod[m.Name] = m
-	}
+		metricsByPod := map[string]metricsv1beta1.PodMetrics{}
+		for _, m := range ms.Items {
+			metricsByPod[m.Name] = m
+		}
 
-	for i := range pss {
-		if m, has := metricsByPod[pss[i].Id]; has && len(m.Containers) > 0 {
-			pss[i].Cpu, pss[i].Memory = calculatePodCpuAndMem(&m)
+		for i := range pss {
+			if m, has := metricsByPod[pss[i].Id]; has && len(m.Containers) > 0 {
+				pss[i].Cpu, pss[i].Memory = calculatePodCpuAndMem(&m)
+			}
 		}
 	}
 

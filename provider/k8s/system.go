@@ -81,19 +81,21 @@ func (p *Provider) SystemProcesses(opts structs.SystemProcessesOptions) (structs
 		pss = append(pss, *ps)
 	}
 
-	ms, err := p.MetricsClient.MetricsV1beta1().PodMetricses(ns).List(am.ListOptions{LabelSelector: labelSelector})
-	if err != nil {
-		return nil, errors.WithStack(errors.Errorf("failed to fetch pod metrics: %s", err))
-	}
+	if p.IsMetricsAvailable() {
+		ms, err := p.MetricsClient.MetricsV1beta1().PodMetricses(ns).List(am.ListOptions{LabelSelector: labelSelector})
+		if err != nil {
+			return nil, errors.WithStack(errors.Errorf("failed to fetch pod metrics: %s", err))
+		}
 
-	metricsByPod := map[string]metricsv1beta1.PodMetrics{}
-	for _, m := range ms.Items {
-		metricsByPod[m.Name] = m
-	}
+		metricsByPod := map[string]metricsv1beta1.PodMetrics{}
+		for _, m := range ms.Items {
+			metricsByPod[m.Name] = m
+		}
 
-	for i := range pss {
-		if m, has := metricsByPod[pss[i].Id]; has && len(m.Containers) > 0 {
-			pss[i].Cpu, pss[i].Memory = calculatePodCpuAndMem(&m)
+		for i := range pss {
+			if m, has := metricsByPod[pss[i].Id]; has && len(m.Containers) > 0 {
+				pss[i].Cpu, pss[i].Memory = calculatePodCpuAndMem(&m)
+			}
 		}
 	}
 

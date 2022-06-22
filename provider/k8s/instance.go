@@ -21,14 +21,16 @@ func (p *Provider) InstanceList() (structs.Instances, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	ms, err := p.MetricsClient.MetricsV1beta1().NodeMetricses().List(am.ListOptions{})
-	if err != nil {
-		return nil, errors.WithStack(errors.Errorf("failed to fetch node metrics: %s", err))
-	}
-
 	metricsByNode := map[string]metricsv1beta1.NodeMetrics{}
-	for _, m := range ms.Items {
-		metricsByNode[m.ObjectMeta.Name] = m
+	if p.IsMetricsAvailable() {
+		ms, err := p.MetricsClient.MetricsV1beta1().NodeMetricses().List(am.ListOptions{})
+		if err != nil {
+			return nil, errors.WithStack(errors.Errorf("failed to fetch node metrics: %s", err))
+		}
+
+		for _, m := range ms.Items {
+			metricsByNode[m.ObjectMeta.Name] = m
+		}
 	}
 
 	is := structs.Instances{}
