@@ -14,6 +14,7 @@ import (
 	shellquote "github.com/kballard/go-shellquote"
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
+	kerr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -119,7 +120,7 @@ func (p *Provider) ProcessGet(app, pid string) (*structs.Process, error) {
 	}
 
 	m, err := p.MetricsClient.MetricsV1beta1().PodMetricses(p.AppNamespace(app)).Get(pid, am.GetOptions{})
-	if err != nil {
+	if err != nil && !kerr.IsNotFound(err) {
 		return nil, errors.WithStack(errors.Errorf("failed to fetch pod metrics: %s", err))
 	}
 	if len(m.Containers) > 0 {

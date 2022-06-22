@@ -68,17 +68,22 @@ func (p *Provider) InstanceList() (structs.Instances, error) {
 		cpuCapacity := toCpuCore(n.Status.Capacity.Cpu().MilliValue())
 		memCapacity := toMemMB(n.Status.Capacity.Memory().Value())
 
+		cpuAllocatable := toCpuCore(n.Status.Allocatable.Cpu().MilliValue())
+		memAllocatable := toMemMB(n.Status.Allocatable.Memory().Value())
+
 		is = append(is, structs.Instance{
-			Cpu:            cpu,
-			CpuCapacity:    cpuCapacity,
-			Id:             n.ObjectMeta.Name,
-			Memory:         mem,
-			MemoryCapacity: memCapacity,
-			PrivateIp:      private,
-			Processes:      len(pds.Items),
-			PublicIp:       public,
-			Started:        n.CreationTimestamp.Time,
-			Status:         status,
+			Cpu:               cpu,
+			CpuCapacity:       cpuCapacity,
+			CpuAllocatable:    cpuAllocatable,
+			Id:                n.ObjectMeta.Name,
+			Memory:            mem,
+			MemoryCapacity:    memCapacity,
+			MemoryAllocatable: memAllocatable,
+			PrivateIp:         private,
+			Processes:         len(pds.Items),
+			PublicIp:          public,
+			Started:           n.CreationTimestamp.Time,
+			Status:            status,
 		})
 	}
 

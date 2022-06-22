@@ -42,7 +42,7 @@ func Instances(rack sdk.Interface, c *stdcli.Context) error {
 	t := c.Table("ID", "STATUS", "STARTED", "PS", "CPU", "MEM", "PUBLIC", "PRIVATE")
 
 	for _, i := range is {
-		t.AddRow(i.Id, i.Status, common.Ago(i.Started), fmt.Sprintf("%d", i.Processes), common.Percent(i.Cpu), common.Percent(i.Memory), i.PublicIp, i.PrivateIp)
+		t.AddRow(i.Id, i.Status, common.Ago(i.Started), fmt.Sprintf("%d", i.Processes), common.Percent(i.Cpu/i.CpuAllocatable), common.Percent(i.Memory/i.MemoryAllocatable), i.PublicIp, i.PrivateIp)
 	}
 
 	return t.Print()
