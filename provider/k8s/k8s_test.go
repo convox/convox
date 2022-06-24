@@ -20,6 +20,7 @@ import (
 	ac "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
+	metricfake "k8s.io/metrics/pkg/client/clientset/versioned/fake"
 )
 
 func reformatYaml(data []byte) ([]byte, error) {
@@ -62,6 +63,7 @@ func testProvider(t *testing.T, fn func(*k8s.Provider)) {
 	a := &atom.MockInterface{}
 	c := fake.NewSimpleClientset()
 	cc := cvfake.NewSimpleClientset()
+	mc := metricfake.NewSimpleClientset()
 
 	_, err := c.CoreV1().Namespaces().Create(&ac.Namespace{
 		ObjectMeta: am.ObjectMeta{
@@ -78,14 +80,15 @@ func testProvider(t *testing.T, fn func(*k8s.Provider)) {
 	require.NoError(t, err)
 
 	p := &k8s.Provider{
-		Atom:      a,
-		Cluster:   c,
-		Convox:    cc,
-		Domain:    "domain1",
-		Engine:    &TestEngine{},
-		Name:      "rack1",
-		Namespace: "ns1",
-		Provider:  "test",
+		Atom:          a,
+		Cluster:       c,
+		Convox:        cc,
+		Domain:        "domain1",
+		Engine:        &TestEngine{},
+		MetricsClient: mc,
+		Name:          "rack1",
+		Namespace:     "ns1",
+		Provider:      "test",
 	}
 
 	err = p.Initialize(structs.ProviderOptions{})

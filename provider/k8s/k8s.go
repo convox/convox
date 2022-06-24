@@ -25,26 +25,28 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	metricsclientset "k8s.io/metrics/pkg/client/clientset/versioned"
 )
 
 type Provider struct {
-	Atom        atom.Interface
-	CertManager bool
-	Config      *rest.Config
-	Convox      cv.Interface
-	Cluster     kubernetes.Interface
-	Domain      string
-	Engine      Engine
-	Image       string
-	Name        string
-	Namespace   string
-	Password    string
-	Provider    string
-	Resolver    string
-	Router      string
-	Socket      string
-	Storage     string
-	Version     string
+	Atom          atom.Interface
+	CertManager   bool
+	Config        *rest.Config
+	Convox        cv.Interface
+	Cluster       kubernetes.Interface
+	Domain        string
+	Engine        Engine
+	Image         string
+	Name          string
+	MetricsClient metricsclientset.Interface
+	Namespace     string
+	Password      string
+	Provider      string
+	Resolver      string
+	Router        string
+	Socket        string
+	Storage       string
+	Version       string
 
 	ctx       context.Context
 	logger    *logger.Logger
@@ -85,23 +87,29 @@ func FromEnv() (*Provider, error) {
 		return nil, errors.WithStack(err)
 	}
 
+	mc, err := metricsclientset.NewForConfig(rc)
+	if err != nil {
+		return nil, err
+	}
+
 	p := &Provider{
-		Atom:        ac,
-		CertManager: os.Getenv("CERT_MANAGER") == "true",
-		Config:      rc,
-		Convox:      cc,
-		Cluster:     kc,
-		Domain:      os.Getenv("DOMAIN"),
-		Image:       os.Getenv("IMAGE"),
-		Name:        ns.Labels["rack"],
-		Namespace:   ns.Name,
-		Password:    os.Getenv("PASSWORD"),
-		Provider:    common.CoalesceString(os.Getenv("PROVIDER"), "k8s"),
-		Resolver:    os.Getenv("RESOLVER"),
-		Router:      os.Getenv("ROUTER"),
-		Socket:      common.CoalesceString(os.Getenv("SOCKET"), "/var/run/docker.sock"),
-		Storage:     common.CoalesceString(os.Getenv("STORAGE"), "/var/storage"),
-		Version:     common.CoalesceString(os.Getenv("VERSION"), "dev"),
+		Atom:          ac,
+		CertManager:   os.Getenv("CERT_MANAGER") == "true",
+		Config:        rc,
+		Convox:        cc,
+		Cluster:       kc,
+		Domain:        os.Getenv("DOMAIN"),
+		Image:         os.Getenv("IMAGE"),
+		MetricsClient: mc,
+		Name:          ns.Labels["rack"],
+		Namespace:     ns.Name,
+		Password:      os.Getenv("PASSWORD"),
+		Provider:      common.CoalesceString(os.Getenv("PROVIDER"), "k8s"),
+		Resolver:      os.Getenv("RESOLVER"),
+		Router:        os.Getenv("ROUTER"),
+		Socket:        common.CoalesceString(os.Getenv("SOCKET"), "/var/run/docker.sock"),
+		Storage:       common.CoalesceString(os.Getenv("STORAGE"), "/var/storage"),
+		Version:       common.CoalesceString(os.Getenv("VERSION"), "dev"),
 	}
 
 	return p, nil
