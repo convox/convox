@@ -43,7 +43,6 @@ func Instances(rack sdk.Interface, c *stdcli.Context) error {
 
 	for _, i := range is {
 		cpuPercent, memPercent := common.Percent(i.Cpu), common.Percent(i.Memory)
-		// for rack version 3, if allocatable metrics available
 		if i.CpuAllocatable > 0 && i.MemoryAllocatable > 0 {
 			cpuPercent, memPercent = common.Percent(i.Cpu/i.CpuAllocatable), common.Percent(i.Memory/i.MemoryAllocatable)
 		}
