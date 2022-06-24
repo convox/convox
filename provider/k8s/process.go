@@ -14,7 +14,6 @@ import (
 	shellquote "github.com/kballard/go-shellquote"
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
-	kerr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -22,20 +21,6 @@ import (
 	"k8s.io/client-go/util/exec"
 	metricsv1beta1 "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 )
-
-func (p *Provider) IsMetricsAvailable() bool {
-	rs, err := p.MetricsClient.Discovery().ServerResourcesForGroupVersion("metrics.k8s.io")
-	if err != nil {
-		return false
-	}
-
-	for _, api := range rs.APIResources {
-		if api.Version == "v1beta1" {
-			return true
-		}
-	}
-	return false
-}
 
 func (p *Provider) ProcessExec(app, pid, command string, rw io.ReadWriter, opts structs.ProcessExecOptions) (int, error) {
 	pss, err := p.ProcessList(app, structs.ProcessListOptions{Service: options.String(pid)})
@@ -133,14 +118,11 @@ func (p *Provider) ProcessGet(app, pid string) (*structs.Process, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	if p.IsMetricsAvailable() {
-		m, err := p.MetricsClient.MetricsV1beta1().PodMetricses(p.AppNamespace(app)).Get(pid, am.GetOptions{})
-		if err != nil && !kerr.IsNotFound(err) {
-			return nil, errors.WithStack(errors.Errorf("failed to fetch pod metrics: %s", err))
-		}
-		if m != nil && len(m.Containers) > 0 {
-			ps.Cpu, ps.Memory = calculatePodCpuAndMem(m)
-		}
+	m, err := p.MetricsClient.MetricsV1beta1().PodMetricses(p.AppNamespace(app)).Get(pid, am.GetOptions{})
+	if err != nil {
+		p.logger.Errorf("failed to fetch pod metrics: %s", err)
+	} else if m != nil && len(m.Containers) > 0 {
+		ps.Cpu, ps.Memory = calculatePodCpuAndMem(m)
 	}
 
 	return ps, nil
@@ -176,12 +158,10 @@ func (p *Provider) ProcessList(app string, opts structs.ProcessListOptions) (str
 		pss = append(pss, *ps)
 	}
 
-	if p.IsMetricsAvailable() {
-		ms, err := p.MetricsClient.MetricsV1beta1().PodMetricses(p.AppNamespace(app)).List(am.ListOptions{LabelSelector: strings.Join(filters, ",")})
-		if err != nil {
-			return nil, errors.WithStack(errors.Errorf("failed to fetch pod metrics: %s", err))
-		}
-
+	ms, err := p.MetricsClient.MetricsV1beta1().PodMetricses(p.AppNamespace(app)).List(am.ListOptions{LabelSelector: strings.Join(filters, ",")})
+	if err != nil {
+		p.logger.Errorf("failed to fetch pod metrics: %s", err)
+	} else {
 		metricsByPod := map[string]metricsv1beta1.PodMetrics{}
 		for _, m := range ms.Items {
 			metricsByPod[m.Name] = m

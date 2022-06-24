@@ -22,12 +22,10 @@ func (p *Provider) InstanceList() (structs.Instances, error) {
 	}
 
 	metricsByNode := map[string]metricsv1beta1.NodeMetrics{}
-	if p.IsMetricsAvailable() {
-		ms, err := p.MetricsClient.MetricsV1beta1().NodeMetricses().List(am.ListOptions{})
-		if err != nil {
-			return nil, errors.WithStack(errors.Errorf("failed to fetch node metrics: %s", err))
-		}
-
+	ms, err := p.MetricsClient.MetricsV1beta1().NodeMetricses().List(am.ListOptions{})
+	if err != nil {
+		p.logger.Errorf("failed to fetch node metrics: %s", err)
+	} else {
 		for _, m := range ms.Items {
 			metricsByNode[m.ObjectMeta.Name] = m
 		}

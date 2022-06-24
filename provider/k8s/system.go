@@ -81,11 +81,10 @@ func (p *Provider) SystemProcesses(opts structs.SystemProcessesOptions) (structs
 		pss = append(pss, *ps)
 	}
 
-	if p.IsMetricsAvailable() {
-		ms, err := p.MetricsClient.MetricsV1beta1().PodMetricses(ns).List(am.ListOptions{LabelSelector: labelSelector})
-		if err != nil {
-			return nil, errors.WithStack(errors.Errorf("failed to fetch pod metrics: %s", err))
-		}
+	ms, err := p.MetricsClient.MetricsV1beta1().PodMetricses(ns).List(am.ListOptions{LabelSelector: labelSelector})
+	if err != nil {
+		p.logger.Errorf("failed to fetch pod metrics: %s", err)
+	} else {
 
 		metricsByPod := map[string]metricsv1beta1.PodMetrics{}
 		for _, m := range ms.Items {
