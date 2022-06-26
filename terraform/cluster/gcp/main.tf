@@ -16,8 +16,10 @@ resource "google_container_cluster" "rack" {
   initial_node_count       = 1
 
   release_channel {
-    channel = "REGULAR"
+    channel = "UNSPECIFIED"
   }
+
+  min_master_version = "1.21.13-gke.900"
 
   workload_identity_config {
     workload_pool = "${data.google_project.current.project_id}.svc.id.goog"
