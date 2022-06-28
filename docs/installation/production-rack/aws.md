@@ -43,13 +43,20 @@ The following environment variables are required:
 ```
 ### Available Parameters
 
-| Name                 | Default       | Description                                                                                |
-| -------------------- | ------------- | ------------------------------------------------------------------------------------------ |
-| **availability_zones** |               | Specify a list of AZ names (minimum 3) to override the random automatic selection from AWS |
-| **cidr**               | **10.1.0.0/16** | CIDR range for VPC                                                                         |
-| **idle_timeout**       | **3600**        | Idle timeout value (in seconds) for the Rack Load Balancer                                 |
-| **node_disk**          | **20**          | Node disk size in GB                                                                       |
-| **node_type**          | **t3.small**    | Node instance type                                                                         |
-| **private**            | **true**        | Put nodes in private subnets behind NAT gateways                                           |
-| **region**             | **us-east-1**   | AWS Region                                                                                 |
-| **syslog**             |               | Forward logs to a syslog endpoint (e.g. **tcp+tls://example.org:1234**)                      |
+| Name                     | Default                | Description                                                                                                    |
+| -------------------------|------------------------|----------------------------------------------------------------------------------------------------------------|
+| **availability_zones**   |                        | Specify a list of AZ names (minimum 3) to override the random automatic selection from AWS                     |
+| **cidr**                 | **10.1.0.0/16**        | CIDR range for VPC                                                                                             |
+| **high_availability**    | **true**               | Setting this to "false" will create a cluster with less reduntant resources for cost optimization              |
+| **internet_gateway_id**  |                        | If you're using an existing vpc for your rack, use this field to pass the id of the attached internet gateway  |
+| **idle_timeout**         | **3600**               | Idle timeout value (in seconds) for the Rack Load Balancer                                                     |
+| **node_capacity_type**   | **on_demand**          | Can be either "on_demand" or "spot". Spot will use AWS spot instances for the cluster nodes                    |
+| **node_disk**            | **20**                 | Node disk size in GB                                                                                           |
+| **node_type**            | **t3.small**           | Node instance type. You can also pass a comma separated list of instance types                                 |
+| **private**              | **true**               | Put nodes in private subnets behind NAT gateways                                                               |
+| **proxy_protocol**       | **true**               | Enable proxy protocol. With this parameter set, the client source ip will be available in the request header `x-forwarded-for` key. **Requires 5 - 10 minutes downtime**.          |
+| **region**               | **us-east-1**          | AWS Region                                                                                                     |
+| **syslog**               |                        | Forward logs to a syslog endpoint (e.g. **tcp+tls://example.org:1234**)                                        |
+| **vpc_id** *             |                        | Use an existing VPC for cluster creation. Make sure to also pass the **cidr** block and **internet_gateway_id**|
+
+\* To avoid CIDR block collision with existing VPC subnets, please add a new CIDR block to your VPC to separate rack resources. Also, remember to pass the **internet_gateway_id** attached to the VPC. If the VPC doesn't have an IG attached, the rack installation will create one automatically, which will also be destroyed if you delete the rack.

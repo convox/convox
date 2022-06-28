@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/console"
@@ -160,6 +162,14 @@ func (c Console) Status() string {
 	return c.status
 }
 
+func (c Console) Sync() error {
+	cc, err := c.client()
+	if err != nil {
+		return err
+	}
+	return cc.RackSync(c.name)
+}
+
 func (c Console) Uninstall() error {
 	return fmt.Errorf("console uninstall not yet supported")
 }
@@ -216,21 +226,47 @@ func (c Console) UpdateVersion(version string) error {
 		return c.updateVersionDirect(version)
 	}
 
-	if version == "" {
-		v, err := terraformLatestVersion()
-		if err != nil {
-			return err
-		}
-		version = v
-	}
-
 	cc, err := c.client()
 	if err != nil {
 		return err
 	}
 
+	r, err := cc.RackGet(c.name)
+	if err != nil {
+		return err
+	}
+	currentVersion := r.Version
+
+	if version == "" {
+		v, err := terraformLatestVersion(currentVersion)
+		if err != nil {
+			return err
+		}
+		version = v
+	}
+	if err := isSkippingMinor(currentVersion, version); err != nil {
+		return err
+	}
+
 	if err := cc.RackUpdate(c.name, version, nil); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func isSkippingMinor(currentVersion, version string) error {
+	cmv, err := strconv.Atoi(strings.Split(currentVersion, ".")[1])
+	if err != nil {
+		return err
+	}
+	mv, err := strconv.Atoi(strings.Split(version, ".")[1])
+	if err != nil {
+		return err
+	}
+
+	if mv > (cmv + 1) {
+		return fmt.Errorf("you can't skip a minor update, please update to the latest 3.%d.XX and so on before updating to 3.%d.XX", (cmv + 1), mv)
 	}
 
 	return nil

@@ -14,6 +14,59 @@ If you have an existing DNS service running on port 53 on your machine, that can
 
 If you have a process running on port 80 or 443 on your machine, that can conflict when trying to set up the Load Balancer for your development Rack. Disabling the service or using a different port will fix the problem.
 
+### DNS issues with local rack on macOS
+
+Check if DNS is set correctly with `scutil --dns`, the output must show you an entry for `convox` pointing to `127.0.0.1`:
+
+```sh
+% scutil --dns
+
+[...]
+
+resolver #8
+  domain   : convox
+  nameserver[0] : 127.0.0.1
+  flags    : Request A records, Request AAAA records
+  reach    : 0x00030002 (Reachable,Local Address,Directly Reachable Address)
+
+```
+
+In case you don't see the entry for convox, configure the DNS [here](/installation/development-rack/macos/).
+
+You can test if the DNS is working using the `dscacheutil` package, the IP Address must be `127.0.0.1`:
+
+```sh
+% dscacheutil -q host -a name api.dev.convox
+name: api.dev.convox
+ip_address: 127.0.0.1
+```
+
+Make sure there is no other service using the port 53, 80 or 443 on your system, this may cause problems with the Convox API.
+
+If everything is configure properly, try to flush your DNS resolver and access your rack again:
+
+```sh
+% sudo dscacheutil -flushcache
+% sudo killall -HUP mDNSResponder
+```
+
+### Configure DNS with scutil on macOS
+
+You can configure a DNS entry with scutil, it will create the entry in the resolver and you don't need to create the `/etc/resolver/convox` file:
+
+```sh
+% sudo scutil
+> d.init
+> d.add ServerAddresses * 127.0.0.1
+> d.add SupplementalMatchDomains * convox
+> set State:/Network/Service/convox/DNS
+> quit
+```
+
+The `sudo scutil` command will open an interactive input, `d.init` starts a new DNS entry, `d.add ServerAddresses` set the IP address to be used, `d.add SupplementalMatchDomains` set the domain to be matched, `set State:/Network/Service/convox/DNS` set the entry name and `quit` exit the scutil command. It will update the `/etc/resolv.conf` and configure the all requests for `*.convox` to be forwarded to the rack.
+
+Use `scutil --dns` to check if the entry was created successfully.
+
 ## I got an error while installing Convox in my cloud provider
 
 The error message is usually quite informative.  If you have existing resources running in your cloud provider and you are near your account limits, a Rack install can sometimes breach those limits, requiring you to request an increase in the appropriate resource (IP addresses, CPU allowances etc). Once your limit has been increased, the Rack should install successfully.

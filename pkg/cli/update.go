@@ -19,7 +19,7 @@ func init() {
 	})
 }
 
-func Update(rack sdk.Interface, c *stdcli.Context) error {
+func Update(_ sdk.Interface, c *stdcli.Context) error {
 	binary, err := releaseBinary()
 	if err != nil {
 		return err
@@ -75,24 +75,34 @@ func releaseBinary() (string, error) {
 }
 
 func latestRelease() (string, error) {
-	res, err := http.Get(fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", Image))
-	if err != nil {
-		return "", err
-	}
-	defer res.Body.Close()
-
-	data, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return "", err
-	}
-
 	var release struct {
 		Tag string `json:"tag_name"`
 	}
 
-	if err := json.Unmarshal(data, &release); err != nil {
+	err := getGitHubReleaseData(fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", Image), &release)
+	if err != nil {
 		return "", err
 	}
 
 	return release.Tag, nil
 }
+
+func getGitHubReleaseData(url string, response interface{}) error {
+	res, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+
+	if err := json.Unmarshal(data, &response); err != nil {
+		return err
+	}
+
+	return nil
+}
+

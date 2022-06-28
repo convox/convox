@@ -129,7 +129,7 @@ resource "kubernetes_stateful_set" "elasticsearch" {
           }
 
           resources {
-            requests {
+            requests = {
               memory = "1Gi"
             }
           }

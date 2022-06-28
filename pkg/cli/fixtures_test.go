@@ -117,15 +117,17 @@ func fxCertificate() *structs.Certificate {
 
 func fxInstance() *structs.Instance {
 	return &structs.Instance{
-		Agent:     true,
-		Cpu:       0.423,
-		Id:        "instance1",
-		Memory:    0.718,
-		PrivateIp: "private",
-		Processes: 3,
-		PublicIp:  "public",
-		Status:    "status",
-		Started:   time.Now().UTC().Add(-48 * time.Hour),
+		Agent:             true,
+		Cpu:               0.423,
+		CpuAllocatable:    1,
+		Id:                "instance1",
+		Memory:            718,
+		MemoryAllocatable: 1000,
+		PrivateIp:         "private",
+		Processes:         3,
+		PublicIp:          "public",
+		Status:            "status",
+		Started:           time.Now().UTC().Add(-48 * time.Hour),
 	}
 }
 
@@ -235,6 +237,10 @@ func fxRelease3() *structs.Release {
 		Manifest: "manifest",
 		Created:  time.Now().UTC().Add(-49 * time.Hour),
 	}
+}
+
+func fxReleaseList() structs.Releases {
+	return structs.Releases{*fxRelease(), *fxRelease2(), *fxRelease3()}
 }
 
 func fxResource() *structs.Resource {

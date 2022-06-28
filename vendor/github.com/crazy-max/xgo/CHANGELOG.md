@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.10.0 (2022/01/07)
+
+* Go 1.17.6, 1.16.13 (#51)
+
+## 0.9.0 (2022/01/02)
+
+* Multi-platform image support with [`goxx`](https://github.com/crazy-max/goxx) (#46)
+
+## 0.8.0 (2021/12/28)
+
+* Switch to Ubuntu base image (#44)
+* Debug build cmd (#43)
+* Enhance dockerfiles (#42)
+
+## 0.7.6 (2021/12/11)
+
+* Go 1.17.5, 1.17.4, 1.16.12, 1.16.11
+
+## 0.7.5 (2021/11/11)
+
+* Go 1.17.3, 1.16.10
+
 ## 0.7.4 (2021/10/14)
 
 * Go 1.17.2, 1.16.9

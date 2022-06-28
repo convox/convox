@@ -31,6 +31,10 @@ func (t Test) Delete() error {
 	return nil
 }
 
+func (t Test) Sync() error {
+	return nil
+}
+
 func (t Test) Endpoint() (*url.URL, error) {
 	return url.Parse("https://foo:bar@example.org")
 }

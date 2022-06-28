@@ -38,6 +38,8 @@ func (p *Provider) ResourceConsole(app, name string, rw io.ReadWriter, opts stru
 		return resourceConsoleCommand(rw, opts, "telnet", cn.Host, cn.Port)
 	case "mysql":
 		return resourceConsoleCommand(rw, opts, "mysql", "-h", cn.Host, "-P", cn.Port, "-u", cn.Username, fmt.Sprintf("-p%s", cn.Password), "-D", cn.Database)
+	case "postgis":
+		return resourceConsoleCommand(rw, opts, "psql", u)
 	case "postgres":
 		return resourceConsoleCommand(rw, opts, "psql", u)
 	case "redis":
@@ -63,6 +65,8 @@ func (p *Provider) ResourceExport(app, name string) (io.ReadCloser, error) {
 		return resourceExportMysql(u)
 	case "mysql":
 		return resourceExportMysql(u)
+	case "postgis":
+		return resourceExportPostgres(u)
 	case "postgres":
 		return resourceExportPostgres(u)
 	default:
@@ -127,6 +131,8 @@ func (p *Provider) ResourceImport(app, name string, r io.Reader) error {
 		return resourceImportMysql(rr, r)
 	case "mysql":
 		return resourceImportMysql(rr, r)
+	case "postgis":
+		return resourceImportPostgres(rr, r)
 	case "postgres":
 		return resourceImportPostgres(rr, r)
 	default:

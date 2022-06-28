@@ -109,7 +109,7 @@ resource "kubernetes_cluster_role" "autoscaler" {
 
   rule {
     api_groups = [""]
-    resources  = ["pods", "services", "replicationcontrollers", "persistentvolumeclaims", "persistentvolumes"]
+    resources  = ["namespaces", "pods", "services", "replicationcontrollers", "persistentvolumeclaims", "persistentvolumes"]
     verbs      = ["watch", "list", "get"]
   }
 
@@ -133,7 +133,7 @@ resource "kubernetes_cluster_role" "autoscaler" {
 
   rule {
     api_groups = ["storage.k8s.io"]
-    resources  = ["storageclasses", "csinodes"]
+    resources  = ["csidrivers", "csinodes", "csistoragecapacities", "storageclasses"]
     verbs      = ["watch", "list", "get"]
   }
 
@@ -286,12 +286,12 @@ resource "kubernetes_deployment" "autoscaler" {
           ]
 
           resources {
-            limits {
+            limits = {
               cpu    = "100m"
               memory = "300Mi"
             }
 
-            requests {
+            requests = {
               cpu    = "100m"
               memory = "300Mi"
             }

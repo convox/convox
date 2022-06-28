@@ -5,19 +5,23 @@ import (
 	"os"
 	"time"
 
-	"github.com/fsouza/go-dockerclient"
+	docker "github.com/fsouza/go-dockerclient"
 )
 
 type Instance struct {
-	Agent     bool      `json:"agent"`
-	Cpu       float64   `json:"cpu"`
-	Id        string    `json:"id"`
-	Memory    float64   `json:"memory"`
-	PrivateIp string    `json:"private-ip"`
-	Processes int       `json:"processes"`
-	PublicIp  string    `json:"public-ip"`
-	Status    string    `json:"status"`
-	Started   time.Time `json:"started"`
+	Agent             bool      `json:"agent"`
+	Cpu               float64   `json:"cpu"`
+	CpuCapacity       float64   `json:"cpu-capacity"`
+	CpuAllocatable    float64   `json:"cpu-allocatable"`
+	Id                string    `json:"id"`
+	Memory            float64   `json:"memory"`
+	MemoryCapacity    float64   `json:"memory-capacity"`
+	MemoryAllocatable float64   `json:"memory-allocatable"`
+	PrivateIp         string    `json:"private-ip"`
+	Processes         int       `json:"processes"`
+	PublicIp          string    `json:"public-ip"`
+	Status            string    `json:"status"`
+	Started           time.Time `json:"started"`
 }
 
 type Instances []Instance

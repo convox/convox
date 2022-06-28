@@ -8,7 +8,6 @@ provider "kubernetes" {
   host                   = module.cluster.endpoint
   token                  = module.cluster.token
 
-  load_config_file = false
 }
 
 data "http" "releases" {

@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -24,6 +25,20 @@ type Terraform struct {
 	name     string
 	provider string
 	status   string
+}
+
+type ReleaseVersion struct {
+	Major    int
+	Minor    int
+	Revision int
+}
+
+func (rv *ReleaseVersion) toString() string {
+	return strconv.Itoa(rv.Major) + "." + strconv.Itoa(rv.Minor) + "." + strconv.Itoa(rv.Revision)
+}
+
+func (rv *ReleaseVersion) sameMinor(compare *ReleaseVersion) bool {
+	return (rv.Major == compare.Major) && (rv.Minor == compare.Minor)
 }
 
 func CreateTerraform(c *stdcli.Context, name string, md *Metadata) (*Terraform, error) {
@@ -161,7 +176,7 @@ func (t Terraform) Endpoint() (*url.URL, error) {
 }
 
 func (Terraform) Latest() (string, error) {
-	return terraformLatestVersion()
+	return getTheLatestRelease()
 }
 
 func (t Terraform) Metadata() (*Metadata, error) {
@@ -230,6 +245,10 @@ func (t Terraform) Status() string {
 	return t.status
 }
 
+func (t Terraform) Sync() error {
+	return fmt.Errorf("sync is only supported for console managed v2 racks")
+}
+
 func (t Terraform) Uninstall() error {
 	dir, err := t.ctx.SettingDirectory(fmt.Sprintf("racks/%s", t.name))
 	if err != nil {
@@ -282,6 +301,20 @@ func (t Terraform) UpdateParams(params map[string]string) error {
 }
 
 func (t Terraform) UpdateVersion(version string) error {
+	if version != "" {
+		r, err := t.Client()
+		if err != nil {
+			return err
+		}
+		s, err := r.SystemGet()
+		if err != nil {
+			return err
+		}
+		if err := isSkippingMinor(s.Version, version); err != nil {
+			return err
+		}
+	}
+
 	vars, err := t.vars()
 	if err != nil {
 		return err
@@ -364,8 +397,12 @@ func (t Terraform) settingsDirectory() (string, error) {
 }
 
 func (t Terraform) update(release string, vars map[string]string) error {
+	currentVersion := ""
+	if vars != nil && vars["release"] != "" {
+		currentVersion = vars["release"]
+	}
 	if release == "" {
-		v, err := terraformLatestVersion()
+		v, err := terraformLatestVersion(currentVersion)
 		if err != nil {
 			return err
 		}
@@ -595,31 +632,109 @@ func terraformInstalled(c *stdcli.Context) bool {
 	return err == nil
 }
 
-func terraformLatestVersion() (string, error) {
+func terraformLatestVersion(current string) (string, error) {
 	if TestLatest != "" {
 		return TestLatest, nil
 	}
 
-	res, err := http.Get("https://api.github.com/repos/convox/convox/releases/latest")
+	currentReleaseVersion, err := convertToReleaseVersion(current)
+	if err != nil {
+		return getTheLatestRelease()
+	} else {
+		return getLatestRevisionForCurrentVersion(currentReleaseVersion)
+	}
+}
+
+func getTheLatestRelease() (string, error) {
+	var release struct {
+		Tag string `json:"tag_name"`
+	}
+
+	err := getGitHubReleaseData("https://api.github.com/repos/convox/convox/releases/latest", &release)
 	if err != nil {
 		return "", err
+	}
+
+	return release.Tag, nil
+}
+
+func getGitHubReleaseData(url string, response interface{}) error {
+	res, err := http.Get(url)
+	if err != nil {
+		return err
 	}
 	defer res.Body.Close()
 
 	data, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	var release struct {
-		Tag string `json:"tag_name"`
+	if err := json.Unmarshal(data, &response); err != nil {
+		return err
 	}
 
-	if err := json.Unmarshal(data, &release); err != nil {
-		return "", err
+	return nil
+}
+
+func getLatestRevisionForCurrentVersion(currentReleaseVersion *ReleaseVersion) (string, error) {
+	page := 1
+	moreReleases := true
+	for moreReleases {
+		response := []struct {
+			Draft      bool   `json:"draft"`
+			Prerelease bool   `json:"prerelease"`
+			Tag        string `json:"tag_name"`
+		}{}
+
+		err := getGitHubReleaseData(fmt.Sprintf("https://api.github.com/repos/convox/convox/releases?per_page=100&page=%s", strconv.Itoa(page)), &response)
+		if err != nil {
+			return "", err
+		}
+
+		for _, release := range response {
+			thisReleaseVersion, err := convertToReleaseVersion(release.Tag)
+			if err != nil {
+				continue
+			}
+			if !release.Draft && !release.Prerelease && currentReleaseVersion.sameMinor(thisReleaseVersion) {
+				return release.Tag, nil
+			} else {
+				continue
+			}
+		}
+		moreReleases = (len(response) == 100)
+		page++
 	}
 
-	return release.Tag, nil
+	return "", fmt.Errorf("No published revisions found for this version: " + currentReleaseVersion.toString())
+}
+
+func convertToReleaseVersion(version string) (*ReleaseVersion, error) {
+	release := &ReleaseVersion{}
+	releaseVersion := strings.Split(version, ".")
+	if len(releaseVersion) != 3 {
+		return nil, fmt.Errorf("Version not in Major.Minor.Revision format: %s", version)
+	}
+
+	major, err := strconv.Atoi(releaseVersion[0])
+	if err != nil {
+		return nil, fmt.Errorf("Major not a number: %s", releaseVersion[0])
+	}
+	minor, err := strconv.Atoi(releaseVersion[1])
+	if err != nil {
+		return nil, fmt.Errorf("Minor not a number: %s", releaseVersion[1])
+	}
+	revision, err := strconv.Atoi(releaseVersion[2])
+	if err != nil {
+		return nil, fmt.Errorf("Revision not a number: %s", releaseVersion[2])
+	}
+
+	release.Major = major
+	release.Minor = minor
+	release.Revision = revision
+
+	return release, nil
 }
 
 func terraformProviderVars(provider string) (map[string]string, error) {

@@ -19,6 +19,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/client-go/util/exec"
+	metricsv1beta1 "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 )
 
 func (p *Provider) ProcessExec(app, pid, command string, rw io.ReadWriter, opts structs.ProcessExecOptions) (int, error) {
@@ -117,6 +118,13 @@ func (p *Provider) ProcessGet(app, pid string) (*structs.Process, error) {
 		return nil, errors.WithStack(err)
 	}
 
+	m, err := p.MetricsClient.MetricsV1beta1().PodMetricses(p.AppNamespace(app)).Get(pid, am.GetOptions{})
+	if err != nil {
+		p.logger.Errorf("failed to fetch pod metrics: %s", err)
+	} else if m != nil && len(m.Containers) > 0 {
+		ps.Cpu, ps.Memory = calculatePodCpuAndMem(m)
+	}
+
 	return ps, nil
 }
 
@@ -148,6 +156,22 @@ func (p *Provider) ProcessList(app string, opts structs.ProcessListOptions) (str
 		}
 
 		pss = append(pss, *ps)
+	}
+
+	ms, err := p.MetricsClient.MetricsV1beta1().PodMetricses(p.AppNamespace(app)).List(am.ListOptions{LabelSelector: strings.Join(filters, ",")})
+	if err != nil {
+		p.logger.Errorf("failed to fetch pod metrics: %s", err)
+	} else {
+		metricsByPod := map[string]metricsv1beta1.PodMetrics{}
+		for _, m := range ms.Items {
+			metricsByPod[m.Name] = m
+		}
+
+		for i := range pss {
+			if m, has := metricsByPod[pss[i].Id]; has && len(m.Containers) > 0 {
+				pss[i].Cpu, pss[i].Memory = calculatePodCpuAndMem(&m)
+			}
+		}
 	}
 
 	return pss, nil
