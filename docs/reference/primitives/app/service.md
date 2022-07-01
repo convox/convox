@@ -93,7 +93,7 @@ services:
 | **timeout**     | number     | 60                  | Timeout period (in seconds) for reading/writing requests to/from your service                                                              |
 | **tls**         | map        |                     | TLS-related configuration                                                                                                                  |
 
-> Environment variables **must** be declared to be populated for a Service.
+> Environment variables declared on `convox.yml` will be populated for a Service.
 
 ### build
 
