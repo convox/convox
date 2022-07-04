@@ -12,7 +12,7 @@ for different deployments (i.e. staging and production).
 
 ## Definition
 
-Environment variables that will be used by the application are defined in [`convox.yml`](/configuration/convox-yml):
+Environment variables that can be used by the application are defined in [`convox.yml`](/configuration/convox-yml):
 
 ### Application Level
 
@@ -82,7 +82,8 @@ your changes you will need to promote this release.
     $ convox releases promote RABCDEFGHI
     Promoting RABCDEFGHI... OK
 ```
-> Environment variables must be defined in the `convox.yml` for their values to be populated on a
+
+> Environment variables can be set using the CLI or through the Console and their values will be available to the
 > [Service](/reference/primitives/app/service).
 
 ## System Variables
