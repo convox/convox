@@ -30,6 +30,10 @@ func NewMetricScraperClient(cluster kubernetes.Interface, host string) *MetricSc
 }
 
 func (m *MetricScraperClient) GetRackMetrics(opts structs.MetricsOptions) (structs.Metrics, error) {
+	if m.host == "" {
+		return nil, errors.WithStack(fmt.Errorf("unimplemented"))
+	}
+
 	ns, err := m.cluster.CoreV1().Nodes().List(am.ListOptions{})
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -117,6 +121,10 @@ func (m *MetricScraperClient) GetRackMetrics(opts structs.MetricsOptions) (struc
 
 // nodeNames: single or comma seperated node names
 func (m *MetricScraperClient) GetNodesMetrics(nodeNames string, metricType structs.ScraperMetricType) (*structs.ScraperMetricList, error) {
+	if m.host == "" {
+		return nil, errors.WithStack(fmt.Errorf("unimplemented"))
+	}
+
 	resp, err := m.c.Get(fmt.Sprintf("%s/api/v1/dashboard/nodes/%s/metrics/%s/data", m.host, nodeNames, metricType))
 	if err != nil {
 		return nil, errors.WithStack(err)

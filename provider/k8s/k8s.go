@@ -93,8 +93,7 @@ func FromEnv() (*Provider, error) {
 		return nil, err
 	}
 
-	msHost := common.CoalesceString(os.Getenv("METRIC_SCRAPER_HOST"), "http://metrics-scrapper.dashboard-metrics-scraper.svc")
-	ms := NewMetricScraperClient(kc, msHost)
+	ms := NewMetricScraperClient(kc, os.Getenv("METRIC_SCRAPER_HOST"))
 
 	p := &Provider{
 		Atom:          ac,

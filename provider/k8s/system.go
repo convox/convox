@@ -54,8 +54,7 @@ func (p *Provider) SystemLogs(opts structs.LogsOptions) (io.ReadCloser, error) {
 func (p *Provider) SystemMetrics(opts structs.MetricsOptions) (structs.Metrics, error) {
 	ms, err := p.metricScraper.GetRackMetrics(opts)
 	if err != nil {
-		p.logger.Errorf("failed to fetch rack metrics: %s", err)
-		return nil, errors.WithStack(fmt.Errorf("unimplemented"))
+		return nil, errors.WithStack(err)
 	}
 	return ms, nil
 }

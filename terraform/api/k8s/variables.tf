@@ -8,7 +8,7 @@ variable "authentication" {
 
 variable "docker_hub_authentication" {
   default = null
-  type = string
+  type    = string
 }
 
 variable "domain" {
@@ -25,6 +25,11 @@ variable "image" {
 
 variable "labels" {
   default = {}
+}
+
+variable "metrics_scraper_host" {
+  default = ""
+  type    = string
 }
 
 variable "namespace" {
