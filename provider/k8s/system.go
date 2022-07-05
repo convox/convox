@@ -52,7 +52,12 @@ func (p *Provider) SystemLogs(opts structs.LogsOptions) (io.ReadCloser, error) {
 }
 
 func (p *Provider) SystemMetrics(opts structs.MetricsOptions) (structs.Metrics, error) {
-	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
+	ms, err := p.metricScraper.GetRackMetrics(opts)
+	if err != nil {
+		p.logger.Errorf("failed to fetch rack metrics: %s", err)
+		return nil, errors.WithStack(fmt.Errorf("unimplemented"))
+	}
+	return ms, nil
 }
 
 func (p *Provider) SystemProcesses(opts structs.SystemProcessesOptions) (structs.Processes, error) {

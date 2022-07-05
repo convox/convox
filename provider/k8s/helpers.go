@@ -7,11 +7,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"path"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
@@ -337,4 +339,55 @@ func calculatePodCpuAndMem(m *metricsv1beta1.PodMetrics) (cpu float64, mem float
 		memTotal += c.Usage.Memory().Value()
 	}
 	return toCpuCore(cpuTotal), toMemMB(memTotal)
+}
+
+func aggregateMetricByPeriod(m structs.Metric, period int64) structs.Metric {
+	sort.Slice(m.Values, func(i, j int) bool {
+		return m.Values[i].Time.After(m.Values[j].Time)
+	})
+
+	vs := structs.MetricValues{}
+	for _, v := range m.Values {
+		if len(vs) > 0 && vs[len(vs)-1].Time.Sub(v.Time).Seconds() <= float64(period) {
+			newv := vs[len(vs)-1]
+			newv.Count++
+			newv.Maximum = math.Max(newv.Maximum, v.Maximum)
+			newv.Minimum = math.Min(newv.Minimum, v.Minimum)
+			newv.Sum += newv.Sum
+		} else {
+			vs = append(vs, v)
+		}
+	}
+
+	for i := range vs {
+		if vs[i].Count > 0 {
+			vs[i].Average = vs[i].Sum / vs[i].Count
+		}
+	}
+
+	return structs.Metric{
+		Name:   m.Name,
+		Values: vs,
+	}
+}
+
+func discradMetricByStart(m structs.Metric, start time.Time) structs.Metric {
+	vs := structs.MetricValues{}
+	for _, v := range m.Values {
+		if !v.Time.Before(start) {
+			vs = append(vs, v)
+		}
+	}
+
+	return structs.Metric{
+		Name:   m.Name,
+		Values: vs,
+	}
+}
+
+func caculatePercentage(cur, total float64) float64 {
+	if total <= 0 {
+		return 0
+	}
+	return (cur / total) * 100
 }
