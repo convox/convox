@@ -1,7 +1,7 @@
 name: daily test
 
 env:
-  VERSION: 3.0.55 # @TODO: Automate to get the latest stable tag: https://bit.ly/3krkRNN
+  VERSION: 3.5.2  # @TODO: Automate to get the latest stable tag: https://bit.ly/3krkRNN
                   # NOTE: convox update is run below so test are run on latest release
 
 on:
