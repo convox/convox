@@ -39,7 +39,7 @@ type Provider struct {
 	Image         string
 	Name          string
 	MetricsClient metricsclientset.Interface
-	metricScraper *MetricScraperClient
+	MetricScraper *MetricScraperClient
 	Namespace     string
 	Password      string
 	Provider      string
@@ -104,7 +104,7 @@ func FromEnv() (*Provider, error) {
 		Domain:        os.Getenv("DOMAIN"),
 		Image:         os.Getenv("IMAGE"),
 		MetricsClient: mc,
-		metricScraper: ms,
+		MetricScraper: ms,
 		Name:          ns.Labels["rack"],
 		Namespace:     ns.Name,
 		Password:      os.Getenv("PASSWORD"),

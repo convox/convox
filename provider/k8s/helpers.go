@@ -348,7 +348,8 @@ func aggregateMetricByPeriod(m structs.Metric, period int64) structs.Metric {
 
 	vs := structs.MetricValues{}
 	for _, v := range m.Values {
-		if len(vs) > 0 && vs[len(vs)-1].Time.Sub(v.Time).Seconds() <= float64(period) {
+		withinPeriod := len(vs) > 0 && vs[len(vs)-1].Time.Sub(v.Time).Seconds() <= float64(period)
+		if withinPeriod {
 			newv := vs[len(vs)-1]
 			newv.Count++
 			newv.Maximum = math.Max(newv.Maximum, v.Maximum)
@@ -374,7 +375,7 @@ func aggregateMetricByPeriod(m structs.Metric, period int64) structs.Metric {
 func discradMetricByStart(m structs.Metric, start time.Time) structs.Metric {
 	vs := structs.MetricValues{}
 	for _, v := range m.Values {
-		if !v.Time.Before(start) {
+		if v.Time.After(start) {
 			vs = append(vs, v)
 		}
 	}

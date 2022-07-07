@@ -52,7 +52,7 @@ func (p *Provider) SystemLogs(opts structs.LogsOptions) (io.ReadCloser, error) {
 }
 
 func (p *Provider) SystemMetrics(opts structs.MetricsOptions) (structs.Metrics, error) {
-	ms, err := p.metricScraper.GetRackMetrics(opts)
+	ms, err := p.MetricScraper.GetRackMetrics(opts)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
