@@ -56,10 +56,15 @@ func (m *MetricScraperClient) GetRackMetrics(opts structs.MetricsOptions) (struc
 		return nil, fmt.Errorf("metrics unavailable")
 	}
 
+	// summation of all nodes metrics represent the rack metrics
+	// aggregate all metric points into cpuMps
+	cpuMps := cpus.Items[0].MetricPoints
+
 	for i := 1; i < len(cpus.Items); i++ {
 		for j, d := range cpus.Items[i].MetricPoints {
-			if j < len(cpus.Items[0].MetricPoints) {
-				cpus.Items[0].MetricPoints[j].Value += d.Value
+			// only consider first len(cpuMps) metrics points from other nodes
+			if j < len(cpuMps) {
+				cpuMps[j].Value += d.Value
 			}
 		}
 	}
@@ -67,7 +72,7 @@ func (m *MetricScraperClient) GetRackMetrics(opts structs.MetricsOptions) (struc
 	cpum := structs.Metric{
 		Name: "cluster:cpu:utilization",
 	}
-	for _, d := range cpus.Items[0].MetricPoints {
+	for _, d := range cpuMps {
 		p := caculatePercentage(float64(d.Value), cpuAllocatable)
 		cpum.Values = append(cpum.Values, structs.MetricValue{
 			Average: p,
@@ -84,10 +89,15 @@ func (m *MetricScraperClient) GetRackMetrics(opts structs.MetricsOptions) (struc
 		return nil, errors.WithStack(err)
 	}
 
+	// summation of all nodes metrics represent the rack metrics
+	// aggregate all metric points into memMps
+	memMps := mems.Items[0].MetricPoints
+
 	for i := 1; i < len(mems.Items); i++ {
 		for j, d := range mems.Items[i].MetricPoints {
-			if j < len(mems.Items[0].MetricPoints) {
-				mems.Items[0].MetricPoints[j].Value += d.Value
+			// only consider first len(memMps) metrics points from other nodes
+			if j < len(memMps) {
+				memMps[j].Value += d.Value
 			}
 		}
 	}
@@ -95,7 +105,7 @@ func (m *MetricScraperClient) GetRackMetrics(opts structs.MetricsOptions) (struc
 	memm := structs.Metric{
 		Name: "cluster:mem:utilization",
 	}
-	for _, d := range mems.Items[0].MetricPoints {
+	for _, d := range memMps {
 		p := caculatePercentage(float64(d.Value), memAllocatable)
 		memm.Values = append(memm.Values, structs.MetricValue{
 			Average: p,
@@ -112,8 +122,8 @@ func (m *MetricScraperClient) GetRackMetrics(opts structs.MetricsOptions) (struc
 		memm = aggregateMetricByPeriod(memm, *opts.Period)
 	}
 	if opts.Start != nil {
-		cpum = discradMetricByStart(cpum, *opts.Start)
-		memm = discradMetricByStart(memm, *opts.Start)
+		cpum = filterMetricByStart(cpum, *opts.Start)
+		memm = filterMetricByStart(memm, *opts.Start)
 	}
 
 	return structs.Metrics{cpum, memm}, nil

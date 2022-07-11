@@ -372,7 +372,7 @@ func aggregateMetricByPeriod(m structs.Metric, period int64) structs.Metric {
 	}
 }
 
-func discradMetricByStart(m structs.Metric, start time.Time) structs.Metric {
+func filterMetricByStart(m structs.Metric, start time.Time) structs.Metric {
 	vs := structs.MetricValues{}
 	for _, v := range m.Values {
 		if v.Time.After(start) {
