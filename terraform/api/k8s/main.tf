@@ -125,7 +125,7 @@ resource "kubernetes_deployment" "api" {
           }
 
           env {
-            name  = "METRIC_SCRAPER_HOST"
+            name  = "METRICS_SCRAPER_HOST"
             value = var.metrics_scraper_host
           }
 

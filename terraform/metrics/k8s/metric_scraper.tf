@@ -91,6 +91,17 @@ resource "kubernetes_deployment" "metrics_scraper" {
             timeout_seconds       = 5
           }
 
+          resources {
+            limits = {
+              cpu    = "100m"
+              memory = "128Mi"
+            }
+            requests = {
+              cpu    = "50m"
+              memory = "50Mi"
+            }
+          }
+
           volume_mount {
             name       = "tmp-dir"
             mount_path = "/tmp"

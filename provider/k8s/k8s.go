@@ -93,7 +93,7 @@ func FromEnv() (*Provider, error) {
 		return nil, err
 	}
 
-	ms := NewMetricScraperClient(kc, os.Getenv("METRIC_SCRAPER_HOST"))
+	ms := NewMetricScraperClient(kc, os.Getenv("METRICS_SCRAPER_HOST"))
 
 	p := &Provider{
 		Atom:          ac,
