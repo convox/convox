@@ -108,9 +108,9 @@ func (p *Provider) SystemReleases() (structs.Releases, error) {
 }
 
 func (p *Provider) SystemUninstall(name string, w io.Writer, opts structs.SystemUninstallOptions) error {
-	return errors.WithStack(fmt.Errorf("unimplemented"))
+	return errors.WithStack(fmt.Errorf("direct rack doesn't support uninstall, make sure you are not using RACK_URL environment variable"))
 }
 
 func (p *Provider) SystemUpdate(opts structs.SystemUpdateOptions) error {
-	return errors.WithStack(fmt.Errorf("self update not supported"))
+	return errors.WithStack(fmt.Errorf("direct rack doesn't support update, make sure you are not using RACK_URL environment variable"))
 }
