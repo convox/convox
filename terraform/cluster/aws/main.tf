@@ -142,3 +142,28 @@ resource "aws_launch_template" "cluster" {
     }
   }
 }
+
+module "ebs_csi_driver_controller" {
+  source  = "DrFaust92/ebs-csi-driver/kubernetes"
+  version = "3.3.1"
+
+  ebs_csi_controller_role_name               = "convox-ebs-csi-driver-controller"
+  ebs_csi_controller_role_policy_name_prefix = "convox-ebs-csi-driver-policy"
+  oidc_url                                   = aws_iam_openid_connect_provider.cluster.url
+}
+
+resource "kubernetes_storage_class" "default" {
+  metadata {
+    name = "gp3"
+    annotations = {
+      "storageclass.kubernetes.io/is-default-class" = "true"
+    }
+  }
+
+  storage_provisioner    = "kubernetes.io/aws-ebs"
+  volume_binding_mode    = "WaitForFirstConsumer"
+  allow_volume_expansion = false
+  parameters = {
+    type = "gp3"
+  }
+}
