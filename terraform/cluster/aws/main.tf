@@ -160,7 +160,7 @@ resource "kubernetes_storage_class" "default" {
     }
   }
 
-  storage_provisioner    = "kubernetes.io/aws-ebs"
+  storage_provisioner    = "ebs.csi.aws.com"
   volume_binding_mode    = "WaitForFirstConsumer"
   allow_volume_expansion = false
   parameters = {
