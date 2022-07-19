@@ -69,7 +69,7 @@ func (m *MetricScraperClient) GetRackMetrics(opts structs.MetricsOptions) (struc
 		}
 	}
 
-	cpum := structs.Metric{
+	cpum := &structs.Metric{
 		Name: "cluster:cpu:utilization",
 	}
 	for _, d := range cpuMps {
@@ -102,7 +102,7 @@ func (m *MetricScraperClient) GetRackMetrics(opts structs.MetricsOptions) (struc
 		}
 	}
 
-	memm := structs.Metric{
+	memm := &structs.Metric{
 		Name: "cluster:mem:utilization",
 	}
 	for _, d := range memMps {
@@ -126,7 +126,7 @@ func (m *MetricScraperClient) GetRackMetrics(opts structs.MetricsOptions) (struc
 		memm = filterMetricByStart(memm, *opts.Start)
 	}
 
-	return structs.Metrics{cpum, memm}, nil
+	return structs.Metrics{*cpum, *memm}, nil
 }
 
 // nodeNames: single or comma seperated node names

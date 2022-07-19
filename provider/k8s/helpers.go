@@ -341,7 +341,7 @@ func calculatePodCpuAndMem(m *metricsv1beta1.PodMetrics) (cpu float64, mem float
 	return toCpuCore(cpuTotal), toMemMB(memTotal)
 }
 
-func aggregateMetricByPeriod(m structs.Metric, period int64) structs.Metric {
+func aggregateMetricByPeriod(m *structs.Metric, period int64) *structs.Metric {
 	sort.Slice(m.Values, func(i, j int) bool {
 		return m.Values[i].Time.After(m.Values[j].Time)
 	})
@@ -366,13 +366,13 @@ func aggregateMetricByPeriod(m structs.Metric, period int64) structs.Metric {
 		}
 	}
 
-	return structs.Metric{
+	return &structs.Metric{
 		Name:   m.Name,
 		Values: vs,
 	}
 }
 
-func filterMetricByStart(m structs.Metric, start time.Time) structs.Metric {
+func filterMetricByStart(m *structs.Metric, start time.Time) *structs.Metric {
 	vs := structs.MetricValues{}
 	for _, v := range m.Values {
 		if v.Time.After(start) {
@@ -380,7 +380,7 @@ func filterMetricByStart(m structs.Metric, start time.Time) structs.Metric {
 		}
 	}
 
-	return structs.Metric{
+	return &structs.Metric{
 		Name:   m.Name,
 		Values: vs,
 	}
