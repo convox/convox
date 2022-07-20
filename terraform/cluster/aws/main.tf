@@ -147,6 +147,8 @@ module "ebs_csi_driver_controller" {
   source  = "DrFaust92/ebs-csi-driver/kubernetes"
   version = "3.3.1"
 
+  ebs_csi_controller_image                   = "public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver"
+  ebs_csi_driver_version                     = var.arm_type ? "v1.9.0-linux-arm64-amazon" : "v1.9.0"
   ebs_csi_controller_role_name               = "convox-ebs-csi-driver-controller"
   ebs_csi_controller_role_policy_name_prefix = "convox-ebs-csi-driver-policy"
   oidc_url                                   = aws_iam_openid_connect_provider.cluster.url
