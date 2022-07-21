@@ -98,7 +98,7 @@ resource "aws_eks_node_group" "cluster" {
   capacity_type   = var.node_capacity_type
   cluster_name    = aws_eks_cluster.cluster.name
   instance_types  = split(",", random_id.node_group.keepers.node_type)
-  node_group_name = "${var.name}-${local.availability_zones[count.index]}-${random_id.node_group.hex}"
+  node_group_name = "${var.name}-${local.availability_zones[count.index]}-${count.index}${random_id.node_group.hex}"
   node_role_arn   = random_id.node_group.keepers.role_arn
   subnet_ids      = [var.private ? aws_subnet.private[count.index].id : aws_subnet.public[count.index].id]
   version         = var.k8s_version
