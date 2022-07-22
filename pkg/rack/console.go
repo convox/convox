@@ -256,11 +256,20 @@ func (c Console) UpdateVersion(version string) error {
 }
 
 func isSkippingMinor(currentVersion, version string) error {
-	cmv, err := strconv.Atoi(strings.Split(currentVersion, ".")[1])
+	splittedCurrent := strings.Split(currentVersion, ".")
+	if len(splittedCurrent) <= 1 {
+		return nil
+	}
+	cmv, err := strconv.Atoi(splittedCurrent[1])
 	if err != nil {
 		return err
 	}
-	mv, err := strconv.Atoi(strings.Split(version, ".")[1])
+
+	splittedVersion := strings.Split(version, ".")
+	if len(splittedVersion) <= 1 {
+		return nil
+	}
+	mv, err := strconv.Atoi(splittedVersion[1])
 	if err != nil {
 		return err
 	}
