@@ -39,6 +39,7 @@ type Provider struct {
 	Image         string
 	Name          string
 	MetricsClient metricsclientset.Interface
+	MetricScraper *MetricScraperClient
 	Namespace     string
 	Password      string
 	Provider      string
@@ -92,6 +93,8 @@ func FromEnv() (*Provider, error) {
 		return nil, err
 	}
 
+	ms := NewMetricScraperClient(kc, os.Getenv("METRICS_SCRAPER_HOST"))
+
 	p := &Provider{
 		Atom:          ac,
 		CertManager:   os.Getenv("CERT_MANAGER") == "true",
@@ -101,6 +104,7 @@ func FromEnv() (*Provider, error) {
 		Domain:        os.Getenv("DOMAIN"),
 		Image:         os.Getenv("IMAGE"),
 		MetricsClient: mc,
+		MetricScraper: ms,
 		Name:          ns.Labels["rack"],
 		Namespace:     ns.Name,
 		Password:      os.Getenv("PASSWORD"),

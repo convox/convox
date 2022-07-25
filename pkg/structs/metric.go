@@ -26,3 +26,24 @@ type MetricsOptions struct {
 	Start   *time.Time `query:"start"`
 	Period  *int64     `query:"period"`
 }
+
+type ScraperMetricType string
+
+const (
+	ScraperMetricTypeCpu ScraperMetricType = "cpu"
+	ScraperMetricTypeMem ScraperMetricType = "mem"
+)
+
+type MetricPoint struct {
+	Timestamp time.Time `json:"timestamp"`
+	Value     uint64    `json:"value"`
+}
+
+type ScraperMetricList struct {
+	Items []ScraperMetric `json:"items"`
+}
+
+type ScraperMetric struct {
+	MetricPoints []MetricPoint `json:"metricPoints"`
+	MetricName   string        `json:"metricName"`
+}

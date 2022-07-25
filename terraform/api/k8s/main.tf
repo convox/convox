@@ -125,6 +125,11 @@ resource "kubernetes_deployment" "api" {
           }
 
           env {
+            name  = "METRICS_SCRAPER_HOST"
+            value = var.metrics_scraper_host
+          }
+
+          env {
             name = "NAMESPACE"
             value_from {
               field_ref {

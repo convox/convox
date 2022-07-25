@@ -23,6 +23,7 @@ module "api" {
   docker_hub_authentication = module.k8s.docker_hub_authentication
   domain                    = module.router.endpoint
   high_availability         = var.high_availability
+  metrics_scraper_host      = module.metrics.metrics_scraper_host
   image                     = var.image
   name                      = var.name
   namespace                 = module.k8s.namespace

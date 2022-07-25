@@ -14,6 +14,11 @@ variable "image" {
   type = string
 }
 
+variable "metrics_scraper_host" {
+  default = ""
+  type    = string
+}
+
 variable "name" {
   type = string
 }
