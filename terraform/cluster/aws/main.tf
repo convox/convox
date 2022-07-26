@@ -164,7 +164,7 @@ resource "kubernetes_storage_class" "default" {
 
   storage_provisioner    = "ebs.csi.aws.com"
   volume_binding_mode    = "WaitForFirstConsumer"
-  allow_volume_expansion = false
+  allow_volume_expansion = true
   parameters = {
     type = "gp3"
   }
