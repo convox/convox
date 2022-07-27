@@ -138,9 +138,11 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 		return errors.WithStack(err)
 	}
 
-	if err := p.initializeTemplates(); err != nil {
-		return errors.WithStack(err)
-	}
+	// if err := p.initializeTemplates(); err != nil {
+	// 	return errors.WithStack(err)
+	// }
+
+	go p.initializeTemplates()
 
 	if !opts.IgnorePriorityClass {
 		if err := p.initializePriorityClass(); err != nil {
@@ -193,6 +195,19 @@ func (p *Provider) applySystemTemplate(name string, params map[string]interface{
 	}
 
 	if err := Apply(data); err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
+}
+
+func (p *Provider) deleteSystemTemplate(name string, params map[string]interface{}) error {
+	data, err := p.RenderTemplate(fmt.Sprintf("system/%s", name), params)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if err := Delete(data); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -262,9 +277,32 @@ func (p *Provider) initializeTemplates() error {
 		return errors.WithStack(err)
 	}
 
+	d, _ := p.Cluster.AppsV1().Deployments("cert-manager").Get("cert-manager", am.GetOptions{})
+
+	// println(d.Spec.Template.Labels["app.kubernetes.io/version"])
+
 	if p.CertManager {
-		if err := p.applySystemTemplate("cert-manager", nil); err != nil {
-			return errors.WithStack(err)
+		if d != nil && d.Spec.Template.Labels["app.kubernetes.io/version"] != "v1.9.0" {
+			println("updating cert-manager...")
+			p.deleteSystemTemplate("cert-manager", nil)
+
+			// println(">>> waiting for namespace to be deleted")
+			// TODO Query the cert-manager namespace and return when it's deleted
+			time.Sleep(time.Second * 20)
+
+			// println(">>> re-applying cert-manager resources")
+			err := p.applySystemTemplate("cert-manager", nil)
+			if err != nil {
+				return err
+			}
+
+			println("update finished")
+		} else if d == nil {
+			err := p.applySystemTemplate("cert-manager", nil)
+			if err != nil {
+				return err
+			}
+
 		}
 
 		go p.installCertManagerConfig()

@@ -35,6 +35,21 @@ func Apply(data []byte, args ...string) error {
 	return nil
 }
 
+func Delete(data []byte, args ...string) error {
+	ka := append([]string{"delete", "-f", "-"}, args...)
+
+	cmd := exec.Command("kubectl", ka...)
+
+	cmd.Stdin = bytes.NewReader(data)
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return errors.WithStack(errors.New(strings.TrimSpace(string(out))))
+	}
+
+	return nil
+}
+
 func ApplyLabels(data []byte, labels string) ([]byte, error) {
 	ls := parseLabels(labels)
 
