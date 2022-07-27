@@ -1,4 +1,4 @@
-resource "aws_s3_bucket" "storage" {
+resource "aws_s3_bucket" "storage" { # skipcq: TF-AWS017, TF-AWS002, TF-AWS077
   bucket_prefix = "${var.name}-storage-"
   force_destroy = true
 }
