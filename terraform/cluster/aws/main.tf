@@ -98,7 +98,7 @@ resource "aws_eks_node_group" "cluster" {
   capacity_type   = var.node_capacity_type
   cluster_name    = aws_eks_cluster.cluster.name
   instance_types  = split(",", random_id.node_group.keepers.node_type)
-  node_group_name = "${var.name}-${local.availability_zones[count.index]}-${random_id.node_group.hex}"
+  node_group_name = "${var.name}-${local.availability_zones[count.index]}-${count.index}${random_id.node_group.hex}"
   node_role_arn   = random_id.node_group.keepers.role_arn
   subnet_ids      = [var.private ? aws_subnet.private[count.index].id : aws_subnet.public[count.index].id]
   version         = var.k8s_version
@@ -141,4 +141,46 @@ resource "aws_launch_template" "cluster" {
       volume_size = random_id.node_group.keepers.node_disk
     }
   }
+}
+
+module "ebs_csi_driver_controller" {
+  source  = "DrFaust92/ebs-csi-driver/kubernetes"
+  version = "3.3.1"
+
+  ebs_csi_controller_image                   = "public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver"
+  ebs_csi_driver_version                     = var.arm_type ? "v1.9.0-linux-arm64-amazon" : "v1.9.0"
+  ebs_csi_controller_role_name               = "convox-ebs-csi-driver-controller"
+  ebs_csi_controller_role_policy_name_prefix = "convox-ebs-csi-driver-policy"
+  oidc_url                                   = aws_iam_openid_connect_provider.cluster.url
+}
+
+resource "kubernetes_storage_class" "default" {
+  metadata {
+    name = "gp3"
+    annotations = {
+      "storageclass.kubernetes.io/is-default-class" = "true"
+    }
+  }
+
+  storage_provisioner    = "ebs.csi.aws.com"
+  volume_binding_mode    = "WaitForFirstConsumer"
+  allow_volume_expansion = true
+  parameters = {
+    type = "gp3"
+  }
+}
+
+resource "kubernetes_annotations" "gp2" {
+  api_version = "storage.k8s.io/v1"
+  kind        = "StorageClass"
+
+  metadata {
+    name = "gp2"
+  }
+
+  annotations = {
+    "storageclass.kubernetes.io/is-default-class" = "false"
+  }
+
+  force = true
 }
