@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -17,7 +18,7 @@ type Webhook struct {
 func (p *Provider) webhookConfigMap() (*ac.ConfigMap, error) {
 	cms := p.Cluster.CoreV1().ConfigMaps(p.Namespace)
 
-	cm, err := cms.Get("webhooks", am.GetOptions{})
+	cm, err := cms.Get(context.TODO(), "webhooks", am.GetOptions{})
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			cm = &ac.ConfigMap{
@@ -27,7 +28,7 @@ func (p *Provider) webhookConfigMap() (*ac.ConfigMap, error) {
 				},
 			}
 
-			if _, err := cms.Create(cm); err != nil {
+			if _, err := cms.Create(context.TODO(), cm, am.CreateOptions{}); err != nil {
 				return nil, err
 			}
 		} else {
@@ -62,7 +63,7 @@ func (p *Provider) webhookCreate(name, url string) error {
 
 	cm.Data[name] = url
 
-	if _, err := p.Cluster.CoreV1().ConfigMaps(p.Namespace).Update(cm); err != nil {
+	if _, err := p.Cluster.CoreV1().ConfigMaps(p.Namespace).Update(context.TODO(), cm, am.UpdateOptions{}); err != nil {
 		return err
 	}
 
@@ -81,7 +82,7 @@ func (p *Provider) webhookDelete(name string) error {
 
 	delete(cm.Data, name)
 
-	if _, err := p.Cluster.CoreV1().ConfigMaps(p.Namespace).Update(cm); err != nil {
+	if _, err := p.Cluster.CoreV1().ConfigMaps(p.Namespace).Update(context.TODO(), cm, am.UpdateOptions{}); err != nil {
 		return err
 	}
 

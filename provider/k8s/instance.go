@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"context"
 	"fmt"
 	"io"
 
@@ -16,13 +17,13 @@ func (p *Provider) InstanceKeyroll() error {
 }
 
 func (p *Provider) InstanceList() (structs.Instances, error) {
-	ns, err := p.Cluster.CoreV1().Nodes().List(am.ListOptions{})
+	ns, err := p.Cluster.CoreV1().Nodes().List(context.TODO(), am.ListOptions{})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	metricsByNode := map[string]metricsv1beta1.NodeMetrics{}
-	ms, err := p.MetricsClient.MetricsV1beta1().NodeMetricses().List(am.ListOptions{})
+	ms, err := p.MetricsClient.MetricsV1beta1().NodeMetricses().List(context.TODO(), am.ListOptions{})
 	if err != nil {
 		p.logger.Errorf("failed to fetch node metrics: %s", err)
 	} else {
@@ -34,7 +35,7 @@ func (p *Provider) InstanceList() (structs.Instances, error) {
 	is := structs.Instances{}
 
 	for _, n := range ns.Items {
-		pds, err := p.Cluster.CoreV1().Pods("").List(am.ListOptions{FieldSelector: fmt.Sprintf("spec.nodeName=%s", n.ObjectMeta.Name)})
+		pds, err := p.Cluster.CoreV1().Pods("").List(context.TODO(), am.ListOptions{FieldSelector: fmt.Sprintf("spec.nodeName=%s", n.ObjectMeta.Name)})
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}

@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -34,7 +35,7 @@ func (m *MetricScraperClient) GetRackMetrics(opts structs.MetricsOptions) (struc
 		return nil, errors.WithStack(fmt.Errorf("unimplemented"))
 	}
 
-	ns, err := m.cluster.CoreV1().Nodes().List(am.ListOptions{})
+	ns, err := m.cluster.CoreV1().Nodes().List(context.TODO(), am.ListOptions{})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

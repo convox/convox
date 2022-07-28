@@ -2,6 +2,7 @@ package atom
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -112,7 +113,7 @@ func Initialize() error {
 }
 
 func (c *Client) Apply(ns, name, release string, template []byte, timeout int32) error {
-	if _, err := c.k8s.CoreV1().Namespaces().Get(ns, am.GetOptions{}); ae.IsNotFound(err) {
+	if _, err := c.k8s.CoreV1().Namespaces().Get(context.Background(), ns, am.GetOptions{}); ae.IsNotFound(err) {
 		if err := c.createNamespace(ns); err != nil {
 			return errors.WithStack(err)
 		}
@@ -270,7 +271,7 @@ func (c *Client) check(ns, version string) (bool, error) {
 			return false, errors.WithStack(err)
 		}
 
-		data, err := rc.Get().Namespace(c.Namespace).Name(c.Name).VersionedParams(&am.GetOptions{}, scheme.ParameterCodec).Resource(fmt.Sprintf("%ss", strings.ToLower(c.Kind))).Do().Raw()
+		data, err := rc.Get().Namespace(c.Namespace).Name(c.Name).VersionedParams(&am.GetOptions{}, scheme.ParameterCodec).Resource(fmt.Sprintf("%ss", strings.ToLower(c.Kind))).Do(context.TODO()).Raw()
 		if err != nil {
 			return false, errors.WithStack(err)
 		}
@@ -311,17 +312,19 @@ func (c *Client) check(ns, version string) (bool, error) {
 }
 
 func (c *Client) createNamespace(ns string) error {
-	_, err := c.k8s.CoreV1().Namespaces().Create(&ac.Namespace{
-		ObjectMeta: am.ObjectMeta{
-			Name: ns,
-		},
-	})
+	_, err := c.k8s.CoreV1().Namespaces().Create(
+		context.Background(),
+		&ac.Namespace{
+			ObjectMeta: am.ObjectMeta{
+				Name: ns,
+			},
+		}, am.CreateOptions{})
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
 	for {
-		if ns, err := c.k8s.CoreV1().Namespaces().Get(ns, am.GetOptions{}); err == nil && ns != nil {
+		if ns, err := c.k8s.CoreV1().Namespaces().Get(context.Background(), ns, am.GetOptions{}); err == nil && ns != nil {
 			break
 		}
 

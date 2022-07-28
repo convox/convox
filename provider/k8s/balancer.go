@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/convox/convox/pkg/structs"
@@ -13,7 +14,7 @@ func (p *Provider) BalancerList(app string) (structs.Balancers, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	ss, err := p.Cluster.CoreV1().Services(p.AppNamespace(app)).List(am.ListOptions{
+	ss, err := p.Cluster.CoreV1().Services(p.AppNamespace(app)).List(context.TODO(), am.ListOptions{
 		LabelSelector: fmt.Sprintf("system=convox,type=balancer,app=%s", app),
 	})
 	if err != nil {

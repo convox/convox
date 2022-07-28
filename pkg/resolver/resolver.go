@@ -184,7 +184,7 @@ func (r *Resolver) setupIngress() error {
 }
 
 func (r *Resolver) setupRouter() error {
-	s, err := r.kubernetes.CoreV1().Services(r.namespace).Get("router", am.GetOptions{})
+	s, err := r.kubernetes.CoreV1().Services(r.namespace).Get(context.TODO(), "router", am.GetOptions{})
 	if err != nil {
 		return err
 	}

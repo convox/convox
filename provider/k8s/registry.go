@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
@@ -162,7 +163,7 @@ type dockerConfigAuth struct {
 }
 
 func (p *Provider) dockerConfigLoad(secret string) (*dockerConfig, error) {
-	s, err := p.Cluster.CoreV1().Secrets(p.Namespace).Get(secret, am.GetOptions{})
+	s, err := p.Cluster.CoreV1().Secrets(p.Namespace).Get(context.TODO(), secret, am.GetOptions{})
 	if ae.IsNotFound(err) {
 		return &dockerConfig{}, nil
 	}
@@ -196,25 +197,29 @@ func (p *Provider) dockerConfigSave(secret string, dc *dockerConfig) error {
 		".dockerconfigjson": data,
 	}
 
-	s, err := p.Cluster.CoreV1().Secrets(p.Namespace).Get(secret, am.GetOptions{})
+	s, err := p.Cluster.CoreV1().Secrets(p.Namespace).Get(context.TODO(), secret, am.GetOptions{})
 	if ae.IsNotFound(err) {
-		_, err := p.Cluster.CoreV1().Secrets(p.Namespace).Create(&ac.Secret{
-			ObjectMeta: am.ObjectMeta{
-				Name: "registries",
-				Labels: map[string]string{
-					"system": "convox",
-					"rack":   p.Name,
+		_, err := p.Cluster.CoreV1().Secrets(p.Namespace).Create(
+			context.TODO(),
+			&ac.Secret{
+				ObjectMeta: am.ObjectMeta{
+					Name: "registries",
+					Labels: map[string]string{
+						"system": "convox",
+						"rack":   p.Name,
+					},
 				},
+				Type: ac.SecretTypeDockerConfigJson,
+				Data: sd,
 			},
-			Type: ac.SecretTypeDockerConfigJson,
-			Data: sd,
-		})
+			am.CreateOptions{},
+		)
 		return errors.WithStack(err)
 	}
 
 	s.Data = sd
 
-	_, err = p.Cluster.CoreV1().Secrets(p.Namespace).Update(s)
+	_, err = p.Cluster.CoreV1().Secrets(p.Namespace).Update(context.TODO(), s, am.UpdateOptions{})
 	if err != nil {
 		return errors.WithStack(err)
 	}

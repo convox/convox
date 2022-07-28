@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"sort"
@@ -67,7 +68,7 @@ func (p *Provider) SystemProcesses(opts structs.SystemProcessesOptions) (structs
 	}
 
 	labelSelector := fmt.Sprintf("system=convox,rack=%s,service", p.Name)
-	pds, err := p.Cluster.CoreV1().Pods(ns).List(am.ListOptions{
+	pds, err := p.Cluster.CoreV1().Pods(ns).List(context.TODO(), am.ListOptions{
 		LabelSelector: labelSelector,
 	})
 	if err != nil {
@@ -85,7 +86,7 @@ func (p *Provider) SystemProcesses(opts structs.SystemProcessesOptions) (structs
 		pss = append(pss, *ps)
 	}
 
-	ms, err := p.MetricsClient.MetricsV1beta1().PodMetricses(ns).List(am.ListOptions{LabelSelector: labelSelector})
+	ms, err := p.MetricsClient.MetricsV1beta1().PodMetricses(ns).List(context.TODO(), am.ListOptions{LabelSelector: labelSelector})
 	if err != nil {
 		p.logger.Errorf("failed to fetch pod metrics: %s", err)
 	} else {

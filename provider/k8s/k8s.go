@@ -78,7 +78,7 @@ func FromEnv() (*Provider, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	ns, err := kc.CoreV1().Namespaces().Get(namespace, am.GetOptions{})
+	ns, err := kc.CoreV1().Namespaces().Get(context.TODO(), namespace, am.GetOptions{})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -205,12 +205,12 @@ func (p *Provider) heartbeat() error {
 		return errors.WithStack(err)
 	}
 
-	ns, err := p.Cluster.CoreV1().Nodes().List(am.ListOptions{})
+	ns, err := p.Cluster.CoreV1().Nodes().List(context.TODO(), am.ListOptions{})
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	ks, err := p.Cluster.CoreV1().Namespaces().Get("kube-system", am.GetOptions{})
+	ks, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), "kube-system", am.GetOptions{})
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -250,7 +250,7 @@ func (p *Provider) initializePriorityClass() error {
 		return errors.WithStack(err)
 	}
 
-	if _, err := p.Cluster.AppsV1().Deployments(p.Namespace).Patch("api", types.JSONPatchType, patch); err != nil {
+	if _, err := p.Cluster.AppsV1().Deployments(p.Namespace).Patch(context.TODO(), "api", types.JSONPatchType, patch, am.PatchOptions{}); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -285,7 +285,7 @@ func (p *Provider) installCertManagerConfig() {
 	for {
 		select {
 		case <-tick.C:
-			d, err := p.Cluster.AppsV1().Deployments("cert-manager").Get("cert-manager-webhook", am.GetOptions{})
+			d, err := p.Cluster.AppsV1().Deployments("cert-manager").Get(context.TODO(), "cert-manager-webhook", am.GetOptions{})
 			if err != nil {
 				fmt.Printf("could not get cert manager webhook deployment: %s\n", err)
 				continue
@@ -300,7 +300,7 @@ func (p *Provider) installCertManagerConfig() {
 						break
 					}
 
-					if cas, err := p.Cluster.CoreV1().Secrets(p.Namespace).Get("ca", am.GetOptions{}); err == nil {
+					if cas, err := p.Cluster.CoreV1().Secrets(p.Namespace).Get(context.TODO(), "ca", am.GetOptions{}); err == nil {
 						params := map[string]interface{}{
 							"CaPublic":  base64.StdEncoding.EncodeToString(cas.Data["tls.crt"]),
 							"CaPrivate": base64.StdEncoding.EncodeToString(cas.Data["tls.key"]),
