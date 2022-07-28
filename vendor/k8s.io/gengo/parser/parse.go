@@ -567,6 +567,10 @@ func (b *Builder) findTypesIn(pkgPath importPathString, u *types.Universe) error
 			t := b.addConstant(*u, nil, tconst)
 			b.addCommentsToType(obj, t)
 		}
+		tconst, ok := obj.(*tc.Const)
+		if ok {
+			b.addConstant(*u, nil, tconst)
+		}
 	}
 
 	importedPkgs := []string{}
