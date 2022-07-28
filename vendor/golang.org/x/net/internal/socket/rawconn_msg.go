@@ -9,6 +9,7 @@ package socket
 
 import (
 	"os"
+	"runtime"
 	"syscall"
 )
 
