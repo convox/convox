@@ -8,13 +8,38 @@ spec:
     - name: v1
       served: true
       storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                description:
+                  type: string
+                ended:
+                  type: string
+                entrypoint:
+                  type: string
+                logs:
+                  type: string
+                manifest:
+                  type: string
+                process:
+                  type: string
+                release:
+                  type: string
+                started:
+                  type: string
+                status:
+                  type: string
   scope: Namespaced
   names:
     plural: builds
     singular: build
     kind: Build
     categories:
-    - convox
+      - convox
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
@@ -26,10 +51,27 @@ spec:
     - name: v1
       served: true
       storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                build:
+                  type: string
+                created:
+                  type: string
+                description:
+                  type: string
+                env:
+                  type: string
+                manifest:
+                  type: string
   scope: Namespaced
   names:
     plural: releases
     singular: release
     kind: Release
     categories:
-    - convox
+      - convox
