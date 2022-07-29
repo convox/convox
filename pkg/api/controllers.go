@@ -1528,4 +1528,3 @@ func (s *Server) SystemUpdate(c *stdapi.Context) error {
 func (s *Server) Workers(c *stdapi.Context) error {
 	return stdapi.Errorf(404, "not available via api")
 }
-
