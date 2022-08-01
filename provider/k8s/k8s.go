@@ -138,10 +138,6 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 		return errors.WithStack(err)
 	}
 
-	// if err := p.initializeTemplates(); err != nil {
-	// 	return errors.WithStack(err)
-	// }
-
 	go p.initializeTemplates()
 
 	if !opts.IgnorePriorityClass {
@@ -277,32 +273,29 @@ func (p *Provider) initializeTemplates() error {
 		return errors.WithStack(err)
 	}
 
-	d, _ := p.Cluster.AppsV1().Deployments("cert-manager").Get("cert-manager", am.GetOptions{})
-
-	// println(d.Spec.Template.Labels["app.kubernetes.io/version"])
-
 	if p.CertManager {
-		if d != nil && d.Spec.Template.Labels["app.kubernetes.io/version"] != "v1.9.0" {
-			println("updating cert-manager...")
+		d, _ := p.Cluster.AppsV1().Deployments("cert-manager").Get("cert-manager", am.GetOptions{})
+		if d == nil {
+			return p.applySystemTemplate("cert-manager", nil)
+		}
+
+		if d.Spec.Template.Labels["app.kubernetes.io/version"] != "v1.9.0" {
+			fmt.Println("Updating cert-manager")
 			p.deleteSystemTemplate("cert-manager", nil)
 
-			// println(">>> waiting for namespace to be deleted")
-			// TODO Query the cert-manager namespace and return when it's deleted
-			time.Sleep(time.Second * 20)
-
-			// println(">>> re-applying cert-manager resources")
-			err := p.applySystemTemplate("cert-manager", nil)
-			if err != nil {
-				return err
+			for {
+				n, _ := p.Cluster.CoreV1().Namespaces().Get("cert-manager", am.GetOptions{})
+				if n.Name == "" {
+					fmt.Println("Uninstalled old cert-manager")
+					break
+				}
 			}
 
-			println("update finished")
-		} else if d == nil {
+			fmt.Println("Installing new cert-manager version")
 			err := p.applySystemTemplate("cert-manager", nil)
 			if err != nil {
-				return err
+				return errors.WithStack(fmt.Errorf("could not update cert-manager: %+v", err))
 			}
-
 		}
 
 		go p.installCertManagerConfig()

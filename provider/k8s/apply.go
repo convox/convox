@@ -42,9 +42,9 @@ func Delete(data []byte, args ...string) error {
 
 	cmd.Stdin = bytes.NewReader(data)
 
-	out, err := cmd.CombinedOutput()
+	_, err := cmd.CombinedOutput()
 	if err != nil {
-		return errors.WithStack(errors.New(strings.TrimSpace(string(out))))
+		return errors.WithStack(err)
 	}
 
 	return nil
