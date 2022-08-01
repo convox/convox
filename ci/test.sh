@@ -21,8 +21,6 @@ root="$(cd $(dirname ${0:-})/..; pwd)"
 
 set -ex
 
-convox api get /system
-
 provider=$(convox api get /system | jq -r .provider)
 
 # cli
