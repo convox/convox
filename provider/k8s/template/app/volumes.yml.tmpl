@@ -7,14 +7,8 @@ metadata:
   name: {{ volumeName $.App . }}
 spec:
   accessModes:
-  - ReadWriteMany
+  - ReadWriteOnce
   resources:
     requests:
       storage: 10Gi
-  selector:
-    matchLabels:
-      system: convox
-      rack: {{$.Rack}}
-      app: {{$.App}}
-      volume: {{ volumeName $.App . }}
 {{ end }}
