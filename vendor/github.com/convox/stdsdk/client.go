@@ -305,7 +305,6 @@ func (c *Client) Request(method, path string, opts RequestOptions) (*http.Reques
 	}
 
 	endpoint := fmt.Sprintf("%s://%s%s%s?%s", c.Endpoint.Scheme, c.Endpoint.Host, c.Endpoint.Path, path, qs)
-
 	req, err := http.NewRequest(method, endpoint, r)
 	if err != nil {
 		return nil, err
@@ -407,6 +406,7 @@ func unmarshalReader(r io.ReadCloser, out interface{}) error {
 	}
 
 	data, err := ioutil.ReadAll(r)
+
 	if err != nil {
 		return err
 	}

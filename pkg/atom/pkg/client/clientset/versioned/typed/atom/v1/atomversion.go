@@ -21,6 +21,7 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	"time"
 
 	v1 "github.com/convox/convox/pkg/atom/pkg/apis/atom/v1"
@@ -73,7 +74,7 @@ func (c *atomVersions) Get(name string, options metav1.GetOptions) (result *v1.A
 		Resource("atomversions").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -90,7 +91,7 @@ func (c *atomVersions) List(opts metav1.ListOptions) (result *v1.AtomVersionList
 		Resource("atomversions").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -107,7 +108,7 @@ func (c *atomVersions) Watch(opts metav1.ListOptions) (watch.Interface, error) {
 		Resource("atomversions").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(context.TODO())
 }
 
 // Create takes the representation of a atomVersion and creates it.  Returns the server's representation of the atomVersion, and an error, if there is any.
@@ -117,7 +118,7 @@ func (c *atomVersions) Create(atomVersion *v1.AtomVersion) (result *v1.AtomVersi
 		Namespace(c.ns).
 		Resource("atomversions").
 		Body(atomVersion).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -130,7 +131,7 @@ func (c *atomVersions) Update(atomVersion *v1.AtomVersion) (result *v1.AtomVersi
 		Resource("atomversions").
 		Name(atomVersion.Name).
 		Body(atomVersion).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -146,7 +147,7 @@ func (c *atomVersions) UpdateStatus(atomVersion *v1.AtomVersion) (result *v1.Ato
 		Name(atomVersion.Name).
 		SubResource("status").
 		Body(atomVersion).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -158,7 +159,7 @@ func (c *atomVersions) Delete(name string, options *metav1.DeleteOptions) error 
 		Resource("atomversions").
 		Name(name).
 		Body(options).
-		Do().
+		Do(context.TODO()).
 		Error()
 }
 
@@ -174,7 +175,7 @@ func (c *atomVersions) DeleteCollection(options *metav1.DeleteOptions, listOptio
 		VersionedParams(&listOptions, scheme.ParameterCodec).
 		Timeout(timeout).
 		Body(options).
-		Do().
+		Do(context.TODO()).
 		Error()
 }
 
@@ -187,7 +188,7 @@ func (c *atomVersions) Patch(name string, pt types.PatchType, data []byte, subre
 		SubResource(subresources...).
 		Name(name).
 		Body(data).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }

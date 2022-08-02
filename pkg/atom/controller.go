@@ -1,6 +1,7 @@
 package atom
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -198,7 +199,7 @@ func (c *AtomController) atomEvent(a *ct.Atom, reason, message string) error {
 		},
 	}
 
-	if _, err := c.kubernetes.CoreV1().Events(a.Namespace).Create(e); err != nil {
+	if _, err := c.kubernetes.CoreV1().Events(a.Namespace).Create(context.Background(), e, am.CreateOptions{}); err != nil {
 		return errors.WithStack(err)
 	}
 

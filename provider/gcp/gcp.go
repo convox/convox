@@ -97,29 +97,32 @@ func (p *Provider) initializeGcpServices() error {
 }
 
 func (p *Provider) initializeResourceQuotas() error {
-	_, err := p.Cluster.CoreV1().ResourceQuotas(p.Namespace).Create(&ac.ResourceQuota{
-		ObjectMeta: am.ObjectMeta{
-			Namespace: p.Namespace,
-			Name:      "gcp-critical-pods",
-		},
-		Spec: ac.ResourceQuotaSpec{
-			Hard: ac.ResourceList{
-				"pods": resource.MustParse("1G"),
+	_, err := p.Cluster.CoreV1().ResourceQuotas(p.Namespace).Create(
+		context.TODO(),
+		&ac.ResourceQuota{
+			ObjectMeta: am.ObjectMeta{
+				Namespace: p.Namespace,
+				Name:      "gcp-critical-pods",
 			},
-			ScopeSelector: &ac.ScopeSelector{
-				MatchExpressions: []ac.ScopedResourceSelectorRequirement{
-					{
-						ScopeName: "PriorityClass",
-						Operator:  "In",
-						Values: []string{
-							"system-node-critical",
-							"system-cluster-critical",
+			Spec: ac.ResourceQuotaSpec{
+				Hard: ac.ResourceList{
+					"pods": resource.MustParse("1G"),
+				},
+				ScopeSelector: &ac.ScopeSelector{
+					MatchExpressions: []ac.ScopedResourceSelectorRequirement{
+						{
+							ScopeName: "PriorityClass",
+							Operator:  "In",
+							Values: []string{
+								"system-node-critical",
+								"system-cluster-critical",
+							},
 						},
 					},
 				},
 			},
-		},
-	})
+		}, am.CreateOptions{},
+	)
 	if err != nil && !errors.IsAlreadyExists(err) {
 		return err
 	}

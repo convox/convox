@@ -21,6 +21,7 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	"time"
 
 	v1 "github.com/convox/convox/provider/k8s/pkg/apis/convox/v1"
@@ -72,7 +73,7 @@ func (c *releases) Get(name string, options metav1.GetOptions) (result *v1.Relea
 		Resource("releases").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -89,7 +90,7 @@ func (c *releases) List(opts metav1.ListOptions) (result *v1.ReleaseList, err er
 		Resource("releases").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -106,7 +107,7 @@ func (c *releases) Watch(opts metav1.ListOptions) (watch.Interface, error) {
 		Resource("releases").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(context.TODO())
 }
 
 // Create takes the representation of a release and creates it.  Returns the server's representation of the release, and an error, if there is any.
@@ -116,7 +117,7 @@ func (c *releases) Create(release *v1.Release) (result *v1.Release, err error) {
 		Namespace(c.ns).
 		Resource("releases").
 		Body(release).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -129,7 +130,7 @@ func (c *releases) Update(release *v1.Release) (result *v1.Release, err error) {
 		Resource("releases").
 		Name(release.Name).
 		Body(release).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -141,7 +142,7 @@ func (c *releases) Delete(name string, options *metav1.DeleteOptions) error {
 		Resource("releases").
 		Name(name).
 		Body(options).
-		Do().
+		Do(context.TODO()).
 		Error()
 }
 
@@ -157,7 +158,7 @@ func (c *releases) DeleteCollection(options *metav1.DeleteOptions, listOptions m
 		VersionedParams(&listOptions, scheme.ParameterCodec).
 		Timeout(timeout).
 		Body(options).
-		Do().
+		Do(context.TODO()).
 		Error()
 }
 
@@ -170,7 +171,7 @@ func (c *releases) Patch(name string, pt types.PatchType, data []byte, subresour
 		SubResource(subresources...).
 		Name(name).
 		Body(data).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }

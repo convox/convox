@@ -151,7 +151,7 @@ func (l *podLogger) stream(ch chan string, namespace, pod string, start time.Tim
 			SinceTime:  &since,
 			Timestamps: true,
 		}
-		r, err := l.provider.Cluster.CoreV1().Pods(namespace).GetLogs(pod, lopts).Stream()
+		r, err := l.provider.Cluster.CoreV1().Pods(namespace).GetLogs(pod, lopts).Stream(context.TODO())
 		if err != nil {
 			fmt.Printf("err = %+v\n", err)
 			break
@@ -189,7 +189,7 @@ func (l *podLogger) watch(ctx context.Context, namespace, pod string, start time
 	var err error
 
 	for {
-		p, err = l.provider.Cluster.CoreV1().Pods(namespace).Get(pod, am.GetOptions{})
+		p, err = l.provider.Cluster.CoreV1().Pods(namespace).Get(context.TODO(), pod, am.GetOptions{})
 		if err != nil {
 			fmt.Printf("err = %+v\n", err)
 			return

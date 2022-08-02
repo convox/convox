@@ -21,6 +21,7 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	"time"
 
 	v1 "github.com/convox/convox/pkg/atom/pkg/apis/atom/v1"
@@ -73,7 +74,7 @@ func (c *atoms) Get(name string, options metav1.GetOptions) (result *v1.Atom, er
 		Resource("atoms").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -90,7 +91,7 @@ func (c *atoms) List(opts metav1.ListOptions) (result *v1.AtomList, err error) {
 		Resource("atoms").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -107,7 +108,7 @@ func (c *atoms) Watch(opts metav1.ListOptions) (watch.Interface, error) {
 		Resource("atoms").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(context.TODO())
 }
 
 // Create takes the representation of a atom and creates it.  Returns the server's representation of the atom, and an error, if there is any.
@@ -117,7 +118,7 @@ func (c *atoms) Create(atom *v1.Atom) (result *v1.Atom, err error) {
 		Namespace(c.ns).
 		Resource("atoms").
 		Body(atom).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -130,7 +131,7 @@ func (c *atoms) Update(atom *v1.Atom) (result *v1.Atom, err error) {
 		Resource("atoms").
 		Name(atom.Name).
 		Body(atom).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -146,7 +147,7 @@ func (c *atoms) UpdateStatus(atom *v1.Atom) (result *v1.Atom, err error) {
 		Name(atom.Name).
 		SubResource("status").
 		Body(atom).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -158,7 +159,7 @@ func (c *atoms) Delete(name string, options *metav1.DeleteOptions) error {
 		Resource("atoms").
 		Name(name).
 		Body(options).
-		Do().
+		Do(context.TODO()).
 		Error()
 }
 
@@ -174,7 +175,7 @@ func (c *atoms) DeleteCollection(options *metav1.DeleteOptions, listOptions meta
 		VersionedParams(&listOptions, scheme.ParameterCodec).
 		Timeout(timeout).
 		Body(options).
-		Do().
+		Do(context.TODO()).
 		Error()
 }
 
@@ -187,7 +188,7 @@ func (c *atoms) Patch(name string, pt types.PatchType, data []byte, subresources
 		SubResource(subresources...).
 		Name(name).
 		Body(data).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }

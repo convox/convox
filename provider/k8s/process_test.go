@@ -1,6 +1,7 @@
 package k8s_test
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -76,7 +77,7 @@ func processCreator(c kubernetes.Interface, ns, name, labels string, fn func(p *
 		fn(p)
 	}
 
-	if _, err := c.CoreV1().Pods(ns).Create(p); err != nil {
+	if _, err := c.CoreV1().Pods(ns).Create(context.TODO(), p, am.CreateOptions{}); err != nil {
 		return err
 	}
 

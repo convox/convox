@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"regexp"
@@ -20,7 +21,7 @@ var (
 )
 
 func (p *Provider) appRegistry(app string) (string, error) {
-	ns, err := p.Provider.Cluster.CoreV1().Namespaces().Get(p.AppNamespace(app), am.GetOptions{})
+	ns, err := p.Provider.Cluster.CoreV1().Namespaces().Get(context.TODO(), p.AppNamespace(app), am.GetOptions{})
 	if err != nil {
 		return "", err
 	}

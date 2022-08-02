@@ -1,6 +1,8 @@
 package k8s_test
 
 import (
+	"context"
+
 	ac "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,7 +20,7 @@ func nodeCreator(c kubernetes.Interface, name string, fn func(n *ac.Node)) error
 		fn(n)
 	}
 
-	if _, err := c.CoreV1().Nodes().Create(n); err != nil {
+	if _, err := c.CoreV1().Nodes().Create(context.TODO(), n, am.CreateOptions{}); err != nil {
 		return err
 	}
 

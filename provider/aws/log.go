@@ -66,8 +66,6 @@ func (p *Provider) Log(app, stream string, ts time.Time, message string) error {
 
 		continue
 	}
-
-	return nil
 }
 
 func (p *Provider) AppLogs(name string, opts structs.LogsOptions) (io.ReadCloser, error) {
