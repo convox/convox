@@ -22,7 +22,7 @@ jobs:
           - gcp
     steps:
       - name: checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v3
       - name: name
         run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")" >> $GITHUB_ENV
       - name: provider
