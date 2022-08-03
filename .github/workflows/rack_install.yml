@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v3
       - name: version
         run: echo "VERSION=${{ github.event.inputs.release }}" >> $GITHUB_ENV
       - name: name

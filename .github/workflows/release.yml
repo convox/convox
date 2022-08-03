@@ -9,9 +9,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v3
       - name: golang-1.16
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: '1.16.12'
       - name: version
@@ -42,9 +42,9 @@ jobs:
         env:
           IMAGE: ${{ github.repository }}
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
       - name: login
         run: docker login --username "${DOCKER_USERNAME}" --password "${DOCKER_PASSWORD}"
         env:
@@ -55,7 +55,7 @@ jobs:
       - name: build-arm64
         run: docker buildx build --platform linux/arm64 -t ${{ github.repository }}:${{ env.VERSION }}-arm64 --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max --build-arg DOCKER_ARCH=aarch64 --build-arg KUBECTL_ARCH=arm64 .
       - name: release-cli-linux
-        uses: actions/upload-release-asset@v1.0.1
+        uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -64,7 +64,7 @@ jobs:
           asset_name: convox-linux
           asset_content_type: application/octet-stream
       - name: release-cli-linux-arm64
-        uses: actions/upload-release-asset@v1.0.1
+        uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -73,7 +73,7 @@ jobs:
           asset_name: convox-linux-arm64
           asset_content_type: application/octet-stream
       - name: release-cli-macos
-        uses: actions/upload-release-asset@v1.0.1
+        uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -82,7 +82,7 @@ jobs:
           asset_name: convox-macos
           asset_content_type: application/octet-stream
       - name: release-cli-macos-arm64
-        uses: actions/upload-release-asset@v1.0.1
+        uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -124,7 +124,7 @@ jobs:
           #   provider: azure
     steps:
       - name: checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v3
       - name: version
         run: echo "VERSION=$(echo ${{ github.ref }} | awk -F/ '{print $3}')" >> $GITHUB_ENV
       - name: name
