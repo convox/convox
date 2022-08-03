@@ -28,6 +28,10 @@ import (
 	metricsclientset "k8s.io/metrics/pkg/client/clientset/versioned"
 )
 
+const (
+	CURRENT_CM_VERSION = "v1.9.0"
+)
+
 type Provider struct {
 	Atom          atom.Interface
 	CertManager   bool
@@ -279,7 +283,7 @@ func (p *Provider) initializeTemplates() error {
 			return p.applySystemTemplate("cert-manager", nil)
 		}
 
-		if d.Spec.Template.Labels["app.kubernetes.io/version"] != "v1.9.0" {
+		if d.Spec.Template.Labels["app.kubernetes.io/version"] != CURRENT_CM_VERSION {
 			fmt.Println("Updating cert-manager")
 			p.deleteSystemTemplate("cert-manager", nil)
 
