@@ -29,7 +29,8 @@ import (
 )
 
 const (
-	CURRENT_CM_VERSION = "v1.9.0"
+	CURRENT_CM_VERSION    = "v1.9.0"
+	MAX_RETRIES_UPDATE_CM = 10
 )
 
 type Provider struct {
@@ -278,7 +279,7 @@ func (p *Provider) initializeTemplates() error {
 	}
 
 	if p.CertManager {
-		d, _ := p.Cluster.AppsV1().Deployments("cert-manager").Get("cert-manager", am.GetOptions{})
+		d, _ := p.Cluster.AppsV1().Deployments("cert-manager").Get(context.TODO(), "cert-manager", am.GetOptions{})
 		if d == nil {
 			return p.applySystemTemplate("cert-manager", nil)
 		}
@@ -287,12 +288,19 @@ func (p *Provider) initializeTemplates() error {
 			fmt.Println("Updating cert-manager")
 			p.deleteSystemTemplate("cert-manager", nil)
 
+			currentRetry := 0
 			for {
-				n, _ := p.Cluster.CoreV1().Namespaces().Get("cert-manager", am.GetOptions{})
+				n, _ := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), "cert-manager", am.GetOptions{})
 				if n.Name == "" {
 					fmt.Println("Uninstalled old cert-manager")
 					break
 				}
+
+				if currentRetry == MAX_RETRIES_UPDATE_CM {
+					panic("Unable to install new cert-manager version, the old version was not uninstalled")
+				}
+				currentRetry++
+				time.Sleep(time.Second * 10)
 			}
 
 			fmt.Println("Installing new cert-manager version")
