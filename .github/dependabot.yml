@@ -4,12 +4,12 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "monthly"
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
-      interval: "daily"
-  - package-ecosystem: terraform
+      interval: "monthly"
+  - package-ecosystem: "terraform"
     directory: "/terraform"
     schedule:
-      interval: daily
+      interval: "monthly"
