@@ -20,6 +20,7 @@ import (
 	"github.com/gobuffalo/packr"
 	"github.com/pkg/errors"
 
+	ae "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -273,47 +274,51 @@ func (p *Provider) initializePriorityClass() error {
 	return nil
 }
 
-func (p *Provider) initializeTemplates() error {
+func (p *Provider) initializeTemplates() {
 	if err := p.applySystemTemplate("crd", nil); err != nil {
-		return errors.WithStack(err)
+		panic(errors.WithStack(err))
 	}
 
-	if p.CertManager {
-		d, _ := p.Cluster.AppsV1().Deployments("cert-manager").Get(context.TODO(), "cert-manager", am.GetOptions{})
-		if d == nil {
-			return p.applySystemTemplate("cert-manager", nil)
-		}
-
-		if d.Spec.Template.Labels["app.kubernetes.io/version"] != CURRENT_CM_VERSION {
-			fmt.Println("Updating cert-manager")
-			p.deleteSystemTemplate("cert-manager", nil)
-
-			currentRetry := 0
-			for {
-				n, _ := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), "cert-manager", am.GetOptions{})
-				if n.Name == "" {
-					fmt.Println("Uninstalled old cert-manager")
-					break
-				}
-
-				if currentRetry == MAX_RETRIES_UPDATE_CM {
-					panic("Unable to install new cert-manager version, the old version was not uninstalled")
-				}
-				currentRetry++
-				time.Sleep(time.Second * 10)
-			}
-
-			fmt.Println("Installing new cert-manager version")
-			err := p.applySystemTemplate("cert-manager", nil)
-			if err != nil {
-				return errors.WithStack(fmt.Errorf("could not update cert-manager: %+v", err))
-			}
-		}
-
-		go p.installCertManagerConfig()
+	if !p.CertManager {
+		fmt.Println("Installing cert-manager skipped")
+		return
 	}
 
-	return nil
+	d, _ := p.Cluster.AppsV1().Deployments("cert-manager").Get(context.TODO(), "cert-manager", am.GetOptions{})
+	if d == nil {
+		if err := p.applySystemTemplate("cert-manager", nil); err != nil {
+			panic(errors.WithStack(err))
+		}
+		return
+	}
+
+	if d.Spec.Template.Labels["app.kubernetes.io/version"] != CURRENT_CM_VERSION {
+		fmt.Println("Updating cert-manager")
+		p.deleteSystemTemplate("cert-manager", nil)
+
+		currentRetry := 0
+		for {
+			_, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), "cert-manager", am.GetOptions{})
+			if ae.IsNotFound(err) {
+				fmt.Println("Uninstalled old cert-manager")
+				break
+			}
+
+			if currentRetry == MAX_RETRIES_UPDATE_CM {
+				panic("Unable to install new cert-manager version, the old version was not uninstalled")
+			}
+			currentRetry++
+			time.Sleep(time.Second * 10)
+		}
+
+		fmt.Println("Installing new cert-manager version")
+		err := p.applySystemTemplate("cert-manager", nil)
+		if err != nil {
+			panic(errors.WithStack(fmt.Errorf("could not update cert-manager: %+v", err)))
+		}
+	}
+
+	go p.installCertManagerConfig()
 }
 
 func (p *Provider) installCertManagerConfig() {
