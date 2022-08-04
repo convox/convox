@@ -86,6 +86,10 @@ jobs:
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       - name: build-amd64
         run: "docker buildx build --platform linux/amd64 -t ${{ github.repository }}:${{ env.VERSION }} --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max ."
+       - name: buildkit-amd64
+        run: docker buildx build -f Dockerfile-buildkit --target rootless --platform linux/amd64 -t ${{ github.repository }}:${{ env.VERSION }}-build --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max .
+      - name: buildkit-amd64-privileged
+        run: docker buildx build -f Dockerfile-buildkit --target privileged --platform linux/amd64 -t ${{ github.repository }}:${{ env.VERSION }}-build-privileged --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max .
   build-arm64:
     needs: release
     runs-on: ubuntu-latest
@@ -107,6 +111,11 @@ jobs:
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       - name: build-arm64
         run: "docker buildx build --platform linux/arm64 -t ${{ github.repository }}:${{ env.VERSION }}-arm64 --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max --build-arg DOCKER_ARCH=aarch64 --build-arg KUBECTL_ARCH=arm64 ."
+      - name: buildkit-arm64
+        run: docker buildx build -f Dockerfile-buildkit --target rootless --platform linux/arm64 -t ${{ github.repository }}:${{ env.VERSION }}-arm64-build --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max --build-arg DOCKER_ARCH=aarch64 --build-arg KUBECTL_ARCH=arm64 .
+      - name: buildkit-arm64-privileged
+        run: docker buildx build -f Dockerfile-buildkit --target privileged --platform linux/arm64 -t ${{ github.repository }}:${{ env.VERSION }}-arm64-build-privileged --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max --build-arg DOCKER_ARCH=aarch64 --build-arg KUBECTL_ARCH=arm64 .
+      
   release-cli-linux:
     needs:
       - release

@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    kubernetes.io/psp: eks.privileged
+    container.apparmor.security.beta.kubernetes.io/nodejs: unconfined
+  # generateName: heron-
+  labels:
+    app: nodejs
+    name: build
+    rack: dev11
+    release: RLUYFXHWLEL
+    service: build
+    system: convox
+    type: process
+  name: heron
+spec:
+  restartPolicy: Never
+  containers:
+  - args:
+    - build
+    - -method
+    - tgz
+    - -cache
+    - "true"
+    env:
+    - name: BUILDKITD_FLAGS
+      value: --oci-worker-no-process-sandbox
+    - name: BUILD_AUTH
+      value: '{"az2bp1nmg9mes7r.azurecr.io/nodejs":{"Username":"3ca62046-554c-4aa6-93ce-1bddec19f3e5","Password":"t5q8Q~d1A4tqAxsAZXzcp5.X~a-fUEW3bfpLLazu"}}'
+    - name: BUILD_DEVELOPMENT
+      value: "false"
+    - name: BUILD_RACK
+      value: az2
+    - name: BUILD_URL
+      value: object://nodejs/tmp/94c6f2ba34a3f25bac02e2307182d8.tgz
+    - name: RACK_URL
+      value: https://convox:QvNT2xlFtHyH4W8NpsiXvurhezRiqMgej4EgHwlmAnDs4OlpZZa7PuJiDRmPsCpy@api.az2-system.svc.cluster.local:5443
+    - name: BUILD_PUSH
+      value: az2bp1nmg9mes7r.azurecr.io/nodejs
+    - name: BUILD_GENERATION
+      value: "2"
+    - name: BUILD_APP
+      value: nodejs
+    - name: BUILD_ID
+      value: BSNLDTBABBO
+    - name: BUILD_MANIFEST
+      value: convox.yml
+    image: heronrs/convox:buildkit20
+    imagePullPolicy: Always
+    name: nodejs
+    securityContext:
+      seccompProfile:
+        type: Unconfined
+    resources:
+      requests:
+        cpu: 512m
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+  shareProcessNamespace: true
+  terminationGracePeriodSeconds: 30

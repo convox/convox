@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/convox/convox/pkg/options"
@@ -75,6 +76,86 @@ func (bb *Build) buildDocker(path, dockerfile string, tag string, env map[string
 	return nil
 }
 
+func (bb *Build) buildBuildKit(path, dockerfile string, tag string, env map[string]string) error {
+	if path == "" {
+		return fmt.Errorf("must have path to build")
+	}
+
+	// buildctl build --frontend dockerfile.v0 --local context=. --local dockerfile=. --opt filename=Dockerfile --export-cache type=inline --import-cache type=registry,ref=4707781
+	// 23668.dkr.ecr.us-east-1.amazonaws.com/dev11/nodejs --output type=image,name=470778123668.dkr.ecr.us-east-1.amazonaws.com/dev11/nodejs,push=true
+	reg := strings.Split(tag, ":")[0]
+	args := []string{"build"}
+	args = append(args, "--frontend", "dockerfile.v0")
+	args = append(args, "--local", fmt.Sprintf("context=%s", path))
+	args = append(args, "--local", fmt.Sprintf("dockerfile=%s", path))
+	args = append(args, "--opt", fmt.Sprintf("filename=%s", dockerfile))
+	args = append(args, "--output", fmt.Sprintf("type=image,name=%s,push=true", tag))
+	args = append(args, "--export-cache", fmt.Sprintf("type=registry,ref=%s:buildcache", reg))
+	args = append(args, "--import-cache", fmt.Sprintf("type=registry,ref=%s:buildcache", reg))
+
+	println(strings.Join(args, " "))
+
+	df := filepath.Join(path, dockerfile)
+
+	ba, err := bb.buildArgs2(df, env)
+	if err != nil {
+		return err
+	}
+
+	args = append(args, ba...)
+
+	if !bb.Cache {
+		args = append(args, "--no-cache")
+	}
+
+	if bb.Terminal {
+		if err := bb.Exec.Terminal("buildctl", args...); err != nil {
+			return err
+		}
+	} else {
+		if err := bb.Exec.Run(bb.writer, "buildctl", args...); err != nil {
+			return err
+		}
+	}
+
+	f, err := ioutil.ReadFile(df)
+	if err != nil {
+		return fmt.Errorf("could not open Dockerfile")
+	}
+
+	r := regexp.MustCompile(`(?i)entrypoint \[(?P<arr>.*)\]|entrypoint (?P<str>".*")`)
+	groups := map[string]string{}
+	gnames := r.SubexpNames()
+
+	for ix, xp := range r.FindStringSubmatch(string(f)) {
+		groups[gnames[ix]] = xp
+	}
+
+	ep := ""
+	// join into a []string and quote according to sh rules
+	if groups["str"] != "" {
+		ep = groups["str"]
+		ep = strings.ReplaceAll(ep, "\"", "")
+		ep = shellquote.Join(strings.Split(ep, " ")...)
+	} else if groups["arr"] != "" {
+		ep = groups["arr"]
+		ep = strings.ReplaceAll(ep, "\"", "")
+		ep = shellquote.Join(strings.Split(ep, ",")...)
+	}
+
+	if ep != "" {
+		opts := structs.BuildUpdateOptions{
+			Entrypoint: options.String(ep),
+		}
+
+		if _, err := bb.Provider.BuildUpdate(bb.App, bb.Id, opts); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (bb *Build) buildArgs(dockerfile string, env map[string]string) ([]string, error) {
 	fd, err := os.Open(dockerfile)
 	if err != nil {
@@ -104,6 +185,42 @@ func (bb *Build) buildArgs(dockerfile string, env map[string]string) ([]string, 
 			k := strings.TrimSpace(parts[0])
 			if v, ok := env[k]; ok {
 				args = append(args, "--build-arg", fmt.Sprintf("%s=%s", k, v))
+			}
+		}
+	}
+
+	return args, nil
+}
+
+func (bb *Build) buildArgs2(dockerfile string, env map[string]string) ([]string, error) {
+	fd, err := os.Open(dockerfile)
+	if err != nil {
+		return nil, err
+	}
+	defer fd.Close()
+
+	s := bufio.NewScanner(fd)
+
+	args := []string{}
+
+	for s.Scan() {
+		fields := strings.Fields(strings.TrimSpace(s.Text()))
+
+		if len(fields) < 2 {
+			continue
+		}
+
+		parts := strings.Split(fields[1], "=")
+
+		switch fields[0] {
+		case "FROM":
+			if bb.Development && strings.Contains(strings.ToLower(s.Text()), "as development") {
+				args = append(args, "--target", "development")
+			}
+		case "ARG":
+			k := strings.TrimSpace(parts[0])
+			if v, ok := env[k]; ok {
+				args = append(args, "--build-arg:", fmt.Sprintf("%s=%s", k, v))
 			}
 		}
 	}
