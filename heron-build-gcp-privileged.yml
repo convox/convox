@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: nodejs
+    name: build
+    rack: dev11
+    release: RLUYFXHWLEL
+    service: build
+    system: convox
+    type: process
+  name: heron
+spec:
+  restartPolicy: Never
+  containers:
+  - args:
+    - build
+    - -method
+    - tgz
+    - -cache
+    - "true"
+    env:
+    - name: BUILD_PUSH
+      value: gcr.io/heron-334418/nodejs
+    - name: BUILD_GENERATION
+      value: "2"
+    - name: BUILD_APP
+      value: nodejs
+    - name: BUILD_AUTH
+      value: '{"gcr.io/heron-334418/nodejs":{"Username":"_json_key","Password":"{\n  \"type\":
+        \"service_account\",\n  \"project_id\": \"heron-334418\",\n  \"private_key_id\":
+        \"37cbd0323e6ca819dd0fbae64bfcac70ec9785b6\",\n  \"private_key\": \"-----BEGIN
+        PRIVATE KEY-----\\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC78ht4+1B5IU8G\\nvKUm//uJorCDw64GxIjM8AFQi/CcorAT+g6TT99o1F/ExzK3UleIukqzbeQcII7F\\nZ3Or2kT3DIpkM9WIg0U2cxVj2EcmG2T7i2+/oplVMXwRAuoEFl6AzQQUWhKJkwHF\\nHwE7bL3THl39gxa9Oyoap4o1VKRv4UZOInKPZ3KGB1qoTq/PZdGu9HsEBnjJue1W\\nyd8UKj0RmFLgF7VV91uAlOHdXDkDFKgirlqyZ4GpZr1yRJz4N5mNP57bxerdb30H\\ncP6bFCeLaYoR4pa+p8YdPocChj31KqMjN+8nrVF1LbZ2cI1Zy1ns+R0l+sFMS4Lg\\nO8SmLLifAgMBAAECggEAApHyZQdV98h7bF8pO80YvOGxqKU4L88bA82gZvnGH445\\nLcmONRHmWM7WqtOcH1YL7MqHYC7EUmVYYapJf0C4qRw0MRL+ySNQz5U0f+BvdwqK\\nD5QkW6pQjt6vXXHJwdnAdXulCG/QfK5Ujt24RmTCFi0xiD71RHJjrM7WHMz8g3i6\\n6zkH94ZkwpDN2THDqgQhSYBaLSxRTqr8LG/LH8oTQQElm2qMhZShgomQO8D1OJUK\\n3SPummu6Tp282AtUjYD5lNa7sm3LCIenCMXpXZ2NYrWKBAO1Op+ipzqj7zK7MFmA\\nCUKYVTbGzUSnpDqIOzp5MWoXhT5K5jySitYwmByDEQKBgQD4xbZbwC4ZI3grgAUO\\nXSfNSfFuA/+f2Cg+i8j04XrLKdzq6q7JXe3VWmNShm9IbQEej0uAISUrHvnPd+Aw\\n6rPHwKqouwHt4Zsn6BmEBZbC/AO8uw4QbuobvgQDzoQ+TesOUJCT3dcV7ej/MHHz\\nw2wgtrixJD8x7AeqXaO5YqSiVwKBgQDBZ/yS9zn0DD74MtphsdRpRwHizWHybYPY\\nb0MVKixRqTtCjIgTS2dOSPcCiZo4/LiSuLF7HdGkFRFGl5CHAiqsFuAbGhzdaaqG\\nBLwLmdrqHN+RXaaFwn8zS2CvlQ2ZiepKR4hzgk6ohRTPPoScK2T8zOElwVfiaAOj\\nNIQ2Bnx++QKBgQDY0Ig0wvPqWO19DCBb+nicBNv0RGvfxiadDHtiYboBo0S1QUCA\\no+qKzjJOVHhcqRQWrFDjJQAd6utSFGpCd+ukJpkWYZY22y+8wh6q36wb2ETxkh2Z\\n2PEUqLEbGDxNiN9aJIE9PlUc+bLd5j0KdMGiaV3ilXK2cb3kj6QICJ7wFQKBgHWs\\n0nWNLNq7dLjJICxe6bGgfZpEgnrhfV373GINReftwtur68NplpKAPKJznL1druO+\\nsmYJb5uZIejEoTAz9ki8pmB3E+b3usROLygT1amqJbEpvP8XpxNLoqlSVHL+Aept\\n+azmNPu99TpffIoUsR5LfhXdvJ5J0STE+Ehyy97pAoGBAKQPuSS2qE7yZDUaXWQT\\neM4e1CgqA7PBJkzuOJTYjeaUJTqCbIAKmZudJamuihQMdsMQZ3hEYfKzvPDWRjok\\n7EeSZi70iHEzwFR815wp+6k2dbLkUcbnDxU1eZDxCzCHfkuILMFmmjkkwNBN2Nl5\\npgoQ+vRC5Bv0tyl8xdpsadA5\\n-----END
+        PRIVATE KEY-----\\n\",\n  \"client_email\": \"tgcp2-api@heron-334418.iam.gserviceaccount.com\",\n  \"client_id\":
+        \"114814295906478184691\",\n  \"auth_uri\": \"https://accounts.google.com/o/oauth2/auth\",\n  \"token_uri\":
+        \"https://oauth2.googleapis.com/token\",\n  \"auth_provider_x509_cert_url\":
+        \"https://www.googleapis.com/oauth2/v1/certs\",\n  \"client_x509_cert_url\":
+        \"https://www.googleapis.com/robot/v1/metadata/x509/tgcp2-api%40heron-334418.iam.gserviceaccount.com\"\n}\n"}}'
+    - name: BUILD_ID
+      value: BGSOQQXFGTW
+    - name: BUILD_MANIFEST
+      value: convox.yml
+    - name: BUILD_RACK
+      value: tgcp2
+    - name: BUILD_URL
+      value: object://nodejs/tmp/458adfb68b473258525ae01a594b02.tgz
+    - name: BUILD_DEVELOPMENT
+      value: "false"
+    - name: RACK_URL
+      value: https://convox:eLAHr3IhIC9mx01MQXSkMc38I1snosqKKpjlLwcyLZ5kvvEV1QZUrFS38WrB3gZN@api.tgcp2-system.svc.cluster.local:5443
+    image: heronrs/convox:buildkit-rootless
+    imagePullPolicy: Always
+    name: nodejs
+    securityContext:
+      privileged: true
+    resources:
+      requests:
+        cpu: 512m
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+  shareProcessNamespace: true
+  terminationGracePeriodSeconds: 30

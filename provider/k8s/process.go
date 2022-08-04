@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 
@@ -286,26 +287,38 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 		release = a.Release
 	}
 
+	anot := map[string]string{}
+	if service == "build" {
+		s.Containers[0].SecurityContext = &ac.SecurityContext{SeccompProfile: &ac.SeccompProfile{Type: ac.SeccompProfileTypeUnconfined}}
+		if os.Getenv("PROVIDER") == "gcp" {
+			s.Containers[0].SecurityContext.Privileged = options.Bool(true)
+		}
+		anot[fmt.Sprintf("container.apparmor.security.beta.kubernetes.io/%s", s.Containers[0].Name)] = "unconfined"
+		s.RestartPolicy = ac.RestartPolicyNever
+	}
+
+	pod := &ac.Pod{
+		ObjectMeta: am.ObjectMeta{
+			Annotations:  anot,
+			GenerateName: fmt.Sprintf("%s-", service),
+			Labels: map[string]string{
+				"app":     app,
+				"rack":    p.Name,
+				"release": release,
+				"service": service,
+				"system":  "convox",
+				"type":    "process",
+				"name":    service,
+			},
+		},
+		Spec: *s,
+	}
+
+	println(pod.String())
+
 	pd, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Create(
 		context.TODO(),
-		&ac.Pod{
-			ObjectMeta: am.ObjectMeta{
-				Annotations: map[string]string{
-					// "iam.amazonaws.com/role": ns.ObjectMeta.Annotations["convox.aws.role"],
-				},
-				GenerateName: fmt.Sprintf("%s-", service),
-				Labels: map[string]string{
-					"app":     app,
-					"rack":    p.Name,
-					"release": release,
-					"service": service,
-					"system":  "convox",
-					"type":    "process",
-					"name":    service,
-				},
-			},
-			Spec: *s,
-		},
+		pod,
 		am.CreateOptions{},
 	)
 	if err != nil {
@@ -314,6 +327,7 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 
 	ps, err := p.ProcessGet(app, pd.ObjectMeta.Name)
 	if err != nil {
+		println("error creating build pod", err.Error())
 		return nil, errors.WithStack(err)
 	}
 

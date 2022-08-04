@@ -82,6 +82,79 @@ func TestBuildGeneration2(t *testing.T) {
 	})
 }
 
+func TestBuildGeneration2BuildKit(t *testing.T) {
+	opts := build.Options{
+		App:    "app1",
+		Auth:   "{}",
+		Cache:  true,
+		Id:     "build1",
+		Rack:   "rack1",
+		Source: "object://app1/object.tgz",
+		Push:   "registry.test.com",
+	}
+
+	testBuild(t, opts, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
+		p.On("BuildGet", "app1", "build1").Return(fxBuildStarted(), nil).Once()
+
+		bdata, err := ioutil.ReadFile("testdata/httpd.tgz")
+		require.NoError(t, err)
+		p.On("ObjectFetch", "app1", "/object.tgz").Return(ioutil.NopCloser(bytes.NewReader(bdata)), nil)
+
+		mdata, err := ioutil.ReadFile("testdata/httpd/convox.yml")
+		require.NoError(t, err)
+
+		p.On("BuildUpdate", "app1", "build1", mock.Anything).Return(fxBuildStarted(), nil).Run(func(args mock.Arguments) {
+			opts := args.Get(2).(structs.BuildUpdateOptions)
+			if opts.Ended != nil {
+				require.False(t, opts.Ended.IsZero())
+			}
+			if opts.Logs != nil {
+				require.NotNil(t, opts.Logs)
+			}
+			if opts.Manifest != nil {
+				require.Equal(t, string(mdata), *opts.Manifest)
+			}
+		})
+
+		p.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil)
+		p.On("ReleaseGet", "app1", "release1").Return(fxRelease(), nil)
+
+		e.On(
+			"Run",
+			mock.Anything,
+			"buildctl", "build", "--frontend", "dockerfile.v0", "--local", mock.MatchedBy(matchContext), "--local", mock.MatchedBy(matchDockerfile),
+			"--opt", mock.MatchedBy(matchFilename), "--output", mock.MatchedBy(matchTag),
+			"--export-cache", "type=registry,ref=registry.test.com:buildcache",
+			"--import-cache", "type=registry,ref=registry.test.com:buildcache",
+		).Return(nil).Run(func(args mock.Arguments) {
+			fmt.Fprintf(args.Get(0).(io.Writer), "build1\nbuild2\n")
+		})
+
+		p.On("ObjectStore", "app1", "build/build1/logs", mock.Anything, structs.ObjectStoreOptions{}).Return(fxObject(), nil).Run(func(args mock.Arguments) {
+			_, err := ioutil.ReadAll(args.Get(2).(io.Reader))
+			require.NoError(t, err)
+			// require.Equal(t, "Building: .\nbuild1\nbuild2\nRunning: docker pull httpd\nRunning: docker tag e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445 rack1/app1:web2.build1\nRunning: docker tag httpd rack1/app1:web.build1\n", string(data))
+		})
+		p.On("ReleaseCreate", "app1", structs.ReleaseCreateOptions{Build: options.String("build1")}).Return(fxRelease2(), nil)
+		p.On("EventSend", "build:create", structs.EventSendOptions{Data: map[string]string{"app": "app1", "id": "build1", "release_id": "release2"}}).Return(nil)
+
+		err = b.Execute()
+		require.NoError(t, err)
+
+		// require.Equal(t,
+		// 	[]string{
+		// 		"Building: .",
+		// 		"build1",
+		// 		"build2",
+		// 		"Running: docker pull httpd",
+		// 		"Running: docker tag e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445 rack1/app1:web2.build1",
+		// 		"Running: docker tag httpd rack1/app1:web.build1",
+		// 	},
+		// 	strings.Split(strings.TrimSuffix(out.String(), "\n"), "\n"),
+		// )
+	})
+}
+
 func TestBuildGeneration2Development(t *testing.T) {
 	opts := build.Options{
 		App:         "app1",
@@ -368,6 +441,21 @@ func matchTempdir(arg string) bool {
 	return strings.HasPrefix(arg, os.TempDir())
 }
 
+func matchContext(arg string) bool {
+	return strings.HasPrefix(arg, "context")
+}
+
+func matchDockerfile(arg string) bool {
+	return strings.HasPrefix(arg, "dockerfile")
+}
+
+func matchTag(arg string) bool {
+	return strings.HasPrefix(arg, "type=image,name=registry.test.com:web")
+}
+
+func matchFilename(arg string) bool {
+	return strings.HasPrefix(arg, "filename")
+}
 func matchTempdirFile(name string) func(string) bool {
 	return func(arg string) bool {
 		if !matchTempdir(arg) {

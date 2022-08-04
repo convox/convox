@@ -3,6 +3,7 @@ package build
 import (
 	"bytes"
 	"compress/gzip"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -20,6 +21,7 @@ import (
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/exec"
+	"github.com/pkg/errors"
 )
 
 type Options struct {
@@ -83,7 +85,7 @@ func (bb *Build) execute() error {
 		return err
 	}
 
-	if err := bb.login(); err != nil {
+	if err := bb.login2(); err != nil {
 		return err
 	}
 
@@ -101,7 +103,7 @@ func (bb *Build) execute() error {
 		return err
 	}
 
-	if err := bb.build(dir); err != nil {
+	if err := bb.build2(dir); err != nil {
 		return err
 	}
 
@@ -186,6 +188,109 @@ func (bb *Build) login() error {
 	return nil
 }
 
+func (bb *Build) login2() error {
+	var registries map[string]struct {
+		Username string
+		Password string
+	}
+
+	type auth struct {
+		Auth string `json:"auth"`
+	}
+
+	type authConfig struct {
+		Auths map[string]auth
+	}
+
+	if err := json.Unmarshal([]byte(bb.Auth), &registries); err != nil {
+		return err
+	}
+
+	ac := authConfig{Auths: make(map[string]auth)}
+	for host, entry := range registries {
+		ac.Auths[host] = auth{
+			Auth: base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", entry.Username, entry.Password))),
+		}
+	}
+
+	f, err := json.Marshal(ac)
+	if err != nil {
+		return err
+	}
+
+	home := os.Getenv("HOME")
+	err = os.WriteFile(fmt.Sprintf("%s/.docker/config.json", home), f, 0755)
+	if err != nil {
+		return errors.WithStack(fmt.Errorf("failed to create registry credentials file - %s", err.Error()))
+	}
+
+	return nil
+}
+
+func (bb *Build) build2(dir string) error {
+	config := filepath.Join(dir, bb.Manifest)
+
+	if _, err := os.Stat(config); os.IsNotExist(err) {
+		return fmt.Errorf("no such file: %s", bb.Manifest)
+	}
+
+	data, err := ioutil.ReadFile(config)
+	if err != nil {
+		return err
+	}
+
+	env, err := common.AppEnvironment(bb.Provider, bb.App)
+	if err != nil {
+		return err
+	}
+
+	m, err := manifest.Load(data, env)
+	if err != nil {
+		return err
+	}
+
+	if err := m.Validate(); err != nil {
+		return err
+	}
+
+	type build struct {
+		Build manifest.ServiceBuild
+		Image string
+		Tag   string
+	}
+
+	builds := []build{}
+
+	for _, s := range m.Services {
+		b := build{
+			Build: s.Build,
+			Image: s.Image,
+		}
+
+		if bb.Push != "" {
+			b.Tag = fmt.Sprintf("%s:%s.%s", bb.Push, s.Name, bb.Id)
+		}
+
+		builds = append(builds, b)
+	}
+
+	for ix, build := range builds {
+		if build.Image != "" {
+			os.WriteFile(fmt.Sprintf("%s/Dockerfile.%d", dir, ix), []byte(fmt.Sprintf("FROM %s", build.Image)), 0755)
+
+			if err := bb.buildBuildKit(dir, fmt.Sprintf("Dockerfile.%d", ix), build.Tag, env); err != nil {
+				return err
+			}
+		} else {
+			if err := bb.buildBuildKit(filepath.Join(dir, build.Build.Path), build.Build.Manifest, build.Tag, env); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 func (bb *Build) build(dir string) error {
 	config := filepath.Join(dir, bb.Manifest)
 
@@ -227,6 +332,14 @@ func (bb *Build) build(dir string) error {
 	pushes := map[string]string{}
 	tags := map[string][]string{}
 
+	type build struct {
+		Build manifest.ServiceBuild
+		Image string
+		Tag   string
+	}
+
+	all := []build{}
+
 	for _, s := range m.Services {
 		hash := s.BuildHash(bb.Id)
 		to := fmt.Sprintf("%s:%s.%s", prefix, s.Name, bb.Id)
@@ -239,10 +352,34 @@ func (bb *Build) build(dir string) error {
 			tags[hash] = append(tags[hash], to)
 		}
 
+		b := build{
+			Build: s.Build,
+			Image: s.Image,
+		}
+
 		if bb.Push != "" {
 			pushes[to] = fmt.Sprintf("%s:%s.%s", bb.Push, s.Name, bb.Id)
+			b.Tag = fmt.Sprintf("%s:%s.%s", bb.Push, s.Name, bb.Id)
+		}
+
+		all = append(all, b)
+	}
+
+	for ix, build := range all {
+		if build.Image != "" {
+			os.WriteFile(fmt.Sprintf("%s/Dockerfile.%d", dir, ix), []byte(fmt.Sprintf("FROM %s", build.Image)), 0755)
+
+			if err := bb.buildBuildKit(dir, fmt.Sprintf("Dockerfile.%d", ix), build.Tag, env); err != nil {
+				return err
+			}
+		} else {
+			if err := bb.buildBuildKit(filepath.Join(dir, build.Build.Path), build.Build.Manifest, build.Tag, env); err != nil {
+				return err
+			}
 		}
 	}
+
+	return nil
 
 	for hash, b := range builds {
 		bb.Printf("Building: %s\n", b.Path)
