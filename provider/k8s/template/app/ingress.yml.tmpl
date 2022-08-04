@@ -1,4 +1,4 @@
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   namespace: {{.Namespace}}
@@ -47,8 +47,10 @@ spec:
       http:
         paths:
         - backend:
-            serviceName: {{.Service.Name}}
-            servicePort: {{.Service.Port.Port}}
+            service:
+              name: {{.Service.Name}}
+              port:
+                number: {{.Service.Port.Port}}
     {{ range .Service.Domains }}
     - host: {{ safe . }}
       http:
