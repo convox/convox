@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    kubernetes.io/psp: eks.privileged
+    container.apparmor.security.beta.kubernetes.io/nodejs: unconfined
+  # generateName: heron-
+  labels:
+    app: nodejs
+    name: build
+    rack: dev11
+    release: RLUYFXHWLEL
+    service: build
+    system: convox
+    type: process
+  name: heron
+spec:
+  restartPolicy: Never
+  containers:
+  - args:
+    - build
+    - -method
+    - tgz
+    - -cache
+    - "true"
+    env:
+    - name: BUILDKITD_FLAGS
+      value: --oci-worker-no-process-sandbox
+    - name: BUILD_GENERATION
+      value: "2"
+    - name: BUILD_DEVELOPMENT
+      value: "false"
+    - name: BUILD_ID
+      value: BIXOHWKNYVY
+    - name: BUILD_RACK
+      value: dev11
+    - name: RACK_URL
+      value: https://convox:DnuJOlybGdbLu45i6c5uDLpiFxZa7lMfIQZ066OtNu9MSnwXb2f5z4xjllMTIm8M@api.dev11-system.svc.cluster.local:5443
+    - name: BUILD_PUSH
+      value: 470778123668.dkr.ecr.us-east-1.amazonaws.com/dev11/nodejs
+    - name: BUILD_APP
+      value: nodejs
+    - name: BUILD_AUTH
+      value: '{"470778123668.dkr.ecr.us-east-1.amazonaws.com/dev11/nodejs":{"Username":"AWS","Password":"eyJwYXlsb2FkIjoidXlmTkw2bkRDTmNiZm9hNzQzVjJ6NkttYVRNV0o2Y0pTWldrZzZ0NkFLME9UTUFiaHFKRnA2QjZmeDRMY2JueDgwNDlDeXhETStJa2N5RHV4Y2ZZKzdROU9BR2huT0h2K0VBMlRHUXFUVlBiWVU0SUluZU5oL1l3VkpSYmNiTUQ2cGh1MnYyVGxFSVpCZkoyT25mOW5kdUhpQzk3V3N5NXdmVUs0T1N0Z01QaWl3amNaU3hpc0NhWmRaNFhFNTg2Z2hqU0NCUHBDYzhLRnBwUnNlMVhQdEVEcEoxcDRNcTV4bHgrSk9GRmtMdnFxR3pwNTQycWNJNm5WUzlwUXRhUllLdFpTc1ZlZCtNNWRzUUVIdklwTG1BeXRtbXFjMldTTGJlUy9QalROdnkzOGpQSStOenEvb3Z3dG1CTTMyS29peDJJcU1OMHQveDlIUnJnTkJ1N1JpeXIreHh1ZnExdERabHFUb2xUbGlLU1N3K0o4VmZOVjBJdGdSb3BxaGdna2ZqTk5CWnhCdWU1bDNBaHl6MGk1REZWY01Iam9yQkh3czdoN1VzV0FERUNpbjkzODRFdFdtS2U1dXl1cFA1REJFa2RPL1UzL2ZZZUpsbHhoeVZpdWZ3N0pDOG5rY0lxTGc5L25LYUFaMEp3a2xHcjF1cW1DWVZ4b1owM3QydmlvbmozbDBJMjZqTHlIbGJnTVFHWWZTVk9rV092RVZ4OVZQV1RraGdyeDU4ZFVCZy9WSkJPazV4cWdHQ3BidGo0L1lJa3VrNkU5ZXZlczV2cllqU20zd3RsM3FDSjU4WkppT2QyR3lzMUo5TCtMbGtPQ0kremVyU2M5SkdSeVFqL2oyUnJGZlkzbEI0Z0MweU1qczlzWnI5U2tJSUxMZldMRDhTWEtValhzY1pRRWZteVorUWorNFlpcXc5eWY3empkSmJFQld3dnc2clRoeXpUcUNWek5JcXhiQkxObThvWEFmSmRGaXBWL2pSZ000bjRLa0kxWWVFVDdBcG5sZzJKaCtIQmFkcGRvUVpCSWJnNThaTGRqZmZTYjQ0cEVXZ0tESEtiUDJPaHowbmQ4VW1TOG1LUm5oRTZjaXlkMi96dDdpdXFFY2xLem5OZnJZTEJiZVk5bnJEa0R4TWp3SU1MTmpGSWlCZ2RRaFN5RGVKTjNBT0h3R3BvRFRSbDAxVVlkSlVBYzRiSEt3RWtMS04zZXVIbzdoa29yK2xJUlJjTFQ0TUpFQzV1REpLRytRT0dZb2VTd3A5MHV4ZTJsREVweDVyTCtmbnBIOU1JMG1yTnh4RUlacUNuTlpLbGduNnFrS2g2eXdmRkRKeUQxbmcxRzgzTXRiakNTSFBxQnJZdXRoTGRNNXlYTVJzRkN4eGJUTndUZFQrN1hOLzlSN2U4U0VhTjkxNDVrNFRJNkErOXYwc0NDUzBBZkpNQStJT1czRmpzeG5QNHI2WXVkeGtVcDd1blYreTZEbjFmajV1ekdqVCtad3VreWdWaWc0c3FVTmpTSmJJZ0ZRaFhTTWd1dFkzVGo1dTZoTWpMV3BQSVVncmkzWERTeVpQb0VwTzRMMEhoUTNLbDAwM21iL3dJSFVuQ0J4ZkNudVdtd3Q1MWlIM0hBbldEZ2ViY3pBVFBqNmVQOVo5WVFXY3ZRVEc0U3gxRzJoeWI5UTRXL0tkelFJVHdQeUpMeFJvVmJBQW1wU0FEUGJUazNnWEpVQm1xLzJPNlZBOXRXUVdlckcyanh0cngwM2tXZzJEZG5wMkdKMk1YU3R2dm1SZEtBL0xFYUdUbXU1d215SndmLzg1bzFncVhRZjlMQW5qWDlEWnNGM0hCNC9iVWZYYy9Xcjh1T01Nd08yS1lCVnJwMFVMci91SU1HWEZwVmtzakxjTjVlVzFCbnNBU3NGNmFmMndxaGVMbXBucjBOY2RSKzJRWXF2TlFjTnFNaGppRUJYNitSMEwxTzVWTXVVYjRqSTZnM1Vhb0xyRWdLV2NWbDJ1dnkyMktQWFY2d1ZtSHRCcXkwV0t2MWsyZUxEdEt2OTEzd1J2Tk9vYmgyY2d4Q24xVmtyc3NiZElZUFdWQ2pkeHpvajdGNGZsRWxiN0ExOHNpVlErbXhWUk5mUTZqcytkdTZUbnVYSnk3alRQc1hTRmRiRW1SeHVmczZIOStKSk53S2N6VjhlNXdJcVVDcnVPM21ib2RJcThkdHdzeFJFSFhPU3ZjYkkxN2N5M21nNXlRcUtxZjFhV1lnN1ExZXE2aGRGM1V0bVpOcHQveHgrcTl1TXNqSFZyUWx1YzVJTDNSK0ZIMWRZY0JwOHFlMVZ6OEc3MzVnRHZMWGJaVHFwZU1BcWtSL1A3NTNkeHRYaDZRNFRFQUJ2ZDF5ZFNMYXp4cjhnQXVsb25vUnZUeG5qaER5UVUvVEVCRnhZNXdOVHBRak1INUtXMVhmTms1Sm1UM3d4cU5ZT2U3Nm1HRyIsImRhdGFrZXkiOiJBUUVCQUhod20wWWFJU0plUnRKbTVuMUc2dXFlZWtYdW9YWFBlNVVGY2U5UnE4LzE0d0FBQUg0d2ZBWUpLb1pJaHZjTkFRY0dvRzh3YlFJQkFEQm9CZ2txaGtpRzl3MEJCd0V3SGdZSllJWklBV1VEQkFFdU1CRUVETHlJS2luUGwxWVZ3VDRlZ0FJQkVJQTdvOGcxWDdycnU2Y2sxVzlQZldnSWI3dWdidFcwMkdtcXpSQ3EzalFZMnQraE9tZHZwT1Z1Skh5SkFDeWNVdlRuV3czelh2bHdNZFYwK0JVPSIsInZlcnNpb24iOiIyIiwidHlwZSI6IkRBVEFfS0VZIiwiZXhwaXJhdGlvbiI6MTY1OTY2MzQxM30="}}'
+    - name: BUILD_MANIFEST
+      value: convox.yml
+    - name: BUILD_URL
+      value: object://nodejs/tmp/5e790e7cb42f20ff8b72a23d59fecb.tgz
+    image: heronrs/convox:buildkit20
+    imagePullPolicy: Always
+    name: nodejs
+    securityContext:
+      seccompProfile:
+        type: Unconfined
+    resources:
+      requests:
+        cpu: 512m
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+  shareProcessNamespace: true
+  terminationGracePeriodSeconds: 30
