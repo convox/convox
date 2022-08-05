@@ -16,8 +16,6 @@ COPY --from=package /go/bin/build /usr/bin
 
 COPY ./buildctl-daemonless.sh /buildctl-daemonless.sh
 
-# RUN chmod +x ./buildctl-daemonless.sh
-
 USER 1000
 
 RUN mkdir -p $HOME/.docker
