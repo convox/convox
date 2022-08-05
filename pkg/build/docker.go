@@ -76,6 +76,10 @@ func (bb *Build) buildDocker(path, dockerfile string, tag string, env map[string
 	return nil
 }
 
+func (bb *Build) cacheProvider(provider string) bool {
+	return provider != "" && strings.Contains("do az", provider)
+}
+
 func (bb *Build) buildBuildKit(path, dockerfile string, tag string, env map[string]string) error {
 	if path == "" {
 		return fmt.Errorf("must have path to build")
@@ -83,15 +87,18 @@ func (bb *Build) buildBuildKit(path, dockerfile string, tag string, env map[stri
 
 	// buildctl build --frontend dockerfile.v0 --local context=. --local dockerfile=. --opt filename=Dockerfile --export-cache type=inline --import-cache type=registry,ref=4707781
 	// 23668.dkr.ecr.us-east-1.amazonaws.com/dev11/nodejs --output type=image,name=470778123668.dkr.ecr.us-east-1.amazonaws.com/dev11/nodejs,push=true
-	reg := strings.Split(tag, ":")[0]
 	args := []string{"build"}
 	args = append(args, "--frontend", "dockerfile.v0")
 	args = append(args, "--local", fmt.Sprintf("context=%s", path))
 	args = append(args, "--local", fmt.Sprintf("dockerfile=%s", path))
 	args = append(args, "--opt", fmt.Sprintf("filename=%s", dockerfile))
 	args = append(args, "--output", fmt.Sprintf("type=image,name=%s,push=true", tag))
-	args = append(args, "--export-cache", fmt.Sprintf("type=registry,ref=%s:buildcache", reg))
-	args = append(args, "--import-cache", fmt.Sprintf("type=registry,ref=%s:buildcache", reg))
+
+	if bb.cacheProvider(os.Getenv("PROVIDER")) {
+		reg := strings.Split(tag, ":")[0]
+		args = append(args, "--export-cache", fmt.Sprintf("type=registry,ref=%s:buildcache", reg))
+		args = append(args, "--import-cache", fmt.Sprintf("type=registry,ref=%s:buildcache", reg))
+	}
 
 	println(strings.Join(args, " "))
 

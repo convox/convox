@@ -25,6 +25,14 @@ import (
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+func (p *Provider) buildImage(provider string) string {
+	img := fmt.Sprintf("%s-build", p.Image)
+	if provider == "gcp" {
+		img = fmt.Sprintf("%s-build-privileged", p.Image)
+	}
+	return img
+}
+
 func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions) (*structs.Build, error) {
 	if _, err := p.AppGet(app); err != nil {
 		return nil, errors.WithStack(err)
@@ -66,6 +74,7 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 		"BUILD_MANIFEST":    common.DefaultString(opts.Manifest, "convox.yml"),
 		"BUILD_RACK":        p.Name,
 		"BUILD_URL":         url,
+		"PROVIDER":          os.Getenv("PROVIDER"),
 		"RACK_URL":          fmt.Sprintf("https://convox:%s@api.%s.svc.cluster.local:5443", p.Password, p.Namespace),
 	}
 
@@ -80,7 +89,8 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 		Command:     options.String(fmt.Sprintf("build -method tgz -cache %t", cache)),
 		Cpu:         options.Int(512),
 		Environment: env,
-		Image:       options.String(p.Image),
+		Image:       options.String(p.buildImage(os.Getenv("PROVIDER"))),
+		Privileged:  options.Bool(os.Getenv("PROVIDER") == "gcp"),
 		Volumes: map[string]string{
 			p.Socket: "/var/run/docker.sock",
 		},

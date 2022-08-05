@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
-	"os"
 	"strings"
 	"time"
 
@@ -271,11 +270,6 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 		return nil, errors.WithStack(err)
 	}
 
-	// ns, err := p.Cluster.CoreV1().Namespaces().Get(p.Namespace, am.GetOptions{})
-	// if err != nil {
-	// 	return nil, err
-	// }
-
 	release := common.DefaultString(opts.Release, "")
 
 	if release == "" {
@@ -287,19 +281,21 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 		release = a.Release
 	}
 
-	anot := map[string]string{}
+	ans := map[string]string{}
 	if service == "build" {
-		s.Containers[0].SecurityContext = &ac.SecurityContext{SeccompProfile: &ac.SeccompProfile{Type: ac.SeccompProfileTypeUnconfined}}
-		if os.Getenv("PROVIDER") == "gcp" {
-			s.Containers[0].SecurityContext.Privileged = options.Bool(true)
+		for idx := 0; idx < len(s.Containers); idx++ {
+			s.Containers[idx].SecurityContext = &ac.SecurityContext{SeccompProfile: &ac.SeccompProfile{Type: ac.SeccompProfileTypeUnconfined}}
+			if opts.Privileged != nil && *opts.Privileged {
+				s.Containers[idx].SecurityContext = &ac.SecurityContext{Privileged: options.Bool(true)}
+				ans[fmt.Sprintf("container.apparmor.security.beta.kubernetes.io/%s", s.Containers[idx].Name)] = "unconfined"
+			}
 		}
-		anot[fmt.Sprintf("container.apparmor.security.beta.kubernetes.io/%s", s.Containers[0].Name)] = "unconfined"
 		s.RestartPolicy = ac.RestartPolicyNever
 	}
 
 	pod := &ac.Pod{
 		ObjectMeta: am.ObjectMeta{
-			Annotations:  anot,
+			Annotations:  ans,
 			GenerateName: fmt.Sprintf("%s-", service),
 			Labels: map[string]string{
 				"app":     app,
@@ -313,8 +309,6 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 		},
 		Spec: *s,
 	}
-
-	println(pod.String())
 
 	pd, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Create(
 		context.TODO(),
