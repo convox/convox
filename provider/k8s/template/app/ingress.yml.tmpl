@@ -56,6 +56,8 @@ spec:
       http:
         paths:
         - backend:
-            serviceName: {{$.Service.Name}}
-            servicePort: {{$.Service.Port.Port}}
+            service:
+              name: {{$.Service.Name}}
+              port:
+                number: {{$.Service.Port.Port}}
     {{ end }}
