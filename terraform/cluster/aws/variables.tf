@@ -24,7 +24,7 @@ variable "internet_gateway_id" {
 
 variable "k8s_version" {
   type = string
-  default = "1.18"
+  default = "1.21"
 }
 
 variable "name" {
