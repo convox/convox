@@ -30,6 +30,7 @@ metadata:
     system: convox
     type: service
 spec:
+  ingressClassName: "{{.Class}}"
   tls:
   - hosts:
     - {{ safe .Host }}
@@ -41,7 +42,6 @@ spec:
     {{ end }}
     secretName: cert-{{$.Service.Name}}-domains
   {{ end }}
-  ingressClassName: "{{.Class}}"
   rules:
     - host: {{ safe .Host }}
       http:

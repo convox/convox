@@ -145,6 +145,12 @@ resource "kubernetes_role" "ingress-nginx" {
   }
 
   rule {
+    api_groups      = ["coordination.k8s.io"]
+    resources       = ["leases"]
+    verbs           = ["create"]
+  }
+
+  rule {
     api_groups      = ["networking.k8s.io"]
     resources       = ["ingressclasses"]
     verbs           = ["get", "list", "watch"]
