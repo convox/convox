@@ -7,7 +7,6 @@ metadata:
     alb.ingress.kubernetes.io/scheme: internet-facing
     convox.com/backend-protocol: "{{.Service.Port.Scheme}}"
     convox.com/idles: "{{.Idles}}"
-    kubernetes.io/ingress-class: "{{.Class}}"
     nginx.ingress.kubernetes.io/backend-protocol: "{{.Service.Port.Scheme}}"
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "{{.Service.Timeout}}"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "{{.Service.Timeout}}"
@@ -42,6 +41,7 @@ spec:
     {{ end }}
     secretName: cert-{{$.Service.Name}}-domains
   {{ end }}
+  ingressClassName: "{{.Class}}"
   rules:
     - host: {{ safe .Host }}
       http:
