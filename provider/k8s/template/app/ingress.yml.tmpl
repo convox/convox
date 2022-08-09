@@ -51,6 +51,7 @@ spec:
               name: {{.Service.Name}}
               port:
                 number: {{.Service.Port.Port}}
+          pathType: ImplementationSpecific
     {{ range .Service.Domains }}
     - host: {{ safe . }}
       http:
