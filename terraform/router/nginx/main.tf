@@ -34,6 +34,16 @@ resource "kubernetes_service_account" "ingress-nginx" {
   }
 }
 
+resource "kubernetes_ingress_class" "nginx" {
+  metadata {
+    name = "nginx"
+  }
+
+  spec {
+    controller = "k8s.io/ingress-nginx"
+  }
+}
+
 resource "kubernetes_cluster_role" "ingress-nginx" {
   metadata {
     name = "ingress-nginx"
