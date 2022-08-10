@@ -5,12 +5,7 @@ metadata:
     convox.com/lock: "false"
     convox.com/params: '{"Test":"foo"}'
   labels:
-    app: app1
     name: app1
-    provider: k8s
-    rack: rack1
-    release: release2
-    system: convox
     type: app
   name: rack1-app1
   ownerReferences:
@@ -28,13 +23,8 @@ metadata:
     service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "3600"
     service.beta.kubernetes.io/aws-load-balancer-type: nlb
   labels:
-    app: app1
     balancer: alpha
-    provider: k8s
-    rack: rack1
-    release: release2
     service: web
-    system: convox
     type: balancer
   name: balancer-alpha
   namespace: rack1-app1
@@ -53,7 +43,7 @@ spec:
     type: service
   type: LoadBalancer
 ---
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
@@ -61,7 +51,6 @@ metadata:
     ann1: val1
     convox.com/backend-protocol: http
     convox.com/idles: "false"
-    kubernetes.io/ingress-class: ""
     nginx.ingress.kubernetes.io/backend-protocol: http
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
@@ -74,28 +63,29 @@ metadata:
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
   labels:
     app: app1
-    provider: k8s
-    rack: rack1
-    release: release2
     service: web
     system: convox
     type: service
   name: web
   namespace: rack1-app1
 spec:
+  ingressClassName: ""
   rules:
   - host: service.host
     http:
       paths:
       - backend:
-          serviceName: web
-          servicePort: 5000
+          service:
+            name: web
+            port:
+              number: 5000
+        pathType: ImplementationSpecific
   tls:
   - hosts:
     - service.host
     secretName: cert-web
 ---
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
@@ -103,7 +93,6 @@ metadata:
     ann1: val1
     convox.com/backend-protocol: http
     convox.com/idles: "false"
-    kubernetes.io/ingress-class: ""
     nginx.ingress.kubernetes.io/backend-protocol: http
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
@@ -116,22 +105,23 @@ metadata:
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
   labels:
     app: app1
-    provider: k8s
-    rack: rack1
-    release: release2
     service: web2
     system: convox
     type: service
   name: web2
   namespace: rack1-app1
 spec:
+  ingressClassName: ""
   rules:
   - host: service.host
     http:
       paths:
       - backend:
-          serviceName: web2
-          servicePort: 5000
+          service:
+            name: web2
+            port:
+              number: 5000
+        pathType: ImplementationSpecific
   tls:
   - hosts:
     - service.host
@@ -144,9 +134,7 @@ kind: ConfigMap
 metadata:
   labels:
     app: app1
-    provider: k8s
     rack: rack1
-    release: release2
     resource: four
     system: convox
     type: resource
@@ -158,9 +146,7 @@ kind: PersistentVolumeClaim
 metadata:
   labels:
     app: app1
-    provider: k8s
     rack: rack1
-    release: release2
     resource: four
     system: convox
   name: resource-four
@@ -181,9 +167,7 @@ metadata:
     app: app1
     kind: postgres
     name: four
-    provider: k8s
     rack: rack1
-    release: release2
     resource: four
     system: convox
     type: resource
@@ -234,9 +218,7 @@ kind: Service
 metadata:
   labels:
     app: app1
-    provider: k8s
     rack: rack1
-    release: release2
     resource: four
     system: convox
     type: resource
@@ -259,9 +241,7 @@ kind: ConfigMap
 metadata:
   labels:
     app: app1
-    provider: k8s
     rack: rack1
-    release: release2
     resource: one
     system: convox
     type: resource
@@ -273,9 +253,7 @@ kind: PersistentVolumeClaim
 metadata:
   labels:
     app: app1
-    provider: k8s
     rack: rack1
-    release: release2
     resource: one
     system: convox
   name: resource-one
@@ -296,9 +274,7 @@ metadata:
     app: app1
     kind: postgres
     name: one
-    provider: k8s
     rack: rack1
-    release: release2
     resource: one
     system: convox
     type: resource
@@ -349,9 +325,7 @@ kind: Service
 metadata:
   labels:
     app: app1
-    provider: k8s
     rack: rack1
-    release: release2
     resource: one
     system: convox
     type: resource
@@ -374,9 +348,7 @@ kind: ConfigMap
 metadata:
   labels:
     app: app1
-    provider: k8s
     rack: rack1
-    release: release2
     resource: three
     system: convox
     type: resource
@@ -390,9 +362,7 @@ kind: ConfigMap
 metadata:
   labels:
     app: app1
-    provider: k8s
     rack: rack1
-    release: release2
     resource: two
     system: convox
     type: resource
@@ -404,9 +374,7 @@ kind: PersistentVolumeClaim
 metadata:
   labels:
     app: app1
-    provider: k8s
     rack: rack1
-    release: release2
     resource: two
     system: convox
   name: resource-two
@@ -426,9 +394,7 @@ metadata:
   labels:
     app: app1
     kind: mysql
-    provider: k8s
     rack: rack1
-    release: release2
     resource: two
     system: convox
     type: resource
@@ -476,9 +442,7 @@ kind: Service
 metadata:
   labels:
     app: app1
-    provider: k8s
     rack: rack1
-    release: release2
     resource: two
     system: convox
     type: resource
@@ -509,12 +473,7 @@ data:
 kind: Secret
 metadata:
   labels:
-    app: app1
-    provider: k8s
-    rack: rack1
-    release: release2
     service: agent
-    system: convox
     type: env
   name: env-agent
   namespace: rack1-app1
@@ -525,12 +484,7 @@ kind: ServiceAccount
 metadata:
   annotations: null
   labels:
-    app: app1
-    provider: k8s
-    rack: rack1
-    release: release2
     service: agent
-    system: convox
     type: serviceaccount
   name: agent
   namespace: rack1-app1
@@ -541,11 +495,7 @@ metadata:
   annotations: null
   labels:
     app: app1
-    provider: k8s
-    rack: rack1
-    release: release2
     service: agent
-    system: convox
     type: service
   name: agent
   namespace: rack1-app1
@@ -618,9 +568,7 @@ metadata:
     convox.com/alias: agent.app1.rack1.local
   labels:
     app: app1
-    provider: k8s
     rack: rack1
-    release: release2
     service: agent
     system: convox
   name: agent
@@ -655,12 +603,7 @@ data:
 kind: Secret
 metadata:
   labels:
-    app: app1
-    provider: k8s
-    rack: rack1
-    release: release2
     service: deployment
-    system: convox
     type: env
   name: env-deployment
   namespace: rack1-app1
@@ -671,12 +614,7 @@ kind: ServiceAccount
 metadata:
   annotations: null
   labels:
-    app: app1
-    provider: k8s
-    rack: rack1
-    release: release2
     service: deployment
-    system: convox
     type: serviceaccount
   name: deployment
   namespace: rack1-app1
@@ -688,11 +626,7 @@ metadata:
     atom.conditions: Available=True,Progressing=True/NewReplicaSetAvailable
   labels:
     app: app1
-    provider: k8s
-    rack: rack1
-    release: release2
     service: deployment
-    system: convox
     type: service
   name: deployment
   namespace: rack1-app1
@@ -769,12 +703,7 @@ data:
 kind: Secret
 metadata:
   labels:
-    app: app1
-    provider: k8s
-    rack: rack1
-    release: release2
     service: singleton
-    system: convox
     type: env
   name: env-singleton
   namespace: rack1-app1
@@ -785,12 +714,7 @@ kind: ServiceAccount
 metadata:
   annotations: null
   labels:
-    app: app1
-    provider: k8s
-    rack: rack1
-    release: release2
     service: singleton
-    system: convox
     type: serviceaccount
   name: singleton
   namespace: rack1-app1
@@ -802,11 +726,7 @@ metadata:
     atom.conditions: Available=True,Progressing=True/NewReplicaSetAvailable
   labels:
     app: app1
-    provider: k8s
-    rack: rack1
-    release: release2
     service: singleton
-    system: convox
     type: service
   name: singleton
   namespace: rack1-app1
@@ -884,12 +804,7 @@ data:
 kind: Secret
 metadata:
   labels:
-    app: app1
-    provider: k8s
-    rack: rack1
-    release: release2
     service: web
-    system: convox
     type: env
   name: env-web
   namespace: rack1-app1
@@ -900,12 +815,7 @@ kind: ServiceAccount
 metadata:
   annotations: null
   labels:
-    app: app1
-    provider: k8s
-    rack: rack1
-    release: release2
     service: web
-    system: convox
     type: serviceaccount
   name: web
   namespace: rack1-app1
@@ -917,11 +827,7 @@ metadata:
     atom.conditions: Available=True,Progressing=True/NewReplicaSetAvailable
   labels:
     app: app1
-    provider: k8s
-    rack: rack1
-    release: release2
     service: web
-    system: convox
     type: service
   name: web
   namespace: rack1-app1
@@ -1022,9 +928,7 @@ metadata:
     convox.com/alias: web.app1.rack1.local
   labels:
     app: app1
-    provider: k8s
     rack: rack1
-    release: release2
     service: web
     system: convox
   name: web
@@ -1056,12 +960,7 @@ data:
 kind: Secret
 metadata:
   labels:
-    app: app1
-    provider: k8s
-    rack: rack1
-    release: release2
     service: web2
-    system: convox
     type: env
   name: env-web2
   namespace: rack1-app1
@@ -1072,12 +971,7 @@ kind: ServiceAccount
 metadata:
   annotations: null
   labels:
-    app: app1
-    provider: k8s
-    rack: rack1
-    release: release2
     service: web2
-    system: convox
     type: serviceaccount
   name: web2
   namespace: rack1-app1
@@ -1089,11 +983,7 @@ metadata:
     atom.conditions: Available=True,Progressing=True/NewReplicaSetAvailable
   labels:
     app: app1
-    provider: k8s
-    rack: rack1
-    release: release2
     service: web2
-    system: convox
     type: service
   name: web2
   namespace: rack1-app1
@@ -1194,9 +1084,7 @@ metadata:
     convox.com/alias: web2.app1.rack1.local
   labels:
     app: app1
-    provider: k8s
     rack: rack1
-    release: release2
     service: web2
     system: convox
   name: web2
@@ -1217,12 +1105,6 @@ null
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
-  labels:
-    app: app1
-    provider: k8s
-    rack: rack1
-    release: release2
-    system: convox
   name: timer-test
   namespace: rack1-app1
 spec:
