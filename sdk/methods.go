@@ -806,7 +806,7 @@ func (c *Client) ServiceList(app string) (structs.Services, error) {
 	return v, err
 }
 
-func (c *Client) ServiceMetrics(app string, name string, opts structs.MetricsOptions) (structs.Metrics, error) {
+func (c *Client) ServiceMetrics(app, name string, opts structs.MetricsOptions) (structs.Metrics, error) {
 	var err error
 
 	ro, err := stdsdk.MarshalOptions(opts)
