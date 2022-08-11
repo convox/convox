@@ -11,6 +11,7 @@ import (
 	"github.com/convox/convox/pkg/structs"
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
+	resource "k8s.io/apimachinery/pkg/api/resource"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -175,6 +176,23 @@ func (p *Provider) ServiceUpdate(app, name string, opts structs.ServiceUpdateOpt
 	if opts.Count != nil {
 		c := int32(*opts.Count)
 		d.Spec.Replicas = &c
+	}
+
+	if opts.Cpu != nil {
+		cpuSize := resource.MustParse(fmt.Sprintf("%dm", *opts.Cpu))
+
+		d.Spec.Template.Spec.Containers[0].Resources.
+			Requests[v1.ResourceCPU] = cpuSize
+	}
+
+	if opts.Memory != nil {
+		memorySize := resource.MustParse(fmt.Sprintf("%dMi", *opts.Memory))
+
+		d.Spec.Template.Spec.Containers[0].Resources.
+			Limits[v1.ResourceMemory] = memorySize
+
+		d.Spec.Template.Spec.Containers[0].Resources.
+			Requests[v1.ResourceMemory] = memorySize
 	}
 
 	if _, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).Update(context.TODO(), d, am.UpdateOptions{}); err != nil {
