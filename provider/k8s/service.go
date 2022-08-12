@@ -182,6 +182,9 @@ func (p *Provider) ServiceUpdate(app, name string, opts structs.ServiceUpdateOpt
 		cpuSize := resource.MustParse(fmt.Sprintf("%dm", *opts.Cpu))
 
 		d.Spec.Template.Spec.Containers[0].Resources.
+			Limits[v1.ResourceCPU] = cpuSize
+
+		d.Spec.Template.Spec.Containers[0].Resources.
 			Requests[v1.ResourceCPU] = cpuSize
 	}
 
