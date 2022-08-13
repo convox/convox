@@ -9,18 +9,10 @@ import (
 )
 
 func (p *Provider) BuildExport(app, id string, w io.Writer) error {
-	if err := p.authAppRepository(app); err != nil {
-		return err
-	}
-
 	return p.Provider.BuildExport(app, id, w)
 }
 
 func (p *Provider) BuildImport(app string, r io.Reader) (*structs.Build, error) {
-	if err := p.authAppRepository(app); err != nil {
-		return nil, err
-	}
-
 	return p.Provider.BuildImport(app, r)
 }
 
