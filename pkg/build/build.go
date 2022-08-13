@@ -85,6 +85,7 @@ func (bb *Build) execute() error {
 		return err
 	}
 
+	// bb.Runtime.Login()
 	if err := bb.login2(); err != nil {
 		return err
 	}
@@ -103,6 +104,7 @@ func (bb *Build) execute() error {
 		return err
 	}
 
+	// bb.Runtime.Build
 	if err := bb.build2(dir); err != nil {
 		return err
 	}
@@ -356,22 +358,6 @@ func (bb *Build) build(dir string) error {
 
 		all = append(all, b)
 	}
-
-	for ix, build := range all {
-		if build.Image != "" {
-			os.WriteFile(fmt.Sprintf("%s/Dockerfile.%d", dir, ix), []byte(fmt.Sprintf("FROM %s", build.Image)), 0755)
-
-			if err := bb.buildBuildKit(dir, fmt.Sprintf("Dockerfile.%d", ix), build.Tag, env); err != nil {
-				return err
-			}
-		} else {
-			if err := bb.buildBuildKit(filepath.Join(dir, build.Build.Path), build.Build.Manifest, build.Tag, env); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
 
 	for hash, b := range builds {
 		bb.Printf("Building: %s\n", b.Path)
