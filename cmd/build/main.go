@@ -126,7 +126,8 @@ func execute() error {
 		return err
 	}
 
-	b, err := build.New(rack, opts)
+	engine := build.BuildKit{}
+	b, err := build.New(rack, opts, &engine)
 	if err != nil {
 		return err
 	}

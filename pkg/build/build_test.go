@@ -476,7 +476,7 @@ func testBuild(t *testing.T, opts build.Options, fn func(*build.Build, *structs.
 	rack, err := sdk.NewFromEnv()
 	require.NoError(t, err)
 
-	b, err := build.New(rack, opts)
+	b, err := build.New(rack, opts, nil)
 	require.NoError(t, err)
 
 	b.Exec = e

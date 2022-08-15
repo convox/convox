@@ -7,13 +7,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/url"
 	"os"
 	"sort"
-
-	// "os/exec"
-	"path/filepath"
 	"strings"
+
+	"path/filepath"
 	"time"
 
 	"github.com/convox/convox/pkg/common"
@@ -23,6 +23,11 @@ import (
 	"github.com/convox/exec"
 	"github.com/pkg/errors"
 )
+
+type Engine interface {
+	Build(bb *Build, dir string) error
+	Login(bb *Build) error
+}
 
 type Options struct {
 	App         string
@@ -44,14 +49,17 @@ type Build struct {
 	Options
 	Exec     exec.Interface
 	Provider structs.Provider
+	Engine   Engine
 	logs     bytes.Buffer
 	writer   io.Writer
 }
 
-func New(rack structs.Provider, opts Options) (*Build, error) {
+func New(rack structs.Provider, opts Options, engine Engine) (*Build, error) {
 	b := &Build{Options: opts}
 
 	b.Exec = &exec.Exec{}
+
+	b.Engine = engine
 
 	b.Manifest = common.CoalesceString(b.Manifest, "convox.yml")
 
@@ -85,8 +93,7 @@ func (bb *Build) execute() error {
 		return err
 	}
 
-	// bb.Runtime.Login()
-	if err := bb.login2(); err != nil {
+	if err := bb.Engine.Login(bb); err != nil {
 		return err
 	}
 
@@ -104,8 +111,8 @@ func (bb *Build) execute() error {
 		return err
 	}
 
-	// bb.Runtime.Build
-	if err := bb.build2(dir); err != nil {
+	// bb.Engine.Build
+	if err := bb.Engine.Build(bb, dir); err != nil {
 		return err
 	}
 
