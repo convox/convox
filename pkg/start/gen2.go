@@ -290,7 +290,7 @@ func (opts Options2) buildCreateExternal(ctx context.Context, pw *prefix.Writer,
 		Terminal:    true,
 	}
 
-	bb, err := builder.New(opts.Provider, bbopts)
+	bb, err := builder.New(opts.Provider, bbopts, &builder.Docker{})
 	if err != nil {
 		return nil, err
 	}
