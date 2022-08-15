@@ -806,6 +806,21 @@ func (c *Client) ServiceList(app string) (structs.Services, error) {
 	return v, err
 }
 
+func (c *Client) ServiceMetrics(app, name string, opts structs.MetricsOptions) (structs.Metrics, error) {
+	var err error
+
+	ro, err := stdsdk.MarshalOptions(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	var v structs.Metrics
+
+	err = c.Get(fmt.Sprintf("/apps/%s/services/%s/metrics", app, name), ro, &v)
+
+	return v, err
+}
+
 func (c *Client) ServiceRestart(app string, name string) error {
 	var err error
 
@@ -1039,4 +1054,3 @@ func (c *Client) Workers() error {
 	err := fmt.Errorf("not available via api")
 	return err
 }
-
