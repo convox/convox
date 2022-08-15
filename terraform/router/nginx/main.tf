@@ -34,6 +34,16 @@ resource "kubernetes_service_account" "ingress-nginx" {
   }
 }
 
+resource "kubernetes_ingress_class" "nginx" {
+  metadata {
+    name = "nginx"
+  }
+
+  spec {
+    controller = "k8s.io/ingress-nginx"
+  }
+}
+
 resource "kubernetes_cluster_role" "ingress-nginx" {
   metadata {
     name = "ingress-nginx"
@@ -72,6 +82,12 @@ resource "kubernetes_cluster_role" "ingress-nginx" {
   rule {
     api_groups = ["extensions", "networking.k8s.io"]
     resources  = ["ingresses"]
+    verbs      = ["get", "list", "watch"]
+  }
+
+  rule {
+    api_groups = ["networking.k8s.io"]
+    resources  = ["ingressclasses"]
     verbs      = ["get", "list", "watch"]
   }
 
@@ -129,6 +145,32 @@ resource "kubernetes_role" "ingress-nginx" {
     api_groups = [""]
     resources  = ["endpoints"]
     verbs      = ["get"]
+  }
+
+  rule {
+    api_groups      = ["coordination.k8s.io"]
+    resource_names  = ["ingress-controller-leader"]
+    resources       = ["leases"]
+    verbs           = ["get", "update"]
+  }
+
+  rule {
+    api_groups      = ["coordination.k8s.io"]
+    resources       = ["leases"]
+    verbs           = ["create"]
+  }
+
+  rule {
+    api_groups      = ["networking.k8s.io"]
+    resources       = ["ingressclasses"]
+    verbs           = ["get", "list", "watch"]
+  }
+
+  rule {
+    api_groups      = [""]
+    resource_names  = ["ingress-controller-leader"]
+    resources       = ["configmaps"]
+    verbs           = ["get", "update"]
   }
 }
 
@@ -194,6 +236,8 @@ resource "kubernetes_deployment" "ingress-nginx" {
             "--udp-services-configmap=$(POD_NAMESPACE)/udp-services",
             "--publish-service=$(POD_NAMESPACE)/router",
             "--annotations-prefix=nginx.ingress.kubernetes.io",
+            "--controller-class=k8s.io/ingress-nginx",
+            "--ingress-class=nginx",
           ]
 
           security_context {
