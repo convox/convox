@@ -2,21 +2,162 @@ package build
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"regexp"
+	"sort"
 	"strings"
 
+	"github.com/convox/convox/pkg/common"
+	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	shellquote "github.com/kballard/go-shellquote"
 )
 
-func (bb *Build) buildDocker(path, dockerfile string, tag string, env map[string]string) error {
+type Docker struct{}
+
+func (d *Docker) Build(bb *Build, dir string) error {
+	config := filepath.Join(dir, bb.Manifest)
+
+	if _, err := os.Stat(config); os.IsNotExist(err) {
+		return fmt.Errorf("no such file: %s", bb.Manifest)
+	}
+
+	data, err := ioutil.ReadFile(config)
+	if err != nil {
+		return err
+	}
+
+	env, err := common.AppEnvironment(bb.Provider, bb.App)
+	if err != nil {
+		return err
+	}
+
+	m, err := manifest.Load(data, env)
+	if err != nil {
+		return err
+	}
+
+	if err := m.Validate(); err != nil {
+		return err
+	}
+
+	prefix := fmt.Sprintf("%s/%s", bb.Rack, bb.App)
+
+	builds := map[string]manifest.ServiceBuild{}
+	pulls := map[string]bool{}
+	pushes := map[string]string{}
+	tags := map[string][]string{}
+
+	for _, s := range m.Services {
+		hash := s.BuildHash(bb.Id)
+		to := fmt.Sprintf("%s:%s.%s", prefix, s.Name, bb.Id)
+
+		if s.Image != "" {
+			pulls[s.Image] = true
+			tags[s.Image] = append(tags[s.Image], to)
+		} else {
+			builds[hash] = s.Build
+			tags[hash] = append(tags[hash], to)
+		}
+
+		if bb.Push != "" {
+			pushes[to] = fmt.Sprintf("%s:%s.%s", bb.Push, s.Name, bb.Id)
+		}
+	}
+
+	for hash, b := range builds {
+		bb.Printf("Building: %s\n", b.Path)
+
+		if err := d.build(bb, filepath.Join(dir, b.Path), b.Manifest, hash, env); err != nil {
+			return err
+		}
+	}
+
+	for image := range pulls {
+		if err := d.pull(bb, image); err != nil {
+			return err
+		}
+	}
+
+	tagfroms := []string{}
+
+	for from := range tags {
+		tagfroms = append(tagfroms, from)
+	}
+
+	sort.Strings(tagfroms)
+
+	for _, from := range tagfroms {
+		tos := tags[from]
+
+		for _, to := range tos {
+			if err := d.tag(bb, from, to); err != nil {
+				return err
+			}
+
+			if bb.EnvWrapper {
+				if err := d.injectConvoxEnv(bb, to); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	pushfroms := []string{}
+
+	for from := range pushes {
+		pushfroms = append(pushfroms, from)
+	}
+
+	sort.Strings(pushfroms)
+
+	for _, from := range pushfroms {
+		to := pushes[from]
+
+		if err := d.tag(bb, from, to); err != nil {
+			return err
+		}
+
+		if err := d.push(bb, to); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (d *Docker) Login(bb *Build) error {
+	var auth map[string]struct {
+		Username string
+		Password string
+	}
+
+	if err := json.Unmarshal([]byte(bb.Auth), &auth); err != nil {
+		return err
+	}
+
+	for host, entry := range auth {
+		buf := &bytes.Buffer{}
+
+		err := bb.Exec.Stream(buf, strings.NewReader(entry.Password), "docker", "login", "-u", entry.Username, "--password-stdin", host)
+
+		bb.Printf("Authenticating %s: %s\n", host, strings.TrimSpace(buf.String()))
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (d *Docker) build(bb *Build, path, dockerfile string, tag string, env map[string]string) error {
 	if path == "" {
 		return fmt.Errorf("must have path to build")
 	}
@@ -66,93 +207,6 @@ func (bb *Build) buildDocker(path, dockerfile string, tag string, env map[string
 	if ep != nil {
 		opts := structs.BuildUpdateOptions{
 			Entrypoint: options.String(shellquote.Join(ep...)),
-		}
-
-		if _, err := bb.Provider.BuildUpdate(bb.App, bb.Id, opts); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (bb *Build) cacheProvider(provider string) bool {
-	return provider != "" && strings.Contains("do az", provider)
-}
-
-func (bb *Build) buildBuildKit(path, dockerfile string, tag string, env map[string]string) error {
-	if path == "" {
-		return fmt.Errorf("must have path to build")
-	}
-
-	// buildctl build --frontend dockerfile.v0 --local context=. --local dockerfile=. --opt filename=Dockerfile --export-cache type=inline --import-cache type=registry,ref=4707781
-	// 23668.dkr.ecr.us-east-1.amazonaws.com/dev11/nodejs --output type=image,name=470778123668.dkr.ecr.us-east-1.amazonaws.com/dev11/nodejs,push=true
-	args := []string{"build"}
-	args = append(args, "--frontend", "dockerfile.v0")
-	args = append(args, "--local", fmt.Sprintf("context=%s", path))
-	args = append(args, "--local", fmt.Sprintf("dockerfile=%s", path))
-	args = append(args, "--opt", fmt.Sprintf("filename=%s", dockerfile))
-	args = append(args, "--output", fmt.Sprintf("type=image,name=%s,push=true", tag))
-
-	if bb.cacheProvider(os.Getenv("PROVIDER")) {
-		reg := strings.Split(tag, ":")[0]
-		args = append(args, "--export-cache", fmt.Sprintf("type=registry,ref=%s:buildcache", reg))
-		args = append(args, "--import-cache", fmt.Sprintf("type=registry,ref=%s:buildcache", reg))
-	}
-
-	println(strings.Join(args, " "))
-
-	df := filepath.Join(path, dockerfile)
-
-	ba, err := bb.buildArgs2(df, env)
-	if err != nil {
-		return err
-	}
-
-	args = append(args, ba...)
-
-	if !bb.Cache {
-		args = append(args, "--no-cache")
-	}
-
-	if bb.Terminal {
-		if err := bb.Exec.Terminal("buildctl", args...); err != nil {
-			return err
-		}
-	} else {
-		if err := bb.Exec.Run(bb.writer, "buildctl", args...); err != nil {
-			return err
-		}
-	}
-
-	f, err := ioutil.ReadFile(df)
-	if err != nil {
-		return fmt.Errorf("could not open Dockerfile")
-	}
-
-	r := regexp.MustCompile(`(?i)entrypoint \[(?P<arr>.*)\]|entrypoint (?P<str>".*")`)
-	groups := map[string]string{}
-	gnames := r.SubexpNames()
-
-	for ix, xp := range r.FindStringSubmatch(string(f)) {
-		groups[gnames[ix]] = xp
-	}
-
-	ep := ""
-	// join into a []string and quote according to sh rules
-	if groups["str"] != "" {
-		ep = groups["str"]
-		ep = strings.ReplaceAll(ep, "\"", "")
-		ep = shellquote.Join(strings.Split(ep, " ")...)
-	} else if groups["arr"] != "" {
-		ep = groups["arr"]
-		ep = strings.ReplaceAll(ep, "\"", "")
-		ep = shellquote.Join(strings.Split(ep, ",")...)
-	}
-
-	if ep != "" {
-		opts := structs.BuildUpdateOptions{
-			Entrypoint: options.String(ep),
 		}
 
 		if _, err := bb.Provider.BuildUpdate(bb.App, bb.Id, opts); err != nil {
@@ -235,7 +289,7 @@ func (bb *Build) buildArgs2(dockerfile string, env map[string]string) ([]string,
 	return args, nil
 }
 
-func (bb *Build) injectConvoxEnv(tag string) error {
+func (d *Docker) injectConvoxEnv(bb *Build, tag string) error {
 	fmt.Fprintf(bb.writer, "Injecting: convox-env\n")
 
 	var cmd []string
@@ -295,7 +349,7 @@ func (bb *Build) injectConvoxEnv(tag string) error {
 	return nil
 }
 
-func (bb *Build) pull(tag string) error {
+func (d *Docker) pull(bb *Build, tag string) error {
 	fmt.Fprintf(bb.writer, "Running: docker pull %s\n", tag)
 
 	data, err := bb.Exec.Execute("docker", "pull", tag)
@@ -306,7 +360,7 @@ func (bb *Build) pull(tag string) error {
 	return nil
 }
 
-func (bb *Build) push(tag string) error {
+func (d *Docker) push(bb *Build, tag string) error {
 	fmt.Fprintf(bb.writer, "Running: docker push %s\n", tag)
 
 	data, err := bb.Exec.Execute("docker", "push", tag)
@@ -317,7 +371,7 @@ func (bb *Build) push(tag string) error {
 	return nil
 }
 
-func (bb *Build) tag(from, to string) error {
+func (d *Docker) tag(bb *Build, from, to string) error {
 	fmt.Fprintf(bb.writer, "Running: docker tag %s %s\n", from, to)
 
 	data, err := bb.Exec.Execute("docker", "tag", from, to)
