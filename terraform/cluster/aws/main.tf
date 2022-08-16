@@ -144,6 +144,10 @@ resource "aws_launch_template" "cluster" {
 }
 
 module "ebs_csi_driver_controller" {
+  depends_on = [
+    null_resource.wait_k8s_api
+  ]
+
   source  = "DrFaust92/ebs-csi-driver/kubernetes"
   version = "3.3.1"
 
@@ -155,7 +159,15 @@ module "ebs_csi_driver_controller" {
 }
 
 resource "kubernetes_storage_class" "default" {
+  depends_on = [
+    null_resource.wait_k8s_api
+  ]
+
   metadata {
+    labels = {
+      "ebs_driver_name" = module.ebs_csi_driver_controller.ebs_csi_driver_name
+    }
+
     name = "gp3"
     annotations = {
       "storageclass.kubernetes.io/is-default-class" = "true"
@@ -171,6 +183,10 @@ resource "kubernetes_storage_class" "default" {
 }
 
 resource "kubernetes_annotations" "gp2" {
+  depends_on = [
+    kubernetes_storage_class.default
+  ]
+
   api_version = "storage.k8s.io/v1"
   kind        = "StorageClass"
 
