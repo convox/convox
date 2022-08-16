@@ -26,10 +26,14 @@ import (
 
 func (p *Provider) buildImage(provider string) string {
 	img := fmt.Sprintf("%s-build", p.Image)
-	if provider == "gcp" {
+	if strings.Contains("do gcp", provider) {
 		img = fmt.Sprintf("%s-build-privileged", p.Image)
 	}
 	return img
+}
+
+func (p *Provider) buildPrivileged(provider string) bool {
+	return strings.Contains("do gcp", provider)
 }
 
 func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions) (*structs.Build, error) {
@@ -89,7 +93,7 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 		Cpu:         options.Int(512),
 		Environment: env,
 		Image:       options.String(p.buildImage(os.Getenv("PROVIDER"))),
-		Privileged:  options.Bool(os.Getenv("PROVIDER") == "gcp"),
+		Privileged:  options.Bool(p.buildPrivileged(os.Getenv("PROVIDER"))),
 		Volumes: map[string]string{
 			p.Socket: "/var/run/docker.sock",
 		},
