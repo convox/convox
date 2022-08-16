@@ -15,7 +15,7 @@ data "http" "releases" {
 }
 
 locals {
-  current = jsondecode(data.http.releases.body).tag_name
+  current = jsondecode(data.http.releases.response_body).tag_name
   release = coalesce(var.release, local.current)
 }
 
@@ -50,7 +50,7 @@ module "rack" {
 
   cluster        = module.cluster.id
   docker_hub_username = var.docker_hub_username
-  docker_hub_password = var.docker_hub_password  
+  docker_hub_password = var.docker_hub_password
   image          = var.image
   name           = var.name
   region         = var.region
