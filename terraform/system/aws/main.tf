@@ -91,4 +91,5 @@ module "rack" {
   release             = local.release
   subnets             = module.cluster.subnets
   whitelist           = split(",", var.whitelist)
+  ebs_csi_driver_name = module.cluster.ebs_csi_driver_name
 }

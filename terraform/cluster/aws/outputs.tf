@@ -3,6 +3,10 @@ output "ca" {
   value      = base64decode(aws_eks_cluster.cluster.certificate_authority.0.data)
 }
 
+output "ebs_csi_driver_name" {
+  value = module.ebs_csi_driver_controller.ebs_csi_driver_name
+}
+
 output "endpoint" {
   depends_on = [aws_eks_node_group.cluster]
   value      = aws_eks_cluster.cluster.endpoint

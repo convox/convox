@@ -10,6 +10,10 @@ variable "docker_hub_password" {
   default = ""
 }
 
+variable "ebs_csi_driver_name" {
+  type = string
+}
+
 variable "high_availability" {
   default = true
 }
