@@ -1,3 +1,3 @@
 output "endpoint" {
-  value = data.http.alias.body
+  value = data.http.alias.response_body
 }

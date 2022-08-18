@@ -4,7 +4,7 @@ data "http" "releases" {
 
 locals {
   arm_type = module.platform.arch == "arm64"
-  current = jsondecode(data.http.releases.body).tag_name
+  current = jsondecode(data.http.releases.response_body).tag_name
   release = local.arm_type ? format("%s-%s", coalesce(var.release, local.current), "arm64") : coalesce(var.release, local.current)
 }
 
