@@ -17,6 +17,21 @@ func (r Resource) DefaultEnv() string {
 	return fmt.Sprintf("%s_URL", strings.Replace(strings.ToUpper(r.Name), "-", "_", -1))
 }
 
+func (r Resource) LoadEnv() []string {
+	return []string{
+		r.mountEnv("URL"),
+		r.mountEnv("USER"),
+		r.mountEnv("PASS"),
+		r.mountEnv("HOST"),
+		r.mountEnv("PORT"),
+		r.mountEnv("NAME"),
+	}
+}
+
 func (r Resource) GetName() string {
 	return r.Name
+}
+
+func (r Resource) mountEnv(name string) string {
+	return fmt.Sprintf("%s_%s", strings.ReplaceAll(strings.ToUpper(r.Name), "-", "_"), name)
 }
