@@ -144,18 +144,30 @@ resource "aws_launch_template" "cluster" {
 }
 
 module "ebs_csi_driver_controller" {
+  depends_on = [
+    null_resource.wait_k8s_api
+  ]
+
   source  = "DrFaust92/ebs-csi-driver/kubernetes"
   version = "3.3.1"
 
   ebs_csi_controller_image                   = "public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver"
-  ebs_csi_driver_version                     = var.arm_type ? "v1.9.0-linux-arm64-amazon" : "v1.9.0"
+  ebs_csi_driver_version                     = "v1.9.0"
   ebs_csi_controller_role_name               = "convox-ebs-csi-driver-controller"
   ebs_csi_controller_role_policy_name_prefix = "convox-ebs-csi-driver-policy"
   oidc_url                                   = aws_iam_openid_connect_provider.cluster.url
 }
 
 resource "kubernetes_storage_class" "default" {
+  depends_on = [
+    null_resource.wait_k8s_api
+  ]
+
   metadata {
+    labels = {
+      "ebs_driver_name" = module.ebs_csi_driver_controller.ebs_csi_driver_name
+    }
+
     name = "gp3"
     annotations = {
       "storageclass.kubernetes.io/is-default-class" = "true"
@@ -171,6 +183,10 @@ resource "kubernetes_storage_class" "default" {
 }
 
 resource "kubernetes_annotations" "gp2" {
+  depends_on = [
+    kubernetes_storage_class.default
+  ]
+
   api_version = "storage.k8s.io/v1"
   kind        = "StorageClass"
 
