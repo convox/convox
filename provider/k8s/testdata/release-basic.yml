@@ -58,3 +58,4 @@ manifest:
       command: bin/test
       schedule: "*/5 * * * *"
       service: web
+      concurrencyPolicy: Forbid
