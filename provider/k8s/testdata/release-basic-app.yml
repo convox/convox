@@ -53,7 +53,7 @@ spec:
     type: service
   type: LoadBalancer
 ---
-apiVersion: networking.k8s.io/v1
+apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   annotations:
@@ -61,6 +61,7 @@ metadata:
     ann1: val1
     convox.com/backend-protocol: http
     convox.com/idles: "false"
+    kubernetes.io/ingress-class: ""
     nginx.ingress.kubernetes.io/backend-protocol: http
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
@@ -82,23 +83,19 @@ metadata:
   name: web
   namespace: rack1-app1
 spec:
-  ingressClassName: ""
   rules:
   - host: service.host
     http:
       paths:
       - backend:
-          service:
-            name: web
-            port:
-              number: 5000
-        pathType: ImplementationSpecific
+          serviceName: web
+          servicePort: 5000
   tls:
   - hosts:
     - service.host
     secretName: cert-web
 ---
-apiVersion: networking.k8s.io/v1
+apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   annotations:
@@ -106,6 +103,7 @@ metadata:
     ann1: val1
     convox.com/backend-protocol: http
     convox.com/idles: "false"
+    kubernetes.io/ingress-class: ""
     nginx.ingress.kubernetes.io/backend-protocol: http
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
@@ -127,17 +125,13 @@ metadata:
   name: web2
   namespace: rack1-app1
 spec:
-  ingressClassName: ""
   rules:
   - host: service.host
     http:
       paths:
       - backend:
-          service:
-            name: web2
-            port:
-              number: 5000
-        pathType: ImplementationSpecific
+          serviceName: web2
+          servicePort: 5000
   tls:
   - hosts:
     - service.host
