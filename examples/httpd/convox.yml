@@ -10,3 +10,13 @@ timers:
     command: ./cmd.sh
     schedule: "* * * * *"
     service: worker
+  concurrency-allowed:
+    command: ./long-cmd.sh
+    schedule: "* * * * *"
+    service: worker
+    concurrencyPolicy: Allow
+  concurrency-forbid:
+    command: ./long-cmd.sh
+    schedule: "* * * * *"
+    service: worker
+    concurrencyPolicy: Forbid

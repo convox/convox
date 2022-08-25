@@ -104,9 +104,21 @@ convox deploy -a httpd
 
 # timers
 sleep 30
-timerLog=$(convox logs -a httpd --no-follow --since 1m | grep service/worker/timer-cleanup)
 
+timerLog=$(convox logs -a httpd --no-follow --since 1m | grep service/worker/timer-cleanup)
 if ! [[ $timerLog == *"Hello Timer"* ]]; then
+  echo "failed"; exit 1;
+fi
+
+sleep 60
+
+numberOfPodsRunning=$(convox ps -a httpd | grep timer-concurrency-allowed | wc -l)
+if [[ $(($numberOfPodsRunning)) < 2 ]]; then
+  echo "failed"; exit 1;
+fi
+
+numberOfPodsForbidRunning=$(convox ps -a httpd | grep timer-concurrency-forbid | wc -l)
+if [[ $(($numberOfPodsForbidRunning)) > 1 ]]; then
   echo "failed"; exit 1;
 fi
 
