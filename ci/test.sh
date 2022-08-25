@@ -102,5 +102,13 @@ convox ps stop $ps -a httpd
 convox ps -a httpd | grep -v $ps
 convox deploy -a httpd
 
+# timers
+sleep 30
+timerLog=$(convox logs -a httpd --no-follow --since 1m | grep service/worker/timer-cleanup)
+
+if ! [[ $timerLog == *"Hello Timer"* ]]; then
+  echo "failed"; exit 1;
+fi
+
 # cleanup
 convox apps delete httpd

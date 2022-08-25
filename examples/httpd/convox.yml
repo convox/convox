@@ -7,6 +7,6 @@ services:
 
 timers:
   cleanup:
-    command: ./usr/src/app/cmd.sh
+    command: ./cmd.sh
     schedule: "* * * * *"
     service: worker
