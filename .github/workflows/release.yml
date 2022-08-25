@@ -102,6 +102,7 @@ jobs:
         job:
           - aws
           - aws-arm64
+          - aws-downgrade
           - aws-existing-vpc
           - do
           - gcp
@@ -114,6 +115,10 @@ jobs:
             provider: aws
             rack_params: "node_type=t4g.small proxy_protocol=true"
             suffix: arm64
+          - job: aws-downgrade
+            provider: aws
+            suffix: downgrade
+            downgrade: true
           - job: aws-existing-vpc
             provider: aws
             rack_params: "vpc_id=vpc-0f18b6d1265717215 internet_gateway_id=igw-01c3d338eecec02a1 cidr=172.0.0.0/16"
@@ -147,8 +152,18 @@ jobs:
         run: ci/install.sh
       - name: wait
         run: sleep 600
+      - name: before downgrade test
+        run: ci/test.sh downgrade-setup
+        if: ${{ matrix.downgrade == true }}
+      - name: downgrade
+        run: ci/downgrade.sh
+        if: ${{ matrix.downgrade == true }}
+      - name: after downgrade test
+        run: ci/test.sh downgrade-check
+        if: ${{ matrix.downgrade == true }}
       - name: test
         run: ci/test.sh
+        if: ${{ matrix.downgrade != true }}
       - name: debug
         run: ci/debug.sh
         if: always()

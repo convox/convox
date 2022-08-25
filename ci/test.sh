@@ -116,3 +116,24 @@ esac
 
 # cleanup
 convox apps delete httpd
+
+# downgrade persistance testing
+if [ "$1" == "downgrade-setup" ]; then
+    # app (httpd2)
+    convox apps create httpd2
+    convox apps
+    convox apps | grep httpd2
+    convox apps info httpd2 | grep running
+    convox deploy -a httpd2
+    endpoint=$(convox api get /apps/httpd2/services | jq -r '.[] | select(.name == "web") | .domain')
+    fetch https://$endpoint | grep "It works"
+    echo "ENDPOINT=${endpoint}" | convox env set -a httpd2
+elif [ "$1" == "downgrade-check" ]; then
+    convox apps
+    convox apps | grep httpd2
+    convox apps info httpd2 | grep running
+    endpoint=$(convox env get ENDPOINT -a httpd2)
+    fetch https://$endpoint | grep "It works"
+    #cleanup
+    convox apps delete httpd2
+fi
