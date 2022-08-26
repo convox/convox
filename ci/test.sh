@@ -72,17 +72,28 @@ endpoint=$(convox api get /apps/httpd/services | jq -r '.[] | select(.name == "w
 fetch https://$endpoint | grep "It works"
 sleep 30
 convox rack ps -a | grep httpd
+convox logs -a httpd --no-follow --since 10m
 convox logs -a httpd --no-follow --since 10m | grep service/web
 releaser=$(convox releases rollback $release -a httpd --id)
 convox ps -a httpd | grep $releaser
-ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running")|.id' | head -n 1)
+ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | head -n 1)
 convox ps info $ps -a httpd | grep $releaser
 convox scale web --count 2 --cpu 192 --memory 256 -a httpd
 convox services -a httpd | grep web | grep 443:80 | grep $endpoint
 endpoint=$(convox api get /apps/httpd/services | jq -r '.[] | select(.name == "web") | .domain')
 fetch https://$endpoint | grep "It works"
-convox ps -a httpd | grep web | wc -l | grep 2
-ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running")|.id' | head -n 1)
+# waiting for web to scale up
+i=0
+while [ "$(convox ps -a httpd | grep web | wc -l)" != "2" ]
+do
+    if [ $((i++)) -gt 50 ]; then
+        exit 1
+    fi
+    echo "waiting for web to scale up..."
+    convox ps -a httpd
+    sleep 15
+done
+ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | head -n 1)
 convox exec $ps "ls -la" -a httpd | grep htdocs
 cat /dev/null | convox exec $ps 'sh -c "sleep 2; echo test"' -a httpd | grep test
 convox run web "ls -la" -a httpd | grep htdocs
@@ -100,6 +111,7 @@ convox cp $ps:/file /tmp/file2 -a httpd
 cat /tmp/file2 | grep foo
 convox ps stop $ps -a httpd
 convox ps -a httpd | grep -v $ps
+convox scale web --count 1
 convox deploy -a httpd
 
 # timers
@@ -113,6 +125,11 @@ case $provider in
       convox logs -a httpd --no-follow --since 1m | grep service/web/timer-example | grep "Hello Timer"
       ;;
 esac
+
+# postgres resource test
+ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "resource-tester")|.id' | head -n 1)
+convox exec $ps "/usr/scripts/db_insert.sh" -a httpd
+convox exec $ps "/usr/scripts/db_check.sh" -a httpd
 
 # cleanup
 convox apps delete httpd
@@ -128,12 +145,19 @@ if [ "$1" == "downgrade-setup" ]; then
     endpoint=$(convox api get /apps/httpd2/services | jq -r '.[] | select(.name == "web") | .domain')
     fetch https://$endpoint | grep "It works"
     echo "ENDPOINT=${endpoint}" | convox env set -a httpd2
+    # postgres resource test
+    ps=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "resource-tester")|.id' | head -n 1)
+    convox exec $ps "/usr/scripts/db_insert.sh" -a httpd2
+    convox exec $ps "/usr/scripts/db_check.sh" -a httpd2
 elif [ "$1" == "downgrade-check" ]; then
     convox apps
     convox apps | grep httpd2
     convox apps info httpd2 | grep running
     endpoint=$(convox env get ENDPOINT -a httpd2)
     fetch https://$endpoint | grep "It works"
+    # postgres resource test
+    ps=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "resource-tester")|.id' | head -n 1)
+    convox exec $ps "/usr/scripts/db_check.sh" -a httpd2
     #cleanup
     convox apps delete httpd2
 fi

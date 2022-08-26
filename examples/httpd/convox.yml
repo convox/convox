@@ -1,7 +1,18 @@
+resources:
+  main:
+    type: postgres
 services:
   web:
     build: .
     port: 80
+  resource-tester:
+    image: nightfury1204/resource-tester:0.0.1
+    resources:
+      - main:DB_URL
+    scale:
+      count: 1
+      cpu: 64
+      memory: 128
 
 timers:
   example:
