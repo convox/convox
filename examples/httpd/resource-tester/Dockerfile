@@ -1,6 +1,6 @@
-FROM alpine
+FROM postgres:10-alpine
 
-RUN apk update && apk add postgresql-client bash && rm -rf /var/lib/apt/lists/*
+RUN apk update && apk add --no-cache bash redis && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/scripts
 COPY . /usr/scripts/

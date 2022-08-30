@@ -1,6 +1,8 @@
 resources:
-  main:
+  postgresdb:
     type: postgres
+  rediscache:
+    type: redis
 services:
   web:
     build: .
@@ -8,7 +10,8 @@ services:
   resource-tester:
     image: nightfury1204/resource-tester:0.0.1
     resources:
-      - main:DB_URL
+      - postgresdb:DB_URL
+      - rediscache:REDIS_URL
     scale:
       count: 1
       cpu: 64

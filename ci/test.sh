@@ -127,9 +127,17 @@ case $provider in
 esac
 
 # postgres resource test
+convox resources -a httpd | grep postgresdb
 ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "resource-tester")|.id' | head -n 1)
 convox exec $ps "/usr/scripts/db_insert.sh" -a httpd
 convox exec $ps "/usr/scripts/db_check.sh" -a httpd
+convox resources export postgresdb -f /tmp/pdb.sql
+convox resources import postgresdb -f /tmp/pdb.sql
+
+# redis resource test
+convox resources -a httpd | grep rediscache
+ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "resource-tester")|.id' | head -n 1)
+convox exec $ps "/usr/scripts/redis_check.sh" -a httpd
 
 # cleanup
 convox apps delete httpd
@@ -146,9 +154,15 @@ if [ "$1" == "downgrade-setup" ]; then
     fetch https://$endpoint | grep "It works"
     echo "ENDPOINT=${endpoint}" | convox env set -a httpd2
     # postgres resource test
+    convox resources -a httpd2 | grep postgresdb
     ps=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "resource-tester")|.id' | head -n 1)
     convox exec $ps "/usr/scripts/db_insert.sh" -a httpd2
     convox exec $ps "/usr/scripts/db_check.sh" -a httpd2
+    # redis resource test
+    convox resources -a httpd2 | grep rediscache
+    ps=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "resource-tester")|.id' | head -n 1)
+    convox exec $ps "/usr/scripts/redis_check.sh" -a httpd2
+
 elif [ "$1" == "downgrade-check" ]; then
     convox apps
     convox apps | grep httpd2
@@ -158,6 +172,10 @@ elif [ "$1" == "downgrade-check" ]; then
     # postgres resource test
     ps=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "resource-tester")|.id' | head -n 1)
     convox exec $ps "/usr/scripts/db_check.sh" -a httpd2
+    # redis resource test
+    convox resources -a httpd2 | grep rediscache
+    ps=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "resource-tester")|.id' | head -n 1)
+    convox exec $ps "/usr/scripts/redis_check.sh" -a httpd2
     #cleanup
     convox apps delete httpd2
 fi
