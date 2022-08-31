@@ -1,15 +1,15 @@
-package atom_test
+package atom
 
 import (
 	"testing"
 
-	"github.com/convox/convox/pkg/atom"
 	aa "github.com/convox/convox/pkg/atom/pkg/apis/atom/v1"
 	av "github.com/convox/convox/pkg/atom/pkg/client/clientset/versioned"
 	afake "github.com/convox/convox/pkg/atom/pkg/client/clientset/versioned/fake"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 func TestStatus(t *testing.T) {
@@ -23,7 +23,7 @@ func TestStatus(t *testing.T) {
 		AtomSpec      aa.AtomSpec
 	}{
 		{
-			Name:          "Happy Path",
+			Name:          "Success",
 			AtomNamespace: "ns1",
 			AtomName:      "atom1",
 			AtomStatus:    "Updating",
@@ -44,7 +44,7 @@ func TestStatus(t *testing.T) {
 		},
 	}
 
-	testClient(t, func(ac *atom.Client) {
+	testClient(t, func(ac *Client) {
 		fac := ac.Atom.(*afake.Clientset)
 
 		for _, test := range tests {
@@ -75,7 +75,7 @@ func TestStatus(t *testing.T) {
 }
 
 func TestCancel(t *testing.T) {
-	testClient(t, func(ac *atom.Client) {
+	testClient(t, func(ac *Client) {
 		fac := ac.Atom.(*afake.Clientset)
 
 		require.NoError(t, atomCreate(fac, "ns1", "atom1", "Updating", "atom1", aa.AtomSpec{}))
@@ -94,6 +94,38 @@ func TestCancel(t *testing.T) {
 
 		err = ac.Cancel("ns1", "atom3")
 		require.EqualError(t, err, "not currently updating")
+	})
+}
+
+func TestApply(t *testing.T) {
+	tests := []struct {
+		Name          string
+		AtomNamespace string
+		AtomName      string
+		AtomRelease   string
+	}{
+		{
+			Name:          "Success",
+			AtomNamespace: "ns1",
+			AtomName:      "atom1",
+			AtomRelease:   "1.0",
+		},
+	}
+
+	testClient(t, func(ac *Client) {
+		fac := ac.Atom.(*afake.Clientset)
+
+		for _, test := range tests {
+			fn := func(t *testing.T) {
+				require.NoError(t, ac.Apply(test.AtomNamespace, test.AtomName, test.AtomRelease, nil, 600))
+
+				a, err := fac.AtomV1().Atoms(test.AtomNamespace).Get(test.AtomName, am.GetOptions{})
+				require.NoError(t, err)
+				require.Equal(t, aa.AtomStatus("Pending"), a.Status)
+			}
+
+			t.Run(test.Name, fn)
+		}
 	})
 }
 
@@ -124,11 +156,13 @@ func atomCreate(ac av.Interface, namespace, name, status, version string, spec a
 	return nil
 }
 
-func testClient(t *testing.T, fn func(*atom.Client)) {
+func testClient(t *testing.T, fn func(*Client)) {
 	fa := afake.NewSimpleClientset()
+	c := fake.NewSimpleClientset()
 
-	a := &atom.Client{
+	a := &Client{
 		Atom: fa,
+		k8s:  c,
 	}
 
 	fn(a)
