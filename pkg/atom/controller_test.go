@@ -206,6 +206,46 @@ func TestUpdate(t *testing.T) {
 			Err: nil,
 		},
 		{
+			Name:          "Cancelled - Failure",
+			AtomNamespace: "atom.controller",
+			AtomName:      "atom8",
+			AtomStatus:    "Failure",
+			AtomVersion:   "v8",
+			Prev: &aa.Atom{
+				ObjectMeta: am.ObjectMeta{
+					Name: "atom8",
+				},
+				Status: aa.AtomStatus("Cancelled"),
+			},
+			Curr: &aa.Atom{
+				ObjectMeta: am.ObjectMeta{
+					Name: "atom8",
+				},
+				Status: aa.AtomStatus("Cancelled"),
+			},
+			Err: nil,
+		},
+		{
+			Name:          "Pending - Error",
+			AtomNamespace: "atom.controller",
+			AtomName:      "atom9",
+			AtomStatus:    "Error",
+			AtomVersion:   "v9",
+			Prev: &aa.Atom{
+				ObjectMeta: am.ObjectMeta{
+					Name: "atom9",
+				},
+				Status: aa.AtomStatus("Pending"),
+			},
+			Curr: &aa.Atom{
+				ObjectMeta: am.ObjectMeta{
+					Name: "atom9",
+				},
+				Status: aa.AtomStatus("Pending"),
+			},
+			Err: nil,
+		},
+		{
 			Name:          "Wrong atom assert",
 			AtomNamespace: "nserr1",
 			AtomName:      "atomerr1",
