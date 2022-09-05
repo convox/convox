@@ -66,7 +66,7 @@ releasee=$(convox env set FOO=bar -a httpd --id) && [ -n "$releasee" ]
 convox env get FOO -a httpd | grep bar
 convox releases -a httpd | grep $releasee
 convox releases info $releasee -a httpd | grep FOO
-convox releases manifest $releasee -a httpd | grep "image: httpd"
+convox releases manifest $releasee -a httpd | grep "build: ."
 convox releases promote $release -a httpd
 endpoint=$(convox api get /apps/httpd/services | jq -r '.[] | select(.name == "web") | .domain')
 fetch https://$endpoint | grep "It works"
@@ -105,20 +105,8 @@ convox deploy -a httpd
 # timers
 sleep 30
 
-timerLog=$(convox logs -a httpd --no-follow --since 1m | grep service/worker/timer-example)
+timerLog=$(convox logs -a httpd --no-follow --since 1m | grep service/web/timer-example)
 if ! [[ $timerLog == *"Hello Timer"* ]]; then
-  echo "failed"; exit 1;
-fi
-
-sleep 60
-
-numberOfPodsRunning=$(convox ps -a httpd | grep timer-concurrency-allowed | wc -l)
-if [[ $(($numberOfPodsRunning)) < 2 ]]; then
-  echo "failed"; exit 1;
-fi
-
-numberOfPodsForbidRunning=$(convox ps -a httpd | grep timer-concurrency-forbid | wc -l)
-if [[ $(($numberOfPodsForbidRunning)) > 1 ]]; then
   echo "failed"; exit 1;
 fi
 

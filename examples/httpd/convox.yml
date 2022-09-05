@@ -1,22 +1,10 @@
 services:
   web:
-    image: httpd
+    build: .
     port: 80
-  worker:
-    build: ./worker
 
 timers:
   example:
-    command: ./cmd.sh
+    command: /usr/local/apache2/timer-cmd.sh
     schedule: "* * * * *"
-    service: worker
-  concurrency-allowed:
-    command: ./long-cmd.sh
-    schedule: "* * * * *"
-    service: worker
-    concurrencyPolicy: Allow
-  concurrency-forbid:
-    command: ./long-cmd.sh
-    schedule: "* * * * *"
-    service: worker
-    concurrencyPolicy: Forbid
+    service: web
