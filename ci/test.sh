@@ -105,7 +105,7 @@ convox deploy -a httpd
 # timers
 sleep 30
 
-timerLog=$(convox logs -a httpd --no-follow --since 1m | grep service/worker/timer-cleanup)
+timerLog=$(convox logs -a httpd --no-follow --since 1m | grep service/worker/timer-example)
 if ! [[ $timerLog == *"Hello Timer"* ]]; then
   echo "failed"; exit 1;
 fi
