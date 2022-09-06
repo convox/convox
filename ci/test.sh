@@ -33,6 +33,49 @@ convox rack logs --no-follow --since 30m
 convox rack logs --no-follow --since 30m | grep service/
 convox rack ps | grep system
 
+# downgrade persistance testing
+if [ "$1" == "downgrade-setup" ]; then
+    # app (httpd2)
+    cd $root/examples/httpd
+    convox apps create httpd2
+    convox apps
+    convox apps | grep httpd2
+    convox apps info httpd2 | grep running
+    convox deploy -a httpd2
+    endpoint=$(convox api get /apps/httpd2/services | jq -r '.[] | select(.name == "web") | .domain')
+    fetch https://$endpoint | grep "It works"
+    echo "ENDPOINT=${endpoint}" | convox env set -a httpd2
+    # postgres resource test
+    convox resources -a httpd2 | grep postgresdb
+    ps=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "resource-tester")|.id' | head -n 1)
+    convox exec $ps "/usr/scripts/db_insert.sh" -a httpd2
+    convox exec $ps "/usr/scripts/db_check.sh" -a httpd2
+    # redis resource test
+    convox resources -a httpd2 | grep rediscache
+    ps=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "resource-tester")|.id' | head -n 1)
+    convox exec $ps "/usr/scripts/redis_check.sh" -a httpd2
+
+    # downgrate-setup runs before the downgrading, so no need to test others functionality
+    # they are covered by other ci test
+    exit 0
+
+elif [ "$1" == "downgrade-check" ]; then
+    convox apps
+    convox apps | grep httpd2
+    convox apps info httpd2 | grep running
+    endpoint=$(convox env get ENDPOINT -a httpd2)
+    fetch https://$endpoint | grep "It works"
+    # postgres resource test
+    ps=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "resource-tester")|.id' | head -n 1)
+    convox exec $ps "/usr/scripts/db_check.sh" -a httpd2
+    # redis resource test
+    convox resources -a httpd2 | grep rediscache
+    ps=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "resource-tester")|.id' | head -n 1)
+    convox exec $ps "/usr/scripts/redis_check.sh" -a httpd2
+    #cleanup
+    convox apps delete httpd2
+fi
+
 # registries
 convox registries
 convox registries add quay.io convox+ci 6D5CJVRM5P3L24OG4AWOYGCDRJLPL0PFQAENZYJ1KGE040YDUGPYKOZYNWFTE5CV
@@ -141,41 +184,3 @@ convox exec $ps "/usr/scripts/redis_check.sh" -a httpd
 
 # cleanup
 convox apps delete httpd
-
-# downgrade persistance testing
-if [ "$1" == "downgrade-setup" ]; then
-    # app (httpd2)
-    convox apps create httpd2
-    convox apps
-    convox apps | grep httpd2
-    convox apps info httpd2 | grep running
-    convox deploy -a httpd2
-    endpoint=$(convox api get /apps/httpd2/services | jq -r '.[] | select(.name == "web") | .domain')
-    fetch https://$endpoint | grep "It works"
-    echo "ENDPOINT=${endpoint}" | convox env set -a httpd2
-    # postgres resource test
-    convox resources -a httpd2 | grep postgresdb
-    ps=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "resource-tester")|.id' | head -n 1)
-    convox exec $ps "/usr/scripts/db_insert.sh" -a httpd2
-    convox exec $ps "/usr/scripts/db_check.sh" -a httpd2
-    # redis resource test
-    convox resources -a httpd2 | grep rediscache
-    ps=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "resource-tester")|.id' | head -n 1)
-    convox exec $ps "/usr/scripts/redis_check.sh" -a httpd2
-
-elif [ "$1" == "downgrade-check" ]; then
-    convox apps
-    convox apps | grep httpd2
-    convox apps info httpd2 | grep running
-    endpoint=$(convox env get ENDPOINT -a httpd2)
-    fetch https://$endpoint | grep "It works"
-    # postgres resource test
-    ps=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "resource-tester")|.id' | head -n 1)
-    convox exec $ps "/usr/scripts/db_check.sh" -a httpd2
-    # redis resource test
-    convox resources -a httpd2 | grep rediscache
-    ps=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "resource-tester")|.id' | head -n 1)
-    convox exec $ps "/usr/scripts/redis_check.sh" -a httpd2
-    #cleanup
-    convox apps delete httpd2
-fi
