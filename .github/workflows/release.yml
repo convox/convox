@@ -153,17 +153,16 @@ jobs:
       - name: wait
         run: sleep 600
       - name: before downgrade test
-        run: ci/test.sh downgrade-setup
+        run: ci/downgrade_setup.sh
         if: ${{ matrix.downgrade == true }}
       - name: downgrade
         run: ci/downgrade.sh
         if: ${{ matrix.downgrade == true }}
       - name: after downgrade test
-        run: ci/test.sh downgrade-check
+        run: ci/downgrade_check.sh
         if: ${{ matrix.downgrade == true }}
       - name: test
         run: ci/test.sh
-        if: ${{ matrix.downgrade != true }}
       - name: debug
         run: ci/debug.sh
         if: always()

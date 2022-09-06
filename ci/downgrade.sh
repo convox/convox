@@ -9,15 +9,4 @@ sleep 30
 
 convox switch ${RACK_NAME}
 
-status=$(convox rack | grep 'Status' | xargs | cut -d ' ' -f2)
-
-while [ "${status}" != "running" ]
-do
-    echo "waiting for rack updates to complete..."
-    sleep 30
-    status=$(convox rack | grep 'Status' | xargs | cut -d ' ' -f2)
-    echo "rack status: ${status}"
-    if [ "${status}" = "failed" ]; then
-        exit 1
-    fi
-done
+convox rack | grep 'Status' | xargs | cut -d ' ' -f2 | grep "running"
