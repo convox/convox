@@ -105,10 +105,14 @@ convox deploy -a httpd
 # timers
 sleep 30
 
-timerLog=$(convox logs -a httpd --no-follow --since 1m | grep service/web/timer-example)
-if ! [[ $timerLog == *"Hello Timer"* ]]; then
-  echo "failed"; exit 1;
-fi
+case $provider in
+   gcp)
+      convox logs -a httpd --no-follow --since 1m | grep timer/example/timer-example | grep "Hello Timer"
+      ;;
+   *)
+      convox logs -a httpd --no-follow --since 1m | grep service/web/timer-example | grep "Hello Timer"
+      ;;
+esac
 
 # cleanup
 convox apps delete httpd
