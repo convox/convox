@@ -66,7 +66,7 @@ releasee=$(convox env set FOO=bar -a httpd --id) && [ -n "$releasee" ]
 convox env get FOO -a httpd | grep bar
 convox releases -a httpd | grep $releasee
 convox releases info $releasee -a httpd | grep FOO
-convox releases manifest $releasee -a httpd | grep "image: httpd"
+convox releases manifest $releasee -a httpd | grep "build: ."
 convox releases promote $release -a httpd
 endpoint=$(convox api get /apps/httpd/services | jq -r '.[] | select(.name == "web") | .domain')
 fetch https://$endpoint | grep "It works"
@@ -101,6 +101,18 @@ cat /tmp/file2 | grep foo
 convox ps stop $ps -a httpd
 convox ps -a httpd | grep -v $ps
 convox deploy -a httpd
+
+# timers
+sleep 30
+
+case $provider in
+   gcp)
+      convox logs -a httpd --no-follow --since 1m | grep timer/example/timer-example | grep "Hello Timer"
+      ;;
+   *)
+      convox logs -a httpd --no-follow --since 1m | grep service/web/timer-example | grep "Hello Timer"
+      ;;
+esac
 
 # cleanup
 convox apps delete httpd
