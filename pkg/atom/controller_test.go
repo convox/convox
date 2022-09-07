@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 )
@@ -149,7 +148,7 @@ func TestUpdate(t *testing.T) {
 					Name: "atom5",
 				},
 				Status:  aa.AtomStatus("Rollback"),
-				Started: metav1.Time{Time: time.Now()},
+				Started: am.Time{Time: time.Now()},
 				Spec: aa.AtomSpec{
 					CurrentVersion:          "v.atom5",
 					ProgressDeadlineSeconds: 180,
@@ -197,7 +196,7 @@ func TestUpdate(t *testing.T) {
 					Name: "atom5",
 				},
 				Status:  aa.AtomStatus("Updating"),
-				Started: metav1.Time{Time: time.Now()},
+				Started: am.Time{Time: time.Now()},
 				Spec: aa.AtomSpec{
 					CurrentVersion:          "v.atom5",
 					ProgressDeadlineSeconds: 180,
