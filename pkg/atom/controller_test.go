@@ -17,31 +17,31 @@ import (
 )
 
 func TestClient(t *testing.T) {
-	testController(t, func(ac *AtomController) {
+	testController(func(ac *AtomController) {
 		assert.NotNil(t, ac.Client())
 	})
 }
 
 func TestStart(t *testing.T) {
-	testController(t, func(ac *AtomController) {
+	testController(func(ac *AtomController) {
 		assert.Nil(t, ac.Start())
 	})
 }
 
 func TestStop(t *testing.T) {
-	testController(t, func(ac *AtomController) {
+	testController(func(ac *AtomController) {
 		assert.Nil(t, ac.Stop())
 	})
 }
 
 func TestAdd(t *testing.T) {
-	testController(t, func(ac *AtomController) {
+	testController(func(ac *AtomController) {
 		assert.Nil(t, ac.Add(5))
 	})
 }
 
 func TestDelete(t *testing.T) {
-	testController(t, func(ac *AtomController) {
+	testController(func(ac *AtomController) {
 		assert.Nil(t, ac.Delete(5))
 	})
 }
@@ -256,7 +256,7 @@ func TestUpdate(t *testing.T) {
 		},
 	}
 
-	testController(t, func(ac *AtomController) {
+	testController(func(ac *AtomController) {
 		for _, test := range tests {
 			fn := func(t *testing.T) {
 				require.NoError(t, atomCreate(
@@ -287,7 +287,7 @@ func TestUpdate(t *testing.T) {
 	})
 }
 
-func testController(t *testing.T, fn func(*AtomController)) {
+func testController(fn func(*AtomController)) {
 	fa := afake.NewSimpleClientset()
 	fakeK8s := fake.NewSimpleClientset()
 
