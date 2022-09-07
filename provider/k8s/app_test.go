@@ -114,6 +114,49 @@ func TestAppDeleteMissingApp(t *testing.T) {
 	})
 }
 
+func TestNamespaceApp(t *testing.T) {
+	tests := []struct {
+		Name      string
+		RackName  string
+		AppName   string
+		Namespace string
+	}{
+		{
+			Name:      "Success",
+			RackName:  "rack1",
+			AppName:   "app1",
+			Namespace: "rack1-app1",
+		},
+		{
+			Name:      "Namespace not found",
+			RackName:  "rack2",
+			AppName:   "app2",
+			Namespace: "app2",
+		},
+	}
+
+	testProvider(t, func(p *k8s.Provider) {
+		for _, test := range tests {
+			fn := func(t *testing.T) {
+				kk := p.Cluster.(*fake.Clientset)
+
+				require.NoError(t, appCreate(kk, test.RackName, test.AppName))
+
+				ns, err := p.NamespaceApp(test.Namespace)
+
+				if err != nil {
+					require.EqualError(t, err, fmt.Sprintf("namespaces \"%s\" not found", test.Namespace))
+				} else {
+					require.NoError(t, err)
+					require.Equal(t, ns, test.AppName)
+				}
+			}
+
+			t.Run(test.Name, fn)
+		}
+	})
+}
+
 func TestAppGet(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		aa := p.Atom.(*atom.MockInterface)
