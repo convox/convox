@@ -1,10 +1,18 @@
+resources:
+  postgresdb:
+    type: postgres
+  rediscache:
+    type: redis
 services:
   web:
     build: .
     port: 80
+    resources:
+      - postgresdb:DB_URL
+      - rediscache:REDIS_URL
 
 timers:
   example:
-    command: /usr/local/apache2/timer-cmd.sh
+    command: /usr/scripts/timer-cmd.sh
     schedule: "* * * * *"
     service: web
