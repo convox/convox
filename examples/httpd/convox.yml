@@ -7,18 +7,12 @@ services:
   web:
     build: .
     port: 80
-  resource-tester:
-    image: nightfury1204/resource-tester:0.0.1
     resources:
       - postgresdb:DB_URL
       - rediscache:REDIS_URL
-    scale:
-      count: 1
-      cpu: 64
-      memory: 128
 
 timers:
   example:
-    command: /usr/local/apache2/timer-cmd.sh
+    command: /usr/scripts/timer-cmd.sh
     schedule: "* * * * *"
     service: web

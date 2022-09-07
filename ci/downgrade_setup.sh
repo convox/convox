@@ -33,10 +33,10 @@ fetch https://$endpoint | grep "It works"
 echo "ENDPOINT=${endpoint}" | convox env set -a httpd2
 # postgres resource test
 convox resources -a httpd2 | grep postgresdb
-ps=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "resource-tester")|.id' | head -n 1)
+ps=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | head -n 1)
 convox exec $ps "/usr/scripts/db_insert.sh" -a httpd2
 convox exec $ps "/usr/scripts/db_check.sh" -a httpd2
 # redis resource test
 convox resources -a httpd2 | grep rediscache
-ps=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "resource-tester")|.id' | head -n 1)
+ps=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | head -n 1)
 convox exec $ps "/usr/scripts/redis_check.sh" -a httpd2

@@ -128,7 +128,7 @@ esac
 
 # postgres resource test
 convox resources -a httpd | grep postgresdb
-ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "resource-tester")|.id' | head -n 1)
+ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | head -n 1)
 convox exec $ps "/usr/scripts/db_insert.sh" -a httpd
 convox exec $ps "/usr/scripts/db_check.sh" -a httpd
 convox resources export postgresdb -f /tmp/pdb.sql
@@ -136,7 +136,7 @@ convox resources import postgresdb -f /tmp/pdb.sql
 
 # redis resource test
 convox resources -a httpd | grep rediscache
-ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "resource-tester")|.id' | head -n 1)
+ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | head -n 1)
 convox exec $ps "/usr/scripts/redis_check.sh" -a httpd
 
 # cleanup
