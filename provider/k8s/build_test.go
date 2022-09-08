@@ -3,13 +3,84 @@ package k8s_test
 import (
 	"fmt"
 	"io/ioutil"
+	"testing"
+	"time"
 
+	"github.com/convox/convox/pkg/atom"
+	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/convox/provider/k8s"
 	ca "github.com/convox/convox/provider/k8s/pkg/apis/convox/v1"
 	cv "github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	yaml "gopkg.in/yaml.v2"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 )
+
+func TestBuildList(t *testing.T) {
+	tests := []struct {
+		Name        string
+		RackName    string
+		AppName     string
+		AppNameList string
+		Namespace   string
+		BuildName   string
+		Response    structs.Builds
+		Err         error
+	}{
+		{
+			Name:        "Success",
+			RackName:    "rack1",
+			AppName:     "app1",
+			AppNameList: "app1",
+			Namespace:   "rack1-app1",
+			BuildName:   "build1",
+			Response:    structs.Builds{structs.Build{Id: "BUILD1", App: "", Description: "foo", Entrypoint: "", Logs: "", Manifest: "services:\n  web:\n    build: .\n    port: 5000\n", Process: "", Release: "", Reason: "", Repository: "", Status: "", Started: time.Date(2020, time.January, 1, 0, 0, 0, 0, time.UTC), Ended: time.Date(2020, time.January, 1, 0, 0, 0, 0, time.UTC), Tags: map[string]string(nil)}},
+			Err:         nil,
+		},
+		{
+			Name:        "app not found",
+			RackName:    "rack2",
+			AppName:     "app2",
+			AppNameList: "app2-not-found",
+			Namespace:   "rack2-app2",
+			BuildName:   "build2",
+			Response:    structs.Builds(structs.Builds{}),
+			Err:         errors.New("app not found: app2-not-found"),
+		},
+	}
+
+	testProvider(t, func(p *k8s.Provider) {
+		for _, test := range tests {
+			fn := func(t *testing.T) {
+				kk := p.Cluster.(*fake.Clientset)
+
+				require.NoError(t, appCreate(kk, test.RackName, test.AppName))
+
+				if test.Err == nil {
+					aa := p.Atom.(*atom.MockInterface)
+					aa.On("Status", test.Namespace, "app").Return("Updating", "R1234567", nil).Once()
+				}
+
+				err := buildCreate(p.Convox, test.Namespace, test.BuildName, "basic")
+				require.NoError(t, err)
+
+				bs, err := p.BuildList(test.AppNameList, structs.BuildListOptions{})
+
+				if err == nil {
+					require.NoError(t, err)
+					assert.Equal(t, bs, test.Response)
+				} else {
+					assert.Equal(t, test.Err.Error(), err.Error())
+				}
+			}
+
+			t.Run(test.Name, fn)
+		}
+	})
+}
 
 func buildCreate(kc cv.Interface, ns, id, fixture string) error {
 	spec, err := buildFixture(fixture)
