@@ -82,6 +82,63 @@ func TestBuildList(t *testing.T) {
 	})
 }
 
+func TestBuildGet(t *testing.T) {
+	tests := []struct {
+		Name        string
+		RackName    string
+		AppName     string
+		AppNameList string
+		Namespace   string
+		BuildName   string
+		Response    *structs.Build
+		Err         error
+	}{
+		{
+			Name:        "Success",
+			RackName:    "rack1",
+			AppName:     "app1",
+			AppNameList: "app1",
+			Namespace:   "rack1-app1",
+			BuildName:   "build1",
+			Response:    &structs.Build{Id: "BUILD1", App: "", Description: "foo", Entrypoint: "", Logs: "", Manifest: "services:\n  web:\n    build: .\n    port: 5000\n", Process: "", Release: "", Reason: "", Repository: "", Status: "", Started: time.Date(2020, time.January, 1, 0, 0, 0, 0, time.UTC), Ended: time.Date(2020, time.January, 1, 0, 0, 0, 0, time.UTC), Tags: map[string]string(nil)},
+			Err:         nil,
+		},
+		{
+			Name:        "app not found",
+			RackName:    "rack2",
+			AppName:     "app2",
+			AppNameList: "app2-not-found",
+			Namespace:   "rack2-app2",
+			BuildName:   "build2",
+			Response:    nil,
+			Err:         errors.New("builds.convox.com \"build2\" not found"),
+		},
+	}
+
+	testProvider(t, func(p *k8s.Provider) {
+		for _, test := range tests {
+			fn := func(t *testing.T) {
+				kk := p.Cluster.(*fake.Clientset)
+
+				require.NoError(t, appCreate(kk, test.RackName, test.AppName))
+
+				err := buildCreate(p.Convox, test.Namespace, test.BuildName, "basic")
+				require.NoError(t, err)
+
+				bs, err := p.BuildGet(test.AppName, test.BuildName)
+				if err == nil {
+					require.NoError(t, err)
+					assert.Equal(t, bs, test.Response)
+				} else {
+					assert.Equal(t, test.Err.Error(), err.Error())
+				}
+			}
+
+			t.Run(test.Name, fn)
+		}
+	})
+}
+
 func buildCreate(kc cv.Interface, ns, id, fixture string) error {
 	spec, err := buildFixture(fixture)
 	if err != nil {
