@@ -104,6 +104,7 @@ jobs:
           - aws-arm64
           - aws-downgrade
           - aws-existing-vpc
+          - aws-upgrade
           - do
           - gcp
           # - azure
@@ -123,6 +124,10 @@ jobs:
             provider: aws
             rack_params: "vpc_id=vpc-0f18b6d1265717215 internet_gateway_id=igw-01c3d338eecec02a1 cidr=172.0.0.0/16"
             suffix: evpc
+          - job: aws-upgrade
+            provider: aws
+            suffix: upgrade
+            upgrade: true
           - job: do
             provider: do
           - job: gcp
@@ -150,17 +155,24 @@ jobs:
         run: ci/cli.sh
       - name: install
         run: ci/install.sh
+        if: ${{ matrix.upgrade == false }}
+      - name: install last release
+        run: ci/install_last_release.sh
+        if: ${{ matrix.upgrade == true }}
       - name: wait
         run: sleep 600
-      - name: before downgrade test
-        run: ci/downgrade_setup.sh
-        if: ${{ matrix.downgrade == true }}
+      - name: before version upgrade/downgrade setup
+        run: ci/before_update_setup.sh
+        if: ${{ matrix.downgrade == true || matrix.upgrade == true}}
       - name: downgrade
         run: ci/downgrade.sh
         if: ${{ matrix.downgrade == true }}
-      - name: after downgrade test
-        run: ci/downgrade_check.sh
-        if: ${{ matrix.downgrade == true }}
+      - name: upgrade
+        run: ci/upgrade.sh
+        if: ${{ matrix.upgrade == true }}
+      - name: after version upgrade/downgrade check
+        run: ci/after_update_check.sh
+        if: ${{ matrix.downgrade == true || matrix.upgrade == true }}
       - name: test
         run: ci/test.sh
       - name: debug
