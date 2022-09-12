@@ -461,9 +461,6 @@ func (p *Provider) BuildUpdate(app, id string, opts structs.BuildUpdateOptions) 
 		b.Status = *opts.Status
 	}
 
-	data, _ := json.Marshal(b)
-	fmt.Println(fmt.Sprintf("BUILD: %s", string(data)))
-
 	if _, err := p.buildUpdate(b); err != nil {
 		return nil, errors.WithStack(err)
 	}
