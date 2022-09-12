@@ -2,7 +2,7 @@ package k8s_test
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -287,7 +287,7 @@ func buildCreate(kc cv.Interface, ns, id, fixture string) error {
 }
 
 func buildFixture(name string) (*ca.BuildSpec, error) {
-	data, err := ioutil.ReadFile(fmt.Sprintf("testdata/build-%s.yml", name))
+	data, err := os.ReadFile(fmt.Sprintf("testdata/build-%s.yml", name))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

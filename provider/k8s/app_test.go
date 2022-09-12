@@ -145,7 +145,7 @@ func TestNamespaceApp(t *testing.T) {
 				ns, err := p.NamespaceApp(test.Namespace)
 
 				if err != nil {
-					require.EqualError(t, err, fmt.Sprintf("namespaces \"%s\" not found", test.Namespace))
+					require.EqualError(t, err, fmt.Sprintf("namespaces %q not found", test.Namespace))
 				} else {
 					require.NoError(t, err)
 					require.Equal(t, ns, test.AppName)
