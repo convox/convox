@@ -1,5 +1,8 @@
 FROM httpd
 
-COPY . /usr/local/apache2
+RUN apt update > /dev/null 2>&1
+RUN apt install -y postgresql-client redis > /dev/null 2>&1
 
-RUN chmod +x /usr/local/apache2/timer-cmd.sh
+COPY ./scripts/ /usr/scripts/
+
+RUN find /usr/scripts/ -type f -iname "*.sh" -exec chmod +x {} \;
