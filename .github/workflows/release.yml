@@ -161,8 +161,8 @@ jobs:
         if: ${{ matrix.upgrade == true }}
       - name: wait
         run: sleep 600
-      - name: before version upgrade/downgrade setup
-        run: ci/before_update_setup.sh
+      - name: before version upgrade/downgrade setup and test
+        run: ci/before_additional_test.sh
         if: ${{ matrix.downgrade == true || matrix.upgrade == true}}
       - name: downgrade
         run: ci/downgrade.sh
@@ -170,8 +170,8 @@ jobs:
       - name: upgrade
         run: ci/upgrade.sh
         if: ${{ matrix.upgrade == true }}
-      - name: after version upgrade/downgrade check
-        run: ci/after_update_check.sh
+      - name: after version upgrade/downgrade test
+        run: ci/after_additional_test.sh
         if: ${{ matrix.downgrade == true || matrix.upgrade == true }}
       - name: test
         run: ci/test.sh
