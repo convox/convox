@@ -183,7 +183,72 @@ func TestBuildUpdate(t *testing.T) {
 				err := buildCreate(p.Convox, test.Namespace, test.BuildName, "basic")
 				require.NoError(t, err)
 
-				_, err = p.BuildUpdate(test.AppName, test.BuildName, structs.BuildUpdateOptions{})
+				status := "Running"
+				release := "v1"
+
+				_, err = p.BuildUpdate(test.AppName, test.BuildName, structs.BuildUpdateOptions{
+					Status:  &status,
+					Release: &release,
+				})
+
+				if err == nil {
+					require.NoError(t, err)
+				} else {
+					assert.Equal(t, test.Err.Error(), err.Error())
+				}
+			}
+
+			t.Run(test.Name, fn)
+		}
+	})
+}
+
+func TestBuildCreate(t *testing.T) {
+	tests := []struct {
+		Name        string
+		RackName    string
+		AppName     string
+		AppNameList string
+		Namespace   string
+		BuildName   string
+		Response    *structs.Build
+		Err         error
+	}{
+		{
+			Name:        "Success",
+			RackName:    "rack1",
+			AppName:     "app1",
+			AppNameList: "app1",
+			Namespace:   "rack1-app1",
+			BuildName:   "build1",
+			Response:    &structs.Build{Id: "BUILD1", App: "", Description: "foo", Entrypoint: "", Logs: "", Manifest: "services:\n  web:\n    build: .\n    port: 5000\n", Process: "", Release: "", Reason: "", Repository: "", Status: "", Started: time.Date(2020, time.January, 1, 0, 0, 0, 0, time.UTC), Ended: time.Date(2020, time.January, 1, 0, 0, 0, 0, time.UTC), Tags: map[string]string(nil)},
+			Err:         nil,
+		},
+		{
+			Name:        "app not found",
+			RackName:    "rack2",
+			AppName:     "app2",
+			AppNameList: "app2-not-found",
+			Namespace:   "rack2-app2",
+			BuildName:   "build2",
+			Response:    nil,
+			Err:         errors.New("app not found: app2"),
+		},
+	}
+
+	testProvider(t, func(p *k8s.Provider) {
+		for _, test := range tests {
+			fn := func(t *testing.T) {
+				kk := p.Cluster.(*fake.Clientset)
+
+				if test.Err == nil {
+					aa := p.Atom.(*atom.MockInterface)
+					aa.On("Status", test.Namespace, "app").Return("Creating", "R1234567", nil).Times(3)
+				}
+
+				require.NoError(t, appCreate(kk, test.RackName, test.AppName))
+
+				_, err := p.BuildCreate(test.AppName, test.BuildName, structs.BuildCreateOptions{})
 				if err == nil {
 					require.NoError(t, err)
 				} else {
