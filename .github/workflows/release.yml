@@ -102,9 +102,7 @@ jobs:
         job:
           - aws
           - aws-arm64
-          - aws-downgrade
           - aws-existing-vpc
-          - aws-upgrade
           - do
           - gcp
           # - azure
@@ -116,18 +114,10 @@ jobs:
             provider: aws
             rack_params: "node_type=t4g.small proxy_protocol=true"
             suffix: arm64
-          - job: aws-downgrade
-            provider: aws
-            suffix: downgrade
-            downgrade: true
           - job: aws-existing-vpc
             provider: aws
             rack_params: "vpc_id=vpc-0f18b6d1265717215 internet_gateway_id=igw-01c3d338eecec02a1 cidr=172.0.0.0/16"
             suffix: evpc
-          - job: aws-upgrade
-            provider: aws
-            suffix: upgrade
-            upgrade: true
           - job: do
             provider: do
           - job: gcp
@@ -155,24 +145,94 @@ jobs:
         run: ci/cli.sh
       - name: install
         run: ci/install.sh
-        if: ${{ matrix.upgrade == false }}
-      - name: install last release
-        run: ci/install_last_release.sh
-        if: ${{ matrix.upgrade == true }}
       - name: wait
         run: sleep 600
-      - name: before version upgrade/downgrade setup and test
+      - name: test
+        run: ci/test.sh
+      - name: debug
+        run: ci/debug.sh
+        if: always()
+      - name: uninstall
+        run: ci/uninstall.sh
+        if: always()
+  ci-downgrage:
+    if: github.repository == 'convox/convox'
+    environment: 'UpgradeDowngradeTests'
+    needs: release
+    runs-on: ubuntu-latest
+    env:
+      provider: aws
+      suffix: downgrade
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: version
+        run: echo "VERSION=$(echo ${{ github.ref }} | awk -F/ '{print $3}')" >> $GITHUB_ENV
+      - name: name
+        run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")${{ env.suffix }}" >> $GITHUB_ENV
+      - name: provider
+        run: echo "PROVIDER=${{ env.provider }}" >> $GITHUB_ENV
+      - name: secrets
+        run: ci/secrets.sh
+        env:
+          SECRETS: ${{ toJson(secrets) }}
+      - name: dependencies
+        run: ci/dependencies.sh
+      - name: cli
+        run: ci/cli.sh
+      - name: install
+        run: ci/install.sh
+      - name: wait
+        run: sleep 600
+      - name: before version downgrade setup and test
         run: ci/before_additional_test.sh
-        if: ${{ matrix.downgrade == true || matrix.upgrade == true}}
       - name: downgrade
         run: ci/downgrade.sh
-        if: ${{ matrix.downgrade == true }}
+      - name: after version downgrade test
+        run: ci/after_additional_test.sh
+      - name: test
+        run: ci/test.sh
+      - name: debug
+        run: ci/debug.sh
+        if: always()
+      - name: uninstall
+        run: ci/uninstall.sh
+        if: always()
+  ci-upgrade:
+    if: github.repository == 'convox/convox'
+    environment: 'UpgradeDowngradeTests'
+    needs: release
+    runs-on: ubuntu-latest
+    env:
+      provider: aws
+      suffix: upgrade
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: version
+        run: echo "VERSION=$(echo ${{ github.ref }} | awk -F/ '{print $3}')" >> $GITHUB_ENV
+      - name: name
+        run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")${{ env.suffix }}" >> $GITHUB_ENV
+      - name: provider
+        run: echo "PROVIDER=${{ env.provider }}" >> $GITHUB_ENV
+      - name: secrets
+        run: ci/secrets.sh
+        env:
+          SECRETS: ${{ toJson(secrets) }}
+      - name: dependencies
+        run: ci/dependencies.sh
+      - name: cli
+        run: ci/cli.sh
+      - name: install last release
+        run: ci/install_last_release.sh
+      - name: wait
+        run: sleep 600
+      - name: before version upgrade setup and test
+        run: ci/before_additional_test.sh
       - name: upgrade
         run: ci/upgrade.sh
-        if: ${{ matrix.upgrade == true }}
-      - name: after version upgrade/downgrade test
+      - name: after version upgrade test
         run: ci/after_additional_test.sh
-        if: ${{ matrix.downgrade == true || matrix.upgrade == true }}
       - name: test
         run: ci/test.sh
       - name: debug
