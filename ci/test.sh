@@ -139,6 +139,11 @@ convox resources -a httpd | grep rediscache
 ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | head -n 1)
 convox exec $ps "/usr/scripts/redis_check.sh" -a httpd
 
+# memcache resource test
+convox resources -a httpd | grep rediscache
+ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | head -n 1)
+convox exec $ps "/usr/scripts/memcache_check.sh" -a httpd
+
 # app (httpd2)
 convox apps create httpd2
 convox apps

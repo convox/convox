@@ -3,6 +3,8 @@ resources:
     type: postgres
   rediscache:
     type: redis
+  memcache:
+    type: memcached
 services:
   web:
     build: .
@@ -10,6 +12,7 @@ services:
     resources:
       - postgresdb:DB_URL
       - rediscache:REDIS_URL
+      - memcache:MEMCACHE_URL
 
 timers:
   example:
