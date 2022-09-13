@@ -53,7 +53,7 @@ If testing new changes in terraform, install the rack using the following comman
 /convox: CONVOX_TERRAFORM_SOURCE=$PWD//terraform/system/%s convox rack install aws rack1
 ```
 
-After saving your changes, go to `~/.config/convox/racks/rack1` and run `terraform apply`
+After saving your changes, go to (Linux:`~/.config/convox/racks/rack1` or OSX:`/System/Volumes/Data/Users/$PROFILENAME/Library/Preferences/convox/racks` and run `terraform apply`
 
 ## License
 
