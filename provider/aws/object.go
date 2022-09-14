@@ -40,6 +40,7 @@ func (p *Provider) ObjectExists(app, key string) (bool, error) {
 		Bucket: aws.String(p.Bucket),
 		Key:    aws.String(p.objectKey(app, key)),
 	})
+
 	if err, ok := err.(awserr.Error); ok && err.Code() == "NotFound" {
 		return false, nil
 	}
@@ -56,9 +57,11 @@ func (p *Provider) ObjectFetch(app, key string) (io.ReadCloser, error) {
 		Bucket: aws.String(p.Bucket),
 		Key:    aws.String(p.objectKey(app, key)),
 	})
+
 	if ae, ok := err.(awserr.Error); ok && ae.Code() == "NoSuchKey" {
 		return nil, fmt.Errorf("object not found: %s", key)
 	}
+
 	if err != nil {
 		return nil, err
 	}
