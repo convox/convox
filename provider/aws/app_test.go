@@ -134,8 +134,11 @@ func appCreate(c kubernetes.Interface, rack, name string) error {
 		context.TODO(),
 		&ac.Namespace{
 			ObjectMeta: am.ObjectMeta{
-				Name:        fmt.Sprintf("%s-%s", rack, name),
-				Annotations: map[string]string{"convox.com/lock": "false"},
+				Name: fmt.Sprintf("%s-%s", rack, name),
+				Annotations: map[string]string{
+					"convox.com/registry": "134537970938.dkr.ecr.us-east-1.amazonaws.com/dev-remote/httpd",
+					"convox.com/lock":     "false",
+				},
 				Labels: map[string]string{
 					"app":    name,
 					"name":   name,
