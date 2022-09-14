@@ -134,13 +134,26 @@ convox exec $ps "/usr/scripts/db_check.sh" -a httpd
 convox resources export postgresdb -f /tmp/pdb.sql
 convox resources import postgresdb -f /tmp/pdb.sql
 
+# mariadb resource test
+convox resources -a httpd | grep mariadb
+ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | head -n 1)
+convox exec $ps "/usr/scripts/mariadb_insert.sh" -a httpd
+convox exec $ps "/usr/scripts/mariadb_check.sh" -a httpd
+
+
+# mysqldb resource test
+convox resources -a httpd | grep mysqldb
+ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | head -n 1)
+convox exec $ps "/usr/scripts/mariadb_insert.sh mysql" -a httpd
+convox exec $ps "/usr/scripts/mariadb_check.sh mysql" -a httpd
+
 # redis resource test
 convox resources -a httpd | grep rediscache
 ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | head -n 1)
 convox exec $ps "/usr/scripts/redis_check.sh" -a httpd
 
 # memcache resource test
-convox resources -a httpd | grep rediscache
+convox resources -a httpd | grep memcache
 ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | head -n 1)
 convox exec $ps "/usr/scripts/memcache_check.sh" -a httpd
 

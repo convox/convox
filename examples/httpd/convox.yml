@@ -5,6 +5,10 @@ resources:
     type: redis
   memcache:
     type: memcached
+  mysqldb:
+    type: mysql
+  mariadb:
+    type: mariadb
 services:
   web:
     build: .
@@ -13,7 +17,8 @@ services:
       - postgresdb:DB_URL
       - rediscache:REDIS_URL
       - memcache:MEMCACHE_URL
-
+      - mysqldb:MYSQL_URL
+      - mariadb:MARIA_URL
 timers:
   example:
     command: /usr/scripts/timer_cmd.sh
