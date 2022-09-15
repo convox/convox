@@ -87,7 +87,7 @@ func requireYamlFixture(t *testing.T, d1 []byte, filename string) {
 	r1, err := reformatYaml(d1)
 	require.NoError(t, err)
 
-	d2, err := os.ReadFile(filepath.Join("../k8s/testdata", filename))
+	d2, err := os.ReadFile(filepath.Join("..", "k8s", "testdata", filename))
 	require.NoError(t, err)
 
 	r2, err := reformatYaml(d2)
