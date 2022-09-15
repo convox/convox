@@ -155,7 +155,7 @@ jobs:
       - name: uninstall
         run: ci/uninstall.sh
         if: always()
-  ci-downgrage:
+  ci-downgrade:
     if: github.repository == 'convox/convox'
     environment: 'UpgradeDowngradeTests'
     needs: release
