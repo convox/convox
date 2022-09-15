@@ -10,7 +10,7 @@ import (
 	"github.com/convox/convox/pkg/atom"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/aws"
-	"github.com/convox/convox/provider/aws/mocks"
+	"github.com/convox/convox/mock/aws"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

@@ -14,7 +14,7 @@ import (
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/aws"
-	"github.com/convox/convox/provider/aws/mocks"
+	"github.com/convox/convox/mock/aws"
 	"github.com/convox/convox/provider/k8s"
 	cvfake "github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned/fake"
 	"github.com/pkg/errors"
