@@ -5,8 +5,12 @@ resources:
     type: redis
   memcache:
     type: memcached
+    options:
+      version: 1.6.17
   mysqldb:
     type: mysql
+    options:
+      version: 8.0.30
   mariadb:
     type: mariadb
 services:
