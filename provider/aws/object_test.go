@@ -2,15 +2,15 @@ package aws_test
 
 import (
 	"errors"
-	"io/ioutil"
+	"io"
 	"strings"
 	"testing"
 
 	awssdk "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/convox/convox/provider/aws"
 	"github.com/convox/convox/pkg/mock/aws"
+	"github.com/convox/convox/provider/aws"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -100,7 +100,7 @@ func TestObjectFetchSuccess(t *testing.T) {
 			Bucket: awssdk.String("bucket1"),
 			Key:    awssdk.String("app1/key1"),
 		}).Return(&s3.GetObjectOutput{
-			Body: ioutil.NopCloser(strings.NewReader("hello world")),
+			Body: io.NopCloser(strings.NewReader("hello world")),
 		}, nil)
 
 		_, err := p.ObjectFetch("app1", "key1")
