@@ -11,7 +11,7 @@ import (
 type TestEngine struct {
 }
 
-func (*TestEngine) AppIdles(app string) (bool, error) {
+func (*TestEngine) AppIdles(_ string) (bool, error) {
 	return false, nil
 }
 
@@ -23,7 +23,7 @@ func (*TestEngine) Heartbeat() (map[string]interface{}, error) {
 	return map[string]interface{}{"foo": "bar"}, nil
 }
 
-func (*TestEngine) IngressAnnotations(app string) (map[string]string, error) {
+func (*TestEngine) IngressAnnotations(_ string) (map[string]string, error) {
 	return map[string]string{"ann1": "val1"}, nil
 }
 
@@ -31,23 +31,23 @@ func (*TestEngine) IngressClass() string {
 	return ""
 }
 
-func (*TestEngine) Log(app, stream string, ts time.Time, message string) error {
+func (*TestEngine) Log(_, _ string, _ time.Time, _ string) error {
 	return nil
 }
 
-func (*TestEngine) ManifestValidate(m *manifest.Manifest) error {
+func (*TestEngine) ManifestValidate(_ *manifest.Manifest) error {
 	return nil
 }
 
-func (*TestEngine) RegistryAuth(host, username, password string) (string, string, error) {
+func (*TestEngine) RegistryAuth(_, username, password string) (string, string, error) {
 	return username, password, nil
 }
 
-func (*TestEngine) RepositoryAuth(app string) (string, string, error) {
+func (*TestEngine) RepositoryAuth(_ string) (string, string, error) {
 	return "un1", "pw1", nil
 }
 
-func (*TestEngine) RepositoryHost(app string) (string, bool, error) {
+func (*TestEngine) RepositoryHost(_ string) (string, bool, error) {
 	return "repo1", true, nil
 }
 
@@ -59,7 +59,7 @@ func (*TestEngine) ResolverHost() (string, error) {
 	return "", errors.WithStack(fmt.Errorf("no resolver"))
 }
 
-func (*TestEngine) ServiceHost(app string, s manifest.Service) string {
+func (*TestEngine) ServiceHost(_ string, _ manifest.Service) string {
 	return "service.host"
 }
 
