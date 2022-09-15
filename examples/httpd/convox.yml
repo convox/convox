@@ -13,6 +13,6 @@ services:
 
 timers:
   example:
-    command: /usr/scripts/timer-cmd.sh
+    command: /usr/scripts/timer_cmd.sh
     schedule: "* * * * *"
     service: web

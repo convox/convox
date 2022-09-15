@@ -1,7 +1,7 @@
 FROM httpd
 
 RUN apt update > /dev/null 2>&1
-RUN apt install -y postgresql-client redis > /dev/null 2>&1
+RUN apt install -y postgresql-client redis > /dev/null 2>&1 curl > /dev/null
 
 COPY ./scripts/ /usr/scripts/
 
