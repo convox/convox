@@ -1,4 +1,4 @@
-package k8s_test
+package aws_test
 
 import (
 	"bytes"
@@ -9,7 +9,9 @@ import (
 
 	"github.com/convox/convox/pkg/atom"
 	"github.com/convox/convox/pkg/mock"
+	"github.com/convox/convox/pkg/mock/aws"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/convox/provider/aws"
 	"github.com/convox/convox/provider/k8s"
 	cvfake "github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned/fake"
 	"github.com/pkg/errors"
@@ -21,43 +23,7 @@ import (
 	metricfake "k8s.io/metrics/pkg/client/clientset/versioned/fake"
 )
 
-func reformatYaml(data []byte) ([]byte, error) {
-	rms := [][]byte{}
-
-	parts := bytes.Split(data, []byte("---\n"))
-
-	for _, part := range parts {
-		var v interface{}
-
-		if err := yaml.Unmarshal(part, &v); err != nil {
-			return nil, errors.WithStack(err)
-		}
-
-		data, err := yaml.Marshal(v)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-
-		rms = append(rms, data)
-	}
-
-	return bytes.Join(rms, []byte("---\n")), nil
-}
-
-func requireYamlFixture(t *testing.T, d1 []byte, filename string) {
-	r1, err := reformatYaml(d1)
-	require.NoError(t, err)
-
-	d2, err := os.ReadFile(filepath.Join("testdata", filename))
-	require.NoError(t, err)
-
-	r2, err := reformatYaml(d2)
-	require.NoError(t, err)
-
-	require.Equal(t, string(r2), string(r1))
-}
-
-func testProvider(t *testing.T, fn func(*k8s.Provider)) {
+func testProvider(t *testing.T, fn func(*aws.Provider)) {
 	a := &atom.MockInterface{}
 	c := fake.NewSimpleClientset()
 	cc := cvfake.NewSimpleClientset()
@@ -100,17 +66,55 @@ func testProvider(t *testing.T, fn func(*k8s.Provider)) {
 
 	os.Setenv("NAMESPACE", "test")
 
-	fn(p)
+	pp := &aws.Provider{
+		Provider: p,
+		Bucket:   "bucket1",
+		Region:   "us-east-1",
+
+		CloudWatchLogs: &mocks.CloudWatchLogsAPI{},
+		ECR:            &mocks.ECRAPI{},
+		CloudFormation: &mocks.CloudFormationAPI{},
+		S3:             &mocks.S3API{},
+		SQS:            &mocks.SQSAPI{},
+	}
+
+	fn(pp)
 
 	a.AssertExpectations(t)
 }
 
-func testProviderManual(t *testing.T, fn func(*k8s.Provider, *fake.Clientset)) {
-	c := &fake.Clientset{}
+func requireYamlFixture(t *testing.T, d1 []byte, filename string) {
+	r1, err := reformatYaml(d1)
+	require.NoError(t, err)
 
-	p := &k8s.Provider{
-		Cluster: c,
+	d2, err := os.ReadFile(filepath.Join("..", "k8s", "testdata", filename))
+	require.NoError(t, err)
+
+	r2, err := reformatYaml(d2)
+	require.NoError(t, err)
+
+	require.Equal(t, string(r2), string(r1))
+}
+
+func reformatYaml(data []byte) ([]byte, error) {
+	rms := [][]byte{}
+
+	parts := bytes.Split(data, []byte("---\n"))
+
+	for _, part := range parts {
+		var v interface{}
+
+		if err := yaml.Unmarshal(part, &v); err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		data, err := yaml.Marshal(v)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		rms = append(rms, data)
 	}
 
-	fn(p, c)
+	return bytes.Join(rms, []byte("---\n")), nil
 }

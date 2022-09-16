@@ -40,6 +40,7 @@ func (p *Provider) ObjectExists(app, key string) (bool, error) {
 		Bucket: aws.String(p.Bucket),
 		Key:    aws.String(p.objectKey(app, key)),
 	})
+
 	if err, ok := err.(awserr.Error); ok && err.Code() == "NotFound" {
 		return false, nil
 	}
@@ -56,9 +57,11 @@ func (p *Provider) ObjectFetch(app, key string) (io.ReadCloser, error) {
 		Bucket: aws.String(p.Bucket),
 		Key:    aws.String(p.objectKey(app, key)),
 	})
+
 	if ae, ok := err.(awserr.Error); ok && ae.Code() == "NoSuchKey" {
 		return nil, fmt.Errorf("object not found: %s", key)
 	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -126,29 +129,6 @@ func (p *Provider) ObjectStore(app, key string, r io.Reader, opts structs.Object
 func (p *Provider) objectKey(app, key string) string {
 	return fmt.Sprintf("%s/%s", app, key)
 }
-
-// func (p *Provider) objectPresignedURL(o *structs.Object, duration time.Duration) (string, error) {
-//   ou, err := url.Parse(o.Url)
-//   if err != nil {
-//     return "", err
-//   }
-
-//   if ou.Scheme != "object" {
-//     return "", fmt.Errorf("url is not an object: %s", o.Url)
-//   }
-
-//   req, _ := p.S3.GetObjectRequest(&s3.GetObjectInput{
-//     Bucket: aws.String(p.Bucket),
-//     Key:    aws.String(p.objectKey(ou.Hostname(), ou.Path)),
-//   })
-
-//   su, err := req.Presign(duration)
-//   if err != nil {
-//     return "", err
-//   }
-
-//   return su, nil
-// }
 
 func generateTempKey() (string, error) {
 	data := make([]byte, 1024)
