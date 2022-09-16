@@ -235,8 +235,6 @@ jobs:
         run: ci/after_additional_test.sh
       - name: test
         run: ci/test.sh
-      - name: internal_communication
-        run: ci/inter_communication.sh
       - name: debug
         run: ci/debug.sh
         if: always()
