@@ -28,12 +28,26 @@ convox apps | grep httpd2
 convox apps info httpd2 | grep running
 endpoint=$(convox env get ENDPOINT -a httpd2)
 fetch https://$endpoint | grep "It works"
+
 # postgres resource test
 ps=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | head -n 1)
 convox exec $ps "/usr/scripts/db_check.sh" -a httpd2
+
+# mariadb resource test
+ps=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | head -n 1)
+convox exec $ps "/usr/scripts/mariadb_check.sh" -a httpd2
+
+# mysqldb resource test
+ps=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | head -n 1)
+convox exec $ps "/usr/scripts/mariadb_check.sh mysql" -a httpd2
+
 # redis resource test
-convox resources -a httpd2 | grep rediscache
 ps=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | head -n 1)
 convox exec $ps "/usr/scripts/redis_check.sh" -a httpd2
+
+# memcache resource test
+ps=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | head -n 1)
+convox exec $ps "/usr/scripts/memcache_check.sh" -a httpd2
+
 #cleanup
 convox apps delete httpd2
