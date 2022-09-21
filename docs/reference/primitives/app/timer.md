@@ -28,7 +28,7 @@ A Timer is defined in [`convox.yml`](/configuration/convox-yml).
 | **command**      | **yes**  | The command to execute once the [Process](/reference/primitives/app/process) starts                               |
 | **schedule**     | **yes**  | A cron formatted schedule for spawning the [Process](/reference/primitives/app/process). All times are UTC        |
 | **service**      | **yes**  | The name of the [Service](/reference/primitives/app/service) that will be used to spawn the [Process](/reference/primitives/app/process) |
-| **concurrency**  | **forbid**  | It specifies how to treat concurrent executions of a job that is created by this cron job. Check this [doc](https://kubernetes.io/docs/tasks/job/automated-tasks-with-cron-jobs/#concurrency-policy) for more info. |
+| **concurrency**  | **no**   | It specifies how to treat concurrent executions of a job that is created by this cron job. Check this [doc](https://kubernetes.io/docs/tasks/job/automated-tasks-with-cron-jobs/#concurrency-policy) for more info. |
 
 ### Cron Expression Format
 
