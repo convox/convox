@@ -6,7 +6,7 @@ metadata:
   name: timer-{{.Timer.Name}}
 spec:
   schedule: "{{.Timer.Schedule}}"
-  concurrencyPolicy: {{.Timer.ConcurrencyPolicy}}
+  concurrencyPolicy: {{.Timer.Concurrency}}
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 1
   jobTemplate:

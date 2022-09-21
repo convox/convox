@@ -3,10 +3,10 @@ package manifest
 type Timer struct {
 	Name string `yaml:"-"`
 
-	Command           string `yaml:"command"`
-	Schedule          string `yaml:"schedule"`
-	Service           string `yaml:"service"`
-	ConcurrencyPolicy string `yaml:"concurrencyPolicy"`
+	Command     string `yaml:"command"`
+	Schedule    string `yaml:"schedule"`
+	Service     string `yaml:"service"`
+	Concurrency string `yaml:"concurrency"`
 }
 
 type Timers []Timer

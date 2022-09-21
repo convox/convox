@@ -20,9 +20,9 @@ timers:
     command: /usr/scripts/timer_long_cmd.sh
     schedule: "* * * * *"
     service: web
-    concurrencyPolicy: Allow
+    concurrency: allow
   concurrencyforbid:
     command: /usr/scripts/timer_long_cmd.sh
     schedule: "* * * * *"
     service: web
-    concurrencyPolicy: Forbid
+    concurrency: forbid

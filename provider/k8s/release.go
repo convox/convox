@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -470,6 +471,10 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 }
 
 func (p *Provider) releaseTemplateTimer(a *structs.App, e structs.Environment, r *structs.Release, s *manifest.Service, t manifest.Timer) ([]byte, error) {
+	if t.Concurrency != "" {
+		t.Concurrency = strings.Title(t.Concurrency)
+	}
+
 	params := map[string]interface{}{
 		"App":       a,
 		"Namespace": p.AppNamespace(a.Name),
@@ -483,6 +488,9 @@ func (p *Provider) releaseTemplateTimer(a *structs.App, e structs.Environment, r
 	if ip, err := p.Engine.ResolverHost(); err == nil {
 		params["Resolver"] = ip
 	}
+
+	data, _ := json.Marshal(params)
+	fmt.Println(fmt.Sprintf("Params: %s", string(data)))
 
 	data, err := p.RenderTemplate("app/timer", params)
 	if err != nil {
