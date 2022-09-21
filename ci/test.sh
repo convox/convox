@@ -72,8 +72,8 @@ endpoint=$(convox api get /apps/httpd/services | jq -r '.[] | select(.name == "w
 fetch https://$endpoint | grep "It works"
 sleep 30
 convox rack ps -a | grep httpd
-convox logs -a httpd --no-follow --since 10m
-convox logs -a httpd --no-follow --since 10m | grep service/web
+convox logs -a httpd --no-follow --since 1m
+convox logs -a httpd --no-follow --since 1m | grep service/web
 releaser=$(convox releases rollback $release -a httpd --id)
 convox ps -a httpd | grep $releaser
 ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | grep web | head -n 1)
