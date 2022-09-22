@@ -3,14 +3,15 @@ package manifest
 type Timer struct {
 	Name string `yaml:"-"`
 
-	Command  string `yaml:"command"`
-	Schedule string `yaml:"schedule"`
-	Service  string `yaml:"service"`
+	Command     string `yaml:"command"`
+	Schedule    string `yaml:"schedule"`
+	Service     string `yaml:"service"`
+	Concurrency string `yaml:"concurrency"`
 }
 
 type Timers []Timer
 
-func (t Timer) GetName() string {
+func (t *Timer) GetName() string {
 	return t.Name
 }
 

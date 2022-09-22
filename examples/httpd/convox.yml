@@ -28,3 +28,13 @@ timers:
     command: /usr/scripts/timer_cmd.sh
     schedule: "* * * * *"
     service: web
+  concurrencyallowed:
+    command: /usr/scripts/timer_long_cmd.sh
+    schedule: "* * * * *"
+    service: web
+    concurrency: allow
+  concurrencyforbid:
+    command: /usr/scripts/timer_long_cmd.sh
+    schedule: "* * * * *"
+    service: web
+    concurrency: forbid
