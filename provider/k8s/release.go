@@ -16,6 +16,8 @@ import (
 	"github.com/convox/convox/pkg/structs"
 	ca "github.com/convox/convox/provider/k8s/pkg/apis/convox/v1"
 	"github.com/pkg/errors"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	v1 "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -471,7 +473,8 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 
 func (p *Provider) releaseTemplateTimer(a *structs.App, e structs.Environment, r *structs.Release, s *manifest.Service, t manifest.Timer) ([]byte, error) {
 	if t.Concurrency != "" {
-		t.Concurrency = strings.Title(t.Concurrency)
+		caser := cases.Title(language.Und, cases.NoLower)
+		t.Concurrency = caser.String(t.Concurrency)
 	}
 
 	params := map[string]interface{}{
