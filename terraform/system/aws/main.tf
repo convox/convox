@@ -53,6 +53,8 @@ module "cluster" {
   node_disk           = var.node_disk
   node_type           = var.node_type
   private             = var.private
+  ssh_private_key     = var.ssh_private_key
+  ssh_public_key      = var.ssh_public_key
   vpc_id              = var.vpc_id
 }
 

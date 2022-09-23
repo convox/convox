@@ -47,6 +47,16 @@ variable "private" {
   default = true
 }
 
+variable "ssh_private_key" {
+  type = string
+  default = ""
+}
+
+variable "ssh_public_key" {
+  type = string
+  default = ""
+}
+
 variable "vpc_id" {
   default = ""
 }

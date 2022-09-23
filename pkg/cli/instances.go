@@ -1,11 +1,14 @@
 package cli
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/options"
+	"github.com/convox/convox/pkg/rack"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
@@ -53,16 +56,50 @@ func Instances(rack sdk.Interface, c *stdcli.Context) error {
 	return t.Print()
 }
 
-func InstancesKeyroll(rack sdk.Interface, c *stdcli.Context) error {
+func InstancesKeyroll(r sdk.Interface, c *stdcli.Context) error {
 	c.Startf("Rolling instance key")
 
-	if err := rack.InstanceKeyroll(); err != nil {
+	rr, err := rack.Current(c)
+	if err != nil {
+		return err
+	}
+
+	data, err := c.SettingRead("current")
+	if err != nil {
+		return err
+	}
+
+	var attrs map[string]string
+	if err := json.Unmarshal([]byte(data), &attrs); err != nil {
+		return err
+	}
+
+	if attrs["type"] == "console" {
+		m, err := rr.Metadata()
+		if err != nil {
+			return err
+		}
+
+		if m.State != nil {
+			private, public, err := generateSShKeyPair()
+			if err != nil {
+				return err
+			}
+
+			c.Args = append(c.Args, fmt.Sprintf("ssh_private_key=%s", base64.StdEncoding.EncodeToString(private)))
+			c.Args = append(c.Args, fmt.Sprintf("ssh_public_key=%s", base64.StdEncoding.EncodeToString(public)))
+			c.Writef("\n")
+			return RackParamsSet(r, c)
+		}
+	}
+
+	if err := r.InstanceKeyroll(); err != nil {
 		return err
 	}
 
 	c.Writef("\n")
 
-	if err := common.WaitForRackWithLogs(rack, c); err != nil {
+	if err := common.WaitForRackWithLogs(r, c); err != nil {
 		return err
 	}
 

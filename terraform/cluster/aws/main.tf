@@ -141,6 +141,8 @@ resource "aws_launch_template" "cluster" {
       volume_size = random_id.node_group.keepers.node_disk
     }
   }
+
+  key_name = var.ssh_private_key != "" ? aws_key_pair.ssh_key_pair[0].key_name : null
 }
 
 module "ebs_csi_driver_controller" {
@@ -199,4 +201,28 @@ resource "kubernetes_annotations" "gp2" {
   }
 
   force = true
+}
+
+resource "aws_key_pair" "ssh_key_pair" {
+  count = var.ssh_private_key != "" ? 1 : 0
+  key_name_prefix   = "${var.name}-key"
+  public_key = base64decode(var.ssh_public_key)
+}
+
+resource "kubernetes_secret" "ssh_key_secret" {
+  depends_on = [
+    null_resource.wait_k8s_api
+  ]
+
+  metadata {
+    name = "ssh-key"
+    namespace = "kube-system"
+  }
+
+  data = {
+    public-key = var.ssh_public_key
+    private-key = var.ssh_private_key
+  }
+
+  type = "Opaque"
 }

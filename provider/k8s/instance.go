@@ -2,12 +2,15 @@ package k8s
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
 
 	"github.com/convox/convox/pkg/structs"
 	"github.com/pkg/errors"
+	"golang.org/x/crypto/ssh"
 	ac "k8s.io/api/core/v1"
+	kerr "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	metricsv1beta1 "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 )
@@ -92,7 +95,102 @@ func (p *Provider) InstanceList() (structs.Instances, error) {
 }
 
 func (p *Provider) InstanceShell(id string, rw io.ReadWriter, opts structs.InstanceShellOptions) (int, error) {
-	return 0, errors.WithStack(fmt.Errorf("unimplemented"))
+	instances, err := p.InstanceList()
+	if err != nil {
+		return 0, err
+	}
+
+	var instance *structs.Instance
+	for i := range instances {
+		if instances[i].Id == id {
+			instance = &instances[i]
+		}
+	}
+	if instance == nil {
+		return 0, fmt.Errorf("instance not found")
+	}
+
+	sshSecret, err := p.Cluster.CoreV1().Secrets("kube-system").Get(context.Background(), "ssh-key", am.GetOptions{})
+	if err != nil {
+		if kerr.IsNotFound(err) {
+			return 0, fmt.Errorf("no instance key found. Did you forget to run `convox instances keyroll`?")
+		}
+		return 0, err
+	}
+
+	if len(sshSecret.Data["private-key"]) == 0 {
+		return 0, fmt.Errorf("no instance key found. Did you forget to run `convox instances keyroll`?")
+	}
+
+	privateKeyBytes, err := base64.RawStdEncoding.DecodeString(string(sshSecret.Data["private-key"]))
+	if err != nil {
+		return 0, fmt.Errorf("invalid ssh private key: %s", err)
+	}
+
+	// configure SSH client
+	signer, err := ssh.ParsePrivateKey(privateKeyBytes)
+	if err != nil {
+		return 0, err
+	}
+
+	config := &ssh.ClientConfig{
+		User:            "ec2-user",
+		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
+
+	ip := instance.PrivateIp
+	conn, err := ssh.Dial("tcp", fmt.Sprintf("%s:22", ip), config)
+	if err != nil {
+		return 0, err
+	}
+	defer conn.Close()
+
+	session, err := conn.NewSession()
+	if err != nil {
+		return 0, err
+	}
+	defer session.Close()
+
+	// Setup I/O
+	session.Stdout = rw
+	session.Stdin = rw
+	session.Stderr = rw
+
+	width := 0
+	height := 0
+
+	if opts.Width != nil {
+		width = *opts.Width
+	}
+
+	if opts.Height != nil {
+		height = *opts.Height
+	}
+
+	if err := session.RequestPty("xterm", height, width, ssh.TerminalModes{}); err != nil {
+		return 0, err
+	}
+
+	code := 0
+
+	if opts.Command != nil {
+		if err := session.Start(*opts.Command); err != nil {
+			return 0, err
+		}
+	} else {
+		if err := session.Shell(); err != nil {
+			return 0, err
+		}
+	}
+
+	if err := session.Wait(); err != nil {
+		if ee, ok := err.(*ssh.ExitError); ok {
+			code = ee.Waitmsg.ExitStatus()
+		}
+	}
+
+	return code, nil
 }
 
 func (p *Provider) InstanceTerminate(id string) error {

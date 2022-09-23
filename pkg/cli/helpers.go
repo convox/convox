@@ -2,15 +2,20 @@ package cli
 
 import (
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
+
+	"golang.org/x/crypto/ssh"
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/structs"
@@ -55,6 +60,57 @@ func executableName() string {
 	default:
 		return "convox"
 	}
+}
+
+func generateSShKeyPair() ([]byte, []byte, error) {
+	bitSize := 4096
+
+	privateKey, privateKeyBytes, err := generatePrivateKey(bitSize)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	publicKeyBytes, err := generatePublicKey(&privateKey.PublicKey)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return privateKeyBytes, publicKeyBytes, nil
+}
+
+func generatePrivateKey(bitSize int) (*rsa.PrivateKey, []byte, error) {
+	privateKey, err := rsa.GenerateKey(rand.Reader, bitSize)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = privateKey.Validate()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	privDER := x509.MarshalPKCS1PrivateKey(privateKey)
+
+	privBlock := pem.Block{
+		Type:    "RSA PRIVATE KEY",
+		Headers: nil,
+		Bytes:   privDER,
+	}
+
+	privatePEM := pem.EncodeToMemory(&privBlock)
+
+	return privateKey, privatePEM, nil
+}
+
+func generatePublicKey(privatekey *rsa.PublicKey) ([]byte, error) {
+	publicRsaKey, err := ssh.NewPublicKey(privatekey)
+	if err != nil {
+		return nil, err
+	}
+
+	pubKeyBytes := ssh.MarshalAuthorizedKey(publicRsaKey)
+
+	return pubKeyBytes, nil
 }
 
 func generateTempKey() (string, error) {
