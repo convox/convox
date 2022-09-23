@@ -84,15 +84,15 @@ endpoint=$(convox api get /apps/httpd/services | jq -r '.[] | select(.name == "w
 fetch https://$endpoint | grep "It works"
 # waiting for web to scale up
 i=0
-while [ "$(convox ps -a httpd | grep web- | wc -l)" != "2" ]
-do
-    if [ $((i++)) -gt 10 ]; then
-        exit 1
-    fi
-    echo "waiting for web to scale up..."
-    convox ps -a httpd
-    sleep 15
-done
+# while [ "$(convox ps -a httpd | grep web- | wc -l)" != "2" ]
+# do
+#     if [ $((i++)) -gt 10 ]; then
+#         exit 1
+#     fi
+#     echo "waiting for web to scale up..."
+#     convox ps -a httpd
+#     sleep 15
+# done
 ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | grep web | head -n 1)
 convox exec $ps "ls -la" -a httpd | grep htdocs
 cat /dev/null | convox exec $ps 'sh -c "sleep 2; echo test"' -a httpd | grep test
