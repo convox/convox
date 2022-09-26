@@ -66,23 +66,34 @@ releasee=$(convox env set FOO=bar -a httpd --id) && [ -n "$releasee" ]
 convox env get FOO -a httpd | grep bar
 convox releases -a httpd | grep $releasee
 convox releases info $releasee -a httpd | grep FOO
-convox releases manifest $releasee -a httpd | grep "image: httpd"
+convox releases manifest $releasee -a httpd | grep "build: ."
 convox releases promote $release -a httpd
 endpoint=$(convox api get /apps/httpd/services | jq -r '.[] | select(.name == "web") | .domain')
 fetch https://$endpoint | grep "It works"
 sleep 30
 convox rack ps -a | grep httpd
-convox logs -a httpd --no-follow --since 10m | grep service/web
+convox logs -a httpd --no-follow --since 1m
+convox logs -a httpd --no-follow --since 1m | grep service/web
 releaser=$(convox releases rollback $release -a httpd --id)
 convox ps -a httpd | grep $releaser
-ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running")|.id' | head -n 1)
+ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | grep web | head -n 1)
 convox ps info $ps -a httpd | grep $releaser
 convox scale web --count 2 --cpu 192 --memory 256 -a httpd
 convox services -a httpd | grep web | grep 443:80 | grep $endpoint
 endpoint=$(convox api get /apps/httpd/services | jq -r '.[] | select(.name == "web") | .domain')
 fetch https://$endpoint | grep "It works"
-convox ps -a httpd | grep web | wc -l | grep 2
-ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running")|.id' | head -n 1)
+# waiting for web to scale up
+i=0
+while [ "$(convox ps -a httpd | grep web- | wc -l)" != "2" ]
+do
+    if [ $((i++)) -gt 10 ]; then
+        exit 1
+    fi
+    echo "waiting for web to scale up..."
+    convox ps -a httpd
+    sleep 15
+done
+ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | grep web | head -n 1)
 convox exec $ps "ls -la" -a httpd | grep htdocs
 cat /dev/null | convox exec $ps 'sh -c "sleep 2; echo test"' -a httpd | grep test
 convox run web "ls -la" -a httpd | grep htdocs
@@ -100,7 +111,83 @@ convox cp $ps:/file /tmp/file2 -a httpd
 cat /tmp/file2 | grep foo
 convox ps stop $ps -a httpd
 convox ps -a httpd | grep -v $ps
+convox scale web --count 1
 convox deploy -a httpd
+
+# timers
+sleep 30
+
+case $provider in
+   gcp)
+      convox logs -a httpd --no-follow --since 10m | grep timer/example/timer-example | grep "Hello Timer"
+      ;;
+   *)
+      convox logs -a httpd --no-follow --since 10m | grep service/web/timer-example | grep "Hello Timer"
+      ;;
+esac
+
+sleep 60
+
+numberOfPodsRunning=$(convox ps -a httpd | grep timer-concurrencyallowed | wc -l)
+if [[ $(($numberOfPodsRunning)) -lt 2 ]]; then
+  exit 1;
+fi
+
+numberOfPodsForbidRunning=$(convox ps -a httpd | grep timer-concurrencyforbid | wc -l)
+if [[ $(($numberOfPodsForbidRunning)) -gt 1 ]]; then
+  exit 1;
+fi
+
+# postgres resource test
+convox resources -a httpd | grep postgresdb
+ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | grep web | head -n 1)
+convox exec $ps "/usr/scripts/db_insert.sh" -a httpd
+convox exec $ps "/usr/scripts/db_check.sh" -a httpd
+convox resources export postgresdb -f /tmp/pdb.sql
+convox resources import postgresdb -f /tmp/pdb.sql
+
+# mariadb resource test
+convox resources -a httpd | grep mariadb
+ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | head -n 1)
+convox exec $ps "/usr/scripts/mariadb_insert.sh" -a httpd
+convox exec $ps "/usr/scripts/mariadb_check.sh" -a httpd
+
+
+# mysqldb resource test
+convox resources -a httpd | grep mysqldb
+ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | head -n 1)
+convox exec $ps "/usr/scripts/mariadb_insert.sh mysql" -a httpd
+convox exec $ps "/usr/scripts/mariadb_check.sh mysql" -a httpd
+
+# redis resource test
+convox resources -a httpd | grep rediscache
+ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | grep web | head -n 1)
+convox exec $ps "/usr/scripts/redis_check.sh" -a httpd
+
+# memcache resource test
+convox resources -a httpd | grep memcache
+ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | head -n 1)
+convox exec $ps "/usr/scripts/memcache_check.sh" -a httpd
+
+# app (httpd2)
+convox apps create httpd2
+convox apps
+convox apps | grep httpd2
+convox apps info httpd2 | grep running
+convox deploy -a httpd2
+endpoint=$(convox api get /apps/httpd2/services | jq -r '.[] | select(.name == "web") | .domain')
+fetch https://$endpoint | grep "It works"
+
+# test internal communication
+rackname=$(convox rack | grep 'Name' | xargs | cut -d ' ' -f2 )
+
+pshttpd=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | grep web | head -n 1)
+pshttpd2=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | grep web | head -n 1)
+
+sleep 10
+convox exec $pshttpd "curl web.httpd2.$rackname.local" -a httpd | grep "It works"
+convox exec $pshttpd2 "curl web.httpd.$rackname.local" -a httpd2 | grep "It works"
 
 # cleanup
 convox apps delete httpd
+convox apps delete httpd2

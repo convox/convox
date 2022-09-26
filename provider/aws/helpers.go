@@ -29,7 +29,6 @@ func (p *Provider) appRegistry(app string) (string, error) {
 	as := ns.ObjectMeta.Annotations
 
 	registry := common.CoalesceString(as["convox.com/registry"], as["convox.registry"])
-
 	if registry == "" {
 		return "", fmt.Errorf("no registry for app: %s", app)
 	}
@@ -58,7 +57,6 @@ func (p *Provider) ecrAuth(host, access, secret string) (string, string, error) 
 	}
 
 	e := ecr.New(s)
-
 	res, err := e.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{
 		RegistryIds: []*string{aws.String(m[1])},
 	})

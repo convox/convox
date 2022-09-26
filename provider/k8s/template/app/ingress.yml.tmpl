@@ -1,4 +1,4 @@
-apiVersion: networking.k8s.io/v1
+apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   namespace: {{.Namespace}}
@@ -7,6 +7,7 @@ metadata:
     alb.ingress.kubernetes.io/scheme: internet-facing
     convox.com/backend-protocol: "{{.Service.Port.Scheme}}"
     convox.com/idles: "{{.Idles}}"
+    kubernetes.io/ingress-class: "{{.Class}}"
     nginx.ingress.kubernetes.io/backend-protocol: "{{.Service.Port.Scheme}}"
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "{{.Service.Timeout}}"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "{{.Service.Timeout}}"
@@ -30,7 +31,6 @@ metadata:
     system: convox
     type: service
 spec:
-  ingressClassName: "{{.Class}}"
   tls:
   - hosts:
     - {{ safe .Host }}
@@ -47,18 +47,13 @@ spec:
       http:
         paths:
         - backend:
-            service:
-              name: {{.Service.Name}}
-              port:
-                number: {{.Service.Port.Port}}
-          pathType: ImplementationSpecific
+            serviceName: {{.Service.Name}}
+            servicePort: {{.Service.Port.Port}}
     {{ range .Service.Domains }}
     - host: {{ safe . }}
       http:
         paths:
         - backend:
-            service:
-              name: {{$.Service.Name}}
-              port:
-                number: {{$.Service.Port.Port}}
+            serviceName: {{$.Service.Name}}
+            servicePort: {{$.Service.Port.Port}}
     {{ end }}
