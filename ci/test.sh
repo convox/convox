@@ -114,6 +114,37 @@ convox ps -a httpd | grep -v $ps
 convox scale web --count 1
 convox deploy -a httpd
 
+# test apps cancel
+echo "FOO=not-bar" | convox env set -a httpd
+echo "COPY new-feature.html /usr/local/apache2/htdocs/index.html" >> Dockerfile
+echo "ENTRYPOINT sleep 60 && httpd-foreground" >> Dockerfile
+convox deploy & # run deploy on background
+
+i=0
+while [ "$(convox apps info -a httpd | grep updating | wc -l)" != "1" ]
+do
+  # exit if takes more than 60 seconds/times
+  if [ $((i++)) -gt 60 ]; then
+    exit 1
+  fi
+  echo "waiting for web to be marked as updating..."
+  sleep 1
+done
+
+echo "app is updating will cancel in 5 secs"
+sleep 5
+kill $!
+
+convox apps cancel -a httpd | grep "Rewriting last active release... OK"
+echo "app deployment canceled"
+
+endpoint=$(convox api get /apps/httpd/services | jq -r '.[] | select(.name == "web") | .domain')
+fetch https://$endpoint | grep "It works"
+echo "still returning the right content"
+
+convox env -a httpd | grep FOO=not-bar
+echo "env var is correctly set"
+
 # timers
 sleep 30
 
