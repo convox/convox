@@ -118,7 +118,7 @@ convox deploy -a httpd
 echo "FOO=not-bar" | convox env set -a httpd
 echo "COPY new-feature.html /usr/local/apache2/htdocs/index.html" >> Dockerfile
 echo "ENTRYPOINT sleep 60 && httpd-foreground" >> Dockerfile
-convox deploy & # run deploy on background
+nohup convox deploy & # run deploy on background
 
 i=0
 while [ "$(convox apps info -a httpd | grep updating | wc -l)" != "1" ]
@@ -131,18 +131,18 @@ do
   sleep 1
 done
 
-echo "app is updating will cancel in 5 secs"
-sleep 5
-kill $!
+echo "app is updating will cancel in 10 secs"
+sleep 10
+# kill $!
 
-convox apps cancel -a httpd | grep "Rewriting last active release... OK"
+convox apps cancel -a httpd | grep "OK"
 echo "app deployment canceled"
 
 endpoint=$(convox api get /apps/httpd/services | jq -r '.[] | select(.name == "web") | .domain')
 fetch https://$endpoint | grep "It works"
 echo "still returning the right content"
 
-convox env -a httpd | grep FOO=not-bar
+convox env -a httpd | grep "FOO" | grep "not-bar"
 echo "env var is correctly set"
 
 # timers
