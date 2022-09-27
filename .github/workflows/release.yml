@@ -87,22 +87,22 @@ jobs:
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       - name: build-arm64
         run: "docker buildx build --platform linux/arm64 -t ${{ github.repository }}:${{ env.VERSION }}-arm64 --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max --build-arg DOCKER_ARCH=aarch64 --build-arg KUBECTL_ARCH=arm64 ."
-  # release-cli-linux:
-  #   needs:
-  #     - release
-  #     - build-amd64
-  #     - build-arm64
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     env:
-  #       GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-  #     name: release-cli-linux
-  #     uses: actions/upload-release-asset@v1.0.2
-  #     with:
-  #       asset_content_type: application/octet-stream
-  #       asset_name: convox-linux
-  #       asset_path: ./cmd/convox/pkg/convox-linux-amd64
-  #       upload_url: "${{ needs.release.outputs.upload_url }}"
+  release-cli-linux:
+    needs:
+      - release
+      - build-amd64
+      - build-arm64
+    runs-on: ubuntu-latest
+    steps:
+      - name: release
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        uses: actions/upload-release-asset@v1.0.2
+        with:
+          asset_content_type: application/octet-stream
+          asset_name: convox-linux
+          asset_path: ./cmd/convox/pkg/convox-linux-amd64
+          upload_url: "${{ needs.release.outputs.upload_url }}"
   # release-cli-linux-arm64:
   #   needs:
   #     - release
