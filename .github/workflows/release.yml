@@ -49,6 +49,8 @@ jobs:
     needs: release
     runs-on: ubuntu-latest
     steps:
+      - name: version
+        run: echo "VERSION=$(echo ${{ github.ref }} | awk -F/ '{print $3}')" >> $GITHUB_ENV
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
@@ -64,6 +66,8 @@ jobs:
     needs: release
     runs-on: ubuntu-latest
     steps:
+      - name: version
+        run: echo "VERSION=$(echo ${{ github.ref }} | awk -F/ '{print $3}')" >> $GITHUB_ENV
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
