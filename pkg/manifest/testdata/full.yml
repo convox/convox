@@ -55,6 +55,7 @@ services:
       grace: 45
     tls:
       redirect: false
+    whitelist: 127.0.0.0/24
   proxy: &proxy
     command: bash
     domain:

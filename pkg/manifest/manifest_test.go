@@ -109,6 +109,7 @@ func TestManifestLoad(t *testing.T) {
 				Tls: manifest.ServiceTls{
 					Redirect: false,
 				},
+				Whitelist: "127.0.0.0/24",
 			},
 			manifest.Service{
 				Name:    "proxy",
@@ -407,6 +408,7 @@ func TestManifestLoad(t *testing.T) {
 		"services.api.termination.grace",
 		"services.api.tls",
 		"services.api.tls.redirect",
+		"services.api.whitelist",
 		"services.bar",
 		"services.foo",
 		"services.foo.command",
