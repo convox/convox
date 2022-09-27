@@ -151,164 +151,164 @@ jobs:
           asset_name: convox-macos-arm64
           asset_path: ./cmd/convox/pkg/convox-darwin-arm64
           upload_url: "${{ needs.release.outputs.upload_url }}"
-  # ci:
-  #   if: github.repository == 'convox/convox'
-  #   needs:
-  #     - release-cli-linux
-  #     - release-cli-linux-arm64
-  #     - release-cli-macos
-  #     - release-cli-macos-arm64
-  #   runs-on: ubuntu-latest
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       job:
-  #         - aws
-  #         - aws-arm64
-  #         - aws-existing-vpc
-  #         - do
-  #         - gcp
-  #         # - azure
-  #       include:
-  #         - job: aws
-  #           provider: aws
-  #           rack_params: "region=us-east-2"
-  #         - job: aws-arm64
-  #           provider: aws
-  #           rack_params: "node_type=t4g.small proxy_protocol=true"
-  #           suffix: arm64
-  #         - job: aws-existing-vpc
-  #           provider: aws
-  #           rack_params: "vpc_id=vpc-0f18b6d1265717215 internet_gateway_id=igw-01c3d338eecec02a1 cidr=172.0.0.0/16"
-  #           suffix: evpc
-  #         - job: do
-  #           provider: do
-  #         - job: gcp
-  #           provider: gcp
-  #         # - job: azure
-  #         #   provider: azure
-  #   steps:
-  #     - name: checkout
-  #       uses: actions/checkout@v3
-  #     - name: version
-  #       run: echo "VERSION=$(echo ${{ github.ref }} | awk -F/ '{print $3}')" >> $GITHUB_ENV
-  #     - name: name
-  #       run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")${{ matrix.suffix }}" >> $GITHUB_ENV
-  #     - name: provider
-  #       run: echo "PROVIDER=${{ matrix.provider }}" >> $GITHUB_ENV
-  #     - name: rack-params
-  #       run: echo "RACK_PARAMS=${{ matrix.rack_params }}" >> $GITHUB_ENV
-  #     - name: secrets
-  #       run: ci/secrets.sh
-  #       env:
-  #         SECRETS: ${{ toJson(secrets) }}
-  #     - name: dependencies
-  #       run: ci/dependencies.sh
-  #     - name: cli
-  #       run: ci/cli.sh
-  #     - name: install
-  #       run: ci/install.sh
-  #     - name: wait
-  #       run: sleep 600
-  #     - name: test
-  #       run: ci/test.sh
-  #     - name: debug
-  #       run: ci/debug.sh
-  #       if: always()
-  #     - name: uninstall
-  #       run: ci/uninstall.sh
-  #       if: always()
-  # ci-downgrade:
-  #   if: github.repository == 'convox/convox'
-  #   environment: 'UpgradeDowngradeTests'
-  #   needs:
-  #     - release-cli-linux
-  #     - release-cli-linux-arm64
-  #     - release-cli-macos
-  #     - release-cli-macos-arm64
-  #   runs-on: ubuntu-latest
-  #   env:
-  #     provider: aws
-  #     suffix: downgrade
-  #   steps:
-  #     - name: checkout
-  #       uses: actions/checkout@v3
-  #     - name: version
-  #       run: echo "VERSION=$(echo ${{ github.ref }} | awk -F/ '{print $3}')" >> $GITHUB_ENV
-  #     - name: name
-  #       run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")${{ env.suffix }}" >> $GITHUB_ENV
-  #     - name: provider
-  #       run: echo "PROVIDER=${{ env.provider }}" >> $GITHUB_ENV
-  #     - name: secrets
-  #       run: ci/secrets.sh
-  #       env:
-  #         SECRETS: ${{ toJson(secrets) }}
-  #     - name: dependencies
-  #       run: ci/dependencies.sh
-  #     - name: cli
-  #       run: ci/cli.sh
-  #     - name: install
-  #       run: ci/install.sh
-  #     - name: wait
-  #       run: sleep 600
-  #     - name: before version downgrade setup and test
-  #       run: ci/before_additional_test.sh
-  #     - name: downgrade
-  #       run: ci/downgrade.sh
-  #     - name: after version downgrade test
-  #       run: ci/after_additional_test.sh
-  #     - name: test
-  #       run: ci/test.sh
-  #     - name: debug
-  #       run: ci/debug.sh
-  #       if: always()
-  #     - name: uninstall
-  #       run: ci/uninstall.sh
-  #       if: always()
-  # ci-upgrade:
-  #   if: github.repository == 'convox/convox'
-  #   environment: 'UpgradeDowngradeTests'
-  #   needs:
-  #     - release-cli-linux
-  #     - release-cli-linux-arm64
-  #     - release-cli-macos
-  #     - release-cli-macos-arm64
-  #   runs-on: ubuntu-latest
-  #   env:
-  #     provider: aws
-  #     suffix: upgrade
-  #   steps:
-  #     - name: checkout
-  #       uses: actions/checkout@v3
-  #     - name: version
-  #       run: echo "VERSION=$(echo ${{ github.ref }} | awk -F/ '{print $3}')" >> $GITHUB_ENV
-  #     - name: name
-  #       run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")${{ env.suffix }}" >> $GITHUB_ENV
-  #     - name: provider
-  #       run: echo "PROVIDER=${{ env.provider }}" >> $GITHUB_ENV
-  #     - name: secrets
-  #       run: ci/secrets.sh
-  #       env:
-  #         SECRETS: ${{ toJson(secrets) }}
-  #     - name: dependencies
-  #       run: ci/dependencies.sh
-  #     - name: cli
-  #       run: ci/cli.sh
-  #     - name: install last release
-  #       run: ci/install_last_release.sh
-  #     - name: wait
-  #       run: sleep 600
-  #     - name: before version upgrade setup and test
-  #       run: ci/before_additional_test.sh
-  #     - name: upgrade
-  #       run: ci/upgrade.sh
-  #     - name: after version upgrade test
-  #       run: ci/after_additional_test.sh
-  #     - name: test
-  #       run: ci/test.sh
-  #     - name: debug
-  #       run: ci/debug.sh
-  #       if: always()
-  #     - name: uninstall
-  #       run: ci/uninstall.sh
-  #       if: always()
+  ci:
+    if: github.repository == 'convox/convox'
+    needs:
+      - release-cli-linux
+      - release-cli-linux-arm64
+      - release-cli-macos
+      - release-cli-macos-arm64
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        job:
+          - aws
+          - aws-arm64
+          - aws-existing-vpc
+          - do
+          - gcp
+          # - azure
+        include:
+          - job: aws
+            provider: aws
+            rack_params: "region=us-east-2"
+          - job: aws-arm64
+            provider: aws
+            rack_params: "node_type=t4g.small proxy_protocol=true"
+            suffix: arm64
+          - job: aws-existing-vpc
+            provider: aws
+            rack_params: "vpc_id=vpc-0f18b6d1265717215 internet_gateway_id=igw-01c3d338eecec02a1 cidr=172.0.0.0/16"
+            suffix: evpc
+          - job: do
+            provider: do
+          - job: gcp
+            provider: gcp
+          # - job: azure
+          #   provider: azure
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: version
+        run: echo "VERSION=$(echo ${{ github.ref }} | awk -F/ '{print $3}')" >> $GITHUB_ENV
+      - name: name
+        run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")${{ matrix.suffix }}" >> $GITHUB_ENV
+      - name: provider
+        run: echo "PROVIDER=${{ matrix.provider }}" >> $GITHUB_ENV
+      - name: rack-params
+        run: echo "RACK_PARAMS=${{ matrix.rack_params }}" >> $GITHUB_ENV
+      - name: secrets
+        run: ci/secrets.sh
+        env:
+          SECRETS: ${{ toJson(secrets) }}
+      - name: dependencies
+        run: ci/dependencies.sh
+      - name: cli
+        run: ci/cli.sh
+      - name: install
+        run: ci/install.sh
+      - name: wait
+        run: sleep 600
+      - name: test
+        run: ci/test.sh
+      - name: debug
+        run: ci/debug.sh
+        if: always()
+      - name: uninstall
+        run: ci/uninstall.sh
+        if: always()
+  ci-downgrade:
+    if: github.repository == 'convox/convox'
+    environment: 'UpgradeDowngradeTests'
+    needs:
+      - release-cli-linux
+      - release-cli-linux-arm64
+      - release-cli-macos
+      - release-cli-macos-arm64
+    runs-on: ubuntu-latest
+    env:
+      provider: aws
+      suffix: downgrade
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: version
+        run: echo "VERSION=$(echo ${{ github.ref }} | awk -F/ '{print $3}')" >> $GITHUB_ENV
+      - name: name
+        run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")${{ env.suffix }}" >> $GITHUB_ENV
+      - name: provider
+        run: echo "PROVIDER=${{ env.provider }}" >> $GITHUB_ENV
+      - name: secrets
+        run: ci/secrets.sh
+        env:
+          SECRETS: ${{ toJson(secrets) }}
+      - name: dependencies
+        run: ci/dependencies.sh
+      - name: cli
+        run: ci/cli.sh
+      - name: install
+        run: ci/install.sh
+      - name: wait
+        run: sleep 600
+      - name: before version downgrade setup and test
+        run: ci/before_additional_test.sh
+      - name: downgrade
+        run: ci/downgrade.sh
+      - name: after version downgrade test
+        run: ci/after_additional_test.sh
+      - name: test
+        run: ci/test.sh
+      - name: debug
+        run: ci/debug.sh
+        if: always()
+      - name: uninstall
+        run: ci/uninstall.sh
+        if: always()
+  ci-upgrade:
+    if: github.repository == 'convox/convox'
+    environment: 'UpgradeDowngradeTests'
+    needs:
+      - release-cli-linux
+      - release-cli-linux-arm64
+      - release-cli-macos
+      - release-cli-macos-arm64
+    runs-on: ubuntu-latest
+    env:
+      provider: aws
+      suffix: upgrade
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: version
+        run: echo "VERSION=$(echo ${{ github.ref }} | awk -F/ '{print $3}')" >> $GITHUB_ENV
+      - name: name
+        run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")${{ env.suffix }}" >> $GITHUB_ENV
+      - name: provider
+        run: echo "PROVIDER=${{ env.provider }}" >> $GITHUB_ENV
+      - name: secrets
+        run: ci/secrets.sh
+        env:
+          SECRETS: ${{ toJson(secrets) }}
+      - name: dependencies
+        run: ci/dependencies.sh
+      - name: cli
+        run: ci/cli.sh
+      - name: install last release
+        run: ci/install_last_release.sh
+      - name: wait
+        run: sleep 600
+      - name: before version upgrade setup and test
+        run: ci/before_additional_test.sh
+      - name: upgrade
+        run: ci/upgrade.sh
+      - name: after version upgrade test
+        run: ci/after_additional_test.sh
+      - name: test
+        run: ci/test.sh
+      - name: debug
+        run: ci/debug.sh
+        if: always()
+      - name: uninstall
+        run: ci/uninstall.sh
+        if: always()
