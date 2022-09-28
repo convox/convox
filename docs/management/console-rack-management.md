@@ -63,8 +63,9 @@ Terraform state will be transferred to your local machine for exclusive manageme
 You can view the Kubernetes resources deployed to your cluster with the AWS Management Console.  
 
 ### Steps:
-- Create a Kubernetes clusterrolebinding that is bound to a Kubernetes clusterrole that has the necessary permissions to view the Kubernetes resources. To learn more about Kubernetes roles and role bindings, see Using RBAC Authorization in the Kubernetes documentation. You can apply one of the following manifests to your cluster that create a role and rolebinding or a clusterrole and clusterrolebinding with the necessary Kubernetes permissions: *
-If your rack version is > 3.6.4, you don’t need to create the Cluster role and the Cluster role binding.
+If your rack version is > 3.6.4, you don’t need to create the cluster role and the cluster role binding.
+
+- Create a Kubernetes clusterrolebinding that is bound to a Kubernetes clusterrole that has the necessary permissions to view the Kubernetes resources. To learn more about Kubernetes roles and role bindings, see [Using RBAC Authorization in the Kubernetes documentation](https://kubernetes.io/docs/reference/access-authn-authz/rbac/). You can apply one of the following manifests to your cluster that create a role and role binding or a cluster role and cluster role binding with the necessary Kubernetes permissions*:
 ```
 kubectl apply -f https://s3.us-west-2.amazonaws.com/amazon-eks/docs/eks-console-full-access.yaml
 ```
@@ -121,3 +122,5 @@ data:
         userarn: arn:aws:iam::111122223333:user/my-user
         username: my-user
 ```
+### `Warning`
+When you edit the `aws-auth` ConfigMap, proceed with caution, if you misconfigure it, you can lock the user out of their rack.
