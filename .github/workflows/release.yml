@@ -58,12 +58,12 @@ jobs:
       - name: upload-convox-darwin-10.16-amd64
         uses: actions/upload-artifact@v2
         with:
-          name: convox-macos
+          name: convox-darwin-10.16-amd64
           path: ./cmd/convox/pkg/convox-darwin-10.16-amd64
       - name: upload-convox-darwin-arm64
         uses: actions/upload-artifact@v2
         with:
-          name: convox-macos-arm64
+          name: convox-darwin-arm64
           path: ./cmd/convox/pkg/convox-darwin-arm64
   build-amd64:
     needs: release
@@ -166,7 +166,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/download-artifact@v2
         with:
-          name: convox-macos
+          name: convox-darwin-10.16-amd64
       - name: release
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
@@ -174,7 +174,7 @@ jobs:
         with:
           asset_content_type: application/octet-stream
           asset_name: convox-macos
-          asset_path: ./convox-macos
+          asset_path: ./convox-darwin-10.16-amd64
           upload_url: "${{ needs.release.outputs.upload_url }}"
   release-cli-macos-arm64:
     needs:
@@ -189,7 +189,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/download-artifact@v2
         with:
-          name: convox-macos-arm64
+          name: convox-darwin-arm64
       - name: release
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
@@ -197,7 +197,7 @@ jobs:
         with:
           asset_content_type: application/octet-stream
           asset_name: convox-macos-arm64
-          asset_path: ./convox-macos-arm64
+          asset_path: ./convox-darwin-arm64
           upload_url: "${{ needs.release.outputs.upload_url }}"
   ci:
     if: github.repository == 'convox/convox'
