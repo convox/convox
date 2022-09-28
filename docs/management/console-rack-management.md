@@ -59,7 +59,7 @@ You can move any Console-managed Rack back to being locally managed only with th
     staging            gcp       running
 ```
 Terraform state will be transferred to your local machine for exclusive management.
-## View Kubernetes resources
+## Access rack cluster in the EKS UI (AWS only)
 You can view the Kubernetes resources deployed to your cluster with the AWS Management Console.  
 
 ### Steps:
