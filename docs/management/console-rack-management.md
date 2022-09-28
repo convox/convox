@@ -59,3 +59,68 @@ You can move any Console-managed Rack back to being locally managed only with th
     staging            gcp       running
 ```
 Terraform state will be transferred to your local machine for exclusive management.
+## Access rack cluster in the EKS UI (AWS only)
+You can view the Kubernetes resources deployed to your cluster with the AWS Management Console.  
+
+### Steps:
+If your rack version is > 3.6.4, you don’t need to create the cluster role and the cluster role binding.
+
+- Create a Kubernetes clusterrolebinding that is bound to a Kubernetes clusterrole that has the necessary permissions to view the Kubernetes resources. To learn more about Kubernetes roles and role bindings, see [Using RBAC Authorization in the Kubernetes documentation](https://kubernetes.io/docs/reference/access-authn-authz/rbac/). You can apply one of the following manifests to your cluster that create a role and role binding or a cluster role and cluster role binding with the necessary Kubernetes permissions*:
+```
+kubectl apply -f https://s3.us-west-2.amazonaws.com/amazon-eks/docs/eks-console-full-access.yaml
+```
+- Make sure that the eks:AccessKubernetesApi, and other necessary IAM permissions to view Kubernetes resources, are assigned to either the user that you sign into the AWS Management Console with, or the role that you switch to once you've signed in to the console.
+The following example policy includes the necessary permissions for a user or role to view Kubernetes resources for all clusters in your account. Replace `111122223333` with your account ID.
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "eks:ListFargateProfiles",
+                "eks:DescribeNodegroup",
+                "eks:ListNodegroups",
+                "eks:ListUpdates",
+                "eks:AccessKubernetesApi",
+                "eks:ListAddons",
+                "eks:DescribeCluster",
+                "eks:DescribeAddonVersions",
+                "eks:ListClusters",
+                "eks:ListIdentityProviderConfigs",
+                "iam:ListRoles"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": "ssm:GetParameter",
+            "Resource": "arn:aws:ssm:*:111122223333:parameter/*"
+        }
+    ]
+}   
+```
+- For more information about adding users or roles to the aws-auth ConfigMap, see [Add IAM users, roles, or AWS accounts to the ConfigMap](https://docs.aws.amazon.com/eks/latest/userguide/add-user-role.html#aws-auth-users).
+
+    1. Open the ConfigMap for editing:  `kubectl edit -n kube-system configmap/aws-auth`
+    2. Add the mappings to the aws-auth ConfigMap, but don't replace any of the existing mappings. The following example adds mappings between IAM users and roles with permissions added in the first step and the Kubernetes groups created in the previous step:
+    - The `my-console-viewer-role` role and the eks-console-dashboard-full-access-group.
+    - The my-user user and the eks-console-dashboard-restricted-access-group.
+
+These examples assume that you attached the IAM permissions in the first step to a role named `my-console-viewer-role` and a user named `my-user`. Replace `111122223333` with your account ID.
+```yaml
+apiVersion: v1
+data:
+  mapRoles: |
+    - groups:
+      - eks-console-dashboard-full-access-group
+      rolearn: arn:aws:iam::111122223333:role/my-console-viewer-role
+      username: my-console-viewer-role         
+  mapUsers: |
+    - groups:
+      - eks-console-dashboard-restricted-access-group
+        userarn: arn:aws:iam::111122223333:user/my-user
+        username: my-user
+```
+### `Warning`
+When you edit the `aws-auth` ConfigMap, proceed with caution, if you misconfigure it, you can lock the user out of their rack.
