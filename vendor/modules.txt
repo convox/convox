@@ -310,9 +310,6 @@ github.com/gorilla/securecookie
 github.com/gorilla/sessions
 # github.com/gorilla/websocket v1.4.2
 github.com/gorilla/websocket
-# github.com/goware/modvendor v0.1.0
-## explicit
-github.com/goware/modvendor
 # github.com/hashicorp/golang-lru v0.5.1
 github.com/hashicorp/golang-lru
 github.com/hashicorp/golang-lru/simplelru
@@ -361,10 +358,6 @@ github.com/mailru/easyjson/jlexer
 github.com/mailru/easyjson/jwriter
 # github.com/mattn/go-ieproxy v0.0.0-20190610004146-91bb50d98149
 github.com/mattn/go-ieproxy
-# github.com/mattn/go-zglob v0.0.1
-## explicit
-github.com/mattn/go-zglob
-github.com/mattn/go-zglob/fastwalk
 # github.com/miekg/dns v1.1.25
 ## explicit
 github.com/miekg/dns
