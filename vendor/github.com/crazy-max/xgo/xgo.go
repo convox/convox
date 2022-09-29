@@ -2,7 +2,6 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
 	"go/build"
@@ -52,22 +51,26 @@ type ConfigFlags struct {
 
 // Command line arguments to pass to go build
 var (
-	buildVerbose = flag.Bool("v", false, "Print the names of packages as they are compiled")
-	buildSteps   = flag.Bool("x", false, "Print the command as executing the builds")
-	buildRace    = flag.Bool("race", false, "Enable data race detection (supported only on amd64)")
-	buildTags    = flag.String("tags", "", "List of build tags to consider satisfied during the build")
-	buildLdFlags = flag.String("ldflags", "", "Arguments to pass on each go tool link invocation")
-	buildMode    = flag.String("buildmode", "default", "Indicates which kind of object file to build")
+	buildVerbose  = flag.Bool("v", false, "Print the names of packages as they are compiled")
+	buildSteps    = flag.Bool("x", false, "Print the command as executing the builds")
+	buildRace     = flag.Bool("race", false, "Enable data race detection (supported only on amd64)")
+	buildTags     = flag.String("tags", "", "List of build tags to consider satisfied during the build")
+	buildLdFlags  = flag.String("ldflags", "", "Arguments to pass on each go tool link invocation")
+	buildMode     = flag.String("buildmode", "default", "Indicates which kind of object file to build")
+	buildVCS      = flag.String("buildvcs", "", "Whether to stamp binaries with version control information")
+	buildTrimPath = flag.Bool("trimpath", false, "Remove all file system paths from the resulting executable")
 )
 
 // BuildFlags is a simple collection of flags to fine tune a build.
 type BuildFlags struct {
-	Verbose bool   // Print the names of packages as they are compiled
-	Steps   bool   // Print the command as executing the builds
-	Race    bool   // Enable data race detection (supported only on amd64)
-	Tags    string // List of build tags to consider satisfied during the build
-	LdFlags string // Arguments to pass on each go tool link invocation
-	Mode    string // Indicates which kind of object file to build
+	Verbose  bool   // Print the names of packages as they are compiled
+	Steps    bool   // Print the command as executing the builds
+	Race     bool   // Enable data race detection (supported only on amd64)
+	Tags     string // List of build tags to consider satisfied during the build
+	LdFlags  string // Arguments to pass on each go tool link invocation
+	Mode     string // Indicates which kind of object file to build
+	VCS      string // Whether to stamp binaries with version control information
+	TrimPath bool   // Remove all file system paths from the resulting executable
 }
 
 func main() {
@@ -102,10 +105,8 @@ func main() {
 			image = fmt.Sprintf("%s:%s", *dockerRepo, *goVersion)
 		}
 		// Check that all required images are available
-		found, err := checkDockerImage(image)
+		found := checkDockerImage(image)
 		switch {
-		case err != nil:
-			log.Fatalf("ERROR: Failed to check docker image availability: %v.", err)
 		case !found:
 			fmt.Println("not found!")
 			if err := pullDockerImage(image); err != nil {
@@ -162,12 +163,14 @@ func main() {
 	}
 	log.Printf("DBG: config: %+v", config)
 	flags := &BuildFlags{
-		Verbose: *buildVerbose,
-		Steps:   *buildSteps,
-		Race:    *buildRace,
-		Tags:    *buildTags,
-		LdFlags: *buildLdFlags,
-		Mode:    *buildMode,
+		Verbose:  *buildVerbose,
+		Steps:    *buildSteps,
+		Race:     *buildRace,
+		Tags:     *buildTags,
+		LdFlags:  *buildLdFlags,
+		Mode:     *buildMode,
+		VCS:      *buildVCS,
+		TrimPath: *buildTrimPath,
 	}
 	log.Printf("DBG: flags: %+v", flags)
 	folder, err := os.Getwd()
@@ -202,13 +205,10 @@ func checkDocker() error {
 }
 
 // Checks whether a required docker image is available locally.
-func checkDockerImage(image string) (bool, error) {
+func checkDockerImage(image string) bool {
 	log.Printf("INFO: Checking for required docker image %s... ", image)
-	out, err := exec.Command("docker", "images", "--no-trunc").Output()
-	if err != nil {
-		return false, err
-	}
-	return bytes.Contains(out, []byte(image)), nil
+	err := exec.Command("docker", "image", "inspect", image).Run()
+	return err == nil
 }
 
 // Pulls an image from the docker registry.
@@ -309,6 +309,8 @@ func compile(image string, config *ConfigFlags, flags *BuildFlags, folder string
 		"-e", fmt.Sprintf("FLAG_TAGS=%s", flags.Tags),
 		"-e", fmt.Sprintf("FLAG_LDFLAGS=%s", flags.LdFlags),
 		"-e", fmt.Sprintf("FLAG_BUILDMODE=%s", flags.Mode),
+		"-e", fmt.Sprintf("FLAG_BUILDVCS=%s", flags.VCS),
+		"-e", fmt.Sprintf("FLAG_TRIMPATH=%v", flags.TrimPath),
 		"-e", "TARGETS=" + strings.Replace(strings.Join(config.Targets, " "), "*", ".", -1),
 	}
 	if usesModules {
@@ -333,6 +335,7 @@ func compile(image string, config *ConfigFlags, flags *BuildFlags, folder string
 			log.Printf("INFO: Using vendored Go module dependencies")
 		}
 	} else {
+		args = append(args, []string{"-e", "GO111MODULE=off"}...)
 		for i := 0; i < len(locals); i++ {
 			args = append(args, []string{"-v", fmt.Sprintf("%s:%s:ro", locals[i], mounts[i])}...)
 		}
@@ -376,6 +379,8 @@ func compileContained(config *ConfigFlags, flags *BuildFlags, folder string) err
 		fmt.Sprintf("FLAG_TAGS=%s", flags.Tags),
 		fmt.Sprintf("FLAG_LDFLAGS=%s", flags.LdFlags),
 		fmt.Sprintf("FLAG_BUILDMODE=%s", flags.Mode),
+		fmt.Sprintf("FLAG_BUILDVCS=%s", flags.VCS),
+		fmt.Sprintf("FLAG_TRIMPATH=%v", flags.TrimPath),
 		"TARGETS=" + strings.Replace(strings.Join(config.Targets, " "), "*", ".", -1),
 	}
 	if local {
