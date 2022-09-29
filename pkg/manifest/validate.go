@@ -12,7 +12,7 @@ const (
 )
 
 var (
-	nameValidator = regexp.MustCompile(`^[a-z]{1}[a-z0-9-]*$`)
+	nameValidator = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
 )
 
 func (m *Manifest) validate() []error {
