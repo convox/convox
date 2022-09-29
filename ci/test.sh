@@ -116,6 +116,8 @@ convox deploy -a httpd
 
 # test apps cancel
 echo "FOO=not-bar" | convox env set -a httpd
+
+cp Dockerfile Dockerfile.original # copy current Dockerfile
 echo "COPY new-feature.html /usr/local/apache2/htdocs/index.html" >> Dockerfile
 echo "ENTRYPOINT sleep 60 && httpd-foreground" >> Dockerfile
 nohup convox deploy & # run deploy on background
@@ -133,7 +135,6 @@ done
 
 echo "app is updating will cancel in 10 secs"
 sleep 10
-# kill $!
 
 convox apps cancel -a httpd | grep "OK"
 echo "app deployment canceled"
@@ -144,6 +145,8 @@ echo "still returning the right content"
 
 convox env -a httpd | grep "FOO" | grep "not-bar"
 echo "env var is correctly set"
+
+mv Dockerfile.original Dockerfile # replace the Dockerfile with the original copy
 
 # timers
 sleep 30
