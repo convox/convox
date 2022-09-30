@@ -245,11 +245,6 @@ func (c *Clientset) CertificatesV1() certificatesv1.CertificatesV1Interface {
 	return c.certificatesV1
 }
 
-// CertificatesV1 retrieves the CertificatesV1Client
-func (c *Clientset) CertificatesV1() certificatesv1.CertificatesV1Interface {
-	return c.certificatesV1
-}
-
 // CertificatesV1beta1 retrieves the CertificatesV1beta1Client
 func (c *Clientset) CertificatesV1beta1() certificatesv1beta1.CertificatesV1beta1Interface {
 	return c.certificatesV1beta1
@@ -273,16 +268,6 @@ func (c *Clientset) CoreV1() corev1.CoreV1Interface {
 // DiscoveryV1 retrieves the DiscoveryV1Client
 func (c *Clientset) DiscoveryV1() discoveryv1.DiscoveryV1Interface {
 	return c.discoveryV1
-}
-
-// DiscoveryV1beta1 retrieves the DiscoveryV1beta1Client
-func (c *Clientset) DiscoveryV1beta1() discoveryv1beta1.DiscoveryV1beta1Interface {
-	return c.discoveryV1beta1
-}
-
-// EventsV1 retrieves the EventsV1Client
-func (c *Clientset) EventsV1() eventsv1.EventsV1Interface {
-	return c.eventsV1
 }
 
 // DiscoveryV1beta1 retrieves the DiscoveryV1beta1Client
@@ -480,10 +465,6 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
-	cs.certificatesV1, err = certificatesv1.NewForConfig(&configShallowCopy)
-	if err != nil {
-		return nil, err
-	}
 	cs.certificatesV1beta1, err = certificatesv1beta1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
@@ -501,14 +482,6 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 		return nil, err
 	}
 	cs.discoveryV1, err = discoveryv1.NewForConfig(&configShallowCopy)
-	if err != nil {
-		return nil, err
-	}
-	cs.discoveryV1beta1, err = discoveryv1beta1.NewForConfig(&configShallowCopy)
-	if err != nil {
-		return nil, err
-	}
-	cs.eventsV1, err = eventsv1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
