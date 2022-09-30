@@ -138,7 +138,6 @@ func (bk *BuildKit) buildArgs(development bool, dockerfile string, env map[strin
 
 	args := []string{}
 
-	fmt.Printf(">>>> env %x+\n", env)
 	for s.Scan() {
 		fields := strings.Fields(strings.TrimSpace(s.Text()))
 
@@ -183,8 +182,6 @@ func (bk *BuildKit) build(bb *Build, path, dockerfile string, tag string, env ma
 		args = append(args, "--export-cache", fmt.Sprintf("type=registry,ref=%s:buildcache", reg))
 		args = append(args, "--import-cache", fmt.Sprintf("type=registry,ref=%s:buildcache", reg))
 	}
-
-	println(strings.Join(args, " "))
 
 	df := filepath.Join(path, dockerfile)
 

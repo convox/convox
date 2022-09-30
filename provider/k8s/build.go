@@ -26,7 +26,7 @@ import (
 
 func (p *Provider) buildImage(provider string) string {
 	img := fmt.Sprintf("%s-build", p.Image)
-	if strings.Contains("do gcp", provider) {
+	if p.buildPrivileged(provider) {
 		img = fmt.Sprintf("%s-build-privileged", p.Image)
 	}
 	return img
