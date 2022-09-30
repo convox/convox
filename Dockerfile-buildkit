@@ -24,7 +24,7 @@ ENTRYPOINT [ "./buildctl-daemonless.sh" ]
 
 ###########################################################################################
 
-FROM moby/buildkit:master as privileged
+FROM moby/buildkit:v0.10.3 as privileged
 
 COPY --from=package /go/bin/build /usr/bin
 

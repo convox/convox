@@ -51,7 +51,6 @@ func main() {
 }
 
 func execute() error {
-	fmt.Println(">>>>>>>>>>>>>>>> EXEEEEEEC")
 	fs := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 
 	fs.StringVar(&flagApp, "app", "example", "app name")

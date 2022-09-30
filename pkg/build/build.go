@@ -111,7 +111,6 @@ func (bb *Build) execute() error {
 		return err
 	}
 
-	// bb.Engine.Build
 	if err := bb.Engine.Build(bb, dir); err != nil {
 		return err
 	}
