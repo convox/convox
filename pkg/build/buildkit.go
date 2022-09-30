@@ -1,6 +1,7 @@
 package build
 
 import (
+	"bufio"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -126,6 +127,43 @@ func (bk *BuildKit) cacheProvider(provider string) bool {
 	return provider != "" && strings.Contains("do az", provider)
 }
 
+func (bk *BuildKit) buildArgs(development bool, dockerfile string, env map[string]string) ([]string, error) {
+	fd, err := os.Open(dockerfile)
+	if err != nil {
+		return nil, err
+	}
+	defer fd.Close()
+
+	s := bufio.NewScanner(fd)
+
+	args := []string{}
+
+	fmt.Printf(">>>> env %x+\n", env)
+	for s.Scan() {
+		fields := strings.Fields(strings.TrimSpace(s.Text()))
+
+		if len(fields) < 2 {
+			continue
+		}
+
+		parts := strings.Split(fields[1], "=")
+
+		switch fields[0] {
+		case "FROM":
+			if development && strings.Contains(strings.ToLower(s.Text()), "as development") {
+				args = append(args, "--target", "development")
+			}
+		case "ARG":
+			k := strings.TrimSpace(parts[0])
+			if v, ok := env[k]; ok {
+				args = append(args, "--build-arg:", fmt.Sprintf("%s=%s", k, v))
+			}
+		}
+	}
+
+	return args, nil
+}
+
 func (bk *BuildKit) build(bb *Build, path, dockerfile string, tag string, env map[string]string) error {
 	if path == "" {
 		return fmt.Errorf("must have path to build")
@@ -150,7 +188,7 @@ func (bk *BuildKit) build(bb *Build, path, dockerfile string, tag string, env ma
 
 	df := filepath.Join(path, dockerfile)
 
-	ba, err := bb.buildArgs2(df, env)
+	ba, err := bk.buildArgs(bb.Development, df, env)
 	if err != nil {
 		return err
 	}
