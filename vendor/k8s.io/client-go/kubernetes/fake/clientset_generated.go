@@ -240,11 +240,6 @@ func (c *Clientset) CertificatesV1() certificatesv1.CertificatesV1Interface {
 	return &fakecertificatesv1.FakeCertificatesV1{Fake: &c.Fake}
 }
 
-// CertificatesV1 retrieves the CertificatesV1Client
-func (c *Clientset) CertificatesV1() certificatesv1.CertificatesV1Interface {
-	return &fakecertificatesv1.FakeCertificatesV1{Fake: &c.Fake}
-}
-
 // CertificatesV1beta1 retrieves the CertificatesV1beta1Client
 func (c *Clientset) CertificatesV1beta1() certificatesv1beta1.CertificatesV1beta1Interface {
 	return &fakecertificatesv1beta1.FakeCertificatesV1beta1{Fake: &c.Fake}
@@ -268,16 +263,6 @@ func (c *Clientset) CoreV1() corev1.CoreV1Interface {
 // DiscoveryV1 retrieves the DiscoveryV1Client
 func (c *Clientset) DiscoveryV1() discoveryv1.DiscoveryV1Interface {
 	return &fakediscoveryv1.FakeDiscoveryV1{Fake: &c.Fake}
-}
-
-// DiscoveryV1beta1 retrieves the DiscoveryV1beta1Client
-func (c *Clientset) DiscoveryV1beta1() discoveryv1beta1.DiscoveryV1beta1Interface {
-	return &fakediscoveryv1beta1.FakeDiscoveryV1beta1{Fake: &c.Fake}
-}
-
-// EventsV1 retrieves the EventsV1Client
-func (c *Clientset) EventsV1() eventsv1.EventsV1Interface {
-	return &fakeeventsv1.FakeEventsV1{Fake: &c.Fake}
 }
 
 // DiscoveryV1beta1 retrieves the DiscoveryV1beta1Client
