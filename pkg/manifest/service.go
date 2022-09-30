@@ -215,6 +215,17 @@ func (s Service) ResourceMap() []ServiceResource {
 	return srs
 }
 
+func (s Service) ResourcesName() []string {
+	srs := []string{}
+
+	for _, r := range s.Resources {
+		parts := strings.SplitN(r, ":", 2)
+		srs = append(srs, parts[0])
+	}
+
+	return srs
+}
+
 func (ss Services) External() Services {
 	return ss.Filter(func(s Service) bool {
 		return !s.Internal

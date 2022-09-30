@@ -109,7 +109,7 @@ spec:
           valueFrom:
             configMapKeyRef:
               name: resource-{{ k8sname .Name }}
-              key: URL
+              key: {{ resourceEnv .Env }}
         {{ end }}
         envFrom:
         - secretRef:
@@ -158,7 +158,7 @@ spec:
           mountPath: /etc/convox
         {{ range .Service.Volumes }}
         - name: {{ volumeName $.App.Name (volumeFrom $.App.Name $.Service.Name .) }}
-          mountPath: "{{ volumeTo . }}" 
+          mountPath: "{{ volumeTo . }}"
         {{ end }}
       volumes:
       - name: ca

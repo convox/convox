@@ -54,7 +54,7 @@ spec:
               valueFrom:
                 configMapKeyRef:
                   name: resource-{{ k8sname .Name }}
-                  key: URL
+                  key: {{ resourceEnv .Env }}
             {{ end }}
             envFrom:
             - secretRef:

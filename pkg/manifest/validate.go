@@ -114,7 +114,7 @@ func (m *Manifest) validateServices() []error {
 			errs = append(errs, fmt.Errorf("service %s deployment maximum can not be greater than 200", s.Name))
 		}
 
-		for _, r := range s.Resources {
+		for _, r := range s.ResourcesName() {
 			if _, err := m.Resource(r); err != nil {
 				if strings.HasPrefix(err.Error(), "no such resource") {
 					errs = append(errs, fmt.Errorf("service %s references a resource that does not exist: %s", s.Name, r))

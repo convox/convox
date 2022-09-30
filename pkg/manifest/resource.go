@@ -32,6 +32,6 @@ func (r Resource) GetName() string {
 	return r.Name
 }
 
-func (r Resource) mountEnv(name string) string {
-	return fmt.Sprintf("%s_%s", strings.ReplaceAll(strings.ToUpper(r.Name), "-", "_"), name)
+func (r Resource) mountEnv(envVar string) string {
+	return fmt.Sprintf("%s_%s", strings.ReplaceAll(strings.ToUpper(r.Name), "-", "_"), envVar)
 }
