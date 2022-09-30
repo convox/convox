@@ -113,6 +113,13 @@ convox ps stop $ps -a httpd
 convox ps -a httpd | grep -v $ps
 convox scale web --count 1
 convox deploy -a httpd
+ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | grep web | head -n 1)
+convox exec -a httpd $ps -- env | grep "ONE_URL="
+convox exec -a httpd $ps -- env | grep "ONE_USER="
+convox exec -a httpd $ps -- env | grep "ONE_PASS="
+convox exec -a httpd $ps -- env | grep "ONE_HOST="
+convox exec -a httpd $ps -- env | grep "ONE_PORT="
+convox exec -a httpd $ps -- env | grep "ONE_NAME="
 
 # timers
 sleep 30
