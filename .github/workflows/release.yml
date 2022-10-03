@@ -86,7 +86,7 @@ jobs:
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       - name: build-amd64
         run: "docker buildx build --platform linux/amd64 -t ${{ github.repository }}:${{ env.VERSION }} --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max ."
-       - name: buildkit-amd64
+      - name: buildkit-amd64
         run: docker buildx build -f Dockerfile-buildkit --target rootless --platform linux/amd64 -t ${{ github.repository }}:${{ env.VERSION }}-build --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max .
       - name: buildkit-amd64-privileged
         run: docker buildx build -f Dockerfile-buildkit --target privileged --platform linux/amd64 -t ${{ github.repository }}:${{ env.VERSION }}-build-privileged --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max .
