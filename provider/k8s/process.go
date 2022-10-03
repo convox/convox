@@ -429,7 +429,6 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 
 			for _, r := range s.ResourceMap() {
 				key := strings.Join(strings.Split(r.Env, "_")[1:], "_")
-				fmt.Printf("\n\n\n========> key for %v: %v\n\n\n", r.Env, key)
 				c.Env = append(c.Env, ac.EnvVar{
 					Name: r.Env,
 					ValueFrom: &ac.EnvVarSource{
