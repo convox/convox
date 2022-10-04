@@ -1,0 +1,22 @@
+name: cleanup_aws
+
+env:
+  VERSION: 3.5.3  # @TODO: Automate to get the latest stable tag: https://bit.ly/3krkRNN
+                  # NOTE: convox update is run below so test are run on latest release
+
+on:
+  schedule:
+    - cron:  '0 0/24 * * *'
+  workflow_dispatch:
+
+jobs:
+  test-clouds:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        provider:
+          - aws
+    steps:
+      - name: cleanup
+        run: ci/cleanup.sh
