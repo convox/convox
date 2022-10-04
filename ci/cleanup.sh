@@ -9,7 +9,7 @@ if [[ "$(aws iam list-account-aliases | jq -r '.AccountAliases[0]')" != "convox-
   exit 1
 fi
 
-for region in us-east-2; do
+for region in us-east-1 us-east-2; do
   echo "region: $region"
 
   for repo in $(aws ecr describe-repositories --region $region | jq -r '.repositories[].repositoryName'); do
