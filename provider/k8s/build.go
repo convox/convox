@@ -32,7 +32,7 @@ func (p *Provider) buildImage(provider string) string {
 }
 
 func (p *Provider) buildPrivileged(provider string) bool {
-	return strings.Contains("do gcp", provider)
+	return strings.Contains("do gcp aws", provider)
 }
 
 func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions) (*structs.Build, error) {
