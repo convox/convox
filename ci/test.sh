@@ -166,6 +166,21 @@ convox apps | grep gpu
 convox apps info gpu | grep running
 release=$(convox build -a gpu -d cibuild --id) && [ -n "$release" ]
 
+# import/export test
+convox apps create httpd-export
+convox deploy -a httpd-export --manifest convox-export.yml
+endpoint=$(convox api get /apps/httpd-export/services | jq -r '.[] | select(.name == "web") | .domain')
+fetch https://$endpoint | grep "It works"
+
+convox apps export -a httpd-export --file httpd-export.tgz
+
+convox apps import -a httpd-import --file httpd-export.tgz
+endpoint=$(convox api get /apps/httpd-import/services | jq -r '.[] | select(.name == "web") | .domain')
+fetch https://$endpoint | grep "It works"
+
+convox apps delete httpd-export
+convox apps delete httpd-import
+
 # cleanup
 convox apps delete gpu
 convox apps delete httpd
