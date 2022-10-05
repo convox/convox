@@ -1,0 +1,19 @@
+# redis and memcached resources cannot be exported
+resources:
+  postgresdb:
+    type: postgres
+  mysqldb:
+    type: mysql
+    options:
+      version: 8.0.30
+  mariadb:
+    type: mariadb
+services:
+  web:
+    build: .
+    port: 80
+timers:
+  example:
+    command: /usr/scripts/timer_cmd.sh
+    schedule: "* 10 * * *"
+    service: web
