@@ -11,6 +11,11 @@ metadata:
     resource: {{.Name}}
 data:
   URL: "memcached://resource-{{ k8sname .Name }}.{{.Namespace}}.svc.cluster.local:11211"
+  USER: ""
+  PASS: ""
+  HOST: "resource-{{ k8sname .Name }}.{{.Namespace}}.svc.cluster.local"
+  PORT: "11211"
+  NAME: ""
 ---
 apiVersion: apps/v1
 kind: Deployment

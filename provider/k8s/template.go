@@ -82,6 +82,9 @@ func (p *Provider) templateHelpers() template.FuncMap {
 		"k8sname": func(s string) string {
 			return nameFilter(s)
 		},
+		"resourceEnv": func(s string) string {
+			return strings.Join(strings.Split(s, "_")[1:], "_")
+		},
 		"lower": func(s string) string {
 			return strings.ToLower(s)
 		},

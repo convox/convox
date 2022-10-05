@@ -139,7 +139,12 @@ spec:
 ---
 apiVersion: v1
 data:
+  HOST: resource-four.rack1-app1.svc.cluster.local
+  NAME: app
+  PASS: 6630abdb8bba553e3e48555e302e51
+  PORT: "5432"
   URL: postgres://app:6630abdb8bba553e3e48555e302e51@resource-four.rack1-app1.svc.cluster.local:5432/app?sslmode=disable
+  USER: app
 kind: ConfigMap
 metadata:
   labels:
@@ -254,7 +259,12 @@ spec:
 ---
 apiVersion: v1
 data:
+  HOST: resource-one.rack1-app1.svc.cluster.local
+  NAME: app
+  PASS: 6630abdb8bba553e3e48555e302e51
+  PORT: "5432"
   URL: postgres://app:6630abdb8bba553e3e48555e302e51@resource-one.rack1-app1.svc.cluster.local:5432/app?sslmode=disable
+  USER: app
 kind: ConfigMap
 metadata:
   labels:
@@ -369,7 +379,12 @@ spec:
 ---
 apiVersion: v1
 data:
+  HOST: ""
+  NAME: ""
+  PASS: ""
+  PORT: ""
   URL: value
+  USER: ""
 kind: ConfigMap
 metadata:
   labels:
@@ -385,7 +400,12 @@ metadata:
 ---
 apiVersion: v1
 data:
+  HOST: resource-two.rack1-app1.svc.cluster.local
+  NAME: app
+  PASS: 6630abdb8bba553e3e48555e302e51
+  PORT: "3306"
   URL: mysql://root:6630abdb8bba553e3e48555e302e51@resource-two.rack1-app1.svc.cluster.local:3306/app
+  USER: root
 kind: ConfigMap
 metadata:
   labels:
@@ -963,6 +983,31 @@ spec:
             configMapKeyRef:
               key: URL
               name: resource-one
+        - name: ONE_USER
+          valueFrom:
+            configMapKeyRef:
+              key: USER
+              name: resource-one
+        - name: ONE_PASS
+          valueFrom:
+            configMapKeyRef:
+              key: PASS
+              name: resource-one
+        - name: ONE_HOST
+          valueFrom:
+            configMapKeyRef:
+              key: HOST
+              name: resource-one
+        - name: ONE_PORT
+          valueFrom:
+            configMapKeyRef:
+              key: PORT
+              name: resource-one
+        - name: ONE_NAME
+          valueFrom:
+            configMapKeyRef:
+              key: NAME
+              name: resource-one
         - name: OTHER_URL
           valueFrom:
             configMapKeyRef:
@@ -973,10 +1018,60 @@ spec:
             configMapKeyRef:
               key: URL
               name: resource-three
+        - name: THREE_USER
+          valueFrom:
+            configMapKeyRef:
+              key: USER
+              name: resource-three
+        - name: THREE_PASS
+          valueFrom:
+            configMapKeyRef:
+              key: PASS
+              name: resource-three
+        - name: THREE_HOST
+          valueFrom:
+            configMapKeyRef:
+              key: HOST
+              name: resource-three
+        - name: THREE_PORT
+          valueFrom:
+            configMapKeyRef:
+              key: PORT
+              name: resource-three
+        - name: THREE_NAME
+          valueFrom:
+            configMapKeyRef:
+              key: NAME
+              name: resource-three
         - name: FOUR_URL
           valueFrom:
             configMapKeyRef:
               key: URL
+              name: resource-four
+        - name: FOUR_USER
+          valueFrom:
+            configMapKeyRef:
+              key: USER
+              name: resource-four
+        - name: FOUR_PASS
+          valueFrom:
+            configMapKeyRef:
+              key: PASS
+              name: resource-four
+        - name: FOUR_HOST
+          valueFrom:
+            configMapKeyRef:
+              key: HOST
+              name: resource-four
+        - name: FOUR_PORT
+          valueFrom:
+            configMapKeyRef:
+              key: PORT
+              name: resource-four
+        - name: FOUR_NAME
+          valueFrom:
+            configMapKeyRef:
+              key: NAME
               name: resource-four
         envFrom:
         - secretRef:
@@ -1135,6 +1230,31 @@ spec:
             configMapKeyRef:
               key: URL
               name: resource-one
+        - name: ONE_USER
+          valueFrom:
+            configMapKeyRef:
+              key: USER
+              name: resource-one
+        - name: ONE_PASS
+          valueFrom:
+            configMapKeyRef:
+              key: PASS
+              name: resource-one
+        - name: ONE_HOST
+          valueFrom:
+            configMapKeyRef:
+              key: HOST
+              name: resource-one
+        - name: ONE_PORT
+          valueFrom:
+            configMapKeyRef:
+              key: PORT
+              name: resource-one
+        - name: ONE_NAME
+          valueFrom:
+            configMapKeyRef:
+              key: NAME
+              name: resource-one
         - name: OTHER_URL
           valueFrom:
             configMapKeyRef:
@@ -1145,10 +1265,60 @@ spec:
             configMapKeyRef:
               key: URL
               name: resource-three
+        - name: THREE_USER
+          valueFrom:
+            configMapKeyRef:
+              key: USER
+              name: resource-three
+        - name: THREE_PASS
+          valueFrom:
+            configMapKeyRef:
+              key: PASS
+              name: resource-three
+        - name: THREE_HOST
+          valueFrom:
+            configMapKeyRef:
+              key: HOST
+              name: resource-three
+        - name: THREE_PORT
+          valueFrom:
+            configMapKeyRef:
+              key: PORT
+              name: resource-three
+        - name: THREE_NAME
+          valueFrom:
+            configMapKeyRef:
+              key: NAME
+              name: resource-three
         - name: FOUR_URL
           valueFrom:
             configMapKeyRef:
               key: URL
+              name: resource-four
+        - name: FOUR_USER
+          valueFrom:
+            configMapKeyRef:
+              key: USER
+              name: resource-four
+        - name: FOUR_PASS
+          valueFrom:
+            configMapKeyRef:
+              key: PASS
+              name: resource-four
+        - name: FOUR_HOST
+          valueFrom:
+            configMapKeyRef:
+              key: HOST
+              name: resource-four
+        - name: FOUR_PORT
+          valueFrom:
+            configMapKeyRef:
+              key: PORT
+              name: resource-four
+        - name: FOUR_NAME
+          valueFrom:
+            configMapKeyRef:
+              key: NAME
               name: resource-four
         envFrom:
         - secretRef:
@@ -1255,6 +1425,31 @@ spec:
                 configMapKeyRef:
                   key: URL
                   name: resource-one
+            - name: ONE_USER
+              valueFrom:
+                configMapKeyRef:
+                  key: USER
+                  name: resource-one
+            - name: ONE_PASS
+              valueFrom:
+                configMapKeyRef:
+                  key: PASS
+                  name: resource-one
+            - name: ONE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  key: HOST
+                  name: resource-one
+            - name: ONE_PORT
+              valueFrom:
+                configMapKeyRef:
+                  key: PORT
+                  name: resource-one
+            - name: ONE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: NAME
+                  name: resource-one
             - name: OTHER_URL
               valueFrom:
                 configMapKeyRef:
@@ -1265,10 +1460,60 @@ spec:
                 configMapKeyRef:
                   key: URL
                   name: resource-three
+            - name: THREE_USER
+              valueFrom:
+                configMapKeyRef:
+                  key: USER
+                  name: resource-three
+            - name: THREE_PASS
+              valueFrom:
+                configMapKeyRef:
+                  key: PASS
+                  name: resource-three
+            - name: THREE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  key: HOST
+                  name: resource-three
+            - name: THREE_PORT
+              valueFrom:
+                configMapKeyRef:
+                  key: PORT
+                  name: resource-three
+            - name: THREE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: NAME
+                  name: resource-three
             - name: FOUR_URL
               valueFrom:
                 configMapKeyRef:
                   key: URL
+                  name: resource-four
+            - name: FOUR_USER
+              valueFrom:
+                configMapKeyRef:
+                  key: USER
+                  name: resource-four
+            - name: FOUR_PASS
+              valueFrom:
+                configMapKeyRef:
+                  key: PASS
+                  name: resource-four
+            - name: FOUR_HOST
+              valueFrom:
+                configMapKeyRef:
+                  key: HOST
+                  name: resource-four
+            - name: FOUR_PORT
+              valueFrom:
+                configMapKeyRef:
+                  key: PORT
+                  name: resource-four
+            - name: FOUR_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: NAME
                   name: resource-four
             envFrom:
             - secretRef:

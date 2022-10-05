@@ -11,6 +11,11 @@ metadata:
     resource: {{.Name}}
 data:
   URL: "mysql://root:{{.Password}}@resource-{{ k8sname .Name }}.{{.Namespace}}.svc.cluster.local:3306/app"
+  USER: "root"
+  PASS: "{{.Password}}"
+  HOST: "resource-{{ k8sname .Name }}.{{.Namespace}}.svc.cluster.local"
+  PORT: "3306"
+  NAME: "app"
 ---
 kind: PersistentVolumeClaim
 apiVersion: v1

@@ -203,10 +203,24 @@ func (s Service) ResourceMap() []ServiceResource {
 
 		switch len(parts) {
 		case 1:
-			srs = append(srs, ServiceResource{Name: parts[0], Env: Resource{Name: parts[0]}.DefaultEnv()})
+			envs := Resource{Name: parts[0]}.LoadEnv()
+			for _, e := range envs {
+				srs = append(srs, ServiceResource{Name: parts[0], Env: e})
+			}
 		case 2:
 			srs = append(srs, ServiceResource{Name: parts[0], Env: strings.TrimSpace(parts[1])})
 		}
+	}
+
+	return srs
+}
+
+func (s Service) ResourcesName() []string {
+	srs := []string{}
+
+	for _, r := range s.Resources {
+		parts := strings.SplitN(r, ":", 2)
+		srs = append(srs, parts[0])
 	}
 
 	return srs

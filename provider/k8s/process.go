@@ -428,12 +428,13 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 			c.Image = fmt.Sprintf("%s:%s.%s", repo, service, r.Build)
 
 			for _, r := range s.ResourceMap() {
+				key := strings.Join(strings.Split(r.Env, "_")[1:], "_")
 				c.Env = append(c.Env, ac.EnvVar{
 					Name: r.Env,
 					ValueFrom: &ac.EnvVarSource{
 						ConfigMapKeyRef: &ac.ConfigMapKeySelector{
 							LocalObjectReference: ac.LocalObjectReference{Name: fmt.Sprintf("resource-%s", nameFilter(r.Name))},
-							Key:                  "URL",
+							Key:                  key,
 						},
 					},
 				})
