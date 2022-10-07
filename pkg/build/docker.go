@@ -290,7 +290,7 @@ func (*Docker) injectConvoxEnv(bb *Build, tag string) error {
 		epdfs += fmt.Sprintf("CMD %s\n", cmdb)
 	}
 
-	tmp := os.TempDir()
+	tmp, err := os.MkdirTemp(os.TempDir(), "")
 	if err != nil {
 		return err
 	}

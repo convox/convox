@@ -247,7 +247,7 @@ func TestLogin(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	err = os.Mkdir(fmt.Sprintf("%s/.docker", tmp), 0600)
+	err = os.Mkdir(fmt.Sprintf("%s/.docker", tmp), 0700)
 	if err != nil {
 		panic(err)
 	}

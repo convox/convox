@@ -139,7 +139,7 @@ func (bb *Build) prepareSource() (string, error) {
 }
 
 func (bb *Build) prepareSourceObject(app, key string) (string, error) {
-	dir, err := os.MkdirTemp("", "")
+	dir, err := os.MkdirTemp(os.TempDir(), "")
 	if err != nil {
 		return "", err
 	}
