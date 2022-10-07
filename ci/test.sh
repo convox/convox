@@ -49,8 +49,6 @@ convox apps create httpd
 convox apps
 convox apps | grep httpd
 convox apps info httpd | grep running
-# assert the run command is going through the Dockerfile entrypoint
-convox run web ls | grep entrypoint
 release=$(convox build -a httpd -d cibuild --id) && [ -n "$release" ]
 convox releases -a httpd | grep $release
 build=$(convox api get /apps/httpd/builds | jq -r ".[0].id") && [ -n "$build" ]
@@ -83,6 +81,8 @@ releaser=$(convox releases rollback $release -a httpd --id)
 convox ps -a httpd | grep $releaser
 ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | grep web | head -n 1)
 convox ps info $ps -a httpd | grep $releaser
+# assert the run command is going through the Dockerfile entrypoint
+convox run web ls | grep entrypoint
 
 $root/ci/test/app_scale.sh &
 $root/ci/test/app_htdocs.sh &
