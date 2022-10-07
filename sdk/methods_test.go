@@ -18,7 +18,6 @@ func TestInstanceKeyroll(t *testing.T) {
 			Name:       options.String("test"),
 			PrivateKey: options.String("test"),
 		})
-		return
 	}))
 	defer ht.Close()
 
@@ -33,9 +32,7 @@ func TestInstanceKeyroll(t *testing.T) {
 }
 
 func TestInstanceKeyrollEmptyBody(t *testing.T) {
-	ht := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		return
-	}))
+	ht := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 	defer ht.Close()
 
 	c, err := sdk.New(ht.URL)

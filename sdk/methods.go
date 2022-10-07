@@ -391,7 +391,7 @@ func (c *Client) InstanceKeyroll() (*structs.KeyPair, error) {
 
 	var v structs.KeyPair
 
-	err = c.Post(fmt.Sprintf("/instances/keyroll"), ro, &v)
+	err = c.Post("/instances/keyroll", ro, &v)
 	if err != nil && strings.Contains(err.Error(), "unexpected end") {
 		// only v3 return the body for keyroll
 		err = nil

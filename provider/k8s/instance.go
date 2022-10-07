@@ -109,7 +109,7 @@ func (p *Provider) InstanceShell(id string, rw io.ReadWriter, opts structs.Insta
 		return 0, fmt.Errorf("instance not found")
 	}
 
-	if opts.PrivateKey == nil || len(*opts.PrivateKey) == 0 {
+	if opts.PrivateKey == nil || *opts.PrivateKey == "" {
 		return 0, fmt.Errorf("private key is not provided")
 	}
 
