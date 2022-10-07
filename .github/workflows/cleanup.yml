@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  test-clouds:
+  cleanup:
     runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
@@ -14,5 +14,13 @@ jobs:
         provider:
           - aws
     steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: secrets
+        run: ci/secrets.sh
+        env:
+          SECRETS: ${{ toJson(secrets) }}
+      - name: dependencies
+        run: ci/dependencies.sh
       - name: cleanup
         run: ci/cleanup.sh
