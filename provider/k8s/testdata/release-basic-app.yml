@@ -72,7 +72,7 @@ metadata:
       grpc_send_timeout 60s;
       client_body_timeout 60s;
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/whitelist-source-range: "127.0.0.0/32"
+    nginx.ingress.kubernetes.io/whitelist-source-range: 127.0.0.0/32
   labels:
     app: app1
     provider: k8s
