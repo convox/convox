@@ -55,6 +55,9 @@ func TestBuild(t *testing.T) {
 			if opts.Manifest != nil {
 				require.Equal(t, string(mdata), *opts.Manifest)
 			}
+			if opts.Entrypoint != nil {
+				require.Equal(t, *opts.Entrypoint, "sh ./entry.sh")
+			}
 		})
 
 		p.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil)
@@ -72,28 +75,23 @@ func TestBuild(t *testing.T) {
 			fmt.Fprintf(args.Get(0).(io.Writer), "build1\nbuild2\n")
 		})
 
+		e.On(
+			"Execute",
+			"skopeo",
+			"inspect",
+			"--config",
+			"docker://registry.test.com:web.build1",
+		).Return(fxSkopeoInspect(), nil)
+
 		p.On("ObjectStore", "app1", "build/build1/logs", mock.Anything, structs.ObjectStoreOptions{}).Return(fxObject(), nil).Run(func(args mock.Arguments) {
 			_, err := ioutil.ReadAll(args.Get(2).(io.Reader))
 			require.NoError(t, err)
-			// require.Equal(t, "Building: .\nbuild1\nbuild2\nRunning: docker pull httpd\nRunning: docker tag e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445 rack1/app1:web2.build1\nRunning: docker tag httpd rack1/app1:web.build1\n", string(data))
 		})
 		p.On("ReleaseCreate", "app1", structs.ReleaseCreateOptions{Build: options.String("build1")}).Return(fxRelease2(), nil)
 		p.On("EventSend", "build:create", structs.EventSendOptions{Data: map[string]string{"app": "app1", "id": "build1", "release_id": "release2"}}).Return(nil)
 
 		err = b.Execute()
 		require.NoError(t, err)
-
-		// require.Equal(t,
-		// 	[]string{
-		// 		"Building: .",
-		// 		"build1",
-		// 		"build2",
-		// 		"Running: docker pull httpd",
-		// 		"Running: docker tag e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445 rack1/app1:web2.build1",
-		// 		"Running: docker tag httpd rack1/app1:web.build1",
-		// 	},
-		// 	strings.Split(strings.TrimSuffix(out.String(), "\n"), "\n"),
-		// )
 	})
 }
 
@@ -131,6 +129,9 @@ func TestBuildDevelopment(t *testing.T) {
 			if opts.Manifest != nil {
 				require.Equal(t, string(mdata), *opts.Manifest)
 			}
+			if opts.Entrypoint != nil {
+				require.Equal(t, *opts.Entrypoint, "sh ./entry.sh")
+			}
 		})
 
 		p.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil)
@@ -148,28 +149,23 @@ func TestBuildDevelopment(t *testing.T) {
 			fmt.Fprintf(args.Get(0).(io.Writer), "build1\nbuild2\n")
 		})
 
+		e.On(
+			"Execute",
+			"skopeo",
+			"inspect",
+			"--config",
+			"docker://registry.test.com:web.build1",
+		).Return(fxSkopeoInspect(), nil)
+
 		p.On("ObjectStore", "app1", "build/build1/logs", mock.Anything, structs.ObjectStoreOptions{}).Return(fxObject(), nil).Run(func(args mock.Arguments) {
 			_, err := ioutil.ReadAll(args.Get(2).(io.Reader))
 			require.NoError(t, err)
-			// require.Equal(t, "Building: .\nbuild1\nbuild2\nRunning: docker pull httpd\nRunning: docker tag e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445 rack1/app1:web2.build1\nRunning: docker tag httpd rack1/app1:web.build1\n", string(data))
 		})
 		p.On("ReleaseCreate", "app1", structs.ReleaseCreateOptions{Build: options.String("build1")}).Return(fxRelease2(), nil)
 		p.On("EventSend", "build:create", structs.EventSendOptions{Data: map[string]string{"app": "app1", "id": "build1", "release_id": "release2"}}).Return(nil)
 
 		err = b.Execute()
 		require.NoError(t, err)
-
-		// require.Equal(t,
-		// 	[]string{
-		// 		"Building: .",
-		// 		"build1",
-		// 		"build2",
-		// 		"Running: docker pull httpd",
-		// 		"Running: docker tag e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445 rack1/app1:web2.build1",
-		// 		"Running: docker tag httpd rack1/app1:web.build1",
-		// 	},
-		// 	strings.Split(strings.TrimSuffix(out.String(), "\n"), "\n"),
-		// )
 	})
 }
 
@@ -207,6 +203,9 @@ func TestBuildOptions(t *testing.T) {
 			if opts.Manifest != nil {
 				require.Equal(t, string(mdata), *opts.Manifest)
 			}
+			if opts.Entrypoint != nil {
+				require.Equal(t, *opts.Entrypoint, "sh ./entry.sh")
+			}
 		})
 
 		p.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil)
@@ -224,28 +223,23 @@ func TestBuildOptions(t *testing.T) {
 			fmt.Fprintf(args.Get(0).(io.Writer), "build1\nbuild2\n")
 		})
 
+		e.On(
+			"Execute",
+			"skopeo",
+			"inspect",
+			"--config",
+			"docker://registry.test.com:web.build1",
+		).Return([]byte("''"), nil)
+
 		p.On("ObjectStore", "app1", "build/build1/logs", mock.Anything, structs.ObjectStoreOptions{}).Return(fxObject(), nil).Run(func(args mock.Arguments) {
 			_, err := ioutil.ReadAll(args.Get(2).(io.Reader))
 			require.NoError(t, err)
-			// require.Equal(t, "Building: .\nbuild1\nbuild2\nRunning: docker pull httpd\nRunning: docker tag e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445 rack1/app1:web2.build1\nRunning: docker tag httpd rack1/app1:web.build1\n", string(data))
 		})
 		p.On("ReleaseCreate", "app1", structs.ReleaseCreateOptions{Build: options.String("build1")}).Return(fxRelease2(), nil)
 		p.On("EventSend", "build:create", structs.EventSendOptions{Data: map[string]string{"app": "app1", "id": "build1", "release_id": "release2"}}).Return(nil)
 
 		err = b.Execute()
 		require.NoError(t, err)
-
-		// require.Equal(t,
-		// 	[]string{
-		// 		"Building: .",
-		// 		"build1",
-		// 		"build2",
-		// 		"Running: docker pull httpd",
-		// 		"Running: docker tag e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445 rack1/app1:web2.build1",
-		// 		"Running: docker tag httpd rack1/app1:web.build1",
-		// 	},
-		// 	strings.Split(strings.TrimSuffix(out.String(), "\n"), "\n"),
-		// )
 	})
 }
 
@@ -300,4 +294,15 @@ func TestLogin(t *testing.T) {
 
 	// base64 encoded user:password
 	require.Equal(t, string(data), `{"Auths":{"host1":{"auth":"dXNlcjE6cGFzczE="}}}`)
+}
+
+func fxSkopeoInspect() []byte {
+	return []byte(`{
+		"config": {
+			"Entrypoint": [
+				"sh",
+				"./entry.sh"
+			]
+		}
+	}`)
 }

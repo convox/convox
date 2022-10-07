@@ -8,14 +8,13 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
-	shellquote "github.com/kballard/go-shellquote"
+	"github.com/kballard/go-shellquote"
 	"github.com/pkg/errors"
 )
 
@@ -163,6 +162,28 @@ func (bk *BuildKit) buildArgs(development bool, dockerfile string, env map[strin
 	return args, nil
 }
 
+func (bk BuildKit) entrypoint(bb *Build, tag string) []string {
+	data, err := bb.Exec.Execute("skopeo", "inspect", "--config", fmt.Sprintf("docker://%s", tag))
+	if err != nil {
+		fmt.Fprint(bb.writer, "failed to retrieve image entrypoint", "-", err.Error())
+		return nil
+	}
+
+	inspect := struct {
+		Config struct {
+			Entrypoint []string
+		}
+	}{}
+
+	err = json.Unmarshal(data, &inspect)
+	if err != nil {
+		fmt.Fprint(bb.writer, "failed to retrieve image entrypoint", "-", err.Error())
+		return nil
+	}
+
+	return inspect.Config.Entrypoint
+}
+
 func (bk *BuildKit) build(bb *Build, path, dockerfile string, tag string, env map[string]string) error {
 	if path == "" {
 		return fmt.Errorf("must have path to build")
@@ -206,34 +227,10 @@ func (bk *BuildKit) build(bb *Build, path, dockerfile string, tag string, env ma
 		}
 	}
 
-	f, err := ioutil.ReadFile(df)
-	if err != nil {
-		return fmt.Errorf("could not open Dockerfile")
-	}
-
-	r := regexp.MustCompile(`(?i)entrypoint \[(?P<arr>.*)\]|entrypoint (?P<str>".*")`)
-	groups := map[string]string{}
-	gnames := r.SubexpNames()
-
-	for ix, xp := range r.FindStringSubmatch(string(f)) {
-		groups[gnames[ix]] = xp
-	}
-
-	ep := ""
-	// join into a []string and quote according to sh rules
-	if groups["str"] != "" {
-		ep = groups["str"]
-		ep = strings.ReplaceAll(ep, "\"", "")
-		ep = shellquote.Join(strings.Split(ep, " ")...)
-	} else if groups["arr"] != "" {
-		ep = groups["arr"]
-		ep = strings.ReplaceAll(ep, "\"", "")
-		ep = shellquote.Join(strings.Split(ep, ",")...)
-	}
-
-	if ep != "" {
+	ep := bk.entrypoint(bb, tag)
+	if len(ep) > 0 {
 		opts := structs.BuildUpdateOptions{
-			Entrypoint: options.String(ep),
+			Entrypoint: options.String(shellquote.Join(ep...)),
 		}
 
 		if _, err := bb.Provider.BuildUpdate(bb.App, bb.Id, opts); err != nil {
