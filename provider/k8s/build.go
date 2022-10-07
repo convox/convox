@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"os/exec"
@@ -32,7 +31,7 @@ func (p *Provider) buildImage(provider string) string {
 	return img
 }
 
-func (p *Provider) buildPrivileged(provider string) bool {
+func (*Provider) buildPrivileged(provider string) bool {
 	return strings.Contains("do gcp aws", provider)
 }
 
@@ -172,10 +171,7 @@ func (p *Provider) BuildExport(app, id string, w io.Writer) error {
 		return errors.WithStack(err)
 	}
 
-	tmp, err := ioutil.TempDir("", "")
-	if err != nil {
-		return errors.WithStack(err)
-	}
+	tmp := os.TempDir()
 
 	defer os.Remove(tmp)
 
@@ -302,7 +298,7 @@ func (p *Provider) BuildImport(app string, r io.Reader) (*structs.Build, error) 
 		}
 
 		if header.Name == "build.json" {
-			data, err := ioutil.ReadAll(tr)
+			data, err := io.ReadAll(tr)
 			if err != nil {
 				return nil, errors.WithStack(err)
 			}

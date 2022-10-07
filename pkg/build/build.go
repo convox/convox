@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 
@@ -95,7 +94,7 @@ func (bb *Build) execute() error {
 		return err
 	}
 
-	data, err := ioutil.ReadFile(filepath.Join(dir, bb.Manifest))
+	data, err := os.ReadFile(filepath.Join(dir, bb.Manifest))
 	if err != nil {
 		return err
 	}
@@ -132,10 +131,7 @@ func (bb *Build) prepareSource() (string, error) {
 }
 
 func (bb *Build) prepareSourceObject(app, key string) (string, error) {
-	dir, err := ioutil.TempDir("", "")
-	if err != nil {
-		return "", err
-	}
+	dir := os.TempDir()
 
 	cwd, err := os.Getwd()
 	if err != nil {

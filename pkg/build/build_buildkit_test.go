@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -37,11 +36,11 @@ func TestBuild(t *testing.T) {
 	testBuild(t, opts, bkEngine, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
 		p.On("BuildGet", "app1", "build1").Return(fxBuildStarted(), nil).Once()
 
-		bdata, err := ioutil.ReadFile("testdata/httpd.tgz")
+		bdata, err := os.ReadFile("testdata/httpd.tgz")
 		require.NoError(t, err)
-		p.On("ObjectFetch", "app1", "/object.tgz").Return(ioutil.NopCloser(bytes.NewReader(bdata)), nil)
+		p.On("ObjectFetch", "app1", "/object.tgz").Return(io.NopCloser(bytes.NewReader(bdata)), nil)
 
-		mdata, err := ioutil.ReadFile("testdata/httpd/convox2.yml")
+		mdata, err := os.ReadFile("testdata/httpd/convox2.yml")
 		require.NoError(t, err)
 
 		p.On("BuildUpdate", "app1", "build1", mock.Anything).Return(fxBuildStarted(), nil).Run(func(args mock.Arguments) {
@@ -84,7 +83,7 @@ func TestBuild(t *testing.T) {
 		).Return(fxSkopeoInspect(), nil)
 
 		p.On("ObjectStore", "app1", "build/build1/logs", mock.Anything, structs.ObjectStoreOptions{}).Return(fxObject(), nil).Run(func(args mock.Arguments) {
-			_, err := ioutil.ReadAll(args.Get(2).(io.Reader))
+			_, err := io.ReadAll(args.Get(2).(io.Reader))
 			require.NoError(t, err)
 		})
 		p.On("ReleaseCreate", "app1", structs.ReleaseCreateOptions{Build: options.String("build1")}).Return(fxRelease2(), nil)
@@ -111,11 +110,11 @@ func TestBuildDevelopment(t *testing.T) {
 	testBuild(t, opts, bkEngine, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
 		p.On("BuildGet", "app1", "build1").Return(fxBuildStarted(), nil).Once()
 
-		bdata, err := ioutil.ReadFile("testdata/httpd-dev.tgz")
+		bdata, err := os.ReadFile("testdata/httpd-dev.tgz")
 		require.NoError(t, err)
-		p.On("ObjectFetch", "app1", "/object.tgz").Return(ioutil.NopCloser(bytes.NewReader(bdata)), nil)
+		p.On("ObjectFetch", "app1", "/object.tgz").Return(io.NopCloser(bytes.NewReader(bdata)), nil)
 
-		mdata, err := ioutil.ReadFile("testdata/httpd-dev/convox.yml")
+		mdata, err := os.ReadFile("testdata/httpd-dev/convox.yml")
 		require.NoError(t, err)
 
 		p.On("BuildUpdate", "app1", "build1", mock.Anything).Return(fxBuildStarted(), nil).Run(func(args mock.Arguments) {
@@ -158,7 +157,7 @@ func TestBuildDevelopment(t *testing.T) {
 		).Return(fxSkopeoInspect(), nil)
 
 		p.On("ObjectStore", "app1", "build/build1/logs", mock.Anything, structs.ObjectStoreOptions{}).Return(fxObject(), nil).Run(func(args mock.Arguments) {
-			_, err := ioutil.ReadAll(args.Get(2).(io.Reader))
+			_, err := io.ReadAll(args.Get(2).(io.Reader))
 			require.NoError(t, err)
 		})
 		p.On("ReleaseCreate", "app1", structs.ReleaseCreateOptions{Build: options.String("build1")}).Return(fxRelease2(), nil)
@@ -185,11 +184,11 @@ func TestBuildOptions(t *testing.T) {
 	testBuild(t, opts, bkEngine, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
 		p.On("BuildGet", "app1", "build1").Return(fxBuildStarted(), nil).Once()
 
-		bdata, err := ioutil.ReadFile("testdata/httpd.tgz")
+		bdata, err := os.ReadFile("testdata/httpd.tgz")
 		require.NoError(t, err)
-		p.On("ObjectFetch", "app1", "/object.tgz").Return(ioutil.NopCloser(bytes.NewReader(bdata)), nil)
+		p.On("ObjectFetch", "app1", "/object.tgz").Return(io.NopCloser(bytes.NewReader(bdata)), nil)
 
-		mdata, err := ioutil.ReadFile("testdata/httpd/convox2.yml")
+		mdata, err := os.ReadFile("testdata/httpd/convox2.yml")
 		require.NoError(t, err)
 
 		p.On("BuildUpdate", "app1", "build1", mock.Anything).Return(fxBuildStarted(), nil).Run(func(args mock.Arguments) {
@@ -232,7 +231,7 @@ func TestBuildOptions(t *testing.T) {
 		).Return([]byte("''"), nil)
 
 		p.On("ObjectStore", "app1", "build/build1/logs", mock.Anything, structs.ObjectStoreOptions{}).Return(fxObject(), nil).Run(func(args mock.Arguments) {
-			_, err := ioutil.ReadAll(args.Get(2).(io.Reader))
+			_, err := io.ReadAll(args.Get(2).(io.Reader))
 			require.NoError(t, err)
 		})
 		p.On("ReleaseCreate", "app1", structs.ReleaseCreateOptions{Build: options.String("build1")}).Return(fxRelease2(), nil)
@@ -248,7 +247,7 @@ func TestLogin(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	err = os.Mkdir(fmt.Sprintf("%s/.docker", tmp), 0777)
+	err = os.Mkdir(fmt.Sprintf("%s/.docker", tmp), 0600)
 	if err != nil {
 		panic(err)
 	}
@@ -287,7 +286,7 @@ func TestLogin(t *testing.T) {
 		panic(err)
 	}
 
-	data, err := ioutil.ReadAll(f)
+	data, err := io.ReadAll(f)
 	if err != nil {
 		panic(err)
 	}

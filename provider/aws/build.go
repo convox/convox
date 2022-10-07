@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"io"
 	"net/url"
-	"os/exec"
-	"strings"
 
 	"github.com/convox/convox/pkg/structs"
 )
@@ -42,26 +40,4 @@ func (p *Provider) BuildLogs(app, id string, opts structs.LogsOptions) (io.ReadC
 			return nil, fmt.Errorf("unable to read logs for build: %s", id)
 		}
 	}
-}
-
-func (p *Provider) authAppRepository(app string) error {
-	repo, _, err := p.RepositoryHost(app)
-	if err != nil {
-		return err
-	}
-
-	user, pass, err := p.RepositoryAuth(app)
-	if err != nil {
-		return err
-	}
-
-	cmd := exec.Command("docker", "login", "-u", user, "--password-stdin", repo)
-
-	cmd.Stdin = strings.NewReader(pass)
-
-	if err := cmd.Run(); err != nil {
-		return err
-	}
-
-	return nil
 }

@@ -69,7 +69,7 @@ func (bk *BuildKit) Build(bb *Build, dir string) error {
 
 	for ix, build := range builds {
 		if build.Image != "" {
-			os.WriteFile(fmt.Sprintf("%s/Dockerfile.%d", dir, ix), []byte(fmt.Sprintf("FROM %s", build.Image)), 0755)
+			os.WriteFile(fmt.Sprintf("%s/Dockerfile.%d", dir, ix), []byte(fmt.Sprintf("FROM %s", build.Image)), 0600)
 
 			if err := bk.build(bb, dir, fmt.Sprintf("Dockerfile.%d", ix), build.Tag, env); err != nil {
 				return err
@@ -84,7 +84,7 @@ func (bk *BuildKit) Build(bb *Build, dir string) error {
 	return nil
 }
 
-func (bk *BuildKit) Login(bb *Build) error {
+func (*BuildKit) Login(bb *Build) error {
 	var registries map[string]struct {
 		Username string
 		Password string
@@ -114,7 +114,7 @@ func (bk *BuildKit) Login(bb *Build) error {
 		return err
 	}
 
-	err = os.WriteFile(fmt.Sprintf("%s/.docker/config.json", os.Getenv("HOME")), f, 0755)
+	err = os.WriteFile(fmt.Sprintf("%s/.docker/config.json", os.Getenv("HOME")), f, 0600)
 	if err != nil {
 		return errors.WithStack(fmt.Errorf("failed to create registry credentials file - %s", err.Error()))
 	}
@@ -122,11 +122,11 @@ func (bk *BuildKit) Login(bb *Build) error {
 	return nil
 }
 
-func (bk *BuildKit) cacheProvider(provider string) bool {
+func (*BuildKit) cacheProvider(provider string) bool {
 	return provider != "" && strings.Contains("do az", provider)
 }
 
-func (bk *BuildKit) buildArgs(development bool, dockerfile string, env map[string]string) ([]string, error) {
+func (*BuildKit) buildArgs(development bool, dockerfile string, env map[string]string) ([]string, error) {
 	fd, err := os.Open(dockerfile)
 	if err != nil {
 		return nil, err
@@ -162,7 +162,7 @@ func (bk *BuildKit) buildArgs(development bool, dockerfile string, env map[strin
 	return args, nil
 }
 
-func (bk BuildKit) entrypoint(bb *Build, tag string) []string {
+func (*BuildKit) entrypoint(bb *Build, tag string) []string {
 	data, err := bb.Exec.Execute("skopeo", "inspect", "--config", fmt.Sprintf("docker://%s", tag))
 	if err != nil {
 		fmt.Fprint(bb.writer, "failed to retrieve image entrypoint", "-", err.Error())
@@ -184,13 +184,11 @@ func (bk BuildKit) entrypoint(bb *Build, tag string) []string {
 	return inspect.Config.Entrypoint
 }
 
-func (bk *BuildKit) build(bb *Build, path, dockerfile string, tag string, env map[string]string) error {
+func (bk *BuildKit) build(bb *Build, path, dockerfile, tag string, env map[string]string) error {
 	if path == "" {
 		return fmt.Errorf("must have path to build")
 	}
 
-	// buildctl build --frontend dockerfile.v0 --local context=. --local dockerfile=. --opt filename=Dockerfile --export-cache type=inline --import-cache type=registry,ref=4707781
-	// 23668.dkr.ecr.us-east-1.amazonaws.com/dev11/nodejs --output type=image,name=470778123668.dkr.ecr.us-east-1.amazonaws.com/dev11/nodejs,push=true
 	args := []string{"build"}
 	args = append(args, "--frontend", "dockerfile.v0")
 	args = append(args, "--local", fmt.Sprintf("context=%s", path))
