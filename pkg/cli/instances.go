@@ -2,16 +2,19 @@ package cli
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/options"
-	"github.com/convox/convox/pkg/rack"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
+)
+
+var (
+	flagKey = stdcli.StringFlag("key", "", "private key file")
 )
 
 func init() {
@@ -26,7 +29,7 @@ func init() {
 	})
 
 	register("instances ssh", "run a shell on an instance", InstancesSsh, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagRack},
+		Flags:    []stdcli.Flag{flagRack, flagKey},
 		Validate: stdcli.ArgsMin(1),
 	})
 
@@ -59,42 +62,21 @@ func Instances(rack sdk.Interface, c *stdcli.Context) error {
 func InstancesKeyroll(r sdk.Interface, c *stdcli.Context) error {
 	c.Startf("Rolling instance key")
 
-	rr, err := rack.Current(c)
+	resp, err := r.InstanceKeyroll()
 	if err != nil {
 		return err
 	}
 
-	data, err := c.SettingRead("current")
-	if err != nil {
-		return err
-	}
-
-	var attrs map[string]string
-	if err := json.Unmarshal([]byte(data), &attrs); err != nil {
-		return err
-	}
-
-	if attrs["type"] == "console" {
-		m, err := rr.Metadata()
-		if err != nil {
+	// only for v3 it will return resp
+	if resp != nil && resp.Name != nil {
+		c.Args = append(c.Args, fmt.Sprintf("key_pair_name=%s", *resp.Name))
+		c.Writef("\n")
+		if err := RackParamsSet(r, c); err != nil {
 			return err
 		}
-
-		if m.State != nil {
-			private, public, err := generateSShKeyPair()
-			if err != nil {
-				return err
-			}
-
-			c.Args = append(c.Args, fmt.Sprintf("ssh_private_key=%s", base64.StdEncoding.EncodeToString(private)))
-			c.Args = append(c.Args, fmt.Sprintf("ssh_public_key=%s", base64.StdEncoding.EncodeToString(public)))
-			c.Writef("\n")
-			return RackParamsSet(r, c)
-		}
-	}
-
-	if err := r.InstanceKeyroll(); err != nil {
-		return err
+		c.Writef("Generated private key:\n")
+		c.Write([]byte(*resp.PrivateKey))
+		return nil
 	}
 
 	c.Writef("\n")
@@ -126,6 +108,14 @@ func InstancesSsh(rack sdk.Interface, c *stdcli.Context) error {
 
 	if command != "" {
 		opts.Command = options.String(command)
+	}
+
+	if key := c.String("key"); key != "" {
+		data, err := os.ReadFile(key)
+		if err != nil {
+			return fmt.Errorf("invalid key file: %s", err)
+		}
+		opts.PrivateKey = options.String(base64.StdEncoding.EncodeToString(data))
 	}
 
 	if s.Version <= "20180708231844" {

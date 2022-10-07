@@ -566,12 +566,12 @@ func (s *Server) InstanceKeyroll(c *stdapi.Context) error {
 		return err
 	}
 
-	err := s.provider(c).WithContext(c.Context()).InstanceKeyroll()
+	v, err := s.provider(c).WithContext(c.Context()).InstanceKeyroll()
 	if err != nil {
 		return err
 	}
 
-	return c.RenderOK()
+	return c.RenderJSON(v)
 }
 
 func (s *Server) InstanceList(c *stdapi.Context) error {

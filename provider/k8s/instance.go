@@ -10,13 +10,12 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
 	ac "k8s.io/api/core/v1"
-	kerr "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	metricsv1beta1 "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 )
 
-func (p *Provider) InstanceKeyroll() error {
-	return errors.WithStack(fmt.Errorf("unimplemented"))
+func (p *Provider) InstanceKeyroll() (*structs.KeyPair, error) {
+	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
 }
 
 func (p *Provider) InstanceList() (structs.Instances, error) {
@@ -110,21 +109,13 @@ func (p *Provider) InstanceShell(id string, rw io.ReadWriter, opts structs.Insta
 		return 0, fmt.Errorf("instance not found")
 	}
 
-	sshSecret, err := p.Cluster.CoreV1().Secrets("kube-system").Get(context.Background(), "ssh-key", am.GetOptions{})
-	if err != nil {
-		if kerr.IsNotFound(err) {
-			return 0, fmt.Errorf("no instance key found. Did you forget to run `convox instances keyroll`?")
-		}
+	if opts.PrivateKey == nil || len(*opts.PrivateKey) == 0 {
+		return 0, fmt.Errorf("private key is not provided")
+	}
+
+	privateKeyBytes, err := base64.StdEncoding.DecodeString(*opts.PrivateKey)
+	if len(privateKeyBytes) == 0 {
 		return 0, err
-	}
-
-	if len(sshSecret.Data["private-key"]) == 0 {
-		return 0, fmt.Errorf("no instance key found. Did you forget to run `convox instances keyroll`?")
-	}
-
-	privateKeyBytes, err := base64.RawStdEncoding.DecodeString(string(sshSecret.Data["private-key"]))
-	if err != nil {
-		return 0, fmt.Errorf("invalid ssh private key: %s", err)
 	}
 
 	// configure SSH client

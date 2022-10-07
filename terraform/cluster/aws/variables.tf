@@ -22,6 +22,10 @@ variable "internet_gateway_id" {
   default = ""
 }
 
+variable "key_pair_name" {
+  type = string
+  default = ""
+}
 variable "k8s_version" {
   type = string
   default = "1.21"
@@ -45,16 +49,6 @@ variable "node_type" {
 
 variable "private" {
   default = true
-}
-
-variable "ssh_private_key" {
-  type = string
-  default = ""
-}
-
-variable "ssh_public_key" {
-  type = string
-  default = ""
 }
 
 variable "vpc_id" {

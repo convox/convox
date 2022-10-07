@@ -29,16 +29,18 @@ var fxInstance = structs.Instance{
 
 func TestInstanceKeyroll(t *testing.T) {
 	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
-		p.On("InstanceKeyroll").Return(nil)
-		err := c.Post("/instances/keyroll", stdsdk.RequestOptions{}, nil)
+		p.On("InstanceKeyroll").Return(&structs.KeyPair{}, nil)
+		var v structs.KeyPair
+		err := c.Post("/instances/keyroll", stdsdk.RequestOptions{}, &v)
 		require.NoError(t, err)
 	})
 }
 
 func TestInstanceKeyrollError(t *testing.T) {
 	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
-		p.On("InstanceKeyroll").Return(fmt.Errorf("err1"))
-		err := c.Post("/instances/keyroll", stdsdk.RequestOptions{}, nil)
+		p.On("InstanceKeyroll").Return(&structs.KeyPair{}, fmt.Errorf("err1"))
+		var v structs.KeyPair
+		err := c.Post("/instances/keyroll", stdsdk.RequestOptions{}, &v)
 		require.EqualError(t, err, "err1")
 	})
 }

@@ -384,14 +384,20 @@ func (c *Client) Initialize(opts structs.ProviderOptions) error {
 	return err
 }
 
-func (c *Client) InstanceKeyroll() error {
+func (c *Client) InstanceKeyroll() (*structs.KeyPair, error) {
 	var err error
 
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
 
-	err = c.Post(fmt.Sprintf("/instances/keyroll"), ro, nil)
+	var v structs.KeyPair
 
-	return err
+	err = c.Post(fmt.Sprintf("/instances/keyroll"), ro, &v)
+	if err != nil && strings.Contains(err.Error(), "unexpected end") {
+		// only v3 return the body for keyroll
+		err = nil
+	}
+
+	return &v, err
 }
 
 func (c *Client) InstanceList() (structs.Instances, error) {
