@@ -52,6 +52,8 @@ convox apps create httpd
 convox apps
 convox apps | grep httpd
 convox apps info httpd | grep running
+# assert the run command is going through the Dockerfile entrypoint
+convox run web ls | grep entrypoint
 release=$(convox build -a httpd -d cibuild --id) && [ -n "$release" ]
 convox releases -a httpd | grep $release
 build=$(convox api get /apps/httpd/builds | jq -r ".[0].id") && [ -n "$build" ]
