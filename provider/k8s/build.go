@@ -171,7 +171,10 @@ func (p *Provider) BuildExport(app, id string, w io.Writer) error {
 		return errors.WithStack(err)
 	}
 
-	tmp := os.TempDir()
+	tmp, err := os.MkdirTemp(os.TempDir(), "")
+	if err != nil {
+		return errors.WithStack(err)
+	}
 
 	defer os.Remove(tmp)
 
