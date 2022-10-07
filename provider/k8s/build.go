@@ -31,7 +31,7 @@ func (p *Provider) buildImage(provider string) string {
 	return img
 }
 
-func (p *Provider) buildPrivileged(provider string) bool {
+func (*Provider) buildPrivileged(provider string) bool {
 	return strings.Contains("do gcp aws", provider)
 }
 

@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -78,7 +77,7 @@ func (s *Start) Start2(ctx context.Context, w io.Writer, opts Options2) error {
 		}
 	}
 
-	data, err := ioutil.ReadFile(common.CoalesceString(opts.Manifest, "convox.yml"))
+	data, err := os.ReadFile(common.CoalesceString(opts.Manifest, "convox.yml"))
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -256,7 +255,7 @@ func (opts Options2) buildCreateExternal(ctx context.Context, pw *prefix.Writer,
 
 	manifest := common.CoalesceString(opts.Manifest, "convox.yml")
 
-	data, err := ioutil.ReadFile(filepath.Join(dir, manifest))
+	data, err := os.ReadFile(filepath.Join(dir, manifest))
 	if err != nil {
 		return nil, err
 	}
@@ -574,7 +573,7 @@ func buildDockerfile(m *manifest.Manifest, root, service string) ([]byte, error)
 		return nil, errors.WithStack(fmt.Errorf("no such file: %s", filepath.Join(s.Build.Path, s.Build.Manifest)))
 	}
 
-	return ioutil.ReadFile(path)
+	return os.ReadFile(path)
 }
 
 func buildIgnores(root, service string) ([]string, error) {

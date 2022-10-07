@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -28,7 +27,7 @@ func (d *Docker) Build(bb *Build, dir string) error {
 		return fmt.Errorf("no such file: %s", bb.Manifest)
 	}
 
-	data, err := ioutil.ReadFile(config)
+	data, err := os.ReadFile(config)
 	if err != nil {
 		return err
 	}
@@ -132,7 +131,7 @@ func (d *Docker) Build(bb *Build, dir string) error {
 	return nil
 }
 
-func (d *Docker) Login(bb *Build) error {
+func (*Docker) Login(bb *Build) error {
 	var auth map[string]struct {
 		Username string
 		Password string
@@ -157,7 +156,7 @@ func (d *Docker) Login(bb *Build) error {
 	return nil
 }
 
-func (d *Docker) build(bb *Build, path, dockerfile string, tag string, env map[string]string) error {
+func (d *Docker) build(bb *Build, path, dockerfile, tag string, env map[string]string) error {
 	if path == "" {
 		return fmt.Errorf("must have path to build")
 	}
@@ -253,43 +252,7 @@ func (bb *Build) buildArgs(dockerfile string, env map[string]string) ([]string, 
 	return args, nil
 }
 
-func (bb *Build) buildArgs2(dockerfile string, env map[string]string) ([]string, error) {
-	fd, err := os.Open(dockerfile)
-	if err != nil {
-		return nil, err
-	}
-	defer fd.Close()
-
-	s := bufio.NewScanner(fd)
-
-	args := []string{}
-
-	for s.Scan() {
-		fields := strings.Fields(strings.TrimSpace(s.Text()))
-
-		if len(fields) < 2 {
-			continue
-		}
-
-		parts := strings.Split(fields[1], "=")
-
-		switch fields[0] {
-		case "FROM":
-			if bb.Development && strings.Contains(strings.ToLower(s.Text()), "as development") {
-				args = append(args, "--target", "development")
-			}
-		case "ARG":
-			k := strings.TrimSpace(parts[0])
-			if v, ok := env[k]; ok {
-				args = append(args, "--build-arg:", fmt.Sprintf("%s=%s", k, v))
-			}
-		}
-	}
-
-	return args, nil
-}
-
-func (d *Docker) injectConvoxEnv(bb *Build, tag string) error {
+func (*Docker) injectConvoxEnv(bb *Build, tag string) error {
 	fmt.Fprintf(bb.writer, "Injecting: convox-env\n")
 
 	var cmd []string
@@ -327,7 +290,7 @@ func (d *Docker) injectConvoxEnv(bb *Build, tag string) error {
 		epdfs += fmt.Sprintf("CMD %s\n", cmdb)
 	}
 
-	tmp, err := ioutil.TempDir("", "")
+	tmp := os.TempDir()
 	if err != nil {
 		return err
 	}
@@ -338,7 +301,7 @@ func (d *Docker) injectConvoxEnv(bb *Build, tag string) error {
 
 	epdf := filepath.Join(tmp, "Dockerfile")
 
-	if err := ioutil.WriteFile(epdf, []byte(epdfs), 0644); err != nil {
+	if err := os.WriteFile(epdf, []byte(epdfs), 0600); err != nil {
 		return err
 	}
 
@@ -349,7 +312,7 @@ func (d *Docker) injectConvoxEnv(bb *Build, tag string) error {
 	return nil
 }
 
-func (d *Docker) pull(bb *Build, tag string) error {
+func (*Docker) pull(bb *Build, tag string) error {
 	fmt.Fprintf(bb.writer, "Running: docker pull %s\n", tag)
 
 	data, err := bb.Exec.Execute("docker", "pull", tag)
@@ -360,7 +323,7 @@ func (d *Docker) pull(bb *Build, tag string) error {
 	return nil
 }
 
-func (d *Docker) push(bb *Build, tag string) error {
+func (*Docker) push(bb *Build, tag string) error {
 	fmt.Fprintf(bb.writer, "Running: docker push %s\n", tag)
 
 	data, err := bb.Exec.Execute("docker", "push", tag)
@@ -371,7 +334,7 @@ func (d *Docker) push(bb *Build, tag string) error {
 	return nil
 }
 
-func (d *Docker) tag(bb *Build, from, to string) error {
+func (*Docker) tag(bb *Build, from, to string) error {
 	fmt.Fprintf(bb.writer, "Running: docker tag %s %s\n", from, to)
 
 	data, err := bb.Exec.Execute("docker", "tag", from, to)
