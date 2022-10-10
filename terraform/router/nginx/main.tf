@@ -231,6 +231,7 @@ resource "kubernetes_deployment" "ingress-nginx" {
           image = var.nginx_image
           args = [
             "/nginx-ingress-controller",
+            "--watch-ingress-without-class=true",
             "--configmap=$(POD_NAMESPACE)/nginx-configuration",
             "--tcp-services-configmap=$(POD_NAMESPACE)/tcp-services",
             "--udp-services-configmap=$(POD_NAMESPACE)/udp-services",
