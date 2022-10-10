@@ -127,7 +127,7 @@ func (p *Provider) InstanceShell(id string, rw io.ReadWriter, opts structs.Insta
 	config := &ssh.ClientConfig{
 		User:            "ec2-user",
 		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // skipcq
 	}
 
 	ip := instance.PrivateIp

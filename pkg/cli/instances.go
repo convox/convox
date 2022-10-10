@@ -76,6 +76,7 @@ func InstancesKeyroll(r sdk.Interface, c *stdcli.Context) error {
 		}
 		c.Writef("Generated private key:\n")
 		c.Write([]byte(*resp.PrivateKey))
+		c.Writef("\n")
 		return nil
 	}
 
