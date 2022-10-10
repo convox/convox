@@ -4,6 +4,10 @@
 ** Describe the bug and the solution. **
 ** Any additional information **
 
+### Add screenshot or video (optional)
+
+** Any screenshot or video capture using the feature **
+
 ### Does it has a breaking change?
 
 ** Describe the changes and if it has any breaking changes in any feature **
