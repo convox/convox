@@ -22,6 +22,9 @@ metadata:
     nginx.ingress.kubernetes.io/session-cookie-name: CONVOXSESSION
     {{ end }}
     nginx.ingress.kubernetes.io/ssl-redirect: "{{.Service.Tls.Redirect}}"
+    {{ if .Service.Whitelist }}
+    nginx.ingress.kubernetes.io/whitelist-source-range: "{{.Service.Whitelist}}"
+    {{ end }}
     {{ range $k, $v := .Annotations }}
     {{$k}}: {{ safe $v }}
     {{ end }}

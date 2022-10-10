@@ -67,6 +67,7 @@ services:
     timeout: 180
     tls:
       redirect: true
+    whitelist: 10.0.0.128/16,192.168.0.1/32
 ```
 
 | Attribute     | Type       | Default             | Description                                                                                                                                |
@@ -92,6 +93,7 @@ services:
 | **test**        | string     |                     | A command to run to test this Service when running **convox test**                                                                           |
 | **timeout**     | number     | 60                  | Timeout period (in seconds) for reading/writing requests to/from your service                                                              |
 | **tls**         | map        |                     | TLS-related configuration                                                                                                                  |
+| **whitelist**   | string     |                     | Comma delimited list of CIDRs, e.g. `10.0.0.0/24,172.10.0.1`, to allow access to the service                                                                                                                  |
 
 > Environment variables declared on `convox.yml` will be populated for a Service.
 
