@@ -50,7 +50,7 @@ func nodeCreateResources(c kubernetes.Interface, name, cpu, mem string) error {
 	})
 }
 
-func TestInstanceShell(t *testing.T) {
+func TestInstanceShellError(t *testing.T) {
 	a := &atom.MockInterface{}
 	c := fake.NewSimpleClientset()
 	cc := cvfake.NewSimpleClientset()

@@ -50,6 +50,7 @@ The following environment variables are required:
 | **high_availability**    | **true**               | Setting this to "false" will create a cluster with less reduntant resources for cost optimization              |
 | **internet_gateway_id**  |                        | If you're using an existing vpc for your rack, use this field to pass the id of the attached internet gateway  |
 | **idle_timeout**         | **3600**               | Idle timeout value (in seconds) for the Rack Load Balancer                                                     |
+| **key_pair_name**        |                        | AWS key pair to use for ssh|
 | **node_capacity_type**   | **on_demand**          | Can be either "on_demand" or "spot". Spot will use AWS spot instances for the cluster nodes                    |
 | **node_disk**            | **20**                 | Node disk size in GB                                                                                           |
 | **node_type**            | **t3.small**           | Node instance type. You can also pass a comma separated list of instance types                                 |

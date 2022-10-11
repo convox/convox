@@ -2,12 +2,14 @@ package cli
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/options"
+	"github.com/convox/convox/pkg/rack"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
@@ -89,8 +91,8 @@ func InstancesKeyroll(r sdk.Interface, c *stdcli.Context) error {
 	return c.OK()
 }
 
-func InstancesSsh(rack sdk.Interface, c *stdcli.Context) error {
-	s, err := rack.SystemGet()
+func InstancesSsh(r sdk.Interface, c *stdcli.Context) error {
+	s, err := r.SystemGet()
 	if err != nil {
 		return err
 	}
@@ -111,16 +113,44 @@ func InstancesSsh(rack sdk.Interface, c *stdcli.Context) error {
 		opts.Command = options.String(command)
 	}
 
-	if key := c.String("key"); key != "" {
-		data, err := os.ReadFile(key)
+	rr, err := rack.Current(c)
+	if err != nil {
+		return err
+	}
+
+	data, err := c.SettingRead("current")
+	if err != nil {
+		return err
+	}
+
+	var attrs map[string]string
+	if err := json.Unmarshal([]byte(data), &attrs); err != nil {
+		return err
+	}
+
+	if attrs["type"] == "console" {
+		m, err := rr.Metadata()
 		if err != nil {
-			return fmt.Errorf("invalid key file: %s", err)
+			return err
 		}
-		opts.PrivateKey = options.String(base64.StdEncoding.EncodeToString(data))
+
+		if m.State != nil {
+			// it's v3 rack
+			key := c.String("key")
+			if key == "" {
+				return fmt.Errorf("private key file is not provided")
+			}
+
+			data, err := os.ReadFile(key)
+			if err != nil {
+				return fmt.Errorf("invalid key file: %s", err)
+			}
+			opts.PrivateKey = options.String(base64.StdEncoding.EncodeToString(data))
+		}
 	}
 
 	if s.Version <= "20180708231844" {
-		code, err := rack.InstanceShellClassic(c.Arg(0), c, opts)
+		code, err := r.InstanceShellClassic(c.Arg(0), c, opts)
 		if err != nil {
 			return err
 		}
@@ -128,7 +158,7 @@ func InstancesSsh(rack sdk.Interface, c *stdcli.Context) error {
 		return stdcli.Exit(code)
 	}
 
-	code, err := rack.InstanceShell(c.Arg(0), c, opts)
+	code, err := r.InstanceShell(c.Arg(0), c, opts)
 	if err != nil {
 		return err
 	}
