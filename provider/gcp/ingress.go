@@ -9,5 +9,5 @@ func (p *Provider) IngressAnnotations(app string) (map[string]string, error) {
 }
 
 func (p *Provider) IngressClass() string {
-	return "convox"
+	return "nginx"
 }

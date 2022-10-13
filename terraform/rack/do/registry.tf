@@ -175,7 +175,8 @@ resource "kubernetes_ingress" "registry" {
     name      = "registry"
 
     annotations = {
-      "cert-manager.io/cluster-issuer" : "letsencrypt"
+      "cert-manager.io/cluster-issuer" = "letsencrypt"
+      "kubernetes.io/ingress.class"    = "nginx"
     }
 
     labels = {
@@ -204,4 +205,3 @@ resource "kubernetes_ingress" "registry" {
     }
   }
 }
-
