@@ -29,8 +29,8 @@ convox version
 # rack
 convox instances
 convox rack
-convox rack logs --no-follow --since 30m
-convox rack logs --no-follow --since 30m | grep service/
+# convox rack logs --no-follow --since 30m
+# convox rack logs --no-follow --since 30m | grep service/
 convox rack ps | grep system
 
 # registries
@@ -138,8 +138,8 @@ echo "env var is correctly set"
 mv Dockerfile.original Dockerfile # replace the Dockerfile with the original copy
 
 # timers
-sleep 30
-$root/ci/test/timers.sh &
+# sleep 30
+# $root/ci/test/timers.sh &
 
 # postgres resource test
 $root/ci/test/resources_postgres.sh &
