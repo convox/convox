@@ -128,7 +128,7 @@ resource "kubernetes_ingress_v1" "registry" {
 
   metadata {
     namespace = module.k8s.namespace
-    name      = "registry"
+    name      = "registry-ing-v1"
 
     annotations = {
       "cert-manager.io/cluster-issuer" = "self-signed"
