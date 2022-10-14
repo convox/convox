@@ -55,10 +55,6 @@ module "k8s" {
   rack      = var.name
   release   = var.release
 
-  annotations = {
-    "kubernetes.io/ingress.class" = "nginx"
-  }
-
   labels = {
     "aadpodidbinding" : "api"
   }
