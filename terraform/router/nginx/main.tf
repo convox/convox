@@ -225,6 +225,12 @@ resource "kubernetes_deployment" "ingress-nginx" {
         service_account_name             = "ingress-nginx"
         automount_service_account_token  = true
         priority_class_name              = var.set_priority_class ? "system-cluster-critical" : null
+        security_context {
+          sysctl {
+            name = "net.ipv4.ip_unprivileged_port_start"
+            value = "1"
+          }
+        }
 
         container {
           name  = "system"
