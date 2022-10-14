@@ -54,7 +54,7 @@ package:
 
 release:
 	test -n "$(VERSION)" # VERSION
-	git tag $(VERSION) -m $(VERSION)
+	git tag $(VERSION) -s -m $(VERSION)
 	git push origin refs/tags/$(VERSION)
 
 test:
