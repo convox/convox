@@ -95,24 +95,24 @@ resource "kubernetes_service_account" "metrics" {
   }
 }
 
-resource "kubernetes_api_service" "metrics" {
-  metadata {
-    name = "v1beta1.metrics.k8s.io"
-  }
+# resource "kubernetes_api_service_v1" "metrics" {
+#   metadata {
+#     name = "v1.metrics.k8s.io"
+#   }
 
-  spec {
-    service {
-      name      = "metrics-server"
-      namespace = "kube-system"
-    }
+#   spec {
+#     service {
+#       name      = "metrics-server"
+#       namespace = "kube-system"
+#     }
 
-    group                    = "metrics.k8s.io"
-    group_priority_minimum   = 100
-    insecure_skip_tls_verify = true
-    version                  = "v1beta1"
-    version_priority         = 100
-  }
-}
+#     group                    = "metrics.k8s.io"
+#     group_priority_minimum   = 100
+#     insecure_skip_tls_verify = true
+#     version                  = "v1"
+#     version_priority         = 100
+#   }
+# }
 
 resource "kubernetes_deployment" "metrics" {
   metadata {
