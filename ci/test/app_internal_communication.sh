@@ -1,4 +1,7 @@
 #!/bin/bash
+
+set -ex
+
 convox apps create httpd2
 convox apps
 convox apps | grep httpd2

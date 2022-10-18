@@ -1,4 +1,7 @@
 #!/bin/bash
+
+set -ex
+
 ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | grep web | head -n 1)
 convox exec $ps "ls -la" -a httpd | grep htdocs
 cat /dev/null | convox exec $ps 'sh -c "sleep 2; echo test"' -a httpd | grep test

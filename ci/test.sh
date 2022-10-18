@@ -29,8 +29,8 @@ convox version
 # rack
 convox instances
 convox rack
-# convox rack logs --no-follow --since 30m
-# convox rack logs --no-follow --since 30m | grep service/
+convox rack logs --no-follow --since 30m
+convox rack logs --no-follow --since 30m | grep service/
 convox rack ps | grep system
 
 # registries
@@ -142,23 +142,23 @@ mv Dockerfile.original Dockerfile # replace the Dockerfile with the original cop
 # $root/ci/test/timers.sh &
 
 # postgres resource test
-# $root/ci/test/resources_postgres.sh &
+$root/ci/test/resources_postgres.sh &
 
-# # mariadb resource test
-# $root/ci/test/resources_mariadb.sh &
+mariadb resource test
+$root/ci/test/resources_mariadb.sh &
 
-# # mysqldb resource test
-# $root/ci/test/resources_mysql.sh &
+mysqldb resource test
+$root/ci/test/resources_mysql.sh &
 
-# # redis resource test
-# $root/ci/test/resources_redis.sh &
+redis resource test
+$root/ci/test/resources_redis.sh &
 
-# # memcache resource test
-# $root/ci/test/resources_memcache.sh &
+memcache resource test
+$root/ci/test/resources_memcache.sh &
 
 # app (httpd2)
-# $root/ci/test/app_internal_communication.sh &
-# wait
+$root/ci/test/app_internal_communication.sh &
+wait
 
 # cleanup
 convox apps delete httpd
