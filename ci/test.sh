@@ -29,8 +29,8 @@ convox version
 # rack
 convox instances
 convox rack
-# convox rack logs --no-follow --since 30m
-# convox rack logs --no-follow --since 30m | grep service/
+convox rack logs --no-follow --since 30m
+convox rack logs --no-follow --since 30m | grep service/
 convox rack ps | grep system
 
 # registries
@@ -87,15 +87,15 @@ $root/ci/test/app_htdocs.sh &
 
 wait
 
-# convox scale web --count 1
-# convox deploy -a httpd
-# ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | grep web | head -n 1)
-# convox exec -a httpd $ps -- env | grep "ONE_URL="
-# convox exec -a httpd $ps -- env | grep "ONE_USER="
-# convox exec -a httpd $ps -- env | grep "ONE_PASS="
-# convox exec -a httpd $ps -- env | grep "ONE_HOST="
-# convox exec -a httpd $ps -- env | grep "ONE_PORT="
-# convox exec -a httpd $ps -- env | grep "ONE_NAME="
+convox scale web --count 1
+convox deploy -a httpd
+ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | grep web | head -n 1)
+convox exec -a httpd $ps -- env | grep "ONE_URL="
+convox exec -a httpd $ps -- env | grep "ONE_USER="
+convox exec -a httpd $ps -- env | grep "ONE_PASS="
+convox exec -a httpd $ps -- env | grep "ONE_HOST="
+convox exec -a httpd $ps -- env | grep "ONE_PORT="
+convox exec -a httpd $ps -- env | grep "ONE_NAME="
 
 # test apps cancel
 echo "FOO=not-bar" | convox env set -a httpd
@@ -136,23 +136,23 @@ mv Dockerfile.original Dockerfile # replace the Dockerfile with the original cop
 # $root/ci/test/timers.sh &
 
 # postgres resource test
-# $root/ci/test/resources_postgres.sh &
+$root/ci/test/resources_postgres.sh &
 
-# # mariadb resource test
-# $root/ci/test/resources_mariadb.sh &
+mariadb resource test
+$root/ci/test/resources_mariadb.sh &
 
-# # mysqldb resource test
-# $root/ci/test/resources_mysql.sh &
+mysqldb resource test
+$root/ci/test/resources_mysql.sh &
 
-# # redis resource test
-# $root/ci/test/resources_redis.sh &
+redis resource test
+$root/ci/test/resources_redis.sh &
 
-# # memcache resource test
-# $root/ci/test/resources_memcache.sh &
+memcache resource test
+$root/ci/test/resources_memcache.sh &
 
 # app (httpd2)
-# $root/ci/test/app_internal_communication.sh &
-# wait
+$root/ci/test/app_internal_communication.sh &
+wait
 
 # cleanup
 convox apps delete httpd
