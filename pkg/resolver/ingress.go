@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	ac "k8s.io/api/core/v1"
-	ae "k8s.io/api/extensions/v1beta1"
+	ae "k8s.io/api/networking/v1"
 	ie "k8s.io/client-go/informers/extensions/v1beta1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
