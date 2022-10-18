@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"html/template"
 	"os/exec"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -417,8 +418,14 @@ func applyTemplate(namespace string, data []byte, filter string) ([]byte, error)
 	labels := parseLabels(filter)
 
 	parts := bytes.Split(data, []byte("---\n"))
+	re := regexp.MustCompile(`extensions\/v1beta|networking\.k8s\.io\/v1beta1`)
 
 	for i := range parts {
+		// skip previous atom version's deprecated resources
+		if re.Match(parts[i]) {
+			continue
+		}
+
 		dp, err := applyLabels(parts[i], labels)
 		if err != nil {
 			return nil, errors.WithStack(err)
