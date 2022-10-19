@@ -153,7 +153,7 @@ resource "kubernetes_deployment" "metrics" {
             "--secure-port=10250",
             "--kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname",
             "--kubelet-use-node-status-port",
-            -"--metric-resolution=15s"
+            "--metric-resolution=15s"
           ]
 
           security_context {
