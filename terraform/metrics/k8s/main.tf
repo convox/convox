@@ -95,24 +95,24 @@ resource "kubernetes_service_account" "metrics" {
   }
 }
 
-# resource "kubernetes_api_service_v1" "metrics" {
-#   metadata {
-#     name = "v1.metrics.k8s.io"
-#   }
+resource "kubernetes_api_service_v1" "metrics" {
+  metadata {
+    name = "v1beta1.metrics.k8s.io"
+  }
 
-#   spec {
-#     service {
-#       name      = "metrics-server"
-#       namespace = "kube-system"
-#     }
+  spec {
+    service {
+      name      = "metrics-server"
+      namespace = "kube-system"
+    }
 
-#     group                    = "metrics.k8s.io"
-#     group_priority_minimum   = 100
-#     insecure_skip_tls_verify = true
-#     version                  = "v1"
-#     version_priority         = 100
-#   }
-# }
+    group                    = "metrics.k8s.io"
+    group_priority_minimum   = 100
+    insecure_skip_tls_verify = true
+    version                  = "v1beta1"
+    version_priority         = 100
+  }
+}
 
 resource "kubernetes_deployment" "metrics" {
   metadata {
@@ -153,12 +153,14 @@ resource "kubernetes_deployment" "metrics" {
             "--secure-port=10250",
             "--kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname",
             "--kubelet-use-node-status-port",
-            "--metric-resolution=15s"
+            -"--metric-resolution=15s"
           ]
 
           security_context {
+            read_only_root_filesystem  = true
             run_as_non_root            = true
             run_as_user                = 1000
+            allow_privilege_escalation = false
           }
 
           port {
@@ -199,6 +201,7 @@ resource "kubernetes_service" "metrics" {
     }
 
     port {
+      name        = "https"
       port        = 443
       protocol    = "TCP"
       target_port = "https"
