@@ -138,16 +138,16 @@ mv Dockerfile.original Dockerfile # replace the Dockerfile with the original cop
 # postgres resource test
 $root/ci/test/resources_postgres.sh &
 
-mariadb resource test
+# mariadb resource test
 $root/ci/test/resources_mariadb.sh &
 
-mysqldb resource test
+# mysqldb resource test
 $root/ci/test/resources_mysql.sh &
 
-redis resource test
+# redis resource test
 $root/ci/test/resources_redis.sh &
 
-memcache resource test
+# memcache resource test
 $root/ci/test/resources_memcache.sh &
 
 # app (httpd2)
