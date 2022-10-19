@@ -128,7 +128,7 @@ func InstancesSsh(r sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	if attrs["type"] == "console" {
+	if attrs["type"] == "console" || attrs["type"] == "terraform" {
 		m, err := rr.Metadata()
 		if err != nil {
 			return err
