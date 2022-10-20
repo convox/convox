@@ -95,7 +95,7 @@ resource "kubernetes_service_account" "metrics" {
   }
 }
 
-resource "kubernetes_api_service" "metrics" {
+resource "kubernetes_api_service_v1" "metrics" {
   metadata {
     name = "v1beta1.metrics.k8s.io"
   }
