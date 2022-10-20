@@ -289,6 +289,7 @@ resource "kubernetes_ingress_v1" "api" {
   }
 
   spec {
+    ingress_class_name = "nginx"
     tls {
       hosts       = ["api.${var.domain}"]
       secret_name = "api-certificate"
@@ -302,7 +303,9 @@ resource "kubernetes_ingress_v1" "api" {
           backend {
             service {
               name = kubernetes_service.api.metadata.0.name
-              port = 5443
+              port {
+                number = 5443
+              }
             }
           }
         }
@@ -329,6 +332,7 @@ resource "kubernetes_ingress_v1" "kubernetes" {
   }
 
   spec {
+    ingress_class_name = "nginx"
     tls {
       hosts       = ["api.${var.domain}"]
       secret_name = "api-certificate"
@@ -344,7 +348,9 @@ resource "kubernetes_ingress_v1" "kubernetes" {
           backend {
             service {
               name = kubernetes_service.api.metadata.0.name
-              port = 8001
+              port {
+                number = 8001
+              }
             }
           }
         }

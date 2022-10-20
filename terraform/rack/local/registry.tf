@@ -156,7 +156,9 @@ resource "kubernetes_ingress_v1" "registry" {
           backend {
             service {
               name = kubernetes_service.registry.metadata.0.name
-              port = 80
+              port {
+                number = 80
+              }
             }
           }
         }
