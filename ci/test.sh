@@ -132,8 +132,8 @@ echo "env var is correctly set"
 mv Dockerfile.original Dockerfile # replace the Dockerfile with the original copy
 
 # timers
-# sleep 30
-# $root/ci/test/timers.sh &
+sleep 30
+$root/ci/test/timers.sh &
 
 # postgres resource test
 $root/ci/test/resources_postgres.sh &
