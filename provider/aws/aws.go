@@ -4,11 +4,13 @@ import (
 	"context"
 	"os"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/aws/aws-sdk-go/service/ecr/ecriface"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -22,8 +24,11 @@ import (
 type Provider struct {
 	*k8s.Provider
 
-	Bucket string
-	Region string
+	Bucket        string
+	EncryptionKey string
+	Region        string
+
+	Ec2 *ec2.EC2
 
 	CloudFormation cloudformationiface.CloudFormationAPI
 	CloudWatchLogs cloudwatchlogsiface.CloudWatchLogsAPI
@@ -39,9 +44,10 @@ func FromEnv() (*Provider, error) {
 	}
 
 	p := &Provider{
-		Provider: k,
-		Bucket:   os.Getenv("BUCKET"),
-		Region:   os.Getenv("AWS_REGION"),
+		Provider:      k,
+		Bucket:        os.Getenv("BUCKET"),
+		EncryptionKey: os.Getenv("ENCRYPTION_KEY"),
+		Region:        os.Getenv("AWS_REGION"),
 	}
 
 	k.Engine = p
@@ -73,6 +79,8 @@ func (p *Provider) initializeAwsServices() error {
 		return err
 	}
 
+	p.Ec2 = ec2.New(s, p.config())
+
 	p.CloudFormation = cloudformation.New(s)
 	p.CloudWatchLogs = cloudwatchlogs.New(s)
 	p.ECR = ecr.New(s)
@@ -80,4 +88,18 @@ func (p *Provider) initializeAwsServices() error {
 	p.SQS = sqs.New(s)
 
 	return nil
+}
+
+func (p *Provider) config() *aws.Config {
+	config := &aws.Config{
+		Region: aws.String(p.Region),
+	}
+
+	if os.Getenv("DEBUG") == "true" {
+		config.WithLogLevel(aws.LogDebugWithHTTPBody)
+	}
+
+	config.MaxRetries = aws.Int(7)
+
+	return config
 }

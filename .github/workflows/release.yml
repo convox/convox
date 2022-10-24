@@ -360,3 +360,45 @@ jobs:
       - name: uninstall
         run: ci/uninstall.sh
         if: always()
+  ci-ssh:
+    if: github.repository == 'convox/convox'
+    needs:
+      - release-cli-linux
+      - release-cli-linux-arm64
+      - release-cli-macos
+      - release-cli-macos-arm64
+    runs-on: ubuntu-latest
+    env:
+      provider: aws
+      suffix: ssh
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: version
+        run: echo "VERSION=$(echo ${{ github.ref }} | awk -F/ '{print $3}')" >> $GITHUB_ENV
+      - name: name
+        run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")${{ env.suffix }}" >> $GITHUB_ENV
+      - name: provider
+        run: echo "PROVIDER=${{ env.provider }}" >> $GITHUB_ENV
+      - name: secrets
+        run: ci/secrets.sh
+        env:
+          SECRETS: ${{ toJson(secrets) }}
+      - name: dependencies
+        run: ci/dependencies.sh
+      - name: cli
+        run: ci/cli.sh
+      - name: install
+        run: ci/install.sh
+      - name: wait
+        run: sleep 600
+      - name: ssh keyroll
+        run: ci/ssh_keyroll.sh
+      - name: test
+        run: ci/test.sh
+      - name: debug
+        run: ci/debug.sh
+        if: always()
+      - name: uninstall
+        run: ci/uninstall.sh
+        if: always()

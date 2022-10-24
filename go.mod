@@ -44,6 +44,7 @@ require (
 	github.com/russross/blackfriday v2.0.0+incompatible
 	github.com/stretchr/testify v1.6.1
 	github.com/vektra/mockery v1.1.2
+	golang.org/x/crypto v0.0.0-20221005025214-4161e89ecf1b
 	golang.org/x/text v0.3.7
 	google.golang.org/api v0.20.0
 	gopkg.in/yaml.v2 v2.4.0

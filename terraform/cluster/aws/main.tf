@@ -141,6 +141,8 @@ resource "aws_launch_template" "cluster" {
       volume_size = random_id.node_group.keepers.node_disk
     }
   }
+
+  key_name = var.key_pair_name != "" ? var.key_pair_name : null
 }
 
 module "ebs_csi_driver_controller" {

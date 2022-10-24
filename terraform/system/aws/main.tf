@@ -47,6 +47,7 @@ module "cluster" {
   gpu_type            = local.gpu_type
   high_availability   = var.high_availability
   internet_gateway_id = var.internet_gateway_id
+  key_pair_name       = var.key_pair_name
   k8s_version         = var.k8s_version
   name                = var.name
   node_capacity_type  = upper(var.node_capacity_type)

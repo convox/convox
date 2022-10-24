@@ -37,3 +37,43 @@ Terminate an instance
     $ convox instances terminate i-029382969778a743a
     Terminating instance... OK
 ```
+
+## instances keyroll
+
+Roll ssh key on instances
+
+### Usage
+```html
+    convox instances keyroll
+```
+For v3 rack it will generate a private key and show it as output. Please save the generated private key and use it when sshing into an instance
+### Examples
+```html
+    $ convox instances keyroll
+    Rolling instance key... OK
+    Updating parameters... OK
+    Generated private key:
+    -----BEGIN RSA PRIVATE KEY-----
+    MIIE...
+    -----END RSA PRIVATE KEY-----
+```
+
+## instances ssh
+
+Run a shell on an instance
+
+### Usage
+**For v2 rack:**
+```html
+    convox instances ssh <instance_id>
+```
+
+**For v3 rack:**
+```html
+    convox instances ssh <instance_id> --key <private_key_file>
+```
+
+### Examples
+```html
+    $ convox instances ssh ip-10-1-80-201.ec2.internal --key ~/.ssh/rack/priv.pem
+```

@@ -25,6 +25,13 @@ resource "aws_iam_role" "api" {
   tags               = local.tags
 }
 
+data "aws_iam_policy_document" "ec2_key_pair" {
+  statement {
+    actions = ["ec2:CreateKeyPair*"]
+    resources = ["*"]
+  }
+}
+
 data "aws_iam_policy_document" "logs" {
   statement {
     actions = [
@@ -69,6 +76,12 @@ data "aws_iam_policy_document" "storage" {
 resource "aws_iam_role_policy_attachment" "api_ecr" {
   role       = aws_iam_role.api.name
   policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"
+}
+
+resource "aws_iam_role_policy" "api_ec2_key_pair" {
+  name   = "ec2_key_pair"
+  role   = aws_iam_role.api.name
+  policy = data.aws_iam_policy_document.ec2_key_pair.json
 }
 
 resource "aws_iam_role_policy" "api_logs" {

@@ -27,9 +27,10 @@ type Instance struct {
 type Instances []Instance
 
 type InstanceShellOptions struct {
-	Command *string `header:"Command"`
-	Height  *int    `header:"Height"`
-	Width   *int    `header:"Width"`
+	Command    *string `header:"Command"`
+	PrivateKey *string `header:"Private-Key"`
+	Height     *int    `header:"Height"`
+	Width      *int    `header:"Width"`
 }
 
 func (i *Instance) Ip() string {
@@ -55,3 +56,8 @@ func (i *Instance) DockerClient() (*docker.Client, error) {
 func (ii Instances) Len() int           { return len(ii) }
 func (ii Instances) Less(i, j int) bool { return ii[i].Id < ii[j].Id }
 func (ii Instances) Swap(i, j int)      { ii[i], ii[j] = ii[j], ii[i] }
+
+type KeyPair struct {
+	Name       *string `json:"name"`
+	PrivateKey *string `json:"private-key"`
+}
