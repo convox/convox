@@ -167,7 +167,7 @@ resource "kubernetes_service" "registry" {
     }
   }
 }
-resource "kubernetes_ingress" "registry" {
+resource "kubernetes_ingress_v1" "registry" {
   wait_for_load_balancer = true
 
   metadata {
@@ -176,7 +176,6 @@ resource "kubernetes_ingress" "registry" {
 
     annotations = {
       "cert-manager.io/cluster-issuer" = "letsencrypt"
-      "kubernetes.io/ingress.class"    = "nginx"
     }
 
     labels = {
@@ -186,6 +185,7 @@ resource "kubernetes_ingress" "registry" {
   }
 
   spec {
+    ingress_class_name = "nginx"
     tls {
       hosts       = ["registry.${module.router.endpoint}"]
       secret_name = "registry-certificate"
@@ -197,8 +197,12 @@ resource "kubernetes_ingress" "registry" {
       http {
         path {
           backend {
-            service_name = kubernetes_service.registry.metadata.0.name
-            service_port = 80
+            service {
+              name = kubernetes_service.registry.metadata.0.name
+              port {
+                number = 80
+              }
+            }
           }
         }
       }
