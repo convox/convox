@@ -418,7 +418,7 @@ func applyTemplate(namespace string, data []byte, filter string) ([]byte, error)
 	labels := parseLabels(filter)
 
 	parts := bytes.Split(data, []byte("---\n"))
-	re := regexp.MustCompile(`^Kind: (extensions\/v1beta|networking\.k8s\.io\/v1beta1)`)
+	re := regexp.MustCompile(`^Kind: (extensions\/v1beta|networking\.k8s\.io\/v1beta1)`) // skipcq: GO-C4007
 
 	for i := range parts {
 		// skip previous atom version's deprecated resources
