@@ -273,7 +273,7 @@ resource "kubernetes_ingress_v1" "api" {
 
   metadata {
     namespace = var.namespace
-    name      = "api-ing-v1"
+    name      = "api"
 
     annotations = merge({
       "convox.com/backend-protocol" : "https",
@@ -319,7 +319,7 @@ resource "kubernetes_ingress_v1" "kubernetes" {
 
   metadata {
     namespace = var.namespace
-    name      = "kubernetes-ing-v1"
+    name      = "kubernetes"
 
     annotations = merge({
       "nginx.ingress.kubernetes.io/use-regex" : "true",
