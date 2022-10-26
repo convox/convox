@@ -104,7 +104,7 @@ resource "aws_eks_node_group" "cluster" {
   version         = var.k8s_version
 
   launch_template {
-    id = aws_launch_template.cluster.id
+    id      = aws_launch_template.cluster.id
     version = "$Latest"
   }
 
@@ -157,7 +157,15 @@ module "ebs_csi_driver_controller" {
   ebs_csi_driver_version                     = "v1.9.0"
   ebs_csi_controller_role_name               = "convox-ebs-csi-driver-controller"
   ebs_csi_controller_role_policy_name_prefix = "convox-ebs-csi-driver-policy"
-  oidc_url                                   = aws_iam_openid_connect_provider.cluster.url
+  csi_controller_tolerations = [
+    { operator = "Exists", key = "CriticalAddonsOnly" },
+    { operator = "Exists", effect = "NoExecute", toleration_seconds = 300 }
+  ]
+  node_tolerations = [
+    { operator = "Exists", key = "CriticalAddonsOnly" },
+    { operator = "Exists", effect = "NoExecute", toleration_seconds = 300 }
+  ]
+  oidc_url = aws_iam_openid_connect_provider.cluster.url
 }
 
 resource "kubernetes_storage_class" "default" {
