@@ -150,14 +150,21 @@ module "ebs_csi_driver_controller" {
     null_resource.wait_k8s_api
   ]
 
-  source  = "DrFaust92/ebs-csi-driver/kubernetes"
-  version = "3.3.1"
+  source  = "github.com/convox/terraform-kubernetes-ebs-csi-driver?ref=48f5650f72684b581697f8831b3f5b60ea624092"
 
   ebs_csi_controller_image                   = "public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver"
   ebs_csi_driver_version                     = "v1.9.0"
   ebs_csi_controller_role_name               = "convox-ebs-csi-driver-controller"
   ebs_csi_controller_role_policy_name_prefix = "convox-ebs-csi-driver-policy"
-  oidc_url                                   = aws_iam_openid_connect_provider.cluster.url
+  csi_controller_tolerations = [
+    { operator = "Exists", key = "CriticalAddonsOnly" },
+    { operator = "Exists", effect = "NoExecute", toleration_seconds = 300 }
+  ]
+  node_tolerations = [
+    { operator = "Exists", key = "CriticalAddonsOnly" },
+    { operator = "Exists", effect = "NoExecute", toleration_seconds = 300 }
+  ]
+  oidc_url = aws_iam_openid_connect_provider.cluster.url
 }
 
 resource "kubernetes_storage_class" "default" {
