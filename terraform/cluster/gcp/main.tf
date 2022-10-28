@@ -85,10 +85,10 @@ resource "local_file" "kubeconfig" {
 
   filename = pathexpand("~/.kube/config.gcp.${var.name}")
   content = templatefile("${path.module}/kubeconfig.tpl", {
-    ca                 = google_container_cluster.rack.master_auth.0.cluster_ca_certificate
+    ca                 = google_container_cluster.rack.master_auth[0].cluster_ca_certificate
     endpoint           = google_container_cluster.rack.endpoint
     client_certificate = google_container_cluster.rack.master_auth.0.client_certificate
-    client_key         = google_container_cluster.rack.master_auth.0.client_key
+    client_key         = google_container_cluster.rack.master_auth[0].client_key
   })
 
   lifecycle {
@@ -101,7 +101,7 @@ provider "kubernetes" {
 
   host                   = "https://${google_container_cluster.rack.endpoint}"
   token                  = data.google_client_config.current.access_token
-  cluster_ca_certificate = base64decode(google_container_cluster.rack.master_auth.0.cluster_ca_certificate)
+  cluster_ca_certificate = base64decode(google_container_cluster.rack.master_auth[0].cluster_ca_certificate)
 }
 
 resource "kubernetes_cluster_role_binding" "client" {
