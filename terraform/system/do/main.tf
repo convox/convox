@@ -27,6 +27,7 @@ module "cluster" {
   }
 
   high_availability = var.high_availability
+  k8s_version       = var.k8s_version
   name              = var.name
   node_type         = var.node_type
   region            = var.region

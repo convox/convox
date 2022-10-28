@@ -19,7 +19,7 @@ resource "google_container_cluster" "rack" {
     channel = "UNSPECIFIED"
   }
 
-  min_master_version = "1.22"
+  min_master_version = var.k8s_version
 
   workload_identity_config {
     workload_pool = "${data.google_project.current.project_id}.svc.id.goog"
