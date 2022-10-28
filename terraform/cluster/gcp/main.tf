@@ -87,7 +87,7 @@ resource "local_file" "kubeconfig" {
   content = templatefile("${path.module}/kubeconfig.tpl", {
     ca                 = google_container_cluster.rack.master_auth[0].cluster_ca_certificate
     endpoint           = google_container_cluster.rack.endpoint
-    client_certificate = google_container_cluster.rack.master_auth.0.client_certificate
+    client_certificate = google_container_cluster.rack.master_auth[0].client_certificate
     client_key         = google_container_cluster.rack.master_auth[0].client_key
   })
 
