@@ -49,6 +49,7 @@ module "k8s" {
 
   annotations = {
     "cert-manager.io/cluster-issuer" = "letsencrypt"
+    "kubernetes.io/ingress.class"    = "nginx"
   }
 
   env = {
