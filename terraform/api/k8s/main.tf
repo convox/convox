@@ -268,7 +268,7 @@ resource "kubernetes_service" "api" {
   }
 }
 
-resource "kubernetes_ingress_v1" "api" {
+resource "kubernetes_ingress" "api" {
   wait_for_load_balancer = true
 
   metadata {
@@ -289,7 +289,6 @@ resource "kubernetes_ingress_v1" "api" {
   }
 
   spec {
-    ingress_class_name = "nginx"
     tls {
       hosts       = ["api.${var.domain}"]
       secret_name = "api-certificate"
@@ -301,12 +300,8 @@ resource "kubernetes_ingress_v1" "api" {
       http {
         path {
           backend {
-            service {
-              name = kubernetes_service.api.metadata.0.name
-              port {
-                number = 5443
-              }
-            }
+            service_name = kubernetes_service.api.metadata.0.name
+            service_port = 5443
           }
         }
       }
@@ -314,7 +309,7 @@ resource "kubernetes_ingress_v1" "api" {
   }
 }
 
-resource "kubernetes_ingress_v1" "kubernetes" {
+resource "kubernetes_ingress" "kubernetes" {
   wait_for_load_balancer = true
 
   metadata {
@@ -332,7 +327,6 @@ resource "kubernetes_ingress_v1" "kubernetes" {
   }
 
   spec {
-    ingress_class_name = "nginx"
     tls {
       hosts       = ["api.${var.domain}"]
       secret_name = "api-certificate"
@@ -346,12 +340,8 @@ resource "kubernetes_ingress_v1" "kubernetes" {
           path = "/kubernetes/.*"
 
           backend {
-            service {
-              name = kubernetes_service.api.metadata.0.name
-              port {
-                number = 8001
-              }
-            }
+            service_name = kubernetes_service.api.metadata.0.name
+            service_port = 8001
           }
         }
       }

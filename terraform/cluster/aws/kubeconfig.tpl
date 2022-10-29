@@ -16,7 +16,7 @@ users:
 - name: aws
   user:
     exec:
-      apiVersion: client.authentication.k8s.io/v1
+      apiVersion: client.authentication.k8s.io/v1beta1
       command: aws
       args:
         - "eks"

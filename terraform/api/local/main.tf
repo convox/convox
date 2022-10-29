@@ -25,6 +25,7 @@ module "k8s" {
   annotations = {
     "cert-manager.io/cluster-issuer" = "self-signed"
     "convox.com/idles"               = "true"
+    "kubernetes.io/ingress.class"    = "nginx"
   }
 
   env = {
