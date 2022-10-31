@@ -1,6 +1,8 @@
 resources:
   one:
     type: postgres
+  my-db:
+    type: postgres
   postgresdb:
     type: postgres
   rediscache:
@@ -26,6 +28,7 @@ services:
       - mysqldb:MYSQL_URL
       - mariadb:MARIA_URL
       - one
+      - my-db
 timers:
   example:
     command: /usr/scripts/timer_cmd.sh
