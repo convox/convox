@@ -104,7 +104,7 @@ Here are some examples of information that could be recorded in annotations:
 - Build, release, or image information like timestamps, release IDs, git branch, PR numbers, image hashes, and registry address.
 - Fields managed by a declarative configuration layer. Attaching these fields as annotations distinguishes them from default values set by clients or servers, and from auto-generated fields and fields set by auto-sizing or auto-scaling systems.
 - User or tool/system provenance information, such as URLs of related objects from other ecosystem components.
-- Configure a Kubernetes service account to assume an IAM Role(aws and gcp only). For example:
+- Configure a service to assume an IAM Role(aws and gcp only). For example:
 ```
 environment:
   - PORT=3000
