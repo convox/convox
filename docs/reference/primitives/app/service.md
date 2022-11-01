@@ -73,7 +73,7 @@ services:
 | Attribute     | Type       | Default             | Description                                                                                                                                |
 | ------------- | ---------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | **agent**       | boolean    | false               | Set to **true** to declare this Service as an [Agent](/configuration/agents)                                                      |
-| **annotations** | list       |                     | A list of annotation keys and values to populate the metadata for the deployed pods and their serviceaccounts                              |
+| **annotations*** | list       |                     | A list of annotation keys and values to populate the metadata for the deployed pods and their serviceaccounts                              |
 | **build**       | string/map | .                   | Build definition (see below)                                                                                                               |
 | **command**     | string     | **CMD** of Dockerfile | The command to run to start a [Process](/reference/primitives/app/process) for this Service                                                                       |
 | **deployment**  | map        |                     | Manual control over deployment parameters                                                                                                  |
@@ -96,6 +96,26 @@ services:
 | **whitelist**   | string     |                     | Comma delimited list of CIDRs, e.g. `10.0.0.0/24,172.10.0.1`, to allow access to the service                                                                                                                  |
 
 > Environment variables declared on `convox.yml` will be populated for a Service.
+
+#### *annotations
+You can use annotations to attach arbitrary non-identifying metadata to objects. Clients such as tools and libraries can retrieve this metadata. In convox, annotations will reflect in pods and service accounts.
+
+Here are some examples of information that could be recorded in annotations:
+- Build, release, or image information like timestamps, release IDs, git branch, PR numbers, image hashes, and registry address.
+- Fields managed by a declarative configuration layer. Attaching these fields as annotations distinguishes them from default values set by clients or servers, and from auto-generated fields and fields set by auto-sizing or auto-scaling systems.
+- User or tool/system provenance information, such as URLs of related objects from other ecosystem components.
+- Configure a Kubernetes service account to assume an IAM Role(aws and gcp only). For example:
+```
+environment:
+  - PORT=3000
+services:
+  web:
+    annotations:
+      - eks.amazonaws.com/role-arn=arn:aws:iam::accountID:role/yourOwnIAMRole
+    domain: ${HOST}
+    build: .
+    port: 3000
+```
 
 ### build
 
