@@ -97,6 +97,26 @@ services:
 
 > Environment variables declared on `convox.yml` will be populated for a Service.
 
+#### *annotations
+You can use annotations to attach arbitrary non-identifying metadata to objects. Clients such as tools and libraries can retrieve this metadata. On Convox, annotations will reflect in pods and service accounts.
+
+Here are some examples of information that can be recorded in annotations:
+- Build, release, or image information like timestamps, release IDs, git branch, PR numbers, image hashes, and registry address.
+- Fields managed by a declarative configuration layer. Attaching these fields as annotations distinguishes them from default values set by clients or servers, and from auto-generated fields and fields set by auto-sizing or auto-scaling systems.
+- User or tool/system provenance information, such as URLs of related objects from other ecosystem components.
+- Configure a service to assume an IAM Role(AWS and GCP only). For example:
+```
+environment:
+  - PORT=3000
+services:
+  web:
+    annotations:
+      - eks.amazonaws.com/role-arn=arn:aws:iam::accountID:role/yourOwnIAMRole
+    domain: ${HOST}
+    build: .
+    port: 3000
+```
+
 ### build
 
 | Attribute  | Type   | Default    | Description                                                   |
