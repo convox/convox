@@ -98,7 +98,7 @@ services:
 > Environment variables declared on `convox.yml` will be populated for a Service.
 
 #### *annotations
-You can use annotations to attach arbitrary non-identifying metadata to objects. Clients such as tools and libraries can retrieve this metadata. On convox, annotations will reflect in pods and service accounts.
+You can use annotations to attach arbitrary non-identifying metadata to objects. Clients such as tools and libraries can retrieve this metadata. On Convox, annotations will reflect in pods and service accounts.
 
 Here are some examples of information that can be recorded in annotations:
 - Build, release, or image information like timestamps, release IDs, git branch, PR numbers, image hashes, and registry address.
