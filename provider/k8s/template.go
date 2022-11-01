@@ -83,7 +83,8 @@ func (p *Provider) templateHelpers() template.FuncMap {
 			return nameFilter(s)
 		},
 		"resourceEnv": func(s string) string {
-			return strings.Join(strings.Split(s, "_")[1:], "_")
+			parts := strings.Split(s, "_")
+			return parts[len(parts)-1]
 		},
 		"lower": func(s string) string {
 			return strings.ToLower(s)
