@@ -64,10 +64,10 @@ resource "local_file" "kubeconfig" {
 
   filename = pathexpand("~/.kube/config.azure.${var.name}")
   content = templatefile("${path.module}/kubeconfig.tpl", {
-    ca                 = azurerm_kubernetes_cluster.rack.kube_config.0.cluster_ca_certificate
-    endpoint           = azurerm_kubernetes_cluster.rack.kube_config.0.host
-    client_certificate = azurerm_kubernetes_cluster.rack.kube_config.0.client_certificate
-    client_key         = azurerm_kubernetes_cluster.rack.kube_config.0.client_key
+    ca                 = azurerm_kubernetes_cluster.rack.kube_config[0].cluster_ca_certificate
+    endpoint           = azurerm_kubernetes_cluster.rack.kube_config[0].host
+    client_certificate = azurerm_kubernetes_cluster.rack.kube_config[0].client_certificate
+    client_key         = azurerm_kubernetes_cluster.rack.kube_config[0].client_key
   })
 
   lifecycle {

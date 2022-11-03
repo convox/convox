@@ -3,7 +3,7 @@ output "ca" {
     google_container_node_pool.rack,
     kubernetes_cluster_role_binding.client,
   ]
-  value = base64decode(google_container_cluster.rack.master_auth.0.cluster_ca_certificate)
+  value = base64decode(google_container_cluster.rack.master_auth[0].cluster_ca_certificate)
 }
 
 output "client_certificate" {
@@ -11,7 +11,7 @@ output "client_certificate" {
     google_container_node_pool.rack,
     kubernetes_cluster_role_binding.client,
   ]
-  value = base64decode(google_container_cluster.rack.master_auth.0.client_certificate)
+  value = base64decode(google_container_cluster.rack.master_auth[0].client_certificate)
 }
 
 output "client_key" {
@@ -19,7 +19,7 @@ output "client_key" {
     google_container_node_pool.rack,
     kubernetes_cluster_role_binding.client,
   ]
-  value = base64decode(google_container_cluster.rack.master_auth.0.client_key)
+  value = base64decode(google_container_cluster.rack.master_auth[0].client_key)
 }
 
 output "endpoint" {
