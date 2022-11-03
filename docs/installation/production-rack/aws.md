@@ -55,7 +55,7 @@ The following environment variables are required:
 | **node_disk**            | **20**                 | Node disk size in GB                                                                                           |
 | **node_type**            | **t3.small**           | Node instance type. You can also pass a comma separated list of instance types                                 |
 | **private**              | **true**               | Put nodes in private subnets behind NAT gateways                                                               |
-| **proxy_protocol**       | **true**               | Enable proxy protocol. With this parameter set, the client source ip will be available in the request header `x-forwarded-for` key. **Requires 5 - 10 minutes downtime**.          |
+| **proxy_protocol**       | **false**               | Enable proxy protocol. With this parameter set, the client source ip will be available in the request header `x-forwarded-for` key. **Requires 5 - 10 minutes downtime**.          |
 | **region**               | **us-east-1**          | AWS Region                                                                                                     |
 | **syslog**               |                        | Forward logs to a syslog endpoint (e.g. **tcp+tls://example.org:1234**)                                        |
 | **vpc_id** *             |                        | Use an existing VPC for cluster creation. Make sure to also pass the **cidr** block and **internet_gateway_id**|
