@@ -241,15 +241,6 @@ resource "kubernetes_deployment" "ingress-nginx" {
             "--ingress-class=nginx",
           ]
 
-          security_context {
-            allow_privilege_escalation = true
-            capabilities {
-              drop = ["ALL"]
-              add  = ["NET_BIND_SERVICE"]
-            }
-            run_as_user = var.nginx_user
-          }
-
           env {
             name = "POD_NAME"
             value_from {

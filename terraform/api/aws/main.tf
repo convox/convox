@@ -29,7 +29,6 @@ module "k8s" {
     "cert-manager.io/cluster-issuer" = "letsencrypt"
     "eks.amazonaws.com/role-arn"     = aws_iam_role.api.arn
     "iam.amazonaws.com/role"         = aws_iam_role.api.arn
-    "kubernetes.io/ingress.class"    = "nginx"
   }
 
   env = {

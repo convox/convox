@@ -59,7 +59,13 @@ resource "kubernetes_cluster_role" "resource" {
 
   rule {
     api_groups = [""]
-    resources  = ["pods", "nodes", "nodes/stats", "namespaces"]
+    resources  = ["nodes/metrics"]
+    verbs      = ["get"]
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["pods", "nodes"]
     verbs      = ["get", "list", "watch"]
   }
 }
@@ -140,8 +146,26 @@ resource "kubernetes_deployment" "metrics" {
 
         container {
           name              = "metrics-server"
-          image             = "k8s.gcr.io/metrics-server/metrics-server:v0.3.7"
+          image             = "k8s.gcr.io/metrics-server/metrics-server:v0.6.1"
           image_pull_policy = "IfNotPresent"
+          args = [
+            "--cert-dir=/tmp",
+            "--secure-port=10250",
+            "--kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname",
+            "--kubelet-use-node-status-port",
+            "--metric-resolution=15s"
+          ]
+
+          security_context {
+            run_as_non_root            = true
+            run_as_user                = 1000
+          }
+
+          port {
+            name           = "https"
+            container_port = 10250
+            protocol       = "TCP"
+          }
 
           volume_mount {
             name       = "tmp-dir"
@@ -177,7 +201,7 @@ resource "kubernetes_service" "metrics" {
     port {
       port        = 443
       protocol    = "TCP"
-      target_port = 443
+      target_port = "https"
     }
   }
 }
