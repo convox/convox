@@ -1,6 +1,5 @@
 output "ca" {
   depends_on = [
-    google_container_cluster.rack,
     google_container_node_pool.rack,
     kubernetes_cluster_role_binding.client,
   ]
@@ -9,7 +8,6 @@ output "ca" {
 
 output "client_certificate" {
   depends_on = [
-    google_container_cluster.rack,
     google_container_node_pool.rack,
     kubernetes_cluster_role_binding.client,
   ]
@@ -18,7 +16,6 @@ output "client_certificate" {
 
 output "client_key" {
   depends_on = [
-    google_container_cluster.rack,
     google_container_node_pool.rack,
     kubernetes_cluster_role_binding.client,
   ]
@@ -27,7 +24,6 @@ output "client_key" {
 
 output "endpoint" {
   depends_on = [
-    google_container_cluster.rack,
     google_container_node_pool.rack,
     kubernetes_cluster_role_binding.client,
   ]
@@ -36,7 +32,6 @@ output "endpoint" {
 
 output "id" {
   depends_on = [
-    google_container_cluster.rack,
     google_container_node_pool.rack,
     kubernetes_cluster_role_binding.client,
   ]

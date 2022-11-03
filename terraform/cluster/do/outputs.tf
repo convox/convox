@@ -1,24 +1,19 @@
 output "ca" {
-  depends_on = [digitalocean_kubernetes_cluster.rack]
-  value      = base64decode(digitalocean_kubernetes_cluster.rack.kube_config[0].cluster_ca_certificate)
+  value = base64decode(digitalocean_kubernetes_cluster.rack.kube_config[0].cluster_ca_certificate)
 }
 
 output "endpoint" {
-  depends_on = [digitalocean_kubernetes_cluster.rack]
-  value      = digitalocean_kubernetes_cluster.rack.endpoint
+  value = digitalocean_kubernetes_cluster.rack.endpoint
 }
 
 output "id" {
-  depends_on = [digitalocean_kubernetes_cluster.rack]
-  value      = digitalocean_kubernetes_cluster.rack.id
+  value = digitalocean_kubernetes_cluster.rack.id
 }
 
 output "name" {
-  depends_on = [digitalocean_kubernetes_cluster.rack]
-  value      = digitalocean_kubernetes_cluster.rack.name
+  value = digitalocean_kubernetes_cluster.rack.name
 }
 
 output "token" {
-  depends_on = [digitalocean_kubernetes_cluster.rack, null_resource.delay_token]
-  value      = digitalocean_kubernetes_cluster.rack.kube_config[0].token
+  value = digitalocean_kubernetes_cluster.rack.kube_config[0].token
 }
