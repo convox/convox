@@ -302,7 +302,7 @@ resource "kubernetes_ingress_v1" "api" {
         path {
           backend {
             service {
-              name = kubernetes_service.api.metadata.0.name
+              name = kubernetes_service.api.metadata[0].name
               port {
                 number = 5443
               }
@@ -347,7 +347,7 @@ resource "kubernetes_ingress_v1" "kubernetes" {
 
           backend {
             service {
-              name = kubernetes_service.api.metadata.0.name
+              name = kubernetes_service.api.metadata[0].name
               port {
                 number = 8001
               }
