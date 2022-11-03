@@ -36,6 +36,7 @@ The following environment variables are required:
 - `GOOGLE_PROJECT` is the id you selected
 
 > You will likely need to set up Billing on this new project at https://console.cloud.google.com/billing before proceeding
+> You can find the full documentation on this here: https://cloud.google.com/billing/docs/how-to/modify-project#enable_billing_for_an_existing_project
 
 ### Create Service Account
 ```html
@@ -47,6 +48,11 @@ The following environment variables are required:
 ### Grant Permissions
 ```html
     $ gcloud projects add-iam-policy-binding $GOOGLE_PROJECT --member=serviceAccount:${serviceaccount} --role=roles/owner
+```
+## Enable GCP APIs
+```html
+    $ gcloud services enable compute.googleapis.com
+    $ gcloud services enable cloudresourcemanager.googleapis.com
 ```
 ## Install Rack
 ```html
