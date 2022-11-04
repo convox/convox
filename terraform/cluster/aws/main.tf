@@ -46,7 +46,6 @@ resource "null_resource" "wait_k8s_api" {
   depends_on = [
     aws_eks_cluster.cluster
   ]
-
 }
 
 resource "aws_eks_cluster" "cluster" {
@@ -118,6 +117,16 @@ resource "aws_eks_node_group" "cluster" {
     create_before_destroy = true
     ignore_changes        = [scaling_config[0].desired_size]
   }
+}
+
+resource "null_resource" "wait_k8s_cluster" {
+  provisioner "local-exec" {
+    command = "sleep 10"
+  }
+
+  depends_on = [
+    aws_eks_node_group.cluster
+  ]
 }
 
 resource "local_file" "kubeconfig" {
