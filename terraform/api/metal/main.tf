@@ -46,7 +46,6 @@ module "k8s" {
 
   annotations = {
     "cert-manager.io/cluster-issuer" = "self-signed"
-    "kubernetes.io/ingress.class"    = "nginx"
   }
 
   env = {
