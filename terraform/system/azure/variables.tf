@@ -12,7 +12,7 @@ variable "image" {
 
 variable "k8s_version" {
   type = string
-  default = "1.20"
+  default = "1.22"
 }
 
 variable "name" {

@@ -1,4 +1,7 @@
 #!/bin/bash
+
+set -ex
+
 case $provider in
    gcp)
       convox logs -a httpd --no-follow --since 10m | grep timer/example/timer-example | grep "Hello Timer"
