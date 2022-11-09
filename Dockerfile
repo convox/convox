@@ -6,12 +6,12 @@ ARG DOCKER_ARCH=x86_64
 ARG KUBECTL_ARCH=amd64
 
 
-# RUN apt-get update && apt-get -y install default-mysql-client postgresql-client redis-tools telnet
+RUN apt-get update && apt-get -y install default-mysql-client postgresql-client redis-tools telnet
 
-# SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# RUN curl -s https://download.docker.com/linux/static/stable/$DOCKER_ARCH/docker-20.10.7.tgz | \
-#   tar -C /usr/bin --strip-components 1 -xz
+RUN curl -s https://download.docker.com/linux/static/stable/$DOCKER_ARCH/docker-20.10.7.tgz | \
+  tar -C /usr/bin --strip-components 1 -xz
 
 RUN curl -Ls https://storage.googleapis.com/kubernetes-release/release/v1.17.3/bin/linux/$KUBECTL_ARCH/kubectl -o /usr/bin/kubectl && \
   chmod +x /usr/bin/kubectl
