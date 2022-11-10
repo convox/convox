@@ -5,28 +5,32 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/gobuffalo/packr"
 	"github.com/pkg/errors"
 )
 
 var (
-	templateBox     packr.Box
+	templates       FileSystem
 	templateHelpers TemplateHelpers
 )
 
 type TemplateHelpers func(c *Context) template.FuncMap
 
-func LoadTemplates(box packr.Box, helpers TemplateHelpers) {
-	templateBox = box
+type FileSystem http.FileSystem
+
+func LoadTemplates(files FileSystem, helpers TemplateHelpers) {
+	templates = files
 	templateHelpers = helpers
 }
 
 func TemplateExists(path string) bool {
-	return templateBox.Has(fmt.Sprintf("%s.tmpl", path))
+	_, err := templates.Open(path)
+	return !os.IsNotExist(err)
 }
 
 func RenderTemplate(c *Context, path string, params interface{}) error {
@@ -53,10 +57,21 @@ func RenderTemplatePart(c *Context, path, part string, params interface{}) error
 	}
 
 	for _, f := range files {
-		if templateBox.Has(f) {
-			if _, err := ts.Parse(templateBox.String(f)); err != nil {
-				return errors.WithStack(err)
-			}
+		fd, err := templates.Open(f)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+
+		data, err := ioutil.ReadAll(fd)
+		if err != nil {
+			return err
+		}
+
+		if _, err := ts.Parse(string(data)); err != nil {
+			return errors.WithStack(err)
 		}
 	}
 
@@ -69,12 +84,4 @@ func RenderTemplatePart(c *Context, path, part string, params interface{}) error
 	io.Copy(c, &buf)
 
 	return nil
-}
-
-func appendIfExists(files []string, path string) []string {
-	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		files = append(files, path)
-	}
-
-	return files
 }

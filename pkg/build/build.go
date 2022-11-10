@@ -26,6 +26,7 @@ import (
 type Options struct {
 	App         string
 	Auth        string
+	BuildArgs   []string
 	Cache       bool
 	Development bool
 	EnvWrapper  bool
@@ -201,6 +202,14 @@ func (bb *Build) build(dir string) error {
 	env, err := common.AppEnvironment(bb.Provider, bb.App)
 	if err != nil {
 		return err
+	}
+
+	for _, v := range bb.BuildArgs {
+		parts := strings.SplitN(v, "=", 2)
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid build args: %s", v)
+		}
+		env[parts[0]] = parts[1]
 	}
 
 	m, err := manifest.Load(data, env)

@@ -3,6 +3,8 @@ package stdcli
 import (
 	"context"
 	"fmt"
+	"os"
+	"runtime/pprof"
 	"strings"
 )
 
@@ -10,6 +12,7 @@ type Engine struct {
 	Commands []Command
 	Executor Executor
 	Name     string
+	Profile  string
 	Reader   *Reader
 	Settings string
 	Version  string
@@ -30,6 +33,15 @@ func (e *Engine) Command(command, description string, fn HandlerFunc, opts Comma
 }
 
 func (e *Engine) Execute(args []string) int {
+	if e.Profile != "" {
+		f, err := os.Create(e.Profile)
+		if err != nil {
+			panic(fmt.Sprintf("could not create profile: %s", e.Profile))
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

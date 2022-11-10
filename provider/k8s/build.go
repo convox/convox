@@ -76,8 +76,18 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 
 	env["BUILD_PUSH"] = repo
 
+	buildCmd := fmt.Sprintf("build -method tgz -cache %t", cache)
+	if opts.BuildArgs != nil {
+		for _, v := range *opts.BuildArgs {
+			if len(strings.SplitN(v, "=", 2)) != 2 {
+				return nil, errors.New("invalid build args:" + v)
+			}
+			buildCmd = fmt.Sprintf("%s -build-args %s", buildCmd, v)
+		}
+	}
+
 	ps, err := p.ProcessRun(app, "build", structs.ProcessRunOptions{
-		Command:     options.String(fmt.Sprintf("build -method tgz -cache %t", cache)),
+		Command:     options.String(buildCmd),
 		Cpu:         options.Int(512),
 		Environment: env,
 		Image:       options.String(p.Image),

@@ -9,6 +9,7 @@ import (
 	"github.com/convox/convox/pkg/api"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/logger"
+	"github.com/convox/stdapi"
 	"github.com/convox/stdsdk"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -22,7 +23,7 @@ func testServer(t *testing.T, fn func(*stdsdk.Client, *structs.MockProvider)) {
 
 	s := api.NewWithProvider(p)
 	s.Logger = logger.Discard
-	s.Server.Recover = func(err error) {
+	s.Server.Recover = func(err error, c *stdapi.Context) {
 		require.NoError(t, err, "httptest server panic")
 	}
 
