@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"os/exec"
@@ -76,8 +75,18 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 
 	env["BUILD_PUSH"] = repo
 
+	buildCmd := fmt.Sprintf("build -method tgz -cache %t", cache)
+	if opts.BuildArgs != nil {
+		for _, v := range *opts.BuildArgs {
+			if len(strings.SplitN(v, "=", 2)) != 2 {
+				return nil, errors.New("invalid build args:" + v)
+			}
+			buildCmd = fmt.Sprintf("%s -build-args %s", buildCmd, v)
+		}
+	}
+
 	ps, err := p.ProcessRun(app, "build", structs.ProcessRunOptions{
-		Command:     options.String(fmt.Sprintf("build -method tgz -cache %t", cache)),
+		Command:     options.String(buildCmd),
 		Cpu:         options.Int(512),
 		Environment: env,
 		Image:       options.String(p.Image),
@@ -159,7 +168,7 @@ func (p *Provider) BuildExport(app, id string, w io.Writer) error {
 		return errors.WithStack(err)
 	}
 
-	tmp, err := ioutil.TempDir("", "")
+	tmp, err := os.MkdirTemp("", "")
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -277,7 +286,7 @@ func (p *Provider) BuildImport(app string, r io.Reader) (*structs.Build, error) 
 		}
 
 		if header.Name == "build.json" {
-			data, err := ioutil.ReadAll(tr)
+			data, err := io.ReadAll(tr)
 			if err != nil {
 				return nil, errors.WithStack(err)
 			}
@@ -529,6 +538,7 @@ func (p *Provider) buildCreate(b *structs.Build) (*structs.Build, error) {
 	return p.buildUnmarshal(kb)
 }
 
+// skipcq
 func (p *Provider) buildGet(app, id string) (*structs.Build, error) {
 	kb, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(app)).Get(strings.ToLower(id), am.GetOptions{})
 	if err != nil {
@@ -538,6 +548,7 @@ func (p *Provider) buildGet(app, id string) (*structs.Build, error) {
 	return p.buildUnmarshal(kb)
 }
 
+// skipcq
 func (p *Provider) buildList(app string) (structs.Builds, error) {
 	kbs, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(app)).List(am.ListOptions{})
 	if err != nil {
@@ -558,6 +569,7 @@ func (p *Provider) buildList(app string) (structs.Builds, error) {
 	return bs, nil
 }
 
+// skipcq
 func (p *Provider) buildMarshal(b *structs.Build) *ca.Build {
 	return &ca.Build{
 		ObjectMeta: am.ObjectMeta{
@@ -583,6 +595,7 @@ func (p *Provider) buildMarshal(b *structs.Build) *ca.Build {
 	}
 }
 
+// skipcq
 func (p *Provider) buildUnmarshal(kb *ca.Build) (*structs.Build, error) {
 	started, err := time.Parse(common.SortableTime, kb.Spec.Started)
 	if err != nil {
@@ -611,6 +624,7 @@ func (p *Provider) buildUnmarshal(kb *ca.Build) (*structs.Build, error) {
 	return b, nil
 }
 
+// skipcq
 func (p *Provider) buildUpdate(b *structs.Build) (*structs.Build, error) {
 	kbo, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(b.App)).Get(strings.ToLower(b.Id), am.GetOptions{})
 	if err != nil {

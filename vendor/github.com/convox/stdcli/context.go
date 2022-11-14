@@ -104,6 +104,19 @@ func (c *Context) String(name string) string {
 	return ""
 }
 
+func (c *Context) StringSlice(name string) []string {
+	if f := c.Flag(name); f != nil && f.Type() == "[]string" {
+		switch t := f.Value.(type) {
+		case nil:
+			v, _ := f.Default.([]string)
+			return v
+		case []string:
+			return t
+		}
+	}
+	return []string{}
+}
+
 func (c *Context) Value(name string) interface{} {
 	if f := c.Flag(name); f != nil {
 		return f.Value
@@ -246,6 +259,10 @@ func (c *Context) Options(opts interface{}) error {
 				}
 			case "string":
 				if x, ok := c.Value(name).(string); ok {
+					u.Set(reflect.ValueOf(&x))
+				}
+			case "[]string":
+				if x, ok := c.Value(name).([]string); ok {
 					u.Set(reflect.ValueOf(&x))
 				}
 			default:
