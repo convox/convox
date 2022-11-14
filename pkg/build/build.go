@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"sort"
@@ -93,7 +92,7 @@ func (bb *Build) execute() error {
 		return err
 	}
 
-	data, err := ioutil.ReadFile(filepath.Join(dir, bb.Manifest))
+	data, err := os.ReadFile(filepath.Join(dir, bb.Manifest))
 	if err != nil {
 		return err
 	}
@@ -130,7 +129,7 @@ func (bb *Build) prepareSource() (string, error) {
 }
 
 func (bb *Build) prepareSourceObject(app, key string) (string, error) {
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return "", err
 	}
@@ -194,7 +193,7 @@ func (bb *Build) build(dir string) error {
 		return fmt.Errorf("no such file: %s", bb.Manifest)
 	}
 
-	data, err := ioutil.ReadFile(config)
+	data, err := os.ReadFile(config)
 	if err != nil {
 		return err
 	}
