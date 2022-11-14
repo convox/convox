@@ -32,6 +32,10 @@ locals {
   gpu_type  = substr(local.node_type, 0, 1) == "g" || substr(local.node_type, 0, 1) == "p"
   image     = var.image
   release   = local.arm_type ? format("%s-%s", coalesce(var.release, local.current), "arm64") : coalesce(var.release, local.current)
+  tag_map   = length(var.tags) == 0 ? {} : {
+    for v in split(",", var.tags):
+      "${split("=", v)[0]}" => split("=", v)[1]
+  }
 }
 
 module "cluster" {
@@ -54,6 +58,7 @@ module "cluster" {
   node_disk           = var.node_disk
   node_type           = var.node_type
   private             = var.private
+  tags                = local.tag_map
   vpc_id              = var.vpc_id
 }
 
@@ -94,6 +99,7 @@ module "rack" {
   proxy_protocol      = var.proxy_protocol
   release             = local.release
   subnets             = module.cluster.subnets
+  tags                = local.tag_map
   whitelist           = split(",", var.whitelist)
   ebs_csi_driver_name = module.cluster.ebs_csi_driver_name
 }

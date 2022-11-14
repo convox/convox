@@ -104,6 +104,16 @@ func validateParams(params map[string]string) error {
 		return errors.New("to schedule your rack to turn on/off you need both ScheduleRackScaleDown and ScheduleRackScaleUp parameters")
 	}
 
+	// format: "key1=val1,key2=val2"
+	if tags, has := params["tags"]; has {
+		tList := strings.Split(tags, ",")
+		for _, p := range tList {
+			if len(strings.Split(p, "=")) != 2 {
+				return errors.New("invalid value for tags param")
+			}
+		}
+	}
+
 	return nil
 }
 

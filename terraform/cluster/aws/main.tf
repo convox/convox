@@ -57,6 +57,7 @@ resource "aws_eks_cluster" "cluster" {
 
   name     = var.name
   role_arn = aws_iam_role.cluster.arn
+  tags     = local.tags
   version  = var.k8s_version
 
   vpc_config {
@@ -69,6 +70,7 @@ resource "aws_eks_cluster" "cluster" {
 
 resource "aws_iam_openid_connect_provider" "cluster" {
   client_id_list  = ["sts.amazonaws.com"]
+  tags            = local.tags
   thumbprint_list = ["9e99a48a9960b14926bb7f3b02e22da2b0ab7280"]
   url             = aws_eks_cluster.cluster.identity.0.oidc.0.issuer
 }
@@ -100,6 +102,7 @@ resource "aws_eks_node_group" "cluster" {
   node_group_name = "${var.name}-${local.availability_zones[count.index]}-${count.index}${random_id.node_group.hex}"
   node_role_arn   = random_id.node_group.keepers.role_arn
   subnet_ids      = [var.private ? aws_subnet.private[count.index].id : aws_subnet.public[count.index].id]
+  tags            = local.tags
   version         = var.k8s_version
 
   launch_template {
@@ -148,6 +151,14 @@ resource "aws_launch_template" "cluster" {
     ebs {
       volume_type = "gp3"
       volume_size = random_id.node_group.keepers.node_disk
+    }
+  }
+
+  dynamic "tag_specifications" {
+    for_each = toset(["instance", "volume", "elastic-gpu", "network-interface", "spot-instances-request"])
+    content {
+      resource_type = tag_specifications.key
+      tags = local.tags
     }
   }
 

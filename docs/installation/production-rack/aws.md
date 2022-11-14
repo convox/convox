@@ -58,6 +58,7 @@ The following environment variables are required:
 | **proxy_protocol**       | **false**               | Enable proxy protocol. With this parameter set, the client source ip will be available in the request header `x-forwarded-for` key. **Requires 5 - 10 minutes downtime**.          |
 | **region**               | **us-east-1**          | AWS Region                                                                                                     |
 | **syslog**               |                        | Forward logs to a syslog endpoint (e.g. **tcp+tls://example.org:1234**)                                        |
+| **tags**                 |                        | Custom tags to add with AWS resources (e.g. **key1=val1,key2=val2**)|
 | **vpc_id** *             |                        | Use an existing VPC for cluster creation. Make sure to also pass the **cidr** block and **internet_gateway_id**|
 
 \* To avoid CIDR block collision with existing VPC subnets, please add a new CIDR block to your VPC to separate rack resources. Also, remember to pass the **internet_gateway_id** attached to the VPC. If the VPC doesn't have an IG attached, the rack installation will create one automatically, which will also be destroyed if you delete the rack.
