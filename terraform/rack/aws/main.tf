@@ -75,5 +75,6 @@ module "router" {
   oidc_sub          = var.oidc_sub
   proxy_protocol    = var.proxy_protocol
   release           = var.release
+  tags              = var.tags
   whitelist         = var.whitelist
 }

@@ -125,7 +125,7 @@ data:
 ### `Warning`
 When you edit the `aws-auth` ConfigMap, proceed with caution, if you misconfigure it, you can lock the user out of their rack.
 
-### Console Ract Metrics
+### Console Rack Metrics
 
 Rack cpu and memory usages metrics support added from version `3.6.3`. So If your rack version is >= `3.6.3`, you'll be able to visualize resource consumption for your rack nodes and workloads.
 

@@ -46,6 +46,10 @@ variable "release" {
   type = string
 }
 
+variable "tags" {
+  default = {}
+}
+
 variable "subnets" {
   type = list
 }

@@ -82,6 +82,10 @@ variable "syslog" {
   default = ""
 }
 
+variable "tags" {
+  default = ""
+}
+
 variable "vpc_id" {
   default = ""
 }

@@ -48,6 +48,7 @@ The parameters available for your Rack depend on the underlying cloud provider.
 | **high_availability** *           | **true**        |
 | **proxy_protocol** **             | **false**       |
 | **vpc_id** ***                    |                 |
+| **tags**                          |                 |
 
 \* Parameter cannot be changed after rack creation
 

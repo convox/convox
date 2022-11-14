@@ -34,6 +34,10 @@ variable "release" {
   type = string
 }
 
+variable "tags" {
+  default = {}
+}
+
 variable "whitelist" {
   default = ["0.0.0.0/0"]
 }

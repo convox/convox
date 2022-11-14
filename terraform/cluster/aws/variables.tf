@@ -51,6 +51,10 @@ variable "private" {
   default = true
 }
 
+variable "tags" {
+  default = {}
+}
+
 variable "vpc_id" {
   default = ""
 }
