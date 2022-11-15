@@ -10,6 +10,11 @@ variable "cidr" {
   default = "10.1.0.0/16"
 }
 
+variable "coredns_version" {
+  type = string
+  default = null
+}
+
 variable "gpu_type" {
   default = false
 }
@@ -26,6 +31,12 @@ variable "key_pair_name" {
   type = string
   default = ""
 }
+
+variable "kube_proxy_version" {
+  type = string
+  default = null
+}
+
 variable "k8s_version" {
   type = string
   default = "1.21"
@@ -57,4 +68,9 @@ variable "tags" {
 
 variable "vpc_id" {
   default = ""
+}
+
+variable "vpc_cni_version" {
+  type = string
+  default = null
 }

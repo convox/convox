@@ -1,6 +1,6 @@
 resource "kubernetes_cluster_role" "console" {
   depends_on = [
-    null_resource.wait_k8s_api
+    null_resource.wait_eks_addons
   ]
   metadata {
     name   = "eks-console-dashboard-full-access-clusterrole"
@@ -75,7 +75,7 @@ resource "kubernetes_cluster_role" "console" {
 
 resource "kubernetes_cluster_role_binding" "console" {
   depends_on = [
-    null_resource.wait_k8s_api
+    null_resource.wait_eks_addons
   ]
   metadata {
     name   = "eks-console-dashboard-full-access-binding"

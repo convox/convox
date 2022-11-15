@@ -60,6 +60,9 @@ module "cluster" {
   private             = var.private
   tags                = local.tag_map
   vpc_id              = var.vpc_id
+  vpc_cni_version = var.vpc_cni_version
+  coredns_version = var.coredns_version
+  kube_proxy_version = var.kube_proxy_version
 }
 
 module "fluentd" {
@@ -70,13 +73,14 @@ module "fluentd" {
     kubernetes = kubernetes
   }
 
-  arm_type  = local.arm_type
-  cluster   = module.cluster.id
-  namespace = "kube-system"
-  oidc_arn  = module.cluster.oidc_arn
-  oidc_sub  = module.cluster.oidc_sub
-  rack      = var.name
-  syslog    = var.syslog
+  arm_type   = local.arm_type
+  cluster    = module.cluster.id
+  eks_addons = module.cluster.eks_addons
+  namespace  = "kube-system"
+  oidc_arn   = module.cluster.oidc_arn
+  oidc_sub   = module.cluster.oidc_sub
+  rack       = var.name
+  syslog     = var.syslog
 }
 
 module "rack" {
@@ -90,6 +94,7 @@ module "rack" {
   cluster             = module.cluster.id
   docker_hub_username = var.docker_hub_username
   docker_hub_password = var.docker_hub_password
+  eks_addons          = module.cluster.eks_addons
   high_availability   = var.high_availability
   idle_timeout        = var.idle_timeout
   image               = local.image
