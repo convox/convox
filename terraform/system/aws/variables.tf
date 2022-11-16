@@ -43,7 +43,7 @@ variable "key_pair_name" {
 
 variable "k8s_version" {
   type = string
-  default = "1.22"
+  default = "1.23"
 }
 
 variable "name" {
