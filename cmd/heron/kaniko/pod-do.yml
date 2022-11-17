@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kaniko
+  # namespace: heron-test-do-nodejs
+spec:
+  containers:
+    - name: kaniko
+      resources: {}
+      image: heronrs/convox:kaniko24
+      imagePullPolicy: Always
+      args:
+        # - "nslookup"
+        # - "registry.423330df64f652ab.convox.cloud"
+        - "executor"
+        # - "-v"
+        # - "debug"
+        - "--dockerfile=/workspace/Dockerfile"
+        - "--context=/workspace"
+        - "--destination=registry.599c1d3073771eb8.convox.cloud/nodejs"
+        # - "--skip-tls-verify"
+      # env:
+        # - name: AWS_SDK_LOAD_CONFIG
+        #   value: "true"
+        # - name: AWS_EC2_METADATA_DISABLED
+        #   value: "true"
+      #   - name: AWS_REGION
+      #     value: "us-east-1"
+      #   - name: AWS_SDK_LOAD_CONFIG
+      #     value: "true"
+      #   - name: AWS_ACCESS_KEY_ID
+      #     value: "ASIAW3HEQCWKG4CRNXC7"
+      #   - name: AWS_SECRET_ACCESS_KEY
+      #     value: "je1El6juaJnHeSwE8i03sITcYM01DEAa8UpLprZT"
+      #   - name: AWS_SESSION_TOKEN
+      #     value: "IQoJb3JpZ2luX2VjEMb//////////wEaCXVzLWVhc3QtMSJHMEUCIQCS1DU+GIMM5nKkMB4P/OekFYPU1Kb9ewqiNHAU4Q+lYAIgUVX68QjgF0+dOeHdfmbflsLrupfogHrUw/Hy9SNaTcAqkwMI3///////////ARAAGgw0NzA3NzgxMjM2NjgiDH978brPdbCwMjK/kirnAhV+y6lyyGmOfiC9H5sZwXLLbiGcFexlmC6vJXXp7PlRDNGNNg+qJs6f3nPQy0SAxqBLDulJtqcFUPPu14zrgzDbSedPJq0iQftF4f3OdUY9ReTbedSJr4DSlpnlTwEu511aF10qroP5YnQ+Y6QdVMg/WaTxKRRGxOCwy7ZWp1xHKpUIhZaY3IMAA2ZaUTANsSZc5DEJ3jmm8g2U+xjK/y27WQzqMMpYwuK3wJFR8PGlTTcTNidrzhFhPlU63rUc92gPCJQProz+Pwrz2jfR1g2sOz3LPFDxoFnLWeo2nrtWKQr9408UaS+5BoZH0kx9bIyOMCuhqgjorCnL/5k1r4EWcnn89XPOwiCIHfPlW5oiiorTg7XZieja+R5Y28Id2GE2Xxq7hC4+zSyo0i8TDTSuo9sGJ+UmcgMUBCfQYvC7b62h7tOiGsCdx/Xhp+TjCHMxLol92/cwVT1my968qllfh4x7EWKZMNrN6JUGOqYBE7g5dJEWBZJrkzAF15ayM4DQi6ACfrDSO/WkwtY3RDh4/qvtZkaq4IfWFcXkra538pTNWtEw2cac4cjPn+CJaQ/FL/vpWjTy82sm5fLKKuQIsx6oebUnD3UWof4EfUumjXpzekq5br8AolpmEW07azIQJ5dd2i3FPkZVwwanHPcJ9jad9NfiDxIMcfFYvwiDYnW0VfYcJ7DcQ52w0Y9UGfn1qgaShA=="
+      # volumeMounts:
+      # # when not using instance role
+      # - name: aws-secret
+      #   mountPath: /root/.aws/
+  restartPolicy: Never
+  # volumes:
+  # # when not using instance role
+  # - name: aws-secret
+  #   secret:
+  #     secretName: aws-secret

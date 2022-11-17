@@ -1,0 +1,235 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    convox.com/lock: "false"
+    convox.com/params: '{}'
+  labels:
+    app: nodejs
+    atom: 149233faeb3d1613990b7bc6b5ac9299d25334357fceed0ed8f41e792f70
+    name: nodejs
+    provider: k8s
+    rack: ht19
+    release: RLMYDENPWEG
+    system: convox
+    type: app
+  name: ht19-nodejs
+  ownerReferences:
+  - apiVersion: v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: Namespace
+    name: ht19-system
+    uid: 20d2961e-5a00-4644-9ef9-cb405bac74f5
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    cert-manager.io/cluster-issuer: letsencrypt
+    convox.com/backend-protocol: http
+    convox.com/idles: "false"
+    nginx.ingress.kubernetes.io/backend-protocol: http
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/server-snippet: |
+      keepalive_timeout 60s;
+      grpc_read_timeout 60s;
+      grpc_send_timeout 60s;
+      client_body_timeout 60s;
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  labels:
+    app: nodejs
+    atom: 149233faeb3d1613990b7bc6b5ac9299d25334357fceed0ed8f41e792f70
+    provider: k8s
+    rack: ht19
+    release: RLMYDENPWEG
+    service: web
+    system: convox
+    type: service
+  name: web
+  namespace: ht19-nodejs
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: web.nodejs.862ec25f9c276f13.convox.cloud
+    http:
+      paths:
+      - backend:
+          service:
+            name: web
+            port:
+              number: 3000
+        pathType: ImplementationSpecific
+  tls:
+  - hosts:
+    - web.nodejs.862ec25f9c276f13.convox.cloud
+    secretName: cert-web
+---
+apiVersion: v1
+data:
+  APP: bm9kZWpz
+  BUILD: QkpPVU5HR1NZRUg=
+  BUILD_DESCRIPTION: ""
+  MYVAR: MTA=
+  PORT: MzAwMA==
+  RACK: aHQxOQ==
+  RACK_URL: aHR0cHM6Ly9jb252b3g6cER4UHJzRVNldUtvR21Ka1JqVWpQOXlmNGt0QnlHdDZUZTE3SVc3WXBwOUVUdUJtbEllR0YxY0tGeGZaMHZNSEBhcGkuaHQxOS1zeXN0ZW0uc3ZjLmNsdXN0ZXIubG9jYWw6NTQ0Mw==
+  RELEASE: UkxNWURFTlBXRUc=
+  SERVICE: d2Vi
+kind: Secret
+metadata:
+  labels:
+    app: nodejs
+    atom: 149233faeb3d1613990b7bc6b5ac9299d25334357fceed0ed8f41e792f70
+    provider: k8s
+    rack: ht19
+    release: RLMYDENPWEG
+    service: web
+    system: convox
+    type: env
+  name: env-web
+  namespace: ht19-nodejs
+type: Opaque
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations: null
+  labels:
+    app: nodejs
+    atom: 149233faeb3d1613990b7bc6b5ac9299d25334357fceed0ed8f41e792f70
+    provider: k8s
+    rack: ht19
+    release: RLMYDENPWEG
+    service: web
+    system: convox
+    type: serviceaccount
+  name: web
+  namespace: ht19-nodejs
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    atom.conditions: Available=True,Progressing=True/NewReplicaSetAvailable
+  labels:
+    app: nodejs
+    atom: 149233faeb3d1613990b7bc6b5ac9299d25334357fceed0ed8f41e792f70
+    provider: k8s
+    rack: ht19
+    release: RLMYDENPWEG
+    service: web
+    system: convox
+    type: service
+  name: web
+  namespace: ht19-nodejs
+spec:
+  minReadySeconds: 1
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: nodejs
+      rack: ht19
+      service: web
+      system: convox
+  strategy:
+    rollingUpdate:
+      maxSurge: 100%
+      maxUnavailable: 50%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations: null
+      labels:
+        app: nodejs
+        name: web
+        rack: ht19
+        release: RLMYDENPWEG
+        service: web
+        system: convox
+        type: service
+    spec:
+      containers:
+      - env:
+        - name: INSTANCE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        envFrom:
+        - secretRef:
+            name: env-web
+        image: 470778123668.dkr.ecr.us-east-1.amazonaws.com/ht19/nodejs:web.BJOUNGGSYEH
+        imagePullPolicy: IfNotPresent
+        name: nodejs
+        ports:
+        - containerPort: 3000
+          name: main
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 3000
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 4
+        resources:
+          limits:
+            memory: 512Mi
+          requests:
+            cpu: 256m
+            memory: 512Mi
+        volumeMounts:
+        - mountPath: /etc/convox
+          name: ca
+      dnsConfig:
+        nameservers:
+        - 172.20.222.75
+        searches:
+        - nodejs.ht19.local
+        - ht19-nodejs.svc.cluster.local
+        - ht19.local
+        - svc.cluster.local
+        - cluster.local
+      dnsPolicy: None
+      serviceAccountName: web
+      shareProcessNamespace: true
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          name: ca
+          optional: true
+        name: ca
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    convox.com/alias: web.nodejs.ht19.local
+  labels:
+    app: nodejs
+    atom: 149233faeb3d1613990b7bc6b5ac9299d25334357fceed0ed8f41e792f70
+    provider: k8s
+    rack: ht19
+    release: RLMYDENPWEG
+    service: web
+    system: convox
+  name: web
+  namespace: ht19-nodejs
+spec:
+  ports:
+  - name: main
+    port: 3000
+    protocol: TCP
+    targetPort: main
+  selector:
+    service: web
+    type: service
+  type: ClusterIP
+---
+null

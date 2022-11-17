@@ -1,0 +1,52 @@
+package main
+
+import (
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"os"
+)
+
+var BUILD_AUTH string = `{"470778123668.dkr.ecr.us-east-1.amazonaws.com/dev4/console":{"Username":"AWS","Password":"eyJwYXlsb2FkIjoiSXMrczBpaDFMM1BRRVRpVmZSVk52ak4zYmV4VlphZjd3VEYwemhnMURJUkU3YkoxOE42OWU0bk5NVVJqUlN6cG9IRXdiSThUVm4xOUJraU45TS9oN2xGTTI5Y1d3eTlEcGc3UEtqK2FEY0l1eGw4YUNpQmpBS29FeHd1Y0tIcWtIWk51VjB6UjBjL05lVXZ2aTBBTkc0QXZaNlFneDBwTDROZE5wN1FFMWtBNU9hWU9vdEYxd3hSUnRocVVCT25ndWRQem9EV1ZZdG1qMkpPaHFselAvV0RleXE5TVA0T0JYTjFmWUpXRU9kNS9ORUNUdW02M2FnZW9yUmQ3cWZ4UFlNUk51VXhDQkwwT1d4cFAxL1pwam1aeXRBZ3R0VlRLc256M0tKM0tXYWM5NVZ2S0gzcG9ldEZ1ZjZLUnlES25SbmJrWUdpZ2RlL3ZoRnk5UVF2eE5XUHhuMW5jaGhNUzNOV3YyeDJVZStxTlk0cVBzN3JTLytVWk1XcjlqV0tTRjRsN2FnSTJHWVNuWHlWN0NBVURYL0hsdzhHRUlybmFzMm9TTGRXU3FVTUZBaVZDMFlUL0RabDRpVDRnTlQwWjVEMHJrNW9uNk54dlNTYi9jSW5EY25xWWFrTTVHajBBem15eVRwMFoxQzEzaDVFbDNPMjZMY1RZeGI4Mmd2aFRlWkN2eUxRbXFrQ3pzSkRLcHh1WVR2eVRCcHJYMnNYUlZHaVJoN0phVHBDOTlmRnYzNTRhOXV1M2c0WnB6VXJzMTBrQmRxRUh2b0dFVWJYZU9zbHNheWtqcG41UVR3Tk55T3ZTek56c0FJMGFCc2dEM3JpUVd4OFNKR1AvcTlTWHo0UDRGZjQveks5ek8vdUlmeEVhbkIzYmdrYU9SOEZUOVRpbGI2QWtydWhOSTdXOGxIeTNYMEQzSUJkMmdjd2NXa0FxSExJSmNEWkZueXZ1aGV0c1NjRnk1LzJjdUJrMUZTOFY2VUY2ZDYybWJwcC9SUlJ5N2RpbDB1c0xveWJHdzJ0ZDlWdHVueHdvUGwyNVBmdCthb0pVWnRGTUdBVkNhNjhtdFZMTU9lNVF1NkRKWnlmM3lBczZvRldpQi9LQ0JxZDRUSU5MS2hMMlo3OC90TGtoU3RNRTI0Y25OdUxaMEo0cDk0Z1h5dElHdnBreFJSQXBzdmtjanFmMVFqWUg2NC9kbkJJRFFSN0QxeHBJQ1RtRy96QWk1bGpXeHQ0QmRCQXVrWnM0WGJGWUlWeHRVTUFZZlJJMlV0OFFpTVZCU0tVeituKzFyVlRQM0N4eHpmeG93SUtzcXFqMWJ1RExjMjMrdWxaV3VITE11cHZJdlNxWk9ZMWM4ZGF0TlFEcjIwNE45cmMycmwxR1dHcVBTU0hCQlVKeHZjRjMzdzFjdmloaFB0MjNReDhvZkszN09XaTJ0aGRLUjNHNHFncTZnd3lkOE9yV0l1U0xOUTNLZGhRaXQvNWxITHhaUG8xM1hjd1UyRk1KKzd6NTR5eUtZVm1TV2cyTDNJN21aK2owSHNrNmxBbEpFbm40eTMrcmVjNnlTSXk1Rlo4RngzVzhnMjNyWUU3OU1hN25XYlUzNUpoQlFFbHM2Wlk1WkhRMVFYMFdhVkVXT1Y2TG5tdDAyRlR3S004V3ZSYmY2Z0NrNGlOL3NkVlB1dDNRbS82dEJ1OStvYkdBSmZrOGtUenhBVWtDY1hpMTJCYkJRelppVUpybGE4enhxb3ZVemN1cC8yZndPZEt3REptUzBvTTBEVmMwVGswdXV6ekF2ZmFCalo5dWFsKzdwRDNpOUFKQXd5RUdYNTI1eitESzczaFo5UHpyeno3TFRxN0RvVDQwa1o1Qk93YUFIckErdXQvU1dMeDZvN1kvTWRMK3JjZnRqMU9Ebi8xQTBqQzNWTkRYMXl6NVBNNktQWWFmY20rTlRjREkvcldQcFNvcVd4Q2JlMGpOU0gyNEFBWnppc1MrYVI2RlNIOVpObTJtUy8rd0NYdUt0bEZwWjdNSGRsd283SGJobmJxOWlCQVZqMmJlWnpQVUJncUduaU90Wm9XT0xjVGRrYjdhYWJDSmQwTU1ESTNzbytQNzc4V2ZxOEwwYUVaYzN2TlBvU01sbCtYdk9pakdGcnI4eTNXUkFjY0VkdXpSVWQrcy9waEw1b2NCcmsvSmsxYzdOZWxSdTR6OHlncWhoa296MVA5ODZCMUJtYXU2WkUvT1l0ejV3WjhrR04yQ2tNa0x2S0hvdmxrT1ZTaGdFYm14dkpLc3BBNWpDYjNMcGJRakI3dFNLcHgxaGNuS3p1eXpGdkhyWWRyaW9mR21UK3FzRXVRY29oUFhnOFBRSjhSejZpbEY1VDhlYmZuMGRtT3d0cW5LWWYvVjBWT0ZzR0FmSzFUU3RSeWJQNDFWYy80eWdheFB0d3RFMVJZVkNHMjhHNHZSMzBBWmErK21lUVVqVXg4YyIsImRhdGFrZXkiOiJBUUVCQUhod20wWWFJU0plUnRKbTVuMUc2dXFlZWtYdW9YWFBlNVVGY2U5UnE4LzE0d0FBQUg0d2ZBWUpLb1pJaHZjTkFRY0dvRzh3YlFJQkFEQm9CZ2txaGtpRzl3MEJCd0V3SGdZSllJWklBV1VEQkFFdU1CRUVETFV5NjVwdDdHcUo1YzIzOGdJQkVJQTdIdFZhRTl1aW9lNnJ2WDI2WXFqUHZlSVBVaGhHL0p2RnV2WlVkcG1ZRXgyZXBXaGFsL2F5Nm5XcmNJc2tVeGY2K2o1aTBUZ1ViLzRxSGNBPSIsInZlcnNpb24iOiIyIiwidHlwZSI6IkRBVEFfS0VZIiwiZXhwaXJhdGlvbiI6MTY1NjY2NTYzMX0="},"enterprise.convox.com":{"Username":"convox","Password":"HkbaTjUtWDf78YOttE5EK0xENTG8KGErWZRzyCMS"}}`
+
+func main() {
+	var auth map[string]struct {
+		Username string
+		Password string
+	}
+
+	if err := json.Unmarshal([]byte(BUILD_AUTH), &auth); err != nil {
+		panic(err)
+	}
+
+	type authConfig struct {
+		Auth string `json:"auth"`
+	}
+
+	regConfig := struct {
+		Auths map[string]authConfig `json:"auths"`
+	}{Auths: make(map[string]authConfig)}
+
+	for host, entry := range auth {
+		println(host, entry.Username)
+		cred := fmt.Sprintf("%s:%s", entry.Username, entry.Password)
+		regConfig.Auths[host] = authConfig{Auth: base64.StdEncoding.EncodeToString([]byte(cred))}
+	}
+
+	f, err := json.Marshal(regConfig)
+	if err != nil {
+		panic(err)
+	}
+
+	cfg, err := os.Create("/home/heron/.docker/config.json.test")
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = cfg.Write(f)
+	if err != nil {
+		panic(err)
+	}
+
+	// return nil
+}
