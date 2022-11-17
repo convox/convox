@@ -141,19 +141,19 @@ sleep 30
 # $root/ci/test/timers.sh &
 
 # postgres resource test
-# $root/ci/test/resources_postgres.sh &
+$root/ci/test/resources_postgres.sh &
 
 # mariadb resource test
-# $root/ci/test/resources_mariadb.sh &
+$root/ci/test/resources_mariadb.sh &
 
 # mysqldb resource test
-# $root/ci/test/resources_mysql.sh &
+$root/ci/test/resources_mysql.sh &
 
 # redis resource test
-# $root/ci/test/resources_redis.sh &
+$root/ci/test/resources_redis.sh &
 
 # memcache resource test
-# $root/ci/test/resources_memcache.sh &
+$root/ci/test/resources_memcache.sh &
 
 # app (httpd2)
 $root/ci/test/app_internal_communication.sh &
