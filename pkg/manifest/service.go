@@ -185,6 +185,19 @@ type ServiceResource struct {
 	Env  string
 }
 
+func (sr ServiceResource) GetConfigMapKey() string {
+	parts := strings.Split(sr.Env, "_")
+	key := parts[len(parts)-1]
+
+	for _, en := range AdditionalEnvNames {
+		if key == en {
+			return key
+		}
+	}
+
+	return DEFAULT_RESOURCE_ENV_NAME
+}
+
 func (s Service) AnnotationsMap() map[string]string {
 	annotations := map[string]string{}
 
