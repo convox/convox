@@ -177,7 +177,7 @@ spec:
       {{ end }}
 {{ if not (eq .Service.Scale.Count.Min .Service.Scale.Count.Max) }}
 ---
-apiVersion: autoscaling/v2beta1
+apiVersion: autoscaling/v2beta2
 kind: HorizontalPodAutoscaler
 metadata:
   namespace: {{.Namespace}}
@@ -196,13 +196,36 @@ spec:
   - type: Resource
     resource:
       name: cpu
-      targetAverageUtilization: {{.}}
+      target:
+        type: Utilization
+        averageUtilization: {{.}}
   {{ end }}
   {{ with .Service.Scale.Targets.Memory }}
   - type: Resource
     resource:
       name: memory
-      targetAverageUtilization: {{.}}
+      target:
+        type: Utilization
+        averageUtilization: {{.}}
+  {{ end }}
+  {{ range .Service.Scale.Targets.External }}
+  - type: External
+    external:
+      metric:
+        name: {{ .Name }}
+        selector:
+          matchLabels:
+            {{ range $k, $v := .MatchLabels }}
+            {{ $k }}: {{ $v }}
+            {{ end }}
+      target:
+        {{ if .AverageValue }}
+        type: AverageValue
+        averageValue: {{ .AverageValue }}
+        {{ else }}
+        type: Value
+        value: {{ .Value }}
+        {{ end }}
   {{ end }}
 {{ end }}
 {{ if or .Service.Port.Port .Service.Ports }}

@@ -59,6 +59,9 @@ services:
       targets:
         cpu: 50
         memory: 80
+        external:
+          - name: "datadogmetric@default:web-requests"
+            averageValue: 200
     singleton: false
     sticky: true
     termination:
@@ -164,6 +167,29 @@ services:
 | --------- | ------ | ------- | ------------------------------------------------------------------------------------------ |
 | **cpu**     | number |         | The percentage of CPU utilization to target for [Processes](/reference/primitives/app/process) of this Service    |
 | **memory**  | number |         | The percentage of memory utilization to target for [Processes](/reference/primitives/app/process) of this Service |
+| **external**  | array of object |         | The array of the external metrics based on which it will scale the Service |
+
+### scale.targets.[]external
+
+| Attribute | Type   | Default | Description                                                                                |
+| --------- | ------ | ------- | ------------------------------------------------------------------------------------------ |
+| **name**     | string |         | The name of the metric |
+| **matchLabels**  | map |         | Key value lablels for the metrics |
+| **averageValue**  | number |         | The target value of the average of the metric across all relevant pods |
+| **value**  | number |         | The target value of the metric |
+
+```yaml
+services:
+  web:
+    build: .
+    port: 3000
+    scale:
+      count: 1-3
+      targets:
+        external:
+          - name: "datadogmetric@default:web-requests"
+            averageValue: 200
+```
 
 &nbsp;
 

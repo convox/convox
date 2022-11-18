@@ -86,6 +86,14 @@ type ServiceScaleCount struct {
 	Min int
 	Max int
 }
+type ServiceScaleExternalMetric struct {
+	AverageValue *float64          `yaml:"averageValue,omitempty"`
+	MatchLabels  map[string]string `yaml:"matchLabels,omitempty"`
+	Name         string            `yaml:"name"`
+	Value        *float64          `yaml:"value,omitempty"`
+}
+
+type ServiceScaleExternalMetrics []ServiceScaleExternalMetric
 
 type ServiceScaleMetric struct {
 	Aggregate  string
@@ -100,6 +108,7 @@ type ServiceScaleMetrics []ServiceScaleMetric
 type ServiceScaleTargets struct {
 	Cpu      int
 	Custom   ServiceScaleMetrics
+	External ServiceScaleExternalMetrics
 	Memory   int
 	Requests int
 }
