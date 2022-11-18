@@ -106,7 +106,7 @@ resource "aws_eks_node_group" "cluster" {
   version         = var.k8s_version
 
   launch_template {
-    id = aws_launch_template.cluster.id
+    id      = aws_launch_template.cluster.id
     version = "$Latest"
   }
 
@@ -158,7 +158,7 @@ resource "aws_launch_template" "cluster" {
     for_each = toset(["instance", "volume", "elastic-gpu", "network-interface", "spot-instances-request"])
     content {
       resource_type = tag_specifications.key
-      tags = local.tags
+      tags          = local.tags
     }
   }
 
@@ -170,7 +170,7 @@ module "ebs_csi_driver_controller" {
     null_resource.wait_eks_addons
   ]
 
-  source  = "github.com/convox/terraform-kubernetes-ebs-csi-driver?ref=48f5650f72684b581697f8831b3f5b60ea624092"
+  source = "github.com/convox/terraform-kubernetes-ebs-csi-driver?ref=48f5650f72684b581697f8831b3f5b60ea624092"
 
   ebs_csi_controller_image                   = "public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver"
   ebs_csi_driver_version                     = "v1.9.0"

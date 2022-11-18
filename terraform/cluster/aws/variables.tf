@@ -11,7 +11,7 @@ variable "cidr" {
 }
 
 variable "coredns_version" {
-  type = string
+  type    = string
   default = null
 }
 
@@ -28,17 +28,17 @@ variable "internet_gateway_id" {
 }
 
 variable "key_pair_name" {
-  type = string
+  type    = string
   default = ""
 }
 
 variable "kube_proxy_version" {
-  type = string
+  type    = string
   default = null
 }
 
 variable "k8s_version" {
-  type = string
+  type    = string
   default = "1.21"
 }
 
@@ -71,6 +71,6 @@ variable "vpc_id" {
 }
 
 variable "vpc_cni_version" {
-  type = string
+  type    = string
   default = null
 }

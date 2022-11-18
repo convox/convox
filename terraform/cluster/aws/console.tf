@@ -3,12 +3,12 @@ resource "kubernetes_cluster_role" "console" {
     null_resource.wait_eks_addons
   ]
   metadata {
-    name   = "eks-console-dashboard-full-access-clusterrole"
+    name = "eks-console-dashboard-full-access-clusterrole"
   }
 
   rule {
     api_groups = [""]
-    resources  = ["nodes", "namespaces", "pods", "configmaps", "endpoints", "events", "limitranges", "persistentvolumeclaims", "podtemplates", "replicationcontrollers", "resourcequotas", "secrets", "serviceaccounts", "services",]
+    resources  = ["nodes", "namespaces", "pods", "configmaps", "endpoints", "events", "limitranges", "persistentvolumeclaims", "podtemplates", "replicationcontrollers", "resourcequotas", "secrets", "serviceaccounts", "services", ]
     verbs      = ["get", "list"]
   }
 
@@ -78,7 +78,7 @@ resource "kubernetes_cluster_role_binding" "console" {
     null_resource.wait_eks_addons
   ]
   metadata {
-    name   = "eks-console-dashboard-full-access-binding"
+    name = "eks-console-dashboard-full-access-binding"
   }
 
   role_ref {
