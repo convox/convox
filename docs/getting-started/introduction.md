@@ -11,7 +11,7 @@ Convox is an open-source Platform as a Service that you can install on your own 
 
 ## First Steps
 
-We recommend you follow these tutorials in this order:
+Here are some helpful tutorials to begin getting familiar with Convox:
 
 * [Create a free Convox account](#create-a-free-convox-account)
 * [Install the Convox CLI and Login](#install-the-convox-cli-and-login)
