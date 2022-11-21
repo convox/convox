@@ -5,6 +5,21 @@ import (
 	"strings"
 )
 
+const (
+	DEFAULT_RESOURCE_ENV_NAME = "URL"
+)
+
+var (
+	AdditionalEnvNames = []string{
+		DEFAULT_RESOURCE_ENV_NAME,
+		"USER",
+		"PASS",
+		"HOST",
+		"PORT",
+		"NAME",
+	}
+)
+
 type Resource struct {
 	Name    string            `yaml:"-"`
 	Type    string            `yaml:"type"`
@@ -18,14 +33,11 @@ func (r Resource) DefaultEnv() string {
 }
 
 func (r Resource) LoadEnv() []string {
-	return []string{
-		r.mountEnv("URL"),
-		r.mountEnv("USER"),
-		r.mountEnv("PASS"),
-		r.mountEnv("HOST"),
-		r.mountEnv("PORT"),
-		r.mountEnv("NAME"),
+	envs := []string{}
+	for _, e := range AdditionalEnvNames {
+		envs = append(envs, r.mountEnv(e))
 	}
+	return envs
 }
 
 func (r Resource) GetName() string {
