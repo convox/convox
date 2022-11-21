@@ -152,11 +152,22 @@ services:
 | Attribute | Type   | Default | Description                                                                                                   |
 | --------- | ------ | ------- | ------------------------------------------------------------------------------------------------------------- |
 | **count**   | number | 1       | The number of [Processes](/reference/primitives/app/process) to run for this Service. For autoscaling use a range, e.g. **1-5**        |
-| **cpu**     | number | 128     | The number of CPU units to reserve for [Processes](/reference/primitives/app/process) of this Service where 1024 units is a full CPU |
-| **memory**  | number | 256     | The number of MB of RAM to reserve for [Processes](/reference/primitives/app/process) of this Service                                |
+| **cpu**     | number | 256     | The number of CPU units to reserve for [Processes](/reference/primitives/app/process) of this Service where 1024 units is a full CPU |
+| **gpu**     | map    |         | The number/type of GPUs to reserve for [Processes](/reference/primitives/app/process) of this Service  |
+| **memory**  | number | 512     | The number of MB of RAM to reserve for [Processes](/reference/primitives/app/process) of this Service                                |
 | **targets** | map    |         | Target metrics to trigger autoscaling                                                                         |
 
 > Specifying **scale** as a number will set the **count** and leave the other values as defaults.
+
+### scale.gpu
+
+| Attribute | Type   | Default | Description                                                                                |
+| --------- | ------ | ------- | ------------------------------------------------------------------------------------------ |
+| **count**  | number |        | The number of GPUs to reserve for [Processes](/reference/primitives/app/process) of this Service    |
+| **vendor** | string | nvidia | The GPU vendor to target for [Processes](/reference/primitives/app/process) of this Service |
+
+> Specifying **gpu** as a number will set the **count** and leave the vendor as default.
+> Specifying a **gpu** value and not specifying the cpu or memory to reserve will remove their defaults to purely reserve based on GPU.
 
 ### scale.targets
 

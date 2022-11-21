@@ -78,6 +78,7 @@ type ServicePortScheme struct {
 type ServiceScale struct {
 	Count   ServiceScaleCount
 	Cpu     int
+	Gpu     ServiceScaleGpu     `yaml:"gpu,omitempty"`
 	Memory  int
 	Targets ServiceScaleTargets `yaml:"targets,omitempty"`
 }
@@ -85,6 +86,11 @@ type ServiceScale struct {
 type ServiceScaleCount struct {
 	Min int
 	Max int
+}
+
+type ServiceScaleGpu struct {
+	Count int
+	Vendor string
 }
 
 type ServiceScaleMetric struct {
