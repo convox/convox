@@ -93,6 +93,7 @@ wait
 
 convox scale web --count 1
 convox deploy -a httpd
+sleep 30
 ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | grep web | head -n 1)
 convox exec -a httpd $ps -- env | grep "ONE_URL="
 convox exec -a httpd $ps -- env | grep "ONE_USER="
