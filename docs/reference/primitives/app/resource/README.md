@@ -40,7 +40,7 @@ The credential details will be stored in the environment variables, you can use 
 
 For example, a `postgres` resource named `main` (as in the example above) would injected like this:
 
-```
+```html
 MAIN_URL=postgres://username:password@host.name:port/database`
 MYDB_USER=username
 MYDB_PASS=password

@@ -428,8 +428,7 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 			c.Image = fmt.Sprintf("%s:%s.%s", repo, service, r.Build)
 
 			for _, r := range s.ResourceMap() {
-				parts := strings.Split(r.Env, "_")
-				key := parts[len(parts)-1]
+				key := r.GetConfigMapKey()
 				c.Env = append(c.Env, ac.EnvVar{
 					Name: r.Env,
 					ValueFrom: &ac.EnvVarSource{
