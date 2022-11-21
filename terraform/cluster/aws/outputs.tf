@@ -40,3 +40,7 @@ output "subnets" {
 output "vpc" {
   value = var.vpc_id == "" ? aws_vpc.nodes[0].id : var.vpc_id
 }
+
+output "eks_addons" {
+  value = [aws_eks_addon.coredns.id, aws_eks_addon.vpc_cni.id, aws_eks_addon.kube_proxy.id]
+}

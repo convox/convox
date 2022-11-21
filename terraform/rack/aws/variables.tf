@@ -14,6 +14,9 @@ variable "ebs_csi_driver_name" {
   type = string
 }
 
+// for eks addons dependency
+variable "eks_addons" {}
+
 variable "high_availability" {
   default = true
 }
