@@ -139,7 +139,7 @@ mv Dockerfile.original Dockerfile # replace the Dockerfile with the original cop
 
 # timers
 sleep 30
-# $root/ci/test/timers.sh &
+$root/ci/test/timers.sh &
 
 # postgres resource test
 $root/ci/test/resources_postgres.sh &
