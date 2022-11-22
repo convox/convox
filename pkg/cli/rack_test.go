@@ -540,6 +540,7 @@ func TestRackUpdate(t *testing.T) {
 		opts := structs.SystemUpdateOptions{
 			Version: options.String("latest"),
 		}
+		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("SystemUpdate", opts).Return(nil)
 
 		res, err := testExecute(e, "rack update", nil)
@@ -550,11 +551,33 @@ func TestRackUpdate(t *testing.T) {
 	})
 }
 
+func TestRackUpdateDowngradeMinorError(t *testing.T) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(&structs.System{
+			Count:      1,
+			Domain:     "domain",
+			Name:       "name",
+			Outputs:    map[string]string{"k1": "v1", "k2": "v2"},
+			Parameters: map[string]string{"Autoscale": "Yes", "ParamFoo": "value1", "ParamOther": "value2"},
+			Provider:   "provider",
+			Region:     "region",
+			Status:     "running",
+			Type:       "type",
+			Version:    "3.3.0",
+		}, nil)
+
+		res, err := testExecute(e, "rack update 3.2.12", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+	})
+}
+
 func TestRackUpdateSpecific(t *testing.T) {
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
 		opts := structs.SystemUpdateOptions{
 			Version: options.String("ver1"),
 		}
+		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("SystemUpdate", opts).Return(nil)
 
 		res, err := testExecute(e, "rack update ver1", nil)
@@ -570,6 +593,7 @@ func TestRackUpdateError(t *testing.T) {
 		opts := structs.SystemUpdateOptions{
 			Version: options.String("latest"),
 		}
+		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("SystemUpdate", opts).Return(fmt.Errorf("err1"))
 
 		res, err := testExecute(e, "rack update", nil)
