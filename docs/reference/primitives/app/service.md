@@ -167,7 +167,7 @@ services:
 | --------- | ------ | ------- | ------------------------------------------------------------------------------------------ |
 | **cpu**     | number |         | The percentage of CPU utilization to target for [Processes](/reference/primitives/app/process) of this Service    |
 | **memory**  | number |         | The percentage of memory utilization to target for [Processes](/reference/primitives/app/process) of this Service |
-| **external**  | array of object |         | The array of the external metrics based on which it will scale the Service |
+| **external**  | map |         | The array of the external metrics based on which it will scale the Service |
 
 ### scale.targets.[]external
 
