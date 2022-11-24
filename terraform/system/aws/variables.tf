@@ -9,7 +9,7 @@ variable "cidr" {
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-coredns.html
 variable "coredns_version" {
   type    = string
-  default = "v1.8.7-eksbuild.1"
+  default = "v1.8.7-eksbuild.2"
 }
 
 variable "docker_hub_username" {
@@ -50,12 +50,12 @@ variable "key_pair_name" {
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-kube-proxy.html
 variable "kube_proxy_version" {
   type    = string
-  default = "v1.22.11-eksbuild.2"
+  default = "v1.23.8-eksbuild.2"
 }
 
 variable "k8s_version" {
   type    = string
-  default = "1.22"
+  default = "1.23"
 }
 
 variable "name" {
