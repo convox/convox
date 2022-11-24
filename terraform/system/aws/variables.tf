@@ -74,6 +74,16 @@ variable "node_type" {
   default = "t3.small"
 }
 
+variable "power_off_schedule" {
+  type    = string
+  default = ""
+}
+
+variable "power_on_schedule" {
+  type    = string
+  default = ""
+}
+
 variable "private" {
   default = true
 }

@@ -32,9 +32,9 @@ locals {
   gpu_type  = substr(local.node_type, 0, 1) == "g" || substr(local.node_type, 0, 1) == "p"
   image     = var.image
   release   = local.arm_type ? format("%s-%s", coalesce(var.release, local.current), "arm64") : coalesce(var.release, local.current)
-  tag_map   = length(var.tags) == 0 ? {} : {
-    for v in split(",", var.tags):
-      "${split("=", v)[0]}" => split("=", v)[1]
+  tag_map = length(var.tags) == 0 ? {} : {
+    for v in split(",", var.tags) :
+    "${split("=", v)[0]}" => split("=", v)[1]
   }
 }
 
@@ -59,6 +59,8 @@ module "cluster" {
   node_capacity_type  = upper(var.node_capacity_type)
   node_disk           = var.node_disk
   node_type           = var.node_type
+  power_off_schedule  = var.power_off_schedule
+  power_on_schedule   = var.power_on_schedule
   private             = var.private
   tags                = local.tag_map
   vpc_cni_version     = var.vpc_cni_version
