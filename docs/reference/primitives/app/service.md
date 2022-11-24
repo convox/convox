@@ -168,6 +168,7 @@ services:
 
 > Specifying **gpu** as a number will set the **count** and leave the vendor as default.
 > Specifying a **gpu** value and not specifying the cpu or memory to reserve will remove their defaults to purely reserve based on GPU.
+> You should ensure that your Rack is running on GPU enabled instances (of the correct vendor) before specifying the **gpu** section in your convox.yml
 
 ### scale.targets
 
