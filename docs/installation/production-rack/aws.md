@@ -54,6 +54,8 @@ The following environment variables are required:
 | **node_capacity_type**   | **on_demand**          | Can be either "on_demand" or "spot". Spot will use AWS spot instances for the cluster nodes                    |
 | **node_disk**            | **20**                 | Node disk size in GB                                                                                           |
 | **node_type**            | **t3.small**           | Node instance type. You can also pass a comma separated list of instance types                                 |
+| **power_off_schedule**   |                        | Power off schedule is specified by the user following the Unix cron syntax format. Example: "0 0 * * 6" |
+| **power_on_schedule**    |                        | Power on schedule is specified by the user following the Unix cron syntax format.Example: "0 0 * * 0" |
 | **private**              | **true**               | Put nodes in private subnets behind NAT gateways                                                               |
 | **proxy_protocol**       | **false**               | Enable proxy protocol. With this parameter set, the client source ip will be available in the request header `x-forwarded-for` key. **Requires 5 - 10 minutes downtime**.          |
 | **region**               | **us-east-1**          | AWS Region                                                                                                     |

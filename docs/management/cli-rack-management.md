@@ -46,6 +46,8 @@ The parameters available for your Rack depend on the underlying cloud provider.
 | **node_type**                     | **t3.small**    |
 | **region**                        | **us-east-1**   |
 | **high_availability** *           | **true**        |
+| **power_off_schedule**            |                 |
+| **power_on_schedule**             |                 |
 | **proxy_protocol** **             | **false**       |
 | **vpc_id** ***                    |                 |
 | **tags**                          |                 |
