@@ -243,7 +243,7 @@ func TestBuildOptions(t *testing.T) {
 }
 
 func TestLogin(t *testing.T) {
-	tmp, err := os.MkdirTemp("", "convox-tests")
+	tmp, err := os.MkdirTemp(os.TempDir(), "convox-tests")
 	if err != nil {
 		panic(err)
 	}

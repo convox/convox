@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"strings"
 
 	"path/filepath"
 	"time"
@@ -79,6 +80,19 @@ func (bb *Build) Execute() error {
 
 func (bb *Build) Printf(format string, args ...interface{}) {
 	fmt.Fprintf(bb.writer, format, args...)
+}
+
+func (bb *Build) buildEnvs() (map[string]string, error) {
+	env := map[string]string{}
+	for _, v := range bb.BuildArgs {
+		parts := strings.SplitN(v, "=", 2)
+		if len(parts) != 2 {
+			return env, fmt.Errorf("invalid build args: %s", v)
+		}
+		env[parts[0]] = parts[1]
+	}
+
+	return env, nil
 }
 
 func (bb *Build) execute() error {

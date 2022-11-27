@@ -37,6 +37,15 @@ func (bk *BuildKit) Build(bb *Build, dir string) error {
 		return err
 	}
 
+	benv, err := bb.buildEnvs()
+	if err != nil {
+		return err
+	}
+
+	for k, v := range benv {
+		env[k] = v
+	}
+
 	m, err := manifest.Load(data, env)
 	if err != nil {
 		return err

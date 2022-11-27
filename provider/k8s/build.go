@@ -274,7 +274,7 @@ func (p *Provider) BuildImport(app string, r io.Reader) (*structs.Build, error) 
 	}
 
 	tr := tar.NewReader(gz)
-	tmp, err := os.MkdirTemp("", "")
+	tmp, err := os.MkdirTemp(os.TempDir(), "")
 	imgBySvc := map[string]string{}
 
 	if err != nil {
