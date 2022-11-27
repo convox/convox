@@ -83,7 +83,6 @@ sleep 30
 ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | grep web | head -n 1)
 convox ps info $ps -a httpd | grep $releaser
 # assert the run command is going through the Dockerfile entrypoint
-convox ps
 convox run web ls | grep entrypoint
 
 $root/ci/test/app_scale.sh &

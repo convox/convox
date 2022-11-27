@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,7 +26,7 @@ func (bk *BuildKit) Build(bb *Build, dir string) error {
 		return fmt.Errorf("no such file: %s", bb.Manifest)
 	}
 
-	data, err := ioutil.ReadFile(config)
+	data, err := os.ReadFile(config)
 	if err != nil {
 		return err
 	}
