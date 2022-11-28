@@ -112,10 +112,12 @@ type ServiceTls struct {
 	Redirect bool
 }
 
+// skipcq
 func (s Service) BuildHash(key string) string {
 	return fmt.Sprintf("%x", sha256.Sum224([]byte(fmt.Sprintf("key=%q build[path=%q, manifest=%q, args=%v] image=%q", key, s.Build.Path, s.Build.Manifest, s.Build.Args, s.Image))))
 }
 
+// skipcq
 func (s Service) Domain() string {
 	if len(s.Domains) < 1 {
 		return ""
@@ -124,6 +126,7 @@ func (s Service) Domain() string {
 	return s.Domains[0]
 }
 
+// skipcq
 func (s Service) EnvironmentDefaults() map[string]string {
 	defaults := map[string]string{}
 
@@ -137,6 +140,7 @@ func (s Service) EnvironmentDefaults() map[string]string {
 	return defaults
 }
 
+// skipcq
 func (s Service) EnvironmentKeys() string {
 	kh := map[string]bool{}
 
@@ -155,10 +159,12 @@ func (s Service) EnvironmentKeys() string {
 	return strings.Join(keys, ",")
 }
 
+// skipcq
 func (s Service) GetName() string {
 	return s.Name
 }
 
+// skipcq
 func (s Service) Autoscale() bool {
 	if s.Agent.Enabled {
 		return false
@@ -198,6 +204,7 @@ func (sr ServiceResource) GetConfigMapKey() string {
 	return DEFAULT_RESOURCE_ENV_NAME
 }
 
+// skipcq
 func (s Service) AnnotationsMap() map[string]string {
 	annotations := map[string]string{}
 
@@ -209,6 +216,7 @@ func (s Service) AnnotationsMap() map[string]string {
 	return annotations
 }
 
+// skipcq
 func (s Service) ResourceMap() []ServiceResource {
 	srs := []ServiceResource{}
 
@@ -229,6 +237,7 @@ func (s Service) ResourceMap() []ServiceResource {
 	return srs
 }
 
+// skipcq
 func (s Service) ResourcesName() []string {
 	srs := []string{}
 
@@ -249,6 +258,7 @@ func (ss Services) External() Services {
 func (ss Services) Filter(fn func(s Service) bool) Services {
 	fss := Services{}
 
+	// skipcq
 	for _, s := range ss {
 		if fn(s) {
 			fss = append(fss, s)
