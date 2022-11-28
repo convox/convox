@@ -10,9 +10,10 @@ provider "kubernetes" {
 }
 
 locals {
-  availability_zones     = var.availability_zones != "" ? compact(split(",", var.availability_zones)) : data.aws_availability_zones.available.names
-  network_resource_count = var.high_availability ? 3 : 2
-  oidc_sub               = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
+  availability_zones       = var.availability_zones != "" ? compact(split(",", var.availability_zones)) : data.aws_availability_zones.available.names
+  network_resource_count   = var.high_availability ? 3 : 2
+  oidc_sub                 = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
+  gpu_tag_disabled_regions = ["eu-north-1"]
 }
 
 data "aws_availability_zones" "available" {
@@ -155,7 +156,10 @@ resource "aws_launch_template" "cluster" {
   }
 
   dynamic "tag_specifications" {
-    for_each = toset(["instance", "volume", "elastic-gpu", "network-interface", "spot-instances-request"])
+    for_each = toset(
+      concat(["instance", "volume", "network-interface", "spot-instances-request"],
+        contains(local.gpu_tag_disabled_regions, data.aws_region.current.name) ? [] : ["elastic-gpu"]
+    ))
     content {
       resource_type = tag_specifications.key
       tags          = local.tags
