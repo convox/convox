@@ -46,8 +46,8 @@ The parameters available for your Rack depend on the underlying cloud provider.
 | **node_type**                     | **t3.small**    |
 | **region**                        | **us-east-1**   |
 | **high_availability** *           | **true**        |
-| **power_off_schedule**            |                 |
-| **power_on_schedule**             |                 |
+| **schedule_rack_scale_down**      |                 |
+| **schedule_rack_scale_up**        |                 |
 | **proxy_protocol** **             | **false**       |
 | **vpc_id** ***                    |                 |
 | **tags**                          |                 |
@@ -57,6 +57,8 @@ The parameters available for your Rack depend on the underlying cloud provider.
 \*\* Setting **proxy_protocol** in an existing rack will require a 5 - 10 minutes downtime window.
 
 \*\*\* To avoid CIDR block collision with existing VPC subnets, please add a new CIDR block to your VPC to separate rack resources. Also, remember to pass the **internet_gateway_id** attached to the VPC. If the VPC doesn't have an IG attached, the rack installation will create one automatically, which will also be destroyed if you delete the rack.
+
+\*\*\* **schedule_rack_scale_down** and **schedule_rack_scale_up** are mutually exclusive. So you have to set both of them properly for the scheduled timed off. If you set only **schedule_rack_scale_down**, it will not scale up on its own.
 
 &nbsp;
 

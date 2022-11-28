@@ -74,16 +74,6 @@ variable "node_type" {
   default = "t3.small"
 }
 
-variable "power_off_schedule" {
-  type    = string
-  default = ""
-}
-
-variable "power_on_schedule" {
-  type    = string
-  default = ""
-}
-
 variable "private" {
   default = true
 }
@@ -98,6 +88,16 @@ variable "release" {
 
 variable "region" {
   default = "us-east-1"
+}
+
+variable "schedule_rack_scale_down" {
+  type    = string
+  default = ""
+}
+
+variable "schedule_rack_scale_up" {
+  type    = string
+  default = ""
 }
 
 variable "syslog" {

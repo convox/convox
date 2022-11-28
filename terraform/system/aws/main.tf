@@ -45,26 +45,26 @@ module "cluster" {
     aws = aws
   }
 
-  arm_type            = local.arm_type
-  availability_zones  = var.availability_zones
-  cidr                = var.cidr
-  coredns_version     = var.coredns_version
-  gpu_type            = local.gpu_type
-  high_availability   = var.high_availability
-  internet_gateway_id = var.internet_gateway_id
-  key_pair_name       = var.key_pair_name
-  kube_proxy_version  = var.kube_proxy_version
-  k8s_version         = var.k8s_version
-  name                = var.name
-  node_capacity_type  = upper(var.node_capacity_type)
-  node_disk           = var.node_disk
-  node_type           = var.node_type
-  power_off_schedule  = var.power_off_schedule
-  power_on_schedule   = var.power_on_schedule
-  private             = var.private
-  tags                = local.tag_map
-  vpc_cni_version     = var.vpc_cni_version
-  vpc_id              = var.vpc_id
+  arm_type                 = local.arm_type
+  availability_zones       = var.availability_zones
+  cidr                     = var.cidr
+  coredns_version          = var.coredns_version
+  gpu_type                 = local.gpu_type
+  high_availability        = var.high_availability
+  internet_gateway_id      = var.internet_gateway_id
+  key_pair_name            = var.key_pair_name
+  kube_proxy_version       = var.kube_proxy_version
+  k8s_version              = var.k8s_version
+  name                     = var.name
+  node_capacity_type       = upper(var.node_capacity_type)
+  node_disk                = var.node_disk
+  node_type                = var.node_type
+  private                  = var.private
+  schedule_rack_scale_down = var.schedule_rack_scale_down
+  schedule_rack_scale_up   = var.schedule_rack_scale_up
+  tags                     = local.tag_map
+  vpc_cni_version          = var.vpc_cni_version
+  vpc_id                   = var.vpc_id
 }
 
 module "fluentd" {
