@@ -62,6 +62,16 @@ variable "private" {
   default = true
 }
 
+variable "schedule_rack_scale_down" {
+  type    = string
+  default = ""
+}
+
+variable "schedule_rack_scale_up" {
+  type    = string
+  default = ""
+}
+
 variable "tags" {
   default = {}
 }

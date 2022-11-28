@@ -278,3 +278,27 @@ resource "null_resource" "wait_eks_addons" {
     aws_eks_addon.kube_proxy
   ]
 }
+
+resource "aws_autoscaling_schedule" "scaledown" {
+  count = length(var.schedule_rack_scale_down) > 6 ? (var.high_availability ? 3 : 1) : 0
+
+  scheduled_action_name  = "scaledown${count.index}"
+  min_size               = 0
+  max_size               = 0
+  desired_capacity       = 0
+  recurrence             = var.schedule_rack_scale_down
+  time_zone              = "UTC"
+  autoscaling_group_name = flatten(aws_eks_node_group.cluster[count.index].resources[*].autoscaling_groups[*].name)[0]
+}
+
+resource "aws_autoscaling_schedule" "scaleup" {
+  count = length(var.schedule_rack_scale_up) > 6 ? (var.high_availability ? 3 : 1) : 0
+
+  scheduled_action_name  = "scaleup${count.index}"
+  min_size               = 1
+  max_size               = 100
+  desired_capacity       = 1
+  recurrence             = var.schedule_rack_scale_up
+  time_zone              = "UTC"
+  autoscaling_group_name = flatten(aws_eks_node_group.cluster[count.index].resources[*].autoscaling_groups[*].name)[0]
+}
