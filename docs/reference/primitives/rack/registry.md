@@ -14,7 +14,11 @@ A Registry is a set of stored credentials for a private Docker registry that can
     Adding registry... OK
 ```
 
-Use `https://index.docker.io/v1/` for DockerHub.
+Use `index.docker.io/v1/` for DockerHub.
+
+<div class="block-callout block-show-callout type-info" markdown="1">
+Note that you should NOT include the `https://` protocol as part of the registry address.  Doing so can cause errors. Convox will add this for you automatically.
+</div>
 
 ## Listing Registries
 ```html

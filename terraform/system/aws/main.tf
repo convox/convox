@@ -48,10 +48,12 @@ module "cluster" {
   arm_type            = local.arm_type
   availability_zones  = var.availability_zones
   cidr                = var.cidr
+  coredns_version     = var.coredns_version
   gpu_type            = local.gpu_type
   high_availability   = var.high_availability
   internet_gateway_id = var.internet_gateway_id
   key_pair_name       = var.key_pair_name
+  kube_proxy_version  = var.kube_proxy_version
   k8s_version         = var.k8s_version
   name                = var.name
   node_capacity_type  = upper(var.node_capacity_type)
@@ -59,6 +61,7 @@ module "cluster" {
   node_type           = var.node_type
   private             = var.private
   tags                = local.tag_map
+  vpc_cni_version     = var.vpc_cni_version
   vpc_id              = var.vpc_id
 }
 
@@ -70,13 +73,14 @@ module "fluentd" {
     kubernetes = kubernetes
   }
 
-  arm_type  = local.arm_type
-  cluster   = module.cluster.id
-  namespace = "kube-system"
-  oidc_arn  = module.cluster.oidc_arn
-  oidc_sub  = module.cluster.oidc_sub
-  rack      = var.name
-  syslog    = var.syslog
+  arm_type   = local.arm_type
+  cluster    = module.cluster.id
+  eks_addons = module.cluster.eks_addons
+  namespace  = "kube-system"
+  oidc_arn   = module.cluster.oidc_arn
+  oidc_sub   = module.cluster.oidc_sub
+  rack       = var.name
+  syslog     = var.syslog
 }
 
 module "rack" {
@@ -90,6 +94,7 @@ module "rack" {
   cluster             = module.cluster.id
   docker_hub_username = var.docker_hub_username
   docker_hub_password = var.docker_hub_password
+  eks_addons          = module.cluster.eks_addons
   high_availability   = var.high_availability
   idle_timeout        = var.idle_timeout
   image               = local.image

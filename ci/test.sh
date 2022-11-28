@@ -96,12 +96,7 @@ convox exec -a httpd $ps -- env | grep "ONE_PASS="
 convox exec -a httpd $ps -- env | grep "ONE_HOST="
 convox exec -a httpd $ps -- env | grep "ONE_PORT="
 convox exec -a httpd $ps -- env | grep "ONE_NAME="
-convox exec -a httpd $ps -- env | grep "MY_DB_URL="
-convox exec -a httpd $ps -- env | grep "MY_DB_USER="
-convox exec -a httpd $ps -- env | grep "MY_DB_PASS="
-convox exec -a httpd $ps -- env | grep "MY_DB_HOST="
-convox exec -a httpd $ps -- env | grep "MY_DB_PORT="
-convox exec -a httpd $ps -- env | grep "MY_DB_NAME="
+convox exec -a httpd $ps -- env | grep "CUSTOM_DATABASE="
 
 # test apps cancel
 echo "FOO=not-bar" | convox env set -a httpd

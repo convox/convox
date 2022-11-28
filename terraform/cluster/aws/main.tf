@@ -106,7 +106,7 @@ resource "aws_eks_node_group" "cluster" {
   version         = var.k8s_version
 
   launch_template {
-    id = aws_launch_template.cluster.id
+    id      = aws_launch_template.cluster.id
     version = "$Latest"
   }
 
@@ -158,7 +158,7 @@ resource "aws_launch_template" "cluster" {
     for_each = toset(["instance", "volume", "elastic-gpu", "network-interface", "spot-instances-request"])
     content {
       resource_type = tag_specifications.key
-      tags = local.tags
+      tags          = local.tags
     }
   }
 
@@ -167,10 +167,10 @@ resource "aws_launch_template" "cluster" {
 
 module "ebs_csi_driver_controller" {
   depends_on = [
-    null_resource.wait_k8s_api
+    null_resource.wait_eks_addons
   ]
 
-  source  = "github.com/convox/terraform-kubernetes-ebs-csi-driver?ref=48f5650f72684b581697f8831b3f5b60ea624092"
+  source = "github.com/convox/terraform-kubernetes-ebs-csi-driver?ref=48f5650f72684b581697f8831b3f5b60ea624092"
 
   ebs_csi_controller_image                   = "public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver"
   ebs_csi_driver_version                     = "v1.9.0"
@@ -228,4 +228,49 @@ resource "kubernetes_annotations" "gp2" {
   }
 
   force = true
+}
+
+resource "aws_eks_addon" "vpc_cni" {
+  depends_on = [
+    null_resource.wait_k8s_api
+  ]
+
+  cluster_name      = aws_eks_cluster.cluster.name
+  addon_name        = "vpc-cni"
+  addon_version     = var.vpc_cni_version
+  resolve_conflicts = "OVERWRITE"
+}
+
+resource "aws_eks_addon" "coredns" {
+  depends_on = [
+    null_resource.wait_k8s_api
+  ]
+
+  cluster_name      = aws_eks_cluster.cluster.name
+  addon_name        = "coredns"
+  addon_version     = var.coredns_version
+  resolve_conflicts = "OVERWRITE"
+}
+
+resource "aws_eks_addon" "kube_proxy" {
+  depends_on = [
+    null_resource.wait_k8s_api
+  ]
+
+  cluster_name      = aws_eks_cluster.cluster.name
+  addon_name        = "kube-proxy"
+  addon_version     = var.kube_proxy_version
+  resolve_conflicts = "OVERWRITE"
+}
+
+resource "null_resource" "wait_eks_addons" {
+  provisioner "local-exec" {
+    command = "sleep 1"
+  }
+
+  depends_on = [
+    aws_eks_addon.vpc_cni,
+    aws_eks_addon.coredns,
+    aws_eks_addon.kube_proxy
+  ]
 }
