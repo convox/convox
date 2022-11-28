@@ -315,3 +315,39 @@ resource "kubernetes_deployment" "autoscaler" {
     }
   }
 }
+
+resource "kubernetes_cluster_role" "hpa_external_metrics" {
+  depends_on = [
+    null_resource.wait_k8s_api
+  ]
+  metadata {
+    name   = "hpa-external-metrics"
+  }
+
+  rule {
+    api_groups = ["external.metrics.k8s.io"]
+    resources  = ["*"]
+    verbs      = ["watch", "list", "get"]
+  }
+}
+
+resource "kubernetes_cluster_role_binding" "hpa_external_metrics" {
+  depends_on = [
+    null_resource.wait_k8s_api
+  ]
+  metadata {
+    name   = "hpa-external-metrics"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "hpa-external-metrics"
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = "horizontal-pod-autoscaler"
+    namespace = "kube-system"
+  }
+}
