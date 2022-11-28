@@ -155,6 +155,15 @@ $root/ci/test/resources_memcache.sh &
 $root/ci/test/app_internal_communication.sh &
 wait
 
+# app (gpu)
+cd $root/examples/gpu
+convox apps create gpu
+convox apps
+convox apps | grep gpu
+convox apps info gpu | grep running
+release=$(convox build -a gpu -d cibuild --id) && [ -n "$release" ]
+
 # cleanup
+convox apps delete gpu
 convox apps delete httpd
 convox apps delete httpd2
