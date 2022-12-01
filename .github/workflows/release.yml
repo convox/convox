@@ -233,6 +233,7 @@ jobs:
             provider: do
           - job: gcp
             provider: gcp
+            rack_params: "region=us-west1"
           # - job: azure
           #   provider: azure
     steps:

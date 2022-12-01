@@ -48,15 +48,15 @@ module "rack" {
     kubernetes = kubernetes
   }
 
-  cluster        = module.cluster.id
+  cluster             = module.cluster.id
   docker_hub_username = var.docker_hub_username
   docker_hub_password = var.docker_hub_password
-  image          = var.image
-  name           = var.name
-  region         = var.region
-  release        = local.release
-  resource_group = azurerm_resource_group.rack.id
-  syslog         = var.syslog
-  whitelist      = split(",", var.whitelist)
-  workspace      = module.cluster.workspace
+  image               = var.image
+  name                = var.name
+  region              = var.region
+  release             = local.release
+  resource_group      = azurerm_resource_group.rack.id
+  syslog              = var.syslog
+  whitelist           = split(",", var.whitelist)
+  workspace           = module.cluster.workspace
 }
