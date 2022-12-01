@@ -143,12 +143,18 @@ spec:
         {{ end }}
         resources:
           limits:
+            {{ with .Service.Scale.Gpu.Count }}
+            {{$.Service.Scale.Gpu.Vendor}}.com/gpu: "{{.}}"
+            {{ end }}
             {{ with .Service.Scale.Memory }}
             memory: "{{.}}Mi"
             {{ end }}
           requests:
             {{ with .Service.Scale.Cpu }}
             cpu: "{{.}}m"
+            {{ end }}
+            {{ with .Service.Scale.Gpu.Count }}
+            {{$.Service.Scale.Gpu.Vendor}}.com/gpu: "{{.}}"
             {{ end }}
             {{ with .Service.Scale.Memory }}
             memory: "{{.}}Mi"

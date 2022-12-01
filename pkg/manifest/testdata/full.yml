@@ -84,6 +84,16 @@ services:
     sticky: true
     timeout: 3600
   bar:
+  gpuscaler:
+    scale:
+      gpu:
+        count: 1
+        vendor: amd
+      cpu: 768
+      memory: 2048
+  defaultgpuscaler:
+    scale:
+      gpu: 2
   scaler:
     scale:
       count: 1-5
