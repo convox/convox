@@ -13,7 +13,7 @@ locals {
   availability_zones       = var.availability_zones != "" ? compact(split(",", var.availability_zones)) : data.aws_availability_zones.available.names
   network_resource_count   = var.high_availability ? 3 : 2
   oidc_sub                 = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
-  gpu_tag_disabled_regions = ["eu-north-1"]
+  gpu_tag_disabled_regions = ["eu-north-1", "ca-central-1"]
 }
 
 data "aws_availability_zones" "available" {
