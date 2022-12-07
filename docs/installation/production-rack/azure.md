@@ -50,7 +50,7 @@ The following environment variables are required:
 ```html
     $ az ad app permission add --id $ARM_CLIENT_ID --api 00000002-0000-0000-c000-000000000000 --api-permissions 311a71cc-e848-46a1-bdf8-97ff7156d8e6=Scope 824c81eb-e3f8-4ee6-8f6d-de7f50d565b7=Role
     $ az ad app permission grant --id $ARM_CLIENT_ID --api 00000002-0000-0000-c000-000000000000 --consent-type AllPrincipals --scope User.Read
-    $ az ad app permission admin-consent --id $ARM_CLIENT_ID 
+    $ az ad app permission admin-consent --id $ARM_CLIENT_ID
 ```
 ## Install Rack
 ```html
@@ -60,6 +60,7 @@ The following environment variables are required:
 
 | Name        | Default          | Description                                                             |
 | ----------- | ---------------- | ----------------------------------------------------------------------- |
-| **node_type** | **Standard_D3_v3** | Node instance type                                                      |
-| **region**    | **eastus**         | Azure region                                                            |
-| **syslog**    |                  | Forward logs to a syslog endpoint (e.g. **tcp+tls://example.org:1234**)   |
+| **cert_duration**        | **2160h**          | Certification renew period                                                |
+| **node_type**            | **Standard_D3_v3** | Node instance type                                                        |
+| **region**               | **eastus**         | Azure region                                                              |
+| **syslog**               |                    | Forward logs to a syslog endpoint (e.g. **tcp+tls://example.org:1234**)   |
