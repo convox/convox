@@ -10,31 +10,32 @@ import (
 type Service struct {
 	Name string `yaml:"-"`
 
-	Agent       ServiceAgent          `yaml:"agent,omitempty"`
-	Annotations ServiceAnnotations    `yaml:"annotations,omitempty"`
-	Build       ServiceBuild          `yaml:"build,omitempty"`
-	Command     string                `yaml:"command,omitempty"`
-	Deployment  ServiceDeployment     `yaml:"deployment,omitempty"`
-	Domains     ServiceDomains        `yaml:"domain,omitempty"`
-	Drain       int                   `yaml:"drain,omitempty"`
-	Environment Environment           `yaml:"environment,omitempty"`
-	Health      ServiceHealth         `yaml:"health,omitempty"`
-	Image       string                `yaml:"image,omitempty"`
-	Init        bool                  `yaml:"init,omitempty"`
-	Internal    bool                  `yaml:"internal,omitempty"`
-	Port        ServicePortScheme     `yaml:"port,omitempty"`
-	Ports       []ServicePortProtocol `yaml:"ports,omitempty"`
-	Privileged  bool                  `yaml:"privileged,omitempty"`
-	Resources   []string              `yaml:"resources,omitempty"`
-	Scale       ServiceScale          `yaml:"scale,omitempty"`
-	Singleton   bool                  `yaml:"singleton,omitempty"`
-	Sticky      bool                  `yaml:"sticky,omitempty"`
-	Termination ServiceTermination    `yaml:"termination,omitempty"`
-	Test        string                `yaml:"test,omitempty"`
-	Timeout     int                   `yaml:"timeout,omitempty"`
-	Tls         ServiceTls            `yaml:"tls,omitempty"`
-	Volumes     []string              `yaml:"volumes,omitempty"`
-	Whitelist   string                `yaml:"whitelist,omitempty"`
+	Agent        ServiceAgent          `yaml:"agent,omitempty"`
+	Annotations  ServiceAnnotations    `yaml:"annotations,omitempty"`
+	Build        ServiceBuild          `yaml:"build,omitempty"`
+	CertDuration string                `yaml:"certDuration,omitempty"`
+	Command      string                `yaml:"command,omitempty"`
+	Deployment   ServiceDeployment     `yaml:"deployment,omitempty"`
+	Domains      ServiceDomains        `yaml:"domain,omitempty"`
+	Drain        int                   `yaml:"drain,omitempty"`
+	Environment  Environment           `yaml:"environment,omitempty"`
+	Health       ServiceHealth         `yaml:"health,omitempty"`
+	Image        string                `yaml:"image,omitempty"`
+	Init         bool                  `yaml:"init,omitempty"`
+	Internal     bool                  `yaml:"internal,omitempty"`
+	Port         ServicePortScheme     `yaml:"port,omitempty"`
+	Ports        []ServicePortProtocol `yaml:"ports,omitempty"`
+	Privileged   bool                  `yaml:"privileged,omitempty"`
+	Resources    []string              `yaml:"resources,omitempty"`
+	Scale        ServiceScale          `yaml:"scale,omitempty"`
+	Singleton    bool                  `yaml:"singleton,omitempty"`
+	Sticky       bool                  `yaml:"sticky,omitempty"`
+	Termination  ServiceTermination    `yaml:"termination,omitempty"`
+	Test         string                `yaml:"test,omitempty"`
+	Timeout      int                   `yaml:"timeout,omitempty"`
+	Tls          ServiceTls            `yaml:"tls,omitempty"`
+	Volumes      []string              `yaml:"volumes,omitempty"`
+	Whitelist    string                `yaml:"whitelist,omitempty"`
 }
 
 type Services []Service
@@ -78,7 +79,7 @@ type ServicePortScheme struct {
 type ServiceScale struct {
 	Count   ServiceScaleCount
 	Cpu     int
-	Gpu     ServiceScaleGpu     `yaml:"gpu,omitempty"`
+	Gpu     ServiceScaleGpu `yaml:"gpu,omitempty"`
 	Memory  int
 	Targets ServiceScaleTargets `yaml:"targets,omitempty"`
 }
@@ -97,7 +98,7 @@ type ServiceScaleExternalMetric struct {
 type ServiceScaleExternalMetrics []ServiceScaleExternalMetric
 
 type ServiceScaleGpu struct {
-	Count int
+	Count  int
 	Vendor string
 }
 

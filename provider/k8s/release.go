@@ -334,11 +334,6 @@ func (p *Provider) releaseTemplateCA(a *structs.App, ca *v1.Secret) ([]byte, err
 }
 
 func (p *Provider) releaseTemplateIngress(a *structs.App, ss manifest.Services, opts structs.ReleasePromoteOptions) ([]byte, error) {
-	ans, err := p.Engine.IngressAnnotations(a.Name)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
 	idles, err := p.Engine.AppIdles(a.Name)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -347,6 +342,11 @@ func (p *Provider) releaseTemplateIngress(a *structs.App, ss manifest.Services, 
 	items := [][]byte{}
 
 	for _, s := range ss {
+		ans, err := p.Engine.IngressAnnotations(s.CertDuration)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
 		params := map[string]interface{}{
 			"Annotations": ans,
 			"App":         a.Name,

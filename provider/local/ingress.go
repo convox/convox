@@ -1,6 +1,6 @@
 package local
 
-func (p *Provider) IngressAnnotations(app string) (map[string]string, error) {
+func (p *Provider) IngressAnnotations(certDuration string) (map[string]string, error) {
 	ans := map[string]string{
 		"cert-manager.io/cluster-issuer": "self-signed",
 	}
