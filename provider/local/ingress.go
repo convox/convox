@@ -5,6 +5,10 @@ func (p *Provider) IngressAnnotations(certDuration string) (map[string]string, e
 		"cert-manager.io/cluster-issuer": "self-signed",
 	}
 
+	if certDuration != "" {
+		ans["cert-manager.io/duration"] = certDuration
+	}
+
 	return ans, nil
 }
 
