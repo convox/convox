@@ -341,7 +341,8 @@ func (p *Provider) releaseTemplateIngress(a *structs.App, ss manifest.Services, 
 
 	items := [][]byte{}
 
-	for _, s := range ss {
+	for i := range ss {
+		s := ss[i]
 		ans, err := p.Engine.IngressAnnotations(s.Certificate.Duration)
 		if err != nil {
 			return nil, errors.WithStack(err)
