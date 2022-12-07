@@ -2,6 +2,11 @@ variable "availability_zones" {
   default = ""
 }
 
+variable "cert_duration" {
+  default = "2160h"
+  type    = string
+}
+
 variable "cidr" {
   default = "10.1.0.0/16"
 }

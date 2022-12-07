@@ -27,6 +27,7 @@ module "k8s" {
 
   annotations = {
     "cert-manager.io/cluster-issuer" = "letsencrypt"
+    "cert-manager.io/duration"       = var.cert_duration
     "eks.amazonaws.com/role-arn"     = aws_iam_role.api.arn
     "iam.amazonaws.com/role"         = aws_iam_role.api.arn
   }
