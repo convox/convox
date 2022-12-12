@@ -18,7 +18,7 @@ RUN apk add skopeo --update
 
 COPY --from=package /go/bin/build /usr/bin
 
-COPY ./buildctl-daemonless.sh /buildctl-daemonless.sh
+COPY ./scripts/buildctl-daemonless.sh /buildctl-daemonless.sh
 
 USER 1000
 
@@ -35,7 +35,7 @@ RUN apk add skopeo --update
 
 COPY --from=package /go/bin/build /usr/bin
 
-COPY ./buildctl-daemonless.sh /buildctl-daemonless.sh
+COPY ./scripts/buildctl-daemonless.sh /buildctl-daemonless.sh
 
 # standard credentials path used by buildkit
 RUN mkdir -p $HOME/.docker
