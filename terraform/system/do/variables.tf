@@ -2,6 +2,11 @@ variable "access_id" {
   type = string
 }
 
+variable "cert_duration" {
+  default = "2160h"
+  type    = string
+}
+
 variable "docker_hub_username" {
   default = ""
 }

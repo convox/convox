@@ -334,11 +334,6 @@ func (p *Provider) releaseTemplateCA(a *structs.App, ca *v1.Secret) ([]byte, err
 }
 
 func (p *Provider) releaseTemplateIngress(a *structs.App, ss manifest.Services, opts structs.ReleasePromoteOptions) ([]byte, error) {
-	ans, err := p.Engine.IngressAnnotations(a.Name)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
 	idles, err := p.Engine.AppIdles(a.Name)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -346,7 +341,13 @@ func (p *Provider) releaseTemplateIngress(a *structs.App, ss manifest.Services, 
 
 	items := [][]byte{}
 
-	for _, s := range ss {
+	for i := range ss {
+		s := ss[i]
+		ans, err := p.Engine.IngressAnnotations(s.Certificate.Duration)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
 		params := map[string]interface{}{
 			"Annotations": ans,
 			"App":         a.Name,
@@ -422,7 +423,8 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 		sc[s.Name] = s.Count
 	}
 
-	for _, s := range ss {
+	for i := range ss {
+		s := ss[i]
 		min := s.Deployment.Minimum
 		max := s.Deployment.Maximum
 
@@ -502,7 +504,8 @@ func (p *Provider) releaseTemplateTimer(a *structs.App, e structs.Environment, r
 func (p *Provider) releaseTemplateVolumes(a *structs.App, ss manifest.Services) ([]byte, error) {
 	vsh := map[string]bool{}
 
-	for _, s := range ss {
+	for i := range ss {
+		s := ss[i]
 		for _, v := range p.volumeSources(a.Name, s.Name, s.Volumes) {
 			if !systemVolume(v) {
 				vsh[v] = true

@@ -77,7 +77,8 @@ services:
 | ------------- | ---------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | **agent**       | boolean    | false               | Set to **true** to declare this Service as an [Agent](/configuration/agents)                                                      |
 | **annotations** | list       |                     | A list of annotation keys and values to populate the metadata for the deployed pods and their serviceaccounts                              |
-| **build**       | string/map | .                   | Build definition (see below)                                                                                                               |
+| **build**       | string/map | .                   | Build definition (see below)                                                                                                                                            |
+| **certificate**| map         |                     | Define certificate parameters                                                                       |
 | **command**     | string     | **CMD** of Dockerfile | The command to run to start a [Process](/reference/primitives/app/process) for this Service                                                                       |
 | **deployment**  | map        |                     | Manual control over deployment parameters                                                                                                  |
 | **domain**      | string     |                     | A custom domain(s) (comma separated) to route to this Service                                                                              |
@@ -128,8 +129,14 @@ services:
 | **manifest** | string | Dockerfile | The filename of the Dockerfile                                |
 | **path**     | string | .          | The path (relative to **convox.yml**) to build for this Service |
 
-> Specifying **build** as a string will set the **path** and leave the other values as defaults.
+### certificate
 
+| Attribute  | Type   | Default    | Description                                                   |
+| ---------- | ------ | ---------- | ------------------------------------------------------------- |
+| **duration** | string | 2160h | Certificate renew frequency period                                |
+
+
+> Specifying **build** as a string will set the **path** and leave the other values as defaults.
 ### deployment
 
 | Attribute | Type   | Default | Description                                                                      |

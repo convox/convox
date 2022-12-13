@@ -13,6 +13,7 @@ type Service struct {
 	Agent       ServiceAgent          `yaml:"agent,omitempty"`
 	Annotations ServiceAnnotations    `yaml:"annotations,omitempty"`
 	Build       ServiceBuild          `yaml:"build,omitempty"`
+	Certificate Certificate           `yaml:"certification,omitempty"`
 	Command     string                `yaml:"command,omitempty"`
 	Deployment  ServiceDeployment     `yaml:"deployment,omitempty"`
 	Domains     ServiceDomains        `yaml:"domain,omitempty"`
@@ -38,6 +39,10 @@ type Service struct {
 }
 
 type Services []Service
+
+type Certificate struct {
+	Duration string `yaml:"duration,omitempty"`
+}
 
 type ServiceAgent struct {
 	Enabled bool `yaml:"enabled,omitempty"`
@@ -78,7 +83,7 @@ type ServicePortScheme struct {
 type ServiceScale struct {
 	Count   ServiceScaleCount
 	Cpu     int
-	Gpu     ServiceScaleGpu     `yaml:"gpu,omitempty"`
+	Gpu     ServiceScaleGpu `yaml:"gpu,omitempty"`
 	Memory  int
 	Targets ServiceScaleTargets `yaml:"targets,omitempty"`
 }
@@ -97,7 +102,7 @@ type ServiceScaleExternalMetric struct {
 type ServiceScaleExternalMetrics []ServiceScaleExternalMetric
 
 type ServiceScaleGpu struct {
-	Count int
+	Count  int
 	Vendor string
 }
 

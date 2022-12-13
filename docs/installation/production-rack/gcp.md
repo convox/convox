@@ -44,7 +44,7 @@ The following environment variables are required:
     $ gcloud iam service-accounts keys create ~/gcloud.convox --iam-account=${serviceaccount}
 ```
 - `GOOGLE_CREDENTIALS` is `~/gcloud.convox`
- 
+
 ### Grant Permissions
 ```html
     $ gcloud projects add-iam-policy-binding $GOOGLE_PROJECT --member=serviceAccount:${serviceaccount} --role=roles/owner
@@ -62,7 +62,8 @@ The following environment variables are required:
 
 | Name          | Default         | Description                                                                              |
 | ------------- | --------------- | ---------------------------------------------------------------------------------------- |
-| **node_type**   | **n1-standard-1** | Node instance type                                                                       |
-| **preemptible** | **true**          | Use [preemptible](https://cloud.google.com/compute/docs/instances/preemptible) instances |
-| **region**      | **us-east1**      | GCP Region                                                                               |
-| **syslog**      |                 | Forward logs to a syslog endpoint (e.g. **tcp+tls://example.org:1234**)                    |
+| **cert_duration** | **2160h**         | Certification renew period                                                                 |
+| **node_type**     | **n1-standard-1** | Node instance type                                                                         |
+| **preemptible**   | **true**          | Use [preemptible](https://cloud.google.com/compute/docs/instances/preemptible) instances   |
+| **region**        | **us-east1**      | GCP Region                                                                                 |
+| **syslog**        |                   | Forward logs to a syslog endpoint (e.g. **tcp+tls://example.org:1234**)                    |

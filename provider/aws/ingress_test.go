@@ -15,11 +15,34 @@ func TestIngressClass(t *testing.T) {
 }
 
 func TestIngressAnnotations(t *testing.T) {
-	testProvider(t, func(p *aws.Provider) {
-		ann, err := p.IngressAnnotations("")
-		require.NoError(t, err)
+	tests := []struct {
+		Name        string
+		Duration    string
+		Annotations map[string]string
+	}{
+		{
+			Name:        "Not passing duration",
+			Duration:    "",
+			Annotations: map[string]string{"cert-manager.io/cluster-issuer": "letsencrypt"},
+		},
+		{
+			Name:     "Passing duration",
+			Duration: "720h",
+			Annotations: map[string]string{
+				"cert-manager.io/cluster-issuer": "letsencrypt",
+				"cert-manager.io/duration":       "720h",
+			},
+		},
+	}
 
-		annotations := map[string]string{"cert-manager.io/cluster-issuer": "letsencrypt"}
-		assert.Equal(t, annotations, ann)
-	})
+	for _, test := range tests {
+		fn := func(t *testing.T) {
+			testProvider(t, func(p *aws.Provider) {
+				ann, err := p.IngressAnnotations(test.Duration)
+				require.NoError(t, err)
+				assert.Equal(t, test.Annotations, ann)
+			})
+		}
+		t.Run(test.Name, fn)
+	}
 }
