@@ -159,14 +159,6 @@ $root/ci/test/resources_memcache.sh &
 $root/ci/test/app_internal_communication.sh &
 wait
 
-# app (gpu)
-cd $root/examples/gpu
-convox apps create gpu
-convox apps
-convox apps | grep gpu
-convox apps info gpu | grep running
-release=$(convox build -a gpu -d cibuild --id) && [ -n "$release" ]
-
 # import/export test
 convox apps create httpd-export
 convox deploy -a httpd-export --manifest convox-export.yml
@@ -181,6 +173,14 @@ fetch https://$endpoint | grep "It works"
 
 convox apps delete httpd-export
 convox apps delete httpd-import
+
+# app (gpu)
+cd $root/examples/gpu
+convox apps create gpu
+convox apps
+convox apps | grep gpu
+convox apps info gpu | grep running
+release=$(convox build -a gpu -d cibuild --id) && [ -n "$release" ]
 
 # cleanup
 convox apps delete gpu
