@@ -13,7 +13,7 @@ require (
 	github.com/Microsoft/hcsshim v0.8.7-0.20190801035247-8694eade7dd3 // indirect
 	github.com/PuerkitoBio/goquery v1.5.0
 	github.com/algolia/algoliasearch-client-go v2.25.0+incompatible
-	github.com/aws/aws-sdk-go v1.21.10
+	github.com/aws/aws-sdk-go v1.44.171
 	github.com/bearsh/hid v1.4.0 // indirect
 	github.com/convox/changes v0.0.0-20191105034405-8c0df759a3b3
 	github.com/convox/exec v0.0.0-20180905012044-cc13d277f897
@@ -45,7 +45,7 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/vektra/mockery v1.1.2
 	golang.org/x/crypto v0.0.0-20221005025214-4161e89ecf1b
-	golang.org/x/text v0.3.7
+	golang.org/x/text v0.4.0
 	google.golang.org/api v0.20.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.21.0
