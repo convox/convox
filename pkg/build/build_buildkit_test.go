@@ -69,7 +69,7 @@ func TestBuild(t *testing.T) {
 			"--opt", mock.MatchedBy(matchFilename), "--output", mock.MatchedBy(matchTag),
 			"--export-cache", "type=registry,ref=registry.test.com:buildcache",
 			"--import-cache", "type=registry,ref=registry.test.com:buildcache",
-			"--build-arg:", "FOO=bar",
+			"--opt", "build-arg:FOO=bar",
 		).Return(nil).Run(func(args mock.Arguments) {
 			fmt.Fprintf(args.Get(0).(io.Writer), "build1\nbuild2\n")
 		})
@@ -217,7 +217,7 @@ func TestBuildOptions(t *testing.T) {
 			"--opt", mock.MatchedBy(matchFilename), "--output", mock.MatchedBy(matchTag),
 			"--export-cache", "type=registry,ref=registry.test.com:buildcache",
 			"--import-cache", "type=registry,ref=registry.test.com:buildcache",
-			"--build-arg:", "FOO=bar",
+			"--opt", "build-arg:FOO=bar",
 		).Return(nil).Run(func(args mock.Arguments) {
 			fmt.Fprintf(args.Get(0).(io.Writer), "build1\nbuild2\n")
 		})
