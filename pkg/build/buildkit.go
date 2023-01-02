@@ -162,7 +162,7 @@ func (*BuildKit) buildArgs(development bool, dockerfile string, env map[string]s
 		case "ARG":
 			k := strings.TrimSpace(parts[0])
 			if v, ok := env[k]; ok {
-				args = append(args, "--build-arg:", fmt.Sprintf("%s=%s", k, v))
+				args = append(args, "--opt", fmt.Sprintf("build-arg:%s=%s", k, v))
 			}
 		}
 	}
@@ -208,6 +208,10 @@ func (bk *BuildKit) build(bb *Build, path, dockerfile, tag string, env map[strin
 		reg := strings.Split(tag, ":")[0]
 		args = append(args, "--export-cache", fmt.Sprintf("type=registry,ref=%s:buildcache", reg))
 		args = append(args, "--import-cache", fmt.Sprintf("type=registry,ref=%s:buildcache", reg))
+	} else {
+		// keep a local cache for services using the same Dockerfile
+		args = append(args, "--export-cache", "type=local,dest=/var/lib/buildkit")
+		args = append(args, "--import-cache", "type=local,src=/var/lib/buildkit")
 	}
 
 	df := filepath.Join(path, dockerfile)
