@@ -284,6 +284,8 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 	ans := map[string]string{}
 	if service == "build" {
 		for idx := 0; idx < len(s.Containers); idx++ {
+			// assign the build container a BestEffor QoS to avoid eating all compute resources
+			s.Containers[idx].Resources = ac.ResourceRequirements{}
 			s.Containers[idx].SecurityContext = &ac.SecurityContext{SeccompProfile: &ac.SeccompProfile{Type: ac.SeccompProfileTypeUnconfined}}
 			if opts.Privileged != nil && *opts.Privileged {
 				s.Containers[idx].SecurityContext = &ac.SecurityContext{Privileged: options.Bool(true)}

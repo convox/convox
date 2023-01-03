@@ -103,9 +103,6 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 		Environment: env,
 		Image:       options.String(p.buildImage(os.Getenv("PROVIDER"))),
 		Privileged:  options.Bool(p.buildPrivileged(os.Getenv("PROVIDER"))),
-		Volumes: map[string]string{
-			p.Socket: "/var/run/docker.sock",
-		},
 	})
 	if err != nil {
 		return nil, errors.WithStack(err)
