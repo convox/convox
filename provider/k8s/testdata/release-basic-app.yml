@@ -628,7 +628,6 @@ spec:
         volumeMounts:
         - mountPath: /etc/convox
           name: ca
-      hostNetwork: true
       serviceAccountName: agent
       shareProcessNamespace: true
       terminationGracePeriodSeconds: 30
