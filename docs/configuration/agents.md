@@ -40,7 +40,9 @@ Each [Process](/reference/primitives/app/process) will have the IP address of it
 
 In the example above, any [Process](/reference/primitives/app/service) on the same Rack can communicate
 with the `telemetry` Agent running on its [Instance](/reference/primitives/rack/instance) using the
-following endpoints:
+following endpoints**:
 
 * `udp://$INSTANCE_IP:8125`
 * `tcp://$INSTANCE_IP:8126`
+
+** A process will be able to communicate with the agent only if its running on the same node. Be sure the `INSTANCE_IP` correspond to the node that the process is running.
