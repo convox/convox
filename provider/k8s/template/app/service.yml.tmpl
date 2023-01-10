@@ -85,9 +85,6 @@ spec:
           - "svc.cluster.local"
           - "cluster.local"
       {{ end }}
-      {{ if .Service.Agent.Enabled }}
-      hostNetwork: true
-      {{ end }}
       serviceAccountName: {{.Service.Name}}
       shareProcessNamespace: {{.Service.Init}}
       terminationGracePeriodSeconds: {{$.Service.Termination.Grace}}
