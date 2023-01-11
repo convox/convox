@@ -5,9 +5,11 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
-  domain  = module.router.endpoint
-  name    = var.name
-  release = var.release
+  docker_hub_username = var.docker_hub_username
+  docker_hub_password = var.docker_hub_password
+  domain              = module.router.endpoint
+  name                = var.name
+  release             = var.release
 }
 
 module "api" {
@@ -17,14 +19,15 @@ module "api" {
     kubernetes = kubernetes
   }
 
-  domain    = module.router.endpoint
-  image     = var.image
-  name      = var.name
-  namespace = module.k8s.namespace
-  release   = var.release
-  resolver  = module.resolver.endpoint
-  router    = module.router.endpoint
-  secret    = random_string.secret.result
+  domain                    = module.router.endpoint
+  docker_hub_authentication = module.k8s.docker_hub_authentication
+  image                     = var.image
+  name                      = var.name
+  namespace                 = module.k8s.namespace
+  release                   = var.release
+  resolver                  = module.resolver.endpoint
+  router                    = module.router.endpoint
+  secret                    = random_string.secret.result
 }
 
 module "resolver" {
@@ -34,22 +37,16 @@ module "resolver" {
     kubernetes = kubernetes
   }
 
-  image     = var.image
-  namespace = module.k8s.namespace
-  platform  = var.platform
-  rack      = var.name
-  release   = var.release
+  docker_hub_authentication = module.k8s.docker_hub_authentication
+  image                     = var.image
+  namespace                 = module.k8s.namespace
+  platform                  = var.platform
+  rack                      = var.name
+  release                   = var.release
 }
 
 module "router" {
-  source = "../../router/local"
-
-  providers = {
-    kubernetes = kubernetes
-  }
-
+  source    = "../../router/local"
   name      = var.name
   namespace = module.k8s.namespace
-  platform  = var.platform
-  release   = var.release
 }
