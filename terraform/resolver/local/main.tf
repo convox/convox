@@ -21,7 +21,7 @@ resource "kubernetes_service" "resolver-external" {
   }
 
   spec {
-    type = var.platform == "Linux" ? "ClusterIP" : "LoadBalancer"
+    type = "ClusterIP"
 
     port {
       name        = "dns"
