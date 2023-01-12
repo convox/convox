@@ -20,10 +20,6 @@ resource "kubernetes_service" "router" {
       protocol    = "TCP"
       target_port = 443
     }
-
-    selector = {
-      "system" = "convox-dummy"
-    }
   }
 }
 
