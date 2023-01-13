@@ -36,10 +36,20 @@ This will remove extra noise from the Datadog Agent itself.
 
 ## Verify Installation
 
-You can verify the daemonset by running
+You can verify the installation by running
 
 ```html
 $ kubectl get daemonset
+NAME      DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR            AGE
+datadog   4         4         4       4            4           kubernetes.io/os=linux   134m
+$
+$ kubectl get pods
+NAME                                    READY   STATUS    RESTARTS   AGE
+datadog-bjw2m                           5/5     Running   0          135m
+datadog-cluster-agent-b5fd4b7f5-tmkql   1/1     Running   0          135m
+datadog-j9c9t                           5/5     Running   0          134m
+datadog-pnrln                           5/5     Running   0          135m
+datadog-vdzc5                           5/5     Running   0          135m
 ```
 
 Once your `DESIRED` `CURRENT` and `READY` counts are all equal your Agents should be up and running. To make any changes to your Agent configuration simply modify your manifest and repeat the steps.
@@ -54,3 +64,5 @@ to connect to the Datadog agent.
 The agent configuration above will be listening to `8125/udp` and `8126/tcp` on the instance
 IP address. This IP address will be available to your [Processes](/reference/primitives/app/process)
 in the `INSTANCE_IP` environment variable.
+
+You can autoscale based on Datadog Metrics with a few [additional steps](/deployment/scaling/).
