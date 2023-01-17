@@ -143,7 +143,7 @@ func TestBuildDevelopment(t *testing.T) {
 			"--opt", mock.MatchedBy(matchFilename), "--output", mock.MatchedBy(matchTag),
 			"--export-cache", "type=registry,ref=registry.test.com:buildcache",
 			"--import-cache", "type=registry,ref=registry.test.com:buildcache",
-			"--target", "development",
+			"--opt", "target=development",
 		).Return(nil).Run(func(args mock.Arguments) {
 			fmt.Fprintf(args.Get(0).(io.Writer), "build1\nbuild2\n")
 		})
