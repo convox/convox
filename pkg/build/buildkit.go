@@ -157,7 +157,7 @@ func (*BuildKit) buildArgs(development bool, dockerfile string, env map[string]s
 		switch fields[0] {
 		case "FROM":
 			if development && strings.Contains(strings.ToLower(s.Text()), "as development") {
-				args = append(args, "--target", "development")
+				args = append(args, "--opt", "target=development")
 			}
 		case "ARG":
 			k := strings.TrimSpace(parts[0])
