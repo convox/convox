@@ -72,6 +72,9 @@ desiredReplicas = ceil[currentReplicas * ( currentMetricValue / desiredMetricVal
 
 #### Datadog
 
+*To use Datadog metrics for autoscaling your rack must be updated to [version 3.9.1](https://github.com/convox/convox/releases/tag/3.9.1) or later.  You can find your rack's version by running `convox rack -r rackNAME`. If you are on an older version, please [update your rack](https://docs.convox.com/management/cli-rack-management/) to use this feature.
+
+
 To autoscale based on Datadog metrics you must first have Datadog and the Datadog Cluster Agent installed. If you used the `datadog-agent-all-features.yaml` when [configuring Datadog](/integrations/monitoring/datadog/) then you will already have the Datadog Cluster Agent installed.
 
 You can check your cluster's pods to see what is installed:
@@ -123,7 +126,7 @@ spec:
 Deploy the service with `kubectl apply -f dd-agent-service.yaml`
 
 
-In this example we will use a simple [nodejs](https://github.com/convox-examples/nodejs) app to demonstrate how to setup scaling with this method. 
+In this example we will start with a simple [nodejs app](https://github.com/convox-examples/nodejs) to demonstrate how to setup scaling with this method. 
 
 Based on the provided template we can make a basic page views metric for the node application: 
 ```html 
@@ -138,8 +141,9 @@ spec:
 Then add the metric to your cluster via `kubectl apply -f page-views-metrics.yaml`
 
 
+Now we are going configure the `convox.yaml` from our nodejs app to autoscale based on this newly created metric. You can find this 
 
-Now we are going configure the `convox.yaml` from our [sample nodejs app](https://github.com/convox-examples/nodejs) to autoscale based on this newly created metric. We will specify the `DatadogMetric` object name in the `scale.targets[].external section`. The `DatadogMetric` object name convention to use in `scale.targets[].external` section is : `datadogmetric@<namespace>:<datadogmetric_name>`
+ We will specify the `datadogmetric` object name in the `scale.targets[].external section`. The `datadogmetric` object name convention to use in `scale.targets[].external` section is : `datadogmetric@<namespace>:<datadogmetric_name>`
 
 We set the env var `DD_AGENT_HOST` to point at the dd-agent service we previously made to push information to Datadog.
 
@@ -159,6 +163,7 @@ services:
           - name: "datadogmetric@default:page-views-metrics"
             averageValue: 5
 ``` 
+[Configured Nodejs app](https://github.com/convox-examples/nodejs-dd-autoscale)
 
 You can now deploy the application with `convox apps create` then `convox deploy`
 

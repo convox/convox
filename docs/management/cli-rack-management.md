@@ -13,9 +13,14 @@ url: /management/cli-rack-management
     $ convox rack update
     Updating rack... OK
 ```
-### Pinning to a specific version
+
+v3 racks need to be updated through every minor version.  We suggest you [locate the latest minor rack version](https://github.com/convox/convox/releases) that you are updating through and then continuing up versions "step-wise" until you reach your desired version.  This is to ensure no internal rack or cluster services fall out of sync/version with each other.  
+
+E.g. a rack on Version `3.6.x` would need update to the latest `3.7.x` version before proceeding to the latest `3.8.x` version and so on.
+
+### Updating to a specific version
 ```html
-    $ convox rack update 3.0.0
+    $ convox rack update 3.6.0
     Updating rack... OK
 ```
 ## Managing Parameters
