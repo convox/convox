@@ -126,7 +126,7 @@ spec:
 Deploy the service with `kubectl apply -f dd-agent-service.yaml`
 
 
-In this example we will start with a simple [nodejs app](https://github.com/convox-examples/nodejs) to demonstrate how to setup scaling with this method. 
+In this example we will start with a [nodejs app](https://github.com/convox-examples/nodejs-dd-autoscale) that has been configured to scale with Datadog to demonstrate how to setup scaling with this method. 
 
 Based on the provided template we can make a basic page views metric for the node application: 
 ```html 
@@ -141,7 +141,7 @@ spec:
 Then add the metric to your cluster via `kubectl apply -f page-views-metrics.yaml`
 
 
-Now we are going configure the `convox.yaml` from our nodejs app to autoscale based on this newly created metric. You can find this 
+Now we are going to look at the configuration of the `convox.yaml` from our nodejs app to autoscale based on this newly created metric.
 
  We will specify the `datadogmetric` object name in the `scale.targets[].external section`. The `datadogmetric` object name convention to use in `scale.targets[].external` section is : `datadogmetric@<namespace>:<datadogmetric_name>`
 
