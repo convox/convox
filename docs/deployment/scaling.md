@@ -165,7 +165,7 @@ services:
 ``` 
 [Configured Nodejs app](https://github.com/convox-examples/nodejs-dd-autoscale)
 
-You can now deploy the application with `convox apps create` then `convox deploy`
+You can now deploy the application with `convox apps create -a nodejs` then `convox deploy -a nodejs`
 
 Once deployed you can check the replica count and deployed services:
 ```html
