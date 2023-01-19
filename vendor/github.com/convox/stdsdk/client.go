@@ -406,7 +406,6 @@ func unmarshalReader(r io.ReadCloser, out interface{}) error {
 	}
 
 	data, err := ioutil.ReadAll(r)
-
 	if err != nil {
 		return err
 	}

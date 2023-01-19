@@ -85,4 +85,4 @@ You can define the location to build for each [Service](/reference/primitives/ap
 
 ### Build Layers Caching
 
-From version 3.11.0 onward, the rack uses buildkit to build and push images. Buildkit allows us to specify a caching path in remote repositories to store/fetch layers that have already been created. Unfortunately, the only rack registries that support such feature so far are DigitalOcean(DO racks have a build-in registry) and Azure.
+From version 3.11.0 onward, Convox uses buildkit to build and push images. Buildkit allows us to specify a caching path in remote repositories to store/fetch layers that have already been created. Unfortunately, the only rack registries that support such feature so far are Azure and DigitalOcean(DO racks have a built-in registry).

@@ -323,7 +323,6 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 
 	ps, err := p.ProcessGet(app, pd.ObjectMeta.Name)
 	if err != nil {
-		println("error creating build pod", err.Error())
 		return nil, errors.WithStack(err)
 	}
 
