@@ -121,4 +121,10 @@ for region in us-east-1 us-east-2; do
       aws iam delete-role --role-name $role
     fi
   done
+
+  for o in $(aws iam list-open-id-connect-providers --no-paginate| jq -r ".OpenIDConnectProviderList[].Arn"); do
+    echo "deleting oidc $o"
+    aws iam delete-open-id-connect-provider --open-id-connect-provider-arn $o
+  done
+
 done
