@@ -13,7 +13,7 @@ type Service struct {
 	Agent       ServiceAgent          `yaml:"agent,omitempty"`
 	Annotations ServiceAnnotations    `yaml:"annotations,omitempty"`
 	Build       ServiceBuild          `yaml:"build,omitempty"`
-	Certificate Certificate           `yaml:"certification,omitempty"`
+	Certificate Certificate           `yaml:"certificate,omitempty"`
 	Command     string                `yaml:"command,omitempty"`
 	Deployment  ServiceDeployment     `yaml:"deployment,omitempty"`
 	Domains     ServiceDomains        `yaml:"domain,omitempty"`
