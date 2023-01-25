@@ -388,6 +388,10 @@ func listConsole(c *stdcli.Context) ([]Console, error) {
 	}
 
 	rs, err := cc.RackList()
+	if err != nil && strings.Contains(err.Error(), "cli token is expired") {
+		return nil, err
+	}
+
 	switch err.(type) {
 	case console.AuthenticationError:
 		return nil, err
