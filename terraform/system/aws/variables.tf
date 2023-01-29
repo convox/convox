@@ -123,6 +123,16 @@ variable "vpc_cni_version" {
   default = "v1.11.4-eksbuild.1"
 }
 
+variable "private_subnets_ids" {
+  type    = list(string)
+  default = []
+}
+
+variable "public_subnets_ids" {
+  type    = list(string)
+  default = []
+}
+
 variable "whitelist" {
   default = "0.0.0.0/0"
 }
