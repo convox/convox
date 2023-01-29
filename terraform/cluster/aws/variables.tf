@@ -102,3 +102,13 @@ variable "vpc_cni_version" {
   type    = string
   default = null
 }
+
+variable "private_subnets_ids" {
+  type    = list(string)
+  default = []
+}
+
+variable "public_subnets_ids" {
+  type    = list(string)
+  default = []
+}

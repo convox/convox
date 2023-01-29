@@ -4,7 +4,8 @@ locals {
     Name = var.name
     Rack = var.name
   })
-  vpc_id = var.vpc_id == "" ? aws_vpc.nodes[0].id : var.vpc_id
+  vpc_id              = var.vpc_id == "" ? aws_vpc.nodes[0].id : var.vpc_id
+  private_subnets_ids = var.private_subnets_ids ? var.private_subnets_ids : aws_subnet.private[*].id
 }
 
 resource "aws_vpc" "nodes" {
@@ -116,7 +117,7 @@ resource "aws_subnet" "private" {
     null_resource.wait_vpc_nodes
   ]
 
-  count = var.private ? local.network_resource_count : 0
+  count = length(var.private_subnets_ids) == 0 ? var.private ? local.network_resource_count : 0 : 0
 
   availability_zone = local.availability_zones[count.index]
   cidr_block        = cidrsubnet(var.cidr, 2, count.index + 1)
