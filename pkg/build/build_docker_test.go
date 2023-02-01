@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -19,6 +18,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var (
+	dockerEngine = &build.Docker{}
+)
+
 func TestBuildGeneration2(t *testing.T) {
 	opts := build.Options{
 		App:    "app1",
@@ -29,12 +32,12 @@ func TestBuildGeneration2(t *testing.T) {
 		Source: "object://app1/object.tgz",
 	}
 
-	testBuild(t, opts, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
+	testBuild(t, opts, dockerEngine, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
 		p.On("BuildGet", "app1", "build1").Return(fxBuildStarted(), nil).Once()
-		bdata, err := ioutil.ReadFile("testdata/httpd.tgz")
+		bdata, err := os.ReadFile("testdata/httpd.tgz")
 		require.NoError(t, err)
-		p.On("ObjectFetch", "app1", "/object.tgz").Return(ioutil.NopCloser(bytes.NewReader(bdata)), nil)
-		mdata, err := ioutil.ReadFile("testdata/httpd/convox.yml")
+		p.On("ObjectFetch", "app1", "/object.tgz").Return(io.NopCloser(bytes.NewReader(bdata)), nil)
+		mdata, err := os.ReadFile("testdata/httpd/convox.yml")
 		require.NoError(t, err)
 		p.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil)
 		p.On("ReleaseGet", "app1", "release1").Return(fxRelease(), nil)
@@ -46,7 +49,7 @@ func TestBuildGeneration2(t *testing.T) {
 		e.On("Execute", "docker", "tag", "httpd", "rack1/app1:web.build1").Return([]byte("tagging\n"), nil)
 		e.On("Execute", "docker", "tag", "e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445", "rack1/app1:web2.build1").Return([]byte("tagging\n"), nil)
 		p.On("ObjectStore", "app1", "build/build1/logs", mock.Anything, structs.ObjectStoreOptions{}).Return(fxObject(), nil).Run(func(args mock.Arguments) {
-			data, err := ioutil.ReadAll(args.Get(2).(io.Reader))
+			data, err := io.ReadAll(args.Get(2).(io.Reader))
 			require.NoError(t, err)
 			require.Equal(t, "Building: .\nbuild1\nbuild2\nRunning: docker pull httpd\nRunning: docker tag e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445 rack1/app1:web2.build1\nRunning: docker tag httpd rack1/app1:web.build1\n", string(data))
 		})
@@ -93,12 +96,12 @@ func TestBuildGeneration2Development(t *testing.T) {
 		Source:      "object://app1/object.tgz",
 	}
 
-	testBuild(t, opts, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
+	testBuild(t, opts, dockerEngine, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
 		p.On("BuildGet", "app1", "build1").Return(fxBuildStarted(), nil).Once()
-		bdata, err := ioutil.ReadFile("testdata/httpd-dev.tgz")
+		bdata, err := os.ReadFile("testdata/httpd-dev.tgz")
 		require.NoError(t, err)
-		p.On("ObjectFetch", "app1", "/object.tgz").Return(ioutil.NopCloser(bytes.NewReader(bdata)), nil)
-		mdata, err := ioutil.ReadFile("testdata/httpd-dev/convox.yml")
+		p.On("ObjectFetch", "app1", "/object.tgz").Return(io.NopCloser(bytes.NewReader(bdata)), nil)
+		mdata, err := os.ReadFile("testdata/httpd-dev/convox.yml")
 		require.NoError(t, err)
 		p.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil)
 		p.On("ReleaseGet", "app1", "release1").Return(fxRelease(), nil)
@@ -108,7 +111,7 @@ func TestBuildGeneration2Development(t *testing.T) {
 		e.On("Execute", "docker", "inspect", "e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445", "--format", "{{json .Config.Entrypoint}}").Return([]byte("[]"), nil)
 		e.On("Execute", "docker", "tag", "e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445", "rack1/app1:web.build1").Return([]byte("tagging\n"), nil)
 		p.On("ObjectStore", "app1", "build/build1/logs", mock.Anything, structs.ObjectStoreOptions{}).Return(fxObject(), nil).Run(func(args mock.Arguments) {
-			data, err := ioutil.ReadAll(args.Get(2).(io.Reader))
+			data, err := io.ReadAll(args.Get(2).(io.Reader))
 			require.NoError(t, err)
 			require.Equal(t, "Building: .\nbuild1\nbuild2\nRunning: docker tag e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445 rack1/app1:web.build1\n", string(data))
 		})
@@ -152,12 +155,12 @@ func TestBuildGeneration2Entrypoint(t *testing.T) {
 		Source: "object://app1/object.tgz",
 	}
 
-	testBuild(t, opts, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
+	testBuild(t, opts, dockerEngine, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
 		p.On("BuildGet", "app1", "build1").Return(fxBuildStarted(), nil).Once()
-		bdata, err := ioutil.ReadFile("testdata/httpd.tgz")
+		bdata, err := os.ReadFile("testdata/httpd.tgz")
 		require.NoError(t, err)
-		p.On("ObjectFetch", "app1", "/object.tgz").Return(ioutil.NopCloser(bytes.NewReader(bdata)), nil)
-		mdata, err := ioutil.ReadFile("testdata/httpd/convox.yml")
+		p.On("ObjectFetch", "app1", "/object.tgz").Return(io.NopCloser(bytes.NewReader(bdata)), nil)
+		mdata, err := os.ReadFile("testdata/httpd/convox.yml")
 		require.NoError(t, err)
 		p.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil)
 		p.On("ReleaseGet", "app1", "release1").Return(fxRelease(), nil)
@@ -169,7 +172,7 @@ func TestBuildGeneration2Entrypoint(t *testing.T) {
 		e.On("Execute", "docker", "tag", "httpd", "rack1/app1:web.build1").Return([]byte("tagging\n"), nil)
 		e.On("Execute", "docker", "tag", "e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445", "rack1/app1:web2.build1").Return([]byte("tagging\n"), nil)
 		p.On("ObjectStore", "app1", "build/build1/logs", mock.Anything, structs.ObjectStoreOptions{}).Return(fxObject(), nil).Run(func(args mock.Arguments) {
-			data, err := ioutil.ReadAll(args.Get(2).(io.Reader))
+			data, err := io.ReadAll(args.Get(2).(io.Reader))
 			require.NoError(t, err)
 			require.Equal(t, "Building: .\nbuild1\nbuild2\nRunning: docker pull httpd\nRunning: docker tag e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445 rack1/app1:web2.build1\nRunning: docker tag httpd rack1/app1:web.build1\n", string(data))
 		})
@@ -216,11 +219,11 @@ func TestBuildGeneration2Failure(t *testing.T) {
 		Source: "object://app1/object.tgz",
 	}
 
-	testBuild(t, opts, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
+	testBuild(t, opts, dockerEngine, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
 		p.On("BuildGet", "app1", "build1").Return(fxBuildStarted(), nil)
 		p.On("ObjectFetch", "app1", "/object.tgz").Return(nil, fmt.Errorf("err1"))
 		p.On("ObjectStore", "app1", "build/build1/logs", mock.Anything, structs.ObjectStoreOptions{}).Return(fxObject(), nil).Run(func(args mock.Arguments) {
-			data, err := ioutil.ReadAll(args.Get(2).(io.Reader))
+			data, err := io.ReadAll(args.Get(2).(io.Reader))
 			require.NoError(t, err)
 			require.Equal(t, "ERROR: err1\n", string(data))
 		})
@@ -261,18 +264,18 @@ func TestBuildGeneration2Options(t *testing.T) {
 		Source:      "object://app1/object.tgz",
 	}
 
-	testBuild(t, opts, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
+	testBuild(t, opts, dockerEngine, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
 		p.On("BuildGet", "app1", "build1").Return(fxBuildStarted(), nil).Once()
 		e.On("Stream", mock.Anything, mock.Anything, "docker", "login", "-u", "user1", "--password-stdin", "host1").Return(nil).Run(func(args mock.Arguments) {
-			data, err := ioutil.ReadAll(args.Get(1).(io.Reader))
+			data, err := io.ReadAll(args.Get(1).(io.Reader))
 			require.NoError(t, err)
 			require.Equal(t, "pass1", string(data))
 			fmt.Fprintf(args.Get(0).(io.Writer), "login-success\n")
 		})
-		bdata, err := ioutil.ReadFile("testdata/httpd.tgz")
+		bdata, err := os.ReadFile("testdata/httpd.tgz")
 		require.NoError(t, err)
-		p.On("ObjectFetch", "app1", "/object.tgz").Return(ioutil.NopCloser(bytes.NewReader(bdata)), nil)
-		mdata, err := ioutil.ReadFile("testdata/httpd/convox2.yml")
+		p.On("ObjectFetch", "app1", "/object.tgz").Return(io.NopCloser(bytes.NewReader(bdata)), nil)
+		mdata, err := os.ReadFile("testdata/httpd/convox2.yml")
 		require.NoError(t, err)
 		// p.On("BuildUpdate", "app1", "build1", structs.BuildUpdateOptions{Manifest: options.String(string(mdata))}).Return(fxBuildStarted(), nil).Once()
 		p.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil)
@@ -289,7 +292,7 @@ func TestBuildGeneration2Options(t *testing.T) {
 		e.On("Execute", "docker", "build", "-t", "rack1/app1:web.build1", mock.AnythingOfType("string")).Return([]byte("building convox-env\n"), nil)
 		e.On("Execute", "docker", "push", "push1:web.build1").Return([]byte("pushing\n"), nil)
 		p.On("ObjectStore", "app1", "build/build1/logs", mock.Anything, structs.ObjectStoreOptions{}).Return(fxObject(), nil).Run(func(args mock.Arguments) {
-			data, err := ioutil.ReadAll(args.Get(2).(io.Reader))
+			data, err := io.ReadAll(args.Get(2).(io.Reader))
 			require.NoError(t, err)
 			require.Equal(t, "Authenticating host1: login-success\nBuilding: .\nbuild1\nbuild2\nRunning: docker tag c67c8080ff5483672fe18cfb54f4710ddcc920b3575810ad05dbe1a4 rack1/app1:web.build1\nInjecting: convox-env\nRunning: docker tag rack1/app1:web.build1 push1:web.build1\nRunning: docker push push1:web.build1\n", string(data))
 		})
@@ -368,6 +371,21 @@ func matchTempdir(arg string) bool {
 	return strings.HasPrefix(arg, os.TempDir())
 }
 
+func matchContext(arg string) bool {
+	return strings.HasPrefix(arg, "context")
+}
+
+func matchDockerfile(arg string) bool {
+	return strings.HasPrefix(arg, "dockerfile")
+}
+
+func matchTag(arg string) bool {
+	return strings.HasPrefix(arg, "type=image,name=registry.test.com:web")
+}
+
+func matchFilename(arg string) bool {
+	return strings.HasPrefix(arg, "filename")
+}
 func matchTempdirFile(name string) func(string) bool {
 	return func(arg string) bool {
 		if !matchTempdir(arg) {
@@ -377,7 +395,7 @@ func matchTempdirFile(name string) func(string) bool {
 	}
 }
 
-func testBuild(t *testing.T, opts build.Options, fn func(*build.Build, *structs.MockProvider, *exec.MockInterface, *bytes.Buffer)) {
+func testBuild(t *testing.T, opts build.Options, engine build.Engine, fn func(*build.Build, *structs.MockProvider, *exec.MockInterface, *bytes.Buffer)) {
 	e := &exec.MockInterface{}
 	p := &structs.MockProvider{}
 
@@ -388,7 +406,7 @@ func testBuild(t *testing.T, opts build.Options, fn func(*build.Build, *structs.
 	rack, err := sdk.NewFromEnv()
 	require.NoError(t, err)
 
-	b, err := build.New(rack, opts)
+	b, err := build.New(rack, opts, engine)
 	require.NoError(t, err)
 
 	b.Exec = e

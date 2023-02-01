@@ -2,7 +2,6 @@ package k8s
 
 import (
 	"archive/tar"
-	"bytes"
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
@@ -23,6 +22,18 @@ import (
 	"github.com/pkg/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func (p *Provider) buildImage(provider string) string {
+	img := fmt.Sprintf("%s-build", p.Image)
+	if p.buildPrivileged(provider) {
+		img = fmt.Sprintf("%s-build-privileged", p.Image)
+	}
+	return img
+}
+
+func (*Provider) buildPrivileged(provider string) bool {
+	return strings.Contains("do gcp aws local", provider)
+}
 
 func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions) (*structs.Build, error) {
 	if _, err := p.AppGet(app); err != nil {
@@ -65,6 +76,7 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 		"BUILD_MANIFEST":    common.DefaultString(opts.Manifest, "convox.yml"),
 		"BUILD_RACK":        p.Name,
 		"BUILD_URL":         url,
+		"PROVIDER":          os.Getenv("PROVIDER"),
 		"RACK_URL":          fmt.Sprintf("https://convox:%s@api.%s.svc.cluster.local:5443", p.Password, p.Namespace),
 	}
 
@@ -89,10 +101,8 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 		Command:     options.String(buildCmd),
 		Cpu:         options.Int(512),
 		Environment: env,
-		Image:       options.String(p.Image),
-		Volumes: map[string]string{
-			p.Socket: "/var/run/docker.sock",
-		},
+		Image:       options.String(p.buildImage(os.Getenv("PROVIDER"))),
+		Privileged:  options.Bool(p.buildPrivileged(os.Getenv("PROVIDER"))),
 	})
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -168,74 +178,65 @@ func (p *Provider) BuildExport(app, id string, w io.Writer) error {
 		return errors.WithStack(err)
 	}
 
-	tmp, err := os.MkdirTemp("", "")
+	tmp, err := os.MkdirTemp(os.TempDir(), "")
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
 	defer os.Remove(tmp)
 
-	images := []string{}
+	repo, _, err := p.Engine.RepositoryHost(app)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	user, pass, err := p.Engine.RepositoryAuth(app)
+	if err != nil {
+		return errors.WithStack(err)
+	}
 
 	for _, service := range services {
-		repo, remote, err := p.Engine.RepositoryHost(app)
-		if err != nil {
+
+		from := fmt.Sprintf("docker://%s:%s.%s", repo, service, build.Id)
+		to := fmt.Sprintf("oci-archive:%s/%s.%s.tar", tmp, service, build.Id)
+
+		if err := exec.Command("skopeo", "copy", "--src-creds", fmt.Sprintf("%s:%s", user, pass), from, to).Run(); err != nil {
 			return errors.WithStack(err)
 		}
+	}
 
-		from := fmt.Sprintf("%s:%s.%s", repo, service, build.Id)
+	filepath.Walk(tmp, func(file string, fi os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 
-		if remote {
-			if err := exec.Command("docker", "pull", from).Run(); err != nil {
-				return errors.WithStack(err)
+		header, err := tar.FileInfoHeader(fi, file)
+		if err != nil {
+			return err
+		}
+
+		// strip tmp dir preffix
+		ff := strings.Split(file, "/")
+		fname := strings.Join(ff[3:], "/")
+
+		header.Name = fname
+
+		if err := tw.WriteHeader(header); err != nil {
+			return err
+		}
+
+		if !fi.IsDir() {
+			data, err := os.Open(file)
+			if err != nil {
+				return err
+			}
+			if _, err := io.Copy(tw, data); err != nil {
+				return err
 			}
 		}
 
-		to := fmt.Sprintf("registry:%s.%s", service, build.Id)
-
-		if err := exec.Command("docker", "tag", from, to).Run(); err != nil {
-			return errors.WithStack(err)
-		}
-
-		images = append(images, to)
-	}
-
-	name := fmt.Sprintf("%s.%s.tar", app, build.Id)
-	file := filepath.Join(tmp, name)
-	args := []string{"save", "-o", file}
-	args = append(args, images...)
-
-	out, err := exec.Command("docker", args...).CombinedOutput()
-	if err != nil {
-		return errors.WithStack(fmt.Errorf("%s: %s", strings.TrimSpace(string(out)), err.Error()))
-	}
-
-	defer os.Remove(file)
-
-	stat, err := os.Stat(file)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	header := &tar.Header{
-		Typeflag: tar.TypeReg,
-		Name:     name,
-		Mode:     0600,
-		Size:     stat.Size(),
-	}
-
-	if err := tw.WriteHeader(header); err != nil {
-		return errors.WithStack(err)
-	}
-
-	fd, err := os.Open(file)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	if _, err := io.Copy(tw, fd); err != nil {
-		return errors.WithStack(err)
-	}
+		return nil
+	})
 
 	if err := tw.Close(); err != nil {
 		return errors.WithStack(err)
@@ -270,19 +271,40 @@ func (p *Provider) BuildImport(app string, r io.Reader) (*structs.Build, error) 
 	}
 
 	tr := tar.NewReader(gz)
+	tmp, err := os.MkdirTemp(os.TempDir(), "")
+	imgBySvc := map[string]string{}
 
-	var manifest imageManifest
+	if err != nil {
+		return nil, fmt.Errorf("failed to create img tmp directory - %s", err.Error())
+	}
 
 	for {
 		header, err := tr.Next()
 		if err == io.EOF {
 			break
 		}
+
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
+
 		if header.Typeflag != tar.TypeReg {
 			continue
+		}
+
+		if strings.HasSuffix(header.Name, ".tar") {
+			f, err := os.Create(fmt.Sprintf("%s/%s", tmp, header.Name))
+			if err != nil {
+				return nil, errors.Errorf("failed to untar image - %s", err.Error())
+			}
+
+			_, err = io.Copy(f, tr)
+			if err != nil {
+				errors.Errorf("failed to write image - %s", err.Error())
+			}
+
+			svc := strings.Split(header.Name, ".")[0]
+			imgBySvc[svc] = f.Name()
 		}
 
 		if header.Name == "build.json" {
@@ -297,72 +319,24 @@ func (p *Provider) BuildImport(app string, r io.Reader) (*structs.Build, error) 
 
 			target.Id = structs.NewBuild(app).Id
 		}
-
-		if strings.HasSuffix(header.Name, ".tar") {
-			cmd := exec.Command("docker", "load")
-
-			pr, pw := io.Pipe()
-			tee := io.TeeReader(tr, pw)
-			outb := &bytes.Buffer{}
-
-			cmd.Stdin = pr
-			cmd.Stdout = outb
-
-			if err := cmd.Start(); err != nil {
-				return nil, errors.WithStack(err)
-			}
-
-			manifest, err = extractImageManifest(tee)
-			if err != nil {
-				return nil, errors.WithStack(err)
-			}
-
-			if err := pw.Close(); err != nil {
-				return nil, errors.WithStack(err)
-			}
-
-			if err := cmd.Wait(); err != nil {
-				out := strings.TrimSpace(outb.String())
-				return nil, errors.WithStack(fmt.Errorf("%s: %s", out, err.Error()))
-			}
-
-			if len(manifest) == 0 {
-				return nil, errors.WithStack(fmt.Errorf("invalid image manifest: no data"))
-			}
-		}
 	}
 
-	// TODO push if needed
-	for _, tags := range manifest {
-		for _, from := range tags.RepoTags {
-			parts := strings.SplitN(from, ":", 2)
-			if len(parts) != 2 {
-				return nil, errors.WithStack(fmt.Errorf("invalid image manifest: invalid repo tag"))
-			}
+	repo, _, err := p.Engine.RepositoryHost(app)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
 
-			serviceid := strings.Split(parts[1], ".")
-			if len(serviceid) != 2 {
-				return nil, errors.WithStack(fmt.Errorf("invalid image manifest: invalid repo tag"))
-			}
+	user, pass, err := p.Engine.RepositoryAuth(app)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
 
-			service := serviceid[0]
+	for svc, img := range imgBySvc {
+		dst := fmt.Sprintf("%s:%s.%s", repo, svc, target.Id)
 
-			repo, remote, err := p.Engine.RepositoryHost(app)
-			if err != nil {
-				return nil, errors.WithStack(err)
-			}
-
-			to := fmt.Sprintf("%s:%s.%s", repo, service, target.Id)
-
-			if err := exec.Command("docker", "tag", from, to).Run(); err != nil {
-				return nil, errors.WithStack(err)
-			}
-
-			if remote {
-				if err := exec.Command("docker", "push", to).Run(); err != nil {
-					return nil, errors.WithStack(err)
-				}
-			}
+		b, err := exec.Command("skopeo", "copy", "--dest-creds", fmt.Sprintf("%s:%s", user, pass), fmt.Sprintf("oci-archive:%s", img), fmt.Sprintf("docker://%s", dst)).CombinedOutput()
+		if err != nil {
+			errors.Errorf("failed to push image - %s\n%s", err.Error(), string(b))
 		}
 	}
 

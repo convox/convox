@@ -46,12 +46,12 @@ RUN make package build compress
 
 ## production ##################################################################
 
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
 ARG DOCKER_ARCH=x86_64
 ARG KUBECTL_ARCH=amd64
 
-RUN apt-get -qq update && apt-get -qq -y install curl default-mysql-client postgresql-client redis-tools telnet
+RUN apt-get -qq update && apt-get -qq -y install curl default-mysql-client postgresql-client redis-tools telnet skopeo
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 

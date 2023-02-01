@@ -3,24 +3,25 @@ package build
 import (
 	"bytes"
 	"compress/gzip"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/url"
 	"os"
-	"sort"
-
-	// "os/exec"
-	"path/filepath"
 	"strings"
+
+	"path/filepath"
 	"time"
 
 	"github.com/convox/convox/pkg/common"
-	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/exec"
 )
+
+type Engine interface {
+	Build(bb *Build, dir string) error
+	Login(bb *Build) error
+}
 
 type Options struct {
 	App         string
@@ -42,14 +43,17 @@ type Build struct {
 	Options
 	Exec     exec.Interface
 	Provider structs.Provider
+	Engine   Engine
 	logs     bytes.Buffer
 	writer   io.Writer
 }
 
-func New(rack structs.Provider, opts Options) (*Build, error) {
+func New(rack structs.Provider, opts Options, engine Engine) (*Build, error) {
 	b := &Build{Options: opts}
 
 	b.Exec = &exec.Exec{}
+
+	b.Engine = engine
 
 	b.Manifest = common.CoalesceString(b.Manifest, "convox.yml")
 
@@ -78,12 +82,25 @@ func (bb *Build) Printf(format string, args ...interface{}) {
 	fmt.Fprintf(bb.writer, format, args...)
 }
 
+func (bb *Build) buildEnvs() (map[string]string, error) {
+	env := map[string]string{}
+	for _, v := range bb.BuildArgs {
+		parts := strings.SplitN(v, "=", 2)
+		if len(parts) != 2 {
+			return env, fmt.Errorf("invalid build args: %s", v)
+		}
+		env[parts[0]] = parts[1]
+	}
+
+	return env, nil
+}
+
 func (bb *Build) execute() error {
 	if _, err := bb.Provider.BuildGet(bb.App, bb.Id); err != nil {
 		return err
 	}
 
-	if err := bb.login(); err != nil {
+	if err := bb.Engine.Login(bb); err != nil {
 		return err
 	}
 
@@ -101,7 +118,7 @@ func (bb *Build) execute() error {
 		return err
 	}
 
-	if err := bb.build(dir); err != nil {
+	if err := bb.Engine.Build(bb, dir); err != nil {
 		return err
 	}
 
@@ -129,7 +146,7 @@ func (bb *Build) prepareSource() (string, error) {
 }
 
 func (bb *Build) prepareSourceObject(app, key string) (string, error) {
-	dir, err := os.MkdirTemp("", "")
+	dir, err := os.MkdirTemp(os.TempDir(), "")
 	if err != nil {
 		return "", err
 	}
@@ -159,150 +176,6 @@ func (bb *Build) prepareSourceObject(app, key string) (string, error) {
 	}
 
 	return dir, nil
-}
-
-func (bb *Build) login() error {
-	var auth map[string]struct {
-		Username string
-		Password string
-	}
-
-	if err := json.Unmarshal([]byte(bb.Auth), &auth); err != nil {
-		return err
-	}
-
-	for host, entry := range auth {
-		buf := &bytes.Buffer{}
-
-		err := bb.Exec.Stream(buf, strings.NewReader(entry.Password), "docker", "login", "-u", entry.Username, "--password-stdin", host)
-
-		bb.Printf("Authenticating %s: %s\n", host, strings.TrimSpace(buf.String()))
-
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (bb *Build) build(dir string) error {
-	config := filepath.Join(dir, bb.Manifest)
-
-	if _, err := os.Stat(config); os.IsNotExist(err) {
-		return fmt.Errorf("no such file: %s", bb.Manifest)
-	}
-
-	data, err := os.ReadFile(config)
-	if err != nil {
-		return err
-	}
-
-	env, err := common.AppEnvironment(bb.Provider, bb.App)
-	if err != nil {
-		return err
-	}
-
-	for _, v := range bb.BuildArgs {
-		parts := strings.SplitN(v, "=", 2)
-		if len(parts) != 2 {
-			return fmt.Errorf("invalid build args: %s", v)
-		}
-		env[parts[0]] = parts[1]
-	}
-
-	m, err := manifest.Load(data, env)
-	if err != nil {
-		return err
-	}
-
-	if err := m.Validate(); err != nil {
-		return err
-	}
-
-	prefix := fmt.Sprintf("%s/%s", bb.Rack, bb.App)
-
-	builds := map[string]manifest.ServiceBuild{}
-	pulls := map[string]bool{}
-	pushes := map[string]string{}
-	tags := map[string][]string{}
-
-	for _, s := range m.Services {
-		hash := s.BuildHash(bb.Id)
-		to := fmt.Sprintf("%s:%s.%s", prefix, s.Name, bb.Id)
-
-		if s.Image != "" {
-			pulls[s.Image] = true
-			tags[s.Image] = append(tags[s.Image], to)
-		} else {
-			builds[hash] = s.Build
-			tags[hash] = append(tags[hash], to)
-		}
-
-		if bb.Push != "" {
-			pushes[to] = fmt.Sprintf("%s:%s.%s", bb.Push, s.Name, bb.Id)
-		}
-	}
-
-	for hash, b := range builds {
-		bb.Printf("Building: %s\n", b.Path)
-
-		if err := bb.buildDocker(filepath.Join(dir, b.Path), b.Manifest, hash, env); err != nil {
-			return err
-		}
-	}
-
-	for image := range pulls {
-		if err := bb.pull(image); err != nil {
-			return err
-		}
-	}
-
-	tagfroms := []string{}
-
-	for from := range tags {
-		tagfroms = append(tagfroms, from)
-	}
-
-	sort.Strings(tagfroms)
-
-	for _, from := range tagfroms {
-		tos := tags[from]
-
-		for _, to := range tos {
-			if err := bb.tag(from, to); err != nil {
-				return err
-			}
-
-			if bb.EnvWrapper {
-				if err := bb.injectConvoxEnv(to); err != nil {
-					return err
-				}
-			}
-		}
-	}
-
-	pushfroms := []string{}
-
-	for from := range pushes {
-		pushfroms = append(pushfroms, from)
-	}
-
-	sort.Strings(pushfroms)
-
-	for _, from := range pushfroms {
-		to := pushes[from]
-
-		if err := bb.tag(from, to); err != nil {
-			return err
-		}
-
-		if err := bb.push(to); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func (bb *Build) success() error {

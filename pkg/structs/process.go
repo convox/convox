@@ -46,6 +46,7 @@ type ProcessRunOptions struct {
 	Release     *string           `flag:"release" header:"Release"`
 	Volumes     map[string]string `header:"Volumes"`
 	Width       *int              `header:"Width"`
+	Privileged  *bool             `header:"Privileged"`
 }
 
 func (p *Process) sortKey() string {
