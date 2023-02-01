@@ -109,6 +109,7 @@ func TestManifestLoad(t *testing.T) {
 				Tls: manifest.ServiceTls{
 					Redirect: false,
 				},
+				Whitelist: "127.0.0.0/24",
 			},
 			manifest.Service{
 				Name:    "proxy",
@@ -204,6 +205,72 @@ func TestManifestLoad(t *testing.T) {
 					Count:  manifest.ServiceScaleCount{Min: 1, Max: 1},
 					Cpu:    256,
 					Memory: 512,
+				},
+				Sticky: false,
+				Termination: manifest.ServiceTermination{
+					Grace: 30,
+				},
+				Timeout: 60,
+				Tls: manifest.ServiceTls{
+					Redirect: true,
+				},
+			},
+			manifest.Service{
+				Name: "gpuscaler",
+				Build: manifest.ServiceBuild{
+					Manifest: "Dockerfile",
+					Path:     ".",
+				},
+				Command: "",
+				Deployment: manifest.ServiceDeployment{
+					Minimum: 50,
+					Maximum: 200,
+				},
+				Drain: 30,
+				Health: manifest.ServiceHealth{
+					Grace:    5,
+					Interval: 5,
+					Path:     "/",
+					Timeout:  4,
+				},
+				Init: true,
+				Scale: manifest.ServiceScale{
+					Count:  manifest.ServiceScaleCount{Min: 1, Max: 1},
+					Cpu:    768,
+					Gpu:    manifest.ServiceScaleGpu{Count: 1, Vendor: "amd"},
+					Memory: 2048,
+				},
+				Sticky: false,
+				Termination: manifest.ServiceTermination{
+					Grace: 30,
+				},
+				Timeout: 60,
+				Tls: manifest.ServiceTls{
+					Redirect: true,
+				},
+			},
+			manifest.Service{
+				Name: "defaultgpuscaler",
+				Build: manifest.ServiceBuild{
+					Manifest: "Dockerfile",
+					Path:     ".",
+				},
+				Command: "",
+				Deployment: manifest.ServiceDeployment{
+					Minimum: 50,
+					Maximum: 200,
+				},
+				Drain: 30,
+				Health: manifest.ServiceHealth{
+					Grace:    5,
+					Interval: 5,
+					Path:     "/",
+					Timeout:  4,
+				},
+				Init: true,
+				Scale: manifest.ServiceScale{
+					Count:  manifest.ServiceScaleCount{Min: 1, Max: 1},
+					Gpu:    manifest.ServiceScaleGpu{Count: 2, Vendor: "nvidia"},
 				},
 				Sticky: false,
 				Termination: manifest.ServiceTermination{
@@ -407,7 +474,11 @@ func TestManifestLoad(t *testing.T) {
 		"services.api.termination.grace",
 		"services.api.tls",
 		"services.api.tls.redirect",
+		"services.api.whitelist",
 		"services.bar",
+		"services.defaultgpuscaler",
+		"services.defaultgpuscaler.scale",
+		"services.defaultgpuscaler.scale.gpu",
 		"services.foo",
 		"services.foo.command",
 		"services.foo.domain",
@@ -422,6 +493,13 @@ func TestManifestLoad(t *testing.T) {
 		"services.foo.singleton",
 		"services.foo.sticky",
 		"services.foo.timeout",
+		"services.gpuscaler",
+		"services.gpuscaler.scale",
+		"services.gpuscaler.scale.cpu",
+		"services.gpuscaler.scale.gpu",
+		"services.gpuscaler.scale.gpu.count",
+		"services.gpuscaler.scale.gpu.vendor",
+		"services.gpuscaler.scale.memory",
 		"services.inherit",
 		"services.inherit.command",
 		"services.inherit.domain",

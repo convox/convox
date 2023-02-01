@@ -21,6 +21,7 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	"time"
 
 	v1 "github.com/convox/convox/provider/k8s/pkg/apis/convox/v1"
@@ -72,7 +73,7 @@ func (c *builds) Get(name string, options metav1.GetOptions) (result *v1.Build, 
 		Resource("builds").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -89,7 +90,7 @@ func (c *builds) List(opts metav1.ListOptions) (result *v1.BuildList, err error)
 		Resource("builds").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -106,7 +107,7 @@ func (c *builds) Watch(opts metav1.ListOptions) (watch.Interface, error) {
 		Resource("builds").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(context.TODO())
 }
 
 // Create takes the representation of a build and creates it.  Returns the server's representation of the build, and an error, if there is any.
@@ -116,7 +117,7 @@ func (c *builds) Create(build *v1.Build) (result *v1.Build, err error) {
 		Namespace(c.ns).
 		Resource("builds").
 		Body(build).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -129,7 +130,7 @@ func (c *builds) Update(build *v1.Build) (result *v1.Build, err error) {
 		Resource("builds").
 		Name(build.Name).
 		Body(build).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -141,7 +142,7 @@ func (c *builds) Delete(name string, options *metav1.DeleteOptions) error {
 		Resource("builds").
 		Name(name).
 		Body(options).
-		Do().
+		Do(context.TODO()).
 		Error()
 }
 
@@ -157,7 +158,7 @@ func (c *builds) DeleteCollection(options *metav1.DeleteOptions, listOptions met
 		VersionedParams(&listOptions, scheme.ParameterCodec).
 		Timeout(timeout).
 		Body(options).
-		Do().
+		Do(context.TODO()).
 		Error()
 }
 
@@ -170,7 +171,7 @@ func (c *builds) Patch(name string, pt types.PatchType, data []byte, subresource
 		SubResource(subresources...).
 		Name(name).
 		Body(data).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }

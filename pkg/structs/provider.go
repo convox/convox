@@ -44,7 +44,7 @@ type Provider interface {
 	FilesDownload(app, pid string, file string) (io.Reader, error)
 	FilesUpload(app, pid string, r io.Reader) error
 
-	InstanceKeyroll() error
+	InstanceKeyroll() (*KeyPair, error)
 	InstanceList() (Instances, error)
 	InstanceShell(id string, rw io.ReadWriter, opts InstanceShellOptions) (int, error)
 	InstanceTerminate(id string) error
@@ -108,6 +108,6 @@ type Provider interface {
 }
 
 type ProviderOptions struct {
-	Logs io.Writer
+	Logs                io.Writer
 	IgnorePriorityClass bool
 }

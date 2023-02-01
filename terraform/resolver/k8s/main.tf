@@ -121,7 +121,7 @@ resource "kubernetes_deployment" "resolver" {
         }
 
         dynamic "image_pull_secrets" {
-          for_each = var.docker_hub_authentication != null ? [var.docker_hub_authentication] : []
+          for_each = var.docker_hub_authentication != "NULL" ? [var.docker_hub_authentication] : []
           content {
             name = var.docker_hub_authentication
           }

@@ -1,13 +1,17 @@
 package gcp
 
-func (p *Provider) IngressAnnotations(app string) (map[string]string, error) {
+func (p *Provider) IngressAnnotations(certDuration string) (map[string]string, error) {
 	ans := map[string]string{
 		"cert-manager.io/cluster-issuer": "letsencrypt",
+	}
+
+	if certDuration != "" {
+		ans["cert-manager.io/duration"] = certDuration
 	}
 
 	return ans, nil
 }
 
 func (p *Provider) IngressClass() string {
-	return "convox"
+	return "nginx"
 }

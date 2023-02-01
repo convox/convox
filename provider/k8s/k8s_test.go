@@ -2,15 +2,13 @@ package k8s_test
 
 import (
 	"bytes"
-	"fmt"
-	"io/ioutil"
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/convox/convox/pkg/atom"
-	"github.com/convox/convox/pkg/manifest"
+	"github.com/convox/convox/pkg/mock"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/k8s"
 	cvfake "github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned/fake"
@@ -50,7 +48,7 @@ func requireYamlFixture(t *testing.T, d1 []byte, filename string) {
 	r1, err := reformatYaml(d1)
 	require.NoError(t, err)
 
-	d2, err := ioutil.ReadFile(filepath.Join("testdata", filename))
+	d2, err := os.ReadFile(filepath.Join("testdata", filename))
 	require.NoError(t, err)
 
 	r2, err := reformatYaml(d2)
@@ -65,18 +63,21 @@ func testProvider(t *testing.T, fn func(*k8s.Provider)) {
 	cc := cvfake.NewSimpleClientset()
 	mc := metricfake.NewSimpleClientset()
 
-	_, err := c.CoreV1().Namespaces().Create(&ac.Namespace{
-		ObjectMeta: am.ObjectMeta{
-			Name: "ns1",
-			Labels: map[string]string{
-				"app":    "system",
-				"rack":   "rack1",
-				"system": "convox",
-				"type":   "rack",
+	_, err := c.CoreV1().Namespaces().Create(
+		context.TODO(), &ac.Namespace{
+			ObjectMeta: am.ObjectMeta{
+				Name: "ns1",
+				Labels: map[string]string{
+					"app":    "system",
+					"rack":   "rack1",
+					"system": "convox",
+					"type":   "rack",
+				},
+				UID: "uid1",
 			},
-			UID: "uid1",
 		},
-	})
+		am.CreateOptions{},
+	)
 	require.NoError(t, err)
 
 	p := &k8s.Provider{
@@ -84,7 +85,7 @@ func testProvider(t *testing.T, fn func(*k8s.Provider)) {
 		Cluster:       c,
 		Convox:        cc,
 		Domain:        "domain1",
-		Engine:        &TestEngine{},
+		Engine:        &mock.TestEngine{},
 		MetricsClient: mc,
 		Name:          "rack1",
 		Namespace:     "ns1",
@@ -94,7 +95,7 @@ func testProvider(t *testing.T, fn func(*k8s.Provider)) {
 	err = p.Initialize(structs.ProviderOptions{})
 	require.NoError(t, err)
 
-	_, err = c.CoreV1().Namespaces().Create(&ac.Namespace{ObjectMeta: am.ObjectMeta{Name: "test"}})
+	_, err = c.CoreV1().Namespaces().Create(context.TODO(), &ac.Namespace{ObjectMeta: am.ObjectMeta{Name: "test"}}, am.CreateOptions{})
 	require.NoError(t, err)
 
 	os.Setenv("NAMESPACE", "test")
@@ -112,67 +113,4 @@ func testProviderManual(t *testing.T, fn func(*k8s.Provider, *fake.Clientset)) {
 	}
 
 	fn(p, c)
-}
-
-type TestEngine struct {
-}
-
-func (tr *TestEngine) AppIdles(app string) (bool, error) {
-	return false, nil
-}
-
-func (te *TestEngine) AppParameters() map[string]string {
-	return map[string]string{"Test": "foo"}
-}
-
-func (te *TestEngine) Heartbeat() (map[string]interface{}, error) {
-	return map[string]interface{}{"foo": "bar"}, nil
-}
-
-func (te *TestEngine) IngressAnnotations(app string) (map[string]string, error) {
-	return map[string]string{"ann1": "val1"}, nil
-}
-
-func (te *TestEngine) IngressClass() string {
-	return ""
-}
-
-func (te *TestEngine) Log(app, stream string, ts time.Time, message string) error {
-	return nil
-}
-
-func (te *TestEngine) ManifestValidate(m *manifest.Manifest) error {
-	return nil
-}
-
-func (te *TestEngine) RegistryAuth(host, username, password string) (string, string, error) {
-	return username, password, nil
-}
-
-func (te *TestEngine) RepositoryAuth(app string) (string, string, error) {
-	return "un1", "pw1", nil
-}
-
-func (te *TestEngine) RepositoryHost(app string) (string, bool, error) {
-	return "repo1", true, nil
-}
-
-func (te *TestEngine) RepositoryPrefix() string {
-	return ""
-}
-
-func (te *TestEngine) ResolverHost() (string, error) {
-	return "", errors.WithStack(fmt.Errorf("no resolver"))
-}
-
-func (te *TestEngine) ServiceHost(app string, s manifest.Service) string {
-	return "service.host"
-}
-
-func (te *TestEngine) SystemHost() string {
-	return "system.host"
-}
-
-func (te *TestEngine) SystemStatus() (string, error) {
-	return "amazing", nil
 }

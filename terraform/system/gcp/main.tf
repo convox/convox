@@ -20,7 +20,7 @@ data "http" "releases" {
 }
 
 locals {
-  current = jsondecode(data.http.releases.body).tag_name
+  current = jsondecode(data.http.releases.response_body).tag_name
   release = coalesce(var.release, local.current)
 }
 
@@ -31,6 +31,7 @@ module "cluster" {
     google = google
   }
 
+  k8s_version = var.k8s_version
   name        = var.name
   node_type   = var.node_type
   preemptible = var.preemptible

@@ -1,14 +1,22 @@
 package cli
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/options"
+	"github.com/convox/convox/pkg/rack"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
+)
+
+var (
+	flagKey = stdcli.StringFlag("key", "", "private key file")
 )
 
 func init() {
@@ -23,7 +31,7 @@ func init() {
 	})
 
 	register("instances ssh", "run a shell on an instance", InstancesSsh, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagRack},
+		Flags:    []stdcli.Flag{flagRack, flagKey},
 		Validate: stdcli.ArgsMin(1),
 	})
 
@@ -53,24 +61,38 @@ func Instances(rack sdk.Interface, c *stdcli.Context) error {
 	return t.Print()
 }
 
-func InstancesKeyroll(rack sdk.Interface, c *stdcli.Context) error {
+func InstancesKeyroll(r sdk.Interface, c *stdcli.Context) error {
 	c.Startf("Rolling instance key")
 
-	if err := rack.InstanceKeyroll(); err != nil {
+	resp, err := r.InstanceKeyroll()
+	if err != nil {
 		return err
+	}
+
+	// only for v3 it will return resp
+	if resp != nil && resp.Name != nil {
+		c.Args = append(c.Args, fmt.Sprintf("key_pair_name=%s", *resp.Name))
+		c.Writef("\n")
+		if err := RackParamsSet(r, c); err != nil {
+			return err
+		}
+		c.Writef("Generated private key:\n")
+		c.Write([]byte(*resp.PrivateKey))
+		c.Writef("\n")
+		return nil
 	}
 
 	c.Writef("\n")
 
-	if err := common.WaitForRackWithLogs(rack, c); err != nil {
+	if err := common.WaitForRackWithLogs(r, c); err != nil {
 		return err
 	}
 
 	return c.OK()
 }
 
-func InstancesSsh(rack sdk.Interface, c *stdcli.Context) error {
-	s, err := rack.SystemGet()
+func InstancesSsh(r sdk.Interface, c *stdcli.Context) error {
+	s, err := r.SystemGet()
 	if err != nil {
 		return err
 	}
@@ -91,8 +113,44 @@ func InstancesSsh(rack sdk.Interface, c *stdcli.Context) error {
 		opts.Command = options.String(command)
 	}
 
+	rr, err := rack.Current(c)
+	if err != nil {
+		return err
+	}
+
+	data, err := c.SettingRead("current")
+	if err != nil {
+		return err
+	}
+
+	var attrs map[string]string
+	if err := json.Unmarshal([]byte(data), &attrs); err != nil {
+		return err
+	}
+
+	if attrs["type"] == "console" || attrs["type"] == "terraform" {
+		m, err := rr.Metadata()
+		if err != nil {
+			return err
+		}
+
+		if m.State != nil {
+			// it's v3 rack
+			key := c.String("key")
+			if key == "" {
+				return fmt.Errorf("private key file is not provided")
+			}
+
+			data, err := os.ReadFile(key)
+			if err != nil {
+				return fmt.Errorf("invalid key file: %s", err)
+			}
+			opts.PrivateKey = options.String(base64.StdEncoding.EncodeToString(data))
+		}
+	}
+
 	if s.Version <= "20180708231844" {
-		code, err := rack.InstanceShellClassic(c.Arg(0), c, opts)
+		code, err := r.InstanceShellClassic(c.Arg(0), c, opts)
 		if err != nil {
 			return err
 		}
@@ -100,7 +158,7 @@ func InstancesSsh(rack sdk.Interface, c *stdcli.Context) error {
 		return stdcli.Exit(code)
 	}
 
-	code, err := rack.InstanceShell(c.Arg(0), c, opts)
+	code, err := r.InstanceShell(c.Arg(0), c, opts)
 	if err != nil {
 		return err
 	}

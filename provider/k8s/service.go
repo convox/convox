@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/convox/convox/pkg/structs"
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
+	resource "k8s.io/apimachinery/pkg/api/resource"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -42,7 +44,7 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 
 	ss := structs.Services{}
 
-	ds, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).List(lopts)
+	ds, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).List(context.TODO(), lopts)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -76,7 +78,7 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 		ss = append(ss, s)
 	}
 
-	dss, err := p.Cluster.AppsV1().DaemonSets(p.AppNamespace(app)).List(lopts)
+	dss, err := p.Cluster.AppsV1().DaemonSets(p.AppNamespace(app)).List(context.TODO(), lopts)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -126,7 +128,7 @@ func (p *Provider) ServiceRestart(app, name string) error {
 func (p *Provider) serviceRestartDaemonset(app, name string) error {
 	ds := p.Cluster.AppsV1().DaemonSets(p.AppNamespace(app))
 
-	s, err := ds.Get(name, am.GetOptions{})
+	s, err := ds.Get(context.TODO(), name, am.GetOptions{})
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -137,7 +139,7 @@ func (p *Provider) serviceRestartDaemonset(app, name string) error {
 
 	s.Spec.Template.Annotations["convox.com/restart"] = strconv.FormatInt(time.Now().UTC().UnixNano(), 10)
 
-	if _, err := ds.Update(s); err != nil {
+	if _, err := ds.Update(context.TODO(), s, am.UpdateOptions{}); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -147,7 +149,7 @@ func (p *Provider) serviceRestartDaemonset(app, name string) error {
 func (p *Provider) serviceRestartDeployment(app, name string) error {
 	ds := p.Cluster.AppsV1().Deployments(p.AppNamespace(app))
 
-	s, err := ds.Get(name, am.GetOptions{})
+	s, err := ds.Get(context.TODO(), name, am.GetOptions{})
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -158,7 +160,7 @@ func (p *Provider) serviceRestartDeployment(app, name string) error {
 
 	s.Spec.Template.Annotations["convox.com/restart"] = strconv.FormatInt(time.Now().UTC().UnixNano(), 10)
 
-	if _, err := ds.Update(s); err != nil {
+	if _, err := ds.Update(context.TODO(), s, am.UpdateOptions{}); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -166,7 +168,7 @@ func (p *Provider) serviceRestartDeployment(app, name string) error {
 }
 
 func (p *Provider) ServiceUpdate(app, name string, opts structs.ServiceUpdateOptions) error {
-	d, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).Get(name, am.GetOptions{})
+	d, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).Get(context.TODO(), name, am.GetOptions{})
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -176,7 +178,24 @@ func (p *Provider) ServiceUpdate(app, name string, opts structs.ServiceUpdateOpt
 		d.Spec.Replicas = &c
 	}
 
-	if _, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).Update(d); err != nil {
+	if opts.Cpu != nil {
+		cpuSize := resource.MustParse(fmt.Sprintf("%dm", *opts.Cpu))
+
+		d.Spec.Template.Spec.Containers[0].Resources.
+			Requests[v1.ResourceCPU] = cpuSize
+	}
+
+	if opts.Memory != nil {
+		memorySize := resource.MustParse(fmt.Sprintf("%dMi", *opts.Memory))
+
+		d.Spec.Template.Spec.Containers[0].Resources.
+			Limits[v1.ResourceMemory] = memorySize
+
+		d.Spec.Template.Spec.Containers[0].Resources.
+			Requests[v1.ResourceMemory] = memorySize
+	}
+
+	if _, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).Update(context.TODO(), d, am.UpdateOptions{}); err != nil {
 		return errors.WithStack(err)
 	}
 

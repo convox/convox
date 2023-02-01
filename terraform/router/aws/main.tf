@@ -1,8 +1,8 @@
 locals {
-  tags = {
+  tags = merge(var.tags, {
     System = "convox"
     Rack   = var.name
-  }
+  })
 }
 
 data "aws_region" "current" {
@@ -60,8 +60,9 @@ resource "kubernetes_service" "router" {
     name      = "router"
 
     annotations = {
-      "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout" = "${var.idle_timeout}"
-      "service.beta.kubernetes.io/aws-load-balancer-type"                    = "nlb"
+      "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout"  = "${var.idle_timeout}"
+      "service.beta.kubernetes.io/aws-load-balancer-type"                     = "nlb"
+      "service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags" = join(",", [for key, value in local.tags : "${key}=${value}"])
     }
   }
 

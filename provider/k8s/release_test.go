@@ -2,7 +2,7 @@ package k8s_test
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"sort"
 	"strings"
 	"testing"
@@ -96,7 +96,7 @@ func TestReleasePromote(t *testing.T) {
 }
 
 func releaseApply(aa *atom.MockInterface, ns, id, atom, fixture string) error {
-	data, err := ioutil.ReadFile(fmt.Sprintf("testdata/release-%s.yml", fixture))
+	data, err := os.ReadFile(fmt.Sprintf("testdata/release-%s.yml", fixture))
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -127,7 +127,7 @@ func releaseCreate(kc cv.Interface, ns, id, fixture string) error {
 }
 
 func releaseFixture(name string) (*ca.ReleaseSpec, error) {
-	data, err := ioutil.ReadFile(fmt.Sprintf("testdata/release-%s.yml", name))
+	data, err := os.ReadFile(fmt.Sprintf("testdata/release-%s.yml", name))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

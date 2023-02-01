@@ -18,6 +18,7 @@ module "k8s" {
   docker_hub_authentication = var.docker_hub_authentication
   domain                    = var.domain
   image                     = var.image
+  metrics_scraper_host      = var.metrics_scraper_host
   namespace                 = var.namespace
   rack                      = var.name
   release                   = var.release
@@ -26,9 +27,9 @@ module "k8s" {
 
   annotations = {
     "cert-manager.io/cluster-issuer" = "letsencrypt"
+    "cert-manager.io/duration"       = var.cert_duration
     "eks.amazonaws.com/role-arn"     = aws_iam_role.api.arn
     "iam.amazonaws.com/role"         = aws_iam_role.api.arn
-    "kubernetes.io/ingress.class"    = "nginx"
   }
 
   env = {

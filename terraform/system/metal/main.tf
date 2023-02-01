@@ -3,7 +3,7 @@ data "http" "releases" {
 }
 
 locals {
-  current = jsondecode(data.http.releases.body).tag_name
+  current = jsondecode(data.http.releases.response_body).tag_name
   release = coalesce(var.release, local.current)
 }
 

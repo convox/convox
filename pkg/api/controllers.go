@@ -566,12 +566,12 @@ func (s *Server) InstanceKeyroll(c *stdapi.Context) error {
 		return err
 	}
 
-	err := s.provider(c).WithContext(c.Context()).InstanceKeyroll()
+	v, err := s.provider(c).WithContext(c.Context()).InstanceKeyroll()
 	if err != nil {
 		return err
 	}
 
-	return c.RenderOK()
+	return c.RenderJSON(v)
 }
 
 func (s *Server) InstanceList(c *stdapi.Context) error {
@@ -1528,4 +1528,3 @@ func (s *Server) SystemUpdate(c *stdapi.Context) error {
 func (s *Server) Workers(c *stdapi.Context) error {
 	return stdapi.Errorf(404, "not available via api")
 }
-

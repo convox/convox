@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
@@ -15,6 +16,8 @@ import (
 	"github.com/convox/convox/pkg/structs"
 	ca "github.com/convox/convox/provider/k8s/pkg/apis/convox/v1"
 	"github.com/pkg/errors"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	v1 "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -108,7 +111,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 	items = append(items, data)
 
 	// ca
-	if ca, err := p.Cluster.CoreV1().Secrets("convox-system").Get("ca", am.GetOptions{}); err == nil {
+	if ca, err := p.Cluster.CoreV1().Secrets("convox-system").Get(context.TODO(), "ca", am.GetOptions{}); err == nil {
 		data, err := p.releaseTemplateCA(a, ca)
 		if err != nil {
 			return errors.WithStack(err)
@@ -279,7 +282,7 @@ func (p *Provider) releaseMarshal(r *structs.Release) *ca.Release {
 }
 
 func (p *Provider) releaseTemplateApp(a *structs.App, opts structs.ReleasePromoteOptions) ([]byte, error) {
-	owner, err := p.Cluster.CoreV1().Namespaces().Get(p.Namespace, am.GetOptions{})
+	owner, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), p.Namespace, am.GetOptions{})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -331,11 +334,6 @@ func (p *Provider) releaseTemplateCA(a *structs.App, ca *v1.Secret) ([]byte, err
 }
 
 func (p *Provider) releaseTemplateIngress(a *structs.App, ss manifest.Services, opts structs.ReleasePromoteOptions) ([]byte, error) {
-	ans, err := p.Engine.IngressAnnotations(a.Name)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
 	idles, err := p.Engine.AppIdles(a.Name)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -343,7 +341,13 @@ func (p *Provider) releaseTemplateIngress(a *structs.App, ss manifest.Services, 
 
 	items := [][]byte{}
 
-	for _, s := range ss {
+	for i := range ss {
+		s := ss[i]
+		ans, err := p.Engine.IngressAnnotations(s.Certificate.Duration)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
 		params := map[string]interface{}{
 			"Annotations": ans,
 			"App":         a.Name,
@@ -419,7 +423,8 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 		sc[s.Name] = s.Count
 	}
 
-	for _, s := range ss {
+	for i := range ss {
+		s := ss[i]
 		min := s.Deployment.Minimum
 		max := s.Deployment.Maximum
 
@@ -469,6 +474,11 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 }
 
 func (p *Provider) releaseTemplateTimer(a *structs.App, e structs.Environment, r *structs.Release, s *manifest.Service, t manifest.Timer) ([]byte, error) {
+	if t.Concurrency != "" {
+		caser := cases.Title(language.Und, cases.NoLower)
+		t.Concurrency = caser.String(t.Concurrency)
+	}
+
 	params := map[string]interface{}{
 		"App":       a,
 		"Namespace": p.AppNamespace(a.Name),
@@ -494,7 +504,8 @@ func (p *Provider) releaseTemplateTimer(a *structs.App, e structs.Environment, r
 func (p *Provider) releaseTemplateVolumes(a *structs.App, ss manifest.Services) ([]byte, error) {
 	vsh := map[string]bool{}
 
-	for _, s := range ss {
+	for i := range ss {
+		s := ss[i]
 		for _, v := range p.volumeSources(a.Name, s.Name, s.Volumes) {
 			if !systemVolume(v) {
 				vsh[v] = true
@@ -540,7 +551,9 @@ func (p *Provider) releaseUnmarshal(kr *ca.Release) (*structs.Release, error) {
 	}
 
 	if len(r.Env) == 0 {
-		if s, err := p.Cluster.CoreV1().Secrets(p.AppNamespace(r.App)).Get(fmt.Sprintf("release-%s", kr.ObjectMeta.Name), am.GetOptions{}); err == nil {
+		if s, err := p.Cluster.CoreV1().Secrets(p.AppNamespace(r.App)).Get(
+			context.TODO(), fmt.Sprintf("release-%s", kr.ObjectMeta.Name), am.GetOptions{},
+		); err == nil {
 			e := structs.Environment{}
 
 			for k, v := range s.Data {

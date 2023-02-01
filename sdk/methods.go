@@ -384,14 +384,20 @@ func (c *Client) Initialize(opts structs.ProviderOptions) error {
 	return err
 }
 
-func (c *Client) InstanceKeyroll() error {
+func (c *Client) InstanceKeyroll() (*structs.KeyPair, error) {
 	var err error
 
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
 
-	err = c.Post(fmt.Sprintf("/instances/keyroll"), ro, nil)
+	var v structs.KeyPair
 
-	return err
+	err = c.Post("/instances/keyroll", ro, &v)
+	if err != nil && strings.Contains(err.Error(), "unexpected end") {
+		// only v3 return the body for keyroll
+		err = nil
+	}
+
+	return &v, err
 }
 
 func (c *Client) InstanceList() (structs.Instances, error) {
@@ -806,6 +812,21 @@ func (c *Client) ServiceList(app string) (structs.Services, error) {
 	return v, err
 }
 
+func (c *Client) ServiceMetrics(app, name string, opts structs.MetricsOptions) (structs.Metrics, error) {
+	var err error
+
+	ro, err := stdsdk.MarshalOptions(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	var v structs.Metrics
+
+	err = c.Get(fmt.Sprintf("/apps/%s/services/%s/metrics", app, name), ro, &v)
+
+	return v, err
+}
+
 func (c *Client) ServiceRestart(app string, name string) error {
 	var err error
 
@@ -1039,4 +1060,3 @@ func (c *Client) Workers() error {
 	err := fmt.Errorf("not available via api")
 	return err
 }
-

@@ -40,6 +40,9 @@ convox registries | grep quay.io | grep convox+ci
 convox registries remove quay.io
 convox registries | grep -v quay.io
 
+# test files
+sudo chmod -R +x $root/ci/test
+
 # app (httpd)
 cd $root/examples/httpd
 convox apps create httpd
@@ -66,41 +69,101 @@ releasee=$(convox env set FOO=bar -a httpd --id) && [ -n "$releasee" ]
 convox env get FOO -a httpd | grep bar
 convox releases -a httpd | grep $releasee
 convox releases info $releasee -a httpd | grep FOO
-convox releases manifest $releasee -a httpd | grep "image: httpd"
+convox releases manifest $releasee -a httpd | grep "build: ."
 convox releases promote $release -a httpd
 endpoint=$(convox api get /apps/httpd/services | jq -r '.[] | select(.name == "web") | .domain')
 fetch https://$endpoint | grep "It works"
 sleep 30
 convox rack ps -a | grep httpd
-convox logs -a httpd --no-follow --since 10m | grep service/web
+convox logs -a httpd --no-follow --since 1m
+convox logs -a httpd --no-follow --since 1m | grep service/web
 releaser=$(convox releases rollback $release -a httpd --id)
 convox ps -a httpd | grep $releaser
-ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running")|.id' | head -n 1)
+ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | grep web | head -n 1)
 convox ps info $ps -a httpd | grep $releaser
-convox scale web --count 2 --cpu 192 --memory 256 -a httpd
-convox services -a httpd | grep web | grep 443:80 | grep $endpoint
+
+$root/ci/test/app_scale.sh &
+$root/ci/test/app_htdocs.sh &
+
+wait
+
+convox scale web --count 1
+convox deploy -a httpd
+ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | grep web | head -n 1)
+convox exec -a httpd $ps -- env | grep "ONE_URL="
+convox exec -a httpd $ps -- env | grep "ONE_USER="
+convox exec -a httpd $ps -- env | grep "ONE_PASS="
+convox exec -a httpd $ps -- env | grep "ONE_HOST="
+convox exec -a httpd $ps -- env | grep "ONE_PORT="
+convox exec -a httpd $ps -- env | grep "ONE_NAME="
+convox exec -a httpd $ps -- env | grep "CUSTOM_DATABASE="
+
+# test apps cancel
+echo "FOO=not-bar" | convox env set -a httpd
+
+cp Dockerfile Dockerfile.original # copy current Dockerfile
+echo "COPY new-feature.html /usr/local/apache2/htdocs/index.html" >> Dockerfile
+echo "ENTRYPOINT sleep 60 && httpd-foreground" >> Dockerfile
+nohup convox deploy & # run deploy on background
+
+i=0
+while [ "$(convox apps info -a httpd | grep updating | wc -l)" != "1" ]
+do
+  # exit if takes more than 60 seconds/times
+  if [ $((i++)) -gt 60 ]; then
+    exit 1
+  fi
+  echo "waiting for web to be marked as updating..."
+  sleep 1
+done
+
+echo "app is updating will cancel in 10 secs"
+sleep 10
+
+convox apps cancel -a httpd | grep "OK"
+echo "app deployment canceled"
+
 endpoint=$(convox api get /apps/httpd/services | jq -r '.[] | select(.name == "web") | .domain')
 fetch https://$endpoint | grep "It works"
-convox ps -a httpd | grep web | wc -l | grep 2
-ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running")|.id' | head -n 1)
-convox exec $ps "ls -la" -a httpd | grep htdocs
-cat /dev/null | convox exec $ps 'sh -c "sleep 2; echo test"' -a httpd | grep test
-convox run web "ls -la" -a httpd | grep htdocs
-cat /dev/null | convox run web 'sh -c "sleep 2; echo test"' -a httpd | grep test
-echo foo > /tmp/file
-convox cp /tmp/file $ps:/file -a httpd
-convox exec $ps "cat /file" -a httpd | grep foo
-mkdir -p /tmp/dir
-echo foo > /tmp/dir/file
-convox cp /tmp/dir $ps:/dir -a httpd
-convox exec $ps "cat /dir/file" -a httpd | grep foo
-convox cp $ps:/dir /tmp/dir2 -a httpd
-cat /tmp/dir2/file | grep foo
-convox cp $ps:/file /tmp/file2 -a httpd
-cat /tmp/file2 | grep foo
-convox ps stop $ps -a httpd
-convox ps -a httpd | grep -v $ps
-convox deploy -a httpd
+echo "still returning the right content"
+
+convox env -a httpd | grep "FOO" | grep "not-bar"
+echo "env var is correctly set"
+
+mv Dockerfile.original Dockerfile # replace the Dockerfile with the original copy
+
+# timers
+sleep 30
+$root/ci/test/timers.sh &
+
+# postgres resource test
+$root/ci/test/resources_postgres.sh &
+
+# mariadb resource test
+$root/ci/test/resources_mariadb.sh &
+
+# mysqldb resource test
+$root/ci/test/resources_mysql.sh &
+
+# redis resource test
+$root/ci/test/resources_redis.sh &
+
+# memcache resource test
+$root/ci/test/resources_memcache.sh &
+
+# app (httpd2)
+$root/ci/test/app_internal_communication.sh &
+wait
+
+# app (gpu)
+cd $root/examples/gpu
+convox apps create gpu
+convox apps
+convox apps | grep gpu
+convox apps info gpu | grep running
+release=$(convox build -a gpu -d cibuild --id) && [ -n "$release" ]
 
 # cleanup
+convox apps delete gpu
 convox apps delete httpd
+convox apps delete httpd2

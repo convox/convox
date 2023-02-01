@@ -20,12 +20,18 @@ import (
 	"github.com/gobuffalo/packr"
 	"github.com/pkg/errors"
 
+	ae "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	metricsclientset "k8s.io/metrics/pkg/client/clientset/versioned"
+)
+
+const (
+	CURRENT_CM_VERSION    = "v1.9.0"
+	MAX_RETRIES_UPDATE_CM = 10
 )
 
 type Provider struct {
@@ -39,6 +45,7 @@ type Provider struct {
 	Image         string
 	Name          string
 	MetricsClient metricsclientset.Interface
+	MetricScraper *MetricScraperClient
 	Namespace     string
 	Password      string
 	Provider      string
@@ -77,7 +84,7 @@ func FromEnv() (*Provider, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	ns, err := kc.CoreV1().Namespaces().Get(namespace, am.GetOptions{})
+	ns, err := kc.CoreV1().Namespaces().Get(context.TODO(), namespace, am.GetOptions{})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -92,6 +99,8 @@ func FromEnv() (*Provider, error) {
 		return nil, err
 	}
 
+	ms := NewMetricScraperClient(kc, os.Getenv("METRICS_SCRAPER_HOST"))
+
 	p := &Provider{
 		Atom:          ac,
 		CertManager:   os.Getenv("CERT_MANAGER") == "true",
@@ -101,6 +110,7 @@ func FromEnv() (*Provider, error) {
 		Domain:        os.Getenv("DOMAIN"),
 		Image:         os.Getenv("IMAGE"),
 		MetricsClient: mc,
+		MetricScraper: ms,
 		Name:          ns.Labels["rack"],
 		Namespace:     ns.Name,
 		Password:      os.Getenv("PASSWORD"),
@@ -134,9 +144,7 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 		return errors.WithStack(err)
 	}
 
-	if err := p.initializeTemplates(); err != nil {
-		return errors.WithStack(err)
-	}
+	go p.initializeTemplates()
 
 	if !opts.IgnorePriorityClass {
 		if err := p.initializePriorityClass(); err != nil {
@@ -195,18 +203,31 @@ func (p *Provider) applySystemTemplate(name string, params map[string]interface{
 	return nil
 }
 
+func (p *Provider) deleteSystemTemplate(name string, params map[string]interface{}) error {
+	data, err := p.RenderTemplate(fmt.Sprintf("system/%s", name), params)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if err := Delete(data); err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
+}
+
 func (p *Provider) heartbeat() error {
 	as, err := p.AppList()
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	ns, err := p.Cluster.CoreV1().Nodes().List(am.ListOptions{})
+	ns, err := p.Cluster.CoreV1().Nodes().List(context.TODO(), am.ListOptions{})
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	ks, err := p.Cluster.CoreV1().Namespaces().Get("kube-system", am.GetOptions{})
+	ks, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), "kube-system", am.GetOptions{})
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -246,27 +267,58 @@ func (p *Provider) initializePriorityClass() error {
 		return errors.WithStack(err)
 	}
 
-	if _, err := p.Cluster.AppsV1().Deployments(p.Namespace).Patch("api", types.JSONPatchType, patch); err != nil {
+	if _, err := p.Cluster.AppsV1().Deployments(p.Namespace).Patch(context.TODO(), "api", types.JSONPatchType, patch, am.PatchOptions{}); err != nil {
 		return errors.WithStack(err)
 	}
 
 	return nil
 }
 
-func (p *Provider) initializeTemplates() error {
+func (p *Provider) initializeTemplates() {
 	if err := p.applySystemTemplate("crd", nil); err != nil {
-		return errors.WithStack(err)
+		panic(errors.WithStack(err))
 	}
 
-	if p.CertManager {
+	if !p.CertManager {
+		fmt.Println("Installing cert-manager skipped")
+		return
+	}
+
+	d, _ := p.Cluster.AppsV1().Deployments("cert-manager").Get(context.TODO(), "cert-manager", am.GetOptions{})
+	if d == nil {
 		if err := p.applySystemTemplate("cert-manager", nil); err != nil {
-			return errors.WithStack(err)
+			panic(errors.WithStack(err))
+		}
+		return
+	}
+
+	if d.Spec.Template.Labels["app.kubernetes.io/version"] != CURRENT_CM_VERSION {
+		fmt.Println("Updating cert-manager")
+		p.deleteSystemTemplate("cert-manager", nil)
+
+		currentRetry := 0
+		for {
+			_, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), "cert-manager", am.GetOptions{})
+			if ae.IsNotFound(err) {
+				fmt.Println("Uninstalled old cert-manager")
+				break
+			}
+
+			if currentRetry == MAX_RETRIES_UPDATE_CM {
+				panic("Unable to install new cert-manager version, the old version was not uninstalled")
+			}
+			currentRetry++
+			time.Sleep(time.Second * 10)
 		}
 
-		go p.installCertManagerConfig()
+		fmt.Println("Installing new cert-manager version")
+		err := p.applySystemTemplate("cert-manager", nil)
+		if err != nil {
+			panic(errors.WithStack(fmt.Errorf("could not update cert-manager: %+v", err)))
+		}
 	}
 
-	return nil
+	go p.installCertManagerConfig()
 }
 
 func (p *Provider) installCertManagerConfig() {
@@ -281,7 +333,7 @@ func (p *Provider) installCertManagerConfig() {
 	for {
 		select {
 		case <-tick.C:
-			d, err := p.Cluster.AppsV1().Deployments("cert-manager").Get("cert-manager-webhook", am.GetOptions{})
+			d, err := p.Cluster.AppsV1().Deployments("cert-manager").Get(context.TODO(), "cert-manager-webhook", am.GetOptions{})
 			if err != nil {
 				fmt.Printf("could not get cert manager webhook deployment: %s\n", err)
 				continue
@@ -296,7 +348,7 @@ func (p *Provider) installCertManagerConfig() {
 						break
 					}
 
-					if cas, err := p.Cluster.CoreV1().Secrets(p.Namespace).Get("ca", am.GetOptions{}); err == nil {
+					if cas, err := p.Cluster.CoreV1().Secrets(p.Namespace).Get(context.TODO(), "ca", am.GetOptions{}); err == nil {
 						params := map[string]interface{}{
 							"CaPublic":  base64.StdEncoding.EncodeToString(cas.Data["tls.crt"]),
 							"CaPrivate": base64.StdEncoding.EncodeToString(cas.Data["tls.key"]),

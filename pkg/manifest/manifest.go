@@ -169,12 +169,18 @@ func (m *Manifest) ApplyDefaults() error {
 			m.Services[i].Scale.Count = ServiceScaleCount{Min: 1, Max: 1}
 		}
 
-		if m.Services[i].Scale.Cpu == 0 {
-			m.Services[i].Scale.Cpu = DefaultCpu
+		if m.Services[i].Scale.Gpu.Count == 0 {
+			if m.Services[i].Scale.Cpu == 0 {
+				m.Services[i].Scale.Cpu = DefaultCpu
+			}
+
+			if m.Services[i].Scale.Memory == 0 {
+				m.Services[i].Scale.Memory = DefaultMem
+			}
 		}
 
-		if m.Services[i].Scale.Memory == 0 {
-			m.Services[i].Scale.Memory = DefaultMem
+		if m.Services[i].Scale.Gpu.Count > 0 && m.Services[i].Scale.Gpu.Vendor == "" {
+			m.Services[i].Scale.Gpu.Vendor = "nvidia"
 		}
 
 		if !m.AttributeExists(fmt.Sprintf("services.%s.termination.grace", s.Name)) {

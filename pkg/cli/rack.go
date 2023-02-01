@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/convox/convox/pkg/common"
@@ -102,6 +103,16 @@ func validateParams(params map[string]string) error {
 	srdown, srup := params["ScheduleRackScaleDown"], params["ScheduleRackScaleUp"]
 	if (srdown == "" || srup == "") && (srdown != "" || srup != "") {
 		return errors.New("to schedule your rack to turn on/off you need both ScheduleRackScaleDown and ScheduleRackScaleUp parameters")
+	}
+
+	// format: "key1=val1,key2=val2"
+	if tags, has := params["tags"]; has {
+		tList := strings.Split(tags, ",")
+		for _, p := range tList {
+			if len(strings.Split(p, "=")) != 2 {
+				return errors.New("invalid value for tags param")
+			}
+		}
 	}
 
 	return nil
@@ -446,7 +457,36 @@ func RackUpdate(_ sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	if err := r.UpdateVersion(c.Arg(0)); err != nil {
+	cl, err := r.Client()
+	if err != nil {
+		return err
+	}
+
+	s, err := cl.SystemGet()
+	if err != nil {
+		return err
+	}
+
+	currentVersion := s.Version
+	newVersion := c.Arg(0)
+
+	// disable downgrabe from minor version for v3 rack
+	if strings.HasPrefix(currentVersion, "3.") && strings.HasPrefix(newVersion, "3.") {
+		curv, err := strconv.Atoi(strings.Split(currentVersion, ".")[1])
+		if err != nil {
+			return err
+		}
+
+		newv, err := strconv.Atoi(strings.Split(newVersion, ".")[1])
+		if err != nil {
+			return err
+		}
+		if newv < curv {
+			return fmt.Errorf("Downgrade from minor version is not supported for v3 rack. Contact the support.")
+		}
+	}
+
+	if err := r.UpdateVersion(newVersion); err != nil {
 		return err
 	}
 

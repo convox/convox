@@ -1,8 +1,9 @@
 locals {
   internet_gateway_id = var.internet_gateway_id == "" ? aws_internet_gateway.nodes[0].id : var.internet_gateway_id
-  tags = {
+  tags = merge(var.tags, {
     Name = var.name
-  }
+    Rack = var.name
+  })
   vpc_id = var.vpc_id == "" ? aws_vpc.nodes[0].id : var.vpc_id
 }
 

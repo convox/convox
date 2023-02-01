@@ -10,9 +10,10 @@ provider "kubernetes" {
 }
 
 locals {
-  availability_zones     = var.availability_zones != "" ? compact(split(",", var.availability_zones)) : data.aws_availability_zones.available.names
-  network_resource_count = var.high_availability ? 3 : 2
-  oidc_sub               = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
+  availability_zones       = var.availability_zones != "" ? compact(split(",", var.availability_zones)) : data.aws_availability_zones.available.names
+  network_resource_count   = var.high_availability ? 3 : 2
+  oidc_sub                 = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
+  gpu_tag_disabled_regions = ["eu-north-1", "ca-central-1"]
 }
 
 data "aws_availability_zones" "available" {
@@ -46,7 +47,6 @@ resource "null_resource" "wait_k8s_api" {
   depends_on = [
     aws_eks_cluster.cluster
   ]
-
 }
 
 resource "aws_eks_cluster" "cluster" {
@@ -58,6 +58,7 @@ resource "aws_eks_cluster" "cluster" {
 
   name     = var.name
   role_arn = aws_iam_role.cluster.arn
+  tags     = local.tags
   version  = var.k8s_version
 
   vpc_config {
@@ -70,6 +71,7 @@ resource "aws_eks_cluster" "cluster" {
 
 resource "aws_iam_openid_connect_provider" "cluster" {
   client_id_list  = ["sts.amazonaws.com"]
+  tags            = local.tags
   thumbprint_list = ["9e99a48a9960b14926bb7f3b02e22da2b0ab7280"]
   url             = aws_eks_cluster.cluster.identity.0.oidc.0.issuer
 }
@@ -97,23 +99,38 @@ resource "aws_eks_node_group" "cluster" {
   ami_type        = var.gpu_type ? "AL2_x86_64_GPU" : var.arm_type ? "AL2_ARM_64" : "AL2_x86_64"
   capacity_type   = var.node_capacity_type
   cluster_name    = aws_eks_cluster.cluster.name
-  disk_size       = random_id.node_group.keepers.node_disk
   instance_types  = split(",", random_id.node_group.keepers.node_type)
-  node_group_name = "${var.name}-${local.availability_zones[count.index]}-${random_id.node_group.hex}"
+  node_group_name = "${var.name}-${local.availability_zones[count.index]}-${count.index}${random_id.node_group.hex}"
   node_role_arn   = random_id.node_group.keepers.role_arn
   subnet_ids      = [var.private ? aws_subnet.private[count.index].id : aws_subnet.public[count.index].id]
+  tags            = local.tags
   version         = var.k8s_version
+
+  launch_template {
+    id      = aws_launch_template.cluster.id
+    version = "$Latest"
+  }
 
   scaling_config {
     desired_size = 1
     min_size     = 1
-    max_size     = var.high_availability ? 100 : 3
+    max_size     = 100
   }
 
   lifecycle {
     create_before_destroy = true
     ignore_changes        = [scaling_config[0].desired_size]
   }
+}
+
+resource "null_resource" "wait_k8s_cluster" {
+  provisioner "local-exec" {
+    command = "sleep 10"
+  }
+
+  depends_on = [
+    aws_eks_node_group.cluster
+  ]
 }
 
 resource "local_file" "kubeconfig" {
@@ -127,4 +144,161 @@ resource "local_file" "kubeconfig" {
     cluster  = aws_eks_cluster.cluster.id
     endpoint = aws_eks_cluster.cluster.endpoint
   })
+}
+
+resource "aws_launch_template" "cluster" {
+  block_device_mappings {
+    device_name = "/dev/xvda"
+    ebs {
+      volume_type = "gp3"
+      volume_size = random_id.node_group.keepers.node_disk
+    }
+  }
+
+  dynamic "tag_specifications" {
+    for_each = toset(
+      concat(["instance", "volume", "network-interface", "spot-instances-request"],
+        contains(local.gpu_tag_disabled_regions, data.aws_region.current.name) ? [] : ["elastic-gpu"]
+    ))
+    content {
+      resource_type = tag_specifications.key
+      tags          = local.tags
+    }
+  }
+
+  key_name = var.key_pair_name != "" ? var.key_pair_name : null
+}
+
+module "ebs_csi_driver_controller" {
+  depends_on = [
+    null_resource.wait_eks_addons
+  ]
+
+  source = "github.com/convox/terraform-kubernetes-ebs-csi-driver?ref=48f5650f72684b581697f8831b3f5b60ea624092"
+
+  ebs_csi_controller_image                   = "public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver"
+  ebs_csi_driver_version                     = "v1.9.0"
+  ebs_csi_controller_role_name               = "convox-ebs-csi-driver-controller"
+  ebs_csi_controller_role_policy_name_prefix = "convox-ebs-csi-driver-policy"
+  csi_controller_tolerations = [
+    { operator = "Exists", key = "CriticalAddonsOnly" },
+    { operator = "Exists", effect = "NoExecute", toleration_seconds = 300 }
+  ]
+  node_tolerations = [
+    { operator = "Exists", key = "CriticalAddonsOnly" },
+    { operator = "Exists", effect = "NoExecute", toleration_seconds = 300 }
+  ]
+  oidc_url = aws_iam_openid_connect_provider.cluster.url
+}
+
+resource "kubernetes_storage_class" "default" {
+  depends_on = [
+    null_resource.wait_k8s_api
+  ]
+
+  metadata {
+    labels = {
+      "ebs_driver_name" = module.ebs_csi_driver_controller.ebs_csi_driver_name
+    }
+
+    name = "gp3"
+    annotations = {
+      "storageclass.kubernetes.io/is-default-class" = "true"
+    }
+  }
+
+  storage_provisioner    = "ebs.csi.aws.com"
+  volume_binding_mode    = "WaitForFirstConsumer"
+  allow_volume_expansion = true
+  parameters = {
+    type = "gp3"
+  }
+}
+
+resource "kubernetes_annotations" "gp2" {
+  depends_on = [
+    kubernetes_storage_class.default
+  ]
+
+  api_version = "storage.k8s.io/v1"
+  kind        = "StorageClass"
+
+  metadata {
+    name = "gp2"
+  }
+
+  annotations = {
+    "storageclass.kubernetes.io/is-default-class" = "false"
+  }
+
+  force = true
+}
+
+resource "aws_eks_addon" "vpc_cni" {
+  depends_on = [
+    null_resource.wait_k8s_api
+  ]
+
+  cluster_name      = aws_eks_cluster.cluster.name
+  addon_name        = "vpc-cni"
+  addon_version     = var.vpc_cni_version
+  resolve_conflicts = "OVERWRITE"
+}
+
+resource "aws_eks_addon" "coredns" {
+  depends_on = [
+    null_resource.wait_k8s_api
+  ]
+
+  cluster_name      = aws_eks_cluster.cluster.name
+  addon_name        = "coredns"
+  addon_version     = var.coredns_version
+  resolve_conflicts = "OVERWRITE"
+}
+
+resource "aws_eks_addon" "kube_proxy" {
+  depends_on = [
+    null_resource.wait_k8s_api
+  ]
+
+  cluster_name      = aws_eks_cluster.cluster.name
+  addon_name        = "kube-proxy"
+  addon_version     = var.kube_proxy_version
+  resolve_conflicts = "OVERWRITE"
+}
+
+resource "null_resource" "wait_eks_addons" {
+  provisioner "local-exec" {
+    command = "sleep 1"
+  }
+
+  depends_on = [
+    aws_eks_addon.vpc_cni,
+    aws_eks_addon.coredns,
+    aws_eks_addon.kube_proxy
+  ]
+}
+
+resource "aws_autoscaling_schedule" "scaledown" {
+  count = length(var.schedule_rack_scale_down) > 6 ? (var.high_availability ? 3 : 1) : 0
+
+  scheduled_action_name  = "scaledown${count.index}"
+  min_size               = 0
+  max_size               = 0
+  desired_capacity       = 0
+  recurrence             = var.schedule_rack_scale_down
+  time_zone              = "UTC"
+  autoscaling_group_name = flatten(aws_eks_node_group.cluster[count.index].resources[*].autoscaling_groups[*].name)[0]
+}
+
+resource "aws_autoscaling_schedule" "scaleup" {
+  count = length(var.schedule_rack_scale_up) > 6 ? (var.high_availability ? 3 : 1) : 0
+
+  scheduled_action_name  = "scaleup${count.index}"
+  min_size               = 1
+  max_size               = 100
+  desired_capacity       = 1
+  recurrence             = var.schedule_rack_scale_up
+  time_zone              = "UTC"
+  autoscaling_group_name = flatten(aws_eks_node_group.cluster[count.index].resources[*].autoscaling_groups[*].name)[0]
 }

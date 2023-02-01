@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"context"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -17,21 +18,25 @@ func (p *Provider) CertificateApply(app, service string, port int, id string) er
 }
 
 func (p *Provider) CertificateCreate(pub, key string, opts structs.CertificateCreateOptions) (*structs.Certificate, error) {
-	s, err := p.Cluster.CoreV1().Secrets(p.Namespace).Create(&ac.Secret{
-		ObjectMeta: am.ObjectMeta{
-			GenerateName: "cert-",
-			Labels: map[string]string{
-				"system": "convox",
-				"rack":   p.Name,
-				"type":   "certificate",
+	s, err := p.Cluster.CoreV1().Secrets(p.Namespace).Create(
+		context.TODO(),
+		&ac.Secret{
+			ObjectMeta: am.ObjectMeta{
+				GenerateName: "cert-",
+				Labels: map[string]string{
+					"system": "convox",
+					"rack":   p.Name,
+					"type":   "certificate",
+				},
 			},
+			Data: map[string][]byte{
+				"tls.crt": []byte(fmt.Sprintf("%s\n%s", pub, common.DefaultString(opts.Chain, ""))),
+				"tls.key": []byte(key),
+			},
+			Type: "kubernetes.io/tls",
 		},
-		Data: map[string][]byte{
-			"tls.crt": []byte(fmt.Sprintf("%s\n%s", pub, common.DefaultString(opts.Chain, ""))),
-			"tls.key": []byte(key),
-		},
-		Type: "kubernetes.io/tls",
-	})
+		am.CreateOptions{},
+	)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -45,7 +50,7 @@ func (p *Provider) CertificateCreate(pub, key string, opts structs.CertificateCr
 }
 
 func (p *Provider) CertificateDelete(id string) error {
-	if err := p.Cluster.CoreV1().Secrets(p.Namespace).Delete(id, nil); err != nil {
+	if err := p.Cluster.CoreV1().Secrets(p.Namespace).Delete(context.TODO(), id, am.DeleteOptions{}); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -75,7 +80,7 @@ func (p *Provider) CertificateGenerate(domains []string) (*structs.Certificate, 
 }
 
 func (p *Provider) CertificateList() (structs.Certificates, error) {
-	ss, err := p.Cluster.CoreV1().Secrets(p.Namespace).List(am.ListOptions{
+	ss, err := p.Cluster.CoreV1().Secrets(p.Namespace).List(context.TODO(), am.ListOptions{
 		FieldSelector: "type=kubernetes.io/tls",
 		LabelSelector: fmt.Sprintf("system=convox,rack=%s,type=certificate", p.Name),
 	})

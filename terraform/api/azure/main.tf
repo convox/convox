@@ -56,10 +56,6 @@ module "k8s" {
   resolver                  = var.resolver
 
 
-  annotations = {
-    "kubernetes.io/ingress.class" = "nginx"
-  }
-
   labels = {
     "aadpodidbinding" : "api"
   }

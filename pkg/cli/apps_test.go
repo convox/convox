@@ -63,8 +63,8 @@ func TestAppsCancel(t *testing.T) {
 		fxapp := fxApp()
 		fxrelease := fxRelease()
 		i.On("AppCancel", "app1").Return(nil)
-		i.On("AppGet", "app1").Return(fxapp, nil)
-		i.On("ReleaseList", fxapp.Name, structs.ReleaseListOptions{}).Return(fxReleaseList(), nil)
+		i.On("ReleaseList", fxapp.Name, structs.ReleaseListOptions{Limit: options.Int(1)}).Return(fxReleaseList(), nil)
+		i.On("ReleaseGet", "app1", fxrelease.Id).Return(fxRelease(), nil)
 		i.On("ReleaseCreate", fxapp.Name, structs.ReleaseCreateOptions{
 			Build: &fxrelease.Build, Description: &fxrelease.Description, Env: &fxrelease.Env},
 		).Return(nil, nil)
@@ -73,17 +73,13 @@ func TestAppsCancel(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
-		res.RequireStdout(t, []string{
-			"Cancelling deployment of app1... Rewriting last active release... OK",
-		})
+		res.RequireStdout(t, []string{"Cancelling deployment of app1...", "Rewriting last active release...", "OK"})
 
 		res, err = testExecute(e, "apps cancel -a app1", nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
-		res.RequireStdout(t, []string{
-			"Cancelling deployment of app1... Rewriting last active release... OK",
-		})
+		res.RequireStdout(t, []string{"Cancelling deployment of app1...", "Rewriting last active release...", "OK"})
 	})
 }
 
@@ -95,9 +91,7 @@ func TestAppsCancelError(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 1, res.Code)
 		res.RequireStderr(t, []string{"ERROR: err1"})
-		res.RequireStdout(t, []string{
-			"Cancelling deployment of app1... ",
-		})
+		res.RequireStdout(t, []string{"Cancelling deployment of app1..."})
 	})
 }
 

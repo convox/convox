@@ -26,11 +26,13 @@ type Build struct {
 type Builds []Build
 
 type BuildCreateOptions struct {
-	Description *string `flag:"description,d" param:"description"`
-	Development *bool   `flag:"development" param:"development"`
-	External    *bool   `flag:"external" param:"external"`
-	Manifest    *string `flag:"manifest,m" param:"manifest"`
-	NoCache     *bool   `flag:"no-cache" param:"no-cache"`
+	BuildArgs      *[]string `flag:"build-args" param:"build-args"`
+	Description    *string   `flag:"description,d" param:"description"`
+	Development    *bool     `flag:"development" param:"development"`
+	External       *bool     `flag:"external" param:"external"`
+	Manifest       *string   `flag:"manifest,m" param:"manifest"`
+	NoCache        *bool     `flag:"no-cache" param:"no-cache"`
+	WildcardDomain *bool     `flag:"wildcard-domain" param:"wildcard-domain"`
 }
 
 type BuildListOptions struct {

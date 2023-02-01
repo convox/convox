@@ -6,6 +6,9 @@ variable "cluster" {
   type = string
 }
 
+// for eks addons dependency
+variable "eks_addons" {}
+
 variable "namespace" {
   type = string
 }

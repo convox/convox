@@ -5,7 +5,10 @@ FROM golang:1.16 AS development
 ARG DOCKER_ARCH=x86_64
 ARG KUBECTL_ARCH=amd64
 
+
 RUN apt-get update && apt-get -y install default-mysql-client postgresql-client redis-tools telnet
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN curl -s https://download.docker.com/linux/static/stable/$DOCKER_ARCH/docker-20.10.7.tgz | \
   tar -C /usr/bin --strip-components 1 -xz
@@ -50,10 +53,12 @@ ARG KUBECTL_ARCH=amd64
 
 RUN apt-get -qq update && apt-get -qq -y install curl default-mysql-client postgresql-client redis-tools telnet
 
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 RUN curl -s https://download.docker.com/linux/static/stable/$DOCKER_ARCH/docker-20.10.7.tgz | \
   tar -C /usr/bin --strip-components 1 -xz
 
-RUN curl -Ls https://storage.googleapis.com/kubernetes-release/release/v1.17.2/bin/linux/$KUBECTL_ARCH/kubectl -o /usr/bin/kubectl && \
+RUN curl -Ls https://storage.googleapis.com/kubernetes-release/release/v1.22.15/bin/linux/$KUBECTL_ARCH/kubectl -o /usr/bin/kubectl && \
   chmod +x /usr/bin/kubectl
 
 ENV DEVELOPMENT=false

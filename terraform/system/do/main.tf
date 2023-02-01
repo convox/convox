@@ -15,7 +15,7 @@ data "http" "releases" {
 }
 
 locals {
-  current = jsondecode(data.http.releases.body).tag_name
+  current = jsondecode(data.http.releases.response_body).tag_name
   release = coalesce(var.release, local.current)
 }
 
@@ -27,6 +27,7 @@ module "cluster" {
   }
 
   high_availability = var.high_availability
+  k8s_version       = var.k8s_version
   name              = var.name
   node_type         = var.node_type
   region            = var.region

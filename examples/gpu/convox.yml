@@ -1,0 +1,6 @@
+services:
+  cuda:
+    image: nvidia/cuda:11.6.2-base-ubuntu20.04
+    command: nvidia-smi
+    scale:
+      gpu: 1

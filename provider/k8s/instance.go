@@ -1,28 +1,31 @@
 package k8s
 
 import (
+	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
 
 	"github.com/convox/convox/pkg/structs"
 	"github.com/pkg/errors"
+	"golang.org/x/crypto/ssh"
 	ac "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	metricsv1beta1 "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 )
 
-func (p *Provider) InstanceKeyroll() error {
-	return errors.WithStack(fmt.Errorf("unimplemented"))
+func (p *Provider) InstanceKeyroll() (*structs.KeyPair, error) {
+	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
 }
 
 func (p *Provider) InstanceList() (structs.Instances, error) {
-	ns, err := p.Cluster.CoreV1().Nodes().List(am.ListOptions{})
+	ns, err := p.Cluster.CoreV1().Nodes().List(context.TODO(), am.ListOptions{})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	metricsByNode := map[string]metricsv1beta1.NodeMetrics{}
-	ms, err := p.MetricsClient.MetricsV1beta1().NodeMetricses().List(am.ListOptions{})
+	ms, err := p.MetricsClient.MetricsV1beta1().NodeMetricses().List(context.TODO(), am.ListOptions{})
 	if err != nil {
 		p.logger.Errorf("failed to fetch node metrics: %s", err)
 	} else {
@@ -34,7 +37,7 @@ func (p *Provider) InstanceList() (structs.Instances, error) {
 	is := structs.Instances{}
 
 	for _, n := range ns.Items {
-		pds, err := p.Cluster.CoreV1().Pods("").List(am.ListOptions{FieldSelector: fmt.Sprintf("spec.nodeName=%s", n.ObjectMeta.Name)})
+		pds, err := p.Cluster.CoreV1().Pods("").List(context.TODO(), am.ListOptions{FieldSelector: fmt.Sprintf("spec.nodeName=%s", n.ObjectMeta.Name)})
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -91,7 +94,94 @@ func (p *Provider) InstanceList() (structs.Instances, error) {
 }
 
 func (p *Provider) InstanceShell(id string, rw io.ReadWriter, opts structs.InstanceShellOptions) (int, error) {
-	return 0, errors.WithStack(fmt.Errorf("unimplemented"))
+	instances, err := p.InstanceList()
+	if err != nil {
+		return 0, err
+	}
+
+	var instance *structs.Instance
+	for i := range instances {
+		if instances[i].Id == id {
+			instance = &instances[i]
+		}
+	}
+	if instance == nil {
+		return 0, fmt.Errorf("instance not found")
+	}
+
+	if opts.PrivateKey == nil || *opts.PrivateKey == "" {
+		return 0, fmt.Errorf("private key is not provided")
+	}
+
+	privateKeyBytes, err := base64.StdEncoding.DecodeString(*opts.PrivateKey)
+	if len(privateKeyBytes) == 0 {
+		return 0, err
+	}
+
+	// configure SSH client
+	signer, err := ssh.ParsePrivateKey(privateKeyBytes)
+	if err != nil {
+		return 0, err
+	}
+
+	config := &ssh.ClientConfig{
+		User:            "ec2-user",
+		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // skipcq
+	}
+
+	ip := instance.PrivateIp
+	conn, err := ssh.Dial("tcp", fmt.Sprintf("%s:22", ip), config)
+	if err != nil {
+		return 0, err
+	}
+	defer conn.Close()
+
+	session, err := conn.NewSession()
+	if err != nil {
+		return 0, err
+	}
+	defer session.Close()
+
+	// Setup I/O
+	session.Stdout = rw
+	session.Stdin = rw
+	session.Stderr = rw
+
+	width := 0
+	height := 0
+
+	if opts.Width != nil {
+		width = *opts.Width
+	}
+
+	if opts.Height != nil {
+		height = *opts.Height
+	}
+
+	if err := session.RequestPty("xterm", height, width, ssh.TerminalModes{}); err != nil {
+		return 0, err
+	}
+
+	code := 0
+
+	if opts.Command != nil {
+		if err := session.Start(*opts.Command); err != nil {
+			return 0, err
+		}
+	} else {
+		if err := session.Shell(); err != nil {
+			return 0, err
+		}
+	}
+
+	if err := session.Wait(); err != nil {
+		if ee, ok := err.(*ssh.ExitError); ok {
+			code = ee.Waitmsg.ExitStatus()
+		}
+	}
+
+	return code, nil
 }
 
 func (p *Provider) InstanceTerminate(id string) error {

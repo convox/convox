@@ -10,6 +10,13 @@ variable "docker_hub_password" {
   default = ""
 }
 
+variable "ebs_csi_driver_name" {
+  type = string
+}
+
+// for eks addons dependency
+variable "eks_addons" {}
+
 variable "high_availability" {
   default = true
 }
@@ -40,6 +47,10 @@ variable "proxy_protocol" {
 
 variable "release" {
   type = string
+}
+
+variable "tags" {
+  default = {}
 }
 
 variable "subnets" {

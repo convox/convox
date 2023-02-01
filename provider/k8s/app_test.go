@@ -1,6 +1,7 @@
 package k8s_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -101,7 +102,7 @@ func TestAppDelete(t *testing.T) {
 		err := p.AppDelete("app1")
 		require.NoError(t, err)
 
-		_, err = kk.CoreV1().Namespaces().Get("rack1-app1", am.GetOptions{})
+		_, err = kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
 		require.EqualError(t, err, `namespaces "rack1-app1" not found`)
 	})
 }
@@ -110,6 +111,49 @@ func TestAppDeleteMissingApp(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		err := p.AppDelete("app1")
 		require.EqualError(t, err, "app not found: app1")
+	})
+}
+
+func TestNamespaceApp(t *testing.T) {
+	tests := []struct {
+		Name      string
+		RackName  string
+		AppName   string
+		Namespace string
+	}{
+		{
+			Name:      "Success",
+			RackName:  "rack1",
+			AppName:   "app1",
+			Namespace: "rack1-app1",
+		},
+		{
+			Name:      "Namespace not found",
+			RackName:  "rack2",
+			AppName:   "app2",
+			Namespace: "app2",
+		},
+	}
+
+	testProvider(t, func(p *k8s.Provider) {
+		for _, test := range tests {
+			fn := func(t *testing.T) {
+				kk := p.Cluster.(*fake.Clientset)
+
+				require.NoError(t, appCreate(kk, test.RackName, test.AppName))
+
+				ns, err := p.NamespaceApp(test.Namespace)
+
+				if err != nil {
+					require.EqualError(t, err, fmt.Sprintf("namespaces %q not found", test.Namespace))
+				} else {
+					require.NoError(t, err)
+					require.Equal(t, ns, test.AppName)
+				}
+			}
+
+			t.Run(test.Name, fn)
+		}
 	})
 }
 
@@ -154,7 +198,7 @@ func TestAppGetUpdating(t *testing.T) {
 				Name: "rack1-app1",
 			},
 		}
-		_, err := kk.CoreV1().Namespaces().Create(ns)
+		_, err := kk.CoreV1().Namespaces().Create(context.TODO(), ns, am.CreateOptions{})
 		require.NoError(t, err)
 
 		a, err := p.AppGet("app1")
@@ -233,7 +277,7 @@ func TestAppUpdateLocked(t *testing.T) {
 		err := p.AppUpdate("app1", structs.AppUpdateOptions{Lock: options.Bool(true)})
 		require.NoError(t, err)
 
-		ns, err := p.Cluster.CoreV1().Namespaces().Get("rack1-app1", am.GetOptions{})
+		ns, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
 		require.NoError(t, err)
 		require.Equal(t, "true", ns.Annotations["convox.com/lock"])
 	})
@@ -262,7 +306,7 @@ func TestAppUpdateDoesNotOverwriteExisting(t *testing.T) {
 		err = p.AppUpdate("app1", structs.AppUpdateOptions{Parameters: map[string]string{"Test": "bar"}})
 		require.NoError(t, err)
 
-		ns, err := p.Cluster.CoreV1().Namespaces().Get("rack1-app1", am.GetOptions{})
+		ns, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
 		require.NoError(t, err)
 		require.Equal(t, "true", ns.Annotations["convox.com/lock"])
 		require.Equal(t, `{"Test":"bar"}`, ns.Annotations["convox.com/params"])
@@ -285,7 +329,7 @@ func TestAppUpdateParameters(t *testing.T) {
 		err := p.AppUpdate("app1", structs.AppUpdateOptions{Parameters: map[string]string{"Test": "bar"}})
 		require.NoError(t, err)
 
-		ns, err := p.Cluster.CoreV1().Namespaces().Get("rack1-app1", am.GetOptions{})
+		ns, err := p.Cluster.CoreV1().Namespaces().Get(context.Background(), "rack1-app1", am.GetOptions{})
 		require.NoError(t, err)
 		require.Equal(t, `{"Test":"bar"}`, ns.Annotations["convox.com/params"])
 	})
@@ -303,19 +347,23 @@ func TestAppUpdateMissing(t *testing.T) {
 }
 
 func appCreate(c kubernetes.Interface, rack, name string) error {
-	_, err := c.CoreV1().Namespaces().Create(&ac.Namespace{
-		ObjectMeta: am.ObjectMeta{
-			Name:        fmt.Sprintf("%s-%s", rack, name),
-			Annotations: map[string]string{"convox.com/lock": "false"},
-			Labels: map[string]string{
-				"app":    name,
-				"name":   name,
-				"rack":   rack,
-				"system": "convox",
-				"type":   "app",
+	_, err := c.CoreV1().Namespaces().Create(
+		context.TODO(),
+		&ac.Namespace{
+			ObjectMeta: am.ObjectMeta{
+				Name:        fmt.Sprintf("%s-%s", rack, name),
+				Annotations: map[string]string{"convox.com/lock": "false"},
+				Labels: map[string]string{
+					"app":    name,
+					"name":   name,
+					"rack":   rack,
+					"system": "convox",
+					"type":   "app",
+				},
 			},
 		},
-	})
+		am.CreateOptions{},
+	)
 
 	return errors.WithStack(err)
 }

@@ -28,8 +28,8 @@ resource "kubernetes_cluster_role_binding" "auth" {
 
   subject {
     kind      = "ServiceAccount"
-    name      = kubernetes_service_account.metrics.metadata.0.name
-    namespace = kubernetes_service_account.metrics.metadata.0.namespace
+    name      = kubernetes_service_account.metrics.metadata[0].name
+    namespace = kubernetes_service_account.metrics.metadata[0].namespace
   }
 }
 
@@ -47,8 +47,8 @@ resource "kubernetes_role_binding" "auth" {
 
   subject {
     kind      = "ServiceAccount"
-    name      = kubernetes_service_account.metrics.metadata.0.name
-    namespace = kubernetes_service_account.metrics.metadata.0.namespace
+    name      = kubernetes_service_account.metrics.metadata[0].name
+    namespace = kubernetes_service_account.metrics.metadata[0].namespace
   }
 }
 
@@ -59,7 +59,13 @@ resource "kubernetes_cluster_role" "resource" {
 
   rule {
     api_groups = [""]
-    resources  = ["pods", "nodes", "nodes/stats", "namespaces"]
+    resources  = ["nodes/metrics"]
+    verbs      = ["get"]
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["pods", "nodes"]
     verbs      = ["get", "list", "watch"]
   }
 }
@@ -72,13 +78,13 @@ resource "kubernetes_cluster_role_binding" "resource" {
   role_ref {
     api_group = "rbac.authorization.k8s.io"
     kind      = "ClusterRole"
-    name      = kubernetes_cluster_role.resource.metadata.0.name
+    name      = kubernetes_cluster_role.resource.metadata[0].name
   }
 
   subject {
     kind      = "ServiceAccount"
-    name      = kubernetes_service_account.metrics.metadata.0.name
-    namespace = kubernetes_service_account.metrics.metadata.0.namespace
+    name      = kubernetes_service_account.metrics.metadata[0].name
+    namespace = kubernetes_service_account.metrics.metadata[0].namespace
   }
 }
 
@@ -135,13 +141,33 @@ resource "kubernetes_deployment" "metrics" {
 
       spec {
         automount_service_account_token = true
-        service_account_name            = kubernetes_service_account.metrics.metadata.0.name
+        service_account_name            = kubernetes_service_account.metrics.metadata[0].name
         priority_class_name             = var.set_priority_class ? "system-cluster-critical" : null
 
         container {
           name              = "metrics-server"
-          image             = "k8s.gcr.io/metrics-server/metrics-server:v0.3.7"
+          image             = "k8s.gcr.io/metrics-server/metrics-server:v0.6.1"
           image_pull_policy = "IfNotPresent"
+          args = [
+            "--cert-dir=/tmp",
+            "--secure-port=10250",
+            "--kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname",
+            "--kubelet-use-node-status-port",
+            "--metric-resolution=15s"
+          ]
+
+          security_context {
+            read_only_root_filesystem  = true
+            run_as_non_root            = true
+            run_as_user                = 1000
+            allow_privilege_escalation = false
+          }
+
+          port {
+            name           = "https"
+            container_port = 10250
+            protocol       = "TCP"
+          }
 
           volume_mount {
             name       = "tmp-dir"
@@ -175,9 +201,10 @@ resource "kubernetes_service" "metrics" {
     }
 
     port {
+      name        = "https"
       port        = 443
       protocol    = "TCP"
-      target_port = 443
+      target_port = "https"
     }
   }
 }

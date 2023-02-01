@@ -10,6 +10,11 @@ variable "cidr" {
   default = "10.1.0.0/16"
 }
 
+variable "coredns_version" {
+  type    = string
+  default = null
+}
+
 variable "gpu_type" {
   default = false
 }
@@ -22,9 +27,19 @@ variable "internet_gateway_id" {
   default = ""
 }
 
+variable "key_pair_name" {
+  type    = string
+  default = ""
+}
+
+variable "kube_proxy_version" {
+  type    = string
+  default = null
+}
+
 variable "k8s_version" {
-  type = string
-  default = "1.18"
+  type    = string
+  default = "1.21"
 }
 
 variable "name" {
@@ -47,6 +62,25 @@ variable "private" {
   default = true
 }
 
+variable "schedule_rack_scale_down" {
+  type    = string
+  default = ""
+}
+
+variable "schedule_rack_scale_up" {
+  type    = string
+  default = ""
+}
+
+variable "tags" {
+  default = {}
+}
+
 variable "vpc_id" {
   default = ""
+}
+
+variable "vpc_cni_version" {
+  type    = string
+  default = null
 }

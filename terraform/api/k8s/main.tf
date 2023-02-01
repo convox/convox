@@ -101,7 +101,7 @@ resource "kubernetes_deployment" "api" {
         share_process_namespace         = true
 
         dynamic "image_pull_secrets" {
-          for_each = var.docker_hub_authentication != null ? [var.docker_hub_authentication] : []
+          for_each = var.docker_hub_authentication != "NULL" ? [var.docker_hub_authentication] : []
           content {
             name = var.docker_hub_authentication
           }
@@ -122,6 +122,11 @@ resource "kubernetes_deployment" "api" {
           env {
             name  = "IMAGE"
             value = "${var.image}:${var.release}"
+          }
+
+          env {
+            name  = "METRICS_SCRAPER_HOST"
+            value = var.metrics_scraper_host
           }
 
           env {
@@ -263,12 +268,12 @@ resource "kubernetes_service" "api" {
   }
 }
 
-resource "kubernetes_ingress" "api" {
+resource "kubernetes_ingress_v1" "api" {
   wait_for_load_balancer = true
 
   metadata {
     namespace = var.namespace
-    name      = "api"
+    name      = "api-ing-v1"
 
     annotations = merge({
       "convox.com/backend-protocol" : "https",
@@ -284,6 +289,7 @@ resource "kubernetes_ingress" "api" {
   }
 
   spec {
+    ingress_class_name = "nginx"
     tls {
       hosts       = ["api.${var.domain}"]
       secret_name = "api-certificate"
@@ -295,8 +301,12 @@ resource "kubernetes_ingress" "api" {
       http {
         path {
           backend {
-            service_name = kubernetes_service.api.metadata.0.name
-            service_port = 5443
+            service {
+              name = kubernetes_service.api.metadata[0].name
+              port {
+                number = 5443
+              }
+            }
           }
         }
       }
@@ -304,12 +314,12 @@ resource "kubernetes_ingress" "api" {
   }
 }
 
-resource "kubernetes_ingress" "kubernetes" {
+resource "kubernetes_ingress_v1" "kubernetes" {
   wait_for_load_balancer = true
 
   metadata {
     namespace = var.namespace
-    name      = "kubernetes"
+    name      = "kubernetes-ing-v1"
 
     annotations = merge({
       "nginx.ingress.kubernetes.io/use-regex" : "true",
@@ -322,6 +332,7 @@ resource "kubernetes_ingress" "kubernetes" {
   }
 
   spec {
+    ingress_class_name = "nginx"
     tls {
       hosts       = ["api.${var.domain}"]
       secret_name = "api-certificate"
@@ -335,8 +346,12 @@ resource "kubernetes_ingress" "kubernetes" {
           path = "/kubernetes/.*"
 
           backend {
-            service_name = kubernetes_service.api.metadata.0.name
-            service_port = 8001
+            service {
+              name = kubernetes_service.api.metadata[0].name
+              port {
+                number = 8001
+              }
+            }
           }
         }
       }

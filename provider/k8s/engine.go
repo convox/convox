@@ -10,7 +10,7 @@ type Engine interface {
 	AppIdles(app string) (bool, error)
 	AppParameters() map[string]string
 	Heartbeat() (map[string]interface{}, error)
-	IngressAnnotations(app string) (map[string]string, error)
+	IngressAnnotations(certDuration string) (map[string]string, error)
 	IngressClass() string
 	Log(app, stream string, ts time.Time, message string) error
 	ManifestValidate(m *manifest.Manifest) error

@@ -59,6 +59,9 @@ services:
       targets:
         cpu: 50
         memory: 80
+        external:
+          - name: "datadogmetric@default:web-requests"
+            averageValue: 200
     singleton: false
     sticky: true
     termination:
@@ -67,13 +70,15 @@ services:
     timeout: 180
     tls:
       redirect: true
+    whitelist: 10.0.0.128/16,192.168.0.1/32
 ```
 
 | Attribute     | Type       | Default             | Description                                                                                                                                |
 | ------------- | ---------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | **agent**       | boolean    | false               | Set to **true** to declare this Service as an [Agent](/configuration/agents)                                                      |
 | **annotations** | list       |                     | A list of annotation keys and values to populate the metadata for the deployed pods and their serviceaccounts                              |
-| **build**       | string/map | .                   | Build definition (see below)                                                                                                               |
+| **build**       | string/map | .                   | Build definition (see below)                                                                                                                                            |
+| **certificate**| map         |                     | Define certificate parameters                                                                       |
 | **command**     | string     | **CMD** of Dockerfile | The command to run to start a [Process](/reference/primitives/app/process) for this Service                                                                       |
 | **deployment**  | map        |                     | Manual control over deployment parameters                                                                                                  |
 | **domain**      | string     |                     | A custom domain(s) (comma separated) to route to this Service                                                                              |
@@ -92,8 +97,30 @@ services:
 | **test**        | string     |                     | A command to run to test this Service when running **convox test**                                                                           |
 | **timeout**     | number     | 60                  | Timeout period (in seconds) for reading/writing requests to/from your service                                                              |
 | **tls**         | map        |                     | TLS-related configuration                                                                                                                  |
+| **whitelist**   | string     |                     | Comma delimited list of CIDRs, e.g. `10.0.0.0/24,172.10.0.1`, to allow access to the service                                                                                                                  |
 
-> Environment variables **must** be declared to be populated for a Service.
+> Environment variables declared on `convox.yml` will be populated for a Service.
+
+#### *annotations
+You can use annotations to attach arbitrary non-identifying metadata to objects. Clients such as tools and libraries can retrieve this metadata. On Convox, annotations will reflect in pods and service accounts.
+
+Here are some examples of information that can be recorded in annotations:
+- Build, release, or image information like timestamps, release IDs, git branch, PR numbers, image hashes, and registry address.
+- Fields managed by a declarative configuration layer. Attaching these fields as annotations distinguishes them from default values set by clients or servers, and from auto-generated fields and fields set by auto-sizing or auto-scaling systems.
+- User or tool/system provenance information, such as URLs of related objects from other ecosystem components.
+- Configure a service to assume an IAM Role(AWS and GCP only). For example:
+
+```yaml
+environment:
+  - PORT=3000
+services:
+  web:
+    annotations:
+      - eks.amazonaws.com/role-arn=arn:aws:iam::accountID:role/yourOwnIAMRole
+    domain: ${HOST}
+    build: .
+    port: 3000
+```
 
 ### build
 
@@ -102,8 +129,14 @@ services:
 | **manifest** | string | Dockerfile | The filename of the Dockerfile                                |
 | **path**     | string | .          | The path (relative to **convox.yml**) to build for this Service |
 
-> Specifying **build** as a string will set the **path** and leave the other values as defaults.
+### certificate
 
+| Attribute  | Type   | Default    | Description                                                   |
+| ---------- | ------ | ---------- | ------------------------------------------------------------- |
+| **duration** | string | 2160h | Certificate renew frequency period                                |
+
+
+> Specifying **build** as a string will set the **path** and leave the other values as defaults.
 ### deployment
 
 | Attribute | Type   | Default | Description                                                                      |
@@ -129,11 +162,23 @@ services:
 | Attribute | Type   | Default | Description                                                                                                   |
 | --------- | ------ | ------- | ------------------------------------------------------------------------------------------------------------- |
 | **count**   | number | 1       | The number of [Processes](/reference/primitives/app/process) to run for this Service. For autoscaling use a range, e.g. **1-5**        |
-| **cpu**     | number | 128     | The number of CPU units to reserve for [Processes](/reference/primitives/app/process) of this Service where 1024 units is a full CPU |
-| **memory**  | number | 256     | The number of MB of RAM to reserve for [Processes](/reference/primitives/app/process) of this Service                                |
+| **cpu**     | number | 256     | The number of CPU units to reserve for [Processes](/reference/primitives/app/process) of this Service where 1024 units is a full CPU |
+| **gpu**     | map    |         | The number/type of GPUs to reserve for [Processes](/reference/primitives/app/process) of this Service  |
+| **memory**  | number | 512     | The number of MB of RAM to reserve for [Processes](/reference/primitives/app/process) of this Service                                |
 | **targets** | map    |         | Target metrics to trigger autoscaling                                                                         |
 
 > Specifying **scale** as a number will set the **count** and leave the other values as defaults.
+
+### scale.gpu
+
+| Attribute | Type   | Default | Description                                                                                |
+| --------- | ------ | ------- | ------------------------------------------------------------------------------------------ |
+| **count**  | number |        | The number of GPUs to reserve for [Processes](/reference/primitives/app/process) of this Service    |
+| **vendor** | string | nvidia | The GPU vendor to target for [Processes](/reference/primitives/app/process) of this Service |
+
+> Specifying **gpu** as a number will set the **count** and leave the vendor as default.
+> Specifying a **gpu** value and not specifying the cpu or memory to reserve will remove their defaults to purely reserve based on GPU.
+> You should ensure that your Rack is running on GPU enabled instances (of the correct vendor) before specifying the **gpu** section in your convox.yml
 
 ### scale.targets
 
@@ -141,6 +186,29 @@ services:
 | --------- | ------ | ------- | ------------------------------------------------------------------------------------------ |
 | **cpu**     | number |         | The percentage of CPU utilization to target for [Processes](/reference/primitives/app/process) of this Service    |
 | **memory**  | number |         | The percentage of memory utilization to target for [Processes](/reference/primitives/app/process) of this Service |
+| **external**  | map |         | The array of the external metrics based on which it will scale the Service |
+
+### scale.targets.[]external
+
+| Attribute | Type   | Default | Description                                                                                |
+| --------- | ------ | ------- | ------------------------------------------------------------------------------------------ |
+| **name**     | string |         | The name of the metric |
+| **matchLabels**  | map |         | Key value lablels for the metrics |
+| **averageValue**  | number |         | The target value of the average of the metric across all relevant pods |
+| **value**  | number |         | The target value of the metric |
+
+```yaml
+services:
+  web:
+    build: .
+    port: 3000
+    scale:
+      count: 1-3
+      targets:
+        external:
+          - name: "datadogmetric@default:web-requests"
+            averageValue: 200
+```
 
 &nbsp;
 

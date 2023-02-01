@@ -3,7 +3,6 @@ package api_test
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"strings"
 	"testing"
 	"time"
@@ -29,16 +28,18 @@ var fxInstance = structs.Instance{
 
 func TestInstanceKeyroll(t *testing.T) {
 	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
-		p.On("InstanceKeyroll").Return(nil)
-		err := c.Post("/instances/keyroll", stdsdk.RequestOptions{}, nil)
+		p.On("InstanceKeyroll").Return(&structs.KeyPair{}, nil)
+		var v structs.KeyPair
+		err := c.Post("/instances/keyroll", stdsdk.RequestOptions{}, &v)
 		require.NoError(t, err)
 	})
 }
 
 func TestInstanceKeyrollError(t *testing.T) {
 	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
-		p.On("InstanceKeyroll").Return(fmt.Errorf("err1"))
-		err := c.Post("/instances/keyroll", stdsdk.RequestOptions{}, nil)
+		p.On("InstanceKeyroll").Return(&structs.KeyPair{}, fmt.Errorf("err1"))
+		var v structs.KeyPair
+		err := c.Post("/instances/keyroll", stdsdk.RequestOptions{}, &v)
 		require.EqualError(t, err, "err1")
 	})
 }
@@ -82,13 +83,13 @@ func TestInstanceShell(t *testing.T) {
 		p.On("InstanceShell", "instance1", mock.Anything, opts).Return(1, nil).Run(func(args mock.Arguments) {
 			rw := args.Get(1).(io.ReadWriter)
 			rw.Write([]byte("out"))
-			data, err := ioutil.ReadAll(rw)
+			data, err := io.ReadAll(rw)
 			require.NoError(t, err)
 			require.Equal(t, "in", string(data))
 		})
 		r, err := c.Websocket("/instances/instance1/shell", ro)
 		require.NoError(t, err)
-		data, err := ioutil.ReadAll(r)
+		data, err := io.ReadAll(r)
 		require.NoError(t, err)
 		require.Equal(t, "outF1E49A85-0AD7-4AEF-A618-C249C6E6568D:1\n", string(data))
 	})
@@ -99,7 +100,7 @@ func TestInstanceShellError(t *testing.T) {
 		p.On("InstanceShell", "instance1", mock.Anything, structs.InstanceShellOptions{}).Return(0, fmt.Errorf("err1"))
 		r, err := c.Websocket("/instances/instance1/shell", stdsdk.RequestOptions{})
 		require.NoError(t, err)
-		d, err := ioutil.ReadAll(r)
+		d, err := io.ReadAll(r)
 		require.NoError(t, err)
 		require.Equal(t, []byte("ERROR: err1\n"), d)
 	})

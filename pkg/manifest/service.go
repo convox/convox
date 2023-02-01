@@ -13,6 +13,7 @@ type Service struct {
 	Agent       ServiceAgent          `yaml:"agent,omitempty"`
 	Annotations ServiceAnnotations    `yaml:"annotations,omitempty"`
 	Build       ServiceBuild          `yaml:"build,omitempty"`
+	Certificate Certificate           `yaml:"certificate,omitempty"`
 	Command     string                `yaml:"command,omitempty"`
 	Deployment  ServiceDeployment     `yaml:"deployment,omitempty"`
 	Domains     ServiceDomains        `yaml:"domain,omitempty"`
@@ -34,9 +35,14 @@ type Service struct {
 	Timeout     int                   `yaml:"timeout,omitempty"`
 	Tls         ServiceTls            `yaml:"tls,omitempty"`
 	Volumes     []string              `yaml:"volumes,omitempty"`
+	Whitelist   string                `yaml:"whitelist,omitempty"`
 }
 
 type Services []Service
+
+type Certificate struct {
+	Duration string `yaml:"duration,omitempty"`
+}
 
 type ServiceAgent struct {
 	Enabled bool `yaml:"enabled,omitempty"`
@@ -77,6 +83,7 @@ type ServicePortScheme struct {
 type ServiceScale struct {
 	Count   ServiceScaleCount
 	Cpu     int
+	Gpu     ServiceScaleGpu `yaml:"gpu,omitempty"`
 	Memory  int
 	Targets ServiceScaleTargets `yaml:"targets,omitempty"`
 }
@@ -84,6 +91,19 @@ type ServiceScale struct {
 type ServiceScaleCount struct {
 	Min int
 	Max int
+}
+type ServiceScaleExternalMetric struct {
+	AverageValue *float64          `yaml:"averageValue,omitempty"`
+	MatchLabels  map[string]string `yaml:"matchLabels,omitempty"`
+	Name         string            `yaml:"name"`
+	Value        *float64          `yaml:"value,omitempty"`
+}
+
+type ServiceScaleExternalMetrics []ServiceScaleExternalMetric
+
+type ServiceScaleGpu struct {
+	Count  int
+	Vendor string
 }
 
 type ServiceScaleMetric struct {
@@ -99,6 +119,7 @@ type ServiceScaleMetrics []ServiceScaleMetric
 type ServiceScaleTargets struct {
 	Cpu      int
 	Custom   ServiceScaleMetrics
+	External ServiceScaleExternalMetrics
 	Memory   int
 	Requests int
 }
@@ -111,10 +132,12 @@ type ServiceTls struct {
 	Redirect bool
 }
 
+// skipcq
 func (s Service) BuildHash(key string) string {
 	return fmt.Sprintf("%x", sha256.Sum224([]byte(fmt.Sprintf("key=%q build[path=%q, manifest=%q, args=%v] image=%q", key, s.Build.Path, s.Build.Manifest, s.Build.Args, s.Image))))
 }
 
+// skipcq
 func (s Service) Domain() string {
 	if len(s.Domains) < 1 {
 		return ""
@@ -123,6 +146,7 @@ func (s Service) Domain() string {
 	return s.Domains[0]
 }
 
+// skipcq
 func (s Service) EnvironmentDefaults() map[string]string {
 	defaults := map[string]string{}
 
@@ -136,6 +160,7 @@ func (s Service) EnvironmentDefaults() map[string]string {
 	return defaults
 }
 
+// skipcq
 func (s Service) EnvironmentKeys() string {
 	kh := map[string]bool{}
 
@@ -154,10 +179,12 @@ func (s Service) EnvironmentKeys() string {
 	return strings.Join(keys, ",")
 }
 
+// skipcq
 func (s Service) GetName() string {
 	return s.Name
 }
 
+// skipcq
 func (s Service) Autoscale() bool {
 	if s.Agent.Enabled {
 		return false
@@ -184,6 +211,20 @@ type ServiceResource struct {
 	Env  string
 }
 
+func (sr ServiceResource) GetConfigMapKey() string {
+	parts := strings.Split(sr.Env, "_")
+	key := parts[len(parts)-1]
+
+	for _, en := range AdditionalEnvNames {
+		if key == en {
+			return key
+		}
+	}
+
+	return DEFAULT_RESOURCE_ENV_NAME
+}
+
+// skipcq
 func (s Service) AnnotationsMap() map[string]string {
 	annotations := map[string]string{}
 
@@ -195,6 +236,7 @@ func (s Service) AnnotationsMap() map[string]string {
 	return annotations
 }
 
+// skipcq
 func (s Service) ResourceMap() []ServiceResource {
 	srs := []ServiceResource{}
 
@@ -203,10 +245,25 @@ func (s Service) ResourceMap() []ServiceResource {
 
 		switch len(parts) {
 		case 1:
-			srs = append(srs, ServiceResource{Name: parts[0], Env: Resource{Name: parts[0]}.DefaultEnv()})
+			envs := Resource{Name: parts[0]}.LoadEnv()
+			for _, e := range envs {
+				srs = append(srs, ServiceResource{Name: parts[0], Env: e})
+			}
 		case 2:
 			srs = append(srs, ServiceResource{Name: parts[0], Env: strings.TrimSpace(parts[1])})
 		}
+	}
+
+	return srs
+}
+
+// skipcq
+func (s Service) ResourcesName() []string {
+	srs := []string{}
+
+	for _, r := range s.Resources {
+		parts := strings.SplitN(r, ":", 2)
+		srs = append(srs, parts[0])
 	}
 
 	return srs
@@ -221,6 +278,7 @@ func (ss Services) External() Services {
 func (ss Services) Filter(fn func(s Service) bool) Services {
 	fss := Services{}
 
+	// skipcq
 	for _, s := range ss {
 		if fn(s) {
 			fss = append(fss, s)

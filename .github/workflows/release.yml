@@ -7,11 +7,15 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.release.outputs.upload_url }}
     steps:
       - name: checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: golang-1.16
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: '1.16.12'
       - name: version
@@ -41,58 +45,167 @@ jobs:
         run: make -C cmd/convox build
         env:
           IMAGE: ${{ github.repository }}
+      - name: upload-convox-linux-amd64
+        uses: actions/upload-artifact@v2
+        with:
+          name: convox-linux-amd64
+          path: ./cmd/convox/pkg/convox-linux-amd64
+      - name: upload-convox-linux-arm64
+        uses: actions/upload-artifact@v2
+        with:
+          name: convox-linux-arm64
+          path: ./cmd/convox/pkg/convox-linux-arm64
+      - name: upload-convox-darwin-10.16-amd64
+        uses: actions/upload-artifact@v2
+        with:
+          name: convox-darwin-10.16-amd64
+          path: ./cmd/convox/pkg/convox-darwin-10.16-amd64
+      - name: upload-convox-darwin-arm64
+        uses: actions/upload-artifact@v2
+        with:
+          name: convox-darwin-arm64
+          path: ./cmd/convox/pkg/convox-darwin-arm64
+  build-amd64:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: version
+        run: echo "VERSION=$(echo ${{ github.ref }} | awk -F/ '{print $3}')" >> $GITHUB_ENV
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
       - name: login
         run: docker login --username "${DOCKER_USERNAME}" --password "${DOCKER_PASSWORD}"
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       - name: build-amd64
-        run: docker buildx build --platform linux/amd64 -t ${{ github.repository }}:${{ env.VERSION }} --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max .
+        run: "docker buildx build --platform linux/amd64 -t ${{ github.repository }}:${{ env.VERSION }} --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max ."
+  build-arm64:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: version
+        run: echo "VERSION=$(echo ${{ github.ref }} | awk -F/ '{print $3}')" >> $GITHUB_ENV
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: login
+        run: docker login --username "${DOCKER_USERNAME}" --password "${DOCKER_PASSWORD}"
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       - name: build-arm64
-        run: docker buildx build --platform linux/arm64 -t ${{ github.repository }}:${{ env.VERSION }}-arm64 --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max --build-arg DOCKER_ARCH=aarch64 --build-arg KUBECTL_ARCH=arm64 .
-      - name: release-cli-linux
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: "docker buildx build --platform linux/arm64 -t ${{ github.repository }}:${{ env.VERSION }}-arm64 --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max --build-arg DOCKER_ARCH=aarch64 --build-arg KUBECTL_ARCH=arm64 ."
+  release-cli-linux:
+    needs:
+      - release
+      - build-amd64
+      - build-arm64
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
         with:
-          upload_url: ${{ steps.release.outputs.upload_url }}
-          asset_path: ./cmd/convox/pkg/convox-linux-amd64
+          fetch-depth: 0
+      - uses: actions/download-artifact@v2
+        with:
+          name: convox-linux-amd64
+      - name: release
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        uses: actions/upload-release-asset@v1.0.2
+        with:
+          asset_content_type: application/octet-stream
           asset_name: convox-linux
-          asset_content_type: application/octet-stream
-      - name: release-cli-linux-arm64
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          asset_path: ./convox-linux-amd64
+          upload_url: "${{ needs.release.outputs.upload_url }}"
+  release-cli-linux-arm64:
+    needs:
+      - release
+      - build-amd64
+      - build-arm64
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
         with:
-          upload_url: ${{ steps.release.outputs.upload_url }}
-          asset_path: ./cmd/convox/pkg/convox-linux-arm64
+          fetch-depth: 0
+      - uses: actions/download-artifact@v2
+        with:
+          name: convox-linux-arm64
+      - name: release
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        uses: actions/upload-release-asset@v1.0.2
+        with:
+          asset_content_type: application/octet-stream
           asset_name: convox-linux-arm64
-          asset_content_type: application/octet-stream
-      - name: release-cli-macos
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          asset_path: ./convox-linux-arm64
+          upload_url: "${{ needs.release.outputs.upload_url }}"
+  release-cli-macos:
+    needs:
+      - release
+      - build-amd64
+      - build-arm64
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
         with:
-          upload_url: ${{ steps.release.outputs.upload_url }}
-          asset_path: ./cmd/convox/pkg/convox-darwin-10.16-amd64
+          fetch-depth: 0
+      - uses: actions/download-artifact@v2
+        with:
+          name: convox-darwin-10.16-amd64
+      - name: release
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        uses: actions/upload-release-asset@v1.0.2
+        with:
+          asset_content_type: application/octet-stream
           asset_name: convox-macos
-          asset_content_type: application/octet-stream
-      - name: release-cli-macos-arm64
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          asset_path: ./convox-darwin-10.16-amd64
+          upload_url: "${{ needs.release.outputs.upload_url }}"
+  release-cli-macos-arm64:
+    needs:
+      - release
+      - build-amd64
+      - build-arm64
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
         with:
-          upload_url: ${{ steps.release.outputs.upload_url }}
-          asset_path: ./cmd/convox/pkg/convox-darwin-arm64
-          asset_name: convox-macos-arm64
+          fetch-depth: 0
+      - uses: actions/download-artifact@v2
+        with:
+          name: convox-darwin-arm64
+      - name: release
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        uses: actions/upload-release-asset@v1.0.2
+        with:
           asset_content_type: application/octet-stream
+          asset_name: convox-macos-arm64
+          asset_path: ./convox-darwin-arm64
+          upload_url: "${{ needs.release.outputs.upload_url }}"
   ci:
     if: github.repository == 'convox/convox'
-    needs: release
+    needs:
+      - release-cli-linux
+      - release-cli-linux-arm64
+      - release-cli-macos
+      - release-cli-macos-arm64
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -120,11 +233,12 @@ jobs:
             provider: do
           - job: gcp
             provider: gcp
+            rack_params: "region=us-west1"
           # - job: azure
           #   provider: azure
     steps:
       - name: checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v3
       - name: version
         run: echo "VERSION=$(echo ${{ github.ref }} | awk -F/ '{print $3}')" >> $GITHUB_ENV
       - name: name
@@ -144,7 +258,143 @@ jobs:
       - name: install
         run: ci/install.sh
       - name: wait
+        run: sleep 300
+      - name: test
+        run: ci/test.sh
+      - name: debug
+        run: ci/debug.sh
+        if: always()
+      - name: uninstall
+        run: ci/uninstall.sh
+        if: always()
+  ci-downgrade:
+    if: github.repository == 'convox/convox'
+    environment: 'UpgradeDowngradeTests'
+    needs:
+      - release-cli-linux
+      - release-cli-linux-arm64
+      - release-cli-macos
+      - release-cli-macos-arm64
+    runs-on: ubuntu-latest
+    env:
+      provider: aws
+      suffix: downgrade
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: version
+        run: echo "VERSION=$(echo ${{ github.ref }} | awk -F/ '{print $3}')" >> $GITHUB_ENV
+      - name: name
+        run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")${{ env.suffix }}" >> $GITHUB_ENV
+      - name: provider
+        run: echo "PROVIDER=${{ env.provider }}" >> $GITHUB_ENV
+      - name: secrets
+        run: ci/secrets.sh
+        env:
+          SECRETS: ${{ toJson(secrets) }}
+      - name: dependencies
+        run: ci/dependencies.sh
+      - name: cli
+        run: ci/cli.sh
+      - name: install
+        run: ci/install.sh
+      - name: wait
         run: sleep 600
+      - name: before version downgrade setup and test
+        run: ci/before_additional_test.sh
+      - name: downgrade
+        run: ci/downgrade.sh
+      - name: after version downgrade test
+        run: ci/after_additional_test.sh
+      - name: test
+        run: ci/test.sh
+      - name: debug
+        run: ci/debug.sh
+        if: always()
+      - name: uninstall
+        run: ci/uninstall.sh
+        if: always()
+  ci-upgrade:
+    if: github.repository == 'convox/convox'
+    environment: 'UpgradeDowngradeTests'
+    needs:
+      - release-cli-linux
+      - release-cli-linux-arm64
+      - release-cli-macos
+      - release-cli-macos-arm64
+    runs-on: ubuntu-latest
+    env:
+      provider: aws
+      suffix: upgrade
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: version
+        run: echo "VERSION=$(echo ${{ github.ref }} | awk -F/ '{print $3}')" >> $GITHUB_ENV
+      - name: name
+        run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")${{ env.suffix }}" >> $GITHUB_ENV
+      - name: provider
+        run: echo "PROVIDER=${{ env.provider }}" >> $GITHUB_ENV
+      - name: secrets
+        run: ci/secrets.sh
+        env:
+          SECRETS: ${{ toJson(secrets) }}
+      - name: dependencies
+        run: ci/dependencies.sh
+      - name: cli
+        run: ci/cli.sh
+      - name: install last release
+        run: ci/install_last_release.sh
+      - name: wait
+        run: sleep 600
+      - name: before version upgrade setup and test
+        run: ci/before_additional_test.sh
+      - name: upgrade
+        run: ci/upgrade.sh
+      - name: after version upgrade test
+        run: ci/after_additional_test.sh
+      - name: test
+        run: ci/test.sh
+      - name: debug
+        run: ci/debug.sh
+        if: always()
+      - name: uninstall
+        run: ci/uninstall.sh
+        if: always()
+  ci-ssh:
+    if: github.repository == 'convox/convox'
+    needs:
+      - release-cli-linux
+      - release-cli-linux-arm64
+      - release-cli-macos
+      - release-cli-macos-arm64
+    runs-on: ubuntu-latest
+    env:
+      provider: aws
+      suffix: ssh
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: version
+        run: echo "VERSION=$(echo ${{ github.ref }} | awk -F/ '{print $3}')" >> $GITHUB_ENV
+      - name: name
+        run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")${{ env.suffix }}" >> $GITHUB_ENV
+      - name: provider
+        run: echo "PROVIDER=${{ env.provider }}" >> $GITHUB_ENV
+      - name: secrets
+        run: ci/secrets.sh
+        env:
+          SECRETS: ${{ toJson(secrets) }}
+      - name: dependencies
+        run: ci/dependencies.sh
+      - name: cli
+        run: ci/cli.sh
+      - name: install
+        run: ci/install.sh
+      - name: wait
+        run: sleep 600
+      - name: ssh keyroll
+        run: ci/ssh_keyroll.sh
       - name: test
         run: ci/test.sh
       - name: debug

@@ -1,5 +1,5 @@
 data "digitalocean_kubernetes_versions" "available" {
-  version_prefix = "1.21."
+  version_prefix = "${var.k8s_version}."
 }
 
 resource "digitalocean_kubernetes_cluster" "rack" {

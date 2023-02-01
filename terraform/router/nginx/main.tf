@@ -34,6 +34,16 @@ resource "kubernetes_service_account" "ingress-nginx" {
   }
 }
 
+resource "kubernetes_ingress_class" "nginx" {
+  metadata {
+    name = "nginx"
+  }
+
+  spec {
+    controller = "k8s.io/ingress-nginx"
+  }
+}
+
 resource "kubernetes_cluster_role" "ingress-nginx" {
   metadata {
     name = "ingress-nginx"
@@ -72,6 +82,12 @@ resource "kubernetes_cluster_role" "ingress-nginx" {
   rule {
     api_groups = ["extensions", "networking.k8s.io"]
     resources  = ["ingresses"]
+    verbs      = ["get", "list", "watch"]
+  }
+
+  rule {
+    api_groups = ["networking.k8s.io"]
+    resources  = ["ingressclasses"]
     verbs      = ["get", "list", "watch"]
   }
 
@@ -130,6 +146,32 @@ resource "kubernetes_role" "ingress-nginx" {
     resources  = ["endpoints"]
     verbs      = ["get"]
   }
+
+  rule {
+    api_groups      = ["coordination.k8s.io"]
+    resource_names  = ["ingress-controller-leader"]
+    resources       = ["leases"]
+    verbs           = ["get", "update"]
+  }
+
+  rule {
+    api_groups      = ["coordination.k8s.io"]
+    resources       = ["leases"]
+    verbs           = ["create"]
+  }
+
+  rule {
+    api_groups      = ["networking.k8s.io"]
+    resources       = ["ingressclasses"]
+    verbs           = ["get", "list", "watch"]
+  }
+
+  rule {
+    api_groups      = [""]
+    resource_names  = ["ingress-controller-leader"]
+    resources       = ["configmaps"]
+    verbs           = ["get", "update"]
+  }
 }
 
 resource "kubernetes_role_binding" "ingress-nginx" {
@@ -183,27 +225,27 @@ resource "kubernetes_deployment" "ingress-nginx" {
         service_account_name             = "ingress-nginx"
         automount_service_account_token  = true
         priority_class_name              = var.set_priority_class ? "system-cluster-critical" : null
+        security_context {
+          sysctl {
+            name = "net.ipv4.ip_unprivileged_port_start"
+            value = "1"
+          }
+        }
 
         container {
           name  = "system"
           image = var.nginx_image
           args = [
             "/nginx-ingress-controller",
+            "--watch-ingress-without-class=true",
             "--configmap=$(POD_NAMESPACE)/nginx-configuration",
             "--tcp-services-configmap=$(POD_NAMESPACE)/tcp-services",
             "--udp-services-configmap=$(POD_NAMESPACE)/udp-services",
             "--publish-service=$(POD_NAMESPACE)/router",
             "--annotations-prefix=nginx.ingress.kubernetes.io",
+            "--controller-class=k8s.io/ingress-nginx",
+            "--ingress-class=nginx",
           ]
-
-          security_context {
-            allow_privilege_escalation = true
-            capabilities {
-              drop = ["ALL"]
-              add  = ["NET_BIND_SERVICE"]
-            }
-            run_as_user = var.nginx_user
-          }
 
           env {
             name = "POD_NAME"

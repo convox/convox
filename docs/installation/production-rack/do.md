@@ -30,7 +30,7 @@ The following environment variables are required:
 Go to https://cloud.digitalocean.com/account/api/tokens and generate a new Personal Access Token.
 
 - `DIGITALOCEAN_TOKEN` is the token you just created
-  
+
 ### Create Spaces Access Key
 
 Go to https://cloud.digitalocean.com/account/api/tokens and generate a new Spaces Access Key.
@@ -46,6 +46,7 @@ Go to https://cloud.digitalocean.com/account/api/tokens and generate a new Space
 
 | Name              | Default         | Description                                                             |
 | ------------------| ----------------| ----------------------------------------------------------------------- |
+| **cert_duration** | **2160h**       | Certification renew period                                              |
 | **node_type**     | **s-2vcpu-4gb** | [Node instance type](https://slugs.do-api.dev/)                         |
 | **region**        | **nyc3**        | [Digital Ocean region](https://slugs.do-api.dev/)                       |
 | **registry_disk** | **50Gi**        | Registry disk size                                                      |

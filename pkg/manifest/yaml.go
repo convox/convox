@@ -394,6 +394,13 @@ func (v *ServiceScale) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if w, ok := t["cpu"].(int); ok {
 			v.Cpu = w
 		}
+		if w, ok := t["gpu"].(interface{}); ok {
+			var g ServiceScaleGpu
+			if err := remarshal(w, &g); err != nil {
+				return err
+			}
+			v.Gpu = g
+		}
 		if w, ok := t["memory"].(int); ok {
 			v.Memory = w
 		}
@@ -406,6 +413,30 @@ func (v *ServiceScale) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 	default:
 		return fmt.Errorf("unknown type for service scale: %T", t)
+	}
+
+	return nil
+}
+
+func (v *ServiceScaleGpu) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var w interface{}
+
+	if err := unmarshal(&w); err != nil {
+		return err
+	}
+
+	switch t := w.(type) {
+	case map[interface{}]interface{}:
+		if w, ok := t["count"].(int); ok {
+			v.Count = w
+		}
+		if w, ok := t["vendor"].(string); ok {
+			v.Vendor = w
+		}
+	case int:
+		v.Count = t
+	default:
+		return fmt.Errorf("unknown type for service scale gpu: %T", t)
 	}
 
 	return nil

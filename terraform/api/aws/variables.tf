@@ -1,3 +1,8 @@
+variable "cert_duration" {
+  default = "2160h"
+  type    = string
+}
+
 variable "docker_hub_authentication" {
   type = string
 }
@@ -12,6 +17,11 @@ variable "high_availability" {
 
 variable "image" {
   type = string
+}
+
+variable "metrics_scraper_host" {
+  default = ""
+  type    = string
 }
 
 variable "name" {

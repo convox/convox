@@ -85,9 +85,6 @@ spec:
           - "svc.cluster.local"
           - "cluster.local"
       {{ end }}
-      {{ if .Service.Agent.Enabled }}
-      hostNetwork: true
-      {{ end }}
       serviceAccountName: {{.Service.Name}}
       shareProcessNamespace: {{.Service.Init}}
       terminationGracePeriodSeconds: {{$.Service.Termination.Grace}}
@@ -109,7 +106,7 @@ spec:
           valueFrom:
             configMapKeyRef:
               name: resource-{{ k8sname .Name }}
-              key: URL
+              key: {{ .GetConfigMapKey }}
         {{ end }}
         envFrom:
         - secretRef:
@@ -143,12 +140,18 @@ spec:
         {{ end }}
         resources:
           limits:
+            {{ with .Service.Scale.Gpu.Count }}
+            {{$.Service.Scale.Gpu.Vendor}}.com/gpu: "{{.}}"
+            {{ end }}
             {{ with .Service.Scale.Memory }}
             memory: "{{.}}Mi"
             {{ end }}
           requests:
             {{ with .Service.Scale.Cpu }}
             cpu: "{{.}}m"
+            {{ end }}
+            {{ with .Service.Scale.Gpu.Count }}
+            {{$.Service.Scale.Gpu.Vendor}}.com/gpu: "{{.}}"
             {{ end }}
             {{ with .Service.Scale.Memory }}
             memory: "{{.}}Mi"
@@ -158,7 +161,7 @@ spec:
           mountPath: /etc/convox
         {{ range .Service.Volumes }}
         - name: {{ volumeName $.App.Name (volumeFrom $.App.Name $.Service.Name .) }}
-          mountPath: "{{ volumeTo . }}" 
+          mountPath: "{{ volumeTo . }}"
         {{ end }}
       volumes:
       - name: ca
@@ -177,7 +180,7 @@ spec:
       {{ end }}
 {{ if not (eq .Service.Scale.Count.Min .Service.Scale.Count.Max) }}
 ---
-apiVersion: autoscaling/v2beta1
+apiVersion: autoscaling/v2beta2
 kind: HorizontalPodAutoscaler
 metadata:
   namespace: {{.Namespace}}
@@ -196,13 +199,36 @@ spec:
   - type: Resource
     resource:
       name: cpu
-      targetAverageUtilization: {{.}}
+      target:
+        type: Utilization
+        averageUtilization: {{.}}
   {{ end }}
   {{ with .Service.Scale.Targets.Memory }}
   - type: Resource
     resource:
       name: memory
-      targetAverageUtilization: {{.}}
+      target:
+        type: Utilization
+        averageUtilization: {{.}}
+  {{ end }}
+  {{ range .Service.Scale.Targets.External }}
+  - type: External
+    external:
+      metric:
+        name: {{ .Name }}
+        selector:
+          matchLabels:
+            {{ range $k, $v := .MatchLabels }}
+            {{ $k }}: {{ $v }}
+            {{ end }}
+      target:
+        {{ if .AverageValue }}
+        type: AverageValue
+        averageValue: {{ .AverageValue }}
+        {{ else }}
+        type: Value
+        value: {{ .Value }}
+        {{ end }}
   {{ end }}
 {{ end }}
 {{ if or .Service.Port.Port .Service.Ports }}

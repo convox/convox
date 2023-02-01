@@ -23,6 +23,7 @@ module "api" {
   docker_hub_authentication = module.k8s.docker_hub_authentication
   domain                    = module.router.endpoint
   high_availability         = var.high_availability
+  metrics_scraper_host      = module.metrics.metrics_scraper_host
   image                     = var.image
   name                      = var.name
   namespace                 = module.k8s.namespace
@@ -74,5 +75,6 @@ module "router" {
   oidc_sub          = var.oidc_sub
   proxy_protocol    = var.proxy_protocol
   release           = var.release
+  tags              = var.tags
   whitelist         = var.whitelist
 }

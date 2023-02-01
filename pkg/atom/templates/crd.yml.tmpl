@@ -1,4 +1,4 @@
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: atoms.atom.convox.com
@@ -8,20 +8,62 @@ spec:
     - name: v1
       served: true
       storage: true
-  version: v1
+      additionalPrinterColumns:
+        - name: Status
+          type: string
+          jsonPath: .status
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            started:
+              type: string
+              nullable: true
+            status:
+              type: string
+              nullable: true
+            spec:
+              type: object
+              nullable: true
+              properties:
+                conditions:
+                  type: array
+                  nullable: true
+                  items:
+                    type: object
+                    properties:
+                      apiVersion:
+                        type: string
+                      conditions:
+                        type: object
+                        additionalProperties:
+                          type: object
+                          properties:
+                            reason:
+                              type: string
+                            status:
+                              type: string
+                      kind:
+                        type: string
+                      name:
+                        type: string
+                      namespace:
+                        type: string
+                currentVersion:
+                  type: string
+                previousVersion:
+                  type: string
+                progressDeadlineSeconds:
+                  type: integer
   scope: Namespaced
   names:
     plural: atoms
     singular: atom
     kind: Atom
     categories:
-    - convox
-  additionalPrinterColumns:
-  - name: Status
-    type: string
-    JSONPath: .status
+      - convox
 ---
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: atomversions.atom.convox.com
@@ -31,11 +73,24 @@ spec:
     - name: v1
       served: true
       storage: true
-  version: v1
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            status:
+              type: string
+            spec:
+              type: object
+              properties:
+                release:
+                  type: string
+                template:
+                  type: string
+                  format: byte
   scope: Namespaced
   names:
     plural: atomversions
     singular: atomversion
     kind: AtomVersion
     categories:
-    - convox
+      - convox

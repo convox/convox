@@ -6,7 +6,7 @@ metadata:
   name: timer-{{.Timer.Name}}
 spec:
   schedule: "{{.Timer.Schedule}}"
-  concurrencyPolicy: Forbid
+  concurrencyPolicy: {{.Timer.Concurrency}}
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 1
   jobTemplate:
@@ -48,13 +48,13 @@ spec:
             - name: INSTANCE_IP
               valueFrom:
                 fieldRef:
-                  fieldPath: status.hostIP              
+                  fieldPath: status.hostIP
             {{ range $.Resources }}
             - name: "{{.Env}}"
               valueFrom:
                 configMapKeyRef:
                   name: resource-{{ k8sname .Name }}
-                  key: URL
+                  key: {{ .GetConfigMapKey }}
             {{ end }}
             envFrom:
             - secretRef:
@@ -78,7 +78,7 @@ spec:
               mountPath: /etc/convox
             {{ range .Service.Volumes }}
             - name: {{ volumeName $.App.Name (volumeFrom $.App.Name $.Service.Name .) }}
-              mountPath: "{{ volumeTo . }}" 
+              mountPath: "{{ volumeTo . }}"
             {{ end }}
           volumes:
           - name: ca

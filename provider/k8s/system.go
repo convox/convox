@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"sort"
@@ -52,7 +53,11 @@ func (p *Provider) SystemLogs(opts structs.LogsOptions) (io.ReadCloser, error) {
 }
 
 func (p *Provider) SystemMetrics(opts structs.MetricsOptions) (structs.Metrics, error) {
-	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
+	ms, err := p.MetricScraper.GetRackMetrics(opts)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return ms, nil
 }
 
 func (p *Provider) SystemProcesses(opts structs.SystemProcessesOptions) (structs.Processes, error) {
@@ -63,7 +68,7 @@ func (p *Provider) SystemProcesses(opts structs.SystemProcessesOptions) (structs
 	}
 
 	labelSelector := fmt.Sprintf("system=convox,rack=%s,service", p.Name)
-	pds, err := p.Cluster.CoreV1().Pods(ns).List(am.ListOptions{
+	pds, err := p.Cluster.CoreV1().Pods(ns).List(context.TODO(), am.ListOptions{
 		LabelSelector: labelSelector,
 	})
 	if err != nil {
@@ -81,7 +86,7 @@ func (p *Provider) SystemProcesses(opts structs.SystemProcessesOptions) (structs
 		pss = append(pss, *ps)
 	}
 
-	ms, err := p.MetricsClient.MetricsV1beta1().PodMetricses(ns).List(am.ListOptions{LabelSelector: labelSelector})
+	ms, err := p.MetricsClient.MetricsV1beta1().PodMetricses(ns).List(context.TODO(), am.ListOptions{LabelSelector: labelSelector})
 	if err != nil {
 		p.logger.Errorf("failed to fetch pod metrics: %s", err)
 	} else {
@@ -108,9 +113,9 @@ func (p *Provider) SystemReleases() (structs.Releases, error) {
 }
 
 func (p *Provider) SystemUninstall(name string, w io.Writer, opts structs.SystemUninstallOptions) error {
-	return errors.WithStack(fmt.Errorf("unimplemented"))
+	return errors.WithStack(fmt.Errorf("direct rack doesn't support uninstall, make sure you are not using RACK_URL environment variable"))
 }
 
 func (p *Provider) SystemUpdate(opts structs.SystemUpdateOptions) error {
-	return errors.WithStack(fmt.Errorf("self update not supported"))
+	return errors.WithStack(fmt.Errorf("direct rack doesn't support update, make sure you are not using RACK_URL environment variable"))
 }

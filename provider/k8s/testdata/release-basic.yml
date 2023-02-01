@@ -29,6 +29,7 @@ manifest:
         - two:OTHER_URL
         - three
         - four
+      whitelist: 127.0.0.0/32
     web2:
       build: .
       port: 5000
@@ -58,3 +59,4 @@ manifest:
       command: bin/test
       schedule: "*/5 * * * *"
       service: web
+      concurrency: forbid

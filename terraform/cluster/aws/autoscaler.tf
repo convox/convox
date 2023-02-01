@@ -54,7 +54,7 @@ locals {
 
 resource "kubernetes_service_account" "autoscaler" {
   depends_on = [
-    null_resource.wait_k8s_api
+    null_resource.wait_eks_addons
   ]
   metadata {
     name      = "cluster-autoscaler"
@@ -69,7 +69,7 @@ resource "kubernetes_service_account" "autoscaler" {
 
 resource "kubernetes_cluster_role" "autoscaler" {
   depends_on = [
-    null_resource.wait_k8s_api
+    null_resource.wait_eks_addons
   ]
   metadata {
     name   = "cluster-autoscaler"
@@ -159,7 +159,7 @@ resource "kubernetes_cluster_role" "autoscaler" {
 
 resource "kubernetes_cluster_role_binding" "autoscaler" {
   depends_on = [
-    null_resource.wait_k8s_api
+    null_resource.wait_eks_addons
   ]
   metadata {
     name   = "cluster-autoscaler"
@@ -181,7 +181,7 @@ resource "kubernetes_cluster_role_binding" "autoscaler" {
 
 resource "kubernetes_role" "autoscaler" {
   depends_on = [
-    null_resource.wait_k8s_api
+    null_resource.wait_eks_addons
   ]
   metadata {
     name      = "cluster-autoscaler"
@@ -205,7 +205,7 @@ resource "kubernetes_role" "autoscaler" {
 
 resource "kubernetes_role_binding" "autoscaler" {
   depends_on = [
-    null_resource.wait_k8s_api
+    null_resource.wait_eks_addons
   ]
   metadata {
     name      = "cluster-autoscaler"
@@ -229,7 +229,7 @@ resource "kubernetes_role_binding" "autoscaler" {
 resource "kubernetes_deployment" "autoscaler" {
   depends_on = [
     aws_iam_role_policy.autoscaler_autoscale,
-    null_resource.wait_k8s_api
+    null_resource.wait_eks_addons
   ]
 
   metadata {
@@ -313,5 +313,41 @@ resource "kubernetes_deployment" "autoscaler" {
         }
       }
     }
+  }
+}
+
+resource "kubernetes_cluster_role" "hpa_external_metrics" {
+  depends_on = [
+    null_resource.wait_k8s_api
+  ]
+  metadata {
+    name   = "hpa-external-metrics"
+  }
+
+  rule {
+    api_groups = ["external.metrics.k8s.io"]
+    resources  = ["*"]
+    verbs      = ["watch", "list", "get"]
+  }
+}
+
+resource "kubernetes_cluster_role_binding" "hpa_external_metrics" {
+  depends_on = [
+    null_resource.wait_k8s_api
+  ]
+  metadata {
+    name   = "hpa-external-metrics"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "hpa-external-metrics"
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = "horizontal-pod-autoscaler"
+    namespace = "kube-system"
   }
 }

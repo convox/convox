@@ -1,3 +1,8 @@
+variable "cert_duration" {
+  default = "2160h"
+  type    = string
+}
+
 variable "docker_hub_username" {
   default = ""
 }
@@ -11,8 +16,8 @@ variable "image" {
 }
 
 variable "k8s_version" {
-  type = string
-  default = "1.20"
+  type    = string
+  default = "1.23"
 }
 
 variable "name" {

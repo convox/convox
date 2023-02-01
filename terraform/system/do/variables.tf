@@ -2,6 +2,11 @@ variable "access_id" {
   type = string
 }
 
+variable "cert_duration" {
+  default = "2160h"
+  type    = string
+}
+
 variable "docker_hub_username" {
   default = ""
 }
@@ -16,6 +21,11 @@ variable "high_availability" {
 
 variable "image" {
   default = "convox/convox"
+}
+
+variable "k8s_version" {
+  type    = string
+  default = "1.23"
 }
 
 variable "name" {
