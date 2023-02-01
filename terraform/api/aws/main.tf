@@ -17,6 +17,7 @@ module "k8s" {
 
   docker_hub_authentication = var.docker_hub_authentication
   domain                    = var.domain
+  domain_internal           = var.domain_internal
   image                     = var.image
   metrics_scraper_host      = var.metrics_scraper_host
   namespace                 = var.namespace

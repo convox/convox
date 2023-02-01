@@ -17,6 +17,9 @@ services:
     deployment:
       minimum: 101
       maximum: 201
+  internal-router-invalid:
+    internal: true
+    internalRouter: true
   serviceF:
     build: .
     resources:

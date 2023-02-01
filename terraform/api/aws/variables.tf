@@ -11,6 +11,10 @@ variable "domain" {
   type = string
 }
 
+variable "domain_internal" {
+  type = string
+}
+
 variable "high_availability" {
   default = true
 }
