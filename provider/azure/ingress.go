@@ -13,5 +13,5 @@ func (p *Provider) IngressAnnotations(certDuration string) (map[string]string, e
 }
 
 func (p *Provider) IngressClass() string {
-	return "convox"
+	return "nginx"
 }

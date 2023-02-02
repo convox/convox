@@ -9,7 +9,7 @@
 set -eu
 
 : ${BUILDCTL=buildctl}
-: ${BUILDCTL_CONNECT_RETRIES_MAX=10}
+: ${BUILDCTL_CONNECT_RETRIES_MAX=50}
 : ${BUILDKITD=buildkitd}
 : ${BUILDKITD_FLAGS=}
 : ${ROOTLESSKIT=rootlesskit}
