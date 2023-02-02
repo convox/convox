@@ -225,7 +225,7 @@ jobs:
           - aws-existing-vpc
           - do
           - gcp
-          # - azure
+          - azure
         include:
           - job: aws
             provider: aws
@@ -243,8 +243,8 @@ jobs:
           - job: gcp
             provider: gcp
             rack_params: "region=us-west1"
-          # - job: azure
-          #   provider: azure
+          - job: azure
+            provider: azure
     steps:
       - name: checkout
         uses: actions/checkout@v3
