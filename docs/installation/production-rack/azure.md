@@ -48,8 +48,8 @@ The following environment variables are required:
 
 ### Grant Permissions
 ```html
-    $ az ad app permission add --id $ARM_CLIENT_ID --api 00000002-0000-0000-c000-000000000000 --api-permissions 311a71cc-e848-46a1-bdf8-97ff7156d8e6=Scope 824c81eb-e3f8-4ee6-8f6d-de7f50d565b7=Role
-    $ az ad app permission grant --id $ARM_CLIENT_ID --api 00000002-0000-0000-c000-000000000000 --consent-type AllPrincipals --scope User.Read
+    $ az ad app permission add --id $ARM_CLIENT_ID --api 00000003-0000-0000-c000-000000000000 --api-permissions 1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9=Role
+    $ az ad app permission grant --id $ARM_CLIENT_ID --api 00000003-0000-0000-c000-000000000000 --consent-type AllPrincipals --scope User.Read
     $ az ad app permission admin-consent --id $ARM_CLIENT_ID
 ```
 ## Install Rack
