@@ -5,7 +5,7 @@ locals {
     Rack = var.name
   })
   vpc_id              = var.vpc_id == "" ? aws_vpc.nodes[0].id : var.vpc_id
-  private_subnets_ids = var.private_subnets_ids ? var.private_subnets_ids : aws_subnet.private[*].id
+  private_subnets_ids = length(var.private_subnets_ids) != 0 ? var.private_subnets_ids : aws_subnet.private[*].id
 }
 
 resource "aws_vpc" "nodes" {
@@ -117,6 +117,11 @@ resource "aws_subnet" "private" {
     null_resource.wait_vpc_nodes
   ]
 
+  // If the variable `private_subnets_ids` is empty,
+  //  if yes, check if it is to create private networks
+  //    if yes, create private subnets
+  //    else, don't create private subnets
+  //  else, don't create private subnets and use the ids on the variable
   count = length(var.private_subnets_ids) == 0 ? var.private ? local.network_resource_count : 0 : 0
 
   availability_zone = local.availability_zones[count.index]
@@ -201,7 +206,7 @@ resource "aws_route_table_association" "private" {
   count = var.private ? local.network_resource_count : 0
 
   route_table_id = aws_route_table.private[count.index].id
-  subnet_id      = aws_subnet.private[count.index].id
+  subnet_id      = var.private_subnets_ids[count.index]
 }
 
 resource "aws_security_group" "cluster" {
