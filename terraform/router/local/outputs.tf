@@ -1,3 +1,3 @@
 output "endpoint" {
-  value = "${var.name}.convox"
+  value = "${var.name}.localdev.convox.cloud"
 }
