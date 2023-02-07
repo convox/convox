@@ -18,7 +18,7 @@ var fxSystem = structs.System{
 	Domain:     "domain",
 	Name:       "name",
 	Outputs:    map[string]string{"k1": "v1", "k2": "v2"},
-	Parameters: map[string]interface{}{"k1": "v1", "k2": "v2"},
+	Parameters: map[string]string{"k1": "v1", "k2": "v2"},
 	Provider:   "provider",
 	Region:     "region",
 	Status:     "status",
@@ -181,7 +181,7 @@ func TestSystemUpdate(t *testing.T) {
 	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
 		opts := structs.SystemUpdateOptions{
 			Count:      options.Int(1),
-			Parameters: map[string]interface{}{"k1": "v1", "k2": "v2"},
+			Parameters: map[string]string{"k1": "v1", "k2": "v2"},
 			Type:       options.String("type"),
 			Version:    options.String("version"),
 		}
