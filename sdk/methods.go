@@ -10,7 +10,6 @@ import (
 	"github.com/convox/stdsdk"
 )
 
-
 func (c *Client) AppCancel(name string) error {
 	var err error
 
@@ -848,7 +847,7 @@ func (c *Client) ServiceUpdate(app string, name string, opts structs.ServiceUpda
 
 	err = c.Put(fmt.Sprintf("/apps/%s/services/%s", app, name), ro, nil)
 
-  return err
+	return err
 }
 
 func (c *Client) Start() error {
@@ -859,11 +858,7 @@ func (c *Client) Start() error {
 func (c *Client) SystemGet() (*structs.System, error) {
 	var err error
 
-	ro := stdsdk.RequestOptions{
-    Headers: stdsdk.Headers{},
-    Params: stdsdk.Params{},
-    Query: stdsdk.Query{},
-  }
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
 
 	var v *structs.System
 
