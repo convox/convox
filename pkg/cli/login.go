@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"strings"
 
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
@@ -50,9 +49,6 @@ func Login(rack sdk.Interface, c *stdcli.Context) error {
 
 	id, err := cl.Auth()
 	if err != nil {
-		if strings.Contains(err.Error(), "cli token is expired") {
-			return err
-		}
 		return fmt.Errorf("invalid login")
 	}
 
