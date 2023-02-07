@@ -42,7 +42,7 @@ func (t Test) Endpoint() (*url.URL, error) {
 func (t Test) Metadata() (*Metadata, error) {
 	m := &Metadata{
 		State: []byte("state"),
-		Vars: map[string]string{
+		Vars: map[string]interface{}{
 			"var1": "val1",
 		},
 	}
@@ -54,14 +54,14 @@ func (t Test) Name() string {
 	return t.name
 }
 
-func (t Test) Parameters() (map[string]string, error) {
+func (t Test) Parameters() (map[string]interface{}, error) {
 	cc, err := t.Client()
 	if err != nil {
 		return nil, err
 	}
 
 	if cc == nil {
-		return map[string]string{}, nil
+		return map[string]interface{}{}, nil
 	}
 
 	s, err := cc.SystemGet()
@@ -88,7 +88,7 @@ func (t Test) Uninstall() error {
 	return nil
 }
 
-func (t Test) UpdateParams(params map[string]string) error {
+func (t Test) UpdateParams(params map[string]interface{}) error {
 	if TestClient == nil {
 		return nil
 	}

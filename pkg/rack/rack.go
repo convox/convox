@@ -20,7 +20,7 @@ type Metadata struct {
 	Deletable bool
 	Provider  string
 	State     []byte
-	Vars      map[string]string
+	Vars      map[string]interface{}
 }
 
 type Rack interface {
@@ -29,12 +29,12 @@ type Rack interface {
 	Endpoint() (*url.URL, error)
 	Metadata() (*Metadata, error)
 	Name() string
-	Parameters() (map[string]string, error)
+	Parameters() (map[string]interface{}, error)
 	Provider() string
 	Remote() bool
 	Status() string
 	Uninstall() error
-	UpdateParams(map[string]string) error
+	UpdateParams(map[string]interface{}) error
 	UpdateVersion(string) error
 	Sync() error
 }
@@ -72,25 +72,29 @@ func Current(c *stdcli.Context) (Rack, error) {
 		return nil, fmt.Errorf("no current rack, use `convox racks` to list and `convox switch <name>` to select")
 	}
 
-	var attrs map[string]string
+	var attrs map[string]interface{}
 
 	if err := json.Unmarshal([]byte(data), &attrs); err != nil {
 		return nil, err
 	}
 
-	switch attrs["type"] {
+	typeAttr, ok := attrs["type"].(string)
+	if !ok {
+	}
+
+	switch typeAttr {
 	case "console":
-		return LoadConsole(c, attrs["name"])
+		return LoadConsole(c, attrs["name"].(string))
 	case "terraform":
-		return LoadTerraform(c, attrs["name"])
+		return LoadTerraform(c, attrs["name"].(string))
 	case "test":
-		return LoadTest(c, attrs["name"])
+		return LoadTest(c, attrs["name"].(string))
 	default:
 		return nil, fmt.Errorf("unknown rack type: %s", attrs["type"])
 	}
 }
 
-func Install(c *stdcli.Context, provider, name, version string, options map[string]string) error {
+func Install(c *stdcli.Context, provider, name, version string, options map[string]interface{}) error {
 	switch len(strings.Split(name, "/")) {
 	case 1:
 		return InstallTerraform(c, provider, name, version, options)

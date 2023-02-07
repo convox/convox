@@ -374,7 +374,7 @@ func TestRackParamsError(t *testing.T) {
 func TestRackParamsSet(t *testing.T) {
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
 		opts := structs.SystemUpdateOptions{
-			Parameters: map[string]string{
+			Parameters: map[string]interface{}{
 				"Foo": "bar",
 				"Baz": "qux",
 			},
@@ -394,7 +394,7 @@ func TestRackParamsSet(t *testing.T) {
 func TestRackParamsSetError(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		opts := structs.SystemUpdateOptions{
-			Parameters: map[string]string{
+			Parameters: map[string]interface{}{
 				"Foo": "bar",
 				"Baz": "qux",
 			},
@@ -590,16 +590,20 @@ func TestRackUpdate(t *testing.T) {
 func TestRackUpdateDowngradeMinorError(t *testing.T) {
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("SystemGet").Return(&structs.System{
-			Count:      1,
-			Domain:     "domain",
-			Name:       "name",
-			Outputs:    map[string]string{"k1": "v1", "k2": "v2"},
-			Parameters: map[string]string{"Autoscale": "Yes", "ParamFoo": "value1", "ParamOther": "value2"},
-			Provider:   "provider",
-			Region:     "region",
-			Status:     "running",
-			Type:       "type",
-			Version:    "3.3.0",
+			Count:   1,
+			Domain:  "domain",
+			Name:    "name",
+			Outputs: map[string]string{"k1": "v1", "k2": "v2"},
+			Parameters: map[string]interface{}{
+				"Autoscale":  "Yes",
+				"ParamFoo":   "value1",
+				"ParamOther": "value2",
+			},
+			Provider: "provider",
+			Region:   "region",
+			Status:   "running",
+			Type:     "type",
+			Version:  "3.3.0",
 		}, nil)
 
 		res, err := testExecute(e, "rack update 3.2.12", nil)

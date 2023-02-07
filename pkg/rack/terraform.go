@@ -48,7 +48,10 @@ func CreateTerraform(c *stdcli.Context, name string, md *Metadata) (*Terraform, 
 
 	t := &Terraform{ctx: c, name: name, provider: md.Provider}
 
-	if err := t.create(md.Vars["release"], md.Vars, md.State); err != nil {
+	release, ok := md.Vars["release"].(string)
+	if !ok {
+	} // TO-DO: return error
+	if err := t.create(release, md.Vars, md.State); err != nil {
 		t.Delete()
 		return nil, err
 	}
@@ -61,7 +64,7 @@ func CreateTerraform(c *stdcli.Context, name string, md *Metadata) (*Terraform, 
 	return t, nil
 }
 
-func InstallTerraform(c *stdcli.Context, provider, name, version string, options map[string]string) error {
+func InstallTerraform(c *stdcli.Context, provider, name, version string, options map[string]interface{}) error {
 	if !terraformInstalled(c) {
 		return fmt.Errorf("terraform required")
 	}
@@ -125,7 +128,6 @@ func LoadTerraform(c *stdcli.Context, name string) (*Terraform, error) {
 	if err := json.Unmarshal(data, &output); err != nil {
 		return nil, err
 	}
-
 	endpoint := ""
 	provider := "unknown"
 	status := "unknown"
@@ -195,7 +197,7 @@ func (t Terraform) Metadata() (*Metadata, error) {
 		return nil, err
 	}
 
-	vars["name"] = common.CoalesceString(vars["name"], t.name)
+	vars["name"] = common.CoalesceString(vars["name"].(string), t.name)
 
 	m := &Metadata{
 		Deletable: true,
@@ -220,7 +222,7 @@ func (t Terraform) Name() string {
 	return t.name
 }
 
-func (t Terraform) Parameters() (map[string]string, error) {
+func (t Terraform) Parameters() (map[string]interface{}, error) {
 	vars, err := t.vars()
 	if err != nil {
 		return nil, err
@@ -270,13 +272,13 @@ func (t Terraform) Uninstall() error {
 	return nil
 }
 
-func (t Terraform) UpdateParams(params map[string]string) error {
+func (t Terraform) UpdateParams(params map[string]interface{}) error {
 	vars, err := t.vars()
 	if err != nil {
 		return err
 	}
 
-	release, ok := vars["release"]
+	release, ok := vars["release"].(string)
 	if !ok {
 		return fmt.Errorf("could not determine current release")
 	}
@@ -348,7 +350,7 @@ func (t Terraform) apply() error {
 	return nil
 }
 
-func (t Terraform) create(release string, vars map[string]string, state []byte) error {
+func (t Terraform) create(release string, vars map[string]interface{}, state []byte) error {
 	dir, err := t.settingsDirectory()
 	if err != nil {
 		return err
@@ -396,10 +398,10 @@ func (t Terraform) settingsDirectory() (string, error) {
 	return t.ctx.SettingDirectory(fmt.Sprintf("racks/%s", t.name))
 }
 
-func (t Terraform) update(release string, vars map[string]string) error {
+func (t Terraform) update(release string, vars map[string]interface{}) error {
 	currentVersion := ""
-	if vars != nil && vars["release"] != "" {
-		currentVersion = vars["release"]
+	if vars != nil && vars["release"].(string) != "" {
+		currentVersion = vars["release"].(string)
 	}
 	if release == "" {
 		v, err := terraformLatestVersion(currentVersion)
@@ -411,10 +413,10 @@ func (t Terraform) update(release string, vars map[string]string) error {
 	}
 
 	if vars == nil {
-		vars = map[string]string{}
+		vars = map[string]interface{}{}
 	}
 
-	vars["name"] = common.CoalesceString(vars["name"], t.name)
+	vars["name"] = common.CoalesceString(vars["name"].(string), t.name)
 	vars["release"] = release
 
 	pv, err := terraformProviderVars(t.provider)
@@ -428,7 +430,7 @@ func (t Terraform) update(release string, vars map[string]string) error {
 
 	for k, v := range pv {
 		if _, ok := vars[k]; !ok {
-			vars[k] = v
+			vars[k] =  v
 		}
 	}
 
@@ -458,8 +460,8 @@ func (t Terraform) update(release string, vars map[string]string) error {
 	return nil
 }
 
-func (t Terraform) vars() (map[string]string, error) {
-	vars := map[string]string{}
+func (t Terraform) vars() (map[string]interface{}, error) {
+	vars := map[string]interface{}{}
 
 	vf, err := t.varsFile()
 	if err != nil {
@@ -495,10 +497,13 @@ func (t Terraform) varsFile() (string, error) {
 	return vf, nil
 }
 
-func (t Terraform) writeVars(vars map[string]string) error {
+func (t Terraform) writeVars(vars map[string]interface{}) error {
 	for k, v := range vars {
-		if strings.TrimSpace(v) == "" {
-			delete(vars, k)
+		switch t := v.(type) {
+		case string:
+			if strings.TrimSpace(t) == "" {
+				delete(vars, k)
+			}
 		}
 	}
 
@@ -549,7 +554,6 @@ func listTerraform(c *stdcli.Context) ([]Terraform, error) {
 
 		ts = append(ts, *t)
 	}
-
 	return ts, nil
 }
 
