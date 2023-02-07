@@ -28,5 +28,6 @@ module "rack" {
   image               = var.image
   name                = var.name
   platform            = module.platform.name
+  os                  = var.os
   release             = local.release
 }

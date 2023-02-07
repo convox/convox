@@ -5,3 +5,7 @@ variable "name" {
 variable "namespace" {
   type = string
 }
+
+variable "os" {
+  default = "ubuntu"
+}

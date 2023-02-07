@@ -14,6 +14,10 @@ variable "name" {
   type = string
 }
 
+variable "os" {
+  default = "ubuntu"
+}
+
 variable "release" {
   default = ""
 }

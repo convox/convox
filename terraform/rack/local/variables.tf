@@ -15,6 +15,10 @@ variable "name" {
   type = string
 }
 
+variable "os" {
+  default = "ubuntu"
+}
+
 variable "platform" {
   type = string
 }

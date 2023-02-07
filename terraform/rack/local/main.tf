@@ -49,4 +49,5 @@ module "router" {
   source    = "../../router/local"
   name      = var.name
   namespace = module.k8s.namespace
+  os        = var.os
 }
