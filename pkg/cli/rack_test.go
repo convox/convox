@@ -128,42 +128,6 @@ func TestRackInstallArgs(t *testing.T) {
 	})
 }
 
-func TestRackInstallArgsList(t *testing.T) {
-	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
-		rack.TestLatest = "foo"
-
-		me := &mockstdcli.Executor{}
-		me.On("Execute", "terraform", "version").Return([]byte{}, nil)
-		me.On("Terminal", "terraform", "init", "-force-copy", "-no-color", "-upgrade").Return(nil)
-		me.On("Terminal", "terraform", "apply", "-auto-approve", "-no-color").Return(nil)
-		e.Executor = me
-
-		res, err := testExecute(e, "rack install local dev1 subnets=foo,bar,zoo", nil)
-		require.NoError(t, err)
-		require.Equal(t, 0, res.Code)
-		res.RequireStderr(t, []string{""})
-		res.RequireStdout(t, []string{""})
-
-		dir := filepath.Join(e.Settings, "racks", "dev1")
-		tf := filepath.Join(dir, "main.tf")
-
-		_, err = os.Stat(dir)
-		require.NoError(t, err)
-		_, err = os.Stat(tf)
-		require.NoError(t, err)
-
-		tfdata, err := ioutil.ReadFile(tf)
-		require.NoError(t, err)
-
-		testdata, err := ioutil.ReadFile("testdata/terraform/dev3.args.tf")
-		require.NoError(t, err)
-
-		require.Equal(t, strings.Trim(string(tfdata), "\n"), strings.Trim(string(testdata), "\n"))
-
-		me.AssertExpectations(t)
-	})
-}
-
 func TestRackInstallPrepare(t *testing.T) {
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
 		rack.TestLatest = "foo"
@@ -374,7 +338,7 @@ func TestRackParamsError(t *testing.T) {
 func TestRackParamsSet(t *testing.T) {
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
 		opts := structs.SystemUpdateOptions{
-			Parameters: map[string]interface{}{
+			Parameters: map[string]string{
 				"Foo": "bar",
 				"Baz": "qux",
 			},
@@ -394,7 +358,7 @@ func TestRackParamsSet(t *testing.T) {
 func TestRackParamsSetError(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		opts := structs.SystemUpdateOptions{
-			Parameters: map[string]interface{}{
+			Parameters: map[string]string{
 				"Foo": "bar",
 				"Baz": "qux",
 			},
@@ -590,20 +554,16 @@ func TestRackUpdate(t *testing.T) {
 func TestRackUpdateDowngradeMinorError(t *testing.T) {
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("SystemGet").Return(&structs.System{
-			Count:   1,
-			Domain:  "domain",
-			Name:    "name",
-			Outputs: map[string]string{"k1": "v1", "k2": "v2"},
-			Parameters: map[string]interface{}{
-				"Autoscale":  "Yes",
-				"ParamFoo":   "value1",
-				"ParamOther": "value2",
-			},
-			Provider: "provider",
-			Region:   "region",
-			Status:   "running",
-			Type:     "type",
-			Version:  "3.3.0",
+			Count:      1,
+			Domain:     "domain",
+			Name:       "name",
+			Outputs:    map[string]string{"k1": "v1", "k2": "v2"},
+			Parameters: map[string]string{"Autoscale": "Yes", "ParamFoo": "value1", "ParamOther": "value2"},
+			Provider:   "provider",
+			Region:     "region",
+			Status:     "running",
+			Type:       "type",
+			Version:    "3.3.0",
 		}, nil)
 
 		res, err := testExecute(e, "rack update 3.2.12", nil)
