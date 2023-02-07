@@ -8,131 +8,49 @@ url: /installation/development-rack/ubuntu
 
 ## Initial Setup
 
-> **_NOTE:_**:  Ubuntu 20.04 users will need to ensure that they are installing the latest version of Convox. See the 'Tips' sections below for more details.
+> **_NOTE:_**:  These instructions are intended for Ubuntu 22.04 LTS.  While alternate versions may function with no issues, version 22.04 LTS is our baseline for updates and testing. 
 
-### Docker
-```html
-    $ sudo apt install docker.io
-```
-
----
-
-### Tips for Ubuntu 20.04 Users
-
-> With Convox, local development racks depend on Docker as a container runtime. A local development rack deployment installs `microk8s` with kubernetes 1.13, which is the latest version of kubernetes that uses Docker. However, kubernetes 1.13 exposes [a bug with the underlying go library](https://github.com/kubernetes/kubernetes/blob/874f0559d9b358f87959ec0bb7645d9cb3d5f7ba/vendor/github.com/miekg/dns/clientconfig.go#L86). In short, the bug checks the `resolv.conf` file for DNS configuration options, and generates an error when the option length is exactly 8 characters.  Although this bug is fixed in subsequent versions of kubernetes, those versions of kubernetes do not use Docker, hence the reason why we have implemented the following installation workaround.
-
-### Installation Workaround
-
-In order to get the kubernetes steps that follow to work, a slight modification to your local `/etc/resolv.conf` file is required. `microk8s` leverages your local DNS configuration to configure DNS resolution in Kubernetes, and the following commands will provide you with a workaround to the problem described above:
-
-Make a backup of your `/etc/resolv.conf` file:
-```html
-    $ mv /etc/resolv.conf /etc/resolv.conf.orig
-```
-Important: Create a new configuration file by removing the `trust-ad` option from the options line in the original configuration file:
-```html
-    $ cat /etc/resolv.conf.orig | sed 's/trust-ad//g' > /etc/resolv.conf.manually-configured
-```
-Next, create a symbolic link to the newly created `/etc/resolv.conf.manually-configured` file:
-```html
-    $ ln -s /etc/resolv.conf.manually-configured /etc/resolv.conf
-```
-These steps allow your local DNS resolver to be manually configured.  Finally, restart the following processes to have this modification take affect:
-```html
-    $ systemctl restart daemon-reload
-    $ systemctl restart systemd-networkd systemd-resolved
-```
-Now, the Kubernetes steps below should work as expected.
-
----
-
-### Kubernetes
-```html
-    $ snap install microk8s --classic --channel=1.13/stable
-    $ microk8s.start
-    $ microk8s.enable dns storage
-    $ mkdir -p ~/.kube
-    $ microk8s.config > ~/.kube/config
-    $ sudo snap restart microk8s
-    $ sudo snap alias microk8s.kubectl kubectl
-```
-### Terraform
-
-- Install [Terraform](https://learn.hashicorp.com/terraform/getting-started/install.html)
-
-### Convox CLI
-
-### x86_64 / amd64
-
-```html
-    $ curl -L https://github.com/convox/convox/releases/latest/download/convox-linux -o /tmp/convox
-    $ sudo mv /tmp/convox /usr/local/bin/convox
-    $ sudo chmod 755 /usr/local/bin/convox
-```
-
-### arm64
-
-```html
-    $ curl -L https://github.com/convox/convox/releases/latest/download/convox-linux-arm64 -o /tmp/convox
-    $ sudo mv /tmp/convox /usr/local/bin/convox
-    $ sudo chmod 755 /usr/local/bin/convox
-```
+To use Convox’s local development Rack feature on Ubuntu, you will need install following applications locally: 
+- [Convox](/reference/primitives/getting-started/introduction/#install-the-convox-cli-and-login) 
+- [Docker](https://docs.docker.com/engine/install/ubuntu/) 
+- [Minikube 1.29.0 or later](https://minikube.sigs.k8s.io/docs/start/) 
+- [Terraform](https://developer.hashicorp.com/terraform/downloads) 
 
 ## Installation
 
-> Make sure that your `kubectl` points at your local microk8s setup.  Ensure that if your `KUBECONFIG` env var is set, it is pointing at a config file that contains your local context.  By default as per the above instructions, your local config will be copied into `~/.kube/config`.
+Convox development racks run on Minikube with several required options: 
+- `--insecure-registry=”registry.<RACK_NAME>.localdev.convox.cloud”`
+- `--kubernetes-version=<k8s_VERSION>` 
+- `--static-ip <IP>` 
 
-Install a local Rack named `dev`.
-```html
-    $ convox rack install local dev
-```
+The first thing you must choose is the name for your rack as it will be a component of other installation parameters.  For this documentation we will use the rack name `test-local` 
 
----
+Then verify the Kubernetes version for the [rack version](https://github.com/convox/convox/releases) you are going to install.  At the time of this writing it is `v1.23.0` 
 
-### Tips for Ubuntu 20.04 Users
+Finally choose a static IP that works for your local configuration.  We have found `192.168.212.2` to work well in most all cases. 
 
-Once you have completed the installation steps above, you will want to make sure that the `convox rack` commands are working by
-executing the following command:
-```html
-    $ convox rack -r dev
-```
-The output from this command should return a summary of your rack configuration similar to the output below:
-```html
-    $ convox rack -r dev
-    Name      dev
-    Provider  local
-    Router    router.dev.convox
-    Status    running
-    Version   3.0.49
-```
-If it doesn't, most likely you will receive a `504` error, as your local firewall rules are not allowing traffic to be forwarded to microk8s.
-This can be resolved with the following command:
-```html
-    $ iptables -P FORWARD ACCEPT
-```
-Issuing the `convox rack -r dev` command should now provide you with the appropriate output.
 
----
+Now start Minikube with: 
+`minikube start --kubernetes-version=v1.23.0 --insecure-registry="https://registry.test-local.localdev.convox.cloud" --static-ip 192.168.212.2` 
 
-## DNS Setup
+- If you receive an error regarding IP `192.168.212.2`, you can delete the docker networks by running `docker network prune`, and then run the full `minikube start` command above again. 
+- If you receive an error regarding docker permissions, you can run the group command given in the output. 
 
-Set `*.convox` to be resolved by the local Rack's DNS server.
-```html
-    $ sudo mkdir -p /usr/lib/systemd/resolved.conf.d
-    $ sudo bash -c "printf '[Resolve]\nDNS=$(kubectl get service/resolver-external -n dev-system -o jsonpath="{.spec.clusterIP}")\nDomains=~convox' > /usr/lib/systemd/resolved.conf.d/convox.conf"
-    $ systemctl daemon-reload
-    $ systemctl restart systemd-networkd systemd-resolved
-```
-## CA Trust
 
-To remove browser warnings about untrusted certificates for local applications
-you can trust the Rack's CA certificate.
+Now enable Minikube ingress and ingress-dns addons: 
+` minikube addons enable ingress` 
+` minikube addons enable ingress-dns`  
 
-This certificate is generated on your local machine and is unique to your Rack.
-```html
-    $ kubectl get secret/ca -n dev-system -o jsonpath="{.data.tls\.crt}" | base64 -d > /tmp/ca
-    $ sudo mv /tmp/ca /usr/local/share/ca-certificates/convox.crt
-    $ sudo update-ca-certificates
-    $ sudo snap restart microk8s
-    $ sudo service docker restart
-```
+Finally install the local development rack with the command `convox rack install local <RACK_NAME> -v <VERSION>` 
+> **_NOTE:_**: Rack version `-v` must be 3.10.5 or later 
+
+For this example the command would be:
+`convox rack install local test-local -v 3.10.5` 
+
+You can now run `convox rack -r <RACK_NAME>` to see the new rack installed locally. 
+ 
+## Management
+
+Local rack files are stored at `~/.config/convox/racks/<RACK_NAME>` 
+If you run into any issues installing and need to delete the local rack you can run: 
+`sudo rm –rf ~/.config/convox/racks/<RACK_NAME>` 

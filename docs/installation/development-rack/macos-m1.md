@@ -1,10 +1,10 @@
 ---
-title: "macOS"
+title: "macOS-M1"
 draft: false
-slug: macOS
-url: /installation/development-rack/macos
+slug: macOS-M1
+url: /installation/development-rack/macos-m1
 ---
-# macOS (Intel/x86)
+# macOS (M1/ARM64)
 
 ## Initial Setup
 
@@ -35,14 +35,14 @@ For this example the command would be:
 
 Now enable Minikube ingress and ingress-dns addons: 
 ` minikube addons enable ingress` 
-` minikube addons enable ingress-dns`
+` minikube addons enable ingress-dns` 
   
 
 Then install the local development rack with the command `convox rack install local <RACK_NAME> -v <VERSION>` 
 > **_NOTE:_**: Rack version `-v` must be `3.10.5` or later 
 
 For this example the command would be:
-`convox rack install local test-local -v 3.10.5` 
+`convox rack install local test-local -v 3.10.5`
 
 Once the rack is installed you should be able to see it by running: `convox racks`
 
