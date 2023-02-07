@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -195,13 +196,18 @@ func (t Terraform) Metadata() (*Metadata, error) {
 		return nil, err
 	}
 
-	vars["name"] = common.CoalesceString(vars["name"], t.name)
+	vars["name"] = common.CoalesceString(vars["name"].(string), t.name)
+
+	params := map[string]string{}
+	for k, v := range vars {
+		params[k] = fmt.Sprint(v)
+	}
 
 	m := &Metadata{
 		Deletable: true,
 		Provider:  t.provider,
 		State:     state,
-		Vars:      vars,
+		Vars:      params,
 	}
 
 	return m, nil
@@ -230,7 +236,12 @@ func (t Terraform) Parameters() (map[string]string, error) {
 	delete(vars, "region")
 	delete(vars, "release")
 
-	return vars, nil
+	params := map[string]string{}
+	for k, v := range vars {
+		params[k] = fmt.Sprint(v)
+	}
+
+	return params, nil
 }
 
 func (t Terraform) Provider() string {
@@ -276,7 +287,7 @@ func (t Terraform) UpdateParams(params map[string]string) error {
 		return err
 	}
 
-	release, ok := vars["release"]
+	release, ok := vars["release"].(string)
 	if !ok {
 		return fmt.Errorf("could not determine current release")
 	}
@@ -366,7 +377,12 @@ func (t Terraform) create(release string, vars map[string]string, state []byte) 
 		return err
 	}
 
-	if err := t.update(release, vars); err != nil {
+	// Needed to break interface between Metadata and terraform variables
+	vars_ := map[string]interface{}{}
+	for k, v := range vars {
+		vars_[k] = v
+	}
+	if err := t.update(release, vars_); err != nil {
 		return err
 	}
 
@@ -396,25 +412,34 @@ func (t Terraform) settingsDirectory() (string, error) {
 	return t.ctx.SettingDirectory(fmt.Sprintf("racks/%s", t.name))
 }
 
-func (t Terraform) update(release string, vars map[string]string) error {
+func (t Terraform) update(release string, vars map[string]interface{}) error {
 	currentVersion := ""
-	if vars != nil && vars["release"] != "" {
-		currentVersion = vars["release"]
+	releaseStr, ok := vars["release"].(string)
+	if vars["release"] != nil && !ok {
+		return fmt.Errorf("could not cast 'release' param to string, got: %s", fmt.Sprint(vars["release"]))
 	}
+
+	if vars != nil && releaseStr != "" {
+		currentVersion = releaseStr
+	}
+
 	if release == "" {
 		v, err := terraformLatestVersion(currentVersion)
 		if err != nil {
 			return err
 		}
 		release = v
-
 	}
 
 	if vars == nil {
-		vars = map[string]string{}
+		vars = map[string]interface{}{}
 	}
 
-	vars["name"] = common.CoalesceString(vars["name"], t.name)
+	nameStr, ok := vars["name"].(string)
+	if vars["name"] != nil && !ok {
+		return fmt.Errorf("could not cast 'name' param to string, got: %s", fmt.Sprint(vars["name"]))
+	}
+	vars["name"] = common.CoalesceString(nameStr, t.name)
 	vars["release"] = release
 
 	pv, err := terraformProviderVars(t.provider)
@@ -458,8 +483,8 @@ func (t Terraform) update(release string, vars map[string]string) error {
 	return nil
 }
 
-func (t Terraform) vars() (map[string]string, error) {
-	vars := map[string]string{}
+func (t Terraform) vars() (map[string]interface{}, error) {
+	vars := map[string]interface{}{}
 
 	vf, err := t.varsFile()
 	if err != nil {
@@ -495,10 +520,16 @@ func (t Terraform) varsFile() (string, error) {
 	return vf, nil
 }
 
-func (t Terraform) writeVars(vars map[string]string) error {
+func (t Terraform) writeVars(vars map[string]interface{}) error {
 	for k, v := range vars {
-		if strings.TrimSpace(v) == "" {
-			delete(vars, k)
+		switch t := v.(type) {
+		case string:
+			if strings.TrimSpace(t) == "" {
+				delete(vars, k)
+			}
+			if strings.Contains(t, ",") {
+				vars[k] = strings.Split(t, ",")
+			}
 		}
 	}
 
@@ -761,6 +792,51 @@ func terraformTemplateHelpers() template.FuncMap {
 			sort.Strings(ks)
 			return ks
 		},
+		"isInt": func(i interface{}) bool {
+			v := reflect.ValueOf(i)
+			switch v.Kind() {
+			case reflect.Int, reflect.Int8, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64:
+				return true
+			default:
+				return false
+			}
+		},
+		"isString": func(i interface{}) bool {
+			v := reflect.ValueOf(i)
+			switch v.Kind() {
+			case reflect.String:
+				return true
+			default:
+				return false
+			}
+		},
+		"isSlice": func(i interface{}) bool {
+			v := reflect.ValueOf(i)
+			switch v.Kind() {
+			case reflect.Slice:
+				return true
+			default:
+				return false
+			}
+		},
+		"isArray": func(i interface{}) bool {
+			v := reflect.ValueOf(i)
+			switch v.Kind() {
+			case reflect.Array:
+				return true
+			default:
+				return false
+			}
+		},
+		"isMap": func(i interface{}) bool {
+			v := reflect.ValueOf(i)
+			switch v.Kind() {
+			case reflect.Map:
+				return true
+			default:
+				return false
+			}
+		},
 	}
 }
 
@@ -822,10 +898,10 @@ func terraformWriteTemplate(filename, version string, params map[string]interfac
 	t, err := template.New("main").Funcs(terraformTemplateHelpers()).Parse(`
 		module "system" {
 			source = "{{.Source}}"
-
-			{{- range (keys .Vars) }}
-			{{.}} = "{{index $.Vars .}}"
-			{{- end }}
+			{{- range $k, $v := $.Vars }}
+			{{ if isString $v }}{{ $k }} = "{{ $v }}" {{- end -}}
+			{{ if isSlice $v }}{{ $k }} = [ {{ range $_, $s := $v }} "{{ $s }}", {{ end }} ] {{ end }}
+      {{- end }}
 		}
 
 		output "api" {
