@@ -59,7 +59,7 @@ func (d Direct) Name() string {
 	return d.name
 }
 
-func (d Direct) Parameters() (map[string]interface{}, error) {
+func (d Direct) Parameters() (map[string]string, error) {
 	cc, err := d.Client()
 	if err != nil {
 		return nil, err
@@ -93,7 +93,7 @@ func (d Direct) Uninstall() error {
 	return fmt.Errorf("uninstall not supported with RACK_URL")
 }
 
-func (d Direct) UpdateParams(params map[string]interface{}) error {
+func (d Direct) UpdateParams(params map[string]string) error {
 	cc, err := d.Client()
 	if err != nil {
 		return err

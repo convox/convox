@@ -44,7 +44,7 @@ func CreateConsole(c *stdcli.Context, name string, md *Metadata) (*Console, erro
 	return cr, nil
 }
 
-func InstallConsole(c *stdcli.Context, provider, name, version string, params map[string]interface{}) error {
+func InstallConsole(c *stdcli.Context, provider, name, version string, options map[string]string) error {
 	return fmt.Errorf("console install from cli not yet supported")
 }
 
@@ -127,7 +127,7 @@ func (c Console) Name() string {
 	return c.name
 }
 
-func (c Console) Parameters() (map[string]interface{}, error) {
+func (c Console) Parameters() (map[string]string, error) {
 	cc, err := c.client()
 	if err != nil {
 		return nil, err
@@ -174,7 +174,7 @@ func (c Console) Uninstall() error {
 	return fmt.Errorf("console uninstall not yet supported")
 }
 
-func (c Console) UpdateParams(params map[string]interface{}) error {
+func (c Console) UpdateParams(params map[string]string) error {
 	cu, err := c.consoleUpdateSupported()
 	if err != nil {
 		return err
@@ -204,7 +204,7 @@ func (c Console) UpdateParams(params map[string]interface{}) error {
 	return nil
 }
 
-func (c Console) updateParamsDirect(params map[string]interface{}) error {
+func (c Console) updateParamsDirect(params map[string]string) error {
 	d, err := c.direct()
 	if err != nil {
 		return err
@@ -388,10 +388,6 @@ func listConsole(c *stdcli.Context) ([]Console, error) {
 	}
 
 	rs, err := cc.RackList()
-	if err != nil && strings.Contains(err.Error(), "cli token is expired") {
-		return nil, err
-	}
-
 	switch err.(type) {
 	case console.AuthenticationError:
 		return nil, err
