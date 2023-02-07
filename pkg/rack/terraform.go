@@ -900,7 +900,7 @@ func terraformWriteTemplate(filename, version string, params map[string]interfac
 			source = "{{.Source}}"
 			{{- range $k, $v := $.Vars }}
 			{{ if isString $v }}{{ $k }} = "{{ $v }}" {{- end -}}
-			{{ if isSlice $v }}{{ $k }} = [ {{ range $_, $s := $v }} "{{ $s }}", {{ end }} ] {{ end }}
+			{{ if isSlice $v }}{{ $k }} = [{{ range $_, $s := $v }}"{{ $s }}", {{ end }}]{{ end }}
       {{- end }}
 		}
 
