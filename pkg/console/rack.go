@@ -11,7 +11,7 @@ type Rack struct {
 	Deletable    bool
 	Name         string
 	Organization Organization
-	Parameters   map[string]interface{}
+	Parameters   map[string]string
 	Provider     string
 	Status       string
 	State        []byte
@@ -20,7 +20,7 @@ type Rack struct {
 
 type Racks []Rack
 
-func (c *Client) RackCreate(name, provider string, state []byte, params map[string]interface{}) (*Rack, error) {
+func (c *Client) RackCreate(name, provider string, state []byte, params map[string]string) (*Rack, error) {
 	pdata, err := json.Marshal(params)
 	if err != nil {
 		return nil, err
@@ -76,7 +76,7 @@ func (c *Client) RackList() (Racks, error) {
 	return rs, nil
 }
 
-func (c *Client) RackUpdate(name, version string, params map[string]interface{}) error {
+func (c *Client) RackUpdate(name, version string, params map[string]string) error {
 	pdata, err := json.Marshal(params)
 	if err != nil {
 		return err
