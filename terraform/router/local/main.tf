@@ -1,25 +1,3 @@
-locals {
-  tags = {
-    System = "convox"
-    Rack   = var.name
-  }
-}
-
-module "nginx" {
-  source = "../nginx"
-
-  providers = {
-    kubernetes = kubernetes
-  }
-
-  nginx_image        = var.nginx_image
-  nginx_user         = "33"
-  namespace          = var.namespace
-  rack               = var.name
-  replicas_min       = 1
-  set_priority_class = false
-}
-
 resource "kubernetes_service" "router" {
   metadata {
     namespace = var.namespace
@@ -27,7 +5,7 @@ resource "kubernetes_service" "router" {
   }
 
   spec {
-    type = var.platform == "Linux" ? "ClusterIP" : "LoadBalancer"
+    type = "ClusterIP"
 
     port {
       name        = "http"
@@ -42,7 +20,18 @@ resource "kubernetes_service" "router" {
       protocol    = "TCP"
       target_port = 443
     }
+  }
+}
 
-    selector = module.nginx.selector
+# add nginx global configuration in minikube ingress
+# otherwise large file upload fails when running convox build command
+resource "kubernetes_config_map_v1_data" "ingress-nginx-controller-configmap" {
+  metadata {
+    name      = "ingress-nginx-controller"
+    namespace = "ingress-nginx"
+  }
+  data = {
+    "hsts" =  "false"
+    "proxy-body-size" = "0"
   }
 }
