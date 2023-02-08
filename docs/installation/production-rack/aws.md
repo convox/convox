@@ -49,7 +49,7 @@ The following environment variables are required:
 | **cert_duration**        | **2160h**              | Certification renew period                                                                                     | 
 | **cidr**                 | **10.1.0.0/16**        | CIDR range for VPC                                                                                             |
 | **high_availability**    | **true**               | Setting this to "false" will create a cluster with less reduntant resources for cost optimization              |
-| **internal_router**  |     **false**        | This will install an internal loadbalancer within the vpc |
+| **internal_router**  |     **false**        | Install an internal loadbalancer within the vpc |
 | **internet_gateway_id**  |                        | If you're using an existing vpc for your rack, use this field to pass the id of the attached internet gateway  |
 | **idle_timeout**         | **3600**               | Idle timeout value (in seconds) for the Rack Load Balancer                                                     |
 | **key_pair_name**        |                        | AWS key pair to use for ssh|
