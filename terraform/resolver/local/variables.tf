@@ -1,3 +1,7 @@
+variable "docker_hub_authentication" {
+  type = string
+}
+
 variable "image" {
   type = string
 }

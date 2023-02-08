@@ -1,9 +1,22 @@
+
+variable "docker_hub_username" {
+  default = ""
+}
+
+variable "docker_hub_password" {
+  default = ""
+}
+
 variable "image" {
   type = string
 }
 
 variable "name" {
   type = string
+}
+
+variable "os" {
+  default = "ubuntu"
 }
 
 variable "platform" {
