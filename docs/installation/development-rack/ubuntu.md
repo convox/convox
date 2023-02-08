@@ -21,14 +21,11 @@ To use Convox’s local development Rack feature on Ubuntu, you will need instal
 Convox development racks run on Minikube with several required options: 
 - `--insecure-registry=”registry.<RACK_NAME>.localdev.convox.cloud”`
 - `--kubernetes-version=<k8s_VERSION>` 
-- `--static-ip <IP>` 
+- `--static-ip 192.168.212.2` 
 
 The first thing you must choose is the name for your rack as it will be a component of other installation parameters.  For this documentation we will use the rack name `test-local` 
 
-Then verify the Kubernetes version for the [rack version](https://github.com/convox/convox/releases) you are going to install.  At the time of this writing it is `v1.23.0` 
-
-Finally choose a static IP that works for your local configuration.  We have found `192.168.212.2` to work well in most all cases. 
-
+Then verify the Kubernetes version for the [rack version](https://github.com/convox/convox/releases) you are going to install.  At the time of this writing it is `v1.23.0`
 
 Now start Minikube with: 
 `minikube start --kubernetes-version=v1.23.0 --insecure-registry="https://registry.test-local.localdev.convox.cloud" --static-ip 192.168.212.2` 
