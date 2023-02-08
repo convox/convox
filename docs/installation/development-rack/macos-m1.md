@@ -42,14 +42,14 @@ Then install the local development rack with the command `convox rack install lo
 > **_NOTE:_**: Rack version `-v` must be `3.10.5` or later 
 
 For this example the command would be:
-`convox rack install local test-local -v 3.10.5`
+`convox rack install local test-local -v 3.10.5 os=mac`
 
 Once the rack is installed you should be able to see it by running: `convox racks`
 
 Finally, to address the rack on macOS you must open a new terminal window and run `minikube tunnel`
 > **_NOTE:_**: You must keep the terminal window with the tunnel active open to address the rack
 
-You can now run: `convox racks -r <RACK_NAME>` to verify connectivity.
+You can now run: `convox rack -r <RACK_NAME>` to verify connectivity.
 
  
 ## Management
