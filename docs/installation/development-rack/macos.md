@@ -38,7 +38,7 @@ Now enable Minikube ingress and ingress-dns addons:
 ` minikube addons enable ingress-dns`
   
 
-Then install the local development rack with the command `convox rack install local <RACK_NAME> -v <VERSION>` 
+Then install the local development rack with the command `convox rack install local <RACK_NAME> -v <VERSION> os=mac` 
 > **_NOTE:_**: Rack version `-v` must be `3.10.5` or later 
 
 For this example the command would be:
