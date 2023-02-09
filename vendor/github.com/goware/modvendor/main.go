@@ -17,6 +17,10 @@ var (
 	flags       = flag.NewFlagSet("modvendor", flag.ExitOnError)
 	copyPatFlag = flags.String("copy", "", "copy files matching glob pattern to ./vendor/ (ie. modvendor -copy=\"**/*.c **/*.h **/*.proto\")")
 	verboseFlag = flags.Bool("v", false, "verbose output")
+	includeFlag = flags.String(
+		"include",
+		"",
+		`specifies additional directories to copy into ./vendor/ which are not specified in ./vendor/modules.txt. Multiple directories can be included by comma separation e.g. -include:github.com/a/b/dir1,github.com/a/b/dir1/dir2`)
 )
 
 type Mod struct {
@@ -55,6 +59,7 @@ func main() {
 		fmt.Println("Whoops, -copy argument is empty, nothing to copy.")
 		os.Exit(1)
 	}
+	additionalDirsToInclude := strings.Split(*includeFlag, ",")
 
 	// Parse/process modules.txt file of pkgs
 	f, _ := os.Open(modtxtPath)
@@ -70,6 +75,9 @@ func main() {
 
 		if line[0] == 35 {
 			s := strings.Split(line, " ")
+			if (len(s) != 6 && len(s) != 3) || s[1] == "explicit" {
+				continue
+			}
 
 			mod = &Mod{
 				ImportPath: s[1],
@@ -83,8 +91,19 @@ func main() {
 			// Handle "replace" in module file if any
 			if len(s) > 3 && s[3] == "=>" {
 				mod.SourcePath = s[4]
-				mod.SourceVersion = s[5]
-				mod.Dir = pkgModPath(mod.SourcePath, mod.SourceVersion)
+
+				// Handle replaces with a relative target. For example:
+				// "replace github.com/status-im/status-go/protocol => ./protocol"
+				if strings.HasPrefix(s[4], ".") || strings.HasPrefix(s[4], "/") {
+					mod.Dir, err = filepath.Abs(s[4])
+					if err != nil {
+						fmt.Printf("invalid relative path: %v", err)
+						os.Exit(1)
+					}
+				} else {
+					mod.SourceVersion = s[5]
+					mod.Dir = pkgModPath(mod.SourcePath, mod.SourceVersion)
+				}
 			} else {
 				mod.Dir = pkgModPath(mod.ImportPath, mod.Version)
 			}
@@ -96,6 +115,12 @@ func main() {
 
 			// Build list of files to module path source to project vendor folder
 			mod.VendorList = buildModVendorList(copyPat, mod)
+			// Append directories we need to also include which may not be in vendor/modules.txt.
+			for _, dir := range additionalDirsToInclude {
+				if strings.HasPrefix(dir, mod.ImportPath) {
+					mod.Pkgs = append(mod.Pkgs, dir)
+				}
+			}
 
 			modules = append(modules, mod)
 
@@ -177,6 +202,17 @@ func importPathIntersect(basePath, pkgPath string) string {
 	return pkgPath[len(basePath):]
 }
 
+func normString(str string) (normStr string) {
+	for _, char := range str {
+		if unicode.IsUpper(char) {
+			normStr += "!" + string(unicode.ToLower(char))
+		} else {
+			normStr += string(char)
+		}
+	}
+	return
+}
+
 func pkgModPath(importPath, version string) string {
 	goPath := os.Getenv("GOPATH")
 	if goPath == "" {
@@ -184,17 +220,10 @@ func pkgModPath(importPath, version string) string {
 		goPath = filepath.Join(os.Getenv("HOME"), "go")
 	}
 
-	var normPath string
+	normPath := normString(importPath)
+	normVersion := normString(version)
 
-	for _, char := range importPath {
-		if unicode.IsUpper(char) {
-			normPath += "!" + string(unicode.ToLower(char))
-		} else {
-			normPath += string(char)
-		}
-	}
-
-	return filepath.Join(goPath, "pkg", "mod", fmt.Sprintf("%s@%s", normPath, version))
+	return filepath.Join(goPath, "pkg", "mod", fmt.Sprintf("%s@%s", normPath, normVersion))
 }
 
 func copyFile(src, dst string) (int64, error) {
