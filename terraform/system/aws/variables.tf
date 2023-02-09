@@ -124,13 +124,13 @@ variable "vpc_cni_version" {
 }
 
 variable "private_subnets_ids" {
-  type    = list(string)
-  default = []
+  type    = string
+  default = ""
 }
 
 variable "public_subnets_ids" {
-  type    = list(string)
-  default = []
+  type    = string
+  default = ""
 }
 
 variable "whitelist" {
