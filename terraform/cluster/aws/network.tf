@@ -5,7 +5,8 @@ locals {
     Rack = var.name
   })
   vpc_id              = var.vpc_id == "" ? aws_vpc.nodes[0].id : var.vpc_id
-  private_subnets_ids = length(var.private_subnets_ids) != 0 ? var.private_subnets_ids : aws_subnet.private[*].id
+  private_subnets_ids = length(var.private_subnets_ids) == 0 ? aws_subnet.private[*].id : var.private_subnets_ids
+  public_subnets_ids  = length(var.public_subnets_ids) == 0 ? aws_subnet.public[*].id : var.public_subnets_ids
 }
 
 resource "aws_vpc" "nodes" {
@@ -53,7 +54,7 @@ resource "aws_subnet" "public" {
     null_resource.wait_vpc_nodes
   ]
 
-  count = local.network_resource_count
+  count = length(var.public_subnets_ids) == 0 ? local.network_resource_count : var.public_subnets_ids
 
   availability_zone       = local.availability_zones[count.index]
   cidr_block              = cidrsubnet(var.cidr, 4, count.index)
@@ -109,7 +110,7 @@ resource "aws_route_table_association" "public" {
   count = local.network_resource_count
 
   route_table_id = aws_route_table.public.id
-  subnet_id      = aws_subnet.public[count.index].id
+  subnet_id      = local.public_subnets_ids[count.index].id
 }
 
 resource "aws_subnet" "private" {
@@ -153,7 +154,7 @@ resource "aws_nat_gateway" "private" {
   count = var.private ? local.network_resource_count : 0
 
   allocation_id = aws_eip.nat[count.index].id
-  subnet_id     = aws_subnet.public[count.index].id
+  subnet_id     = local.public_subnets_ids[count.index].id
 
   tags = merge(local.tags, {
     Name = "${var.name} ${count.index}"
