@@ -13,7 +13,3 @@ variable "domain" {
 variable "name" {
   type = string
 }
-
-variable "release" {
-  type = string
-}
