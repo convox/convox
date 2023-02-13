@@ -30,7 +30,7 @@ output "oidc_sub" {
 }
 
 output "route_table_public" {
-  value = aws_route_table.public.id
+  value = local.public_route_table
 }
 
 output "subnets" {
