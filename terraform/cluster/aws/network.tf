@@ -7,7 +7,7 @@ locals {
 
   private_subnets_ids  = length(var.private_subnets_ids) == 0 ? aws_subnet.private[*].id : var.private_subnets_ids
   private_route_tables = length(var.private_subnets_ids) == 0 ? aws_route_table.private[*].id : data.aws_route_table.private[*].id
-  nat_gateway_ids       = length(var.private_subnets_ids) == 0 ? aws_nat_gateway.private[*].id : data.aws_nat_gateway.private[*].id
+  #nat_gateway_ids       = length(var.private_subnets_ids) == 0 ? aws_nat_gateway.private[*].id : data.aws_nat_gateway.private[*].id
 
   public_subnets_ids  = length(var.public_subnets_ids) == 0 ? aws_subnet.public[*].id : var.public_subnets_ids
   public_route_table  = length(var.public_subnets_ids) == 0 ? aws_route_table.public[0].id : data.aws_route_table.public.id
@@ -160,12 +160,6 @@ resource "aws_eip" "nat" {
   })
 }
 
-data "aws_nat_gateway" "private" {
-  count  = length(var.private_subnets_ids) == 0 ? 0 : 1
-  vpc_id = local.vpc_id
-  #subnet_id = var.public_subnets_ids[0]
-}
-
 resource "aws_nat_gateway" "private" {
   count = length(var.private_subnets_ids) == 0 ? var.private ? local.network_resource_count : 0 : 0
 
@@ -217,7 +211,7 @@ resource "aws_route" "private-default" {
   count = length(var.private_subnets_ids) == 0 ? var.private ? local.network_resource_count : 0 : 0
 
   destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = local.nat_gateway_ids[count.index]
+  nat_gateway_id         = aws_nat_gateway.private[count.index].id
   route_table_id         = local.private_route_tables[count.index]
 
   timeouts {
