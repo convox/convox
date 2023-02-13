@@ -4,9 +4,9 @@ draft: false
 slug: logs
 url: /reference/cli/logs
 ---
-# logs
+# Logs
 
-## logs
+## Logs
 
 Get logs for an app
 
@@ -27,3 +27,11 @@ Get logs for an app
     2020-02-05T12:47:41Z service/web/77f0e67e-4886-4aa8-be56-1d19a3aab53b ns=template id=2bdd60aaf431 route=root at=end state=success elapsed=0.065
     2020-02-05T12:47:41Z service/web/77f0e67e-4886-4aa8-be56-1d19a3aab53b ns=template id=2bdd60aaf431 route=root at=start method="GET" path="/" elapsed=0.029
 ```
+
+### Options
+
+- `--app` - Specify application for logging 
+- `--rack` - Specify rack for logging 
+- `--filter` - Filter for a specific string within the logs  
+- `--since` - Set time frame for log query  
+- `--no-follow` - Prints logs in terminal rather than opening a log stream 

@@ -5,12 +5,13 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
-  image     = var.image
-  namespace = var.namespace
-  rack      = var.rack
-  release   = var.release
-  replicas  = 1
-  set_priority_class = false
+  docker_hub_authentication = var.docker_hub_authentication
+  image                     = var.image
+  namespace                 = var.namespace
+  rack                      = var.rack
+  release                   = var.release
+  replicas                  = 1
+  set_priority_class        = false
 }
 
 resource "kubernetes_service" "resolver-external" {
@@ -20,7 +21,7 @@ resource "kubernetes_service" "resolver-external" {
   }
 
   spec {
-    type = var.platform == "Linux" ? "ClusterIP" : "LoadBalancer"
+    type = "ClusterIP"
 
     port {
       name        = "dns"
