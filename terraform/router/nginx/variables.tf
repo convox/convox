@@ -1,5 +1,5 @@
 variable "nginx_image" {
-  type = string
+  type    = string
   default = "registry.k8s.io/ingress-nginx/controller:v1.3.0@sha256:d1707ca76d3b044ab8a28277a2466a02100ee9f58a86af1535a3edf9323ea1b5"
 }
 
@@ -8,10 +8,12 @@ variable "namespace" {
 }
 
 variable "proxy_protocol" {
+  type    = bool
   default = false
 }
 
 variable "cloud_provider" {
+  type    = string
   default = ""
 }
 
@@ -20,13 +22,16 @@ variable "rack" {
 }
 
 variable "replicas_min" {
+  type    = number
   default = 2
 }
 
 variable "replicas_max" {
+  type    = number
   default = 10
 }
 
 variable "set_priority_class" {
+  type    = bool
   default = true
 }

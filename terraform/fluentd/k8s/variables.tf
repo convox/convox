@@ -1,5 +1,6 @@
 variable "annotations" {
   default = {}
+  type    = map(string)
 }
 
 variable "cluster" {
@@ -7,6 +8,7 @@ variable "cluster" {
 }
 
 variable "env" {
+  type    = map(string)
   default = {}
 }
 

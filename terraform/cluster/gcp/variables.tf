@@ -1,5 +1,5 @@
 variable "k8s_version" {
-  type = string
+  type    = string
   default = "1.22"
 }
 
@@ -12,6 +12,7 @@ variable "node_type" {
 }
 
 variable "preemptible" {
+  type    = bool
   default = true
 }
 

@@ -1,5 +1,6 @@
 variable "high_availability" {
   default = true
+  type = bool
 }
 
 variable "k8s_version" {
