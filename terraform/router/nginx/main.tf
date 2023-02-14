@@ -148,29 +148,29 @@ resource "kubernetes_role" "ingress-nginx" {
   }
 
   rule {
-    api_groups      = ["coordination.k8s.io"]
-    resource_names  = ["ingress-controller-leader"]
-    resources       = ["leases"]
-    verbs           = ["get", "update"]
+    api_groups     = ["coordination.k8s.io"]
+    resource_names = ["ingress-controller-leader"]
+    resources      = ["leases"]
+    verbs          = ["get", "update"]
   }
 
   rule {
-    api_groups      = ["coordination.k8s.io"]
-    resources       = ["leases"]
-    verbs           = ["create"]
+    api_groups = ["coordination.k8s.io"]
+    resources  = ["leases"]
+    verbs      = ["create"]
   }
 
   rule {
-    api_groups      = ["networking.k8s.io"]
-    resources       = ["ingressclasses"]
-    verbs           = ["get", "list", "watch"]
+    api_groups = ["networking.k8s.io"]
+    resources  = ["ingressclasses"]
+    verbs      = ["get", "list", "watch"]
   }
 
   rule {
-    api_groups      = [""]
-    resource_names  = ["ingress-controller-leader"]
-    resources       = ["configmaps"]
-    verbs           = ["get", "update"]
+    api_groups     = [""]
+    resource_names = ["ingress-controller-leader"]
+    resources      = ["configmaps"]
+    verbs          = ["get", "update"]
   }
 }
 
@@ -227,7 +227,7 @@ resource "kubernetes_deployment" "ingress-nginx" {
         priority_class_name              = var.set_priority_class ? "system-cluster-critical" : null
         security_context {
           sysctl {
-            name = "net.ipv4.ip_unprivileged_port_start"
+            name  = "net.ipv4.ip_unprivileged_port_start"
             value = "1"
           }
         }
@@ -342,6 +342,173 @@ resource "kubernetes_horizontal_pod_autoscaler" "router" {
       api_version = "apps/v1"
       kind        = "Deployment"
       name        = "ingress-nginx"
+    }
+  }
+}
+
+resource "kubernetes_ingress_class" "nginx-internal" {
+  metadata {
+    name = "nginx-internal"
+  }
+
+  spec {
+    controller = "k8s.io/ingress-nginx-internal"
+  }
+}
+
+resource "kubernetes_deployment" "ingress-nginx-internal" {
+  count = var.internal_router ? 1 : 0
+
+  metadata {
+    namespace = var.namespace
+    name      = "ingress-nginx-internal"
+  }
+
+  spec {
+    replicas = 1
+    selector {
+      match_labels = {
+        system  = "convox"
+        service = "ingress-nginx-internal"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app            = "system"
+          name           = "ingress-nginx-internal"
+          rack           = var.rack
+          system         = "convox"
+          service        = "ingress-nginx-internal"
+          type           = "service"
+          proxy_protocol = var.proxy_protocol
+        }
+      }
+
+      spec {
+        termination_grace_period_seconds = 300
+        service_account_name             = "ingress-nginx"
+        automount_service_account_token  = true
+        priority_class_name              = var.set_priority_class ? "system-cluster-critical" : null
+        security_context {
+          sysctl {
+            name  = "net.ipv4.ip_unprivileged_port_start"
+            value = "1"
+          }
+        }
+
+        container {
+          name  = "system"
+          image = var.nginx_image
+          args = [
+            "/nginx-ingress-controller",
+            "--watch-ingress-without-class=false",
+            "--configmap=$(POD_NAMESPACE)/nginx-configuration",
+            "--tcp-services-configmap=$(POD_NAMESPACE)/tcp-services",
+            "--udp-services-configmap=$(POD_NAMESPACE)/udp-services",
+            "--publish-service=$(POD_NAMESPACE)/router-internal",
+            "--annotations-prefix=nginx.ingress.kubernetes.io",
+            "--controller-class=k8s.io/ingress-nginx-internal",
+            "--ingress-class=nginx-internal",
+            "--election-id=ingress-internal-controller-leader",
+          ]
+
+          env {
+            name = "POD_NAME"
+            value_from {
+              field_ref {
+                field_path = "metadata.name"
+              }
+            }
+          }
+
+          env {
+            name = "POD_NAMESPACE"
+            value_from {
+              field_ref {
+                field_path = "metadata.namespace"
+              }
+            }
+          }
+
+          port {
+            name           = "http"
+            container_port = 80
+          }
+
+          port {
+            name           = "https"
+            container_port = 443
+          }
+
+          resources {
+            requests = {
+              cpu    = "100m"
+              memory = "90Mi"
+            }
+          }
+
+          liveness_probe {
+            initial_delay_seconds = 10
+            period_seconds        = 10
+            timeout_seconds       = 10
+            success_threshold     = 1
+            failure_threshold     = 3
+
+            http_get {
+              path   = "/healthz"
+              port   = 10254
+              scheme = "HTTP"
+            }
+          }
+
+          readiness_probe {
+            period_seconds    = 10
+            timeout_seconds   = 10
+            success_threshold = 1
+            failure_threshold = 3
+
+            http_get {
+              path   = "/healthz"
+              port   = 10254
+              scheme = "HTTP"
+            }
+          }
+
+          lifecycle {
+            pre_stop {
+              exec {
+                command = ["/wait-shutdown"]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [spec[0].replicas]
+  }
+}
+
+resource "kubernetes_horizontal_pod_autoscaler" "router-internal" {
+  count = var.internal_router ? 1 : 0
+  metadata {
+    namespace = var.namespace
+    name      = "nginx-internal"
+  }
+
+  spec {
+    min_replicas                      = var.replicas_min
+    max_replicas                      = var.replicas_max
+    target_cpu_utilization_percentage = 90
+
+    scale_target_ref {
+      api_version = "apps/v1"
+      kind        = "Deployment"
+      name        = "ingress-nginx-internal"
     }
   }
 }

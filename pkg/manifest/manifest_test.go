@@ -269,8 +269,8 @@ func TestManifestLoad(t *testing.T) {
 				},
 				Init: true,
 				Scale: manifest.ServiceScale{
-					Count:  manifest.ServiceScaleCount{Min: 1, Max: 1},
-					Gpu:    manifest.ServiceScaleGpu{Count: 2, Vendor: "nvidia"},
+					Count: manifest.ServiceScaleCount{Min: 1, Max: 1},
+					Gpu:   manifest.ServiceScaleGpu{Count: 2, Vendor: "nvidia"},
 				},
 				Sticky: false,
 				Termination: manifest.ServiceTermination{
@@ -695,6 +695,7 @@ func TestManifestValidate(t *testing.T) {
 		"service deployment-invalid-low deployment maximum can not be less than 100",
 		"service deployment-invalid-high deployment minimum can not be greater than 100",
 		"service deployment-invalid-high deployment maximum can not be greater than 200",
+		"service internal-router-invalid can not have both internal and internalRouter set as true",
 		"service name serviceF invalid, must contain only lowercase alphanumeric and dashes",
 		"service serviceF references a resource that does not exist: foo",
 		"timer name timer_1 invalid, must contain only lowercase alphanumeric and dashes",

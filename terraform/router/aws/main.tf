@@ -15,12 +15,13 @@ module "nginx" {
     kubernetes = kubernetes
   }
 
-  cloud_provider = "aws"
-  namespace      = var.namespace
-  proxy_protocol = var.proxy_protocol
-  rack           = var.name
-  replicas_max   = var.high_availability ? 10 : 1
-  replicas_min   = var.high_availability ? 2 : 1
+  cloud_provider  = "aws"
+  internal_router = var.internal_router
+  namespace       = var.namespace
+  proxy_protocol  = var.proxy_protocol
+  rack            = var.name
+  replicas_max    = var.high_availability ? 10 : 1
+  replicas_min    = var.high_availability ? 2 : 1
 }
 
 resource "kubernetes_config_map" "nginx-configuration" {
@@ -92,4 +93,45 @@ resource "kubernetes_service" "router" {
 
 data "http" "alias" {
   url = "https://alias.convox.com/alias/${length(kubernetes_service.router.status.0.load_balancer.0.ingress) > 0 ? kubernetes_service.router.status.0.load_balancer.0.ingress.0.hostname : ""}"
+}
+
+resource "kubernetes_service" "router-internal" {
+  count = var.internal_router ? 1 : 0
+  metadata {
+    namespace = var.namespace
+    name      = "router-internal"
+
+    annotations = {
+      "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout"  = "${var.idle_timeout}"
+      "service.beta.kubernetes.io/aws-load-balancer-type"                     = "nlb"
+      "service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags" = join(",", [for key, value in local.tags : "${key}=${value}"])
+      "service.beta.kubernetes.io/aws-load-balancer-internal"                 = "true"
+    }
+  }
+
+  spec {
+    external_traffic_policy = "Cluster"
+    type                    = "LoadBalancer"
+
+    port {
+      name        = "http"
+      port        = 80
+      protocol    = "TCP"
+      target_port = 80
+    }
+
+    port {
+      name        = "https"
+      port        = 443
+      protocol    = "TCP"
+      target_port = 443
+    }
+
+    selector = module.nginx.selector-internal
+  }
+}
+
+data "http" "alias-internal" {
+  count = var.internal_router ? 1 : 0
+  url   = "https://alias.convox.com/alias/${length(kubernetes_service.router-internal[0].status.0.load_balancer.0.ingress) > 0 ? kubernetes_service.router-internal[0].status.0.load_balancer.0.ingress.0.hostname : ""}"
 }
