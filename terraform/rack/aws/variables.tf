@@ -25,6 +25,11 @@ variable "idle_timeout" {
   type = number
 }
 
+variable "internal_router" {
+  type    = bool
+  default = false
+}
+
 variable "image" {
   type = string
 }
@@ -54,7 +59,7 @@ variable "tags" {
 }
 
 variable "subnets" {
-  type = list
+  type = list(any)
 }
 
 variable "whitelist" {

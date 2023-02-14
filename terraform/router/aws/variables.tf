@@ -6,6 +6,11 @@ variable "idle_timeout" {
   type = number
 }
 
+variable "internal_router" {
+  type    = bool
+  default = false
+}
+
 variable "high_availability" {
   default = true
 }
