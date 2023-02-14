@@ -5,11 +5,14 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    target-branch: "staging"
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
       interval: "monthly"
+    target-branch: "staging"
   - package-ecosystem: "terraform"
     directory: "/terraform"
     schedule:
       interval: "monthly"
+    target-branch: "staging"
