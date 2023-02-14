@@ -13,7 +13,7 @@ require (
 	github.com/Microsoft/hcsshim v0.8.7-0.20190801035247-8694eade7dd3 // indirect
 	github.com/PuerkitoBio/goquery v1.5.0
 	github.com/algolia/algoliasearch-client-go v2.25.0+incompatible
-	github.com/aws/aws-sdk-go v1.21.10
+	github.com/aws/aws-sdk-go v1.34.0
 	github.com/bearsh/hid v1.4.0 // indirect
 	github.com/convox/changes v0.0.0-20191105034405-8c0df759a3b3
 	github.com/convox/exec v0.0.0-20180905012044-cc13d277f897
