@@ -3,7 +3,9 @@ package azfile
 import (
 	"context"
 	"encoding/xml"
+	"errors"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -15,6 +17,131 @@ type FileHTTPHeaders struct {
 	ContentLanguage    string
 	ContentDisposition string
 	CacheControl       string
+
+	SMBProperties
+}
+
+// FileCreationTime and FileLastWriteTime are handled by the Azure Files service with high-precision ISO-8601 timestamps.
+// Use this format to parse these fields and format them.
+const ISO8601 = "2006-01-02T15:04:05.0000000Z"   // must have 0's for fractional seconds, because Files Service requires fixed width
+
+// SMBPropertyHolder is an interface designed for SMBPropertyAdapter, to identify valid response types for adapting.
+type SMBPropertyHolder interface {
+	FileCreationTime() string
+	FileLastWriteTime() string
+	FileAttributes() string
+}
+
+// SMBPropertyAdapter is a wrapper struct that automatically converts the string outputs of FileAttributes, FileCreationTime and FileLastWrite time to time.Time.
+// It is _not_ error resistant. It is expected that the response you're inserting into this is a valid response.
+// File and directory calls that return such properties are: GetProperties, SetProperties, Create
+// File Downloads also return such properties. Insert other response types at your peril.
+type SMBPropertyAdapter struct {
+	PropertySource SMBPropertyHolder
+}
+
+func (s *SMBPropertyAdapter) convertISO8601(input string) time.Time {
+	t, err := time.Parse(ISO8601, input)
+
+	if err != nil {
+		// This should literally never happen if this struct is used correctly.
+		panic("SMBPropertyAdapter expects a successful response fitting the SMBPropertyHolder interface. Failed to parse time:\n" + err.Error())
+	}
+
+	return t
+}
+
+func (s *SMBPropertyAdapter) FileCreationTime() time.Time {
+	return s.convertISO8601(s.PropertySource.FileCreationTime()).UTC()
+}
+
+func (s *SMBPropertyAdapter) FileLastWriteTime() time.Time {
+	return s.convertISO8601(s.PropertySource.FileLastWriteTime()).UTC()
+}
+
+func (s *SMBPropertyAdapter) FileAttributes() FileAttributeFlags {
+	return ParseFileAttributeFlagsString(s.PropertySource.FileAttributes())
+}
+
+// SMBProperties defines a struct that takes in optional parameters regarding SMB/NTFS properties.
+// When you pass this into another function (Either literally or via FileHTTPHeaders), the response will probably fit inside SMBPropertyAdapter.
+// Nil values of the properties are inferred to be preserved (or when creating, use defaults). Clearing a value can be done by supplying an empty item instead of nil.
+type SMBProperties struct {
+	// NOTE: If pointers are nil, we infer that you wish to preserve these properties. To clear them, point to an empty string.
+	// NOTE: Permission strings are required to be sub-9KB. Please upload the permission to the share, and submit a key instead if yours exceeds this limit.
+	PermissionString *string
+	PermissionKey *string
+	// In Windows, a 32 bit file attributes integer exists. This is that.
+	FileAttributes *FileAttributeFlags
+	// A UTC time-date string is specified below. A value of 'now' defaults to now. 'preserve' defaults to preserving the old case.
+	FileCreationTime *time.Time
+	FileLastWriteTime *time.Time
+}
+
+// SetISO8601CreationTime sets the file creation time with a string formatted as ISO8601
+func (sp *SMBProperties) SetISO8601CreationTime(input string) error {
+	t, err := time.Parse(ISO8601, input)
+
+	if err != nil {
+		return err
+	}
+
+	sp.FileCreationTime = &t
+	return nil
+}
+
+// SetISO8601WriteTime sets the file last write time with a string formatted as ISO8601
+func (sp *SMBProperties) SetISO8601WriteTime(input string) error {
+	t, err := time.Parse(ISO8601, input)
+
+	if err != nil {
+		return err
+	}
+
+	sp.FileLastWriteTime = &t
+	return nil
+}
+
+func (sp *SMBProperties) selectSMBPropertyValues(isDir bool, defaultPerm, defaultAttribs, defaultTime string) (permStr, permKey *string, attribs, creationTime, lastWriteTime string, err error) {
+	permStr = &defaultPerm
+	if sp.PermissionString != nil {
+		permStr = sp.PermissionString
+	}
+
+	if sp.PermissionKey != nil {
+		if permStr == &defaultPerm {
+			permStr = nil
+		} else if permStr != nil {
+			err = errors.New("only permission string OR permission key may be used")
+			return
+		}
+
+		permKey = sp.PermissionKey
+	}
+
+	attribs = defaultAttribs
+	if sp.FileAttributes != nil {
+		attribs = sp.FileAttributes.String()
+		if isDir && strings.ToLower(attribs) != "none"  {   // must test string, not sp.FileAttributes, since it may contain set bits that we don't convert
+			// Directories need to have this attribute included, if setting any attributes.
+			// We don't expose it in FileAttributes because it doesn't do anything useful to consumers of
+			// this SDK. And because it always needs to be set for directories and not for non-directories,
+			// so it makes sense to automate that here.
+			attribs += "|Directory"
+		}
+	}
+
+	creationTime = defaultTime
+	if sp.FileCreationTime != nil {
+		creationTime = sp.FileCreationTime.UTC().Format(ISO8601)
+	}
+
+	lastWriteTime = defaultTime
+	if sp.FileLastWriteTime != nil {
+		lastWriteTime = sp.FileLastWriteTime.UTC().Format(ISO8601)
+	}
+
+	return
 }
 
 // NewHTTPHeaders returns the user-modifiable properties for this file.
