@@ -1,5 +1,9 @@
 variable "GO_VERSION" {
-  default = "1.17.6"
+  default = "1.19.4"
+}
+
+variable "DESTDIR" {
+  default = "./bin"
 }
 
 target "_common" {
@@ -9,7 +13,7 @@ target "_common" {
   }
 }
 
-// Special target: https://github.com/docker/metadata-action#bake-definition
+# Special target: https://github.com/docker/metadata-action#bake-definition
 target "docker-metadata-action" {
   tags = ["xgo:local"]
 }
@@ -36,7 +40,7 @@ target "image-local" {
 target "artifact" {
   inherits = ["_common", "docker-metadata-action"]
   target = "artifact"
-  output = ["./dist"]
+  output = ["${DESTDIR}/artifact"]
 }
 
 target "artifact-all" {
@@ -56,6 +60,14 @@ target "artifact-all" {
     "windows/arm64",
     "windows/386"
   ]
+}
+
+target "release" {
+  target = "release"
+  output = ["${DESTDIR}/release"]
+  contexts = {
+    artifacts = "${DESTDIR}/artifact"
+  }
 }
 
 variable "BASE_IMAGE" {
@@ -98,14 +110,6 @@ target "test-ffmerger" {
   inherits = ["test"]
   args = {
     PROJECT = "github.com/crazy-max/firefox-history-merger"
-    BRANCH = "master"
-  }
-}
-
-target "test-goethereum" {
-  inherits = ["test"]
-  args = {
-    PROJECT = "github.com/ethereum/go-ethereum/cmd/geth"
     BRANCH = "master"
   }
 }
