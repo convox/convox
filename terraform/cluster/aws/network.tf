@@ -7,7 +7,6 @@ locals {
 
   private_subnets_ids  = length(var.private_subnets_ids) == 0 ? aws_subnet.private[*].id : var.private_subnets_ids
   private_route_tables = length(var.private_subnets_ids) == 0 ? aws_route_table.private[*].id : data.aws_route_table.private[*].id
-  #nat_gateway_ids       = length(var.private_subnets_ids) == 0 ? aws_nat_gateway.private[*].id : data.aws_nat_gateway.private[*].id
 
   public_subnets_ids  = length(var.public_subnets_ids) == 0 ? aws_subnet.public[*].id : var.public_subnets_ids
   public_route_table  = length(var.public_subnets_ids) == 0 ? aws_route_table.public[0].id : data.aws_route_table.public.id
