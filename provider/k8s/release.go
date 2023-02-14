@@ -151,6 +151,19 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 			items = append(items, data)
 		}
 
+		// ingress internal
+		if rss := m.Services.Routable().InternalRouter(); len(rss) > 0 {
+			if p.DomainInternal == "" {
+				return errors.New("please enable the rack's internal router first: convox rack params set internal_router=true")
+			}
+			data, err := p.releaseTemplateIngressInternal(a, rss, opts)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+
+			items = append(items, data)
+		}
+
 		// resources
 		for _, r := range m.Resources {
 			data, err := p.releaseTemplateResource(a, e, r)
@@ -360,6 +373,39 @@ func (p *Provider) releaseTemplateIngress(a *structs.App, ss manifest.Services, 
 		}
 
 		data, err := p.RenderTemplate("app/ingress", params)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		items = append(items, data)
+	}
+
+	return bytes.Join(items, []byte("---\n")), nil
+}
+
+func (p *Provider) releaseTemplateIngressInternal(a *structs.App, ss manifest.Services, opts structs.ReleasePromoteOptions) ([]byte, error) {
+	idles, err := p.Engine.AppIdles(a.Name)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	items := [][]byte{}
+
+	for i := range ss {
+		s := ss[i]
+
+		params := map[string]interface{}{
+			"Annotations": map[string]string{},
+			"App":         a.Name,
+			"Class":       p.Engine.IngressInternalClass(),
+			"Host":        p.Engine.ServiceHost(a.Name, s),
+			"Idles":       common.DefaultBool(opts.Idle, idles),
+			"Namespace":   p.AppNamespace(a.Name),
+			"Rack":        p.Name,
+			"Service":     s,
+		}
+
+		data, err := p.RenderTemplate("app/ingress-internal", params)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}

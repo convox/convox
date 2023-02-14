@@ -15,6 +15,11 @@ variable "domain" {
   type = string
 }
 
+variable "domain_internal" {
+  type    = string
+  default = ""
+}
+
 variable "env" {
   default = {}
 }

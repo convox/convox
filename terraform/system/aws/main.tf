@@ -101,6 +101,7 @@ module "rack" {
   eks_addons          = module.cluster.eks_addons
   high_availability   = var.high_availability
   idle_timeout        = var.idle_timeout
+  internal_router     = var.internal_router
   image               = local.image
   name                = var.name
   oidc_arn            = module.cluster.oidc_arn

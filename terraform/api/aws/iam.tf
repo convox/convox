@@ -27,7 +27,7 @@ resource "aws_iam_role" "api" {
 
 data "aws_iam_policy_document" "ec2_key_pair" {
   statement {
-    actions = ["ec2:CreateKeyPair*"]
+    actions   = ["ec2:CreateKeyPair*"]
     resources = ["*"]
   }
 }

@@ -39,6 +39,11 @@ variable "idle_timeout" {
   # }
 }
 
+variable "internal_router" {
+  type    = bool
+  default = false
+}
+
 variable "image" {
   default = "convox/convox"
 }
