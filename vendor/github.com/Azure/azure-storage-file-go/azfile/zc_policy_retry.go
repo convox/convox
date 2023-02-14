@@ -230,6 +230,11 @@ func NewRetryPolicyFactory(o RetryOptions) pipeline.Factory {
 						} else {
 							action = "NoRetry: net.Error and in the non-retriable list"
 						}
+					} else if err == io.ErrUnexpectedEOF {
+						// Some of our methods under the zz_ files do use io.Copy and other related methods that can throw an unexpectedEOF.
+						// However, we don't actually return those errors when we get them.
+						// Consider this more of a safety net.
+						action = "Retry: io.UnexpectedEOF"
 					} else {
 						action = "NoRetry: unrecognized error"
 					}

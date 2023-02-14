@@ -58,10 +58,17 @@ func (d DirectoryURL) NewDirectoryURL(directoryName string) DirectoryURL {
 // Create creates a new directory within a storage account.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/create-directory.
 // Pass default values for SMB properties (ex: "None" for file attributes).
-func (d DirectoryURL) Create(ctx context.Context, metadata Metadata) (*DirectoryCreateResponse, error) {
-	defaultPermissions := "inherit"
-	return d.directoryClient.Create(ctx, "None", "now", "now", nil, metadata,
-		&defaultPermissions, nil)
+// If permissions is empty, the default permission "inherit" is used.
+// For SDDL strings over 9KB, upload using ShareURL.CreatePermission, and supply the permissionKey.
+func (d DirectoryURL) Create(ctx context.Context, metadata Metadata, properties SMBProperties) (*DirectoryCreateResponse, error) {
+	permStr, permKey, fileAttr, fileCreateTime, FileLastWriteTime, err := properties.selectSMBPropertyValues(true, defaultPermissionString, defaultFileAttributes, defaultCurrentTimeString)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return d.directoryClient.Create(ctx, fileAttr, fileCreateTime, FileLastWriteTime, nil, metadata,
+		permStr, permKey)
 }
 
 // Delete removes the specified empty directory. Note that the directory must be empty before it can be deleted..
@@ -74,6 +81,19 @@ func (d DirectoryURL) Delete(ctx context.Context) (*DirectoryDeleteResponse, err
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/get-directory-properties.
 func (d DirectoryURL) GetProperties(ctx context.Context) (*DirectoryGetPropertiesResponse, error) {
 	return d.directoryClient.GetProperties(ctx, nil, nil)
+}
+
+// SetProperties sets the directory's metadata and system properties.
+// Preserves values for SMB properties.
+// For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/set-directory-properties.
+func (d DirectoryURL) SetProperties(ctx context.Context, properties SMBProperties) (*DirectorySetPropertiesResponse, error) {
+	permStr, permKey, fileAttr, fileCreateTime, FileLastWriteTime, err := properties.selectSMBPropertyValues(true, defaultPreserveString, defaultPreserveString, defaultPreserveString)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return d.directoryClient.SetProperties(ctx, fileAttr, fileCreateTime, FileLastWriteTime, nil, permStr, permKey)
 }
 
 // SetMetadata sets the directory's metadata.

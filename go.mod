@@ -5,7 +5,7 @@ go 1.16
 require (
 	cloud.google.com/go/storage v1.6.0
 	github.com/Azure/azure-sdk-for-go v36.1.0+incompatible
-	github.com/Azure/azure-storage-file-go v0.6.0
+	github.com/Azure/azure-storage-file-go v0.8.0
 	github.com/Azure/go-autorest/autorest v0.11.12
 	github.com/Azure/go-autorest/autorest/azure/auth v0.4.0
 	github.com/Azure/go-autorest/autorest/to v0.3.0 // indirect
@@ -23,7 +23,7 @@ require (
 	github.com/convox/stdcli v0.0.0-20221110070640-8f8fb17bfe20
 	github.com/convox/stdsdk v0.0.0-20201005151143-fb7f05286eea
 	github.com/convox/version v0.0.0-20160822184233-ffefa0d565d2
-	github.com/crazy-max/xgo v0.24.0
+  github.com/crazy-max/xgo v0.24.0
 	github.com/creack/pty v1.1.18
 	github.com/docker/docker v1.4.2-0.20190710153559-aa8249ae1b8b
 	github.com/dustin/go-humanize v1.0.0
