@@ -12,6 +12,7 @@ type Engine interface {
 	Heartbeat() (map[string]interface{}, error)
 	IngressAnnotations(certDuration string) (map[string]string, error)
 	IngressClass() string
+	IngressInternalClass() string
 	Log(app, stream string, ts time.Time, message string) error
 	ManifestValidate(m *manifest.Manifest) error
 	RegistryAuth(host, username, password string) (string, string, error)

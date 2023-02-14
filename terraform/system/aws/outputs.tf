@@ -10,6 +10,10 @@ output "endpoint" {
   value = module.rack.endpoint
 }
 
+output "endpoint_internal" {
+  value = module.rack.endpoint_internal
+}
+
 output "release" {
   value = local.release
 }

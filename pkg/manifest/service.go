@@ -10,32 +10,33 @@ import (
 type Service struct {
 	Name string `yaml:"-"`
 
-	Agent       ServiceAgent          `yaml:"agent,omitempty"`
-	Annotations ServiceAnnotations    `yaml:"annotations,omitempty"`
-	Build       ServiceBuild          `yaml:"build,omitempty"`
-	Certificate Certificate           `yaml:"certificate,omitempty"`
-	Command     string                `yaml:"command,omitempty"`
-	Deployment  ServiceDeployment     `yaml:"deployment,omitempty"`
-	Domains     ServiceDomains        `yaml:"domain,omitempty"`
-	Drain       int                   `yaml:"drain,omitempty"`
-	Environment Environment           `yaml:"environment,omitempty"`
-	Health      ServiceHealth         `yaml:"health,omitempty"`
-	Image       string                `yaml:"image,omitempty"`
-	Init        bool                  `yaml:"init,omitempty"`
-	Internal    bool                  `yaml:"internal,omitempty"`
-	Port        ServicePortScheme     `yaml:"port,omitempty"`
-	Ports       []ServicePortProtocol `yaml:"ports,omitempty"`
-	Privileged  bool                  `yaml:"privileged,omitempty"`
-	Resources   []string              `yaml:"resources,omitempty"`
-	Scale       ServiceScale          `yaml:"scale,omitempty"`
-	Singleton   bool                  `yaml:"singleton,omitempty"`
-	Sticky      bool                  `yaml:"sticky,omitempty"`
-	Termination ServiceTermination    `yaml:"termination,omitempty"`
-	Test        string                `yaml:"test,omitempty"`
-	Timeout     int                   `yaml:"timeout,omitempty"`
-	Tls         ServiceTls            `yaml:"tls,omitempty"`
-	Volumes     []string              `yaml:"volumes,omitempty"`
-	Whitelist   string                `yaml:"whitelist,omitempty"`
+	Agent          ServiceAgent          `yaml:"agent,omitempty"`
+	Annotations    ServiceAnnotations    `yaml:"annotations,omitempty"`
+	Build          ServiceBuild          `yaml:"build,omitempty"`
+	Certificate    Certificate           `yaml:"certificate,omitempty"`
+	Command        string                `yaml:"command,omitempty"`
+	Deployment     ServiceDeployment     `yaml:"deployment,omitempty"`
+	Domains        ServiceDomains        `yaml:"domain,omitempty"`
+	Drain          int                   `yaml:"drain,omitempty"`
+	Environment    Environment           `yaml:"environment,omitempty"`
+	Health         ServiceHealth         `yaml:"health,omitempty"`
+	Image          string                `yaml:"image,omitempty"`
+	Init           bool                  `yaml:"init,omitempty"`
+	Internal       bool                  `yaml:"internal,omitempty"`
+	InternalRouter bool                  `yaml:"internalRouter,omitempty"`
+	Port           ServicePortScheme     `yaml:"port,omitempty"`
+	Ports          []ServicePortProtocol `yaml:"ports,omitempty"`
+	Privileged     bool                  `yaml:"privileged,omitempty"`
+	Resources      []string              `yaml:"resources,omitempty"`
+	Scale          ServiceScale          `yaml:"scale,omitempty"`
+	Singleton      bool                  `yaml:"singleton,omitempty"`
+	Sticky         bool                  `yaml:"sticky,omitempty"`
+	Termination    ServiceTermination    `yaml:"termination,omitempty"`
+	Test           string                `yaml:"test,omitempty"`
+	Timeout        int                   `yaml:"timeout,omitempty"`
+	Tls            ServiceTls            `yaml:"tls,omitempty"`
+	Volumes        []string              `yaml:"volumes,omitempty"`
+	Whitelist      string                `yaml:"whitelist,omitempty"`
 }
 
 type Services []Service
@@ -271,7 +272,7 @@ func (s Service) ResourcesName() []string {
 
 func (ss Services) External() Services {
 	return ss.Filter(func(s Service) bool {
-		return !s.Internal
+		return !s.Internal && !s.InternalRouter
 	})
 }
 
@@ -286,6 +287,12 @@ func (ss Services) Filter(fn func(s Service) bool) Services {
 	}
 
 	return fss
+}
+
+func (ss Services) InternalRouter() Services {
+	return ss.Filter(func(s Service) bool {
+		return s.InternalRouter
+	})
 }
 
 func (ss Services) Routable() Services {

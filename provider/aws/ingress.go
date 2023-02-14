@@ -15,3 +15,7 @@ func (p *Provider) IngressAnnotations(certDuration string) (map[string]string, e
 func (p *Provider) IngressClass() string {
 	return "nginx"
 }
+
+func (p *Provider) IngressInternalClass() string {
+	return "nginx-internal"
+}
