@@ -29,6 +29,15 @@ func TestServiceHost(t *testing.T) {
 			HostResponse: "app1-service.app1.rack1.local",
 		},
 		{
+			Name:    "Internal Router",
+			AppName: "app1",
+			Service: manifest.Service{
+				Name:           "app1-service",
+				InternalRouter: true,
+			},
+			HostResponse: "app1-service.app1.domain-internal",
+		},
+		{
 			Name:    "Public",
 			AppName: "app2",
 			Service: manifest.Service{

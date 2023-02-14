@@ -120,6 +120,11 @@ resource "kubernetes_deployment" "api" {
           }
 
           env {
+            name  = "DOMAIN_INTERNAL"
+            value = var.domain_internal
+          }
+
+          env {
             name  = "IMAGE"
             value = "${var.image}:${var.release}"
           }

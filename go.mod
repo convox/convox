@@ -23,15 +23,15 @@ require (
 	github.com/convox/stdcli v0.0.0-20221110070640-8f8fb17bfe20
 	github.com/convox/stdsdk v0.0.0-20201005151143-fb7f05286eea
 	github.com/convox/version v0.0.0-20160822184233-ffefa0d565d2
-	github.com/crazy-max/xgo v0.10.0
-	github.com/creack/pty v1.1.13
+	github.com/crazy-max/xgo v0.24.0
+	github.com/creack/pty v1.1.18
 	github.com/docker/docker v1.4.2-0.20190710153559-aa8249ae1b8b
 	github.com/dustin/go-humanize v1.0.0
 	github.com/elastic/go-elasticsearch/v6 v6.8.2
 	github.com/fsouza/go-dockerclient v1.4.2
 	github.com/gobuffalo/packr v1.30.1
 	github.com/gobwas/glob v0.2.3
-	github.com/gorilla/mux v1.7.3
+	github.com/gorilla/mux v1.8.0
 	github.com/goware/modvendor v0.1.0
 	github.com/headzoo/surf v1.0.0
 	github.com/headzoo/ut v0.0.0-20181013193318-a13b5a7a02ca // indirect

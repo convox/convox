@@ -31,6 +31,10 @@ func (*TestEngine) IngressClass() string {
 	return ""
 }
 
+func (*TestEngine) IngressInternalClass() string {
+	return ""
+}
+
 func (*TestEngine) Log(_, _ string, _ time.Time, _ string) error {
 	return nil
 }
