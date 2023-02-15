@@ -7,7 +7,7 @@ ARG KUBECTL_ARCH=amd64
 
 
 RUN apt-get update \
-  && apt-get -y install default-mysql-client postgresql-client redis-tools telnet \
+  && apt-get -y install --no-install-recommends default-mysql-client postgresql-client redis-tools telnet \
   && rm -rf /var/lib/apt/lists/*
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -39,7 +39,7 @@ RUN make build
 FROM golang:1.16 AS package
 
 RUN apt-get update \
-  && apt-get -y install upx-ucl \
+  && apt-get -y install --no-install-recommends upx-ucl \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src/convox
@@ -56,7 +56,7 @@ ARG DOCKER_ARCH=x86_64
 ARG KUBECTL_ARCH=amd64
 
 RUN apt-get -qq update \
-  && apt-get -qq -y install curl default-mysql-client postgresql-client redis-tools telnet \
+  && apt-get -qq -y install --no-install-recommends  default-mysql-client postgresql-client redis-tools telnet \
   && rm -rf /var/lib/apt/lists/*
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
