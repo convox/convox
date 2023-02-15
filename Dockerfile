@@ -8,6 +8,7 @@ ARG KUBECTL_ARCH=amd64
 
 RUN apt-get update \
   && apt-get -y install --no-install-recommends default-mysql-client postgresql-client redis-tools telnet \
+  && apt-get cache clean \
   && rm -rf /var/lib/apt/lists/*
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -28,7 +29,7 @@ WORKDIR /usr/src/convox
 COPY go.mod go.sum ./
 COPY vendor vendor
 
-RUN go build -mod=vendor --ldflags="-s -w" $(go list -mod=vendor ./vendor/...)
+RUN go build -mod=vendor --ldflags="-s -w" "$(go list -mod=vendor ./vendor/...)"
 
 COPY . .
 
@@ -40,6 +41,7 @@ FROM golang:1.16 AS package
 
 RUN apt-get update \
   && apt-get -y install --no-install-recommends upx-ucl \
+  && apt-get cache clean \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src/convox
@@ -56,7 +58,8 @@ ARG DOCKER_ARCH=x86_64
 ARG KUBECTL_ARCH=amd64
 
 RUN apt-get -qq update \
-  && apt-get -qq -y install --no-install-recommends  default-mysql-client postgresql-client redis-tools telnet \
+  && apt-get -qq -y install --no-install-recommends default-mysql-client postgresql-client redis-tools telnet \
+  && apt-get cache clean \
   && rm -rf /var/lib/apt/lists/*
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
