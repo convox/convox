@@ -176,7 +176,6 @@ data "aws_route_table" "private" {
 }
 
 resource "aws_route_table" "private" {
-  #count = var.private ? local.network_resource_count : 0
   count = length(var.private_subnets_ids) == 0 ? var.private ? local.network_resource_count : 0 : 0
 
   vpc_id = local.vpc_id
