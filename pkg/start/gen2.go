@@ -707,7 +707,11 @@ lines:
 
 		if stat.IsDir() && !strings.HasSuffix(abs, "/") {
 			abs = abs + "/"
-		} bs[i].Local = abs if bs[i].Remote == "." {
+		}
+
+		bs[i].Local = abs
+
+		if bs[i].Remote == "." {
 			bs[i].Remote = wd
 		}
 	}
