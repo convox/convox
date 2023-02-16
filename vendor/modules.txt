@@ -56,7 +56,7 @@ github.com/Microsoft/go-winio/pkg/guid
 # github.com/Microsoft/hcsshim v0.8.7-0.20190801035247-8694eade7dd3
 ## explicit
 github.com/Microsoft/hcsshim/osversion
-# github.com/PuerkitoBio/goquery v1.5.0
+# github.com/PuerkitoBio/goquery v1.8.0
 ## explicit
 github.com/PuerkitoBio/goquery
 # github.com/PuerkitoBio/purell v1.1.1
@@ -69,7 +69,7 @@ github.com/adrg/xdg
 ## explicit
 github.com/algolia/algoliasearch-client-go/algoliasearch
 github.com/algolia/algoliasearch-client-go/algoliasearch/call
-# github.com/andybalholm/cascadia v1.0.0
+# github.com/andybalholm/cascadia v1.3.1
 github.com/andybalholm/cascadia
 # github.com/aws/aws-sdk-go v1.21.10
 ## explicit
