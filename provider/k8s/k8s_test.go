@@ -81,15 +81,16 @@ func testProvider(t *testing.T, fn func(*k8s.Provider)) {
 	require.NoError(t, err)
 
 	p := &k8s.Provider{
-		Atom:          a,
-		Cluster:       c,
-		Convox:        cc,
-		Domain:        "domain1",
-		Engine:        &mock.TestEngine{},
-		MetricsClient: mc,
-		Name:          "rack1",
-		Namespace:     "ns1",
-		Provider:      "test",
+		Atom:           a,
+		Cluster:        c,
+		Convox:         cc,
+		Domain:         "domain1",
+		DomainInternal: "domain-internal",
+		Engine:         &mock.TestEngine{},
+		MetricsClient:  mc,
+		Name:           "rack1",
+		Namespace:      "ns1",
+		Provider:       "test",
 	}
 
 	err = p.Initialize(structs.ProviderOptions{})

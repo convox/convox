@@ -114,6 +114,10 @@ func (m *Manifest) validateServices() []error {
 			errs = append(errs, fmt.Errorf("service %s deployment maximum can not be greater than 200", s.Name))
 		}
 
+		if s.Internal && s.InternalRouter {
+			errs = append(errs, fmt.Errorf("service %s can not have both internal and internalRouter set as true", s.Name))
+		}
+
 		for _, r := range s.ResourcesName() {
 			if _, err := m.Resource(r); err != nil {
 				if strings.HasPrefix(err.Error(), "no such resource") {

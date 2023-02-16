@@ -1,0 +1,57 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: {{.Namespace}}
+  name: {{.Service.Name}}-internal
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internal
+    convox.com/backend-protocol: "{{.Service.Port.Scheme}}"
+    convox.com/idles: "{{.Idles}}"
+    nginx.ingress.kubernetes.io/backend-protocol: "{{.Service.Port.Scheme}}"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "{{.Service.Timeout}}"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "{{.Service.Timeout}}"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "{{.Service.Timeout}}"
+    nginx.ingress.kubernetes.io/server-snippet: |
+        keepalive_timeout {{.Service.Timeout}}s;
+        grpc_read_timeout {{.Service.Timeout}}s;
+        grpc_send_timeout {{.Service.Timeout}}s;
+        client_body_timeout {{.Service.Timeout}}s;
+    {{ if .Service.Sticky }}
+    nginx.ingress.kubernetes.io/affinity: cookie
+    nginx.ingress.kubernetes.io/session-cookie-name: CONVOXSESSION
+    {{ end }}
+    nginx.ingress.kubernetes.io/ssl-redirect: "{{.Service.Tls.Redirect}}"
+    {{ if .Service.Whitelist }}
+    nginx.ingress.kubernetes.io/whitelist-source-range: "{{.Service.Whitelist}}"
+    {{ end }}
+    {{ range $k, $v := .Annotations }}
+    {{$k}}: {{ safe $v }}
+    {{ end }}
+  labels:
+    app: {{.App}}
+    service: {{.Service.Name}}
+    system: convox
+    type: service
+spec:
+  ingressClassName: "{{.Class}}"
+  rules:
+    - host: {{ safe .Host }}
+      http:
+        paths:
+        - backend:
+            service:
+              name: {{.Service.Name}}
+              port:
+                number: {{.Service.Port.Port}}
+          pathType: ImplementationSpecific
+    {{ range .Service.Domains }}
+    - host: {{ safe . }}
+      http:
+        paths:
+        - backend:
+            service:
+              name: {{$.Service.Name}}
+              port:
+                number: {{$.Service.Port.Port}}
+          pathType: ImplementationSpecific
+    {{ end }}
