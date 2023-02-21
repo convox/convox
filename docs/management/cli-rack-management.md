@@ -46,6 +46,7 @@ The parameters available for your Rack depend on the underlying cloud provider.
 |---------------------------------- |-----------------|
 | **cidr**                          | **10.1.0.0/16** |
 | **internet_gateway_id**           |                 |
+| **internal_router**               | **false**       |
 | **node_capacity_type**            | **on_demand**   |
 | **node_disk**                     | **20**          |
 | **node_type**                     | **t3.small**    |
