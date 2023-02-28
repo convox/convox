@@ -76,6 +76,7 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 		"BUILD_MANIFEST":    common.DefaultString(opts.Manifest, "convox.yml"),
 		"BUILD_RACK":        p.Name,
 		"BUILD_URL":         url,
+		"BUILDKIT_ENABLED":  p.BuildkitEnabled,
 		"PROVIDER":          os.Getenv("PROVIDER"),
 		"RACK_URL":          fmt.Sprintf("https://convox:%s@api.%s.svc.cluster.local:5443", p.Password, p.Namespace),
 	}
@@ -97,13 +98,22 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 		}
 	}
 
-	ps, err := p.ProcessRun(app, "build", structs.ProcessRunOptions{
+	psOpts := structs.ProcessRunOptions{
 		Command:     options.String(buildCmd),
 		Cpu:         options.Int(512),
 		Environment: env,
-		Image:       options.String(p.buildImage(os.Getenv("PROVIDER"))),
-		Privileged:  options.Bool(p.buildPrivileged(os.Getenv("PROVIDER"))),
-	})
+	}
+	if p.BuildkitEnabled == "true" {
+		psOpts.Image = options.String(p.buildImage(os.Getenv("PROVIDER")))
+		psOpts.Privileged = options.Bool(p.buildPrivileged(os.Getenv("PROVIDER")))
+	} else {
+		psOpts.Image = options.String(p.Image)
+		psOpts.Volumes = map[string]string{
+			p.Socket: "/var/run/docker.sock",
+		}
+	}
+
+	ps, err := p.ProcessRun(app, "build", psOpts)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

@@ -115,6 +115,10 @@ resource "kubernetes_deployment" "api" {
           image_pull_policy = "IfNotPresent"
 
           env {
+            name  = "BUILDKIT_ENABLED"
+            value = var.buildkit_enabled
+          }
+          env {
             name  = "DOMAIN"
             value = var.domain
           }

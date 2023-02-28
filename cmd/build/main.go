@@ -125,8 +125,13 @@ func execute() error {
 		return err
 	}
 
-	engine := build.BuildKit{}
-	b, err := build.New(rack, opts, &engine)
+	var engine build.Engine
+	engine = &build.Docker{}
+	if os.Getenv("BUILDKIT_ENABLED") == "true" {
+		engine = &build.BuildKit{}
+	}
+
+	b, err := build.New(rack, opts, engine)
 	if err != nil {
 		return err
 	}

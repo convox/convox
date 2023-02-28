@@ -6,6 +6,10 @@ variable "authentication" {
   default = true
 }
 
+variable "buildkit_enabled" {
+  default = false
+}
+
 variable "docker_hub_authentication" {
   default = null
   type    = string

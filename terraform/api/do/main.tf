@@ -37,6 +37,7 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
+  buildkit_enabled          = var.buildkit_enabled
   docker_hub_authentication = var.docker_hub_authentication
   domain                    = var.domain
   image                     = var.image

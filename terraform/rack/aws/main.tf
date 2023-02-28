@@ -20,6 +20,7 @@ module "api" {
     kubernetes = kubernetes
   }
 
+  buildkit_enabled          = var.buildkit_enabled
   docker_hub_authentication = module.k8s.docker_hub_authentication
   domain                    = module.router.endpoint
   domain_internal           = module.router.endpoint_internal
