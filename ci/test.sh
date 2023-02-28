@@ -55,7 +55,7 @@ build=$(convox api get /apps/httpd/builds | jq -r ".[0].id") && [ -n "$build" ]
 convox builds -a httpd | grep $build
 convox builds info $build -a httpd | grep $build
 convox builds info $build -a httpd | grep cibuild
-convox builds logs $build -a httpd | grep "Running: docker push"
+convox builds logs $build -a httpd | grep "pushing manifest for"
 convox builds export $build -a httpd -f /tmp/build.tgz
 releasei=$(convox builds import -a httpd -f /tmp/build.tgz --id) && [ -n "$releasei" ]
 buildi=$(convox api get /apps/httpd/releases/$releasei | jq -r ".build") && [ -n "$buildi" ]
@@ -79,8 +79,11 @@ convox logs -a httpd --no-follow --since 1m
 convox logs -a httpd --no-follow --since 1m | grep service/web
 releaser=$(convox releases rollback $release -a httpd --id)
 convox ps -a httpd | grep $releaser
+sleep 30
 ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | grep web | head -n 1)
 convox ps info $ps -a httpd | grep $releaser
+# assert the run command is going through the Dockerfile entrypoint
+convox run web ls | grep entrypoint
 
 $root/ci/test/app_scale.sh &
 $root/ci/test/app_htdocs.sh &
@@ -89,6 +92,7 @@ wait
 
 convox scale web --count 1
 convox deploy -a httpd
+sleep 30
 ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | grep web | head -n 1)
 convox exec -a httpd $ps -- env | grep "ONE_URL="
 convox exec -a httpd $ps -- env | grep "ONE_USER="
@@ -154,6 +158,21 @@ $root/ci/test/resources_memcache.sh &
 # app (httpd2)
 $root/ci/test/app_internal_communication.sh &
 wait
+
+# import/export test
+convox apps create httpd-export
+convox deploy -a httpd-export --manifest convox-export.yml
+endpoint=$(convox api get /apps/httpd-export/services | jq -r '.[] | select(.name == "web") | .domain')
+fetch https://$endpoint | grep "It works"
+
+convox apps export -a httpd-export --file httpd-export.tgz
+
+convox apps import -a httpd-import --file httpd-export.tgz
+endpoint=$(convox api get /apps/httpd-import/services | jq -r '.[] | select(.name == "web") | .domain')
+fetch https://$endpoint | grep "It works"
+
+convox apps delete httpd-export
+convox apps delete httpd-import
 
 # app (gpu)
 cd $root/examples/gpu
