@@ -9,6 +9,8 @@ url: /configuration/rack-to-rack
 Using Convox’s (internal_router)[/installation/production-rack/aws/] rack parameter along with service configuration (internalRouter)[/reference/primitives/app/service/] you can enable private communication between racks/clusters on your cloud platform.  You can complete this in a few simple steps: 
 
 ## Prerequisites
+It is required that you are on rack version `3.10.6` or later.  You can check your rack's version by running `convox rack -r rackNAME`
+
 You will first need to establish connectivity between your racks in your given cloud environment.  Under standard conditions rack's will be installed in seperate VPCs. Connectivity is most easily accomplished via VPC Peering and configuration of routes, and security groups.   
 
 You will need to manually complete this setup process on your own as we cannot predict your existing infrastructure or how you would need to facilitate or secure this connection/peering to suit your requirements. 
