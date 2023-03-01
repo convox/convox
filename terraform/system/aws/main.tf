@@ -69,8 +69,8 @@ module "cluster" {
   tags                     = local.tag_map
   vpc_cni_version          = var.vpc_cni_version
   vpc_id                   = var.vpc_id
-  private_subnets_ids      = split(",", var.private_subnets_ids)
-  public_subnets_ids       = split(",", var.public_subnets_ids)
+  private_subnets_ids      = compact(split(",", var.private_subnets_ids))
+  public_subnets_ids       = compact(split(",", var.public_subnets_ids))
 }
 
 resource "null_resource" "wait_for_cluster" {
