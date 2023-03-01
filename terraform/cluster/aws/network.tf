@@ -9,7 +9,7 @@ locals {
   private_route_tables = length(var.private_subnets_ids) == 0 ? aws_route_table.private[*].id : data.aws_route_table.private[*].id
 
   public_subnets_ids  = length(var.public_subnets_ids) == 0 ? aws_subnet.public[*].id : var.public_subnets_ids
-  public_route_table  = length(var.public_subnets_ids) == 0 ? aws_route_table.public[0].id : data.aws_route_table.public.id
+  public_route_table  = length(var.public_subnets_ids) == 0 ? aws_route_table.public[0].id : data.aws_route_table.public[0].id
   internet_gateway_id = var.internet_gateway_id == "" ? aws_internet_gateway.nodes[0].id : var.internet_gateway_id
 }
 
@@ -77,7 +77,8 @@ resource "aws_subnet" "public" {
 }
 
 data "aws_route_table" "public" {
-  subnet_id = var.public_subnets_ids[0]
+  count     = length(var.public_subnets_ids)
+  subnet_id = var.public_subnets_ids[count.index]
 }
 
 resource "aws_route_table" "public" {
@@ -226,7 +227,7 @@ resource "aws_route_table_association" "private" {
   count = var.private ? local.network_resource_count : 0
 
   route_table_id = local.private_route_tables[count.index]
-  subnet_id      = var.private_subnets_ids[count.index]
+  subnet_id      = local.private_subnets_ids[count.index]
 }
 
 resource "aws_security_group" "cluster" {
