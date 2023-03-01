@@ -30,11 +30,11 @@ output "oidc_sub" {
 }
 
 output "route_table_public" {
-  value = aws_route_table.public.id
+  value = local.public_route_table
 }
 
 output "subnets" {
-  value = aws_subnet.private.*.id
+  value = length(var.private_subnets_ids) == 0 ? aws_subnet.private.*.id : var.private_subnets_ids
 }
 
 output "vpc" {
