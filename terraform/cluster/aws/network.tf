@@ -10,6 +10,7 @@ locals {
 
   public_subnets_ids  = length(var.public_subnets_ids) == 0 ? aws_subnet.public[*].id : var.public_subnets_ids
   public_route_table  = length(var.public_subnets_ids) == 0 ? aws_route_table.public[0].id : data.aws_route_table.public[0].id
+
   internet_gateway_id = var.internet_gateway_id == "" ? aws_internet_gateway.nodes[0].id : var.internet_gateway_id
 }
 
