@@ -1505,6 +1505,43 @@ func (_m *Interface) ResourceUpdateClassic(_a0 string, _a1 structs.ResourceUpdat
 	return r0, r1
 }
 
+// RuntimeAttach provides a mock function with given fields: rackOrgSlug, opts
+func (_m *Interface) RuntimeAttach(rackOrgSlug string, opts structs.RuntimeAttachOptions) error {
+	ret := _m.Called(rackOrgSlug, opts)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, structs.RuntimeAttachOptions) error); ok {
+		r0 = rf(rackOrgSlug, opts)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// Runtimes provides a mock function with given fields: rackOrgSlug
+func (_m *Interface) Runtimes(rackOrgSlug string) (structs.Runtimes, error) {
+	ret := _m.Called(rackOrgSlug)
+
+	var r0 structs.Runtimes
+	if rf, ok := ret.Get(0).(func(string) structs.Runtimes); ok {
+		r0 = rf(rackOrgSlug)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(structs.Runtimes)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(rackOrgSlug)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ServiceList provides a mock function with given fields: app
 func (_m *Interface) ServiceList(app string) (structs.Services, error) {
 	ret := _m.Called(app)
