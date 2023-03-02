@@ -64,6 +64,8 @@ The following environment variables are required:
 | **syslog**               |                        | Forward logs to a syslog endpoint (e.g. **tcp+tls://example.org:1234**)                                        |
 | **tags**                 |                        | Custom tags to add with AWS resources (e.g. **key1=val1,key2=val2**)|
 | **vpc_id** *             |                        | Use an existing VPC for cluster creation. Make sure to also pass the **cidr** block and **internet_gateway_id**|
+| **private_subnets_ids**  |                        | Ids of private subnets to use to create the Rack. Make sure to also pass the **vpc_id** and **internet_gateway_id** |
+| **public_subnets_ids**   |                        | Ids of private subnets to use to create the Rack. Make sure to also pass the **vpc_id** and **internet_gateway_id** |
 
 \* To avoid CIDR block collision with existing VPC subnets, please add a new CIDR block to your VPC to separate rack resources. Also, remember to pass the **internet_gateway_id** attached to the VPC. If the VPC doesn't have an IG attached, the rack installation will create one automatically, which will also be destroyed if you delete the rack.
 
