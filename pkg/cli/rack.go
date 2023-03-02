@@ -178,7 +178,7 @@ func RackInstall(_ sdk.Interface, c *stdcli.Context) error {
 			Vars:     opts,
 		}
 
-		if _, err := rack.Create(c, name, md); err != nil {
+		if _, err := rack.Create(c, name, md, false); err != nil {
 			return err
 		}
 
@@ -279,7 +279,7 @@ func RackMv(_ sdk.Interface, c *stdcli.Context) error {
 		return fmt.Errorf("rack %s has dependencies and can not be moved", from)
 	}
 
-	if _, err := rack.Create(c, to, md); err != nil {
+	if _, err := rack.Create(c, to, md, true); err != nil {
 		return err
 	}
 

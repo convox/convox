@@ -23,6 +23,7 @@ module "k8s" {
   metrics_scraper_host      = var.metrics_scraper_host
   namespace                 = var.namespace
   rack                      = var.name
+  rack_name                 = var.rack_name
   release                   = var.release
   replicas                  = var.high_availability ? 2 : 1
   resolver                  = var.resolver

@@ -15,6 +15,7 @@ import (
 
 func (p *Provider) SystemGet() (*structs.System, error) {
 	status := "running"
+	fmt.Printf("provider SystemGet: %+v\n", p)
 
 	// status, err := p.Engine.SystemStatus()
 	// if err != nil {
@@ -35,7 +36,7 @@ func (p *Provider) SystemGet() (*structs.System, error) {
 
 	s := &structs.System{
 		Domain:   fmt.Sprintf("router.%s", p.Domain),
-		Name:     p.Name,
+		Name:     p.RackName,
 		Provider: p.Provider,
 		Status:   status,
 		Version:  p.Version,

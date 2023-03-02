@@ -39,10 +39,10 @@ type Rack interface {
 	Sync() error
 }
 
-func Create(c *stdcli.Context, name string, md *Metadata) (Rack, error) {
+func Create(c *stdcli.Context, name string, md *Metadata, apply bool) (Rack, error) {
 	switch len(strings.Split(name, "/")) {
 	case 1:
-		return CreateTerraform(c, name, md)
+		return CreateTerraform(c, name, md, apply)
 	case 2:
 		return CreateConsole(c, name, md)
 	default:

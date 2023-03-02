@@ -74,3 +74,7 @@ variable "socket" {
 variable "volumes" {
   default = {}
 }
+
+variable "rack_name" {
+  type = string
+}
