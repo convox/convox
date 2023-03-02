@@ -1,5 +1,5 @@
 variable "buildkit_enabled" {
-  default = false
+  default = true
 }
 
 variable "cert_duration" {
