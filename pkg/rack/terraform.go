@@ -41,7 +41,7 @@ func (rv *ReleaseVersion) sameMinor(compare *ReleaseVersion) bool {
 	return (rv.Major == compare.Major) && (rv.Minor == compare.Minor)
 }
 
-func CreateTerraform(c *stdcli.Context, name string, md *Metadata, apply bool) (*Terraform, error) {
+func CreateTerraform(c *stdcli.Context, name string, md *Metadata) (*Terraform, error) {
 	if !terraformInstalled(c) {
 		return nil, fmt.Errorf("terraform required")
 	}
@@ -56,12 +56,6 @@ func CreateTerraform(c *stdcli.Context, name string, md *Metadata, apply bool) (
 	if err := t.init(); err != nil {
 		t.Delete()
 		return nil, err
-	}
-
-	if apply {
-		if err := t.apply(); err != nil {
-			return nil, err
-		}
 	}
 
 	return t, nil
@@ -421,11 +415,9 @@ func (t Terraform) update(release string, vars map[string]string) error {
 		vars = map[string]string{}
 	}
 
-	// rack_name can be updated
-	vars["rack_name"] = t.name
-	// name must be the same or it will not link to the cluster name
 	vars["name"] = common.CoalesceString(vars["name"], t.name)
 	vars["release"] = release
+	vars["rack_name"] = common.CoalesceString(vars["rack_name"], t.name)
 
 	pv, err := terraformProviderVars(t.provider)
 	if err != nil {

@@ -178,7 +178,7 @@ func RackInstall(_ sdk.Interface, c *stdcli.Context) error {
 			Vars:     opts,
 		}
 
-		if _, err := rack.Create(c, name, md, false); err != nil {
+		if _, err := rack.Create(c, name, md); err != nil {
 			return err
 		}
 
@@ -279,12 +279,34 @@ func RackMv(_ sdk.Interface, c *stdcli.Context) error {
 		return fmt.Errorf("rack %s has dependencies and can not be moved", from)
 	}
 
-	if _, err := rack.Create(c, to, md, true); err != nil {
+	movedToConsole, newRackName := false, to
+	parts := strings.SplitN(to, "/", 2)
+	if len(parts) == 2 {
+		movedToConsole = true
+		newRackName = parts[1]
+	}
+	params := make(map[string]string)
+	params["rack_name"] = newRackName
+	if err := fr.UpdateParams(params); err != nil {
+		return err
+	}
+
+	md, err = fr.Metadata()
+	if err != nil {
+		return err
+	}
+
+	if _, err := rack.Create(c, to, md); err != nil {
 		return err
 	}
 
 	if err := fr.Delete(); err != nil {
 		return err
+	}
+
+	if movedToConsole {
+		ci := c.Info()
+		ci.Add("Attention!", "Login in the console and attach a runtime integration to the rack")
 	}
 
 	return c.OK()
