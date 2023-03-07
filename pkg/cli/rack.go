@@ -89,7 +89,7 @@ func init() {
 	})
 
 	registerWithoutProvider("rack update", "update a rack", RackUpdate, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagRack},
+		Flags:    []stdcli.Flag{flagRack, flagForce},
 		Usage:    "[version]",
 		Validate: stdcli.ArgsMax(1),
 	})
@@ -486,7 +486,8 @@ func RackUpdate(_ sdk.Interface, c *stdcli.Context) error {
 		}
 	}
 
-	if err := r.UpdateVersion(newVersion); err != nil {
+	force, _ := c.Value("force").(bool)
+	if err := r.UpdateVersion(newVersion, force); err != nil {
 		return err
 	}
 
