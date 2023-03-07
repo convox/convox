@@ -110,7 +110,7 @@ func (d Direct) UpdateParams(params map[string]string) error {
 	return nil
 }
 
-func (d Direct) UpdateVersion(version string) error {
+func (d Direct) UpdateVersion(version string, force bool) error {
 	if version == "" {
 		v, err := d.latest()
 		if err != nil {
@@ -126,6 +126,7 @@ func (d Direct) UpdateVersion(version string) error {
 
 	opts := structs.SystemUpdateOptions{
 		Version: options.String(version),
+		Force:   options.Bool(force),
 	}
 
 	if err := cc.SystemUpdate(opts); err != nil {

@@ -35,7 +35,7 @@ type Rack interface {
 	Status() string
 	Uninstall() error
 	UpdateParams(map[string]string) error
-	UpdateVersion(string) error
+	UpdateVersion(string, bool) error
 	Sync() error
 }
 

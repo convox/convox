@@ -34,6 +34,7 @@ type SystemUninstallOptions struct {
 
 type SystemUpdateOptions struct {
 	Count      *int              `param:"count"`
+	Force      *bool             `param:"force"`
 	Parameters map[string]string `param:"parameters"`
 	Type       *string           `param:"type"`
 	Version    *string           `param:"version"`
