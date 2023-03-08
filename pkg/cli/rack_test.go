@@ -539,6 +539,7 @@ func TestRackUpdate(t *testing.T) {
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
 		opts := structs.SystemUpdateOptions{
 			Version: options.String("latest"),
+			Force:   options.Bool(false),
 		}
 		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("SystemUpdate", opts).Return(nil)
@@ -576,6 +577,7 @@ func TestRackUpdateSpecific(t *testing.T) {
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
 		opts := structs.SystemUpdateOptions{
 			Version: options.String("ver1"),
+			Force:   options.Bool(false),
 		}
 		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("SystemUpdate", opts).Return(nil)
@@ -592,6 +594,7 @@ func TestRackUpdateError(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		opts := structs.SystemUpdateOptions{
 			Version: options.String("latest"),
+			Force:   options.Bool(false),
 		}
 		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("SystemUpdate", opts).Return(fmt.Errorf("err1"))
@@ -601,5 +604,33 @@ func TestRackUpdateError(t *testing.T) {
 		require.Equal(t, 1, res.Code)
 		res.RequireStderr(t, []string{"ERROR: err1"})
 		res.RequireStdout(t, []string{""})
+	})
+}
+
+func TestRackUpdateForce(t *testing.T) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		opts := structs.SystemUpdateOptions{
+			Version: options.String("3.10.12"),
+			Force:   options.Bool(true),
+		}
+
+		i.On("SystemGet").Return(&structs.System{
+			Count:      1,
+			Domain:     "domain",
+			Name:       "name",
+			Outputs:    map[string]string{"k1": "v1", "k2": "v2"},
+			Parameters: map[string]string{"Autoscale": "Yes", "ParamFoo": "value1", "ParamOther": "value2"},
+			Provider:   "provider",
+			Region:     "region",
+			Status:     "running",
+			Type:       "type",
+			Version:    "3.3.0",
+		}, nil)
+
+		i.On("SystemUpdate", opts).Return(nil)
+
+		res, err := testExecute(e, "rack update 3.10.12 --force", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
 	})
 }
