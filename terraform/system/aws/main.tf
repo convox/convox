@@ -55,6 +55,7 @@ module "cluster" {
   key_pair_name            = var.key_pair_name
   kube_proxy_version       = var.kube_proxy_version
   k8s_version              = var.k8s_version
+  imds_http_tokens         = var.imds_http_tokens
   name                     = var.name
   node_capacity_type       = upper(var.node_capacity_type)
   node_disk                = var.node_disk

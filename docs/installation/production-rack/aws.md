@@ -52,6 +52,7 @@ The following environment variables are required:
 | **internal_router**  |     **false**        | Install an internal loadbalancer within the vpc |
 | **internet_gateway_id**  |                        | If you're using an existing vpc for your rack, use this field to pass the id of the attached internet gateway  |
 | **idle_timeout**         | **3600**               | Idle timeout value (in seconds) for the Rack Load Balancer                                                     |
+| **imds_http_tokens**         | **optional**               | Whether or not the metadata service requires session tokens, also referred to as Instance Metadata Service Version 2 (IMDSv2). Can be optional or required                                                     |
 | **key_pair_name**        |                        | AWS key pair to use for ssh|
 | **node_capacity_type**   | **on_demand**          | Can be either "on_demand" or "spot". Spot will use AWS spot instances for the cluster nodes                    |
 | **node_disk**            | **20**                 | Node disk size in GB                                                                                           |

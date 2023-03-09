@@ -48,6 +48,11 @@ variable "image" {
   default = "convox/convox"
 }
 
+variable "imds_http_tokens" {
+  type    = string
+  default = "optional"
+}
+
 variable "internet_gateway_id" {
   default = ""
 }
