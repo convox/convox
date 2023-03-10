@@ -252,7 +252,6 @@ func (c Console) UpdateVersion(version string, force bool) error {
 	}
 
 	if err := cc.RackUpdate(c.name, version, force, nil); err != nil {
-		fmt.Println(err)
 		return err
 	}
 
