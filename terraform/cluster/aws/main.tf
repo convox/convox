@@ -155,6 +155,10 @@ resource "aws_launch_template" "cluster" {
     }
   }
 
+  metadata_options {
+    http_tokens = var.imds_http_tokens
+  }
+
   dynamic "tag_specifications" {
     for_each = toset(
       concat(["instance", "volume", "network-interface", "spot-instances-request"],
