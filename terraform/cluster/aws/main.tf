@@ -155,7 +155,7 @@ resource "aws_launch_template" "cluster" {
     }
   }
 
-  metadata_options{
+  metadata_options {
     http_tokens = var.imds_http_tokens
   }
 
