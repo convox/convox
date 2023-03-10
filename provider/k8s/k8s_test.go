@@ -66,6 +66,9 @@ func testProvider(t *testing.T, fn func(*k8s.Provider)) {
 	_, err := c.CoreV1().Namespaces().Create(
 		context.TODO(), &ac.Namespace{
 			ObjectMeta: am.ObjectMeta{
+				Annotations: map[string]string{
+					"git-sha": "",
+				},
 				Name: "ns1",
 				Labels: map[string]string{
 					"app":    "system",
