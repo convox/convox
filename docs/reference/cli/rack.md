@@ -156,6 +156,36 @@ List rack processes as well as essential system ones running on the Rack
     router-846b84d544-ndz76  rack    router         running  3.0.0.beta44  2 weeks ago  router
     router-846b84d544-ndz76  system  router         running  3.0.0.beta44  2 weeks ago  router
 ```
+
+## rack runtimes
+
+List of attachable runtime integrations
+
+### Usage
+```html
+    convox rack runtimes
+```
+### Examples
+```html
+    $ convox rack runtimes
+    ID                                    TITLE
+    20e58437-fab7-4124-aa5a-2e5978f1149e  047979207916
+```
+
+## rack runtime attach
+
+Attach runtime integration to the rack
+
+### Usage
+```html
+    convox rack runtime attach <runtime_id>
+```
+### Examples
+```html
+    $ convox rack runtime attach 20e58437-fab7-4124-aa5a-2e5978f11
+    OK
+```
+
 ## rack uninstall
 
 Uninstalls a Rack

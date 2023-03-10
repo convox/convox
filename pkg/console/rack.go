@@ -76,7 +76,7 @@ func (c *Client) RackList() (Racks, error) {
 	return rs, nil
 }
 
-func (c *Client) RackUpdate(name, version string, params map[string]string) error {
+func (c *Client) RackUpdate(name, version string, force bool, params map[string]string) error {
 	pdata, err := json.Marshal(params)
 	if err != nil {
 		return err
@@ -86,6 +86,7 @@ func (c *Client) RackUpdate(name, version string, params map[string]string) erro
 		Params: stdsdk.Params{
 			"params":  string(pdata),
 			"version": version,
+			"force":   force,
 		},
 	}
 
