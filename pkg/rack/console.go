@@ -197,7 +197,7 @@ func (c Console) UpdateParams(params map[string]string) error {
 		return fmt.Errorf("current version invalid")
 	}
 
-	if err := cc.RackUpdate(c.name, r.Version, params); err != nil {
+	if err := cc.RackUpdate(c.name, r.Version, false, params); err != nil {
 		return err
 	}
 
@@ -217,13 +217,13 @@ func (c Console) updateParamsDirect(params map[string]string) error {
 	return nil
 }
 
-func (c Console) UpdateVersion(version string) error {
+func (c Console) UpdateVersion(version string, force bool) error {
 	cu, err := c.consoleUpdateSupported()
 	if err != nil {
 		return err
 	}
 	if !cu {
-		return c.updateVersionDirect(version)
+		return c.updateVersionDirect(version, force)
 	}
 
 	cc, err := c.client()
@@ -244,11 +244,14 @@ func (c Console) UpdateVersion(version string) error {
 		}
 		version = v
 	}
-	if err := isSkippingMinor(currentVersion, version); err != nil {
-		return err
+
+	if !force {
+		if err := isSkippingMinor(currentVersion, version); err != nil {
+			return err
+		}
 	}
 
-	if err := cc.RackUpdate(c.name, version, nil); err != nil {
+	if err := cc.RackUpdate(c.name, version, force, nil); err != nil {
 		return err
 	}
 
@@ -281,13 +284,13 @@ func isSkippingMinor(currentVersion, version string) error {
 	return nil
 }
 
-func (c Console) updateVersionDirect(version string) error {
+func (c Console) updateVersionDirect(version string, force bool) error {
 	d, err := c.direct()
 	if err != nil {
 		return err
 	}
 
-	if err := d.UpdateVersion(version); err != nil {
+	if err := d.UpdateVersion(version, force); err != nil {
 		return err
 	}
 
