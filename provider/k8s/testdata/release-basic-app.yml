@@ -526,6 +526,7 @@ data:
   APP: YXBwMQ==
   BUILD: QlVJTEQx
   BUILD_DESCRIPTION: Zm9v
+  BUILD_GIT_SHA: ""
   FOO: YmFy
   FOUR_URL: ""
   RACK: cmFjazE=
@@ -671,6 +672,7 @@ data:
   APP: YXBwMQ==
   BUILD: QlVJTEQx
   BUILD_DESCRIPTION: Zm9v
+  BUILD_GIT_SHA: ""
   FOO: YmFy
   FOUR_URL: ""
   RACK: cmFjazE=
@@ -785,6 +787,7 @@ data:
   APP: YXBwMQ==
   BUILD: QlVJTEQx
   BUILD_DESCRIPTION: Zm9v
+  BUILD_GIT_SHA: ""
   FOO: YmFy
   FOUR_URL: ""
   RACK: cmFjazE=
@@ -899,6 +902,7 @@ data:
   APP: YXBwMQ==
   BUILD: QlVJTEQx
   BUILD_DESCRIPTION: Zm9v
+  BUILD_GIT_SHA: ""
   FOO: YmFy
   FOUR_URL: ""
   PORT: NTAwMA==
@@ -1146,6 +1150,7 @@ data:
   APP: YXBwMQ==
   BUILD: QlVJTEQx
   BUILD_DESCRIPTION: Zm9v
+  BUILD_GIT_SHA: ""
   FOO: YmFy
   FOUR_URL: ""
   PORT: NTAwMA==

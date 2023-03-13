@@ -43,6 +43,7 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 	b := structs.NewBuild(app)
 
 	b.Description = common.DefaultString(opts.Description, "")
+	b.GitSha = common.DefaultString(opts.GitSha, "")
 	b.Started = time.Now()
 
 	if _, err := p.buildCreate(b); err != nil {
@@ -557,6 +558,9 @@ func (p *Provider) buildList(app string) (structs.Builds, error) {
 func (p *Provider) buildMarshal(b *structs.Build) *ca.Build {
 	return &ca.Build{
 		ObjectMeta: am.ObjectMeta{
+			Annotations: map[string]string{
+				"git-sha": b.GitSha,
+			},
 			Namespace: p.AppNamespace(b.App),
 			Name:      strings.ToLower(b.Id),
 			Labels: map[string]string{
@@ -596,6 +600,7 @@ func (p *Provider) buildUnmarshal(kb *ca.Build) (*structs.Build, error) {
 		Description: kb.Spec.Description,
 		Ended:       ended,
 		Entrypoint:  kb.Spec.Entrypoint,
+		GitSha:      kb.ObjectMeta.Annotations["git-sha"],
 		Id:          strings.ToUpper(kb.ObjectMeta.Name),
 		Logs:        kb.Spec.Logs,
 		Manifest:    kb.Spec.Manifest,

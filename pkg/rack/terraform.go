@@ -300,8 +300,8 @@ func (t Terraform) UpdateParams(params map[string]string) error {
 	return nil
 }
 
-func (t Terraform) UpdateVersion(version string) error {
-	if version != "" {
+func (t Terraform) UpdateVersion(version string, force bool) error {
+	if version != "" && !force {
 		r, err := t.Client()
 		if err != nil {
 			return err

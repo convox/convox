@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/rack"
@@ -69,6 +70,16 @@ func init() {
 		Validate: stdcli.Args(0),
 	})
 
+	register("rack runtimes", "list attachable runtime integrations", RackRuntimes, stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagRack},
+		Validate: stdcli.Args(0),
+	})
+
+	register("rack runtime attach", "attach runtime integration", RackRuntimeAttach, stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagRack},
+		Validate: stdcli.Args(1),
+	})
+
 	register("rack scale", "scale the rack", RackScale, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
 			flagRack,
@@ -89,7 +100,7 @@ func init() {
 	})
 
 	registerWithoutProvider("rack update", "update a rack", RackUpdate, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagRack},
+		Flags:    []stdcli.Flag{flagRack, flagForce},
 		Usage:    "[version]",
 		Validate: stdcli.ArgsMax(1),
 	})
@@ -363,6 +374,48 @@ func RackReleases(rack sdk.Interface, c *stdcli.Context) error {
 	return t.Print()
 }
 
+func RackRuntimes(rack sdk.Interface, c *stdcli.Context) error {
+	data, err := c.SettingRead("current")
+	if err != nil {
+		return err
+	}
+	var attrs map[string]string
+	if err := json.Unmarshal([]byte(data), &attrs); err != nil {
+		return err
+	}
+
+	rs, err := rack.Runtimes(attrs["name"])
+	if err != nil {
+		return err
+	}
+
+	t := c.Table("ID", "TITLE")
+	for _, r := range rs {
+		t.AddRow(r.Id, r.Title)
+	}
+
+	return t.Print()
+}
+
+func RackRuntimeAttach(rack sdk.Interface, c *stdcli.Context) error {
+	data, err := c.SettingRead("current")
+	if err != nil {
+		return err
+	}
+	var attrs map[string]string
+	if err := json.Unmarshal([]byte(data), &attrs); err != nil {
+		return err
+	}
+
+	if err := rack.RuntimeAttach(attrs["name"], structs.RuntimeAttachOptions{
+		Runtime: aws.String(c.Arg(0)),
+	}); err != nil {
+		return err
+	}
+
+	return c.OK()
+}
+
 func RackScale(rack sdk.Interface, c *stdcli.Context) error {
 	s, err := rack.SystemGet()
 	if err != nil {
@@ -486,7 +539,8 @@ func RackUpdate(_ sdk.Interface, c *stdcli.Context) error {
 		}
 	}
 
-	if err := r.UpdateVersion(newVersion); err != nil {
+	force, _ := c.Value("force").(bool)
+	if err := r.UpdateVersion(newVersion, force); err != nil {
 		return err
 	}
 

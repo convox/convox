@@ -104,7 +104,7 @@ func (t Test) UpdateParams(params map[string]string) error {
 	return nil
 }
 
-func (t Test) UpdateVersion(version string) error {
+func (t Test) UpdateVersion(version string, force bool) error {
 	if TestClient == nil {
 		return nil
 	}
@@ -115,6 +115,7 @@ func (t Test) UpdateVersion(version string) error {
 
 	opts := structs.SystemUpdateOptions{
 		Version: options.String(version),
+		Force:   options.Bool(force),
 	}
 
 	if err := TestClient.SystemUpdate(opts); err != nil {
