@@ -5,8 +5,9 @@ FROM golang:1.16 AS development
 ARG DOCKER_ARCH=x86_64
 ARG KUBECTL_ARCH=amd64
 
-
-RUN apt-get update && apt-get -y install default-mysql-client postgresql-client redis-tools telnet
+RUN apt-get update \
+  && apt-get -y install --no-install-recommends default-mysql-client=1.0.7 postgresql-client=13+225 redis-tools=6.0.16-1+deb11u2 telnet=0.17-42 \
+  && rm -rf /var/lib/apt/lists/*
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -36,7 +37,9 @@ RUN make build
 
 FROM golang:1.16 AS package
 
-RUN apt-get update && apt-get -y install upx-ucl
+RUN apt-get update \
+  && apt-get -y install --no-install-recommends upx-ucl=3.96-2 \
+  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src/convox
 
@@ -51,7 +54,9 @@ FROM ubuntu:20.04
 ARG DOCKER_ARCH=x86_64
 ARG KUBECTL_ARCH=amd64
 
-RUN apt-get -qq update && apt-get -qq -y install curl default-mysql-client postgresql-client redis-tools telnet
+RUN apt-get -qq update \
+  && apt-get -qq -y install --no-install-recommends default-mysql-client=1.0.7 postgresql-client=13+225 redis-tools=6.0.16-1+deb11u2 telnet=0.17-42 \
+  && rm -rf /var/lib/apt/lists/*
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 

@@ -7,5 +7,6 @@ variable "namespace" {
 }
 
 variable "os" {
+  type    = string
   default = "ubuntu"
 }

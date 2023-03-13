@@ -1,4 +1,5 @@
 variable "set_priority_class" {
+  type    = bool
   default = true
 }
 

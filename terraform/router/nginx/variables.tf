@@ -19,10 +19,12 @@ variable "namespace" {
 }
 
 variable "proxy_protocol" {
+  type    = bool
   default = false
 }
 
 variable "cloud_provider" {
+  type    = string
   default = ""
 }
 
@@ -31,13 +33,16 @@ variable "rack" {
 }
 
 variable "replicas_min" {
+  type    = number
   default = 2
 }
 
 variable "replicas_max" {
+  type    = number
   default = 10
 }
 
 variable "set_priority_class" {
+  type    = bool
   default = true
 }

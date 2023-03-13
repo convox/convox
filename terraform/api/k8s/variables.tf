@@ -1,9 +1,11 @@
 variable "annotations" {
   default = {}
+  type = map(string)
 }
 
 variable "authentication" {
   default = true
+  type = bool
 }
 
 variable "docker_hub_authentication" {
@@ -21,6 +23,7 @@ variable "domain_internal" {
 }
 
 variable "env" {
+  type = map(string)
   default = {}
 }
 
@@ -29,6 +32,7 @@ variable "image" {
 }
 
 variable "labels" {
+  type = map(string)
   default = {}
 }
 
@@ -54,17 +58,21 @@ variable "resolver" {
 }
 
 variable "replicas" {
+  type = number
   default = 2
 }
 
 variable "set_priority_class" {
+  type = bool
   default = true
 }
 
 variable "socket" {
   default = "/var/run/docker.sock"
+  type = string
 }
 
 variable "volumes" {
+  type = map(string)
   default = {}
 }

@@ -429,13 +429,13 @@ func (opts Options2) streamLogs(ctx context.Context, pw prefix.Writer, services 
 }
 
 func (opts Options2) waitForBuild(ctx context.Context, id string) error {
-	tick := time.Tick(1 * time.Second)
+	tick := time.NewTicker(1 * time.Second)
 
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-tick:
+		case <-tick.C:
 			b, err := opts.Provider.BuildGet(opts.App, id)
 			if err != nil {
 				return errors.WithStack(err)
@@ -500,7 +500,8 @@ func (opts Options2) watchPath(ctx context.Context, pw prefix.Writer, service, r
 		Ignores: ignores,
 	})
 
-	tick := time.Tick(1000 * time.Millisecond)
+
+	tick := time.NewTicker(1000 * time.Millisecond)
 	chgs := []changes.Change{}
 
 	for {
@@ -509,7 +510,7 @@ func (opts Options2) watchPath(ctx context.Context, pw prefix.Writer, service, r
 			return
 		case c := <-cch:
 			chgs = append(chgs, c)
-		case <-tick:
+		case <- tick.C:
 			if len(chgs) == 0 {
 				continue
 			}
@@ -577,7 +578,7 @@ func buildDockerfile(m *manifest.Manifest, root, service string) ([]byte, error)
 	return ioutil.ReadFile(path)
 }
 
-func buildIgnores(root, service string) ([]string, error) {
+func buildIgnores(root, _ string) ([]string, error) {
 	fd, err := os.Open(filepath.Join(root, ".dockerignore"))
 	if os.IsNotExist(err) {
 		return []string{}, nil
