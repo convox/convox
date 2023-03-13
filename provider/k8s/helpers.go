@@ -164,6 +164,7 @@ func (p *Provider) buildEnvironment(a *structs.App, b *structs.Build) map[string
 	return map[string]string{
 		"BUILD":             b.Id,
 		"BUILD_DESCRIPTION": b.Description,
+		"BUILD_GIT_SHA":     b.GitSha,
 	}
 }
 
