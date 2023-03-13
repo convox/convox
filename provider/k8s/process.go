@@ -270,11 +270,6 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 		return nil, errors.WithStack(err)
 	}
 
-	// ns, err := p.Cluster.CoreV1().Namespaces().Get(p.Namespace, am.GetOptions{})
-	// if err != nil {
-	// 	return nil, err
-	// }
-
 	release := common.DefaultString(opts.Release, "")
 
 	if release == "" {
@@ -286,26 +281,40 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 		release = a.Release
 	}
 
+	ans := map[string]string{}
+	if service == "build" {
+		for idx := 0; idx < len(s.Containers); idx++ {
+			// assign the build container a BestEffor QoS to avoid eating all compute resources
+			s.Containers[idx].Resources = ac.ResourceRequirements{}
+			s.Containers[idx].SecurityContext = &ac.SecurityContext{SeccompProfile: &ac.SeccompProfile{Type: ac.SeccompProfileTypeUnconfined}}
+			if opts.Privileged != nil && *opts.Privileged {
+				s.Containers[idx].SecurityContext = &ac.SecurityContext{Privileged: options.Bool(true)}
+				ans[fmt.Sprintf("container.apparmor.security.beta.kubernetes.io/%s", s.Containers[idx].Name)] = "unconfined"
+			}
+		}
+		s.RestartPolicy = ac.RestartPolicyNever
+	}
+
+	pod := &ac.Pod{
+		ObjectMeta: am.ObjectMeta{
+			Annotations:  ans,
+			GenerateName: fmt.Sprintf("%s-", service),
+			Labels: map[string]string{
+				"app":     app,
+				"rack":    p.Name,
+				"release": release,
+				"service": service,
+				"system":  "convox",
+				"type":    "process",
+				"name":    service,
+			},
+		},
+		Spec: *s,
+	}
+
 	pd, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Create(
 		context.TODO(),
-		&ac.Pod{
-			ObjectMeta: am.ObjectMeta{
-				Annotations: map[string]string{
-					// "iam.amazonaws.com/role": ns.ObjectMeta.Annotations["convox.aws.role"],
-				},
-				GenerateName: fmt.Sprintf("%s-", service),
-				Labels: map[string]string{
-					"app":     app,
-					"rack":    p.Name,
-					"release": release,
-					"service": service,
-					"system":  "convox",
-					"type":    "process",
-					"name":    service,
-				},
-			},
-			Spec: *s,
-		},
+		pod,
 		am.CreateOptions{},
 	)
 	if err != nil {

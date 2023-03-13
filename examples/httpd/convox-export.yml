@@ -1,0 +1,12 @@
+resources:
+  postgresdb:
+    type: postgres
+services:
+  web:
+    build: .
+    port: 80
+timers:
+  example:
+    command: /usr/scripts/timer_cmd.sh
+    schedule: "* 10 * * *"
+    service: web

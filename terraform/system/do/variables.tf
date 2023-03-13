@@ -2,6 +2,10 @@ variable "access_id" {
   type = string
 }
 
+variable "buildkit_enabled" {
+  default = false
+}
+
 variable "cert_duration" {
   default = "2160h"
   type    = string

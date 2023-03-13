@@ -252,7 +252,7 @@ func buildExternal(rack sdk.Interface, c *stdcli.Context, opts structs.BuildCrea
 		bopts.Terminal = false
 	}
 
-	bb, err := builder.New(rack, bopts)
+	bb, err := builder.New(rack, bopts, &builder.Docker{})
 	if err != nil {
 		return nil, err
 	}

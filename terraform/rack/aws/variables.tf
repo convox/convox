@@ -1,3 +1,7 @@
+variable "buildkit_enabled" {
+  default = false
+}
+
 variable "cluster" {
   type = string
 }

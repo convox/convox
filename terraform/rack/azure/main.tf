@@ -7,9 +7,9 @@ module "k8s" {
 
   docker_hub_username = var.docker_hub_username
   docker_hub_password = var.docker_hub_password
-  domain  = module.router.endpoint
-  name    = var.name
-  release = var.release
+  domain              = module.router.endpoint
+  name                = var.name
+  release             = var.release
 }
 
 module "api" {
@@ -20,19 +20,20 @@ module "api" {
     kubernetes = kubernetes
   }
 
-  cluster        = var.cluster
+  buildkit_enabled          = var.buildkit_enabled
+  cluster                   = var.cluster
   docker_hub_authentication = module.k8s.docker_hub_authentication
-  domain         = module.router.endpoint
-  image          = var.image
-  name           = var.name
-  namespace      = module.k8s.namespace
-  region         = var.region
-  release        = var.release
-  resolver       = module.resolver.endpoint
-  resource_group = var.resource_group
-  router         = module.router.endpoint
-  syslog         = var.syslog
-  workspace      = var.workspace
+  domain                    = module.router.endpoint
+  image                     = var.image
+  name                      = var.name
+  namespace                 = module.k8s.namespace
+  region                    = var.region
+  release                   = var.release
+  resolver                  = module.resolver.endpoint
+  resource_group            = var.resource_group
+  router                    = module.router.endpoint
+  syslog                    = var.syslog
+  workspace                 = var.workspace
 }
 
 module "resolver" {
@@ -44,10 +45,10 @@ module "resolver" {
   }
 
   docker_hub_authentication = module.k8s.docker_hub_authentication
-  image     = var.image
-  namespace = module.k8s.namespace
-  rack      = var.name
-  release   = var.release
+  image                     = var.image
+  namespace                 = module.k8s.namespace
+  rack                      = var.name
+  release                   = var.release
 }
 
 module "router" {

@@ -37,7 +37,7 @@ module "fluentd" {
   elasticsearch = module.elasticsearch.host
   namespace     = var.namespace
   rack          = var.name
-  resolver                  = var.resolver
+  resolver      = var.resolver
   syslog        = var.syslog
 }
 
@@ -48,12 +48,13 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
+  buildkit_enabled          = var.buildkit_enabled
   docker_hub_authentication = var.docker_hub_authentication
-  domain    = var.domain
-  image     = var.image
-  namespace = var.namespace
-  rack      = var.name
-  release   = var.release
+  domain                    = var.domain
+  image                     = var.image
+  namespace                 = var.namespace
+  rack                      = var.name
+  release                   = var.release
 
   labels = {
     "aadpodidbinding" : "api"

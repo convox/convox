@@ -1,0 +1,44 @@
+FROM golang:1.16-alpine AS package
+
+RUN apk update && apk add make gcc linux-headers libc-dev
+
+WORKDIR /usr/src/convox
+
+COPY . .
+
+RUN make $GOPATH/bin/build
+
+###########################################################################################
+
+FROM moby/buildkit:v0.10.3-rootless as rootless
+
+USER root
+
+RUN apk add skopeo --update
+
+COPY --from=package /go/bin/build /usr/bin
+
+COPY ./scripts/buildctl-daemonless.sh /buildctl-daemonless.sh
+
+USER 1000
+
+# standard credentials path used by buildkit
+RUN mkdir -p $HOME/.docker
+
+ENTRYPOINT [ "./buildctl-daemonless.sh" ]
+
+###########################################################################################
+
+FROM moby/buildkit:v0.10.3 as privileged
+
+RUN apk add skopeo --update
+
+COPY --from=package /go/bin/build /usr/bin
+
+COPY ./scripts/buildctl-daemonless.sh /buildctl-daemonless.sh
+
+# standard credentials path used by buildkit
+RUN mkdir -p $HOME/.docker
+
+ENTRYPOINT [ "./buildctl-daemonless.sh" ]
+
