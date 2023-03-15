@@ -60,16 +60,16 @@ func (bk *BuildKit) Build(bb *Build, dir string) error {
 		Tag   string
 	}
 
-	builds := []build{}
+	var builds []build
 
-	for _, s := range m.Services {
+	for i := range m.Services {
 		b := build{
-			Build: s.Build,
-			Image: s.Image,
+			Build: m.Services[i].Build,
+			Image: m.Services[i].Image,
 		}
 
 		if bb.Push != "" {
-			b.Tag = fmt.Sprintf("%s:%s.%s", bb.Push, s.Name, bb.Id)
+			b.Tag = fmt.Sprintf("%s:%s.%s", bb.Push, m.Services[i].Name, bb.Id)
 		}
 
 		builds = append(builds, b)
@@ -131,7 +131,7 @@ func (*BuildKit) Login(bb *Build) error {
 }
 
 func (*BuildKit) cacheProvider(provider string) bool {
-	return provider != "" && strings.Contains("do az", provider)
+	return provider != "" && strings.Contains("do az", provider) // skipcq
 }
 
 func (*BuildKit) buildArgs(development bool, dockerfile string, env map[string]string) ([]string, error) {
@@ -139,11 +139,11 @@ func (*BuildKit) buildArgs(development bool, dockerfile string, env map[string]s
 	if err != nil {
 		return nil, err
 	}
-	defer fd.Close()
+	defer fd.Close() // skipcq
 
 	s := bufio.NewScanner(fd)
 
-	args := []string{}
+	var args []string
 
 	for s.Scan() {
 		fields := strings.Fields(strings.TrimSpace(s.Text()))
@@ -192,26 +192,27 @@ func (*BuildKit) entrypoint(bb *Build, tag string) []string {
 	return inspect.Config.Entrypoint
 }
 
+// skipcq
 func (bk *BuildKit) build(bb *Build, path, dockerfile, tag string, env map[string]string) error {
 	if path == "" {
 		return fmt.Errorf("must have path to build")
 	}
 
 	args := []string{"build"}
-	args = append(args, "--frontend", "dockerfile.v0")
-	args = append(args, "--local", fmt.Sprintf("context=%s", path))
-	args = append(args, "--local", fmt.Sprintf("dockerfile=%s", path))
-	args = append(args, "--opt", fmt.Sprintf("filename=%s", dockerfile))
-	args = append(args, "--output", fmt.Sprintf("type=image,name=%s,push=true", tag))
+	args = append(args, "--frontend", "dockerfile.v0")                                // skipcq
+	args = append(args, "--local", fmt.Sprintf("context=%s", path))                   // skipcq
+	args = append(args, "--local", fmt.Sprintf("dockerfile=%s", path))                // skipcq
+	args = append(args, "--opt", fmt.Sprintf("filename=%s", dockerfile))              // skipcq
+	args = append(args, "--output", fmt.Sprintf("type=image,name=%s,push=true", tag)) // skipcq
 
 	if bk.cacheProvider(os.Getenv("PROVIDER")) {
 		reg := strings.Split(tag, ":")[0]
-		args = append(args, "--export-cache", fmt.Sprintf("type=registry,ref=%s:buildcache", reg))
-		args = append(args, "--import-cache", fmt.Sprintf("type=registry,ref=%s:buildcache", reg))
+		args = append(args, "--export-cache", fmt.Sprintf("type=registry,ref=%s:buildcache", reg)) // skipcq
+		args = append(args, "--import-cache", fmt.Sprintf("type=registry,ref=%s:buildcache", reg)) // skipcq
 	} else {
 		// keep a local cache for services using the same Dockerfile
-		args = append(args, "--export-cache", "type=local,dest=/var/lib/buildkit")
-		args = append(args, "--import-cache", "type=local,src=/var/lib/buildkit")
+		args = append(args, "--export-cache", "type=local,dest=/var/lib/buildkit") // skipcq
+		args = append(args, "--import-cache", "type=local,src=/var/lib/buildkit")  // skipcq
 	}
 
 	df := filepath.Join(path, dockerfile)

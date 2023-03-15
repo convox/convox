@@ -1,13 +1,9 @@
 package k8s
 
 import (
-	"archive/tar"
-	"bytes"
 	"context"
 	"crypto/sha256"
-	"encoding/json"
 	"fmt"
-	"io"
 	"math"
 	"path"
 	"regexp"
@@ -43,8 +39,8 @@ type Patch struct {
 func (p *Provider) ingressSecrets(a *structs.App, ss manifest.Services) (map[string]string, error) {
 	domains := map[string]bool{}
 
-	for _, s := range ss {
-		for _, d := range s.Domains {
+	for i := range ss {
+		for _, d := range ss[i].Domains {
 			domains[d] = false
 		}
 	}
@@ -113,6 +109,7 @@ func (p *Provider) ingressSecrets(a *structs.App, ss manifest.Services) (map[str
 	return secrets, nil
 }
 
+// skipcq
 func (p *Provider) environment(a *structs.App, r *structs.Release, s manifest.Service, e structs.Environment) (map[string]string, error) {
 	env := map[string]string{}
 
@@ -154,13 +151,14 @@ func (p *Provider) environment(a *structs.App, r *structs.Release, s manifest.Se
 	return env, nil
 }
 
-func (p *Provider) appEnvironment(a *structs.App) map[string]string {
+func (*Provider) appEnvironment(a *structs.App) map[string]string {
 	return map[string]string{
 		"APP": a.Name,
 	}
 }
 
-func (p *Provider) buildEnvironment(a *structs.App, b *structs.Build) map[string]string {
+// skipcq
+func (*Provider) buildEnvironment(a *structs.App, b *structs.Build) map[string]string {
 	return map[string]string{
 		"BUILD":             b.Id,
 		"BUILD_DESCRIPTION": b.Description,
@@ -168,12 +166,14 @@ func (p *Provider) buildEnvironment(a *structs.App, b *structs.Build) map[string
 	}
 }
 
-func (p *Provider) releaseEnvironment(a *structs.App, r *structs.Release) map[string]string {
+// skipcq
+func (*Provider) releaseEnvironment(a *structs.App, r *structs.Release) map[string]string {
 	return map[string]string{
 		"RELEASE": r.Id,
 	}
 }
 
+// skipcq
 func (p *Provider) serviceEnvironment(a *structs.App, s manifest.Service) map[string]string {
 	env := map[string]string{
 		"SERVICE": s.Name,
@@ -193,7 +193,7 @@ func (p *Provider) systemEnvironment() map[string]string {
 	}
 }
 
-func (p *Provider) volumeFrom(app, service, v string) string {
+func (*Provider) volumeFrom(app, service, v string) string {
 	from := strings.Split(v, ":")[0]
 
 	switch {
@@ -222,7 +222,7 @@ func (p *Provider) volumeSources(app, service string, vs []string) []string {
 		vsh[p.volumeFrom(app, service, v)] = true
 	}
 
-	vsu := []string{}
+	var vsu []string
 
 	for v := range vsh {
 		vsu = append(vsu, v)
@@ -231,42 +231,6 @@ func (p *Provider) volumeSources(app, service string, vs []string) []string {
 	sort.Strings(vsu)
 
 	return vsu
-}
-
-type imageManifest []struct {
-	RepoTags []string
-}
-
-func extractImageManifest(r io.Reader) (imageManifest, error) {
-	mtr := tar.NewReader(r)
-
-	var manifest imageManifest
-
-	for {
-		mh, err := mtr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-
-		if mh.Name == "manifest.json" {
-			var mdata bytes.Buffer
-
-			if _, err := io.Copy(&mdata, mtr); err != nil {
-				return nil, errors.WithStack(err)
-			}
-
-			if err := json.Unmarshal(mdata.Bytes(), &manifest); err != nil {
-				return nil, errors.WithStack(err)
-			}
-
-			return manifest, nil
-		}
-	}
-
-	return nil, errors.WithStack(fmt.Errorf("unable to locate manifest"))
 }
 
 func nameFilter(name string) string {

@@ -62,20 +62,20 @@ func (d *Docker) Build(bb *Build, dir string) error {
 	pushes := map[string]string{}
 	tags := map[string][]string{}
 
-	for _, s := range m.Services {
-		hash := s.BuildHash(bb.Id)
-		to := fmt.Sprintf("%s:%s.%s", prefix, s.Name, bb.Id)
+	for i := range m.Services {
+		hash := m.Services[i].BuildHash(bb.Id)
+		to := fmt.Sprintf("%s:%s.%s", prefix, m.Services[i].Name, bb.Id)
 
-		if s.Image != "" {
-			pulls[s.Image] = true
-			tags[s.Image] = append(tags[s.Image], to)
+		if m.Services[i].Image != "" {
+			pulls[m.Services[i].Image] = true
+			tags[m.Services[i].Image] = append(tags[m.Services[i].Image], to)
 		} else {
-			builds[hash] = s.Build
+			builds[hash] = m.Services[i].Build
 			tags[hash] = append(tags[hash], to)
 		}
 
 		if bb.Push != "" {
-			pushes[to] = fmt.Sprintf("%s:%s.%s", bb.Push, s.Name, bb.Id)
+			pushes[to] = fmt.Sprintf("%s:%s.%s", bb.Push, m.Services[i].Name, bb.Id)
 		}
 	}
 
@@ -93,7 +93,7 @@ func (d *Docker) Build(bb *Build, dir string) error {
 		}
 	}
 
-	tagfroms := []string{}
+	var tagfroms []string
 
 	for from := range tags {
 		tagfroms = append(tagfroms, from)
@@ -117,7 +117,7 @@ func (d *Docker) Build(bb *Build, dir string) error {
 		}
 	}
 
-	pushfroms := []string{}
+	var pushfroms []string
 
 	for from := range pushes {
 		pushfroms = append(pushfroms, from)
@@ -165,7 +165,8 @@ func (*Docker) Login(bb *Build) error {
 	return nil
 }
 
-func (d *Docker) build(bb *Build, path, dockerfile, tag string, env map[string]string) error {
+// skipcq
+func (*Docker) build(bb *Build, path, dockerfile, tag string, env map[string]string) error {
 	if path == "" {
 		return fmt.Errorf("must have path to build")
 	}
@@ -230,11 +231,11 @@ func (bb *Build) buildArgs(dockerfile string, env map[string]string) ([]string, 
 	if err != nil {
 		return nil, err
 	}
-	defer fd.Close()
+	defer fd.Close() // skipcq
 
 	s := bufio.NewScanner(fd)
 
-	args := []string{}
+	var args []string
 
 	for s.Scan() {
 		fields := strings.Fields(strings.TrimSpace(s.Text()))

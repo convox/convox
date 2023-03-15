@@ -187,7 +187,7 @@ func (p *Provider) ProcessLogs(app, pid string, opts structs.LogsOptions) (io.Re
 }
 
 func (p *Provider) streamProcessLogs(w io.WriteCloser, app, pid string, opts structs.LogsOptions) {
-	defer w.Close()
+	defer w.Close() // skipcq
 
 	lopts := &ac.PodLogOptions{
 		Follow:     true,
@@ -378,7 +378,7 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 		VolumeMounts:  []ac.VolumeMount{},
 	}
 
-	vs := []ac.Volume{}
+	var vs []ac.Volume
 
 	c.VolumeMounts = append(c.VolumeMounts, ac.VolumeMount{
 		Name:      "ca",
@@ -530,7 +530,7 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 	}
 
 	if opts.Volumes != nil {
-		vs := []string{}
+		var vs []string
 
 		for from, to := range opts.Volumes {
 			vs = append(vs, fmt.Sprintf("%s:%s", from, to))
@@ -617,7 +617,7 @@ func (p *Provider) processFromPod(pd ac.Pod) (*structs.Process, error) {
 		}
 	}
 
-	ports := []string{}
+	var ports []string
 	for _, p := range c.Ports {
 		if p.HostPort == 0 {
 			ports = append(ports, fmt.Sprint(p.ContainerPort))

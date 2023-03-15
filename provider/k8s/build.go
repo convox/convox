@@ -32,7 +32,7 @@ func (p *Provider) buildImage(provider string) string {
 }
 
 func (*Provider) buildPrivileged(provider string) bool {
-	return strings.Contains("do gcp aws local", provider)
+	return strings.Contains("do gcp aws local", provider) // skipcq
 }
 
 func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions) (*structs.Build, error) {
@@ -140,7 +140,7 @@ func (p *Provider) BuildExport(app, id string, w io.Writer) error {
 		return errors.WithStack(err)
 	}
 
-	services := []string{}
+	var services []string
 
 	r, err := p.ReleaseGet(app, build.Release)
 	if err != nil {
@@ -158,8 +158,8 @@ func (p *Provider) BuildExport(app, id string, w io.Writer) error {
 		return errors.WithStack(err)
 	}
 
-	for _, s := range m.Services {
-		services = append(services, s.Name)
+	for i := range m.Services {
+		services = append(services, m.Services[i].Name)
 	}
 
 	if len(services) < 1 {
@@ -241,6 +241,8 @@ func (p *Provider) BuildExport(app, id string, w io.Writer) error {
 			if err != nil {
 				return err
 			}
+
+			// skipcq
 			if _, err := io.Copy(tw, data); err != nil {
 				return err
 			}
@@ -309,6 +311,7 @@ func (p *Provider) BuildImport(app string, r io.Reader) (*structs.Build, error) 
 				return nil, errors.Errorf("failed to untar image - %s", err.Error())
 			}
 
+			// skipcq
 			_, err = io.Copy(f, tr)
 			if err != nil {
 				errors.Errorf("failed to write image - %s", err.Error())

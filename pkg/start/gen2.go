@@ -55,7 +55,7 @@ type buildSource struct {
 	Remote string
 }
 
-func (s *Start) Start2(ctx context.Context, w io.Writer, opts Options2) error {
+func (*Start) Start2(ctx context.Context, w io.Writer, opts Options2) error {
 	select {
 	case <-ctx.Done():
 		return nil
@@ -99,8 +99,8 @@ func (s *Start) Start2(ctx context.Context, w io.Writer, opts Options2) error {
 	services := map[string]bool{}
 
 	if opts.Services == nil {
-		for _, s := range m.Services {
-			services[s.Name] = true
+		for i := range m.Services {
+			services[m.Services[i].Name] = true
 		}
 	} else {
 		for _, s := range opts.Services {
@@ -156,13 +156,13 @@ func (s *Start) Start2(ctx context.Context, w io.Writer, opts Options2) error {
 		return errors.WithStack(err)
 	}
 
-	for _, s := range m.Services {
-		if !services[s.Name] {
+	for i := range m.Services {
+		if !services[m.Services[i].Name] {
 			continue
 		}
 
-		if s.Build.Path != "" {
-			go opts.watchChanges(ctx, pw, m, s.Name, wd, errch)
+		if m.Services[i].Build.Path != "" {
+			go opts.watchChanges(ctx, pw, m, m.Services[i].Name, wd, errch)
 		}
 	}
 
@@ -373,7 +373,7 @@ func (opts Options2) handleAdds(pid, remote string, adds []changes.Change) error
 			return errors.WithStack(err)
 		}
 
-		defer fd.Close()
+		defer fd.Close() // skipcq
 
 		if _, err := io.Copy(tw, fd); err != nil {
 			return errors.WithStack(err)
@@ -500,7 +500,7 @@ func (opts Options2) watchPath(ctx context.Context, pw prefix.Writer, service, r
 	})
 
 	tick := time.Tick(1000 * time.Millisecond)
-	chgs := []changes.Change{}
+	var chgs []changes.Change
 
 	for {
 		select {
@@ -602,7 +602,7 @@ func buildSources(m *manifest.Manifest, root, service string) ([]buildSource, er
 		return nil, errors.WithStack(err)
 	}
 
-	bs := []buildSource{}
+	var bs []buildSource
 	env := map[string]string{}
 	wd := ""
 
@@ -714,7 +714,7 @@ lines:
 		}
 	}
 
-	bss := []buildSource{}
+	var bss []buildSource
 
 	for i := range bs {
 		contained := false

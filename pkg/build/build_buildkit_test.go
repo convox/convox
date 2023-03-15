@@ -32,7 +32,7 @@ func TestBuild(t *testing.T) {
 		Manifest: "convox2.yml",
 	}
 
-	os.Setenv("PROVIDER", "do")
+	t.Setenv("PROVIDER", "do")
 	testBuild(t, opts, bkEngine, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
 		p.On("BuildGet", "app1", "build1").Return(fxBuildStarted(), nil).Once()
 
@@ -106,7 +106,7 @@ func TestBuildDevelopment(t *testing.T) {
 		Push:        "registry.test.com",
 	}
 
-	os.Setenv("PROVIDER", "do")
+	t.Setenv("PROVIDER", "do")
 	testBuild(t, opts, bkEngine, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
 		p.On("BuildGet", "app1", "build1").Return(fxBuildStarted(), nil).Once()
 
@@ -180,7 +180,7 @@ func TestBuildOptions(t *testing.T) {
 		Manifest: "convox2.yml",
 	}
 
-	os.Setenv("PROVIDER", "do")
+	t.Setenv("PROVIDER", "do")
 	testBuild(t, opts, bkEngine, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
 		p.On("BuildGet", "app1", "build1").Return(fxBuildStarted(), nil).Once()
 
@@ -253,7 +253,7 @@ func TestLogin(t *testing.T) {
 	}
 
 	defer os.Remove(tmp)
-	os.Setenv("HOME", tmp)
+	t.Setenv("HOME", tmp)
 
 	r, err := sdk.NewFromEnv()
 	if err != nil {
