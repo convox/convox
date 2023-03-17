@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"reflect"
 
 	"github.com/convox/convox/pkg/structs"
@@ -39,27 +40,9 @@ func NewWithProvider(p structs.Provider) *Server {
 
 	s.Server.Router.Router = s.Server.Router.Router.SkipClean(true)
 
-	// s.Router.HandleFunc("/debug/pprof/", pprof.Index)
-	// s.Router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-	// s.Router.HandleFunc("/debug/pprof/profile", pprof.Profile)
-	// s.Router.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-	// s.Router.HandleFunc("/debug/pprof/trace", pprof.Trace)
-
-	// s.Route("GET", "/v2/", func(c *stdapi.Context) error {
-	// 	c.Response().Header().Add("Docker-Distribution-Api-Version", "registry/2.0")
-	// 	if _, pass, _ := c.Request().BasicAuth(); s.Password != "" && s.Password != pass {
-	// 		c.Response().Header().Set("WWW-Authenticate", `Basic realm="convox"`)
-	// 		return stdapi.Errorf(401, "invalid authentication")
-	// 	}
-	// 	return nil
-	// })
-
 	s.Subrouter("/", func(auth *stdapi.Router) {
 		auth.Use(s.authenticate)
-
 		auth.Route("GET", "/auth", func(c *stdapi.Context) error { return c.RenderOK() })
-
-		// auth.Route("GET", "/v2/{path:.*}", s.RegistryProxy)
 
 		s.setupRoutes(*auth)
 	})
@@ -69,6 +52,9 @@ func NewWithProvider(p structs.Provider) *Server {
 
 func (s *Server) authenticate(next stdapi.HandlerFunc) stdapi.HandlerFunc {
 	return func(c *stdapi.Context) error {
+		fmt.Println("*** Check Authentication ***")
+		fmt.Println(s.Password)
+		fmt.Println("*** Check Authentication ***")
 		if _, pass, _ := c.Request().BasicAuth(); s.Password != "" && s.Password != pass {
 			c.Response().Header().Set("WWW-Authenticate", `Basic realm="convox"`)
 			return stdapi.Errorf(401, "invalid authentication")
