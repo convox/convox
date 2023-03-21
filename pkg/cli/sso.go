@@ -1,7 +1,10 @@
 package cli
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -26,7 +29,9 @@ func init() {
 		Validate: stdcli.ArgsMax(5),
 	})
 
-	registerWithoutProvider("sso login", "authenticate with a console using sso", SsoLogin, stdcli.CommandOptions{})
+	registerWithoutProvider("sso login", "authenticate with a console using sso", SsoLogin, stdcli.CommandOptions{
+		Usage: "[hostname]",
+	})
 }
 
 func SsoConfigure(rack sdk.Interface, c *stdcli.Context) error {
@@ -115,6 +120,8 @@ func SsoConfigure(rack sdk.Interface, c *stdcli.Context) error {
 }
 
 func SsoLogin(rack sdk.Interface, c *stdcli.Context) error {
+	hostname := coalesce(c.Arg(0), "console.convox.com")
+
 	provider, err := c.SettingRead("provider")
 	if err != nil {
 		return err
@@ -169,7 +176,7 @@ func SsoLogin(rack sdk.Interface, c *stdcli.Context) error {
 		os.Exit(1)
 	}
 
-	log.Println("You will now be taken to your browser for authentication")
+	log.Println("Waiting for login... ")
 
 	time.Sleep(1 * time.Second)
 	fmt.Println(p.RedirectPath())
@@ -201,23 +208,18 @@ func authCodeCallbackHandler(w http.ResponseWriter, r *http.Request, server *htt
 		return
 	}
 
-	// session, err := sessionStore.Get(r, "okta-hosted-login-session-store")
-	// if err != nil {
-	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
-	// }
-
 	verificationError := p.VerifyToken(exchange.IdToken)
 
 	if verificationError != nil {
 		fmt.Println(verificationError)
 	}
 
-	// if verificationError == nil {
-	// 	session.Values["id_token"] = exchange.IdToken
-	// 	session.Values["access_token"] = exchange.AccessToken
+	profile := getProfileData(r, p, exchange.AccessToken)
 
-	// 	session.Save(r, w)
-	// }
+	if profile["convoxID"] == "" {
+		fmt.Fprintf(w, "There's no Convox ID configured for the user")
+		return
+	}
 
 	// show succes page
 	msg := "<p><strong>Success!</strong></p>"
@@ -226,6 +228,29 @@ func authCodeCallbackHandler(w http.ResponseWriter, r *http.Request, server *htt
 
 	// close the HTTP server
 	cleanup(server)
+}
+
+func getProfileData(r *http.Request, p structs.SsoProvider, accessToken string) map[string]string {
+	m := make(map[string]string)
+
+	if accessToken == "" {
+		return m
+	}
+
+	reqUrl := p.Opts().Issuer + "/v1/userinfo"
+
+	req, _ := http.NewRequest("GET", reqUrl, bytes.NewReader([]byte("")))
+	h := req.Header
+	h.Add("Authorization", "Bearer "+accessToken)
+	h.Add("Accept", "application/json")
+
+	client := &http.Client{}
+	resp, _ := client.Do(req)
+	body, _ := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
+	json.Unmarshal(body, &m)
+
+	return m
 }
 
 func cleanup(server *http.Server) {
