@@ -339,6 +339,20 @@ func (c Console) consoleUpdateSupported() (bool, error) {
 }
 
 func consoleClient(c *stdcli.Context, host, rack string) (*console.Client, error) {
+	params, err := ssoParams(c)
+	if err != nil {
+		return nil, err
+	}
+
+	if params["uid"] != "" && params["bearer_token"] != "" && params["issuer"] != "" {
+		cc, err := console.NewSsoClient(fmt.Sprintf("https://%s", host), rack, params, c)
+		if err != nil {
+			return nil, err
+		}
+
+		return cc, nil
+	}
+
 	pw, err := currentPassword(c, host)
 	if err != nil {
 		return nil, err
@@ -372,6 +386,35 @@ func currentPassword(c *stdcli.Context, host string) (string, error) {
 	}
 
 	return c.SettingReadKey("auth", host)
+}
+
+func ssoParams(c *stdcli.Context) (map[string]string, error) {
+	token, err := c.SettingRead("bearer_token")
+	if err != nil {
+		return nil, err
+	}
+
+	uid, err := c.SettingRead("uid")
+	if err != nil {
+		return nil, err
+	}
+
+	issuer, err := c.SettingRead("issuer")
+	if err != nil {
+		return nil, err
+	}
+
+	provider, err := c.SettingRead("provider")
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]string{
+		"bearer_token": token,
+		"uid":          uid,
+		"issuer":       issuer,
+		"provider":     provider,
+	}, nil
 }
 
 func listConsole(c *stdcli.Context) ([]Console, error) {

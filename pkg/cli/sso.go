@@ -25,10 +25,7 @@ func init() {
 		Validate: stdcli.ArgsMax(0),
 	})
 
-	registerWithoutProvider("sso login", "authenticate with a console using sso", SsoLogin, stdcli.CommandOptions{
-		Usage:    "[hostname]",
-		Validate: stdcli.ArgsMax(1),
-	})
+	registerWithoutProvider("sso login", "authenticate with a console using sso", SsoLogin, stdcli.CommandOptions{})
 }
 
 func SsoConfigure(rack sdk.Interface, c *stdcli.Context) error {
@@ -117,8 +114,6 @@ func SsoConfigure(rack sdk.Interface, c *stdcli.Context) error {
 }
 
 func SsoLogin(rack sdk.Interface, c *stdcli.Context) error {
-	hostname := coalesce(c.Arg(0), "console.convox.com")
-
 	provider, err := c.SettingRead("provider")
 	if err != nil {
 		return err
@@ -163,7 +158,7 @@ func SsoLogin(rack sdk.Interface, c *stdcli.Context) error {
 	server := &http.Server{Addr: "/authorization-code/callback"}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		authCodeCallbackHandler(w, r, server, p, hostname)
+		authCodeCallbackHandler(w, r, server, c, p)
 	})
 
 	port := fmt.Sprintf(":%s", "8080")
@@ -184,7 +179,7 @@ func SsoLogin(rack sdk.Interface, c *stdcli.Context) error {
 	return c.OK()
 }
 
-func authCodeCallbackHandler(w http.ResponseWriter, r *http.Request, server *http.Server, p structs.SsoProvider, hostname string) {
+func authCodeCallbackHandler(w http.ResponseWriter, r *http.Request, server *http.Server, c *stdcli.Context, p structs.SsoProvider) {
 	// Check the state that was returned in the query string is the same as the above state
 	if r.URL.Query().Get("state") != p.Opts().State {
 		fmt.Fprintln(w, "The state was not as expected")
@@ -217,22 +212,14 @@ func authCodeCallbackHandler(w http.ResponseWriter, r *http.Request, server *htt
 		return
 	}
 
-	cl, err := sdk.New(fmt.Sprintf("https://%s", hostname))
-	if err != nil {
-		fmt.Fprintf(w, "Could not call console auth endpoint")
+	if err := c.SettingWrite("uid", profile["convoxID"]); err != nil {
+		fmt.Fprintf(w, "Could not set UID on the CLI settings")
+
 		return
 	}
 
-	_, err = cl.SsoAuth(structs.SsoAuthOptions{
-		UserID:   profile["convoxID"],
-		Token:    exchange.AccessToken,
-		Sso:      "true",
-		Issuer:   p.Opts().Issuer,
-		Provider: p.Name(),
-	})
-
-	if err != nil {
-		fmt.Fprintf(w, "invalid login")
+	if err := c.SettingWrite("bearer_token", exchange.AccessToken); err != nil {
+		fmt.Fprintf(w, "Could not set Bearer Token on the CLI settings")
 		return
 	}
 
