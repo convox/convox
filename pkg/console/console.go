@@ -47,10 +47,6 @@ func NewSsoClient(endpoint, rack string, params map[string]string, handler Handl
 		handler: handler,
 	}
 
-	// s.Authenticator = cl.authenticator
-	// s.Rack = rack
-	// s.Session = cl.session
-
 	s.Client.Headers = func() http.Header {
 		var version = "dev"
 
@@ -66,10 +62,6 @@ func NewSsoClient(endpoint, rack string, params map[string]string, handler Handl
 		if rack != "" {
 			h.Set("Rack", rack)
 		}
-
-		// if c.Session != nil {
-		// 	h.Set("Session", c.Session(c))
-		// }
 
 		return h
 	}
