@@ -21,6 +21,10 @@ func Initialize(opts structs.SsoProviderOptions) (structs.SsoProvider, error) {
 	return &Okta{opts}, nil
 }
 
+func (o *Okta) Name() string {
+	return "okta"
+}
+
 func (o *Okta) Opts() structs.SsoProviderOptions {
 	return o.opts
 }
@@ -38,7 +42,7 @@ func (o *Okta) RedirectPath() string {
 	return o.opts.Issuer + "/v1/authorize?" + q.Encode()
 }
 
-func (o *Okta) ExchangeCode(code string, r *http.Request) structs.SsoExchangeCode {
+func (o *Okta) ExchangeCode(r *http.Request, code string) structs.SsoExchangeCode {
 	authHeader := base64.StdEncoding.EncodeToString(
 		[]byte(o.opts.ClientID + ":" + o.opts.ClientSecret))
 
@@ -86,4 +90,27 @@ func (o *Okta) VerifyToken(t string) error {
 	}
 
 	return fmt.Errorf("token could not be verified: %s", "")
+}
+
+func (o *Okta) GetProfileData(r *http.Request, accessToken string) map[string]string {
+	m := make(map[string]string)
+
+	if accessToken == "" {
+		return m
+	}
+
+	reqUrl := o.Opts().Issuer + "/v1/userinfo"
+
+	req, _ := http.NewRequest("GET", reqUrl, bytes.NewReader([]byte("")))
+	h := req.Header
+	h.Add("Authorization", "Bearer "+accessToken)
+	h.Add("Accept", "application/json")
+
+	client := &http.Client{}
+	resp, _ := client.Do(req)
+	body, _ := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
+	json.Unmarshal(body, &m)
+
+	return m
 }

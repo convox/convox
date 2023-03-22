@@ -1,15 +1,11 @@
 package cli
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/sdk"
@@ -26,11 +22,12 @@ func init() {
 			stdcli.StringFlag("issuer", "i", "issuer"),
 			stdcli.StringFlag("redirect_uri", "r", "redirect_uri"),
 		},
-		Validate: stdcli.ArgsMax(5),
+		Validate: stdcli.ArgsMax(0),
 	})
 
 	registerWithoutProvider("sso login", "authenticate with a console using sso", SsoLogin, stdcli.CommandOptions{
-		Usage: "[hostname]",
+		Usage:    "[hostname]",
+		Validate: stdcli.ArgsMax(1),
 	})
 }
 
@@ -166,7 +163,7 @@ func SsoLogin(rack sdk.Interface, c *stdcli.Context) error {
 	server := &http.Server{Addr: "/authorization-code/callback"}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		authCodeCallbackHandler(w, r, server, p)
+		authCodeCallbackHandler(w, r, server, p, hostname)
 	})
 
 	port := fmt.Sprintf(":%s", "8080")
@@ -178,17 +175,16 @@ func SsoLogin(rack sdk.Interface, c *stdcli.Context) error {
 
 	log.Println("Waiting for login... ")
 
-	time.Sleep(1 * time.Second)
-	fmt.Println(p.RedirectPath())
+	// time.Sleep(1 * time.Second)
 	sso.Openbrowser(p.RedirectPath())
-	time.Sleep(1 * time.Second)
+	// time.Sleep(1 * time.Second)
 
 	server.Serve(l)
 
 	return c.OK()
 }
 
-func authCodeCallbackHandler(w http.ResponseWriter, r *http.Request, server *http.Server, p structs.SsoProvider) {
+func authCodeCallbackHandler(w http.ResponseWriter, r *http.Request, server *http.Server, p structs.SsoProvider, hostname string) {
 	// Check the state that was returned in the query string is the same as the above state
 	if r.URL.Query().Get("state") != p.Opts().State {
 		fmt.Fprintln(w, "The state was not as expected")
@@ -201,7 +197,7 @@ func authCodeCallbackHandler(w http.ResponseWriter, r *http.Request, server *htt
 		return
 	}
 
-	exchange := p.ExchangeCode(r.URL.Query().Get("code"), r)
+	exchange := p.ExchangeCode(r, r.URL.Query().Get("code"))
 	if exchange.Error != "" {
 		fmt.Println(exchange.Error)
 		fmt.Println(exchange.ErrorDescription)
@@ -214,10 +210,29 @@ func authCodeCallbackHandler(w http.ResponseWriter, r *http.Request, server *htt
 		fmt.Println(verificationError)
 	}
 
-	profile := getProfileData(r, p, exchange.AccessToken)
+	profile := p.GetProfileData(r, exchange.AccessToken)
 
 	if profile["convoxID"] == "" {
 		fmt.Fprintf(w, "There's no Convox ID configured for the user")
+		return
+	}
+
+	cl, err := sdk.New(fmt.Sprintf("https://%s", hostname))
+	if err != nil {
+		fmt.Fprintf(w, "Could not call console auth endpoint")
+		return
+	}
+
+	_, err = cl.SsoAuth(structs.SsoAuthOptions{
+		UserID:   profile["convoxID"],
+		Token:    exchange.AccessToken,
+		Sso:      "true",
+		Issuer:   p.Opts().Issuer,
+		Provider: p.Name(),
+	})
+
+	if err != nil {
+		fmt.Fprintf(w, "invalid login")
 		return
 	}
 
@@ -228,29 +243,6 @@ func authCodeCallbackHandler(w http.ResponseWriter, r *http.Request, server *htt
 
 	// close the HTTP server
 	cleanup(server)
-}
-
-func getProfileData(r *http.Request, p structs.SsoProvider, accessToken string) map[string]string {
-	m := make(map[string]string)
-
-	if accessToken == "" {
-		return m
-	}
-
-	reqUrl := p.Opts().Issuer + "/v1/userinfo"
-
-	req, _ := http.NewRequest("GET", reqUrl, bytes.NewReader([]byte("")))
-	h := req.Header
-	h.Add("Authorization", "Bearer "+accessToken)
-	h.Add("Accept", "application/json")
-
-	client := &http.Client{}
-	resp, _ := client.Do(req)
-	body, _ := ioutil.ReadAll(resp.Body)
-	defer resp.Body.Close()
-	json.Unmarshal(body, &m)
-
-	return m
 }
 
 func cleanup(server *http.Server) {

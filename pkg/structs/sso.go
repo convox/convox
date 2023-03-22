@@ -3,10 +3,12 @@ package structs
 import "net/http"
 
 type SsoProvider interface {
-	RedirectPath() string
-	ExchangeCode(code string, r *http.Request) SsoExchangeCode
-	VerifyToken(t string) error
+	ExchangeCode(r *http.Request, code string) SsoExchangeCode
+	GetProfileData(r *http.Request, accessToken string) map[string]string
+	Name() string
 	Opts() SsoProviderOptions
+	RedirectPath() string
+	VerifyToken(t string) error
 }
 
 type SsoProviderOptions struct {
@@ -27,4 +29,12 @@ type SsoExchangeCode struct {
 	ExpiresIn        int    `json:"expires_in,omitempty"`
 	Scope            string `json:"scope,omitempty"`
 	IdToken          string `json:"id_token,omitempty"`
+}
+
+type SsoAuthOptions struct {
+	UserID   string `json:"user_id"`
+	Token    string `json:"token"`
+	Sso      string `json:"sso"`
+	Provider string `json:"provider"`
+	Issuer   string `json:"issuer"`
 }
