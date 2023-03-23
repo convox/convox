@@ -35,7 +35,7 @@ func (o *Okta) RedirectPath() string {
 	q.Add("response_type", "code")
 	q.Add("response_mode", "query")
 	q.Add("scope", o.opts.Scope)
-	q.Add("redirect_uri", o.opts.RedirectURL)
+	q.Add("redirect_uri", "http://localhost:8090/authorization-code/callback")
 	q.Add("state", o.opts.State)
 	q.Add("nonce", o.opts.Nonce)
 
@@ -49,7 +49,7 @@ func (o *Okta) ExchangeCode(r *http.Request, code string) structs.SsoExchangeCod
 	q := r.URL.Query()
 	q.Add("grant_type", "authorization_code")
 	q.Set("code", code)
-	q.Add("redirect_uri", o.opts.RedirectURL)
+	q.Add("redirect_uri", "http://localhost:8090/authorization-code/callback")
 
 	url := o.opts.Issuer + "/v1/token?" + q.Encode()
 

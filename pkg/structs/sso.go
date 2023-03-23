@@ -15,7 +15,6 @@ type SsoProviderOptions struct {
 	ClientID     string
 	ClientSecret string
 	Issuer       string
-	RedirectURL  string
 	Scope        string
 	State        string
 	Nonce        string

@@ -27,7 +27,9 @@ func init() {
 		Validate: stdcli.ArgsMax(0),
 	})
 
-	registerWithoutProvider("sso login", "authenticate with a console using sso", SsoLogin, stdcli.CommandOptions{})
+	registerWithoutProvider("sso login", "authenticate with a console using sso", SsoLogin, stdcli.CommandOptions{
+		Validate: stdcli.ArgsMax(0),
+	})
 }
 
 func SsoConfigure(rack sdk.Interface, c *stdcli.Context) error {
@@ -80,18 +82,6 @@ func SsoConfigure(rack sdk.Interface, c *stdcli.Context) error {
 		c.Writef("\n")
 	}
 
-	redirectURI := coalesce(c.String("redirect_uri"), os.Getenv("SSO_REDIRECT_URI"))
-	if redirectURI == "" {
-		c.Writef("SSO Redirect URI: ")
-
-		redirectURI, err = c.ReadSecret()
-		if err != nil {
-			return err
-		}
-
-		c.Writef("\n")
-	}
-
 	if err := c.SettingWrite("provider", provider); err != nil {
 		return err
 	}
@@ -105,10 +95,6 @@ func SsoConfigure(rack sdk.Interface, c *stdcli.Context) error {
 	}
 
 	if err := c.SettingWrite("issuer", issuer); err != nil {
-		return err
-	}
-
-	if err := c.SettingWrite("redirect_uri", redirectURI); err != nil {
 		return err
 	}
 
@@ -136,18 +122,12 @@ func SsoLogin(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	redirectURI, err := c.SettingRead("redirect_uri")
-	if err != nil {
-		return err
-	}
-
 	nonce, _ := sso.GenerateNonce()
 
 	p, err := sso.Initialize(provider, structs.SsoProviderOptions{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
 		Issuer:       issuer,
-		RedirectURL:  redirectURI,
 		Scope:        "openid profile email",
 		State:        sso.GenerateState(),
 		Nonce:        nonce,
@@ -163,7 +143,7 @@ func SsoLogin(rack sdk.Interface, c *stdcli.Context) error {
 		authCodeCallbackHandler(w, r, server, c, p)
 	})
 
-	port := fmt.Sprintf(":%s", "8080")
+	port := fmt.Sprintf(":%s", "8090")
 	l, err := net.Listen("tcp", port)
 	if err != nil {
 		fmt.Printf("snap: can't listen to port %s: %s\n", port, err)
