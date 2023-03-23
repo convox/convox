@@ -162,13 +162,11 @@ func SsoLogin(rack sdk.Interface, c *stdcli.Context) error {
 }
 
 func authCodeCallbackHandler(w http.ResponseWriter, r *http.Request, server *http.Server, c *stdcli.Context, p structs.SsoProvider) {
-	// Check the state that was returned in the query string is the same as the above state
 	if r.URL.Query().Get("state") != p.Opts().State {
 		fmt.Fprintln(w, "The state was not as expected")
 		return
 	}
 
-	// Make sure the code was provided
 	if r.URL.Query().Get("code") == "" {
 		fmt.Fprintln(w, "The code was not returned or is not accessible")
 		return
@@ -205,11 +203,9 @@ func authCodeCallbackHandler(w http.ResponseWriter, r *http.Request, server *htt
 		return
 	}
 
-	// show succes page
 	w.Header().Set("Content-Type", "text/html")
 	w.Write(openSuccessHTMLFile())
 
-	// close the HTTP server
 	cleanup(server)
 }
 
@@ -221,7 +217,6 @@ func openSuccessHTMLFile() []byte {
 
 	defer file.Close()
 
-	// Read the contents of the HTML file
 	fileContents, err := io.ReadAll(file)
 	if err != nil {
 		return nil
