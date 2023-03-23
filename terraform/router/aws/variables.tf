@@ -39,6 +39,11 @@ variable "release" {
   type = string
 }
 
+variable "ssl_protocols" {
+  default = ""
+  type    = string
+}
+
 variable "tags" {
   default = {}
 }

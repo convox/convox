@@ -123,6 +123,11 @@ variable "syslog" {
   default = ""
 }
 
+variable "ssl_protocols" {
+  default = ""
+  type    = string
+}
+
 variable "tags" {
   default = ""
 }

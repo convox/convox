@@ -63,6 +63,7 @@ The following environment variables are required:
 | **proxy_protocol**       | **false**               | Enable proxy protocol. With this parameter set, the client source ip will be available in the request header `x-forwarded-for` key. **Requires 5 - 10 minutes downtime**.          |
 | **region**               | **us-east-1**          | AWS Region                                                                                                     |
 | **syslog**               |                        | Forward logs to a syslog endpoint (e.g. **tcp+tls://example.org:1234**)                                        |
+| **ssl_protocols**        |                        | SSL protocols to use for (nginx)[https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_ssl_protocols] (e.g. **TLSv1.2 TLSv1.3**)|
 | **tags**                 |                        | Custom tags to add with AWS resources (e.g. **key1=val1,key2=val2**)|
 | **vpc_id** *             |                        | Use an existing VPC for cluster creation. Make sure to also pass the **cidr** block and **internet_gateway_id**|
 

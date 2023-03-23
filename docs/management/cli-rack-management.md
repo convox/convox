@@ -56,6 +56,7 @@ The parameters available for your Rack depend on the underlying cloud provider.
 | **schedule_rack_scale_up**        |                 |
 | **proxy_protocol** **             | **false**       |
 | **vpc_id** ***                    |                 |
+| **ssl_protocols**                 |                 |
 | **tags**                          |                 |
 
 \* Parameter cannot be changed after rack creation

@@ -41,3 +41,8 @@ variable "replicas_max" {
 variable "set_priority_class" {
   default = true
 }
+
+variable "ssl_protocols" {
+  default = ""
+  type    = string
+}
