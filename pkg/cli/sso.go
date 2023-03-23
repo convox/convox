@@ -22,7 +22,6 @@ func init() {
 			stdcli.StringFlag("client_id", "c", "client id"),
 			stdcli.StringFlag("client_secret", "s", "client secret"),
 			stdcli.StringFlag("issuer", "i", "issuer"),
-			stdcli.StringFlag("redirect_uri", "r", "redirect_uri"),
 		},
 		Validate: stdcli.ArgsMax(0),
 	})
