@@ -2,10 +2,12 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/sdk"
@@ -170,9 +172,9 @@ func SsoLogin(rack sdk.Interface, c *stdcli.Context) error {
 
 	log.Println("Waiting for login... ")
 
-	// time.Sleep(1 * time.Second)
+	time.Sleep(1 * time.Second)
 	sso.Openbrowser(p.RedirectPath())
-	// time.Sleep(1 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	server.Serve(l)
 
@@ -194,8 +196,8 @@ func authCodeCallbackHandler(w http.ResponseWriter, r *http.Request, server *htt
 
 	exchange := p.ExchangeCode(r, r.URL.Query().Get("code"))
 	if exchange.Error != "" {
-		fmt.Println(exchange.Error)
-		fmt.Println(exchange.ErrorDescription)
+		fmt.Fprintf(w, exchange.Error)
+		fmt.Fprintf(w, exchange.ErrorDescription)
 		return
 	}
 
@@ -224,12 +226,28 @@ func authCodeCallbackHandler(w http.ResponseWriter, r *http.Request, server *htt
 	}
 
 	// show succes page
-	msg := "<p><strong>Success!</strong></p>"
-	msg = msg + "<p>You are authenticated and can now return to the CLI.</p>"
-	fmt.Fprintf(w, msg)
+	w.Header().Set("Content-Type", "text/html")
+	w.Write(openSuccessHTMLFile())
 
 	// close the HTTP server
 	cleanup(server)
+}
+
+func openSuccessHTMLFile() []byte {
+	file, err := os.Open("../../sso/templates/success.html")
+	if err != nil {
+		return nil
+	}
+
+	defer file.Close()
+
+	// Read the contents of the HTML file
+	fileContents, err := io.ReadAll(file)
+	if err != nil {
+		return nil
+	}
+
+	return fileContents
 }
 
 func cleanup(server *http.Server) {
