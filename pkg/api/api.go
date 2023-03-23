@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"reflect"
 
 	"github.com/convox/convox/pkg/structs"
@@ -52,9 +51,6 @@ func NewWithProvider(p structs.Provider) *Server {
 
 func (s *Server) authenticate(next stdapi.HandlerFunc) stdapi.HandlerFunc {
 	return func(c *stdapi.Context) error {
-		fmt.Println("*** Check Authentication ***")
-		fmt.Println(s.Password)
-		fmt.Println("*** Check Authentication ***")
 		if _, pass, _ := c.Request().BasicAuth(); s.Password != "" && s.Password != pass {
 			c.Response().Header().Set("WWW-Authenticate", `Basic realm="convox"`)
 			return stdapi.Errorf(401, "invalid authentication")
