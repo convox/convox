@@ -32,6 +32,8 @@ services:
     build:
       manifest: Dockerfile
       path: .
+    certificate:
+      duration: 2160h 
     command: bin/web
     deployment:
       minimum: 25
