@@ -269,7 +269,7 @@ resource "kubernetes_deployment" "autoscaler" {
         priority_class_name             = "system-cluster-critical"
 
         container {
-          image             = "k8s.gcr.io/autoscaling/cluster-autoscaler:v1.22.1"
+          image             = "registry.k8s.io/autoscaling/cluster-autoscaler:v1.22.1"
           image_pull_policy = "IfNotPresent"
           name              = "cluster-autoscaler"
 
