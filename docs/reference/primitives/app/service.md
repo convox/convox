@@ -132,14 +132,14 @@ services:
 | **manifest** | string | Dockerfile | The filename of the Dockerfile                                |
 | **path**     | string | .          | The path (relative to **convox.yml**) to build for this Service |
 
+> Specifying **build** as a string will set the **path** and leave the other values as defaults.
+
 ### certificate
 
 | Attribute  | Type   | Default    | Description                                                   |
 | ---------- | ------ | ---------- | ------------------------------------------------------------- |
 | **duration** | string | 2160h | Certificate renew frequency period                                |
 
-
-> Specifying **build** as a string will set the **path** and leave the other values as defaults.
 ### deployment
 
 | Attribute | Type   | Default | Description                                                                      |
