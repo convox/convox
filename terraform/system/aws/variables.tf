@@ -77,6 +77,14 @@ variable "k8s_version" {
   default = "1.23"
 }
 
+variable "max_on_demand_count" {
+  default = 100
+}
+
+variable "min_on_demand_count" {
+  default = 1
+}
+
 variable "name" {
   type = string
 }
