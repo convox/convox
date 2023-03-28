@@ -15,7 +15,6 @@ import (
 
 func (p *Provider) SystemGet() (*structs.System, error) {
 	status := "running"
-	fmt.Printf("provider SystemGet: %+v\n", p)
 
 	// status, err := p.Engine.SystemStatus()
 	// if err != nil {
