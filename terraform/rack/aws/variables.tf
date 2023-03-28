@@ -66,6 +66,16 @@ variable "subnets" {
   type = list(any)
 }
 
+variable "ssl_ciphers" {
+  default = ""
+  type    = string
+}
+
+variable "ssl_protocols" {
+  default = ""
+  type    = string
+}
+
 variable "whitelist" {
   default = ["0.0.0.0/0"]
 }

@@ -22,6 +22,8 @@ module "nginx" {
   rack            = var.name
   replicas_max    = var.high_availability ? 10 : 1
   replicas_min    = var.high_availability ? 2 : 1
+  ssl_ciphers     = var.ssl_ciphers
+  ssl_protocols   = var.ssl_protocols
 }
 
 resource "kubernetes_config_map" "nginx-configuration" {
@@ -33,6 +35,8 @@ resource "kubernetes_config_map" "nginx-configuration" {
   data = {
     "proxy-body-size"    = "0"
     "use-proxy-protocol" = var.proxy_protocol ? "true" : "false"
+    "ssl-ciphers"        = var.ssl_ciphers == "" ? null : var.ssl_ciphers
+    "ssl-protocols"      = var.ssl_protocols == "" ? null : var.ssl_protocols
   }
 
   depends_on = [
