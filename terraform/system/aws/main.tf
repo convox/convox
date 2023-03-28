@@ -108,6 +108,7 @@ module "rack" {
   oidc_sub            = module.cluster.oidc_sub
   proxy_protocol      = var.proxy_protocol
   release             = local.release
+  ssl_ciphers         = var.ssl_ciphers
   ssl_protocols       = var.ssl_protocols
   subnets             = module.cluster.subnets
   tags                = local.tag_map
