@@ -91,26 +91,3 @@ func (o *Okta) VerifyToken(t string) error {
 
 	return fmt.Errorf("token could not be verified: %s", "")
 }
-
-func (o *Okta) GetProfileData(r *http.Request, accessToken string) map[string]string {
-	m := make(map[string]string)
-
-	if accessToken == "" {
-		return m
-	}
-
-	reqUrl := o.Opts().Issuer + "/v1/userinfo"
-
-	req, _ := http.NewRequest("GET", reqUrl, bytes.NewReader([]byte("")))
-	h := req.Header
-	h.Add("Authorization", "Bearer "+accessToken)
-	h.Add("Accept", "application/json")
-
-	client := &http.Client{}
-	resp, _ := client.Do(req)
-	body, _ := ioutil.ReadAll(resp.Body)
-	defer resp.Body.Close()
-	json.Unmarshal(body, &m)
-
-	return m
-}

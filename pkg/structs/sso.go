@@ -4,7 +4,6 @@ import "net/http"
 
 type SsoProvider interface {
 	ExchangeCode(r *http.Request, code string) SsoExchangeCode
-	GetProfileData(r *http.Request, accessToken string) map[string]string
 	Name() string
 	Opts() SsoProviderOptions
 	RedirectPath() string

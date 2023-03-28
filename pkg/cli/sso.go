@@ -184,19 +184,6 @@ func authCodeCallbackHandler(w http.ResponseWriter, r *http.Request, server *htt
 		fmt.Println(verificationError)
 	}
 
-	profile := p.GetProfileData(r, exchange.AccessToken)
-
-	if profile["convoxID"] == "" {
-		fmt.Fprintf(w, "There's no Convox ID configured for the user")
-		return
-	}
-
-	if err := c.SettingWrite("uid", profile["convoxID"]); err != nil {
-		fmt.Fprintf(w, "Could not set UID on the CLI settings")
-
-		return
-	}
-
 	if err := c.SettingWrite("bearer_token", exchange.AccessToken); err != nil {
 		fmt.Fprintf(w, "Could not set Bearer Token on the CLI settings")
 		return
