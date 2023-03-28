@@ -54,7 +54,6 @@ func NewSsoClient(endpoint, rack string, params map[string]string, handler Handl
 
 		h.Set("User-Agent", fmt.Sprintf("convox.go/%s", version))
 		h.Set("Version", version)
-		h.Set("User-ID", params["uid"])
 		h.Set("Issuer", params["issuer"])
 		h.Set("SSO-Provider", params["provider"])
 		h.Set("Authorization", fmt.Sprintf("Bearer %s", params["bearer_token"]))

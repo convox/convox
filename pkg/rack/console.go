@@ -344,7 +344,7 @@ func consoleClient(c *stdcli.Context, host, rack string) (*console.Client, error
 		return nil, err
 	}
 
-	if params["uid"] != "" && params["bearer_token"] != "" && params["issuer"] != "" {
+	if params["bearer_token"] != "" && params["issuer"] != "" {
 		cc, err := console.NewSsoClient(fmt.Sprintf("https://%s", host), rack, params, c)
 		if err != nil {
 			return nil, err
@@ -394,11 +394,6 @@ func ssoParams(c *stdcli.Context) (map[string]string, error) {
 		return nil, err
 	}
 
-	uid, err := c.SettingRead("uid")
-	if err != nil {
-		return nil, err
-	}
-
 	issuer, err := c.SettingRead("issuer")
 	if err != nil {
 		return nil, err
@@ -411,7 +406,6 @@ func ssoParams(c *stdcli.Context) (map[string]string, error) {
 
 	return map[string]string{
 		"bearer_token": token,
-		"uid":          uid,
 		"issuer":       issuer,
 		"provider":     provider,
 	}, nil
