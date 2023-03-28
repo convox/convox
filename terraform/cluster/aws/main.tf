@@ -97,7 +97,7 @@ resource "aws_eks_node_group" "cluster" {
   count = var.high_availability ? 3 : 1
 
   ami_type        = var.gpu_type ? "AL2_x86_64_GPU" : var.arm_type ? "AL2_ARM_64" : "AL2_x86_64"
-  capacity_type   = var.node_capacity_type
+  capacity_type   = var.node_capacity_type == "MIXED" ? count.index == 0 ? "ON_DEMAND" : "SPOT" : var.node_capacity_type
   cluster_name    = aws_eks_cluster.cluster.name
   instance_types  = split(",", random_id.node_group.keepers.node_type)
   node_group_name = "${var.name}-${local.availability_zones[count.index]}-${count.index}${random_id.node_group.hex}"
@@ -112,9 +112,9 @@ resource "aws_eks_node_group" "cluster" {
   }
 
   scaling_config {
-    desired_size = 1
-    min_size     = 1
-    max_size     = 100
+    desired_size = var.node_capacity_type == "MIXED" ? count.index == 0 ? var.min_on_demand_count : 1 : 1
+    min_size     = var.node_capacity_type == "MIXED" ? count.index == 0 ? var.min_on_demand_count : 1 : 1
+    max_size     = var.node_capacity_type == "MIXED" ? count.index == 0 ? var.max_on_demand_count : 100 : 100
   }
 
   lifecycle {

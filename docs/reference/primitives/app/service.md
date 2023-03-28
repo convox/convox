@@ -32,6 +32,8 @@ services:
     build:
       manifest: Dockerfile
       path: .
+    certificate:
+      duration: 2160h 
     command: bin/web
     deployment:
       minimum: 25
@@ -82,7 +84,7 @@ services:
 | **command**     | string     | **CMD** of Dockerfile | The command to run to start a [Process](/reference/primitives/app/process) for this Service                                                                       |
 | **deployment**  | map        |                     | Manual control over deployment parameters                                                                                                  |
 | **domain**      | string     |                     | A custom domain(s) (comma separated) to route to this Service                                                                              |
-| **drain**       | number     |                     | The number of seconds to wait for connections to drain when terminating a [Process](/reference/primitives/app/process) of this Service                            |
+| **drain**       | number     |                     | The number of seconds to wait for connections to drain when terminating a [Process](/reference/primitives/app/process) of this Service. Only applies for version 2 rack services. For version 3 rack services use termination grace period **termination.grace** |
 | **environment** | list       |                     | A list of environment variables (with optional defaults) to populate from the [Release](/reference/primitives/app/release) environment                            |
 | **health**      | string/map | /                   | Health check definition (see below)                                                                                                        |
 | **image**       | string     |                     | An external Docker image to use for this Service (supercedes **build**)                                                                      |
@@ -130,14 +132,14 @@ services:
 | **manifest** | string | Dockerfile | The filename of the Dockerfile                                |
 | **path**     | string | .          | The path (relative to **convox.yml**) to build for this Service |
 
+> Specifying **build** as a string will set the **path** and leave the other values as defaults.
+
 ### certificate
 
 | Attribute  | Type   | Default    | Description                                                   |
 | ---------- | ------ | ---------- | ------------------------------------------------------------- |
 | **duration** | string | 2160h | Certificate renew frequency period                                |
 
-
-> Specifying **build** as a string will set the **path** and leave the other values as defaults.
 ### deployment
 
 | Attribute | Type   | Default | Description                                                                      |
