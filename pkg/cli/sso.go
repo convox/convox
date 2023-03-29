@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 
@@ -22,6 +23,7 @@ func init() {
 			stdcli.StringFlag("client_id", "c", "client id"),
 			stdcli.StringFlag("client_secret", "s", "client secret"),
 			stdcli.StringFlag("issuer", "i", "issuer"),
+			stdcli.StringFlag("callback_url", "u", "callback url"),
 		},
 		Validate: stdcli.ArgsMax(0),
 	})
@@ -71,9 +73,21 @@ func SsoConfigure(rack sdk.Interface, c *stdcli.Context) error {
 
 	issuer := coalesce(c.String("issuer"), os.Getenv("SSO_ISSUER"))
 	if issuer == "" {
-		c.Writef("SSO ISSUER: ")
+		c.Writef("SSO Issuer: ")
 
 		issuer, err = c.ReadSecret()
+		if err != nil {
+			return err
+		}
+
+		c.Writef("\n")
+	}
+
+	callbackURL := coalesce(c.String("callback_url"), os.Getenv("SSO_CALLBACK_URL"))
+	if callbackURL == "" {
+		c.Writef("SSO Callback URL: ")
+
+		callbackURL, err = c.ReadSecret()
 		if err != nil {
 			return err
 		}
@@ -94,6 +108,10 @@ func SsoConfigure(rack sdk.Interface, c *stdcli.Context) error {
 	}
 
 	if err := c.SettingWriteKey("sso", "issuer", issuer); err != nil {
+		return err
+	}
+
+	if err := c.SettingWriteKey("sso", "callback_url", callbackURL); err != nil {
 		return err
 	}
 
@@ -121,6 +139,20 @@ func SsoLogin(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
+	callbackURL, err := c.SettingReadKey("sso", "callback_url")
+	if err != nil {
+		return err
+	}
+
+	parsedUrl, err := url.Parse(callbackURL)
+	if err != nil {
+		return fmt.Errorf("Error parsing the Callback URL: %s", err)
+	}
+
+	// Extract the port and path
+	port := parsedUrl.Port()
+	path := parsedUrl.Path
+
 	nonce, _ := sso.GenerateNonce()
 
 	p, err := sso.Initialize(provider, structs.SsoProviderOptions{
@@ -136,14 +168,13 @@ func SsoLogin(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	server := &http.Server{Addr: "/authorization-code/callback"}
+	server := &http.Server{Addr: path}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		authCodeCallbackHandler(w, r, server, c, p)
 	})
 
-	port := fmt.Sprintf(":%s", "8090")
-	l, err := net.Listen("tcp", port)
+	l, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
 	if err != nil {
 		fmt.Printf("snap: can't listen to port %s: %s\n", port, err)
 		os.Exit(1)

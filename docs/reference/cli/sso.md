@@ -14,6 +14,7 @@ Fields:
 - Client ID: The OpenID Connect client ID provided by your Identity Provider.
 - Client secret: The OpenID Connect client secret provided by your Identity Provider.
 - Issuer: A unique string that identifies the provider issuing a request.
+- Callback URL: A unique string that identifies the callback url that the idp will redirect the request after authorize the customer.
 
 ### Usage
 ```html
@@ -23,7 +24,7 @@ Fields:
 or
 
 ```html
-    convox sso configure -p PROVIDER -c CLIENT_ID -s CLIENT_SECRET -i ISSUER
+    convox sso configure -p PROVIDER -c CLIENT_ID -s CLIENT_SECRET -i ISSUER -u CALLBACK_URL
 ```
 
 or we can add following environment variables:
@@ -33,6 +34,7 @@ SSO_PROVIDER
 SSO_CLIENT_ID
 SSO_CLIENT_SECRET
 SSO_ISSUER
+SSO_CALLBACK_URL
 ```
 
 ### Examples
@@ -41,7 +43,8 @@ SSO_ISSUER
     SSO Provider: 
     SSO Client ID: 
     SSO Client Secret: 
-    SSO Issuer: 
+    SSO Issuer:
+    SSO Callback URL: 
     OK
 ```
 
@@ -58,4 +61,4 @@ You will be redirected to the browser to your fill the credentials in your ident
 
 ### Requirements
 Is necessary to configure the identity provider to add the `convoxID` that refers with the user id in the console. Also, is required to add this field in the token claim. 
-Also, configure the callback endpoint in the customer application as `http://localhost:8090/authorization-code/callback`.
+Also, configure the callback endpoint in the customer application, for example, `http://localhost:8090/authorization-code/callback`. Port and the path can be customized by the customer.
