@@ -26,13 +26,22 @@ or
     convox sso configure -p PROVIDER -c CLIENT_ID -s CLIENT_SECRET -i ISSUER
 ```
 
+or we can add following environment variables:
+
+```
+SSO_PROVIDER
+SSO_CLIENT_ID
+SSO_CLIENT_SECRET
+SSO_ISSUER
+```
+
 ### Examples
 ```html
     convox sso configure
     SSO Provider: 
     SSO Client ID: 
     SSO Client Secret: 
-    SSO ISSUER: 
+    SSO Issuer: 
     OK
 ```
 

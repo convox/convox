@@ -81,19 +81,19 @@ func SsoConfigure(rack sdk.Interface, c *stdcli.Context) error {
 		c.Writef("\n")
 	}
 
-	if err := c.SettingWrite("provider", provider); err != nil {
+	if err := c.SettingWriteKey("sso", "provider", provider); err != nil {
 		return err
 	}
 
-	if err := c.SettingWrite("client_id", clientID); err != nil {
+	if err := c.SettingWriteKey("sso", "client_id", clientID); err != nil {
 		return err
 	}
 
-	if err := c.SettingWrite("client_secret", clientSecret); err != nil {
+	if err := c.SettingWriteKey("sso", "client_secret", clientSecret); err != nil {
 		return err
 	}
 
-	if err := c.SettingWrite("issuer", issuer); err != nil {
+	if err := c.SettingWriteKey("sso", "issuer", issuer); err != nil {
 		return err
 	}
 
@@ -101,22 +101,22 @@ func SsoConfigure(rack sdk.Interface, c *stdcli.Context) error {
 }
 
 func SsoLogin(rack sdk.Interface, c *stdcli.Context) error {
-	provider, err := c.SettingRead("provider")
+	provider, err := c.SettingReadKey("sso", "provider")
 	if err != nil {
 		return err
 	}
 
-	clientID, err := c.SettingRead("client_id")
+	clientID, err := c.SettingReadKey("sso", "client_id")
 	if err != nil {
 		return err
 	}
 
-	clientSecret, err := c.SettingRead("client_secret")
+	clientSecret, err := c.SettingReadKey("sso", "client_secret")
 	if err != nil {
 		return err
 	}
 
-	issuer, err := c.SettingRead("issuer")
+	issuer, err := c.SettingReadKey("sso", "issuer")
 	if err != nil {
 		return err
 	}
@@ -184,7 +184,7 @@ func authCodeCallbackHandler(w http.ResponseWriter, r *http.Request, server *htt
 		fmt.Println(verificationError)
 	}
 
-	if err := c.SettingWrite("bearer_token", exchange.AccessToken); err != nil {
+	if err := c.SettingWriteKey("sso", "bearer_token", exchange.AccessToken); err != nil {
 		fmt.Fprintf(w, "Could not set Bearer Token on the CLI settings")
 		return
 	}

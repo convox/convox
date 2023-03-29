@@ -389,17 +389,17 @@ func currentPassword(c *stdcli.Context, host string) (string, error) {
 }
 
 func ssoParams(c *stdcli.Context) (map[string]string, error) {
-	token, err := c.SettingRead("bearer_token")
+	token, err := c.SettingReadKey("sso", "bearer_token")
 	if err != nil {
 		return nil, err
 	}
 
-	issuer, err := c.SettingRead("issuer")
+	issuer, err := c.SettingReadKey("sso", "issuer")
 	if err != nil {
 		return nil, err
 	}
 
-	provider, err := c.SettingRead("provider")
+	provider, err := c.SettingReadKey("sso", "provider")
 	if err != nil {
 		return nil, err
 	}
