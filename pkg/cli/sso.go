@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"net/http"
@@ -14,6 +13,7 @@ import (
 	"github.com/convox/convox/sdk"
 	"github.com/convox/convox/sso"
 	"github.com/convox/stdcli"
+	"github.com/gobuffalo/packr"
 )
 
 func init() {
@@ -221,25 +221,25 @@ func authCodeCallbackHandler(w http.ResponseWriter, r *http.Request, server *htt
 	}
 
 	w.Header().Set("Content-Type", "text/html")
-	w.Write(openSuccessHTMLFile())
+	file, err := openAuthHTMLFile()
+	if err != nil {
+		fmt.Fprintf(w, "Could not open the success authentication html page")
+		return
+	}
+	w.Write(file)
 
 	cleanup(server)
 }
 
-func openSuccessHTMLFile() []byte {
-	file, err := os.Open("../../sso/templates/success.html")
+func openAuthHTMLFile() ([]byte, error) {
+	box := packr.NewBox("../../public")
+	html, err := box.Find("auth.html")
+
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
-	defer file.Close()
-
-	fileContents, err := io.ReadAll(file)
-	if err != nil {
-		return nil
-	}
-
-	return fileContents
+	return html, nil
 }
 
 func cleanup(server *http.Server) {
