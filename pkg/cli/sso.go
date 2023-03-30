@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
@@ -144,15 +145,6 @@ func SsoLogin(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	parsedUrl, err := url.Parse(callbackURL)
-	if err != nil {
-		return fmt.Errorf("Error parsing the Callback URL: %s", err)
-	}
-
-	// Extract the port and path
-	port := parsedUrl.Port()
-	path := parsedUrl.Path
-
 	nonce, _ := sso.GenerateNonce()
 
 	p, err := sso.Initialize(provider, structs.SsoProviderOptions{
@@ -168,17 +160,30 @@ func SsoLogin(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
+	parsedUrl, err := url.Parse(callbackURL)
+	if err != nil {
+		return fmt.Errorf("Error parsing the Callback URL: %s", err)
+	}
+
+	// Extract the port and path
+	port := parsedUrl.Port()
+	path := parsedUrl.Path
+
 	server := &http.Server{Addr: path}
+	done := make(chan bool)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		authCodeCallbackHandler(w, r, server, c, p)
+		authCodeCallbackHandler(w, r, c, p, done)
 	})
 
-	l, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
-	if err != nil {
-		fmt.Printf("snap: can't listen to port %s: %s\n", port, err)
-		os.Exit(1)
-	}
+	go func() {
+		l, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
+		if err != nil {
+			fmt.Printf("snap: can't listen to port %s: %s\n", port, err)
+		}
+
+		server.Serve(l)
+	}()
 
 	log.Println("Waiting for login... ")
 
@@ -186,12 +191,20 @@ func SsoLogin(rack sdk.Interface, c *stdcli.Context) error {
 	sso.Openbrowser(p.RedirectPath())
 	time.Sleep(1 * time.Second)
 
-	server.Serve(l)
+	// Wait for the user authentication to complete
+	<-done
+
+	// Shutdown the HTTP server gracefully
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+	if err := server.Shutdown(ctx); err != nil {
+		fmt.Println("Error shutting down server:", err)
+	}
 
 	return c.OK()
 }
 
-func authCodeCallbackHandler(w http.ResponseWriter, r *http.Request, server *http.Server, c *stdcli.Context, p structs.SsoProvider) {
+func authCodeCallbackHandler(w http.ResponseWriter, r *http.Request, c *stdcli.Context, p structs.SsoProvider, done chan bool) {
 	if r.URL.Query().Get("state") != p.Opts().State {
 		fmt.Fprintln(w, "The state was not as expected")
 		return
@@ -228,7 +241,7 @@ func authCodeCallbackHandler(w http.ResponseWriter, r *http.Request, server *htt
 	}
 	w.Write(file)
 
-	cleanup(server)
+	done <- true
 }
 
 func openAuthHTMLFile() ([]byte, error) {
@@ -240,8 +253,4 @@ func openAuthHTMLFile() ([]byte, error) {
 	}
 
 	return html, nil
-}
-
-func cleanup(server *http.Server) {
-	go server.Close()
 }
