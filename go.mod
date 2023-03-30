@@ -3,10 +3,10 @@ module github.com/convox/convox
 go 1.16
 
 require (
-	cloud.google.com/go/storage v1.6.0
+	cloud.google.com/go/storage v1.10.0
 	github.com/Azure/azure-sdk-for-go v36.1.0+incompatible
 	github.com/Azure/azure-storage-file-go v0.6.0
-	github.com/Azure/go-autorest/autorest v0.11.12
+	github.com/Azure/go-autorest/autorest v0.11.18
 	github.com/Azure/go-autorest/autorest/azure/auth v0.4.0
 	github.com/Azure/go-autorest/autorest/to v0.3.0 // indirect
 	github.com/Azure/go-autorest/autorest/validation v0.2.0 // indirect
@@ -39,18 +39,17 @@ require (
 	github.com/miekg/dns v1.1.25
 	github.com/pkg/errors v0.9.1
 	github.com/russross/blackfriday v2.0.0+incompatible
-	github.com/stretchr/testify v1.6.1
+	github.com/stretchr/objx v0.2.0 // indirect
+	github.com/stretchr/testify v1.7.0
 	github.com/vektra/mockery v1.1.2
 	golang.org/x/crypto v0.0.0-20221005025214-4161e89ecf1b
 	golang.org/x/text v0.3.7
-	google.golang.org/api v0.20.0
+	google.golang.org/api v0.43.0
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.21.0
-	k8s.io/apimachinery v0.21.0
-	k8s.io/client-go v0.21.0
-	k8s.io/code-generator v0.21.0
+	k8s.io/api v0.24.0
+	k8s.io/apimachinery v0.24.0
+	k8s.io/client-go v0.24.0
+	k8s.io/code-generator v0.24.0
 	k8s.io/klog v1.0.0
-	k8s.io/kube-openapi v0.0.0-20211110013926-83f114cd0513 // indirect
-	k8s.io/metrics v0.21.0
-	sigs.k8s.io/structured-merge-diff/v4 v4.1.2 // indirect
+	k8s.io/metrics v0.24.0
 )
