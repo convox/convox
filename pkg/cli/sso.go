@@ -171,6 +171,7 @@ func SsoLogin(rack sdk.Interface, c *stdcli.Context) error {
 
 	server := &http.Server{Addr: path}
 	done := make(chan bool)
+	errors := make(chan error)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		authCodeCallbackHandler(w, r, c, p, done)
@@ -180,12 +181,18 @@ func SsoLogin(rack sdk.Interface, c *stdcli.Context) error {
 		l, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
 		if err != nil {
 			fmt.Printf("snap: can't listen to port %s: %s\n", port, err)
+			errors <- err
 		}
 
 		server.Serve(l)
 	}()
 
-	log.Println("Waiting for login... ")
+	select {
+	case err := <-errors:
+		return err
+	default:
+		log.Println("Waiting for login... ")
+	}
 
 	time.Sleep(1 * time.Second)
 	sso.Openbrowser(p.RedirectPath())
@@ -199,6 +206,7 @@ func SsoLogin(rack sdk.Interface, c *stdcli.Context) error {
 	defer cancel()
 	if err := server.Shutdown(ctx); err != nil {
 		fmt.Println("Error shutting down server:", err)
+		return err
 	}
 
 	return c.OK()
