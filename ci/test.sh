@@ -55,7 +55,7 @@ build=$(convox api get /apps/httpd/builds | jq -r ".[0].id") && [ -n "$build" ]
 convox builds -a httpd | grep $build
 convox builds info $build -a httpd | grep $build
 convox builds info $build -a httpd | grep cibuild
-convox builds logs $build -a httpd | grep "Running: docker push"
+convox builds logs $build -a httpd | grep "pushing manifest for"
 convox builds export $build -a httpd -f /tmp/build.tgz
 releasei=$(convox builds import -a httpd -f /tmp/build.tgz --id) && [ -n "$releasei" ]
 buildi=$(convox api get /apps/httpd/releases/$releasei | jq -r ".build") && [ -n "$buildi" ]
