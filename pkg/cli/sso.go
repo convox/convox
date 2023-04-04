@@ -214,7 +214,7 @@ func SsoLogin(rack sdk.Interface, c *stdcli.Context) error {
 
 func authCodeCallbackHandler(w http.ResponseWriter, r *http.Request, c *stdcli.Context, p structs.SsoProvider, done chan bool) {
 	if r.URL.Query().Get("state") != p.Opts().State {
-		fmt.Fprintln(w, "The state was not as expected")
+		fmt.Fprintln(w, "The state was not as expected. Please check if you are trying to connect in the right Idendity provider application")
 		return
 	}
 
@@ -237,14 +237,23 @@ func authCodeCallbackHandler(w http.ResponseWriter, r *http.Request, c *stdcli.C
 	}
 
 	if err := c.SettingWriteKey("sso", "bearer_token", exchange.AccessToken); err != nil {
-		fmt.Fprintf(w, "Could not set Bearer Token on the CLI settings")
+		errorMsg := `
+		Could not set Token on the CLI settings. The bearer token returned by the identity provider is set in the local convox config.
+		Check if your convox folder is accessible: Linux: ~/.config/convox/config | OsX: /System/Volumes/Data/Users/$PROFILENAME/Library/Preferences/convox/config
+		`
+		fmt.Fprintf(w, errorMsg)
 		return
 	}
 
 	w.Header().Set("Content-Type", "text/html")
 	file, err := openAuthHTMLFile()
 	if err != nil {
-		fmt.Fprintf(w, "Could not open the success authentication html page")
+		errorMsg := `
+		Could not open the success authentication page. Don't worry, you still can check if you're logged in in the cli, please:
+		Check if your convox folder is accessible: Linux: ~/.config/convox/config | OsX: /System/Volumes/Data/Users/$PROFILENAME/Library/Preferences/convox/config 
+		and your data is saved in sso file inside of it.
+		`
+		fmt.Fprintf(w, errorMsg)
 		return
 	}
 	w.Write(file)
