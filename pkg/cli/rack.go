@@ -14,7 +14,6 @@ import (
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/rack"
 	"github.com/convox/convox/pkg/structs"
-	"github.com/convox/convox/pkg/telemetry"
 	"github.com/convox/convox/provider"
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
@@ -196,14 +195,6 @@ func RackInstall(_ sdk.Interface, c *stdcli.Context) error {
 		}
 	}
 
-	done := make(chan struct{})
-	go func() {
-		telemetry.Track(c, opts)
-		defer close(done)
-	}()
-
-	<-done
-
 	return nil
 }
 
@@ -343,14 +334,6 @@ func RackParamsSet(_ sdk.Interface, c *stdcli.Context) error {
 	if err := r.UpdateParams(params); err != nil {
 		return err
 	}
-
-	done := make(chan struct{})
-	go func() {
-		telemetry.Track(c, params)
-		defer close(done)
-	}()
-
-	<-done
 
 	return c.OK()
 }

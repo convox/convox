@@ -21,3 +21,11 @@ variable "os" {
 variable "release" {
   default = ""
 }
+
+variable "settings" {
+  default = ""
+}
+
+variable "telemetry" {
+  default = ""
+}
