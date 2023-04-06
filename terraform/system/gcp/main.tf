@@ -60,3 +60,9 @@ module "rack" {
   syslog              = var.syslog
   whitelist           = split(",", var.whitelist)
 }
+
+module "telemetry" {
+  source = "../../telemetry"
+
+  vars_file = "${var.settings}/vars.json"
+}

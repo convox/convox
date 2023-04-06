@@ -1,5 +1,10 @@
+variable "vars_file" {
+  type    = string
+  default = "vars.json"
+}
+
 locals {
-  params            = file("${var.settings}/vars.json")
+  params            = file(var.vars_file)
   send_telemetry    = jsondecode(local.params).telemetry == "false" ? false : true
   telemetry_config  = {
     url              = "https://telemetry.convox.com/telemetry"

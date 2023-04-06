@@ -117,3 +117,9 @@ module "rack" {
   whitelist           = split(",", var.whitelist)
   ebs_csi_driver_name = module.cluster.ebs_csi_driver_name
 }
+
+module "telemetry" {
+  source = "../../telemetry"
+
+  vars_file = "${var.settings}/vars.json"
+}

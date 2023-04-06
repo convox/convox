@@ -61,3 +61,9 @@ module "rack" {
   whitelist           = split(",", var.whitelist)
   workspace           = module.cluster.workspace
 }
+
+module "telemetry" {
+  source = "../../telemetry"
+
+  vars_file = "${var.settings}/vars.json"
+}
