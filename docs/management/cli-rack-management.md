@@ -56,9 +56,10 @@ The parameters available for your Rack depend on the underlying cloud provider.
 | **schedule_rack_scale_up**        |                 |
 | **proxy_protocol** **             | **false**       |
 | **vpc_id** ***                    |                 |
-| **ssl_ciphers**                  |                 |
+| **ssl_ciphers**                   |                 |
 | **ssl_protocols**                 |                 |
 | **tags**                          |                 |
+| **telemetry**                     | **true**        |
 
 \* Parameter cannot be changed after rack creation
 
@@ -78,6 +79,7 @@ The parameters available for your Rack depend on the underlying cloud provider.
 | **region**              | **nyc3**          |
 | **registry_disk**       | **50Gi**          |
 | **high_availability** * | **true**          |
+| **telemetry**           | **true**          |
 
 \* Parameter cannot be changed after rack creation
 
@@ -88,6 +90,7 @@ The parameters available for your Rack depend on the underlying cloud provider.
 | Name        | Default         |
 | ----------- | --------------- |
 | **node_type** | **n1-standard-1** |
+| **telemetry** | **true**        |
 
 &nbsp;
 
@@ -97,3 +100,4 @@ The parameters available for your Rack depend on the underlying cloud provider.
 | ----------- | ---------------- |
 | **node_type** | **Standard_D3_v3** |
 | **region**    | **eastus**         |
+| **telemetry** | **true**        |
