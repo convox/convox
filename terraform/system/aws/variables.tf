@@ -127,6 +127,10 @@ variable "schedule_rack_scale_up" {
   default = ""
 }
 
+variable "settings" {
+  default = ""
+}
+
 variable "syslog" {
   default = ""
 }
@@ -142,6 +146,10 @@ variable "ssl_protocols" {
 }
 
 variable "tags" {
+  default = ""
+}
+
+variable "telemetry" {
   default = ""
 }
 

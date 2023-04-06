@@ -56,7 +56,15 @@ variable "secret_key" {
   type = string
 }
 
+variable "settings" {
+  default = ""
+}
+
 variable "syslog" {
+  default = ""
+}
+
+variable "telemetry" {
   default = ""
 }
 

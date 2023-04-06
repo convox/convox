@@ -40,7 +40,15 @@ variable "release" {
   default = ""
 }
 
+variable "settings" {
+  default = ""
+}
+
 variable "syslog" {
+  default = ""
+}
+
+variable "telemetry" {
   default = ""
 }
 
