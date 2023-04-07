@@ -10,6 +10,11 @@ variable "domain" {
   type = string
 }
 
+// for eks addons dependency
+variable "eks_addons" { # skipcq
+  default = []
+}
+
 variable "name" {
   type = string
 }
