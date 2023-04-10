@@ -180,7 +180,7 @@ module "ebs_csi_driver_controller" {
 
   source = "github.com/convox/terraform-kubernetes-ebs-csi-driver?ref=56352cbfff0bce7bc08cb43c788609a438a2613f"
 
-  aws_partition = data.aws_partition.current.partition
+  aws_partition                              = data.aws_partition.current.partition
   ebs_csi_controller_image                   = "public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver"
   ebs_csi_driver_version                     = "v1.9.0"
   ebs_csi_controller_role_name               = "convox-ebs-csi-driver-controller"
