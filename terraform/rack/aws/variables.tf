@@ -76,6 +76,11 @@ variable "ssl_protocols" {
   type    = string
 }
 
+variable "vars_file" {
+  type    = string
+  default = ""
+}
+
 variable "whitelist" {
   default = ["0.0.0.0/0"]
 }

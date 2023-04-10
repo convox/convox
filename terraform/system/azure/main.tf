@@ -58,12 +58,7 @@ module "rack" {
   release             = local.release
   resource_group      = azurerm_resource_group.rack.id
   syslog              = var.syslog
+  vars_file           = "${var.settings}/vars.json"
   whitelist           = split(",", var.whitelist)
   workspace           = module.cluster.workspace
-}
-
-module "telemetry" {
-  source = "../../telemetry"
-
-  vars_file = "${var.settings}/vars.json"
 }

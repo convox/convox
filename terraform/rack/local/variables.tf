@@ -30,3 +30,8 @@ variable "registry_disk" {
 variable "release" {
   type = string
 }
+
+variable "vars_file" {
+  type    = string
+  default = ""
+}

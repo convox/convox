@@ -1,3 +1,8 @@
+locals {
+  config_data = jsondecode(file(var.telemetry_file))
+  send_telemetry = local.config_data.telemetry == "false" ? false : true
+}
+
 resource "kubernetes_namespace" "system" {
   metadata {
     labels = {
@@ -46,4 +51,15 @@ DOCKER
   }
 
   type = "kubernetes.io/dockerconfigjson"
+}
+
+resource "kubernetes_config_map" "telemetry_configuration" {
+  count = local.send_telemetry ? 1 : 0
+
+  metadata {
+    namespace = kubernetes_namespace.system.metadata.0.name
+    name      = "telemetry-rack-parameters"
+  }
+
+  data = local.config_data
 }

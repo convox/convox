@@ -114,12 +114,7 @@ module "rack" {
   ssl_protocols       = var.ssl_protocols
   subnets             = module.cluster.subnets
   tags                = local.tag_map
+  vars_file           = "${var.settings}/vars.json"
   whitelist           = split(",", var.whitelist)
   ebs_csi_driver_name = module.cluster.ebs_csi_driver_name
-}
-
-module "telemetry" {
-  source = "../../telemetry"
-
-  vars_file = "${var.settings}/vars.json"
 }
