@@ -153,6 +153,11 @@ resource "kubernetes_deployment" "api" {
           }
 
           env {
+            name  = "RACK_NAME"
+            value = var.rack_name
+          }
+
+          env {
             name  = "VERSION"
             value = var.release
           }

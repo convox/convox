@@ -35,7 +35,7 @@ func (p *Provider) SystemGet() (*structs.System, error) {
 
 	s := &structs.System{
 		Domain:   fmt.Sprintf("router.%s", p.Domain),
-		Name:     p.Name,
+		Name:     p.RackName,
 		Provider: p.Provider,
 		Status:   status,
 		Version:  p.Version,
