@@ -14,6 +14,11 @@ variable "gpu_type" {
   default = false
 }
 
+variable "gpu_tag_enable" {
+  default = false
+  type    = bool
+}
+
 variable "high_availability" {
   default = true
 }

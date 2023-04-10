@@ -14,6 +14,11 @@ variable "docker_hub_password" {
   default = ""
 }
 
+variable "gpu_tag_enable" {
+  default = false
+  type    = bool
+}
+
 variable "high_availability" {
   default = true
 }
