@@ -49,6 +49,7 @@ module "rack" {
   high_availability   = var.high_availability
   image               = var.image
   name                = var.name
+  rack_name           = var.rack_name
   region              = var.region
   registry_disk       = var.registry_disk
   release             = local.release

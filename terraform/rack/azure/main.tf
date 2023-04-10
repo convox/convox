@@ -26,6 +26,7 @@ module "api" {
   domain                    = module.router.endpoint
   image                     = var.image
   name                      = var.name
+  rack_name                 = var.rack_name
   namespace                 = module.k8s.namespace
   region                    = var.region
   release                   = var.release

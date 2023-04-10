@@ -28,6 +28,7 @@ module "api" {
   metrics_scraper_host      = module.metrics.metrics_scraper_host
   image                     = var.image
   name                      = var.name
+  rack_name                 = var.rack_name
   namespace                 = module.k8s.namespace
   oidc_arn                  = var.oidc_arn
   oidc_sub                  = var.oidc_sub

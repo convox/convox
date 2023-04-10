@@ -42,6 +42,10 @@ variable "name" {
   type = string
 }
 
+variable "rack_name" {
+  type = string
+}
+
 variable "oidc_arn" {
   type = string
 }
