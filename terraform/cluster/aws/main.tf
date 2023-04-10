@@ -13,7 +13,6 @@ locals {
   availability_zones       = var.availability_zones != "" ? compact(split(",", var.availability_zones)) : data.aws_availability_zones.available.names
   network_resource_count   = var.high_availability ? 3 : 2
   oidc_sub                 = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
-  gpu_tag_disabled_regions = ["eu-north-1", "ca-central-1", "eu-west-3"]
 }
 
 data "aws_availability_zones" "available" {
@@ -35,18 +34,6 @@ resource "null_resource" "delay_cluster" {
     "eks_cluster" = aws_iam_role_policy_attachment.cluster_eks_cluster.id,
     "eks_service" = aws_iam_role_policy_attachment.cluster_eks_service.id,
   }
-}
-
-// the cluster API takes some seconds to be available even when aws reports that the cluster is ready
-// https://github.com/terraform-aws-modules/terraform-aws-eks/issues/621
-resource "null_resource" "wait_k8s_api" {
-  provisioner "local-exec" {
-    command = "sleep 120"
-  }
-
-  depends_on = [
-    aws_eks_cluster.cluster
-  ]
 }
 
 resource "aws_eks_cluster" "cluster" {
@@ -123,6 +110,19 @@ resource "aws_eks_node_group" "cluster" {
   }
 }
 
+// the cluster API takes some seconds to be available even when aws reports that the cluster is ready
+// https://github.com/terraform-aws-modules/terraform-aws-eks/issues/621
+resource "null_resource" "wait_k8s_api" {
+  provisioner "local-exec" {
+    command = "sleep 120 && echo ${aws_eks_node_group.cluster[0].id}"
+  }
+
+  depends_on = [
+    aws_eks_cluster.cluster,
+    aws_eks_node_group.cluster
+  ]
+}
+
 resource "null_resource" "wait_k8s_cluster" {
   provisioner "local-exec" {
     command = "sleep 10"
@@ -162,7 +162,7 @@ resource "aws_launch_template" "cluster" {
   dynamic "tag_specifications" {
     for_each = toset(
       concat(["instance", "volume", "network-interface", "spot-instances-request"],
-        contains(local.gpu_tag_disabled_regions, data.aws_region.current.name) ? [] : ["elastic-gpu"]
+        var.gpu_tag_enable ? ["elastic-gpu"] : []
     ))
     content {
       resource_type = tag_specifications.key
@@ -178,8 +178,9 @@ module "ebs_csi_driver_controller" {
     null_resource.wait_eks_addons
   ]
 
-  source = "github.com/convox/terraform-kubernetes-ebs-csi-driver?ref=48f5650f72684b581697f8831b3f5b60ea624092"
+  source = "github.com/convox/terraform-kubernetes-ebs-csi-driver?ref=56352cbfff0bce7bc08cb43c788609a438a2613f"
 
+  aws_partition                              = data.aws_partition.current.partition
   ebs_csi_controller_image                   = "public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver"
   ebs_csi_driver_version                     = "v1.9.0"
   ebs_csi_controller_role_name               = "convox-ebs-csi-driver-controller"
