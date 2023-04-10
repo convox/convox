@@ -106,6 +106,7 @@ module "rack" {
   internal_router     = var.internal_router
   image               = local.image
   name                = var.name
+  rack_name           = var.rack_name
   oidc_arn            = module.cluster.oidc_arn
   oidc_sub            = module.cluster.oidc_sub
   proxy_protocol      = var.proxy_protocol
