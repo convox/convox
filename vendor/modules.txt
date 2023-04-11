@@ -77,9 +77,6 @@ github.com/adrg/xdg
 ## explicit
 github.com/algolia/algoliasearch-client-go/algoliasearch
 github.com/algolia/algoliasearch-client-go/algoliasearch/call
-# github.com/andybalholm/cascadia v1.0.0
-## explicit
-github.com/andybalholm/cascadia
 # github.com/aws/aws-sdk-go v1.21.10
 ## explicit
 github.com/aws/aws-sdk-go/aws
@@ -353,9 +350,6 @@ github.com/gorilla/websocket
 # github.com/goware/modvendor v0.1.0
 ## explicit
 github.com/goware/modvendor
-# github.com/hashicorp/golang-lru v0.5.1
-github.com/hashicorp/golang-lru
-github.com/hashicorp/golang-lru/simplelru
 # github.com/ijc/Gotty v0.0.0-20170406111628-a8b993ba6abd
 ## explicit
 github.com/ijc/Gotty
