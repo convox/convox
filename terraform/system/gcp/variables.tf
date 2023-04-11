@@ -29,7 +29,8 @@ variable "name" {
 }
 
 variable "rack_name" {
-  type = string
+  default = ""
+  type    = string
 }
 
 variable "node_type" {
