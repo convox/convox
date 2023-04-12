@@ -81,7 +81,7 @@ func TestRackParams2(t *testing.T) {
 				"params3": "test3",
 				"params4": "test4",
 				"params5": "test5",
-				"params6": "test6",
+				"cidr":    "test6",
 			},
 		}
 
@@ -108,7 +108,7 @@ func TestRackParams2(t *testing.T) {
 			"params2": "test2",
 			"params4": "test4",
 			"params5": "test5",
-			"params6": "test6",
+			"cidr":    "a66df261120b6c2311c6ef0b1bab4e583afcbcc0",
 		}, params)
 
 		tps, err := fc.CoreV1().ConfigMaps(p.Namespace).Get(context.TODO(), "telemetry-rack-sync", am.GetOptions{})
@@ -118,7 +118,7 @@ func TestRackParams2(t *testing.T) {
 		require.Equal(t, "true", tps.Data["params3"])
 		require.Equal(t, "false", tps.Data["params4"])
 		require.Equal(t, "false", tps.Data["params5"])
-		require.Equal(t, "false", tps.Data["params6"])
+		require.Equal(t, "false", tps.Data["cidr"])
 	})
 }
 

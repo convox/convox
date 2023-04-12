@@ -2,10 +2,26 @@ package k8s
 
 import (
 	"context"
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
+	"strings"
 
 	v1 "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+var (
+	skipParams = []string{
+		"cidr",
+		"key_pair_name",
+		"internet_gateway_id",
+		"syslog",
+		"tags",
+		"vpc_id",
+		"whitelist",
+	}
+	redactedParams = strings.Join(skipParams, ",")
 )
 
 func (p *Provider) RackParams() map[string]interface{} {
@@ -58,7 +74,11 @@ func (p *Provider) RackParams() map[string]interface{} {
 	toSync := map[string]interface{}{}
 	for _, s := range nSync {
 		if val, ok := trp.Data[s]; ok {
-			toSync[s] = val
+			if strings.Contains(redactedParams, s) {
+				toSync[s] = hashParamValue(val)
+			} else {
+				toSync[s] = val
+			}
 		}
 	}
 
@@ -106,4 +126,10 @@ func (p *Provider) SyncParams() error {
 	}
 
 	return nil
+}
+
+func hashParamValue(value string) string {
+	hasher := sha1.New()
+	hasher.Write([]byte(value))
+	return hex.EncodeToString(hasher.Sum(nil))
 }
