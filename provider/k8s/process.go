@@ -485,6 +485,7 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 				{Name: "ndots", Value: options.String("1")},
 			},
 			Searches: []string{
+				fmt.Sprintf("%s.%s", app, p.Name),
 				fmt.Sprintf("%s.%s.local", app, p.Name),
 				fmt.Sprintf("%s.svc.cluster.local", p.AppNamespace(app)),
 				fmt.Sprintf("%s.local", p.Name),

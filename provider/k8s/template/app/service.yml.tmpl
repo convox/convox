@@ -79,6 +79,7 @@ spec:
         nameservers:
           - "{{ . }}"
         searches:
+          - "{{$.App.Name}}.{{$.Rack}}"
           - "{{$.App.Name}}.{{$.Rack}}.local"
           - "{{$.Namespace}}.svc.cluster.local"
           - "{{$.Rack}}.local"
