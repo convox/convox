@@ -2,7 +2,8 @@
 title: "rack"
 draft: false
 slug: rack
-url: /reference/cli/rack ---
+url: /reference/cli/rack 
+---
 # rack
 
 ## rack
