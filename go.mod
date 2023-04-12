@@ -39,18 +39,16 @@ require (
 	github.com/miekg/dns v1.1.25
 	github.com/pkg/errors v0.9.1
 	github.com/russross/blackfriday v2.0.0+incompatible
-	github.com/stretchr/testify v1.6.1
+	github.com/stretchr/testify v1.8.1
 	github.com/vektra/mockery v1.1.2
-	golang.org/x/crypto v0.0.0-20221005025214-4161e89ecf1b
-	golang.org/x/text v0.3.7
+	golang.org/x/crypto v0.1.0
+	golang.org/x/text v0.8.0
 	google.golang.org/api v0.20.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.21.0
 	k8s.io/apimachinery v0.21.0
 	k8s.io/client-go v0.21.0
-	k8s.io/code-generator v0.21.0
+	k8s.io/code-generator v0.27.0
 	k8s.io/klog v1.0.0
-	k8s.io/kube-openapi v0.0.0-20211110013926-83f114cd0513 // indirect
 	k8s.io/metrics v0.21.0
-	sigs.k8s.io/structured-merge-diff/v4 v4.1.2 // indirect
 )
