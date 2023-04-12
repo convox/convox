@@ -58,7 +58,7 @@ resource "kubernetes_config_map" "telemetry_configuration" {
 
   metadata {
     namespace = kubernetes_namespace.system.metadata.0.name
-    name      = "telemetry-rack-parameters"
+    name      = "telemetry-rack-params"
   }
 
   data = local.config_data
