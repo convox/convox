@@ -197,6 +197,11 @@ resource "aws_route" "private-default" {
 }
 
 resource "aws_route_table_association" "private" {
+  depends_on = [
+    aws_route_table.private,
+    aws_subnet.private,
+  ]
+
   count = var.private ? local.network_resource_count : 0
 
   route_table_id = aws_route_table.private[count.index].id
