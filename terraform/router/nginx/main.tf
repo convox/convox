@@ -348,7 +348,175 @@ resource "kubernetes_horizontal_pod_autoscaler" "router" {
   }
 }
 
+resource "kubernetes_service_account" "ingress-nginx-internal" {
+  count = var.internal_router ? 1 : 0
+  
+  metadata {
+    namespace = var.namespace
+    name      = "ingress-nginx-internal"
+  }
+}
+
+resource "kubernetes_cluster_role" "ingress-nginx-internal" {
+  count = var.internal_router ? 1 : 0
+
+  metadata {
+    name = "ingress-nginx-internal"
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["configmaps", "endpoints", "nodes", "pods", "secrets"]
+    verbs      = ["list", "watch"]
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["nodes"]
+    verbs      = ["get"]
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["services"]
+    verbs      = ["get", "list", "watch"]
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["events"]
+    verbs      = ["create", "patch"]
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["events"]
+    verbs      = ["create", "patch"]
+  }
+
+  rule {
+    api_groups = ["extensions", "networking.k8s.io"]
+    resources  = ["ingresses"]
+    verbs      = ["get", "list", "watch"]
+  }
+
+  rule {
+    api_groups = ["networking.k8s.io"]
+    resources  = ["ingressclasses"]
+    verbs      = ["get", "list", "watch"]
+  }
+
+  rule {
+    api_groups = ["extensions", "networking.k8s.io"]
+    resources  = ["ingresses/status"]
+    verbs      = ["update"]
+  }
+}
+
+resource "kubernetes_cluster_role_binding" "ingress-nginx-internal" {
+  count = var.internal_router ? 1 : 0
+
+  metadata {
+    name = "ingress-nginx-internal"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "ingress-nginx-internal"
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = "ingress-nginx-internal"
+    namespace = var.namespace
+  }
+}
+
+resource "kubernetes_role" "ingress-nginx-internal" {
+  count = var.internal_router ? 1 : 0
+
+  metadata {
+    namespace = var.namespace
+    name      = "ingress-nginx-internal"
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["configmaps", "pods", "secrets", "namespaces"]
+    verbs      = ["get"]
+  }
+
+  rule {
+    api_groups     = [""]
+    resources      = ["configmaps"]
+    resource_names = ["ingress-controller-leader-nginx-internal"]
+    verbs          = ["get", "update"]
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["configmaps"]
+    verbs      = ["create"]
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["endpoints"]
+    verbs      = ["get"]
+  }
+
+  rule {
+    api_groups     = ["coordination.k8s.io"]
+    resource_names = ["ingress-controller-leader-internal"]
+    resources      = ["leases"]
+    verbs          = ["get", "update"]
+  }
+
+  rule {
+    api_groups = ["coordination.k8s.io"]
+    resources  = ["leases"]
+    verbs      = ["create"]
+  }
+
+  rule {
+    api_groups = ["networking.k8s.io"]
+    resources  = ["ingressclasses"]
+    verbs      = ["get", "list", "watch"]
+  }
+
+  rule {
+    api_groups     = [""]
+    resource_names = ["ingress-controller-leader-internal"]
+    resources      = ["configmaps"]
+    verbs          = ["get", "update"]
+  }
+}
+
+resource "kubernetes_role_binding" "ingress-nginx-internal" {
+  count = var.internal_router ? 1 : 0
+
+  metadata {
+    namespace = var.namespace
+    name      = "ingress-nginx-internal"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = "ingress-nginx-internal"
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = "ingress-nginx-internal"
+    namespace = var.namespace
+  }
+}
+
 resource "kubernetes_ingress_class" "nginx-internal" {
+  count = var.internal_router ? 1 : 0
+
   metadata {
     name = "nginx-internal"
   }
