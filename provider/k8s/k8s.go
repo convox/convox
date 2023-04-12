@@ -51,6 +51,7 @@ type Provider struct {
 	Namespace       string
 	Password        string
 	Provider        string
+	RackName        string
 	Resolver        string
 	Router          string
 	Socket          string
@@ -103,6 +104,8 @@ func FromEnv() (*Provider, error) {
 
 	ms := NewMetricScraperClient(kc, os.Getenv("METRICS_SCRAPER_HOST"))
 
+	rn := common.CoalesceString(os.Getenv("RACK_NAME"), ns.Labels["rack"])
+
 	p := &Provider{
 		Atom:            ac,
 		BuildkitEnabled: os.Getenv("BUILDKIT_ENABLED"),
@@ -119,6 +122,7 @@ func FromEnv() (*Provider, error) {
 		Namespace:       ns.Name,
 		Password:        os.Getenv("PASSWORD"),
 		Provider:        common.CoalesceString(os.Getenv("PROVIDER"), "k8s"),
+		RackName:        rn,
 		Resolver:        os.Getenv("RESOLVER"),
 		Router:          os.Getenv("ROUTER"),
 		Socket:          common.CoalesceString(os.Getenv("SOCKET"), "/var/run/docker.sock"),

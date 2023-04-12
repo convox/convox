@@ -29,6 +29,11 @@ variable "docker_hub_password" {
   default = ""
 }
 
+variable "gpu_tag_enable" {
+  default = false
+  type    = bool
+}
+
 variable "high_availability" {
   default = true
 }
@@ -87,6 +92,11 @@ variable "min_on_demand_count" {
 
 variable "name" {
   type = string
+}
+
+variable "rack_name" {
+  default = ""
+  type    = string
 }
 
 variable "node_capacity_type" {

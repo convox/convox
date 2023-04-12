@@ -23,12 +23,13 @@ module "api" {
 
   buildkit_enabled          = var.buildkit_enabled
   docker_hub_authentication = module.k8s.docker_hub_authentication
-  domain                    = module.router.endpoint
+  domain                    = try(module.router.endpoint, "") # terraform destroy sometimes failes to resolve the value
   domain_internal           = module.router.endpoint_internal
   high_availability         = var.high_availability
   metrics_scraper_host      = module.metrics.metrics_scraper_host
   image                     = var.image
   name                      = var.name
+  rack_name                 = var.rack_name
   namespace                 = module.k8s.namespace
   oidc_arn                  = var.oidc_arn
   oidc_sub                  = var.oidc_sub

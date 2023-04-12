@@ -52,6 +52,7 @@ module "rack" {
   docker_hub_password = var.docker_hub_password
   image               = var.image
   name                = var.name
+  rack_name           = var.rack_name
   network             = module.cluster.network
   nodes_account       = module.cluster.nodes_account
   project_id          = module.project.id

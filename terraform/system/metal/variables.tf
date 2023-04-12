@@ -18,6 +18,11 @@ variable "name" {
   type = string
 }
 
+variable "rack_name" {
+  default = ""
+  type    = string
+}
+
 variable "registry_disk" {
   default = "50Gi"
 }

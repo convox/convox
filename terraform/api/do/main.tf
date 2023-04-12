@@ -43,6 +43,7 @@ module "k8s" {
   image                     = var.image
   namespace                 = var.namespace
   rack                      = var.name
+  rack_name                 = var.rack_name
   release                   = var.release
   resolver                  = var.resolver
   replicas                  = var.high_availability ? 2 : 1

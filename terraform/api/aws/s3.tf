@@ -13,7 +13,18 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "storage" {
   }
 }
 
+resource "aws_s3_bucket_ownership_controls" "storage" {
+  bucket = aws_s3_bucket.storage.bucket
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+
 resource "aws_s3_bucket_acl" "storage" {
+  depends_on = [
+    aws_s3_bucket_ownership_controls.storage
+  ]
+
   bucket = aws_s3_bucket.storage.bucket
   acl    = "private"
 }

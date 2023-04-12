@@ -30,6 +30,11 @@ variable "name" {
   type = string
 }
 
+variable "rack_name" {
+  default = ""
+  type    = string
+}
+
 variable "region" {
   type = string
 }

@@ -50,6 +50,7 @@ module "cluster" {
   cidr                     = var.cidr
   coredns_version          = var.coredns_version
   gpu_type                 = local.gpu_type
+  gpu_tag_enable           = var.gpu_tag_enable
   high_availability        = var.high_availability
   internet_gateway_id      = var.internet_gateway_id
   imds_http_tokens         = var.imds_http_tokens
@@ -70,6 +71,12 @@ module "cluster" {
   vpc_id                   = var.vpc_id
 }
 
+resource "null_resource" "wait_for_cluster" {
+  provisioner "local-exec" {
+    command = "sleep 1 && echo ${module.cluster.eks_addons[0]}"
+  }
+}
+
 module "fluentd" {
   source = "../../fluentd/aws"
 
@@ -77,6 +84,10 @@ module "fluentd" {
     aws        = aws
     kubernetes = kubernetes
   }
+
+  depends_on = [
+    null_resource.wait_for_cluster
+  ]
 
   arm_type   = local.arm_type
   cluster    = module.cluster.id
@@ -96,6 +107,10 @@ module "rack" {
     kubernetes = kubernetes
   }
 
+  depends_on = [
+    null_resource.wait_for_cluster
+  ]
+
   buildkit_enabled    = var.buildkit_enabled
   cluster             = module.cluster.id
   docker_hub_username = var.docker_hub_username
@@ -106,6 +121,7 @@ module "rack" {
   internal_router     = var.internal_router
   image               = local.image
   name                = var.name
+  rack_name           = var.rack_name
   oidc_arn            = module.cluster.oidc_arn
   oidc_sub            = module.cluster.oidc_sub
   proxy_protocol      = var.proxy_protocol

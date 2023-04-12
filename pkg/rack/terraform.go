@@ -196,6 +196,7 @@ func (t Terraform) Metadata() (*Metadata, error) {
 	}
 
 	vars["name"] = common.CoalesceString(vars["name"], t.name)
+	vars["rack_name"] = common.CoalesceString(vars["rack_name"], t.name)
 
 	m := &Metadata{
 		Deletable: true,
@@ -416,6 +417,7 @@ func (t Terraform) update(release string, vars map[string]string) error {
 
 	vars["name"] = common.CoalesceString(vars["name"], t.name)
 	vars["release"] = release
+	vars["rack_name"] = common.CoalesceString(vars["rack_name"], t.name)
 
 	pv, err := terraformProviderVars(t.provider)
 	if err != nil {

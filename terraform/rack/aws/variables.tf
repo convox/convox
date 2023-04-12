@@ -42,6 +42,11 @@ variable "name" {
   type = string
 }
 
+variable "rack_name" {
+  default = ""
+  type    = string
+}
+
 variable "oidc_arn" {
   type = string
 }

@@ -28,6 +28,11 @@ variable "name" {
   type = string
 }
 
+variable "rack_name" {
+  default = ""
+  type    = string
+}
+
 variable "node_type" {
   default = "n1-standard-2"
 }

@@ -54,6 +54,7 @@ module "rack" {
   docker_hub_password = var.docker_hub_password
   image               = var.image
   name                = var.name
+  rack_name           = var.rack_name
   region              = var.region
   release             = local.release
   resource_group      = azurerm_resource_group.rack.id
