@@ -1,6 +1,6 @@
 locals {
   config_data = jsondecode(file(var.telemetry_file))
-  send_telemetry = local.config_data.telemetry == "false" ? false : true
+  send_telemetry = contains(keys(local.config_data), "telemetry") ? index(local.config_data["telemetry"], 0) != "false" : true
 }
 
 resource "kubernetes_namespace" "system" {

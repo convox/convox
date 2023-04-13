@@ -13,6 +13,8 @@ import (
 
 var (
 	skipParams = []string{
+		"name",
+		"rack_name",
 		"cidr",
 		"key_pair_name",
 		"internet_gateway_id",
