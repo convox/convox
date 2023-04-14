@@ -174,7 +174,17 @@ func SsoLogin(rack sdk.Interface, c *stdcli.Context) error {
 	errors := make(chan error)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		authCodeCallbackHandler(w, r, c, p, done)
+		token := AuthCodeCallbackHandler(w, r, p, openAuthHTMLFile)
+
+		if err := c.SettingWriteKey("sso", "bearer_token", token); err != nil {
+			errorMsg := `
+			Could not set Token on the CLI settings. The bearer token returned by the identity provider is set in the local convox config.
+			Check if your convox folder is accessible: Linux: ~/.config/convox/config | OsX: /System/Volumes/Data/Users/$PROFILENAME/Library/Preferences/convox/config
+			`
+			fmt.Fprintf(w, errorMsg)
+		}
+
+		done <- true
 	})
 
 	go func() {
@@ -212,22 +222,22 @@ func SsoLogin(rack sdk.Interface, c *stdcli.Context) error {
 	return c.OK()
 }
 
-func authCodeCallbackHandler(w http.ResponseWriter, r *http.Request, c *stdcli.Context, p structs.SsoProvider, done chan bool) {
+func AuthCodeCallbackHandler(w http.ResponseWriter, r *http.Request, p structs.SsoProvider, successHTMLFile func() ([]byte, error)) string {
 	if r.URL.Query().Get("state") != p.Opts().State {
 		fmt.Fprintln(w, "The state was not as expected. Please check if you are trying to connect in the right Idendity provider application")
-		return
+		return ""
 	}
 
 	if r.URL.Query().Get("code") == "" {
 		fmt.Fprintln(w, "The code was not returned or is not accessible")
-		return
+		return ""
 	}
 
 	exchange := p.ExchangeCode(r, r.URL.Query().Get("code"))
 	if exchange.Error != "" {
 		fmt.Fprintf(w, exchange.Error)
 		fmt.Fprintf(w, exchange.ErrorDescription)
-		return
+		return ""
 	}
 
 	verificationError := p.VerifyToken(exchange.IdToken)
@@ -236,17 +246,8 @@ func authCodeCallbackHandler(w http.ResponseWriter, r *http.Request, c *stdcli.C
 		fmt.Println(verificationError)
 	}
 
-	if err := c.SettingWriteKey("sso", "bearer_token", exchange.AccessToken); err != nil {
-		errorMsg := `
-		Could not set Token on the CLI settings. The bearer token returned by the identity provider is set in the local convox config.
-		Check if your convox folder is accessible: Linux: ~/.config/convox/config | OsX: /System/Volumes/Data/Users/$PROFILENAME/Library/Preferences/convox/config
-		`
-		fmt.Fprintf(w, errorMsg)
-		return
-	}
-
 	w.Header().Set("Content-Type", "text/html")
-	file, err := openAuthHTMLFile()
+	file, err := successHTMLFile()
 	if err != nil {
 		errorMsg := `
 		Could not open the success authentication page. Don't worry, you still can check if you're logged in in the cli, please:
@@ -254,11 +255,11 @@ func authCodeCallbackHandler(w http.ResponseWriter, r *http.Request, c *stdcli.C
 		and your data is saved in sso file inside of it.
 		`
 		fmt.Fprintf(w, errorMsg)
-		return
+		return ""
 	}
 	w.Write(file)
 
-	done <- true
+	return exchange.AccessToken
 }
 
 func openAuthHTMLFile() ([]byte, error) {
