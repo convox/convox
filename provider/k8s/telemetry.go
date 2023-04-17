@@ -2,7 +2,7 @@ package k8s
 
 import (
 	"context"
-	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"strings"
@@ -35,9 +35,9 @@ func (p *Provider) RackParams() map[string]interface{} {
 
 	trs, err := p.Cluster.CoreV1().ConfigMaps(p.Namespace).Get(context.TODO(), "telemetry-rack-sync", am.GetOptions{})
 	if err != nil {
-		fmt.Printf("could not find params sync configmap: %v: Creating configmap...", err)
+		fmt.Println("Could not find params sync configmap. Creating configmap...")
 
-		err = createNewSyncConfigMap(trp, trs, p)
+		trs, err = createNewSyncConfigMap(trp, p)
 		if err != nil {
 			return map[string]interface{}{}
 		}
@@ -85,7 +85,7 @@ func (p *Provider) RackParams() map[string]interface{} {
 	return toSync
 }
 
-func createNewSyncConfigMap(trp *v1.ConfigMap, trs *v1.ConfigMap, p *Provider) error {
+func createNewSyncConfigMap(trp *v1.ConfigMap, p *Provider) (*v1.ConfigMap, error) {
 	data := map[string]string{}
 	for k := range trp.Data {
 		data[k] = "false"
@@ -101,11 +101,11 @@ func createNewSyncConfigMap(trp *v1.ConfigMap, trs *v1.ConfigMap, p *Provider) e
 	trs, err := p.Cluster.CoreV1().ConfigMaps(p.Namespace).Create(context.TODO(), cm, am.CreateOptions{})
 	if err != nil {
 		fmt.Printf("could not create configmap: %v", err)
-		return err
+		return nil, err
 	}
 
 	fmt.Printf("Created Sync ConfigMap %s\n", trs.GetName())
-	return nil
+	return trs, nil
 }
 
 func (p *Provider) CheckParamsInConfigMapAsSync() error {
@@ -129,7 +129,7 @@ func (p *Provider) CheckParamsInConfigMapAsSync() error {
 }
 
 func hashParamValue(value string) string {
-	hasher := sha1.New()
+	hasher := sha256.New()
 	hasher.Write([]byte(value))
 	return hex.EncodeToString(hasher.Sum(nil))
 }

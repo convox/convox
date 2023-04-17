@@ -108,7 +108,7 @@ func TestRackParams2(t *testing.T) {
 			"params2": "test2",
 			"params4": "test4",
 			"params5": "test5",
-			"cidr":    "a66df261120b6c2311c6ef0b1bab4e583afcbcc0",
+			"cidr":    "ed0cb90bdfa4f93981a7d03cff99213a86aa96a6cbcf89ec5e8889871f088727",
 		}, params)
 
 		tps, err := fc.CoreV1().ConfigMaps(p.Namespace).Get(context.TODO(), "telemetry-rack-sync", am.GetOptions{})
