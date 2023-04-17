@@ -44,7 +44,7 @@ func (p *Provider) RackParams() map[string]interface{} {
 	}
 
 	// Get all new params and update trs configmap
-	newParams := []string{}
+	var newParams []string
 	for k := range trp.Data {
 		if _, ok := trs.Data[k]; !ok {
 			newParams = append(newParams, k)
