@@ -31,5 +31,6 @@ module "rack" {
   platform            = module.platform.name
   os                  = var.os
   release             = local.release
-  vars_file           = "${var.settings}/vars.json"
+  telemetry           = var.telemetry
+  telemetry_file      = "${var.settings}/vars.json"
 }

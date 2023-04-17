@@ -55,6 +55,7 @@ module "rack" {
   release             = local.release
   secret_key          = var.secret_key
   syslog              = var.syslog
-  vars_file           = "${var.settings}/vars.json"
+  telemetry           = var.telemetry
+  telemetry_file      = "${var.settings}/vars.json"
   whitelist           = split(",", var.whitelist)
 }

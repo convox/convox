@@ -55,7 +55,11 @@ variable "syslog" {
   default = ""
 }
 
-variable "vars_file" {
+variable "telemetry" {
+  default = ""
+}
+
+variable "telemetry_file" {
   type    = string
   default = ""
 }

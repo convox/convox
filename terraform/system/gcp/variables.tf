@@ -58,7 +58,7 @@ variable "syslog" {
 }
 
 variable "telemetry" {
-  default = ""
+  default = "true"
 }
 
 variable "whitelist" {
