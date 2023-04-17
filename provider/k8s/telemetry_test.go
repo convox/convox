@@ -182,7 +182,7 @@ func TestSyncParams(t *testing.T) {
 		_, err := fc.CoreV1().ConfigMaps(p.Namespace).Create(context.TODO(), cm, am.CreateOptions{})
 		require.NoError(t, err)
 
-		err = p.SyncParams()
+		err = p.CheckParamsInConfigMapAsSync()
 		require.NoError(t, err)
 
 		tps, err := fc.CoreV1().ConfigMaps(p.Namespace).Get(context.TODO(), "telemetry-rack-sync", am.GetOptions{})

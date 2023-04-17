@@ -267,7 +267,7 @@ func (p *Provider) heartbeat() error {
 		return errors.WithStack(err)
 	}
 
-	if err := p.SyncParams(); err != nil {
+	if err := p.CheckParamsInConfigMapAsSync(); err != nil {
 		return errors.WithStack(err)
 	}
 

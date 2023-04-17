@@ -37,11 +37,9 @@ func (p *Provider) RackParams() map[string]interface{} {
 	if err != nil {
 		fmt.Printf("could not find params sync configmap: %v: Creating configmap...", err)
 
-		var hadErrorOnCreate bool
-		var noParamsToSync map[string]interface{}
-		trs, hadErrorOnCreate, noParamsToSync = createNewSyncConfigMap(trp, trs, err, p)
-		if hadErrorOnCreate {
-			return noParamsToSync
+		err = createNewSyncConfigMap(trp, trs, p)
+		if err != nil {
+			return map[string]interface{}{}
 		}
 	}
 
@@ -87,7 +85,7 @@ func (p *Provider) RackParams() map[string]interface{} {
 	return toSync
 }
 
-func createNewSyncConfigMap(trp *v1.ConfigMap, trs *v1.ConfigMap, err error, p *Provider) (*v1.ConfigMap, bool, map[string]interface{}) {
+func createNewSyncConfigMap(trp *v1.ConfigMap, trs *v1.ConfigMap, p *Provider) error {
 	data := map[string]string{}
 	for k := range trp.Data {
 		data[k] = "false"
@@ -100,17 +98,17 @@ func createNewSyncConfigMap(trp *v1.ConfigMap, trs *v1.ConfigMap, err error, p *
 		Data: data,
 	}
 
-	trs, err = p.Cluster.CoreV1().ConfigMaps(p.Namespace).Create(context.TODO(), cm, am.CreateOptions{})
+	trs, err := p.Cluster.CoreV1().ConfigMaps(p.Namespace).Create(context.TODO(), cm, am.CreateOptions{})
 	if err != nil {
 		fmt.Printf("could not create configmap: %v", err)
-		return nil, true, nil
+		return err
 	}
 
 	fmt.Printf("Created Sync ConfigMap %s\n", trs.GetName())
-	return trs, false, nil
+	return nil
 }
 
-func (p *Provider) SyncParams() error {
+func (p *Provider) CheckParamsInConfigMapAsSync() error {
 	trs, err := p.Cluster.CoreV1().ConfigMaps(p.Namespace).Get(context.TODO(), "telemetry-rack-sync", am.GetOptions{})
 	if err != nil {
 		return err
