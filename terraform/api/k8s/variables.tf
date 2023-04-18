@@ -76,5 +76,6 @@ variable "volumes" {
 }
 
 variable "rack_name" {
-  type = string
+  default = ""
+  type    = string
 }

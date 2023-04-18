@@ -19,6 +19,11 @@ import (
 	"github.com/convox/stdcli"
 )
 
+const (
+	MINOR_VERSION_RACK_NAME_SUPPORT = 11
+	PATCH_VERSION_RACK_NAME_SUPPORT = 2
+)
+
 type Terraform struct {
 	ctx      *stdcli.Context
 	endpoint string
@@ -196,7 +201,23 @@ func (t Terraform) Metadata() (*Metadata, error) {
 	}
 
 	vars["name"] = common.CoalesceString(vars["name"], t.name)
-	vars["rack_name"] = common.CoalesceString(vars["rack_name"], t.name)
+
+	// only 3.11.2+ supports rack_name
+	c, err := t.Client()
+	if err == nil {
+		s, _ := c.SystemGet()
+
+		if s.Name != "" {
+			rv, _ := ConvertToReleaseVersion(s.Version)
+
+			if rv != nil {
+				if rv.Minor > MINOR_VERSION_RACK_NAME_SUPPORT ||
+					(rv.Minor == MINOR_VERSION_RACK_NAME_SUPPORT && rv.Revision >= PATCH_VERSION_RACK_NAME_SUPPORT) {
+					vars["rack_name"] = common.CoalesceString(vars["rack_name"], t.name)
+				}
+			}
+		}
+	}
 
 	m := &Metadata{
 		Deletable: true,
@@ -417,7 +438,23 @@ func (t Terraform) update(release string, vars map[string]string) error {
 
 	vars["name"] = common.CoalesceString(vars["name"], t.name)
 	vars["release"] = release
-	vars["rack_name"] = common.CoalesceString(vars["rack_name"], t.name)
+
+	// only 3.11.2+ supports rack_name
+	c, err := t.Client()
+	if err == nil {
+		s, _ := c.SystemGet()
+
+		if s.Name != "" {
+			rv, _ := ConvertToReleaseVersion(s.Version)
+
+			if rv != nil {
+				if rv.Minor > MINOR_VERSION_RACK_NAME_SUPPORT ||
+					(rv.Minor == MINOR_VERSION_RACK_NAME_SUPPORT && rv.Revision >= PATCH_VERSION_RACK_NAME_SUPPORT) {
+					vars["rack_name"] = common.CoalesceString(vars["rack_name"], t.name)
+				}
+			}
+		}
+	}
 
 	pv, err := terraformProviderVars(t.provider)
 	if err != nil {
@@ -639,7 +676,7 @@ func terraformLatestVersion(current string) (string, error) {
 		return TestLatest, nil
 	}
 
-	currentReleaseVersion, err := convertToReleaseVersion(current)
+	currentReleaseVersion, err := ConvertToReleaseVersion(current)
 	if err != nil {
 		return getTheLatestRelease()
 	} else {
@@ -695,7 +732,7 @@ func getLatestRevisionForCurrentVersion(currentReleaseVersion *ReleaseVersion) (
 		}
 
 		for _, release := range response {
-			thisReleaseVersion, err := convertToReleaseVersion(release.Tag)
+			thisReleaseVersion, err := ConvertToReleaseVersion(release.Tag)
 			if err != nil {
 				continue
 			}
@@ -712,7 +749,7 @@ func getLatestRevisionForCurrentVersion(currentReleaseVersion *ReleaseVersion) (
 	return "", fmt.Errorf("No published revisions found for this version: " + currentReleaseVersion.toString())
 }
 
-func convertToReleaseVersion(version string) (*ReleaseVersion, error) {
+func ConvertToReleaseVersion(version string) (*ReleaseVersion, error) {
 	release := &ReleaseVersion{}
 	releaseVersion := strings.Split(version, ".")
 	if len(releaseVersion) != 3 {
