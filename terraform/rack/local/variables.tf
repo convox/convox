@@ -37,7 +37,7 @@ variable "release" {
 }
 
 variable "telemetry" {
-  default = ""
+  type   = bool
 }
 
 variable "telemetry_file" {

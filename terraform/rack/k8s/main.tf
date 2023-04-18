@@ -49,7 +49,7 @@ DOCKER
 }
 
 resource "kubernetes_config_map" "telemetry_configuration" {
-  count = var.telemetry != "false" ? 1 : 0
+  count = var.telemetry ? 1 : 0
 
   metadata {
     namespace = kubernetes_namespace.system.metadata[0].name

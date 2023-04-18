@@ -16,9 +16,12 @@ variable "name" {
   type = string
 }
 
+variable "release" {
+  type = string
+}
+
 variable "telemetry" {
-  type    = string
-  default = ""
+  type   = bool
 }
 
 variable "telemetry_file" {

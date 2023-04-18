@@ -82,7 +82,7 @@ variable "ssl_protocols" {
 }
 
 variable "telemetry" {
-  default = ""
+  type   = bool
 }
 
 variable "telemetry_file" {
