@@ -259,7 +259,7 @@ func RackLogs(rack sdk.Interface, c *stdcli.Context) error {
 	return nil
 }
 
-func RackMv(_ sdk.Interface, c *stdcli.Context) error {
+func RackMv(ri sdk.Interface, c *stdcli.Context) error {
 	from := c.Arg(0)
 	to := c.Arg(1)
 
@@ -286,7 +286,15 @@ func RackMv(_ sdk.Interface, c *stdcli.Context) error {
 		newRackName = parts[1]
 	}
 	params := make(map[string]string)
-	params["rack_name"] = newRackName
+
+	// only 3.11.2+ supports rack_name
+	s, _ := ri.SystemGet()
+	if s.Name != "" {
+		if rack.HasSupport(s.Version, rack.MINOR_RACK_NAME_SUPPORT, rack.PATCH_RACK_NAME_SUPPORT) {
+			params["rack_name"] = newRackName
+		}
+	}
+
 	if err := fr.UpdateParams(params); err != nil {
 		return err
 	}
