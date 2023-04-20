@@ -74,6 +74,8 @@ func (s *Server) authenticate(next stdapi.HandlerFunc) stdapi.HandlerFunc {
 			return stdapi.Errorf(401, "invalid authentication")
 		}
 
+		SetReadWriteRole(c)
+
 		return next(c)
 	}
 }
