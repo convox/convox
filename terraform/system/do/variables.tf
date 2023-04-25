@@ -60,8 +60,17 @@ variable "secret_key" {
   type = string
 }
 
+variable "settings" {
+  default = ""
+}
+
 variable "syslog" {
   default = ""
+}
+
+variable "telemetry" {
+  type   = bool
+  default = true
 }
 
 variable "token" {

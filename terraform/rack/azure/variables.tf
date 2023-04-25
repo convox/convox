@@ -43,6 +43,15 @@ variable "syslog" {
   default = ""
 }
 
+variable "telemetry" {
+  type   = bool
+}
+
+variable "telemetry_file" {
+  type    = string
+  default = ""
+}
+
 variable "whitelist" {
   default = ["0.0.0.0/0"]
 }

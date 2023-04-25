@@ -35,3 +35,12 @@ variable "registry_disk" {
 variable "release" {
   type = string
 }
+
+variable "telemetry" {
+  type   = bool
+}
+
+variable "telemetry_file" {
+  type    = string
+  default = ""
+}

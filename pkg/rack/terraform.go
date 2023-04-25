@@ -445,6 +445,7 @@ func (t Terraform) update(release string, vars map[string]string) error {
 		"Name":     t.name,
 		"Provider": t.provider,
 		"Vars":     vars,
+		"Settings": dir,
 	}
 
 	if err := terraformWriteTemplate(tf, release, params); err != nil {
@@ -824,7 +825,8 @@ func terraformWriteTemplate(filename, version string, params map[string]interfac
 	t, err := template.New("main").Funcs(terraformTemplateHelpers()).Parse(`
 		module "system" {
 			source = "{{.Source}}"
-
+			settings = "{{.Settings}}"
+			
 			{{- range (keys .Vars) }}
 			{{.}} = "{{index $.Vars .}}"
 			{{- end }}

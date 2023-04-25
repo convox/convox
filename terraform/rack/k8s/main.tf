@@ -17,7 +17,7 @@ resource "kubernetes_namespace" "system" {
 
 resource "kubernetes_config_map" "rack" {
   metadata {
-    namespace = kubernetes_namespace.system.metadata.0.name
+    namespace = kubernetes_namespace.system.metadata[0].name
     name      = "rack"
   }
 
@@ -29,7 +29,7 @@ resource "kubernetes_config_map" "rack" {
 resource "kubernetes_secret" "docker_hub_authentication" {
   count = var.docker_hub_username != "" ? 1 : 0
   metadata {
-    namespace = kubernetes_namespace.system.metadata.0.name
+    namespace = kubernetes_namespace.system.metadata[0].name
     name = "docker-hub-authentication"
   }
 
@@ -46,4 +46,15 @@ DOCKER
   }
 
   type = "kubernetes.io/dockerconfigjson"
+}
+
+resource "kubernetes_config_map" "telemetry_configuration" {
+  count = var.telemetry ? 1 : 0
+
+  metadata {
+    namespace = kubernetes_namespace.system.metadata[0].name
+    name      = "telemetry-rack-params"
+  }
+
+  data = jsondecode(file(var.telemetry_file))
 }

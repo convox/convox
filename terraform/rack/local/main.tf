@@ -10,6 +10,8 @@ module "k8s" {
   domain              = module.router.endpoint
   name                = var.name
   release             = var.release
+  telemetry           = var.telemetry
+  telemetry_file      = var.telemetry_file
 }
 
 module "api" {

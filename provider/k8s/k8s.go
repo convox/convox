@@ -258,7 +258,16 @@ func (p *Provider) heartbeat() error {
 		ms[k] = v
 	}
 
+	rp := p.RackParams()
+	if rp != nil {
+		ms["params"] = rp
+	}
+
 	if err := p.metrics.Post("heartbeat", ms); err != nil {
+		return errors.WithStack(err)
+	}
+
+	if err := p.CheckParamsInConfigMapAsSync(); err != nil {
 		return errors.WithStack(err)
 	}
 
