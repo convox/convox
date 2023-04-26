@@ -12,9 +12,14 @@ import (
 )
 
 var (
-	skipParams = []string{
+	skipParams = strings.Join([]string{
 		"name",
 		"rack_name",
+		"release",
+		"region",
+	}, ",")
+
+	redactedParams = strings.Join([]string{
 		"cidr",
 		"key_pair_name",
 		"internet_gateway_id",
@@ -22,8 +27,7 @@ var (
 		"tags",
 		"vpc_id",
 		"whitelist",
-	}
-	redactedParams = strings.Join(skipParams, ",")
+	}, ",")
 )
 
 func (p *Provider) RackParams() map[string]interface{} {
@@ -65,13 +69,13 @@ func (p *Provider) RackParams() map[string]interface{} {
 	// Get all non sync params
 	var nSync []string
 	for k, v := range trs.Data {
-		if v == "false" {
+		if v == "false" && !strings.Contains(skipParams, k) {
 			nSync = append(nSync, k)
 		}
 	}
 
 	// Get all non sync from initial configmap and return them
-	toSync := map[string]interface{}{}
+	var toSync map[string]interface{}
 	for _, s := range nSync {
 		if val, ok := trp.Data[s]; ok {
 			if strings.Contains(redactedParams, s) {
