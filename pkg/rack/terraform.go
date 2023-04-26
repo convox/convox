@@ -441,11 +441,14 @@ func (t Terraform) update(release string, vars map[string]string) error {
 
 	tf := filepath.Join(dir, "main.tf")
 
+	if release > "3.11.2" {
+		vars["settings"] = dir
+	}
+
 	params := map[string]interface{}{
 		"Name":     t.name,
 		"Provider": t.provider,
 		"Vars":     vars,
-		"Settings": dir,
 	}
 
 	if err := terraformWriteTemplate(tf, release, params); err != nil {
@@ -824,8 +827,7 @@ func terraformWriteTemplate(filename, version string, params map[string]interfac
 
 	t, err := template.New("main").Funcs(terraformTemplateHelpers()).Parse(`
 		module "system" {
-			source = "{{.Source}}"
-			settings = "{{.Settings}}"
+			source 	 = "{{.Source}}"
 			
 			{{- range (keys .Vars) }}
 			{{.}} = "{{index $.Vars .}}"
@@ -854,6 +856,8 @@ func terraformWriteTemplate(filename, version string, params map[string]interfac
 	}
 	defer fd.Close()
 
+	fmt.Println(t)
+	fmt.Println(params)
 	if err := t.Execute(fd, params); err != nil {
 		return err
 	}
