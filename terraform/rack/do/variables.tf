@@ -51,17 +51,17 @@ variable "secret_key" {
   type = string
 }
 
+variable "settings" {
+  type    = string
+  default = ""
+}
+
 variable "syslog" {
   default = ""
 }
 
 variable "telemetry" {
   type   = bool
-}
-
-variable "telemetry_file" {
-  type    = string
-  default = ""
 }
 
 variable "whitelist" {

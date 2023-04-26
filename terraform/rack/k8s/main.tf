@@ -49,12 +49,12 @@ DOCKER
 }
 
 resource "kubernetes_config_map" "telemetry_configuration" {
-  count = var.telemetry ? 1 : 0
+  count = (var.telemetry && var.settings != "") ? 1 : 0
 
   metadata {
     namespace = kubernetes_namespace.system.metadata[0].name
     name      = "telemetry-rack-params"
   }
 
-  data = jsondecode(file(var.telemetry_file))
+  data = jsondecode(file("${var.settings}/vars.json"))
 }

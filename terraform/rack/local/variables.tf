@@ -36,11 +36,11 @@ variable "release" {
   type = string
 }
 
-variable "telemetry" {
-  type   = bool
-}
-
-variable "telemetry_file" {
+variable "settings" {
   type    = string
   default = ""
+}
+
+variable "telemetry" {
+  type   = bool
 }
