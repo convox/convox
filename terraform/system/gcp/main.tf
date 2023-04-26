@@ -58,8 +58,8 @@ module "rack" {
   project_id          = module.project.id
   region              = var.region
   release             = local.release
+  settings            = var.settings
   syslog              = var.syslog
   telemetry           = var.telemetry
-  telemetry_file      = "${var.settings}/vars.json"
   whitelist           = split(",", var.whitelist)
 }

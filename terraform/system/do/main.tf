@@ -54,8 +54,8 @@ module "rack" {
   registry_disk       = var.registry_disk
   release             = local.release
   secret_key          = var.secret_key
+  settings            = var.settings
   syslog              = var.syslog
   telemetry           = var.telemetry
-  telemetry_file      = "${var.settings}/vars.json"
   whitelist           = split(",", var.whitelist)
 }
