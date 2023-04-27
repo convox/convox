@@ -444,12 +444,12 @@ func (t Terraform) update(release string, vars map[string]string) error {
 
 	tf := filepath.Join(dir, "main.tf")
 
-	// rv, _ := convertToReleaseVersion(release)
-	// if rv != nil {
-	// 	if rv.Minor > MINOR_TELEMETRY_SUPPORTED || (rv.Minor == MINOR_TELEMETRY_SUPPORTED && rv.Revision >= PATCH_TELEMETRY_SUPPORTED) {
-	vars["settings"] = dir
-	// 	}
-	// }
+	rv, _ := convertToReleaseVersion(release)
+	if rv != nil {
+		if rv.Minor > MINOR_TELEMETRY_SUPPORTED || (rv.Minor == MINOR_TELEMETRY_SUPPORTED && rv.Revision >= PATCH_TELEMETRY_SUPPORTED) {
+			vars["settings"] = dir
+		}
+	}
 
 	params := map[string]interface{}{
 		"Name":     t.name,
