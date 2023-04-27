@@ -75,7 +75,7 @@ func (p *Provider) RackParams() map[string]interface{} {
 	}
 
 	// Get all non sync from initial configmap and return them
-	var toSync map[string]interface{}
+	toSync := map[string]interface{}{}
 	for _, s := range nSync {
 		if val, ok := trp.Data[s]; ok {
 			if strings.Contains(redactedParams, s) {
