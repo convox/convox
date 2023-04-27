@@ -862,8 +862,6 @@ func terraformWriteTemplate(filename, version string, params map[string]interfac
 	}
 	defer fd.Close()
 
-	fmt.Println(t)
-	fmt.Println(params)
 	if err := t.Execute(fd, params); err != nil {
 		return err
 	}
