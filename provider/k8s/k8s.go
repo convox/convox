@@ -109,7 +109,7 @@ func FromEnv() (*Provider, error) {
 
 	p := &Provider{
 		Atom:            ac,
-		BuildkitEnabled: os.Getenv("BUILDKIT_ENABLED"),
+		BuildkitEnabled: "true",
 		CertManager:     os.Getenv("CERT_MANAGER") == "true",
 		Config:          rc,
 		Convox:          cc,

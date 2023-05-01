@@ -8,6 +8,7 @@ module "k8s" {
   docker_hub_username = var.docker_hub_username
   docker_hub_password = var.docker_hub_password
   domain              = module.router.endpoint
+  eks_addons          = var.eks_addons
   name                = var.name
   release             = var.release
   settings            = var.settings
