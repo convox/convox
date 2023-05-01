@@ -264,18 +264,7 @@ func (p *Provider) heartbeat() error {
 		ms["rack_params"] = rp
 	}
 
-	data, err := json.Marshal(ms)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(fmt.Printf("Hash to send to metrics app: +%v", string(data)))
-
 	if err := p.metrics.Post("heartbeat", ms); err != nil {
-		return errors.WithStack(err)
-	}
-
-	if err := p.CheckParamsInConfigMapAsSync(); err != nil {
 		return errors.WithStack(err)
 	}
 

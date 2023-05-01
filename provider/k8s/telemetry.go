@@ -50,26 +50,6 @@ func (p *Provider) RackParams() map[string]interface{} {
 	return toSync
 }
 
-func (p *Provider) CheckParamsInConfigMapAsSync() error {
-	trs, err := p.Cluster.CoreV1().ConfigMaps(p.Namespace).Get(context.TODO(), "telemetry-rack-sync", am.GetOptions{})
-	if err != nil {
-		return err
-	}
-
-	for k, v := range trs.Data {
-		if v == "false" {
-			trs.Data[k] = "true"
-		}
-	}
-
-	_, err = p.Cluster.CoreV1().ConfigMaps(p.Namespace).Update(context.TODO(), trs, am.UpdateOptions{})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func hashParamValue(value string) string {
 	hasher := sha256.New()
 	hasher.Write([]byte(value))
