@@ -258,9 +258,14 @@ func (p *Provider) heartbeat() error {
 		ms[k] = v
 	}
 
-	for k, v := range p.RackParams() {
-		keyName := fmt.Sprintf("params_%s", k)
-		ms[keyName] = v
+	// for k, v := range p.RackParams() {
+	// 	keyName := fmt.Sprintf("rack_params_%s", k)
+	// 	ms[keyName] = v
+	// }
+
+	rp := p.RackParams()
+	if rp != nil {
+		ms["rack_params"] = rp
 	}
 
 	data, err := json.Marshal(ms)
