@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 
-	v1 "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -37,79 +36,18 @@ func (p *Provider) RackParams() map[string]interface{} {
 		return nil
 	}
 
-	trs, err := p.Cluster.CoreV1().ConfigMaps(p.Namespace).Get(context.TODO(), "telemetry-rack-sync", am.GetOptions{})
-	if err != nil {
-		fmt.Println("Could not find params sync configmap. Creating configmap...")
-
-		trs, err = createNewSyncConfigMap(trp, p)
-		if err != nil {
-			return map[string]interface{}{}
-		}
-	}
-
-	// Get all new params and update trs configmap
-	var newParams []string
-	for k := range trp.Data {
-		if _, ok := trs.Data[k]; !ok {
-			newParams = append(newParams, k)
-		}
-	}
-
-	if len(newParams) > 0 {
-		for _, np := range newParams {
-			trs.Data[np] = "false"
-		}
-
-		trs, err = p.Cluster.CoreV1().ConfigMaps(p.Namespace).Update(context.TODO(), trs, am.UpdateOptions{})
-		if err != nil {
-			return nil
-		}
-	}
-
-	// Get all non sync params
-	var nSync []string
-	for k, v := range trs.Data {
-		if v == "false" && !strings.Contains(skipParams, k) {
-			nSync = append(nSync, k)
-		}
-	}
-
-	// Get all non sync from initial configmap and return them
 	toSync := map[string]interface{}{}
-	for _, s := range nSync {
-		if val, ok := trp.Data[s]; ok {
-			if strings.Contains(redactedParams, s) {
-				toSync[s] = hashParamValue(val)
+	for k, v := range trp.Data {
+		if !strings.Contains(skipParams, k) {
+			if strings.Contains(redactedParams, k) {
+				toSync[k] = hashParamValue(v)
 			} else {
-				toSync[s] = val
+				toSync[k] = v
 			}
 		}
 	}
 
 	return toSync
-}
-
-func createNewSyncConfigMap(trp *v1.ConfigMap, p *Provider) (*v1.ConfigMap, error) {
-	data := map[string]string{}
-	for k := range trp.Data {
-		data[k] = "false"
-	}
-
-	cm := &v1.ConfigMap{
-		ObjectMeta: am.ObjectMeta{
-			Name: "telemetry-rack-sync",
-		},
-		Data: data,
-	}
-
-	trs, err := p.Cluster.CoreV1().ConfigMaps(p.Namespace).Create(context.TODO(), cm, am.CreateOptions{})
-	if err != nil {
-		fmt.Printf("could not create configmap: %v", err)
-		return nil, err
-	}
-
-	fmt.Printf("Created Sync ConfigMap %s\n", trs.GetName())
-	return trs, nil
 }
 
 func (p *Provider) CheckParamsInConfigMapAsSync() error {
