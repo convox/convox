@@ -3,7 +3,7 @@ provider "kubernetes" {
   host                   = aws_eks_cluster.cluster.endpoint
 
   exec {
-    api_version = "client.authentication.k8s.io/v1alpha1"
+    api_version = "client.authentication.k8s.io/v1beta1"
     args        = ["eks", "get-token", "--cluster-name", var.name]
     command     = "aws"
   }

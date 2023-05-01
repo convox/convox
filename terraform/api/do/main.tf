@@ -33,6 +33,10 @@ module "fluentd" {
 module "k8s" {
   source = "../k8s"
 
+  depends_on = [
+    digitalocean_spaces_bucket.storage
+  ]
+
   providers = {
     kubernetes = kubernetes
   }

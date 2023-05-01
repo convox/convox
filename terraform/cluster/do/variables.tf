@@ -4,7 +4,7 @@ variable "high_availability" {
 
 variable "k8s_version" {
   type = string
-  default = "1.22"
+  default = "1.24"
 }
 
 variable "name" {

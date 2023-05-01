@@ -1,6 +1,6 @@
 ## development #################################################################
 
-FROM golang:1.16 AS development
+FROM golang:1.17 AS development
 
 ARG DOCKER_ARCH=x86_64
 ARG KUBECTL_ARCH=amd64
@@ -34,7 +34,7 @@ RUN make build
 
 ## package #####################################################################
 
-FROM golang:1.16 AS package
+FROM golang:1.17 AS package
 
 RUN apt-get update && apt-get -y install upx-ucl
 
