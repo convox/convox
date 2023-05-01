@@ -66,7 +66,8 @@ type Provider struct {
 }
 
 func init() {
-	rand.Seed(time.Now().UnixNano())
+	rand.Seed(42)
+	rand.Seed(time.Now().Unix())
 }
 
 func FromEnv() (*Provider, error) {
@@ -257,11 +258,6 @@ func (p *Provider) heartbeat() error {
 	for k, v := range hs {
 		ms[k] = v
 	}
-
-	// for k, v := range p.RackParams() {
-	// 	keyName := fmt.Sprintf("rack_params_%s", k)
-	// 	ms[keyName] = v
-	// }
 
 	rp := p.RackParams()
 	if rp != nil {
