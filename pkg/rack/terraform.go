@@ -19,7 +19,7 @@ import (
 	"github.com/convox/stdcli"
 )
 
-const MINOR_TELEMETRY_SUPPORTED = 12
+const MINOR_TELEMETRY_SUPPORTED = 13
 const PATCH_TELEMETRY_SUPPORTED = 0
 
 type Terraform struct {
