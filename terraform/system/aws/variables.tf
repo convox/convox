@@ -161,7 +161,7 @@ variable "tags" {
 
 variable "telemetry" {
   type   = bool
-  default = true
+  default = false
 }
 
 variable "vpc_id" {

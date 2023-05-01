@@ -70,7 +70,7 @@ variable "syslog" {
 
 variable "telemetry" {
   type   = bool
-  default = true
+  default = false
 }
 
 variable "token" {
