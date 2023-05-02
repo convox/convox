@@ -38,13 +38,15 @@ func (p *Provider) RackParams() map[string]interface{} {
 
 	toSync := map[string]interface{}{}
 	for k, v := range trp.Data {
-		if !strings.Contains(skipParams, k) {
-			if strings.Contains(redactedParams, k) {
-				toSync[k] = hashParamValue(v)
-			} else {
-				toSync[k] = v
-			}
+		if strings.Contains(skipParams, k) {
+			continue
 		}
+
+		if strings.Contains(redactedParams, k) {
+			v = hashParamValue(v)
+		}
+
+		toSync[k] = v
 	}
 
 	return toSync

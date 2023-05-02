@@ -444,11 +444,8 @@ func (t Terraform) update(release string, vars map[string]string) error {
 
 	tf := filepath.Join(dir, "main.tf")
 
-	rv, _ := convertToReleaseVersion(release)
-	if rv != nil {
-		if rv.Minor > MINOR_TELEMETRY_SUPPORTED || (rv.Minor == MINOR_TELEMETRY_SUPPORTED && rv.Revision >= PATCH_TELEMETRY_SUPPORTED) {
-			vars["settings"] = dir
-		}
+	if hasSupport(release) {
+		vars["settings"] = dir
 	}
 
 	params := map[string]interface{}{
@@ -468,6 +465,17 @@ func (t Terraform) update(release string, vars map[string]string) error {
 	}
 
 	return nil
+}
+
+func hasSupport(release string) bool {
+	rv, _ := convertToReleaseVersion(release)
+	if rv != nil {
+		if rv.Minor > MINOR_TELEMETRY_SUPPORTED || (rv.Minor == MINOR_TELEMETRY_SUPPORTED && rv.Revision >= PATCH_TELEMETRY_SUPPORTED) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (t Terraform) vars() (map[string]string, error) {
