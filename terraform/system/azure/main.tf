@@ -48,7 +48,6 @@ module "rack" {
     kubernetes = kubernetes
   }
 
-  buildkit_enabled    = var.buildkit_enabled
   cluster             = module.cluster.id
   docker_hub_username = var.docker_hub_username
   docker_hub_password = var.docker_hub_password

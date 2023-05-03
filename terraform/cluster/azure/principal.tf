@@ -1,7 +1,10 @@
 resource "azuread_application" "cluster" {
-  name                       = "cluster"
-  available_to_other_tenants = false
-  oauth2_allow_implicit_flow = true
+  display_name = "cluster"
+  web {
+    implicit_grant {
+      access_token_issuance_enabled = true
+    }
+  }
 }
 
 resource "azuread_service_principal" "cluster" {
@@ -17,7 +20,6 @@ resource "random_string" "cluster_password" {
 
 resource "azuread_service_principal_password" "cluster" {
   service_principal_id = azuread_service_principal.cluster.id
-  value                = random_string.cluster_password.result
   end_date             = "2099-01-01T00:00:00Z"
 }
 
