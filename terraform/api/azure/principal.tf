@@ -1,7 +1,10 @@
 resource "azuread_application" "api" {
-  name                       = "api"
-  available_to_other_tenants = false
-  oauth2_allow_implicit_flow = true
+  display_name               = "api"
+  web {
+    implicit_grant {
+      access_token_issuance_enabled = true
+    }
+  }
 }
 
 resource "azuread_service_principal" "api" {
@@ -9,15 +12,8 @@ resource "azuread_service_principal" "api" {
   app_role_assignment_required = false
 }
 
-resource "random_string" "api_password" {
-  length  = 30
-  special = true
-  upper   = true
-}
-
 resource "azuread_service_principal_password" "api" {
   service_principal_id = azuread_service_principal.api.id
-  value                = random_string.api_password.result
   end_date             = "2099-01-01T00:00:00Z"
 }
 
