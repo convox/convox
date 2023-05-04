@@ -163,7 +163,7 @@ github.com/convox/inotify
 # github.com/convox/logger v0.0.0-20180522214415-e39179955b52
 ## explicit
 github.com/convox/logger
-# github.com/convox/stdapi v1.1.3-0.20221110105517-90599cc7af87
+# github.com/convox/stdapi v1.1.3-0.20221110171947-8d98f61e61ed
 ## explicit; go 1.12
 github.com/convox/stdapi
 # github.com/convox/stdcli v0.0.0-20221110070640-8f8fb17bfe20
@@ -332,19 +332,16 @@ github.com/google/gofuzz
 # github.com/googleapis/gax-go/v2 v2.0.5
 ## explicit
 github.com/googleapis/gax-go/v2
-# github.com/gorilla/context v1.1.1
-## explicit
-github.com/gorilla/context
 # github.com/gorilla/mux v1.8.0
 ## explicit; go 1.12
 github.com/gorilla/mux
 # github.com/gorilla/securecookie v1.1.1
 ## explicit
 github.com/gorilla/securecookie
-# github.com/gorilla/sessions v1.1.3
+# github.com/gorilla/sessions v1.2.1
 ## explicit
 github.com/gorilla/sessions
-# github.com/gorilla/websocket v1.4.2
+# github.com/gorilla/websocket v1.5.0
 ## explicit; go 1.12
 github.com/gorilla/websocket
 # github.com/goware/modvendor v0.1.0
@@ -449,7 +446,7 @@ github.com/rogpeppe/go-internal/semver
 # github.com/russross/blackfriday v2.0.0+incompatible
 ## explicit
 github.com/russross/blackfriday
-# github.com/sebest/xff v0.0.0-20160910043805-6c115e0ffa35
+# github.com/sebest/xff v0.0.0-20210106013422-671bd2870b3a
 ## explicit
 github.com/sebest/xff
 # github.com/shurcooL/sanitized_anchor_name v1.0.0
