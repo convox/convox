@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -e
+set -ex
 
 if [ ! -x "$(which jq)" ]
 then
@@ -20,7 +20,7 @@ then
     exit 1
 fi
 
-target_groups=$(aws --region=$3 resourcegroupstaggingapi get-resources --tag-filters "Key=kubernetes.io/service-name,Values=$1-system/router" --resource-type-filters "elasticloadbalancing:targetgroup")
+target_groups=$(aws --region=$2 resourcegroupstaggingapi get-resources --tag-filters "Key=kubernetes.io/service-name,Values=$1-system/router-internal" --resource-type-filters "elasticloadbalancing:targetgroup")
 target_groups=$(echo $target_groups | jq -r "[.ResourceTagMappingList[] | .ResourceARN] | @sh" | tr -d \')
 
 seconds=0
@@ -34,10 +34,10 @@ do
     fi
     echo "waiting for NLB target-groups..."
     sleep 30
-    target_groups=$(aws --region=$3 resourcegroupstaggingapi get-resources --tag-filters "Key=kubernetes.io/service-name,Values=$1-system/router" --resource-type-filters "elasticloadbalancing:targetgroup")
+    target_groups=$(aws --region=$2 resourcegroupstaggingapi get-resources --tag-filters "Key=kubernetes.io/service-name,Values=$1-system/router-internal" --resource-type-filters "elasticloadbalancing:targetgroup")
     target_groups=$(echo $target_groups | jq -r "[.ResourceTagMappingList[] | .ResourceARN] | @sh" | tr -d \')
 done
 
 for group in $target_groups; do
-    aws --region=$3 elbv2 modify-target-group-attributes --target-group-arn $group --attributes Key=proxy_protocol_v2.enabled,Value=$2 > /dev/null
+    aws --region=$2 elbv2 modify-target-group-attributes --target-group-arn $group --attributes Key=preserve_client_ip.enabled,Value=false > /dev/null
 done
