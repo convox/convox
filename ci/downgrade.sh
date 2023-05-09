@@ -10,3 +10,8 @@ sleep 30
 convox switch ${RACK_NAME}
 
 convox rack | grep 'Status' | xargs | cut -d ' ' -f2 | grep "running"
+
+version=$(convox rack | grep Version | awk -F '  +' '{print $2}')
+if [ "${version}" != "${LATEST_RELEASE}" ]; then
+  exit 1;
+fi
