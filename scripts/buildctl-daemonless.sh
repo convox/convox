@@ -9,7 +9,7 @@
 set -eu
 
 : ${BUILDCTL=buildctl}
-: ${BUILDCTL_CONNECT_RETRIES_MAX=10}
+: ${BUILDCTL_CONNECT_RETRIES_MAX=100}
 : ${BUILDKITD=buildkitd}
 : ${BUILDKITD_FLAGS=}
 : ${ROOTLESSKIT=rootlesskit}
@@ -18,7 +18,7 @@ set -eu
 # * pid
 # * addr
 # * log
-tmp=$(mktemp -d /tmp/buildctl-daemonless.XXXXXX)
+tmp=$(mktemp -d /temp/buildctl-daemonless.XXXXXX)
 trap "kill \$(cat $tmp/pid); wait \$(cat $tmp/pid) || true; rm -rf $tmp" EXIT
 
 startBuildkitd() {
@@ -49,11 +49,13 @@ waitForBuildkitd() {
             cat >&2 $tmp/log
             exit 1
         fi
-        sleep $(awk "BEGIN{print (100 + $try * 20) * 0.001}")
+        sleep 0.5
         try=$(expr $try + 1)
     done
 }
 
 startBuildkitd
+cat $tmp/log
 waitForBuildkitd
+cat $tmp/log
 "$@"
