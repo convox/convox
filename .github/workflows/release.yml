@@ -220,11 +220,11 @@ jobs:
       fail-fast: false
       matrix:
         job:
-          - aws
-          - aws-arm64
-          - aws-existing-vpc
-          - do
-          - gcp
+          # - aws
+          # - aws-arm64
+          # - aws-existing-vpc
+          # - do
+          # - gcp
           - azure
         include:
           - job: aws

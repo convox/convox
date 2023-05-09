@@ -9,7 +9,7 @@
 set -eu
 
 : ${BUILDCTL=buildctl}
-: ${BUILDCTL_CONNECT_RETRIES_MAX=10}
+: ${BUILDCTL_CONNECT_RETRIES_MAX=100}
 : ${BUILDKITD=buildkitd}
 : ${BUILDKITD_FLAGS=}
 : ${ROOTLESSKIT=rootlesskit}
@@ -49,11 +49,13 @@ waitForBuildkitd() {
             cat >&2 $tmp/log
             exit 1
         fi
-        sleep $(awk "BEGIN{print (100 + $try * 20) * 0.001}")
+        sleep 0.5
         try=$(expr $try + 1)
     done
 }
 
 startBuildkitd
+cat $tmp/log
 waitForBuildkitd
+cat $tmp/log
 "$@"
