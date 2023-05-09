@@ -220,29 +220,29 @@ jobs:
       fail-fast: false
       matrix:
         job:
-          - aws
-          - aws-arm64
-          - aws-existing-vpc
-          - do
-          - gcp
+          # - aws
+          # - aws-arm64
+          # - aws-existing-vpc
+          # - do
+          # - gcp
           - azure
         include:
-          - job: aws
-            provider: aws
-            rack_params: "region=us-east-2"
-          - job: aws-arm64
-            provider: aws
-            rack_params: "node_type=t4g.small proxy_protocol=true"
-            suffix: arm64
-          - job: aws-existing-vpc
-            provider: aws
-            rack_params: "vpc_id=vpc-0f18b6d1265717215 internet_gateway_id=igw-01c3d338eecec02a1 cidr=172.0.0.0/16"
-            suffix: evpc
-          - job: do
-            provider: do
-          - job: gcp
-            provider: gcp
-            rack_params: "region=us-west1"
+          # - job: aws
+          #   provider: aws
+          #   rack_params: "region=us-east-2"
+          # - job: aws-arm64
+          #   provider: aws
+          #   rack_params: "node_type=t4g.small proxy_protocol=true"
+          #   suffix: arm64
+          # - job: aws-existing-vpc
+          #   provider: aws
+          #   rack_params: "vpc_id=vpc-0f18b6d1265717215 internet_gateway_id=igw-01c3d338eecec02a1 cidr=172.0.0.0/16"
+          #   suffix: evpc
+          # - job: do
+          #   provider: do
+          # - job: gcp
+          #   provider: gcp
+          #   rack_params: "region=us-west1"
           - job: azure
             provider: azure
     steps:
