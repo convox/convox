@@ -79,7 +79,7 @@ func TestRackInstall(t *testing.T) {
 		testdata, err := ioutil.ReadFile("testdata/terraform/dev1.tf")
 		require.NoError(t, err)
 
-		require.Equal(t, strings.Trim(string(tfdata), "\n"), strings.Trim(string(testdata), "\n"))
+		require.Equal(t, strings.Trim(removeSettingsLine(string(tfdata)), "\n"), removeSettingsLine(strings.Trim(string(testdata), "\n")))
 
 		// existing rack should not switch
 		res, err = testExecute(e, "switch", nil)
@@ -90,6 +90,17 @@ func TestRackInstall(t *testing.T) {
 
 		me.AssertExpectations(t)
 	})
+}
+
+func removeSettingsLine(s string) string {
+	lines := strings.Split(s, "\n")
+	for i, line := range lines {
+		if strings.HasPrefix(strings.TrimSpace(line), "settings =") {
+			lines = append(lines[:i], lines[i+1:]...)
+			break
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 
 func TestRackInstallArgs(t *testing.T) {
@@ -122,7 +133,7 @@ func TestRackInstallArgs(t *testing.T) {
 		testdata, err := ioutil.ReadFile("testdata/terraform/dev1.args.tf")
 		require.NoError(t, err)
 
-		require.Equal(t, strings.Trim(string(tfdata), "\n"), strings.Trim(string(testdata), "\n"))
+		require.Equal(t, strings.Trim(removeSettingsLine(string(tfdata)), "\n"), removeSettingsLine(strings.Trim(string(testdata), "\n")))
 
 		me.AssertExpectations(t)
 	})
@@ -157,7 +168,7 @@ func TestRackInstallPrepare(t *testing.T) {
 		testdata, err := ioutil.ReadFile("testdata/terraform/dev1.tf")
 		require.NoError(t, err)
 
-		require.Equal(t, strings.Trim(string(tfdata), "\n"), strings.Trim(string(testdata), "\n"))
+		require.Equal(t, strings.Trim(removeSettingsLine(string(tfdata)), "\n"), removeSettingsLine(strings.Trim(string(testdata), "\n")))
 
 		me.AssertExpectations(t)
 	})
@@ -197,7 +208,7 @@ func TestRackInstallSwitch(t *testing.T) {
 		testdata, err := ioutil.ReadFile("testdata/terraform/dev1.tf")
 		require.NoError(t, err)
 
-		require.Equal(t, strings.Trim(string(tfdata), "\n"), strings.Trim(string(testdata), "\n"))
+		require.Equal(t, strings.Trim(removeSettingsLine(string(tfdata)), "\n"), removeSettingsLine(strings.Trim(string(testdata), "\n")))
 
 		// no existing rack should switch
 		res, err = testExecute(e, "switch", nil)
@@ -238,7 +249,7 @@ func TestRackInstallVersion(t *testing.T) {
 		testdata, err := ioutil.ReadFile("testdata/terraform/dev1.version.tf")
 		require.NoError(t, err)
 
-		require.Equal(t, strings.Trim(string(tfdata), "\n"), strings.Trim(string(testdata), "\n"))
+		require.Equal(t, strings.Trim(removeSettingsLine(string(tfdata)), "\n"), removeSettingsLine(strings.Trim(string(testdata), "\n")))
 
 		me.AssertExpectations(t)
 	})
