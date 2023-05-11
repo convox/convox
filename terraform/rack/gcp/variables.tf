@@ -51,8 +51,17 @@ variable "release" {
   type = string
 }
 
+variable "settings" {
+  type    = string
+  default = ""
+}
+
 variable "syslog" {
   default = ""
+}
+
+variable "telemetry" {
+  type   = bool
 }
 
 variable "whitelist" {

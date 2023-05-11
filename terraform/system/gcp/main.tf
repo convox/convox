@@ -58,6 +58,8 @@ module "rack" {
   project_id          = module.project.id
   region              = var.region
   release             = local.release
+  settings            = var.settings
   syslog              = var.syslog
+  telemetry           = var.telemetry
   whitelist           = split(",", var.whitelist)
 }

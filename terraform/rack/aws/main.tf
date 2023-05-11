@@ -11,6 +11,8 @@ module "k8s" {
   eks_addons          = var.eks_addons
   name                = var.name
   release             = var.release
+  settings            = var.settings
+  telemetry           = var.telemetry
 }
 
 module "api" {

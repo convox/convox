@@ -31,4 +31,6 @@ module "rack" {
   platform            = module.platform.name
   os                  = var.os
   release             = local.release
+  settings            = var.settings
+  telemetry           = var.telemetry
 }

@@ -54,6 +54,8 @@ module "rack" {
   registry_disk       = var.registry_disk
   release             = local.release
   secret_key          = var.secret_key
+  settings            = var.settings
   syslog              = var.syslog
+  telemetry           = var.telemetry
   whitelist           = split(",", var.whitelist)
 }
