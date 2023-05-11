@@ -2,7 +2,6 @@ package aws_test
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/convox/convox/pkg/atom"
@@ -39,10 +38,9 @@ func TestRepositoryAuth(t *testing.T) {
 				}
 
 				host, _, err := p.RepositoryAuth(test.Appname)
-				fmt.Println(err)
 				if err == nil {
 					require.NoError(t, err)
-					assert.Equal(t, host, "")
+					assert.Equal(t, host, "AWS")
 				} else {
 					assert.Equal(t, test.Err.Error(), err.Error())
 				}
