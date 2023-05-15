@@ -1,10 +1,6 @@
-<<<<<<<< HEAD:vendor/github.com/patrickmn/go-cache/LICENSE
-Copyright (c) 2012-2018 Patrick Mylund Nielsen and the go-cache contributors
-========
 MIT License
 
 Copyright (c) 2019 Josh Bleecher Snyder
->>>>>>>> staging:vendor/github.com/josharian/intern/license.md
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

@@ -185,6 +185,7 @@ github.com/creack/pty
 ## explicit
 github.com/davecgh/go-spew/spew
 # github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.0-20210816181553-5444fa50b93d
+## explicit; go 1.13
 github.com/decred/dcrd/dcrec/secp256k1/v4
 # github.com/dimchansky/utfbom v1.1.0
 ## explicit
@@ -299,6 +300,7 @@ github.com/gobwas/glob/syntax/lexer
 github.com/gobwas/glob/util/runes
 github.com/gobwas/glob/util/strings
 # github.com/goccy/go-json v0.9.4
+## explicit; go 1.12
 github.com/goccy/go-json
 github.com/goccy/go-json/internal/decoder
 github.com/goccy/go-json/internal/encoder
@@ -362,9 +364,6 @@ github.com/gorilla/websocket
 # github.com/goware/modvendor v0.1.0
 ## explicit
 github.com/goware/modvendor
-# github.com/hashicorp/golang-lru v0.5.1
-github.com/hashicorp/golang-lru
-github.com/hashicorp/golang-lru/simplelru
 # github.com/ijc/Gotty v0.0.0-20170406111628-a8b993ba6abd
 ## explicit
 github.com/ijc/Gotty
@@ -406,15 +405,20 @@ github.com/kballard/go-shellquote
 ## explicit
 github.com/konsorten/go-windows-terminal-sequences
 # github.com/lestrrat-go/backoff/v2 v2.0.8
+## explicit; go 1.16
 github.com/lestrrat-go/backoff/v2
 # github.com/lestrrat-go/blackmagic v1.0.0
+## explicit; go 1.16
 github.com/lestrrat-go/blackmagic
 # github.com/lestrrat-go/httpcc v1.0.0
+## explicit; go 1.16
 github.com/lestrrat-go/httpcc
 # github.com/lestrrat-go/iter v1.0.1
+## explicit; go 1.13
 github.com/lestrrat-go/iter/arrayiter
 github.com/lestrrat-go/iter/mapiter
 # github.com/lestrrat-go/jwx v1.2.18
+## explicit; go 1.15
 github.com/lestrrat-go/jwx/internal/base64
 github.com/lestrrat-go/jwx/internal/ecutil
 github.com/lestrrat-go/jwx/internal/iter
@@ -426,8 +430,8 @@ github.com/lestrrat-go/jwx/jwk
 github.com/lestrrat-go/jwx/jws
 github.com/lestrrat-go/jwx/x25519
 # github.com/lestrrat-go/option v1.0.0
+## explicit; go 1.16
 github.com/lestrrat-go/option
-# github.com/mailru/easyjson v0.7.0
 # github.com/mailru/easyjson v0.7.6
 ## explicit; go 1.12
 github.com/mailru/easyjson/buffer
@@ -463,7 +467,7 @@ github.com/munnerz/goautoneg
 ## explicit
 github.com/mxk/go-flowrate/flowrate
 # github.com/okta/okta-jwt-verifier-golang v1.3.1
-## explicit
+## explicit; go 1.15
 github.com/okta/okta-jwt-verifier-golang
 github.com/okta/okta-jwt-verifier-golang/adaptors
 github.com/okta/okta-jwt-verifier-golang/adaptors/lestrratGoJwx
@@ -483,6 +487,7 @@ github.com/opencontainers/image-spec/specs-go/v1
 github.com/opencontainers/runc/libcontainer/system
 github.com/opencontainers/runc/libcontainer/user
 # github.com/patrickmn/go-cache v0.0.0-20180815053127-5633e0862627
+## explicit
 github.com/patrickmn/go-cache
 # github.com/pkg/errors v0.9.1
 ## explicit
