@@ -67,10 +67,6 @@ func (m *MockSsoProvider) ExchangeCode(r *http.Request, code string) structs.Sso
 	}
 }
 
-func (m *MockSsoProvider) Name() string {
-	return "name"
-}
-
 func (m *MockSsoProvider) Opts() structs.SsoProviderOptions {
 	return structs.SsoProviderOptions{
 		State: "state123",

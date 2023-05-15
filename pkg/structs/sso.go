@@ -4,7 +4,6 @@ import "net/http"
 
 type SsoProvider interface {
 	ExchangeCode(r *http.Request, code string) SsoExchangeCode
-	Name() string
 	Opts() SsoProviderOptions
 	RedirectPath() string
 	VerifyToken(t string) error

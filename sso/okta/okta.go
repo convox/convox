@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 
@@ -19,10 +19,6 @@ type Okta struct {
 
 func Initialize(opts structs.SsoProviderOptions) (structs.SsoProvider, error) {
 	return &Okta{opts}, nil
-}
-
-func (o *Okta) Name() string {
-	return "okta"
 }
 
 func (o *Okta) Opts() structs.SsoProviderOptions {
@@ -63,7 +59,8 @@ func (o *Okta) ExchangeCode(r *http.Request, code string) structs.SsoExchangeCod
 
 	client := &http.Client{}
 	resp, _ := client.Do(req)
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, _ := io.ReadAll(resp.Body)
+
 	defer resp.Body.Close()
 	var exchange structs.SsoExchangeCode
 	json.Unmarshal(body, &exchange)
