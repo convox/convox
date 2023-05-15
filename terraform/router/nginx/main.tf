@@ -133,7 +133,7 @@ resource "kubernetes_role" "ingress-nginx" {
   rule {
     api_groups     = [""]
     resources      = ["configmaps"]
-    resource_names = ["ingress-controller-leader-nginx"]
+    resource_names = ["ingress-controller-leader-nginx", "ingress-internal-controller-leader-nginx"]
     verbs          = ["get", "update"]
   }
 
@@ -151,7 +151,7 @@ resource "kubernetes_role" "ingress-nginx" {
 
   rule {
     api_groups     = ["coordination.k8s.io"]
-    resource_names = ["ingress-controller-leader"]
+    resource_names = ["ingress-controller-leader", "ingress-internal-controller-leader"]
     resources      = ["leases"]
     verbs          = ["get", "update"]
   }
@@ -170,7 +170,7 @@ resource "kubernetes_role" "ingress-nginx" {
 
   rule {
     api_groups     = [""]
-    resource_names = ["ingress-controller-leader"]
+    resource_names = ["ingress-controller-leader", "ingress-internal-controller-leader"]
     resources      = ["configmaps"]
     verbs          = ["get", "update"]
   }
