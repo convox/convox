@@ -59,6 +59,18 @@ resource "null_resource" "set_proxy_protocol" {
   ]
 }
 
+resource "null_resource" "set_preserve_client_ip_false" {
+  count = var.internal_router ? 1 : 0
+
+  provisioner "local-exec" {
+    command = "sh ${path.module}/preserve-client-ip.sh ${var.name} ${data.aws_region.current.name}"
+  }
+
+  depends_on = [
+    kubernetes_service.router-internal
+  ]
+}
+
 resource "kubernetes_service" "router" {
   metadata {
     namespace = var.namespace
