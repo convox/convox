@@ -10,7 +10,7 @@ RUN make $GOPATH/bin/build
 
 ###########################################################################################
 
-FROM moby/buildkit:v0.10.3-rootless as rootless
+FROM moby/buildkit:v0.11.6-rootless as rootless
 
 USER root
 
@@ -29,7 +29,7 @@ ENTRYPOINT [ "./buildctl-daemonless.sh" ]
 
 ###########################################################################################
 
-FROM moby/buildkit:v0.10.3 as privileged
+FROM moby/buildkit:v0.11.6 as privileged
 
 RUN apk add skopeo --update
 
