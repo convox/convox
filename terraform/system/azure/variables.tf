@@ -1,7 +1,3 @@
-variable "buildkit_enabled" {
-  default = true
-}
-
 variable "cert_duration" {
   default = "2160h"
   type    = string
