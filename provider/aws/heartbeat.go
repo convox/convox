@@ -15,9 +15,25 @@ func (p *Provider) Heartbeat() (map[string]interface{}, error) {
 		return nil, err
 	}
 
+	onDemandCnt, spotCnt, err := p.getInstanceTypeWiseCnt()
+	if err != nil {
+		return nil, err
+	}
+
+	hs := map[string]interface{}{
+		"instance_type":            strings.TrimSpace(string(data)),
+		"region":                   p.Region,
+		"on_demand_instance_count": onDemandCnt,
+		"spot_instance_count":      spotCnt,
+	}
+
+	return hs, nil
+}
+
+func (p *Provider) getInstanceTypeWiseCnt() (int, int, error) {
 	ns, err := p.Cluster.CoreV1().Nodes().List(context.TODO(), am.ListOptions{})
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return 0, 0, errors.WithStack(err)
 	}
 
 	spotCnt := 0
@@ -31,13 +47,5 @@ func (p *Provider) Heartbeat() (map[string]interface{}, error) {
 			spotCnt++
 		}
 	}
-
-	hs := map[string]interface{}{
-		"instance_type":            strings.TrimSpace(string(data)),
-		"region":                   p.Region,
-		"on_demand_instance_count": onDemandCnt,
-		"spot_instance_count":      spotCnt,
-	}
-
-	return hs, nil
+	return onDemandCnt, spotCnt, nil
 }
