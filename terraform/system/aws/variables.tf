@@ -18,7 +18,7 @@ variable "cidr" {
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-coredns.html
 variable "coredns_version" {
   type    = string
-  default = "v1.8.7-eksbuild.2"
+  default = "v1.8.7-eksbuild.4"
 }
 
 variable "docker_hub_username" {
@@ -74,12 +74,12 @@ variable "key_pair_name" {
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-kube-proxy.html
 variable "kube_proxy_version" {
   type    = string
-  default = "v1.23.8-eksbuild.2"
+  default = "v1.24.10-eksbuild.2"
 }
 
 variable "k8s_version" {
   type    = string
-  default = "1.23"
+  default = "1.24"
 }
 
 variable "max_on_demand_count" {
@@ -137,6 +137,10 @@ variable "schedule_rack_scale_up" {
   default = ""
 }
 
+variable "settings" {
+  default = ""
+}
+
 variable "syslog" {
   default = ""
 }
@@ -155,6 +159,11 @@ variable "tags" {
   default = ""
 }
 
+variable "telemetry" {
+  type   = bool
+  default = false
+}
+
 variable "vpc_id" {
   default = ""
 }
@@ -162,7 +171,7 @@ variable "vpc_id" {
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-vpc-cni.html
 variable "vpc_cni_version" {
   type    = string
-  default = "v1.11.4-eksbuild.1"
+  default = "v1.12.6-eksbuild.1"
 }
 
 variable "whitelist" {

@@ -1,7 +1,3 @@
-variable "buildkit_enabled" {
-  default = false
-}
-
 variable "cluster" {
   type = string
 }
@@ -39,8 +35,17 @@ variable "resource_group" {
   type = string
 }
 
+variable "settings" {
+  type    = string
+  default = ""
+}
+
 variable "syslog" {
   default = ""
+}
+
+variable "telemetry" {
+  type   = bool
 }
 
 variable "whitelist" {

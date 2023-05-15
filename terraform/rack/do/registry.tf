@@ -17,6 +17,10 @@ resource "random_string" "secret" {
 }
 
 resource "kubernetes_deployment" "registry" {
+  depends_on = [
+    digitalocean_spaces_bucket.registry
+  ]
+
   metadata {
     namespace = module.k8s.namespace
     name      = "registry"

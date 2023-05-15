@@ -21,7 +21,7 @@ variable "image" {
 
 variable "k8s_version" {
   type    = string
-  default = "1.23"
+  default = "1.24"
 }
 
 variable "name" {
@@ -49,8 +49,17 @@ variable "release" {
   default = ""
 }
 
+variable "settings" {
+  default = ""
+}
+
 variable "syslog" {
   default = ""
+}
+
+variable "telemetry" {
+  type   = bool
+  default = false
 }
 
 variable "whitelist" {

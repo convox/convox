@@ -288,7 +288,7 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 			s.Containers[idx].Resources = ac.ResourceRequirements{}
 			s.Containers[idx].SecurityContext = &ac.SecurityContext{SeccompProfile: &ac.SeccompProfile{Type: ac.SeccompProfileTypeUnconfined}}
 			if opts.Privileged != nil && *opts.Privileged {
-				s.Containers[idx].SecurityContext = &ac.SecurityContext{Privileged: options.Bool(true)}
+				s.Containers[idx].SecurityContext.Privileged = options.Bool(true)
 				ans[fmt.Sprintf("container.apparmor.security.beta.kubernetes.io/%s", s.Containers[idx].Name)] = "unconfined"
 			}
 		}

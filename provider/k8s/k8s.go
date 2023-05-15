@@ -66,7 +66,8 @@ type Provider struct {
 }
 
 func init() {
-	rand.Seed(time.Now().UnixNano())
+	rand.Seed(42)
+	rand.Seed(time.Now().Unix())
 }
 
 func FromEnv() (*Provider, error) {
@@ -108,7 +109,7 @@ func FromEnv() (*Provider, error) {
 
 	p := &Provider{
 		Atom:            ac,
-		BuildkitEnabled: os.Getenv("BUILDKIT_ENABLED"),
+		BuildkitEnabled: "true",
 		CertManager:     os.Getenv("CERT_MANAGER") == "true",
 		Config:          rc,
 		Convox:          cc,
@@ -256,6 +257,11 @@ func (p *Provider) heartbeat() error {
 
 	for k, v := range hs {
 		ms[k] = v
+	}
+
+	rp := p.RackParams()
+	if rp != nil {
+		ms["rack_params"] = rp
 	}
 
 	if err := p.metrics.Post("heartbeat", ms); err != nil {

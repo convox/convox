@@ -48,7 +48,6 @@ module "rack" {
     kubernetes = kubernetes
   }
 
-  buildkit_enabled    = var.buildkit_enabled
   cluster             = module.cluster.id
   docker_hub_username = var.docker_hub_username
   docker_hub_password = var.docker_hub_password
@@ -58,7 +57,9 @@ module "rack" {
   region              = var.region
   release             = local.release
   resource_group      = azurerm_resource_group.rack.id
+  settings            = var.settings
   syslog              = var.syslog
+  telemetry           = var.telemetry
   whitelist           = split(",", var.whitelist)
   workspace           = module.cluster.workspace
 }

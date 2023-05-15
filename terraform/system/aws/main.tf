@@ -7,7 +7,7 @@ provider "kubernetes" {
   host                   = module.cluster.endpoint
 
   exec {
-    api_version = "client.authentication.k8s.io/v1alpha1"
+    api_version = "client.authentication.k8s.io/v1beta1"
     args        = ["eks", "get-token", "--cluster-name", var.name]
     command     = "aws"
   }
@@ -126,10 +126,12 @@ module "rack" {
   oidc_sub            = module.cluster.oidc_sub
   proxy_protocol      = var.proxy_protocol
   release             = local.release
+  settings            = var.settings
   ssl_ciphers         = var.ssl_ciphers
   ssl_protocols       = var.ssl_protocols
   subnets             = module.cluster.subnets
   tags                = local.tag_map
+  telemetry           = var.telemetry
   whitelist           = split(",", var.whitelist)
   ebs_csi_driver_name = module.cluster.ebs_csi_driver_name
 }

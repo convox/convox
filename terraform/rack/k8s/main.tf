@@ -7,6 +7,10 @@ resource "kubernetes_namespace" "system" {
       type   = "rack"
     }
 
+    annotations = {
+      "eks_addons_dependency" = length(var.eks_addons) > 0 ? var.eks_addons[0] : "" // explicit eks addon dependency
+    }
+
     name = "${var.name}-system"
   }
 
@@ -17,7 +21,7 @@ resource "kubernetes_namespace" "system" {
 
 resource "kubernetes_config_map" "rack" {
   metadata {
-    namespace = kubernetes_namespace.system.metadata.0.name
+    namespace = kubernetes_namespace.system.metadata[0].name
     name      = "rack"
   }
 
@@ -29,7 +33,7 @@ resource "kubernetes_config_map" "rack" {
 resource "kubernetes_secret" "docker_hub_authentication" {
   count = var.docker_hub_username != "" ? 1 : 0
   metadata {
-    namespace = kubernetes_namespace.system.metadata.0.name
+    namespace = kubernetes_namespace.system.metadata[0].name
     name = "docker-hub-authentication"
   }
 
@@ -46,4 +50,15 @@ DOCKER
   }
 
   type = "kubernetes.io/dockerconfigjson"
+}
+
+resource "kubernetes_config_map" "telemetry_configuration" {
+  count = (var.telemetry && var.settings != "") ? 1 : 0
+
+  metadata {
+    namespace = kubernetes_namespace.system.metadata[0].name
+    name      = "telemetry-rack-params"
+  }
+
+  data = jsondecode(file("${var.settings}/vars.json"))
 }

@@ -19,6 +19,9 @@ import (
 	"github.com/convox/stdcli"
 )
 
+const MINOR_TELEMETRY_SUPPORTED = 12
+const PATCH_TELEMETRY_SUPPORTED = 1
+
 type Terraform struct {
 	ctx      *stdcli.Context
 	endpoint string
@@ -441,6 +444,10 @@ func (t Terraform) update(release string, vars map[string]string) error {
 
 	tf := filepath.Join(dir, "main.tf")
 
+	if hasSupport(release) {
+		vars["settings"] = dir
+	}
+
 	params := map[string]interface{}{
 		"Name":     t.name,
 		"Provider": t.provider,
@@ -458,6 +465,17 @@ func (t Terraform) update(release string, vars map[string]string) error {
 	}
 
 	return nil
+}
+
+func hasSupport(release string) bool {
+	rv, _ := convertToReleaseVersion(release)
+	if rv != nil {
+		if rv.Minor > MINOR_TELEMETRY_SUPPORTED || (rv.Minor == MINOR_TELEMETRY_SUPPORTED && rv.Revision >= PATCH_TELEMETRY_SUPPORTED) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (t Terraform) vars() (map[string]string, error) {
@@ -824,7 +842,7 @@ func terraformWriteTemplate(filename, version string, params map[string]interfac
 	t, err := template.New("main").Funcs(terraformTemplateHelpers()).Parse(`
 		module "system" {
 			source = "{{.Source}}"
-
+			
 			{{- range (keys .Vars) }}
 			{{.}} = "{{index $.Vars .}}"
 			{{- end }}

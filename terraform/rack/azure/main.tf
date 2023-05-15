@@ -10,6 +10,8 @@ module "k8s" {
   domain              = module.router.endpoint
   name                = var.name
   release             = var.release
+  settings            = var.settings
+  telemetry           = var.telemetry
 }
 
 module "api" {
@@ -20,7 +22,6 @@ module "api" {
     kubernetes = kubernetes
   }
 
-  buildkit_enabled          = var.buildkit_enabled
   cluster                   = var.cluster
   docker_hub_authentication = module.k8s.docker_hub_authentication
   domain                    = module.router.endpoint

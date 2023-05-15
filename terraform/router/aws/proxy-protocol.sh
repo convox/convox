@@ -34,7 +34,7 @@ do
     fi
     echo "waiting for NLB target-groups..."
     sleep 30
-    target_groups=$(aws resourcegroupstaggingapi get-resources --tag-filters "Key=kubernetes.io/service-name,Values=$1-system/router" --resource-type-filters "elasticloadbalancing:targetgroup")
+    target_groups=$(aws --region=$3 resourcegroupstaggingapi get-resources --tag-filters "Key=kubernetes.io/service-name,Values=$1-system/router" --resource-type-filters "elasticloadbalancing:targetgroup")
     target_groups=$(echo $target_groups | jq -r "[.ResourceTagMappingList[] | .ResourceARN] | @sh" | tr -d \')
 done
 
