@@ -80,9 +80,32 @@ func (p *Provider) CertificateGenerate(domains []string) (*structs.Certificate, 
 }
 
 func (p *Provider) CertificateList() (structs.Certificates, error) {
-	ss, err := p.Cluster.CoreV1().Secrets(p.Namespace).List(context.TODO(), am.ListOptions{
+	ns, err := p.Cluster.CoreV1().Namespaces().List(context.TODO(), am.ListOptions{
+		LabelSelector: fmt.Sprintf("system=convox,rack=%s", p.Name),
+	})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	cs := structs.Certificates{}
+
+	for _, n := range ns.Items {
+		certs, err := p.certFromNamespace(n)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		for _, c := range certs {
+			cs = append(cs, c)
+		}
+	}
+
+	return cs, nil
+}
+
+func (p *Provider) certFromNamespace(ns ac.Namespace) (structs.Certificates, error) {
+	ss, err := p.Cluster.CoreV1().Secrets(ns.Name).List(context.TODO(), am.ListOptions{
 		FieldSelector: "type=kubernetes.io/tls",
-		LabelSelector: fmt.Sprintf("system=convox,rack=%s,type=certificate", p.Name),
 	})
 	if err != nil {
 		return nil, errors.WithStack(err)
