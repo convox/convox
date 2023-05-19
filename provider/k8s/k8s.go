@@ -19,10 +19,12 @@ import (
 	"github.com/convox/logger"
 	"github.com/gobuffalo/packr"
 	"github.com/pkg/errors"
+	"k8s.io/client-go/discovery"
 
 	ae "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -41,8 +43,11 @@ type Provider struct {
 	Config          *rest.Config
 	Convox          cv.Interface
 	Cluster         kubernetes.Interface
+	DiscoveryClient discovery.DiscoveryInterface
 	Domain          string
 	DomainInternal  string
+	DynamicClient   dynamic.Interface
+	RestClient      rest.Interface
 	Engine          Engine
 	Image           string
 	Name            string
@@ -103,10 +108,15 @@ func FromEnv() (*Provider, error) {
 		return nil, err
 	}
 
+	dc, err := dynamic.NewForConfig(rc)
+	if err != nil {
+		return nil, err
+	}
+
 	ms := NewMetricScraperClient(kc, os.Getenv("METRICS_SCRAPER_HOST"))
 
 	rn := common.CoalesceString(os.Getenv("RACK_NAME"), ns.Labels["rack"])
-
+	kc.Discovery()
 	p := &Provider{
 		Atom:            ac,
 		BuildkitEnabled: "true",
@@ -114,8 +124,11 @@ func FromEnv() (*Provider, error) {
 		Config:          rc,
 		Convox:          cc,
 		Cluster:         kc,
+		DiscoveryClient: kc.Discovery(),
+		DynamicClient:   dc,
 		Domain:          os.Getenv("DOMAIN"),
 		DomainInternal:  os.Getenv("DOMAIN_INTERNAL"),
+		RestClient:      kc.RESTClient(),
 		Image:           os.Getenv("IMAGE"),
 		MetricsClient:   mc,
 		MetricScraper:   ms,

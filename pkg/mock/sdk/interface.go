@@ -557,6 +557,20 @@ func (_m *Interface) CertificateDelete(id string) error {
 	return r0
 }
 
+// CertificateRenew provides a mock function with given fields: id
+func (_m *Interface) CertificateRenew(id string) error {
+	ret := _m.Called(id)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string) error); ok {
+		r0 = rf(id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // CertificateGenerate provides a mock function with given fields: domains
 func (_m *Interface) CertificateGenerate(domains []string) (*structs.Certificate, error) {
 	ret := _m.Called(domains)

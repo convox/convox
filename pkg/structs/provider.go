@@ -35,6 +35,7 @@ type Provider interface {
 	CertificateApply(app, service string, port int, id string) error
 	CertificateCreate(pub, key string, opts CertificateCreateOptions) (*Certificate, error)
 	CertificateDelete(id string) error
+	CertificateRenew(id string) error
 	CertificateGenerate(domains []string) (*Certificate, error)
 	CertificateList() (Certificates, error)
 
