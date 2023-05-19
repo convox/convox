@@ -438,6 +438,21 @@ func (s *Server) CertificateDelete(c *stdapi.Context) error {
 	return c.RenderOK()
 }
 
+func (s *Server) CertificateRenew(c *stdapi.Context) error {
+	if err := s.hook("CertificateRenewValidate", c); err != nil {
+		return err
+	}
+
+	id := c.Var("id")
+
+	err := s.provider(c).WithContext(c.Context()).CertificateRenew(id)
+	if err != nil {
+		return err
+	}
+
+	return c.RenderOK()
+}
+
 func (s *Server) CertificateGenerate(c *stdapi.Context) error {
 	if err := s.hook("CertificateGenerateValidate", c); err != nil {
 		return err

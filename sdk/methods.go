@@ -295,6 +295,16 @@ func (c *Client) CertificateDelete(id string) error {
 	return err
 }
 
+func (c *Client) CertificateRenew(id string) error {
+	var err error
+
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+
+	err = c.Post(fmt.Sprintf("/certificates/%s/renew", id), ro, nil)
+
+	return err
+}
+
 func (c *Client) CertificateGenerate(domains []string) (*structs.Certificate, error) {
 	var err error
 
