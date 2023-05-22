@@ -90,16 +90,13 @@ func (p *Provider) CertificateList() (structs.Certificates, error) {
 	}
 
 	cs := structs.Certificates{}
-
 	for _, n := range ns.Items {
 		certs, err := p.certFromNamespace(n)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
 
-		for _, c := range certs {
-			cs = append(cs, c)
-		}
+		cs = append(cs, certs...)
 	}
 
 	return cs, nil
