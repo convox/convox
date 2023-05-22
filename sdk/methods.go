@@ -131,7 +131,7 @@ func (c *Client) BalancerList(app string) (structs.Balancers, error) {
 	return v, err
 }
 
-func (c *Client) BuildCreate(app string, url string, opts structs.BuildCreateOptions) (*structs.Build, error) {
+func (c *Client) BuildCreate(app, url string, opts structs.BuildCreateOptions) (*structs.Build, error) {
 	var err error
 
 	ro, err := stdsdk.MarshalOptions(opts)
@@ -148,7 +148,7 @@ func (c *Client) BuildCreate(app string, url string, opts structs.BuildCreateOpt
 	return v, err
 }
 
-func (c *Client) BuildExport(app string, id string, w io.Writer) error {
+func (c *Client) BuildExport(app, id string, w io.Writer) error {
 	var err error
 
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
@@ -167,7 +167,7 @@ func (c *Client) BuildExport(app string, id string, w io.Writer) error {
 	return err
 }
 
-func (c *Client) BuildGet(app string, id string) (*structs.Build, error) {
+func (c *Client) BuildGet(app, id string) (*structs.Build, error) {
 	var err error
 
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
@@ -208,7 +208,7 @@ func (c *Client) BuildList(app string, opts structs.BuildListOptions) (structs.B
 	return v, err
 }
 
-func (c *Client) BuildLogs(app string, id string, opts structs.LogsOptions) (io.ReadCloser, error) {
+func (c *Client) BuildLogs(app, id string, opts structs.LogsOptions) (io.ReadCloser, error) {
 	var err error
 
 	ro, err := stdsdk.MarshalOptions(opts)
@@ -228,7 +228,7 @@ func (c *Client) BuildLogs(app string, id string, opts structs.LogsOptions) (io.
 	return v, err
 }
 
-func (c *Client) BuildUpdate(app string, id string, opts structs.BuildUpdateOptions) (*structs.Build, error) {
+func (c *Client) BuildUpdate(app, id string, opts structs.BuildUpdateOptions) (*structs.Build, error) {
 	var err error
 
 	ro, err := stdsdk.MarshalOptions(opts)
@@ -255,7 +255,7 @@ func (c *Client) CapacityGet() (*structs.Capacity, error) {
 	return v, err
 }
 
-func (c *Client) CertificateApply(app string, service string, port int, id string) error {
+func (c *Client) CertificateApply(app, service string, port int, id string) error {
 	var err error
 
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
@@ -346,7 +346,7 @@ func (c *Client) EventSend(action string, opts structs.EventSendOptions) error {
 	return err
 }
 
-func (c *Client) FilesDelete(app string, pid string, files []string) error {
+func (c *Client) FilesDelete(app, pid string, files []string) error {
 	var err error
 
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
@@ -358,7 +358,7 @@ func (c *Client) FilesDelete(app string, pid string, files []string) error {
 	return err
 }
 
-func (c *Client) FilesDownload(app string, pid string, file string) (io.Reader, error) {
+func (c *Client) FilesDownload(app, pid string, file string) (io.Reader, error) {
 	var err error
 
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
@@ -377,7 +377,7 @@ func (c *Client) FilesDownload(app string, pid string, file string) (io.Reader, 
 	return v, err
 }
 
-func (c *Client) FilesUpload(app string, pid string, r io.Reader) error {
+func (c *Client) FilesUpload(app, pid string, r io.Reader) error {
 	var err error
 
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
@@ -453,7 +453,7 @@ func (c *Client) InstanceTerminate(id string) error {
 	return err
 }
 
-func (c *Client) ObjectDelete(app string, key string) error {
+func (c *Client) ObjectDelete(app, key string) error {
 	var err error
 
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
@@ -463,7 +463,7 @@ func (c *Client) ObjectDelete(app string, key string) error {
 	return err
 }
 
-func (c *Client) ObjectExists(app string, key string) (bool, error) {
+func (c *Client) ObjectExists(app, key string) (bool, error) {
 	var err error
 
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
@@ -475,7 +475,7 @@ func (c *Client) ObjectExists(app string, key string) (bool, error) {
 	return v, err
 }
 
-func (c *Client) ObjectFetch(app string, key string) (io.ReadCloser, error) {
+func (c *Client) ObjectFetch(app, key string) (io.ReadCloser, error) {
 	var err error
 
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
@@ -506,7 +506,7 @@ func (c *Client) ObjectList(app string, prefix string) ([]string, error) {
 	return v, err
 }
 
-func (c *Client) ObjectStore(app string, key string, r io.Reader, opts structs.ObjectStoreOptions) (*structs.Object, error) {
+func (c *Client) ObjectStore(app, key string, r io.Reader, opts structs.ObjectStoreOptions) (*structs.Object, error) {
 	var err error
 
 	ro, err := stdsdk.MarshalOptions(opts)
@@ -523,7 +523,7 @@ func (c *Client) ObjectStore(app string, key string, r io.Reader, opts structs.O
 	return v, err
 }
 
-func (c *Client) ProcessExec(app string, pid string, command string, rw io.ReadWriter, opts structs.ProcessExecOptions) (int, error) {
+func (c *Client) ProcessExec(app, pid string, command string, rw io.ReadWriter, opts structs.ProcessExecOptions) (int, error) {
 	var err error
 
 	ro, err := stdsdk.MarshalOptions(opts)
@@ -544,7 +544,7 @@ func (c *Client) ProcessExec(app string, pid string, command string, rw io.ReadW
 	return v, err
 }
 
-func (c *Client) ProcessGet(app string, pid string) (*structs.Process, error) {
+func (c *Client) ProcessGet(app, pid string) (*structs.Process, error) {
 	var err error
 
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
@@ -571,7 +571,7 @@ func (c *Client) ProcessList(app string, opts structs.ProcessListOptions) (struc
 	return v, err
 }
 
-func (c *Client) ProcessLogs(app string, pid string, opts structs.LogsOptions) (io.ReadCloser, error) {
+func (c *Client) ProcessLogs(app, pid string, opts structs.LogsOptions) (io.ReadCloser, error) {
 	var err error
 
 	ro, err := stdsdk.MarshalOptions(opts)
@@ -591,7 +591,7 @@ func (c *Client) ProcessLogs(app string, pid string, opts structs.LogsOptions) (
 	return v, err
 }
 
-func (c *Client) ProcessRun(app string, service string, opts structs.ProcessRunOptions) (*structs.Process, error) {
+func (c *Client) ProcessRun(app, service string, opts structs.ProcessRunOptions) (*structs.Process, error) {
 	var err error
 
 	ro, err := stdsdk.MarshalOptions(opts)
@@ -606,7 +606,7 @@ func (c *Client) ProcessRun(app string, service string, opts structs.ProcessRunO
 	return v, err
 }
 
-func (c *Client) ProcessStop(app string, pid string) error {
+func (c *Client) ProcessStop(app, pid string) error {
 	var err error
 
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
@@ -638,7 +638,7 @@ func (c *Client) Proxy(host string, port int, rw io.ReadWriter, opts structs.Pro
 	return err
 }
 
-func (c *Client) RegistryAdd(server string, username string, password string) (*structs.Registry, error) {
+func (c *Client) RegistryAdd(server, username, password string) (*structs.Registry, error) {
 	var err error
 
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
@@ -697,7 +697,7 @@ func (c *Client) ReleaseCreate(app string, opts structs.ReleaseCreateOptions) (*
 	return v, err
 }
 
-func (c *Client) ReleaseGet(app string, id string) (*structs.Release, error) {
+func (c *Client) ReleaseGet(app, id string) (*structs.Release, error) {
 	var err error
 
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
@@ -724,7 +724,7 @@ func (c *Client) ReleaseList(app string, opts structs.ReleaseListOptions) (struc
 	return v, err
 }
 
-func (c *Client) ReleasePromote(app string, id string, opts structs.ReleasePromoteOptions) error {
+func (c *Client) ReleasePromote(app, id string, opts structs.ReleasePromoteOptions) error {
 	var err error
 
 	ro, err := stdsdk.MarshalOptions(opts)
@@ -737,7 +737,7 @@ func (c *Client) ReleasePromote(app string, id string, opts structs.ReleasePromo
 	return err
 }
 
-func (c *Client) ResourceConsole(app string, name string, rw io.ReadWriter, opts structs.ResourceConsoleOptions) error {
+func (c *Client) ResourceConsole(app, name string, rw io.ReadWriter, opts structs.ResourceConsoleOptions) error {
 	var err error
 
 	ro, err := stdsdk.MarshalOptions(opts)
@@ -759,7 +759,7 @@ func (c *Client) ResourceConsole(app string, name string, rw io.ReadWriter, opts
 	return err
 }
 
-func (c *Client) ResourceExport(app string, name string) (io.ReadCloser, error) {
+func (c *Client) ResourceExport(app, name string) (io.ReadCloser, error) {
 	var err error
 
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
@@ -776,7 +776,7 @@ func (c *Client) ResourceExport(app string, name string) (io.ReadCloser, error) 
 	return v, err
 }
 
-func (c *Client) ResourceGet(app string, name string) (*structs.Resource, error) {
+func (c *Client) ResourceGet(app, name string) (*structs.Resource, error) {
 	var err error
 
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
@@ -788,7 +788,7 @@ func (c *Client) ResourceGet(app string, name string) (*structs.Resource, error)
 	return v, err
 }
 
-func (c *Client) ResourceImport(app string, name string, r io.Reader) error {
+func (c *Client) ResourceImport(app, name string, r io.Reader) error {
 	var err error
 
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
@@ -864,7 +864,7 @@ func (c *Client) ServiceMetrics(app, name string, opts structs.MetricsOptions) (
 	return v, err
 }
 
-func (c *Client) ServiceRestart(app string, name string) error {
+func (c *Client) ServiceRestart(app, name string) error {
 	var err error
 
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
@@ -874,7 +874,7 @@ func (c *Client) ServiceRestart(app string, name string) error {
 	return err
 }
 
-func (c *Client) ServiceUpdate(app string, name string, opts structs.ServiceUpdateOptions) error {
+func (c *Client) ServiceUpdate(app, name string, opts structs.ServiceUpdateOptions) error {
 	var err error
 
 	ro, err := stdsdk.MarshalOptions(opts)
@@ -1012,7 +1012,7 @@ func (c *Client) SystemResourceGet(name string) (*structs.Resource, error) {
 	return v, err
 }
 
-func (c *Client) SystemResourceLink(name string, app string) (*structs.Resource, error) {
+func (c *Client) SystemResourceLink(name, app string) (*structs.Resource, error) {
 	var err error
 
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
@@ -1050,7 +1050,7 @@ func (c *Client) SystemResourceTypes() (structs.ResourceTypes, error) {
 	return v, err
 }
 
-func (c *Client) SystemResourceUnlink(name string, app string) (*structs.Resource, error) {
+func (c *Client) SystemResourceUnlink(name, app string) (*structs.Resource, error) {
 	var err error
 
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
