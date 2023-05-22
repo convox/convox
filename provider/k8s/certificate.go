@@ -15,7 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func (*Provider) CertificateApply(app, service string, port int, id string) error {
+func (*Provider) CertificateApply(_, _ string, _ int, _ string) error {
 	return errors.WithStack(fmt.Errorf("unimplemented"))
 }
 
