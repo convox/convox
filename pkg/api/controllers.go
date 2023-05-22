@@ -557,7 +557,7 @@ func (s *Server) FilesUpload(c *stdapi.Context) error {
 	return c.RenderOK()
 }
 
-func (_ *Server) Initialize(c *stdapi.Context) error {
+func (*Server) Initialize(c *stdapi.Context) error {
 	return stdapi.Errorf(404, "not available via api")
 }
 
@@ -1231,7 +1231,7 @@ func (s *Server) ServiceUpdate(c *stdapi.Context) error {
 	return c.RenderOK()
 }
 
-func (_ *Server) Start(c *stdapi.Context) error {
+func (*Server) Start(c *stdapi.Context) error {
 	return stdapi.Errorf(404, "not available via api")
 }
 
@@ -1252,7 +1252,7 @@ func (s *Server) SystemGet(c *stdapi.Context) error {
 	return c.RenderJSON(v)
 }
 
-func (_ *Server) SystemInstall(c *stdapi.Context) error {
+func (*Server) SystemInstall(c *stdapi.Context) error {
 	return stdapi.Errorf(404, "not available via api")
 }
 
@@ -1503,7 +1503,7 @@ func (s *Server) SystemResourceUpdate(c *stdapi.Context) error {
 	return c.RenderJSON(v)
 }
 
-func (_ *Server) SystemUninstall(c *stdapi.Context) error {
+func (*Server) SystemUninstall(c *stdapi.Context) error {
 	return stdapi.Errorf(404, "not available via api")
 }
 
@@ -1525,7 +1525,7 @@ func (s *Server) SystemUpdate(c *stdapi.Context) error {
 	return c.RenderOK()
 }
 
-func (_ *Server) Workers(c *stdapi.Context) error {
+func (*Server) Workers(c *stdapi.Context) error {
 	return stdapi.Errorf(404, "not available via api")
 }
 
