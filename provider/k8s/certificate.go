@@ -15,7 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func (p *Provider) CertificateApply(app, service string, port int, id string) error {
+func (_ *Provider) CertificateApply(app, service string, port int, id string) error {
 	return errors.WithStack(fmt.Errorf("unimplemented"))
 }
 
@@ -124,7 +124,7 @@ func (p *Provider) certFromNamespace(ns ac.Namespace) (structs.Certificates, err
 	return cs, nil
 }
 
-func (p *Provider) certificateFromSecret(s *ac.Secret) (*structs.Certificate, error) {
+func (_ *Provider) certificateFromSecret(s *ac.Secret) (*structs.Certificate, error) {
 	crt, ok := s.Data["tls.crt"]
 	if !ok {
 		return nil, errors.WithStack(fmt.Errorf("invalid certificate: %s", s.ObjectMeta.Name))
