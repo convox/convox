@@ -267,7 +267,7 @@ func (c *Client) CertificateApply(app, service string, port int, id string) erro
 	return err
 }
 
-func (c *Client) CertificateCreate(pub string, key string, opts structs.CertificateCreateOptions) (*structs.Certificate, error) {
+func (c *Client) CertificateCreate(pub, key string, opts structs.CertificateCreateOptions) (*structs.Certificate, error) {
 	var err error
 
 	ro, err := stdsdk.MarshalOptions(opts)
@@ -358,7 +358,7 @@ func (c *Client) FilesDelete(app, pid string, files []string) error {
 	return err
 }
 
-func (c *Client) FilesDownload(app, pid string, file string) (io.Reader, error) {
+func (c *Client) FilesDownload(app, pid, file string) (io.Reader, error) {
 	var err error
 
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
@@ -492,7 +492,7 @@ func (c *Client) ObjectFetch(app, key string) (io.ReadCloser, error) {
 	return v, err
 }
 
-func (c *Client) ObjectList(app string, prefix string) ([]string, error) {
+func (c *Client) ObjectList(app, prefix string) ([]string, error) {
 	var err error
 
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
@@ -523,7 +523,7 @@ func (c *Client) ObjectStore(app, key string, r io.Reader, opts structs.ObjectSt
 	return v, err
 }
 
-func (c *Client) ProcessExec(app, pid string, command string, rw io.ReadWriter, opts structs.ProcessExecOptions) (int, error) {
+func (c *Client) ProcessExec(app, pid, command string, rw io.ReadWriter, opts structs.ProcessExecOptions) (int, error) {
 	var err error
 
 	ro, err := stdsdk.MarshalOptions(opts)
