@@ -23,6 +23,7 @@ func (s *Server) setupRoutes(r stdapi.Router) {
 	r.Route("PUT", "/apps/{app}/ssl/{service}/{port}", s.CertificateApply)
 	r.Route("POST", "/certificates", s.CertificateCreate)
 	r.Route("DELETE", "/certificates/{id}", s.CertificateDelete)
+	r.Route("POST", "/certificates/{id}/renew", s.CertificateRenew)
 	r.Route("POST", "/certificates/generate", s.CertificateGenerate)
 	r.Route("GET", "/certificates", s.CertificateList)
 	r.Route("POST", "/events", s.EventSend)
@@ -81,4 +82,3 @@ func (s *Server) setupRoutes(r stdapi.Router) {
 	r.Route("PUT", "/system", s.SystemUpdate)
 	r.Route("", "", s.Workers)
 }
-

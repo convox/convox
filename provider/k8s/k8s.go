@@ -19,6 +19,8 @@ import (
 	"github.com/convox/logger"
 	"github.com/gobuffalo/packr"
 	"github.com/pkg/errors"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/dynamic"
 
 	ae "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,21 +41,24 @@ type Provider struct {
 	BuildkitEnabled  string
 	BuildNodeEnabled string
 	CertManager      bool
+	Cluster          kubernetes.Interface
 	Config           *rest.Config
 	Convox           cv.Interface
-	Cluster          kubernetes.Interface
+	DiscoveryClient  discovery.DiscoveryInterface
 	Domain           string
 	DomainInternal   string
+	DynamicClient    dynamic.Interface
 	Engine           Engine
 	Image            string
 	Name             string
-	MetricsClient    metricsclientset.Interface
 	MetricScraper    *MetricScraperClient
+	MetricsClient    metricsclientset.Interface
 	Namespace        string
 	Password         string
 	Provider         string
 	RackName         string
 	Resolver         string
+	RestClient       rest.Interface
 	Router           string
 	Socket           string
 	Storage          string
@@ -94,6 +99,11 @@ func FromEnv() (*Provider, error) {
 		return nil, errors.WithStack(err)
 	}
 
+	dc, err := dynamic.NewForConfig(rc)
+	if err != nil {
+		return nil, err
+	}
+
 	cc, err := cv.NewForConfig(rc)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -113,20 +123,23 @@ func FromEnv() (*Provider, error) {
 		BuildkitEnabled:  "true",
 		BuildNodeEnabled: os.Getenv("BUILD_NODE_ENABLED"),
 		CertManager:      os.Getenv("CERT_MANAGER") == "true",
+		Cluster:          kc,
 		Config:           rc,
 		Convox:           cc,
-		Cluster:          kc,
+		DiscoveryClient:  kc.Discovery(),
 		Domain:           os.Getenv("DOMAIN"),
 		DomainInternal:   os.Getenv("DOMAIN_INTERNAL"),
+		DynamicClient:    dc,
 		Image:            os.Getenv("IMAGE"),
-		MetricsClient:    mc,
 		MetricScraper:    ms,
+		MetricsClient:    mc,
 		Name:             ns.Labels["rack"],
 		Namespace:        ns.Name,
 		Password:         os.Getenv("PASSWORD"),
 		Provider:         common.CoalesceString(os.Getenv("PROVIDER"), "k8s"),
 		RackName:         rn,
 		Resolver:         os.Getenv("RESOLVER"),
+		RestClient:       kc.RESTClient(),
 		Router:           os.Getenv("ROUTER"),
 		Socket:           common.CoalesceString(os.Getenv("SOCKET"), "/var/run/docker.sock"),
 		Storage:          common.CoalesceString(os.Getenv("STORAGE"), "/var/storage"),
