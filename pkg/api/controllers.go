@@ -1528,3 +1528,18 @@ func (s *Server) SystemUpdate(c *stdapi.Context) error {
 func (s *Server) Workers(c *stdapi.Context) error {
 	return stdapi.Errorf(404, "not available via api")
 }
+
+func (s *Server) CertificateRenew(c *stdapi.Context) error {
+	if err := s.hook("CertificateRenewValidate", c); err != nil {
+		return err
+	}
+
+	id := c.Var("id")
+
+	err := s.provider(c).WithContext(c.Context()).CertificateRenew(id)
+	if err != nil {
+		return err
+	}
+
+	return c.RenderOK()
+}

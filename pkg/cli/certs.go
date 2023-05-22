@@ -39,6 +39,11 @@ func init() {
 		Usage:    "<pub> <key>",
 		Validate: stdcli.Args(2),
 	})
+
+	register("certs renew", "renew a certificate", CertsRenew, stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagRack, flagApp},
+		Validate: stdcli.Args(0),
+	})
 }
 
 func Certs(rack sdk.Interface, c *stdcli.Context) error {
@@ -149,4 +154,15 @@ func CertsImport(rack sdk.Interface, c *stdcli.Context) error {
 	}
 
 	return nil
+}
+
+func CertsRenew(rack sdk.Interface, c *stdcli.Context) error {
+	app := app(c)
+	c.Startf("Renewing certificate <app>%s</app>", app)
+
+	if err := rack.CertificateRenew(app); err != nil {
+		return err
+	}
+
+	return c.OK()
 }
