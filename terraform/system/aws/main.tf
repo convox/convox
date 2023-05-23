@@ -47,6 +47,8 @@ module "cluster" {
 
   arm_type                 = local.arm_type
   availability_zones       = var.availability_zones
+  build_node_min_count     = var.build_node_min_count
+  build_node_type          = var.build_node_type != "" ? var.build_node_type : var.node_type
   cidr                     = var.cidr
   coredns_version          = var.coredns_version
   gpu_type                 = local.gpu_type
@@ -111,7 +113,7 @@ module "rack" {
     null_resource.wait_for_cluster
   ]
 
-  buildkit_enabled    = var.buildkit_enabled
+  build_node_enabled  = var.build_node_enabled
   cluster             = module.cluster.id
   docker_hub_username = var.docker_hub_username
   docker_hub_password = var.docker_hub_password

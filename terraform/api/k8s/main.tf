@@ -118,6 +118,12 @@ resource "kubernetes_deployment" "api" {
             name  = "BUILDKIT_ENABLED"
             value = var.buildkit_enabled
           }
+
+          env {
+            name = "BUILD_NODE_ENABLED"
+            value = var.build_node_enabled
+          }
+
           env {
             name  = "DOMAIN"
             value = var.domain

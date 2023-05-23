@@ -321,7 +321,7 @@ resource "kubernetes_cluster_role" "hpa_external_metrics" {
     null_resource.wait_k8s_api
   ]
   metadata {
-    name   = "hpa-external-metrics"
+    name = "hpa-external-metrics"
   }
 
   rule {
@@ -336,7 +336,7 @@ resource "kubernetes_cluster_role_binding" "hpa_external_metrics" {
     null_resource.wait_k8s_api
   ]
   metadata {
-    name   = "hpa-external-metrics"
+    name = "hpa-external-metrics"
   }
 
   role_ref {

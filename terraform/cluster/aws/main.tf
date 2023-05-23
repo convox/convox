@@ -10,9 +10,9 @@ provider "kubernetes" {
 }
 
 locals {
-  availability_zones       = var.availability_zones != "" ? compact(split(",", var.availability_zones)) : data.aws_availability_zones.available.names
-  network_resource_count   = var.high_availability ? 3 : 2
-  oidc_sub                 = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
+  availability_zones     = var.availability_zones != "" ? compact(split(",", var.availability_zones)) : data.aws_availability_zones.available.names
+  network_resource_count = var.high_availability ? 3 : 2
+  oidc_sub               = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
 }
 
 data "aws_availability_zones" "available" {
@@ -75,6 +75,16 @@ resource "random_id" "node_group" {
   }
 }
 
+resource "random_id" "build_node_group" {
+  byte_length = 8
+
+  keepers = {
+    node_disk = var.node_disk
+    node_type = var.build_node_type
+    role_arn  = replace(aws_iam_role.nodes.arn, "role/convox/", "role/") # eks barfs on roles with paths
+  }
+}
+
 resource "aws_eks_node_group" "cluster" {
   depends_on = [
     aws_eks_cluster.cluster,
@@ -107,6 +117,65 @@ resource "aws_eks_node_group" "cluster" {
   lifecycle {
     create_before_destroy = true
     ignore_changes        = [scaling_config[0].desired_size]
+  }
+}
+
+resource "aws_eks_node_group" "cluster-build" {
+  depends_on = [
+    aws_eks_cluster.cluster,
+    aws_iam_openid_connect_provider.cluster,
+  ]
+
+  count = 1
+
+  ami_type        = var.gpu_type ? "AL2_x86_64_GPU" : var.arm_type ? "AL2_ARM_64" : "AL2_x86_64"
+  capacity_type   = "ON_DEMAND"
+  cluster_name    = aws_eks_cluster.cluster.name
+  instance_types  = split(",", random_id.build_node_group.keepers.node_type)
+  node_group_name = "${var.name}-build-${local.availability_zones[count.index]}-${count.index}${random_id.build_node_group.hex}"
+  node_role_arn   = random_id.build_node_group.keepers.role_arn
+  subnet_ids      = [aws_subnet.private[count.index].id]
+  tags            = local.tags
+  version         = var.k8s_version
+
+  labels = {
+    "convox-build" : "true"
+  }
+
+  taint {
+    key    = "dedicated"
+    value  = "build"
+    effect = "NO_SCHEDULE"
+  }
+
+  launch_template {
+    id      = aws_launch_template.cluster.id
+    version = "$Latest"
+  }
+
+  scaling_config {
+    desired_size = var.build_node_min_count
+    min_size     = var.build_node_min_count
+    max_size     = 100
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_autoscaling_group_tag" "cluster-build" {
+  depends_on = [
+    aws_eks_node_group.cluster-build
+  ]
+
+  autoscaling_group_name = aws_eks_node_group.cluster-build[0].resources[0].autoscaling_groups[0].name
+
+  tag {
+    key   = "k8s.io/cluster-autoscaler/node-template/label/convox-build"
+    value = "true"
+
+    propagate_at_launch = true
   }
 }
 
