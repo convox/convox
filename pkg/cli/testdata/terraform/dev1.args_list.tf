@@ -1,9 +1,9 @@
 
 		module "system" {
 			source = "github.com/convox/convox//terraform/system/local?ref=foo"
+			foo = ["bar", "bar", "zzz", ]
 			name = "dev1"
 			release = "foo"
-      subnets = ["foo","bar","zoo"]
 		}
 
 		output "api" {

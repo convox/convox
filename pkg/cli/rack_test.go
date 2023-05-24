@@ -139,6 +139,42 @@ func TestRackInstallArgs(t *testing.T) {
 	})
 }
 
+func TestRackInstallArgsList(t *testing.T) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		rack.TestLatest = "foo"
+
+		me := &mockstdcli.Executor{}
+		me.On("Execute", "terraform", "version").Return([]byte{}, nil)
+		me.On("Terminal", "terraform", "init", "-force-copy", "-no-color", "-upgrade").Return(nil)
+		me.On("Terminal", "terraform", "apply", "-auto-approve", "-no-color").Return(nil)
+		e.Executor = me
+
+		res, err := testExecute(e, "rack install local dev1 foo=bar,bar,zzz", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{""})
+
+		dir := filepath.Join(e.Settings, "racks", "dev1")
+		tf := filepath.Join(dir, "main.tf")
+
+		_, err = os.Stat(dir)
+		require.NoError(t, err)
+		_, err = os.Stat(tf)
+		require.NoError(t, err)
+
+		tfdata, err := ioutil.ReadFile(tf)
+		require.NoError(t, err)
+
+		testdata, err := ioutil.ReadFile("testdata/terraform/dev1.args_list.tf")
+		require.NoError(t, err)
+
+		require.Equal(t, strings.Trim(string(tfdata), "\n"), strings.Trim(string(testdata), "\n"))
+
+		me.AssertExpectations(t)
+	})
+}
+
 func TestRackInstallPrepare(t *testing.T) {
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
 		rack.TestLatest = "foo"
