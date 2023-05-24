@@ -19,3 +19,7 @@ func (p *Provider) IngressClass() string {
 func (p *Provider) IngressInternalClass() string {
 	return "nginx-internal"
 }
+
+func (p *Provider) IngressInternalClass() string {
+	return "nginx-internal"
+}

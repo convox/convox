@@ -151,7 +151,11 @@ resource "kubernetes_role" "ingress-nginx" {
 
   rule {
     api_groups     = ["coordination.k8s.io"]
+<<<<<<< HEAD
     resource_names = ["ingress-controller-leader", "ingress-internal-controller-leader"]
+=======
+    resource_names = ["ingress-controller-leader"]
+>>>>>>> 355928f5 (Feat-838: Internal router  for rack to communication (#565))
     resources      = ["leases"]
     verbs          = ["get", "update"]
   }
@@ -170,7 +174,11 @@ resource "kubernetes_role" "ingress-nginx" {
 
   rule {
     api_groups     = [""]
+<<<<<<< HEAD
     resource_names = ["ingress-controller-leader", "ingress-internal-controller-leader"]
+=======
+    resource_names = ["ingress-controller-leader"]
+>>>>>>> 355928f5 (Feat-838: Internal router  for rack to communication (#565))
     resources      = ["configmaps"]
     verbs          = ["get", "update"]
   }
