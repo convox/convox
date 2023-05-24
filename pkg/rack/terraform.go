@@ -199,10 +199,7 @@ func (t Terraform) Metadata() (*Metadata, error) {
 	}
 
 	vars["name"] = common.CoalesceString(vars["name"], t.name)
-<<<<<<< HEAD
 	vars["rack_name"] = common.CoalesceString(vars["rack_name"], t.name)
-=======
->>>>>>> 18987799 (Revert pkg/rack changes)
 
 	m := &Metadata{
 		Deletable: true,
