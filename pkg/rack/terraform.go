@@ -51,10 +51,7 @@ func CreateTerraform(c *stdcli.Context, name string, md *Metadata) (*Terraform, 
 
 	t := &Terraform{ctx: c, name: name, provider: md.Provider}
 
-	release, ok := md.Vars["release"].(string)
-	if !ok {
-	} // TO-DO: return error
-	if err := t.create(release, md.Vars, md.State); err != nil {
+	if err := t.create(md.Vars["release"], md.Vars, md.State); err != nil {
 		t.Delete()
 		return nil, err
 	}
@@ -67,7 +64,7 @@ func CreateTerraform(c *stdcli.Context, name string, md *Metadata) (*Terraform, 
 	return t, nil
 }
 
-func InstallTerraform(c *stdcli.Context, provider, name, version string, options map[string]interface{}) error {
+func InstallTerraform(c *stdcli.Context, provider, name, version string, options map[string]string) error {
 	if !terraformInstalled(c) {
 		return fmt.Errorf("terraform required")
 	}
@@ -131,6 +128,7 @@ func LoadTerraform(c *stdcli.Context, name string) (*Terraform, error) {
 	if err := json.Unmarshal(data, &output); err != nil {
 		return nil, err
 	}
+
 	endpoint := ""
 	provider := "unknown"
 	status := "unknown"
@@ -201,7 +199,10 @@ func (t Terraform) Metadata() (*Metadata, error) {
 	}
 
 	vars["name"] = common.CoalesceString(vars["name"], t.name)
+<<<<<<< HEAD
 	vars["rack_name"] = common.CoalesceString(vars["rack_name"], t.name)
+=======
+>>>>>>> 18987799 (Revert pkg/rack changes)
 
 	m := &Metadata{
 		Deletable: true,
@@ -226,7 +227,7 @@ func (t Terraform) Name() string {
 	return t.name
 }
 
-func (t Terraform) Parameters() (map[string]interface{}, error) {
+func (t Terraform) Parameters() (map[string]string, error) {
 	vars, err := t.vars()
 	if err != nil {
 		return nil, err
@@ -276,13 +277,13 @@ func (t Terraform) Uninstall() error {
 	return nil
 }
 
-func (t Terraform) UpdateParams(params map[string]interface{}) error {
+func (t Terraform) UpdateParams(params map[string]string) error {
 	vars, err := t.vars()
 	if err != nil {
 		return err
 	}
 
-	release, ok := vars["release"].(string)
+	release, ok := vars["release"]
 	if !ok {
 		return fmt.Errorf("could not determine current release")
 	}
@@ -354,7 +355,7 @@ func (t Terraform) apply() error {
 	return nil
 }
 
-func (t Terraform) create(release string, vars map[string]interface{}, state []byte) error {
+func (t Terraform) create(release string, vars map[string]string, state []byte) error {
 	dir, err := t.settingsDirectory()
 	if err != nil {
 		return err
@@ -402,10 +403,10 @@ func (t Terraform) settingsDirectory() (string, error) {
 	return t.ctx.SettingDirectory(fmt.Sprintf("racks/%s", t.name))
 }
 
-func (t Terraform) update(release string, vars map[string]interface{}) error {
+func (t Terraform) update(release string, vars map[string]string) error {
 	currentVersion := ""
-	if vars != nil && vars["release"].(string) != "" {
-		currentVersion = vars["release"].(string)
+	if vars != nil && vars["release"] != "" {
+		currentVersion = vars["release"]
 	}
 	if release == "" {
 		v, err := terraformLatestVersion(currentVersion)
@@ -417,10 +418,10 @@ func (t Terraform) update(release string, vars map[string]interface{}) error {
 	}
 
 	if vars == nil {
-		vars = map[string]interface{}{}
+		vars = map[string]string{}
 	}
 
-	vars["name"] = common.CoalesceString(vars["name"].(string), t.name)
+	vars["name"] = common.CoalesceString(vars["name"], t.name)
 	vars["release"] = release
 	vars["rack_name"] = common.CoalesceString(vars["rack_name"], t.name)
 
@@ -517,13 +518,10 @@ func (t Terraform) varsFile() (string, error) {
 	return vf, nil
 }
 
-func (t Terraform) writeVars(vars map[string]interface{}) error {
+func (t Terraform) writeVars(vars map[string]string) error {
 	for k, v := range vars {
-		switch t := v.(type) {
-		case string:
-			if strings.TrimSpace(t) == "" {
-				delete(vars, k)
-			}
+		if strings.TrimSpace(v) == "" {
+			delete(vars, k)
 		}
 	}
 
@@ -574,6 +572,7 @@ func listTerraform(c *stdcli.Context) ([]Terraform, error) {
 
 		ts = append(ts, *t)
 	}
+
 	return ts, nil
 }
 
