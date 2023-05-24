@@ -106,7 +106,7 @@ func init() {
 	})
 }
 
-func validateParams(params map[string]string) error {
+func validateParams(params map[string]interface{}) error {
 	if params["high_availability"] != "" {
 		return errors.New("the high_availability parameter is only supported during rack installation")
 	}
@@ -118,7 +118,11 @@ func validateParams(params map[string]string) error {
 
 	// format: "key1=val1,key2=val2"
 	if tags, has := params["tags"]; has {
-		tList := strings.Split(tags, ",")
+		asStr, ok := tags.(string)
+		if !ok {
+			return errors.New(fmt.Sprint("cannot cast tag to string", params["tags"]))
+		}
+		tList := strings.Split(asStr, ",")
 		for _, p := range tList {
 			if len(strings.Split(p, "=")) != 2 {
 				return errors.New("invalid value for tags param")
@@ -334,7 +338,7 @@ func RackParams(_ sdk.Interface, c *stdcli.Context) error {
 	i := c.Info()
 
 	for _, k := range keys {
-		i.Add(k, params[k])
+		i.Add(k, fmt.Sprint(params[k]))
 	}
 
 	return i.Print()
@@ -469,7 +473,11 @@ func RackScale(rack sdk.Interface, c *stdcli.Context) error {
 
 	i := c.Info()
 
-	i.Add("Autoscale", s.Parameters["Autoscale"])
+	asStr, ok := s.Parameters["Autoscale"].(string)
+	if !ok {
+		return fmt.Errorf("cannot cast parameter autoscale to string, got: %s", fmt.Sprint(s.Parameters["Autoscale"]))
+	}
+	i.Add("Autoscale", asStr)
 	i.Add("Count", fmt.Sprintf("%d", s.Count))
 	i.Add("Status", s.Status)
 	i.Add("Type", s.Type)

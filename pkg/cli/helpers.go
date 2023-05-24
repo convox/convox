@@ -27,12 +27,17 @@ func app(c *stdcli.Context) string {
 	return coalesce(c.String("app"), c.LocalSetting("app"), filepath.Base(wd))
 }
 
-func argsToOptions(args []string) map[string]string {
-	options := map[string]string{}
+func argsToOptions(args []string) map[string]interface{} {
+	options := map[string]interface{}{}
 
 	for _, arg := range args {
 		parts := strings.SplitN(arg, "=", 2)
-		options[parts[0]] = parts[1]
+		optionName := parts[0]
+		if strings.Contains(parts[1], ",") {
+			options[optionName] = strings.Split(parts[1], ",")
+		} else {
+			options[optionName] = parts[1]
+		}
 	}
 
 	return options
