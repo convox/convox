@@ -8,12 +8,6 @@ require (
 	github.com/Azure/azure-storage-file-go v0.6.0
 	github.com/Azure/go-autorest/autorest v0.11.18
 	github.com/Azure/go-autorest/autorest/azure/auth v0.4.0
-<<<<<<< HEAD
-=======
-	github.com/Azure/go-autorest/autorest/to v0.3.0 // indirect
-	github.com/Azure/go-autorest/autorest/validation v0.2.0 // indirect
-	github.com/Microsoft/hcsshim v0.8.7-0.20190801035247-8694eade7dd3 // indirect
->>>>>>> 8db66401 (Remove outdated code and unused lib (#611))
 	github.com/algolia/algoliasearch-client-go v2.25.0+incompatible
 	github.com/aws/aws-sdk-go v1.21.10
 	github.com/convox/changes v0.0.0-20191105034405-8c0df759a3b3

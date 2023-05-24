@@ -842,7 +842,7 @@ func terraformWriteTemplate(filename, version string, params map[string]interfac
 	t, err := template.New("main").Funcs(terraformTemplateHelpers()).Parse(`
 		module "system" {
 			source = "{{.Source}}"
-
+			
 			{{- range (keys .Vars) }}
 			{{.}} = "{{index $.Vars .}}"
 			{{- end }}
