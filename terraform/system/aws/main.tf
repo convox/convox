@@ -79,12 +79,6 @@ resource "null_resource" "wait_for_cluster" {
   }
 }
 
-resource "null_resource" "wait_for_cluster" {
-  provisioner "local-exec" {
-    command = "sleep 1 && echo ${module.cluster.eks_addons[0]}"
-  }
-}
-
 module "fluentd" {
   source = "../../fluentd/aws"
 
