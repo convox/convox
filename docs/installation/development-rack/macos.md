@@ -51,7 +51,6 @@ Finally, to address the rack on macOS you must open a new terminal window and ru
 
 You can now run: `convox rack -r <RACK_NAME>` to verify connectivity.
 
-
 ## Management
 
 Local rack files are stored at `/Users/$USER/Library/Preferences/convox/racks/<RACK_NAME>`
