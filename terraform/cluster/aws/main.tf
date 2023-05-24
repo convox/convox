@@ -154,7 +154,6 @@ resource "aws_eks_node_group" "cluster-build" {
   }
 
   scaling_config {
-    desired_size = var.build_node_min_count
     min_size     = var.build_node_min_count
     max_size     = 100
   }
