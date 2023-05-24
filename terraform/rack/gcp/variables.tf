@@ -23,12 +23,8 @@ variable "name" {
 }
 
 variable "rack_name" {
-<<<<<<< HEAD
   default = ""
   type    = string
-=======
-  type = string
->>>>>>> 24b9e3c9 (Change rack name (#589))
 }
 
 variable "network" {
