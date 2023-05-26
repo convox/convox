@@ -1,4 +1,4 @@
-name: cleanup_aws
+name: cleanup_aws_do
 
 on:
   schedule:
@@ -10,19 +10,22 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
-      matrix:
-        provider:
-          - aws
     steps:
       - name: checkout
         uses: actions/checkout@v3
-      - name: provider
-        run: echo "PROVIDER=${{ matrix.provider }}" >> $GITHUB_ENV
       - name: secrets
         run: ci/secrets.sh
         env:
           SECRETS: ${{ toJson(secrets) }}
+          PROVIDER: aws
       - name: dependencies
         run: ci/dependencies.sh
       - name: cleanup
         run: ci/cleanup.sh
+      - name: do secrets
+        run: ci/secrets.sh
+        env:
+          SECRETS: ${{ toJson(secrets) }}
+          PROVIDER: do
+      - name: do cleanup
+        run: ci/do_cleanup.sh
