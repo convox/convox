@@ -24,6 +24,7 @@ type Service struct {
 	Init           bool                  `yaml:"init,omitempty"`
 	Internal       bool                  `yaml:"internal,omitempty"`
 	InternalRouter bool                  `yaml:"internalRouter,omitempty"`
+	Lifecycle      ServiceLifecycle      `yaml:"lifecycle,omitempty"`
 	Port           ServicePortScheme     `yaml:"port,omitempty"`
 	Ports          []ServicePortProtocol `yaml:"ports,omitempty"`
 	Privileged     bool                  `yaml:"privileged,omitempty"`
@@ -69,6 +70,11 @@ type ServiceHealth struct {
 	Interval int
 	Path     string
 	Timeout  int
+}
+
+type ServiceLifecycle struct {
+	PreStop   string `yaml:"preStop,omitempty"`
+	PostStart string `yaml:"postStart,omitempty"`
 }
 
 type ServicePortProtocol struct {
