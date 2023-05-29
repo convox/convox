@@ -6,7 +6,7 @@ url: /configuration/service-discovery
 ---
 # Service Discovery
 
-## Load Balanced
+## Load Balancer
 
 The load balancer hostname for a particular [Service](/reference/primitives/app/service) can
 be found using `convox services`.
