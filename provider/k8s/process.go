@@ -293,6 +293,34 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 			}
 		}
 		s.RestartPolicy = ac.RestartPolicyNever
+		if p.BuildNodeEnabled == "true" {
+			s.Affinity = &ac.Affinity{
+				NodeAffinity: &ac.NodeAffinity{
+					RequiredDuringSchedulingIgnoredDuringExecution: &ac.NodeSelector{
+						NodeSelectorTerms: []ac.NodeSelectorTerm{
+							{
+								MatchExpressions: []ac.NodeSelectorRequirement{
+									{
+										Key:      "convox-build",
+										Operator: ac.NodeSelectorOpIn,
+										Values: []string{
+											"true",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+			s.Tolerations = []ac.Toleration{
+				{
+					Key:      "dedicated",
+					Operator: ac.TolerationOpExists,
+					Effect:   ac.TaintEffectNoSchedule,
+				},
+			}
+		}
 	}
 
 	pod := &ac.Pod{
