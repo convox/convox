@@ -406,7 +406,7 @@ resource "kubernetes_deployment" "ingress-nginx-internal" {
           args = [
             "/nginx-ingress-controller",
             "--watch-ingress-without-class=false",
-            "--configmap=$(POD_NAMESPACE)/nginx-configuration",
+            "--configmap=$(POD_NAMESPACE)/nginx-internal-configuration",
             "--tcp-services-configmap=$(POD_NAMESPACE)/tcp-services",
             "--udp-services-configmap=$(POD_NAMESPACE)/udp-services",
             "--publish-service=$(POD_NAMESPACE)/router-internal",
