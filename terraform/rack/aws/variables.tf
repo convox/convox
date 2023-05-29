@@ -2,6 +2,11 @@ variable "buildkit_enabled" {
   default = false
 }
 
+variable "build_node_enabled" {
+  default = false
+  type    = bool
+}
+
 variable "cluster" {
   type = string
 }
@@ -87,7 +92,7 @@ variable "ssl_protocols" {
 }
 
 variable "telemetry" {
-  type   = bool
+  type = bool
 }
 
 variable "whitelist" {
