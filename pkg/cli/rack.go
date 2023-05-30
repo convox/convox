@@ -288,11 +288,9 @@ func RackMv(ri sdk.Interface, c *stdcli.Context) error {
 	params := make(map[string]string)
 
 	// only 3.11.2+ supports rack_name
-	s, _ := ri.SystemGet()
-	if s.Name != "" {
-		if rack.HasSupport(s.Version, rack.MINOR_RACK_NAME_SUPPORT, rack.PATCH_RACK_NAME_SUPPORT) {
-			params["rack_name"] = newRackName
-		}
+	s, err := ri.SystemGet()
+	if err == nil && rack.HasSupport(s.Version, rack.MINOR_RACK_NAME_SUPPORT, rack.PATCH_RACK_NAME_SUPPORT) {
+		params["rack_name"] = newRackName
 	}
 
 	if err := fr.UpdateParams(params); err != nil {
