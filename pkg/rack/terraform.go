@@ -208,8 +208,8 @@ func (t Terraform) Metadata() (*Metadata, error) {
 	// only 3.11.2+ supports rack_name
 	c, err := t.Client()
 	if err == nil {
-		s, _ := c.SystemGet()
-		if s.Name != "" && HasSupport(s.Version, MINOR_RACK_NAME_SUPPORT, PATCH_RACK_NAME_SUPPORT) {
+		s, err := c.SystemGet()
+		if err == nil && HasSupport(s.Version, MINOR_RACK_NAME_SUPPORT, PATCH_RACK_NAME_SUPPORT) {
 			vars["rack_name"] = common.CoalesceString(vars["rack_name"], t.name)
 		}
 	}
@@ -434,16 +434,6 @@ func (t Terraform) update(release string, vars map[string]string) error {
 	vars["name"] = common.CoalesceString(vars["name"], t.name)
 	vars["release"] = release
 
-	// only 3.11.2+ supports rack_name
-	c, err := t.Client()
-	if err == nil {
-		s, _ := c.SystemGet()
-
-		if s.Name != "" && HasSupport(s.Version, MINOR_RACK_NAME_SUPPORT, PATCH_RACK_NAME_SUPPORT) {
-			vars["rack_name"] = common.CoalesceString(vars["rack_name"], t.name)
-		}
-	}
-
 	pv, err := terraformProviderVars(t.provider)
 	if err != nil {
 		return err
@@ -466,6 +456,12 @@ func (t Terraform) update(release string, vars map[string]string) error {
 
 	tf := filepath.Join(dir, "main.tf")
 
+	// only 3.11.2+ supports rack_name
+	if HasSupport(release, MINOR_RACK_NAME_SUPPORT, PATCH_RACK_NAME_SUPPORT) {
+		vars["rack_name"] = common.CoalesceString(vars["rack_name"], t.name)
+	}
+
+	// support for telemetry
 	if HasSupport(release, MINOR_TELEMETRY_SUPPORTED, PATCH_TELEMETRY_SUPPORTED) {
 		vars["settings"] = dir
 	}
