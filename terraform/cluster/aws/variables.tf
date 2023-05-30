@@ -6,6 +6,10 @@ variable "availability_zones" {
   default = ""
 }
 
+variable "build_node_enabled" {
+  default = false
+  type    = bool
+}
 
 variable "build_node_type" {
   type = string
