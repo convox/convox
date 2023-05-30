@@ -126,7 +126,7 @@ resource "aws_eks_node_group" "cluster-build" {
     aws_iam_openid_connect_provider.cluster,
   ]
 
-  count = 1
+  count = var.build_node_enabled ? 1 : 0
 
   ami_type        = var.gpu_type ? "AL2_x86_64_GPU" : var.arm_type ? "AL2_ARM_64" : "AL2_x86_64"
   capacity_type   = "ON_DEMAND"
@@ -168,6 +168,8 @@ resource "aws_autoscaling_group_tag" "cluster-build" {
   depends_on = [
     aws_eks_node_group.cluster-build
   ]
+
+  count = var.build_node_enabled ? 1 : 0
 
   autoscaling_group_name = aws_eks_node_group.cluster-build[0].resources[0].autoscaling_groups[0].name
 
