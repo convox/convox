@@ -187,7 +187,7 @@ github.com/davecgh/go-spew/spew
 # github.com/dimchansky/utfbom v1.1.0
 ## explicit
 github.com/dimchansky/utfbom
-# github.com/docker/distribution v2.7.1+incompatible
+# github.com/docker/distribution v2.8.2+incompatible
 ## explicit
 github.com/docker/distribution/registry/api/errcode
 # github.com/docker/docker v1.4.2-0.20190710153559-aa8249ae1b8b
