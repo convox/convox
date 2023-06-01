@@ -3,7 +3,6 @@
 			baz = "qux"
 			name = "dev2"
 			other = "side"
-			rack_name = "dev2"
 			release = ""
 		}
 

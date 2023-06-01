@@ -6,7 +6,7 @@ url: /configuration/service-discovery
 ---
 # Service Discovery
 
-## Load Balanced
+## Load Balancer
 
 The load balancer hostname for a particular [Service](/reference/primitives/app/service) can
 be found using `convox services`.
@@ -62,9 +62,3 @@ The `web` [Service](/reference/primitives/app/service) could reach the `auth` [S
 > Note that the internal port of the `auth` [Service](/reference/primitives/app/service) is not receiving
 > automatic SSL termination. If you want this connection to be encrypted you would need to handle SSL
 > inside the [Service](/reference/primitives/app/service).
-
-DNS search suffixes are automatically configured for internal hostnames on a Rack. The following URLs would
-also work for contacting the `auth` [Service](/reference/primitives/app/service):
-
-* `http://auth:5000` for [Services](/reference/primitives/app/service) on the same app.
-* `http://auth.myapp:5000` for other [Apps](/reference/primitives/app) on the same Rack.

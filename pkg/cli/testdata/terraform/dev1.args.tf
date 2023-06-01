@@ -3,7 +3,6 @@
 			baz = "qux"
 			foo = "bar"
 			name = "dev1"
-			rack_name = "dev1"
 			release = "foo"
 		}
 

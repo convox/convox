@@ -24,6 +24,7 @@ module "api" {
   }
 
   buildkit_enabled          = var.buildkit_enabled
+  build_node_enabled        = var.build_node_enabled
   docker_hub_authentication = module.k8s.docker_hub_authentication
   domain                    = try(module.router.endpoint, "") # terraform destroy sometimes failes to resolve the value
   domain_internal           = module.router.endpoint_internal

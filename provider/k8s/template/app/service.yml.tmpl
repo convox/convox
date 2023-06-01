@@ -113,6 +113,25 @@ spec:
             name: env-{{.Service.Name}}
         image: {{ image .App .Service .Release }}
         imagePullPolicy: IfNotPresent
+        {{ if or .Service.Lifecycle.PostStart .Service.Lifecycle.PreStop }}
+        lifecycle:
+          {{ with .Service.Lifecycle.PostStart }}
+          postStart:
+            exec:
+              command:
+              {{ range shellsplit . }}
+                - {{ safe . }}
+              {{ end }}
+          {{ end }}
+          {{ with .Service.Lifecycle.PreStop }}
+          preStop:
+            exec:
+              command:
+              {{ range shellsplit . }}
+                - {{ safe . }}
+              {{ end }}
+          {{ end }}
+        {{ end }}
         {{ with .Service.Port.Port }}
         readinessProbe:
           httpGet:

@@ -2,8 +2,17 @@ variable "availability_zones" {
   default = ""
 }
 
-variable "buildkit_enabled" {
+variable "build_node_enabled" {
   default = false
+  type    = bool
+}
+
+variable "build_node_type" {
+  default = ""
+}
+
+variable "build_node_min_count" {
+  default = 0
 }
 
 variable "cert_duration" {
@@ -160,7 +169,7 @@ variable "tags" {
 }
 
 variable "telemetry" {
-  type   = bool
+  type    = bool
   default = false
 }
 

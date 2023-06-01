@@ -46,6 +46,9 @@ The following environment variables are required:
 | Name                     | Default                | Description                                                                                                    |
 | -------------------------|------------------------|----------------------------------------------------------------------------------------------------------------|
 | **availability_zones**   |                        | Specify a list of AZ names (minimum 3) to override the random automatic selection from AWS                     |
+| **build_node_enabled**   |     false              | Enabled dedicated build node for build |
+| **build_node_type**      | same as **node_type**  | Node type for the build node |
+| **build_node_min_count** |     0                  | Minimum number of build nodes to keep running |
 | **cert_duration**        | **2160h**              | Certification renew period                                                                                     | 
 | **cidr**                 | **10.1.0.0/16**        | CIDR range for VPC                                                                                             |
 | **gpu_tag_enable**       | **false**              | Enable gpu tagging. Some aws region doesn't support gpu tagging  |
@@ -62,8 +65,8 @@ The following environment variables are required:
 | **node_type**            | **t3.small**           | Node instance type. You can also pass a comma separated list of instance types                                 |
 | **schedule_rack_scale_down**   |                        | Rack scale down schedule is specified by the user following the Unix cron syntax format. Example: "0 18 * * 5". The supported cron expression format consists of five fields separated by white spaces: [Minute] [Hour] [Day_of_Month] [Month_of_Year] [Day_of_Week]. More details on the CRON format can be found in (Crontab)[http://crontab.org/] and (examples)[https://crontab.guru/examples.html]. The time is calculated in **UTC**. |
 | **schedule_rack_scale_up**    |                        | Rack scale up schedule is specified by the user following the Unix cron syntax format.Example: "0 0 * * 0". The supported cron expression format consists of five fields separated by white spaces: [Minute] [Hour] [Day_of_Month] [Month_of_Year] [Day_of_Week]. More details on the CRON format can be found in (Crontab)[http://crontab.org/] and (examples)[https://crontab.guru/examples.html]. The time is calculated in **UTC**. |
-| **private**              | **false**               | Put nodes in private subnets behind NAT gateways                                                               |
-| **proxy_protocol**       | **false**               | Enable proxy protocol. With this parameter set, the client source ip will be available in the request header `x-forwarded-for` key. **Requires 5 - 10 minutes downtime**.          |
+| **private**              | **true**               | Put nodes in private subnets behind NAT gateways                                                               |
+| **proxy_protocol**       | **false**               | Enable proxy protocol. With this parameter set, the client source ip will be available in the request header `x-forwarded-for` key. **Requires 5 - 10 minutes downtime**. This is not applicable for **internal_router**        |
 | **region**               | **us-east-1**          | AWS Region                                                                                                     |
 | **syslog**               |                        | Forward logs to a syslog endpoint (e.g. **tcp+tls://example.org:1234**)                                        |
 | **ssl_ciphers**          |                        | SSL ciphers to use for (nginx)[https://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_ciphers]. They must be separated by colon.|

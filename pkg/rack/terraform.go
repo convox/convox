@@ -19,8 +19,13 @@ import (
 	"github.com/convox/stdcli"
 )
 
-const MINOR_TELEMETRY_SUPPORTED = 12
-const PATCH_TELEMETRY_SUPPORTED = 1
+const (
+	MINOR_TELEMETRY_SUPPORTED = 12
+	PATCH_TELEMETRY_SUPPORTED = 1
+
+	MINOR_RACK_NAME_SUPPORT = 11
+	PATCH_RACK_NAME_SUPPORT = 2
+)
 
 type Terraform struct {
 	ctx      *stdcli.Context
@@ -199,7 +204,15 @@ func (t Terraform) Metadata() (*Metadata, error) {
 	}
 
 	vars["name"] = common.CoalesceString(vars["name"], t.name)
-	vars["rack_name"] = common.CoalesceString(vars["rack_name"], t.name)
+
+	// only 3.11.2+ supports rack_name
+	c, err := t.Client()
+	if err == nil {
+		s, err := c.SystemGet()
+		if err == nil && HasSupport(s.Version, MINOR_RACK_NAME_SUPPORT, PATCH_RACK_NAME_SUPPORT) {
+			vars["rack_name"] = common.CoalesceString(vars["rack_name"], t.name)
+		}
+	}
 
 	m := &Metadata{
 		Deletable: true,
@@ -420,7 +433,6 @@ func (t Terraform) update(release string, vars map[string]string) error {
 
 	vars["name"] = common.CoalesceString(vars["name"], t.name)
 	vars["release"] = release
-	vars["rack_name"] = common.CoalesceString(vars["rack_name"], t.name)
 
 	pv, err := terraformProviderVars(t.provider)
 	if err != nil {
@@ -444,7 +456,13 @@ func (t Terraform) update(release string, vars map[string]string) error {
 
 	tf := filepath.Join(dir, "main.tf")
 
-	if hasSupport(release) {
+	// only 3.11.2+ supports rack_name
+	if HasSupport(release, MINOR_RACK_NAME_SUPPORT, PATCH_RACK_NAME_SUPPORT) {
+		vars["rack_name"] = common.CoalesceString(vars["rack_name"], t.name)
+	}
+
+	// support for telemetry
+	if HasSupport(release, MINOR_TELEMETRY_SUPPORTED, PATCH_TELEMETRY_SUPPORTED) {
 		vars["settings"] = dir
 	}
 
@@ -467,10 +485,16 @@ func (t Terraform) update(release string, vars map[string]string) error {
 	return nil
 }
 
-func hasSupport(release string) bool {
-	rv, _ := convertToReleaseVersion(release)
+// HasSupport compares the release version with the given minor and patch version
+// returns true if the release version is greater than or equal to the given minor and patch version
+func HasSupport(release string, minor, patch int) bool {
+	rv, err := ConvertToReleaseVersion(release)
+	if err != nil {
+		return false
+	}
+
 	if rv != nil {
-		if rv.Minor > MINOR_TELEMETRY_SUPPORTED || (rv.Minor == MINOR_TELEMETRY_SUPPORTED && rv.Revision >= PATCH_TELEMETRY_SUPPORTED) {
+		if rv.Minor > minor || (rv.Minor == minor && rv.Revision >= patch) {
 			return true
 		}
 	}
@@ -657,7 +681,7 @@ func terraformLatestVersion(current string) (string, error) {
 		return TestLatest, nil
 	}
 
-	currentReleaseVersion, err := convertToReleaseVersion(current)
+	currentReleaseVersion, err := ConvertToReleaseVersion(current)
 	if err != nil {
 		return getTheLatestRelease()
 	} else {
@@ -713,7 +737,7 @@ func getLatestRevisionForCurrentVersion(currentReleaseVersion *ReleaseVersion) (
 		}
 
 		for _, release := range response {
-			thisReleaseVersion, err := convertToReleaseVersion(release.Tag)
+			thisReleaseVersion, err := ConvertToReleaseVersion(release.Tag)
 			if err != nil {
 				continue
 			}
@@ -730,7 +754,7 @@ func getLatestRevisionForCurrentVersion(currentReleaseVersion *ReleaseVersion) (
 	return "", fmt.Errorf("No published revisions found for this version: " + currentReleaseVersion.toString())
 }
 
-func convertToReleaseVersion(version string) (*ReleaseVersion, error) {
+func ConvertToReleaseVersion(version string) (*ReleaseVersion, error) {
 	release := &ReleaseVersion{}
 	releaseVersion := strings.Split(version, ".")
 	if len(releaseVersion) != 3 {

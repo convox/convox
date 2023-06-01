@@ -6,6 +6,19 @@ variable "availability_zones" {
   default = ""
 }
 
+variable "build_node_enabled" {
+  default = false
+  type    = bool
+}
+
+variable "build_node_type" {
+  type = string
+}
+
+variable "build_node_min_count" {
+  default = 0
+}
+
 variable "cidr" {
   default = "10.1.0.0/16"
 }

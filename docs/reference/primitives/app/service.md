@@ -49,6 +49,9 @@ services:
       path: /check
       timeout: 3
     internal: false
+    lifecycle:
+      preStop: "sleep 10"
+      postStart: "sleep 10"
     port: 5000
     ports:
       - 5001
@@ -90,6 +93,7 @@ services:
 | **image**       | string     |                     | An external Docker image to use for this Service (supercedes **build**)                                                                      |
 | **internal**    | boolean    | false               | Set to **true** to make this Service only accessible inside the Rack                                                                         |
 | **internalRouter** | boolean    | false               | Set it to **true** to make this Service only accessible using internal loadbalancer. You also have to set the rack parameter [internal_router](/installation/production-rack/aws) to **true**                 |
+| **lifecycle** |  map  |       | The prestop and poststart hooks enable running commands before terminating and after starting the container, respectively |
 | **port**        | string     |                     | The port that the default Rack balancer will use to [route incoming traffic](/configuration/load-balancers)                     |
 | **ports**       | list       |                     | A list of ports available for internal [service discovery](/configuration/service-discovery) or custom [Balancers](/reference/primitives/app/balancer) |
 | **privileged**  | boolean    | true                | Set to **false** to prevent [Processes](/reference/primitives/app/process) of this Service from running as root inside their container                              |
@@ -146,6 +150,15 @@ services:
 | --------- | ------ | ------- | -------------------------------------------------------------------------------- |
 | **maximum** | number | 200     | The maximum percentage of Processes to allow during rolling deploys              |
 | **minimum** | number | 50      | The minimum percentage of healthy Processes to keep alive during rolling deploys |
+
+&nbsp;
+
+### lifecycle
+
+| Attribute | Type   | Default | Description                                                                                |
+| --------- | ------ | ------- | ------------------------------------------------------------------------------------------ |
+| **perStop**     | string |         | The pre stop command |
+| **postStart**  | string |         | The post stop command |
 
 &nbsp;
 

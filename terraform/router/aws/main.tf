@@ -44,6 +44,19 @@ resource "kubernetes_config_map" "nginx-configuration" {
   ]
 }
 
+resource "kubernetes_config_map" "nginx-internal-configuration" {
+  metadata {
+    namespace = var.namespace
+    name      = "nginx-internal-configuration"
+  }
+
+  data = {
+    "proxy-body-size"    = "0"
+    "ssl-ciphers"        = var.ssl_ciphers == "" ? null : var.ssl_ciphers
+    "ssl-protocols"      = var.ssl_protocols == "" ? null : var.ssl_protocols
+  }
+}
+
 resource "null_resource" "set_proxy_protocol" {
 
   triggers = {

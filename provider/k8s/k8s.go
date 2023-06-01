@@ -35,28 +35,29 @@ const (
 )
 
 type Provider struct {
-	Atom            atom.Interface
-	BuildkitEnabled string
-	CertManager     bool
-	Config          *rest.Config
-	Convox          cv.Interface
-	Cluster         kubernetes.Interface
-	Domain          string
-	DomainInternal  string
-	Engine          Engine
-	Image           string
-	Name            string
-	MetricsClient   metricsclientset.Interface
-	MetricScraper   *MetricScraperClient
-	Namespace       string
-	Password        string
-	Provider        string
-	RackName        string
-	Resolver        string
-	Router          string
-	Socket          string
-	Storage         string
-	Version         string
+	Atom             atom.Interface
+	BuildkitEnabled  string
+	BuildNodeEnabled string
+	CertManager      bool
+	Config           *rest.Config
+	Convox           cv.Interface
+	Cluster          kubernetes.Interface
+	Domain           string
+	DomainInternal   string
+	Engine           Engine
+	Image            string
+	Name             string
+	MetricsClient    metricsclientset.Interface
+	MetricScraper    *MetricScraperClient
+	Namespace        string
+	Password         string
+	Provider         string
+	RackName         string
+	Resolver         string
+	Router           string
+	Socket           string
+	Storage          string
+	Version          string
 
 	ctx       context.Context
 	logger    *logger.Logger
@@ -108,27 +109,28 @@ func FromEnv() (*Provider, error) {
 	rn := common.CoalesceString(os.Getenv("RACK_NAME"), ns.Labels["rack"])
 
 	p := &Provider{
-		Atom:            ac,
-		BuildkitEnabled: "true",
-		CertManager:     os.Getenv("CERT_MANAGER") == "true",
-		Config:          rc,
-		Convox:          cc,
-		Cluster:         kc,
-		Domain:          os.Getenv("DOMAIN"),
-		DomainInternal:  os.Getenv("DOMAIN_INTERNAL"),
-		Image:           os.Getenv("IMAGE"),
-		MetricsClient:   mc,
-		MetricScraper:   ms,
-		Name:            ns.Labels["rack"],
-		Namespace:       ns.Name,
-		Password:        os.Getenv("PASSWORD"),
-		Provider:        common.CoalesceString(os.Getenv("PROVIDER"), "k8s"),
-		RackName:        rn,
-		Resolver:        os.Getenv("RESOLVER"),
-		Router:          os.Getenv("ROUTER"),
-		Socket:          common.CoalesceString(os.Getenv("SOCKET"), "/var/run/docker.sock"),
-		Storage:         common.CoalesceString(os.Getenv("STORAGE"), "/var/storage"),
-		Version:         common.CoalesceString(os.Getenv("VERSION"), "dev"),
+		Atom:             ac,
+		BuildkitEnabled:  "true",
+		BuildNodeEnabled: os.Getenv("BUILD_NODE_ENABLED"),
+		CertManager:      os.Getenv("CERT_MANAGER") == "true",
+		Config:           rc,
+		Convox:           cc,
+		Cluster:          kc,
+		Domain:           os.Getenv("DOMAIN"),
+		DomainInternal:   os.Getenv("DOMAIN_INTERNAL"),
+		Image:            os.Getenv("IMAGE"),
+		MetricsClient:    mc,
+		MetricScraper:    ms,
+		Name:             ns.Labels["rack"],
+		Namespace:        ns.Name,
+		Password:         os.Getenv("PASSWORD"),
+		Provider:         common.CoalesceString(os.Getenv("PROVIDER"), "k8s"),
+		RackName:         rn,
+		Resolver:         os.Getenv("RESOLVER"),
+		Router:           os.Getenv("ROUTER"),
+		Socket:           common.CoalesceString(os.Getenv("SOCKET"), "/var/run/docker.sock"),
+		Storage:          common.CoalesceString(os.Getenv("STORAGE"), "/var/storage"),
+		Version:          common.CoalesceString(os.Getenv("VERSION"), "dev"),
 	}
 
 	return p, nil
