@@ -193,16 +193,6 @@ variable "public_subnets_ids" {
   default = ""
 }
 
-variable "private_subnets_ids" {
-  type    = string
-  default = ""
-}
-
-variable "public_subnets_ids" {
-  type    = string
-  default = ""
-}
-
 variable "whitelist" {
   default = "0.0.0.0/0"
 }
