@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  cleanup:
+  cleanup-aws:
     runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
@@ -22,10 +22,19 @@ jobs:
         run: ci/dependencies.sh
       - name: cleanup
         run: ci/cleanup.sh
+  cleanup-do:
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
       - name: do secrets
         run: ci/secrets.sh
         env:
           SECRETS: ${{ toJson(secrets) }}
           PROVIDER: do
+      - name: dependencies
+        run: ci/dependencies.sh
       - name: do cleanup
         run: ci/do_cleanup.sh
