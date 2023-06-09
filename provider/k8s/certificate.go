@@ -7,15 +7,17 @@ import (
 	"fmt"
 	"strings"
 
+	cmapiutil "github.com/cert-manager/cert-manager/pkg/api/util"
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func (p *Provider) CertificateApply(app, service string, port int, id string) error {
+func (*Provider) CertificateApply(_, _ string, _ int, _ string) error {
 	return errors.WithStack(fmt.Errorf("unimplemented"))
 }
 
@@ -90,16 +92,13 @@ func (p *Provider) CertificateList() (structs.Certificates, error) {
 	}
 
 	cs := structs.Certificates{}
-
 	for _, n := range ns.Items {
 		certs, err := p.certFromNamespace(n)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
 
-		for _, c := range certs {
-			cs = append(cs, c)
-		}
+		cs = append(cs, certs...)
 	}
 
 	return cs, nil
@@ -127,7 +126,7 @@ func (p *Provider) certFromNamespace(ns ac.Namespace) (structs.Certificates, err
 	return cs, nil
 }
 
-func (p *Provider) certificateFromSecret(s *ac.Secret) (*structs.Certificate, error) {
+func (*Provider) certificateFromSecret(s *ac.Secret) (*structs.Certificate, error) {
 	crt, ok := s.Data["tls.crt"]
 	if !ok {
 		return nil, errors.WithStack(fmt.Errorf("invalid certificate: %s", s.ObjectMeta.Name))
@@ -159,33 +158,27 @@ func (p *Provider) certificateFromSecret(s *ac.Secret) (*structs.Certificate, er
 }
 
 func (p *Provider) CertificateRenew(app string) error {
-	ss, err := p.Cluster.CoreV1().Secrets(p.AppNamespace(app)).List(context.TODO(), am.ListOptions{
-		FieldSelector: "type=kubernetes.io/tls",
-	})
+	certs, err := p.CertManagerClient.CertmanagerV1().Certificates(p.AppNamespace(app)).List(context.TODO(), am.ListOptions{})
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	for _, s := range ss.Items {
-		if strings.Contains(s.Name, "-domains") {
-			return p.renewCertificate(p.AppNamespace(app), s.Name)
+	for _, cert := range certs.Items {
+		if strings.Contains(cert.Name, "-domains") {
+			if err := p.renewCertificate(&cert); err != nil {
+				return err
+			}
 		}
 	}
 
 	return nil
 }
 
-func (p *Provider) renewCertificate(namespace, name string) error {
-	if err := p.Cluster.CoreV1().Secrets(p.Namespace).Delete(context.TODO(), name, am.DeleteOptions{}); err != nil {
-		return errors.WithStack(err)
+func (p *Provider) renewCertificate(crt *cmapi.Certificate) error {
+	cmapiutil.SetCertificateCondition(crt, crt.Generation, cmapi.CertificateConditionIssuing, cmmeta.ConditionTrue, "ManuallyTriggered", "Certificate re-issuance manually triggered")
+	_, err := p.CertManagerClient.CertmanagerV1().Certificates(crt.Namespace).UpdateStatus(context.TODO(), crt, am.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to trigger issuance of Certificate %s: %v", crt.Name, err)
 	}
-
-	gvr := schema.GroupVersionResource{
-		Group:    "cert-manager.io",
-		Version:  "v1",
-		Resource: "certificates",
-	}
-
-	return p.DynamicClient.Resource(gvr).
-		Namespace(namespace).Delete(context.TODO(), name, am.DeleteOptions{})
+	return nil
 }

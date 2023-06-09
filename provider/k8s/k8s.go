@@ -22,6 +22,7 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 
+	cmclient "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned"
 	ae "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -37,32 +38,33 @@ const (
 )
 
 type Provider struct {
-	Atom             atom.Interface
-	BuildkitEnabled  string
-	BuildNodeEnabled string
-	CertManager      bool
-	Cluster          kubernetes.Interface
-	Config           *rest.Config
-	Convox           cv.Interface
-	DiscoveryClient  discovery.DiscoveryInterface
-	Domain           string
-	DomainInternal   string
-	DynamicClient    dynamic.Interface
-	Engine           Engine
-	Image            string
-	Name             string
-	MetricScraper    *MetricScraperClient
-	MetricsClient    metricsclientset.Interface
-	Namespace        string
-	Password         string
-	Provider         string
-	RackName         string
-	Resolver         string
-	RestClient       rest.Interface
-	Router           string
-	Socket           string
-	Storage          string
-	Version          string
+	Atom              atom.Interface
+	BuildkitEnabled   string
+	BuildNodeEnabled  string
+	CertManager       bool
+	Cluster           kubernetes.Interface
+	Config            *rest.Config
+	Convox            cv.Interface
+	CertManagerClient cmclient.Interface
+	DiscoveryClient   discovery.DiscoveryInterface
+	Domain            string
+	DomainInternal    string
+	DynamicClient     dynamic.Interface
+	Engine            Engine
+	Image             string
+	Name              string
+	MetricScraper     *MetricScraperClient
+	MetricsClient     metricsclientset.Interface
+	Namespace         string
+	Password          string
+	Provider          string
+	RackName          string
+	Resolver          string
+	RestClient        rest.Interface
+	Router            string
+	Socket            string
+	Storage           string
+	Version           string
 
 	ctx       context.Context
 	logger    *logger.Logger
@@ -72,7 +74,6 @@ type Provider struct {
 }
 
 func init() {
-	rand.Seed(42)
 	rand.Seed(time.Now().Unix())
 }
 
@@ -109,6 +110,11 @@ func FromEnv() (*Provider, error) {
 		return nil, errors.WithStack(err)
 	}
 
+	cm, err := cmclient.NewForConfig(rc)
+	if err != nil {
+		return nil, err
+	}
+
 	mc, err := metricsclientset.NewForConfig(rc)
 	if err != nil {
 		return nil, err
@@ -119,31 +125,32 @@ func FromEnv() (*Provider, error) {
 	rn := common.CoalesceString(os.Getenv("RACK_NAME"), ns.Labels["rack"])
 
 	p := &Provider{
-		Atom:             ac,
-		BuildkitEnabled:  "true",
-		BuildNodeEnabled: os.Getenv("BUILD_NODE_ENABLED"),
-		CertManager:      os.Getenv("CERT_MANAGER") == "true",
-		Cluster:          kc,
-		Config:           rc,
-		Convox:           cc,
-		DiscoveryClient:  kc.Discovery(),
-		Domain:           os.Getenv("DOMAIN"),
-		DomainInternal:   os.Getenv("DOMAIN_INTERNAL"),
-		DynamicClient:    dc,
-		Image:            os.Getenv("IMAGE"),
-		MetricScraper:    ms,
-		MetricsClient:    mc,
-		Name:             ns.Labels["rack"],
-		Namespace:        ns.Name,
-		Password:         os.Getenv("PASSWORD"),
-		Provider:         common.CoalesceString(os.Getenv("PROVIDER"), "k8s"),
-		RackName:         rn,
-		Resolver:         os.Getenv("RESOLVER"),
-		RestClient:       kc.RESTClient(),
-		Router:           os.Getenv("ROUTER"),
-		Socket:           common.CoalesceString(os.Getenv("SOCKET"), "/var/run/docker.sock"),
-		Storage:          common.CoalesceString(os.Getenv("STORAGE"), "/var/storage"),
-		Version:          common.CoalesceString(os.Getenv("VERSION"), "dev"),
+		Atom:              ac,
+		BuildkitEnabled:   "true",
+		BuildNodeEnabled:  os.Getenv("BUILD_NODE_ENABLED"),
+		CertManager:       os.Getenv("CERT_MANAGER") == "true",
+		Cluster:           kc,
+		Config:            rc,
+		Convox:            cc,
+		CertManagerClient: cm,
+		DiscoveryClient:   kc.Discovery(),
+		Domain:            os.Getenv("DOMAIN"),
+		DomainInternal:    os.Getenv("DOMAIN_INTERNAL"),
+		DynamicClient:     dc,
+		Image:             os.Getenv("IMAGE"),
+		MetricScraper:     ms,
+		MetricsClient:     mc,
+		Name:              ns.Labels["rack"],
+		Namespace:         ns.Name,
+		Password:          os.Getenv("PASSWORD"),
+		Provider:          common.CoalesceString(os.Getenv("PROVIDER"), "k8s"),
+		RackName:          rn,
+		Resolver:          os.Getenv("RESOLVER"),
+		RestClient:        kc.RESTClient(),
+		Router:            os.Getenv("ROUTER"),
+		Socket:            common.CoalesceString(os.Getenv("SOCKET"), "/var/run/docker.sock"),
+		Storage:           common.CoalesceString(os.Getenv("STORAGE"), "/var/storage"),
+		Version:           common.CoalesceString(os.Getenv("VERSION"), "dev"),
 	}
 
 	return p, nil
