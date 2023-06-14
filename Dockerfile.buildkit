@@ -41,4 +41,3 @@ COPY ./scripts/buildctl-daemonless.sh /buildctl-daemonless.sh
 RUN mkdir -p $HOME/.docker
 
 ENTRYPOINT [ "./buildctl-daemonless.sh" ]
-
