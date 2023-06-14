@@ -356,6 +356,10 @@ func (v *ServicePortScheme) UnmarshalYAML(unmarshal func(interface{}) error) err
 		return fmt.Errorf("invalid port: %s", t)
 	}
 
+	if v.Scheme == "grpc" {
+		v.Scheme = "GRPC"
+	}
+
 	return nil
 }
 
