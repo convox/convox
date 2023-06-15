@@ -33,6 +33,8 @@ module "api" {
   release                   = var.release
   resolver                  = module.resolver.endpoint
   resource_group            = var.resource_group
+  resource_group_name       = var.resource_group_name
+  resource_group_location   = var.resource_group_location
   router                    = module.router.endpoint
   syslog                    = var.syslog
   workspace                 = var.workspace
