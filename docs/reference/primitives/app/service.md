@@ -25,6 +25,14 @@ services:
 
 ```html
 services:
+  grpc:
+    build: .
+    port: grpc:5551
+    grpcHealthEnabled: true
+```
+
+```html
+services:
   web:
     agent: false
     annotations:
@@ -89,12 +97,13 @@ services:
 | **domain**      | string     |                     | A custom domain(s) (comma separated) to route to this Service                                                                              |
 | **drain**       | number     |                     | The number of seconds to wait for connections to drain when terminating a [Process](/reference/primitives/app/process) of this Service. Only applies for version 2 rack services. For version 3 rack services use termination grace period **termination.grace** |
 | **environment** | list       |                     | A list of environment variables (with optional defaults) to populate from the [Release](/reference/primitives/app/release) environment                            |
+| **grpcHealthEnabled** | boolean   |      false          | Enables liveliness health check for grpc. It should follow the [grpc health protocol](https://github.com/grpc/grpc/blob/master/doc/health-checking.md) (ref: [k8s](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-grpc-liveness-probe))|
 | **health**      | string/map | /                   | Health check definition (see below)                                                                                                        |
 | **image**       | string     |                     | An external Docker image to use for this Service (supercedes **build**)                                                                      |
 | **internal**    | boolean    | false               | Set to **true** to make this Service only accessible inside the Rack                                                                         |
 | **internalRouter** | boolean    | false               | Set it to **true** to make this Service only accessible using internal loadbalancer. You also have to set the rack parameter [internal_router](/installation/production-rack/aws) to **true**                 |
 | **lifecycle** |  map  |       | The prestop and poststart hooks enable running commands before terminating and after starting the container, respectively |
-| **port**        | string     |                     | The port that the default Rack balancer will use to [route incoming traffic](/configuration/load-balancers)                     |
+| **port**        | string     |                     | The port that the default Rack balancer will use to [route incoming traffic](/configuration/load-balancers). For grpc service specify the scheme: `grpc:5051`|
 | **ports**       | list       |                     | A list of ports available for internal [service discovery](/configuration/service-discovery) or custom [Balancers](/reference/primitives/app/balancer) |
 | **privileged**  | boolean    | true                | Set to **false** to prevent [Processes](/reference/primitives/app/process) of this Service from running as root inside their container                              |
 | **scale**       | map        | 1                   | Define scaling parameters (see below)                                                                                                      |
