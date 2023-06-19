@@ -12,6 +12,8 @@ An App is a logical container for [Primitives](/reference/primitives) that are u
 
 An App is defined by a single [`convox.yml`](/configuration/convox-yml)
 ```html
+    labels:
+      convox.com/test: true
     resources:
       database:
         type: postgres
