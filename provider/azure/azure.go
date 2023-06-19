@@ -156,7 +156,7 @@ func (p *Provider) azureStorageKey() (string, error) {
 	ac := storage.NewAccountsClient(p.Subscription)
 	ac.Authorizer = a
 
-	res, err := ac.ListKeys(ctx, p.ResourceGroup, p.StorageAccount, storage.Kerb)
+	res, err := ac.ListKeys(ctx, p.ResourceGroup, p.StorageAccount, storage.ListKeyExpandKerb)
 	if err != nil {
 		return "", err
 	}

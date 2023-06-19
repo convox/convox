@@ -5,7 +5,11 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"strings"
 
+	cmapiutil "github.com/cert-manager/cert-manager/pkg/api/util"
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/pkg/errors"
@@ -13,7 +17,7 @@ import (
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (p *Provider) CertificateApply(app, service string, port int, id string) error {
+func (*Provider) CertificateApply(_, _ string, _ int, _ string) error {
 	return errors.WithStack(fmt.Errorf("unimplemented"))
 }
 
@@ -80,9 +84,29 @@ func (p *Provider) CertificateGenerate(domains []string) (*structs.Certificate, 
 }
 
 func (p *Provider) CertificateList() (structs.Certificates, error) {
-	ss, err := p.Cluster.CoreV1().Secrets(p.Namespace).List(context.TODO(), am.ListOptions{
+	ns, err := p.Cluster.CoreV1().Namespaces().List(context.TODO(), am.ListOptions{
+		LabelSelector: fmt.Sprintf("system=convox,rack=%s", p.Name),
+	})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	cs := structs.Certificates{}
+	for _, n := range ns.Items {
+		certs, err := p.certFromNamespace(n)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		cs = append(cs, certs...)
+	}
+
+	return cs, nil
+}
+
+func (p *Provider) certFromNamespace(ns ac.Namespace) (structs.Certificates, error) {
+	ss, err := p.Cluster.CoreV1().Secrets(ns.Name).List(context.TODO(), am.ListOptions{
 		FieldSelector: "type=kubernetes.io/tls",
-		LabelSelector: fmt.Sprintf("system=convox,rack=%s,type=certificate", p.Name),
 	})
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -102,7 +126,7 @@ func (p *Provider) CertificateList() (structs.Certificates, error) {
 	return cs, nil
 }
 
-func (p *Provider) certificateFromSecret(s *ac.Secret) (*structs.Certificate, error) {
+func (*Provider) certificateFromSecret(s *ac.Secret) (*structs.Certificate, error) {
 	crt, ok := s.Data["tls.crt"]
 	if !ok {
 		return nil, errors.WithStack(fmt.Errorf("invalid certificate: %s", s.ObjectMeta.Name))
@@ -131,4 +155,30 @@ func (p *Provider) certificateFromSecret(s *ac.Secret) (*structs.Certificate, er
 	}
 
 	return c, nil
+}
+
+func (p *Provider) CertificateRenew(app string) error {
+	certs, err := p.CertManagerClient.CertmanagerV1().Certificates(p.AppNamespace(app)).List(context.TODO(), am.ListOptions{})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	for _, cert := range certs.Items {
+		if strings.Contains(cert.Name, "-domains") {
+			if err := p.renewCertificate(&cert); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (p *Provider) renewCertificate(crt *cmapi.Certificate) error {
+	cmapiutil.SetCertificateCondition(crt, crt.Generation, cmapi.CertificateConditionIssuing, cmmeta.ConditionTrue, "ManuallyTriggered", "Certificate re-issuance manually triggered")
+	_, err := p.CertManagerClient.CertmanagerV1().Certificates(crt.Namespace).UpdateStatus(context.TODO(), crt, am.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to trigger issuance of Certificate %s: %v", crt.Name, err)
+	}
+	return nil
 }
