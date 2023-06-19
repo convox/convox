@@ -11,13 +11,23 @@ import (
 )
 
 var (
-	DefaultCpu = 256
-	DefaultMem = 512
+	DefaultCpu        = 256
+	DefaultMem        = 512
+	ReservedLabelKeys = map[string]bool{
+		"system":  true,
+		"rack":    true,
+		"app":     true,
+		"name":    true,
+		"service": true,
+		"release": true,
+		"type":    true,
+	}
 )
 
 type Manifest struct {
 	Balancers   Balancers   `yaml:"balancers,omitempty"`
 	Environment Environment `yaml:"environment,omitempty"`
+	Labels      Labels      `yaml:"labels,omitempty"`
 	Params      Params      `yaml:"params,omitempty"`
 	Resources   Resources   `yaml:"resources,omitempty"`
 	Services    Services    `yaml:"services,omitempty"`
@@ -63,6 +73,10 @@ func Load(data []byte, env map[string]string) (*Manifest, error) {
 	}
 
 	if err := m.CombineEnv(); err != nil {
+		return nil, err
+	}
+
+	if err := m.CombineLabels(); err != nil {
 		return nil, err
 	}
 
@@ -257,6 +271,35 @@ func (m *Manifest) CombineEnv() error {
 	for k := range m.env {
 		if !keys[k] {
 			delete(m.env, k)
+		}
+	}
+
+	return nil
+}
+
+func (m *Manifest) CombineLabels() error {
+	for k := range m.Labels {
+		if _, has := ReservedLabelKeys[k]; has {
+			return fmt.Errorf("reserved label key '%s' is not allowed", k)
+		}
+	}
+
+	for i := range m.Services {
+		used := map[string]bool{}
+		for k := range m.Services[i].Labels {
+			used[k] = true
+			if _, has := ReservedLabelKeys[k]; has {
+				return fmt.Errorf("reserved label key '%s' is not allowed", k)
+			}
+		}
+
+		for k, v := range m.Labels {
+			if !used[k] {
+				if m.Services[i].Labels == nil {
+					m.Services[i].Labels = Labels{}
+				}
+				m.Services[i].Labels[k] = v
+			}
 		}
 	}
 

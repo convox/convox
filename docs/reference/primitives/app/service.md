@@ -57,6 +57,8 @@ services:
       path: /check
       timeout: 3
     internal: false
+    labels:
+      convox.com/test: true
     lifecycle:
       preStop: "sleep 10"
       postStart: "sleep 10"
@@ -102,6 +104,7 @@ services:
 | **image**       | string     |                     | An external Docker image to use for this Service (supercedes **build**)                                                                      |
 | **internal**    | boolean    | false               | Set to **true** to make this Service only accessible inside the Rack                                                                         |
 | **internalRouter** | boolean    | false               | Set it to **true** to make this Service only accessible using internal loadbalancer. You also have to set the rack parameter [internal_router](/installation/production-rack/aws) to **true**                 |
+| **labels** |  map  |       | Custom labels for k8s resources. See here for (syntax and character set)[https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set]. Also following keys are reserved: `system`, `rack`, `app`, `name`, `service`, `release`, `type` |
 | **lifecycle** |  map  |       | The prestop and poststart hooks enable running commands before terminating and after starting the container, respectively |
 | **port**        | string     |                     | The port that the default Rack balancer will use to [route incoming traffic](/configuration/load-balancers). For grpc service specify the scheme: `grpc:5051`|
 | **ports**       | list       |                     | A list of ports available for internal [service discovery](/configuration/service-discovery) or custom [Balancers](/reference/primitives/app/balancer) |

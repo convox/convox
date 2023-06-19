@@ -6,6 +6,9 @@ metadata:
   labels:
     type: env
     service: {{.Service.Name}}
+    {{ range keyValue .Service.Labels }}
+    {{.Key}}: "{{.Value}}"
+    {{ end }}
 type: Opaque
 data:
   {{ range keyValue .Environment }}
@@ -24,6 +27,9 @@ metadata:
   labels:
     service: {{.Service.Name}}
     type: serviceaccount
+    {{ range keyValue .Service.Labels }}
+    {{.Key}}: "{{.Value}}"
+    {{ end }}
 ---
 apiVersion: apps/v1
 kind: {{ if .Service.Agent.Enabled }} DaemonSet {{ else }} Deployment {{ end }}
@@ -38,6 +44,9 @@ metadata:
     app: {{.App.Name}}
     type: service
     service: {{.Service.Name}}
+    {{ range keyValue .Service.Labels }}
+    {{.Key}}: "{{.Value}}"
+    {{ end }}
 spec:
   selector:
     matchLabels:
@@ -72,6 +81,9 @@ spec:
         service: {{.Service.Name}}
         release: {{.Release.Id}}
         type: service
+        {{ range keyValue .Service.Labels }}
+        {{.Key}}: "{{.Value}}"
+        {{ end }}
     spec:
       {{ with .Resolver }}
       dnsPolicy: "None"
@@ -217,6 +229,9 @@ metadata:
   name: {{.Service.Name}}
   labels:
     service: {{.Service.Name}}
+    {{ range keyValue .Service.Labels }}
+    {{.Key}}: "{{.Value}}"
+    {{ end }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
@@ -275,6 +290,9 @@ metadata:
     service: {{.Service.Name}}
     rack: {{.Rack}}
     system: convox
+    {{ range keyValue .Service.Labels }}
+    {{.Key}}: "{{.Value}}"
+    {{ end }}
 spec:
   type: ClusterIP
   selector:
