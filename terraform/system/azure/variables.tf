@@ -17,7 +17,7 @@ variable "image" {
 
 variable "k8s_version" {
   type    = string
-  default = "1.24"
+  default = "1.25"
 }
 
 variable "name" {
@@ -50,7 +50,7 @@ variable "syslog" {
 }
 
 variable "telemetry" {
-  type   = bool
+  type    = bool
   default = false
 }
 
