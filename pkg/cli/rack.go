@@ -170,6 +170,11 @@ func RackInstall(_ sdk.Interface, c *stdcli.Context) error {
 
 	opts := argsToOptions(args)
 
+	// node_type should only get the first instance type
+	if strings.Contains(opts["node_type"], ",") {
+		opts["node_type"] = strings.Split(opts["node_type"], ",")[0]
+	}
+
 	if c.Bool("prepare") {
 		opts["release"] = version
 
@@ -351,6 +356,11 @@ func RackParamsSet(_ sdk.Interface, c *stdcli.Context) error {
 	params := argsToOptions(c.Args)
 	if err := validateParams(params); err != nil {
 		return err
+	}
+
+	// node_type should only get the first instance type
+	if strings.Contains(params["node_type"], ",") {
+		params["node_type"] = strings.Split(params["node_type"], ",")[0]
 	}
 
 	if err := r.UpdateParams(params); err != nil {
