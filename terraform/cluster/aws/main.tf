@@ -249,11 +249,11 @@ module "ebs_csi_driver_controller" {
     null_resource.wait_eks_addons
   ]
 
-  source = "github.com/convox/terraform-kubernetes-ebs-csi-driver?ref=56352cbfff0bce7bc08cb43c788609a438a2613f"
+  source = "github.com/convox/terraform-kubernetes-ebs-csi-driver?ref=01740b559d14f489e5ea2160d2dad0ee951fb4d9"
 
-  aws_partition                              = data.aws_partition.current.partition
+  arn_format                                 = data.aws_partition.current.partition
   ebs_csi_controller_image                   = "public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver"
-  ebs_csi_driver_version                     = "v1.9.0"
+  ebs_csi_driver_version                     = "v1.19.0"
   ebs_csi_controller_role_name               = "convox-ebs-csi-driver-controller"
   ebs_csi_controller_role_policy_name_prefix = "convox-ebs-csi-driver-policy"
   csi_controller_tolerations = [

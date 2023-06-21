@@ -1,4 +1,4 @@
-FROM golang:1.17-alpine AS package
+FROM golang:1.18-alpine AS package
 
 RUN apk update && apk add make gcc linux-headers libc-dev
 
@@ -41,4 +41,3 @@ COPY ./scripts/buildctl-daemonless.sh /buildctl-daemonless.sh
 RUN mkdir -p $HOME/.docker
 
 ENTRYPOINT [ "./buildctl-daemonless.sh" ]
-

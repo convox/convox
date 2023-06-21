@@ -33,11 +33,13 @@ module "cluster" {
     azurerm = azurerm
   }
 
-  k8s_version    = var.k8s_version
-  name           = var.name
-  node_type      = var.node_type
-  region         = var.region
-  resource_group = azurerm_resource_group.rack.id
+  k8s_version             = var.k8s_version
+  name                    = var.name
+  node_type               = var.node_type
+  region                  = var.region
+  resource_group          = azurerm_resource_group.rack.id
+  resource_group_name     = azurerm_resource_group.rack.name
+  resource_group_location = azurerm_resource_group.rack.location
 }
 
 module "rack" {
@@ -48,18 +50,20 @@ module "rack" {
     kubernetes = kubernetes
   }
 
-  cluster             = module.cluster.id
-  docker_hub_username = var.docker_hub_username
-  docker_hub_password = var.docker_hub_password
-  image               = var.image
-  name                = var.name
-  rack_name           = var.rack_name
-  region              = var.region
-  release             = local.release
-  resource_group      = azurerm_resource_group.rack.id
-  settings            = var.settings
-  syslog              = var.syslog
-  telemetry           = var.telemetry
-  whitelist           = split(",", var.whitelist)
-  workspace           = module.cluster.workspace
+  cluster                 = module.cluster.id
+  docker_hub_username     = var.docker_hub_username
+  docker_hub_password     = var.docker_hub_password
+  image                   = var.image
+  name                    = var.name
+  rack_name               = var.rack_name
+  region                  = var.region
+  release                 = local.release
+  resource_group          = azurerm_resource_group.rack.id
+  resource_group_name     = azurerm_resource_group.rack.name
+  resource_group_location = azurerm_resource_group.rack.location
+  settings                = var.settings
+  syslog                  = var.syslog
+  telemetry               = var.telemetry
+  whitelist               = split(",", var.whitelist)
+  workspace               = module.cluster.workspace
 }

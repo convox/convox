@@ -11,8 +11,8 @@ resource "random_string" "suffix" {
 
 resource "azurerm_log_analytics_workspace" "rack" {
   name                = "${var.name}-${random_string.suffix.result}"
-  location            = var.region
-  resource_group_name = var.name
+  location            = var.resource_group_location
+  resource_group_name = var.resource_group_name
   sku                 = "PerGB2018"
   retention_in_days   = 30
 
@@ -25,8 +25,8 @@ resource "azurerm_kubernetes_cluster" "rack" {
   depends_on = [azurerm_role_assignment.cluster-contributor]
 
   name                = var.name
-  location            = var.region
-  resource_group_name = var.name
+  location            = var.resource_group_location
+  resource_group_name = var.resource_group_name
   dns_prefix          = var.name
   kubernetes_version  = data.azurerm_kubernetes_service_versions.available.latest_version
 
