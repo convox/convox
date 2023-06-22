@@ -468,6 +468,20 @@ func (_m *MockProvider) CertificateList() (Certificates, error) {
 	return r0, r1
 }
 
+// CertificateRenew provides a mock function with given fields: id
+func (_m *MockProvider) CertificateRenew(id string) error {
+	ret := _m.Called(id)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string) error); ok {
+		r0 = rf(id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // EventSend provides a mock function with given fields: action, opts
 func (_m *MockProvider) EventSend(action string, opts EventSendOptions) error {
 	ret := _m.Called(action, opts)
@@ -1236,6 +1250,48 @@ func (_m *MockProvider) SystemInstall(w io.Writer, opts SystemInstallOptions) (s
 	return r0, r1
 }
 
+// SystemJwtSignKey provides a mock function with given fields:
+func (_m *MockProvider) SystemJwtSignKey() (string, error) {
+	ret := _m.Called()
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// SystemJwtSignKeyRotate provides a mock function with given fields:
+func (_m *MockProvider) SystemJwtSignKeyRotate() (string, error) {
+	ret := _m.Called()
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // SystemLogs provides a mock function with given fields: opts
 func (_m *MockProvider) SystemLogs(opts LogsOptions) (io.ReadCloser, error) {
 	ret := _m.Called(opts)
@@ -1574,17 +1630,4 @@ func NewMockProvider(t NewMockProviderT) *MockProvider {
 	t.Cleanup(func() { mock.AssertExpectations(t) })
 
 	return mock
-}
-
-func (_m *MockProvider) CertificateRenew(id string) error {
-	ret := _m.Called(id)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(string) error); ok {
-		r0 = rf(id)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
 }

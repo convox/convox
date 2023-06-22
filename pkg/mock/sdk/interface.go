@@ -603,6 +603,20 @@ func (_m *Interface) CertificateList() (structs.Certificates, error) {
 	return r0, r1
 }
 
+// CertificateRenew provides a mock function with given fields: id
+func (_m *Interface) CertificateRenew(id string) error {
+	ret := _m.Called(id)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string) error); ok {
+		r0 = rf(id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // Endpoint provides a mock function with given fields:
 func (_m *Interface) Endpoint() (*url.URL, error) {
 	ret := _m.Called()
@@ -1191,6 +1205,27 @@ func (_m *Interface) Proxy(host string, port int, rw io.ReadWriter, opts structs
 	return r0
 }
 
+// RackHost provides a mock function with given fields: rackOrgSlug
+func (_m *Interface) RackHost(rackOrgSlug string) (structs.RackData, error) {
+	ret := _m.Called(rackOrgSlug)
+
+	var r0 structs.RackData
+	if rf, ok := ret.Get(0).(func(string) structs.RackData); ok {
+		r0 = rf(rackOrgSlug)
+	} else {
+		r0 = ret.Get(0).(structs.RackData)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(rackOrgSlug)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // RegistryAdd provides a mock function with given fields: server, username, password
 func (_m *Interface) RegistryAdd(server string, username string, password string) (*structs.Registry, error) {
 	ret := _m.Called(server, username, password)
@@ -1644,6 +1679,71 @@ func (_m *Interface) SystemInstall(w io.Writer, opts structs.SystemInstallOption
 	var r1 error
 	if rf, ok := ret.Get(1).(func(io.Writer, structs.SystemInstallOptions) error); ok {
 		r1 = rf(w, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// SystemJwtSignKey provides a mock function with given fields:
+func (_m *Interface) SystemJwtSignKey() (string, error) {
+	ret := _m.Called()
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// SystemJwtSignKeyRotate provides a mock function with given fields:
+func (_m *Interface) SystemJwtSignKeyRotate() (string, error) {
+	ret := _m.Called()
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// SystemJwtToken provides a mock function with given fields: opts
+func (_m *Interface) SystemJwtToken(opts structs.SystemJwtOptions) (*structs.SystemJwt, error) {
+	ret := _m.Called(opts)
+
+	var r0 *structs.SystemJwt
+	if rf, ok := ret.Get(0).(func(structs.SystemJwtOptions) *structs.SystemJwt); ok {
+		r0 = rf(opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*structs.SystemJwt)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(structs.SystemJwtOptions) error); ok {
+		r1 = rf(opts)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -2164,17 +2264,4 @@ func NewInterface(t NewInterfaceT) *Interface {
 	t.Cleanup(func() { mock.AssertExpectations(t) })
 
 	return mock
-}
-
-func (_m *Interface) CertificateRenew(id string) error {
-	ret := _m.Called(id)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(string) error); ok {
-		r0 = rf(id)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
 }

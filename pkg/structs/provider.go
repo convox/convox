@@ -87,6 +87,8 @@ type Provider interface {
 
 	SystemGet() (*System, error)
 	SystemInstall(w io.Writer, opts SystemInstallOptions) (string, error)
+	SystemJwtSignKey() (string, error)
+	SystemJwtSignKeyRotate() (string, error)
 	SystemLogs(opts LogsOptions) (io.ReadCloser, error)
 	SystemMetrics(opts MetricsOptions) (Metrics, error)
 	SystemProcesses(opts SystemProcessesOptions) (Processes, error)
