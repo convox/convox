@@ -1,10 +1,12 @@
 package api
 
 import (
+	"fmt"
 	"io"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/stdapi"
@@ -1308,7 +1310,64 @@ func (s *Server) SystemMetrics(c *stdapi.Context) error {
 	return c.RenderJSON(v)
 }
 
+func (s *Server) SystemJwtSignKeyRotate(c *stdapi.Context) error {
+	_, err := s.provider(c).WithContext(c.Context()).SystemJwtSignKeyRotate()
+	if err != nil {
+		return err
+	}
+	return c.RenderOK()
+}
+
+func (s *Server) SystemJwtToken(c *stdapi.Context) error {
+	role := c.Value("role")
+	durationInHour, err := strconv.Atoi(c.Value("durationInHour"))
+	if err != nil {
+		return fmt.Errorf("invalid duration")
+	}
+
+	var tk string
+
+	switch role {
+	case "read":
+		tk, err = s.JwtMngr.ReadToken(time.Hour * time.Duration(durationInHour))
+		if err != nil {
+			return err
+		}
+	case "write":
+		tk, err = s.JwtMngr.WriteToken(time.Hour * time.Duration(durationInHour))
+		if err != nil {
+			return err
+		}
+	}
+
+	return c.RenderJSON(structs.SystemJwt{
+		Token: tk,
+	})
+}
+
 func (s *Server) SystemProcesses(c *stdapi.Context) error {
+	if err := s.hook("SystemProcessesValidate", c); err != nil {
+		return err
+	}
+
+	var opts structs.SystemProcessesOptions
+	if err := stdapi.UnmarshalOptions(c.Request(), &opts); err != nil {
+		return err
+	}
+
+	v, err := s.provider(c).WithContext(c.Context()).SystemProcesses(opts)
+	if err != nil {
+		return err
+	}
+
+	if vs, ok := interface{}(v).(Sortable); ok {
+		sort.Slice(v, vs.Less)
+	}
+
+	return c.RenderJSON(v)
+}
+
+func (s *Server) SystemReadAccess(c *stdapi.Context) error {
 	if err := s.hook("SystemProcessesValidate", c); err != nil {
 		return err
 	}
