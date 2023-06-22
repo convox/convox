@@ -60,9 +60,18 @@ func (p *Provider) apiProxy() (*apiProxy, error) {
 
 func (p *Provider) apiProxyAuthenticate(handler http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if _, password, ok := r.BasicAuth(); !ok || password != p.Password {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
+		username, password, _ := r.BasicAuth()
+		if username == "jwt" && p.JwtMngr != nil {
+			_, err := p.JwtMngr.Verify(password)
+			if err != nil {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+		} else {
+			if password != p.Password {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
 		}
 
 		r.Header.Del("Authorization")

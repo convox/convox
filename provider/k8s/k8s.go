@@ -12,6 +12,7 @@ import (
 
 	"github.com/convox/convox/pkg/atom"
 	"github.com/convox/convox/pkg/common"
+	"github.com/convox/convox/pkg/jwt"
 	"github.com/convox/convox/pkg/metrics"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/pkg/templater"
@@ -52,6 +53,7 @@ type Provider struct {
 	DynamicClient     dynamic.Interface
 	Engine            Engine
 	Image             string
+	JwtMngr           *jwt.JwtManager
 	Name              string
 	MetricScraper     *MetricScraperClient
 	MetricsClient     metricsclientset.Interface
@@ -182,6 +184,13 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 			return errors.WithStack(err)
 		}
 	}
+
+	signKey, err := p.SystemJwtSignKey()
+	if err != nil {
+		return err
+	}
+
+	p.JwtMngr = jwt.NewJwtManager(signKey)
 
 	return nil
 }

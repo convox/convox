@@ -25,6 +25,20 @@ func init() {
 		Validate: stdcli.Args(0),
 	})
 
+	register("rack access", "get rack access creds", RackAccess, stdcli.CommandOptions{
+		Flags: []stdcli.Flag{
+			flagRack,
+			stdcli.StringFlag("role", "", "access role: read or write"),
+			stdcli.IntFlag("duration", "", "duration in hours"),
+		},
+		Validate: stdcli.Args(0),
+	})
+
+	register("rack access key rotate", "rotate access key", RackAccessKeyRotate, stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagRack},
+		Validate: stdcli.Args(0),
+	})
+
 	registerWithoutProvider("rack install", "install a new rack", RackInstall, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
 			stdcli.BoolFlag("prepare", "", "prepare the install but don't run it"),
@@ -156,6 +170,51 @@ func Rack(rack sdk.Interface, c *stdcli.Context) error {
 	i.Add("Version", s.Version)
 
 	return i.Print()
+}
+
+func RackAccess(rack sdk.Interface, c *stdcli.Context) error {
+	data, err := c.SettingRead("current")
+	if err != nil {
+		return err
+	}
+	var attrs map[string]string
+	if err := json.Unmarshal([]byte(data), &attrs); err != nil {
+		return err
+	}
+
+	rData, err := rack.SystemGet()
+	if err != nil {
+		return err
+	}
+
+	role, ok := c.Value("role").(string)
+	if !ok {
+		return fmt.Errorf("role is required")
+	}
+
+	duration, ok := c.Value("duration").(int)
+	if !ok {
+		return fmt.Errorf("duration is required")
+	}
+
+	jwtTk, err := rack.SystemJwtToken(structs.SystemJwtOptions{
+		Role:           options.String(role),
+		DurationInHour: options.String(strconv.Itoa(duration)),
+	})
+	if err != nil {
+		return err
+	}
+
+	return c.Writef("RACK_URL=https://jwt:%s@%s\n", jwtTk.Token, rData.RackDomain)
+}
+
+func RackAccessKeyRotate(rack sdk.Interface, c *stdcli.Context) error {
+	_, err := rack.SystemJwtSignKeyRotate()
+	if err != nil {
+		return err
+	}
+
+	return c.OK()
 }
 
 func RackInstall(_ sdk.Interface, c *stdcli.Context) error {

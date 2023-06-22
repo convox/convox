@@ -34,8 +34,10 @@ type Interface interface {
 	RegistryRemoveClassic(string) error
 	ResourceCreateClassic(string, structs.ResourceCreateOptions) (*structs.Resource, error)
 	ResourceUpdateClassic(string, structs.ResourceUpdateOptions) (*structs.Resource, error)
+	RackHost(rackOrgSlug string) (structs.RackData, error)
 	Runtimes(rackOrgSlug string) (structs.Runtimes, error)
 	RuntimeAttach(rackOrgSlug string, opts structs.RuntimeAttachOptions) error
+	SystemJwtToken(opts structs.SystemJwtOptions) (*structs.SystemJwt, error)
 	SystemResourceCreateClassic(string, structs.ResourceCreateOptions) (*structs.Resource, error)
 	SystemResourceDeleteClassic(string) error
 	SystemResourceGetClassic(string) (*structs.Resource, error)
