@@ -5,6 +5,11 @@ apiVersion: v1
 metadata:
   namespace: {{$.Namespace}}
   name: {{ volumeName $.App . }}
+  labels:
+    system: convox
+    {{ range keyValue .Labels }}
+    {{.Key}}: "{{.Value}}"
+    {{ end }}
 spec:
   accessModes:
   - ReadWriteOnce

@@ -13,6 +13,9 @@ metadata:
     balancer: {{.Balancer.Name}}
     service: {{.Balancer.Service}}
     type: balancer
+    {{ range keyValue .Labels }}
+    {{.Key}}: "{{.Value}}"
+    {{ end }}
 spec:
   type: LoadBalancer
   externalTrafficPolicy: Cluster

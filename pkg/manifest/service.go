@@ -25,6 +25,7 @@ type Service struct {
 	Init              bool                  `yaml:"init,omitempty"`
 	Internal          bool                  `yaml:"internal,omitempty"`
 	InternalRouter    bool                  `yaml:"internalRouter,omitempty"`
+	Labels            Labels                `yaml:"labels,omitempty"`
 	Lifecycle         ServiceLifecycle      `yaml:"lifecycle,omitempty"`
 	Port              ServicePortScheme     `yaml:"port,omitempty"`
 	Ports             []ServicePortProtocol `yaml:"ports,omitempty"`
