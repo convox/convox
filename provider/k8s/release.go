@@ -133,7 +133,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 
 		// balancers
 		for _, b := range m.Balancers {
-			data, err := p.releaseTemplateBalancer(a, r, b)
+			data, err := p.releaseTemplateBalancer(a, r, b, m.Labels)
 			if err != nil {
 				return errors.WithStack(err)
 			}
@@ -198,7 +198,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		}
 
 		// volumes
-		data, err = p.releaseTemplateVolumes(a, m.Services)
+		data, err = p.releaseTemplateVolumes(a, m.Services, m.Labels)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -316,12 +316,13 @@ func (p *Provider) releaseTemplateApp(a *structs.App, opts structs.ReleasePromot
 	return data, nil
 }
 
-func (p *Provider) releaseTemplateBalancer(a *structs.App, r *structs.Release, b manifest.Balancer) ([]byte, error) {
+func (p *Provider) releaseTemplateBalancer(a *structs.App, r *structs.Release, b manifest.Balancer, lbs manifest.Labels) ([]byte, error) {
 	params := map[string]interface{}{
 		"Annotations": b.AnnotationsMap(),
 		"Balancer":    b,
 		"Namespace":   p.AppNamespace(a.Name),
 		"Release":     r,
+		"Labels":      lbs,
 	}
 
 	data, err := p.RenderTemplate("app/balancer", params)
@@ -547,7 +548,7 @@ func (p *Provider) releaseTemplateTimer(a *structs.App, e structs.Environment, r
 	return data, nil
 }
 
-func (p *Provider) releaseTemplateVolumes(a *structs.App, ss manifest.Services) ([]byte, error) {
+func (p *Provider) releaseTemplateVolumes(a *structs.App, ss manifest.Services, lbs manifest.Labels) ([]byte, error) {
 	vsh := map[string]bool{}
 
 	for i := range ss {
@@ -570,6 +571,7 @@ func (p *Provider) releaseTemplateVolumes(a *structs.App, ss manifest.Services) 
 		"Namespace": p.AppNamespace(a.Name),
 		"Rack":      p.Name,
 		"Volumes":   vs,
+		"Labels":    lbs,
 	}
 
 	data, err := p.RenderTemplate("app/volumes", params)

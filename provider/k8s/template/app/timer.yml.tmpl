@@ -23,6 +23,9 @@ spec:
             release: {{.Release.Id}}
             service: {{.Service.Name}}
             type: timer
+            {{ range keyValue .Service.Labels }}
+            {{.Key}}: "{{.Value}}"
+            {{ end }}
         spec:
           {{ with .Resolver }}
           dnsPolicy: "None"

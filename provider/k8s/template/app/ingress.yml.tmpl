@@ -32,6 +32,9 @@ metadata:
     service: {{.Service.Name}}
     system: convox
     type: service
+    {{ range keyValue .Service.Labels }}
+    {{.Key}}: "{{.Value}}"
+    {{ end }}
 spec:
   ingressClassName: "{{.Class}}"
   tls:
