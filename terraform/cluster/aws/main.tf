@@ -226,7 +226,7 @@ resource "aws_launch_template" "cluster" {
     }
   }
 
-  instance_type = var.node_type
+  instance_type = split(",", var.node_type)[0]
 
   metadata_options {
     http_tokens = var.imds_http_tokens
