@@ -25,11 +25,11 @@ func init() {
 		Validate: stdcli.Args(0),
 	})
 
-	register("rack access", "get rack access creds", RackAccess, stdcli.CommandOptions{
+	register("rack access", "get rack access credential", RackAccess, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
 			flagRack,
 			stdcli.StringFlag("role", "", "access role: read or write"),
-			stdcli.IntFlag("duration", "", "duration in hours"),
+			stdcli.IntFlag("duration-in-hour", "", "duration in hours"),
 		},
 		Validate: stdcli.Args(0),
 	})
@@ -192,7 +192,7 @@ func RackAccess(rack sdk.Interface, c *stdcli.Context) error {
 		return fmt.Errorf("role is required")
 	}
 
-	duration, ok := c.Value("duration").(int)
+	duration, ok := c.Value("duration-in-hour").(int)
 	if !ok {
 		return fmt.Errorf("duration is required")
 	}

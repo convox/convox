@@ -224,3 +224,50 @@ Updates a Rack to a new version.
     provider = local
     OK
 ```
+
+## rack access credential
+
+Generates rack access credential
+
+> supported from: 3.14.1
+
+### Usage
+```html
+    convox rack access --role [role] --duration-in-hour [duration]
+```
+flags:
+  - `role`: Access role for the credential. Allowed roles are: `read` or `write`
+  - `duration-in-hour`: TTL for the credential.
+
+### Examples
+```html
+    $ convox rack access --role read --duration-in-hour 1
+    RACK_URL=https://...
+
+    $ export RACK_URL=https://...
+    $ convox rack
+    Name      v3-rack
+    Provider  aws
+    Router    router.convox
+    Status    running
+    Version   ...
+
+```
+
+## rack access key rotation
+
+Rotates the rack access key that is used for rack access credential. It will invalidate previous all the credential generated from ` convox rack access --role [role] --duration-in-hour [duration]`.
+
+> supported from: 3.14.1
+
+### Usage
+```html
+    convox rack access key rotate
+```
+
+### Examples
+```html
+    $ convox rack access key rotate              
+    OK
+
+```
