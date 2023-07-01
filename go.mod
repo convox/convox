@@ -36,7 +36,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/vektra/mockery v1.1.2
 	golang.org/x/crypto v0.0.0-20221005025214-4161e89ecf1b
-	golang.org/x/text v0.8.0
+	golang.org/x/text v0.10.0
 	google.golang.org/api v0.62.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.25.10
