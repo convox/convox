@@ -34,7 +34,7 @@ resource "kubernetes_secret" "docker_hub_authentication" {
   count = var.docker_hub_username != "" ? 1 : 0
   metadata {
     namespace = kubernetes_namespace.system.metadata[0].name
-    name = "docker-hub-authentication"
+    name      = "docker-hub-authentication"
   }
 
   data = {
@@ -53,12 +53,23 @@ DOCKER
 }
 
 resource "kubernetes_config_map" "telemetry_configuration" {
-  count = (var.telemetry && var.settings != "") ? 1 : 0
+  count = var.telemetry ? 1 : 0
 
   metadata {
     namespace = kubernetes_namespace.system.metadata[0].name
     name      = "telemetry-rack-params"
   }
 
-  data = jsondecode(file("${var.settings}/vars.json"))
+  data = var.telemetry_map
+}
+
+resource "kubernetes_config_map" "telemetry_default_configuration" {
+  count = var.telemetry ? 1 : 0
+
+  metadata {
+    namespace = kubernetes_namespace.system.metadata[0].name
+    name      = "telemetry-default-rack-params"
+  }
+
+  data = var.telemetry_default_map
 }
