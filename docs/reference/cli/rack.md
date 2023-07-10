@@ -233,15 +233,15 @@ Generates rack access credential
 
 ### Usage
 ```html
-    convox rack access --role [role] --duration-in-hour [duration]
+    convox rack access --role [role] --duration-in-hours [duration]
 ```
 flags:
   - `role`: Access role for the credential. Allowed roles are: `read` or `write`
-  - `duration-in-hour`: TTL for the credential.
+  - `duration-in-hours`: TTL for the credential.
 
 ### Examples
 ```html
-    $ convox rack access --role read --duration-in-hour 1
+    $ convox rack access --role read --duration-in-hours 1
     RACK_URL=https://...
 
     $ export RACK_URL=https://...
@@ -256,7 +256,7 @@ flags:
 
 ## rack access key rotation
 
-Rotates the rack access key that is used for rack access credential. It will invalidate previous all the credential generated from ` convox rack access --role [role] --duration-in-hour [duration]`.
+Rotates the rack access key that is used for rack access credential. It will invalidate previous all the credential generated from ` convox rack access --role [role] --duration-in-hours [duration]`.
 
 > supported from: 3.14.1
 
