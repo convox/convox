@@ -41,21 +41,22 @@ module "rack" {
     kubernetes   = kubernetes
   }
 
-  access_id           = var.access_id
-  buildkit_enabled    = var.buildkit_enabled
-  cluster             = module.cluster.id
-  docker_hub_username = var.docker_hub_username
-  docker_hub_password = var.docker_hub_password
-  high_availability   = var.high_availability
-  image               = var.image
-  name                = var.name
-  rack_name           = var.rack_name
-  region              = var.region
-  registry_disk       = var.registry_disk
-  release             = local.release
-  secret_key          = var.secret_key
-  settings            = var.settings
-  syslog              = var.syslog
-  telemetry           = var.telemetry
-  whitelist           = split(",", var.whitelist)
+  access_id             = var.access_id
+  buildkit_enabled      = var.buildkit_enabled
+  cluster               = module.cluster.id
+  docker_hub_username   = var.docker_hub_username
+  docker_hub_password   = var.docker_hub_password
+  high_availability     = var.high_availability
+  image                 = var.image
+  name                  = var.name
+  rack_name             = var.rack_name
+  region                = var.region
+  registry_disk         = var.registry_disk
+  release               = local.release
+  secret_key            = var.secret_key
+  syslog                = var.syslog
+  telemetry             = var.telemetry
+  telemetry_map         = local.telemetry_map
+  telemetry_default_map = local.telemetry_default_map
+  whitelist             = split(",", var.whitelist)
 }

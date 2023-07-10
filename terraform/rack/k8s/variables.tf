@@ -25,11 +25,14 @@ variable "release" {
   type = string
 }
 
-variable "settings" {
-  type    = string
-  default = ""
+variable "telemetry" {
+  type = bool
 }
 
-variable "telemetry" {
-  type   = bool
+variable "telemetry_map" {
+  type = any
+}
+
+variable "telemetry_default_map" {
+  type = any
 }

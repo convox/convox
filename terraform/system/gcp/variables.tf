@@ -58,7 +58,7 @@ variable "syslog" {
 }
 
 variable "telemetry" {
-  type   = bool
+  type    = bool
   default = false
 }
 
