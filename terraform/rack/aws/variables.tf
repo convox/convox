@@ -72,11 +72,6 @@ variable "tags" {
   default = {}
 }
 
-variable "settings" {
-  type    = string
-  default = ""
-}
-
 variable "subnets" {
   type = list(any)
 }
@@ -93,6 +88,14 @@ variable "ssl_protocols" {
 
 variable "telemetry" {
   type = bool
+}
+
+variable "telemetry_map" {
+  type = any
+}
+
+variable "telemetry_default_map" {
+  type = any
 }
 
 variable "whitelist" {

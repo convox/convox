@@ -1,0 +1,17 @@
+{{define "telemetry"}}
+// this is auto generated(do not edit manually): go run cmd/telemetry-gen/main.go {{ .Provider }}
+
+locals {
+  telemetry_map = {
+    {{ range $key, $value := .VarMap -}}
+    {{ $key }} = {{ $value }}
+    {{ end -}}
+  }
+
+  telemetry_default_map = {
+    {{ range $key, $value := .DefaultMap -}}
+    {{ $key }} = "{{ $value }}"
+    {{ end -}}
+  }
+}
+{{ end }}

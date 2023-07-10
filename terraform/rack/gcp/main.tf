@@ -5,13 +5,14 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
-  docker_hub_username = var.docker_hub_username
-  docker_hub_password = var.docker_hub_password
-  domain              = module.router.endpoint
-  name                = var.name
-  release             = var.release
-  settings            = var.settings
-  telemetry           = var.telemetry
+  docker_hub_username   = var.docker_hub_username
+  docker_hub_password   = var.docker_hub_password
+  domain                = module.router.endpoint
+  name                  = var.name
+  release               = var.release
+  telemetry             = var.telemetry
+  telemetry_map         = var.telemetry_map
+  telemetry_default_map = var.telemetry_default_map
 }
 
 module "api" {

@@ -462,9 +462,9 @@ func (t Terraform) update(release string, vars map[string]string) error {
 	}
 
 	// support for telemetry
-	if HasSupport(release, MINOR_TELEMETRY_SUPPORTED, PATCH_TELEMETRY_SUPPORTED) {
-		vars["settings"] = dir
-	}
+	// if HasSupport(release, MINOR_TELEMETRY_SUPPORTED, PATCH_TELEMETRY_SUPPORTED) {
+	// 	vars["settings"] = dir
+	// }
 
 	params := map[string]interface{}{
 		"Name":     t.name,

@@ -61,9 +61,10 @@ module "rack" {
   resource_group          = azurerm_resource_group.rack.id
   resource_group_name     = azurerm_resource_group.rack.name
   resource_group_location = azurerm_resource_group.rack.location
-  settings                = var.settings
   syslog                  = var.syslog
   telemetry               = var.telemetry
+  telemetry_map           = local.telemetry_map
+  telemetry_default_map   = local.telemetry_default_map
   whitelist               = split(",", var.whitelist)
   workspace               = module.cluster.workspace
 }
