@@ -20,7 +20,7 @@ require (
 	github.com/convox/version v0.0.0-20160822184233-ffefa0d565d2
 	github.com/crazy-max/xgo v0.24.0
 	github.com/creack/pty v1.1.18
-	github.com/docker/docker v20.10.14+incompatible
+	github.com/docker/docker v20.10.24+incompatible
 	github.com/dustin/go-humanize v1.0.0
 	github.com/elastic/go-elasticsearch/v6 v6.8.2
 	github.com/fsouza/go-dockerclient v1.4.2
