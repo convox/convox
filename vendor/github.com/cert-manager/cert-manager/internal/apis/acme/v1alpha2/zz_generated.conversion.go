@@ -33,7 +33,7 @@ import (
 	pkgapismetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
-	apisv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	v1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 func init() {
@@ -669,7 +669,7 @@ func Convert_acme_ACMEChallengeSolverHTTP01_To_v1alpha2_ACMEChallengeSolverHTTP0
 func autoConvert_v1alpha2_ACMEChallengeSolverHTTP01GatewayHTTPRoute_To_acme_ACMEChallengeSolverHTTP01GatewayHTTPRoute(in *ACMEChallengeSolverHTTP01GatewayHTTPRoute, out *acme.ACMEChallengeSolverHTTP01GatewayHTTPRoute, s conversion.Scope) error {
 	out.ServiceType = v1.ServiceType(in.ServiceType)
 	out.Labels = *(*map[string]string)(unsafe.Pointer(&in.Labels))
-	out.ParentRefs = *(*[]apisv1alpha2.ParentRef)(unsafe.Pointer(&in.ParentRefs))
+	out.ParentRefs = *(*[]v1beta1.ParentReference)(unsafe.Pointer(&in.ParentRefs))
 	return nil
 }
 
@@ -681,7 +681,7 @@ func Convert_v1alpha2_ACMEChallengeSolverHTTP01GatewayHTTPRoute_To_acme_ACMEChal
 func autoConvert_acme_ACMEChallengeSolverHTTP01GatewayHTTPRoute_To_v1alpha2_ACMEChallengeSolverHTTP01GatewayHTTPRoute(in *acme.ACMEChallengeSolverHTTP01GatewayHTTPRoute, out *ACMEChallengeSolverHTTP01GatewayHTTPRoute, s conversion.Scope) error {
 	out.ServiceType = v1.ServiceType(in.ServiceType)
 	out.Labels = *(*map[string]string)(unsafe.Pointer(&in.Labels))
-	out.ParentRefs = *(*[]apisv1alpha2.ParentRef)(unsafe.Pointer(&in.ParentRefs))
+	out.ParentRefs = *(*[]v1beta1.ParentReference)(unsafe.Pointer(&in.ParentRefs))
 	return nil
 }
 
@@ -692,6 +692,7 @@ func Convert_acme_ACMEChallengeSolverHTTP01GatewayHTTPRoute_To_v1alpha2_ACMEChal
 
 func autoConvert_v1alpha2_ACMEChallengeSolverHTTP01Ingress_To_acme_ACMEChallengeSolverHTTP01Ingress(in *ACMEChallengeSolverHTTP01Ingress, out *acme.ACMEChallengeSolverHTTP01Ingress, s conversion.Scope) error {
 	out.ServiceType = v1.ServiceType(in.ServiceType)
+	out.IngressClassName = (*string)(unsafe.Pointer(in.IngressClassName))
 	out.Class = (*string)(unsafe.Pointer(in.Class))
 	out.Name = in.Name
 	out.PodTemplate = (*acme.ACMEChallengeSolverHTTP01IngressPodTemplate)(unsafe.Pointer(in.PodTemplate))
@@ -706,6 +707,7 @@ func Convert_v1alpha2_ACMEChallengeSolverHTTP01Ingress_To_acme_ACMEChallengeSolv
 
 func autoConvert_acme_ACMEChallengeSolverHTTP01Ingress_To_v1alpha2_ACMEChallengeSolverHTTP01Ingress(in *acme.ACMEChallengeSolverHTTP01Ingress, out *ACMEChallengeSolverHTTP01Ingress, s conversion.Scope) error {
 	out.ServiceType = v1.ServiceType(in.ServiceType)
+	out.IngressClassName = (*string)(unsafe.Pointer(in.IngressClassName))
 	out.Class = (*string)(unsafe.Pointer(in.Class))
 	out.Name = in.Name
 	out.PodTemplate = (*ACMEChallengeSolverHTTP01IngressPodTemplate)(unsafe.Pointer(in.PodTemplate))
@@ -768,6 +770,7 @@ func autoConvert_v1alpha2_ACMEChallengeSolverHTTP01IngressPodSpec_To_acme_ACMECh
 	out.Tolerations = *(*[]v1.Toleration)(unsafe.Pointer(&in.Tolerations))
 	out.PriorityClassName = in.PriorityClassName
 	out.ServiceAccountName = in.ServiceAccountName
+	out.ImagePullSecrets = *(*[]v1.LocalObjectReference)(unsafe.Pointer(&in.ImagePullSecrets))
 	return nil
 }
 
@@ -782,6 +785,7 @@ func autoConvert_acme_ACMEChallengeSolverHTTP01IngressPodSpec_To_v1alpha2_ACMECh
 	out.Tolerations = *(*[]v1.Toleration)(unsafe.Pointer(&in.Tolerations))
 	out.PriorityClassName = in.PriorityClassName
 	out.ServiceAccountName = in.ServiceAccountName
+	out.ImagePullSecrets = *(*[]v1.LocalObjectReference)(unsafe.Pointer(&in.ImagePullSecrets))
 	return nil
 }
 
@@ -876,6 +880,7 @@ func autoConvert_v1alpha2_ACMEIssuer_To_acme_ACMEIssuer(in *ACMEIssuer, out *acm
 	out.Email = in.Email
 	out.Server = in.Server
 	out.PreferredChain = in.PreferredChain
+	out.CABundle = *(*[]byte)(unsafe.Pointer(&in.CABundle))
 	out.SkipTLSVerify = in.SkipTLSVerify
 	if in.ExternalAccountBinding != nil {
 		in, out := &in.ExternalAccountBinding, &out.ExternalAccountBinding
@@ -909,6 +914,7 @@ func autoConvert_acme_ACMEIssuer_To_v1alpha2_ACMEIssuer(in *acme.ACMEIssuer, out
 	out.Email = in.Email
 	out.Server = in.Server
 	out.PreferredChain = in.PreferredChain
+	out.CABundle = *(*[]byte)(unsafe.Pointer(&in.CABundle))
 	out.SkipTLSVerify = in.SkipTLSVerify
 	if in.ExternalAccountBinding != nil {
 		in, out := &in.ExternalAccountBinding, &out.ExternalAccountBinding
@@ -1279,6 +1285,7 @@ func Convert_acme_ACMEIssuerDNS01ProviderWebhook_To_v1alpha2_ACMEIssuerDNS01Prov
 func autoConvert_v1alpha2_ACMEIssuerStatus_To_acme_ACMEIssuerStatus(in *ACMEIssuerStatus, out *acme.ACMEIssuerStatus, s conversion.Scope) error {
 	out.URI = in.URI
 	out.LastRegisteredEmail = in.LastRegisteredEmail
+	out.LastPrivateKeyHash = in.LastPrivateKeyHash
 	return nil
 }
 
@@ -1290,6 +1297,7 @@ func Convert_v1alpha2_ACMEIssuerStatus_To_acme_ACMEIssuerStatus(in *ACMEIssuerSt
 func autoConvert_acme_ACMEIssuerStatus_To_v1alpha2_ACMEIssuerStatus(in *acme.ACMEIssuerStatus, out *ACMEIssuerStatus, s conversion.Scope) error {
 	out.URI = in.URI
 	out.LastRegisteredEmail = in.LastRegisteredEmail
+	out.LastPrivateKeyHash = in.LastPrivateKeyHash
 	return nil
 }
 
