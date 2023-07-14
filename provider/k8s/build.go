@@ -107,6 +107,9 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 	if p.BuildkitEnabled == "true" {
 		psOpts.Image = options.String(p.buildImage(os.Getenv("PROVIDER")))
 		psOpts.Privileged = options.Bool(p.buildPrivileged(os.Getenv("PROVIDER")))
+		psOpts.Volumes = map[string]string{
+			"/var/lib/buildkit": "/var/lib/buildkit/",
+		}
 	} else {
 		psOpts.Image = options.String(p.Image)
 		psOpts.Volumes = map[string]string{
