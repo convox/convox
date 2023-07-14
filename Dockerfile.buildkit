@@ -25,6 +25,10 @@ USER 1000
 # standard credentials path used by buildkit
 RUN mkdir -p $HOME/.docker
 
+RUN mkdir -p $HOME/.config/buildkit
+
+COPY ./scripts/buildkitd.toml ~/.config/buildkit/buildkitd.toml
+
 ENTRYPOINT [ "./buildctl-daemonless.sh" ]
 
 ###########################################################################################
@@ -36,6 +40,8 @@ RUN apk add skopeo --update
 COPY --from=package /go/bin/build /usr/bin
 
 COPY ./scripts/buildctl-daemonless.sh /buildctl-daemonless.sh
+
+COPY ./scripts/buildkitd.toml /etc/buildkit/buildkitd.toml
 
 # standard credentials path used by buildkit
 RUN mkdir -p $HOME/.docker
