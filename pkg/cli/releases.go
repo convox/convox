@@ -30,12 +30,12 @@ func init() {
 	})
 
 	register("releases promote", "promote a release", ReleasesPromote, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagApp, flagRack},
+		Flags:    []stdcli.Flag{flagApp, flagRack, flagForce},
 		Validate: stdcli.ArgsMax(1),
 	})
 
 	register("releases rollback", "copy an old release forward and promote it", ReleasesRollback, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagApp, flagId, flagRack},
+		Flags:    []stdcli.Flag{flagApp, flagId, flagRack, flagForce},
 		Validate: stdcli.Args(1),
 	})
 }
@@ -127,10 +127,10 @@ func ReleasesPromote(rack sdk.Interface, c *stdcli.Context) error {
 		release = rs[0].Id
 	}
 
-	return releasePromote(rack, c, app(c), release)
+	return releasePromote(rack, c, app(c), release, c.Bool("force"))
 }
 
-func releasePromote(rack sdk.Interface, c *stdcli.Context, app, id string) error {
+func releasePromote(rack sdk.Interface, c *stdcli.Context, app, id string, force bool) error {
 	if id == "" {
 		return fmt.Errorf("no release to promote")
 	}
@@ -140,7 +140,7 @@ func releasePromote(rack sdk.Interface, c *stdcli.Context, app, id string) error
 		return err
 	}
 
-	if a.Status != "running" {
+	if !force && a.Status != "running" {
 		c.Startf("Waiting for app to be ready")
 
 		if err := common.WaitForAppRunning(rack, app); err != nil {
@@ -152,7 +152,9 @@ func releasePromote(rack sdk.Interface, c *stdcli.Context, app, id string) error
 
 	c.Startf("Promoting <release>%s</release>", id)
 
-	if err := rack.ReleasePromote(app, id, structs.ReleasePromoteOptions{}); err != nil {
+	if err := rack.ReleasePromote(app, id, structs.ReleasePromoteOptions{
+		Force: &force,
+	}); err != nil {
 		return err
 	}
 
@@ -203,7 +205,10 @@ func ReleasesRollback(rack sdk.Interface, c *stdcli.Context) error {
 
 	c.Startf("Promoting <release>%s</release>", rn.Id)
 
-	if err := rack.ReleasePromote(app(c), rn.Id, structs.ReleasePromoteOptions{}); err != nil {
+	force := c.Bool("force")
+	if err := rack.ReleasePromote(app(c), rn.Id, structs.ReleasePromoteOptions{
+		Force: &force,
+	}); err != nil {
 		return err
 	}
 
