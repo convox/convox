@@ -133,7 +133,6 @@ resource "aws_eks_node_group" "cluster-build" {
   ami_type        = var.gpu_type ? "AL2_x86_64_GPU" : var.arm_type ? "AL2_ARM_64" : "AL2_x86_64"
   capacity_type   = "ON_DEMAND"
   cluster_name    = aws_eks_cluster.cluster.name
-  instance_types  = split(",", random_id.build_node_group[0].keepers.node_type)
   node_group_name = "${var.name}-build-${local.availability_zones[count.index]}-${count.index}${random_id.build_node_group[0].hex}"
   node_role_arn   = random_id.build_node_group[0].keepers.role_arn
   subnet_ids      = [aws_subnet.private[count.index].id]
@@ -230,6 +229,10 @@ resource "aws_launch_template" "cluster" {
 
   metadata_options {
     http_tokens = var.imds_http_tokens
+  }
+
+  instance_requirements {
+    allowed_instance_types = split(",", random_id.build_node_group[0].keepers.node_type)
   }
 
   dynamic "tag_specifications" {
