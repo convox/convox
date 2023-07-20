@@ -232,6 +232,8 @@ resource "aws_launch_template" "cluster" {
     http_tokens = var.imds_http_tokens
   }
 
+  instance_type = split(",", random_id.build_node_group[0].keepers.node_type)[0]
+
   dynamic "tag_specifications" {
     for_each = toset(
       concat(["instance", "volume", "network-interface", "spot-instances-request"],
