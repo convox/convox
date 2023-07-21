@@ -26,13 +26,16 @@ data "http" "releases" {
 
 locals {
   // var.node_type can be assigned a comma separated list of instance types
-  node_type = split(",", var.node_type)[0]
-  arm_type  = substr(local.node_type, 0, 2) == "a1" || substr(local.node_type, 0, 3) == "c6g" || substr(local.node_type, 0, 3) == "c7g" || substr(local.node_type, 0, 3) == "m6g" || substr(local.node_type, 0, 3) == "r6g" || substr(local.node_type, 0, 3) == "t4g"
-  current   = jsondecode(data.http.releases.response_body).tag_name
-  gpu_type  = substr(local.node_type, 0, 1) == "g" || substr(local.node_type, 0, 1) == "p"
-  image     = var.image
-  release   = local.arm_type ? format("%s-%s", coalesce(var.release, local.current), "arm64") : coalesce(var.release, local.current)
-  tag_map = length(var.tags) == 0 ? {} : {
+  node_type       = split(",", var.node_type)[0]
+  build_node_type = var.build_node_type != "" ? var.build_node_type : local.node_type
+  arm_type        = substr(local.node_type, 0, 2) == "a1" || substr(local.node_type, 0, 3) == "c6g" || substr(local.node_type, 0, 3) == "c7g" || substr(local.node_type, 0, 3) == "m6g" || substr(local.node_type, 0, 3) == "r6g" || substr(local.node_type, 0, 3) == "t4g"
+  build_arm_type  = substr(local.build_node_type, 0, 2) == "a1" || substr(local.build_node_type, 0, 3) == "c6g" || substr(local.build_node_type, 0, 3) == "c7g" || substr(local.build_node_type, 0, 3) == "m6g" || substr(local.build_node_type, 0, 3) == "r6g" || substr(local.build_node_type, 0, 3) == "t4g"
+  current         = jsondecode(data.http.releases.response_body).tag_name
+  gpu_type        = substr(local.node_type, 0, 1) == "g" || substr(local.node_type, 0, 1) == "p"
+  build_gpu_type  = substr(local.build_node_type, 0, 1) == "g" || substr(local.build_node_type, 0, 1) == "p"
+  image           = var.image
+  release         = local.arm_type ? format("%s-%s", coalesce(var.release, local.current), "arm64") : coalesce(var.release, local.current)
+  tag_map         = length(var.tags) == 0 ? {} : {
     for v in split(",", var.tags) :
     "${split("=", v)[0]}" => split("=", v)[1]
   }
@@ -46,6 +49,7 @@ module "cluster" {
   }
 
   arm_type                 = local.arm_type
+  build_arm_type           = local.build_arm_type
   availability_zones       = var.availability_zones
   build_node_enabled       = var.build_node_enabled
   build_node_min_count     = var.build_node_min_count
@@ -53,6 +57,7 @@ module "cluster" {
   cidr                     = var.cidr
   coredns_version          = var.coredns_version
   gpu_type                 = local.gpu_type
+  build_gpu_type           = local.build_gpu_type
   gpu_tag_enable           = var.gpu_tag_enable
   high_availability        = var.high_availability
   internet_gateway_id      = var.internet_gateway_id

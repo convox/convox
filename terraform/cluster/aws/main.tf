@@ -130,7 +130,7 @@ resource "aws_eks_node_group" "cluster-build" {
 
   count = var.build_node_enabled ? 1 : 0
 
-  ami_type        = var.gpu_type ? "AL2_x86_64_GPU" : var.arm_type ? "AL2_ARM_64" : "AL2_x86_64"
+  ami_type        = var.build_gpu_type ? "AL2_x86_64_GPU" : var.build_arm_type ? "AL2_ARM_64" : "AL2_x86_64"
   capacity_type   = "ON_DEMAND"
   cluster_name    = aws_eks_cluster.cluster.name
   instance_types  = split(",", random_id.build_node_group[0].keepers.node_type)

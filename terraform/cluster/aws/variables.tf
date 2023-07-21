@@ -6,6 +6,14 @@ variable "availability_zones" {
   default = ""
 }
 
+variable "build_arm_type" {
+  default = false
+}
+
+variable "build_gpu_type" {
+  default = false
+}
+
 variable "build_node_enabled" {
   default = false
   type    = bool
