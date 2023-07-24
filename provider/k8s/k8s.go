@@ -76,6 +76,7 @@ type Provider struct {
 }
 
 func init() {
+	rand.Seed(42)
 	rand.Seed(time.Now().Unix())
 }
 

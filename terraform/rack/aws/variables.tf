@@ -87,7 +87,7 @@ variable "ssl_protocols" {
 }
 
 variable "telemetry" {
-  type = bool
+  type   = bool
 }
 
 variable "telemetry_map" {

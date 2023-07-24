@@ -152,7 +152,7 @@ func EnvEdit(rack sdk.Interface, c *stdcli.Context) error {
 	c.Writef("Release: <release>%s</release>\n", r.Id)
 
 	if c.Bool("promote") {
-		if err := releasePromote(rack, c, app(c), r.Id); err != nil {
+		if err := releasePromote(rack, c, app(c), r.Id, false); err != nil {
 			return err
 		}
 	}
@@ -242,7 +242,7 @@ func EnvSet(rack sdk.Interface, c *stdcli.Context) error {
 	c.Writef("Release: <release>%s</release>\n", r.Id)
 
 	if c.Bool("promote") {
-		if err := releasePromote(rack, c, app(c), r.Id); err != nil {
+		if err := releasePromote(rack, c, app(c), r.Id, false); err != nil {
 			return err
 		}
 	}
@@ -304,7 +304,7 @@ func EnvUnset(rack sdk.Interface, c *stdcli.Context) error {
 	c.Writef("Release: <release>%s</release>\n", r.Id)
 
 	if c.Bool("promote") {
-		if err := releasePromote(rack, c, app(c), r.Id); err != nil {
+		if err := releasePromote(rack, c, app(c), r.Id, false); err != nil {
 			return err
 		}
 	}

@@ -267,7 +267,7 @@ Rotates the rack access key that is used for rack access credential. It will inv
 
 ### Examples
 ```html
-    $ convox rack access key rotate              
+    $ convox rack access key rotate
     OK
 
 ```
