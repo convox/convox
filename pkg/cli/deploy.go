@@ -11,7 +11,7 @@ import (
 
 func init() {
 	register("deploy", "create and promote a build", Deploy, stdcli.CommandOptions{
-		Flags:    append(stdcli.OptionFlags(structs.BuildCreateOptions{}), flagApp, flagId, flagRack),
+		Flags:    append(stdcli.OptionFlags(structs.BuildCreateOptions{}), flagApp, flagId, flagRack, flagForce),
 		Usage:    "[dir]",
 		Validate: stdcli.ArgsMax(1),
 	})
@@ -30,7 +30,7 @@ func Deploy(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	if err := releasePromote(rack, c, app(c), b.Release); err != nil {
+	if err := releasePromote(rack, c, app(c), b.Release, c.Bool("force")); err != nil {
 		return err
 	}
 
