@@ -48,7 +48,9 @@ func (p *Provider) ReleaseCreate(app string, opts structs.ReleaseCreateOptions) 
 			return nil, errors.WithStack(err)
 		}
 
-		r.Description = fmt.Sprintf("env %s", desc)
+		if strings.TrimSpace(desc) != "" {
+			r.Description = fmt.Sprintf("env %s", desc)
+		}
 		r.Env = *opts.Env
 	}
 
