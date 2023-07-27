@@ -51,6 +51,7 @@ module "cluster" {
   arm_type                 = local.arm_type
   build_arm_type           = local.build_arm_type
   availability_zones       = var.availability_zones
+  build_node_disk          = var.build_node_disk
   build_node_enabled       = var.build_node_enabled
   build_node_min_count     = var.build_node_min_count
   build_node_type          = var.build_node_type != "" ? var.build_node_type : var.node_type

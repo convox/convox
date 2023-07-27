@@ -81,7 +81,7 @@ resource "random_id" "build_node_group" {
   byte_length = 8
 
   keepers = {
-    node_disk = var.node_disk
+    node_disk = var.build_node_disk
     node_type = var.build_node_type
     role_arn  = replace(aws_iam_role.nodes.arn, "role/convox/", "role/") # eks barfs on roles with paths
   }
@@ -151,7 +151,7 @@ resource "aws_eks_node_group" "cluster-build" {
   }
 
   launch_template {
-    id      = aws_launch_template.cluster.id
+    id      = aws_launch_template_build.cluster.id
     version = "$Latest"
   }
 
@@ -225,6 +225,33 @@ resource "aws_launch_template" "cluster" {
     ebs {
       volume_type = "gp3"
       volume_size = random_id.node_group.keepers.node_disk
+    }
+  }
+
+  metadata_options {
+    http_tokens = var.imds_http_tokens
+  }
+
+  dynamic "tag_specifications" {
+    for_each = toset(
+      concat(["instance", "volume", "network-interface", "spot-instances-request"],
+        var.gpu_tag_enable ? ["elastic-gpu"] : []
+    ))
+    content {
+      resource_type = tag_specifications.key
+      tags          = local.tags
+    }
+  }
+
+  key_name = var.key_pair_name != "" ? var.key_pair_name : null
+}
+
+resource "aws_launch_template_build" "cluster" {
+  block_device_mappings {
+    device_name = "/dev/xvda"
+    ebs {
+      volume_type = "gp3"
+      volume_size = random_id.node_group.keepers.build_node_disk
     }
   }
 

@@ -69,17 +69,18 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 	cache := common.DefaultBool(opts.NoCache, true)
 
 	env := map[string]string{
-		"BUILD_APP":         app,
-		"BUILD_AUTH":        string(auth),
-		"BUILD_DEVELOPMENT": fmt.Sprintf("%t", common.DefaultBool(opts.Development, false)),
-		"BUILD_GENERATION":  "2",
-		"BUILD_ID":          b.Id,
-		"BUILD_MANIFEST":    common.DefaultString(opts.Manifest, "convox.yml"),
-		"BUILD_RACK":        p.Name,
-		"BUILD_URL":         url,
-		"BUILDKIT_ENABLED":  p.BuildkitEnabled,
-		"PROVIDER":          os.Getenv("PROVIDER"),
-		"RACK_URL":          fmt.Sprintf("https://convox:%s@api.%s.svc.cluster.local:5443", p.Password, p.Namespace),
+		"BUILD_APP":          app,
+		"BUILD_AUTH":         string(auth),
+		"BUILD_DEVELOPMENT":  fmt.Sprintf("%t", common.DefaultBool(opts.Development, false)),
+		"BUILD_GENERATION":   "2",
+		"BUILD_ID":           b.Id,
+		"BUILD_MANIFEST":     common.DefaultString(opts.Manifest, "convox.yml"),
+		"BUILD_NODE_ENABLED": p.BuildNodeEnabled,
+		"BUILD_RACK":         p.Name,
+		"BUILD_URL":          url,
+		"BUILDKIT_ENABLED":   p.BuildkitEnabled,
+		"PROVIDER":           os.Getenv("PROVIDER"),
+		"RACK_URL":           fmt.Sprintf("https://convox:%s@api.%s.svc.cluster.local:5443", p.Password, p.Namespace),
 	}
 
 	repo, _, err := p.Engine.RepositoryHost(app)
@@ -107,8 +108,10 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 	if p.BuildkitEnabled == "true" {
 		psOpts.Image = options.String(p.buildImage(os.Getenv("PROVIDER")))
 		psOpts.Privileged = options.Bool(p.buildPrivileged(os.Getenv("PROVIDER")))
-		psOpts.Volumes = map[string]string{
-			"/var/lib/buildkit": "/var/lib/buildkit/",
+		if p.BuildNodeEnabled == "true" {
+			psOpts.Volumes = map[string]string{
+				"/var/lib/buildkit": "/var/lib/buildkit/",
+			}
 		}
 	} else {
 		psOpts.Image = options.String(p.Image)

@@ -46,6 +46,7 @@ The following environment variables are required:
 | Name                     | Default                | Description                                                                                                    |
 | -------------------------|------------------------|----------------------------------------------------------------------------------------------------------------|
 | **availability_zones**   |                        | Specify a list of AZ names (minimum 3) to override the random automatic selection from AWS                     |
+| **build_node_disk**      | **20**                 | Node disk size for the build node |
 | **build_node_enabled**   |     false              | Enabled dedicated build node for build |
 | **build_node_type**      | same as **node_type**  | Node type for the build node |
 | **build_node_min_count** |     0                  | Minimum number of build nodes to keep running |
