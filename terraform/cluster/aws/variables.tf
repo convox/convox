@@ -6,6 +6,10 @@ variable "availability_zones" {
   default = ""
 }
 
+variable "build_node_disk" {
+  default = 20
+}
+
 variable "build_node_enabled" {
   default = false
   type    = bool
