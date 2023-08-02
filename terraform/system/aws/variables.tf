@@ -186,3 +186,13 @@ variable "vpc_cni_version" {
 variable "whitelist" {
   default = "0.0.0.0/0"
 }
+
+variable "private_subnets_ids" {
+  type    = string
+  default = ""
+}
+
+variable "public_subnets_ids" {
+  type    = string
+  default = ""
+}
