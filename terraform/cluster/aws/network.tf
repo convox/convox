@@ -5,6 +5,14 @@ locals {
     Rack = var.name
   })
   vpc_id = var.vpc_id == "" ? aws_vpc.nodes[0].id : var.vpc_id
+
+  validate_private_subnets_count = length(var.private_subnets_ids) == 0 ? true : (var.high_availability ? (length(var.private_subnets_ids) == 3 ? true : tobool("If high availability is enabled, there must be 3 private subnets on each AZ")) : true)
+  private_subnets_ids            = length(var.private_subnets_ids) == 0 ? aws_subnet.private[*].id : var.private_subnets_ids
+  private_route_tables           = length(var.private_subnets_ids) == 0 ? aws_route_table.private[*].id : data.aws_route_table.private[*].id
+
+  validate_public_subnets_count = length(var.public_subnets_ids) == 0 ? true : (var.high_availability ? (length(var.public_subnets_ids) == 3 ? true : tobool("If high availability is enabled, there must be 3 public subnets on each AZ")) : true)
+  public_subnets_ids            = length(var.public_subnets_ids) == 0 ? aws_subnet.public[*].id : var.public_subnets_ids
+  public_route_table            = length(var.public_subnets_ids) == 0 ? aws_route_table.public[0].id : data.aws_route_table.public[0].id
 }
 
 resource "aws_vpc" "nodes" {
@@ -52,7 +60,7 @@ resource "aws_subnet" "public" {
     null_resource.wait_vpc_nodes
   ]
 
-  count = local.network_resource_count
+  count = length(var.public_subnets_ids) == 0 ? local.network_resource_count : 0
 
   availability_zone       = local.availability_zones[count.index]
   cidr_block              = cidrsubnet(var.cidr, 4, count.index)
@@ -71,6 +79,7 @@ resource "aws_subnet" "public" {
 }
 
 resource "aws_route_table" "public" {
+  count  = length(var.public_subnets_ids) == 0 ? 1 : 0
   vpc_id = local.vpc_id
 
   tags = merge(local.tags, {
@@ -116,7 +125,11 @@ resource "aws_subnet" "private" {
     null_resource.wait_vpc_nodes
   ]
 
-  count = var.private ? local.network_resource_count : 0
+  // If len(private_subnets_ids) == 0 then
+  // | if private == true then count = local.network_resource_count
+  // | else count = 0 (because private is false)
+  // else count = 0 (because the private subnets are being provided by input)
+  count = length(var.private_subnets_ids) == 0 ? var.private ? local.network_resource_count : 0 : 0
 
   availability_zone = local.availability_zones[count.index]
   cidr_block        = cidrsubnet(var.cidr, 2, count.index + 1)
@@ -144,7 +157,11 @@ resource "aws_eip" "nat" {
 }
 
 resource "aws_nat_gateway" "private" {
-  count = var.private ? local.network_resource_count : 0
+  // if len(private_subnet_ids) == 0 then
+  // | if private == true then count = local.network_resource_count
+  // | else count = 0 (because private is false)
+  // else count = 0 (because data.aws_nat_gateway will handle that)
+  count = length(var.private_subnets_ids) == 0 ? (var.private ? local.network_resource_count : 0) : 0
 
   allocation_id = aws_eip.nat[count.index].id
   subnet_id     = aws_subnet.public[count.index].id
@@ -155,7 +172,7 @@ resource "aws_nat_gateway" "private" {
 }
 
 resource "aws_route_table" "private" {
-  count = var.private ? local.network_resource_count : 0
+  count = length(var.private_subnets_ids) == 0 ? var.private ? local.network_resource_count : 0 : 0
 
   vpc_id = local.vpc_id
 
@@ -185,7 +202,7 @@ resource "aws_route" "private-default" {
     null_resource.wait_routes_private
   ]
 
-  count = var.private ? local.network_resource_count : 0
+  count = length(var.private_subnets_ids) == 0 ? var.private ? local.network_resource_count : 0 : 0
 
   destination_cidr_block = "0.0.0.0/0"
   nat_gateway_id         = aws_nat_gateway.private[count.index].id
