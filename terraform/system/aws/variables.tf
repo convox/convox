@@ -124,6 +124,16 @@ variable "private" {
   default = true
 }
 
+variable "private_subnets_ids" {
+  type    = string
+  default = ""
+}
+
+variable "public_subnets_ids" {
+  type    = string
+  default = ""
+}
+
 variable "proxy_protocol" {
   default = false
 }
@@ -186,3 +196,4 @@ variable "vpc_cni_version" {
 variable "whitelist" {
   default = "0.0.0.0/0"
 }
+
