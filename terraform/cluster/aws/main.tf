@@ -52,7 +52,7 @@ resource "aws_eks_cluster" "cluster" {
     endpoint_public_access  = true
     endpoint_private_access = false
     security_group_ids      = [aws_security_group.cluster.id]
-    subnet_ids              = concat(aws_subnet.public.*.id)
+    subnet_ids              = concat(local.public_subnets_ids)
   }
 }
 
@@ -101,7 +101,7 @@ resource "aws_eks_node_group" "cluster" {
   instance_types  = split(",", random_id.node_group.keepers.node_type)
   node_group_name = "${var.name}-${local.availability_zones[count.index]}-${count.index}${random_id.node_group.hex}"
   node_role_arn   = random_id.node_group.keepers.role_arn
-  subnet_ids      = [var.private ? aws_subnet.private[count.index].id : aws_subnet.public[count.index].id]
+  subnet_ids      = [var.private ? local.private_subnets_ids[count.index] : local.public_subnets_ids[count.index]]
   tags            = local.tags
   version         = var.k8s_version
 
