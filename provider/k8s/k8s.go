@@ -34,39 +34,41 @@ import (
 )
 
 const (
-	CURRENT_CM_VERSION    = "v1.9.0"
-	MAX_RETRIES_UPDATE_CM = 10
+	CURRENT_CM_VERSION     = "v1.10.2"
+	MAX_RETRIES_UPDATE_CM  = 10
+	CERT_MANAGER_NAMESPACE = "cert-manager"
 )
 
 type Provider struct {
-	Atom              atom.Interface
-	BuildkitEnabled   string
-	BuildNodeEnabled  string
-	CertManager       bool
-	Cluster           kubernetes.Interface
-	Config            *rest.Config
-	Convox            cv.Interface
-	CertManagerClient cmclient.Interface
-	DiscoveryClient   discovery.DiscoveryInterface
-	Domain            string
-	DomainInternal    string
-	DynamicClient     dynamic.Interface
-	Engine            Engine
-	Image             string
-	JwtMngr           *jwt.JwtManager
-	Name              string
-	MetricScraper     *MetricScraperClient
-	MetricsClient     metricsclientset.Interface
-	Namespace         string
-	Password          string
-	Provider          string
-	RackName          string
-	Resolver          string
-	RestClient        rest.Interface
-	Router            string
-	Socket            string
-	Storage           string
-	Version           string
+	Atom               atom.Interface
+	BuildkitEnabled    string
+	BuildNodeEnabled   string
+	CertManager        bool
+	CertManagerRoleArn string
+	Cluster            kubernetes.Interface
+	Config             *rest.Config
+	Convox             cv.Interface
+	CertManagerClient  cmclient.Interface
+	DiscoveryClient    discovery.DiscoveryInterface
+	Domain             string
+	DomainInternal     string
+	DynamicClient      dynamic.Interface
+	Engine             Engine
+	Image              string
+	JwtMngr            *jwt.JwtManager
+	Name               string
+	MetricScraper      *MetricScraperClient
+	MetricsClient      metricsclientset.Interface
+	Namespace          string
+	Password           string
+	Provider           string
+	RackName           string
+	Resolver           string
+	RestClient         rest.Interface
+	Router             string
+	Socket             string
+	Storage            string
+	Version            string
 
 	ctx       context.Context
 	logger    *logger.Logger
@@ -127,32 +129,33 @@ func FromEnv() (*Provider, error) {
 	rn := common.CoalesceString(os.Getenv("RACK_NAME"), ns.Labels["rack"])
 
 	p := &Provider{
-		Atom:              ac,
-		BuildkitEnabled:   "true",
-		BuildNodeEnabled:  os.Getenv("BUILD_NODE_ENABLED"),
-		CertManager:       os.Getenv("CERT_MANAGER") == "true",
-		Cluster:           kc,
-		Config:            rc,
-		Convox:            cc,
-		CertManagerClient: cm,
-		DiscoveryClient:   kc.Discovery(),
-		Domain:            os.Getenv("DOMAIN"),
-		DomainInternal:    os.Getenv("DOMAIN_INTERNAL"),
-		DynamicClient:     dc,
-		Image:             os.Getenv("IMAGE"),
-		MetricScraper:     ms,
-		MetricsClient:     mc,
-		Name:              ns.Labels["rack"],
-		Namespace:         ns.Name,
-		Password:          os.Getenv("PASSWORD"),
-		Provider:          common.CoalesceString(os.Getenv("PROVIDER"), "k8s"),
-		RackName:          rn,
-		Resolver:          os.Getenv("RESOLVER"),
-		RestClient:        kc.RESTClient(),
-		Router:            os.Getenv("ROUTER"),
-		Socket:            common.CoalesceString(os.Getenv("SOCKET"), "/var/run/docker.sock"),
-		Storage:           common.CoalesceString(os.Getenv("STORAGE"), "/var/storage"),
-		Version:           common.CoalesceString(os.Getenv("VERSION"), "dev"),
+		Atom:               ac,
+		BuildkitEnabled:    "true",
+		BuildNodeEnabled:   os.Getenv("BUILD_NODE_ENABLED"),
+		CertManager:        os.Getenv("CERT_MANAGER") == "true",
+		CertManagerRoleArn: os.Getenv("CERT_MANAGER_ROLE_ARN"),
+		Cluster:            kc,
+		Config:             rc,
+		Convox:             cc,
+		CertManagerClient:  cm,
+		DiscoveryClient:    kc.Discovery(),
+		Domain:             os.Getenv("DOMAIN"),
+		DomainInternal:     os.Getenv("DOMAIN_INTERNAL"),
+		DynamicClient:      dc,
+		Image:              os.Getenv("IMAGE"),
+		MetricScraper:      ms,
+		MetricsClient:      mc,
+		Name:               ns.Labels["rack"],
+		Namespace:          ns.Name,
+		Password:           os.Getenv("PASSWORD"),
+		Provider:           common.CoalesceString(os.Getenv("PROVIDER"), "k8s"),
+		RackName:           rn,
+		Resolver:           os.Getenv("RESOLVER"),
+		RestClient:         kc.RESTClient(),
+		Router:             os.Getenv("ROUTER"),
+		Socket:             common.CoalesceString(os.Getenv("SOCKET"), "/var/run/docker.sock"),
+		Storage:            common.CoalesceString(os.Getenv("STORAGE"), "/var/storage"),
+		Version:            common.CoalesceString(os.Getenv("VERSION"), "dev"),
 	}
 
 	return p, nil
@@ -329,9 +332,11 @@ func (p *Provider) initializeTemplates() {
 		return
 	}
 
-	d, _ := p.Cluster.AppsV1().Deployments("cert-manager").Get(context.TODO(), "cert-manager", am.GetOptions{})
+	d, _ := p.Cluster.AppsV1().Deployments(CERT_MANAGER_NAMESPACE).Get(context.TODO(), "cert-manager", am.GetOptions{})
 	if d == nil {
-		if err := p.applySystemTemplate("cert-manager", nil); err != nil {
+		if err := p.applySystemTemplate("cert-manager", map[string]interface{}{
+			"Role": p.CertManagerRoleArn,
+		}); err != nil {
 			panic(errors.WithStack(err))
 		}
 		return
@@ -343,7 +348,7 @@ func (p *Provider) initializeTemplates() {
 
 		currentRetry := 0
 		for {
-			_, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), "cert-manager", am.GetOptions{})
+			_, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), CERT_MANAGER_NAMESPACE, am.GetOptions{})
 			if ae.IsNotFound(err) {
 				fmt.Println("Uninstalled old cert-manager")
 				break
@@ -357,7 +362,9 @@ func (p *Provider) initializeTemplates() {
 		}
 
 		fmt.Println("Installing new cert-manager version")
-		err := p.applySystemTemplate("cert-manager", nil)
+		err := p.applySystemTemplate("cert-manager", map[string]interface{}{
+			"Role": p.CertManagerRoleArn,
+		})
 		if err != nil {
 			panic(errors.WithStack(fmt.Errorf("could not update cert-manager: %+v", err)))
 		}
@@ -384,11 +391,18 @@ func (p *Provider) installCertManagerConfig() {
 				continue
 			}
 
+			config, err := p.LetsEncryptConfigGet()
+			if err != nil {
+				fmt.Printf("invalid config: %s\n", err)
+			}
+
 			for _, c := range d.Status.Conditions {
 				if c.Type == "Available" && c.Status == "True" {
 					fmt.Printf("installing cert manager letsencrypt config\n")
 
-					if err := p.applySystemTemplate("cert-manager-letsencrypt", nil); err != nil {
+					if err := p.applySystemTemplate("cert-manager-letsencrypt", map[string]interface{}{
+						"Config": config,
+					}); err != nil {
 						fmt.Printf("could not install cert manager letsencrypt config: %s\n", err)
 						break
 					}

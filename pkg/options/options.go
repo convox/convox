@@ -36,3 +36,10 @@ func Time(value time.Time) *time.Time {
 	v := value
 	return &v
 }
+
+func StringValueSafe(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
