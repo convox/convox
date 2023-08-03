@@ -95,3 +95,28 @@ resource "aws_iam_role_policy" "api_storage" {
   role   = aws_iam_role.api.name
   policy = data.aws_iam_policy_document.storage.json
 }
+
+data "aws_iam_policy_document" "assume_cert_manager" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+    effect  = "Allow"
+
+    condition {
+      test     = "StringEquals"
+      variable = var.oidc_sub
+      values   = ["system:serviceaccount:cert-manager:cert-manager"]
+    }
+
+    principals {
+      identifiers = [var.oidc_arn]
+      type        = "Federated"
+    }
+  }
+}
+
+resource "aws_iam_role" "cert-manager" {
+  name               = "${var.name}-cert-manager"
+  assume_role_policy = data.aws_iam_policy_document.assume_cert_manager.json
+  path               = "/convox/"
+  tags               = local.tags
+}

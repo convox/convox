@@ -3,6 +3,7 @@ package k8s
 import (
 	"context"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"strings"
@@ -11,10 +12,18 @@ import (
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	"github.com/convox/convox/pkg/common"
+	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
+	kerr "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/client-go/applyconfigurations/core/v1"
+	amv1 "k8s.io/client-go/applyconfigurations/meta/v1"
+)
+
+const (
+	LETSENCRYPT_CONFIG = "letsencrypt-config"
 )
 
 func (*Provider) CertificateApply(_, _ string, _ int, _ string) error {
@@ -181,4 +190,58 @@ func (p *Provider) renewCertificate(crt *cmapi.Certificate) error {
 		return fmt.Errorf("failed to trigger issuance of Certificate %s: %v", crt.Name, err)
 	}
 	return nil
+}
+
+func (p *Provider) LetsEncryptConfigApply(config structs.LetsEncryptConfig) error {
+	config.Defaults()
+	data, err := json.Marshal(config)
+	if err != nil {
+		return err
+	}
+
+	sObj := &corev1.SecretApplyConfiguration{
+		TypeMetaApplyConfiguration: amv1.TypeMetaApplyConfiguration{
+			Kind:       options.String("Secret"),
+			APIVersion: options.String("v1"),
+		},
+		ObjectMetaApplyConfiguration: &amv1.ObjectMetaApplyConfiguration{
+			Name: options.String(LETSENCRYPT_CONFIG),
+			Labels: map[string]string{
+				"system": "convox",
+				"rack":   p.Name,
+			},
+		},
+		Data: map[string][]byte{
+			"config": data,
+		},
+	}
+	if _, err = p.Cluster.CoreV1().Secrets(CERT_MANAGER_NAMESPACE).Apply(context.TODO(), sObj, am.ApplyOptions{
+		FieldManager: "convox-system",
+	}); err != nil {
+		return err
+	}
+
+	return p.applySystemTemplate("cert-manager-letsencrypt", map[string]interface{}{
+		"Config": config,
+	})
+}
+
+func (p *Provider) LetsEncryptConfigGet() (*structs.LetsEncryptConfig, error) {
+	c := &structs.LetsEncryptConfig{}
+	c.Defaults()
+	s, err := p.Cluster.CoreV1().Secrets(CERT_MANAGER_NAMESPACE).Get(
+		context.TODO(), LETSENCRYPT_CONFIG, am.GetOptions{},
+	)
+	if err != nil {
+		if kerr.IsNotFound(err) {
+			return c, nil
+		}
+		return nil, errors.WithStack(err)
+	}
+
+	if err := json.Unmarshal(s.Data["config"], c); err != nil {
+		return nil, err
+	}
+
+	return c, nil
 }

@@ -24,7 +24,9 @@ func TestDeploy(t *testing.T) {
 		i.On("BuildGet", "app1", "build1").Return(fxBuildRunning(), nil).Once()
 		i.On("BuildGet", "app1", "build4").Return(fxBuild(), nil)
 		i.On("AppGet", "app1").Return(fxApp(), nil).Once()
-		i.On("ReleasePromote", "app1", "release1", structs.ReleasePromoteOptions{}).Return(nil)
+		i.On("ReleasePromote", "app1", "release1", structs.ReleasePromoteOptions{
+			Force: options.Bool(false),
+		}).Return(nil)
 		i.On("AppGet", "app1").Return(fxAppUpdating(), nil).Twice()
 		i.On("AppGet", "app1").Return(fxApp(), nil)
 		opts := structs.LogsOptions{Prefix: options.Bool(true), Since: options.Duration(5 * time.Second)}
@@ -59,7 +61,9 @@ func TestDeployError(t *testing.T) {
 		i.On("BuildGet", "app1", "build1").Return(fxBuildRunning(), nil).Once()
 		i.On("BuildGet", "app1", "build4").Return(fxBuild(), nil)
 		i.On("AppGet", "app1").Return(fxApp(), nil)
-		i.On("ReleasePromote", "app1", "release1", structs.ReleasePromoteOptions{}).Return(fmt.Errorf("err1"))
+		i.On("ReleasePromote", "app1", "release1", structs.ReleasePromoteOptions{
+			Force: options.Bool(false),
+		}).Return(fmt.Errorf("err1"))
 
 		res, err := testExecute(e, "deploy ./testdata/httpd -a app1 -d foo", nil)
 		require.NoError(t, err)

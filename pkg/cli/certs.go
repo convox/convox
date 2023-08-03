@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strconv"
+	"strings"
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/options"
@@ -42,6 +44,52 @@ func init() {
 
 	register("certs renew", "renew a certificate", CertsRenew, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagRack, flagApp},
+		Validate: stdcli.Args(0),
+	})
+
+	register("letsencrypt dns route53 add", "configure letsencrypt dns route53 solver", CertLetsEncryptDnsRoute53Add, stdcli.CommandOptions{
+		Flags: []stdcli.Flag{
+			flagRack,
+			stdcli.IntFlag("id", "", "dns solver id"),
+			stdcli.StringFlag("dns-zones", "", "comma sperated dns zones"),
+			stdcli.StringFlag("hosted-zone-id", "", "host zone id"),
+			stdcli.StringFlag("role", "", "aws role arn to assume to access dns zones"),
+			stdcli.StringFlag("region", "", "aws region"),
+		},
+		Validate: stdcli.Args(0),
+	})
+
+	register("letsencrypt dns route53 update", "update letsencrypt dns route53 solver", CertLetsEncryptDnsRoute53Update, stdcli.CommandOptions{
+		Flags: []stdcli.Flag{
+			flagRack,
+			stdcli.IntFlag("id", "", "dns solver id"),
+			stdcli.StringFlag("dns-zones", "", "comma sperated dns zones"),
+			stdcli.StringFlag("hosted-zone-id", "", "host zone id"),
+			stdcli.StringFlag("role", "", "aws role arn to assume to access dns zones"),
+			stdcli.StringFlag("region", "", "aws region"),
+		},
+		Validate: stdcli.Args(0),
+	})
+
+	register("letsencrypt dns route53 delete", "delete letsencrypt dns route53 solver", CertLetsEncryptDnsRoute53Delete, stdcli.CommandOptions{
+		Flags: []stdcli.Flag{
+			flagRack,
+			stdcli.IntFlag("id", "", "dns solver id"),
+		},
+		Validate: stdcli.Args(0),
+	})
+
+	register("letsencrypt dns route53 list", "list letsencrypt dns route53 solver", CertLetsEncryptDnsRoute53List, stdcli.CommandOptions{
+		Flags: []stdcli.Flag{
+			flagRack,
+		},
+		Validate: stdcli.Args(0),
+	})
+
+	register("letsencrypt dns route53 role", "letsencrypt dns route53 role arn", CertLetsEncryptDnsRoute53Role, stdcli.CommandOptions{
+		Flags: []stdcli.Flag{
+			flagRack,
+		},
 		Validate: stdcli.Args(0),
 	})
 }
@@ -165,4 +213,150 @@ func CertsRenew(rack sdk.Interface, c *stdcli.Context) error {
 	}
 
 	return c.OK()
+}
+
+func CertLetsEncryptDnsRoute53Add(rack sdk.Interface, c *stdcli.Context) error {
+	solver := &structs.Dns01Solver{}
+	solver.Id = c.Int("id")
+	if solver.Id <= 0 {
+		return fmt.Errorf("invalid id or id is not provided")
+	}
+	for _, d := range strings.Split(c.String("dns-zones"), ",") {
+		dd := strings.TrimSpace(d)
+		if len(dd) > 0 {
+			solver.DnsZones = append(solver.DnsZones, dd)
+		}
+	}
+	solver.Route53 = &structs.Route53{}
+	solver.Route53.Role = options.String(c.String("role"))
+	solver.Route53.Region = options.String(c.String("region"))
+	solver.Route53.HostedZoneID = options.String(c.String("hosted-zone-id"))
+
+	if err := solver.Validate(); err != nil {
+		return err
+	}
+
+	config, err := rack.LetsEncryptConfigGet()
+	if err != nil {
+		return fmt.Errorf("failed to get config: %s", err)
+	}
+
+	exists := map[int]bool{}
+	for i := range config.Solvers {
+		exists[config.Solvers[i].Id] = true
+	}
+
+	if exists[solver.Id] {
+		return fmt.Errorf("id required or provided id is already in use")
+	}
+
+	config.Solvers = append(config.Solvers, solver)
+
+	if err := rack.LetsEncryptConfigApply(*config); err != nil {
+		return err
+	}
+	return c.OK()
+}
+
+func CertLetsEncryptDnsRoute53Update(rack sdk.Interface, c *stdcli.Context) error {
+	solver := &structs.Dns01Solver{}
+	solver.Id = c.Int("id")
+	for _, d := range strings.Split(c.String("dns-zones"), ",") {
+		dd := strings.TrimSpace(d)
+		if len(dd) > 0 {
+			solver.DnsZones = append(solver.DnsZones, dd)
+		}
+	}
+	solver.Route53 = &structs.Route53{}
+	solver.Route53.Role = options.String(c.String("role"))
+	solver.Route53.Region = options.String(c.String("region"))
+	solver.Route53.HostedZoneID = options.String(c.String("hosted-zone-id"))
+
+	if err := solver.Validate(); err != nil {
+		return err
+	}
+
+	config, err := rack.LetsEncryptConfigGet()
+	if err != nil {
+		return fmt.Errorf("failed to get config: %s", err)
+	}
+
+	found := false
+	for i := range config.Solvers {
+		if config.Solvers[i].Id == solver.Id {
+			config.Solvers[i] = solver
+			found = true
+		}
+	}
+
+	if !found {
+		return fmt.Errorf("not found or invalid id")
+	}
+
+	if err := rack.LetsEncryptConfigApply(*config); err != nil {
+		return err
+	}
+	return c.OK()
+}
+
+func CertLetsEncryptDnsRoute53Delete(rack sdk.Interface, c *stdcli.Context) error {
+	id := c.Int("id")
+	if id <= 0 {
+		return fmt.Errorf("invalid id or id is not provided")
+	}
+
+	config, err := rack.LetsEncryptConfigGet()
+	if err != nil {
+		return fmt.Errorf("failed to get config: %s", err)
+	}
+
+	found := false
+	solvers := []*structs.Dns01Solver{}
+	for i := range config.Solvers {
+		if config.Solvers[i].Id == id {
+			found = true
+		} else {
+			solvers = append(solvers, config.Solvers[i])
+		}
+	}
+
+	if !found {
+		return fmt.Errorf("not found or invalid id")
+	}
+
+	config.Solvers = solvers
+	if err := rack.LetsEncryptConfigApply(*config); err != nil {
+		return err
+	}
+	return c.OK()
+}
+
+func CertLetsEncryptDnsRoute53List(rack sdk.Interface, c *stdcli.Context) error {
+	config, err := rack.LetsEncryptConfigGet()
+	if err != nil {
+		return fmt.Errorf("failed to get config: %s", err)
+	}
+
+	t := c.Table("ID", "DNS-ZONES", "HOSTED-ZONE-ID", "REGION", "ROLE")
+
+	for _, c := range config.Solvers {
+		if c.Route53 != nil {
+			t.AddRow(strconv.Itoa(c.Id), strings.Join(c.DnsZones, ","),
+				options.StringValueSafe(c.Route53.HostedZoneID),
+				options.StringValueSafe(c.Route53.Region),
+				options.StringValueSafe(c.Route53.Role),
+			)
+		}
+	}
+
+	return t.Print()
+}
+
+func CertLetsEncryptDnsRoute53Role(rack sdk.Interface, c *stdcli.Context) error {
+	config, err := rack.LetsEncryptConfigGet()
+	if err != nil {
+		return fmt.Errorf("failed to get config: %s", err)
+	}
+
+	return c.Writef("%s\n", config.Role)
 }
