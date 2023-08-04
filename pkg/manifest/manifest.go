@@ -186,11 +186,24 @@ func (m *Manifest) ApplyDefaults() error {
 		if m.Services[i].Scale.Gpu.Count == 0 {
 			if m.Services[i].Scale.Cpu == 0 {
 				m.Services[i].Scale.Cpu = DefaultCpu
+				if m.Services[i].Scale.Limit.Cpu > 0 {
+					m.Services[i].Scale.Cpu = m.Services[i].Scale.Limit.Cpu
+				}
 			}
 
 			if m.Services[i].Scale.Memory == 0 {
 				m.Services[i].Scale.Memory = DefaultMem
+				if m.Services[i].Scale.Limit.Memory > 0 {
+					m.Services[i].Scale.Memory = m.Services[i].Scale.Limit.Memory
+				}
 			}
+		}
+
+		if m.Services[i].Scale.Limit.Cpu > 0 && m.Services[i].Scale.Limit.Cpu < m.Services[i].Scale.Cpu {
+			return fmt.Errorf("cpu limit can not be less cpu request")
+		}
+		if m.Services[i].Scale.Limit.Memory > 0 && m.Services[i].Scale.Limit.Memory < m.Services[i].Scale.Memory {
+			return fmt.Errorf("memory limit can not be less memory request")
 		}
 
 		if m.Services[i].Scale.Gpu.Count > 0 && m.Services[i].Scale.Gpu.Vendor == "" {
