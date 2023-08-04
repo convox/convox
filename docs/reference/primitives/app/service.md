@@ -190,7 +190,7 @@ services:
 | Attribute | Type   | Default | Description                                                                                                   |
 | --------- | ------ | ------- | ------------------------------------------------------------------------------------------------------------- |
 | **count**   | number | 1       | The number of [Processes](/reference/primitives/app/process) to run for this Service. For autoscaling use a range, e.g. **1-5**        |
-| **cpu**     | number | 256     | The number of CPU units to reserve for [Processes](/reference/primitives/app/process) of this Service where 1024 units is a full CPU |
+| **cpu**     | number | 256     | The number of CPU units to reserve for [Processes](/reference/primitives/app/process) of this Service where 1000 units is a full CPU |
 | **gpu**     | map    |         | The number/type of GPUs to reserve for [Processes](/reference/primitives/app/process) of this Service  |
 | **memory**  | number | 512     | The number of MB of RAM to reserve for [Processes](/reference/primitives/app/process) of this Service                                |
 | **targets** | map    |         | Target metrics to trigger autoscaling                                                                         |
