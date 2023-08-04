@@ -10,6 +10,14 @@ variable "build_node_disk" {
   default = 20
 }
 
+variable "build_arm_type" {
+  default = false
+}
+
+variable "build_gpu_type" {
+  default = false
+}
+
 variable "build_node_enabled" {
   default = false
   type    = bool
