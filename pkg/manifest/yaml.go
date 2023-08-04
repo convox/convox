@@ -415,6 +415,13 @@ func (v *ServiceScale) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			}
 			v.Targets = t
 		}
+		if w, ok := t["limit"].(interface{}); ok {
+			var lmt ServiceResourceLimit
+			if err := remarshal(w, &lmt); err != nil {
+				return err
+			}
+			v.Limit = lmt
+		}
 	default:
 		return fmt.Errorf("unknown type for service scale: %T", t)
 	}
