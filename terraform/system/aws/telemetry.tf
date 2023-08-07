@@ -4,6 +4,7 @@
 locals {
   telemetry_map = {
     availability_zones = var.availability_zones
+    build_node_cache_enabled = var.build_node_cache_enabled
     build_node_disk = var.build_node_disk
     build_node_enabled = var.build_node_enabled
     build_node_min_count = var.build_node_min_count
@@ -49,6 +50,7 @@ locals {
 
   telemetry_default_map = {
     availability_zones = ""
+    build_node_cache_enabled = "true"
     build_node_disk = "20"
     build_node_enabled = "false"
     build_node_min_count = "0"

@@ -15,7 +15,7 @@ variable "build_gpu_type" {
 }
 
 variable "build_node_disk" {
-  default = 20
+  default = 30
 }
 
 variable "build_node_enabled" {

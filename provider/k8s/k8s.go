@@ -40,35 +40,36 @@ const (
 )
 
 type Provider struct {
-	Atom               atom.Interface
-	BuildkitEnabled    string
-	BuildNodeEnabled   string
-	CertManager        bool
-	CertManagerRoleArn string
-	Cluster            kubernetes.Interface
-	Config             *rest.Config
-	Convox             cv.Interface
-	CertManagerClient  cmclient.Interface
-	DiscoveryClient    discovery.DiscoveryInterface
-	Domain             string
-	DomainInternal     string
-	DynamicClient      dynamic.Interface
-	Engine             Engine
-	Image              string
-	JwtMngr            *jwt.JwtManager
-	Name               string
-	MetricScraper      *MetricScraperClient
-	MetricsClient      metricsclientset.Interface
-	Namespace          string
-	Password           string
-	Provider           string
-	RackName           string
-	Resolver           string
-	RestClient         rest.Interface
-	Router             string
-	Socket             string
-	Storage            string
-	Version            string
+	Atom                  atom.Interface
+	BuildkitEnabled       string
+	BuildNodeEnabled      string
+	BuildNodeCacheEnabled string
+	CertManager           bool
+	CertManagerRoleArn    string
+	Cluster               kubernetes.Interface
+	Config                *rest.Config
+	Convox                cv.Interface
+	CertManagerClient     cmclient.Interface
+	DiscoveryClient       discovery.DiscoveryInterface
+	Domain                string
+	DomainInternal        string
+	DynamicClient         dynamic.Interface
+	Engine                Engine
+	Image                 string
+	JwtMngr               *jwt.JwtManager
+	Name                  string
+	MetricScraper         *MetricScraperClient
+	MetricsClient         metricsclientset.Interface
+	Namespace             string
+	Password              string
+	Provider              string
+	RackName              string
+	Resolver              string
+	RestClient            rest.Interface
+	Router                string
+	Socket                string
+	Storage               string
+	Version               string
 
 	ctx       context.Context
 	logger    *logger.Logger
@@ -129,33 +130,34 @@ func FromEnv() (*Provider, error) {
 	rn := common.CoalesceString(os.Getenv("RACK_NAME"), ns.Labels["rack"])
 
 	p := &Provider{
-		Atom:               ac,
-		BuildkitEnabled:    "true",
-		BuildNodeEnabled:   os.Getenv("BUILD_NODE_ENABLED"),
-		CertManager:        os.Getenv("CERT_MANAGER") == "true",
-		CertManagerRoleArn: os.Getenv("CERT_MANAGER_ROLE_ARN"),
-		Cluster:            kc,
-		Config:             rc,
-		Convox:             cc,
-		CertManagerClient:  cm,
-		DiscoveryClient:    kc.Discovery(),
-		Domain:             os.Getenv("DOMAIN"),
-		DomainInternal:     os.Getenv("DOMAIN_INTERNAL"),
-		DynamicClient:      dc,
-		Image:              os.Getenv("IMAGE"),
-		MetricScraper:      ms,
-		MetricsClient:      mc,
-		Name:               ns.Labels["rack"],
-		Namespace:          ns.Name,
-		Password:           os.Getenv("PASSWORD"),
-		Provider:           common.CoalesceString(os.Getenv("PROVIDER"), "k8s"),
-		RackName:           rn,
-		Resolver:           os.Getenv("RESOLVER"),
-		RestClient:         kc.RESTClient(),
-		Router:             os.Getenv("ROUTER"),
-		Socket:             common.CoalesceString(os.Getenv("SOCKET"), "/var/run/docker.sock"),
-		Storage:            common.CoalesceString(os.Getenv("STORAGE"), "/var/storage"),
-		Version:            common.CoalesceString(os.Getenv("VERSION"), "dev"),
+		Atom:                  ac,
+		BuildkitEnabled:       "true",
+		BuildNodeEnabled:      os.Getenv("BUILD_NODE_ENABLED"),
+		BuildNodeCacheEnabled: os.Getenv("BUILD_NODE_CACHE_ENABLED"),
+		CertManager:           os.Getenv("CERT_MANAGER") == "true",
+		CertManagerRoleArn:    os.Getenv("CERT_MANAGER_ROLE_ARN"),
+		Cluster:               kc,
+		Config:                rc,
+		Convox:                cc,
+		CertManagerClient:     cm,
+		DiscoveryClient:       kc.Discovery(),
+		Domain:                os.Getenv("DOMAIN"),
+		DomainInternal:        os.Getenv("DOMAIN_INTERNAL"),
+		DynamicClient:         dc,
+		Image:                 os.Getenv("IMAGE"),
+		MetricScraper:         ms,
+		MetricsClient:         mc,
+		Name:                  ns.Labels["rack"],
+		Namespace:             ns.Name,
+		Password:              os.Getenv("PASSWORD"),
+		Provider:              common.CoalesceString(os.Getenv("PROVIDER"), "k8s"),
+		RackName:              rn,
+		Resolver:              os.Getenv("RESOLVER"),
+		RestClient:            kc.RESTClient(),
+		Router:                os.Getenv("ROUTER"),
+		Socket:                common.CoalesceString(os.Getenv("SOCKET"), "/var/run/docker.sock"),
+		Storage:               common.CoalesceString(os.Getenv("STORAGE"), "/var/storage"),
+		Version:               common.CoalesceString(os.Getenv("VERSION"), "dev"),
 	}
 
 	return p, nil

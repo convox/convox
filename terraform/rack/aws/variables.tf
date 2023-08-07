@@ -7,6 +7,11 @@ variable "build_node_enabled" {
   type    = bool
 }
 
+variable "build_node_cache_enabled" {
+  default = false
+  type    = bool
+}
+
 variable "cluster" {
   type = string
 }

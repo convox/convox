@@ -134,8 +134,8 @@ func (*BuildKit) cacheProvider(provider string) bool {
 	return provider != "" && strings.Contains("do az", provider) // skipcq
 }
 
-func (*BuildKit) localCache(buildnode string) bool {
-	return buildnode != "" && strings.ToLower(buildnode) == "true" // skipcq
+func (*BuildKit) localCache(buildNode string) bool {
+	return strings.ToLower(buildNode) == "true" // skipcq
 }
 
 func (*BuildKit) buildArgs(development bool, dockerfile string, env map[string]string) ([]string, error) {
@@ -213,7 +213,7 @@ func (bk *BuildKit) build(bb *Build, path, dockerfile, tag string, env map[strin
 		reg := strings.Split(tag, ":")[0]
 		args = append(args, "--export-cache", fmt.Sprintf("type=registry,ref=%s:buildcache", reg)) // skipcq
 		args = append(args, "--import-cache", fmt.Sprintf("type=registry,ref=%s:buildcache", reg)) // skipcq
-	} else if (bk.localCache(os.Getenv("BUILD_NODE_ENABLED"))){
+	} else if bk.localCache(os.Getenv("BUILD_NODE_ENABLED")) {
 		// keep a local cache for services using the same Dockerfile
 		args = append(args, "--export-cache", "type=local,dest=/var/lib/buildkit") // skipcq
 		args = append(args, "--import-cache", "type=local,src=/var/lib/buildkit")  // skipcq

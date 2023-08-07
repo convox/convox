@@ -125,6 +125,11 @@ resource "kubernetes_deployment" "api" {
           }
 
           env {
+            name = "BUILD_NODE_CACHE_ENABLED"
+            value = var.build_node_cache_enabled
+          }
+
+          env {
             name  = "DOMAIN"
             value = var.domain
           }

@@ -17,6 +17,7 @@ module "k8s" {
 
   buildkit_enabled          = var.buildkit_enabled
   build_node_enabled        = var.build_node_enabled
+  build_node_cache_enabled  = var.build_node_cache_enabled
   docker_hub_authentication = var.docker_hub_authentication
   domain                    = var.domain
   domain_internal           = var.domain_internal
