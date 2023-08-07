@@ -9,7 +9,7 @@ import (
 
 	"github.com/convox/convox/pkg/atom"
 	"github.com/convox/convox/pkg/mock"
-	"github.com/convox/convox/pkg/mock/aws"
+	mocks "github.com/convox/convox/pkg/mock/aws"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/aws"
 	"github.com/convox/convox/provider/k8s"
