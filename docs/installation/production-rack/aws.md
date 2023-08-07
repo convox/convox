@@ -73,8 +73,8 @@ The following environment variables are required:
 | **ssl_protocols**        |                        | SSL protocols to use for (nginx)[https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_ssl_protocols] (e.g. **TLSv1.2 TLSv1.3**). They must be separated by spaces.|
 | **tags**                 |                        | Custom tags to add with AWS resources (e.g. **key1=val1,key2=val2**)|
 | **vpc_id** *             |                        | Use an existing VPC for cluster creation. Make sure to also pass the **cidr** block and **internet_gateway_id**|
-| **private_subnets_ids**  |                        | Ids of private subnets to use to create the Rack. Make sure to also pass the **vpc_id** and **internet_gateway_id** |
-| **public_subnets_ids**   |                        | Ids of private subnets to use to create the Rack. Make sure to also pass the **vpc_id** and **internet_gateway_id** |
+| **private_subnets_ids**  |                        | Ids of private subnets to use to create the Rack. Make sure to also pass the **vpc_id** and it should be properly configured with nat gateway and route table. Also configure the public subnets since load balancer will use public subnets. For high availability there should be 3 subnets. Use comma to specify multiple subnets(no space)|
+| **public_subnets_ids**   |                        | Ids of private subnets to use to create the Rack. Make sure to also pass the **vpc_id** and it should be properly configured with internet gateway and route table. For high availability there should be 3 subnets. Use comma to specify multiple subnets(no space)|
 
 \* To avoid CIDR block collision with existing VPC subnets, please add a new CIDR block to your VPC to separate rack resources. Also, remember to pass the **internet_gateway_id** attached to the VPC. If the VPC doesn't have an IG attached, the rack installation will create one automatically, which will also be destroyed if you delete the rack.
 
