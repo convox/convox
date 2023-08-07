@@ -66,8 +66,13 @@ spec:
             imagePullPolicy: IfNotPresent
             resources:
               limits:
-                {{ with .Service.Scale.Memory }}
-                memory: "{{.}}Mi"
+                {{ if (gt .Service.Scale.Limit.Cpu 0)}}
+                cpu: "{{.Service.Scale.Limit.Cpu}}m"
+                {{ end }}
+                {{ if (gt .Service.Scale.Limit.Memory 0)}}
+                memory: "{{.Service.Scale.Limit.Memory}}Mi"
+                {{ else if (gt .Service.Scale.Memory 0)}}
+                memory: "{{.Service.Scale.Memory}}Mi"
                 {{ end }}
               requests:
                 {{ with .Service.Scale.Cpu }}

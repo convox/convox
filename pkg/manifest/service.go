@@ -94,7 +94,13 @@ type ServiceScale struct {
 	Cpu     int
 	Gpu     ServiceScaleGpu `yaml:"gpu,omitempty"`
 	Memory  int
-	Targets ServiceScaleTargets `yaml:"targets,omitempty"`
+	Limit   ServiceResourceLimit `yaml:"limit,omitempty"`
+	Targets ServiceScaleTargets  `yaml:"targets,omitempty"`
+}
+
+type ServiceResourceLimit struct {
+	Cpu    int
+	Memory int
 }
 
 type ServiceScaleCount struct {
