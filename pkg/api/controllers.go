@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"sort"
@@ -474,6 +475,38 @@ func (s *Server) CertificateList(c *stdapi.Context) error {
 	}
 
 	return c.RenderJSON(v)
+}
+
+func (s *Server) LetsEncryptConfigGet(c *stdapi.Context) error {
+	v, err := s.provider(c).WithContext(c.Context()).LetsEncryptConfigGet()
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("%#v\n", v)
+
+	return c.RenderJSON(v)
+}
+
+func (s *Server) LetsEncryptConfigApply(c *stdapi.Context) error {
+	config := structs.LetsEncryptConfig{}
+
+	if err := stdapi.UnmarshalOptions(c.Request(), &config); err != nil {
+		return err
+	}
+
+	if err := json.NewDecoder(c).Decode(&config); err != nil {
+		return err
+	}
+
+	fmt.Printf("%#v\n", config)
+
+	err := s.provider(c).WithContext(c.Context()).LetsEncryptConfigApply(config)
+	if err != nil {
+		return err
+	}
+
+	return c.RenderOK()
 }
 
 func (s *Server) EventSend(c *stdapi.Context) error {

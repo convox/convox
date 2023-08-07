@@ -1,6 +1,8 @@
 package sdk
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -451,6 +453,35 @@ func (c *Client) InstanceTerminate(id string) error {
 	err = c.Delete(fmt.Sprintf("/instances/%s", id), ro, nil)
 
 	return err
+}
+
+func (c *Client) LetsEncryptConfigGet() (*structs.LetsEncryptConfig, error) {
+	var err error
+
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+
+	var v *structs.LetsEncryptConfig
+
+	err = c.Get("/letsencrypt/config", ro, &v)
+
+	return v, err
+}
+
+func (c *Client) LetsEncryptConfigApply(config structs.LetsEncryptConfig) error {
+	ro := stdsdk.RequestOptions{
+		Headers: stdsdk.Headers{},
+		Params:  stdsdk.Params{},
+		Query:   stdsdk.Query{},
+	}
+
+	data, err := json.Marshal(config)
+	if err != nil {
+		return err
+	}
+
+	ro.Body = bytes.NewBuffer(data)
+
+	return c.Put("/letsencrypt/config", ro, nil)
 }
 
 func (c *Client) ObjectDelete(app, key string) error {

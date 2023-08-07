@@ -39,6 +39,9 @@ type Provider interface {
 	CertificateGenerate(domains []string) (*Certificate, error)
 	CertificateList() (Certificates, error)
 
+	LetsEncryptConfigGet() (*LetsEncryptConfig, error)
+	LetsEncryptConfigApply(config LetsEncryptConfig) error
+
 	EventSend(action string, opts EventSendOptions) error
 
 	FilesDelete(app, pid string, files []string) error
