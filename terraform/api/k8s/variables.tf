@@ -17,6 +17,11 @@ variable "build_node_enabled" {
   type    = bool
 }
 
+variable "build_node_cache_enabled" {
+  default = false
+  type    = bool
+}
+
 variable "docker_hub_authentication" {
   default = null
   type    = string

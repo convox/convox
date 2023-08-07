@@ -151,7 +151,7 @@ resource "aws_eks_node_group" "cluster-build" {
   }
 
   launch_template {
-    id      = aws_launch_template_build.cluster.id
+    id      = aws_launch_template.cluster_build.id
     version = "$Latest"
   }
 
@@ -246,12 +246,12 @@ resource "aws_launch_template" "cluster" {
   key_name = var.key_pair_name != "" ? var.key_pair_name : null
 }
 
-resource "aws_launch_template_build" "cluster" {
+resource "aws_launch_template" "cluster_build" {
   block_device_mappings {
     device_name = "/dev/xvda"
     ebs {
       volume_type = "gp3"
-      volume_size = random_id.node_group.keepers.build_node_disk
+      volume_size = random_id.build_node_group[0].keepers.node_disk
     }
   }
 

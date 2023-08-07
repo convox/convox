@@ -11,6 +11,11 @@ variable "build_node_enabled" {
   type    = bool
 }
 
+variable "build_node_cache_enabled" {
+  default = true
+  type    = bool
+}
+
 variable "build_node_type" {
   default = ""
 }
