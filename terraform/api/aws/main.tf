@@ -37,12 +37,13 @@ module "k8s" {
   }
 
   env = {
-    AWS_REGION   = data.aws_region.current.name
-    BUCKET       = aws_s3_bucket.storage.id
-    CERT_MANAGER = "true"
-    PROVIDER     = "aws"
-    RESOLVER     = var.resolver
-    ROUTER       = var.router
-    SOCKET       = "/var/run/docker.sock"
+    AWS_REGION            = data.aws_region.current.name
+    BUCKET                = aws_s3_bucket.storage.id
+    CERT_MANAGER          = "true"
+    CERT_MANAGER_ROLE_ARN = aws_iam_role.cert-manager.arn
+    PROVIDER              = "aws"
+    RESOLVER              = var.resolver
+    ROUTER                = var.router
+    SOCKET                = "/var/run/docker.sock"
   }
 }

@@ -251,6 +251,84 @@ func (_m *ECRAPI) BatchGetImageWithContext(_a0 context.Context, _a1 *ecr.BatchGe
 	return r0, r1
 }
 
+// BatchGetRepositoryScanningConfiguration provides a mock function with given fields: _a0
+func (_m *ECRAPI) BatchGetRepositoryScanningConfiguration(_a0 *ecr.BatchGetRepositoryScanningConfigurationInput) (*ecr.BatchGetRepositoryScanningConfigurationOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ecr.BatchGetRepositoryScanningConfigurationOutput
+	if rf, ok := ret.Get(0).(func(*ecr.BatchGetRepositoryScanningConfigurationInput) *ecr.BatchGetRepositoryScanningConfigurationOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ecr.BatchGetRepositoryScanningConfigurationOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ecr.BatchGetRepositoryScanningConfigurationInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// BatchGetRepositoryScanningConfigurationRequest provides a mock function with given fields: _a0
+func (_m *ECRAPI) BatchGetRepositoryScanningConfigurationRequest(_a0 *ecr.BatchGetRepositoryScanningConfigurationInput) (*request.Request, *ecr.BatchGetRepositoryScanningConfigurationOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ecr.BatchGetRepositoryScanningConfigurationInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ecr.BatchGetRepositoryScanningConfigurationOutput
+	if rf, ok := ret.Get(1).(func(*ecr.BatchGetRepositoryScanningConfigurationInput) *ecr.BatchGetRepositoryScanningConfigurationOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ecr.BatchGetRepositoryScanningConfigurationOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// BatchGetRepositoryScanningConfigurationWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *ECRAPI) BatchGetRepositoryScanningConfigurationWithContext(_a0 context.Context, _a1 *ecr.BatchGetRepositoryScanningConfigurationInput, _a2 ...request.Option) (*ecr.BatchGetRepositoryScanningConfigurationOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ecr.BatchGetRepositoryScanningConfigurationOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ecr.BatchGetRepositoryScanningConfigurationInput, ...request.Option) *ecr.BatchGetRepositoryScanningConfigurationOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ecr.BatchGetRepositoryScanningConfigurationOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ecr.BatchGetRepositoryScanningConfigurationInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // CompleteLayerUpload provides a mock function with given fields: _a0
 func (_m *ECRAPI) CompleteLayerUpload(_a0 *ecr.CompleteLayerUploadInput) (*ecr.CompleteLayerUploadOutput, error) {
 	ret := _m.Called(_a0)
@@ -321,6 +399,84 @@ func (_m *ECRAPI) CompleteLayerUploadWithContext(_a0 context.Context, _a1 *ecr.C
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *ecr.CompleteLayerUploadInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CreatePullThroughCacheRule provides a mock function with given fields: _a0
+func (_m *ECRAPI) CreatePullThroughCacheRule(_a0 *ecr.CreatePullThroughCacheRuleInput) (*ecr.CreatePullThroughCacheRuleOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ecr.CreatePullThroughCacheRuleOutput
+	if rf, ok := ret.Get(0).(func(*ecr.CreatePullThroughCacheRuleInput) *ecr.CreatePullThroughCacheRuleOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ecr.CreatePullThroughCacheRuleOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ecr.CreatePullThroughCacheRuleInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CreatePullThroughCacheRuleRequest provides a mock function with given fields: _a0
+func (_m *ECRAPI) CreatePullThroughCacheRuleRequest(_a0 *ecr.CreatePullThroughCacheRuleInput) (*request.Request, *ecr.CreatePullThroughCacheRuleOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ecr.CreatePullThroughCacheRuleInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ecr.CreatePullThroughCacheRuleOutput
+	if rf, ok := ret.Get(1).(func(*ecr.CreatePullThroughCacheRuleInput) *ecr.CreatePullThroughCacheRuleOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ecr.CreatePullThroughCacheRuleOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// CreatePullThroughCacheRuleWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *ECRAPI) CreatePullThroughCacheRuleWithContext(_a0 context.Context, _a1 *ecr.CreatePullThroughCacheRuleInput, _a2 ...request.Option) (*ecr.CreatePullThroughCacheRuleOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ecr.CreatePullThroughCacheRuleOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ecr.CreatePullThroughCacheRuleInput, ...request.Option) *ecr.CreatePullThroughCacheRuleOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ecr.CreatePullThroughCacheRuleOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ecr.CreatePullThroughCacheRuleInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -477,6 +633,84 @@ func (_m *ECRAPI) DeleteLifecyclePolicyWithContext(_a0 context.Context, _a1 *ecr
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *ecr.DeleteLifecyclePolicyInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeletePullThroughCacheRule provides a mock function with given fields: _a0
+func (_m *ECRAPI) DeletePullThroughCacheRule(_a0 *ecr.DeletePullThroughCacheRuleInput) (*ecr.DeletePullThroughCacheRuleOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ecr.DeletePullThroughCacheRuleOutput
+	if rf, ok := ret.Get(0).(func(*ecr.DeletePullThroughCacheRuleInput) *ecr.DeletePullThroughCacheRuleOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ecr.DeletePullThroughCacheRuleOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ecr.DeletePullThroughCacheRuleInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeletePullThroughCacheRuleRequest provides a mock function with given fields: _a0
+func (_m *ECRAPI) DeletePullThroughCacheRuleRequest(_a0 *ecr.DeletePullThroughCacheRuleInput) (*request.Request, *ecr.DeletePullThroughCacheRuleOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ecr.DeletePullThroughCacheRuleInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ecr.DeletePullThroughCacheRuleOutput
+	if rf, ok := ret.Get(1).(func(*ecr.DeletePullThroughCacheRuleInput) *ecr.DeletePullThroughCacheRuleOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ecr.DeletePullThroughCacheRuleOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DeletePullThroughCacheRuleWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *ECRAPI) DeletePullThroughCacheRuleWithContext(_a0 context.Context, _a1 *ecr.DeletePullThroughCacheRuleInput, _a2 ...request.Option) (*ecr.DeletePullThroughCacheRuleOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ecr.DeletePullThroughCacheRuleOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ecr.DeletePullThroughCacheRuleInput, ...request.Option) *ecr.DeletePullThroughCacheRuleOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ecr.DeletePullThroughCacheRuleOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ecr.DeletePullThroughCacheRuleInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -719,6 +953,84 @@ func (_m *ECRAPI) DeleteRepositoryWithContext(_a0 context.Context, _a1 *ecr.Dele
 	return r0, r1
 }
 
+// DescribeImageReplicationStatus provides a mock function with given fields: _a0
+func (_m *ECRAPI) DescribeImageReplicationStatus(_a0 *ecr.DescribeImageReplicationStatusInput) (*ecr.DescribeImageReplicationStatusOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ecr.DescribeImageReplicationStatusOutput
+	if rf, ok := ret.Get(0).(func(*ecr.DescribeImageReplicationStatusInput) *ecr.DescribeImageReplicationStatusOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ecr.DescribeImageReplicationStatusOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ecr.DescribeImageReplicationStatusInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeImageReplicationStatusRequest provides a mock function with given fields: _a0
+func (_m *ECRAPI) DescribeImageReplicationStatusRequest(_a0 *ecr.DescribeImageReplicationStatusInput) (*request.Request, *ecr.DescribeImageReplicationStatusOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ecr.DescribeImageReplicationStatusInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ecr.DescribeImageReplicationStatusOutput
+	if rf, ok := ret.Get(1).(func(*ecr.DescribeImageReplicationStatusInput) *ecr.DescribeImageReplicationStatusOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ecr.DescribeImageReplicationStatusOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DescribeImageReplicationStatusWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *ECRAPI) DescribeImageReplicationStatusWithContext(_a0 context.Context, _a1 *ecr.DescribeImageReplicationStatusInput, _a2 ...request.Option) (*ecr.DescribeImageReplicationStatusOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ecr.DescribeImageReplicationStatusOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ecr.DescribeImageReplicationStatusInput, ...request.Option) *ecr.DescribeImageReplicationStatusOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ecr.DescribeImageReplicationStatusOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ecr.DescribeImageReplicationStatusInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // DescribeImageScanFindings provides a mock function with given fields: _a0
 func (_m *ECRAPI) DescribeImageScanFindings(_a0 *ecr.DescribeImageScanFindingsInput) (*ecr.DescribeImageScanFindingsOutput, error) {
 	ret := _m.Called(_a0)
@@ -937,6 +1249,119 @@ func (_m *ECRAPI) DescribeImagesWithContext(_a0 context.Context, _a1 *ecr.Descri
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *ecr.DescribeImagesInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribePullThroughCacheRules provides a mock function with given fields: _a0
+func (_m *ECRAPI) DescribePullThroughCacheRules(_a0 *ecr.DescribePullThroughCacheRulesInput) (*ecr.DescribePullThroughCacheRulesOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ecr.DescribePullThroughCacheRulesOutput
+	if rf, ok := ret.Get(0).(func(*ecr.DescribePullThroughCacheRulesInput) *ecr.DescribePullThroughCacheRulesOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ecr.DescribePullThroughCacheRulesOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ecr.DescribePullThroughCacheRulesInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribePullThroughCacheRulesPages provides a mock function with given fields: _a0, _a1
+func (_m *ECRAPI) DescribePullThroughCacheRulesPages(_a0 *ecr.DescribePullThroughCacheRulesInput, _a1 func(*ecr.DescribePullThroughCacheRulesOutput, bool) bool) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*ecr.DescribePullThroughCacheRulesInput, func(*ecr.DescribePullThroughCacheRulesOutput, bool) bool) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribePullThroughCacheRulesPagesWithContext provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *ECRAPI) DescribePullThroughCacheRulesPagesWithContext(_a0 context.Context, _a1 *ecr.DescribePullThroughCacheRulesInput, _a2 func(*ecr.DescribePullThroughCacheRulesOutput, bool) bool, _a3 ...request.Option) error {
+	_va := make([]interface{}, len(_a3))
+	for _i := range _a3 {
+		_va[_i] = _a3[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1, _a2)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *ecr.DescribePullThroughCacheRulesInput, func(*ecr.DescribePullThroughCacheRulesOutput, bool) bool, ...request.Option) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribePullThroughCacheRulesRequest provides a mock function with given fields: _a0
+func (_m *ECRAPI) DescribePullThroughCacheRulesRequest(_a0 *ecr.DescribePullThroughCacheRulesInput) (*request.Request, *ecr.DescribePullThroughCacheRulesOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ecr.DescribePullThroughCacheRulesInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ecr.DescribePullThroughCacheRulesOutput
+	if rf, ok := ret.Get(1).(func(*ecr.DescribePullThroughCacheRulesInput) *ecr.DescribePullThroughCacheRulesOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ecr.DescribePullThroughCacheRulesOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DescribePullThroughCacheRulesWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *ECRAPI) DescribePullThroughCacheRulesWithContext(_a0 context.Context, _a1 *ecr.DescribePullThroughCacheRulesInput, _a2 ...request.Option) (*ecr.DescribePullThroughCacheRulesOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ecr.DescribePullThroughCacheRulesOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ecr.DescribePullThroughCacheRulesInput, ...request.Option) *ecr.DescribePullThroughCacheRulesOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ecr.DescribePullThroughCacheRulesOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ecr.DescribePullThroughCacheRulesInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -1553,6 +1978,84 @@ func (_m *ECRAPI) GetRegistryPolicyWithContext(_a0 context.Context, _a1 *ecr.Get
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *ecr.GetRegistryPolicyInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetRegistryScanningConfiguration provides a mock function with given fields: _a0
+func (_m *ECRAPI) GetRegistryScanningConfiguration(_a0 *ecr.GetRegistryScanningConfigurationInput) (*ecr.GetRegistryScanningConfigurationOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ecr.GetRegistryScanningConfigurationOutput
+	if rf, ok := ret.Get(0).(func(*ecr.GetRegistryScanningConfigurationInput) *ecr.GetRegistryScanningConfigurationOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ecr.GetRegistryScanningConfigurationOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ecr.GetRegistryScanningConfigurationInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetRegistryScanningConfigurationRequest provides a mock function with given fields: _a0
+func (_m *ECRAPI) GetRegistryScanningConfigurationRequest(_a0 *ecr.GetRegistryScanningConfigurationInput) (*request.Request, *ecr.GetRegistryScanningConfigurationOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ecr.GetRegistryScanningConfigurationInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ecr.GetRegistryScanningConfigurationOutput
+	if rf, ok := ret.Get(1).(func(*ecr.GetRegistryScanningConfigurationInput) *ecr.GetRegistryScanningConfigurationOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ecr.GetRegistryScanningConfigurationOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// GetRegistryScanningConfigurationWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *ECRAPI) GetRegistryScanningConfigurationWithContext(_a0 context.Context, _a1 *ecr.GetRegistryScanningConfigurationInput, _a2 ...request.Option) (*ecr.GetRegistryScanningConfigurationOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ecr.GetRegistryScanningConfigurationOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ecr.GetRegistryScanningConfigurationInput, ...request.Option) *ecr.GetRegistryScanningConfigurationOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ecr.GetRegistryScanningConfigurationOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ecr.GetRegistryScanningConfigurationInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -2290,6 +2793,84 @@ func (_m *ECRAPI) PutRegistryPolicyWithContext(_a0 context.Context, _a1 *ecr.Put
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *ecr.PutRegistryPolicyInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// PutRegistryScanningConfiguration provides a mock function with given fields: _a0
+func (_m *ECRAPI) PutRegistryScanningConfiguration(_a0 *ecr.PutRegistryScanningConfigurationInput) (*ecr.PutRegistryScanningConfigurationOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ecr.PutRegistryScanningConfigurationOutput
+	if rf, ok := ret.Get(0).(func(*ecr.PutRegistryScanningConfigurationInput) *ecr.PutRegistryScanningConfigurationOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ecr.PutRegistryScanningConfigurationOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ecr.PutRegistryScanningConfigurationInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// PutRegistryScanningConfigurationRequest provides a mock function with given fields: _a0
+func (_m *ECRAPI) PutRegistryScanningConfigurationRequest(_a0 *ecr.PutRegistryScanningConfigurationInput) (*request.Request, *ecr.PutRegistryScanningConfigurationOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ecr.PutRegistryScanningConfigurationInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ecr.PutRegistryScanningConfigurationOutput
+	if rf, ok := ret.Get(1).(func(*ecr.PutRegistryScanningConfigurationInput) *ecr.PutRegistryScanningConfigurationOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ecr.PutRegistryScanningConfigurationOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// PutRegistryScanningConfigurationWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *ECRAPI) PutRegistryScanningConfigurationWithContext(_a0 context.Context, _a1 *ecr.PutRegistryScanningConfigurationInput, _a2 ...request.Option) (*ecr.PutRegistryScanningConfigurationOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ecr.PutRegistryScanningConfigurationOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ecr.PutRegistryScanningConfigurationInput, ...request.Option) *ecr.PutRegistryScanningConfigurationOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ecr.PutRegistryScanningConfigurationOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ecr.PutRegistryScanningConfigurationInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)

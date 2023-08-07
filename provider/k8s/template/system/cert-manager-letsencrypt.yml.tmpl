@@ -17,3 +17,23 @@ spec:
    - http01:
        ingress:
          class: nginx
+   {{ with .Config }}
+   {{ range .Solvers }}
+   - dns01:
+       {{ with .Route53 }}
+       route53:
+         {{ with .HostedZoneID }}
+         hostedZoneID: {{ . }}
+         {{ end }}
+         region: {{ .Region }}
+         {{ with .Role }}
+         role: {{ safe . }}
+         {{ end }}
+       {{ end }}
+     selector:
+       dnsZones:
+       {{ range .DnsZones }}
+       - {{ safe . }}
+       {{ end }}
+   {{ end }}
+   {{ end }}
