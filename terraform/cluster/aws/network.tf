@@ -104,9 +104,11 @@ resource "aws_route" "public-default" {
     null_resource.wait_routes_public
   ]
 
+  count = length(var.public_subnets_ids) == 0 ? local.network_resource_count : 0
+
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = local.internet_gateway_id
-  route_table_id         = aws_route_table.public.id
+  route_table_id         = aws_route_table.public[0].id
 
   timeouts {
     create = "10m"
@@ -114,9 +116,9 @@ resource "aws_route" "public-default" {
 }
 
 resource "aws_route_table_association" "public" {
-  count = local.network_resource_count
+  count = length(var.public_subnets_ids) == 0 ? local.network_resource_count : 0
 
-  route_table_id = aws_route_table.public.id
+  route_table_id = aws_route_table.public[0].id
   subnet_id      = aws_subnet.public[count.index].id
 }
 
@@ -219,7 +221,7 @@ resource "aws_route_table_association" "private" {
     aws_subnet.private,
   ]
 
-  count = var.private ? local.network_resource_count : 0
+  count = length(var.public_subnets_ids) == 0 ? var.private ? local.network_resource_count : 0 : 0
 
   route_table_id = aws_route_table.private[count.index].id
   subnet_id      = aws_subnet.private[count.index].id
