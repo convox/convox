@@ -69,6 +69,9 @@ services:
     privileged: false
     scale:
       count: 1-3
+      limit:
+        cpu: 256
+        memory: 1024
       cpu: 128
       memory: 512
       targets:
@@ -190,10 +193,11 @@ services:
 | Attribute | Type   | Default | Description                                                                                                   |
 | --------- | ------ | ------- | ------------------------------------------------------------------------------------------------------------- |
 | **count**   | number | 1       | The number of [Processes](/reference/primitives/app/process) to run for this Service. For autoscaling use a range, e.g. **1-5**        |
-| **cpu**     | number | 256     | The number of CPU units to reserve for [Processes](/reference/primitives/app/process) of this Service where 1024 units is a full CPU |
+| **cpu**     | number | 256     | The number of CPU units to reserve for [Processes](/reference/primitives/app/process) of this Service where 1000 units is a full CPU |
 | **gpu**     | map    |         | The number/type of GPUs to reserve for [Processes](/reference/primitives/app/process) of this Service  |
 | **memory**  | number | 512     | The number of MB of RAM to reserve for [Processes](/reference/primitives/app/process) of this Service                                |
-| **targets** | map    |         | Target metrics to trigger autoscaling                                                                         |
+| **targets** | map    |         | Target metrics to trigger autoscaling |
+| **limit** | map    |         | The maximum cpu or memory usage limit |
 
 > Specifying **scale** as a number will set the **count** and leave the other values as defaults.
 
@@ -215,6 +219,13 @@ services:
 | **cpu**     | number |         | The percentage of CPU utilization to target for [Processes](/reference/primitives/app/process) of this Service    |
 | **memory**  | number |         | The percentage of memory utilization to target for [Processes](/reference/primitives/app/process) of this Service |
 | **external**  | map |         | The array of the external metrics based on which it will scale the Service |
+
+### scale.limit
+
+| Attribute | Type   | Default | Description                                                                                |
+| --------- | ------ | ------- | ------------------------------------------------------------------------------------------ |
+| **cpu**     | number |         | The number of CPU units to limit for [Processes](/reference/primitives/app/process) of this Service where 1000 units is a full CPU    |
+| **memory**  | number |         | The number of MB of RAM to limit for [Processes](/reference/primitives/app/process) of this Service |
 
 ### scale.targets.[]external
 

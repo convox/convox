@@ -28,14 +28,13 @@ const opAddPermission = "AddPermission"
 // This method is useful when you want to inject custom logic or configuration
 // into the SDK's request lifecycle. Such as custom headers, or retry logic.
 //
+//	// Example sending a request using the AddPermissionRequest method.
+//	req, resp := client.AddPermissionRequest(params)
 //
-//    // Example sending a request using the AddPermissionRequest method.
-//    req, resp := client.AddPermissionRequest(params)
-//
-//    err := req.Send()
-//    if err == nil { // resp is now filled
-//        fmt.Println(resp)
-//    }
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/AddPermission
 func (c *SQS) AddPermissionRequest(input *AddPermissionInput) (req *request.Request, output *AddPermissionOutput) {
@@ -66,16 +65,16 @@ func (c *SQS) AddPermissionRequest(input *AddPermissionInput) (req *request.Requ
 // Messages to a Shared Queue (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-writing-an-sqs-policy.html#write-messages-to-shared-queue)
 // in the Amazon SQS Developer Guide.
 //
-//    * AddPermission generates a policy for you. You can use SetQueueAttributes
-//    to upload your policy. For more information, see Using Custom Policies
-//    with the Amazon SQS Access Policy Language (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-creating-custom-policies.html)
-//    in the Amazon SQS Developer Guide.
+//   - AddPermission generates a policy for you. You can use SetQueueAttributes
+//     to upload your policy. For more information, see Using Custom Policies
+//     with the Amazon SQS Access Policy Language (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-creating-custom-policies.html)
+//     in the Amazon SQS Developer Guide.
 //
-//    * An Amazon SQS policy can have a maximum of 7 actions.
+//   - An Amazon SQS policy can have a maximum of 7 actions.
 //
-//    * To remove the ability to change queue permissions, you must deny permission
-//    to the AddPermission, RemovePermission, and SetQueueAttributes actions
-//    in your IAM policy.
+//   - To remove the ability to change queue permissions, you must deny permission
+//     to the AddPermission, RemovePermission, and SetQueueAttributes actions
+//     in your IAM policy.
 //
 // Some actions take lists of parameters. These lists are specified using the
 // param.n notation. Values of n are integers starting from 1. For example,
@@ -97,11 +96,11 @@ func (c *SQS) AddPermissionRequest(input *AddPermissionInput) (req *request.Requ
 // API operation AddPermission for usage and error information.
 //
 // Returned Error Codes:
-//   * ErrCodeOverLimit "OverLimit"
-//   The specified action violates a limit. For example, ReceiveMessage returns
-//   this error if the maximum number of inflight messages is reached and AddPermission
-//   returns this error if the maximum number of permissions for the queue is
-//   reached.
+//   - ErrCodeOverLimit "OverLimit"
+//     The specified action violates a limit. For example, ReceiveMessage returns
+//     this error if the maximum number of inflight messages is reached and AddPermission
+//     returns this error if the maximum number of permissions for the queue is
+//     reached.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/AddPermission
 func (c *SQS) AddPermission(input *AddPermissionInput) (*AddPermissionOutput, error) {
@@ -141,14 +140,13 @@ const opChangeMessageVisibility = "ChangeMessageVisibility"
 // This method is useful when you want to inject custom logic or configuration
 // into the SDK's request lifecycle. Such as custom headers, or retry logic.
 //
+//	// Example sending a request using the ChangeMessageVisibilityRequest method.
+//	req, resp := client.ChangeMessageVisibilityRequest(params)
 //
-//    // Example sending a request using the ChangeMessageVisibilityRequest method.
-//    req, resp := client.ChangeMessageVisibilityRequest(params)
-//
-//    err := req.Send()
-//    if err == nil { // resp is now filled
-//        fmt.Println(resp)
-//    }
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/ChangeMessageVisibility
 func (c *SQS) ChangeMessageVisibilityRequest(input *ChangeMessageVisibilityInput) (req *request.Request, output *ChangeMessageVisibilityOutput) {
@@ -231,11 +229,12 @@ func (c *SQS) ChangeMessageVisibilityRequest(input *ChangeMessageVisibilityInput
 // API operation ChangeMessageVisibility for usage and error information.
 //
 // Returned Error Codes:
-//   * ErrCodeMessageNotInflight "AWS.SimpleQueueService.MessageNotInflight"
-//   The specified message isn't in flight.
 //
-//   * ErrCodeReceiptHandleIsInvalid "ReceiptHandleIsInvalid"
-//   The specified receipt handle isn't valid.
+//   - ErrCodeMessageNotInflight "AWS.SimpleQueueService.MessageNotInflight"
+//     The specified message isn't in flight.
+//
+//   - ErrCodeReceiptHandleIsInvalid "ReceiptHandleIsInvalid"
+//     The specified receipt handle isn't valid.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/ChangeMessageVisibility
 func (c *SQS) ChangeMessageVisibility(input *ChangeMessageVisibilityInput) (*ChangeMessageVisibilityOutput, error) {
@@ -275,14 +274,13 @@ const opChangeMessageVisibilityBatch = "ChangeMessageVisibilityBatch"
 // This method is useful when you want to inject custom logic or configuration
 // into the SDK's request lifecycle. Such as custom headers, or retry logic.
 //
+//	// Example sending a request using the ChangeMessageVisibilityBatchRequest method.
+//	req, resp := client.ChangeMessageVisibilityBatchRequest(params)
 //
-//    // Example sending a request using the ChangeMessageVisibilityBatchRequest method.
-//    req, resp := client.ChangeMessageVisibilityBatchRequest(params)
-//
-//    err := req.Send()
-//    if err == nil { // resp is now filled
-//        fmt.Println(resp)
-//    }
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/ChangeMessageVisibilityBatch
 func (c *SQS) ChangeMessageVisibilityBatchRequest(input *ChangeMessageVisibilityBatchInput) (req *request.Request, output *ChangeMessageVisibilityBatchOutput) {
@@ -328,17 +326,18 @@ func (c *SQS) ChangeMessageVisibilityBatchRequest(input *ChangeMessageVisibility
 // API operation ChangeMessageVisibilityBatch for usage and error information.
 //
 // Returned Error Codes:
-//   * ErrCodeTooManyEntriesInBatchRequest "AWS.SimpleQueueService.TooManyEntriesInBatchRequest"
-//   The batch request contains more entries than permissible.
 //
-//   * ErrCodeEmptyBatchRequest "AWS.SimpleQueueService.EmptyBatchRequest"
-//   The batch request doesn't contain any entries.
+//   - ErrCodeTooManyEntriesInBatchRequest "AWS.SimpleQueueService.TooManyEntriesInBatchRequest"
+//     The batch request contains more entries than permissible.
 //
-//   * ErrCodeBatchEntryIdsNotDistinct "AWS.SimpleQueueService.BatchEntryIdsNotDistinct"
-//   Two or more batch entries in the request have the same Id.
+//   - ErrCodeEmptyBatchRequest "AWS.SimpleQueueService.EmptyBatchRequest"
+//     The batch request doesn't contain any entries.
 //
-//   * ErrCodeInvalidBatchEntryId "AWS.SimpleQueueService.InvalidBatchEntryId"
-//   The Id of a batch entry in a batch request doesn't abide by the specification.
+//   - ErrCodeBatchEntryIdsNotDistinct "AWS.SimpleQueueService.BatchEntryIdsNotDistinct"
+//     Two or more batch entries in the request have the same Id.
+//
+//   - ErrCodeInvalidBatchEntryId "AWS.SimpleQueueService.InvalidBatchEntryId"
+//     The Id of a batch entry in a batch request doesn't abide by the specification.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/ChangeMessageVisibilityBatch
 func (c *SQS) ChangeMessageVisibilityBatch(input *ChangeMessageVisibilityBatchInput) (*ChangeMessageVisibilityBatchOutput, error) {
@@ -378,14 +377,13 @@ const opCreateQueue = "CreateQueue"
 // This method is useful when you want to inject custom logic or configuration
 // into the SDK's request lifecycle. Such as custom headers, or retry logic.
 //
+//	// Example sending a request using the CreateQueueRequest method.
+//	req, resp := client.CreateQueueRequest(params)
 //
-//    // Example sending a request using the CreateQueueRequest method.
-//    req, resp := client.CreateQueueRequest(params)
-//
-//    err := req.Send()
-//    if err == nil { // resp is now filled
-//        fmt.Println(resp)
-//    }
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/CreateQueue
 func (c *SQS) CreateQueueRequest(input *CreateQueueInput) (req *request.Request, output *CreateQueueOutput) {
@@ -409,19 +407,19 @@ func (c *SQS) CreateQueueRequest(input *CreateQueueInput) (req *request.Request,
 // Creates a new standard or FIFO queue. You can pass one or more attributes
 // in the request. Keep the following in mind:
 //
-//    * If you don't specify the FifoQueue attribute, Amazon SQS creates a standard
-//    queue. You can't change the queue type after you create it and you can't
-//    convert an existing standard queue into a FIFO queue. You must either
-//    create a new FIFO queue for your application or delete your existing standard
-//    queue and recreate it as a FIFO queue. For more information, see Moving
-//    From a Standard Queue to a FIFO Queue (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/FIFO-queues.html#FIFO-queues-moving)
-//    in the Amazon SQS Developer Guide.
+//   - If you don't specify the FifoQueue attribute, Amazon SQS creates a standard
+//     queue. You can't change the queue type after you create it and you can't
+//     convert an existing standard queue into a FIFO queue. You must either
+//     create a new FIFO queue for your application or delete your existing standard
+//     queue and recreate it as a FIFO queue. For more information, see Moving
+//     From a Standard Queue to a FIFO Queue (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/FIFO-queues.html#FIFO-queues-moving)
+//     in the Amazon SQS Developer Guide.
 //
-//    * If you don't provide a value for an attribute, the queue is created
-//    with the default value for the attribute.
+//   - If you don't provide a value for an attribute, the queue is created
+//     with the default value for the attribute.
 //
-//    * If you delete a queue, you must wait at least 60 seconds before creating
-//    a queue with the same name.
+//   - If you delete a queue, you must wait at least 60 seconds before creating
+//     a queue with the same name.
 //
 // To successfully create a new queue, you must provide a queue name that adheres
 // to the limits related to queues (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/limits-queues.html)
@@ -433,12 +431,12 @@ func (c *SQS) CreateQueueRequest(input *CreateQueueInput) (req *request.Request,
 // To get the queue URL, use the GetQueueUrl action. GetQueueUrl requires only
 // the QueueName parameter. be aware of existing queue names:
 //
-//    * If you provide the name of an existing queue along with the exact names
-//    and values of all the queue's attributes, CreateQueue returns the queue
-//    URL for the existing queue.
+//   - If you provide the name of an existing queue along with the exact names
+//     and values of all the queue's attributes, CreateQueue returns the queue
+//     URL for the existing queue.
 //
-//    * If the queue name, attribute names, or attribute values don't match
-//    an existing queue, CreateQueue returns an error.
+//   - If the queue name, attribute names, or attribute values don't match
+//     an existing queue, CreateQueue returns an error.
 //
 // Some actions take lists of parameters. These lists are specified using the
 // param.n notation. Values of n are integers starting from 1. For example,
@@ -460,14 +458,15 @@ func (c *SQS) CreateQueueRequest(input *CreateQueueInput) (req *request.Request,
 // API operation CreateQueue for usage and error information.
 //
 // Returned Error Codes:
-//   * ErrCodeQueueDeletedRecently "AWS.SimpleQueueService.QueueDeletedRecently"
-//   You must wait 60 seconds after deleting a queue before you can create another
-//   queue with the same name.
 //
-//   * ErrCodeQueueNameExists "QueueAlreadyExists"
-//   A queue with this name already exists. Amazon SQS returns this error only
-//   if the request includes attributes whose values differ from those of the
-//   existing queue.
+//   - ErrCodeQueueDeletedRecently "AWS.SimpleQueueService.QueueDeletedRecently"
+//     You must wait 60 seconds after deleting a queue before you can create another
+//     queue with the same name.
+//
+//   - ErrCodeQueueNameExists "QueueAlreadyExists"
+//     A queue with this name already exists. Amazon SQS returns this error only
+//     if the request includes attributes whose values differ from those of the
+//     existing queue.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/CreateQueue
 func (c *SQS) CreateQueue(input *CreateQueueInput) (*CreateQueueOutput, error) {
@@ -507,14 +506,13 @@ const opDeleteMessage = "DeleteMessage"
 // This method is useful when you want to inject custom logic or configuration
 // into the SDK's request lifecycle. Such as custom headers, or retry logic.
 //
+//	// Example sending a request using the DeleteMessageRequest method.
+//	req, resp := client.DeleteMessageRequest(params)
 //
-//    // Example sending a request using the DeleteMessageRequest method.
-//    req, resp := client.DeleteMessageRequest(params)
-//
-//    err := req.Send()
-//    if err == nil { // resp is now filled
-//        fmt.Println(resp)
-//    }
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/DeleteMessage
 func (c *SQS) DeleteMessageRequest(input *DeleteMessageInput) (req *request.Request, output *DeleteMessageOutput) {
@@ -565,11 +563,12 @@ func (c *SQS) DeleteMessageRequest(input *DeleteMessageInput) (req *request.Requ
 // API operation DeleteMessage for usage and error information.
 //
 // Returned Error Codes:
-//   * ErrCodeInvalidIdFormat "InvalidIdFormat"
-//   The specified receipt handle isn't valid for the current version.
 //
-//   * ErrCodeReceiptHandleIsInvalid "ReceiptHandleIsInvalid"
-//   The specified receipt handle isn't valid.
+//   - ErrCodeInvalidIdFormat "InvalidIdFormat"
+//     The specified receipt handle isn't valid for the current version.
+//
+//   - ErrCodeReceiptHandleIsInvalid "ReceiptHandleIsInvalid"
+//     The specified receipt handle isn't valid.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/DeleteMessage
 func (c *SQS) DeleteMessage(input *DeleteMessageInput) (*DeleteMessageOutput, error) {
@@ -609,14 +608,13 @@ const opDeleteMessageBatch = "DeleteMessageBatch"
 // This method is useful when you want to inject custom logic or configuration
 // into the SDK's request lifecycle. Such as custom headers, or retry logic.
 //
+//	// Example sending a request using the DeleteMessageBatchRequest method.
+//	req, resp := client.DeleteMessageBatchRequest(params)
 //
-//    // Example sending a request using the DeleteMessageBatchRequest method.
-//    req, resp := client.DeleteMessageBatchRequest(params)
-//
-//    err := req.Send()
-//    if err == nil { // resp is now filled
-//        fmt.Println(resp)
-//    }
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/DeleteMessageBatch
 func (c *SQS) DeleteMessageBatchRequest(input *DeleteMessageBatchInput) (req *request.Request, output *DeleteMessageBatchOutput) {
@@ -661,17 +659,18 @@ func (c *SQS) DeleteMessageBatchRequest(input *DeleteMessageBatchInput) (req *re
 // API operation DeleteMessageBatch for usage and error information.
 //
 // Returned Error Codes:
-//   * ErrCodeTooManyEntriesInBatchRequest "AWS.SimpleQueueService.TooManyEntriesInBatchRequest"
-//   The batch request contains more entries than permissible.
 //
-//   * ErrCodeEmptyBatchRequest "AWS.SimpleQueueService.EmptyBatchRequest"
-//   The batch request doesn't contain any entries.
+//   - ErrCodeTooManyEntriesInBatchRequest "AWS.SimpleQueueService.TooManyEntriesInBatchRequest"
+//     The batch request contains more entries than permissible.
 //
-//   * ErrCodeBatchEntryIdsNotDistinct "AWS.SimpleQueueService.BatchEntryIdsNotDistinct"
-//   Two or more batch entries in the request have the same Id.
+//   - ErrCodeEmptyBatchRequest "AWS.SimpleQueueService.EmptyBatchRequest"
+//     The batch request doesn't contain any entries.
 //
-//   * ErrCodeInvalidBatchEntryId "AWS.SimpleQueueService.InvalidBatchEntryId"
-//   The Id of a batch entry in a batch request doesn't abide by the specification.
+//   - ErrCodeBatchEntryIdsNotDistinct "AWS.SimpleQueueService.BatchEntryIdsNotDistinct"
+//     Two or more batch entries in the request have the same Id.
+//
+//   - ErrCodeInvalidBatchEntryId "AWS.SimpleQueueService.InvalidBatchEntryId"
+//     The Id of a batch entry in a batch request doesn't abide by the specification.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/DeleteMessageBatch
 func (c *SQS) DeleteMessageBatch(input *DeleteMessageBatchInput) (*DeleteMessageBatchOutput, error) {
@@ -711,14 +710,13 @@ const opDeleteQueue = "DeleteQueue"
 // This method is useful when you want to inject custom logic or configuration
 // into the SDK's request lifecycle. Such as custom headers, or retry logic.
 //
+//	// Example sending a request using the DeleteQueueRequest method.
+//	req, resp := client.DeleteQueueRequest(params)
 //
-//    // Example sending a request using the DeleteQueueRequest method.
-//    req, resp := client.DeleteQueueRequest(params)
-//
-//    err := req.Send()
-//    if err == nil { // resp is now filled
-//        fmt.Println(resp)
-//    }
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/DeleteQueue
 func (c *SQS) DeleteQueueRequest(input *DeleteQueueInput) (req *request.Request, output *DeleteQueueOutput) {
@@ -801,14 +799,13 @@ const opGetQueueAttributes = "GetQueueAttributes"
 // This method is useful when you want to inject custom logic or configuration
 // into the SDK's request lifecycle. Such as custom headers, or retry logic.
 //
+//	// Example sending a request using the GetQueueAttributesRequest method.
+//	req, resp := client.GetQueueAttributesRequest(params)
 //
-//    // Example sending a request using the GetQueueAttributesRequest method.
-//    req, resp := client.GetQueueAttributesRequest(params)
-//
-//    err := req.Send()
-//    if err == nil { // resp is now filled
-//        fmt.Println(resp)
-//    }
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/GetQueueAttributes
 func (c *SQS) GetQueueAttributesRequest(input *GetQueueAttributesInput) (req *request.Request, output *GetQueueAttributesOutput) {
@@ -842,8 +839,8 @@ func (c *SQS) GetQueueAttributesRequest(input *GetQueueAttributesInput) (req *re
 // API operation GetQueueAttributes for usage and error information.
 //
 // Returned Error Codes:
-//   * ErrCodeInvalidAttributeName "InvalidAttributeName"
-//   The specified attribute doesn't exist.
+//   - ErrCodeInvalidAttributeName "InvalidAttributeName"
+//     The specified attribute doesn't exist.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/GetQueueAttributes
 func (c *SQS) GetQueueAttributes(input *GetQueueAttributesInput) (*GetQueueAttributesOutput, error) {
@@ -883,14 +880,13 @@ const opGetQueueUrl = "GetQueueUrl"
 // This method is useful when you want to inject custom logic or configuration
 // into the SDK's request lifecycle. Such as custom headers, or retry logic.
 //
+//	// Example sending a request using the GetQueueUrlRequest method.
+//	req, resp := client.GetQueueUrlRequest(params)
 //
-//    // Example sending a request using the GetQueueUrlRequest method.
-//    req, resp := client.GetQueueUrlRequest(params)
-//
-//    err := req.Send()
-//    if err == nil { // resp is now filled
-//        fmt.Println(resp)
-//    }
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/GetQueueUrl
 func (c *SQS) GetQueueUrlRequest(input *GetQueueUrlInput) (req *request.Request, output *GetQueueUrlOutput) {
@@ -928,8 +924,8 @@ func (c *SQS) GetQueueUrlRequest(input *GetQueueUrlInput) (req *request.Request,
 // API operation GetQueueUrl for usage and error information.
 //
 // Returned Error Codes:
-//   * ErrCodeQueueDoesNotExist "AWS.SimpleQueueService.NonExistentQueue"
-//   The specified queue doesn't exist.
+//   - ErrCodeQueueDoesNotExist "AWS.SimpleQueueService.NonExistentQueue"
+//     The specified queue doesn't exist.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/GetQueueUrl
 func (c *SQS) GetQueueUrl(input *GetQueueUrlInput) (*GetQueueUrlOutput, error) {
@@ -969,14 +965,13 @@ const opListDeadLetterSourceQueues = "ListDeadLetterSourceQueues"
 // This method is useful when you want to inject custom logic or configuration
 // into the SDK's request lifecycle. Such as custom headers, or retry logic.
 //
+//	// Example sending a request using the ListDeadLetterSourceQueuesRequest method.
+//	req, resp := client.ListDeadLetterSourceQueuesRequest(params)
 //
-//    // Example sending a request using the ListDeadLetterSourceQueuesRequest method.
-//    req, resp := client.ListDeadLetterSourceQueuesRequest(params)
-//
-//    err := req.Send()
-//    if err == nil { // resp is now filled
-//        fmt.Println(resp)
-//    }
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/ListDeadLetterSourceQueues
 func (c *SQS) ListDeadLetterSourceQueuesRequest(input *ListDeadLetterSourceQueuesInput) (req *request.Request, output *ListDeadLetterSourceQueuesOutput) {
@@ -1026,8 +1021,8 @@ func (c *SQS) ListDeadLetterSourceQueuesRequest(input *ListDeadLetterSourceQueue
 // API operation ListDeadLetterSourceQueues for usage and error information.
 //
 // Returned Error Codes:
-//   * ErrCodeQueueDoesNotExist "AWS.SimpleQueueService.NonExistentQueue"
-//   The specified queue doesn't exist.
+//   - ErrCodeQueueDoesNotExist "AWS.SimpleQueueService.NonExistentQueue"
+//     The specified queue doesn't exist.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/ListDeadLetterSourceQueues
 func (c *SQS) ListDeadLetterSourceQueues(input *ListDeadLetterSourceQueuesInput) (*ListDeadLetterSourceQueuesOutput, error) {
@@ -1059,15 +1054,14 @@ func (c *SQS) ListDeadLetterSourceQueuesWithContext(ctx aws.Context, input *List
 //
 // Note: This operation can generate multiple requests to a service.
 //
-//    // Example iterating over at most 3 pages of a ListDeadLetterSourceQueues operation.
-//    pageNum := 0
-//    err := client.ListDeadLetterSourceQueuesPages(params,
-//        func(page *sqs.ListDeadLetterSourceQueuesOutput, lastPage bool) bool {
-//            pageNum++
-//            fmt.Println(page)
-//            return pageNum <= 3
-//        })
-//
+//	// Example iterating over at most 3 pages of a ListDeadLetterSourceQueues operation.
+//	pageNum := 0
+//	err := client.ListDeadLetterSourceQueuesPages(params,
+//	    func(page *sqs.ListDeadLetterSourceQueuesOutput, lastPage bool) bool {
+//	        pageNum++
+//	        fmt.Println(page)
+//	        return pageNum <= 3
+//	    })
 func (c *SQS) ListDeadLetterSourceQueuesPages(input *ListDeadLetterSourceQueuesInput, fn func(*ListDeadLetterSourceQueuesOutput, bool) bool) error {
 	return c.ListDeadLetterSourceQueuesPagesWithContext(aws.BackgroundContext(), input, fn)
 }
@@ -1119,14 +1113,13 @@ const opListQueueTags = "ListQueueTags"
 // This method is useful when you want to inject custom logic or configuration
 // into the SDK's request lifecycle. Such as custom headers, or retry logic.
 //
+//	// Example sending a request using the ListQueueTagsRequest method.
+//	req, resp := client.ListQueueTagsRequest(params)
 //
-//    // Example sending a request using the ListQueueTagsRequest method.
-//    req, resp := client.ListQueueTagsRequest(params)
-//
-//    err := req.Send()
-//    if err == nil { // resp is now filled
-//        fmt.Println(resp)
-//    }
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/ListQueueTags
 func (c *SQS) ListQueueTagsRequest(input *ListQueueTagsInput) (req *request.Request, output *ListQueueTagsOutput) {
@@ -1199,14 +1192,13 @@ const opListQueues = "ListQueues"
 // This method is useful when you want to inject custom logic or configuration
 // into the SDK's request lifecycle. Such as custom headers, or retry logic.
 //
+//	// Example sending a request using the ListQueuesRequest method.
+//	req, resp := client.ListQueuesRequest(params)
 //
-//    // Example sending a request using the ListQueuesRequest method.
-//    req, resp := client.ListQueuesRequest(params)
-//
-//    err := req.Send()
-//    if err == nil { // resp is now filled
-//        fmt.Println(resp)
-//    }
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/ListQueues
 func (c *SQS) ListQueuesRequest(input *ListQueuesInput) (req *request.Request, output *ListQueuesOutput) {
@@ -1285,15 +1277,14 @@ func (c *SQS) ListQueuesWithContext(ctx aws.Context, input *ListQueuesInput, opt
 //
 // Note: This operation can generate multiple requests to a service.
 //
-//    // Example iterating over at most 3 pages of a ListQueues operation.
-//    pageNum := 0
-//    err := client.ListQueuesPages(params,
-//        func(page *sqs.ListQueuesOutput, lastPage bool) bool {
-//            pageNum++
-//            fmt.Println(page)
-//            return pageNum <= 3
-//        })
-//
+//	// Example iterating over at most 3 pages of a ListQueues operation.
+//	pageNum := 0
+//	err := client.ListQueuesPages(params,
+//	    func(page *sqs.ListQueuesOutput, lastPage bool) bool {
+//	        pageNum++
+//	        fmt.Println(page)
+//	        return pageNum <= 3
+//	    })
 func (c *SQS) ListQueuesPages(input *ListQueuesInput, fn func(*ListQueuesOutput, bool) bool) error {
 	return c.ListQueuesPagesWithContext(aws.BackgroundContext(), input, fn)
 }
@@ -1345,14 +1336,13 @@ const opPurgeQueue = "PurgeQueue"
 // This method is useful when you want to inject custom logic or configuration
 // into the SDK's request lifecycle. Such as custom headers, or retry logic.
 //
+//	// Example sending a request using the PurgeQueueRequest method.
+//	req, resp := client.PurgeQueueRequest(params)
 //
-//    // Example sending a request using the PurgeQueueRequest method.
-//    req, resp := client.PurgeQueueRequest(params)
-//
-//    err := req.Send()
-//    if err == nil { // resp is now filled
-//        fmt.Println(resp)
-//    }
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/PurgeQueue
 func (c *SQS) PurgeQueueRequest(input *PurgeQueueInput) (req *request.Request, output *PurgeQueueOutput) {
@@ -1396,13 +1386,14 @@ func (c *SQS) PurgeQueueRequest(input *PurgeQueueInput) (req *request.Request, o
 // API operation PurgeQueue for usage and error information.
 //
 // Returned Error Codes:
-//   * ErrCodeQueueDoesNotExist "AWS.SimpleQueueService.NonExistentQueue"
-//   The specified queue doesn't exist.
 //
-//   * ErrCodePurgeQueueInProgress "AWS.SimpleQueueService.PurgeQueueInProgress"
-//   Indicates that the specified queue previously received a PurgeQueue request
-//   within the last 60 seconds (the time it can take to delete the messages in
-//   the queue).
+//   - ErrCodeQueueDoesNotExist "AWS.SimpleQueueService.NonExistentQueue"
+//     The specified queue doesn't exist.
+//
+//   - ErrCodePurgeQueueInProgress "AWS.SimpleQueueService.PurgeQueueInProgress"
+//     Indicates that the specified queue previously received a PurgeQueue request
+//     within the last 60 seconds (the time it can take to delete the messages in
+//     the queue).
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/PurgeQueue
 func (c *SQS) PurgeQueue(input *PurgeQueueInput) (*PurgeQueueOutput, error) {
@@ -1442,14 +1433,13 @@ const opReceiveMessage = "ReceiveMessage"
 // This method is useful when you want to inject custom logic or configuration
 // into the SDK's request lifecycle. Such as custom headers, or retry logic.
 //
+//	// Example sending a request using the ReceiveMessageRequest method.
+//	req, resp := client.ReceiveMessageRequest(params)
 //
-//    // Example sending a request using the ReceiveMessageRequest method.
-//    req, resp := client.ReceiveMessageRequest(params)
-//
-//    err := req.Send()
-//    if err == nil { // resp is now filled
-//        fmt.Println(resp)
-//    }
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/ReceiveMessage
 func (c *SQS) ReceiveMessageRequest(input *ReceiveMessageInput) (req *request.Request, output *ReceiveMessageOutput) {
@@ -1485,18 +1475,18 @@ func (c *SQS) ReceiveMessageRequest(input *ReceiveMessageInput) (req *request.Re
 //
 // For each message returned, the response includes the following:
 //
-//    * The message body.
+//   - The message body.
 //
-//    * An MD5 digest of the message body. For information about MD5, see RFC1321
-//    (https://www.ietf.org/rfc/rfc1321.txt).
+//   - An MD5 digest of the message body. For information about MD5, see RFC1321
+//     (https://www.ietf.org/rfc/rfc1321.txt).
 //
-//    * The MessageId you received when you sent the message to the queue.
+//   - The MessageId you received when you sent the message to the queue.
 //
-//    * The receipt handle.
+//   - The receipt handle.
 //
-//    * The message attributes.
+//   - The message attributes.
 //
-//    * An MD5 digest of the message attributes.
+//   - An MD5 digest of the message attributes.
 //
 // The receipt handle is the identifier you must provide when deleting the message.
 // For more information, see Queue and Message Identifiers (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-queue-message-identifiers.html)
@@ -1526,11 +1516,11 @@ func (c *SQS) ReceiveMessageRequest(input *ReceiveMessageInput) (req *request.Re
 // API operation ReceiveMessage for usage and error information.
 //
 // Returned Error Codes:
-//   * ErrCodeOverLimit "OverLimit"
-//   The specified action violates a limit. For example, ReceiveMessage returns
-//   this error if the maximum number of inflight messages is reached and AddPermission
-//   returns this error if the maximum number of permissions for the queue is
-//   reached.
+//   - ErrCodeOverLimit "OverLimit"
+//     The specified action violates a limit. For example, ReceiveMessage returns
+//     this error if the maximum number of inflight messages is reached and AddPermission
+//     returns this error if the maximum number of permissions for the queue is
+//     reached.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/ReceiveMessage
 func (c *SQS) ReceiveMessage(input *ReceiveMessageInput) (*ReceiveMessageOutput, error) {
@@ -1570,14 +1560,13 @@ const opRemovePermission = "RemovePermission"
 // This method is useful when you want to inject custom logic or configuration
 // into the SDK's request lifecycle. Such as custom headers, or retry logic.
 //
+//	// Example sending a request using the RemovePermissionRequest method.
+//	req, resp := client.RemovePermissionRequest(params)
 //
-//    // Example sending a request using the RemovePermissionRequest method.
-//    req, resp := client.RemovePermissionRequest(params)
-//
-//    err := req.Send()
-//    if err == nil { // resp is now filled
-//        fmt.Println(resp)
-//    }
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/RemovePermission
 func (c *SQS) RemovePermissionRequest(input *RemovePermissionInput) (req *request.Request, output *RemovePermissionOutput) {
@@ -1602,15 +1591,15 @@ func (c *SQS) RemovePermissionRequest(input *RemovePermissionInput) (req *reques
 // Revokes any permissions in the queue policy that matches the specified Label
 // parameter.
 //
-//    * Only the owner of a queue can remove permissions from it.
+//   - Only the owner of a queue can remove permissions from it.
 //
-//    * Cross-account permissions don't apply to this action. For more information,
-//    see Grant cross-account permissions to a role and a user name (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-customer-managed-policy-examples.html#grant-cross-account-permissions-to-role-and-user-name)
-//    in the Amazon SQS Developer Guide.
+//   - Cross-account permissions don't apply to this action. For more information,
+//     see Grant cross-account permissions to a role and a user name (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-customer-managed-policy-examples.html#grant-cross-account-permissions-to-role-and-user-name)
+//     in the Amazon SQS Developer Guide.
 //
-//    * To remove the ability to change queue permissions, you must deny permission
-//    to the AddPermission, RemovePermission, and SetQueueAttributes actions
-//    in your IAM policy.
+//   - To remove the ability to change queue permissions, you must deny permission
+//     to the AddPermission, RemovePermission, and SetQueueAttributes actions
+//     in your IAM policy.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -1656,14 +1645,13 @@ const opSendMessage = "SendMessage"
 // This method is useful when you want to inject custom logic or configuration
 // into the SDK's request lifecycle. Such as custom headers, or retry logic.
 //
+//	// Example sending a request using the SendMessageRequest method.
+//	req, resp := client.SendMessageRequest(params)
 //
-//    // Example sending a request using the SendMessageRequest method.
-//    req, resp := client.SendMessageRequest(params)
-//
-//    err := req.Send()
-//    if err == nil { // resp is now filled
-//        fmt.Println(resp)
-//    }
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/SendMessage
 func (c *SQS) SendMessageRequest(input *SendMessageInput) (req *request.Request, output *SendMessageOutput) {
@@ -1702,11 +1690,12 @@ func (c *SQS) SendMessageRequest(input *SendMessageInput) (req *request.Request,
 // API operation SendMessage for usage and error information.
 //
 // Returned Error Codes:
-//   * ErrCodeInvalidMessageContents "InvalidMessageContents"
-//   The message contains characters outside the allowed set.
 //
-//   * ErrCodeUnsupportedOperation "AWS.SimpleQueueService.UnsupportedOperation"
-//   Error code 400. Unsupported operation.
+//   - ErrCodeInvalidMessageContents "InvalidMessageContents"
+//     The message contains characters outside the allowed set.
+//
+//   - ErrCodeUnsupportedOperation "AWS.SimpleQueueService.UnsupportedOperation"
+//     Error code 400. Unsupported operation.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/SendMessage
 func (c *SQS) SendMessage(input *SendMessageInput) (*SendMessageOutput, error) {
@@ -1746,14 +1735,13 @@ const opSendMessageBatch = "SendMessageBatch"
 // This method is useful when you want to inject custom logic or configuration
 // into the SDK's request lifecycle. Such as custom headers, or retry logic.
 //
+//	// Example sending a request using the SendMessageBatchRequest method.
+//	req, resp := client.SendMessageBatchRequest(params)
 //
-//    // Example sending a request using the SendMessageBatchRequest method.
-//    req, resp := client.SendMessageBatchRequest(params)
-//
-//    err := req.Send()
-//    if err == nil { // resp is now filled
-//        fmt.Println(resp)
-//    }
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/SendMessageBatch
 func (c *SQS) SendMessageBatchRequest(input *SendMessageBatchInput) (req *request.Request, output *SendMessageBatchOutput) {
@@ -1814,23 +1802,24 @@ func (c *SQS) SendMessageBatchRequest(input *SendMessageBatchInput) (req *reques
 // API operation SendMessageBatch for usage and error information.
 //
 // Returned Error Codes:
-//   * ErrCodeTooManyEntriesInBatchRequest "AWS.SimpleQueueService.TooManyEntriesInBatchRequest"
-//   The batch request contains more entries than permissible.
 //
-//   * ErrCodeEmptyBatchRequest "AWS.SimpleQueueService.EmptyBatchRequest"
-//   The batch request doesn't contain any entries.
+//   - ErrCodeTooManyEntriesInBatchRequest "AWS.SimpleQueueService.TooManyEntriesInBatchRequest"
+//     The batch request contains more entries than permissible.
 //
-//   * ErrCodeBatchEntryIdsNotDistinct "AWS.SimpleQueueService.BatchEntryIdsNotDistinct"
-//   Two or more batch entries in the request have the same Id.
+//   - ErrCodeEmptyBatchRequest "AWS.SimpleQueueService.EmptyBatchRequest"
+//     The batch request doesn't contain any entries.
 //
-//   * ErrCodeBatchRequestTooLong "AWS.SimpleQueueService.BatchRequestTooLong"
-//   The length of all the messages put together is more than the limit.
+//   - ErrCodeBatchEntryIdsNotDistinct "AWS.SimpleQueueService.BatchEntryIdsNotDistinct"
+//     Two or more batch entries in the request have the same Id.
 //
-//   * ErrCodeInvalidBatchEntryId "AWS.SimpleQueueService.InvalidBatchEntryId"
-//   The Id of a batch entry in a batch request doesn't abide by the specification.
+//   - ErrCodeBatchRequestTooLong "AWS.SimpleQueueService.BatchRequestTooLong"
+//     The length of all the messages put together is more than the limit.
 //
-//   * ErrCodeUnsupportedOperation "AWS.SimpleQueueService.UnsupportedOperation"
-//   Error code 400. Unsupported operation.
+//   - ErrCodeInvalidBatchEntryId "AWS.SimpleQueueService.InvalidBatchEntryId"
+//     The Id of a batch entry in a batch request doesn't abide by the specification.
+//
+//   - ErrCodeUnsupportedOperation "AWS.SimpleQueueService.UnsupportedOperation"
+//     Error code 400. Unsupported operation.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/SendMessageBatch
 func (c *SQS) SendMessageBatch(input *SendMessageBatchInput) (*SendMessageBatchOutput, error) {
@@ -1870,14 +1859,13 @@ const opSetQueueAttributes = "SetQueueAttributes"
 // This method is useful when you want to inject custom logic or configuration
 // into the SDK's request lifecycle. Such as custom headers, or retry logic.
 //
+//	// Example sending a request using the SetQueueAttributesRequest method.
+//	req, resp := client.SetQueueAttributesRequest(params)
 //
-//    // Example sending a request using the SetQueueAttributesRequest method.
-//    req, resp := client.SetQueueAttributesRequest(params)
-//
-//    err := req.Send()
-//    if err == nil { // resp is now filled
-//        fmt.Println(resp)
-//    }
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/SetQueueAttributes
 func (c *SQS) SetQueueAttributesRequest(input *SetQueueAttributesInput) (req *request.Request, output *SetQueueAttributesOutput) {
@@ -1904,17 +1892,17 @@ func (c *SQS) SetQueueAttributesRequest(input *SetQueueAttributesInput) (req *re
 // to propagate throughout the Amazon SQS system. Changes made to the MessageRetentionPeriod
 // attribute can take up to 15 minutes.
 //
-//    * In the future, new attributes might be added. If you write code that
-//    calls this action, we recommend that you structure your code so that it
-//    can handle new attributes gracefully.
+//   - In the future, new attributes might be added. If you write code that
+//     calls this action, we recommend that you structure your code so that it
+//     can handle new attributes gracefully.
 //
-//    * Cross-account permissions don't apply to this action. For more information,
-//    see Grant cross-account permissions to a role and a user name (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-customer-managed-policy-examples.html#grant-cross-account-permissions-to-role-and-user-name)
-//    in the Amazon SQS Developer Guide.
+//   - Cross-account permissions don't apply to this action. For more information,
+//     see Grant cross-account permissions to a role and a user name (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-customer-managed-policy-examples.html#grant-cross-account-permissions-to-role-and-user-name)
+//     in the Amazon SQS Developer Guide.
 //
-//    * To remove the ability to change queue permissions, you must deny permission
-//    to the AddPermission, RemovePermission, and SetQueueAttributes actions
-//    in your IAM policy.
+//   - To remove the ability to change queue permissions, you must deny permission
+//     to the AddPermission, RemovePermission, and SetQueueAttributes actions
+//     in your IAM policy.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -1924,8 +1912,8 @@ func (c *SQS) SetQueueAttributesRequest(input *SetQueueAttributesInput) (req *re
 // API operation SetQueueAttributes for usage and error information.
 //
 // Returned Error Codes:
-//   * ErrCodeInvalidAttributeName "InvalidAttributeName"
-//   The specified attribute doesn't exist.
+//   - ErrCodeInvalidAttributeName "InvalidAttributeName"
+//     The specified attribute doesn't exist.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/SetQueueAttributes
 func (c *SQS) SetQueueAttributes(input *SetQueueAttributesInput) (*SetQueueAttributesOutput, error) {
@@ -1965,14 +1953,13 @@ const opTagQueue = "TagQueue"
 // This method is useful when you want to inject custom logic or configuration
 // into the SDK's request lifecycle. Such as custom headers, or retry logic.
 //
+//	// Example sending a request using the TagQueueRequest method.
+//	req, resp := client.TagQueueRequest(params)
 //
-//    // Example sending a request using the TagQueueRequest method.
-//    req, resp := client.TagQueueRequest(params)
-//
-//    err := req.Send()
-//    if err == nil { // resp is now filled
-//        fmt.Println(resp)
-//    }
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/TagQueue
 func (c *SQS) TagQueueRequest(input *TagQueueInput) (req *request.Request, output *TagQueueOutput) {
@@ -2000,15 +1987,15 @@ func (c *SQS) TagQueueRequest(input *TagQueueInput) (req *request.Request, outpu
 //
 // When you use queue tags, keep the following guidelines in mind:
 //
-//    * Adding more than 50 tags to a queue isn't recommended.
+//   - Adding more than 50 tags to a queue isn't recommended.
 //
-//    * Tags don't have any semantic meaning. Amazon SQS interprets tags as
-//    character strings.
+//   - Tags don't have any semantic meaning. Amazon SQS interprets tags as
+//     character strings.
 //
-//    * Tags are case-sensitive.
+//   - Tags are case-sensitive.
 //
-//    * A new tag with a key identical to that of an existing tag overwrites
-//    the existing tag.
+//   - A new tag with a key identical to that of an existing tag overwrites
+//     the existing tag.
 //
 // For a full list of tag restrictions, see Quotas related to queues (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-limits.html#limits-queues)
 // in the Amazon SQS Developer Guide.
@@ -2061,14 +2048,13 @@ const opUntagQueue = "UntagQueue"
 // This method is useful when you want to inject custom logic or configuration
 // into the SDK's request lifecycle. Such as custom headers, or retry logic.
 //
+//	// Example sending a request using the UntagQueueRequest method.
+//	req, resp := client.UntagQueueRequest(params)
 //
-//    // Example sending a request using the UntagQueueRequest method.
-//    req, resp := client.UntagQueueRequest(params)
-//
-//    err := req.Send()
-//    if err == nil { // resp is now filled
-//        fmt.Println(resp)
-//    }
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/sqs-2012-11-05/UntagQueue
 func (c *SQS) UntagQueueRequest(input *UntagQueueInput) (req *request.Request, output *UntagQueueOutput) {
@@ -2129,9 +2115,10 @@ func (c *SQS) UntagQueueWithContext(ctx aws.Context, input *UntagQueueInput, opt
 type AddPermissionInput struct {
 	_ struct{} `type:"structure"`
 
-	// The account numbers of the principals (https://docs.aws.amazon.com/general/latest/gr/glos-chap.html#P)
-	// who are to receive permission. For information about locating the account
-	// identification, see Your Amazon Web Services Identifiers (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-making-api-requests.html#sqs-api-request-authentication)
+	// The Amazon Web Services account numbers of the principals (https://docs.aws.amazon.com/general/latest/gr/glos-chap.html#P)
+	// who are to receive permission. For information about locating the Amazon
+	// Web Services account identification, see Your Amazon Web Services Identifiers
+	// (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-making-api-requests.html#sqs-api-request-authentication)
 	// in the Amazon SQS Developer Guide.
 	//
 	// AWSAccountIds is a required field
@@ -2166,12 +2153,20 @@ type AddPermissionInput struct {
 	QueueUrl *string `type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s AddPermissionInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s AddPermissionInput) GoString() string {
 	return s.String()
 }
@@ -2226,12 +2221,20 @@ type AddPermissionOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s AddPermissionOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s AddPermissionOutput) GoString() string {
 	return s.String()
 }
@@ -2260,12 +2263,20 @@ type BatchResultErrorEntry struct {
 	SenderFault *bool `type:"boolean" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s BatchResultErrorEntry) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s BatchResultErrorEntry) GoString() string {
 	return s.String()
 }
@@ -2311,12 +2322,20 @@ type ChangeMessageVisibilityBatchInput struct {
 	QueueUrl *string `type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ChangeMessageVisibilityBatchInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ChangeMessageVisibilityBatchInput) GoString() string {
 	return s.String()
 }
@@ -2376,12 +2395,20 @@ type ChangeMessageVisibilityBatchOutput struct {
 	Successful []*ChangeMessageVisibilityBatchResultEntry `locationNameList:"ChangeMessageVisibilityBatchResultEntry" type:"list" flattened:"true" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ChangeMessageVisibilityBatchOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ChangeMessageVisibilityBatchOutput) GoString() string {
 	return s.String()
 }
@@ -2432,12 +2459,20 @@ type ChangeMessageVisibilityBatchRequestEntry struct {
 	VisibilityTimeout *int64 `type:"integer"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ChangeMessageVisibilityBatchRequestEntry) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ChangeMessageVisibilityBatchRequestEntry) GoString() string {
 	return s.String()
 }
@@ -2486,12 +2521,20 @@ type ChangeMessageVisibilityBatchResultEntry struct {
 	Id *string `type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ChangeMessageVisibilityBatchResultEntry) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ChangeMessageVisibilityBatchResultEntry) GoString() string {
 	return s.String()
 }
@@ -2525,12 +2568,20 @@ type ChangeMessageVisibilityInput struct {
 	VisibilityTimeout *int64 `type:"integer" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ChangeMessageVisibilityInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ChangeMessageVisibilityInput) GoString() string {
 	return s.String()
 }
@@ -2576,12 +2627,20 @@ type ChangeMessageVisibilityOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ChangeMessageVisibilityOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ChangeMessageVisibilityOutput) GoString() string {
 	return s.String()
 }
@@ -2653,6 +2712,11 @@ type CreateQueueInput struct {
 	//    but results in more calls to KMS which might incur charges after Free
 	//    Tier. For more information, see How Does the Data Key Reuse Period Work?
 	//    (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-server-side-encryption.html#sqs-how-does-the-data-key-reuse-period-work).
+	//
+	//    * SqsManagedSseEnabled – Enables server-side queue encryption using
+	//    SQS owned encryption keys. Only one server-side encryption option is supported
+	//    per queue (e.g. SSE-KMS (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-configure-sse-existing-queue.html)
+	//    or SSE-SQS (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-configure-sqs-sse-queue.html)).
 	//
 	// The following attributes apply only to FIFO (first-in-first-out) queues (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/FIFO-queues.html):
 	//
@@ -2750,12 +2814,20 @@ type CreateQueueInput struct {
 	Tags map[string]*string `locationName:"Tag" locationNameKey:"Key" locationNameValue:"Value" type:"map" flattened:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s CreateQueueInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s CreateQueueInput) GoString() string {
 	return s.String()
 }
@@ -2799,12 +2871,20 @@ type CreateQueueOutput struct {
 	QueueUrl *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s CreateQueueOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s CreateQueueOutput) GoString() string {
 	return s.String()
 }
@@ -2831,12 +2911,20 @@ type DeleteMessageBatchInput struct {
 	QueueUrl *string `type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteMessageBatchInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteMessageBatchInput) GoString() string {
 	return s.String()
 }
@@ -2896,12 +2984,20 @@ type DeleteMessageBatchOutput struct {
 	Successful []*DeleteMessageBatchResultEntry `locationNameList:"DeleteMessageBatchResultEntry" type:"list" flattened:"true" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteMessageBatchOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteMessageBatchOutput) GoString() string {
 	return s.String()
 }
@@ -2939,12 +3035,20 @@ type DeleteMessageBatchRequestEntry struct {
 	ReceiptHandle *string `type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteMessageBatchRequestEntry) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteMessageBatchRequestEntry) GoString() string {
 	return s.String()
 }
@@ -2987,12 +3091,20 @@ type DeleteMessageBatchResultEntry struct {
 	Id *string `type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteMessageBatchResultEntry) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteMessageBatchResultEntry) GoString() string {
 	return s.String()
 }
@@ -3019,12 +3131,20 @@ type DeleteMessageInput struct {
 	ReceiptHandle *string `type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteMessageInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteMessageInput) GoString() string {
 	return s.String()
 }
@@ -3061,12 +3181,20 @@ type DeleteMessageOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteMessageOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteMessageOutput) GoString() string {
 	return s.String()
 }
@@ -3082,12 +3210,20 @@ type DeleteQueueInput struct {
 	QueueUrl *string `type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteQueueInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteQueueInput) GoString() string {
 	return s.String()
 }
@@ -3115,12 +3251,20 @@ type DeleteQueueOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteQueueOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteQueueOutput) GoString() string {
 	return s.String()
 }
@@ -3208,6 +3352,11 @@ type GetQueueAttributesInput struct {
 	//    before calling KMS again. For more information, see How Does the Data
 	//    Key Reuse Period Work? (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-server-side-encryption.html#sqs-how-does-the-data-key-reuse-period-work).
 	//
+	//    * SqsManagedSseEnabled – Returns information about whether the queue
+	//    is using SSE-SQS encryption using SQS owned encryption keys. Only one
+	//    server-side encryption option is supported per queue (e.g. SSE-KMS (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-configure-sse-existing-queue.html)
+	//    or SSE-SQS (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-configure-sqs-sse-queue.html)).
+	//
 	// The following attributes apply only to FIFO (first-in-first-out) queues (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/FIFO-queues.html):
 	//
 	//    * FifoQueue – Returns information about whether the queue is FIFO. For
@@ -3244,7 +3393,7 @@ type GetQueueAttributesInput struct {
 	//
 	// For information on throughput quotas, see Quotas related to messages (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/quotas-messages.html)
 	// in the Amazon SQS Developer Guide.
-	AttributeNames []*string `locationNameList:"AttributeName" type:"list" flattened:"true"`
+	AttributeNames []*string `locationNameList:"AttributeName" type:"list" flattened:"true" enum:"QueueAttributeName"`
 
 	// The URL of the Amazon SQS queue whose attribute information is retrieved.
 	//
@@ -3254,12 +3403,20 @@ type GetQueueAttributesInput struct {
 	QueueUrl *string `type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s GetQueueAttributesInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s GetQueueAttributesInput) GoString() string {
 	return s.String()
 }
@@ -3297,12 +3454,20 @@ type GetQueueAttributesOutput struct {
 	Attributes map[string]*string `locationName:"Attribute" locationNameKey:"Name" locationNameValue:"Value" type:"map" flattened:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s GetQueueAttributesOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s GetQueueAttributesOutput) GoString() string {
 	return s.String()
 }
@@ -3324,16 +3489,24 @@ type GetQueueUrlInput struct {
 	// QueueName is a required field
 	QueueName *string `type:"string" required:"true"`
 
-	// The account ID of the account that created the queue.
+	// The Amazon Web Services account ID of the account that created the queue.
 	QueueOwnerAWSAccountId *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s GetQueueUrlInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s GetQueueUrlInput) GoString() string {
 	return s.String()
 }
@@ -3372,12 +3545,20 @@ type GetQueueUrlOutput struct {
 	QueueUrl *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s GetQueueUrlOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s GetQueueUrlOutput) GoString() string {
 	return s.String()
 }
@@ -3406,12 +3587,20 @@ type ListDeadLetterSourceQueuesInput struct {
 	QueueUrl *string `type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ListDeadLetterSourceQueuesInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ListDeadLetterSourceQueuesInput) GoString() string {
 	return s.String()
 }
@@ -3463,12 +3652,20 @@ type ListDeadLetterSourceQueuesOutput struct {
 	QueueUrls []*string `locationName:"queueUrls" locationNameList:"QueueUrl" type:"list" flattened:"true" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ListDeadLetterSourceQueuesOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ListDeadLetterSourceQueuesOutput) GoString() string {
 	return s.String()
 }
@@ -3494,12 +3691,20 @@ type ListQueueTagsInput struct {
 	QueueUrl *string `type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ListQueueTagsInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ListQueueTagsInput) GoString() string {
 	return s.String()
 }
@@ -3530,12 +3735,20 @@ type ListQueueTagsOutput struct {
 	Tags map[string]*string `locationName:"Tag" locationNameKey:"Key" locationNameValue:"Value" type:"map" flattened:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ListQueueTagsOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ListQueueTagsOutput) GoString() string {
 	return s.String()
 }
@@ -3563,12 +3776,20 @@ type ListQueuesInput struct {
 	QueueNamePrefix *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ListQueuesInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ListQueuesInput) GoString() string {
 	return s.String()
 }
@@ -3605,12 +3826,20 @@ type ListQueuesOutput struct {
 	QueueUrls []*string `locationNameList:"QueueUrl" type:"list" flattened:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ListQueuesOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ListQueuesOutput) GoString() string {
 	return s.String()
 }
@@ -3671,7 +3900,7 @@ type Message struct {
 	MessageAttributes map[string]*MessageAttributeValue `locationName:"MessageAttribute" locationNameKey:"Name" locationNameValue:"Value" type:"map" flattened:"true"`
 
 	// A unique identifier for the message. A MessageIdis considered unique across
-	// all accounts for an extended period of time.
+	// all Amazon Web Services accounts for an extended period of time.
 	MessageId *string `type:"string"`
 
 	// An identifier associated with the act of receiving the message. A new receipt
@@ -3680,12 +3909,20 @@ type Message struct {
 	ReceiptHandle *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s Message) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s Message) GoString() string {
 	return s.String()
 }
@@ -3747,7 +3984,6 @@ type MessageAttributeValue struct {
 
 	// Binary type attributes can store any binary data, such as compressed data,
 	// encrypted data, or images.
-	//
 	// BinaryValue is automatically base64 encoded/decoded by the SDK.
 	BinaryValue []byte `type:"blob"`
 
@@ -3769,12 +4005,20 @@ type MessageAttributeValue struct {
 	StringValue *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s MessageAttributeValue) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s MessageAttributeValue) GoString() string {
 	return s.String()
 }
@@ -3835,7 +4079,6 @@ type MessageSystemAttributeValue struct {
 
 	// Binary type attributes can store any binary data, such as compressed data,
 	// encrypted data, or images.
-	//
 	// BinaryValue is automatically base64 encoded/decoded by the SDK.
 	BinaryValue []byte `type:"blob"`
 
@@ -3857,12 +4100,20 @@ type MessageSystemAttributeValue struct {
 	StringValue *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s MessageSystemAttributeValue) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s MessageSystemAttributeValue) GoString() string {
 	return s.String()
 }
@@ -3921,12 +4172,20 @@ type PurgeQueueInput struct {
 	QueueUrl *string `type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PurgeQueueInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PurgeQueueInput) GoString() string {
 	return s.String()
 }
@@ -3954,12 +4213,20 @@ type PurgeQueueOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PurgeQueueOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PurgeQueueOutput) GoString() string {
 	return s.String()
 }
@@ -3987,6 +4254,11 @@ type ReceiveMessageInput struct {
 	//    * SentTimestamp – Returns the time the message was sent to the queue
 	//    (epoch time (http://en.wikipedia.org/wiki/Unix_time) in milliseconds).
 	//
+	//    * SqsManagedSseEnabled – Enables server-side queue encryption using
+	//    SQS owned encryption keys. Only one server-side encryption option is supported
+	//    per queue (e.g. SSE-KMS (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-configure-sse-existing-queue.html)
+	//    or SSE-SQS (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-configure-sqs-sse-queue.html)).
+	//
 	//    * MessageDeduplicationId – Returns the value provided by the producer
 	//    that calls the SendMessage action.
 	//
@@ -3995,7 +4267,7 @@ type ReceiveMessageInput struct {
 	//    in sequence.
 	//
 	//    * SequenceNumber – Returns the value provided by Amazon SQS.
-	AttributeNames []*string `locationNameList:"AttributeName" type:"list" flattened:"true"`
+	AttributeNames []*string `locationNameList:"AttributeName" type:"list" flattened:"true" enum:"QueueAttributeName"`
 
 	// The maximum number of messages to return. Amazon SQS never returns more messages
 	// than this value (however, fewer messages might be returned). Valid values:
@@ -4100,12 +4372,20 @@ type ReceiveMessageInput struct {
 	WaitTimeSeconds *int64 `type:"integer"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ReceiveMessageInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ReceiveMessageInput) GoString() string {
 	return s.String()
 }
@@ -4173,12 +4453,20 @@ type ReceiveMessageOutput struct {
 	Messages []*Message `locationNameList:"Message" type:"list" flattened:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ReceiveMessageOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ReceiveMessageOutput) GoString() string {
 	return s.String()
 }
@@ -4206,12 +4494,20 @@ type RemovePermissionInput struct {
 	QueueUrl *string `type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s RemovePermissionInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s RemovePermissionInput) GoString() string {
 	return s.String()
 }
@@ -4248,12 +4544,20 @@ type RemovePermissionOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s RemovePermissionOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s RemovePermissionOutput) GoString() string {
 	return s.String()
 }
@@ -4274,12 +4578,20 @@ type SendMessageBatchInput struct {
 	QueueUrl *string `type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SendMessageBatchInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SendMessageBatchInput) GoString() string {
 	return s.String()
 }
@@ -4340,12 +4652,20 @@ type SendMessageBatchOutput struct {
 	Successful []*SendMessageBatchResultEntry `locationNameList:"SendMessageBatchResultEntry" type:"list" flattened:"true" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SendMessageBatchOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SendMessageBatchOutput) GoString() string {
 	return s.String()
 }
@@ -4479,12 +4799,20 @@ type SendMessageBatchRequestEntry struct {
 	MessageSystemAttributes map[string]*MessageSystemAttributeValue `locationName:"MessageSystemAttribute" locationNameKey:"Name" locationNameValue:"Value" type:"map" flattened:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SendMessageBatchRequestEntry) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SendMessageBatchRequestEntry) GoString() string {
 	return s.String()
 }
@@ -4610,12 +4938,20 @@ type SendMessageBatchResultEntry struct {
 	SequenceNumber *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SendMessageBatchResultEntry) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SendMessageBatchResultEntry) GoString() string {
 	return s.String()
 }
@@ -4779,12 +5115,20 @@ type SendMessageInput struct {
 	QueueUrl *string `type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SendMessageInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SendMessageInput) GoString() string {
 	return s.String()
 }
@@ -4902,12 +5246,20 @@ type SendMessageOutput struct {
 	SequenceNumber *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SendMessageOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SendMessageOutput) GoString() string {
 	return s.String()
 }
@@ -5010,6 +5362,11 @@ type SetQueueAttributesInput struct {
 	//    Tier. For more information, see How Does the Data Key Reuse Period Work?
 	//    (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-server-side-encryption.html#sqs-how-does-the-data-key-reuse-period-work).
 	//
+	//    * SqsManagedSseEnabled – Enables server-side queue encryption using
+	//    SQS owned encryption keys. Only one server-side encryption option is supported
+	//    per queue (e.g. SSE-KMS (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-configure-sse-existing-queue.html)
+	//    or SSE-SQS (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-configure-sqs-sse-queue.html)).
+	//
 	// The following attribute applies only to FIFO (first-in-first-out) queues
 	// (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/FIFO-queues.html):
 	//
@@ -5066,12 +5423,20 @@ type SetQueueAttributesInput struct {
 	QueueUrl *string `type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SetQueueAttributesInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SetQueueAttributesInput) GoString() string {
 	return s.String()
 }
@@ -5108,12 +5473,20 @@ type SetQueueAttributesOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SetQueueAttributesOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SetQueueAttributesOutput) GoString() string {
 	return s.String()
 }
@@ -5132,12 +5505,20 @@ type TagQueueInput struct {
 	Tags map[string]*string `locationName:"Tag" locationNameKey:"Key" locationNameValue:"Value" type:"map" flattened:"true" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s TagQueueInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s TagQueueInput) GoString() string {
 	return s.String()
 }
@@ -5174,12 +5555,20 @@ type TagQueueOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s TagQueueOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s TagQueueOutput) GoString() string {
 	return s.String()
 }
@@ -5198,12 +5587,20 @@ type UntagQueueInput struct {
 	TagKeys []*string `locationNameList:"TagKey" type:"list" flattened:"true" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s UntagQueueInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s UntagQueueInput) GoString() string {
 	return s.String()
 }
@@ -5240,12 +5637,20 @@ type UntagQueueOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s UntagQueueOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s UntagQueueOutput) GoString() string {
 	return s.String()
 }
@@ -5362,6 +5767,12 @@ const (
 
 	// QueueAttributeNameFifoThroughputLimit is a QueueAttributeName enum value
 	QueueAttributeNameFifoThroughputLimit = "FifoThroughputLimit"
+
+	// QueueAttributeNameRedriveAllowPolicy is a QueueAttributeName enum value
+	QueueAttributeNameRedriveAllowPolicy = "RedriveAllowPolicy"
+
+	// QueueAttributeNameSqsManagedSseEnabled is a QueueAttributeName enum value
+	QueueAttributeNameSqsManagedSseEnabled = "SqsManagedSseEnabled"
 )
 
 // QueueAttributeName_Values returns all elements of the QueueAttributeName enum
@@ -5387,5 +5798,7 @@ func QueueAttributeName_Values() []string {
 		QueueAttributeNameKmsDataKeyReusePeriodSeconds,
 		QueueAttributeNameDeduplicationScope,
 		QueueAttributeNameFifoThroughputLimit,
+		QueueAttributeNameRedriveAllowPolicy,
+		QueueAttributeNameSqsManagedSseEnabled,
 	}
 }

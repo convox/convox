@@ -1,5 +1,64 @@
 # Changes
 
+## [0.102.1](https://github.com/googleapis/google-cloud-go/compare/v0.102.0...v0.102.1) (2022-06-17)
+
+
+### Bug Fixes
+
+* **longrunning:** regapic remove path params duped as query params ([#6183](https://github.com/googleapis/google-cloud-go/issues/6183)) ([c963be3](https://github.com/googleapis/google-cloud-go/commit/c963be301f074779e6bb8c897d8064fa076e9e35))
+
+## [0.102.0](https://github.com/googleapis/google-cloud-go/compare/v0.101.1...v0.102.0) (2022-05-24)
+
+
+### Features
+
+* **civil:** add Before and After methods to civil.Time ([#5703](https://github.com/googleapis/google-cloud-go/issues/5703)) ([7acaaaf](https://github.com/googleapis/google-cloud-go/commit/7acaaafef47668c3e8382b8bc03475598c3db187))
+
+### [0.101.1](https://github.com/googleapis/google-cloud-go/compare/v0.101.0...v0.101.1) (2022-05-03)
+
+
+### Bug Fixes
+
+* **internal/gapicgen:** properly update modules that have no gapic changes ([#5945](https://github.com/googleapis/google-cloud-go/issues/5945)) ([de2befc](https://github.com/googleapis/google-cloud-go/commit/de2befcaa2a886499db9da6d4d04d28398c8d44b))
+
+## [0.101.0](https://github.com/googleapis/google-cloud-go/compare/v0.100.2...v0.101.0) (2022-04-20)
+
+
+### Features
+
+* **all:** bump grpc dep ([#5481](https://github.com/googleapis/google-cloud-go/issues/5481)) ([b12964d](https://github.com/googleapis/google-cloud-go/commit/b12964df5c63c647aaf204e73cfcdfd379d19682))
+* **internal/gapicgen:** change versionClient for gapics ([#5687](https://github.com/googleapis/google-cloud-go/issues/5687)) ([55f0d92](https://github.com/googleapis/google-cloud-go/commit/55f0d92bf112f14b024b4ab0076c9875a17423c9))
+
+
+### Bug Fixes
+
+* **internal/gapicgen:** add generation of internal/version.go for new client modules ([#5726](https://github.com/googleapis/google-cloud-go/issues/5726)) ([341e0df](https://github.com/googleapis/google-cloud-go/commit/341e0df1e44480706180cc5b07c49b3cee904095))
+* **internal/gapicgen:** don't gen version files for longrunning and debugger ([#5698](https://github.com/googleapis/google-cloud-go/issues/5698)) ([3a81108](https://github.com/googleapis/google-cloud-go/commit/3a81108c74cd8864c56b8ab5939afd864db3c64b))
+* **internal/gapicgen:** don't try to make snippets for non-gapics ([#5919](https://github.com/googleapis/google-cloud-go/issues/5919)) ([c94dddc](https://github.com/googleapis/google-cloud-go/commit/c94dddc60ef83a0584ba8f7dd24589d9db971672))
+* **internal/gapicgen:** move breaking change indicator if present ([#5452](https://github.com/googleapis/google-cloud-go/issues/5452)) ([e712df5](https://github.com/googleapis/google-cloud-go/commit/e712df5ebb45598a1653081d7e11e578bad22ff8))
+* **internal/godocfx:** prevent errors for filtered mods ([#5485](https://github.com/googleapis/google-cloud-go/issues/5485)) ([6cb9b89](https://github.com/googleapis/google-cloud-go/commit/6cb9b89b2d654c695eab00d8fb375cce0cd6e059))
+
+## [0.100.0](https://www.github.com/googleapis/google-cloud-go/compare/v0.99.0...v0.100.0) (2022-01-04)
+
+
+### Features
+
+* **analytics/admin:** add the `AcknowledgeUserDataCollection` operation which acknowledges the terms of user data collection for the specified property feat: add the new resource type `DataStream`, which is planned to eventually replace `WebDataStream`, `IosAppDataStream`, `AndroidAppDataStream` resources fix!: remove `GetEnhancedMeasurementSettings`, `UpdateEnhancedMeasurementSettingsRequest`, `UpdateEnhancedMeasurementSettingsRequest` operations from the API feat: add `CreateDataStream`, `DeleteDataStream`, `UpdateDataStream`, `ListDataStreams` operations to support the new `DataStream` resource feat: add `DISPLAY_VIDEO_360_ADVERTISER_LINK`,  `DISPLAY_VIDEO_360_ADVERTISER_LINK_PROPOSAL` fields to `ChangeHistoryResourceType` enum feat: add the `account` field to the `Property` type docs: update the documentation with a new list of valid values for `UserLink.direct_roles` field ([5444809](https://www.github.com/googleapis/google-cloud-go/commit/5444809e0b7cf9f5416645ea2df6fec96f8b9023))
+* **assuredworkloads:** EU Regions and Support With Sovereign Controls ([5444809](https://www.github.com/googleapis/google-cloud-go/commit/5444809e0b7cf9f5416645ea2df6fec96f8b9023))
+* **dialogflow/cx:** added the display name of the current page in webhook requests ([e0833b2](https://www.github.com/googleapis/google-cloud-go/commit/e0833b2853834ba79fd20ca2ae9c613d585dd2a5))
+* **dialogflow/cx:** added the display name of the current page in webhook requests ([e0833b2](https://www.github.com/googleapis/google-cloud-go/commit/e0833b2853834ba79fd20ca2ae9c613d585dd2a5))
+* **dialogflow:** added export documentation method feat: added filter in list documentations request feat: added option to import custom metadata from Google Cloud Storage in reload document request feat: added option to apply partial update to the smart messaging allowlist in reload document request feat: added filter in list knowledge bases request ([5444809](https://www.github.com/googleapis/google-cloud-go/commit/5444809e0b7cf9f5416645ea2df6fec96f8b9023))
+* **dialogflow:** removed OPTIONAL for speech model variant docs: added more docs for speech model variant and improved docs format for participant ([5444809](https://www.github.com/googleapis/google-cloud-go/commit/5444809e0b7cf9f5416645ea2df6fec96f8b9023))
+* **recaptchaenterprise:** add new reCAPTCHA Enterprise fraud annotations ([3dd34a2](https://www.github.com/googleapis/google-cloud-go/commit/3dd34a262edbff63b9aece8faddc2ff0d98ce42a))
+
+
+### Bug Fixes
+
+* **artifactregistry:** fix resource pattern ID segment name ([5444809](https://www.github.com/googleapis/google-cloud-go/commit/5444809e0b7cf9f5416645ea2df6fec96f8b9023))
+* **compute:** add parameter in compute bazel rules ([#692](https://www.github.com/googleapis/google-cloud-go/issues/692)) ([5444809](https://www.github.com/googleapis/google-cloud-go/commit/5444809e0b7cf9f5416645ea2df6fec96f8b9023))
+* **profiler:** refine regular expression for parsing backoff duration in E2E tests ([#5229](https://www.github.com/googleapis/google-cloud-go/issues/5229)) ([4438aeb](https://www.github.com/googleapis/google-cloud-go/commit/4438aebca2ec01d4dbf22287aa651937a381e043))
+* **profiler:** remove certificate expiration workaround ([#5222](https://www.github.com/googleapis/google-cloud-go/issues/5222)) ([2da36c9](https://www.github.com/googleapis/google-cloud-go/commit/2da36c95f44d5f88fd93cd949ab78823cea74fe7))
+
 ## [0.99.0](https://www.github.com/googleapis/google-cloud-go/compare/v0.98.0...v0.99.0) (2021-12-06)
 
 
