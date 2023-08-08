@@ -98,7 +98,7 @@ func (client LocalUsersClient) CreateOrUpdatePreparer(ctx context.Context, resou
 		"username":          autorest.Encode("path", username),
 	}
 
-	const APIVersion = "2021-09-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -197,7 +197,7 @@ func (client LocalUsersClient) DeletePreparer(ctx context.Context, resourceGroup
 		"username":          autorest.Encode("path", username),
 	}
 
-	const APIVersion = "2021-09-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -293,7 +293,7 @@ func (client LocalUsersClient) GetPreparer(ctx context.Context, resourceGroupNam
 		"username":          autorest.Encode("path", username),
 	}
 
-	const APIVersion = "2021-09-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -384,7 +384,7 @@ func (client LocalUsersClient) ListPreparer(ctx context.Context, resourceGroupNa
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-09-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -481,7 +481,7 @@ func (client LocalUsersClient) ListKeysPreparer(ctx context.Context, resourceGro
 		"username":          autorest.Encode("path", username),
 	}
 
-	const APIVersion = "2021-09-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -578,7 +578,7 @@ func (client LocalUsersClient) RegeneratePasswordPreparer(ctx context.Context, r
 		"username":          autorest.Encode("path", username),
 	}
 
-	const APIVersion = "2021-09-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

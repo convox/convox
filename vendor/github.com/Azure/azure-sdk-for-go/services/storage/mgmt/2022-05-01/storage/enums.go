@@ -10,17 +10,17 @@ package storage
 type AccessTier string
 
 const (
-	// AccessTierCool ...
-	AccessTierCool AccessTier = "Cool"
-	// AccessTierHot ...
-	AccessTierHot AccessTier = "Hot"
-	// AccessTierPremium ...
-	AccessTierPremium AccessTier = "Premium"
+	// Cool ...
+	Cool AccessTier = "Cool"
+	// Hot ...
+	Hot AccessTier = "Hot"
+	// Premium ...
+	Premium AccessTier = "Premium"
 )
 
 // PossibleAccessTierValues returns an array of possible values for the AccessTier const type.
 func PossibleAccessTierValues() []AccessTier {
-	return []AccessTier{AccessTierCool, AccessTierHot, AccessTierPremium}
+	return []AccessTier{Cool, Hot, Premium}
 }
 
 // AccountExpand enumerates the values for account expand.
@@ -42,132 +42,138 @@ func PossibleAccountExpandValues() []AccountExpand {
 type AccountImmutabilityPolicyState string
 
 const (
-	// AccountImmutabilityPolicyStateDisabled ...
-	AccountImmutabilityPolicyStateDisabled AccountImmutabilityPolicyState = "Disabled"
-	// AccountImmutabilityPolicyStateLocked ...
-	AccountImmutabilityPolicyStateLocked AccountImmutabilityPolicyState = "Locked"
-	// AccountImmutabilityPolicyStateUnlocked ...
-	AccountImmutabilityPolicyStateUnlocked AccountImmutabilityPolicyState = "Unlocked"
+	// Disabled ...
+	Disabled AccountImmutabilityPolicyState = "Disabled"
+	// Locked ...
+	Locked AccountImmutabilityPolicyState = "Locked"
+	// Unlocked ...
+	Unlocked AccountImmutabilityPolicyState = "Unlocked"
 )
 
 // PossibleAccountImmutabilityPolicyStateValues returns an array of possible values for the AccountImmutabilityPolicyState const type.
 func PossibleAccountImmutabilityPolicyStateValues() []AccountImmutabilityPolicyState {
-	return []AccountImmutabilityPolicyState{AccountImmutabilityPolicyStateDisabled, AccountImmutabilityPolicyStateLocked, AccountImmutabilityPolicyStateUnlocked}
+	return []AccountImmutabilityPolicyState{Disabled, Locked, Unlocked}
 }
 
 // AccountStatus enumerates the values for account status.
 type AccountStatus string
 
 const (
-	// AccountStatusAvailable ...
-	AccountStatusAvailable AccountStatus = "available"
-	// AccountStatusUnavailable ...
-	AccountStatusUnavailable AccountStatus = "unavailable"
+	// Available ...
+	Available AccountStatus = "available"
+	// Unavailable ...
+	Unavailable AccountStatus = "unavailable"
 )
 
 // PossibleAccountStatusValues returns an array of possible values for the AccountStatus const type.
 func PossibleAccountStatusValues() []AccountStatus {
-	return []AccountStatus{AccountStatusAvailable, AccountStatusUnavailable}
+	return []AccountStatus{Available, Unavailable}
 }
 
 // AccountType enumerates the values for account type.
 type AccountType string
 
 const (
-	// AccountTypeComputer ...
-	AccountTypeComputer AccountType = "Computer"
-	// AccountTypeUser ...
-	AccountTypeUser AccountType = "User"
+	// Computer ...
+	Computer AccountType = "Computer"
+	// User ...
+	User AccountType = "User"
 )
 
 // PossibleAccountTypeValues returns an array of possible values for the AccountType const type.
 func PossibleAccountTypeValues() []AccountType {
-	return []AccountType{AccountTypeComputer, AccountTypeUser}
+	return []AccountType{Computer, User}
 }
 
 // Action enumerates the values for action.
 type Action string
 
 const (
-	// ActionAllow ...
-	ActionAllow Action = "Allow"
+	// Allow ...
+	Allow Action = "Allow"
 )
 
 // PossibleActionValues returns an array of possible values for the Action const type.
 func PossibleActionValues() []Action {
-	return []Action{ActionAllow}
-}
-
-// Action1 enumerates the values for action 1.
-type Action1 string
-
-const (
-	// Action1Acquire ...
-	Action1Acquire Action1 = "Acquire"
-	// Action1Break ...
-	Action1Break Action1 = "Break"
-	// Action1Change ...
-	Action1Change Action1 = "Change"
-	// Action1Release ...
-	Action1Release Action1 = "Release"
-	// Action1Renew ...
-	Action1Renew Action1 = "Renew"
-)
-
-// PossibleAction1Values returns an array of possible values for the Action1 const type.
-func PossibleAction1Values() []Action1 {
-	return []Action1{Action1Acquire, Action1Break, Action1Change, Action1Release, Action1Renew}
+	return []Action{Allow}
 }
 
 // AllowedCopyScope enumerates the values for allowed copy scope.
 type AllowedCopyScope string
 
 const (
-	// AllowedCopyScopeAAD ...
-	AllowedCopyScopeAAD AllowedCopyScope = "AAD"
-	// AllowedCopyScopePrivateLink ...
-	AllowedCopyScopePrivateLink AllowedCopyScope = "PrivateLink"
+	// AAD ...
+	AAD AllowedCopyScope = "AAD"
+	// PrivateLink ...
+	PrivateLink AllowedCopyScope = "PrivateLink"
 )
 
 // PossibleAllowedCopyScopeValues returns an array of possible values for the AllowedCopyScope const type.
 func PossibleAllowedCopyScopeValues() []AllowedCopyScope {
-	return []AllowedCopyScope{AllowedCopyScopeAAD, AllowedCopyScopePrivateLink}
+	return []AllowedCopyScope{AAD, PrivateLink}
+}
+
+// AllowedMethods enumerates the values for allowed methods.
+type AllowedMethods string
+
+const (
+	// DELETE ...
+	DELETE AllowedMethods = "DELETE"
+	// GET ...
+	GET AllowedMethods = "GET"
+	// HEAD ...
+	HEAD AllowedMethods = "HEAD"
+	// MERGE ...
+	MERGE AllowedMethods = "MERGE"
+	// OPTIONS ...
+	OPTIONS AllowedMethods = "OPTIONS"
+	// PATCH ...
+	PATCH AllowedMethods = "PATCH"
+	// POST ...
+	POST AllowedMethods = "POST"
+	// PUT ...
+	PUT AllowedMethods = "PUT"
+)
+
+// PossibleAllowedMethodsValues returns an array of possible values for the AllowedMethods const type.
+func PossibleAllowedMethodsValues() []AllowedMethods {
+	return []AllowedMethods{DELETE, GET, HEAD, MERGE, OPTIONS, PATCH, POST, PUT}
 }
 
 // BlobRestoreProgressStatus enumerates the values for blob restore progress status.
 type BlobRestoreProgressStatus string
 
 const (
-	// BlobRestoreProgressStatusComplete ...
-	BlobRestoreProgressStatusComplete BlobRestoreProgressStatus = "Complete"
-	// BlobRestoreProgressStatusFailed ...
-	BlobRestoreProgressStatusFailed BlobRestoreProgressStatus = "Failed"
-	// BlobRestoreProgressStatusInProgress ...
-	BlobRestoreProgressStatusInProgress BlobRestoreProgressStatus = "InProgress"
+	// Complete ...
+	Complete BlobRestoreProgressStatus = "Complete"
+	// Failed ...
+	Failed BlobRestoreProgressStatus = "Failed"
+	// InProgress ...
+	InProgress BlobRestoreProgressStatus = "InProgress"
 )
 
 // PossibleBlobRestoreProgressStatusValues returns an array of possible values for the BlobRestoreProgressStatus const type.
 func PossibleBlobRestoreProgressStatusValues() []BlobRestoreProgressStatus {
-	return []BlobRestoreProgressStatus{BlobRestoreProgressStatusComplete, BlobRestoreProgressStatusFailed, BlobRestoreProgressStatusInProgress}
+	return []BlobRestoreProgressStatus{Complete, Failed, InProgress}
 }
 
 // Bypass enumerates the values for bypass.
 type Bypass string
 
 const (
-	// BypassAzureServices ...
-	BypassAzureServices Bypass = "AzureServices"
-	// BypassLogging ...
-	BypassLogging Bypass = "Logging"
-	// BypassMetrics ...
-	BypassMetrics Bypass = "Metrics"
-	// BypassNone ...
-	BypassNone Bypass = "None"
+	// AzureServices ...
+	AzureServices Bypass = "AzureServices"
+	// Logging ...
+	Logging Bypass = "Logging"
+	// Metrics ...
+	Metrics Bypass = "Metrics"
+	// None ...
+	None Bypass = "None"
 )
 
 // PossibleBypassValues returns an array of possible values for the Bypass const type.
 func PossibleBypassValues() []Bypass {
-	return []Bypass{BypassAzureServices, BypassLogging, BypassMetrics, BypassNone}
+	return []Bypass{AzureServices, Logging, Metrics, None}
 }
 
 // CreatedByType enumerates the values for created by type.
@@ -229,6 +235,8 @@ type DirectoryServiceOptions string
 const (
 	// DirectoryServiceOptionsAADDS ...
 	DirectoryServiceOptionsAADDS DirectoryServiceOptions = "AADDS"
+	// DirectoryServiceOptionsAADKERB ...
+	DirectoryServiceOptionsAADKERB DirectoryServiceOptions = "AADKERB"
 	// DirectoryServiceOptionsAD ...
 	DirectoryServiceOptionsAD DirectoryServiceOptions = "AD"
 	// DirectoryServiceOptionsNone ...
@@ -237,52 +245,52 @@ const (
 
 // PossibleDirectoryServiceOptionsValues returns an array of possible values for the DirectoryServiceOptions const type.
 func PossibleDirectoryServiceOptionsValues() []DirectoryServiceOptions {
-	return []DirectoryServiceOptions{DirectoryServiceOptionsAADDS, DirectoryServiceOptionsAD, DirectoryServiceOptionsNone}
+	return []DirectoryServiceOptions{DirectoryServiceOptionsAADDS, DirectoryServiceOptionsAADKERB, DirectoryServiceOptionsAD, DirectoryServiceOptionsNone}
 }
 
 // DNSEndpointType enumerates the values for dns endpoint type.
 type DNSEndpointType string
 
 const (
-	// DNSEndpointTypeAzureDNSZone ...
-	DNSEndpointTypeAzureDNSZone DNSEndpointType = "AzureDnsZone"
-	// DNSEndpointTypeStandard ...
-	DNSEndpointTypeStandard DNSEndpointType = "Standard"
+	// AzureDNSZone ...
+	AzureDNSZone DNSEndpointType = "AzureDnsZone"
+	// Standard ...
+	Standard DNSEndpointType = "Standard"
 )
 
 // PossibleDNSEndpointTypeValues returns an array of possible values for the DNSEndpointType const type.
 func PossibleDNSEndpointTypeValues() []DNSEndpointType {
-	return []DNSEndpointType{DNSEndpointTypeAzureDNSZone, DNSEndpointTypeStandard}
+	return []DNSEndpointType{AzureDNSZone, Standard}
 }
 
 // EnabledProtocols enumerates the values for enabled protocols.
 type EnabledProtocols string
 
 const (
-	// EnabledProtocolsNFS ...
-	EnabledProtocolsNFS EnabledProtocols = "NFS"
-	// EnabledProtocolsSMB ...
-	EnabledProtocolsSMB EnabledProtocols = "SMB"
+	// NFS ...
+	NFS EnabledProtocols = "NFS"
+	// SMB ...
+	SMB EnabledProtocols = "SMB"
 )
 
 // PossibleEnabledProtocolsValues returns an array of possible values for the EnabledProtocols const type.
 func PossibleEnabledProtocolsValues() []EnabledProtocols {
-	return []EnabledProtocols{EnabledProtocolsNFS, EnabledProtocolsSMB}
+	return []EnabledProtocols{NFS, SMB}
 }
 
 // EncryptionScopeSource enumerates the values for encryption scope source.
 type EncryptionScopeSource string
 
 const (
-	// EncryptionScopeSourceMicrosoftKeyVault ...
-	EncryptionScopeSourceMicrosoftKeyVault EncryptionScopeSource = "Microsoft.KeyVault"
-	// EncryptionScopeSourceMicrosoftStorage ...
-	EncryptionScopeSourceMicrosoftStorage EncryptionScopeSource = "Microsoft.Storage"
+	// MicrosoftKeyVault ...
+	MicrosoftKeyVault EncryptionScopeSource = "Microsoft.KeyVault"
+	// MicrosoftStorage ...
+	MicrosoftStorage EncryptionScopeSource = "Microsoft.Storage"
 )
 
 // PossibleEncryptionScopeSourceValues returns an array of possible values for the EncryptionScopeSource const type.
 func PossibleEncryptionScopeSourceValues() []EncryptionScopeSource {
-	return []EncryptionScopeSource{EncryptionScopeSourceMicrosoftKeyVault, EncryptionScopeSourceMicrosoftStorage}
+	return []EncryptionScopeSource{MicrosoftKeyVault, MicrosoftStorage}
 }
 
 // EncryptionScopeState enumerates the values for encryption scope state.
@@ -304,28 +312,28 @@ func PossibleEncryptionScopeStateValues() []EncryptionScopeState {
 type ExtendedLocationTypes string
 
 const (
-	// ExtendedLocationTypesEdgeZone ...
-	ExtendedLocationTypesEdgeZone ExtendedLocationTypes = "EdgeZone"
+	// EdgeZone ...
+	EdgeZone ExtendedLocationTypes = "EdgeZone"
 )
 
 // PossibleExtendedLocationTypesValues returns an array of possible values for the ExtendedLocationTypes const type.
 func PossibleExtendedLocationTypesValues() []ExtendedLocationTypes {
-	return []ExtendedLocationTypes{ExtendedLocationTypesEdgeZone}
+	return []ExtendedLocationTypes{EdgeZone}
 }
 
 // Format enumerates the values for format.
 type Format string
 
 const (
-	// FormatCsv ...
-	FormatCsv Format = "Csv"
-	// FormatParquet ...
-	FormatParquet Format = "Parquet"
+	// Csv ...
+	Csv Format = "Csv"
+	// Parquet ...
+	Parquet Format = "Parquet"
 )
 
 // PossibleFormatValues returns an array of possible values for the Format const type.
 func PossibleFormatValues() []Format {
-	return []Format{FormatCsv, FormatParquet}
+	return []Format{Csv, Parquet}
 }
 
 // GeoReplicationStatus enumerates the values for geo replication status.
@@ -349,15 +357,15 @@ func PossibleGeoReplicationStatusValues() []GeoReplicationStatus {
 type HTTPProtocol string
 
 const (
-	// HTTPProtocolHTTPS ...
-	HTTPProtocolHTTPS HTTPProtocol = "https"
-	// HTTPProtocolHttpshttp ...
-	HTTPProtocolHttpshttp HTTPProtocol = "https,http"
+	// HTTPS ...
+	HTTPS HTTPProtocol = "https"
+	// Httpshttp ...
+	Httpshttp HTTPProtocol = "https,http"
 )
 
 // PossibleHTTPProtocolValues returns an array of possible values for the HTTPProtocol const type.
 func PossibleHTTPProtocolValues() []HTTPProtocol {
-	return []HTTPProtocol{HTTPProtocolHTTPS, HTTPProtocolHttpshttp}
+	return []HTTPProtocol{HTTPS, Httpshttp}
 }
 
 // IdentityType enumerates the values for identity type.
@@ -398,32 +406,32 @@ func PossibleImmutabilityPolicyStateValues() []ImmutabilityPolicyState {
 type ImmutabilityPolicyUpdateType string
 
 const (
-	// ImmutabilityPolicyUpdateTypeExtend ...
-	ImmutabilityPolicyUpdateTypeExtend ImmutabilityPolicyUpdateType = "extend"
-	// ImmutabilityPolicyUpdateTypeLock ...
-	ImmutabilityPolicyUpdateTypeLock ImmutabilityPolicyUpdateType = "lock"
-	// ImmutabilityPolicyUpdateTypePut ...
-	ImmutabilityPolicyUpdateTypePut ImmutabilityPolicyUpdateType = "put"
+	// Extend ...
+	Extend ImmutabilityPolicyUpdateType = "extend"
+	// Lock ...
+	Lock ImmutabilityPolicyUpdateType = "lock"
+	// Put ...
+	Put ImmutabilityPolicyUpdateType = "put"
 )
 
 // PossibleImmutabilityPolicyUpdateTypeValues returns an array of possible values for the ImmutabilityPolicyUpdateType const type.
 func PossibleImmutabilityPolicyUpdateTypeValues() []ImmutabilityPolicyUpdateType {
-	return []ImmutabilityPolicyUpdateType{ImmutabilityPolicyUpdateTypeExtend, ImmutabilityPolicyUpdateTypeLock, ImmutabilityPolicyUpdateTypePut}
+	return []ImmutabilityPolicyUpdateType{Extend, Lock, Put}
 }
 
 // KeyPermission enumerates the values for key permission.
 type KeyPermission string
 
 const (
-	// KeyPermissionFull ...
-	KeyPermissionFull KeyPermission = "Full"
-	// KeyPermissionRead ...
-	KeyPermissionRead KeyPermission = "Read"
+	// Full ...
+	Full KeyPermission = "Full"
+	// Read ...
+	Read KeyPermission = "Read"
 )
 
 // PossibleKeyPermissionValues returns an array of possible values for the KeyPermission const type.
 func PossibleKeyPermissionValues() []KeyPermission {
-	return []KeyPermission{KeyPermissionFull, KeyPermissionRead}
+	return []KeyPermission{Full, Read}
 }
 
 // KeySource enumerates the values for key source.
@@ -460,21 +468,21 @@ func PossibleKeyTypeValues() []KeyType {
 type Kind string
 
 const (
-	// KindBlobStorage ...
-	KindBlobStorage Kind = "BlobStorage"
-	// KindBlockBlobStorage ...
-	KindBlockBlobStorage Kind = "BlockBlobStorage"
-	// KindFileStorage ...
-	KindFileStorage Kind = "FileStorage"
-	// KindStorage ...
-	KindStorage Kind = "Storage"
-	// KindStorageV2 ...
-	KindStorageV2 Kind = "StorageV2"
+	// BlobStorage ...
+	BlobStorage Kind = "BlobStorage"
+	// BlockBlobStorage ...
+	BlockBlobStorage Kind = "BlockBlobStorage"
+	// FileStorage ...
+	FileStorage Kind = "FileStorage"
+	// Storage ...
+	Storage Kind = "Storage"
+	// StorageV2 ...
+	StorageV2 Kind = "StorageV2"
 )
 
 // PossibleKindValues returns an array of possible values for the Kind const type.
 func PossibleKindValues() []Kind {
-	return []Kind{KindBlobStorage, KindBlockBlobStorage, KindFileStorage, KindStorage, KindStorageV2}
+	return []Kind{BlobStorage, BlockBlobStorage, FileStorage, Storage, StorageV2}
 }
 
 // LargeFileSharesState enumerates the values for large file shares state.
@@ -492,19 +500,40 @@ func PossibleLargeFileSharesStateValues() []LargeFileSharesState {
 	return []LargeFileSharesState{LargeFileSharesStateDisabled, LargeFileSharesStateEnabled}
 }
 
+// LeaseContainerRequestAction enumerates the values for lease container request action.
+type LeaseContainerRequestAction string
+
+const (
+	// Acquire ...
+	Acquire LeaseContainerRequestAction = "Acquire"
+	// Break ...
+	Break LeaseContainerRequestAction = "Break"
+	// Change ...
+	Change LeaseContainerRequestAction = "Change"
+	// Release ...
+	Release LeaseContainerRequestAction = "Release"
+	// Renew ...
+	Renew LeaseContainerRequestAction = "Renew"
+)
+
+// PossibleLeaseContainerRequestActionValues returns an array of possible values for the LeaseContainerRequestAction const type.
+func PossibleLeaseContainerRequestActionValues() []LeaseContainerRequestAction {
+	return []LeaseContainerRequestAction{Acquire, Break, Change, Release, Renew}
+}
+
 // LeaseDuration enumerates the values for lease duration.
 type LeaseDuration string
 
 const (
-	// LeaseDurationFixed ...
-	LeaseDurationFixed LeaseDuration = "Fixed"
-	// LeaseDurationInfinite ...
-	LeaseDurationInfinite LeaseDuration = "Infinite"
+	// Fixed ...
+	Fixed LeaseDuration = "Fixed"
+	// Infinite ...
+	Infinite LeaseDuration = "Infinite"
 )
 
 // PossibleLeaseDurationValues returns an array of possible values for the LeaseDuration const type.
 func PossibleLeaseDurationValues() []LeaseDuration {
-	return []LeaseDuration{LeaseDurationFixed, LeaseDurationInfinite}
+	return []LeaseDuration{Fixed, Infinite}
 }
 
 // LeaseShareAction enumerates the values for lease share action.
@@ -568,26 +597,26 @@ func PossibleLeaseStatusValues() []LeaseStatus {
 type ListContainersInclude string
 
 const (
-	// ListContainersIncludeDeleted ...
-	ListContainersIncludeDeleted ListContainersInclude = "deleted"
+	// Deleted ...
+	Deleted ListContainersInclude = "deleted"
 )
 
 // PossibleListContainersIncludeValues returns an array of possible values for the ListContainersInclude const type.
 func PossibleListContainersIncludeValues() []ListContainersInclude {
-	return []ListContainersInclude{ListContainersIncludeDeleted}
+	return []ListContainersInclude{Deleted}
 }
 
 // ListKeyExpand enumerates the values for list key expand.
 type ListKeyExpand string
 
 const (
-	// ListKeyExpandKerb ...
-	ListKeyExpandKerb ListKeyExpand = "kerb"
+	// Kerb ...
+	Kerb ListKeyExpand = "kerb"
 )
 
 // PossibleListKeyExpandValues returns an array of possible values for the ListKeyExpand const type.
 func PossibleListKeyExpandValues() []ListKeyExpand {
-	return []ListKeyExpand{ListKeyExpandKerb}
+	return []ListKeyExpand{Kerb}
 }
 
 // MigrationState enumerates the values for migration state.
@@ -609,72 +638,72 @@ func PossibleMigrationStateValues() []MigrationState {
 type MinimumTLSVersion string
 
 const (
-	// MinimumTLSVersionTLS10 ...
-	MinimumTLSVersionTLS10 MinimumTLSVersion = "TLS1_0"
-	// MinimumTLSVersionTLS11 ...
-	MinimumTLSVersionTLS11 MinimumTLSVersion = "TLS1_1"
-	// MinimumTLSVersionTLS12 ...
-	MinimumTLSVersionTLS12 MinimumTLSVersion = "TLS1_2"
+	// TLS10 ...
+	TLS10 MinimumTLSVersion = "TLS1_0"
+	// TLS11 ...
+	TLS11 MinimumTLSVersion = "TLS1_1"
+	// TLS12 ...
+	TLS12 MinimumTLSVersion = "TLS1_2"
 )
 
 // PossibleMinimumTLSVersionValues returns an array of possible values for the MinimumTLSVersion const type.
 func PossibleMinimumTLSVersionValues() []MinimumTLSVersion {
-	return []MinimumTLSVersion{MinimumTLSVersionTLS10, MinimumTLSVersionTLS11, MinimumTLSVersionTLS12}
+	return []MinimumTLSVersion{TLS10, TLS11, TLS12}
 }
 
 // Name enumerates the values for name.
 type Name string
 
 const (
-	// NameAccessTimeTracking ...
-	NameAccessTimeTracking Name = "AccessTimeTracking"
+	// AccessTimeTracking ...
+	AccessTimeTracking Name = "AccessTimeTracking"
 )
 
 // PossibleNameValues returns an array of possible values for the Name const type.
 func PossibleNameValues() []Name {
-	return []Name{NameAccessTimeTracking}
+	return []Name{AccessTimeTracking}
 }
 
 // ObjectType enumerates the values for object type.
 type ObjectType string
 
 const (
-	// ObjectTypeBlob ...
-	ObjectTypeBlob ObjectType = "Blob"
-	// ObjectTypeContainer ...
-	ObjectTypeContainer ObjectType = "Container"
+	// Blob ...
+	Blob ObjectType = "Blob"
+	// Container ...
+	Container ObjectType = "Container"
 )
 
 // PossibleObjectTypeValues returns an array of possible values for the ObjectType const type.
 func PossibleObjectTypeValues() []ObjectType {
-	return []ObjectType{ObjectTypeBlob, ObjectTypeContainer}
+	return []ObjectType{Blob, Container}
 }
 
 // Permissions enumerates the values for permissions.
 type Permissions string
 
 const (
-	// PermissionsA ...
-	PermissionsA Permissions = "a"
-	// PermissionsC ...
-	PermissionsC Permissions = "c"
-	// PermissionsD ...
-	PermissionsD Permissions = "d"
-	// PermissionsL ...
-	PermissionsL Permissions = "l"
-	// PermissionsP ...
-	PermissionsP Permissions = "p"
-	// PermissionsR ...
-	PermissionsR Permissions = "r"
-	// PermissionsU ...
-	PermissionsU Permissions = "u"
-	// PermissionsW ...
-	PermissionsW Permissions = "w"
+	// A ...
+	A Permissions = "a"
+	// C ...
+	C Permissions = "c"
+	// D ...
+	D Permissions = "d"
+	// L ...
+	L Permissions = "l"
+	// P ...
+	P Permissions = "p"
+	// R ...
+	R Permissions = "r"
+	// U ...
+	U Permissions = "u"
+	// W ...
+	W Permissions = "w"
 )
 
 // PossiblePermissionsValues returns an array of possible values for the Permissions const type.
 func PossiblePermissionsValues() []Permissions {
-	return []Permissions{PermissionsA, PermissionsC, PermissionsD, PermissionsL, PermissionsP, PermissionsR, PermissionsU, PermissionsW}
+	return []Permissions{A, C, D, L, P, R, U, W}
 }
 
 // PrivateEndpointConnectionProvisioningState enumerates the values for private endpoint connection
@@ -701,34 +730,34 @@ func PossiblePrivateEndpointConnectionProvisioningStateValues() []PrivateEndpoin
 type PrivateEndpointServiceConnectionStatus string
 
 const (
-	// PrivateEndpointServiceConnectionStatusApproved ...
-	PrivateEndpointServiceConnectionStatusApproved PrivateEndpointServiceConnectionStatus = "Approved"
-	// PrivateEndpointServiceConnectionStatusPending ...
-	PrivateEndpointServiceConnectionStatusPending PrivateEndpointServiceConnectionStatus = "Pending"
-	// PrivateEndpointServiceConnectionStatusRejected ...
-	PrivateEndpointServiceConnectionStatusRejected PrivateEndpointServiceConnectionStatus = "Rejected"
+	// Approved ...
+	Approved PrivateEndpointServiceConnectionStatus = "Approved"
+	// Pending ...
+	Pending PrivateEndpointServiceConnectionStatus = "Pending"
+	// Rejected ...
+	Rejected PrivateEndpointServiceConnectionStatus = "Rejected"
 )
 
 // PossiblePrivateEndpointServiceConnectionStatusValues returns an array of possible values for the PrivateEndpointServiceConnectionStatus const type.
 func PossiblePrivateEndpointServiceConnectionStatusValues() []PrivateEndpointServiceConnectionStatus {
-	return []PrivateEndpointServiceConnectionStatus{PrivateEndpointServiceConnectionStatusApproved, PrivateEndpointServiceConnectionStatusPending, PrivateEndpointServiceConnectionStatusRejected}
+	return []PrivateEndpointServiceConnectionStatus{Approved, Pending, Rejected}
 }
 
 // ProvisioningState enumerates the values for provisioning state.
 type ProvisioningState string
 
 const (
-	// ProvisioningStateCreating ...
-	ProvisioningStateCreating ProvisioningState = "Creating"
-	// ProvisioningStateResolvingDNS ...
-	ProvisioningStateResolvingDNS ProvisioningState = "ResolvingDNS"
-	// ProvisioningStateSucceeded ...
-	ProvisioningStateSucceeded ProvisioningState = "Succeeded"
+	// Creating ...
+	Creating ProvisioningState = "Creating"
+	// ResolvingDNS ...
+	ResolvingDNS ProvisioningState = "ResolvingDNS"
+	// Succeeded ...
+	Succeeded ProvisioningState = "Succeeded"
 )
 
 // PossibleProvisioningStateValues returns an array of possible values for the ProvisioningState const type.
 func PossibleProvisioningStateValues() []ProvisioningState {
-	return []ProvisioningState{ProvisioningStateCreating, ProvisioningStateResolvingDNS, ProvisioningStateSucceeded}
+	return []ProvisioningState{Creating, ResolvingDNS, Succeeded}
 }
 
 // PublicAccess enumerates the values for public access.
@@ -767,96 +796,96 @@ func PossiblePublicNetworkAccessValues() []PublicNetworkAccess {
 type Reason string
 
 const (
-	// ReasonAccountNameInvalid ...
-	ReasonAccountNameInvalid Reason = "AccountNameInvalid"
-	// ReasonAlreadyExists ...
-	ReasonAlreadyExists Reason = "AlreadyExists"
+	// AccountNameInvalid ...
+	AccountNameInvalid Reason = "AccountNameInvalid"
+	// AlreadyExists ...
+	AlreadyExists Reason = "AlreadyExists"
 )
 
 // PossibleReasonValues returns an array of possible values for the Reason const type.
 func PossibleReasonValues() []Reason {
-	return []Reason{ReasonAccountNameInvalid, ReasonAlreadyExists}
+	return []Reason{AccountNameInvalid, AlreadyExists}
 }
 
 // ReasonCode enumerates the values for reason code.
 type ReasonCode string
 
 const (
-	// ReasonCodeNotAvailableForSubscription ...
-	ReasonCodeNotAvailableForSubscription ReasonCode = "NotAvailableForSubscription"
-	// ReasonCodeQuotaID ...
-	ReasonCodeQuotaID ReasonCode = "QuotaId"
+	// NotAvailableForSubscription ...
+	NotAvailableForSubscription ReasonCode = "NotAvailableForSubscription"
+	// QuotaID ...
+	QuotaID ReasonCode = "QuotaId"
 )
 
 // PossibleReasonCodeValues returns an array of possible values for the ReasonCode const type.
 func PossibleReasonCodeValues() []ReasonCode {
-	return []ReasonCode{ReasonCodeNotAvailableForSubscription, ReasonCodeQuotaID}
+	return []ReasonCode{NotAvailableForSubscription, QuotaID}
 }
 
 // RootSquashType enumerates the values for root squash type.
 type RootSquashType string
 
 const (
-	// RootSquashTypeAllSquash ...
-	RootSquashTypeAllSquash RootSquashType = "AllSquash"
-	// RootSquashTypeNoRootSquash ...
-	RootSquashTypeNoRootSquash RootSquashType = "NoRootSquash"
-	// RootSquashTypeRootSquash ...
-	RootSquashTypeRootSquash RootSquashType = "RootSquash"
+	// AllSquash ...
+	AllSquash RootSquashType = "AllSquash"
+	// NoRootSquash ...
+	NoRootSquash RootSquashType = "NoRootSquash"
+	// RootSquash ...
+	RootSquash RootSquashType = "RootSquash"
 )
 
 // PossibleRootSquashTypeValues returns an array of possible values for the RootSquashType const type.
 func PossibleRootSquashTypeValues() []RootSquashType {
-	return []RootSquashType{RootSquashTypeAllSquash, RootSquashTypeNoRootSquash, RootSquashTypeRootSquash}
+	return []RootSquashType{AllSquash, NoRootSquash, RootSquash}
 }
 
 // RoutingChoice enumerates the values for routing choice.
 type RoutingChoice string
 
 const (
-	// RoutingChoiceInternetRouting ...
-	RoutingChoiceInternetRouting RoutingChoice = "InternetRouting"
-	// RoutingChoiceMicrosoftRouting ...
-	RoutingChoiceMicrosoftRouting RoutingChoice = "MicrosoftRouting"
+	// InternetRouting ...
+	InternetRouting RoutingChoice = "InternetRouting"
+	// MicrosoftRouting ...
+	MicrosoftRouting RoutingChoice = "MicrosoftRouting"
 )
 
 // PossibleRoutingChoiceValues returns an array of possible values for the RoutingChoice const type.
 func PossibleRoutingChoiceValues() []RoutingChoice {
-	return []RoutingChoice{RoutingChoiceInternetRouting, RoutingChoiceMicrosoftRouting}
+	return []RoutingChoice{InternetRouting, MicrosoftRouting}
 }
 
 // Schedule enumerates the values for schedule.
 type Schedule string
 
 const (
-	// ScheduleDaily ...
-	ScheduleDaily Schedule = "Daily"
-	// ScheduleWeekly ...
-	ScheduleWeekly Schedule = "Weekly"
+	// Daily ...
+	Daily Schedule = "Daily"
+	// Weekly ...
+	Weekly Schedule = "Weekly"
 )
 
 // PossibleScheduleValues returns an array of possible values for the Schedule const type.
 func PossibleScheduleValues() []Schedule {
-	return []Schedule{ScheduleDaily, ScheduleWeekly}
+	return []Schedule{Daily, Weekly}
 }
 
 // Services enumerates the values for services.
 type Services string
 
 const (
-	// ServicesB ...
-	ServicesB Services = "b"
-	// ServicesF ...
-	ServicesF Services = "f"
-	// ServicesQ ...
-	ServicesQ Services = "q"
-	// ServicesT ...
-	ServicesT Services = "t"
+	// B ...
+	B Services = "b"
+	// F ...
+	F Services = "f"
+	// Q ...
+	Q Services = "q"
+	// T ...
+	T Services = "t"
 )
 
 // PossibleServicesValues returns an array of possible values for the Services const type.
 func PossibleServicesValues() []Services {
-	return []Services{ServicesB, ServicesF, ServicesQ, ServicesT}
+	return []Services{B, F, Q, T}
 }
 
 // ShareAccessTier enumerates the values for share access tier.
@@ -935,27 +964,27 @@ func PossibleSkuConversionStatusValues() []SkuConversionStatus {
 type SkuName string
 
 const (
-	// SkuNamePremiumLRS ...
-	SkuNamePremiumLRS SkuName = "Premium_LRS"
-	// SkuNamePremiumZRS ...
-	SkuNamePremiumZRS SkuName = "Premium_ZRS"
-	// SkuNameStandardGRS ...
-	SkuNameStandardGRS SkuName = "Standard_GRS"
-	// SkuNameStandardGZRS ...
-	SkuNameStandardGZRS SkuName = "Standard_GZRS"
-	// SkuNameStandardLRS ...
-	SkuNameStandardLRS SkuName = "Standard_LRS"
-	// SkuNameStandardRAGRS ...
-	SkuNameStandardRAGRS SkuName = "Standard_RAGRS"
-	// SkuNameStandardRAGZRS ...
-	SkuNameStandardRAGZRS SkuName = "Standard_RAGZRS"
-	// SkuNameStandardZRS ...
-	SkuNameStandardZRS SkuName = "Standard_ZRS"
+	// PremiumLRS ...
+	PremiumLRS SkuName = "Premium_LRS"
+	// PremiumZRS ...
+	PremiumZRS SkuName = "Premium_ZRS"
+	// StandardGRS ...
+	StandardGRS SkuName = "Standard_GRS"
+	// StandardGZRS ...
+	StandardGZRS SkuName = "Standard_GZRS"
+	// StandardLRS ...
+	StandardLRS SkuName = "Standard_LRS"
+	// StandardRAGRS ...
+	StandardRAGRS SkuName = "Standard_RAGRS"
+	// StandardRAGZRS ...
+	StandardRAGZRS SkuName = "Standard_RAGZRS"
+	// StandardZRS ...
+	StandardZRS SkuName = "Standard_ZRS"
 )
 
 // PossibleSkuNameValues returns an array of possible values for the SkuName const type.
 func PossibleSkuNameValues() []SkuName {
-	return []SkuName{SkuNamePremiumLRS, SkuNamePremiumZRS, SkuNameStandardGRS, SkuNameStandardGZRS, SkuNameStandardLRS, SkuNameStandardRAGRS, SkuNameStandardRAGZRS, SkuNameStandardZRS}
+	return []SkuName{PremiumLRS, PremiumZRS, StandardGRS, StandardGZRS, StandardLRS, StandardRAGRS, StandardRAGZRS, StandardZRS}
 }
 
 // SkuTier enumerates the values for sku tier.
@@ -998,21 +1027,21 @@ func PossibleStateValues() []State {
 type UsageUnit string
 
 const (
-	// UsageUnitBytes ...
-	UsageUnitBytes UsageUnit = "Bytes"
-	// UsageUnitBytesPerSecond ...
-	UsageUnitBytesPerSecond UsageUnit = "BytesPerSecond"
-	// UsageUnitCount ...
-	UsageUnitCount UsageUnit = "Count"
-	// UsageUnitCountsPerSecond ...
-	UsageUnitCountsPerSecond UsageUnit = "CountsPerSecond"
-	// UsageUnitPercent ...
-	UsageUnitPercent UsageUnit = "Percent"
-	// UsageUnitSeconds ...
-	UsageUnitSeconds UsageUnit = "Seconds"
+	// Bytes ...
+	Bytes UsageUnit = "Bytes"
+	// BytesPerSecond ...
+	BytesPerSecond UsageUnit = "BytesPerSecond"
+	// Count ...
+	Count UsageUnit = "Count"
+	// CountsPerSecond ...
+	CountsPerSecond UsageUnit = "CountsPerSecond"
+	// Percent ...
+	Percent UsageUnit = "Percent"
+	// Seconds ...
+	Seconds UsageUnit = "Seconds"
 )
 
 // PossibleUsageUnitValues returns an array of possible values for the UsageUnit const type.
 func PossibleUsageUnitValues() []UsageUnit {
-	return []UsageUnit{UsageUnitBytes, UsageUnitBytesPerSecond, UsageUnitCount, UsageUnitCountsPerSecond, UsageUnitPercent, UsageUnitSeconds}
+	return []UsageUnit{Bytes, BytesPerSecond, Count, CountsPerSecond, Percent, Seconds}
 }

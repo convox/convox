@@ -84,7 +84,7 @@ func (client AccountsClient) AbortHierarchicalNamespaceMigrationPreparer(ctx con
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-09-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -176,7 +176,7 @@ func (client AccountsClient) CheckNameAvailabilityPreparer(ctx context.Context, 
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-09-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -253,11 +253,7 @@ func (client AccountsClient) Create(ctx context.Context, resourceGroupName strin
 						{Target: "parameters.AccountPropertiesCreateParameters.AzureFilesIdentityBasedAuthentication", Name: validation.Null, Rule: false,
 							Chain: []validation.Constraint{{Target: "parameters.AccountPropertiesCreateParameters.AzureFilesIdentityBasedAuthentication.ActiveDirectoryProperties", Name: validation.Null, Rule: false,
 								Chain: []validation.Constraint{{Target: "parameters.AccountPropertiesCreateParameters.AzureFilesIdentityBasedAuthentication.ActiveDirectoryProperties.DomainName", Name: validation.Null, Rule: true, Chain: nil},
-									{Target: "parameters.AccountPropertiesCreateParameters.AzureFilesIdentityBasedAuthentication.ActiveDirectoryProperties.NetBiosDomainName", Name: validation.Null, Rule: true, Chain: nil},
-									{Target: "parameters.AccountPropertiesCreateParameters.AzureFilesIdentityBasedAuthentication.ActiveDirectoryProperties.ForestName", Name: validation.Null, Rule: true, Chain: nil},
 									{Target: "parameters.AccountPropertiesCreateParameters.AzureFilesIdentityBasedAuthentication.ActiveDirectoryProperties.DomainGUID", Name: validation.Null, Rule: true, Chain: nil},
-									{Target: "parameters.AccountPropertiesCreateParameters.AzureFilesIdentityBasedAuthentication.ActiveDirectoryProperties.DomainSid", Name: validation.Null, Rule: true, Chain: nil},
-									{Target: "parameters.AccountPropertiesCreateParameters.AzureFilesIdentityBasedAuthentication.ActiveDirectoryProperties.AzureStorageSid", Name: validation.Null, Rule: true, Chain: nil},
 								}},
 							}},
 						{Target: "parameters.AccountPropertiesCreateParameters.ImmutableStorageWithVersioning", Name: validation.Null, Rule: false,
@@ -297,7 +293,7 @@ func (client AccountsClient) CreatePreparer(ctx context.Context, resourceGroupNa
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-09-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -400,7 +396,7 @@ func (client AccountsClient) DeletePreparer(ctx context.Context, resourceGroupNa
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-09-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -485,7 +481,7 @@ func (client AccountsClient) FailoverPreparer(ctx context.Context, resourceGroup
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-09-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -588,7 +584,7 @@ func (client AccountsClient) GetPropertiesPreparer(ctx context.Context, resource
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-09-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -678,7 +674,7 @@ func (client AccountsClient) HierarchicalNamespaceMigrationPreparer(ctx context.
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-09-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 		"requestType": autorest.Encode("query", requestType),
@@ -771,7 +767,7 @@ func (client AccountsClient) ListPreparer(ctx context.Context) (*http.Request, e
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-09-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -902,7 +898,7 @@ func (client AccountsClient) ListAccountSASPreparer(ctx context.Context, resourc
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-09-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -995,7 +991,7 @@ func (client AccountsClient) ListByResourceGroupPreparer(ctx context.Context, re
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-09-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1124,7 +1120,7 @@ func (client AccountsClient) ListKeysPreparer(ctx context.Context, resourceGroup
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-09-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1223,7 +1219,7 @@ func (client AccountsClient) ListServiceSASPreparer(ctx context.Context, resourc
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-09-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1319,7 +1315,7 @@ func (client AccountsClient) RegenerateKeyPreparer(ctx context.Context, resource
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-09-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1409,7 +1405,7 @@ func (client AccountsClient) RestoreBlobRangesPreparer(ctx context.Context, reso
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-09-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1512,7 +1508,7 @@ func (client AccountsClient) RevokeUserDelegationKeysPreparer(ctx context.Contex
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-09-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1608,7 +1604,7 @@ func (client AccountsClient) UpdatePreparer(ctx context.Context, resourceGroupNa
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-09-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
