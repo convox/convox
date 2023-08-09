@@ -8,7 +8,7 @@ root = "/var/lib/buildkit"
 [worker.oci]
     enabled = true
     gc = true
-    gckeepstorage = "90%"
+    gckeepstorage = 80%
     snapshotter = "overlayfs"
 
     [[worker.oci.gcpolicy]]
@@ -17,8 +17,8 @@ root = "/var/lib/buildkit"
     keepDuration = 31449600
 
     [[worker.oci.gcpolicy]]
-    keepBytes = "90%"
+    keepBytes = 80%
 
     [[worker.oci.gcpolicy]]
     all = true
-    keepBytes = "90%"
+    keepBytes = 80%
