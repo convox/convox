@@ -29,7 +29,9 @@ locals {
     node_disk = var.node_disk
     node_type = var.node_type
     private = var.private
+    private_subnets_ids = var.private_subnets_ids
     proxy_protocol = var.proxy_protocol
+    public_subnets_ids = var.public_subnets_ids
     rack_name = var.rack_name
     region = var.region
     release = var.release
@@ -73,7 +75,9 @@ locals {
     node_disk = "20"
     node_type = "t3.small"
     private = "true"
+    private_subnets_ids = ""
     proxy_protocol = "false"
+    public_subnets_ids = ""
     rack_name = ""
     region = "us-east-1"
     release = ""
