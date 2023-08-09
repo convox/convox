@@ -1,6 +1,6 @@
 locals {
-  is_custom_subnets_provided    = (length(var.public_subnets_ids) + length(var.private_subnets_ids)) == 0 ? false : true
-  internet_gateway_id = !local.is_custom_subnets_provided ? (var.internet_gateway_id == "" ? aws_internet_gateway.nodes[0].id : var.internet_gateway_id) : ""
+  is_custom_subnets_provided = (length(var.public_subnets_ids) + length(var.private_subnets_ids)) == 0 ? false : true
+  internet_gateway_id        = !local.is_custom_subnets_provided ? (var.internet_gateway_id == "" ? aws_internet_gateway.nodes[0].id : var.internet_gateway_id) : ""
   tags = merge(var.tags, {
     Name = var.name
     Rack = var.name
