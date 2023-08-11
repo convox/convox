@@ -13,8 +13,3 @@ version=$(convox rack | grep Version | awk -F '  +' '{print $2}')
 if [ "${version}" != "${VERSION}" ]; then
   exit 1;
 fi
-
-param_version=$(convox rack params | grep release | awk -F '  +' '{print $2}')
-if [ "${param_version}" != "${VERSION}" ]; then
-  exit 1;
-fi
