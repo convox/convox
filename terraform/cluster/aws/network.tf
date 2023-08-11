@@ -103,7 +103,7 @@ resource "aws_route" "public-default" {
     null_resource.wait_routes_public
   ]
 
-  count = !local.is_custom_subnets_provided ? local.network_resource_count : 0
+  count = !local.is_custom_subnets_provided ? 1 : 0
 
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = local.internet_gateway_id
