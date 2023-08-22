@@ -101,7 +101,6 @@ resource "aws_eks_node_group" "cluster" {
   ami_type        = var.gpu_type ? "AL2_x86_64_GPU" : var.arm_type ? "AL2_ARM_64" : "AL2_x86_64"
   capacity_type   = var.node_capacity_type == "MIXED" ? count.index == 0 ? "ON_DEMAND" : "SPOT" : var.node_capacity_type
   cluster_name    = aws_eks_cluster.cluster.name
-  instance_types  = split(",", random_id.node_group.keepers.node_type)
   node_group_name = "${var.name}-${var.private ? data.aws_subnet.private_subnet_details[count.index].availability_zone : data.aws_subnet.public_subnet_details[count.index].availability_zone}-${count.index}${random_id.node_group.hex}"
   node_role_arn   = random_id.node_group.keepers.role_arn
   subnet_ids      = [var.private ? local.private_subnets_ids[count.index] : local.public_subnets_ids[count.index]]
@@ -234,6 +233,8 @@ resource "aws_launch_template" "cluster" {
   metadata_options {
     http_tokens = var.imds_http_tokens
   }
+
+  instance_type = split(",", random_id.node_group.keepers.node_type)[0]
 
   dynamic "tag_specifications" {
     for_each = toset(
