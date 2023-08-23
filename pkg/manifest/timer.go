@@ -1,7 +1,8 @@
 package manifest
 
 type Timer struct {
-	Name string `yaml:"-"`
+	Name        string             `yaml:"-"`
+	Annotations ServiceAnnotations `yaml:"annotations,omitempty"`
 
 	Command     string `yaml:"command"`
 	Schedule    string `yaml:"schedule"`
