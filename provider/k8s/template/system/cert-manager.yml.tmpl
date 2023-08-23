@@ -5263,7 +5263,7 @@ spec:
         runAsNonRoot: true
       containers:
         - name: cert-manager
-          image: "quay.io/jetstack/cert-manager-cainjector:v1.10.3"
+          image: "quay.io/jetstack/cert-manager-cainjector:v1.10.2"
           imagePullPolicy: IfNotPresent
           args:
           - --v=2
@@ -5315,7 +5315,7 @@ spec:
         runAsNonRoot: true
       containers:
         - name: cert-manager
-          image: "quay.io/jetstack/cert-manager-controller:v1.10.3"
+          image: "quay.io/jetstack/cert-manager-controller:v1.10.2"
           imagePullPolicy: IfNotPresent
           args:
           - --v=2
@@ -5368,7 +5368,7 @@ spec:
         runAsNonRoot: true
       containers:
         - name: cert-manager
-          image: "quay.io/jetstack/cert-manager-webhook:v1.10.3"
+          image: "quay.io/jetstack/cert-manager-webhook:v1.10.2"
           imagePullPolicy: IfNotPresent
           args:
           - --v=2

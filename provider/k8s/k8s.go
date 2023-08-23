@@ -344,7 +344,9 @@ func (p *Provider) initializeTemplates() {
 
 	if d.Spec.Template.Labels["app.kubernetes.io/version"] != CURRENT_CM_VERSION {
 		fmt.Println("Updating cert-manager")
-		p.deleteSystemTemplate("cert-manager", nil)
+		p.deleteSystemTemplate("cert-manager", map[string]interface{}{
+			"Role": p.CertManagerRoleArn,
+		})
 
 		currentRetry := 0
 		for {
