@@ -17,6 +17,8 @@ A Timer is defined in [`convox.yml`](/configuration/convox-yml).
         build: ./worker
     timers:
       cleanup:
+        annotations:
+          - test.annotation.org/value=foobar
         command: bin/cleanup
         schedule: "0 3 * * *"
         service: worker
@@ -25,6 +27,7 @@ A Timer is defined in [`convox.yml`](/configuration/convox-yml).
 
 | Name       | Required | Description                                                                                |
 | ---------- | -------- | ------------------------------------------------------------------------------------------ |
+| **annotations** | **no**     | A list of annotation keys and values to populate the metadata for the deployed pods and their serviceaccounts |
 | **command**      | **yes**  | The command to execute once the [Process](/reference/primitives/app/process) starts                               |
 | **schedule**     | **yes**  | A cron formatted schedule for spawning the [Process](/reference/primitives/app/process). All times are UTC        |
 | **service**      | **yes**  | The name of the [Service](/reference/primitives/app/service) that will be used to spawn the [Process](/reference/primitives/app/process) |

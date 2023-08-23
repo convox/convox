@@ -1,4 +1,18 @@
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    convox.com/type: timer
+    {{ range keyValue .Annotations }}
+    {{.Key}}: "{{ quoteEscape .Value}}"
+    {{ end }}
+  namespace: {{.Namespace}}
+  name: timer-{{.Timer.Name}}
+  labels:
+    timer: {{.Timer.Name}}
+    type: serviceaccount
+---
 kind: CronJob
 apiVersion: batch/v1
 metadata:
@@ -15,6 +29,11 @@ spec:
       # ttlSecondsAfterFinished: 60
       template:
         metadata:
+          annotations:
+            convox.com/type: timer
+            {{ range keyValue .Annotations }}
+            {{.Key}}: "{{ quoteEscape .Value}}"
+            {{ end }}
           labels:
             system: convox
             rack: {{.Rack}}
@@ -41,6 +60,7 @@ spec:
           {{ end }}
           restartPolicy: Never
           shareProcessNamespace: {{.Service.Init}}
+          serviceAccountName: timer-{{.Timer.Name}}
           containers:
           - name: {{.App.Name}}
             args:
