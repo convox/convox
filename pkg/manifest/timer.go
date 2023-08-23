@@ -1,7 +1,10 @@
 package manifest
 
+import "strings"
+
 type Timer struct {
-	Name string `yaml:"-"`
+	Name        string             `yaml:"-"`
+	Annotations ServiceAnnotations `yaml:"annotations,omitempty"`
 
 	Command     string `yaml:"command"`
 	Schedule    string `yaml:"schedule"`
@@ -10,6 +13,18 @@ type Timer struct {
 }
 
 type Timers []Timer
+
+// skipcq
+func (t Timer) AnnotationsMap() map[string]string {
+	annotations := map[string]string{}
+
+	for _, a := range t.Annotations {
+		parts := strings.SplitN(a, "=", 2)
+		annotations[parts[0]] = parts[1]
+	}
+
+	return annotations
+}
 
 func (t *Timer) GetName() string {
 	return t.Name

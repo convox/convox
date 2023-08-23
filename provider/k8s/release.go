@@ -529,13 +529,14 @@ func (p *Provider) releaseTemplateTimer(a *structs.App, e structs.Environment, r
 	}
 
 	params := map[string]interface{}{
-		"App":       a,
-		"Namespace": p.AppNamespace(a.Name),
-		"Rack":      p.Name,
-		"Release":   r,
-		"Resources": s.ResourceMap(),
-		"Service":   s,
-		"Timer":     t,
+		"Annotations": t.AnnotationsMap(),
+		"App":         a,
+		"Namespace":   p.AppNamespace(a.Name),
+		"Rack":        p.Name,
+		"Release":     r,
+		"Resources":   s.ResourceMap(),
+		"Service":     s,
+		"Timer":       t,
 	}
 
 	if ip, err := p.Engine.ResolverHost(); err == nil {
