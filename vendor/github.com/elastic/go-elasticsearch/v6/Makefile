@@ -1,6 +1,8 @@
+SHELL := /bin/bash
+
 ##@ Test
 test-unit:  ## Run unit tests
-	@echo "\033[2m→ Running unit tests...\033[0m"
+	@printf "\033[2m→ Running unit tests...\033[0m\n"
 ifdef race
 	$(eval testunitargs += "-race")
 endif
@@ -16,7 +18,7 @@ endif
 test: test-unit
 
 test-integ:  ## Run integration tests
-	@echo "\033[2m→ Running integration tests...\033[0m"
+	@printf "\033[2m→ Running integration tests...\033[0m\n"
 	$(eval testintegtags += "integration")
 ifdef multinode
 	$(eval testintegtags += "multinode")
@@ -45,9 +47,11 @@ ifdef flavor
 else
 	$(eval flavor='core')
 endif
-	@echo "\033[2m→ Running API integration tests for [$(flavor)]...\033[0m"
+	@printf "\033[2m→ Running API integration tests for [$(flavor)]...\033[0m\n"
 ifeq ($(flavor), xpack)
 	@{ \
+		set -e ; \
+		trap "test -d .git && git checkout --quiet $(PWD)/esapi/test/go.mod" INT TERM EXIT; \
 		export ELASTICSEARCH_URL='https://elastic:elastic@localhost:9200' && \
 		if which gotestsum > /dev/null 2>&1 ; then \
 			cd esapi/test && \
@@ -65,6 +69,8 @@ ifeq ($(flavor), xpack)
 else
 	$(eval testapiargs += $(PWD)/esapi/test/*_test.go)
 	@{ \
+		set -e ; \
+		trap "test -d .git && git checkout --quiet $(PWD)/esapi/test/go.mod" INT TERM EXIT; \
 		if which gotestsum > /dev/null 2>&1 ; then \
 			cd esapi/test && gotestsum --format=short-verbose --junitfile=$(PWD)/tmp/integration-api-report.xml -- $(testapiargs); \
 		else \
@@ -75,75 +81,83 @@ else
 endif
 
 test-bench:  ## Run benchmarks
-	@echo "\033[2m→ Running benchmarks...\033[0m"
+	@printf "\033[2m→ Running benchmarks...\033[0m\n"
 	go test -run=none -bench=. -benchmem ./...
 
 test-examples: ## Execute the _examples
-	@echo "\033[2m→ Testing the examples...\033[0m"
+	@printf "\033[2m→ Testing the examples...\033[0m\n"
 	@{ \
 		set -e ; \
+		trap "test -d .git && git checkout --quiet _examples/**/go.mod" INT TERM EXIT; \
 		for f in _examples/*.go; do \
-			echo "\033[2m────────────────────────────────────────────────────────────────────────────────"; \
-			echo "\033[1m$$f\033[0m"; \
-			echo "\033[2m────────────────────────────────────────────────────────────────────────────────\033[0m"; \
+			printf "\033[2m────────────────────────────────────────────────────────────────────────────────\n"; \
+			printf "\033[1m$$f\033[0m\n"; \
+			printf "\033[2m────────────────────────────────────────────────────────────────────────────────\033[0m\n"; \
 			(go run $$f && true) || \
 			( \
-				echo "\033[31m────────────────────────────────────────────────────────────────────────────────\033[0m"; \
-				echo "\033[31;1m⨯ ERROR\033[0m"; \
+				printf "\033[31m────────────────────────────────────────────────────────────────────────────────\033[0m\n"; \
+				printf "\033[31;1m⨯ ERROR\033[0m\n"; \
 				false; \
 			); \
 		done; \
 		\
 		for f in _examples/*/; do \
-			echo "\033[2m────────────────────────────────────────────────────────────────────────────────\033[0m"; \
-			echo "\033[1m$$f\033[0m"; \
-			echo "\033[2m────────────────────────────────────────────────────────────────────────────────\033[0m"; \
+			printf "\033[2m────────────────────────────────────────────────────────────────────────────────\033[0m\n"; \
+			printf "\033[1m$$f\033[0m\n"; \
+			printf "\033[2m────────────────────────────────────────────────────────────────────────────────\033[0m\n"; \
 			(cd $$f && make test && true) || \
 			( \
-				echo "\033[31m────────────────────────────────────────────────────────────────────────────────\033[0m"; \
-				echo "\033[31;1m⨯ ERROR\033[0m"; \
+				printf "\033[31m────────────────────────────────────────────────────────────────────────────────\033[0m\n"; \
+				printf "\033[31;1m⨯ ERROR\033[0m\n"; \
 				false; \
 			); \
 		done; \
-		echo "\033[32m────────────────────────────────────────────────────────────────────────────────\033[0m"; \
+		printf "\033[32m────────────────────────────────────────────────────────────────────────────────\033[0m\n"; \
 		\
-		echo "\033[32;1mSUCCESS\033[0m"; \
+		printf "\033[32;1mSUCCESS\033[0m\n"; \
 	}
 
 test-coverage:  ## Generate test coverage report
-	@echo "\033[2m→ Generating test coverage report...\033[0m"
+	@printf "\033[2m→ Generating test coverage report...\033[0m\n"
 	@go tool cover -html=tmp/unit.cov -o tmp/coverage.html
 	@go tool cover -func=tmp/unit.cov | 'grep' -v 'esapi/api\.' | sed 's/github.com\/elastic\/go-elasticsearch\///g'
-	@echo "--------------------------------------------------------------------------------\nopen tmp/coverage.html\n"
+	@printf "\033[0m--------------------------------------------------------------------------------\nopen tmp/coverage.html\n\n\033[0m"
 
 ##@ Development
 lint:  ## Run lint on the package
-	@echo "\033[2m→ Running lint...\033[0m"
+	@printf "\033[2m→ Running lint...\033[0m\n"
 	go vet github.com/elastic/go-elasticsearch/...
 	go list github.com/elastic/go-elasticsearch/... | 'grep' -v internal | xargs golint -set_exit_status
+	@{ \
+		set -e ; \
+		trap "test -d ../../../.git && git checkout --quiet go.mod" INT TERM EXIT; \
+		echo "cd internal/cmd/generate/ && go vet ./..."; \
+		cd "internal/cmd/generate/" && go vet ./...; \
+	}
+
 
 apidiff: ## Display API incompabilities
 	@if ! command -v apidiff > /dev/null; then \
-		echo "\033[31;1mERROR: apidiff not installed\033[0m"; \
-		echo "go get -u github.com/go-modules-by-example/apidiff"; \
-		echo "\033[2m→ https://github.com/go-modules-by-example/index/blob/master/019_apidiff/README.md\033[0m\n"; \
+		printf "\033[31;1mERROR: apidiff not installed\033[0m\n"; \
+		printf "go get -u github.com/go-modules-by-example/apidiff\n"; \
+		printf "\033[2m→ https://github.com/go-modules-by-example/index/blob/master/019_apidiff/README.md\033[0m\n\n"; \
 		false; \
 	fi;
 	@rm -rf tmp/apidiff-OLD tmp/apidiff-NEW
 	@git clone --quiet --local .git/ tmp/apidiff-OLD
 	@mkdir -p tmp/apidiff-NEW
 	@tar -c --exclude .git --exclude tmp --exclude cmd . | tar -x -C tmp/apidiff-NEW
-	@echo "\033[2m→ Running apidiff...\033[0m"
-	@echo "tmp/apidiff-OLD/esapi tmp/apidiff-NEW/esapi"
+	@printf "\033[2m→ Running apidiff...\033[0m\n"
+	@pritnf "tmp/apidiff-OLD/esapi tmp/apidiff-NEW/esapi\n"
 	@{ \
 		set -e ; \
 		output=$$(apidiff tmp/apidiff-OLD/esapi tmp/apidiff-NEW/esapi); \
-		echo "\n$$output\n"; \
+		printf "\n$$output\n\n"; \
 		if echo $$output | grep -i -e 'incompatible' - > /dev/null 2>&1; then \
-			echo "\n\033[31;1mFAILURE\033[0m\n"; \
+			printf "\n\033[31;1mFAILURE\033[0m\n\n"; \
 			false; \
 		else \
-			echo "\033[32;1mSUCCESS\033[0m"; \
+			printf "\033[32;1mSUCCESS\033[0m\n"; \
 		fi; \
 	}
 
@@ -158,7 +172,7 @@ else
 	$(eval branches_list = $(shell echo $(branches) | tr ',' ' ') )
 endif
 	$(eval commits_list = $(shell echo $(commits) | tr ',' ' '))
-	@echo "\033[2m→ Backporting commits [$(commits)]\033[0m"
+	@printf "\033[2m→ Backporting commits [$(commits)]\033[0m\n"
 	@{ \
 		set -e -o pipefail; \
 		for commit in $(commits_list); do \
@@ -166,7 +180,7 @@ endif
 		done; \
 		echo ""; \
 		for branch in $(branches_list); do \
-			echo "\033[2m→ $$branch\033[0m"; \
+			printf "\033[2m→ $$branch\033[0m\n"; \
 			git checkout $$branch; \
 			for commit in $(commits_list); do \
 				git cherry-pick -x $$commit; \
@@ -174,68 +188,80 @@ endif
 			git status --short --branch; \
 			echo ""; \
 		done; \
-		echo "\033[2m→ Push updates to Github:\033[0m"; \
+		printf "\033[2m→ Push updates to Github:\033[0m\n"; \
 		for branch in $(branches_list); do \
 			echo "git push --verbose origin $$branch"; \
 		done; \
 	}
 
 release: ## Release a new version to Github
+	$(eval branch = $(shell git rev-parse --abbrev-ref HEAD))
+	$(eval current_version = $(shell cat internal/version/version.go | sed -Ee 's/const Client = "(.*)"/\1/' | tail -1))
+	@printf "\033[2m→ [$(branch)] Current version: $(current_version)...\033[0m\n"
 ifndef version
-	@echo "Missing version argument, exiting..."
+	@printf "\033[31m[!] Missing version argument, exiting...\033[0m\n"
 	@exit 2
 endif
 ifeq ($(version), "")
-	@echo "Empty version argument, exiting..."
+	@printf "\033[31m[!] Empty version argument, exiting...\033[0m\n"
 	@exit 2
 endif
-	@echo "\033[2m→ Creating version $(version)...\033[0m"
+	@printf "\033[2m→ [$(branch)] Creating version $(version)...\033[0m\n"
 	@{ \
+		set -e -o pipefail; \
 		cp internal/version/version.go internal/version/version.go.OLD && \
 		cat internal/version/version.go.OLD | sed -e 's/Client = ".*"/Client = "$(version)"/' > internal/version/version.go && \
-		rm internal/version/version.go.OLD && \
 		go vet internal/version/version.go && \
 		go fmt internal/version/version.go && \
 		git diff --color-words internal/version/version.go | tail -n 1; \
 	}
 	@{ \
-		echo "\033[2m→ Commit and create Git tag? (y/n): \033[0m\c"; \
+		set -e -o pipefail; \
+		printf "\033[2m→ Commit and create Git tag? (y/n): \033[0m\c"; \
 		read continue; \
 		if [[ $$continue == "y" ]]; then \
 			git add internal/version/version.go && \
 			git commit --no-status --quiet --message "Release $(version)" && \
 			git tag --annotate v$(version) --message 'Release $(version)'; \
-			echo "\033[2m→ Push `git show --pretty='%h (%s)' --no-patch HEAD` to Github:\033[0m\n"; \
-			echo "\033[1m  git push origin v$(version)\033[0m\n"; \
+			printf "\033[2m→ Push `git show --pretty='%h (%s)' --no-patch HEAD` to Github:\033[0m\n\n"; \
+			printf "\033[1m  git push origin HEAD && git push origin v$(version)\033[0m\n\n"; \
+			mv internal/version/version.go.OLD internal/version/version.go && \
+			git add internal/version/version.go && \
+			original_version=`cat internal/version/version.go | sed -ne 's;^const Client = "\(.*\)"$$;\1;p'` && \
+			git commit --no-status --quiet --message "Update version to $$original_version"; \
+			printf "\033[2m→ Version updated to [$$original_version].\033[0m\n\n"; \
 		else \
 			echo "Aborting..."; \
+			rm internal/version/version.go.OLD; \
 			exit 1; \
 		fi; \
 	}
 
 godoc: ## Display documentation for the package
-	@echo "\033[2m→ Generating documentation...\033[0m"
-	@echo "open http://localhost:6060/pkg/github.com/elastic/go-elasticsearch/\n"
-	mkdir -p /tmp/tmpgoroot/doc
-	rm -rf /tmp/tmpgopath/src/github.com/elastic/go-elasticsearch
-	mkdir -p /tmp/tmpgopath/src/github.com/elastic/go-elasticsearch
-	tar -c --exclude='.git' --exclude='tmp' . | tar -x -C /tmp/tmpgopath/src/github.com/elastic/go-elasticsearch
-	GOROOT=/tmp/tmpgoroot/ GOPATH=/tmp/tmpgopath/ godoc -http=localhost:6060 -play
+	@printf "\033[2m→ Generating documentation...\033[0m\n"
+	@echo "* http://localhost:6060/pkg/github.com/elastic/go-elasticsearch/v6"
+	@echo "* http://localhost:6060/pkg/github.com/elastic/go-elasticsearch/v6/esapi"
+	@echo "* http://localhost:6060/pkg/github.com/elastic/go-elasticsearch/v6/estransport"
+	@echo "* http://localhost:6060/pkg/github.com/elastic/go-elasticsearch/v6/esutil"
+	@printf "\n"
+	godoc --http=localhost:6060 --play
 
 cluster: ## Launch an Elasticsearch cluster with Docker
 	$(eval version ?= "elasticsearch-oss:6.8-SNAPSHOT")
 ifeq ($(origin nodes), undefined)
 	$(eval nodes = 1)
 endif
-	@echo "\033[2m→ Launching" $(nodes) "node(s) of" $(version) "...\033[0m"
+	@printf "\033[2m→ Launching %d node(s) of %s...\033[0m\n" $(nodes) $(version)
 ifeq ($(shell test $(nodes) && test $(nodes) -gt 1; echo $$?),0)
-	$(eval detached ?= "true")
+	$(eval detach ?= "true")
 else
-	$(eval detached ?= "false")
+	$(eval detach ?= "false")
 endif
 ifdef version
 ifneq (,$(findstring oss,$(version)))
+	$(eval elasticsearch_url = "http://es1:9200")
 else
+	$(eval elasticsearch_url = "https://elastic:elastic@es1:9200")
 	$(eval xpack_env += --env "ELASTIC_PASSWORD=elastic")
 	$(eval xpack_env += --env "xpack.license.self_generated.type=trial")
 	$(eval xpack_env += --env "xpack.security.enabled=true")
@@ -244,10 +270,12 @@ else
 	$(eval xpack_env += --env "xpack.security.http.ssl.key=certs/testnode.key")
 	$(eval xpack_env += --env "xpack.security.http.ssl.certificate=certs/testnode.crt")
 	$(eval xpack_env += --env "xpack.security.http.ssl.certificate_authorities=certs/ca.crt")
+	$(eval xpack_env += --env "xpack.security.http.ssl.verification_mode=none")
 	$(eval xpack_env += --env "xpack.security.transport.ssl.enabled=true")
 	$(eval xpack_env += --env "xpack.security.transport.ssl.key=certs/testnode.key")
 	$(eval xpack_env += --env "xpack.security.transport.ssl.certificate=certs/testnode.crt")
 	$(eval xpack_env += --env "xpack.security.transport.ssl.certificate_authorities=certs/ca.crt")
+	$(eval xpack_env += --env "xpack.security.transport.ssl.verification_mode=none")
 	$(eval xpack_volumes += --volume "$(PWD)/.jenkins/certs/testnode.crt:/usr/share/elasticsearch/config/certs/testnode.crt")
 	$(eval xpack_volumes += --volume "$(PWD)/.jenkins/certs/testnode.key:/usr/share/elasticsearch/config/certs/testnode.key")
 	$(eval xpack_volumes += --volume "$(PWD)/.jenkins/certs/ca.crt:/usr/share/elasticsearch/config/certs/ca.crt")
@@ -279,31 +307,31 @@ endif
 				--publish $$hostport:9200 \
 				--ulimit nofile=65536:65536 \
 				--ulimit memlock=-1:-1 \
-				--detach=$(detached) \
+				--detach=$(detach) \
 				--rm \
 				docker.elastic.co/elasticsearch/$(version); \
 		done \
 	}
-ifdef detached
+ifdef detach
 	@{ \
-		echo "\033[2m→ Waiting for the cluster...\033[0m"; \
-		docker run --network elasticsearch --rm appropriate/curl --max-time 120 --retry 120 --retry-delay 1 --retry-connrefused --show-error --silent http://es1:9200; \
+		printf "\033[2m→ Waiting for the cluster on $(elasticsearch_url)...\033[0m\n"; \
+		docker run --network elasticsearch --rm appropriate/curl --max-time 120 --retry 120 --retry-delay 1 --retry-connrefused --show-error --silent --insecure $(elasticsearch_url); \
 		output="\033[2m→ Cluster ready; to remove containers:"; \
 		output="$$output docker rm -f"; \
 		for n in `seq 1 $(nodes)`; do \
 			output="$$output es$$n"; \
 		done; \
-		echo "$$output\033[0m"; \
+		printf "$$output\033[0m\n"; \
 	}
 endif
 
 cluster-update: ## Update the Docker image
 	$(eval version ?= "elasticsearch-oss:6.8-SNAPSHOT")
-	@echo "\033[2m→ Updating the Docker image...\033[0m"
+	@printf "\033[2m→ Updating the Docker image...\033[0m\n"
 	@docker pull docker.elastic.co/elasticsearch/$(version);
 
 cluster-clean: ## Remove unused Docker volumes and networks
-	@echo "\033[2m→ Cleaning up Docker assets...\033[0m"
+	@printf "\033[2m→ Cleaning up Docker assets...\033[0m\n"
 	docker volume prune --force
 	docker network prune --force
 
@@ -318,8 +346,8 @@ gen-api:  ## Generate the API package from the JSON specification
 ifdef debug
 	$(eval args += --debug)
 endif
-ifdef ELASTICSEARCH_VERSION
-	$(eval version = $(ELASTICSEARCH_VERSION))
+ifdef ELASTICSEARCH_BUILD_VERSION
+	$(eval version = $(ELASTICSEARCH_BUILD_VERSION))
 else
 	$(eval version = $(shell cat "$(input)/buildSrc/version.properties" | grep 'elasticsearch' | cut -d '=' -f 2 | tr -d ' '))
 endif
@@ -328,9 +356,11 @@ ifdef ELASTICSEARCH_BUILD_HASH
 else
 	$(eval build_hash = $(shell git --git-dir='$(input)/.git' rev-parse --short HEAD))
 endif
-	@echo "\033[2m→ Generating API package from specification ($(version):$(build_hash))...\033[0m"
+	@printf "\033[2m→ Generating API package from specification ($(version):$(build_hash))...\033[0m\n"
 	@{ \
-		export ELASTICSEARCH_VERSION=$(version) && \
+		set -e; \
+		trap "test -d .git && git checkout --quiet $(PWD)/internal/cmd/generate/go.mod" INT TERM EXIT; \
+		export ELASTICSEARCH_BUILD_VERSION=$(version) && \
 		export ELASTICSEARCH_BUILD_HASH=$(build_hash) && \
 		cd internal/cmd/generate && \
 		go run main.go apisource --input '$(PWD)/$(input)/rest-api-spec/src/main/resources/rest-api-spec/api/*.json' --output '$(PWD)/$(output)' $(args) && \
@@ -344,8 +374,8 @@ gen-tests:  ## Generate the API tests from the YAML specification
 ifdef debug
 	$(eval args += --debug)
 endif
-ifdef ELASTICSEARCH_VERSION
-	$(eval version = $(ELASTICSEARCH_VERSION))
+ifdef ELASTICSEARCH_BUILD_VERSION
+	$(eval version = $(ELASTICSEARCH_BUILD_VERSION))
 else
 	$(eval version = $(shell cat "$(input)/buildSrc/version.properties" | grep 'elasticsearch' | cut -d '=' -f 2 | tr -d ' '))
 endif
@@ -354,13 +384,16 @@ ifdef ELASTICSEARCH_BUILD_HASH
 else
 	$(eval build_hash = $(shell git --git-dir='$(input)/.git' rev-parse --short HEAD))
 endif
-	@echo "\033[2m→ Generating API tests from specification ($(version):$(build_hash))...\033[0m"
+	@printf "\033[2m→ Generating API tests from specification ($(version):$(build_hash))...\033[0m\n"
 	@{ \
-		export ELASTICSEARCH_VERSION=$(version) && \
+		set -e; \
+		trap "test -d .git && git checkout --quiet $(PWD)/internal/cmd/generate/go.mod" INT TERM EXIT; \
+		export ELASTICSEARCH_BUILD_VERSION=$(version) && \
 		export ELASTICSEARCH_BUILD_HASH=$(build_hash) && \
 		rm -rf $(output)/*_test.go && \
 		rm -rf $(output)/xpack && \
 		cd internal/cmd/generate && \
+		go get golang.org/x/tools/cmd/goimports && \
 		go generate ./... && \
 		go run main.go apitests --input '$(PWD)/$(input)/rest-api-spec/src/main/resources/rest-api-spec/test/**/*.y*ml' --output '$(PWD)/$(output)' $(args) && \
 		go run main.go apitests --input '$(PWD)/$(input)/x-pack/plugin/src/test/resources/rest-api-spec/test/**/*.yml' --output '$(PWD)/$(output)/xpack' $(args) && \

@@ -2,10 +2,13 @@
 
 The official Go client for [Elasticsearch](https://www.elastic.co/products/elasticsearch).
 
-[![GoDoc](https://godoc.org/github.com/elastic/go-elasticsearch?status.svg)](http://godoc.org/github.com/elastic/go-elasticsearch)
-[![Travis-CI](https://travis-ci.org/elastic/go-elasticsearch.svg?branch=master)](https://travis-ci.org/elastic/go-elasticsearch)
+[![GoDoc](https://godoc.org/github.com/elastic/go-elasticsearch?status.svg)](https://pkg.go.dev/github.com/elastic/go-elasticsearch/v6)
 [![Go Report Card](https://goreportcard.com/badge/github.com/elastic/go-elasticsearch)](https://goreportcard.com/report/github.com/elastic/go-elasticsearch)
 [![codecov.io](https://codecov.io/github/elastic/go-elasticsearch/coverage.svg?branch=master)](https://codecov.io/gh/elastic/go-elasticsearch?branch=master)
+[![Build](https://github.com/elastic/go-elasticsearch/workflows/Build/badge.svg)](https://github.com/elastic/go-elasticsearch/actions?query=branch%3A6.x)
+[![Unit](https://github.com/elastic/go-elasticsearch/workflows/Unit/badge.svg)](https://github.com/elastic/go-elasticsearch/actions?query=branch%3A6.x)
+[![Integration](https://github.com/elastic/go-elasticsearch/workflows/Integration/badge.svg)](https://github.com/elastic/go-elasticsearch/actions?query=branch%3A6.x)
+[![API](https://github.com/elastic/go-elasticsearch/workflows/API/badge.svg)](https://github.com/elastic/go-elasticsearch/actions?query=branch%3A6.x)
 
 ## Compatibility
 
@@ -106,7 +109,7 @@ log.Println(res)
 When you export the `ELASTICSEARCH_URL` environment variable,
 it will be used to set the cluster endpoint(s). Separate multiple adresses by a comma.
 
-To set the cluster endpoint(s) programatically, pass them in the configuration object
+To set the cluster endpoint(s) programatically, pass a configuration object
 to the `elasticsearch.NewClient()` function.
 
 ```golang
@@ -115,34 +118,55 @@ cfg := elasticsearch.Config{
     "http://localhost:9200",
     "http://localhost:9201",
   },
+  // ...
 }
 es, err := elasticsearch.NewClient(cfg)
-// ...
 ```
 
-To configure the HTTP settings, pass a [`http.Transport`](https://golang.org/pkg/net/http/#Transport)
-object in the configuration object (the values are for illustrative purposes only).
+To set the username and password, include them in the endpoint URL,
+or use the corresponding configuration options.
+
+```golang
+cfg := elasticsearch.Config{
+  // ...
+  Username: "foo",
+  Password: "bar",
+}
+```
+
+To set a custom certificate authority used to sign the certificates of cluster nodes,
+use the `CACert` configuration option.
+
+```golang
+cert, _ := ioutil.ReadFile(*cacert)
+
+cfg := elasticsearch.Config{
+  // ...
+  CACert: cert,
+}
+```
+
+To configure other HTTP settings, pass an [`http.Transport`](https://golang.org/pkg/net/http/#Transport)
+object in the configuration object.
 
 ```golang
 cfg := elasticsearch.Config{
   Transport: &http.Transport{
     MaxIdleConnsPerHost:   10,
     ResponseHeaderTimeout: time.Second,
-    DialContext:           (&net.Dialer{Timeout: time.Second}).DialContext,
     TLSClientConfig: &tls.Config{
       MinVersion: tls.VersionTLS11,
       // ...
     },
+    // ...
   },
 }
-
-es, err := elasticsearch.NewClient(cfg)
-// ...
 ```
 
 See the [`_examples/configuration.go`](_examples/configuration.go) and
 [`_examples/customization.go`](_examples/customization.go) files for
 more examples of configuration and customization of the client.
+See the [`_examples/security`](_examples/security) for an example of a security configuration.
 
 The following example demonstrates a more complex usage. It fetches the Elasticsearch version from the cluster, indexes a couple of documents concurrently, and prints the search results, using a lightweight wrapper around the response body.
 
@@ -187,6 +211,7 @@ func main() {
   if err != nil {
     log.Fatalf("Error getting response: %s", err)
   }
+  defer res.Body.Close()
   // Check response status
   if res.IsError() {
     log.Fatalf("Error: %s", res.String())
@@ -335,7 +360,7 @@ The `esutil` package provides convenience helpers for working with the client. A
 
 ## Examples
 
-The **[`_examples`](./_examples)** folder contains a number of recipes and comprehensive examples to get you started with the client, including configuration and customization of the client, mocking the transport for unit tests, embedding the client in a custom type, building queries, performing requests, and parsing the responses.
+The **[`_examples`](./_examples)** folder contains a number of recipes and comprehensive examples to get you started with the client, including configuration and customization of the client, using a custom certificate authority (CA) for security (TLS), mocking the transport for unit tests, embedding the client in a custom type, building queries, performing requests individually and in bulk, and parsing the responses.
 
 <!-- ----------------------------------------------------------------------------------------------- -->
 
