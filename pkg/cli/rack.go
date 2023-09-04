@@ -355,13 +355,17 @@ func RackMv(_ sdk.Interface, c *stdcli.Context) error {
 		}
 	}
 
-	if err := fr.UpdateParams(params); err != nil {
-		return err
-	}
+	// if err := fr.UpdateParams(params); err != nil {
+	// 	return err
+	// }
 
 	md, err = fr.Metadata()
 	if err != nil {
 		return err
+	}
+
+	for k, v := range params {
+		md.Vars[k] = v
 	}
 
 	if _, err := rack.Create(c, to, md); err != nil {
