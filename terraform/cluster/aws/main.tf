@@ -67,7 +67,7 @@ resource "random_id" "node_group" {
   byte_length = 8
 
   keepers = {
-    dummy               = "1"
+    dummy               = "2"
     node_capacity_type  = var.node_capacity_type
     node_disk           = var.node_disk
     node_type           = var.node_type
@@ -84,7 +84,7 @@ resource "random_id" "build_node_group" {
   byte_length = 8
 
   keepers = {
-    dummy               = "1"
+    dummy               = "2"
     node_disk           = var.node_disk
     node_type           = var.build_node_type
     private_subnets_ids = join("-", local.private_subnets_ids)
