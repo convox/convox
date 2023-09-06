@@ -614,7 +614,8 @@ func RackUpdate(_ sdk.Interface, c *stdcli.Context) error {
 	newVersion := c.Arg(0)
 
 	// disable downgrabe from minor version for v3 rack
-	if strings.HasPrefix(currentVersion, "3.") && strings.HasPrefix(newVersion, "3.") {
+	if strings.HasPrefix(currentVersion, "3.") && strings.HasPrefix(newVersion, "3.") &&
+		!strings.Contains(currentVersion, "rc") && !strings.Contains(newVersion, "rc") {
 		curv, err := strconv.Atoi(strings.Split(currentVersion, ".")[1])
 		if err != nil {
 			return err
