@@ -155,7 +155,7 @@ resource "aws_eks_node_group" "cluster-build" {
   }
 
   launch_template {
-    id      = aws_launch_template.cluster.id
+    id      = aws_launch_template.cluster-build.id
     version = "$Latest"
   }
 
@@ -237,6 +237,33 @@ resource "aws_launch_template" "cluster" {
   }
 
   instance_type = split(",", random_id.node_group.keepers.node_type)[0]
+
+  dynamic "tag_specifications" {
+    for_each = toset(
+      concat(["instance", "volume", "network-interface", "spot-instances-request"],
+        var.gpu_tag_enable ? ["elastic-gpu"] : []
+    ))
+    content {
+      resource_type = tag_specifications.key
+      tags          = local.tags
+    }
+  }
+
+  key_name = var.key_pair_name != "" ? var.key_pair_name : null
+}
+
+resource "aws_launch_template" "cluster-build" {
+  block_device_mappings {
+    device_name = "/dev/xvda"
+    ebs {
+      volume_type = "gp3"
+      volume_size = random_id.node_group.keepers.node_disk
+    }
+  }
+
+  metadata_options {
+    http_tokens = var.imds_http_tokens
+  }
 
   dynamic "tag_specifications" {
     for_each = toset(
