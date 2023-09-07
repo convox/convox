@@ -20,7 +20,7 @@ List private registries
     SERVER                                        USERNAME
     123456789012.dkr.ecr.us-east-1.amazonaws.com  AKIAABCDE1F2GHIJKLMN
     private.registry.com                          my_private_name
-    https://index.docker.io/v1/                           my_docker_name
+    index.docker.io/v1/                           my_docker_name
     quay.io                                       my_quay_name
 ```
 ## registries add

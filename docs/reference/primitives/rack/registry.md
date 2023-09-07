@@ -15,7 +15,7 @@ A Registry is a set of stored credentials for a private Docker registry that can
     Adding registry... OK
 ```
 
-Use `https://index.docker.io/v1/` for DockerHub.
+Use `index.docker.io/v1/` for DockerHub. Do NOT include `https://` in the registry scheme.
 
 ## Listing Registries
 
