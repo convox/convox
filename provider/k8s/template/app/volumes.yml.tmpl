@@ -7,7 +7,7 @@ metadata:
   name: {{ volumeName $.App . }}
   labels:
     system: convox
-    {{ range keyValue .Labels }}
+    {{ range keyValue $.Labels }}
     {{.Key}}: "{{.Value}}"
     {{ end }}
 spec:
