@@ -134,6 +134,10 @@ func (*BuildKit) cacheProvider(provider string) bool {
 	return provider != "" && strings.Contains("do az", provider) // skipcq
 }
 
+func (*BuildKit) imageManifestCacheProvider(provider string) bool {
+	return provider != "" && strings.Contains("aws", provider) // skipcq
+}
+
 func (*BuildKit) buildArgs(development bool, dockerfile string, env map[string]string) ([]string, error) {
 	fd, err := os.Open(dockerfile)
 	if err != nil {
@@ -208,6 +212,10 @@ func (bk *BuildKit) build(bb *Build, path, dockerfile, tag string, env map[strin
 	if bk.cacheProvider(os.Getenv("PROVIDER")) {
 		reg := strings.Split(tag, ":")[0]
 		args = append(args, "--export-cache", fmt.Sprintf("type=registry,ref=%s:buildcache", reg)) // skipcq
+		args = append(args, "--import-cache", fmt.Sprintf("type=registry,ref=%s:buildcache", reg)) // skipcq
+	} else if bk.imageManifestCacheProvider(os.Getenv("PROVIDER")) {
+		reg := strings.Split(tag, ":")[0]
+		args = append(args, "--export-cache", fmt.Sprintf("mode=max,image-manifest=true,type=registry,ref=%s:buildcache", reg)) // skipcq
 		args = append(args, "--import-cache", fmt.Sprintf("type=registry,ref=%s:buildcache", reg)) // skipcq
 	} else {
 		// keep a local cache for services using the same Dockerfile
