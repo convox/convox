@@ -322,6 +322,23 @@ func RackMv(_ sdk.Interface, c *stdcli.Context) error {
 	from := c.Arg(0)
 	to := c.Arg(1)
 
+	movedToConsole, toRackName := false, to
+	parts := strings.SplitN(to, "/", 2)
+	if len(parts) == 2 {
+		movedToConsole = true
+		toRackName = parts[1]
+	}
+
+	fromRackName := from
+	fparts := strings.SplitN(from, "/", 2)
+	if len(fparts) == 2 {
+		fromRackName = fparts[1]
+	}
+
+	if fromRackName != toRackName {
+		return fmt.Errorf("rack name must remain same")
+	}
+
 	c.Startf("moving rack <rack>%s</rack> to <rack>%s</rack>", from, to)
 
 	fr, err := rack.Load(c, from)
@@ -336,27 +353,6 @@ func RackMv(_ sdk.Interface, c *stdcli.Context) error {
 
 	if !md.Deletable {
 		return fmt.Errorf("rack %s has dependencies and can not be moved", from)
-	}
-
-	movedToConsole, newRackName := false, to
-	parts := strings.SplitN(to, "/", 2)
-	if len(parts) == 2 {
-		movedToConsole = true
-		newRackName = parts[1]
-	}
-	params := make(map[string]string)
-
-	// only 3.11.2+ supports rack_name
-	ri, err := fr.Client()
-	if err == nil {
-		s, err := ri.SystemGet()
-		if err == nil && rack.HasSupport(s.Version, rack.MINOR_RACK_NAME_SUPPORT, rack.PATCH_RACK_NAME_SUPPORT) {
-			params["rack_name"] = newRackName
-		}
-	}
-
-	if err := fr.UpdateParams(params); err != nil {
-		return err
 	}
 
 	md, err = fr.Metadata()

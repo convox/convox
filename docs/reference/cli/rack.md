@@ -89,6 +89,7 @@ Get logs for the rack
 ## rack mv
 
 Transfer the management of a Rack from an individual user to an organization or vice versa.
+> note: rack name should be same
 
 ### Usage
 ```html
