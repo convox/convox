@@ -16,6 +16,7 @@ locals {
     high_availability = var.high_availability
     idle_timeout = var.idle_timeout
     image = var.image
+    imds_http_hop_limit = var.imds_http_hop_limit
     imds_http_tokens = var.imds_http_tokens
     internal_router = var.internal_router
     internet_gateway_id = var.internet_gateway_id
@@ -62,6 +63,7 @@ locals {
     high_availability = "true"
     idle_timeout = "3600"
     image = "convox/convox"
+    imds_http_hop_limit = "2"
     imds_http_tokens = "optional"
     internal_router = "false"
     internet_gateway_id = ""
