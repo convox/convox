@@ -71,6 +71,11 @@ variable "imds_http_tokens" {
   default = "optional"
 }
 
+variable "imds_http_hop_limit" {
+  type    = number
+  default = 3
+}
+
 variable "internet_gateway_id" {
   default = ""
 }
