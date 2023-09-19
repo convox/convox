@@ -234,6 +234,7 @@ resource "aws_launch_template" "cluster" {
 
   metadata_options {
     http_tokens = var.imds_http_tokens
+    http_put_response_hop_limit = var.imds_http_hop_limit
   }
 
   instance_type = split(",", random_id.node_group.keepers.node_type)[0]
@@ -263,6 +264,7 @@ resource "aws_launch_template" "cluster-build" {
 
   metadata_options {
     http_tokens = var.imds_http_tokens
+    http_put_response_hop_limit = var.imds_http_hop_limit
   }
 
   dynamic "tag_specifications" {

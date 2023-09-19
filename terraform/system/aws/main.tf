@@ -62,6 +62,7 @@ module "cluster" {
   high_availability        = var.high_availability
   internet_gateway_id      = var.internet_gateway_id
   imds_http_tokens         = var.imds_http_tokens
+  imds_http_hop_limit      = var.imds_http_hop_limit
   key_pair_name            = var.key_pair_name
   kube_proxy_version       = var.kube_proxy_version
   k8s_version              = var.k8s_version
