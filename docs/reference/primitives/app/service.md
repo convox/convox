@@ -56,6 +56,13 @@ services:
       interval: 5
       path: /check
       timeout: 3
+    liveness:
+      path: /liveness/check
+      grace: 15
+      interval: 5
+      timeout: 3
+      successThreshold: 1
+      failureThreshold: 3
     internal: false
     labels:
       convox.com/test: true
@@ -104,6 +111,7 @@ services:
 | **environment** | list       |                     | A list of environment variables (with optional defaults) to populate from the [Release](/reference/primitives/app/release) environment                            |
 | **grpcHealthEnabled** | boolean   |      false          | Enables liveliness health check for grpc. It should follow the [grpc health protocol](https://github.com/grpc/grpc/blob/master/doc/health-checking.md) (ref: [k8s](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-grpc-liveness-probe))|
 | **health**      | string/map | /                   | Health check definition (see below)                                                                                                        |
+| **liveness** | map |      | Liveness check definition (see below). By default it is disabled. If it fails then service will restart |
 | **image**       | string     |                     | An external Docker image to use for this Service (supercedes **build**)                                                                      |
 | **internal**    | boolean    | false               | Set to **true** to make this Service only accessible inside the Rack                                                                         |
 | **internalRouter** | boolean    | false               | Set it to **true** to make this Service only accessible using internal loadbalancer. You also have to set the rack parameter [internal_router](/installation/production-rack/aws) to **true**                 |
@@ -185,8 +193,24 @@ services:
 | **interval** | number | 5       | The number of seconds between health checks                                                      |
 | **path**     | string | /       | The path to request for health checks                                                            |
 | **timeout**  | number | 4       | The number of seconds to wait for a successful response                                          |
+| **disable**  | bool | false       | To disable the healthcheck |
 
 > Specifying **health** as a string will set the **path** and leave the other values as defaults.
+
+&nbsp;
+
+### liveness
+
+| Attribute  | Type   | Default | Description                                                                                      |
+| ---------- | ------ | ------- | ------------------------------------------------------------------------------------------------ |
+| **grace**    | number | 10       | The number of seconds to wait for a [Process](/reference/primitives/app/process) to start before starting liveness checks |
+| **interval** | number | 5       | The number of seconds between health checks                                                      |
+| **path**     | string |        | The path to request for health checks                                                            |
+| **timeout**  | number | 5      | The number of seconds to wait for a successful response                                          |
+| **successThreshold**  | number | 1      | The number of seconds to wait for a successful response                                          |
+| **failureThreshold**  | number | 3      | The number of seconds to wait for a successful response                                          |
+
+> If you want to enable liveness check, you have to specify **path** and others are optional
 
 ### scale
 
