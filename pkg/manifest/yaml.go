@@ -264,6 +264,9 @@ func (v *ServiceHealth) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if w, ok := t["timeout"].(int); ok {
 			v.Timeout = w
 		}
+		if w, ok := t["disable"].(bool); ok {
+			v.Disable = w
+		}
 	case string:
 		v.Path = t
 	default:
