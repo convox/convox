@@ -21,6 +21,7 @@ type Service struct {
 	Environment       Environment           `yaml:"environment,omitempty"`
 	GrpcHealthEnabled bool                  `yaml:"grpcHealthEnabled,omitempty"`
 	Health            ServiceHealth         `yaml:"health,omitempty"`
+	Liveness          ServiceLiveness       `yaml:"liveness,omitempty"`
 	Image             string                `yaml:"image,omitempty"`
 	Init              bool                  `yaml:"init,omitempty"`
 	Internal          bool                  `yaml:"internal,omitempty"`
@@ -68,10 +69,20 @@ type ServiceDeployment struct {
 type ServiceDomains []string
 
 type ServiceHealth struct {
+	Disable  bool
 	Grace    int
 	Interval int
 	Path     string
 	Timeout  int
+}
+
+type ServiceLiveness struct {
+	Grace            int    `yaml:"grace,omitempty"`
+	Interval         int    `yaml:"interval,omitempty"`
+	Path             string `yaml:"path,omitempty"`
+	Timeout          int    `yaml:"timeout,omitempty"`
+	SuccessThreshold int    `yaml:"successThreshold,omitempty"`
+	FailureThreshold int    `yaml:"failureThreshold,omitempty"`
 }
 
 type ServiceLifecycle struct {

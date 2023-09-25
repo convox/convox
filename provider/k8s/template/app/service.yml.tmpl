@@ -145,7 +145,18 @@ spec:
           {{ end }}
         {{ end }}
         {{ with .Service.Port.Port }}
-        {{ if not (eq $.Service.Port.Scheme "GRPC") }}
+        {{ if and (not (eq $.Service.Port.Scheme "GRPC")) (not (eq $.Service.Liveness.Path ""))}}
+        livenessProbe:
+          httpGet:
+            path: {{$.Service.Liveness.Path}}"
+            port: {{.}}
+          initialDelaySeconds: {{$.Service.Liveness.Grace}}
+          periodSeconds: {{$.Service.Liveness.Interval}}
+          timeoutSeconds: {{$.Service.Liveness.Timeout}}
+          successThreshold: {{$.Service.Liveness.SuccessThreshold}}
+          failureThreshold: {{$.Service.Liveness.FailureThreshold}}
+        {{ end }}
+        {{ if and (not (eq $.Service.Port.Scheme "GRPC")) (not $.Service.Health.Disable) }}
         readinessProbe:
           httpGet:
             path: "{{$.Service.Health.Path}}"

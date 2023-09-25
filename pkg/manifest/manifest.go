@@ -163,6 +163,25 @@ func (m *Manifest) ApplyDefaults() error {
 			m.Services[i].Health.Timeout = m.Services[i].Health.Interval - 1
 		}
 
+		s.Liveness.Path = strings.TrimSpace(s.Liveness.Path)
+		if s.Liveness.Path != "" {
+			if s.Liveness.Grace == 0 {
+				m.Services[i].Liveness.Grace = 10
+			}
+			if s.Liveness.Interval == 0 {
+				m.Services[i].Liveness.Interval = 5
+			}
+			if s.Liveness.Timeout == 0 {
+				m.Services[i].Liveness.Timeout = 5
+			}
+			if s.Liveness.SuccessThreshold == 0 {
+				m.Services[i].Liveness.SuccessThreshold = 1
+			}
+			if s.Liveness.FailureThreshold == 0 {
+				m.Services[i].Liveness.FailureThreshold = 3
+			}
+		}
+
 		if !m.AttributeExists(fmt.Sprintf("services.%s.init", s.Name)) {
 			m.Services[i].Init = true
 		}
