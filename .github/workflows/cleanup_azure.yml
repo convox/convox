@@ -1,0 +1,24 @@
+name: cleanup_azure
+
+on:
+  schedule:
+    - cron:  '0 2/24 * * *'
+  workflow_dispatch:
+
+jobs:
+  cleanup-azure:
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: azure secrets
+        run: ci/secrets.sh
+        env:
+          SECRETS: ${{ toJson(secrets) }}
+          PROVIDER: azure
+      - name: dependencies
+        run: ci/dependencies.sh
+      - name: azure cleanup
+        run: ci/azure_cleanup.sh

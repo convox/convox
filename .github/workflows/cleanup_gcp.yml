@@ -1,0 +1,24 @@
+name: cleanup_gcp
+
+on:
+  schedule:
+    - cron:  '0 2/24 * * *'
+  workflow_dispatch:
+
+jobs:
+  cleanup-gcp:
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: gcp secrets
+        run: ci/secrets.sh
+        env:
+          SECRETS: ${{ toJson(secrets) }}
+          PROVIDER: gcp
+      - name: dependencies
+        run: ci/dependencies.sh
+      - name: gcp cleanup
+        run: ci/gcp_cleanup.sh
