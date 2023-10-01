@@ -11,7 +11,7 @@ jobs:
       upload_url: ${{ steps.release.outputs.upload_url }}
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: golang-1.18
@@ -70,7 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: version
@@ -95,7 +95,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: version
@@ -124,7 +124,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: actions/download-artifact@v2
@@ -147,7 +147,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: actions/download-artifact@v2
@@ -170,7 +170,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: actions/download-artifact@v2
@@ -193,7 +193,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: actions/download-artifact@v2
@@ -247,7 +247,7 @@ jobs:
             provider: azure
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: version
         run: echo "VERSION=$(echo ${{ github.ref }} | awk -F/ '{print $3}')" >> $GITHUB_ENV
       - name: name
@@ -290,7 +290,7 @@ jobs:
       suffix: downgrade
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: version
         run: echo "VERSION=$(echo ${{ github.ref }} | awk -F/ '{print $3}')" >> $GITHUB_ENV
       - name: name
@@ -337,7 +337,7 @@ jobs:
       suffix: upgrade
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: version
         run: echo "VERSION=$(echo ${{ github.ref }} | awk -F/ '{print $3}')" >> $GITHUB_ENV
       - name: name
@@ -383,7 +383,7 @@ jobs:
       suffix: ssh
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: version
         run: echo "VERSION=$(echo ${{ github.ref }} | awk -F/ '{print $3}')" >> $GITHUB_ENV
       - name: name
