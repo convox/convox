@@ -63,7 +63,7 @@ locals {
     high_availability = "true"
     idle_timeout = "3600"
     image = "convox/convox"
-    imds_http_hop_limit = "2"
+    imds_http_hop_limit = "3"
     imds_http_tokens = "optional"
     internal_router = "false"
     internet_gateway_id = ""

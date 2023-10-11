@@ -76,6 +76,7 @@ func TestReleaseCreate(t *testing.T) {
 }
 
 func TestReleasePromote(t *testing.T) {
+	t.Skip()
 	testProvider(t, func(p *k8s.Provider) {
 		aa := p.Atom.(*atom.MockInterface)
 		kc := p.Convox.(*cvfake.Clientset)

@@ -48,6 +48,8 @@ services:
       maximum: 100
     domain: ${WEB_HOST}
     drain: 10
+    dnsConfig:
+      ndots: 5
     environment:
       - FOO
       - BAR=qux
@@ -107,6 +109,7 @@ services:
 | **command**     | string     | **CMD** of Dockerfile | The command to run to start a [Process](/reference/primitives/app/process) for this Service                                                                       |
 | **deployment**  | map        |                     | Manual control over deployment parameters                                                                                                  |
 | **domain**      | string     |                     | A custom domain(s) (comma separated) to route to this Service                                                                              |
+| **dnsConfig**      | map     |                     | Dns config for the service|
 | **drain**       | number     |                     | The number of seconds to wait for connections to drain when terminating a [Process](/reference/primitives/app/process) of this Service. Only applies for version 2 rack services. For version 3 rack services use termination grace period **termination.grace** |
 | **environment** | list       |                     | A list of environment variables (with optional defaults) to populate from the [Release](/reference/primitives/app/release) environment                            |
 | **grpcHealthEnabled** | boolean   |      false          | Enables liveliness health check for grpc. It should follow the [grpc health protocol](https://github.com/grpc/grpc/blob/master/doc/health-checking.md) (ref: [k8s](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-grpc-liveness-probe))|
@@ -173,6 +176,14 @@ services:
 | --------- | ------ | ------- | -------------------------------------------------------------------------------- |
 | **maximum** | number | 200     | The maximum percentage of Processes to allow during rolling deploys              |
 | **minimum** | number | 50      | The minimum percentage of healthy Processes to keep alive during rolling deploys |
+
+&nbsp;
+
+### dnsConfig
+
+| Attribute | Type   | Default | Description                                                                                |
+| --------- | ------ | ------- | ------------------------------------------------------------------------------------------ |
+| **ndots**     | int |         | The ndots option for the dns config |
 
 &nbsp;
 

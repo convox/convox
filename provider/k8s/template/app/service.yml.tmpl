@@ -85,9 +85,15 @@ spec:
         {{.Key}}: "{{.Value}}"
         {{ end }}
     spec:
-      {{ with .Resolver }}
+      {{ if or (.Resolver) (gt .Service.DnsConfig.Ndots 0) }}
       dnsPolicy: "None"
       dnsConfig:
+        {{ if gt .Service.DnsConfig.Ndots 0 }}
+        options:
+        - name: ndots
+          value: "{{.Service.DnsConfig.Ndots}}"
+        {{ end }}
+        {{ with .Resolver }}
         nameservers:
           - "{{ . }}"
         searches:
@@ -96,6 +102,7 @@ spec:
           - "{{$.Rack}}.local"
           - "svc.cluster.local"
           - "cluster.local"
+        {{ end }}
       {{ end }}
       serviceAccountName: {{.Service.Name}}
       shareProcessNamespace: {{.Service.Init}}
