@@ -28,3 +28,27 @@ resource "aws_s3_bucket_acl" "storage" {
   bucket = aws_s3_bucket.storage.bucket
   acl    = "private"
 }
+
+resource "aws_s3_bucket_policy" "allow_access_for_logs" {
+  bucket = aws_s3_bucket.storage.bucket
+  policy = data.aws_iam_policy_document.allow_access_for_logs.json
+}
+
+data "aws_iam_policy_document" "allow_access_for_logs" {
+  statement {
+    principals {
+      type        = "Service"
+      identifiers = ["delivery.logs.amazonaws.com"]
+    }
+
+    actions = [
+      "s3:GetBucketAcl",
+      "s3:PutObject",
+    ]
+
+    resources = [
+      aws_s3_bucket.storage.arn,
+      "${aws_s3_bucket.storage.arn}/logs/*",
+    ]
+  }
+}

@@ -93,6 +93,9 @@ resource "kubernetes_service" "router" {
       "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout"  = "${var.idle_timeout}"
       "service.beta.kubernetes.io/aws-load-balancer-type"                     = "nlb"
       "service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags" = join(",", [for key, value in local.tags : "${key}=${value}"])
+      "service.beta.kubernetes.io/aws-load-balancer-access-log-s3-bucket-name" = var.lb_access_log_enable ? "${aws_s3_bucket.logs[0].bucket}" : ""
+      "service.beta.kubernetes.io/aws-load-balancer-access-log-s3-bucket-prefix" = "logs/nlb"
+      "service.beta.kubernetes.io/aws-load-balancer-access-log-enabled" = var.lb_access_log_enable
     }
   }
 

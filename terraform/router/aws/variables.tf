@@ -15,6 +15,11 @@ variable "high_availability" {
   default = true
 }
 
+variable "lb_access_log_enable" {
+  type = bool
+  default = false
+}
+
 variable "name" {
   type = string
 }

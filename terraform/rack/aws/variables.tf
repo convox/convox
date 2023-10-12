@@ -43,6 +43,11 @@ variable "image" {
   type = string
 }
 
+variable "lb_access_log_enable" {
+  type = bool
+  default = false
+}
+
 variable "name" {
   type = string
 }

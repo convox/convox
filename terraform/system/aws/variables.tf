@@ -96,6 +96,11 @@ variable "k8s_version" {
   default = "1.25"
 }
 
+variable "lb_access_log_enable" {
+  type = bool
+  default = false
+}
+
 variable "max_on_demand_count" {
   default = 100
 }

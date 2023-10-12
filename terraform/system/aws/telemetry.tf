@@ -23,6 +23,7 @@ locals {
     k8s_version = var.k8s_version
     key_pair_name = var.key_pair_name
     kube_proxy_version = var.kube_proxy_version
+    lb_access_log_enable = var.lb_access_log_enable
     max_on_demand_count = var.max_on_demand_count
     min_on_demand_count = var.min_on_demand_count
     name = var.name
@@ -63,13 +64,14 @@ locals {
     high_availability = "true"
     idle_timeout = "3600"
     image = "convox/convox"
-    imds_http_hop_limit = "2"
+    imds_http_hop_limit = "3"
     imds_http_tokens = "optional"
     internal_router = "false"
     internet_gateway_id = ""
     k8s_version = "1.25"
     key_pair_name = ""
     kube_proxy_version = "v1.25.6-eksbuild.1"
+    lb_access_log_enable = "false"
     max_on_demand_count = "100"
     min_on_demand_count = "1"
     name = ""
