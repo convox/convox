@@ -16,6 +16,7 @@ type Service struct {
 	Certificate       Certificate           `yaml:"certificate,omitempty"`
 	Command           string                `yaml:"command,omitempty"`
 	Deployment        ServiceDeployment     `yaml:"deployment,omitempty"`
+	DnsConfig         ServiceDnsConfig      `yaml:"dnsConfig,omitempty"`
 	Domains           ServiceDomains        `yaml:"domain,omitempty"`
 	Drain             int                   `yaml:"drain,omitempty"`
 	Environment       Environment           `yaml:"environment,omitempty"`
@@ -67,6 +68,10 @@ type ServiceDeployment struct {
 }
 
 type ServiceDomains []string
+
+type ServiceDnsConfig struct {
+	Ndots int
+}
 
 type ServiceHealth struct {
 	Disable  bool
