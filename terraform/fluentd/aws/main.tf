@@ -21,14 +21,16 @@ module "k8s" {
   rack      = var.rack
 
   target = templatefile("${path.module}/target.conf.tpl", {
-    rack   = var.rack,
-    region = data.aws_region.current.name,
-    syslog = compact(split(",", var.syslog)),
+    access_log_retention = var.access_log_retention_in_days,
+    rack                 = var.rack,
+    region               = data.aws_region.current.name,
+    syslog               = compact(split(",", var.syslog))
   })
 
   annotations = {
     "eks.amazonaws.com/role-arn" = aws_iam_role.fluentd.arn,
-    "iam.amazonaws.com/role"     = aws_iam_role.fluentd.arn
+    "iam.amazonaws.com/role"     = aws_iam_role.fluentd.arn,
+    "convox.com/dummy"           = var.access_log_retention_in_days,
   }
 
   env = {
