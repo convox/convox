@@ -45,6 +45,7 @@ The following environment variables are required:
 
 | Name                     | Default                | Description                                                                                                    |
 | -------------------------|------------------------|----------------------------------------------------------------------------------------------------------------|
+| **access_log_retention_in_days**   |         7          | Specify nginx access log retention period in cloudwatch logs. The log group name will be `/convox/<rack-name>/system` and stream name `/nginx-access-logs` |
 | **availability_zones**   |                        | Specify a list of AZ names (minimum 3) to override the random automatic selection from AWS                     |
 | **build_node_enabled**   |     false              | Enabled dedicated build node for build |
 | **build_node_type**      | same as **node_type**  | Node type for the build node |
