@@ -1,3 +1,7 @@
+variable "access_log_retention_in_days" {
+  default = "7"
+}
+
 variable "availability_zones" {
   default = ""
 }

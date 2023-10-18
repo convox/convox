@@ -10,6 +10,42 @@
 		</record>
 	</filter>
 
+    <match rack.*.app.system.service.ingress-nginx>
+      @type rewrite_tag_filter
+      <rule>
+        key log
+        pattern  /^\{/
+        tag $${tag}.access
+      </rule>
+    </match>
+
+    <match rack.*.app.system.service.ingress-nginx.access>
+      <filter **>
+        @type grep
+        <regexp>
+          key message
+          pattern /^\{/
+        </regexp>
+      </filter>
+
+      <store>
+        @type cloudwatch_logs
+        region ${region}
+        auto_create_stream true
+        retention_in_days ${access_log_retention}
+        log_group_name_key group_name
+        log_stream_name "/nginx-access-logs"
+        message_keys log
+
+        <buffer>
+          flush_interval 1
+          chunk_limit_size 2m
+          queued_chunks_limit_size 32
+          retry_forever true
+        </buffer>
+      </store>
+    </match>
+
 	<match **>
 		@type copy
 
