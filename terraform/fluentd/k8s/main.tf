@@ -51,6 +51,8 @@ resource "kubernetes_config_map" "fluentd" {
 }
 
 resource "kubernetes_daemonset" "fluentd" {
+  count = var.fluentd_disable ? 0 : 1
+
   metadata {
     namespace = var.namespace
     name      = "fluentd"

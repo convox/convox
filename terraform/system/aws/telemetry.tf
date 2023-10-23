@@ -12,6 +12,7 @@ locals {
     coredns_version = var.coredns_version
     docker_hub_password = var.docker_hub_password
     docker_hub_username = var.docker_hub_username
+    fluentd_disable = var.fluentd_disable
     gpu_tag_enable = var.gpu_tag_enable
     high_availability = var.high_availability
     idle_timeout = var.idle_timeout
@@ -59,6 +60,7 @@ locals {
     coredns_version = "v1.9.3-eksbuild.2"
     docker_hub_password = ""
     docker_hub_username = ""
+    fluentd_disable = "false"
     gpu_tag_enable = "false"
     high_availability = "true"
     idle_timeout = "3600"

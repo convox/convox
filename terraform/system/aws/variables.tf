@@ -38,6 +38,11 @@ variable "docker_hub_password" {
   default = ""
 }
 
+variable "fluentd_disable" {
+  type    = bool
+  default = false
+}
+
 variable "gpu_tag_enable" {
   default = false
   type    = bool
