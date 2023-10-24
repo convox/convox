@@ -117,6 +117,15 @@ func (c *EventController) Add(obj interface{}) error {
 		if err := c.Provider.systemLog(app, o.Name, e.LastTimestamp.Time, e.Message); err != nil {
 			return errors.WithStack(err)
 		}
+	case "autoscaling/v2/HorizontalPodAutoscaler":
+		app, err := c.Provider.NamespaceApp(o.Namespace)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+
+		if err := c.Provider.systemLog(app, o.Name, e.LastTimestamp.Time, e.Message); err != nil {
+			return errors.WithStack(err)
+		}
 	case "v1/ConfigMap":
 	case "v1/Pod":
 		switch e.Reason {
