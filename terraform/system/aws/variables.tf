@@ -38,6 +38,11 @@ variable "docker_hub_password" {
   default = ""
 }
 
+variable "disable_image_manifest_cache" {
+  type    = bool
+  default = false
+}
+
 variable "gpu_tag_enable" {
   default = false
   type    = bool
