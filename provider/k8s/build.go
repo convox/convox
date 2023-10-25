@@ -69,17 +69,18 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 	cache := common.DefaultBool(opts.NoCache, true)
 
 	env := map[string]string{
-		"BUILD_APP":         app,
-		"BUILD_AUTH":        string(auth),
-		"BUILD_DEVELOPMENT": fmt.Sprintf("%t", common.DefaultBool(opts.Development, false)),
-		"BUILD_GENERATION":  "2",
-		"BUILD_ID":          b.Id,
-		"BUILD_MANIFEST":    common.DefaultString(opts.Manifest, "convox.yml"),
-		"BUILD_RACK":        p.Name,
-		"BUILD_URL":         url,
-		"BUILDKIT_ENABLED":  p.BuildkitEnabled,
-		"PROVIDER":          os.Getenv("PROVIDER"),
-		"RACK_URL":          fmt.Sprintf("https://convox:%s@api.%s.svc.cluster.local:5443", p.Password, p.Namespace),
+		"BUILD_APP":                    app,
+		"BUILD_AUTH":                   string(auth),
+		"BUILD_DEVELOPMENT":            fmt.Sprintf("%t", common.DefaultBool(opts.Development, false)),
+		"BUILD_GENERATION":             "2",
+		"BUILD_ID":                     b.Id,
+		"BUILD_MANIFEST":               common.DefaultString(opts.Manifest, "convox.yml"),
+		"BUILD_RACK":                   p.Name,
+		"BUILD_URL":                    url,
+		"BUILDKIT_ENABLED":             p.BuildkitEnabled,
+		"PROVIDER":                     os.Getenv("PROVIDER"),
+		"DISABLE_IMAGE_MANIFEST_CACHE": os.Getenv("DISABLE_IMAGE_MANIFEST_CACHE"),
+		"RACK_URL":                     fmt.Sprintf("https://convox:%s@api.%s.svc.cluster.local:5443", p.Password, p.Namespace),
 	}
 
 	repo, _, err := p.Engine.RepositoryHost(app)
