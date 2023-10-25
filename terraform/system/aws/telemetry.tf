@@ -11,6 +11,7 @@ locals {
     cert_duration = var.cert_duration
     cidr = var.cidr
     coredns_version = var.coredns_version
+    disable_image_manifest_cache = var.disable_image_manifest_cache
     docker_hub_password = var.docker_hub_password
     docker_hub_username = var.docker_hub_username
     fluentd_disable = var.fluentd_disable
@@ -60,6 +61,7 @@ locals {
     cert_duration = "2160h"
     cidr = "10.1.0.0/16"
     coredns_version = "v1.9.3-eksbuild.7"
+    disable_image_manifest_cache = "false"
     docker_hub_password = ""
     docker_hub_username = ""
     fluentd_disable = "false"
@@ -95,7 +97,7 @@ locals {
     syslog = ""
     tags = ""
     telemetry = "false"
-    vpc_cni_version = "v1.15.1-eksbuild.1"
+    vpc_cni_version = "v1.13.4-eksbuild.1"
     vpc_id = ""
     whitelist = "0.0.0.0/0"
     }

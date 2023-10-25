@@ -31,6 +31,11 @@ variable "domain_internal" {
   default = ""
 }
 
+variable "disable_image_manifest_cache" {
+  type    = bool
+  default = false
+}
+
 variable "env" {
   default = {}
 }

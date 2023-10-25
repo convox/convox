@@ -47,6 +47,11 @@ variable "fluentd_disable" {
   default = false
 }
 
+variable "disable_image_manifest_cache" {
+  type    = bool
+  default = false
+}
+
 variable "gpu_tag_enable" {
   default = false
   type    = bool
