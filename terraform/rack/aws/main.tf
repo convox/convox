@@ -24,22 +24,23 @@ module "api" {
     kubernetes = kubernetes
   }
 
-  buildkit_enabled          = var.buildkit_enabled
-  build_node_enabled        = var.build_node_enabled
-  docker_hub_authentication = module.k8s.docker_hub_authentication
-  domain                    = try(module.router.endpoint, "") # terraform destroy sometimes failes to resolve the value
-  domain_internal           = module.router.endpoint_internal
-  high_availability         = var.high_availability
-  metrics_scraper_host      = module.metrics.metrics_scraper_host
-  image                     = var.image
-  name                      = var.name
-  rack_name                 = var.rack_name
-  namespace                 = module.k8s.namespace
-  oidc_arn                  = var.oidc_arn
-  oidc_sub                  = var.oidc_sub
-  release                   = var.release
-  resolver                  = module.resolver.endpoint
-  router                    = module.router.endpoint
+  buildkit_enabled             = var.buildkit_enabled
+  build_node_enabled           = var.build_node_enabled
+  docker_hub_authentication    = module.k8s.docker_hub_authentication
+  domain                       = try(module.router.endpoint, "") # terraform destroy sometimes failes to resolve the value
+  domain_internal              = module.router.endpoint_internal
+  disable_image_manifest_cache = var.disable_image_manifest_cache
+  high_availability            = var.high_availability
+  metrics_scraper_host         = module.metrics.metrics_scraper_host
+  image                        = var.image
+  name                         = var.name
+  rack_name                    = var.rack_name
+  namespace                    = module.k8s.namespace
+  oidc_arn                     = var.oidc_arn
+  oidc_sub                     = var.oidc_sub
+  release                      = var.release
+  resolver                     = module.resolver.endpoint
+  router                       = module.router.endpoint
 }
 
 module "metrics" {

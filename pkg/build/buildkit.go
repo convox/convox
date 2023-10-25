@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/convox/convox/pkg/common"
@@ -135,6 +136,10 @@ func (*BuildKit) cacheProvider(provider string) bool {
 }
 
 func (*BuildKit) imageManifestCacheProvider(provider string) bool {
+	if disable, err := strconv.ParseBool(os.Getenv("DISABLE_IMAGE_MANIFEST_CACHE")); err != nil || disable {
+		// until this release: https://github.com/moby/buildkit/pull/4336
+		return false
+	}
 	return provider != "" && strings.Contains("aws", provider) // skipcq
 }
 
@@ -216,7 +221,7 @@ func (bk *BuildKit) build(bb *Build, path, dockerfile, tag string, env map[strin
 	} else if bk.imageManifestCacheProvider(os.Getenv("PROVIDER")) {
 		reg := strings.Split(tag, ":")[0]
 		args = append(args, "--export-cache", fmt.Sprintf("mode=max,image-manifest=true,type=registry,ref=%s:buildcache", reg)) // skipcq
-		args = append(args, "--import-cache", fmt.Sprintf("type=registry,ref=%s:buildcache", reg)) // skipcq
+		args = append(args, "--import-cache", fmt.Sprintf("type=registry,ref=%s:buildcache", reg))                              // skipcq
 	} else {
 		// keep a local cache for services using the same Dockerfile
 		args = append(args, "--export-cache", "type=local,dest=/var/lib/buildkit") // skipcq

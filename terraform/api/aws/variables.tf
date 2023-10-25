@@ -24,6 +24,11 @@ variable "domain_internal" {
   type = string
 }
 
+variable "disable_image_manifest_cache" {
+  type    = bool
+  default = false
+}
+
 variable "high_availability" {
   default = true
 }
