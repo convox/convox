@@ -19,6 +19,11 @@ variable "docker_hub_password" {
   default = ""
 }
 
+variable "disable_image_manifest_cache" {
+  type    = bool
+  default = false
+}
+
 variable "ebs_csi_driver_name" {
   type = string
 }

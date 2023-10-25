@@ -120,7 +120,7 @@ resource "kubernetes_deployment" "api" {
           }
 
           env {
-            name = "BUILD_NODE_ENABLED"
+            name  = "BUILD_NODE_ENABLED"
             value = var.build_node_enabled
           }
 
@@ -132,6 +132,11 @@ resource "kubernetes_deployment" "api" {
           env {
             name  = "DOMAIN_INTERNAL"
             value = var.domain_internal
+          }
+
+          env {
+            name  = "DISABLE_IMAGE_MANIFEST_CACHE"
+            value = var.disable_image_manifest_cache
           }
 
           env {
