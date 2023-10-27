@@ -51,6 +51,7 @@ The following environment variables are required:
 | **build_node_min_count** |     0                  | Minimum number of build nodes to keep running |
 | **cert_duration**        | **2160h**              | Certification renew period                                                                                     | 
 | **cidr**                 | **10.1.0.0/16**        | CIDR range for VPC                                                                                             |
+| **fluentd_disable**       | **false**              | Disable fluentd installation in the rack |
 | **gpu_tag_enable**       | **false**              | Enable gpu tagging. Some aws region doesn't support gpu tagging  |
 | **high_availability**    | **true**               | Setting this to "false" will create a cluster with less reduntant resources for cost optimization              |
 | **internal_router**  |     **false**        | Install an internal loadbalancer within the vpc |

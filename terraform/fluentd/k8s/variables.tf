@@ -10,6 +10,11 @@ variable "env" {
   default = {}
 }
 
+variable "fluentd_disable" {
+  type    = bool
+  default = false
+}
+
 variable "image" {
   type = string
 }
