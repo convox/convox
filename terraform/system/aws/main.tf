@@ -100,14 +100,15 @@ module "fluentd" {
     null_resource.wait_for_cluster
   ]
 
-  arm_type   = local.arm_type
-  cluster    = module.cluster.id
-  eks_addons = module.cluster.eks_addons
-  namespace  = "kube-system"
-  oidc_arn   = module.cluster.oidc_arn
-  oidc_sub   = module.cluster.oidc_sub
-  rack       = var.name
-  syslog     = var.syslog
+  arm_type        = local.arm_type
+  cluster         = module.cluster.id
+  eks_addons      = module.cluster.eks_addons
+  fluentd_disable = var.fluentd_disable
+  namespace       = "kube-system"
+  oidc_arn        = module.cluster.oidc_arn
+  oidc_sub        = module.cluster.oidc_sub
+  rack            = var.name
+  syslog          = var.syslog
 }
 
 module "rack" {

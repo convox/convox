@@ -6,6 +6,11 @@ variable "cluster" {
   type = string
 }
 
+variable "fluentd_disable" {
+  type    = bool
+  default = false
+}
+
 // for eks addons dependency
 variable "eks_addons" {}
 
