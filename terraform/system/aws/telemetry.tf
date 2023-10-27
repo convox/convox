@@ -3,6 +3,7 @@
 
 locals {
   telemetry_map = {
+    access_log_retention_in_days = var.access_log_retention_in_days
     availability_zones = var.availability_zones
     build_node_enabled = var.build_node_enabled
     build_node_min_count = var.build_node_min_count
@@ -51,6 +52,7 @@ locals {
     }
 
   telemetry_default_map = {
+    access_log_retention_in_days = "7"
     availability_zones = ""
     build_node_enabled = "false"
     build_node_min_count = "0"
