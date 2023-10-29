@@ -20,6 +20,8 @@
     </match>
 
     <match rack.*.app.system.service.ingress-nginx.access>
+	  @type copy
+
       <filter **>
         @type grep
         <regexp>
