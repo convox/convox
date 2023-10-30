@@ -20,7 +20,7 @@
     </match>
 
     <match rack.*.app.system.service.ingress-nginx.access>
-	  @type copy
+      @type copy
 
       <store>
         @type cloudwatch_logs
