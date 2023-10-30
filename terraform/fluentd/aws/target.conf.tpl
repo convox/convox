@@ -22,14 +22,6 @@
     <match rack.*.app.system.service.ingress-nginx.access>
 	  @type copy
 
-      <filter **>
-        @type grep
-        <regexp>
-          key message
-          pattern /^\{/
-        </regexp>
-      </filter>
-
       <store>
         @type cloudwatch_logs
         region ${region}
