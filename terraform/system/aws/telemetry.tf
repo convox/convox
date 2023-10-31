@@ -97,7 +97,7 @@ locals {
     syslog = ""
     tags = ""
     telemetry = "false"
-    vpc_cni_version = "v1.13.4-eksbuild.1"
+    vpc_cni_version = "v1.13.3-eksbuild.1"
     vpc_id = ""
     whitelist = "0.0.0.0/0"
     }
