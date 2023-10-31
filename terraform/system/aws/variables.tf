@@ -209,10 +209,9 @@ variable "vpc_id" {
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-vpc-cni.html
 variable "vpc_cni_version" {
   type    = string
-  default = "v1.13.4-eksbuild.1"
+  default = "v1.13.3-eksbuild.1"
 }
 
 variable "whitelist" {
   default = "0.0.0.0/0"
 }
-
