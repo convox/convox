@@ -34,11 +34,18 @@ resource "aws_iam_role_policy_attachment" "cluster_eks_cluster" {
 }
 
 resource "aws_iam_role_policy_attachment" "cluster_eks_service" {
+  depends_on = [
+    aws_iam_role_policy_attachment.cluster_eks_cluster
+  ]
   role       = aws_iam_role.cluster.name
   policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AmazonEKSServicePolicy"
 }
 
 resource "aws_iam_role_policy_attachment" "cluster_ec2_readonly" {
+  depends_on = [
+    aws_iam_role_policy_attachment.cluster_eks_cluster,
+    aws_iam_role_policy_attachment.cluster_eks_service
+  ]
   role       = aws_iam_role.cluster.name
   policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AmazonEC2ReadOnlyAccess"
 }
@@ -55,11 +62,18 @@ resource "aws_iam_role_policy_attachment" "nodes_ecr" {
 }
 
 resource "aws_iam_role_policy_attachment" "nodes_eks_cni" {
+  depends_on = [
+    aws_iam_role_policy_attachment.nodes_ecr
+  ]
   role       = aws_iam_role.nodes.name
   policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AmazonEKS_CNI_Policy"
 }
 
 resource "aws_iam_role_policy_attachment" "nodes_eks_worker" {
+  depends_on = [
+    aws_iam_role_policy_attachment.nodes_ecr,
+    aws_iam_role_policy_attachment.nodes_eks_cni
+  ]
   role       = aws_iam_role.nodes.name
   policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AmazonEKSWorkerNodePolicy"
 }
