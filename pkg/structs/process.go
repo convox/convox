@@ -38,11 +38,13 @@ type ProcessListOptions struct {
 
 type ProcessRunOptions struct {
 	Command     *string           `header:"Command"`
-	Cpu         *int              `header:"Cpu"`
+	Cpu         *int              `flag:"cpu" header:"Cpu"`
+	CpuLimit    *int              `flag:"cpu-limit" header:"Cpu-Limit"`
 	Environment map[string]string `header:"Environment"`
 	Height      *int              `header:"Height"`
 	Image       *string           `header:"Image"`
-	Memory      *int              `header:"Memory"`
+	Memory      *int              `flag:"memory" header:"Memory"`
+	MemoryLimit *int              `flag:"memory-limit" header:"Memory-Limit"`
 	Release     *string           `flag:"release" header:"Release"`
 	Volumes     map[string]string `header:"Volumes"`
 	Width       *int              `header:"Width"`

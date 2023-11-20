@@ -553,8 +553,22 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 		s.Containers[0].Resources.Requests["cpu"] = resource.MustParse(fmt.Sprintf("%dm", *opts.Cpu))
 	}
 
+	if opts.CpuLimit != nil {
+		if s.Containers[0].Resources.Limits == nil {
+			s.Containers[0].Resources.Limits = ac.ResourceList{}
+		}
+		s.Containers[0].Resources.Limits["cpu"] = resource.MustParse(fmt.Sprintf("%dm", *opts.CpuLimit))
+	}
+
 	if opts.Memory != nil {
 		s.Containers[0].Resources.Requests["memory"] = resource.MustParse(fmt.Sprintf("%dMi", *opts.Memory))
+	}
+
+	if opts.MemoryLimit != nil {
+		if s.Containers[0].Resources.Limits == nil {
+			s.Containers[0].Resources.Limits = ac.ResourceList{}
+		}
+		s.Containers[0].Resources.Limits["memory"] = resource.MustParse(fmt.Sprintf("%dMi", *opts.MemoryLimit))
 	}
 
 	if opts.Volumes != nil {
