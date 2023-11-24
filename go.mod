@@ -22,7 +22,7 @@ require (
 	github.com/creack/pty v1.1.18
 	github.com/docker/docker v20.10.17+incompatible
 	github.com/dustin/go-humanize v1.0.0
-	github.com/elastic/go-elasticsearch/v6 v6.8.2
+	github.com/elastic/go-elasticsearch/v6 v6.8.10
 	github.com/fsouza/go-dockerclient v1.4.2
 	github.com/gobuffalo/packr v1.30.1
 	github.com/gobwas/glob v0.2.3
