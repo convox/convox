@@ -10,38 +10,39 @@ import (
 type Service struct {
 	Name string `yaml:"-"`
 
-	Agent             ServiceAgent          `yaml:"agent,omitempty"`
-	Annotations       ServiceAnnotations    `yaml:"annotations,omitempty"`
-	Build             ServiceBuild          `yaml:"build,omitempty"`
-	Certificate       Certificate           `yaml:"certificate,omitempty"`
-	Command           string                `yaml:"command,omitempty"`
-	Deployment        ServiceDeployment     `yaml:"deployment,omitempty"`
-	DnsConfig         ServiceDnsConfig      `yaml:"dnsConfig,omitempty"`
-	Domains           ServiceDomains        `yaml:"domain,omitempty"`
-	Drain             int                   `yaml:"drain,omitempty"`
-	Environment       Environment           `yaml:"environment,omitempty"`
-	GrpcHealthEnabled bool                  `yaml:"grpcHealthEnabled,omitempty"`
-	Health            ServiceHealth         `yaml:"health,omitempty"`
-	Liveness          ServiceLiveness       `yaml:"liveness,omitempty"`
-	Image             string                `yaml:"image,omitempty"`
-	Init              bool                  `yaml:"init,omitempty"`
-	Internal          bool                  `yaml:"internal,omitempty"`
-	InternalRouter    bool                  `yaml:"internalRouter,omitempty"`
-	Labels            Labels                `yaml:"labels,omitempty"`
-	Lifecycle         ServiceLifecycle      `yaml:"lifecycle,omitempty"`
-	Port              ServicePortScheme     `yaml:"port,omitempty"`
-	Ports             []ServicePortProtocol `yaml:"ports,omitempty"`
-	Privileged        bool                  `yaml:"privileged,omitempty"`
-	Resources         []string              `yaml:"resources,omitempty"`
-	Scale             ServiceScale          `yaml:"scale,omitempty"`
-	Singleton         bool                  `yaml:"singleton,omitempty"`
-	Sticky            bool                  `yaml:"sticky,omitempty"`
-	Termination       ServiceTermination    `yaml:"termination,omitempty"`
-	Test              string                `yaml:"test,omitempty"`
-	Timeout           int                   `yaml:"timeout,omitempty"`
-	Tls               ServiceTls            `yaml:"tls,omitempty"`
-	Volumes           []string              `yaml:"volumes,omitempty"`
-	Whitelist         string                `yaml:"whitelist,omitempty"`
+	Agent              ServiceAgent          `yaml:"agent,omitempty"`
+	Annotations        ServiceAnnotations    `yaml:"annotations,omitempty"`
+	Build              ServiceBuild          `yaml:"build,omitempty"`
+	Certificate        Certificate           `yaml:"certificate,omitempty"`
+	Command            string                `yaml:"command,omitempty"`
+	Deployment         ServiceDeployment     `yaml:"deployment,omitempty"`
+	DnsConfig          ServiceDnsConfig      `yaml:"dnsConfig,omitempty"`
+	Domains            ServiceDomains        `yaml:"domain,omitempty"`
+	Drain              int                   `yaml:"drain,omitempty"`
+	Environment        Environment           `yaml:"environment,omitempty"`
+	GrpcHealthEnabled  bool                  `yaml:"grpcHealthEnabled,omitempty"`
+	Health             ServiceHealth         `yaml:"health,omitempty"`
+	Liveness           ServiceLiveness       `yaml:"liveness,omitempty"`
+	Image              string                `yaml:"image,omitempty"`
+	Init               bool                  `yaml:"init,omitempty"`
+	Internal           bool                  `yaml:"internal,omitempty"`
+	InternalRouter     bool                  `yaml:"internalRouter,omitempty"`
+	IngressAnnotations ServiceAnnotations    `yaml:"ingressAnnotations,omitempty"`
+	Labels             Labels                `yaml:"labels,omitempty"`
+	Lifecycle          ServiceLifecycle      `yaml:"lifecycle,omitempty"`
+	Port               ServicePortScheme     `yaml:"port,omitempty"`
+	Ports              []ServicePortProtocol `yaml:"ports,omitempty"`
+	Privileged         bool                  `yaml:"privileged,omitempty"`
+	Resources          []string              `yaml:"resources,omitempty"`
+	Scale              ServiceScale          `yaml:"scale,omitempty"`
+	Singleton          bool                  `yaml:"singleton,omitempty"`
+	Sticky             bool                  `yaml:"sticky,omitempty"`
+	Termination        ServiceTermination    `yaml:"termination,omitempty"`
+	Test               string                `yaml:"test,omitempty"`
+	Timeout            int                   `yaml:"timeout,omitempty"`
+	Tls                ServiceTls            `yaml:"tls,omitempty"`
+	Volumes            []string              `yaml:"volumes,omitempty"`
+	Whitelist          string                `yaml:"whitelist,omitempty"`
 }
 
 type Services []Service
@@ -260,6 +261,18 @@ func (s Service) AnnotationsMap() map[string]string {
 	annotations := map[string]string{}
 
 	for _, a := range s.Annotations {
+		parts := strings.SplitN(a, "=", 2)
+		annotations[parts[0]] = parts[1]
+	}
+
+	return annotations
+}
+
+// skipcq
+func (s Service) IngressAnnotationsMap() map[string]string {
+	annotations := map[string]string{}
+
+	for _, a := range s.IngressAnnotations {
 		parts := strings.SplitN(a, "=", 2)
 		annotations[parts[0]] = parts[1]
 	}

@@ -364,6 +364,15 @@ func (p *Provider) releaseTemplateIngress(a *structs.App, ss manifest.Services, 
 			return nil, errors.WithStack(err)
 		}
 
+		customAns := s.IngressAnnotationsMap()
+		reservedAns := p.reservedNginxAnnotations()
+
+		for k, v := range customAns {
+			if !reservedAns[k] {
+				ans[k] = v
+			}
+		}
+
 		params := map[string]interface{}{
 			"Annotations": ans,
 			"App":         a.Name,
@@ -616,4 +625,21 @@ func (p *Provider) releaseUnmarshal(kr *ca.Release) (*structs.Release, error) {
 	}
 
 	return r, nil
+}
+
+func (p *Provider) reservedNginxAnnotations() map[string]bool {
+	return map[string]bool{
+		"alb.ingress.kubernetes.io/scheme":                   true,
+		"cert-manager.io/cluster-issuer":                     true,
+		"cert-manager.io/duration":                           true,
+		"nginx.ingress.kubernetes.io/backend-protocol":       true,
+		"nginx.ingress.kubernetes.io/proxy-connect-timeout":  true,
+		"nginx.ingress.kubernetes.io/proxy-read-timeout":     true,
+		"nginx.ingress.kubernetes.io/proxy-send-timeout":     true,
+		"nginx.ingress.kubernetes.io/server-snippet":         true,
+		"nginx.ingress.kubernetes.io/affinity":               true,
+		"nginx.ingress.kubernetes.io/session-cookie-name":    true,
+		"nginx.ingress.kubernetes.io/ssl-redirect":           true,
+		"nginx.ingress.kubernetes.io/whitelist-source-range": true,
+	}
 }
