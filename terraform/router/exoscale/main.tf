@@ -1,13 +1,3 @@
-locals {
-  tags = merge(var.tags, {
-    System = "convox"
-    Rack   = var.name
-  })
-}
-
-data "aws_region" "current" {
-}
-
 module "nginx" {
   source = "../nginx"
 
@@ -15,8 +5,7 @@ module "nginx" {
     kubernetes = kubernetes
   }
 
-  cloud_provider  = "aws"
-  internal_router = var.internal_router
+  cloud_provider  = "exoscale"
   namespace       = var.namespace
   proxy_protocol  = var.proxy_protocol
   rack            = var.name
@@ -39,10 +28,6 @@ resource "kubernetes_config_map" "nginx-configuration" {
     "ssl-ciphers"        = var.ssl_ciphers == "" ? null : var.ssl_ciphers
     "ssl-protocols"      = var.ssl_protocols == "" ? null : var.ssl_protocols
   }
-
-  depends_on = [
-    null_resource.set_proxy_protocol
-  ]
 }
 
 resource "kubernetes_service" "router" {
@@ -51,9 +36,7 @@ resource "kubernetes_service" "router" {
     name      = "router"
 
     annotations = {
-      "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout"  = "${var.idle_timeout}"
-      "service.beta.kubernetes.io/aws-load-balancer-type"                     = "nlb"
-      "service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags" = join(",", [for key, value in local.tags : "${key}=${value}"])
+      "service.beta.kubernetes.io/exoscale-loadbalancer-service-description"  = "nlb for ${var.name}"
     }
   }
 

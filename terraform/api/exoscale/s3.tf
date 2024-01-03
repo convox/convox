@@ -26,6 +26,16 @@ resource "exoscale_iam_role" "api_role" {
           }
         ]
       }
+
+      compute = {
+        type = "rules"
+        rules = [
+          {
+            expression = "operation.startsWith('get-') || operation.startsWith('list-')"
+            action = "allow"
+          }
+        ]
+      }
     }
   }
 }

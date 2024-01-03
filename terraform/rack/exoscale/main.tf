@@ -67,24 +67,18 @@ module "resolver" {
 }
 
 module "router" {
-  source = "../../router/aws"
+  source = "../../router/exoscale"
 
   providers = {
-    aws        = aws
     kubernetes = kubernetes
   }
 
   high_availability = var.high_availability
-  idle_timeout      = var.idle_timeout
-  internal_router   = var.internal_router
   name              = var.name
   namespace         = module.k8s.namespace
-  oidc_arn          = var.oidc_arn
-  oidc_sub          = var.oidc_sub
   proxy_protocol    = var.proxy_protocol
   release           = var.release
   ssl_ciphers       = var.ssl_ciphers
   ssl_protocols     = var.ssl_protocols
-  tags              = var.tags
   whitelist         = var.whitelist
 }

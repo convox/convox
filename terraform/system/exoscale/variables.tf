@@ -1,3 +1,30 @@
+
+variable "build_node_enabled" {
+  default = false
+  type    = bool
+}
+
+variable "build_node_type" {
+  default = ""
+}
+
+variable "build_node_min_count" {
+  default = 0
+}
+
+variable "docker_hub_username" {
+  default = ""
+}
+
+variable "docker_hub_password" {
+  default = ""
+}
+
+variable "disable_image_manifest_cache" {
+  type    = bool
+  default = false
+}
+
 variable "high_availability" {
   default = true
 }
@@ -37,4 +64,28 @@ variable "release" {
 variable "instance_disk_size" {
   type = number
   default = 50
+}
+
+variable "registry_disk" {
+  type = string
+  default = 50
+}
+
+variable "ssl_ciphers" {
+  default = ""
+  type    = string
+}
+
+variable "ssl_protocols" {
+  default = ""
+  type    = string
+}
+
+variable "telemetry" {
+  type    = bool
+  default = false
+}
+
+variable "whitelist" {
+  default = "0.0.0.0/0"
 }
