@@ -8,7 +8,6 @@ module "k8s" {
   docker_hub_username   = var.docker_hub_username
   docker_hub_password   = var.docker_hub_password
   domain                = module.router.endpoint
-  eks_addons            = var.eks_addons
   name                  = var.name
   release               = var.release
   telemetry             = var.telemetry
@@ -17,10 +16,11 @@ module "k8s" {
 }
 
 module "api" {
-  source = "../../api/aws"
+  source = "../../api/exoscale"
 
   providers = {
     aws        = aws
+    exoscale   = exoscale
     kubernetes = kubernetes
   }
 
@@ -36,11 +36,10 @@ module "api" {
   name                         = var.name
   rack_name                    = var.rack_name
   namespace                    = module.k8s.namespace
-  oidc_arn                     = var.oidc_arn
-  oidc_sub                     = var.oidc_sub
   release                      = var.release
   resolver                     = module.resolver.endpoint
   router                       = module.router.endpoint
+  zone = var.zone
 }
 
 module "metrics" {
@@ -53,10 +52,9 @@ module "metrics" {
 }
 
 module "resolver" {
-  source = "../../resolver/aws"
+  source = "../../resolver/exoscale"
 
   providers = {
-    aws        = aws
     kubernetes = kubernetes
   }
 

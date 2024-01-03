@@ -35,9 +35,11 @@ func FromEnv() (*Provider, error) {
 	}
 
 	p := &Provider{
-		Provider: k,
-		Bucket:   os.Getenv("BUCKET"),
-		Zone:     os.Getenv("EXOSCALE_ZONE"),
+		Provider:  k,
+		Bucket:    os.Getenv("BUCKET"),
+		Zone:      os.Getenv("EXOSCALE_ZONE"),
+		accessKey: os.Getenv("EXOSCALE_ACCESS_KEY"),
+		secretKey: os.Getenv("EXOSCALE_SECRET_KEY"),
 	}
 
 	k.Engine = p

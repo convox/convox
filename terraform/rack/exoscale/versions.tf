@@ -4,6 +4,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "4.23.0"
     }
+    exoscale = {
+      source  = "exoscale/exoscale"
+      version = "~> 0.54"
+    }
     external = {
       source  = "hashicorp/external"
       version = "~> 2.1"

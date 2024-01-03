@@ -1,5 +1,5 @@
 resource "kubernetes_config_map" "nginx-configuration" {
-  count = var.cloud_provider == "aws" ? 0 : 1
+  count = contains(["aws", "exoscale"], var.cloud_provider) ? 0 : 1
   metadata {
     namespace = var.namespace
     name      = "nginx-configuration"

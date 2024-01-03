@@ -1,13 +1,3 @@
-data "aws_caller_identity" "current" {}
-data "aws_region" "current" {}
-
-locals {
-  tags = {
-    System = "convox"
-    Rack   = var.name
-  }
-}
-
 module "k8s" {
   source = "../k8s"
 
@@ -37,7 +27,9 @@ module "k8s" {
 
   env = {
     EXOSCALE_ZONE         = var.zone
-    BUCKET                = aws_s3_bucket.storage.id
+    EXOSCALE_ACCESS_KEY   = exoscale_iam_api_key.api_key.key
+    EXOSCALE_SECRET_KEY   = exoscale_iam_api_key.api_key.secret
+    BUCKET                = aws_s3_bucket.storage_bucket.bucket
     CERT_MANAGER          = "true"
     PROVIDER              = "exoscale"
     RESOLVER              = var.resolver
