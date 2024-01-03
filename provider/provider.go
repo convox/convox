@@ -8,6 +8,7 @@ import (
 	"github.com/convox/convox/provider/aws"
 	"github.com/convox/convox/provider/azure"
 	"github.com/convox/convox/provider/do"
+	"github.com/convox/convox/provider/exoscale"
 	"github.com/convox/convox/provider/gcp"
 	"github.com/convox/convox/provider/local"
 	"github.com/convox/convox/provider/metal"
@@ -25,6 +26,8 @@ func FromEnv() (structs.Provider, error) {
 		return azure.FromEnv()
 	case "do":
 		return do.FromEnv()
+	case "exoscale":
+		return exoscale.FromEnv()
 	case "gcp":
 		return gcp.FromEnv()
 	case "local":
@@ -47,6 +50,8 @@ func Valid(slug string) bool {
 	case "azure":
 		return true
 	case "do":
+		return true
+	case "exoscale":
 		return true
 	case "gcp":
 		return true
