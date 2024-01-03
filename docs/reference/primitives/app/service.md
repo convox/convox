@@ -66,6 +66,8 @@ services:
       successThreshold: 1
       failureThreshold: 3
     internal: false
+    ingressAnnotations:
+      - nginx.ingress.kubernetes.io/limit-rpm=10
     labels:
       convox.com/test: true
     lifecycle:
@@ -116,6 +118,7 @@ services:
 | **health**      | string/map | /                   | Health check definition (see below)                                                                                                        |
 | **liveness** | map |      | Liveness check definition (see below). By default it is disabled. If it fails then service will restart |
 | **image**       | string     |                     | An external Docker image to use for this Service (supercedes **build**)                                                                      |
+| **ingressAnnotations** | list       |                     | A list of annotation keys and values to add in ingress resource. Check below for reserved annotation keys |
 | **internal**    | boolean    | false               | Set to **true** to make this Service only accessible inside the Rack                                                                         |
 | **internalRouter** | boolean    | false               | Set it to **true** to make this Service only accessible using internal loadbalancer. You also have to set the rack parameter [internal_router](/installation/production-rack/aws) to **true**                 |
 | **labels** |  map  |       | Custom labels for k8s resources. See here for (syntax and character set)[https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set]. Also following keys are reserved: `system`, `rack`, `app`, `name`, `service`, `release`, `type` |
@@ -186,6 +189,34 @@ services:
 | **ndots**     | int |         | The ndots option for the dns config |
 
 &nbsp;
+
+### ingressAnnotations
+
+This accepts list of strings where in each string annotation key and value is separated by `=` sign:
+
+```html
+services:
+  web:
+    ...
+    ingressAnnotations:
+      - nginx.ingress.kubernetes.io/limit-rpm=10
+      - nginx.ingress.kubernetes.io/enable-access-log=false
+  ...
+```
+
+Reserved annotation keys:
+- `alb.ingress.kubernetes.io/scheme`
+- `cert-manager.io/cluster-issuer`
+- `cert-manager.io/duration`
+- `nginx.ingress.kubernetes.io/backend-protocol`
+- `nginx.ingress.kubernetes.io/proxy-connect-timeout`
+- `nginx.ingress.kubernetes.io/proxy-read-timeout`
+- `nginx.ingress.kubernetes.io/proxy-send-timeout`
+- `nginx.ingress.kubernetes.io/server-snippet`
+- `nginx.ingress.kubernetes.io/affinity`
+- `nginx.ingress.kubernetes.io/session-cookie-name`
+- `nginx.ingress.kubernetes.io/ssl-redirect`
+- `nginx.ingress.kubernetes.io/whitelist-source-range`
 
 ### lifecycle
 
