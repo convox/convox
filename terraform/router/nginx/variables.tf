@@ -1,3 +1,7 @@
+variable "cluster_id" {
+  type = string
+  default = ""
+}
 
 variable "internal_router" {
   type    = bool

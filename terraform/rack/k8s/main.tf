@@ -9,6 +9,7 @@ resource "kubernetes_namespace" "system" {
 
     annotations = {
       "eks_addons_dependency" = length(var.eks_addons) > 0 ? var.eks_addons[0] : "" // explicit eks addon dependency
+      "cluster_id" = var.cluster_id // explicit cluster dependency
     }
 
     name = "${var.name}-system"

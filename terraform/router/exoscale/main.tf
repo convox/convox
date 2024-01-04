@@ -6,6 +6,7 @@ module "nginx" {
   }
 
   cloud_provider  = "exoscale"
+  cluster_id = var.cluster_id
   namespace       = var.namespace
   proxy_protocol  = var.proxy_protocol
   rack            = var.name

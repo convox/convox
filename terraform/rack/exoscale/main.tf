@@ -8,6 +8,7 @@ module "k8s" {
   docker_hub_username   = var.docker_hub_username
   docker_hub_password   = var.docker_hub_password
   domain                = module.router.endpoint
+  cluster_id = var.cluster
   name                  = var.name
   release               = var.release
   telemetry             = var.telemetry
@@ -28,6 +29,7 @@ module "api" {
 
   buildkit_enabled             = var.buildkit_enabled
   build_node_enabled           = var.build_node_enabled
+  cluster_id = var.cluster
   docker_hub_authentication    = module.k8s.docker_hub_authentication
   domain                       = module.router.endpoint
   disable_image_manifest_cache = var.disable_image_manifest_cache
@@ -59,6 +61,7 @@ module "resolver" {
     kubernetes = kubernetes
   }
 
+  cluster_id = var.cluster
   docker_hub_authentication = module.k8s.docker_hub_authentication
   high_availability         = var.high_availability
   image                     = var.image
@@ -74,6 +77,7 @@ module "router" {
     kubernetes = kubernetes
   }
 
+  cluster_id = var.cluster
   high_availability = var.high_availability
   name              = var.name
   namespace         = module.k8s.namespace

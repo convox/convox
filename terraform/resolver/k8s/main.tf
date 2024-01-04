@@ -60,6 +60,10 @@ resource "kubernetes_deployment" "resolver" {
       system  = "convox"
       type    = "service"
     }
+
+    annotations = {
+      "convox.com/cluster-id" = var.cluster_id // add explicit dependency
+    }
   }
 
   spec {

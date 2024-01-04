@@ -664,6 +664,8 @@ func terraformEnv(provider string) (map[string]string, error) {
 		return requireEnv("ARM_CLIENT_ID", "ARM_CLIENT_SECRET", "ARM_SUBSCRIPTION_ID", "ARM_TENANT_ID")
 	case "do":
 		return requireEnv("DIGITALOCEAN_ACCESS_ID", "DIGITALOCEAN_SECRET_KEY", "DIGITALOCEAN_TOKEN")
+	case "exoscale":
+		return requireEnv("EXOSCALE_API_KEY", "EXOSCALE_API_SECRET")
 	case "gcp":
 		return requireEnv("GOOGLE_CREDENTIALS", "GOOGLE_PROJECT")
 	default:

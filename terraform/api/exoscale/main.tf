@@ -1,3 +1,28 @@
+module "elasticsearch" {
+  source = "../../elasticsearch/k8s-ephemeral"
+
+  providers = {
+    kubernetes = kubernetes
+  }
+
+  namespace = var.namespace
+  replicas  = var.high_availability ? 2 : 1
+}
+
+module "fluentd" {
+  source = "../../fluentd/elasticsearch"
+
+  providers = {
+    kubernetes = kubernetes
+  }
+
+  cluster       = var.cluster_id
+  elasticsearch = module.elasticsearch.host
+  namespace     = var.namespace
+  rack          = var.name
+  syslog        = var.syslog
+}
+
 module "k8s" {
   source = "../k8s"
 
@@ -22,9 +47,11 @@ module "k8s" {
   annotations = {
     "cert-manager.io/cluster-issuer" = "letsencrypt"
     "cert-manager.io/duration"       = var.cert_duration
+    "convox.com/cluster-id" = var.cluster_id // add explicit dependency
   }
 
   env = {
+    ELASTIC_URL     = module.elasticsearch.url
     EXOSCALE_ZONE         = var.zone
     EXOSCALE_ACCESS_KEY   = exoscale_iam_api_key.api_key.key
     EXOSCALE_SECRET_KEY   = exoscale_iam_api_key.api_key.secret

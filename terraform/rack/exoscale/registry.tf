@@ -157,8 +157,8 @@ resource "kubernetes_deployment" "registry" {
         volume {
           name = "registry"
 
-          persistent_volume_claim {
-            claim_name = kubernetes_persistent_volume_claim.registry.metadata.0.name
+          empty_dir {
+            size_limit = "10Gi"
           }
         }
       }
@@ -166,21 +166,21 @@ resource "kubernetes_deployment" "registry" {
   }
 }
 
-resource "kubernetes_persistent_volume_claim" "registry" {
-  metadata {
-    namespace = module.k8s.namespace
-    name      = "registry"
-  }
+# resource "kubernetes_persistent_volume_claim" "registry" {
+#   metadata {
+#     namespace = module.k8s.namespace
+#     name      = "registry"
+#   }
 
-  spec {
-    access_modes = ["ReadWriteOnce"]
-    resources {
-      requests = {
-        storage = var.registry_disk
-      }
-    }
-  }
-}
+#   spec {
+#     access_modes = ["ReadWriteOnce"]
+#     resources {
+#       requests = {
+#         storage = var.registry_disk
+#       }
+#     }
+#   }
+# }
 
 resource "kubernetes_service" "registry" {
   metadata {

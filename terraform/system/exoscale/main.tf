@@ -70,7 +70,7 @@ module "rack" {
   }
 
   build_node_enabled           = var.build_node_enabled
-  cluster                      = module.cluster.id
+  cluster                      = module.cluster.depend_id
   docker_hub_username          = var.docker_hub_username
   docker_hub_password          = var.docker_hub_password
   disable_image_manifest_cache = var.disable_image_manifest_cache

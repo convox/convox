@@ -1,3 +1,8 @@
+variable "cluster_id" {
+  type = string
+  default = ""
+}
+
 variable "high_availability" {
   default = true
 }

@@ -199,6 +199,10 @@ resource "kubernetes_deployment" "ingress-nginx" {
   metadata {
     namespace = var.namespace
     name      = "ingress-nginx"
+
+    annotations = {
+      "convox.com/cluster-id" = var.cluster_id
+    }
   }
 
   spec {

@@ -3,6 +3,11 @@ variable "annotations" {
   default = {}
 }
 
+variable "cluster_id" {
+  type = string
+  default = ""
+}
+
 variable "docker_hub_authentication" {
   type = string
   default = null

@@ -7,6 +7,11 @@ variable "build_node_enabled" {
   type    = bool
 }
 
+variable "cluster_id" {
+  type = string
+  default = ""
+}
+
 variable "cert_duration" {
   default = "2160h"
   type    = string
