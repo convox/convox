@@ -15,13 +15,13 @@ resource "exoscale_iam_role" "sos_admin_role" {
   editable = true
 
   policy = {
-    default-service-strategy = "deny"
+    default_service_strategy = "deny"
     services = {
       sos = {
         type = "rules"
         rules = [
           {
-            expression = "parameters.bucket == ${local.bucket_name}"
+            expression = "parameters.bucket == '${local.bucket_name}'"
             action = "allow"
           }
         ]
@@ -33,25 +33,6 @@ resource "exoscale_iam_role" "sos_admin_role" {
 resource "exoscale_iam_api_key" "sos_api_key" {
   name = "${var.name}-sos-api-key"
   role_id = exoscale_iam_role.sos_admin_role.id
-}
-
-provider "aws" {
-
-  endpoints {
-    s3 = local.s3_region_endpoint
-  }
-
-  region     = var.zone
-
-  access_key = exoscale_iam_api_key.sos_api_key.key
-  secret_key = exoscale_iam_api_key.sos_api_key.secret
-
-  # Disable AWS-specific features
-  skip_credentials_validation = true
-  skip_region_validation      = true
-  skip_requesting_account_id  = true
-  # add this when we update aws terraform provider version
-  # skip_s3_checksum            = true
 }
 
 resource "aws_s3_bucket" "registry_bucket" {

@@ -25,13 +25,21 @@ variable "disable_image_manifest_cache" {
   default = false
 }
 
+variable "exoscale_api_key" {
+  type = string
+}
+
+variable "exoscale_api_secret" {
+  type = string
+}
+
 variable "high_availability" {
   default = true
 }
 
 variable "k8s_version" {
   type = string
-  default = "1.28.4"
+  default = "1.26.11"
 }
 
 variable "name" {

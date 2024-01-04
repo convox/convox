@@ -18,8 +18,10 @@ module "k8s" {
 module "api" {
   source = "../../api/exoscale"
 
+  depends_on = [ module.router ]
+
   providers = {
-    aws        = aws
+    aws = aws
     exoscale   = exoscale
     kubernetes = kubernetes
   }
@@ -27,11 +29,10 @@ module "api" {
   buildkit_enabled             = var.buildkit_enabled
   build_node_enabled           = var.build_node_enabled
   docker_hub_authentication    = module.k8s.docker_hub_authentication
-  domain                       = try(module.router.endpoint, "") # terraform destroy sometimes failes to resolve the value
-  domain_internal              = module.router.endpoint_internal
+  domain                       = module.router.endpoint
   disable_image_manifest_cache = var.disable_image_manifest_cache
   high_availability            = var.high_availability
-  metrics_scraper_host         = module.metrics.metrics_scraper_host
+  #metrics_scraper_host         = module.metrics.metrics_scraper_host
   image                        = var.image
   name                         = var.name
   rack_name                    = var.rack_name
@@ -42,14 +43,14 @@ module "api" {
   zone = var.zone
 }
 
-module "metrics" {
-  source = "../../metrics/k8s"
+# module "metrics" {
+#   source = "../../metrics/k8s"
 
-  providers = {
-    kubernetes = kubernetes
-  }
+#   providers = {
+#     kubernetes = kubernetes
+#   }
 
-}
+# }
 
 module "resolver" {
   source = "../../resolver/exoscale"

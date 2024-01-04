@@ -50,10 +50,6 @@ variable "release" {
   type = string
 }
 
-variable "subnets" {
-  type = list(any)
-}
-
 variable "ssl_ciphers" {
   default = ""
   type    = string

@@ -1,7 +1,15 @@
-output "endpoint" {
-  value = module.cluster.endpoint
+output "api" {
+  value = module.rack.api
 }
 
-output "test" {
-  value = local.kube_config_yaml
+output "cluster" {
+  value = module.cluster
+}
+
+output "endpoint" {
+  value = module.rack.endpoint
+}
+
+output "release" {
+  value = local.release
 }

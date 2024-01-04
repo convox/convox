@@ -790,6 +790,12 @@ func terraformProviderVars(provider string) (map[string]string, error) {
 			"token":      os.Getenv("DIGITALOCEAN_TOKEN"),
 		}
 		return vars, nil
+	case "exoscale":
+		vars := map[string]string{
+			"exoscale_api_key":    os.Getenv("EXOSCALE_API_KEY"),
+			"exoscale_api_secret": os.Getenv("EXOSCALE_API_SECRET"),
+		}
+		return vars, nil
 	default:
 		return map[string]string{}, nil
 	}

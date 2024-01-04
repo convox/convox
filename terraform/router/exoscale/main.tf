@@ -65,5 +65,5 @@ resource "kubernetes_service" "router" {
 }
 
 data "http" "alias" {
-  url = "https://alias.convox.com/alias/${length(kubernetes_service.router.status.0.load_balancer.0.ingress) > 0 ? kubernetes_service.router.status.0.load_balancer.0.ingress.0.hostname : ""}"
+  url = "https://alias.convox.com/alias/${length(kubernetes_service.router.status.0.load_balancer.0.ingress) > 0 ? kubernetes_service.router.status.0.load_balancer.0.ingress.0.ip : ""}"
 }

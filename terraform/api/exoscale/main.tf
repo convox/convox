@@ -9,7 +9,6 @@ module "k8s" {
   build_node_enabled           = var.build_node_enabled
   docker_hub_authentication    = var.docker_hub_authentication
   domain                       = var.domain
-  domain_internal              = var.domain_internal
   disable_image_manifest_cache = var.disable_image_manifest_cache
   image                        = var.image
   metrics_scraper_host         = var.metrics_scraper_host
