@@ -3,7 +3,6 @@ resource "exoscale_sks_cluster" "rack" {
   zone    = var.zone
   version = var.k8s_version
   auto_upgrade = false
-  cni = "calico"
   exoscale_ccm = true
   labels = {
     "convox" = "rack"

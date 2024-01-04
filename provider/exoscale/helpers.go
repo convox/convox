@@ -1,7 +1,6 @@
 package exoscale
 
 import (
-	"context"
 	"encoding/base64"
 	"fmt"
 	"regexp"
@@ -12,29 +11,11 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
-	"github.com/convox/convox/pkg/common"
-	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
 	ecrHostMatcher = regexp.MustCompile(`(\d+)\.dkr\.ecr\.([^.]+)\.amazonaws\.com`)
 )
-
-func (p *Provider) appRegistry(app string) (string, error) {
-	ns, err := p.Provider.Cluster.CoreV1().Namespaces().Get(context.TODO(), p.AppNamespace(app), am.GetOptions{})
-	if err != nil {
-		return "", err
-	}
-
-	as := ns.ObjectMeta.Annotations
-
-	registry := common.CoalesceString(as["convox.com/registry"], as["convox.registry"])
-	if registry == "" {
-		return "", fmt.Errorf("no registry for app: %s", app)
-	}
-
-	return registry, nil
-}
 
 func (p *Provider) ecrAuth(host, access, secret string) (string, string, error) {
 	if !ecrHostMatcher.MatchString(host) {

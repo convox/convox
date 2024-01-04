@@ -58,6 +58,8 @@ module "k8s" {
     BUCKET                = aws_s3_bucket.storage_bucket.bucket
     CERT_MANAGER          = "true"
     PROVIDER              = "exoscale"
+    REGISTRY        = "registry.${var.domain}"
+    REGISTRY_SECRET = var.registry_secret
     RESOLVER              = var.resolver
     ROUTER                = var.router
     SOCKET                = "/var/run/docker.sock"

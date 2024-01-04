@@ -21,6 +21,9 @@ type Provider struct {
 	Bucket string
 	Zone   string
 
+	Registry       string
+	RegistrySecret string
+
 	accessKey string
 	secretKey string
 
@@ -35,11 +38,13 @@ func FromEnv() (*Provider, error) {
 	}
 
 	p := &Provider{
-		Provider:  k,
-		Bucket:    os.Getenv("BUCKET"),
-		Zone:      os.Getenv("EXOSCALE_ZONE"),
-		accessKey: os.Getenv("EXOSCALE_ACCESS_KEY"),
-		secretKey: os.Getenv("EXOSCALE_SECRET_KEY"),
+		Provider:       k,
+		Bucket:         os.Getenv("BUCKET"),
+		Zone:           os.Getenv("EXOSCALE_ZONE"),
+		accessKey:      os.Getenv("EXOSCALE_ACCESS_KEY"),
+		secretKey:      os.Getenv("EXOSCALE_SECRET_KEY"),
+		Registry:       os.Getenv("REGISTRY"),
+		RegistrySecret: os.Getenv("REGISTRY_SECRET"),
 	}
 
 	k.Engine = p

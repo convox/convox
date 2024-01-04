@@ -88,3 +88,39 @@ module "rack" {
   registry_disk = var.registry_disk
   zone = var.zone
 }
+
+# overwrite corefile, since exoscale add cluster id to the local dns
+resource "kubernetes_config_map_v1_data" "example" {
+
+  depends_on = [ module.cluster ]
+
+  force = true
+
+  metadata {
+    name = "coredns"
+    namespace = "kube-system"
+  }
+
+  data = {
+    "Corefile" = <<EOF
+.:53 {
+    log
+    errors
+    health {
+      lameduck 5s
+    }
+    ready
+    kubernetes cluster.local in-addr.arpa ip6.arpa {
+      pods verified
+      fallthrough in-addr.arpa ip6.arpa
+    }
+    forward . /etc/resolv.conf
+    prometheus :9153
+    cache 300
+    loop
+    reload
+    loadbalance
+}
+EOF
+  }
+}

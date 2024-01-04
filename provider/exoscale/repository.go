@@ -1,25 +1,17 @@
 package exoscale
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func (p *Provider) RepositoryAuth(app string) (string, string, error) {
-	host, _, err := p.RepositoryHost(app)
-	if err != nil {
-		return "", "", err
-	}
-
-	return p.ecrAuth(host, "", "")
+	return "docker", p.RegistrySecret, nil
 }
 
 func (p *Provider) RepositoryHost(app string) (string, bool, error) {
-	registry, err := p.appRegistry(app)
-	if err != nil {
-		return "", false, err
-	}
-
-	return registry, true, nil
+	return fmt.Sprintf("%s/%s", p.Registry, app), true, nil
 }
 
 func (p *Provider) RepositoryPrefix() string {
-	return fmt.Sprintf("%s/", p.Name)
+	return ""
 }

@@ -37,6 +37,7 @@ resource "exoscale_iam_api_key" "sos_api_key" {
 
 resource "aws_s3_bucket" "registry_bucket" {
   bucket   = local.bucket_name
+  force_destroy = true
 }
 
 resource "aws_s3_bucket_acl" "registry_bucket_acl" {

@@ -75,3 +75,7 @@ variable "zone" {
 variable "syslog" {
   default = ""
 }
+
+variable "registry_secret" {
+  type = string
+}

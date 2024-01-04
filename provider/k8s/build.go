@@ -32,7 +32,7 @@ func (p *Provider) buildImage(provider string) string {
 }
 
 func (*Provider) buildPrivileged(provider string) bool {
-	return strings.Contains("do gcp aws azure local", provider) // skipcq
+	return strings.Contains("do gcp aws azure local exoscale", provider) // skipcq
 }
 
 func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions) (*structs.Build, error) {

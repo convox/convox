@@ -43,6 +43,7 @@ module "api" {
   resolver                     = module.resolver.endpoint
   router                       = module.router.endpoint
   zone = var.zone
+  registry_secret = random_string.secret.result
 }
 
 # module "metrics" {

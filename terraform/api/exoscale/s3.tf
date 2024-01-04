@@ -10,7 +10,7 @@ locals {
 }
 
 resource "exoscale_iam_role" "api_role" {
-  name = "${var.name}-sos-admin-role"
+  name = "${var.name}-api-role"
   description = "SOS registry bucket admin role"
   editable = true
 
@@ -47,6 +47,7 @@ resource "exoscale_iam_api_key" "api_key" {
 
 resource "aws_s3_bucket" "storage_bucket" {
   bucket   = local.bucket_name
+  force_destroy = true
 }
 
 resource "aws_s3_bucket_acl" "storage_bucket_acl" {
