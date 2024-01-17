@@ -17,6 +17,11 @@ variable "build_node_enabled" {
   type    = bool
 }
 
+variable "convox_domain_tls_cert_disable" {
+  default = false
+  type    = bool
+}
+
 variable "docker_hub_authentication" {
   default = null
   type    = string

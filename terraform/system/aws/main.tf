@@ -127,29 +127,30 @@ module "rack" {
     null_resource.wait_for_cluster
   ]
 
-  build_node_enabled           = var.build_node_enabled
-  cluster                      = module.cluster.id
-  docker_hub_username          = var.docker_hub_username
-  docker_hub_password          = var.docker_hub_password
-  disable_image_manifest_cache = var.disable_image_manifest_cache
-  eks_addons                   = module.cluster.eks_addons
-  high_availability            = var.high_availability
-  idle_timeout                 = var.idle_timeout
-  internal_router              = var.internal_router
-  image                        = local.image
-  name                         = local.name
-  rack_name                    = local.rack_name
-  oidc_arn                     = module.cluster.oidc_arn
-  oidc_sub                     = module.cluster.oidc_sub
-  proxy_protocol               = var.proxy_protocol
-  release                      = local.release
-  ssl_ciphers                  = var.ssl_ciphers
-  ssl_protocols                = var.ssl_protocols
-  subnets                      = module.cluster.subnets
-  tags                         = local.tag_map
-  telemetry                    = var.telemetry
-  telemetry_map                = local.telemetry_map
-  telemetry_default_map        = local.telemetry_default_map
-  whitelist                    = split(",", var.whitelist)
-  ebs_csi_driver_name          = module.cluster.ebs_csi_driver_name
+  build_node_enabled             = var.build_node_enabled
+  cluster                        = module.cluster.id
+  convox_domain_tls_cert_disable = var.convox_domain_tls_cert_disable
+  docker_hub_username            = var.docker_hub_username
+  docker_hub_password            = var.docker_hub_password
+  disable_image_manifest_cache   = var.disable_image_manifest_cache
+  eks_addons                     = module.cluster.eks_addons
+  high_availability              = var.high_availability
+  idle_timeout                   = var.idle_timeout
+  internal_router                = var.internal_router
+  image                          = local.image
+  name                           = local.name
+  rack_name                      = local.rack_name
+  oidc_arn                       = module.cluster.oidc_arn
+  oidc_sub                       = module.cluster.oidc_sub
+  proxy_protocol                 = var.proxy_protocol
+  release                        = local.release
+  ssl_ciphers                    = var.ssl_ciphers
+  ssl_protocols                  = var.ssl_protocols
+  subnets                        = module.cluster.subnets
+  tags                           = local.tag_map
+  telemetry                      = var.telemetry
+  telemetry_map                  = local.telemetry_map
+  telemetry_default_map          = local.telemetry_default_map
+  whitelist                      = split(",", var.whitelist)
+  ebs_csi_driver_name            = module.cluster.ebs_csi_driver_name
 }
