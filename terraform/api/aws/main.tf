@@ -15,20 +15,21 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
-  buildkit_enabled             = var.buildkit_enabled
-  build_node_enabled           = var.build_node_enabled
-  docker_hub_authentication    = var.docker_hub_authentication
-  domain                       = var.domain
-  domain_internal              = var.domain_internal
-  disable_image_manifest_cache = var.disable_image_manifest_cache
-  image                        = var.image
-  metrics_scraper_host         = var.metrics_scraper_host
-  namespace                    = var.namespace
-  rack                         = var.name
-  rack_name                    = var.rack_name
-  release                      = var.release
-  replicas                     = var.high_availability ? 2 : 1
-  resolver                     = var.resolver
+  buildkit_enabled               = var.buildkit_enabled
+  build_node_enabled             = var.build_node_enabled
+  convox_domain_tls_cert_disable = var.convox_domain_tls_cert_disable
+  docker_hub_authentication      = var.docker_hub_authentication
+  domain                         = var.domain
+  domain_internal                = var.domain_internal
+  disable_image_manifest_cache   = var.disable_image_manifest_cache
+  image                          = var.image
+  metrics_scraper_host           = var.metrics_scraper_host
+  namespace                      = var.namespace
+  rack                           = var.name
+  rack_name                      = var.rack_name
+  release                        = var.release
+  replicas                       = var.high_availability ? 2 : 1
+  resolver                       = var.resolver
 
   annotations = {
     "cert-manager.io/cluster-issuer" = "letsencrypt"
