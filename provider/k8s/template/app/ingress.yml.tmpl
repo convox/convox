@@ -38,9 +38,11 @@ metadata:
 spec:
   ingressClassName: "{{.Class}}"
   tls:
+  {{ if .ConvoxDomainTLSCertDisable }}
   - hosts:
     - {{ safe .Host }}
     secretName: cert-{{.Service.Name}}
+  {{ end }}
   {{ with .Service.Domains }}
   - hosts:
     {{ range . }}

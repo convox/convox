@@ -10,6 +10,7 @@ locals {
     build_node_type = var.build_node_type
     cert_duration = var.cert_duration
     cidr = var.cidr
+    convox_domain_tls_cert_disable = var.convox_domain_tls_cert_disable
     coredns_version = var.coredns_version
     disable_image_manifest_cache = var.disable_image_manifest_cache
     docker_hub_password = var.docker_hub_password
@@ -60,6 +61,7 @@ locals {
     build_node_type = ""
     cert_duration = "2160h"
     cidr = "10.1.0.0/16"
+    convox_domain_tls_cert_disable = "false"
     coredns_version = "v1.9.3-eksbuild.7"
     disable_image_manifest_cache = "false"
     docker_hub_password = ""
@@ -97,7 +99,7 @@ locals {
     syslog = ""
     tags = ""
     telemetry = "false"
-    vpc_cni_version = "v1.13.3-eksbuild.1"
+    vpc_cni_version = "v1.14.1-eksbuild.1"
     vpc_id = ""
     whitelist = "0.0.0.0/0"
     }
