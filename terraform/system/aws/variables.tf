@@ -28,6 +28,11 @@ variable "cidr" {
   default = "10.1.0.0/16"
 }
 
+variable "convox_domain_tls_cert_disable" {
+  default = false
+  type    = bool
+}
+
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-coredns.html
 variable "coredns_version" {
   type    = string

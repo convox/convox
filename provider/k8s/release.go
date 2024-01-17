@@ -374,14 +374,15 @@ func (p *Provider) releaseTemplateIngress(a *structs.App, ss manifest.Services, 
 		}
 
 		params := map[string]interface{}{
-			"Annotations": ans,
-			"App":         a.Name,
-			"Class":       p.Engine.IngressClass(),
-			"Host":        p.Engine.ServiceHost(a.Name, s),
-			"Idles":       common.DefaultBool(opts.Idle, idles),
-			"Namespace":   p.AppNamespace(a.Name),
-			"Rack":        p.Name,
-			"Service":     s,
+			"Annotations":                ans,
+			"App":                        a.Name,
+			"Class":                      p.Engine.IngressClass(),
+			"ConvoxDomainTLSCertDisable": !p.ConvoxDomainTLSCertDisable,
+			"Host":                       p.Engine.ServiceHost(a.Name, s),
+			"Idles":                      common.DefaultBool(opts.Idle, idles),
+			"Namespace":                  p.AppNamespace(a.Name),
+			"Rack":                       p.Name,
+			"Service":                    s,
 		}
 
 		data, err := p.RenderTemplate("app/ingress", params)
@@ -407,14 +408,15 @@ func (p *Provider) releaseTemplateIngressInternal(a *structs.App, ss manifest.Se
 		s := ss[i]
 
 		params := map[string]interface{}{
-			"Annotations": map[string]string{},
-			"App":         a.Name,
-			"Class":       p.Engine.IngressInternalClass(),
-			"Host":        p.Engine.ServiceHost(a.Name, s),
-			"Idles":       common.DefaultBool(opts.Idle, idles),
-			"Namespace":   p.AppNamespace(a.Name),
-			"Rack":        p.Name,
-			"Service":     s,
+			"Annotations":                map[string]string{},
+			"App":                        a.Name,
+			"Class":                      p.Engine.IngressInternalClass(),
+			"ConvoxDomainTLSCertDisable": !p.ConvoxDomainTLSCertDisable,
+			"Host":                       p.Engine.ServiceHost(a.Name, s),
+			"Idles":                      common.DefaultBool(opts.Idle, idles),
+			"Namespace":                  p.AppNamespace(a.Name),
+			"Rack":                       p.Name,
+			"Service":                    s,
 		}
 
 		data, err := p.RenderTemplate("app/ingress-internal", params)

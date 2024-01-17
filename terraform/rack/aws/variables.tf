@@ -11,6 +11,11 @@ variable "cluster" {
   type = string
 }
 
+variable "convox_domain_tls_cert_disable" {
+  default = false
+  type    = bool
+}
+
 variable "docker_hub_username" {
   default = ""
 }
