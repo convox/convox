@@ -42,11 +42,11 @@ For example, a `postgres` resource named `main` (as in the example above) would 
 
 ```html
 MAIN_URL=postgres://username:password@host.name:port/database`
-MYDB_USER=username
-MYDB_PASS=password
-MYDB_HOST=host.name
-MYDB_PORT=port
-MYDB_NAME=database
+MAIN_USER=username
+MAIN_PASS=password
+MAIN_HOST=host.name
+MAIN_PORT=port
+MAIN_NAME=database
 ```
 
 ## Overlays
