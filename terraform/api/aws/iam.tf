@@ -25,6 +25,46 @@ resource "aws_iam_role" "api" {
   tags               = local.tags
 }
 
+data "aws_iam_policy_document" "iam_role_manage" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "iam:CreateRole",
+      "iam:UpdateRole",
+      "iam:DeleteRole",
+      "iam:PassRole",
+      "iam:TagRole",
+      "iam:UntagRole",
+      "iam:GetRole",
+      "iam:GetRolePolicy",
+      "iam:ListRolePolicies",
+      "iam:ListAttachedRolePolicies",
+      "iam:AttachRolePolicy",
+      "iam:DetachRolePolicy",
+      "iam:ListPolicyVersions",
+      "iam:UpdateAssumeRolePolicy",
+      "iam:UpdateRoleDescription",
+    ]
+    resources = [
+      "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/convox/*",
+    ]
+  }
+}
+
+data "aws_iam_policy_document" "eks_pod_identitiy" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "eks:ListPodIdentityAssociations",
+      "eks:CreatePodIdentityAssociation",
+      "eks:DescribePodIdentityAssociation",
+      "eks:DeletePodIdentityAssociation",
+      "eks:UpdatePodIdentityAssociation",
+    ]
+    resources = ["*"]
+  }
+}
+
 data "aws_iam_policy_document" "ec2_key_pair" {
   statement {
     actions   = ["ec2:CreateKeyPair*"]
@@ -94,6 +134,18 @@ resource "aws_iam_role_policy" "api_storage" {
   name   = "storage"
   role   = aws_iam_role.api.name
   policy = data.aws_iam_policy_document.storage.json
+}
+
+resource "aws_iam_role_policy" "api_iam_manage" {
+  name   = "api-iam-manage"
+  role   = aws_iam_role.api.name
+  policy = data.aws_iam_policy_document.iam_role_manage.json
+}
+
+resource "aws_iam_role_policy" "api_eks_pod_identity" {
+  name   = "api-eks-pod-identity"
+  role   = aws_iam_role.api.name
+  policy = data.aws_iam_policy_document.eks_pod_identitiy.json
 }
 
 data "aws_iam_policy_document" "assume_cert_manager" {

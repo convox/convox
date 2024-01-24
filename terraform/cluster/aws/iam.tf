@@ -56,6 +56,22 @@ resource "aws_iam_role" "nodes" {
   path               = "/convox/"
 }
 
+data "aws_iam_policy_document" "eks_pod_identitiy" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "eks-auth:AssumeRoleForPodIdentity",
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "nodes_eks_pod_identitiy" {
+  name   = "eks-pod-identitiy"
+  role   = aws_iam_role.nodes.name
+  policy = data.aws_iam_policy_document.eks_pod_identitiy.json
+}
+
 resource "aws_iam_role_policy_attachment" "nodes_ecr" {
   role       = aws_iam_role.nodes.name
   policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
