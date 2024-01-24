@@ -397,6 +397,19 @@ resource "aws_eks_addon" "kube_proxy" {
   resolve_conflicts = "OVERWRITE"
 }
 
+resource "aws_eks_addon" "eks_pod_identity_agent" {
+  depends_on = [
+    null_resource.wait_k8s_api
+  ]
+
+  count = var.pod_identity_agent_enable ? 1 : 0
+
+  cluster_name      = aws_eks_cluster.cluster.name
+  addon_name        = "eks-pod-identity-agent"
+  addon_version     = var.pod_identity_agent_version
+  resolve_conflicts = "OVERWRITE"
+}
+
 resource "null_resource" "wait_eks_addons" {
   provisioner "local-exec" {
     command = "sleep 1"
