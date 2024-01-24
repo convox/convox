@@ -164,6 +164,16 @@ variable "node_type" {
   default = "t3.small"
 }
 
+variable "pod_identity_agent_enable" {
+  type    = bool
+  default = false
+}
+
+variable "pod_identity_agent_version" {
+  type    = string
+  default = "v1.2.0-eksbuild.1"
+}
+
 variable "private" {
   default = true
 }
