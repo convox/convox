@@ -32,6 +32,6 @@ variable "settings" {
 }
 
 variable "telemetry" {
-  type   = bool
+  type    = bool
   default = false
 }

@@ -15,8 +15,10 @@ data "http" "releases" {
 }
 
 locals {
-  current = jsondecode(data.http.releases.response_body).tag_name
-  release = coalesce(var.release, local.current)
+  name      = lower(var.name)
+  rack_name = lower(var.rack_name)
+  current   = jsondecode(data.http.releases.response_body).tag_name
+  release   = coalesce(var.release, local.current)
 }
 
 module "cluster" {
@@ -28,7 +30,7 @@ module "cluster" {
 
   high_availability = var.high_availability
   k8s_version       = var.k8s_version
-  name              = var.name
+  name              = local.name
   node_type         = var.node_type
   region            = var.region
 }
@@ -48,8 +50,8 @@ module "rack" {
   docker_hub_password   = var.docker_hub_password
   high_availability     = var.high_availability
   image                 = var.image
-  name                  = var.name
-  rack_name             = var.rack_name
+  name                  = local.name
+  rack_name             = local.rack_name
   region                = var.region
   registry_disk         = var.registry_disk
   release               = local.release

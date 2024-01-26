@@ -3,9 +3,11 @@ data "http" "releases" {
 }
 
 locals {
-  arm_type = module.platform.arch == "arm64"
-  current  = jsondecode(data.http.releases.response_body).tag_name
-  release  = local.arm_type ? format("%s-%s", coalesce(var.release, local.current), "arm64") : coalesce(var.release, local.current)
+  name      = lower(var.name)
+  rack_name = lower(var.rack_name)
+  arm_type  = module.platform.arch == "arm64"
+  current   = jsondecode(data.http.releases.response_body).tag_name
+  release   = local.arm_type ? format("%s-%s", coalesce(var.release, local.current), "arm64") : coalesce(var.release, local.current)
 }
 
 provider "kubernetes" {
@@ -26,8 +28,8 @@ module "rack" {
   docker_hub_username = var.docker_hub_username
   docker_hub_password = var.docker_hub_password
   image               = var.image
-  name                = var.name
-  rack_name           = var.rack_name
+  name                = local.name
+  rack_name           = local.rack_name
   platform            = module.platform.name
   os                  = var.os
   release             = local.release
