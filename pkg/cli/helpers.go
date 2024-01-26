@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"time"
@@ -139,4 +140,11 @@ func waitForResourceRunning(rack sdk.Interface, c *stdcli.Context, resource stri
 
 		return r.Status == "running", nil
 	})
+}
+
+func checkRackNameRegex(name string) error {
+	if !regexp.MustCompile(`^[a-z0-9-]+$`).MatchString(name) {
+		return fmt.Errorf("only lowercase alphanumeric characters and hyphen allowed and must not start with hyphen")
+	}
+	return nil
 }

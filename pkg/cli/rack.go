@@ -227,6 +227,10 @@ func RackInstall(_ sdk.Interface, c *stdcli.Context) error {
 		return fmt.Errorf("unknown provider: %s", slug)
 	}
 
+	if err := checkRackNameRegex(name); err != nil {
+		return err
+	}
+
 	opts := argsToOptions(args)
 
 	if c.Bool("prepare") {
