@@ -3,8 +3,10 @@ data "http" "releases" {
 }
 
 locals {
-  current = jsondecode(data.http.releases.response_body).tag_name
-  release = coalesce(var.release, local.current)
+  name      = lower(var.name)
+  rack_name = lower(var.rack_name)
+  current   = jsondecode(data.http.releases.response_body).tag_name
+  release   = coalesce(var.release, local.current)
 }
 
 provider "kubernetes" {}
@@ -18,12 +20,12 @@ module "rack" {
 
   docker_hub_username = var.docker_hub_username
   docker_hub_password = var.docker_hub_password
-  domain        = var.domain
-  image         = var.image
-  name          = var.name
-  release       = local.release
-  registry_disk = var.registry_disk
-  syslog        = var.syslog
-  whitelist     = split(",", var.whitelist)
+  domain              = var.domain
+  image               = var.image
+  name                = local.name
+  release             = local.release
+  registry_disk       = var.registry_disk
+  syslog              = var.syslog
+  whitelist           = split(",", var.whitelist)
 }
 

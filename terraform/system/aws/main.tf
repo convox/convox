@@ -8,7 +8,7 @@ provider "kubernetes" {
 
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
-    args        = ["eks", "get-token", "--cluster-name", var.name]
+    args        = ["eks", "get-token", "--cluster-name", local.name]
     command     = "aws"
   }
 }
@@ -25,6 +25,9 @@ data "http" "releases" {
 }
 
 locals {
+  name      = lower(var.name)
+  rack_name = lower(var.rack_name)
+
   // var.node_type can be assigned a comma separated list of instance types
   node_type       = split(",", var.node_type)[0]
   build_node_type = var.build_node_type != "" ? var.build_node_type : local.node_type
@@ -68,7 +71,7 @@ module "cluster" {
   k8s_version              = var.k8s_version
   max_on_demand_count      = var.max_on_demand_count
   min_on_demand_count      = var.min_on_demand_count
-  name                     = var.name
+  name                     = local.name
   node_capacity_type       = upper(var.node_capacity_type)
   node_disk                = var.node_disk
   node_type                = var.node_type
@@ -108,7 +111,7 @@ module "fluentd" {
   namespace                    = "kube-system"
   oidc_arn                     = module.cluster.oidc_arn
   oidc_sub                     = module.cluster.oidc_sub
-  rack                         = var.name
+  rack                         = local.name
   syslog                       = var.syslog
 }
 
@@ -134,8 +137,8 @@ module "rack" {
   idle_timeout                 = var.idle_timeout
   internal_router              = var.internal_router
   image                        = local.image
-  name                         = var.name
-  rack_name                    = var.rack_name
+  name                         = local.name
+  rack_name                    = local.rack_name
   oidc_arn                     = module.cluster.oidc_arn
   oidc_sub                     = module.cluster.oidc_sub
   proxy_protocol               = var.proxy_protocol
