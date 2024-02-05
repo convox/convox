@@ -36,7 +36,7 @@ variable "convox_domain_tls_cert_disable" {
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-coredns.html
 variable "coredns_version" {
   type    = string
-  default = "v1.9.3-eksbuild.7"
+  default = "v1.10.1-eksbuild.7"
 }
 
 variable "docker_hub_username" {
@@ -107,12 +107,12 @@ variable "key_pair_name" {
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-kube-proxy.html
 variable "kube_proxy_version" {
   type    = string
-  default = "v1.26.9-eksbuild.2"
+  default = "v1.27.8-eksbuild.4"
 }
 
 variable "k8s_version" {
   type    = string
-  default = "1.26"
+  default = "1.27"
 }
 
 variable "max_on_demand_count" {
@@ -214,7 +214,7 @@ variable "vpc_id" {
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-vpc-cni.html
 variable "vpc_cni_version" {
   type    = string
-  default = "v1.14.1-eksbuild.1"
+  default = "v1.15.5-eksbuild.1"
 }
 
 variable "whitelist" {
