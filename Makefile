@@ -15,7 +15,7 @@ clean-package:
 	find . -name '*-packr.go' -delete
 
 compress: $(binaries)
-	upx-ucl -1 $^
+	echo "not supported"
 
 dev:
 	test -n "$(IMAGE)" # IMAGE
