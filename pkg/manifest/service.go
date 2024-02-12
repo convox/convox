@@ -42,7 +42,40 @@ type Service struct {
 	Timeout            int                   `yaml:"timeout,omitempty"`
 	Tls                ServiceTls            `yaml:"tls,omitempty"`
 	Volumes            []string              `yaml:"volumes,omitempty"`
+	VolumeOptions      []VolumeOption        `yaml:"volumeOptions,omitempty"`
 	Whitelist          string                `yaml:"whitelist,omitempty"`
+}
+
+type VolumeOption struct {
+	EmptyDir *VolumeEmptyDir `yaml:"emptyDir,omitempty"`
+}
+
+func (v VolumeOption) Validate() error {
+	if v.EmptyDir != nil {
+		return v.EmptyDir.Validate()
+	}
+	return nil
+}
+
+type VolumeEmptyDir struct {
+	Id        string `yaml:"id"`
+	Medium    string `yaml:"medium,omitempty"`
+	MountPath string `yaml:"mountPath"`
+}
+
+func (v VolumeEmptyDir) Validate() error {
+	if v.Id == "" {
+		return fmt.Errorf("emptyDir.id is required")
+	}
+	if v.MountPath == "" {
+		return fmt.Errorf("emptyDir.mountPath is required")
+	}
+	if v.Medium != "" {
+		if v.Medium != "Memory" {
+			return fmt.Errorf("emptyDir.medium's allowed values: Memory")
+		}
+	}
+	return nil
 }
 
 type Services []Service
