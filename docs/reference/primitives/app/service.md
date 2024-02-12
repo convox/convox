@@ -133,6 +133,7 @@ services:
 | **test**        | string     |                     | A command to run to test this Service when running **convox test**                                                                           |
 | **timeout**     | number     | 60                  | Timeout period (in seconds) for reading/writing requests to/from your service                                                              |
 | **tls**         | map        |                     | TLS-related configuration                                                                                                                  |
+| **volumeOptions**  | list    |                     | List of volumes to attach with service |
 | **whitelist**   | string     |                     | Comma delimited list of CIDRs, e.g. `10.0.0.0/24,172.10.0.1`, to allow access to the service                                                                                                                  |
 
 > Environment variables declared on `convox.yml` will be populated for a Service.
@@ -330,6 +331,38 @@ services:
 | Attribute  | Type    | Default | Description                                                                          |
 | ---------- | ------- | ------- | ------------------------------------------------------------------------------------ |
 | **redirect** | boolean | true    | Whether or not HTTP requests should be redirected to HTTPS using a 308 response code |
+
+&nbsp;
+
+### []volumeOptions
+
+| Attribute  | Type    | Default | Description                                                                          |
+| ---------- | ------- | ------- | ------------------------------------------------------------------------------------ |
+| **emptyDir** | map |     | Configuration for [emptyDir](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir) volume |
+
+&nbsp;
+
+### []volumeOptions.emptyDir
+
+| Attribute  | Type    | Default | Description                                                                          |
+| ---------- | ------- | ------- | ------------------------------------------------------------------------------------ |
+| **id** | string |     | Required. Id of the volume. |
+| **mountPath** | string |     | Required. Path in the serive file system to mount the volume |
+| **medium** | string |     | Optional. Specifies the emptyDir medium. Allowed values: `"Memory"` or `""` |
+
+
+```yaml
+environment:
+  - PORT=3000
+services:
+  web:
+    build: .
+    port: 3000
+    volumeOptions:
+      - emptyDir:
+          id: "test-vol"
+          mountPath: "/my/test/vol"
+```
 
 &nbsp;
 
