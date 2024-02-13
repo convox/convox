@@ -1,7 +1,7 @@
 ---
-title: "apps"
+title: "letsencrypt"
 draft: false
-slug: apps
+slug: letsencrypt
 url: /reference/cli/letsencrypt
 ---
 # letsencrypt

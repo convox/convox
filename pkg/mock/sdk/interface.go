@@ -2288,6 +2288,50 @@ func (_m *Interface) Workers() error {
 	return r0
 }
 
+// WorkflowCustomRun provides a mock function with given fields: rackOrgSlug, workflowId, opts
+func (_m *Interface) WorkflowCustomRun(rackOrgSlug string, workflowId string, opts structs.WorkflowCustomRunOptions) (*structs.WorkflowCustomRunResp, error) {
+	ret := _m.Called(rackOrgSlug, workflowId, opts)
+
+	var r0 *structs.WorkflowCustomRunResp
+	if rf, ok := ret.Get(0).(func(string, string, structs.WorkflowCustomRunOptions) *structs.WorkflowCustomRunResp); ok {
+		r0 = rf(rackOrgSlug, workflowId, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*structs.WorkflowCustomRunResp)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, string, structs.WorkflowCustomRunOptions) error); ok {
+		r1 = rf(rackOrgSlug, workflowId, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// WorkflowList provides a mock function with given fields: rackOrgSlug
+func (_m *Interface) WorkflowList(rackOrgSlug string) (structs.WorkflowListResp, error) {
+	ret := _m.Called(rackOrgSlug)
+
+	var r0 structs.WorkflowListResp
+	if rf, ok := ret.Get(0).(func(string) structs.WorkflowListResp); ok {
+		r0 = rf(rackOrgSlug)
+	} else {
+		r0 = ret.Get(0).(structs.WorkflowListResp)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(rackOrgSlug)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 type NewInterfaceT interface {
 	mock.TestingT
 	Cleanup(func())

@@ -868,6 +868,33 @@ func (c *Client) Runtimes(rackOrgSlug string) (structs.Runtimes, error) {
 	return v, err
 }
 
+func (c *Client) WorkflowList(rackOrgSlug string) (structs.WorkflowListResp, error) {
+	var err error
+
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+
+	var v structs.WorkflowListResp
+
+	err = c.Get(fmt.Sprintf("/racks/%s/workflows", rackOrgSlug), ro, &v)
+
+	return v, err
+}
+
+func (c *Client) WorkflowCustomRun(rackOrgSlug, workflowId string, opts structs.WorkflowCustomRunOptions) (*structs.WorkflowCustomRunResp, error) {
+	var err error
+
+	ro, err := stdsdk.MarshalOptions(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	var v structs.WorkflowCustomRunResp
+
+	err = c.Post(fmt.Sprintf("/racks/%s/workflows/%s/run", rackOrgSlug, workflowId), ro, &v)
+
+	return &v, err
+}
+
 func (c *Client) RuntimeAttach(rackOrgSlug string, opts structs.RuntimeAttachOptions) error {
 	var err error
 
