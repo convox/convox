@@ -64,3 +64,25 @@ type Runtimes []Runtime
 type RuntimeAttachOptions struct {
 	Runtime *string `param:"runtime"`
 }
+
+type WorkflowResp struct {
+	Id   string `json:"id"`
+	Name string `json:"name"`
+	Kind string `json:"kind"`
+}
+
+type WorkflowListResp struct {
+	Oid       string         `json:"oid"`
+	Workflows []WorkflowResp `json:"workflows"`
+}
+
+type WorkflowCustomRunOptions struct {
+	App    *string `param:"app" flag:"app,a"`
+	Branch *string `param:"branch" flag:"branch"`
+	Commit *string `param:"commit" flag:"commit"`
+	Title  *string `param:"title" flag:"title"`
+}
+
+type WorkflowCustomRunResp struct {
+	JobID string `json:"jod_id"`
+}
