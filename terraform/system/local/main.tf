@@ -25,14 +25,16 @@ module "rack" {
     kubernetes = kubernetes
   }
 
-  docker_hub_username = var.docker_hub_username
-  docker_hub_password = var.docker_hub_password
-  image               = var.image
-  name                = local.name
-  rack_name           = local.rack_name
-  platform            = module.platform.name
-  os                  = var.os
-  release             = local.release
-  settings            = var.settings
-  telemetry           = var.telemetry
+  docker_hub_username   = var.docker_hub_username
+  docker_hub_password   = var.docker_hub_password
+  image                 = var.image
+  name                  = local.name
+  rack_name             = local.rack_name
+  platform              = module.platform.name
+  os                    = var.os
+  release               = local.release
+  settings              = var.settings
+  telemetry             = var.telemetry
+  telemetry_map         = local.telemetry_map
+  telemetry_default_map = local.telemetry_default_map
 }
