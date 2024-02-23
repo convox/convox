@@ -108,20 +108,22 @@ type ServiceDnsConfig struct {
 }
 
 type ServiceHealth struct {
-	Disable  bool
-	Grace    int
-	Interval int
-	Path     string
-	Timeout  int
+	Disable  bool              `yaml:"disable,omitempty"`
+	Grace    int               `yaml:"grace,omitempty"`
+	Interval int               `yaml:"interval,omitempty"`
+	Path     string            `yaml:"path,omitempty"`
+	Port     ServicePortScheme `yaml:"port,omitempty"`
+	Timeout  int               `yaml:"timeout,omitempty"`
 }
 
 type ServiceLiveness struct {
-	Grace            int    `yaml:"grace,omitempty"`
-	Interval         int    `yaml:"interval,omitempty"`
-	Path             string `yaml:"path,omitempty"`
-	Timeout          int    `yaml:"timeout,omitempty"`
-	SuccessThreshold int    `yaml:"successThreshold,omitempty"`
-	FailureThreshold int    `yaml:"failureThreshold,omitempty"`
+	Grace            int               `yaml:"grace,omitempty"`
+	Interval         int               `yaml:"interval,omitempty"`
+	Path             string            `yaml:"path,omitempty"`
+	Port             ServicePortScheme `yaml:"port,omitempty"`
+	Timeout          int               `yaml:"timeout,omitempty"`
+	SuccessThreshold int               `yaml:"successThreshold,omitempty"`
+	FailureThreshold int               `yaml:"failureThreshold,omitempty"`
 }
 
 type ServiceLifecycle struct {

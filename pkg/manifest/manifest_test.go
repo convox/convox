@@ -123,6 +123,7 @@ func TestManifestLoad(t *testing.T) {
 				Health: manifest.ServiceHealth{
 					Grace:    5,
 					Path:     "/auth",
+					Port:     2001,
 					Interval: 5,
 					Timeout:  4,
 				},
