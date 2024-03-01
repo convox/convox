@@ -82,7 +82,7 @@ func (d *Docker) Build(bb *Build, dir string) error {
 	for hash, b := range builds {
 		bb.Printf("Building: %s\n", b.Path)
 
-		if err := d.build(bb, filepath.Join(dir, b.Path), b.Manifest, hash, env); err != nil {
+		if err := d.build(bb, filepath.Join(dir, b.Path), b.Manifest, b.Target, hash, env); err != nil {
 			return err
 		}
 	}
@@ -166,7 +166,7 @@ func (*Docker) Login(bb *Build) error {
 }
 
 // skipcq
-func (*Docker) build(bb *Build, path, dockerfile, tag string, env map[string]string) error {
+func (*Docker) build(bb *Build, path, dockerfile, target, tag string, env map[string]string) error {
 	if path == "" {
 		return fmt.Errorf("must have path to build")
 	}
@@ -182,6 +182,10 @@ func (*Docker) build(bb *Build, path, dockerfile, tag string, env map[string]str
 	args = append(args, "-t", tag)
 	args = append(args, "-f", df)
 	args = append(args, "--network", "host")
+
+	if target != "" {
+		args = append(args, "--target", target)
+	}
 
 	ba, err := bb.buildArgs(df, env)
 	if err != nil {
