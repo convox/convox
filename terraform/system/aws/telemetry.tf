@@ -21,6 +21,7 @@ locals {
     image = var.image
     imds_http_hop_limit = var.imds_http_hop_limit
     imds_http_tokens = var.imds_http_tokens
+    imds_tags_enable = var.imds_tags_enable
     internal_router = var.internal_router
     internet_gateway_id = var.internet_gateway_id
     k8s_version = var.k8s_version
@@ -71,6 +72,7 @@ locals {
     image = "convox/convox"
     imds_http_hop_limit = "3"
     imds_http_tokens = "optional"
+    imds_tags_enable = "false"
     internal_router = "false"
     internet_gateway_id = ""
     k8s_version = "1.26"
