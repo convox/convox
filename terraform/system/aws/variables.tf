@@ -81,6 +81,11 @@ variable "imds_http_hop_limit" {
   default = 3
 }
 
+variable "imds_tags_enable" {
+  type    = bool
+  default = false
+}
+
 variable "internet_gateway_id" {
   default = ""
 }
