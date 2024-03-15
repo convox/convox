@@ -20,7 +20,7 @@ E.g. a rack on Version `3.12.x` would need update to the latest `3.13.x` version
 
 You should always update to the latest patch version of your new version because often times fixes are applied throughout the minor which can cause problems if going to only the base version. Additionally you do not need to be on the highest patch version of your current minor to update your rack to the next minor.
 
-E.g. a rack on Version `3.13.1` should update directly to `3.14.4` not (the latest version in `3.14.x` at the time of this writing).
+E.g. a rack on Version `3.13.1` should update directly to `3.14.4` (the latest version in `3.14.x` at the time of this writing).
 
 ### Updating to a specific version
 ```html
