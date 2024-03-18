@@ -112,7 +112,7 @@ variable "key_pair_name" {
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-kube-proxy.html
 variable "kube_proxy_version" {
   type    = string
-  default = "v1.27.8-eksbuild.4"
+  default = "v1.28.6-eksbuild.2"
 }
 
 variable "k8s_version" {
