@@ -26,7 +26,7 @@ _Note on Versioning: In the `major.minor.patch` format, `minor` versions indicat
 
 ### Updating to a specific version
 ```html
-    $ convox rack update 3.6.0
+    $ convox rack update 3.16.1
     Updating rack... OK
 ```
 
