@@ -294,7 +294,7 @@ module "ebs_csi_driver_controller" {
 
   arn_format                                 = data.aws_partition.current.partition
   ebs_csi_controller_image                   = "public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver"
-  ebs_csi_driver_version                     = "v1.27.0"
+  ebs_csi_driver_version                     = "v1.28.0"
   ebs_csi_controller_role_name               = "convox-ebs-csi-driver-controller"
   ebs_csi_controller_role_policy_name_prefix = "convox-ebs-csi-driver-policy"
   csi_controller_tolerations = [
