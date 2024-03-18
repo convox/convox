@@ -117,7 +117,7 @@ variable "kube_proxy_version" {
 
 variable "k8s_version" {
   type    = string
-  default = "1.27"
+  default = "1.28"
 }
 
 variable "max_on_demand_count" {
