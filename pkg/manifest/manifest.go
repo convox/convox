@@ -151,6 +151,10 @@ func (m *Manifest) ApplyDefaults() error {
 			m.Services[i].Health.Path = "/"
 		}
 
+		if s.Health.Port.Port != 0 && s.Health.Port.Scheme == "" {
+			m.Services[i].Health.Port.Scheme = "http"
+		}
+
 		if s.Health.Port.Port == 0 && s.Port.Port > 0 {
 			m.Services[i].Health.Port.Port = s.Port.Port
 			if s.Port.Scheme != "" {
