@@ -151,8 +151,8 @@ spec:
               {{ end }}
           {{ end }}
         {{ end }}
-        {{ with .Service.Port.Port }}
-        {{ if and (not (eq $.Service.Port.Scheme "GRPC")) (not (eq $.Service.Liveness.Path ""))}}
+        {{ with .Service.Liveness.Port }}
+        {{ if and (not (eq $.Service.Liveness.Port.Scheme "GRPC")) (not (eq $.Service.Liveness.Path ""))}}
         livenessProbe:
           httpGet:
             path: {{$.Service.Liveness.Path}}"
@@ -163,7 +163,19 @@ spec:
           successThreshold: {{$.Service.Liveness.SuccessThreshold}}
           failureThreshold: {{$.Service.Liveness.FailureThreshold}}
         {{ end }}
-        {{ if and (not (eq $.Service.Port.Scheme "GRPC")) (not $.Service.Health.Disable) }}
+        {{ if (eq $.Service.Liveness.Port.Scheme  "GRPC") }}
+        livenessProbe:
+          grpc:
+            port: {{.}}
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 15
+          successThreshold: 1
+          failureThreshold: 5
+        {{ end }}
+        {{ end }}
+        {{ with .Service.Health.Port }}
+        {{ if and (not (eq $.Service.Health.Port.Scheme "GRPC")) (not $.Service.Health.Disable) }}
         readinessProbe:
           httpGet:
             path: "{{$.Service.Health.Path}}"
@@ -174,15 +186,6 @@ spec:
           timeoutSeconds: {{$.Service.Health.Timeout}}
           successThreshold: 1
           failureThreshold: 3
-        {{ else if $.Service.GrpcHealthEnabled }}
-        livenessProbe:
-          grpc:
-            port: {{.}}
-          initialDelaySeconds: 10
-          periodSeconds: 5
-          timeoutSeconds: 15
-          successThreshold: 1
-          failureThreshold: 5
         {{ end }}
         {{ end }}
         ports:

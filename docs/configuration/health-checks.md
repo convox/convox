@@ -34,6 +34,7 @@ services:
       grace: 5
       interval: 5
       path: /check
+      port: 8000
       timeout: 3
 ```
 
@@ -42,4 +43,5 @@ services:
 | **grace**    | 5       | The amount of time in seconds to wait for a [Process](/reference/primitives/app/process) to boot before beginning health checks |
 | **interval** | 5       | The number of seconds between health checks                                                                                          |
 | **path**     | /       | The HTTP endpoint that will be requested                                                                                             |
+| **port**     | Inherited from service port | The port that the health check will connect to                                                                   |
 | **timeout**  | 4       | The number of seconds to wait for a valid response                                                                                   |
