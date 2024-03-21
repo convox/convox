@@ -236,7 +236,7 @@ resource "aws_launch_template" "cluster" {
     http_tokens                 = var.imds_http_tokens
     http_put_response_hop_limit = var.imds_http_hop_limit
     http_endpoint               = "enabled"
-    instance_metadata_tags      = "enabled"
+    instance_metadata_tags      = var.imds_tags_enable ? "enabled": "disabled"
   }
 
   instance_type = split(",", random_id.node_group.keepers.node_type)[0]
@@ -268,7 +268,7 @@ resource "aws_launch_template" "cluster-build" {
     http_tokens                 = var.imds_http_tokens
     http_put_response_hop_limit = var.imds_http_hop_limit
     http_endpoint               = "enabled"
-    instance_metadata_tags      = "enabled"
+    instance_metadata_tags      = var.imds_tags_enable ? "enabled": "disabled"
   }
 
   dynamic "tag_specifications" {
@@ -294,7 +294,7 @@ module "ebs_csi_driver_controller" {
 
   arn_format                                 = data.aws_partition.current.partition
   ebs_csi_controller_image                   = "public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver"
-  ebs_csi_driver_version                     = "v1.27.0"
+  ebs_csi_driver_version                     = "v1.28.0"
   ebs_csi_controller_role_name               = "convox-ebs-csi-driver-controller"
   ebs_csi_controller_role_policy_name_prefix = "convox-ebs-csi-driver-policy"
   csi_controller_tolerations = [
