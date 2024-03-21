@@ -95,6 +95,11 @@ variable "imds_http_hop_limit" {
   default = 3
 }
 
+variable "imds_tags_enable" {
+  type    = bool
+  default = false
+}
+
 variable "internet_gateway_id" {
   default = ""
 }
@@ -107,12 +112,12 @@ variable "key_pair_name" {
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-kube-proxy.html
 variable "kube_proxy_version" {
   type    = string
-  default = "v1.27.8-eksbuild.4"
+  default = "v1.28.6-eksbuild.2"
 }
 
 variable "k8s_version" {
   type    = string
-  default = "1.27"
+  default = "1.28"
 }
 
 variable "max_on_demand_count" {
@@ -214,7 +219,7 @@ variable "vpc_id" {
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-vpc-cni.html
 variable "vpc_cni_version" {
   type    = string
-  default = "v1.15.4-eksbuild.1"
+  default = "v1.16.4-eksbuild.2"
 }
 
 variable "whitelist" {
