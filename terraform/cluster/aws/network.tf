@@ -69,7 +69,7 @@ resource "aws_subnet" "public" {
   tags = merge(local.tags, {
     Name = "${var.name} public ${count.index}"
     "kubernetes.io/cluster/${var.name}" : "shared"
-    "kubernetes.io/role/elb" : ""
+    "kubernetes.io/role/elb" : "1"
   })
 
   timeouts {
@@ -135,7 +135,7 @@ resource "aws_subnet" "private" {
   tags = merge(local.tags, {
     Name = "${var.name} private ${count.index}"
     "kubernetes.io/cluster/${var.name}" : "shared"
-    "kubernetes.io/role/internal-elb" : ""
+    "kubernetes.io/role/internal-elb" : "1"
   })
 
   timeouts {
@@ -262,7 +262,7 @@ resource "aws_ec2_tag" "private_subnets_tagging2" {
   count       = length(var.private_subnets_ids)
   resource_id = var.private_subnets_ids[count.index]
   key         = "kubernetes.io/role/internal-elb"
-  value       = ""
+  value       = "1"
 }
 
 resource "aws_ec2_tag" "public_subnets_tagging1" {
@@ -276,5 +276,5 @@ resource "aws_ec2_tag" "public_subnets_tagging2" {
   count       = length(var.public_subnets_ids)
   resource_id = var.public_subnets_ids[count.index]
   key         = "kubernetes.io/role/elb"
-  value       = ""
+  value       = "1"
 }

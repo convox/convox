@@ -33,10 +33,20 @@ variable "convox_domain_tls_cert_disable" {
   type    = bool
 }
 
+variable "convox_rack_domain" {
+  default = ""
+  type    = string
+}
+
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-coredns.html
 variable "coredns_version" {
   type    = string
   default = "v1.10.1-eksbuild.7"
+}
+
+variable "deploy_extra_nlb" {
+  default = false
+  type    = bool
 }
 
 variable "docker_hub_username" {
@@ -133,6 +143,11 @@ variable "name" {
 }
 
 variable "rack_name" {
+  default = ""
+  type    = string
+}
+
+variable "nlb_security_group" {
   default = ""
   type    = string
 }

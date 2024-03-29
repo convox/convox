@@ -44,3 +44,7 @@ output "vpc" {
 output "eks_addons" {
   value = [aws_eks_addon.coredns.id, aws_eks_addon.vpc_cni.id, aws_eks_addon.kube_proxy.id]
 }
+
+output "lbc_helm_id" {
+  value = helm_release.aws_lbc.id
+}
