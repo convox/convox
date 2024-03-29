@@ -60,6 +60,8 @@ resource "kubernetes_config_map" "nginx-internal-configuration" {
 
 resource "null_resource" "set_proxy_protocol" {
 
+  count = kubernetes_service.router.spec[0].load_balancer_class == "service.k8s.aws/nlb" ? 0 : 1
+
   triggers = {
     proxy_protocol = var.proxy_protocol
   }
@@ -74,7 +76,7 @@ resource "null_resource" "set_proxy_protocol" {
 }
 
 resource "null_resource" "set_preserve_client_ip_false" {
-  count = var.internal_router ? 1 : 0
+  count = var.internal_router ? (kubernetes_service.outer-internal.spec[0].load_balancer_class == "service.k8s.aws/nlb" ? 0 : 1) : 0
 
   provisioner "local-exec" {
     command = "sh ${path.module}/preserve-client-ip.sh ${var.name} ${data.aws_region.current.name}"
@@ -99,6 +101,7 @@ resource "kubernetes_service" "router_extra" {
       "service.beta.kubernetes.io/aws-load-balancer-scheme"                              = "internet-facing"
       "service.beta.kubernetes.io/aws-load-balancer-security-groups"                     = var.nlb_security_group
       "service.beta.kubernetes.io/aws-load-balancer-manage-backend-security-group-rules" = "true"
+      "service.beta.kubernetes.io/aws-load-balancer-proxy-protocol"                      = var.proxy_protocol ? "*" : ""
       "convox.io/dependency"                                                             = var.lbc_helm_id
     }
   }
@@ -146,6 +149,7 @@ resource "kubernetes_service" "router" {
       "service.beta.kubernetes.io/aws-load-balancer-scheme"                              = "internet-facing"
       "service.beta.kubernetes.io/aws-load-balancer-security-groups"                     = var.nlb_security_group
       "service.beta.kubernetes.io/aws-load-balancer-manage-backend-security-group-rules" = "true"
+      "service.beta.kubernetes.io/aws-load-balancer-proxy-protocol"                      = var.proxy_protocol ? "*" : ""
       "convox.io/dependency"                                                             = var.lbc_helm_id
     }
   }
@@ -197,6 +201,7 @@ resource "kubernetes_service" "router-internal" {
       "service.beta.kubernetes.io/aws-load-balancer-internal"                            = "true"
       "service.beta.kubernetes.io/aws-load-balancer-scheme"                              = "internal"
       "service.beta.kubernetes.io/aws-load-balancer-manage-backend-security-group-rules" = "true"
+      "service.beta.kubernetes.io/aws-load-balancer-target-group-attributes"             = "preserve_client_ip.enabled=false"
       "convox.io/dependency"                                                             = var.lbc_helm_id
     }
   }
