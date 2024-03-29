@@ -77,11 +77,14 @@ module "router" {
     kubernetes = kubernetes
   }
 
+  convox_rack_domain = var.convox_rack_domain
+  deploy_extra_nlb = var.deploy_extra_nlb
   high_availability = var.high_availability
   idle_timeout      = var.idle_timeout
   internal_router   = var.internal_router
   name              = var.name
   namespace         = module.k8s.namespace
+  nlb_security_group = var.nlb_security_group
   oidc_arn          = var.oidc_arn
   oidc_sub          = var.oidc_sub
   proxy_protocol    = var.proxy_protocol
@@ -90,4 +93,5 @@ module "router" {
   ssl_protocols     = var.ssl_protocols
   tags              = var.tags
   whitelist         = var.whitelist
+  lbc_helm_id       = var.lbc_helm_id
 }

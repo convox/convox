@@ -131,6 +131,8 @@ module "rack" {
   build_node_enabled             = var.build_node_enabled
   cluster                        = module.cluster.id
   convox_domain_tls_cert_disable = var.convox_domain_tls_cert_disable
+  convox_rack_domain             = var.convox_rack_domain
+  deploy_extra_nlb               = var.deploy_extra_nlb
   docker_hub_username            = var.docker_hub_username
   docker_hub_password            = var.docker_hub_password
   disable_image_manifest_cache   = var.disable_image_manifest_cache
@@ -139,8 +141,10 @@ module "rack" {
   idle_timeout                   = var.idle_timeout
   internal_router                = var.internal_router
   image                          = local.image
+  lbc_helm_id                    = module.cluster.lbc_helm_id
   name                           = local.name
   rack_name                      = local.rack_name
+  nlb_security_group             = var.nlb_security_group
   oidc_arn                       = module.cluster.oidc_arn
   oidc_sub                       = module.cluster.oidc_sub
   proxy_protocol                 = var.proxy_protocol
