@@ -11,7 +11,9 @@ locals {
     cert_duration = var.cert_duration
     cidr = var.cidr
     convox_domain_tls_cert_disable = var.convox_domain_tls_cert_disable
+    convox_rack_domain = var.convox_rack_domain
     coredns_version = var.coredns_version
+    deploy_extra_nlb = var.deploy_extra_nlb
     disable_image_manifest_cache = var.disable_image_manifest_cache
     docker_hub_password = var.docker_hub_password
     docker_hub_username = var.docker_hub_username
@@ -31,6 +33,7 @@ locals {
     max_on_demand_count = var.max_on_demand_count
     min_on_demand_count = var.min_on_demand_count
     name = var.name
+    nlb_security_group = var.nlb_security_group
     node_capacity_type = var.node_capacity_type
     node_disk = var.node_disk
     node_type = var.node_type
@@ -63,7 +66,9 @@ locals {
     cert_duration = "2160h"
     cidr = "10.1.0.0/16"
     convox_domain_tls_cert_disable = "false"
+    convox_rack_domain = ""
     coredns_version = "v1.10.1-eksbuild.7"
+    deploy_extra_nlb = "false"
     disable_image_manifest_cache = "false"
     docker_hub_password = ""
     docker_hub_username = ""
@@ -83,6 +88,7 @@ locals {
     max_on_demand_count = "100"
     min_on_demand_count = "1"
     name = ""
+    nlb_security_group = ""
     node_capacity_type = "on_demand"
     node_disk = "20"
     node_type = "t3.small"

@@ -33,11 +33,11 @@ resource "kubernetes_config_map" "nginx-configuration" {
   }
 
   data = {
-    "proxy-body-size"    = "0"
-    "use-proxy-protocol" = var.proxy_protocol ? "true" : "false"
+    "proxy-body-size"     = "0"
+    "use-proxy-protocol"  = var.proxy_protocol ? "true" : "false"
     "log-format-upstream" = file("${path.module}/log-format.txt")
-    "ssl-ciphers"        = var.ssl_ciphers == "" ? null : var.ssl_ciphers
-    "ssl-protocols"      = var.ssl_protocols == "" ? null : var.ssl_protocols
+    "ssl-ciphers"         = var.ssl_ciphers == "" ? null : var.ssl_ciphers
+    "ssl-protocols"       = var.ssl_protocols == "" ? null : var.ssl_protocols
   }
 
   depends_on = [
@@ -52,9 +52,9 @@ resource "kubernetes_config_map" "nginx-internal-configuration" {
   }
 
   data = {
-    "proxy-body-size"    = "0"
-    "ssl-ciphers"        = var.ssl_ciphers == "" ? null : var.ssl_ciphers
-    "ssl-protocols"      = var.ssl_protocols == "" ? null : var.ssl_protocols
+    "proxy-body-size" = "0"
+    "ssl-ciphers"     = var.ssl_ciphers == "" ? null : var.ssl_ciphers
+    "ssl-protocols"   = var.ssl_protocols == "" ? null : var.ssl_protocols
   }
 }
 
@@ -85,15 +85,21 @@ resource "null_resource" "set_preserve_client_ip_false" {
   ]
 }
 
-resource "kubernetes_service" "router" {
+resource "kubernetes_service" "router_extra" {
+  count = var.deploy_extra_nlb ? 1 : 0
+
   metadata {
     namespace = var.namespace
-    name      = "router"
+    name      = "router-extra"
 
     annotations = {
-      "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout"  = "${var.idle_timeout}"
-      "service.beta.kubernetes.io/aws-load-balancer-type"                     = "nlb"
-      "service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags" = join(",", [for key, value in local.tags : "${key}=${value}"])
+      "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout"             = "${var.idle_timeout}"
+      "service.beta.kubernetes.io/aws-load-balancer-type"                                = "nlb"
+      "service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags"            = join(",", [for key, value in local.tags : "${key}=${value}"])
+      "service.beta.kubernetes.io/aws-load-balancer-scheme"                              = "internet-facing"
+      "service.beta.kubernetes.io/aws-load-balancer-security-groups"                     = var.nlb_security_group
+      "service.beta.kubernetes.io/aws-load-balancer-manage-backend-security-group-rules" = "true"
+      "convox.io/dependency"                                                             = var.lbc_helm_id
     }
   }
 
@@ -118,6 +124,59 @@ resource "kubernetes_service" "router" {
     }
 
     selector = module.nginx.selector
+
+    load_balancer_class = "service.k8s.aws/nlb"
+  }
+
+  lifecycle {
+    ignore_changes = [spec[0].load_balancer_class]
+  }
+}
+
+
+resource "kubernetes_service" "router" {
+  metadata {
+    namespace = var.namespace
+    name      = "router"
+
+    annotations = {
+      "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout"             = "${var.idle_timeout}"
+      "service.beta.kubernetes.io/aws-load-balancer-type"                                = "nlb"
+      "service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags"            = join(",", [for key, value in local.tags : "${key}=${value}"])
+      "service.beta.kubernetes.io/aws-load-balancer-scheme"                              = "internet-facing"
+      "service.beta.kubernetes.io/aws-load-balancer-security-groups"                     = var.nlb_security_group
+      "service.beta.kubernetes.io/aws-load-balancer-manage-backend-security-group-rules" = "true"
+      "convox.io/dependency"                                                             = var.lbc_helm_id
+    }
+  }
+
+  spec {
+    external_traffic_policy = "Cluster"
+    type                    = "LoadBalancer"
+
+    load_balancer_source_ranges = var.whitelist
+
+    port {
+      name        = "http"
+      port        = 80
+      protocol    = "TCP"
+      target_port = 80
+    }
+
+    port {
+      name        = "https"
+      port        = 443
+      protocol    = "TCP"
+      target_port = 443
+    }
+
+    selector = module.nginx.selector
+
+    load_balancer_class = "service.k8s.aws/nlb"
+  }
+
+  lifecycle {
+    ignore_changes = [spec[0].load_balancer_class]
   }
 }
 
@@ -132,10 +191,13 @@ resource "kubernetes_service" "router-internal" {
     name      = "router-internal"
 
     annotations = {
-      "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout"  = "${var.idle_timeout}"
-      "service.beta.kubernetes.io/aws-load-balancer-type"                     = "nlb"
-      "service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags" = join(",", [for key, value in local.tags : "${key}=${value}"])
-      "service.beta.kubernetes.io/aws-load-balancer-internal"                 = "true"
+      "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout"             = "${var.idle_timeout}"
+      "service.beta.kubernetes.io/aws-load-balancer-type"                                = "nlb"
+      "service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags"            = join(",", [for key, value in local.tags : "${key}=${value}"])
+      "service.beta.kubernetes.io/aws-load-balancer-internal"                            = "true"
+      "service.beta.kubernetes.io/aws-load-balancer-scheme"                              = "internal"
+      "service.beta.kubernetes.io/aws-load-balancer-manage-backend-security-group-rules" = "true"
+      "convox.io/dependency"                                                             = var.lbc_helm_id
     }
   }
 
@@ -158,6 +220,12 @@ resource "kubernetes_service" "router-internal" {
     }
 
     selector = module.nginx.selector-internal
+
+    load_balancer_class = "service.k8s.aws/nlb"
+  }
+
+  lifecycle {
+    ignore_changes = [spec[0].load_balancer_class]
   }
 }
 

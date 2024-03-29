@@ -16,6 +16,16 @@ variable "convox_domain_tls_cert_disable" {
   type    = bool
 }
 
+variable "convox_rack_domain" {
+  default = ""
+  type    = string
+}
+
+variable "deploy_extra_nlb" {
+  default = false
+  type    = bool
+}
+
 variable "docker_hub_username" {
   default = ""
 }
@@ -53,11 +63,21 @@ variable "image" {
   type = string
 }
 
+variable "lbc_helm_id" {
+  default = ""
+  type = string
+}
+
 variable "name" {
   type = string
 }
 
 variable "rack_name" {
+  default = ""
+  type    = string
+}
+
+variable "nlb_security_group" {
   default = ""
   type    = string
 }

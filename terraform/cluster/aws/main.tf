@@ -9,6 +9,19 @@ provider "kubernetes" {
   }
 }
 
+provider "helm" {
+  kubernetes {
+    cluster_ca_certificate = base64decode(aws_eks_cluster.cluster.certificate_authority.0.data)
+    host                   = aws_eks_cluster.cluster.endpoint
+
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      args        = ["eks", "get-token", "--cluster-name", var.name]
+      command     = "aws"
+    }
+  }
+}
+
 locals {
   availability_zones     = var.availability_zones != "" ? compact(split(",", var.availability_zones)) : data.aws_availability_zones.available.names
   network_resource_count = var.high_availability ? 3 : 2
@@ -236,7 +249,7 @@ resource "aws_launch_template" "cluster" {
     http_tokens                 = var.imds_http_tokens
     http_put_response_hop_limit = var.imds_http_hop_limit
     http_endpoint               = "enabled"
-    instance_metadata_tags      = var.imds_tags_enable ? "enabled": "disabled"
+    instance_metadata_tags      = var.imds_tags_enable ? "enabled" : "disabled"
   }
 
   instance_type = split(",", random_id.node_group.keepers.node_type)[0]
@@ -268,7 +281,7 @@ resource "aws_launch_template" "cluster-build" {
     http_tokens                 = var.imds_http_tokens
     http_put_response_hop_limit = var.imds_http_hop_limit
     http_endpoint               = "enabled"
-    instance_metadata_tags      = var.imds_tags_enable ? "enabled": "disabled"
+    instance_metadata_tags      = var.imds_tags_enable ? "enabled" : "disabled"
   }
 
   dynamic "tag_specifications" {
