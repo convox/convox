@@ -16,8 +16,8 @@ import (
 )
 
 func init() {
-	register("resources", "list resources", Resources, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagRack, flagApp},
+	register("resources", "list resources", watch(Resources), stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagRack, flagApp, flagWatchInterval},
 		Validate: stdcli.Args(0),
 	})
 
@@ -69,8 +69,8 @@ func init() {
 		Validate: stdcli.Args(1),
 	})
 
-	register("rack resources", "list resources", RackResources, stdcli.CommandOptions{
-		Flags:     []stdcli.Flag{flagRack},
+	register("rack resources", "list resources", watch(RackResources), stdcli.CommandOptions{
+		Flags:     []stdcli.Flag{flagRack, flagWatchInterval},
 		Invisible: true,
 		Validate:  stdcli.Args(0),
 	})

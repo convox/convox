@@ -6,8 +6,8 @@ import (
 )
 
 func init() {
-	register("registries", "list private registries", Registries, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagRack},
+	register("registries", "list private registries", watch(Registries), stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagRack, flagWatchInterval},
 		Validate: stdcli.Args(0),
 	})
 

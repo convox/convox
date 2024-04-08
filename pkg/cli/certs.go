@@ -15,8 +15,8 @@ import (
 )
 
 func init() {
-	register("certs", "list certificates", Certs, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagRack},
+	register("certs", "list certificates", watch(Certs), stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagRack, flagWatchInterval},
 		Validate: stdcli.Args(0),
 	})
 

@@ -19,8 +19,8 @@ import (
 )
 
 func init() {
-	register("env", "list env vars", Env, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagRack, flagApp},
+	register("env", "list env vars", watch(Env), stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagRack, flagApp, flagWatchInterval},
 		Validate: stdcli.Args(0),
 	})
 

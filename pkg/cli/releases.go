@@ -14,8 +14,8 @@ import (
 )
 
 func init() {
-	register("releases", "list releases for an app", Releases, stdcli.CommandOptions{
-		Flags:    append(stdcli.OptionFlags(structs.ReleaseListOptions{}), flagRack, flagApp),
+	register("releases", "list releases for an app", watch(Releases), stdcli.CommandOptions{
+		Flags:    append(stdcli.OptionFlags(structs.ReleaseListOptions{}), flagRack, flagApp, flagWatchInterval),
 		Validate: stdcli.Args(0),
 	})
 

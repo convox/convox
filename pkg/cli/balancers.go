@@ -6,8 +6,8 @@ import (
 )
 
 func init() {
-	register("balancers", "list balancers for an app", Balancers, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagApp, flagRack},
+	register("balancers", "list balancers for an app", watch(Balancers), stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagApp, flagRack, flagWatchInterval},
 		Validate: stdcli.Args(0),
 	})
 }

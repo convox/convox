@@ -12,7 +12,7 @@ import (
 
 func init() {
 	register("scale", "scale a service", Scale, stdcli.CommandOptions{
-		Flags: append(stdcli.OptionFlags(structs.ServiceUpdateOptions{}), flagApp, flagRack),
+		Flags: append(stdcli.OptionFlags(structs.ServiceUpdateOptions{}), flagApp, flagRack, flagWatchInterval),
 		Usage: "<service>",
 		Validate: func(c *stdcli.Context) error {
 			if c.Value("count") != nil || c.Value("cpu") != nil || c.Value("memory") != nil {
@@ -64,37 +64,39 @@ func Scale(rack sdk.Interface, c *stdcli.Context) error {
 		return c.OK()
 	}
 
-	var ss structs.Services
-	running := map[string]int{}
+	return watch(func(r sdk.Interface, c *stdcli.Context) error {
+		var ss structs.Services
+		running := map[string]int{}
 
-	if s.Version < "20180708231844" {
-		ss, err = rack.FormationGet(app(c))
+		if s.Version < "20180708231844" {
+			ss, err = rack.FormationGet(app(c))
+			if err != nil {
+				return err
+			}
+		} else {
+			ss, err = rack.ServiceList(app(c))
+			if err != nil {
+				return err
+			}
+		}
+
+		sort.Slice(ss, func(i, j int) bool { return ss[i].Name < ss[j].Name })
+
+		ps, err := rack.ProcessList(app(c), structs.ProcessListOptions{})
 		if err != nil {
 			return err
 		}
-	} else {
-		ss, err = rack.ServiceList(app(c))
-		if err != nil {
-			return err
+
+		for _, p := range ps {
+			running[p.Name] += 1
 		}
-	}
 
-	sort.Slice(ss, func(i, j int) bool { return ss[i].Name < ss[j].Name })
+		t := c.Table("SERVICE", "DESIRED", "RUNNING", "CPU", "MEMORY")
 
-	ps, err := rack.ProcessList(app(c), structs.ProcessListOptions{})
-	if err != nil {
-		return err
-	}
+		for _, s := range ss {
+			t.AddRow(s.Name, fmt.Sprintf("%d", s.Count), fmt.Sprintf("%d", running[s.Name]), fmt.Sprintf("%d", s.Cpu), fmt.Sprintf("%d", s.Memory))
+		}
 
-	for _, p := range ps {
-		running[p.Name] += 1
-	}
-
-	t := c.Table("SERVICE", "DESIRED", "RUNNING", "CPU", "MEMORY")
-
-	for _, s := range ss {
-		t.AddRow(s.Name, fmt.Sprintf("%d", s.Count), fmt.Sprintf("%d", running[s.Name]), fmt.Sprintf("%d", s.Cpu), fmt.Sprintf("%d", s.Memory))
-	}
-
-	return t.Print()
+		return t.Print()
+	})(rack, c)
 }
