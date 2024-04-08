@@ -63,6 +63,7 @@ The following environment variables are required:
 | **key_pair_name**        |                        | AWS key pair to use for ssh|
 | **min_on_demand_count**  | **1**                  | When used with `mixed` node capacity type, can set the minimum required number of on demand nodes              |
 | **max_on_demand_count**  | **100**                | When used with `mixed` node capacity type, can set the maximum required number of on demand nodes              |
+| **nlb_security_group**  |                | The ID of the security group to attach with the NLB. By default inbound traffic from any ip is allowed. Be cautious about this parameter, you might lose access to services by using improper security group |
 | **node_capacity_type**   | **on_demand**          | Can be either "on_demand", "spot" or "mixed". Spot will use AWS spot instances for the cluster nodes.  Mixed will create one node group with on demand instances, and the other 2 with spot instances.  Use mixed with the min_on_demand_count and max_on_demand_count parameters to control the minimum acceptable service availability should all spot instances become unavailable.  |
 | **node_disk**            | **20**                 | Node disk size in GB                                                                                           |
 | **node_type**            | **t3.small**           | Node instance type.|
