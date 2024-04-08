@@ -26,8 +26,8 @@ func init() {
 		Validate: stdcli.ArgsMax(1),
 	})
 
-	register("builds", "list builds", Builds, stdcli.CommandOptions{
-		Flags:    append(stdcli.OptionFlags(structs.BuildListOptions{}), flagRack, flagApp),
+	register("builds", "list builds", watch(Builds), stdcli.CommandOptions{
+		Flags:    append(stdcli.OptionFlags(structs.BuildListOptions{}), flagRack, flagApp, flagWatchInterval),
 		Validate: stdcli.Args(0),
 	})
 

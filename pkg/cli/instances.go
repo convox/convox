@@ -20,8 +20,8 @@ var (
 )
 
 func init() {
-	register("instances", "list instances", Instances, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagRack},
+	register("instances", "list instances", watch(Instances), stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagRack, flagWatchInterval},
 		Validate: stdcli.Args(0),
 	})
 

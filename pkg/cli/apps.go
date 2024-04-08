@@ -19,8 +19,8 @@ import (
 )
 
 func init() {
-	register("apps", "list apps", Apps, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagRack},
+	register("apps", "list apps", watch(Apps), stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagRack, flagWatchInterval},
 		Validate: stdcli.Args(0),
 	})
 

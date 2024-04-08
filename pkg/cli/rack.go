@@ -20,8 +20,8 @@ import (
 )
 
 func init() {
-	register("rack", "get information about the rack", Rack, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagRack},
+	register("rack", "get information about the rack", watch(Rack), stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagRack, flagWatchInterval},
 		Validate: stdcli.Args(0),
 	})
 

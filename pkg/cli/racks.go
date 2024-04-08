@@ -7,7 +7,8 @@ import (
 )
 
 func init() {
-	registerWithoutProvider("racks", "list available racks", Racks, stdcli.CommandOptions{
+	registerWithoutProvider("racks", "list available racks", watch(Racks), stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagWatchInterval},
 		Validate: stdcli.Args(0),
 	})
 }
