@@ -173,6 +173,84 @@ func (_m *CloudWatchLogsAPI) CancelExportTaskWithContext(_a0 context.Context, _a
 	return r0, r1
 }
 
+// CreateDelivery provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) CreateDelivery(_a0 *cloudwatchlogs.CreateDeliveryInput) (*cloudwatchlogs.CreateDeliveryOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.CreateDeliveryOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.CreateDeliveryInput) *cloudwatchlogs.CreateDeliveryOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.CreateDeliveryOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.CreateDeliveryInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CreateDeliveryRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) CreateDeliveryRequest(_a0 *cloudwatchlogs.CreateDeliveryInput) (*request.Request, *cloudwatchlogs.CreateDeliveryOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.CreateDeliveryInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.CreateDeliveryOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.CreateDeliveryInput) *cloudwatchlogs.CreateDeliveryOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.CreateDeliveryOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// CreateDeliveryWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) CreateDeliveryWithContext(_a0 context.Context, _a1 *cloudwatchlogs.CreateDeliveryInput, _a2 ...request.Option) (*cloudwatchlogs.CreateDeliveryOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.CreateDeliveryOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.CreateDeliveryInput, ...request.Option) *cloudwatchlogs.CreateDeliveryOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.CreateDeliveryOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.CreateDeliveryInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // CreateExportTask provides a mock function with given fields: _a0
 func (_m *CloudWatchLogsAPI) CreateExportTask(_a0 *cloudwatchlogs.CreateExportTaskInput) (*cloudwatchlogs.CreateExportTaskOutput, error) {
 	ret := _m.Called(_a0)
@@ -243,6 +321,84 @@ func (_m *CloudWatchLogsAPI) CreateExportTaskWithContext(_a0 context.Context, _a
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.CreateExportTaskInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CreateLogAnomalyDetector provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) CreateLogAnomalyDetector(_a0 *cloudwatchlogs.CreateLogAnomalyDetectorInput) (*cloudwatchlogs.CreateLogAnomalyDetectorOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.CreateLogAnomalyDetectorOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.CreateLogAnomalyDetectorInput) *cloudwatchlogs.CreateLogAnomalyDetectorOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.CreateLogAnomalyDetectorOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.CreateLogAnomalyDetectorInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CreateLogAnomalyDetectorRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) CreateLogAnomalyDetectorRequest(_a0 *cloudwatchlogs.CreateLogAnomalyDetectorInput) (*request.Request, *cloudwatchlogs.CreateLogAnomalyDetectorOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.CreateLogAnomalyDetectorInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.CreateLogAnomalyDetectorOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.CreateLogAnomalyDetectorInput) *cloudwatchlogs.CreateLogAnomalyDetectorOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.CreateLogAnomalyDetectorOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// CreateLogAnomalyDetectorWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) CreateLogAnomalyDetectorWithContext(_a0 context.Context, _a1 *cloudwatchlogs.CreateLogAnomalyDetectorInput, _a2 ...request.Option) (*cloudwatchlogs.CreateLogAnomalyDetectorOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.CreateLogAnomalyDetectorOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.CreateLogAnomalyDetectorInput, ...request.Option) *cloudwatchlogs.CreateLogAnomalyDetectorOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.CreateLogAnomalyDetectorOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.CreateLogAnomalyDetectorInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -407,6 +563,474 @@ func (_m *CloudWatchLogsAPI) CreateLogStreamWithContext(_a0 context.Context, _a1
 	return r0, r1
 }
 
+// DeleteAccountPolicy provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) DeleteAccountPolicy(_a0 *cloudwatchlogs.DeleteAccountPolicyInput) (*cloudwatchlogs.DeleteAccountPolicyOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.DeleteAccountPolicyOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.DeleteAccountPolicyInput) *cloudwatchlogs.DeleteAccountPolicyOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.DeleteAccountPolicyOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.DeleteAccountPolicyInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteAccountPolicyRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) DeleteAccountPolicyRequest(_a0 *cloudwatchlogs.DeleteAccountPolicyInput) (*request.Request, *cloudwatchlogs.DeleteAccountPolicyOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.DeleteAccountPolicyInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.DeleteAccountPolicyOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.DeleteAccountPolicyInput) *cloudwatchlogs.DeleteAccountPolicyOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.DeleteAccountPolicyOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DeleteAccountPolicyWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) DeleteAccountPolicyWithContext(_a0 context.Context, _a1 *cloudwatchlogs.DeleteAccountPolicyInput, _a2 ...request.Option) (*cloudwatchlogs.DeleteAccountPolicyOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.DeleteAccountPolicyOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.DeleteAccountPolicyInput, ...request.Option) *cloudwatchlogs.DeleteAccountPolicyOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.DeleteAccountPolicyOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.DeleteAccountPolicyInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteDataProtectionPolicy provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) DeleteDataProtectionPolicy(_a0 *cloudwatchlogs.DeleteDataProtectionPolicyInput) (*cloudwatchlogs.DeleteDataProtectionPolicyOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.DeleteDataProtectionPolicyOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.DeleteDataProtectionPolicyInput) *cloudwatchlogs.DeleteDataProtectionPolicyOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.DeleteDataProtectionPolicyOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.DeleteDataProtectionPolicyInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteDataProtectionPolicyRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) DeleteDataProtectionPolicyRequest(_a0 *cloudwatchlogs.DeleteDataProtectionPolicyInput) (*request.Request, *cloudwatchlogs.DeleteDataProtectionPolicyOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.DeleteDataProtectionPolicyInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.DeleteDataProtectionPolicyOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.DeleteDataProtectionPolicyInput) *cloudwatchlogs.DeleteDataProtectionPolicyOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.DeleteDataProtectionPolicyOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DeleteDataProtectionPolicyWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) DeleteDataProtectionPolicyWithContext(_a0 context.Context, _a1 *cloudwatchlogs.DeleteDataProtectionPolicyInput, _a2 ...request.Option) (*cloudwatchlogs.DeleteDataProtectionPolicyOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.DeleteDataProtectionPolicyOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.DeleteDataProtectionPolicyInput, ...request.Option) *cloudwatchlogs.DeleteDataProtectionPolicyOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.DeleteDataProtectionPolicyOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.DeleteDataProtectionPolicyInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteDelivery provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) DeleteDelivery(_a0 *cloudwatchlogs.DeleteDeliveryInput) (*cloudwatchlogs.DeleteDeliveryOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.DeleteDeliveryOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.DeleteDeliveryInput) *cloudwatchlogs.DeleteDeliveryOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.DeleteDeliveryOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.DeleteDeliveryInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteDeliveryDestination provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) DeleteDeliveryDestination(_a0 *cloudwatchlogs.DeleteDeliveryDestinationInput) (*cloudwatchlogs.DeleteDeliveryDestinationOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.DeleteDeliveryDestinationOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.DeleteDeliveryDestinationInput) *cloudwatchlogs.DeleteDeliveryDestinationOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.DeleteDeliveryDestinationOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.DeleteDeliveryDestinationInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteDeliveryDestinationPolicy provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) DeleteDeliveryDestinationPolicy(_a0 *cloudwatchlogs.DeleteDeliveryDestinationPolicyInput) (*cloudwatchlogs.DeleteDeliveryDestinationPolicyOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.DeleteDeliveryDestinationPolicyOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.DeleteDeliveryDestinationPolicyInput) *cloudwatchlogs.DeleteDeliveryDestinationPolicyOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.DeleteDeliveryDestinationPolicyOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.DeleteDeliveryDestinationPolicyInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteDeliveryDestinationPolicyRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) DeleteDeliveryDestinationPolicyRequest(_a0 *cloudwatchlogs.DeleteDeliveryDestinationPolicyInput) (*request.Request, *cloudwatchlogs.DeleteDeliveryDestinationPolicyOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.DeleteDeliveryDestinationPolicyInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.DeleteDeliveryDestinationPolicyOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.DeleteDeliveryDestinationPolicyInput) *cloudwatchlogs.DeleteDeliveryDestinationPolicyOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.DeleteDeliveryDestinationPolicyOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DeleteDeliveryDestinationPolicyWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) DeleteDeliveryDestinationPolicyWithContext(_a0 context.Context, _a1 *cloudwatchlogs.DeleteDeliveryDestinationPolicyInput, _a2 ...request.Option) (*cloudwatchlogs.DeleteDeliveryDestinationPolicyOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.DeleteDeliveryDestinationPolicyOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.DeleteDeliveryDestinationPolicyInput, ...request.Option) *cloudwatchlogs.DeleteDeliveryDestinationPolicyOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.DeleteDeliveryDestinationPolicyOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.DeleteDeliveryDestinationPolicyInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteDeliveryDestinationRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) DeleteDeliveryDestinationRequest(_a0 *cloudwatchlogs.DeleteDeliveryDestinationInput) (*request.Request, *cloudwatchlogs.DeleteDeliveryDestinationOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.DeleteDeliveryDestinationInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.DeleteDeliveryDestinationOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.DeleteDeliveryDestinationInput) *cloudwatchlogs.DeleteDeliveryDestinationOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.DeleteDeliveryDestinationOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DeleteDeliveryDestinationWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) DeleteDeliveryDestinationWithContext(_a0 context.Context, _a1 *cloudwatchlogs.DeleteDeliveryDestinationInput, _a2 ...request.Option) (*cloudwatchlogs.DeleteDeliveryDestinationOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.DeleteDeliveryDestinationOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.DeleteDeliveryDestinationInput, ...request.Option) *cloudwatchlogs.DeleteDeliveryDestinationOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.DeleteDeliveryDestinationOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.DeleteDeliveryDestinationInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteDeliveryRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) DeleteDeliveryRequest(_a0 *cloudwatchlogs.DeleteDeliveryInput) (*request.Request, *cloudwatchlogs.DeleteDeliveryOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.DeleteDeliveryInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.DeleteDeliveryOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.DeleteDeliveryInput) *cloudwatchlogs.DeleteDeliveryOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.DeleteDeliveryOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DeleteDeliverySource provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) DeleteDeliverySource(_a0 *cloudwatchlogs.DeleteDeliverySourceInput) (*cloudwatchlogs.DeleteDeliverySourceOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.DeleteDeliverySourceOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.DeleteDeliverySourceInput) *cloudwatchlogs.DeleteDeliverySourceOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.DeleteDeliverySourceOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.DeleteDeliverySourceInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteDeliverySourceRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) DeleteDeliverySourceRequest(_a0 *cloudwatchlogs.DeleteDeliverySourceInput) (*request.Request, *cloudwatchlogs.DeleteDeliverySourceOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.DeleteDeliverySourceInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.DeleteDeliverySourceOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.DeleteDeliverySourceInput) *cloudwatchlogs.DeleteDeliverySourceOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.DeleteDeliverySourceOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DeleteDeliverySourceWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) DeleteDeliverySourceWithContext(_a0 context.Context, _a1 *cloudwatchlogs.DeleteDeliverySourceInput, _a2 ...request.Option) (*cloudwatchlogs.DeleteDeliverySourceOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.DeleteDeliverySourceOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.DeleteDeliverySourceInput, ...request.Option) *cloudwatchlogs.DeleteDeliverySourceOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.DeleteDeliverySourceOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.DeleteDeliverySourceInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteDeliveryWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) DeleteDeliveryWithContext(_a0 context.Context, _a1 *cloudwatchlogs.DeleteDeliveryInput, _a2 ...request.Option) (*cloudwatchlogs.DeleteDeliveryOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.DeleteDeliveryOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.DeleteDeliveryInput, ...request.Option) *cloudwatchlogs.DeleteDeliveryOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.DeleteDeliveryOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.DeleteDeliveryInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // DeleteDestination provides a mock function with given fields: _a0
 func (_m *CloudWatchLogsAPI) DeleteDestination(_a0 *cloudwatchlogs.DeleteDestinationInput) (*cloudwatchlogs.DeleteDestinationOutput, error) {
 	ret := _m.Called(_a0)
@@ -477,6 +1101,84 @@ func (_m *CloudWatchLogsAPI) DeleteDestinationWithContext(_a0 context.Context, _
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.DeleteDestinationInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteLogAnomalyDetector provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) DeleteLogAnomalyDetector(_a0 *cloudwatchlogs.DeleteLogAnomalyDetectorInput) (*cloudwatchlogs.DeleteLogAnomalyDetectorOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.DeleteLogAnomalyDetectorOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.DeleteLogAnomalyDetectorInput) *cloudwatchlogs.DeleteLogAnomalyDetectorOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.DeleteLogAnomalyDetectorOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.DeleteLogAnomalyDetectorInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteLogAnomalyDetectorRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) DeleteLogAnomalyDetectorRequest(_a0 *cloudwatchlogs.DeleteLogAnomalyDetectorInput) (*request.Request, *cloudwatchlogs.DeleteLogAnomalyDetectorOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.DeleteLogAnomalyDetectorInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.DeleteLogAnomalyDetectorOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.DeleteLogAnomalyDetectorInput) *cloudwatchlogs.DeleteLogAnomalyDetectorOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.DeleteLogAnomalyDetectorOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DeleteLogAnomalyDetectorWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) DeleteLogAnomalyDetectorWithContext(_a0 context.Context, _a1 *cloudwatchlogs.DeleteLogAnomalyDetectorInput, _a2 ...request.Option) (*cloudwatchlogs.DeleteLogAnomalyDetectorOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.DeleteLogAnomalyDetectorOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.DeleteLogAnomalyDetectorInput, ...request.Option) *cloudwatchlogs.DeleteLogAnomalyDetectorOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.DeleteLogAnomalyDetectorOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.DeleteLogAnomalyDetectorInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -1023,6 +1725,423 @@ func (_m *CloudWatchLogsAPI) DeleteSubscriptionFilterWithContext(_a0 context.Con
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.DeleteSubscriptionFilterInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeAccountPolicies provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) DescribeAccountPolicies(_a0 *cloudwatchlogs.DescribeAccountPoliciesInput) (*cloudwatchlogs.DescribeAccountPoliciesOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.DescribeAccountPoliciesOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.DescribeAccountPoliciesInput) *cloudwatchlogs.DescribeAccountPoliciesOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.DescribeAccountPoliciesOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.DescribeAccountPoliciesInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeAccountPoliciesRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) DescribeAccountPoliciesRequest(_a0 *cloudwatchlogs.DescribeAccountPoliciesInput) (*request.Request, *cloudwatchlogs.DescribeAccountPoliciesOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.DescribeAccountPoliciesInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.DescribeAccountPoliciesOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.DescribeAccountPoliciesInput) *cloudwatchlogs.DescribeAccountPoliciesOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.DescribeAccountPoliciesOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DescribeAccountPoliciesWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) DescribeAccountPoliciesWithContext(_a0 context.Context, _a1 *cloudwatchlogs.DescribeAccountPoliciesInput, _a2 ...request.Option) (*cloudwatchlogs.DescribeAccountPoliciesOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.DescribeAccountPoliciesOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.DescribeAccountPoliciesInput, ...request.Option) *cloudwatchlogs.DescribeAccountPoliciesOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.DescribeAccountPoliciesOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.DescribeAccountPoliciesInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeDeliveries provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) DescribeDeliveries(_a0 *cloudwatchlogs.DescribeDeliveriesInput) (*cloudwatchlogs.DescribeDeliveriesOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.DescribeDeliveriesOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.DescribeDeliveriesInput) *cloudwatchlogs.DescribeDeliveriesOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.DescribeDeliveriesOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.DescribeDeliveriesInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeDeliveriesPages provides a mock function with given fields: _a0, _a1
+func (_m *CloudWatchLogsAPI) DescribeDeliveriesPages(_a0 *cloudwatchlogs.DescribeDeliveriesInput, _a1 func(*cloudwatchlogs.DescribeDeliveriesOutput, bool) bool) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.DescribeDeliveriesInput, func(*cloudwatchlogs.DescribeDeliveriesOutput, bool) bool) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeDeliveriesPagesWithContext provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *CloudWatchLogsAPI) DescribeDeliveriesPagesWithContext(_a0 context.Context, _a1 *cloudwatchlogs.DescribeDeliveriesInput, _a2 func(*cloudwatchlogs.DescribeDeliveriesOutput, bool) bool, _a3 ...request.Option) error {
+	_va := make([]interface{}, len(_a3))
+	for _i := range _a3 {
+		_va[_i] = _a3[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1, _a2)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.DescribeDeliveriesInput, func(*cloudwatchlogs.DescribeDeliveriesOutput, bool) bool, ...request.Option) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeDeliveriesRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) DescribeDeliveriesRequest(_a0 *cloudwatchlogs.DescribeDeliveriesInput) (*request.Request, *cloudwatchlogs.DescribeDeliveriesOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.DescribeDeliveriesInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.DescribeDeliveriesOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.DescribeDeliveriesInput) *cloudwatchlogs.DescribeDeliveriesOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.DescribeDeliveriesOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DescribeDeliveriesWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) DescribeDeliveriesWithContext(_a0 context.Context, _a1 *cloudwatchlogs.DescribeDeliveriesInput, _a2 ...request.Option) (*cloudwatchlogs.DescribeDeliveriesOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.DescribeDeliveriesOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.DescribeDeliveriesInput, ...request.Option) *cloudwatchlogs.DescribeDeliveriesOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.DescribeDeliveriesOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.DescribeDeliveriesInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeDeliveryDestinations provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) DescribeDeliveryDestinations(_a0 *cloudwatchlogs.DescribeDeliveryDestinationsInput) (*cloudwatchlogs.DescribeDeliveryDestinationsOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.DescribeDeliveryDestinationsOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.DescribeDeliveryDestinationsInput) *cloudwatchlogs.DescribeDeliveryDestinationsOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.DescribeDeliveryDestinationsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.DescribeDeliveryDestinationsInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeDeliveryDestinationsPages provides a mock function with given fields: _a0, _a1
+func (_m *CloudWatchLogsAPI) DescribeDeliveryDestinationsPages(_a0 *cloudwatchlogs.DescribeDeliveryDestinationsInput, _a1 func(*cloudwatchlogs.DescribeDeliveryDestinationsOutput, bool) bool) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.DescribeDeliveryDestinationsInput, func(*cloudwatchlogs.DescribeDeliveryDestinationsOutput, bool) bool) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeDeliveryDestinationsPagesWithContext provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *CloudWatchLogsAPI) DescribeDeliveryDestinationsPagesWithContext(_a0 context.Context, _a1 *cloudwatchlogs.DescribeDeliveryDestinationsInput, _a2 func(*cloudwatchlogs.DescribeDeliveryDestinationsOutput, bool) bool, _a3 ...request.Option) error {
+	_va := make([]interface{}, len(_a3))
+	for _i := range _a3 {
+		_va[_i] = _a3[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1, _a2)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.DescribeDeliveryDestinationsInput, func(*cloudwatchlogs.DescribeDeliveryDestinationsOutput, bool) bool, ...request.Option) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeDeliveryDestinationsRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) DescribeDeliveryDestinationsRequest(_a0 *cloudwatchlogs.DescribeDeliveryDestinationsInput) (*request.Request, *cloudwatchlogs.DescribeDeliveryDestinationsOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.DescribeDeliveryDestinationsInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.DescribeDeliveryDestinationsOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.DescribeDeliveryDestinationsInput) *cloudwatchlogs.DescribeDeliveryDestinationsOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.DescribeDeliveryDestinationsOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DescribeDeliveryDestinationsWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) DescribeDeliveryDestinationsWithContext(_a0 context.Context, _a1 *cloudwatchlogs.DescribeDeliveryDestinationsInput, _a2 ...request.Option) (*cloudwatchlogs.DescribeDeliveryDestinationsOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.DescribeDeliveryDestinationsOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.DescribeDeliveryDestinationsInput, ...request.Option) *cloudwatchlogs.DescribeDeliveryDestinationsOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.DescribeDeliveryDestinationsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.DescribeDeliveryDestinationsInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeDeliverySources provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) DescribeDeliverySources(_a0 *cloudwatchlogs.DescribeDeliverySourcesInput) (*cloudwatchlogs.DescribeDeliverySourcesOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.DescribeDeliverySourcesOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.DescribeDeliverySourcesInput) *cloudwatchlogs.DescribeDeliverySourcesOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.DescribeDeliverySourcesOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.DescribeDeliverySourcesInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeDeliverySourcesPages provides a mock function with given fields: _a0, _a1
+func (_m *CloudWatchLogsAPI) DescribeDeliverySourcesPages(_a0 *cloudwatchlogs.DescribeDeliverySourcesInput, _a1 func(*cloudwatchlogs.DescribeDeliverySourcesOutput, bool) bool) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.DescribeDeliverySourcesInput, func(*cloudwatchlogs.DescribeDeliverySourcesOutput, bool) bool) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeDeliverySourcesPagesWithContext provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *CloudWatchLogsAPI) DescribeDeliverySourcesPagesWithContext(_a0 context.Context, _a1 *cloudwatchlogs.DescribeDeliverySourcesInput, _a2 func(*cloudwatchlogs.DescribeDeliverySourcesOutput, bool) bool, _a3 ...request.Option) error {
+	_va := make([]interface{}, len(_a3))
+	for _i := range _a3 {
+		_va[_i] = _a3[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1, _a2)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.DescribeDeliverySourcesInput, func(*cloudwatchlogs.DescribeDeliverySourcesOutput, bool) bool, ...request.Option) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeDeliverySourcesRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) DescribeDeliverySourcesRequest(_a0 *cloudwatchlogs.DescribeDeliverySourcesInput) (*request.Request, *cloudwatchlogs.DescribeDeliverySourcesOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.DescribeDeliverySourcesInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.DescribeDeliverySourcesOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.DescribeDeliverySourcesInput) *cloudwatchlogs.DescribeDeliverySourcesOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.DescribeDeliverySourcesOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DescribeDeliverySourcesWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) DescribeDeliverySourcesWithContext(_a0 context.Context, _a1 *cloudwatchlogs.DescribeDeliverySourcesInput, _a2 ...request.Option) (*cloudwatchlogs.DescribeDeliverySourcesOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.DescribeDeliverySourcesOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.DescribeDeliverySourcesInput, ...request.Option) *cloudwatchlogs.DescribeDeliverySourcesOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.DescribeDeliverySourcesOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.DescribeDeliverySourcesInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -2099,6 +3218,474 @@ func (_m *CloudWatchLogsAPI) FilterLogEventsWithContext(_a0 context.Context, _a1
 	return r0, r1
 }
 
+// GetDataProtectionPolicy provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) GetDataProtectionPolicy(_a0 *cloudwatchlogs.GetDataProtectionPolicyInput) (*cloudwatchlogs.GetDataProtectionPolicyOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.GetDataProtectionPolicyOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.GetDataProtectionPolicyInput) *cloudwatchlogs.GetDataProtectionPolicyOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.GetDataProtectionPolicyOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.GetDataProtectionPolicyInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetDataProtectionPolicyRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) GetDataProtectionPolicyRequest(_a0 *cloudwatchlogs.GetDataProtectionPolicyInput) (*request.Request, *cloudwatchlogs.GetDataProtectionPolicyOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.GetDataProtectionPolicyInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.GetDataProtectionPolicyOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.GetDataProtectionPolicyInput) *cloudwatchlogs.GetDataProtectionPolicyOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.GetDataProtectionPolicyOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// GetDataProtectionPolicyWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) GetDataProtectionPolicyWithContext(_a0 context.Context, _a1 *cloudwatchlogs.GetDataProtectionPolicyInput, _a2 ...request.Option) (*cloudwatchlogs.GetDataProtectionPolicyOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.GetDataProtectionPolicyOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.GetDataProtectionPolicyInput, ...request.Option) *cloudwatchlogs.GetDataProtectionPolicyOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.GetDataProtectionPolicyOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.GetDataProtectionPolicyInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetDelivery provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) GetDelivery(_a0 *cloudwatchlogs.GetDeliveryInput) (*cloudwatchlogs.GetDeliveryOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.GetDeliveryOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.GetDeliveryInput) *cloudwatchlogs.GetDeliveryOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.GetDeliveryOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.GetDeliveryInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetDeliveryDestination provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) GetDeliveryDestination(_a0 *cloudwatchlogs.GetDeliveryDestinationInput) (*cloudwatchlogs.GetDeliveryDestinationOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.GetDeliveryDestinationOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.GetDeliveryDestinationInput) *cloudwatchlogs.GetDeliveryDestinationOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.GetDeliveryDestinationOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.GetDeliveryDestinationInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetDeliveryDestinationPolicy provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) GetDeliveryDestinationPolicy(_a0 *cloudwatchlogs.GetDeliveryDestinationPolicyInput) (*cloudwatchlogs.GetDeliveryDestinationPolicyOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.GetDeliveryDestinationPolicyOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.GetDeliveryDestinationPolicyInput) *cloudwatchlogs.GetDeliveryDestinationPolicyOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.GetDeliveryDestinationPolicyOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.GetDeliveryDestinationPolicyInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetDeliveryDestinationPolicyRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) GetDeliveryDestinationPolicyRequest(_a0 *cloudwatchlogs.GetDeliveryDestinationPolicyInput) (*request.Request, *cloudwatchlogs.GetDeliveryDestinationPolicyOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.GetDeliveryDestinationPolicyInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.GetDeliveryDestinationPolicyOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.GetDeliveryDestinationPolicyInput) *cloudwatchlogs.GetDeliveryDestinationPolicyOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.GetDeliveryDestinationPolicyOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// GetDeliveryDestinationPolicyWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) GetDeliveryDestinationPolicyWithContext(_a0 context.Context, _a1 *cloudwatchlogs.GetDeliveryDestinationPolicyInput, _a2 ...request.Option) (*cloudwatchlogs.GetDeliveryDestinationPolicyOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.GetDeliveryDestinationPolicyOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.GetDeliveryDestinationPolicyInput, ...request.Option) *cloudwatchlogs.GetDeliveryDestinationPolicyOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.GetDeliveryDestinationPolicyOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.GetDeliveryDestinationPolicyInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetDeliveryDestinationRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) GetDeliveryDestinationRequest(_a0 *cloudwatchlogs.GetDeliveryDestinationInput) (*request.Request, *cloudwatchlogs.GetDeliveryDestinationOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.GetDeliveryDestinationInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.GetDeliveryDestinationOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.GetDeliveryDestinationInput) *cloudwatchlogs.GetDeliveryDestinationOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.GetDeliveryDestinationOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// GetDeliveryDestinationWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) GetDeliveryDestinationWithContext(_a0 context.Context, _a1 *cloudwatchlogs.GetDeliveryDestinationInput, _a2 ...request.Option) (*cloudwatchlogs.GetDeliveryDestinationOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.GetDeliveryDestinationOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.GetDeliveryDestinationInput, ...request.Option) *cloudwatchlogs.GetDeliveryDestinationOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.GetDeliveryDestinationOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.GetDeliveryDestinationInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetDeliveryRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) GetDeliveryRequest(_a0 *cloudwatchlogs.GetDeliveryInput) (*request.Request, *cloudwatchlogs.GetDeliveryOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.GetDeliveryInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.GetDeliveryOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.GetDeliveryInput) *cloudwatchlogs.GetDeliveryOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.GetDeliveryOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// GetDeliverySource provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) GetDeliverySource(_a0 *cloudwatchlogs.GetDeliverySourceInput) (*cloudwatchlogs.GetDeliverySourceOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.GetDeliverySourceOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.GetDeliverySourceInput) *cloudwatchlogs.GetDeliverySourceOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.GetDeliverySourceOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.GetDeliverySourceInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetDeliverySourceRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) GetDeliverySourceRequest(_a0 *cloudwatchlogs.GetDeliverySourceInput) (*request.Request, *cloudwatchlogs.GetDeliverySourceOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.GetDeliverySourceInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.GetDeliverySourceOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.GetDeliverySourceInput) *cloudwatchlogs.GetDeliverySourceOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.GetDeliverySourceOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// GetDeliverySourceWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) GetDeliverySourceWithContext(_a0 context.Context, _a1 *cloudwatchlogs.GetDeliverySourceInput, _a2 ...request.Option) (*cloudwatchlogs.GetDeliverySourceOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.GetDeliverySourceOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.GetDeliverySourceInput, ...request.Option) *cloudwatchlogs.GetDeliverySourceOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.GetDeliverySourceOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.GetDeliverySourceInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetDeliveryWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) GetDeliveryWithContext(_a0 context.Context, _a1 *cloudwatchlogs.GetDeliveryInput, _a2 ...request.Option) (*cloudwatchlogs.GetDeliveryOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.GetDeliveryOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.GetDeliveryInput, ...request.Option) *cloudwatchlogs.GetDeliveryOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.GetDeliveryOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.GetDeliveryInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetLogAnomalyDetector provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) GetLogAnomalyDetector(_a0 *cloudwatchlogs.GetLogAnomalyDetectorInput) (*cloudwatchlogs.GetLogAnomalyDetectorOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.GetLogAnomalyDetectorOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.GetLogAnomalyDetectorInput) *cloudwatchlogs.GetLogAnomalyDetectorOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.GetLogAnomalyDetectorOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.GetLogAnomalyDetectorInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetLogAnomalyDetectorRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) GetLogAnomalyDetectorRequest(_a0 *cloudwatchlogs.GetLogAnomalyDetectorInput) (*request.Request, *cloudwatchlogs.GetLogAnomalyDetectorOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.GetLogAnomalyDetectorInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.GetLogAnomalyDetectorOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.GetLogAnomalyDetectorInput) *cloudwatchlogs.GetLogAnomalyDetectorOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.GetLogAnomalyDetectorOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// GetLogAnomalyDetectorWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) GetLogAnomalyDetectorWithContext(_a0 context.Context, _a1 *cloudwatchlogs.GetLogAnomalyDetectorInput, _a2 ...request.Option) (*cloudwatchlogs.GetLogAnomalyDetectorOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.GetLogAnomalyDetectorOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.GetLogAnomalyDetectorInput, ...request.Option) *cloudwatchlogs.GetLogAnomalyDetectorOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.GetLogAnomalyDetectorOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.GetLogAnomalyDetectorInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetLogEvents provides a mock function with given fields: _a0
 func (_m *CloudWatchLogsAPI) GetLogEvents(_a0 *cloudwatchlogs.GetLogEventsInput) (*cloudwatchlogs.GetLogEventsOutput, error) {
 	ret := _m.Called(_a0)
@@ -2446,6 +4033,310 @@ func (_m *CloudWatchLogsAPI) GetQueryResultsWithContext(_a0 context.Context, _a1
 	return r0, r1
 }
 
+// ListAnomalies provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) ListAnomalies(_a0 *cloudwatchlogs.ListAnomaliesInput) (*cloudwatchlogs.ListAnomaliesOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.ListAnomaliesOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.ListAnomaliesInput) *cloudwatchlogs.ListAnomaliesOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.ListAnomaliesOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.ListAnomaliesInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListAnomaliesPages provides a mock function with given fields: _a0, _a1
+func (_m *CloudWatchLogsAPI) ListAnomaliesPages(_a0 *cloudwatchlogs.ListAnomaliesInput, _a1 func(*cloudwatchlogs.ListAnomaliesOutput, bool) bool) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.ListAnomaliesInput, func(*cloudwatchlogs.ListAnomaliesOutput, bool) bool) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ListAnomaliesPagesWithContext provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *CloudWatchLogsAPI) ListAnomaliesPagesWithContext(_a0 context.Context, _a1 *cloudwatchlogs.ListAnomaliesInput, _a2 func(*cloudwatchlogs.ListAnomaliesOutput, bool) bool, _a3 ...request.Option) error {
+	_va := make([]interface{}, len(_a3))
+	for _i := range _a3 {
+		_va[_i] = _a3[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1, _a2)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.ListAnomaliesInput, func(*cloudwatchlogs.ListAnomaliesOutput, bool) bool, ...request.Option) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ListAnomaliesRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) ListAnomaliesRequest(_a0 *cloudwatchlogs.ListAnomaliesInput) (*request.Request, *cloudwatchlogs.ListAnomaliesOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.ListAnomaliesInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.ListAnomaliesOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.ListAnomaliesInput) *cloudwatchlogs.ListAnomaliesOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.ListAnomaliesOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// ListAnomaliesWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) ListAnomaliesWithContext(_a0 context.Context, _a1 *cloudwatchlogs.ListAnomaliesInput, _a2 ...request.Option) (*cloudwatchlogs.ListAnomaliesOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.ListAnomaliesOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.ListAnomaliesInput, ...request.Option) *cloudwatchlogs.ListAnomaliesOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.ListAnomaliesOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.ListAnomaliesInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListLogAnomalyDetectors provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) ListLogAnomalyDetectors(_a0 *cloudwatchlogs.ListLogAnomalyDetectorsInput) (*cloudwatchlogs.ListLogAnomalyDetectorsOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.ListLogAnomalyDetectorsOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.ListLogAnomalyDetectorsInput) *cloudwatchlogs.ListLogAnomalyDetectorsOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.ListLogAnomalyDetectorsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.ListLogAnomalyDetectorsInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListLogAnomalyDetectorsPages provides a mock function with given fields: _a0, _a1
+func (_m *CloudWatchLogsAPI) ListLogAnomalyDetectorsPages(_a0 *cloudwatchlogs.ListLogAnomalyDetectorsInput, _a1 func(*cloudwatchlogs.ListLogAnomalyDetectorsOutput, bool) bool) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.ListLogAnomalyDetectorsInput, func(*cloudwatchlogs.ListLogAnomalyDetectorsOutput, bool) bool) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ListLogAnomalyDetectorsPagesWithContext provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *CloudWatchLogsAPI) ListLogAnomalyDetectorsPagesWithContext(_a0 context.Context, _a1 *cloudwatchlogs.ListLogAnomalyDetectorsInput, _a2 func(*cloudwatchlogs.ListLogAnomalyDetectorsOutput, bool) bool, _a3 ...request.Option) error {
+	_va := make([]interface{}, len(_a3))
+	for _i := range _a3 {
+		_va[_i] = _a3[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1, _a2)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.ListLogAnomalyDetectorsInput, func(*cloudwatchlogs.ListLogAnomalyDetectorsOutput, bool) bool, ...request.Option) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ListLogAnomalyDetectorsRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) ListLogAnomalyDetectorsRequest(_a0 *cloudwatchlogs.ListLogAnomalyDetectorsInput) (*request.Request, *cloudwatchlogs.ListLogAnomalyDetectorsOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.ListLogAnomalyDetectorsInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.ListLogAnomalyDetectorsOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.ListLogAnomalyDetectorsInput) *cloudwatchlogs.ListLogAnomalyDetectorsOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.ListLogAnomalyDetectorsOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// ListLogAnomalyDetectorsWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) ListLogAnomalyDetectorsWithContext(_a0 context.Context, _a1 *cloudwatchlogs.ListLogAnomalyDetectorsInput, _a2 ...request.Option) (*cloudwatchlogs.ListLogAnomalyDetectorsOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.ListLogAnomalyDetectorsOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.ListLogAnomalyDetectorsInput, ...request.Option) *cloudwatchlogs.ListLogAnomalyDetectorsOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.ListLogAnomalyDetectorsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.ListLogAnomalyDetectorsInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListTagsForResource provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) ListTagsForResource(_a0 *cloudwatchlogs.ListTagsForResourceInput) (*cloudwatchlogs.ListTagsForResourceOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.ListTagsForResourceOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.ListTagsForResourceInput) *cloudwatchlogs.ListTagsForResourceOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.ListTagsForResourceOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.ListTagsForResourceInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListTagsForResourceRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) ListTagsForResourceRequest(_a0 *cloudwatchlogs.ListTagsForResourceInput) (*request.Request, *cloudwatchlogs.ListTagsForResourceOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.ListTagsForResourceInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.ListTagsForResourceOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.ListTagsForResourceInput) *cloudwatchlogs.ListTagsForResourceOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.ListTagsForResourceOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// ListTagsForResourceWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) ListTagsForResourceWithContext(_a0 context.Context, _a1 *cloudwatchlogs.ListTagsForResourceInput, _a2 ...request.Option) (*cloudwatchlogs.ListTagsForResourceOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.ListTagsForResourceOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.ListTagsForResourceInput, ...request.Option) *cloudwatchlogs.ListTagsForResourceOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.ListTagsForResourceOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.ListTagsForResourceInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ListTagsLogGroup provides a mock function with given fields: _a0
 func (_m *CloudWatchLogsAPI) ListTagsLogGroup(_a0 *cloudwatchlogs.ListTagsLogGroupInput) (*cloudwatchlogs.ListTagsLogGroupOutput, error) {
 	ret := _m.Called(_a0)
@@ -2516,6 +4407,396 @@ func (_m *CloudWatchLogsAPI) ListTagsLogGroupWithContext(_a0 context.Context, _a
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.ListTagsLogGroupInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// PutAccountPolicy provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) PutAccountPolicy(_a0 *cloudwatchlogs.PutAccountPolicyInput) (*cloudwatchlogs.PutAccountPolicyOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.PutAccountPolicyOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.PutAccountPolicyInput) *cloudwatchlogs.PutAccountPolicyOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.PutAccountPolicyOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.PutAccountPolicyInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// PutAccountPolicyRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) PutAccountPolicyRequest(_a0 *cloudwatchlogs.PutAccountPolicyInput) (*request.Request, *cloudwatchlogs.PutAccountPolicyOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.PutAccountPolicyInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.PutAccountPolicyOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.PutAccountPolicyInput) *cloudwatchlogs.PutAccountPolicyOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.PutAccountPolicyOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// PutAccountPolicyWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) PutAccountPolicyWithContext(_a0 context.Context, _a1 *cloudwatchlogs.PutAccountPolicyInput, _a2 ...request.Option) (*cloudwatchlogs.PutAccountPolicyOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.PutAccountPolicyOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.PutAccountPolicyInput, ...request.Option) *cloudwatchlogs.PutAccountPolicyOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.PutAccountPolicyOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.PutAccountPolicyInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// PutDataProtectionPolicy provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) PutDataProtectionPolicy(_a0 *cloudwatchlogs.PutDataProtectionPolicyInput) (*cloudwatchlogs.PutDataProtectionPolicyOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.PutDataProtectionPolicyOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.PutDataProtectionPolicyInput) *cloudwatchlogs.PutDataProtectionPolicyOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.PutDataProtectionPolicyOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.PutDataProtectionPolicyInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// PutDataProtectionPolicyRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) PutDataProtectionPolicyRequest(_a0 *cloudwatchlogs.PutDataProtectionPolicyInput) (*request.Request, *cloudwatchlogs.PutDataProtectionPolicyOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.PutDataProtectionPolicyInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.PutDataProtectionPolicyOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.PutDataProtectionPolicyInput) *cloudwatchlogs.PutDataProtectionPolicyOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.PutDataProtectionPolicyOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// PutDataProtectionPolicyWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) PutDataProtectionPolicyWithContext(_a0 context.Context, _a1 *cloudwatchlogs.PutDataProtectionPolicyInput, _a2 ...request.Option) (*cloudwatchlogs.PutDataProtectionPolicyOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.PutDataProtectionPolicyOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.PutDataProtectionPolicyInput, ...request.Option) *cloudwatchlogs.PutDataProtectionPolicyOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.PutDataProtectionPolicyOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.PutDataProtectionPolicyInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// PutDeliveryDestination provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) PutDeliveryDestination(_a0 *cloudwatchlogs.PutDeliveryDestinationInput) (*cloudwatchlogs.PutDeliveryDestinationOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.PutDeliveryDestinationOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.PutDeliveryDestinationInput) *cloudwatchlogs.PutDeliveryDestinationOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.PutDeliveryDestinationOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.PutDeliveryDestinationInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// PutDeliveryDestinationPolicy provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) PutDeliveryDestinationPolicy(_a0 *cloudwatchlogs.PutDeliveryDestinationPolicyInput) (*cloudwatchlogs.PutDeliveryDestinationPolicyOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.PutDeliveryDestinationPolicyOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.PutDeliveryDestinationPolicyInput) *cloudwatchlogs.PutDeliveryDestinationPolicyOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.PutDeliveryDestinationPolicyOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.PutDeliveryDestinationPolicyInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// PutDeliveryDestinationPolicyRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) PutDeliveryDestinationPolicyRequest(_a0 *cloudwatchlogs.PutDeliveryDestinationPolicyInput) (*request.Request, *cloudwatchlogs.PutDeliveryDestinationPolicyOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.PutDeliveryDestinationPolicyInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.PutDeliveryDestinationPolicyOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.PutDeliveryDestinationPolicyInput) *cloudwatchlogs.PutDeliveryDestinationPolicyOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.PutDeliveryDestinationPolicyOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// PutDeliveryDestinationPolicyWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) PutDeliveryDestinationPolicyWithContext(_a0 context.Context, _a1 *cloudwatchlogs.PutDeliveryDestinationPolicyInput, _a2 ...request.Option) (*cloudwatchlogs.PutDeliveryDestinationPolicyOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.PutDeliveryDestinationPolicyOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.PutDeliveryDestinationPolicyInput, ...request.Option) *cloudwatchlogs.PutDeliveryDestinationPolicyOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.PutDeliveryDestinationPolicyOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.PutDeliveryDestinationPolicyInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// PutDeliveryDestinationRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) PutDeliveryDestinationRequest(_a0 *cloudwatchlogs.PutDeliveryDestinationInput) (*request.Request, *cloudwatchlogs.PutDeliveryDestinationOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.PutDeliveryDestinationInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.PutDeliveryDestinationOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.PutDeliveryDestinationInput) *cloudwatchlogs.PutDeliveryDestinationOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.PutDeliveryDestinationOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// PutDeliveryDestinationWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) PutDeliveryDestinationWithContext(_a0 context.Context, _a1 *cloudwatchlogs.PutDeliveryDestinationInput, _a2 ...request.Option) (*cloudwatchlogs.PutDeliveryDestinationOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.PutDeliveryDestinationOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.PutDeliveryDestinationInput, ...request.Option) *cloudwatchlogs.PutDeliveryDestinationOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.PutDeliveryDestinationOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.PutDeliveryDestinationInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// PutDeliverySource provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) PutDeliverySource(_a0 *cloudwatchlogs.PutDeliverySourceInput) (*cloudwatchlogs.PutDeliverySourceOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.PutDeliverySourceOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.PutDeliverySourceInput) *cloudwatchlogs.PutDeliverySourceOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.PutDeliverySourceOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.PutDeliverySourceInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// PutDeliverySourceRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) PutDeliverySourceRequest(_a0 *cloudwatchlogs.PutDeliverySourceInput) (*request.Request, *cloudwatchlogs.PutDeliverySourceOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.PutDeliverySourceInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.PutDeliverySourceOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.PutDeliverySourceInput) *cloudwatchlogs.PutDeliverySourceOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.PutDeliverySourceOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// PutDeliverySourceWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) PutDeliverySourceWithContext(_a0 context.Context, _a1 *cloudwatchlogs.PutDeliverySourceInput, _a2 ...request.Option) (*cloudwatchlogs.PutDeliverySourceOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.PutDeliverySourceOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.PutDeliverySourceInput, ...request.Option) *cloudwatchlogs.PutDeliverySourceOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.PutDeliverySourceOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.PutDeliverySourceInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -3148,6 +5429,84 @@ func (_m *CloudWatchLogsAPI) PutSubscriptionFilterWithContext(_a0 context.Contex
 	return r0, r1
 }
 
+// StartLiveTail provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) StartLiveTail(_a0 *cloudwatchlogs.StartLiveTailInput) (*cloudwatchlogs.StartLiveTailOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.StartLiveTailOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.StartLiveTailInput) *cloudwatchlogs.StartLiveTailOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.StartLiveTailOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.StartLiveTailInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// StartLiveTailRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) StartLiveTailRequest(_a0 *cloudwatchlogs.StartLiveTailInput) (*request.Request, *cloudwatchlogs.StartLiveTailOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.StartLiveTailInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.StartLiveTailOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.StartLiveTailInput) *cloudwatchlogs.StartLiveTailOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.StartLiveTailOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// StartLiveTailWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) StartLiveTailWithContext(_a0 context.Context, _a1 *cloudwatchlogs.StartLiveTailInput, _a2 ...request.Option) (*cloudwatchlogs.StartLiveTailOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.StartLiveTailOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.StartLiveTailInput, ...request.Option) *cloudwatchlogs.StartLiveTailOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.StartLiveTailOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.StartLiveTailInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // StartQuery provides a mock function with given fields: _a0
 func (_m *CloudWatchLogsAPI) StartQuery(_a0 *cloudwatchlogs.StartQueryInput) (*cloudwatchlogs.StartQueryOutput, error) {
 	ret := _m.Called(_a0)
@@ -3382,6 +5741,84 @@ func (_m *CloudWatchLogsAPI) TagLogGroupWithContext(_a0 context.Context, _a1 *cl
 	return r0, r1
 }
 
+// TagResource provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) TagResource(_a0 *cloudwatchlogs.TagResourceInput) (*cloudwatchlogs.TagResourceOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.TagResourceOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.TagResourceInput) *cloudwatchlogs.TagResourceOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.TagResourceOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.TagResourceInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// TagResourceRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) TagResourceRequest(_a0 *cloudwatchlogs.TagResourceInput) (*request.Request, *cloudwatchlogs.TagResourceOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.TagResourceInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.TagResourceOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.TagResourceInput) *cloudwatchlogs.TagResourceOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.TagResourceOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// TagResourceWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) TagResourceWithContext(_a0 context.Context, _a1 *cloudwatchlogs.TagResourceInput, _a2 ...request.Option) (*cloudwatchlogs.TagResourceOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.TagResourceOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.TagResourceInput, ...request.Option) *cloudwatchlogs.TagResourceOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.TagResourceOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.TagResourceInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // TestMetricFilter provides a mock function with given fields: _a0
 func (_m *CloudWatchLogsAPI) TestMetricFilter(_a0 *cloudwatchlogs.TestMetricFilterInput) (*cloudwatchlogs.TestMetricFilterOutput, error) {
 	ret := _m.Called(_a0)
@@ -3530,6 +5967,240 @@ func (_m *CloudWatchLogsAPI) UntagLogGroupWithContext(_a0 context.Context, _a1 *
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.UntagLogGroupInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// UntagResource provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) UntagResource(_a0 *cloudwatchlogs.UntagResourceInput) (*cloudwatchlogs.UntagResourceOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.UntagResourceOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.UntagResourceInput) *cloudwatchlogs.UntagResourceOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.UntagResourceOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.UntagResourceInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// UntagResourceRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) UntagResourceRequest(_a0 *cloudwatchlogs.UntagResourceInput) (*request.Request, *cloudwatchlogs.UntagResourceOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.UntagResourceInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.UntagResourceOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.UntagResourceInput) *cloudwatchlogs.UntagResourceOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.UntagResourceOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// UntagResourceWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) UntagResourceWithContext(_a0 context.Context, _a1 *cloudwatchlogs.UntagResourceInput, _a2 ...request.Option) (*cloudwatchlogs.UntagResourceOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.UntagResourceOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.UntagResourceInput, ...request.Option) *cloudwatchlogs.UntagResourceOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.UntagResourceOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.UntagResourceInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// UpdateAnomaly provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) UpdateAnomaly(_a0 *cloudwatchlogs.UpdateAnomalyInput) (*cloudwatchlogs.UpdateAnomalyOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.UpdateAnomalyOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.UpdateAnomalyInput) *cloudwatchlogs.UpdateAnomalyOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.UpdateAnomalyOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.UpdateAnomalyInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// UpdateAnomalyRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) UpdateAnomalyRequest(_a0 *cloudwatchlogs.UpdateAnomalyInput) (*request.Request, *cloudwatchlogs.UpdateAnomalyOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.UpdateAnomalyInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.UpdateAnomalyOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.UpdateAnomalyInput) *cloudwatchlogs.UpdateAnomalyOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.UpdateAnomalyOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// UpdateAnomalyWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) UpdateAnomalyWithContext(_a0 context.Context, _a1 *cloudwatchlogs.UpdateAnomalyInput, _a2 ...request.Option) (*cloudwatchlogs.UpdateAnomalyOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.UpdateAnomalyOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.UpdateAnomalyInput, ...request.Option) *cloudwatchlogs.UpdateAnomalyOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.UpdateAnomalyOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.UpdateAnomalyInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// UpdateLogAnomalyDetector provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) UpdateLogAnomalyDetector(_a0 *cloudwatchlogs.UpdateLogAnomalyDetectorInput) (*cloudwatchlogs.UpdateLogAnomalyDetectorOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudwatchlogs.UpdateLogAnomalyDetectorOutput
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.UpdateLogAnomalyDetectorInput) *cloudwatchlogs.UpdateLogAnomalyDetectorOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.UpdateLogAnomalyDetectorOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.UpdateLogAnomalyDetectorInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// UpdateLogAnomalyDetectorRequest provides a mock function with given fields: _a0
+func (_m *CloudWatchLogsAPI) UpdateLogAnomalyDetectorRequest(_a0 *cloudwatchlogs.UpdateLogAnomalyDetectorInput) (*request.Request, *cloudwatchlogs.UpdateLogAnomalyDetectorOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudwatchlogs.UpdateLogAnomalyDetectorInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudwatchlogs.UpdateLogAnomalyDetectorOutput
+	if rf, ok := ret.Get(1).(func(*cloudwatchlogs.UpdateLogAnomalyDetectorInput) *cloudwatchlogs.UpdateLogAnomalyDetectorOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudwatchlogs.UpdateLogAnomalyDetectorOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// UpdateLogAnomalyDetectorWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudWatchLogsAPI) UpdateLogAnomalyDetectorWithContext(_a0 context.Context, _a1 *cloudwatchlogs.UpdateLogAnomalyDetectorInput, _a2 ...request.Option) (*cloudwatchlogs.UpdateLogAnomalyDetectorOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudwatchlogs.UpdateLogAnomalyDetectorOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.UpdateLogAnomalyDetectorInput, ...request.Option) *cloudwatchlogs.UpdateLogAnomalyDetectorOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.UpdateLogAnomalyDetectorOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.UpdateLogAnomalyDetectorInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)

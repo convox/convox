@@ -44,6 +44,7 @@ type Service struct {
 	Volumes            []string              `yaml:"volumes,omitempty"`
 	VolumeOptions      []VolumeOption        `yaml:"volumeOptions,omitempty"`
 	Whitelist          string                `yaml:"whitelist,omitempty"`
+	AccessControl      AccessControlOptions  `yaml:"accessControl,omitempty"`
 }
 
 type VolumeOption struct {
@@ -375,4 +376,12 @@ func (ss Services) Routable() Services {
 	return ss.Filter(func(s Service) bool {
 		return s.Port.Port > 0
 	})
+}
+
+type AccessControlOptions struct {
+	AWSPodIdentity *AWSPodIdentityOptions `yaml:"awsPodIdentity,omitempty"`
+}
+
+type AWSPodIdentityOptions struct {
+	PolicyArns []string `yaml:"policyArns"`
 }
