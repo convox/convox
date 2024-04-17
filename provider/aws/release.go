@@ -3,6 +3,7 @@ package aws
 import (
 	"crypto/sha256"
 	"fmt"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/eks"
@@ -157,6 +158,8 @@ func (p *Provider) associatePodIdentityIfNotExist(app, service, roleArn string) 
 		if err != nil {
 			return fmt.Errorf("failed to list associated pod identitiy: %s", err)
 		}
+		// wait 90s to sync pod identity association
+		time.Sleep(90 * time.Second)
 	}
 
 	return nil
