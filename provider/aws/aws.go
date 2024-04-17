@@ -13,6 +13,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/aws/aws-sdk-go/service/ecr/ecriface"
+	"github.com/aws/aws-sdk-go/service/eks"
+	"github.com/aws/aws-sdk-go/service/eks/eksiface"
+	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/sqs"
@@ -33,6 +37,8 @@ type Provider struct {
 	CloudFormation cloudformationiface.CloudFormationAPI
 	CloudWatchLogs cloudwatchlogsiface.CloudWatchLogsAPI
 	ECR            ecriface.ECRAPI
+	EKS            eksiface.EKSAPI
+	IAM            iamiface.IAMAPI
 	S3             s3iface.S3API
 	SQS            sqsiface.SQSAPI
 }
@@ -84,6 +90,8 @@ func (p *Provider) initializeAwsServices() error {
 	p.CloudFormation = cloudformation.New(s)
 	p.CloudWatchLogs = cloudwatchlogs.New(s)
 	p.ECR = ecr.New(s)
+	p.IAM = iam.New(s)
+	p.EKS = eks.New(s)
 	p.S3 = s3.New(s)
 	p.SQS = sqs.New(s)
 
