@@ -133,6 +133,13 @@ resource "aws_eks_node_group" "cluster" {
     max_size     = var.node_capacity_type == "MIXED" ? count.index == 0 ? var.max_on_demand_count : 100 : 100
   }
 
+  dynamic "update_config" {
+    for_each = var.node_max_unavailable_percentage > 0 ? [var.node_max_unavailable_percentage] : []
+    content {
+      max_unavailable_percentage = var.node_max_unavailable_percentage
+    }
+  }
+
   lifecycle {
     create_before_destroy = true
     ignore_changes        = [scaling_config[0].desired_size]

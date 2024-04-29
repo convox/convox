@@ -170,6 +170,11 @@ variable "node_disk" {
   default = 20
 }
 
+variable "node_max_unavailable_percentage" {
+  type    = number
+  default = 0
+}
+
 variable "node_type" {
   default = "t3.small"
 }
