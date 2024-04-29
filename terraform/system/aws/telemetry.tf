@@ -38,6 +38,7 @@ locals {
     nlb_security_group = var.nlb_security_group
     node_capacity_type = var.node_capacity_type
     node_disk = var.node_disk
+    node_max_unavailable_percentage = var.node_max_unavailable_percentage
     node_type = var.node_type
     pod_identity_agent_enable = var.pod_identity_agent_enable
     pod_identity_agent_version = var.pod_identity_agent_version
@@ -97,6 +98,7 @@ locals {
     nlb_security_group = ""
     node_capacity_type = "on_demand"
     node_disk = "20"
+    node_max_unavailable_percentage = "0"
     node_type = "t3.small"
     pod_identity_agent_enable = "false"
     pod_identity_agent_version = "v1.2.0-eksbuild.1"
