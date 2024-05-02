@@ -3,7 +3,6 @@ package manifest
 import (
 	"crypto/sha256"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 )
@@ -64,9 +63,6 @@ func (v VolumeOption) Validate() error {
 		return v.EmptyDir.Validate()
 	}
 	if v.AwsEfs != nil {
-		if len(os.Getenv("EFS_FILE_SYSTEM_ID")) <= 2 {
-			return fmt.Errorf("efs csi driver is not enabled but efs volume is specified")
-		}
 		return v.AwsEfs.Validate()
 	}
 	return nil

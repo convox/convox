@@ -567,6 +567,9 @@ func (p *Provider) releaseTemplateTimer(a *structs.App, e structs.Environment, r
 
 func (p *Provider) releaseTemplateEfs(a *structs.App, s manifest.Service) ([]byte, error) {
 	for i := range s.VolumeOptions {
+		if s.VolumeOptions[i].AwsEfs != nil && len(p.EfsFileSystemId) <= 2 {
+			return nil, fmt.Errorf("efs csi driver is not enabled but efs volume is specified")
+		}
 		if err := s.VolumeOptions[i].Validate(); err != nil {
 			return nil, err
 		}
