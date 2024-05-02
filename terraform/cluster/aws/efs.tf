@@ -79,9 +79,9 @@ resource "kubernetes_storage_class_v1" "convox_efs" {
     directoryPerms        = "700"
     gidRangeStart         = "1000"                             # optional
     gidRangeEnd           = "20000"                            # optional
-    basePath              = "/dynamic_provisioning"            # optional
+    basePath              = "/dp"                              # optional
     subPathPattern        = "$${.PVC.namespace}/$${.PVC.name}" # optional
-    ensureUniqueDirectory = "true"                             # optional
+    ensureUniqueDirectory = "false"                            # optional
     reuseAccessPoint      = "false"                            # optional
   }
 }
