@@ -3,8 +3,15 @@ package manifest
 import (
 	"crypto/sha256"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
+)
+
+const (
+	PVCAccessModeReadWriteOnce = "ReadWriteOnce"
+	PVCAccessModeReadOnlyMany  = "ReadOnlyMany"
+	PVCAccessModeReadWriteMany = "ReadWriteMany"
 )
 
 type Service struct {
@@ -49,11 +56,18 @@ type Service struct {
 
 type VolumeOption struct {
 	EmptyDir *VolumeEmptyDir `yaml:"emptyDir,omitempty"`
+	AwsEfs   *VolumeAwsEfs   `yaml:"awsEfs,omitempty"`
 }
 
 func (v VolumeOption) Validate() error {
 	if v.EmptyDir != nil {
 		return v.EmptyDir.Validate()
+	}
+	if v.AwsEfs != nil {
+		if len(os.Getenv("EFS_FILE_SYSTEM_ID")) <= 2 {
+			return fmt.Errorf("efs csi driver is not enabled but efs volume is specified")
+		}
+		return v.AwsEfs.Validate()
 	}
 	return nil
 }
@@ -75,6 +89,33 @@ func (v VolumeEmptyDir) Validate() error {
 		if v.Medium != "Memory" {
 			return fmt.Errorf("emptyDir.medium's allowed values: Memory")
 		}
+	}
+	return nil
+}
+
+type VolumeAwsEfs struct {
+	Id string `yaml:"id"`
+
+	AccessMode string `yaml:"accessMode,omitempty"`
+	MountPath  string `yaml:"mountPath"`
+}
+
+func (v VolumeAwsEfs) Validate() error {
+	if v.Id == "" {
+		return fmt.Errorf("awsEfs.id is required")
+	}
+	if v.MountPath == "" {
+		return fmt.Errorf("awsEfs.mountPath is required")
+	}
+
+	allowedModes := []string{
+		PVCAccessModeReadOnlyMany,
+		PVCAccessModeReadWriteMany,
+		PVCAccessModeReadWriteOnce,
+	}
+
+	if !containsInStringSlice(allowedModes, v.AccessMode) {
+		return fmt.Errorf("awsEfs.accessMode must be one of these values: %s", strings.Join(allowedModes, ", "))
 	}
 	return nil
 }

@@ -48,3 +48,7 @@ output "eks_addons" {
 output "lbc_helm_id" {
   value = helm_release.aws_lbc.id
 }
+
+output "efs_file_system_id" {
+  value = var.efs_csi_driver_enable ? aws_efs_file_system.convox_efs[0].id : ""
+}

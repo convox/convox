@@ -43,6 +43,10 @@ variable "ebs_csi_driver_name" {
   type = string
 }
 
+variable "efs_file_system_id" {
+  type = string
+}
+
 // for eks addons dependency
 variable "eks_addons" {}
 
@@ -65,7 +69,7 @@ variable "image" {
 
 variable "lbc_helm_id" {
   default = ""
-  type = string
+  type    = string
 }
 
 variable "name" {

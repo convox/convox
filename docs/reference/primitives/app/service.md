@@ -366,6 +366,7 @@ services:
 | Attribute  | Type    | Default | Description                                                                          |
 | ---------- | ------- | ------- | ------------------------------------------------------------------------------------ |
 | **emptyDir** | map |     | Configuration for [emptyDir](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir) volume |
+| **awsEfs** | map |     | Configuration for AWS Efs volume. To use this you have to enable efs csi driver in the rack |
 
 &nbsp;
 
@@ -389,6 +390,31 @@ services:
       - emptyDir:
           id: "test-vol"
           mountPath: "/my/test/vol"
+```
+
+&nbsp;
+
+### []volumeOptions.awsEfs
+
+| Attribute  | Type    | Default | Description                                                                          |
+| ---------- | ------- | ------- | ------------------------------------------------------------------------------------ |
+| **id** | string |     | Required. Id of the volume. |
+| **mountPath** | string |     | Required. Path in the serive file system to mount the volume |
+| **accessMode** | string |     | Required. Specifies the access mode for the volume. Allowed values are: `ReadWriteOnce`, `ReadOnlyMany`, `ReadWriteMany` |
+
+
+```yaml
+environment:
+  - PORT=3000
+services:
+  web:
+    build: .
+    port: 3000
+    volumeOptions:
+      - awsEfs:
+          id: "efs-1"
+          accessMode: ReadWriteMany
+          mountPath: "/my/data/"
 ```
 
 &nbsp;

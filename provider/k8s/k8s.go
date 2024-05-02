@@ -54,6 +54,7 @@ type Provider struct {
 	Domain                     string
 	DomainInternal             string
 	DynamicClient              dynamic.Interface
+	EfsFileSystemId            string
 	Engine                     Engine
 	Image                      string
 	JwtMngr                    *jwt.JwtManager
@@ -144,6 +145,7 @@ func FromEnv() (*Provider, error) {
 		Domain:                     os.Getenv("DOMAIN"),
 		DomainInternal:             os.Getenv("DOMAIN_INTERNAL"),
 		DynamicClient:              dc,
+		EfsFileSystemId:            os.Getenv("EFS_FILE_SYSTEM_ID"),
 		Image:                      os.Getenv("IMAGE"),
 		MetricScraper:              ms,
 		MetricsClient:              mc,
