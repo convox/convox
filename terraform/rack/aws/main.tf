@@ -31,6 +31,7 @@ module "api" {
   domain                         = try(module.router.endpoint, "") # terraform destroy sometimes failes to resolve the value
   domain_internal                = module.router.endpoint_internal
   disable_image_manifest_cache   = var.disable_image_manifest_cache
+  efs_file_system_id             = var.efs_file_system_id
   high_availability              = var.high_availability
   metrics_scraper_host           = module.metrics.metrics_scraper_host
   image                          = var.image
@@ -78,20 +79,20 @@ module "router" {
   }
 
   convox_rack_domain = var.convox_rack_domain
-  deploy_extra_nlb = var.deploy_extra_nlb
-  high_availability = var.high_availability
-  idle_timeout      = var.idle_timeout
-  internal_router   = var.internal_router
-  name              = var.name
-  namespace         = module.k8s.namespace
+  deploy_extra_nlb   = var.deploy_extra_nlb
+  high_availability  = var.high_availability
+  idle_timeout       = var.idle_timeout
+  internal_router    = var.internal_router
+  name               = var.name
+  namespace          = module.k8s.namespace
   nlb_security_group = var.nlb_security_group
-  oidc_arn          = var.oidc_arn
-  oidc_sub          = var.oidc_sub
-  proxy_protocol    = var.proxy_protocol
-  release           = var.release
-  ssl_ciphers       = var.ssl_ciphers
-  ssl_protocols     = var.ssl_protocols
-  tags              = var.tags
-  whitelist         = var.whitelist
-  lbc_helm_id       = var.lbc_helm_id
+  oidc_arn           = var.oidc_arn
+  oidc_sub           = var.oidc_sub
+  proxy_protocol     = var.proxy_protocol
+  release            = var.release
+  ssl_ciphers        = var.ssl_ciphers
+  ssl_protocols      = var.ssl_protocols
+  tags               = var.tags
+  whitelist          = var.whitelist
+  lbc_helm_id        = var.lbc_helm_id
 }

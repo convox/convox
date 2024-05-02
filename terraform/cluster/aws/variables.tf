@@ -36,6 +36,16 @@ variable "coredns_version" {
   default = null
 }
 
+variable "efs_csi_driver_enable" {
+  type    = bool
+  default = false
+}
+
+variable "efs_csi_driver_version" {
+  type    = string
+  default = "v2.0.1-eksbuild.1"
+}
+
 variable "gpu_type" {
   default = false
 }

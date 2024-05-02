@@ -34,6 +34,10 @@ variable "disable_image_manifest_cache" {
   default = false
 }
 
+variable "efs_file_system_id" {
+  type = string
+}
+
 variable "high_availability" {
   default = true
 }

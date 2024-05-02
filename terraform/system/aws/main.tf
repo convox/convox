@@ -59,6 +59,8 @@ module "cluster" {
   build_node_type            = var.build_node_type != "" ? var.build_node_type : var.node_type
   cidr                       = var.cidr
   coredns_version            = var.coredns_version
+  efs_csi_driver_enable      = var.efs_csi_driver_enable
+  efs_csi_driver_version     = var.efs_csi_driver_version
   gpu_type                   = local.gpu_type
   build_gpu_type             = local.build_gpu_type
   gpu_tag_enable             = var.gpu_tag_enable
@@ -139,6 +141,7 @@ module "rack" {
   docker_hub_password            = var.docker_hub_password
   disable_image_manifest_cache   = var.disable_image_manifest_cache
   eks_addons                     = module.cluster.eks_addons
+  efs_file_system_id             = module.cluster.efs_file_system_id
   high_availability              = var.high_availability
   idle_timeout                   = var.idle_timeout
   internal_router                = var.internal_router

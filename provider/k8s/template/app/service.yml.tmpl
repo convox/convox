@@ -233,6 +233,10 @@ spec:
         - name: ed-{{ .Id }}
           mountPath: {{ .MountPath }}
         {{ end }}
+        {{ with .AwsEfs }}
+        - name: efs-{{ .Id }}
+          mountPath: {{ .MountPath }}
+        {{ end }}
         {{ end }}
       volumes:
       - name: ca
@@ -245,8 +249,7 @@ spec:
         hostPath:
           path: "{{.}}"
         {{ else }}
-        persistentVolumeClaim:
-          claimName: {{ volumeName $.App.Name . }}
+        emptyDir: {}
         {{ end }}
       {{ end }}
       {{ range .Service.VolumeOptions }}
@@ -258,6 +261,11 @@ spec:
         {{ else }}
         emptyDir: {}
         {{ end }}
+      {{ end }}
+      {{ with .AwsEfs }}
+      - name: efs-{{ .Id }}
+        persistentVolumeClaim:
+          claimName: efs-{{$.Service.Name}}-{{.Id}}
       {{ end }}
       {{ end }}
 {{ if not (eq .Service.Scale.Count.Min .Service.Scale.Count.Max) }}

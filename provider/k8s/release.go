@@ -199,12 +199,6 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 			items = append(items, data)
 		}
 
-		// volumes
-		data, err = p.releaseTemplateVolumes(a, m.Services, m.Labels)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-
 		items = append(items, data)
 	}
 
@@ -484,6 +478,15 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 	}
 
 	for i := range ss {
+		// efs
+		vdata, err := p.releaseTemplateEfs(a, ss[i])
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		if vdata != nil {
+			items = append(items, vdata)
+		}
+
 		s := ss[i]
 		min := s.Deployment.Minimum
 		max := s.Deployment.Maximum
@@ -562,33 +565,21 @@ func (p *Provider) releaseTemplateTimer(a *structs.App, e structs.Environment, r
 	return data, nil
 }
 
-func (p *Provider) releaseTemplateVolumes(a *structs.App, ss manifest.Services, lbs manifest.Labels) ([]byte, error) {
-	vsh := map[string]bool{}
-
-	for i := range ss {
-		s := ss[i]
-		for _, v := range p.volumeSources(a.Name, s.Name, s.Volumes) {
-			if !systemVolume(v) {
-				vsh[v] = true
-			}
+func (p *Provider) releaseTemplateEfs(a *structs.App, s manifest.Service) ([]byte, error) {
+	for i := range s.VolumeOptions {
+		if err := s.VolumeOptions[i].Validate(); err != nil {
+			return nil, err
 		}
 	}
 
-	vs := []string{}
-
-	for s := range vsh {
-		vs = append(vs, s)
-	}
-
 	params := map[string]interface{}{
-		"App":       a.Name,
+		"App":       a,
 		"Namespace": p.AppNamespace(a.Name),
 		"Rack":      p.Name,
-		"Volumes":   vs,
-		"Labels":    lbs,
+		"Service":   s,
 	}
 
-	data, err := p.RenderTemplate("app/volumes", params)
+	data, err := p.RenderTemplate("app/efs", params)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

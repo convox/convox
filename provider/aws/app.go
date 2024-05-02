@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecr"
@@ -66,6 +67,10 @@ func (p *Provider) AppDelete(name string) error {
 }
 
 func (p *Provider) cleanUpPodIdentity(app string) error {
+	if os.Getenv("TEST") == "true" {
+		return nil
+	}
+
 	podIdentityResp, err := p.EKS.ListPodIdentityAssociations(&eks.ListPodIdentityAssociationsInput{
 		ClusterName: aws.String(p.Name),
 		Namespace:   aws.String(p.Provider.AppNamespace(app)),

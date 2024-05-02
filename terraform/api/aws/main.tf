@@ -43,6 +43,7 @@ module "k8s" {
     BUCKET                = aws_s3_bucket.storage.id
     CERT_MANAGER          = "true"
     CERT_MANAGER_ROLE_ARN = aws_iam_role.cert-manager.arn
+    EFS_FILE_SYSTEM_ID    = var.efs_file_system_id
     PROVIDER              = "aws"
     RESOLVER              = var.resolver
     ROUTER                = var.router
