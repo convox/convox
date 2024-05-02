@@ -95,6 +95,7 @@ resource "kubernetes_service" "router_extra" {
     name      = "router-extra"
 
     annotations = {
+      "service.beta.kubernetes.io/aws-load-balancer-name"                                = "router-extra-${var.name}"
       "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout"             = "${var.idle_timeout}"
       "service.beta.kubernetes.io/aws-load-balancer-type"                                = "nlb"
       "service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags"            = join(",", [for key, value in local.tags : "${key}=${value}"])
@@ -143,6 +144,7 @@ resource "kubernetes_service" "router" {
     name      = "router"
 
     annotations = {
+      "service.beta.kubernetes.io/aws-load-balancer-name"                                = "router-${var.name}"
       "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout"             = "${var.idle_timeout}"
       "service.beta.kubernetes.io/aws-load-balancer-type"                                = "nlb"
       "service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags"            = join(",", [for key, value in local.tags : "${key}=${value}"])
@@ -195,6 +197,7 @@ resource "kubernetes_service" "router-internal" {
     name      = "router-internal"
 
     annotations = {
+      "service.beta.kubernetes.io/aws-load-balancer-name"                                = "router-internal-${var.name}"
       "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout"             = "${var.idle_timeout}"
       "service.beta.kubernetes.io/aws-load-balancer-type"                                = "nlb"
       "service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags"            = join(",", [for key, value in local.tags : "${key}=${value}"])
