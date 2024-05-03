@@ -29,6 +29,7 @@ To create a Convox account simply signup [here](https://console.convox.com/signu
 
 To install the Convox CLI follow the instructions for your operating system:
 
+For a quick overview of some commonly used CLI commands, you may find this [blog post on common Convox CLI commands](https://www.convox.com/blog/common-convox-cli-commands) helpful.
 
 ### Linux
 
