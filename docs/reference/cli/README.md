@@ -12,32 +12,32 @@ For a quick overview of some commonly used commands, you may find this [blog pos
 
 | Command                          | Description                                                                                     |
 |:---------------------------------|:------------------------------------------------------------------------------------------------|
-| [API](/reference/cli/api)        | Query the Rack API.                                                                             |
-| [Apps](/reference/cli/apps)      | List, create, or delete apps and manage app-specific operations like locks and parameter settings. |
-| [Balancers](/reference/cli/balancers) | List balancers for an app.                                                                      |
-| [Build](/reference/cli/build)    | Create a build.                                                                                 |
-| [Builds](/reference/cli/builds)  | List builds and manage build-specific operations such as importing or exporting builds.         |
-| [Cp](/reference/cli/cp)          | Copy files to and from a running process.                                                       |
-| [Deploy](/reference/cli/deploy)  | Create and promote a build.                                                                     |
-| [Env](/reference/cli/env)        | Manage environment variables for an app.                                                        |
-| [Exec](/reference/cli/exec)      | Execute a command in a running process.                                                         |
-| [Instances](/reference/cli/instances) | List instances or manage specific instance operations.                                         |
-| [Let's Encrypt](/reference/cli/letsencrypt) | Manage Let's Encrypt configurations and certificates.                                          |
-| [Login](/reference/cli/login)    | Authenticate with a rack.                                                                       |
-| [Logs](/reference/cli/logs)      | Get logs for an app.                                                                            |
-| [Proxy](/reference/cli/proxy)    | Proxy a connection inside the rack.                                                             |
-| [Ps](/reference/cli/ps)          | List app processes or manage process-specific operations like stopping processes.               |
-| [Rack](/reference/cli/rack)      | Get information about the rack or manage rack-specific settings and operations.                 |
-| [Racks](/reference/cli/racks)    | List available racks or manage rack installations.                                              |
-| [Registries](/reference/cli/registries) | List and manage private registries.                                                            |
-| [Releases](/reference/cli/releases) | Manage app releases, including listing, promoting, and rolling back releases.                  |
-| [Resources](/reference/cli/resources) | List resources or manage resource-specific operations like imports, exports, and proxies.      |
-| [Restart](/reference/cli/restart) | Restart an app.                                                                                |
-| [Run](/reference/cli/run)        | Execute a command in a new process.                                                             |
-| [Scale](/reference/cli/scale)    | Scale a service.                                                                               |
-| [Services](/reference/cli/services) | List services for an app or restart services.                                                  |
-| [Start](/reference/cli/start)    | Start an application for local development.                                                     |
-| [Test](/reference/cli/test)      | Run tests.                                                                                     |
-| [Update](/reference/cli/update)  | Update the CLI or a rack.                                                                       |
-| [Version](/reference/cli/version)| Display version information.                                                                    |
-| [Workflows](/reference/cli/workflows) | Get list of workflows or run a workflow for a specified branch or commit.                     |
+| [api](/reference/cli/api)        | Query the Rack API.                                                                             |
+| [apps](/reference/cli/apps)      | List, create, or delete apps and manage app-specific operations like locks and parameter settings. |
+| [balancers](/reference/cli/balancers) | List balancers for an app.                                                                      |
+| [build](/reference/cli/build)    | Create a build.                                                                                 |
+| [builds](/reference/cli/builds)  | List builds and manage build-specific operations such as importing or exporting builds.         |
+| [cp](/reference/cli/cp)          | Copy files to and from a running process.                                                       |
+| [deploy](/reference/cli/deploy)  | Create and promote a build.                                                                     |
+| [env](/reference/cli/env)        | Manage environment variables for an app.                                                        |
+| [exec](/reference/cli/exec)      | Execute a command in a running process.                                                         |
+| [instances](/reference/cli/instances) | List instances or manage specific instance operations.                                         |
+| [letsencrypt](/reference/cli/letsencrypt) | Manage Let's Encrypt configurations and certificates.                                          |
+| [login](/reference/cli/login)    | Authenticate with a rack.                                                                       |
+| [logs](/reference/cli/logs)      | Get logs for an app.                                                                            |
+| [proxy](/reference/cli/proxy)    | Proxy a connection inside the rack.                                                             |
+| [ps](/reference/cli/ps)          | List app processes or manage process-specific operations like stopping processes.               |
+| [rack](/reference/cli/rack)      | Get information about the rack or manage rack-specific settings and operations.                 |
+| [racks](/reference/cli/racks)    | List available racks or manage rack installations.                                              |
+| [registries](/reference/cli/registries) | List and manage private registries.                                                            |
+| [releases](/reference/cli/releases) | Manage app releases, including listing, promoting, and rolling back releases.                  |
+| [resources](/reference/cli/resources) | List resources or manage resource-specific operations like imports, exports, and proxies.      |
+| [restart](/reference/cli/restart) | Restart an app.                                                                                |
+| [run](/reference/cli/run)        | Execute a command in a new process.                                                             |
+| [scale](/reference/cli/scale)    | Scale a service.                                                                               |
+| [services](/reference/cli/services) | List services for an app or restart services.                                                  |
+| [start](/reference/cli/start)    | Start an application for local development.                                                     |
+| [test](/reference/cli/test)      | Run tests.                                                                                     |
+| [update](/reference/cli/update)  | Update the CLI or a rack.                                                                       |
+| [version](/reference/cli/version)| Display version information.                                                                    |
+| [workflows](/reference/cli/workflows) | Get list of workflows or run a workflow for a specified branch or commit.                     |
