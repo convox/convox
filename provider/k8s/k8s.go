@@ -66,6 +66,7 @@ type Provider struct {
 	Provider                   string
 	RackName                   string
 	Resolver                   string
+	BuildDisableResolver       bool
 	RestClient                 rest.Interface
 	Router                     string
 	Socket                     string
@@ -134,6 +135,7 @@ func FromEnv() (*Provider, error) {
 		Atom:                       ac,
 		BuildkitEnabled:            "true",
 		BuildNodeEnabled:           os.Getenv("BUILD_NODE_ENABLED"),
+		BuildDisableResolver:       os.Getenv("BUILD_DISABLE_CONVOX_RESOLVER") == "true",
 		CertManager:                os.Getenv("CERT_MANAGER") == "true",
 		CertManagerRoleArn:         os.Getenv("CERT_MANAGER_ROLE_ARN"),
 		Cluster:                    kc,
