@@ -16,7 +16,7 @@ url: /management/cli-rack-management
 
 v3 racks need to be updated through every minor version.  We suggest you [locate the latest minor rack version](https://github.com/convox/convox/releases) that you are updating through and then continuing up versions "step-wise" until you reach your desired version.  This is to ensure no internal rack or cluster services fall out of sync/version with each other.  
 
-E.g. a rack on Version `3.12.x` would need update to the latest `3.13.x` version before proceeding to the latest `3.15.x` version and so on.
+E.g. a rack on Version `3.13.x` would need update to the latest `3.14.x` version before proceeding to the latest `3.15.x` version and so on.
 
 You should always update to the latest patch version of your new version because often times fixes are applied throughout the minor which can cause problems if going to only the base version. Additionally you do not need to be on the highest patch version of your current minor to update your rack to the next minor.
 
