@@ -134,6 +134,7 @@ module "rack" {
     null_resource.wait_for_cluster
   ]
 
+  build_disable_convox_resolver  = var.build_disable_convox_resolver
   build_node_enabled             = var.build_node_enabled
   cluster                        = module.cluster.id
   convox_domain_tls_cert_disable = var.convox_domain_tls_cert_disable
