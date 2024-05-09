@@ -6,6 +6,10 @@ variable "availability_zones" {
   default = ""
 }
 
+variable "build_disable_convox_resolver" {
+  default = false
+}
+
 variable "build_node_enabled" {
   default = false
   type    = bool

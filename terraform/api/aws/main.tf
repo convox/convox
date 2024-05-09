@@ -41,6 +41,7 @@ module "k8s" {
   env = {
     AWS_REGION            = data.aws_region.current.name
     BUCKET                = aws_s3_bucket.storage.id
+    BUILD_DISABLE_CONVOX_RESOLVER = var.build_disable_convox_resolver
     CERT_MANAGER          = "true"
     CERT_MANAGER_ROLE_ARN = aws_iam_role.cert-manager.arn
     PROVIDER              = "aws"

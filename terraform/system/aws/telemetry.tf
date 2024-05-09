@@ -5,6 +5,7 @@ locals {
   telemetry_map = {
     access_log_retention_in_days = var.access_log_retention_in_days
     availability_zones = var.availability_zones
+    build_disable_convox_resolver = var.build_disable_convox_resolver
     build_node_enabled = var.build_node_enabled
     build_node_min_count = var.build_node_min_count
     build_node_type = var.build_node_type
@@ -57,6 +58,7 @@ locals {
   telemetry_default_map = {
     access_log_retention_in_days = "7"
     availability_zones = ""
+    build_disable_convox_resolver = "false"
     build_node_enabled = "false"
     build_node_min_count = "0"
     build_node_type = ""
