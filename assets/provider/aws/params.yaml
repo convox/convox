@@ -9,29 +9,17 @@ Groups:
   - name: Security & Compliance
     order: 2
     params:
+      - name: pod_identity_agent_enable
+        default: "FALSE"
+        type: boolean
+        description: Enables the AWS Pod Identity Agent
       - name: imds_http_tokens
         default: "optional"
         type: string
         description: Determines whether or not the metadata service requires session tokens, also referred to as Instance Metadata Service Version 2 (IMDSv2)
-      - name: ssl_ciphers
-        default: "null"
-        sideNote: "Setting this parameter will override the Convox dynamic default"
-        type: string
-        regex: "^([A-Za-z0-9_+-]+)(:[A-Za-z0-9_+-]+)*$"
-        description: Advanced Configuration - SSL ciphers to use for (nginx)[https://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_ciphers]. They must be separated by colon.
-      - name: ssl_protocols
-        default: "null"
-        sideNote: "Setting this parameter will override the Convox dynamic default"
-        type: string
-        regex: "^(SSLv2|SSLv3|TLSv1|TLSv1\\.1|TLSv1\\.2|TLSv1\\.3)( (SSLv2|SSLv3|TLSv1|TLSv1\\.1|TLSv1\\.2|TLSv1\\.3))*$"
-        description: Advanced Configuration - SSL protocols to use for (nginx)[https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_ssl_protocols] - e.g. TLSv1.2 TLSv1.3 - They must be separated by spaces.
-      - name: convox_domain_tls_cert_disable
-        default: "FALSE"
-        type: boolean
-        description: You should only change this if you have internal domain certificates configured and do not want to generate additional certificates.
       - name: nlb_security_group
         default: "null"
-        sideNote: "Setting this parameter will override the AWS default NLB Security Group"
+        sideNote: "AWS default created unless set"
         type: string
         regex: "^sg-[0-9a-f]{8,17}$"
         description: The ID of the custom security group to attach with the NLB. By default inbound traffic from any IP is allowed. Be cautious about this parameter, you might lose access to services by using improper security group.
@@ -45,28 +33,54 @@ Groups:
         type: string
         regex: "^\\d+h$"
         description: You can change this if the default Let'sEncrypt certificate renewal period (90d) doesn't suit your use-case.
-      - name: pod_identity_agent_enable
+      - name: convox_domain_tls_cert_disable
         default: "FALSE"
         type: boolean
-        description: Enables the AWS Pod Identity Agent
+        description: You should only change this if you have internal domain certificates configured and do not want to generate additional certificates.
+      - name: ssl_ciphers
+        default: "null"
+        sideNote: "Nginx default unless set"
+        type: string
+        regex: "^([A-Za-z0-9_+-]+)(:[A-Za-z0-9_+-]+)*$"
+        description: Advanced Configuration - SSL ciphers to use for Nginx. They must be separated by colon.
+      - name: ssl_protocols
+        default: "null"
+        sideNote: "Nginx default unless set"
+        type: string
+        regex: "^(SSLv2|SSLv3|TLSv1|TLSv1\\.1|TLSv1\\.2|TLSv1\\.3)( (SSLv2|SSLv3|TLSv1|TLSv1\\.1|TLSv1\\.2|TLSv1\\.3))*$"
+        description: Advanced Configuration - SSL protocols to use for Nginx - e.g. TLSv1.2 TLSv1.3 - They must be separated by spaces.
   - name: Networking
     order: 3
     params:
+      - name: internal_router
+        default: "FALSE"
+        type: boolean
+        description: Creates an internal loadbalancer within the VPC that can be used for VPC peering or to access other AWS Services
+      - name: proxy_protocol
+        default: "FALSE"
+        type: boolean
+        description: With this parameter enabled, the client source IP will be available in the request header `x-forwarded-for` key. This is not applicable for internal_router
       - name: cidr
         default: "10.1.0.0/16"
         type: string
         regex: "^((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)\\/[1-9]|[1-2][0-9]|3[0-2]$"
         description: You should consider creating unique CIDR values e.g. 10.2.0.0/16 if you will ever want to peer VPCs
-      - name: internal_router
-        default: "FALSE"
-        type: boolean
-        description: Creates an internal loadbalancer within the VPC that can be used for VPC peering or to access other AWS Services
+      - name: vpc_id
+        default: "null"
+        type: string
+        regex: "^vpc-[0-9a-f]{17}$"
+        description: Used for installing a rack into an existing VPC. Make sure to also set the cidr block and internet_gateway_id parameters
       - name: internet_gateway_id
         default: "null"
         sideNote: "Convox will automatically create and manage an Internet Gateway"
         type: string
         regex: "^igw-[0-9a-f]{17}$"
         description: If you want to install the rack into an existing VPC, enter the name id of the attached internet gateway
+      - name: availability_zones
+        default: "null"
+        type: string
+        regex: "^([a-z]+-[a-z]+-\\d+[a-z])(,[a-z]+-[a-z]+-\\d+[a-z])+$"
+        description: Specify Availability Zones if you would don't want them to be chosen at random from your region. Comma separated list e.g. us-east-1b,us-east-1c,us-east-1d
       - name: private_subnets_ids
         default: "null"
         sideNote: "Convox will automatically create and manage Subnets"
@@ -79,48 +93,18 @@ Groups:
         type: string
         regex: "^subnet-[0-9a-f]{17}$"
         description: Advanced Configuration - this parameter is for edge use cases where cluster needs to be installed into existing subnets. Please see full documentation if you're considering this configuration.
-      - name: vpc_id
-        default: "null"
-        type: string
-        regex: "^vpc-[0-9a-f]{17}$"
-        description: Used for installing a rack into an existing VPC. Make sure to also set the cidr block and internet_gateway_id parameters
-      - name: proxy_protocol
-        default: "FALSE"
-        type: boolean
-        description: With this parameter enabled, the client source IP will be available in the request header `x-forwarded-for` key. This is not applicable for internal_router
-      - name: availability_zones
-        default: "null"
-        type: string
-        regex: "^([a-z]+-[a-z]+-\\d+[a-z])(,[a-z]+-[a-z]+-\\d+[a-z])+$"
-        description: Specify Availability Zones if you would don't want them to be chosen at random from your region. Comma separated list e.g. us-east-1b,us-east-1c,us-east-1d
   - name: Performance & Scaling
     order: 4
     params:
+      - name: high_availability
+        default: "TRUE"
+        type: boolean
+        description: Setting this to false will create a cluster with less redundant resources for cost optimization
       - name: node_type
         default: "t3.small"
         type: string
         regex: "^[a-z]+\\d\\.[a-z0-9]+$"
         description: Node instance type
-      - name: node_disk
-        default: "20"
-        type: integer
-        description: Node disk size in GB
-      - name: node_capacity_type
-        default: "on_demand"
-        type: string
-        description: "on-demand - Will only use on demand instances (Highest availability/Highest Cost)\nspot - Will use AWS spot instances for the cluster nodes.\nmixed - Will create one node group with on demand instances, and the other 2 with spot instances. Use mixed with the min_on_demand_count and max_on_demand_count parameters to control the minimum acceptable service availability should all spot instances become unavailable."
-      - name: min_on_demand_count
-        default: "1"
-        type: integer
-        description: When used with `mixed` node capacity type, can set the minimum required number of on demand nodes
-      - name: max_on_demand_count
-        default: "100"
-        type: integer
-        description: When used with `mixed` node capacity type, can set the maximum required number of on demand nodes
-      - name: high_availability
-        default: "TRUE"
-        type: boolean
-        description: Setting this to false will create a cluster with less redundant resources for cost optimization
       - name: build_node_enabled
         default: "FALSE"
         type: boolean
@@ -135,6 +119,34 @@ Groups:
         default: "0"
         type: integer
         description: By default the build node will scale out after 30min of inactivity. You can set this value to retain a number of build nodes if the node initialization time (45s) is too long for you
+      - name: node_capacity_type
+        default: "on_demand"
+        type: string
+        description: "on-demand - Will only use on demand instances (Highest availability/Highest Cost)\nspot - Will use AWS spot instances for the cluster nodes.\nmixed - Will create one node group with on demand instances, and the other 2 with spot instances. Use mixed with the min_on_demand_count and max_on_demand_count parameters to control the minimum acceptable service availability should all spot instances become unavailable."
+      - name: min_on_demand_count
+        default: "1"
+        type: integer
+        description: When used with `mixed` node capacity type, can set the minimum required number of on demand nodes
+      - name: max_on_demand_count
+        default: "100"
+        type: integer
+        description: When used with `mixed` node capacity type, can set the maximum required number of on demand nodes
+      - name: node_disk
+        default: "20"
+        type: integer
+        description: Node disk size in GB
+      - name: efs_csi_driver_enable
+        default: "FALSE"
+        type: boolean
+        description: Enable the EFS CSI driver to use the AWS EFS volumes.
+      - name: gpu_tag_enable
+        default: "FALSE"
+        type: boolean
+        description: GPU tagging is not available in all AWS Regions
+      - name: idle_timeout
+        default: "3600"
+        type: integer
+        description: Idle timeout value (in seconds) for the Rack Load Balancer
       - name: schedule_rack_scale_down
         optional: true
         default: "null"
@@ -147,14 +159,6 @@ Groups:
         type: string
         regex: "^(\\*|([0-5]?\\d)) (\\*|([01]?\\d|2[0-3])) (\\*|([1-9]|[12]\\d|3[01])) (\\*|([1-9]|1[0-2])) (\\*|[0-6])$"
         description: "Rack scale up schedule is specified by the user following the Unix cron syntax format. Example: \"0 0 * * 0\" - Must also configure schedule_rack_scale_down"
-      - name: idle_timeout
-        default: "3600"
-        type: integer
-        description: Idle timeout value (in seconds) for the Rack Load Balancer
-      - name: gpu_tag_enable
-        default: "FALSE"
-        type: boolean
-        description: GPU tagging is not available in all AWS Regions
   - name: Logging & Monitoring
     order: 5
     params:
@@ -162,13 +166,13 @@ Groups:
         default: "7"
         type: integer
         description: nginx access logs stored in CloudWatch
-      - name: fluentd_disable
-        default: "FALSE"
-        type: boolean
-        description: Disable fluentd if you're using another monitoring solution. This will disable CloudWatch metrics.
       - name: syslog
         default: "null"
         type: string
         regex: "^(tcp|udp|tcp\\+tls|udp\\+tls)://[a-zA-Z\\d.-]+(:\\d+)?$"
         description: Forward logs to a syslog endpoint - e.g. tcp+tls://example.org:1234
         optional: true
+      - name: fluentd_disable
+        default: "FALSE"
+        type: boolean
+        description: Disable fluentd if you're using another monitoring solution. This will disable CloudWatch metrics.
