@@ -3,14 +3,14 @@ Groups:
     order: 1
     params:
       - name: private
-        default: "TRUE"
+        default: "true"
         type: boolean
         description: Put nodes in private subnets behind NAT gateways - security best practice
   - name: Security & Compliance
     order: 2
     params:
       - name: pod_identity_agent_enable
-        default: "FALSE"
+        default: "false"
         type: boolean
         description: Enables the AWS Pod Identity Agent
       - name: imds_http_tokens
@@ -34,7 +34,7 @@ Groups:
         regex: "^\\d+h$"
         description: You can change this if the default Let'sEncrypt certificate renewal period (90d) doesn't suit your use-case.
       - name: convox_domain_tls_cert_disable
-        default: "FALSE"
+        default: "false"
         type: boolean
         description: You should only change this if you have internal domain certificates configured and do not want to generate additional certificates.
       - name: ssl_ciphers
@@ -53,11 +53,11 @@ Groups:
     order: 3
     params:
       - name: internal_router
-        default: "FALSE"
+        default: "false"
         type: boolean
         description: Creates an internal loadbalancer within the VPC that can be used for VPC peering or to access other AWS Services
       - name: proxy_protocol
-        default: "FALSE"
+        default: "false"
         type: boolean
         description: With this parameter enabled, the client source IP will be available in the request header `x-forwarded-for` key. This is not applicable for internal_router
       - name: cidr
@@ -98,7 +98,7 @@ Groups:
     order: 4
     params:
       - name: high_availability
-        default: "TRUE"
+        default: "true"
         type: boolean
         description: Setting this to false will create a cluster with less redundant resources for cost optimization
       - name: node_type
@@ -107,7 +107,7 @@ Groups:
         regex: "^[a-z]+\\d\\.[a-z0-9]+$"
         description: Node instance type
       - name: build_node_enabled
-        default: "FALSE"
+        default: "false"
         type: boolean
         description: The build node alleviates resource constraint and unnecessary scaling during build time.
       - name: build_node_type
@@ -137,11 +137,11 @@ Groups:
         type: integer
         description: Node disk size in GB
       - name: efs_csi_driver_enable
-        default: "FALSE"
+        default: "false"
         type: boolean
         description: Enable the EFS CSI driver to use the AWS EFS volumes.
       - name: gpu_tag_enable
-        default: "FALSE"
+        default: "false"
         type: boolean
         description: GPU tagging is not available in all AWS Regions
       - name: idle_timeout
@@ -177,6 +177,6 @@ Groups:
         description: Forward logs to a syslog endpoint - e.g. tcp+tls://example.org:1234
         optional: true
       - name: fluentd_disable
-        default: "FALSE"
+        default: "false"
         type: boolean
         description: Disable fluentd if you're using another monitoring solution. This will disable CloudWatch metrics.
