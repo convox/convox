@@ -63,7 +63,7 @@ Groups:
       - name: cidr
         default: "10.1.0.0/16"
         type: string
-        regex: "^((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)\\/[1-9]|[1-2][0-9]|3[0-2]$"
+        regex: "^((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)\\/(3[0-2]|[12]?[0-9])$"
         description: You should consider creating unique CIDR values e.g. 10.2.0.0/16 if you will ever want to peer VPCs
       - name: vpc_id
         default: "null"
@@ -72,24 +72,25 @@ Groups:
         description: Used for installing a rack into an existing VPC. Make sure to also set the cidr block and internet_gateway_id parameters
       - name: internet_gateway_id
         default: "null"
-        sideNote: "Convox will automatically create and manage an Internet Gateway"
+        sideNote: "Convox managed if not set"
         type: string
         regex: "^igw-[0-9a-f]{17}$"
         description: If you want to install the rack into an existing VPC, enter the name id of the attached internet gateway
       - name: availability_zones
         default: "null"
+        sideNote: "Convox managed if not set"
         type: string
         regex: "^([a-z]+-[a-z]+-\\d+[a-z])(,[a-z]+-[a-z]+-\\d+[a-z])+$"
         description: Specify Availability Zones if you would don't want them to be chosen at random from your region. Comma separated list e.g. us-east-1b,us-east-1c,us-east-1d
       - name: private_subnets_ids
         default: "null"
-        sideNote: "Convox will automatically create and manage Subnets"
+        sideNote: "Convox managed if not set"
         type: string
         regex: "^subnet-[0-9a-f]{17}$"
         description: Advanced Configuration - this parameter is for edge use cases where cluster needs to be installed into existing subnets. Please see full documentation if you're considering this configuration.
       - name: public_subnets_ids
         default: "null"
-        sideNote: "Convox will automatically create and manage Subnets"
+        sideNote: "Convox managed if not set"
         type: string
         regex: "^subnet-[0-9a-f]{17}$"
         description: Advanced Configuration - this parameter is for edge use cases where cluster needs to be installed into existing subnets. Please see full documentation if you're considering this configuration.
@@ -149,12 +150,14 @@ Groups:
         description: Idle timeout value (in seconds) for the Rack Load Balancer
       - name: schedule_rack_scale_down
         optional: true
+        sideNote: "Not configured by default"
         default: "null"
         type: string
         regex: "^(\\*|([0-5]?\\d)) (\\*|([01]?\\d|2[0-3])) (\\*|([1-9]|[12]\\d|3[01])) (\\*|([1-9]|1[0-2])) (\\*|[0-6])$"
         description: "Rack scale down schedule is specified by the user following the Unix cron syntax format. Example: \"0 18 * * 5\" - Rack API and App's Services will be inaccessible during this time - Must also configure schedule_rack_scale_up"
       - name: schedule_rack_scale_up
         optional: true
+        sideNote: "Not configured by default"
         default: "null"
         type: string
         regex: "^(\\*|([0-5]?\\d)) (\\*|([01]?\\d|2[0-3])) (\\*|([1-9]|[12]\\d|3[01])) (\\*|([1-9]|1[0-2])) (\\*|[0-6])$"
@@ -168,6 +171,7 @@ Groups:
         description: nginx access logs stored in CloudWatch
       - name: syslog
         default: "null"
+        sideNote: "Not forwared by default"
         type: string
         regex: "^(tcp|udp|tcp\\+tls|udp\\+tls)://[a-zA-Z\\d.-]+(:\\d+)?$"
         description: Forward logs to a syslog endpoint - e.g. tcp+tls://example.org:1234
