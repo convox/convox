@@ -30,7 +30,6 @@ _Note on Versioning: In the `major.minor.patch` format, `minor` versions indicat
     Updating rack... OK
 ```
 
-
 ## Managing Parameters
 
 ### Viewing current parameters
@@ -44,30 +43,52 @@ _Note on Versioning: In the `major.minor.patch` format, `minor` versions indicat
     $ convox rack params set node_disk=30 node_type=c5.large
     Setting parameters... OK
 ```
+
 ## Available Parameters
 
 The parameters available for your Rack depend on the underlying cloud provider.
 
 ### Amazon Web Services
 
-| Name                              | Default         |
-|---------------------------------- |-----------------|
-| **cidr**                          | **10.1.0.0/16** |
-| **internet_gateway_id**           |                 |
-| **internal_router**               | **false**       |
-| **node_capacity_type**            | **on_demand**   |
-| **node_disk**                     | **20**          |
-| **node_type**                     | **t3.small**    |
-| **region**                        | **us-east-1**   |
-| **high_availability** *           | **true**        |
-| **schedule_rack_scale_down**      |                 |
-| **schedule_rack_scale_up**        |                 |
-| **proxy_protocol** **             | **false**       |
-| **vpc_id** ***                    |                 |
-| **ssl_ciphers**                   |                 |
-| **ssl_protocols**                 |                 |
-| **tags**                          |                 |
-| **telemetry**                     | **true**        |
+For detailed descriptions and instructions, visit the [AWS Rack Parameters](/configuration/rack-parameters/aws) page.
+
+| Name                                      | Default                |
+|-------------------------------------------|------------------------|
+| **access_log_retention_in_days**          | **7**                  |
+| **availability_zones**                    |                        |
+| **build_node_enabled**                    | **false**              |
+| **build_node_min_count**                  | **0**                  |
+| **build_node_type**                       |                        |
+| **cert_duration**                         | **2160h**              |
+| **cidr**                                  | **10.1.0.0/16**        |
+| **convox_domain_tls_cert_disable**        | **false**              |
+| **efs_csi_driver_enable**                 | **false**              |
+| **fluentd_disable**                       | **false**              |
+| **gpu_tag_enable**                        | **false**              |
+| **high_availability** *                   | **true**               |
+| **idle_timeout**                          | **3600**               |
+| **imds_http_tokens**                      | **optional**           |
+| **internal_router**                       | **false**              |
+| **internet_gateway_id**                   |                        |
+| **max_on_demand_count**                   | **100**                |
+| **min_on_demand_count**                   | **1**                  |
+| **nlb_security_group**                    |                        |
+| **node_capacity_type**                    | **on_demand**          |
+| **node_disk**                             | **20**                 |
+| **node_type**                             | **t3.small**           |
+| **pod_identity_agent_enable**             | **false**              |
+| **private**                               | **true**               |
+| **private_subnets_ids**                   |                        |
+| **proxy_protocol** **                     | **false**              |
+| **public_subnets_ids**                    |                        |
+| **schedule_rack_scale_down**              |                        |
+| **schedule_rack_scale_up**                |                        |
+| **ssl_ciphers**                           |                        |
+| **ssl_protocols**                         |                        |
+| **syslog**                                |                        |
+| **tags**                                  |                        |
+| **telemetry**                             | **true**               |
+| **vpc_id** ***                            |                        |
 
 \* Parameter cannot be changed after rack creation
 
@@ -95,17 +116,17 @@ The parameters available for your Rack depend on the underlying cloud provider.
 
 ### Google Cloud
 
-| Name        | Default         |
-| ----------- | --------------- |
-| **node_type** | **n1-standard-1** |
-| **telemetry** | **true**        |
+| Name                    | Default           |
+|-------------------------|-------------------|
+| **node_type**           | **n1-standard-1** |
+| **telemetry**           | **true**          |
 
 &nbsp;
 
 ### Microsoft Azure
 
-| Name        | Default          |
-| ----------- | ---------------- |
-| **node_type** | **Standard_D3_v3** |
-| **region**    | **eastus**         |
-| **telemetry** | **true**        |
+| Name                    | Default           |
+|-------------------------|-------------------|
+| **node_type**           | **Standard_D3_v3**|
+| **region**              | **eastus**        |
+| **telemetry**           | **true**          |
