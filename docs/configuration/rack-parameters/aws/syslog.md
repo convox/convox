@@ -11,7 +11,7 @@ url: /configuration/rack-parameters/aws/syslog
 The `syslog` parameter specifies the endpoint to forward logs to a syslog server (e.g. **tcp+tls://example.org:1234**).
 
 ## Default Value
-The default value for `syslog` is ``. When set to ``, syslog forwarding is not enabled. This parameter is optional and can be configured based on your specific logging needs.
+The default value for `syslog` is an empty string. When set to an empty string, syslog forwarding is not enabled. This parameter is optional and can be configured based on your specific logging needs.
 
 ## Use Cases
 - **Centralized Logging**: Forward logs to a centralized syslog server for better log management and analysis.

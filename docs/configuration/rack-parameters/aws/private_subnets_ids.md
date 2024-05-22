@@ -11,7 +11,7 @@ url: /configuration/rack-parameters/aws/private_subnets_ids
 The `private_subnets_ids` parameter specifies the IDs of private subnets to use for creating the Rack. This is an advanced configuration parameter intended for edge use cases where the cluster needs to be installed into existing subnets.
 
 ## Default Value
-The default value for `private_subnets_ids` is ``. When the `private_subnets_ids` parameter is set to ``, Convox will automatically create private subnets within the VPC.
+The default value for `private_subnets_ids` is an empty string. When set to an empty string, Convox will automatically create private subnets within the VPC.
 
 ## Use Cases
 - **Existing VPC Integration**: Use this parameter to integrate your Convox rack with existing private subnets in a VPC.

@@ -11,9 +11,9 @@ url: /configuration/rack-parameters/aws/schedule_rack_scale_down
 The `schedule_rack_scale_down` parameter specifies the schedule for scaling down the rack using the Unix cron syntax format. Example: '0 18 * * 5'. The supported cron expression format consists of five fields separated by white spaces: [Minute] [Hour] [Day_of_Month] [Month_of_Year] [Day_of_Week]. More details on the CRON format can be found in [Crontab](http://crontab.org/) and [examples](https://crontab.guru/examples.html). The time is calculated in **UTC**.
 
 ## Default Value
-The default value for `schedule_rack_scale_down` is ``.
+The default value for `schedule_rack_scale_down` is an empty string.
 
-If the `schedule_rack_scale_down` parameter is set to ``, no scale-down schedule is applied by default. This parameter is optional and can be configured based on your specific needs.
+If the `schedule_rack_scale_down` parameter is set to an empty string, no scale-down schedule is applied by default. This parameter is optional and can be configured based on your specific needs.
 
 ## Use Cases
 - **Cost Optimization**: Schedule the rack to scale down during off-peak hours to reduce costs.

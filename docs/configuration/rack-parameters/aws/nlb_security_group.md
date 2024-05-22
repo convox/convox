@@ -8,10 +8,10 @@ url: /configuration/rack-parameters/aws/nlb_security_group
 # nlb_security_group
 
 ## Description
-The `nlb_security_group` parameter specifies the ID of the security group to attach to the Network Load Balancer (NLB). By default, if this parameter is set to ``, Convox will apply the AWS default NLB security group, which allows inbound traffic from any IP address. Use caution when configuring this parameter to avoid losing access to services due to improper security group settings.
+The `nlb_security_group` parameter specifies the ID of the security group to attach to the Network Load Balancer (NLB). Use caution when configuring this parameter to avoid losing access to services due to improper security group settings.
 
 ## Default Value
-The default value for `nlb_security_group` is ``.
+The default value for `nlb_security_group` is an empty string. When set to an empty string, Convox will apply the AWS default NLB security group, which allows inbound traffic from any IP address.
 
 ## Use Cases
 - **Custom Security Group**: Attach a custom security group to the NLB to control inbound and outbound traffic according to your security policies.

@@ -11,7 +11,7 @@ url: /configuration/rack-parameters/aws/internet_gateway_id
 The `internet_gateway_id` parameter is used when you are using an existing VPC for your rack. This parameter allows you to specify the ID of the attached internet gateway.
 
 ## Default Value
-The default value for `internet_gateway_id` is ``. When the `internet_gateway_id` parameter is set to ``, Convox will automatically create an internet gateway if one does not already exist for the VPC.
+The default value for `internet_gateway_id` is an empty string. When set to an empty string, Convox will automatically create an internet gateway if one does not already exist for the VPC.
 
 ## Use Cases
 - **Existing VPC Integration**: Use this parameter to integrate your Convox rack with an existing VPC that has an internet gateway attached.

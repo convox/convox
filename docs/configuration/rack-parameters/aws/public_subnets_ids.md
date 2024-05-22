@@ -11,7 +11,7 @@ url: /configuration/rack-parameters/aws/public_subnets_ids
 The `public_subnets_ids` parameter specifies the IDs of public subnets to use for creating the Rack. This is an advanced configuration parameter intended for edge use cases where the cluster needs to be installed into existing subnets.
 
 ## Default Value
-The default value for `public_subnets_ids` is ``.
+The default value for `public_subnets_ids` is an empty string. When set to an empty string, Convox will automatically create public subnets within the VPC.
 
 ## Use Cases
 - **Existing VPC Integration**: Use this parameter to integrate your Convox rack with existing public subnets in a VPC.

@@ -11,7 +11,7 @@ url: /configuration/rack-parameters/aws/ssl_protocols
 The `ssl_protocols` parameter specifies the SSL protocols to use for [nginx](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_ssl_protocols) (e.g. **TLSv1.2 TLSv1.3**). They must be separated by spaces.
 
 ## Default Value
-The default value for `ssl_protocols` is ``. When set to ``, Nginx will use its default protocols: `TLSv1.2 TLSv1.3`.
+The default value for `ssl_protocols` is an empty string. When set to an empty string, Nginx will use its default protocols: `TLSv1.2 TLSv1.3`.
 
 ## Use Cases
 - **Security Compliance**: Specify custom SSL protocols to comply with organizational security policies or regulatory requirements.

@@ -1,3 +1,4 @@
+
 ---
 title: "ssl_ciphers"
 draft: false
@@ -11,7 +12,17 @@ url: /configuration/rack-parameters/aws/ssl_ciphers
 The `ssl_ciphers` parameter specifies the SSL ciphers to use for [nginx](https://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_ciphers). They must be separated by colons.
 
 ## Default Value
-The default value for `ssl_ciphers` is ``. When set to ``, Nginx will use its default ciphers: `ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384`.
+The default value for `ssl_ciphers` is an empty string. When set to an empty string, Nginx will use its default ciphers: 
+```
+ECDHE-ECDSA-AES128-GCM-SHA256
+ECDHE-RSA-AES128-GCM-SHA256
+ECDHE-ECDSA-AES256-GCM-SHA384
+ECDHE-RSA-AES256-GCM-SHA384
+ECDHE-ECDSA-CHACHA20-POLY1305
+ECDHE-RSA-CHACHA20-POLY1305
+DHE-RSA-AES128-GCM-SHA256
+DHE-RSA-AES256-GCM-SHA384
+```
 
 ## Use Cases
 - **Security Compliance**: Specify custom SSL ciphers to comply with organizational security policies or regulatory requirements.
