@@ -17,17 +17,7 @@ The default value for `cidr` is `10.1.0.0/16`.
 - **Custom IP Range**: Define a specific IP address range to avoid conflicts with existing networks or to meet organizational policies.
 - **Network Segmentation**: Organize your IP addresses to support subnetting and network segmentation within your VPC.
 
-## Managing Parameters
-
-### Viewing Current Parameters
-```html
-$ convox rack params -r rackName
-cidr  10.1.0.0/16
-node_disk  20
-node_type  t3.small
-```
-
-### Setting Parameters
+## Setting Parameters
 To set the `cidr` parameter, use the following command:
 ```html
 $ convox rack params set cidr=10.2.0.0/16 -r rackName

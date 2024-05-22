@@ -17,17 +17,7 @@ The default value for `convox_domain_tls_cert_disable` is `false`.
 - **Custom Domain Certificates**: Use this parameter if you have internal domain certificates configured and do not need additional certificates generated for the `*.convox.cloud` domain.
 - **Security and Compliance**: Managing your own certificates can give you more control over the security and compliance aspects of your deployment.
 
-## Managing Parameters
-
-### Viewing Current Parameters
-```html
-$ convox rack params -r rackName
-convox_domain_tls_cert_disable  false
-node_disk  20
-node_type  t3.small
-```
-
-### Setting Parameters
+## Setting Parameters
 To set the `convox_domain_tls_cert_disable` parameter, use the following command:
 ```html
 $ convox rack params set convox_domain_tls_cert_disable=true -r rackName

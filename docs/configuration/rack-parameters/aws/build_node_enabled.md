@@ -17,17 +17,7 @@ The default value for `build_node_enabled` is `false`.
 - **Isolated Build Environment**: Using a dedicated build node ensures that the resources used during the build process do not affect the application runtime environment.
 - **Optimized Build Performance**: A dedicated build node can be optimized for build tasks, potentially speeding up the build process.
 
-## Managing Parameters
-
-### Viewing Current Parameters
-```html
-$ convox rack params -r rackName
-build_node_enabled  false
-node_disk  20
-node_type  t3.small
-```
-
-### Setting Parameters
+## Setting Parameters
 To enable a dedicated build node, use the following command:
 ```html
 $ convox rack params set build_node_enabled=true -r rackName

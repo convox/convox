@@ -11,21 +11,13 @@ url: /configuration/rack-parameters/aws/ssl_ciphers
 The `ssl_ciphers` parameter specifies the SSL ciphers to use for [nginx](https://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_ciphers). They must be separated by colons.
 
 ## Default Value
-The default value for `ssl_ciphers` is `null`. When set to `null`, Nginx will use its default ciphers: `ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384`.
+The default value for `ssl_ciphers` is ``. When set to ``, Nginx will use its default ciphers: `ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384`.
 
 ## Use Cases
 - **Security Compliance**: Specify custom SSL ciphers to comply with organizational security policies or regulatory requirements.
 - **Performance Optimization**: Choose ciphers that provide the best performance for your specific use case.
 
-## Managing Parameters
-
-### Viewing Current Parameters
-```html
-$ convox rack params -r rackName
-ssl_ciphers  
-```
-
-### Setting Parameters
+## Setting Parameters
 To set the `ssl_ciphers` parameter, use the following command:
 ```html
 $ convox rack params set ssl_ciphers=ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384 -r rackName

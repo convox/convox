@@ -17,17 +17,7 @@ The default value for `max_on_demand_count` is `100`.
 - **Cost Management**: Limit the number of on-demand instances to control costs while still benefiting from the reliability of on-demand nodes.
 - **Resource Allocation**: Ensure that a specific maximum number of on-demand nodes are available for your cluster to meet performance and reliability requirements.
 
-## Managing Parameters
-
-### Viewing Current Parameters
-```html
-$ convox rack params -r rackName
-max_on_demand_count  100
-node_disk  20
-node_type  t3.small
-```
-
-### Setting Parameters
+## Setting Parameters
 To set the `max_on_demand_count` parameter, use the following command:
 ```html
 $ convox rack params set max_on_demand_count=50 -r rackName

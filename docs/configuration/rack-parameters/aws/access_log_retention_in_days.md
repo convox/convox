@@ -17,15 +17,7 @@ The default value for `access_log_retention_in_days` is `7`.
 - **Regulatory Compliance**: Ensuring logs are retained for a specific period to comply with regulatory requirements.
 - **Audit and Monitoring**: Keeping logs available for auditing purposes or for detailed monitoring and troubleshooting over a defined period.
 
-## Managing Parameters
-
-### Viewing Current Parameters
-```html
-$ convox rack params -r rackName
-access_log_retention_in_days  7
-```
-
-### Setting Parameters
+## Setting Parameters
 To set the `access_log_retention_in_days` parameter, use the following command:
 ```html
 $ convox rack params set access_log_retention_in_days=30 -r rackName

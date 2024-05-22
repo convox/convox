@@ -17,17 +17,7 @@ The default value for `high_availability` is `true`.
 - **Cost Optimization**: Reduce infrastructure costs by creating a less redundant cluster.
 - **Resource Management**: Allocate fewer resources for environments where high availability is not critical.
 
-## Managing Parameters
-
-### Viewing Current Parameters
-```html
-$ convox rack params -r rackName
-high_availability  true
-node_disk  20
-node_type  t3.small
-```
-
-### Setting Parameters
+## Setting Parameters
 To disable high availability, use the following command:
 ```html
 $ convox rack params set high_availability=false -r rackName

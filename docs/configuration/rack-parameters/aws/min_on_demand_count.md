@@ -17,17 +17,7 @@ The default value for `min_on_demand_count` is `1`.
 - **Reliability**: Ensure that a minimum number of reliable on-demand instances are always available to handle workloads.
 - **Performance Assurance**: Maintain a specific number of on-demand nodes to meet performance and reliability requirements.
 
-## Managing Parameters
-
-### Viewing Current Parameters
-```html
-$ convox rack params -r rackName
-min_on_demand_count  1
-node_disk  20
-node_type  t3.small
-```
-
-### Setting Parameters
+## Setting Parameters
 To set the `min_on_demand_count` parameter, use the following command:
 ```html
 $ convox rack params set min_on_demand_count=2 -r rackName

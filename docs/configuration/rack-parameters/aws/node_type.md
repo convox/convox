@@ -17,16 +17,7 @@ The default value for `node_type` is `t3.small`.
 - **Resource Allocation**: Choose an instance type that matches the resource requirements of your applications.
 - **Performance Optimization**: Select instance types that provide the necessary compute power and memory to ensure optimal performance.
 
-## Managing Parameters
-
-### Viewing Current Parameters
-```html
-$ convox rack params -r rackName
-node_type  t3.small
-node_disk  20
-```
-
-### Setting Parameters
+## Setting Parameters
 To set the `node_type` parameter, use the following command:
 ```html
 $ convox rack params set node_type=c5.large -r rackName

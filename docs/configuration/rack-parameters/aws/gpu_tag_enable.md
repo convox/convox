@@ -17,17 +17,7 @@ The default value for `gpu_tag_enable` is `false`.
 - **Resource Tracking**: Tagging GPU resources to keep track of GPU usage and costs.
 - **Operational Management**: Simplify the management and organization of GPU instances within your AWS infrastructure.
 
-## Managing Parameters
-
-### Viewing Current Parameters
-```html
-$ convox rack params -r rackName
-gpu_tag_enable  false
-node_disk  20
-node_type  t3.small
-```
-
-### Setting Parameters
+## Setting Parameters
 To enable GPU tagging, use the following command:
 ```html
 $ convox rack params set gpu_tag_enable=true -r rackName

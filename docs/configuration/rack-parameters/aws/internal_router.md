@@ -17,17 +17,7 @@ The default value for `internal_router` is `false`.
 - **Rack-to-Rack Communication**: Facilitates communication between different racks via VPC peering and routing.
 - **Internal AWS Services**: Enables routing and data flows to other AWS services that are within the same VPC or connected through AWS backbone network.
 
-## Managing Parameters
-
-### Viewing Current Parameters
-```html
-$ convox rack params -r rackName
-internal_router  false
-node_disk  20
-node_type  t3.small
-```
-
-### Setting Parameters
+## Setting Parameters
 To enable the internal router, use the following command:
 ```html
 $ convox rack params set internal_router=true -r rackName

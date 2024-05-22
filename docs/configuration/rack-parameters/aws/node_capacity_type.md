@@ -21,17 +21,7 @@ The default value for `node_capacity_type` is `on_demand`.
 - **Cost Optimization**: Use `spot` or `mixed` capacity types to reduce costs by leveraging lower-cost spot instances while maintaining a baseline of reliable on-demand instances.
 - **Reliability and Performance**: Use `on_demand` capacity type for maximum reliability and performance, as on-demand instances are not subject to interruption like spot instances.
 
-## Managing Parameters
-
-### Viewing Current Parameters
-```html
-$ convox rack params -r rackName
-node_capacity_type  on_demand
-node_disk  20
-node_type  t3.small
-```
-
-### Setting Parameters
+## Setting Parameters
 To set the `node_capacity_type` parameter, use the following command:
 ```html
 $ convox rack params set node_capacity_type=mixed -r rackName

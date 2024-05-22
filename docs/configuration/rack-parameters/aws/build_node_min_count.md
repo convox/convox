@@ -17,17 +17,7 @@ The default value for `build_node_min_count` is `0`.
 - **Consistent Build Availability**: Ensures that there are always a minimum number of build nodes available to handle build tasks, reducing wait times and improving efficiency.
 - **Performance Optimization**: Prevents delays in build processes, especially during peak development times, by maintaining a ready pool of build nodes.
 
-## Managing Parameters
-
-### Viewing Current Parameters
-```html
-$ convox rack params -r rackName
-build_node_min_count  0
-node_disk  20
-node_type  t3.small
-```
-
-### Setting Parameters
+## Setting Parameters
 To set the `build_node_min_count` parameter, use the following command:
 ```html
 $ convox rack params set build_node_min_count=2 -r rackName

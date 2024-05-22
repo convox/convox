@@ -19,15 +19,7 @@ The default value for `proxy_protocol` is `false`.
 - **Client IP Tracking**: Enable the Proxy Protocol to track the original client IP address in applications behind a load balancer.
 - **Logging and Analytics**: Improve logging and analytics accuracy by capturing the client's source IP address.
 
-## Managing Parameters
-
-### Viewing Current Parameters
-```html
-$ convox rack params -r rackName
-proxy_protocol  false
-```
-
-### Setting Parameters
+## Setting Parameters
 To set the `proxy_protocol` parameter, use the following command:
 ```html
 $ convox rack params set proxy_protocol=true -r rackName

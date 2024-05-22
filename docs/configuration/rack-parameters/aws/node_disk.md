@@ -17,16 +17,7 @@ The default value for `node_disk` is `20` GB.
 - **Storage Optimization**: Adjust the disk size to meet the storage requirements of your applications and workloads.
 - **Performance Management**: Ensure that each node has sufficient storage to handle its tasks without running into capacity issues.
 
-## Managing Parameters
-
-### Viewing Current Parameters
-```html
-$ convox rack params -r rackName
-node_disk  20
-node_type  t3.small
-```
-
-### Setting Parameters
+## Setting Parameters
 To set the `node_disk` parameter, use the following command:
 ```html
 $ convox rack params set node_disk=50 -r rackName

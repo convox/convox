@@ -17,15 +17,7 @@ The default value for `imds_http_tokens` is `optional`.
 - **Enhanced Security**: Requiring IMDSv2 tokens helps protect against unauthorized metadata access.
 - **Compliance**: Some security frameworks recommend or require the use of IMDSv2 for accessing instance metadata.
 
-## Managing Parameters
-
-### Viewing Current Parameters
-```html
-$ convox rack params -r rackName
-imds_http_tokens  optional
-```
-
-### Setting Parameters
+## Setting Parameters
 To set the `imds_http_tokens` parameter, use the following command:
 ```html
 $ convox rack params set imds_http_tokens=required -r rackName

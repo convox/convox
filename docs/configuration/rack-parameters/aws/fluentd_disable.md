@@ -17,17 +17,7 @@ The default value for `fluentd_disable` is `false`.
 - **Custom Logging Solutions**: Disable Fluentd if you are using an alternative logging solution.
 - **Resource Optimization**: Reduce resource usage by disabling unnecessary components if Fluentd is not required.
 
-## Managing Parameters
-
-### Viewing Current Parameters
-```html
-$ convox rack params -r rackName
-fluentd_disable  false
-node_disk  20
-node_type  t3.small
-```
-
-### Setting Parameters
+## Setting Parameters
 To disable Fluentd, use the following command:
 ```html
 $ convox rack params set fluentd_disable=true -r rackName

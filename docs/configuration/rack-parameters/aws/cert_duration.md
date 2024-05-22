@@ -17,17 +17,7 @@ The default value for `cert_duration` is `2160h` (90 days).
 - **Custom Renewal Periods**: Adjusting the certificate renewal period to align with your security policies or operational requirements.
 - **Compliance**: Ensuring that your SSL/TLS certificates are renewed within a specific timeframe to meet regulatory or compliance standards.
 
-## Managing Parameters
-
-### Viewing Current Parameters
-```html
-$ convox rack params -r rackName
-cert_duration  2160h
-node_disk  20
-node_type  t3.small
-```
-
-### Setting Parameters
+## Setting Parameters
 To set the `cert_duration` parameter, use the following command:
 ```html
 $ convox rack params set cert_duration=4320h -r rackName

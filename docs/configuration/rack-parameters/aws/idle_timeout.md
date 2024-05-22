@@ -17,17 +17,7 @@ The default value for `idle_timeout` is `3600` seconds (1 hour).
 - **Resource Optimization**: Adjusting the idle timeout can help optimize resource usage and performance for your applications.
 - **Application Requirements**: Set an appropriate idle timeout based on your application's connection behavior and requirements.
 
-## Managing Parameters
-
-### Viewing Current Parameters
-```html
-$ convox rack params -r rackName
-idle_timeout  3600
-node_disk  20
-node_type  t3.small
-```
-
-### Setting Parameters
+## Setting Parameters
 To set the `idle_timeout` parameter, use the following command:
 ```html
 $ convox rack params set idle_timeout=600 -r rackName

@@ -11,21 +11,13 @@ url: /configuration/rack-parameters/aws/ssl_protocols
 The `ssl_protocols` parameter specifies the SSL protocols to use for [nginx](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_ssl_protocols) (e.g. **TLSv1.2 TLSv1.3**). They must be separated by spaces.
 
 ## Default Value
-The default value for `ssl_protocols` is `null`. When set to `null`, Nginx will use its default protocols: `TLSv1.2 TLSv1.3`.
+The default value for `ssl_protocols` is ``. When set to ``, Nginx will use its default protocols: `TLSv1.2 TLSv1.3`.
 
 ## Use Cases
 - **Security Compliance**: Specify custom SSL protocols to comply with organizational security policies or regulatory requirements.
 - **Compatibility**: Choose protocols that ensure compatibility with clients and systems interacting with your application.
 
-## Managing Parameters
-
-### Viewing Current Parameters
-```html
-$ convox rack params -r rackName
-ssl_protocols  
-```
-
-### Setting Parameters
+## Setting Parameters
 To set the `ssl_protocols` parameter, use the following command:
 ```html
 $ convox rack params set ssl_protocols='TLSv1.2 TLSv1.3' -r rackName

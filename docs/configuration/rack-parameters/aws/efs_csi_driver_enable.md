@@ -17,17 +17,7 @@ The default value for `efs_csi_driver_enable` is `false`.
 - **Shared Service Volumes**: Enable multiple EC2 instances to access the same file system simultaneously, supporting access modes like ReadWriteOnce (RWO), ReadOnlyMany (ROM), and ReadWriteMany (RWM).
 - **Enhanced Data Storage**: Use AWS EFS for applications requiring shared access to files across distributed instances.
 
-## Managing Parameters
-
-### Viewing Current Parameters
-```html
-$ convox rack params -r rackName
-efs_csi_driver_enable  false
-node_disk  20
-node_type  t3.small
-```
-
-### Setting Parameters
+## Setting Parameters
 To enable the EFS CSI driver, use the following command:
 ```html
 $ convox rack params set efs_csi_driver_enable=true -r rackName

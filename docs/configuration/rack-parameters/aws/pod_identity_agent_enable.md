@@ -17,15 +17,7 @@ The default value for `pod_identity_agent_enable` is `false`.
 - **Granular IAM Policies**: Assign specific IAM roles to pods, ensuring that each pod has only the permissions it needs.
 - **Security Best Practices**: Avoid using static credentials inside pods and leverage IAM roles for security.
 
-## Managing Parameters
-
-### Viewing Current Parameters
-```html
-$ convox rack params -r rackName
-pod_identity_agent_enable  false
-```
-
-### Setting Parameters
+## Setting Parameters
 To enable the AWS Pod Identity Agent, use the following command:
 ```html
 $ convox rack params set pod_identity_agent_enable=true -r rackName
@@ -36,7 +28,7 @@ This command enables the AWS Pod Identity Agent for your rack.
 ## Additional Information
 Enabling the AWS Pod Identity Agent allows your applications running in Kubernetes to securely access AWS services by assuming IAM roles. This setup reduces the need for static AWS credentials within your application code. Ensure that you have configured IAM roles and Kubernetes service accounts properly to take full advantage of this feature.
 
-### How to Use and Test
+### How to Use
 1. Enable the EKS pod identity feature by executing:
    ```html
    convox rack params set pod_identity_agent_enable=true -r rackName

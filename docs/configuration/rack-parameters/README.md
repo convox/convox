@@ -27,11 +27,9 @@ This command sets the specified parameter to the given value.
 
 ## Cloud Providers
 
-| Provider        | Description                                     |
-|:----------------|:------------------------------------------------|
-| [AWS](/configuration/rack-parameters/aws)       | Parameters specific to Amazon Web Services (AWS)    |
-| GCP             | Parameters specific to Google Cloud Platform (GCP) |
-| Azure           | Parameters specific to Microsoft Azure          |
-| Digital Ocean   | Parameters specific to Digital Ocean            |
+- [Amazon Web Services (AWS)](/configuration/rack-parameters/aws)
+- [Google Cloud Platform (GCP)](/configuration/rack-parameters/gcp)
+- [Microsoft Azure](/configuration/rack-parameters/azure)
+- [Digital Ocean](/configuration/rack-parameters/do)
 
 Select your cloud provider to view the available parameters and their configurations.

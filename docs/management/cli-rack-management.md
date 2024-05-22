@@ -102,11 +102,15 @@ For detailed descriptions and instructions, visit the [AWS Rack Parameters](/con
 
 ### Digital Ocean
 
+For detailed descriptions and instructions, visit the [Digital Ocean Rack Parameters](/configuration/rack-parameters/do) page.
+
 | Name                    | Default           |
 |-------------------------|-------------------|
+| **cert_duration**       | **2160h**         |
 | **node_type**           | **s-2vcpu-4gb**   |
 | **region**              | **nyc3**          |
 | **registry_disk**       | **50Gi**          |
+| **syslog**              |                   |
 | **high_availability** * | **true**          |
 | **telemetry**           | **true**          |
 
@@ -114,19 +118,29 @@ For detailed descriptions and instructions, visit the [AWS Rack Parameters](/con
 
 &nbsp;
 
-### Google Cloud
+### Google Cloud Platform
+
+For detailed descriptions and instructions, visit the [Google Cloud Platform Rack Parameters](/configuration/rack-parameters/gcp) page.
 
 | Name                    | Default           |
 |-------------------------|-------------------|
+| **cert_duration**       | **2160h**         |
 | **node_type**           | **n1-standard-1** |
+| **preemptible**         | **true**          |
+| **region**              | **us-east1**      |
+| **syslog**              |                   |
 | **telemetry**           | **true**          |
 
 &nbsp;
 
 ### Microsoft Azure
 
+For detailed descriptions and instructions, visit the [Microsoft Azure Rack Parameters](/configuration/rack-parameters/azure) page.
+
 | Name                    | Default           |
 |-------------------------|-------------------|
+| **cert_duration**       | **2160h**         |
 | **node_type**           | **Standard_D3_v3**|
 | **region**              | **eastus**        |
+| **syslog**              |                   |
 | **telemetry**           | **true**          |
