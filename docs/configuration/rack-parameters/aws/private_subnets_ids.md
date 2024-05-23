@@ -22,7 +22,9 @@ The `private_subnets_ids` parameter must be configured at rack installation. Exa
 | Key                    | Value                                         |
 |------------------------|-----------------------------------------------|
 | `private_subnets_ids`  | `subnet-12345678,subnet-87654321,subnet-11223344` |
+
 <br>
+
 ## Additional Information
 When configuring `private_subnets_ids`, ensure that you also set the [vpc_id](/configuration/rack-parameters/aws/vpc_id) parameter and properly configure the VPC with a NAT gateway and route table. Additionally, configure the [public_subnets_ids](/configuration/rack-parameters/aws/public_subnets_ids) parameter, as the load balancer will use public subnets. For high availability, there should be at least three subnets.
 

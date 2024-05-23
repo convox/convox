@@ -23,8 +23,11 @@ Here are some helpful tutorials to get started with Convox:
 
 ## Create a Free Convox Account
 
-To create a Convox account, simply sign up [here](https://console.convox.com/signup). We recommend using your company email address and your actual company name as the organization name. You can invite your colleagues to the organization later.
+To create a Convox account, simply sign up [here](https://console.convox.com/signup). We recommend using your company or organization's email address.
 
+The first time you log in, you will be prompted to create an Organization. An Organization can have multiple users, such as colleagues or project collaborators, who you can invite to join. You can rename your Organization at any time from the Console Settings page.
+
+![Organization Create](/images/documentation/getting-started/introduction/signup_org.png)
 
 ## Install a Runtime Integration for Your Cloud Provider
 
@@ -93,7 +96,7 @@ Once you have installed the CLI, you can log in to your Convox account by copyin
 
 ![CLI Login Checklist](/images/documentation/getting-started/introduction/cli_checklist.png)
 
-If you ever need to log in to the CLI again, you can generate a new CLI key by going to the [account page](https://console.convox.com/account) and clicking on `Reset CLI Key`, which will generate a new key and login command.
+If you ever need to log in to the CLI again, you can generate a new CLI key by going to the [account page](https://console.convox.com/account) and clicking on reset button, which will generate a new key and login command.
 
 ![CLI Login Account](/images/documentation/getting-started/introduction/cli_account.png)
 
@@ -198,13 +201,13 @@ In your browser, navigate to the hostname shown for the `web` service.
 Edit the file [`app.js`](https://github.com/convox-examples/nodejs/blob/master/app.js) in your local directory and modify the line that says:
 
 ```javascript
-res.end('Hello Convox!\nI\'m: ' ...
+res.end('Hello World!\nI\'m: ' ...
 ```
 
 to instead say:
 
 ```javascript
-res.end('Hello World!\nI\'m: ' ...
+res.end('Hello Convox!\nI\'m: ' ...
 ```
 
 Save the file, then re-deploy the app by running the deploy command again:
@@ -237,6 +240,10 @@ Promoting RSPAOICEBER...
 ...
 ```
 
-Once the rollback is complete, refresh your browser, and you should see the `Hello World!` message has been reverted to `Hello Convox!`.
+Once the rollback is complete, refresh your browser, and you should see the `Hello Convox!` message has been reverted to `Hello World!`.
 
 Hopefully, this small example has given you an idea of how easy and powerful Convox is. As a next step, let's get your first custom app configured and deployed by following the [App Configuration Guide](/tutorials/preparing-an-application).
+
+## Take a Tour of the Convox Console
+
+To get familiar with the Convox Console and some of its additional features, watch our [Convox - Console Tour](https://www.youtube.com/watch?v=p7f_MzAFxSg&t=25s) video on YouTube. This video provides a comprehensive overview of the console, helping you navigate and utilize its various functionalities effectively.
