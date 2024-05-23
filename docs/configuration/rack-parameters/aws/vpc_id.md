@@ -18,12 +18,12 @@ The default value for `vpc_id` is ``. When set to ``, Convox will create a new V
 - **Custom Network Configuration**: Specify an existing VPC to meet specific network requirements and configurations.
 
 ## Setting Parameters
-To set the `vpc_id` parameter, use the following command:
-```html
-$ convox rack params set vpc_id=vpc-12345678 -r rackName
-Setting parameters... OK
-```
-This command sets the VPC ID to the specified value.
+The `vpc_id` parameter must be configured at rack installation. Example:
+| Key                    | Value                                         |
+|------------------------|-----------------------------------------------|
+| `vpc_id`   | `vpc-12345678` |
+
+&nbsp;
 
 ## Additional Information
 When configuring the `vpc_id` parameter, ensure that you also set the [cidr](/configuration/rack-parameters/aws/cidr) block and [internet_gateway_id](/configuration/rack-parameters/aws/internet_gateway_id) parameters. Additionally, configure the [private_subnets_ids](/configuration/rack-parameters/aws/private_subnets_ids) and [public_subnets_ids](/configuration/rack-parameters/aws/public_subnets_ids) parameters for subnet configurations. Proper configuration of these parameters is essential for integrating your Convox rack with an existing VPC and ensuring network connectivity and security.

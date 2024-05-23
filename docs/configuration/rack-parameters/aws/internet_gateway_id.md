@@ -18,12 +18,12 @@ The default value for `internet_gateway_id` is an empty string. When set to an e
 - **Network Configuration**: Ensures that your rack can access the internet through the specified internet gateway.
 
 ## Setting Parameters
-To set the `internet_gateway_id` parameter, use the following command:
-```html
-$ convox rack params set internet_gateway_id=igw-1234567890abcdef0 -r rackName
-Setting parameters... OK
-```
-This command specifies the ID of the internet gateway for your existing VPC.
+The `internet_gateway_id` parameter must be configured at rack installation. Example:
+| Key                    | Value                                         |
+|------------------------|-----------------------------------------------|
+| `internet_gateway_id`   | `igw-1234567890abcdef0` |
+
+&nbsp;
 
 ## Additional Information
 By setting the `internet_gateway_id` parameter, you enable your rack to utilize the specified internet gateway, ensuring seamless integration with your existing AWS network infrastructure.

@@ -20,12 +20,12 @@ The default value for `private` is `true`.
 - **Compliance Requirements**: Certain compliance standards may require that sensitive workloads run in private subnets.
 
 ## Setting Parameters
-To set the `private` parameter, use the following command:
-```html
-$ convox rack params set private=false -r rackName
-Setting parameters... OK
-```
-This command sets the nodes to be placed in public subnets.
+The `private` parameter must be configured at rack installation. Example:
+| Key                    | Value                                         |
+|------------------------|-----------------------------------------------|
+| `private`  | `true` |
+
+&nbsp;
 
 ## Additional Information
 When the `private` parameter is set to `true`, nodes are placed in private subnets, which enhances security by preventing direct access from the internet.

@@ -18,12 +18,12 @@ The default value for `cidr` is `10.1.0.0/16`.
 - **Network Segmentation**: Organize your IP addresses to support subnetting and network segmentation within your VPC.
 
 ## Setting Parameters
-To set the `cidr` parameter, use the following command:
-```html
-$ convox rack params set cidr=10.2.0.0/16 -r rackName
-Setting parameters... OK
-```
-This command sets the CIDR range for the VPC to `10.2.0.0/16`.
+The `cidr` parameter must be configured at rack installation. Example:
+| Key                    | Value                                         |
+|------------------------|-----------------------------------------------|
+| `cidr`  | `10.2.0.0/16` |
+
+&nbsp;
 
 ## Additional Information
 Choosing an appropriate CIDR range is crucial for the efficient management of your network. Ensure that the CIDR range does not overlap with any existing networks to avoid IP address conflicts. The CIDR range you choose should accommodate the number of subnets and hosts you plan to deploy within your VPC. For more information on CIDR notation and VPC planning, refer to the [AWS VPC documentation](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Subnets.html#VPC_Sizing).

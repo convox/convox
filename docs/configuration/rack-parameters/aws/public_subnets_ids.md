@@ -19,12 +19,11 @@ The default value for `public_subnets_ids` is an empty string. When set to an em
 
 ## Setting Parameters
 The `public_subnets_ids` parameter must be configured at rack installation. Example:
-
 | Key                    | Value                                         |
 |------------------------|-----------------------------------------------|
 | `public_subnets_ids`   | `subnet-12345678,subnet-87654321,subnet-11223344` |
 
-<br>
+&nbsp;
 
 ## Additional Information
 When configuring `public_subnets_ids`, ensure that you also set the [vpc_id](/configuration/rack-parameters/aws/vpc_id) parameter and properly configure the VPC with an internet gateway and route table. Additionally, configure the [private_subnets_ids](/configuration/rack-parameters/aws/private_subnets_ids) parameter for internal resources. For high availability, there should be at least three subnets.

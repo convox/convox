@@ -18,12 +18,12 @@ The default value for `availability_zones` is an empty string. When set to an em
 - **High Availability**: Ensuring that your applications and services are spread across multiple AZs enhances fault tolerance and availability.
 
 ## Setting Parameters
-To set the `availability_zones` parameter, use the following command:
-```html
-$ convox rack params set availability_zones=us-east-1a,us-east-1b,us-east-1c -r rackName
-Setting parameters... OK
-```
-This command sets the availability zones to `us-east-1a`, `us-east-1b`, and `us-east-1c`.
+The `availability_zones` parameter must be configured at rack installation. Example:
+| Key                    | Value                                         |
+|------------------------|-----------------------------------------------|
+| `ailability_zones`  | `east-1a,us-east-1b,us-east-1c` |
+
+&nbsp;
 
 ## Additional Information
 Specifying AZs can help you optimize resource placement based on your application's requirements. For example, you might choose AZs based on their proximity to your user base or other AWS services. Ensure that the chosen AZs are available in your AWS region and that they meet your redundancy and latency requirements.
