@@ -6,6 +6,40 @@ Groups:
         default: "true"
         type: boolean
         description: Put nodes in private subnets behind NAT gateways - security best practice
+      - name: availability_zones
+        default: "null"
+        sideNote: "Convox managed if not set"
+        type: string
+        regex: "^([a-z]+-[a-z]+-\\d+[a-z])(,[a-z]+-[a-z]+-\\d+[a-z])+$"
+        description: Specify Availability Zones if you would don't want them to be chosen at random from your region. Comma separated list e.g. us-east-1b,us-east-1c,us-east-1d
+      - name: vpc_id
+        default: "null"
+        type: string
+        regex: "^vpc-[0-9a-f]{17}$"
+        description: Used for installing a rack into an existing VPC. Make sure to also set the cidr block and internet_gateway_id parameters
+      - name: cidr
+        default: "10.1.0.0/16"
+        type: string
+        regex: "^((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)\\/(3[0-2]|[12]?[0-9])$"
+        description: You should consider creating unique CIDR values e.g. 10.2.0.0/16 if you will ever want to peer VPCs
+      - name: internet_gateway_id
+        default: "null"
+        sideNote: "Convox managed if not set"
+        type: string
+        regex: "^igw-[0-9a-f]{17}$"
+        description: If you want to install the rack into an existing VPC, enter the name id of the attached internet gateway
+      - name: private_subnets_ids
+        default: "null"
+        sideNote: "Convox managed if not set"
+        type: string
+        regex: "^subnet-[0-9a-f]{17}$"
+        description: Advanced Configuration - this parameter is for edge use cases where cluster needs to be installed into existing subnets. Please see full documentation if you're considering this configuration.
+      - name: public_subnets_ids
+        default: "null"
+        sideNote: "Convox managed if not set"
+        type: string
+        regex: "^subnet-[0-9a-f]{17}$"
+        description: Advanced Configuration - this parameter is for edge use cases where cluster needs to be installed into existing subnets. Please see full documentation if you're considering this configuration.
   - name: Security & Compliance
     order: 2
     params:
@@ -60,40 +94,6 @@ Groups:
         default: "false"
         type: boolean
         description: With this parameter enabled, the client source IP will be available in the request header `x-forwarded-for` key. This is not applicable for internal_router
-      - name: cidr
-        default: "10.1.0.0/16"
-        type: string
-        regex: "^((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)\\/(3[0-2]|[12]?[0-9])$"
-        description: You should consider creating unique CIDR values e.g. 10.2.0.0/16 if you will ever want to peer VPCs
-      - name: vpc_id
-        default: "null"
-        type: string
-        regex: "^vpc-[0-9a-f]{17}$"
-        description: Used for installing a rack into an existing VPC. Make sure to also set the cidr block and internet_gateway_id parameters
-      - name: internet_gateway_id
-        default: "null"
-        sideNote: "Convox managed if not set"
-        type: string
-        regex: "^igw-[0-9a-f]{17}$"
-        description: If you want to install the rack into an existing VPC, enter the name id of the attached internet gateway
-      - name: availability_zones
-        default: "null"
-        sideNote: "Convox managed if not set"
-        type: string
-        regex: "^([a-z]+-[a-z]+-\\d+[a-z])(,[a-z]+-[a-z]+-\\d+[a-z])+$"
-        description: Specify Availability Zones if you would don't want them to be chosen at random from your region. Comma separated list e.g. us-east-1b,us-east-1c,us-east-1d
-      - name: private_subnets_ids
-        default: "null"
-        sideNote: "Convox managed if not set"
-        type: string
-        regex: "^subnet-[0-9a-f]{17}$"
-        description: Advanced Configuration - this parameter is for edge use cases where cluster needs to be installed into existing subnets. Please see full documentation if you're considering this configuration.
-      - name: public_subnets_ids
-        default: "null"
-        sideNote: "Convox managed if not set"
-        type: string
-        regex: "^subnet-[0-9a-f]{17}$"
-        description: Advanced Configuration - this parameter is for edge use cases where cluster needs to be installed into existing subnets. Please see full documentation if you're considering this configuration.
   - name: Performance & Scaling
     order: 4
     params:
