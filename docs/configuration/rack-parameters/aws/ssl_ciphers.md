@@ -13,7 +13,7 @@ The `ssl_ciphers` parameter specifies the SSL ciphers to use for [nginx](https:/
 
 ## Default Value
 The default value for `ssl_ciphers` is an empty string. When set to an empty string, Nginx will use its default ciphers: 
-```
+```yaml
 ECDHE-ECDSA-AES128-GCM-SHA256
 ECDHE-RSA-AES128-GCM-SHA256
 ECDHE-ECDSA-AES256-GCM-SHA384
