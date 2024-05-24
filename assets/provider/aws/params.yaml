@@ -247,3 +247,4 @@ Groups:
         type: boolean
         description: Disable fluentd if you're using another monitoring solution. This
           will disable CloudWatch metrics.
+          
