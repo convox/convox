@@ -65,6 +65,9 @@ Groups:
         description: Determines whether or not the metadata service requires session
           tokens, also referred to as Instance Metadata Service Version 2
           (IMDSv2)
+        allowedValues:
+              - optional
+              - required
       - name: nlb_security_group
         default: "null"
         sideNote: AWS default created unless set
@@ -145,7 +148,7 @@ Groups:
           scaling during build time.
       - name: build_node_type
         optional: true
-        default: same as node_type
+        default: t3.small
         type: string
         regex: ^[a-z]+\d\.[a-z0-9]+$
         description: By default the build node will use the same instance type as the
@@ -156,6 +159,7 @@ Groups:
         description: ~By default the build node will scale out after 30min of
           inactivity.~ ~You can set this value to retain a number of build nodes
           if the node initialization time (45s) is too long for you~
+        allowedMinValue: 0
       - name: node_capacity_type
         default: on_demand
         type: string
@@ -166,20 +170,28 @@ Groups:
           *min_on_demand_count* and *max_on_demand_count* parameters to control
           the minimum acceptable service availability should all spot instances
           become unavailable.~
+        allowedValues:
+              - on_demand
+              - spot
+              - mixed
       - name: min_on_demand_count
         default: "1"
         type: integer
         description: When used with *mixed* node capacity type, can set the minimum
           required number of on demand nodes
+        allowedMinValue: 1
       - name: max_on_demand_count
         default: "100"
         type: integer
         description: When used with *mixed* node capacity type, can set the maximum
           required number of on demand nodes
+        allowedMinValue: 0
+        allowedMaxValue: 1350
       - name: node_disk
         default: "20"
         type: integer
         description: Node disk size in GB
+        allowedMinValue: 1
       - name: efs_csi_driver_enable
         default: "false"
         type: boolean
@@ -192,6 +204,8 @@ Groups:
         default: "3600"
         type: integer
         description: Idle timeout value (in seconds) for the Rack Load Balancer
+        allowedMinValue: 60
+        allowedMaxValue: 4000
       - name: schedule_rack_scale_down
         optional: true
         sideNote: Not configured by default
@@ -220,6 +234,7 @@ Groups:
         default: "7"
         type: integer
         description: nginx access logs stored in CloudWatch
+        allowedMinValue: -1
       - name: syslog
         default: "null"
         sideNote: Not forwared by default
@@ -232,3 +247,4 @@ Groups:
         type: boolean
         description: Disable fluentd if you're using another monitoring solution. This
           will disable CloudWatch metrics.
+          
