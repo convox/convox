@@ -5,27 +5,27 @@ Groups:
       - name: private
         default: "true"
         type: boolean
-        description: Put nodes in private subnets behind NAT gateways - security best
+        description: Place nodes in private subnets behind NAT gateways - Security best
           practice
       - name: availability_zones
         default: "null"
         sideNote: Convox managed if not set
         type: string
         regex: ^([a-z]+-[a-z]+-\d+[a-z])(,[a-z]+-[a-z]+-\d+[a-z])+$
-        description: Specify Availability Zones if you would don't want them to be
-          chosen at random from your region. Comma separated list ~*e.g.*
-          us-east-1b,us-east-1c,us-east-1d~
+        description: Specify Availability Zones if you don't want them to be
+          chosen at random from your region. &l Comma separated list &i e.g. &i
+          us-east-1b,us-east-1c,us-east-1d &l
       - name: vpc_id
         default: "null"
         type: string
         regex: ^vpc-[0-9a-f]{17}$
         description: Used for installing a rack into an existing VPC. Make sure to also
-          set the cidr block and internet_gateway_id parameters
+          set the &i cidr &i and &i internet_gateway_id &i parameters
       - name: cidr
         default: 10.1.0.0/16
         type: string
         regex: ^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\/(3[0-2]|[12]?[0-9])$
-        description: You should consider creating unique CIDR values ~*e.g.* 10.2.0.0/16
+        description: You should consider creating unique CIDR values &l &i e.g. i& 10.2.0.0/16 &l
           if you will ever want to peer VPCs~
       - name: internet_gateway_id
         default: "null"
@@ -40,18 +40,18 @@ Groups:
         type: string
         regex: ^subnet-[0-9a-f]{17}$
         description: |
-          **Advanced Configuration** - this parameter is for edge use cases
-          where cluster needs to be installed into existing subnets. **Please
-          see full documentation if you're considering this configuration.**
+          &b Advanced Configuration &b &l this parameter is for edge use cases
+          where cluster needs to be installed into existing subnets. &l &l Please
+          see full documentation if you're considering this configuration. &l
       - name: public_subnets_ids
         default: "null"
         sideNote: Convox managed if not set
         type: string
         regex: ^subnet-[0-9a-f]{17}$
         description: |
-          **Advanced Configuration** - this parameter is for edge use cases
-          where cluster needs to be installed into existing subnets. **Please
-          see full documentation if you're considering this configuration.**
+          &b Advanced Configuration &b &l this parameter is for edge use cases
+          where cluster needs to be installed into existing subnets. &l &l Please
+          see full documentation if you're considering this configuration. &l
   - name: Security & Compliance
     order: 2
     params:
@@ -64,7 +64,7 @@ Groups:
         type: string
         description: Determines whether or not the metadata service requires session
           tokens, also referred to as Instance Metadata Service Version 2
-          (IMDSv2)
+          ([IMDSv2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html))
         allowedValues:
               - optional
               - required
@@ -73,16 +73,17 @@ Groups:
         sideNote: AWS default created unless set
         type: string
         regex: ^sg-[0-9a-f]{8,17}$
-        description: ~The ID of the custom security group to attach with the NLB.~ ~By
-          default inbound traffic from any IP is allowed.~ ~Be cautious about
+        description: |
+          &l The ID of the custom security group to attach with the NLB. &l &l By
+          default inbound traffic from any IP is allowed. &l &l Be cautious about
           this parameter, you might lose access to services by using improper
-          security group.~
+          security group. &l"
       - name: tags
         default: "null"
         type: string
         regex: ^(\w+=[^,]+)(,\w+=[^,]+)*$
         description: Custom tags to add to AWS resources along side Convox managed
-          tags  ~*e.g.* key1=val1,key2=val2~
+          tags  &l &i e.g. &i key1=val1,key2=val2 &l
       - name: cert_duration
         default: 2160h
         type: string
@@ -101,9 +102,9 @@ Groups:
         type: string
         regex: ^([A-Za-z0-9_+-]+)(:[A-Za-z0-9_+-]+)*$
         description: |
-          **Advanced Configuration** - SSL ciphers to use for
-          (Nginx)[https://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_ciphers].
-          They must be separated by colon.
+          &b Advanced Configuration &b &l SSL ciphers to use for
+          (Nginx)[https://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_ciphers]. &l
+          &l They must be separated by colon. &l
       - name: ssl_protocols
         default: "null"
         sideNote: Nginx default unless set
@@ -111,9 +112,9 @@ Groups:
         regex: ^(SSLv2|SSLv3|TLSv1|TLSv1\.1|TLSv1\.2|TLSv1\.3)(
           (SSLv2|SSLv3|TLSv1|TLSv1\.1|TLSv1\.2|TLSv1\.3))*$
         description: |
-          **Advanced Configuration** - SSL protocols to use for
-          (Nginx)[https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_ssl_protocols]  ~e.g.
-          TLSv1.2 TLSv1.3 - They must be separated by spaces.~
+          &b Advanced Configuration &b &l SSL protocols to use for
+          (Nginx)[https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_ssl_protocols] &l &l &i e.g. &i
+          TLSv1.2 TLSv1.3 - They must be separated by spaces. &l
   - name: Networking
     order: 3
     params:
@@ -126,7 +127,7 @@ Groups:
         default: "false"
         type: boolean
         description: With this parameter enabled, the client source IP will be available
-          in the request header *x-forwarded-for* key. This is not applicable
+          in the request header &i x-forwarded-for &i key. This is not applicable
           for internal_router
   - name: Performance & Scaling
     order: 4
@@ -140,7 +141,7 @@ Groups:
         default: t3.small
         type: string
         regex: ^[a-z]+\d\.[a-z0-9]+$
-        description: Node instance type
+        description: AWS EC2 (Instance type)[https://aws.amazon.com/ec2/instance-types/]
       - name: build_node_enabled
         default: "false"
         type: boolean
@@ -151,25 +152,28 @@ Groups:
         default: t3.small
         type: string
         regex: ^[a-z]+\d\.[a-z0-9]+$
-        description: By default the build node will use the same instance type as the
-          *node_type*
+        description: |
+          By default the build node will use the same instance type as the
+          &i node_type &i
       - name: build_node_min_count
         default: "0"
         type: integer
-        description: ~By default the build node will scale out after 30min of
-          inactivity.~ ~You can set this value to retain a number of build nodes
-          if the node initialization time (45s) is too long for you~
+        description: |
+          &l By default the build node will scale out after 30min of
+          inactivity. &l &l You can set this value to retain a number of build nodes
+          if the node initialization time (45s) is too long for you &l
         allowedMinValue: 0
       - name: node_capacity_type
         default: on_demand
         type: string
-        description: ~on-demand - Will only use on demand instances (Highest
-          availability/Highest Cost)~ ~spot - Will use AWS spot instances for
-          the cluster nodes.~ ~mixed - Will create one node group with on demand
-          instances, and the other 2 with spot instances. Use mixed with the
-          *min_on_demand_count* and *max_on_demand_count* parameters to control
+        description: |
+          &l &b on-demand &b - Will only use on-demand instances (Highest
+          availability/Highest Cost) &l &l &b spot &b - Will use AWS Spot Instances for
+          the cluster nodes. &l &l &b mixed &b - Will create one node group with on-demand
+          instances, and the other 2 with Spot Instances. &l &l Use &b mixed &b with the
+          &i min_on_demand_count &i and &i max_on_demand_count &i parameters to control
           the minimum acceptable service availability should all spot instances
-          become unavailable.~
+          become unavailable. &l
         allowedValues:
               - on_demand
               - spot
@@ -177,14 +181,14 @@ Groups:
       - name: min_on_demand_count
         default: "1"
         type: integer
-        description: When used with *mixed* node capacity type, can set the minimum
+        description: When used with &b mixed &b &i node_capacity_type &i, can set the minimum
           required number of on demand nodes
         allowedMinValue: 1
       - name: max_on_demand_count
         default: "100"
         type: integer
-        description: When used with *mixed* node capacity type, can set the maximum
-          required number of on demand nodes
+        description: When used with &b mixed &b &i node_capacity_type &i, can set the maximum
+          possilbe number of on demand nodes
         allowedMinValue: 0
         allowedMaxValue: 1350
       - name: node_disk
@@ -213,10 +217,11 @@ Groups:
         type: string
         regex: ^(\*|([0-5]?\d)) (\*|([01]?\d|2[0-3])) (\*|([1-9]|[12]\d|3[01]))
           (\*|([1-9]|1[0-2])) (\*|[0-6])$
-        description: "~Rack scale down schedule is specified by the user following the
-          Unix cron syntax format.~ ~Example: \"0 18 * * 5\"~ ~Rack API and
-          App's Services will be inaccessible during this time~ ~Must also
-          configure *schedule_rack_scale_up*~"
+        description: |
+          &l Rack scale down schedule is specified by following the
+          Unix cron syntax format. &l &l Example: "0 18 * * 5" &l &l Rack API and
+          App's Services will be inaccessible during this time &l &l Must also
+          configure &i schedule_rack_scale_up &i &l
       - name: schedule_rack_scale_up
         optional: true
         sideNote: Not configured by default
@@ -224,9 +229,11 @@ Groups:
         type: string
         regex: ^(\*|([0-5]?\d)) (\*|([01]?\d|2[0-3])) (\*|([1-9]|[12]\d|3[01]))
           (\*|([1-9]|1[0-2])) (\*|[0-6])$
-        description: '~Rack scale up schedule is specified by the user following the
-          Unix cron syntax format.~ ~Example: "0 0 * * 0"~  ~Must also configure
-          *schedule_rack_scale_down*~'
+        description: |
+          &l Rack scale up schedule is specified by following the
+          Unix cron syntax format. &l &l Example: "0 0 * * 0" &l &l Rack API and
+          App's Services will be inaccessible during this time &l &l Must also
+          configure &i schedule_rack_scale_down &i &l
   - name: Logging & Monitoring
     order: 5
     params:
@@ -240,7 +247,7 @@ Groups:
         sideNote: Not forwared by default
         type: string
         regex: ^(tcp|udp|tcp\+tls|udp\+tls)://[a-zA-Z\d.-]+(:\d+)?$
-        description: Forward logs to a syslog endpoint - e.g. tcp+tls://example.org:1234
+        description: Forward logs to a syslog endpoint  &l &i e.g. &i tcp+tls://example.org:1234 &l
         optional: true
       - name: fluentd_disable
         default: "false"
