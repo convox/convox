@@ -124,6 +124,12 @@ resource "aws_eks_node_group" "cluster" {
     create_before_destroy = true
     ignore_changes        = [scaling_config[0].desired_size]
   }
+
+  timeouts {
+    update = "2h"
+    delete = "1h"
+    create = "1h"
+  }
 }
 
 resource "aws_eks_node_group" "cluster-build" {

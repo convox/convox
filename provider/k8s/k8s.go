@@ -71,6 +71,8 @@ type Provider struct {
 	Storage                    string
 	Version                    string
 
+	nc *NodeController
+
 	ctx       context.Context
 	logger    *logger.Logger
 	metrics   *metrics.Metrics
@@ -218,9 +220,22 @@ func (p *Provider) Start() error {
 		return errors.WithStack(log.Error(err))
 	}
 
+	nc, err := NewNodeController(p)
+	if err != nil {
+		return errors.WithStack(log.Error(err))
+	}
+	p.nc = nc
+
+	dc, err := NewDeploymentController(p)
+	if err != nil {
+		return errors.WithStack(log.Error(err))
+	}
+
 	go ec.Run()
 	go pc.Run()
 	go wc.Run()
+	go nc.Run()
+	go dc.Run()
 
 	go common.Tick(1*time.Hour, p.heartbeat)
 

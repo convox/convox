@@ -11,6 +11,16 @@ variable "build_node_enabled" {
   type    = bool
 }
 
+variable "efs_csi_driver_enable" {
+  default = false
+  type = bool
+}
+
+variable "pod_identity_agent_enable" {
+  default = false
+  type = bool
+}
+
 variable "build_node_type" {
   default = ""
 }

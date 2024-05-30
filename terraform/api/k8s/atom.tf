@@ -73,9 +73,6 @@ resource "kubernetes_deployment" "atom" {
 
     template {
       metadata {
-        annotations = {
-          "scheduler.alpha.kubernetes.io/critical-pod" : ""
-        }
 
         labels = {
           app     = "system"
