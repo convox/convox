@@ -42,11 +42,11 @@ func (c *EventController) Client() kubernetes.Interface {
 }
 
 func (c *EventController) Informer() cache.SharedInformer {
+
 	return ic.NewFilteredEventInformer(c.Provider.Cluster, ac.NamespaceAll, 0, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
 }
 
-func (c *EventController) ListOptions(opts *am.ListOptions) {
-}
+func (c *EventController) ListOptions(opts *am.ListOptions) {}
 
 func (c *EventController) Run() {
 	ch := make(chan error)
@@ -72,6 +72,10 @@ func (c *EventController) Add(obj interface{}) error {
 		return errors.WithStack(err)
 	}
 
+	if e.InvolvedObject.Kind == "Node" && e.Reason == "NodeNotSchedulable" && e.LastTimestamp.Add(5*time.Minute).After(time.Now()) {
+		c.Provider.nc.Add(e.InvolvedObject.Name)
+	}
+
 	if e.LastTimestamp.Before(&c.start) {
 		return nil
 	}
@@ -84,6 +88,9 @@ func (c *EventController) Add(obj interface{}) error {
 	case "apps/v1/Deployment":
 		app, err := c.Provider.NamespaceApp(o.Namespace)
 		if err != nil {
+			if strings.Contains(err.Error(), "could not determine app for namespace") {
+				return nil
+			}
 			return errors.WithStack(err)
 		}
 
@@ -93,6 +100,9 @@ func (c *EventController) Add(obj interface{}) error {
 	case "apps/v1/ReplicaSet":
 		app, err := c.Provider.NamespaceApp(o.Namespace)
 		if err != nil {
+			if strings.Contains(err.Error(), "could not determine app for namespace") {
+				return nil
+			}
 			return errors.WithStack(err)
 		}
 
@@ -102,6 +112,9 @@ func (c *EventController) Add(obj interface{}) error {
 	case "atom.convox.com/v1/Atom":
 		app, err := c.Provider.NamespaceApp(o.Namespace)
 		if err != nil {
+			if strings.Contains(err.Error(), "could not determine app for namespace") {
+				return nil
+			}
 			return errors.WithStack(err)
 		}
 
@@ -111,6 +124,9 @@ func (c *EventController) Add(obj interface{}) error {
 	case "autoscaling/v2beta2/HorizontalPodAutoscaler":
 		app, err := c.Provider.NamespaceApp(o.Namespace)
 		if err != nil {
+			if strings.Contains(err.Error(), "could not determine app for namespace") {
+				return nil
+			}
 			return errors.WithStack(err)
 		}
 
@@ -120,6 +136,9 @@ func (c *EventController) Add(obj interface{}) error {
 	case "autoscaling/v2/HorizontalPodAutoscaler":
 		app, err := c.Provider.NamespaceApp(o.Namespace)
 		if err != nil {
+			if strings.Contains(err.Error(), "could not determine app for namespace") {
+				return nil
+			}
 			return errors.WithStack(err)
 		}
 
@@ -133,6 +152,9 @@ func (c *EventController) Add(obj interface{}) error {
 		default:
 			app, err := c.Provider.NamespaceApp(o.Namespace)
 			if err != nil {
+				if strings.Contains(err.Error(), "could not determine app for namespace") {
+					return nil
+				}
 				return errors.WithStack(err)
 			}
 
