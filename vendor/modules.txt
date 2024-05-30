@@ -1043,6 +1043,7 @@ k8s.io/client-go/applyconfigurations/storage/v1beta1
 k8s.io/client-go/discovery
 k8s.io/client-go/discovery/fake
 k8s.io/client-go/dynamic
+k8s.io/client-go/informers/apps/v1
 k8s.io/client-go/informers/core/v1
 k8s.io/client-go/informers/extensions/v1beta1
 k8s.io/client-go/informers/internalinterfaces
@@ -1151,6 +1152,7 @@ k8s.io/client-go/kubernetes/typed/storage/v1alpha1
 k8s.io/client-go/kubernetes/typed/storage/v1alpha1/fake
 k8s.io/client-go/kubernetes/typed/storage/v1beta1
 k8s.io/client-go/kubernetes/typed/storage/v1beta1/fake
+k8s.io/client-go/listers/apps/v1
 k8s.io/client-go/listers/core/v1
 k8s.io/client-go/listers/extensions/v1beta1
 k8s.io/client-go/openapi
