@@ -12,46 +12,49 @@ Groups:
         sideNote: Convox managed if not set
         type: string
         regex: ^([a-z]+-[a-z]+-\d+[a-z])(,[a-z]+-[a-z]+-\d+[a-z])+$
-        description: Specify Availability Zones if you don't want them to be
-          chosen at random from your region. &l Comma separated list &i e.g. &i
+        description: Specify Availability Zones if you don't want them to be 
+          chosen at random from your region. &l Comma separated list &i e.g. &i - 
           us-east-1b,us-east-1c,us-east-1d &l
       - name: vpc_id
         default: "null"
+        sideNote: Convox managed if not set
         type: string
         regex: ^vpc-[0-9a-f]{17}$
-        description: Used for installing a rack into an existing VPC. Make sure to also
+        description: Used for installing a rack into an existing VPC. You must also 
           set the &i cidr &i and &i internet_gateway_id &i parameters
       - name: cidr
         default: 10.1.0.0/16
         type: string
         regex: ^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\/(3[0-2]|[12]?[0-9])$
-        description: You should consider creating unique CIDR values &l &i e.g. i& 10.2.0.0/16 &l
-          if you will ever want to peer VPCs~
+        description: |
+          You should consider creating unique CIDR values &l &i e.g. &i 10.2.0.0/16
+          if you will ever want to peer VPCs &l
       - name: internet_gateway_id
         default: "null"
         sideNote: Convox managed if not set
         type: string
         regex: ^igw-[0-9a-f]{17}$
-        description: If you want to install the rack into an existing VPC, enter the
-          name id of the attached internet gateway
+        description: |
+          To install the rack into an existing VPC, enter the
+          name-id of the attached internet gateway.
       - name: private_subnets_ids
         default: "null"
         sideNote: Convox managed if not set
         type: string
         regex: ^subnet-[0-9a-f]{17}$
         description: |
-          &b Advanced Configuration &b &l this parameter is for edge use cases
-          where cluster needs to be installed into existing subnets. &l &l Please
-          see full documentation if you're considering this configuration. &l
+          &b Advanced Configuration &b &l This parameter is for edge use cases
+          where cluster needs to be installed into existing subnets. &l &l See 
+          full (documentation)[https://docs.convox.com/configuration/rack-parameters/aws/private_subnets_ids/] if you're considering this configuration. &l
       - name: public_subnets_ids
         default: "null"
         sideNote: Convox managed if not set
         type: string
         regex: ^subnet-[0-9a-f]{17}$
         description: |
-          &b Advanced Configuration &b &l this parameter is for edge use cases
-          where cluster needs to be installed into existing subnets. &l &l Please
-          see full documentation if you're considering this configuration. &l
+          &b Advanced Configuration &b &l This parameter is for edge use cases
+          where cluster needs to be installed into existing subnets. &l &l See 
+          full (documentation)[https://docs.convox.com/configuration/rack-parameters/aws/public_subnets_ids/] if you're considering this configuration. &l
   - name: Security & Compliance
     order: 2
     params:
@@ -63,8 +66,8 @@ Groups:
         default: optional
         type: string
         description: Determines whether or not the metadata service requires session
-          tokens, also referred to as Instance Metadata Service Version 2
-          ([IMDSv2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html))
+          tokens, also referred to as Instance Metadata Service Version 2 
+          ((IMDSv2)[https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html])
         allowedValues:
               - optional
               - required
@@ -77,7 +80,7 @@ Groups:
           &l The ID of the custom security group to attach with the NLB. &l &l By
           default inbound traffic from any IP is allowed. &l &l Be cautious about
           this parameter, you might lose access to services by using improper
-          security group. &l"
+          security group. &l
       - name: tags
         default: "null"
         type: string
@@ -104,7 +107,7 @@ Groups:
         description: |
           &b Advanced Configuration &b &l SSL ciphers to use for
           (Nginx)[https://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_ciphers]. &l
-          &l They must be separated by colon. &l
+          &l They must be listed separated by colons. &l
       - name: ssl_protocols
         default: "null"
         sideNote: Nginx default unless set
@@ -113,8 +116,8 @@ Groups:
           (SSLv2|SSLv3|TLSv1|TLSv1\.1|TLSv1\.2|TLSv1\.3))*$
         description: |
           &b Advanced Configuration &b &l SSL protocols to use for
-          (Nginx)[https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_ssl_protocols] &l &l &i e.g. &i
-          TLSv1.2 TLSv1.3 - They must be separated by spaces. &l
+          (Nginx)[https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_ssl_protocols] &l 
+          &l They must be listed separated by spaces. &i e.g. &i - TLSv1.2 TLSv1.3 &l
   - name: Networking
     order: 3
     params:
@@ -128,20 +131,20 @@ Groups:
         type: boolean
         description: With this parameter enabled, the client source IP will be available
           in the request header &i x-forwarded-for &i key. This is not applicable
-          for internal_router
+          for &i internal_router &i
   - name: Performance & Scaling
     order: 4
     params:
       - name: high_availability
         default: "true"
         type: boolean
-        description: Setting this to false will create a cluster with less redundant
+        description: Setting this to false will create a cluster with fewer redundant
           resources for cost optimization
       - name: node_type
         default: t3.small
         type: string
         regex: ^[a-z]+\d\.[a-z0-9]+$
-        description: AWS EC2 (Instance type)[https://aws.amazon.com/ec2/instance-types/]
+        description: AWS EC2 (Instance type)[https://aws.amazon.com/ec2/instance-types/] used for cluster nodes.
       - name: build_node_enabled
         default: "false"
         type: boolean
@@ -161,7 +164,7 @@ Groups:
         description: |
           &l By default the build node will scale out after 30min of
           inactivity. &l &l You can set this value to retain a number of build nodes
-          if the node initialization time (45s) is too long for you &l
+          if the node initialization time (~45s) is too long for your use-case &l
         allowedMinValue: 0
       - name: node_capacity_type
         default: on_demand
@@ -199,11 +202,11 @@ Groups:
       - name: efs_csi_driver_enable
         default: "false"
         type: boolean
-        description: Enable the EFS CSI driver to use the AWS EFS volumes.
+        description: Enable the EFS CSI driver to use AWS EFS volumes, allowing for shared service volumes.
       - name: gpu_tag_enable
         default: "false"
         type: boolean
-        description: GPU tagging is not available in all AWS Regions
+        description: GPU tagging is not available in all AWS Regions.
       - name: idle_timeout
         default: "3600"
         type: integer
@@ -240,18 +243,17 @@ Groups:
       - name: access_log_retention_in_days
         default: "7"
         type: integer
-        description: nginx access logs stored in CloudWatch
+        description: Nginx access logs stored in CloudWatch
         allowedMinValue: -1
       - name: syslog
         default: "null"
         sideNote: Not forwared by default
         type: string
         regex: ^(tcp|udp|tcp\+tls|udp\+tls)://[a-zA-Z\d.-]+(:\d+)?$
-        description: Forward logs to a syslog endpoint  &l &i e.g. &i tcp+tls://example.org:1234 &l
+        description: Forward logs to a syslog endpoint  &l &i e.g. &i - tcp+tls://example.org:1234 &l
         optional: true
       - name: fluentd_disable
         default: "false"
         type: boolean
-        description: Disable fluentd if you're using another monitoring solution. This
-          will disable CloudWatch metrics.
-          
+        description: Disable fluentd if you're using another monitoring solution. &l This
+          will disable CloudWatch metrics. &l
