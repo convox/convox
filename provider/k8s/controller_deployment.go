@@ -146,9 +146,8 @@ func (c *DeployController) Update(prev, cur interface{}) error {
 }
 
 func (c *DeployController) SyncPDB(d *apps.Deployment, remove bool) error {
-	lbs := map[string]string{}
-	for _, v := range labelsForDeployment {
-		lbs[v] = d.Labels[v]
+	if d.Spec.Selector == nil {
+		return fmt.Errorf("invalid deployment selector: %s/%s", d.Namespace, d.Name)
 	}
 
 	if d.Annotations[AnnotationPdbDisabled] == "true" || d.Spec.Template.Annotations[AnnotationPdbDisabled] == "true" {
@@ -186,11 +185,10 @@ func (c *DeployController) SyncPDB(d *apps.Deployment, remove bool) error {
 			Name:      d.Name,
 			Namespace: d.Namespace,
 		}, func(pdb *policyv1.PodDisruptionBudget) *policyv1.PodDisruptionBudget {
-			pdb.Labels = lbs
+			pdb.Labels = d.Labels
 			pdb.Spec.MinAvailable = minAvailable
-			pdb.Spec.Selector = &metav1.LabelSelector{
-				MatchLabels: lbs,
-			}
+			pdb.Spec.Selector = d.Spec.Selector
+			pdb.Spec.Selector.MatchLabels["type"] = "service"
 			return pdb
 		}, metav1.PatchOptions{
 			FieldManager: "convox",
@@ -205,7 +203,8 @@ func (c *DeployController) isConvoxManaged(d *apps.Deployment) bool {
 			return false
 		}
 	}
-	return true
+
+	return strings.Contains(d.Labels["system"], "convox")
 }
 
 func assertDeployment(v interface{}) (*apps.Deployment, error) {
