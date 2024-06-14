@@ -43,6 +43,7 @@ func init() {
 		Flags: []stdcli.Flag{
 			stdcli.BoolFlag("prepare", "", "prepare the install but don't run it"),
 			stdcli.StringFlag("version", "v", "rack version"),
+			stdcli.StringFlag("runtime", "r", "runtime id"),
 		},
 		Usage:    "<provider> <name> [option=value]...",
 		Validate: stdcli.ArgsMin(2),
@@ -222,6 +223,7 @@ func RackInstall(_ sdk.Interface, c *stdcli.Context) error {
 	name := c.Arg(1)
 	args := c.Args[2:]
 	version := c.String("version")
+	runtime := c.String("runtime")
 
 	if !provider.Valid(slug) {
 		return fmt.Errorf("unknown provider: %s", slug)
@@ -248,7 +250,7 @@ func RackInstall(_ sdk.Interface, c *stdcli.Context) error {
 		return nil
 	}
 
-	if err := rack.Install(c, slug, name, version, opts); err != nil {
+	if err := rack.Install(c, slug, name, version, runtime, opts); err != nil {
 		return err
 	}
 
