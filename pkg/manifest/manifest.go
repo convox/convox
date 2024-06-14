@@ -151,6 +151,19 @@ func (m *Manifest) ApplyDefaults() error {
 			m.Services[i].Health.Path = "/"
 		}
 
+		if s.Health.Port.Port != 0 && s.Health.Port.Scheme == "" {
+			m.Services[i].Health.Port.Scheme = "http"
+		}
+
+		if s.Health.Port.Port == 0 && s.Port.Port > 0 {
+			m.Services[i].Health.Port.Port = s.Port.Port
+			if s.Port.Scheme != "" {
+				m.Services[i].Health.Port.Scheme = s.Port.Scheme
+			} else {
+				m.Services[i].Health.Port.Scheme = "http"
+			}
+		}
+
 		if s.Health.Interval == 0 {
 			m.Services[i].Health.Interval = 5
 		}
@@ -170,6 +183,14 @@ func (m *Manifest) ApplyDefaults() error {
 			}
 			if s.Liveness.Interval == 0 {
 				m.Services[i].Liveness.Interval = 5
+			}
+			if s.Liveness.Port.Port == 0 && s.Port.Port > 0 {
+				m.Services[i].Liveness.Port.Port = s.Port.Port
+				if s.Port.Scheme != "" {
+					m.Services[i].Liveness.Port.Scheme = s.Port.Scheme
+				} else {
+					m.Services[i].Liveness.Port.Scheme = "http"
+				}
 			}
 			if s.Liveness.Timeout == 0 {
 				m.Services[i].Liveness.Timeout = 5
