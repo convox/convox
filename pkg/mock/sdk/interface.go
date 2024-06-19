@@ -1059,6 +1059,29 @@ func (_m *Interface) ObjectStore(app string, key string, r io.Reader, opts struc
 	return r0, r1
 }
 
+// OrganizationRuntimes provides a mock function with given fields: org
+func (_m *Interface) OrganizationRuntimes(org string) (structs.Runtimes, error) {
+	ret := _m.Called(org)
+
+	var r0 structs.Runtimes
+	if rf, ok := ret.Get(0).(func(string) structs.Runtimes); ok {
+		r0 = rf(org)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(structs.Runtimes)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(org)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ProcessExec provides a mock function with given fields: app, pid, command, rw, opts
 func (_m *Interface) ProcessExec(app string, pid string, command string, rw io.ReadWriter, opts structs.ProcessExecOptions) (int, error) {
 	ret := _m.Called(app, pid, command, rw, opts)
