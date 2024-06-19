@@ -1,38 +1,20 @@
 package cli_test
 
 import (
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
-	"net/url"
-	"path/filepath"
+	"fmt"
 	"testing"
 
 	"github.com/convox/convox/pkg/cli"
 	mocksdk "github.com/convox/convox/pkg/mock/sdk"
-	"github.com/gorilla/mux"
+	"github.com/convox/convox/pkg/structs"
 	"github.com/stretchr/testify/require"
 )
 
 func TestRuntimesSuccess(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		r := mux.NewRouter()
+		i.On("OrganizationRuntimes", "testorg").Return(structs.Runtimes{*fxRuntime()}, nil)
 
-		r.HandleFunc("/organizations/test-org-stg/runtimes", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte(`[
-				{"Id":"b29266a2-0d25-4194-b375-a7ac722f82a5","Title":"533267189958"},
-			]`))
-		}).Methods("GET")
-
-		ts := httptest.NewTLSServer(r)
-
-		tsu, err := url.Parse(ts.URL)
-		require.NoError(t, err)
-
-		err = ioutil.WriteFile(filepath.Join(e.Settings, "console"), []byte(tsu.Host), 0644)
-		require.NoError(t, err)
-
-		res, err := testExecute(e, "runtimes test-org-stg", nil)
+		res, err := testExecute(e, "runtimes testorg", nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
@@ -43,14 +25,14 @@ func TestRuntimesSuccess(t *testing.T) {
 	})
 }
 
-func TestRuntimesNone(t *testing.T) {
+func TestRuntimesError(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		res, err := testExecute(e, "runtimes test-org-stg", nil)
+		i.On("OrganizationRuntimes", "fakeorg").Return(nil, fmt.Errorf("organization not found"))
+
+		res, err := testExecute(e, "runtimes fakeorg", nil)
 		require.NoError(t, err)
-		require.Equal(t, 0, res.Code)
-		res.RequireStderr(t, []string{""})
-		res.RequireStdout(t, []string{
-			"ID                                    TITLE",
-		})
+		require.Equal(t, 1, res.Code)
+		res.RequireStderr(t, []string{"ERROR: organization not found"})
+		res.RequireStdout(t, []string{""})
 	})
 }
