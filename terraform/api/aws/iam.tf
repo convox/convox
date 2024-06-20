@@ -113,6 +113,37 @@ data "aws_iam_policy_document" "storage" {
   }
 }
 
+data "aws_iam_policy_document" "rds_provisioner" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "ec2:CreateSecurityGroup",
+      "ec2:DeleteSecurityGroup",
+      "ec2:Describe*",
+      "ec2:AuthorizeSecurityGroupIngress",
+      "ec2:AuthorizeSecurityGroupEgress",
+      "ec2:RevokeSecurityGroupIngress",
+      "ec2:RevokeSecurityGroupEgress",
+      "ec2:ModifySecurityGroupRules"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "rds:CreateDBInstance",
+      "rds:DeleteDBInstance",
+      "rds:ModifyDBInstance",
+      "rds:Describe*",
+      "rds:CreateDBSubnetGroup",
+      "rds:DeleteDBSubnetGroup",
+      "rds:ModifyDBSubnetGroup",
+    ]
+    resources = ["*"]
+  }
+}
+
 resource "aws_iam_role_policy_attachment" "api_ecr" {
   role       = aws_iam_role.api.name
   policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"
@@ -146,6 +177,12 @@ resource "aws_iam_role_policy" "api_eks_pod_identity" {
   name   = "api-eks-pod-identity"
   role   = aws_iam_role.api.name
   policy = data.aws_iam_policy_document.eks_pod_identitiy.json
+}
+
+resource "aws_iam_role_policy" "rds_provisioner" {
+  name   = "api-rds-provisioner"
+  role   = aws_iam_role.api.name
+  policy = data.aws_iam_policy_document.rds_provisioner.json
 }
 
 data "aws_iam_policy_document" "assume_cert_manager" {

@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"math"
+	"os"
 	"path"
 	"regexp"
 	"sort"
@@ -14,10 +15,16 @@ import (
 
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned/scheme"
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
 	ae "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	tc "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/tools/leaderelection"
+	"k8s.io/client-go/tools/leaderelection/resourcelock"
+	"k8s.io/client-go/tools/record"
 	metricsv1beta1 "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 )
 
@@ -357,4 +364,47 @@ func caculatePercentage(cur, total float64) float64 {
 		return 0
 	}
 	return (cur / total) * 100
+}
+
+func RunUsingLeaderElection(ns, name string, cluster kubernetes.Interface, onStarted func(context.Context), onStopped func()) error {
+	identifier, err := os.Hostname()
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("starting elector: %s/%s (%s)\n", ns, name, identifier)
+
+	eb := record.NewBroadcaster()
+	eb.StartRecordingToSink(&tc.EventSinkImpl{Interface: cluster.CoreV1().Events("")})
+
+	recorder := eb.NewRecorder(scheme.Scheme, ac.EventSource{Component: name})
+
+	rl := &resourcelock.LeaseLock{
+		LeaseMeta: am.ObjectMeta{Namespace: ns, Name: name},
+		Client:    cluster.CoordinationV1(),
+		LockConfig: resourcelock.ResourceLockConfig{
+			Identity:      identifier,
+			EventRecorder: recorder,
+		},
+	}
+
+	el, err := leaderelection.NewLeaderElector(leaderelection.LeaderElectionConfig{
+		Lock:          rl,
+		LeaseDuration: 60 * time.Second,
+		RenewDeadline: 15 * time.Second,
+		RetryPeriod:   5 * time.Second,
+		Callbacks: leaderelection.LeaderCallbacks{
+			OnStartedLeading: onStarted,
+			OnStoppedLeading: onStopped,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	ctx, _ := context.WithCancel(context.Background())
+
+	go el.Run(ctx)
+
+	return nil
 }

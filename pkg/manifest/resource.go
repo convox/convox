@@ -47,3 +47,7 @@ func (r Resource) GetName() string {
 func (r Resource) mountEnv(envVar string) string {
 	return fmt.Sprintf("%s_%s", strings.ReplaceAll(strings.ToUpper(r.Name), "-", "_"), envVar)
 }
+
+func (r Resource) IsRds() bool {
+	return strings.HasPrefix(r.Type, "rds-")
+}

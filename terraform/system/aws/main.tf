@@ -159,11 +159,12 @@ module "rack" {
   release                        = local.release
   ssl_ciphers                    = var.ssl_ciphers
   ssl_protocols                  = var.ssl_protocols
-  subnets                        = module.cluster.subnets
+  subnets                        = module.cluster.susbnets
   tags                           = local.tag_map
   telemetry                      = var.telemetry
   telemetry_map                  = local.telemetry_map
   telemetry_default_map          = local.telemetry_default_map
   whitelist                      = split(",", var.whitelist)
   ebs_csi_driver_name            = module.cluster.ebs_csi_driver_name
+  vpc_id                         = module.cluster.vpc
 }
