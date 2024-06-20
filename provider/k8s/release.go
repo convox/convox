@@ -14,6 +14,7 @@ import (
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/convox/provider/aws/provisioner/rds"
 	ca "github.com/convox/convox/provider/k8s/pkg/apis/convox/v1"
 	"github.com/pkg/errors"
 	"golang.org/x/text/cases"
@@ -168,12 +169,14 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 
 		// resources
 		for _, r := range m.Resources {
-			data, err := p.releaseTemplateResource(a, e, r)
-			if err != nil {
-				return errors.WithStack(err)
-			}
+			if !r.IsRds() {
+				data, err := p.releaseTemplateResource(a, e, r)
+				if err != nil {
+					return errors.WithStack(err)
+				}
 
-			items = append(items, data)
+				items = append(items, data)
+			}
 		}
 
 		// services
@@ -200,6 +203,30 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		}
 
 		items = append(items, data)
+
+		// rds resources
+		for _, r := range m.Resources {
+			if r.IsRds() {
+				id := p.CreateRdsResourceStateId(app, r.Name)
+
+				err := p.RdsProvisioner.Provision(id, p.MapToRdsParameter(r.Type, r.Options))
+				if err != nil {
+					return err
+				}
+
+				conn, err := p.RdsProvisioner.GetConnectionInfo(id)
+				if err != nil {
+					return err
+				}
+
+				data, err := p.releaseTemplateRdsResource(a, e, r, conn)
+				if err != nil {
+					return errors.WithStack(err)
+				}
+
+				items = append(items, data)
+			}
+		}
 	}
 
 	tdata := bytes.Join(items, []byte("---\n"))
@@ -436,6 +463,28 @@ func (p *Provider) releaseTemplateResource(a *structs.App, e structs.Environment
 		"Parameters": r.Options,
 		"Password":   fmt.Sprintf("%x", sha256.Sum256([]byte(p.Name)))[0:30],
 		"Rack":       p.Name,
+	}
+
+	data, err := p.RenderTemplate(fmt.Sprintf("resource/%s", r.Type), params)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return data, nil
+}
+
+func (p *Provider) releaseTemplateRdsResource(a *structs.App, e structs.Environment, r manifest.Resource, conn *rds.ConnectionInfo) ([]byte, error) {
+	params := map[string]interface{}{
+		"App":        a.Name,
+		"Namespace":  p.AppNamespace(a.Name),
+		"Name":       r.Name,
+		"Parameters": r.Options,
+		"Rack":       p.Name,
+		"Host":       conn.Host,
+		"Port":       conn.Port,
+		"User":       conn.UserName,
+		"Password":   conn.Password,
+		"Database":   conn.Database,
 	}
 
 	data, err := p.RenderTemplate(fmt.Sprintf("resource/%s", r.Type), params)

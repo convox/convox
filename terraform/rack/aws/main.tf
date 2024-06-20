@@ -44,6 +44,8 @@ module "api" {
   release                        = var.release
   resolver                       = module.resolver.endpoint
   router                         = module.router.endpoint
+  subnets                        = var.subnets
+  vpc_id                         = var.vpc_id
 }
 
 module "metrics" {

@@ -136,6 +136,10 @@ variable "telemetry_default_map" {
   type = any
 }
 
+variable "vpc_id" {
+  type = string
+}
+
 variable "whitelist" {
   default = ["0.0.0.0/0"]
 }
