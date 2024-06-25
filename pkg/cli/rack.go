@@ -256,8 +256,8 @@ func RackInstall(_ sdk.Interface, c *stdcli.Context) error {
 	}
 
 	if runtime != "" {
-		name = parts[0]+ "/" +parts[1]
-		c.Writef("Convox Rack installation initiated. Check the progress on the Console Racks page if desired.")
+		name = parts[0] + "/" + parts[1]
+		c.Writef("Convox Rack installation initiated. Check the progress on the Console Racks page if desired. \n")
 	}
 
 	if err := rack.Install(c, slug, name, version, runtime, opts); err != nil {
