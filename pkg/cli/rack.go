@@ -228,6 +228,11 @@ func RackInstall(_ sdk.Interface, c *stdcli.Context) error {
 	if !provider.Valid(slug) {
 		return fmt.Errorf("unknown provider: %s", slug)
 	}
+	var parts []string
+	if runtime != "" {
+		parts = strings.Split(name, "/")
+		name = parts[1]
+	}
 
 	if err := checkRackNameRegex(name); err != nil {
 		return err
@@ -248,6 +253,10 @@ func RackInstall(_ sdk.Interface, c *stdcli.Context) error {
 		}
 
 		return nil
+	}
+
+	if runtime != "" {
+		name = parts[0]+ "/" +parts[1]
 	}
 
 	if err := rack.Install(c, slug, name, version, runtime, opts); err != nil {
