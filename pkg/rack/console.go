@@ -107,7 +107,7 @@ func (c Console) Endpoint() (*url.URL, error) {
 
 	username := base64.StdEncoding.EncodeToString([]byte(c.name))
 
-	endpoint := fmt.Sprintf("http://%s:%s@%s", string(username), url.QueryEscape(pw), c.host)
+	endpoint := fmt.Sprintf("https://%s:%s@%s", string(username), url.QueryEscape(pw), c.host)
 
 	return url.Parse(endpoint)
 }
@@ -363,7 +363,7 @@ func consoleClient(c *stdcli.Context, host, rack string) (*console.Client, error
 		return nil, err
 	}
 
-	endpoint := fmt.Sprintf("http://convox:%s@%s", url.QueryEscape(pw), host)
+	endpoint := fmt.Sprintf("https://convox:%s@%s", url.QueryEscape(pw), host)
 
 	cc, err := console.NewClient(endpoint, rack, c)
 	if err != nil {
