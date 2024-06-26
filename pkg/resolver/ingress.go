@@ -6,7 +6,7 @@ import (
 
 	ac "k8s.io/api/core/v1"
 	ae "k8s.io/api/networking/v1"
-	ie "k8s.io/client-go/informers/extensions/v1beta1"
+	ie "k8s.io/client-go/informers/networking/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 )
