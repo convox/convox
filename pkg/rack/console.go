@@ -44,8 +44,27 @@ func CreateConsole(c *stdcli.Context, name string, md *Metadata) (*Console, erro
 	return cr, nil
 }
 
-func InstallConsole(c *stdcli.Context, provider, name, version string, options map[string]string) error {
-	return fmt.Errorf("console install from cli not yet supported")
+func InstallConsole(c *stdcli.Context, provider, name, version, runtime string, options map[string]string) error {
+	host, err := currentConsole(c)
+	if err != nil {
+		return err
+	}
+
+	cc, err := consoleClient(c, host, "")
+	if err != nil {
+		return err
+	}
+	
+	if options["region"] == "" {
+		return fmt.Errorf("region not provided")
+	}
+
+	_, err = cc.RackInstall(name, provider, version, runtime, options)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func LoadConsole(c *stdcli.Context, name string) (*Console, error) {
