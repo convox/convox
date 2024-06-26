@@ -36,6 +36,7 @@ type Interface interface {
 	ResourceUpdateClassic(string, structs.ResourceUpdateOptions) (*structs.Resource, error)
 	RackHost(rackOrgSlug string) (structs.RackData, error)
 	Runtimes(rackOrgSlug string) (structs.Runtimes, error)
+	OrganizationRuntimes(org string) (structs.Runtimes, error)
 	RuntimeAttach(rackOrgSlug string, opts structs.RuntimeAttachOptions) error
 	SystemJwtToken(opts structs.SystemJwtOptions) (*structs.SystemJwt, error)
 	SystemResourceCreateClassic(string, structs.ResourceCreateOptions) (*structs.Resource, error)

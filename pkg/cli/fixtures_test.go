@@ -357,3 +357,10 @@ func fxSystemUpdating() *structs.System {
 		Version:    "21000101000000",
 	}
 }
+
+func fxRuntime() *structs.Runtime {
+	return &structs.Runtime{
+		Id:    "b29266a2-0d25-4194-b375-a7ac722f82a5",
+		Title: "533267189958",
+	}
+}
