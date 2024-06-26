@@ -90,12 +90,12 @@ func Current(c *stdcli.Context) (Rack, error) {
 	}
 }
 
-func Install(c *stdcli.Context, provider, name, version string, options map[string]string) error {
+func Install(c *stdcli.Context, provider, name, version, runtime string, options map[string]string) error {
 	switch len(strings.Split(name, "/")) {
 	case 1:
 		return InstallTerraform(c, provider, name, version, options)
 	case 2:
-		return InstallConsole(c, provider, name, version, options)
+		return InstallConsole(c, provider, name, version, runtime, options)
 	default:
 		return fmt.Errorf("invalid name: %s", name)
 	}
