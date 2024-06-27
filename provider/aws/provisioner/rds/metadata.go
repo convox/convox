@@ -1,237 +1,250 @@
 package rds
 
 import (
-	"fmt"
-
 	"github.com/convox/convox/pkg/options"
 )
 
-func ParameterMetaDataForInstall(name string) (*MetaData, error) {
-	switch name {
-	case ParamDBInstanceIdentifier:
-		return &MetaData{
+type MetaData struct {
+	Required                    *bool   `json:"required"`
+	Ignore                      *bool   `json:"ignore"`
+	Immutable                   *bool   `json:"immutable"`
+	UpdatesWithSomeInterruption *bool   `json:"updatesWithSomeInterruption"`
+	Default                     *string `json:"default"`
+}
+
+func GetParametersMetaDataForInstall() map[string]*MetaData {
+	return map[string]*MetaData{
+		ParamDBInstanceIdentifier: {
 			Required:  options.Bool(true),
 			Immutable: options.Bool(true),
-		}, nil
-	case ParamDBName:
-		return &MetaData{
+		},
+		ParamDBName: {
 			Required:  options.Bool(true),
 			Immutable: options.Bool(true),
 			Default:   options.String("app"),
-		}, nil
-	case ParamDBParameterGroupName:
-		return &MetaData{
+		},
+		ParamDBParameterGroupName: {
 			UpdatesWithSomeInterruption: options.Bool(true),
-		}, nil
-	case ParamEngine:
-		return &MetaData{
+		},
+		ParamEngine: {
 			Required:  options.Bool(true),
 			Immutable: options.Bool(true),
-		}, nil
-	case ParamEngineVersion:
-		return &MetaData{
+		},
+		ParamEngineVersion: {
 			Required:                    options.Bool(true),
 			UpdatesWithSomeInterruption: options.Bool(true),
-		}, nil
-	case ParamDBInstanceClass:
-		return &MetaData{
+		},
+		ParamDBInstanceClass: {
 			Required:                    options.Bool(true),
 			UpdatesWithSomeInterruption: options.Bool(true),
-		}, nil
-	case ParamStorageType:
-		return &MetaData{
+		},
+		ParamStorageType: {
 			Required: options.Bool(true),
 			Default:  options.String("gp2"),
-		}, nil
-	case ParamAllocatedStorage:
-		return &MetaData{
+		},
+		ParamAllocatedStorage: {
 			Required: options.Bool(true),
 			Default:  options.String("20"),
-		}, nil
-	case ParamMasterUsername:
-		return &MetaData{
+		},
+		ParamMasterUsername: {
 			Required: options.Bool(true),
 			Default:  options.String("app"),
-		}, nil
-	case ParamMasterUserPassword:
-		return &MetaData{
+		},
+		ParamMasterUserPassword: {
 			Required: options.Bool(true),
-		}, nil
-	case ParamAllowMajorVersionUpgrade:
-		return &MetaData{
+		},
+		ParamAllowMajorVersionUpgrade: {
 			Default: options.String("true"),
-		}, nil
-	case ParamAutoMinorVersionUpgrade:
-		return &MetaData{
+		},
+		ParamAutoMinorVersionUpgrade: {
 			UpdatesWithSomeInterruption: options.Bool(true),
-		}, nil
-	case ParamBackupRetentionPeriod:
-		return &MetaData{
+		},
+		ParamBackupRetentionPeriod: {
 			UpdatesWithSomeInterruption: options.Bool(true),
-		}, nil
-	case ParamDBSubnetGroupName:
-		return &MetaData{
+		},
+		ParamDBSubnetGroupName: {
 			Immutable: options.Bool(true),
-		}, nil
-	case ParamDBSnapshotIdentifier:
-		return &MetaData{
+		},
+		ParamDBSnapshotIdentifier: {
 			Immutable: options.Bool(true),
-		}, nil
-	case ParamDeletionProtection:
-		return &MetaData{}, nil
-	case ParamIops:
-		return &MetaData{}, nil
-	case ParamMultiAZ:
-		return &MetaData{
+		},
+		ParamDeletionProtection: {},
+		ParamIops:               {},
+		ParamMultiAZ: {
 			UpdatesWithSomeInterruption: options.Bool(true),
-		}, nil
-	case ParamPort:
-		return &MetaData{
+		},
+		ParamPort: {
 			Required:  options.Bool(true),
 			Immutable: options.Bool(true),
-		}, nil
-	case ParamPreferredBackupWindow:
-		return &MetaData{}, nil
-	case ParamPreferredMaintenanceWindow:
-		return &MetaData{}, nil
-	case ParamPubliclyAccessible:
-		return &MetaData{
+		},
+		ParamPreferredBackupWindow:      {},
+		ParamPreferredMaintenanceWindow: {},
+		ParamPubliclyAccessible: {
 			Default: options.String("false"),
-		}, nil
-	case ParamStorageEncrypted:
-		return &MetaData{
+		},
+		ParamStorageEncrypted: {
 			Immutable: options.Bool(true),
-		}, nil
-	case ParamSourceDBInstanceIdentifier:
-		return &MetaData{}, nil
-	case ParamSubnetIds:
-		return &MetaData{}, nil
-	case ParamVPCSecurityGroups:
-		return &MetaData{}, nil
-	case ParamVPC:
-		return &MetaData{}, nil
-	default:
-		return &MetaData{}, nil
+		},
+		ParamSubnetIds:         {},
+		ParamVPCSecurityGroups: {},
+		ParamVPC:               {},
 	}
+
+	// not allowed params:
+	// - ParamSourceDBInstanceIdentifier
 }
 
-func ParameterMetaDataForUpdate(name string) (*MetaData, error) {
-	switch name {
-	case ParamDBInstanceIdentifier:
-		return &MetaData{
+func GetParametersMetaDataForUpdate() map[string]*MetaData {
+	return map[string]*MetaData{
+		ParamDBInstanceIdentifier: {
 			Required:  options.Bool(true),
 			Immutable: options.Bool(true),
-		}, nil
-	case ParamDBName:
-		return &MetaData{
+		},
+		ParamDBName: {
 			Immutable: options.Bool(true),
 			Default:   options.String("app"),
-		}, nil
-	case ParamDBParameterGroupName:
-		return &MetaData{
+		},
+		ParamDBParameterGroupName: {
 			UpdatesWithSomeInterruption: options.Bool(true),
-		}, nil
-	case ParamEngine:
-		return &MetaData{
+		},
+		ParamEngine: {
 			Immutable: options.Bool(true),
-		}, nil
-	case ParamEngineVersion:
-		return &MetaData{
+		},
+		ParamEngineVersion: {
 			UpdatesWithSomeInterruption: options.Bool(true),
-		}, nil
-	case ParamDBInstanceClass:
-		return &MetaData{
+		},
+		ParamDBInstanceClass: {
 			UpdatesWithSomeInterruption: options.Bool(true),
-		}, nil
-	case ParamStorageType:
-		return &MetaData{
+		},
+		ParamStorageType: {
 			Default: options.String("gp2"),
-		}, nil
-	case ParamAllocatedStorage:
-		return &MetaData{
+		},
+		ParamAllocatedStorage: {
 			Default: options.String("20"),
-		}, nil
-	case ParamMasterUsername:
-		return &MetaData{
+		},
+		ParamMasterUsername: {
 			Immutable: options.Bool(true),
-		}, nil
-	case ParamMasterUserPassword:
-		return &MetaData{}, nil
-	case ParamAllowMajorVersionUpgrade:
-		return &MetaData{
+		},
+		ParamMasterUserPassword: {},
+		ParamAllowMajorVersionUpgrade: {
 			Default: options.String("true"),
-		}, nil
-	case ParamAutoMinorVersionUpgrade:
-		return &MetaData{
+		},
+		ParamAutoMinorVersionUpgrade: {
 			UpdatesWithSomeInterruption: options.Bool(true),
-		}, nil
-	case ParamBackupRetentionPeriod:
-		return &MetaData{
+		},
+		ParamBackupRetentionPeriod: {
 			UpdatesWithSomeInterruption: options.Bool(true),
-		}, nil
-	case ParamDBSubnetGroupName:
-		return &MetaData{
+		},
+		ParamDBSubnetGroupName: {
 			Immutable: options.Bool(true),
-		}, nil
-	case ParamDBSnapshotIdentifier:
-		return &MetaData{
+		},
+		ParamDBSnapshotIdentifier: {
 			Immutable: options.Bool(true),
-		}, nil
-	case ParamDeletionProtection:
-		return &MetaData{}, nil
-	case ParamIops:
-		return &MetaData{}, nil
-	case ParamMultiAZ:
-		return &MetaData{
+		},
+		ParamDeletionProtection: {},
+		ParamIops:               {},
+		ParamMultiAZ: {
 			UpdatesWithSomeInterruption: options.Bool(true),
-		}, nil
-	case ParamPort:
-		return &MetaData{
+		},
+		ParamPort: {
 			Immutable: options.Bool(true),
-		}, nil
-	case ParamPreferredBackupWindow:
-		return &MetaData{}, nil
-	case ParamPreferredMaintenanceWindow:
-		return &MetaData{}, nil
-	case ParamPubliclyAccessible:
-		return &MetaData{
+		},
+		ParamPreferredBackupWindow:      {},
+		ParamPreferredMaintenanceWindow: {},
+		ParamPubliclyAccessible: {
 			Default: options.String("false"),
-		}, nil
-	case ParamStorageEncrypted:
-		return &MetaData{
+		},
+		ParamStorageEncrypted: {
 			Immutable: options.Bool(true),
-		}, nil
-	case ParamSourceDBInstanceIdentifier:
-		return &MetaData{
-			UpdatesWithSomeInterruption: options.Bool(true),
-		}, nil
-	case ParamSubnetIds:
-		return &MetaData{}, nil
-	case ParamVPCSecurityGroups:
-		return &MetaData{
-			Immutable: options.Bool(true),
-		}, nil
-	case ParamVPC:
-		return &MetaData{}, nil
-	case ParamApplyImmediately:
-		return &MetaData{
+		},
+		ParamSubnetIds:         {},
+		ParamVPCSecurityGroups: {},
+		ParamVPC:               {},
+		ParamApplyImmediately: {
 			Default: options.String("true"),
-		}, nil
-	default:
-		return nil, fmt.Errorf("metadata not found for param: %s", name)
+		},
 	}
 }
 
-func ParameterMetaDataForImport(name string) (*MetaData, error) {
-	switch name {
-	case ParamDBInstanceIdentifier:
-		return &MetaData{
+func GetParametersMetaDataForImport() map[string]*MetaData {
+	m := map[string]*MetaData{}
+	for _, p := range ParametersNameList() {
+		m[p] = &MetaData{}
+	}
+
+	m[ParamDBInstanceIdentifier] = &MetaData{
+		Required:  options.Bool(true),
+		Immutable: options.Bool(true),
+	}
+
+	m[ParamPort] = &MetaData{
+		Required: options.Bool(true),
+	}
+
+	m[ParamDBName] = &MetaData{
+		Required: options.Bool(true),
+	}
+
+	m[ParamMasterUsername] = &MetaData{
+		Required: options.Bool(true),
+	}
+
+	m[ParamMasterUserPassword] = &MetaData{
+		Required: options.Bool(true),
+	}
+
+	delete(m, ParamAllowMajorVersionUpgrade)
+	return m
+}
+
+func GetParametersMetaDataForReadReplicaInstall() map[string]*MetaData {
+	return map[string]*MetaData{
+		ParamDBInstanceIdentifier: {
 			Required:  options.Bool(true),
 			Immutable: options.Bool(true),
-		}, nil
-	case ParamAllowMajorVersionUpgrade:
-		return nil, fmt.Errorf("not supported")
-	default:
-		return &MetaData{}, nil
+		},
+		ParamSourceDBInstanceIdentifier: {
+			Required:  options.Bool(true),
+			Immutable: options.Bool(true),
+		},
+		ParamEngine: {
+			Immutable: options.Bool(true),
+		},
+		ParamDBParameterGroupName: {
+			UpdatesWithSomeInterruption: options.Bool(true),
+		},
+		ParamDBInstanceClass: {
+			Required:                    options.Bool(true),
+			UpdatesWithSomeInterruption: options.Bool(true),
+		},
+		ParamStorageType: {
+			Required: options.Bool(true),
+			Default:  options.String("gp2"),
+		},
+		ParamAllocatedStorage: {
+			Required: options.Bool(true),
+			Default:  options.String("20"),
+		},
+		ParamAutoMinorVersionUpgrade: {
+			UpdatesWithSomeInterruption: options.Bool(true),
+		},
+		ParamDBSubnetGroupName: {
+			Immutable: options.Bool(true),
+		},
+		ParamDeletionProtection: {},
+		ParamIops:               {},
+		ParamMultiAZ: {
+			UpdatesWithSomeInterruption: options.Bool(true),
+		},
+		ParamPort: {
+			Required: options.Bool(true),
+		},
+		ParamPubliclyAccessible: {
+			Default: options.String("false"),
+		},
+		ParamSubnetIds:         {},
+		ParamVPCSecurityGroups: {},
+		ParamVPC:               {},
 	}
+
 }

@@ -31,28 +31,36 @@ type StateData struct {
 
 	Host string `json:"host"`
 
-	Paramters []Parameter `json:"parameters"`
+	Paramters map[string]Parameter `json:"parameters"`
 }
 
 func NewState(id string, state StatusType, params []Parameter) *StateData {
-	return &StateData{
+	s := &StateData{
 		Id:        id,
 		Status:    state,
 		Imported:  false,
 		Locked:    options.Bool(false),
-		Paramters: params,
+		Paramters: map[string]Parameter{},
 	}
+
+	for _, p := range params {
+		s.AddOrUpdateParameter(p)
+	}
+
+	return s
 }
 
 func NewEmptyState() *StateData {
-	return &StateData{}
+	return &StateData{
+		Paramters: map[string]Parameter{},
+	}
 }
 
 func NewStateForImport(id string) *StateData {
 	return &StateData{
 		Id:        id,
 		Imported:  true,
-		Paramters: []Parameter{},
+		Paramters: map[string]Parameter{},
 	}
 }
 
@@ -62,6 +70,19 @@ func (s *StateData) GetStatus() string {
 
 func (s *StateData) SetStatus(state StatusType) {
 	s.Status = state
+}
+
+func (s *StateData) AddParameter(p Parameter) error {
+	if _, has := s.Paramters[*p.Key]; has {
+		return fmt.Errorf("parameter with same already exists")
+	}
+
+	s.Paramters[*p.Key] = p
+	return nil
+}
+
+func (s *StateData) AddOrUpdateParameter(p Parameter) {
+	s.Paramters[*p.Key] = p
 }
 
 func (s *StateData) GetParameter(key string) (*Parameter, error) {
@@ -182,7 +203,11 @@ func (s *StateData) Unlock() error {
 }
 
 func (s *StateData) GetParameters() []Parameter {
-	return s.Paramters
+	ps := []Parameter{}
+	for _, p := range s.Paramters {
+		ps = append(ps, p)
+	}
+	return ps
 }
 
 func (s *StateData) GetStateInBytes() ([]byte, error) {
@@ -191,22 +216,54 @@ func (s *StateData) GetStateInBytes() ([]byte, error) {
 
 // it will update the value if it's not immutable,
 // also it will return true or false if the given value differs from existing value
-func (s *StateData) UpdateParameterValue(key, value string) (bool, error) {
-	for i := range s.Paramters {
-		if k, err := s.Paramters[i].GetKey(); err == nil && k == key {
-			return s.Paramters[i].Update(value)
+func (s *StateData) UpdateParameterValueForDbUpdate(key, value string) (bool, error) {
+	updateMetadataMap := GetParametersMetaDataForUpdate()
+	param, has := s.Paramters[key]
+	if !has {
+		// adding new parameter, since this is new parameter key for this state
+		m, has := updateMetadataMap[key]
+		if !has {
+			return false, fmt.Errorf("parameter metadata not found: %s", key)
 		}
+		s.AddOrUpdateParameter(*NewParameter(key, value, m))
+		return true, nil
 	}
-	return false, fmt.Errorf("parameter not found: %s", key)
+
+	isUpdated, err := param.Update(value)
+	if err != nil {
+		return false, err
+	}
+
+	if isUpdated {
+		m, has := updateMetadataMap[key]
+		if !has {
+			return false, fmt.Errorf("parameter metadata not found: %s", key)
+		}
+
+		if err := param.UpdateMetaData(m); err != nil {
+			return false, err
+		}
+
+		s.AddOrUpdateParameter(param)
+
+		return isUpdated, nil
+	}
+	return isUpdated, nil
 }
 
 func (s *StateData) InitializeParameterValue(key, value string) error {
-	for i := range s.Paramters {
-		if k, err := s.Paramters[i].GetKey(); err == nil && k == key {
-			return s.Paramters[i].Initialize(value)
-		}
+	param, has := s.Paramters[key]
+	if !has {
+		return fmt.Errorf("parameter not found to initialize: %s", key)
 	}
-	return fmt.Errorf("parameter not found: %s", key)
+
+	if err := param.Initialize(value); err != nil {
+		return err
+	}
+
+	s.AddOrUpdateParameter(param)
+
+	return nil
 }
 
 func (s *StateData) LoadState(data []byte) error {
@@ -216,7 +273,7 @@ func (s *StateData) LoadState(data []byte) error {
 	return nil
 }
 
-func (s *StateData) AddParameterByValuePtr(key string, value interface{}) error {
+func (s *StateData) AddParameterForImportByValuePtr(key string, value interface{}) error {
 	v, err := convertToStringPtr(value)
 	if err != nil {
 		return err
@@ -226,105 +283,114 @@ func (s *StateData) AddParameterByValuePtr(key string, value interface{}) error 
 		return fmt.Errorf("parameter already exists: %s", key)
 	}
 
-	m, err := ParameterMetaDataForImport(key)
-	if err != nil {
-		return err
+	paramsMeta := GetParametersMetaDataForImport()
+	m, has := paramsMeta[key]
+	if !has {
+		return fmt.Errorf("metadata not found for param: %s", key)
 	}
-	if m.Required != nil && *m.Required && value == nil {
+
+	if m.Required != nil && *m.Required && (v == nil || *v == "") {
 		return fmt.Errorf("value is required for parameter: %s", key)
 	}
-	s.Paramters = append(s.Paramters, *NewParameterForValuePtr(key, v, m))
+
+	s.AddOrUpdateParameter(*NewParameterForValuePtr(key, v, m))
+
 	return nil
 }
 
 func (s *StateData) ImportState(db *rdstypes.DBInstance, newMasterPassword *string) error {
-	if err := s.AddParameterByValuePtr(ParamDBInstanceIdentifier, db.DBInstanceIdentifier); err != nil {
+	if err := s.AddParameterForImportByValuePtr(ParamDBInstanceIdentifier, db.DBInstanceIdentifier); err != nil {
 		return err
 	}
 
-	if err := s.AddParameterByValuePtr(ParamAllocatedStorage, db.AllocatedStorage); err != nil {
+	if err := s.AddParameterForImportByValuePtr(ParamAllocatedStorage, db.AllocatedStorage); err != nil {
 		return err
 	}
 
-	if err := s.AddParameterByValuePtr(ParamAutoMinorVersionUpgrade, db.AutoMinorVersionUpgrade); err != nil {
+	if err := s.AddParameterForImportByValuePtr(ParamAutoMinorVersionUpgrade, db.AutoMinorVersionUpgrade); err != nil {
 		return err
 	}
 
-	if err := s.AddParameterByValuePtr(ParamBackupRetentionPeriod, db.BackupRetentionPeriod); err != nil {
+	if err := s.AddParameterForImportByValuePtr(ParamBackupRetentionPeriod, db.BackupRetentionPeriod); err != nil {
 		return err
 	}
 
-	if err := s.AddParameterByValuePtr(ParamDBInstanceClass, db.DBInstanceClass); err != nil {
+	if err := s.AddParameterForImportByValuePtr(ParamDBInstanceClass, db.DBInstanceClass); err != nil {
 		return err
 	}
 
-	if err := s.AddParameterByValuePtr(ParamDBName, db.DBName); err != nil {
+	dbName := db.DBName
+	if db.DBName == nil || *db.DBName == "" {
+		dbName = db.Engine
+	}
+
+	if err := s.AddParameterForImportByValuePtr(ParamDBName, dbName); err != nil {
 		return err
 	}
 
 	if len(db.DBParameterGroups) > 0 {
-		if err := s.AddParameterByValuePtr(ParamDBParameterGroupName, db.DBParameterGroups[0].DBParameterGroupName); err != nil {
+		if err := s.AddParameterForImportByValuePtr(ParamDBParameterGroupName, db.DBParameterGroups[0].DBParameterGroupName); err != nil {
 			return err
 		}
 	}
 
 	if db.DBSubnetGroup != nil {
-		if err := s.AddParameterByValuePtr(ParamDBSubnetGroupName, db.DBSubnetGroup.DBSubnetGroupName); err != nil {
+		if err := s.AddParameterForImportByValuePtr(ParamDBSubnetGroupName, db.DBSubnetGroup.DBSubnetGroupName); err != nil {
 			return err
 		}
 	}
 
-	if err := s.AddParameterByValuePtr(ParamDeletionProtection, db.DeletionProtection); err != nil {
+	if err := s.AddParameterForImportByValuePtr(ParamDeletionProtection, db.DeletionProtection); err != nil {
 		return err
 	}
 
-	if err := s.AddParameterByValuePtr(ParamEngine, db.Engine); err != nil {
+	if err := s.AddParameterForImportByValuePtr(ParamEngine, db.Engine); err != nil {
 		return err
 	}
 
-	if err := s.AddParameterByValuePtr(ParamEngineVersion, db.EngineVersion); err != nil {
+	if err := s.AddParameterForImportByValuePtr(ParamEngineVersion, db.EngineVersion); err != nil {
 		return err
 	}
 
-	if err := s.AddParameterByValuePtr(ParamIops, db.Iops); err != nil {
+	if err := s.AddParameterForImportByValuePtr(ParamIops, db.Iops); err != nil {
 		return err
 	}
 
-	if err := s.AddParameterByValuePtr(ParamMasterUsername, db.MasterUsername); err != nil {
+	if err := s.AddParameterForImportByValuePtr(ParamMasterUsername, db.MasterUsername); err != nil {
 		return err
 	}
 
-	if err := s.AddParameterByValuePtr(ParamMasterUserPassword, newMasterPassword); err != nil {
+	if err := s.AddParameterForImportByValuePtr(ParamMasterUserPassword, newMasterPassword); err != nil {
 		return err
 	}
 
-	if err := s.AddParameterByValuePtr(ParamMultiAZ, db.MultiAZ); err != nil {
+	if err := s.AddParameterForImportByValuePtr(ParamMultiAZ, db.MultiAZ); err != nil {
 		return err
 	}
 
 	if db.Endpoint != nil {
-		if err := s.AddParameterByValuePtr(ParamPort, db.Endpoint.Port); err != nil {
+		if err := s.AddParameterForImportByValuePtr(ParamPort, db.Endpoint.Port); err != nil {
 			return err
 		}
 	}
 
-	if err := s.AddParameterByValuePtr(ParamPreferredBackupWindow, db.PreferredBackupWindow); err != nil {
+	if err := s.AddParameterForImportByValuePtr(ParamPreferredBackupWindow, db.PreferredBackupWindow); err != nil {
 		return err
 	}
 
-	if err := s.AddParameterByValuePtr(ParamPreferredMaintenanceWindow, db.PreferredMaintenanceWindow); err != nil {
+	if err := s.AddParameterForImportByValuePtr(ParamPreferredMaintenanceWindow, db.PreferredMaintenanceWindow); err != nil {
 		return err
 	}
 
-	if err := s.AddParameterByValuePtr(ParamPubliclyAccessible, db.PubliclyAccessible); err != nil {
+	if err := s.AddParameterForImportByValuePtr(ParamPubliclyAccessible, db.PubliclyAccessible); err != nil {
 		return err
 	}
 
-	if err := s.AddParameterByValuePtr(ParamStorageEncrypted, db.StorageEncrypted); err != nil {
+	if err := s.AddParameterForImportByValuePtr(ParamStorageEncrypted, db.StorageEncrypted); err != nil {
 		return err
 	}
 
-	if err := s.AddParameterByValuePtr(ParamStorageType, db.StorageType); err != nil {
+	if err := s.AddParameterForImportByValuePtr(ParamStorageType, db.StorageType); err != nil {
 		return err
 	}
 
@@ -336,7 +402,7 @@ func (s *StateData) ImportState(db *rdstypes.DBInstance, newMasterPassword *stri
 			}
 		}
 		if len(sgList) > 0 {
-			if err := s.AddParameterByValuePtr(ParamVPCSecurityGroups, sgList); err != nil {
+			if err := s.AddParameterForImportByValuePtr(ParamVPCSecurityGroups, sgList); err != nil {
 				return err
 			}
 		}
@@ -454,8 +520,8 @@ func (s *StateData) ToAllCommonParamsForInstall() (*AllCommonParams, error) {
 		return nil, err
 	}
 
-	paramsObj.SourceDBInstanceIdentifier, err = s.GetParameterValuePtr(ParamSourceDBInstanceIdentifier)
-	if err != nil {
+	paramsObj.SourceDBInstanceIdentifier, _ = s.GetParameterValuePtr(ParamSourceDBInstanceIdentifier)
+	if err != nil && !IsNotFoundError(err) {
 		return nil, err
 	}
 
@@ -467,59 +533,76 @@ func (s *StateData) ToAllCommonParamsForInstall() (*AllCommonParams, error) {
 	return paramsObj, nil
 }
 
-func (s *StateData) GenerateCreateDBInstanceInput() (*rds.CreateDBInstanceInput, error) {
-	allParamsObj, err := s.ToAllCommonParamsForInstall()
-	if err != nil {
-		return nil, err
-	}
-	return &rds.CreateDBInstanceInput{
-		AllocatedStorage:           allParamsObj.AllocatedStorage,
-		AutoMinorVersionUpgrade:    allParamsObj.AutoMinorVersionUpgrade,
-		BackupRetentionPeriod:      allParamsObj.BackupRetentionPeriod,
-		DBInstanceClass:            allParamsObj.DBInstanceClass,
-		DBInstanceIdentifier:       allParamsObj.DBInstanceIdentifier,
-		DBName:                     allParamsObj.DBName,
-		DBParameterGroupName:       allParamsObj.DBParameterGroupName,
-		DBSubnetGroupName:          allParamsObj.DBSubnetGroupName,
-		DeletionProtection:         allParamsObj.DeletionProtection,
-		Engine:                     allParamsObj.Engine,
-		EngineVersion:              allParamsObj.EngineVersion,
-		Iops:                       allParamsObj.Iops,
-		MasterUserPassword:         allParamsObj.MasterUserPassword,
-		MasterUsername:             allParamsObj.MasterUsername,
-		MultiAZ:                    allParamsObj.MultiAZ,
-		Port:                       allParamsObj.Port,
-		PreferredBackupWindow:      allParamsObj.PreferredBackupWindow,
-		PreferredMaintenanceWindow: allParamsObj.PreferredMaintenanceWindow,
-		PubliclyAccessible:         allParamsObj.PubliclyAccessible,
-		StorageEncrypted:           allParamsObj.StorageEncrypted,
-		StorageType:                allParamsObj.StorageType,
-		VpcSecurityGroupIds:        allParamsObj.VpcSecurityGroupIds,
-	}, nil
-}
+func (s *StateData) ToAllCommonParamsForReplicaInstall() (*AllCommonParams, error) {
+	var err error
+	paramsObj := &AllCommonParams{}
 
-func (s *StateData) GenerateCreateDBInstanceReadReplicaInput() (*rds.CreateDBInstanceReadReplicaInput, error) {
-	allParamsObj, err := s.ToAllCommonParamsForInstall()
+	paramsObj.AllocatedStorage, err = s.GetParameterValueInt32Ptr(ParamAllocatedStorage)
 	if err != nil {
 		return nil, err
 	}
 
-	return &rds.CreateDBInstanceReadReplicaInput{
-		AllocatedStorage:           allParamsObj.AllocatedStorage,
-		AutoMinorVersionUpgrade:    allParamsObj.AutoMinorVersionUpgrade,
-		DBInstanceClass:            allParamsObj.DBInstanceClass,
-		DBInstanceIdentifier:       allParamsObj.DBInstanceIdentifier,
-		DBParameterGroupName:       allParamsObj.DBParameterGroupName,
-		DBSubnetGroupName:          allParamsObj.DBSubnetGroupName,
-		DeletionProtection:         allParamsObj.DeletionProtection,
-		Iops:                       allParamsObj.Iops,
-		MultiAZ:                    allParamsObj.MultiAZ,
-		Port:                       allParamsObj.Port,
-		PubliclyAccessible:         allParamsObj.PubliclyAccessible,
-		StorageType:                allParamsObj.StorageType,
-		SourceDBInstanceIdentifier: allParamsObj.SourceDBInstanceIdentifier,
-		VpcSecurityGroupIds:        allParamsObj.VpcSecurityGroupIds,
-	}, nil
+	paramsObj.AutoMinorVersionUpgrade, err = s.GetParameterValueBoolPtr(ParamAutoMinorVersionUpgrade)
+	if err != nil {
+		return nil, err
+	}
+
+	paramsObj.DBInstanceClass, err = s.GetParameterValuePtr(ParamDBInstanceClass)
+	if err != nil {
+		return nil, err
+	}
+
+	paramsObj.DBInstanceIdentifier, err = s.GetParameterValuePtr(ParamDBInstanceIdentifier)
+	if err != nil {
+		return nil, err
+	}
+
+	paramsObj.DBParameterGroupName, err = s.GetParameterValuePtr(ParamDBParameterGroupName)
+	if err != nil {
+		return nil, err
+	}
+
+	paramsObj.DBSubnetGroupName, err = s.GetParameterValuePtr(ParamDBSubnetGroupName)
+	if err != nil {
+		return nil, err
+	}
+
+	paramsObj.DeletionProtection, err = s.GetParameterValueBoolPtr(ParamDeletionProtection)
+	if err != nil {
+		return nil, err
+	}
+
+	paramsObj.Iops, err = s.GetParameterValueInt32Ptr(ParamIops)
+	if err != nil {
+		return nil, err
+	}
+
+	paramsObj.MultiAZ, err = s.GetParameterValueBoolPtr(ParamMultiAZ)
+	if err != nil {
+		return nil, err
+	}
+
+	paramsObj.Port, err = s.GetParameterValueInt32Ptr(ParamPort)
+	if err != nil {
+		return nil, err
+	}
+
+	paramsObj.PubliclyAccessible, err = s.GetParameterValueBoolPtr(ParamPubliclyAccessible)
+	if err != nil {
+		return nil, err
+	}
+
+	paramsObj.SourceDBInstanceIdentifier, _ = s.GetParameterValuePtr(ParamSourceDBInstanceIdentifier)
+	if err != nil && !IsNotFoundError(err) {
+		return nil, err
+	}
+
+	paramsObj.VpcSecurityGroupIds, err = s.GetParameterValueStringArray(ParamVPCSecurityGroups)
+	if err != nil {
+		return nil, err
+	}
+
+	return paramsObj, nil
 }
 
 func (s *StateData) ToAllCommonParamsForUpdate() (*AllCommonParams, error) {
@@ -645,33 +728,39 @@ func (s *StateData) ToAllCommonParamsForUpdate() (*AllCommonParams, error) {
 }
 
 func (s *StateData) GenerateModifyDBInstanceInput(changedParams []string) (*rds.ModifyDBInstanceInput, error) {
+	paramsMeta := GetParametersMetaDataForUpdate()
 	changedAndRequiredParams := []Parameter{}
 	paramMap := map[string]struct{}{}
 	for _, paramKey := range changedParams {
 		value, err := s.GetParameterValue(paramKey)
-		if err != nil {
+		if err != nil && !IsNotFoundError(err) {
 			return nil, err
 		}
 
-		m, err := ParameterMetaDataForUpdate(paramKey)
-		if err != nil {
-			return nil, err
+		// probably value is set to empty string
+		if IsNotFoundError(err) {
+			valuePtr, err2 := s.GetParameterValuePtr(paramKey)
+			if err2 != nil {
+				return nil, err2
+			}
+
+			if valuePtr != nil {
+				value = *valuePtr
+			} else {
+				return nil, err
+			}
+		}
+
+		m, has := paramsMeta[paramKey]
+		if !has {
+			return nil, fmt.Errorf("metadata not found for param: %s", paramKey)
 		}
 
 		changedAndRequiredParams = append(changedAndRequiredParams, *NewParameter(paramKey, value, m))
 		paramMap[paramKey] = struct{}{}
 	}
 
-	allParams := ParametersNameList()
-	for _, pKey := range allParams {
-		m, err := ParameterMetaDataForUpdate(pKey)
-		if err != nil {
-			if IsNotFoundError(err) {
-				continue
-			}
-			return nil, err
-		}
-
+	for pKey, m := range paramsMeta {
 		if m.Required != nil && *m.Required {
 			if _, has := paramMap[pKey]; !has {
 				value, err := s.GetParameterValue(pKey)
@@ -710,5 +799,60 @@ func (s *StateData) GenerateModifyDBInstanceInput(changedParams []string) (*rds.
 		PreferredMaintenanceWindow: allParamsObj.PreferredMaintenanceWindow,
 		PubliclyAccessible:         allParamsObj.PubliclyAccessible,
 		StorageType:                allParamsObj.StorageType,
+	}, nil
+}
+
+func (s *StateData) GenerateCreateDBInstanceInput() (*rds.CreateDBInstanceInput, error) {
+	allParamsObj, err := s.ToAllCommonParamsForInstall()
+	if err != nil {
+		return nil, err
+	}
+	return &rds.CreateDBInstanceInput{
+		AllocatedStorage:           allParamsObj.AllocatedStorage,
+		AutoMinorVersionUpgrade:    allParamsObj.AutoMinorVersionUpgrade,
+		BackupRetentionPeriod:      allParamsObj.BackupRetentionPeriod,
+		DBInstanceClass:            allParamsObj.DBInstanceClass,
+		DBInstanceIdentifier:       allParamsObj.DBInstanceIdentifier,
+		DBName:                     allParamsObj.DBName,
+		DBParameterGroupName:       allParamsObj.DBParameterGroupName,
+		DBSubnetGroupName:          allParamsObj.DBSubnetGroupName,
+		DeletionProtection:         allParamsObj.DeletionProtection,
+		Engine:                     allParamsObj.Engine,
+		EngineVersion:              allParamsObj.EngineVersion,
+		Iops:                       allParamsObj.Iops,
+		MasterUserPassword:         allParamsObj.MasterUserPassword,
+		MasterUsername:             allParamsObj.MasterUsername,
+		MultiAZ:                    allParamsObj.MultiAZ,
+		Port:                       allParamsObj.Port,
+		PreferredBackupWindow:      allParamsObj.PreferredBackupWindow,
+		PreferredMaintenanceWindow: allParamsObj.PreferredMaintenanceWindow,
+		PubliclyAccessible:         allParamsObj.PubliclyAccessible,
+		StorageEncrypted:           allParamsObj.StorageEncrypted,
+		StorageType:                allParamsObj.StorageType,
+		VpcSecurityGroupIds:        allParamsObj.VpcSecurityGroupIds,
+	}, nil
+}
+
+func (s *StateData) GenerateCreateDBInstanceReadReplicaInput() (*rds.CreateDBInstanceReadReplicaInput, error) {
+	allParamsObj, err := s.ToAllCommonParamsForReplicaInstall()
+	if err != nil {
+		return nil, err
+	}
+
+	return &rds.CreateDBInstanceReadReplicaInput{
+		AllocatedStorage:           allParamsObj.AllocatedStorage,
+		AutoMinorVersionUpgrade:    allParamsObj.AutoMinorVersionUpgrade,
+		DBInstanceClass:            allParamsObj.DBInstanceClass,
+		DBInstanceIdentifier:       allParamsObj.DBInstanceIdentifier,
+		DBParameterGroupName:       allParamsObj.DBParameterGroupName,
+		DBSubnetGroupName:          allParamsObj.DBSubnetGroupName,
+		DeletionProtection:         allParamsObj.DeletionProtection,
+		Iops:                       allParamsObj.Iops,
+		MultiAZ:                    allParamsObj.MultiAZ,
+		Port:                       allParamsObj.Port,
+		PubliclyAccessible:         allParamsObj.PubliclyAccessible,
+		StorageType:                allParamsObj.StorageType,
+		SourceDBInstanceIdentifier: allParamsObj.SourceDBInstanceIdentifier,
+		VpcSecurityGroupIds:        allParamsObj.VpcSecurityGroupIds,
 	}, nil
 }

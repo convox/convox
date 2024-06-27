@@ -124,7 +124,8 @@ data "aws_iam_policy_document" "rds_provisioner" {
       "ec2:AuthorizeSecurityGroupEgress",
       "ec2:RevokeSecurityGroupIngress",
       "ec2:RevokeSecurityGroupEgress",
-      "ec2:ModifySecurityGroupRules"
+      "ec2:ModifySecurityGroupRules",
+      "ec2:CreateTags",
     ]
     resources = ["*"]
   }
@@ -132,13 +133,14 @@ data "aws_iam_policy_document" "rds_provisioner" {
   statement {
     effect = "Allow"
     actions = [
-      "rds:CreateDBInstance",
-      "rds:DeleteDBInstance",
-      "rds:ModifyDBInstance",
+      "rds:CreateDBInstance*",
+      "rds:DeleteDBInstance*",
+      "rds:ModifyDBInstance*",
       "rds:Describe*",
       "rds:CreateDBSubnetGroup",
       "rds:DeleteDBSubnetGroup",
       "rds:ModifyDBSubnetGroup",
+      "rds:AddTagsToResource"
     ]
     resources = ["*"]
   }

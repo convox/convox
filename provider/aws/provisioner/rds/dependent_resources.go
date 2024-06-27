@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/rds"
 	rdstypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 )
 
 func (p *Provisioner) GetVPCCIDR(vpcID string) (string, error) {
@@ -53,6 +54,9 @@ func (p *Provisioner) GetDBSubnetGroup(subnetGroupName string) (*rdstypes.DBSubn
 
 	result, err := p.rdsClient.DescribeDBSubnetGroups(context.Background(), input)
 	if err != nil {
+		if err, ok := err.(awserr.Error); ok && err.Code() == "DBSubnetGroupNotFoundFault" {
+			return nil, fmt.Errorf("db subnet group not found")
+		}
 		return nil, fmt.Errorf("failed to describe db subnet groups: %s", err)
 	}
 

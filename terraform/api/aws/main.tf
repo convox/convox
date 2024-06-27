@@ -49,7 +49,7 @@ module "k8s" {
     RESOLVER                      = var.resolver
     ROUTER                        = var.router
     SOCKET                        = "/var/run/docker.sock"
-    SUBNET_IDS                    = var.subnets
+    SUBNET_IDS                    = join(",", var.subnets)
     VPC_ID                        = var.vpc_id
   }
 }

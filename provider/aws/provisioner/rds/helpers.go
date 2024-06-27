@@ -44,17 +44,42 @@ func convertToStringPtr(v interface{}) (*string, error) {
 	}
 
 	switch v.(type) {
+	case int32:
+		vInt := v.(int32)
+		return options.String(strconv.FormatInt(int64(vInt), 10)), nil
+	case string:
+		vStr := v.(string)
+		return &vStr, nil
+	case int64:
+		vInt := v.(int64)
+		return options.String(strconv.FormatInt(int64(vInt), 10)), nil
+	case bool:
+		vBool := v.(bool)
+		return options.String(strconv.FormatBool(vBool)), nil
 	case *int32:
-		vInt := v.(*int32)
+		vInt, _ := v.(*int32)
+		if vInt == nil {
+			return nil, nil
+		}
 		return options.String(strconv.FormatInt(int64(*vInt), 10)), nil
 	case *string:
-		return v.(*string), nil
+		vStr, _ := v.(*string)
+		if vStr == nil {
+			return nil, nil
+		}
+		return vStr, nil
 	case *int64:
-		vInt := v.(*int64)
+		vInt, _ := v.(*int64)
+		if vInt == nil {
+			return nil, nil
+		}
 		return options.String(strconv.FormatInt(int64(*vInt), 10)), nil
 	case *bool:
-		vInt := v.(*int64)
-		return options.String(strconv.FormatInt(int64(*vInt), 10)), nil
+		vBool, _ := v.(*bool)
+		if vBool == nil {
+			return nil, nil
+		}
+		return options.String(strconv.FormatBool(*vBool)), nil
 	case []string:
 		vArr := v.([]string)
 		return options.String(strings.Join(vArr, ",")), nil
@@ -67,7 +92,7 @@ func GenerateSecurePassword(length int) (string, error) {
 	const (
 		letters         = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 		digits          = "0123456789"
-		specialChars    = "@#$[]{}?"
+		specialChars    = "$#?"
 		allChars        = letters + digits + specialChars
 		minLetters      = 4
 		minDigits       = 1
@@ -126,24 +151,4 @@ func GenerateSecurePassword(length int) (string, error) {
 	}
 
 	return string(password), nil
-}
-
-func DefaultDbPort(engine string) string {
-	switch engine {
-	case "mysql", "mariadb":
-		return "3306"
-	case "postgres":
-		return "5432"
-	default:
-		return "8080"
-	}
-}
-
-func IsDbImport(options map[string]string) (bool, string) {
-	for k, v := range options {
-		if strings.EqualFold(k, "import") {
-			return len(strings.TrimSpace(v)) > 0, strings.TrimSpace(v)
-		}
-	}
-	return false, ""
 }

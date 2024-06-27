@@ -4,12 +4,15 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/rds"
 	rdstypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/convox/convox/provider/aws/provisioner"
 	"github.com/convox/logger"
 )
@@ -37,23 +40,40 @@ func NewProvisioner(s provisioner.Storage) *Provisioner {
 }
 
 func (p *Provisioner) Provision(id string, options map[string]string) error {
-	_, err := p.storage.GetState(id)
-	if err != nil {
-		if IsNotFoundError(err) {
-			return p.Install(id, options)
-		}
-		return err
-	}
-
-	if ok, v := IsDbImport(options); ok {
+	if v, ok := options[ParamImport]; ok {
 		pass := options[ParamMasterUserPassword]
 		if pass == "" {
 			return fmt.Errorf("db password is required for import")
 		}
-		return p.Import(id, v, &pass)
+		p.logger.Logf("Start db instance import")
+		if err := p.Import(id, v, &pass); err != nil {
+			return fmt.Errorf("failed to import db instance: %s", err)
+		}
+		return nil
 	}
 
-	return p.Update(id, options)
+	_, err := p.storage.GetState(id)
+	if err != nil {
+		if IsNotFoundError(err) {
+			if options[ParamSourceDBInstanceIdentifier] != "" {
+				p.logger.Logf("Start provision for db replica")
+				return p.InstallReplica(id, options)
+			}
+
+			p.logger.Logf("Start provision for db instance")
+			if err := p.Install(id, options); err != nil {
+				return fmt.Errorf("failed to install db instance: %s", err)
+			}
+			return nil
+		}
+		return err
+	}
+
+	p.logger.Logf("Start db instance update")
+	if err := p.Update(id, options); err != nil {
+		return fmt.Errorf("failed to update db instance: %s", err)
+	}
+	return nil
 }
 
 func (p *Provisioner) Install(id string, options map[string]string) error {
@@ -66,25 +86,20 @@ func (p *Provisioner) Install(id string, options map[string]string) error {
 
 	options[ParamDBInstanceIdentifier] = id
 
-	if _, has := options[ParamPort]; !has {
-		options[ParamPort] = DefaultDbPort(options[ParamEngine])
+	if err := p.ApplyInstallDefaults(options); err != nil {
+		return err
 	}
 
-	if _, has := options[ParamMasterUserPassword]; !has {
-		options[ParamMasterUserPassword], err = GenerateSecurePassword(36)
-		if err != nil {
-			return fmt.Errorf("failed to generate password: %s", err)
+	installParamsMeta := GetParametersMetaDataForInstall()
+
+	for k := range options {
+		if _, has := installParamsMeta[k]; !has {
+			return fmt.Errorf("param '%s' is not allowed or supported", k)
 		}
 	}
 
-	allParamNames := ParametersNameList()
 	params := []Parameter{}
-	for _, p := range allParamNames {
-		m, err := ParameterMetaDataForInstall(p)
-		if err != nil {
-			return err
-		}
-
+	for p, m := range installParamsMeta {
 		newParam := NewParameter(p, options[p], m)
 		if err := newParam.Validate(); err != nil {
 			return err
@@ -131,24 +146,125 @@ func (p *Provisioner) Install(id string, options map[string]string) error {
 		return err
 	}
 
-	stateData.Host = *dbCreateResp.DBInstance.Endpoint.Address
+	if dbCreateResp != nil && dbCreateResp.DBInstance != nil && dbCreateResp.DBInstance.Endpoint != nil &&
+		dbCreateResp.DBInstance.Endpoint.Address != nil {
+		stateData.Host = *dbCreateResp.DBInstance.Endpoint.Address
+	}
 
-	p.logger.Logf("Saving the state data for id: %s", id)
-	stateBytes, err := stateData.GetStateInBytes()
-	if err != nil {
-		p.logger.Errorf("Failed to get state bytes: %s", err)
+	if err := p.SaveState(id, stateData); err != nil {
 		p.logger.Logf("Uninstalling because of the error: %s", err)
 		p.Uninstall(id)
 		return err
 	}
 
-	if err := p.storage.SaveState(id, stateBytes); err != nil {
-		p.logger.Errorf("Failed to save state: %s", err)
-		p.logger.Logf("Uninstalling because of the error: %s", err)
-		p.Uninstall(id)
-		return err
-	}
 	p.logger.Logf("Successfully installed db instance, it may take some times to be available")
+
+	return nil
+}
+
+func (p *Provisioner) InstallReplica(id string, options map[string]string) error {
+	_, err := p.storage.GetState(id)
+	if err != nil && !IsNotFoundError(err) {
+		return err
+	} else if err == nil {
+		return fmt.Errorf("already found saved state for this id: %s", id)
+	}
+
+	sourceDbStateBytes, err := p.storage.GetState(options[ParamSourceDBInstanceIdentifier])
+	if err != nil {
+		return fmt.Errorf("failed to get source db state: %s", err)
+	}
+
+	sourceDbState := NewEmptyState()
+	if err := sourceDbState.LoadState(sourceDbStateBytes); err != nil {
+		return fmt.Errorf("failed to load source db state: %s", err)
+	}
+
+	if options[ParamPort] == "" {
+		options[ParamPort], err = sourceDbState.GetParameterValue(ParamPort)
+		if err != nil {
+			return fmt.Errorf("failed to get from source db: %s", err)
+		}
+	}
+
+	options[ParamDBInstanceIdentifier] = id
+
+	installParamsMeta := GetParametersMetaDataForReadReplicaInstall()
+
+	for k := range options {
+		if _, has := installParamsMeta[k]; !has {
+			return fmt.Errorf("param '%s' is not allowed or supported", k)
+		}
+	}
+
+	params := []Parameter{}
+	for p, m := range installParamsMeta {
+		newParam := NewParameter(p, options[p], m)
+		if err := newParam.Validate(); err != nil {
+			return err
+		}
+
+		params = append(params, *newParam)
+	}
+
+	for i := range params {
+		if err := params[i].Validate(); err != nil {
+			return err
+		}
+	}
+
+	p.logger.Logf("Generating the state data for id: %s", id)
+	stateData := NewState(id, StateProvisioning, params)
+
+	paramsToInheritFromSourceDb := []string{
+		ParamMasterUsername,
+		ParamMasterUserPassword,
+		ParamDBName,
+	}
+
+	for _, p := range paramsToInheritFromSourceDb {
+		value, err := sourceDbState.GetParameterValue(p)
+		if err != nil {
+			return fmt.Errorf("failed to get from source db: %s", err)
+		}
+
+		stateData.AddOrUpdateParameter(*NewParameter(p, value, &MetaData{}))
+	}
+
+	createOptions, err := stateData.GenerateCreateDBInstanceReadReplicaInput()
+	if err != nil {
+		return err
+	}
+
+	createOptions.Tags = []rdstypes.Tag{
+		{
+			Key:   aws.String(ProvisionerName),
+			Value: aws.String(stateData.Id),
+		},
+	}
+
+	p.logger.Logf("Installing db instance read replica: %s", id)
+	dbCreateResp, err := p.rdsClient.CreateDBInstanceReadReplica(context.TODO(), createOptions)
+	if err != nil {
+		p.logger.Errorf("Failed to create db instance read replica: %s", err)
+		p.logger.Logf("Uninstalling because of the error: %s", err)
+		p.Uninstall(id)
+		return err
+	}
+
+	if dbCreateResp != nil && dbCreateResp.DBInstance != nil && dbCreateResp.DBInstance.Endpoint != nil &&
+		dbCreateResp.DBInstance.Endpoint.Address != nil {
+		stateData.Host = *dbCreateResp.DBInstance.Endpoint.Address
+	}
+
+	if err := p.SaveState(id, stateData); err != nil {
+		p.logger.Logf("Uninstalling because of the error: %s", err)
+		p.Uninstall(id)
+		return err
+	}
+
+	p.logger.Logf("Successfully installed db instance read replica, it may take some times to be available")
+
 	return nil
 }
 
@@ -165,9 +281,9 @@ func (p *Provisioner) Update(id string, optoins map[string]string) error {
 
 	changedParams := []string{}
 	for k, v := range optoins {
-		changed, err := stateData.UpdateParameterValue(k, v)
+		changed, err := stateData.UpdateParameterValueForDbUpdate(k, v)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to update parameter value: %s", err)
 		}
 		if changed {
 			changedParams = append(changedParams, k)
@@ -179,11 +295,15 @@ func (p *Provisioner) Update(id string, optoins map[string]string) error {
 		return nil
 	}
 
-	// handle promote read replica seperatly
+	p.logger.Logf("found changes in these following parameters: %s", strings.Join(changedParams, ", "))
+
+	if targetExistsInStringArray(changedParams, ParamSourceDBInstanceIdentifier) {
+		return fmt.Errorf("change in %s parameter not supported", ParamSourceDBInstanceIdentifier)
+	}
 
 	modifyReqInput, err := stateData.GenerateModifyDBInstanceInput(changedParams)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to generate modification config: %s", err)
 	}
 
 	// TODO: Add option manage this from user side
@@ -193,22 +313,10 @@ func (p *Provisioner) Update(id string, optoins map[string]string) error {
 
 	_, err = p.rdsClient.ModifyDBInstance(context.Background(), modifyReqInput)
 	if err != nil {
-		return err
+		return fmt.Errorf("modification request failed with an error: %s", err)
 	}
 
-	p.logger.Logf("Saving the state data for id: %s", id)
-	newstateBytes, err := stateData.GetStateInBytes()
-	if err != nil {
-		p.logger.Errorf("Failed to get state bytes: %s", err)
-		p.logger.Logf("Uninstalling because of the error: %s", err)
-		p.Uninstall(id)
-		return err
-	}
-
-	if err := p.storage.SaveState(id, newstateBytes); err != nil {
-		p.logger.Errorf("Failed to save state: %s", err)
-		p.logger.Logf("Uninstalling because of the error: %s", err)
-		p.Uninstall(id)
+	if err := p.SaveState(id, stateData); err != nil {
 		return err
 	}
 
@@ -236,19 +344,7 @@ func (p *Provisioner) Import(id string, dbIdentifier string, pass *string) error
 		return err
 	}
 
-	p.logger.Logf("Saving the state data for id: %s", id)
-	stateBytes, err := state.GetStateInBytes()
-	if err != nil {
-		p.logger.Errorf("Failed to get state bytes: %s", err)
-		p.logger.Logf("Uninstalling because of the error: %s", err)
-		p.Uninstall(id)
-		return err
-	}
-
-	if err := p.storage.SaveState(id, stateBytes); err != nil {
-		p.logger.Errorf("Failed to save state: %s", err)
-		p.logger.Logf("Uninstalling because of the error: %s", err)
-		p.Uninstall(id)
+	if err := p.SaveState(id, state); err != nil {
 		return err
 	}
 
@@ -285,7 +381,22 @@ func (p *Provisioner) Uninstall(id string) error {
 	return nil
 }
 
-func (p *Provisioner) WaitUnitlAvailable(id string) error {
+func (p *Provisioner) SaveState(id string, stateData *StateData) error {
+	p.logger.Logf("Saving the state data for id: %s", id)
+	stateBytes, err := stateData.GetStateInBytes()
+	if err != nil {
+		p.logger.Errorf("Failed to get state bytes: %s", err)
+		return err
+	}
+
+	if err := p.storage.SaveState(id, stateBytes); err != nil {
+		p.logger.Errorf("Failed to save state: %s", err)
+		return err
+	}
+	return nil
+}
+
+func (p *Provisioner) WaitUntilDBIsAvailable(id string) error {
 	stateBytes, err := p.storage.GetState(id)
 	if err != nil {
 		return err
@@ -333,6 +444,25 @@ func (p *Provisioner) IsDbAvailable(id string) (bool, error) {
 	return targetExistsInStringArray(DbInstanceAvailableStates, status), nil
 }
 
+func (p *Provisioner) GetDbStatus(id string) (string, error) {
+	stateBytes, err := p.storage.GetState(id)
+	if err != nil {
+		return "", err
+	}
+
+	stateData := NewEmptyState()
+	if err := stateData.LoadState(stateBytes); err != nil {
+		return "", err
+	}
+
+	dbIdentifier, err := stateData.GetParameterValue(ParamDBInstanceIdentifier)
+	if err != nil {
+		return "", err
+	}
+
+	return p.getDbStatus(dbIdentifier)
+}
+
 func (p *Provisioner) GetConnectionInfo(id string) (*ConnectionInfo, error) {
 	p.logger.Logf("Fetching the state data for id: %s", id)
 	stateBytes, err := p.storage.GetState(id)
@@ -344,6 +474,32 @@ func (p *Provisioner) GetConnectionInfo(id string) (*ConnectionInfo, error) {
 	state := NewEmptyState()
 	if err := state.LoadState(stateBytes); err != nil {
 		return nil, err
+	}
+
+	if state.Host == "" {
+		if err := p.WaitUntilDBIsAvailable(id); err != nil {
+			return nil, err
+		}
+
+		dbIdentifier, err := state.GetParameterValue(ParamDBInstanceIdentifier)
+		if err != nil {
+			return nil, err
+		}
+
+		dbResp, err := p.GetDBInstance(dbIdentifier)
+		if err != nil {
+			return nil, err
+		}
+
+		if dbResp.Endpoint == nil || dbResp.Endpoint.Address == nil {
+			return nil, fmt.Errorf("db enpoint not found")
+		}
+
+		state.Host = *dbResp.Endpoint.Address
+
+		if err := p.SaveState(id, state); err != nil {
+			return nil, err
+		}
 	}
 
 	username, err := state.GetParameterValue(ParamMasterUsername)
@@ -483,6 +639,9 @@ func (p *Provisioner) GetDBInstance(dbIdentifier string) (*rdstypes.DBInstance, 
 
 	result, err := p.rdsClient.DescribeDBInstances(context.Background(), input)
 	if err != nil {
+		if err, ok := err.(awserr.Error); ok && err.Code() == "DBInstanceNotFound" {
+			return nil, fmt.Errorf("db instance not found")
+		}
 		return nil, fmt.Errorf("failed to describe db instances: %s", err)
 	}
 
@@ -493,31 +652,23 @@ func (p *Provisioner) GetDBInstance(dbIdentifier string) (*rdstypes.DBInstance, 
 	return &result.DBInstances[0], nil
 }
 
-func (p *Provisioner) GetDBInstancesByTags(tags map[string]string) ([]rdstypes.DBInstance, error) {
-	var filters []rdstypes.Filter
-	for key, value := range tags {
-		filters = append(filters, rdstypes.Filter{
-			Name:   aws.String("tag:" + key),
-			Values: []string{value},
-		})
-	}
-	input := &rds.DescribeDBInstancesInput{
-		Filters: filters,
-	}
-
-	result, err := p.rdsClient.DescribeDBInstances(context.Background(), input)
-	if err != nil {
-		return nil, fmt.Errorf("failed to describe db instances: %s", err)
-	}
-
-	return result.DBInstances, nil
-}
-
 func (p *Provisioner) DeleteDBInstance(dbIdentifier string) error {
-	_, err := p.rdsClient.DeleteDBInstance(context.Background(), &rds.DeleteDBInstanceInput{
-		DBInstanceIdentifier:      aws.String(dbIdentifier),
-		FinalDBSnapshotIdentifier: aws.String(fmt.Sprintf("%s-final-snapshot", dbIdentifier)),
-	})
+	input := &rds.DeleteDBInstanceInput{
+		DBInstanceIdentifier: aws.String(dbIdentifier),
+	}
+
+	resp, err := p.GetDBInstance(dbIdentifier)
+	if err != nil {
+		return err
+	}
+
+	if resp.ReadReplicaSourceDBInstanceIdentifier != nil && *resp.ReadReplicaSourceDBInstanceIdentifier != "" {
+		input.SkipFinalSnapshot = aws.Bool(true)
+	} else {
+		input.FinalDBSnapshotIdentifier = aws.String(fmt.Sprintf("%s-final-snapshot-%d", dbIdentifier, time.Now().UTC().Unix()))
+	}
+
+	_, err = p.rdsClient.DeleteDBInstance(context.Background(), input)
 	if err != nil {
 		return fmt.Errorf("failed to delete db instance: %s", err)
 	}
@@ -526,16 +677,23 @@ func (p *Provisioner) DeleteDBInstance(dbIdentifier string) error {
 }
 
 func (p *Provisioner) deleteDBInstancesIfManaged(state *StateData) error {
-	dbList, err := p.GetDBInstancesByTags(map[string]string{
-		ProvisionerName: state.Id,
-	})
+	dbIdentifier, err := state.GetParameterValue(ParamDBInstanceIdentifier)
 	if err != nil {
 		return err
 	}
 
-	for i := range dbList {
-		p.logger.Logf("Deleting db instance: %s", *dbList[i].DBInstanceIdentifier)
-		p.DeleteDBInstance(*dbList[i].DBInstanceIdentifier)
+	resp, err := p.GetDBInstance(dbIdentifier)
+	if err != nil {
+		if IsNotFoundError(err) {
+			return nil
+		}
+		return err
+	}
+
+	for _, v := range resp.TagList {
+		if v.Key != nil && *v.Key == ProvisionerName && v.Value != nil && *v.Value == state.Id {
+			return p.DeleteDBInstance(dbIdentifier)
+		}
 	}
 	return nil
 }
@@ -567,6 +725,9 @@ func (p *Provisioner) deleteDBSubnetGroupIfManaged(state *StateData) error {
 
 	dbSbg, err := p.GetDBSubnetGroup(*subnetGroup)
 	if err != nil {
+		if IsNotFoundError(err) {
+			return nil
+		}
 		return err
 	}
 

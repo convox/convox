@@ -244,9 +244,9 @@ func (p *Provider) Start() error {
 		return errors.WithStack(log.Error(err))
 	}
 
-	err = p.RdsStateDeleterWorkerStart()
+	sc, err := NewSecretController(p)
 	if err != nil {
-		return errors.WithStack(log.Error(err))
+		return errors.WithStack(err)
 	}
 
 	go ec.Run()
@@ -254,6 +254,7 @@ func (p *Provider) Start() error {
 	go wc.Run()
 	go nc.Run()
 	go dc.Run()
+	go sc.Run()
 
 	go common.Tick(1*time.Hour, p.heartbeat)
 

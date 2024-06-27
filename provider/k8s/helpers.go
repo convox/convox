@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
@@ -242,6 +243,17 @@ func (p *Provider) volumeSources(app, service string, vs []string) []string {
 
 func nameFilter(name string) string {
 	return kubernetesNameFilter.ReplaceAllString(name, "")
+}
+
+func nameFilterV2(name string) string {
+	name = strings.ToLower(name)
+	var builder strings.Builder
+	for _, char := range name {
+		if unicode.IsLetter(char) || (unicode.IsDigit(char) && builder.Len() > 0) || char == '-' {
+			builder.WriteRune(char)
+		}
+	}
+	return builder.String()
 }
 
 func primaryContainer(cs []ac.Container, app string) (*ac.Container, error) {

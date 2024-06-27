@@ -159,7 +159,7 @@ module "rack" {
   release                        = local.release
   ssl_ciphers                    = var.ssl_ciphers
   ssl_protocols                  = var.ssl_protocols
-  subnets                        = module.cluster.susbnets
+  subnets                        = module.cluster.subnets
   tags                           = local.tag_map
   telemetry                      = var.telemetry
   telemetry_map                  = local.telemetry_map

@@ -2,7 +2,6 @@ package k8s
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -10,7 +9,6 @@ import (
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/provider/aws/provisioner/rds"
-	"github.com/convox/logger"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 	corev1 "k8s.io/api/core/v1"
@@ -66,7 +64,9 @@ func (p *Provider) SaveState(id string, data []byte) error {
 			"provsioner": "rds",
 			"type":       "state",
 		}
-		s.Data[StateDataKey] = data
+		s.Data = map[string][]byte{
+			StateDataKey: data,
+		}
 		return s
 	}, metav1.PatchOptions{
 		FieldManager: "convox",
@@ -89,15 +89,36 @@ func (p *Provider) GetState(id string) ([]byte, error) {
 		return nil, err
 	}
 
-	encoded, has := s.Data[StateDataKey]
+	data, has := s.Data[StateDataKey]
 	if !has {
 		return nil, fmt.Errorf("state not found")
 	}
-	data := []byte{}
-	if _, err := base64.StdEncoding.Decode(data, encoded); err != nil {
+
+	return data, err
+}
+
+func (p *Provider) SendStateLog(id, message string) error {
+	app, err := p.ParseAppNameFromStateId(id)
+	if err != nil {
+		return err
+	}
+
+	return p.systemLog(app, "state", time.Now(), fmt.Sprintf("rds resource: %s", message))
+}
+
+func (p *Provider) ListRdsStateForApp(app string) ([]string, error) {
+	resp, err := p.Cluster.CoreV1().Secrets(p.AppNamespace(app)).List(p.ctx, metav1.ListOptions{
+		LabelSelector: "system=convox,type=state",
+	})
+	if err != nil {
 		return nil, err
 	}
-	return data, err
+
+	stateIds := []string{}
+	for i := range resp.Items {
+		stateIds = append(stateIds, resp.Items[i].Name)
+	}
+	return stateIds, nil
 }
 
 func (p *Provider) CreateOrPatchSecret(ctx context.Context, meta metav1.ObjectMeta, transform func(*corev1.Secret) *corev1.Secret, opts metav1.PatchOptions) (*corev1.Secret, error) {
@@ -147,97 +168,59 @@ func (p *Provider) PatchSecretObject(ctx context.Context, cur, mod *corev1.Secre
 	return p.Cluster.CoreV1().Secrets(cur.Namespace).Patch(ctx, cur.Name, types.StrategicMergePatchType, patch, opts)
 }
 
-func (p *Provider) MapToRdsParameter(rdsType string, params map[string]string) map[string]string {
+func (p *Provider) MapToRdsParameter(rdsType, app string, params map[string]string) map[string]string {
 	out := map[string]string{
-		rds.ParamEngine:          strings.TrimPrefix(rdsType, "rds-"),
-		rds.ParamEngineVersion:   params["version"],
-		rds.ParamDBInstanceClass: common.CoalesceString(params["instance"], params["class"]),
-		rds.ParamVPC:             common.CoalesceString(params["vpc"], p.VpcID),
-		rds.ParamSubnetIds:       common.CoalesceString(params["subnets"], p.SubnetIDs),
+		rds.ParamEngine:    strings.TrimPrefix(rdsType, "rds-"),
+		rds.ParamVPC:       common.CoalesceString(params["vpc"], p.VpcID),
+		rds.ParamSubnetIds: common.CoalesceString(params["subnets"], p.SubnetIDs),
 	}
 
-	titleCaser := cases.Title(language.English)
+	titleCaser := cases.Title(language.Und, cases.NoLower)
 
 	for k, v := range params {
 		switch k {
-		case "encrypted":
+		case "encrypted": // for rack v2 rds param backward compatibility
 			out[rds.ParamStorageEncrypted] = v
-		case "deletionProtection":
+		case "deletionProtection": // for rack v2 rds param backward compatibility
 			out[rds.ParamDeletionProtection] = v
-		case "durable":
+		case "durable": // for rack v2 rds param backward compatibility
 			out[rds.ParamMultiAZ] = v
-		case "iops":
+		case "iops": // for rack v2 rds param backward compatibility
 			out[rds.ParamIops] = v
-		case "storage":
+		case "storage": // for rack v2 rds param backward compatibility
 			out[rds.ParamAllocatedStorage] = v
-		case "preferredBackupWindow":
+		case "preferredBackupWindow": // for rack v2 rds param backward compatibility
 			out[rds.ParamPreferredBackupWindow] = v
-		case "backupRetentionPeriod":
+		case "backupRetentionPeriod": // for rack v2 rds param backward compatibility
 			out[rds.ParamBackupRetentionPeriod] = v
+		case "readSourceDB": // for rack v2 rds param backward compatibility
+			out[rds.ParamSourceDBInstanceIdentifier] = v
+		case "class", "instance":
+			out[rds.ParamDBInstanceClass] = v
+		case "version":
+			out[rds.ParamEngineVersion] = v
 		default:
 			out[titleCaser.String(k)] = v
 		}
 	}
-	return out
-}
 
-func (p *Provider) RdsStateDeleterWorkerStart() error {
-	logger := p.logger.At("worker=rds-state-deleter")
+	if strings.HasPrefix(out[rds.ParamSourceDBInstanceIdentifier], "#convox.resources.") {
+		rName := strings.TrimPrefix(out[rds.ParamSourceDBInstanceIdentifier], "#convox.resources.")
+		out[rds.ParamSourceDBInstanceIdentifier] = p.CreateRdsResourceStateId(app, rName)
+	}
 
-	stopCtx, cancel := context.WithCancel(context.Background())
+	allowedParamList := map[string]struct{}{}
+	for _, pKey := range rds.ParametersNameList() {
+		allowedParamList[pKey] = struct{}{}
+	}
 
-	onStart := func(ctx context.Context) {
-		ticker := time.NewTicker(3 * time.Minute)
-
-		for {
-			select {
-			case <-ticker.C:
-				p.syncRdsStateDelete(stopCtx, logger)
-			case <-stopCtx.Done():
-				return
-			}
+	filtered := map[string]string{}
+	for k, v := range out {
+		if _, has := allowedParamList[k]; has {
+			filtered[k] = v
 		}
 	}
-
-	onStop := func() {
-		cancel()
-	}
-
-	return RunUsingLeaderElection("kube-system", "convox-k8s-rds-state-deleter", p.Cluster, onStart, onStop)
-}
-
-func (p *Provider) syncRdsStateDelete(ctx context.Context, log *logger.Logger) {
-	log.Logf("syncing rds state delete tasks...")
-	resp, err := p.Cluster.CoreV1().Secrets(corev1.NamespaceAll).List(ctx, metav1.ListOptions{
-		LabelSelector: "system=convox,type=state",
-	})
-	if err != nil {
-		log.Errorf("failed to list secrets: %s", err)
-	}
-	for i := range resp.Items {
-		item := resp.Items[i]
-		if item.DeletionTimestamp != nil {
-			if err := p.uninstallRdsAssociatedWithStateSecret(&item); err != nil {
-				log.Errorf("failed to uninstall rds with associated secret: %s/%s, reason: %s", item.Namespace, item.Name, err)
-			}
-		} else {
-			resourceName, err := p.ParseResourceNameFromStateId(item.Name)
-			if err != nil {
-				log.Errorf("failed to get resource name: %s", err)
-			} else {
-				resp, err := p.Cluster.CoreV1().ConfigMaps(item.Namespace).List(p.ctx, metav1.ListOptions{
-					LabelSelector: fmt.Sprintf("resource=%s,provisioner=rds", resourceName),
-				})
-				if err != nil {
-					log.Errorf("failed to list config map for the resource: %s, reason: %s", resourceName, err)
-				} else if len(resp.Items) == 0 {
-					if err := p.uninstallRdsAssociatedWithStateSecret(&item); err != nil {
-						log.Errorf("failed to uninstall rds with associated secret: %s/%s, reason: %s", item.Namespace, item.Name, err)
-					}
-				}
-			}
-		}
-	}
+	return filtered
 }
 
 func (p *Provider) uninstallRdsAssociatedWithStateSecret(stateSecret *corev1.Secret) error {
@@ -262,11 +245,10 @@ func (p *Provider) uninstallRdsAssociatedWithStateSecret(stateSecret *corev1.Sec
 }
 
 func hasStateFinalizer(finalizers []string) bool {
-	hasFinalizer := false
 	for _, fn := range finalizers {
 		if fn == StateFinalizer {
-			hasFinalizer = true
+			return true
 		}
 	}
-	return hasFinalizer
+	return false
 }

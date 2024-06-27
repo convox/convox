@@ -204,12 +204,15 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 
 		items = append(items, data)
 
+		rdsStateMap := map[string]struct{}{}
 		// rds resources
 		for _, r := range m.Resources {
 			if r.IsRds() {
 				id := p.CreateRdsResourceStateId(app, r.Name)
 
-				err := p.RdsProvisioner.Provision(id, p.MapToRdsParameter(r.Type, r.Options))
+				rdsStateMap[id] = struct{}{}
+
+				err := p.RdsProvisioner.Provision(id, p.MapToRdsParameter(r.Type, app, r.Options))
 				if err != nil {
 					return err
 				}
@@ -225,6 +228,21 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 				}
 
 				items = append(items, data)
+			}
+		}
+
+		existingStateIds, err := p.ListRdsStateForApp(app)
+		if err != nil {
+			return fmt.Errorf("failed to get rds state list: %s", err)
+		}
+
+		for _, rdsId := range existingStateIds {
+			if _, has := rdsStateMap[rdsId]; !has {
+				// delete the state, rds clean up job will delete the rds
+				err = p.Cluster.CoreV1().Secrets(p.AppNamespace(app)).Delete(p.ctx, rdsId, am.DeleteOptions{})
+				if err != nil {
+					return fmt.Errorf("failed to delete rds state: %s", err)
+				}
 			}
 		}
 	}
