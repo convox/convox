@@ -18,6 +18,15 @@ func (p *Provisioner) ApplyInstallDefaults(options map[string]string) error {
 	return nil
 }
 
+func (p *Provisioner) ApplyRestoreFromSnapshotDefaults(options map[string]string) error {
+	var err error
+
+	if _, has := options[ParamPort]; !has {
+		options[ParamPort] = DefaultDbPort(options[ParamEngine])
+	}
+	return err
+}
+
 func DefaultDbPort(engine string) string {
 	switch engine {
 	case "mysql", "mariadb":

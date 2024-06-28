@@ -208,6 +208,10 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		// rds resources
 		for _, r := range m.Resources {
 			if r.IsRds() {
+				if err := r.RdsNameValidate(); err != nil {
+					return err
+				}
+
 				id := p.CreateRdsResourceStateId(app, r.Name)
 
 				rdsStateMap[id] = struct{}{}
@@ -243,6 +247,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 				if err != nil {
 					return fmt.Errorf("failed to delete rds state: %s", err)
 				}
+				p.SendStateLog(rdsId, "db instance deletion is triggered")
 			}
 		}
 	}
@@ -256,6 +261,8 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 	}
 
 	p.EventSend("release:promote", structs.EventSendOptions{Data: map[string]string{"app": app, "id": id}, Status: options.String("start")})
+
+	p.FlushStateLog(app)
 
 	return nil
 }

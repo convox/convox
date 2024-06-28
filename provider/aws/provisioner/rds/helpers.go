@@ -152,3 +152,10 @@ func GenerateSecurePassword(length int) (string, error) {
 
 	return string(password), nil
 }
+
+func GetValueFromStringPtr(s *string, defaultVal string) string {
+	if s == nil {
+		return defaultVal
+	}
+	return *s
+}

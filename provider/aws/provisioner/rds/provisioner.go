@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 
@@ -43,7 +44,7 @@ func (p *Provisioner) Provision(id string, options map[string]string) error {
 	if v, ok := options[ParamImport]; ok {
 		pass := options[ParamMasterUserPassword]
 		if pass == "" {
-			return fmt.Errorf("db password is required for import")
+			return fmt.Errorf("imported db password is required for import")
 		}
 		p.logger.Logf("Start db instance import")
 		if err := p.Import(id, v, &pass); err != nil {
@@ -58,6 +59,11 @@ func (p *Provisioner) Provision(id string, options map[string]string) error {
 			if options[ParamSourceDBInstanceIdentifier] != "" {
 				p.logger.Logf("Start provision for db replica")
 				return p.InstallReplica(id, options)
+			}
+
+			if options[ParamDBSnapshotIdentifier] != "" {
+				p.logger.Logf("Start provision for db instance from snapshot")
+				return p.RestoreFromSnapshot(id, options)
 			}
 
 			p.logger.Logf("Start provision for db instance")
@@ -118,11 +124,11 @@ func (p *Provisioner) Install(id string, options map[string]string) error {
 	stateData := NewState(id, StateProvisioning, params)
 
 	if err := p.createSecurityGroupIfNotProvided(stateData); err != nil {
-		return err
+		return fmt.Errorf("failed to create security group: %s", err)
 	}
 
 	if err := p.createDBSubnetGroupIfNotProvided(stateData); err != nil {
-		return err
+		return fmt.Errorf("failed to create subnet group: %s", err)
 	}
 
 	createOptions, err := stateData.GenerateCreateDBInstanceInput()
@@ -158,7 +164,7 @@ func (p *Provisioner) Install(id string, options map[string]string) error {
 	}
 
 	p.logger.Logf("Successfully installed db instance, it may take some times to be available")
-
+	p.storage.SendStateLog(id, "successfully installed db instance")
 	return nil
 }
 
@@ -170,21 +176,9 @@ func (p *Provisioner) InstallReplica(id string, options map[string]string) error
 		return fmt.Errorf("already found saved state for this id: %s", id)
 	}
 
-	sourceDbStateBytes, err := p.storage.GetState(options[ParamSourceDBInstanceIdentifier])
-	if err != nil {
-		return fmt.Errorf("failed to get source db state: %s", err)
-	}
-
-	sourceDbState := NewEmptyState()
-	if err := sourceDbState.LoadState(sourceDbStateBytes); err != nil {
-		return fmt.Errorf("failed to load source db state: %s", err)
-	}
-
-	if options[ParamPort] == "" {
-		options[ParamPort], err = sourceDbState.GetParameterValue(ParamPort)
-		if err != nil {
-			return fmt.Errorf("failed to get from source db: %s", err)
-		}
+	pass := options[ParamMasterUserPassword]
+	if pass == "" {
+		return fmt.Errorf("source db password is required for read replica")
 	}
 
 	options[ParamDBInstanceIdentifier] = id
@@ -207,29 +201,8 @@ func (p *Provisioner) InstallReplica(id string, options map[string]string) error
 		params = append(params, *newParam)
 	}
 
-	for i := range params {
-		if err := params[i].Validate(); err != nil {
-			return err
-		}
-	}
-
 	p.logger.Logf("Generating the state data for id: %s", id)
 	stateData := NewState(id, StateProvisioning, params)
-
-	paramsToInheritFromSourceDb := []string{
-		ParamMasterUsername,
-		ParamMasterUserPassword,
-		ParamDBName,
-	}
-
-	for _, p := range paramsToInheritFromSourceDb {
-		value, err := sourceDbState.GetParameterValue(p)
-		if err != nil {
-			return fmt.Errorf("failed to get from source db: %s", err)
-		}
-
-		stateData.AddOrUpdateParameter(*NewParameter(p, value, &MetaData{}))
-	}
 
 	createOptions, err := stateData.GenerateCreateDBInstanceReadReplicaInput()
 	if err != nil {
@@ -264,7 +237,7 @@ func (p *Provisioner) InstallReplica(id string, options map[string]string) error
 	}
 
 	p.logger.Logf("Successfully installed db instance read replica, it may take some times to be available")
-
+	p.storage.SendStateLog(id, "successfully installed db instance read replica")
 	return nil
 }
 
@@ -292,6 +265,7 @@ func (p *Provisioner) Update(id string, optoins map[string]string) error {
 
 	if len(changedParams) == 0 {
 		p.logger.Logf("no changes detected")
+		p.storage.SendStateLog(id, "no changes detected")
 		return nil
 	}
 
@@ -320,8 +294,8 @@ func (p *Provisioner) Update(id string, optoins map[string]string) error {
 		return err
 	}
 
-	p.logger.Logf("Successfully applied the the updates")
-
+	p.logger.Logf("Successfully applied the db updates")
+	p.storage.SendStateLog(id, "successfully applied the db updates")
 	return nil
 }
 
@@ -348,6 +322,88 @@ func (p *Provisioner) Import(id string, dbIdentifier string, pass *string) error
 		return err
 	}
 
+	p.logger.Logf("Successfully imported db instance")
+	p.storage.SendStateLog(id, "successfully imported db instance")
+	return nil
+}
+
+func (p *Provisioner) RestoreFromSnapshot(id string, options map[string]string) error {
+	_, err := p.storage.GetState(id)
+	if err != nil && !IsNotFoundError(err) {
+		return err
+	} else if err == nil {
+		return fmt.Errorf("already found saved state for this id: %s", id)
+	}
+
+	options[ParamDBInstanceIdentifier] = id
+
+	if err := p.ApplyRestoreFromSnapshotDefaults(options); err != nil {
+		return err
+	}
+
+	installParamsMeta := GetParametersMetaDataForRestoreFromSnapshotInstall()
+
+	for k := range options {
+		if _, has := installParamsMeta[k]; !has {
+			return fmt.Errorf("param '%s' is not allowed or supported", k)
+		}
+	}
+
+	params := []Parameter{}
+	for p, m := range installParamsMeta {
+		newParam := NewParameter(p, options[p], m)
+		if err := newParam.Validate(); err != nil {
+			return err
+		}
+
+		params = append(params, *newParam)
+	}
+
+	p.logger.Logf("Generating the state data for id: %s", id)
+	stateData := NewState(id, StateProvisioning, params)
+
+	if err := p.createSecurityGroupIfNotProvided(stateData); err != nil {
+		return fmt.Errorf("failed to create security group: %s", err)
+	}
+
+	if err := p.createDBSubnetGroupIfNotProvided(stateData); err != nil {
+		return fmt.Errorf("failed to create subnet group: %s", err)
+	}
+
+	createOptions, err := stateData.GenerateRestoreDBInstanceFromSnapshotInput()
+	if err != nil {
+		return err
+	}
+
+	createOptions.Tags = []rdstypes.Tag{
+		{
+			Key:   aws.String(ProvisionerName),
+			Value: aws.String(stateData.Id),
+		},
+	}
+
+	p.logger.Logf("Restoring db instance: %s from snapshot", id)
+	dbCreateResp, err := p.rdsClient.RestoreDBInstanceFromDBSnapshot(context.TODO(), createOptions)
+	if err != nil {
+		p.logger.Errorf("Failed to restore db instance from snapshot: %s", err)
+		p.logger.Logf("Uninstalling because of the error: %s", err)
+		p.Uninstall(id)
+		return err
+	}
+
+	if dbCreateResp != nil && dbCreateResp.DBInstance != nil && dbCreateResp.DBInstance.Endpoint != nil &&
+		dbCreateResp.DBInstance.Endpoint.Address != nil {
+		stateData.Host = *dbCreateResp.DBInstance.Endpoint.Address
+	}
+
+	if err := p.SaveState(id, stateData); err != nil {
+		p.logger.Logf("Uninstalling because of the error: %s", err)
+		p.Uninstall(id)
+		return err
+	}
+
+	p.logger.Logf("Successfully restored db instance from snapshot, it may take some times to be available")
+	p.storage.SendStateLog(id, "successfully restored db instance from snapshot")
 	return nil
 }
 
@@ -476,7 +532,34 @@ func (p *Provisioner) GetConnectionInfo(id string) (*ConnectionInfo, error) {
 		return nil, err
 	}
 
-	if state.Host == "" {
+	var (
+		user   string
+		pass   string
+		dbName string
+		port   string
+	)
+
+	usernamePtr := state.GetParameter(ParamMasterUsername)
+	if usernamePtr != nil && !usernamePtr.IsValueEmpty() {
+		user = *usernamePtr.Value
+	}
+
+	passPtr := state.GetParameter(ParamMasterUserPassword)
+	if passPtr != nil && !passPtr.IsValueEmpty() {
+		pass = *passPtr.Value
+	}
+
+	portPtr := state.GetParameter(ParamPort)
+	if portPtr != nil && !portPtr.IsValueEmpty() {
+		port = *portPtr.Value
+	}
+
+	dbNamePtr := state.GetParameter(ParamDBName)
+	if dbNamePtr != nil && !dbNamePtr.IsValueEmpty() {
+		dbName = *dbNamePtr.Value
+	}
+
+	if state.Host == "" || usernamePtr == nil || portPtr == nil || dbNamePtr == nil {
 		if err := p.WaitUntilDBIsAvailable(id); err != nil {
 			return nil, err
 		}
@@ -497,35 +580,31 @@ func (p *Provisioner) GetConnectionInfo(id string) (*ConnectionInfo, error) {
 
 		state.Host = *dbResp.Endpoint.Address
 
+		if dbResp.Endpoint == nil || dbResp.Endpoint.Port == nil {
+			return nil, fmt.Errorf("db enpoint port not found")
+		}
+		port = strconv.FormatInt(int64(*dbResp.Endpoint.Port), 10)
+
+		if dbResp.MasterUsername == nil {
+			return nil, fmt.Errorf("db master username not found")
+		}
+		user = *dbResp.MasterUsername
+
+		dbName = GetValueFromStringPtr(dbResp.DBName, "")
+
+		state.AddOrUpdateParameter(*NewParameter(ParamDBName, dbName, &MetaData{}))
+		state.AddOrUpdateParameter(*NewParameter(ParamMasterUsername, user, &MetaData{}))
+		state.AddOrUpdateParameter(*NewParameter(ParamPort, port, &MetaData{}))
+
 		if err := p.SaveState(id, state); err != nil {
 			return nil, err
 		}
 	}
 
-	username, err := state.GetParameterValue(ParamMasterUsername)
-	if err != nil {
-		return nil, err
-	}
-
-	pass, err := state.GetParameterValue(ParamMasterUserPassword)
-	if err != nil {
-		return nil, err
-	}
-
-	port, err := state.GetParameterValue(ParamPort)
-	if err != nil {
-		return nil, err
-	}
-
-	dbName, err := state.GetParameterValue(ParamDBName)
-	if err != nil {
-		return nil, err
-	}
-
 	return &ConnectionInfo{
 		Host:     state.Host,
 		Port:     port,
-		UserName: username,
+		UserName: user,
 		Password: pass,
 		Database: dbName,
 	}, nil

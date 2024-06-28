@@ -140,7 +140,8 @@ data "aws_iam_policy_document" "rds_provisioner" {
       "rds:CreateDBSubnetGroup",
       "rds:DeleteDBSubnetGroup",
       "rds:ModifyDBSubnetGroup",
-      "rds:AddTagsToResource"
+      "rds:AddTagsToResource",
+      "rds:RestoreDBInstanceFromDBSnapshot",
     ]
     resources = ["*"]
   }

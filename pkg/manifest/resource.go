@@ -2,6 +2,7 @@ package manifest
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -18,6 +19,8 @@ var (
 		"PORT",
 		"NAME",
 	}
+
+	RdsNameValidationRegex = regexp.MustCompile("^[a-z]([a-z0-9-]*[a-z0-9])?$")
 )
 
 type Resource struct {
@@ -50,4 +53,14 @@ func (r Resource) mountEnv(envVar string) string {
 
 func (r Resource) IsRds() bool {
 	return strings.HasPrefix(r.Type, "rds-")
+}
+
+func (r Resource) RdsNameValidate() error {
+	if !RdsNameValidationRegex.MatchString(r.Name) {
+		return fmt.Errorf("invalid rds resource name: only alphanumeric letter and hypen allowed")
+	}
+	if len(r.Name) > 20 {
+		return fmt.Errorf("rds resource name must not excced 20 char limit")
+	}
+	return nil
 }

@@ -85,43 +85,28 @@ func (s *StateData) AddOrUpdateParameter(p Parameter) {
 	s.Paramters[*p.Key] = p
 }
 
-func (s *StateData) GetParameter(key string) (*Parameter, error) {
-	for _, p := range s.Paramters {
-		k, err := p.GetKey()
-		if err != nil {
-			return nil, err
-		}
-		if k == key {
-			return &p, nil
-		}
+func (s *StateData) GetParameter(key string) *Parameter {
+	p, has := s.Paramters[key]
+	if !has {
+		return nil
 	}
-	return nil, fmt.Errorf("parameter not found: %s", key)
+	return &p
 }
 
 func (s *StateData) GetParameterValue(key string) (string, error) {
-	for _, p := range s.Paramters {
-		k, err := p.GetKey()
-		if err != nil {
-			return "", err
-		}
-		if k == key {
-			return p.GetValue()
-		}
+	p := s.GetParameter(key)
+	if p == nil {
+		return "", fmt.Errorf("parameter not found: %s", key)
 	}
-	return "", fmt.Errorf("parameter not found: %s", key)
+	return p.GetValue()
 }
 
 func (s *StateData) GetParameterValuePtr(key string) (*string, error) {
-	for _, p := range s.Paramters {
-		k, err := p.GetKey()
-		if err != nil {
-			return nil, err
-		}
-		if k == key {
-			return p.GetValuePtr()
-		}
+	p := s.GetParameter(key)
+	if p == nil {
+		return nil, fmt.Errorf("parameter not found: %s", key)
 	}
-	return nil, fmt.Errorf("parameter not found: %s", key)
+	return p.GetValuePtr()
 }
 
 func (s *StateData) GetParameterValueStringArray(key string) ([]string, error) {
@@ -520,11 +505,6 @@ func (s *StateData) ToAllCommonParamsForInstall() (*AllCommonParams, error) {
 		return nil, err
 	}
 
-	paramsObj.SourceDBInstanceIdentifier, _ = s.GetParameterValuePtr(ParamSourceDBInstanceIdentifier)
-	if err != nil && !IsNotFoundError(err) {
-		return nil, err
-	}
-
 	paramsObj.VpcSecurityGroupIds, err = s.GetParameterValueStringArray(ParamVPCSecurityGroups)
 	if err != nil {
 		return nil, err
@@ -592,8 +572,80 @@ func (s *StateData) ToAllCommonParamsForReplicaInstall() (*AllCommonParams, erro
 		return nil, err
 	}
 
-	paramsObj.SourceDBInstanceIdentifier, _ = s.GetParameterValuePtr(ParamSourceDBInstanceIdentifier)
-	if err != nil && !IsNotFoundError(err) {
+	paramsObj.SourceDBInstanceIdentifier, err = s.GetParameterValuePtr(ParamSourceDBInstanceIdentifier)
+	if err != nil {
+		return nil, err
+	}
+
+	paramsObj.VpcSecurityGroupIds, err = s.GetParameterValueStringArray(ParamVPCSecurityGroups)
+	if err != nil {
+		return nil, err
+	}
+
+	return paramsObj, nil
+}
+
+func (s *StateData) ToAllCommonParamsForRestoreFromSnapshotInstall() (*AllCommonParams, error) {
+	var err error
+	paramsObj := &AllCommonParams{}
+
+	paramsObj.AllocatedStorage, err = s.GetParameterValueInt32Ptr(ParamAllocatedStorage)
+	if err != nil {
+		return nil, err
+	}
+
+	paramsObj.AutoMinorVersionUpgrade, err = s.GetParameterValueBoolPtr(ParamAutoMinorVersionUpgrade)
+	if err != nil {
+		return nil, err
+	}
+
+	paramsObj.DBSnapshotIdentifier, _ = s.GetParameterValuePtr(ParamDBSnapshotIdentifier)
+	if err != nil {
+		return nil, err
+	}
+
+	paramsObj.DBInstanceClass, err = s.GetParameterValuePtr(ParamDBInstanceClass)
+	if err != nil {
+		return nil, err
+	}
+
+	paramsObj.DBInstanceIdentifier, err = s.GetParameterValuePtr(ParamDBInstanceIdentifier)
+	if err != nil {
+		return nil, err
+	}
+
+	paramsObj.DBParameterGroupName, err = s.GetParameterValuePtr(ParamDBParameterGroupName)
+	if err != nil {
+		return nil, err
+	}
+
+	paramsObj.DBSubnetGroupName, err = s.GetParameterValuePtr(ParamDBSubnetGroupName)
+	if err != nil {
+		return nil, err
+	}
+
+	paramsObj.DeletionProtection, err = s.GetParameterValueBoolPtr(ParamDeletionProtection)
+	if err != nil {
+		return nil, err
+	}
+
+	paramsObj.Iops, err = s.GetParameterValueInt32Ptr(ParamIops)
+	if err != nil {
+		return nil, err
+	}
+
+	paramsObj.MultiAZ, err = s.GetParameterValueBoolPtr(ParamMultiAZ)
+	if err != nil {
+		return nil, err
+	}
+
+	paramsObj.Port, err = s.GetParameterValueInt32Ptr(ParamPort)
+	if err != nil {
+		return nil, err
+	}
+
+	paramsObj.PubliclyAccessible, err = s.GetParameterValueBoolPtr(ParamPubliclyAccessible)
+	if err != nil {
 		return nil, err
 	}
 
@@ -799,6 +851,7 @@ func (s *StateData) GenerateModifyDBInstanceInput(changedParams []string) (*rds.
 		PreferredMaintenanceWindow: allParamsObj.PreferredMaintenanceWindow,
 		PubliclyAccessible:         allParamsObj.PubliclyAccessible,
 		StorageType:                allParamsObj.StorageType,
+		VpcSecurityGroupIds:        allParamsObj.VpcSecurityGroupIds,
 	}, nil
 }
 
@@ -854,5 +907,29 @@ func (s *StateData) GenerateCreateDBInstanceReadReplicaInput() (*rds.CreateDBIns
 		StorageType:                allParamsObj.StorageType,
 		SourceDBInstanceIdentifier: allParamsObj.SourceDBInstanceIdentifier,
 		VpcSecurityGroupIds:        allParamsObj.VpcSecurityGroupIds,
+	}, nil
+}
+
+func (s *StateData) GenerateRestoreDBInstanceFromSnapshotInput() (*rds.RestoreDBInstanceFromDBSnapshotInput, error) {
+	allParamsObj, err := s.ToAllCommonParamsForRestoreFromSnapshotInstall()
+	if err != nil {
+		return nil, err
+	}
+
+	return &rds.RestoreDBInstanceFromDBSnapshotInput{
+		AllocatedStorage:        allParamsObj.AllocatedStorage,
+		AutoMinorVersionUpgrade: allParamsObj.AutoMinorVersionUpgrade,
+		DBInstanceClass:         allParamsObj.DBInstanceClass,
+		DBInstanceIdentifier:    allParamsObj.DBInstanceIdentifier,
+		DBSnapshotIdentifier:    allParamsObj.DBSnapshotIdentifier,
+		DBParameterGroupName:    allParamsObj.DBParameterGroupName,
+		DBSubnetGroupName:       allParamsObj.DBSubnetGroupName,
+		DeletionProtection:      allParamsObj.DeletionProtection,
+		Iops:                    allParamsObj.Iops,
+		MultiAZ:                 allParamsObj.MultiAZ,
+		Port:                    allParamsObj.Port,
+		PubliclyAccessible:      allParamsObj.PubliclyAccessible,
+		StorageType:             allParamsObj.StorageType,
+		VpcSecurityGroupIds:     allParamsObj.VpcSecurityGroupIds,
 	}, nil
 }

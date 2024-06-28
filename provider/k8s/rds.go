@@ -5,12 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/provider/aws/provisioner/rds"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 	corev1 "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,13 +22,20 @@ const (
 	StateDataKey   = "state"
 )
 
+var (
+	tempRdsEventLogStore = &tempStateLogStorage{
+		lock:      sync.Mutex{},
+		s:         map[string][]string{},
+		threshold: 50,
+	}
+)
+
 func (p *Provider) CreateRdsResourceStateId(app string, resourceName string) string {
-	resourceName = nameFilter(resourceName)
-	return fmt.Sprintf("%s-r%sr-%s", resourceName, p.RackName, app)
+	return fmt.Sprintf("%s-r%sr-%s", resourceName, p.Name, app)
 }
 
 func (p *Provider) ParseAppNameFromStateId(id string) (string, error) {
-	parts := strings.Split(id, fmt.Sprintf("-r%sr-", p.RackName))
+	parts := strings.Split(id, fmt.Sprintf("-r%sr-", p.Name))
 	if len(parts) != 2 {
 		return "", fmt.Errorf("invalid state id")
 	}
@@ -103,7 +109,21 @@ func (p *Provider) SendStateLog(id, message string) error {
 		return err
 	}
 
-	return p.systemLog(app, "state", time.Now(), fmt.Sprintf("rds resource: %s", message))
+	resourceName, err := p.ParseResourceNameFromStateId(id)
+	if err != nil {
+		return err
+	}
+
+	tempRdsEventLogStore.Add(app, fmt.Sprintf("rds resource %s: %s", resourceName, message))
+	return nil
+}
+
+func (p *Provider) FlushStateLog(app string) {
+	logList := tempRdsEventLogStore.Get(app)
+	tempRdsEventLogStore.Reset(app)
+	for _, msg := range logList {
+		p.systemLog(app, "state", time.Now(), msg)
+	}
 }
 
 func (p *Provider) ListRdsStateForApp(app string) ([]string, error) {
@@ -175,8 +195,6 @@ func (p *Provider) MapToRdsParameter(rdsType, app string, params map[string]stri
 		rds.ParamSubnetIds: common.CoalesceString(params["subnets"], p.SubnetIDs),
 	}
 
-	titleCaser := cases.Title(language.Und, cases.NoLower)
-
 	for k, v := range params {
 		switch k {
 		case "encrypted": // for rack v2 rds param backward compatibility
@@ -200,7 +218,11 @@ func (p *Provider) MapToRdsParameter(rdsType, app string, params map[string]stri
 		case "version":
 			out[rds.ParamEngineVersion] = v
 		default:
-			out[titleCaser.String(k)] = v
+			for _, pKey := range rds.ParametersNameList() {
+				if strings.EqualFold(k, pKey) {
+					out[pKey] = v
+				}
+			}
 		}
 	}
 

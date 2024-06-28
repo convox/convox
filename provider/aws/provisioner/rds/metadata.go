@@ -231,14 +231,13 @@ func GetParametersMetaDataForReadReplicaInstall() map[string]*MetaData {
 		ParamDBSubnetGroupName: {
 			Immutable: options.Bool(true),
 		},
+		ParamMasterUserPassword: {},
 		ParamDeletionProtection: {},
 		ParamIops:               {},
 		ParamMultiAZ: {
 			UpdatesWithSomeInterruption: options.Bool(true),
 		},
-		ParamPort: {
-			Required: options.Bool(true),
-		},
+		ParamPort: {},
 		ParamPubliclyAccessible: {
 			Default: options.String("false"),
 		},
@@ -246,5 +245,53 @@ func GetParametersMetaDataForReadReplicaInstall() map[string]*MetaData {
 		ParamVPCSecurityGroups: {},
 		ParamVPC:               {},
 	}
+}
 
+func GetParametersMetaDataForRestoreFromSnapshotInstall() map[string]*MetaData {
+	return map[string]*MetaData{
+		ParamDBInstanceIdentifier: {
+			Required:  options.Bool(true),
+			Immutable: options.Bool(true),
+		},
+		ParamDBSnapshotIdentifier: {
+			Required:  options.Bool(true),
+			Immutable: options.Bool(true),
+		},
+		ParamEngine: {
+			Immutable: options.Bool(true),
+		},
+		ParamDBParameterGroupName: {
+			UpdatesWithSomeInterruption: options.Bool(true),
+		},
+		ParamDBInstanceClass: {
+			Required:                    options.Bool(true),
+			UpdatesWithSomeInterruption: options.Bool(true),
+		},
+		ParamStorageType: {
+			Required: options.Bool(true),
+			Default:  options.String("gp2"),
+		},
+		ParamAllocatedStorage: {
+			Required: options.Bool(true),
+			Default:  options.String("20"),
+		},
+		ParamAutoMinorVersionUpgrade: {
+			UpdatesWithSomeInterruption: options.Bool(true),
+		},
+		ParamDBSubnetGroupName: {
+			Immutable: options.Bool(true),
+		},
+		ParamDeletionProtection: {},
+		ParamIops:               {},
+		ParamMultiAZ: {
+			UpdatesWithSomeInterruption: options.Bool(true),
+		},
+		ParamPort: {},
+		ParamPubliclyAccessible: {
+			Default: options.String("false"),
+		},
+		ParamSubnetIds:         {},
+		ParamVPCSecurityGroups: {},
+		ParamVPC:               {},
+	}
 }

@@ -7,6 +7,7 @@ import (
 type AllCommonParams struct {
 	DBInstanceClass                    *string
 	DBInstanceIdentifier               *string
+	DBSnapshotIdentifier               *string
 	Engine                             *string
 	AllocatedStorage                   *int32
 	AutoMinorVersionUpgrade            *bool
@@ -17,7 +18,6 @@ type AllCommonParams struct {
 	CharacterSetName                   *string
 	CopyTagsToSnapshot                 *bool
 	CustomIamInstanceProfile           *string
-	DBClusterIdentifier                *string
 	DBName                             *string
 	DBParameterGroupName               *string
 	DBSecurityGroups                   []string

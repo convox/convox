@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 
@@ -419,4 +420,36 @@ func RunUsingLeaderElection(ns, name string, cluster kubernetes.Interface, onSta
 	go el.Run(ctx)
 
 	return nil
+}
+
+type tempStateLogStorage struct {
+	lock      sync.Mutex
+	s         map[string][]string
+	threshold int
+}
+
+func (t *tempStateLogStorage) Add(key, value string) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	if _, has := t.s[key]; !has {
+		t.s[key] = []string{}
+	}
+	t.s[key] = append(t.s[key], value)
+
+	l := len(t.s[key])
+	if l > t.threshold {
+		t.s[key] = t.s[key][l-t.threshold:]
+	}
+}
+
+func (t *tempStateLogStorage) Get(key string) []string {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	return t.s[key]
+}
+
+func (t *tempStateLogStorage) Reset(key string) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	t.s[key] = []string{}
 }
