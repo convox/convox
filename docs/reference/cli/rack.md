@@ -27,16 +27,25 @@ Get information about the rack
 
 Install a new Rack
 
+> note: for console install provide org_name/rack_name as `<name>` and region & runtime are required
+
 ### Usage
 ```html
     convox rack install <provider> <name> [option=value]...
 ```
+
+flags:
+  - `runtime`: runtime integration ID 
+
 ### Examples
 ```html
     $ convox rack install local dev
     ...
 
     $ convox rack install aws production region=eu-west-1 node_type=t3.large
+    ...
+
+    $ convox rack install aws my-org/staging region=us-east-1 --runtime=20e58437-fab7-4124-aa5a-2e5978f1149e
     ...
 ```
 ## rack kubeconfig
@@ -272,3 +281,17 @@ Rotates the rack access key that is used for rack access credential. It will inv
     OK
 
 ```
+
+## runtimes 
+
+List of available runtime integrations for a organisation
+
+### Usage
+```html
+    convox runtimes 
+```
+### Examples
+```html
+    $ convox runtimes org_name
+    ID                                    TITLE
+    20e58437-fab7-4124-aa5a-2e5978f1149e  047979280916
