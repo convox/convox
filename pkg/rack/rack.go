@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
 )
@@ -220,4 +221,23 @@ func currentRack(c *stdcli.Context) string {
 	}
 
 	return ""
+}
+
+func Listruntimes(c *stdcli.Context, org string) (structs.Runtimes, error) {
+	host, err := currentConsole(c)
+	if err != nil {
+		return nil, err
+	}
+
+	cc, err := consoleClient(c, host, "")
+	if err != nil {
+		return nil, err
+	}
+
+	rs, err := cc.OrganizationRuntimes(org)
+	if err != nil {
+		return nil, err
+	}
+
+	return rs, nil
 }
