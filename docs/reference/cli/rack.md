@@ -27,11 +27,13 @@ Get information about the rack
 
 Install a new Rack
 
-> note: for console install provide org_name/rack_name as `<name>` and region & runtime are required
+> note: To install the rack into the console with the specified runtime, region, and optional parameters: provide orgname/rackname in place of `<name>`
 
 ### Usage
 ```html
     convox rack install <provider> <name> [option=value]...
+
+    convox rack install <provider> <orgname>/<rackname> region=<region> --runtime=<runtime-id> [option=value]...
 ```
 
 flags:
@@ -292,6 +294,6 @@ List of available runtime integrations for a organisation
 ```
 ### Examples
 ```html
-    $ convox runtimes org_name
+    $ convox runtimes orgname
     ID                                    TITLE
     20e58437-fab7-4124-aa5a-2e5978f1149e  047979280916
