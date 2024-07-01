@@ -289,17 +289,3 @@ Rotates the rack access key that is used for rack access credential. It will inv
     OK
 
 ```
-
-## runtimes 
-
-List of available runtime integrations for a organisation
-
-### Usage
-```html
-    convox runtimes 
-```
-### Examples
-```html
-    $ convox runtimes orgname
-    ID                                    TITLE
-    20e58437-fab7-4124-aa5a-2e5978f1149e  047979280916
