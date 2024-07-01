@@ -27,7 +27,7 @@ Get information about the rack
 
 Install a new Rack
 
-> note: To install the rack into the console with the specified runtime, region, and optional parameters: provide orgname/rackname in place of `<name>`
+> note: To install the rack into the console with the specified runtime, region, and optional [parameters](https://docs.convox.com/configuration/rack-parameters/): provide orgname/rackname in place of `<name>`
 
 ### Usage
 ```html
@@ -38,6 +38,11 @@ Install a new Rack
 
 flags:
   - `runtime`: runtime integration ID 
+  - `version`: specify the rack version to install
+
+> note: To install a rack into an organization with runtime integration, ensure your CLI is updated to the latest version. For detailed instructions on updating CLI, please see [CLI Management](https://docs.convox.com/management/cli-rack-management/).
+
+> note: Obtain the runtime ID by running `convox runtimes <orgname>`.
 
 ### Examples
 ```html
@@ -50,6 +55,7 @@ flags:
     $ convox rack install aws my-org/staging region=us-east-1 --runtime=20e58437-fab7-4124-aa5a-2e5978f1149e
     ...
 ```
+
 ## rack kubeconfig
 
 Output a Kubernetes configuration file for connecting to the underlying cluster
