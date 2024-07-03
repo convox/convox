@@ -11,7 +11,7 @@ metadata:
     resource: {{ k8sname .Name }}
     provisioner: rds
 data:
-  URL: "postgres://{{.User}}:{{.Password}}@r{{.Host}}:{{.Port}}/{{.Database}}?sslmode=disable"
+  URL: "postgres://{{.User}}:{{.Password}}@{{.Host}}:{{.Port}}/{{.Database}}?sslmode=disable"
   USER: "{{.User}}"
   PASS: "{{.Password}}"
   HOST: "{{.Host}}"
