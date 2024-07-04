@@ -50,7 +50,7 @@ func (p *Provider) ParseResourceNameFromStateId(id string) (string, error) {
 	return parts[0], nil
 }
 
-func (p *Provider) SaveState(id string, data []byte) error {
+func (p *Provider) SaveState(id string, data []byte, provisioner string) error {
 	app, err := p.ParseAppNameFromStateId(id)
 	if err != nil {
 		return err
@@ -67,7 +67,7 @@ func (p *Provider) SaveState(id string, data []byte) error {
 		s.Labels = map[string]string{
 			"rack":       p.RackName,
 			"system":     "convox",
-			"provsioner": "rds",
+			"provsioner": provisioner,
 			"type":       "state",
 		}
 		s.Data = map[string][]byte{
@@ -114,7 +114,7 @@ func (p *Provider) SendStateLog(id, message string) error {
 		return err
 	}
 
-	tempRdsEventLogStore.Add(app, fmt.Sprintf("rds resource %s: %s", resourceName, message))
+	tempRdsEventLogStore.Add(app, fmt.Sprintf("resource %s: %s", resourceName, message))
 	return nil
 }
 

@@ -176,9 +176,21 @@ func (p *Provisioner) InstallReplica(id string, options map[string]string) error
 		return fmt.Errorf("already found saved state for this id: %s", id)
 	}
 
-	pass := options[ParamMasterUserPassword]
-	if pass == "" {
-		return fmt.Errorf("source db password is required for read replica")
+	if options[ParamMasterUserPassword] == "" {
+		sourceDbIdentifier := options[ParamSourceDBInstanceIdentifier]
+		if srcDbStateBytes, err := p.storage.GetState(sourceDbIdentifier); err == nil {
+			srcDbState := NewEmptyState()
+			if err := srcDbState.LoadState(srcDbStateBytes); err != nil {
+				return fmt.Errorf("failed to load source db state: %s", err)
+			}
+			v, _ := srcDbState.GetParameterValuePtr(ParamMasterUserPassword)
+			if v != nil {
+				options[ParamMasterUserPassword] = *v
+			}
+		}
+		if options[ParamMasterUserPassword] == "" {
+			return fmt.Errorf("source db password is required for read replica, use parameter 'masterUserPassword' to provide it")
+		}
 	}
 
 	options[ParamDBInstanceIdentifier] = id
@@ -445,7 +457,7 @@ func (p *Provisioner) SaveState(id string, stateData *StateData) error {
 		return err
 	}
 
-	if err := p.storage.SaveState(id, stateBytes); err != nil {
+	if err := p.storage.SaveState(id, stateBytes, ProvisionerName); err != nil {
 		p.logger.Errorf("Failed to save state: %s", err)
 		return err
 	}
