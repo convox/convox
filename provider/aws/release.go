@@ -27,6 +27,21 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		}
 	}
 
+	servicesMap := make(map[string]manifest.Service)
+	for i := range m.Services {
+		servicesMap[m.Services[i].Name] = m.Services[i]
+	}
+
+	for i := range m.Timers {
+		service, ok := servicesMap[m.Timers[i].Service]
+		if ok {
+			err = p.processAccessControl(app, fmt.Sprintf("timer-%s", m.Timers[i].Name), service.AccessControl)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	return p.Provider.ReleasePromote(app, id, opts)
 }
 
