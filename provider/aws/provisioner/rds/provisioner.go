@@ -275,17 +275,35 @@ func (p *Provisioner) Update(id string, optoins map[string]string) error {
 		}
 	}
 
+	isPromoted := false
+	sourceDBParam := stateData.GetParameter(ParamSourceDBInstanceIdentifier)
+	if _, has := optoins[ParamSourceDBInstanceIdentifier]; !has && sourceDBParam != nil && !sourceDBParam.IsValueEmpty() {
+		dbIdentifier, err := stateData.GetParameterValue(ParamDBInstanceIdentifier)
+		if err != nil {
+			return err
+		}
+		_, err = p.rdsClient.PromoteReadReplica(context.Background(), &rds.PromoteReadReplicaInput{
+			DBInstanceIdentifier: &dbIdentifier,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to promote read replica: %s", err)
+		}
+
+		stateData.AddOrUpdateParameter(*NewParameterForValuePtr(ParamSourceDBInstanceIdentifier, nil, &MetaData{}))
+
+		p.storage.SendStateLog(id, "promoted the read replica")
+		isPromoted = true
+	}
+
 	if len(changedParams) == 0 {
-		p.logger.Logf("no changes detected")
-		p.storage.SendStateLog(id, "no changes detected")
+		if !isPromoted {
+			p.logger.Logf("no changes detected")
+			p.storage.SendStateLog(id, "no changes detected")
+		}
 		return nil
 	}
 
 	p.logger.Logf("found changes in these following parameters: %s", strings.Join(changedParams, ", "))
-
-	if targetExistsInStringArray(changedParams, ParamSourceDBInstanceIdentifier) {
-		return fmt.Errorf("change in %s parameter not supported", ParamSourceDBInstanceIdentifier)
-	}
 
 	modifyReqInput, err := stateData.GenerateModifyDBInstanceInput(changedParams)
 	if err != nil {
