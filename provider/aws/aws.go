@@ -32,6 +32,8 @@ type Provider struct {
 	EncryptionKey string
 	Region        string
 
+	ecr_scan_on_push_enable string
+
 	Ec2 *ec2.EC2
 
 	CloudFormation cloudformationiface.CloudFormationAPI
@@ -50,10 +52,11 @@ func FromEnv() (*Provider, error) {
 	}
 
 	p := &Provider{
-		Provider:      k,
-		Bucket:        os.Getenv("BUCKET"),
-		EncryptionKey: os.Getenv("ENCRYPTION_KEY"),
-		Region:        os.Getenv("AWS_REGION"),
+		Provider:                k,
+		Bucket:                  os.Getenv("BUCKET"),
+		EncryptionKey:           os.Getenv("ENCRYPTION_KEY"),
+		Region:                  os.Getenv("AWS_REGION"),
+		ecr_scan_on_push_enable: os.Getenv("ECR_SCAN_ON_PUSH_ENABLE"),
 	}
 
 	k.Engine = p
