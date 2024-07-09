@@ -450,8 +450,13 @@ func (p *Provisioner) Uninstall(id string) error {
 		return err
 	}
 
-	if err := p.deleteDBInstancesIfManaged(state); err != nil {
+	deletionProtectionEnabled, err := p.deleteDBInstancesIfManaged(state)
+	if err != nil {
 		return err
+	}
+
+	if deletionProtectionEnabled {
+		return nil
 	}
 
 	if err := p.deleteSecurityGroupIfManaged(state); err != nil {
@@ -785,26 +790,31 @@ func (p *Provisioner) DeleteDBInstance(dbIdentifier string) error {
 	return nil
 }
 
-func (p *Provisioner) deleteDBInstancesIfManaged(state *StateData) error {
+// this will delete db if managed and deletion protection is disbaled
+func (p *Provisioner) deleteDBInstancesIfManaged(state *StateData) (bool, error) {
 	dbIdentifier, err := state.GetParameterValue(ParamDBInstanceIdentifier)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	resp, err := p.GetDBInstance(dbIdentifier)
 	if err != nil {
 		if IsNotFoundError(err) {
-			return nil
+			return false, nil
 		}
-		return err
+		return false, err
+	}
+
+	if resp.DeletionProtection != nil && *resp.DeletionProtection {
+		return true, nil
 	}
 
 	for _, v := range resp.TagList {
 		if v.Key != nil && *v.Key == ProvisionerName && v.Value != nil && *v.Value == state.Id {
-			return p.DeleteDBInstance(dbIdentifier)
+			return false, p.DeleteDBInstance(dbIdentifier)
 		}
 	}
-	return nil
+	return false, nil
 }
 
 func (p *Provisioner) deleteSecurityGroupIfManaged(state *StateData) error {
