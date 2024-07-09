@@ -87,3 +87,8 @@ variable "resolver" {
 variable "router" {
   type = string
 }
+
+variable "ecr_scan_on_push_enable" {
+  type    = bool
+  default = false
+}
