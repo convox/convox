@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: {{.Namespace}}
+  name: resource-{{ k8sname .Name }}
+  labels:
+    system: convox
+    rack: {{.Rack}}
+    app: {{.App}}
+    type: rds-mysql
+    resource: {{ k8sname .Name }}
+    provisioner: rds
+data:
+  URL: "mysql://{{.User}}:{{.Password}}@{{.Host}}:{{.Port}}/{{.Database}}"
+  USER: "{{.User}}"
+  PASS: "{{.Password}}"
+  HOST: "{{.Host}}"
+  PORT: "{{.Port}}"
+  NAME: "{{.Database}}"
+---

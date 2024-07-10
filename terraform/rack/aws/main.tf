@@ -45,6 +45,8 @@ module "api" {
   resolver                       = module.resolver.endpoint
   router                         = module.router.endpoint
   ecr_scan_on_push_enable        = var.ecr_scan_on_push_enable
+  subnets                        = var.subnets
+  vpc_id                         = var.vpc_id
 }
 
 module "metrics" {

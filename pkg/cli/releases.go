@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -151,14 +152,20 @@ func releasePromote(rack sdk.Interface, c *stdcli.Context, app, id string, force
 	}
 
 	c.Startf("Promoting <release>%s</release>", id)
+	c.Writef("\n")
+
+	ctx, cancel := context.WithCancel(c.Context)
+
+	go printPromotingInProgress(ctx, c)
 
 	if err := rack.ReleasePromote(app, id, structs.ReleasePromoteOptions{
 		Force: &force,
 	}); err != nil {
+		cancel()
 		return err
 	}
 
-	c.Writef("\n")
+	cancel()
 
 	if err := common.WaitForAppWithLogs(rack, c, app); err != nil {
 		return err
