@@ -269,3 +269,8 @@ variable "vpc_cni_version" {
 variable "whitelist" {
   default = "0.0.0.0/0"
 }
+
+variable "ecr_scan_on_push_enable" {
+  type    = bool
+  default = false
+}

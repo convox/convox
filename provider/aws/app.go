@@ -24,6 +24,9 @@ func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*struc
 
 	res, err := p.ECR.CreateRepository(&ecr.CreateRepositoryInput{
 		RepositoryName: aws.String(fmt.Sprintf("%s%s", p.RepositoryPrefix(), name)),
+		ImageScanningConfiguration: &ecr.ImageScanningConfiguration{
+			ScanOnPush: aws.Bool(p.EcrScanOnPushEnable),
+		},
 	})
 	if err != nil {
 		return nil, err
