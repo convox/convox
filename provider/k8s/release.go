@@ -14,6 +14,7 @@ import (
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/convox/provider/aws/provisioner/rds"
 	ca "github.com/convox/convox/provider/k8s/pkg/apis/convox/v1"
 	"github.com/pkg/errors"
 	"golang.org/x/text/cases"
@@ -168,12 +169,14 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 
 		// resources
 		for _, r := range m.Resources {
-			data, err := p.releaseTemplateResource(a, e, r)
-			if err != nil {
-				return errors.WithStack(err)
-			}
+			if !r.IsRds() {
+				data, err := p.releaseTemplateResource(a, e, r)
+				if err != nil {
+					return errors.WithStack(err)
+				}
 
-			items = append(items, data)
+				items = append(items, data)
+			}
 		}
 
 		// services
@@ -200,6 +203,53 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		}
 
 		items = append(items, data)
+
+		rdsStateMap := map[string]struct{}{}
+		// rds resources
+		for _, r := range m.Resources {
+			if r.IsRds() {
+				if err := r.RdsNameValidate(); err != nil {
+					return err
+				}
+
+				id := p.CreateRdsResourceStateId(app, r.Name)
+
+				rdsStateMap[id] = struct{}{}
+
+				err := p.RdsProvisioner.Provision(id, p.MapToRdsParameter(r.Type, app, r.Options))
+				if err != nil {
+					return err
+				}
+
+				conn, err := p.RdsProvisioner.GetConnectionInfo(id)
+				if err != nil {
+					return err
+				}
+
+				data, err := p.releaseTemplateRdsResource(a, e, r, conn)
+				if err != nil {
+					return errors.WithStack(err)
+				}
+
+				items = append(items, data)
+			}
+		}
+
+		existingStateIds, err := p.ListRdsStateForApp(app)
+		if err != nil {
+			return fmt.Errorf("failed to get rds state list: %s", err)
+		}
+
+		for _, rdsId := range existingStateIds {
+			if _, has := rdsStateMap[rdsId]; !has {
+				// delete the state, rds clean up job will delete the rds
+				err = p.Cluster.CoreV1().Secrets(p.AppNamespace(app)).Delete(p.ctx, rdsId, am.DeleteOptions{})
+				if err != nil {
+					return fmt.Errorf("failed to delete rds state: %s", err)
+				}
+				p.SendStateLog(rdsId, "db instance deletion is triggered")
+			}
+		}
 	}
 
 	tdata := bytes.Join(items, []byte("---\n"))
@@ -211,6 +261,8 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 	}
 
 	p.EventSend("release:promote", structs.EventSendOptions{Data: map[string]string{"app": app, "id": id}, Status: options.String("start")})
+
+	p.FlushStateLog(app)
 
 	return nil
 }
@@ -436,6 +488,28 @@ func (p *Provider) releaseTemplateResource(a *structs.App, e structs.Environment
 		"Parameters": r.Options,
 		"Password":   fmt.Sprintf("%x", sha256.Sum256([]byte(p.Name)))[0:30],
 		"Rack":       p.Name,
+	}
+
+	data, err := p.RenderTemplate(fmt.Sprintf("resource/%s", r.Type), params)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return data, nil
+}
+
+func (p *Provider) releaseTemplateRdsResource(a *structs.App, e structs.Environment, r manifest.Resource, conn *rds.ConnectionInfo) ([]byte, error) {
+	params := map[string]interface{}{
+		"App":        a.Name,
+		"Namespace":  p.AppNamespace(a.Name),
+		"Name":       r.Name,
+		"Parameters": r.Options,
+		"Rack":       p.Name,
+		"Host":       conn.Host,
+		"Port":       conn.Port,
+		"User":       conn.UserName,
+		"Password":   conn.Password,
+		"Database":   conn.Database,
 	}
 
 	data, err := p.RenderTemplate(fmt.Sprintf("resource/%s", r.Type), params)

@@ -98,6 +98,11 @@ func (p *Provider) ResourceGet(app, name string) (*structs.Resource, error) {
 		Url:    u,
 	}
 
+	if mr.IsRds() {
+		r.Status, err = p.RdsProvisioner.GetDbStatus(p.CreateRdsResourceStateId(app, name))
+		return r, err
+	}
+
 	overlay, err := p.resourceOverlay(app, name)
 	if err != nil {
 		return nil, err
@@ -161,6 +166,13 @@ func (p *Provider) ResourceList(app string) (structs.Resources, error) {
 
 		rs = append(rs, *r)
 	}
+
+	rdss, err := p.RdsResourceList(app)
+	if err != nil {
+		return nil, err
+	}
+
+	rs = append(rs, rdss...)
 
 	return rs, nil
 }
@@ -296,6 +308,28 @@ func (p *Provider) resourceUrl(app, name string) (string, error) {
 	}
 
 	return cm.Data["URL"], nil
+}
+
+func (p *Provider) RdsResourceList(app string) (structs.Resources, error) {
+	m, _, err := common.AppManifest(p, app)
+	if err != nil {
+		return nil, err
+	}
+
+	rs := structs.Resources{}
+
+	for _, mr := range m.Resources {
+		if mr.IsRds() {
+			r, err := p.ResourceGet(app, mr.Name)
+			if err != nil {
+				return nil, err
+			}
+			if r != nil {
+				rs = append(rs, *r)
+			}
+		}
+	}
+	return rs, nil
 }
 
 type resourceConnection struct {

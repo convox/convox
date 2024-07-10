@@ -47,6 +47,11 @@ variable "ebs_csi_driver_name" {
   type = string
 }
 
+variable "ecr_scan_on_push_enable" {
+  type    = bool
+  default = false
+}
+
 variable "efs_file_system_id" {
   type = string
 }
@@ -136,11 +141,10 @@ variable "telemetry_default_map" {
   type = any
 }
 
-variable "whitelist" {
-  default = ["0.0.0.0/0"]
+variable "vpc_id" {
+  type = string
 }
 
-variable "ecr_scan_on_push_enable" {
-  type    = bool
-  default = false
+variable "whitelist" {
+  default = ["0.0.0.0/0"]
 }
