@@ -56,6 +56,9 @@ func TestAppCreate(t *testing.T) {
 				ecrapi := p.ECR.(*mocks.ECRAPI)
 				ecrapi.On("CreateRepository", &ecr.CreateRepositoryInput{
 					RepositoryName: awssdk.String(test.BucketName),
+					ImageScanningConfiguration: &ecr.ImageScanningConfiguration{
+						ScanOnPush: awssdk.Bool(false),
+					},
 				}).Return(test.Output, test.Err)
 
 				a, err := p.AppCreate(test.AppName, structs.AppCreateOptions{})

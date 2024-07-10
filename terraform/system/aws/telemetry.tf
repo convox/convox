@@ -18,6 +18,7 @@ locals {
     disable_image_manifest_cache = var.disable_image_manifest_cache
     docker_hub_password = var.docker_hub_password
     docker_hub_username = var.docker_hub_username
+    ecr_scan_on_push_enable = var.ecr_scan_on_push_enable
     efs_csi_driver_enable = var.efs_csi_driver_enable
     efs_csi_driver_version = var.efs_csi_driver_version
     fluentd_disable = var.fluentd_disable
@@ -79,6 +80,7 @@ locals {
     disable_image_manifest_cache = "false"
     docker_hub_password = ""
     docker_hub_username = ""
+    ecr_scan_on_push_enable = "false"
     efs_csi_driver_enable = "false"
     efs_csi_driver_version = "v2.0.1-eksbuild.1"
     fluentd_disable = "false"

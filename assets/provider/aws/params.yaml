@@ -118,6 +118,10 @@ Groups:
           &b Advanced Configuration &b &l SSL protocols to use for
           (Nginx)[https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_ssl_protocols] &l 
           &l They must be listed separated by spaces. &i e.g. &i - TLSv1.2 TLSv1.3 &l
+      - name: ecr_scan_on_push_enable
+        default: "false"
+        type: boolean
+        description: Automatically scans images for vulnerabilities upon push to the ECR repository.
   - name: Networking
     order: 3
     params:

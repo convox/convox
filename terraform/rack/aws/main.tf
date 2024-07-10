@@ -44,6 +44,7 @@ module "api" {
   release                        = var.release
   resolver                       = module.resolver.endpoint
   router                         = module.router.endpoint
+  ecr_scan_on_push_enable        = var.ecr_scan_on_push_enable
 }
 
 module "metrics" {
