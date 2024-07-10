@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
@@ -193,4 +194,17 @@ func checkRackNameRegex(name string) error {
 		return fmt.Errorf("only lowercase alphanumeric characters and hyphen allowed and must not start with hyphen")
 	}
 	return nil
+}
+
+func printPromotingInProgress(ctx context.Context, cliCtx *stdcli.Context) {
+	ticket := time.NewTicker(15 * time.Second)
+
+	for {
+		select {
+		case <-ticket.C:
+			cliCtx.Writef("Promoting still in progress...\n")
+		case <-ctx.Done():
+			return
+		}
+	}
 }

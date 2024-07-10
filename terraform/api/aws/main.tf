@@ -50,5 +50,7 @@ module "k8s" {
     ROUTER                        = var.router
     SOCKET                        = "/var/run/docker.sock"
     ECR_SCAN_ON_PUSH_ENABLE       = var.ecr_scan_on_push_enable
+    SUBNET_IDS                    = join(",", var.subnets)
+    VPC_ID                        = var.vpc_id
   }
 }
