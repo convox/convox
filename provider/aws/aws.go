@@ -52,7 +52,7 @@ func FromEnv() (*Provider, error) {
 		return nil, err
 	}
 
-	EcrScanOnPushEnable, err := strconv.ParseBool(os.Getenv("ECR_SCAN_ON_PUSH_ENABLE"))
+	ecrScanOnPushEnable, err := strconv.ParseBool(os.Getenv("ECR_SCAN_ON_PUSH_ENABLE"))
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func FromEnv() (*Provider, error) {
 		Bucket:              os.Getenv("BUCKET"),
 		EncryptionKey:       os.Getenv("ENCRYPTION_KEY"),
 		Region:              os.Getenv("AWS_REGION"),
-		EcrScanOnPushEnable: EcrScanOnPushEnable,
+		EcrScanOnPushEnable: ecrScanOnPushEnable,
 	}
 
 	k.Engine = p
