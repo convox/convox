@@ -57,7 +57,7 @@ func TestAppCreate(t *testing.T) {
 				ecrapi.On("CreateRepository", &ecr.CreateRepositoryInput{
 					RepositoryName: awssdk.String(test.BucketName),
 					ImageScanningConfiguration: &ecr.ImageScanningConfiguration{
-						ScanOnPush: awssdk.Bool(true),
+						ScanOnPush: awssdk.Bool(false),
 					},
 				}).Return(test.Output, test.Err)
 
