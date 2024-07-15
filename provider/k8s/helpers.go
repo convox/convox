@@ -5,19 +5,28 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"math"
+	"os"
 	"path"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
+	"unicode"
 
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned/scheme"
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
 	ae "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	tc "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/tools/leaderelection"
+	"k8s.io/client-go/tools/leaderelection/resourcelock"
+	"k8s.io/client-go/tools/record"
 	metricsv1beta1 "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 )
 
@@ -237,6 +246,17 @@ func nameFilter(name string) string {
 	return kubernetesNameFilter.ReplaceAllString(name, "")
 }
 
+func nameFilterV2(name string) string {
+	name = strings.ToLower(name)
+	var builder strings.Builder
+	for _, char := range name {
+		if unicode.IsLetter(char) || (unicode.IsDigit(char) && builder.Len() > 0) || char == '-' {
+			builder.WriteRune(char)
+		}
+	}
+	return builder.String()
+}
+
 func primaryContainer(cs []ac.Container, app string) (*ac.Container, error) {
 	if len(cs) != 1 {
 		return nil, fmt.Errorf("no containers found")
@@ -357,4 +377,79 @@ func caculatePercentage(cur, total float64) float64 {
 		return 0
 	}
 	return (cur / total) * 100
+}
+
+func RunUsingLeaderElection(ns, name string, cluster kubernetes.Interface, onStarted func(context.Context), onStopped func()) error {
+	identifier, err := os.Hostname()
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("starting elector: %s/%s (%s)\n", ns, name, identifier)
+
+	eb := record.NewBroadcaster()
+	eb.StartRecordingToSink(&tc.EventSinkImpl{Interface: cluster.CoreV1().Events("")})
+
+	recorder := eb.NewRecorder(scheme.Scheme, ac.EventSource{Component: name})
+
+	rl := &resourcelock.LeaseLock{
+		LeaseMeta: am.ObjectMeta{Namespace: ns, Name: name},
+		Client:    cluster.CoordinationV1(),
+		LockConfig: resourcelock.ResourceLockConfig{
+			Identity:      identifier,
+			EventRecorder: recorder,
+		},
+	}
+
+	el, err := leaderelection.NewLeaderElector(leaderelection.LeaderElectionConfig{
+		Lock:          rl,
+		LeaseDuration: 60 * time.Second,
+		RenewDeadline: 15 * time.Second,
+		RetryPeriod:   5 * time.Second,
+		Callbacks: leaderelection.LeaderCallbacks{
+			OnStartedLeading: onStarted,
+			OnStoppedLeading: onStopped,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	ctx, _ := context.WithCancel(context.Background())
+
+	go el.Run(ctx)
+
+	return nil
+}
+
+type tempStateLogStorage struct {
+	lock      sync.Mutex
+	s         map[string][]string
+	threshold int
+}
+
+func (t *tempStateLogStorage) Add(key, value string) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	if _, has := t.s[key]; !has {
+		t.s[key] = []string{}
+	}
+	t.s[key] = append(t.s[key], value)
+
+	l := len(t.s[key])
+	if l > t.threshold {
+		t.s[key] = t.s[key][l-t.threshold:]
+	}
+}
+
+func (t *tempStateLogStorage) Get(key string) []string {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	return t.s[key]
+}
+
+func (t *tempStateLogStorage) Reset(key string) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	t.s[key] = []string{}
 }

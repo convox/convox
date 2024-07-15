@@ -16,6 +16,7 @@ import (
 	"github.com/convox/convox/pkg/metrics"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/pkg/templater"
+	"github.com/convox/convox/provider/aws/provisioner/rds"
 	cv "github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned"
 	"github.com/convox/logger"
 	"github.com/gobuffalo/packr"
@@ -71,9 +72,13 @@ type Provider struct {
 	Router                     string
 	Socket                     string
 	Storage                    string
+	SubnetIDs                  string
 	Version                    string
+	VpcID                      string
 
 	nc *NodeController
+
+	RdsProvisioner *rds.Provisioner
 
 	ctx       context.Context
 	logger    *logger.Logger
@@ -163,8 +168,12 @@ func FromEnv() (*Provider, error) {
 		Router:                     os.Getenv("ROUTER"),
 		Socket:                     common.CoalesceString(os.Getenv("SOCKET"), "/var/run/docker.sock"),
 		Storage:                    common.CoalesceString(os.Getenv("STORAGE"), "/var/storage"),
+		SubnetIDs:                  os.Getenv("SUBNET_IDS"),
 		Version:                    common.CoalesceString(os.Getenv("VERSION"), "dev"),
+		VpcID:                      os.Getenv("VPC_ID"),
 	}
+
+	p.RdsProvisioner = rds.NewProvisioner(p)
 
 	return p, nil
 }
@@ -235,11 +244,17 @@ func (p *Provider) Start() error {
 		return errors.WithStack(log.Error(err))
 	}
 
+	sc, err := NewSecretController(p)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
 	go ec.Run()
 	go pc.Run()
 	go wc.Run()
 	go nc.Run()
 	go dc.Run()
+	go sc.Run()
 
 	go common.Tick(1*time.Hour, p.heartbeat)
 

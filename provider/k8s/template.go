@@ -82,6 +82,9 @@ func (p *Provider) templateHelpers() template.FuncMap {
 		"k8sname": func(s string) string {
 			return nameFilter(s)
 		},
+		"k8snamev2": func(s string) string {
+			return nameFilterV2(s)
+		},
 		"lower": func(s string) string {
 			return strings.ToLower(s)
 		},

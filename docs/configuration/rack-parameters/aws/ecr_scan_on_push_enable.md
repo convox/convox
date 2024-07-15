@@ -23,9 +23,11 @@ To enable the `ecr_scan_on_push_enable` parameter, use the following command:
 $ convox rack params set ecr_scan_on_push_enable=true -r rackName
 Setting parameters... OK
 ```
+
 This command enables the image scan feature for all images pushed to the ECR repository.
 
 ## Additional Information
 Enabling `ecr_scan_on_push_enable` helps in maintaining a secure container environment by ensuring that all images are scanned for known vulnerabilities upon being pushed to the repository. This feature leverages Amazon ECR's image scanning capabilities to provide detailed reports on security findings, aiding in proactive vulnerability management.
 
 When `ecr_scan_on_push_enable` is set to `true`, each image push to the ECR repository will trigger an automatic scan, with results accessible through the AWS Management Console or AWS CLI. This setting helps in identifying and mitigating security risks in the container images before they are deployed in production environments.
+

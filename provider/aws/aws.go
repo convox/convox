@@ -3,6 +3,7 @@ package aws
 import (
 	"context"
 	"os"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -32,6 +33,8 @@ type Provider struct {
 	EncryptionKey string
 	Region        string
 
+	EcrScanOnPushEnable bool
+
 	Ec2 *ec2.EC2
 
 	CloudFormation cloudformationiface.CloudFormationAPI
@@ -49,11 +52,17 @@ func FromEnv() (*Provider, error) {
 		return nil, err
 	}
 
+	ecrScanOnPushEnable, err := strconv.ParseBool(os.Getenv("ECR_SCAN_ON_PUSH_ENABLE"))
+	if err != nil {
+		return nil, err
+	}
+
 	p := &Provider{
-		Provider:      k,
-		Bucket:        os.Getenv("BUCKET"),
-		EncryptionKey: os.Getenv("ENCRYPTION_KEY"),
-		Region:        os.Getenv("AWS_REGION"),
+		Provider:            k,
+		Bucket:              os.Getenv("BUCKET"),
+		EncryptionKey:       os.Getenv("ENCRYPTION_KEY"),
+		Region:              os.Getenv("AWS_REGION"),
+		EcrScanOnPushEnable: ecrScanOnPushEnable,
 	}
 
 	k.Engine = p

@@ -38,6 +38,11 @@ variable "disable_image_manifest_cache" {
   default = false
 }
 
+variable "ecr_scan_on_push_enable" {
+  type    = bool
+  default = false
+}
+
 variable "efs_file_system_id" {
   type = string
 }
@@ -85,5 +90,13 @@ variable "resolver" {
 }
 
 variable "router" {
+  type = string
+}
+
+variable "subnets" {
+  type = list(any)
+}
+
+variable "vpc_id" {
   type = string
 }

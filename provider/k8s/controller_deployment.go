@@ -222,7 +222,7 @@ func (p *Provider) CreateOrPatchPDB(ctx context.Context, meta metav1.ObjectMeta,
 		p.logger.Logf("Creating PDB %s/%s.", meta.Namespace, meta.Name)
 		out, err := p.Cluster.PolicyV1().PodDisruptionBudgets(meta.Namespace).Create(ctx, transform(&policyv1.PodDisruptionBudget{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       "Deployment",
+				Kind:       "PodDisruptionBudget",
 				APIVersion: policyv1.SchemeGroupVersion.String(),
 			},
 			ObjectMeta: meta,
