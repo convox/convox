@@ -8,10 +8,6 @@ url: /reference/primitives/app/resource
 
 A Resource is a network-accessible external service.
 
-## Advisory
-
-If an application is deleted, it will delete its created RDS databases. We advise enabling `deletionProtection` for any production or critical databases to avoid any accidental removal.
-
 ## Definition
 
 A Resource is defined in [`convox.yml`](/configuration/convox-yml) and linked to one or more [Services](/reference/primitives/app/service).
@@ -100,6 +96,11 @@ For detailed configuration options and defaults for each type of AWS RDS resourc
 - [MySQL](/reference/primitives/app/resource/mysql/)
 - [PostgreSQL](/reference/primitives/app/resource/postgres/)
 
+### Advisory
+
+If an application is deleted, it will delete its created RDS databases. We advise enabling `deletionProtection` for any production or critical databases to avoid any accidental removal. If a database is imported, the database will not be removed if the application is deleted and it will need to be manually deleted.
+
+
 ## RDS Features
 
 ### Read Replicas
@@ -179,6 +180,7 @@ resources:
     options:
       storage: 10
       snapshot: test-v3-rds-snapshot-postgres
+      version: 13
 services:
   web:
     resources:
@@ -186,7 +188,7 @@ services:
 ```
 
 **Usage**:
-- Set the `snapshot` option with the snapshot identifier to restore from a snapshot.
+- Set the `snapshot` option with the snapshot identifier and ensure the `version` matches the engine version of the snapshot.
 - Remove the `snapshot` option and redeploy to enable options management from the `convox.yml`.
 
 **Immutable Attributes for Snapshots**:
