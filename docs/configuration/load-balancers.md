@@ -8,7 +8,7 @@ url: /configuration/load-balancers
 
 ## Standard Load Balancer
 
-Each Rack contains a built-in HTTPS load balancer, using AWS ELB or GCP Load Balancer based on the cloud provider.
+Each Rack contains a built-in HTTPS load balancer, using AWS NLB or GCP Load Balancer based on the cloud provider.
 
 For an app named `myapp` with a `convox.yml` like this:
 
