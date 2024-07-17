@@ -14,7 +14,7 @@ import (
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
-	"github.com/convox/convox/provider/aws/provisioner/rds"
+	"github.com/convox/convox/provider/aws/provisioner"
 	ca "github.com/convox/convox/provider/k8s/pkg/apis/convox/v1"
 	"github.com/pkg/errors"
 	"golang.org/x/text/cases"
@@ -169,7 +169,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 
 		// resources
 		for _, r := range m.Resources {
-			if !r.IsRds() {
+			if !r.IsCustomManagedResource() {
 				data, err := p.releaseTemplateResource(a, e, r)
 				if err != nil {
 					return errors.WithStack(err)
@@ -204,52 +204,21 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 
 		items = append(items, data)
 
-		rdsStateMap := map[string]struct{}{}
 		// rds resources
-		for _, r := range m.Resources {
-			if r.IsRds() {
-				if err := r.RdsNameValidate(); err != nil {
-					return err
-				}
-
-				id := p.CreateRdsResourceStateId(app, r.Name)
-
-				rdsStateMap[id] = struct{}{}
-
-				err := p.RdsProvisioner.Provision(id, p.MapToRdsParameter(r.Type, app, r.Options))
-				if err != nil {
-					return err
-				}
-
-				conn, err := p.RdsProvisioner.GetConnectionInfo(id)
-				if err != nil {
-					return err
-				}
-
-				data, err := p.releaseTemplateRdsResource(a, e, r, conn)
-				if err != nil {
-					return errors.WithStack(err)
-				}
-
-				items = append(items, data)
-			}
-		}
-
-		existingStateIds, err := p.ListRdsStateForApp(app)
+		rdsItems, err := p.releaseRdsResources(a, e, m)
 		if err != nil {
-			return fmt.Errorf("failed to get rds state list: %s", err)
+			return err
 		}
 
-		for _, rdsId := range existingStateIds {
-			if _, has := rdsStateMap[rdsId]; !has {
-				// delete the state, rds clean up job will delete the rds
-				err = p.Cluster.CoreV1().Secrets(p.AppNamespace(app)).Delete(p.ctx, rdsId, am.DeleteOptions{})
-				if err != nil {
-					return fmt.Errorf("failed to delete rds state: %s", err)
-				}
-				p.SendStateLog(rdsId, "db instance deletion is triggered")
-			}
+		items = append(items, rdsItems...)
+
+		// elasticache resources
+		elasticacheItems, err := p.releaseElasticacheResources(a, e, m)
+		if err != nil {
+			return err
 		}
+
+		items = append(items, elasticacheItems...)
 	}
 
 	tdata := bytes.Join(items, []byte("---\n"))
@@ -498,7 +467,7 @@ func (p *Provider) releaseTemplateResource(a *structs.App, e structs.Environment
 	return data, nil
 }
 
-func (p *Provider) releaseTemplateRdsResource(a *structs.App, e structs.Environment, r manifest.Resource, conn *rds.ConnectionInfo) ([]byte, error) {
+func (p *Provider) releaseTemplateCustomResource(a *structs.App, e structs.Environment, r manifest.Resource, conn *provisioner.ConnectionInfo) ([]byte, error) {
 	params := map[string]interface{}{
 		"App":        a.Name,
 		"Namespace":  p.AppNamespace(a.Name),
@@ -695,6 +664,106 @@ func (p *Provider) releaseUnmarshal(kr *ca.Release) (*structs.Release, error) {
 	}
 
 	return r, nil
+}
+
+func (p *Provider) releaseElasticacheResources(app *structs.App, envs structs.Environment, m *manifest.Manifest) ([][]byte, error) {
+	items := [][]byte{}
+	stateMap := map[string]struct{}{}
+	for _, r := range m.Resources {
+		if r.IsElastiCache() {
+			if err := r.ElastiCacheNameValidate(); err != nil {
+				return nil, err
+			}
+
+			id := p.CreateAwsResourceStateId(app.Name, r.Name)
+
+			stateMap[id] = struct{}{}
+
+			err := p.ElasticacheProvisioner.Provision(id, p.MapToElasticacheParameter(r.Type, app.Name, r.Options))
+			if err != nil {
+				return nil, err
+			}
+
+			conn, err := p.ElasticacheProvisioner.GetConnectionInfo(id)
+			if err != nil {
+				return nil, err
+			}
+
+			data, err := p.releaseTemplateCustomResource(app, envs, r, conn)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+
+			items = append(items, data)
+		}
+	}
+
+	existingStateIds, err := p.ListElasticacheStateForApp(app.Name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get elasticache state list: %s", err)
+	}
+
+	for _, eId := range existingStateIds {
+		if _, has := stateMap[eId]; !has {
+			// delete the state, elasticache clean up job will delete the elasticache
+			err = p.Cluster.CoreV1().Secrets(p.AppNamespace(app.Name)).Delete(p.ctx, eId, am.DeleteOptions{})
+			if err != nil {
+				return nil, fmt.Errorf("failed to delete elasticache state: %s", err)
+			}
+			p.SendStateLog(eId, "elasticache deletion is triggered")
+		}
+	}
+	return items, nil
+}
+
+func (p *Provider) releaseRdsResources(app *structs.App, envs structs.Environment, m *manifest.Manifest) ([][]byte, error) {
+	items := [][]byte{}
+	rdsStateMap := map[string]struct{}{}
+	for _, r := range m.Resources {
+		if r.IsRds() {
+			if err := r.RdsNameValidate(); err != nil {
+				return nil, err
+			}
+
+			id := p.CreateAwsResourceStateId(app.Name, r.Name)
+
+			rdsStateMap[id] = struct{}{}
+
+			err := p.RdsProvisioner.Provision(id, p.MapToRdsParameter(r.Type, app.Name, r.Options))
+			if err != nil {
+				return nil, err
+			}
+
+			conn, err := p.RdsProvisioner.GetConnectionInfo(id)
+			if err != nil {
+				return nil, err
+			}
+
+			data, err := p.releaseTemplateCustomResource(app, envs, r, conn)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+
+			items = append(items, data)
+		}
+	}
+
+	existingStateIds, err := p.ListRdsStateForApp(app.Name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get rds state list: %s", err)
+	}
+
+	for _, rdsId := range existingStateIds {
+		if _, has := rdsStateMap[rdsId]; !has {
+			// delete the state, rds clean up job will delete the rds
+			err = p.Cluster.CoreV1().Secrets(p.AppNamespace(app.Name)).Delete(p.ctx, rdsId, am.DeleteOptions{})
+			if err != nil {
+				return nil, fmt.Errorf("failed to delete rds state: %s", err)
+			}
+			p.SendStateLog(rdsId, "db instance deletion is triggered")
+		}
+	}
+	return items, nil
 }
 
 func (p *Provider) reservedNginxAnnotations() map[string]bool {

@@ -146,6 +146,22 @@ data "aws_iam_policy_document" "rds_provisioner" {
     ]
     resources = ["*"]
   }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "elasticache:Create*",
+      "elasticache:Modify*",
+      "elasticache:Describe*",
+      "elasticache:Delete*",
+      "elasticache:List*",
+      "elasticache:IncreaseReplicaCount",
+      "elasticache:ListTagsForResource",
+      "elasticache:AddTagsToResource",
+      "elasticache:DecreaseReplicaCount",
+    ]
+    resources = ["*"]
+  }
 }
 
 resource "aws_iam_role_policy_attachment" "api_ecr" {

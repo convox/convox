@@ -5,3 +5,11 @@ type Storage interface {
 	GetState(id string) ([]byte, error)
 	SendStateLog(id, message string) error
 }
+
+type ConnectionInfo struct {
+	Host     string
+	Port     string
+	UserName string
+	Password string
+	Database string
+}

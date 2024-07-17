@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/kctl"
+	"github.com/convox/convox/provider/aws/provisioner/elasticache"
+	"github.com/convox/convox/provider/aws/provisioner/rds"
 	"github.com/convox/logger"
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
@@ -87,11 +90,21 @@ func (c *SecretController) Update(prev, cur interface{}) error {
 
 	if ss.Labels["system"] == "convox" && ss.Labels["type"] == "state" {
 		if ss.DeletionTimestamp != nil && hasStateFinalizer(ss.Finalizers) {
-			err = c.Provider.uninstallRdsAssociatedWithStateSecret(ss)
-			if err != nil {
-				c.log.Errorf("failed to uninstall rds with associated secret: %s/%s, reason: %s", ss.Namespace, ss.Name, err)
+			switch common.CoalesceString(ss.Labels["provisioner"], ss.Labels["provsioner"]) {
+			case rds.ProvisionerName:
+				err = c.Provider.uninstallRdsAssociatedWithStateSecret(ss)
+				if err != nil {
+					c.log.Errorf("failed to uninstall rds with associated secret: %s/%s, reason: %s", ss.Namespace, ss.Name, err)
+				}
+				return err
+			case elasticache.ProvisionerName:
+				err = c.Provider.uninstallElaticacheAssociatedWithStateSecret(ss)
+				if err != nil {
+					c.log.Errorf("failed to uninstall elasticache with associated secret: %s/%s, reason: %s", ss.Namespace, ss.Name, err)
+				}
+				return err
+
 			}
-			return err
 		}
 	}
 	return nil

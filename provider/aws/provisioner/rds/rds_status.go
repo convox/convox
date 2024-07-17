@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/convox/convox/provider/aws/provisioner"
 )
 
 // Database instance status: http://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Overview.DBInstance.Status.html
@@ -118,10 +120,11 @@ func (p *Provisioner) waitUntilTargetDBStatus(dbIdentifier string, conf *DBStatu
 				return err
 			}
 
-			if targetExistsInStringArray(conf.Target, status) {
+			if provisioner.TargetExistsInStringArray(conf.Target, status) {
 				return nil
 			}
-			if targetExistsInStringArray(conf.Pending, status) {
+
+			if provisioner.TargetExistsInStringArray(conf.Pending, status) {
 				p.logger.Logf("DB instances still in %s state", status)
 			}
 		}
