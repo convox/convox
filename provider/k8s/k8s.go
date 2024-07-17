@@ -16,6 +16,7 @@ import (
 	"github.com/convox/convox/pkg/metrics"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/pkg/templater"
+	"github.com/convox/convox/provider/aws/provisioner/elasticache"
 	"github.com/convox/convox/provider/aws/provisioner/rds"
 	cv "github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned"
 	"github.com/convox/logger"
@@ -78,7 +79,8 @@ type Provider struct {
 
 	nc *NodeController
 
-	RdsProvisioner *rds.Provisioner
+	RdsProvisioner         *rds.Provisioner
+	ElasticacheProvisioner *elasticache.Provisioner
 
 	ctx       context.Context
 	logger    *logger.Logger
@@ -174,6 +176,7 @@ func FromEnv() (*Provider, error) {
 	}
 
 	p.RdsProvisioner = rds.NewProvisioner(p)
+	p.ElasticacheProvisioner = elasticache.NewProvisioner(p)
 
 	return p, nil
 }

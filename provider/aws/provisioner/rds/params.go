@@ -6,8 +6,6 @@ import (
 	"github.com/convox/convox/pkg/options"
 )
 
-type RDSParameters map[string]*Parameter
-
 const (
 	ParamDBInstanceIdentifier       = "DBInstanceIdentifier"
 	ParamDBName                     = "DBName"

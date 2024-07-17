@@ -99,7 +99,7 @@ func (p *Provider) ResourceGet(app, name string) (*structs.Resource, error) {
 	}
 
 	if mr.IsRds() {
-		r.Status, err = p.RdsProvisioner.GetDbStatus(p.CreateRdsResourceStateId(app, name))
+		r.Status, err = p.RdsProvisioner.GetDbStatus(p.CreateAwsResourceStateId(app, name))
 		return r, err
 	}
 

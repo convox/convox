@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/rds"
 	rdstypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
 	"github.com/convox/convox/pkg/options"
+	"github.com/convox/convox/provider/aws/provisioner"
 )
 
 type StatusType string
@@ -119,7 +120,7 @@ func (s *StateData) GetParameterValueStringArray(key string) ([]string, error) {
 		return nil, nil
 	}
 
-	return convertToStringArray(*v), nil
+	return provisioner.ConvertToStringArray(*v), nil
 }
 
 func (s *StateData) GetParameterValueInt32Ptr(key string) (*int32, error) {
@@ -259,7 +260,7 @@ func (s *StateData) LoadState(data []byte) error {
 }
 
 func (s *StateData) AddParameterForImportByValuePtr(key string, value interface{}) error {
-	v, err := convertToStringPtr(value)
+	v, err := provisioner.ConvertToStringPtr(value)
 	if err != nil {
 		return err
 	}
@@ -662,117 +663,117 @@ func (s *StateData) ToAllCommonParamsForUpdate() (*AllCommonParams, error) {
 	paramsObj := &AllCommonParams{}
 
 	paramsObj.AllocatedStorage, err = s.GetParameterValueInt32Ptr(ParamAllocatedStorage)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return nil, err
 	}
 
 	paramsObj.AutoMinorVersionUpgrade, err = s.GetParameterValueBoolPtr(ParamAutoMinorVersionUpgrade)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return nil, err
 	}
 
 	paramsObj.BackupRetentionPeriod, err = s.GetParameterValueInt32Ptr(ParamBackupRetentionPeriod)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return nil, err
 	}
 
 	paramsObj.DBInstanceClass, err = s.GetParameterValuePtr(ParamDBInstanceClass)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return nil, err
 	}
 
 	paramsObj.DBInstanceIdentifier, err = s.GetParameterValuePtr(ParamDBInstanceIdentifier)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return nil, err
 	}
 
 	paramsObj.DBName, err = s.GetParameterValuePtr(ParamDBName)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return nil, err
 	}
 
 	paramsObj.DBParameterGroupName, err = s.GetParameterValuePtr(ParamDBParameterGroupName)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return nil, err
 	}
 
 	paramsObj.DBSubnetGroupName, err = s.GetParameterValuePtr(ParamDBSubnetGroupName)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return nil, err
 	}
 
 	paramsObj.DeletionProtection, err = s.GetParameterValueBoolPtr(ParamDeletionProtection)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return nil, err
 	}
 
 	paramsObj.Engine, err = s.GetParameterValuePtr(ParamEngine)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return nil, err
 	}
 
 	paramsObj.EngineVersion, err = s.GetParameterValuePtr(ParamEngineVersion)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return nil, err
 	}
 
 	paramsObj.Iops, err = s.GetParameterValueInt32Ptr(ParamIops)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return nil, err
 	}
 
 	paramsObj.MasterUserPassword, err = s.GetParameterValuePtr(ParamMasterUserPassword)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return nil, err
 	}
 
 	paramsObj.MasterUsername, err = s.GetParameterValuePtr(ParamMasterUsername)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return nil, err
 	}
 
 	paramsObj.MultiAZ, err = s.GetParameterValueBoolPtr(ParamMultiAZ)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return nil, err
 	}
 
 	paramsObj.Port, err = s.GetParameterValueInt32Ptr(ParamPort)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return nil, err
 	}
 
 	paramsObj.PreferredBackupWindow, err = s.GetParameterValuePtr(ParamPreferredBackupWindow)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return nil, err
 	}
 
 	paramsObj.PreferredMaintenanceWindow, err = s.GetParameterValuePtr(ParamPreferredMaintenanceWindow)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return nil, err
 	}
 
 	paramsObj.PubliclyAccessible, err = s.GetParameterValueBoolPtr(ParamPubliclyAccessible)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return nil, err
 	}
 
 	paramsObj.StorageEncrypted, err = s.GetParameterValueBoolPtr(ParamStorageEncrypted)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return nil, err
 	}
 
 	paramsObj.StorageType, err = s.GetParameterValuePtr(ParamStorageType)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return nil, err
 	}
 
 	paramsObj.SourceDBInstanceIdentifier, err = s.GetParameterValuePtr(ParamSourceDBInstanceIdentifier)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return nil, err
 	}
 
 	paramsObj.VpcSecurityGroupIds, err = s.GetParameterValueStringArray(ParamVPCSecurityGroups)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return nil, err
 	}
 
@@ -785,12 +786,12 @@ func (s *StateData) GenerateModifyDBInstanceInput(changedParams []string) (*rds.
 	paramMap := map[string]struct{}{}
 	for _, paramKey := range changedParams {
 		value, err := s.GetParameterValue(paramKey)
-		if err != nil && !IsNotFoundError(err) {
+		if err != nil && !provisioner.IsNotFoundError(err) {
 			return nil, err
 		}
 
 		// probably value is set to empty string
-		if IsNotFoundError(err) {
+		if provisioner.IsNotFoundError(err) {
 			valuePtr, err2 := s.GetParameterValuePtr(paramKey)
 			if err2 != nil {
 				return nil, err2
