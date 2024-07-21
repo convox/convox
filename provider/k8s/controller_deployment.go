@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -154,9 +155,9 @@ func (c *DeployController) SyncPDB(d *apps.Deployment, remove bool) error {
 		remove = true
 	}
 
-	minAvailable := &intstr.IntOrString{
+	pdb_default_min_available_percentage := &intstr.IntOrString{
 		Type:   intstr.String,
-		StrVal: "50%",
+		StrVal: os.Getenv("PDB_DEFAULT_MIN_AVAILABLE_PERCENTAGE")+"%",
 	}
 
 	minAvailableAnnoVal := d.Annotations[AnnotationPdbMinAvailable]
@@ -165,12 +166,12 @@ func (c *DeployController) SyncPDB(d *apps.Deployment, remove bool) error {
 	}
 	if minAvailableAnnoVal != "" {
 		if strings.HasSuffix(minAvailableAnnoVal, "%") {
-			minAvailable = &intstr.IntOrString{
+			pdb_default_min_available_percentage = &intstr.IntOrString{
 				Type:   intstr.String,
 				StrVal: minAvailableAnnoVal,
 			}
 		} else if val, err := strconv.Atoi(minAvailableAnnoVal); err != nil {
-			minAvailable = &intstr.IntOrString{
+			pdb_default_min_available_percentage = &intstr.IntOrString{
 				Type:   intstr.Int,
 				IntVal: int32(val),
 			}
@@ -186,7 +187,7 @@ func (c *DeployController) SyncPDB(d *apps.Deployment, remove bool) error {
 			Namespace: d.Namespace,
 		}, func(pdb *policyv1.PodDisruptionBudget) *policyv1.PodDisruptionBudget {
 			pdb.Labels = d.Labels
-			pdb.Spec.MinAvailable = minAvailable
+			pdb.Spec.MinAvailable = pdb_default_min_available_percentage 
 			pdb.Spec.Selector = d.Spec.Selector
 			pdb.Spec.Selector.MatchLabels["type"] = "service"
 			return pdb
