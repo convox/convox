@@ -100,3 +100,8 @@ variable "subnets" {
 variable "vpc_id" {
   type = string
 }
+
+variable "pdb_default_min_available_percentage" {
+  type    = number
+  default = 50
+}

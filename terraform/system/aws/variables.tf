@@ -274,3 +274,8 @@ variable "ecr_scan_on_push_enable" {
   type    = bool
   default = false
 }
+
+variable "pdb_default_min_available_percentage" {
+  type    = number
+  default = 50
+}
