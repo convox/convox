@@ -32,6 +32,7 @@ module "api" {
   domain                               = try(module.router.endpoint, "") # terraform destroy sometimes failes to resolve the value
   domain_internal                      = module.router.endpoint_internal
   disable_image_manifest_cache         = var.disable_image_manifest_cache
+  ecr_scan_on_push_enable              = var.ecr_scan_on_push_enable
   efs_file_system_id                   = var.efs_file_system_id
   high_availability                    = var.high_availability
   metrics_scraper_host                 = module.metrics.metrics_scraper_host
@@ -41,13 +42,12 @@ module "api" {
   namespace                            = module.k8s.namespace
   oidc_arn                             = var.oidc_arn
   oidc_sub                             = var.oidc_sub
+  pdb_default_min_available_percentage = var.pdb_default_min_available_percentage
   release                              = var.release
   resolver                             = module.resolver.endpoint
   router                               = module.router.endpoint
-  ecr_scan_on_push_enable              = var.ecr_scan_on_push_enable
   subnets                              = var.subnets
   vpc_id                               = var.vpc_id
-  pdb_default_min_available_percentage = var.pdb_default_min_available_percentage
 }
 
 module "metrics" {

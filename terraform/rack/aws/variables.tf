@@ -103,6 +103,11 @@ variable "oidc_sub" {
   type = string
 }
 
+variable "pdb_default_min_available_percentage" {
+  type    = number
+  default = 50
+}
+
 variable "proxy_protocol" {
   default = false
 }
@@ -147,9 +152,4 @@ variable "vpc_id" {
 
 variable "whitelist" {
   default = ["0.0.0.0/0"]
-}
-
-variable "pdb_default_min_available_percentage" {
-  type    = number
-  default = 50
 }

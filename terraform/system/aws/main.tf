@@ -155,6 +155,7 @@ module "rack" {
   nlb_security_group                   = var.nlb_security_group
   oidc_arn                             = module.cluster.oidc_arn
   oidc_sub                             = module.cluster.oidc_sub
+  pdb_default_min_available_percentage = var.pdb_default_min_available_percentage
   proxy_protocol                       = var.proxy_protocol
   release                              = local.release
   ssl_ciphers                          = var.ssl_ciphers
@@ -168,5 +169,4 @@ module "rack" {
   ebs_csi_driver_name                  = module.cluster.ebs_csi_driver_name
   ecr_scan_on_push_enable              = var.ecr_scan_on_push_enable
   vpc_id                               = module.cluster.vpc
-  pdb_default_min_available_percentage = var.pdb_default_min_available_percentage
 }

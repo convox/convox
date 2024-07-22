@@ -71,6 +71,11 @@ variable "disable_image_manifest_cache" {
   default = false
 }
 
+variable "ecr_scan_on_push_enable" {
+  type    = bool
+  default = false
+}
+
 variable "efs_csi_driver_enable" {
   type    = bool
   default = false
@@ -183,6 +188,11 @@ variable "node_type" {
   default = "t3.small"
 }
 
+variable "pdb_default_min_available_percentage" {
+  type    = number
+  default = 50
+}
+
 variable "pod_identity_agent_enable" {
   type    = bool
   default = false
@@ -268,14 +278,4 @@ variable "vpc_cni_version" {
 
 variable "whitelist" {
   default = "0.0.0.0/0"
-}
-
-variable "ecr_scan_on_push_enable" {
-  type    = bool
-  default = false
-}
-
-variable "pdb_default_min_available_percentage" {
-  type    = number
-  default = 50
 }
