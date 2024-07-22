@@ -4,12 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/kctl"
 	"github.com/convox/logger"
 	"github.com/pkg/errors"
@@ -155,8 +153,6 @@ func (c *DeployController) SyncPDB(d *apps.Deployment, remove bool) error {
 	if d.Annotations[AnnotationPdbDisabled] == "true" || d.Spec.Template.Annotations[AnnotationPdbDisabled] == "true" {
 		remove = true
 	}
-
-	c.Provider.PdbDefaultMinAvailablePercentage = common.CoalesceString(os.Getenv("PDB_DEFAULT_MIN_AVAILABLE_PERCENTAGE"),"50")
 
 	pdb_default_min_available_percentage := &intstr.IntOrString{
 		Type:   intstr.String,
