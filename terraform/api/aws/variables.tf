@@ -64,11 +64,6 @@ variable "name" {
   type = string
 }
 
-variable "rack_name" {
-  default = ""
-  type    = string
-}
-
 variable "namespace" {
   type = string
 }
@@ -79,6 +74,16 @@ variable "oidc_arn" {
 
 variable "oidc_sub" {
   type = string
+}
+
+variable "pdb_default_min_available_percentage" {
+  type    = number
+  default = 50
+}
+
+variable "rack_name" {
+  default = ""
+  type    = string
 }
 
 variable "release" {
@@ -100,3 +105,4 @@ variable "subnets" {
 variable "vpc_id" {
   type = string
 }
+
