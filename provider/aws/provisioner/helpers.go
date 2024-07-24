@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/convox/convox/pkg/options"
+	uuid "github.com/satori/go.uuid"
 )
 
 func ConvertToStringArray(s string) []string {
@@ -158,4 +159,16 @@ func GetValueFromStringPtr(s *string, defaultVal string) string {
 		return defaultVal
 	}
 	return *s
+}
+
+func GenShortUuid() string {
+	parts := strings.Split(uuid.NewV4().String(), "-")
+	return parts[len(parts)-1]
+}
+
+func GenShortResourceName(r string) string {
+	if len(r) > 20 {
+		r = r[:20]
+	}
+	return fmt.Sprintf("%s%s", r, GenShortUuid())
 }

@@ -90,7 +90,7 @@ func (p *Provisioner) Install(id string, options map[string]string) error {
 		return fmt.Errorf("already found saved state for this id: %s", id)
 	}
 
-	options[ParamDBInstanceIdentifier] = id
+	options[ParamDBInstanceIdentifier] = provisioner.GenShortResourceName(id)
 
 	if err := p.ApplyInstallDefaults(options); err != nil {
 		return err
@@ -193,7 +193,7 @@ func (p *Provisioner) InstallReplica(id string, options map[string]string) error
 		}
 	}
 
-	options[ParamDBInstanceIdentifier] = id
+	options[ParamDBInstanceIdentifier] = provisioner.GenShortResourceName(id)
 
 	installParamsMeta := GetParametersMetaDataForReadReplicaInstall()
 
@@ -365,7 +365,7 @@ func (p *Provisioner) RestoreFromSnapshot(id string, options map[string]string) 
 		return fmt.Errorf("already found saved state for this id: %s", id)
 	}
 
-	options[ParamDBInstanceIdentifier] = id
+	options[ParamDBInstanceIdentifier] = provisioner.GenShortResourceName(id)
 
 	if err := p.ApplyRestoreFromSnapshotDefaults(options); err != nil {
 		return err

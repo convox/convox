@@ -108,7 +108,7 @@ func (p *Provisioner) InstallReplicationGroup(id string, options map[string]stri
 		return fmt.Errorf("already found saved state for this id: %s", id)
 	}
 
-	options[ParamReplicationGroupId] = id
+	options[ParamReplicationGroupId] = provisioner.GenShortResourceName(id)
 
 	if err := p.ApplyReplicationGroupInstallDefaults(options); err != nil {
 		return err
@@ -189,7 +189,7 @@ func (p *Provisioner) InstallCacheCluster(id string, options map[string]string) 
 		return fmt.Errorf("already found saved state for this id: %s", id)
 	}
 
-	options[ParamCacheClusterId] = id
+	options[ParamCacheClusterId] = provisioner.GenShortResourceName(id)
 
 	if err := p.ApplyCacheClusterInstallDefaults(options); err != nil {
 		return err
