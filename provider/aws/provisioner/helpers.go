@@ -167,8 +167,9 @@ func GenShortUuid() string {
 }
 
 func GenShortResourceName(r string) string {
-	if len(r) > 20 {
-		r = r[:20]
+	temp := r
+	if len(temp) > 20 {
+		temp = temp[:20]
 	}
-	return fmt.Sprintf("%s%s", r, GenShortUuid())
+	return fmt.Sprintf("%s%s", temp, GenShortUuid())
 }

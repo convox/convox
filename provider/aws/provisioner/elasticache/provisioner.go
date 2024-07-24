@@ -723,12 +723,12 @@ func (p *Provisioner) GetReplicationGroupConnectionInfo(id string) (*provisioner
 	}
 
 	if state.Host == "" || portPtr == nil {
-		repGrpId, err := state.GetParameterValue(ParamReplicationGroupId)
-		if err != nil {
+		if err := p.WaitUntilReplicationGroupIsAvailable(id); err != nil {
 			return nil, err
 		}
 
-		if err := p.WaitUntilReplicationGroupIsAvailable(repGrpId); err != nil {
+		repGrpId, err := state.GetParameterValue(ParamReplicationGroupId)
+		if err != nil {
 			return nil, err
 		}
 
