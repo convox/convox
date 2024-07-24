@@ -129,6 +129,16 @@ resource "kubernetes_deployment" "api" {
           }
 
           env {
+            name  = "DOCKER_HUB_USERNAME"
+            value = var.docker_hub_username
+          }
+
+          env {
+            name  = "DOCKER_HUB_PASSWORD"
+            value = var.docker_hub_password
+          }
+
+          env {
             name  = "DOMAIN"
             value = var.domain
           }
@@ -142,6 +152,7 @@ resource "kubernetes_deployment" "api" {
             name  = "DISABLE_IMAGE_MANIFEST_CACHE"
             value = var.disable_image_manifest_cache
           }
+
 
           env {
             name  = "IMAGE"

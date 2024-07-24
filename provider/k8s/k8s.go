@@ -53,6 +53,8 @@ type Provider struct {
 	ConvoxDomainTLSCertDisable       bool
 	CertManagerClient                cmclient.Interface
 	DiscoveryClient                  discovery.DiscoveryInterface
+	DockerUsername                   string
+	DockerPassword                   string
 	Domain                           string
 	DomainInternal                   string
 	DynamicClient                    dynamic.Interface
@@ -163,7 +165,7 @@ func FromEnv() (*Provider, error) {
 		MetricsClient:                    mc,
 		Name:                             ns.Labels["rack"],
 		Namespace:                        ns.Name,
-		PdbDefaultMinAvailablePercentage: common.CoalesceString(os.Getenv("PDB_DEFAULT_MIN_AVAILABLE_PERCENTAGE"),"50"),
+		PdbDefaultMinAvailablePercentage: common.CoalesceString(os.Getenv("PDB_DEFAULT_MIN_AVAILABLE_PERCENTAGE"), "50"),
 		Password:                         os.Getenv("PASSWORD"),
 		Provider:                         common.CoalesceString(os.Getenv("PROVIDER"), "k8s"),
 		RackName:                         rn,
@@ -175,6 +177,8 @@ func FromEnv() (*Provider, error) {
 		SubnetIDs:                        os.Getenv("SUBNET_IDS"),
 		Version:                          common.CoalesceString(os.Getenv("VERSION"), "dev"),
 		VpcID:                            os.Getenv("VPC_ID"),
+		DockerUsername:                   os.Getenv("DOCKER_HUB_USERNAME"),
+		DockerPassword:                   os.Getenv("DOCKER_HUB_PASSWORD"),
 	}
 
 	p.RdsProvisioner = rds.NewProvisioner(p)

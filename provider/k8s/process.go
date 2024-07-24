@@ -3,6 +3,7 @@ package k8s
 import (
 	"bufio"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"math/rand"
@@ -571,6 +572,33 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 			s.Containers[0].Resources.Limits = ac.ResourceList{}
 		}
 		s.Containers[0].Resources.Limits["memory"] = resource.MustParse(fmt.Sprintf("%dMi", *opts.MemoryLimit))
+	}
+
+	if p.DockerUsername != "" && p.DockerPassword != "" {
+		_, err = p.CreateOrPatchSecret(p.ctx, am.ObjectMeta{
+			Name:      "docker-hub-authentication",
+			Namespace: p.AppNamespace(app),
+		}, func(s *ac.Secret) *ac.Secret {
+			s.Data = map[string][]byte{
+				".dockerconfigjson": []byte(fmt.Sprintf(
+			`{
+				"auths": {
+				  "https://index.docker.io/v2/": {
+					"auth": "%s" 
+				  }
+				}
+			  }`, base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", p.DockerUsername, p.DockerPassword))))),
+			}
+			s.Type = "kubernetes.io/dockerconfigjson"
+			return s
+		}, am.PatchOptions{
+			FieldManager: "convox",
+		},
+		); if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		s.ImagePullSecrets = append(s.ImagePullSecrets, ac.LocalObjectReference{Name: "docker-hub-authentication" })
 	}
 
 	if opts.Volumes != nil {

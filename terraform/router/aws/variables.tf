@@ -8,6 +8,11 @@ variable "deploy_extra_nlb" {
   type    = bool
 }
 
+variable "docker_hub_authentication" {
+  type = string
+  default = null
+}
+
 variable "env" {
   default = {}
 }

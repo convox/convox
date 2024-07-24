@@ -15,15 +15,16 @@ module "nginx" {
     kubernetes = kubernetes
   }
 
-  cloud_provider  = "aws"
-  internal_router = var.internal_router
-  namespace       = var.namespace
-  proxy_protocol  = var.proxy_protocol
-  rack            = var.name
-  replicas_max    = var.high_availability ? 10 : 1
-  replicas_min    = var.high_availability ? 2 : 1
-  ssl_ciphers     = var.ssl_ciphers
-  ssl_protocols   = var.ssl_protocols
+  cloud_provider            = "aws"
+  docker_hub_authentication = var.docker_hub_authentication
+  internal_router           = var.internal_router
+  namespace                 = var.namespace
+  proxy_protocol            = var.proxy_protocol
+  rack                      = var.name
+  replicas_max              = var.high_availability ? 10 : 1
+  replicas_min              = var.high_availability ? 2 : 1
+  ssl_ciphers               = var.ssl_ciphers
+  ssl_protocols             = var.ssl_protocols
 }
 
 resource "kubernetes_config_map" "nginx-configuration" {

@@ -19,6 +19,8 @@ module "k8s" {
   build_node_enabled             = var.build_node_enabled
   convox_domain_tls_cert_disable = var.convox_domain_tls_cert_disable
   docker_hub_authentication      = var.docker_hub_authentication
+  docker_hub_username            = var.docker_hub_username
+  docker_hub_password            = var.docker_hub_password
   domain                         = var.domain
   domain_internal                = var.domain_internal
   disable_image_manifest_cache   = var.disable_image_manifest_cache
