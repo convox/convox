@@ -169,7 +169,7 @@ func (c *DeployController) SyncPDB(d *apps.Deployment, remove bool) error {
 				Type:   intstr.String,
 				StrVal: minAvailableAnnoVal,
 			}
-		} else if val, err := strconv.Atoi(minAvailableAnnoVal); err != nil {
+		} else if val, err := strconv.Atoi(minAvailableAnnoVal); err == nil {
 			pdbMinAvailable = &intstr.IntOrString{
 				Type:   intstr.Int,
 				IntVal: int32(val),
@@ -186,7 +186,7 @@ func (c *DeployController) SyncPDB(d *apps.Deployment, remove bool) error {
 			Namespace: d.Namespace,
 		}, func(pdb *policyv1.PodDisruptionBudget) *policyv1.PodDisruptionBudget {
 			pdb.Labels = d.Labels
-			pdb.Spec.MinAvailable = pdbMinAvailable 
+			pdb.Spec.MinAvailable = pdbMinAvailable
 			pdb.Spec.Selector = d.Spec.Selector
 			pdb.Spec.Selector.MatchLabels["type"] = "service"
 			return pdb
