@@ -66,10 +66,11 @@ module "router" {
     kubernetes   = kubernetes
   }
 
-  high_availability = var.high_availability
-  name              = var.name
-  namespace         = module.k8s.namespace
-  region            = var.region
-  release           = var.release
-  whitelist         = var.whitelist
+  docker_hub_authentication = module.k8s.docker_hub_authentication
+  high_availability         = var.high_availability
+  name                      = var.name
+  namespace                 = module.k8s.namespace
+  region                    = var.region
+  release                   = var.release
+  whitelist                 = var.whitelist
 }
