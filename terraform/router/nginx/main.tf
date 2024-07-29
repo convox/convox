@@ -242,6 +242,13 @@ resource "kubernetes_deployment" "ingress-nginx" {
           }
         }
 
+        dynamic "image_pull_secrets" {
+          for_each = var.docker_hub_authentication != "NULL" ? [var.docker_hub_authentication] : []
+          content {
+            name = var.docker_hub_authentication
+          }
+        }
+
         container {
           name  = "system"
           image = var.nginx_image

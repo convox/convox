@@ -69,11 +69,3 @@ type AllCommonParams struct {
 	Timezone                           *string
 	VpcSecurityGroupIds                []string
 }
-
-type ConnectionInfo struct {
-	Host     string
-	Port     string
-	UserName string
-	Password string
-	Database string
-}

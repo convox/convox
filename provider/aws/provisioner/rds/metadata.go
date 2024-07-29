@@ -63,6 +63,7 @@ func GetParametersMetaDataForInstall() map[string]*MetaData {
 			UpdatesWithSomeInterruption: options.Bool(true),
 		},
 		ParamDBSubnetGroupName: {
+			// if not provided, convox will create it
 			Immutable: options.Bool(true),
 		},
 		ParamDBSnapshotIdentifier: {

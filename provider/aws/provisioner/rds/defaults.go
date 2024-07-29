@@ -1,6 +1,10 @@
 package rds
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/convox/convox/provider/aws/provisioner"
+)
 
 func (p *Provisioner) ApplyInstallDefaults(options map[string]string) error {
 	var err error
@@ -10,7 +14,7 @@ func (p *Provisioner) ApplyInstallDefaults(options map[string]string) error {
 	}
 
 	if _, has := options[ParamMasterUserPassword]; !has {
-		options[ParamMasterUserPassword], err = GenerateSecurePassword(36)
+		options[ParamMasterUserPassword], err = provisioner.GenerateSecurePassword(36)
 		if err != nil {
 			return fmt.Errorf("failed to generate password: %s", err)
 		}

@@ -55,7 +55,7 @@ func (p *Provisioner) Provision(id string, options map[string]string) error {
 
 	_, err := p.storage.GetState(id)
 	if err != nil {
-		if IsNotFoundError(err) {
+		if provisioner.IsNotFoundError(err) {
 			if options[ParamSourceDBInstanceIdentifier] != "" {
 				p.logger.Logf("Start provision for db replica")
 				return p.InstallReplica(id, options)
@@ -84,13 +84,13 @@ func (p *Provisioner) Provision(id string, options map[string]string) error {
 
 func (p *Provisioner) Install(id string, options map[string]string) error {
 	_, err := p.storage.GetState(id)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return err
 	} else if err == nil {
 		return fmt.Errorf("already found saved state for this id: %s", id)
 	}
 
-	options[ParamDBInstanceIdentifier] = id
+	options[ParamDBInstanceIdentifier] = provisioner.GenShortResourceName(id)
 
 	if err := p.ApplyInstallDefaults(options); err != nil {
 		return err
@@ -170,7 +170,7 @@ func (p *Provisioner) Install(id string, options map[string]string) error {
 
 func (p *Provisioner) InstallReplica(id string, options map[string]string) error {
 	_, err := p.storage.GetState(id)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return err
 	} else if err == nil {
 		return fmt.Errorf("already found saved state for this id: %s", id)
@@ -193,7 +193,7 @@ func (p *Provisioner) InstallReplica(id string, options map[string]string) error
 		}
 	}
 
-	options[ParamDBInstanceIdentifier] = id
+	options[ParamDBInstanceIdentifier] = provisioner.GenShortResourceName(id)
 
 	installParamsMeta := GetParametersMetaDataForReadReplicaInstall()
 
@@ -331,7 +331,7 @@ func (p *Provisioner) Update(id string, optoins map[string]string) error {
 
 func (p *Provisioner) Import(id string, dbIdentifier string, pass *string) error {
 	_, err := p.storage.GetState(id)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return err
 	}
 
@@ -359,13 +359,13 @@ func (p *Provisioner) Import(id string, dbIdentifier string, pass *string) error
 
 func (p *Provisioner) RestoreFromSnapshot(id string, options map[string]string) error {
 	_, err := p.storage.GetState(id)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return err
 	} else if err == nil {
 		return fmt.Errorf("already found saved state for this id: %s", id)
 	}
 
-	options[ParamDBInstanceIdentifier] = id
+	options[ParamDBInstanceIdentifier] = provisioner.GenShortResourceName(id)
 
 	if err := p.ApplyRestoreFromSnapshotDefaults(options); err != nil {
 		return err
@@ -532,7 +532,7 @@ func (p *Provisioner) IsDbAvailable(id string) (bool, error) {
 		return false, err
 	}
 
-	return targetExistsInStringArray(DbInstanceAvailableStates, status), nil
+	return provisioner.TargetExistsInStringArray(DbInstanceAvailableStates, status), nil
 }
 
 func (p *Provisioner) GetDbStatus(id string) (string, error) {
@@ -554,7 +554,7 @@ func (p *Provisioner) GetDbStatus(id string) (string, error) {
 	return p.getDbStatus(dbIdentifier)
 }
 
-func (p *Provisioner) GetConnectionInfo(id string) (*ConnectionInfo, error) {
+func (p *Provisioner) GetConnectionInfo(id string) (*provisioner.ConnectionInfo, error) {
 	p.logger.Logf("Fetching the state data for id: %s", id)
 	stateBytes, err := p.storage.GetState(id)
 	if err != nil {
@@ -625,7 +625,7 @@ func (p *Provisioner) GetConnectionInfo(id string) (*ConnectionInfo, error) {
 		}
 		user = *dbResp.MasterUsername
 
-		dbName = GetValueFromStringPtr(dbResp.DBName, "")
+		dbName = provisioner.GetValueFromStringPtr(dbResp.DBName, "")
 
 		state.AddOrUpdateParameter(*NewParameter(ParamDBName, dbName, &MetaData{}))
 		state.AddOrUpdateParameter(*NewParameter(ParamMasterUsername, user, &MetaData{}))
@@ -636,7 +636,7 @@ func (p *Provisioner) GetConnectionInfo(id string) (*ConnectionInfo, error) {
 		}
 	}
 
-	return &ConnectionInfo{
+	return &provisioner.ConnectionInfo{
 		Host:     state.Host,
 		Port:     port,
 		UserName: user,
@@ -647,7 +647,7 @@ func (p *Provisioner) GetConnectionInfo(id string) (*ConnectionInfo, error) {
 
 func (p *Provisioner) createSecurityGroupIfNotProvided(state *StateData) error {
 	securityGroups, err := state.GetParameterValue(ParamVPCSecurityGroups)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return err
 	}
 	if securityGroups != "" {
@@ -709,7 +709,7 @@ func (p *Provisioner) createSecurityGroupIfNotProvided(state *StateData) error {
 
 func (p *Provisioner) createDBSubnetGroupIfNotProvided(state *StateData) error {
 	subnetGroupName, err := state.GetParameterValue(ParamDBSubnetGroupName)
-	if err != nil && !IsNotFoundError(err) {
+	if err != nil && !provisioner.IsNotFoundError(err) {
 		return err
 	}
 	if subnetGroupName != "" {
@@ -733,7 +733,7 @@ func (p *Provisioner) createDBSubnetGroupIfNotProvided(state *StateData) error {
 	if err != nil {
 		return err
 	}
-	groupName, err := p.CreateDBSubnetGroup(subnetGroupName, convertToStringArray(subnetIdsStr), state.Id)
+	groupName, err := p.CreateDBSubnetGroup(subnetGroupName, provisioner.ConvertToStringArray(subnetIdsStr), state.Id)
 	if err != nil {
 		return fmt.Errorf("failed to create db subnet group: %s", err)
 	}
@@ -844,7 +844,7 @@ func (p *Provisioner) deleteDBSubnetGroupIfManaged(state *StateData) error {
 
 	dbSbg, err := p.GetDBSubnetGroup(*subnetGroup)
 	if err != nil {
-		if IsNotFoundError(err) {
+		if provisioner.IsNotFoundError(err) {
 			return nil
 		}
 		return err

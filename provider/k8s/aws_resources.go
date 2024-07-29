@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/convox/convox/pkg/common"
+	"github.com/convox/convox/provider/aws/provisioner/elasticache"
 	"github.com/convox/convox/provider/aws/provisioner/rds"
 	corev1 "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
@@ -30,11 +31,11 @@ var (
 	}
 )
 
-func (p *Provider) CreateRdsResourceStateId(app string, resourceName string) string {
+func (p *Provider) CreateAwsResourceStateId(app string, resourceName string) string {
 	return fmt.Sprintf("%s-r%sr-%s", resourceName, p.Name, app)
 }
 
-func (p *Provider) ParseAppNameFromStateId(id string) (string, error) {
+func (p *Provider) ParseAppNameFromAwsResourceStateId(id string) (string, error) {
 	parts := strings.Split(id, fmt.Sprintf("-r%sr-", p.Name))
 	if len(parts) != 2 {
 		return "", fmt.Errorf("invalid state id")
@@ -42,8 +43,8 @@ func (p *Provider) ParseAppNameFromStateId(id string) (string, error) {
 	return parts[1], nil
 }
 
-func (p *Provider) ParseResourceNameFromStateId(id string) (string, error) {
-	parts := strings.Split(id, fmt.Sprintf("-r%sr-", p.RackName))
+func (p *Provider) ParseResourceNameFromAwsResourceStateId(id string) (string, error) {
+	parts := strings.Split(id, fmt.Sprintf("-r%sr-", p.Name))
 	if len(parts) != 2 {
 		return "", fmt.Errorf("invalid state id")
 	}
@@ -51,7 +52,7 @@ func (p *Provider) ParseResourceNameFromStateId(id string) (string, error) {
 }
 
 func (p *Provider) SaveState(id string, data []byte, provisioner string) error {
-	app, err := p.ParseAppNameFromStateId(id)
+	app, err := p.ParseAppNameFromAwsResourceStateId(id)
 	if err != nil {
 		return err
 	}
@@ -65,10 +66,10 @@ func (p *Provider) SaveState(id string, data []byte, provisioner string) error {
 		}
 
 		s.Labels = map[string]string{
-			"rack":       p.RackName,
-			"system":     "convox",
-			"provsioner": provisioner,
-			"type":       "state",
+			"rack":        p.RackName,
+			"system":      "convox",
+			"provisioner": provisioner,
+			"type":        "state",
 		}
 		s.Data = map[string][]byte{
 			StateDataKey: data,
@@ -82,7 +83,7 @@ func (p *Provider) SaveState(id string, data []byte, provisioner string) error {
 }
 
 func (p *Provider) GetState(id string) ([]byte, error) {
-	app, err := p.ParseAppNameFromStateId(id)
+	app, err := p.ParseAppNameFromAwsResourceStateId(id)
 	if err != nil {
 		return nil, err
 	}
@@ -104,12 +105,12 @@ func (p *Provider) GetState(id string) ([]byte, error) {
 }
 
 func (p *Provider) SendStateLog(id, message string) error {
-	app, err := p.ParseAppNameFromStateId(id)
+	app, err := p.ParseAppNameFromAwsResourceStateId(id)
 	if err != nil {
 		return err
 	}
 
-	resourceName, err := p.ParseResourceNameFromStateId(id)
+	resourceName, err := p.ParseResourceNameFromAwsResourceStateId(id)
 	if err != nil {
 		return err
 	}
@@ -129,6 +130,23 @@ func (p *Provider) FlushStateLog(app string) {
 func (p *Provider) ListRdsStateForApp(app string) ([]string, error) {
 	resp, err := p.Cluster.CoreV1().Secrets(p.AppNamespace(app)).List(p.ctx, metav1.ListOptions{
 		LabelSelector: "system=convox,type=state",
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	stateIds := []string{}
+	for i := range resp.Items {
+		if resp.Items[i].Labels["provisioner"] == "" || resp.Items[i].Labels["provisioner"] == rds.ProvisionerName {
+			stateIds = append(stateIds, resp.Items[i].Name)
+		}
+	}
+	return stateIds, nil
+}
+
+func (p *Provider) ListElasticacheStateForApp(app string) ([]string, error) {
+	resp, err := p.Cluster.CoreV1().Secrets(p.AppNamespace(app)).List(p.ctx, metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("system=convox,type=state,provisioner=%s", elasticache.ProvisionerName),
 	})
 	if err != nil {
 		return nil, err
@@ -228,7 +246,7 @@ func (p *Provider) MapToRdsParameter(rdsType, app string, params map[string]stri
 
 	if strings.HasPrefix(out[rds.ParamSourceDBInstanceIdentifier], "#convox.resources.") {
 		rName := strings.TrimPrefix(out[rds.ParamSourceDBInstanceIdentifier], "#convox.resources.")
-		out[rds.ParamSourceDBInstanceIdentifier] = p.CreateRdsResourceStateId(app, rName)
+		out[rds.ParamSourceDBInstanceIdentifier] = p.CreateAwsResourceStateId(app, rName)
 	}
 
 	allowedParamList := map[string]struct{}{}
@@ -245,8 +263,79 @@ func (p *Provider) MapToRdsParameter(rdsType, app string, params map[string]stri
 	return filtered
 }
 
+func (p *Provider) MapToElasticacheParameter(cacheType, app string, params map[string]string) map[string]string {
+	out := map[string]string{
+		elasticache.ParamEngine:    strings.TrimPrefix(cacheType, "elasticache-"),
+		elasticache.ParamVPC:       common.CoalesceString(params["vpc"], p.VpcID),
+		elasticache.ParamSubnetIds: common.CoalesceString(params["subnets"], p.SubnetIDs),
+	}
+
+	for k, v := range params {
+		switch k {
+		case "deletionProtection":
+			out[elasticache.ParamDeletionProtection] = v
+		case "durable":
+			out[elasticache.ParamAutomaticFailoverEnabled] = v
+		case "nodes":
+			if out[elasticache.ParamEngine] == "redis" {
+				out[elasticache.ParamNumCacheClusters] = v
+			} else {
+				out[elasticache.ParamNumCacheNodes] = v
+			}
+		case "encrypted":
+			out[elasticache.ParamAtRestEncryptionEnabled] = v
+		case "class", "instance":
+			out[elasticache.ParamCacheNodeType] = v
+		case "version":
+			out[elasticache.ParamEngineVersion] = v
+		case "password":
+			out[elasticache.ParamAuthToken] = v
+		default:
+			for _, pKey := range elasticache.ParametersNameList() {
+				if strings.EqualFold(k, pKey) {
+					out[pKey] = v
+				}
+			}
+		}
+	}
+
+	allowedParamList := map[string]struct{}{}
+	for _, pKey := range elasticache.ParametersNameList() {
+		allowedParamList[pKey] = struct{}{}
+	}
+
+	filtered := map[string]string{}
+	for k, v := range out {
+		if _, has := allowedParamList[k]; has {
+			filtered[k] = v
+		}
+	}
+	return filtered
+}
+
 func (p *Provider) uninstallRdsAssociatedWithStateSecret(stateSecret *corev1.Secret) error {
 	if err := p.RdsProvisioner.Uninstall(stateSecret.Name); err != nil {
+		return err
+	}
+
+	_, err := p.PatchSecret(p.ctx, stateSecret, func(s *corev1.Secret) *corev1.Secret {
+		if hasStateFinalizer(s.Finalizers) {
+			newFinalizers := []string{}
+			for _, fn := range s.Finalizers {
+				if fn != StateFinalizer {
+					newFinalizers = append(newFinalizers, fn)
+				}
+			}
+			s.Finalizers = newFinalizers
+		}
+		return s
+	}, metav1.PatchOptions{})
+
+	return err
+}
+
+func (p *Provider) uninstallElaticacheAssociatedWithStateSecret(stateSecret *corev1.Secret) error {
+	if err := p.ElasticacheProvisioner.Uninstall(stateSecret.Name); err != nil {
 		return err
 	}
 
