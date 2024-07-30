@@ -217,6 +217,12 @@ Groups:
         description: Idle timeout value (in seconds) for the Rack Load Balancer
         allowedMinValue: 60
         allowedMaxValue: 4000
+      - name: pdb_default_min_available_percentage
+        default: "50"
+        type: integer
+        description: The minimum number of pods that must be available at any time
+        allowedMinValue: 0
+        allowedMaxValue: 100
       - name: schedule_rack_scale_down
         optional: true
         sideNote: Not configured by default
