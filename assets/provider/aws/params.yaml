@@ -217,6 +217,14 @@ Groups:
         description: Idle timeout value (in seconds) for the Rack Load Balancer
         allowedMinValue: 60
         allowedMaxValue: 4000
+      - name: registry_pull_qps
+        default: "5"
+        type: integer
+        description: Sets the maximum number of image pull requests in kubelet config.
+      - name: registry_burst
+        default: "10"
+        type: integer
+        description: Sets the maximum number of image pull requests that can be made in a burst, exceeding the registry_pull_qps limit for a short duration.
       - name: schedule_rack_scale_down
         optional: true
         sideNote: Not configured by default
