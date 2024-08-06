@@ -229,6 +229,16 @@ variable "region" {
   default = "us-east-1"
 }
 
+variable "registry_pull_qps" {
+  type = number
+  default = 5
+}
+
+variable "registry_burst" {
+  type = number
+  default = 10
+}
+
 variable "schedule_rack_scale_down" {
   type    = string
   default = ""

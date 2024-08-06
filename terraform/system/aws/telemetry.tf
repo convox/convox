@@ -51,6 +51,8 @@ locals {
     public_subnets_ids = var.public_subnets_ids
     rack_name = var.rack_name
     region = var.region
+    registry_pull_qps = var.registry_pull_qps
+    registry_burst = var.registry_burst
     release = var.release
     schedule_rack_scale_down = var.schedule_rack_scale_down
     schedule_rack_scale_up = var.schedule_rack_scale_up
@@ -114,6 +116,8 @@ locals {
     public_subnets_ids = ""
     rack_name = ""
     region = "us-east-1"
+    registry_pull_qps = "5"
+    registry_burst = "10"
     release = ""
     schedule_rack_scale_down = ""
     schedule_rack_scale_up = ""
