@@ -1,24 +1,38 @@
 provider "kubernetes" {
-  cluster_ca_certificate = base64decode(aws_eks_cluster.cluster.certificate_authority.0.data)
-  host                   = aws_eks_cluster.cluster.endpoint
+  cluster_ca_certificate = var.private_eks_host != "" ? null : base64decode(aws_eks_cluster.cluster.certificate_authority.0.data)
+  host                   = var.private_eks_host != "" ? var.private_eks_host : aws_eks_cluster.cluster.endpoint
 
-  exec {
-    api_version = "client.authentication.k8s.io/v1beta1"
-    args        = ["eks", "get-token", "--cluster-name", var.name]
-    command     = "aws"
-  }
-}
-
-provider "helm" {
-  kubernetes {
-    cluster_ca_certificate = base64decode(aws_eks_cluster.cluster.certificate_authority.0.data)
-    host                   = aws_eks_cluster.cluster.endpoint
-
-    exec {
+  dynamic "exec" {
+    for_each = var.private_eks_host != "" ? [] : [1]
+    content {
       api_version = "client.authentication.k8s.io/v1beta1"
       args        = ["eks", "get-token", "--cluster-name", var.name]
       command     = "aws"
     }
+  }
+
+  insecure = var.private_eks_host != "" ? true : false
+  username = var.private_eks_host != "" ? var.private_eks_user : null
+  password = var.private_eks_host != "" ? var.private_eks_pass : null
+}
+
+provider "helm" {
+  kubernetes {
+    cluster_ca_certificate = var.private_eks_host != "" ? null : base64decode(aws_eks_cluster.cluster.certificate_authority.0.data)
+    host                   = var.private_eks_host != "" ? var.private_eks_host : aws_eks_cluster.cluster.endpoint
+
+    dynamic "exec" {
+      for_each = var.private_eks_host != "" ? [] : [1]
+      content {
+        api_version = "client.authentication.k8s.io/v1beta1"
+        args        = ["eks", "get-token", "--cluster-name", var.name]
+        command     = "aws"
+      }
+    }
+
+    insecure = var.private_eks_host != "" ? true : false
+    username = var.private_eks_host != "" ? var.private_eks_user : null
+    password = var.private_eks_host != "" ? var.private_eks_pass : null
   }
 }
 
@@ -62,8 +76,8 @@ resource "aws_eks_cluster" "cluster" {
   version  = var.k8s_version
 
   vpc_config {
-    endpoint_public_access  = true
-    endpoint_private_access = false
+    endpoint_public_access  = var.disable_public_access ? false : true
+    endpoint_private_access = var.disable_public_access
     security_group_ids      = [aws_security_group.cluster.id]
     subnet_ids              = concat(local.public_subnets_ids)
   }
