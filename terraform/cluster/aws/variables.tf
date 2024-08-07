@@ -36,6 +36,11 @@ variable "coredns_version" {
   default = null
 }
 
+variable "disable_public_access" {
+  type    = bool
+  default = false
+}
+
 variable "efs_csi_driver_enable" {
   type    = bool
   default = false
@@ -134,6 +139,18 @@ variable "pod_identity_agent_version" {
 
 variable "private" {
   default = true
+}
+
+variable "private_eks_host" {
+  default = ""
+}
+
+variable "private_eks_user" {
+  default = ""
+}
+
+variable "private_eks_pass" {
+  default = ""
 }
 
 variable "schedule_rack_scale_down" {

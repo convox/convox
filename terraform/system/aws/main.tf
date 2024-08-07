@@ -3,14 +3,21 @@ provider "aws" {
 }
 
 provider "kubernetes" {
-  cluster_ca_certificate = module.cluster.ca
-  host                   = module.cluster.endpoint
+  cluster_ca_certificate = var.private_eks_host != "" ? null : module.cluster.ca
+  host                   = var.private_eks_host != "" ? var.private_eks_host : module.cluster.endpoint
 
-  exec {
-    api_version = "client.authentication.k8s.io/v1beta1"
-    args        = ["eks", "get-token", "--cluster-name", local.name]
-    command     = "aws"
+  dynamic "exec" {
+    for_each = var.private_eks_host != "" ? [] : [1]
+    content {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      args        = ["eks", "get-token", "--cluster-name", local.name]
+      command     = "aws"
+    }
   }
+
+  insecure = var.private_eks_host != "" ? true : false
+  username = var.private_eks_host != "" ? var.private_eks_user : null
+  password = var.private_eks_host != "" ? var.private_eks_pass : null
 }
 
 data "aws_eks_cluster_auth" "cluster" {
@@ -59,6 +66,7 @@ module "cluster" {
   build_node_type                 = var.build_node_type != "" ? var.build_node_type : var.node_type
   cidr                            = var.cidr
   coredns_version                 = var.coredns_version
+  disable_public_access           = var.disable_public_access
   efs_csi_driver_enable           = var.efs_csi_driver_enable
   efs_csi_driver_version          = var.efs_csi_driver_version
   gpu_type                        = local.gpu_type
@@ -80,6 +88,9 @@ module "cluster" {
   node_type                       = var.node_type
   node_max_unavailable_percentage = var.node_max_unavailable_percentage
   private                         = var.private
+  private_eks_host                = var.private_eks_host
+  private_eks_user                = var.private_eks_user
+  private_eks_pass                = var.private_eks_pass
   schedule_rack_scale_down        = var.schedule_rack_scale_down
   schedule_rack_scale_up          = var.schedule_rack_scale_up
   tags                            = local.tag_map
