@@ -34,6 +34,8 @@ locals {
     k8s_version = var.k8s_version
     key_pair_name = var.key_pair_name
     kube_proxy_version = var.kube_proxy_version
+    kubelet_registry_burst = var.kubelet_registry_burst
+    kubelet_registry_pull_qps = var.kubelet_registry_pull_qps
     max_on_demand_count = var.max_on_demand_count
     min_on_demand_count = var.min_on_demand_count
     name = var.name
@@ -97,6 +99,8 @@ locals {
     k8s_version = "1.28"
     key_pair_name = ""
     kube_proxy_version = "v1.28.6-eksbuild.2"
+    kubelet_registry_burst = "10"
+    kubelet_registry_pull_qps = "5"
     max_on_demand_count = "100"
     min_on_demand_count = "1"
     name = ""

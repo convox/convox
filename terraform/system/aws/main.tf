@@ -80,16 +80,17 @@ module "cluster" {
   node_type                       = var.node_type
   node_max_unavailable_percentage = var.node_max_unavailable_percentage
   private                         = var.private
+  private_subnets_ids             = compact(split(",", var.private_subnets_ids))
+  public_subnets_ids              = compact(split(",", var.public_subnets_ids))
+  pod_identity_agent_enable       = var.pod_identity_agent_enable
+  pod_identity_agent_version      = var.pod_identity_agent_version
+  kubelet_registry_pull_qps       = var.kubelet_registry_pull_qps
+  kubelet_registry_burst          = var.kubelet_registry_burst
   schedule_rack_scale_down        = var.schedule_rack_scale_down
   schedule_rack_scale_up          = var.schedule_rack_scale_up
   tags                            = local.tag_map
   vpc_cni_version                 = var.vpc_cni_version
   vpc_id                          = var.vpc_id
-  private_subnets_ids             = compact(split(",", var.private_subnets_ids))
-  public_subnets_ids              = compact(split(",", var.public_subnets_ids))
-  pod_identity_agent_enable       = var.pod_identity_agent_enable
-  pod_identity_agent_version      = var.pod_identity_agent_version
-
 }
 
 resource "null_resource" "wait_for_cluster" {
