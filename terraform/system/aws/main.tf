@@ -84,8 +84,8 @@ module "cluster" {
   public_subnets_ids              = compact(split(",", var.public_subnets_ids))
   pod_identity_agent_enable       = var.pod_identity_agent_enable
   pod_identity_agent_version      = var.pod_identity_agent_version
-  registry_pull_qps               = var.registry_pull_qps
-  registry_burst                  = var.registry_burst
+  kubelet_registry_pull_qps       = var.kubelet_registry_pull_qps
+  kubelet_registry_burst          = var.kubelet_registry_burst
   schedule_rack_scale_down        = var.schedule_rack_scale_down
   schedule_rack_scale_up          = var.schedule_rack_scale_up
   tags                            = local.tag_map

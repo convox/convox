@@ -144,6 +144,16 @@ variable "kube_proxy_version" {
   default = "v1.28.6-eksbuild.2"
 }
 
+variable "kubelet_registry_pull_qps" {
+  type = number
+  default = 5
+}
+
+variable "kubelet_registry_burst" {
+  type = number
+  default = 10
+}
+
 variable "k8s_version" {
   type    = string
   default = "1.28"
@@ -227,16 +237,6 @@ variable "release" {
 
 variable "region" {
   default = "us-east-1"
-}
-
-variable "registry_pull_qps" {
-  type = number
-  default = 5
-}
-
-variable "registry_burst" {
-  type = number
-  default = 10
 }
 
 variable "schedule_rack_scale_down" {

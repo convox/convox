@@ -88,6 +88,16 @@ variable "kube_proxy_version" {
   default = null
 }
 
+variable "kubelet_registry_pull_qps" {
+  type = number
+  default = 5
+}
+
+variable "kubelet_registry_burst" {
+  type = number
+  default = 10
+}
+
 variable "k8s_version" {
   type    = string
   default = "1.21"
@@ -134,16 +144,6 @@ variable "pod_identity_agent_version" {
 
 variable "private" {
   default = true
-}
-
-variable "registry_pull_qps" {
-  type = number
-  default = 5
-}
-
-variable "registry_burst" {
-  type = number
-  default = 10
 }
 
 variable "schedule_rack_scale_down" {

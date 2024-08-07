@@ -297,7 +297,7 @@ resource "aws_launch_template" "cluster" {
   KUBELET_CONFIG_FILE="/etc/kubernetes/kubelet/kubelet-config.json"
 
   # Modify the registryPullQPS and registryBurst parameters in the kubelet config file
-  jq '.registryPullQPS = ${var.registry_pull_qps} | .registryBurst = ${var.registry_burst}' $KUBELET_CONFIG_FILE > /tmp/kubelet-config.json
+  jq '.registryPullQPS = ${var.kubelet_registry_pull_qps} | .registryBurst = ${var.kubelet_registry_burst}' $KUBELET_CONFIG_FILE > /tmp/kubelet-config.json
   mv -f /tmp/kubelet-config.json $KUBELET_CONFIG_FILE
 
   # Reload the systemd daemon to apply the changes
