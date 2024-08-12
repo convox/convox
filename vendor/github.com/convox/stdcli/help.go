@@ -53,6 +53,9 @@ func helpCommand(e *Engine, cmd *Command) {
 	fs := []Flag{}
 
 	for _, f := range cmd.Flags {
+		if f.skipHelpCommand {
+			continue
+		}
 		fs = append(fs, f)
 	}
 
