@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	entrypoint := stdcli.BoolFlag("entrypoint", "e", "set to false to disable the original entrypoint in your container")
+	entrypoint := stdcli.BoolFlag("entrypoint", "e", "set to false to disable the original entrypoint in your container",false)
 	entrypoint.Default = true
 
 	register("run", "execute a command in a new process", Run, stdcli.CommandOptions{
@@ -21,7 +21,7 @@ func init() {
 			stdcli.OptionFlags(structs.ProcessRunOptions{}),
 			flagRack,
 			flagApp,
-			stdcli.BoolFlag("detach", "d", "run process in the background"),
+			stdcli.BoolFlag("detach", "d", "run process in the background",false),
 			stdcli.IntFlag("timeout", "t", "timeout"),
 			entrypoint,
 		),

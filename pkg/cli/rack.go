@@ -41,7 +41,7 @@ func init() {
 
 	registerWithoutProvider("rack install", "install a new rack", RackInstall, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
-			stdcli.BoolFlag("prepare", "", "prepare the install but don't run it"),
+			stdcli.BoolFlag("prepare", "", "prepare the install but don't run it",false),
 			stdcli.StringFlag("version", "v", "rack version"),
 			stdcli.StringFlag("runtime", "r", "runtime id"),
 		},

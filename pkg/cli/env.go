@@ -28,7 +28,7 @@ func init() {
 		Flags: []stdcli.Flag{
 			flagApp,
 			flagRack,
-			stdcli.BoolFlag("promote", "p", "promote the release"),
+			stdcli.BoolFlag("promote", "p", "promote the release",false),
 		},
 		Validate: stdcli.Args(0),
 	})
@@ -44,8 +44,8 @@ func init() {
 			flagApp,
 			flagId,
 			flagRack,
-			stdcli.BoolFlag("replace", "", "replace all environment variables with given ones"),
-			stdcli.BoolFlag("promote", "p", "promote the release"),
+			stdcli.BoolFlag("replace", "", "replace all environment variables with given ones",false),
+			stdcli.BoolFlag("promote", "p", "promote the release",false),
 		},
 		Usage: "<key=value> [key=value]...",
 	})
@@ -55,7 +55,7 @@ func init() {
 			flagApp,
 			flagId,
 			flagRack,
-			stdcli.BoolFlag("promote", "p", "promote the release"),
+			stdcli.BoolFlag("promote", "p", "promote the release",false),
 		},
 		Usage:    "<key> [key]...",
 		Validate: stdcli.ArgsMin(1),

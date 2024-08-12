@@ -16,7 +16,7 @@ func init() {
 	register("proxy", "proxy a connection inside the rack", Proxy, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
 			flagRack,
-			stdcli.BoolFlag("tls", "t", "wrap connection in tls"),
+			stdcli.BoolFlag("tls", "t", "wrap connection in tls",false),
 		},
 		Usage:    "<[port:]host:hostport> [[port:]host:hostport]...",
 		Validate: stdcli.ArgsMin(1),

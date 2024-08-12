@@ -57,7 +57,7 @@ func init() {
 			flagRack,
 			flagApp,
 			stdcli.IntFlag("port", "p", "local port"),
-			stdcli.BoolFlag("tls", "t", "wrap connection in tls"),
+			stdcli.BoolFlag("tls", "t", "wrap connection in tls",false),
 		},
 		Usage:    "<resource>",
 		Validate: stdcli.Args(1),
@@ -117,7 +117,7 @@ func init() {
 		Flags: []stdcli.Flag{
 			flagRack,
 			stdcli.IntFlag("port", "p", "local port"),
-			stdcli.BoolFlag("tls", "t", "wrap connection in tls"),
+			stdcli.BoolFlag("tls", "t", "wrap connection in tls",false),
 		},
 		Invisible: true,
 		Usage:     "<resource>",

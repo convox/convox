@@ -20,9 +20,9 @@ var (
 
 var (
 	flagApp           = stdcli.StringFlag("app", "a", "app name")
-	flagForce         = stdcli.BoolFlag("force", "", "force version update")
-	flagId            = stdcli.BoolFlag("id", "", "put logs on stderr, release id on stdout")
-	flagNoFollow      = stdcli.BoolFlag("no-follow", "", "do not follow logs")
+	flagForce         = stdcli.BoolFlag("force", "", "force version update",false)
+	flagId            = stdcli.BoolFlag("id", "", "put logs on stderr, release id on stdout",false)
+	flagNoFollow      = stdcli.BoolFlag("no-follow", "", "do not follow logs",false)
 	flagRack          = stdcli.StringFlag("rack", "r", "rack name")
 	flagWatchInterval = stdcli.StringFlag("watch", "", "cmd watch/rerun interval in seconds")
 )

@@ -27,7 +27,7 @@ func (e *Engine) Command(command, description string, fn HandlerFunc, opts stdcl
 	}
 
 	// the wait command flag is added for making the cli tool v2 backwards compatible
-	opts.Flags = append(opts.Flags, stdcli.BoolFlag("wait", "w", "wait for completion") )
+	opts.Flags = append(opts.Flags, stdcli.BoolFlag("wait", "w", "wait for completion", true))
 
 	e.Engine.Command(command, description, wfn, opts)
 }
@@ -38,7 +38,7 @@ func (e *Engine) CommandWithoutProvider(command, description string, fn HandlerF
 	}
 
 	// the wait command flag is added for making the cli tool v2 backwards compatible
-	opts.Flags = append(opts.Flags, stdcli.BoolFlag("wait", "w", "wait for completion") )
+	opts.Flags = append(opts.Flags, stdcli.BoolFlag("wait", "w", "wait for completion", true))
 
 	e.Engine.Command(command, description, wfn, opts)
 }
