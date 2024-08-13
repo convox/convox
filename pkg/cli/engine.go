@@ -26,6 +26,10 @@ func (e *Engine) Command(command, description string, fn HandlerFunc, opts stdcl
 		return fn(rc, c)
 	}
 
+	// the wait command flag is added for making the cli tool v2 backwards compatible
+	flagWait.SkipHelpCommand = true
+	opts.Flags = append(opts.Flags, flagWait)
+
 	e.Engine.Command(command, description, wfn, opts)
 }
 
@@ -33,6 +37,10 @@ func (e *Engine) CommandWithoutProvider(command, description string, fn HandlerF
 	wfn := func(c *stdcli.Context) error {
 		return fn(nil, c)
 	}
+
+	// the wait command flag is added for making the cli tool v2 backwards compatible
+	flagWait.SkipHelpCommand = true
+	opts.Flags = append(opts.Flags, flagWait)
 
 	e.Engine.Command(command, description, wfn, opts)
 }

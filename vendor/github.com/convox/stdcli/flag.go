@@ -9,11 +9,12 @@ import (
 )
 
 type Flag struct {
-	Default     interface{}
-	Description string
-	Name        string
-	Short       string
-	Value       interface{}
+	Default         interface{}
+	Description     string
+	Name            string
+	Short           string
+	Value           interface{}
+	SkipHelpCommand bool
 
 	kind string
 }
