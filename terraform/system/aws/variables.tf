@@ -71,6 +71,11 @@ variable "disable_image_manifest_cache" {
   default = false
 }
 
+variable "disable_public_access" {
+  type    = bool
+  default = false
+}
+
 variable "ecr_scan_on_push_enable" {
   type    = bool
   default = false
@@ -229,6 +234,18 @@ variable "public_subnets_ids" {
 
 variable "proxy_protocol" {
   default = false
+}
+
+variable "private_eks_host" {
+  default = ""
+}
+
+variable "private_eks_user" {
+  default = ""
+}
+
+variable "private_eks_pass" {
+  default = ""
 }
 
 variable "release" {
