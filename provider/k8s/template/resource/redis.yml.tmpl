@@ -50,7 +50,7 @@ spec:
     spec:
       containers:
       - name: redis
-        image: redis:{{ coalesce (index .Parameters "version") "4.0.10" }}
+        image: {{ if eq .Image "" }}redis:{{ coalesce (index .Parameters "version") "4.0.10" }}{{ else }}{{ .Image }}{{ end }}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 6379

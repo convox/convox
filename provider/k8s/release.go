@@ -457,6 +457,7 @@ func (p *Provider) releaseTemplateResource(a *structs.App, e structs.Environment
 		"Parameters": r.Options,
 		"Password":   fmt.Sprintf("%x", sha256.Sum256([]byte(p.Name)))[0:30],
 		"Rack":       p.Name,
+		"Image":	  r.Image,
 	}
 
 	data, err := p.RenderTemplate(fmt.Sprintf("resource/%s", r.Type), params)
