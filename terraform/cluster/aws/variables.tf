@@ -36,6 +36,11 @@ variable "coredns_version" {
   default = null
 }
 
+variable "disable_public_access" {
+  type    = bool
+  default = false
+}
+
 variable "efs_csi_driver_enable" {
   type    = bool
   default = false
@@ -88,6 +93,16 @@ variable "kube_proxy_version" {
   default = null
 }
 
+variable "kubelet_registry_pull_qps" {
+  type = number
+  default = 5
+}
+
+variable "kubelet_registry_burst" {
+  type = number
+  default = 10
+}
+
 variable "k8s_version" {
   type    = string
   default = "1.21"
@@ -134,6 +149,18 @@ variable "pod_identity_agent_version" {
 
 variable "private" {
   default = true
+}
+
+variable "private_eks_host" {
+  default = ""
+}
+
+variable "private_eks_user" {
+  default = ""
+}
+
+variable "private_eks_pass" {
+  default = ""
 }
 
 variable "schedule_rack_scale_down" {

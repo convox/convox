@@ -16,6 +16,7 @@ locals {
     coredns_version = var.coredns_version
     deploy_extra_nlb = var.deploy_extra_nlb
     disable_image_manifest_cache = var.disable_image_manifest_cache
+    disable_public_access = var.disable_public_access
     docker_hub_password = var.docker_hub_password
     docker_hub_username = var.docker_hub_username
     ecr_scan_on_push_enable = var.ecr_scan_on_push_enable
@@ -34,6 +35,8 @@ locals {
     k8s_version = var.k8s_version
     key_pair_name = var.key_pair_name
     kube_proxy_version = var.kube_proxy_version
+    kubelet_registry_burst = var.kubelet_registry_burst
+    kubelet_registry_pull_qps = var.kubelet_registry_pull_qps
     max_on_demand_count = var.max_on_demand_count
     min_on_demand_count = var.min_on_demand_count
     name = var.name
@@ -46,6 +49,9 @@ locals {
     pod_identity_agent_enable = var.pod_identity_agent_enable
     pod_identity_agent_version = var.pod_identity_agent_version
     private = var.private
+    private_eks_host = var.private_eks_host
+    private_eks_pass = var.private_eks_pass
+    private_eks_user = var.private_eks_user
     private_subnets_ids = var.private_subnets_ids
     proxy_protocol = var.proxy_protocol
     public_subnets_ids = var.public_subnets_ids
@@ -79,6 +85,7 @@ locals {
     coredns_version = "v1.10.1-eksbuild.7"
     deploy_extra_nlb = "false"
     disable_image_manifest_cache = "false"
+    disable_public_access = "false"
     docker_hub_password = ""
     docker_hub_username = ""
     ecr_scan_on_push_enable = "false"
@@ -97,6 +104,8 @@ locals {
     k8s_version = "1.28"
     key_pair_name = ""
     kube_proxy_version = "v1.28.6-eksbuild.2"
+    kubelet_registry_burst = "10"
+    kubelet_registry_pull_qps = "5"
     max_on_demand_count = "100"
     min_on_demand_count = "1"
     name = ""
@@ -109,6 +118,9 @@ locals {
     pod_identity_agent_enable = "false"
     pod_identity_agent_version = "v1.2.0-eksbuild.1"
     private = "true"
+    private_eks_host = ""
+    private_eks_pass = ""
+    private_eks_user = ""
     private_subnets_ids = ""
     proxy_protocol = "false"
     public_subnets_ids = ""

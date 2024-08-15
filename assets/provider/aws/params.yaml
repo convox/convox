@@ -223,6 +223,14 @@ Groups:
         description: The minimum number of pods that must be available at any time
         allowedMinValue: 0
         allowedMaxValue: 100
+      - name: kubelet_registry_pull_qps
+        default: "5"
+        type: integer
+        description: Sets the maximum number of image pull requests in kubelet config.
+      - name: kubelet_registry_burst
+        default: "10"
+        type: integer
+        description: Sets the maximum number of image pull requests that can be made in a burst, exceeding the registry_pull_qps limit for a short duration.
       - name: schedule_rack_scale_down
         optional: true
         sideNote: Not configured by default

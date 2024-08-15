@@ -71,6 +71,11 @@ variable "disable_image_manifest_cache" {
   default = false
 }
 
+variable "disable_public_access" {
+  type    = bool
+  default = false
+}
+
 variable "ecr_scan_on_push_enable" {
   type    = bool
   default = false
@@ -142,6 +147,16 @@ variable "key_pair_name" {
 variable "kube_proxy_version" {
   type    = string
   default = "v1.28.6-eksbuild.2"
+}
+
+variable "kubelet_registry_pull_qps" {
+  type = number
+  default = 5
+}
+
+variable "kubelet_registry_burst" {
+  type = number
+  default = 10
 }
 
 variable "k8s_version" {
@@ -219,6 +234,18 @@ variable "public_subnets_ids" {
 
 variable "proxy_protocol" {
   default = false
+}
+
+variable "private_eks_host" {
+  default = ""
+}
+
+variable "private_eks_user" {
+  default = ""
+}
+
+variable "private_eks_pass" {
+  default = ""
 }
 
 variable "release" {
