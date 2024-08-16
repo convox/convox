@@ -50,7 +50,7 @@ spec:
     spec:
       containers:
       - name: memcached
-        image: {{ if eq .Image "" }}memcached:{{ coalesce (index .Parameters "version") "1.4.34" }}{{ else }}{{ .Image }}{{ end }}
+        image: {{ if not .Image }}memcached:{{ coalesce (index .Parameters "version") "1.4.34" }}{{ else }}{{ .Image }}{{ end }}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 11211
