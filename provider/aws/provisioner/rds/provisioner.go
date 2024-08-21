@@ -163,8 +163,8 @@ func (p *Provisioner) Install(id string, options map[string]string) error {
 		return err
 	}
 
-	p.logger.Logf("Successfully installed db instance, it may take some times to be available")
-	p.storage.SendStateLog(id, "successfully installed db instance")
+	p.logger.Logf("Successfully created db instance, it may take some time to be available")
+	p.storage.SendStateLog(id, "successfully created db instance, it may take some time to be available")
 	return nil
 }
 
@@ -248,8 +248,8 @@ func (p *Provisioner) InstallReplica(id string, options map[string]string) error
 		return err
 	}
 
-	p.logger.Logf("Successfully installed db instance read replica, it may take some times to be available")
-	p.storage.SendStateLog(id, "successfully installed db instance read replica")
+	p.logger.Logf("Successfully created db instance read replica, it may take some time to be available")
+	p.storage.SendStateLog(id, "successfully created db instance read replica, it may take some time to be available")
 	return nil
 }
 

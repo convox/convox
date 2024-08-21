@@ -21,6 +21,7 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	time "time"
 
 	atomv1 "github.com/convox/convox/pkg/atom/pkg/apis/atom/v1"
@@ -63,13 +64,13 @@ func NewFilteredAtomVersionInformer(client versioned.Interface, namespace string
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.AtomV1().AtomVersions(namespace).List(options)
+				return client.AtomV1().AtomVersions(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.AtomV1().AtomVersions(namespace).Watch(options)
+				return client.AtomV1().AtomVersions(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&atomv1.AtomVersion{},

@@ -258,12 +258,18 @@ func (p *Provider) Start() error {
 		return errors.WithStack(err)
 	}
 
+	atomCtrl, err := NewAtomController(p)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
 	go ec.Run()
 	go pc.Run()
 	go wc.Run()
 	go nc.Run()
 	go dc.Run()
 	go sc.Run()
+	go atomCtrl.Run()
 
 	go common.Tick(1*time.Hour, p.heartbeat)
 

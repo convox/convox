@@ -176,8 +176,8 @@ func (p *Provisioner) InstallReplicationGroup(id string, options map[string]stri
 		return err
 	}
 
-	p.logger.Logf("Successfully installed redis replication group, it may take some times to be available")
-	p.storage.SendStateLog(id, "successfully installed redis replication group")
+	p.logger.Logf("Successfully created redis replication group, it may take some time to be available")
+	p.storage.SendStateLog(id, "successfully created redis replication group, it may take some time to be available")
 	return nil
 }
 
@@ -257,8 +257,8 @@ func (p *Provisioner) InstallCacheCluster(id string, options map[string]string) 
 		return err
 	}
 
-	p.logger.Logf("Successfully installed memcached cache cluster, it may take some times to be available")
-	p.storage.SendStateLog(id, "successfully installed memcached cache cluster")
+	p.logger.Logf("Successfully created memcached cache cluster, it may take some time to be available")
+	p.storage.SendStateLog(id, "successfully created memcached cache cluster, it may take some time to be available")
 	return nil
 }
 
@@ -642,6 +642,30 @@ func (p *Provisioner) WaitUntilReplicationGroupIsAvailable(id string) error {
 	return nil
 }
 
+func (p *Provisioner) IsReplicationGroupAvailable(id string) (bool, error) {
+	stateBytes, err := p.storage.GetState(id)
+	if err != nil {
+		return false, err
+	}
+
+	stateData := NewEmptyState()
+	if err := stateData.LoadState(stateBytes); err != nil {
+		return false, err
+	}
+
+	repGrpId, err := stateData.GetParameterValue(ParamReplicationGroupId)
+	if err != nil {
+		return false, err
+	}
+
+	status, err := p.getReplicationGroupStatus(repGrpId)
+	if err != nil {
+		return false, err
+	}
+
+	return status == ReplicationGroupStatusAvailable, nil
+}
+
 func (p *Provisioner) WaitUntilCacheClusterIsAvailable(id string) error {
 	stateBytes, err := p.storage.GetState(id)
 	if err != nil {
@@ -664,6 +688,58 @@ func (p *Provisioner) WaitUntilCacheClusterIsAvailable(id string) error {
 	}
 	p.logger.Logf("Memcached cache cluster is now available")
 	return nil
+}
+
+func (p *Provisioner) IsCacheClusterAvailable(id string) (bool, error) {
+	stateBytes, err := p.storage.GetState(id)
+	if err != nil {
+		return false, err
+	}
+
+	stateData := NewEmptyState()
+	if err := stateData.LoadState(stateBytes); err != nil {
+		return false, err
+	}
+
+	clusterId, err := stateData.GetParameterValue(ParamCacheClusterId)
+	if err != nil {
+		return false, err
+	}
+
+	status, err := p.getCacheClusterStatus(clusterId)
+	if err != nil {
+		return false, err
+	}
+
+	return status == CacheClusterStatusAvailable, nil
+}
+
+func (p *Provisioner) IsElastiCacheAvailable(id string) (bool, error) {
+	p.logger.Logf("Fetching the state data for id: %s", id)
+	stateBytes, err := p.storage.GetState(id)
+	if err != nil {
+		return false, err
+	}
+
+	p.logger.Logf("Loading the state data for id: %s", id)
+	state := NewEmptyState()
+	if err := state.LoadState(stateBytes); err != nil {
+		return false, err
+	}
+
+	engine, err := state.GetParameterValue(ParamEngine)
+	if err != nil {
+		return false, err
+	}
+
+	switch engine {
+	case "redis":
+		return p.IsReplicationGroupAvailable(id)
+	case "memcached":
+		return p.IsCacheClusterAvailable(id)
+	default:
+		return false, fmt.Errorf("invalid cache engine: %s", engine)
+	}
 }
 
 func (p *Provisioner) GetConnectionInfo(id string) (*provisioner.ConnectionInfo, error) {
