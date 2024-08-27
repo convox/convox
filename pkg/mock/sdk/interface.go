@@ -557,13 +557,13 @@ func (_m *Interface) CertificateDelete(id string) error {
 	return r0
 }
 
-// CertificateGenerate provides a mock function with given fields: domains
-func (_m *Interface) CertificateGenerate(domains []string) (*structs.Certificate, error) {
-	ret := _m.Called(domains)
+// CertificateGenerate provides a mock function with given fields: domains, opts
+func (_m *Interface) CertificateGenerate(domains []string, opts structs.CertificateGenerateOptions) (*structs.Certificate, error) {
+	ret := _m.Called(domains, opts)
 
 	var r0 *structs.Certificate
-	if rf, ok := ret.Get(0).(func([]string) *structs.Certificate); ok {
-		r0 = rf(domains)
+	if rf, ok := ret.Get(0).(func([]string, structs.CertificateGenerateOptions) *structs.Certificate); ok {
+		r0 = rf(domains, opts)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*structs.Certificate)
@@ -571,8 +571,8 @@ func (_m *Interface) CertificateGenerate(domains []string) (*structs.Certificate
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func([]string) error); ok {
-		r1 = rf(domains)
+	if rf, ok := ret.Get(1).(func([]string, structs.CertificateGenerateOptions) error); ok {
+		r1 = rf(domains, opts)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -580,13 +580,13 @@ func (_m *Interface) CertificateGenerate(domains []string) (*structs.Certificate
 	return r0, r1
 }
 
-// CertificateList provides a mock function with given fields:
-func (_m *Interface) CertificateList() (structs.Certificates, error) {
-	ret := _m.Called()
+// CertificateList provides a mock function with given fields: opts
+func (_m *Interface) CertificateList(opts structs.CertificateListOptions) (structs.Certificates, error) {
+	ret := _m.Called(opts)
 
 	var r0 structs.Certificates
-	if rf, ok := ret.Get(0).(func() structs.Certificates); ok {
-		r0 = rf()
+	if rf, ok := ret.Get(0).(func(structs.CertificateListOptions) structs.Certificates); ok {
+		r0 = rf(opts)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(structs.Certificates)
@@ -594,8 +594,8 @@ func (_m *Interface) CertificateList() (structs.Certificates, error) {
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func() error); ok {
-		r1 = rf()
+	if rf, ok := ret.Get(1).(func(structs.CertificateListOptions) error); ok {
+		r1 = rf(opts)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1052,29 +1052,6 @@ func (_m *Interface) ObjectStore(app string, key string, r io.Reader, opts struc
 	var r1 error
 	if rf, ok := ret.Get(1).(func(string, string, io.Reader, structs.ObjectStoreOptions) error); ok {
 		r1 = rf(app, key, r, opts)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// OrganizationRuntimes provides a mock function with given fields: org
-func (_m *Interface) OrganizationRuntimes(org string) (structs.Runtimes, error) {
-	ret := _m.Called(org)
-
-	var r0 structs.Runtimes
-	if rf, ok := ret.Get(0).(func(string) structs.Runtimes); ok {
-		r0 = rf(org)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(structs.Runtimes)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(string) error); ok {
-		r1 = rf(org)
 	} else {
 		r1 = ret.Error(1)
 	}

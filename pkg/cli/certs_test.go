@@ -8,28 +8,29 @@ import (
 	mocksdk "github.com/convox/convox/pkg/mock/sdk"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
 func TestCerts(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("CertificateList").Return(structs.Certificates{*fxCertificate(), *fxCertificate()}, nil)
+		i.On("CertificateList", mock.Anything).Return(structs.Certificates{*fxCertificate(), *fxCertificate()}, nil)
 
 		res, err := testExecute(e, "certs", nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
-			"ID     DOMAIN       EXPIRES",
-			"cert1  example.org  2 days from now",
-			"cert1  example.org  2 days from now",
+			"ID     DOMAIN       EXPIRES          Status",
+			"cert1  example.org  2 days from now  Ready",
+			"cert1  example.org  2 days from now  Ready",
 		})
 	})
 }
 
 func TestCertsError(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("CertificateList").Return(nil, fmt.Errorf("err1"))
+		i.On("CertificateList", mock.Anything).Return(nil, fmt.Errorf("err1"))
 
 		res, err := testExecute(e, "certs", nil)
 		require.NoError(t, err)
@@ -65,7 +66,7 @@ func TestCertsDeleteError(t *testing.T) {
 
 func TestCertsGenerate(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("CertificateGenerate", []string{"test.example.org", "other.example.org"}).Return(fxCertificate(), nil)
+		i.On("CertificateGenerate", []string{"test.example.org", "other.example.org"}, mock.Anything).Return(fxCertificate(), nil)
 
 		res, err := testExecute(e, "certs generate test.example.org other.example.org", nil)
 		require.NoError(t, err)
@@ -77,7 +78,7 @@ func TestCertsGenerate(t *testing.T) {
 
 func TestCertsGenerateError(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("CertificateGenerate", []string{"test.example.org", "other.example.org"}).Return(nil, fmt.Errorf("err1"))
+		i.On("CertificateGenerate", []string{"test.example.org", "other.example.org"}, mock.Anything).Return(nil, fmt.Errorf("err1"))
 
 		res, err := testExecute(e, "certs generate test.example.org other.example.org", nil)
 		require.NoError(t, err)

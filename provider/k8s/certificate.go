@@ -2,11 +2,14 @@ package k8s
 
 import (
 	"context"
+	"crypto/sha1"
 	"crypto/x509"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"strings"
+	"time"
 
 	cmapiutil "github.com/cert-manager/cert-manager/pkg/api/util"
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
@@ -24,6 +27,7 @@ import (
 
 const (
 	LETSENCRYPT_CONFIG = "letsencrypt-config"
+	ISSUER_LETSENCRYPT = "letsencrypt"
 )
 
 func (*Provider) CertificateApply(_, _ string, _ int, _ string) error {
@@ -70,7 +74,16 @@ func (p *Provider) CertificateDelete(id string) error {
 	return nil
 }
 
-func (p *Provider) CertificateGenerate(domains []string) (*structs.Certificate, error) {
+func (p *Provider) CertificateGenerate(domains []string, opts structs.CertificateGenerateOptions) (*structs.Certificate, error) {
+	if opts.Issuer == nil {
+		return p.certificateGenerateSelfSigned(domains)
+	} else if *opts.Issuer == ISSUER_LETSENCRYPT {
+		return p.certificateGenerateLetsencrypt(domains, opts)
+	}
+	return nil, fmt.Errorf("invalid issuer")
+}
+
+func (p *Provider) certificateGenerateSelfSigned(domains []string) (*structs.Certificate, error) {
 	switch len(domains) {
 	case 0:
 		return nil, errors.WithStack(fmt.Errorf("must specify a domain"))
@@ -92,7 +105,81 @@ func (p *Provider) CertificateGenerate(domains []string) (*structs.Certificate, 
 	return p.CertificateCreate(string(pub), string(key), structs.CertificateCreateOptions{})
 }
 
-func (p *Provider) CertificateList() (structs.Certificates, error) {
+func (p *Provider) certificateGenerateLetsencrypt(domains []string, opts structs.CertificateGenerateOptions) (*structs.Certificate, error) {
+	if len(domains) == 0 {
+		return nil, errors.WithStack(fmt.Errorf("must specify a domain"))
+	}
+
+	if len(domains) > 10 {
+		return nil, errors.WithStack(fmt.Errorf("can not specify more than 10 domain name"))
+	}
+
+	duration := 4320 * time.Hour // 6 months
+	if opts.Duration != nil {
+		var err error
+		duration, err = time.ParseDuration(*opts.Duration)
+		if err != nil {
+			return nil, fmt.Errorf("invalid duration: %s", err)
+		}
+	}
+
+	for i := range domains {
+		domains[i] = strings.TrimSpace(domains[i])
+	}
+
+	h := sha1.New()
+	_, err := h.Write([]byte(strings.Join(domains, "-")))
+	if err != nil {
+		return nil, fmt.Errorf("failed generate hash: %s", err)
+	}
+
+	domainHash := hex.EncodeToString(h.Sum(nil))
+	certId := fmt.Sprintf("cert-%s", domainHash)
+
+	// create letsencrypt cert request
+	_, err = p.CertManagerClient.CertmanagerV1().Certificates(p.Namespace).Create(p.ctx, &cmapi.Certificate{
+		ObjectMeta: am.ObjectMeta{
+			Name:      certId,
+			Namespace: p.Namespace,
+		},
+		Spec: cmapi.CertificateSpec{
+			IssuerRef: cmmeta.ObjectReference{
+				Group: "cert-manager.io",
+				Kind:  "ClusterIssuer",
+				Name:  "letsencrypt",
+			},
+			DNSNames:   domains,
+			SecretName: certId,
+			Duration: &am.Duration{
+				Duration: duration,
+			},
+			Usages: []cmapi.KeyUsage{
+				cmapi.UsageDigitalSignature,
+				cmapi.UsageKeyEncipherment,
+			},
+			SecretTemplate: &cmapi.CertificateSecretTemplate{
+				Labels: map[string]string{
+					"system": "convox",
+					"type":   "letsencrypt-certificate",
+				},
+			},
+		},
+	}, am.CreateOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return &structs.Certificate{
+		Id:      certId,
+		Domain:  domains[0],
+		Domains: domains,
+	}, nil
+}
+
+func (p *Provider) CertificateList(opts structs.CertificateListOptions) (structs.Certificates, error) {
+	if opts.Generated != nil && *opts.Generated {
+		return p.generatedCertificateList()
+	}
 	ns, err := p.Cluster.CoreV1().Namespaces().List(context.TODO(), am.ListOptions{
 		LabelSelector: fmt.Sprintf("system=convox,rack=%s", p.Name),
 	})
@@ -111,6 +198,47 @@ func (p *Provider) CertificateList() (structs.Certificates, error) {
 	}
 
 	return cs, nil
+}
+
+func (p *Provider) generatedCertificateList() (structs.Certificates, error) {
+	certs, err := p.certFromNamespace(ac.Namespace{
+		ObjectMeta: am.ObjectMeta{
+			Name: p.Namespace,
+		},
+	})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	certMap := map[string]structs.Certificate{}
+	for i := range certs {
+		certMap[certs[i].Id] = certs[i]
+	}
+
+	certList, err := p.CertManagerClient.CertmanagerV1().Certificates(p.Namespace).List(p.ctx, am.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range certList.Items {
+		conds := certList.Items[i].Status.Conditions
+		ready := false
+		for j := range conds {
+			if conds[j].Type == cmapi.CertificateConditionReady && conds[j].Status == cmmeta.ConditionTrue {
+				ready = true
+			}
+		}
+		if _, has := certMap[certList.Items[i].Name]; !has && !ready {
+			certs = append(certs, structs.Certificate{
+				Id:      certList.Items[i].Name,
+				Domain:  certList.Items[i].Spec.CommonName,
+				Domains: certList.Items[i].Spec.DNSNames,
+				Status:  "Not Ready",
+			})
+		}
+	}
+
+	return certs, nil
 }
 
 func (p *Provider) certFromNamespace(ns ac.Namespace) (structs.Certificates, error) {

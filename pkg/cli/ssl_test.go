@@ -7,6 +7,7 @@ import (
 	"github.com/convox/convox/pkg/cli"
 	mocksdk "github.com/convox/convox/pkg/mock/sdk"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -14,7 +15,7 @@ func TestSsl(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("ServiceList", "app1").Return(structs.Services{*fxService(), *fxService()}, nil)
-		i.On("CertificateList").Return(structs.Certificates{*fxCertificate()}, nil)
+		i.On("CertificateList", mock.Anything).Return(structs.Certificates{*fxCertificate()}, nil)
 
 		res, err := testExecute(e, "ssl -a app1", nil)
 		require.NoError(t, err)
@@ -47,7 +48,7 @@ func TestSslClassic(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("SystemGet").Return(fxSystemClassic(), nil)
 		i.On("FormationGet", "app1").Return(structs.Services{*fxService(), *fxService()}, nil)
-		i.On("CertificateList").Return(structs.Certificates{*fxCertificate()}, nil)
+		i.On("CertificateList", mock.Anything).Return(structs.Certificates{*fxCertificate()}, nil)
 
 		res, err := testExecute(e, "ssl -a app1", nil)
 		require.NoError(t, err)
