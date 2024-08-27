@@ -50,6 +50,41 @@ MAIN_PORT=port
 MAIN_NAME=database
 ```
 
+## Custom Images:
+
+You can also pass a compatible custom image for all resource type.
+
+To use a custom image, include the `image` field in your resource configuration:
+
+```
+resources:
+  main:
+    type: postgres
+    image: pgvector/pgvector:pg16
+services:
+  web:
+    resources:
+      - main
+```
+
+Note:
+
+1. Always include the image tag when specifying a custom image. If no tag is provided, the `latest` tag will be used. Ensure that the specified image has a `latest` tag or provide a specific tag to avoid errors.
+2. The image field takes precedence over the version field. If both are specified, the version field will be ignored.
+
+Example:
+
+```
+resources:
+  myRedis:
+    type: redis
+    image: custom-redis-image:6.2
+    options:
+      version: 6.0
+```
+
+In this example, a custom Redis image named `custom-redis-image` with tag `6.2` will be used.
+
 ## Overlays
 
 By default, any Resources you define will be satisfied by starting a containerized version on your [Rack](/reference/primitives/rack). This allows you to get up and running as quickly as possible and provides a low-cost solution and more effective usage of your Rack.

@@ -67,7 +67,7 @@ spec:
     spec:
       containers:
       - name: mysql
-        image: mysql:{{ coalesce (index .Parameters "version") "5.7.23" }}
+        image: {{ if not .Image }}mysql:{{ coalesce (index .Parameters "version") "5.7.23" }}{{ else }}{{ .Image }}{{ end }}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3306
