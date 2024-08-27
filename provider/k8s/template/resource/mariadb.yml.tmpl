@@ -67,7 +67,7 @@ spec:
     spec:
       containers:
       - name: mariadb
-        image: mariadb:{{ coalesce (index .Parameters "version") "10.6.0" }}
+        image: {{ if not .Image }}mariadb:{{ coalesce (index .Parameters "version") "10.6.0" }}{{ else }}{{ .Image }}{{ end }}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3306
