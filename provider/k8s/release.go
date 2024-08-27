@@ -104,6 +104,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 	}
 
 	items := [][]byte{}
+	dependencies := []string{}
 
 	// app
 	data, err := p.releaseTemplateApp(a, opts)
@@ -205,27 +206,39 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		items = append(items, data)
 
 		// rds resources
-		rdsItems, err := p.releaseRdsResources(a, e, m)
+		rdsItems, rdsDeps, err := p.releaseRdsResources(a, e, m)
 		if err != nil {
 			return err
 		}
 
 		items = append(items, rdsItems...)
+		if len(rdsDeps) > 0 {
+			dependencies = append(dependencies, rdsDeps...)
+		}
 
 		// elasticache resources
-		elasticacheItems, err := p.releaseElasticacheResources(a, e, m)
+		elasticacheItems, elastiDeps, err := p.releaseElasticacheResources(a, e, m)
 		if err != nil {
 			return err
 		}
 
 		items = append(items, elasticacheItems...)
+		if len(elastiDeps) > 0 {
+			dependencies = append(dependencies, elastiDeps...)
+		}
 	}
 
 	tdata := bytes.Join(items, []byte("---\n"))
 
-	timeout := int32(common.DefaultInt(opts.Timeout, 1800))
+	timeout := int32(common.DefaultInt(opts.Timeout, 2100))
 
-	if err := p.Apply(p.AppNamespace(app), "app", id, tdata, fmt.Sprintf("system=convox,provider=k8s,rack=%s,app=%s,release=%s", p.Name, app, id), timeout); err != nil {
+	if err := p.Apply(p.AppNamespace(app), "app", PromoteApplyConfig{
+		Version:      id,
+		Data:         tdata,
+		Labels:       fmt.Sprintf("system=convox,provider=k8s,rack=%s,app=%s,release=%s", p.Name, app, id),
+		Timeout:      timeout,
+		Dependencies: dependencies,
+	}); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -714,13 +727,14 @@ func (p *Provider) releaseUnmarshal(kr *ca.Release) (*structs.Release, error) {
 	return r, nil
 }
 
-func (p *Provider) releaseElasticacheResources(app *structs.App, envs structs.Environment, m *manifest.Manifest) ([][]byte, error) {
+func (p *Provider) releaseElasticacheResources(app *structs.App, envs structs.Environment, m *manifest.Manifest) ([][]byte, []string, error) {
 	items := [][]byte{}
+	dependencies := []string{}
 	stateMap := map[string]struct{}{}
 	for _, r := range m.Resources {
 		if r.IsElastiCache() {
 			if err := r.ElastiCacheNameValidate(); err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 
 			id := p.CreateAwsResourceStateId(app.Name, r.Name)
@@ -729,26 +743,36 @@ func (p *Provider) releaseElasticacheResources(app *structs.App, envs structs.En
 
 			err := p.ElasticacheProvisioner.Provision(id, p.MapToElasticacheParameter(r.Type, app.Name, r.Options))
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 
-			conn, err := p.ElasticacheProvisioner.GetConnectionInfo(id)
+			isAvailable, err := p.ElasticacheProvisioner.IsElastiCacheAvailable(id)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
+			if isAvailable {
+				conn, err := p.ElasticacheProvisioner.GetConnectionInfo(id)
+				if err != nil {
+					return nil, nil, err
+				}
 
-			data, err := p.releaseTemplateCustomResource(app, envs, r, conn)
-			if err != nil {
-				return nil, errors.WithStack(err)
+				data, err := p.releaseTemplateCustomResource(app, envs, r, conn)
+				if err != nil {
+					return nil, nil, errors.WithStack(err)
+				}
+
+				items = append(items, data)
+			} else {
+				substitutionId := resourceSubstitutionId(app.Name, r.Type, r.Name)
+				dependencies = append(dependencies, substitutionId)
+				items = append(items, []byte(substitutionId))
 			}
-
-			items = append(items, data)
 		}
 	}
 
 	existingStateIds, err := p.ListElasticacheStateForApp(app.Name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get elasticache state list: %s", err)
+		return nil, nil, fmt.Errorf("failed to get elasticache state list: %s", err)
 	}
 
 	for _, eId := range existingStateIds {
@@ -756,21 +780,22 @@ func (p *Provider) releaseElasticacheResources(app *structs.App, envs structs.En
 			// delete the state, elasticache clean up job will delete the elasticache
 			err = p.Cluster.CoreV1().Secrets(p.AppNamespace(app.Name)).Delete(p.ctx, eId, am.DeleteOptions{})
 			if err != nil {
-				return nil, fmt.Errorf("failed to delete elasticache state: %s", err)
+				return nil, nil, fmt.Errorf("failed to delete elasticache state: %s", err)
 			}
 			p.SendStateLog(eId, "elasticache deletion is triggered")
 		}
 	}
-	return items, nil
+	return items, dependencies, nil
 }
 
-func (p *Provider) releaseRdsResources(app *structs.App, envs structs.Environment, m *manifest.Manifest) ([][]byte, error) {
+func (p *Provider) releaseRdsResources(app *structs.App, envs structs.Environment, m *manifest.Manifest) ([][]byte, []string, error) {
 	items := [][]byte{}
+	dependencies := []string{}
 	rdsStateMap := map[string]struct{}{}
 	for _, r := range m.Resources {
 		if r.IsRds() {
 			if err := r.RdsNameValidate(); err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 
 			id := p.CreateAwsResourceStateId(app.Name, r.Name)
@@ -779,26 +804,37 @@ func (p *Provider) releaseRdsResources(app *structs.App, envs structs.Environmen
 
 			err := p.RdsProvisioner.Provision(id, p.MapToRdsParameter(r.Type, app.Name, r.Options))
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 
-			conn, err := p.RdsProvisioner.GetConnectionInfo(id)
+			isAvailable, err := p.RdsProvisioner.IsDbAvailable(id)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 
-			data, err := p.releaseTemplateCustomResource(app, envs, r, conn)
-			if err != nil {
-				return nil, errors.WithStack(err)
-			}
+			if isAvailable {
+				conn, err := p.RdsProvisioner.GetConnectionInfo(id)
+				if err != nil {
+					return nil, nil, err
+				}
 
-			items = append(items, data)
+				data, err := p.releaseTemplateCustomResource(app, envs, r, conn)
+				if err != nil {
+					return nil, nil, errors.WithStack(err)
+				}
+
+				items = append(items, data)
+			} else {
+				substitutionId := resourceSubstitutionId(app.Name, r.Type, r.Name)
+				dependencies = append(dependencies, substitutionId)
+				items = append(items, []byte(substitutionId))
+			}
 		}
 	}
 
 	existingStateIds, err := p.ListRdsStateForApp(app.Name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get rds state list: %s", err)
+		return nil, nil, fmt.Errorf("failed to get rds state list: %s", err)
 	}
 
 	for _, rdsId := range existingStateIds {
@@ -806,12 +842,12 @@ func (p *Provider) releaseRdsResources(app *structs.App, envs structs.Environmen
 			// delete the state, rds clean up job will delete the rds
 			err = p.Cluster.CoreV1().Secrets(p.AppNamespace(app.Name)).Delete(p.ctx, rdsId, am.DeleteOptions{})
 			if err != nil {
-				return nil, fmt.Errorf("failed to delete rds state: %s", err)
+				return nil, nil, fmt.Errorf("failed to delete rds state: %s", err)
 			}
 			p.SendStateLog(rdsId, "db instance deletion is triggered")
 		}
 	}
-	return items, nil
+	return items, dependencies, nil
 }
 
 func (p *Provider) reservedNginxAnnotations() map[string]bool {

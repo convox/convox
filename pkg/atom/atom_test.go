@@ -1,6 +1,7 @@
 package atom
 
 import (
+	"context"
 	"testing"
 
 	aa "github.com/convox/convox/pkg/atom/pkg/apis/atom/v1"
@@ -83,12 +84,12 @@ func TestCancel(t *testing.T) {
 		require.NoError(t, atomCreate(fac, "ns1", "atom3", "Other", "atom3", aa.AtomSpec{}))
 
 		require.NoError(t, ac.Cancel("ns1", "atom1"))
-		a, err := fac.AtomV1().Atoms("ns1").Get("atom1", am.GetOptions{})
+		a, err := fac.AtomV1().Atoms("ns1").Get(context.Background(), "atom1", am.GetOptions{})
 		require.NoError(t, err)
 		require.Equal(t, aa.AtomStatus("Cancelled"), a.Status)
 
 		require.NoError(t, ac.Cancel("ns1", "atom2"))
-		a, err = fac.AtomV1().Atoms("ns1").Get("atom2", am.GetOptions{})
+		a, err = fac.AtomV1().Atoms("ns1").Get(context.Background(), "atom2", am.GetOptions{})
 		require.NoError(t, err)
 		require.Equal(t, aa.AtomStatus("Failure"), a.Status)
 
@@ -117,9 +118,13 @@ func TestApply(t *testing.T) {
 
 		for _, test := range tests {
 			fn := func(t *testing.T) {
-				require.NoError(t, ac.Apply(test.AtomNamespace, test.AtomName, test.AtomRelease, nil, 600))
+				require.NoError(t, ac.Apply(test.AtomNamespace, test.AtomName, &ApplyConfig{
+					Release:  test.AtomRelease,
+					Template: nil,
+					Timeout:  600,
+				}))
 
-				a, err := fac.AtomV1().Atoms(test.AtomNamespace).Get(test.AtomName, am.GetOptions{})
+				a, err := fac.AtomV1().Atoms(test.AtomNamespace).Get(context.Background(), test.AtomName, am.GetOptions{})
 				require.NoError(t, err)
 				require.Equal(t, aa.AtomStatus("Pending"), a.Status)
 			}
@@ -130,25 +135,25 @@ func TestApply(t *testing.T) {
 }
 
 func atomCreate(ac av.Interface, namespace, name, status, version string, spec aa.AtomSpec) error {
-	_, err := ac.AtomV1().Atoms(namespace).Create(&aa.Atom{
+	_, err := ac.AtomV1().Atoms(namespace).Create(context.Background(), &aa.Atom{
 		ObjectMeta: am.ObjectMeta{
 			Name: name,
 		},
 		Status: aa.AtomStatus(status),
 		Spec:   spec,
-	})
+	}, am.CreateOptions{})
 	if err != nil {
 		return err
 	}
 
-	_, err = ac.AtomV1().AtomVersions(namespace).Create(&aa.AtomVersion{
+	_, err = ac.AtomV1().AtomVersions(namespace).Create(context.Background(), &aa.AtomVersion{
 		ObjectMeta: am.ObjectMeta{
 			Name: version,
 		},
 		Spec: aa.AtomVersionSpec{
 			Release: version,
 		},
-	})
+	}, am.CreateOptions{})
 	if err != nil {
 		return err
 	}
