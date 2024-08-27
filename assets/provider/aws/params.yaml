@@ -19,7 +19,7 @@ Groups:
         default: "null"
         sideNote: Convox managed if not set
         type: string
-        regex: ^vpc-[0-9a-f]{17}$
+        regex: ^vpc-.+$
         description: Used for installing a rack into an existing VPC. You must also 
           set the &i cidr &i and &i internet_gateway_id &i parameters
       - name: cidr
@@ -33,7 +33,7 @@ Groups:
         default: "null"
         sideNote: Convox managed if not set
         type: string
-        regex: ^igw-[0-9a-f]{17}$
+        regex: ^igw-.+$
         description: |
           To install the rack into an existing VPC, enter the
           name-id of the attached internet gateway.
@@ -41,7 +41,7 @@ Groups:
         default: "null"
         sideNote: Convox managed if not set
         type: string
-        regex: ^subnet-[0-9a-f]{17}$
+        regex: ^(subnet-.+)(,subnet-.+)*$
         description: |
           &b Advanced Configuration &b &l This parameter is for edge use cases
           where cluster needs to be installed into existing subnets. &l &l See 
@@ -50,7 +50,7 @@ Groups:
         default: "null"
         sideNote: Convox managed if not set
         type: string
-        regex: ^subnet-[0-9a-f]{17}$
+        regex: ^(subnet-.+)(,subnet-.+)*$
         description: |
           &b Advanced Configuration &b &l This parameter is for edge use cases
           where cluster needs to be installed into existing subnets. &l &l See 
@@ -75,7 +75,7 @@ Groups:
         default: "null"
         sideNote: AWS default created unless set
         type: string
-        regex: ^sg-[0-9a-f]{8,17}$
+        regex: ^sg-.+$
         description: |
           &l The ID of the custom security group to attach with the NLB. &l &l By
           default inbound traffic from any IP is allowed. &l &l Be cautious about
@@ -221,8 +221,8 @@ Groups:
         default: "50"
         type: integer
         description: The minimum number of pods that must be available at any time
-        allowedMinValue: 0
-        allowedMaxValue: 100
+        allowedMinValue: -1
+        allowedMaxValue: 101
       - name: kubelet_registry_pull_qps
         default: "5"
         type: integer
