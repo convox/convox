@@ -448,7 +448,12 @@ func (s *Server) CertificateGenerate(c *stdapi.Context) error {
 
 	domains := strings.Split(c.Value("domains"), ",")
 
-	v, err := s.provider(c).WithContext(c.Context()).CertificateGenerate(domains)
+	var opts structs.CertificateGenerateOptions
+	if err := stdapi.UnmarshalOptions(c.Request(), &opts); err != nil {
+		return err
+	}
+
+	v, err := s.provider(c).WithContext(c.Context()).CertificateGenerate(domains, opts)
 	if err != nil {
 		return err
 	}
@@ -465,7 +470,12 @@ func (s *Server) CertificateList(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).CertificateList()
+	var opts structs.CertificateListOptions
+	if err := stdapi.UnmarshalOptions(c.Request(), &opts); err != nil {
+		return err
+	}
+
+	v, err := s.provider(c).WithContext(c.Context()).CertificateList(opts)
 	if err != nil {
 		return err
 	}

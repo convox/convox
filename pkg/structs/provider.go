@@ -36,8 +36,8 @@ type Provider interface {
 	CertificateCreate(pub, key string, opts CertificateCreateOptions) (*Certificate, error)
 	CertificateDelete(id string) error
 	CertificateRenew(id string) error
-	CertificateGenerate(domains []string) (*Certificate, error)
-	CertificateList() (Certificates, error)
+	CertificateGenerate(domains []string, opts CertificateGenerateOptions) (*Certificate, error)
+	CertificateList(opts CertificateListOptions) (Certificates, error)
 
 	LetsEncryptConfigGet() (*LetsEncryptConfig, error)
 	LetsEncryptConfigApply(config LetsEncryptConfig) error

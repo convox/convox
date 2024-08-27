@@ -422,13 +422,13 @@ func (_m *MockProvider) CertificateDelete(id string) error {
 	return r0
 }
 
-// CertificateGenerate provides a mock function with given fields: domains
-func (_m *MockProvider) CertificateGenerate(domains []string) (*Certificate, error) {
-	ret := _m.Called(domains)
+// CertificateGenerate provides a mock function with given fields: domains, opts
+func (_m *MockProvider) CertificateGenerate(domains []string, opts CertificateGenerateOptions) (*Certificate, error) {
+	ret := _m.Called(domains, opts)
 
 	var r0 *Certificate
-	if rf, ok := ret.Get(0).(func([]string) *Certificate); ok {
-		r0 = rf(domains)
+	if rf, ok := ret.Get(0).(func([]string, CertificateGenerateOptions) *Certificate); ok {
+		r0 = rf(domains, opts)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*Certificate)
@@ -436,8 +436,8 @@ func (_m *MockProvider) CertificateGenerate(domains []string) (*Certificate, err
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func([]string) error); ok {
-		r1 = rf(domains)
+	if rf, ok := ret.Get(1).(func([]string, CertificateGenerateOptions) error); ok {
+		r1 = rf(domains, opts)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -445,13 +445,13 @@ func (_m *MockProvider) CertificateGenerate(domains []string) (*Certificate, err
 	return r0, r1
 }
 
-// CertificateList provides a mock function with given fields:
-func (_m *MockProvider) CertificateList() (Certificates, error) {
-	ret := _m.Called()
+// CertificateList provides a mock function with given fields: opts
+func (_m *MockProvider) CertificateList(opts CertificateListOptions) (Certificates, error) {
+	ret := _m.Called(opts)
 
 	var r0 Certificates
-	if rf, ok := ret.Get(0).(func() Certificates); ok {
-		r0 = rf()
+	if rf, ok := ret.Get(0).(func(CertificateListOptions) Certificates); ok {
+		r0 = rf(opts)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(Certificates)
@@ -459,8 +459,8 @@ func (_m *MockProvider) CertificateList() (Certificates, error) {
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func() error); ok {
-		r1 = rf()
+	if rf, ok := ret.Get(1).(func(CertificateListOptions) error); ok {
+		r1 = rf(opts)
 	} else {
 		r1 = ret.Error(1)
 	}
