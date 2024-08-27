@@ -55,6 +55,11 @@ spec:
                   type: string
                 progressDeadlineSeconds:
                   type: integer
+                dependencies:
+                  type: array
+                  nullable: true
+                  items:
+                    type: string
   scope: Namespaced
   names:
     plural: atoms

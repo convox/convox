@@ -6,4 +6,8 @@ metadata:
 spec:
   currentVersion: {{.Name}}-{{.Version}}
   progressDeadlineSeconds: {{.Timeout}}
+  dependencies:
+  {{ range .Dependencies }}
+  - {{.}}
+  {{ end }}
 status: Pending

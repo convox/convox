@@ -394,3 +394,22 @@ func (t *tempStateLogStorage) Reset(key string) {
 	defer t.lock.Unlock()
 	t.s[key] = []string{}
 }
+
+func resourceSubstitutionId(app, rType, rName string) string {
+	return fmt.Sprintf("##|app:%s|type:%s|resource:%s|##", app, rType, rName)
+}
+
+func parseResourceSubstitutionId(id string) (string, string, string) {
+	var app, rtype, rname string
+	parts := strings.Split(id, "|")
+	for _, p := range parts {
+		if strings.HasPrefix(p, "app:") {
+			app = strings.TrimPrefix(p, "app:")
+		} else if strings.HasPrefix(p, "type:") {
+			rtype = strings.TrimPrefix(p, "type:")
+		} else if strings.HasPrefix(p, "resource:") {
+			rname = strings.TrimPrefix(p, "resource:")
+		}
+	}
+	return app, rtype, rname
+}
