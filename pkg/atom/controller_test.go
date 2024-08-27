@@ -229,7 +229,7 @@ func TestUpdate(t *testing.T) {
 			Name:          "Pending - Error",
 			AtomNamespace: "atom.controller",
 			AtomName:      "atom9",
-			AtomStatus:    "Error",
+			AtomStatus:    "Rollback",
 			AtomVersion:   "v9",
 			Prev: &aa.Atom{
 				ObjectMeta: am.ObjectMeta{
@@ -241,7 +241,7 @@ func TestUpdate(t *testing.T) {
 				ObjectMeta: am.ObjectMeta{
 					Name: "atom9",
 				},
-				Status: aa.AtomStatus("Pending"),
+				Status: aa.AtomStatus("Error"),
 			},
 			Err: nil,
 		},
