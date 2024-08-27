@@ -379,6 +379,24 @@ func (p *Provider) releaseTemplateIngress(a *structs.App, ss manifest.Services, 
 			return nil, errors.WithStack(err)
 		}
 
+		if s.Certificate.Id != "" {
+			keys := []string{}
+			for k := range ans {
+				keys = append(keys, k)
+			}
+			for _, k := range keys {
+				if strings.HasPrefix(k, "cert-manager.io") {
+					delete(ans, k)
+				}
+			}
+
+			data, err := p.releaseTemplateCertSecret(a, s)
+			if err != nil {
+				return nil, err
+			}
+			items = append(items, data)
+		}
+
 		customAns := s.IngressAnnotationsMap()
 		reservedAns := p.reservedNginxAnnotations()
 
@@ -409,6 +427,35 @@ func (p *Provider) releaseTemplateIngress(a *structs.App, ss manifest.Services, 
 	}
 
 	return bytes.Join(items, []byte("---\n")), nil
+}
+
+func (p *Provider) releaseTemplateCertSecret(a *structs.App, s manifest.Service) ([]byte, error) {
+	certSecret, err := p.Cluster.CoreV1().Secrets(p.Namespace).Get(p.ctx, s.Certificate.Id, am.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	hash, err := secretDataHash(certSecret)
+	if err != nil {
+		return nil, err
+	}
+
+	secretObj := &v1.Secret{
+		TypeMeta: am.TypeMeta{
+			Kind:       "Secret",
+			APIVersion: "v1",
+		},
+		ObjectMeta: am.ObjectMeta{
+			Name:      s.Certificate.Id,
+			Namespace: p.AppNamespace(a.Name),
+			Annotations: map[string]string{
+				AnnotationSecretDataHash: hash,
+			},
+		},
+		Data: certSecret.Data,
+	}
+
+	return SerializeK8sObjToYaml(secretObj)
 }
 
 func (p *Provider) releaseTemplateIngressInternal(a *structs.App, ss manifest.Services, opts structs.ReleasePromoteOptions) ([]byte, error) {

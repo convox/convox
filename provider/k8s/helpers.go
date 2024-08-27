@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"fmt"
@@ -20,8 +21,9 @@ import (
 	"github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned/scheme"
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
-	ae "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/client-go/kubernetes"
 	tc "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/leaderelection"
@@ -43,79 +45,6 @@ type Patch struct {
 	Op    string      `json:"op"`
 	Path  string      `json:"path"`
 	Value interface{} `json:"value"`
-}
-
-func (p *Provider) ingressSecrets(a *structs.App, ss manifest.Services) (map[string]string, error) {
-	domains := map[string]bool{}
-
-	for i := range ss {
-		for _, d := range ss[i].Domains {
-			domains[d] = false
-		}
-	}
-
-	cs, err := p.CertificateList()
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	sort.Slice(cs, func(i, j int) bool { return cs[i].Expiration.After(cs[i].Expiration) })
-
-	secrets := map[string]string{}
-
-	for _, c := range cs {
-		count := 0
-
-		for _, d := range c.Domains {
-			if v, ok := domains[d]; ok && !v {
-				domains[d] = true
-				count++
-			}
-		}
-
-		if count > 0 {
-			for _, d := range c.Domains {
-				secrets[d] = c.Id
-			}
-		}
-	}
-
-	for d, matched := range domains {
-		if !matched {
-			c, err := p.CertificateGenerate([]string{d})
-			if err != nil {
-				return nil, errors.WithStack(err)
-			}
-
-			secrets[d] = c.Id
-		}
-	}
-
-	ids := map[string]bool{}
-
-	for _, id := range secrets {
-		ids[id] = true
-	}
-
-	for id := range ids {
-		if _, err := p.Cluster.CoreV1().Secrets(p.AppNamespace(a.Name)).Get(context.TODO(), id, am.GetOptions{}); ae.IsNotFound(err) {
-
-			kc, err := p.Cluster.CoreV1().Secrets(p.Namespace).Get(context.TODO(), id, am.GetOptions{})
-			if err != nil {
-				return nil, errors.WithStack(err)
-			}
-
-			kc.ObjectMeta.Namespace = p.AppNamespace(a.Name)
-			kc.ResourceVersion = ""
-			kc.UID = ""
-
-			if _, err := p.Cluster.CoreV1().Secrets(p.AppNamespace(a.Name)).Create(context.TODO(), kc, am.CreateOptions{}); err != nil {
-				return nil, errors.WithStack(err)
-			}
-		}
-	}
-
-	return secrets, nil
 }
 
 // skipcq
@@ -420,6 +349,18 @@ func RunUsingLeaderElection(ns, name string, cluster kubernetes.Interface, onSta
 	go el.Run(ctx)
 
 	return nil
+}
+
+func SerializeK8sObjToYaml(obj runtime.Object) ([]byte, error) {
+	serializer := json.NewYAMLSerializer(json.DefaultMetaFactory, nil, nil)
+
+	var buf []byte
+	w := bytes.NewBuffer(buf)
+	err := serializer.Encode(obj, w)
+	if err != nil {
+		return nil, err
+	}
+	return w.Bytes(), nil
 }
 
 type tempStateLogStorage struct {

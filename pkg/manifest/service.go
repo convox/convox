@@ -119,6 +119,7 @@ func (v VolumeAwsEfs) Validate() error {
 type Services []Service
 
 type Certificate struct {
+	Id       string `yaml:"id,omitempty"`
 	Duration string `yaml:"duration,omitempty"`
 }
 

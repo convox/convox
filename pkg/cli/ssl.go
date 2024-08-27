@@ -48,7 +48,9 @@ func Ssl(rack sdk.Interface, c *stdcli.Context) error {
 
 	certs := map[string]structs.Certificate{}
 
-	cs, err := rack.CertificateList()
+	var opts structs.CertificateListOptions
+
+	cs, err := rack.CertificateList(opts)
 	if err != nil {
 		return err
 	}

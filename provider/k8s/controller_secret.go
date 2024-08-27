@@ -1,6 +1,9 @@
 package k8s
 
 import (
+	"context"
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -11,10 +14,15 @@ import (
 	"github.com/convox/logger"
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ic "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
+)
+
+const (
+	AnnotationSecretDataHash = "convox.com/data-hash"
 )
 
 type SecretController struct {
@@ -107,7 +115,47 @@ func (c *SecretController) Update(prev, cur interface{}) error {
 			}
 		}
 	}
+
+	if ss.Labels["system"] == "convox" && ss.Labels["type"] == "letsencrypt-certificate" {
+		c.syncSecretCertData(ss)
+	}
 	return nil
+}
+
+func (c *SecretController) syncSecretCertData(certSecret *v1.Secret) {
+	dataHash, err := secretDataHash(certSecret)
+	if err != nil {
+		c.log.Errorf("failed generate hash: %s", err)
+	}
+
+	continueVal := ""
+	for {
+		sList, err := c.Provider.Cluster.CoreV1().Secrets(v1.NamespaceAll).List(context.TODO(), am.ListOptions{
+			FieldSelector: fmt.Sprintf("metadata.name=%s", certSecret.Name),
+			Continue:      continueVal,
+		})
+		if err != nil {
+			c.log.Errorf("failed to list secrets: %s", err)
+		}
+
+		for i := range sList.Items {
+			if sList.Items[i].Annotations[AnnotationSecretDataHash] != dataHash {
+				_, err := c.Provider.PatchSecret(context.TODO(), &sList.Items[i], func(s *v1.Secret) *v1.Secret {
+					s.Annotations[AnnotationSecretDataHash] = dataHash
+					s.Data = certSecret.Data
+					return s
+				}, am.PatchOptions{})
+				if err != nil {
+					c.log.Errorf("failed update cert secret: %s", err)
+				}
+			}
+		}
+
+		continueVal = sList.Continue
+		if continueVal == "" {
+			return
+		}
+	}
 }
 
 func assertSecret(v interface{}) (*ac.Secret, error) {
@@ -117,4 +165,15 @@ func assertSecret(v interface{}) (*ac.Secret, error) {
 	}
 
 	return s, nil
+}
+
+func secretDataHash(s *v1.Secret) (string, error) {
+	h := sha1.New()
+	for k := range s.Data {
+		_, err := h.Write(s.Data[k])
+		if err != nil {
+			return "", err
+		}
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
