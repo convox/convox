@@ -84,7 +84,7 @@ Groups:
       - name: tags
         default: "null"
         type: string
-        regex: ^(\w+=[^,]+)(,\w+=[^,]+)*$
+        regex: ^([^=\s,]+=[^\s,]+)(,[^=\s,]+=[^\s,]+)*$
         description: Custom tags to add to AWS resources along side Convox managed
           tags  &l &i e.g. &i key1=val1,key2=val2 &l
       - name: cert_duration
