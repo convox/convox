@@ -48,7 +48,7 @@ spec:
     {{ range . }}
     - {{ safe . }}
     {{ end }}
-    secretName: {{ if .Service.Certificate.Id }} {{.Service.Certificate.Id}} {{ else }} cert-{{$.Service.Name}}-domains {{ end }}
+    secretName: {{ if $.Service.Certificate.Id }} {{$.Service.Certificate.Id}} {{ else }} cert-{{$.Service.Name}}-domains {{ end }}
   {{ end }}
   rules:
     - host: {{ safe .Host }}
