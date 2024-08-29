@@ -11,6 +11,7 @@ import (
 
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/stdapi"
+	"github.com/convox/stdsdk"
 )
 
 func (s *Server) AppCancel(c *stdapi.Context) error {
@@ -632,14 +633,13 @@ func (s *Server) InstanceShell(c *stdapi.Context) error {
 	}
 
 	id := c.Var("id")
-	rw := c
 
 	var opts structs.InstanceShellOptions
 	if err := stdapi.UnmarshalOptions(c.Request(), &opts); err != nil {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).InstanceShell(id, rw, opts)
+	v, err := s.provider(c).WithContext(c.Context()).InstanceShell(id, stdsdk.NewAdapterWs(c.Websocket()), opts)
 	if err != nil {
 		return err
 	}
@@ -784,14 +784,13 @@ func (s *Server) ProcessExec(c *stdapi.Context) error {
 	app := c.Var("app")
 	pid := c.Var("pid")
 	command := c.Value("command")
-	rw := c
 
 	var opts structs.ProcessExecOptions
 	if err := stdapi.UnmarshalOptions(c.Request(), &opts); err != nil {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).ProcessExec(app, pid, command, rw, opts)
+	v, err := s.provider(c).WithContext(c.Context()).ProcessExec(app, pid, command, stdsdk.NewAdapterWs(c.Websocket()), opts)
 	if err != nil {
 		return err
 	}
@@ -927,7 +926,6 @@ func (s *Server) Proxy(c *stdapi.Context) error {
 	}
 
 	host := c.Var("host")
-	rw := c
 
 	port, cerr := strconv.Atoi(c.Var("port"))
 	if cerr != nil {
@@ -939,7 +937,7 @@ func (s *Server) Proxy(c *stdapi.Context) error {
 		return err
 	}
 
-	err := s.provider(c).WithContext(c.Context()).Proxy(host, port, rw, opts)
+	err := s.provider(c).WithContext(c.Context()).Proxy(host, port, stdsdk.NewAdapterWs(c.Websocket()), opts)
 	if err != nil {
 		return err
 	}
