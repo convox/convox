@@ -21,10 +21,10 @@ type Flag struct {
 
 func BoolFlag(name, short, description string) Flag {
 	return Flag{
-		Description: description,
-		Name:        name,
-		Short:       short,
-		kind:        "bool",
+		Description:     description,
+		Name:            name,
+		Short:           short,
+		kind:            "bool",
 	}
 }
 
