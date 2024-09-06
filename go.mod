@@ -21,7 +21,7 @@ require (
 	github.com/convox/logger v0.0.0-20180522214415-e39179955b52
 	github.com/convox/stdapi v1.1.3-0.20221110171947-8d98f61e61ed
 	github.com/convox/stdcli v0.0.0-20240813092220-8beeb2dc2420
-	github.com/convox/stdsdk v0.0.0-20201005151143-fb7f05286eea
+	github.com/convox/stdsdk v0.0.2
 	github.com/convox/version v0.0.0-20160822184233-ffefa0d565d2
 	github.com/crazy-max/xgo v0.24.0
 	github.com/creack/pty v1.1.18
