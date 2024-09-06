@@ -93,7 +93,7 @@ func GenerateSecurePassword(length int) (string, error) {
 	const (
 		letters         = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 		digits          = "0123456789"
-		specialChars    = "$#?"
+		specialChars    = "#"
 		allChars        = letters + digits + specialChars
 		minLetters      = 4
 		minDigits       = 1
