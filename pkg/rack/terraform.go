@@ -873,7 +873,8 @@ func terraformWriteTemplate(filename, version string, params map[string]interfac
 		}
 
 		output "api" {
-			value = module.system.api
+			value     = module.system.api
+			sensitive = true
 		}
 
 		output "provider" {
