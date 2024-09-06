@@ -292,7 +292,20 @@ func ResourcesProxy(rack sdk.Interface, c *stdcli.Context) error {
 		return fmt.Errorf("no url for resource: %s", r.Name)
 	}
 
-	u, err := url.Parse(r.Url)
+	escapedUrl := r.Url
+
+	// this is to resolve url parsing error when there is special char on password
+	if _, err := url.Parse(escapedUrl); err != nil {
+		if strings.Contains(r.Url, "@") {
+			frontParts := strings.SplitN(r.Url, "://", 2)
+			if len(frontParts) > 0 {
+				backParts := strings.SplitN(r.Url, "@", 2)
+				escapedUrl = fmt.Sprintf("%s://%s", frontParts[0], backParts[len(backParts)-1])
+			}
+		}
+	}
+
+	u, err := url.Parse(escapedUrl)
 	if err != nil {
 		return err
 	}
@@ -307,7 +320,7 @@ func ResourcesProxy(rack sdk.Interface, c *stdcli.Context) error {
 		case "https":
 			remoteport = "443"
 		default:
-			return fmt.Errorf("unknown port for url: %s", r.Url)
+			return fmt.Errorf("unknown port for url: %s", escapedUrl)
 		}
 	}
 
