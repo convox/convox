@@ -86,3 +86,43 @@ You can define the location to build for each [Service](/reference/primitives/ap
 ### Build Layers Caching
 
 From version 3.11.0 onward, Convox uses buildkit to build and push images. Buildkit allows us to specify a caching path in remote repositories to store/fetch layers that have already been created. Unfortunately, the only rack registries that support such feature so far are Azure and DigitalOcean(DO racks have a built-in registry).
+
+
+## Using Docker Credentials in Builds
+
+### Overview
+
+We have added support for using Docker credentials in Convox build and service pods. This feature helps avoid potential rate limits imposed by Docker Hub, particularly when operating large clusters that may perform multiple simultaneous pulls from Docker. By supplying Docker credentials, you can ensure that Docker Hub's rate limits are bypassed, resulting in smoother operations for your services.
+
+### Requirements
+
+- You must be on at least Convox rack version `3.18.8` to use this feature. 
+
+### How to Use Docker Credentials in Convox
+
+To use Docker Hub credentials during the build process, follow these steps:
+
+1. **Generate a read-only access token in Docker Hub:**
+   - Log in to your Docker Hub account.
+   - Go to **Account Settings** and navigate to the **Security** tab.
+   - Under **Access Tokens**, click **New Access Token**.
+   - Set the access permissions to **Read-only** and generate the token.
+
+2. **Set the credentials for your Convox rack:**
+
+   Run the following command to set the Docker Hub credentials on your rack. Be sure to use the read-only access token to avoid storing your Docker password in plain text.
+
+   ```
+   $ convox rack params set docker_hub_username=<your-docker-hub-username> docker_hub_password=<your-read-only-token> -r <rackName>
+   ```
+
+3. **Verify that the credentials have been set:**
+
+   After setting the credentials, you can confirm they have been successfully configured by running:
+
+   ```
+   $ convox rack params -r <rackName>
+   ```
+
+This will list the current parameters for the rack, including the Docker credentials.
+

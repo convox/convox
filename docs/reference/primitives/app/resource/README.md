@@ -175,7 +175,7 @@ Resource linking works the same with read replicas, meaning environment variable
 
 ### Database Import
 
-Database import allows you to integrate any RDS managed database into Convox, whether it was initially created by Convox or not.
+Database import allows you to integrate any RDS managed database or Elasticache into Convox, whether it was initially created by Convox or not.
 
 ```html
 resources:
@@ -230,6 +230,50 @@ services:
 - Storage encryption
 - Engine version
 - Storage volume
+
+
+## AWS ElastiCache Redis and Memcached Resources
+
+Convox now supports native AWS ElastiCache Redis and Memcached instances for high-performance caching solutions. These managed cache instances can be defined and linked to services similarly to other managed resources.
+
+### Defining AWS ElastiCache Resources
+
+AWS ElastiCache resources are specified with an `elasticache-` prefix followed by the cache type (`redis` or `memcached`). Below are examples of defining both Redis and Memcached resources:
+
+**Redis Example**:
+```
+resources:
+  cache:
+    type: elasticache-redis
+    options:
+      class: cache.t3.micro
+      version: 6.2
+services:
+  web:
+    resources:
+      - cache
+```
+
+**Memcached Example** (note that the `nodes` parameter must be set):
+```
+resources:
+  cache:
+    type: elasticache-memcached
+    options:
+      version: 1.6.6
+      class: cache.t4g.micro
+      nodes: 1
+services:
+  web:
+    resources:
+      - cache
+```
+
+For detailed configuration options and examples for each type of AWS Elasticache resource, refer to the specific resource documentation pages:
+
+- [Redis](/reference/primitives/app/resource/redis/)
+- [Memcached](/reference/primitives/app/resource/memcached/)
+
 
 ## Command Line Interface
 
