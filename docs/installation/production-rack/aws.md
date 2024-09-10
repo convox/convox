@@ -86,3 +86,38 @@ The following environment variables are required:
 \* To avoid CIDR block collision with existing VPC subnets, please add a new CIDR block to your VPC to separate rack resources. Also, remember to pass the **internet_gateway_id** attached to the VPC. If the VPC doesn't have an IG attached, the rack installation will create one automatically, which will also be destroyed if you delete the rack.
 
 \* **schedule_rack_scale_down** and **schedule_rack_scale_up** are mutually exclusive. So you have to set both of them properly for the scheduled timed off. If you set only **schedule_rack_scale_down**, it will not scale up on its own.
+
+
+### Cluster Endpoint Access
+
+Convox allows you to configure access to the Kubernetes API server endpoint for your EKS cluster. This functionality is accessible through the Convox Console under the Rack Settings menu in the Security tab. To configure the cluster endpoint access mode, navigate to your rack, select it, and click the cogwheel in the upper right-hand corner of the screen.
+
+### Modes of Cluster Endpoint Access
+
+There are three modes available for configuring the cluster endpoint access:
+
+- **Public**: The EKS cluster endpoint is accessible from outside the VPC, allowing external connections. This is the default configuration. Although publicly accessible, it is secured through multiple layers of protection to ensure that only authorized access is permitted.
+
+- **Semi-Private**: In this mode, the cluster temporarily switches to public access during updates or configuration changes, then reverts to private when complete. This mode is suitable for older racks and any version, but note that enabling Semi-Private mode will add approximately 15 minutes to each update.
+
+- **Private**: The EKS cluster endpoint is restricted to VPC access only, ensuring that only internal traffic can access it. This mode provides the highest level of security by limiting access to within the VPC while maintaining full Convox API functionality.
+
+### Requirements
+
+To use the full **Private** mode, your rack must be on at least version `3.18.9`. The **Semi-Private** mode is available for all rack versions, and **Public** is the default state.
+
+To access these settings:
+
+1. Log in to the Convox Console.
+2. Navigate to your Rack Settings by selecting the rack and clicking the cogwheel in the upper right-hand corner of the screen.
+3. Go to the **Security** tab to configure the cluster endpoint access mode.
+
+### How to Use or Test the Feature
+
+1. **Ensure your Convox rack is updated to version 3.18.9 if you wish to use the Private mode**:
+
+2. **Access the Security tab in the Rack Settings to configure the cluster endpoint access mode.**
+
+3. **Wait approximately 10 minutes for the update to apply.**
+
+For more details on updating your rack, refer to the [Updating a Rack](https://docs.convox.com/management/cli-rack-management/) page.
