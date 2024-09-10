@@ -54,17 +54,18 @@ services:
 
 Below is a chart of configuration options available for AWS ElastiCache Memcached resources:
 
-| Attribute                | Type    | Description                                                                                       |
-| ------------------------ | ------- | ------------------------------------------------------------------------------------------------- |
-| **nodes**                | int     | **Required.** The number of nodes in the Memcached cluster.                                        |
-| **class**                | string  | The compute and memory capacity of the cache instance.                                             |
-| **version**              | string  | The version of the cache engine.                                                                   |
-| **deletionProtection**   | boolean | Whether to enable deletion protection for the cache instance.                                      |
-| **durable**              | boolean | Whether to create a Multi-AZ cache instance.                                                       |
-| **encrypted**            | boolean | Whether to enable encryption at rest for the cache instance.                                       |
-| **autoMinorVersionUpgrade** | boolean | Whether to allow automatic minor version upgrades for the cache engine.                           |
-| **import**                    | string  | The cache identifier used for cache import. Requires the correct `masterUserPassword` option set.       |
-| **masterUserPassword**        | string  | The password for the master user. Should be set as an environment variable to avoid hardcoding.               |
+| Attribute                   | Type    | Description                                                                                         |
+| --------------------------- | ------- | --------------------------------------------------------------------------------------------------- |
+| **nodes**                   | int     | **Required.** The number of nodes in the Memcached cluster.                                          |
+| **class**                   | string  | The compute and memory capacity of the cache instance.                                               |
+| **version**                 | string  | The version of the cache engine.                                                                     |
+| **deletionProtection**      | boolean | Whether to enable deletion protection for the cache instance.                                        |
+| **durable**                 | boolean | Whether to create a Multi-AZ cache instance.                                                         |
+| **encrypted**               | boolean | Whether to enable encryption at rest for the cache instance.                                         |
+| **autoMinorVersionUpgrade** | boolean | Whether to allow automatic minor version upgrades for the cache engine.                              |
+| **import**                  | string  | The cache identifier used for cache import.                                                          |
+
+
 
 > **Important:** The `deletionProtection` option is managed by Convox and is not an AWS feature. It is used to prevent the resource from being removed if accidentally deleted from the `convox.yml` file. If `deletionProtection` is enabled, the resource will not be deleted even if it is removed from the manifest.
 
