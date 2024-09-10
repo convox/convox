@@ -10,7 +10,7 @@ url: /reference/primitives/app/resource/memcached
 
 A Memcached Resource is defined in [```convox.yml```](/configuration/convox-yml) and linked to one or more [Services](/reference/primitives/app/service).
 
-```
+```html
 resources:
   main:
     type: memcached
@@ -25,7 +25,7 @@ services:
 
 In addition to containerized resources, Convox v3 allows the creation of Memcached resources via AWS ElastiCache. This provides enhanced durability and managed service benefits. Below is a general example of how to define AWS ElastiCache Memcached resources:
 
-```
+```html
 resources:
   cache:
     type: elasticache-memcached
@@ -72,14 +72,14 @@ Below is a chart of configuration options available for AWS ElastiCache Memcache
 ### Command Line Interface
 
 #### Listing Resources
-```
+```html
 $ convox resources -a myapp
 NAME      TYPE       URL
 cache     elasticache-memcached  memcached://hostname:port
 ```
 
 #### Getting Information about a Resource
-```
+```html
 $ convox resources info cache -a myapp
 Name  cache
 Type  elasticache-memcached
@@ -87,13 +87,13 @@ URL   memcached://hostname:port
 ```
 
 #### Getting the URL for a Resource
-```
+```html
 $ convox resources url cache -a myapp
 memcached://hostname:port
 ```
 
 #### Starting a Proxy to a Resource
-```
+```html
 $ convox resources proxy cache -a myapp
 Proxying localhost:11211 to hostname:port
 ```

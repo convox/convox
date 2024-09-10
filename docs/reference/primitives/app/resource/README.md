@@ -56,7 +56,7 @@ You can also pass a compatible custom image for all resource type.
 
 To use a custom image, include the `image` field in your resource configuration:
 
-```
+```html
 resources:
   main:
     type: postgres
@@ -74,7 +74,7 @@ Note:
 
 Example:
 
-```
+```html
 resources:
   myRedis:
     type: redis
@@ -241,7 +241,7 @@ Convox now supports native AWS ElastiCache Redis and Memcached instances for hig
 AWS ElastiCache resources are specified with an `elasticache-` prefix followed by the cache type (`redis` or `memcached`). Below are examples of defining both Redis and Memcached resources:
 
 **Redis Example**:
-```
+```html
 resources:
   cache:
     type: elasticache-redis
@@ -255,7 +255,7 @@ services:
 ```
 
 **Memcached Example** (note that the `nodes` parameter must be set):
-```
+```html
 resources:
   cache:
     type: elasticache-memcached
@@ -268,6 +268,8 @@ services:
     resources:
       - cache
 ```
+
+> **Note:** The `nodes` option is required for Memcached and must be set to the desired number of nodes for the Memcached cluster.
 
 For detailed configuration options and examples for each type of AWS Elasticache resource, refer to the specific resource documentation pages:
 

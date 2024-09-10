@@ -14,7 +14,7 @@ If you specify a custom `domain:` attribute for your service, Convox will automa
 
 To minimize delays during your first deployment, you can pre-generate your SSL certificate. This ensures your service is available without waiting for the certificate issuance process.
 
-```
+```html
 $ convox certs generate "*.example.org" "myapp.example.org" --issuer letsencrypt
 Generating certificate... OK, cert-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
@@ -27,7 +27,7 @@ You can view and manage your existing SSL certificates with the following comman
 
 To list your current certificates:
 
-```
+```html
 $ convox certs --generated
 ID                          DOMAIN                   EXPIRES
 cert-xxxxxxxxxxxxxx         *.example.com            1 year from now
@@ -36,7 +36,7 @@ cert-yyyyyyyyyyyyyy         myapp.example.org        1 year from now
 
 To delete an existing certificate:
 
-```
+```html
 $ convox certs delete cert-xxxxxxxxxxxxxx
 Deleting certificate cert-xxxxxxxxxxxxxx... OK
 ```
@@ -49,7 +49,7 @@ Convox also supports the Let's Encrypt DNS01 challenge for SSL certificate gener
 
 1. **Retrieve the IAM Role**: Retrieve the IAM role used by the service:
 
-```
+```html
 convox letsencrypt dns route53 role
 ```
 
@@ -57,7 +57,7 @@ This will return the ARN of the IAM role (e.g., `arn:aws:iam::XXXXXXXXXX:role/co
 
 2. **Create a Route53 DNS Zone Access Role**: Create a role in AWS IAM with the necessary permissions to manage your Route53 DNS zone. Replace `<zone-id>` with your actual Route53 zone ID:
 
-```
+```html
 {
    "Version": "2012-10-17",
    "Statement": [
@@ -80,7 +80,7 @@ This will return the ARN of the IAM role (e.g., `arn:aws:iam::XXXXXXXXXX:role/co
 
 3. **Update Trust Policy**: Update the trust policy for this role to allow the `cert-manager` role from your Convox rack to assume it:
 
-```
+```html
 {
    "Version": "2012-10-17",
    "Statement": [
@@ -99,7 +99,7 @@ This will return the ARN of the IAM role (e.g., `arn:aws:iam::XXXXXXXXXX:role/co
 
 4. **Add Assume Permission**: Add assume role permission to your `cert-manager` role:
 
-```
+```html
 {
    "Version": "2012-10-17",
    "Statement": [
@@ -116,13 +116,13 @@ This will return the ARN of the IAM role (e.g., `arn:aws:iam::XXXXXXXXXX:role/co
 
 5. **Configure the DNS Solver**: Run the following command to configure the DNS solver for Let's Encrypt:
 
-```
+```html
 convox letsencrypt dns route53 add --id 1 --dns-zones <your.zone> --role arn:aws:iam::XXXXXXXXXX:role/dns-access --hosted-zone-id <hosted-zone-id> --region <hosted-zone-region>
 ```
 
 6. **Verify Configuration**: Check the configuration:
 
-```
+```html
 convox letsencrypt dns route53 list
 ```
 
@@ -136,7 +136,7 @@ Convox allows you to generate wildcard certificates that secure an entire domain
 
 To generate a wildcard certificate:
 
-```
+```html
 $ convox certs generate "*.mydomain.com" --issuer letsencrypt
 ```
 
@@ -146,7 +146,7 @@ Once the wildcard certificate is generated, you can reuse it across multiple app
 
 For example, to apply the wildcard certificate to a service:
 
-```
+```html
 environment:
   - PORT=3000
 services:
