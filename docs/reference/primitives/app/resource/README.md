@@ -175,7 +175,7 @@ Resource linking works the same with read replicas, meaning environment variable
 
 ### Database Import
 
-Database import allows you to integrate any RDS managed database into Convox, whether it was initially created by Convox or not.
+Database import allows you to integrate any RDS managed database or Elasticache into Convox, whether it was initially created by Convox or not.
 
 ```html
 resources:

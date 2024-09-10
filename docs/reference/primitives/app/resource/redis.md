@@ -60,8 +60,11 @@ Below is a chart of configuration options available for AWS ElastiCache Redis re
 | **encrypted**            | boolean | Whether to enable encryption at rest for the cache instance.                                       |
 | **transitEncryption**    | boolean | Whether to enable in-transit encryption for securing data flow between applications and cache.     |
 | **autoMinorVersionUpgrade** | boolean | Whether to allow automatic minor version upgrades for the cache engine.                           |
+| **import**                    | string  | The cache identifier used for cache import. Requires the correct `masterUserPassword` option set.       |
+| **masterUserPassword**        | string  | The password for the master user. Should be set as an environment variable to avoid hardcoding.               |
 
-*Note: For Redis, the `nodes` option does not apply as Redis is a single-node service unless clustering is enabled.*
+> **Important:** The `deletionProtection` option is managed by Convox and is not an AWS feature. It is used to prevent the resource from being removed if accidentally deleted from the `convox.yml` file. If `deletionProtection` is enabled, the resource will not be deleted even if it is removed from the manifest.
+
 
 ### Command Line Interface
 

@@ -15,7 +15,7 @@ If you specify a custom `domain:` attribute for your service, Convox will automa
 To minimize delays during your first deployment, you can pre-generate your SSL certificate. This ensures your service is available without waiting for the certificate issuance process.
 
 ```
-$ convox certs generate "*.example.org" "myapp.example.org"
+$ convox certs generate "*.example.org" "myapp.example.org" --issuer letsencrypt
 Generating certificate... OK, cert-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
@@ -28,7 +28,7 @@ You can view and manage your existing SSL certificates with the following comman
 To list your current certificates:
 
 ```
-$ convox certs
+$ convox certs --generated
 ID                          DOMAIN                   EXPIRES
 cert-xxxxxxxxxxxxxx         *.example.com            1 year from now
 cert-yyyyyyyyyyyyyy         myapp.example.org        1 year from now
