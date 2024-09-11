@@ -112,7 +112,7 @@ To use Docker Hub credentials during the build process, follow these steps:
 
    Run the following command to set the Docker Hub credentials on your rack. Be sure to use the read-only access token to avoid storing your Docker password in plain text.
 
-   ```
+   ```html
    $ convox rack params set docker_hub_username=<your-docker-hub-username> docker_hub_password=<your-read-only-token> -r <rackName>
    ```
 
@@ -120,7 +120,7 @@ To use Docker Hub credentials during the build process, follow these steps:
 
    After setting the credentials, you can confirm they have been successfully configured by running:
 
-   ```
+   ```html
    $ convox rack params -r <rackName>
    ```
 

@@ -23,7 +23,7 @@ AWS EFS (Elastic File System) provides a scalable, persistent storage solution t
 
 To use AWS EFS volumes, you must enable the EFS CSI driver on your rack. Run the following command to enable it:
 
-```
+```html
 convox rack params set efs_csi_driver_enable=true -r rackName
 ```
 
@@ -31,7 +31,7 @@ convox rack params set efs_csi_driver_enable=true -r rackName
 
 After enabling the driver, define your EFS volumes in the `convox.yml` file:
 
-```
+```html
 environment:
   - PORT=3000
 services:
@@ -76,7 +76,7 @@ For more details, refer to the [Updating a Rack](https://docs.convox.com/managem
 
 You can configure **emptyDir** volumes directly in the `convox.yml` file. Here’s an example:
 
-```
+```html
 environment:
   - PORT=3000
 services:
