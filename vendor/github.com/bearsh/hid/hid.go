@@ -17,6 +17,33 @@ var ErrDeviceClosed = errors.New("hid: device closed")
 // operating system is not supported by the library.
 var ErrUnsupportedPlatform = errors.New("hid: unsupported platform")
 
+const (
+	BusUnknown   = 0x00
+	BusUSB       = 0x01
+	BusBluetooth = 0x02
+	BusI2C       = 0x03
+	BusSPI       = 0x04
+)
+
+type BusType int
+
+func (t BusType) String() string {
+	switch t {
+	case BusUSB:
+		return "usb"
+	case BusBluetooth:
+		return "bluetooth"
+	case BusI2C:
+		return "i2c"
+	case BusSPI:
+		return "spi"
+	case BusUnknown:
+		fallthrough
+	default:
+		return "unknown"
+	}
+}
+
 // DeviceInfo is a hidapi info structure.
 type DeviceInfo struct {
 	Path         string // Platform-specific device path
@@ -26,12 +53,14 @@ type DeviceInfo struct {
 	Serial       string // Serial Number
 	Manufacturer string // Manufacturer String
 	Product      string // Product string
-	UsagePage    uint16 // Usage Page for this Device/Interface (Windows/Mac only)
-	Usage        uint16 // Usage for this Device/Interface (Windows/Mac only)
+	UsagePage    uint16 // Usage Page for this Device/Interface (Windows/Mac/hidraw only)
+	Usage        uint16 // Usage for this Device/Interface (Windows/Mac/hidraw only)
 
 	// The USB interface which this logical device
 	// represents. Valid on both Linux implementations
 	// in all cases, and valid on the Windows implementation
 	// only if the device contains more than one interface.
 	Interface int
+
+	BusType BusType // Underlying bus type
 }

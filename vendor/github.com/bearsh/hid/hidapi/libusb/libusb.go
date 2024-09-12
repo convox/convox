@@ -1,6 +1,10 @@
-// +build dummy
-
-// This Go file is part of a workaround for `go mod vendor`.
-// Please see the file `c_deps.go` at the root for more information.
+//go:build !hidraw && linux && cgo
 
 package libusb
+
+/*
+#cgo CFLAGS: -I../. -I../../libusb/libusb
+#cgo logging CFLAGS: -DDEBUG_PRINTF
+#cgo android,logging LDFLAGS: -llog
+*/
+import "C"

@@ -1,6 +1,8 @@
-// +build dummy
-
-// This Go file is part of a workaround for `go mod vendor`.
-// Please see the file `c_deps.go` at the root for more information.
+//go:build darwin && !ios
 
 package mac
+
+/*
+#cgo CFLAGS: -I../. -DOS_DARWIN
+*/
+import "C"
