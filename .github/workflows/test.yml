@@ -27,7 +27,7 @@ jobs:
       - name: golang-1.19
         uses: actions/setup-go@v3
         with:
-          go-version: '1.19.10'
+          go-version: '1.23'
       - name: tools
         run: make tools
       - name: cli
