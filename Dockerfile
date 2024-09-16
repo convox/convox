@@ -1,6 +1,6 @@
 ## development #################################################################
 
-FROM golang:1.19 AS development
+FROM golang:1.23 AS development
 
 ARG DOCKER_ARCH=x86_64
 ARG KUBECTL_ARCH=amd64
@@ -34,7 +34,7 @@ RUN make build
 
 ## package #####################################################################
 
-FROM golang:1.19 AS package
+FROM golang:1.23 AS package
 
 WORKDIR /usr/src/convox
 
