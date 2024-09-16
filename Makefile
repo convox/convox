@@ -5,7 +5,9 @@ commands = api atom build convox docs resolver
 binaries = $(addprefix $(GOPATH)/bin/, $(commands))
 sources  = $(shell find . -name '*.go')
 
-all: build
+install-deps: sudo apt-get install libudev-dev
+
+all: install-deps build
 
 build: $(binaries)
 
@@ -59,7 +61,6 @@ release:
 	git push origin refs/tags/$(VERSION)
 
 test:
-	sudo apt-get install libudev-dev
 	env TEST=true go test -covermode atomic -coverprofile coverage.txt -mod=vendor ./...
 	go run cmd/telemetry-gen/main.go verify
 
@@ -72,6 +73,7 @@ vendor:
 	go run vendor/github.com/goware/modvendor/main.go -copy="**/*.c **/*.h"
 
 $(binaries): $(GOPATH)/bin/%: $(sources)
+	@$(MAKE) install-deps
 	go install -mod=vendor --ldflags="-s -w" ./cmd/$*
 
 define restart
