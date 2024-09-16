@@ -424,8 +424,6 @@ github.com/emicklei/go-restful/v3/log
 # github.com/evanphx/json-patch v5.6.0+incompatible
 ## explicit
 github.com/evanphx/json-patch
-# github.com/fsnotify/fsnotify v1.7.0
-## explicit; go 1.17
 # github.com/fsouza/go-dockerclient v1.4.2
 ## explicit; go 1.11
 github.com/fsouza/go-dockerclient
@@ -685,8 +683,6 @@ github.com/opencontainers/image-spec/specs-go/v1
 # github.com/opencontainers/runc v1.1.2
 ## explicit; go 1.16
 github.com/opencontainers/runc/libcontainer/user
-# github.com/opensource-apple/CF v0.0.0-20150910194929-3cc41a76b149
-## explicit
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
