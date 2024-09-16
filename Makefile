@@ -5,7 +5,8 @@ commands = api atom build convox docs resolver
 binaries = $(addprefix $(GOPATH)/bin/, $(commands))
 sources  = $(shell find . -name '*.go')
 
-install-deps: sudo apt-get install libudev-dev
+install-deps: 
+	RUN apt-get update && apt-get install -y libudev-dev
 
 all: install-deps build
 
