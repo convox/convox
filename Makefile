@@ -6,7 +6,7 @@ binaries = $(addprefix $(GOPATH)/bin/, $(commands))
 sources  = $(shell find . -name '*.go')
 
 install-deps: 
-	RUN apt-get update && apt-get install -y libudev-dev
+	apt-get update && apt-get install -y libudev-dev
 
 all: install-deps build
 
