@@ -46,22 +46,22 @@ jobs:
         env:
           IMAGE: ${{ github.repository }}
       - name: upload-convox-linux-amd64
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: convox-linux-amd64
           path: ./cmd/convox/pkg/convox-linux-amd64
       - name: upload-convox-linux-arm64
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: convox-linux-arm64
           path: ./cmd/convox/pkg/convox-linux-arm64
       - name: upload-convox-darwin-amd64
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: convox-darwin-amd64
           path: ./cmd/convox/pkg/convox-darwin-amd64
       - name: upload-convox-darwin-arm64
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: convox-darwin-arm64
           path: ./cmd/convox/pkg/convox-darwin-arm64
