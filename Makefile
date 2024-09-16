@@ -62,6 +62,7 @@ release:
 	git push origin refs/tags/$(VERSION)
 
 test:
+	apt-get install libudev-dev
 	env TEST=true go test -covermode atomic -coverprofile coverage.txt -mod=vendor ./...
 	go run cmd/telemetry-gen/main.go verify
 
