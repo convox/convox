@@ -38,7 +38,7 @@ FROM golang:1.23 AS package
 
 WORKDIR /usr/src/convox
 
-RUN apt-get install libudev-dev
+RUN apt-get update && apt-get install -y libudev-dev
 
 COPY . .
 
