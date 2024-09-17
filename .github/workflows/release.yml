@@ -14,12 +14,14 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: golang-1.19
+      - name: golang-1.23
         uses: actions/setup-go@v3
         with:
-          go-version: '1.19.10'
+          go-version: '1.23'
       - name: version
         run: echo "VERSION=$(echo ${{ github.ref }} | awk -F/ '{print $3}')" >> $GITHUB_ENV
+      - name: Install libudev-dev
+        run: sudo apt-get update && sudo apt-get install -y libudev-dev
       - name: changelog
         id: changelog
         run: |
@@ -46,22 +48,22 @@ jobs:
         env:
           IMAGE: ${{ github.repository }}
       - name: upload-convox-linux-amd64
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: convox-linux-amd64
           path: ./cmd/convox/pkg/convox-linux-amd64
       - name: upload-convox-linux-arm64
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: convox-linux-arm64
           path: ./cmd/convox/pkg/convox-linux-arm64
       - name: upload-convox-darwin-amd64
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: convox-darwin-amd64
           path: ./cmd/convox/pkg/convox-darwin-amd64
       - name: upload-convox-darwin-arm64
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: convox-darwin-arm64
           path: ./cmd/convox/pkg/convox-darwin-arm64
@@ -84,6 +86,8 @@ jobs:
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Install libudev-dev
+        run: sudo apt-get update && sudo apt-get install -y libudev-dev
       - name: build-amd64
         run: "docker buildx build --platform linux/amd64 -t ${{ github.repository }}:${{ env.VERSION }} --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max ."
       - name: buildkit-amd64
@@ -109,6 +113,8 @@ jobs:
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Install libudev-dev
+        run: sudo apt-get update && sudo apt-get install -y libudev-dev
       - name: build-arm64
         run: "docker buildx build --platform linux/arm64 -t ${{ github.repository }}:${{ env.VERSION }}-arm64 --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max --build-arg DOCKER_ARCH=aarch64 --build-arg KUBECTL_ARCH=arm64 ."
       - name: buildkit-arm64
