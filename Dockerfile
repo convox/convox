@@ -38,6 +38,8 @@ FROM golang:1.23 AS package
 
 WORKDIR /usr/src/convox
 
+RUN apt-get install libudev-dev
+
 COPY . .
 
 RUN make package build compress
