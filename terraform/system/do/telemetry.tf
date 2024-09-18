@@ -33,7 +33,7 @@ locals {
     docker_hub_username = ""
     high_availability = "true"
     image = "convox/convox"
-    k8s_version = "1.28"
+    k8s_version = "1.29"
     name = ""
     node_type = "s-2vcpu-4gb"
     rack_name = ""
