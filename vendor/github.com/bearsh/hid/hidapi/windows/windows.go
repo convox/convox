@@ -1,6 +1,8 @@
-// +build dummy
-
-// This Go file is part of a workaround for `go mod vendor`.
-// Please see the file `c_deps.go` at the root for more information.
+//go:build windows
 
 package windows
+
+/*
+#cgo CFLAGS: -I../. -DOS_WINDOWS -Dhidapi_winapi_EXPORTS
+*/
+import "C"

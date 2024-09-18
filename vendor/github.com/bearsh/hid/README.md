@@ -21,8 +21,11 @@ On Linux the package uses either [`libusb`](https://github.com/libusb/libusb) (d
 All of these dependencies are vendored directly into the repository and wrapped using CGO,
 making the `hid` package self-contained and go-gettable.
 
-Supported platforms at the moment are Linux, macOS and Windows (exclude constraints are also specified
-for Android and iOS to allow smoother vendoring into cross platform projects).
+Supported platforms at the moment are:
+- Linux
+- macOS (darwin but not iOS)
+- Windows
+- Android (to enumerate and open devices, native USBManager needs to be used)
 
 ## Libusb backend selection (linux only)
 
