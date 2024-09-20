@@ -10,7 +10,7 @@ resource "kubernetes_resource_quota" "gcp-critical-pods" {
   }
   spec {
     hard = {
-      pods = "1G"
+      pods = "1000"
     }
     scope_selector {
       match_expression {
