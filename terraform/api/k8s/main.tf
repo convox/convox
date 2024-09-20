@@ -3,6 +3,25 @@ resource "random_string" "password" {
   special = false
 }
 
+resource "kubernetes_resource_quota" "gcp-critical-pods" {
+  metadata {
+    name = "gcp-critical-pods"
+    namespace = var.namespace
+  }
+  spec {
+    hard = {
+      pods = "1000"
+    }
+    scope_selector {
+      match_expression {
+        scope_name = "PriorityClass"
+        operator = "In"
+        values = ["system-node-critical", "system-cluster-critical"]
+      }
+    }
+  }
+}
+
 resource "kubernetes_cluster_role" "api" {
   metadata {
     name = "${var.rack}-api"
@@ -291,6 +310,7 @@ resource "kubernetes_deployment" "api" {
       }
     }
   }
+  depends_on = [ kubernetes_resource_quota.gcp-critical-pods ]
 }
 
 resource "kubernetes_service" "api" {
