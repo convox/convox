@@ -3,7 +3,6 @@ terraform {
     google = {
       source  = "hashicorp/google"
       version = "~> 4.69.1"
-      configuration_aliases = [ google.direct ]
     }
     http = {
       source  = "hashicorp/http"
