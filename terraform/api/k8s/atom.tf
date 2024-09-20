@@ -113,4 +113,5 @@ resource "kubernetes_deployment" "atom" {
       }
     }
   }
+  depends_on = [ kubernetes_resource_quota.gcp-critical-pods ]
 }
