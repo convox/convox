@@ -25,7 +25,7 @@ var (
 )
 
 type Manifest struct {
-	AppSettings AppSettings `yaml:"app-settings,omitempty"`
+	AppSettings AppSettings `yaml:"appSettings,omitempty"`
 	Balancers   Balancers   `yaml:"balancers,omitempty"`
 	Environment Environment `yaml:"environment,omitempty"`
 	Labels      Labels      `yaml:"labels,omitempty"`

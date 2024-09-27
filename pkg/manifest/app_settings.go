@@ -1,10 +1,10 @@
 package manifest
 
 type AppSettings struct {
-	AwsLogs *ServiceLogsRetention `yaml:"aws-logs,omitempty"`
+	AwsLogs *ServiceLogsRetention `yaml:"awsLogs,omitempty"`
 }
 
 type ServiceLogsRetention struct {
-	CwRetention      int  `yaml:"cw-retention,omitempty"`
+	CwRetention      int  `yaml:"cwRetention,omitempty"`
 	RetentionDisable bool `yaml:"disableRetention,omitempty"`
 }
