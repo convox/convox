@@ -167,6 +167,10 @@ func Rack(rack sdk.Interface, c *stdcli.Context) error {
 		}
 	}
 
+	if s.RouterInternal != "" {
+		i.Add("RouterInternal", s.RouterInternal)
+	}
+
 	i.Add("Status", s.Status)
 	i.Add("Version", s.Version)
 
