@@ -52,6 +52,10 @@ func (p *Provider) SystemGet() (*structs.System, error) {
 		Version:    p.Version,
 	}
 
+	if p.DomainInternal != "" {
+		s.RouterInternal = fmt.Sprintf("router.%s", p.DomainInternal)
+	}
+
 	return s, nil
 }
 
