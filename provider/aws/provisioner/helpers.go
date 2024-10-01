@@ -93,11 +93,11 @@ func GenerateSecurePassword(length int) (string, error) {
 	const (
 		letters         = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 		digits          = "0123456789"
-		specialChars    = "#"
+		specialChars    = ""
 		allChars        = letters + digits + specialChars
 		minLetters      = 4
 		minDigits       = 1
-		minSpecialChars = 1
+		minSpecialChars = 0
 	)
 
 	if length < minLetters+minDigits+minSpecialChars {
@@ -124,12 +124,6 @@ func GenerateSecurePassword(length int) (string, error) {
 	}
 	for i := minLetters; i < minLetters+minDigits; i++ {
 		password[i], err = generateChar(digits)
-		if err != nil {
-			return "", err
-		}
-	}
-	for i := minLetters + minDigits; i < minLetters+minDigits+minSpecialChars; i++ {
-		password[i], err = generateChar(specialChars)
 		if err != nil {
 			return "", err
 		}

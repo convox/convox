@@ -37,6 +37,14 @@ metadata:
     {{ end }}
 spec:
   ingressClassName: "{{.Class}}"
+  tls:
+  {{ with .Service.Domains }}
+  - hosts:
+    {{ range . }}
+    - {{ safe . }}
+    {{ end }}
+    secretName: {{ if $.Service.Certificate.Id }} {{$.Service.Certificate.Id}} {{ else }} cert-{{$.Service.Name}}-domains {{ end }}
+  {{ end }}
   rules:
     - host: {{ safe .Host }}
       http:
