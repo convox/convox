@@ -120,6 +120,7 @@ services:
 | **liveness** | map |      | Liveness check definition (see below). By default it is disabled. If it fails then service will restart |
 | **image**       | string     |                     | An external Docker image to use for this Service (supercedes **build**)                                                                      |
 | **ingressAnnotations** | list       |                     | A list of annotation keys and values to add in ingress resource. Check below for reserved annotation keys |
+| **initContainer** | map       |                     | Init container configuration. This runs before your main application container. Use it to configure application environment. |
 | **internal**    | boolean    | false               | Set to **true** to make this Service only accessible inside the Rack                                                                         |
 | **internalRouter** | boolean    | false               | Set it to **true** to make this Service only accessible using internal loadbalancer. You also have to set the rack parameter [internal_router](/installation/production-rack/aws) to **true**                 |
 | **labels** |  map  |       | Custom labels for k8s resources. See here for (syntax and character set)[https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set]. Also following keys are reserved: `system`, `rack`, `app`, `name`, `service`, `release`, `type` |
@@ -246,6 +247,20 @@ Reserved annotation keys:
 - `nginx.ingress.kubernetes.io/session-cookie-name`
 - `nginx.ingress.kubernetes.io/ssl-redirect`
 - `nginx.ingress.kubernetes.io/whitelist-source-range`
+
+&nbsp;
+
+### initContainer
+
+It takes inputs just like a container and runs before main container. It supports all these arguments-
+
+| Attribute | Type   | Default | Description                                                                                |
+| --------- | ------ | ------- | ------------------------------------------------------------------------------------------ |
+| **image**     | string |         | An external Docker image to be run in the init container |
+| **command**  | string |         | The command to run in the init container |
+| **volumeOptions**  | list |         | List of volumes to attach with service |
+
+&nbsp;
 
 ### lifecycle
 
