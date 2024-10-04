@@ -107,6 +107,26 @@ spec:
       serviceAccountName: {{.Service.Name}}
       shareProcessNamespace: {{.Service.Init}}
       terminationGracePeriodSeconds: {{$.Service.Termination.Grace}}
+      initContainers:
+      - name: init-{{.App.Name}}
+        image: {{ .Service.InitContainer.Image }} 
+        {{ with .Service.InitContainer.Command }}
+        args:
+        {{ range shellsplit . }}
+          - {{ safe . }}
+        {{ end }}
+        {{ end }}
+        volumeMounts:
+        {{ range .Service.InitContainer.VolumeOptions }}
+        {{ with .EmptyDir }}
+        - name: ed-{{ .Id }}
+          mountPath: {{ .MountPath }}
+        {{ end }}
+        {{ with .AwsEfs }}
+        - name: efs-{{ .Id }}
+          mountPath: {{ .MountPath }}
+        {{ end }}
+        {{ end }}
       containers:
       - name: {{.App.Name}}
         {{ with .Service.Command }}
