@@ -56,9 +56,9 @@ func (bk *BuildKit) Build(bb *Build, dir string) error {
 	}
 
 	type build struct {
-		Build manifest.ServiceBuild
-		Image string
-		Tag   string
+		Build  manifest.ServiceBuild
+		Image  string
+		Tag    string
 	}
 
 	var builds []build
@@ -80,11 +80,11 @@ func (bk *BuildKit) Build(bb *Build, dir string) error {
 		if build.Image != "" {
 			os.WriteFile(fmt.Sprintf("%s/Dockerfile.%d", dir, ix), []byte(fmt.Sprintf("FROM %s", build.Image)), 0600)
 
-			if err := bk.build(bb, dir, fmt.Sprintf("Dockerfile.%d", ix), build.Tag, env); err != nil {
+			if err := bk.build(bb, dir, fmt.Sprintf("Dockerfile.%d", ix), build.Build.Target, build.Tag, env); err != nil {
 				return err
 			}
 		} else {
-			if err := bk.build(bb, filepath.Join(dir, build.Build.Path), build.Build.Manifest, build.Tag, env); err != nil {
+			if err := bk.build(bb, filepath.Join(dir, build.Build.Path), build.Build.Manifest, build.Build.Target, build.Tag, env); err != nil {
 				return err
 			}
 		}
@@ -202,7 +202,7 @@ func (*BuildKit) entrypoint(bb *Build, tag string) []string {
 }
 
 // skipcq
-func (bk *BuildKit) build(bb *Build, path, dockerfile, tag string, env map[string]string) error {
+func (bk *BuildKit) build(bb *Build, path, dockerfile, target, tag string, env map[string]string) error {
 	if path == "" {
 		return fmt.Errorf("must have path to build")
 	}
@@ -213,6 +213,10 @@ func (bk *BuildKit) build(bb *Build, path, dockerfile, tag string, env map[strin
 	args = append(args, "--local", fmt.Sprintf("dockerfile=%s", path))                // skipcq
 	args = append(args, "--opt", fmt.Sprintf("filename=%s", dockerfile))              // skipcq
 	args = append(args, "--output", fmt.Sprintf("type=image,name=%s,push=true", tag)) // skipcq
+
+	if (target != nil && target != "") {
+		args = append(args, "--opt", fmt.Sprintf("target=%s", target)) // skipcq
+	}
 
 	if bk.cacheProvider(os.Getenv("PROVIDER")) {
 		reg := strings.Split(tag, ":")[0]
