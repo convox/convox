@@ -65,7 +65,7 @@ func RebaseArchive(r io.Reader, src, dst string) (io.Reader, error) {
 	return &buf, nil
 }
 
-func Tarball(dir string) ([]byte, error) {
+func Tarball(dir string, ignorefile string) ([]byte, error) {
 	abs, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, err
@@ -76,7 +76,7 @@ func Tarball(dir string) ([]byte, error) {
 		return nil, err
 	}
 
-	data, err := ioutil.ReadFile(filepath.Join(sym, ".dockerignore"))
+	data, err := ioutil.ReadFile(filepath.Join(sym, ignorefile))
 	if err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
