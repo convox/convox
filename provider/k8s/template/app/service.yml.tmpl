@@ -109,7 +109,7 @@ spec:
       terminationGracePeriodSeconds: {{$.Service.Termination.Grace}}
       initContainers:
       - name: init-{{.App.Name}}
-        image: {{ .Service.InitContainer.Image }} 
+        image: {{ coalesce .Service.InitContainer.Image (image .App .Service .Release) }}
         {{ with .Service.InitContainer.Command }}
         args:
         {{ range shellsplit . }}
