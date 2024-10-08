@@ -31,7 +31,7 @@ type Service struct {
 	Liveness           ServiceLiveness       `yaml:"liveness,omitempty"`
 	Image              string                `yaml:"image,omitempty"`
 	Init               bool                  `yaml:"init,omitempty"`
-	InitContainer      InitContainer         `yaml:"initContainer,omitempty"`
+	InitContainer      *InitContainer        `yaml:"initContainer,omitempty"`
 	Internal           bool                  `yaml:"internal,omitempty"`
 	InternalRouter     bool                  `yaml:"internalRouter,omitempty"`
 	IngressAnnotations ServiceAnnotations    `yaml:"ingressAnnotations,omitempty"`
