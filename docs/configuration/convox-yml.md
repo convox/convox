@@ -12,6 +12,10 @@ url: /configuration/convox-yml
     environment:
       - COMPANY=Convox
       - DOCS_URL
+    appSettings:
+      awsLogs:
+        cwRetention: 31
+        disableRetention: false
     resources:
       database:
         type: postgres
@@ -73,6 +77,18 @@ The top-level `environment` section defines [Environment Variables](/configurati
       - DOCS_URL        # must be set before deployment
 ```
 See [Environment Variables](/configuration/environment) for configuration options.
+
+## app settings
+
+The `appSettings` section defines settings that apply exclusively to a particular app within the rack. These settings are independent of the global rack-level parameters and provide a mechanism for tailoring configuration to individual applications.
+
+```html
+    appSettings:
+      awsLogs:
+        cwRetention: 31
+        disableRetention: false
+```
+See [App Settings](/configuration/app-settings) for configuration options.
 
 ## resources
 
