@@ -256,9 +256,11 @@ It takes inputs just like a container and runs before main container. It support
 
 | Attribute | Type   | Default | Description                                                                                |
 | --------- | ------ | ------- | ------------------------------------------------------------------------------------------ |
-| **image**     | string |         | An external Docker image to be run in the init container |
+| **image**     | string |         | An external Docker image to be run in the init container, if not set then it will use service image |
 | **command**  | string |         | The command to run in the init container |
 | **volumeOptions**  | list |         | List of volumes to attach with service |
+
+* Setting a command is necessary for creation of initContainer.
 
 &nbsp;
 
