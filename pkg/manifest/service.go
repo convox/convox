@@ -255,7 +255,7 @@ func (s Service) EnvironmentDefaults() map[string]string {
 	defaults := map[string]string{}
 
 	for _, e := range s.Environment {
-		switch parts := strings.Split(e, "="); len(parts) {
+		switch parts := strings.SplitN(e, "=", 2); len(parts) {
 		case 2:
 			defaults[parts[0]] = parts[1]
 		}
@@ -269,7 +269,7 @@ func (s Service) EnvironmentKeys() string {
 	kh := map[string]bool{}
 
 	for _, e := range s.Environment {
-		kh[strings.Split(e, "=")[0]] = true
+		kh[strings.SplitN(e, "=", 2)[0]] = true
 	}
 
 	keys := []string{}
