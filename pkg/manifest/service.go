@@ -31,6 +31,7 @@ type Service struct {
 	Liveness           ServiceLiveness       `yaml:"liveness,omitempty"`
 	Image              string                `yaml:"image,omitempty"`
 	Init               bool                  `yaml:"init,omitempty"`
+	InitContainer      *InitContainer        `yaml:"initContainer,omitempty"`
 	Internal           bool                  `yaml:"internal,omitempty"`
 	InternalRouter     bool                  `yaml:"internalRouter,omitempty"`
 	IngressAnnotations ServiceAnnotations    `yaml:"ingressAnnotations,omitempty"`
@@ -51,6 +52,12 @@ type Service struct {
 	VolumeOptions      []VolumeOption        `yaml:"volumeOptions,omitempty"`
 	Whitelist          string                `yaml:"whitelist,omitempty"`
 	AccessControl      AccessControlOptions  `yaml:"accessControl,omitempty"`
+}
+
+type InitContainer struct {
+	Image         string         `yaml:"image,omitempty"`
+	Command       string         `yaml:"command,omitempty"`
+	VolumeOptions []VolumeOption `yaml:"volumeOptions,omitempty"`
 }
 
 type VolumeOption struct {
