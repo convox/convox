@@ -18,6 +18,17 @@ type Rack struct {
 	Version      string
 }
 
+type RackResponse struct {
+	Deletable    bool
+	Name         string
+	Organization string
+	Parameters   map[string]string
+	Provider     string
+	Status       string
+	State        []byte
+	Version      string
+}
+
 type Racks []Rack
 
 func (c *Client) RackCreate(name, provider string, state []byte, params map[string]string) (*Rack, error) {
@@ -38,6 +49,31 @@ func (c *Client) RackCreate(name, provider string, state []byte, params map[stri
 	var r Rack
 
 	if err := c.Post("/racks", opts, &r); err != nil {
+		return nil, err
+	}
+
+	return &r, nil
+}
+
+func (c *Client) RackInstall(name, provider, version, runtimeid string, params map[string]string) (*RackResponse, error) {
+	pdata, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+
+	opts := stdsdk.RequestOptions{
+		Params: stdsdk.Params{
+			"name":     name,
+			"params":   string(pdata),
+			"provider": provider,
+			"runtime":  runtimeid,
+			"version":  version,
+		},
+	}
+
+	var r RackResponse
+
+	if err := c.Post(fmt.Sprintf("/racks/%s/install", name), opts, &r); err != nil {
 		return nil, err
 	}
 

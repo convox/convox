@@ -6,6 +6,10 @@ variable "availability_zones" {
   default = ""
 }
 
+variable "build_disable_convox_resolver" {
+  default = false
+}
+
 variable "build_node_enabled" {
   default = false
   type    = bool
@@ -33,10 +37,20 @@ variable "convox_domain_tls_cert_disable" {
   type    = bool
 }
 
+variable "convox_rack_domain" {
+  default = ""
+  type    = string
+}
+
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-coredns.html
 variable "coredns_version" {
   type    = string
-  default = "v1.10.1-eksbuild.7"
+  default = "v1.11.1-eksbuild.4"
+}
+
+variable "deploy_extra_nlb" {
+  default = false
+  type    = bool
 }
 
 variable "docker_hub_username" {
@@ -55,6 +69,26 @@ variable "fluentd_disable" {
 variable "disable_image_manifest_cache" {
   type    = bool
   default = false
+}
+
+variable "disable_public_access" {
+  type    = bool
+  default = false
+}
+
+variable "ecr_scan_on_push_enable" {
+  type    = bool
+  default = false
+}
+
+variable "efs_csi_driver_enable" {
+  type    = bool
+  default = false
+}
+
+variable "efs_csi_driver_version" {
+  type    = string
+  default = "v2.0.7-eksbuild.1"
 }
 
 variable "gpu_tag_enable" {
@@ -112,12 +146,22 @@ variable "key_pair_name" {
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-kube-proxy.html
 variable "kube_proxy_version" {
   type    = string
-  default = "v1.28.6-eksbuild.2"
+  default = "v1.29.0-eksbuild.1"
+}
+
+variable "kubelet_registry_pull_qps" {
+  type = number
+  default = 5
+}
+
+variable "kubelet_registry_burst" {
+  type = number
+  default = 10
 }
 
 variable "k8s_version" {
   type    = string
-  default = "1.28"
+  default = "1.29"
 }
 
 variable "max_on_demand_count" {
@@ -137,6 +181,11 @@ variable "rack_name" {
   type    = string
 }
 
+variable "nlb_security_group" {
+  default = ""
+  type    = string
+}
+
 variable "node_capacity_type" {
   default = "on_demand"
 }
@@ -145,8 +194,28 @@ variable "node_disk" {
   default = 20
 }
 
+variable "node_max_unavailable_percentage" {
+  type    = number
+  default = 0
+}
+
 variable "node_type" {
   default = "t3.small"
+}
+
+variable "pdb_default_min_available_percentage" {
+  type    = number
+  default = 50
+}
+
+variable "pod_identity_agent_enable" {
+  type    = bool
+  default = false
+}
+
+variable "pod_identity_agent_version" {
+  type    = string
+  default = "v1.3.2-eksbuild.2"
 }
 
 variable "private" {
@@ -165,6 +234,18 @@ variable "public_subnets_ids" {
 
 variable "proxy_protocol" {
   default = false
+}
+
+variable "private_eks_host" {
+  default = ""
+}
+
+variable "private_eks_user" {
+  default = ""
+}
+
+variable "private_eks_pass" {
+  default = ""
 }
 
 variable "release" {
@@ -219,7 +300,7 @@ variable "vpc_id" {
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-vpc-cni.html
 variable "vpc_cni_version" {
   type    = string
-  default = "v1.16.4-eksbuild.2"
+  default = "v1.18.3-eksbuild.2"
 }
 
 variable "whitelist" {

@@ -93,21 +93,60 @@ func (p *Provider) createLogGroup(app string) error {
 		return err
 	}
 
+	_, err = p.CloudWatchLogs.PutRetentionPolicy(&cloudwatchlogs.PutRetentionPolicyInput{
+		LogGroupName:    aws.String(p.appLogGroup(app)),
+		RetentionInDays: aws.Int64(7),
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (p *Provider) UpdateOrDisableLogGroupRetention(app string, retentionDays int, disableRetention bool) error {
+
+	// disable retention policy
+	if disableRetention {
+		_, err := p.CloudWatchLogs.DeleteRetentionPolicy(&cloudwatchlogs.DeleteRetentionPolicyInput{
+			LogGroupName: aws.String(p.appLogGroup(app)),
+		})
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	// Round retentionDays to the nearest higher allowed value
+	retentionDays = roundUpToNearestAllowedRetention(retentionDays)
+	_, err := p.CloudWatchLogs.PutRetentionPolicy(&cloudwatchlogs.PutRetentionPolicyInput{
+		LogGroupName:    aws.String(p.appLogGroup(app)),
+		RetentionInDays: aws.Int64(int64(retentionDays)),
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func roundUpToNearestAllowedRetention(retentionDays int) int {
+	allowedRetentionValues := []int{1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1096, 1827, 2192, 2557, 2922, 3288, 3653}
+
+	// Find the first allowed retention value that is greater than or equal to retentionDays
+	for _, allowedValue := range allowedRetentionValues {
+		if allowedValue >= retentionDays {
+			return allowedValue
+		}
+	}
+
+	return allowedRetentionValues[len(allowedRetentionValues)-1]
 }
 
 func (p *Provider) createLogStream(group, stream string) error {
 	_, err := p.CloudWatchLogs.CreateLogStream(&cloudwatchlogs.CreateLogStreamInput{
 		LogGroupName:  aws.String(group),
 		LogStreamName: aws.String(stream),
-	})
-	if err != nil {
-		return err
-	}
-
-	_, err = p.CloudWatchLogs.PutRetentionPolicy(&cloudwatchlogs.PutRetentionPolicyInput{
-		LogGroupName:    aws.String(group),
-		RetentionInDays: aws.Int64(7),
 	})
 	if err != nil {
 		return err

@@ -28,8 +28,10 @@ import (
 )
 
 // AtomLister helps list Atoms.
+// All objects returned here must be treated as read-only.
 type AtomLister interface {
 	// List lists all Atoms in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.Atom, err error)
 	// Atoms returns an object that can list and get Atoms.
 	Atoms(namespace string) AtomNamespaceLister
@@ -60,10 +62,13 @@ func (s *atomLister) Atoms(namespace string) AtomNamespaceLister {
 }
 
 // AtomNamespaceLister helps list and get Atoms.
+// All objects returned here must be treated as read-only.
 type AtomNamespaceLister interface {
 	// List lists all Atoms in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.Atom, err error)
 	// Get retrieves the Atom from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.Atom, error)
 	AtomNamespaceListerExpansion
 }

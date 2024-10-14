@@ -107,6 +107,7 @@ services:
 | ------------- | ---------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | **agent**       | boolean    | false               | Set to **true** to declare this Service as an [Agent](/configuration/agents)                                                      |
 | **annotations** | list       |                     | A list of annotation keys and values to populate the metadata for the deployed pods and their serviceaccounts                              |
+| **accessControl** | map       |                     | Specification of the pod access control management. Currently only IAM using AWS pod identity is supported |
 | **build**       | string/map | .                   | Build definition (see below)                                                                                                                                            |
 | **certificate**| map         |                     | Define certificate parameters                                                                       |
 | **command**     | string     | **CMD** of Dockerfile | The command to run to start a [Process](/reference/primitives/app/process) for this Service                                                                       |
@@ -139,7 +140,7 @@ services:
 
 > Environment variables declared on `convox.yml` will be populated for a Service.
 
-#### *annotations
+### *annotations
 You can use annotations to attach arbitrary non-identifying metadata to objects. Clients such as tools and libraries can retrieve this metadata. On Convox, annotations will reflect in pods and service accounts.
 
 Here are some examples of information that can be recorded in annotations:
@@ -159,6 +160,32 @@ services:
     build: .
     port: 3000
 ```
+### accessControl
+
+| Attribute  | Type   | Default    | Description                                                   |
+| ---------- | ------ | ---------- | ------------------------------------------------------------- |
+| **awsPodIdentity** | map |  | The specification for IAM Role for AWS Pod Identity. This will only work if pod identity is enable on the rack. |
+
+```html
+services:
+  web:
+    ...
+    accessControl:
+      awsPodIdentity:
+        policyArns:
+         - "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+         - "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+  ...
+```
+
+### accessControl.awsPodIdentity
+
+| Attribute  | Type   | Default    | Description                                                   |
+| ---------- | ------ | ---------- | ------------------------------------------------------------- |
+| **policyArns** | list |  | The of policy arns for the IAM role |
+
+> Pod identity must be enabled on rack before specifying this.
+
 
 ### build
 
@@ -176,6 +203,7 @@ services:
 | Attribute  | Type   | Default    | Description                                                   |
 | ---------- | ------ | ---------- | ------------------------------------------------------------- |
 | **duration** | string | 2160h | Certificate renew frequency period                                |
+| **id** | string |  | Id of the generated Certificate to use instead of creating new certificate. If this is specified, then the `duration` vaule will not have any effect on the this, since it is already generated.|
 
 ### deployment
 
@@ -342,6 +370,7 @@ services:
 | Attribute  | Type    | Default | Description                                                                          |
 | ---------- | ------- | ------- | ------------------------------------------------------------------------------------ |
 | **emptyDir** | map |     | Configuration for [emptyDir](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir) volume |
+| **awsEfs** | map |     | Configuration for AWS Efs volume. To use this you have to enable efs csi driver in the rack |
 
 &nbsp;
 
@@ -365,6 +394,31 @@ services:
       - emptyDir:
           id: "test-vol"
           mountPath: "/my/test/vol"
+```
+
+&nbsp;
+
+### []volumeOptions.awsEfs
+
+| Attribute  | Type    | Default | Description                                                                          |
+| ---------- | ------- | ------- | ------------------------------------------------------------------------------------ |
+| **id** | string |     | Required. Id of the volume. |
+| **mountPath** | string |     | Required. Path in the serive file system to mount the volume |
+| **accessMode** | string |     | Required. Specifies the access mode for the volume. Allowed values are: `ReadWriteOnce`, `ReadOnlyMany`, `ReadWriteMany` |
+
+
+```yaml
+environment:
+  - PORT=3000
+services:
+  web:
+    build: .
+    port: 3000
+    volumeOptions:
+      - awsEfs:
+          id: "efs-1"
+          accessMode: ReadWriteMany
+          mountPath: "/my/data/"
 ```
 
 &nbsp;

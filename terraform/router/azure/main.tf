@@ -12,8 +12,9 @@ module "nginx" {
     kubernetes = kubernetes
   }
 
-  namespace = var.namespace
-  rack      = var.name
+  docker_hub_authentication = var.docker_hub_authentication
+  namespace                 = var.namespace
+  rack                      = var.name
 }
 
 resource "kubernetes_service" "router" {

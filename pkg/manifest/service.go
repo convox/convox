@@ -7,6 +7,12 @@ import (
 	"strings"
 )
 
+const (
+	PVCAccessModeReadWriteOnce = "ReadWriteOnce"
+	PVCAccessModeReadOnlyMany  = "ReadOnlyMany"
+	PVCAccessModeReadWriteMany = "ReadWriteMany"
+)
+
 type Service struct {
 	Name string `yaml:"-"`
 
@@ -44,15 +50,20 @@ type Service struct {
 	Volumes            []string              `yaml:"volumes,omitempty"`
 	VolumeOptions      []VolumeOption        `yaml:"volumeOptions,omitempty"`
 	Whitelist          string                `yaml:"whitelist,omitempty"`
+	AccessControl      AccessControlOptions  `yaml:"accessControl,omitempty"`
 }
 
 type VolumeOption struct {
 	EmptyDir *VolumeEmptyDir `yaml:"emptyDir,omitempty"`
+	AwsEfs   *VolumeAwsEfs   `yaml:"awsEfs,omitempty"`
 }
 
 func (v VolumeOption) Validate() error {
 	if v.EmptyDir != nil {
 		return v.EmptyDir.Validate()
+	}
+	if v.AwsEfs != nil {
+		return v.AwsEfs.Validate()
 	}
 	return nil
 }
@@ -78,9 +89,37 @@ func (v VolumeEmptyDir) Validate() error {
 	return nil
 }
 
+type VolumeAwsEfs struct {
+	Id string `yaml:"id"`
+
+	AccessMode string `yaml:"accessMode,omitempty"`
+	MountPath  string `yaml:"mountPath"`
+}
+
+func (v VolumeAwsEfs) Validate() error {
+	if v.Id == "" {
+		return fmt.Errorf("awsEfs.id is required")
+	}
+	if v.MountPath == "" {
+		return fmt.Errorf("awsEfs.mountPath is required")
+	}
+
+	allowedModes := []string{
+		PVCAccessModeReadOnlyMany,
+		PVCAccessModeReadWriteMany,
+		PVCAccessModeReadWriteOnce,
+	}
+
+	if !containsInStringSlice(allowedModes, v.AccessMode) {
+		return fmt.Errorf("awsEfs.accessMode must be one of these values: %s", strings.Join(allowedModes, ", "))
+	}
+	return nil
+}
+
 type Services []Service
 
 type Certificate struct {
+	Id       string `yaml:"id,omitempty"`
 	Duration string `yaml:"duration,omitempty"`
 }
 
@@ -376,4 +415,12 @@ func (ss Services) Routable() Services {
 	return ss.Filter(func(s Service) bool {
 		return s.Port.Port > 0
 	})
+}
+
+type AccessControlOptions struct {
+	AWSPodIdentity *AWSPodIdentityOptions `yaml:"awsPodIdentity,omitempty"`
+}
+
+type AWSPodIdentityOptions struct {
+	PolicyArns []string `yaml:"policyArns"`
 }

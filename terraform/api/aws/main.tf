@@ -19,6 +19,8 @@ module "k8s" {
   build_node_enabled             = var.build_node_enabled
   convox_domain_tls_cert_disable = var.convox_domain_tls_cert_disable
   docker_hub_authentication      = var.docker_hub_authentication
+  docker_hub_username            = var.docker_hub_username
+  docker_hub_password            = var.docker_hub_password
   domain                         = var.domain
   domain_internal                = var.domain_internal
   disable_image_manifest_cache   = var.disable_image_manifest_cache
@@ -39,13 +41,19 @@ module "k8s" {
   }
 
   env = {
-    AWS_REGION            = data.aws_region.current.name
-    BUCKET                = aws_s3_bucket.storage.id
-    CERT_MANAGER          = "true"
-    CERT_MANAGER_ROLE_ARN = aws_iam_role.cert-manager.arn
-    PROVIDER              = "aws"
-    RESOLVER              = var.resolver
-    ROUTER                = var.router
-    SOCKET                = "/var/run/docker.sock"
+    AWS_REGION                           = data.aws_region.current.name
+    BUCKET                               = aws_s3_bucket.storage.id
+    CERT_MANAGER                         = "true"
+    CERT_MANAGER_ROLE_ARN                = aws_iam_role.cert-manager.arn
+    EFS_FILE_SYSTEM_ID                   = var.efs_file_system_id
+    BUILD_DISABLE_CONVOX_RESOLVER        = var.build_disable_convox_resolver
+    PDB_DEFAULT_MIN_AVAILABLE_PERCENTAGE = var.pdb_default_min_available_percentage
+    PROVIDER                             = "aws"
+    RESOLVER                             = var.resolver
+    ROUTER                               = var.router
+    SOCKET                               = "/var/run/docker.sock"
+    ECR_SCAN_ON_PUSH_ENABLE              = var.ecr_scan_on_push_enable
+    SUBNET_IDS                           = join(",", var.subnets)
+    VPC_ID                               = var.vpc_id
   }
 }

@@ -1,3 +1,7 @@
+variable "docker_hub_authentication" {
+  type = string
+  default = null
+}
 
 variable "internal_router" {
   type    = bool

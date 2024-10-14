@@ -43,6 +43,7 @@ type AtomSpec struct {
 	CurrentVersion          string          `json:"currentVersion"`
 	PreviousVersion         string          `json:"previousVersion"`
 	ProgressDeadlineSeconds int32           `json:"progressDeadlineSeconds"`
+	Dependencies            []string        `json:"dependencies"`
 }
 
 type AtomStatus string

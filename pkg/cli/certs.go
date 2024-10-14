@@ -15,8 +15,8 @@ import (
 )
 
 func init() {
-	register("certs", "list certificates", Certs, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagRack},
+	register("certs", "list certificates", watch(Certs), stdcli.CommandOptions{
+		Flags:    append(stdcli.OptionFlags(structs.CertificateListOptions{}), flagRack, flagWatchInterval),
 		Validate: stdcli.Args(0),
 	})
 
@@ -27,7 +27,7 @@ func init() {
 	})
 
 	register("certs generate", "generate a certificate", CertsGenerate, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagId, flagRack},
+		Flags:    append(stdcli.OptionFlags(structs.CertificateGenerateOptions{}), flagId, flagRack),
 		Usage:    "<domain> [domain...]",
 		Validate: stdcli.ArgsMin(1),
 	})
@@ -95,15 +95,21 @@ func init() {
 }
 
 func Certs(rack sdk.Interface, c *stdcli.Context) error {
-	cs, err := rack.CertificateList()
+	var opts structs.CertificateListOptions
+
+	if err := c.Options(&opts); err != nil {
+		return err
+	}
+
+	cs, err := rack.CertificateList(opts)
 	if err != nil {
 		return err
 	}
 
-	t := c.Table("ID", "DOMAIN", "EXPIRES")
+	t := c.Table("ID", "DOMAIN", "EXPIRES", "Status")
 
 	for _, c := range cs {
-		t.AddRow(c.Id, c.Domain, common.Ago(c.Expiration))
+		t.AddRow(c.Id, c.Domain, common.Ago(c.Expiration), common.CoalesceString(c.Status, "Ready"))
 	}
 
 	return t.Print()
@@ -129,9 +135,14 @@ func CertsGenerate(rack sdk.Interface, c *stdcli.Context) error {
 		c.Writer().Stdout = c.Writer().Stderr
 	}
 
+	var opts structs.CertificateGenerateOptions
+	if err := c.Options(&opts); err != nil {
+		return err
+	}
+
 	c.Startf("Generating certificate")
 
-	cr, err := rack.CertificateGenerate(c.Args)
+	cr, err := rack.CertificateGenerate(c.Args, opts)
 	if err != nil {
 		return err
 	}

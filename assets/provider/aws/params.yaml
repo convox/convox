@@ -1,0 +1,277 @@
+Groups:
+  - name: Immutable
+    order: 1
+    params:
+      - name: private
+        default: "true"
+        type: boolean
+        description: Place nodes in private subnets behind NAT gateways - Security best
+          practice
+      - name: availability_zones
+        default: "null"
+        sideNote: Convox managed if not set
+        type: string
+        regex: ^([a-z]+-[a-z]+-\d+[a-z])(,[a-z]+-[a-z]+-\d+[a-z])+$
+        description: Specify Availability Zones if you don't want them to be 
+          chosen at random from your region. &l Comma separated list &i e.g. &i - 
+          us-east-1b,us-east-1c,us-east-1d &l
+      - name: vpc_id
+        default: "null"
+        sideNote: Convox managed if not set
+        type: string
+        regex: ^vpc-.+$
+        description: Used for installing a rack into an existing VPC. You must also 
+          set the &i cidr &i and &i internet_gateway_id &i parameters
+      - name: cidr
+        default: 10.1.0.0/16
+        type: string
+        regex: ^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\/(3[0-2]|[12]?[0-9])$
+        description: |
+          You should consider creating unique CIDR values &l &i e.g. &i 10.2.0.0/16
+          if you will ever want to peer VPCs &l
+      - name: internet_gateway_id
+        default: "null"
+        sideNote: Convox managed if not set
+        type: string
+        regex: ^igw-.+$
+        description: |
+          To install the rack into an existing VPC, enter the
+          name-id of the attached internet gateway.
+      - name: private_subnets_ids
+        default: "null"
+        sideNote: Convox managed if not set
+        type: string
+        regex: ^(subnet-.+)(,subnet-.+)*$
+        description: |
+          &b Advanced Configuration &b &l This parameter is for edge use cases
+          where cluster needs to be installed into existing subnets. &l &l See 
+          full (documentation)[https://docs.convox.com/configuration/rack-parameters/aws/private_subnets_ids/] if you're considering this configuration. &l
+      - name: public_subnets_ids
+        default: "null"
+        sideNote: Convox managed if not set
+        type: string
+        regex: ^(subnet-.+)(,subnet-.+)*$
+        description: |
+          &b Advanced Configuration &b &l This parameter is for edge use cases
+          where cluster needs to be installed into existing subnets. &l &l See 
+          full (documentation)[https://docs.convox.com/configuration/rack-parameters/aws/public_subnets_ids/] if you're considering this configuration. &l
+  - name: Security & Compliance
+    order: 2
+    params:
+      - name: pod_identity_agent_enable
+        default: "false"
+        type: boolean
+        description: Enables the AWS Pod Identity Agent
+      - name: imds_http_tokens
+        default: optional
+        type: string
+        description: Determines whether or not the metadata service requires session
+          tokens, also referred to as Instance Metadata Service Version 2 
+          ((IMDSv2)[https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html])
+        allowedValues:
+              - optional
+              - required
+      - name: nlb_security_group
+        default: "null"
+        sideNote: AWS default created unless set
+        type: string
+        regex: ^sg-.+$
+        description: |
+          &l The ID of the custom security group to attach with the NLB. &l &l By
+          default inbound traffic from any IP is allowed. &l &l Be cautious about
+          this parameter, you might lose access to services by using improper
+          security group. &l
+      - name: tags
+        default: "null"
+        type: string
+        regex: ^([^=\s,]+=[^\s,]+)(,[^=\s,]+=[^\s,]+)*$
+        description: Custom tags to add to AWS resources along side Convox managed
+          tags  &l &i e.g. &i key1=val1,key2=val2 &l
+      - name: cert_duration
+        default: 2160h
+        type: string
+        regex: ^\d+h$
+        description: You can change this if the default Let'sEncrypt certificate renewal
+          period (90d) doesn't suit your use-case.
+      - name: convox_domain_tls_cert_disable
+        default: "false"
+        type: boolean
+        description: You should only change this if you have internal domain
+          certificates configured and do not want to generate additional
+          certificates.
+      - name: ssl_ciphers
+        default: "null"
+        sideNote: Nginx default unless set
+        type: string
+        regex: ^([A-Za-z0-9_+-]+)(:[A-Za-z0-9_+-]+)*$
+        description: |
+          &b Advanced Configuration &b &l SSL ciphers to use for
+          (Nginx)[https://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_ciphers]. &l
+          &l They must be listed separated by colons. &l
+      - name: ssl_protocols
+        default: "null"
+        sideNote: Nginx default unless set
+        type: string
+        regex: ^(SSLv2|SSLv3|TLSv1|TLSv1\.1|TLSv1\.2|TLSv1\.3)(
+          (SSLv2|SSLv3|TLSv1|TLSv1\.1|TLSv1\.2|TLSv1\.3))*$
+        description: |
+          &b Advanced Configuration &b &l SSL protocols to use for
+          (Nginx)[https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_ssl_protocols] &l 
+          &l They must be listed separated by spaces. &i e.g. &i - TLSv1.2 TLSv1.3 &l
+      - name: ecr_scan_on_push_enable
+        default: "false"
+        type: boolean
+        description: Automatically scans images for vulnerabilities upon push to the ECR repository.
+  - name: Networking
+    order: 3
+    params:
+      - name: internal_router
+        default: "false"
+        type: boolean
+        description: Creates an internal loadbalancer within the VPC that can be used
+          for VPC peering or to access other AWS Services
+      - name: proxy_protocol
+        default: "false"
+        type: boolean
+        description: With this parameter enabled, the client source IP will be available
+          in the request header &i x-forwarded-for &i key. This is not applicable
+          for &i internal_router &i
+  - name: Performance & Scaling
+    order: 4
+    params:
+      - name: high_availability
+        default: "true"
+        type: boolean
+        description: Setting this to false will create a cluster with fewer redundant
+          resources for cost optimization
+      - name: node_type
+        default: t3.small
+        type: string
+        regex: ^[a-z]+\d*[a-z]*\.\d*[a-z0-9]+(\.[a-z]+)?$
+        description: AWS EC2 (Instance type)[https://aws.amazon.com/ec2/instance-types/] used for cluster nodes.
+      - name: build_node_enabled
+        default: "false"
+        type: boolean
+        description: The build node alleviates resource constraint and unnecessary
+          scaling during build time.
+      - name: build_node_type
+        optional: true
+        default: t3.small
+        type: string
+        regex: ^[a-z]+\d*[a-z]*\.\d*[a-z0-9]+(\.[a-z]+)?$
+        description: |
+          By default the build node will use the same instance type as the
+          &i node_type &i
+      - name: build_node_min_count
+        default: "0"
+        type: integer
+        description: |
+          &l By default the build node will scale out after 30min of
+          inactivity. &l &l You can set this value to retain a number of build nodes
+          if the node initialization time (~45s) is too long for your use-case &l
+        allowedMinValue: 0
+      - name: node_capacity_type
+        default: on_demand
+        type: string
+        description: |
+          &l &b on-demand &b - Will only use on-demand instances (Highest
+          availability/Highest Cost) &l &l &b spot &b - Will use AWS Spot Instances for
+          the cluster nodes. &l &l &b mixed &b - Will create one node group with on-demand
+          instances, and the other 2 with Spot Instances. &l &l Use &b mixed &b with the
+          &i min_on_demand_count &i and &i max_on_demand_count &i parameters to control
+          the minimum acceptable service availability should all spot instances
+          become unavailable. &l
+        allowedValues:
+              - on_demand
+              - spot
+              - mixed
+      - name: min_on_demand_count
+        default: "1"
+        type: integer
+        description: When used with &b mixed &b &i node_capacity_type &i, can set the minimum
+          required number of on demand nodes
+        allowedMinValue: 1
+      - name: max_on_demand_count
+        default: "100"
+        type: integer
+        description: When used with &b mixed &b &i node_capacity_type &i, can set the maximum
+          possilbe number of on demand nodes
+        allowedMinValue: 0
+        allowedMaxValue: 1350
+      - name: node_disk
+        default: "20"
+        type: integer
+        description: Node disk size in GB
+        allowedMinValue: 1
+      - name: efs_csi_driver_enable
+        default: "false"
+        type: boolean
+        description: Enable the EFS CSI driver to use AWS EFS volumes, allowing for shared service volumes.
+      - name: gpu_tag_enable
+        default: "false"
+        type: boolean
+        description: GPU tagging is not available in all AWS Regions.
+      - name: idle_timeout
+        default: "3600"
+        type: integer
+        description: Idle timeout value (in seconds) for the Rack Load Balancer
+        allowedMinValue: 60
+        allowedMaxValue: 4000
+      - name: pdb_default_min_available_percentage
+        default: "50"
+        type: integer
+        description: The minimum number of pods that must be available at any time
+        allowedMinValue: -1
+        allowedMaxValue: 101
+      - name: kubelet_registry_pull_qps
+        default: "5"
+        type: integer
+        description: Sets the maximum number of image pull requests in kubelet config.
+      - name: kubelet_registry_burst
+        default: "10"
+        type: integer
+        description: Sets the maximum number of image pull requests that can be made in a burst, exceeding the registry_pull_qps limit for a short duration.
+      - name: schedule_rack_scale_down
+        optional: true
+        sideNote: Not configured by default
+        default: "null"
+        type: string
+        regex: ^(\*|([0-5]?\d)) (\*|([01]?\d|2[0-3])) (\*|([1-9]|[12]\d|3[01]))
+          (\*|([1-9]|1[0-2])) (\*|[0-6])$
+        description: |
+          &l Rack scale down schedule is specified by following the
+          Unix cron syntax format. &l &l Example: "0 18 * * 5" &l &l Rack API and
+          App's Services will be inaccessible during this time &l &l Must also
+          configure &i schedule_rack_scale_up &i &l
+      - name: schedule_rack_scale_up
+        optional: true
+        sideNote: Not configured by default
+        default: "null"
+        type: string
+        regex: ^(\*|([0-5]?\d)) (\*|([01]?\d|2[0-3])) (\*|([1-9]|[12]\d|3[01]))
+          (\*|([1-9]|1[0-2])) (\*|[0-6])$
+        description: |
+          &l Rack scale up schedule is specified by following the
+          Unix cron syntax format. &l &l Example: "0 0 * * 0" &l &l Rack API and
+          App's Services will be inaccessible during this time &l &l Must also
+          configure &i schedule_rack_scale_down &i &l
+  - name: Logging & Monitoring
+    order: 5
+    params:
+      - name: access_log_retention_in_days
+        default: "7"
+        type: integer
+        description: Nginx access logs stored in CloudWatch
+        allowedMinValue: -1
+      - name: syslog
+        default: "null"
+        sideNote: Not forwared by default
+        type: string
+        regex: ^(tcp|udp|tcp\+tls|udp\+tls)://[a-zA-Z\d.-]+(:\d+)?$
+        description: Forward logs to a syslog endpoint  &l &i e.g. &i - tcp+tls://example.org:1234 &l
+        optional: true
+      - name: fluentd_disable
+        default: "false"
+        type: boolean
+        description: Disable fluentd if you're using another monitoring solution. &l This
+          will disable CloudWatch metrics. &l

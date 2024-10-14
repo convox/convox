@@ -1,11 +1,38 @@
 provider "kubernetes" {
-  cluster_ca_certificate = base64decode(aws_eks_cluster.cluster.certificate_authority.0.data)
-  host                   = aws_eks_cluster.cluster.endpoint
+  cluster_ca_certificate = var.private_eks_host != "" ? null : base64decode(aws_eks_cluster.cluster.certificate_authority.0.data)
+  host                   = var.private_eks_host != "" ? var.private_eks_host : aws_eks_cluster.cluster.endpoint
 
-  exec {
-    api_version = "client.authentication.k8s.io/v1beta1"
-    args        = ["eks", "get-token", "--cluster-name", var.name]
-    command     = "aws"
+  dynamic "exec" {
+    for_each = var.private_eks_host != "" ? [] : [1]
+    content {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      args        = ["eks", "get-token", "--cluster-name", var.name]
+      command     = "aws"
+    }
+  }
+
+  insecure = var.private_eks_host != "" ? true : false
+  username = var.private_eks_host != "" ? var.private_eks_user : null
+  password = var.private_eks_host != "" ? var.private_eks_pass : null
+}
+
+provider "helm" {
+  kubernetes {
+    cluster_ca_certificate = var.private_eks_host != "" ? null : base64decode(aws_eks_cluster.cluster.certificate_authority.0.data)
+    host                   = var.private_eks_host != "" ? var.private_eks_host : aws_eks_cluster.cluster.endpoint
+
+    dynamic "exec" {
+      for_each = var.private_eks_host != "" ? [] : [1]
+      content {
+        api_version = "client.authentication.k8s.io/v1beta1"
+        args        = ["eks", "get-token", "--cluster-name", var.name]
+        command     = "aws"
+      }
+    }
+
+    insecure = var.private_eks_host != "" ? true : false
+    username = var.private_eks_host != "" ? var.private_eks_user : null
+    password = var.private_eks_host != "" ? var.private_eks_pass : null
   }
 }
 
@@ -49,8 +76,8 @@ resource "aws_eks_cluster" "cluster" {
   version  = var.k8s_version
 
   vpc_config {
-    endpoint_public_access  = true
-    endpoint_private_access = false
+    endpoint_public_access  = var.disable_public_access ? false : true
+    endpoint_private_access = var.disable_public_access
     security_group_ids      = [aws_security_group.cluster.id]
     subnet_ids              = concat(local.public_subnets_ids)
   }
@@ -120,9 +147,22 @@ resource "aws_eks_node_group" "cluster" {
     max_size     = var.node_capacity_type == "MIXED" ? count.index == 0 ? var.max_on_demand_count : 100 : 100
   }
 
+  dynamic "update_config" {
+    for_each = var.node_max_unavailable_percentage > 0 ? [var.node_max_unavailable_percentage] : []
+    content {
+      max_unavailable_percentage = var.node_max_unavailable_percentage
+    }
+  }
+
   lifecycle {
     create_before_destroy = true
     ignore_changes        = [scaling_config[0].desired_size]
+  }
+
+  timeouts {
+    update = "2h"
+    delete = "1h"
+    create = "1h"
   }
 }
 
@@ -236,7 +276,7 @@ resource "aws_launch_template" "cluster" {
     http_tokens                 = var.imds_http_tokens
     http_put_response_hop_limit = var.imds_http_hop_limit
     http_endpoint               = "enabled"
-    instance_metadata_tags      = var.imds_tags_enable ? "enabled": "disabled"
+    instance_metadata_tags      = var.imds_tags_enable ? "enabled" : "disabled"
   }
 
   instance_type = split(",", random_id.node_group.keepers.node_type)[0]
@@ -251,6 +291,11 @@ resource "aws_launch_template" "cluster" {
       tags          = local.tags
     }
   }
+
+  user_data = var.kubelet_registry_pull_qps != 5 || var.kubelet_registry_burst != 10 ? base64encode(templatefile("${path.module}/files/kubelet_config_override.sh",{
+    kubelet_registry_pull_qps = var.kubelet_registry_pull_qps
+    kubelet_registry_burst = var.kubelet_registry_burst
+  })) : ""
 
   key_name = var.key_pair_name != "" ? var.key_pair_name : null
 }
@@ -268,7 +313,7 @@ resource "aws_launch_template" "cluster-build" {
     http_tokens                 = var.imds_http_tokens
     http_put_response_hop_limit = var.imds_http_hop_limit
     http_endpoint               = "enabled"
-    instance_metadata_tags      = var.imds_tags_enable ? "enabled": "disabled"
+    instance_metadata_tags      = var.imds_tags_enable ? "enabled" : "disabled"
   }
 
   dynamic "tag_specifications" {
@@ -294,7 +339,7 @@ module "ebs_csi_driver_controller" {
 
   arn_format                                 = data.aws_partition.current.partition
   ebs_csi_controller_image                   = "public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver"
-  ebs_csi_driver_version                     = "v1.28.0"
+  ebs_csi_driver_version                     = "v1.34.0"
   ebs_csi_controller_role_name               = "convox-ebs-csi-driver-controller"
   ebs_csi_controller_role_policy_name_prefix = "convox-ebs-csi-driver-policy"
   csi_controller_tolerations = [
@@ -381,6 +426,19 @@ resource "aws_eks_addon" "kube_proxy" {
   cluster_name      = aws_eks_cluster.cluster.name
   addon_name        = "kube-proxy"
   addon_version     = var.kube_proxy_version
+  resolve_conflicts = "OVERWRITE"
+}
+
+resource "aws_eks_addon" "eks_pod_identity_agent" {
+  depends_on = [
+    null_resource.wait_k8s_api
+  ]
+
+  count = var.pod_identity_agent_enable ? 1 : 0
+
+  cluster_name      = aws_eks_cluster.cluster.name
+  addon_name        = "eks-pod-identity-agent"
+  addon_version     = var.pod_identity_agent_version
   resolve_conflicts = "OVERWRITE"
 }
 

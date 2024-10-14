@@ -19,11 +19,13 @@ var (
 )
 
 var (
-	flagApp      = stdcli.StringFlag("app", "a", "app name")
-	flagForce    = stdcli.BoolFlag("force", "", "force version update")
-	flagId       = stdcli.BoolFlag("id", "", "put logs on stderr, release id on stdout")
-	flagNoFollow = stdcli.BoolFlag("no-follow", "", "do not follow logs")
-	flagRack     = stdcli.StringFlag("rack", "r", "rack name")
+	flagApp           = stdcli.StringFlag("app", "a", "app name")
+	flagForce         = stdcli.BoolFlag("force", "", "force version update")
+	flagId            = stdcli.BoolFlag("id", "", "put logs on stderr, release id on stdout")
+	flagNoFollow      = stdcli.BoolFlag("no-follow", "", "do not follow logs")
+	flagRack          = stdcli.StringFlag("rack", "r", "rack name")
+	flagWatchInterval = stdcli.StringFlag("watch", "", "cmd watch/rerun interval in seconds")
+	flagWait 		  = stdcli.BoolFlag("wait", "w", "wait for completion")
 )
 
 func New(name, version string) *Engine {

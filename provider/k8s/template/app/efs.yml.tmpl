@@ -1,0 +1,22 @@
+{{ range .Service.VolumeOptions }}
+{{ with .AwsEfs }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: efs-{{$.Service.Name}}-{{.Id}}
+  namespace: {{$.Namespace}}
+  labels:
+    system: convox
+    {{ range keyValue $.Service.Labels }}
+    {{.Key}}: "{{.Value}}"
+    {{ end }}
+spec:
+  accessModes:
+    - {{.AccessMode}}
+  storageClassName: efs-sc
+  resources:
+    requests:
+      storage: 1Mi # efs driver ignores this value
+{{ end }}
+{{ end }}

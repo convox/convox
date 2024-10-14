@@ -21,10 +21,14 @@ limitations under the License.
 package fake
 
 import (
-	atomv1 "github.com/convox/convox/pkg/atom/pkg/apis/atom/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"context"
+	json "encoding/json"
+	"fmt"
+
+	v1 "github.com/convox/convox/pkg/atom/pkg/apis/atom/v1"
+	atomv1 "github.com/convox/convox/pkg/atom/pkg/client/applyconfiguration/atom/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -36,25 +40,25 @@ type FakeAtoms struct {
 	ns   string
 }
 
-var atomsResource = schema.GroupVersionResource{Group: "atom.convox.com", Version: "v1", Resource: "atoms"}
+var atomsResource = v1.SchemeGroupVersion.WithResource("atoms")
 
-var atomsKind = schema.GroupVersionKind{Group: "atom.convox.com", Version: "v1", Kind: "Atom"}
+var atomsKind = v1.SchemeGroupVersion.WithKind("Atom")
 
 // Get takes name of the atom, and returns the corresponding atom object, and an error if there is any.
-func (c *FakeAtoms) Get(name string, options v1.GetOptions) (result *atomv1.Atom, err error) {
+func (c *FakeAtoms) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Atom, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(atomsResource, c.ns, name), &atomv1.Atom{})
+		Invokes(testing.NewGetAction(atomsResource, c.ns, name), &v1.Atom{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*atomv1.Atom), err
+	return obj.(*v1.Atom), err
 }
 
 // List takes label and field selectors, and returns the list of Atoms that match those selectors.
-func (c *FakeAtoms) List(opts v1.ListOptions) (result *atomv1.AtomList, err error) {
+func (c *FakeAtoms) List(ctx context.Context, opts metav1.ListOptions) (result *v1.AtomList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(atomsResource, atomsKind, c.ns, opts), &atomv1.AtomList{})
+		Invokes(testing.NewListAction(atomsResource, atomsKind, c.ns, opts), &v1.AtomList{})
 
 	if obj == nil {
 		return nil, err
@@ -64,8 +68,8 @@ func (c *FakeAtoms) List(opts v1.ListOptions) (result *atomv1.AtomList, err erro
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &atomv1.AtomList{ListMeta: obj.(*atomv1.AtomList).ListMeta}
-	for _, item := range obj.(*atomv1.AtomList).Items {
+	list := &v1.AtomList{ListMeta: obj.(*v1.AtomList).ListMeta}
+	for _, item := range obj.(*v1.AtomList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -74,69 +78,114 @@ func (c *FakeAtoms) List(opts v1.ListOptions) (result *atomv1.AtomList, err erro
 }
 
 // Watch returns a watch.Interface that watches the requested atoms.
-func (c *FakeAtoms) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeAtoms) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(atomsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a atom and creates it.  Returns the server's representation of the atom, and an error, if there is any.
-func (c *FakeAtoms) Create(atom *atomv1.Atom) (result *atomv1.Atom, err error) {
+func (c *FakeAtoms) Create(ctx context.Context, atom *v1.Atom, opts metav1.CreateOptions) (result *v1.Atom, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(atomsResource, c.ns, atom), &atomv1.Atom{})
+		Invokes(testing.NewCreateAction(atomsResource, c.ns, atom), &v1.Atom{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*atomv1.Atom), err
+	return obj.(*v1.Atom), err
 }
 
 // Update takes the representation of a atom and updates it. Returns the server's representation of the atom, and an error, if there is any.
-func (c *FakeAtoms) Update(atom *atomv1.Atom) (result *atomv1.Atom, err error) {
+func (c *FakeAtoms) Update(ctx context.Context, atom *v1.Atom, opts metav1.UpdateOptions) (result *v1.Atom, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(atomsResource, c.ns, atom), &atomv1.Atom{})
+		Invokes(testing.NewUpdateAction(atomsResource, c.ns, atom), &v1.Atom{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*atomv1.Atom), err
+	return obj.(*v1.Atom), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeAtoms) UpdateStatus(atom *atomv1.Atom) (*atomv1.Atom, error) {
+func (c *FakeAtoms) UpdateStatus(ctx context.Context, atom *v1.Atom, opts metav1.UpdateOptions) (*v1.Atom, error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(atomsResource, "status", c.ns, atom), &atomv1.Atom{})
+		Invokes(testing.NewUpdateSubresourceAction(atomsResource, "status", c.ns, atom), &v1.Atom{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*atomv1.Atom), err
+	return obj.(*v1.Atom), err
 }
 
 // Delete takes name of the atom and deletes it. Returns an error if one occurs.
-func (c *FakeAtoms) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeAtoms) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(atomsResource, c.ns, name), &atomv1.Atom{})
+		Invokes(testing.NewDeleteActionWithOptions(atomsResource, c.ns, name, opts), &v1.Atom{})
 
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeAtoms) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(atomsResource, c.ns, listOptions)
+func (c *FakeAtoms) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(atomsResource, c.ns, listOpts)
 
-	_, err := c.Fake.Invokes(action, &atomv1.AtomList{})
+	_, err := c.Fake.Invokes(action, &v1.AtomList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched atom.
-func (c *FakeAtoms) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *atomv1.Atom, err error) {
+func (c *FakeAtoms) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Atom, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(atomsResource, c.ns, name, pt, data, subresources...), &atomv1.Atom{})
+		Invokes(testing.NewPatchSubresourceAction(atomsResource, c.ns, name, pt, data, subresources...), &v1.Atom{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*atomv1.Atom), err
+	return obj.(*v1.Atom), err
+}
+
+// Apply takes the given apply declarative configuration, applies it and returns the applied atom.
+func (c *FakeAtoms) Apply(ctx context.Context, atom *atomv1.AtomApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Atom, err error) {
+	if atom == nil {
+		return nil, fmt.Errorf("atom provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(atom)
+	if err != nil {
+		return nil, err
+	}
+	name := atom.Name
+	if name == nil {
+		return nil, fmt.Errorf("atom.Name must be provided to Apply")
+	}
+	obj, err := c.Fake.
+		Invokes(testing.NewPatchSubresourceAction(atomsResource, c.ns, *name, types.ApplyPatchType, data), &v1.Atom{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.Atom), err
+}
+
+// ApplyStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
+func (c *FakeAtoms) ApplyStatus(ctx context.Context, atom *atomv1.AtomApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Atom, err error) {
+	if atom == nil {
+		return nil, fmt.Errorf("atom provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(atom)
+	if err != nil {
+		return nil, err
+	}
+	name := atom.Name
+	if name == nil {
+		return nil, fmt.Errorf("atom.Name must be provided to Apply")
+	}
+	obj, err := c.Fake.
+		Invokes(testing.NewPatchSubresourceAction(atomsResource, c.ns, *name, types.ApplyPatchType, data, "status"), &v1.Atom{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.Atom), err
 }

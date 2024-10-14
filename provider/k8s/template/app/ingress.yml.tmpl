@@ -41,14 +41,14 @@ spec:
   {{ if .ConvoxDomainTLSCertDisable }}
   - hosts:
     - {{ safe .Host }}
-    secretName: cert-{{.Service.Name}}
+    secretName: {{ if .Service.Certificate.Id }} {{.Service.Certificate.Id}} {{ else }} cert-{{.Service.Name}} {{end}}
   {{ end }}
   {{ with .Service.Domains }}
   - hosts:
     {{ range . }}
     - {{ safe . }}
     {{ end }}
-    secretName: cert-{{$.Service.Name}}-domains
+    secretName: {{ if $.Service.Certificate.Id }} {{$.Service.Certificate.Id}} {{ else }} cert-{{$.Service.Name}}-domains {{ end }}
   {{ end }}
   rules:
     - host: {{ safe .Host }}

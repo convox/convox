@@ -73,9 +73,6 @@ resource "kubernetes_deployment" "atom" {
 
     template {
       metadata {
-        annotations = {
-          "scheduler.alpha.kubernetes.io/critical-pod" : ""
-        }
 
         labels = {
           app     = "system"
@@ -116,4 +113,5 @@ resource "kubernetes_deployment" "atom" {
       }
     }
   }
+  depends_on = [ kubernetes_resource_quota.gcp-critical-pods ]
 }
