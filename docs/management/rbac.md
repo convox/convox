@@ -1,5 +1,5 @@
 ---
-title: "Role-Based Access Control (RBAC)"
+title: "Console RBAC"
 draft: false
 slug: RBAC
 url: /management/rbac
@@ -76,6 +76,15 @@ RBAC operates under a zero-trust model. This means if no permission is granted, 
 
 Permissions set for the **All Resources** type are evaluated last. This allows you to use **All Resources** as a base template (e.g., read access) and then override it with more specific policies like `deny-all` for certain resources, making access management easier and more flexible.
 
+## Deploy Keys and RBAC
+
+With the RBAC update, you can assign custom roles to [Deploy Keys](/management/deploy-keys), allowing deploy keys to have more flexible permissions. Deploy keys are API keys designed for use in CI environments or other remote systems.
+
+By assigning a custom role to a deploy key, you can extend its default capabilities to include additional commands beyond the predefined set. This lets you configure deploy keys with specific permissions tailored to your organizational needs.
+
+For more information on how to create and use deploy keys, visit the [Deploy Keys documentation](/management/deploy-keys).
+
+
 ## Summary
 
 With RBAC, you can now:
@@ -83,6 +92,6 @@ With RBAC, you can now:
 - Assign roles to users from the **Active Users** tab.
 - Define permissions for different resource types, including applications, billing, and Kubernetes access.
 - Leverage the zero-trust model to ensure that only allowed actions are permitted.
+- Extend Deploy Key functionality by assigning custom roles for more flexible use cases.
 
 By setting up permissions correctly, your organization can achieve tighter security controls and more flexible user access management.
-
