@@ -49,3 +49,4 @@ $ env CONVOX_HOST=console.convox.com CONVOX_PASSWORD=<key> convox deploy
 $ env CONVOX_HOST=console.convox.com CONVOX_PASSWORD=<key> convox run web bin/migrate
 $ env CONVOX_HOST=console.convox.com CONVOX_PASSWORD=<key> convox env set NODE_ENV=production FOO=bar ... --replace
 $ env CONVOX_HOST=console.convox.com CONVOX_PASSWORD=<key> convox builds export <build ID> -a <app1> -r <rack1> | convox builds import -a <app2> -r <rack2>
+```
