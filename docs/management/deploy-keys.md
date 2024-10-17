@@ -4,6 +4,7 @@ draft: false
 slug: Deploy Keys
 url: /management/deploy-keys
 ---
+
 # Deploy Keys
 
 Deploy keys are limited scope API keys that allow you to run some limited commands from a remote environment (such as continuous integration systems like Jenkins, Travis, CircleCI etc) without needing to store/use/expose your user credentials.  
@@ -25,13 +26,19 @@ The commands you can run with a deploy key are limited to the following for secu
 * `releases promote` (only if you specify the release id to promote)
 * `run`
 
+## Custom Roles with Deploy Keys
+
+With the [RBAC](/management/rbac) update, you can assign custom roles to Deploy Keys. This allows you to extend the default set of commands a deploy key can execute, providing more granular control over what operations are permitted. By assigning a custom role, you can tailor a deploy key’s permissions to suit your specific needs.
+
+For more details, see the [RBAC documentation](/management/rbac).
+
 ## Creating a Deploy Key
 
 To generate a deploy key, log into your account at [console.convox.com](https://console.convox.com) and click on the **Settings** tab on the left.
 
 Go to the **Deploy Keys** section, give your deploy key a name, and click on **Create**.
 
-> Deploy keys are specific to the organization they are created within.  They can only be run against Racks within the same organization.
+> Deploy keys are specific to the organization they are created within. They can only be run against Racks within the same organization.
 
 ## Using a Deploy Key
 
