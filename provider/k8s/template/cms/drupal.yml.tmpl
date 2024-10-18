@@ -1,0 +1,252 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: drupal-install-script
+  namespace: {{$.Namespace}}
+data:
+  install-drupal.sh: |
+    #!/bin/bash
+
+    # Check for an existing Drupal settings file
+    if [ -f /data/sites/default/settings.php ]; then
+      echo "Drupal website already installed. Skipping installation."
+      exit 0
+    fi
+
+    # Install Drush using Composer
+    # composer require drush/drush
+
+    sleep 30
+
+    # Install Drupal using Drush
+    {{ with .CMSInstance.DrupalOptions }}
+    drush si  --db-url={{ .Database.Url }}   --site-name="{{ coalesce .SiteName "Convox Drupal Instance" }}" --account-name="{{ coalesce .AdminUsername "admin" }}" --account-pass="{{ coalesce .AdminPassword "admin" }}" --account-mail="{{ coalesce .Email "demo@gmail.com" }}" -y
+
+    {{ range .Modules }}
+    composer require '{{ . }}'
+    {{ end }}
+
+    composer require 'drupal/smtp'
+
+    {{ range .Themes }}
+    composer require '{{ . }}'
+    {{ end }}
+    {{ end }}
+
+    # Copy the sites directory to the EFS volume
+    mkdir -p /data/cmp-temp-data
+    cp /opt/drupal/composer.json /data/
+    cp /opt/drupal/composer.lock /data/
+    cp -r /opt/drupal/vendor/* /data/cmp-temp-data/
+    cp /var/www/html/sites /data/ -R
+    cp /var/www/html/modules /data/ -R
+    cp /var/www/html/themes /data/ -R
+    cp /var/www/html/profiles /data/ -R
+
+    chmod 2777 /data/ -R
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+  name: {{.CMSInstance.Name}}
+  namespace: {{.Namespace}}
+  labels:
+    app: {{.App.Name}}
+    type: cms
+    cms: {{.CMSInstance.Name}}
+spec: 
+  selector:
+    matchLabels:
+      system: convox
+      rack: {{.Rack}}
+      app: {{.App.Name}}
+      cms: {{.CMSInstance.Name}}
+  replicas: 1
+  template: 
+    metadata: 
+      labels:
+        system: convox
+        rack: {{.Rack}}
+        app: {{.App.Name}}
+        name: {{.CMSInstance.Name}}
+        cms: {{.CMSInstance.Name}}
+        type: cms
+    spec:
+      {{ if .Resolver }}
+      dnsPolicy: "None"
+      dnsConfig:
+        {{ with .Resolver }}
+        nameservers:
+          - "{{ . }}"
+        searches:
+          - "{{$.App.Name}}.{{$.Rack}}.local"
+          - "{{$.Namespace}}.svc.cluster.local"
+          - "{{$.Rack}}.local"
+          - "svc.cluster.local"
+          - "cluster.local"
+        {{ end }}
+      {{ end }}
+      initContainers:
+      - name: drupal-installer
+        image: "nconvox/v3rack:drush11"
+        command: ["/bin/bash", "-c", " cp /etc/scripts/install-drupal.sh /tmp/ && chmod +x /tmp/install-drupal.sh && /tmp/install-drupal.sh"]
+        volumeMounts:
+        - name: efs-{{$.CMSInstance.Name}}
+          mountPath: /data
+        - name: drupal-install-script
+          mountPath: /etc/scripts
+      containers:
+      - image: {{ coalesce .CMSInstance.Image "drupal:10.2.8" }}
+        name: {{.App.Name}}
+        ports:
+        - containerPort: 80
+        startupProbe:
+          tcpSocket:
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        resources:
+          requests:
+            cpu: "256m"
+            memory: "512Mi"
+        volumeMounts:
+        - mountPath: /opt/drupal/composer.json
+          name: efs-{{$.CMSInstance.Name}}
+          subPath: composer.json
+        - mountPath: /opt/drupal/composer.lock
+          name: efs-{{$.CMSInstance.Name}}
+          subPath: composer.lock
+        - mountPath: /opt/drupal/vendor
+          name: efs-{{$.CMSInstance.Name}}
+          subPath: cmp-temp-data
+        - mountPath: /var/www/html/modules
+          name: efs-{{$.CMSInstance.Name}}
+          subPath: modules
+        - mountPath: /var/www/html/profiles
+          name: efs-{{$.CMSInstance.Name}}
+          subPath: profiles
+        - mountPath: /var/www/html/sites
+          name: efs-{{$.CMSInstance.Name}}
+          subPath: sites
+        - mountPath: /var/www/html/themes
+          name: efs-{{$.CMSInstance.Name}}
+          subPath: themes
+      volumes:
+      - name: efs-{{$.CMSInstance.Name}}
+        persistentVolumeClaim:
+          claimName: efs-{{$.CMSInstance.Name}}
+      - name: drupal-install-script
+        configMap:
+          name: drupal-install-script
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: efs-{{$.CMSInstance.Name}}
+  namespace: {{$.Namespace}}
+  labels:
+    app: {{.App.Name}}
+    rack: {{.Rack}}
+    system: convox
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: efs-sc
+  resources:
+    requests:
+      storage: 1Mi # efs driver ignores this value
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: {{.Namespace}}
+  name: {{.CMSInstance.Name}}
+  annotations:
+    convox.com/alias: "cms.{{.CMSInstance.Name}}.{{.App.Name}}.{{.Rack}}.local"
+  labels:
+    app: {{.App.Name}}
+    cms: {{.CMSInstance.Name}}
+    rack: {{.Rack}}
+    system: convox
+spec:
+  type: ClusterIP
+  selector:
+    cms: {{.CMSInstance.Name}}
+    type: cms
+  ports:
+    - name: main
+      port: 80
+      protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: {{.Namespace}}
+  name: {{.CMSInstance.Name}}
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    convox.com/backend-protocol: "http"
+    convox.com/idles: "false"
+    nginx.ingress.kubernetes.io/backend-protocol: "http"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "150"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "150"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "150"
+    nginx.ingress.kubernetes.io/server-snippet: |
+        keepalive_timeout 150s;
+        grpc_read_timeout 150s;
+        grpc_send_timeout 150s;
+        client_body_timeout 150s;
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  labels:
+    app: {{.App.Name}}
+    cms: {{.CMSInstance.Name}}
+    system: convox
+    type: cms
+spec:
+  ingressClassName: "nginx"
+  tls:
+  - hosts:
+    - {{ safe .Host }}
+    secretName:  cert-{{ .CMSInstance.Name }}
+  rules:
+    - host: {{ safe .Host }}
+      http:
+        paths:
+        - backend:
+            service:
+              name: {{.CMSInstance.Name}}
+              port:
+                number: 80
+          pathType: ImplementationSpecific
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  namespace: {{.Namespace}}
+  name: {{.CMSInstance.Name}}
+  labels:
+    cms: {{.CMSInstance.Name}}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{.CMSInstance.Name}}
+  minReplicas: {{.CMSInstance.Scale.Min}}
+  maxReplicas: {{.CMSInstance.Scale.Min}}
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+---
