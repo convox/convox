@@ -89,7 +89,7 @@ spec:
       {{ end }}
       initContainers:
       - name: drupal-installer
-        image: "nconvox/v3rack:drush11"
+        image: "nconvox/v3rack:drush12"
         command: ["/bin/bash", "-c", " cp /etc/scripts/install-drupal.sh /tmp/ && chmod +x /tmp/install-drupal.sh && /tmp/install-drupal.sh"]
         volumeMounts:
         - name: efs-{{$.CMSInstance.Name}}
