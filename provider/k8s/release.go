@@ -923,19 +923,22 @@ func (p *Provider) releaseCMSResource(a *structs.App, e structs.Environment, rs 
 
 				dbUser := ""
 				dbPort := ""
+				dbType := ""
 				dbHost := fmt.Sprintf("resource-%s.%s.svc.cluster.local", r.Name, p.AppNamespace(a.Name))
 				dbPass := fmt.Sprintf("%x", sha256.Sum256([]byte(p.Name)))[0:30]
 
 				if r.Type == "postgres" {
+					dbType = "pgsql"
 					dbUser = "app"
 					dbPort = "5432"
 				} else if r.Type == "mysql" {
+					dbType = "mysql"
 					dbUser = "root"
 					dbPort = "3306"
 				}
 
 				dbUrl = fmt.Sprintf("%s://%s:%s@%s:%s/app",
-					r.Type,
+					dbType,
 					dbUser,
 					dbPass,
 					dbHost,
