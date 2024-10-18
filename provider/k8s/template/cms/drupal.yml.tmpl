@@ -235,7 +235,7 @@ spec:
     kind: Deployment
     name: {{.CMSInstance.Name}}
   minReplicas: {{.CMSInstance.Scale.Min}}
-  maxReplicas: {{.CMSInstance.Scale.Min}}
+  maxReplicas: {{.CMSInstance.Scale.Max}}
   metrics:
   - type: Resource
     resource:
