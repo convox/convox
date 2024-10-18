@@ -226,6 +226,15 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		if len(elastiDeps) > 0 {
 			dependencies = append(dependencies, elastiDeps...)
 		}
+
+		// cms
+		cms, err := p.releaseCMSResource(a, e, m.Resources, m.Cms)
+		if err != nil {
+			return err
+		}
+
+		items = append(items, cms)
+
 	}
 
 	tdata := bytes.Join(items, []byte("---\n"))
@@ -897,4 +906,83 @@ func (p *Provider) reservedNginxAnnotations() map[string]bool {
 		"nginx.ingress.kubernetes.io/ssl-redirect":           true,
 		"nginx.ingress.kubernetes.io/whitelist-source-range": true,
 	}
+}
+
+func (p *Provider) releaseCMSResource(a *structs.App, e structs.Environment, rs manifest.Resources, c manifest.CMSInstances) ([]byte, error) {
+
+	items := [][]byte{}
+
+	for _, cc := range c {
+
+		// Db from Resource
+		dbUrl := ""
+		resourceName := cc.Resources[0]
+
+		for _, r := range rs {
+			if r.Name == resourceName {
+
+				dbUser := ""
+				dbPort := ""
+				dbHost := fmt.Sprintf("resource-%s.%s.svc.cluster.local", r.Name, p.AppNamespace(a.Name))
+				dbPass := fmt.Sprintf("%x", sha256.Sum256([]byte(p.Name)))[0:30]
+
+				if r.Type == "postgres" {
+					dbUser = "app"
+					dbPort = "5432"
+				} else if r.Type == "mysql" {
+					dbUser = "root"
+					dbPort = "3306"
+				}
+
+				dbUrl = fmt.Sprintf("%s://%s:%s@%s:%s/app",
+					r.Type,
+					dbUser,
+					dbPass,
+					dbHost,
+					dbPort,
+				)
+			}
+		}
+
+		if dbUrl == "" {
+			return nil, fmt.Errorf("database url is empty")
+		}
+
+		cc.DrupalOptions.Database.Url = dbUrl
+
+		cc.Scale.Max = common.CoalesceInt(cc.Scale.Max, 3)
+		cc.Scale.Min = common.CoalesceInt(cc.Scale.Min, 1)
+
+		if cc.Scale.Min > cc.Scale.Max {
+			return nil, fmt.Errorf("minimum scale count cannot be greater than the maximum count")
+		}
+
+		host := ""
+		if cc.DrupalOptions.Domain == "" {
+			host = fmt.Sprintf("cms.%s.%s.%s", cc.Name, a.Name, p.Domain)
+		} else {
+			host = fmt.Sprintf("%s.%s", cc.DrupalOptions.Domain, p.Domain)
+		}
+
+		params := map[string]interface{}{
+			"App":         a,
+			"Namespace":   p.AppNamespace(a.Name),
+			"Rack":        p.Name,
+			"Host":        host,
+			"CMSInstance": cc,
+		}
+
+		if ip, err := p.Engine.ResolverHost(); err == nil {
+			params["Resolver"] = ip
+		}
+
+		data, err := p.RenderTemplate("cms/drupal", params)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		items = append(items, data)
+	}
+
+	return bytes.Join(items, []byte("---\n")), nil
 }

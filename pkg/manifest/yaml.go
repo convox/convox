@@ -145,6 +145,20 @@ func (v *Resource) SetName(name string) error {
 	return nil
 }
 
+// cms
+func (v CMSInstances) MarshalYAML() (interface{}, error) {
+	return marshalMapSlice(v)
+}
+
+func (v *CMSInstances) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	return unmarshalMapSlice(unmarshal, v)
+}
+
+func (v *CMSInstance) SetName(name string) error {
+	v.Name = name
+	return nil
+}
+
 func (v Services) MarshalYAML() (interface{}, error) {
 	return marshalMapSlice(v)
 }
