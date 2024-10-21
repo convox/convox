@@ -31,6 +31,43 @@ To assign a custom role to a user:
 2. Select the custom role you've created from the dropdown.
 3. Assign it to the selected user.
 
+## Pre-Created Roles
+
+To make role assignment easier, Convox provides a set of **pre-created roles**. These roles come with pre-configured permissions, mirroring the existing legacy Console Roles, that are managed by Convox, ensuring they cover common use cases and best practices for platform access. These roles are cumulative, with each level adding more permissions than the last.
+
+### Administrator
+
+The **Administrator** role provides full access across all resources and permissions within the platform.
+
+An Administrator can:
+- **Write All Resources**: Full control over all platform resources, including:
+  - Billing
+  - Users
+  - Audit Logs
+
+### OperatorV2
+
+The **OperatorV2** role builds on the **DeveloperV2** role by adding permissions to manage infrastructure and organizational workflows. Operators can perform day-to-day management of key systems and settings without having full control over sensitive areas like billing or user management.
+
+An OperatorV2 can:
+- **Write Applications**: Full control over application deployment and management.
+- **Write Racks**: Full control over infrastructure and rack configurations.
+- **Write Integrations**: Full control over external integrations.
+- **Write Workflows**: Full control over workflows.
+- **Read Audit Logs**: View-only access to audit logs for monitoring and compliance.
+- **Read Dashboard**: View-only access to the organization dashboard.
+- **Read Jobs**: View-only access to job statuses and logs.
+
+### DeveloperV2
+
+The **DeveloperV2** role is focused on application development and deployment. This role grants control over applications while providing read-only visibility into certain organizational resources.
+
+A DeveloperV2 can:
+- **Write Applications**: Full control over application deployment and management.
+- **Read Dashboard**: View-only access to the organization dashboard.
+- **Read Jobs**: View-only access to job statuses and logs.
+- **Read Racks**: View-only access to rack details.
+
 ## Defining Role Permissions
 
 Each role can have multiple permission policies. Every policy consists of:
@@ -98,7 +135,7 @@ This role provides administrative-level write access to all resources except for
 
 This role gives an engineer write access to manage deployments and jobs across multiple applications but does not allow modifications to **Racks** or **Organization Settings**. This is useful for teams that need to deploy code and manage app-specific jobs but should not alter infrastructure-level settings.
 
-![DevOps Engineer Limited Write Access](/images/documentation/management/rbac/example2.png)
+![Engineer with Limited Write Access](/images/documentation/management/rbac/example2.png)
 
 ### 3. Read-Only Auditor for Compliance
 
