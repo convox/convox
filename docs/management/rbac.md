@@ -33,7 +33,7 @@ To assign a custom role to a user:
 
 ## Pre-Created Roles
 
-To make role assignment easier, Convox provides a set of **pre-created roles**. These roles come with pre-configured permissions, mirroring the existing legacy Console Roles, that are managed by Convox, ensuring they cover common use cases and best practices for platform access. These roles are cumulative, with each level adding more permissions than the last.
+To make role assignment easier, Convox provides a set of **pre-created roles**. These roles come with pre-configured permissions, mirroring the existing legacy Console Roles, and are managed by Convox to cover common use cases and best practices for platform access. The new managed roles also extend to CLI use, ensuring consistent permissions across both the Console and CLI. These roles are cumulative, with each level adding more permissions than the last.
 
 ### Administrator
 
@@ -137,7 +137,7 @@ This role gives an engineer write access to manage deployments and jobs across m
 
 ![Engineer with Limited Write Access](/images/documentation/management/rbac/example2.png)
 
-### 3. Read-Only Auditor for Compliance
+### 3. Read-Only Auditor
 
 This role is designed for compliance or auditing purposes. The user is granted read access to all resources, ensuring they can review configurations, logs, and settings but cannot make any modifications. This is ideal for security audits or compliance checks where full visibility is required without the ability to change anything.
 
