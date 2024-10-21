@@ -42,5 +42,13 @@ variable "settings" {
 }
 
 variable "telemetry" {
-  type   = bool
+  type = bool
+}
+
+variable "telemetry_map" {
+  type = any
+}
+
+variable "telemetry_default_map" {
+  type = any
 }

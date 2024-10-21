@@ -62,7 +62,7 @@ func (c *AtomController) Client() kubernetes.Interface {
 }
 
 func (c *AtomController) Informer() cache.SharedInformer {
-	return ic.NewFilteredAtomInformer(c.convox, ac.NamespaceAll, 5*time.Second, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
+	return ic.NewFilteredAtomInformer(c.convox, ac.NamespaceAll, 15*time.Second, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
 }
 
 func (c *AtomController) ListOptions(opts *am.ListOptions) {
@@ -150,7 +150,7 @@ func (c *AtomController) Update(prev, cur interface{}) error {
 		}
 	}
 
-	if ca.Status == pa.Status {
+	if ca.Status == pa.Status && ca.Status != "Pending" {
 		return nil
 	}
 
@@ -163,12 +163,16 @@ func (c *AtomController) Update(prev, cur interface{}) error {
 
 		c.atomStatus(ca, "Rollback")
 	case "Pending":
-		if err := c.atom.apply(ca); err != nil {
-			c.atomStatus(ca, "Error")
-			return err
-		}
+		if len(ca.Spec.Dependencies) > 0 {
+			c.atomEvent(ca, "Status", "Waiting on dependent resources to be completed")
+		} else {
+			if err := c.atom.apply(ca); err != nil {
+				c.atomStatus(ca, "Error")
+				return err
+			}
 
-		c.atomStatus(ca, "Updating")
+			c.atomStatus(ca, "Updating")
+		}
 	}
 
 	return nil

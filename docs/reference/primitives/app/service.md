@@ -66,6 +66,8 @@ services:
       successThreshold: 1
       failureThreshold: 3
     internal: false
+    ingressAnnotations:
+      - nginx.ingress.kubernetes.io/limit-rpm=10
     labels:
       convox.com/test: true
     lifecycle:
@@ -104,6 +106,7 @@ services:
 | ------------- | ---------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | **agent**       | boolean    | false               | Set to **true** to declare this Service as an [Agent](/configuration/agents)                                                      |
 | **annotations** | list       |                     | A list of annotation keys and values to populate the metadata for the deployed pods and their serviceaccounts                              |
+| **accessControl** | map       |                     | Specification of the pod access control management. Currently only IAM using AWS pod identity is supported |
 | **build**       | string/map | .                   | Build definition (see below)                                                                                                                                            |
 | **certificate**| map         |                     | Define certificate parameters                                                                       |
 | **command**     | string     | **CMD** of Dockerfile | The command to run to start a [Process](/reference/primitives/app/process) for this Service                                                                       |
@@ -116,6 +119,8 @@ services:
 | **health**      | string/map | /                   | Health check definition (see below)                                                                                                        |
 | **liveness** | map |      | Liveness check definition (see below). By default it is disabled. If it fails then service will restart |
 | **image**       | string     |                     | An external Docker image to use for this Service (supercedes **build**)                                                                      |
+| **ingressAnnotations** | list       |                     | A list of annotation keys and values to add in ingress resource. Check below for reserved annotation keys |
+| **initContainer** | map       |                     | Init container configuration. This runs before your main application container. Use it to configure application environment. |
 | **internal**    | boolean    | false               | Set to **true** to make this Service only accessible inside the Rack                                                                         |
 | **internalRouter** | boolean    | false               | Set it to **true** to make this Service only accessible using internal loadbalancer. You also have to set the rack parameter [internal_router](/installation/production-rack/aws) to **true**                 |
 | **labels** |  map  |       | Custom labels for k8s resources. See here for (syntax and character set)[https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set]. Also following keys are reserved: `system`, `rack`, `app`, `name`, `service`, `release`, `type` |
@@ -130,11 +135,12 @@ services:
 | **test**        | string     |                     | A command to run to test this Service when running **convox test**                                                                           |
 | **timeout**     | number     | 60                  | Timeout period (in seconds) for reading/writing requests to/from your service                                                              |
 | **tls**         | map        |                     | TLS-related configuration                                                                                                                  |
+| **volumeOptions**  | list    |                     | List of volumes to attach with service |
 | **whitelist**   | string     |                     | Comma delimited list of CIDRs, e.g. `10.0.0.0/24,172.10.0.1`, to allow access to the service                                                                                                                  |
 
 > Environment variables declared on `convox.yml` will be populated for a Service.
 
-#### *annotations
+### *annotations
 You can use annotations to attach arbitrary non-identifying metadata to objects. Clients such as tools and libraries can retrieve this metadata. On Convox, annotations will reflect in pods and service accounts.
 
 Here are some examples of information that can be recorded in annotations:
@@ -154,6 +160,32 @@ services:
     build: .
     port: 3000
 ```
+### accessControl
+
+| Attribute  | Type   | Default    | Description                                                   |
+| ---------- | ------ | ---------- | ------------------------------------------------------------- |
+| **awsPodIdentity** | map |  | The specification for IAM Role for AWS Pod Identity. This will only work if pod identity is enable on the rack. |
+
+```html
+services:
+  web:
+    ...
+    accessControl:
+      awsPodIdentity:
+        policyArns:
+         - "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+         - "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+  ...
+```
+
+### accessControl.awsPodIdentity
+
+| Attribute  | Type   | Default    | Description                                                   |
+| ---------- | ------ | ---------- | ------------------------------------------------------------- |
+| **policyArns** | list |  | The of policy arns for the IAM role |
+
+> Pod identity must be enabled on rack before specifying this.
+
 
 ### build
 
@@ -169,6 +201,7 @@ services:
 | Attribute  | Type   | Default    | Description                                                   |
 | ---------- | ------ | ---------- | ------------------------------------------------------------- |
 | **duration** | string | 2160h | Certificate renew frequency period                                |
+| **id** | string |  | Id of the generated Certificate to use instead of creating new certificate. If this is specified, then the `duration` vaule will not have any effect on the this, since it is already generated.|
 
 ### deployment
 
@@ -184,6 +217,50 @@ services:
 | Attribute | Type   | Default | Description                                                                                |
 | --------- | ------ | ------- | ------------------------------------------------------------------------------------------ |
 | **ndots**     | int |         | The ndots option for the dns config |
+
+&nbsp;
+
+### ingressAnnotations
+
+This accepts list of strings where in each string annotation key and value is separated by `=` sign:
+
+```html
+services:
+  web:
+    ...
+    ingressAnnotations:
+      - nginx.ingress.kubernetes.io/limit-rpm=10
+      - nginx.ingress.kubernetes.io/enable-access-log=false
+  ...
+```
+
+Reserved annotation keys:
+- `alb.ingress.kubernetes.io/scheme`
+- `cert-manager.io/cluster-issuer`
+- `cert-manager.io/duration`
+- `nginx.ingress.kubernetes.io/backend-protocol`
+- `nginx.ingress.kubernetes.io/proxy-connect-timeout`
+- `nginx.ingress.kubernetes.io/proxy-read-timeout`
+- `nginx.ingress.kubernetes.io/proxy-send-timeout`
+- `nginx.ingress.kubernetes.io/server-snippet`
+- `nginx.ingress.kubernetes.io/affinity`
+- `nginx.ingress.kubernetes.io/session-cookie-name`
+- `nginx.ingress.kubernetes.io/ssl-redirect`
+- `nginx.ingress.kubernetes.io/whitelist-source-range`
+
+&nbsp;
+
+### initContainer
+
+It takes inputs just like a container and runs before main container. It supports all these arguments-
+
+| Attribute | Type   | Default | Description                                                                                |
+| --------- | ------ | ------- | ------------------------------------------------------------------------------------------ |
+| **image**     | string |         | An external Docker image to be run in the init container, if not set then it will use service image |
+| **command**  | string |         | The command to run in the init container |
+| **volumeOptions**  | list |         | List of volumes to attach with service |
+
+* Setting a command is necessary for creation of initContainer.
 
 &nbsp;
 
@@ -299,6 +376,64 @@ services:
 | Attribute  | Type    | Default | Description                                                                          |
 | ---------- | ------- | ------- | ------------------------------------------------------------------------------------ |
 | **redirect** | boolean | true    | Whether or not HTTP requests should be redirected to HTTPS using a 308 response code |
+
+&nbsp;
+
+### []volumeOptions
+
+| Attribute  | Type    | Default | Description                                                                          |
+| ---------- | ------- | ------- | ------------------------------------------------------------------------------------ |
+| **emptyDir** | map |     | Configuration for [emptyDir](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir) volume |
+| **awsEfs** | map |     | Configuration for AWS Efs volume. To use this you have to enable efs csi driver in the rack |
+
+&nbsp;
+
+### []volumeOptions.emptyDir
+
+| Attribute  | Type    | Default | Description                                                                          |
+| ---------- | ------- | ------- | ------------------------------------------------------------------------------------ |
+| **id** | string |     | Required. Id of the volume. |
+| **mountPath** | string |     | Required. Path in the serive file system to mount the volume |
+| **medium** | string |     | Optional. Specifies the emptyDir medium. Allowed values: `"Memory"` or `""` |
+
+
+```yaml
+environment:
+  - PORT=3000
+services:
+  web:
+    build: .
+    port: 3000
+    volumeOptions:
+      - emptyDir:
+          id: "test-vol"
+          mountPath: "/my/test/vol"
+```
+
+&nbsp;
+
+### []volumeOptions.awsEfs
+
+| Attribute  | Type    | Default | Description                                                                          |
+| ---------- | ------- | ------- | ------------------------------------------------------------------------------------ |
+| **id** | string |     | Required. Id of the volume. |
+| **mountPath** | string |     | Required. Path in the serive file system to mount the volume |
+| **accessMode** | string |     | Required. Specifies the access mode for the volume. Allowed values are: `ReadWriteOnce`, `ReadOnlyMany`, `ReadWriteMany` |
+
+
+```yaml
+environment:
+  - PORT=3000
+services:
+  web:
+    build: .
+    port: 3000
+    volumeOptions:
+      - awsEfs:
+          id: "efs-1"
+          accessMode: ReadWriteMany
+          mountPath: "/my/data/"
+```
 
 &nbsp;
 

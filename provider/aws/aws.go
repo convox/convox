@@ -3,6 +3,7 @@ package aws
 import (
 	"context"
 	"os"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -13,6 +14,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/aws/aws-sdk-go/service/ecr/ecriface"
+	"github.com/aws/aws-sdk-go/service/eks"
+	"github.com/aws/aws-sdk-go/service/eks/eksiface"
+	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/sqs"
@@ -28,11 +33,15 @@ type Provider struct {
 	EncryptionKey string
 	Region        string
 
+	EcrScanOnPushEnable bool
+
 	Ec2 *ec2.EC2
 
 	CloudFormation cloudformationiface.CloudFormationAPI
 	CloudWatchLogs cloudwatchlogsiface.CloudWatchLogsAPI
 	ECR            ecriface.ECRAPI
+	EKS            eksiface.EKSAPI
+	IAM            iamiface.IAMAPI
 	S3             s3iface.S3API
 	SQS            sqsiface.SQSAPI
 }
@@ -43,11 +52,17 @@ func FromEnv() (*Provider, error) {
 		return nil, err
 	}
 
+	ecrScanOnPushEnable, err := strconv.ParseBool(os.Getenv("ECR_SCAN_ON_PUSH_ENABLE"))
+	if err != nil {
+		return nil, err
+	}
+
 	p := &Provider{
-		Provider:      k,
-		Bucket:        os.Getenv("BUCKET"),
-		EncryptionKey: os.Getenv("ENCRYPTION_KEY"),
-		Region:        os.Getenv("AWS_REGION"),
+		Provider:            k,
+		Bucket:              os.Getenv("BUCKET"),
+		EncryptionKey:       os.Getenv("ENCRYPTION_KEY"),
+		Region:              os.Getenv("AWS_REGION"),
+		EcrScanOnPushEnable: ecrScanOnPushEnable,
 	}
 
 	k.Engine = p
@@ -84,6 +99,8 @@ func (p *Provider) initializeAwsServices() error {
 	p.CloudFormation = cloudformation.New(s)
 	p.CloudWatchLogs = cloudwatchlogs.New(s)
 	p.ECR = ecr.New(s)
+	p.IAM = iam.New(s)
+	p.EKS = eks.New(s)
 	p.S3 = s3.New(s)
 	p.SQS = sqs.New(s)
 

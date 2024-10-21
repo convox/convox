@@ -8,7 +8,7 @@ import (
 	awssdk "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/convox/convox/pkg/atom"
-	"github.com/convox/convox/pkg/mock/aws"
+	mocks "github.com/convox/convox/pkg/mock/aws"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/aws"
 	"github.com/pkg/errors"
@@ -49,13 +49,17 @@ func TestAppCreate(t *testing.T) {
 			fn := func(t *testing.T) {
 				aa := p.Atom.(*atom.MockInterface)
 				aa.On("Status", test.Namespace, "app").Return("Updating", "R1234567", nil).Twice()
-				aa.On("Apply", test.Namespace, "app", "", mock.Anything, int32(30)).Return(nil).Once().Run(func(args mock.Arguments) {
-					requireYamlFixture(t, args.Get(3).([]byte), "app.yml")
+				aa.On("Apply", test.Namespace, "app", mock.Anything).Return(nil).Once().Run(func(args mock.Arguments) {
+					cfg := args.Get(2).(*atom.ApplyConfig)
+					requireYamlFixture(t, cfg.Template, "app.yml")
 				})
 
 				ecrapi := p.ECR.(*mocks.ECRAPI)
 				ecrapi.On("CreateRepository", &ecr.CreateRepositoryInput{
 					RepositoryName: awssdk.String(test.BucketName),
+					ImageScanningConfiguration: &ecr.ImageScanningConfiguration{
+						ScanOnPush: awssdk.Bool(false),
+					},
 				}).Return(test.Output, test.Err)
 
 				a, err := p.AppCreate(test.AppName, structs.AppCreateOptions{})

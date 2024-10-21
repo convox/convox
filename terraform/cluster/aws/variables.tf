@@ -36,6 +36,21 @@ variable "coredns_version" {
   default = null
 }
 
+variable "disable_public_access" {
+  type    = bool
+  default = false
+}
+
+variable "efs_csi_driver_enable" {
+  type    = bool
+  default = false
+}
+
+variable "efs_csi_driver_version" {
+  type    = string
+  default = "v2.0.1-eksbuild.1"
+}
+
 variable "gpu_type" {
   default = false
 }
@@ -59,6 +74,11 @@ variable "imds_http_hop_limit" {
   default = 2
 }
 
+variable "imds_tags_enable" {
+  type    = bool
+  default = false
+}
+
 variable "internet_gateway_id" {
   default = ""
 }
@@ -73,9 +93,19 @@ variable "kube_proxy_version" {
   default = null
 }
 
+variable "kubelet_registry_pull_qps" {
+  type = number
+  default = 5
+}
+
+variable "kubelet_registry_burst" {
+  type = number
+  default = 10
+}
+
 variable "k8s_version" {
   type    = string
-  default = "1.21"
+  default = "1.29"
 }
 
 variable "max_on_demand_count" {
@@ -98,12 +128,39 @@ variable "node_disk" {
   default = 20
 }
 
+variable "node_max_unavailable_percentage" {
+  type    = number
+  default = 0
+}
+
 variable "node_type" {
   default = "t3.small"
 }
 
+variable "pod_identity_agent_enable" {
+  type    = bool
+  default = false
+}
+
+variable "pod_identity_agent_version" {
+  type    = string
+  default = null
+}
+
 variable "private" {
   default = true
+}
+
+variable "private_eks_host" {
+  default = ""
+}
+
+variable "private_eks_user" {
+  default = ""
+}
+
+variable "private_eks_pass" {
+  default = ""
 }
 
 variable "schedule_rack_scale_down" {

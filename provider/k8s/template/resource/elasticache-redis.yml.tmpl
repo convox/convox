@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: {{.Namespace}}
+  name: resource-{{ k8sname .Name }}
+  labels:
+    system: convox
+    rack: {{.Rack}}
+    app: {{.App}}
+    type: elasticache-memcached
+    resource: {{.Name}}
+    provisioner: elasticache
+data:
+  URL: "redis{{- if .Password -}} s {{- end -}}://{{- if .Password -}} {{.Password}}@ {{- end -}}{{.Host}}:{{.Port}}/0"
+  USER: ""
+  PASS: "{{.Password}}"
+  HOST: "{{.Host}}"
+  PORT: "{{.Port}}"
+  NAME: ""
+---

@@ -6,10 +6,10 @@ resource "kubernetes_config_map" "nginx-configuration" {
   }
 
   data = {
-    "proxy-body-size"     = "0"
-    "use-proxy-protocol"  = var.proxy_protocol ? "true" : "false"
-    "ssl-ciphers"         = var.ssl_ciphers == "" ? null : var.ssl_ciphers
-    "ssl-protocols"       = var.ssl_protocols == "" ? null : var.ssl_protocols
+    "proxy-body-size"    = "0"
+    "use-proxy-protocol" = var.proxy_protocol ? "true" : "false"
+    "ssl-ciphers"        = var.ssl_ciphers == "" ? null : var.ssl_ciphers
+    "ssl-protocols"      = var.ssl_protocols == "" ? null : var.ssl_protocols
   }
 }
 
@@ -199,6 +199,14 @@ resource "kubernetes_deployment" "ingress-nginx" {
   metadata {
     namespace = var.namespace
     name      = "ingress-nginx"
+    labels = {
+      app     = "system"
+      name    = "ingress-nginx"
+      rack    = var.rack
+      system  = "convox"
+      service = "ingress-nginx"
+      type    = "service"
+    }
   }
 
   spec {
@@ -231,6 +239,13 @@ resource "kubernetes_deployment" "ingress-nginx" {
           sysctl {
             name  = "net.ipv4.ip_unprivileged_port_start"
             value = "1"
+          }
+        }
+
+        dynamic "image_pull_secrets" {
+          for_each = var.docker_hub_authentication != "NULL" ? [var.docker_hub_authentication] : []
+          content {
+            name = var.docker_hub_authentication
           }
         }
 

@@ -125,8 +125,14 @@ func (m *Manifest) validateServices() []error {
 				}
 			}
 		}
-	}
 
+		for i := range s.VolumeOptions {
+			if err := s.VolumeOptions[i].Validate(); err != nil {
+				errs = append(errs, err)
+			}
+		}
+
+	}
 	return errs
 }
 

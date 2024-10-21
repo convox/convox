@@ -46,4 +46,6 @@ type Interface interface {
 	SystemResourceTypesClassic() (structs.ResourceTypes, error)
 	SystemResourceUnlinkClassic(string, string) (*structs.Resource, error)
 	SystemResourceUpdateClassic(string, structs.ResourceUpdateOptions) (*structs.Resource, error)
+	WorkflowList(rackOrgSlug string) (structs.WorkflowListResp, error)
+	WorkflowCustomRun(rackOrgSlug, workflowId string, opts structs.WorkflowCustomRunOptions) (*structs.WorkflowCustomRunResp, error)
 }

@@ -1,6 +1,7 @@
 package atom
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -228,7 +229,7 @@ func TestUpdate(t *testing.T) {
 			Name:          "Pending - Error",
 			AtomNamespace: "atom.controller",
 			AtomName:      "atom9",
-			AtomStatus:    "Error",
+			AtomStatus:    "Rollback",
 			AtomVersion:   "v9",
 			Prev: &aa.Atom{
 				ObjectMeta: am.ObjectMeta{
@@ -240,7 +241,7 @@ func TestUpdate(t *testing.T) {
 				ObjectMeta: am.ObjectMeta{
 					Name: "atom9",
 				},
-				Status: aa.AtomStatus("Pending"),
+				Status: aa.AtomStatus("Error"),
 			},
 			Err: nil,
 		},
@@ -273,7 +274,7 @@ func TestUpdate(t *testing.T) {
 				if test.Err == nil {
 					require.NoError(t, err)
 
-					a, err := ac.convox.AtomV1().Atoms(test.AtomNamespace).Get(test.AtomName, am.GetOptions{})
+					a, err := ac.convox.AtomV1().Atoms(test.AtomNamespace).Get(context.Background(), test.AtomName, am.GetOptions{})
 					require.NoError(t, err)
 					require.Equal(t, aa.AtomStatus(test.AtomStatus), a.Status)
 				} else {

@@ -1,4 +1,4 @@
-FROM golang:1.18-alpine AS package
+FROM golang:1.23-alpine AS package
 
 RUN apk update && apk add make gcc linux-headers libc-dev
 
@@ -10,7 +10,7 @@ RUN make $GOPATH/bin/build
 
 ###########################################################################################
 
-FROM moby/buildkit:v0.12.2-rootless as rootless
+FROM moby/buildkit:v0.16.0-rootless as rootless
 
 USER root
 
@@ -29,7 +29,7 @@ ENTRYPOINT [ "./buildctl-daemonless.sh" ]
 
 ###########################################################################################
 
-FROM moby/buildkit:v0.12.2 as privileged
+FROM moby/buildkit:v0.16.0 as privileged
 
 RUN apk add skopeo --update
 

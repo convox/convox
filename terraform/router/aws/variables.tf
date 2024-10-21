@@ -1,3 +1,18 @@
+variable "convox_rack_domain" {
+  default = ""
+  type    = string
+}
+
+variable "deploy_extra_nlb" {
+  default = false
+  type    = bool
+}
+
+variable "docker_hub_authentication" {
+  type = string
+  default = null
+}
+
 variable "env" {
   default = {}
 }
@@ -15,12 +30,22 @@ variable "high_availability" {
   default = true
 }
 
+variable "lbc_helm_id" {
+  default = ""
+  type    = string
+}
+
 variable "name" {
   type = string
 }
 
 variable "namespace" {
   type = string
+}
+
+variable "nlb_security_group" {
+  default = ""
+  type    = string
 }
 
 variable "oidc_arn" {

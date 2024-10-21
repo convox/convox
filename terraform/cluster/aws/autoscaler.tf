@@ -33,6 +33,7 @@ data "aws_iam_policy_document" "autoscale" {
       "autoscaling:SetDesiredCapacity",
       "autoscaling:TerminateInstanceInAutoScalingGroup",
       "ec2:DescribeLaunchTemplateVersions",
+      "ec2:DescribeInstanceTypes",
     ]
     effect    = "Allow"
     resources = ["*"]
@@ -269,7 +270,7 @@ resource "kubernetes_deployment" "autoscaler" {
         priority_class_name             = "system-cluster-critical"
 
         container {
-          image             = "registry.k8s.io/autoscaling/cluster-autoscaler:v1.22.1"
+          image             = "registry.k8s.io/autoscaling/cluster-autoscaler:v1.28.2"
           image_pull_policy = "IfNotPresent"
           name              = "cluster-autoscaler"
 
@@ -283,6 +284,7 @@ resource "kubernetes_deployment" "autoscaler" {
             "--node-group-auto-discovery=asg:tag=k8s.io/cluster-autoscaler/enabled,k8s.io/cluster-autoscaler/${aws_eks_cluster.cluster.name}",
             "--balance-similar-node-groups",
             "--skip-nodes-with-system-pods=false",
+            "--max-pod-eviction-time=5m",
           ]
 
           resources {

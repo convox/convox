@@ -1,6 +1,6 @@
 ## development #################################################################
 
-FROM golang:1.18 AS development
+FROM golang:1.23 AS development
 
 ARG DOCKER_ARCH=x86_64
 ARG KUBECTL_ARCH=amd64
@@ -34,11 +34,11 @@ RUN make build
 
 ## package #####################################################################
 
-FROM golang:1.18 AS package
-
-RUN apt-get update && apt-get -y install upx-ucl
+FROM golang:1.23 AS package
 
 WORKDIR /usr/src/convox
+
+RUN apt-get update && apt-get install -y libudev-dev
 
 COPY . .
 

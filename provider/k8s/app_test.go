@@ -75,8 +75,9 @@ func TestAppCreate(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		aa := p.Atom.(*atom.MockInterface)
 
-		aa.On("Apply", "rack1-app1", "app", "", mock.Anything, int32(30)).Return(nil).Once().Run(func(args mock.Arguments) {
-			requireYamlFixture(t, args.Get(3).([]byte), "app.yml")
+		aa.On("Apply", "rack1-app1", "app", mock.Anything).Return(nil).Once().Run(func(args mock.Arguments) {
+			cfg := args.Get(2).(*atom.ApplyConfig)
+			requireYamlFixture(t, cfg.Template, "app.yml")
 		})
 
 		aa.On("Status", "rack1-app1", "app").Return("Updating", "R1234567", nil).Twice()
@@ -266,8 +267,9 @@ func TestAppUpdateLocked(t *testing.T) {
 		aa := p.Atom.(*atom.MockInterface)
 		kk := p.Cluster.(*fake.Clientset)
 
-		aa.On("Apply", "rack1-app1", "app", "", mock.Anything, int32(30)).Return(nil).Once().Run(func(args mock.Arguments) {
-			requireYamlFixture(t, args.Get(3).([]byte), "app-locked.yml")
+		aa.On("Apply", "rack1-app1", "app", mock.Anything).Return(nil).Once().Run(func(args mock.Arguments) {
+			cfg := args.Get(2).(*atom.ApplyConfig)
+			requireYamlFixture(t, cfg.Template, "app-locked.yml")
 		})
 
 		aa.On("Status", "rack1-app1", "app").Return("Running", "", nil).Twice()
@@ -288,12 +290,14 @@ func TestAppUpdateDoesNotOverwriteExisting(t *testing.T) {
 		aa := p.Atom.(*atom.MockInterface)
 		kk := p.Cluster.(*fake.Clientset)
 
-		aa.On("Apply", "rack1-app1", "app", "", mock.Anything, int32(30)).Return(nil).Once().Run(func(args mock.Arguments) {
-			requireYamlFixture(t, args.Get(3).([]byte), "app-locked.yml")
+		aa.On("Apply", "rack1-app1", "app", mock.Anything).Return(nil).Once().Run(func(args mock.Arguments) {
+			cfg := args.Get(2).(*atom.ApplyConfig)
+			requireYamlFixture(t, cfg.Template, "app-locked.yml")
 		}).Once()
 
-		aa.On("Apply", "rack1-app1", "app", "", mock.Anything, int32(30)).Return(nil).Once().Run(func(args mock.Arguments) {
-			requireYamlFixture(t, args.Get(3).([]byte), "app-locked-params.yml")
+		aa.On("Apply", "rack1-app1", "app", mock.Anything).Return(nil).Once().Run(func(args mock.Arguments) {
+			cfg := args.Get(2).(*atom.ApplyConfig)
+			requireYamlFixture(t, cfg.Template, "app-locked-params.yml")
 		}).Once()
 
 		aa.On("Status", "rack1-app1", "app").Return("Running", "", nil).Times(4)
@@ -318,8 +322,9 @@ func TestAppUpdateParameters(t *testing.T) {
 		aa := p.Atom.(*atom.MockInterface)
 		kk := p.Cluster.(*fake.Clientset)
 
-		aa.On("Apply", "rack1-app1", "app", "", mock.Anything, int32(30)).Return(nil).Once().Run(func(args mock.Arguments) {
-			requireYamlFixture(t, args.Get(3).([]byte), "app-params.yml")
+		aa.On("Apply", "rack1-app1", "app", mock.Anything).Return(nil).Once().Run(func(args mock.Arguments) {
+			cfg := args.Get(2).(*atom.ApplyConfig)
+			requireYamlFixture(t, cfg.Template, "app-params.yml")
 		})
 
 		aa.On("Status", "rack1-app1", "app").Return("Running", "", nil).Twice()

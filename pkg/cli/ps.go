@@ -8,13 +8,13 @@ import (
 )
 
 func init() {
-	register("ps", "list app processes", Ps, stdcli.CommandOptions{
-		Flags:    append(stdcli.OptionFlags(structs.ProcessListOptions{}), flagApp, flagRack),
+	register("ps", "list app processes", watch(Ps), stdcli.CommandOptions{
+		Flags:    append(stdcli.OptionFlags(structs.ProcessListOptions{}), flagApp, flagRack, flagWatchInterval),
 		Validate: stdcli.Args(0),
 	})
 
-	register("ps info", "get information about a process", PsInfo, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagApp, flagRack},
+	register("ps info", "get information about a process", watch(PsInfo), stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagApp, flagRack, flagWatchInterval},
 		Validate: stdcli.Args(1),
 	})
 

@@ -9,13 +9,13 @@ type MockInterface struct {
 	mock.Mock
 }
 
-// Apply provides a mock function with given fields: ns, name, release, template, timeout
-func (_m *MockInterface) Apply(ns string, name string, release string, template []byte, timeout int32) error {
-	ret := _m.Called(ns, name, release, template, timeout)
+// Apply provides a mock function with given fields: namespace, name, cfg
+func (_m *MockInterface) Apply(namespace string, name string, cfg *ApplyConfig) error {
+	ret := _m.Called(namespace, name, cfg)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string, string, string, []byte, int32) error); ok {
-		r0 = rf(ns, name, release, template, timeout)
+	if rf, ok := ret.Get(0).(func(string, string, *ApplyConfig) error); ok {
+		r0 = rf(namespace, name, cfg)
 	} else {
 		r0 = ret.Error(0)
 	}

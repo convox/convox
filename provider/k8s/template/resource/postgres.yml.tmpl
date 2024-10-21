@@ -68,7 +68,7 @@ spec:
     spec:
       containers:
       - name: postgres
-        image: postgres:{{ coalesce (index .Parameters "version") "10.5" }}
+        image: {{ if not .Image }}postgres:{{ coalesce (index .Parameters "version") "10.5" }}{{ else }}{{ .Image }}{{ end }}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 5432

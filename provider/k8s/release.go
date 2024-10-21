@@ -14,6 +14,7 @@ import (
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/convox/provider/aws/provisioner"
 	ca "github.com/convox/convox/provider/k8s/pkg/apis/convox/v1"
 	"github.com/pkg/errors"
 	"golang.org/x/text/cases"
@@ -103,6 +104,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 	}
 
 	items := [][]byte{}
+	dependencies := []string{}
 
 	// app
 	data, err := p.releaseTemplateApp(a, opts)
@@ -168,12 +170,14 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 
 		// resources
 		for _, r := range m.Resources {
-			data, err := p.releaseTemplateResource(a, e, r)
-			if err != nil {
-				return errors.WithStack(err)
-			}
+			if !r.IsCustomManagedResource() {
+				data, err := p.releaseTemplateResource(a, e, r)
+				if err != nil {
+					return errors.WithStack(err)
+				}
 
-			items = append(items, data)
+				items = append(items, data)
+			}
 		}
 
 		// services
@@ -199,24 +203,48 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 			items = append(items, data)
 		}
 
-		// volumes
-		data, err = p.releaseTemplateVolumes(a, m.Services, m.Labels)
+		items = append(items, data)
+
+		// rds resources
+		rdsItems, rdsDeps, err := p.releaseRdsResources(a, e, m)
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 
-		items = append(items, data)
+		items = append(items, rdsItems...)
+		if len(rdsDeps) > 0 {
+			dependencies = append(dependencies, rdsDeps...)
+		}
+
+		// elasticache resources
+		elasticacheItems, elastiDeps, err := p.releaseElasticacheResources(a, e, m)
+		if err != nil {
+			return err
+		}
+
+		items = append(items, elasticacheItems...)
+		if len(elastiDeps) > 0 {
+			dependencies = append(dependencies, elastiDeps...)
+		}
 	}
 
 	tdata := bytes.Join(items, []byte("---\n"))
 
-	timeout := int32(common.DefaultInt(opts.Timeout, 1800))
+	timeout := int32(common.DefaultInt(opts.Timeout, 2100))
 
-	if err := p.Apply(p.AppNamespace(app), "app", id, tdata, fmt.Sprintf("system=convox,provider=k8s,rack=%s,app=%s,release=%s", p.Name, app, id), timeout); err != nil {
+	if err := p.Apply(p.AppNamespace(app), "app", PromoteApplyConfig{
+		Version:      id,
+		Data:         tdata,
+		Labels:       fmt.Sprintf("system=convox,provider=k8s,rack=%s,app=%s,release=%s", p.Name, app, id),
+		Timeout:      timeout,
+		Dependencies: dependencies,
+	}); err != nil {
 		return errors.WithStack(err)
 	}
 
 	p.EventSend("release:promote", structs.EventSendOptions{Data: map[string]string{"app": app, "id": id}, Status: options.String("start")})
+
+	p.FlushStateLog(app)
 
 	return nil
 }
@@ -364,15 +392,43 @@ func (p *Provider) releaseTemplateIngress(a *structs.App, ss manifest.Services, 
 			return nil, errors.WithStack(err)
 		}
 
+		if s.Certificate.Id != "" {
+			keys := []string{}
+			for k := range ans {
+				keys = append(keys, k)
+			}
+			for _, k := range keys {
+				if strings.HasPrefix(k, "cert-manager.io") {
+					delete(ans, k)
+				}
+			}
+
+			data, err := p.releaseTemplateCertSecret(a, s)
+			if err != nil {
+				return nil, err
+			}
+			items = append(items, data)
+		}
+
+		customAns := s.IngressAnnotationsMap()
+		reservedAns := p.reservedNginxAnnotations()
+
+		for k, v := range customAns {
+			if !reservedAns[k] {
+				ans[k] = v
+			}
+		}
+
 		params := map[string]interface{}{
-			"Annotations": ans,
-			"App":         a.Name,
-			"Class":       p.Engine.IngressClass(),
-			"Host":        p.Engine.ServiceHost(a.Name, s),
-			"Idles":       common.DefaultBool(opts.Idle, idles),
-			"Namespace":   p.AppNamespace(a.Name),
-			"Rack":        p.Name,
-			"Service":     s,
+			"Annotations":                ans,
+			"App":                        a.Name,
+			"Class":                      p.Engine.IngressClass(),
+			"ConvoxDomainTLSCertDisable": !p.ConvoxDomainTLSCertDisable,
+			"Host":                       p.Engine.ServiceHost(a.Name, s),
+			"Idles":                      common.DefaultBool(opts.Idle, idles),
+			"Namespace":                  p.AppNamespace(a.Name),
+			"Rack":                       p.Name,
+			"Service":                    s,
 		}
 
 		data, err := p.RenderTemplate("app/ingress", params)
@@ -397,15 +453,48 @@ func (p *Provider) releaseTemplateIngressInternal(a *structs.App, ss manifest.Se
 	for i := range ss {
 		s := ss[i]
 
+		ans, err := p.Engine.IngressAnnotations(s.Certificate.Duration)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		if s.Certificate.Id != "" {
+			keys := []string{}
+			for k := range ans {
+				keys = append(keys, k)
+			}
+			for _, k := range keys {
+				if strings.HasPrefix(k, "cert-manager.io") {
+					delete(ans, k)
+				}
+			}
+
+			data, err := p.releaseTemplateCertSecret(a, s)
+			if err != nil {
+				return nil, err
+			}
+			items = append(items, data)
+		}
+
+		customAns := s.IngressAnnotationsMap()
+		reservedAns := p.reservedNginxAnnotations()
+
+		for k, v := range customAns {
+			if !reservedAns[k] {
+				ans[k] = v
+			}
+		}
+
 		params := map[string]interface{}{
-			"Annotations": map[string]string{},
-			"App":         a.Name,
-			"Class":       p.Engine.IngressInternalClass(),
-			"Host":        p.Engine.ServiceHost(a.Name, s),
-			"Idles":       common.DefaultBool(opts.Idle, idles),
-			"Namespace":   p.AppNamespace(a.Name),
-			"Rack":        p.Name,
-			"Service":     s,
+			"Annotations":                ans,
+			"App":                        a.Name,
+			"Class":                      p.Engine.IngressInternalClass(),
+			"ConvoxDomainTLSCertDisable": !p.ConvoxDomainTLSCertDisable,
+			"Host":                       p.Engine.ServiceHost(a.Name, s),
+			"Idles":                      common.DefaultBool(opts.Idle, idles),
+			"Namespace":                  p.AppNamespace(a.Name),
+			"Rack":                       p.Name,
+			"Service":                    s,
 		}
 
 		data, err := p.RenderTemplate("app/ingress-internal", params)
@@ -417,6 +506,35 @@ func (p *Provider) releaseTemplateIngressInternal(a *structs.App, ss manifest.Se
 	}
 
 	return bytes.Join(items, []byte("---\n")), nil
+}
+
+func (p *Provider) releaseTemplateCertSecret(a *structs.App, s manifest.Service) ([]byte, error) {
+	certSecret, err := p.Cluster.CoreV1().Secrets(p.Namespace).Get(p.ctx, s.Certificate.Id, am.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	hash, err := secretDataHash(certSecret)
+	if err != nil {
+		return nil, err
+	}
+
+	secretObj := &v1.Secret{
+		TypeMeta: am.TypeMeta{
+			Kind:       "Secret",
+			APIVersion: "v1",
+		},
+		ObjectMeta: am.ObjectMeta{
+			Name:      s.Certificate.Id,
+			Namespace: p.AppNamespace(a.Name),
+			Annotations: map[string]string{
+				AnnotationSecretDataHash: hash,
+			},
+		},
+		Data: certSecret.Data,
+	}
+
+	return SerializeK8sObjToYaml(secretObj)
 }
 
 func (p *Provider) releaseTemplateResource(a *structs.App, e structs.Environment, r manifest.Resource) ([]byte, error) {
@@ -431,6 +549,29 @@ func (p *Provider) releaseTemplateResource(a *structs.App, e structs.Environment
 		"Parameters": r.Options,
 		"Password":   fmt.Sprintf("%x", sha256.Sum256([]byte(p.Name)))[0:30],
 		"Rack":       p.Name,
+		"Image":      r.Image,
+	}
+
+	data, err := p.RenderTemplate(fmt.Sprintf("resource/%s", r.Type), params)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return data, nil
+}
+
+func (p *Provider) releaseTemplateCustomResource(a *structs.App, e structs.Environment, r manifest.Resource, conn *provisioner.ConnectionInfo) ([]byte, error) {
+	params := map[string]interface{}{
+		"App":        a.Name,
+		"Namespace":  p.AppNamespace(a.Name),
+		"Name":       r.Name,
+		"Parameters": r.Options,
+		"Rack":       p.Name,
+		"Host":       conn.Host,
+		"Port":       conn.Port,
+		"User":       conn.UserName,
+		"Password":   conn.Password,
+		"Database":   conn.Database,
 	}
 
 	data, err := p.RenderTemplate(fmt.Sprintf("resource/%s", r.Type), params)
@@ -473,6 +614,15 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 	}
 
 	for i := range ss {
+		// efs
+		vdata, err := p.releaseTemplateEfs(a, ss[i])
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		if vdata != nil {
+			items = append(items, vdata)
+		}
+
 		s := ss[i]
 		min := s.Deployment.Minimum
 		max := s.Deployment.Maximum
@@ -551,33 +701,24 @@ func (p *Provider) releaseTemplateTimer(a *structs.App, e structs.Environment, r
 	return data, nil
 }
 
-func (p *Provider) releaseTemplateVolumes(a *structs.App, ss manifest.Services, lbs manifest.Labels) ([]byte, error) {
-	vsh := map[string]bool{}
-
-	for i := range ss {
-		s := ss[i]
-		for _, v := range p.volumeSources(a.Name, s.Name, s.Volumes) {
-			if !systemVolume(v) {
-				vsh[v] = true
-			}
+func (p *Provider) releaseTemplateEfs(a *structs.App, s manifest.Service) ([]byte, error) {
+	for i := range s.VolumeOptions {
+		if s.VolumeOptions[i].AwsEfs != nil && len(p.EfsFileSystemId) <= 2 {
+			return nil, fmt.Errorf("efs csi driver is not enabled but efs volume is specified")
+		}
+		if err := s.VolumeOptions[i].Validate(); err != nil {
+			return nil, err
 		}
 	}
 
-	vs := []string{}
-
-	for s := range vsh {
-		vs = append(vs, s)
-	}
-
 	params := map[string]interface{}{
-		"App":       a.Name,
+		"App":       a,
 		"Namespace": p.AppNamespace(a.Name),
 		"Rack":      p.Name,
-		"Volumes":   vs,
-		"Labels":    lbs,
+		"Service":   s,
 	}
 
-	data, err := p.RenderTemplate("app/volumes", params)
+	data, err := p.RenderTemplate("app/efs", params)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -616,4 +757,144 @@ func (p *Provider) releaseUnmarshal(kr *ca.Release) (*structs.Release, error) {
 	}
 
 	return r, nil
+}
+
+func (p *Provider) releaseElasticacheResources(app *structs.App, envs structs.Environment, m *manifest.Manifest) ([][]byte, []string, error) {
+	items := [][]byte{}
+	dependencies := []string{}
+	stateMap := map[string]struct{}{}
+	for _, r := range m.Resources {
+		if r.IsElastiCache() {
+			if err := r.ElastiCacheNameValidate(); err != nil {
+				return nil, nil, err
+			}
+
+			id := p.CreateAwsResourceStateId(app.Name, r.Name)
+
+			stateMap[id] = struct{}{}
+
+			err := p.ElasticacheProvisioner.Provision(id, p.MapToElasticacheParameter(r.Type, app.Name, r.Options))
+			if err != nil {
+				return nil, nil, err
+			}
+
+			isAvailable, err := p.ElasticacheProvisioner.IsElastiCacheAvailable(id)
+			if err != nil {
+				return nil, nil, err
+			}
+			if isAvailable {
+				conn, err := p.ElasticacheProvisioner.GetConnectionInfo(id)
+				if err != nil {
+					return nil, nil, err
+				}
+
+				data, err := p.releaseTemplateCustomResource(app, envs, r, conn)
+				if err != nil {
+					return nil, nil, errors.WithStack(err)
+				}
+
+				items = append(items, data)
+			} else {
+				substitutionId := resourceSubstitutionId(app.Name, r.Type, r.Name)
+				dependencies = append(dependencies, substitutionId)
+				items = append(items, []byte(substitutionId))
+			}
+		}
+	}
+
+	existingStateIds, err := p.ListElasticacheStateForApp(app.Name)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get elasticache state list: %s", err)
+	}
+
+	for _, eId := range existingStateIds {
+		if _, has := stateMap[eId]; !has {
+			// delete the state, elasticache clean up job will delete the elasticache
+			err = p.Cluster.CoreV1().Secrets(p.AppNamespace(app.Name)).Delete(p.ctx, eId, am.DeleteOptions{})
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to delete elasticache state: %s", err)
+			}
+			p.SendStateLog(eId, "elasticache deletion is triggered")
+		}
+	}
+	return items, dependencies, nil
+}
+
+func (p *Provider) releaseRdsResources(app *structs.App, envs structs.Environment, m *manifest.Manifest) ([][]byte, []string, error) {
+	items := [][]byte{}
+	dependencies := []string{}
+	rdsStateMap := map[string]struct{}{}
+	for _, r := range m.Resources {
+		if r.IsRds() {
+			if err := r.RdsNameValidate(); err != nil {
+				return nil, nil, err
+			}
+
+			id := p.CreateAwsResourceStateId(app.Name, r.Name)
+
+			rdsStateMap[id] = struct{}{}
+
+			err := p.RdsProvisioner.Provision(id, p.MapToRdsParameter(r.Type, app.Name, r.Options))
+			if err != nil {
+				return nil, nil, err
+			}
+
+			isAvailable, err := p.RdsProvisioner.IsDbAvailable(id)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			if isAvailable {
+				conn, err := p.RdsProvisioner.GetConnectionInfo(id)
+				if err != nil {
+					return nil, nil, err
+				}
+
+				data, err := p.releaseTemplateCustomResource(app, envs, r, conn)
+				if err != nil {
+					return nil, nil, errors.WithStack(err)
+				}
+
+				items = append(items, data)
+			} else {
+				substitutionId := resourceSubstitutionId(app.Name, r.Type, r.Name)
+				dependencies = append(dependencies, substitutionId)
+				items = append(items, []byte(substitutionId))
+			}
+		}
+	}
+
+	existingStateIds, err := p.ListRdsStateForApp(app.Name)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get rds state list: %s", err)
+	}
+
+	for _, rdsId := range existingStateIds {
+		if _, has := rdsStateMap[rdsId]; !has {
+			// delete the state, rds clean up job will delete the rds
+			err = p.Cluster.CoreV1().Secrets(p.AppNamespace(app.Name)).Delete(p.ctx, rdsId, am.DeleteOptions{})
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to delete rds state: %s", err)
+			}
+			p.SendStateLog(rdsId, "db instance deletion is triggered")
+		}
+	}
+	return items, dependencies, nil
+}
+
+func (p *Provider) reservedNginxAnnotations() map[string]bool {
+	return map[string]bool{
+		"alb.ingress.kubernetes.io/scheme":                   true,
+		"cert-manager.io/cluster-issuer":                     true,
+		"cert-manager.io/duration":                           true,
+		"nginx.ingress.kubernetes.io/backend-protocol":       true,
+		"nginx.ingress.kubernetes.io/proxy-connect-timeout":  true,
+		"nginx.ingress.kubernetes.io/proxy-read-timeout":     true,
+		"nginx.ingress.kubernetes.io/proxy-send-timeout":     true,
+		"nginx.ingress.kubernetes.io/server-snippet":         true,
+		"nginx.ingress.kubernetes.io/affinity":               true,
+		"nginx.ingress.kubernetes.io/session-cookie-name":    true,
+		"nginx.ingress.kubernetes.io/ssl-redirect":           true,
+		"nginx.ingress.kubernetes.io/whitelist-source-range": true,
+	}
 }

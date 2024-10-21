@@ -219,9 +219,15 @@ func (bk *BuildKit) build(bb *Build, path, dockerfile, tag string, env map[strin
 		args = append(args, "--export-cache", fmt.Sprintf("type=registry,ref=%s.buildcache", reg)) // skipcq
 		args = append(args, "--import-cache", fmt.Sprintf("type=registry,ref=%s.buildcache", reg)) // skipcq
 	} else if bk.imageManifestCacheProvider(os.Getenv("PROVIDER")) {
+/* fix later
 		reg := tag[:strings.LastIndex(tag, ".")]
 		args = append(args, "--export-cache", fmt.Sprintf("mode=max,image-manifest=true,type=registry,ref=%s.buildcache", reg)) // skipcq
 		args = append(args, "--import-cache", fmt.Sprintf("type=registry,ref=%s.buildcache", reg))                              // skipcq
+=======
+		reg := strings.Split(tag, ":")[0]
+		args = append(args, "--export-cache", fmt.Sprintf("mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true,compression=estargz,type=registry,ref=%s:buildcache", reg)) // skipcq
+		args = append(args, "--import-cache", fmt.Sprintf("type=registry,ref=%s:buildcache", reg))                                                                                        // skipcq
+*/
 	} else {
 		// keep a local cache for services using the same Dockerfile
 		args = append(args, "--export-cache", "type=local,dest=/var/lib/buildkit") // skipcq

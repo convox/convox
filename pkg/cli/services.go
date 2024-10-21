@@ -10,8 +10,8 @@ import (
 )
 
 func init() {
-	register("services", "list services for an app", Services, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagApp, flagRack},
+	register("services", "list services for an app", watch(Services), stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagApp, flagRack, flagWatchInterval},
 		Validate: stdcli.Args(0),
 	})
 

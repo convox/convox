@@ -16,6 +16,8 @@ import (
 	"github.com/convox/convox/pkg/metrics"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/pkg/templater"
+	"github.com/convox/convox/provider/aws/provisioner/elasticache"
+	"github.com/convox/convox/provider/aws/provisioner/rds"
 	cv "github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned"
 	"github.com/convox/logger"
 	"github.com/gobuffalo/packr"
@@ -40,35 +42,48 @@ const (
 )
 
 type Provider struct {
-	Atom               atom.Interface
-	BuildkitEnabled    string
-	BuildNodeEnabled   string
-	CertManager        bool
-	CertManagerRoleArn string
-	Cluster            kubernetes.Interface
-	Config             *rest.Config
-	Convox             cv.Interface
-	CertManagerClient  cmclient.Interface
-	DiscoveryClient    discovery.DiscoveryInterface
-	Domain             string
-	DomainInternal     string
-	DynamicClient      dynamic.Interface
-	Engine             Engine
-	Image              string
-	JwtMngr            *jwt.JwtManager
-	Name               string
-	MetricScraper      *MetricScraperClient
-	MetricsClient      metricsclientset.Interface
-	Namespace          string
-	Password           string
-	Provider           string
-	RackName           string
-	Resolver           string
-	RestClient         rest.Interface
-	Router             string
-	Socket             string
-	Storage            string
-	Version            string
+	Atom                             atom.Interface
+	BuildkitEnabled                  string
+	BuildNodeEnabled                 string
+	CertManager                      bool
+	CertManagerRoleArn               string
+	Cluster                          kubernetes.Interface
+	Config                           *rest.Config
+	Convox                           cv.Interface
+	ConvoxDomainTLSCertDisable       bool
+	CertManagerClient                cmclient.Interface
+	DiscoveryClient                  discovery.DiscoveryInterface
+	DockerUsername                   string
+	DockerPassword                   string
+	Domain                           string
+	DomainInternal                   string
+	DynamicClient                    dynamic.Interface
+	EfsFileSystemId                  string
+	Engine                           Engine
+	Image                            string
+	JwtMngr                          *jwt.JwtManager
+	Name                             string
+	MetricScraper                    *MetricScraperClient
+	MetricsClient                    metricsclientset.Interface
+	Namespace                        string
+	Password                         string
+	PdbDefaultMinAvailablePercentage string
+	Provider                         string
+	RackName                         string
+	Resolver                         string
+	BuildDisableResolver             bool
+	RestClient                       rest.Interface
+	Router                           string
+	Socket                           string
+	Storage                          string
+	SubnetIDs                        string
+	Version                          string
+	VpcID                            string
+
+	nc *NodeController
+
+	RdsProvisioner         *rds.Provisioner
+	ElasticacheProvisioner *elasticache.Provisioner
 
 	ctx       context.Context
 	logger    *logger.Logger
@@ -129,34 +144,45 @@ func FromEnv() (*Provider, error) {
 	rn := common.CoalesceString(os.Getenv("RACK_NAME"), ns.Labels["rack"])
 
 	p := &Provider{
-		Atom:               ac,
-		BuildkitEnabled:    "true",
-		BuildNodeEnabled:   os.Getenv("BUILD_NODE_ENABLED"),
-		CertManager:        os.Getenv("CERT_MANAGER") == "true",
-		CertManagerRoleArn: os.Getenv("CERT_MANAGER_ROLE_ARN"),
-		Cluster:            kc,
-		Config:             rc,
-		Convox:             cc,
-		CertManagerClient:  cm,
-		DiscoveryClient:    kc.Discovery(),
-		Domain:             os.Getenv("DOMAIN"),
-		DomainInternal:     os.Getenv("DOMAIN_INTERNAL"),
-		DynamicClient:      dc,
-		Image:              os.Getenv("IMAGE"),
-		MetricScraper:      ms,
-		MetricsClient:      mc,
-		Name:               ns.Labels["rack"],
-		Namespace:          ns.Name,
-		Password:           os.Getenv("PASSWORD"),
-		Provider:           common.CoalesceString(os.Getenv("PROVIDER"), "k8s"),
-		RackName:           rn,
-		Resolver:           os.Getenv("RESOLVER"),
-		RestClient:         kc.RESTClient(),
-		Router:             os.Getenv("ROUTER"),
-		Socket:             common.CoalesceString(os.Getenv("SOCKET"), "/var/run/docker.sock"),
-		Storage:            common.CoalesceString(os.Getenv("STORAGE"), "/var/storage"),
-		Version:            common.CoalesceString(os.Getenv("VERSION"), "dev"),
+		Atom:                             ac,
+		BuildkitEnabled:                  "true",
+		BuildNodeEnabled:                 os.Getenv("BUILD_NODE_ENABLED"),
+		BuildDisableResolver:             os.Getenv("BUILD_DISABLE_CONVOX_RESOLVER") == "true",
+		CertManager:                      os.Getenv("CERT_MANAGER") == "true",
+		CertManagerRoleArn:               os.Getenv("CERT_MANAGER_ROLE_ARN"),
+		Cluster:                          kc,
+		Config:                           rc,
+		Convox:                           cc,
+		ConvoxDomainTLSCertDisable:       os.Getenv("CONVOX_DOMAIN_TLS_CERT_DISABLE") == "true",
+		CertManagerClient:                cm,
+		DiscoveryClient:                  kc.Discovery(),
+		Domain:                           os.Getenv("DOMAIN"),
+		DomainInternal:                   os.Getenv("DOMAIN_INTERNAL"),
+		DynamicClient:                    dc,
+		EfsFileSystemId:                  os.Getenv("EFS_FILE_SYSTEM_ID"),
+		Image:                            os.Getenv("IMAGE"),
+		MetricScraper:                    ms,
+		MetricsClient:                    mc,
+		Name:                             ns.Labels["rack"],
+		Namespace:                        ns.Name,
+		PdbDefaultMinAvailablePercentage: common.CoalesceString(os.Getenv("PDB_DEFAULT_MIN_AVAILABLE_PERCENTAGE"), "50"),
+		Password:                         os.Getenv("PASSWORD"),
+		Provider:                         common.CoalesceString(os.Getenv("PROVIDER"), "k8s"),
+		RackName:                         rn,
+		Resolver:                         os.Getenv("RESOLVER"),
+		RestClient:                       kc.RESTClient(),
+		Router:                           os.Getenv("ROUTER"),
+		Socket:                           common.CoalesceString(os.Getenv("SOCKET"), "/var/run/docker.sock"),
+		Storage:                          common.CoalesceString(os.Getenv("STORAGE"), "/var/storage"),
+		SubnetIDs:                        os.Getenv("SUBNET_IDS"),
+		Version:                          common.CoalesceString(os.Getenv("VERSION"), "dev"),
+		VpcID:                            os.Getenv("VPC_ID"),
+		DockerUsername:                   os.Getenv("DOCKER_HUB_USERNAME"),
+		DockerPassword:                   os.Getenv("DOCKER_HUB_PASSWORD"),
 	}
+
+	p.RdsProvisioner = rds.NewProvisioner(p)
+	p.ElasticacheProvisioner = elasticache.NewProvisioner(p)
 
 	return p, nil
 }
@@ -216,9 +242,34 @@ func (p *Provider) Start() error {
 		return errors.WithStack(log.Error(err))
 	}
 
+	nc, err := NewNodeController(p)
+	if err != nil {
+		return errors.WithStack(log.Error(err))
+	}
+	p.nc = nc
+
+	dc, err := NewDeploymentController(p)
+	if err != nil {
+		return errors.WithStack(log.Error(err))
+	}
+
+	sc, err := NewSecretController(p)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	atomCtrl, err := NewAtomController(p)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
 	go ec.Run()
 	go pc.Run()
 	go wc.Run()
+	go nc.Run()
+	go dc.Run()
+	go sc.Run()
+	go atomCtrl.Run()
 
 	go common.Tick(1*time.Hour, p.heartbeat)
 

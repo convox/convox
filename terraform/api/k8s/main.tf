@@ -3,6 +3,25 @@ resource "random_string" "password" {
   special = false
 }
 
+resource "kubernetes_resource_quota" "gcp-critical-pods" {
+  metadata {
+    name = "gcp-critical-pods"
+    namespace = var.namespace
+  }
+  spec {
+    hard = {
+      pods = "1000"
+    }
+    scope_selector {
+      match_expression {
+        scope_name = "PriorityClass"
+        operator = "In"
+        values = ["system-node-critical", "system-cluster-critical"]
+      }
+    }
+  }
+}
+
 resource "kubernetes_cluster_role" "api" {
   metadata {
     name = "${var.rack}-api"
@@ -24,6 +43,24 @@ resource "kubernetes_cluster_role_binding" "api" {
     api_group = "rbac.authorization.k8s.io"
     kind      = "ClusterRole"
     name      = kubernetes_cluster_role.api.metadata.0.name
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = kubernetes_service_account.api.metadata.0.name
+    namespace = kubernetes_service_account.api.metadata.0.namespace
+  }
+}
+
+resource "kubernetes_cluster_role_binding" "api-cluster-admin" {
+  metadata {
+    name = "${var.rack}-api-cluster-admin"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
   }
 
   subject {
@@ -81,9 +118,7 @@ resource "kubernetes_deployment" "api" {
 
     template {
       metadata {
-        annotations = merge(var.annotations, {
-          "scheduler.alpha.kubernetes.io/critical-pod" : ""
-        })
+        annotations = var.annotations
 
         labels = merge(var.labels, {
           app     = "system"
@@ -99,6 +134,7 @@ resource "kubernetes_deployment" "api" {
         automount_service_account_token = true
         service_account_name            = kubernetes_service_account.api.metadata.0.name
         share_process_namespace         = true
+        priority_class_name             = "system-cluster-critical"
 
         dynamic "image_pull_secrets" {
           for_each = var.docker_hub_authentication != "NULL" ? [var.docker_hub_authentication] : []
@@ -125,6 +161,21 @@ resource "kubernetes_deployment" "api" {
           }
 
           env {
+            name  = "CONVOX_DOMAIN_TLS_CERT_DISABLE"
+            value = var.convox_domain_tls_cert_disable
+          }
+
+          env {
+            name  = "DOCKER_HUB_USERNAME"
+            value = var.docker_hub_username
+          }
+
+          env {
+            name  = "DOCKER_HUB_PASSWORD"
+            value = var.docker_hub_password
+          }
+
+          env {
             name  = "DOMAIN"
             value = var.domain
           }
@@ -138,6 +189,7 @@ resource "kubernetes_deployment" "api" {
             name  = "DISABLE_IMAGE_MANIFEST_CACHE"
             value = var.disable_image_manifest_cache
           }
+
 
           env {
             name  = "IMAGE"
@@ -258,6 +310,7 @@ resource "kubernetes_deployment" "api" {
       }
     }
   }
+  depends_on = [ kubernetes_resource_quota.gcp-critical-pods ]
 }
 
 resource "kubernetes_service" "api" {

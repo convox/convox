@@ -15,6 +15,7 @@ import (
 	cv "github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned"
 	cvfake "github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned/fake"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	yaml "gopkg.in/yaml.v2"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -96,13 +97,19 @@ func TestReleasePromote(t *testing.T) {
 	})
 }
 
-func releaseApply(aa *atom.MockInterface, ns, id, atom, fixture string) error {
+func releaseApply(aa *atom.MockInterface, ns, id, atm, fixture string) error {
 	data, err := os.ReadFile(fmt.Sprintf("testdata/release-%s.yml", fixture))
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	aa.On("Apply", ns, atom, id, data, int32(1800)).Return(nil).Once()
+	aa.On("Apply", ns, atm, mock.Anything).Return(func(args mock.Arguments) error {
+		cfg := args.Get(2).(*atom.ApplyConfig)
+		if string(cfg.Template) != string(data) {
+			return fmt.Errorf("data didn't match")
+		}
+		return nil
+	}).Once()
 
 	return nil
 }
