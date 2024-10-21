@@ -13,6 +13,8 @@ Existing users retain their **Legacy Role** by default, ensuring that no active 
 
 > **Note**: While legacy roles did not affect CLI access, the new RBAC roles will apply to both the Console and the CLI, ensuring unified permission management across interfaces.
 
+> **Important**: It is highly recommended to restrict write access to the **Roles** resource. If a user has write access to roles, they could potentially modify or escalate their own permissions, undermining the security of the RBAC configuration. Follow the principle of least privilege to mitigate this risk.
+
 ## Creating Roles
 
 Roles can be created or cloned using the **Roles** tab found on the **Users** page of the Console. To create a new role:
@@ -56,10 +58,6 @@ Here are the available resource types that can be selected when defining permiss
 - Users
 - Workflows
 
-### Best Practices for Role Creation
-
-A recommended pattern for role creation is to start with **All Resources** set to `Read` access, and then apply more granular `Write` or `Deny` permissions for specific resources. This ensures broad, non-destructive access to resources by default, while allowing finer control over which users have higher privileges or restrictions.
-
 ### Relation Between Rack and App Permissions
 
 It’s important to note that **Rack** permissions and **App** permissions are related. A user must have access to the **Rack** to make use of **App** permissions. If a user is granted app-level permissions but lacks permissions for the associated rack, the app permissions will not grant access. Rack permissions act as a foundational requirement for app-related actions.
@@ -85,6 +83,30 @@ RBAC operates under a zero-trust model. This means if no permission is granted, 
 ### All Resources Type
 
 Permissions set for the **All Resources** type are evaluated last. This allows you to use **All Resources** as a base template (e.g., read access) and then override it with more specific policies like `deny-all` for certain resources, making access management easier and more flexible.
+
+## Common Role Patterns
+
+Below are common patterns for role creation using RBAC, addressing specific use cases within an organization.
+
+### 1. Non-Billing Administrator
+
+This role provides administrative-level write access to all resources except for the **Billing** page, where the user is denied access. Additionally, the role has read-only access to the **Users** and **Roles** resources, which is helpful for auditing and oversight without the ability to modify roles.
+
+![Non-Billing Administrator](/images/documentation/management/rbac/example1.png)
+
+### 2. Engineer with Limited Write Access
+
+This role gives an engineer write access to manage deployments and jobs across multiple applications but does not allow modifications to **Racks** or **Organization Settings**. This is useful for teams that need to deploy code and manage app-specific jobs but should not alter infrastructure-level settings.
+
+![DevOps Engineer Limited Write Access](/images/documentation/management/rbac/example2.png)
+
+### 3. Read-Only Auditor for Compliance
+
+This role is designed for compliance or auditing purposes. The user is granted read access to all resources, ensuring they can review configurations, logs, and settings but cannot make any modifications. This is ideal for security audits or compliance checks where full visibility is required without the ability to change anything.
+
+![Read-Only Auditor](/images/documentation/management/rbac/example3.png)
+
+These examples showcase the flexibility of RBAC in managing user access based on common organizational roles and responsibilities.
 
 ## Deploy Keys and RBAC
 
