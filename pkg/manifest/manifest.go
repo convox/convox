@@ -25,14 +25,15 @@ var (
 )
 
 type Manifest struct {
-	AppSettings AppSettings `yaml:"appSettings,omitempty"`
-	Balancers   Balancers   `yaml:"balancers,omitempty"`
-	Environment Environment `yaml:"environment,omitempty"`
-	Labels      Labels      `yaml:"labels,omitempty"`
-	Params      Params      `yaml:"params,omitempty"`
-	Resources   Resources   `yaml:"resources,omitempty"`
-	Services    Services    `yaml:"services,omitempty"`
-	Timers      Timers      `yaml:"timers,omitempty"`
+	AppSettings AppSettings  `yaml:"appSettings,omitempty"`
+	Balancers   Balancers    `yaml:"balancers,omitempty"`
+	Environment Environment  `yaml:"environment,omitempty"`
+	Labels      Labels       `yaml:"labels,omitempty"`
+	Params      Params       `yaml:"params,omitempty"`
+	Resources   Resources    `yaml:"resources,omitempty"`
+	Services    Services     `yaml:"services,omitempty"`
+	Timers      Timers       `yaml:"timers,omitempty"`
+	Cms         CMSInstances `yaml:"cms,omitempty"`
 
 	attributes map[string]bool
 	env        map[string]string
