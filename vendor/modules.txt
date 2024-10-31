@@ -342,8 +342,8 @@ github.com/convox/changes
 # github.com/convox/exec v0.0.0-20180905012044-cc13d277f897
 ## explicit
 github.com/convox/exec
-# github.com/convox/go-u2fhost v0.0.0-20240906091537-cf8aacb82e82
-## explicit; go 1.14
+# github.com/convox/go-u2fhost v0.0.1
+## explicit; go 1.21
 github.com/convox/go-u2fhost
 github.com/convox/go-u2fhost/bytes
 github.com/convox/go-u2fhost/hid
@@ -600,8 +600,8 @@ github.com/imdario/mergo
 github.com/inconshreveable/go-update
 github.com/inconshreveable/go-update/internal/binarydist
 github.com/inconshreveable/go-update/internal/osext
-# github.com/inconshreveable/mousetrap v1.0.0
-## explicit
+# github.com/inconshreveable/mousetrap v1.1.0
+## explicit; go 1.18
 github.com/inconshreveable/mousetrap
 # github.com/jmespath/go-jmespath v0.4.0
 ## explicit; go 1.14
@@ -704,10 +704,10 @@ github.com/sebest/xff
 # github.com/shurcooL/sanitized_anchor_name v1.0.0
 ## explicit
 github.com/shurcooL/sanitized_anchor_name
-# github.com/sirupsen/logrus v1.8.1
+# github.com/sirupsen/logrus v1.9.3
 ## explicit; go 1.13
 github.com/sirupsen/logrus
-# github.com/spf13/cobra v1.5.0
+# github.com/spf13/cobra v1.8.0
 ## explicit; go 1.15
 github.com/spf13/cobra
 # github.com/spf13/pflag v1.0.5

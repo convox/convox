@@ -3,7 +3,7 @@ package console
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"regexp"
 
@@ -44,7 +44,7 @@ func (c *Client) authenticator(cl *stdsdk.Client, res *http.Response) (http.Head
 		}
 		defer ares.Body.Close()
 
-		dres, err := ioutil.ReadAll(ares.Body)
+		dres, err := io.ReadAll(ares.Body)
 		if err != nil {
 			return nil, err
 		}
