@@ -7,9 +7,9 @@ all: build
 
 build:
 	mkdir pkg/
-	env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -tags=hidraw -ldflags "-X main.version=$(VERSION) -X main.image=$(IMAGE)" -o pkg/convox-linux-amd64
-	env CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -tags=hidraw -ldflags "-X main.version=$(VERSION) -X main.image=$(IMAGE)" -o pkg/convox-linux-arm64
-	env CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags "-X main.version=$(VERSION) -X main.image=$(IMAGE)" -o pkg/convox-darwin-arm64
+	env CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -tags=hidraw -ldflags "-X main.version=$(VERSION) -X main.image=$(IMAGE)" -o pkg/convox-linux-amd64
+	env CGO_ENABLED=1 GOOS=linux GOARCH=arm64 CC=aarch64-linux-gnu-gcc go build -tags=hidraw -ldflags "-X main.version=$(VERSION) -X main.image=$(IMAGE)" -o pkg/convox-linux-arm64
+	env CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -ldflags "-X main.version=$(VERSION) -X main.image=$(IMAGE)" -o pkg/convox-darwin-arm64
 
 	go env -w GO111MODULE=auto
 	tar cz -C ../.. . | docker run -v $(gopath)/src/github.com/convox/convox:/convox -i ubuntu tar xz -C /convox
