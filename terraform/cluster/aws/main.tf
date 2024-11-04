@@ -292,7 +292,8 @@ resource "aws_launch_template" "cluster" {
     }
   }
 
-  user_data = var.kubelet_registry_pull_qps != 5 || var.kubelet_registry_burst != 10 ? base64encode(templatefile("${path.module}/files/kubelet_config_override.sh",{
+  user_data = var.user_data != "" || var.kubelet_registry_pull_qps != 5 || var.kubelet_registry_burst != 10 ? base64encode(templatefile("${path.module}/files/custom_user_data.sh",{
+    user_data = var.user_data
     kubelet_registry_pull_qps = var.kubelet_registry_pull_qps
     kubelet_registry_burst = var.kubelet_registry_burst
   })) : ""
