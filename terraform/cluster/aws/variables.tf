@@ -1,17 +1,5 @@
-variable "arm_type" {
-  default = false
-}
-
 variable "availability_zones" {
   default = ""
-}
-
-variable "build_arm_type" {
-  default = false
-}
-
-variable "build_gpu_type" {
-  default = false
 }
 
 variable "build_node_enabled" {
@@ -49,10 +37,6 @@ variable "efs_csi_driver_enable" {
 variable "efs_csi_driver_version" {
   type    = string
   default = "v2.0.1-eksbuild.1"
-}
-
-variable "gpu_type" {
-  default = false
 }
 
 variable "gpu_tag_enable" {
