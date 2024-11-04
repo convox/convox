@@ -29,4 +29,6 @@ SCRIPT
 chmod +x /opt/modify_kubelet.sh
 /opt/modify_kubelet.sh
 
+${user_data}
+
 --==MYBOUNDARY==--

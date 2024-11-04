@@ -293,6 +293,11 @@ variable "telemetry" {
   default = false
 }
 
+variable "user_data" {
+  type    = string
+  default = ""
+}
+
 variable "vpc_id" {
   default = ""
 }
