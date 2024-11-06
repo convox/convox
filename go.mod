@@ -19,7 +19,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/rds v1.79.4
 	github.com/convox/changes v0.0.0-20191105034405-8c0df759a3b3
 	github.com/convox/exec v0.0.0-20180905012044-cc13d277f897
-	github.com/convox/go-u2fhost v0.0.0-20240906091537-cf8aacb82e82
+	github.com/convox/go-u2fhost v0.0.1
 	github.com/convox/logger v0.0.0-20180522214415-e39179955b52
 	github.com/convox/stdapi v1.1.3-0.20221110171947-8d98f61e61ed
 	github.com/convox/stdcli v0.0.0-20240813092220-8beeb2dc2420
@@ -122,7 +122,7 @@ require (
 	github.com/hashicorp/hcl/v2 v2.17.0 // indirect
 	github.com/ijc/Gotty v0.0.0-20170406111628-a8b993ba6abd // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
-	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/joho/godotenv v1.3.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
@@ -148,8 +148,8 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
-	github.com/sirupsen/logrus v1.8.1 // indirect
-	github.com/spf13/cobra v1.5.0 // indirect
+	github.com/sirupsen/logrus v1.9.3 // indirect
+	github.com/spf13/cobra v1.8.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/zclconf/go-cty v1.13.0 // indirect

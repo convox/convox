@@ -54,7 +54,7 @@ func InstallConsole(c *stdcli.Context, provider, name, version, runtime string, 
 	if err != nil {
 		return err
 	}
-	
+
 	if options["region"] == "" {
 		return fmt.Errorf("region not provided")
 	}
@@ -108,6 +108,10 @@ func (c Console) Endpoint() (*url.URL, error) {
 	username := base64.StdEncoding.EncodeToString([]byte(c.name))
 
 	endpoint := fmt.Sprintf("https://%s:%s@%s", string(username), url.QueryEscape(pw), c.host)
+	if os.Getenv("X_DEV_ALLOW_HTTP") == "true" {
+		fmt.Println("waring: using http inscure mode")
+		endpoint = fmt.Sprintf("http://%s:%s@%s", string(username), url.QueryEscape(pw), c.host)
+	}
 
 	return url.Parse(endpoint)
 }
@@ -364,6 +368,10 @@ func consoleClient(c *stdcli.Context, host, rack string) (*console.Client, error
 	}
 
 	endpoint := fmt.Sprintf("https://convox:%s@%s", url.QueryEscape(pw), host)
+	if os.Getenv("X_DEV_ALLOW_HTTP") == "true" {
+		fmt.Println("waring: using http inscure mode")
+		endpoint = fmt.Sprintf("http://convox:%s@%s", url.QueryEscape(pw), host)
+	}
 
 	cc, err := console.NewClient(endpoint, rack, c)
 	if err != nil {

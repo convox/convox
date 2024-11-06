@@ -43,7 +43,12 @@ func Login(rack sdk.Interface, c *stdcli.Context) error {
 
 	c.Startf("Authenticating with <info>%s</info>", hostname)
 
-	cl, err := sdk.New(fmt.Sprintf("https://convox:%s@%s", url.QueryEscape(password), hostname))
+	hostUrl := fmt.Sprintf("https://convox:%s@%s", url.QueryEscape(password), hostname)
+	if os.Getenv("X_DEV_ALLOW_HTTP") == "true" {
+		fmt.Println("waring: using http inscure mode")
+		hostUrl = fmt.Sprintf("http://convox:%s@%s", url.QueryEscape(password), hostname)
+	}
+	cl, err := sdk.New(hostUrl)
 	if err != nil {
 		return err
 	}
