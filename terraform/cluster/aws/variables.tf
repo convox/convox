@@ -41,6 +41,11 @@ variable "disable_public_access" {
   default = false
 }
 
+variable "disable_kernel_mitigations" {
+  type    = bool
+  default = false
+}
+
 variable "efs_csi_driver_enable" {
   type    = bool
   default = false

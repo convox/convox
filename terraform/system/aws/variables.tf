@@ -76,6 +76,11 @@ variable "disable_public_access" {
   default = false
 }
 
+variable "disable_kernel_mitigations" {
+  type    = bool
+  default = false
+}
+
 variable "ecr_scan_on_push_enable" {
   type    = bool
   default = false
