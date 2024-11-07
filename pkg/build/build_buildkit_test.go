@@ -67,8 +67,8 @@ func TestBuild(t *testing.T) {
 			mock.Anything,
 			"buildctl", "build", "--frontend", "dockerfile.v0", "--local", mock.MatchedBy(matchContext), "--local", mock.MatchedBy(matchDockerfile),
 			"--opt", mock.MatchedBy(matchFilename), "--output", mock.MatchedBy(matchTag),
-			"--export-cache", "type=registry,ref=registry.test.com:buildcache",
-			"--import-cache", "type=registry,ref=registry.test.com:buildcache",
+			"--export-cache", "type=registry,ref=registry.test.com:web.buildcache",
+			"--import-cache", "type=registry,ref=registry.test.com:web.buildcache",
 			"--opt", "build-arg:FOO=bar",
 		).Return(nil).Run(func(args mock.Arguments) {
 			fmt.Fprintf(args.Get(0).(io.Writer), "build1\nbuild2\n")
@@ -141,8 +141,8 @@ func TestBuildDevelopment(t *testing.T) {
 			mock.Anything,
 			"buildctl", "build", "--frontend", "dockerfile.v0", "--local", mock.MatchedBy(matchContext), "--local", mock.MatchedBy(matchDockerfile),
 			"--opt", mock.MatchedBy(matchFilename), "--output", mock.MatchedBy(matchTag),
-			"--export-cache", "type=registry,ref=registry.test.com:buildcache",
-			"--import-cache", "type=registry,ref=registry.test.com:buildcache",
+			"--export-cache", "type=registry,ref=registry.test.com:web.buildcache",
+			"--import-cache", "type=registry,ref=registry.test.com:web.buildcache",
 			"--opt", "target=development",
 		).Return(nil).Run(func(args mock.Arguments) {
 			fmt.Fprintf(args.Get(0).(io.Writer), "build1\nbuild2\n")
@@ -215,8 +215,8 @@ func TestBuildOptions(t *testing.T) {
 			mock.Anything,
 			"buildctl", "build", "--frontend", "dockerfile.v0", "--local", mock.MatchedBy(matchContext), "--local", mock.MatchedBy(matchDockerfile),
 			"--opt", mock.MatchedBy(matchFilename), "--output", mock.MatchedBy(matchTag),
-			"--export-cache", "type=registry,ref=registry.test.com:buildcache",
-			"--import-cache", "type=registry,ref=registry.test.com:buildcache",
+			"--export-cache", "type=registry,ref=registry.test.com:web.buildcache",
+			"--import-cache", "type=registry,ref=registry.test.com:web.buildcache",
 			"--opt", "build-arg:FOO=bar",
 		).Return(nil).Run(func(args mock.Arguments) {
 			fmt.Fprintf(args.Get(0).(io.Writer), "build1\nbuild2\n")
