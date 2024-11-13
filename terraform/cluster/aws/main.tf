@@ -40,7 +40,6 @@ locals {
   availability_zones     = var.availability_zones != "" ? compact(split(",", var.availability_zones)) : data.aws_availability_zones.available.names
   network_resource_count = var.high_availability ? 3 : 2
   oidc_sub               = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
-  user_data = ""
 }
 
 data "aws_availability_zones" "available" {
