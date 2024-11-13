@@ -79,7 +79,8 @@ The following environment variables are required:
 | **ssl_ciphers**          |                        | SSL ciphers to use for (nginx)[https://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_ciphers]. They must be separated by colon.|
 | **ssl_protocols**        |                        | SSL protocols to use for (nginx)[https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_ssl_protocols] (e.g. **TLSv1.2 TLSv1.3**). They must be separated by spaces.|
 | **tags**                 |                        | Custom tags to add with AWS resources (e.g. **key1=val1,key2=val2**)|
-| **user_data_url**            |                    | URL for file containing custom user data to pass to the instance to be run when it is added to your Rack |
+| **user_data**            |                        | Custom user data to pass to the instance to be run when it is added to your Rack |
+| **user_data_url**            |                    | URL for script file containing custom user data to pass to the instance to be run when it is added to your Rack. Enables support for large script file |
 | **vpc_id** *             |                        | Use an existing VPC for cluster creation. Make sure to also pass the **cidr** block and **internet_gateway_id**|
 | **private_subnets_ids**  |                        | Ids of private subnets to use to create the Rack. Make sure to also pass the **vpc_id** and it should be properly configured with nat gateway and route table. Also configure the public subnets since load balancer will use public subnets. For high availability there should be 3 subnets. Use comma to specify multiple subnets(no space)|
 | **public_subnets_ids**   |                        | Ids of private subnets to use to create the Rack. Make sure to also pass the **vpc_id** and it should be properly configured with internet gateway and route table. For high availability there should be 3 subnets. Use comma to specify multiple subnets(no space)|
