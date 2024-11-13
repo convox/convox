@@ -40,6 +40,7 @@ locals {
   availability_zones     = var.availability_zones != "" ? compact(split(",", var.availability_zones)) : data.aws_availability_zones.available.names
   network_resource_count = var.high_availability ? 3 : 2
   oidc_sub               = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
+  user_data = ""
 }
 
 data "aws_availability_zones" "available" {
@@ -263,6 +264,21 @@ resource "local_file" "kubeconfig" {
   })
 }
 
+resource "null_resource" "user_data_download" {
+  count = var.user_data_url != "" ? 1 : 0 
+
+  provisioner "local-exec" {
+    command = "curl -s -o ${path.module}/user_data.sh '${var.user_data_url}'"
+  }
+}
+
+data "local_file" "user_data_file_content" {
+  count    = var.user_data_url != "" ? 1 : 0  
+  filename = "${path.module}/user_data.sh"
+
+  depends_on = [ null_resource.user_data_download ]
+}
+
 resource "aws_launch_template" "cluster" {
   block_device_mappings {
     device_name = "/dev/xvda"
@@ -292,10 +308,10 @@ resource "aws_launch_template" "cluster" {
     }
   }
 
-  user_data = var.user_data != "" || var.kubelet_registry_pull_qps != 5 || var.kubelet_registry_burst != 10 ? base64encode(templatefile("${path.module}/files/custom_user_data.sh",{
-    user_data = var.user_data
+  user_data = var.user_data_url != "" || var.kubelet_registry_pull_qps != 5 || var.kubelet_registry_burst != 10 ? base64encode(templatefile("${path.module}/files/custom_user_data.sh",{
     kubelet_registry_pull_qps = var.kubelet_registry_pull_qps
     kubelet_registry_burst = var.kubelet_registry_burst
+    user_data = var.user_data_url != "" ? data.local_file.user_data_file_content[0].content : ""
   })) : ""
 
   key_name = var.key_pair_name != "" ? var.key_pair_name : null

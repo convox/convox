@@ -66,7 +66,7 @@ locals {
     syslog = var.syslog
     tags = var.tags
     telemetry = var.telemetry
-    user_data = var.user_data
+    user_data_url = var.user_data_url
     vpc_cni_version = var.vpc_cni_version
     vpc_id = var.vpc_id
     whitelist = var.whitelist
@@ -136,7 +136,7 @@ locals {
     syslog = ""
     tags = ""
     telemetry = "false"
-    user_data = ""
+    user_data_url = ""
     vpc_cni_version = "v1.18.3-eksbuild.2"
     vpc_id = ""
     whitelist = "0.0.0.0/0"

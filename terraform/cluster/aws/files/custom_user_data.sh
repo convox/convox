@@ -5,7 +5,7 @@ Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
 Content-Type: text/x-shellscript; charset="us-ascii"
 
 #!/bin/bash
-echo "Running custom user data script"
+echo "CONVOX MANAGED USER DATA SCRIPT"
 cat <<'SCRIPT' > /opt/modify_kubelet.sh
 #!/bin/bash
 
@@ -29,6 +29,7 @@ SCRIPT
 chmod +x /opt/modify_kubelet.sh
 /opt/modify_kubelet.sh
 
+echo "USER PROVIDED USER DATA SCRIPT"
 ${user_data}
 
 --==MYBOUNDARY==--

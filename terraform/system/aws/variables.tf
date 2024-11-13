@@ -293,7 +293,7 @@ variable "telemetry" {
   default = false
 }
 
-variable "user_data" {
+variable "user_data_url" {
   type    = string
   default = ""
 }

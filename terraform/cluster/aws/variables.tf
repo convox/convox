@@ -196,7 +196,7 @@ variable "public_subnets_ids" {
   default = []
 }
 
-variable "user_data" {
+variable "user_data_url" {
   type    = string
   default = ""
 }
