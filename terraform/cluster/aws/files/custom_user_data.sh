@@ -32,4 +32,6 @@ chmod +x /opt/modify_kubelet.sh
 echo "USER PROVIDED USER DATA SCRIPT"
 ${user_data}
 
+${user_data_script_file}
+
 --==MYBOUNDARY==--

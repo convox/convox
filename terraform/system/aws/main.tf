@@ -100,6 +100,7 @@ module "cluster" {
   schedule_rack_scale_down        = var.schedule_rack_scale_down
   schedule_rack_scale_up          = var.schedule_rack_scale_up
   tags                            = local.tag_map
+  user_data                       = var.user_data
   user_data_url                   = var.user_data_url
   vpc_cni_version                 = var.vpc_cni_version
   vpc_id                          = var.vpc_id
