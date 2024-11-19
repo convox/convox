@@ -1237,6 +1237,35 @@ func (s *Server) ServiceList(c *stdapi.Context) error {
 	return c.RenderJSON(v)
 }
 
+func (s *Server) ServiceLogs(c *stdapi.Context) error {
+	app := c.Var("app")
+	name := c.Var("service")
+
+	var opts structs.LogsOptions
+	if err := stdapi.UnmarshalOptions(c.Request(), &opts); err != nil {
+		return err
+	}
+
+	v, err := s.provider(c).WithContext(c.Context()).ServiceLogs(app, name, opts)
+	if err != nil {
+		return err
+	}
+
+	if c, ok := interface{}(v).(io.Closer); ok {
+		defer c.Close()
+	}
+
+	if _, err := io.Copy(c, v); err != nil {
+		return err
+	}
+
+	if vs, ok := interface{}(v).(Sortable); ok {
+		sort.Slice(v, vs.Less)
+	}
+
+	return nil
+}
+
 func (s *Server) ServiceRestart(c *stdapi.Context) error {
 	if err := s.hook("ServiceRestartValidate", c); err != nil {
 		return err

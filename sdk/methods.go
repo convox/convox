@@ -93,6 +93,26 @@ func (c *Client) AppLogs(name string, opts structs.LogsOptions) (io.ReadCloser, 
 	return v, err
 }
 
+func (c *Client) ServiceLogs(app, name string, opts structs.LogsOptions) (io.ReadCloser, error) {
+	var err error
+
+	ro, err := stdsdk.MarshalOptions(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	var v io.ReadCloser
+
+	r, err := c.Websocket(fmt.Sprintf("/apps/%s/services/%s/logs", app, name), ro)
+	if err != nil {
+		return nil, err
+	}
+
+	v = r
+
+	return v, err
+}
+
 func (c *Client) AppMetrics(name string, opts structs.MetricsOptions) (structs.Metrics, error) {
 	var err error
 
