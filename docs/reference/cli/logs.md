@@ -32,6 +32,8 @@ Get logs for an app
 
 - `--app` - Specify application for logging 
 - `--rack` - Specify rack for logging 
-- `--filter` - Filter for a specific string within the logs  
+- `--filter` - Filter for a specific string within the logs. This is not applicable for service specific logging.
 - `--since` - Set time frame for log query  
-- `--no-follow` - Prints logs in terminal rather than opening a log stream 
+- `--no-follow` - Prints logs in terminal rather than opening a log stream
+- `--service` or `-s` - Sepcify the name of the service
+- `--tail` - Specify the number of lines to tail. This is only applicable on service specific logging.
