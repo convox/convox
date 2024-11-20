@@ -263,6 +263,11 @@ resource "local_file" "kubeconfig" {
   })
 }
 
+data "http" "user_data_content" {
+  count = var.user_data_url != "" ? 1 : 0
+  url = var.user_data_url
+}
+
 resource "aws_launch_template" "cluster" {
   block_device_mappings {
     device_name = "/dev/xvda"
@@ -292,9 +297,11 @@ resource "aws_launch_template" "cluster" {
     }
   }
 
-  user_data = var.kubelet_registry_pull_qps != 5 || var.kubelet_registry_burst != 10 ? base64encode(templatefile("${path.module}/files/kubelet_config_override.sh",{
+  user_data = var.user_data_url != "" || var.user_data != "" || var.kubelet_registry_pull_qps != 5 || var.kubelet_registry_burst != 10 ? base64encode(templatefile("${path.module}/files/custom_user_data.sh",{
     kubelet_registry_pull_qps = var.kubelet_registry_pull_qps
     kubelet_registry_burst = var.kubelet_registry_burst
+    user_data_script_file = var.user_data_url != "" ? data.http.user_data_content[0].body : ""
+    user_data = var.user_data
   })) : ""
 
   key_name = var.key_pair_name != "" ? var.key_pair_name : null
