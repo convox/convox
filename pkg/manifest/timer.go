@@ -1,7 +1,5 @@
 package manifest
 
-import "strings"
-
 type Timer struct {
 	Name        string             `yaml:"-"`
 	Annotations ServiceAnnotations `yaml:"annotations,omitempty"`
@@ -19,8 +17,9 @@ func (t Timer) AnnotationsMap() map[string]string {
 	annotations := map[string]string{}
 
 	for _, a := range t.Annotations {
-		parts := strings.SplitN(a, "=", 2)
-		annotations[parts[0]] = parts[1]
+		for k, v := range a {
+			annotations[k] = v.(string)
+		}
 	}
 
 	return annotations

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	yaml "gopkg.in/yaml.v2"
 )
 
 const (
@@ -134,7 +136,8 @@ type ServiceAgent struct {
 	Enabled bool `yaml:"enabled,omitempty"`
 }
 
-type ServiceAnnotations []string
+type ServiceAnnotations []map[string]interface{}
+
 
 type ServiceBuild struct {
 	Args     []string `yaml:"args,omitempty"`
@@ -336,15 +339,46 @@ func (sr ServiceResource) GetConfigMapKey() string {
 }
 
 // skipcq
+// func (s Service) AnnotationsMap() map[string]string {
+// 	annotations := map[string]string{}
+
+// 	for _, a := range s.Annotations {
+// 		parts := strings.SplitN(a, "=", 2)
+// 		annotations[parts[0]] = parts[1]
+// 	}
+
+// 	return annotations
+// }
+
+
 func (s Service) AnnotationsMap() map[string]string {
 	annotations := map[string]string{}
 
 	for _, a := range s.Annotations {
-		parts := strings.SplitN(a, "=", 2)
-		annotations[parts[0]] = parts[1]
+		for k, v := range a {
+			switch val := v.(type) {
+			case string:
+				annotations[k] = val
+			case map[interface{}]interface{}:
+				multilineValue, err := parseMultiLineValue(val)
+				if err != nil {
+					continue
+				}
+				annotations[k] = multilineValue
+			default:
+				annotations[k] = fmt.Sprintf("%v", val)
+			}
+		}
 	}
-
 	return annotations
+}
+
+func parseMultiLineValue(value map[interface{}]interface{}) (string, error) {
+	data, err := yaml.Marshal(value)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
 }
 
 // skipcq
@@ -352,8 +386,9 @@ func (s Service) IngressAnnotationsMap() map[string]string {
 	annotations := map[string]string{}
 
 	for _, a := range s.IngressAnnotations {
-		parts := strings.SplitN(a, "=", 2)
-		annotations[parts[0]] = parts[1]
+		for k, v := range a {
+			annotations[k] = v.(string)
+		}
 	}
 
 	return annotations
