@@ -70,8 +70,8 @@ spec:
         {{ if .Service.Agent.Enabled }}
         scheduler.alpha.kubernetes.io/critical-pod: ""
         {{ end }}
-        {{ range keyValue .Annotations }}
-        {{.Key}}: "{{ quoteEscape .Value}}"
+        {{ range .Annotations }}
+        - {{.Key}}: "{{ .Value}}"
         {{ end }}
       labels:
         system: convox

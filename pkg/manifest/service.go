@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-
-	yaml "gopkg.in/yaml.v2"
 )
 
 const (
@@ -19,7 +17,7 @@ type Service struct {
 	Name string `yaml:"-"`
 
 	Agent              ServiceAgent          `yaml:"agent,omitempty"`
-	Annotations        ServiceAnnotations    `yaml:"annotations,omitempty"`
+	Annotations        Annotations           `yaml:"annotations,omitempty"`
 	Build              ServiceBuild          `yaml:"build,omitempty"`
 	Certificate        Certificate           `yaml:"certificate,omitempty"`
 	Command            string                `yaml:"command,omitempty"`
@@ -54,6 +52,13 @@ type Service struct {
 	VolumeOptions      []VolumeOption        `yaml:"volumeOptions,omitempty"`
 	Whitelist          string                `yaml:"whitelist,omitempty"`
 	AccessControl      AccessControlOptions  `yaml:"accessControl,omitempty"`
+}
+
+type Annotations []Annotation
+
+type Annotation struct {
+	Key   string
+	Value string
 }
 
 type InitContainer struct {
@@ -350,36 +355,23 @@ func (sr ServiceResource) GetConfigMapKey() string {
 // 	return annotations
 // }
 
-
 func (s Service) AnnotationsMap() map[string]string {
 	annotations := map[string]string{}
 
 	for _, a := range s.Annotations {
-		for k, v := range a {
-			switch val := v.(type) {
-			case string:
-				annotations[k] = val
-			case map[interface{}]interface{}:
-				multilineValue, err := parseMultiLineValue(val)
-				if err != nil {
-					continue
-				}
-				annotations[k] = multilineValue
-			default:
-				annotations[k] = fmt.Sprintf("%v", val)
-			}
-		}
+		annotations[a.Key] = a.Value
 	}
+
 	return annotations
 }
 
-func parseMultiLineValue(value map[interface{}]interface{}) (string, error) {
-	data, err := yaml.Marshal(value)
-	if err != nil {
-		return "", err
-	}
-	return string(data), nil
-}
+// func parseMultiLineValue(value map[interface{}]interface{}) (string, error) {
+// 	data, err := yaml.Marshal(value)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	return string(data), nil
+// }
 
 // skipcq
 func (s Service) IngressAnnotationsMap() map[string]string {

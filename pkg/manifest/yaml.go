@@ -1,6 +1,7 @@
 package manifest
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -155,6 +156,48 @@ func (v *Services) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 func (v *Service) SetName(name string) error {
 	v.Name = name
+	return nil
+}
+
+func (a *Annotations) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawAnnotations []interface{}
+	if err := unmarshal(&rawAnnotations); err != nil {
+		return fmt.Errorf("failed to unmarshal annotations: %w", err)
+	}
+
+	var annotations []Annotation
+
+	for _, raw := range rawAnnotations {
+		switch item := raw.(type) {
+		case string:
+			parts := strings.SplitN(item, "=", 2)
+			if len(parts) != 2 {
+				return fmt.Errorf("invalid annotation format: %s", item)
+			}
+			annotations = append(annotations, Annotation{Key: parts[0], Value: parts[1]})
+
+		case map[string]interface{}:
+			for k, v := range item {
+				switch value := v.(type) {
+				case string:
+					annotations = append(annotations, Annotation{Key: k, Value: value})
+				case map[string]interface{}, []interface{}:
+					jsonValue, err := json.Marshal(value)
+					if err != nil {
+						return fmt.Errorf("failed to marshal complex value for key %s: %w", k, err)
+					}
+					annotations = append(annotations, Annotation{Key: k, Value: string(jsonValue)})
+				default:
+					return fmt.Errorf("unsupported value type for key %s: %T", k, value)
+				}
+			}
+
+		default:
+			return fmt.Errorf("unsupported annotation type: %T", item)
+		}
+	}
+
+	*a = annotations
 	return nil
 }
 
