@@ -142,8 +142,7 @@ type ServiceAgent struct {
 	Enabled bool `yaml:"enabled,omitempty"`
 }
 
-type ServiceAnnotations []map[string]interface{}
-
+type ServiceAnnotations []string
 
 type ServiceBuild struct {
 	Args     []string `yaml:"args,omitempty"`
@@ -379,9 +378,8 @@ func (s Service) IngressAnnotationsMap() map[string]string {
 	annotations := map[string]string{}
 
 	for _, a := range s.IngressAnnotations {
-		for k, v := range a {
-			annotations[k] = v.(string)
-		}
+		parts := strings.SplitN(a, "=", 2)
+		annotations[parts[0]] = parts[1]
 	}
 
 	return annotations

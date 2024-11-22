@@ -129,11 +129,11 @@ func (p *Provider) templateHelpers() template.FuncMap {
 		"volumeTo": func(v string) (string, error) {
 			return volumeTo(v)
 		},
-		"splitIntoLines": splitIntoLinesUnified,
+		"splitIntoLines": splitIntoLines,
 	}
 }
 
-func splitIntoLinesUnified(value interface{}) []string {
+func splitIntoLines(value interface{}) []string {
 	var lines []string
 	var valueStr string
 
