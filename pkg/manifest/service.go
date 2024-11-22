@@ -2,6 +2,7 @@ package manifest
 
 import (
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -57,8 +58,8 @@ type Service struct {
 type Annotations []Annotation
 
 type Annotation struct {
-	Key   string
-	Value string
+	Key   string      `yaml:"key"`
+	Value interface{} `yaml:"value"`
 }
 
 type InitContainer struct {
@@ -343,35 +344,35 @@ func (sr ServiceResource) GetConfigMapKey() string {
 	return DEFAULT_RESOURCE_ENV_NAME
 }
 
-// skipcq
-// func (s Service) AnnotationsMap() map[string]string {
-// 	annotations := map[string]string{}
-
-// 	for _, a := range s.Annotations {
-// 		parts := strings.SplitN(a, "=", 2)
-// 		annotations[parts[0]] = parts[1]
-// 	}
-
-// 	return annotations
-// }
-
 func (s Service) AnnotationsMap() map[string]string {
-	annotations := map[string]string{}
+	annotations := make(map[string]string)
 
-	for _, a := range s.Annotations {
-		annotations[a.Key] = a.Value
+	for _, annotation := range s.Annotations {
+		// Marshal the value to a JSON string
+		jsonValue, err := json.Marshal(annotation.Value)
+		if err != nil {
+			// Handle JSON marshaling errors if needed
+			fmt.Printf("Error marshaling annotation value for key %s: %v\n", annotation.Key, err)
+			continue
+		}
+
+		jsonStr := string(jsonValue)
+
+		if containsJSONStructure(jsonStr) {
+			key := fmt.Sprintf("%s : |", annotation.Key)
+			annotations[key] = jsonStr
+		} else {
+			key := fmt.Sprintf("%s :", annotation.Key)
+			annotations[key] = jsonStr
+		}
 	}
 
 	return annotations
 }
 
-// func parseMultiLineValue(value map[interface{}]interface{}) (string, error) {
-// 	data, err := yaml.Marshal(value)
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	return string(data), nil
-// }
+func containsJSONStructure(str string) bool {
+	return strings.Contains(str, "{") || strings.Contains(str, "}")
+}
 
 // skipcq
 func (s Service) IngressAnnotationsMap() map[string]string {

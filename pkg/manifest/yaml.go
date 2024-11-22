@@ -176,19 +176,46 @@ func (a *Annotations) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			}
 			annotations = append(annotations, Annotation{Key: parts[0], Value: parts[1]})
 
-		case map[string]interface{}:
+		case map[interface{}]interface{}:
+			// Handle annotations as map[interface{}]interface{}
 			for k, v := range item {
-				switch value := v.(type) {
-				case string:
-					annotations = append(annotations, Annotation{Key: k, Value: value})
-				case map[string]interface{}, []interface{}:
-					jsonValue, err := json.Marshal(value)
-					if err != nil {
-						return fmt.Errorf("failed to marshal complex value for key %s: %w", k, err)
+				keyStr, ok := k.(string)
+				if !ok {
+					return fmt.Errorf("annotation key is not a string: %v", k)
+				}
+
+				// Try to parse the value as JSON
+				var jsonValue interface{}
+				if jsonStr, ok := v.(string); ok {
+					if err := json.Unmarshal([]byte(jsonStr), &jsonValue); err == nil {
+						// Successfully unmarshaled JSON string into a map
+						annotations = append(annotations, Annotation{Key: keyStr, Value: jsonValue})
+					} else {
+						// If not a valid JSON, store the string as-is
+						annotations = append(annotations, Annotation{Key: keyStr, Value: jsonStr})
 					}
-					annotations = append(annotations, Annotation{Key: k, Value: string(jsonValue)})
-				default:
-					return fmt.Errorf("unsupported value type for key %s: %T", k, value)
+				} else {
+					// Store as is if not a JSON string
+					annotations = append(annotations, Annotation{Key: keyStr, Value: v})
+				}
+			}
+
+		case map[string]interface{}:
+			// Handle annotations as map[string]interface{}
+			for k, v := range item {
+				// Try to parse the value as JSON
+				var jsonValue interface{}
+				if jsonStr, ok := v.(string); ok {
+					if err := json.Unmarshal([]byte(jsonStr), &jsonValue); err == nil {
+						// Successfully unmarshaled JSON string into a map
+						annotations = append(annotations, Annotation{Key: k, Value: jsonValue})
+					} else {
+						// If not a valid JSON, store the string as-is
+						annotations = append(annotations, Annotation{Key: k, Value: jsonStr})
+					}
+				} else {
+					// Store as is if not a JSON string
+					annotations = append(annotations, Annotation{Key: k, Value: v})
 				}
 			}
 

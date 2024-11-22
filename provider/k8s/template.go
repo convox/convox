@@ -1,10 +1,12 @@
 package k8s
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"log"
 	"sort"
 	"strings"
 
@@ -13,6 +15,7 @@ import (
 	"github.com/convox/convox/pkg/structs"
 	shellquote "github.com/kballard/go-shellquote"
 	"github.com/pkg/errors"
+	yaml "gopkg.in/yaml.v2"
 )
 
 func (p *Provider) RenderTemplate(name string, params map[string]interface{}) ([]byte, error) {
@@ -126,7 +129,43 @@ func (p *Provider) templateHelpers() template.FuncMap {
 		"volumeTo": func(v string) (string, error) {
 			return volumeTo(v)
 		},
+		"splitIntoLines": splitIntoLinesUnified,
 	}
+}
+
+func splitIntoLinesUnified(value interface{}) []string {
+	var lines []string
+	var valueStr string
+
+	// Convert the value to string if it's not already
+	switch v := value.(type) {
+	case string:
+		valueStr = v
+	case []byte:
+		valueStr = string(v)
+	default:
+		// Marshal the interface value to YAML
+		bytes, err := yaml.Marshal(v)
+		if err != nil {
+			log.Printf("Error marshaling interface to YAML: %v", err)
+			valueStr = fmt.Sprintf("%v", v)
+		} else {
+			valueStr = string(bytes)
+		}
+	}
+
+	// Check if the value is a valid JSON string
+	var prettyJSON bytes.Buffer
+	if err := json.Indent(&prettyJSON, []byte(valueStr), "", "  "); err == nil {
+		// If valid JSON, use the pretty-printed JSON
+		valueStr = prettyJSON.String()
+	}
+
+	// Split the final string into lines
+	for _, line := range strings.Split(valueStr, "\n") {
+		lines = append(lines, line)
+	}
+	return lines
 }
 
 // func templateResources(filter string) ([]string, error) {

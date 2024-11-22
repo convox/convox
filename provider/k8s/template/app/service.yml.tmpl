@@ -19,9 +19,13 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   annotations:
-    {{ range keyValue .Annotations }}
-    {{.Key}}: "{{ quoteEscape .Value}}"
-    {{ end }}
+    {{- range $key, $value := .Annotations }}
+        {{ $key }}
+        {{- $lines := splitIntoLines $value }}
+        {{- range $lines }}
+          {{ . }}
+        {{- end }}
+    {{- end }}
   namespace: {{.Namespace}}
   name: {{.Service.Name}}
   labels:
@@ -70,9 +74,13 @@ spec:
         {{ if .Service.Agent.Enabled }}
         scheduler.alpha.kubernetes.io/critical-pod: ""
         {{ end }}
-        {{ range .Annotations }}
-        - {{.Key}}: "{{ .Value}}"
-        {{ end }}
+        {{- range $key, $value := .Annotations }}
+            {{ $key }}
+            {{- $lines := splitIntoLines $value }}
+            {{- range $lines }}
+              {{ . }}
+            {{- end }}
+        {{- end }}
       labels:
         system: convox
         rack: {{.Rack}}
