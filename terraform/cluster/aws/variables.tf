@@ -118,6 +118,7 @@ variable "node_max_unavailable_percentage" {
 }
 
 variable "node_type" {
+  description = "Comma-delimited list of node types"
   default = "t3.small"
 }
 
