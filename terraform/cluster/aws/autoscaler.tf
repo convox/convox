@@ -227,6 +227,22 @@ resource "kubernetes_role_binding" "autoscaler" {
   }
 }
 
+resource "kubernetes_pod_disruption_budget_v1" "autoscaler" {
+  metadata {
+    name      = "cluster-autoscaler"
+    namespace = "kube-system"
+    labels    = local.autoscaler_labels
+  }
+  spec {
+    min_available = "1"
+    selector {
+      match_labels = {
+        "app" : "cluster-autoscaler"
+      }
+    }
+  }
+}
+
 resource "kubernetes_deployment" "autoscaler" {
   depends_on = [
     aws_iam_role_policy.autoscaler_autoscale,
@@ -267,7 +283,7 @@ resource "kubernetes_deployment" "autoscaler" {
       spec {
         automount_service_account_token = true
         service_account_name            = "cluster-autoscaler"
-        priority_class_name             = "system-cluster-critical"
+        priority_class_name             = "system-node-critical"
 
         container {
           image             = "registry.k8s.io/autoscaling/cluster-autoscaler:v1.28.2"
