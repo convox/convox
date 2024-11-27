@@ -158,6 +158,54 @@ func (v *Service) SetName(name string) error {
 	return nil
 }
 
+func (a *Annotations) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawAnnotations []interface{}
+	if err := unmarshal(&rawAnnotations); err != nil {
+		return fmt.Errorf("failed to unmarshal annotations: %w", err)
+	}
+
+	var annotations []Annotation
+
+	for _, raw := range rawAnnotations {
+		switch item := raw.(type) {
+		case string:
+			parts := strings.SplitN(item, "=", 2)
+			if len(parts) != 2 {
+				return fmt.Errorf("invalid annotation format: %s", item)
+			}
+			annotations = append(annotations, Annotation{Key: parts[0], Value: parts[1]})
+
+		case map[interface{}]interface{}:
+			for k, v := range item {
+				keyStr, ok := k.(string)
+				if !ok {
+					return fmt.Errorf("annotation key is not a string: %v", k)
+				}
+				vStr, ok := v.(string)
+				if !ok {
+					return fmt.Errorf("annotation value is not a string: %v", k)
+				}
+				annotations = append(annotations, Annotation{Key: keyStr, Value: vStr})
+			}
+
+		case map[string]interface{}:
+			for k, v := range item {
+				vStr, ok := v.(string)
+				if !ok {
+					return fmt.Errorf("annotation value is not a string: %v", k)
+				}
+				annotations = append(annotations, Annotation{Key: k, Value: vStr})
+			}
+
+		default:
+			return fmt.Errorf("unsupported annotation type: %T", item)
+		}
+	}
+
+	*a = annotations
+	return nil
+}
+
 func (v *ServiceAgent) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var w interface{}
 

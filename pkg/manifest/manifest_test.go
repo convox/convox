@@ -62,10 +62,20 @@ func TestManifestLoad(t *testing.T) {
 		Services: manifest.Services{
 			manifest.Service{
 				Name: "api",
-				Annotations: []string{
-					"eks.amazonaws.com/role-arn=arn:aws:iam::123456789012:role/eksctl-irptest-addon-iamsa-default-my-serviceaccount-Role1-UCGG6NDYZ3UE",
-					"test.other.com/annotation=myothervalue",
-					"string.test.com/annotation=\"thishasquotes\""},
+				Annotations: manifest.Annotations{
+					manifest.Annotation{
+						Key:   "eks.amazonaws.com/role-arn",
+						Value: "arn:aws:iam::123456789012:role/eksctl-irptest-addon-iamsa-default-my-serviceaccount-Role1-UCGG6NDYZ3UE",
+					},
+					manifest.Annotation{
+						Key:   "test.other.com/annotation",
+						Value: "myothervalue",
+					},
+					manifest.Annotation{
+						Key:   "string.test.com/annotation",
+						Value: "\"thishasquotes\"",
+					},
+				},
 				Build: manifest.ServiceBuild{
 					Manifest: "Dockerfile2",
 					Path:     "api",

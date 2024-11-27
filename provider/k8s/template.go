@@ -13,6 +13,7 @@ import (
 	"github.com/convox/convox/pkg/structs"
 	shellquote "github.com/kballard/go-shellquote"
 	"github.com/pkg/errors"
+	yaml "gopkg.in/yaml.v2"
 )
 
 func (p *Provider) RenderTemplate(name string, params map[string]interface{}) ([]byte, error) {
@@ -72,6 +73,14 @@ func (p *Provider) templateHelpers() template.FuncMap {
 			}
 			return fmt.Sprintf("%s:%s.%s", repo, s.Name, r.Build), nil
 		},
+		"indent": func(spaces int, v string) string {
+			pad := strings.Repeat(" ", spaces)
+			return pad + strings.Replace(v, "\n", "\n"+pad, -1)
+		},
+		"nindent": func(spaces int, v string) string {
+			pad := strings.Repeat(" ", spaces)
+			return "\n" + pad + strings.Replace(v, "\n", "\n"+pad, -1)
+		},
 		"json": func(v interface{}) (string, error) {
 			data, err := json.Marshal(v)
 			if err != nil {
@@ -125,6 +134,13 @@ func (p *Provider) templateHelpers() template.FuncMap {
 		},
 		"volumeTo": func(v string) (string, error) {
 			return volumeTo(v)
+		},
+		"yamlMarshal": func(v interface{}) (string, error) {
+			d, err := yaml.Marshal(v)
+			if err != nil {
+				return "", fmt.Errorf("yamlMarshal: %s", err)
+			}
+			return string(d), nil
 		},
 	}
 }

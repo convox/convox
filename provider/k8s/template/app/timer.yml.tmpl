@@ -4,9 +4,9 @@ kind: ServiceAccount
 metadata:
   annotations:
     convox.com/type: timer
-    {{ range keyValue .Annotations }}
-    {{.Key}}: "{{ quoteEscape .Value}}"
-    {{ end }}
+    {{- if ne (len .Annotations) 0 }}
+    {{- yamlMarshal .Annotations | nindent 4 }}
+    {{- end }}
   namespace: {{.Namespace}}
   name: timer-{{.Timer.Name}}
   labels:
@@ -31,9 +31,9 @@ spec:
         metadata:
           annotations:
             convox.com/type: timer
-            {{ range keyValue .Annotations }}
-            {{.Key}}: "{{ quoteEscape .Value}}"
-            {{ end }}
+            {{- if ne (len .Annotations) 0 }}
+            {{- yamlMarshal .Annotations | nindent 12 }}
+            {{- end }}
           labels:
             system: convox
             rack: {{.Rack}}

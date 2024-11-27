@@ -2,6 +2,7 @@ package common
 
 import (
 	"bytes"
+	"html"
 	"regexp"
 
 	yaml "gopkg.in/yaml.v2"
@@ -12,6 +13,8 @@ var (
 )
 
 func FormatYAML(data []byte) ([]byte, error) {
+	data = []byte(html.UnescapeString(string(data)))
+
 	ps := yamlSplitter.Split(string(data), -1)
 	bs := make([][]byte, len(ps))
 
