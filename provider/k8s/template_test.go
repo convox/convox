@@ -2,8 +2,11 @@ package k8s
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
+	"github.com/convox/convox/pkg/manifest"
+	"github.com/convox/convox/pkg/mock"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/pkg/templater"
@@ -41,5 +44,60 @@ func TestRenderTemplate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	fmt.Println(string(data))
+}
+
+func TestRenderTemplateService(t *testing.T) {
+	a := &structs.App{
+		Name: "test-app",
+	}
+
+	d, err := os.ReadFile("./testdata/convox1.yml")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	m, err := manifest.Load(d, map[string]string{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	params := map[string]interface{}{
+		"Annotations":    m.Services[0].AnnotationsMap(),
+		"App":            a,
+		"Environment":    map[string]string{},
+		"MaxSurge":       100,
+		"MaxUnavailable": 100,
+		"Namespace":      "ns",
+		"Password":       "pass",
+		"Rack":           "rack",
+		"Release": &structs.Release{
+			Id: "r1",
+		},
+		"Replicas":  2,
+		"Resources": m.Services[0].ResourceMap(),
+		"Service":   m.Services[0],
+		"Timer":     m.Timers[0],
+	}
+
+	p := Provider{
+		Engine: &mock.TestEngine{},
+	}
+	p.templater = templater.New(packr.NewBox("../k8s/template"), p.templateHelpers())
+
+	var data []byte
+
+	data, err = p.RenderTemplate("app/timer", params)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println(string(data))
+
+	data, err = p.RenderTemplate("app/service", params)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	fmt.Println(string(data))
 }

@@ -17,7 +17,7 @@ type Service struct {
 	Name string `yaml:"-"`
 
 	Agent              ServiceAgent          `yaml:"agent,omitempty"`
-	Annotations        ServiceAnnotations    `yaml:"annotations,omitempty"`
+	Annotations        Annotations           `yaml:"annotations,omitempty"`
 	Build              ServiceBuild          `yaml:"build,omitempty"`
 	Certificate        Certificate           `yaml:"certificate,omitempty"`
 	Command            string                `yaml:"command,omitempty"`
@@ -34,7 +34,7 @@ type Service struct {
 	InitContainer      *InitContainer        `yaml:"initContainer,omitempty"`
 	Internal           bool                  `yaml:"internal,omitempty"`
 	InternalRouter     bool                  `yaml:"internalRouter,omitempty"`
-	IngressAnnotations ServiceAnnotations    `yaml:"ingressAnnotations,omitempty"`
+	IngressAnnotations Annotations           `yaml:"ingressAnnotations,omitempty"`
 	Labels             Labels                `yaml:"labels,omitempty"`
 	Lifecycle          ServiceLifecycle      `yaml:"lifecycle,omitempty"`
 	Port               ServicePortScheme     `yaml:"port,omitempty"`
@@ -52,6 +52,13 @@ type Service struct {
 	VolumeOptions      []VolumeOption        `yaml:"volumeOptions,omitempty"`
 	Whitelist          string                `yaml:"whitelist,omitempty"`
 	AccessControl      AccessControlOptions  `yaml:"accessControl,omitempty"`
+}
+
+type Annotations []Annotation
+
+type Annotation struct {
+	Key   string `yaml:"key"`
+	Value string `yaml:"value"`
 }
 
 type InitContainer struct {
@@ -335,13 +342,11 @@ func (sr ServiceResource) GetConfigMapKey() string {
 	return DEFAULT_RESOURCE_ENV_NAME
 }
 
-// skipcq
 func (s Service) AnnotationsMap() map[string]string {
 	annotations := map[string]string{}
 
 	for _, a := range s.Annotations {
-		parts := strings.SplitN(a, "=", 2)
-		annotations[parts[0]] = parts[1]
+		annotations[a.Key] = a.Value
 	}
 
 	return annotations
@@ -351,9 +356,8 @@ func (s Service) AnnotationsMap() map[string]string {
 func (s Service) IngressAnnotationsMap() map[string]string {
 	annotations := map[string]string{}
 
-	for _, a := range s.IngressAnnotations {
-		parts := strings.SplitN(a, "=", 2)
-		annotations[parts[0]] = parts[1]
+	for _, a := range s.Annotations {
+		annotations[a.Key] = a.Value
 	}
 
 	return annotations
