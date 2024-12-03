@@ -61,7 +61,8 @@ func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*struc
 		return nil, errors.WithStack(err)
 	}
 
-	if err := p.ReleasePromote(a.Name, "", structs.ReleasePromoteOptions{Timeout: options.Int(30)}); err != nil {
+	timeout := common.DefaultInt(opts.Timeout, 300)
+	if err := p.ReleasePromote(a.Name, "", structs.ReleasePromoteOptions{Timeout: &timeout}); err != nil {
 		return nil, errors.WithStack(err)
 	}
 
