@@ -213,8 +213,18 @@ func TestAppList(t *testing.T) {
 		aa := p.Atom.(*atom.MockInterface)
 		kk := p.Cluster.(*fake.Clientset)
 
-		aa.On("Status", "rack1-app1", "app").Return("Running", "R1234567", nil).Once()
-		aa.On("Status", "rack1-app2", "app").Return("Updating", "R2345678", nil).Once()
+		aa.On("StatusAll").Return([]atom.AtomStatusInfo{
+			{
+				Namespace: "rack1-app1",
+				Status:    "Running",
+				Release:   "R1234567",
+			},
+			{
+				Namespace: "rack1-app2",
+				Status:    "Updating",
+				Release:   "R2345678",
+			},
+		}, nil)
 
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 		require.NoError(t, appCreate(kk, "rack1", "app2"))
