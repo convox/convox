@@ -230,7 +230,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 
 	tdata := bytes.Join(items, []byte("---\n"))
 
-	timeout := int32(common.DefaultInt(opts.Timeout, 2100))
+	timeout := int32(common.DefaultInt(opts.Timeout, 3000))
 
 	if err := p.Apply(p.AppNamespace(app), "app", PromoteApplyConfig{
 		Version:      id,

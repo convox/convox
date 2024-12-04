@@ -120,8 +120,11 @@ func (c *AtomController) Update(prev, cur interface{}) error {
 	switch ca.Status {
 	case "Rollback":
 		if deadline := am.NewTime(time.Now().UTC().Add(-1 * time.Duration(ca.Spec.ProgressDeadlineSeconds) * time.Second)); ca.Started.Before(&deadline) {
-			c.atomStatus(ca, "Failure")
-			return nil
+			success, err := c.atom.check(ca.Namespace, ca.Spec.CurrentVersion)
+			if err != nil || !success {
+				c.atomStatus(ca, "Failure")
+				return nil
+			}
 		}
 
 		success, err := c.atom.check(ca.Namespace, ca.Spec.CurrentVersion)
@@ -135,8 +138,11 @@ func (c *AtomController) Update(prev, cur interface{}) error {
 		}
 	case "Updating":
 		if deadline := am.NewTime(time.Now().UTC().Add(-1 * time.Duration(ca.Spec.ProgressDeadlineSeconds) * time.Second)); ca.Started.Before(&deadline) {
-			c.atomStatus(ca, "Deadline")
-			return nil
+			success, err := c.atom.check(ca.Namespace, ca.Spec.CurrentVersion)
+			if err != nil || !success {
+				c.atomStatus(ca, "Deadline")
+				return nil
+			}
 		}
 
 		success, err := c.atom.check(ca.Namespace, ca.Spec.CurrentVersion)
