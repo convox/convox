@@ -17,6 +17,7 @@ type Apps []App
 
 type AppCreateOptions struct {
 	Generation *string `default:"2" flag:"generation,g" param:"generation"`
+	Timeout    *int    `flag:"timeout" param:"timeout"`
 }
 
 type AppUpdateOptions struct {
