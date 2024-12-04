@@ -24,6 +24,7 @@ import (
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -121,6 +122,7 @@ func (c *Client) Apply(ns, name string, cfg *ApplyConfig) error {
 	a.Spec.CurrentVersion = v.Name
 	a.Spec.ProgressDeadlineSeconds = cfg.Timeout
 	a.Spec.Dependencies = cfg.Dependencies
+	a.Spec.ReleaseCache = GenAtomReleaseCache(v.Name, v.Spec.Release)
 	a.Started = am.Now()
 	a.Status = "Pending"
 
@@ -153,6 +155,40 @@ func (c *Client) Cancel(ns, name string) error {
 	return nil
 }
 
+func (c *Client) updateReleaseCache(a *aa.Atom) {
+	atomVersion, _ := ParseAtomReleaseCache(a.Spec.ReleaseCache)
+	if atomVersion == a.Spec.CurrentVersion {
+		return
+	}
+
+	v, err := c.Atom.AtomV1().AtomVersions(a.Namespace).Get(c.ctx, a.Spec.CurrentVersion, am.GetOptions{})
+	if err != nil {
+		fmt.Printf("ns=atom at=updateReleaseCache ns=%q err=%q\n", a.Namespace, err)
+		return
+	}
+
+	a.Spec.ReleaseCache = GenAtomReleaseCache(a.Spec.CurrentVersion, v.Spec.Release)
+
+	// Create the patch data
+	patch := map[string]interface{}{
+		"spec": map[string]interface{}{
+			"releaseCache": a.Spec.ReleaseCache,
+		},
+	}
+
+	patchBytes, err := json.Marshal(patch)
+	if err != nil {
+		fmt.Printf("ns=atom at=updateReleaseCache ns=%q err=%q\n", a.Namespace, err)
+		return
+	}
+
+	_, err = c.Atom.AtomV1().Atoms(a.Namespace).Patch(c.ctx, a.Name, types.MergePatchType, patchBytes, am.PatchOptions{})
+	if err != nil {
+		fmt.Printf("ns=atom at=updateReleaseCache ns=%q err=%q\n", a.Namespace, err)
+		return
+	}
+}
+
 func (c *Client) Status(ns, name string) (string, string, error) {
 	a, err := c.Atom.AtomV1().Atoms(ns).Get(c.ctx, name, am.GetOptions{})
 	if ae.IsNotFound(err) {
@@ -162,18 +198,44 @@ func (c *Client) Status(ns, name string) (string, string, error) {
 		return "", "", errors.WithStack(err)
 	}
 
-	release := ""
-
-	if a.Spec.CurrentVersion != "" {
-		v, err := c.Atom.AtomV1().AtomVersions(ns).Get(c.ctx, a.Spec.CurrentVersion, am.GetOptions{})
-		if err != nil {
-			return "", "", errors.WithStack(err)
-		}
-
-		release = v.Spec.Release
+	atomVersion, release := ParseAtomReleaseCache(a.Spec.ReleaseCache)
+	if atomVersion == a.Spec.CurrentVersion {
+		return string(a.Status), release, nil
 	}
 
+	c.updateReleaseCache(a)
+
+	_, release = ParseAtomReleaseCache(a.Spec.ReleaseCache)
+
 	return string(a.Status), release, nil
+}
+
+type AtomStatusInfo struct {
+	Namespace string
+	Status    string
+	Release   string
+}
+
+func (c *Client) StatusAll() ([]AtomStatusInfo, error) {
+	aList, err := c.Atom.AtomV1().Atoms(am.NamespaceAll).List(c.ctx, am.ListOptions{
+		FieldSelector: "metadata.name=app",
+	})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	result := []AtomStatusInfo{}
+	for i := range aList.Items {
+		a := &aList.Items[i]
+		c.updateReleaseCache(a)
+		_, release := ParseAtomReleaseCache(a.Spec.ReleaseCache)
+		result = append(result, AtomStatusInfo{
+			Namespace: a.Namespace,
+			Status:    string(a.Status),
+			Release:   release,
+		})
+	}
+	return result, err
 }
 
 func (c *Client) apply(a *aa.Atom) error {
@@ -337,6 +399,20 @@ func (c *Client) update(a *aa.Atom, fn func(ua *aa.Atom)) (*aa.Atom, error) {
 	}
 
 	return fa, nil
+}
+
+func (c *Client) SyncReleaseCache() error {
+	aList, err := c.Atom.AtomV1().Atoms(am.NamespaceAll).List(c.ctx, am.ListOptions{
+		FieldSelector: "metadata.name=app",
+	})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	for i := range aList.Items {
+		c.updateReleaseCache(&aList.Items[i])
+	}
+	return nil
 }
 
 func applyLabels(data []byte, labels map[string]string) ([]byte, error) {
@@ -580,4 +656,16 @@ func templateHelpers() map[string]interface{} {
 			return template.HTML(fmt.Sprintf("%q", s))
 		},
 	}
+}
+
+func GenAtomReleaseCache(atomVersion, release string) string {
+	return fmt.Sprintf("%s|%s", atomVersion, release)
+}
+
+func ParseAtomReleaseCache(cache string) (atomVerion string, relese string) {
+	parts := strings.Split(cache, "|")
+	if len(parts) == 2 {
+		return parts[0], parts[1]
+	}
+	return "", ""
 }

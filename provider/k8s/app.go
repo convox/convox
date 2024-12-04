@@ -7,6 +7,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/convox/convox/pkg/atom"
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
@@ -122,10 +123,20 @@ func (p *Provider) AppList() (structs.Apps, error) {
 		return nil, errors.WithStack(err)
 	}
 
+	atmList, err := p.Atom.StatusAll()
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	atmMap := map[string]atom.AtomStatusInfo{}
+	for i := range atmList {
+		atmMap[atmList[i].Namespace] = atmList[i]
+	}
+
 	as := structs.Apps{}
 
 	for _, n := range ns.Items {
-		a, err := p.appFromNamespace(n)
+		a, err := p.appFromNamespaceAndAtom(n, atmMap[n.Name])
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -216,6 +227,62 @@ func (p *Provider) appFromNamespace(ns ac.Namespace) (*structs.App, error) {
 		Locked:     ns.Annotations["convox.com/lock"] == "true",
 		Name:       name,
 		Release:    release,
+		Router:     p.Router,
+		Status:     status,
+	}
+
+	var params map[string]string
+
+	if data, ok := ns.Annotations["convox.com/params"]; ok && data > "" {
+		if err := json.Unmarshal([]byte(data), &params); err != nil {
+			return nil, errors.WithStack(err)
+		}
+	}
+
+	if params == nil {
+		params = map[string]string{}
+	}
+
+	defparams := p.Engine.AppParameters()
+
+	// set parameter default values
+	for k, v := range defparams {
+		if _, ok := params[k]; !ok {
+			params[k] = v
+		}
+	}
+
+	// filter out invalid parameters
+	for k := range params {
+		if _, ok := defparams[k]; !ok {
+			delete(params, k)
+		}
+	}
+
+	a.Parameters = params
+
+	switch ns.Status.Phase {
+	case "Terminating":
+		a.Status = "deleting"
+	}
+
+	return a, nil
+}
+
+func (p *Provider) appFromNamespaceAndAtom(ns ac.Namespace, atm atom.AtomStatusInfo) (*structs.App, error) {
+	name := common.CoalesceString(ns.Labels["app"], ns.Labels["name"])
+
+	status := common.AtomStatus(atm.Status)
+
+	if ns.Annotations == nil {
+		ns.Annotations = map[string]string{}
+	}
+
+	a := &structs.App{
+		Generation: "3",
+		Locked:     ns.Annotations["convox.com/lock"] == "true",
+		Name:       name,
+		Release:    atm.Release,
 		Router:     p.Router,
 		Status:     status,
 	}

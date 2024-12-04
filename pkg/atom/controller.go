@@ -73,6 +73,8 @@ func (c *AtomController) Run() {
 
 	go c.controller.Run(ch)
 
+	go c.atom.SyncReleaseCache()
+
 	for err := range ch {
 		fmt.Printf("err = %+v\n", err)
 	}
