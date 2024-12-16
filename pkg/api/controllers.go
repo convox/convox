@@ -595,7 +595,12 @@ func (s *Server) FilesUpload(c *stdapi.Context) error {
 	pid := c.Var("pid")
 	r := c
 
-	err := s.provider(c).WithContext(c.Context()).FilesUpload(app, pid, r)
+	var opts structs.FileTransterOptions
+	if err := stdapi.UnmarshalOptions(c.Request(), &opts); err != nil {
+		return err
+	}
+
+	err := s.provider(c).WithContext(c.Context()).FilesUpload(app, pid, r, opts)
 	if err != nil {
 		return err
 	}

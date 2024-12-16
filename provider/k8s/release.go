@@ -226,6 +226,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		if len(elastiDeps) > 0 {
 			dependencies = append(dependencies, elastiDeps...)
 		}
+
 	}
 
 	tdata := bytes.Join(items, []byte("---\n"))

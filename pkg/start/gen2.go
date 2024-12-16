@@ -342,7 +342,7 @@ func (opts Options2) handleAdds(pid, remote string, adds []changes.Change) error
 	ch := make(chan error)
 
 	go func() {
-		ch <- opts.Provider.FilesUpload(opts.App, pid, rp)
+		ch <- opts.Provider.FilesUpload(opts.App, pid, rp, structs.FileTransterOptions{})
 		close(ch)
 	}()
 

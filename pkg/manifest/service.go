@@ -29,6 +29,7 @@ type Service struct {
 	GrpcHealthEnabled  bool                  `yaml:"grpcHealthEnabled,omitempty"`
 	Health             ServiceHealth         `yaml:"health,omitempty"`
 	Liveness           ServiceLiveness       `yaml:"liveness,omitempty"`
+	StartupProbe       ServiceStartupProbe   `yaml:"startupProbe,omitempty"`
 	Image              string                `yaml:"image,omitempty"`
 	Init               bool                  `yaml:"init,omitempty"`
 	InitContainer      *InitContainer        `yaml:"initContainer,omitempty"`
@@ -106,8 +107,9 @@ func (v VolumeEmptyDir) Validate() error {
 type VolumeAwsEfs struct {
 	Id string `yaml:"id"`
 
-	AccessMode string `yaml:"accessMode,omitempty"`
-	MountPath  string `yaml:"mountPath"`
+	AccessMode   string `yaml:"accessMode,omitempty"`
+	MountPath    string `yaml:"mountPath"`
+	StorageClass string `yaml:"storageClass,omitempty"`
 }
 
 func (v VolumeAwsEfs) Validate() error {
@@ -172,6 +174,16 @@ type ServiceLiveness struct {
 	Grace            int    `yaml:"grace,omitempty"`
 	Interval         int    `yaml:"interval,omitempty"`
 	Path             string `yaml:"path,omitempty"`
+	Timeout          int    `yaml:"timeout,omitempty"`
+	SuccessThreshold int    `yaml:"successThreshold,omitempty"`
+	FailureThreshold int    `yaml:"failureThreshold,omitempty"`
+}
+
+type ServiceStartupProbe struct {
+	Grace            int    `yaml:"grace,omitempty"`
+	Interval         int    `yaml:"interval,omitempty"`
+	Path             string `yaml:"path,omitempty"`
+	TcpSocketPort    string `yaml:"tcpSocketPort,omitempty"`
 	Timeout          int    `yaml:"timeout,omitempty"`
 	SuccessThreshold int    `yaml:"successThreshold,omitempty"`
 	FailureThreshold int    `yaml:"failureThreshold,omitempty"`
