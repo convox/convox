@@ -405,10 +405,13 @@ func (c *Client) FilesDownload(app, pid, file string) (io.Reader, error) {
 	return v, err
 }
 
-func (c *Client) FilesUpload(app, pid string, r io.Reader) error {
+func (c *Client) FilesUpload(app, pid string, r io.Reader, opts structs.FileTransterOptions) error {
 	var err error
 
-	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+	ro, err := stdsdk.MarshalOptions(opts)
+	if err != nil {
+		return err
+	}
 
 	ro.Body = r
 

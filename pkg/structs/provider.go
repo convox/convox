@@ -46,7 +46,7 @@ type Provider interface {
 
 	FilesDelete(app, pid string, files []string) error
 	FilesDownload(app, pid string, file string) (io.Reader, error)
-	FilesUpload(app, pid string, r io.Reader) error
+	FilesUpload(app, pid string, r io.Reader, opts FileTransterOptions) error
 
 	InstanceKeyroll() (*KeyPair, error)
 	InstanceList() (Instances, error)

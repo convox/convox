@@ -14,7 +14,7 @@ metadata:
 spec:
   accessModes:
     - {{.AccessMode}}
-  storageClassName: efs-sc
+  storageClassName: {{ if .StorageClass }} {{.StorageClass}} {{ else }} efs-sc {{end}}
   resources:
     requests:
       storage: 1Mi # efs driver ignores this value

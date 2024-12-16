@@ -557,12 +557,12 @@ func (_m *MockProvider) FilesDownload(app string, pid string, file string) (io.R
 }
 
 // FilesUpload provides a mock function with given fields: app, pid, r
-func (_m *MockProvider) FilesUpload(app string, pid string, r io.Reader) error {
-	ret := _m.Called(app, pid, r)
+func (_m *MockProvider) FilesUpload(app string, pid string, r io.Reader, opts FileTransterOptions) error {
+	ret := _m.Called(app, pid, r, opts)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string, string, io.Reader) error); ok {
-		r0 = rf(app, pid, r)
+	if rf, ok := ret.Get(0).(func(string, string, io.Reader, FileTransterOptions) error); ok {
+		r0 = rf(app, pid, r, opts)
 	} else {
 		r0 = ret.Error(0)
 	}

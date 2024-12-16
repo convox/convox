@@ -85,3 +85,55 @@ resource "kubernetes_storage_class_v1" "convox_efs" {
     reuseAccessPoint      = "false"                            # optional
   }
 }
+
+resource "kubernetes_storage_class_v1" "convox_efs_775" {
+  depends_on = [null_resource.wait_k8s_api]
+
+  count = var.efs_csi_driver_enable ? 1 : 0
+
+  metadata {
+    name = "efs-sc-775"
+  }
+
+  storage_provisioner = "efs.csi.aws.com"
+
+  parameters = {
+    provisioningMode      = "efs-ap"
+    fileSystemId          = aws_efs_file_system.convox_efs[0].id
+    uid = "33"
+    gid = "33"
+    directoryPerms        = "0775"
+    gidRangeStart         = "1000"                             # optional
+    gidRangeEnd           = "20000"                            # optional
+    basePath              = "/dp775"                              # optional
+    subPathPattern        = "$${.PVC.namespace}/$${.PVC.name}" # optional
+    ensureUniqueDirectory = "false"                            # optional
+    reuseAccessPoint      = "false"                            # optional
+  }
+}
+
+resource "kubernetes_storage_class_v1" "convox_efs_777" {
+  depends_on = [null_resource.wait_k8s_api]
+
+  count = var.efs_csi_driver_enable ? 1 : 0
+
+  metadata {
+    name = "efs-sc-777"
+  }
+
+  storage_provisioner = "efs.csi.aws.com"
+
+  parameters = {
+    provisioningMode      = "efs-ap"
+    fileSystemId          = aws_efs_file_system.convox_efs[0].id
+    uid = "1000"
+    gid = "1000"
+    directoryPerms        = "0775"
+    gidRangeStart         = "1000"                             # optional
+    gidRangeEnd           = "20000"                            # optional
+    basePath              = "/dp777"                              # optional
+    subPathPattern        = "$${.PVC.namespace}/$${.PVC.name}" # optional
+    ensureUniqueDirectory = "false"                            # optional
+    reuseAccessPoint      = "false"                            # optional
+  }
+}

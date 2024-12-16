@@ -117,6 +117,19 @@ spec:
           - {{ safe . }}
         {{ end }}
         {{ end }}
+        env:
+        - name: INIT_CONTAINER
+          value: "true"
+        {{ range $.Resources }}
+        - name: "{{.Env}}"
+          valueFrom:
+            configMapKeyRef:
+              name: resource-{{ k8sname .Name }}
+              key: {{ .GetConfigMapKey }}
+        {{ end }}
+        envFrom:
+        - secretRef:
+            name: env-{{.Service.Name}}
         volumeMounts:
         {{ range .Service.InitContainer.VolumeOptions }}
         {{ with .EmptyDir }}
@@ -174,6 +187,23 @@ spec:
           {{ end }}
         {{ end }}
         {{ with .Service.Port.Port }}
+        {{ if or (not (eq $.Service.StartupProbe.Path "")) (not (eq $.Service.StartupProbe.TcpSocketPort ""))}}
+        startupProbe:
+          {{ if not (eq $.Service.StartupProbe.Path "")}}
+          httpGet:
+            path: {{$.Service.StartupProbe.Path}}"
+            port: {{.}}
+          {{ end }}
+          {{ if not (eq $.Service.StartupProbe.TcpSocketPort "")}}
+          tcpSocket:
+            port: {{$.Service.StartupProbe.TcpSocketPort}}
+          {{ end }}
+          initialDelaySeconds: {{$.Service.Liveness.Grace}}
+          periodSeconds: {{$.Service.Liveness.Interval}}
+          timeoutSeconds: {{$.Service.Liveness.Timeout}}
+          successThreshold: {{$.Service.Liveness.SuccessThreshold}}
+          failureThreshold: {{$.Service.Liveness.FailureThreshold}}
+        {{ end }}
         {{ if and (not (eq $.Service.Port.Scheme "GRPC")) (not (eq $.Service.Liveness.Path ""))}}
         livenessProbe:
           httpGet:
