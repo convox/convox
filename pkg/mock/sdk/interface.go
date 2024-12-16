@@ -738,12 +738,12 @@ func (_m *Interface) FilesDownload(app string, pid string, file string) (io.Read
 }
 
 // FilesUpload provides a mock function with given fields: app, pid, r
-func (_m *Interface) FilesUpload(app string, pid string, r io.Reader) error {
-	ret := _m.Called(app, pid, r)
+func (_m *Interface) FilesUpload(app string, pid string, r io.Reader, opts structs.FileTransterOptions) error {
+	ret := _m.Called(app, pid, r, opts)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string, string, io.Reader) error); ok {
-		r0 = rf(app, pid, r)
+	if rf, ok := ret.Get(0).(func(string, string, io.Reader, structs.FileTransterOptions) error); ok {
+		r0 = rf(app, pid, r, opts)
 	} else {
 		r0 = ret.Error(0)
 	}
