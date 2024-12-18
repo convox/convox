@@ -13,6 +13,9 @@ type Provider interface {
 
 	AppCancel(name string) error
 	AppCreate(name string, opts AppCreateOptions) (*App, error)
+	AppConfigGet(app, name string) (*AppConfig, error)
+	AppConfigList(app string) ([]AppConfig, error)
+	AppConfigSet(app, name, valueBase64 string) error
 	AppGet(name string) (*App, error)
 	AppDelete(name string) error
 	AppList() (Apps, error)
