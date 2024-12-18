@@ -21,6 +21,7 @@ type Service struct {
 	Build              ServiceBuild          `yaml:"build,omitempty"`
 	Certificate        Certificate           `yaml:"certificate,omitempty"`
 	Command            string                `yaml:"command,omitempty"`
+	ConfigMounts       ConfigMounts          `yaml:"configMounts,omitempty"`
 	Deployment         ServiceDeployment     `yaml:"deployment,omitempty"`
 	DnsConfig          ServiceDnsConfig      `yaml:"dnsConfig,omitempty"`
 	Domains            ServiceDomains        `yaml:"domain,omitempty"`
@@ -66,6 +67,7 @@ type InitContainer struct {
 	Image         string         `yaml:"image,omitempty"`
 	Command       string         `yaml:"command,omitempty"`
 	VolumeOptions []VolumeOption `yaml:"volumeOptions,omitempty"`
+	ConfigMounts  ConfigMounts   `yaml:"configMounts,omitempty"`
 }
 
 type VolumeOption struct {

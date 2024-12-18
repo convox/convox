@@ -141,6 +141,11 @@ spec:
           mountPath: {{ .MountPath }}
         {{ end }}
         {{ end }}
+        {{ range .Service.InitContainer.ConfigMounts }}
+        - name: cfg-{{ .Id }}
+          mountPath: "{{ pathJoin .Dir .Filename }}"
+          subPath: "{{ .Filename }}"
+        {{ end }}
       {{ end }}
       containers:
       - name: {{.App.Name}}
@@ -280,6 +285,11 @@ spec:
         - name: {{ volumeName $.App.Name (volumeFrom $.App.Name $.Service.Name .) }}
           mountPath: "{{ volumeTo . }}"
         {{ end }}
+        {{ range .Service.ConfigMounts }}
+        - name: cfg-{{ .Id }}
+          mountPath: "{{ pathJoin .Dir .Filename }}"
+          subPath: "{{ .Filename }}"
+        {{ end }}
         {{ range .Service.VolumeOptions }}
         {{ with .EmptyDir }}
         - name: ed-{{ .Id }}
@@ -320,6 +330,15 @@ spec:
           claimName: efs-{{$.Service.Name}}-{{.Id}}
       {{ end }}
       {{ end }}
+      {{ range $.Service.ConfigMounts }}
+      - name: cfg-{{ .Id }}
+        secret:
+          secretName: cfg-{{ .Id }}
+          items:
+            - key: app.json
+              path: {{ .Filename }}
+      {{ end }}
+ 
 {{ if not (eq .Service.Scale.Count.Min .Service.Scale.Count.Max) }}
 ---
 apiVersion: autoscaling/v2
