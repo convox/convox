@@ -28,3 +28,8 @@ type AppUpdateOptions struct {
 func (a Apps) Less(i, j int) bool {
 	return a[i].Name < a[j].Name
 }
+
+type AppConfig struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}

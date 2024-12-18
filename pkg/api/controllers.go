@@ -53,6 +53,47 @@ func (s *Server) AppCreate(c *stdapi.Context) error {
 	return c.RenderJSON(v)
 }
 
+func (s *Server) AppConfigGet(c *stdapi.Context) error {
+	name := c.Var("name")
+	app := c.Var("app")
+
+	v, err := s.provider(c).WithContext(c.Context()).AppConfigGet(app, name)
+	if err != nil {
+		return err
+	}
+
+	return c.RenderJSON(v)
+}
+
+func (s *Server) AppConfigList(c *stdapi.Context) error {
+	app := c.Var("app")
+
+	v, err := s.provider(c).WithContext(c.Context()).AppConfigList(app)
+	if err != nil {
+		return err
+	}
+
+	if vs, ok := interface{}(v).(Sortable); ok {
+		sort.Slice(v, vs.Less)
+	}
+
+	return c.RenderJSON(v)
+}
+
+func (s *Server) AppConfigSet(c *stdapi.Context) error {
+	app := c.Var("app")
+	name := c.Var("name")
+
+	valaue64 := c.Value("value")
+
+	err := s.provider(c).WithContext(c.Context()).AppConfigSet(app, name, valaue64)
+	if err != nil {
+		return err
+	}
+
+	return c.RenderOK()
+}
+
 func (s *Server) AppDelete(c *stdapi.Context) error {
 	if err := s.hook("AppDeleteValidate", c); err != nil {
 		return err

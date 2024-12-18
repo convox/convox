@@ -49,6 +49,44 @@ func (c *Client) AppDelete(name string) error {
 	return err
 }
 
+/*
+	AppConfigGet(app, name string) (*AppConfig, error)
+	AppConfigList(app string) ([]AppConfig, error)
+	AppConfigSet(app, name, valueBase64 string) error
+*/
+
+func (c *Client) AppConfigGet(app, name string) (*structs.AppConfig, error) {
+	var err error
+
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+
+	var v *structs.AppConfig
+
+	err = c.Get(fmt.Sprintf("/apps/%s/configs/%s", app, name), ro, &v)
+
+	return v, err
+}
+
+func (c *Client) AppConfigList(app string) ([]structs.AppConfig, error) {
+	var err error
+
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+
+	var v []structs.AppConfig
+
+	err = c.Get(fmt.Sprintf("/apps/%s/configs", app), ro, &v)
+
+	return v, err
+}
+
+func (c *Client) AppConfigSet(app, name, valueBase64 string) error {
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+
+	ro.Params["value"] = valueBase64
+
+	return c.Put(fmt.Sprintf("/apps/%s/configs/%s", app, name), ro, nil)
+}
+
 func (c *Client) AppGet(name string) (*structs.App, error) {
 	var err error
 
