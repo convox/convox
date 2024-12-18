@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -75,6 +76,80 @@ func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*struc
 	p.EventSend("app:create", structs.EventSendOptions{Data: map[string]string{"name": name}})
 
 	return a, nil
+}
+
+func (p *Provider) AppConfigGet(app, name string) (*structs.AppConfig, error) {
+	cfg, err := p.Cluster.CoreV1().Secrets(p.AppNamespace(app)).Get(context.TODO(), p.GenConfigName(name), am.GetOptions{})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if ae.IsNotFound(err) {
+		return nil, errors.WithStack(fmt.Errorf("app config not found: %s", name))
+	}
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	c := &structs.AppConfig{
+		Name: name,
+	}
+	if cfg.Data != nil {
+		c.Value = string(cfg.Data[APP_CONFIG_KEY])
+	}
+
+	return c, nil
+}
+
+func (p *Provider) AppConfigList(app string) ([]structs.AppConfig, error) {
+	resp, err := p.Cluster.CoreV1().Secrets(p.AppNamespace(app)).List(context.TODO(), am.ListOptions{
+		LabelSelector: "system=convox,type=config",
+	})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	cfgs := []structs.AppConfig{}
+	for i := range resp.Items {
+		cfg := &resp.Items[i]
+		c := structs.AppConfig{
+			Name: strings.TrimPrefix(cfg.Name, "cfg-"),
+		}
+		if cfg.Data != nil {
+			c.Value = string(cfg.Data[APP_CONFIG_KEY])
+		}
+
+		cfgs = append(cfgs, c)
+	}
+
+	return cfgs, nil
+}
+
+func (p *Provider) AppConfigSet(app, name, valueBase64 string) error {
+	data, err := base64.StdEncoding.DecodeString(valueBase64)
+	if err != nil {
+		return fmt.Errorf("failed to parse base 64 vaule: %s", err)
+	}
+
+	_, err = p.CreateOrPatchSecret(p.ctx, am.ObjectMeta{
+		Name:      p.GenConfigName(name),
+		Namespace: p.AppNamespace(app),
+	}, func(s *ac.Secret) *ac.Secret {
+		if s.Labels == nil {
+			s.Labels = map[string]string{}
+		}
+		s.Labels["app"] = app
+		s.Labels["system"] = "convox"
+		s.Labels["type"] = "config"
+
+		s.Data = map[string][]byte{
+			APP_CONFIG_KEY: data,
+		}
+
+		return s
+	}, am.PatchOptions{FieldManager: "convox"})
+	if err != nil {
+		return fmt.Errorf("failed to set config: %s", err)
+	}
+	return err
 }
 
 func (p *Provider) AppDelete(name string) error {
@@ -378,4 +453,8 @@ func (p *Provider) appUpdate(a *structs.App) error {
 	}
 
 	return nil
+}
+
+func (p *Provider) GenConfigName(id string) string {
+	return fmt.Sprintf("cfg-%s", id)
 }
