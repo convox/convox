@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bufio"
 	"encoding/base64"
 	"fmt"
 	"os"
@@ -70,6 +71,13 @@ func ConfigSet(rack sdk.Interface, c *stdcli.Context) error {
 		data, err = os.ReadFile(f)
 		if err != nil {
 			return fmt.Errorf("failed to read the file: %s", err)
+		}
+	} else {
+		if !c.Reader().IsTerminal() {
+			s := bufio.NewScanner(c.Reader())
+			for s.Scan() {
+				data = append(data, s.Bytes()...)
+			}
 		}
 	}
 
