@@ -7,7 +7,7 @@ type AppConfigs []AppConfig
 type AppConfig struct {
 	Id    string  `yaml:"id"`
 	Name  string  `yaml:"name,omitempty"` // the actual name to create secret config
-	Value *string `yaml:"value"`
+	Value *string `yaml:"value,omitempty"`
 }
 
 func (a *AppConfig) Validate() error {

@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/base64"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/convox/convox/sdk"
@@ -70,6 +71,13 @@ func ConfigSet(rack sdk.Interface, c *stdcli.Context) error {
 		data, err = os.ReadFile(f)
 		if err != nil {
 			return fmt.Errorf("failed to read the file: %s", err)
+		}
+	} else {
+		if !c.Reader().IsTerminal() {
+			data, err = io.ReadAll(c.Reader())
+			if err != nil {
+				return err
+			}
 		}
 	}
 
