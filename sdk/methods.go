@@ -49,12 +49,6 @@ func (c *Client) AppDelete(name string) error {
 	return err
 }
 
-/*
-	AppConfigGet(app, name string) (*AppConfig, error)
-	AppConfigList(app string) ([]AppConfig, error)
-	AppConfigSet(app, name, valueBase64 string) error
-*/
-
 func (c *Client) AppConfigGet(app, name string) (*structs.AppConfig, error) {
 	var err error
 
