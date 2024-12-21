@@ -194,8 +194,6 @@ jobs:
   release-cli-macos-arm64:
     needs:
       - release
-      - build-amd64
-      - build-arm64
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -217,6 +215,8 @@ jobs:
   ci:
     if: github.repository == 'convox/convox'
     needs:
+      - build-amd64
+      - build-arm64
       - release-cli-linux
       - release-cli-linux-arm64
       - release-cli-macos
@@ -286,6 +286,8 @@ jobs:
     if: github.repository == 'convox/convox'
     environment: 'UpgradeDowngradeTests'
     needs:
+      - build-amd64
+      - build-arm64
       - release-cli-linux
       - release-cli-linux-arm64
       - release-cli-macos
@@ -333,6 +335,8 @@ jobs:
     if: github.repository == 'convox/convox'
     environment: 'UpgradeDowngradeTests'
     needs:
+      - build-amd64
+      - build-arm64
       - release-cli-linux
       - release-cli-linux-arm64
       - release-cli-macos
@@ -379,6 +383,8 @@ jobs:
   ci-ssh:
     if: github.repository == 'convox/convox'
     needs:
+      - build-amd64
+      - build-arm64
       - release-cli-linux
       - release-cli-linux-arm64
       - release-cli-macos
