@@ -57,6 +57,8 @@ spec:
       app: {{.App}}
       resource: {{.Name}}
   replicas: 1
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:
