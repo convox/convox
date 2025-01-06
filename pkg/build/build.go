@@ -1,7 +1,6 @@
 package build
 
 import (
-	"bytes"
 	"compress/gzip"
 	"fmt"
 	"io"
@@ -44,7 +43,7 @@ type Build struct {
 	Exec     exec.Interface
 	Provider structs.Provider
 	Engine   Engine
-	logs     bytes.Buffer
+	logs     *os.File
 	writer   io.Writer
 }
 
@@ -59,12 +58,17 @@ func New(rack structs.Provider, opts Options, engine Engine) (*Build, error) {
 
 	b.Provider = rack
 
-	b.logs = bytes.Buffer{}
+	f, err := os.CreateTemp(os.TempDir(), "build-log")
+	if err != nil {
+		return nil, err
+	}
+
+	b.logs = f
 
 	if opts.Output != nil {
-		b.writer = io.MultiWriter(opts.Output, &b.logs)
+		b.writer = io.MultiWriter(opts.Output, b.logs)
 	} else {
-		b.writer = io.MultiWriter(os.Stdout, &b.logs)
+		b.writer = io.MultiWriter(os.Stdout, b.logs)
 	}
 
 	return b, nil
@@ -179,7 +183,7 @@ func (bb *Build) prepareSourceObject(app, key string) (string, error) {
 }
 
 func (bb *Build) success() error {
-	logs, err := bb.Provider.ObjectStore(bb.App, fmt.Sprintf("build/%s/logs", bb.Id), bytes.NewReader(bb.logs.Bytes()), structs.ObjectStoreOptions{})
+	logs, err := bb.Provider.ObjectStore(bb.App, fmt.Sprintf("build/%s/logs", bb.Id), bb.logs, structs.ObjectStoreOptions{})
 	if err != nil {
 		return err
 	}
@@ -217,7 +221,7 @@ func (bb *Build) fail(buildError error) error {
 
 	bb.Provider.EventSend("build:create", structs.EventSendOptions{Data: map[string]string{"app": bb.App, "id": bb.Id}, Error: options.String(buildError.Error())})
 
-	logs, err := bb.Provider.ObjectStore(bb.App, fmt.Sprintf("build/%s/logs", bb.Id), bytes.NewReader(bb.logs.Bytes()), structs.ObjectStoreOptions{})
+	logs, err := bb.Provider.ObjectStore(bb.App, fmt.Sprintf("build/%s/logs", bb.Id), bb.logs, structs.ObjectStoreOptions{})
 	if err != nil {
 		return err
 	}
