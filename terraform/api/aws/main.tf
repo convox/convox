@@ -57,3 +57,26 @@ module "k8s" {
     VPC_ID                               = var.vpc_id
   }
 }
+
+
+// efs related resources
+
+resource "kubernetes_persistent_volume_claim_v1" "efs-pvc-system-775" {
+  count = var.efs_file_system_id != "" ? 1 : 0
+
+  metadata {
+    name = "efs-pvc-system-775"
+    namespace = var.namespace
+  }
+
+  spec {
+    access_modes = [ "ReadWriteMany" ]
+    resources {
+      requests = {
+        storage = "2Gi"
+      }
+    }
+    volume_name = "efs-pv-775"
+    storage_class_name = "efs-sc-base"
+  }
+}
