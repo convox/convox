@@ -62,7 +62,7 @@ module "k8s" {
 // efs related resources
 
 resource "kubernetes_persistent_volume_claim_v1" "efs-pvc-system-775" {
-  count = var.efs_file_system_id != "" ? 1 : 0
+  count = var.efs_csi_driver_enable ? 1 : 0
 
   metadata {
     name = "efs-pvc-system-775"
