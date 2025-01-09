@@ -25,10 +25,11 @@ type Process struct {
 type Processes []Process
 
 type ProcessExecOptions struct {
-	Entrypoint *bool `header:"Entrypoint"`
-	Height     *int  `header:"Height"`
-	Tty        *bool `header:"Tty" default:"true"`
-	Width      *int  `header:"Width"`
+	Entrypoint   *bool `header:"Entrypoint"`
+	Height       *int  `header:"Height"`
+	Tty          *bool `header:"Tty" default:"true"`
+	Width        *int  `header:"Width"`
+	DisableStdin *bool `header:"Disable-Stdin"`
 }
 
 type ProcessListOptions struct {
