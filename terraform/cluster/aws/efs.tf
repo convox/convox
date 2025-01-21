@@ -137,3 +137,48 @@ resource "kubernetes_storage_class_v1" "convox_efs_777" {
     reuseAccessPoint      = "false"                            # optional
   }
 }
+
+resource "kubernetes_storage_class_v1" "convox_efs_base" {
+  depends_on = [null_resource.wait_k8s_api]
+
+  count = var.efs_csi_driver_enable ? 1 : 0
+
+  metadata {
+    name = "efs-sc-base"
+  }
+
+  storage_provisioner = "efs.csi.aws.com"
+
+}
+
+resource "kubernetes_persistent_volume_v1" "convox_efs_pv_775" {
+  depends_on = [null_resource.wait_k8s_api]
+
+  count = var.efs_csi_driver_enable ? 1 : 0
+
+  metadata {
+    name = "efs-pv-775"
+  }
+
+  spec {
+
+    capacity = {
+      storage = "200Gi"
+    }
+
+    access_modes = ["ReadWriteMany"]
+    mount_options = ["tls"]
+    persistent_volume_reclaim_policy = "Retain"
+
+    persistent_volume_source {
+      csi {
+        driver = "efs.csi.aws.com"
+        volume_handle = "${aws_efs_file_system.convox_efs[0].id}:/dp775"
+      }
+    }
+
+    storage_class_name = kubernetes_storage_class_v1.convox_efs_base[0].metadata[0].name
+    volume_mode = "Filesystem"
+  }
+
+}
