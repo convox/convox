@@ -158,6 +158,7 @@ module "rack" {
   docker_hub_password                  = var.docker_hub_password
   disable_image_manifest_cache         = var.disable_image_manifest_cache
   eks_addons                           = module.cluster.eks_addons
+  efs_csi_driver_enable                = var.efs_csi_driver_enable
   efs_file_system_id                   = module.cluster.efs_file_system_id
   high_availability                    = var.high_availability
   idle_timeout                         = var.idle_timeout
