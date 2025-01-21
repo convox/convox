@@ -25,7 +25,7 @@ import (
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/prefix"
 	"github.com/convox/convox/pkg/structs"
-	"github.com/docker/docker/builder/dockerignore"
+	"github.com/moby/buildkit/frontend/dockerfile/dockerignore"
 )
 
 const (
