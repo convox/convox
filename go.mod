@@ -51,6 +51,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.29.8
 	k8s.io/apimachinery v0.29.8
+	k8s.io/cli-runtime v0.29.8
 	k8s.io/client-go v0.29.8
 	k8s.io/code-generator v0.29.8
 	k8s.io/klog v1.0.0
@@ -188,7 +189,6 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiextensions-apiserver v0.25.2 // indirect
-	k8s.io/cli-runtime v0.29.8 // indirect
 	k8s.io/component-base v0.29.8 // indirect
 	k8s.io/gengo v0.0.0-20230829151522-9cce18d56c01 // indirect
 	k8s.io/klog/v2 v2.110.1 // indirect
@@ -207,7 +207,7 @@ require (
 	github.com/cert-manager/cert-manager v1.10.2
 	github.com/gorilla/sessions v1.2.1 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
-	github.com/moby/buildkit v0.10.6 // indirect
+	github.com/moby/buildkit v0.10.6
 	github.com/sebest/xff v0.0.0-20210106013422-671bd2870b3a // indirect
 	golang.org/x/net v0.23.0 // indirect
 )
