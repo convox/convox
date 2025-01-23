@@ -714,6 +714,9 @@ func (p *Provider) releaseTemplateEfs(a *structs.App, s manifest.Service) ([]byt
 		if s.VolumeOptions[i].AwsEfs != nil && len(p.EfsFileSystemId) <= 2 {
 			return nil, fmt.Errorf("efs csi driver is not enabled but efs volume is specified")
 		}
+		if s.VolumeOptions[i].AwsEfs != nil && s.VolumeOptions[i].AwsEfs.VolumeHandle != "" {
+			s.VolumeOptions[i].AwsEfs.ProcessTemplate(p.EfsFileSystemId, a.Name, s.Name)
+		}
 		if err := s.VolumeOptions[i].Validate(); err != nil {
 			return nil, err
 		}

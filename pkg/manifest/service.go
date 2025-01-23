@@ -112,6 +112,7 @@ type VolumeAwsEfs struct {
 	AccessMode   string `yaml:"accessMode,omitempty"`
 	MountPath    string `yaml:"mountPath"`
 	StorageClass string `yaml:"storageClass,omitempty"`
+	VolumeHandle string `yaml:"volumeHandle,omitempty"`
 }
 
 func (v VolumeAwsEfs) Validate() error {
@@ -132,6 +133,15 @@ func (v VolumeAwsEfs) Validate() error {
 		return fmt.Errorf("awsEfs.accessMode must be one of these values: %s", strings.Join(allowedModes, ", "))
 	}
 	return nil
+}
+
+func (v *VolumeAwsEfs) ProcessTemplate(efsFsId, app, service string) {
+	if !strings.Contains(v.VolumeHandle, ":") {
+		v.VolumeHandle = fmt.Sprintf("%s:%s", efsFsId, v.VolumeHandle)
+	}
+
+	v.VolumeHandle = strings.ReplaceAll(v.VolumeHandle, "[APP]", app)
+	v.VolumeHandle = strings.ReplaceAll(v.VolumeHandle, "[SERVICE]", service)
 }
 
 type Services []Service
