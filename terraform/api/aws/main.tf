@@ -61,11 +61,11 @@ module "k8s" {
 
 // efs related resources
 
-resource "kubernetes_persistent_volume_claim_v1" "efs-pvc-system-775" {
+resource "kubernetes_persistent_volume_claim_v1" "efs-pvc-system-root" {
   count = var.efs_csi_driver_enable ? 1 : 0
 
   metadata {
-    name = "efs-pvc-system-775"
+    name = "efs-pvc-system-root"
     namespace = var.namespace
   }
 
@@ -76,7 +76,7 @@ resource "kubernetes_persistent_volume_claim_v1" "efs-pvc-system-775" {
         storage = "2Gi"
       }
     }
-    volume_name = "efs-pv-775"
+    volume_name = "efs-pv-root"
     storage_class_name = "efs-sc-base"
   }
 }
