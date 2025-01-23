@@ -151,13 +151,13 @@ resource "kubernetes_storage_class_v1" "convox_efs_base" {
 
 }
 
-resource "kubernetes_persistent_volume_v1" "convox_efs_pv_775" {
+resource "kubernetes_persistent_volume_v1" "convox_efs_pv_root" {
   depends_on = [null_resource.wait_k8s_api]
 
   count = var.efs_csi_driver_enable ? 1 : 0
 
   metadata {
-    name = "efs-pv-775"
+    name = "efs-pv-root"
   }
 
   spec {
@@ -167,13 +167,20 @@ resource "kubernetes_persistent_volume_v1" "convox_efs_pv_775" {
     }
 
     access_modes = ["ReadWriteMany"]
-    mount_options = ["tls"]
+    mount_options = [
+      "noresvport",
+      "rsize=1048576",
+      "wsize=1048576",
+      "hard",
+      "timeo=600",
+      "retrans=2",
+    ]
     persistent_volume_reclaim_policy = "Retain"
 
     persistent_volume_source {
       csi {
         driver = "efs.csi.aws.com"
-        volume_handle = "${aws_efs_file_system.convox_efs[0].id}:/dp775"
+        volume_handle = "${aws_efs_file_system.convox_efs[0].id}"
       }
     }
 

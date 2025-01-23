@@ -1,5 +1,53 @@
 {{ range .Service.VolumeOptions }}
 {{ with .AwsEfs }}
+{{ if .VolumeHandle }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: efs-pv-{{$.App.Name}}-{{$.Service.Name}}-{{.Id}}
+  labels:
+    system: convox
+    app: {{$.App.Name}}
+spec:
+  accessModes:
+  - ReadWriteMany
+  capacity:
+    storage: 500Gi
+  csi:
+    driver: efs.csi.aws.com
+    volumeHandle: {{ .VolumeHandle }}
+  mountOptions:
+  - noresvport
+  - rsize=1048576
+  - wsize=1048576
+  - hard
+  - timeo=600
+  - retrans=2
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: {{ if .StorageClass }} {{.StorageClass}} {{ else }} efs-sc-base {{end}}
+  volumeMode: Filesystem
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: efs-{{$.Service.Name}}-{{.Id}}
+  namespace: {{$.Namespace}}
+  labels:
+    system: convox
+    {{ range keyValue $.Service.Labels }}
+    {{.Key}}: "{{.Value}}"
+    {{ end }}
+spec:
+  accessModes:
+    - {{.AccessMode}}
+  storageClassName: {{ if .StorageClass }} {{.StorageClass}} {{ else }} efs-sc-base {{end}}
+  volumeMode: Filesystem
+  volumeName: efs-pv-{{$.App.Name}}-{{$.Service.Name}}-{{.Id}}
+  resources:
+    requests:
+      storage: 1Mi # efs driver ignores this value
+{{ else }}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -18,5 +66,6 @@ spec:
   resources:
     requests:
       storage: 1Mi # efs driver ignores this value
+{{ end }}
 {{ end }}
 {{ end }}
