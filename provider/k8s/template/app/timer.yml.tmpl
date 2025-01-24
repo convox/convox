@@ -115,6 +115,21 @@ spec:
             - name: {{ volumeName $.App.Name (volumeFrom $.App.Name $.Service.Name .) }}
               mountPath: "{{ volumeTo . }}"
             {{ end }}
+            {{ range .Service.ConfigMounts }}
+            - name: cfg-{{ .Id }}
+              mountPath: "{{ pathJoin .Dir .Filename }}"
+              subPath: "{{ .Filename }}"
+            {{ end }}
+            {{ range .Service.VolumeOptions }}
+            {{ with .EmptyDir }}
+            - name: ed-{{ .Id }}
+              mountPath: {{ .MountPath }}
+            {{ end }}
+            {{ with .AwsEfs }}
+            - name: efs-{{ .Id }}
+              mountPath: {{ .MountPath }}
+            {{ end }}
+            {{ end }}
           volumes:
           - name: ca
             configMap:
@@ -129,4 +144,28 @@ spec:
             persistentVolumeClaim:
               claimName: {{ volumeName $.App.Name . }}
             {{ end }}
+          {{ end }}
+          {{ range .Service.VolumeOptions }}
+          {{ with .EmptyDir }}
+          - name: ed-{{ .Id }}
+            {{ if .Medium }}
+            emptyDir:
+              medium: {{ .Medium }}
+            {{ else }}
+            emptyDir: {}
+            {{ end }}
+          {{ end }}
+          {{ with .AwsEfs }}
+          - name: efs-{{ .Id }}
+            persistentVolumeClaim:
+              claimName: efs-{{$.Service.Name}}-{{.Id}}
+          {{ end }}
+          {{ end }}
+          {{ range $.Service.ConfigMounts }}
+          - name: cfg-{{ .Id }}
+            secret:
+              secretName: cfg-{{ .Id }}
+              items:
+                - key: app.json
+                  path: {{ .Filename }}
           {{ end }}
