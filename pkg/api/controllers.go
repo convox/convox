@@ -848,6 +848,7 @@ func (s *Server) ProcessExec(c *stdapi.Context) error {
 
 	v, err := s.provider(c).WithContext(c.Context()).ProcessExec(app, pid, command, stdsdk.NewAdapterWs(c.Websocket()), opts)
 	if err != nil {
+		renderStatusCode(c, v)
 		return err
 	}
 

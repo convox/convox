@@ -30,9 +30,20 @@ func (p *Provider) ProcessExec(app, pid, command string, rw io.ReadWriter, opts 
 		return 0, err
 	}
 
+	runningPs := structs.Processes{}
+	for _, pp := range pss {
+		if pp.Status == "running" {
+			runningPs = append(runningPs, pp)
+		}
+	}
+
+	if len(runningPs) == 0 {
+		return 0, fmt.Errorf("no running process is found")
+	}
+
 	// if pid is a service name, pick one at random
-	if len(pss) > 0 {
-		pid = pss[rand.Intn(len(pss))].Id
+	if len(runningPs) > 0 {
+		pid = runningPs[rand.Intn(len(runningPs))].Id
 	}
 
 	req := p.Cluster.CoreV1().RESTClient().Post().Resource("pods").Name(pid).Namespace(p.AppNamespace(app)).SubResource("exec").Param("container", app)
@@ -119,7 +130,7 @@ func (p *Provider) ProcessExec(app, pid, command string, rw io.ReadWriter, opts 
 		return ee.ExitStatus(), nil
 	}
 	if err != nil {
-		return 0, errors.WithStack(err)
+		return 1, errors.WithStack(err)
 	}
 
 	return 0, nil
