@@ -26,7 +26,7 @@ func (t Timer) AnnotationsMap() map[string]string {
 	return annotations
 }
 
-func (t *Timer) GetName() string {
+func (t Timer) GetName() string {
 	return t.Name
 }
 

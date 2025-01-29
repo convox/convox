@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http/httputil"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -998,6 +1000,33 @@ func (s *Server) Proxy(c *stdapi.Context) error {
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func (s *Server) ProxyHttpService(c *stdapi.Context) error {
+	host := c.Header("X-Host")
+	port, cerr := strconv.Atoi(c.Header("X-Port"))
+	if cerr != nil {
+		return cerr
+	}
+
+	path := c.Var("path")
+
+	u, err := url.Parse(fmt.Sprintf("http://%s:%d", host, port))
+	if err != nil {
+		return fmt.Errorf("invalid host: %s", err)
+	}
+
+	rp := httputil.NewSingleHostReverseProxy(u)
+
+	req := c.Request()
+
+	req.Host = u.Hostname()
+	req.URL.Path = fmt.Sprintf("/%s", path)
+	req.URL.RawQuery = c.Request().URL.RawQuery
+
+	rp.ServeHTTP(c.Response(), req)
 
 	return nil
 }
