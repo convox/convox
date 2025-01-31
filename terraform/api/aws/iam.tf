@@ -137,6 +137,7 @@ data "aws_iam_policy_document" "rds_provisioner" {
       "rds:CreateDBInstance*",
       "rds:DeleteDBInstance*",
       "rds:ModifyDBInstance*",
+      "rds:CreateDBSnapshot",
       "rds:Describe*",
       "rds:CreateDBSubnetGroup",
       "rds:DeleteDBSubnetGroup",
