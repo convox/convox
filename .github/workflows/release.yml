@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       upload_url: ${{ steps.release.outputs.upload_url }}
     steps:
@@ -69,7 +69,7 @@ jobs:
           path: ./cmd/convox/pkg/convox-darwin-arm64
   build-amd64:
     needs: release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -96,7 +96,7 @@ jobs:
         run: docker buildx build -f Dockerfile.buildkit --target privileged --platform linux/amd64 -t ${{ github.repository }}:${{ env.VERSION }}-build-privileged --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max .
   build-arm64:
     needs: release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -125,7 +125,7 @@ jobs:
   release-cli-linux:
     needs:
       - release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -146,7 +146,7 @@ jobs:
   release-cli-linux-arm64:
     needs:
       - release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -167,7 +167,7 @@ jobs:
   release-cli-macos:
     needs:
       - release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -188,7 +188,7 @@ jobs:
   release-cli-macos-arm64:
     needs:
       - release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -215,7 +215,7 @@ jobs:
       - release-cli-linux-arm64
       - release-cli-macos
       - release-cli-macos-arm64
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -286,7 +286,7 @@ jobs:
       - release-cli-linux-arm64
       - release-cli-macos
       - release-cli-macos-arm64
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       provider: aws
       suffix: downgrade
@@ -335,7 +335,7 @@ jobs:
       - release-cli-linux-arm64
       - release-cli-macos
       - release-cli-macos-arm64
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       provider: aws
       suffix: upgrade
@@ -383,7 +383,7 @@ jobs:
       - release-cli-linux-arm64
       - release-cli-macos
       - release-cli-macos-arm64
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       provider: aws
       suffix: ssh
