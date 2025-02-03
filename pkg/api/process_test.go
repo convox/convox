@@ -90,7 +90,7 @@ func TestProcessExecError(t *testing.T) {
 		require.NoError(t, err)
 		d, err := ioutil.ReadAll(r)
 		require.NoError(t, err)
-		require.Equal(t, []byte("ERROR: err1\n"), d)
+		require.Equal(t, []byte("F1E49A85-0AD7-4AEF-A618-C249C6E6568D:0\nERROR: err1\n"), d)
 	})
 }
 
