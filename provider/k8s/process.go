@@ -38,7 +38,11 @@ func (p *Provider) ProcessExec(app, pid, command string, rw io.ReadWriter, opts 
 	}
 
 	if len(runningPs) == 0 {
-		return 0, fmt.Errorf("no running process is found")
+		ps, err := p.ProcessGet(app, pid)
+		if err != nil {
+			return 0, err
+		}
+		runningPs = append(runningPs, *ps)
 	}
 
 	// if pid is a service name, pick one at random
