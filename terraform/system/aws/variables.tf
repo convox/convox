@@ -2,8 +2,18 @@ variable "access_log_retention_in_days" {
   default = "7"
 }
 
+variable "ami_id" {
+  type    = string
+  default = null
+}
+
 variable "availability_zones" {
   default = ""
+}
+
+variable "build_ami_id" {
+  type    = string
+  default = null
 }
 
 variable "build_disable_convox_resolver" {
