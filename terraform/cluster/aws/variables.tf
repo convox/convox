@@ -1,9 +1,19 @@
+variable "ami_id" {
+  type    = string
+  default = null
+}
+
 variable "arm_type" {
   default = false
 }
 
 variable "availability_zones" {
   default = ""
+}
+
+variable "build_ami_id" {
+  type    = string
+  default = null
 }
 
 variable "build_arm_type" {
