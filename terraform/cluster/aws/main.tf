@@ -40,6 +40,10 @@ locals {
   availability_zones     = var.availability_zones != "" ? compact(split(",", var.availability_zones)) : data.aws_availability_zones.available.names
   network_resource_count = var.high_availability ? 3 : 2
   oidc_sub               = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
+  node_type_list = split(",", var.node_type)
+  node_type_map  = zipmap(range(length(local.node_type_list)), local.node_type_list)
+  build_node_type_list = split(",", var.build_node_type)
+  build_node_type_map = zipmap(range(length(local.build_node_type_list)), local.build_node_type_list)
 }
 
 data "aws_availability_zones" "available" {
@@ -91,13 +95,14 @@ resource "aws_iam_openid_connect_provider" "cluster" {
 }
 
 resource "random_id" "node_group" {
+  for_each = local.node_type_map
   byte_length = 8
 
   keepers = {
     dummy               = "2"
     node_capacity_type  = var.node_capacity_type
     node_disk           = var.node_disk
-    node_type           = var.node_type
+    node_type           = each.value
     private             = var.private
     private_subnets_ids = join("-", local.private_subnets_ids)
     public_subnets_ids  = join("-", local.public_subnets_ids)
@@ -106,6 +111,7 @@ resource "random_id" "node_group" {
 }
 
 resource "random_id" "build_node_group" {
+  for_each = local.build_node_type_map
   count = var.build_node_enabled ? 1 : 0
 
   byte_length = 8
@@ -113,13 +119,27 @@ resource "random_id" "build_node_group" {
   keepers = {
     dummy               = "2"
     node_disk           = var.node_disk
-    node_type           = var.build_node_type
+    node_type           = each.value
     private_subnets_ids = join("-", local.private_subnets_ids)
     role_arn            = replace(aws_iam_role.nodes.arn, "role/convox/", "role/") # eks barfs on roles with paths
   }
 }
 
+module "amitype" {
+  source    = "./amitype"
+  for_each  = local.node_type_map
+  node_type = each.value
+}
+
+module "amitype_build" {
+  source    = "./amitype"
+  for_each  = local.build_node_type_map
+  node_type = each.value
+}
+
 resource "aws_eks_node_group" "cluster" {
+  for_each = local.node_type_map
+
   depends_on = [
     aws_eks_cluster.cluster,
     aws_iam_openid_connect_provider.cluster,
@@ -127,23 +147,23 @@ resource "aws_eks_node_group" "cluster" {
 
   count = var.high_availability ? 3 : 1
 
-  ami_type        = var.gpu_type ? "AL2_x86_64_GPU" : var.arm_type ? "AL2_ARM_64" : "AL2_x86_64"
-  capacity_type   = var.node_capacity_type == "MIXED" ? count.index == 0 ? "ON_DEMAND" : "SPOT" : var.node_capacity_type
+  ami_type        = module.amitype[each.key].gpu_type ? "AL2_x86_64_GPU" : module.amitype[each.key].arm_type ? "AL2_ARM_64" : "AL2_x86_64"
+  capacity_type   = var.node_capacity_type == "MIXED" ? each.key == 0 ? "ON_DEMAND" : "SPOT" : var.node_capacity_type
   cluster_name    = aws_eks_cluster.cluster.name
-  node_group_name = "${var.name}-${var.private ? data.aws_subnet.private_subnet_details[count.index].availability_zone : data.aws_subnet.public_subnet_details[count.index].availability_zone}-${count.index}${random_id.node_group.hex}"
-  node_role_arn   = random_id.node_group.keepers.role_arn
+  node_group_name = "${var.name}-${var.private ? data.aws_subnet.private_subnet_details[count.index].availability_zone : data.aws_subnet.public_subnet_details[count.index].availability_zone}-${count.index}${random_id.node_group[each.key].hex}"
+  node_role_arn   = random_id.node_group[each.key].keepers.role_arn
   subnet_ids      = [var.private ? local.private_subnets_ids[count.index] : local.public_subnets_ids[count.index]]
   tags            = local.tags
   version         = var.k8s_version
 
   launch_template {
-    id      = aws_launch_template.cluster.id
+    id      = aws_launch_template.cluster[each.key].id
     version = "$Latest"
   }
 
   scaling_config {
-    desired_size = var.node_capacity_type == "MIXED" ? count.index == 0 ? var.min_on_demand_count : 1 : 1
-    min_size     = var.node_capacity_type == "MIXED" ? count.index == 0 ? var.min_on_demand_count : 1 : 1
+    desired_size = each.key != 0 ? 0 : var.node_capacity_type == "MIXED" ? count.index == 0 ? var.min_on_demand_count : 1 : 1
+    min_size     = each.key != 0 ? 0 : var.node_capacity_type == "MIXED" ? count.index == 0 ? var.min_on_demand_count : 1 : 1
     max_size     = var.node_capacity_type == "MIXED" ? count.index == 0 ? var.max_on_demand_count : 100 : 100
   }
 
@@ -167,6 +187,8 @@ resource "aws_eks_node_group" "cluster" {
 }
 
 resource "aws_eks_node_group" "cluster-build" {
+  for_each = local.build_node_type_map
+
   depends_on = [
     aws_eks_cluster.cluster,
     aws_iam_openid_connect_provider.cluster,
@@ -174,12 +196,11 @@ resource "aws_eks_node_group" "cluster-build" {
 
   count = var.build_node_enabled ? 1 : 0
 
-  ami_type        = var.build_gpu_type ? "AL2_x86_64_GPU" : var.build_arm_type ? "AL2_ARM_64" : "AL2_x86_64"
+  ami_type        = module.amitype_build[each.key].gpu_type ? "AL2_x86_64_GPU" : module.amitype_build[each.key].arm_type ? "AL2_ARM_64" : "AL2_x86_64"
   capacity_type   = "ON_DEMAND"
   cluster_name    = aws_eks_cluster.cluster.name
-  instance_types  = split(",", random_id.build_node_group[0].keepers.node_type)
-  node_group_name = "${var.name}-build-${data.aws_subnet.private_subnet_details[count.index].availability_zone}-${count.index}${random_id.build_node_group[0].hex}"
-  node_role_arn   = random_id.build_node_group[0].keepers.role_arn
+  node_group_name = "${var.name}-build-${data.aws_subnet.private_subnet_details[count.index].availability_zone}-${count.index}${random_id.build_node_group[each.key].hex}"
+  node_role_arn   = random_id.build_node_group[each.key].keepers.role_arn
   subnet_ids      = [local.private_subnets_ids[count.index]]
   tags            = local.tags
   version         = var.k8s_version
@@ -269,11 +290,13 @@ data "http" "user_data_content" {
 }
 
 resource "aws_launch_template" "cluster" {
+  for_each = local.node_type_map
+
   block_device_mappings {
     device_name = "/dev/xvda"
     ebs {
       volume_type = "gp3"
-      volume_size = random_id.node_group.keepers.node_disk
+      volume_size = random_id.node_group[each.key].keepers.node_disk
     }
   }
 
@@ -284,7 +307,7 @@ resource "aws_launch_template" "cluster" {
     instance_metadata_tags      = var.imds_tags_enable ? "enabled" : "disabled"
   }
 
-  instance_type = split(",", random_id.node_group.keepers.node_type)[0]
+  instance_type = each.value
 
   dynamic "tag_specifications" {
     for_each = toset(
@@ -308,6 +331,8 @@ resource "aws_launch_template" "cluster" {
 }
 
 resource "aws_launch_template" "cluster-build" {
+  for_each = local.build_node_type_map
+
   block_device_mappings {
     device_name = "/dev/xvda"
     ebs {
@@ -322,6 +347,8 @@ resource "aws_launch_template" "cluster-build" {
     http_endpoint               = "enabled"
     instance_metadata_tags      = var.imds_tags_enable ? "enabled" : "disabled"
   }
+
+  instance_type = each.value
 
   dynamic "tag_specifications" {
     for_each = toset(
