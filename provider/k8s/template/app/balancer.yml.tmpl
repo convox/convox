@@ -27,7 +27,6 @@ spec:
   {{ end }}
   selector:
     service: {{.Balancer.Service}}
-    release: {{.Release.Id}}
     type: service
   ports:
     {{ range .Balancer.Ports }}

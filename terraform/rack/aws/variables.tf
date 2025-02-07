@@ -52,6 +52,11 @@ variable "ecr_scan_on_push_enable" {
   default = false
 }
 
+variable "efs_csi_driver_enable" {
+  type    = bool
+  default = false
+}
+
 variable "efs_file_system_id" {
   type = string
 }

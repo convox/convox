@@ -21,6 +21,9 @@ func (s *Server) setupRoutes(r stdapi.Router) {
 	r.Route("GET", "/apps/{app}/builds", s.BuildList)
 	r.Route("SOCKET", "/apps/{app}/builds/{id}/logs", s.BuildLogs)
 	r.Route("PUT", "/apps/{app}/builds/{id}", s.BuildUpdate)
+	r.Route("GET", "/apps/{app}/configs", s.AppConfigList)
+	r.Route("GET", "/apps/{app}/configs/{name}", s.AppConfigGet)
+	r.Route("PUT", "/apps/{app}/configs/{name}", s.AppConfigSet)
 	r.Route("GET", "/system/capacity", s.CapacityGet)
 	r.Route("PUT", "/apps/{app}/ssl/{service}/{port}", s.CertificateApply)
 	r.Route("POST", "/certificates", s.CertificateCreate)
@@ -88,4 +91,6 @@ func (s *Server) setupRoutes(r stdapi.Router) {
 	r.Route("", "", s.SystemUninstall)
 	r.Route("PUT", "/system", s.SystemUpdate)
 	r.Route("", "", s.Workers)
+
+	r.Route("ANY", "/custom/http/proxy/{path:.*}", s.ProxyHttpService)
 }

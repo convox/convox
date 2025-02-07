@@ -3,7 +3,9 @@ package k8s
 import (
 	"io"
 	"io/ioutil"
+	"strings"
 
+	"github.com/convox/convox/pkg/structs"
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -62,12 +64,19 @@ func (p *Provider) FilesDownload(app, pid, file string) (io.Reader, error) {
 	return r, nil
 }
 
-func (p *Provider) FilesUpload(app, pid string, r io.Reader) error {
+func (p *Provider) FilesUpload(app, pid string, r io.Reader, opts structs.FileTransterOptions) error {
 	req := p.Cluster.CoreV1().RESTClient().Post().Resource("pods").Name(pid).Namespace(p.AppNamespace(app)).SubResource("exec").Param("container", app)
+
+	cmd := []string{"tar"}
+	if opts.TarExtraFlags != nil {
+		cmd = append(cmd, strings.Split(*opts.TarExtraFlags, ",")...)
+	}
+
+	cmd = append(cmd, []string{"-C", "/", "-xf", "-"}...)
 
 	eo := &ac.PodExecOptions{
 		Container: app,
-		Command:   []string{"tar", "-C", "/", "-xf", "-"},
+		Command:   cmd,
 		Stdin:     true,
 	}
 

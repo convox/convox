@@ -25,7 +25,7 @@ import (
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/prefix"
 	"github.com/convox/convox/pkg/structs"
-	"github.com/docker/docker/builder/dockerignore"
+	"github.com/moby/buildkit/frontend/dockerfile/dockerignore"
 )
 
 const (
@@ -342,7 +342,7 @@ func (opts Options2) handleAdds(pid, remote string, adds []changes.Change) error
 	ch := make(chan error)
 
 	go func() {
-		ch <- opts.Provider.FilesUpload(opts.App, pid, rp)
+		ch <- opts.Provider.FilesUpload(opts.App, pid, rp, structs.FileTransterOptions{})
 		close(ch)
 	}()
 

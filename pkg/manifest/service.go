@@ -21,6 +21,7 @@ type Service struct {
 	Build              ServiceBuild          `yaml:"build,omitempty"`
 	Certificate        Certificate           `yaml:"certificate,omitempty"`
 	Command            string                `yaml:"command,omitempty"`
+	ConfigMounts       ConfigMounts          `yaml:"configMounts,omitempty"`
 	Deployment         ServiceDeployment     `yaml:"deployment,omitempty"`
 	DnsConfig          ServiceDnsConfig      `yaml:"dnsConfig,omitempty"`
 	Domains            ServiceDomains        `yaml:"domain,omitempty"`
@@ -29,6 +30,7 @@ type Service struct {
 	GrpcHealthEnabled  bool                  `yaml:"grpcHealthEnabled,omitempty"`
 	Health             ServiceHealth         `yaml:"health,omitempty"`
 	Liveness           ServiceLiveness       `yaml:"liveness,omitempty"`
+	StartupProbe       ServiceStartupProbe   `yaml:"startupProbe,omitempty"`
 	Image              string                `yaml:"image,omitempty"`
 	Init               bool                  `yaml:"init,omitempty"`
 	InitContainer      *InitContainer        `yaml:"initContainer,omitempty"`
@@ -65,6 +67,7 @@ type InitContainer struct {
 	Image         string         `yaml:"image,omitempty"`
 	Command       string         `yaml:"command,omitempty"`
 	VolumeOptions []VolumeOption `yaml:"volumeOptions,omitempty"`
+	ConfigMounts  ConfigMounts   `yaml:"configMounts,omitempty"`
 }
 
 type VolumeOption struct {
@@ -106,8 +109,10 @@ func (v VolumeEmptyDir) Validate() error {
 type VolumeAwsEfs struct {
 	Id string `yaml:"id"`
 
-	AccessMode string `yaml:"accessMode,omitempty"`
-	MountPath  string `yaml:"mountPath"`
+	AccessMode   string `yaml:"accessMode,omitempty"`
+	MountPath    string `yaml:"mountPath"`
+	StorageClass string `yaml:"storageClass,omitempty"`
+	VolumeHandle string `yaml:"volumeHandle,omitempty"`
 }
 
 func (v VolumeAwsEfs) Validate() error {
@@ -128,6 +133,15 @@ func (v VolumeAwsEfs) Validate() error {
 		return fmt.Errorf("awsEfs.accessMode must be one of these values: %s", strings.Join(allowedModes, ", "))
 	}
 	return nil
+}
+
+func (v *VolumeAwsEfs) ProcessTemplate(efsFsId, app, service string) {
+	if !strings.Contains(v.VolumeHandle, ":") {
+		v.VolumeHandle = fmt.Sprintf("%s:%s", efsFsId, v.VolumeHandle)
+	}
+
+	v.VolumeHandle = strings.ReplaceAll(v.VolumeHandle, "[APP]", app)
+	v.VolumeHandle = strings.ReplaceAll(v.VolumeHandle, "[SERVICE]", service)
 }
 
 type Services []Service
@@ -172,6 +186,16 @@ type ServiceLiveness struct {
 	Grace            int    `yaml:"grace,omitempty"`
 	Interval         int    `yaml:"interval,omitempty"`
 	Path             string `yaml:"path,omitempty"`
+	Timeout          int    `yaml:"timeout,omitempty"`
+	SuccessThreshold int    `yaml:"successThreshold,omitempty"`
+	FailureThreshold int    `yaml:"failureThreshold,omitempty"`
+}
+
+type ServiceStartupProbe struct {
+	Grace            int    `yaml:"grace,omitempty"`
+	Interval         int    `yaml:"interval,omitempty"`
+	Path             string `yaml:"path,omitempty"`
+	TcpSocketPort    string `yaml:"tcpSocketPort,omitempty"`
 	Timeout          int    `yaml:"timeout,omitempty"`
 	SuccessThreshold int    `yaml:"successThreshold,omitempty"`
 	FailureThreshold int    `yaml:"failureThreshold,omitempty"`

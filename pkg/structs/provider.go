@@ -13,6 +13,9 @@ type Provider interface {
 
 	AppCancel(name string) error
 	AppCreate(name string, opts AppCreateOptions) (*App, error)
+	AppConfigGet(app, name string) (*AppConfig, error)
+	AppConfigList(app string) ([]AppConfig, error)
+	AppConfigSet(app, name, valueBase64 string) error
 	AppGet(name string) (*App, error)
 	AppDelete(name string) error
 	AppList() (Apps, error)
@@ -46,7 +49,7 @@ type Provider interface {
 
 	FilesDelete(app, pid string, files []string) error
 	FilesDownload(app, pid string, file string) (io.Reader, error)
-	FilesUpload(app, pid string, r io.Reader) error
+	FilesUpload(app, pid string, r io.Reader, opts FileTransterOptions) error
 
 	InstanceKeyroll() (*KeyPair, error)
 	InstanceList() (Instances, error)

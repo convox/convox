@@ -27,6 +27,7 @@ var (
 type Manifest struct {
 	AppSettings AppSettings `yaml:"appSettings,omitempty"`
 	Balancers   Balancers   `yaml:"balancers,omitempty"`
+	Configs     AppConfigs  `yaml:"configs,omitempty"`
 	Environment Environment `yaml:"environment,omitempty"`
 	Labels      Labels      `yaml:"labels,omitempty"`
 	Params      Params      `yaml:"params,omitempty"`
@@ -119,6 +120,7 @@ func (m *Manifest) ApplyCompatibility() error {
 }
 
 func (m *Manifest) ApplyDefaults() error {
+
 	for i, s := range m.Services {
 		if s.Build.Path == "" && s.Image == "" {
 			m.Services[i].Build.Path = "."

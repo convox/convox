@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http/httputil"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -51,6 +53,47 @@ func (s *Server) AppCreate(c *stdapi.Context) error {
 	}
 
 	return c.RenderJSON(v)
+}
+
+func (s *Server) AppConfigGet(c *stdapi.Context) error {
+	name := c.Var("name")
+	app := c.Var("app")
+
+	v, err := s.provider(c).WithContext(c.Context()).AppConfigGet(app, name)
+	if err != nil {
+		return err
+	}
+
+	return c.RenderJSON(v)
+}
+
+func (s *Server) AppConfigList(c *stdapi.Context) error {
+	app := c.Var("app")
+
+	v, err := s.provider(c).WithContext(c.Context()).AppConfigList(app)
+	if err != nil {
+		return err
+	}
+
+	if vs, ok := interface{}(v).(Sortable); ok {
+		sort.Slice(v, vs.Less)
+	}
+
+	return c.RenderJSON(v)
+}
+
+func (s *Server) AppConfigSet(c *stdapi.Context) error {
+	app := c.Var("app")
+	name := c.Var("name")
+
+	valaue64 := c.Value("value")
+
+	err := s.provider(c).WithContext(c.Context()).AppConfigSet(app, name, valaue64)
+	if err != nil {
+		return err
+	}
+
+	return c.RenderOK()
 }
 
 func (s *Server) AppDelete(c *stdapi.Context) error {
@@ -595,7 +638,12 @@ func (s *Server) FilesUpload(c *stdapi.Context) error {
 	pid := c.Var("pid")
 	r := c
 
-	err := s.provider(c).WithContext(c.Context()).FilesUpload(app, pid, r)
+	var opts structs.FileTransterOptions
+	if err := stdapi.UnmarshalOptions(c.Request(), &opts); err != nil {
+		return err
+	}
+
+	err := s.provider(c).WithContext(c.Context()).FilesUpload(app, pid, r, opts)
 	if err != nil {
 		return err
 	}
@@ -802,6 +850,7 @@ func (s *Server) ProcessExec(c *stdapi.Context) error {
 
 	v, err := s.provider(c).WithContext(c.Context()).ProcessExec(app, pid, command, stdsdk.NewAdapterWs(c.Websocket()), opts)
 	if err != nil {
+		renderStatusCode(c, v)
 		return err
 	}
 
@@ -951,6 +1000,33 @@ func (s *Server) Proxy(c *stdapi.Context) error {
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func (s *Server) ProxyHttpService(c *stdapi.Context) error {
+	host := c.Header("X-Host")
+	port, cerr := strconv.Atoi(c.Header("X-Port"))
+	if cerr != nil {
+		return cerr
+	}
+
+	path := c.Var("path")
+
+	u, err := url.Parse(fmt.Sprintf("http://%s:%d", host, port))
+	if err != nil {
+		return fmt.Errorf("invalid host: %s", err)
+	}
+
+	rp := httputil.NewSingleHostReverseProxy(u)
+
+	req := c.Request()
+
+	req.Host = u.Hostname()
+	req.URL.Path = fmt.Sprintf("/%s", path)
+	req.URL.RawQuery = c.Request().URL.RawQuery
+
+	rp.ServeHTTP(c.Response(), req)
 
 	return nil
 }

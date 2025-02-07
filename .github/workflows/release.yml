@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       upload_url: ${{ steps.release.outputs.upload_url }}
     steps:
@@ -48,28 +48,28 @@ jobs:
         env:
           IMAGE: ${{ github.repository }}
       - name: upload-convox-linux-amd64
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: convox-linux-amd64
           path: ./cmd/convox/pkg/convox-linux-amd64
       - name: upload-convox-linux-arm64
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: convox-linux-arm64
           path: ./cmd/convox/pkg/convox-linux-arm64
       - name: upload-convox-darwin-amd64
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: convox-darwin-amd64
           path: ./cmd/convox/pkg/convox-darwin-amd64
       - name: upload-convox-darwin-arm64
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: convox-darwin-arm64
           path: ./cmd/convox/pkg/convox-darwin-arm64
   build-amd64:
     needs: release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -96,7 +96,7 @@ jobs:
         run: docker buildx build -f Dockerfile.buildkit --target privileged --platform linux/amd64 -t ${{ github.repository }}:${{ env.VERSION }}-build-privileged --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max .
   build-arm64:
     needs: release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -125,15 +125,13 @@ jobs:
   release-cli-linux:
     needs:
       - release
-      - build-amd64
-      - build-arm64
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: convox-linux-amd64
       - name: release
@@ -148,15 +146,13 @@ jobs:
   release-cli-linux-arm64:
     needs:
       - release
-      - build-amd64
-      - build-arm64
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: convox-linux-arm64
       - name: release
@@ -171,15 +167,13 @@ jobs:
   release-cli-macos:
     needs:
       - release
-      - build-amd64
-      - build-arm64
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: convox-darwin-amd64
       - name: release
@@ -194,15 +188,13 @@ jobs:
   release-cli-macos-arm64:
     needs:
       - release
-      - build-amd64
-      - build-arm64
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: convox-darwin-arm64
       - name: release
@@ -217,11 +209,13 @@ jobs:
   ci:
     if: github.repository == 'convox/convox'
     needs:
+      - build-amd64
+      - build-arm64
       - release-cli-linux
       - release-cli-linux-arm64
       - release-cli-macos
       - release-cli-macos-arm64
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -286,11 +280,13 @@ jobs:
     if: github.repository == 'convox/convox'
     environment: 'UpgradeDowngradeTests'
     needs:
+      - build-amd64
+      - build-arm64
       - release-cli-linux
       - release-cli-linux-arm64
       - release-cli-macos
       - release-cli-macos-arm64
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       provider: aws
       suffix: downgrade
@@ -333,11 +329,13 @@ jobs:
     if: github.repository == 'convox/convox'
     environment: 'UpgradeDowngradeTests'
     needs:
+      - build-amd64
+      - build-arm64
       - release-cli-linux
       - release-cli-linux-arm64
       - release-cli-macos
       - release-cli-macos-arm64
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       provider: aws
       suffix: upgrade
@@ -379,11 +377,13 @@ jobs:
   ci-ssh:
     if: github.repository == 'convox/convox'
     needs:
+      - build-amd64
+      - build-arm64
       - release-cli-linux
       - release-cli-linux-arm64
       - release-cli-macos
       - release-cli-macos-arm64
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       provider: aws
       suffix: ssh

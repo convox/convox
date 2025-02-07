@@ -23,6 +23,10 @@ import (
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	APP_CONFIG_KEY = "app.json"
+)
+
 func (p *Provider) ReleaseCreate(app string, opts structs.ReleaseCreateOptions) (*structs.Release, error) {
 	r, err := p.releaseFork(app)
 	if err != nil {
@@ -225,6 +229,10 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		items = append(items, elasticacheItems...)
 		if len(elastiDeps) > 0 {
 			dependencies = append(dependencies, elastiDeps...)
+		}
+
+		if err := p.releaseAppConfigs(a, m); err != nil {
+			return err
 		}
 	}
 
@@ -706,6 +714,9 @@ func (p *Provider) releaseTemplateEfs(a *structs.App, s manifest.Service) ([]byt
 		if s.VolumeOptions[i].AwsEfs != nil && len(p.EfsFileSystemId) <= 2 {
 			return nil, fmt.Errorf("efs csi driver is not enabled but efs volume is specified")
 		}
+		if s.VolumeOptions[i].AwsEfs != nil && s.VolumeOptions[i].AwsEfs.VolumeHandle != "" {
+			s.VolumeOptions[i].AwsEfs.ProcessTemplate(p.EfsFileSystemId, a.Name, s.Name)
+		}
 		if err := s.VolumeOptions[i].Validate(); err != nil {
 			return nil, err
 		}
@@ -897,4 +908,49 @@ func (p *Provider) reservedNginxAnnotations() map[string]bool {
 		"nginx.ingress.kubernetes.io/ssl-redirect":           true,
 		"nginx.ingress.kubernetes.io/whitelist-source-range": true,
 	}
+}
+
+func (p *Provider) releaseAppConfigs(app *structs.App, m *manifest.Manifest) error {
+	if len(m.Configs) == 0 {
+		return nil
+	}
+
+	for i := range m.Configs {
+		name := common.CoalesceString(m.Configs[i].Name, p.GenConfigName(m.Configs[i].Id))
+		_, err := p.CreateOrPatchSecret(p.ctx, am.ObjectMeta{
+			Name:      name,
+			Namespace: p.AppNamespace(app.Name),
+			Labels: map[string]string{
+				"system": "convox",
+				"type":   "config",
+				"app":    app.Name,
+			},
+		}, func(s *v1.Secret) *v1.Secret {
+			if m.Configs[i].Value != nil {
+				s.Data = map[string][]byte{
+					APP_CONFIG_KEY: []byte(*m.Configs[i].Value),
+				}
+			} else if _, has := s.Data[APP_CONFIG_KEY]; !has {
+				s.Data = map[string][]byte{
+					APP_CONFIG_KEY: []byte(""),
+				}
+			}
+
+			if s.Labels == nil {
+				s.Labels = map[string]string{}
+			}
+
+			s.Labels["app"] = app.Name
+			s.Labels["system"] = "convox"
+			s.Labels["type"] = "config"
+			return s
+		}, am.PatchOptions{
+			FieldManager: "convox",
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create/update config: %s", err)
+		}
+	}
+
+	return nil
 }

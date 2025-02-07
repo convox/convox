@@ -24,7 +24,7 @@ func New(box packr.Box, helpers template.FuncMap) *Templater {
 func (t *Templater) Render(name string, params interface{}) ([]byte, error) {
 	ts := template.New("").Funcs(t.helpers)
 
-	tdata, err := t.box.MustString(name)
+	tdata, err := t.box.FindString(name)
 	if err != nil {
 		return nil, err
 	}

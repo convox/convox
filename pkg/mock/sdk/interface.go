@@ -36,6 +36,66 @@ func (_m *Interface) AppCancel(name string) error {
 	return r0
 }
 
+// AppConfigGet provides a mock function with given fields: app, name
+func (_m *Interface) AppConfigGet(app string, name string) (*structs.AppConfig, error) {
+	ret := _m.Called(app, name)
+
+	var r0 *structs.AppConfig
+	if rf, ok := ret.Get(0).(func(string, string) *structs.AppConfig); ok {
+		r0 = rf(app, name)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*structs.AppConfig)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, string) error); ok {
+		r1 = rf(app, name)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// AppConfigList provides a mock function with given fields: app
+func (_m *Interface) AppConfigList(app string) ([]structs.AppConfig, error) {
+	ret := _m.Called(app)
+
+	var r0 []structs.AppConfig
+	if rf, ok := ret.Get(0).(func(string) []structs.AppConfig); ok {
+		r0 = rf(app)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]structs.AppConfig)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(app)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// AppConfigSet provides a mock function with given fields: app, name, valueBase64
+func (_m *Interface) AppConfigSet(app string, name string, valueBase64 string) error {
+	ret := _m.Called(app, name, valueBase64)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string, string) error); ok {
+		r0 = rf(app, name, valueBase64)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // AppCreate provides a mock function with given fields: name, opts
 func (_m *Interface) AppCreate(name string, opts structs.AppCreateOptions) (*structs.App, error) {
 	ret := _m.Called(name, opts)
@@ -737,13 +797,13 @@ func (_m *Interface) FilesDownload(app string, pid string, file string) (io.Read
 	return r0, r1
 }
 
-// FilesUpload provides a mock function with given fields: app, pid, r
-func (_m *Interface) FilesUpload(app string, pid string, r io.Reader) error {
-	ret := _m.Called(app, pid, r)
+// FilesUpload provides a mock function with given fields: app, pid, r, opts
+func (_m *Interface) FilesUpload(app string, pid string, r io.Reader, opts structs.FileTransterOptions) error {
+	ret := _m.Called(app, pid, r, opts)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string, string, io.Reader) error); ok {
-		r0 = rf(app, pid, r)
+	if rf, ok := ret.Get(0).(func(string, string, io.Reader, structs.FileTransterOptions) error); ok {
+		r0 = rf(app, pid, r, opts)
 	} else {
 		r0 = ret.Error(0)
 	}

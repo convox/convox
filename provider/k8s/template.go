@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -97,6 +98,7 @@ func (p *Provider) templateHelpers() template.FuncMap {
 		"lower": func(s string) string {
 			return strings.ToLower(s)
 		},
+		"pathJoin": filepath.Join,
 		"quoteEscape": func(s string) string {
 			return strings.ReplaceAll(s, "\"", "\\\"")
 		},

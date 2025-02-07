@@ -35,6 +35,7 @@ module "api" {
   domain_internal                      = module.router.endpoint_internal
   disable_image_manifest_cache         = var.disable_image_manifest_cache
   ecr_scan_on_push_enable              = var.ecr_scan_on_push_enable
+  efs_csi_driver_enable                = var.efs_csi_driver_enable
   efs_file_system_id                   = var.efs_file_system_id
   high_availability                    = var.high_availability
   metrics_scraper_host                 = module.metrics.metrics_scraper_host

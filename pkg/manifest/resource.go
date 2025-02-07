@@ -26,7 +26,7 @@ var (
 type Resource struct {
 	Name    string            `yaml:"-"`
 	Type    string            `yaml:"type"`
-	Image   string            `yaml:"image"`
+	Image   string            `yaml:"image,omitempty"`
 	Options map[string]string `yaml:"options"`
 }
 

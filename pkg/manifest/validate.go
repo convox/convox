@@ -18,6 +18,13 @@ var (
 func (m *Manifest) validate() []error {
 	errs := []error{}
 
+	for i := range m.Configs {
+		if err := m.Configs[i].Validate(); err != nil {
+			errs = append(errs, err)
+			break
+		}
+	}
+
 	errs = append(errs, m.validateBalancers()...)
 	errs = append(errs, m.validateEnv()...)
 	errs = append(errs, m.validateResources()...)
@@ -93,6 +100,11 @@ func (m *Manifest) validateResources() []error {
 func (m *Manifest) validateServices() []error {
 	errs := []error{}
 
+	configMap := map[string]struct{}{}
+	for i := range m.Configs {
+		configMap[m.Configs[i].Id] = struct{}{}
+	}
+
 	for _, s := range m.Services {
 		if !nameValidator.MatchString(s.Name) {
 			errs = append(errs, fmt.Errorf("service name %s invalid, %s", s.Name, ValidNameDescription))
@@ -129,6 +141,17 @@ func (m *Manifest) validateServices() []error {
 		for i := range s.VolumeOptions {
 			if err := s.VolumeOptions[i].Validate(); err != nil {
 				errs = append(errs, err)
+			}
+		}
+
+		for i := range s.ConfigMounts {
+			cm := &s.ConfigMounts[i]
+			if err := cm.Validate(); err != nil {
+				errs = append(errs, err)
+			}
+
+			if _, has := configMap[cm.Id]; !has {
+				errs = append(errs, fmt.Errorf("config id: '%s' not found", cm.Id))
 			}
 		}
 

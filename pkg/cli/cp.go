@@ -7,13 +7,14 @@ import (
 	"strings"
 
 	"github.com/convox/convox/pkg/common"
+	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
 )
 
 func init() {
 	register("cp", "copy files", Cp, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagApp, flagRack},
+		Flags:    append([]stdcli.Flag{flagApp, flagRack}, stdcli.OptionFlags(structs.FileTransterOptions{})...),
 		Usage:    "<[pid:]src> <[pid:]dst>",
 		Validate: stdcli.Args(2),
 	})
@@ -23,19 +24,24 @@ func Cp(rack sdk.Interface, c *stdcli.Context) error {
 	src := c.Arg(0)
 	dst := c.Arg(1)
 
+	var opts structs.FileTransterOptions
+	if err := c.Options(&opts); err != nil {
+		return err
+	}
+
 	r, err := cpSource(rack, c, src)
 	if err != nil {
 		return err
 	}
 
-	if err := cpDestination(rack, c, r, dst); err != nil {
+	if err := cpDestination(rack, c, r, dst, opts); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func cpDestination(rack sdk.Interface, c *stdcli.Context, r io.Reader, dst string) error {
+func cpDestination(rack sdk.Interface, c *stdcli.Context, r io.Reader, dst string, opts structs.FileTransterOptions) error {
 	parts := strings.SplitN(dst, ":", 2)
 
 	switch len(parts) {
@@ -61,7 +67,7 @@ func cpDestination(rack sdk.Interface, c *stdcli.Context, r io.Reader, dst strin
 			return err
 		}
 
-		return rack.FilesUpload(app(c), parts[0], rr)
+		return rack.FilesUpload(app(c), parts[0], rr, opts)
 	default:
 		return fmt.Errorf("unknown destination: %s", dst)
 	}

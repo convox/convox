@@ -76,7 +76,7 @@ func TestFilesUpload(t *testing.T) {
 		opts := stdsdk.RequestOptions{
 			Body: strings.NewReader("data"),
 		}
-		p.On("FilesUpload", "app1", "pid1", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
+		p.On("FilesUpload", "app1", "pid1", mock.Anything, mock.Anything).Return(nil).Run(func(args mock.Arguments) {
 			data, err := ioutil.ReadAll(args.Get(2).(io.Reader))
 			require.NoError(t, err)
 			require.Equal(t, "data", string(data))
@@ -88,7 +88,7 @@ func TestFilesUpload(t *testing.T) {
 
 func TestFilesUploadError(t *testing.T) {
 	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
-		p.On("FilesUpload", "app1", "pid1", mock.Anything).Return(fmt.Errorf("err1"))
+		p.On("FilesUpload", "app1", "pid1", mock.Anything, mock.Anything).Return(fmt.Errorf("err1"))
 		err := c.Post("/apps/app1/processes/pid1/files", stdsdk.RequestOptions{}, nil)
 		require.EqualError(t, err, "err1")
 	})

@@ -30,9 +30,24 @@ func (p *Provider) ProcessExec(app, pid, command string, rw io.ReadWriter, opts 
 		return 0, err
 	}
 
+	runningPs := structs.Processes{}
+	for _, pp := range pss {
+		if pp.Status == "running" {
+			runningPs = append(runningPs, pp)
+		}
+	}
+
+	if len(runningPs) == 0 {
+		ps, err := p.ProcessGet(app, pid)
+		if err != nil {
+			return 0, err
+		}
+		runningPs = append(runningPs, *ps)
+	}
+
 	// if pid is a service name, pick one at random
-	if len(pss) > 0 {
-		pid = pss[rand.Intn(len(pss))].Id
+	if len(runningPs) > 0 {
+		pid = runningPs[rand.Intn(len(runningPs))].Id
 	}
 
 	req := p.Cluster.CoreV1().RESTClient().Post().Resource("pods").Name(pid).Namespace(p.AppNamespace(app)).SubResource("exec").Param("container", app)
@@ -77,6 +92,14 @@ func (p *Provider) ProcessExec(app, pid, command string, rw io.ReadWriter, opts 
 		TTY:       true,
 	}
 
+	if opts.DisableStdin != nil && *opts.DisableStdin {
+		eo.Stdin = false
+	}
+
+	if opts.Tty != nil && !*opts.Tty {
+		eo.TTY = false
+	}
+
 	req.VersionedParams(eo, scheme.ParameterCodec)
 
 	e, err := remotecommand.NewSPDYExecutor(p.Config, "POST", req.URL())
@@ -84,26 +107,34 @@ func (p *Provider) ProcessExec(app, pid, command string, rw io.ReadWriter, opts 
 		return 0, errors.WithStack(err)
 	}
 
-	inr, inw := io.Pipe()
-	go io.Copy(inw, rw)
-
 	sopts := remotecommand.StreamOptions{
-		Stdin:  inr,
 		Stdout: rw,
 		Stderr: rw,
 		Tty:    true,
 	}
 
-	if opts.Height != nil && opts.Width != nil {
-		sopts.TerminalSizeQueue = &terminalSize{Height: *opts.Height, Width: *opts.Width}
+	if !eo.Stdin && !eo.TTY {
+		sopts.Tty = false
+	} else {
+		if eo.Stdin {
+			inr, inw := io.Pipe()
+			go io.Copy(inw, rw)
+
+			sopts.Stdin = inr
+		}
+
+		if opts.Height != nil && opts.Width != nil {
+			sopts.TerminalSizeQueue = &terminalSize{Height: *opts.Height, Width: *opts.Width}
+		}
+
 	}
 
-	err = e.Stream(sopts)
+	err = e.StreamWithContext(p.ctx, sopts)
 	if ee, ok := err.(exec.ExitError); ok {
 		return ee.ExitStatus(), nil
 	}
 	if err != nil {
-		return 0, errors.WithStack(err)
+		return 1, errors.WithStack(err)
 	}
 
 	return 0, nil
@@ -581,7 +612,7 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 		}, func(s *ac.Secret) *ac.Secret {
 			s.Data = map[string][]byte{
 				".dockerconfigjson": []byte(fmt.Sprintf(
-			`{
+					`{
 				"auths": {
 				  "https://index.docker.io/v2/": {
 					"auth": "%s" 
@@ -594,11 +625,12 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 		}, am.PatchOptions{
 			FieldManager: "convox",
 		},
-		); if err != nil {
+		)
+		if err != nil {
 			return nil, errors.WithStack(err)
 		}
 
-		s.ImagePullSecrets = append(s.ImagePullSecrets, ac.LocalObjectReference{Name: "docker-hub-authentication" })
+		s.ImagePullSecrets = append(s.ImagePullSecrets, ac.LocalObjectReference{Name: "docker-hub-authentication"})
 	}
 
 	if opts.Volumes != nil {

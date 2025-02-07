@@ -57,6 +57,11 @@ variable "efs_file_system_id" {
   type = string
 }
 
+variable "efs_csi_driver_enable" {
+  type    = bool
+  default = false
+}
+
 variable "high_availability" {
   default = true
 }

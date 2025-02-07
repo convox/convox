@@ -15,7 +15,7 @@ import (
 
 func TestCpUpload(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("FilesUpload", "app1", "0123456789", mock.Anything).Return(nil)
+		i.On("FilesUpload", "app1", "0123456789", mock.Anything, mock.Anything).Return(nil)
 
 		res, err := testExecute(e, "cp -a app1 testdata/file 0123456789:/tmp/", nil)
 		require.NoError(t, err)
@@ -27,7 +27,7 @@ func TestCpUpload(t *testing.T) {
 
 func TestCpUploadError(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("FilesUpload", "app1", "0123456789", mock.Anything).Return(fmt.Errorf("err1"))
+		i.On("FilesUpload", "app1", "0123456789", mock.Anything, mock.Anything).Return(fmt.Errorf("err1"))
 
 		res, err := testExecute(e, "cp -a app1 testdata/file 0123456789:/tmp/", nil)
 		require.NoError(t, err)

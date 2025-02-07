@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/docker/docker/builder/dockerignore"
 	"github.com/docker/docker/pkg/archive"
+	"github.com/moby/buildkit/frontend/dockerfile/dockerignore"
 )
 
 func Archive(file string) (io.Reader, error) {
@@ -47,8 +47,8 @@ func RebaseArchive(r io.Reader, src, dst string) (io.Reader, error) {
 			h.Name = fmt.Sprintf("/%s", h.Name)
 		}
 
-		// the second check - strings.HasSuffix(h.Name, "/") is for checking if the src provided is a single file, if it is then it should not be skipped -- 
-		if !strings.HasPrefix(h.Name, src) && strings.HasSuffix(h.Name, "/")  {
+		// the second check - strings.HasSuffix(h.Name, "/") is for checking if the src provided is a single file, if it is then it should not be skipped --
+		if !strings.HasPrefix(h.Name, src) && strings.HasSuffix(h.Name, "/") {
 			continue
 		}
 
