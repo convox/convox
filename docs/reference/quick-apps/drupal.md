@@ -1,7 +1,7 @@
 ---
-title: "Quick Apps - Drupal"
+title: "Drupal"
 draft: false
-slug: Quick Apps Drupal
+slug: Drupal
 url: /reference/quick-apps/drupal/
 ---
 
