@@ -7,9 +7,33 @@ url: /reference/quick-apps/drupal/
 
 # Quick Apps - Drupal
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Getting Started](#getting-started)
+- [Installation Steps](#installation-steps)
+  - [Step 1: Configure Convox Settings](#step-1-configure-convox-settings)
+  - [Step 2: Configure Drupal](#step-2-configure-drupal)
+  - [Step 3: Configure Database](#step-3-configure-database)
+  - [Step 4: Review and Install](#step-4-review-and-install)
+- [Post-Installation](#post-installation)
+  - [Monitoring Installation Progress](#monitoring-installation-progress)
+  - [After Installation Completion](#after-installation-completion)
+- [Managing Active Apps](#managing-active-apps)
+  - [Site Actions](#site-actions)
+- [Site Configuration & Settings](#site-configuration--settings)
+  - [Site Information](#site-information)
+  - [Basic Settings](#basic-settings)
+  - [Site Operations](#site-operations)
+  - [Custom Configurations](#custom-configuration)
+  - [Deleting a Site](#deleting-a-site)
+
 ## Overview
 
 Quick Apps - Drupal allows you to deploy a fully functional Drupal site into your Convox rack with minimal configuration. Whether you are setting up a new Drupal installation or deploying an existing Git-based site, this streamlined process ensures a smooth setup.
+
+For a step-by-step walkthrough of Quick Apps - Drupal, check out our **[Guided Tour](https://app.storylane.io/share/dvtwoaxuuakh)**.
+
 
 > **⚠ Important Notice:**  
 > To use **Quick Apps - Drupal**, your Convox **rack must be on version 3.19.7 or later**. If you are on an older version, you can see the [Updating a Rack](https://docs.convox.com/management/cli-rack-management/#updating-to-the-latest-version) information for additional guidance.  
@@ -163,7 +187,7 @@ Displays general details about the Drupal site, including its URL, Convox applic
 ### **Basic Settings**
 This section includes several subpages:
 
-#### **General Settings**
+### General Settings
 - **Domain Name**: Assign a custom domain to the site.  
   - Convox automatically generates a system domain for each application. See [Custom Domains](/deployment/custom-domains) for details.
 - **PHP Memory Limit**: Defines the maximum amount of memory a PHP script can consume. This setting is critical for performance tuning, particularly in high-traffic Drupal environments.  
@@ -179,7 +203,7 @@ This section includes several subpages:
 - **Trusted Domains**: Configures Drupal's `trusted_host_patterns` setting.  
   - Helps prevent HTTP Host header attacks by restricting accepted domains.
 
-#### **Database Settings**
+### Database Settings
 - **Version**: Allows upgrading or changing the database version.  
   - **Warning**: Upgrading databases may introduce compatibility issues. Always back up your database before making changes.
 - **Instance Size**: Modify the RDS instance type for performance adjustments.  
@@ -194,18 +218,18 @@ This section includes several subpages:
 > - Storage capacity increases are usually applied without downtime, but instance resizing or version upgrades may cause short-term disruptions.
 > - It is recommended to monitor the **RDS instance status** in the AWS Console to ensure changes have fully propagated before making further modifications.
 
-#### **Resource Allocations**
+### Resource Allocations
 - **vCPU**: Adjust CPU allocation (default is `0.256`).
 - **Memory**: Configure memory allocation (default is `512MB`).
 - **Scale**: Modify the number of application instances.  
   - **Warning**: Changing resource allocations may impact site performance and availability.
 
-#### **Site Labels**
+### Site Labels
 - **Managed Labels**: Required Convox-managed labels (Production, Test, or Dev) determine indexing and searchability.
 - **Custom Labels**: Assign additional labels for organization and filtering.  
   - **Examples**: `team-name`, `feature-branch`, `client-project`.
 
-#### **Cron Settings** (Timer Settings)
+### Cron Settings (Timer Settings)
 - **Command**: The script or command to be executed.
 - **Schedule**: Defines the cron execution schedule. See [Timer Documentation](/reference/primitives/app/timer) for cron syntax details.  
   - A scheduling tool is available to simplify configuration.
@@ -219,7 +243,7 @@ This means that while cron jobs have access to necessary application resources, 
 
 ### Site Operations
 
-#### **Clone From Site**
+### Clone From Site
 - **Source Application**: Select the site to copy from.
 - **Copy Code**: Clones the entire Drupal codebase, including configurations, modules, and themes.
 - **Copy Config**: Copies only the site settings, such as database configurations and resource allocations.
@@ -228,11 +252,11 @@ This means that while cron jobs have access to necessary application resources, 
   - **Important**: The selected **source application remains unchanged**. All changes are applied **to the currently selected site**, overwriting any existing configuration.  
   - This ensures that cloned sites remain functionally consistent without affecting the original source site.
 
-#### **Drupal Core Version**
+### Drupal Core Version
 - Change the core version of Drupal for the site.
 - **Warning**: Updating Drupal can break module compatibility. Always test in a staging environment before upgrading.
 
-#### **Backups & Restore**
+### Backups & Restore
 - **Create Backup**: Generates a full snapshot of the site.
 - **Restore**: Select a previous backup to roll back changes.
 - **Delete Backup**: Removes a stored backup.
@@ -240,12 +264,12 @@ This means that while cron jobs have access to necessary application resources, 
 
 ### Custom Configuration
 
-#### **Custom `settings.php`**
+### Custom `settings.php`
 - Allows modifying the `settings.php` file manually.
 - Use cases include environment variable overrides and caching optimizations.
 - **Changes take effect immediately**, and the service will restart automatically.
 
-#### **Custom `PHP.ini`**
+### Custom `PHP.ini`
 - Modify PHP settings by pasting a custom `PHP.ini` file.
 - Adjust execution limits, upload sizes, or other PHP parameters.
 - **Changes apply immediately**, and the service will restart automatically.
