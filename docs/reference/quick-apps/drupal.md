@@ -11,6 +11,10 @@ url: /reference/quick-apps/drupal/
 
 Quick Apps - Drupal allows you to deploy a fully functional Drupal site into your Convox rack with minimal configuration. Whether you are setting up a new Drupal installation or deploying an existing Git-based site, this streamlined process ensures a smooth setup.
 
+> **⚠ Important Notice:**  
+> To use **Quick Apps - Drupal**, your Convox **rack must be on version 3.19.7 or later**. If you are on an older version, you can see the [Updating a Rack](https://docs.convox.com/management/cli-rack-management/#updating-to-the-latest-version) information for additional guidance.  
+> Additionally, you must set the rack parameter **`efs_csi_driver_enable=true`** to enable AWS EFS storage. For details, see the [EFS CSI Driver Configuration](/configuration/rack-parameters/aws/efs_csi_driver_enable) page.
+
 ## Getting Started
 
 1. Navigate to the **Quick Apps** tab in the Convox Console.
