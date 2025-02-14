@@ -164,6 +164,17 @@ data "aws_iam_policy_document" "rds_provisioner" {
     ]
     resources = ["*"]
   }
+
+  statement {
+    effect = "Allow"
+    actions = ["iam:CreateServiceLinkedRole"]
+    resources = ["arn:${data.aws_partition.current.partition}:iam::*:role/aws-service-role/rds.amazonaws.com/AWSServiceRoleForRDS"]
+    condition {
+      test     = "StringLike"
+      variable = "iam:AWSServiceName"
+      values   = ["rds.amazonaws.com"]
+    }
+  }
 }
 
 resource "aws_iam_role_policy_attachment" "api_ecr" {
