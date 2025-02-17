@@ -7,6 +7,11 @@ Groups:
         type: boolean
         description: Place nodes in private subnets behind NAT gateways - Security best
           practice
+      - name: high_availability
+        default: "true"
+        type: boolean
+        description: Setting this to false will create a cluster with fewer redundant
+          resources for cost optimization
       - name: availability_zones
         default: "null"
         sideNote: Convox managed if not set
@@ -139,11 +144,6 @@ Groups:
   - name: Performance & Scaling
     order: 4
     params:
-      - name: high_availability
-        default: "true"
-        type: boolean
-        description: Setting this to false will create a cluster with fewer redundant
-          resources for cost optimization
       - name: node_type
         default: t3.small
         type: string
