@@ -59,6 +59,7 @@ module "cluster" {
   }
 
   arm_type                        = local.arm_type
+  aws_ebs_csi_driver_version      = var.aws_ebs_csi_driver_version
   build_arm_type                  = local.build_arm_type
   availability_zones              = var.availability_zones
   build_node_enabled              = var.build_node_enabled
@@ -168,6 +169,7 @@ module "rack" {
   name                                 = local.name
   rack_name                            = local.rack_name
   nlb_security_group                   = var.nlb_security_group
+  nginx_image                          = var.nginx_image
   oidc_arn                             = module.cluster.oidc_arn
   oidc_sub                             = module.cluster.oidc_sub
   pdb_default_min_available_percentage = var.pdb_default_min_available_percentage
@@ -181,7 +183,6 @@ module "rack" {
   telemetry_map                        = local.telemetry_map
   telemetry_default_map                = local.telemetry_default_map
   whitelist                            = split(",", var.whitelist)
-  ebs_csi_driver_name                  = module.cluster.ebs_csi_driver_name
   ecr_scan_on_push_enable              = var.ecr_scan_on_push_enable
   vpc_id                               = module.cluster.vpc
 }

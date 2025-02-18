@@ -96,7 +96,7 @@ jobs:
         run: docker buildx build -f Dockerfile.buildkit --target privileged --platform linux/amd64 -t ${{ github.repository }}:${{ env.VERSION }}-build-privileged --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max .
   build-arm64:
     needs: release
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-22.04-arm
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -104,10 +104,8 @@ jobs:
           fetch-depth: 0
       - name: version
         run: echo "VERSION=$(echo ${{ github.ref }} | awk -F/ '{print $3}')" >> $GITHUB_ENV
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
       - name: login
         run: docker login --username "${DOCKER_USERNAME}" --password "${DOCKER_PASSWORD}"
         env:

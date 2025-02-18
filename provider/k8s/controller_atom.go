@@ -11,24 +11,30 @@ import (
 
 	atomv1 "github.com/convox/convox/pkg/atom/pkg/apis/atom/v1"
 	av "github.com/convox/convox/pkg/atom/pkg/client/clientset/versioned"
+	ic "github.com/convox/convox/pkg/atom/pkg/client/informers/externalversions/atom/v1"
+	"github.com/convox/convox/pkg/kctl"
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/logger"
 	"github.com/pkg/errors"
+	ac "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
-
-	"github.com/convox/logger"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/cache"
 )
 
 type AtomController struct {
-	provider *Provider
+	provider   *Provider
+	controller *kctl.Controller
 
 	atom                av.Interface
 	logger              *logger.Logger
 	start               time.Time
 	dependencyProcessor *sync.Map
+	atomClient          *av.Clientset
 }
 
 func NewAtomController(p *Provider) (*AtomController, error) {
@@ -45,24 +51,89 @@ func NewAtomController(p *Provider) (*AtomController, error) {
 		start:               time.Now().UTC(),
 	}
 
+	c, err := kctl.NewController(p.Namespace, "convox-atom-controller", ac)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	ac.controller = c
+
 	return ac, nil
 }
 
-func (a *AtomController) Run() error {
-	return RunUsingLeaderElection(a.provider.Namespace, "convox-atom-controller", a.provider.Cluster, a.Start, a.Stop)
+func (c *AtomController) Client() kubernetes.Interface {
+	return c.provider.Cluster
 }
 
-func (a *AtomController) Start(ctx context.Context) {
-	for {
-		a.sync()
-		time.Sleep(30 * time.Second)
+func (c *AtomController) Informer() cache.SharedInformer {
+	return ic.NewFilteredAtomInformer(c.atom, ac.NamespaceAll, 30*time.Second, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
+}
+
+func (c *AtomController) ListOptions(opts *metav1.ListOptions) {}
+
+func (c *AtomController) Run() {
+	ch := make(chan error)
+
+	go c.controller.Run(ch)
+
+	for err := range ch {
+		fmt.Printf("err = %+v\n", err)
 	}
 }
 
-func (a *AtomController) Stop() {
+func (a *AtomController) Start() error {
+	return nil
 }
 
-func (a *AtomController) sync() error {
+func (a *AtomController) Stop() error {
+	return nil
+}
+
+func (a *AtomController) Add(obj interface{}) error {
+	d, err := assertAtom(obj)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	a.logger.Logf("atom add: %s/%s\n", d.Namespace, d.Name)
+
+	return a.syncAtom(d)
+}
+
+func (a *AtomController) Delete(obj interface{}) error {
+	d, err := assertAtom(obj)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	a.logger.Logf("atom delete: %s/%s\n", d.Namespace, d.Name)
+
+	return nil
+}
+
+func (a *AtomController) Update(prev, cur interface{}) error {
+	d, err := assertAtom(cur)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	a.logger.Logf("atom update: %s/%s\n", d.Namespace, d.Name)
+
+	return a.syncAtom(d)
+}
+
+func (a *AtomController) syncAtom(obj *atomv1.Atom) error {
+	a.logger.Logf("syncing atoms...")
+
+	// obj.Name is fixed, so obj.Namespace will be unique per app
+	if _, ok := a.dependencyProcessor.Load(obj.Namespace); !ok && len(obj.Spec.Dependencies) > 0 {
+		a.dependencyProcessor.Store(obj.Namespace, true)
+		go a.processDependency(obj)
+	}
+	return nil
+}
+
+func (a *AtomController) syncAll() error {
 	a.logger.Logf("syncing pending atoms...")
 	listResp, err := a.atom.AtomV1().Atoms(v1.NamespaceAll).List(a.provider.ctx, v1.ListOptions{})
 	if err != nil {
@@ -199,4 +270,13 @@ func (a *AtomController) PatchAtomObject(ctx context.Context, cur, mod *atomv1.A
 	}
 	a.logger.Logf("Patching Atom %s/%s with %s.", cur.Namespace, cur.Name, string(patch))
 	return a.atom.AtomV1().Atoms(cur.Namespace).Patch(ctx, cur.Name, types.MergePatchType, patch, opts)
+}
+
+func assertAtom(v interface{}) (*atomv1.Atom, error) {
+	d, ok := v.(*atomv1.Atom)
+	if !ok {
+		return nil, errors.WithStack(fmt.Errorf("could not assert atom for type: %T", v))
+	}
+
+	return d, nil
 }

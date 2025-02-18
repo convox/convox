@@ -19,6 +19,7 @@ module "nginx" {
   docker_hub_authentication = var.docker_hub_authentication
   internal_router           = var.internal_router
   namespace                 = var.namespace
+  nginx_image               = var.nginx_image
   proxy_protocol            = var.proxy_protocol
   rack                      = var.name
   replicas_max              = var.high_availability ? 10 : 1
@@ -34,11 +35,13 @@ resource "kubernetes_config_map" "nginx-configuration" {
   }
 
   data = {
-    "proxy-body-size"     = "0"
-    "use-proxy-protocol"  = var.proxy_protocol ? "true" : "false"
-    "log-format-upstream" = file("${path.module}/log-format.txt")
-    "ssl-ciphers"         = var.ssl_ciphers == "" ? null : var.ssl_ciphers
-    "ssl-protocols"       = var.ssl_protocols == "" ? null : var.ssl_protocols
+    "proxy-body-size"           = "0"
+    "use-proxy-protocol"        = var.proxy_protocol ? "true" : "false"
+    "log-format-upstream"       = file("${path.module}/log-format.txt")
+    "ssl-ciphers"               = var.ssl_ciphers == "" ? null : var.ssl_ciphers
+    "ssl-protocols"             = var.ssl_protocols == "" ? null : var.ssl_protocols
+    "allow-snippet-annotations" = "true"
+    "annotations-risk-level"    = "Critical"
   }
 
   depends_on = [
@@ -103,7 +106,7 @@ resource "kubernetes_service" "router_extra" {
       "service.beta.kubernetes.io/aws-load-balancer-scheme"                              = "internet-facing"
       "service.beta.kubernetes.io/aws-load-balancer-security-groups"                     = var.nlb_security_group
       "service.beta.kubernetes.io/aws-load-balancer-manage-backend-security-group-rules" = "true"
-      "service.beta.kubernetes.io/aws-load-balancer-target-group-attributes" = var.proxy_protocol ? "proxy_protocol_v2.enabled=true" : "proxy_protocol_v2.enabled=false"
+      "service.beta.kubernetes.io/aws-load-balancer-target-group-attributes"             = var.proxy_protocol ? "proxy_protocol_v2.enabled=true" : "proxy_protocol_v2.enabled=false"
       "convox.io/dependency"                                                             = var.lbc_helm_id
     }
   }
@@ -152,7 +155,7 @@ resource "kubernetes_service" "router" {
       "service.beta.kubernetes.io/aws-load-balancer-scheme"                              = "internet-facing"
       "service.beta.kubernetes.io/aws-load-balancer-security-groups"                     = var.nlb_security_group
       "service.beta.kubernetes.io/aws-load-balancer-manage-backend-security-group-rules" = "true"
-      "service.beta.kubernetes.io/aws-load-balancer-target-group-attributes" = var.proxy_protocol ? "proxy_protocol_v2.enabled=true" : "proxy_protocol_v2.enabled=false"
+      "service.beta.kubernetes.io/aws-load-balancer-target-group-attributes"             = var.proxy_protocol ? "proxy_protocol_v2.enabled=true" : "proxy_protocol_v2.enabled=false"
       "convox.io/dependency"                                                             = var.lbc_helm_id
     }
   }

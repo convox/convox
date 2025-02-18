@@ -30,10 +30,14 @@ data "aws_iam_policy_document" "autoscale" {
       "autoscaling:DescribeAutoScalingInstances",
       "autoscaling:DescribeLaunchConfigurations",
       "autoscaling:DescribeTags",
+      "autoscaling:DescribeScalingActivities",
       "autoscaling:SetDesiredCapacity",
       "autoscaling:TerminateInstanceInAutoScalingGroup",
       "ec2:DescribeLaunchTemplateVersions",
       "ec2:DescribeInstanceTypes",
+      "ec2:DescribeImages",
+      "ec2:GetInstanceTypesFromInstanceRequirements",
+      "eks:DescribeNodegroup"
     ]
     effect    = "Allow"
     resources = ["*"]
@@ -105,13 +109,25 @@ resource "kubernetes_cluster_role" "autoscaler" {
   rule {
     api_groups = [""]
     resources  = ["nodes"]
-    verbs      = ["watch", "list", "get", "update"]
+    verbs      = ["watch", "list", "get", "create", "delete", "update"]
   }
 
   rule {
     api_groups = [""]
     resources  = ["namespaces", "pods", "services", "replicationcontrollers", "persistentvolumeclaims", "persistentvolumes"]
     verbs      = ["watch", "list", "get"]
+  }
+
+  rule {
+    api_groups = ["batch"]
+    resources  = ["jobs", "cronjobs"]
+    verbs      = ["watch", "list", "get"]
+  }
+
+  rule {
+    api_groups = ["batch", "extensions"]
+    resources  = ["jobs"]
+    verbs      = ["watch", "list", "get", "patch"]
   }
 
   rule {
@@ -134,14 +150,14 @@ resource "kubernetes_cluster_role" "autoscaler" {
 
   rule {
     api_groups = ["storage.k8s.io"]
-    resources  = ["csidrivers", "csinodes", "csistoragecapacities", "storageclasses"]
+    resources  = ["csidrivers", "csinodes", "csistoragecapacities", "storageclasses", "volumeattachments"]
     verbs      = ["watch", "list", "get"]
   }
 
   rule {
-    api_groups = ["batch", "extensions"]
-    resources  = ["jobs"]
-    verbs      = ["get", "list", "watch", "patch"]
+    api_groups = [""]
+    resources  = ["configmaps"]
+    verbs      = ["get", "list", "watch"]
   }
 
   rule {
@@ -199,8 +215,14 @@ resource "kubernetes_role" "autoscaler" {
   rule {
     api_groups     = [""]
     resources      = ["configmaps"]
-    resource_names = ["cluster-autoscaler-status", "cluster-autoscaler-priority-expander"]
+    resource_names = ["cluster-autoscaler-status", "cluster-autoscaler-priority-expander", "cluster-autoscaler"]
     verbs          = ["delete", "get", "update", "watch"]
+  }
+
+  rule {
+    api_groups = ["coordination.k8s.io"]
+    resources  = ["leases"]
+    verbs      = ["create", "get", "update"]
   }
 }
 
@@ -274,7 +296,6 @@ resource "kubernetes_deployment" "autoscaler" {
         }
 
         annotations = {
-          "cluster-autoscaler.kubernetes.io/safe-to-evict" : "false",
           "prometheus.io/scrape" : "true",
           "prometheus.io/port" : "8085"
         }
@@ -286,7 +307,7 @@ resource "kubernetes_deployment" "autoscaler" {
         priority_class_name             = "system-node-critical"
 
         container {
-          image             = "registry.k8s.io/autoscaling/cluster-autoscaler:v1.28.2"
+          image             = "registry.k8s.io/autoscaling/cluster-autoscaler:v1.32.0"
           image_pull_policy = "IfNotPresent"
           name              = "cluster-autoscaler"
 

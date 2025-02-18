@@ -72,6 +72,11 @@ resource "aws_iam_role_policy" "nodes_eks_pod_identitiy" {
   policy = data.aws_iam_policy_document.eks_pod_identitiy.json
 }
 
+resource "aws_iam_role_policy_attachment" "nodes_aws_ebs_csi_driver" {
+  role       = aws_iam_role.nodes.name
+  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+}
+
 resource "aws_iam_role_policy_attachment" "nodes_ecr" {
   role       = aws_iam_role.nodes.name
   policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
@@ -88,7 +93,8 @@ resource "aws_iam_role_policy_attachment" "nodes_eks_cni" {
 resource "aws_iam_role_policy_attachment" "nodes_eks_worker" {
   depends_on = [
     aws_iam_role_policy_attachment.nodes_ecr,
-    aws_iam_role_policy_attachment.nodes_eks_cni
+    aws_iam_role_policy_attachment.nodes_eks_cni,
+    aws_iam_role_policy_attachment.nodes_aws_ebs_csi_driver,
   ]
   role       = aws_iam_role.nodes.name
   policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AmazonEKSWorkerNodePolicy"
@@ -101,6 +107,7 @@ resource "null_resource" "iam" {
     aws_iam_role_policy_attachment.cluster_eks_cluster,
     aws_iam_role_policy_attachment.cluster_eks_service,
     aws_iam_role_policy_attachment.nodes_ecr,
+    aws_iam_role_policy_attachment.nodes_aws_ebs_csi_driver,
     aws_iam_role_policy_attachment.nodes_eks_cni,
     aws_iam_role_policy_attachment.nodes_eks_worker,
   ]
