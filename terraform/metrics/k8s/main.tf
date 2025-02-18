@@ -146,7 +146,7 @@ resource "kubernetes_deployment" "metrics" {
 
         container {
           name              = "metrics-server"
-          image             = "registry.k8s.io/metrics-server/metrics-server:v0.6.1"
+          image             = "registry.k8s.io/metrics-server/metrics-server:v0.7.2"
           image_pull_policy = "IfNotPresent"
           args = [
             "--cert-dir=/tmp",

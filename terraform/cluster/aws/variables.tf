@@ -6,6 +6,11 @@ variable "availability_zones" {
   default = ""
 }
 
+variable "aws_ebs_csi_driver_version" {
+  type    = string
+  default = null
+}
+
 variable "build_arm_type" {
   default = false
 }
@@ -105,7 +110,7 @@ variable "kubelet_registry_burst" {
 
 variable "k8s_version" {
   type    = string
-  default = "1.29"
+  default = "1.30"
 }
 
 variable "max_on_demand_count" {

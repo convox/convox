@@ -300,7 +300,7 @@ resource "aws_launch_template" "cluster" {
   user_data = var.user_data_url != "" || var.user_data != "" || var.kubelet_registry_pull_qps != 5 || var.kubelet_registry_burst != 10 ? base64encode(templatefile("${path.module}/files/custom_user_data.sh",{
     kubelet_registry_pull_qps = var.kubelet_registry_pull_qps
     kubelet_registry_burst = var.kubelet_registry_burst
-    user_data_script_file = var.user_data_url != "" ? data.http.user_data_content[0].body : ""
+    user_data_script_file = var.user_data_url != "" ? data.http.user_data_content[0].response_body : ""
     user_data = var.user_data
   })) : ""
 
@@ -337,39 +337,12 @@ resource "aws_launch_template" "cluster-build" {
   key_name = var.key_pair_name != "" ? var.key_pair_name : null
 }
 
-module "ebs_csi_driver_controller" {
-  depends_on = [
-    null_resource.wait_eks_addons
-  ]
-
-  source = "github.com/convox/terraform-kubernetes-ebs-csi-driver?ref=01740b559d14f489e5ea2160d2dad0ee951fb4d9"
-
-  arn_format                                 = data.aws_partition.current.partition
-  ebs_csi_controller_image                   = "public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver"
-  ebs_csi_driver_version                     = "v1.34.0"
-  ebs_csi_controller_role_name               = "convox-ebs-csi-driver-controller"
-  ebs_csi_controller_role_policy_name_prefix = "convox-ebs-csi-driver-policy"
-  csi_controller_tolerations = [
-    { operator = "Exists", key = "CriticalAddonsOnly" },
-    { operator = "Exists", effect = "NoExecute", toleration_seconds = 300 }
-  ]
-  node_tolerations = [
-    { operator = "Exists", key = "CriticalAddonsOnly" },
-    { operator = "Exists", effect = "NoExecute", toleration_seconds = 300 }
-  ]
-  oidc_url = aws_iam_openid_connect_provider.cluster.url
-}
-
 resource "kubernetes_storage_class" "default" {
   depends_on = [
     null_resource.wait_k8s_api
   ]
 
   metadata {
-    labels = {
-      "ebs_driver_name" = module.ebs_csi_driver_controller.ebs_csi_driver_name
-    }
-
     name = "gp3"
     annotations = {
       "storageclass.kubernetes.io/is-default-class" = "true"
@@ -449,6 +422,16 @@ resource "aws_eks_addon" "eks_pod_identity_agent" {
   resolve_conflicts = "OVERWRITE"
 }
 
+resource "aws_eks_addon" "aws_ebs_csi_driver" {
+  depends_on = [
+    null_resource.wait_k8s_api
+  ]
+
+  cluster_name      = aws_eks_cluster.cluster.name
+  addon_name        = "aws-ebs-csi-driver"
+  addon_version     = var.aws_ebs_csi_driver_version
+}
+
 resource "null_resource" "wait_eks_addons" {
   provisioner "local-exec" {
     command = "sleep 1"
@@ -457,7 +440,7 @@ resource "null_resource" "wait_eks_addons" {
   depends_on = [
     aws_eks_addon.vpc_cni,
     aws_eks_addon.coredns,
-    aws_eks_addon.kube_proxy
+    aws_eks_addon.kube_proxy,
   ]
 }
 

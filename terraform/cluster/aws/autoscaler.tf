@@ -274,7 +274,6 @@ resource "kubernetes_deployment" "autoscaler" {
         }
 
         annotations = {
-          "cluster-autoscaler.kubernetes.io/safe-to-evict" : "false",
           "prometheus.io/scrape" : "true",
           "prometheus.io/port" : "8085"
         }
@@ -286,7 +285,7 @@ resource "kubernetes_deployment" "autoscaler" {
         priority_class_name             = "system-node-critical"
 
         container {
-          image             = "registry.k8s.io/autoscaling/cluster-autoscaler:v1.28.2"
+          image             = "registry.k8s.io/autoscaling/cluster-autoscaler:v1.32.0"
           image_pull_policy = "IfNotPresent"
           name              = "cluster-autoscaler"
 

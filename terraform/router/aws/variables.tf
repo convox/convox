@@ -48,6 +48,11 @@ variable "nlb_security_group" {
   type    = string
 }
 
+variable "nginx_image" {
+  type    = string
+  default = "registry.k8s.io/ingress-nginx/controller:v1.12.0@sha256:e6b8de175acda6ca913891f0f727bca4527e797d52688cbe9fec9040d6f6b6fa"
+}
+
 variable "oidc_arn" {
   type = string
 }

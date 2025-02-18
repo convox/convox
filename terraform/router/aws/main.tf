@@ -19,6 +19,7 @@ module "nginx" {
   docker_hub_authentication = var.docker_hub_authentication
   internal_router           = var.internal_router
   namespace                 = var.namespace
+  nginx_image               = var.nginx_image
   proxy_protocol            = var.proxy_protocol
   rack                      = var.name
   replicas_max              = var.high_availability ? 10 : 1

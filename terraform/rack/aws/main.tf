@@ -95,6 +95,7 @@ module "router" {
   name                      = var.name
   namespace                 = module.k8s.namespace
   nlb_security_group        = var.nlb_security_group
+  nginx_image               = var.nginx_image
   oidc_arn                  = var.oidc_arn
   oidc_sub                  = var.oidc_sub
   proxy_protocol            = var.proxy_protocol

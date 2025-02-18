@@ -6,13 +6,18 @@ import (
 	"sync"
 	"time"
 
+	"github.com/convox/convox/pkg/kctl"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/logger"
+	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	appsv1 "k8s.io/client-go/applyconfigurations/apps/v1"
 	corev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	amv1 "k8s.io/client-go/applyconfigurations/meta/v1"
+	"k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/cache"
 )
 
 type DeploymentFilter struct {
@@ -22,7 +27,8 @@ type DeploymentFilter struct {
 }
 
 type NodeController struct {
-	Provider *Provider
+	provider   *Provider
+	controller *kctl.Controller
 
 	stopCh chan struct{}
 	nodeCh chan string
@@ -35,7 +41,7 @@ type NodeController struct {
 
 func NewNodeController(p *Provider) (*NodeController, error) {
 	nc := &NodeController{
-		Provider: p,
+		provider: p,
 		stopCh:   make(chan struct{}),
 		nodeCh:   make(chan string, 50),
 		nodeMap:  &sync.Map{},
@@ -43,81 +49,84 @@ func NewNodeController(p *Provider) (*NodeController, error) {
 		start:    time.Now().UTC(),
 	}
 
+	c, err := kctl.NewController(p.Namespace, "convox-node-controller", nc)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	nc.controller = c
+
 	return nc, nil
 }
 
-func (c *NodeController) Stop() error {
-	c.stopCh <- struct{}{}
-	close(c.nodeCh)
-	return nil
+func (c *NodeController) Client() kubernetes.Interface {
+	return c.provider.Cluster
 }
 
-func (c *NodeController) Add(node string) error {
-	if _, ok := c.nodeMap.Load(node); !ok {
-		c.nodeMap.Store(node, true)
-		c.nodeCh <- node
-	}
-	return nil
+func (c *NodeController) Informer() cache.SharedInformer {
+	return informers.NewSharedInformerFactory(c.provider.Cluster, 3*time.Minute).Core().V1().Nodes().Informer()
 }
 
 func (c *NodeController) Run() {
-	for i := 0; i < 3; i++ {
-		go c.processor()
-	}
+	ch := make(chan error)
 
-	ticker := time.NewTicker(15 * time.Minute)
+	go c.controller.Run(ch)
 
-	for {
-		select {
-		case <-ticker.C:
-			c.ProcessDrainingNode()
-		case <-c.stopCh:
-			return
-		}
+	for err := range ch {
+		fmt.Printf("err = %+v\n", err)
 	}
 }
 
-func (c *NodeController) processor() {
-	for node := range c.nodeCh {
-		c.nodeMap.Delete(node)
-		c.logger.Logf("processing node: %s", node)
-		nObj, err := c.Provider.Cluster.CoreV1().Nodes().Get(c.Provider.ctx, node, am.GetOptions{})
-		if err != nil {
-			c.logger.Errorf("failed to get node: %s", err)
-			return
-		}
-		if nObj.Spec.Unschedulable {
-			c.findAndRescheduleDeploymentWithOneReplica(node)
-		}
-	}
+func (c *NodeController) Start() error {
+	c.start = time.Now().UTC()
+
+	return nil
 }
 
-func (c *NodeController) ProcessDrainingNode() {
-	continueVal := ""
-	for {
-		c.logger.Logf("Fetching nodes to process drain nodes")
-		nodeList, err := c.Provider.Cluster.CoreV1().Nodes().List(c.Provider.ctx, am.ListOptions{
-			Continue: continueVal,
-		})
-		if err != nil {
-			c.logger.Errorf("failed to list pods in a node: %s", err)
-			return
-		}
+func (c *NodeController) Stop() error {
+	return nil
+}
 
-		for i := range nodeList.Items {
-			nd := &nodeList.Items[i]
-			if nd.Spec.Unschedulable &&
-				nd.CreationTimestamp.Add(5*time.Minute).Before(time.Now()) {
-				c.logger.Logf("Found unschedulable node: %s", nd.Name)
-				c.Add(nd.Name)
-			}
-		}
-
-		if nodeList.Continue == "" {
-			return
-		}
-		continueVal = nodeList.Continue
+func (c *NodeController) Add(obj interface{}) error {
+	nd, err := assertNode(obj)
+	if err != nil {
+		return errors.WithStack(err)
 	}
+
+	fmt.Printf("node add: %s/%s\n", nd.ObjectMeta.Namespace, nd.ObjectMeta.Name)
+
+	if nd.Spec.Unschedulable &&
+		nd.CreationTimestamp.Add(5*time.Minute).Before(time.Now()) {
+		c.logger.Logf("Found unschedulable node: %s", nd.Name)
+		c.findAndRescheduleDeploymentWithOneReplica(nd.Name)
+	}
+
+	return nil
+}
+
+func (c *NodeController) Delete(obj interface{}) error {
+	nd, err := assertNode(obj)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	fmt.Printf("node delete: %s/%s\n", nd.ObjectMeta.Namespace, nd.ObjectMeta.Name)
+	return nil
+}
+
+func (c *NodeController) Update(prev, cur interface{}) error {
+	nd, err := assertNode(cur)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	fmt.Printf("node update: %s/%s\n", nd.ObjectMeta.Namespace, nd.ObjectMeta.Name)
+	if nd.Spec.Unschedulable &&
+		nd.CreationTimestamp.Add(5*time.Minute).Before(time.Now()) {
+		c.logger.Logf("Found unschedulable node: %s", nd.Name)
+		c.findAndRescheduleDeploymentWithOneReplica(nd.Name)
+	}
+	return nil
 }
 
 func (c *NodeController) findAndRescheduleDeploymentWithOneReplica(node string) {
@@ -125,7 +134,7 @@ func (c *NodeController) findAndRescheduleDeploymentWithOneReplica(node string) 
 	continueVal := ""
 
 	for {
-		podList, err := c.Provider.Cluster.CoreV1().Pods(ac.NamespaceAll).List(c.Provider.ctx, am.ListOptions{
+		podList, err := c.provider.Cluster.CoreV1().Pods(ac.NamespaceAll).List(c.provider.ctx, am.ListOptions{
 			FieldSelector: fmt.Sprintf("spec.nodeName=%s", node),
 			Continue:      continueVal,
 		})
@@ -161,7 +170,7 @@ func (c *NodeController) findAndRescheduleDeploymentWithOneReplica(node string) 
 		}
 
 		for _, v := range labelsMap {
-			pdbList, err := c.Provider.Cluster.PolicyV1().PodDisruptionBudgets(v.Ns).List(c.Provider.ctx, am.ListOptions{
+			pdbList, err := c.provider.Cluster.PolicyV1().PodDisruptionBudgets(v.Ns).List(c.provider.ctx, am.ListOptions{
 				LabelSelector: fmt.Sprintf("app=%s,service=%s,system=convox", v.App, v.Service),
 			})
 			if err != nil {
@@ -208,8 +217,17 @@ func (c *NodeController) triggerDeploymentReschedule(name, ns, node string) erro
 			},
 		},
 	}
-	_, err := c.Provider.Cluster.AppsV1().Deployments(ns).Apply(context.TODO(), sObj, am.ApplyOptions{
+	_, err := c.provider.Cluster.AppsV1().Deployments(ns).Apply(context.TODO(), sObj, am.ApplyOptions{
 		FieldManager: "convox-system",
 	})
 	return err
+}
+
+func assertNode(v interface{}) (*ac.Node, error) {
+	nd, ok := v.(*ac.Node)
+	if !ok {
+		return nil, errors.WithStack(fmt.Errorf("could not assert node for type: %T", v))
+	}
+
+	return nd, nil
 }
