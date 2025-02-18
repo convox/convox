@@ -6,6 +6,11 @@ variable "availability_zones" {
   default = ""
 }
 
+variable "aws_ebs_csi_driver_version" {
+  type    = string
+  default = "v1.39.0-eksbuild.1"
+}
+
 variable "build_disable_convox_resolver" {
   default = false
 }
@@ -45,7 +50,7 @@ variable "convox_rack_domain" {
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-coredns.html
 variable "coredns_version" {
   type    = string
-  default = "v1.11.1-eksbuild.4"
+  default = "v1.11.4-eksbuild.2"
 }
 
 variable "deploy_extra_nlb" {
@@ -88,7 +93,7 @@ variable "efs_csi_driver_enable" {
 
 variable "efs_csi_driver_version" {
   type    = string
-  default = "v2.0.7-eksbuild.1"
+  default = "v2.1.4-eksbuild.1"
 }
 
 variable "gpu_tag_enable" {
@@ -146,7 +151,7 @@ variable "key_pair_name" {
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-kube-proxy.html
 variable "kube_proxy_version" {
   type    = string
-  default = "v1.29.0-eksbuild.1"
+  default = "v1.30.9-eksbuild.3"
 }
 
 variable "kubelet_registry_pull_qps" {
@@ -161,7 +166,7 @@ variable "kubelet_registry_burst" {
 
 variable "k8s_version" {
   type    = string
-  default = "1.29"
+  default = "1.30"
 }
 
 variable "max_on_demand_count" {
@@ -203,6 +208,11 @@ variable "node_type" {
   default = "t3.small"
 }
 
+variable "nginx_image" {
+  type    = string
+  default = "registry.k8s.io/ingress-nginx/controller:v1.12.0@sha256:e6b8de175acda6ca913891f0f727bca4527e797d52688cbe9fec9040d6f6b6fa"
+}
+
 variable "pdb_default_min_available_percentage" {
   type    = number
   default = 50
@@ -215,7 +225,7 @@ variable "pod_identity_agent_enable" {
 
 variable "pod_identity_agent_version" {
   type    = string
-  default = "v1.3.2-eksbuild.2"
+  default = "v1.3.4-eksbuild.1"
 }
 
 variable "private" {
@@ -310,7 +320,7 @@ variable "vpc_id" {
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-vpc-cni.html
 variable "vpc_cni_version" {
   type    = string
-  default = "v1.18.3-eksbuild.2"
+  default = "v1.19.2-eksbuild.1"
 }
 
 variable "whitelist" {

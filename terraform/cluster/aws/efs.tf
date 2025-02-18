@@ -100,12 +100,12 @@ resource "kubernetes_storage_class_v1" "convox_efs_775" {
   parameters = {
     provisioningMode      = "efs-ap"
     fileSystemId          = aws_efs_file_system.convox_efs[0].id
-    uid = "33"
-    gid = "33"
+    uid                   = "33"
+    gid                   = "33"
     directoryPerms        = "0775"
     gidRangeStart         = "1000"                             # optional
     gidRangeEnd           = "20000"                            # optional
-    basePath              = "/dp775"                              # optional
+    basePath              = "/dp775"                           # optional
     subPathPattern        = "$${.PVC.namespace}/$${.PVC.name}" # optional
     ensureUniqueDirectory = "false"                            # optional
     reuseAccessPoint      = "false"                            # optional
@@ -126,12 +126,12 @@ resource "kubernetes_storage_class_v1" "convox_efs_777" {
   parameters = {
     provisioningMode      = "efs-ap"
     fileSystemId          = aws_efs_file_system.convox_efs[0].id
-    uid = "1000"
-    gid = "1000"
+    uid                   = "1000"
+    gid                   = "1000"
     directoryPerms        = "0775"
     gidRangeStart         = "1000"                             # optional
     gidRangeEnd           = "20000"                            # optional
-    basePath              = "/dp777"                              # optional
+    basePath              = "/dp777"                           # optional
     subPathPattern        = "$${.PVC.namespace}/$${.PVC.name}" # optional
     ensureUniqueDirectory = "false"                            # optional
     reuseAccessPoint      = "false"                            # optional
@@ -179,13 +179,13 @@ resource "kubernetes_persistent_volume_v1" "convox_efs_pv_root" {
 
     persistent_volume_source {
       csi {
-        driver = "efs.csi.aws.com"
-        volume_handle = "${aws_efs_file_system.convox_efs[0].id}"
+        driver        = "efs.csi.aws.com"
+        volume_handle = aws_efs_file_system.convox_efs[0].id
       }
     }
 
     storage_class_name = kubernetes_storage_class_v1.convox_efs_base[0].metadata[0].name
-    volume_mode = "Filesystem"
+    volume_mode        = "Filesystem"
   }
 
 }

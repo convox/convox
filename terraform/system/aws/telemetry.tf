@@ -5,6 +5,7 @@ locals {
   telemetry_map = {
     access_log_retention_in_days = var.access_log_retention_in_days
     availability_zones = var.availability_zones
+    aws_ebs_csi_driver_version = var.aws_ebs_csi_driver_version
     build_disable_convox_resolver = var.build_disable_convox_resolver
     build_node_enabled = var.build_node_enabled
     build_node_min_count = var.build_node_min_count
@@ -40,6 +41,7 @@ locals {
     max_on_demand_count = var.max_on_demand_count
     min_on_demand_count = var.min_on_demand_count
     name = var.name
+    nginx_image = var.nginx_image
     nlb_security_group = var.nlb_security_group
     node_capacity_type = var.node_capacity_type
     node_disk = var.node_disk
@@ -76,6 +78,7 @@ locals {
   telemetry_default_map = {
     access_log_retention_in_days = "7"
     availability_zones = ""
+    aws_ebs_csi_driver_version = "v1.39.0-eksbuild.1"
     build_disable_convox_resolver = "false"
     build_node_enabled = "false"
     build_node_min_count = "0"
@@ -84,7 +87,7 @@ locals {
     cidr = "10.1.0.0/16"
     convox_domain_tls_cert_disable = "false"
     convox_rack_domain = ""
-    coredns_version = "v1.11.1-eksbuild.4"
+    coredns_version = "v1.11.4-eksbuild.2"
     deploy_extra_nlb = "false"
     disable_image_manifest_cache = "false"
     disable_public_access = "false"
@@ -92,7 +95,7 @@ locals {
     docker_hub_username = ""
     ecr_scan_on_push_enable = "false"
     efs_csi_driver_enable = "false"
-    efs_csi_driver_version = "v2.0.7-eksbuild.1"
+    efs_csi_driver_version = "v2.1.4-eksbuild.1"
     fluentd_disable = "false"
     gpu_tag_enable = "false"
     high_availability = "true"
@@ -103,14 +106,15 @@ locals {
     imds_tags_enable = "false"
     internal_router = "false"
     internet_gateway_id = ""
-    k8s_version = "1.29"
+    k8s_version = "1.30"
     key_pair_name = ""
-    kube_proxy_version = "v1.29.0-eksbuild.1"
+    kube_proxy_version = "v1.30.9-eksbuild.3"
     kubelet_registry_burst = "10"
     kubelet_registry_pull_qps = "5"
     max_on_demand_count = "100"
     min_on_demand_count = "1"
     name = ""
+    nginx_image = "registry.k8s.io/ingress-nginx/controller:v1.12.0@sha256:e6b8de175acda6ca913891f0f727bca4527e797d52688cbe9fec9040d6f6b6fa"
     nlb_security_group = ""
     node_capacity_type = "on_demand"
     node_disk = "20"
@@ -118,7 +122,7 @@ locals {
     node_type = "t3.small"
     pdb_default_min_available_percentage = "50"
     pod_identity_agent_enable = "false"
-    pod_identity_agent_version = "v1.3.2-eksbuild.2"
+    pod_identity_agent_version = "v1.3.4-eksbuild.1"
     private = "true"
     private_eks_host = ""
     private_eks_pass = ""
@@ -139,7 +143,7 @@ locals {
     telemetry = "false"
     user_data = ""
     user_data_url = ""
-    vpc_cni_version = "v1.18.3-eksbuild.2"
+    vpc_cni_version = "v1.19.2-eksbuild.1"
     vpc_id = ""
     whitelist = "0.0.0.0/0"
     }
