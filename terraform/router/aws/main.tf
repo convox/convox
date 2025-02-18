@@ -40,6 +40,8 @@ resource "kubernetes_config_map" "nginx-configuration" {
     "log-format-upstream" = file("${path.module}/log-format.txt")
     "ssl-ciphers"         = var.ssl_ciphers == "" ? null : var.ssl_ciphers
     "ssl-protocols"       = var.ssl_protocols == "" ? null : var.ssl_protocols
+    "allow-snippet-annotations"=  "true"
+    "annotations-risk-level" = "Critical"
   }
 
   depends_on = [

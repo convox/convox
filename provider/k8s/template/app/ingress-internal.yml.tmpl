@@ -13,8 +13,6 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-send-timeout: "{{.Service.Timeout}}"
     nginx.ingress.kubernetes.io/server-snippet: |
         keepalive_timeout {{.Service.Timeout}}s;
-        grpc_read_timeout {{.Service.Timeout}}s;
-        grpc_send_timeout {{.Service.Timeout}}s;
         client_body_timeout {{.Service.Timeout}}s;
     {{ if .Service.Sticky }}
     nginx.ingress.kubernetes.io/affinity: cookie
