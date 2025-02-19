@@ -5,8 +5,9 @@ FROM golang:1.23 AS development
 ARG DOCKER_ARCH=aarch64
 ARG KUBECTL_ARCH=arm64
 
+ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get -y install curl skopeo
+RUN apt-get update && apt-get -y install --no-install-recommends curl skopeo
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -55,7 +56,7 @@ ARG KUBECTL_ARCH=arm64
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update
-RUN apt-get -y install curl skopeo
+RUN apt-get -y install --no-install-recommends curl skopeo
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
