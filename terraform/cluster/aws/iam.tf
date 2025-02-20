@@ -73,7 +73,7 @@ resource "aws_iam_role_policy" "nodes_eks_pod_identitiy" {
 }
 
 resource "aws_iam_role_policy_attachment" "nodes_aws_ebs_csi_driver" {
-  role   = aws_iam_role.nodes.name
+  role       = aws_iam_role.nodes.name
   policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
 }
 

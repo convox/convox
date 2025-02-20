@@ -149,6 +149,11 @@ func (c *NodeController) findAndRescheduleDeploymentWithOneReplica(node string) 
 		}
 		for i := range podList.Items {
 			pod := &podList.Items[i]
+
+			if pod.Labels["app"] == "cluster-autoscaler" {
+				c.triggerDeploymentReschedule("cluster-autoscaler", pod.Namespace, node)
+			}
+
 			key := pod.Name
 			for _, lb := range labelsToCheck {
 				v, has := pod.Labels[lb]

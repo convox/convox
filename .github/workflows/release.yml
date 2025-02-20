@@ -96,7 +96,7 @@ jobs:
         run: docker buildx build -f Dockerfile.buildkit --target privileged --platform linux/amd64 -t ${{ github.repository }}:${{ env.VERSION }}-build-privileged --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max .
   build-arm64:
     needs: release
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-22.04-arm
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -104,8 +104,6 @@ jobs:
           fetch-depth: 0
       - name: version
         run: echo "VERSION=$(echo ${{ github.ref }} | awk -F/ '{print $3}')" >> $GITHUB_ENV
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: login
@@ -116,7 +114,7 @@ jobs:
       - name: Install libudev-dev
         run: sudo apt-get update && sudo apt-get install -y libudev-dev
       - name: build-arm64
-        run: "DOCKER_BUILDKIT=0 docker buildx build -f Dockerfile.arm --platform linux/arm64 -t ${{ github.repository }}:${{ env.VERSION }}-arm64 --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max --build-arg DOCKER_ARCH=aarch64 --build-arg KUBECTL_ARCH=arm64 ."
+        run: "docker buildx build --platform linux/arm64 -t ${{ github.repository }}:${{ env.VERSION }}-arm64 --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max --build-arg DOCKER_ARCH=aarch64 --build-arg KUBECTL_ARCH=arm64 ."
       - name: buildkit-arm64
         run: docker buildx build -f Dockerfile.buildkit --target rootless --platform linux/arm64 -t ${{ github.repository }}:${{ env.VERSION }}-arm64-build --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max --build-arg DOCKER_ARCH=aarch64 --build-arg KUBECTL_ARCH=arm64 .
       - name: buildkit-arm64-privileged

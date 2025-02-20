@@ -220,9 +220,9 @@ resource "kubernetes_role" "autoscaler" {
   }
 
   rule {
-    api_groups     = ["coordination.k8s.io"]
-    resources      = ["leases"]
-    verbs          = ["create", "get", "update"]
+    api_groups = ["coordination.k8s.io"]
+    resources  = ["leases"]
+    verbs      = ["create", "get", "update"]
   }
 }
 

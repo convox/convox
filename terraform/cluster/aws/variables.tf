@@ -99,12 +99,12 @@ variable "kube_proxy_version" {
 }
 
 variable "kubelet_registry_pull_qps" {
-  type = number
+  type    = number
   default = 5
 }
 
 variable "kubelet_registry_burst" {
-  type = number
+  type    = number
   default = 10
 }
 
