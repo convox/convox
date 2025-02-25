@@ -56,9 +56,11 @@ resource "kubernetes_config_map" "nginx-internal-configuration" {
   }
 
   data = {
-    "proxy-body-size" = "0"
-    "ssl-ciphers"     = var.ssl_ciphers == "" ? null : var.ssl_ciphers
-    "ssl-protocols"   = var.ssl_protocols == "" ? null : var.ssl_protocols
+    "proxy-body-size"           = "0"
+    "ssl-ciphers"               = var.ssl_ciphers == "" ? null : var.ssl_ciphers
+    "ssl-protocols"             = var.ssl_protocols == "" ? null : var.ssl_protocols
+    "allow-snippet-annotations" = "true"
+    "annotations-risk-level"    = "Critical"
   }
 }
 
