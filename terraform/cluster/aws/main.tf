@@ -94,6 +94,7 @@ resource "random_id" "node_group" {
   byte_length = 8
 
   keepers = {
+    ami_id              = var.ami_id
     dummy               = "2"
     node_capacity_type  = var.node_capacity_type
     node_disk           = var.node_disk
@@ -111,6 +112,7 @@ resource "random_id" "build_node_group" {
   byte_length = 8
 
   keepers = {
+    ami_id              = var.build_ami_id ? var.build_ami_id : var.ami_id
     dummy               = "2"
     node_disk           = var.node_disk
     node_type           = var.build_node_type
@@ -285,7 +287,7 @@ resource "aws_launch_template" "cluster" {
   }
 
   instance_type = split(",", random_id.node_group.keepers.node_type)[0]
-  image_id = var.ami_id
+  image_id = random_id.node_group.keepers.ami_id
 
   dynamic "tag_specifications" {
     for_each = toset(
@@ -324,7 +326,7 @@ resource "aws_launch_template" "cluster-build" {
     instance_metadata_tags      = var.imds_tags_enable ? "enabled" : "disabled"
   }
 
-  image_id = var.build_ami_id ? var.build_ami_id : var.ami_id
+  image_id = random_id.build_node_group[0].keepers.ami_id
 
   dynamic "tag_specifications" {
     for_each = toset(
