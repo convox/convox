@@ -129,7 +129,7 @@ resource "aws_eks_node_group" "cluster" {
 
   count = var.high_availability ? 3 : 1
 
-  ami_type        = var.ami_id ? "CUSTOM" : var.gpu_type ? "AL2_x86_64_GPU" : var.arm_type ? "AL2_ARM_64" : "AL2_x86_64"
+  ami_type        = var.ami_id != null ? "CUSTOM" : var.gpu_type ? "AL2_x86_64_GPU" : var.arm_type ? "AL2_ARM_64" : "AL2_x86_64"
   capacity_type   = var.node_capacity_type == "MIXED" ? count.index == 0 ? "ON_DEMAND" : "SPOT" : var.node_capacity_type
   cluster_name    = aws_eks_cluster.cluster.name
   node_group_name = "${var.name}-${var.private ? data.aws_subnet.private_subnet_details[count.index].availability_zone : data.aws_subnet.public_subnet_details[count.index].availability_zone}-${count.index}${random_id.node_group.hex}"
@@ -176,7 +176,7 @@ resource "aws_eks_node_group" "cluster-build" {
 
   count = var.build_node_enabled ? 1 : 0
 
-  ami_type        = var.build_ami_id ? "CUSTOM" : (var.build_gpu_type ? "AL2_x86_64_GPU" : (var.build_arm_type ? "AL2_ARM_64" : "AL2_x86_64"))
+  ami_type        = var.build_ami_id != null ? "CUSTOM" : (var.build_gpu_type ? "AL2_x86_64_GPU" : (var.build_arm_type ? "AL2_ARM_64" : "AL2_x86_64"))
   capacity_type   = "ON_DEMAND"
   cluster_name    = aws_eks_cluster.cluster.name
   instance_types  = split(",", random_id.build_node_group[0].keepers.node_type)
