@@ -455,9 +455,18 @@ resource "aws_eks_addon" "aws_ebs_csi_driver" {
   addon_name    = "aws-ebs-csi-driver"
   addon_version = var.aws_ebs_csi_driver_version
   tags = {
-    "depends": module.ebs_csi_driver_controller.wait_for_it,
+    "depends" : module.ebs_csi_driver_controller.wait_for_it,
   }
+
   resolve_conflicts = "OVERWRITE"
+
+  configuration_values = jsonencode({
+    sidecars = {
+      snapshotter = {
+        forceEnable = false
+      }
+    }
+  })
 }
 
 resource "null_resource" "wait_eks_addons" {
