@@ -345,13 +345,14 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 					},
 				},
 			}
-			s.Tolerations = []ac.Toleration{
-				{
-					Key:      "dedicated",
-					Operator: ac.TolerationOpExists,
-					Effect:   ac.TaintEffectNoSchedule,
-				},
-			}
+		}
+
+		s.Tolerations = []ac.Toleration{
+			{
+				Key:      "dedicated",
+				Operator: ac.TolerationOpExists,
+				Effect:   ac.TaintEffectNoSchedule,
+			},
 		}
 	}
 
@@ -603,6 +604,19 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 			s.Containers[0].Resources.Limits = ac.ResourceList{}
 		}
 		s.Containers[0].Resources.Limits["memory"] = resource.MustParse(fmt.Sprintf("%dMi", *opts.MemoryLimit))
+	}
+
+	if opts.NodeLabels != nil {
+		labelStrList := strings.Split(*opts.NodeLabels, ",")
+		for _, lb := range labelStrList {
+			parts := strings.SplitN(lb, "=", 2)
+			if len(parts) == 2 {
+				if s.NodeSelector == nil {
+					s.NodeSelector = map[string]string{}
+				}
+				s.NodeSelector[parts[0]] = parts[1]
+			}
+		}
 	}
 
 	if p.DockerUsername != "" && p.DockerPassword != "" {
