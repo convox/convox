@@ -104,7 +104,6 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 
 	psOpts := structs.ProcessRunOptions{
 		Command:     options.String(buildCmd),
-		Cpu:         options.Int(512),
 		Environment: env,
 	}
 

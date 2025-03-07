@@ -1,16 +1,19 @@
 package cli
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/convox/convox/pkg/common"
+	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/rack"
 	"github.com/convox/convox/pkg/structs"
@@ -121,7 +124,65 @@ func init() {
 	})
 }
 
-func validateParams(params map[string]string) error {
+type NodeGroupConfigParam struct {
+	Type         string  `json:"type"`
+	Disk         *int    `json:"disk,omitempty"`
+	CapacityType *string `json:"capacity_type,omitempty"`
+	MinSize      *int    `json:"min_size,omitempty"`
+	DesiredSize  *int    `json:"desired_size,omitempty"`
+	MaxSize      *int    `json:"max_size,omitempty"`
+	Label        *string `json:"label,omitempty"`
+	AmiID        *string `json:"ami_id,omitempty"`
+	Dedicated    *bool   `json:"dedicated,omitempty"`
+}
+
+func (n *NodeGroupConfigParam) Validate() error {
+	if n.Type == "" {
+		return fmt.Errorf("node type is required: '%s'", n.Type)
+	}
+	if n.Disk != nil && *n.Disk < 20 {
+		return fmt.Errorf("node disk is less than 20: '%d'", *n.Disk)
+	}
+	if n.MinSize != nil && *n.MinSize < 0 {
+		return fmt.Errorf("invalid min size: '%d'", *n.MinSize)
+	}
+	if n.MaxSize != nil && *n.MaxSize < 0 {
+		return fmt.Errorf("invalid max size: '%d'", *n.MaxSize)
+	}
+	if n.DesiredSize != nil && *n.DesiredSize < 0 {
+		return fmt.Errorf("invalid desired size: '%d'", *n.DesiredSize)
+	}
+	if n.DesiredSize != nil && n.MinSize != nil && *n.DesiredSize < *n.MinSize {
+		return fmt.Errorf("invalid desired size: '%d' must be greater or equal to min size", *n.DesiredSize)
+	}
+	if n.DesiredSize != nil && n.MaxSize != nil && *n.DesiredSize > *n.MaxSize {
+		return fmt.Errorf("invalid desired size: '%d' must be less or equal to max size", *n.DesiredSize)
+	}
+	if n.CapacityType != nil && (*n.CapacityType != "ON_DEMAND" && *n.CapacityType != "SPOT") {
+		return fmt.Errorf("allowed capasity type: ON_DEMAND or SPOT, found : '%s'", *n.CapacityType)
+	}
+	if n.Label != nil && !manifest.NameValidator.MatchString(*n.Label) {
+		return fmt.Errorf("label value '%s' invalid, %s", *n.Label, manifest.ValidNameDescription)
+	}
+
+	if n.Dedicated != nil && *n.Dedicated && n.Label == nil {
+		return fmt.Errorf("label is required when dedicated option is set")
+	}
+	return nil
+}
+
+type AdditionalNodeGroups []NodeGroupConfigParam
+
+func (an AdditionalNodeGroups) Validate() error {
+	for i := range an {
+		if err := an[i].Validate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateAndMutateParams(params map[string]string) error {
 	if params["high_availability"] != "" {
 		return errors.New("the high_availability parameter is only supported during rack installation")
 	}
@@ -138,6 +199,46 @@ func validateParams(params map[string]string) error {
 			if len(strings.Split(p, "=")) != 2 {
 				return errors.New("invalid value for tags param")
 			}
+		}
+	}
+
+	ngKeys := []string{"additional_node_groups_config", "additional_build_groups_config"}
+	for _, k := range ngKeys {
+		if params[k] != "" {
+			var err error
+			cfgData := []byte(params[k])
+			if strings.HasSuffix(params[k], ".json") {
+				cfgData, err = os.ReadFile(params[k])
+				if err != nil {
+					return fmt.Errorf("invalid param '%s' value, failed to read the file: %s", k, err)
+				}
+			} else if !strings.HasPrefix(params[k], "[") {
+				data, err := base64.StdEncoding.DecodeString(params[k])
+				if err != nil {
+					return fmt.Errorf("invalid param '%s' value: %s", k, err)
+				}
+
+				cfgData = data
+			}
+
+			nCfgs := AdditionalNodeGroups{}
+			if err := json.Unmarshal(cfgData, &nCfgs); err != nil {
+				return err
+			}
+
+			if err := nCfgs.Validate(); err != nil {
+				return err
+			}
+
+			sort.Slice(nCfgs, func(i, j int) bool {
+				return nCfgs[i].Type < nCfgs[j].Type
+			})
+
+			data, err := json.Marshal(nCfgs)
+			if err != nil {
+				return fmt.Errorf("failed to process params '%s': %s", k, err)
+			}
+			params[k] = base64.StdEncoding.EncodeToString(data)
 		}
 	}
 
@@ -416,6 +517,16 @@ func RackParams(_ sdk.Interface, c *stdcli.Context) error {
 		keys = append(keys, k)
 	}
 
+	ngKeys := []string{"additional_node_groups_config", "additional_build_groups_config"}
+	for _, k := range ngKeys {
+		if params[k] != "" {
+			v, err := base64.StdEncoding.DecodeString(params[k])
+			if err == nil {
+				params[k] = string(v)
+			}
+		}
+	}
+
 	sort.Strings(keys)
 
 	i := c.Info()
@@ -436,7 +547,7 @@ func RackParamsSet(_ sdk.Interface, c *stdcli.Context) error {
 	c.Startf("Updating parameters")
 
 	params := argsToOptions(c.Args)
-	if err := validateParams(params); err != nil {
+	if err := validateAndMutateParams(params); err != nil {
 		return err
 	}
 
