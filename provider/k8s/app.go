@@ -253,7 +253,11 @@ func (p *Provider) NamespaceApp(namespace string) (string, error) {
 }
 
 func (p *Provider) AppParameters() map[string]string {
-	return map[string]string{}
+	return map[string]string{
+		structs.AppParamBuildCpu:    "",
+		structs.AppParamBuildMem:    "",
+		structs.AppParamBuildLabels: "",
+	}
 }
 
 func (p *Provider) AppUpdate(name string, opts structs.AppUpdateOptions) error {
@@ -328,8 +332,8 @@ func (p *Provider) appFromNamespace(ns ac.Namespace) (*structs.App, error) {
 	}
 
 	// filter out invalid parameters
-	for k := range params {
-		if _, ok := defparams[k]; !ok {
+	for k, v := range params {
+		if _, ok := defparams[k]; !ok || (ok && v == "") {
 			delete(params, k)
 		}
 	}
@@ -378,7 +382,7 @@ func (p *Provider) appFromNamespaceAndAtom(ns ac.Namespace, atm atom.AtomStatusI
 
 	// set parameter default values
 	for k, v := range defparams {
-		if _, ok := params[k]; !ok {
+		if _, ok := params[k]; !ok && v != "" {
 			params[k] = v
 		}
 	}
@@ -416,16 +420,16 @@ func (p *Provider) appNameValidate(name string) error {
 func (p *Provider) appParametersUpdate(a *structs.App, params map[string]string) error {
 	defs := p.Engine.AppParameters()
 
-	var redundantParameters []string
+	var invalidParameters []string
 	for k, v := range params {
 		if _, ok := defs[k]; !ok {
-			redundantParameters = append(redundantParameters, k)
+			invalidParameters = append(invalidParameters, k)
 		} else {
 			a.Parameters[k] = v
 		}
 	}
 
-	fmt.Printf("Skipping redundant parameters: %s ...", strings.Join(redundantParameters, ", "))
+	fmt.Printf("Skipping unsupported parameters: %s ...", strings.Join(invalidParameters, ", "))
 
 	return nil
 }
