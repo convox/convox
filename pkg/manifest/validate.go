@@ -12,7 +12,7 @@ const (
 )
 
 var (
-	nameValidator = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
+	NameValidator = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
 )
 
 func (m *Manifest) validate() []error {
@@ -85,7 +85,7 @@ func (m *Manifest) validateResources() []error {
 	errs := []error{}
 
 	for _, r := range m.Resources {
-		if !nameValidator.MatchString(r.Name) {
+		if !NameValidator.MatchString(r.Name) {
 			errs = append(errs, fmt.Errorf("resource name %s invalid, %s", r.Name, ValidNameDescription))
 		}
 
@@ -106,7 +106,7 @@ func (m *Manifest) validateServices() []error {
 	}
 
 	for _, s := range m.Services {
-		if !nameValidator.MatchString(s.Name) {
+		if !NameValidator.MatchString(s.Name) {
 			errs = append(errs, fmt.Errorf("service name %s invalid, %s", s.Name, ValidNameDescription))
 		}
 
@@ -163,7 +163,7 @@ func (m *Manifest) validateTimers() []error {
 	errs := []error{}
 
 	for _, t := range m.Timers {
-		if !nameValidator.MatchString(t.Name) {
+		if !NameValidator.MatchString(t.Name) {
 			errs = append(errs, fmt.Errorf("timer name %s invalid, %s", t.Name, ValidNameDescription))
 		}
 
