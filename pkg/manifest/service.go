@@ -38,6 +38,7 @@ type Service struct {
 	InternalRouter     bool                  `yaml:"internalRouter,omitempty"`
 	IngressAnnotations Annotations           `yaml:"ingressAnnotations,omitempty"`
 	Labels             Labels                `yaml:"labels,omitempty"`
+	NodeSelectorLabels Labels                `yaml:"nodeSelectorLabels,omitempty"`
 	Lifecycle          ServiceLifecycle      `yaml:"lifecycle,omitempty"`
 	Port               ServicePortScheme     `yaml:"port,omitempty"`
 	Ports              []ServicePortProtocol `yaml:"ports,omitempty"`

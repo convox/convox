@@ -4,7 +4,7 @@ resource "kubernetes_cluster_role" "resolver" {
   }
 
   rule {
-    api_groups = ["extensions"]
+    api_groups = ["extensions", "networking.k8s.io"]
     resources  = ["ingresses"]
     verbs      = ["get", "list", "watch"]
   }
