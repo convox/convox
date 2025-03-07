@@ -3,6 +3,34 @@ variable "ami_id" {
   default = null
 }
 
+variable "additional_node_groups" {
+  type = list(object({
+    type          = string
+    disk          = optional(number)
+    capacity_type = optional(string)
+    min_size      = optional(number)
+    desired_size  = optional(number)
+    max_size      = optional(number)
+    label         = optional(string)
+    ami_id        = optional(string)
+  }))
+  default = []
+}
+
+variable "additional_build_groups" {
+  type = list(object({
+    type          = string
+    disk          = optional(number)
+    capacity_type = optional(string)
+    min_size      = optional(number)
+    desired_size  = optional(number)
+    max_size      = optional(number)
+    label         = optional(string)
+    ami_id        = optional(string)
+  }))
+  default = []
+}
+
 variable "arm_type" {
   default = false
 }

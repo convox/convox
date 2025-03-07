@@ -7,6 +7,16 @@ variable "ami_id" {
   default = null
 }
 
+variable "additional_node_groups_config" {
+  type    = string
+  default = ""
+}
+
+variable "additional_build_groups_config" {
+  type    = string
+  default = ""
+}
+
 variable "availability_zones" {
   default = ""
 }
@@ -165,12 +175,12 @@ variable "kube_proxy_version" {
 }
 
 variable "kubelet_registry_pull_qps" {
-  type = number
+  type    = number
   default = 5
 }
 
 variable "kubelet_registry_burst" {
-  type = number
+  type    = number
   default = 10
 }
 

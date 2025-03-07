@@ -85,6 +85,12 @@ spec:
         {{.Key}}: "{{.Value}}"
         {{ end }}
     spec:
+      {{ if .Service.NodeSelectorLabels }}
+      nodeSelector:
+        {{ range keyValue .Service.NodeSelectorLabels }}
+        {{.Key}}: "{{.Value}}"
+        {{ end }}
+      {{ end }}
       {{ if or (.Resolver) (gt .Service.DnsConfig.Ndots 0) }}
       dnsPolicy: "None"
       dnsConfig:
