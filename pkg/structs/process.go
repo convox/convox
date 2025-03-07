@@ -50,6 +50,7 @@ type ProcessRunOptions struct {
 	Volumes     map[string]string `header:"Volumes"`
 	Width       *int              `header:"Width"`
 	Privileged  *bool             `header:"Privileged"`
+	NodeLabels  *string           `flag:"node-labels" header:"Node-Labels"`
 }
 
 func (p *Process) sortKey() string {
