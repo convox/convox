@@ -112,7 +112,7 @@ resource "random_id" "build_node_group" {
   byte_length = 8
 
   keepers = {
-    ami_id              = var.build_ami_id ? var.build_ami_id : var.ami_id
+    ami_id              = var.build_ami_id
     dummy               = "2"
     node_disk           = var.node_disk
     node_type           = var.build_node_type
@@ -176,7 +176,7 @@ resource "aws_eks_node_group" "cluster-build" {
 
   count = var.build_node_enabled ? 1 : 0
 
-  ami_type        = var.ami_id ? "CUSTOM" : (var.build_gpu_type ? "AL2_x86_64_GPU" : (var.build_arm_type ? "AL2_ARM_64" : "AL2_x86_64"))
+  ami_type        = var.build_ami_id ? "CUSTOM" : (var.build_gpu_type ? "AL2_x86_64_GPU" : (var.build_arm_type ? "AL2_ARM_64" : "AL2_x86_64"))
   capacity_type   = "ON_DEMAND"
   cluster_name    = aws_eks_cluster.cluster.name
   instance_types  = split(",", random_id.build_node_group[0].keepers.node_type)
@@ -326,7 +326,7 @@ resource "aws_launch_template" "cluster-build" {
     instance_metadata_tags      = var.imds_tags_enable ? "enabled" : "disabled"
   }
 
-  image_id = random_id.build_node_group[0].keepers.ami_id
+  image_id = var.build_node_enabled ? random_id.build_node_group[0].keepers.ami_id : null
 
   dynamic "tag_specifications" {
     for_each = toset(
