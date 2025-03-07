@@ -168,7 +168,7 @@ data "aws_iam_policy_document" "rds_provisioner" {
   statement {
     effect = "Allow"
     actions = ["iam:CreateServiceLinkedRole"]
-    resources = ["arn:aws:iam::*:role/aws-service-role/rds.amazonaws.com/AWSServiceRoleForRDS"]
+    resources = ["arn:${data.aws_partition.current.partition}:iam::*:role/aws-service-role/rds.amazonaws.com/AWSServiceRoleForRDS"]
     condition {
       test     = "StringLike"
       variable = "iam:AWSServiceName"
