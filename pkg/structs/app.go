@@ -1,5 +1,11 @@
 package structs
 
+const (
+	AppParamBuildLabels = "BuildLabels"
+	AppParamBuildCpu    = "BuildCpu"
+	AppParamBuildMem    = "BuildMem"
+)
+
 type App struct {
 	Generation string `json:"generation,omitempty"`
 	Locked     bool   `json:"locked"`

@@ -316,8 +316,6 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 	ans := map[string]string{}
 	if service == "build" {
 		for idx := 0; idx < len(s.Containers); idx++ {
-			// assign the build container a BestEffor QoS to avoid eating all compute resources
-			s.Containers[idx].Resources = ac.ResourceRequirements{}
 			s.Containers[idx].SecurityContext = &ac.SecurityContext{SeccompProfile: &ac.SeccompProfile{Type: ac.SeccompProfileTypeUnconfined}}
 			if opts.Privileged != nil && *opts.Privileged {
 				s.Containers[idx].SecurityContext.Privileged = options.Bool(true)
@@ -345,13 +343,14 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 					},
 				},
 			}
-			s.Tolerations = []ac.Toleration{
-				{
-					Key:      "dedicated",
-					Operator: ac.TolerationOpExists,
-					Effect:   ac.TaintEffectNoSchedule,
-				},
-			}
+		}
+
+		s.Tolerations = []ac.Toleration{
+			{
+				Key:      "dedicated",
+				Operator: ac.TolerationOpExists,
+				Effect:   ac.TaintEffectNoSchedule,
+			},
 		}
 	}
 
@@ -603,6 +602,19 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 			s.Containers[0].Resources.Limits = ac.ResourceList{}
 		}
 		s.Containers[0].Resources.Limits["memory"] = resource.MustParse(fmt.Sprintf("%dMi", *opts.MemoryLimit))
+	}
+
+	if opts.NodeLabels != nil {
+		labelStrList := strings.Split(*opts.NodeLabels, ",")
+		for _, lb := range labelStrList {
+			parts := strings.SplitN(lb, "=", 2)
+			if len(parts) == 2 {
+				if s.NodeSelector == nil {
+					s.NodeSelector = map[string]string{}
+				}
+				s.NodeSelector[parts[0]] = parts[1]
+			}
+		}
 	}
 
 	if p.DockerUsername != "" && p.DockerPassword != "" {

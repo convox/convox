@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -36,7 +37,8 @@ func (*Provider) buildPrivileged(provider string) bool {
 }
 
 func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions) (*structs.Build, error) {
-	if _, err := p.AppGet(app); err != nil {
+	appObj, err := p.AppGet(app)
+	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
@@ -102,9 +104,29 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 
 	psOpts := structs.ProcessRunOptions{
 		Command:     options.String(buildCmd),
-		Cpu:         options.Int(512),
 		Environment: env,
 	}
+
+	if nlbs := appObj.Parameters[structs.AppParamBuildLabels]; nlbs != "" {
+		psOpts.NodeLabels = options.String(nlbs)
+	}
+
+	if cpu := appObj.Parameters[structs.AppParamBuildCpu]; cpu != "" {
+		v, err := strconv.ParseInt(cpu, 10, 32)
+		if err != nil {
+			return nil, fmt.Errorf("invalid build cpu: %s, err: %s", cpu, err)
+		}
+		psOpts.Cpu = options.Int(int(v))
+	}
+
+	if mem := appObj.Parameters[structs.AppParamBuildMem]; mem != "" {
+		v, err := strconv.ParseInt(mem, 10, 32)
+		if err != nil {
+			return nil, fmt.Errorf("invalid build mem: %s, err: %s", mem, err)
+		}
+		psOpts.Memory = options.Int(int(v))
+	}
+
 	if p.BuildkitEnabled == "true" {
 		psOpts.Image = options.String(p.buildImage(os.Getenv("PROVIDER")))
 		psOpts.Privileged = options.Bool(p.buildPrivileged(os.Getenv("PROVIDER")))
