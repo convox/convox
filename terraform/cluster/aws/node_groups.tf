@@ -36,7 +36,7 @@ resource "aws_eks_node_group" "cluster_additional" {
   node_role_arn   = random_id.additional_node_groups[count.index].keepers.role_arn
   subnet_ids      = var.private ? local.private_subnets_ids : local.public_subnets_ids
   tags            = local.tags
-  version         = var.k8s_version
+  version         = random_id.additional_node_groups[count.index].keepers.ami_id != null ? null : var.k8s_version
 
   launch_template {
     id      = aws_launch_template.cluster_additional[count.index].id
@@ -178,7 +178,7 @@ resource "aws_eks_node_group" "build_additional" {
   node_role_arn   = random_id.build_node_additional[count.index].keepers.role_arn
   subnet_ids      = local.private_subnets_ids
   tags            = local.tags
-  version         = var.k8s_version
+  version         =  random_id.build_node_additional[count.index].keepers.ami_id != null ? null : var.k8s_version
 
   labels = {
     "convox-build" : "true"
