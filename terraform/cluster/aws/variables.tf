@@ -13,6 +13,7 @@ variable "additional_node_groups" {
     max_size      = optional(number)
     label         = optional(string)
     ami_id        = optional(string)
+    dedicated     = optional(bool, false)
   }))
   default = []
 }

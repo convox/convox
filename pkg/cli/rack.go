@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -132,6 +133,7 @@ type NodeGroupConfigParam struct {
 	MaxSize      *int    `json:"max_size,omitempty"`
 	Label        *string `json:"label,omitempty"`
 	AmiID        *string `json:"ami_id,omitempty"`
+	Dedicated    *bool   `json:"dedicated,omitempty"`
 }
 
 func (n *NodeGroupConfigParam) Validate() error {
@@ -156,11 +158,15 @@ func (n *NodeGroupConfigParam) Validate() error {
 	if n.DesiredSize != nil && n.MaxSize != nil && *n.DesiredSize > *n.MaxSize {
 		return fmt.Errorf("invalid desired size: '%d' must be less or equal to max size", *n.DesiredSize)
 	}
-	if n.CapacityType != nil && (*n.CapacityType != "ON_DEMAND" && *n.CapacityType == "SPOT") {
+	if n.CapacityType != nil && (*n.CapacityType != "ON_DEMAND" && *n.CapacityType != "SPOT") {
 		return fmt.Errorf("allowed capasity type: ON_DEMAND or SPOT, found : '%s'", *n.CapacityType)
 	}
 	if n.Label != nil && !manifest.NameValidator.MatchString(*n.Label) {
 		return fmt.Errorf("label value '%s' invalid, %s", *n.Label, manifest.ValidNameDescription)
+	}
+
+	if n.Dedicated != nil && *n.Dedicated && n.Label == nil {
+		return fmt.Errorf("label is required when dedicated option is set")
 	}
 	return nil
 }
@@ -199,16 +205,24 @@ func validateAndMutateParams(params map[string]string) error {
 	ngKeys := []string{"additional_node_groups_config", "additional_build_groups_config"}
 	for _, k := range ngKeys {
 		if params[k] != "" {
-			if !strings.HasPrefix(params[k], "[") {
+			var err error
+			cfgData := []byte(params[k])
+			if strings.HasSuffix(params[k], ".json") {
+				cfgData, err = os.ReadFile(params[k])
+				if err != nil {
+					return fmt.Errorf("invalid param '%s' value, failed to read the file: %s", k, err)
+				}
+			} else if !strings.HasPrefix(params[k], "[") {
 				data, err := base64.StdEncoding.DecodeString(params[k])
 				if err != nil {
 					return fmt.Errorf("invalid param '%s' value: %s", k, err)
 				}
 
-				params[k] = string(data)
+				cfgData = data
 			}
+
 			nCfgs := AdditionalNodeGroups{}
-			if err := json.Unmarshal([]byte(params[k]), &nCfgs); err != nil {
+			if err := json.Unmarshal(cfgData, &nCfgs); err != nil {
 				return err
 			}
 

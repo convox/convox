@@ -90,6 +90,23 @@ spec:
         {{ range keyValue .Service.NodeSelectorLabels }}
         {{.Key}}: "{{.Value}}"
         {{ end }}
+      {{ $hasTolerations := false }}
+      {{ range keyValue .Service.NodeSelectorLabels }}
+        {{ if eq .Key "convox.io/label" }}
+          {{ $hasTolerations = true }}
+        {{ end }}
+      {{ end }}
+      {{ if $hasTolerations }}
+      tolerations:
+        {{ range keyValue .Service.NodeSelectorLabels }}
+        {{ if eq .Key "convox.io/label" }}
+        - key: "dedicated-node"
+          operator: "Equal"
+          value: "{{.Value}}"
+          effect: "NoSchedule"
+        {{ end }}
+        {{ end }}
+      {{ end }}
       {{ end }}
       {{ if or (.Resolver) (gt .Service.DnsConfig.Ndots 0) }}
       dnsPolicy: "None"

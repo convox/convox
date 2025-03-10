@@ -65,6 +65,15 @@ resource "aws_eks_node_group" "cluster_additional" {
     "convox.io/label" = var.additional_node_groups[count.index].label != null ? var.additional_node_groups[count.index].label : "custom"
   }
 
+  dynamic "taint" {
+    for_each = var.additional_node_groups[count.index].dedicated ? [1] : []
+    content {
+      key    = "dedicated-node"
+      value  = var.additional_node_groups[count.index].label != null ? var.additional_node_groups[count.index].label : "custom"
+      effect = "NO_SCHEDULE"
+    }
+  }
+
   timeouts {
     update = "2h"
     delete = "1h"
