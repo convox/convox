@@ -1,0 +1,44 @@
+---
+title: "AWS App Parameters"
+draft: false
+slug: aws-app-parameters
+url: /reference/app-parameters/aws
+---
+# AWS App Parameters
+
+The following parameters are available for configuring your Convox applications on Amazon Web Services (AWS). These parameters allow you to customize and optimize the behavior of your applications running on the AWS platform.
+
+## Parameters
+
+| Parameter | Description |
+|:---------|:------------|
+| [BuildLabels](/reference/app-parameters/aws/BuildLabels) | Specifies Kubernetes node selector labels for build pods |
+| [BuildCpu](/reference/app-parameters/aws/BuildCpu) | Sets the CPU request for build pods in millicores |
+| [BuildMem](/reference/app-parameters/aws/BuildMem) | Sets the memory request for build pods in megabytes |
+
+These application-specific parameters complement the rack-level configuration available through [Rack Parameters](/configuration/rack-parameters/aws), providing fine-grained control over your application deployments.
+
+## Setting Parameters
+
+To set an app parameter, use the following command:
+```html
+$ convox apps params set parameterName=value -a appName
+Setting parameters... OK
+```
+
+For example, to set the `BuildLabels` parameter:
+```html
+$ convox apps params set BuildLabels=convox.io/label=app-build -a myapp
+Setting BuildLabels... OK
+```
+
+## Viewing Parameters
+
+To view the current parameters for an application:
+```html
+$ convox apps params -a appName
+NAME         VALUE
+BuildLabels  convox.io/label=app-build
+BuildCpu     512
+BuildMem     1024
+```
