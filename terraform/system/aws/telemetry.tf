@@ -81,7 +81,6 @@ locals {
     access_log_retention_in_days = "7"
     ami_id = ""
     availability_zones = ""
-    aws_ebs_csi_driver_version = "v1.39.0-eksbuild.1"
     build_ami_id = ""
     build_disable_convox_resolver = "false"
     build_node_enabled = "false"
