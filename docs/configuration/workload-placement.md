@@ -35,6 +35,76 @@ At the rack level, you can define custom node groups:
 
 These parameters allow you to specify instance types, disk sizes, capacity types (on-demand vs. spot), scaling parameters, and custom labels for your node groups.
 
+### Setting Rack Parameters with JSON Files
+
+While you can set configuration directly using a JSON string, most users find it more manageable to use a JSON file, especially for complex configurations.
+
+#### Using a JSON File for Node Groups
+
+Create a JSON file (e.g., `node-groups.json`) with your configuration:
+
+```json
+[
+  {
+    "type": "t3.medium",
+    "capacity_type": "ON_DEMAND",
+    "min_size": 1,
+    "desired_size": 2,
+    "max_size": 5,
+    "label": "critical-services"
+  },
+  {
+    "type": "c5.large",
+    "capacity_type": "SPOT",
+    "min_size": 0,
+    "desired_size": 1,
+    "max_size": 10,
+    "label": "batch-workers",
+    "disk": 100
+  }
+]
+```
+
+Then apply the configuration using:
+
+```bash
+$ convox rack params set additional_node_groups_config=/path/to/node-groups.json -r rackName
+```
+
+#### Using a JSON File for Build Node Groups
+
+Similarly, create a JSON file (e.g., `build-groups.json`) for build node configuration:
+
+```json
+[
+  {
+    "type": "c5.xlarge",
+    "capacity_type": "SPOT",
+    "min_size": 0,
+    "desired_size": 0,
+    "max_size": 3,
+    "label": "app-build",
+    "disk": 100
+  }
+]
+```
+
+Apply it with:
+
+```bash
+$ convox rack params set additional_build_groups_config=/path/to/build-groups.json -r rackName
+```
+
+#### Using a JSON String Directly
+
+If you prefer, you can also specify the configuration as a single JSON string directly in the command:
+
+```bash
+$ convox rack params set 'additional_node_groups_config=[{"type":"t3.medium","capacity_type":"ON_DEMAND","min_size":1,"desired_size":2,"max_size":5,"label":"critical-services"}]' -r rackName
+```
+
+This approach is convenient for simple configurations or in automation scripts where generating a file might be impractical. However, for complex configurations with multiple node groups or when making frequent changes, using a JSON file is recommended for better readability and maintenance.
+
 ### App-level Configuration
 
 At the application level, you can control where specific workloads run:
@@ -65,26 +135,17 @@ This example creates a cost-optimized infrastructure with dedicated node pools f
 
 1. **Rack Configuration**:
    ```html
-   $ convox rack params set 'additional_node_groups_config=[
-     {"type":"t3.medium","capacity_type":"ON_DEMAND","min_size":1,"desired_size":2,"max_size":5,"label":"critical-services"},
-     {"type":"c5.large","capacity_type":"SPOT","min_size":0,"desired_size":1,"max_size":10,"label":"batch-workers"}
-   ]' -r production
+   $ convox rack params set additional_node_groups_config=/path/to/node-groups.json -r production
+   $ convox rack params set additional_build_groups_config=/path/to/build-groups.json -r production
    ```
 
-2. **Build Node Configuration**:
-   ```html
-   $ convox rack params set 'additional_build_groups_config=[
-     {"type":"c5.xlarge","capacity_type":"SPOT","min_size":0,"desired_size":1,"max_size":3,"label":"app-build"}
-   ]' -r production
-   ```
-
-3. **Application Configuration**:
+2. **Application Configuration**:
    ```html
    $ convox apps params set BuildLabels=convox.io/label=app-build -a myapp
    $ convox apps params set BuildCpu=1024 BuildMem=4096 -a myapp
    ```
 
-4. **Service Configuration** (in `convox.yml`):
+3. **Service Configuration** (in `convox.yml`):
    ```yaml
    services:
      web:
@@ -107,14 +168,27 @@ This configuration creates:
 
 To create dedicated node groups that exclusively run specific services:
 
-1. **Rack Configuration**:
-   ```html
-   $ convox rack params set 'additional_node_groups_config=[
-     {"type":"m5.large","capacity_type":"ON_DEMAND","min_size":2,"desired_size":3,"max_size":5,"label":"database-workers","dedicated":true}
-   ]' -r production
+1. **Create a JSON file for your node group configuration**:
+   ```json
+   [
+     {
+       "type": "m5.large",
+       "capacity_type": "ON_DEMAND",
+       "min_size": 2,
+       "desired_size": 3,
+       "max_size": 5,
+       "label": "database-workers",
+       "dedicated": true
+     }
+   ]
    ```
 
-2. **Service Configuration** (in `convox.yml`):
+2. **Apply the configuration**:
+   ```html
+   $ convox rack params set additional_node_groups_config=/path/to/dedicated-nodes.json -r production
+   ```
+
+3. **Service Configuration** (in `convox.yml`):
    ```yaml
    services:
      db-processor:
@@ -172,9 +246,4 @@ If nodes aren't scaling as expected:
 
 ## Conclusion
 
-Effective workload placement is a powerful tool for optimizing your Convox infrastructure. By leveraging custom node groups and service placement rules, you can create an infrastructure that balances performance, cost, and isolation requirements for your specific application needs.
-
-For more detailed information, refer to:
-- [additional_node_groups_config](/configuration/rack-parameters/aws/additional_node_groups_config)
-- [additional_build_groups_config](/configuration/rack-parameters/aws/additional_build_groups_config)
-- [BuildLabels](/reference/app-parameters/aws/BuildLabels)
+Effective workload placement is a powerful tool for optimizing your Conv
