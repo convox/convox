@@ -25,7 +25,7 @@ By default, build pods use the standard CPU allocation defined at the rack level
 To set the CPU request for build pods:
 
 ```html
-$ convox apps params set BuildCpu=512 -a <app>
+$ convox apps params set BuildCpu=<value> -a <app>
 Setting BuildCpu... OK
 ```
 

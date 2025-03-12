@@ -29,8 +29,8 @@ The `additional_build_groups_config` parameter takes a JSON array of node group 
 | `type` | Yes | The EC2 instance type to use for the build node group |  |
 | `disk` | No | The disk size in GB for the nodes | Same as main node disk |
 | `capacity_type` | No | Whether to use on-demand or spot instances | `ON_DEMAND` |
-| `min_size` | No | Minimum number of nodes | 1 |
-| `desired_size` | No | Desired number of nodes | 1 |
+| `min_size` | No | Minimum number of nodes | 0 |
+| `desired_size` | No | Desired number of nodes | 0 |
 | `max_size` | No | Maximum number of nodes | 100 |
 | `label` | No | Custom label value for the node group. Applied as `convox.io/label: <label-value>` | None |
 | `ami_id`* | No | Custom AMI ID to use | EKS-optimized AMI |
