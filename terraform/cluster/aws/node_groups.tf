@@ -1,3 +1,15 @@
+
+locals {
+  launch_template_user_data_raw = var.user_data_url != "" || var.user_data != "" || var.kubelet_registry_pull_qps != 5 || var.kubelet_registry_burst != 10 ? templatefile("${path.module}/files/custom_user_data.sh", {
+    kubelet_registry_pull_qps = var.kubelet_registry_pull_qps
+    kubelet_registry_burst    = var.kubelet_registry_burst
+    user_data_script_file     = var.user_data_url != "" ? data.http.user_data_content[0].response_body : ""
+    user_data                 = var.user_data
+  }) : ""
+
+  kube_dns_ip = cidrhost(aws_eks_cluster.cluster.kubernetes_network_config[0].service_ipv4_cidr, 10)
+}
+
 resource "random_id" "additional_node_groups" {
   byte_length = 8
 
@@ -114,13 +126,17 @@ resource "aws_launch_template" "cluster_additional" {
     }
   }
 
-  user_data = var.user_data_url != "" || var.user_data != "" || var.kubelet_registry_pull_qps != 5 || var.kubelet_registry_burst != 10 ? base64encode(templatefile("${path.module}/files/custom_user_data.sh", {
-    kubelet_registry_pull_qps = var.kubelet_registry_pull_qps
-    kubelet_registry_burst    = var.kubelet_registry_burst
-    user_data_script_file     = var.user_data_url != "" ? data.http.user_data_content[0].response_body : ""
-    user_data                 = var.user_data
-  })) : ""
+  user_data = random_id.additional_node_groups[count.index].keepers.ami_id == null ? null : base64encode(<<-EOF
+#!/bin/bash
+set -ex
+/etc/eks/bootstrap.sh ${aws_eks_cluster.cluster.name} \
+  --kubelet-extra-args '--node-labels=eks.amazonaws.com/nodegroup=${var.name}-additional-${count.index}-${random_id.additional_node_groups[count.index].hex}' \
+  --b64-cluster-ca ${aws_eks_cluster.cluster.certificate_authority[0].data} \
+  --apiserver-endpoint ${aws_eks_cluster.cluster.endpoint} --use-max-pods true --dns-cluster-ip ${local.kube_dns_ip}
 
+${local.launch_template_user_data_raw}
+EOF
+  )
   key_name = var.key_pair_name != "" ? var.key_pair_name : null
 }
 
@@ -134,7 +150,7 @@ resource "aws_autoscaling_group_tag" "cluster_additional" {
   autoscaling_group_name = aws_eks_node_group.cluster_additional[count.index].resources[0].autoscaling_groups[0].name
   tag {
     key   = "k8s.io/cluster-autoscaler/node-template/label/convox.io/label"
-    value =  var.additional_node_groups[count.index].label != null ? var.additional_node_groups[count.index].label : "custom"
+    value = var.additional_node_groups[count.index].label != null ? var.additional_node_groups[count.index].label : "custom"
 
     propagate_at_launch = true
   }
@@ -178,7 +194,7 @@ resource "aws_eks_node_group" "build_additional" {
   node_role_arn   = random_id.build_node_additional[count.index].keepers.role_arn
   subnet_ids      = local.private_subnets_ids
   tags            = local.tags
-  version         =  random_id.build_node_additional[count.index].keepers.ami_id != null ? null : var.k8s_version
+  version         = random_id.build_node_additional[count.index].keepers.ami_id != null ? null : var.k8s_version
 
   labels = {
     "convox-build" : "true"
@@ -229,6 +245,16 @@ resource "aws_launch_template" "build_additional" {
     instance_metadata_tags      = var.imds_tags_enable ? "enabled" : "disabled"
   }
 
+  user_data = random_id.build_node_additional[count.index].keepers.ami_id == null ? null : base64encode(<<-EOF
+#!/bin/bash
+set -ex
+/etc/eks/bootstrap.sh ${aws_eks_cluster.cluster.name} \
+  --kubelet-extra-args '--node-labels=eks.amazonaws.com/nodegroup=${var.name}-build-additional-${count.index}-${random_id.build_node_additional[count.index].hex}' \
+  --b64-cluster-ca ${aws_eks_cluster.cluster.certificate_authority[0].data} \
+  --apiserver-endpoint ${aws_eks_cluster.cluster.endpoint} --use-max-pods true --dns-cluster-ip ${local.kube_dns_ip}
+EOF
+  )
+
   dynamic "tag_specifications" {
     for_each = toset(
       concat(["instance", "volume", "network-interface", "spot-instances-request"],
@@ -270,7 +296,7 @@ resource "aws_autoscaling_group_tag" "build_additional_custom" {
   autoscaling_group_name = aws_eks_node_group.build_additional[count.index].resources[0].autoscaling_groups[0].name
   tag {
     key   = "k8s.io/cluster-autoscaler/node-template/label/convox.io/label"
-    value =  var.additional_build_groups[count.index].label != null ? var.additional_build_groups[count.index].label : "custom-build"
+    value = var.additional_build_groups[count.index].label != null ? var.additional_build_groups[count.index].label : "custom-build"
 
     propagate_at_launch = true
   }

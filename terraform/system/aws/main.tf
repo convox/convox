@@ -61,14 +61,12 @@ module "cluster" {
     aws = aws
   }
 
-  ami_id                          = var.ami_id
   additional_node_groups          = local.additional_node_groups
   additional_build_groups         = local.additional_build_groups
   arm_type                        = local.arm_type
   aws_ebs_csi_driver_version      = var.aws_ebs_csi_driver_version
   build_arm_type                  = local.build_arm_type
   availability_zones              = var.availability_zones
-  build_ami_id                    = var.build_ami_id
   build_node_enabled              = var.build_node_enabled
   build_node_min_count            = var.build_node_min_count
   build_node_type                 = var.build_node_type != "" ? var.build_node_type : var.node_type

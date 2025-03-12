@@ -2,11 +2,6 @@ variable "access_log_retention_in_days" {
   default = "7"
 }
 
-variable "ami_id" {
-  type    = string
-  default = null
-}
-
 variable "additional_node_groups_config" {
   type    = string
   default = ""
@@ -24,11 +19,6 @@ variable "availability_zones" {
 variable "aws_ebs_csi_driver_version" {
   type    = string
   default = "v1.39.0-eksbuild.1"
-}
-
-variable "build_ami_id" {
-  type    = string
-  default = null
 }
 
 variable "build_disable_convox_resolver" {

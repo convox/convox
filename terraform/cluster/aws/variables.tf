@@ -1,8 +1,3 @@
-variable "ami_id" {
-  type    = string
-  default = null
-}
-
 variable "additional_node_groups" {
   type = list(object({
     type          = string
@@ -42,11 +37,6 @@ variable "availability_zones" {
 
 
 variable "aws_ebs_csi_driver_version" {
-  type    = string
-  default = null
-}
-
-variable "build_ami_id" {
   type    = string
   default = null
 }
