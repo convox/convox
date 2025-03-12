@@ -8,14 +8,18 @@ url: /configuration/rack-parameters/aws/pod_identity_agent_enable
 # pod_identity_agent_enable
 
 ## Description
-The `pod_identity_agent_enable` parameter enables the AWS Pod Identity Agent. This allows Kubernetes pods to assume IAM roles, providing fine-grained access control for accessing AWS services.
+The `pod_identity_agent_enable` parameter enables the AWS Pod Identity Agent in your EKS cluster. This feature allows Kubernetes pods to assume IAM roles directly, providing a more secure way to grant AWS permissions to your applications without using long-lived credentials or environment variables.
+
+When enabled, this parameter installs and configures the AWS Pod Identity Agent, which facilitates the association between Kubernetes service accounts and AWS IAM roles.
 
 ## Default Value
 The default value for `pod_identity_agent_enable` is `false`.
 
 ## Use Cases
-- **Granular IAM Policies**: Assign specific IAM roles to pods, ensuring that each pod has only the permissions it needs.
-- **Security Best Practices**: Avoid using static credentials inside pods and leverage IAM roles for security.
+- **Enhanced Security**: Replace AWS access keys with IAM roles for pods, reducing the risk associated with long-lived credentials.
+- **Fine-grained Access Control**: Apply precise IAM policies to specific services or components within your application.
+- **Regulatory Compliance**: Meet security requirements by implementing the principle of least privilege for AWS resource access.
+- **Simplified Credential Management**: Eliminate the need to manage and rotate AWS credentials within your applications.
 
 ## Setting Parameters
 To enable the AWS Pod Identity Agent, use the following command:
@@ -23,34 +27,36 @@ To enable the AWS Pod Identity Agent, use the following command:
 $ convox rack params set pod_identity_agent_enable=true -r rackName
 Setting parameters... OK
 ```
-This command enables the AWS Pod Identity Agent for your rack.
+
+## Using with Applications
+Once enabled at the rack level, you can configure services in your `convox.yml` file to use specific IAM policies:
+
+```yaml
+services:
+  web:
+    build: .
+    port: 3000
+    accessControl:
+      awsPodIdentity:
+        policyArns:
+          - "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+          - "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+          - "arn:aws:iam::123456789012:policy/MyCustomPolicy"
+```
+
+In this example, the `web` service is granted permissions defined in three AWS IAM policies:
+1. Read-only access to ECR repositories
+2. Read-only access to S3 buckets
+3. A custom policy you've defined in your AWS account
 
 ## Additional Information
-Enabling the AWS Pod Identity Agent allows your applications running in Kubernetes to securely access AWS services by assuming IAM roles. This setup reduces the need for static AWS credentials within your application code. Ensure that you have configured IAM roles and Kubernetes service accounts properly to take full advantage of this feature.
+- The Pod Identity Agent creates a new IAM role for each service that uses the `awsPodIdentity` configuration.
+- The IAM role names follow the pattern `eksctl-<cluster-name>-addon-pod-identity-role`.
+- Applications using Pod Identity don't need to include AWS credentials in their environment variables.
+- When a pod is created, the identity agent automatically injects AWS credentials into the pod's environment.
+- This implementation leverages EKS Pod Identity, which is the AWS-recommended approach for pod IAM access.
+- Pod Identity replaces the older kiam/kube2iam pattern as well as the IAM Roles for Service Accounts (IRSA) approach.
+- Each service can have different IAM policies attached, allowing for precise access control.
 
-### How to Use
-1. Enable the EKS pod identity feature by executing:
-   ```html
-   convox rack params set pod_identity_agent_enable=true -r rackName
-   ```
-
-2. Update your `convox.yml` to include the required AWS IAM policy ARNs:
-   ```yaml
-   services:
-     web:
-       build: .
-       port: 3000
-       accessControl:
-         awsPodIdentity:
-           policyArns:
-             - "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-             - "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
-             - "arn:aws:iam::123456789012:policy/MyCustomPolicy"
-   ```
-
-3. Deploy your application changes using:
-   ```html
-   convox deploy -a appName -r rackName
-   ```
-   
-By enabling this parameter, you enhance the security and manageability of your application's access to AWS resources.
+## Version Requirements
+This feature requires at least Convox rack version `3.18.1`.
