@@ -35,6 +35,8 @@ At the rack level, you can define custom node groups:
 
 These parameters allow you to specify instance types, disk sizes, capacity types (on-demand vs. spot), scaling parameters, and custom labels for your node groups.
 
+> **Note**: These configurations are independent of each other. You can use either one or both depending on your needs. If you only configure additional node groups, builds will continue using the rack's primary build node (if [build_node_enabled](/configuration/rack-parameters/aws/build_node_enabled) is set) or the primary rack nodes. If you only configure build node groups, your services will continue running on the standard rack nodes while builds will be isolated according to your build configuration.
+
 ### Setting Rack Parameters with JSON Files
 
 While you can set configuration directly using a JSON string, most users find it more manageable to use a JSON file, especially for complex configurations.
@@ -95,15 +97,19 @@ Apply it with:
 $ convox rack params set additional_build_groups_config=/path/to/build-groups.json -r rackName
 ```
 
-#### Using a JSON String Directly
+#### Using a Single JSON String (Alternative Approach)
 
-If you prefer, you can also specify the configuration as a single JSON string directly in the command:
+If you prefer to set configuration directly in the command line without creating a file, you can use a JSON string:
 
 ```bash
 $ convox rack params set 'additional_node_groups_config=[{"type":"t3.medium","capacity_type":"ON_DEMAND","min_size":1,"desired_size":2,"max_size":5,"label":"critical-services"}]' -r rackName
 ```
 
-This approach is convenient for simple configurations or in automation scripts where generating a file might be impractical. However, for complex configurations with multiple node groups or when making frequent changes, using a JSON file is recommended for better readability and maintenance.
+```bash
+$ convox rack params set 'additional_build_groups_config=[{"type":"c5.xlarge","capacity_type":"SPOT","min_size":0,"desired_size":0,"max_size":3,"label":"app-build","disk":100}]' -r rackName
+```
+
+This approach is useful for automation scripts or when making quick changes, though it becomes unwieldy for more complex configurations.
 
 ### App-level Configuration
 
@@ -199,6 +205,30 @@ To create dedicated node groups that exclusively run specific services:
 
 With `dedicated:true`, only services that explicitly select the node group will run on it, ensuring isolation for sensitive workloads.
 
+### Flexible Configuration Options
+
+Convox allows you to implement different levels of customization based on your needs:
+
+1. **Build Isolation Only**: Configure only `additional_build_groups_config` to isolate build processes while keeping services on standard nodes:
+   ```bash
+   $ convox rack params set additional_build_groups_config=/path/to/build-groups.json -r production
+   $ convox apps params set BuildLabels=convox.io/label=app-build -a myapp
+   ```
+
+2. **Service Placement Only**: Configure only `additional_node_groups_config` to customize service placement while letting builds run on standard nodes:
+   ```bash
+   $ convox rack params set additional_node_groups_config=/path/to/node-groups.json -r production
+   ```
+   In your `convox.yml`:
+   ```yaml
+   services:
+     web:
+       nodeSelectorLabels:
+         convox.io/label: critical-services
+   ```
+
+3. **Complete Workload Management**: Implement both configurations for full control over placement of both services and build processes.
+
 ## Best Practices
 
 1. **Match Node Resources to Workload Requirements**:
@@ -246,4 +276,9 @@ If nodes aren't scaling as expected:
 
 ## Conclusion
 
-Effective workload placement is a powerful tool for optimizing your Conv
+Effective workload placement is a powerful tool for optimizing your Convox infrastructure. By leveraging custom node groups and service placement rules, you can create an infrastructure that balances performance, cost, and isolation requirements for your specific application needs.
+
+For more detailed information, refer to:
+- [additional_node_groups_config](/configuration/rack-parameters/aws/additional_node_groups_config)
+- [additional_build_groups_config](/configuration/rack-parameters/aws/additional_build_groups_config)
+- [BuildLabels](/reference/app-parameters/aws/BuildLabels)
