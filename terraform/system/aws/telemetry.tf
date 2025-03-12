@@ -4,10 +4,8 @@
 locals {
   telemetry_map = {
     access_log_retention_in_days = var.access_log_retention_in_days
-    ami_id = var.ami_id
     availability_zones = var.availability_zones
     aws_ebs_csi_driver_version = var.aws_ebs_csi_driver_version
-    build_ami_id = var.build_ami_id
     build_disable_convox_resolver = var.build_disable_convox_resolver
     build_node_enabled = var.build_node_enabled
     build_node_min_count = var.build_node_min_count
@@ -79,9 +77,8 @@ locals {
 
   telemetry_default_map = {
     access_log_retention_in_days = "7"
-    ami_id = ""
     availability_zones = ""
-    build_ami_id = ""
+    aws_ebs_csi_driver_version = "v1.39.0-eksbuild.1"
     build_disable_convox_resolver = "false"
     build_node_enabled = "false"
     build_node_min_count = "0"

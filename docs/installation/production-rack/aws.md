@@ -46,9 +46,7 @@ The following environment variables are required:
 | Name                     | Default                | Description                                                                                                    |
 | -------------------------|------------------------|----------------------------------------------------------------------------------------------------------------|
 | **access_log_retention_in_days**   |         7          | Specify nginx access log retention period in cloudwatch logs. The log group name will be `/convox/<rack-name>/system` and stream name `/nginx-access-logs` |
-| **ami_id**               |                        | Custom AMI ID to use in your Rack nodes.  WARNING, an invalid or incomplete AMI will break your rack.  Use with caution. |
 | **availability_zones**   |                        | Specify a list of AZ names (minimum 3) to override the random automatic selection from AWS                     |
-| **build_ami_id**         |                        | Custom AMI ID to use with your build node. If `ami_id` is set and `build_ami_id` is not set, the build node will use the AMI from `ami_id` |
 | **build_node_enabled**   |     false              | Enabled dedicated build node for build |
 | **build_node_type**      | same as **node_type**  | Node type for the build node |
 | **build_node_min_count** |     0                  | Minimum number of build nodes to keep running |
