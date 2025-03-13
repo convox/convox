@@ -2,7 +2,7 @@
 title: "AWS App Parameters"
 draft: false
 slug: aws-app-parameters
-url: /reference/app-parameters/aws
+url: /configuration/app-parameters/aws
 ---
 # AWS App Parameters
 
@@ -12,9 +12,9 @@ The following parameters are available for configuring your Convox applications 
 
 | Parameter | Description |
 |:---------|:------------|
-| [BuildLabels](/reference/app-parameters/aws/BuildLabels) | Specifies Kubernetes node selector labels for build pods |
-| [BuildCpu](/reference/app-parameters/aws/BuildCpu) | Sets the CPU request for build pods in millicores |
-| [BuildMem](/reference/app-parameters/aws/BuildMem) | Sets the memory request for build pods in megabytes |
+| [BuildLabels](/configuration/app-parameters/aws/BuildLabels) | Specifies Kubernetes node selector labels for build pods |
+| [BuildCpu](/configuration/app-parameters/aws/BuildCpu) | Sets the CPU request for build pods in millicores |
+| [BuildMem](/configuration/app-parameters/aws/BuildMem) | Sets the memory request for build pods in megabytes |
 
 > **Warning**: When configuring `BuildLabels`, ensure that the specified labels match those defined in the [`additional_build_groups`](/configuration/rack-parameters/aws/additional_build_groups) rack parameter. If the labels don't match any existing build node groups, build pods will remain in a pending state indefinitely, preventing builds from completing.
 

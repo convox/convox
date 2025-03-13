@@ -72,6 +72,8 @@ The JSON file should be structured as follows:
 ]
 ```
 
+> **Important Note on AWS Rate Limits**: When adding or removing multiple node groups, it's recommended to modify no more than three node groups at a time to avoid hitting AWS API rate limits. If you receive a rate limit error during an update simply run the parameter set command again. The operation will resume from where it left off, creating the remaining node groups without duplicating the ones that were already successfully created.
+
 ### Using a Raw JSON String
 ```html
 $ convox rack params set 'additional_node_groups_config=[{"type":"t3.medium","disk":50,"capacity_type":"ON_DEMAND","min_size":1,"desired_size":1,"max_size":3,"label":"app-workers"}]' -r rackName
