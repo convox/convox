@@ -2,7 +2,7 @@
 title: "BuildCpu"
 draft: false
 slug: BuildCpu
-url: /reference/app-parameters/aws/BuildCpu
+url: /configuration/app-parameters/aws/BuildCpu
 ---
 
 # BuildCpu
@@ -10,7 +10,7 @@ url: /reference/app-parameters/aws/BuildCpu
 ## Description
 The `BuildCpu` app parameter allows you to specify the CPU request for build pods in millicores. This parameter enables you to control the amount of CPU resources allocated to build processes, allowing you to optimize build performance based on your application's build requirements.
 
-When used in conjunction with [`BuildMem`](/reference/app-parameters/aws/BuildMem) and [`BuildLabels`](/reference/app-parameters/aws/BuildLabels), this parameter provides fine-grained control over build resource allocation and placement.
+When used in conjunction with [`BuildMem`](/configuration/app-parameters/aws/BuildMem) and [`BuildLabels`](/configuration/app-parameters/aws/BuildLabels), this parameter provides fine-grained control over build resource allocation and placement.
 
 ## Default Value
 By default, build pods use the standard CPU allocation defined at the rack level.

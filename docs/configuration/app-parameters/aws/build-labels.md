@@ -2,7 +2,7 @@
 title: "BuildLabels"
 draft: false
 slug: BuildLabels
-url: /reference/app-parameters/aws/BuildLabels
+url: /configuration/app-parameters/aws/BuildLabels
 ---
 
 # BuildLabels

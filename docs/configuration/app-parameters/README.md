@@ -2,7 +2,7 @@
 title: "App Parameters"
 draft: false
 slug: app-parameters
-url: /reference/app-parameters
+url: /configuration/app-parameters
 ---
 # App Parameters
 
@@ -27,6 +27,6 @@ This command sets the specified parameter to the given value.
 
 ## Cloud Providers
 
-- [Amazon Web Services (AWS)](/reference/app-parameters/aws)
+- [Amazon Web Services (AWS)](/configuration/app-parameters/aws)
 
 Select your cloud provider to view the available parameters and their configurations.

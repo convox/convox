@@ -2,7 +2,7 @@
 title: "BuildMem"
 draft: false
 slug: BuildMem
-url: /reference/app-parameters/aws/BuildMem
+url: /configuration/app-parameters/aws/BuildMem
 ---
 
 # BuildMem
@@ -10,7 +10,7 @@ url: /reference/app-parameters/aws/BuildMem
 ## Description
 The `BuildMem` app parameter allows you to specify the memory request for build pods in megabytes. This parameter enables you to control the amount of memory resources allocated to build processes, helping you optimize build performance and prevent out-of-memory errors during complex builds.
 
-When used in conjunction with [`BuildCpu`](/reference/app-parameters/aws/BuildCpu) and [`BuildLabels`](/reference/app-parameters/aws/BuildLabels), this parameter provides comprehensive control over build resource allocation and placement.
+When used in conjunction with [`BuildCpu`](/configuration/app-parameters/aws/BuildCpu) and [`BuildLabels`](/configuration/app-parameters/aws/BuildLabels), this parameter provides comprehensive control over build resource allocation and placement.
 
 ## Default Value
 By default, build pods use the standard memory allocation defined at the rack level.

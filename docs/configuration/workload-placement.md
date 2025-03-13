@@ -73,6 +73,8 @@ Then apply the configuration using:
 $ convox rack params set additional_node_groups_config=/path/to/node-groups.json -r rackName
 ```
 
+> **Important Note on AWS Rate Limits**: When adding or removing multiple node groups, it's recommended to modify no more than three node groups at a time to avoid hitting AWS API rate limits. If you receive a rate limit error during an update simply run the parameter set command again. The operation will resume from where it left off, creating the remaining node groups without duplicating the ones that were already successfully created.
+
 #### Using a JSON File for Build Node Groups
 
 Similarly, create a JSON file (e.g., `build-groups.json`) for build node configuration:
@@ -281,4 +283,4 @@ Effective workload placement is a powerful tool for optimizing your Convox infra
 For more detailed information, refer to:
 - [additional_node_groups_config](/configuration/rack-parameters/aws/additional_node_groups_config)
 - [additional_build_groups_config](/configuration/rack-parameters/aws/additional_build_groups_config)
-- [BuildLabels](/reference/app-parameters/aws/BuildLabels)
+- [BuildLabels](/configuration/app-parameters/aws/BuildLabels)
