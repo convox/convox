@@ -10,7 +10,7 @@ An Instance provides capacity for running [Processes](/reference/primitives/app/
 
 ## List Instances
 ```html
-    $ convox rack instances
+    $ convox instances
     ID                            STATUS   STARTED         PS  CPU    MEM    PUBLIC         PRIVATE
     ip-10-1-1-1.ec2.internal      running  10 minutes ago  8   0.00%  0.00%  18.200.200.99  10.1.1.1
     ip-10-1-2-2.ec2.internal      running  10 minutes ago  6   0.00%  0.00%  3.80.240.200   10.1.2.2
