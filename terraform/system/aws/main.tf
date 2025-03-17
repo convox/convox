@@ -181,7 +181,6 @@ module "rack" {
   telemetry_map                        = local.telemetry_map
   telemetry_default_map                = local.telemetry_default_map
   whitelist                            = split(",", var.whitelist)
-  ebs_csi_driver_name                  = module.cluster.ebs_csi_driver_name
   ecr_scan_on_push_enable              = var.ecr_scan_on_push_enable
   vpc_id                               = module.cluster.vpc
 }

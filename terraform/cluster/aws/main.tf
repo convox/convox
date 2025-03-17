@@ -337,39 +337,12 @@ resource "aws_launch_template" "cluster-build" {
   key_name = var.key_pair_name != "" ? var.key_pair_name : null
 }
 
-module "ebs_csi_driver_controller" {
-  depends_on = [
-    null_resource.wait_eks_addons
-  ]
-
-  source = "github.com/convox/terraform-kubernetes-ebs-csi-driver?ref=01740b559d14f489e5ea2160d2dad0ee951fb4d9"
-
-  arn_format                                 = data.aws_partition.current.partition
-  ebs_csi_controller_image                   = "public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver"
-  ebs_csi_driver_version                     = "v1.34.0"
-  ebs_csi_controller_role_name               = "convox-ebs-csi-driver-controller"
-  ebs_csi_controller_role_policy_name_prefix = "convox-ebs-csi-driver-policy"
-  csi_controller_tolerations = [
-    { operator = "Exists", key = "CriticalAddonsOnly" },
-    { operator = "Exists", effect = "NoExecute", toleration_seconds = 300 }
-  ]
-  node_tolerations = [
-    { operator = "Exists", key = "CriticalAddonsOnly" },
-    { operator = "Exists", effect = "NoExecute", toleration_seconds = 300 }
-  ]
-  oidc_url = aws_iam_openid_connect_provider.cluster.url
-}
-
 resource "kubernetes_storage_class" "default" {
   depends_on = [
     null_resource.wait_k8s_api
   ]
 
   metadata {
-    labels = {
-      "ebs_driver_name" = module.ebs_csi_driver_controller.ebs_csi_driver_name
-    }
-
     name = "gp3"
     annotations = {
       "storageclass.kubernetes.io/is-default-class" = "true"

@@ -43,10 +43,6 @@ variable "disable_image_manifest_cache" {
   default = false
 }
 
-variable "ebs_csi_driver_name" {
-  type = string
-}
-
 variable "ecr_scan_on_push_enable" {
   type    = bool
   default = false
