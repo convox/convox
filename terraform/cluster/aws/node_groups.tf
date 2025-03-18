@@ -8,6 +8,20 @@ locals {
   }) : ""
 
   kube_dns_ip = cidrhost(aws_eks_cluster.cluster.kubernetes_network_config[0].service_ipv4_cidr, 10)
+
+  additional_node_groups_with_defaults = [
+    for ng in var.additional_node_groups : {
+      type          = ng.type
+      disk          = ng.disk != null ? ng.disk : 50
+      capacity_type = ng.capacity_type != null ? ng.capacity_type : "ON_DEMAND"
+      min_size      = ng.min_size != null ? ng.min_size : 1
+      desired_size  = ng.desired_size != null ? ng.desired_size : 2
+      max_size      = ng.max_size != null ? ng.max_size : 5
+      label         = ng.label != null ? ng.label : "default"
+      ami_id        = ng.ami_id
+      dedicated     = ng.dedicated != null ? ng.dedicated : false
+    }
+  ]
 }
 
 resource "random_id" "additional_node_groups" {
