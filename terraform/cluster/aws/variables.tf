@@ -1,30 +1,27 @@
 variable "additional_node_groups" {
-  type = list(object({
-    type          = string
-    disk          = optional(number)
-    capacity_type = optional(string)
-    min_size      = optional(number)
-    desired_size  = optional(number)
-    max_size      = optional(number)
-    label         = optional(string)
-    ami_id        = optional(string)
-    dedicated     = optional(bool, false)
-  }))
+  type    = list(map(any))
   default = []
+  validation {
+    condition = alltrue([
+      for group in var.additional_node_groups : alltrue([
+        can(group.type),
+      ])
+    ])
+    error_message = "Invalid cluster node group configuration"
+  }
 }
 
 variable "additional_build_groups" {
-  type = list(object({
-    type          = string
-    disk          = optional(number)
-    capacity_type = optional(string)
-    min_size      = optional(number)
-    desired_size  = optional(number)
-    max_size      = optional(number)
-    label         = optional(string)
-    ami_id        = optional(string)
-  }))
+  type    = list(map(any))
   default = []
+  validation {
+    condition = alltrue([
+      for group in var.additional_build_groups : alltrue([
+        can(group.type),
+      ])
+    ])
+    error_message = "Invalid build node group configuration"
+  }
 }
 
 variable "arm_type" {
