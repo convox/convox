@@ -1,29 +1,10 @@
 variable "additional_node_groups" {
-  type = list(object({
-    type          = string
-    disk          = optional(number)
-    capacity_type = optional(string)
-    min_size      = optional(number)
-    desired_size  = optional(number)
-    max_size      = optional(number)
-    label         = optional(string)
-    ami_id        = optional(string)
-    dedicated     = optional(bool, false)
-  }))
+  type    = list(map(any))
   default = []
 }
 
 variable "additional_build_groups" {
-  type = list(object({
-    type          = string
-    disk          = optional(number)
-    capacity_type = optional(string)
-    min_size      = optional(number)
-    desired_size  = optional(number)
-    max_size      = optional(number)
-    label         = optional(string)
-    ami_id        = optional(string)
-  }))
+  type    = list(map(any))
   default = []
 }
 

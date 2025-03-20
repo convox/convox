@@ -50,8 +50,8 @@ locals {
     "${split("=", v)[0]}" => split("=", v)[1]
   }
 
-  additional_node_groups  = var.additional_node_groups_config != "" ? (startswith(var.additional_node_groups_config, "[") ? jsondecode(var.additional_node_groups_config) : jsondecode(base64decode(var.additional_node_groups_config))): []
-  additional_build_groups = var.additional_build_groups_config != "" ? (startswith(var.additional_build_groups_config, "[") ? jsondecode(var.additional_build_groups_config) : jsondecode(base64decode(var.additional_build_groups_config))): []
+  additional_node_groups  = try(jsondecode(var.additional_node_groups_config), jsondecode(base64decode(var.additional_node_groups_config)), [])
+  additional_build_groups = try(jsondecode(var.additional_build_groups_config), jsondecode(base64decode(var.additional_build_groups_config)), [])
 }
 
 module "cluster" {

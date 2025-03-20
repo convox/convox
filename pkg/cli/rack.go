@@ -129,7 +129,6 @@ type NodeGroupConfigParam struct {
 	Disk         *int    `json:"disk,omitempty"`
 	CapacityType *string `json:"capacity_type,omitempty"`
 	MinSize      *int    `json:"min_size,omitempty"`
-	DesiredSize  *int    `json:"desired_size,omitempty"`
 	MaxSize      *int    `json:"max_size,omitempty"`
 	Label        *string `json:"label,omitempty"`
 	AmiID        *string `json:"ami_id,omitempty"`
@@ -149,14 +148,8 @@ func (n *NodeGroupConfigParam) Validate() error {
 	if n.MaxSize != nil && *n.MaxSize < 0 {
 		return fmt.Errorf("invalid max size: '%d'", *n.MaxSize)
 	}
-	if n.DesiredSize != nil && *n.DesiredSize < 0 {
-		return fmt.Errorf("invalid desired size: '%d'", *n.DesiredSize)
-	}
-	if n.DesiredSize != nil && n.MinSize != nil && *n.DesiredSize < *n.MinSize {
-		return fmt.Errorf("invalid desired size: '%d' must be greater or equal to min size", *n.DesiredSize)
-	}
-	if n.DesiredSize != nil && n.MaxSize != nil && *n.DesiredSize > *n.MaxSize {
-		return fmt.Errorf("invalid desired size: '%d' must be less or equal to max size", *n.DesiredSize)
+	if n.MinSize != nil && n.MaxSize != nil && *n.MinSize > *n.MaxSize {
+		return fmt.Errorf("invalid min size: '%d' must be less or equal to max size", *n.MinSize)
 	}
 	if n.CapacityType != nil && (*n.CapacityType != "ON_DEMAND" && *n.CapacityType != "SPOT") {
 		return fmt.Errorf("allowed capasity type: ON_DEMAND or SPOT, found : '%s'", *n.CapacityType)
