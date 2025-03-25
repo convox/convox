@@ -28,7 +28,7 @@ func (p *Provider) ServiceLogs(app, name string, opts structs.LogsOptions) (io.R
 		In:     r,
 		Out:    w,
 		ErrOut: w,
-	}, true)
+	})
 
 	f := cmdutil.NewFactory(p.newlogsConfigFlags(p.AppNamespace(app)))
 
