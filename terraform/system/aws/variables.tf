@@ -18,7 +18,7 @@ variable "availability_zones" {
 
 variable "aws_ebs_csi_driver_version" {
   type    = string
-  default = "v1.39.0-eksbuild.1"
+  default = "v1.41.0-eksbuild.1"
 }
 
 variable "build_disable_convox_resolver" {
@@ -103,7 +103,7 @@ variable "efs_csi_driver_enable" {
 
 variable "efs_csi_driver_version" {
   type    = string
-  default = "v2.1.4-eksbuild.1"
+  default = "v2.1.6-eksbuild.1"
 }
 
 variable "gpu_tag_enable" {
@@ -161,7 +161,7 @@ variable "key_pair_name" {
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-kube-proxy.html
 variable "kube_proxy_version" {
   type    = string
-  default = "v1.30.9-eksbuild.3"
+  default = "v1.31.2-eksbuild.3"
 }
 
 variable "kubelet_registry_pull_qps" {
@@ -176,7 +176,7 @@ variable "kubelet_registry_burst" {
 
 variable "k8s_version" {
   type    = string
-  default = "1.30"
+  default = "1.31"
 }
 
 variable "max_on_demand_count" {
@@ -330,7 +330,7 @@ variable "vpc_id" {
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-vpc-cni.html
 variable "vpc_cni_version" {
   type    = string
-  default = "v1.19.2-eksbuild.1"
+  default = "v1.19.2-eksbuild.5"
 }
 
 variable "whitelist" {
