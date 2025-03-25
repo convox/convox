@@ -110,7 +110,7 @@ locals {
     imds_tags_enable = "false"
     internal_router = "false"
     internet_gateway_id = ""
-    k8s_version = "1.30"
+    k8s_version = "1.31"
     key_pair_name = ""
     kube_proxy_version = "v1.30.9-eksbuild.3"
     kubelet_registry_burst = "10"

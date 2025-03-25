@@ -1,0 +1,12 @@
+[
+    {
+        "type":"t3.medium",
+        "disk":50,
+        "capacity_type":"ON_DEMAND",
+        "min_size":1,
+        "desired_size":1,
+        "max_size":3,
+        "label":"app-builders",
+        "dedicated": false
+    }
+]
