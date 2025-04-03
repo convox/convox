@@ -32,6 +32,14 @@ func String(value string) *string {
 	return &v
 }
 
+func StringOrNil(value string) *string {
+	if value == "" {
+		return nil
+	}
+	v := value
+	return &v
+}
+
 func Time(value time.Time) *time.Time {
 	v := value
 	return &v
