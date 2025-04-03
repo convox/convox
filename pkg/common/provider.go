@@ -36,6 +36,24 @@ func AppEnvironment(p structs.Provider, app string) (structs.Environment, error)
 	return env, nil
 }
 
+func AppEnvironmentForRelease(p structs.Provider, app, releaseId string) (structs.Environment, error) {
+	rs, err := p.ReleaseGet(app, releaseId)
+	if err != nil {
+		return nil, err
+	}
+	if rs == nil {
+		return structs.Environment{}, nil
+	}
+
+	env := structs.Environment{}
+
+	if err := env.Load([]byte(rs.Env)); err != nil {
+		return nil, err
+	}
+
+	return env, nil
+}
+
 func AppManifest(p structs.Provider, app string) (*manifest.Manifest, *structs.Release, error) {
 	a, err := p.AppGet(app)
 	if err != nil {
