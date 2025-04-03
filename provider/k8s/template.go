@@ -49,6 +49,9 @@ func (p *Provider) templateHelpers() template.FuncMap {
 			}
 			return ds
 		},
+		"hasSuffix": func(s, suffix string) bool {
+			return strings.HasSuffix(s, suffix)
+		},
 		"keyValue": func(inputItems ...map[string]string) []kvItem {
 			kv := map[string]string{}
 			for _, e := range inputItems {
