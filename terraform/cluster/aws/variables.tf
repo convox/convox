@@ -152,6 +152,10 @@ variable "node_type" {
   default = "t3.small"
 }
 
+variable "nvidia_device_plugin_enable" {
+  default = false
+}
+
 variable "pod_identity_agent_enable" {
   type    = bool
   default = false
