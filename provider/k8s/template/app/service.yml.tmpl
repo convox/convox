@@ -255,12 +255,20 @@ spec:
           successThreshold: 1
           failureThreshold: 3
         {{ else if $.Service.GrpcHealthEnabled }}
+        readinessProbe:
+          grpc:
+            port: {{.}}
+          initialDelaySeconds: {{$.Service.Health.Grace}}
+          periodSeconds: {{$.Service.Health.Interval}}
+          timeoutSeconds: {{$.Service.Health.Timeout}}
+          successThreshold: 1
+          failureThreshold: 5
         livenessProbe:
           grpc:
             port: {{.}}
-          initialDelaySeconds: 10
-          periodSeconds: 5
-          timeoutSeconds: 15
+          initialDelaySeconds: {{$.Service.Health.Grace}}
+          periodSeconds: {{$.Service.Health.Interval}}
+          timeoutSeconds: {{$.Service.Health.Timeout}}
           successThreshold: 1
           failureThreshold: 5
         {{ end }}
