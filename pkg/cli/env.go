@@ -52,7 +52,7 @@ func init() {
 			flagRack,
 			stdcli.BoolFlag("replace", "", "replace all environment variables with given ones"),
 			stdcli.BoolFlag("promote", "p", "promote the release"),
-			stdcli.StringFlag("parent-release", "", "id of the parent release"),
+			stdcli.StringFlag("release", "", "id of the release"),
 		},
 		Usage: "<key=value> [key=value]...",
 	})
@@ -202,13 +202,13 @@ func EnvSet(rack sdk.Interface, c *stdcli.Context) error {
 		c.Writer().Stdout = c.Writer().Stderr
 	}
 
-	parentReleaseId := c.String("parent-release")
+	releaseId := c.String("release")
 
 	env := structs.Environment{}
 	var err error
 
 	if !c.Bool("replace") {
-		env, err = getEnvHelper(rack, app(c), parentReleaseId)
+		env, err = getEnvHelper(rack, app(c), releaseId)
 		if err != nil {
 			return err
 		}
@@ -251,7 +251,7 @@ func EnvSet(rack sdk.Interface, c *stdcli.Context) error {
 	} else {
 		r, err = rack.ReleaseCreate(app(c), structs.ReleaseCreateOptions{
 			Env:           options.String(env.String()),
-			ParentRelease: options.StringOrNil(parentReleaseId),
+			ParentRelease: options.StringOrNil(releaseId),
 		})
 		if err != nil {
 			return err
