@@ -161,7 +161,7 @@ variable "key_pair_name" {
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-kube-proxy.html
 variable "kube_proxy_version" {
   type    = string
-  default = "v1.31.2-eksbuild.3"
+  default = "v1.31.3-eksbuild.2"
 }
 
 variable "kubelet_registry_pull_qps" {
