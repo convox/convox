@@ -10,7 +10,8 @@ locals {
   kube_dns_ip = cidrhost(aws_eks_cluster.cluster.kubernetes_network_config[0].service_ipv4_cidr, 10)
 
   additional_node_groups_with_defaults = [
-    for ng in var.additional_node_groups : {
+    for idx, ng in var.additional_node_groups : {
+      id            = tonumber(lookup(ng, "id", idx))
       type          = lookup(ng, "type", null)
       disk          = tonumber(lookup(ng, "disk", var.node_disk))
       capacity_type = lookup(ng, "capacity_type", "ON_DEMAND")
@@ -20,11 +21,16 @@ locals {
       label         = lookup(ng, "label", null)
       ami_id        = lookup(ng, "ami_id", null)
       dedicated     = tobool(lookup(ng, "dedicated", false))
+      tags          = { 
+        for pair in compact(split(",", lookup(ng, "tags", ""))) : 
+          trimspace(split("=", pair)[0]) => trimspace(try(split("=", pair)[1], "novalue"))
+      }
     }
   ]
 
   additional_build_groups_with_defaults = [
-    for ng in var.additional_build_groups : {
+    for idx, ng in var.additional_build_groups : {
+      id            = tonumber(lookup(ng, "id", idx))
       type          = lookup(ng, "type", null)
       disk          = tonumber(lookup(ng, "disk", var.node_disk))
       capacity_type = lookup(ng, "capacity_type", "ON_DEMAND")
@@ -33,6 +39,10 @@ locals {
       max_size      = tonumber(lookup(ng, "max_size", 100))
       label         = lookup(ng, "label", null)
       ami_id        = lookup(ng, "ami_id", null)
+      tags          = { 
+        for pair in compact(split(",", lookup(ng, "tags", ""))) : 
+          trimspace(split("=", pair)[0]) => trimspace(try(split("=", pair)[1], "novalue"))
+      }
     }
   ]
 }
@@ -40,23 +50,25 @@ locals {
 resource "random_id" "additional_node_groups" {
   byte_length = 8
 
-  count = length(local.additional_node_groups_with_defaults)
+  for_each  = { for idx, ng in local.additional_node_groups_with_defaults : ng.id => ng}
 
   keepers = {
-    node_capacity_type  = local.additional_node_groups_with_defaults[count.index].capacity_type != null ? local.additional_node_groups_with_defaults[count.index].capacity_type : "ON_DEMAND"
-    node_disk           = local.additional_node_groups_with_defaults[count.index].disk != null ? local.additional_node_groups_with_defaults[count.index].disk : var.node_disk
-    node_type           = local.additional_node_groups_with_defaults[count.index].type
-    ami_id              = local.additional_node_groups_with_defaults[count.index].ami_id
+    id = each.value.id
+    node_capacity_type  = each.value.capacity_type != null ? each.value.capacity_type : "ON_DEMAND"
+    node_disk           = each.value.disk != null ? each.value.disk : var.node_disk
+    node_type           = each.value.type
+    ami_id              = each.value.ami_id
     private             = var.private
     private_subnets_ids = join("-", local.private_subnets_ids)
     public_subnets_ids  = join("-", local.public_subnets_ids)
     role_arn            = replace(aws_iam_role.nodes.arn, "role/convox/", "role/") # eks barfs on roles with paths
+    tags                = try(jsonencode(each.value.tags), "")
   }
 }
 
 module "amitype" {
   source    = "../../helpers/aws"
-  for_each  = { for idx, ng in local.additional_node_groups_with_defaults : idx => ng }
+  for_each  = { for ng in local.additional_node_groups_with_defaults : ng.id => ng }
   node_type = each.value.type
 }
 
@@ -66,26 +78,26 @@ resource "aws_eks_node_group" "cluster_additional" {
     aws_iam_openid_connect_provider.cluster,
   ]
 
-  count = length(local.additional_node_groups_with_defaults)
+  for_each  = { for ng in local.additional_node_groups_with_defaults : ng.id => ng}
 
-  ami_type        = random_id.additional_node_groups[count.index].keepers.ami_id != null ? "CUSTOM" : module.amitype[count.index].ami_type
-  capacity_type   = random_id.additional_node_groups[count.index].keepers.node_capacity_type
+  ami_type        = random_id.additional_node_groups[each.key].keepers.ami_id != null ? "CUSTOM" : module.amitype[each.key].ami_type
+  capacity_type   = random_id.additional_node_groups[each.key].keepers.node_capacity_type
   cluster_name    = aws_eks_cluster.cluster.name
-  node_group_name = "${var.name}-additional-${count.index}-${random_id.additional_node_groups[count.index].hex}"
-  node_role_arn   = random_id.additional_node_groups[count.index].keepers.role_arn
+  node_group_name = "${var.name}-additional-${each.key}-${random_id.additional_node_groups[each.key].hex}"
+  node_role_arn   = random_id.additional_node_groups[each.key].keepers.role_arn
   subnet_ids      = var.private ? local.private_subnets_ids : local.public_subnets_ids
-  tags            = local.tags
-  version         = random_id.additional_node_groups[count.index].keepers.ami_id != null ? null : var.k8s_version
+  tags            = each.value.tags == null ? local.tags : merge(local.tags, each.value.tags)
+  version         = random_id.additional_node_groups[each.key].keepers.ami_id != null ? null : var.k8s_version
 
   launch_template {
-    id      = aws_launch_template.cluster_additional[count.index].id
+    id      = aws_launch_template.cluster_additional[each.key].id
     version = "$Latest"
   }
 
   scaling_config {
-    desired_size = local.additional_node_groups_with_defaults[count.index].desired_size != null ? local.additional_node_groups_with_defaults[count.index].desired_size : 1
-    min_size     = local.additional_node_groups_with_defaults[count.index].min_size != null ? local.additional_node_groups_with_defaults[count.index].min_size : 1
-    max_size     = local.additional_node_groups_with_defaults[count.index].max_size != null ? local.additional_node_groups_with_defaults[count.index].max_size : 100
+    desired_size = each.value.desired_size != null ? each.value.desired_size : 1
+    min_size     = each.value.min_size != null ? each.value.min_size : 1
+    max_size     = each.value.max_size != null ? each.value.max_size : 100
   }
 
   dynamic "update_config" {
@@ -101,14 +113,14 @@ resource "aws_eks_node_group" "cluster_additional" {
   }
 
   labels = {
-    "convox.io/label" = local.additional_node_groups_with_defaults[count.index].label != null ? local.additional_node_groups_with_defaults[count.index].label : "custom"
+    "convox.io/label" = each.value.label != null ? each.value.label : "custom"
   }
 
   dynamic "taint" {
-    for_each = local.additional_node_groups_with_defaults[count.index].dedicated ? [1] : []
+    for_each = each.value.dedicated ? [1] : []
     content {
       key    = "dedicated-node"
-      value  = local.additional_node_groups_with_defaults[count.index].label != null ? local.additional_node_groups_with_defaults[count.index].label : "custom"
+      value  = each.value.label != null ? each.value.label : "custom"
       effect = "NO_SCHEDULE"
     }
   }
@@ -121,13 +133,13 @@ resource "aws_eks_node_group" "cluster_additional" {
 }
 
 resource "aws_launch_template" "cluster_additional" {
-  count = length(local.additional_node_groups_with_defaults)
+  for_each  = { for idx, ng in local.additional_node_groups_with_defaults : ng.id => ng}
 
   block_device_mappings {
     device_name = "/dev/xvda"
     ebs {
       volume_type = "gp3"
-      volume_size = random_id.additional_node_groups[count.index].keepers.node_disk
+      volume_size = random_id.additional_node_groups[each.key].keepers.node_disk
     }
   }
 
@@ -138,9 +150,9 @@ resource "aws_launch_template" "cluster_additional" {
     instance_metadata_tags      = var.imds_tags_enable ? "enabled" : "disabled"
   }
 
-  instance_type = random_id.additional_node_groups[count.index].keepers.node_type
+  instance_type = random_id.additional_node_groups[each.key].keepers.node_type
 
-  image_id = random_id.additional_node_groups[count.index].keepers.ami_id
+  image_id = random_id.additional_node_groups[each.key].keepers.ami_id
 
   dynamic "tag_specifications" {
     for_each = toset(
@@ -149,15 +161,15 @@ resource "aws_launch_template" "cluster_additional" {
     ))
     content {
       resource_type = tag_specifications.key
-      tags          = local.tags
+      tags          = each.value.tags == null ? local.tags : merge(local.tags, each.value.tags)
     }
   }
 
-  user_data = random_id.additional_node_groups[count.index].keepers.ami_id == null ? null : base64encode(<<-EOF
+  user_data = random_id.additional_node_groups[each.key].keepers.ami_id == null ? null : base64encode(<<-EOF
 #!/bin/bash
 set -ex
 /etc/eks/bootstrap.sh ${aws_eks_cluster.cluster.name} \
-  --kubelet-extra-args '--node-labels=eks.amazonaws.com/nodegroup=${var.name}-additional-${count.index}-${random_id.additional_node_groups[count.index].hex}' \
+  --kubelet-extra-args '--node-labels=eks.amazonaws.com/nodegroup=${var.name}-additional-${each.key}-${random_id.additional_node_groups[each.key].hex}' \
   --b64-cluster-ca ${aws_eks_cluster.cluster.certificate_authority[0].data} \
   --apiserver-endpoint ${aws_eks_cluster.cluster.endpoint} --use-max-pods true --dns-cluster-ip ${local.kube_dns_ip}
 
@@ -167,42 +179,39 @@ EOF
   key_name = var.key_pair_name != "" ? var.key_pair_name : null
 }
 
-resource "aws_autoscaling_group_tag" "cluster_additional" {
-  depends_on = [
-    aws_eks_node_group.cluster_additional
-  ]
+module "asg_tags_cluster_additional" {
+  source    = "../../helpers/aws-asg-tag"
 
-  count = length(local.additional_node_groups_with_defaults)
+  for_each  = { for idx, ng in local.additional_node_groups_with_defaults : ng.id => ng}
 
-  autoscaling_group_name = aws_eks_node_group.cluster_additional[count.index].resources[0].autoscaling_groups[0].name
-  tag {
-    key   = "k8s.io/cluster-autoscaler/node-template/label/convox.io/label"
-    value = local.additional_node_groups_with_defaults[count.index].label != null ? local.additional_node_groups_with_defaults[count.index].label : "custom"
-
-    propagate_at_launch = true
-  }
+  asg_name = aws_eks_node_group.cluster_additional[each.key].resources[0].autoscaling_groups[0].name
+  asg_tags = merge({
+    "k8s.io/cluster-autoscaler/node-template/label/convox.io/label" = coalesce(each.value.label, "custom")
+  }, coalesce(each.value.tags, {}))
 }
 
 ###### additional build node groups
 
 resource "random_id" "build_node_additional" {
-  count = length(local.additional_build_groups_with_defaults)
+  for_each  = { for idx, ng in local.additional_build_groups_with_defaults : ng.id => ng}
 
   byte_length = 8
 
   keepers = {
-    node_disk           = local.additional_build_groups_with_defaults[count.index].disk != null ? local.additional_build_groups_with_defaults[count.index].disk : var.node_disk
-    node_type           = local.additional_build_groups_with_defaults[count.index].type
-    capacity_type       = local.additional_build_groups_with_defaults[count.index].capacity_type
-    ami_id              = local.additional_build_groups_with_defaults[count.index].ami_id
+    id = each.value.id
+    node_disk           = each.value.disk != null ? each.value.disk : var.node_disk
+    node_type           = each.value.type
+    capacity_type       = each.value.capacity_type
+    ami_id              = each.value.ami_id
     private_subnets_ids = join("-", local.private_subnets_ids)
     role_arn            = replace(aws_iam_role.nodes.arn, "role/convox/", "role/") # eks barfs on roles with paths
+    tags                = try(jsonencode(each.value.tags), "")
   }
 }
 
 module "build_amitype" {
   source    = "../../helpers/aws"
-  for_each  = { for idx, ng in local.additional_build_groups_with_defaults : idx => ng }
+  for_each  = { for ng in local.additional_build_groups_with_defaults : ng.id => ng }
   node_type = each.value.type
 }
 
@@ -213,20 +222,20 @@ resource "aws_eks_node_group" "build_additional" {
     aws_iam_openid_connect_provider.cluster,
   ]
 
-  count = length(local.additional_build_groups_with_defaults)
+  for_each  = { for idx, ng in local.additional_build_groups_with_defaults : ng.id => ng}
 
-  ami_type        = random_id.build_node_additional[count.index].keepers.ami_id != null ? "CUSTOM" : module.build_amitype[count.index].ami_type
-  capacity_type   = random_id.build_node_additional[count.index].keepers.capacity_type != null ? random_id.build_node_additional[count.index].keepers.capacity_type : "ON_DEMAND"
+  ami_type        = random_id.build_node_additional[each.key].keepers.ami_id != null ? "CUSTOM" : module.build_amitype[each.key].ami_type
+  capacity_type   = random_id.build_node_additional[each.key].keepers.capacity_type != null ? random_id.build_node_additional[each.key].keepers.capacity_type : "ON_DEMAND"
   cluster_name    = aws_eks_cluster.cluster.name
-  node_group_name = "${var.name}-build-additional-${count.index}-${random_id.build_node_additional[count.index].hex}"
-  node_role_arn   = random_id.build_node_additional[count.index].keepers.role_arn
+  node_group_name = "${var.name}-build-additional-${each.key}-${random_id.build_node_additional[each.key].hex}"
+  node_role_arn   = random_id.build_node_additional[each.key].keepers.role_arn
   subnet_ids      = local.private_subnets_ids
-  tags            = local.tags
-  version         = random_id.build_node_additional[count.index].keepers.ami_id != null ? null : var.k8s_version
+  tags            = each.value.tags == null ? local.tags : merge(local.tags, each.value.tags)
+  version         = random_id.build_node_additional[each.key].keepers.ami_id != null ? null : var.k8s_version
 
   labels = {
     "convox-build" : "true"
-    "convox.io/label" = local.additional_build_groups_with_defaults[count.index].label != null ? local.additional_build_groups_with_defaults[count.index].label : "custom-build"
+    "convox.io/label" = each.value.label != null ? each.value.label : "custom-build"
   }
 
   taint {
@@ -236,14 +245,14 @@ resource "aws_eks_node_group" "build_additional" {
   }
 
   launch_template {
-    id      = aws_launch_template.build_additional[count.index].id
+    id      = aws_launch_template.build_additional[each.key].id
     version = "$Latest"
   }
 
   scaling_config {
-    desired_size = local.additional_build_groups_with_defaults[count.index].desired_size != null ? local.additional_build_groups_with_defaults[count.index].desired_size : 0
-    min_size     = local.additional_build_groups_with_defaults[count.index].min_size != null ? local.additional_build_groups_with_defaults[count.index].min_size : 0
-    max_size     = local.additional_build_groups_with_defaults[count.index].max_size != null ? local.additional_build_groups_with_defaults[count.index].max_size : 100
+    desired_size = each.value.desired_size != null ? each.value.desired_size : 0
+    min_size     = each.value.min_size != null ? each.value.min_size : 0
+    max_size     = each.value.max_size != null ? each.value.max_size : 100
   }
 
   lifecycle {
@@ -252,19 +261,19 @@ resource "aws_eks_node_group" "build_additional" {
 }
 
 resource "aws_launch_template" "build_additional" {
-  count = length(local.additional_build_groups_with_defaults)
+  for_each  = { for idx, ng in local.additional_build_groups_with_defaults : ng.id => ng}
 
   block_device_mappings {
     device_name = "/dev/xvda"
     ebs {
       volume_type = "gp3"
-      volume_size = random_id.build_node_additional[count.index].keepers.node_disk
+      volume_size = random_id.build_node_additional[each.key].keepers.node_disk
     }
   }
 
-  instance_type = random_id.build_node_additional[count.index].keepers.node_type
+  instance_type = random_id.build_node_additional[each.key].keepers.node_type
 
-  image_id = random_id.build_node_additional[count.index].keepers.ami_id
+  image_id = random_id.build_node_additional[each.key].keepers.ami_id
 
   metadata_options {
     http_tokens                 = var.imds_http_tokens
@@ -273,11 +282,11 @@ resource "aws_launch_template" "build_additional" {
     instance_metadata_tags      = var.imds_tags_enable ? "enabled" : "disabled"
   }
 
-  user_data = random_id.build_node_additional[count.index].keepers.ami_id == null ? null : base64encode(<<-EOF
+  user_data = random_id.build_node_additional[each.key].keepers.ami_id == null ? null : base64encode(<<-EOF
 #!/bin/bash
 set -ex
 /etc/eks/bootstrap.sh ${aws_eks_cluster.cluster.name} \
-  --kubelet-extra-args '--node-labels=eks.amazonaws.com/nodegroup=${var.name}-build-additional-${count.index}-${random_id.build_node_additional[count.index].hex}' \
+  --kubelet-extra-args '--node-labels=eks.amazonaws.com/nodegroup=${var.name}-build-additional-${each.key}-${random_id.build_node_additional[each.key].hex}' \
   --b64-cluster-ca ${aws_eks_cluster.cluster.certificate_authority[0].data} \
   --apiserver-endpoint ${aws_eks_cluster.cluster.endpoint} --use-max-pods true --dns-cluster-ip ${local.kube_dns_ip}
 EOF
@@ -290,42 +299,23 @@ EOF
     ))
     content {
       resource_type = tag_specifications.key
-      tags          = local.tags
+      tags          = each.value.tags == null ? local.tags : merge(local.tags, each.value.tags)
     }
   }
 
   key_name = var.key_pair_name != "" ? var.key_pair_name : null
 }
 
-resource "aws_autoscaling_group_tag" "build_additional" {
-  depends_on = [
-    aws_eks_node_group.build_additional
-  ]
 
-  count = var.build_node_enabled ? length(local.additional_build_groups_with_defaults) : 0
+module "asg_tags_build_additional" {
+  source    = "../../helpers/aws-asg-tag"
 
-  autoscaling_group_name = aws_eks_node_group.build_additional[count.index].resources[0].autoscaling_groups[0].name
+  for_each  = { for idx, ng in local.additional_build_groups_with_defaults : ng.id => ng}
 
-  tag {
-    key   = "k8s.io/cluster-autoscaler/node-template/label/convox-build"
-    value = "true"
-
-    propagate_at_launch = true
-  }
+  asg_name = aws_eks_node_group.build_additional[each.key].resources[0].autoscaling_groups[0].name
+  asg_tags = merge({
+    "k8s.io/cluster-autoscaler/node-template/label/convox-build" = "true"
+    "k8s.io/cluster-autoscaler/node-template/label/convox.io/label"= coalesce(each.value.label, "custom-build")
+  }, coalesce(each.value.tags, {}))
 }
 
-resource "aws_autoscaling_group_tag" "build_additional_custom" {
-  depends_on = [
-    aws_eks_node_group.build_additional
-  ]
-
-  count = length(local.additional_build_groups_with_defaults)
-
-  autoscaling_group_name = aws_eks_node_group.build_additional[count.index].resources[0].autoscaling_groups[0].name
-  tag {
-    key   = "k8s.io/cluster-autoscaler/node-template/label/convox.io/label"
-    value = local.additional_build_groups_with_defaults[count.index].label != null ? local.additional_build_groups_with_defaults[count.index].label : "custom-build"
-
-    propagate_at_launch = true
-  }
-}
