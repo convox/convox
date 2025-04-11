@@ -51,3 +51,11 @@ func StringValueSafe(s *string) string {
 	}
 	return *s
 }
+
+func StringPtrArray(arr []string) []*string {
+	v := []*string{}
+	for i := range arr {
+		v = append(v, &arr[i])
+	}
+	return v
+}

@@ -21,9 +21,9 @@ locals {
       label         = lookup(ng, "label", null)
       ami_id        = lookup(ng, "ami_id", null)
       dedicated     = tobool(lookup(ng, "dedicated", false))
-      tags          = { 
-        for pair in compact(split(",", lookup(ng, "tags", ""))) : 
-          trimspace(split("=", pair)[0]) => trimspace(try(split("=", pair)[1], "novalue"))
+      tags = {
+        for pair in compact(split(",", lookup(ng, "tags", ""))) :
+        trimspace(split("=", pair)[0]) => trimspace(try(split("=", pair)[1], "novalue"))
       }
     }
   ]
@@ -39,9 +39,9 @@ locals {
       max_size      = tonumber(lookup(ng, "max_size", 100))
       label         = lookup(ng, "label", null)
       ami_id        = lookup(ng, "ami_id", null)
-      tags          = { 
-        for pair in compact(split(",", lookup(ng, "tags", ""))) : 
-          trimspace(split("=", pair)[0]) => trimspace(try(split("=", pair)[1], "novalue"))
+      tags = {
+        for pair in compact(split(",", lookup(ng, "tags", ""))) :
+        trimspace(split("=", pair)[0]) => trimspace(try(split("=", pair)[1], "novalue"))
       }
     }
   ]
@@ -50,10 +50,10 @@ locals {
 resource "random_id" "additional_node_groups" {
   byte_length = 8
 
-  for_each  = { for idx, ng in local.additional_node_groups_with_defaults : ng.id => ng}
+  for_each = { for idx, ng in local.additional_node_groups_with_defaults : ng.id => ng }
 
   keepers = {
-    id = each.value.id
+    id                  = each.value.id
     node_capacity_type  = each.value.capacity_type != null ? each.value.capacity_type : "ON_DEMAND"
     node_disk           = each.value.disk != null ? each.value.disk : var.node_disk
     node_type           = each.value.type
@@ -78,7 +78,7 @@ resource "aws_eks_node_group" "cluster_additional" {
     aws_iam_openid_connect_provider.cluster,
   ]
 
-  for_each  = { for ng in local.additional_node_groups_with_defaults : ng.id => ng}
+  for_each = { for ng in local.additional_node_groups_with_defaults : ng.id => ng }
 
   ami_type        = random_id.additional_node_groups[each.key].keepers.ami_id != null ? "CUSTOM" : module.amitype[each.key].ami_type
   capacity_type   = random_id.additional_node_groups[each.key].keepers.node_capacity_type
@@ -133,7 +133,7 @@ resource "aws_eks_node_group" "cluster_additional" {
 }
 
 resource "aws_launch_template" "cluster_additional" {
-  for_each  = { for idx, ng in local.additional_node_groups_with_defaults : ng.id => ng}
+  for_each = { for idx, ng in local.additional_node_groups_with_defaults : ng.id => ng }
 
   block_device_mappings {
     device_name = "/dev/xvda"
@@ -180,9 +180,9 @@ EOF
 }
 
 module "asg_tags_cluster_additional" {
-  source    = "../../helpers/aws-asg-tag"
+  source = "../../helpers/aws-asg-tag"
 
-  for_each  = { for idx, ng in local.additional_node_groups_with_defaults : ng.id => ng}
+  for_each = { for idx, ng in local.additional_node_groups_with_defaults : ng.id => ng }
 
   asg_name = aws_eks_node_group.cluster_additional[each.key].resources[0].autoscaling_groups[0].name
   asg_tags = merge({
@@ -193,12 +193,12 @@ module "asg_tags_cluster_additional" {
 ###### additional build node groups
 
 resource "random_id" "build_node_additional" {
-  for_each  = { for idx, ng in local.additional_build_groups_with_defaults : ng.id => ng}
+  for_each = { for idx, ng in local.additional_build_groups_with_defaults : ng.id => ng }
 
   byte_length = 8
 
   keepers = {
-    id = each.value.id
+    id                  = each.value.id
     node_disk           = each.value.disk != null ? each.value.disk : var.node_disk
     node_type           = each.value.type
     capacity_type       = each.value.capacity_type
@@ -222,7 +222,7 @@ resource "aws_eks_node_group" "build_additional" {
     aws_iam_openid_connect_provider.cluster,
   ]
 
-  for_each  = { for idx, ng in local.additional_build_groups_with_defaults : ng.id => ng}
+  for_each = { for idx, ng in local.additional_build_groups_with_defaults : ng.id => ng }
 
   ami_type        = random_id.build_node_additional[each.key].keepers.ami_id != null ? "CUSTOM" : module.build_amitype[each.key].ami_type
   capacity_type   = random_id.build_node_additional[each.key].keepers.capacity_type != null ? random_id.build_node_additional[each.key].keepers.capacity_type : "ON_DEMAND"
@@ -261,7 +261,7 @@ resource "aws_eks_node_group" "build_additional" {
 }
 
 resource "aws_launch_template" "build_additional" {
-  for_each  = { for idx, ng in local.additional_build_groups_with_defaults : ng.id => ng}
+  for_each = { for idx, ng in local.additional_build_groups_with_defaults : ng.id => ng }
 
   block_device_mappings {
     device_name = "/dev/xvda"
@@ -308,14 +308,14 @@ EOF
 
 
 module "asg_tags_build_additional" {
-  source    = "../../helpers/aws-asg-tag"
+  source = "../../helpers/aws-asg-tag"
 
-  for_each  = { for idx, ng in local.additional_build_groups_with_defaults : ng.id => ng}
+  for_each = { for idx, ng in local.additional_build_groups_with_defaults : ng.id => ng }
 
   asg_name = aws_eks_node_group.build_additional[each.key].resources[0].autoscaling_groups[0].name
   asg_tags = merge({
-    "k8s.io/cluster-autoscaler/node-template/label/convox-build" = "true"
-    "k8s.io/cluster-autoscaler/node-template/label/convox.io/label"= coalesce(each.value.label, "custom-build")
+    "k8s.io/cluster-autoscaler/node-template/label/convox-build"    = "true"
+    "k8s.io/cluster-autoscaler/node-template/label/convox.io/label" = coalesce(each.value.label, "custom-build")
   }, coalesce(each.value.tags, {}))
 }
 
