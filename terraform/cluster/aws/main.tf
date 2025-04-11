@@ -167,7 +167,7 @@ resource "aws_eks_node_group" "cluster" {
 }
 
 module "asg_tags_cluster" {
-  source    = "../../helpers/aws-asg-tag"
+  source = "../../helpers/aws-asg-tag"
 
   count = var.high_availability ? 3 : 1
 
@@ -220,7 +220,7 @@ resource "aws_eks_node_group" "cluster-build" {
 }
 
 module "asg_tags_build" {
-  source    = "../../helpers/aws-asg-tag"
+  source = "../../helpers/aws-asg-tag"
 
   count = var.build_node_enabled ? 1 : 0
 

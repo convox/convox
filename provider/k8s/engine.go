@@ -9,6 +9,7 @@ import (
 type Engine interface {
 	AppIdles(app string) (bool, error)
 	AppParameters() map[string]string
+	GPUIntanceList(instanceTypes []string) ([]string, error)
 	Heartbeat() (map[string]interface{}, error)
 	IngressAnnotations(certDuration string) (map[string]string, error)
 	IngressClass() string

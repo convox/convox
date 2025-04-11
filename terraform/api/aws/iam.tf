@@ -127,6 +127,7 @@ data "aws_iam_policy_document" "rds_provisioner" {
       "ec2:RevokeSecurityGroupEgress",
       "ec2:ModifySecurityGroupRules",
       "ec2:CreateTags",
+      "ec2:DescribeInstanceTypes",
     ]
     resources = ["*"]
   }

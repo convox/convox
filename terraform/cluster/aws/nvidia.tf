@@ -10,4 +10,26 @@ resource "helm_release" "nvidia_device_plugin" {
   chart      = "nvidia-device-plugin"
   version    = "0.17.1"
   namespace  = "kube-system"
+
+  values = [
+    yamlencode({
+      affinity = {
+        nodeAffinity = {
+          requiredDuringSchedulingIgnoredDuringExecution = {
+            nodeSelectorTerms = [
+              {
+                matchExpressions = [
+                  {
+                    key      = "convox.io/gpu-vendor"
+                    operator = "In"
+                    values   = ["nvidia"]
+                  }
+                ]
+              },
+            ]
+          }
+        }
+      }
+    })
+  ]
 }
