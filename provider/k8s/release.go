@@ -28,7 +28,7 @@ const (
 )
 
 func (p *Provider) ReleaseCreate(app string, opts structs.ReleaseCreateOptions) (*structs.Release, error) {
-	r, err := p.releaseFork(app)
+	r, err := p.releaseFork(app, opts.ParentRelease)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -275,8 +275,20 @@ func (p *Provider) releaseGet(app, id string) (*structs.Release, error) {
 	return p.releaseUnmarshal(kr)
 }
 
-func (p *Provider) releaseFork(app string) (*structs.Release, error) {
+func (p *Provider) releaseFork(app string, parentRelease *string) (*structs.Release, error) {
 	r := structs.NewRelease(app)
+
+	if parentRelease != nil && *parentRelease != "" {
+		pr, err := p.releaseGet(app, *parentRelease)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		r.Build = pr.Build
+		r.Env = pr.Env
+
+		return r, nil
+	}
 
 	rs, err := p.ReleaseList(app, structs.ReleaseListOptions{Limit: options.Int(1)})
 	if err != nil {

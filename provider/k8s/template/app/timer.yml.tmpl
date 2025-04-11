@@ -102,6 +102,13 @@ spec:
                 {{ if (gt .Service.Scale.Limit.Cpu 0)}}
                 cpu: "{{.Service.Scale.Limit.Cpu}}m"
                 {{ end }}
+                {{ with .Service.Scale.Gpu.Count }}
+                {{ if hasSuffix $.Service.Scale.Gpu.Vendor ".com"}}
+                {{$.Service.Scale.Gpu.Vendor}}/gpu: "{{.}}"
+                {{ else }}
+                {{$.Service.Scale.Gpu.Vendor}}.com/gpu: "{{.}}"
+                {{ end }}
+                {{ end }}
                 {{ if (gt .Service.Scale.Limit.Memory 0)}}
                 memory: "{{.Service.Scale.Limit.Memory}}Mi"
                 {{ else if (gt .Service.Scale.Memory 0)}}
@@ -110,6 +117,13 @@ spec:
               requests:
                 {{ with .Service.Scale.Cpu }}
                 cpu: "{{.}}m"
+                {{ end }}
+                {{ with .Service.Scale.Gpu.Count }}
+                {{ if hasSuffix $.Service.Scale.Gpu.Vendor ".com"}}
+                {{$.Service.Scale.Gpu.Vendor}}/gpu: "{{.}}"
+                {{ else }}
+                {{$.Service.Scale.Gpu.Vendor}}.com/gpu: "{{.}}"
+                {{ end }}
                 {{ end }}
                 {{ with .Service.Scale.Memory }}
                 memory: "{{.}}Mi"

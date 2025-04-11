@@ -161,7 +161,7 @@ variable "key_pair_name" {
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-kube-proxy.html
 variable "kube_proxy_version" {
   type    = string
-  default = "v1.31.2-eksbuild.3"
+  default = "v1.31.3-eksbuild.2"
 }
 
 variable "kubelet_registry_pull_qps" {
@@ -221,6 +221,10 @@ variable "node_type" {
 variable "nginx_image" {
   type    = string
   default = "registry.k8s.io/ingress-nginx/controller:v1.12.0@sha256:e6b8de175acda6ca913891f0f727bca4527e797d52688cbe9fec9040d6f6b6fa"
+}
+
+variable "nvidia_device_plugin_enable" {
+  default = false
 }
 
 variable "pdb_default_min_available_percentage" {

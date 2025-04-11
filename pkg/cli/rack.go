@@ -125,6 +125,7 @@ func init() {
 }
 
 type NodeGroupConfigParam struct {
+	Id           *int    `json:"id"`
 	Type         string  `json:"type"`
 	Disk         *int    `json:"disk,omitempty"`
 	CapacityType *string `json:"capacity_type,omitempty"`
@@ -133,6 +134,7 @@ type NodeGroupConfigParam struct {
 	Label        *string `json:"label,omitempty"`
 	AmiID        *string `json:"ami_id,omitempty"`
 	Dedicated    *bool   `json:"dedicated,omitempty"`
+	Tags         *string `json:"tags,omitempty"`
 }
 
 func (n *NodeGroupConfigParam) Validate() error {
@@ -161,15 +163,48 @@ func (n *NodeGroupConfigParam) Validate() error {
 	if n.Dedicated != nil && *n.Dedicated && n.Label == nil {
 		return fmt.Errorf("label is required when dedicated option is set")
 	}
+
+	if n.Tags != nil {
+		reserved := []string{"name", "rack"}
+		for _, part := range strings.Split(*n.Tags, ",") {
+			if len(strings.SplitN(part, "=", 2)) != 2 {
+				return fmt.Errorf("invalid 'tags', use format: k1=v1,k2=v2")
+			}
+
+			k := strings.SplitN(part, "=", 2)[0]
+			if common.ContainsInStringSlice(reserved, strings.ToLower(k)) {
+				return fmt.Errorf("reserved tag key '%s' is not allowed", k)
+			}
+		}
+	}
+
 	return nil
 }
 
 type AdditionalNodeGroups []NodeGroupConfigParam
 
 func (an AdditionalNodeGroups) Validate() error {
+	idCnt := 0
+	idMap := map[int]bool{}
 	for i := range an {
 		if err := an[i].Validate(); err != nil {
 			return err
+		}
+		if an[i].Id != nil {
+			idCnt++
+			if idMap[*an[i].Id] {
+				return fmt.Errorf("duplicate node group id is found: %d", *an[i].Id)
+			}
+		}
+	}
+
+	if idCnt > 0 && idCnt != len(an) {
+		return fmt.Errorf("some node groups missing id property")
+	}
+
+	if idCnt == 0 {
+		for i := range an {
+			an[i].Id = options.Int(i + 1)
 		}
 	}
 	return nil
@@ -224,7 +259,10 @@ func validateAndMutateParams(params map[string]string) error {
 			}
 
 			sort.Slice(nCfgs, func(i, j int) bool {
-				return nCfgs[i].Type < nCfgs[j].Type
+				if nCfgs[i].Id == nil || nCfgs[j].Id == nil {
+					return true
+				}
+				return *nCfgs[i].Id < *nCfgs[j].Id
 			})
 
 			data, err := json.Marshal(nCfgs)

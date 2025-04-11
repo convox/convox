@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -20,7 +19,10 @@ import (
 
 func init() {
 	register("env", "list env vars", watch(Env), stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagRack, flagApp, flagWatchInterval},
+		Flags: []stdcli.Flag{
+			flagRack, flagApp, flagWatchInterval,
+			stdcli.StringFlag("release", "", "id of the release"),
+		},
 		Validate: stdcli.Args(0),
 	})
 
@@ -29,12 +31,16 @@ func init() {
 			flagApp,
 			flagRack,
 			stdcli.BoolFlag("promote", "p", "promote the release"),
+			stdcli.StringFlag("release", "", "id of the release"),
 		},
 		Validate: stdcli.Args(0),
 	})
 
 	register("env get", "get an env var", EnvGet, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagRack, flagApp},
+		Flags: []stdcli.Flag{
+			flagRack, flagApp,
+			stdcli.StringFlag("release", "", "id of the release"),
+		},
 		Usage:    "<var>",
 		Validate: stdcli.Args(1),
 	})
@@ -46,6 +52,7 @@ func init() {
 			flagRack,
 			stdcli.BoolFlag("replace", "", "replace all environment variables with given ones"),
 			stdcli.BoolFlag("promote", "p", "promote the release"),
+			stdcli.StringFlag("release", "", "id of the release"),
 		},
 		Usage: "<key=value> [key=value]...",
 	})
@@ -56,6 +63,7 @@ func init() {
 			flagId,
 			flagRack,
 			stdcli.BoolFlag("promote", "p", "promote the release"),
+			stdcli.StringFlag("release", "", "id of the release"),
 		},
 		Usage:    "<key> [key]...",
 		Validate: stdcli.ArgsMin(1),
@@ -63,7 +71,9 @@ func init() {
 }
 
 func Env(rack sdk.Interface, c *stdcli.Context) error {
-	env, err := common.AppEnvironment(rack, app(c))
+	releaseId := c.String("release")
+
+	env, err := getEnvHelper(rack, app(c), releaseId)
 	if err != nil {
 		return err
 	}
@@ -74,12 +84,14 @@ func Env(rack sdk.Interface, c *stdcli.Context) error {
 }
 
 func EnvEdit(rack sdk.Interface, c *stdcli.Context) error {
-	env, err := common.AppEnvironment(rack, app(c))
+	releaseId := c.String("release")
+
+	env, err := getEnvHelper(rack, app(c), releaseId)
 	if err != nil {
 		return err
 	}
 
-	tmp, err := ioutil.TempDir("", "")
+	tmp, err := os.MkdirTemp("", "")
 	if err != nil {
 		return err
 	}
@@ -107,7 +119,7 @@ func EnvEdit(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	data, err := ioutil.ReadFile(file)
+	data, err := os.ReadFile(file)
 	if err != nil {
 		return err
 	}
@@ -141,7 +153,10 @@ func EnvEdit(rack sdk.Interface, c *stdcli.Context) error {
 			return err
 		}
 	} else {
-		r, err = rack.ReleaseCreate(app(c), structs.ReleaseCreateOptions{Env: options.String(nenv.String())})
+		r, err = rack.ReleaseCreate(app(c), structs.ReleaseCreateOptions{
+			Env:           options.String(nenv.String()),
+			ParentRelease: options.StringOrNil(releaseId),
+		})
 		if err != nil {
 			return err
 		}
@@ -161,7 +176,8 @@ func EnvEdit(rack sdk.Interface, c *stdcli.Context) error {
 }
 
 func EnvGet(rack sdk.Interface, c *stdcli.Context) error {
-	env, err := common.AppEnvironment(rack, app(c))
+	releaseId := c.String("release")
+	env, err := getEnvHelper(rack, app(c), releaseId)
 	if err != nil {
 		return err
 	}
@@ -186,11 +202,13 @@ func EnvSet(rack sdk.Interface, c *stdcli.Context) error {
 		c.Writer().Stdout = c.Writer().Stderr
 	}
 
+	releaseId := c.String("release")
+
 	env := structs.Environment{}
 	var err error
 
 	if !c.Bool("replace") {
-		env, err = common.AppEnvironment(rack, app(c))
+		env, err = getEnvHelper(rack, app(c), releaseId)
 		if err != nil {
 			return err
 		}
@@ -231,7 +249,10 @@ func EnvSet(rack sdk.Interface, c *stdcli.Context) error {
 			return err
 		}
 	} else {
-		r, err = rack.ReleaseCreate(app(c), structs.ReleaseCreateOptions{Env: options.String(env.String())})
+		r, err = rack.ReleaseCreate(app(c), structs.ReleaseCreateOptions{
+			Env:           options.String(env.String()),
+			ParentRelease: options.StringOrNil(releaseId),
+		})
 		if err != nil {
 			return err
 		}
@@ -262,7 +283,9 @@ func EnvUnset(rack sdk.Interface, c *stdcli.Context) error {
 		c.Writer().Stdout = c.Writer().Stderr
 	}
 
-	env, err := common.AppEnvironment(rack, app(c))
+	releaseId := c.String("release")
+
+	env, err := getEnvHelper(rack, app(c), releaseId)
 	if err != nil {
 		return err
 	}
@@ -293,7 +316,10 @@ func EnvUnset(rack sdk.Interface, c *stdcli.Context) error {
 			}
 		}
 	} else {
-		r, err = rack.ReleaseCreate(app(c), structs.ReleaseCreateOptions{Env: options.String(env.String())})
+		r, err = rack.ReleaseCreate(app(c), structs.ReleaseCreateOptions{
+			Env:           options.String(env.String()),
+			ParentRelease: options.StringOrNil(releaseId),
+		})
 		if err != nil {
 			return err
 		}
@@ -314,4 +340,12 @@ func EnvUnset(rack sdk.Interface, c *stdcli.Context) error {
 	}
 
 	return nil
+}
+
+func getEnvHelper(rack sdk.Interface, appName, releaseId string) (structs.Environment, error) {
+	if releaseId != "" {
+		return common.AppEnvironmentForRelease(rack, appName, releaseId)
+	}
+
+	return common.AppEnvironment(rack, appName)
 }

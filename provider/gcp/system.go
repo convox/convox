@@ -7,3 +7,7 @@ func (p *Provider) SystemHost() string {
 func (p *Provider) SystemStatus() (string, error) {
 	return "running", nil
 }
+
+func (p *Provider) GPUIntanceList(instanceTypes []string) ([]string, error) {
+	return nil, nil
+}

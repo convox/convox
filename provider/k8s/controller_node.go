@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -12,6 +13,8 @@ import (
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	appsv1 "k8s.io/client-go/applyconfigurations/apps/v1"
 	corev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	amv1 "k8s.io/client-go/applyconfigurations/meta/v1"
@@ -93,6 +96,8 @@ func (c *NodeController) Add(obj interface{}) error {
 		return errors.WithStack(err)
 	}
 
+	go c.AddGpuLabel(nd)
+
 	fmt.Printf("node add: %s/%s\n", nd.ObjectMeta.Namespace, nd.ObjectMeta.Name)
 
 	if nd.Spec.Unschedulable &&
@@ -120,6 +125,8 @@ func (c *NodeController) Update(prev, cur interface{}) error {
 		return errors.WithStack(err)
 	}
 
+	go c.AddGpuLabel(nd)
+
 	fmt.Printf("node update: %s/%s\n", nd.ObjectMeta.Namespace, nd.ObjectMeta.Name)
 	if nd.Spec.Unschedulable &&
 		nd.CreationTimestamp.Add(5*time.Minute).Before(time.Now()) {
@@ -127,6 +134,45 @@ func (c *NodeController) Update(prev, cur interface{}) error {
 		c.findAndRescheduleDeploymentWithOneReplica(nd.Name)
 	}
 	return nil
+}
+
+func (c *NodeController) AddGpuLabel(nd *ac.Node) {
+	intanceType := nd.Labels["node.kubernetes.io/instance-type"]
+	if intanceType == "" {
+		return
+	}
+
+	labelKey := "convox.io/gpu-vendor"
+	labelValue := "nvidia"
+
+	if nd.Labels[labelKey] != "" {
+		return
+	}
+
+	nodeKey := fmt.Sprintf("%s-gpu-label", nd.Name)
+
+	// check if already processed this node
+	if _, ok := c.nodeMap.Load(nodeKey); ok {
+		c.logger.Errorf("node label's are already processed: %s", nd.Name)
+		return
+	}
+
+	gpus, err := c.provider.Engine.GPUIntanceList([]string{intanceType})
+	if err != nil {
+		c.logger.Errorf("failed to check gpu instance '%s': %s", intanceType, err)
+		return
+	}
+
+	if len(gpus) > 0 {
+		c.logger.Logf("found gpu instance: %s and applying label", intanceType)
+
+		if err := c.PatchNodeLabel(nd, labelKey, labelValue); err != nil {
+			c.logger.Errorf("failed to patch node: %s, err: %s", nd.Name, err)
+			return
+		}
+	}
+
+	c.nodeMap.Store(nodeKey, true)
 }
 
 func (c *NodeController) findAndRescheduleDeploymentWithOneReplica(node string) {
@@ -226,6 +272,28 @@ func (c *NodeController) triggerDeploymentReschedule(name, ns, node string) erro
 		FieldManager: "convox-system",
 	})
 	return err
+}
+
+func (c *NodeController) PatchNodeLabel(nd *ac.Node, key, value string) error {
+	// Patch labels using strategic merge patch
+	patch := map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"labels": map[string]string{
+				key: value,
+			},
+		},
+	}
+
+	patchBytes, err := json.Marshal(patch)
+	if err != nil {
+		return fmt.Errorf("Error marshaling patch: %v", err)
+	}
+
+	_, err = c.provider.Cluster.CoreV1().Nodes().Patch(c.provider.ctx, nd.Name, types.StrategicMergePatchType, patchBytes, v1.PatchOptions{})
+	if err != nil {
+		return fmt.Errorf("Error patching node: %v", err)
+	}
+	return nil
 }
 
 func assertNode(v interface{}) (*ac.Node, error) {

@@ -93,6 +93,7 @@ module "cluster" {
   node_disk                       = var.node_disk
   node_type                       = var.node_type
   node_max_unavailable_percentage = var.node_max_unavailable_percentage
+  nvidia_device_plugin_enable     = var.nvidia_device_plugin_enable
   private                         = var.private
   private_subnets_ids             = compact(split(",", var.private_subnets_ids))
   public_subnets_ids              = compact(split(",", var.public_subnets_ids))

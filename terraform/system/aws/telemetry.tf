@@ -49,6 +49,7 @@ locals {
     node_disk = var.node_disk
     node_max_unavailable_percentage = var.node_max_unavailable_percentage
     node_type = var.node_type
+    nvidia_device_plugin_enable = var.nvidia_device_plugin_enable
     pdb_default_min_available_percentage = var.pdb_default_min_available_percentage
     pod_identity_agent_enable = var.pod_identity_agent_enable
     pod_identity_agent_version = var.pod_identity_agent_version
@@ -112,7 +113,7 @@ locals {
     internet_gateway_id = ""
     k8s_version = "1.31"
     key_pair_name = ""
-    kube_proxy_version = "v1.31.2-eksbuild.3"
+    kube_proxy_version = "v1.31.3-eksbuild.2"
     kubelet_registry_burst = "10"
     kubelet_registry_pull_qps = "5"
     max_on_demand_count = "100"
@@ -124,6 +125,7 @@ locals {
     node_disk = "20"
     node_max_unavailable_percentage = "0"
     node_type = "t3.small"
+    nvidia_device_plugin_enable = "false"
     pdb_default_min_available_percentage = "50"
     pod_identity_agent_enable = "false"
     pod_identity_agent_version = "v1.3.4-eksbuild.1"

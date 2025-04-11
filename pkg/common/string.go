@@ -35,3 +35,12 @@ func UpperName(name string) string {
 
 	return us
 }
+
+func ContainsInStringSlice(ss []string, s string) bool {
+	for _, v := range ss {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}

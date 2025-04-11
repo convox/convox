@@ -166,6 +166,15 @@ resource "aws_eks_node_group" "cluster" {
   }
 }
 
+module "asg_tags_cluster" {
+  source = "../../helpers/aws-asg-tag"
+
+  count = var.high_availability ? 3 : 1
+
+  asg_name = aws_eks_node_group.cluster[count.index].resources[0].autoscaling_groups[0].name
+  asg_tags = local.tags
+}
+
 resource "aws_eks_node_group" "cluster-build" {
   depends_on = [
     aws_eks_cluster.cluster,
@@ -208,6 +217,15 @@ resource "aws_eks_node_group" "cluster-build" {
   lifecycle {
     create_before_destroy = true
   }
+}
+
+module "asg_tags_build" {
+  source = "../../helpers/aws-asg-tag"
+
+  count = var.build_node_enabled ? 1 : 0
+
+  asg_name = aws_eks_node_group.cluster-build[0].resources[0].autoscaling_groups[0].name
+  asg_tags = local.tags
 }
 
 resource "aws_autoscaling_group_tag" "cluster-build" {

@@ -255,12 +255,20 @@ spec:
           successThreshold: 1
           failureThreshold: 3
         {{ else if $.Service.GrpcHealthEnabled }}
+        readinessProbe:
+          grpc:
+            port: {{.}}
+          initialDelaySeconds: {{$.Service.Health.Grace}}
+          periodSeconds: {{$.Service.Health.Interval}}
+          timeoutSeconds: {{$.Service.Health.Timeout}}
+          successThreshold: 1
+          failureThreshold: 5
         livenessProbe:
           grpc:
             port: {{.}}
-          initialDelaySeconds: 10
-          periodSeconds: 5
-          timeoutSeconds: 15
+          initialDelaySeconds: {{$.Service.Health.Grace}}
+          periodSeconds: {{$.Service.Health.Interval}}
+          timeoutSeconds: {{$.Service.Health.Timeout}}
           successThreshold: 1
           failureThreshold: 5
         {{ end }}
@@ -284,7 +292,11 @@ spec:
             cpu: "{{.Service.Scale.Limit.Cpu}}m"
             {{ end }}
             {{ with .Service.Scale.Gpu.Count }}
+            {{ if hasSuffix $.Service.Scale.Gpu.Vendor ".com"}}
+            {{$.Service.Scale.Gpu.Vendor}}/gpu: "{{.}}"
+            {{ else }}
             {{$.Service.Scale.Gpu.Vendor}}.com/gpu: "{{.}}"
+            {{ end }}
             {{ end }}
             {{ if (gt .Service.Scale.Limit.Memory 0)}}
             memory: "{{.Service.Scale.Limit.Memory}}Mi"
@@ -296,7 +308,11 @@ spec:
             cpu: "{{.}}m"
             {{ end }}
             {{ with .Service.Scale.Gpu.Count }}
+            {{ if hasSuffix $.Service.Scale.Gpu.Vendor ".com"}}
+            {{$.Service.Scale.Gpu.Vendor}}/gpu: "{{.}}"
+            {{ else }}
             {{$.Service.Scale.Gpu.Vendor}}.com/gpu: "{{.}}"
+            {{ end }}
             {{ end }}
             {{ with .Service.Scale.Memory }}
             memory: "{{.}}Mi"

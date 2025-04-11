@@ -74,3 +74,7 @@ func (*TestEngine) SystemHost() string {
 func (*TestEngine) SystemStatus() (string, error) {
 	return "amazing", nil
 }
+
+func (*TestEngine) GPUIntanceList(instanceTypes []string) ([]string, error) {
+	return nil, nil
+}
