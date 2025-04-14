@@ -11,6 +11,7 @@ Convox allows you to easily scale any [Service](/reference/primitives/app/servic
 - Horizontal concurrency (number of [Processes](/reference/primitives/app/process))
 - CPU allocation (in CPU units where 1000 units is one full CPU)
 - Memory allocation (in MB)
+- GPU allocation (number of GPUs per process)
 
 ## Initial Defaults
 
@@ -24,6 +25,17 @@ You can specify the scale for any [Service](/reference/primitives/app/service) i
           memory: 512
 ```
 > If you specify a static `count` it will only be used on first deploy. Subsequent changes must be made using the `convox` CLI.
+
+For GPU-accelerated workloads, you can specify the number of GPUs required:
+```html
+    services:
+      ml-worker:
+        scale:
+          count: 1
+          cpu: 1000
+          memory: 2048
+          gpu: 1
+```
 
 ## Manual Scaling
 
@@ -45,7 +57,7 @@ You can specify the scale for any [Service](/reference/primitives/app/service) i
     2020-01-01T00:00:00Z system/k8s/web-65f45567d-c7sdw Started container main
     OK
 ```
-> Changes to `cpu` or `memory` should be done in your `convox.yml`, and a new release of your app deployed.
+> Changes to `cpu`, `memory`, or `gpu` should be done in your `convox.yml`, and a new release of your app deployed.
 
 ## Autoscaling
 
@@ -68,9 +80,69 @@ You must consider that the targets for CPU and Memory use the service replicas l
 desiredReplicas = ceil[currentReplicas * ( currentMetricValue / desiredMetricValue )]
 ```
 
-### Autoscaling With Custom Metrics
+## GPU Scaling
 
-#### Datadog
+For workloads that require GPU acceleration, Convox supports requesting GPU resources at the service level. This is particularly useful for machine learning, video processing, and scientific computing applications.
+
+### Prerequisites for GPU Scaling
+
+Before using GPU scaling:
+
+1. Your rack must be running on GPU-capable instances (such as AWS EC2 p3, p4, g4, or g5 families)
+2. The NVIDIA device plugin must be enabled on your rack:
+```html
+$ convox rack params set nvidia_device_plugin_enable=true -r rackName
+```
+
+### Configuring GPU Requirements
+
+You can specify GPU requirements in the `scale` section of your service definition:
+
+```html
+services:
+  ml-trainer:
+    build: .
+    command: python train.py
+    scale:
+      count: 1-3
+      cpu: 1000
+      memory: 4096
+      gpu: 1
+```
+
+This configuration requests 1 GPU for each process of the `ml-trainer` service.
+
+### Important Notes About GPU Scaling
+
+- GPUs are allocated as whole units (you cannot request a fraction of a GPU)
+- Services requesting GPUs will only be scheduled on nodes that have available GPUs
+- Each process will receive the specified number of GPUs
+- If you specify a GPU count without specifying CPU or memory resources, the defaults for those resources will be removed to allow for pure GPU-based scheduling
+- When using GPUs, you may need to use a base image that includes the NVIDIA CUDA toolkit
+
+### Combining GPU with Autoscaling
+
+GPU-enabled services can be configured with autoscaling:
+
+```html
+services:
+  ml-inference:
+    build: .
+    command: python serve_model.py
+    scale:
+      count: 1-5
+      cpu: 1000
+      memory: 2048
+      gpu: 1
+      targets:
+        cpu: 80
+```
+
+The service will scale based on CPU utilization while ensuring that each process has access to a GPU.
+
+## Autoscaling With Custom Metrics
+
+### Datadog
 
 *To use Datadog metrics for autoscaling your rack must be updated to [version 3.9.1](https://github.com/convox/convox/releases/tag/3.9.1) or later.  You can find your rack's version by running `convox rack -r rackNAME`. If you are on an older version, please [update your rack](https://docs.convox.com/management/cli-rack-management/) to use this feature.
 
