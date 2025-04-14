@@ -30,9 +30,10 @@ The `additional_node_groups_config` parameter takes a JSON array of node group c
 | `disk` | No | The disk size in GB for the nodes | Same as main node disk |
 | `capacity_type` | No | Whether to use on-demand or spot instances | `ON_DEMAND` |
 | `min_size` | No | Minimum number of nodes | 1 |
-| `desired_size` | No | Desired number of nodes | 1 |
 | `max_size` | No | Maximum number of nodes | 100 |
 | `label` | No | Custom label value for the node group. Applied as `convox.io/label: <label-value>` | None |
+| `id` | No | A unique integer identifier for the node group that persists across updates | Auto-generated |
+| `tags` | No | Custom AWS tags specified as comma-separated key-value pairs (e.g., `environment=production,team=backend`) | None |
 | `ami_id`* | No | Custom AMI ID to use | EKS-optimized AMI |
 | `dedicated` | No | When `true`, only services with matching node group labels will be scheduled on these nodes | `false` |
 
@@ -51,23 +52,25 @@ The JSON file should be structured as follows:
 ```json
 [
   {
+    "id": 101,
     "type": "t3.medium",
     "disk": 50,
     "capacity_type": "ON_DEMAND",
     "min_size": 1,
-    "desired_size": 2,
     "max_size": 3,
-    "label": "app-workers"
+    "label": "app-workers",
+    "tags": "environment=production,team=backend"
   },
   {
+    "id": 102,
     "type": "m5.large",
     "disk": 100,
     "capacity_type": "SPOT",
     "min_size": 2,
-    "desired_size": 3,
     "max_size": 5,
     "label": "batch-workers",
-    "ami_id": "ami-0123456789abcdef0"
+    "ami_id": "ami-0123456789abcdef0",
+    "tags": "environment=production,team=data,workload=batch"
   }
 ]
 ```
@@ -76,8 +79,55 @@ The JSON file should be structured as follows:
 
 ### Using a Raw JSON String
 ```html
-$ convox rack params set 'additional_node_groups_config=[{"type":"t3.medium","disk":50,"capacity_type":"ON_DEMAND","min_size":1,"desired_size":1,"max_size":3,"label":"app-workers"}]' -r rackName
+$ convox rack params set 'additional_node_groups_config=[{"id":101,"type":"t3.medium","disk":50,"capacity_type":"ON_DEMAND","min_size":1,"max_size":3,"label":"app-workers","tags":"environment=production,team=backend"}]' -r rackName
 Setting parameters... OK
+```
+
+## Node Group Identification and Tagging
+
+### Using the `id` Field
+
+The `id` field ensures that node groups preserve their identity during configuration updates:
+
+- Each node group should have a unique integer identifier
+- Using the `id` field prevents unnecessary recreation of node groups when making changes to their configuration
+- Without an `id`, Convox generates a random identifier that changes when configurations are updated, potentially causing disruptive node group replacements
+- Consistent `id` values help maintain stable infrastructure during updates
+
+Example configuration using the `id` field:
+```json
+[
+  {
+    "id": 101,
+    "type": "t3.medium",
+    "label": "web-services",
+    "min_size": 1,
+    "max_size": 5
+  }
+]
+```
+
+### Using the `tags` Field
+
+The `tags` field allows you to add AWS tags to specific node groups:
+
+- Tags help with cost allocation, resource organization, and compliance tracking
+- Specify tags as comma-separated key-value pairs (e.g., `"environment=production,team=backend"`)
+- Tags are applied directly to the AWS node group resources
+- Custom tags can be used with AWS cost management and reporting tools
+
+Example configuration using the `tags` field:
+```json
+[
+  {
+    "id": 101,
+    "type": "t3.medium",
+    "label": "web-services",
+    "min_size": 1,
+    "max_size": 5,
+    "tags": "environment=production,team=frontend,tier=web"
+  }
+]
 ```
 
 ## Using Node Groups with Services

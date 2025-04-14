@@ -79,12 +79,47 @@ You can set values for your environment variables using `convox env set`:
 Setting environment variables will cause a new [Release](/reference/primitives/app/release) to be created. In order to deploy
 your changes you will need to promote this release.
 ```html
-    $ convox releases promote RABCDEFGHI
-    Promoting RABCDEFGHI... OK
+    $ convox releases promote RABCDEFGHIJ
+    Promoting RABCDEFGHIJ... OK
 ```
 
 > Environment variables can be set using the CLI or through the Console and their values will be available to the
 > [Service](/reference/primitives/app/service).
+
+### Release-Based Environment Management
+
+You can manage environment variables for a specific release by using the `--release` flag with any `convox env` command. This is useful in workflows where multiple builds may occur between promotions, allowing you to target environment changes to a specific release rather than always applying them to the latest release.
+
+View environment variables for a specific release:
+```html
+    $ convox env -a myapp --release RXYZ123
+    ALLOWED_IPS=1.2.3.4
+    COOKIE_SECRET=foo
+    QUEUE=main
+```
+
+Set environment variables for a specific release:
+```html
+    $ convox env set FEATURE_FLAG=true -a myapp --release RXYZ123
+    Setting FEATURE_FLAG... OK
+    Release: RXYZ123
+```
+
+Unset environment variables for a specific release:
+```html
+    $ convox env unset LEGACY_MODE -a myapp --release RXYZ123
+    Unsetting LEGACY_MODE... OK
+    Release: RXYZ123
+```
+
+Edit environment variables interactively for a specific release:
+```html
+    $ convox env edit -a myapp --release RXYZ123
+    Setting ... OK
+    Release: RXYZ123
+```
+
+This release-specific environment management ensures that environment changes are only applied to the intended release, preventing unintentional modifications to other releases in your workflow.
 
 ## System Variables
 
