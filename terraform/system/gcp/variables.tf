@@ -33,6 +33,10 @@ variable "rack_name" {
   type    = string
 }
 
+variable "node_disk" {
+  default = 100
+}
+
 variable "node_type" {
   default = "n1-standard-2"
 }

@@ -38,6 +38,7 @@ resource "google_container_node_pool" "rack" {
   name               = "${google_container_cluster.rack.name}-nodes-${var.node_type}"
   location           = google_container_cluster.rack.location
   cluster            = google_container_cluster.rack.name
+
   initial_node_count = 1
 
   autoscaling {
@@ -48,6 +49,7 @@ resource "google_container_node_pool" "rack" {
   node_config {
     machine_type = var.node_type
     preemptible  = var.preemptible
+    disk_size_gb = var.node_disk
 
     metadata = {
       disable-legacy-endpoints = "true"
