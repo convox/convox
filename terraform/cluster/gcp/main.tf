@@ -8,9 +8,10 @@ resource "random_string" "password" {
 }
 
 resource "google_container_cluster" "rack" {
-  name     = var.name
-  location = data.google_client_config.current.region
-  network  = google_compute_network.rack.name
+  name                = var.name
+  location            = data.google_client_config.current.region
+  network             = google_compute_network.rack.name
+  deletion_protection = false
 
   remove_default_node_pool = true
   initial_node_count       = 1
@@ -35,9 +36,10 @@ resource "google_container_cluster" "rack" {
 }
 
 resource "google_container_node_pool" "rack" {
-  name               = "${google_container_cluster.rack.name}-nodes-${var.node_type}"
-  location           = google_container_cluster.rack.location
-  cluster            = google_container_cluster.rack.name
+  name     = "${google_container_cluster.rack.name}-nodes-${var.node_type}"
+  location = google_container_cluster.rack.location
+  cluster  = google_container_cluster.rack.name
+
   initial_node_count = 1
 
   autoscaling {
@@ -48,6 +50,7 @@ resource "google_container_node_pool" "rack" {
   node_config {
     machine_type = var.node_type
     preemptible  = var.preemptible
+    disk_size_gb = var.node_disk
 
     metadata = {
       disable-legacy-endpoints = "true"
