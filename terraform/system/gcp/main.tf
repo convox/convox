@@ -35,6 +35,7 @@ module "cluster" {
 
   k8s_version = var.k8s_version
   name        = local.name
+  node_disk   = var.node_disk
   node_type   = var.node_type
   preemptible = var.preemptible
   project_id  = module.project.id
