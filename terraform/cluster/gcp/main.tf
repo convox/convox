@@ -12,6 +12,8 @@ resource "google_container_cluster" "rack" {
   location = data.google_client_config.current.region
   network  = google_compute_network.rack.name
 
+  deletion_protection = false
+
   remove_default_node_pool = true
   initial_node_count       = 1
 
