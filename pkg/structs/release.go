@@ -20,7 +20,7 @@ type ReleaseCreateOptions struct {
 	Build         *string `param:"build"`
 	Description   *string `param:"description"`
 	Env           *string `param:"env"`
-	ParentRelease *string `params:"parent-release"`
+	ParentRelease *string `param:"parent-release"`
 }
 
 type ReleaseListOptions struct {

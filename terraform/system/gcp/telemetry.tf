@@ -10,6 +10,7 @@ locals {
     image = var.image
     k8s_version = var.k8s_version
     name = var.name
+    node_disk = var.node_disk
     node_type = var.node_type
     preemptible = var.preemptible
     rack_name = var.rack_name
@@ -29,6 +30,7 @@ locals {
     image = "convox/convox"
     k8s_version = "1.31"
     name = ""
+    node_disk = "100"
     node_type = "n1-standard-2"
     preemptible = "true"
     rack_name = ""
