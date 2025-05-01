@@ -30,6 +30,22 @@ resource "helm_release" "nvidia_device_plugin" {
           }
         }
       }
+      tolerations = [
+        {
+          key      = "CriticalAddonsOnly"
+          operator = "Exists"
+        },
+        {
+          key      = "nvidia.com/gpu"
+          operator = "Exists"
+          effect   = "NoSchedule"
+        },
+        {
+          key      = "dedicated-node"
+          operator = "Exists"
+          effect   = "NoSchedule"
+        }
+      ]
     })
   ]
 }
