@@ -623,6 +623,15 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 				s.NodeSelector[parts[0]] = parts[1]
 			}
 		}
+
+		if s.Tolerations == nil {
+			s.Tolerations = []ac.Toleration{}
+		}
+		s.Tolerations = append(s.Tolerations, ac.Toleration{
+			Key:      "dedicated-node",
+			Operator: ac.TolerationOpExists,
+			Effect:   ac.TaintEffectNoSchedule,
+		})
 	}
 
 	if p.DockerUsername != "" && p.DockerPassword != "" {
