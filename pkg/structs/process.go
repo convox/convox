@@ -42,6 +42,7 @@ type ProcessRunOptions struct {
 	Cpu         *int              `flag:"cpu" header:"Cpu"`
 	CpuLimit    *int              `flag:"cpu-limit" header:"Cpu-Limit"`
 	Environment map[string]string `header:"Environment"`
+	Gpu         *int              `flag:"gpu" header:"Gpu"`
 	Height      *int              `header:"Height"`
 	Image       *string           `header:"Image"`
 	Memory      *int              `flag:"memory" header:"Memory"`

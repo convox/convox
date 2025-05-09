@@ -219,7 +219,7 @@ spec:
         startupProbe:
           {{ if not (eq $.Service.StartupProbe.Path "")}}
           httpGet:
-            path: {{$.Service.StartupProbe.Path}}"
+            path: "{{$.Service.StartupProbe.Path}}"
             port: {{.}}
           {{ end }}
           {{ if not (eq $.Service.StartupProbe.TcpSocketPort "")}}
@@ -235,7 +235,7 @@ spec:
         {{ if and (not (eq $.Service.Port.Scheme "GRPC")) (not (eq $.Service.Liveness.Path ""))}}
         livenessProbe:
           httpGet:
-            path: {{$.Service.Liveness.Path}}"
+            path: "{{$.Service.Liveness.Path}}"
             port: {{.}}
           initialDelaySeconds: {{$.Service.Liveness.Grace}}
           periodSeconds: {{$.Service.Liveness.Interval}}

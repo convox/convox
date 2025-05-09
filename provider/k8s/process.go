@@ -593,6 +593,14 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 		s.Containers[0].Resources.Limits["cpu"] = resource.MustParse(fmt.Sprintf("%dm", *opts.CpuLimit))
 	}
 
+	if opts.Gpu != nil {
+		s.Containers[0].Resources.Requests["nvidia.com/gpu"] = resource.MustParse(fmt.Sprintf("%d", *opts.Gpu))
+		if s.Containers[0].Resources.Limits == nil {
+			s.Containers[0].Resources.Limits = ac.ResourceList{}
+		}
+		s.Containers[0].Resources.Limits["nvidia.com/gpu"] = resource.MustParse(fmt.Sprintf("%d", *opts.Gpu))
+	}
+
 	if opts.Memory != nil {
 		s.Containers[0].Resources.Requests["memory"] = resource.MustParse(fmt.Sprintf("%dMi", *opts.Memory))
 	}
@@ -615,6 +623,15 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 				s.NodeSelector[parts[0]] = parts[1]
 			}
 		}
+
+		if s.Tolerations == nil {
+			s.Tolerations = []ac.Toleration{}
+		}
+		s.Tolerations = append(s.Tolerations, ac.Toleration{
+			Key:      "dedicated-node",
+			Operator: ac.TolerationOpExists,
+			Effect:   ac.TaintEffectNoSchedule,
+		})
 	}
 
 	if p.DockerUsername != "" && p.DockerPassword != "" {
