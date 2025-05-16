@@ -48,10 +48,17 @@ The following environment variables are required:
 
 ### Grant Permissions
 ```html
-    $ az ad app permission add --id $ARM_CLIENT_ID --api 00000002-0000-0000-c000-000000000000 --api-permissions 311a71cc-e848-46a1-bdf8-97ff7156d8e6=Scope 824c81eb-e3f8-4ee6-8f6d-de7f50d565b7=Role
-    $ az ad app permission grant --id $ARM_CLIENT_ID --api 00000002-0000-0000-c000-000000000000 --consent-type AllPrincipals --scope User.Read
+    # Grant Microsoft Graph API permissions using the new Microsoft Graph resource ID
+    $ az ad app permission add --id $ARM_CLIENT_ID --api 00000003-0000-0000-c000-000000000000 --api-permissions e1fe6dd8-ba31-4d61-89e7-88639da4683d=Scope 19dbc75e-c2e2-444c-a770-ec69d8559fc7=Role
+    
+    # The minimum permission required is Directory.Read.All
+    $ az ad app permission grant --id $ARM_CLIENT_ID --api 00000003-0000-0000-c000-000000000000 --consent-type AllPrincipals --scope Directory.Read.All
+    
+    # Perform admin consent for the permissions
     $ az ad app permission admin-consent --id $ARM_CLIENT_ID
 ```
+
+> **Note**: For new Azure tenants, you must use Microsoft Graph API (not Azure AD Graph). The service principal must have either **Directory Reader role** or `Directory.Read.All` permission consented in Microsoft Graph.
 ## Install Rack
 ```html
     $ convox rack install azure <name> [param1=value1]...
