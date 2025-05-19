@@ -7,7 +7,7 @@ on:
 
 jobs:
   cleanup-aws:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
     steps:
@@ -23,7 +23,7 @@ jobs:
       - name: cleanup
         run: ci/cleanup.sh
   cleanup-do:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
     steps:
