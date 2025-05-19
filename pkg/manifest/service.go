@@ -162,6 +162,7 @@ type ServiceBuild struct {
 	Args     []string `yaml:"args,omitempty"`
 	Manifest string   `yaml:"manifest,omitempty"`
 	Path     string   `yaml:"path,omitempty"`
+	Target   string   `yaml:"target,omitempty"`
 }
 
 type ServiceDeployment struct {
