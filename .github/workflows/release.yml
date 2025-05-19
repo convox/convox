@@ -119,7 +119,7 @@ jobs:
         run: docker buildx build -f Dockerfile.buildkit --target rootless --platform linux/arm64 -t ${{ github.repository }}:${{ env.VERSION }}-arm64-build --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max --build-arg DOCKER_ARCH=aarch64 --build-arg KUBECTL_ARCH=arm64 .
       - name: buildkit-arm64-privileged
         run: docker buildx build -f Dockerfile.buildkit --target privileged --platform linux/arm64 -t ${{ github.repository }}:${{ env.VERSION }}-arm64-build-privileged --push --cache-from type=registry,ref=${{ github.repository }} --cache-to type=registry,ref=${{ github.repository }},mode=max --build-arg DOCKER_ARCH=aarch64 --build-arg KUBECTL_ARCH=arm64 .
-      
+
   release-cli-linux:
     needs:
       - release
@@ -268,9 +268,6 @@ jobs:
         run: sleep 300
       - name: test
         run: ci/test.sh
-      - name: debug
-        run: ci/debug.sh
-        if: always()
       - name: uninstall
         run: ci/uninstall.sh
         if: always()
@@ -317,9 +314,6 @@ jobs:
         run: ci/after_additional_test.sh
       - name: test
         run: ci/test.sh
-      - name: debug
-        run: ci/debug.sh
-        if: always()
       - name: uninstall
         run: ci/uninstall.sh
         if: always()
@@ -366,9 +360,6 @@ jobs:
         run: ci/after_additional_test.sh
       - name: test
         run: ci/test.sh
-      - name: debug
-        run: ci/debug.sh
-        if: always()
       - name: uninstall
         run: ci/uninstall.sh
         if: always()
@@ -410,9 +401,6 @@ jobs:
         run: ci/ssh_keyroll.sh
       - name: test
         run: ci/test.sh
-      - name: debug
-        run: ci/debug.sh
-        if: always()
       - name: uninstall
         run: ci/uninstall.sh
         if: always()

@@ -39,9 +39,6 @@ jobs:
         run: sleep 600
       - name: test
         run: ci/test.sh
-      - name: debug
-        run: ci/debug.sh
-        if: always()
       - name: uninstall
         run: ci/uninstall.sh
         if: always()
