@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -euo pipefail
 trap exit SIGINT
 
 base=$(dirname $(dirname $0))
@@ -127,4 +128,27 @@ for region in us-east-1 us-east-2; do
     aws iam delete-open-id-connect-provider --open-id-connect-provider-arn $o
   done
 
+  mapfile -t stacks < <(aws cloudformation list-stacks \
+    --region "$region" \
+    --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE UPDATE_ROLLBACK_COMPLETE ROLLBACK_COMPLETE IMPORT_COMPLETE \
+    --query 'StackSummaries[?starts_with(StackName,`ci-`)].StackName' \
+    --output text | tr '\t' '\n')
+
+  if [[ ${#stacks[@]} -eq 0 ]]; then
+    echo "   No matching stacks found."
+  else
+    for stack in "${stacks[@]}"; do
+      echo "   Deleting stack $stack…"
+      aws cloudformation delete-stack --region "$region" --stack-name "$stack"
+    done
+
+    # Wait for deletions to finish so that dependent resources disappear before
+    # we attempt to clean them up in later sections of the script.
+    for stack in "${stacks[@]}"; do
+      echo "   Waiting for $stack deletion to complete…"
+      # The wait command exits with a non‑zero code if the stack disappears
+      # before the waiter starts, so we ignore errors.
+      aws cloudformation wait stack-delete-complete --region "$region" --stack-name "$stack" || true
+    done
+  fi
 done
