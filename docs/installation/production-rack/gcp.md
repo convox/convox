@@ -35,25 +35,34 @@ The following environment variables are required:
 ```
 - `GOOGLE_PROJECT` is the id you selected
 
-> You will likely need to set up Billing on this new project at https://console.cloud.google.com/billing before proceeding
-> You can find the full documentation on this here: https://cloud.google.com/billing/docs/how-to/modify-project#enable_billing_for_an_existing_project
+> You will need to enable billing on this new project before proceeding. Visit https://console.cloud.google.com/billing to set up billing for your project.
 
 ### Create Service Account
 ```html
-    $ serviceaccount=$(gcloud iam service-accounts create convox --format="value(email)")
-    $ gcloud iam service-accounts keys create ~/gcloud.convox --iam-account=${serviceaccount}
+    $ serviceaccount="convox@${GOOGLE_PROJECT}.iam.gserviceaccount.com"
+    $ gcloud iam service-accounts create convox
+    $ gcloud iam service-accounts keys create ~/.gcloud.convox --iam-account="${serviceaccount}"
 ```
 - `GOOGLE_CREDENTIALS` is `~/gcloud.convox`
 
 ### Grant Permissions
 ```html
-    $ gcloud projects add-iam-policy-binding $GOOGLE_PROJECT --member=serviceAccount:${serviceaccount} --role=roles/owner
+    $ gcloud projects add-iam-policy-binding ${GOOGLE_PROJECT} --member="serviceAccount:${serviceaccount}" --role="roles/owner"
 ```
+
 ## Enable GCP APIs
+
+The following APIs must be enabled for your GCP project:
+
 ```html
+    $ gcloud services enable cloudapis.googleapis.com
     $ gcloud services enable compute.googleapis.com
     $ gcloud services enable cloudresourcemanager.googleapis.com
+    $ gcloud services enable container.googleapis.com
+    $ gcloud services enable serviceusage.googleapis.com
+    $ gcloud services enable servicemanagement.googleapis.com
 ```
+
 ## Install Rack
 ```html
     $ convox rack install gcp <name> [param1=value1]...
