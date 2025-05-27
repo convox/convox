@@ -40,13 +40,6 @@ resource "azurerm_kubernetes_cluster" "rack" {
     os_disk_size_gb     = 30
   }
 
-  addon_profile {
-    oms_agent {
-      enabled                    = true
-      log_analytics_workspace_id = azurerm_log_analytics_workspace.rack.id
-    }
-  }
-
   service_principal {
     client_id     = azuread_service_principal.cluster.application_id
     client_secret = azuread_service_principal_password.cluster.value
