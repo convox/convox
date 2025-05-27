@@ -7,23 +7,36 @@ on:
 
 jobs:
   cleanup-aws:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
+      matrix:
+        provider: [aws]
     steps:
-      - name: checkout
+      - name: Checkout
         uses: actions/checkout@v3
-      - name: secrets
+      - name: AWS secrets
         run: ci/secrets.sh
         env:
           SECRETS: ${{ toJson(secrets) }}
           PROVIDER: aws
-      - name: dependencies
+      - name: System dependencies
         run: ci/dependencies.sh
-      - name: cleanup
-        run: ci/cleanup.sh
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.22'
+      - name: Cache / download Go modules
+        run: go mod download
+      - name: AWS cleanup
+        run: |
+          go run .
+        env:
+          AWS_ACCESS_KEY_ID:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION:    us-east-1
   cleanup-do:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
     steps:
