@@ -6,22 +6,19 @@ url: /configuration/health-checks
 ---
 # Health Checks
 
-Deploying a [Service](/reference/primitives/app/service) behind a load balancer requires a health
-check to determine whether a given [Process](/reference/primitives/app/process) is ready to
-handle requests.
+Deploying a [Service](/reference/primitives/app/service) behind a load balancer requires a health check to determine whether a given [Process](/reference/primitives/app/process) is ready to handle requests.
 
 Health checks must return a valid HTTP response code (200-399) within the configured `timeout`.
 
-[Processes](/reference/primitives/app/process) that fail two health checks in a row are assumed
-dead and will be terminated and replaced.
+[Processes](/reference/primitives/app/process) that fail two health checks in a row are assumed dead and will be terminated and replaced.
 
 ## Definition
 
 ### Simple
 ```html
-    services:
-      web:
-        health: /check
+services:
+  web:
+    health: /check
 ```
 > Specifying `health` as a string will set the `path` and leave the other options as defaults.
 
@@ -37,12 +34,73 @@ services:
       timeout: 3
 ```
 
-| Attribute  | Default | Description                                                                                                                          |
-| ---------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Attribute  | Default | Description                                                                      |
+| ---------- | ------- | -------------------------------------------------------------------------------- |
 | **grace**    | 5       | The amount of time in seconds to wait for a [Process](/reference/primitives/app/process) to boot before beginning health checks |
-| **interval** | 5       | The number of seconds between health checks                                                                                          |
-| **path**     | /       | The HTTP endpoint that will be requested                                                                                             |
-| **timeout**  | 4       | The number of seconds to wait for a valid response                                                                                   |
+| **interval** | 5       | The number of seconds between health checks                                      |
+| **path**     | /       | The HTTP endpoint that will be requested                                         |
+| **timeout**  | 4       | The number of seconds to wait for a valid response                               |
+
+## Liveness Checks
+
+Liveness checks complement health checks by monitoring the ongoing health of running processes. While health checks (readiness probes) determine when a service is ready to receive traffic, liveness checks determine when a service should be restarted if it becomes unresponsive or enters a broken state.
+
+When a liveness check fails, Kubernetes will restart the container, which can help recover from deadlocks, memory leaks, or other issues that cause a process to become unresponsive while still appearing to be running.
+
+### Liveness Check Configuration
+
+```html
+services:
+  web:
+    liveness:
+      path: /liveness/check
+      grace: 15
+      interval: 5
+      timeout: 3
+      successThreshold: 1
+      failureThreshold: 3
+```
+
+| Attribute           | Default | Description                                                                      |
+| ------------------- | ------- | -------------------------------------------------------------------------------- |
+| **path**              |         | **Required.** The HTTP endpoint that will be requested for liveness checks      |
+| **grace**             | 10      | The amount of time in seconds to wait for a [Process](/reference/primitives/app/process) to start before beginning liveness checks |
+| **interval**          | 5       | The number of seconds between liveness checks                                    |
+| **timeout**           | 5       | The number of seconds to wait for a successful response                          |
+| **successThreshold**  | 1       | The number of consecutive successful checks required to consider the probe successful |
+| **failureThreshold**  | 3       | The number of consecutive failed checks required before restarting the container |
+
+### Important Considerations
+
+- **Path is Required**: Unlike health checks, you must specify a `path` to enable liveness checks
+- **Conservative Configuration**: Liveness checks should be configured conservatively to avoid unnecessary restarts. False positives can cause service disruption
+- **Separate Endpoints**: Consider using different endpoints for health checks and liveness checks to monitor different aspects of your application
+- **Startup Time**: Set an appropriate `grace` period to allow your application to fully initialize before liveness checks begin
+
+### Example Use Cases
+
+**Detecting Deadlocks:**
+```html
+services:
+  worker:
+    liveness:
+      path: /worker/health
+      grace: 30
+      interval: 10
+      failureThreshold: 5
+```
+
+**Monitoring Memory-Intensive Applications:**
+```html
+services:
+  processor:
+    liveness:
+      path: /memory-check
+      grace: 45
+      interval: 15
+      timeout: 10
+      failureThreshold: 3
+```
 
 ## gRPC Health Checks
 
@@ -78,12 +136,12 @@ services:
       timeout: 2
 ```
 
-| Attribute  | Default | Description                                                                                                                          |
-| ---------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Attribute  | Default | Description                                                                      |
+| ---------- | ------- | -------------------------------------------------------------------------------- |
 | **grace**    | 5       | The amount of time in seconds to wait for a [Process](/reference/primitives/app/process) to boot before beginning health checks |
-| **interval** | 5       | The number of seconds between health checks                                                                                          |
-| **path**     | /       | The service name to check within your gRPC health implementation                                                                       |
-| **timeout**  | 4       | The number of seconds to wait for a valid response                                                                                   |
+| **interval** | 5       | The number of seconds between health checks                                      |
+| **path**     | /       | The service name to check within your gRPC health implementation                 |
+| **timeout**  | 4       | The number of seconds to wait for a valid response                               |
 
 ### Implementation Requirements
 
