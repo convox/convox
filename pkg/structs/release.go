@@ -23,6 +23,14 @@ type ReleaseCreateOptions struct {
 	ParentRelease *string `param:"parent-release"`
 }
 
+type ReleaseCreateFromOptions struct {
+	BuildFrom             *string `flag:"build-from"`
+	EnvFrom               *string `flag:"env-from"`
+	UseActiveReleaseBuild *bool   `flag:"use-active-release-build"`
+	UseActiveReleaseEnv   *bool   `flag:"use-active-release-env"`
+	Promote               *bool   `flag:"promote"`
+}
+
 type ReleaseListOptions struct {
 	Limit *int `flag:"limit,l" query:"limit"`
 }
