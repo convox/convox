@@ -50,6 +50,7 @@ locals {
     node_max_unavailable_percentage = var.node_max_unavailable_percentage
     node_type = var.node_type
     nvidia_device_plugin_enable = var.nvidia_device_plugin_enable
+    nvidia_device_time_slicing_replicas = var.nvidia_device_time_slicing_replicas
     pdb_default_min_available_percentage = var.pdb_default_min_available_percentage
     pod_identity_agent_enable = var.pod_identity_agent_enable
     pod_identity_agent_version = var.pod_identity_agent_version
@@ -126,6 +127,7 @@ locals {
     node_max_unavailable_percentage = "0"
     node_type = "t3.small"
     nvidia_device_plugin_enable = "false"
+    nvidia_device_time_slicing_replicas = "0"
     pdb_default_min_available_percentage = "50"
     pod_identity_agent_enable = "false"
     pod_identity_agent_version = "v1.3.4-eksbuild.1"

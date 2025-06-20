@@ -227,6 +227,11 @@ variable "nvidia_device_plugin_enable" {
   default = false
 }
 
+variable "nvidia_device_time_slicing_replicas" {
+  type    = number
+  default = 0
+}
+
 variable "pdb_default_min_available_percentage" {
   type    = number
   default = 50
