@@ -13,6 +13,24 @@ resource "helm_release" "nvidia_device_plugin" {
 
   values = [
     yamlencode({
+      config = {
+        map = var.nvidia_device_time_slicing_replicas <= 1 ? {} : {
+          default = yamlencode({
+            version = "v1"
+            flags = {
+              "migStrategy" : "none"
+            }
+            sharing = {
+              timeSlicing = {
+                resources = [{
+                  name     = "nvidia.com/gpu"
+                  replicas = var.nvidia_device_time_slicing_replicas
+                }]
+              }
+            }
+          })
+        }
+      }
       affinity = {
         nodeAffinity = {
           requiredDuringSchedulingIgnoredDuringExecution = {
