@@ -38,6 +38,11 @@ variable "docker_hub_password" {
   default = ""
 }
 
+variable "disable_convox_resolver" {
+  type    = bool
+  default = false
+}
+
 variable "disable_image_manifest_cache" {
   type    = bool
   default = false

@@ -164,6 +164,7 @@ module "rack" {
   deploy_extra_nlb                     = var.deploy_extra_nlb
   docker_hub_username                  = var.docker_hub_username
   docker_hub_password                  = var.docker_hub_password
+  disable_convox_resolver              = var.disable_convox_resolver
   disable_image_manifest_cache         = var.disable_image_manifest_cache
   eks_addons                           = module.cluster.eks_addons
   efs_csi_driver_enable                = var.efs_csi_driver_enable
