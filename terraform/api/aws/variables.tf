@@ -43,6 +43,11 @@ variable "domain_internal" {
   type = string
 }
 
+variable "disable_convox_resolver" {
+  type    = bool
+  default = false
+}
+
 variable "disable_image_manifest_cache" {
   type    = bool
   default = false

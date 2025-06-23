@@ -81,6 +81,11 @@ variable "fluentd_disable" {
   default = false
 }
 
+variable "disable_convox_resolver" {
+  type    = bool
+  default = false
+}
+
 variable "disable_image_manifest_cache" {
   type    = bool
   default = false
