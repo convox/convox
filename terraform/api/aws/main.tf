@@ -49,7 +49,7 @@ module "k8s" {
     BUILD_DISABLE_CONVOX_RESOLVER        = var.build_disable_convox_resolver
     PDB_DEFAULT_MIN_AVAILABLE_PERCENTAGE = var.pdb_default_min_available_percentage
     PROVIDER                             = "aws"
-    RESOLVER                             = var.resolver
+    RESOLVER                             = var.disable_convox_resolver ? "" : var.resolver
     ROUTER                               = var.router
     SOCKET                               = "/var/run/docker.sock"
     ECR_SCAN_ON_PUSH_ENABLE              = var.ecr_scan_on_push_enable
