@@ -18,6 +18,7 @@ locals {
     convox_rack_domain = var.convox_rack_domain
     coredns_version = var.coredns_version
     deploy_extra_nlb = var.deploy_extra_nlb
+    disable_convox_resolver = var.disable_convox_resolver
     disable_image_manifest_cache = var.disable_image_manifest_cache
     disable_public_access = var.disable_public_access
     docker_hub_password = var.docker_hub_password
@@ -95,6 +96,7 @@ locals {
     convox_rack_domain = ""
     coredns_version = "v1.11.4-eksbuild.2"
     deploy_extra_nlb = "false"
+    disable_convox_resolver = "false"
     disable_image_manifest_cache = "false"
     disable_public_access = "false"
     docker_hub_password = ""
