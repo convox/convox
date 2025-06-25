@@ -20,6 +20,11 @@ func init() {
 		Validate: stdcli.Args(0),
 	})
 
+	register("releases create-from", "create a new release using the build from one release and the environment from another for an app", ReleasesCreateFrom, stdcli.CommandOptions{
+		Flags:    append(stdcli.OptionFlags(structs.ReleaseCreateFromOptions{}), flagRack, flagApp),
+		Validate: stdcli.Args(0),
+	})
+
 	register("releases info", "get information about a release", ReleasesInfo, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagApp, flagRack},
 		Validate: stdcli.Args(1),
@@ -71,6 +76,67 @@ func Releases(rack sdk.Interface, c *stdcli.Context) error {
 	}
 
 	return t.Print()
+}
+
+func ReleasesCreateFrom(rack sdk.Interface, c *stdcli.Context) error {
+	var opts structs.ReleaseCreateFromOptions
+
+	if err := c.Options(&opts); err != nil {
+		return err
+	}
+
+	if (opts.BuildFrom == nil && opts.UseActiveReleaseBuild == nil) || (opts.BuildFrom != nil && opts.UseActiveReleaseBuild != nil) {
+		return fmt.Errorf("must specify either --build-from or --use-active-release-build")
+	}
+
+	if (opts.EnvFrom == nil && opts.UseActiveReleaseEnv == nil) || (opts.EnvFrom != nil && opts.UseActiveReleaseEnv != nil) {
+		return fmt.Errorf("must specify either --env-from or --use-active-release-env")
+	}
+
+	a, err := rack.AppGet(app(c))
+	if err != nil {
+		return err
+	}
+
+	buildRelease := a.Release
+	if opts.BuildFrom != nil {
+		buildRelease = *opts.BuildFrom
+	}
+
+	buildRs, err := rack.ReleaseGet(app(c), buildRelease)
+	if err != nil {
+		return err
+	}
+
+	envRelease := a.Release
+	if opts.EnvFrom != nil {
+		envRelease = *opts.EnvFrom
+	}
+
+	envRs, err := rack.ReleaseGet(app(c), envRelease)
+	if err != nil {
+		return err
+	}
+
+	c.Writef("Using build from release: %s\n", buildRs.Id)
+	c.Writef("Using env from release: %s\n", envRs.Id)
+
+	result, err := rack.ReleaseCreate(app(c), structs.ReleaseCreateOptions{
+		Build:       options.String(buildRs.Build),
+		Env:         options.String(envRs.Env),
+		Description: options.String(fmt.Sprintf("Created from build release: %s and environment release: %s", buildRs.Id, envRs.Id)),
+	})
+	if err != nil {
+		return err
+	}
+
+	c.Writef("Created release: %s\n", result.Id)
+
+	if opts.Promote != nil && *opts.Promote {
+		return releasePromote(rack, c, app(c), result.Id, false)
+	}
+
+	return c.OK()
 }
 
 func ReleasesInfo(rack sdk.Interface, c *stdcli.Context) error {
