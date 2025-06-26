@@ -132,7 +132,7 @@ func (*BuildKit) Login(bb *Build) error {
 }
 
 func (*BuildKit) cacheProvider(provider string) bool {
-	return provider != "" && strings.Contains("do az", provider) // skipcq
+	return provider != "" && strings.Contains("do az gcp", provider) // skipcq
 }
 
 func (*BuildKit) imageManifestCacheProvider(provider string) bool {
@@ -223,8 +223,8 @@ func (bk *BuildKit) build(bb *Build, path, dockerfile, tag string, env map[strin
 		} else {
 			reg = fmt.Sprintf("%s:buildcache", reg)
 		}
-		args = append(args, "--export-cache", fmt.Sprintf("type=registry,ref=%s", reg)) // skipcq
-		args = append(args, "--import-cache", fmt.Sprintf("type=registry,ref=%s", reg)) // skipcq
+		args = append(args, "--export-cache", fmt.Sprintf("mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true,type=registry,ref=%s", reg)) // skipcq
+		args = append(args, "--import-cache", fmt.Sprintf("type=registry,ref=%s", reg))                                                                    // skipcq
 	} else if bk.imageManifestCacheProvider(os.Getenv("PROVIDER")) {
 		tagParts := strings.Split(tag, ":")
 		reg := tagParts[0]
