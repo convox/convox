@@ -66,6 +66,11 @@ variable "efs_csi_driver_version" {
   default = "v2.0.1-eksbuild.1"
 }
 
+variable "ebs_volume_encryption_enabled" {
+  type    = bool
+  default = false
+}
+
 variable "gpu_type" {
   default = false
 }

@@ -23,6 +23,7 @@ locals {
     disable_public_access = var.disable_public_access
     docker_hub_password = var.docker_hub_password
     docker_hub_username = var.docker_hub_username
+    ebs_volume_encryption_enabled = var.ebs_volume_encryption_enabled
     ecr_scan_on_push_enable = var.ecr_scan_on_push_enable
     efs_csi_driver_enable = var.efs_csi_driver_enable
     efs_csi_driver_version = var.efs_csi_driver_version
@@ -101,6 +102,7 @@ locals {
     disable_public_access = "false"
     docker_hub_password = ""
     docker_hub_username = ""
+    ebs_volume_encryption_enabled = "false"
     ecr_scan_on_push_enable = "false"
     efs_csi_driver_enable = "false"
     efs_csi_driver_version = "v2.1.6-eksbuild.1"
