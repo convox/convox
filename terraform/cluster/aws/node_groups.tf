@@ -140,6 +140,7 @@ resource "aws_launch_template" "cluster_additional" {
     ebs {
       volume_type = "gp3"
       volume_size = random_id.additional_node_groups[each.key].keepers.node_disk
+      encrypted   = var.ebs_volume_encryption_enabled
     }
   }
 
@@ -268,6 +269,7 @@ resource "aws_launch_template" "build_additional" {
     ebs {
       volume_type = "gp3"
       volume_size = random_id.build_node_additional[each.key].keepers.node_disk
+      encrypted   = var.ebs_volume_encryption_enabled
     }
   }
 

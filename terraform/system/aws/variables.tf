@@ -101,6 +101,11 @@ variable "ecr_scan_on_push_enable" {
   default = false
 }
 
+variable "ebs_volume_encryption_enabled" {
+  type    = bool
+  default = false
+}
+
 variable "efs_csi_driver_enable" {
   type    = bool
   default = false
