@@ -66,6 +66,11 @@ variable "efs_csi_driver_version" {
   default = "v2.0.1-eksbuild.1"
 }
 
+variable "ebs_volume_encryption_enabled" {
+  type    = bool
+  default = false
+}
+
 variable "gpu_type" {
   default = false
 }
@@ -154,6 +159,11 @@ variable "node_type" {
 
 variable "nvidia_device_plugin_enable" {
   default = false
+}
+
+variable "nvidia_device_time_slicing_replicas" {
+  type    = number
+  default = 0
 }
 
 variable "pod_identity_agent_enable" {

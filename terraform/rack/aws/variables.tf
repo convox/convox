@@ -25,6 +25,11 @@ variable "convox_rack_domain" {
   type    = string
 }
 
+variable "custom_provided_bucket" {
+  type    = string
+  default = ""
+}
+
 variable "deploy_extra_nlb" {
   default = false
   type    = bool
@@ -36,6 +41,11 @@ variable "docker_hub_username" {
 
 variable "docker_hub_password" {
   default = ""
+}
+
+variable "disable_convox_resolver" {
+  type    = bool
+  default = false
 }
 
 variable "disable_image_manifest_cache" {

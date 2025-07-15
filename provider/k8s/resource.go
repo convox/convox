@@ -103,6 +103,16 @@ func (p *Provider) ResourceGet(app, name string) (*structs.Resource, error) {
 		return r, err
 	}
 
+	if mr.IsElastiCache() {
+		isAvailable, err := p.ElasticacheProvisioner.IsElastiCacheAvailable(p.CreateAwsResourceStateId(app, name))
+		if isAvailable {
+			r.Status = "running"
+		} else {
+			r.Status = "pending"
+		}
+		return r, err
+	}
+
 	overlay, err := p.resourceOverlay(app, name)
 	if err != nil {
 		return nil, err
@@ -173,6 +183,13 @@ func (p *Provider) ResourceList(app string) (structs.Resources, error) {
 	}
 
 	rs = append(rs, rdss...)
+
+	caches, err := p.ElastiCacheResourceList(app)
+	if err != nil {
+		return nil, err
+	}
+
+	rs = append(rs, caches...)
 
 	return rs, nil
 }
@@ -329,6 +346,29 @@ func (p *Provider) RdsResourceList(app string) (structs.Resources, error) {
 			}
 		}
 	}
+	return rs, nil
+}
+
+func (p *Provider) ElastiCacheResourceList(app string) (structs.Resources, error) {
+	m, _, err := common.AppManifest(p, app)
+	if err != nil {
+		return nil, err
+	}
+
+	rs := structs.Resources{}
+
+	for _, mr := range m.Resources {
+		if mr.IsElastiCache() {
+			r, err := p.ResourceGet(app, mr.Name)
+			if err != nil {
+				return nil, err
+			}
+			if r != nil {
+				rs = append(rs, *r)
+			}
+		}
+	}
+
 	return rs, nil
 }
 

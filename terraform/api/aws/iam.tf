@@ -96,7 +96,7 @@ data "aws_iam_policy_document" "storage" {
       "s3:ListBucket",
     ]
     resources = [
-      aws_s3_bucket.storage.arn,
+      var.custom_provided_bucket != "" ? data.aws_s3_bucket.custom_bucket[0].arn : aws_s3_bucket.storage.arn,
     ]
   }
 
@@ -109,7 +109,7 @@ data "aws_iam_policy_document" "storage" {
       "s3:PutObject",
     ]
     resources = [
-      "${aws_s3_bucket.storage.arn}/*",
+      var.custom_provided_bucket != "" ? "${data.aws_s3_bucket.custom_bucket[0].arn}/*" : "${aws_s3_bucket.storage.arn}/*",
     ]
   }
 }

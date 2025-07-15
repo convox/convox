@@ -266,11 +266,6 @@ resource "kubernetes_deployment" "api" {
             timeout_seconds       = 3
           }
 
-          volume_mount {
-            name       = "docker"
-            mount_path = "/var/run/docker.sock"
-          }
-
           dynamic "volume_mount" {
             for_each = var.volumes
             iterator = volume

@@ -63,6 +63,11 @@ variable "coredns_version" {
   default = "v1.11.4-eksbuild.2"
 }
 
+variable "custom_provided_bucket" {
+  type    = string
+  default = ""
+}
+
 variable "deploy_extra_nlb" {
   default = false
   type    = bool
@@ -81,6 +86,11 @@ variable "fluentd_disable" {
   default = false
 }
 
+variable "disable_convox_resolver" {
+  type    = bool
+  default = false
+}
+
 variable "disable_image_manifest_cache" {
   type    = bool
   default = false
@@ -92,6 +102,11 @@ variable "disable_public_access" {
 }
 
 variable "ecr_scan_on_push_enable" {
+  type    = bool
+  default = false
+}
+
+variable "ebs_volume_encryption_enabled" {
   type    = bool
   default = false
 }
@@ -225,6 +240,11 @@ variable "nginx_image" {
 
 variable "nvidia_device_plugin_enable" {
   default = false
+}
+
+variable "nvidia_device_time_slicing_replicas" {
+  type    = number
+  default = 0
 }
 
 variable "pdb_default_min_available_percentage" {

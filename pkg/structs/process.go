@@ -38,20 +38,21 @@ type ProcessListOptions struct {
 }
 
 type ProcessRunOptions struct {
-	Command     *string           `header:"Command"`
-	Cpu         *int              `flag:"cpu" header:"Cpu"`
-	CpuLimit    *int              `flag:"cpu-limit" header:"Cpu-Limit"`
-	Environment map[string]string `header:"Environment"`
-	Gpu         *int              `flag:"gpu" header:"Gpu"`
-	Height      *int              `header:"Height"`
-	Image       *string           `header:"Image"`
-	Memory      *int              `flag:"memory" header:"Memory"`
-	MemoryLimit *int              `flag:"memory-limit" header:"Memory-Limit"`
-	Release     *string           `flag:"release" header:"Release"`
-	Volumes     map[string]string `header:"Volumes"`
-	Width       *int              `header:"Width"`
-	Privileged  *bool             `header:"Privileged"`
-	NodeLabels  *string           `flag:"node-labels" header:"Node-Labels"`
+	Command        *string           `header:"Command"`
+	Cpu            *int              `flag:"cpu" header:"Cpu"`
+	CpuLimit       *int              `flag:"cpu-limit" header:"Cpu-Limit"`
+	Environment    map[string]string `header:"Environment"`
+	Gpu            *int              `flag:"gpu" header:"Gpu"`
+	Height         *int              `header:"Height"`
+	Image          *string           `header:"Image"`
+	Memory         *int              `flag:"memory" header:"Memory"`
+	MemoryLimit    *int              `flag:"memory-limit" header:"Memory-Limit"`
+	Release        *string           `flag:"release" header:"Release"`
+	Volumes        map[string]string `header:"Volumes"`
+	Width          *int              `header:"Width"`
+	Privileged     *bool             `header:"Privileged"`
+	NodeLabels     *string           `flag:"node-labels" header:"Node-Labels"`
+	SystemCritical *bool             `flag:"system-critical" header:"System-Critical"`
 }
 
 func (p *Process) sortKey() string {

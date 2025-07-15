@@ -28,6 +28,7 @@ module "api" {
   build_disable_convox_resolver        = var.build_disable_convox_resolver
   build_node_enabled                   = var.build_node_enabled
   convox_domain_tls_cert_disable       = var.convox_domain_tls_cert_disable
+  custom_provided_bucket               = var.custom_provided_bucket
   docker_hub_authentication            = module.k8s.docker_hub_authentication
   docker_hub_username                  = var.docker_hub_username
   docker_hub_password                  = var.docker_hub_password
@@ -47,6 +48,7 @@ module "api" {
   oidc_sub                             = var.oidc_sub
   pdb_default_min_available_percentage = var.pdb_default_min_available_percentage
   release                              = var.release
+  disable_convox_resolver              = var.disable_convox_resolver
   resolver                             = module.resolver.endpoint
   router                               = module.router.endpoint
   subnets                              = var.subnets

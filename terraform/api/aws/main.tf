@@ -42,14 +42,14 @@ module "k8s" {
 
   env = {
     AWS_REGION                           = data.aws_region.current.name
-    BUCKET                               = aws_s3_bucket.storage.id
+    BUCKET                               = var.custom_provided_bucket != "" ? data.aws_s3_bucket.custom_bucket[0].id : aws_s3_bucket.storage.id
     CERT_MANAGER                         = "true"
     CERT_MANAGER_ROLE_ARN                = aws_iam_role.cert-manager.arn
     EFS_FILE_SYSTEM_ID                   = var.efs_file_system_id
     BUILD_DISABLE_CONVOX_RESOLVER        = var.build_disable_convox_resolver
     PDB_DEFAULT_MIN_AVAILABLE_PERCENTAGE = var.pdb_default_min_available_percentage
     PROVIDER                             = "aws"
-    RESOLVER                             = var.resolver
+    RESOLVER                             = var.disable_convox_resolver ? "" : var.resolver
     ROUTER                               = var.router
     SOCKET                               = "/var/run/docker.sock"
     ECR_SCAN_ON_PUSH_ENABLE              = var.ecr_scan_on_push_enable

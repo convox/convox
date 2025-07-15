@@ -354,6 +354,10 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 		}
 	}
 
+	if opts.SystemCritical != nil && *opts.SystemCritical {
+		s.PriorityClassName = "system-node-critical"
+	}
+
 	pod := &ac.Pod{
 		ObjectMeta: am.ObjectMeta{
 			Annotations:  ans,

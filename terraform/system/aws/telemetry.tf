@@ -18,10 +18,12 @@ locals {
     convox_rack_domain = var.convox_rack_domain
     coredns_version = var.coredns_version
     deploy_extra_nlb = var.deploy_extra_nlb
+    disable_convox_resolver = var.disable_convox_resolver
     disable_image_manifest_cache = var.disable_image_manifest_cache
     disable_public_access = var.disable_public_access
     docker_hub_password = var.docker_hub_password
     docker_hub_username = var.docker_hub_username
+    ebs_volume_encryption_enabled = var.ebs_volume_encryption_enabled
     ecr_scan_on_push_enable = var.ecr_scan_on_push_enable
     efs_csi_driver_enable = var.efs_csi_driver_enable
     efs_csi_driver_version = var.efs_csi_driver_version
@@ -50,6 +52,7 @@ locals {
     node_max_unavailable_percentage = var.node_max_unavailable_percentage
     node_type = var.node_type
     nvidia_device_plugin_enable = var.nvidia_device_plugin_enable
+    nvidia_device_time_slicing_replicas = var.nvidia_device_time_slicing_replicas
     pdb_default_min_available_percentage = var.pdb_default_min_available_percentage
     pod_identity_agent_enable = var.pod_identity_agent_enable
     pod_identity_agent_version = var.pod_identity_agent_version
@@ -94,10 +97,12 @@ locals {
     convox_rack_domain = ""
     coredns_version = "v1.11.4-eksbuild.2"
     deploy_extra_nlb = "false"
+    disable_convox_resolver = "false"
     disable_image_manifest_cache = "false"
     disable_public_access = "false"
     docker_hub_password = ""
     docker_hub_username = ""
+    ebs_volume_encryption_enabled = "false"
     ecr_scan_on_push_enable = "false"
     efs_csi_driver_enable = "false"
     efs_csi_driver_version = "v2.1.6-eksbuild.1"
@@ -126,6 +131,7 @@ locals {
     node_max_unavailable_percentage = "0"
     node_type = "t3.small"
     nvidia_device_plugin_enable = "false"
+    nvidia_device_time_slicing_replicas = "0"
     pdb_default_min_available_percentage = "50"
     pod_identity_agent_enable = "false"
     pod_identity_agent_version = "v1.3.4-eksbuild.1"
