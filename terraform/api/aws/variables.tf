@@ -21,6 +21,11 @@ variable "convox_domain_tls_cert_disable" {
   type    = bool
 }
 
+variable "custom_provided_bucket" {
+  type    = string
+  default = ""
+}
+
 variable "docker_hub_authentication" {
   type = string
 }
@@ -125,4 +130,3 @@ variable "subnets" {
 variable "vpc_id" {
   type = string
 }
-

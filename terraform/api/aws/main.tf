@@ -42,7 +42,7 @@ module "k8s" {
 
   env = {
     AWS_REGION                           = data.aws_region.current.name
-    BUCKET                               = aws_s3_bucket.storage.id
+    BUCKET                               = var.custom_provided_bucket != "" ? data.aws_s3_bucket.custom_bucket[0].id : aws_s3_bucket.storage.id
     CERT_MANAGER                         = "true"
     CERT_MANAGER_ROLE_ARN                = aws_iam_role.cert-manager.arn
     EFS_FILE_SYSTEM_ID                   = var.efs_file_system_id

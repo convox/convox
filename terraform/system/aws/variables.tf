@@ -63,6 +63,11 @@ variable "coredns_version" {
   default = "v1.11.4-eksbuild.2"
 }
 
+variable "custom_provided_bucket" {
+  type    = string
+  default = ""
+}
+
 variable "deploy_extra_nlb" {
   default = false
   type    = bool

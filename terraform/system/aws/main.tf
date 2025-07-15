@@ -162,6 +162,7 @@ module "rack" {
   cluster                              = module.cluster.id
   convox_domain_tls_cert_disable       = var.convox_domain_tls_cert_disable
   convox_rack_domain                   = var.convox_rack_domain
+  custom_provided_bucket               = var.custom_provided_bucket
   deploy_extra_nlb                     = var.deploy_extra_nlb
   docker_hub_username                  = var.docker_hub_username
   docker_hub_password                  = var.docker_hub_password

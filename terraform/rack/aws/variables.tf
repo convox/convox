@@ -25,6 +25,11 @@ variable "convox_rack_domain" {
   type    = string
 }
 
+variable "custom_provided_bucket" {
+  type    = string
+  default = ""
+}
+
 variable "deploy_extra_nlb" {
   default = false
   type    = bool
