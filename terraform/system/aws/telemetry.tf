@@ -17,6 +17,7 @@ locals {
     convox_domain_tls_cert_disable = var.convox_domain_tls_cert_disable
     convox_rack_domain = var.convox_rack_domain
     coredns_version = var.coredns_version
+    custom_provided_bucket = var.custom_provided_bucket
     deploy_extra_nlb = var.deploy_extra_nlb
     disable_convox_resolver = var.disable_convox_resolver
     disable_image_manifest_cache = var.disable_image_manifest_cache
@@ -96,6 +97,7 @@ locals {
     convox_domain_tls_cert_disable = "false"
     convox_rack_domain = ""
     coredns_version = "v1.11.4-eksbuild.2"
+    custom_provided_bucket = ""
     deploy_extra_nlb = "false"
     disable_convox_resolver = "false"
     disable_image_manifest_cache = "false"
