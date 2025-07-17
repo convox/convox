@@ -23,6 +23,8 @@ The following parameters are available for configuring your Convox rack on Amazo
 | [cert_duration](/configuration/rack-parameters/aws/cert_duration)                   | Specifies the certification renewal period.                              |
 | [cidr](/configuration/rack-parameters/aws/cidr)                                     | Specifies the CIDR range for the VPC.                                     |
 | [convox_domain_tls_cert_disable](/configuration/rack-parameters/aws/convox_domain_tls_cert_disable) | Disables Convox domain TLS certificate generation for services. |
+| [disable_convox_resolver](/configuration/rack-parameters/aws/disable_convox_resolver) | Disables the Convox resolver and uses the Kubernetes resolver instead. |
+| [ebs_volume_encryption_enabled](/configuration/rack-parameters/aws/ebs_volume_encryption_enabled) | Enables encryption for EBS volumes used by primary node disks. |
 | [ecr_scan_on_push_enable](/configuration/rack-parameters/aws/ecr_scan_on_push_enable) | Enables automatic vulnerability scanning for images pushed to ECR. |
 | [efs_csi_driver_enable](/configuration/rack-parameters/aws/efs_csi_driver_enable)   | Enables the EFS CSI driver to use AWS EFS volumes.                       |
 | [fluentd_disable](/configuration/rack-parameters/aws/fluentd_disable)               | Disables Fluentd installation in the rack.                               |
@@ -40,6 +42,8 @@ The following parameters are available for configuring your Convox rack on Amazo
 | [node_capacity_type](/configuration/rack-parameters/aws/node_capacity_type)         | Specifies the node capacity type: on-demand, spot, or mixed.             |
 | [node_disk](/configuration/rack-parameters/aws/node_disk)                           | Specifies the node disk size in GB.                                      |
 | [node_type](/configuration/rack-parameters/aws/node_type)                           | Specifies the node instance type.                                        |
+| [nvidia_device_plugin_enable](/configuration/rack-parameters/aws/nvidia_device_plugin_enable) | Enables the NVIDIA GPU device plugin for GPU workloads. |
+| [nvidia_device_time_slicing_replicas](/configuration/rack-parameters/aws/nvidia_device_time_slicing_replicas) | Configures GPU time slicing by setting the number of virtual replicas per physical GPU. |
 | [pdb_default_min_available_percentage](/configuration/rack-parameters/aws/pdb_default_min_available_percentage) | Sets the default minimum percentage for Pod Disruption Budgets. |
 | [pod_identity_agent_enable](/configuration/rack-parameters/aws/pod_identity_agent_enable) | Enables the AWS Pod Identity Agent. |
 | [private](/configuration/rack-parameters/aws/private)                               | Specifies whether to place nodes in private subnets behind NAT gateways. |
@@ -55,3 +59,28 @@ The following parameters are available for configuring your Convox rack on Amazo
 | [user_data](/configuration/rack-parameters/aws/user_data)                           | Specifies custom commands to append to EC2 instance user data scripts.   |
 | [user_data_url](/configuration/rack-parameters/aws/user_data_url)                   | Specifies a URL to a script to append to EC2 instance user data scripts. |
 | [vpc_id](/configuration/rack-parameters/aws/vpc_id)                                 | Specifies the ID of an existing VPC to use for cluster creation.         |
+
+## Setting Parameters
+
+To set an rack parameter, use the following command:
+```html
+$ convox rack params set parameterName=value -r rackName
+Updating parameters... OK
+```
+
+For example, to set the `node_type` parameter:
+```html
+$ convox rack params set node_type=m5.xlarge -r rackName
+Updating parameters... OK
+```
+
+## Viewing Parameters
+
+To view the current parameters for a rack:
+```html
+$ convox rack params -r rackName
+access_log_retention_in_days          7
+build_node_enabled                    true
+build_node_min_count                  0
+build_node_type                       t3.small
+```
