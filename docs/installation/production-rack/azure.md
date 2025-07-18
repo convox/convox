@@ -65,7 +65,7 @@ echo "Subscription ID: $ARM_SUBSCRIPTION_ID"
 ```
 
 **Expected output:**
-```
+```html
 # az account list --output table
 Name             CloudName    SubscriptionId                        State    IsDefault
 ---------------  -----------  ------------------------------------  -------  -----------
