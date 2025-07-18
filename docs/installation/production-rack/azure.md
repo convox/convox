@@ -10,8 +10,6 @@ url: /installation/production-rack/azure
 
 > These are instructions for installing a Rack via the command line. The easiest way to install a Rack is with the [Convox Web Console](https://console.convox.com)
 
----
-
 ## Initial Setup
 
 ### 1 Install prerequisites
@@ -22,13 +20,13 @@ url: /installation/production-rack/azure
 | **Terraform** (optional)  | [https://developer.hashicorp.com/terraform/tutorials](https://developer.hashicorp.com/terraform/tutorials)       |
 | **Convox CLI**            | [/installation/cli](/installation/cli)                                                                           |
 
-```bash
+```html
 # sign‑in to Azure
 az login
 ```
 
 **Expected output:**
-```
+```html
 A web browser has been opened at https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize. 
 Please continue the login in the web browser.
 
@@ -41,8 +39,6 @@ No     Subscription name    Subscription ID                       Tenant
 The default is marked with an *; the default tenant is 'YourTenant' and subscription is 'Your Subscription'.
 ```
 
----
-
 ## 2 Environment variables required by Terraform
 
 | Variable              | Where to get it                                     |
@@ -52,11 +48,9 @@ The default is marked with an *; the default tenant is 'YourTenant' and subscrip
 | `ARM_SUBSCRIPTION_ID` | `az account show --query id -o tsv`                 |
 | `ARM_TENANT_ID`       | `az account show --query tenantId -o tsv`           |
 
----
-
 ## 3 Select your subscription and set environment variables
 
-```bash
+```html
 # List available subscriptions
 az account list --output table
 
@@ -71,7 +65,7 @@ echo "Subscription ID: $ARM_SUBSCRIPTION_ID"
 ```
 
 **Expected output:**
-```bash
+```
 # az account list --output table
 Name             CloudName    SubscriptionId                        State    IsDefault
 ---------------  -----------  ------------------------------------  -------  -----------
@@ -81,11 +75,9 @@ Your Subscription AzureCloud   xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx  Enabled  Tr
 Subscription ID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 ```
 
----
-
 ## 4 Create the Terraform service‑principal
 
-```bash
+```html
 az ad sp create-for-rbac \
   --name terraform \
   --role Owner \
@@ -93,7 +85,7 @@ az ad sp create-for-rbac \
 ```
 
 **Expected output:**
-```json
+```html
 {
   "appId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
   "displayName": "terraform",
@@ -103,7 +95,7 @@ az ad sp create-for-rbac \
 ```
 
 **Set environment variables from the output:**
-```bash
+```html
 # Copy the appId from the output above
 export ARM_CLIENT_ID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 
@@ -114,13 +106,11 @@ export ARM_CLIENT_SECRET="xxxxx~xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 export ARM_TENANT_ID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 ```
 
----
-
 ## 5 Grant Microsoft Graph permissions (API scope)
 
 **Note:** The original documentation had an incorrect permission ID. Use the corrected commands below:
 
-```bash
+```html
 # Add User.Read delegated permission (corrected permission ID)
 az ad app permission add --id $ARM_CLIENT_ID \
   --api 00000003-0000-0000-c000-000000000000 \
@@ -136,7 +126,7 @@ az ad app permission admin-consent --id $ARM_CLIENT_ID
 ```
 
 **Expected output:**
-```bash
+```html
 # First command output:
 Invoking `az ad app permission grant --id xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --api 00000003-0000-0000-c000-000000000000` is needed to make the change effective
 
@@ -154,17 +144,13 @@ Invoking `az ad app permission grant --id xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx -
 # Third command completes silently if successful
 ```
 
----
-
-## 6 **NEW — Assign the Application Administrator directory role**
+## 6 Assign the Application Administrator directory role
 
 Terraform/Convox must be able to create Azure AD (Entra) application objects. Because Azure RBAC roles do **not** flow into Entra ID, you need to grant the service‑principal a **directory role**.
 
 > The quickest safe choice is **Application Administrator**. (Cloud Application Administrator also works.)
 
-### 6·1 Assign via Azure CLI + Microsoft Graph
-
-```bash
+```html
 # 1) Get the internal roleDefinitionId for "Application Administrator"
 ROLE_ID=$(az rest --method GET \
   --url "https://graph.microsoft.com/v1.0/roleManagement/directory/roleDefinitions?\$filter=displayName eq 'Application Administrator'" \
@@ -187,7 +173,7 @@ az rest --method POST \
 ```
 
 **Expected output:**
-```bash
+```html
 # echo "Role ID: $ROLE_ID"
 Role ID: 9b895d92-2cd3-44c7-9d02-a6ac2d5ea5c3
 
@@ -204,13 +190,11 @@ Service Principal Object ID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 }
 ```
 
----
-
 ## 7 Verify your environment variables
 
 Before proceeding to install the Rack, verify all required environment variables are set:
 
-```bash
+```html
 echo "ARM_SUBSCRIPTION_ID: $ARM_SUBSCRIPTION_ID"
 echo "ARM_CLIENT_ID: $ARM_CLIENT_ID"  
 echo "ARM_CLIENT_SECRET: $ARM_CLIENT_SECRET"
@@ -218,7 +202,7 @@ echo "ARM_TENANT_ID: $ARM_TENANT_ID"
 ```
 
 **Expected output:**
-```bash
+```html
 ARM_SUBSCRIPTION_ID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 ARM_CLIENT_ID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 ARM_CLIENT_SECRET: xxxxx~xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -227,11 +211,9 @@ ARM_TENANT_ID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 
 **Important:** If any of these are empty, go back and re-run the relevant commands from steps 3-4.
 
----
-
 ## 8 Install the Rack
 
-```bash
+```html
 convox rack install azure <name> [param=value]…
 ```
 
@@ -243,12 +225,9 @@ convox rack install azure <name> [param=value]…
 | `syslog`        |                  | Forward logs to a syslog endpoint |
 
 **Example:**
-```bash
+```html
 convox rack install azure my-rack region=westus2 node_type=Standard_D2_v3
 ```
-
----
-
 ## 9 Troubleshooting
 
 ### Common Issues and Solutions
@@ -266,7 +245,7 @@ convox rack install azure my-rack region=westus2 node_type=Standard_D2_v3
 **Solution:** 
 1. Verify step 6 completed successfully
 2. Check that the service principal has the role assigned:
-   ```bash
+   ```html
    az rest --method GET \
      --url "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?\$filter=principalId eq '${SP_OBJECT_ID}'"
    ```
@@ -274,7 +253,7 @@ convox rack install azure my-rack region=westus2 node_type=Standard_D2_v3
 #### Issue: Environment variables not persisting
 **Cause:** Variables only exist in current shell session.
 **Solution:** Either re-export them or add them to your shell profile:
-```bash
+```html
 # Add to ~/.bashrc or ~/.zshrc
 export ARM_SUBSCRIPTION_ID="your-subscription-id"
 export ARM_CLIENT_ID="your-client-id"
@@ -286,7 +265,7 @@ export ARM_TENANT_ID="your-tenant-id"
 
 To verify your setup is correct before installing:
 
-```bash
+```html
 # Test Azure CLI authentication
 az account show
 
@@ -297,8 +276,6 @@ az account show
 # Switch back to your user account
 az login
 ```
-
----
 
 ## 10 Alternative: Using Convox Console Runtime Integration
 
@@ -326,7 +303,7 @@ You'll need the following values from the previous steps. Here's where to find e
 
 From your service principal creation output:
 
-```json
+```html
 {
   "appId": "abcdef12-3456-7890-abcd-ef1234567890",      ← Client ID
   "displayName": "terraform",
@@ -336,7 +313,7 @@ From your service principal creation output:
 ```
 
 **Quick reference commands to get these values:**
-```bash
+```html
 # Subscription ID
 echo "Subscription ID: $ARM_SUBSCRIPTION_ID"
 
