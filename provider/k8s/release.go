@@ -87,7 +87,9 @@ func (p *Provider) ReleaseList(app string, opts structs.ReleaseListOptions) (str
 		return nil, errors.WithStack(err)
 	}
 
-	rs, err := p.releaseList(app)
+	limit := common.DefaultInt(opts.Limit, 10)
+
+	rs, err := p.releaseList(app, limit)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -303,8 +305,10 @@ func (p *Provider) releaseFork(app string, parentRelease *string) (*structs.Rele
 	return r, nil
 }
 
-func (p *Provider) releaseList(app string) (structs.Releases, error) {
-	krs, err := p.Convox.ConvoxV1().Releases(p.AppNamespace(app)).List(am.ListOptions{})
+func (p *Provider) releaseList(app string, limit int) (structs.Releases, error) {
+	krs, err := p.Convox.ConvoxV1().Releases(p.AppNamespace(app)).List(am.ListOptions{
+		Limit: int64(limit),
+	})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

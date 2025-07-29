@@ -12,7 +12,7 @@ build: $(binaries)
 clean: clean-package
 
 clean-package:
-	find . -name '*-packr.go' -delete
+	echo "not supported"
 
 compress: $(binaries)
 	echo "not supported"
@@ -51,7 +51,7 @@ mocks: generate-provider
 	go run vendor/github.com/vektra/mockery/cmd/mockery/mockery.go -case underscore -dir pkg/build -outpkg build -output pkg/mock/build -name Engine
 
 package:
-	go run -mod=vendor vendor/github.com/gobuffalo/packr/packr/main.go
+	echo "not needed"
 
 release:
 	test -n "$(VERSION)" # VERSION
