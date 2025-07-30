@@ -485,7 +485,7 @@ func applyTemplate(namespace string, data []byte, filter string) ([]byte, error)
 	args := []string{"--prune", "-l", filter, "--namespace", namespace}
 
 	for _, r := range rs {
-		args = append(args, "--prune-whitelist", r)
+		args = append(args, "--prune-allowlist", r)
 	}
 
 	out, err := kubectlApply(data, args...)

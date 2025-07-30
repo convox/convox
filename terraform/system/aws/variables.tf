@@ -118,7 +118,7 @@ variable "efs_csi_driver_enable" {
 
 variable "efs_csi_driver_version" {
   type    = string
-  default = "2.1.9-eksbuild.1"
+  default = "v2.1.9-eksbuild.1"
 }
 
 variable "gpu_tag_enable" {
