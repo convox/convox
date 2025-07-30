@@ -7,3 +7,4 @@ terraform/platform/convox.platform
 .vscode/
 cmd/convox/convox
 examples/httpd/*.tgz
+personal/
