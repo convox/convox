@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/convox/convox/pkg/common"
@@ -13,8 +14,10 @@ import (
 	"github.com/convox/convox/pkg/structs"
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
+	flowcontrolv1 "k8s.io/api/flowcontrol/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	appsv1 "k8s.io/client-go/applyconfigurations/apps/v1"
 	corev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	amv1 "k8s.io/client-go/applyconfigurations/meta/v1"
@@ -203,4 +206,64 @@ func (p *Provider) updateJwtSignKey() (string, error) {
 		FieldManager: "convox-system",
 	})
 	return base64.StdEncoding.EncodeToString([]byte(signKey)), err
+}
+
+func (p *Provider) createOrUpdateFlowSchema(namespace string, saNames []string) error {
+	p.logger.Logf("Creating or updating flow schema for service accounts %s in namespace %s", strings.Join(saNames, ", "), namespace)
+
+	fs := &flowcontrolv1.FlowSchema{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "convox-high-priority",
+		},
+		Spec: flowcontrolv1.FlowSchemaSpec{
+			MatchingPrecedence: 1001,
+			PriorityLevelConfiguration: flowcontrolv1.PriorityLevelConfigurationReference{
+				Name: "workload-high",
+			},
+			DistinguisherMethod: &flowcontrolv1.FlowDistinguisherMethod{
+				Type: flowcontrolv1.FlowDistinguisherMethodByUserType,
+			},
+			Rules: []flowcontrolv1.PolicyRulesWithSubjects{
+				{
+					Subjects: []flowcontrolv1.Subject{},
+					ResourceRules: []flowcontrolv1.ResourcePolicyRule{
+						{
+							Verbs:     []string{"*"},
+							APIGroups: []string{"*"},
+							Resources: []string{"*"},
+						},
+					},
+					NonResourceRules: []flowcontrolv1.NonResourcePolicyRule{
+						{
+							Verbs:           []string{"*"},
+							NonResourceURLs: []string{"*"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, saName := range saNames {
+		fs.Spec.Rules[0].Subjects = append(fs.Spec.Rules[0].Subjects, flowcontrolv1.Subject{
+			Kind: "ServiceAccount",
+			ServiceAccount: &flowcontrolv1.ServiceAccountSubject{
+				Name:      saName,
+				Namespace: namespace,
+			},
+		})
+	}
+
+	flowSchemas := p.Cluster.FlowcontrolV1().FlowSchemas()
+	ctx := context.Background()
+
+	existing, err := flowSchemas.Get(ctx, fs.Name, metav1.GetOptions{})
+	if err == nil && existing != nil {
+		fs.ResourceVersion = existing.ResourceVersion
+		_, err = flowSchemas.Update(ctx, fs, metav1.UpdateOptions{})
+		return err
+	}
+
+	_, err = flowSchemas.Create(ctx, fs, metav1.CreateOptions{})
+	return err
 }

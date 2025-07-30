@@ -221,6 +221,12 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 
 	p.JwtMngr = jwt.NewJwtManager(signKey)
 
+	if err := p.createOrUpdateFlowSchema(p.Namespace, []string{
+		"api", "atom", "resolver",
+	}); err != nil {
+		p.logger.Errorf("error creating flow schema: %v", err)
+	}
+
 	return nil
 }
 
