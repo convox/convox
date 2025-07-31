@@ -334,10 +334,10 @@ It takes inputs just like a container and runs before main container. It support
 
 ### scale.limit
 
-| Attribute | Type   | Default | Description                                                                                |
-| --------- | ------ | ------- | ------------------------------------------------------------------------------------------ |
-| **cpu**     | number |         | The number of CPU units to limit for [Processes](/reference/primitives/app/process) of this Service where 1000 units is a full CPU    |
-| **memory**  | number |         | The number of MB of RAM to limit for [Processes](/reference/primitives/app/process) of this Service |
+| Attribute  | Type   | Default       | Description                                                                                           |
+| ---------- | ------ | ------------- | ----------------------------------------------------------------------------------------------------- |
+| **cpu**    | number |               | The number of CPU units to limit for [Processes](/reference/primitives/app/process) of this Service where 1000 units is a full CPU |
+| **memory** | number | <scale.memory> | The number of MB of RAM to limit for [Processes](/reference/primitives/app/process) of this Service     |
 
 ### scale.targets.[]external
 
