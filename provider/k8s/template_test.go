@@ -10,12 +10,12 @@ import (
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/pkg/templater"
-	"github.com/gobuffalo/packr"
+	"github.com/convox/convox/provider/k8s/template"
 )
 
 func TestRenderTemplate(t *testing.T) {
 	p := Provider{}
-	p.templater = templater.New(packr.NewBox("../k8s/template"), p.templateHelpers())
+	p.templater = templater.New(template.TemplatesFS, p.templateHelpers())
 
 	data, err := p.RenderTemplate(fmt.Sprintf("system/%s", "cert-manager-letsencrypt"), map[string]interface{}{
 		"Config": structs.LetsEncryptConfig{
@@ -83,7 +83,7 @@ func TestRenderTemplateService(t *testing.T) {
 	p := Provider{
 		Engine: &mock.TestEngine{},
 	}
-	p.templater = templater.New(packr.NewBox("../k8s/template"), p.templateHelpers())
+	p.templater = templater.New(template.TemplatesFS, p.templateHelpers())
 
 	var data []byte
 
