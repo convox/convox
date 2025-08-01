@@ -146,7 +146,7 @@ resource "aws_subnet" "private" {
 resource "aws_eip" "nat" {
   count = !local.is_custom_subnets_provided ? (var.private ? local.network_resource_count : 0) : 0
 
-  vpc = true
+  domain = "vpc"
 
   tags = merge(local.tags, {
     Name = "${var.name} nat ${count.index}"

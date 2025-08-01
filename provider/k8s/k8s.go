@@ -19,8 +19,8 @@ import (
 	"github.com/convox/convox/provider/aws/provisioner/elasticache"
 	"github.com/convox/convox/provider/aws/provisioner/rds"
 	cv "github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned"
+	"github.com/convox/convox/provider/k8s/template"
 	"github.com/convox/logger"
-	"github.com/gobuffalo/packr"
 	"github.com/pkg/errors"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
@@ -195,7 +195,7 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 	p.ctx = context.Background()
 	p.logger = logger.New("ns=k8s")
 	p.metrics = metrics.New("https://metrics.convox.com/metrics/rack")
-	p.templater = templater.New(packr.NewBox("../k8s/template"), p.templateHelpers())
+	p.templater = templater.New(template.TemplatesFS, p.templateHelpers())
 	p.webhooks = []string{}
 
 	if os.Getenv("TEST") == "true" {
@@ -220,6 +220,12 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 	}
 
 	p.JwtMngr = jwt.NewJwtManager(signKey)
+
+	if err := p.createOrUpdateFlowSchema(p.Namespace, []string{
+		"api", "atom", "resolver",
+	}); err != nil {
+		p.logger.Errorf("error creating flow schema: %v", err)
+	}
 
 	return nil
 }

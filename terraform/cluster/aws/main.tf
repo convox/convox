@@ -94,7 +94,7 @@ resource "random_id" "node_group" {
   byte_length = 8
 
   keepers = {
-    dummy               = "2"
+    dummy               = "3"
     node_capacity_type  = var.node_capacity_type
     node_disk           = var.node_disk
     node_type           = var.node_type
@@ -111,7 +111,7 @@ resource "random_id" "build_node_group" {
   byte_length = 8
 
   keepers = {
-    dummy               = "2"
+    dummy               = "3"
     node_disk           = var.node_disk
     node_type           = var.build_node_type
     private_subnets_ids = join("-", local.private_subnets_ids)
@@ -127,7 +127,7 @@ resource "aws_eks_node_group" "cluster" {
 
   count = var.high_availability ? 3 : 1
 
-  ami_type        = var.gpu_type ? "AL2_x86_64_GPU" : var.arm_type ? "AL2_ARM_64" : "AL2_x86_64"
+  ami_type        = var.gpu_type ? "AL2023_x86_64_NVIDIA" : var.arm_type ? "AL2023_ARM_64_STANDARD" : "AL2023_x86_64_STANDARD"
   capacity_type   = var.node_capacity_type == "MIXED" ? count.index == 0 ? "ON_DEMAND" : "SPOT" : var.node_capacity_type
   cluster_name    = aws_eks_cluster.cluster.name
   node_group_name = "${var.name}-${var.private ? data.aws_subnet.private_subnet_details[count.index].availability_zone : data.aws_subnet.public_subnet_details[count.index].availability_zone}-${count.index}${random_id.node_group.hex}"
@@ -182,8 +182,7 @@ resource "aws_eks_node_group" "cluster-build" {
   ]
 
   count = var.build_node_enabled ? 1 : 0
-
-  ami_type        = var.build_gpu_type ? "AL2_x86_64_GPU" : var.build_arm_type ? "AL2_ARM_64" : "AL2_x86_64"
+  ami_type        = var.build_gpu_type ? "AL2023_x86_64_NVIDIA" : var.build_arm_type ? "AL2023_ARM_64_STANDARD" : "AL2023_x86_64_STANDARD"
   capacity_type   = "ON_DEMAND"
   cluster_name    = aws_eks_cluster.cluster.name
   instance_types  = split(",", random_id.build_node_group[0].keepers.node_type)
@@ -427,7 +426,8 @@ resource "aws_eks_addon" "vpc_cni" {
   cluster_name      = aws_eks_cluster.cluster.name
   addon_name        = "vpc-cni"
   addon_version     = var.vpc_cni_version
-  resolve_conflicts = "OVERWRITE"
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
 }
 
 resource "aws_eks_addon" "coredns" {
@@ -438,7 +438,8 @@ resource "aws_eks_addon" "coredns" {
   cluster_name      = aws_eks_cluster.cluster.name
   addon_name        = "coredns"
   addon_version     = var.coredns_version
-  resolve_conflicts = "OVERWRITE"
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
 }
 
 resource "aws_eks_addon" "kube_proxy" {
@@ -449,7 +450,8 @@ resource "aws_eks_addon" "kube_proxy" {
   cluster_name      = aws_eks_cluster.cluster.name
   addon_name        = "kube-proxy"
   addon_version     = var.kube_proxy_version
-  resolve_conflicts = "OVERWRITE"
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
 }
 
 resource "aws_eks_addon" "eks_pod_identity_agent" {
@@ -462,7 +464,8 @@ resource "aws_eks_addon" "eks_pod_identity_agent" {
   cluster_name      = aws_eks_cluster.cluster.name
   addon_name        = "eks-pod-identity-agent"
   addon_version     = var.pod_identity_agent_version
-  resolve_conflicts = "OVERWRITE"
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
 }
 
 resource "aws_eks_addon" "aws_ebs_csi_driver" {
@@ -478,7 +481,8 @@ resource "aws_eks_addon" "aws_ebs_csi_driver" {
     "depends" : module.ebs_csi_driver_controller.wait_for_it,
   }
 
-  resolve_conflicts = "OVERWRITE"
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
 
   configuration_values = jsonencode({
     sidecars = {
