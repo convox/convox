@@ -87,6 +87,13 @@ func (bb *Build) buildEnvs() (map[string]string, error) {
 	for _, v := range bb.BuildArgs {
 		parts := strings.SplitN(v, "=", 2)
 		if len(parts) != 2 {
+			if len(parts) == 1 {
+				if os.Getenv(parts[0]) != "" {
+					env[parts[0]] = os.Getenv(parts[0])
+					continue
+				}
+				return env, fmt.Errorf("invalid build arg: %s, failed to resolve it", v)
+			}
 			return env, fmt.Errorf("invalid build args: %s", v)
 		}
 		env[parts[0]] = parts[1]

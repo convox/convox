@@ -79,6 +79,7 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 		"BUILD_MANIFEST":               common.DefaultString(opts.Manifest, "convox.yml"),
 		"BUILD_RACK":                   p.Name,
 		"BUILD_URL":                    url,
+		"BUILD_GIT_SHA":                b.GitSha,
 		"BUILDKIT_ENABLED":             p.BuildkitEnabled,
 		"PROVIDER":                     os.Getenv("PROVIDER"),
 		"DISABLE_IMAGE_MANIFEST_CACHE": os.Getenv("DISABLE_IMAGE_MANIFEST_CACHE"),
