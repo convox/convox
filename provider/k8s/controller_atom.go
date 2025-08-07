@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -12,13 +13,14 @@ import (
 	atomv1 "github.com/convox/convox/pkg/atom/pkg/apis/atom/v1"
 	av "github.com/convox/convox/pkg/atom/pkg/client/clientset/versioned"
 	ic "github.com/convox/convox/pkg/atom/pkg/client/informers/externalversions/atom/v1"
+	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/kctl"
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/logger"
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
@@ -66,15 +68,17 @@ func (c *AtomController) Client() kubernetes.Interface {
 }
 
 func (c *AtomController) Informer() cache.SharedInformer {
-	return ic.NewFilteredAtomInformer(c.atom, ac.NamespaceAll, 30*time.Second, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
+	return ic.NewFilteredAtomInformer(c.atom, ac.NamespaceAll, 0, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
 }
 
-func (c *AtomController) ListOptions(opts *metav1.ListOptions) {}
+func (c *AtomController) ListOptions(opts *am.ListOptions) {}
 
 func (c *AtomController) Run() {
 	ch := make(chan error)
 
 	go c.controller.Run(ch)
+
+	go c.runMarker()
 
 	for err := range ch {
 		fmt.Printf("err = %+v\n", err)
@@ -125,11 +129,14 @@ func (a *AtomController) Update(prev, cur interface{}) error {
 func (a *AtomController) syncAtom(obj *atomv1.Atom) error {
 	a.logger.Logf("syncing atoms...")
 
+	go a.updateNamespace(obj)
+
 	// obj.Name is fixed, so obj.Namespace will be unique per app
 	if _, ok := a.dependencyProcessor.Load(obj.Namespace); !ok && len(obj.Spec.Dependencies) > 0 {
 		a.dependencyProcessor.Store(obj.Namespace, true)
 		go a.processDependency(obj)
 	}
+
 	return nil
 }
 
@@ -246,11 +253,11 @@ func (a *AtomController) resolveDependencyInAtomVersion(obj *atomv1.Atom, dep st
 	return err
 }
 
-func (a *AtomController) PatchAtom(ctx context.Context, cur *atomv1.Atom, transform func(*atomv1.Atom) *atomv1.Atom, opts metav1.PatchOptions) (*atomv1.Atom, error) {
+func (a *AtomController) PatchAtom(ctx context.Context, cur *atomv1.Atom, transform func(*atomv1.Atom) *atomv1.Atom, opts am.PatchOptions) (*atomv1.Atom, error) {
 	return a.PatchAtomObject(ctx, cur, transform(cur.DeepCopy()), opts)
 }
 
-func (a *AtomController) PatchAtomObject(ctx context.Context, cur, mod *atomv1.Atom, opts metav1.PatchOptions) (*atomv1.Atom, error) {
+func (a *AtomController) PatchAtomObject(ctx context.Context, cur, mod *atomv1.Atom, opts am.PatchOptions) (*atomv1.Atom, error) {
 	curJson, err := json.Marshal(cur)
 	if err != nil {
 		return nil, err
@@ -272,6 +279,48 @@ func (a *AtomController) PatchAtomObject(ctx context.Context, cur, mod *atomv1.A
 	return a.atom.AtomV1().Atoms(cur.Namespace).Patch(ctx, cur.Name, types.MergePatchType, patch, opts)
 }
 
+func (a *AtomController) updateNamespace(obj *atomv1.Atom) {
+	a.logger.Logf("updating namespace for atom %s/%s", obj.Namespace, obj.Name)
+
+	if a.provider.namespaceInformer != nil {
+		ns, err := a.provider.GetNamespaceFromInformer(obj.Namespace)
+		if err == nil {
+			if ns.Annotations != nil && ns.Annotations["convox.com/app-status"] == string(obj.Status) &&
+				ns.Annotations["convox.com/app-atom-cur-version"] == obj.Spec.CurrentVersion {
+				a.logger.Logf("namespace %s/%s already up to date", obj.Namespace, obj.Name)
+				return
+			}
+		}
+	}
+
+	atomv, err := a.atom.AtomV1().AtomVersions(obj.Namespace).Get(a.provider.ctx, obj.Spec.CurrentVersion, v1.GetOptions{})
+	if err != nil {
+		a.logger.Errorf("failed to get atom version '%s': %s", obj.Spec.CurrentVersion, err)
+		return
+	}
+
+	// Create the patch data
+	patchBytes, err := patchBytes(map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]string{
+				"convox.com/app-status":           string(obj.Status),
+				"convox.com/app-release":          atomv.Spec.Release,
+				"convox.com/app-atom-cur-version": obj.Spec.CurrentVersion,
+			},
+		},
+	})
+	if err != nil {
+		a.logger.Errorf("failed to create patch bytes err=%q\n", err)
+		return
+	}
+
+	_, err = a.provider.Cluster.CoreV1().Namespaces().Patch(a.provider.ctx, obj.Namespace, types.MergePatchType, patchBytes, am.PatchOptions{})
+	if err != nil {
+		fmt.Printf("failed to patch namespace '%s' err=%q\n", obj.Namespace, err)
+		return
+	}
+}
+
 func assertAtom(v interface{}) (*atomv1.Atom, error) {
 	d, ok := v.(*atomv1.Atom)
 	if !ok {
@@ -279,4 +328,113 @@ func assertAtom(v interface{}) (*atomv1.Atom, error) {
 	}
 
 	return d, nil
+}
+
+func (a *AtomController) runMarker() {
+	for {
+		// to make sure only one marker is running
+		time.Sleep(30 * time.Second)
+		if a.controller.IsLeader.Load() {
+			break
+		}
+	}
+
+	for {
+		a.markOldbuilds()
+		a.markOldReleases()
+
+		time.Sleep(6 * time.Hour)
+	}
+}
+
+func (a *AtomController) markOldbuilds() {
+	a.logger.Logf("marking old builds...")
+
+	bList, err := a.provider.Convox.ConvoxV1().Builds(am.NamespaceAll).List(am.ListOptions{
+		LabelSelector: "!marked",
+	})
+	if err != nil {
+		a.logger.Logf("failed to list builds: %s", err)
+		return
+	}
+
+	bItems := bList.Items
+	sort.Slice(bItems, func(i, j int) bool {
+		startedI, err := time.Parse(common.SortableTime, bItems[i].Spec.Started)
+		if err != nil {
+			startedI = bItems[i].CreationTimestamp.UTC()
+		}
+		startedJ, err := time.Parse(common.SortableTime, bItems[j].Spec.Started)
+		if err != nil {
+			startedI = bItems[j].CreationTimestamp.UTC()
+		}
+		return startedI.Before(startedJ)
+	})
+
+	for i, b := range bItems {
+		if i >= 50 {
+			patchBytes, err := patchBytes(map[string]interface{}{
+				"metadata": map[string]interface{}{
+					"labels": map[string]string{
+						"marked": "old",
+					},
+				},
+			})
+			if err != nil {
+				a.logger.Errorf("failed to create patch bytes err=%q\n", err)
+				return
+			}
+			_, err = a.provider.Convox.ConvoxV1().Builds(b.Namespace).Patch(b.Name, types.MergePatchType, patchBytes)
+			if err != nil {
+				a.logger.Errorf("failed to mark build '%s/%s' err=%q\n", b.Namespace, b.Name, err)
+			}
+			time.Sleep(100 * time.Millisecond) // to avoid rate limit
+		}
+	}
+}
+
+func (a *AtomController) markOldReleases() {
+	a.logger.Logf("marking old released...")
+
+	rList, err := a.provider.Convox.ConvoxV1().Releases(am.NamespaceAll).List(am.ListOptions{
+		LabelSelector: "!marked",
+	})
+	if err != nil {
+		a.logger.Logf("failed to list builds: %s", err)
+		return
+	}
+
+	rItems := rList.Items
+	sort.Slice(rItems, func(i, j int) bool {
+		startedI, err := time.Parse(common.SortableTime, rItems[i].Spec.Created)
+		if err != nil {
+			startedI = rItems[i].CreationTimestamp.UTC()
+		}
+		startedJ, err := time.Parse(common.SortableTime, rItems[j].Spec.Created)
+		if err != nil {
+			startedI = rItems[j].CreationTimestamp.UTC()
+		}
+		return startedI.Before(startedJ)
+	})
+
+	for i, r := range rItems {
+		if i >= 50 {
+			patchBytes, err := patchBytes(map[string]interface{}{
+				"metadata": map[string]interface{}{
+					"labels": map[string]string{
+						"marked": "old",
+					},
+				},
+			})
+			if err != nil {
+				a.logger.Errorf("failed to create patch bytes err=%q\n", err)
+				return
+			}
+			_, err = a.provider.Convox.ConvoxV1().Releases(r.Namespace).Patch(r.Name, types.MergePatchType, patchBytes)
+			if err != nil {
+				a.logger.Errorf("failed to mark release '%s/%s' err=%q\n", r.Namespace, r.Name, err)
+			}
+			time.Sleep(100 * time.Millisecond) // to avoid rate limit
+		}
+	}
 }
