@@ -122,7 +122,7 @@ func (p *Provider) ResourceGet(app, name string) (*structs.Resource, error) {
 		return r, nil
 	}
 
-	d, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).Get(context.TODO(), fmt.Sprintf("resource-%s", nameFilter(name)), am.GetOptions{})
+	d, err := p.GetDeploymentFromInformer(fmt.Sprintf("resource-%s", nameFilter(name)), p.AppNamespace(app))
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +161,7 @@ func (p *Provider) ResourceList(app string) (structs.Resources, error) {
 		LabelSelector: fmt.Sprintf("app=%s,type=resource", app),
 	}
 
-	ds, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).List(context.TODO(), lopts)
+	ds, err := p.ListDeploymentsFromInformer(p.AppNamespace(app), lopts.LabelSelector)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

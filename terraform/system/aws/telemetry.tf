@@ -107,7 +107,7 @@ locals {
     ebs_volume_encryption_enabled = "false"
     ecr_scan_on_push_enable = "false"
     efs_csi_driver_enable = "false"
-    efs_csi_driver_version = "2.1.9-eksbuild.1"
+    efs_csi_driver_version = "v2.1.9-eksbuild.1"
     fluentd_disable = "false"
     gpu_tag_enable = "false"
     high_availability = "true"

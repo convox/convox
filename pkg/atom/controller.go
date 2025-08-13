@@ -31,6 +31,9 @@ func NewController(cfg *rest.Config) (*AtomController, error) {
 		return nil, errors.WithStack(err)
 	}
 
+	cfg.QPS = 20
+	cfg.Burst = 40
+
 	cc, err := cv.NewForConfig(cfg)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -62,7 +65,7 @@ func (c *AtomController) Client() kubernetes.Interface {
 }
 
 func (c *AtomController) Informer() cache.SharedInformer {
-	return ic.NewFilteredAtomInformer(c.convox, ac.NamespaceAll, 15*time.Second, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
+	return ic.NewFilteredAtomInformer(c.convox, ac.NamespaceAll, 30*time.Second, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
 }
 
 func (c *AtomController) ListOptions(opts *am.ListOptions) {

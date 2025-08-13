@@ -29,23 +29,6 @@ const ConvoxJwtSecretName = "convox-jwt-key"
 func (p *Provider) SystemGet() (*structs.System, error) {
 	status := "running"
 
-	// status, err := p.Engine.SystemStatus()
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// ss, _, err := p.atom.Status(p.Namespace, "system")
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// status = "running"
-
-	// switch status {
-	// case "running", "unknown":
-	// 	status = common.AtomStatus(ss)
-	// }
-
 	s := &structs.System{
 		Domain:     fmt.Sprintf("router.%s", p.Domain),
 		Name:       p.RackName,
@@ -132,9 +115,7 @@ func (p *Provider) SystemProcesses(opts structs.SystemProcessesOptions) (structs
 	}
 
 	labelSelector := fmt.Sprintf("system=convox,rack=%s,service", p.Name)
-	pds, err := p.Cluster.CoreV1().Pods(ns).List(context.TODO(), am.ListOptions{
-		LabelSelector: labelSelector,
-	})
+	pds, err := p.ListPodsFromInformer(ns, labelSelector)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
