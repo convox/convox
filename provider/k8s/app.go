@@ -8,7 +8,6 @@ import (
 	"io"
 	"strings"
 
-	"github.com/convox/convox/pkg/atom"
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
@@ -170,7 +169,7 @@ func (p *Provider) AppDelete(name string) error {
 }
 
 func (p *Provider) AppGet(name string) (*structs.App, error) {
-	ns, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), p.AppNamespace(name), am.GetOptions{})
+	ns, err := p.GetNamespaceFromInformer(p.AppNamespace(name))
 	if ae.IsNotFound(err) {
 		return nil, errors.WithStack(fmt.Errorf("app not found: %s", name))
 	}
@@ -191,27 +190,15 @@ func (p *Provider) AppIdles(name string) (bool, error) {
 }
 
 func (p *Provider) AppList() (structs.Apps, error) {
-	ns, err := p.Cluster.CoreV1().Namespaces().List(context.TODO(), am.ListOptions{
-		LabelSelector: fmt.Sprintf("system=convox,rack=%s,type=app", p.Name),
-	})
+	ns, err := p.ListNamespacesFromInformer(fmt.Sprintf("system=convox,rack=%s,type=app", p.Name))
 	if err != nil {
 		return nil, errors.WithStack(err)
-	}
-
-	atmList, err := p.Atom.StatusAll()
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	atmMap := map[string]atom.AtomStatusInfo{}
-	for i := range atmList {
-		atmMap[atmList[i].Namespace] = atmList[i]
 	}
 
 	as := structs.Apps{}
 
 	for _, n := range ns.Items {
-		a, err := p.appFromNamespaceAndAtom(n, atmMap[n.Name])
+		a, err := p.appFromNamespaceOnly(n)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -240,7 +227,7 @@ func (p *Provider) AppNamespace(app string) string {
 }
 
 func (p *Provider) NamespaceApp(namespace string) (string, error) {
-	ns, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), namespace, am.GetOptions{})
+	ns, err := p.GetNamespaceFromInformer(namespace)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
@@ -289,10 +276,14 @@ func (p *Provider) AppUpdate(name string, opts structs.AppUpdateOptions) error {
 
 func (p *Provider) appFromNamespace(ns ac.Namespace) (*structs.App, error) {
 	name := common.CoalesceString(ns.Labels["app"], ns.Labels["name"])
+	as, release := ns.Annotations["convox.com/app-status"], ns.Annotations["convox.com/app-release"]
 
-	as, release, err := p.Atom.Status(ns.Name, "app")
-	if err != nil {
-		return nil, errors.WithStack(err)
+	if as == "" || release == "" {
+		var err error
+		as, release, err = p.Atom.Status(ns.Name, "app")
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
 	}
 
 	status := common.AtomStatus(as)
@@ -348,10 +339,10 @@ func (p *Provider) appFromNamespace(ns ac.Namespace) (*structs.App, error) {
 	return a, nil
 }
 
-func (p *Provider) appFromNamespaceAndAtom(ns ac.Namespace, atm atom.AtomStatusInfo) (*structs.App, error) {
+func (p *Provider) appFromNamespaceOnly(ns ac.Namespace) (*structs.App, error) {
 	name := common.CoalesceString(ns.Labels["app"], ns.Labels["name"])
 
-	status := common.AtomStatus(atm.Status)
+	status := common.AtomStatus(ns.Annotations["convox.com/app-status"])
 
 	if ns.Annotations == nil {
 		ns.Annotations = map[string]string{}
@@ -361,7 +352,7 @@ func (p *Provider) appFromNamespaceAndAtom(ns ac.Namespace, atm atom.AtomStatusI
 		Generation: "3",
 		Locked:     ns.Annotations["convox.com/lock"] == "true",
 		Name:       name,
-		Release:    atm.Release,
+		Release:    ns.Annotations["convox.com/app-release"],
 		Router:     p.Router,
 		Status:     status,
 	}

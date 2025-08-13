@@ -26,9 +26,12 @@ import (
 	"k8s.io/client-go/dynamic"
 
 	cmclient "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned"
+	cinformer "github.com/convox/convox/provider/k8s/pkg/client/informers/externalversions/convox/v1"
 	ae "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	informerappsv1 "k8s.io/client-go/informers/apps/v1"
+	informerv1 "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -80,7 +83,13 @@ type Provider struct {
 	Version                          string
 	VpcID                            string
 
-	nc *NodeController
+	nc                 *NodeController
+	namespaceInformer  informerv1.NamespaceInformer
+	nodeInformer       informerv1.NodeInformer
+	podInformer        informerv1.PodInformer
+	deploymentInformer informerappsv1.DeploymentInformer
+	buildInformer      cinformer.BuildInformer
+	releaseInformer    cinformer.ReleaseInformer
 
 	RdsProvisioner         *rds.Provisioner
 	ElasticacheProvisioner *elasticache.Provisioner
@@ -103,6 +112,9 @@ func FromEnv() (*Provider, error) {
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+
+	rc.QPS = 25
+	rc.Burst = 50
 
 	kc, err := kubernetes.NewForConfig(rc)
 	if err != nil {
@@ -183,6 +195,8 @@ func FromEnv() (*Provider, error) {
 
 	p.RdsProvisioner = rds.NewProvisioner(p)
 	p.ElasticacheProvisioner = elasticache.NewProvisioner(p)
+
+	ms.SetProvider(p)
 
 	return p, nil
 }
@@ -281,6 +295,10 @@ func (p *Provider) Start() error {
 
 	go p.startApiProxy()
 
+	if os.Getenv("TEST") != "true" {
+		go p.RunSharedInformer(make(chan struct{}))
+	}
+
 	return log.Success()
 }
 
@@ -322,12 +340,12 @@ func (p *Provider) heartbeat() error {
 		return errors.WithStack(err)
 	}
 
-	ns, err := p.Cluster.CoreV1().Nodes().List(context.TODO(), am.ListOptions{})
+	ns, err := p.ListNodesFromInformer("")
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	ks, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), "kube-system", am.GetOptions{})
+	ks, err := p.GetNamespaceFromInformer("kube-system")
 	if err != nil {
 		return errors.WithStack(err)
 	}

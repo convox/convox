@@ -180,9 +180,7 @@ func (p *Provider) CertificateList(opts structs.CertificateListOptions) (structs
 	if opts.Generated != nil && *opts.Generated {
 		return p.generatedCertificateList()
 	}
-	ns, err := p.Cluster.CoreV1().Namespaces().List(context.TODO(), am.ListOptions{
-		LabelSelector: fmt.Sprintf("system=convox,rack=%s", p.Name),
-	})
+	ns, err := p.ListNamespacesFromInformer(fmt.Sprintf("system=convox,rack=%s", p.Name))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

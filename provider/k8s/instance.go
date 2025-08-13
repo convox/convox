@@ -19,7 +19,7 @@ func (p *Provider) InstanceKeyroll() (*structs.KeyPair, error) {
 }
 
 func (p *Provider) InstanceList() (structs.Instances, error) {
-	ns, err := p.Cluster.CoreV1().Nodes().List(context.TODO(), am.ListOptions{})
+	ns, err := p.ListNodesFromInformer("")
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

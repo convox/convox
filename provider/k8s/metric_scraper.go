@@ -10,14 +10,16 @@ import (
 
 	"github.com/convox/convox/pkg/structs"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
 type MetricScraperClient struct {
-	c       *http.Client
-	cluster kubernetes.Interface
-	host    string
+	c        *http.Client
+	cluster  kubernetes.Interface
+	host     string
+	provider *Provider
 }
 
 func NewMetricScraperClient(cluster kubernetes.Interface, host string) *MetricScraperClient {
@@ -25,9 +27,27 @@ func NewMetricScraperClient(cluster kubernetes.Interface, host string) *MetricSc
 		c: &http.Client{
 			Timeout: 10 * time.Second,
 		},
-		cluster: cluster,
-		host:    host,
+		cluster:  cluster,
+		host:     host,
+		provider: nil,
 	}
+}
+
+func (m *MetricScraperClient) SetProvider(p *Provider) {
+	m.provider = p
+}
+
+func (m *MetricScraperClient) ListNodes() (*corev1.NodeList, error) {
+	if m.provider != nil {
+		return m.provider.ListNodesFromInformer("")
+	}
+
+	ns, err := m.cluster.CoreV1().Nodes().List(context.TODO(), am.ListOptions{})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return ns, nil
 }
 
 func (m *MetricScraperClient) GetRackMetrics(opts structs.MetricsOptions) (structs.Metrics, error) {
@@ -35,7 +55,7 @@ func (m *MetricScraperClient) GetRackMetrics(opts structs.MetricsOptions) (struc
 		return nil, errors.WithStack(fmt.Errorf("unimplemented"))
 	}
 
-	ns, err := m.cluster.CoreV1().Nodes().List(context.TODO(), am.ListOptions{})
+	ns, err := m.ListNodes()
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
