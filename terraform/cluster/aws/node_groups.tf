@@ -62,7 +62,7 @@ resource "random_id" "additional_node_groups" {
     id                  = each.value.id
     node_capacity_type  = each.value.capacity_type != null ? each.value.capacity_type : "ON_DEMAND"
     node_disk           = each.value.disk != null ? each.value.disk : var.node_disk
-    node_type           = each.value.typ
+    node_type           = each.value.type
     types               = each.value.types
     cpu                 = each.value.cpu
     mem                 = each.value.mem
