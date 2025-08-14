@@ -109,6 +109,7 @@ spec:
                 values:
                 - {{ .Value }}
           {{ end }}
+          {{ end }}
       {{ $hasTolerations := false }}
       {{ range keyValue .Service.NodeSelectorLabels }}
         {{ if eq .Key "convox.io/label" }}
