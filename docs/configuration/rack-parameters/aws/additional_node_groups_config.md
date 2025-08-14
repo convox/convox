@@ -29,7 +29,7 @@ The `additional_node_groups_config` parameter takes a JSON array of node group c
 | `type` | Yes (or set the `cpu` and `mem` fields) | The EC2 instance type to use for the node group |  |
 | `cpu` | Yes (or set the `type` field) | The minimum number of vCPUs required from the node |  |
 | `mem` | Yes (or set the `type` field) | The minimum mib of memory required from the node |  |
-| `types` | No (but can use in conjunection with the `cpu` and `mem` fields) | List of instance types to apply your specified `cpu` and `mem` attributes against. All other instance types are ignored, even if they match your specified attributes. You can use strings with one or more wild cards, represented by an asterisk (*), to allow an instance type, size, or generation. |  |
+| `types` | No (but can use in conjunction with the `cpu` and `mem` fields) | List of instance types to apply your specified `cpu` and `mem` attributes against. All other instance types are ignored, even if they match your specified attributes. You can use strings with one or more wild cards, represented by an asterisk (*), to allow an instance type, size, or generation. |  |
 | `disk` | No | The disk size in GB for the nodes | Same as main node disk |
 | `capacity_type` | No | Whether to use on-demand or spot instances | `ON_DEMAND` |
 | `min_size` | No | Minimum number of nodes | 1 |
