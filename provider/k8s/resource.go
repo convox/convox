@@ -62,13 +62,9 @@ func (p *Provider) ResourceExport(app, name string) (io.ReadCloser, error) {
 	}
 
 	switch r.Type {
-	case "mariadb":
+	case "mariadb", "rds-mariadb", "mysql", "rds-mysql":
 		return resourceExportMysql(u)
-	case "mysql":
-		return resourceExportMysql(u)
-	case "postgis":
-		return resourceExportPostgres(u)
-	case "postgres":
+	case "postgis", "postgres", "rds-postgres":
 		return resourceExportPostgres(u)
 	default:
 		return nil, errors.WithStack(fmt.Errorf("export not available for resources of type: %s", r.Type))
@@ -143,13 +139,9 @@ func (p *Provider) ResourceImport(app, name string, r io.Reader) error {
 	}
 
 	switch rr.Type {
-	case "mariadb":
+	case "mariadb", "rds-maridadb", "mysql", "rds-mysql":
 		return resourceImportMysql(rr, r)
-	case "mysql":
-		return resourceImportMysql(rr, r)
-	case "postgis":
-		return resourceImportPostgres(rr, r)
-	case "postgres":
+	case "postgis", "postgres", "rds-postgres":
 		return resourceImportPostgres(rr, r)
 	default:
 		return errors.WithStack(fmt.Errorf("import not available for resources of type: %s", rr.Type))
