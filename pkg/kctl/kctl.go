@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sync/atomic"
 	"time"
 
 	ac "k8s.io/api/core/v1"
@@ -29,6 +30,7 @@ type Controller struct {
 	errch    chan error
 	recorder record.EventRecorder
 	stopper  chan struct{}
+	IsLeader atomic.Bool
 }
 
 type ControllerHandler interface {
@@ -52,6 +54,7 @@ func NewController(namespace, name string, handler ControllerHandler) (*Controll
 		Identifier: hostname,
 		Name:       name,
 		Namespace:  namespace,
+		IsLeader:   atomic.Bool{},
 	}
 
 	return c, nil
@@ -71,6 +74,8 @@ func (c *Controller) leaderStart(informer cache.SharedInformer) func(ctx context
 	return func(ctx context.Context) {
 		fmt.Printf("started leading: %s/%s (%s)\n", c.Namespace, c.Name, c.Identifier)
 
+		c.IsLeader.Store(true)
+
 		if err := c.Handler.Start(); err != nil {
 			c.errch <- err
 		}
@@ -83,7 +88,7 @@ func (c *Controller) leaderStart(informer cache.SharedInformer) func(ctx context
 
 func (c *Controller) leaderStop() {
 	fmt.Printf("stopped leading: %s/%s (%s)\n", c.Namespace, c.Name, c.Identifier)
-
+	c.IsLeader.Store(false)
 	close(c.stopper)
 	c.stopper = nil
 

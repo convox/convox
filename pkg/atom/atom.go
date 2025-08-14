@@ -15,8 +15,8 @@ import (
 
 	aa "github.com/convox/convox/pkg/atom/pkg/apis/atom/v1"
 	av "github.com/convox/convox/pkg/atom/pkg/client/clientset/versioned"
+	atomTmpl "github.com/convox/convox/pkg/atom/templates"
 	"github.com/convox/convox/pkg/templater"
-	"github.com/gobuffalo/packr"
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 	ac "k8s.io/api/core/v1"
@@ -31,7 +31,7 @@ import (
 )
 
 var (
-	templates = templater.New(packr.NewBox("../atom/templates"), templateHelpers())
+	templates = templater.New(atomTmpl.TemplatesFS, templateHelpers())
 )
 
 type Client struct {
@@ -485,7 +485,7 @@ func applyTemplate(namespace string, data []byte, filter string) ([]byte, error)
 	args := []string{"--prune", "-l", filter, "--namespace", namespace}
 
 	for _, r := range rs {
-		args = append(args, "--prune-whitelist", r)
+		args = append(args, "--prune-allowlist", r)
 	}
 
 	out, err := kubectlApply(data, args...)

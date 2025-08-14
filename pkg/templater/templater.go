@@ -2,34 +2,34 @@ package templater
 
 import (
 	"bytes"
+	"embed"
 	"html/template"
-
-	"github.com/gobuffalo/packr"
 )
 
+// Templater holds the embedded filesystem and template helpers.
 type Templater struct {
-	box     packr.Box
+	fs      embed.FS
 	helpers template.FuncMap
 }
 
-func New(box packr.Box, helpers template.FuncMap) *Templater {
-	// fmt.Printf("box.List() = %+v\n", box.List())
-
+// New creates a new Templater with the given embed.FS and helpers.
+func New(fs embed.FS, helpers template.FuncMap) *Templater {
 	return &Templater{
-		box:     box,
+		fs:      fs,
 		helpers: helpers,
 	}
 }
 
+// Render renders the template with the given name and parameters.
 func (t *Templater) Render(name string, params interface{}) ([]byte, error) {
 	ts := template.New("").Funcs(t.helpers)
 
-	tdata, err := t.box.FindString(name)
+	tdata, err := t.fs.ReadFile(name)
 	if err != nil {
 		return nil, err
 	}
 
-	if _, err := ts.Parse(tdata); err != nil {
+	if _, err := ts.Parse(string(tdata)); err != nil {
 		return nil, err
 	}
 

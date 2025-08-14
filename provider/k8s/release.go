@@ -87,14 +87,16 @@ func (p *Provider) ReleaseList(app string, opts structs.ReleaseListOptions) (str
 		return nil, errors.WithStack(err)
 	}
 
-	rs, err := p.releaseList(app)
+	limit := common.DefaultInt(opts.Limit, 10)
+
+	rs, err := p.releaseList(app, limit)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	sort.Slice(rs, func(i, j int) bool { return rs[j].Created.Before(rs[i].Created) })
 
-	if limit := common.DefaultInt(opts.Limit, 10); len(rs) > limit {
+	if len(rs) > limit {
 		rs = rs[0:limit]
 	}
 
@@ -267,7 +269,7 @@ func (p *Provider) releaseCreate(r *structs.Release) (*structs.Release, error) {
 }
 
 func (p *Provider) releaseGet(app, id string) (*structs.Release, error) {
-	kr, err := p.Convox.ConvoxV1().Releases(p.AppNamespace(app)).Get(strings.ToLower(id), am.GetOptions{})
+	kr, err := p.GetReleaseFromInformer(strings.ToLower(id), p.AppNamespace(app))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -303,8 +305,8 @@ func (p *Provider) releaseFork(app string, parentRelease *string) (*structs.Rele
 	return r, nil
 }
 
-func (p *Provider) releaseList(app string) (structs.Releases, error) {
-	krs, err := p.Convox.ConvoxV1().Releases(p.AppNamespace(app)).List(am.ListOptions{})
+func (p *Provider) releaseList(app string, limit int) (structs.Releases, error) {
+	krs, err := p.ListReleasesFromInformer(p.AppNamespace(app), "", limit)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -345,7 +347,7 @@ func (p *Provider) releaseMarshal(r *structs.Release) *ca.Release {
 }
 
 func (p *Provider) releaseTemplateApp(a *structs.App, opts structs.ReleasePromoteOptions) ([]byte, error) {
-	owner, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), p.Namespace, am.GetOptions{})
+	owner, err := p.GetNamespaceFromInformer(p.Namespace)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

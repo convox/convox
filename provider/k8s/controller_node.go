@@ -19,6 +19,7 @@ import (
 	corev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	amv1 "k8s.io/client-go/applyconfigurations/meta/v1"
 	"k8s.io/client-go/informers"
+	informerv1 "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 )
@@ -40,16 +41,19 @@ type NodeController struct {
 
 	logger *logger.Logger
 	start  time.Time
+
+	nodeInformer informerv1.NodeInformer
 }
 
 func NewNodeController(p *Provider) (*NodeController, error) {
 	nc := &NodeController{
-		provider: p,
-		stopCh:   make(chan struct{}),
-		nodeCh:   make(chan string, 50),
-		nodeMap:  &sync.Map{},
-		logger:   logger.New("ns=node-controller"),
-		start:    time.Now().UTC(),
+		provider:     p,
+		stopCh:       make(chan struct{}),
+		nodeCh:       make(chan string, 50),
+		nodeMap:      &sync.Map{},
+		logger:       logger.New("ns=node-controller"),
+		start:        time.Now().UTC(),
+		nodeInformer: informers.NewSharedInformerFactory(p.Cluster, 3*time.Minute).Core().V1().Nodes(),
 	}
 
 	c, err := kctl.NewController(p.Namespace, "convox-node-controller", nc)
@@ -67,7 +71,7 @@ func (c *NodeController) Client() kubernetes.Interface {
 }
 
 func (c *NodeController) Informer() cache.SharedInformer {
-	return informers.NewSharedInformerFactory(c.provider.Cluster, 3*time.Minute).Core().V1().Nodes().Informer()
+	return c.nodeInformer.Informer()
 }
 
 func (c *NodeController) Run() {
@@ -153,7 +157,7 @@ func (c *NodeController) AddGpuLabel(nd *ac.Node) {
 
 	// check if already processed this node
 	if _, ok := c.nodeMap.Load(nodeKey); ok {
-		c.logger.Errorf("node label's are already processed: %s", nd.Name)
+		c.logger.Logf("skipping: node label's are already processed: %s", nd.Name)
 		return
 	}
 

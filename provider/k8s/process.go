@@ -141,7 +141,7 @@ func (p *Provider) ProcessExec(app, pid, command string, rw io.ReadWriter, opts 
 }
 
 func (p *Provider) ProcessGet(app, pid string) (*structs.Process, error) {
-	pd, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Get(context.TODO(), pid, am.GetOptions{})
+	pd, err := p.GetPodFromInformer(pid, p.AppNamespace(app))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -175,7 +175,7 @@ func (p *Provider) ProcessList(app string, opts structs.ProcessListOptions) (str
 		filters = append(filters, fmt.Sprintf("service=%s", *opts.Service))
 	}
 
-	pds, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).List(context.TODO(), am.ListOptions{LabelSelector: strings.Join(filters, ",")})
+	pds, err := p.ListPodsFromInformer(p.AppNamespace(app), strings.Join(filters, ","))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -234,7 +234,7 @@ func (p *Provider) streamProcessLogs(w io.WriteCloser, app, pid string, opts str
 	service := ""
 
 	for {
-		pp, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Get(context.TODO(), pid, am.GetOptions{})
+		pp, err := p.GetPodFromInformer(pid, p.AppNamespace(app))
 		if err != nil {
 			fmt.Printf("err: %+v\n", err)
 			break
@@ -402,7 +402,7 @@ func (p *Provider) ProcessStop(app, pid string) error {
 
 func (p *Provider) ProcessWait(app, pid string) (int, error) {
 	for {
-		pd, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Get(context.TODO(), pid, am.GetOptions{})
+		pd, err := p.GetPodFromInformer(pid, p.AppNamespace(app))
 		if err != nil {
 			return 0, errors.WithStack(err)
 		}

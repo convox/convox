@@ -210,24 +210,17 @@ func TestAppGetUpdating(t *testing.T) {
 
 func TestAppList(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
-		aa := p.Atom.(*atom.MockInterface)
+		//aa := p.Atom.(*atom.MockInterface)
 		kk := p.Cluster.(*fake.Clientset)
 
-		aa.On("StatusAll").Return([]atom.AtomStatusInfo{
-			{
-				Namespace: "rack1-app1",
-				Status:    "Running",
-				Release:   "R1234567",
-			},
-			{
-				Namespace: "rack1-app2",
-				Status:    "Updating",
-				Release:   "R2345678",
-			},
-		}, nil)
-
-		require.NoError(t, appCreate(kk, "rack1", "app1"))
-		require.NoError(t, appCreate(kk, "rack1", "app2"))
+		require.NoError(t, appCreateWithAnnotation(kk, "rack1", "app1", map[string]string{
+			"convox.com/app-status":  "Running",
+			"convox.com/app-release": "R1234567",
+		}))
+		require.NoError(t, appCreateWithAnnotation(kk, "rack1", "app2", map[string]string{
+			"convox.com/app-status":  "Updating",
+			"convox.com/app-release": "R2345678",
+		}))
 
 		as, err := p.AppList()
 		require.NoError(t, err)
@@ -368,6 +361,29 @@ func appCreate(c kubernetes.Interface, rack, name string) error {
 			ObjectMeta: am.ObjectMeta{
 				Name:        fmt.Sprintf("%s-%s", rack, name),
 				Annotations: map[string]string{"convox.com/lock": "false"},
+				Labels: map[string]string{
+					"app":    name,
+					"name":   name,
+					"rack":   rack,
+					"system": "convox",
+					"type":   "app",
+				},
+			},
+		},
+		am.CreateOptions{},
+	)
+
+	return errors.WithStack(err)
+}
+
+func appCreateWithAnnotation(c kubernetes.Interface, rack, name string, anno map[string]string) error {
+	anno["convox.com/lock"] = "false"
+	_, err := c.CoreV1().Namespaces().Create(
+		context.TODO(),
+		&ac.Namespace{
+			ObjectMeta: am.ObjectMeta{
+				Name:        fmt.Sprintf("%s-%s", rack, name),
+				Annotations: anno,
 				Labels: map[string]string{
 					"app":    name,
 					"name":   name,

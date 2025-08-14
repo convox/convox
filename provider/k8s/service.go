@@ -46,7 +46,7 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 
 	ss := structs.Services{}
 
-	ds, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).List(context.TODO(), lopts)
+	ds, err := p.ListDeploymentsFromInformer(p.AppNamespace(app), lopts.LabelSelector)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -78,6 +78,18 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 		}
 
 		ss = append(ss, s)
+	}
+
+	hasAgent := false
+	for _, s := range m.Services {
+		if s.Agent.Enabled {
+			hasAgent = true
+			break
+		}
+	}
+
+	if !hasAgent {
+		return ss, nil
 	}
 
 	dss, err := p.Cluster.AppsV1().DaemonSets(p.AppNamespace(app)).List(context.TODO(), lopts)
@@ -170,7 +182,7 @@ func (p *Provider) serviceRestartDeployment(app, name string) error {
 }
 
 func (p *Provider) ServiceUpdate(app, name string, opts structs.ServiceUpdateOptions) error {
-	d, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).Get(context.TODO(), name, am.GetOptions{})
+	d, err := p.GetDeploymentFromInformer(name, p.AppNamespace(app))
 	if err != nil {
 		return errors.WithStack(err)
 	}

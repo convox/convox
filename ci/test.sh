@@ -121,11 +121,22 @@ do
   sleep 1
 done
 
-echo "app is updating will cancel in 10 secs"
-sleep 10
+echo "app is updating will cancel in 3 secs"
+sleep 3
 
-convox apps cancel -a httpd | grep "OK"
-echo "app deployment canceled"
+for i in {1..30}; do
+  if convox apps cancel -a httpd | grep "OK"; then
+    echo "app deployment canceled"
+    break
+  else
+    echo "cancel attempt $i failed, retrying..."
+    sleep 1
+  fi
+  if [ $i -eq 30 ]; then
+    echo "Failed to cancel app deployment after 20 attempts"
+    exit 1
+  fi
+done
 
 endpoint=$(convox api get /apps/httpd/services | jq -r '.[] | select(.name == "web") | .domain')
 fetch https://$endpoint | grep "It works"

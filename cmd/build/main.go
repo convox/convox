@@ -106,6 +106,8 @@ func execute() error {
 		flagUrl = v
 	}
 
+	// BUILD_GIT_SHA is exposed as env as well
+
 	opts := build.Options{
 		App:         flagApp,
 		Auth:        flagAuth,

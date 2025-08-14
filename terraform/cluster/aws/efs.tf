@@ -10,7 +10,8 @@ resource "aws_eks_addon" "aws_efs_csi_driver" {
   cluster_name      = aws_eks_cluster.cluster.name
   addon_name        = "aws-efs-csi-driver"
   addon_version     = var.efs_csi_driver_version
-  resolve_conflicts = "OVERWRITE"
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
 }
 
 // setup iam permissions

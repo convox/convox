@@ -2,8 +2,8 @@ package docs
 
 import (
 	"bytes"
+	"embed"
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"regexp"
@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/algolia/algoliasearch-client-go/algoliasearch"
-	"github.com/gobuffalo/packr"
 	"github.com/russross/blackfriday"
 	"gopkg.in/yaml.v2"
 )
@@ -61,28 +60,39 @@ type Documents struct {
 	documents []Document
 }
 
-func Load(box packr.Box) (*Documents, error) {
+func Load(docFs embed.FS, dir string) (*Documents, error) {
 	ds := &Documents{
 		documents: []Document{},
 	}
 
-	err := box.Walk(func(path string, file packr.File) error {
-		data, err := ioutil.ReadAll(file)
+	entries, err := docFs.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			// Recursively walk subdirectories
+			subDs, err := Load(docFs, dir+"/"+entry.Name())
+			if err != nil {
+				return nil, err
+			}
+			ds.documents = append(ds.documents, subDs.documents...)
+			continue
+		}
+
+		path := dir + "/" + entry.Name()
+		data, err := docFs.ReadFile(path)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		d, err := parseDocument(path, data)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		ds.Add(*d)
-
-		return nil
-	})
-	if err != nil {
-		return nil, err
 	}
 
 	return ds, nil

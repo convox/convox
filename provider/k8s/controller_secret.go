@@ -55,7 +55,7 @@ func (c *SecretController) Client() kubernetes.Interface {
 }
 
 func (c *SecretController) Informer() cache.SharedInformer {
-	return ic.NewFilteredSecretInformer(c.Provider.Cluster, ac.NamespaceAll, 3*time.Minute, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
+	return ic.NewFilteredSecretInformer(c.Provider.Cluster, ac.NamespaceAll, 10*time.Minute, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
 }
 
 func (c *SecretController) ListOptions(opts *am.ListOptions) {

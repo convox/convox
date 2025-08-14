@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	gojson "encoding/json"
 	"fmt"
 	"math"
 	"os"
@@ -412,4 +413,8 @@ func parseResourceSubstitutionId(id string) (string, string, string) {
 		}
 	}
 	return app, rtype, rname
+}
+
+func patchBytes(patch map[string]interface{}) ([]byte, error) {
+	return gojson.Marshal(patch)
 }
