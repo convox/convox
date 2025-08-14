@@ -300,7 +300,8 @@ resource "aws_launch_template" "build_additional" {
     content {
       vcpu_count { min = random_id.build_node_additional[each.key].keepers.cpu }
       memory_mib { min = random_id.build_node_additional[each.key].keepers.mem }
-      allowed_instance_types = random_id.build_node_additional[each.key].keepers.types != null ? random_id.build_node_additional[each.key].keepers.types : [random_id.build_node_additional[each.key].keepers.node_type]
+      allowed_instance_types = random_id.build_node_additional[each.key].keepers.types != null ? random_id.build_node_additional[each.key].keepers.types :
+        random_id.build_node_additional[each.key].keepers.node_type != null ? [random_id.build_node_additional[each.key].keepers.node_type] : []
     }
   }
 
