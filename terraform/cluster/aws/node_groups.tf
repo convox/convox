@@ -59,6 +59,7 @@ resource "random_id" "additional_node_groups" {
   for_each = { for idx, ng in local.additional_node_groups_with_defaults : ng.id => ng }
 
   keepers = {
+    dummy               = "1"
     id                  = each.value.id
     node_capacity_type  = each.value.capacity_type != null ? each.value.capacity_type : "ON_DEMAND"
     node_disk           = each.value.disk != null ? each.value.disk : var.node_disk
@@ -218,6 +219,7 @@ resource "random_id" "build_node_additional" {
   byte_length = 8
 
   keepers = {
+    dummy               = "1"
     id                  = each.value.id
     node_disk           = each.value.disk != null ? each.value.disk : var.node_disk
     node_type           = each.value.type

@@ -79,6 +79,7 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 		"BUILD_MANIFEST":               common.DefaultString(opts.Manifest, "convox.yml"),
 		"BUILD_RACK":                   p.Name,
 		"BUILD_URL":                    url,
+		"BUILD_GIT_SHA":                b.GitSha,
 		"BUILDKIT_ENABLED":             p.BuildkitEnabled,
 		"PROVIDER":                     os.Getenv("PROVIDER"),
 		"DISABLE_IMAGE_MANIFEST_CACHE": os.Getenv("DISABLE_IMAGE_MANIFEST_CACHE"),
@@ -95,7 +96,7 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 	buildCmd := fmt.Sprintf("build -method tgz -cache %t", cache)
 	if opts.BuildArgs != nil {
 		for _, v := range *opts.BuildArgs {
-			if len(strings.SplitN(v, "=", 2)) != 2 {
+			if len(strings.SplitN(v, "=", 2)) > 2 {
 				return nil, errors.New("invalid build args:" + v)
 			}
 			buildCmd = fmt.Sprintf("%s -build-args %s", buildCmd, v)
@@ -433,14 +434,16 @@ func (p *Provider) BuildList(app string, opts structs.BuildListOptions) (structs
 		return nil, errors.WithStack(err)
 	}
 
-	bs, err := p.buildList(app)
+	limit := common.DefaultInt(opts.Limit, 10)
+
+	bs, err := p.buildList(app, limit)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	sort.Slice(bs, func(i, j int) bool { return bs[i].Started.After(bs[j].Started) })
 
-	if limit := common.DefaultInt(opts.Limit, 10); len(bs) > limit {
+	if len(bs) > limit {
 		bs = bs[0:limit]
 	}
 
@@ -551,7 +554,7 @@ func (p *Provider) buildCreate(b *structs.Build) (*structs.Build, error) {
 
 // skipcq
 func (p *Provider) buildGet(app, id string) (*structs.Build, error) {
-	kb, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(app)).Get(strings.ToLower(id), am.GetOptions{})
+	kb, err := p.GetBuildFromInformer(strings.ToLower(id), p.AppNamespace(app))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -560,8 +563,8 @@ func (p *Provider) buildGet(app, id string) (*structs.Build, error) {
 }
 
 // skipcq
-func (p *Provider) buildList(app string) (structs.Builds, error) {
-	kbs, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(app)).List(am.ListOptions{})
+func (p *Provider) buildList(app string, limit int) (structs.Builds, error) {
+	kbs, err := p.ListBuildsFromInformer(p.AppNamespace(app), "", limit)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -641,7 +644,7 @@ func (p *Provider) buildUnmarshal(kb *ca.Build) (*structs.Build, error) {
 
 // skipcq
 func (p *Provider) buildUpdate(b *structs.Build) (*structs.Build, error) {
-	kbo, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(b.App)).Get(strings.ToLower(b.Id), am.GetOptions{})
+	kbo, err := p.GetBuildFromInformer(strings.ToLower(b.Id), p.AppNamespace(b.App))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
