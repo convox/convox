@@ -26,7 +26,10 @@ The `additional_build_groups_config` parameter takes a JSON array of node group 
 
 | Field | Required | Description | Default |
 |-------|----------|-------------|---------|
-| `type` | Yes | The EC2 instance type to use for the build node group |  |
+| `type` | Yes (or set the `cpu` and `mem` fields) | The EC2 instance type to use for the build node group |  |
+| `cpu` | Yes (or set the `type` field) | The minimum number of vCPUs required from the build node |  |
+| `mem` | Yes (or set the `type` field) | The minimum mib of memory required from the build node |  |
+| `types` | No (but can use in conjunection with the `cpu` and `mem` fields) | List of instance types to apply your specified `cpu` and `mem` attributes against. All other instance types are ignored, even if they match your specified attributes. You can use strings with one or more wild cards, represented by an asterisk (*), to allow an instance type, size, or generation. |  |
 | `disk` | No | The disk size in GB for the nodes | Same as main node disk |
 | `capacity_type` | No | Whether to use on-demand or spot instances | `ON_DEMAND` |
 | `min_size` | No | Minimum number of nodes | 0 |
@@ -68,6 +71,40 @@ The JSON file should be structured as follows:
 $ convox rack params set 'additional_build_groups_config=[{"type":"c5.2xlarge","disk":100,"capacity_type":"SPOT","min_size":0,"desired_size":1,"max_size":5,"label":"app-build"}]' -r rackName
 Setting parameters... OK
 ```
+
+## Using `cpu`, `mem` and `types` to allow for more flexibility
+
+To allow for more instance type choice within one node group, instead of specifying a single type, you are able to specify minimum `cpu` and `mem` requirements, and optionally provide a list of instance types to match those against.
+
+```json
+[
+  {
+    "id": 101,
+    "cpu": 4,
+    "mem": 8192,
+    "types": "c3.xlarge, c4.xlarge, c5.xlarge, c5d.xlarge, c5a.xlarge, c5n.xlarge",
+    "disk": 50,
+    "capacity_type": "ON_DEMAND",
+    "min_size": 1,
+    "max_size": 3,
+    "label": "compute-xlarge"
+  },
+  {
+    "id": 102,
+    "cpu": 16,
+    "mem": 16384,
+    "types": "*.4xlarge, *.8xlarge",
+    "disk": 100,
+    "capacity_type": "SPOT",
+    "min_size": 2,
+    "max_size": 5,
+    "label": "4xlarge"
+  }
+]
+```
+
+Our first node group (`101`) would use any instance that has at least 4 vCPU and 8GiB of memory that also matches one of the specific types listed.  Our second node group (`102`) would use any instance that has at least 16 vCPU, 16GiB of memory and can be from any family of instance as long as it is a 4xlarge size or an 8xlarge size.
+The following are further examples: `m5.8xlarge, c5*.*, m5a.*, r*, *3*.` For example, if you specify `c5*`, you are allowing the entire C5 instance family, which includes all C5a and C5n instance types. If you specify `m5a.*`, you are allowing all the M5a instance types, but not the M5n instance types.
 
 ## Directing Build Pods to Specific Node Groups
 To direct build pods to specific node groups, use the `BuildLabels` app parameter:

@@ -13,6 +13,9 @@ locals {
     for idx, ng in var.additional_node_groups : {
       id            = tonumber(lookup(ng, "id", idx))
       type          = lookup(ng, "type", null)
+      types         = lookup(ng, "types", null)
+      cpu           = tonumber(lookup(ng, "cpu", 0))
+      mem           = tonumber(lookup(ng, "mem", 0))
       disk          = tonumber(lookup(ng, "disk", var.node_disk))
       capacity_type = lookup(ng, "capacity_type", "ON_DEMAND")
       min_size      = tonumber(lookup(ng, "min_size", 1))
@@ -32,6 +35,9 @@ locals {
     for idx, ng in var.additional_build_groups : {
       id            = tonumber(lookup(ng, "id", idx))
       type          = lookup(ng, "type", null)
+      types         = lookup(ng, "types", null)
+      cpu           = tonumber(lookup(ng, "cpu", 0))
+      mem           = tonumber(lookup(ng, "mem", 0))
       disk          = tonumber(lookup(ng, "disk", var.node_disk))
       capacity_type = lookup(ng, "capacity_type", "ON_DEMAND")
       min_size      = tonumber(lookup(ng, "min_size", 0))
@@ -56,7 +62,10 @@ resource "random_id" "additional_node_groups" {
     id                  = each.value.id
     node_capacity_type  = each.value.capacity_type != null ? each.value.capacity_type : "ON_DEMAND"
     node_disk           = each.value.disk != null ? each.value.disk : var.node_disk
-    node_type           = each.value.type
+    node_type           = each.value.typ
+    types               = each.value.types
+    cpu                 = each.value.cpu
+    mem                 = each.value.mem
     ami_id              = each.value.ami_id
     private             = var.private
     private_subnets_ids = join("-", local.private_subnets_ids)
@@ -151,7 +160,16 @@ resource "aws_launch_template" "cluster_additional" {
     instance_metadata_tags      = var.imds_tags_enable ? "enabled" : "disabled"
   }
 
-  instance_type = random_id.additional_node_groups[each.key].keepers.node_type
+  dynamic "instance_requirements" {
+    for_each = random_id.additional_node_groups[each.key].keepers.cpu > 0 && random_id.additional_node_groups[each.key].keepers.mem > 0 ? [1] : []
+    content {
+      vcpu_count { min = random_id.additional_node_groups[each.key].keepers.cpu }
+      memory_mib { min = random_id.additional_node_groups[each.key].keepers.mem }
+      allowed_instance_types = random_id.additional_node_groups[each.key].keepers.types != null ? random_id.additional_node_groups[each.key].keepers.types : [random_id.additional_node_groups[each.key].keepers.node_type]
+    }
+  }
+
+  instance_type = random_id.additional_node_groups[each.key].keepers.cpu > 0 && random_id.additional_node_groups[each.key].keepers.mem > 0 ? null : random_id.additional_node_groups[each.key].keepers.node_type
 
   image_id = random_id.additional_node_groups[each.key].keepers.ami_id
 
@@ -202,6 +220,9 @@ resource "random_id" "build_node_additional" {
     id                  = each.value.id
     node_disk           = each.value.disk != null ? each.value.disk : var.node_disk
     node_type           = each.value.type
+    types               = each.value.types
+    cpu                 = each.value.cpu
+    mem                 = each.value.mem
     capacity_type       = each.value.capacity_type
     ami_id              = each.value.ami_id
     private_subnets_ids = join("-", local.private_subnets_ids)
@@ -273,7 +294,16 @@ resource "aws_launch_template" "build_additional" {
     }
   }
 
-  instance_type = random_id.build_node_additional[each.key].keepers.node_type
+  dynamic "instance_requirements" {
+    for_each = random_id.build_node_additional[each.key].keepers.cpu > 0 && random_id.build_node_additional[each.key].keepers.mem > 0 ? [1] : []
+    content {
+      vcpu_count { min = random_id.build_node_additional[each.key].keepers.cpu }
+      memory_mib { min = random_id.build_node_additional[each.key].keepers.mem }
+      allowed_instance_types = random_id.build_node_additional[each.key].keepers.types != null ? random_id.build_node_additional[each.key].keepers.types : [random_id.build_node_additional[each.key].keepers.node_type]
+    }
+  }
+
+  instance_type = random_id.build_node_additional[each.key].keepers.cpu > 0 && random_id.build_node_additional[each.key].keepers.mem > 0 ? null : random_id.build_node_additional[each.key].keepers.node_type
 
   image_id = random_id.build_node_additional[each.key].keepers.ami_id
 
