@@ -1,6 +1,15 @@
 FROM golang:1.23-alpine AS package
 
-RUN apk update && apk add make binutils gcc linux-headers libc-dev
+ARG DOCKER_ARCH=x86_64
+
+RUN apk update && \
+    apk add --no-cache \
+    build-base \
+    binutils \
+    binutils-gold \
+    gcc \
+    musl-dev \
+    make
 
 WORKDIR /usr/src/convox
 
@@ -11,6 +20,8 @@ RUN make $GOPATH/bin/build
 ###########################################################################################
 
 FROM moby/buildkit:v0.23.2-rootless as rootless
+
+ARG DOCKER_ARCH=x86_64
 
 USER root
 
@@ -30,6 +41,8 @@ ENTRYPOINT [ "./buildctl-daemonless.sh" ]
 ###########################################################################################
 
 FROM moby/buildkit:v0.23.2 as privileged
+
+ARG DOCKER_ARCH=x86_64
 
 RUN apk add skopeo --update
 
