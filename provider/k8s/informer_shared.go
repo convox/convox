@@ -49,7 +49,7 @@ func (p *Provider) RunSharedInformer(stopCh chan struct{}) {
 
 	// convox custom informers
 	convoxInformerFactory := cinformer.NewFilteredSharedInformerFactory(p.Convox, 0, am.NamespaceAll, func(opts *am.ListOptions) {
-		opts.LabelSelector = "!marked"
+		opts.LabelSelector = "!convox.io/marked-as"
 	})
 	buildInformer := convoxInformerFactory.Convox().V1().Builds()
 	releaseInformer := convoxInformerFactory.Convox().V1().Releases()
@@ -270,7 +270,7 @@ func (p *Provider) GetBuildFromInformer(name, ns string) (*v1.Build, error) {
 }
 
 func (p *Provider) ListBuildsFromInformer(ns string, labelSelector string, limit int) (*v1.BuildList, error) {
-	if p.buildInformer == nil || limit > 45 {
+	if p.buildInformer == nil || limit > 50 {
 		return p.Convox.ConvoxV1().Builds(ns).List(am.ListOptions{
 			LabelSelector: labelSelector,
 		})
@@ -317,7 +317,7 @@ func (p *Provider) GetReleaseFromInformer(name, ns string) (*v1.Release, error) 
 }
 
 func (p *Provider) ListReleasesFromInformer(ns string, labelSelector string, limit int) (*v1.ReleaseList, error) {
-	if p.releaseInformer == nil || limit > 45 {
+	if p.releaseInformer == nil || limit > 50 {
 		return p.Convox.ConvoxV1().Releases(ns).List(am.ListOptions{
 			LabelSelector: labelSelector,
 		})

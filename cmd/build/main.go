@@ -8,6 +8,7 @@ import (
 
 	"github.com/convox/convox/pkg/build"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/convox/provider/k8s"
 	"github.com/convox/convox/sdk"
 )
 
@@ -44,6 +45,15 @@ var (
 )
 
 func main() {
+
+	if os.Args[1] == "build-and-release-sync" {
+		if err := RunBuildAndReleaseSync(); err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: %s\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	if err := execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: %s\n", err)
 		os.Exit(1)
@@ -137,5 +147,20 @@ func execute() error {
 		return err
 	}
 
+	return nil
+}
+
+func RunBuildAndReleaseSync() error {
+	p, err := k8s.FromEnv()
+	if err != nil {
+		return fmt.Errorf("failed to create provider: %w", err)
+	}
+
+	atomCtrl, err := k8s.NewAtomController(p)
+	if err != nil {
+		return fmt.Errorf("failed to create atom controller: %w", err)
+	}
+
+	atomCtrl.SyncMarker()
 	return nil
 }

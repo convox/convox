@@ -1,6 +1,6 @@
 FROM golang:1.23-alpine AS package
 
-RUN apk update && apk add make gcc linux-headers libc-dev
+RUN apk update && apk add make binutils gcc linux-headers libc-dev
 
 WORKDIR /usr/src/convox
 
