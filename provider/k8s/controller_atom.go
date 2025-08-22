@@ -17,6 +17,7 @@ import (
 	"github.com/convox/convox/pkg/kctl"
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
+	convoxv1 "github.com/convox/convox/provider/k8s/pkg/apis/convox/v1"
 	"github.com/convox/logger"
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
@@ -340,101 +341,152 @@ func (a *AtomController) runMarker() {
 	}
 
 	for {
-		a.markOldbuilds()
-		a.markOldReleases()
+		a.SyncMarker()
 
 		time.Sleep(6 * time.Hour)
 	}
 }
 
+func (a *AtomController) SyncMarker() {
+	a.markOldbuilds()
+	a.markOldReleases()
+}
+
 func (a *AtomController) markOldbuilds() {
 	a.logger.Logf("marking old builds...")
 
-	bList, err := a.provider.Convox.ConvoxV1().Builds(am.NamespaceAll).List(am.ListOptions{
-		LabelSelector: "!marked",
-	})
-	if err != nil {
-		a.logger.Logf("failed to list builds: %s", err)
-		return
+	bItemsByNamespace := make(map[string][]convoxv1.Build)
+
+	listOpts := am.ListOptions{
+		LabelSelector: "!convox.io/marked-as",
 	}
 
-	bItems := bList.Items
-	sort.Slice(bItems, func(i, j int) bool {
-		startedI, err := time.Parse(common.SortableTime, bItems[i].Spec.Started)
+	for {
+		bList, err := a.provider.Convox.ConvoxV1().Builds(am.NamespaceAll).List(listOpts)
 		if err != nil {
-			startedI = bItems[i].CreationTimestamp.UTC()
+			a.logger.Logf("failed to list builds: %s", err)
+			return
 		}
-		startedJ, err := time.Parse(common.SortableTime, bItems[j].Spec.Started)
-		if err != nil {
-			startedI = bItems[j].CreationTimestamp.UTC()
-		}
-		return startedI.Before(startedJ)
-	})
 
-	for i, b := range bItems {
-		if i >= 50 {
-			patchBytes, err := patchBytes(map[string]interface{}{
-				"metadata": map[string]interface{}{
-					"labels": map[string]string{
-						"marked": "old",
+		for _, b := range bList.Items {
+			if _, ok := bItemsByNamespace[b.Namespace]; !ok {
+				bItemsByNamespace[b.Namespace] = []convoxv1.Build{}
+			}
+			bItemsByNamespace[b.Namespace] = append(bItemsByNamespace[b.Namespace], b)
+		}
+
+		if bList.GetContinue() == "" {
+			break
+		}
+		listOpts.Continue = bList.GetContinue()
+	}
+
+	a.logger.Logf("fetched builds")
+
+	for _, bItems := range bItemsByNamespace {
+		sort.Slice(bItems, func(i, j int) bool {
+			startedI, err := time.Parse(common.SortableTime, bItems[i].Spec.Started)
+			if err != nil {
+				startedI = bItems[i].CreationTimestamp.UTC()
+			}
+			startedJ, err := time.Parse(common.SortableTime, bItems[j].Spec.Started)
+			if err != nil {
+				startedI = bItems[j].CreationTimestamp.UTC()
+			}
+			// sort by creation time, so that the newest release comes first
+			return startedI.After(startedJ)
+		})
+
+		for i, b := range bItems {
+			if i >= 60 {
+				patchBytes, err := patchBytes(map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"labels": map[string]string{
+							"convox.io/marked-as": "old",
+						},
 					},
-				},
-			})
-			if err != nil {
-				a.logger.Errorf("failed to create patch bytes err=%q\n", err)
-				return
+				})
+				if err != nil {
+					a.logger.Errorf("failed to create patch bytes err=%q\n", err)
+					return
+				}
+				_, err = a.provider.Convox.ConvoxV1().Builds(b.Namespace).Patch(b.Name, types.MergePatchType, patchBytes)
+				if err != nil {
+					a.logger.Errorf("failed to mark build '%s/%s' err=%q\n", b.Namespace, b.Name, err)
+				}
+				time.Sleep(50 * time.Millisecond) // to avoid rate limit
 			}
-			_, err = a.provider.Convox.ConvoxV1().Builds(b.Namespace).Patch(b.Name, types.MergePatchType, patchBytes)
-			if err != nil {
-				a.logger.Errorf("failed to mark build '%s/%s' err=%q\n", b.Namespace, b.Name, err)
-			}
-			time.Sleep(100 * time.Millisecond) // to avoid rate limit
 		}
 	}
+
+	a.logger.Logf("finished marking old builds")
 }
 
 func (a *AtomController) markOldReleases() {
 	a.logger.Logf("marking old released...")
 
-	rList, err := a.provider.Convox.ConvoxV1().Releases(am.NamespaceAll).List(am.ListOptions{
-		LabelSelector: "!marked",
-	})
-	if err != nil {
-		a.logger.Logf("failed to list builds: %s", err)
-		return
+	rListByNamespace := make(map[string][]convoxv1.Release)
+	listOpts := am.ListOptions{
+		LabelSelector: "!convox.io/marked-as",
 	}
 
-	rItems := rList.Items
-	sort.Slice(rItems, func(i, j int) bool {
-		startedI, err := time.Parse(common.SortableTime, rItems[i].Spec.Created)
+	for {
+		rList, err := a.provider.Convox.ConvoxV1().Releases(am.NamespaceAll).List(listOpts)
 		if err != nil {
-			startedI = rItems[i].CreationTimestamp.UTC()
+			a.logger.Logf("failed to list releases: %s", err)
+			return
 		}
-		startedJ, err := time.Parse(common.SortableTime, rItems[j].Spec.Created)
-		if err != nil {
-			startedI = rItems[j].CreationTimestamp.UTC()
-		}
-		return startedI.Before(startedJ)
-	})
 
-	for i, r := range rItems {
-		if i >= 50 {
-			patchBytes, err := patchBytes(map[string]interface{}{
-				"metadata": map[string]interface{}{
-					"labels": map[string]string{
-						"marked": "old",
+		for _, r := range rList.Items {
+			if _, ok := rListByNamespace[r.Namespace]; !ok {
+				rListByNamespace[r.Namespace] = []convoxv1.Release{}
+			}
+			rListByNamespace[r.Namespace] = append(rListByNamespace[r.Namespace], r)
+		}
+
+		if rList.GetContinue() == "" {
+			break
+		}
+		listOpts.Continue = rList.GetContinue()
+	}
+
+	a.logger.Logf("fetched releases")
+
+	for _, rItems := range rListByNamespace {
+		sort.Slice(rItems, func(i, j int) bool {
+			startedI, err := time.Parse(common.SortableTime, rItems[i].Spec.Created)
+			if err != nil {
+				startedI = rItems[i].CreationTimestamp.UTC()
+			}
+			startedJ, err := time.Parse(common.SortableTime, rItems[j].Spec.Created)
+			if err != nil {
+				startedI = rItems[j].CreationTimestamp.UTC()
+			}
+			// sort by creation time, so that the newest release comes first
+			return startedI.After(startedJ)
+		})
+
+		for i, r := range rItems {
+			if i >= 60 {
+				patchBytes, err := patchBytes(map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"labels": map[string]string{
+							"convox.io/marked-as": "old",
+						},
 					},
-				},
-			})
-			if err != nil {
-				a.logger.Errorf("failed to create patch bytes err=%q\n", err)
-				return
+				})
+				if err != nil {
+					a.logger.Errorf("failed to create patch bytes err=%q\n", err)
+					return
+				}
+				_, err = a.provider.Convox.ConvoxV1().Releases(r.Namespace).Patch(r.Name, types.MergePatchType, patchBytes)
+				if err != nil {
+					a.logger.Errorf("failed to mark release '%s/%s' err=%q\n", r.Namespace, r.Name, err)
+				}
+				time.Sleep(50 * time.Millisecond) // to avoid rate limit
 			}
-			_, err = a.provider.Convox.ConvoxV1().Releases(r.Namespace).Patch(r.Name, types.MergePatchType, patchBytes)
-			if err != nil {
-				a.logger.Errorf("failed to mark release '%s/%s' err=%q\n", r.Namespace, r.Name, err)
-			}
-			time.Sleep(100 * time.Millisecond) // to avoid rate limit
 		}
 	}
+
+	a.logger.Logf("finished marking old releases")
 }
