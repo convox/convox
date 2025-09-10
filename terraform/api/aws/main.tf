@@ -55,6 +55,7 @@ module "k8s" {
     ECR_SCAN_ON_PUSH_ENABLE              = var.ecr_scan_on_push_enable
     SUBNET_IDS                           = join(",", var.subnets)
     VPC_ID                               = var.vpc_id
+    FEATURE_GATES                        = var.api_feature_gates
   }
 }
 

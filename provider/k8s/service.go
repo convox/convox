@@ -19,8 +19,14 @@ func (p *Provider) ServiceHost(app string, s manifest.Service) string {
 	if s.Internal {
 		return fmt.Sprintf("%s.%s.%s.local", s.Name, app, p.Name)
 	} else if s.InternalRouter {
+		if p.ContextTID() != "" {
+			return fmt.Sprintf("%s.%s.%s.%s", s.Name, app, p.ContextTID(), p.DomainInternal)
+		}
 		return fmt.Sprintf("%s.%s.%s", s.Name, app, p.DomainInternal)
 	} else {
+		if p.ContextTID() != "" {
+			return fmt.Sprintf("%s.%s.%s.%s", s.Name, app, p.ContextTID(), p.Domain)
+		}
 		return fmt.Sprintf("%s.%s.%s", s.Name, app, p.Domain)
 	}
 }
@@ -64,7 +70,7 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 
 		s := structs.Service{
 			Count:  int(common.DefaultInt32(d.Spec.Replicas, 0)),
-			Domain: p.Engine.ServiceHost(app, *ms),
+			Domain: p.ServiceHost(app, *ms),
 			Name:   d.ObjectMeta.Name,
 			Ports:  serviceContainerPorts(*c, ms.Internal),
 		}
@@ -110,7 +116,7 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 
 		s := structs.Service{
 			Count:  int(d.Status.NumberReady),
-			Domain: p.Engine.ServiceHost(app, *ms),
+			Domain: p.ServiceHost(app, *ms),
 			Name:   d.ObjectMeta.Name,
 			Ports:  serviceContainerPorts(*c, ms.Internal),
 		}

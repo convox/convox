@@ -31,7 +31,7 @@ import (
 )
 
 var (
-	templates = templater.New(atomTmpl.TemplatesFS, templateHelpers())
+	templates = templater.New(atomTmpl.TemplatesFS)
 )
 
 type Client struct {
@@ -70,7 +70,7 @@ type ApplyConfig struct {
 }
 
 func Initialize() error {
-	data, err := templates.Render("crd.yml.tmpl", nil)
+	data, err := templates.Render("crd.yml.tmpl", nil, templateHelpers())
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -574,7 +574,7 @@ func kubectlCreate(data []byte, args ...string) ([]byte, error) {
 }
 
 func kubectlApplyTemplate(template string, params map[string]interface{}) error {
-	data, err := templates.Render(template, params)
+	data, err := templates.Render(template, params, templateHelpers())
 	if err != nil {
 		return errors.WithStack(err)
 	}

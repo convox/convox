@@ -18,7 +18,7 @@ import (
 )
 
 func (p *Provider) RenderTemplate(name string, params map[string]interface{}) ([]byte, error) {
-	data, err := p.templater.Render(fmt.Sprintf("%s.yml.tmpl", name), params)
+	data, err := p.templater.Render(fmt.Sprintf("%s.yml.tmpl", name), params, p.templateHelpers())
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -41,7 +41,7 @@ func (p *Provider) templateHelpers() template.FuncMap {
 		},
 		"domains": func(app string, s manifest.Service) []string {
 			ds := []string{
-				p.Engine.ServiceHost(app, s),
+				p.ServiceHost(app, s),
 				// fmt.Sprintf("%s.%s.%s.local", s.Name, app, p.Name),
 			}
 			for _, d := range s.Domains {

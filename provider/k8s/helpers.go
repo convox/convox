@@ -18,6 +18,7 @@ import (
 	"unicode"
 
 	"github.com/convox/convox/pkg/manifest"
+	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned/scheme"
 	"github.com/pkg/errors"
@@ -52,8 +53,12 @@ type Patch struct {
 func (p *Provider) environment(a *structs.App, r *structs.Release, s manifest.Service, e structs.Environment) (map[string]string, error) {
 	env := map[string]string{}
 
-	for k, v := range p.systemEnvironment() {
-		env[k] = v
+	if p.ContextTID() != "" {
+		env["TID"] = p.ContextTID()
+	} else {
+		for k, v := range p.systemEnvironment() {
+			env[k] = v
+		}
 	}
 
 	for k, v := range p.appEnvironment(a) {
@@ -126,6 +131,9 @@ func (p *Provider) serviceEnvironment(a *structs.App, s manifest.Service) map[st
 }
 
 func (p *Provider) systemEnvironment() map[string]string {
+	if p.FeatureGates[options.FeatureGateSystemEnvDisable] {
+		return map[string]string{}
+	}
 	return map[string]string{
 		"RACK":     p.Name,
 		"RACK_URL": fmt.Sprintf("https://convox:%s@api.%s.svc.cluster.local:5443", p.Password, p.Namespace),
@@ -170,6 +178,24 @@ func (p *Provider) volumeSources(app, service string, vs []string) []string {
 	sort.Strings(vsu)
 
 	return vsu
+}
+
+func (p *Provider) parseTidFromNamespace(ns string) string {
+	ns = strings.TrimPrefix(ns, p.Name+"-")
+	parts := strings.SplitN(ns, "-", 2)
+	if len(parts) == 2 {
+		return parts[0]
+	}
+	return ""
+}
+
+func (p *Provider) parseAppFromNamespace(ns string) string {
+	ns = strings.TrimPrefix(ns, p.Name+"-")
+	parts := strings.SplitN(ns, "-", 2)
+	if len(parts) == 2 {
+		return parts[1]
+	}
+	return ns
 }
 
 func nameFilter(name string) string {
