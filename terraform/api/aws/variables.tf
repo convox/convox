@@ -1,3 +1,8 @@
+variable "api_feature_gates" {
+  type = string
+  default = ""
+}
+
 variable "buildkit_enabled" {
   default = false
 }

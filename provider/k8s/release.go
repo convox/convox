@@ -369,6 +369,9 @@ func (p *Provider) releaseTemplateApp(a *structs.App, opts structs.ReleasePromot
 }
 
 func (p *Provider) releaseTemplateBalancer(a *structs.App, r *structs.Release, b manifest.Balancer, lbs manifest.Labels) ([]byte, error) {
+	if p.FeatureGates[options.FeatureGateBalancerDisable] {
+		return nil, fmt.Errorf("balancer resource is disabled")
+	}
 	params := map[string]interface{}{
 		"Annotations": b.AnnotationsMap(),
 		"Balancer":    b,
@@ -446,7 +449,7 @@ func (p *Provider) releaseTemplateIngress(a *structs.App, ss manifest.Services, 
 			"App":                        a.Name,
 			"Class":                      p.Engine.IngressClass(),
 			"ConvoxDomainTLSCertDisable": !p.ConvoxDomainTLSCertDisable,
-			"Host":                       p.Engine.ServiceHost(a.Name, s),
+			"Host":                       p.ServiceHost(a.Name, s),
 			"Idles":                      common.DefaultBool(opts.Idle, idles),
 			"Namespace":                  p.AppNamespace(a.Name),
 			"Rack":                       p.Name,
@@ -512,7 +515,7 @@ func (p *Provider) releaseTemplateIngressInternal(a *structs.App, ss manifest.Se
 			"App":                        a.Name,
 			"Class":                      p.Engine.IngressInternalClass(),
 			"ConvoxDomainTLSCertDisable": !p.ConvoxDomainTLSCertDisable,
-			"Host":                       p.Engine.ServiceHost(a.Name, s),
+			"Host":                       p.ServiceHost(a.Name, s),
 			"Idles":                      common.DefaultBool(opts.Idle, idles),
 			"Namespace":                  p.AppNamespace(a.Name),
 			"Rack":                       p.Name,
@@ -787,9 +790,13 @@ func (p *Provider) releaseUnmarshal(kr *ca.Release) (*structs.Release, error) {
 func (p *Provider) releaseElasticacheResources(app *structs.App, envs structs.Environment, m *manifest.Manifest) ([][]byte, []string, error) {
 	items := [][]byte{}
 	dependencies := []string{}
+
 	stateMap := map[string]struct{}{}
 	for _, r := range m.Resources {
 		if r.IsElastiCache() {
+			if p.FeatureGates[options.FeatureGateElasticacheDisable] {
+				return nil, nil, fmt.Errorf("elasticache resource is disabled")
+			}
 			if err := r.ElastiCacheNameValidate(); err != nil {
 				return nil, nil, err
 			}
@@ -848,9 +855,13 @@ func (p *Provider) releaseElasticacheResources(app *structs.App, envs structs.En
 func (p *Provider) releaseRdsResources(app *structs.App, envs structs.Environment, m *manifest.Manifest) ([][]byte, []string, error) {
 	items := [][]byte{}
 	dependencies := []string{}
+
 	rdsStateMap := map[string]struct{}{}
 	for _, r := range m.Resources {
 		if r.IsRds() {
+			if p.FeatureGates[options.FeatureGateRdsDisable] {
+				return nil, nil, fmt.Errorf("rds resource is disabled")
+			}
 			if err := r.RdsNameValidate(); err != nil {
 				return nil, nil, err
 			}

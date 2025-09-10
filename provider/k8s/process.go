@@ -375,6 +375,10 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 		Spec: *s,
 	}
 
+	if opts.IsBuild {
+		pod.ObjectMeta.Labels["service-type"] = "build"
+	}
+
 	pd, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Create(
 		context.TODO(),
 		pod,

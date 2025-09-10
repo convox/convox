@@ -14,13 +14,13 @@ func init() {
 	register("configs", "list of app configs", watch(Configs), stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagRack, flagApp, flagWatchInterval},
 		Validate: stdcli.Args(0),
-	})
+	}, WithCloud())
 
 	register("config get", "get the config", ConfigGet, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagRack, flagApp},
 		Usage:    "<name>",
 		Validate: stdcli.Args(1),
-	})
+	}, WithCloud())
 
 	register("config set", "set the config", ConfigSet, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
@@ -32,7 +32,7 @@ func init() {
 		},
 		Usage:    "<name>",
 		Validate: stdcli.Args(1),
-	})
+	}, WithCloud())
 }
 
 func Configs(rack sdk.Interface, c *stdcli.Context) error {

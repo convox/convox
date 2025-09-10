@@ -15,7 +15,7 @@ func init() {
 		Flags:    []stdcli.Flag{flagRack, flagApp},
 		Usage:    "<pid> <command>",
 		Validate: stdcli.ArgsMin(2),
-	})
+	}, WithCloud())
 }
 
 func Exec(rack sdk.Interface, c *stdcli.Context) error {

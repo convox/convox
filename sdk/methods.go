@@ -1257,3 +1257,22 @@ func (*Client) Workers() error {
 	err := fmt.Errorf("not available via api")
 	return err
 }
+
+func (c *Client) MachineList() (structs.Machines, error) {
+	var err error
+
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+
+	var v structs.Machines
+
+	err = c.Get("/machines", ro, &v)
+
+	return v, err
+}
+
+func (c *Client) ClientType() string {
+	if c.MachineID != "" {
+		return "machine"
+	}
+	return "standard"
+}

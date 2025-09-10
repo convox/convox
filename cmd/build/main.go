@@ -137,6 +137,10 @@ func execute() error {
 		return err
 	}
 
+	rack.ExtraHeaders = map[string]string{
+		"X-Convox-TID": os.Getenv("CONVOX_TID"),
+	}
+
 	var engine build.Engine = &build.BuildKit{}
 	b, err := build.New(rack, opts, engine)
 	if err != nil {

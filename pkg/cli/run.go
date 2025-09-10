@@ -27,7 +27,7 @@ func init() {
 		),
 		Usage:    "<service> <command>",
 		Validate: stdcli.ArgsMin(2),
-	})
+	}, WithCloud())
 }
 
 func Run(rack sdk.Interface, c *stdcli.Context) error {

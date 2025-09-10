@@ -241,3 +241,22 @@ func Listruntimes(c *stdcli.Context, org string) (structs.Runtimes, error) {
 
 	return rs, nil
 }
+
+func ListMachines(c *stdcli.Context) (structs.Machines, error) {
+	host, err := currentConsole(c)
+	if err != nil {
+		return nil, err
+	}
+
+	cc, err := consoleClient(c, host, "")
+	if err != nil {
+		return nil, err
+	}
+
+	rs, err := cc.MachineList()
+	if err != nil {
+		return nil, err
+	}
+
+	return rs, nil
+}

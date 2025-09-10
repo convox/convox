@@ -13,23 +13,30 @@ func init() {
 	register("services", "list services for an app", watch(Services), stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagApp, flagRack, flagWatchInterval},
 		Validate: stdcli.Args(0),
-	})
+	}, WithCloud())
 
 	register("services restart", "restart a service", ServicesRestart, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagApp, flagRack},
 		Validate: stdcli.Args(1),
-	})
+	}, WithCloud())
 }
 
 func Services(rack sdk.Interface, c *stdcli.Context) error {
-	sys, err := rack.SystemGet()
-	if err != nil {
-		return err
+	rackVersion := ""
+	if rack.ClientType() == "standard" {
+		sys, err := rack.SystemGet()
+		if err != nil {
+			return err
+		}
+		rackVersion = sys.Version
+	} else {
+		rackVersion = "v3"
 	}
 
 	var ss structs.Services
+	var err error
 
-	if sys.Version < "20180708231844" {
+	if rackVersion < "20180708231844" {
 		ss, err = rack.FormationGet(app(c))
 		if err != nil {
 			return err

@@ -123,7 +123,7 @@ func (p *Provider) FlushStateLog(app string) {
 	logList := tempRdsEventLogStore.Get(app)
 	tempRdsEventLogStore.Reset(app)
 	for _, msg := range logList {
-		p.systemLog(app, "state", time.Now(), msg)
+		p.systemLog("", app, "state", time.Now(), msg)
 	}
 }
 

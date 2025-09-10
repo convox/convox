@@ -17,7 +17,7 @@ func init() {
 		Flags:    append([]stdcli.Flag{flagApp, flagRack}, stdcli.OptionFlags(structs.FileTransterOptions{})...),
 		Usage:    "<[pid:]src> <[pid:]dst>",
 		Validate: stdcli.Args(2),
-	})
+	}, WithCloud())
 }
 
 func Cp(rack sdk.Interface, c *stdcli.Context) error {

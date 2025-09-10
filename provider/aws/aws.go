@@ -85,6 +85,7 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 func (p *Provider) WithContext(ctx context.Context) structs.Provider {
 	pp := *p
 	pp.Provider = pp.Provider.WithContext(ctx).(*k8s.Provider)
+	pp.Provider.Engine = &pp
 	return &pp
 }
 

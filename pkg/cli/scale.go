@@ -25,7 +25,7 @@ func init() {
 				return stdcli.Args(0)(c)
 			}
 		},
-	})
+	}, WithCloud())
 }
 
 func Scale(rack sdk.Interface, c *stdcli.Context) error {

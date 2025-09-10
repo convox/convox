@@ -18,7 +18,10 @@ import (
 	"k8s.io/kubectl/pkg/scheme"
 )
 
-func (p *Provider) systemLog(app, name string, ts time.Time, message string) error {
+func (p *Provider) systemLog(tid, app, name string, ts time.Time, message string) error {
+	if tid != "" {
+		app = fmt.Sprintf("%s-%s", tid, app)
+	}
 	return p.Engine.Log(app, fmt.Sprintf("system/k8s/%s", name), ts, message)
 }
 
