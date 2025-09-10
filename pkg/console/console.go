@@ -32,3 +32,7 @@ func NewClient(endpoint string, rack string, handler Handler) (*Client, error) {
 
 	return cl, nil
 }
+
+func (c *Client) SetMachine(id string) {
+	c.Client.MachineID = id
+}

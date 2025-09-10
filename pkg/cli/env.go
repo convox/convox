@@ -24,7 +24,7 @@ func init() {
 			stdcli.StringFlag("release", "", "id of the release"),
 		},
 		Validate: stdcli.Args(0),
-	})
+	}, WithCloud())
 
 	register("env edit", "edit env interactively", EnvEdit, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
@@ -34,7 +34,7 @@ func init() {
 			stdcli.StringFlag("release", "", "id of the release"),
 		},
 		Validate: stdcli.Args(0),
-	})
+	}, WithCloud())
 
 	register("env get", "get an env var", EnvGet, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
@@ -43,7 +43,7 @@ func init() {
 		},
 		Usage:    "<var>",
 		Validate: stdcli.Args(1),
-	})
+	}, WithCloud())
 
 	register("env set", "set env var(s)", EnvSet, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
@@ -55,7 +55,7 @@ func init() {
 			stdcli.StringFlag("release", "", "id of the release"),
 		},
 		Usage: "<key=value> [key=value]...",
-	})
+	}, WithCloud())
 
 	register("env unset", "unset env var(s)", EnvUnset, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
@@ -67,7 +67,7 @@ func init() {
 		},
 		Usage:    "<key> [key]...",
 		Validate: stdcli.ArgsMin(1),
-	})
+	}, WithCloud())
 }
 
 func Env(rack sdk.Interface, c *stdcli.Context) error {

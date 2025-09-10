@@ -24,6 +24,7 @@ module "api" {
     kubernetes = kubernetes
   }
 
+  api_feature_gates                    = var.api_feature_gates
   buildkit_enabled                     = var.buildkit_enabled
   build_disable_convox_resolver        = var.build_disable_convox_resolver
   build_node_enabled                   = var.build_node_enabled

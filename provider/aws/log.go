@@ -17,8 +17,8 @@ import (
 
 var sequenceTokens sync.Map
 
-func (p *Provider) Log(app, stream string, ts time.Time, message string) error {
-	group := p.appLogGroup(app)
+func (p *Provider) Log(name, stream string, ts time.Time, message string) error {
+	group := p.appLogGroup(name)
 
 	req := &cloudwatchlogs.PutLogEventsInput{
 		LogGroupName:  aws.String(group),
@@ -44,7 +44,7 @@ func (p *Provider) Log(app, stream string, ts time.Time, message string) error {
 		switch awsErrorCode(err) {
 		case "ResourceNotFoundException":
 			if strings.Contains(err.Error(), "log group") {
-				if err := p.createLogGroup(app); err != nil {
+				if err := p.createLogGroup(name); err != nil {
 					return err
 				}
 			}
@@ -69,6 +69,9 @@ func (p *Provider) Log(app, stream string, ts time.Time, message string) error {
 }
 
 func (p *Provider) AppLogs(name string, opts structs.LogsOptions) (io.ReadCloser, error) {
+	if p.ContextTID() != "" {
+		name = fmt.Sprintf("%s-%s", p.ContextTID(), name)
+	}
 	return p.subscribeLogs(p.Context(), p.appLogGroup(name), "", opts)
 }
 

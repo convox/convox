@@ -169,7 +169,8 @@ func (a *AtomController) processDependency(obj *atomv1.Atom) {
 		if strings.HasPrefix(rType, "rds-") {
 			if err := a.processRdsDependency(obj, dep); err != nil {
 				a.logger.Logf(err.Error())
-				a.provider.systemLog(app, "state", time.Now(), err.Error())
+				a.provider.systemLog(a.provider.parseTidFromNamespace(obj.Namespace),
+					app, "state", time.Now(), err.Error())
 				return
 			}
 		}
@@ -177,7 +178,8 @@ func (a *AtomController) processDependency(obj *atomv1.Atom) {
 		if strings.HasPrefix(rType, "elasticache-") {
 			if err := a.processElasticacheDependency(obj, dep); err != nil {
 				a.logger.Logf(err.Error())
-				a.provider.systemLog(app, "state", time.Now(), err.Error())
+				a.provider.systemLog(a.provider.parseTidFromNamespace(obj.Namespace),
+					app, "state", time.Now(), err.Error())
 				return
 			}
 		}
@@ -188,7 +190,8 @@ func (a *AtomController) processDependency(obj *atomv1.Atom) {
 	}, v1.PatchOptions{})
 	if err != nil {
 		a.logger.Logf(err.Error())
-		a.provider.systemLog(strings.TrimPrefix(obj.Namespace, a.provider.Name), "state", time.Now(), fmt.Sprintf("failed to patch atom dependency: %s", err))
+		a.provider.systemLog(a.provider.parseTidFromNamespace(obj.Namespace),
+			a.provider.parseAppFromNamespace(obj.Namespace), "state", time.Now(), fmt.Sprintf("failed to patch atom dependency: %s", err))
 		return
 	}
 }

@@ -24,12 +24,12 @@ func init() {
 		Flags:    append(stdcli.OptionFlags(structs.BuildCreateOptions{}), flagRack, flagApp, flagId),
 		Usage:    "[dir]",
 		Validate: stdcli.ArgsMax(1),
-	})
+	}, WithCloud())
 
 	register("builds", "list builds", watch(Builds), stdcli.CommandOptions{
 		Flags:    append(stdcli.OptionFlags(structs.BuildListOptions{}), flagRack, flagApp, flagWatchInterval),
 		Validate: stdcli.Args(0),
-	})
+	}, WithCloud())
 
 	register("builds export", "export a build", BuildsExport, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
@@ -39,7 +39,7 @@ func init() {
 		},
 		Usage:    "<build>",
 		Validate: stdcli.Args(1),
-	})
+	}, WithCloud())
 
 	register("builds import", "import a build", BuildsImport, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
@@ -49,19 +49,19 @@ func init() {
 			stdcli.StringFlag("file", "f", "import from file"),
 		},
 		Validate: stdcli.Args(0),
-	})
+	}, WithCloud())
 
 	register("builds info", "get information about a build", BuildsInfo, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagRack, flagApp},
 		Usage:    "<build>",
 		Validate: stdcli.Args(1),
-	})
+	}, WithCloud())
 
 	register("builds logs", "get logs for a build", BuildsLogs, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagRack, flagApp},
 		Usage:    "<build>",
 		Validate: stdcli.Args(1),
-	})
+	}, WithCloud())
 }
 
 func Build(rack sdk.Interface, c *stdcli.Context) error {
@@ -129,14 +129,20 @@ func build(rack sdk.Interface, c *stdcli.Context, development bool) (*structs.Bu
 
 	c.OK()
 
-	s, err := rack.SystemGet()
-	if err != nil {
-		return nil, err
+	rackVersion := ""
+	if rack.ClientType() == "machine" {
+		rackVersion = "v3"
+	} else {
+		s, err := rack.SystemGet()
+		if err != nil {
+			return nil, err
+		}
+		rackVersion = s.Version
 	}
 
 	var b *structs.Build
 
-	if s.Version < "20180708231844" {
+	if rackVersion < "20180708231844" {
 		c.Startf("Starting build")
 
 		b, err = rack.BuildCreateUpload(app(c), bytes.NewReader(data), opts)
