@@ -166,8 +166,8 @@ func (m *Manifest) ApplyDefaults() error {
 			m.Services[i].Health.Timeout = m.Services[i].Health.Interval - 1
 		}
 
-		s.Liveness.Path = strings.TrimSpace(s.Liveness.Path)
-		if s.Liveness.Path != "" {
+		m.Services[i].Liveness.Path = strings.TrimSpace(s.Liveness.Path)
+		if m.Services[i].Liveness.Path != "" {
 			if s.Liveness.Grace == 0 {
 				m.Services[i].Liveness.Grace = 10
 			}
@@ -182,6 +182,25 @@ func (m *Manifest) ApplyDefaults() error {
 			}
 			if s.Liveness.FailureThreshold == 0 {
 				m.Services[i].Liveness.FailureThreshold = 3
+			}
+		}
+
+		m.Services[i].StartupProbe.Path = strings.TrimSpace(s.StartupProbe.Path)
+		if m.Services[i].StartupProbe.Path != "" {
+			if s.StartupProbe.Grace == 0 {
+				m.Services[i].StartupProbe.Grace = 30
+			}
+			if s.StartupProbe.Interval == 0 {
+				m.Services[i].StartupProbe.Interval = 5
+			}
+			if s.StartupProbe.Timeout == 0 {
+				m.Services[i].StartupProbe.Timeout = 5
+			}
+			if s.StartupProbe.SuccessThreshold == 0 {
+				m.Services[i].StartupProbe.SuccessThreshold = 1
+			}
+			if s.StartupProbe.FailureThreshold == 0 {
+				m.Services[i].StartupProbe.FailureThreshold = 3
 			}
 		}
 
