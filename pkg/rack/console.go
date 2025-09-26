@@ -142,7 +142,14 @@ func findMachineId(mList structs.Machines, machine string) (string, error) {
 			}
 			mid = m.ID
 			foundMatch = true
+			if orgMachine == machine || m.Name == machine {
+				return mid, nil
+			}
 		}
+	}
+
+	if !foundMatch {
+		return "", fmt.Errorf("no machine found matching '%s'", machine)
 	}
 
 	return mid, nil

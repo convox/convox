@@ -6,12 +6,13 @@ import (
 )
 
 const (
-	FeatureGateRdsDisable         = "rds-disable"
-	FeatureGateElasticacheDisable = "elasticache-disable"
-	FeatureGateSystemEnvDisable   = "system-env-disable"
-	FeatureGateBalancerDisable    = "balancer-disable"
-	FeatureGateTid                = "tid"
-	FeatureGateAppLimitRequired   = "app-limit-required"
+	FeatureGateRdsDisable          = "rds-disable"
+	FeatureGateElasticacheDisable  = "elasticache-disable"
+	FeatureGateSystemEnvDisable    = "system-env-disable"
+	FeatureGateBalancerDisable     = "balancer-disable"
+	FeatureGateTid                 = "tid"
+	FeatureGateAppLimitRequired    = "app-limit-required"
+	FeatureGateExternalDnsResolver = "external-dns-resolver" // will use 1.1.1.1 as the default resolver if enabled
 )
 
 func GetFeatureGates() map[string]bool {
