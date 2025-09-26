@@ -686,6 +686,10 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 			params["Resolver"] = ip
 		}
 
+		if options.GetFeatureGates()[options.FeatureGateExternalDnsResolver] {
+			params["DisableDnsSearches"] = true
+		}
+
 		data, err := p.RenderTemplate("app/service", params)
 		if err != nil {
 			return nil, errors.WithStack(err)
@@ -716,6 +720,10 @@ func (p *Provider) releaseTemplateTimer(a *structs.App, e structs.Environment, r
 
 	if ip, err := p.Engine.ResolverHost(); err == nil {
 		params["Resolver"] = ip
+	}
+
+	if options.GetFeatureGates()[options.FeatureGateExternalDnsResolver] {
+		params["DisableDnsSearches"] = true
 	}
 
 	data, err := p.RenderTemplate("app/timer", params)

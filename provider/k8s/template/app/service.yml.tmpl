@@ -119,12 +119,14 @@ spec:
         {{ with .Resolver }}
         nameservers:
           - "{{ . }}"
+        {{ if not (index $ "DisableDnsSearches") }}
         searches:
           - "{{$.App.Name}}.{{$.Rack}}.local"
           - "{{$.Namespace}}.svc.cluster.local"
           - "{{$.Rack}}.local"
           - "svc.cluster.local"
           - "cluster.local"
+        {{ end }}
         {{ end }}
       {{ end }}
       serviceAccountName: {{.Service.Name}}

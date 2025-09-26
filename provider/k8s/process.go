@@ -427,7 +427,7 @@ func (p *Provider) ProcessWait(app, pid string) (int, error) {
 	}
 }
 
-func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec, error) {
+func (p *Provider) podSpecFromService(app, service, release string, isBuild bool) (*ac.PodSpec, error) {
 	a, err := p.AppGet(app)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -464,7 +464,7 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 		},
 	})
 
-	if service != "build" && release != "" {
+	if !isBuild && release != "" {
 		m, r, err := common.ReleaseManifest(p, app, release)
 		if err != nil {
 			return nil, errors.WithStack(err)
@@ -544,7 +544,7 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 		Volumes:               vs,
 	}
 
-	if service != "build" || !p.BuildDisableResolver {
+	if !isBuild {
 		if ip, err := p.Engine.ResolverHost(); err == nil {
 			ps.DNSPolicy = "None"
 			ps.DNSConfig = &ac.PodDNSConfig{
@@ -560,6 +560,26 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 					"cluster.local",
 				},
 			}
+			if options.GetFeatureGates()[options.FeatureGateExternalDnsResolver] {
+				ps.DNSConfig.Searches = []string{}
+			}
+		}
+	}
+
+	if isBuild && !p.BuildDisableResolver && p.Resolver != "" {
+		ps.DNSPolicy = "None"
+		ps.DNSConfig = &ac.PodDNSConfig{
+			Nameservers: []string{p.Resolver},
+			Options: []ac.PodDNSConfigOption{
+				{Name: "ndots", Value: options.String("1")},
+			},
+			Searches: []string{
+				fmt.Sprintf("%s.%s.local", app, p.Name),
+				fmt.Sprintf("%s.svc.cluster.local", p.AppNamespace(app)),
+				fmt.Sprintf("%s.local", p.Name),
+				"svc.cluster.local",
+				"cluster.local",
+			},
 		}
 	}
 
@@ -567,7 +587,7 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 }
 
 func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.ProcessRunOptions) (*ac.PodSpec, error) {
-	s, err := p.podSpecFromService(app, service, common.DefaultString(opts.Release, ""))
+	s, err := p.podSpecFromService(app, service, common.DefaultString(opts.Release, ""), opts.IsBuild)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
