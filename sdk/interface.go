@@ -11,6 +11,8 @@ import (
 type Interface interface {
 	structs.Provider
 
+	ClientType() string
+
 	// raw http
 	Get(string, stdsdk.RequestOptions, interface{}) error
 
@@ -29,6 +31,7 @@ type Interface interface {
 	FormationGet(string) (structs.Services, error)
 	FormationUpdate(string, string, structs.ServiceUpdateOptions) error
 	InstanceShellClassic(string, io.ReadWriter, structs.InstanceShellOptions) (int, error)
+	MachineList() (structs.Machines, error)
 	ProcessRunAttached(string, string, io.ReadWriter, int, structs.ProcessRunOptions) (int, error)
 	ProcessRunDetached(string, string, structs.ProcessRunOptions) (string, error)
 	RegistryRemoveClassic(string) error

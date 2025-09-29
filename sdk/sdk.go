@@ -28,9 +28,11 @@ var (
 
 type Client struct {
 	*stdsdk.Client
-	Debug   bool
-	Rack    string
-	Session SessionFunc
+	Debug        bool
+	Rack         string
+	MachineID    string
+	Session      SessionFunc
+	ExtraHeaders map[string]string
 }
 
 type SessionFunc func(c *Client) string
@@ -69,6 +71,10 @@ func (c *Client) Endpoint() (*url.URL, error) {
 func (c *Client) Headers() http.Header {
 	h := http.Header{}
 
+	for k, v := range c.ExtraHeaders {
+		h.Set(k, v)
+	}
+
 	h.Set("User-Agent", fmt.Sprintf("convox.go/%s", Version))
 	h.Set("Version", Version)
 
@@ -87,9 +93,79 @@ func (c *Client) Headers() http.Header {
 	return h
 }
 
+func (c *Client) Get(path string, opts stdsdk.RequestOptions, out interface{}) error {
+	if strings.HasPrefix(path, "/app") {
+		path = c.AddPrefixIfCloud(path)
+	}
+
+	return c.Client.Get(path, opts, out)
+}
+
+func (c *Client) Post(path string, opts stdsdk.RequestOptions, out interface{}) error {
+	if strings.HasPrefix(path, "/app") {
+		path = c.AddPrefixIfCloud(path)
+	}
+
+	return c.Client.Post(path, opts, out)
+}
+
+func (c *Client) Put(path string, opts stdsdk.RequestOptions, out interface{}) error {
+	if strings.HasPrefix(path, "/app") {
+		path = c.AddPrefixIfCloud(path)
+	}
+
+	return c.Client.Put(path, opts, out)
+}
+
+func (c *Client) Delete(path string, opts stdsdk.RequestOptions, out interface{}) error {
+	if strings.HasPrefix(path, "/app") {
+		path = c.AddPrefixIfCloud(path)
+	}
+
+	return c.Client.Delete(path, opts, out)
+}
+
+func (c *Client) Head(path string, opts stdsdk.RequestOptions, out *bool) error {
+	if strings.HasPrefix(path, "/app") {
+		path = c.AddPrefixIfCloud(path)
+	}
+
+	return c.Client.Head(path, opts, out)
+}
+
+func (c *Client) PostStream(path string, opts stdsdk.RequestOptions) (*http.Response, error) {
+	if strings.HasPrefix(path, "/app") {
+		path = c.AddPrefixIfCloud(path)
+	}
+
+	return c.Client.PostStream(path, opts)
+}
+
+func (c *Client) PutStream(path string, opts stdsdk.RequestOptions) (*http.Response, error) {
+	if strings.HasPrefix(path, "/app") {
+		path = c.AddPrefixIfCloud(path)
+	}
+
+	return c.Client.PutStream(path, opts)
+}
+
+func (c *Client) GetStream(path string, opts stdsdk.RequestOptions) (*http.Response, error) {
+	if strings.HasPrefix(path, "/app") {
+		path = c.AddPrefixIfCloud(path)
+	}
+
+	return c.Client.GetStream(path, opts)
+}
+
 func (c *Client) Websocket(path string, opts stdsdk.RequestOptions) (io.ReadCloser, error) {
-	// trigger session authentication
-	c.Get("/racks", stdsdk.RequestOptions{}, nil)
+	if strings.HasPrefix(path, "/app") {
+		path = c.AddPrefixIfCloud(path)
+		// trigger session authentication
+		c.Get("/machines", stdsdk.RequestOptions{}, nil)
+	} else {
+		// trigger session authentication
+		c.Get("/racks", stdsdk.RequestOptions{}, nil)
+	}
 
 	return c.Client.Websocket(path, opts)
 }
@@ -137,4 +213,11 @@ func (c *Client) WithContext(ctx context.Context) structs.Provider {
 	cc := *c
 	cc.Client = cc.Client.WithContext(ctx)
 	return &cc
+}
+
+func (c *Client) AddPrefixIfCloud(path string) string {
+	if c.MachineID != "" {
+		return fmt.Sprintf("/machines/%s%s", c.MachineID, path)
+	}
+	return path
 }

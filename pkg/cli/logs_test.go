@@ -13,6 +13,7 @@ import (
 
 func TestLogs(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		// i.On("ClientType").Return("standard")
 		i.On("AppLogs", "app1", structs.LogsOptions{Prefix: options.Bool(true)}).Return(testLogs(fxLogs()), nil)
 
 		res, err := testExecute(e, "logs -a app1", nil)
@@ -28,6 +29,7 @@ func TestLogs(t *testing.T) {
 
 func TestLogsError(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		// i.On("ClientType").Return("standard")
 		i.On("AppLogs", "app1", structs.LogsOptions{Prefix: options.Bool(true)}).Return(nil, fmt.Errorf("err1"))
 
 		res, err := testExecute(e, "logs -a app1", nil)

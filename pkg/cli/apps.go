@@ -22,25 +22,25 @@ func init() {
 	register("apps", "list apps", watch(Apps), stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagRack, flagWatchInterval},
 		Validate: stdcli.Args(0),
-	})
+	}, WithCloud())
 
 	register("apps cancel", "cancel an app update", AppsCancel, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagRack, flagApp},
 		Usage:    "[app]",
 		Validate: stdcli.ArgsMax(1),
-	})
+	}, WithCloud())
 
 	register("apps create", "create an app", AppsCreate, stdcli.CommandOptions{
 		Flags:    append(stdcli.OptionFlags(structs.AppCreateOptions{}), flagRack),
 		Usage:    "[name]",
 		Validate: stdcli.ArgsMax(1),
-	})
+	}, WithCloud())
 
 	register("apps delete", "delete an app", AppsDelete, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagRack},
 		Usage:    "<app>",
 		Validate: stdcli.Args(1),
-	})
+	}, WithCloud())
 
 	register("apps export", "export an app", AppsExport, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
@@ -50,7 +50,7 @@ func init() {
 		},
 		Usage:    "[app]",
 		Validate: stdcli.ArgsMax(1),
-	})
+	}, WithCloud())
 
 	register("apps import", "import an app", AppsImport, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
@@ -60,13 +60,13 @@ func init() {
 		},
 		Usage:    "[app]",
 		Validate: stdcli.ArgsMax(1),
-	})
+	}, WithCloud())
 
 	register("apps info", "get information about an app", AppsInfo, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagApp, flagRack},
 		Usage:    "[app]",
 		Validate: stdcli.ArgsMax(1),
-	})
+	}, WithCloud())
 
 	register("apps lock", "enable termination protection", AppsLock, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagApp, flagRack},
@@ -78,13 +78,13 @@ func init() {
 		Flags:    []stdcli.Flag{flagApp, flagRack},
 		Usage:    "[app]",
 		Validate: stdcli.ArgsMax(1),
-	})
+	}, WithCloud())
 
 	register("apps params set", "set app parameters", AppsParamsSet, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagApp, flagRack},
 		Usage:    "<Key=Value> [Key=Value]...",
 		Validate: stdcli.ArgsMin(1),
-	})
+	}, WithCloud())
 
 	register("apps unlock", "disable termination protection", AppsUnlock, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagApp, flagRack},
