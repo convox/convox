@@ -11,6 +11,7 @@ import (
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/manifest"
+	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	shellquote "github.com/kballard/go-shellquote"
 	"github.com/pkg/errors"
@@ -69,6 +70,12 @@ func (p *Provider) templateHelpers() template.FuncMap {
 				sorted = append(sorted, kvItem{Key: k, Value: kv[k]})
 			}
 			return sorted
+		},
+		"internalResourceDotDomainSuffix": func() string {
+			if options.GetFeatureGateValue(options.FeatureGateResourceInternalDomainSuffix) != "" {
+				return options.GetFeatureGateValue(options.FeatureGateResourceInternalDomainSuffix)
+			}
+			return "svc.cluster.local"
 		},
 		"image": func(a *structs.App, s manifest.Service, r *structs.Release) (string, error) {
 			repo, _, err := p.Engine.RepositoryHost(a.Name)

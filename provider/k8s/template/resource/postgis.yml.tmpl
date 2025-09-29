@@ -10,10 +10,10 @@ metadata:
     type: resource
     resource: {{.Name}}
 data:
-  URL: "postgres://app:{{.Password}}@resource-{{ k8sname .Name }}.{{.Namespace}}.svc.cluster.local:5432/app?sslmode=disable"
+  URL: "postgres://app:{{.Password}}@resource-{{ k8sname .Name }}.{{.Namespace}}.{{ internalResourceDotDomainSuffix }}:5432/app?sslmode=disable"
   USER: "app"
   PASS: "{{.Password}}"
-  HOST: "resource-{{ k8sname .Name }}.{{.Namespace}}.svc.cluster.local"
+  HOST: "resource-{{ k8sname .Name }}.{{.Namespace}}.{{ internalResourceDotDomainSuffix }}"
   PORT: "5432"
   NAME: "app"
 ---
@@ -111,6 +111,8 @@ kind: Service
 metadata:
   namespace: {{.Namespace}}
   name: resource-{{ k8sname .Name }}
+  annotations:
+    convox.com/alias: resource-{{ k8sname .Name }}.{{.Namespace}}.{{ internalResourceDotDomainSuffix }}
   labels:
     system: convox
     rack: {{.Rack}}

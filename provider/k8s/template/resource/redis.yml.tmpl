@@ -10,10 +10,10 @@ metadata:
     type: resource
     resource: {{.Name}}
 data:
-  URL: "redis://resource-{{ k8sname .Name }}.{{.Namespace}}.svc.cluster.local:6379"
+  URL: "redis://resource-{{ k8sname .Name }}.{{.Namespace}}.{{ internalResourceDotDomainSuffix }}:6379"
   USER: ""
   PASS: ""
-  HOST: "resource-{{ k8sname .Name }}.{{.Namespace}}.svc.cluster.local"
+  HOST: "resource-{{ k8sname .Name }}.{{.Namespace}}.{{ internalResourceDotDomainSuffix }}"
   PORT: "6379"
   NAME: ""
 ---
@@ -75,6 +75,8 @@ kind: Service
 metadata:
   namespace: {{.Namespace}}
   name: resource-{{ k8sname .Name }}
+  annotations:
+    convox.com/alias: resource-{{ k8sname .Name }}.{{.Namespace}}.{{ internalResourceDotDomainSuffix }}
   labels:
     system: convox
     rack: {{.Rack}}

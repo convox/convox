@@ -2,13 +2,16 @@ package k8s
 
 import (
 	"fmt"
+	"net"
 
 	"github.com/convox/convox/pkg/options"
 )
 
 func (p *Provider) ResolverHost() (string, error) {
-	if options.GetFeatureGates()[options.FeatureGateExternalDnsResolver] {
-		return "1.1.1.1", nil
+	if dnsip := options.GetFeatureGateValue(options.FeatureGateExternalDnsResolver); dnsip != "" {
+		if net.ParseIP(dnsip) != nil {
+			return dnsip, nil
+		}
 	}
 
 	if p.Resolver == "" {
