@@ -86,6 +86,21 @@ spec:
         volumeMounts:
         - mountPath: /var/lib/postgresql/data
           name: data
+        resources:
+          limits:
+            {{ if (index .Parameters "cpu") }}
+            cpu: "{{.Parameters.cpu}}m"
+            {{ end }}
+            {{ if (index .Parameters "mem") }}
+            memory: "{{.Parameters.mem}}Mi"
+            {{ end }}
+          requests:
+            {{ if (index .Parameters "cpu") }}
+            cpu: "{{.Parameters.cpu}}m"
+            {{ end }}
+            {{ if (index .Parameters "mem") }}
+            memory: "{{.Parameters.mem}}Mi"
+            {{ end }}
       volumes:
       - name: data
         persistentVolumeClaim:

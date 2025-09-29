@@ -54,6 +54,21 @@ spec:
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 6379
+        resources:
+          limits:
+            {{ if (index .Parameters "cpu") }}
+            cpu: "{{.Parameters.cpu}}m"
+            {{ end }}
+            {{ if (index .Parameters "mem") }}
+            memory: "{{.Parameters.mem}}Mi"
+            {{ end }}
+          requests:
+            {{ if (index .Parameters "cpu") }}
+            cpu: "{{.Parameters.cpu}}m"
+            {{ end }}
+            {{ if (index .Parameters "mem") }}
+            memory: "{{.Parameters.mem}}Mi"
+            {{ end }}
 ---
 apiVersion: v1
 kind: Service
