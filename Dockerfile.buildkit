@@ -1,6 +1,9 @@
 FROM golang:1.23-alpine AS package
 
-RUN apk update && apk add make binutils gcc linux-headers libc-dev
+# Ensure all build tools (including ld) are present for ARM builds
+RUN apk add --no-cache make binutils gcc musl-dev linux-headers libc-dev build-base
+# Install binutils-gold to provide ld for ARM64 builds
+RUN apk add --no-cache binutils-gold
 
 WORKDIR /usr/src/convox
 

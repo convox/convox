@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/convox/convox/pkg/options"
@@ -15,7 +16,7 @@ func init() {
 			stdcli.StringFlag("service", "s", "service name"),
 		),
 		Validate: stdcli.Args(0),
-	})
+	}, WithCloud())
 }
 
 func Logs(rack sdk.Interface, c *stdcli.Context) error {
@@ -30,6 +31,10 @@ func Logs(rack sdk.Interface, c *stdcli.Context) error {
 	}
 
 	opts.Prefix = options.Bool(true)
+
+	if rack.ClientType() != "standard" && c.String("service") == "" {
+		return fmt.Errorf("logs must specify --service")
+	}
 
 	var r io.ReadCloser
 	var err error

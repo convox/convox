@@ -11,6 +11,7 @@ import (
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/console"
+	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
 )
@@ -80,6 +81,78 @@ func LoadConsole(c *stdcli.Context, name string) (*Console, error) {
 	}
 
 	return nil, fmt.Errorf("no such console rack: %s", name)
+}
+
+func CurrentConsoleClientWithMachine(c *stdcli.Context, machine string) (*console.Client, error) {
+	host, err := currentConsole(c)
+	if err != nil {
+		return nil, err
+	}
+
+	cc, err := consoleClient(c, host, "")
+	if err != nil {
+		return nil, err
+	}
+
+	mList := structs.Machines{}
+
+	mstr, _ := c.SettingRead("machines")
+	if mstr == "" || json.Unmarshal([]byte(mstr), &mList) != nil {
+		mList, err = cc.Machines()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	mid, err := findMachineId(mList, machine)
+	if err != nil {
+		// try to refresh the machine list from the server
+		mList, err = cc.Machines()
+		if err != nil {
+			return nil, err
+		}
+		mid, err = findMachineId(mList, machine)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if mid == "" {
+		return nil, fmt.Errorf("no machine found matching '%s'", machine)
+	}
+	cc.SetMachine(mid)
+
+	mBytes, err := json.Marshal(mList)
+	if err != nil {
+		return nil, err
+	}
+
+	c.SettingWrite("machines", string(mBytes))
+
+	return cc, nil
+}
+
+func findMachineId(mList structs.Machines, machine string) (string, error) {
+	foundMatch := false
+	mid := ""
+	for _, m := range mList {
+		orgMachine := fmt.Sprintf("%s/%s", m.OrganizationInfo["name"], m.Name)
+		if strings.Contains(orgMachine, machine) {
+			if foundMatch {
+				return "", fmt.Errorf("multiple machines match for '%s', please be more specific (e.g. <org-name>/<machine-name>)", machine)
+			}
+			mid = m.ID
+			foundMatch = true
+			if orgMachine == machine || m.Name == machine {
+				return mid, nil
+			}
+		}
+	}
+
+	if !foundMatch {
+		return "", fmt.Errorf("no machine found matching '%s'", machine)
+	}
+
+	return mid, nil
 }
 
 func (c Console) Client() (sdk.Interface, error) {
