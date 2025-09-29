@@ -2414,3 +2414,36 @@ func (_m *Interface) WorkflowList(rackOrgSlug string) (structs.WorkflowListResp,
 
 	return r0, r1
 }
+
+func (_m *Interface) MachineList() (structs.Machines, error) {
+	ret := _m.Called()
+
+	var r0 structs.Machines
+	if rf, ok := ret.Get(0).(func() structs.Machines); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(structs.Machines)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+func (_m *Interface) ClientType() string {
+	ret := _m.Called()
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}

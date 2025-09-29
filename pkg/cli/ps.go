@@ -11,17 +11,17 @@ func init() {
 	register("ps", "list app processes", watch(Ps), stdcli.CommandOptions{
 		Flags:    append(stdcli.OptionFlags(structs.ProcessListOptions{}), flagApp, flagRack, flagWatchInterval),
 		Validate: stdcli.Args(0),
-	})
+	}, WithCloud())
 
 	register("ps info", "get information about a process", watch(PsInfo), stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagApp, flagRack, flagWatchInterval},
 		Validate: stdcli.Args(1),
-	})
+	}, WithCloud())
 
 	register("ps stop", "stop a process", PsStop, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagApp, flagRack},
 		Validate: stdcli.Args(1),
-	})
+	}, WithCloud())
 }
 
 func Ps(rack sdk.Interface, c *stdcli.Context) error {

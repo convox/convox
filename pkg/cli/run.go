@@ -27,15 +27,10 @@ func init() {
 		),
 		Usage:    "<service> <command>",
 		Validate: stdcli.ArgsMin(2),
-	})
+	}, WithCloud())
 }
 
 func Run(rack sdk.Interface, c *stdcli.Context) error {
-	s, err := rack.SystemGet()
-	if err != nil {
-		return err
-	}
-
 	service := c.Arg(0)
 	command := strings.Join(c.Args[1:], " ")
 
@@ -60,26 +55,6 @@ func Run(rack sdk.Interface, c *stdcli.Context) error {
 
 	restore := c.TerminalRaw()
 	defer restore()
-
-	if s.Version <= "20180708231844" {
-		if c.Bool("detach") {
-			c.Startf("Running detached process")
-
-			pid, err := rack.ProcessRunDetached(app(c), service, opts)
-			if err != nil {
-				return err
-			}
-
-			return c.OK(pid)
-		}
-
-		code, err := rack.ProcessRunAttached(app(c), service, c, timeout, opts)
-		if err != nil {
-			return err
-		}
-
-		return stdcli.Exit(code)
-	}
 
 	if c.Bool("detach") {
 		c.Startf("Running detached process")

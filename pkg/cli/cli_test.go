@@ -59,6 +59,8 @@ func testClientWait(t *testing.T, wait time.Duration, fn func(*cli.Engine, *mock
 	err = ioutil.WriteFile(filepath.Join(tmp, "current"), []byte(`{"type":"test","name":"rack1"}`), 0600)
 	require.NoError(t, err)
 
+	i.On("ClientType").Return("standard").Maybe()
+
 	fn(e, i)
 
 	i.AssertExpectations(t)

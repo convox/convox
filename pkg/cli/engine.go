@@ -1,6 +1,9 @@
 package cli
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/convox/convox/pkg/rack"
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
@@ -33,6 +36,26 @@ func (e *Engine) Command(command, description string, fn HandlerFunc, opts stdcl
 	e.Engine.Command(command, description, wfn, opts)
 }
 
+func (e *Engine) CommandWithCloud(command, description string, fn HandlerFunc, opts stdcli.CommandOptions) {
+	wfn := func(c *stdcli.Context) error {
+		machine := c.String("machine")
+		if machine == "" {
+			machine = os.Getenv("CONVOX_MACHINE")
+			if machine == "" {
+				return fmt.Errorf("machine not specified")
+			}
+		}
+		cc, err := rack.CurrentConsoleClientWithMachine(c, machine)
+		if err != nil {
+			return err
+		}
+
+		return fn(cc, c)
+	}
+
+	e.Engine.Command(command, description, wfn, opts)
+}
+
 func (e *Engine) CommandWithoutProvider(command, description string, fn HandlerFunc, opts stdcli.CommandOptions) {
 	wfn := func(c *stdcli.Context) error {
 		return fn(nil, c)
@@ -49,6 +72,8 @@ func (e *Engine) RegisterCommands() {
 	for _, c := range commands {
 		if c.Rack {
 			e.Command(c.Command, c.Description, c.Handler, c.Opts)
+		} else if c.Cloud {
+			e.CommandWithCloud(c.Command, c.Description, c.Handler, c.Opts)
 		} else {
 			e.CommandWithoutProvider(c.Command, c.Description, c.Handler, c.Opts)
 		}
@@ -63,16 +88,52 @@ type command struct {
 	Handler     HandlerFunc
 	Opts        stdcli.CommandOptions
 	Rack        bool
+	Cloud       bool
 }
 
-func register(cmd, description string, fn HandlerFunc, opts stdcli.CommandOptions) {
+type RegisterCmdOptions struct {
+	Cloud bool
+}
+
+type RegisterCmdOptionsFunc func(*RegisterCmdOptions)
+
+func WithCloud() RegisterCmdOptionsFunc {
+	return func(opts *RegisterCmdOptions) {
+		opts.Cloud = true
+	}
+}
+
+func register(cmd, description string, fn HandlerFunc, opts stdcli.CommandOptions, regOpts ...RegisterCmdOptionsFunc) {
+	rco := &RegisterCmdOptions{}
+	for _, ro := range regOpts {
+		ro(rco)
+	}
+
 	commands = append(commands, command{
 		Command:     cmd,
 		Description: description,
 		Handler:     fn,
 		Opts:        opts,
 		Rack:        true,
+		Cloud:       false,
 	})
+
+	if rco.Cloud {
+		for i := range opts.Flags {
+			if opts.Flags[i].Name == "rack" {
+				opts.Flags[i] = flagMachine
+				break
+			}
+		}
+		commands = append(commands, command{
+			Command:     fmt.Sprintf("cloud %s", cmd),
+			Description: description,
+			Handler:     fn,
+			Opts:        opts,
+			Rack:        false,
+			Cloud:       true,
+		})
+	}
 }
 
 func registerWithoutProvider(cmd, description string, fn HandlerFunc, opts stdcli.CommandOptions) {
@@ -82,5 +143,17 @@ func registerWithoutProvider(cmd, description string, fn HandlerFunc, opts stdcl
 		Handler:     fn,
 		Opts:        opts,
 		Rack:        false,
+		Cloud:       false,
+	})
+}
+
+func registerWithCloud(cmd, description string, fn HandlerFunc, opts stdcli.CommandOptions) {
+	commands = append(commands, command{
+		Command:     cmd,
+		Description: description,
+		Handler:     fn,
+		Opts:        opts,
+		Rack:        false,
+		Cloud:       true,
 	})
 }
