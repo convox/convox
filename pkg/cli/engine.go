@@ -119,9 +119,11 @@ func register(cmd, description string, fn HandlerFunc, opts stdcli.CommandOption
 	})
 
 	if rco.Cloud {
-		for i := range opts.Flags {
-			if opts.Flags[i].Name == "rack" {
-				opts.Flags[i] = flagMachine
+		cOpts := opts
+		cOpts.Flags = append([]stdcli.Flag{}, cOpts.Flags...)
+		for i := range cOpts.Flags {
+			if cOpts.Flags[i].Name == "rack" {
+				cOpts.Flags[i] = flagMachine
 				break
 			}
 		}
@@ -129,7 +131,7 @@ func register(cmd, description string, fn HandlerFunc, opts stdcli.CommandOption
 			Command:     fmt.Sprintf("cloud %s", cmd),
 			Description: description,
 			Handler:     fn,
-			Opts:        opts,
+			Opts:        cOpts,
 			Rack:        false,
 			Cloud:       true,
 		})
