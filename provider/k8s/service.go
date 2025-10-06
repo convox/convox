@@ -10,6 +10,7 @@ import (
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/pkg/errors"
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -214,6 +215,16 @@ func (p *Provider) ServiceUpdate(app, name string, opts structs.ServiceUpdateOpt
 	}
 
 	return nil
+}
+
+func (p *Provider) serviceDaemonset(app, name string) (*appsv1.DaemonSet, error) {
+	ds := p.Cluster.AppsV1().DaemonSets(p.AppNamespace(app))
+	return ds.Get(context.TODO(), name, am.GetOptions{})
+}
+
+func (p *Provider) serviceDeployment(app, name string) (*appsv1.Deployment, error) {
+	ds := p.Cluster.AppsV1().Deployments(p.AppNamespace(app))
+	return ds.Get(context.TODO(), name, am.GetOptions{})
 }
 
 func serviceContainerPorts(c v1.Container, internal bool) []structs.ServicePort {

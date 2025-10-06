@@ -666,7 +666,7 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 		s.ImagePullSecrets = append(s.ImagePullSecrets, ac.LocalObjectReference{Name: "docker-hub-authentication"})
 	}
 
-	if opts.Volumes != nil {
+	if opts.Volumes != nil && opts.UseServiceVolume == nil {
 		var vs []string
 
 		for from, to := range opts.Volumes {
@@ -687,6 +687,36 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 				Name:      p.volumeName(app, p.volumeFrom(app, service, v)),
 				MountPath: to,
 			})
+		}
+	}
+
+	if opts.UseServiceVolume != nil && *opts.UseServiceVolume {
+		m, _, err := common.AppManifest(p, app)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		sManifest, err := m.Service(service)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		if sManifest.Agent.Enabled {
+			ds, err := p.serviceDaemonset(app, service)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+
+			s.Volumes = ds.Spec.Template.Spec.Volumes
+			s.Containers[0].VolumeMounts = ds.Spec.Template.Spec.Containers[0].VolumeMounts
+		} else {
+			dp, err := p.serviceDeployment(app, service)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+
+			s.Volumes = dp.Spec.Template.Spec.Volumes
+			s.Containers[0].VolumeMounts = dp.Spec.Template.Spec.Containers[0].VolumeMounts
 		}
 	}
 
