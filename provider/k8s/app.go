@@ -299,6 +299,9 @@ func (p *Provider) appFromNamespace(ns ac.Namespace) (*structs.App, error) {
 		Release:    release,
 		Router:     p.Router,
 		Status:     status,
+		Tags: map[string]string{
+			"namespace": ns.Name,
+		},
 	}
 
 	var params map[string]string
@@ -355,6 +358,9 @@ func (p *Provider) appFromNamespaceOnly(ns ac.Namespace) (*structs.App, error) {
 		Release:    ns.Annotations["convox.com/app-release"],
 		Router:     p.Router,
 		Status:     status,
+		Tags: map[string]string{
+			"namespace": ns.Name,
+		},
 	}
 
 	var params map[string]string

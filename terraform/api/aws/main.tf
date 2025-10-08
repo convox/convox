@@ -41,20 +41,22 @@ module "k8s" {
   }
 
   env = {
-    AWS_REGION                           = data.aws_region.current.name
-    BUCKET                               = var.custom_provided_bucket != "" ? data.aws_s3_bucket.custom_bucket[0].id : aws_s3_bucket.storage.id
-    CERT_MANAGER                         = "true"
-    CERT_MANAGER_ROLE_ARN                = aws_iam_role.cert-manager.arn
-    EFS_FILE_SYSTEM_ID                   = var.efs_file_system_id
-    BUILD_DISABLE_CONVOX_RESOLVER        = var.build_disable_convox_resolver
-    PDB_DEFAULT_MIN_AVAILABLE_PERCENTAGE = var.pdb_default_min_available_percentage
-    PROVIDER                             = "aws"
-    RESOLVER                             = var.disable_convox_resolver ? "" : var.resolver
-    ROUTER                               = var.router
-    SOCKET                               = "/var/run/docker.sock"
-    ECR_SCAN_ON_PUSH_ENABLE              = var.ecr_scan_on_push_enable
-    SUBNET_IDS                           = join(",", var.subnets)
-    VPC_ID                               = var.vpc_id
+    AWS_REGION                                = data.aws_region.current.name
+    BUCKET                                    = var.custom_provided_bucket != "" ? data.aws_s3_bucket.custom_bucket[0].id : aws_s3_bucket.storage.id
+    CERT_MANAGER                              = "true"
+    CERT_MANAGER_ROLE_ARN                     = aws_iam_role.cert-manager.arn
+    EFS_FILE_SYSTEM_ID                        = var.efs_file_system_id
+    BUILD_DISABLE_CONVOX_RESOLVER             = var.build_disable_convox_resolver
+    PDB_DEFAULT_MIN_AVAILABLE_PERCENTAGE      = var.pdb_default_min_available_percentage
+    PROVIDER                                  = "aws"
+    RESOLVER                                  = var.disable_convox_resolver ? "" : var.resolver
+    ROUTER                                    = var.router
+    SOCKET                                    = "/var/run/docker.sock"
+    ECR_SCAN_ON_PUSH_ENABLE                   = var.ecr_scan_on_push_enable
+    SUBNET_IDS                                = join(",", var.subnets)
+    VPC_ID                                    = var.vpc_id
+    RELEASES_TO_RETAIN_AFTER_ACTIVE           = var.releases_to_retain_after_active
+    RELEASES_TO_RETAIN_TASK_RUN_INTERVAL_HOUR = var.releases_to_retain_task_run_interval_hour
   }
 }
 
@@ -65,18 +67,18 @@ resource "kubernetes_persistent_volume_claim_v1" "efs-pvc-system-root" {
   count = var.efs_csi_driver_enable ? 1 : 0
 
   metadata {
-    name = "efs-pvc-system-root"
+    name      = "efs-pvc-system-root"
     namespace = var.namespace
   }
 
   spec {
-    access_modes = [ "ReadWriteMany" ]
+    access_modes = ["ReadWriteMany"]
     resources {
       requests = {
         storage = "2Gi"
       }
     }
-    volume_name = "efs-pv-root"
+    volume_name        = "efs-pv-root"
     storage_class_name = "efs-sc-base"
   }
 }

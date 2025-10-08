@@ -15,3 +15,7 @@ func (p *Provider) RepositoryHost(app string) (string, bool, error) {
 func (p *Provider) RepositoryPrefix() string {
 	return ""
 }
+
+func (p *Provider) RepositoryImagesBatchDelete(app string, tags []string) error {
+	return fmt.Errorf("not implemented")
+}

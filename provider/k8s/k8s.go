@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
+	"strconv"
 	"time"
 
 	"github.com/convox/convox/pkg/atom"
@@ -45,43 +46,45 @@ const (
 )
 
 type Provider struct {
-	Atom                             atom.Interface
-	BuildkitEnabled                  string
-	BuildNodeEnabled                 string
-	CertManager                      bool
-	CertManagerRoleArn               string
-	Cluster                          kubernetes.Interface
-	Config                           *rest.Config
-	Convox                           cv.Interface
-	ConvoxDomainTLSCertDisable       bool
-	CertManagerClient                cmclient.Interface
-	DiscoveryClient                  discovery.DiscoveryInterface
-	DockerUsername                   string
-	DockerPassword                   string
-	Domain                           string
-	DomainInternal                   string
-	DynamicClient                    dynamic.Interface
-	EfsFileSystemId                  string
-	Engine                           Engine
-	Image                            string
-	JwtMngr                          *jwt.JwtManager
-	Name                             string
-	MetricScraper                    *MetricScraperClient
-	MetricsClient                    metricsclientset.Interface
-	Namespace                        string
-	Password                         string
-	PdbDefaultMinAvailablePercentage string
-	Provider                         string
-	RackName                         string
-	Resolver                         string
-	BuildDisableResolver             bool
-	RestClient                       rest.Interface
-	Router                           string
-	Socket                           string
-	Storage                          string
-	SubnetIDs                        string
-	Version                          string
-	VpcID                            string
+	Atom                                atom.Interface
+	BuildkitEnabled                     string
+	BuildNodeEnabled                    string
+	CertManager                         bool
+	CertManagerRoleArn                  string
+	Cluster                             kubernetes.Interface
+	Config                              *rest.Config
+	Convox                              cv.Interface
+	ConvoxDomainTLSCertDisable          bool
+	CertManagerClient                   cmclient.Interface
+	DiscoveryClient                     discovery.DiscoveryInterface
+	DockerUsername                      string
+	DockerPassword                      string
+	Domain                              string
+	DomainInternal                      string
+	DynamicClient                       dynamic.Interface
+	EfsFileSystemId                     string
+	Engine                              Engine
+	Image                               string
+	JwtMngr                             *jwt.JwtManager
+	Name                                string
+	ReleasesToRetainAfterActive         int
+	ReleasesToRetainTaskRunIntervalHour int
+	MetricScraper                       *MetricScraperClient
+	MetricsClient                       metricsclientset.Interface
+	Namespace                           string
+	Password                            string
+	PdbDefaultMinAvailablePercentage    string
+	Provider                            string
+	RackName                            string
+	Resolver                            string
+	BuildDisableResolver                bool
+	RestClient                          rest.Interface
+	Router                              string
+	Socket                              string
+	Storage                             string
+	SubnetIDs                           string
+	Version                             string
+	VpcID                               string
 
 	nc                 *NodeController
 	namespaceInformer  informerv1.NamespaceInformer
@@ -192,6 +195,9 @@ func FromEnv() (*Provider, error) {
 		DockerUsername:                   os.Getenv("DOCKER_HUB_USERNAME"),
 		DockerPassword:                   os.Getenv("DOCKER_HUB_PASSWORD"),
 	}
+
+	p.ReleasesToRetainAfterActive, _ = strconv.Atoi(os.Getenv("RELEASES_TO_RETAIN_AFTER_ACTIVE"))
+	p.ReleasesToRetainTaskRunIntervalHour, _ = strconv.Atoi(os.Getenv("RELEASES_TO_RETAIN_TASK_RUN_INTERVAL_HOUR"))
 
 	p.RdsProvisioner = rds.NewProvisioner(p)
 	p.ElasticacheProvisioner = elasticache.NewProvisioner(p)
