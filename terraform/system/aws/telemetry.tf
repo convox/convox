@@ -67,6 +67,8 @@ locals {
     rack_name = var.rack_name
     region = var.region
     release = var.release
+    releases_to_retain_after_active = var.releases_to_retain_after_active
+    releases_to_retain_task_run_interval_hour = var.releases_to_retain_task_run_interval_hour
     schedule_rack_scale_down = var.schedule_rack_scale_down
     schedule_rack_scale_up = var.schedule_rack_scale_up
     settings = var.settings
@@ -147,6 +149,8 @@ locals {
     rack_name = ""
     region = "us-east-1"
     release = ""
+    releases_to_retain_after_active = "0"
+    releases_to_retain_task_run_interval_hour = "24"
     schedule_rack_scale_down = ""
     schedule_rack_scale_up = ""
     settings = ""

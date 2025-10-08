@@ -81,6 +81,8 @@ func (c *AtomController) Run() {
 
 	go c.runMarker()
 
+	go c.runReleaseBuildCleanup()
+
 	for err := range ch {
 		fmt.Printf("err = %+v\n", err)
 	}
@@ -344,6 +346,39 @@ func (a *AtomController) runMarker() {
 		a.SyncMarker()
 
 		time.Sleep(6 * time.Hour)
+	}
+}
+
+func (a *AtomController) runReleaseBuildCleanup() {
+	if a.provider.ReleasesToRetainAfterActive < 1 {
+		return
+	}
+
+	for {
+		// to make sure only one marker is running
+		time.Sleep(30 * time.Second)
+		if a.controller.IsLeader.Load() {
+			break
+		}
+	}
+
+	releaseCleaner := &releaseCleaner{
+		provider:                        a.provider,
+		engine:                          a.provider.Engine,
+		releasesToRetainAfterActive:     a.provider.ReleasesToRetainAfterActive,
+		releaseBuildCleanupIntervalHour: a.provider.ReleasesToRetainTaskRunIntervalHour,
+		ctx:                             a.provider.ctx,
+		cluster:                         a.provider.Cluster,
+		convox:                          a.provider.Convox,
+		systemNamespace:                 a.provider.Namespace,
+		logger:                          logger.New("ns=release-cleaner"),
+	}
+
+	for {
+		if err := releaseCleaner.Run(); err != nil {
+			a.logger.Logf("release cleanup error: %s", err)
+		}
+		time.Sleep(30 * time.Second)
 	}
 }
 

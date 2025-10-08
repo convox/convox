@@ -31,6 +31,6 @@ resource "aws_s3_bucket_acl" "storage" {
 
 
 data "aws_s3_bucket" "custom_bucket" {
-  count = var.custom_provided_bucket != "" ? 1 : 0
+  count  = var.custom_provided_bucket != "" ? 1 : 0
   bucket = var.custom_provided_bucket
 }

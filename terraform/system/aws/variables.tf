@@ -296,6 +296,16 @@ variable "release" {
   default = ""
 }
 
+variable "releases_to_retain_after_active" {
+  type = number
+  default = 0
+}
+
+variable "releases_to_retain_task_run_interval_hour" {
+  type = number
+  default = 24
+}
+
 variable "region" {
   default = "us-east-1"
 }
