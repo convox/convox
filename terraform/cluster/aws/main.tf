@@ -181,7 +181,7 @@ resource "aws_eks_node_group" "cluster-build" {
     aws_iam_openid_connect_provider.cluster,
   ]
 
-  count = var.build_node_enabled ? 1 : 0
+  count           = var.build_node_enabled ? 1 : 0
   ami_type        = var.build_gpu_type ? "AL2023_x86_64_NVIDIA" : var.build_arm_type ? "AL2023_ARM_64_STANDARD" : "AL2023_x86_64_STANDARD"
   capacity_type   = "ON_DEMAND"
   cluster_name    = aws_eks_cluster.cluster.name
@@ -423,9 +423,9 @@ resource "aws_eks_addon" "vpc_cni" {
     null_resource.wait_k8s_api
   ]
 
-  cluster_name      = aws_eks_cluster.cluster.name
-  addon_name        = "vpc-cni"
-  addon_version     = var.vpc_cni_version
+  cluster_name                = aws_eks_cluster.cluster.name
+  addon_name                  = "vpc-cni"
+  addon_version               = var.vpc_cni_version
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
 }
@@ -435,9 +435,9 @@ resource "aws_eks_addon" "coredns" {
     null_resource.wait_k8s_api
   ]
 
-  cluster_name      = aws_eks_cluster.cluster.name
-  addon_name        = "coredns"
-  addon_version     = var.coredns_version
+  cluster_name                = aws_eks_cluster.cluster.name
+  addon_name                  = "coredns"
+  addon_version               = var.coredns_version
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
 }
@@ -447,9 +447,9 @@ resource "aws_eks_addon" "kube_proxy" {
     null_resource.wait_k8s_api
   ]
 
-  cluster_name      = aws_eks_cluster.cluster.name
-  addon_name        = "kube-proxy"
-  addon_version     = var.kube_proxy_version
+  cluster_name                = aws_eks_cluster.cluster.name
+  addon_name                  = "kube-proxy"
+  addon_version               = var.kube_proxy_version
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
 }
@@ -461,9 +461,9 @@ resource "aws_eks_addon" "eks_pod_identity_agent" {
 
   count = var.pod_identity_agent_enable ? 1 : 0
 
-  cluster_name      = aws_eks_cluster.cluster.name
-  addon_name        = "eks-pod-identity-agent"
-  addon_version     = var.pod_identity_agent_version
+  cluster_name                = aws_eks_cluster.cluster.name
+  addon_name                  = "eks-pod-identity-agent"
+  addon_version               = var.pod_identity_agent_version
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
 }

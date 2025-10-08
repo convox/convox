@@ -1,6 +1,11 @@
 package aws
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/aws/aws-sdk-go/aws"
+	ecrTypes "github.com/aws/aws-sdk-go/service/ecr"
+)
 
 func (p *Provider) RepositoryAuth(app string) (string, string, error) {
 	host, _, err := p.RepositoryHost(app)
@@ -22,4 +27,20 @@ func (p *Provider) RepositoryHost(app string) (string, bool, error) {
 
 func (p *Provider) RepositoryPrefix() string {
 	return fmt.Sprintf("%s/", p.Name)
+}
+
+func (p *Provider) RepositoryImagesBatchDelete(app string, tags []string) error {
+	imageIds := []*ecrTypes.ImageIdentifier{}
+
+	for _, tag := range tags {
+		imageIds = append(imageIds, &ecrTypes.ImageIdentifier{ImageTag: aws.String(tag)})
+	}
+
+	repo := aws.String(fmt.Sprintf("%s%s", p.RepositoryPrefix(), app))
+	_, err := p.ECR.BatchDeleteImage(&ecrTypes.BatchDeleteImageInput{
+		RepositoryName: repo,
+		ImageIds:       imageIds,
+	})
+
+	return err
 }

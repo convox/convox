@@ -185,6 +185,8 @@ module "rack" {
   pdb_default_min_available_percentage = var.pdb_default_min_available_percentage
   proxy_protocol                       = var.proxy_protocol
   release                              = local.release
+  releases_to_retain_after_active      = var.releases_to_retain_after_active
+  releases_to_retain_task_run_interval_hour = var.releases_to_retain_task_run_interval_hour
   ssl_ciphers                          = var.ssl_ciphers
   ssl_protocols                        = var.ssl_protocols
   subnets                              = module.cluster.subnets
