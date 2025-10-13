@@ -207,6 +207,7 @@ resource "random_id" "build_node_additional" {
     capacity_type       = each.value.capacity_type
     ami_id              = each.value.ami_id
     private_subnets_ids = join("-", local.private_subnets_ids)
+    public_subnets_ids  = join("-", local.public_subnets_ids)
     role_arn            = replace(aws_iam_role.nodes.arn, "role/convox/", "role/") # eks barfs on roles with paths
     tags                = try(jsonencode(each.value.tags), "")
   }
@@ -232,7 +233,7 @@ resource "aws_eks_node_group" "build_additional" {
   cluster_name    = aws_eks_cluster.cluster.name
   node_group_name = "${var.name}-build-additional-${each.key}-${random_id.build_node_additional[each.key].hex}"
   node_role_arn   = random_id.build_node_additional[each.key].keepers.role_arn
-  subnet_ids      = local.private_subnets_ids
+  subnet_ids      = var.private ? local.private_subnets_ids : local.public_subnets_ids
   tags            = each.value.tags == null ? local.tags : merge(local.tags, each.value.tags)
   version         = random_id.build_node_additional[each.key].keepers.ami_id != null ? null : var.k8s_version
 
