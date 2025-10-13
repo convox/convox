@@ -116,6 +116,7 @@ resource "random_id" "build_node_group" {
     node_disk           = var.node_disk
     node_type           = var.build_node_type
     private_subnets_ids = join("-", local.private_subnets_ids)
+    public_subnets_ids  = join("-", local.public_subnets_ids)
     role_arn            = replace(aws_iam_role.nodes.arn, "role/convox/", "role/") # eks barfs on roles with paths
   }
 }
@@ -189,7 +190,7 @@ resource "aws_eks_node_group" "cluster-build" {
   instance_types  = split(",", random_id.build_node_group[0].keepers.node_type)
   node_group_name = "${var.name}-build-${data.aws_subnet.private_subnet_details[count.index].availability_zone}-${count.index}${random_id.build_node_group[0].hex}"
   node_role_arn   = random_id.build_node_group[0].keepers.role_arn
-  subnet_ids      = [local.private_subnets_ids[count.index]]
+  subnet_ids      = [var.private ? local.private_subnets_ids[count.index] : local.public_subnets_ids[count.index]]
   tags            = local.tags
   version         = var.k8s_version
 
