@@ -28,6 +28,7 @@ locals {
     ecr_scan_on_push_enable = var.ecr_scan_on_push_enable
     efs_csi_driver_enable = var.efs_csi_driver_enable
     efs_csi_driver_version = var.efs_csi_driver_version
+    enable_private_access = var.enable_private_access
     fluentd_disable = var.fluentd_disable
     gpu_tag_enable = var.gpu_tag_enable
     high_availability = var.high_availability
@@ -110,6 +111,7 @@ locals {
     ecr_scan_on_push_enable = "false"
     efs_csi_driver_enable = "false"
     efs_csi_driver_version = "v2.1.9-eksbuild.1"
+    enable_private_access = "false"
     fluentd_disable = "false"
     gpu_tag_enable = "false"
     high_availability = "true"

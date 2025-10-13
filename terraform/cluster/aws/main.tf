@@ -76,8 +76,9 @@ resource "aws_eks_cluster" "cluster" {
   version  = var.k8s_version
 
   vpc_config {
-    endpoint_public_access  = var.disable_public_access ? false : true
-    endpoint_private_access = var.disable_public_access
+    endpoint_public_access = var.disable_public_access ? false : true
+    // if public access is disabled, then private access must be true
+    endpoint_private_access = var.disable_public_access ? true : var.enable_private_access
     security_group_ids      = [aws_security_group.cluster.id]
     subnet_ids              = concat(local.public_subnets_ids)
   }
