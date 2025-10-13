@@ -56,6 +56,11 @@ variable "disable_public_access" {
   default = false
 }
 
+variable "enable_private_access" {
+  type    = bool
+  default = false
+}
+
 variable "efs_csi_driver_enable" {
   type    = bool
   default = false

@@ -101,6 +101,11 @@ variable "disable_public_access" {
   default = false
 }
 
+variable "enable_private_access" {
+  type    = bool
+  default = false
+}
+
 variable "ecr_scan_on_push_enable" {
   type    = bool
   default = false
@@ -297,12 +302,12 @@ variable "release" {
 }
 
 variable "releases_to_retain_after_active" {
-  type = number
+  type    = number
   default = 0
 }
 
 variable "releases_to_retain_task_run_interval_hour" {
-  type = number
+  type    = number
   default = 24
 }
 
