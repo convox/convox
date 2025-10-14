@@ -30,12 +30,12 @@ func TestRenderTemplate(t *testing.T) {
 					},
 				},
 				{
-					Id:       1,
-					DnsZones: []string{"test.com"},
-					Route53: &structs.Route53{
-						HostedZoneID: options.String("host"),
-						Region:       options.String("us"),
-						Role:         options.String("role"),
+					Id:       2,
+					DnsZones: []string{"example.org"},
+					Cloudflare: &structs.Cloudflare{
+						ApiKeySecretRefName: options.String("cloudflare-dns-credential-2"),
+						ApiKeySecretRefKey:  options.String("api-key"),
+						Email:               options.String("ops@example.com"),
 					},
 				},
 			},
