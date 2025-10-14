@@ -1,13 +1,18 @@
 data "http" "releases" {
+  count = var.release == "" ? 1 : 0
+
   url = "https://api.github.com/repos/${var.image}/releases/latest"
+  request_headers = {
+    User-Agent = "convox"
+  }
 }
 
 locals {
-  name      = lower(var.name)
-  rack_name = lower(var.rack_name)
-  arm_type  = module.platform.arch == "arm64"
-  current   = jsondecode(data.http.releases.response_body).tag_name
-  release   = local.arm_type ? format("%s-%s", coalesce(var.release, local.current), "arm64") : coalesce(var.release, local.current)
+  name            = lower(var.name)
+  rack_name       = lower(var.rack_name)
+  arm_type        = module.platform.arch == "arm64"
+  desired_release = var.release != "" ? var.release : jsondecode(data.http.releases[0].response_body).tag_name
+  release         = local.arm_type ? format("%s-%s", local.desired_release, "arm64") : local.desired_release
 }
 
 provider "kubernetes" {

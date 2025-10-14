@@ -25,6 +25,8 @@ data "aws_eks_cluster_auth" "cluster" {
 }
 
 data "http" "releases" {
+  count = var.release == "" ? 1 : 0
+
   url = "https://api.github.com/repos/${var.image}/releases/latest"
   request_headers = {
     User-Agent = "convox"
@@ -40,11 +42,11 @@ locals {
   build_node_type = var.build_node_type != "" ? var.build_node_type : local.node_type
   arm_type        = substr(local.node_type, 0, 2) == "a1" || substr(local.node_type, 0, 3) == "c6g" || substr(local.node_type, 0, 3) == "c7g" || substr(local.node_type, 0, 3) == "m6g" || substr(local.node_type, 0, 3) == "r6g" || substr(local.node_type, 0, 3) == "t4g"
   build_arm_type  = substr(local.build_node_type, 0, 2) == "a1" || substr(local.build_node_type, 0, 3) == "c6g" || substr(local.build_node_type, 0, 3) == "c7g" || substr(local.build_node_type, 0, 3) == "m6g" || substr(local.build_node_type, 0, 3) == "r6g" || substr(local.build_node_type, 0, 3) == "t4g"
-  current         = jsondecode(data.http.releases.response_body).tag_name
+  desired_release = var.release != "" ? var.release : jsondecode(data.http.releases[0].response_body).tag_name
   gpu_type        = substr(local.node_type, 0, 1) == "g" || substr(local.node_type, 0, 1) == "p"
   build_gpu_type  = substr(local.build_node_type, 0, 1) == "g" || substr(local.build_node_type, 0, 1) == "p"
   image           = var.image
-  release         = local.arm_type ? format("%s-%s", coalesce(var.release, local.current), "arm64") : coalesce(var.release, local.current)
+  release         = local.arm_type ? format("%s-%s", local.desired_release, "arm64") : local.desired_release
   tag_map = length(var.tags) == 0 ? {} : {
     for v in split(",", var.tags) :
     "${split("=", v)[0]}" => split("=", v)[1]
@@ -157,44 +159,44 @@ module "rack" {
     null_resource.wait_for_cluster
   ]
 
-  build_disable_convox_resolver        = var.build_disable_convox_resolver
-  build_node_enabled                   = var.build_node_enabled
-  cluster                              = module.cluster.id
-  convox_domain_tls_cert_disable       = var.convox_domain_tls_cert_disable
-  convox_rack_domain                   = var.convox_rack_domain
-  custom_provided_bucket               = var.custom_provided_bucket
-  deploy_extra_nlb                     = var.deploy_extra_nlb
-  docker_hub_username                  = var.docker_hub_username
-  docker_hub_password                  = var.docker_hub_password
-  disable_convox_resolver              = var.disable_convox_resolver
-  disable_image_manifest_cache         = var.disable_image_manifest_cache
-  eks_addons                           = module.cluster.eks_addons
-  efs_csi_driver_enable                = var.efs_csi_driver_enable
-  efs_file_system_id                   = module.cluster.efs_file_system_id
-  high_availability                    = var.high_availability
-  idle_timeout                         = var.idle_timeout
-  internal_router                      = var.internal_router
-  image                                = local.image
-  lbc_helm_id                          = module.cluster.lbc_helm_id
-  name                                 = local.name
-  rack_name                            = local.rack_name
-  nlb_security_group                   = var.nlb_security_group
-  nginx_image                          = var.nginx_image
-  oidc_arn                             = module.cluster.oidc_arn
-  oidc_sub                             = module.cluster.oidc_sub
-  pdb_default_min_available_percentage = var.pdb_default_min_available_percentage
-  proxy_protocol                       = var.proxy_protocol
-  release                              = local.release
-  releases_to_retain_after_active      = var.releases_to_retain_after_active
+  build_disable_convox_resolver             = var.build_disable_convox_resolver
+  build_node_enabled                        = var.build_node_enabled
+  cluster                                   = module.cluster.id
+  convox_domain_tls_cert_disable            = var.convox_domain_tls_cert_disable
+  convox_rack_domain                        = var.convox_rack_domain
+  custom_provided_bucket                    = var.custom_provided_bucket
+  deploy_extra_nlb                          = var.deploy_extra_nlb
+  docker_hub_username                       = var.docker_hub_username
+  docker_hub_password                       = var.docker_hub_password
+  disable_convox_resolver                   = var.disable_convox_resolver
+  disable_image_manifest_cache              = var.disable_image_manifest_cache
+  eks_addons                                = module.cluster.eks_addons
+  efs_csi_driver_enable                     = var.efs_csi_driver_enable
+  efs_file_system_id                        = module.cluster.efs_file_system_id
+  high_availability                         = var.high_availability
+  idle_timeout                              = var.idle_timeout
+  internal_router                           = var.internal_router
+  image                                     = local.image
+  lbc_helm_id                               = module.cluster.lbc_helm_id
+  name                                      = local.name
+  rack_name                                 = local.rack_name
+  nlb_security_group                        = var.nlb_security_group
+  nginx_image                               = var.nginx_image
+  oidc_arn                                  = module.cluster.oidc_arn
+  oidc_sub                                  = module.cluster.oidc_sub
+  pdb_default_min_available_percentage      = var.pdb_default_min_available_percentage
+  proxy_protocol                            = var.proxy_protocol
+  release                                   = local.release
+  releases_to_retain_after_active           = var.releases_to_retain_after_active
   releases_to_retain_task_run_interval_hour = var.releases_to_retain_task_run_interval_hour
-  ssl_ciphers                          = var.ssl_ciphers
-  ssl_protocols                        = var.ssl_protocols
-  subnets                              = module.cluster.subnets
-  tags                                 = local.tag_map
-  telemetry                            = var.telemetry
-  telemetry_map                        = local.telemetry_map
-  telemetry_default_map                = local.telemetry_default_map
-  whitelist                            = split(",", var.whitelist)
-  ecr_scan_on_push_enable              = var.ecr_scan_on_push_enable
-  vpc_id                               = module.cluster.vpc
+  ssl_ciphers                               = var.ssl_ciphers
+  ssl_protocols                             = var.ssl_protocols
+  subnets                                   = module.cluster.subnets
+  tags                                      = local.tag_map
+  telemetry                                 = var.telemetry
+  telemetry_map                             = local.telemetry_map
+  telemetry_default_map                     = local.telemetry_default_map
+  whitelist                                 = split(",", var.whitelist)
+  ecr_scan_on_push_enable                   = var.ecr_scan_on_push_enable
+  vpc_id                                    = module.cluster.vpc
 }
