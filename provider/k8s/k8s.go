@@ -40,7 +40,7 @@ import (
 )
 
 const (
-	CURRENT_CM_VERSION     = "v1.10.3"
+	CURRENT_CM_VERSION     = "v1.18.2"
 	MAX_RETRIES_UPDATE_CM  = 10
 	CERT_MANAGER_NAMESPACE = "cert-manager"
 )
