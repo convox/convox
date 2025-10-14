@@ -20,20 +20,43 @@ spec:
    {{ with .Config }}
    {{ range .Solvers }}
    - dns01:
-       {{ with .Route53 }}
+       {{- with .Route53 }}
        route53:
-         {{ with .HostedZoneID }}
+         {{- with .HostedZoneID }}
          hostedZoneID: {{ . }}
-         {{ end }}
+         {{- end }}
          region: {{ .Region }}
-         {{ with .Role }}
+         {{- with .Role }}
          role: {{ safe . }}
-         {{ end }}
-       {{ end }}
+         {{- end }}
+       {{- end }}
+      {{- with .Cloudflare }}
+      cloudflare:
+        {{- if and .ApiTokenSecretRefName .ApiTokenSecretRefKey }}
+        apiTokenSecretRef:
+          {{- with .ApiTokenSecretRefName }}
+          name: {{ . }}
+          {{- end }}
+          {{- with .ApiTokenSecretRefKey }}
+          key: {{ . }}
+          {{- end }}
+        {{- else if and .ApiKeySecretRefName .ApiKeySecretRefKey }}
+        apiKeySecretRef:
+          {{- with .ApiKeySecretRefName }}
+          name: {{ . }}
+          {{- end }}
+          {{- with .ApiKeySecretRefKey }}
+          key: {{ . }}
+          {{- end }}
+        {{- with .Email }}
+        email: {{ . }}
+        {{- end }}
+        {{- end }}
+      {{- end }}
      selector:
        dnsZones:
-       {{ range .DnsZones }}
+       {{- range .DnsZones }}
        - {{ safe . }}
-       {{ end }}
+       {{- end }}
    {{ end }}
    {{ end }}
