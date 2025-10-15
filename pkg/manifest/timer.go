@@ -6,10 +6,11 @@ type Timer struct {
 	Name        string             `yaml:"-"`
 	Annotations ServiceAnnotations `yaml:"annotations,omitempty"`
 
-	Command     string `yaml:"command,omitempty"`
-	Schedule    string `yaml:"schedule"`
-	Service     string `yaml:"service"`
-	Concurrency string `yaml:"concurrency,omitempty"`
+	Command       string `yaml:"command,omitempty"`
+	Schedule      string `yaml:"schedule"`
+	Service       string `yaml:"service"`
+	Concurrency   string `yaml:"concurrency,omitempty"`
+	ParallelCount int    `yaml:"parallelCount,omitempty"`
 }
 
 type Timers []Timer
