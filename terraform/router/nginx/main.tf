@@ -6,10 +6,10 @@ resource "kubernetes_config_map" "nginx-configuration" {
   }
 
   data = {
-    "proxy-body-size"    = "0"
-    "use-proxy-protocol" = var.proxy_protocol ? "true" : "false"
-    "ssl-ciphers"        = var.ssl_ciphers == "" ? null : var.ssl_ciphers
-    "ssl-protocols"      = var.ssl_protocols == "" ? null : var.ssl_protocols
+    "proxy-body-size"           = "0"
+    "use-proxy-protocol"        = var.proxy_protocol ? "true" : "false"
+    "ssl-ciphers"               = var.ssl_ciphers == "" ? null : var.ssl_ciphers
+    "ssl-protocols"             = var.ssl_protocols == "" ? null : var.ssl_protocols
     "allow-snippet-annotations" = "true"
     "annotations-risk-level"    = "Critical"
   }
@@ -197,9 +197,9 @@ resource "kubernetes_role" "ingress-nginx" {
   }
 
   rule {
-    api_groups     = ["discovery.k8s.io"]
-    resources      = ["endpointslices"]
-    verbs          = ["get", "list", "watch"]
+    api_groups = ["discovery.k8s.io"]
+    resources  = ["endpointslices"]
+    verbs      = ["get", "list", "watch"]
   }
 }
 
@@ -305,7 +305,7 @@ resource "kubernetes_deployment" "ingress-nginx" {
           }
 
           env {
-            name = "LD_PRELOAD"
+            name  = "LD_PRELOAD"
             value = "/usr/local/lib/libmimalloc.so"
           }
 
@@ -343,13 +343,13 @@ resource "kubernetes_deployment" "ingress-nginx" {
           security_context {
             allow_privilege_escalation = false
             capabilities {
-              add = [ "NET_BIND_SERVICE" ]
-              drop = [ "ALL" ]
+              add  = ["NET_BIND_SERVICE"]
+              drop = ["ALL"]
             }
             read_only_root_filesystem = false
-            run_as_group = 82
-            run_as_non_root = true
-            run_as_user = 101
+            run_as_group              = 82
+            run_as_non_root           = true
+            run_as_user               = 101
             seccomp_profile {
               type = "RuntimeDefault"
             }
@@ -381,7 +381,11 @@ resource "kubernetes_deployment" "ingress-nginx" {
   }
 
   lifecycle {
-    ignore_changes = [spec[0].replicas]
+    ignore_changes = [
+      spec[0].replicas,
+      spec[0].template[0].metadata[0].annotations["convox.com/triggered-reschedule-for-node"],
+      spec[0].template[0].metadata[0].annotations["convox.com/restart"]
+    ]
   }
 }
 
@@ -493,7 +497,7 @@ resource "kubernetes_deployment" "ingress-nginx-internal" {
           }
 
           env {
-            name = "LD_PRELOAD"
+            name  = "LD_PRELOAD"
             value = "/usr/local/lib/libmimalloc.so"
           }
 
@@ -544,13 +548,13 @@ resource "kubernetes_deployment" "ingress-nginx-internal" {
           security_context {
             allow_privilege_escalation = false
             capabilities {
-              add = [ "NET_BIND_SERVICE" ]
-              drop = [ "ALL" ]
+              add  = ["NET_BIND_SERVICE"]
+              drop = ["ALL"]
             }
             read_only_root_filesystem = false
-            run_as_group = 82
-            run_as_non_root = true
-            run_as_user = 101
+            run_as_group              = 82
+            run_as_non_root           = true
+            run_as_user               = 101
             seccomp_profile {
               type = "RuntimeDefault"
             }
@@ -569,7 +573,11 @@ resource "kubernetes_deployment" "ingress-nginx-internal" {
   }
 
   lifecycle {
-    ignore_changes = [spec[0].replicas]
+    ignore_changes = [
+      spec[0].replicas,
+      spec[0].template[0].metadata[0].annotations["convox.com/triggered-reschedule-for-node"],
+      spec[0].template[0].metadata[0].annotations["convox.com/restart"]
+    ]
   }
 }
 

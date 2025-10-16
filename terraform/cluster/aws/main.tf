@@ -138,7 +138,7 @@ resource "aws_eks_node_group" "cluster" {
 
   launch_template {
     id      = aws_launch_template.cluster.id
-    version = "$Latest"
+    version = tostring(aws_launch_template.cluster.latest_version)
   }
 
   scaling_config {
@@ -204,7 +204,7 @@ resource "aws_eks_node_group" "cluster-build" {
 
   launch_template {
     id      = aws_launch_template.cluster-build.id
-    version = "$Latest"
+    version = tostring(aws_launch_template.cluster-build.latest_version)
   }
 
   scaling_config {

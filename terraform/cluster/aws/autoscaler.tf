@@ -353,6 +353,12 @@ resource "kubernetes_deployment" "autoscaler" {
       }
     }
   }
+
+  lifecycle {
+    ignore_changes = [
+      spec[0].template[0].metadata[0].annotations["convox.com/triggered-reschedule-for-node"]
+    ]
+  }
 }
 
 resource "kubernetes_cluster_role" "hpa_external_metrics" {

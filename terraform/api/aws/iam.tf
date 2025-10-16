@@ -23,6 +23,10 @@ resource "aws_iam_role" "api" {
   assume_role_policy = data.aws_iam_policy_document.assume_api.json
   path               = "/convox/"
   tags               = local.tags
+
+  lifecycle {
+    ignore_changes = [assume_role_policy]
+  }
 }
 
 data "aws_iam_policy_document" "iam_role_manage" {
@@ -181,42 +185,77 @@ data "aws_iam_policy_document" "rds_provisioner" {
 resource "aws_iam_role_policy_attachment" "api_ecr" {
   role       = aws_iam_role.api.name
   policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"
+
+  lifecycle {
+    ignore_changes       = [policy_arn]
+    replace_triggered_by = [terraform_data.release_sentinel.id]
+  }
 }
 
 resource "aws_iam_role_policy" "api_ec2_key_pair" {
   name   = "ec2_key_pair"
   role   = aws_iam_role.api.name
   policy = data.aws_iam_policy_document.ec2_key_pair.json
+
+  lifecycle {
+    ignore_changes       = [policy]
+    replace_triggered_by = [terraform_data.release_sentinel.id]
+  }
 }
 
 resource "aws_iam_role_policy" "api_logs" {
   name   = "logs"
   role   = aws_iam_role.api.name
   policy = data.aws_iam_policy_document.logs.json
+
+  lifecycle {
+    ignore_changes       = [policy]
+    replace_triggered_by = [terraform_data.release_sentinel.id]
+  }
 }
 
 resource "aws_iam_role_policy" "api_storage" {
   name   = "storage"
   role   = aws_iam_role.api.name
   policy = data.aws_iam_policy_document.storage.json
+
+  lifecycle {
+    ignore_changes       = [policy]
+    replace_triggered_by = [terraform_data.release_sentinel.id]
+  }
 }
 
 resource "aws_iam_role_policy" "api_iam_manage" {
   name   = "api-iam-manage"
   role   = aws_iam_role.api.name
   policy = data.aws_iam_policy_document.iam_role_manage.json
+
+  lifecycle {
+    ignore_changes       = [policy]
+    replace_triggered_by = [terraform_data.release_sentinel.id]
+  }
 }
 
 resource "aws_iam_role_policy" "api_eks_pod_identity" {
   name   = "api-eks-pod-identity"
   role   = aws_iam_role.api.name
   policy = data.aws_iam_policy_document.eks_pod_identitiy.json
+
+  lifecycle {
+    ignore_changes       = [policy]
+    replace_triggered_by = [terraform_data.release_sentinel.id]
+  }
 }
 
 resource "aws_iam_role_policy" "rds_provisioner" {
   name   = "api-rds-provisioner"
   role   = aws_iam_role.api.name
   policy = data.aws_iam_policy_document.rds_provisioner.json
+
+  lifecycle {
+    ignore_changes       = [policy]
+    replace_triggered_by = [terraform_data.release_sentinel.id]
+  }
 }
 
 data "aws_iam_policy_document" "assume_cert_manager" {
@@ -242,4 +281,8 @@ resource "aws_iam_role" "cert-manager" {
   assume_role_policy = data.aws_iam_policy_document.assume_cert_manager.json
   path               = "/convox/"
   tags               = local.tags
+
+  lifecycle {
+    ignore_changes = [assume_role_policy]
+  }
 }
