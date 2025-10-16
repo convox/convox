@@ -125,7 +125,7 @@ resource "kubernetes_deployment" "registry" {
           name = "registry"
 
           persistent_volume_claim {
-            claim_name = kubernetes_persistent_volume_claim.registry.metadata.0.name
+            claim_name = kubernetes_persistent_volume_claim.registry.metadata[0].name
           }
         }
       }
@@ -209,7 +209,7 @@ resource "kubernetes_ingress_v1" "registry" {
         path {
           backend {
             service {
-              name = kubernetes_service.registry.metadata.0.name
+              name = kubernetes_service.registry.metadata[0].name
               port {
                 number = 80
               }
