@@ -42,13 +42,13 @@ resource "kubernetes_cluster_role_binding" "api" {
   role_ref {
     api_group = "rbac.authorization.k8s.io"
     kind      = "ClusterRole"
-    name      = kubernetes_cluster_role.api.metadata.0.name
+    name      = kubernetes_cluster_role.api.metadata[0].name
   }
 
   subject {
     kind      = "ServiceAccount"
-    name      = kubernetes_service_account.api.metadata.0.name
-    namespace = kubernetes_service_account.api.metadata.0.namespace
+    name      = kubernetes_service_account.api.metadata[0].name
+    namespace = kubernetes_service_account.api.metadata[0].namespace
   }
 }
 
@@ -65,8 +65,8 @@ resource "kubernetes_cluster_role_binding" "api-cluster-admin" {
 
   subject {
     kind      = "ServiceAccount"
-    name      = kubernetes_service_account.api.metadata.0.name
-    namespace = kubernetes_service_account.api.metadata.0.namespace
+    name      = kubernetes_service_account.api.metadata[0].name
+    namespace = kubernetes_service_account.api.metadata[0].namespace
   }
 }
 
@@ -132,7 +132,7 @@ resource "kubernetes_deployment" "api" {
 
       spec {
         automount_service_account_token = true
-        service_account_name            = kubernetes_service_account.api.metadata.0.name
+        service_account_name            = kubernetes_service_account.api.metadata[0].name
         share_process_namespace         = true
         priority_class_name             = "system-cluster-critical"
 
