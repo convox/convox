@@ -188,7 +188,7 @@ resource "aws_eks_node_group" "cluster-build" {
   capacity_type   = "ON_DEMAND"
   cluster_name    = aws_eks_cluster.cluster.name
   instance_types  = split(",", random_id.build_node_group[0].keepers.node_type)
-  node_group_name = "${var.name}-build-${data.aws_subnet.private_subnet_details[count.index].availability_zone}-${count.index}${random_id.build_node_group[0].hex}"
+  node_group_name = "${var.name}-build-${var.private ? data.aws_subnet.private_subnet_details[count.index].availability_zone : data.aws_subnet.public_subnet_details[count.index].availability_zone}-${count.index}${random_id.build_node_group[0].hex}"
   node_role_arn   = random_id.build_node_group[0].keepers.role_arn
   subnet_ids      = [var.private ? local.private_subnets_ids[count.index] : local.public_subnets_ids[count.index]]
   tags            = local.tags
