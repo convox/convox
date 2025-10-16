@@ -321,6 +321,14 @@ resource "kubernetes_deployment" "api" {
       }
     }
   }
+  lifecycle {
+    ignore_changes = [
+      spec[0].template[0].metadata[0].annotations["convox.com/triggered-reschedule-for-node"],
+      spec[0].template[0].metadata[0].annotations["convox.com/restartAt"],
+      spec[0].template[0].metadata[0].annotations["convox.com/restart"]
+    ]
+  }
+
   depends_on = [kubernetes_resource_quota.gcp-critical-pods]
 }
 
