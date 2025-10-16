@@ -63,7 +63,7 @@ func (*TestEngine) ResolverHost() (string, error) {
 	return "", errors.WithStack(fmt.Errorf("no resolver"))
 }
 
-func (*TestEngine) ServiceHost(_ string, _ manifest.Service) string {
+func (*TestEngine) ServiceHost(_ string, _ *manifest.Service) string {
 	return "service.host"
 }
 

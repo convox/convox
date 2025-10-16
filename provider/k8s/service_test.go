@@ -51,7 +51,7 @@ func TestServiceHost(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		for _, test := range tests {
 			fn := func(t *testing.T) {
-				host := p.ServiceHost(test.AppName, test.Service)
+				host := p.ServiceHost(test.AppName, &test.Service)
 				assert.Equal(t, host, test.HostResponse)
 			}
 

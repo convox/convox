@@ -22,7 +22,7 @@ type Engine interface {
 	RepositoryPrefix() string
 	ResolverHost() (string, error)
 	RepositoryImagesBatchDelete(app string, tags []string) error
-	ServiceHost(app string, s manifest.Service) string
+	ServiceHost(app string, s *manifest.Service) string
 	SystemHost() string
 	SystemStatus() (string, error)
 }

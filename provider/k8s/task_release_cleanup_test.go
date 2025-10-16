@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
@@ -102,7 +102,7 @@ func (m *MockEngine) ResolverHost() (string, error) {
 	return "", nil
 }
 
-func (m *MockEngine) ServiceHost(app string, s manifest.Service) string {
+func (m *MockEngine) ServiceHost(app string, s *manifest.Service) string {
 	args := m.Called(app, s)
 	return args.String(0)
 }
@@ -119,7 +119,7 @@ func (m *MockEngine) SystemStatus() (string, error) {
 func createReleaseCleaner(
 	provider providerForReleaseCleaner,
 	engine Engine,
-	convox cvfake.Clientset,
+	convox *cvfake.Clientset,
 	cluster *fake.Clientset,
 	systemNamespace string,
 	releasesToRetainAfterActive int,
@@ -129,7 +129,7 @@ func createReleaseCleaner(
 	return &releaseCleaner{
 		provider:                    provider,
 		engine:                      engine,
-		convox:                      &convox,
+		convox:                      convox,
 		logger:                      log,
 		cluster:                     cluster,
 		systemNamespace:             systemNamespace,
@@ -141,7 +141,7 @@ func createReleaseCleaner(
 // Helper functions for creating test data
 func createTestRelease(name, ns, build, created string) convoxv1.Release {
 	return convoxv1.Release{
-		ObjectMeta: metav1.ObjectMeta{
+		ObjectMeta: am.ObjectMeta{
 			Name:      name,
 			Namespace: ns,
 		},
@@ -154,7 +154,7 @@ func createTestRelease(name, ns, build, created string) convoxv1.Release {
 
 func createTestBuild(name, ns, started string) convoxv1.Build {
 	return convoxv1.Build{
-		ObjectMeta: metav1.ObjectMeta{
+		ObjectMeta: am.ObjectMeta{
 			Name:      name,
 			Namespace: ns,
 		},
@@ -167,43 +167,51 @@ func createTestBuild(name, ns, started string) convoxv1.Build {
 // Create a namespace for testing
 func createNamespace(cluster *fake.Clientset, name string, annotations map[string]string) error {
 	ns := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
+		ObjectMeta: am.ObjectMeta{
 			Name:        name,
 			Annotations: annotations,
 		},
 	}
-	_, err := cluster.CoreV1().Namespaces().Create(context.Background(), ns, metav1.CreateOptions{})
+	_, err := cluster.CoreV1().Namespaces().Create(context.Background(), ns, am.CreateOptions{})
 	return err
 }
 
 // Test for the waitUntilScheduledForCleanup method
 func TestWaitUntilScheduledForCleanup(t *testing.T) {
 	systemNamespace := "test-namespace"
+	now := time.Now().UTC()
+	annotationTS := now.Add(-2 * time.Hour).Format(time.RFC3339)
+	configMapTS := now.Add(-3 * time.Hour).Format(time.RFC3339)
 
 	testCases := []struct {
-		name        string
-		annotation  string
-		expectError bool
+		name               string
+		annotation         string
+		configMapTimestamp string
+		expectTimestamp    string
 	}{
 		{
-			name:        "No annotation",
-			annotation:  "",
-			expectError: false,
+			name:               "Creates configmap when missing",
+			annotation:         "",
+			configMapTimestamp: "",
+			expectTimestamp:    "",
 		},
 		{
-			name:        "Recent annotation",
-			annotation:  time.Now().Add((-24 * time.Hour) + (5 * time.Second)).Format(time.RFC3339),
-			expectError: false,
+			name:               "Copies annotation when configmap missing",
+			annotation:         annotationTS,
+			configMapTimestamp: "",
+			expectTimestamp:    annotationTS,
 		},
 		{
-			name:        "Old annotation",
-			annotation:  time.Now().Add(-48 * time.Hour).Format(time.RFC3339),
-			expectError: false,
+			name:               "Keeps existing configmap timestamp",
+			annotation:         "",
+			configMapTimestamp: configMapTS,
+			expectTimestamp:    configMapTS,
 		},
 		{
-			name:        "Invalid date format",
-			annotation:  "invalid-date-format",
-			expectError: false,
+			name:               "Handles invalid timestamp",
+			annotation:         "",
+			configMapTimestamp: "invalid-date-format",
+			expectTimestamp:    "invalid-date-format",
 		},
 	}
 
@@ -217,7 +225,7 @@ func TestWaitUntilScheduledForCleanup(t *testing.T) {
 
 			// Create namespace with annotation
 			ns := &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
+				ObjectMeta: am.ObjectMeta{
 					Name: systemNamespace,
 				},
 			}
@@ -228,11 +236,25 @@ func TestWaitUntilScheduledForCleanup(t *testing.T) {
 				}
 			}
 
-			_, err := cluster.CoreV1().Namespaces().Create(context.Background(), ns, metav1.CreateOptions{})
+			_, err := cluster.CoreV1().Namespaces().Create(context.Background(), ns, am.CreateOptions{})
 			require.NoError(t, err)
 
+			if tc.configMapTimestamp != "" {
+				cm := &corev1.ConfigMap{
+					ObjectMeta: am.ObjectMeta{
+						Name:      cleanupConfigMapName,
+						Namespace: systemNamespace,
+					},
+					Data: map[string]string{
+						cleanupTimestampKey: tc.configMapTimestamp,
+					},
+				}
+				_, err := cluster.CoreV1().ConfigMaps(systemNamespace).Create(context.Background(), cm, am.CreateOptions{})
+				require.NoError(t, err)
+			}
+
 			// Create the cleaner
-			cleaner := createReleaseCleaner(provider, engine, *convox, cluster, systemNamespace, 3)
+			cleaner := createReleaseCleaner(provider, engine, convox, cluster, systemNamespace, 3)
 
 			// Override the context with a canceled one to avoid long sleeps in tests
 			cancelCtx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
@@ -242,13 +264,50 @@ func TestWaitUntilScheduledForCleanup(t *testing.T) {
 			// Call the method
 			err = cleaner.waitUntilScheduledForCleanup()
 
-			if tc.expectError {
-				assert.Error(t, err)
+			assert.NoError(t, err)
+
+			cm, err := cluster.CoreV1().ConfigMaps(systemNamespace).Get(context.Background(), cleanupConfigMapName, am.GetOptions{})
+			require.NoError(t, err)
+
+			got := cm.Data[cleanupTimestampKey]
+			if tc.expectTimestamp == "" {
+				assert.Empty(t, got)
 			} else {
-				assert.NoError(t, err)
+				assert.Equal(t, tc.expectTimestamp, got)
 			}
 		})
 	}
+}
+
+func TestUpdateCleanupTimestamp(t *testing.T) {
+	provider := &MockProviderForReleaseCleaner{}
+	engine := &MockEngine{}
+	convox := cvfake.NewSimpleClientset()
+	cluster := fake.NewSimpleClientset()
+
+	systemNamespace := "test-namespace"
+	_, err := cluster.CoreV1().Namespaces().Create(context.Background(), &corev1.Namespace{
+		ObjectMeta: am.ObjectMeta{
+			Name: systemNamespace,
+		},
+	}, am.CreateOptions{})
+	require.NoError(t, err)
+
+	cleaner := createReleaseCleaner(provider, engine, convox, cluster, systemNamespace, 3)
+
+	ts := time.Now().UTC().Truncate(time.Second)
+	require.NoError(t, cleaner.updateCleanupTimestamp(ts))
+
+	cm, err := cluster.CoreV1().ConfigMaps(systemNamespace).Get(context.Background(), cleanupConfigMapName, am.GetOptions{})
+	require.NoError(t, err)
+	assert.Equal(t, ts.Format(time.RFC3339), cm.Data[cleanupTimestampKey])
+
+	next := ts.Add(30 * time.Minute)
+	require.NoError(t, cleaner.updateCleanupTimestamp(next))
+
+	cm, err = cluster.CoreV1().ConfigMaps(systemNamespace).Get(context.Background(), cleanupConfigMapName, am.GetOptions{})
+	require.NoError(t, err)
+	assert.Equal(t, next.Format(time.RFC3339), cm.Data[cleanupTimestampKey])
 }
 
 // Test for appReleaseAndBuildCleanup method
@@ -384,7 +443,7 @@ func TestAppReleaseAndBuildCleanup(t *testing.T) {
 			}
 
 			// Create the cleaner
-			cleaner := createReleaseCleaner(mockProvider, mockEngine, *convox, cluster, "test-namespace", tc.releasesToRetainAfterActive)
+			cleaner := createReleaseCleaner(mockProvider, mockEngine, convox, cluster, "test-namespace", tc.releasesToRetainAfterActive)
 
 			// Call the method
 			err := cleaner.appReleaseAndBuildCleanup(&tc.app)
@@ -400,7 +459,7 @@ func TestAppReleaseAndBuildCleanup(t *testing.T) {
 			mockEngine.AssertExpectations(t)
 
 			for _, b := range tc.builds {
-				_, err := convox.ConvoxV1().Builds(b.Namespace).Get(b.Name, metav1.GetOptions{})
+				_, err := convox.ConvoxV1().Builds(b.Namespace).Get(b.Name, am.GetOptions{})
 				if common.ContainsInStringSlice(tc.expectedDeletedBuilds, b.Name) {
 					assert.Error(t, err, "Expected build %s to be deleted", b.Name)
 				} else {
@@ -409,7 +468,7 @@ func TestAppReleaseAndBuildCleanup(t *testing.T) {
 			}
 
 			for _, r := range tc.releases {
-				_, err := convox.ConvoxV1().Releases(r.Namespace).Get(r.Name, metav1.GetOptions{})
+				_, err := convox.ConvoxV1().Releases(r.Namespace).Get(r.Name, am.GetOptions{})
 				if common.ContainsInStringSlice(tc.expectedDeletedReleases, r.Name) {
 					assert.Error(t, err, "Expected release %s to be deleted", r.Name)
 				} else {

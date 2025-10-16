@@ -16,7 +16,7 @@ import (
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (p *Provider) ServiceHost(app string, s manifest.Service) string {
+func (p *Provider) ServiceHost(app string, s *manifest.Service) string {
 	if s.Internal {
 		return fmt.Sprintf("%s.%s.%s.local", s.Name, app, p.Name)
 	} else if s.InternalRouter {
@@ -65,7 +65,7 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 
 		s := structs.Service{
 			Count:  int(common.DefaultInt32(d.Spec.Replicas, 0)),
-			Domain: p.Engine.ServiceHost(app, *ms),
+			Domain: p.Engine.ServiceHost(app, ms),
 			Name:   d.ObjectMeta.Name,
 			Ports:  serviceContainerPorts(*c, ms.Internal),
 		}
@@ -111,7 +111,7 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 
 		s := structs.Service{
 			Count:  int(d.Status.NumberReady),
-			Domain: p.Engine.ServiceHost(app, *ms),
+			Domain: p.Engine.ServiceHost(app, ms),
 			Name:   d.ObjectMeta.Name,
 			Ports:  serviceContainerPorts(*c, ms.Internal),
 		}

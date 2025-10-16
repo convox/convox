@@ -13,13 +13,17 @@ import (
 	convoxv1 "github.com/convox/convox/provider/k8s/pkg/apis/convox/v1"
 	cv "github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned"
 	"github.com/convox/logger"
+	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 )
 
-const cleanupAnnotationKey = "convox.io/last-release-build-cleanup"
+const (
+	cleanupAnnotationKey = "convox.io/last-release-build-cleanup"
+	cleanupConfigMapName = "convox-release-cleanup"
+	cleanupTimestampKey  = "last-release-build-cleanup"
+)
 
 type providerForReleaseCleaner interface {
 	AppList() (structs.Apps, error)
@@ -50,14 +54,14 @@ func (a *releaseCleaner) Run() error {
 }
 
 func (a *releaseCleaner) waitUntilScheduledForCleanup() error {
-	sysNs, err := a.cluster.CoreV1().Namespaces().Get(a.ctx, a.systemNamespace, v1.GetOptions{})
+	cm, err := a.ensureCleanupConfigMap()
 	if err != nil {
-		a.logger.Errorf("failed to get system namespace: %s", err)
+		a.logger.Errorf("failed to ensure cleanup state: %s", err)
 		return err
 	}
 
-	if sysNs.Annotations[cleanupAnnotationKey] != "" {
-		t, err := time.Parse(time.RFC3339, sysNs.Annotations[cleanupAnnotationKey])
+	if ts := cm.Data[cleanupTimestampKey]; ts != "" {
+		t, err := time.Parse(time.RFC3339, ts)
 		if err == nil && t.Add(time.Duration(a.releaseBuildCleanupIntervalHour)*time.Hour).After(time.Now().UTC()) {
 			a.logger.Logf("release build cleanup already run in last %d hours, skipping", a.releaseBuildCleanupIntervalHour)
 			time.Sleep(t.Add(time.Duration(a.releaseBuildCleanupIntervalHour)*time.Hour).Sub(time.Now().UTC()) + (10 * time.Second))
@@ -87,22 +91,78 @@ func (a *releaseCleaner) cleanupReleasesAndBuilds() error {
 		time.Sleep(3 * time.Second)
 	}
 
-	patchBytes, err := patchBytes(map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"annotations": map[string]string{
-				cleanupAnnotationKey: time.Now().UTC().Format(time.RFC3339),
-			},
-		},
-	})
-	if err != nil {
-		a.logger.Errorf("failed to create patch bytes err=%q\n", err)
+	if err := a.updateCleanupTimestamp(time.Now().UTC()); err != nil {
+		a.logger.Errorf("failed to record cleanup timestamp: %s", err)
 		return err
 	}
-	_, err = a.cluster.CoreV1().Namespaces().Patch(a.ctx, a.systemNamespace, types.MergePatchType, patchBytes, am.PatchOptions{})
+
+	return nil
+}
+
+func (a *releaseCleaner) ensureCleanupConfigMap() (*corev1.ConfigMap, error) {
+	cm, err := a.cluster.CoreV1().ConfigMaps(a.systemNamespace).Get(a.ctx, cleanupConfigMapName, am.GetOptions{})
 	if err != nil {
-		a.logger.Errorf("failed to patch namespace '%s' err=%q\n", a.systemNamespace, err)
+		if kerrors.IsNotFound(err) {
+			data := map[string]string{}
+			ns, nsErr := a.cluster.CoreV1().Namespaces().Get(a.ctx, a.systemNamespace, am.GetOptions{})
+			if nsErr == nil {
+				if ts := ns.Annotations[cleanupAnnotationKey]; ts != "" {
+					data[cleanupTimestampKey] = ts
+				}
+			}
+			cm = &corev1.ConfigMap{
+				ObjectMeta: am.ObjectMeta{
+					Name:      cleanupConfigMapName,
+					Namespace: a.systemNamespace,
+				},
+				Data: data,
+			}
+			created, createErr := a.cluster.CoreV1().ConfigMaps(a.systemNamespace).Create(a.ctx, cm, am.CreateOptions{})
+			if createErr != nil {
+				if kerrors.IsAlreadyExists(createErr) {
+					return a.cluster.CoreV1().ConfigMaps(a.systemNamespace).Get(a.ctx, cleanupConfigMapName, am.GetOptions{})
+				}
+				return nil, createErr
+			}
+			if created.Data == nil {
+				created.Data = map[string]string{}
+			}
+			return created, nil
+		}
+		return nil, err
 	}
-	return err
+
+	if cm.Data == nil {
+		cm.Data = map[string]string{}
+	}
+
+	return cm, nil
+}
+
+func (a *releaseCleaner) updateCleanupTimestamp(ts time.Time) error {
+	for i := 0; i < 3; i++ {
+		cm, err := a.ensureCleanupConfigMap()
+		if err != nil {
+			return err
+		}
+
+		updated := cm.DeepCopy()
+		if updated.Data == nil {
+			updated.Data = map[string]string{}
+		}
+		updated.Data[cleanupTimestampKey] = ts.Format(time.RFC3339)
+
+		if _, err := a.cluster.CoreV1().ConfigMaps(a.systemNamespace).Update(a.ctx, updated, am.UpdateOptions{}); err != nil {
+			if kerrors.IsConflict(err) {
+				continue
+			}
+			return err
+		}
+
+		return nil
+	}
+
+	return fmt.Errorf("failed to update cleanup timestamp after retries")
 }
 
 func (a *releaseCleaner) toTime(t string) time.Time {
@@ -195,7 +255,8 @@ func (a *releaseCleaner) appReleaseAndBuildCleanup(app *structs.App) error {
 				a.logger.Errorf("failed to load manifest for build '%s' of app '%s': %s", b.Name, app.Name, err)
 				continue
 			}
-			for _, svc := range m.Services {
+			for i := range m.Services {
+				svc := &m.Services[i]
 				if svc.Name != "" {
 					buildTagsToDelete = append(buildTagsToDelete, fmt.Sprintf("%s.%s", svc.Name, strings.ToUpper(b.Name)))
 				}
@@ -215,5 +276,6 @@ func (a *releaseCleaner) appReleaseAndBuildCleanup(app *structs.App) error {
 			a.logger.Errorf("failed to delete images for builds '%s': %s", strings.Join(batch, ","), err)
 		}
 	}
+
 	return nil
 }
