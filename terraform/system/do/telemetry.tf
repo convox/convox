@@ -14,6 +14,7 @@ locals {
     k8s_version              = var.k8s_version
     name                     = var.name
     node_type                = var.node_type
+    private_api              = var.private_api
     rack_name                = var.rack_name
     region                   = var.region
     registry_disk            = var.registry_disk
@@ -40,6 +41,7 @@ locals {
     k8s_version              = "1.35"
     name                     = ""
     node_type                = "s-2vcpu-4gb"
+    private_api              = "false"
     rack_name                = ""
     region                   = "nyc3"
     registry_disk            = "50Gi"
