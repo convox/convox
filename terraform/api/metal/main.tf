@@ -37,12 +37,13 @@ module "k8s" {
   }
 
   docker_hub_authentication = var.docker_hub_authentication
-  domain    = var.domain
-  image     = var.image
-  namespace = var.namespace
-  rack      = var.name
-  release   = var.release
-  resolver  = var.resolver
+  domain                    = var.domain
+  image                     = var.image
+  namespace                 = var.namespace
+  rack                      = var.name
+  release                   = var.release
+  resolver                  = var.resolver
+  private_api               = var.private_api
 
   annotations = {
     "cert-manager.io/cluster-issuer" = "self-signed"

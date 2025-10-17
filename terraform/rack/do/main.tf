@@ -40,6 +40,7 @@ module "api" {
   secret                    = random_string.secret.result
   secret_key                = var.secret_key
   syslog                    = var.syslog
+  private_api               = var.private_api
 }
 
 module "resolver" {

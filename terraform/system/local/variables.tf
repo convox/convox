@@ -35,3 +35,8 @@ variable "telemetry" {
   type    = bool
   default = false
 }
+
+variable "private_api" {
+  type    = bool
+  default = false
+}

@@ -38,3 +38,8 @@ variable "router" {
 variable "secret" {
   type = string
 }
+
+variable "private_api" {
+  type    = bool
+  default = false
+}

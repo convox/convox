@@ -52,3 +52,8 @@ variable "telemetry_map" {
 variable "telemetry_default_map" {
   type = any
 }
+
+variable "private_api" {
+  type    = bool
+  default = false
+}

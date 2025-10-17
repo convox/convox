@@ -139,6 +139,45 @@ func TestRackInstallArgs(t *testing.T) {
 	})
 }
 
+func TestRackInstallPrivateAPI(t *testing.T) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		rack.TestLatest = "foo"
+
+		me := &mockstdcli.Executor{}
+		me.On("Execute", "terraform", "version").Return([]byte{}, nil)
+		me.On("Terminal", "terraform", "init", "-force-copy", "-no-color", "-upgrade").Return(nil)
+		me.On("Terminal", "terraform", "apply", "-auto-approve", "-no-color").Return(nil)
+		e.Executor = me
+
+		res, err := testExecute(e, "rack install local devprivate private_api=true", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{""})
+
+		dir := filepath.Join(e.Settings, "racks", "devprivate")
+		tf := filepath.Join(dir, "main.tf")
+
+		_, err = os.Stat(dir)
+		require.NoError(t, err)
+		_, err = os.Stat(tf)
+		require.NoError(t, err)
+
+		tfdata, err := ioutil.ReadFile(tf)
+		require.NoError(t, err)
+
+		testdata, err := ioutil.ReadFile("testdata/terraform/dev_private.tf")
+		require.NoError(t, err)
+
+		actual := strings.ReplaceAll(strings.Trim(removeSettingsLine(string(tfdata)), "\n"), "\t", "")
+		expected := strings.ReplaceAll(removeSettingsLine(strings.Trim(string(testdata), "\n")), "\t", "")
+
+		require.Equal(t, expected, actual)
+
+		me.AssertExpectations(t)
+	})
+}
+
 func TestRackInstallPrepare(t *testing.T) {
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
 		rack.TestLatest = "foo"

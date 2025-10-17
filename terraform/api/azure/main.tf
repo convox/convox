@@ -55,6 +55,7 @@ module "k8s" {
   rack_name                 = var.rack_name
   release                   = var.release
   resolver                  = var.resolver
+  private_api               = var.private_api
 
   labels = {
     "aadpodidbinding" : "api"

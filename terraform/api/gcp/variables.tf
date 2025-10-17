@@ -51,6 +51,11 @@ variable "resolver" {
   type = string
 }
 
+variable "private_api" {
+  type    = bool
+  default = false
+}
+
 variable "router" {
   type = string
 }

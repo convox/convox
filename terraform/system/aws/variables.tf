@@ -145,6 +145,11 @@ variable "internal_router" {
   default = false
 }
 
+variable "private_api" {
+  type    = bool
+  default = false
+}
+
 variable "image" {
   default = "convox/convox"
 }
@@ -297,12 +302,12 @@ variable "release" {
 }
 
 variable "releases_to_retain_after_active" {
-  type = number
+  type    = number
   default = 0
 }
 
 variable "releases_to_retain_task_run_interval_hour" {
-  type = number
+  type    = number
   default = 24
 }
 

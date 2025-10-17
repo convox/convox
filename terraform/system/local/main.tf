@@ -37,4 +37,5 @@ module "rack" {
   telemetry             = var.telemetry
   telemetry_map         = local.telemetry_map
   telemetry_default_map = local.telemetry_default_map
+  private_api           = var.private_api
 }

@@ -38,6 +38,7 @@ module "api" {
   resource_group_location   = var.resource_group_location
   router                    = module.router.endpoint
   syslog                    = var.syslog
+  private_api               = var.private_api
   workspace                 = var.workspace
 }
 

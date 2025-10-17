@@ -38,6 +38,7 @@ module "api" {
   resolver                  = module.resolver.endpoint
   router                    = module.router.endpoint
   syslog                    = var.syslog
+  private_api               = var.private_api
 }
 
 module "resolver" {

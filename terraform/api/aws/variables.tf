@@ -106,6 +106,11 @@ variable "pdb_default_min_available_percentage" {
   default = 50
 }
 
+variable "private_api" {
+  type    = bool
+  default = false
+}
+
 variable "rack_name" {
   default = ""
   type    = string

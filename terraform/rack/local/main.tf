@@ -32,6 +32,7 @@ module "api" {
   resolver                  = module.resolver.endpoint
   router                    = module.router.endpoint
   secret                    = random_string.secret.result
+  private_api               = var.private_api
 }
 
 module "resolver" {

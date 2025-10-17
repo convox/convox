@@ -83,6 +83,11 @@ variable "internal_router" {
   default = false
 }
 
+variable "private_api" {
+  type    = bool
+  default = false
+}
+
 variable "image" {
   type = string
 }

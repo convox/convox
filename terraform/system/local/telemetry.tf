@@ -8,6 +8,7 @@ locals {
     image               = var.image
     name                = var.name
     os                  = var.os
+    private_api         = var.private_api
     rack_name           = var.rack_name
     release             = var.release
     settings            = var.settings
@@ -20,6 +21,7 @@ locals {
     image               = "convox/convox"
     name                = ""
     os                  = "ubuntu"
+    private_api         = "false"
     rack_name           = ""
     release             = ""
     settings            = ""

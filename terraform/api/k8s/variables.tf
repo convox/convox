@@ -104,3 +104,9 @@ variable "rack_name" {
   default = ""
   type    = string
 }
+
+variable "private_api" {
+  description = "When true, skip creating public ingress resources for the Rack API"
+  type        = bool
+  default     = false
+}

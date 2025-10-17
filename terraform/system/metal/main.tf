@@ -27,5 +27,5 @@ module "rack" {
   registry_disk       = var.registry_disk
   syslog              = var.syslog
   whitelist           = split(",", var.whitelist)
+  private_api         = var.private_api
 }
-

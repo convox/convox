@@ -22,6 +22,7 @@ module "k8s" {
   release                   = var.release
   replicas                  = 1
   resolver                  = var.resolver
+  private_api               = var.private_api
   set_priority_class        = false
 
   annotations = {

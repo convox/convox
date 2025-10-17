@@ -104,6 +104,10 @@ Groups:
         description: You should only change this if you have internal domain
           certificates configured and do not want to generate additional
           certificates.
+      - name: private_api
+        default: "false"
+        type: boolean
+        description: Disable the public Convox API ingress so the rack API is only reachable through private networking (VPN, peered VPC, Tailscale, etc.)
       - name: ssl_ciphers
         default: "null"
         sideNote: Nginx default unless set
