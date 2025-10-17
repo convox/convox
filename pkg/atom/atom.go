@@ -600,7 +600,7 @@ func parseLabels(labels string) map[string]string {
 }
 
 func templateResources(filter string) ([]string, error) {
-	data, err := exec.Command("kubectl", "api-resources", "--verbs=list", "--namespaced", "-o", "name").CombinedOutput()
+	data, err := exec.Command("kubectl", "api-resources", "--verbs=list", "--namespaced", "-o", "name").Output()
 	if err != nil {
 		return []string{}, nil
 	}
@@ -609,7 +609,7 @@ func templateResources(filter string) ([]string, error) {
 
 	rsh := map[string]bool{}
 
-	data, err = exec.Command("kubectl", "get", "-l", filter, "--all-namespaces", "-o", "json", strings.Join(ars, ",")).CombinedOutput()
+	data, err = exec.Command("kubectl", "get", "-l", filter, "--all-namespaces", "-o", "json", strings.Join(ars, ",")).Output()
 	if err != nil {
 		return []string{}, nil
 	}

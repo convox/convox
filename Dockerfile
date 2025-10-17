@@ -1,6 +1,6 @@
 ## development #################################################################
 
-FROM golang:1.23.7 AS development
+FROM golang:1.25 AS development
 
 ARG DOCKER_ARCH=x86_64
 ARG KUBECTL_ARCH=amd64
@@ -13,7 +13,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl -s https://download.docker.com/linux/static/stable/$DOCKER_ARCH/docker-20.10.7.tgz | \
   tar -C /usr/bin --strip-components 1 -xz
 
-RUN curl -Ls https://dl.k8s.io/release/v1.32.0/bin/linux/$KUBECTL_ARCH/kubectl -o /usr/bin/kubectl && \
+RUN curl -Ls https://dl.k8s.io/release/v1.33.5/bin/linux/$KUBECTL_ARCH/kubectl -o /usr/bin/kubectl && \
   chmod +x /usr/bin/kubectl
 
 RUN curl -Ls https://github.com/mattgreen/watchexec/releases/download/1.8.6/watchexec-1.8.6-x86_64-unknown-linux-gnu.tar.gz | \
@@ -34,7 +34,7 @@ RUN make build
 
 ## package #####################################################################
 
-FROM golang:1.23.7 AS package
+FROM golang:1.25 AS package
 
 WORKDIR /usr/src/convox
 
@@ -58,7 +58,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl -s https://download.docker.com/linux/static/stable/$DOCKER_ARCH/docker-20.10.7.tgz | \
   tar -C /usr/bin --strip-components 1 -xz
 
-RUN curl -Ls https://dl.k8s.io/release/v1.32.0/bin/linux/$KUBECTL_ARCH/kubectl -o /usr/bin/kubectl && \
+RUN curl -Ls https://dl.k8s.io/release/v1.33.5/bin/linux/$KUBECTL_ARCH/kubectl -o /usr/bin/kubectl && \
   chmod +x /usr/bin/kubectl
 
 ENV DEVELOPMENT=false
