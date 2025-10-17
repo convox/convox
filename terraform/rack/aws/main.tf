@@ -65,6 +65,7 @@ module "api" {
   pdb_default_min_available_percentage      = var.pdb_default_min_available_percentage
   prometheus_url                            = var.prometheus_url
   release                                   = var.release
+  private_api                               = var.private_api
   disable_convox_resolver                   = var.disable_convox_resolver
   resolver                                  = module.resolver.endpoint
   router                                    = module.router.endpoint

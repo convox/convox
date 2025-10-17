@@ -318,6 +318,7 @@ module "rack" {
   pod_imds_block_enabled                    = var.pod_imds_block_enabled
   network_policy_enable                     = var.network_policy_enable
   release                                   = local.release
+  private_api                               = var.private_api
   releases_to_retain_after_active           = var.releases_to_retain_after_active
   releases_to_retain_task_run_interval_hour = var.releases_to_retain_task_run_interval_hour
   release_watcher_gc_interval               = var.release_watcher_gc_interval

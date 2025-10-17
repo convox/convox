@@ -127,6 +127,7 @@ locals {
     pod_security_mode                         = var.pod_security_mode
     pod_security_standard                     = var.pod_security_standard
     private                                   = var.private
+    private_api                               = var.private_api
     private_eks_pass                          = var.private_eks_pass
     private_subnets_ids                       = var.private_subnets_ids
     prometheus_gpu_metrics_chart_version      = var.prometheus_gpu_metrics_chart_version
@@ -286,6 +287,7 @@ locals {
     pod_security_mode                         = "warn"
     pod_security_standard                     = ""
     private                                   = "true"
+    private_api                               = "false"
     private_eks_pass                          = ""
     private_subnets_ids                       = ""
     prometheus_gpu_metrics_chart_version      = "27.9.0"

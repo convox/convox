@@ -351,3 +351,8 @@ variable "envoy_memory_request" {
   type    = string
   default = "256Mi"
 }
+
+variable "private_api" {
+  type    = bool
+  default = false
+}

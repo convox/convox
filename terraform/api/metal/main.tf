@@ -43,6 +43,7 @@ module "k8s" {
   namespace                 = var.namespace
   rack                      = var.name
   release                   = var.release
+  private_api               = var.private_api
   resolver                  = var.resolver
   webhook_signing_key       = var.webhook_signing_key
 

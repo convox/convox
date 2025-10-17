@@ -76,3 +76,8 @@ variable "webhook_signing_key" {
   type    = string
   default = ""
 }
+
+variable "private_api" {
+  type    = bool
+  default = false
+}

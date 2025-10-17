@@ -29,5 +29,5 @@ module "rack" {
   syslog              = var.syslog
   webhook_signing_key = var.webhook_signing_key
   whitelist           = split(",", var.whitelist)
+  private_api         = var.private_api
 }
-
