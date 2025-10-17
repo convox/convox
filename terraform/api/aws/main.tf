@@ -15,6 +15,7 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
+  disable_api_k8s_proxy          = var.disable_api_k8s_proxy
   buildkit_enabled               = var.buildkit_enabled
   build_node_enabled             = var.build_node_enabled
   convox_domain_tls_cert_disable = var.convox_domain_tls_cert_disable

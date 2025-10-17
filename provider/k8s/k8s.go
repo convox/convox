@@ -299,7 +299,9 @@ func (p *Provider) Start() error {
 
 	go common.Tick(1*time.Hour, p.heartbeat)
 
-	go p.startApiProxy()
+	if os.Getenv("DISABLE_API_K8S_PROXY") != "true" {
+		go p.startApiProxy()
+	}
 
 	if os.Getenv("TEST") != "true" {
 		go p.RunSharedInformer(make(chan struct{}))

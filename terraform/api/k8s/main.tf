@@ -5,7 +5,7 @@ resource "random_string" "password" {
 
 resource "kubernetes_resource_quota" "gcp-critical-pods" {
   metadata {
-    name = "gcp-critical-pods"
+    name      = "gcp-critical-pods"
     namespace = var.namespace
   }
   spec {
@@ -15,8 +15,8 @@ resource "kubernetes_resource_quota" "gcp-critical-pods" {
     scope_selector {
       match_expression {
         scope_name = "PriorityClass"
-        operator = "In"
-        values = ["system-node-critical", "system-cluster-critical"]
+        operator   = "In"
+        values     = ["system-node-critical", "system-cluster-critical"]
       }
     }
   }
@@ -158,6 +158,11 @@ resource "kubernetes_deployment" "api" {
           env {
             name  = "BUILD_NODE_ENABLED"
             value = var.build_node_enabled
+          }
+
+          env {
+            name  = "DISABLE_API_K8S_PROXY"
+            value = var.disable_api_k8s_proxy
           }
 
           env {
@@ -305,7 +310,7 @@ resource "kubernetes_deployment" "api" {
       }
     }
   }
-  depends_on = [ kubernetes_resource_quota.gcp-critical-pods ]
+  depends_on = [kubernetes_resource_quota.gcp-critical-pods]
 }
 
 resource "kubernetes_service" "api" {
@@ -327,11 +332,14 @@ resource "kubernetes_service" "api" {
       protocol    = "TCP"
     }
 
-    port {
-      name        = "kubernetes"
-      port        = 8001
-      target_port = 8001
-      protocol    = "TCP"
+    dynamic "port" {
+      for_each = var.disable_api_k8s_proxy ? [] : [1]
+      content {
+        name        = "kubernetes"
+        port        = 8001
+        target_port = 8001
+        protocol    = "TCP"
+      }
     }
 
     selector = {
@@ -388,6 +396,8 @@ resource "kubernetes_ingress_v1" "api" {
 }
 
 resource "kubernetes_ingress_v1" "kubernetes" {
+  count = var.disable_api_k8s_proxy ? 0 : 1
+
   wait_for_load_balancer = true
 
   metadata {

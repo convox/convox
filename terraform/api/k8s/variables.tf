@@ -2,6 +2,11 @@ variable "annotations" {
   default = {}
 }
 
+variable "disable_api_k8s_proxy" {
+  default = false
+  type    = bool
+}
+
 variable "authentication" {
   default = true
 }

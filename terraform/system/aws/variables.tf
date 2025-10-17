@@ -2,6 +2,11 @@ variable "access_log_retention_in_days" {
   default = "7"
 }
 
+variable "disable_api_k8s_proxy" {
+  default = false
+  type    = bool
+}
+
 variable "additional_node_groups_config" {
   type    = string
   default = ""
@@ -297,12 +302,12 @@ variable "release" {
 }
 
 variable "releases_to_retain_after_active" {
-  type = number
+  type    = number
   default = 0
 }
 
 variable "releases_to_retain_task_run_interval_hour" {
-  type = number
+  type    = number
   default = 24
 }
 

@@ -1,3 +1,8 @@
+variable "disable_api_k8s_proxy" {
+  default = false
+  type    = bool
+}
+
 variable "buildkit_enabled" {
   default = false
 }
