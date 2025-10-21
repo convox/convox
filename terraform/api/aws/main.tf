@@ -34,12 +34,17 @@ module "k8s" {
   resolver                       = var.resolver
   private_api                    = var.private_api
 
-  annotations = {
-    "cert-manager.io/cluster-issuer" = "letsencrypt"
-    "cert-manager.io/duration"       = var.cert_duration
-    "eks.amazonaws.com/role-arn"     = aws_iam_role.api.arn
-    "iam.amazonaws.com/role"         = aws_iam_role.api.arn
-  }
+  # When private_api is enabled, don't add cert-manager annotations since there's no public ingress
+  annotations = merge(
+    {
+      "eks.amazonaws.com/role-arn" = aws_iam_role.api.arn
+      "iam.amazonaws.com/role"     = aws_iam_role.api.arn
+    },
+    var.private_api ? {} : {
+      "cert-manager.io/cluster-issuer" = "letsencrypt"
+      "cert-manager.io/duration"       = var.cert_duration
+    }
+  )
 
   env = {
     AWS_REGION                                = data.aws_region.current.name
