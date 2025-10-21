@@ -50,6 +50,8 @@ The following parameters are available for configuring your Convox rack on Amazo
 | [private_subnets_ids](/configuration/rack-parameters/aws/private_subnets_ids)       | Specifies the IDs of private subnets to use for the Rack.                |
 | [proxy_protocol](/configuration/rack-parameters/aws/proxy_protocol)                 | Enables the Proxy Protocol to track the original client IP address.      |
 | [public_subnets_ids](/configuration/rack-parameters/aws/public_subnets_ids)         | Specifies the IDs of public subnets to use for the Rack.                 |
+| [releases_to_retain_after_active](/configuration/rack-parameters/aws/releases_to_retain_after_active) | Specifies the number of releases to retain after the currently active release. |
+| [releases_to_retain_task_run_interval_hour](/configuration/rack-parameters/aws/releases_to_retain_task_run_interval_hour) | Defines the interval in hours at which the release cleanup task runs. |
 | [schedule_rack_scale_down](/configuration/rack-parameters/aws/schedule_rack_scale_down) | Specifies the schedule for scaling down the rack.                        |
 | [schedule_rack_scale_up](/configuration/rack-parameters/aws/schedule_rack_scale_up) | Specifies the schedule for scaling up the rack.                          |
 | [ssl_ciphers](/configuration/rack-parameters/aws/ssl_ciphers)                       | Specifies the SSL ciphers to use for Nginx.                              |

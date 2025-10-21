@@ -102,6 +102,105 @@ services:
       failureThreshold: 3
 ```
 
+## Startup Probes
+
+Startup probes provide a way to check if an application has successfully started before allowing readiness and liveness probes to take effect. This is particularly useful for applications that require significant initialization time or have variable startup durations.
+
+When a startup probe is configured, all other probes are disabled until it succeeds. This prevents Kubernetes from prematurely marking a service as unhealthy or restarting it before initialization completes.
+
+### Startup Probe Configuration
+
+```html
+services:
+  web:
+    build: .
+    port: 3000
+    startupProbe:
+      tcpSocketPort: 3000
+      grace: 30
+      interval: 10
+      timeout: 5
+      successThreshold: 1
+      failureThreshold: 30
+```
+
+| Attribute           | Default | Description                                                                      |
+| ------------------- | ------- | -------------------------------------------------------------------------------- |
+| **tcpSocketPort**     | **Required** | The TCP port to check for startup success                               |
+| **grace**             | 0       | The number of seconds to wait before starting startup checks                     |
+| **interval**          | 10      | The number of seconds between startup probe checks                               |
+| **timeout**           | 1       | The number of seconds to wait for a successful response                          |
+| **successThreshold**  | 1       | The number of consecutive successful checks required to consider the startup complete |
+| **failureThreshold**  | 3       | The number of consecutive failed checks before the container is restarted        |
+
+### HTTP Startup Probe
+
+You can also use an HTTP endpoint for startup probes:
+
+```html
+services:
+  api:
+    build: .
+    port: 8080
+    startupProbe:
+      path: /startup
+      grace: 10
+      interval: 5
+      failureThreshold: 40
+```
+
+| Attribute           | Default | Description                                                                      |
+| ------------------- | ------- | -------------------------------------------------------------------------------- |
+| **path**              | **Required** | The HTTP endpoint to check for startup success                          |
+| **grace**             | 0       | The number of seconds to wait before starting startup checks                     |
+| **interval**          | 10      | The number of seconds between startup probe checks                               |
+| **timeout**           | 1       | The number of seconds to wait for a successful response                          |
+| **successThreshold**  | 1       | The number of consecutive successful checks required to consider the startup complete |
+| **failureThreshold**  | 3       | The number of consecutive failed checks before the container is restarted        |
+
+### Use Cases for Startup Probes
+
+Startup probes are ideal for:
+
+- **Database Migrations**: Applications that run database migrations on startup
+- **Cache Warming**: Services that need to populate caches before serving traffic
+- **Large Applications**: Applications with significant initialization requirements
+- **Configuration Loading**: Services that load extensive configuration or connect to multiple external services
+- **Legacy Applications**: Applications with unpredictable or lengthy startup times
+
+### Example: Application with Long Initialization
+
+```html
+services:
+  analytics:
+    build: .
+    port: 5000
+    startupProbe:
+      tcpSocketPort: 5000
+      grace: 60
+      interval: 15
+      failureThreshold: 20  # Allows up to 5 minutes for startup (15s * 20)
+    health:
+      path: /health
+      interval: 5
+    liveness:
+      path: /live
+      interval: 10
+      failureThreshold: 3
+```
+
+In this example:
+- The startup probe allows up to 5 minutes for the application to start
+- Once the startup probe succeeds, the health and liveness checks begin
+- If startup fails after 20 attempts, the container is restarted
+
+### Important Startup Probe Considerations
+
+- **Relationship with Other Probes**: Liveness and readiness probes are disabled until the startup probe succeeds
+- **Failure Threshold**: Set a high enough `failureThreshold` to accommodate your application's maximum startup time
+- **Startup vs. Liveness**: Use startup probes for initialization, liveness probes for ongoing health monitoring
+- **Resource Planning**: Consider that pods may take longer to become ready when using startup probes
+
 ## gRPC Health Checks
 
 For services that use gRPC instead of HTTP, Convox provides support for gRPC health checks through the gRPC health checking protocol. To enable gRPC health checks, you need to:
@@ -191,3 +290,10 @@ func main() {
 ```
 
 With this implementation and the appropriate configuration in your `convox.yml`, your gRPC service will properly report its health status to Convox, ensuring that it only receives traffic when it's ready to handle requests.
+
+## Version Requirements
+
+- Basic health checks: All versions
+- Liveness checks: All versions
+- Startup probes: Version 3.19.7+
+- gRPC health checks: All versions
