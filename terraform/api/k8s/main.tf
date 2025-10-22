@@ -309,7 +309,8 @@ resource "kubernetes_deployment" "api" {
     ignore_changes = [
       spec[0].template[0].metadata[0].annotations["convox.com/triggered-reschedule-for-node"],
       spec[0].template[0].metadata[0].annotations["convox.com/restartAt"],
-      spec[0].template[0].metadata[0].annotations["convox.com/restart"]
+      spec[0].template[0].metadata[0].annotations["convox.com/restart"],
+      spec[0].template[0].metadata[0].annotations["convox.com/config-hash"]
     ]
   }
 
