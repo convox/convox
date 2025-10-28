@@ -25,6 +25,8 @@ data "aws_eks_cluster_auth" "cluster" {
 }
 
 data "http" "releases" {
+  count = var.release == "" ? 1 : 0
+
   url = "https://api.github.com/repos/${var.image}/releases/latest"
   request_headers = {
     User-Agent = "convox"
@@ -40,11 +42,11 @@ locals {
   build_node_type = var.build_node_type != "" ? var.build_node_type : local.node_type
   arm_type        = substr(local.node_type, 0, 2) == "a1" || substr(local.node_type, 0, 3) == "c6g" || substr(local.node_type, 0, 3) == "c7g" || substr(local.node_type, 0, 3) == "m6g" || substr(local.node_type, 0, 3) == "r6g" || substr(local.node_type, 0, 3) == "t4g"
   build_arm_type  = substr(local.build_node_type, 0, 2) == "a1" || substr(local.build_node_type, 0, 3) == "c6g" || substr(local.build_node_type, 0, 3) == "c7g" || substr(local.build_node_type, 0, 3) == "m6g" || substr(local.build_node_type, 0, 3) == "r6g" || substr(local.build_node_type, 0, 3) == "t4g"
-  current         = jsondecode(data.http.releases.response_body).tag_name
+  desired_release = var.release != "" ? var.release : jsondecode(data.http.releases[0].response_body).tag_name
   gpu_type        = substr(local.node_type, 0, 1) == "g" || substr(local.node_type, 0, 1) == "p"
   build_gpu_type  = substr(local.build_node_type, 0, 1) == "g" || substr(local.build_node_type, 0, 1) == "p"
   image           = var.image
-  release         = local.arm_type ? format("%s-%s", coalesce(var.release, local.current), "arm64") : coalesce(var.release, local.current)
+  release         = local.arm_type ? format("%s-%s", local.desired_release, "arm64") : local.desired_release
   tag_map = length(var.tags) == 0 ? {} : {
     for v in split(",", var.tags) :
     "${split("=", v)[0]}" => split("=", v)[1]

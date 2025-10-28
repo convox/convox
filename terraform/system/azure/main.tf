@@ -11,14 +11,19 @@ provider "kubernetes" {
 }
 
 data "http" "releases" {
+  count = var.release == "" ? 1 : 0
+
   url = "https://api.github.com/repos/${var.image}/releases/latest"
+  request_headers = {
+    User-Agent = "convox"
+  }
 }
 
 locals {
-  name      = lower(var.name)
-  rack_name = lower(var.rack_name)
-  current   = jsondecode(data.http.releases.response_body).tag_name
-  release   = coalesce(var.release, local.current)
+  name            = lower(var.name)
+  rack_name       = lower(var.rack_name)
+  desired_release = var.release != "" ? var.release : jsondecode(data.http.releases[0].response_body).tag_name
+  release         = local.desired_release
 }
 
 data "azurerm_client_config" "current" {}
