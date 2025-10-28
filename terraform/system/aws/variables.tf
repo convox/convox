@@ -12,6 +12,11 @@ variable "additional_build_groups_config" {
   default = ""
 }
 
+variable "api_feature_gates" {
+  type = string
+  default = ""
+}
+
 variable "availability_zones" {
   default = ""
 }

@@ -10,10 +10,10 @@ metadata:
     type: resource
     resource: {{.Name}}
 data:
-  URL: "mysql://root:{{.Password}}@resource-{{ k8sname .Name }}.{{.Namespace}}.svc.cluster.local:3306/app"
+  URL: "mysql://root:{{.Password}}@resource-{{ k8sname .Name }}.{{.Namespace}}.{{ internalResourceDotDomainSuffix }}:3306/app"
   USER: "root"
   PASS: "{{.Password}}"
-  HOST: "resource-{{ k8sname .Name }}.{{.Namespace}}.svc.cluster.local"
+  HOST: "resource-{{ k8sname .Name }}.{{.Namespace}}.{{ internalResourceDotDomainSuffix }}"
   PORT: "3306"
   NAME: "app"
 ---
@@ -82,6 +82,21 @@ spec:
         - mountPath: /var/lib/mysql
           name: data
           subPath: mysql
+        resources:
+          limits:
+            {{ if (index .Parameters "cpu") }}
+            cpu: "{{.Parameters.cpu}}m"
+            {{ end }}
+            {{ if (index .Parameters "mem") }}
+            memory: "{{.Parameters.mem}}Mi"
+            {{ end }}
+          requests:
+            {{ if (index .Parameters "cpu") }}
+            cpu: "{{.Parameters.cpu}}m"
+            {{ end }}
+            {{ if (index .Parameters "mem") }}
+            memory: "{{.Parameters.mem}}Mi"
+            {{ end }}
       volumes:
       - name: data
         persistentVolumeClaim:
@@ -92,6 +107,8 @@ kind: Service
 metadata:
   namespace: {{.Namespace}}
   name: resource-{{ k8sname .Name }}
+  annotations:
+    convox.com/alias: resource-{{ k8sname .Name }}.{{.Namespace}}.{{ internalResourceDotDomainSuffix }}
   labels:
     system: convox
     rack: {{.Rack}}

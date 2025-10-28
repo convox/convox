@@ -56,7 +56,7 @@ func (p *Provider) AppDelete(name string) error {
 
 	_, err = p.ECR.DeleteRepository(&ecr.DeleteRepositoryInput{
 		Force:          aws.Bool(true),
-		RepositoryName: aws.String(fmt.Sprintf("%s/%s", p.Name, name)),
+		RepositoryName: aws.String(fmt.Sprintf("%s%s", p.RepositoryPrefix(), name)),
 	})
 	if err != nil {
 		switch awsErrorCode(err) {

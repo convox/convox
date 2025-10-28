@@ -158,6 +158,7 @@ module "rack" {
     null_resource.wait_for_cluster
   ]
 
+  api_feature_gates                         = var.api_feature_gates
   build_disable_convox_resolver             = var.build_disable_convox_resolver
   build_node_enabled                        = var.build_node_enabled
   cluster                                   = module.cluster.id

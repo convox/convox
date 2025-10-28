@@ -55,6 +55,7 @@ module "api" {
   releases_to_retain_task_run_interval_hour = var.releases_to_retain_task_run_interval_hour
   subnets                                   = var.subnets
   vpc_id                                    = var.vpc_id
+  api_feature_gates                         = var.api_feature_gates
 }
 
 module "metrics" {

@@ -26,6 +26,9 @@ func (p *Provider) RepositoryHost(app string) (string, bool, error) {
 }
 
 func (p *Provider) RepositoryPrefix() string {
+	if p.ContextTID() != "" {
+		return fmt.Sprintf("%s-%s/", p.Name, p.ContextTID())
+	}
 	return fmt.Sprintf("%s/", p.Name)
 }
 

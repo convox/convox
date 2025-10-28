@@ -83,3 +83,12 @@ func (r Resource) ElastiCacheNameValidate() error {
 	}
 	return nil
 }
+
+func (r Resource) IsContainerizedResource() bool {
+	switch r.Type {
+	case "postgres", "mysql", "mariadb", "redis", "memcached", "postgis":
+		return true
+	default:
+		return false
+	}
+}
