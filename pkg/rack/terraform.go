@@ -751,7 +751,7 @@ func getLatestRevisionForCurrentVersion(currentReleaseVersion *ReleaseVersion) (
 		page++
 	}
 
-	return "", fmt.Errorf("No published revisions found for this version: " + currentReleaseVersion.toString())
+	return "", fmt.Errorf("No published revisions found for this version: %s", currentReleaseVersion.toString())
 }
 
 func ConvertToReleaseVersion(version string) (*ReleaseVersion, error) {

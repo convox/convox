@@ -35,7 +35,7 @@ func Deploy(rack sdk.Interface, c *stdcli.Context) error {
 	}
 
 	if c.Bool("id") {
-		fmt.Fprintf(stdout, b.Release)
+		fmt.Fprintf(stdout, "%s", b.Release)
 	}
 
 	return nil
