@@ -301,7 +301,7 @@ func ReleasesRollback(rack sdk.Interface, c *stdcli.Context) error {
 	}
 
 	if c.Bool("id") {
-		fmt.Fprintf(stdout, rn.Id)
+		fmt.Fprintf(stdout, "%s", rn.Id)
 	}
 
 	return c.OK()

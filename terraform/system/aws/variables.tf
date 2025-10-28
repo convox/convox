@@ -23,7 +23,7 @@ variable "availability_zones" {
 
 variable "aws_ebs_csi_driver_version" {
   type    = string
-  default = "v1.46.0-eksbuild.1"
+  default = "v1.51.1-eksbuild.1"
 }
 
 variable "build_disable_convox_resolver" {
@@ -65,7 +65,7 @@ variable "convox_rack_domain" {
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-coredns.html
 variable "coredns_version" {
   type    = string
-  default = "v1.11.4-eksbuild.14"
+  default = "v1.12.4-eksbuild.1"
 }
 
 variable "custom_provided_bucket" {
@@ -128,7 +128,7 @@ variable "efs_csi_driver_enable" {
 
 variable "efs_csi_driver_version" {
   type    = string
-  default = "v2.1.9-eksbuild.1"
+  default = "v2.1.13-eksbuild.1"
 }
 
 variable "gpu_tag_enable" {
@@ -186,7 +186,7 @@ variable "key_pair_name" {
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-kube-proxy.html
 variable "kube_proxy_version" {
   type    = string
-  default = "v1.32.6-eksbuild.2"
+  default = "v1.33.3-eksbuild.10"
 }
 
 variable "kubelet_registry_pull_qps" {
@@ -201,7 +201,7 @@ variable "kubelet_registry_burst" {
 
 variable "k8s_version" {
   type    = string
-  default = "1.32"
+  default = "1.33"
 }
 
 variable "max_on_demand_count" {
@@ -245,7 +245,7 @@ variable "node_type" {
 
 variable "nginx_image" {
   type    = string
-  default = "registry.k8s.io/ingress-nginx/controller:v1.12.0@sha256:e6b8de175acda6ca913891f0f727bca4527e797d52688cbe9fec9040d6f6b6fa"
+  default = "registry.k8s.io/ingress-nginx/controller:v1.12.6@sha256:c371fbf42b4f23584ce879d99303463131f4f31612f0875482b983354eeca7e6"
 }
 
 variable "nvidia_device_plugin_enable" {
@@ -269,7 +269,7 @@ variable "pod_identity_agent_enable" {
 
 variable "pod_identity_agent_version" {
   type    = string
-  default = "v1.3.8-eksbuild.2"
+  default = "v1.3.9-eksbuild.3"
 }
 
 variable "private" {
@@ -374,7 +374,7 @@ variable "vpc_id" {
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-vpc-cni.html
 variable "vpc_cni_version" {
   type    = string
-  default = "v1.20.0-eksbuild.1"
+  default = "v1.20.4-eksbuild.1"
 }
 
 variable "whitelist" {

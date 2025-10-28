@@ -238,5 +238,5 @@ func (p *Provider) registryApp(path string) (string, error) {
 }
 
 func registryError(err error) error {
-	return stdapi.Errorf(403, fmt.Sprintf(`{"errors":[{"message":%q}]}`, err.Error()))
+	return stdapi.Errorf(403, `{"errors":[{"message":%q}]}`, err.Error())
 }

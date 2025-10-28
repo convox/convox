@@ -130,7 +130,7 @@ variable "kubelet_registry_burst" {
 
 variable "k8s_version" {
   type    = string
-  default = "1.32"
+  default = "1.33"
 }
 
 variable "max_on_demand_count" {
