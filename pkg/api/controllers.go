@@ -23,7 +23,7 @@ func (s *Server) AppCancel(c *stdapi.Context) error {
 
 	name := c.Var("name")
 
-	err := s.provider(c).WithContext(c.Context()).AppCancel(name)
+	err := s.provider(c).WithContext(contextFrom(c)).AppCancel(name)
 	if err != nil {
 		return err
 	}
@@ -43,7 +43,7 @@ func (s *Server) AppCreate(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).AppCreate(name, opts)
+	v, err := s.provider(c).WithContext(contextFrom(c)).AppCreate(name, opts)
 	if err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func (s *Server) AppConfigGet(c *stdapi.Context) error {
 	name := c.Var("name")
 	app := c.Var("app")
 
-	v, err := s.provider(c).WithContext(c.Context()).AppConfigGet(app, name)
+	v, err := s.provider(c).WithContext(contextFrom(c)).AppConfigGet(app, name)
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func (s *Server) AppConfigGet(c *stdapi.Context) error {
 func (s *Server) AppConfigList(c *stdapi.Context) error {
 	app := c.Var("app")
 
-	v, err := s.provider(c).WithContext(c.Context()).AppConfigList(app)
+	v, err := s.provider(c).WithContext(contextFrom(c)).AppConfigList(app)
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (s *Server) AppConfigSet(c *stdapi.Context) error {
 
 	valaue64 := c.Value("value")
 
-	err := s.provider(c).WithContext(c.Context()).AppConfigSet(app, name, valaue64)
+	err := s.provider(c).WithContext(contextFrom(c)).AppConfigSet(app, name, valaue64)
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ func (s *Server) AppDelete(c *stdapi.Context) error {
 
 	name := c.Var("name")
 
-	err := s.provider(c).WithContext(c.Context()).AppDelete(name)
+	err := s.provider(c).WithContext(contextFrom(c)).AppDelete(name)
 	if err != nil {
 		return err
 	}
@@ -118,7 +118,7 @@ func (s *Server) AppGet(c *stdapi.Context) error {
 
 	name := c.Var("name")
 
-	v, err := s.provider(c).WithContext(c.Context()).AppGet(name)
+	v, err := s.provider(c).WithContext(contextFrom(c)).AppGet(name)
 	if err != nil {
 		return err
 	}
@@ -135,7 +135,7 @@ func (s *Server) AppList(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).AppList()
+	v, err := s.provider(c).WithContext(contextFrom(c)).AppList()
 	if err != nil {
 		return err
 	}
@@ -159,7 +159,7 @@ func (s *Server) AppLogs(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).AppLogs(name, opts)
+	v, err := s.provider(c).WithContext(contextFrom(c)).AppLogs(name, opts)
 	if err != nil {
 		return err
 	}
@@ -191,7 +191,7 @@ func (s *Server) AppMetrics(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).AppMetrics(name, opts)
+	v, err := s.provider(c).WithContext(contextFrom(c)).AppMetrics(name, opts)
 	if err != nil {
 		return err
 	}
@@ -215,7 +215,7 @@ func (s *Server) AppUpdate(c *stdapi.Context) error {
 		return err
 	}
 
-	err := s.provider(c).WithContext(c.Context()).AppUpdate(name, opts)
+	err := s.provider(c).WithContext(contextFrom(c)).AppUpdate(name, opts)
 	if err != nil {
 		return err
 	}
@@ -230,7 +230,7 @@ func (s *Server) BalancerList(c *stdapi.Context) error {
 
 	app := c.Var("app")
 
-	v, err := s.provider(c).WithContext(c.Context()).BalancerList(app)
+	v, err := s.provider(c).WithContext(contextFrom(c)).BalancerList(app)
 	if err != nil {
 		return err
 	}
@@ -255,7 +255,7 @@ func (s *Server) BuildCreate(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).BuildCreate(app, url, opts)
+	v, err := s.provider(c).WithContext(contextFrom(c)).BuildCreate(app, url, opts)
 	if err != nil {
 		return err
 	}
@@ -276,7 +276,7 @@ func (s *Server) BuildExport(c *stdapi.Context) error {
 	id := c.Var("id")
 	w := c
 
-	err := s.provider(c).WithContext(c.Context()).BuildExport(app, id, w)
+	err := s.provider(c).WithContext(contextFrom(c)).BuildExport(app, id, w)
 	if err != nil {
 		return err
 	}
@@ -292,7 +292,7 @@ func (s *Server) BuildGet(c *stdapi.Context) error {
 	app := c.Var("app")
 	id := c.Var("id")
 
-	v, err := s.provider(c).WithContext(c.Context()).BuildGet(app, id)
+	v, err := s.provider(c).WithContext(contextFrom(c)).BuildGet(app, id)
 	if err != nil {
 		return err
 	}
@@ -312,7 +312,7 @@ func (s *Server) BuildImport(c *stdapi.Context) error {
 	app := c.Var("app")
 	r := c
 
-	v, err := s.provider(c).WithContext(c.Context()).BuildImport(app, r)
+	v, err := s.provider(c).WithContext(contextFrom(c)).BuildImport(app, r)
 	if err != nil {
 		return err
 	}
@@ -336,7 +336,7 @@ func (s *Server) BuildList(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).BuildList(app, opts)
+	v, err := s.provider(c).WithContext(contextFrom(c)).BuildList(app, opts)
 	if err != nil {
 		return err
 	}
@@ -361,7 +361,7 @@ func (s *Server) BuildLogs(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).BuildLogs(app, id, opts)
+	v, err := s.provider(c).WithContext(contextFrom(c)).BuildLogs(app, id, opts)
 	if err != nil {
 		return err
 	}
@@ -394,7 +394,7 @@ func (s *Server) BuildUpdate(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).BuildUpdate(app, id, opts)
+	v, err := s.provider(c).WithContext(contextFrom(c)).BuildUpdate(app, id, opts)
 	if err != nil {
 		return err
 	}
@@ -411,7 +411,7 @@ func (s *Server) CapacityGet(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).CapacityGet()
+	v, err := s.provider(c).WithContext(contextFrom(c)).CapacityGet()
 	if err != nil {
 		return err
 	}
@@ -437,7 +437,7 @@ func (s *Server) CertificateApply(c *stdapi.Context) error {
 		return cerr
 	}
 
-	err := s.provider(c).WithContext(c.Context()).CertificateApply(app, service, port, id)
+	err := s.provider(c).WithContext(contextFrom(c)).CertificateApply(app, service, port, id)
 	if err != nil {
 		return err
 	}
@@ -458,7 +458,7 @@ func (s *Server) CertificateCreate(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).CertificateCreate(pub, key, opts)
+	v, err := s.provider(c).WithContext(contextFrom(c)).CertificateCreate(pub, key, opts)
 	if err != nil {
 		return err
 	}
@@ -477,7 +477,7 @@ func (s *Server) CertificateDelete(c *stdapi.Context) error {
 
 	id := c.Var("id")
 
-	err := s.provider(c).WithContext(c.Context()).CertificateDelete(id)
+	err := s.provider(c).WithContext(contextFrom(c)).CertificateDelete(id)
 	if err != nil {
 		return err
 	}
@@ -497,7 +497,7 @@ func (s *Server) CertificateGenerate(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).CertificateGenerate(domains, opts)
+	v, err := s.provider(c).WithContext(contextFrom(c)).CertificateGenerate(domains, opts)
 	if err != nil {
 		return err
 	}
@@ -519,7 +519,7 @@ func (s *Server) CertificateList(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).CertificateList(opts)
+	v, err := s.provider(c).WithContext(contextFrom(c)).CertificateList(opts)
 	if err != nil {
 		return err
 	}
@@ -532,7 +532,7 @@ func (s *Server) CertificateList(c *stdapi.Context) error {
 }
 
 func (s *Server) LetsEncryptConfigGet(c *stdapi.Context) error {
-	v, err := s.provider(c).WithContext(c.Context()).LetsEncryptConfigGet()
+	v, err := s.provider(c).WithContext(contextFrom(c)).LetsEncryptConfigGet()
 	if err != nil {
 		return err
 	}
@@ -555,7 +555,7 @@ func (s *Server) LetsEncryptConfigApply(c *stdapi.Context) error {
 
 	fmt.Printf("%#v\n", config)
 
-	err := s.provider(c).WithContext(c.Context()).LetsEncryptConfigApply(config)
+	err := s.provider(c).WithContext(contextFrom(c)).LetsEncryptConfigApply(config)
 	if err != nil {
 		return err
 	}
@@ -575,7 +575,7 @@ func (s *Server) EventSend(c *stdapi.Context) error {
 		return err
 	}
 
-	err := s.provider(c).WithContext(c.Context()).EventSend(action, opts)
+	err := s.provider(c).WithContext(contextFrom(c)).EventSend(action, opts)
 	if err != nil {
 		return err
 	}
@@ -592,7 +592,7 @@ func (s *Server) FilesDelete(c *stdapi.Context) error {
 	pid := c.Var("pid")
 	files := strings.Split(c.Value("files"), ",")
 
-	err := s.provider(c).WithContext(c.Context()).FilesDelete(app, pid, files)
+	err := s.provider(c).WithContext(contextFrom(c)).FilesDelete(app, pid, files)
 	if err != nil {
 		return err
 	}
@@ -609,7 +609,7 @@ func (s *Server) FilesDownload(c *stdapi.Context) error {
 	pid := c.Var("pid")
 	file := c.Value("file")
 
-	v, err := s.provider(c).WithContext(c.Context()).FilesDownload(app, pid, file)
+	v, err := s.provider(c).WithContext(contextFrom(c)).FilesDownload(app, pid, file)
 	if err != nil {
 		return err
 	}
@@ -643,7 +643,7 @@ func (s *Server) FilesUpload(c *stdapi.Context) error {
 		return err
 	}
 
-	err := s.provider(c).WithContext(c.Context()).FilesUpload(app, pid, r, opts)
+	err := s.provider(c).WithContext(contextFrom(c)).FilesUpload(app, pid, r, opts)
 	if err != nil {
 		return err
 	}
@@ -660,7 +660,7 @@ func (s *Server) InstanceKeyroll(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).InstanceKeyroll()
+	v, err := s.provider(c).WithContext(contextFrom(c)).InstanceKeyroll()
 	if err != nil {
 		return err
 	}
@@ -673,7 +673,7 @@ func (s *Server) InstanceList(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).InstanceList()
+	v, err := s.provider(c).WithContext(contextFrom(c)).InstanceList()
 	if err != nil {
 		return err
 	}
@@ -697,7 +697,7 @@ func (s *Server) InstanceShell(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).InstanceShell(id, stdsdk.NewAdapterWs(c.Websocket()), opts)
+	v, err := s.provider(c).WithContext(contextFrom(c)).InstanceShell(id, stdsdk.NewAdapterWs(c.Websocket()), opts)
 	if err != nil {
 		return err
 	}
@@ -716,7 +716,7 @@ func (s *Server) InstanceTerminate(c *stdapi.Context) error {
 
 	id := c.Var("id")
 
-	err := s.provider(c).WithContext(c.Context()).InstanceTerminate(id)
+	err := s.provider(c).WithContext(contextFrom(c)).InstanceTerminate(id)
 	if err != nil {
 		return err
 	}
@@ -732,7 +732,7 @@ func (s *Server) ObjectDelete(c *stdapi.Context) error {
 	app := c.Var("app")
 	key := c.Var("key")
 
-	err := s.provider(c).WithContext(c.Context()).ObjectDelete(app, key)
+	err := s.provider(c).WithContext(contextFrom(c)).ObjectDelete(app, key)
 	if err != nil {
 		return err
 	}
@@ -748,7 +748,7 @@ func (s *Server) ObjectExists(c *stdapi.Context) error {
 	app := c.Var("app")
 	key := c.Var("key")
 
-	v, err := s.provider(c).WithContext(c.Context()).ObjectExists(app, key)
+	v, err := s.provider(c).WithContext(contextFrom(c)).ObjectExists(app, key)
 	if err != nil {
 		return err
 	}
@@ -768,7 +768,7 @@ func (s *Server) ObjectFetch(c *stdapi.Context) error {
 	app := c.Var("app")
 	key := c.Var("key")
 
-	v, err := s.provider(c).WithContext(c.Context()).ObjectFetch(app, key)
+	v, err := s.provider(c).WithContext(contextFrom(c)).ObjectFetch(app, key)
 	if err != nil {
 		return err
 	}
@@ -796,7 +796,7 @@ func (s *Server) ObjectList(c *stdapi.Context) error {
 	app := c.Var("app")
 	prefix := c.Value("prefix")
 
-	v, err := s.provider(c).WithContext(c.Context()).ObjectList(app, prefix)
+	v, err := s.provider(c).WithContext(contextFrom(c)).ObjectList(app, prefix)
 	if err != nil {
 		return err
 	}
@@ -822,7 +822,7 @@ func (s *Server) ObjectStore(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).ObjectStore(app, key, r, opts)
+	v, err := s.provider(c).WithContext(contextFrom(c)).ObjectStore(app, key, r, opts)
 	if err != nil {
 		return err
 	}
@@ -848,7 +848,7 @@ func (s *Server) ProcessExec(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).ProcessExec(app, pid, command, stdsdk.NewAdapterWs(c.Websocket()), opts)
+	v, err := s.provider(c).WithContext(contextFrom(c)).ProcessExec(app, pid, command, stdsdk.NewAdapterWs(c.Websocket()), opts)
 	if err != nil {
 		renderStatusCode(c, v)
 		return err
@@ -869,7 +869,7 @@ func (s *Server) ProcessGet(c *stdapi.Context) error {
 	app := c.Var("app")
 	pid := c.Var("pid")
 
-	v, err := s.provider(c).WithContext(c.Context()).ProcessGet(app, pid)
+	v, err := s.provider(c).WithContext(contextFrom(c)).ProcessGet(app, pid)
 	if err != nil {
 		return err
 	}
@@ -893,7 +893,7 @@ func (s *Server) ProcessList(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).ProcessList(app, opts)
+	v, err := s.provider(c).WithContext(contextFrom(c)).ProcessList(app, opts)
 	if err != nil {
 		return err
 	}
@@ -918,7 +918,7 @@ func (s *Server) ProcessLogs(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).ProcessLogs(app, pid, opts)
+	v, err := s.provider(c).WithContext(contextFrom(c)).ProcessLogs(app, pid, opts)
 	if err != nil {
 		return err
 	}
@@ -951,7 +951,7 @@ func (s *Server) ProcessRun(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).ProcessRun(app, service, opts)
+	v, err := s.provider(c).WithContext(contextFrom(c)).ProcessRun(app, service, opts)
 	if err != nil {
 		return err
 	}
@@ -971,7 +971,7 @@ func (s *Server) ProcessStop(c *stdapi.Context) error {
 	app := c.Var("app")
 	pid := c.Var("pid")
 
-	err := s.provider(c).WithContext(c.Context()).ProcessStop(app, pid)
+	err := s.provider(c).WithContext(contextFrom(c)).ProcessStop(app, pid)
 	if err != nil {
 		return err
 	}
@@ -996,7 +996,7 @@ func (s *Server) Proxy(c *stdapi.Context) error {
 		return err
 	}
 
-	err := s.provider(c).WithContext(c.Context()).Proxy(host, port, stdsdk.NewAdapterWs(c.Websocket()), opts)
+	err := s.provider(c).WithContext(contextFrom(c)).Proxy(host, port, stdsdk.NewAdapterWs(c.Websocket()), opts)
 	if err != nil {
 		return err
 	}
@@ -1040,7 +1040,7 @@ func (s *Server) RegistryAdd(c *stdapi.Context) error {
 	username := c.Value("username")
 	password := c.Value("password")
 
-	v, err := s.provider(c).WithContext(c.Context()).RegistryAdd(server, username, password)
+	v, err := s.provider(c).WithContext(contextFrom(c)).RegistryAdd(server, username, password)
 	if err != nil {
 		return err
 	}
@@ -1057,7 +1057,7 @@ func (s *Server) RegistryList(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).RegistryList()
+	v, err := s.provider(c).WithContext(contextFrom(c)).RegistryList()
 	if err != nil {
 		return err
 	}
@@ -1076,7 +1076,7 @@ func (s *Server) RegistryProxy(c *stdapi.Context) error {
 
 	ctx := c
 
-	err := s.provider(c).WithContext(c.Context()).RegistryProxy(ctx)
+	err := s.provider(c).WithContext(contextFrom(c)).RegistryProxy(ctx)
 	if err != nil {
 		return err
 	}
@@ -1091,7 +1091,7 @@ func (s *Server) RegistryRemove(c *stdapi.Context) error {
 
 	server := c.Var("server")
 
-	err := s.provider(c).WithContext(c.Context()).RegistryRemove(server)
+	err := s.provider(c).WithContext(contextFrom(c)).RegistryRemove(server)
 	if err != nil {
 		return err
 	}
@@ -1111,7 +1111,7 @@ func (s *Server) ReleaseCreate(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).ReleaseCreate(app, opts)
+	v, err := s.provider(c).WithContext(contextFrom(c)).ReleaseCreate(app, opts)
 	if err != nil {
 		return err
 	}
@@ -1131,7 +1131,7 @@ func (s *Server) ReleaseGet(c *stdapi.Context) error {
 	app := c.Var("app")
 	id := c.Var("id")
 
-	v, err := s.provider(c).WithContext(c.Context()).ReleaseGet(app, id)
+	v, err := s.provider(c).WithContext(contextFrom(c)).ReleaseGet(app, id)
 	if err != nil {
 		return err
 	}
@@ -1155,7 +1155,7 @@ func (s *Server) ReleaseList(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).ReleaseList(app, opts)
+	v, err := s.provider(c).WithContext(contextFrom(c)).ReleaseList(app, opts)
 	if err != nil {
 		return err
 	}
@@ -1180,7 +1180,7 @@ func (s *Server) ReleasePromote(c *stdapi.Context) error {
 		return err
 	}
 
-	err := s.provider(c).WithContext(c.Context()).ReleasePromote(app, id, opts)
+	err := s.provider(c).WithContext(contextFrom(c)).ReleasePromote(app, id, opts)
 	if err != nil {
 		return err
 	}
@@ -1202,7 +1202,7 @@ func (s *Server) ResourceConsole(c *stdapi.Context) error {
 		return err
 	}
 
-	err := s.provider(c).WithContext(c.Context()).ResourceConsole(app, name, rw, opts)
+	err := s.provider(c).WithContext(contextFrom(c)).ResourceConsole(app, name, rw, opts)
 	if err != nil {
 		return err
 	}
@@ -1218,7 +1218,7 @@ func (s *Server) ResourceExport(c *stdapi.Context) error {
 	app := c.Var("app")
 	name := c.Var("name")
 
-	v, err := s.provider(c).WithContext(c.Context()).ResourceExport(app, name)
+	v, err := s.provider(c).WithContext(contextFrom(c)).ResourceExport(app, name)
 	if err != nil {
 		return err
 	}
@@ -1246,7 +1246,7 @@ func (s *Server) ResourceGet(c *stdapi.Context) error {
 	app := c.Var("app")
 	name := c.Var("name")
 
-	v, err := s.provider(c).WithContext(c.Context()).ResourceGet(app, name)
+	v, err := s.provider(c).WithContext(contextFrom(c)).ResourceGet(app, name)
 	if err != nil {
 		return err
 	}
@@ -1267,7 +1267,7 @@ func (s *Server) ResourceImport(c *stdapi.Context) error {
 	name := c.Var("name")
 	r := c
 
-	err := s.provider(c).WithContext(c.Context()).ResourceImport(app, name, r)
+	err := s.provider(c).WithContext(contextFrom(c)).ResourceImport(app, name, r)
 	if err != nil {
 		return err
 	}
@@ -1282,7 +1282,7 @@ func (s *Server) ResourceList(c *stdapi.Context) error {
 
 	app := c.Var("app")
 
-	v, err := s.provider(c).WithContext(c.Context()).ResourceList(app)
+	v, err := s.provider(c).WithContext(contextFrom(c)).ResourceList(app)
 	if err != nil {
 		return err
 	}
@@ -1301,7 +1301,7 @@ func (s *Server) ServiceList(c *stdapi.Context) error {
 
 	app := c.Var("app")
 
-	v, err := s.provider(c).WithContext(c.Context()).ServiceList(app)
+	v, err := s.provider(c).WithContext(contextFrom(c)).ServiceList(app)
 	if err != nil {
 		return err
 	}
@@ -1322,7 +1322,7 @@ func (s *Server) ServiceLogs(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).ServiceLogs(app, name, opts)
+	v, err := s.provider(c).WithContext(contextFrom(c)).ServiceLogs(app, name, opts)
 	if err != nil {
 		return err
 	}
@@ -1350,7 +1350,7 @@ func (s *Server) ServiceRestart(c *stdapi.Context) error {
 	app := c.Var("app")
 	name := c.Var("name")
 
-	err := s.provider(c).WithContext(c.Context()).ServiceRestart(app, name)
+	err := s.provider(c).WithContext(contextFrom(c)).ServiceRestart(app, name)
 	if err != nil {
 		return err
 	}
@@ -1371,7 +1371,7 @@ func (s *Server) ServiceUpdate(c *stdapi.Context) error {
 		return err
 	}
 
-	err := s.provider(c).WithContext(c.Context()).ServiceUpdate(app, name, opts)
+	err := s.provider(c).WithContext(contextFrom(c)).ServiceUpdate(app, name, opts)
 	if err != nil {
 		return err
 	}
@@ -1388,7 +1388,7 @@ func (s *Server) SystemGet(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).SystemGet()
+	v, err := s.provider(c).WithContext(contextFrom(c)).SystemGet()
 	if err != nil {
 		return err
 	}
@@ -1414,7 +1414,7 @@ func (s *Server) SystemLogs(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).SystemLogs(opts)
+	v, err := s.provider(c).WithContext(contextFrom(c)).SystemLogs(opts)
 	if err != nil {
 		return err
 	}
@@ -1444,7 +1444,7 @@ func (s *Server) SystemMetrics(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).SystemMetrics(opts)
+	v, err := s.provider(c).WithContext(contextFrom(c)).SystemMetrics(opts)
 	if err != nil {
 		return err
 	}
@@ -1457,7 +1457,7 @@ func (s *Server) SystemMetrics(c *stdapi.Context) error {
 }
 
 func (s *Server) SystemJwtSignKeyRotate(c *stdapi.Context) error {
-	_, err := s.provider(c).WithContext(c.Context()).SystemJwtSignKeyRotate()
+	_, err := s.provider(c).WithContext(contextFrom(c)).SystemJwtSignKeyRotate()
 	if err != nil {
 		return err
 	}
@@ -1501,7 +1501,7 @@ func (s *Server) SystemProcesses(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).SystemProcesses(opts)
+	v, err := s.provider(c).WithContext(contextFrom(c)).SystemProcesses(opts)
 	if err != nil {
 		return err
 	}
@@ -1523,7 +1523,7 @@ func (s *Server) SystemReadAccess(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).SystemProcesses(opts)
+	v, err := s.provider(c).WithContext(contextFrom(c)).SystemProcesses(opts)
 	if err != nil {
 		return err
 	}
@@ -1540,7 +1540,7 @@ func (s *Server) SystemReleases(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).SystemReleases()
+	v, err := s.provider(c).WithContext(contextFrom(c)).SystemReleases()
 	if err != nil {
 		return err
 	}
@@ -1564,7 +1564,7 @@ func (s *Server) SystemResourceCreate(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).SystemResourceCreate(kind, opts)
+	v, err := s.provider(c).WithContext(contextFrom(c)).SystemResourceCreate(kind, opts)
 	if err != nil {
 		return err
 	}
@@ -1583,7 +1583,7 @@ func (s *Server) SystemResourceDelete(c *stdapi.Context) error {
 
 	name := c.Var("name")
 
-	err := s.provider(c).WithContext(c.Context()).SystemResourceDelete(name)
+	err := s.provider(c).WithContext(contextFrom(c)).SystemResourceDelete(name)
 	if err != nil {
 		return err
 	}
@@ -1598,7 +1598,7 @@ func (s *Server) SystemResourceGet(c *stdapi.Context) error {
 
 	name := c.Var("name")
 
-	v, err := s.provider(c).WithContext(c.Context()).SystemResourceGet(name)
+	v, err := s.provider(c).WithContext(contextFrom(c)).SystemResourceGet(name)
 	if err != nil {
 		return err
 	}
@@ -1618,7 +1618,7 @@ func (s *Server) SystemResourceLink(c *stdapi.Context) error {
 	name := c.Var("name")
 	app := c.Value("app")
 
-	v, err := s.provider(c).WithContext(c.Context()).SystemResourceLink(name, app)
+	v, err := s.provider(c).WithContext(contextFrom(c)).SystemResourceLink(name, app)
 	if err != nil {
 		return err
 	}
@@ -1635,7 +1635,7 @@ func (s *Server) SystemResourceList(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).SystemResourceList()
+	v, err := s.provider(c).WithContext(contextFrom(c)).SystemResourceList()
 	if err != nil {
 		return err
 	}
@@ -1652,7 +1652,7 @@ func (s *Server) SystemResourceTypes(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).SystemResourceTypes()
+	v, err := s.provider(c).WithContext(contextFrom(c)).SystemResourceTypes()
 	if err != nil {
 		return err
 	}
@@ -1672,7 +1672,7 @@ func (s *Server) SystemResourceUnlink(c *stdapi.Context) error {
 	name := c.Var("name")
 	app := c.Var("app")
 
-	v, err := s.provider(c).WithContext(c.Context()).SystemResourceUnlink(name, app)
+	v, err := s.provider(c).WithContext(contextFrom(c)).SystemResourceUnlink(name, app)
 	if err != nil {
 		return err
 	}
@@ -1696,7 +1696,7 @@ func (s *Server) SystemResourceUpdate(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(c.Context()).SystemResourceUpdate(name, opts)
+	v, err := s.provider(c).WithContext(contextFrom(c)).SystemResourceUpdate(name, opts)
 	if err != nil {
 		return err
 	}
@@ -1722,7 +1722,7 @@ func (s *Server) SystemUpdate(c *stdapi.Context) error {
 		return err
 	}
 
-	err := s.provider(c).WithContext(c.Context()).SystemUpdate(opts)
+	err := s.provider(c).WithContext(contextFrom(c)).SystemUpdate(opts)
 	if err != nil {
 		return err
 	}
@@ -1741,7 +1741,7 @@ func (s *Server) CertificateRenew(c *stdapi.Context) error {
 
 	id := c.Var("id")
 
-	err := s.provider(c).WithContext(c.Context()).CertificateRenew(id)
+	err := s.provider(c).WithContext(contextFrom(c)).CertificateRenew(id)
 	if err != nil {
 		return err
 	}

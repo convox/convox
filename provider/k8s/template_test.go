@@ -15,7 +15,7 @@ import (
 
 func TestRenderTemplate(t *testing.T) {
 	p := Provider{}
-	p.templater = templater.New(template.TemplatesFS, p.templateHelpers())
+	p.templater = templater.New(template.TemplatesFS)
 
 	data, err := p.RenderTemplate(fmt.Sprintf("system/%s", "cert-manager-letsencrypt"), map[string]interface{}{
 		"Config": structs.LetsEncryptConfig{
@@ -83,7 +83,7 @@ func TestRenderTemplateService(t *testing.T) {
 	p := Provider{
 		Engine: &mock.TestEngine{},
 	}
-	p.templater = templater.New(template.TemplatesFS, p.templateHelpers())
+	p.templater = templater.New(template.TemplatesFS)
 
 	var data []byte
 

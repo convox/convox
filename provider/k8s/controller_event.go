@@ -94,7 +94,7 @@ func (c *EventController) Add(obj interface{}) error {
 			return errors.WithStack(err)
 		}
 
-		if err := c.Provider.systemLog(app, o.Name, e.LastTimestamp.Time, e.Message); err != nil {
+		if err := c.Provider.systemLog(c.Provider.parseTidFromNamespace(o.Namespace), app, o.Name, e.LastTimestamp.Time, e.Message); err != nil {
 			return errors.WithStack(err)
 		}
 	case "apps/v1/ReplicaSet":
@@ -106,7 +106,7 @@ func (c *EventController) Add(obj interface{}) error {
 			return errors.WithStack(err)
 		}
 
-		if err := c.Provider.systemLog(app, o.Name, e.LastTimestamp.Time, e.Message); err != nil {
+		if err := c.Provider.systemLog(c.Provider.parseTidFromNamespace(o.Namespace), app, o.Name, e.LastTimestamp.Time, e.Message); err != nil {
 			return errors.WithStack(err)
 		}
 	case "atom.convox.com/v1/Atom":
@@ -118,7 +118,7 @@ func (c *EventController) Add(obj interface{}) error {
 			return errors.WithStack(err)
 		}
 
-		if err := c.Provider.systemLog(app, fmt.Sprintf("atom/%s", strings.ReplaceAll(e.InvolvedObject.Name, ".", "/")), e.LastTimestamp.Time, fmt.Sprintf("%s: %s", e.Reason, e.Message)); err != nil {
+		if err := c.Provider.systemLog(c.Provider.parseTidFromNamespace(o.Namespace), app, fmt.Sprintf("atom/%s", strings.ReplaceAll(e.InvolvedObject.Name, ".", "/")), e.LastTimestamp.Time, fmt.Sprintf("%s: %s", e.Reason, e.Message)); err != nil {
 			return errors.WithStack(err)
 		}
 	case "autoscaling/v2beta2/HorizontalPodAutoscaler":
@@ -130,7 +130,7 @@ func (c *EventController) Add(obj interface{}) error {
 			return errors.WithStack(err)
 		}
 
-		if err := c.Provider.systemLog(app, o.Name, e.LastTimestamp.Time, e.Message); err != nil {
+		if err := c.Provider.systemLog(c.Provider.parseTidFromNamespace(o.Namespace), app, o.Name, e.LastTimestamp.Time, e.Message); err != nil {
 			return errors.WithStack(err)
 		}
 	case "autoscaling/v2/HorizontalPodAutoscaler":
@@ -142,7 +142,7 @@ func (c *EventController) Add(obj interface{}) error {
 			return errors.WithStack(err)
 		}
 
-		if err := c.Provider.systemLog(app, o.Name, e.LastTimestamp.Time, e.Message); err != nil {
+		if err := c.Provider.systemLog(c.Provider.parseTidFromNamespace(o.Namespace), app, o.Name, e.LastTimestamp.Time, e.Message); err != nil {
 			return errors.WithStack(err)
 		}
 	case "v1/ConfigMap":
@@ -158,7 +158,7 @@ func (c *EventController) Add(obj interface{}) error {
 				return errors.WithStack(err)
 			}
 
-			if err := c.Provider.systemLog(app, o.Name, e.LastTimestamp.Time, e.Message); err != nil {
+			if err := c.Provider.systemLog(c.Provider.parseTidFromNamespace(o.Namespace), app, o.Name, e.LastTimestamp.Time, e.Message); err != nil {
 				return errors.WithStack(err)
 			}
 		}

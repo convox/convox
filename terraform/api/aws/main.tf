@@ -57,6 +57,7 @@ module "k8s" {
     VPC_ID                                    = var.vpc_id
     RELEASES_TO_RETAIN_AFTER_ACTIVE           = var.releases_to_retain_after_active
     RELEASES_TO_RETAIN_TASK_RUN_INTERVAL_HOUR = var.releases_to_retain_task_run_interval_hour
+    FEATURE_GATES                        = var.api_feature_gates
   }
 }
 

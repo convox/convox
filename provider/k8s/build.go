@@ -84,6 +84,7 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 		"PROVIDER":                     os.Getenv("PROVIDER"),
 		"DISABLE_IMAGE_MANIFEST_CACHE": os.Getenv("DISABLE_IMAGE_MANIFEST_CACHE"),
 		"RACK_URL":                     fmt.Sprintf("https://convox:%s@api.%s.svc.cluster.local:5443", p.Password, p.Namespace),
+		"CONVOX_TID":                   p.ContextTID(),
 	}
 
 	repo, _, err := p.Engine.RepositoryHost(app)
@@ -106,6 +107,7 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 	psOpts := structs.ProcessRunOptions{
 		Command:     options.String(buildCmd),
 		Environment: env,
+		IsBuild:     true,
 	}
 
 	if nlbs := appObj.Parameters[structs.AppParamBuildLabels]; nlbs != "" {

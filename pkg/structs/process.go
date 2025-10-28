@@ -54,6 +54,7 @@ type ProcessRunOptions struct {
 	Privileged       *bool             `header:"Privileged"`
 	NodeLabels       *string           `flag:"node-labels" header:"Node-Labels"`
 	SystemCritical   *bool             `flag:"system-critical" header:"System-Critical"`
+	IsBuild          bool
 }
 
 func (p *Process) sortKey() string {
