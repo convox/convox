@@ -281,7 +281,7 @@ func EnvSet(rack sdk.Interface, c *stdcli.Context) error {
 	}
 
 	if c.Bool("id") {
-		fmt.Fprintf(stdout, r.Id)
+		fmt.Fprintf(stdout, "%s", r.Id)
 	}
 
 	return nil
@@ -354,7 +354,7 @@ func EnvUnset(rack sdk.Interface, c *stdcli.Context) error {
 	}
 
 	if c.Bool("id") {
-		fmt.Fprintf(stdout, r.Id)
+		fmt.Fprintf(stdout, "%s", r.Id)
 	}
 
 	return nil

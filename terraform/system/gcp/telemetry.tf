@@ -28,7 +28,7 @@ locals {
     docker_hub_password = ""
     docker_hub_username = ""
     image = "convox/convox"
-    k8s_version = "1.32"
+    k8s_version = "1.33"
     name = ""
     node_disk = "100"
     node_type = "n1-standard-2"

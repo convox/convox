@@ -81,7 +81,7 @@ func Build(rack sdk.Interface, c *stdcli.Context) error {
 	c.Writef("Release: <release>%s</release>\n", b.Release)
 
 	if c.Bool("id") {
-		fmt.Fprintf(stdout, b.Release)
+		fmt.Fprintf(stdout, "%s", b.Release)
 	}
 
 	return nil
@@ -415,7 +415,7 @@ func BuildsImport(rack sdk.Interface, c *stdcli.Context) error {
 	c.OK(b.Release)
 
 	if c.Bool("id") {
-		fmt.Fprintf(stdout, b.Release)
+		fmt.Fprintf(stdout, "%s", b.Release)
 	}
 
 	return nil
