@@ -223,6 +223,10 @@ func (m *Manifest) ApplyDefaults() error {
 			}
 		}
 
+		if options.GetFeatureGates()[options.FeatureGateDisableHostUsersAsDefault] {
+			m.Services[i].DisableHostUsers = true
+		}
+
 		if options.GetFeatureGates()[options.FeatureGateAppLimitRequired] {
 			m.Services[i].Scale.Cpu = options.CoalesceInt(m.Services[i].Scale.Cpu, options.CoalesceInt(m.Services[i].Scale.Limit.Cpu, DefaultCpu))
 			m.Services[i].Scale.Memory = options.CoalesceInt(m.Services[i].Scale.Memory, options.CoalesceInt(m.Services[i].Scale.Limit.Memory, DefaultMem))

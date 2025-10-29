@@ -592,6 +592,10 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 		return nil, errors.WithStack(err)
 	}
 
+	if options.GetFeatureGates()[options.FeatureGateDisableHostUsersAsDefault] {
+		s.HostUsers = options.Bool(false)
+	}
+
 	if opts.Command != nil {
 		parts, err := shellquote.Split(*opts.Command)
 		if err != nil {
@@ -619,6 +623,11 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 			s.Containers[0].Resources.Limits = ac.ResourceList{}
 		}
 		s.Containers[0].Resources.Limits["cpu"] = resource.MustParse(fmt.Sprintf("%dm", *opts.CpuLimit))
+	} else if options.GetFeatureGates()[options.FeatureGateAppLimitRequired] && opts.Cpu != nil {
+		if s.Containers[0].Resources.Limits == nil {
+			s.Containers[0].Resources.Limits = ac.ResourceList{}
+		}
+		s.Containers[0].Resources.Limits["cpu"] = s.Containers[0].Resources.Requests["cpu"]
 	}
 
 	if opts.Gpu != nil {
@@ -638,6 +647,11 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 			s.Containers[0].Resources.Limits = ac.ResourceList{}
 		}
 		s.Containers[0].Resources.Limits["memory"] = resource.MustParse(fmt.Sprintf("%dMi", *opts.MemoryLimit))
+	} else if options.GetFeatureGates()[options.FeatureGateAppLimitRequired] && opts.Memory != nil {
+		if s.Containers[0].Resources.Limits == nil {
+			s.Containers[0].Resources.Limits = ac.ResourceList{}
+		}
+		s.Containers[0].Resources.Limits["memory"] = s.Containers[0].Resources.Requests["memory"]
 	}
 
 	if opts.NodeLabels != nil {

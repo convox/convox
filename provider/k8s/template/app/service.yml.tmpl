@@ -108,6 +108,9 @@ spec:
         {{ end }}
       {{ end }}
       {{ end }}
+      {{ if .Service.DisableHostUsers }}
+      hostUsers: false
+      {{ end }}
       {{ if or (.Resolver) (gt .Service.DnsConfig.Ndots 0) }}
       dnsPolicy: "None"
       dnsConfig:
