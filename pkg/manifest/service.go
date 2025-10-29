@@ -26,6 +26,7 @@ type Service struct {
 	DnsConfig          ServiceDnsConfig      `yaml:"dnsConfig,omitempty"`
 	Domains            ServiceDomains        `yaml:"domain,omitempty"`
 	Drain              int                   `yaml:"drain,omitempty"`
+	DisableHostUsers   bool                  `yaml:"disableHostUsers,omitempty"`
 	Environment        Environment           `yaml:"environment,omitempty"`
 	GrpcHealthEnabled  bool                  `yaml:"grpcHealthEnabled,omitempty"`
 	Health             ServiceHealth         `yaml:"health,omitempty"`
