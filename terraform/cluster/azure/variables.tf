@@ -1,5 +1,5 @@
 variable "k8s_version" {
-  type = string
+  type    = string
   default = "1.33"
 }
 

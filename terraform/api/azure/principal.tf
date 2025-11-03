@@ -1,5 +1,5 @@
 resource "azuread_application" "api" {
-  display_name               = "api"
+  display_name = "api"
   web {
     implicit_grant {
       access_token_issuance_enabled = true
@@ -8,7 +8,7 @@ resource "azuread_application" "api" {
 }
 
 resource "azuread_service_principal" "api" {
-  application_id               = azuread_application.api.application_id
+  client_id                    = azuread_application.api.client_id
   app_role_assignment_required = false
 }
 
@@ -20,5 +20,5 @@ resource "azuread_service_principal_password" "api" {
 resource "azurerm_role_assignment" "principal_api_contributor" {
   scope                = var.resource_group
   role_definition_name = "Contributor"
-  principal_id         = azuread_service_principal.api.id
+  principal_id         = azuread_service_principal.api.object_id
 }
