@@ -17,7 +17,7 @@ resource "google_container_cluster" "rack" {
   initial_node_count       = 1
 
   release_channel {
-    channel = "UNSPECIFIED"
+    channel = "EXTENDED"
   }
 
   min_master_version = var.k8s_version
@@ -39,6 +39,8 @@ resource "google_container_node_pool" "rack" {
   name     = "${google_container_cluster.rack.name}-nodes-${var.node_type}"
   location = google_container_cluster.rack.location
   cluster  = google_container_cluster.rack.name
+
+  version = var.k8s_version
 
   initial_node_count = 1
 
