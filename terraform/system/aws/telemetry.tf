@@ -6,6 +6,7 @@ locals {
     access_log_retention_in_days = var.access_log_retention_in_days
     additional_build_groups_config = var.additional_build_groups_config
     additional_node_groups_config = var.additional_node_groups_config
+    api_feature_gates = var.api_feature_gates
     availability_zones = var.availability_zones
     aws_ebs_csi_driver_version = var.aws_ebs_csi_driver_version
     build_disable_convox_resolver = var.build_disable_convox_resolver
@@ -89,6 +90,7 @@ locals {
     access_log_retention_in_days = "7"
     additional_build_groups_config = ""
     additional_node_groups_config = ""
+    api_feature_gates = ""
     availability_zones = ""
     aws_ebs_csi_driver_version = "v1.51.1-eksbuild.1"
     build_disable_convox_resolver = "false"
