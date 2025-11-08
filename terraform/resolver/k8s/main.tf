@@ -127,10 +127,10 @@ resource "kubernetes_deployment" "resolver" {
           }
         }
         container {
-          name               = "system"
-          args               = ["resolver"]
-          image              = "${var.image}:${var.release}"
-          image_pull_policy  = "IfNotPresent"
+          name              = "system"
+          args              = ["resolver"]
+          image             = "${var.image}:${var.release}"
+          image_pull_policy = "IfNotPresent"
 
           env {
             name = "NAMESPACE"
@@ -176,6 +176,13 @@ resource "kubernetes_deployment" "resolver" {
         }
       }
     }
+  }
+
+  lifecycle {
+    ignore_changes = [
+      spec[0].template[0].metadata[0].annotations["convox.com/triggered-reschedule-for-node"],
+      spec[0].template[0].metadata[0].annotations["convox.com/restart"]
+    ]
   }
 }
 

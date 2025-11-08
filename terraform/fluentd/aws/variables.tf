@@ -1,6 +1,6 @@
 variable "access_log_retention_in_days" {
   default = "7"
-  type = string
+  type    = string
 }
 
 variable "arm_type" {

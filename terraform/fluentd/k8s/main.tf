@@ -18,13 +18,13 @@ resource "kubernetes_cluster_role_binding" "fluentd" {
   role_ref {
     api_group = "rbac.authorization.k8s.io"
     kind      = "ClusterRole"
-    name      = kubernetes_cluster_role.fluentd.metadata.0.name
+    name      = kubernetes_cluster_role.fluentd.metadata[0].name
   }
 
   subject {
     kind      = "ServiceAccount"
-    name      = kubernetes_service_account.fluentd.metadata.0.name
-    namespace = kubernetes_service_account.fluentd.metadata.0.namespace
+    name      = kubernetes_service_account.fluentd.metadata[0].name
+    namespace = kubernetes_service_account.fluentd.metadata[0].namespace
   }
 }
 
@@ -213,5 +213,11 @@ resource "kubernetes_daemonset" "fluentd" {
         }
       }
     }
+  }
+
+  lifecycle {
+    ignore_changes = [
+      spec[0].template[0].metadata[0].annotations["convox.com/restart"]
+    ]
   }
 }

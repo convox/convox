@@ -182,6 +182,13 @@ resource "kubernetes_deployment" "metrics" {
       }
     }
   }
+
+  lifecycle {
+    ignore_changes = [
+      spec[0].template[0].metadata[0].annotations["convox.com/triggered-reschedule-for-node"],
+      spec[0].template[0].metadata[0].annotations["convox.com/restart"]
+    ]
+  }
 }
 
 resource "kubernetes_service" "metrics" {
