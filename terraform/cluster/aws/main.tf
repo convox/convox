@@ -79,6 +79,7 @@ resource "aws_eks_cluster" "cluster" {
     endpoint_public_access = var.disable_public_access ? false : true
     // if public access is disabled, then private access must be true
     endpoint_private_access = var.disable_public_access ? true : var.enable_private_access
+    public_access_cidrs     = var.public_access_cidrs
     security_group_ids      = [aws_security_group.cluster.id]
     subnet_ids              = concat(local.public_subnets_ids)
   }

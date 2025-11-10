@@ -52,6 +52,8 @@ locals {
 
   additional_node_groups  = try(jsondecode(var.additional_node_groups_config), jsondecode(base64decode(var.additional_node_groups_config)), [])
   additional_build_groups = try(jsondecode(var.additional_build_groups_config), jsondecode(base64decode(var.additional_build_groups_config)), [])
+
+  public_access_cidrs = var.eks_api_server_public_access_cidrs == "" ? ["0.0.0.0/0"] : split(",", var.eks_api_server_public_access_cidrs)
 }
 
 module "cluster" {
@@ -105,6 +107,7 @@ module "cluster" {
   private_eks_host                    = var.private_eks_host
   private_eks_user                    = var.private_eks_user
   private_eks_pass                    = var.private_eks_pass
+  public_access_cidrs                 = local.public_access_cidrs
   kubelet_registry_pull_qps           = var.kubelet_registry_pull_qps
   kubelet_registry_burst              = var.kubelet_registry_burst
   schedule_rack_scale_down            = var.schedule_rack_scale_down
