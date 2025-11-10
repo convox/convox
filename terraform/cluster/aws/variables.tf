@@ -197,6 +197,11 @@ variable "private_eks_pass" {
   default = ""
 }
 
+variable "public_access_cidrs" {
+  type    = list(string)
+  default = ["0.0.0.0/0"]
+}
+
 variable "schedule_rack_scale_down" {
   type    = string
   default = ""

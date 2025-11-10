@@ -13,7 +13,7 @@ variable "additional_build_groups_config" {
 }
 
 variable "api_feature_gates" {
-  type = string
+  type    = string
   default = ""
 }
 
@@ -129,6 +129,11 @@ variable "efs_csi_driver_enable" {
 variable "efs_csi_driver_version" {
   type    = string
   default = "v2.1.13-eksbuild.1"
+}
+
+variable "eks_api_server_public_access_cidrs" {
+  type    = list(string)
+  default = ["0.0.0.0/0"]
 }
 
 variable "gpu_tag_enable" {
