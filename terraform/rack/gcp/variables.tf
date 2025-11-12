@@ -39,6 +39,12 @@ variable "nodes_account" {
   type = string
 }
 
+variable "nginx_additional_config" {
+  description = "Comma-separated key=value pairs (e.g., 'key1=value1,key2=value2')"
+  type        = string
+  default     = ""
+}
+
 variable "project_id" {
   type = string
 }

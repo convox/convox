@@ -10,6 +10,7 @@ locals {
     image = var.image
     k8s_version = var.k8s_version
     name = var.name
+    nginx_additional_config = var.nginx_additional_config
     node_disk = var.node_disk
     node_type = var.node_type
     preemptible = var.preemptible
@@ -30,6 +31,7 @@ locals {
     image = "convox/convox"
     k8s_version = "1.33"
     name = ""
+    nginx_additional_config = ""
     node_disk = "100"
     node_type = "n1-standard-2"
     preemptible = "true"

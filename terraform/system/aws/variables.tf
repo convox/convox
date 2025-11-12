@@ -132,8 +132,9 @@ variable "efs_csi_driver_version" {
 }
 
 variable "eks_api_server_public_access_cidrs" {
-  type    = list(string)
-  default = ["0.0.0.0/0"]
+  type        = string
+  description = "comma separated cidr"
+  default     = "0.0.0.0/0"
 }
 
 variable "gpu_tag_enable" {
@@ -251,6 +252,12 @@ variable "node_type" {
 variable "nginx_image" {
   type    = string
   default = "registry.k8s.io/ingress-nginx/controller:v1.12.6@sha256:c371fbf42b4f23584ce879d99303463131f4f31612f0875482b983354eeca7e6"
+}
+
+variable "nginx_additional_config" {
+  description = "Comma-separated key=value pairs (e.g., 'key1=value1,key2=value2')"
+  type        = string
+  default     = ""
 }
 
 variable "nvidia_device_plugin_enable" {
