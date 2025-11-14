@@ -1,5 +1,5 @@
 variable "docker_hub_authentication" {
-  type = string
+  type    = string
   default = null
 }
 
@@ -16,6 +16,12 @@ variable "nginx_image" {
 variable "nginx_user" {
   type    = string
   default = "101"
+}
+
+variable "nginx_additional_config" {
+  description = "Comma-separated key=value pairs (e.g., 'key1=value1,key2=value2')"
+  type        = string
+  default     = ""
 }
 
 variable "namespace" {

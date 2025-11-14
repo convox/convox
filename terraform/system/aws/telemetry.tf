@@ -29,6 +29,7 @@ locals {
     ecr_scan_on_push_enable = var.ecr_scan_on_push_enable
     efs_csi_driver_enable = var.efs_csi_driver_enable
     efs_csi_driver_version = var.efs_csi_driver_version
+    eks_api_server_public_access_cidrs = var.eks_api_server_public_access_cidrs
     enable_private_access = var.enable_private_access
     fluentd_disable = var.fluentd_disable
     gpu_tag_enable = var.gpu_tag_enable
@@ -48,6 +49,7 @@ locals {
     max_on_demand_count = var.max_on_demand_count
     min_on_demand_count = var.min_on_demand_count
     name = var.name
+    nginx_additional_config = var.nginx_additional_config
     nginx_image = var.nginx_image
     nlb_security_group = var.nlb_security_group
     node_capacity_type = var.node_capacity_type
@@ -113,6 +115,7 @@ locals {
     ecr_scan_on_push_enable = "false"
     efs_csi_driver_enable = "false"
     efs_csi_driver_version = "v2.1.13-eksbuild.1"
+    eks_api_server_public_access_cidrs = "0.0.0.0/0"
     enable_private_access = "false"
     fluentd_disable = "false"
     gpu_tag_enable = "false"
@@ -132,6 +135,7 @@ locals {
     max_on_demand_count = "100"
     min_on_demand_count = "1"
     name = ""
+    nginx_additional_config = ""
     nginx_image = "registry.k8s.io/ingress-nginx/controller:v1.12.6@sha256:c371fbf42b4f23584ce879d99303463131f4f31612f0875482b983354eeca7e6"
     nlb_security_group = ""
     node_capacity_type = "on_demand"

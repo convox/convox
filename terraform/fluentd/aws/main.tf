@@ -15,7 +15,7 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
-  fluentd_disable  = var.fluentd_disable
+  fluentd_disable = var.fluentd_disable
 
   cluster   = var.cluster
   image     = var.arm_type ? "convox/fluentd:1.13-arm64" : "convox/fluentd:1.13"

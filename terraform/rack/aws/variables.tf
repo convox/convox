@@ -1,5 +1,5 @@
 variable "api_feature_gates" {
-  type = string
+  type    = string
   default = ""
 }
 
@@ -114,6 +114,12 @@ variable "nlb_security_group" {
 variable "nginx_image" {
   type    = string
   default = "registry.k8s.io/ingress-nginx/controller:v1.12.0@sha256:e6b8de175acda6ca913891f0f727bca4527e797d52688cbe9fec9040d6f6b6fa"
+}
+
+variable "nginx_additional_config" {
+  description = "Comma-separated key=value pairs (e.g., 'key1=value1,key2=value2')"
+  type        = string
+  default     = ""
 }
 
 variable "oidc_arn" {

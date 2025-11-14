@@ -1,5 +1,5 @@
 variable "api_feature_gates" {
-  type = string
+  type    = string
   default = ""
 }
 
