@@ -11,7 +11,7 @@ resource "azurerm_storage_account" "storage" {
 }
 
 resource "azurerm_storage_share" "storage" {
-  name                 = "storage"
-  quota                = 50
-  storage_account_id   = azurerm_storage_account.storage.id
+  name               = "storage"
+  quota              = 50
+  storage_account_id = azurerm_storage_account.storage.id
 }
