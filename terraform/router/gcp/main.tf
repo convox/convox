@@ -12,6 +12,7 @@ module "nginx" {
     kubernetes = kubernetes
   }
 
+  nginx_additional_config   = var.nginx_additional_config
   docker_hub_authentication = var.docker_hub_authentication
   namespace                 = var.namespace
   rack                      = var.name

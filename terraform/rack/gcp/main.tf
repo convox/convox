@@ -67,6 +67,7 @@ module "router" {
   name                      = var.name
   namespace                 = module.k8s.namespace
   network                   = var.network
+  nginx_additional_config   = var.nginx_additional_config
   release                   = var.release
   whitelist                 = var.whitelist
 }

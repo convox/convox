@@ -5,7 +5,7 @@ resource "random_string" "password" {
 
 resource "kubernetes_resource_quota" "gcp-critical-pods" {
   metadata {
-    name = "gcp-critical-pods"
+    name      = "gcp-critical-pods"
     namespace = var.namespace
   }
   spec {
@@ -15,8 +15,8 @@ resource "kubernetes_resource_quota" "gcp-critical-pods" {
     scope_selector {
       match_expression {
         scope_name = "PriorityClass"
-        operator = "In"
-        values = ["system-node-critical", "system-cluster-critical"]
+        operator   = "In"
+        values     = ["system-node-critical", "system-cluster-critical"]
       }
     }
   }
@@ -305,7 +305,7 @@ resource "kubernetes_deployment" "api" {
       }
     }
   }
-  depends_on = [ kubernetes_resource_quota.gcp-critical-pods ]
+  depends_on = [kubernetes_resource_quota.gcp-critical-pods]
 }
 
 resource "kubernetes_service" "api" {

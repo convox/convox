@@ -31,7 +31,7 @@ resource "kubernetes_config_map_v1_data" "ingress-nginx-controller-configmap" {
     namespace = "ingress-nginx"
   }
   data = {
-    "hsts" =  "false"
+    "hsts"            = "false"
     "proxy-body-size" = "0"
   }
 }

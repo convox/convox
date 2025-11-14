@@ -185,6 +185,7 @@ module "rack" {
   rack_name                                 = local.rack_name
   nlb_security_group                        = var.nlb_security_group
   nginx_image                               = var.nginx_image
+  nginx_additional_config                   = var.nginx_additional_config
   oidc_arn                                  = module.cluster.oidc_arn
   oidc_sub                                  = module.cluster.oidc_sub
   pdb_default_min_available_percentage      = var.pdb_default_min_available_percentage
