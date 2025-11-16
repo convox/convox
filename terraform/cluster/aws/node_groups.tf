@@ -79,7 +79,7 @@ resource "random_id" "additional_node_groups" {
 module "amitype" {
   source    = "../../helpers/aws"
   for_each  = { for ng in local.additional_node_groups_with_defaults : ng.id => ng }
-  node_type = each.value.type
+  node_type = coalesce(each.value.type, try(each.value.types[0], null))
 }
 
 resource "aws_eks_node_group" "cluster_additional" {
@@ -237,7 +237,7 @@ resource "random_id" "build_node_additional" {
 module "build_amitype" {
   source    = "../../helpers/aws"
   for_each  = { for ng in local.additional_build_groups_with_defaults : ng.id => ng }
-  node_type = each.value.type
+  node_type = coalesce(each.value.type, try(each.value.types[0], null))
 }
 
 
@@ -354,4 +354,3 @@ module "asg_tags_build_additional" {
     "k8s.io/cluster-autoscaler/node-template/label/convox.io/label" = coalesce(each.value.label, "custom-build")
   }, coalesce(each.value.tags, {}))
 }
-
