@@ -183,12 +183,12 @@ You can also specify nodeAffinityLabels with weights to specify preferences of w
 services:
   web:
     nodeAffinityLabels:
-      - Weight: 1
-        Label: node.kubernetes.io/instance-type
-        Value: t3a.medium
-      - Weight: 10
-        Label: node.kubernetes.io/instance-type
-        Value: t3a.large
+      - weight: 1
+        label: node.kubernetes.io/instance-type
+        value: t3a.medium
+      - weight: 10
+        label: node.kubernetes.io/instance-type
+        value: t3a.large
 ```
 
 Weights will be summed for all matching labels and the node with the highest weight will have the service scheduled on it.
@@ -201,12 +201,12 @@ services:
     nodeSelectorLabels:
       convox.io/label: app-workers
     nodeAffinityLabels:
-      - Weight: 1
-        Label: node.kubernetes.io/instance-type
-        Value: t3a.medium
-      - Weight: 10
-        Label: node.kubernetes.io/instance-type
-        Value: t3a.large
+      - weight: 1
+        label: node.kubernetes.io/instance-type
+        value: t3a.medium
+      - weight: 10
+        label: node.kubernetes.io/instance-type
+        value: t3a.large
 ```
 
 In this case, the service will definitely be scheduled on the `app-workers` group, preferably on a `t3a.large` instance, or if not on a `t3a.medium` instance, or if not, then any other instance in the group.
