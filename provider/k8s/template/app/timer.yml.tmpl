@@ -51,11 +51,34 @@ spec:
             {{.Key}}: "{{.Value}}"
             {{ end }}
         spec:
+          {{ if or (.Service.NodeSelectorLabels) (.Service.NodeAffinityLabels) }}
+          affinity:
+            nodeAffinity:
+              {{ if .Service.NodeSelectorLabels }}
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  {{ range keyValue .Service.NodeSelectorLabels }}
+                  - key: {{ .Key }}
+                    operator: In
+                    values:
+                    - {{ .Value }}
+                  {{ end }}
+              {{ end }}
+              {{ if .Service.NodeAffinityLabels }}
+              preferredDuringSchedulingIgnoredDuringExecution:
+              {{ range .Service.NodeAffinityLabels }}
+              - weight: {{ .Weight }}
+                preference:
+                  matchExpressions:
+                  - key: {{ .Label }}
+                    operator: In
+                    values:
+                    - {{ .Value }}
+              {{ end }}
+              {{ end }}
+          {{ end }}
           {{ if .Service.NodeSelectorLabels }}
-          nodeSelector:
-            {{ range keyValue .Service.NodeSelectorLabels }}
-            {{.Key}}: "{{.Value}}"
-            {{ end }}
           {{ $hasTolerations := false }}
           {{ range keyValue .Service.NodeSelectorLabels }}
             {{ if eq .Key "convox.io/label" }}
