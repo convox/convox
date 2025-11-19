@@ -100,13 +100,15 @@ There are three modes available for configuring the cluster endpoint access:
 
 - **Public**: The EKS cluster endpoint is accessible from outside the VPC, allowing external connections. This is the default configuration. Although publicly accessible, it is secured through multiple layers of protection to ensure that only authorized access is permitted.
 
+- **Public-Private**: This hybrid mode enables both public and private network access to your EKS cluster API server simultaneously. External clients (such as CI/CD systems and developer machines) can connect via the public endpoint, while in-VPC resources (pods, services, and internal tools) automatically use the private endpoint for improved performance and security. This mode provides a balance between operational flexibility and security, allowing you to maintain external management capabilities while keeping node-to-control-plane communication private. It's ideal for organizations transitioning to more restrictive configurations or those requiring both external tool access and compliance with private network requirements.
+
 - **Semi-Private**: In this mode, the cluster temporarily switches to public access during updates or configuration changes, then reverts to private when complete. This mode is suitable for older racks and any version, but note that enabling Semi-Private mode will add approximately 15 minutes to each update.
 
 - **Private**: The EKS cluster endpoint is restricted to VPC access only, ensuring that only internal traffic can access it. This mode provides the highest level of security by limiting access to within the VPC while maintaining full Convox API functionality.
 
 ### Requirements
 
-To use the full **Private** mode, your rack must be on at least version `3.18.9`. The **Semi-Private** mode is available for all rack versions, and **Public** is the default state.
+To use the **Private** mode, your rack must be on at least version `3.18.9`. The **Public-Private** mode requires version `3.22.4` or later. The **Semi-Private** mode is available for all rack versions, and **Public** is the default state.
 
 To access these settings:
 

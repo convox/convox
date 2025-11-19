@@ -76,8 +76,10 @@ resource "aws_eks_cluster" "cluster" {
   version  = var.k8s_version
 
   vpc_config {
-    endpoint_public_access  = var.disable_public_access ? false : true
-    endpoint_private_access = var.disable_public_access
+    endpoint_public_access = var.disable_public_access ? false : true
+    // if public access is disabled, then private access must be true
+    endpoint_private_access = var.disable_public_access ? true : var.enable_private_access
+    public_access_cidrs     = var.public_access_cidrs
     security_group_ids      = [aws_security_group.cluster.id]
     subnet_ids              = concat(local.public_subnets_ids)
   }
@@ -115,6 +117,7 @@ resource "random_id" "build_node_group" {
     node_disk           = var.node_disk
     node_type           = var.build_node_type
     private_subnets_ids = join("-", local.private_subnets_ids)
+    public_subnets_ids  = join("-", local.public_subnets_ids)
     role_arn            = replace(aws_iam_role.nodes.arn, "role/convox/", "role/") # eks barfs on roles with paths
   }
 }
@@ -181,14 +184,14 @@ resource "aws_eks_node_group" "cluster-build" {
     aws_iam_openid_connect_provider.cluster,
   ]
 
-  count = var.build_node_enabled ? 1 : 0
+  count           = var.build_node_enabled ? 1 : 0
   ami_type        = var.build_gpu_type ? "AL2023_x86_64_NVIDIA" : var.build_arm_type ? "AL2023_ARM_64_STANDARD" : "AL2023_x86_64_STANDARD"
   capacity_type   = "ON_DEMAND"
   cluster_name    = aws_eks_cluster.cluster.name
   instance_types  = split(",", random_id.build_node_group[0].keepers.node_type)
-  node_group_name = "${var.name}-build-${data.aws_subnet.private_subnet_details[count.index].availability_zone}-${count.index}${random_id.build_node_group[0].hex}"
+  node_group_name = "${var.name}-build-${var.private ? data.aws_subnet.private_subnet_details[count.index].availability_zone : data.aws_subnet.public_subnet_details[count.index].availability_zone}-${count.index}${random_id.build_node_group[0].hex}"
   node_role_arn   = random_id.build_node_group[0].keepers.role_arn
-  subnet_ids      = [local.private_subnets_ids[count.index]]
+  subnet_ids      = [var.private ? local.private_subnets_ids[count.index] : local.public_subnets_ids[count.index]]
   tags            = local.tags
   version         = var.k8s_version
 
@@ -423,9 +426,9 @@ resource "aws_eks_addon" "vpc_cni" {
     null_resource.wait_k8s_api
   ]
 
-  cluster_name      = aws_eks_cluster.cluster.name
-  addon_name        = "vpc-cni"
-  addon_version     = var.vpc_cni_version
+  cluster_name                = aws_eks_cluster.cluster.name
+  addon_name                  = "vpc-cni"
+  addon_version               = var.vpc_cni_version
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
 }
@@ -435,9 +438,9 @@ resource "aws_eks_addon" "coredns" {
     null_resource.wait_k8s_api
   ]
 
-  cluster_name      = aws_eks_cluster.cluster.name
-  addon_name        = "coredns"
-  addon_version     = var.coredns_version
+  cluster_name                = aws_eks_cluster.cluster.name
+  addon_name                  = "coredns"
+  addon_version               = var.coredns_version
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
 }
@@ -447,9 +450,9 @@ resource "aws_eks_addon" "kube_proxy" {
     null_resource.wait_k8s_api
   ]
 
-  cluster_name      = aws_eks_cluster.cluster.name
-  addon_name        = "kube-proxy"
-  addon_version     = var.kube_proxy_version
+  cluster_name                = aws_eks_cluster.cluster.name
+  addon_name                  = "kube-proxy"
+  addon_version               = var.kube_proxy_version
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
 }
@@ -461,9 +464,9 @@ resource "aws_eks_addon" "eks_pod_identity_agent" {
 
   count = var.pod_identity_agent_enable ? 1 : 0
 
-  cluster_name      = aws_eks_cluster.cluster.name
-  addon_name        = "eks-pod-identity-agent"
-  addon_version     = var.pod_identity_agent_version
+  cluster_name                = aws_eks_cluster.cluster.name
+  addon_name                  = "eks-pod-identity-agent"
+  addon_version               = var.pod_identity_agent_version
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
 }

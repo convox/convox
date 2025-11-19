@@ -53,6 +53,27 @@ services:
 - **awsEfs.accessMode**: Specifies ReadWriteMany, ReadOnlyMany, or ReadWriteOnce.
 - **mountPath**: Defines the mount point for the volume inside the service.
 
+### AWS EFS Storage Classes
+
+Starting from version 3.19.7, you can specify a custom storage class for your EFS volumes. This provides greater flexibility for defining AWS storage behaviors and allows custom storage policies for specific workloads.
+
+```html
+environment:
+  - PORT=3000
+services:
+  web:
+    build: .
+    port: 3000
+    volumeOptions:
+      - awsEfs:
+          id: "data"
+          accessMode: ReadWriteMany
+          mountPath: "/opt/data/"
+          storageClass: "efs-sc-33"
+```
+
+- **awsEfs.storageClass**: (Optional) Specifies the AWS EFS storage class to use for the volume. This allows you to apply custom storage policies and integrate with your organization's storage management requirements.
+
 ### Best Practices and Use Cases for AWS EFS Volumes
 
 AWS EFS volumes are ideal for:
@@ -61,10 +82,14 @@ AWS EFS volumes are ideal for:
 - **Persistent Storage Across Restarts**: Maintains data persistence even after service restarts.
 - **Content Management Systems**: Allows multiple editors to access and modify shared content.
 - **Data Processing**: Enables distributed data processing across multiple services.
+- **Custom Storage Policies**: With storage class support, you can implement organization-specific storage policies.
 
 ### Version Requirements for AWS EFS Volumes
 
-You must be on at least rack version `3.18.2` to use AWS EFS volumes. If you are on an earlier version, update your rack using the following command:
+- Basic EFS support: You must be on at least rack version `3.18.2` to use AWS EFS volumes.
+- Storage class support: You must be on at least rack version `3.19.7` to use the `storageClass` attribute.
+
+If you are on an earlier version, update your rack using the following command:
 
 For more details, refer to the [Updating a Rack](https://docs.convox.com/management/cli-rack-management/) documentation.
 
@@ -74,7 +99,7 @@ For more details, refer to the [Updating a Rack](https://docs.convox.com/managem
 
 ### Configuring emptyDir Volumes in convox.yml
 
-You can configure **emptyDir** volumes directly in the `convox.yml` file. Here’s an example:
+You can configure **emptyDir** volumes directly in the `convox.yml` file. Here's an example:
 
 ```html
 environment:

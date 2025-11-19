@@ -10,10 +10,10 @@ metadata:
     type: resource
     resource: {{.Name}}
 data:
-  URL: "memcached://resource-{{ k8sname .Name }}.{{.Namespace}}.svc.cluster.local:11211"
+  URL: "memcached://resource-{{ k8sname .Name }}.{{.Namespace}}.{{ internalResourceDotDomainSuffix }}:11211"
   USER: ""
   PASS: ""
-  HOST: "resource-{{ k8sname .Name }}.{{.Namespace}}.svc.cluster.local"
+  HOST: "resource-{{ k8sname .Name }}.{{.Namespace}}.{{ internalResourceDotDomainSuffix }}"
   PORT: "11211"
   NAME: ""
 ---
@@ -54,12 +54,29 @@ spec:
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 11211
+        resources:
+          limits:
+            {{ if (index .Parameters "cpu") }}
+            cpu: "{{.Parameters.cpu}}m"
+            {{ end }}
+            {{ if (index .Parameters "mem") }}
+            memory: "{{.Parameters.mem}}Mi"
+            {{ end }}
+          requests:
+            {{ if (index .Parameters "cpu") }}
+            cpu: "{{.Parameters.cpu}}m"
+            {{ end }}
+            {{ if (index .Parameters "mem") }}
+            memory: "{{.Parameters.mem}}Mi"
+            {{ end }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
   namespace: {{.Namespace}}
   name: resource-{{ k8sname .Name }}
+  annotations:
+    convox.com/alias: resource-{{ k8sname .Name }}.{{.Namespace}}.{{ internalResourceDotDomainSuffix }}
   labels:
     system: convox
     rack: {{.Rack}}

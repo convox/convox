@@ -8,21 +8,19 @@ import (
 
 // Templater holds the embedded filesystem and template helpers.
 type Templater struct {
-	fs      embed.FS
-	helpers template.FuncMap
+	fs embed.FS
 }
 
 // New creates a new Templater with the given embed.FS and helpers.
-func New(fs embed.FS, helpers template.FuncMap) *Templater {
+func New(fs embed.FS) *Templater {
 	return &Templater{
-		fs:      fs,
-		helpers: helpers,
+		fs: fs,
 	}
 }
 
 // Render renders the template with the given name and parameters.
-func (t *Templater) Render(name string, params interface{}) ([]byte, error) {
-	ts := template.New("").Funcs(t.helpers)
+func (t *Templater) Render(name string, params interface{}, helpers template.FuncMap) ([]byte, error) {
+	ts := template.New("").Funcs(helpers)
 
 	tdata, err := t.fs.ReadFile(name)
 	if err != nil {

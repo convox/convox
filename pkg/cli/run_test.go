@@ -17,7 +17,6 @@ import (
 
 func TestRun(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("ProcessRun", "app1", "web", structs.ProcessRunOptions{Command: options.String("sleep 7200")}).Return(fxProcess(), nil)
 		i.On("ProcessGet", "app1", "pid1").Return(fxProcessPending(), nil).Twice()
 		i.On("ProcessGet", "app1", "pid1").Return(fxProcess(), nil)
@@ -40,7 +39,6 @@ func TestRun(t *testing.T) {
 
 func TestRunError(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("ProcessRun", "app1", "web", structs.ProcessRunOptions{Command: options.String("sleep 7200")}).Return(nil, fmt.Errorf("err1"))
 
 		res, err := testExecute(e, "run web bash -a app1 -t 7200", strings.NewReader("in"))
@@ -51,40 +49,8 @@ func TestRunError(t *testing.T) {
 	})
 }
 
-func TestRunClassic(t *testing.T) {
-	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("SystemGet").Return(fxSystemClassic(), nil)
-		i.On("ProcessRunAttached", "app1", "web", mock.Anything, 7200, structs.ProcessRunOptions{Command: options.String("bash")}).Return(4, nil).Run(func(args mock.Arguments) {
-			data, err := ioutil.ReadAll(args.Get(2).(io.Reader))
-			require.NoError(t, err)
-			require.Equal(t, "in", string(data))
-			args.Get(2).(io.Writer).Write([]byte("out"))
-		})
-
-		res, err := testExecute(e, "run web bash -a app1 -t 7200", strings.NewReader("in"))
-		require.NoError(t, err)
-		require.Equal(t, 4, res.Code)
-		res.RequireStderr(t, []string{""})
-		require.Equal(t, "out", res.Stdout)
-	})
-}
-
-func TestRunClassicDetached(t *testing.T) {
-	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("SystemGet").Return(fxSystemClassic(), nil)
-		i.On("ProcessRunDetached", "app1", "web", structs.ProcessRunOptions{Command: options.String("bash")}).Return("pid1", nil)
-
-		res, err := testExecute(e, "run web bash -a app1 -d", strings.NewReader("in"))
-		require.NoError(t, err)
-		require.Equal(t, 0, res.Code)
-		res.RequireStderr(t, []string{""})
-		res.RequireStdout(t, []string{"Running detached process... OK, pid1"})
-	})
-}
-
 func TestRunDetached(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("ProcessRun", "app1", "web", structs.ProcessRunOptions{Command: options.String("bash")}).Return(fxProcess(), nil)
 
 		res, err := testExecute(e, "run web bash -a app1 -d", nil)

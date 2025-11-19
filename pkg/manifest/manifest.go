@@ -4,14 +4,16 @@ import (
 	"fmt"
 	"math/rand"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/convox/convox/pkg/options"
 	yaml "gopkg.in/yaml.v2"
 )
 
 var (
-	DefaultCpu        = 256
+	DefaultCpu        = 250
 	DefaultMem        = 512
 	ReservedLabelKeys = map[string]bool{
 		"system":  true,
@@ -221,6 +223,18 @@ func (m *Manifest) ApplyDefaults() error {
 			}
 		}
 
+		if options.GetFeatureGates()[options.FeatureGateDisableHostUsersAsDefault] {
+			m.Services[i].DisableHostUsers = true
+		}
+
+		if options.GetFeatureGates()[options.FeatureGateAppLimitRequired] {
+			m.Services[i].Scale.Cpu = options.CoalesceInt(m.Services[i].Scale.Cpu, options.CoalesceInt(m.Services[i].Scale.Limit.Cpu, DefaultCpu))
+			m.Services[i].Scale.Memory = options.CoalesceInt(m.Services[i].Scale.Memory, options.CoalesceInt(m.Services[i].Scale.Limit.Memory, DefaultMem))
+
+			m.Services[i].Scale.Limit.Cpu = options.CoalesceInt(m.Services[i].Scale.Limit.Cpu, m.Services[i].Scale.Cpu)
+			m.Services[i].Scale.Limit.Memory = options.CoalesceInt(m.Services[i].Scale.Limit.Memory, m.Services[i].Scale.Memory)
+		}
+
 		if m.Services[i].Scale.Limit.Cpu > 0 && m.Services[i].Scale.Limit.Cpu < m.Services[i].Scale.Cpu {
 			return fmt.Errorf("cpu limit can not be less cpu request")
 		}
@@ -242,6 +256,31 @@ func (m *Manifest) ApplyDefaults() error {
 
 		if !m.AttributeExists(fmt.Sprintf("services.%s.tls.redirect", s.Name)) {
 			m.Services[i].Tls.Redirect = true
+		}
+	}
+
+	for i := range m.Resources {
+		if m.Resources[i].Options == nil {
+			m.Resources[i].Options = map[string]string{}
+		}
+		if options.GetFeatureGates()[options.FeatureGateAppLimitRequired] && m.Resources[i].IsContainerizedResource() {
+			// set default options
+			if m.Resources[i].Options["cpu"] == "" {
+				m.Resources[i].Options["cpu"] = "250" // 0.25 vCPU
+			} else {
+				cpu, _ := strconv.Atoi(m.Resources[i].Options["cpu"])
+				if cpu < 100 || cpu > 10000 {
+					return fmt.Errorf("resource cpu must be between 100 and 10000 millicpu")
+				}
+			}
+			if m.Resources[i].Options["mem"] == "" {
+				m.Resources[i].Options["mem"] = "512" // 512 MB
+			} else {
+				mem, _ := strconv.Atoi(m.Resources[i].Options["mem"])
+				if mem < 256 || mem > 10240 {
+					return fmt.Errorf("resource mem must be between 256 and 10240 megabyte")
+				}
+			}
 		}
 	}
 

@@ -61,7 +61,7 @@ module "k8s" {
   }
 
   env = {
-    AZURE_CLIENT_ID       = azuread_service_principal.api.application_id
+    AZURE_CLIENT_ID       = azuread_service_principal.api.client_id
     AZURE_CLIENT_SECRET   = azuread_service_principal_password.api.value
     AZURE_SUBSCRIPTION_ID = data.azurerm_subscription.current.subscription_id
     AZURE_TENANT_ID       = data.azurerm_client_config.current.tenant_id

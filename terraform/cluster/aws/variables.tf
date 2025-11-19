@@ -56,6 +56,11 @@ variable "disable_public_access" {
   default = false
 }
 
+variable "enable_private_access" {
+  type    = bool
+  default = false
+}
+
 variable "efs_csi_driver_enable" {
   type    = bool
   default = false
@@ -125,7 +130,7 @@ variable "kubelet_registry_burst" {
 
 variable "k8s_version" {
   type    = string
-  default = "1.32"
+  default = "1.33"
 }
 
 variable "max_on_demand_count" {
@@ -190,6 +195,11 @@ variable "private_eks_user" {
 
 variable "private_eks_pass" {
   default = ""
+}
+
+variable "public_access_cidrs" {
+  type    = list(string)
+  default = ["0.0.0.0/0"]
 }
 
 variable "schedule_rack_scale_down" {

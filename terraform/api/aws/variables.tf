@@ -1,3 +1,8 @@
+variable "api_feature_gates" {
+  type    = string
+  default = ""
+}
+
 variable "buildkit_enabled" {
   default = false
 }
@@ -113,6 +118,16 @@ variable "rack_name" {
 
 variable "release" {
   type = string
+}
+
+variable "releases_to_retain_after_active" {
+  type    = number
+  default = 0
+}
+
+variable "releases_to_retain_task_run_interval_hour" {
+  type    = number
+  default = 24
 }
 
 variable "resolver" {

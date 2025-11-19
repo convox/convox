@@ -63,7 +63,7 @@ module "k8s" {
     PROJECT      = data.google_client_config.current.project,
     PROVIDER     = "gcp"
     REGION       = data.google_client_config.current.region
-    REGISTRY     ="${var.region}-docker.pkg.dev/${var.project_id}/${var.name}"
+    REGISTRY     = "${var.region}-docker.pkg.dev/${var.project_id}/${var.name}"
     RESOLVER     = var.resolver
     ROUTER       = var.router
     SOCKET       = "/var/run/docker.sock"

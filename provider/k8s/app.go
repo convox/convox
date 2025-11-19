@@ -49,6 +49,10 @@ func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*struc
 		},
 	}
 
+	if p.ContextTID() != "" {
+		ns.ObjectMeta.Labels["tid"] = p.ContextTID()
+	}
+
 	if _, err := p.Cluster.CoreV1().Namespaces().Create(context.TODO(), ns, am.CreateOptions{}); err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -190,7 +194,11 @@ func (p *Provider) AppIdles(name string) (bool, error) {
 }
 
 func (p *Provider) AppList() (structs.Apps, error) {
-	ns, err := p.ListNamespacesFromInformer(fmt.Sprintf("system=convox,rack=%s,type=app", p.Name))
+	selector := fmt.Sprintf("system=convox,rack=%s,type=app", p.Name)
+	if p.ContextTID() != "" {
+		selector = fmt.Sprintf("%s,tid=%s", selector, p.ContextTID())
+	}
+	ns, err := p.ListNamespacesFromInformer(selector)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -222,6 +230,9 @@ func (p *Provider) AppNamespace(app string) string {
 	case "system":
 		return p.Namespace
 	default:
+		if p.ContextTID() != "" {
+			return fmt.Sprintf("%s-%s-%s", p.Name, p.ContextTID(), app)
+		}
 		return fmt.Sprintf("%s-%s", p.Name, app)
 	}
 }
@@ -299,6 +310,9 @@ func (p *Provider) appFromNamespace(ns ac.Namespace) (*structs.App, error) {
 		Release:    release,
 		Router:     p.Router,
 		Status:     status,
+		Tags: map[string]string{
+			"namespace": ns.Name,
+		},
 	}
 
 	var params map[string]string
@@ -355,6 +369,9 @@ func (p *Provider) appFromNamespaceOnly(ns ac.Namespace) (*structs.App, error) {
 		Release:    ns.Annotations["convox.com/app-release"],
 		Router:     p.Router,
 		Status:     status,
+		Tags: map[string]string{
+			"namespace": ns.Name,
+		},
 	}
 
 	var params map[string]string

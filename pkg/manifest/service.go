@@ -26,6 +26,7 @@ type Service struct {
 	DnsConfig          ServiceDnsConfig      `yaml:"dnsConfig,omitempty"`
 	Domains            ServiceDomains        `yaml:"domain,omitempty"`
 	Drain              int                   `yaml:"drain,omitempty"`
+	DisableHostUsers   bool                  `yaml:"disableHostUsers,omitempty"`
 	Environment        Environment           `yaml:"environment,omitempty"`
 	GrpcHealthEnabled  bool                  `yaml:"grpcHealthEnabled,omitempty"`
 	Health             ServiceHealth         `yaml:"health,omitempty"`
@@ -38,6 +39,7 @@ type Service struct {
 	InternalRouter     bool                  `yaml:"internalRouter,omitempty"`
 	IngressAnnotations Annotations           `yaml:"ingressAnnotations,omitempty"`
 	Labels             Labels                `yaml:"labels,omitempty"`
+	NodeAffinityLabels Affinities            `yaml:"nodeAffinityLabels,omitempty"`
 	NodeSelectorLabels Labels                `yaml:"nodeSelectorLabels,omitempty"`
 	Lifecycle          ServiceLifecycle      `yaml:"lifecycle,omitempty"`
 	Port               ServicePortScheme     `yaml:"port,omitempty"`
@@ -55,6 +57,14 @@ type Service struct {
 	VolumeOptions      []VolumeOption        `yaml:"volumeOptions,omitempty"`
 	Whitelist          string                `yaml:"whitelist,omitempty"`
 	AccessControl      AccessControlOptions  `yaml:"accessControl,omitempty"`
+}
+
+type Affinities []Affinity
+
+type Affinity struct {
+	Label  string `yaml:"label"`
+	Weight int    `yaml:"weight"`
+	Value  string `yaml:"value"`
 }
 
 type Annotations []Annotation

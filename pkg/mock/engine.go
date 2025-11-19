@@ -78,3 +78,7 @@ func (*TestEngine) SystemStatus() (string, error) {
 func (*TestEngine) GPUIntanceList(instanceTypes []string) ([]string, error) {
 	return nil, nil
 }
+
+func (*TestEngine) RepositoryImagesBatchDelete(app string, tags []string) error {
+	return nil
+}

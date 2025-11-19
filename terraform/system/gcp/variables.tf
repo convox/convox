@@ -21,7 +21,7 @@ variable "image" {
 
 variable "k8s_version" {
   type    = string
-  default = "1.32"
+  default = "1.33"
 }
 
 variable "name" {
@@ -39,6 +39,12 @@ variable "node_disk" {
 
 variable "node_type" {
   default = "n1-standard-2"
+}
+
+variable "nginx_additional_config" {
+  description = "Comma-separated key=value pairs (e.g., 'key1=value1,key2=value2')"
+  type        = string
+  default     = ""
 }
 
 variable "preemptible" {

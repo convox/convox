@@ -150,7 +150,7 @@ func CertsGenerate(rack sdk.Interface, c *stdcli.Context) error {
 	c.OK(cr.Id)
 
 	if c.Bool("id") {
-		fmt.Fprintf(stdout, cr.Id)
+		fmt.Fprintf(stdout, "%s", cr.Id)
 	}
 
 	return nil
@@ -209,7 +209,7 @@ func CertsImport(rack sdk.Interface, c *stdcli.Context) error {
 	c.OK(cr.Id)
 
 	if c.Bool("id") {
-		fmt.Fprintf(stdout, cr.Id)
+		fmt.Fprintf(stdout, "%s", cr.Id)
 	}
 
 	return nil

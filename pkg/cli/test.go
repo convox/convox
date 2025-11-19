@@ -22,7 +22,7 @@ func init() {
 		},
 		Usage:    "[dir]",
 		Validate: stdcli.ArgsMax(1),
-	})
+	}, WithCloud())
 }
 
 func Test(rack sdk.Interface, c *stdcli.Context) error {

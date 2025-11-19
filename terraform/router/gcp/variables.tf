@@ -19,6 +19,12 @@ variable "network" {
   type = string
 }
 
+variable "nginx_additional_config" {
+  description = "Comma-separated key=value pairs (e.g., 'key1=value1,key2=value2')"
+  type        = string
+  default     = ""
+}
+
 variable "release" {
   type = string
 }

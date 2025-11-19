@@ -6,6 +6,7 @@ locals {
     access_log_retention_in_days = var.access_log_retention_in_days
     additional_build_groups_config = var.additional_build_groups_config
     additional_node_groups_config = var.additional_node_groups_config
+    api_feature_gates = var.api_feature_gates
     availability_zones = var.availability_zones
     aws_ebs_csi_driver_version = var.aws_ebs_csi_driver_version
     build_disable_convox_resolver = var.build_disable_convox_resolver
@@ -28,6 +29,8 @@ locals {
     ecr_scan_on_push_enable = var.ecr_scan_on_push_enable
     efs_csi_driver_enable = var.efs_csi_driver_enable
     efs_csi_driver_version = var.efs_csi_driver_version
+    eks_api_server_public_access_cidrs = var.eks_api_server_public_access_cidrs
+    enable_private_access = var.enable_private_access
     fluentd_disable = var.fluentd_disable
     gpu_tag_enable = var.gpu_tag_enable
     high_availability = var.high_availability
@@ -46,6 +49,7 @@ locals {
     max_on_demand_count = var.max_on_demand_count
     min_on_demand_count = var.min_on_demand_count
     name = var.name
+    nginx_additional_config = var.nginx_additional_config
     nginx_image = var.nginx_image
     nlb_security_group = var.nlb_security_group
     node_capacity_type = var.node_capacity_type
@@ -67,6 +71,8 @@ locals {
     rack_name = var.rack_name
     region = var.region
     release = var.release
+    releases_to_retain_after_active = var.releases_to_retain_after_active
+    releases_to_retain_task_run_interval_hour = var.releases_to_retain_task_run_interval_hour
     schedule_rack_scale_down = var.schedule_rack_scale_down
     schedule_rack_scale_up = var.schedule_rack_scale_up
     settings = var.settings
@@ -86,8 +92,9 @@ locals {
     access_log_retention_in_days = "7"
     additional_build_groups_config = ""
     additional_node_groups_config = ""
+    api_feature_gates = ""
     availability_zones = ""
-    aws_ebs_csi_driver_version = "v1.46.0-eksbuild.1"
+    aws_ebs_csi_driver_version = "v1.51.1-eksbuild.1"
     build_disable_convox_resolver = "false"
     build_node_enabled = "false"
     build_node_min_count = "0"
@@ -96,7 +103,7 @@ locals {
     cidr = "10.1.0.0/16"
     convox_domain_tls_cert_disable = "false"
     convox_rack_domain = ""
-    coredns_version = "v1.11.4-eksbuild.14"
+    coredns_version = "v1.12.4-eksbuild.1"
     custom_provided_bucket = ""
     deploy_extra_nlb = "false"
     disable_convox_resolver = "false"
@@ -107,7 +114,9 @@ locals {
     ebs_volume_encryption_enabled = "false"
     ecr_scan_on_push_enable = "false"
     efs_csi_driver_enable = "false"
-    efs_csi_driver_version = "v2.1.9-eksbuild.1"
+    efs_csi_driver_version = "v2.1.13-eksbuild.1"
+    eks_api_server_public_access_cidrs = "0.0.0.0/0"
+    enable_private_access = "false"
     fluentd_disable = "false"
     gpu_tag_enable = "false"
     high_availability = "true"
@@ -118,15 +127,16 @@ locals {
     imds_tags_enable = "false"
     internal_router = "false"
     internet_gateway_id = ""
-    k8s_version = "1.32"
+    k8s_version = "1.33"
     key_pair_name = ""
-    kube_proxy_version = "v1.32.6-eksbuild.2"
+    kube_proxy_version = "v1.33.3-eksbuild.10"
     kubelet_registry_burst = "10"
     kubelet_registry_pull_qps = "5"
     max_on_demand_count = "100"
     min_on_demand_count = "1"
     name = ""
-    nginx_image = "registry.k8s.io/ingress-nginx/controller:v1.12.0@sha256:e6b8de175acda6ca913891f0f727bca4527e797d52688cbe9fec9040d6f6b6fa"
+    nginx_additional_config = ""
+    nginx_image = "registry.k8s.io/ingress-nginx/controller:v1.12.6@sha256:c371fbf42b4f23584ce879d99303463131f4f31612f0875482b983354eeca7e6"
     nlb_security_group = ""
     node_capacity_type = "on_demand"
     node_disk = "20"
@@ -136,7 +146,7 @@ locals {
     nvidia_device_time_slicing_replicas = "0"
     pdb_default_min_available_percentage = "50"
     pod_identity_agent_enable = "false"
-    pod_identity_agent_version = "v1.3.8-eksbuild.2"
+    pod_identity_agent_version = "v1.3.9-eksbuild.3"
     private = "true"
     private_eks_host = ""
     private_eks_pass = ""
@@ -147,6 +157,8 @@ locals {
     rack_name = ""
     region = "us-east-1"
     release = ""
+    releases_to_retain_after_active = "0"
+    releases_to_retain_task_run_interval_hour = "24"
     schedule_rack_scale_down = ""
     schedule_rack_scale_up = ""
     settings = ""
@@ -157,7 +169,7 @@ locals {
     telemetry = "false"
     user_data = ""
     user_data_url = ""
-    vpc_cni_version = "v1.20.0-eksbuild.1"
+    vpc_cni_version = "v1.20.4-eksbuild.1"
     vpc_id = ""
     whitelist = "0.0.0.0/0"
     }

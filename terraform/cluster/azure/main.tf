@@ -31,17 +31,19 @@ resource "azurerm_kubernetes_cluster" "rack" {
   kubernetes_version  = data.azurerm_kubernetes_service_versions.available.latest_version
 
   default_node_pool {
-    enable_auto_scaling = true
-    name                = "default"
-    min_count           = 3
-    max_count           = 100
-    node_count          = 3
-    vm_size             = var.node_type
-    os_disk_size_gb     = 30
+    auto_scaling_enabled        = true
+    name                        = "default"
+    temporary_name_for_rotation = "defaulttemp"
+    min_count                   = 3
+    max_count                   = 100
+    node_count                  = 3
+    vm_size                     = var.node_type
+    os_disk_size_gb             = 30
+    orchestrator_version        = data.azurerm_kubernetes_service_versions.available.latest_version
   }
 
   service_principal {
-    client_id     = azuread_service_principal.cluster.application_id
+    client_id     = azuread_service_principal.cluster.client_id
     client_secret = azuread_service_principal_password.cluster.value
   }
 
@@ -50,20 +52,20 @@ resource "azurerm_kubernetes_cluster" "rack" {
   }
 }
 
-resource "local_file" "kubeconfig" {
-  depends_on = [
-    azurerm_kubernetes_cluster.rack,
-  ]
+# resource "local_file" "kubeconfig" {
+#   depends_on = [
+#     azurerm_kubernetes_cluster.rack,
+#   ]
 
-  filename = pathexpand("~/.kube/config.azure.${var.name}")
-  content = templatefile("${path.module}/kubeconfig.tpl", {
-    ca                 = azurerm_kubernetes_cluster.rack.kube_config[0].cluster_ca_certificate
-    endpoint           = azurerm_kubernetes_cluster.rack.kube_config[0].host
-    client_certificate = azurerm_kubernetes_cluster.rack.kube_config[0].client_certificate
-    client_key         = azurerm_kubernetes_cluster.rack.kube_config[0].client_key
-  })
+#   filename = pathexpand("~/.kube/config.azure.${var.name}")
+#   content = templatefile("${path.module}/kubeconfig.tpl", {
+#     ca                 = azurerm_kubernetes_cluster.rack.kube_config[0].cluster_ca_certificate
+#     endpoint           = azurerm_kubernetes_cluster.rack.kube_config[0].host
+#     client_certificate = azurerm_kubernetes_cluster.rack.kube_config[0].client_certificate
+#     client_key         = azurerm_kubernetes_cluster.rack.kube_config[0].client_key
+#   })
 
-  lifecycle {
-    ignore_changes = [content]
-  }
-}
+#   lifecycle {
+#     ignore_changes = [content]
+#   }
+# }

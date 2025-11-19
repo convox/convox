@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/miekg/dns"
@@ -211,6 +212,10 @@ func (r *Resolver) setupService() error {
 }
 
 func (r *Resolver) upstream() string {
+	if dns_upstream := os.Getenv("DNS_UPSTREAM"); dns_upstream != "" {
+		return dns_upstream
+	}
+
 	cc, err := dns.ClientConfigFromFile("/etc/resolv.conf")
 	if err != nil {
 		return UpstreamFallback

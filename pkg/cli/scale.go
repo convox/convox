@@ -25,15 +25,10 @@ func init() {
 				return stdcli.Args(0)(c)
 			}
 		},
-	})
+	}, WithCloud())
 }
 
 func Scale(rack sdk.Interface, c *stdcli.Context) error {
-	s, err := rack.SystemGet()
-	if err != nil {
-		return err
-	}
-
 	var opts structs.ServiceUpdateOptions
 
 	if err := c.Options(&opts); err != nil {
@@ -45,14 +40,8 @@ func Scale(rack sdk.Interface, c *stdcli.Context) error {
 
 		c.Startf("Scaling <service>%s</service>", service)
 
-		if s.Version <= "20180708231844" {
-			if err := rack.FormationUpdate(app(c), service, opts); err != nil {
-				return err
-			}
-		} else {
-			if err := rack.ServiceUpdate(app(c), service, opts); err != nil {
-				return err
-			}
+		if err := rack.ServiceUpdate(app(c), service, opts); err != nil {
+			return err
 		}
 
 		c.Writef("\n")
@@ -65,19 +54,11 @@ func Scale(rack sdk.Interface, c *stdcli.Context) error {
 	}
 
 	return watch(func(r sdk.Interface, c *stdcli.Context) error {
-		var ss structs.Services
 		running := map[string]int{}
 
-		if s.Version < "20180708231844" {
-			ss, err = rack.FormationGet(app(c))
-			if err != nil {
-				return err
-			}
-		} else {
-			ss, err = rack.ServiceList(app(c))
-			if err != nil {
-				return err
-			}
+		ss, err := rack.ServiceList(app(c))
+		if err != nil {
+			return err
 		}
 
 		sort.Slice(ss, func(i, j int) bool { return ss[i].Name < ss[j].Name })

@@ -24,35 +24,38 @@ module "api" {
     kubernetes = kubernetes
   }
 
-  buildkit_enabled                     = var.buildkit_enabled
-  build_disable_convox_resolver        = var.build_disable_convox_resolver
-  build_node_enabled                   = var.build_node_enabled
-  convox_domain_tls_cert_disable       = var.convox_domain_tls_cert_disable
-  custom_provided_bucket               = var.custom_provided_bucket
-  docker_hub_authentication            = module.k8s.docker_hub_authentication
-  docker_hub_username                  = var.docker_hub_username
-  docker_hub_password                  = var.docker_hub_password
-  domain                               = try(module.router.endpoint, "") # terraform destroy sometimes failes to resolve the value
-  domain_internal                      = module.router.endpoint_internal
-  disable_image_manifest_cache         = var.disable_image_manifest_cache
-  ecr_scan_on_push_enable              = var.ecr_scan_on_push_enable
-  efs_csi_driver_enable                = var.efs_csi_driver_enable
-  efs_file_system_id                   = var.efs_file_system_id
-  high_availability                    = var.high_availability
-  metrics_scraper_host                 = module.metrics.metrics_scraper_host
-  image                                = var.image
-  name                                 = var.name
-  rack_name                            = var.rack_name
-  namespace                            = module.k8s.namespace
-  oidc_arn                             = var.oidc_arn
-  oidc_sub                             = var.oidc_sub
-  pdb_default_min_available_percentage = var.pdb_default_min_available_percentage
-  release                              = var.release
-  disable_convox_resolver              = var.disable_convox_resolver
-  resolver                             = module.resolver.endpoint
-  router                               = module.router.endpoint
-  subnets                              = var.subnets
-  vpc_id                               = var.vpc_id
+  buildkit_enabled                          = var.buildkit_enabled
+  build_disable_convox_resolver             = var.build_disable_convox_resolver
+  build_node_enabled                        = var.build_node_enabled
+  convox_domain_tls_cert_disable            = var.convox_domain_tls_cert_disable
+  custom_provided_bucket                    = var.custom_provided_bucket
+  docker_hub_authentication                 = module.k8s.docker_hub_authentication
+  docker_hub_username                       = var.docker_hub_username
+  docker_hub_password                       = var.docker_hub_password
+  domain                                    = try(module.router.endpoint, "") # terraform destroy sometimes failes to resolve the value
+  domain_internal                           = module.router.endpoint_internal
+  disable_image_manifest_cache              = var.disable_image_manifest_cache
+  ecr_scan_on_push_enable                   = var.ecr_scan_on_push_enable
+  efs_csi_driver_enable                     = var.efs_csi_driver_enable
+  efs_file_system_id                        = var.efs_file_system_id
+  high_availability                         = var.high_availability
+  metrics_scraper_host                      = module.metrics.metrics_scraper_host
+  image                                     = var.image
+  name                                      = var.name
+  rack_name                                 = var.rack_name
+  namespace                                 = module.k8s.namespace
+  oidc_arn                                  = var.oidc_arn
+  oidc_sub                                  = var.oidc_sub
+  pdb_default_min_available_percentage      = var.pdb_default_min_available_percentage
+  release                                   = var.release
+  disable_convox_resolver                   = var.disable_convox_resolver
+  resolver                                  = module.resolver.endpoint
+  router                                    = module.router.endpoint
+  releases_to_retain_after_active           = var.releases_to_retain_after_active
+  releases_to_retain_task_run_interval_hour = var.releases_to_retain_task_run_interval_hour
+  subnets                                   = var.subnets
+  vpc_id                                    = var.vpc_id
+  api_feature_gates                         = var.api_feature_gates
 }
 
 module "metrics" {
@@ -98,6 +101,7 @@ module "router" {
   namespace                 = module.k8s.namespace
   nlb_security_group        = var.nlb_security_group
   nginx_image               = var.nginx_image
+  nginx_additional_config   = var.nginx_additional_config
   oidc_arn                  = var.oidc_arn
   oidc_sub                  = var.oidc_sub
   proxy_protocol            = var.proxy_protocol

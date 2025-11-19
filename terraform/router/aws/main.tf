@@ -3,6 +3,12 @@ locals {
     System = "convox"
     Rack   = var.name
   })
+
+  additional_config_str = try(base64decode(var.nginx_additional_config), var.nginx_additional_config)
+  additional_config_map = local.additional_config_str != "" ? {
+    for item in split(",", local.additional_config_str) :
+    split("=", item)[0] => split("=", item)[1]
+  } : {}
 }
 
 data "aws_region" "current" {
@@ -20,6 +26,7 @@ module "nginx" {
   internal_router           = var.internal_router
   namespace                 = var.namespace
   nginx_image               = var.nginx_image
+  nginx_additional_config   = var.nginx_additional_config
   proxy_protocol            = var.proxy_protocol
   rack                      = var.name
   replicas_max              = var.high_availability ? 10 : 1
@@ -34,15 +41,18 @@ resource "kubernetes_config_map" "nginx-configuration" {
     name      = "nginx-configuration"
   }
 
-  data = {
-    "proxy-body-size"           = "0"
-    "use-proxy-protocol"        = var.proxy_protocol ? "true" : "false"
-    "log-format-upstream"       = file("${path.module}/log-format.txt")
-    "ssl-ciphers"               = var.ssl_ciphers == "" ? null : var.ssl_ciphers
-    "ssl-protocols"             = var.ssl_protocols == "" ? null : var.ssl_protocols
-    "allow-snippet-annotations" = "true"
-    "annotations-risk-level"    = "Critical"
-  }
+  data = merge(
+    {
+      "proxy-body-size"           = "0"
+      "use-proxy-protocol"        = var.proxy_protocol ? "true" : "false"
+      "log-format-upstream"       = file("${path.module}/log-format.txt")
+      "ssl-ciphers"               = var.ssl_ciphers == "" ? null : var.ssl_ciphers
+      "ssl-protocols"             = var.ssl_protocols == "" ? null : var.ssl_protocols
+      "allow-snippet-annotations" = "true"
+      "annotations-risk-level"    = "Critical"
+    },
+    local.additional_config_map,
+  )
 
   depends_on = [
     null_resource.set_proxy_protocol

@@ -27,6 +27,11 @@ spec:
     spec:
       backoffLimit: 0
       # ttlSecondsAfterFinished: 60
+      {{ if gt .Timer.ParallelCount 1 }}
+      completionMode: "Indexed"
+      completions: {{ .Timer.ParallelCount }}
+      parallelism: {{ .Timer.ParallelCount }}
+      {{ end }}
       template:
         metadata:
           annotations:
@@ -46,11 +51,54 @@ spec:
             {{.Key}}: "{{.Value}}"
             {{ end }}
         spec:
+          {{ if or (.Service.NodeSelectorLabels) (.Service.NodeAffinityLabels) }}
+          affinity:
+            nodeAffinity:
+              {{ if .Service.NodeSelectorLabels }}
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  {{ range keyValue .Service.NodeSelectorLabels }}
+                  - key: {{ .Key }}
+                    operator: In
+                    values:
+                    - {{ .Value }}
+                  {{ end }}
+              {{ end }}
+              {{ if .Service.NodeAffinityLabels }}
+              preferredDuringSchedulingIgnoredDuringExecution:
+              {{ range .Service.NodeAffinityLabels }}
+              - weight: {{ .Weight }}
+                preference:
+                  matchExpressions:
+                  - key: {{ .Label }}
+                    operator: In
+                    values:
+                    - {{ .Value }}
+              {{ end }}
+              {{ end }}
+          {{ end }}
           {{ if .Service.NodeSelectorLabels }}
-          nodeSelector:
-            {{ range keyValue .Service.NodeSelectorLabels }}
-            {{.Key}}: "{{.Value}}"
+          {{ $hasTolerations := false }}
+          {{ range keyValue .Service.NodeSelectorLabels }}
+            {{ if eq .Key "convox.io/label" }}
+              {{ $hasTolerations = true }}
             {{ end }}
+          {{ end }}
+          {{ if $hasTolerations }}
+          tolerations:
+            {{ range keyValue .Service.NodeSelectorLabels }}
+            {{ if eq .Key "convox.io/label" }}
+            - key: "dedicated-node"
+              operator: "Equal"
+              value: "{{.Value}}"
+              effect: "NoSchedule"
+            {{ end }}
+            {{ end }}
+          {{ end }}
+          {{ end }}
+          {{ if .Service.DisableHostUsers }}
+          hostUsers: false
           {{ end }}
           {{ if or (.Resolver) (gt .Service.DnsConfig.Ndots 0) }}
           dnsPolicy: "None"
@@ -63,12 +111,14 @@ spec:
             {{ with .Resolver }}
             nameservers:
               - "{{ . }}"
+            {{ if not (index $ "DisableDnsSearches") }}
             searches:
               - "{{$.App.Name}}.{{$.Rack}}.local"
               - "{{$.Namespace}}.svc.cluster.local"
               - "{{$.Rack}}.local"
               - "svc.cluster.local"
               - "cluster.local"
+            {{ end }}
             {{ end }}
           {{ end }}
           restartPolicy: Never
@@ -85,6 +135,12 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.hostIP
+            {{ if gt .Timer.ParallelCount 1 }}
+            - name: TIMER_INDEX
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.annotations['batch.kubernetes.io/job-completion-index']
+            {{ end }}
             {{ range $.Resources }}
             - name: "{{.Env}}"
               valueFrom:

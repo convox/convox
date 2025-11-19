@@ -10,6 +10,7 @@ import (
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/pkg/errors"
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,8 +20,14 @@ func (p *Provider) ServiceHost(app string, s manifest.Service) string {
 	if s.Internal {
 		return fmt.Sprintf("%s.%s.%s.local", s.Name, app, p.Name)
 	} else if s.InternalRouter {
+		if p.ContextTID() != "" {
+			return fmt.Sprintf("%s.%s.%s.%s", s.Name, app, p.ContextTID(), p.DomainInternal)
+		}
 		return fmt.Sprintf("%s.%s.%s", s.Name, app, p.DomainInternal)
 	} else {
+		if p.ContextTID() != "" {
+			return fmt.Sprintf("%s.%s.%s.%s", s.Name, app, p.ContextTID(), p.Domain)
+		}
 		return fmt.Sprintf("%s.%s.%s", s.Name, app, p.Domain)
 	}
 }
@@ -64,7 +71,7 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 
 		s := structs.Service{
 			Count:  int(common.DefaultInt32(d.Spec.Replicas, 0)),
-			Domain: p.Engine.ServiceHost(app, *ms),
+			Domain: p.ServiceHost(app, *ms),
 			Name:   d.ObjectMeta.Name,
 			Ports:  serviceContainerPorts(*c, ms.Internal),
 		}
@@ -110,7 +117,7 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 
 		s := structs.Service{
 			Count:  int(d.Status.NumberReady),
-			Domain: p.Engine.ServiceHost(app, *ms),
+			Domain: p.ServiceHost(app, *ms),
 			Name:   d.ObjectMeta.Name,
 			Ports:  serviceContainerPorts(*c, ms.Internal),
 		}
@@ -214,6 +221,16 @@ func (p *Provider) ServiceUpdate(app, name string, opts structs.ServiceUpdateOpt
 	}
 
 	return nil
+}
+
+func (p *Provider) serviceDaemonset(app, name string) (*appsv1.DaemonSet, error) {
+	ds := p.Cluster.AppsV1().DaemonSets(p.AppNamespace(app))
+	return ds.Get(context.TODO(), name, am.GetOptions{})
+}
+
+func (p *Provider) serviceDeployment(app, name string) (*appsv1.Deployment, error) {
+	ds := p.Cluster.AppsV1().Deployments(p.AppNamespace(app))
+	return ds.Get(context.TODO(), name, am.GetOptions{})
 }
 
 func serviceContainerPorts(c v1.Container, internal bool) []structs.ServicePort {

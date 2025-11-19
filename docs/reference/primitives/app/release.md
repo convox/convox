@@ -52,6 +52,93 @@ has been completely rolled back.
     Description  env add:FOO
     Env          FOO=bar
 ```
+### Creating a Custom Release
+
+The `convox releases create-from` command allows you to create a new release by combining the build from one release with the environment variables from another release. This provides flexibility in managing deployments by letting you mix and match builds and environments from different releases.
+
+#### Basic Usage
+Create a new release using build from one release and environment from another:
+```html
+    $ convox releases create-from --build-from=RXXXXXXXXXXX --env-from=RYYYYYYYYYY -a myapp
+    Creating release... OK
+    Release: RNEWRELEASE
+```
+
+#### With Auto-Promotion
+Create and automatically promote the new release:
+```html
+    $ convox releases create-from --build-from=RXXXXXXXXXXX --env-from=RYYYYYYYYYY -a myapp --promote
+    Creating release... OK
+    Release: RNEWRELEASE
+    Promoting RNEWRELEASE... OK
+```
+
+#### Using Active Release Components
+Use the currently active release's build with environment from a specific release:
+```html
+    $ convox releases create-from --use-active-release-build --env-from=RYYYYYYYYYY -a myapp
+    Creating release... OK
+    Release: RNEWRELEASE
+```
+
+Use the currently active release's environment with build from a specific release:
+```html
+    $ convox releases create-from --build-from=RXXXXXXXXXXX --use-active-release-env -a myapp
+    Creating release... OK
+    Release: RNEWRELEASE
+```
+
+#### Available Flags for create-from
+
+| Flag | Description |
+|------|-------------|
+| `--app` / `-a` | Specify the target application |
+| `--build-from` | Release ID to use as the build source |
+| `--env-from` | Release ID to use as the environment source |
+| `--promote` | Automatically promote the new release after creation |
+| `--rack` / `-r` | Specify the target rack |
+| `--use-active-release-build` | Use the currently active release's build |
+| `--use-active-release-env` | Use the currently active release's environment |
+
+#### Common Use Cases
+
+- **Rollback with updated environment**: Use a previous stable build with current environment variables
+- **Environment promotion**: Apply production environment settings to a development build
+- **Selective updates**: Update only the build or only the environment without affecting the other
+- **Release composition**: Create custom release combinations for testing or deployment strategies
+
+#### Example Workflow
+
+1. List available releases to identify source releases:
+```html
+    $ convox releases -a myapp
+    ID          STATUS  BUILD       CREATED        DESCRIPTION
+    RCDEFGHIJK          BABCDEFGHI  1 minute ago   env add:FOO
+    RBCDEFGHIJ  active  BABCDEFGHI  5 minutes ago  build 0a1b2c3d4e5f
+    RABCDEFGHI          AABCDEFGHI  1 hour ago     build 1b2c3d4e5f6g
+```
+
+2. Create a new release combining specific build and environment:
+```html
+    $ convox releases create-from --build-from=RABCDEFGHI --env-from=RCDEFGHIJK -a myapp
+    Creating release... OK
+    Release: RDEFGHIJKL
+```
+
+3. Verify the new release was created:
+```html
+    $ convox releases -a myapp
+    ID          STATUS  BUILD       CREATED        DESCRIPTION
+    RDEFGHIJKL          AABCDEFGHI  5 seconds ago  created-from
+    RCDEFGHIJK          BABCDEFGHI  2 minutes ago  env add:FOO
+    RBCDEFGHIJ  active  BABCDEFGHI  6 minutes ago  build 0a1b2c3d4e5f
+```
+
+4. Promote if not using the `--promote` flag:
+```html
+    $ convox releases promote RDEFGHIJKL -a myapp
+```
+
 ### Promoting a Release
 ```html
     $ convox releases promote RCDEFGHIJK -a myapp

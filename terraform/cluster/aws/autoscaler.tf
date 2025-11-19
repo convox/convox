@@ -149,6 +149,12 @@ resource "kubernetes_cluster_role" "autoscaler" {
   }
 
   rule {
+    api_groups = ["discovery.k8s.io"]
+    resources  = ["endpointslices"]
+    verbs      = ["get", "list", "update", "create", "patch"]
+  }
+
+  rule {
     api_groups = ["storage.k8s.io"]
     resources  = ["csidrivers", "csinodes", "csistoragecapacities", "storageclasses", "volumeattachments"]
     verbs      = ["watch", "list", "get"]

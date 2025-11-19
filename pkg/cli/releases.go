@@ -18,32 +18,32 @@ func init() {
 	register("releases", "list releases for an app", watch(Releases), stdcli.CommandOptions{
 		Flags:    append(stdcli.OptionFlags(structs.ReleaseListOptions{}), flagRack, flagApp, flagWatchInterval),
 		Validate: stdcli.Args(0),
-	})
+	}, WithCloud())
 
 	register("releases create-from", "create a new release using the build from one release and the environment from another for an app", ReleasesCreateFrom, stdcli.CommandOptions{
 		Flags:    append(stdcli.OptionFlags(structs.ReleaseCreateFromOptions{}), flagRack, flagApp),
 		Validate: stdcli.Args(0),
-	})
+	}, WithCloud())
 
 	register("releases info", "get information about a release", ReleasesInfo, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagApp, flagRack},
 		Validate: stdcli.Args(1),
-	})
+	}, WithCloud())
 
 	register("releases manifest", "get manifest for a release", ReleasesManifest, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagApp, flagRack},
 		Validate: stdcli.Args(1),
-	})
+	}, WithCloud())
 
 	register("releases promote", "promote a release", ReleasesPromote, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagApp, flagRack, flagForce},
 		Validate: stdcli.ArgsMax(1),
-	})
+	}, WithCloud())
 
 	register("releases rollback", "copy an old release forward and promote it", ReleasesRollback, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagApp, flagId, flagRack, flagForce},
 		Validate: stdcli.Args(1),
-	})
+	}, WithCloud())
 }
 
 func Releases(rack sdk.Interface, c *stdcli.Context) error {
@@ -301,7 +301,7 @@ func ReleasesRollback(rack sdk.Interface, c *stdcli.Context) error {
 	}
 
 	if c.Bool("id") {
-		fmt.Fprintf(stdout, rn.Id)
+		fmt.Fprintf(stdout, "%s", rn.Id)
 	}
 
 	return c.OK()

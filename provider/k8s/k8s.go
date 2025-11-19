@@ -8,12 +8,14 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
+	"strconv"
 	"time"
 
 	"github.com/convox/convox/pkg/atom"
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/jwt"
 	"github.com/convox/convox/pkg/metrics"
+	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/pkg/templater"
 	"github.com/convox/convox/provider/aws/provisioner/elasticache"
@@ -45,43 +47,46 @@ const (
 )
 
 type Provider struct {
-	Atom                             atom.Interface
-	BuildkitEnabled                  string
-	BuildNodeEnabled                 string
-	CertManager                      bool
-	CertManagerRoleArn               string
-	Cluster                          kubernetes.Interface
-	Config                           *rest.Config
-	Convox                           cv.Interface
-	ConvoxDomainTLSCertDisable       bool
-	CertManagerClient                cmclient.Interface
-	DiscoveryClient                  discovery.DiscoveryInterface
-	DockerUsername                   string
-	DockerPassword                   string
-	Domain                           string
-	DomainInternal                   string
-	DynamicClient                    dynamic.Interface
-	EfsFileSystemId                  string
-	Engine                           Engine
-	Image                            string
-	JwtMngr                          *jwt.JwtManager
-	Name                             string
-	MetricScraper                    *MetricScraperClient
-	MetricsClient                    metricsclientset.Interface
-	Namespace                        string
-	Password                         string
-	PdbDefaultMinAvailablePercentage string
-	Provider                         string
-	RackName                         string
-	Resolver                         string
-	BuildDisableResolver             bool
-	RestClient                       rest.Interface
-	Router                           string
-	Socket                           string
-	Storage                          string
-	SubnetIDs                        string
-	Version                          string
-	VpcID                            string
+	Atom                                atom.Interface
+	BuildkitEnabled                     string
+	BuildNodeEnabled                    string
+	CertManager                         bool
+	CertManagerRoleArn                  string
+	Cluster                             kubernetes.Interface
+	Config                              *rest.Config
+	Convox                              cv.Interface
+	ConvoxDomainTLSCertDisable          bool
+	CertManagerClient                   cmclient.Interface
+	DiscoveryClient                     discovery.DiscoveryInterface
+	DockerUsername                      string
+	DockerPassword                      string
+	Domain                              string
+	DomainInternal                      string
+	DynamicClient                       dynamic.Interface
+	EfsFileSystemId                     string
+	Engine                              Engine
+	Image                               string
+	JwtMngr                             *jwt.JwtManager
+	Name                                string
+	ReleasesToRetainAfterActive         int
+	ReleasesToRetainTaskRunIntervalHour int
+	MetricScraper                       *MetricScraperClient
+	MetricsClient                       metricsclientset.Interface
+	Namespace                           string
+	Password                            string
+	PdbDefaultMinAvailablePercentage    string
+	Provider                            string
+	RackName                            string
+	Resolver                            string
+	BuildDisableResolver                bool
+	RestClient                          rest.Interface
+	Router                              string
+	Socket                              string
+	Storage                             string
+	SubnetIDs                           string
+	Version                             string
+	VpcID                               string
+	FeatureGates                        map[string]bool
 
 	nc                 *NodeController
 	namespaceInformer  informerv1.NamespaceInformer
@@ -193,6 +198,10 @@ func FromEnv() (*Provider, error) {
 		DockerPassword:                   os.Getenv("DOCKER_HUB_PASSWORD"),
 	}
 
+	p.ReleasesToRetainAfterActive, _ = strconv.Atoi(os.Getenv("RELEASES_TO_RETAIN_AFTER_ACTIVE"))
+	p.ReleasesToRetainTaskRunIntervalHour, _ = strconv.Atoi(os.Getenv("RELEASES_TO_RETAIN_TASK_RUN_INTERVAL_HOUR"))
+	p.FeatureGates = options.GetFeatureGates()
+
 	p.RdsProvisioner = rds.NewProvisioner(p)
 	p.ElasticacheProvisioner = elasticache.NewProvisioner(p)
 
@@ -205,11 +214,22 @@ func (p *Provider) Context() context.Context {
 	return p.ctx
 }
 
+func (p *Provider) ContextTID() string {
+	if p.ctx == nil {
+		return ""
+	}
+
+	if tid, ok := p.ctx.Value("X-Convox-TID").(string); ok {
+		return tid
+	}
+	return ""
+}
+
 func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 	p.ctx = context.Background()
 	p.logger = logger.New("ns=k8s")
 	p.metrics = metrics.New("https://metrics.convox.com/metrics/rack")
-	p.templater = templater.New(template.TemplatesFS, p.templateHelpers())
+	p.templater = templater.New(template.TemplatesFS)
 	p.webhooks = []string{}
 
 	if os.Getenv("TEST") == "true" {

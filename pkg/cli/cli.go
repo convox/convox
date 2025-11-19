@@ -25,7 +25,8 @@ var (
 	flagNoFollow      = stdcli.BoolFlag("no-follow", "", "do not follow logs")
 	flagRack          = stdcli.StringFlag("rack", "r", "rack name")
 	flagWatchInterval = stdcli.StringFlag("watch", "", "cmd watch/rerun interval in seconds")
-	flagWait 		  = stdcli.BoolFlag("wait", "w", "wait for completion")
+	flagWait          = stdcli.BoolFlag("wait", "w", "wait for completion")
+	flagMachine       = stdcli.StringFlag("machine", "i", "machine name")
 )
 
 func New(name, version string) *Engine {

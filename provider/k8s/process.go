@@ -375,6 +375,10 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 		Spec: *s,
 	}
 
+	if opts.IsBuild {
+		pod.ObjectMeta.Labels["service-type"] = "build"
+	}
+
 	pd, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Create(
 		context.TODO(),
 		pod,
@@ -423,7 +427,7 @@ func (p *Provider) ProcessWait(app, pid string) (int, error) {
 	}
 }
 
-func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec, error) {
+func (p *Provider) podSpecFromService(app, service, release string, isBuild bool) (*ac.PodSpec, error) {
 	a, err := p.AppGet(app)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -460,7 +464,7 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 		},
 	})
 
-	if service != "build" && release != "" {
+	if !isBuild && release != "" {
 		m, r, err := common.ReleaseManifest(p, app, release)
 		if err != nil {
 			return nil, errors.WithStack(err)
@@ -540,7 +544,7 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 		Volumes:               vs,
 	}
 
-	if service != "build" || !p.BuildDisableResolver {
+	if !isBuild {
 		if ip, err := p.Engine.ResolverHost(); err == nil {
 			ps.DNSPolicy = "None"
 			ps.DNSConfig = &ac.PodDNSConfig{
@@ -556,6 +560,26 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 					"cluster.local",
 				},
 			}
+			if options.GetFeatureGates()[options.FeatureGateExternalDnsResolver] {
+				ps.DNSConfig.Searches = []string{}
+			}
+		}
+	}
+
+	if isBuild && !p.BuildDisableResolver && p.Resolver != "" {
+		ps.DNSPolicy = "None"
+		ps.DNSConfig = &ac.PodDNSConfig{
+			Nameservers: []string{p.Resolver},
+			Options: []ac.PodDNSConfigOption{
+				{Name: "ndots", Value: options.String("1")},
+			},
+			Searches: []string{
+				fmt.Sprintf("%s.%s.local", app, p.Name),
+				fmt.Sprintf("%s.svc.cluster.local", p.AppNamespace(app)),
+				fmt.Sprintf("%s.local", p.Name),
+				"svc.cluster.local",
+				"cluster.local",
+			},
 		}
 	}
 
@@ -563,9 +587,13 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 }
 
 func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.ProcessRunOptions) (*ac.PodSpec, error) {
-	s, err := p.podSpecFromService(app, service, common.DefaultString(opts.Release, ""))
+	s, err := p.podSpecFromService(app, service, common.DefaultString(opts.Release, ""), opts.IsBuild)
 	if err != nil {
 		return nil, errors.WithStack(err)
+	}
+
+	if options.GetFeatureGates()[options.FeatureGateDisableHostUsersAsDefault] {
+		s.HostUsers = options.Bool(false)
 	}
 
 	if opts.Command != nil {
@@ -595,6 +623,11 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 			s.Containers[0].Resources.Limits = ac.ResourceList{}
 		}
 		s.Containers[0].Resources.Limits["cpu"] = resource.MustParse(fmt.Sprintf("%dm", *opts.CpuLimit))
+	} else if options.GetFeatureGates()[options.FeatureGateAppLimitRequired] && opts.Cpu != nil {
+		if s.Containers[0].Resources.Limits == nil {
+			s.Containers[0].Resources.Limits = ac.ResourceList{}
+		}
+		s.Containers[0].Resources.Limits["cpu"] = s.Containers[0].Resources.Requests["cpu"]
 	}
 
 	if opts.Gpu != nil {
@@ -614,6 +647,11 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 			s.Containers[0].Resources.Limits = ac.ResourceList{}
 		}
 		s.Containers[0].Resources.Limits["memory"] = resource.MustParse(fmt.Sprintf("%dMi", *opts.MemoryLimit))
+	} else if options.GetFeatureGates()[options.FeatureGateAppLimitRequired] && opts.Memory != nil {
+		if s.Containers[0].Resources.Limits == nil {
+			s.Containers[0].Resources.Limits = ac.ResourceList{}
+		}
+		s.Containers[0].Resources.Limits["memory"] = s.Containers[0].Resources.Requests["memory"]
 	}
 
 	if opts.NodeLabels != nil {
@@ -666,7 +704,7 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 		s.ImagePullSecrets = append(s.ImagePullSecrets, ac.LocalObjectReference{Name: "docker-hub-authentication"})
 	}
 
-	if opts.Volumes != nil {
+	if opts.Volumes != nil && opts.UseServiceVolume == nil {
 		var vs []string
 
 		for from, to := range opts.Volumes {
@@ -687,6 +725,36 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 				Name:      p.volumeName(app, p.volumeFrom(app, service, v)),
 				MountPath: to,
 			})
+		}
+	}
+
+	if opts.UseServiceVolume != nil && *opts.UseServiceVolume {
+		m, _, err := common.AppManifest(p, app)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		sManifest, err := m.Service(service)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		if sManifest.Agent.Enabled {
+			ds, err := p.serviceDaemonset(app, service)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+
+			s.Volumes = ds.Spec.Template.Spec.Volumes
+			s.Containers[0].VolumeMounts = ds.Spec.Template.Spec.Containers[0].VolumeMounts
+		} else {
+			dp, err := p.serviceDeployment(app, service)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+
+			s.Volumes = dp.Spec.Template.Spec.Volumes
+			s.Containers[0].VolumeMounts = dp.Spec.Template.Spec.Containers[0].VolumeMounts
 		}
 	}
 

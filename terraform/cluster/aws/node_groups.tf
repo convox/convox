@@ -186,17 +186,15 @@ resource "aws_launch_template" "cluster_additional" {
     }
   }
 
-  user_data = random_id.additional_node_groups[each.key].keepers.ami_id == null ? null : base64encode(<<-EOF
-#!/bin/bash
-set -ex
-/etc/eks/bootstrap.sh ${aws_eks_cluster.cluster.name} \
-  --kubelet-extra-args '--node-labels=eks.amazonaws.com/nodegroup=${var.name}-additional-${each.key}-${random_id.additional_node_groups[each.key].hex}' \
-  --b64-cluster-ca ${aws_eks_cluster.cluster.certificate_authority[0].data} \
-  --apiserver-endpoint ${aws_eks_cluster.cluster.endpoint} --use-max-pods true --dns-cluster-ip ${local.kube_dns_ip}
-
-${local.launch_template_user_data_raw}
-EOF
-  )
+  user_data = random_id.additional_node_groups[each.key].keepers.ami_id == null ? null : base64encode(templatefile("${path.module}/files/custom_ami_userdata_al2023.sh", {
+    api_server_endpoint = aws_eks_cluster.cluster.endpoint,
+    api_server_ca       = aws_eks_cluster.cluster.certificate_authority[0].data,
+    name                = aws_eks_cluster.cluster.name,
+    cidr                = var.cidr,
+    cluster_dns         = local.kube_dns_ip,
+    node_labels         = "eks.amazonaws.com/nodegroup=${var.name}-additional-${each.key}-${random_id.additional_node_groups[each.key].hex}",
+    user_data           = local.launch_template_user_data_raw,
+  }))
   key_name = var.key_pair_name != "" ? var.key_pair_name : null
 }
 
@@ -229,6 +227,7 @@ resource "random_id" "build_node_additional" {
     capacity_type       = each.value.capacity_type
     ami_id              = each.value.ami_id
     private_subnets_ids = join("-", local.private_subnets_ids)
+    public_subnets_ids  = join("-", local.public_subnets_ids)
     role_arn            = replace(aws_iam_role.nodes.arn, "role/convox/", "role/") # eks barfs on roles with paths
     tags                = try(jsonencode(each.value.tags), "")
   }
@@ -254,7 +253,7 @@ resource "aws_eks_node_group" "build_additional" {
   cluster_name    = aws_eks_cluster.cluster.name
   node_group_name = "${var.name}-build-additional-${each.key}-${random_id.build_node_additional[each.key].hex}"
   node_role_arn   = random_id.build_node_additional[each.key].keepers.role_arn
-  subnet_ids      = local.private_subnets_ids
+  subnet_ids      = var.private ? local.private_subnets_ids : local.public_subnets_ids
   tags            = each.value.tags == null ? local.tags : merge(local.tags, each.value.tags)
   version         = random_id.build_node_additional[each.key].keepers.ami_id != null ? null : var.k8s_version
 
@@ -318,15 +317,15 @@ resource "aws_launch_template" "build_additional" {
     instance_metadata_tags      = var.imds_tags_enable ? "enabled" : "disabled"
   }
 
-  user_data = random_id.build_node_additional[each.key].keepers.ami_id == null ? null : base64encode(<<-EOF
-#!/bin/bash
-set -ex
-/etc/eks/bootstrap.sh ${aws_eks_cluster.cluster.name} \
-  --kubelet-extra-args '--node-labels=eks.amazonaws.com/nodegroup=${var.name}-build-additional-${each.key}-${random_id.build_node_additional[each.key].hex}' \
-  --b64-cluster-ca ${aws_eks_cluster.cluster.certificate_authority[0].data} \
-  --apiserver-endpoint ${aws_eks_cluster.cluster.endpoint} --use-max-pods true --dns-cluster-ip ${local.kube_dns_ip}
-EOF
-  )
+  user_data = random_id.build_node_additional[each.key].keepers.ami_id == null ? null : base64encode(templatefile("${path.module}/files/custom_ami_userdata_al2023.sh", {
+    api_server_endpoint = aws_eks_cluster.cluster.endpoint,
+    api_server_ca       = aws_eks_cluster.cluster.certificate_authority[0].data,
+    name                = aws_eks_cluster.cluster.name,
+    cidr                = var.cidr,
+    cluster_dns         = local.kube_dns_ip,
+    node_labels         = "eks.amazonaws.com/nodegroup=${var.name}-build-additional-${each.key}-${random_id.build_node_additional[each.key].hex}",
+    user_data           = "",
+  }))
 
   dynamic "tag_specifications" {
     for_each = toset(

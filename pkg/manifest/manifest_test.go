@@ -107,7 +107,7 @@ func TestManifestLoad(t *testing.T) {
 				Resources: []string{"database"},
 				Scale: manifest.ServiceScale{
 					Count:  manifest.ServiceScaleCount{Min: 3, Max: 10},
-					Cpu:    256,
+					Cpu:    250,
 					Memory: 512,
 				},
 				Sticky: false,
@@ -179,7 +179,7 @@ func TestManifestLoad(t *testing.T) {
 				Port: manifest.ServicePortScheme{Port: 3000, Scheme: "https"},
 				Scale: manifest.ServiceScale{
 					Count:  manifest.ServiceScaleCount{Min: 0, Max: 0},
-					Cpu:    256,
+					Cpu:    250,
 					Memory: 512,
 				},
 				Singleton: true,
@@ -213,7 +213,7 @@ func TestManifestLoad(t *testing.T) {
 				Init: true,
 				Scale: manifest.ServiceScale{
 					Count:  manifest.ServiceScaleCount{Min: 1, Max: 1},
-					Cpu:    256,
+					Cpu:    250,
 					Memory: 512,
 				},
 				Sticky: false,
@@ -312,7 +312,7 @@ func TestManifestLoad(t *testing.T) {
 				Init: true,
 				Scale: manifest.ServiceScale{
 					Count:  manifest.ServiceScaleCount{Min: 1, Max: 5},
-					Cpu:    256,
+					Cpu:    250,
 					Memory: 512,
 					Targets: manifest.ServiceScaleTargets{
 						Cpu:      50,
@@ -401,7 +401,7 @@ func TestManifestLoad(t *testing.T) {
 				},
 				Scale: manifest.ServiceScale{
 					Count:  manifest.ServiceScaleCount{Min: 1, Max: 1},
-					Cpu:    256,
+					Cpu:    250,
 					Memory: 512,
 				},
 				Sticky: false,
@@ -615,7 +615,7 @@ func TestManifestLoadSimple(t *testing.T) {
 				Init: true,
 				Scale: manifest.ServiceScale{
 					Count:  manifest.ServiceScaleCount{Min: 1, Max: 1},
-					Cpu:    256,
+					Cpu:    250,
 					Memory: 512,
 				},
 				Sticky: false,

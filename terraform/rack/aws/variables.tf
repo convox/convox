@@ -1,3 +1,8 @@
+variable "api_feature_gates" {
+  type    = string
+  default = ""
+}
+
 variable "buildkit_enabled" {
   default = false
 }
@@ -111,6 +116,12 @@ variable "nginx_image" {
   default = "registry.k8s.io/ingress-nginx/controller:v1.12.0@sha256:e6b8de175acda6ca913891f0f727bca4527e797d52688cbe9fec9040d6f6b6fa"
 }
 
+variable "nginx_additional_config" {
+  description = "Comma-separated key=value pairs (e.g., 'key1=value1,key2=value2')"
+  type        = string
+  default     = ""
+}
+
 variable "oidc_arn" {
   type = string
 }
@@ -130,6 +141,16 @@ variable "proxy_protocol" {
 
 variable "release" {
   type = string
+}
+
+variable "releases_to_retain_after_active" {
+  type    = number
+  default = 0
+}
+
+variable "releases_to_retain_task_run_interval_hour" {
+  type    = number
+  default = 24
 }
 
 variable "tags" {
