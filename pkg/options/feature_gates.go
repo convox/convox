@@ -6,15 +6,17 @@ import (
 )
 
 const (
-	FeatureGateRdsDisable                   = "rds-disable"
-	FeatureGateElasticacheDisable           = "elasticache-disable"
-	FeatureGateSystemEnvDisable             = "system-env-disable"
-	FeatureGateBalancerDisable              = "balancer-disable"
-	FeatureGateTid                          = "tid"
-	FeatureGateAppLimitRequired             = "app-limit-required"
-	FeatureGateExternalDnsResolver          = "external-dns-resolver"           // will use 1.1.1.1 as the default resolver if enabled
-	FeatureGateResourceInternalDomainSuffix = "resource-internal-domain-suffix" // will use svc.cluster.local as the default internal resource domain suffix
-	FeatureGateDisableHostUsersAsDefault    = "disable-host-users"              // will disable setting the host user in the container if enabled
+	FeatureGateRdsDisable                    = "rds-disable"
+	FeatureGatePrefixBasedAwsResourceDisable = "aws-resource-prefix-based-disable" // will disable resources based on prefixes like rds- and elasticache-
+	FeatureGateElasticacheDisable            = "elasticache-disable"
+	FeatureGateSystemEnvDisable              = "system-env-disable"
+	FeatureGateBalancerDisable               = "balancer-disable"
+	FeatureGateTid                           = "tid"
+	FeatureGateAppLimitRequired              = "app-limit-required"
+	FeatureGateExternalDnsResolver           = "external-dns-resolver"           // will use 1.1.1.1 as the default resolver if enabled
+	FeatureGateResourceInternalDomainSuffix  = "resource-internal-domain-suffix" // will use svc.cluster.local as the default internal resource domain suffix
+	FeatureGateDisableHostUsersAsDefault     = "disable-host-users"              // will disable setting the host user in the container if enabled
+	FeatureGateRDSTemplateConfig             = "rds-template-config"             // will limit RDS parameters to a basic set when using templates
 )
 
 func GetFeatureGates() map[string]bool {

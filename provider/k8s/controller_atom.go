@@ -167,7 +167,6 @@ func (a *AtomController) processDependency(obj *atomv1.Atom) {
 	defer a.dependencyProcessor.Delete(obj.Namespace)
 	for _, dep := range obj.Spec.Dependencies {
 		app, rType, _ := parseResourceSubstitutionId(dep)
-
 		if strings.HasPrefix(rType, "rds-") {
 			if err := a.processRdsDependency(obj, dep); err != nil {
 				a.logger.Logf("%s", err.Error())

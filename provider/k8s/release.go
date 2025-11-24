@@ -15,6 +15,7 @@ import (
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/aws/provisioner"
+	"github.com/convox/convox/provider/aws/provisioner/rds"
 	ca "github.com/convox/convox/provider/k8s/pkg/apis/convox/v1"
 	"github.com/pkg/errors"
 	"golang.org/x/text/cases"
@@ -805,6 +806,11 @@ func (p *Provider) releaseElasticacheResources(app *structs.App, envs structs.En
 			if p.FeatureGates[options.FeatureGateElasticacheDisable] {
 				return nil, nil, fmt.Errorf("elasticache resource is disabled")
 			}
+
+			if p.FeatureGates[options.FeatureGatePrefixBasedAwsResourceDisable] && strings.HasPrefix(r.Name, "elasticache-") {
+				return nil, nil, fmt.Errorf("elasticache resource is disabled")
+			}
+
 			if err := r.ElastiCacheNameValidate(); err != nil {
 				return nil, nil, err
 			}
@@ -813,7 +819,7 @@ func (p *Provider) releaseElasticacheResources(app *structs.App, envs structs.En
 
 			stateMap[id] = struct{}{}
 
-			err := p.ElasticacheProvisioner.Provision(id, p.MapToElasticacheParameter(r.Type, app.Name, r.Options))
+			err := p.ElasticacheProvisioner.Provision(id, p.MapToElasticacheParameter(r.Type, app.Name, r.Options), p.AwsResourceTags(app.Name, r.Name))
 			if err != nil {
 				return nil, nil, err
 			}
@@ -870,6 +876,11 @@ func (p *Provider) releaseRdsResources(app *structs.App, envs structs.Environmen
 			if p.FeatureGates[options.FeatureGateRdsDisable] {
 				return nil, nil, fmt.Errorf("rds resource is disabled")
 			}
+
+			if p.FeatureGates[options.FeatureGatePrefixBasedAwsResourceDisable] && strings.HasPrefix(r.Name, "rds-") {
+				return nil, nil, fmt.Errorf("rds resource is disabled")
+			}
+
 			if err := r.RdsNameValidate(); err != nil {
 				return nil, nil, err
 			}
@@ -878,7 +889,14 @@ func (p *Provider) releaseRdsResources(app *structs.App, envs structs.Environmen
 
 			rdsStateMap[id] = struct{}{}
 
-			err := p.RdsProvisioner.Provision(id, p.MapToRdsParameter(r.Type, app.Name, r.Options))
+			rdsParams, rdsMeta, err := p.MapToRdsParameterAndMeta(r.Type, app.Name, r.Options)
+			if err != nil {
+				return nil, nil, err
+			}
+			err = p.RdsProvisioner.Provision(id, rdsParams, rds.ProvisionExtraOpts{
+				Tags: p.AwsResourceTags(app.Name, r.Name),
+				Meta: rdsMeta,
+			})
 			if err != nil {
 				return nil, nil, err
 			}
@@ -888,6 +906,10 @@ func (p *Provider) releaseRdsResources(app *structs.App, envs structs.Environmen
 				return nil, nil, err
 			}
 
+			if !strings.HasPrefix(r.Type, "rds") {
+				// for dependency compatibility
+				r.Type = fmt.Sprintf("rds-%s", r.Type)
+			}
 			if isAvailable {
 				conn, err := p.RdsProvisioner.GetConnectionInfo(id)
 				if err != nil {

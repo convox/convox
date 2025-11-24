@@ -40,7 +40,7 @@ func NewProvisioner(s provisioner.Storage) *Provisioner {
 	}
 }
 
-func (p *Provisioner) Provision(id string, options map[string]string) error {
+func (p *Provisioner) Provision(id string, options map[string]string, tags map[string]string) error {
 	if options[ParamEngine] == "redis" {
 		if v, ok := options[ParamImport]; ok {
 			p.logger.Logf("Start redis replication group import")
@@ -55,7 +55,7 @@ func (p *Provisioner) Provision(id string, options map[string]string) error {
 			if provisioner.IsNotFoundError(err) {
 
 				p.logger.Logf("Start provisioning for redis replication group")
-				if err := p.InstallReplicationGroup(id, options); err != nil {
+				if err := p.InstallReplicationGroup(id, options, tags); err != nil {
 					return fmt.Errorf("failed to install redis replication group: %s", err)
 				}
 				return nil
@@ -82,7 +82,7 @@ func (p *Provisioner) Provision(id string, options map[string]string) error {
 			if provisioner.IsNotFoundError(err) {
 
 				p.logger.Logf("Start provisioning for memcached cache cluster")
-				if err := p.InstallCacheCluster(id, options); err != nil {
+				if err := p.InstallCacheCluster(id, options, tags); err != nil {
 					return fmt.Errorf("failed to install memcache cache cluster: %s", err)
 				}
 				return nil
@@ -100,7 +100,7 @@ func (p *Provisioner) Provision(id string, options map[string]string) error {
 	return fmt.Errorf("%s not supported", options[ParamEngine])
 }
 
-func (p *Provisioner) InstallReplicationGroup(id string, options map[string]string) error {
+func (p *Provisioner) InstallReplicationGroup(id string, options map[string]string, tags map[string]string) error {
 	_, err := p.storage.GetState(id)
 	if err != nil && !provisioner.IsNotFoundError(err) {
 		return err
@@ -161,6 +161,15 @@ func (p *Provisioner) InstallReplicationGroup(id string, options map[string]stri
 		},
 	}
 
+	if tags != nil {
+		for k, v := range tags {
+			createOptions.Tags = append(createOptions.Tags, elasticachetypes.Tag{
+				Key:   aws.String(k),
+				Value: aws.String(v),
+			})
+		}
+	}
+
 	p.logger.Logf("Installing redis replication group: %s", id)
 	_, err = p.elasticacheClient.CreateReplicationGroup(context.TODO(), createOptions)
 	if err != nil {
@@ -181,7 +190,7 @@ func (p *Provisioner) InstallReplicationGroup(id string, options map[string]stri
 	return nil
 }
 
-func (p *Provisioner) InstallCacheCluster(id string, options map[string]string) error {
+func (p *Provisioner) InstallCacheCluster(id string, options map[string]string, tags map[string]string) error {
 	_, err := p.storage.GetState(id)
 	if err != nil && !provisioner.IsNotFoundError(err) {
 		return err
@@ -240,6 +249,15 @@ func (p *Provisioner) InstallCacheCluster(id string, options map[string]string) 
 			Key:   aws.String(ProvisionerName),
 			Value: aws.String(stateData.Id),
 		},
+	}
+
+	if tags != nil {
+		for k, v := range tags {
+			createOptions.Tags = append(createOptions.Tags, elasticachetypes.Tag{
+				Key:   aws.String(k),
+				Value: aws.String(v),
+			})
+		}
 	}
 
 	p.logger.Logf("Installing memcached cache cluster: %s", id)
