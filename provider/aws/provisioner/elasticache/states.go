@@ -33,6 +33,8 @@ type StateData struct {
 
 	Host string `json:"host"`
 
+	Meta map[string]string `json:"meta"`
+
 	Paramters map[string]Parameter `json:"parameters"`
 }
 
@@ -72,6 +74,10 @@ func (s *StateData) GetStatus() string {
 
 func (s *StateData) SetStatus(state StatusType) {
 	s.Status = state
+}
+
+func (s *StateData) SetMeta(meta map[string]string) {
+	s.Meta = meta
 }
 
 func (s *StateData) AddParameter(p Parameter) error {

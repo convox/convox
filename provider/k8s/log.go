@@ -22,7 +22,7 @@ func (p *Provider) systemLog(tid, app, name string, ts time.Time, message string
 	if tid != "" {
 		app = fmt.Sprintf("%s-%s", tid, app)
 	}
-	if options.GetFeatureGates()[options.FeatureGateTid] && tid == "" {
+	if options.GetFeatureGates()[options.FeatureGateTid] {
 		return p.Engine.Log(app, fmt.Sprintf("system/%s", name), ts, message)
 	}
 	return p.Engine.Log(app, fmt.Sprintf("system/k8s/%s", name), ts, message)

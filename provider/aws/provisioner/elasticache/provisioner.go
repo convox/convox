@@ -40,11 +40,16 @@ func NewProvisioner(s provisioner.Storage) *Provisioner {
 	}
 }
 
-func (p *Provisioner) Provision(id string, options map[string]string) error {
+type ProvisionExtraOpts struct {
+	Tags map[string]string
+	Meta map[string]string
+}
+
+func (p *Provisioner) Provision(id string, options map[string]string, extraOpts ProvisionExtraOpts) error {
 	if options[ParamEngine] == "redis" {
 		if v, ok := options[ParamImport]; ok {
 			p.logger.Logf("Start redis replication group import")
-			if err := p.ImportReplicatonGroup(id, v, options); err != nil {
+			if err := p.ImportReplicatonGroup(id, v, options, extraOpts); err != nil {
 				return fmt.Errorf("failed to import redis replication group: %s", err)
 			}
 			return nil
@@ -55,7 +60,7 @@ func (p *Provisioner) Provision(id string, options map[string]string) error {
 			if provisioner.IsNotFoundError(err) {
 
 				p.logger.Logf("Start provisioning for redis replication group")
-				if err := p.InstallReplicationGroup(id, options); err != nil {
+				if err := p.InstallReplicationGroup(id, options, extraOpts); err != nil {
 					return fmt.Errorf("failed to install redis replication group: %s", err)
 				}
 				return nil
@@ -64,14 +69,14 @@ func (p *Provisioner) Provision(id string, options map[string]string) error {
 		}
 
 		p.logger.Logf("Start redis replication group update")
-		if err := p.UpdateReplicationGroup(id, options); err != nil {
+		if err := p.UpdateReplicationGroup(id, options, extraOpts); err != nil {
 			return fmt.Errorf("failed to update redis replication group: %s", err)
 		}
 		return nil
 	} else if options[ParamEngine] == "memcached" {
 		if v, ok := options[ParamImport]; ok {
 			p.logger.Logf("Start memcached cache cluster import")
-			if err := p.ImportCacheCluster(id, v, options); err != nil {
+			if err := p.ImportCacheCluster(id, v, options, extraOpts); err != nil {
 				return fmt.Errorf("failed to import memcached cache cluster: %s", err)
 			}
 			return nil
@@ -82,7 +87,7 @@ func (p *Provisioner) Provision(id string, options map[string]string) error {
 			if provisioner.IsNotFoundError(err) {
 
 				p.logger.Logf("Start provisioning for memcached cache cluster")
-				if err := p.InstallCacheCluster(id, options); err != nil {
+				if err := p.InstallCacheCluster(id, options, extraOpts); err != nil {
 					return fmt.Errorf("failed to install memcache cache cluster: %s", err)
 				}
 				return nil
@@ -91,7 +96,7 @@ func (p *Provisioner) Provision(id string, options map[string]string) error {
 		}
 
 		p.logger.Logf("Start memcached cache cluster update")
-		if err := p.UpdateCacheCluster(id, options); err != nil {
+		if err := p.UpdateCacheCluster(id, options, extraOpts); err != nil {
 			return fmt.Errorf("failed to update memcached cache cluster: %s", err)
 		}
 		return nil
@@ -100,7 +105,7 @@ func (p *Provisioner) Provision(id string, options map[string]string) error {
 	return fmt.Errorf("%s not supported", options[ParamEngine])
 }
 
-func (p *Provisioner) InstallReplicationGroup(id string, options map[string]string) error {
+func (p *Provisioner) InstallReplicationGroup(id string, options map[string]string, extraOpts ProvisionExtraOpts) error {
 	_, err := p.storage.GetState(id)
 	if err != nil && !provisioner.IsNotFoundError(err) {
 		return err
@@ -140,6 +145,9 @@ func (p *Provisioner) InstallReplicationGroup(id string, options map[string]stri
 
 	p.logger.Logf("Generating the state data for id: %s", id)
 	stateData := NewState(id, StateProvisioning, params)
+	if extraOpts.Meta != nil {
+		stateData.SetMeta(extraOpts.Meta)
+	}
 
 	if err := p.createSecurityGroupIfNotProvided(stateData); err != nil {
 		return fmt.Errorf("failed to create security group: %s", err)
@@ -159,6 +167,15 @@ func (p *Provisioner) InstallReplicationGroup(id string, options map[string]stri
 			Key:   aws.String(ProvisionerName),
 			Value: aws.String(stateData.Id),
 		},
+	}
+
+	if extraOpts.Tags != nil {
+		for k, v := range extraOpts.Tags {
+			createOptions.Tags = append(createOptions.Tags, elasticachetypes.Tag{
+				Key:   aws.String(k),
+				Value: aws.String(v),
+			})
+		}
 	}
 
 	p.logger.Logf("Installing redis replication group: %s", id)
@@ -181,7 +198,7 @@ func (p *Provisioner) InstallReplicationGroup(id string, options map[string]stri
 	return nil
 }
 
-func (p *Provisioner) InstallCacheCluster(id string, options map[string]string) error {
+func (p *Provisioner) InstallCacheCluster(id string, options map[string]string, extraOpts ProvisionExtraOpts) error {
 	_, err := p.storage.GetState(id)
 	if err != nil && !provisioner.IsNotFoundError(err) {
 		return err
@@ -221,6 +238,9 @@ func (p *Provisioner) InstallCacheCluster(id string, options map[string]string) 
 
 	p.logger.Logf("Generating the state data for id: %s", id)
 	stateData := NewState(id, StateProvisioning, params)
+	if extraOpts.Meta != nil {
+		stateData.SetMeta(extraOpts.Meta)
+	}
 
 	if err := p.createSecurityGroupIfNotProvided(stateData); err != nil {
 		return fmt.Errorf("failed to create security group: %s", err)
@@ -240,6 +260,15 @@ func (p *Provisioner) InstallCacheCluster(id string, options map[string]string) 
 			Key:   aws.String(ProvisionerName),
 			Value: aws.String(stateData.Id),
 		},
+	}
+
+	if extraOpts.Tags != nil {
+		for k, v := range extraOpts.Tags {
+			createOptions.Tags = append(createOptions.Tags, elasticachetypes.Tag{
+				Key:   aws.String(k),
+				Value: aws.String(v),
+			})
+		}
 	}
 
 	p.logger.Logf("Installing memcached cache cluster: %s", id)
@@ -262,7 +291,7 @@ func (p *Provisioner) InstallCacheCluster(id string, options map[string]string) 
 	return nil
 }
 
-func (p *Provisioner) UpdateReplicationGroup(id string, optoins map[string]string) error {
+func (p *Provisioner) UpdateReplicationGroup(id string, options map[string]string, extraOpts ProvisionExtraOpts) error {
 	stateBytes, err := p.storage.GetState(id)
 	if err != nil {
 		return err
@@ -273,10 +302,14 @@ func (p *Provisioner) UpdateReplicationGroup(id string, optoins map[string]strin
 		return err
 	}
 
+	if extraOpts.Meta != nil {
+		stateData.SetMeta(extraOpts.Meta)
+	}
+
 	updateMetadata := GetParametersMetaDataForReplicationGroupUpdate()
 
 	changedParams := []string{}
-	for k, v := range optoins {
+	for k, v := range options {
 		changed, err := stateData.UpdateParameterValueForCacheUpdate(k, v, updateMetadata)
 		if err != nil {
 			return fmt.Errorf("failed to update parameter value: %s", err)
@@ -371,7 +404,7 @@ func (p *Provisioner) UpdateReplicationGroup(id string, optoins map[string]strin
 	return nil
 }
 
-func (p *Provisioner) UpdateCacheCluster(id string, optoins map[string]string) error {
+func (p *Provisioner) UpdateCacheCluster(id string, options map[string]string, extraOpts ProvisionExtraOpts) error {
 	stateBytes, err := p.storage.GetState(id)
 	if err != nil {
 		return err
@@ -382,10 +415,14 @@ func (p *Provisioner) UpdateCacheCluster(id string, optoins map[string]string) e
 		return err
 	}
 
+	if extraOpts.Meta != nil {
+		stateData.SetMeta(extraOpts.Meta)
+	}
+
 	updateMetadata := GetParametersMetaDataForCacheClusterUpdate()
 
 	changedParams := []string{}
-	for k, v := range optoins {
+	for k, v := range options {
 		changed, err := stateData.UpdateParameterValueForCacheUpdate(k, v, updateMetadata)
 		if err != nil {
 			return fmt.Errorf("failed to update parameter value: %s", err)
@@ -436,13 +473,16 @@ func (p *Provisioner) UpdateCacheCluster(id string, optoins map[string]string) e
 	return nil
 }
 
-func (p *Provisioner) ImportReplicatonGroup(id string, repGrpId string, options map[string]string) error {
+func (p *Provisioner) ImportReplicatonGroup(id string, repGrpId string, options map[string]string, extraOpts ProvisionExtraOpts) error {
 	_, err := p.storage.GetState(id)
 	if err != nil && !provisioner.IsNotFoundError(err) {
 		return err
 	}
 
 	state := NewStateForImport(id)
+	if extraOpts.Meta != nil {
+		state.SetMeta(extraOpts.Meta)
+	}
 
 	p.logger.Logf("Fetching redis replication group details: %s", repGrpId)
 
@@ -469,14 +509,16 @@ func (p *Provisioner) ImportReplicatonGroup(id string, repGrpId string, options 
 	return nil
 }
 
-func (p *Provisioner) ImportCacheCluster(id string, clusterId string, options map[string]string) error {
+func (p *Provisioner) ImportCacheCluster(id string, clusterId string, options map[string]string, extraOpts ProvisionExtraOpts) error {
 	_, err := p.storage.GetState(id)
 	if err != nil && !provisioner.IsNotFoundError(err) {
 		return err
 	}
 
 	state := NewStateForImport(id)
-
+	if extraOpts.Meta != nil {
+		state.SetMeta(extraOpts.Meta)
+	}
 	p.logger.Logf("Fetching memcached cache cluster details: %s", clusterId)
 
 	cluster, err := p.GetCacheCluster(clusterId)
@@ -611,7 +653,7 @@ func (p *Provisioner) SaveState(id string, stateData *StateData) error {
 		return err
 	}
 
-	if err := p.storage.SaveState(id, stateBytes, ProvisionerName); err != nil {
+	if err := p.storage.SaveState(id, stateBytes, ProvisionerName, stateData.Meta); err != nil {
 		p.logger.Errorf("Failed to save state: %s", err)
 		return err
 	}

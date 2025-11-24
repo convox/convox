@@ -24,10 +24,11 @@ var (
 )
 
 type Resource struct {
-	Name    string            `yaml:"-"`
-	Type    string            `yaml:"type"`
-	Image   string            `yaml:"image,omitempty"`
-	Options map[string]string `yaml:"options"`
+	Name     string            `yaml:"-"`
+	Type     string            `yaml:"type"`
+	Provider string            `yaml:"provider,omitempty"`
+	Image    string            `yaml:"image,omitempty"`
+	Options  map[string]string `yaml:"options"`
 }
 
 type Resources []Resource
@@ -53,10 +54,17 @@ func (r Resource) mountEnv(envVar string) string {
 }
 
 func (r Resource) IsCustomManagedResource() bool {
-	return r.IsRds() || r.IsElastiCache()
+	return r.IsRds() || r.IsElastiCache() || r.IsAwsProvider()
+}
+
+func (r Resource) IsAwsProvider() bool {
+	return r.Provider == "aws"
 }
 
 func (r Resource) IsRds() bool {
+	if r.Type == "postgres" || r.Type == "mysql" || r.Type == "mariadb" {
+		return r.Provider == "aws"
+	}
 	return strings.HasPrefix(r.Type, "rds-")
 }
 
@@ -71,6 +79,9 @@ func (r Resource) RdsNameValidate() error {
 }
 
 func (r Resource) IsElastiCache() bool {
+	if r.Type == "redis" || r.Type == "memcached" {
+		return r.Provider == "aws"
+	}
 	return strings.HasPrefix(r.Type, "elasticache-")
 }
 
@@ -87,7 +98,7 @@ func (r Resource) ElastiCacheNameValidate() error {
 func (r Resource) IsContainerizedResource() bool {
 	switch r.Type {
 	case "postgres", "mysql", "mariadb", "redis", "memcached", "postgis":
-		return true
+		return r.Provider == "container" || r.Provider == ""
 	default:
 		return false
 	}

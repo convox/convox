@@ -15,6 +15,8 @@ import (
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/aws/provisioner"
+	"github.com/convox/convox/provider/aws/provisioner/elasticache"
+	"github.com/convox/convox/provider/aws/provisioner/rds"
 	ca "github.com/convox/convox/provider/k8s/pkg/apis/convox/v1"
 	"github.com/pkg/errors"
 	"golang.org/x/text/cases"
@@ -254,7 +256,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 
 	p.EventSend("release:promote", structs.EventSendOptions{Data: map[string]string{"app": app, "id": id}, Status: options.String("start")})
 
-	p.FlushStateLog(app)
+	p.FlushStateLog(p.ContextTID(), app)
 
 	return nil
 }
@@ -585,10 +587,15 @@ func (p *Provider) releaseTemplateResource(a *structs.App, e structs.Environment
 	return data, nil
 }
 
-func (p *Provider) releaseTemplateCustomResource(a *structs.App, e structs.Environment, r manifest.Resource, conn *provisioner.ConnectionInfo) ([]byte, error) {
+func (p *Provider) releaseTemplateCustomResource(tid string, a *structs.App, e structs.Environment, r manifest.Resource, conn *provisioner.ConnectionInfo) ([]byte, error) {
+	ns := p.AppNamespace(a.Name)
+	if tid != "" {
+		ns = p.TidNamespace(tid, a.Name)
+	}
+
 	params := map[string]interface{}{
 		"App":        a.Name,
-		"Namespace":  p.AppNamespace(a.Name),
+		"Namespace":  ns,
 		"Name":       r.Name,
 		"Parameters": r.Options,
 		"Rack":       p.Name,
@@ -805,15 +812,25 @@ func (p *Provider) releaseElasticacheResources(app *structs.App, envs structs.En
 			if p.FeatureGates[options.FeatureGateElasticacheDisable] {
 				return nil, nil, fmt.Errorf("elasticache resource is disabled")
 			}
+
+			if p.FeatureGates[options.FeatureGatePrefixBasedAwsResourceDisable] && strings.HasPrefix(r.Name, "elasticache-") {
+				return nil, nil, fmt.Errorf("elasticache resource is disabled")
+			}
+
 			if err := r.ElastiCacheNameValidate(); err != nil {
 				return nil, nil, err
 			}
 
-			id := p.CreateAwsResourceStateId(app.Name, r.Name)
+			id, err := p.CreateAwsResourceStateId(p.ContextTID(), app.Name, r.Name)
+			if err != nil {
+				return nil, nil, err
+			}
 
 			stateMap[id] = struct{}{}
 
-			err := p.ElasticacheProvisioner.Provision(id, p.MapToElasticacheParameter(r.Type, app.Name, r.Options))
+			err = p.ElasticacheProvisioner.Provision(id, p.MapToElasticacheParameter(r.Type, app.Name, r.Options), elasticache.ProvisionExtraOpts{
+				Tags: p.AwsResourceTags(app.Name, r.Name),
+			})
 			if err != nil {
 				return nil, nil, err
 			}
@@ -828,14 +845,20 @@ func (p *Provider) releaseElasticacheResources(app *structs.App, envs structs.En
 					return nil, nil, err
 				}
 
-				data, err := p.releaseTemplateCustomResource(app, envs, r, conn)
+				data, err := p.releaseTemplateCustomResource(p.ContextTID(), app, envs, r, conn)
 				if err != nil {
 					return nil, nil, errors.WithStack(err)
 				}
 
 				items = append(items, data)
 			} else {
-				substitutionId := resourceSubstitutionId(app.Name, r.Type, r.Name)
+				substitutionId := resourceSubstitutionId(&resourceSubstitution{
+					App:     app.Name,
+					RType:   r.Type,
+					RName:   r.Name,
+					StateId: id,
+					Tid:     p.ContextTID(),
+				})
 				dependencies = append(dependencies, substitutionId)
 				items = append(items, []byte(substitutionId))
 			}
@@ -870,15 +893,30 @@ func (p *Provider) releaseRdsResources(app *structs.App, envs structs.Environmen
 			if p.FeatureGates[options.FeatureGateRdsDisable] {
 				return nil, nil, fmt.Errorf("rds resource is disabled")
 			}
+
+			if p.FeatureGates[options.FeatureGatePrefixBasedAwsResourceDisable] && strings.HasPrefix(r.Name, "rds-") {
+				return nil, nil, fmt.Errorf("rds resource is disabled")
+			}
+
 			if err := r.RdsNameValidate(); err != nil {
 				return nil, nil, err
 			}
 
-			id := p.CreateAwsResourceStateId(app.Name, r.Name)
+			id, err := p.CreateAwsResourceStateId(p.ContextTID(), app.Name, r.Name)
+			if err != nil {
+				return nil, nil, err
+			}
 
 			rdsStateMap[id] = struct{}{}
 
-			err := p.RdsProvisioner.Provision(id, p.MapToRdsParameter(r.Type, app.Name, r.Options))
+			rdsParams, rdsMeta, err := p.MapToRdsParameterAndMeta(r.Type, app.Name, r)
+			if err != nil {
+				return nil, nil, err
+			}
+			err = p.RdsProvisioner.Provision(id, rdsParams, rds.ProvisionExtraOpts{
+				Tags: p.AwsResourceTags(app.Name, r.Name),
+				Meta: rdsMeta,
+			})
 			if err != nil {
 				return nil, nil, err
 			}
@@ -888,20 +926,30 @@ func (p *Provider) releaseRdsResources(app *structs.App, envs structs.Environmen
 				return nil, nil, err
 			}
 
+			if !strings.HasPrefix(r.Type, "rds") {
+				// for dependency compatibility
+				r.Type = fmt.Sprintf("rds-%s", r.Type)
+			}
 			if isAvailable {
 				conn, err := p.RdsProvisioner.GetConnectionInfo(id)
 				if err != nil {
 					return nil, nil, err
 				}
 
-				data, err := p.releaseTemplateCustomResource(app, envs, r, conn)
+				data, err := p.releaseTemplateCustomResource(p.ContextTID(), app, envs, r, conn)
 				if err != nil {
 					return nil, nil, errors.WithStack(err)
 				}
 
 				items = append(items, data)
 			} else {
-				substitutionId := resourceSubstitutionId(app.Name, r.Type, r.Name)
+				substitutionId := resourceSubstitutionId(&resourceSubstitution{
+					App:     app.Name,
+					RType:   r.Type,
+					RName:   r.Name,
+					StateId: id,
+					Tid:     p.ContextTID(),
+				})
 				dependencies = append(dependencies, substitutionId)
 				items = append(items, []byte(substitutionId))
 			}

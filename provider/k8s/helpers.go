@@ -396,49 +396,73 @@ type tempStateLogStorage struct {
 	threshold int
 }
 
-func (t *tempStateLogStorage) Add(key, value string) {
+func (t *tempStateLogStorage) Add(tid, key, value string) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	if _, has := t.s[key]; !has {
-		t.s[key] = []string{}
+	tkey := tid + key
+	if _, has := t.s[tkey]; !has {
+		t.s[tkey] = []string{}
 	}
-	t.s[key] = append(t.s[key], value)
+	t.s[tkey] = append(t.s[tkey], value)
 
-	l := len(t.s[key])
+	l := len(t.s[tkey])
 	if l > t.threshold {
-		t.s[key] = t.s[key][l-t.threshold:]
+		t.s[tkey] = t.s[tkey][l-t.threshold:]
 	}
 }
 
-func (t *tempStateLogStorage) Get(key string) []string {
+func (t *tempStateLogStorage) Get(tid, key string) []string {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	return t.s[key]
+	return t.s[tid+key]
 }
 
-func (t *tempStateLogStorage) Reset(key string) {
+func (t *tempStateLogStorage) Reset(tid, key string) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	t.s[key] = []string{}
+	t.s[tid+key] = []string{}
 }
 
-func resourceSubstitutionId(app, rType, rName string) string {
-	return fmt.Sprintf("##|app:%s|type:%s|resource:%s|##", app, rType, rName)
+type resourceSubstitution struct {
+	App     string `json:"app"`
+	RType   string `json:"type"`
+	RName   string `json:"resource"`
+	StateId string `json:"stateId"`
+	Tid     string `json:"tid"`
 }
 
-func parseResourceSubstitutionId(id string) (string, string, string) {
-	var app, rtype, rname string
+func resourceSubstitutionId(r *resourceSubstitution) string {
+	jsonData, _ := gojson.Marshal(r)
+	mapData := map[string]string{}
+	_ = gojson.Unmarshal(jsonData, &mapData)
+
+	subsId := "##|"
+	for k, v := range mapData {
+		subsId = subsId + fmt.Sprintf("%s:%s|", k, v)
+	}
+	subsId += "##"
+	return subsId
+}
+
+func parseResourceSubstitutionId(id string) *resourceSubstitution {
+	kv := make(map[string]string)
 	parts := strings.Split(id, "|")
 	for _, p := range parts {
-		if strings.HasPrefix(p, "app:") {
-			app = strings.TrimPrefix(p, "app:")
-		} else if strings.HasPrefix(p, "type:") {
-			rtype = strings.TrimPrefix(p, "type:")
-		} else if strings.HasPrefix(p, "resource:") {
-			rname = strings.TrimPrefix(p, "resource:")
+		if p == "" || p == "##" { // skip empty and delimiters
+			continue
+		}
+		if idx := strings.Index(p, ":"); idx > 0 {
+			k := p[:idx]
+			v := p[idx+1:]
+			kv[k] = v
 		}
 	}
-	return app, rtype, rname
+
+	rs := &resourceSubstitution{}
+	jsonData, _ := gojson.Marshal(kv)
+	_ = gojson.Unmarshal(jsonData, rs)
+
+	return rs
 }
 
 func patchBytes(patch map[string]interface{}) ([]byte, error) {

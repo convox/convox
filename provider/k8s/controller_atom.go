@@ -166,22 +166,21 @@ func (a *AtomController) processDependency(obj *atomv1.Atom) {
 	a.logger.Logf("start processing dependency for: %s", obj.Namespace)
 	defer a.dependencyProcessor.Delete(obj.Namespace)
 	for _, dep := range obj.Spec.Dependencies {
-		app, rType, _ := parseResourceSubstitutionId(dep)
-
-		if strings.HasPrefix(rType, "rds-") {
+		rsInfo := parseResourceSubstitutionId(dep)
+		if strings.HasPrefix(rsInfo.RType, "rds-") {
 			if err := a.processRdsDependency(obj, dep); err != nil {
 				a.logger.Logf("%s", err.Error())
-				a.provider.systemLog(a.provider.parseTidFromNamespace(obj.Namespace),
-					app, "state", time.Now(), err.Error())
+				a.provider.systemLog(rsInfo.Tid,
+					rsInfo.App, "state", time.Now(), err.Error())
 				return
 			}
 		}
 
-		if strings.HasPrefix(rType, "elasticache-") {
+		if strings.HasPrefix(rsInfo.RType, "elasticache-") {
 			if err := a.processElasticacheDependency(obj, dep); err != nil {
 				a.logger.Logf("%s", err.Error())
-				a.provider.systemLog(a.provider.parseTidFromNamespace(obj.Namespace),
-					app, "state", time.Now(), err.Error())
+				a.provider.systemLog(rsInfo.Tid,
+					rsInfo.App, "state", time.Now(), err.Error())
 				return
 			}
 		}
@@ -199,21 +198,20 @@ func (a *AtomController) processDependency(obj *atomv1.Atom) {
 }
 
 func (a *AtomController) processRdsDependency(obj *atomv1.Atom, dep string) error {
-	app, rType, rName := parseResourceSubstitutionId(dep)
-	resourceId := a.provider.CreateAwsResourceStateId(app, rName)
+	rsInfo := parseResourceSubstitutionId(dep)
 
-	conn, err := a.provider.RdsProvisioner.GetConnectionInfo(resourceId)
+	conn, err := a.provider.RdsProvisioner.GetConnectionInfo(rsInfo.StateId)
 	if err != nil {
-		return fmt.Errorf("failed to get connection info for resource '%s': %s", rName, err)
+		return fmt.Errorf("failed to get connection info for resource '%s': %s", rsInfo.RName, err)
 	}
-	data, err := a.provider.releaseTemplateCustomResource(&structs.App{
-		Name: app,
+	data, err := a.provider.releaseTemplateCustomResource(rsInfo.Tid, &structs.App{
+		Name: rsInfo.App,
 	}, nil, manifest.Resource{
-		Type: rType,
-		Name: rName,
+		Type: rsInfo.RType,
+		Name: rsInfo.RName,
 	}, conn)
 	if err != nil {
-		return fmt.Errorf("failed to create resource '%s' connecton config: %s", rName, err)
+		return fmt.Errorf("failed to create resource '%s' connecton config: %s", rsInfo.RName, err)
 	}
 	if err := a.resolveDependencyInAtomVersion(obj, dep, data); err != nil {
 		return err
@@ -222,21 +220,20 @@ func (a *AtomController) processRdsDependency(obj *atomv1.Atom, dep string) erro
 }
 
 func (a *AtomController) processElasticacheDependency(obj *atomv1.Atom, dep string) error {
-	app, rType, rName := parseResourceSubstitutionId(dep)
-	resourceId := a.provider.CreateAwsResourceStateId(app, rName)
+	rsInfo := parseResourceSubstitutionId(dep)
 
-	conn, err := a.provider.ElasticacheProvisioner.GetConnectionInfo(resourceId)
+	conn, err := a.provider.ElasticacheProvisioner.GetConnectionInfo(rsInfo.StateId)
 	if err != nil {
-		return fmt.Errorf("failed to get connection info for resource '%s': %s", rName, err)
+		return fmt.Errorf("failed to get connection info for resource '%s': %s", rsInfo.RName, err)
 	}
-	data, err := a.provider.releaseTemplateCustomResource(&structs.App{
-		Name: app,
+	data, err := a.provider.releaseTemplateCustomResource(rsInfo.Tid, &structs.App{
+		Name: rsInfo.App,
 	}, nil, manifest.Resource{
-		Type: rType,
-		Name: rName,
+		Type: rsInfo.RType,
+		Name: rsInfo.RName,
 	}, conn)
 	if err != nil {
-		return fmt.Errorf("failed to create resource '%s' connecton config: %s", rName, err)
+		return fmt.Errorf("failed to create resource '%s' connecton config: %s", rsInfo.RName, err)
 	}
 	if err := a.resolveDependencyInAtomVersion(obj, dep, data); err != nil {
 		return err

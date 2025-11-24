@@ -40,14 +40,19 @@ func NewProvisioner(s provisioner.Storage) *Provisioner {
 	}
 }
 
-func (p *Provisioner) Provision(id string, options map[string]string) error {
+type ProvisionExtraOpts struct {
+	Tags map[string]string
+	Meta map[string]string
+}
+
+func (p *Provisioner) Provision(id string, options map[string]string, extraOpts ProvisionExtraOpts) error {
 	if v, ok := options[ParamImport]; ok {
 		pass := options[ParamMasterUserPassword]
 		if pass == "" {
 			return fmt.Errorf("imported db password is required for import")
 		}
 		p.logger.Logf("Start db instance import")
-		if err := p.Import(id, v, &pass); err != nil {
+		if err := p.Import(id, v, &pass, extraOpts); err != nil {
 			return fmt.Errorf("failed to import db instance: %s", err)
 		}
 		return nil
@@ -58,16 +63,16 @@ func (p *Provisioner) Provision(id string, options map[string]string) error {
 		if provisioner.IsNotFoundError(err) {
 			if options[ParamSourceDBInstanceIdentifier] != "" {
 				p.logger.Logf("Start provision for db replica")
-				return p.InstallReplica(id, options)
+				return p.InstallReplica(id, options, extraOpts)
 			}
 
 			if options[ParamDBSnapshotIdentifier] != "" {
 				p.logger.Logf("Start provision for db instance from snapshot")
-				return p.RestoreFromSnapshot(id, options)
+				return p.RestoreFromSnapshot(id, options, extraOpts)
 			}
 
 			p.logger.Logf("Start provision for db instance")
-			if err := p.Install(id, options); err != nil {
+			if err := p.Install(id, options, extraOpts); err != nil {
 				return fmt.Errorf("failed to install db instance: %s", err)
 			}
 			return nil
@@ -76,13 +81,13 @@ func (p *Provisioner) Provision(id string, options map[string]string) error {
 	}
 
 	p.logger.Logf("Start db instance update")
-	if err := p.Update(id, options); err != nil {
+	if err := p.Update(id, options, extraOpts); err != nil {
 		return fmt.Errorf("failed to update db instance: %s", err)
 	}
 	return nil
 }
 
-func (p *Provisioner) Install(id string, options map[string]string) error {
+func (p *Provisioner) Install(id string, options map[string]string, extraOpts ProvisionExtraOpts) error {
 	_, err := p.storage.GetState(id)
 	if err != nil && !provisioner.IsNotFoundError(err) {
 		return err
@@ -122,6 +127,9 @@ func (p *Provisioner) Install(id string, options map[string]string) error {
 
 	p.logger.Logf("Generating the state data for id: %s", id)
 	stateData := NewState(id, StateProvisioning, params)
+	if extraOpts.Meta != nil {
+		stateData.SetMeta(extraOpts.Meta)
+	}
 
 	if err := p.createSecurityGroupIfNotProvided(stateData); err != nil {
 		return fmt.Errorf("failed to create security group: %s", err)
@@ -141,6 +149,15 @@ func (p *Provisioner) Install(id string, options map[string]string) error {
 			Key:   aws.String(ProvisionerName),
 			Value: aws.String(stateData.Id),
 		},
+	}
+
+	if extraOpts.Tags != nil {
+		for k, v := range extraOpts.Tags {
+			createOptions.Tags = append(createOptions.Tags, rdstypes.Tag{
+				Key:   aws.String(k),
+				Value: aws.String(v),
+			})
+		}
 	}
 
 	p.logger.Logf("Installing db instance: %s", id)
@@ -168,7 +185,7 @@ func (p *Provisioner) Install(id string, options map[string]string) error {
 	return nil
 }
 
-func (p *Provisioner) InstallReplica(id string, options map[string]string) error {
+func (p *Provisioner) InstallReplica(id string, options map[string]string, extraOpts ProvisionExtraOpts) error {
 	_, err := p.storage.GetState(id)
 	if err != nil && !provisioner.IsNotFoundError(err) {
 		return err
@@ -215,6 +232,9 @@ func (p *Provisioner) InstallReplica(id string, options map[string]string) error
 
 	p.logger.Logf("Generating the state data for id: %s", id)
 	stateData := NewState(id, StateProvisioning, params)
+	if extraOpts.Meta != nil {
+		stateData.SetMeta(extraOpts.Meta)
+	}
 
 	createOptions, err := stateData.GenerateCreateDBInstanceReadReplicaInput()
 	if err != nil {
@@ -226,6 +246,15 @@ func (p *Provisioner) InstallReplica(id string, options map[string]string) error
 			Key:   aws.String(ProvisionerName),
 			Value: aws.String(stateData.Id),
 		},
+	}
+
+	if extraOpts.Tags != nil {
+		for k, v := range extraOpts.Tags {
+			createOptions.Tags = append(createOptions.Tags, rdstypes.Tag{
+				Key:   aws.String(k),
+				Value: aws.String(v),
+			})
+		}
 	}
 
 	p.logger.Logf("Installing db instance read replica: %s", id)
@@ -253,7 +282,7 @@ func (p *Provisioner) InstallReplica(id string, options map[string]string) error
 	return nil
 }
 
-func (p *Provisioner) Update(id string, optoins map[string]string) error {
+func (p *Provisioner) Update(id string, optoins map[string]string, extraOpts ProvisionExtraOpts) error {
 	stateBytes, err := p.storage.GetState(id)
 	if err != nil {
 		return err
@@ -262,6 +291,10 @@ func (p *Provisioner) Update(id string, optoins map[string]string) error {
 	stateData := NewEmptyState()
 	if err := stateData.LoadState(stateBytes); err != nil {
 		return err
+	}
+
+	if extraOpts.Meta != nil {
+		stateData.SetMeta(extraOpts.Meta)
 	}
 
 	changedParams := []string{}
@@ -329,13 +362,16 @@ func (p *Provisioner) Update(id string, optoins map[string]string) error {
 	return nil
 }
 
-func (p *Provisioner) Import(id string, dbIdentifier string, pass *string) error {
+func (p *Provisioner) Import(id string, dbIdentifier string, pass *string, extraOpts ProvisionExtraOpts) error {
 	_, err := p.storage.GetState(id)
 	if err != nil && !provisioner.IsNotFoundError(err) {
 		return err
 	}
 
 	state := NewStateForImport(id)
+	if extraOpts.Meta != nil {
+		state.SetMeta(extraOpts.Meta)
+	}
 
 	p.logger.Logf("Fetching db instance details: %s", dbIdentifier)
 
@@ -357,7 +393,7 @@ func (p *Provisioner) Import(id string, dbIdentifier string, pass *string) error
 	return nil
 }
 
-func (p *Provisioner) RestoreFromSnapshot(id string, options map[string]string) error {
+func (p *Provisioner) RestoreFromSnapshot(id string, options map[string]string, extraOpts ProvisionExtraOpts) error {
 	_, err := p.storage.GetState(id)
 	if err != nil && !provisioner.IsNotFoundError(err) {
 		return err
@@ -391,6 +427,9 @@ func (p *Provisioner) RestoreFromSnapshot(id string, options map[string]string) 
 
 	p.logger.Logf("Generating the state data for id: %s", id)
 	stateData := NewState(id, StateProvisioning, params)
+	if extraOpts.Meta != nil {
+		stateData.SetMeta(extraOpts.Meta)
+	}
 
 	if err := p.createSecurityGroupIfNotProvided(stateData); err != nil {
 		return fmt.Errorf("failed to create security group: %s", err)
@@ -410,6 +449,15 @@ func (p *Provisioner) RestoreFromSnapshot(id string, options map[string]string) 
 			Key:   aws.String(ProvisionerName),
 			Value: aws.String(stateData.Id),
 		},
+	}
+
+	if extraOpts.Tags != nil {
+		for k, v := range extraOpts.Tags {
+			createOptions.Tags = append(createOptions.Tags, rdstypes.Tag{
+				Key:   aws.String(k),
+				Value: aws.String(v),
+			})
+		}
 	}
 
 	p.logger.Logf("Restoring db instance: %s from snapshot", id)
@@ -480,7 +528,7 @@ func (p *Provisioner) SaveState(id string, stateData *StateData) error {
 		return err
 	}
 
-	if err := p.storage.SaveState(id, stateBytes, ProvisionerName); err != nil {
+	if err := p.storage.SaveState(id, stateBytes, ProvisionerName, stateData.Meta); err != nil {
 		p.logger.Errorf("Failed to save state: %s", err)
 		return err
 	}

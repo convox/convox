@@ -41,6 +41,11 @@ jobs:
           prerelease: true
           release_name: "${{ env.VERSION }}"
           tag_name: ${{ env.VERSION }}
+      - name: Check and free space
+        run: |
+          df -h
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost
+          df -h
       - name: tools
         run: make tools
       - name: cli

@@ -237,6 +237,10 @@ func (p *Provider) AppNamespace(app string) string {
 	}
 }
 
+func (p *Provider) TidNamespace(tid, app string) string {
+	return fmt.Sprintf("%s-%s-%s", p.Name, tid, app)
+}
+
 func (p *Provider) NamespaceApp(namespace string) (string, error) {
 	ns, err := p.GetNamespaceFromInformer(namespace)
 	if err != nil {
@@ -303,6 +307,10 @@ func (p *Provider) appFromNamespace(ns ac.Namespace) (*structs.App, error) {
 		ns.Annotations = map[string]string{}
 	}
 
+	if ns.Labels == nil {
+		ns.Labels = map[string]string{}
+	}
+
 	a := &structs.App{
 		Generation: "3",
 		Locked:     ns.Annotations["convox.com/lock"] == "true",
@@ -312,6 +320,7 @@ func (p *Provider) appFromNamespace(ns ac.Namespace) (*structs.App, error) {
 		Status:     status,
 		Tags: map[string]string{
 			"namespace": ns.Name,
+			"tid":       ns.Labels["tid"],
 		},
 	}
 
