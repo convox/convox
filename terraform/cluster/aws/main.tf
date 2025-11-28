@@ -269,18 +269,18 @@ resource "null_resource" "wait_k8s_cluster" {
   ]
 }
 
-resource "local_file" "kubeconfig" {
-  depends_on = [
-    aws_eks_node_group.cluster,
-  ]
+# resource "local_file" "kubeconfig" {
+#   depends_on = [
+#     aws_eks_node_group.cluster,
+#   ]
 
-  filename = pathexpand("~/.kube/config.aws.${var.name}")
-  content = templatefile("${path.module}/kubeconfig.tpl", {
-    ca       = aws_eks_cluster.cluster.certificate_authority.0.data
-    cluster  = aws_eks_cluster.cluster.id
-    endpoint = aws_eks_cluster.cluster.endpoint
-  })
-}
+#   filename = pathexpand("~/.kube/config.aws.${var.name}")
+#   content = templatefile("${path.module}/kubeconfig.tpl", {
+#     ca       = aws_eks_cluster.cluster.certificate_authority.0.data
+#     cluster  = aws_eks_cluster.cluster.id
+#     endpoint = aws_eks_cluster.cluster.endpoint
+#   })
+# }
 
 data "http" "user_data_content" {
   count = var.user_data_url != "" ? 1 : 0
