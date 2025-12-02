@@ -15,6 +15,7 @@ const (
 	FeatureGateExternalDnsResolver          = "external-dns-resolver"           // will use 1.1.1.1 as the default resolver if enabled
 	FeatureGateResourceInternalDomainSuffix = "resource-internal-domain-suffix" // will use svc.cluster.local as the default internal resource domain suffix
 	FeatureGateDisableHostUsersAsDefault    = "disable-host-users"              // will disable setting the host user in the container if enabled
+	FeatureGateEnableYamlAnchorSupport      = "enable-yaml-anchor-support"      // will enable YAML anchor support in manifests if enabled
 )
 
 func GetFeatureGates() map[string]bool {

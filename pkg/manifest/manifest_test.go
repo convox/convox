@@ -714,3 +714,15 @@ func TestManifestValidate(t *testing.T) {
 
 	require.EqualError(t, err, fmt.Sprintf("validation errors:\n%s", strings.Join(errors, "\n")))
 }
+
+func TestManifestAnchor(t *testing.T) {
+	data, err := common.Testdata("sample-anchor-alias")
+	require.NoError(t, err)
+
+	resolved, err := manifest.ResolveAnchorAndAlias(data)
+	require.NoError(t, err)
+
+	expected, err := common.Testdata("sample-anchor-alias-expanded")
+	require.NoError(t, err)
+	require.Equal(t, string(expected), string(resolved))
+}

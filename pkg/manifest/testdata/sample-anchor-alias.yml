@@ -1,0 +1,38 @@
+base_service: &base_service
+  image: ubuntu:20.04
+  environment:
+    - VAR1=value1
+    - VAR2=value2
+  ports:
+    - 8080
+    - 9090
+  scale:
+    cpu: 256
+    memory: 512
+web:
+  <<: *base_service
+  command: run-web
+  environment:
+    - VAR1=web
+    - VAR3=webonly
+worker:
+  <<: *base_service
+  command: run-worker
+  environment:
+    - VAR1=worker
+    - VAR4=workeronly
+proxy: &proxy
+  image: nginx:alpine
+  ports:
+    - 80
+    - 443
+  environment:
+    - PROXY=true
+inherit_proxy:
+  <<: *proxy
+  command: custom-proxy
+  environment:
+    - PROXY=inherit
+services:
+  - *base_service
+  - *proxy

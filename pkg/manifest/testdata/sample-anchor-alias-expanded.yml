@@ -1,0 +1,67 @@
+base_service:
+    environment:
+        - VAR1=value1
+        - VAR2=value2
+    image: ubuntu:20.04
+    ports:
+        - 8080
+        - 9090
+    scale:
+        cpu: 256
+        memory: 512
+inherit_proxy:
+    command: custom-proxy
+    environment:
+        - PROXY=inherit
+    image: nginx:alpine
+    ports:
+        - 80
+        - 443
+proxy:
+    environment:
+        - PROXY=true
+    image: nginx:alpine
+    ports:
+        - 80
+        - 443
+services:
+    - environment:
+        - VAR1=value1
+        - VAR2=value2
+      image: ubuntu:20.04
+      ports:
+        - 8080
+        - 9090
+      scale:
+        cpu: 256
+        memory: 512
+    - environment:
+        - PROXY=true
+      image: nginx:alpine
+      ports:
+        - 80
+        - 443
+web:
+    command: run-web
+    environment:
+        - VAR1=web
+        - VAR3=webonly
+    image: ubuntu:20.04
+    ports:
+        - 8080
+        - 9090
+    scale:
+        cpu: 256
+        memory: 512
+worker:
+    command: run-worker
+    environment:
+        - VAR1=worker
+        - VAR4=workeronly
+    image: ubuntu:20.04
+    ports:
+        - 8080
+        - 9090
+    scale:
+        cpu: 256
+        memory: 512

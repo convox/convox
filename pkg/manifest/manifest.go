@@ -53,6 +53,13 @@ func Load(data []byte, env map[string]string) (*Manifest, error) {
 		return nil, err
 	}
 
+	if options.GetFeatureGates()[options.FeatureGateEnableYamlAnchorSupport] {
+		p, err = ResolveAnchorAndAlias(p)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	if err := yaml.Unmarshal(p, &m); err != nil {
 		return nil, err
 	}
