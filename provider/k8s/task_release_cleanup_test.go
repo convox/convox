@@ -372,6 +372,9 @@ func TestAppReleaseAndBuildCleanup(t *testing.T) {
 			// Mock the AppNamespace method
 			mockProvider.On("AppNamespace", tc.app.Name).Return(tc.app.Name + "-namespace")
 
+			// Add expectation for RepositoryImagesBatchDelete with empty builds slice
+			mockEngine.On("RepositoryImagesBatchDelete", tc.app.Name, mock.Anything).Return(nil).Maybe()
+
 			// Setup test data
 			// In a real test, you would actually create these objects in the fake client
 			// But since we'll mock the List calls, we don't need to do that here
