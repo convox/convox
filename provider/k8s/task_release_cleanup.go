@@ -177,43 +177,45 @@ func (a *releaseCleaner) appReleaseAndBuildCleanup(app *structs.App) error {
 		}
 	}
 
+	// delete releases older than the retained ones
 	for i := foundActiveIndex + a.releasesToRetainAfterActive + 1; i < len(rs); i++ {
-		a.convox.ConvoxV1().Releases(appNamespace).Delete(rs[i].Name, &am.DeleteOptions{})
+		if err := a.convox.ConvoxV1().Releases(appNamespace).Delete(rs[i].Name, &am.DeleteOptions{}); err != nil {
+			a.logger.Errorf("failed to delete release '%s': %s", rs[i].Name, err)
+			return err
+		}
 		time.Sleep(50 * time.Millisecond) // to avoid rate limit
 	}
 
 	oldReleaseTime := a.toTime(rs[min(foundActiveIndex+a.releasesToRetainAfterActive, len(rs)-1)].Spec.Created)
 	oldestReleaseTimeToKeep := oldReleaseTime.Add(-1 * time.Minute)
-	buildToDelete := []string{}
-	buildTagsToDelete := []string{}
+	buildToDelete := map[string][]string{}
 	for _, b := range bs {
 		// also ensure we don't delete builds that are newer than the oldest release we are keeping
 		if _, ok := buildToKeep[b.Name]; !ok && a.toTime(b.Spec.Started).Before(oldestReleaseTimeToKeep) {
-			buildToDelete = append(buildToDelete, b.Name)
+			buildToDelete[b.Name] = []string{}
 			m, err := manifest.Load([]byte(b.Spec.Manifest), structs.Environment{})
 			if err != nil {
 				a.logger.Errorf("failed to load manifest for build '%s' of app '%s': %s", b.Name, app.Name, err)
-				continue
+				return err
 			}
 			for _, svc := range m.Services {
 				if svc.Name != "" {
-					buildTagsToDelete = append(buildTagsToDelete, fmt.Sprintf("%s.%s", svc.Name, strings.ToUpper(b.Name)))
+					buildToDelete[b.Name] = append(buildToDelete[b.Name], fmt.Sprintf("%s.%s", svc.Name, strings.ToUpper(b.Name)))
 				}
 			}
 		}
 	}
 
-	for _, b := range buildToDelete {
-		a.convox.ConvoxV1().Builds(appNamespace).Delete(b, &am.DeleteOptions{})
-		time.Sleep(50 * time.Millisecond) // to avoid rate limit
-	}
-
-	batchSize := 50
-	for i := 0; i < len(buildTagsToDelete); i = i + batchSize {
-		batch := buildTagsToDelete[i:min(i+batchSize, len(buildTagsToDelete))]
-		if err := a.engine.RepositoryImagesBatchDelete(app.Name, batch); err != nil {
-			a.logger.Errorf("failed to delete images for builds '%s': %s", strings.Join(batch, ","), err)
+	for bName, tags := range buildToDelete {
+		if err := a.engine.RepositoryImagesBatchDelete(app.Name, tags); err != nil {
+			a.logger.Errorf("failed to delete images for builds '%s': %s", strings.Join(tags, ","), err)
+			return err
 		}
+		if err := a.convox.ConvoxV1().Builds(appNamespace).Delete(bName, &am.DeleteOptions{}); err != nil {
+			a.logger.Errorf("failed to delete build '%s': %s", bName, err)
+			return err
+		}
+		time.Sleep(50 * time.Millisecond) // to avoid rate limit
 	}
 	return nil
 }
