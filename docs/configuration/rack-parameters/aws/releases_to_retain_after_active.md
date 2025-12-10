@@ -52,21 +52,55 @@ $ convox rack params set releases_to_retain_after_active=10 -r rackName
 - When a new release becomes active, the retention policy is re-evaluated during the next cleanup cycle.
 - The active release itself is always retained regardless of this setting.
 
+## Error Handling and Retry Behavior
+
+Starting with version 3.23.2, the cleanup process includes improved error handling for ECR image removal:
+
+- **Atomic Operations**: Releases are only removed when their corresponding ECR images have been successfully deleted. If an error occurs during ECR image removal, the associated Convox release will not be deleted.
+- **Automatic Retry**: When ECR image removal fails, the cleanup will automatically retry on the next scheduled interval rather than skipping the release permanently.
+- **Error Visibility**: Any errors encountered during image removal are reported in the Convox API pod logs, making it easier to diagnose and resolve issues such as ECR permission problems or service disruptions.
+
+To view cleanup errors, check the Convox API pod logs:
+```html
+$ convox rack logs -r rackName | grep -i "ecr\|cleanup\|release"
+```
+
+If releases are not being cleaned up as expected, review the API pod logs to identify any underlying issues preventing ECR image removal.
+
 ## Best Practices
 - **Production Environments**: Set a higher retention value (50-100) to maintain adequate rollback options.
 - **Development Environments**: Use lower values (10-20) to minimize storage costs.
 - **High-Frequency Deployments**: Consider lower retention values if you deploy multiple times per day.
 - **Compliance Requirements**: Align retention values with your organization's disaster recovery and audit policies.
 - **Cost Optimization**: Monitor ECR storage costs and adjust retention accordingly.
+- **Monitor Cleanup Logs**: Periodically review API pod logs to ensure cleanup operations are completing successfully.
 
 ## Important Considerations
 - Ensure that the retention value aligns with your disaster recovery and rollback procedures.
 - Once releases are cleaned up, they cannot be recovered.
 - The cleanup process is permanent and removes both release metadata and container images.
 - Consider your deployment frequency when setting this value - more frequent deployments may require lower retention values.
+- If cleanup operations are failing, check the Convox API pod logs for error details before assuming the feature is not working.
+
+## Troubleshooting
+
+### Releases Not Being Cleaned Up
+If releases are not being removed as expected:
+
+1. **Check API Pod Logs**: Review the Convox API pod logs for errors related to ECR image removal.
+2. **Verify ECR Permissions**: Ensure the rack has appropriate permissions to delete images from ECR repositories.
+3. **Confirm Parameter Setting**: Verify the parameter is set correctly with `convox rack params -r rackName`.
+4. **Check Cleanup Interval**: The cleanup runs on a schedule defined by `releases_to_retain_task_run_interval_hour` (default: 24 hours).
+5. **Active Release Requirement**: Applications without an active release will be skipped during cleanup.
+
+### Common ECR Errors
+- **Access Denied**: The rack IAM role may lack permissions to delete ECR images.
+- **Image Not Found**: The image may have already been manually deleted from ECR.
+- **Rate Limiting**: AWS may be throttling ECR API requests during high-volume cleanup operations.
 
 ## Related Parameters
 - [releases_to_retain_task_run_interval_hour](/configuration/rack-parameters/aws/releases_to_retain_task_run_interval_hour): Controls how frequently the cleanup task runs to remove old releases.
 
 ## Version Requirements
-This feature requires at least Convox rack version `3.22.3`.
+- Basic release cleanup functionality requires at least Convox rack version `3.22.3`.
+- Improved error handling and retry behavior requires at least Convox rack version `3.23.2`.
