@@ -615,7 +615,9 @@ Scaling web...
 OK
 ```
 
-## Resource Management
+## Resource Management (Cloud Databases)
+
+Cloud Databases are defined in your `convox.yml` with `provider: aws`. The CLI provides commands to interact with these managed databases.
 
 ### resources
 
@@ -647,7 +649,7 @@ $ convox cloud resources console <resource> -a <app> -i <machine>
 **Example:**
 ```bash
 $ convox cloud resources console database -a myapp -i production
-psql (13.3)
+psql (17.5)
 Type "help" for help.
 db=#
 ```

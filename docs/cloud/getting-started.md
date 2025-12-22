@@ -7,7 +7,7 @@ url: /cloud/getting-started
 
 # Getting Started with Convox Cloud
 
-This guide will walk you through setting up Convox Cloud and deploying your first application to a machine.  You can also follow the guided onboarding process when you first login to the [Convox Console](https://console.convox.com/signup).
+This guide walks you through setting up Convox Cloud and deploying your first application. You can also follow the guided onboarding process when you first login to the [Convox Console](https://console.convox.com/signup).
 
 ## Prerequisites
 
@@ -15,7 +15,7 @@ Before you begin, ensure you have:
 
 - A Convox account (sign up at [console.convox.com](https://console.convox.com/signup))
 - The latest Convox CLI installed (version 3.19.0 or higher)
-- A application with a `Dockerfile` ready to deploy
+- An application with a `Dockerfile` ready to deploy
 
 ## Step 1: Install the Convox CLI
 
@@ -62,7 +62,7 @@ To create a machine:
    - **Size**: Select the appropriate size (start with Small for production apps)
 5. Click "Create Machine"
 
-Once created, verify your machine is available via the CLI or within the Console page:
+Once created, verify your machine is available:
 
 ```bash
 $ convox cloud machines
@@ -72,26 +72,18 @@ my-first-machine   small   us-east-1   running  2 minutes ago
 
 ## Step 4: Prepare Your Application
 
-Clone the Convox Node.js example application to get started quickly:
+Clone the Convox Node.js example application:
 
 ```bash
 $ git clone https://github.com/convox-examples/nodejs.git
 $ cd nodejs
 ```
 
-This example repository includes everything you need to deploy to Convox Cloud:
+This example includes:
 - A simple Express.js application (`app.js`)
 - Package configuration (`package.json`)
 - Docker configuration (`Dockerfile`)
 - Convox deployment configuration (`convox.yml`)
-
-The application is pre-configured with:
-- Express web server running on port 3000
-- Minimal resource allocation (250 CPU, 512 MB memory)
-- Single instance scaling
-- Health check endpoint
-
-You can deploy this application as-is to test your Convox Cloud setup, or modify it to suit your needs.
 
 ## Step 5: Create & Deploy Your Application
 
@@ -102,8 +94,7 @@ $ convox cloud apps create my-app -i my-first-machine
 Creating my-app... OK
 ```
 
-
-Deploy your application to the machine:
+Deploy your application:
 
 ```bash
 $ convox cloud deploy -a my-app -i my-first-machine
@@ -168,6 +159,66 @@ Then redeploy:
 $ convox cloud deploy -a my-app -i my-first-machine
 ```
 
+## Adding a Database
+
+To add a managed database to your application, update your `convox.yml`:
+
+```yaml
+resources:
+  database:
+    type: postgres
+    provider: aws
+    options:
+      class: dev
+      version: 17.5
+
+services:
+  web:
+    build: .
+    port: 3000
+    resources:
+      - database
+```
+
+Deploy the updated configuration:
+
+```bash
+$ convox cloud deploy -a my-app -i my-first-machine
+```
+
+The database connection URL is automatically injected as environment variables:
+
+```
+DATABASE_URL=postgres://username:password@host.name:5432/database
+DATABASE_USER=username
+DATABASE_PASS=password
+DATABASE_HOST=host.name
+DATABASE_PORT=5432
+DATABASE_NAME=database
+```
+
+### Production Database
+
+For production workloads, use a larger class with Multi-AZ failover:
+
+```yaml
+resources:
+  database:
+    type: postgres
+    provider: aws
+    options:
+      class: small
+      version: 17.5
+      durable: true
+
+services:
+  web:
+    build: .
+    port: 3000
+    resources:
+      - database
+```
+
 ## Common Workflows
 
 ### Setting Environment Variables
@@ -201,13 +252,22 @@ $ convox cloud releases rollback RABCDEFGHI -a my-app -i my-first-machine
 Rolling back to RABCDEFGHI... OK
 ```
 
+### Database Console
+
+```bash
+$ convox cloud resources console database -a my-app -i my-first-machine
+psql (17.5)
+Type "help" for help.
+database=#
+```
+
 ## Best Practices
 
 1. **Start Small**: Begin with an X-Small or Small machine and scale up as needed
 2. **Use Environment Variables**: Never hardcode secrets in your code
 3. **Monitor Resources**: Keep an eye on CPU and memory usage to right-size your machine
 4. **Enable Autoscaling**: Let Convox automatically adjust capacity based on load
-5. **Regular Deployments**: Deploy frequently to catch issues early
+5. **Use Cloud Databases for Production**: Enable `durable: true` for high availability
 
 ## Troubleshooting
 
@@ -232,20 +292,31 @@ $ convox cloud logs -s my-service -a my-app -i my-first-machine
 
 ### Out of Resources
 
-If you see resource errors, consider upgrading your machine size. To do this:
+If you see resource errors, consider upgrading your machine size:
 1. Log into the Convox Console
 2. Navigate to your machine settings
 3. Select a larger size
 4. Apply the changes
 
+### Database Connection Issues
+
+Verify the database is linked:
+```bash
+$ convox cloud resources -a my-app -i my-first-machine
+```
+
+Check environment variables:
+```bash
+$ convox cloud env -a my-app -i my-first-machine
+```
+
 ## Next Steps
 
-Now that you have your first application running on Convox Cloud:
-
-- [Learn about Machine Management](/cloud/machines) - Detailed guide to machine configuration
-- [Explore the CLI Reference](/cloud/cli-reference) - Complete command documentation
-- [Review Sizing and Pricing](/cloud/machines/sizing-and-pricing) - Optimize your costs
-- [Understand Limitations](/cloud/machines/limitations) - Know the platform constraints
+- [Machine Management](/cloud/machines) - Detailed guide to machine configuration
+- [Cloud Databases](/cloud/databases) - Database configuration and options
+- [CLI Reference](/cloud/cli-reference) - Complete command documentation
+- [Sizing and Pricing](/cloud/machines/sizing-and-pricing) - Optimize your costs
+- [Limitations](/cloud/machines/limitations) - Understand platform constraints
 
 ## Getting Help
 
