@@ -55,12 +55,12 @@ mycompany/feature-testing     500   1024    2h30m
 
 Machines come in four pre-configured sizes:
 
-| Size | vCPU | RAM | Best For |
-|------|------|-----|----------|
-| **X-Small** | 0.5 | 1 GB | Development, testing, low-traffic apps |
-| **Small** | 1 | 2 GB | Standard production applications |
-| **Medium** | 2 | 4 GB | Growing applications, multiple services |
-| **Large** | 4 | 8 GB | High-traffic production, resource-intensive apps |
+| Size | vCPU | RAM | Monthly Price | Best For |
+|------|------|-----|---------------|----------|
+| **X-Small** | 0.5 | 1 GB | $12 | Development, testing, low-traffic apps |
+| **Small** | 1 | 2 GB | $25 | Standard production applications |
+| **Medium** | 2 | 4 GB | $75 | Growing applications, multiple services |
+| **Large** | 4 | 8 GB | $150 | High-traffic production, resource-intensive apps |
 
 ## Upgrading and Downgrading Machines
 
@@ -71,7 +71,7 @@ Machine resize functionality is coming soon. In the meantime, to change your mac
 3. Verify your application is running correctly on the new machine
 4. Remove the old machine once you've confirmed everything is working
 
-This ensures zero downtime during the transition to your new machine size.
+This ensures zero downtime during the transition.
 
 ## Resource Allocation
 
@@ -94,8 +94,8 @@ services:
     port: 3000
     scale:
       count: 2
-      cpu: 250    # 0.25 vCPU per process
-      memory: 512 # 512 MB per process
+      cpu: 250
+      memory: 512
   
   worker:
     build: .
@@ -116,6 +116,35 @@ services:
 Total resource usage:
 - CPU: (2 × 250) + 250 + 125 = 875 millicores (under 1000 limit)
 - Memory: (2 × 512) + 768 + 256 = 2048 MB (at 2 GB limit)
+
+## Cloud Databases
+
+Convox Cloud provides managed database instances separately from machines. Cloud Databases are billed independently and include:
+
+- PostgreSQL, MySQL, and MariaDB
+- 7-day automated backups
+- Optional Multi-AZ failover
+
+See [Cloud Databases](/cloud/databases) for configuration details.
+
+### Example with Database
+
+```yaml
+resources:
+  database:
+    type: postgres
+    provider: aws
+    options:
+      class: small
+      version: 17.5
+
+services:
+  web:
+    build: .
+    port: 3000
+    resources:
+      - database
+```
 
 ## Managing Applications on Machines
 
@@ -191,7 +220,7 @@ app-859886fd8d-h8nxf  web      running  RWIUFPDLJFV  10 hours ago
 
 ## Build Configuration
 
-Machines include isolated build environments that don't consume machine resources. Build configuration options:
+Machines include isolated build environments that don't consume machine resources:
 
 - Builds run in ephemeral containers
 - Build cache is maintained per machine
@@ -223,6 +252,8 @@ To delete a machine:
 - Remove all applications running on it
 - Delete all associated data
 - Cannot be undone
+
+Note: Cloud Databases are managed separately and are not deleted when a machine is deleted.
 
 ## Best Practices
 
@@ -272,5 +303,6 @@ To delete a machine:
 ## Next Steps
 
 - [Sizing and Pricing](/cloud/machines/sizing-and-pricing) - Detailed pricing information
+- [Cloud Databases](/cloud/databases) - Database configuration options
 - [Limitations](/cloud/machines/limitations) - Understand machine constraints
 - [CLI Reference](/cloud/cli-reference) - Complete command documentation

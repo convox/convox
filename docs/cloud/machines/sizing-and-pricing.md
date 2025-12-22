@@ -7,7 +7,7 @@ url: /cloud/machines/sizing-and-pricing
 
 # Sizing and Pricing
 
-Convox Cloud offers simple, predictable pricing based on machine size. Choose the right size for your workload and pay a fixed monthly price with no hidden infrastructure costs.
+Convox Cloud offers predictable pricing based on machine size. Choose the right size for your workload and pay a fixed monthly price with no hidden infrastructure costs.
 
 ## Machine Tiers
 
@@ -61,11 +61,7 @@ Convox Cloud offers simple, predictable pricing based on machine size. Choose th
 
 ### X-Small Free Hours
 
-The X-Small tier includes 250 free hours per month, perfect for:
-- Development and testing
-- Hobby projects
-- Learning Convox
-- Staging environments
+The X-Small tier includes 250 free hours per month:
 
 **How it works:**
 - First 250 hours each month are free
@@ -77,31 +73,54 @@ The X-Small tier includes 250 free hours per month, perfect for:
 - Running 24/7 for ~11 days (250 hours) = FREE
 - Running one machine full month (730 hours) = $7.89 for extra 480 hours
 
+## Cloud Databases Pricing
+
+Cloud Databases are billed separately from machines:
+
+| Database Class | vCPU | RAM | Storage | Monthly Price |
+|----------------|------|-----|---------|---------------|
+| **dev** | 1.0 | 1 GB | 20 GB | $19 |
+| **small** | 2.0 | 2 GB | 50 GB | $39 |
+| **medium** | 2.0 | 4 GB | 100 GB | $99 |
+| **large** | 2.0 | 8 GB | 250 GB | $199 |
+
+Enabling `durable: true` for Multi-AZ failover doubles the database cost.
+
+See [Database Sizing and Pricing](/cloud/databases/sizing-and-pricing) for details.
+
 ## Pricing Examples
+
+### Development Environment
+
+| Resource | Size/Class | Monthly Cost |
+|----------|------------|--------------|
+| Machine | X-Small | $12 |
+| PostgreSQL | dev | $19 |
+| **Total** | | **$31** |
 
 ### Single Service Application
 
-**Small E-commerce Site**
-- Machine: Small ($25/month)
-- Services: Web + Background Worker
-- Traffic: 10,000 visitors/month
-- **Total: $25/month**
+| Resource | Size/Class | Monthly Cost |
+|----------|------------|--------------|
+| Machine | Small | $25 |
+| PostgreSQL (durable) | small | $78 |
+| **Total** | | **$103** |
 
 ### Multi-Service Application
 
-**SaaS Platform**
-- Machine: Medium ($75/month)
-- Services: Web + API + Worker + Cache
-- Traffic: 50,000 visitors/month
-- **Total: $75/month**
+| Resource | Size/Class | Monthly Cost |
+|----------|------------|--------------|
+| Machine | Medium | $75 |
+| PostgreSQL (durable) | medium | $198 |
+| **Total** | | **$273** |
 
 ### High-Traffic Application
 
-**Content Platform**
-- Machine: Large ($150/month)
-- Services: Web (3x) + API (2x) + Worker (2x) + Cache + Queue
-- Traffic: 500,000 visitors/month
-- **Total: $150/month**
+| Resource | Size/Class | Monthly Cost |
+|----------|------------|--------------|
+| Machine | Large | $150 |
+| PostgreSQL (durable) | large | $398 |
+| **Total** | | **$548** |
 
 ## Billing Details
 
@@ -147,16 +166,21 @@ All machine tiers include:
 Services will be throttled or may experience performance degradation. Consider upgrading your machine size.
 
 ### Are there any hidden costs?
-No. The monthly machine price includes all infrastructure, bandwidth (within reasonable limits), storage, and platform features.
+No. The monthly machine price includes all infrastructure, bandwidth (within reasonable limits), storage, and platform features. Database costs are separate and listed clearly.
 
 ### Can I pause a machine to save costs?
-Currently, machines cannot be paused. For temporary environments, we recommend using the X-Small tier's free hours.  You can create an destoy machines at any time and will be billed on a pro-rated basis.
+Currently, machines cannot be paused. For temporary environments, use the X-Small tier's free hours. You can create and destroy machines at any time and will be billed on a pro-rated basis.
 
 ### How does billing work for autoscaling?
 Autoscaling happens within your machine's resource limits. There are no additional charges for scaling services up or down within your machine.
 
+### Are database costs separate from machine costs?
+Yes. Machines and Cloud Databases are billed separately. See the pricing examples above for combined costs.
+
 ## Next Steps
 
 - [Machine Management](/cloud/machines) - Learn how to create and manage machines
+- [Cloud Databases](/cloud/databases) - Database configuration options
+- [Database Pricing](/cloud/databases/sizing-and-pricing) - Detailed database pricing
 - [Getting Started](/cloud/getting-started) - Deploy your first application
 - [Limitations](/cloud/machines/limitations) - Understand platform constraints

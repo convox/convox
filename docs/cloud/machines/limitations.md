@@ -7,7 +7,7 @@ url: /cloud/machines/limitations
 
 # Limitations and Differences
 
-While Convox Cloud provides the same powerful application deployment capabilities as self-hosted Convox Racks, there are some limitations due to its managed, multi-tenant nature. This guide outlines these limitations and provides alternatives where applicable.
+While Convox Cloud provides the same application deployment capabilities as self-hosted Convox Racks, there are some limitations due to its managed, multi-tenant nature. This guide outlines these limitations and provides alternatives where applicable.
 
 ## Infrastructure Access Limitations
 
@@ -123,62 +123,73 @@ Unlike self-hosted Racks, Cloud machines have limited configuration options:
 **Limitation**: Cannot establish VPC peering or private connectivity to your own AWS resources.
 
 **Impact**:
-- Cannot directly connect to private RDS databases
+- Cannot directly connect to private RDS databases in your own AWS account
 - Cannot access private S3 endpoints
 - Cannot integrate with existing VPCs
 
 **Alternatives**:
+- Use Cloud Databases (managed RDS through Convox)
 - Use public endpoints with security groups
 - Implement API-based integration
-- Use resource overlays for managed databases
 
-## Service Limitations
+## Database Resources
 
-### No Custom Services
+### Cloud Databases (Managed RDS)
 
-**Limitation**: Cannot deploy system-level services or operators.
+Convox Cloud provides fully managed RDS databases through Cloud Databases:
 
-**Not Supported**:
-- Kubernetes operators
-- Admission webhooks  
-- Custom controllers
-- Cluster-wide services
-- DaemonSets
+**Available Database Types**:
+- PostgreSQL (versions 14.x - 18.x)
+- MySQL (versions 8.0.x and 8.4.x)
+- MariaDB (versions 10.6.x - 11.8.x)
 
-**Supported**:
-- Standard application services via `convox.yml`
-- Sidecar containers within your services
-- Init containers
+**Configuration Example**:
+```yaml
+resources:
+  database:
+    type: postgres
+    provider: aws
+    options:
+      class: small
+      version: 17.5
+      durable: true
 
-### Agent Services Not Supported
+services:
+  web:
+    resources:
+      - database
+```
 
-**Limitation**: Cannot deploy agent-type services that run on every node.
-
-**Impact**:
-- Cannot deploy custom monitoring agents
-- Cannot run node-level services
-- Cannot install custom log collectors
-
-**Alternatives**:
-- Use built-in monitoring and logging
-- Include agents in your application containers
-- Use external SaaS monitoring solutions
-
-## Resource Limitations
-
-### Database Resources
-
-**Limitation**: Only containerized databases are available, no managed RDS option.
-
-**Available Resources**:
-- PostgreSQL (containerized)
-- MySQL (containerized)
-- Redis (containerized)
-- Memcached (containerized)
+**Available Options**:
+- Database class (dev, small, medium, large)
+- Database version
+- Multi-AZ failover (`durable: true`)
 
 **Not Available**:
-- AWS RDS
-- ElastiCache
+- Custom RDS instance types
+- Custom storage sizes beyond class limits
+- Read replicas
+- Custom parameter groups
+
+### Containerized Databases
+
+You can also use containerized databases (without `provider: aws`):
+
+```yaml
+resources:
+  database:
+    type: postgres
+    options:
+      version: 13
+      storage: 10
+```
+
+**Note**: Containerized databases do not persist data across machine restarts. Use Cloud Databases for production workloads.
+
+### External Databases
+
+**Not Available Through Cloud**:
+- AWS ElastiCache
 - DocumentDB
 - DynamoDB
 
@@ -186,7 +197,9 @@ Unlike self-hosted Racks, Cloud machines have limited configuration options:
 - Use resource overlays to connect to external databases
 - Provision managed databases separately and connect via environment variables
 
-### Storage Limitations
+## Storage Limitations
+
+### No Persistent Volumes
 
 **Limitation**: No persistent volume support or EFS mounting.
 
@@ -197,7 +210,7 @@ Unlike self-hosted Racks, Cloud machines have limited configuration options:
 
 **Alternatives**:
 - Use external object storage (S3)
-- Store data in databases
+- Store data in Cloud Databases
 - Implement stateless architectures
 
 ### No Custom Volume Mounts
@@ -267,6 +280,38 @@ volumes:
 - Scan images in your CI/CD pipeline
 - Use external scanning services
 - Regularly update base images
+
+## Service Limitations
+
+### No Custom Services
+
+**Limitation**: Cannot deploy system-level services or operators.
+
+**Not Supported**:
+- Kubernetes operators
+- Admission webhooks  
+- Custom controllers
+- Cluster-wide services
+- DaemonSets
+
+**Supported**:
+- Standard application services via `convox.yml`
+- Sidecar containers within your services
+- Init containers
+
+### Agent Services Not Supported
+
+**Limitation**: Cannot deploy agent-type services that run on every node.
+
+**Impact**:
+- Cannot deploy custom monitoring agents
+- Cannot run node-level services
+- Cannot install custom log collectors
+
+**Alternatives**:
+- Use built-in monitoring and logging
+- Include agents in your application containers
+- Use external SaaS monitoring solutions
 
 ## Scaling Limitations
 
@@ -356,7 +401,7 @@ volumes:
 ### Adapting to Limitations
 
 1. **Design for Statelessness**
-   - Store state in external services
+   - Store state in Cloud Databases
    - Use databases for persistence
    - Implement session storage in Redis
 
@@ -365,14 +410,21 @@ volumes:
    services:
      web:
        scale:
-         cpu: 250      # Start small
-         memory: 512   # Increase as needed
+         cpu: 250
+         memory: 512
    ```
 
-3. **Use External Services**
-   - Databases: Use DBaaS providers
-   - Storage: Use S3 or similar
-   - Monitoring: Integrate Datadog, New Relic, etc.
+3. **Use Cloud Databases for Production**
+   ```yaml
+   resources:
+     database:
+       type: postgres
+       provider: aws
+       options:
+         class: small
+         version: 17.5
+         durable: true
+   ```
 
 4. **Implement at Application Level**
    - Security: Application-level authentication
@@ -391,6 +443,7 @@ Consider a self-hosted Convox Rack if you need:
 - Persistent storage
 - System-level customization
 - Dedicated resources
+- Advanced RDS features (read replicas, custom instance types)
 
 ## Feature Comparison Table
 
@@ -403,13 +456,14 @@ Consider a self-hosted Convox Rack if you need:
 | Network Policies | ✗ | ✓ |
 | Persistent Volumes | ✗ | ✓ |
 | Custom IAM Roles | ✗ | ✓ |
-| RDS Resources | ✗ | ✓ |
+| Managed Databases | ✓ (Cloud DBs) | ✓ (RDS Resources) |
+| RDS Read Replicas | ✗ | ✓ |
 | Agent Services | ✗ | ✓ |
 | Custom Build Nodes | ✗ | ✓ |
 | Rack Parameters | Limited | Full |
 | Setup Time | Instant | 10-20 min |
 | Maintenance | None | Required |
-| Pricing | Per Machine | Infrastructure |
+| Pricing | Per Machine/DB | Infrastructure |
 
 ## Getting Help
 
@@ -423,5 +477,6 @@ If you're unsure whether Convox Cloud meets your requirements:
 ## Next Steps
 
 - [CLI Reference](/cloud/cli-reference) - Learn available commands
+- [Cloud Databases](/cloud/databases) - Database configuration options
 - [Migration Guide](/cloud/migration-guide) - Move from other platforms
 - [Comparison](/cloud/comparison) - Detailed Cloud vs Rack comparison

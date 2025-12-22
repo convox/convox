@@ -7,32 +7,31 @@ url: /cloud/comparison
 
 # Cloud vs Rack Comparison
 
-This comprehensive comparison helps you choose between Convox Cloud (managed machines) and self-hosted Convox Racks based on your specific requirements, technical expertise, and business needs.
+This comparison helps you choose between Convox Cloud (managed machines) and self-hosted Convox Racks based on your requirements.
 
-## Executive Summary
+## Summary
 
 | Aspect | Convox Cloud | Self-Hosted Rack |
 |--------|--------------|------------------|
-| **Best For** | Startups, rapid deployment, predictable costs | Enterprises, full control, compliance needs |
+| **Best For** | Rapid deployment, predictable costs | Full control, compliance needs |
 | **Setup Time** | < 1 minute | 10-20 minutes |
 | **Expertise Required** | Minimal | Moderate to Advanced |
-| **Cost Model** | Fixed monthly per machine | Variable infrastructure costs |
+| **Cost Model** | Fixed monthly per machine/database | Variable infrastructure costs |
 | **Control Level** | Platform-managed | Full control |
 | **Maintenance** | Zero | Regular updates required |
 
-## Detailed Feature Comparison
+## Feature Comparison
 
 ### Infrastructure Management
 
 | Feature | Convox Cloud | Self-Hosted Rack |
 |---------|--------------|------------------|
-| **AWS Account Required** | ✗ | ✓ |
-| **VPC Management** | ✗ | ✓ |
-| **Security Groups** | ✗ | ✓ |
-| **IAM Roles** | ✗ | ✓ |
-| **Subnet Configuration** | ✗ | ✓ |
+| **AWS Account Required** | No | Yes |
+| **VPC Management** | No | Yes |
+| **Security Groups** | No | Yes |
+| **IAM Roles** | No | Yes |
+| **Subnet Configuration** | No | Yes |
 | **NAT Gateways** | Managed | Self-managed |
-| **Internet Gateways** | Managed | Self-managed |
 | **Cluster Upgrades** | Automatic | Manual |
 | **OS Patching** | Automatic | Manual/Automated |
 | **Certificate Management** | Automatic | Automatic |
@@ -46,54 +45,63 @@ This comprehensive comparison helps you choose between Convox Cloud (managed mac
 | **Build Environment** | Managed pool | Configurable |
 | **Local Development** | Same as rack | Identical |
 | **convox.yml Support** | Full | Full |
-| **Environment Variables** | ✓ | ✓ |
-| **Rolling Deployments** | ✓ | ✓ |
-| **Rollback Support** | ✓ | ✓ |
-| **Log Aggregation** | 7 days | Configurable |
+| **Environment Variables** | Yes | Yes |
+| **Rolling Deployments** | Yes | Yes |
+| **Rollback Support** | Yes | Yes |
+| **Log Retention** | 7 days | Configurable |
 | **Monitoring** | Basic | Full CloudWatch/Custom |
+
+### Database Resources
+
+| Feature | Convox Cloud | Self-Hosted Rack |
+|---------|--------------|------------------|
+| **Managed RDS** | Yes (Cloud Databases) | Yes (RDS Resources) |
+| **PostgreSQL** | Yes | Yes |
+| **MySQL** | Yes | Yes |
+| **MariaDB** | Yes | Yes |
+| **Read Replicas** | No | Yes |
+| **Custom Instance Types** | No (fixed classes) | Yes |
+| **Custom Storage Sizes** | No (fixed per class) | Yes |
+| **Snapshot Restore** | No | Yes |
+| **Database Import** | No | Yes |
+| **ElastiCache** | No | Yes |
+| **Containerized DBs** | Yes | Yes |
 
 ### Operational Capabilities
 
 | Feature | Convox Cloud | Self-Hosted Rack |
 |---------|--------------|------------------|
-| **Kubectl Access** | ✗ | ✓ |
-| **SSH to Nodes** | ✗ | ✓ |
-| **Custom Node Types** | ✗ | ✓ |
-| **Spot Instances** | ✗ | ✓ |
-| **GPU Support** | ✗ | ✓ |
-| **Custom AMIs** | ✗ | ✓ |
-| **Cluster Autoscaling** | ✗ | Configurable |
-| **Pod Autoscaling** | ✓ | ✓ |
-| **Custom Operators** | ✗ | ✓ |
-| **Service Mesh** | ✗ | ✓ |
+| **Kubectl Access** | No | Yes |
+| **SSH to Nodes** | No | Yes |
+| **Custom Node Types** | No | Yes |
+| **Spot Instances** | No | Yes |
+| **GPU Support** | No | Yes |
+| **Custom AMIs** | No | Yes |
+| **Cluster Autoscaling** | No | Configurable |
+| **Pod Autoscaling** | Yes | Yes |
+| **Custom Operators** | No | Yes |
 
 ### Networking
 
 | Feature | Convox Cloud | Self-Hosted Rack |
 |---------|--------------|------------------|
 | **Load Balancer Type** | Managed ALB | ALB/NLB/CLB |
-| **Static IPs** | ✗ | ✓ |
-| **Custom Domains** | ✓ | ✓ |
-| **SSL Termination** | ✓ | ✓ |
-| **VPC Peering** | ✗ | ✓ |
-| **Private Link** | ✗ | ✓ |
-| **Internal Load Balancers** | ✗ | ✓ |
-| **Network Policies** | ✗ | ✓ |
-| **Service Discovery** | Internal only | Full |
-| **Egress Control** | ✗ | ✓ |
+| **Static IPs** | No | Yes |
+| **Custom Domains** | Yes | Yes |
+| **SSL Termination** | Yes | Yes |
+| **VPC Peering** | No | Yes |
+| **Private Link** | No | Yes |
+| **Internal Load Balancers** | No | Yes |
+| **Network Policies** | No | Yes |
 
-### Storage and Databases
+### Storage
 
 | Feature | Convox Cloud | Self-Hosted Rack |
 |---------|--------------|------------------|
-| **Persistent Volumes** | ✗ | ✓ |
-| **EFS Support** | ✗ | ✓ |
-| **EBS Volumes** | ✗ | ✓ |
-| **RDS Integration** | ✗ | ✓ |
-| **ElastiCache** | ✗ | ✓ |
-| **S3 Access** | ✗ | ✓ |
-| **Containerized DBs** | ✓ | ✓ |
-| **Backup Management** | Manual | Configurable |
+| **Persistent Volumes** | No | Yes |
+| **EFS Support** | No | Yes |
+| **EBS Volumes** | No | Yes |
+| **S3 Access** | Via credentials | Yes |
 
 ### Security and Compliance
 
@@ -104,25 +112,32 @@ This comprehensive comparison helps you choose between Convox Cloud (managed mac
 | **Secrets Management** | Environment vars | Multiple options |
 | **RBAC** | Platform-managed | Full control |
 | **Audit Logging** | Basic | CloudTrail/Custom |
-| **Data Residency** | Platform-managed | Any AWS region |
-| **Encryption at Rest** | ✓ | Configurable |
-| **Custom Security Groups** | ✗ | ✓ |
-| **WAF Integration** | ✗ | ✓ |
+| **Custom Security Groups** | No | Yes |
+| **WAF Integration** | No | Yes |
 
 ## Cost Analysis
 
 ### Convox Cloud Pricing
 
-Simple, predictable monthly pricing:
+**Machines:**
 
-| Machine Size | Monthly Cost | Included |
-|--------------|--------------|----------|
-| X-Small | $12* | 0.5 vCPU, 1 GB RAM, builds, SSL, monitoring |
-| Small | $25 | 1 vCPU, 2 GB RAM, builds, SSL, monitoring |
-| Medium | $75 | 2 vCPU, 4 GB RAM, builds, SSL, monitoring |
-| Large | $150 | 4 vCPU, 8 GB RAM, builds, SSL, monitoring |
+| Machine Size | Monthly Cost |
+|--------------|--------------|
+| X-Small | $12 |
+| Small | $25 |
+| Medium | $75 |
+| Large | $150 |
 
-*500 free hours/month
+**Cloud Databases:**
+
+| Database Class | Monthly Cost |
+|----------------|--------------|
+| dev | $19 |
+| small | $39 |
+| medium | $99 |
+| large | $199 |
+
+Enabling `durable: true` doubles the database cost.
 
 ### Self-Hosted Rack Costs (AWS)
 
@@ -136,36 +151,19 @@ Variable costs based on usage:
 | NAT Gateway | ~$45 | Plus data transfer |
 | EBS Storage | ~$10 | 100 GB |
 | Data Transfer | ~$20+ | Varies by usage |
-| CloudWatch | ~$10 | Basic monitoring |
+| RDS (db.t3.micro) | ~$15+ | If using managed DB |
 | **Total** | **~$228+** | Minimum production |
 
 ### Cost Comparison by Scale
 
 | Workload | Convox Cloud | Self-Hosted Rack |
 |----------|--------------|------------------|
-| Dev/Test | $0-12 | ~$100 |
-| Small Production | $25 | ~$228 |
-| Medium Production | $50-100 | ~$400 |
-| Large Production | $200-400 | ~$800+ |
-| Enterprise | Contact Sales | $1,500+ |
+| Dev/Test | $12-31 | ~$100 |
+| Small Production | $64-103 | ~$228 |
+| Medium Production | $174-273 | ~$400 |
+| Large Production | $349-548 | ~$800+ |
 
-## Performance Comparison
-
-### Resource Allocation
-
-**Convox Cloud**
-- Fixed CPU:Memory ratios (1:2)
-- Shared build infrastructure
-- Network performance varies by machine size
-- No dedicated resources below Large tier
-
-**Self-Hosted Rack**
-- Customizable ratios
-- Dedicated build nodes optional
-- Full network performance control
-- All resources dedicated
-
-### Scalability Limits
+## Scalability Limits
 
 | Metric | Convox Cloud | Self-Hosted Rack |
 |--------|--------------|------------------|
@@ -180,62 +178,23 @@ Variable costs based on usage:
 
 ### Choose Convox Cloud When:
 
-✓ **Rapid Deployment Priority**
 - Need to deploy in minutes, not hours
-- Prototype or MVP development
 - Limited DevOps resources
-
-✓ **Predictable Costs Required**
 - Fixed monthly budgets
-- Startups with cost constraints
-- Projects with defined resource needs
-
-✓ **Standard Architecture**
-- Typical web applications
-- Microservices under 10 services
-- Standard networking requirements
-
-✓ **Team Capabilities**
-- Limited AWS expertise
+- Standard web applications
 - Small development teams
-- Focus on application, not infrastructure
-
-✓ **Business Requirements**
 - SaaS applications
-- B2B/B2C web applications
-- Development and staging environments
 
 ### Choose Self-Hosted Rack When:
 
-✓ **Full Control Required**
 - Need Kubernetes access
-- Custom operators or CRDs
-- Complex networking requirements
-
-✓ **Compliance Needs**
-- HIPAA, PCI DSS requirements
-- Data residency requirements
-- Audit logging requirements
-
-✓ **Advanced Architecture**
+- Compliance requirements (HIPAA, PCI DSS)
 - Service mesh implementations
 - Multi-region deployments
-- Hybrid cloud setups
-
-✓ **Resource Requirements**
 - GPU workloads
-- Memory-intensive applications (>8GB)
-- Persistent storage needs
-
-✓ **Integration Needs**
 - VPC peering required
-- Direct RDS/ElastiCache access
-- IAM role integration
-
-✓ **Scale Requirements**
+- Direct RDS/ElastiCache access with advanced features
 - Very large applications
-- Hundreds of services
-- Custom autoscaling needs
 
 ## Migration Paths
 
@@ -255,7 +214,6 @@ Migration effort: **Low**
 
 When to migrate:
 - Reducing operational overhead
-- Cutting infrastructure costs
 - Simplifying management
 
 Migration effort: **Low-Medium**
@@ -263,28 +221,13 @@ Migration effort: **Low-Medium**
 - Adjust for limitations
 - 2-4 hours typical
 
-## Decision Matrix
-
-| Factor | Weight | Convox Cloud | Self-Hosted Rack |
-|--------|--------|--------------|------------------|
-| **Setup Speed** | High | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ |
-| **Ease of Use** | High | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ |
-| **Cost (Small)** | High | ⭐⭐⭐⭐⭐ | ⭐⭐ |
-| **Cost (Large)** | Medium | ⭐⭐⭐ | ⭐⭐⭐⭐ |
-| **Flexibility** | Medium | ⭐⭐ | ⭐⭐⭐⭐⭐ |
-| **Control** | Low | ⭐ | ⭐⭐⭐⭐⭐ |
-| **Compliance** | Varies | ⭐ | ⭐⭐⭐⭐⭐ |
-| **Maintenance** | High | ⭐⭐⭐⭐⭐ | ⭐⭐ |
-| **Scaling** | Medium | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
-| **Security** | High | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
-
 ## Hybrid Approach
 
 Consider using both Cloud and Rack:
 
 ### Development on Cloud
 - X-Small machines for developers
-- Rapid iteration
+- Dev database class
 - Cost-effective testing
 
 ### Production on Rack
@@ -301,23 +244,6 @@ $ convox cloud deploy -i dev
 $ convox rack install aws production
 $ convox deploy -r production
 ```
-
-## FAQ
-
-### Can I migrate between Cloud and Rack?
-Yes, applications are portable between Cloud and Rack with minor adjustments for Cloud limitations.
-
-### Can I use both simultaneously?
-Yes, many teams use Cloud for development/staging and Rack for production.
-
-### Which is more secure?
-Rack offers more security control, but Cloud provides managed security updates and patches.
-
-### Which is faster to deploy?
-Initial setup is faster on Cloud (minutes vs. 10-20 minutes), but deployment speeds are similar once configured.
-
-### Can Cloud handle production workloads?
-Yes, Cloud handles production workloads well within its resource limits (up to 4 vCPU, 8 GB RAM per machine).
 
 ## Recommendation Summary
 
@@ -350,37 +276,19 @@ Yes, Cloud handles production workloads well within its resource limits (up to 4
 ### Try Convox Cloud
 ```bash
 # Create machine via Console at console.convox.com
-# Create your application
 $ convox cloud apps create my-app -i my-first-machine
-# Then deploy
 $ convox cloud deploy -i my-first-machine -a my-app
 ```
 
 ### Try Self-Hosted Rack
 ```bash
-# Create Runtime Integration then Install Rack via Console at console.convox.com
-# Create your application
+# Create Runtime Integration then Install Rack via Console
 $ convox apps create my-app -r my-first-rack
-# Then deploy
 $ convox deploy -r my-first-rack -a my-app
 ```
 
-## Support and Resources
+## Support
 
-### Documentation
-- [Cloud Getting Started](/cloud/getting-started)
-- [Rack Installation](/getting-started/introduction)
-
-### Contact
 - Sales: sales@convox.com
 - Support: cloud-support@convox.com
 - Community: community.convox.com
-
-## Conclusion
-
-Both Convox Cloud and self-hosted Racks have their place:
-
-- **Cloud** excels at simplicity, speed, and predictable costs
-- **Rack** provides full control, flexibility, and enterprise features
-
-Choose based on your team's needs, technical requirements, and growth trajectory. Start with Cloud for quick wins, migrate to Rack when you need more control.

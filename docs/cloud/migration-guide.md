@@ -7,9 +7,9 @@ url: /cloud/migration-guide
 
 # Migration Guide
 
-This guide helps you migrate your applications to Convox Cloud from other platforms. Whether you're coming from Heroku, Render, Railway, or even a self-hosted Convox Rack, we'll walk you through the process step by step.
+This guide helps you migrate your applications to Convox Cloud from other platforms. Whether you're coming from Heroku, Render, Railway, or a self-hosted Convox Rack, we'll walk you through the process.
 
-## Quick Migration Overview
+## Migration Overview
 
 | From Platform | Effort Level | Key Changes | Migration Time |
 |---------------|-------------|-------------|----------------|
@@ -112,7 +112,7 @@ services:
     build: .
     command: node migrate.js
     scale:
-      count: 0  # Template service for migrations
+      count: 0
 ```
 
 ### Step 4: Handle Add-ons
@@ -121,19 +121,21 @@ Map Heroku add-ons to Convox resources:
 
 | Heroku Add-on | Convox Equivalent |
 |---------------|-------------------|
-| Heroku Postgres | `postgres` resource or external |
-| Heroku Redis | `redis` resource or external |
+| Heroku Postgres | Cloud Database (postgres) |
+| Heroku Redis | External service or containerized |
 | SendGrid | Use API with environment variables |
 | Papertrail | Configure syslog or use external |
 | New Relic | Add agent to Dockerfile |
 
-**Example with database:**
+**Example with Cloud Database:**
 ```yaml
 resources:
   database:
     type: postgres
+    provider: aws
     options:
-      storage: 10
+      class: small
+      version: 17.5
       
 services:
   web:
@@ -150,7 +152,7 @@ services:
 $ heroku pg:backups:capture -a your-heroku-app
 $ heroku pg:backups:download -a your-heroku-app
 
-# Import to Convox
+# Import to Convox Cloud Database
 $ convox cloud resources import database --file latest.dump -a myapp -i production
 ```
 
@@ -158,7 +160,6 @@ $ convox cloud resources import database --file latest.dump -a myapp -i producti
 
 ```bash
 # Create machine via Convox Console first
-# Log into console.convox.com > Cloud Machines > New Machine
 
 # Set environment variables from Heroku export
 $ convox cloud env set $(cat .env.heroku) -a myapp -i production
@@ -188,7 +189,7 @@ $ convox cloud services -a myapp -i production
 
 ### Step 1: Export Render Configuration
 
-Your `render.yaml` defines your services. We'll convert this to `convox.yml`.
+Your `render.yaml` defines your services. Convert this to `convox.yml`.
 
 **Render render.yaml:**
 ```yaml
@@ -215,8 +216,6 @@ databases:
 
 ### Step 2: Create Dockerfile
 
-Since Render handles builds automatically, you'll need a Dockerfile:
-
 ```dockerfile
 FROM node:18-alpine
 WORKDIR /app
@@ -237,8 +236,10 @@ environment:
 resources:
   database:
     type: postgres
+    provider: aws
     options:
-      storage: 10
+      class: dev
+      version: 17.5
 
 services:
   web:
@@ -267,9 +268,6 @@ services:
 
 ```bash
 # Create Convox machine via Console
-# Log into console.convox.com > Cloud Machines > New Machine
-
-# Deploy to Convox
 $ convox cloud deploy -i production
 
 # Copy environment variables
@@ -281,8 +279,6 @@ $ convox cloud env set DATABASE_URL=postgres://... -a myapp -i production
 Railway uses automatic builds and nixpacks. You'll need to be more explicit with Convox.
 
 ### Step 1: Create Dockerfile
-
-Railway automatically detects your framework. With Convox, create an explicit Dockerfile:
 
 ```dockerfile
 # Example for Next.js app
@@ -306,6 +302,14 @@ CMD ["npm", "start"]
 ### Step 2: Create convox.yml
 
 ```yaml
+resources:
+  database:
+    type: postgres
+    provider: aws
+    options:
+      class: small
+      version: 17.5
+
 services:
   web:
     build: .
@@ -317,6 +321,8 @@ services:
       targets:
         cpu: 70
     health: /api/health
+    resources:
+      - database
 ```
 
 ### Step 3: Handle Railway Variables
@@ -380,13 +386,28 @@ volumes:       # No persistent volumes in Cloud
 privileged:    # Limited in Cloud
 ```
 
-**Handle persistent storage differently:**
+**Convert RDS resources to Cloud Databases:**
+
+Before (Rack):
 ```yaml
-# Instead of volumes, use external storage
-services:
-  web:
-    environment:
-      - S3_BUCKET=myapp-uploads  # Use S3 instead of volumes
+resources:
+  database:
+    type: rds-postgres
+    options:
+      class: db.t3.micro
+      storage: 20
+      version: 13
+```
+
+After (Cloud):
+```yaml
+resources:
+  database:
+    type: postgres
+    provider: aws
+    options:
+      class: dev
+      version: 17.5
 ```
 
 ### Step 5: Update CI/CD
@@ -445,8 +466,10 @@ environment:
 resources:
   database:
     type: postgres
-  cache:
-    type: redis
+    provider: aws
+    options:
+      class: dev
+      version: 17.5
 
 services:
   web:
@@ -454,15 +477,15 @@ services:
     port: 3000
     resources:
       - database
-      - cache
       
   worker:
     build: .
     command: npm run worker
     resources:
       - database
-      - cache
 ```
+
+Note: Redis is not available as a Cloud Database. Use an external Redis service or include it in your application.
 
 ### Step 2: Deploy
 
@@ -471,84 +494,35 @@ services:
 $ convox cloud deploy -i production
 ```
 
-## Common Migration Tasks
+## Database Migration
 
-### Database Migration
-
-#### PostgreSQL
+### PostgreSQL
 
 ```bash
 # Export from source
 $ pg_dump $OLD_DATABASE_URL > backup.sql
 
-# Import to Convox
+# Import to Convox Cloud Database
 $ convox cloud resources import database --file backup.sql -a myapp -i production
 ```
 
-#### MySQL
+### MySQL
 
 ```bash
 # Export from source
 $ mysqldump -h old-host -u user -p database > backup.sql
 
-# Import to Convox
+# Import to Convox Cloud Database
 $ convox cloud resources import database --file backup.sql -a myapp -i production
 ```
 
-#### MongoDB (Using External Service)
+### MongoDB (Using External Service)
 
-Since Convox Cloud doesn't provide MongoDB:
+Convox Cloud doesn't provide MongoDB. Use an external service:
 
 ```bash
 # Use MongoDB Atlas or similar
 $ convox cloud env set MONGODB_URI=mongodb+srv://... -a myapp -i production
-```
-
-### File Storage Migration
-
-Convox Cloud doesn't support persistent volumes. Use object storage instead:
-
-```bash
-# Upload existing files to S3
-$ aws s3 sync ./uploads s3://my-bucket/uploads
-
-# Update app to use S3
-$ convox cloud env set \
-    S3_BUCKET=my-bucket \
-    AWS_ACCESS_KEY_ID=... \
-    AWS_SECRET_ACCESS_KEY=... \
-    -a myapp -i production
-```
-
-### Scheduled Jobs Migration
-
-**From Heroku Scheduler:**
-```yaml
-timers:
-  cleanup:
-    command: rake cleanup
-    schedule: "0 3 * * *"
-    service: web
-```
-
-**From cron:**
-```yaml
-timers:
-  hourly:
-    command: /app/bin/hourly-task
-    schedule: "0 * * * *"
-    service: worker
-```
-
-### SSL Certificates
-
-Convox automatically provisions Let's Encrypt certificates:
-
-```yaml
-services:
-  web:
-    domain: myapp.com,www.myapp.com
-    port: 3000
 ```
 
 ## Migration Checklist
@@ -568,7 +542,8 @@ services:
 - [ ] Create Dockerfile if needed
 - [ ] Create convox.yml
 - [ ] Deploy application
-- [ ] Import databases
+- [ ] Create Cloud Databases
+- [ ] Import database data
 - [ ] Set environment variables
 - [ ] Configure domains
 - [ ] Run smoke tests
@@ -590,7 +565,6 @@ services:
 
 **Solution**: Optimize Dockerfile with multi-stage builds:
 ```dockerfile
-# Build stage
 FROM node:18 AS builder
 WORKDIR /app
 COPY package*.json ./
@@ -598,7 +572,6 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# Runtime stage
 FROM node:18-alpine
 WORKDIR /app
 COPY --from=builder /app/dist ./dist
@@ -638,7 +611,7 @@ const dbUrl = process.env.DATABASE_URL || 'postgres://localhost/dev'
 services:
   web:
     scale:
-      memory: 1024  # Increase from 512
+      memory: 1024
 ```
 
 ## Getting Help
@@ -660,6 +633,7 @@ services:
 After migration:
 
 1. [Optimize your machine size](/cloud/machines/sizing-and-pricing)
-2. [Set up monitoring and alerts](/cloud/monitoring)
-3. [Configure autoscaling](/deployment/scaling)
-4. [Implement CI/CD](/deployment/workflows)
+2. [Configure Cloud Databases](/cloud/databases)
+3. [Set up monitoring and alerts](/cloud/monitoring)
+4. [Configure autoscaling](/deployment/scaling)
+5. [Implement CI/CD](/deployment/workflows)
