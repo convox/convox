@@ -464,6 +464,7 @@ func (p *Provider) podSpecFromService(app, service, release string, isBuild bool
 		},
 	})
 
+	serviceAccountName := ""
 	if !isBuild && release != "" {
 		m, r, err := common.ReleaseManifest(p, app, release)
 		if err != nil {
@@ -479,6 +480,7 @@ func (p *Provider) podSpecFromService(app, service, release string, isBuild bool
 		env := map[string]string{}
 
 		if s, _ := m.Service(service); s != nil {
+			serviceAccountName = s.Name
 			if s.Command != "" {
 				parts, err := shellquote.Split(s.Command)
 				if err != nil {
@@ -539,6 +541,7 @@ func (p *Provider) podSpecFromService(app, service, release string, isBuild bool
 	}
 
 	ps := &ac.PodSpec{
+		ServiceAccountName:    serviceAccountName,
 		Containers:            []ac.Container{c},
 		ShareProcessNamespace: options.Bool(true),
 		Volumes:               vs,
