@@ -470,3 +470,54 @@ func parseResourceSubstitutionId(id string) (string, string, string) {
 func patchBytes(patch map[string]interface{}) ([]byte, error) {
 	return gojson.Marshal(patch)
 }
+
+// serviceSecurityContext maps a manifest service's Privileged flag and
+// ServiceSecurityContext block to a Kubernetes container SecurityContext.
+// Returns nil when no settings are configured so callers can leave the
+// container SecurityContext unset. Mirrors the rendering logic in
+// provider/k8s/template/app/{service,timer}.yml.tmpl so one-off `convox run`
+// pods apply the same hardening as Deployment and CronJob pods.
+func serviceSecurityContext(s *manifest.Service) *ac.SecurityContext {
+	if s == nil {
+		return nil
+	}
+	if !s.Privileged && !s.SecurityContext.HasSecurityContext() {
+		return nil
+	}
+
+	sc := &ac.SecurityContext{}
+
+	if s.Privileged {
+		sc.Privileged = options.Bool(true)
+	}
+	if s.SecurityContext.RunAsNonRoot != nil {
+		sc.RunAsNonRoot = options.Bool(*s.SecurityContext.RunAsNonRoot)
+	}
+	if s.SecurityContext.RunAsUser != nil {
+		sc.RunAsUser = options.Int64(*s.SecurityContext.RunAsUser)
+	}
+	if s.SecurityContext.RunAsGroup != nil {
+		sc.RunAsGroup = options.Int64(*s.SecurityContext.RunAsGroup)
+	}
+	if s.SecurityContext.ReadOnlyRootFilesystem != nil {
+		sc.ReadOnlyRootFilesystem = options.Bool(*s.SecurityContext.ReadOnlyRootFilesystem)
+	}
+	if s.SecurityContext.AllowPrivilegeEscalation != nil {
+		sc.AllowPrivilegeEscalation = options.Bool(*s.SecurityContext.AllowPrivilegeEscalation)
+	}
+	if s.SecurityContext.Capabilities.HasCapabilities() {
+		caps := &ac.Capabilities{}
+		for _, c := range s.SecurityContext.Capabilities.Add {
+			caps.Add = append(caps.Add, ac.Capability(c))
+		}
+		for _, c := range s.SecurityContext.Capabilities.Drop {
+			caps.Drop = append(caps.Drop, ac.Capability(c))
+		}
+		sc.Capabilities = caps
+	}
+	if s.SecurityContext.SeccompProfile != "" {
+		sc.SeccompProfile = &ac.SeccompProfile{Type: ac.SeccompProfileType(s.SecurityContext.SeccompProfile)}
+	}
+
+	return sc
+}
