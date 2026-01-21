@@ -92,6 +92,14 @@ services:
         external:
           - name: "datadogmetric@default:web-requests"
             averageValue: 200
+    securityContext:
+      runAsNonRoot: true
+      readOnlyRootFilesystem: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+      seccompProfile: RuntimeDefault
     singleton: false
     sticky: true
     termination:
@@ -135,6 +143,7 @@ services:
 | **privileged**  | boolean    | false               | Set to **true** to allow [Processes](/reference/primitives/app/process) of this Service to run as root inside their container. Use with caution as this grants elevated permissions |
 | **resources**   | list       |                     | A list of [Resources](/reference/primitives/app/resource) to make available to this Service (e.g. databases) |
 | **scale**       | map        | 1                   | Define scaling parameters (see below)                                                                                                      |
+| **securityContext** | map   |                     | Container security settings including capabilities, read-only filesystem, and seccomp profiles (see below)                               |
 | **singleton**   | boolean    | false               | Set to **true** to prevent extra [Processes](/reference/primitives/app/process) of this Service from being started during deployments                               |
 | **sticky**      | boolean    | false               | Set to **true** to enable sticky sessions                                                                                                    |
 | **termination** | map        |                     | Termination related configuration                                                                                                          |
@@ -443,6 +452,70 @@ services:
 ```
 
 
+
+### securityContext
+
+Container-level security settings. These settings control Linux security features for the container. Any field left unset is omitted from the rendered pod spec, leaving the Kubernetes default in effect.
+
+| Attribute                    | Type    | Default | Description                                                                                                 |
+| ---------------------------- | ------- | ------- | ----------------------------------------------------------------------------------------------------------- |
+| **runAsNonRoot**             | boolean |         | Require the container to run as a non-root user                                                             |
+| **runAsUser**                | number  |         | The UID to run the container as                                                                             |
+| **runAsGroup**               | number  |         | The GID to run the container as                                                                             |
+| **readOnlyRootFilesystem**   | boolean |         | Mount the root filesystem as read-only                                                                      |
+| **allowPrivilegeEscalation** | boolean |         | Whether a process can gain more privileges than its parent process. Set to **false** for security hardening |
+| **capabilities**             | map     |         | Linux capabilities to add or drop (see below)                                                               |
+| **seccompProfile**           | string  |         | The seccomp profile to apply. Allowed values: `RuntimeDefault`, `Unconfined`                                |
+
+```yaml
+services:
+  web:
+    build: .
+    port: 3000
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      readOnlyRootFilesystem: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+      seccompProfile: RuntimeDefault
+```
+
+Notes:
+
+- These settings apply to the service's Deployment pods, its Timer CronJob pods, and one-off containers created by `convox run <service>`. Build containers retain Convox's existing build-time security context (unconfined seccomp, optionally privileged) regardless of manifest configuration.
+- The legacy top-level `privileged: true` flag still renders as `privileged: true` in the pod's security context. When `privileged: true` is set, Kubernetes grants the container all Linux capabilities at runtime; `capabilities.drop` has no effect in that mode. Do not mix `privileged: true` with `securityContext` hardening unless you understand that precedence.
+- `seccompProfile: Localhost` is not currently supported because Convox does not expose the required `localhostProfile` path field.
+- Namespaces with restrictive Kubernetes [Pod Security Admission](https://kubernetes.io/docs/concepts/security/pod-security-admission/) labels may reject pods that use `privileged: true` or that omit `runAsNonRoot` / `seccompProfile`. Configure `securityContext` to match the namespace's enforced profile.
+- `seccompProfile: RuntimeDefault` requires the kubelet to provide a default seccomp profile. All managed providers Convox supports (EKS, GKE, AKS, DOKS) ship this profile; self-managed bare-metal clusters must provision it themselves.
+- `readOnlyRootFilesystem: true` prevents the container from writing anywhere outside explicitly mounted volumes. Processes that cache to `$HOME` (AWS CLI credential cache, CUDA kernel cache at `~/.nv/ComputeCache`, many language runtimes) need a writable mount. Use `volumeOptions.emptyDir` with a `mountPath` targeting the cache directory.
+
+### securityContext.capabilities
+
+| Attribute | Type | Default | Description                                                                                       |
+| --------- | ---- | ------- | ------------------------------------------------------------------------------------------------- |
+| **drop**  | list |         | List of Linux capabilities to drop. Use `ALL` to drop all capabilities                            |
+| **add**   | list |         | List of Linux capabilities to add back (typically after dropping `ALL`)                           |
+
+Capability names are case-sensitive and must omit the `CAP_` prefix (use `NET_BIND_SERVICE`, not `CAP_NET_BIND_SERVICE`).
+
+```yaml
+services:
+  web:
+    build: .
+    port: 3000
+    securityContext:
+      capabilities:
+        drop:
+          - ALL
+        add:
+          - NET_BIND_SERVICE
+```
+
+&nbsp;
 
 ### termination
 

@@ -580,6 +580,10 @@ func (p *Provider) podSpecFromService(app, service, release string, isBuild bool
 			}
 
 			nodeSelectorLabels = s.NodeSelectorLabels
+
+			if sc := serviceSecurityContext(s); sc != nil {
+				c.SecurityContext = sc
+			}
 		}
 
 		for k, v := range env {

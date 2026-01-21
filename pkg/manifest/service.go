@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -25,47 +26,48 @@ const (
 type Service struct {
 	Name string `yaml:"-"`
 
-	Agent              ServiceAgent          `yaml:"agent,omitempty"`
-	Annotations        Annotations           `yaml:"annotations,omitempty"`
-	Build              ServiceBuild          `yaml:"build,omitempty"`
-	Certificate        Certificate           `yaml:"certificate,omitempty"`
-	Command            string                `yaml:"command,omitempty"`
-	ConfigMounts       ConfigMounts          `yaml:"configMounts,omitempty"`
-	Deployment         ServiceDeployment     `yaml:"deployment,omitempty"`
-	DnsConfig          ServiceDnsConfig      `yaml:"dnsConfig,omitempty"`
-	Domains            ServiceDomains        `yaml:"domain,omitempty"`
-	Drain              int                   `yaml:"drain,omitempty"`
-	DisableHostUsers   bool                  `yaml:"disableHostUsers,omitempty"`
-	Environment        Environment           `yaml:"environment,omitempty"`
-	GrpcHealthEnabled  bool                  `yaml:"grpcHealthEnabled,omitempty"`
-	Health             ServiceHealth         `yaml:"health,omitempty"`
-	Liveness           ServiceLiveness       `yaml:"liveness,omitempty"`
-	StartupProbe       ServiceStartupProbe   `yaml:"startupProbe,omitempty"`
-	Image              string                `yaml:"image,omitempty"`
-	Init               bool                  `yaml:"init,omitempty"`
-	InitContainer      *InitContainer        `yaml:"initContainer,omitempty"`
-	Internal           bool                  `yaml:"internal,omitempty"`
-	InternalRouter     bool                  `yaml:"internalRouter,omitempty"`
-	IngressAnnotations Annotations           `yaml:"ingressAnnotations,omitempty"`
-	Labels             Labels                `yaml:"labels,omitempty"`
-	NodeAffinityLabels Affinities            `yaml:"nodeAffinityLabels,omitempty"`
-	NodeSelectorLabels Labels                `yaml:"nodeSelectorLabels,omitempty"`
-	Lifecycle          ServiceLifecycle      `yaml:"lifecycle,omitempty"`
-	Port               ServicePortScheme     `yaml:"port,omitempty"`
-	Ports              []ServicePortProtocol `yaml:"ports,omitempty"`
-	Privileged         bool                  `yaml:"privileged,omitempty"`
-	Resources          []string              `yaml:"resources,omitempty"`
-	Scale              ServiceScale          `yaml:"scale,omitempty"`
-	Singleton          bool                  `yaml:"singleton,omitempty"`
-	Sticky             bool                  `yaml:"sticky,omitempty"`
-	Termination        ServiceTermination    `yaml:"termination,omitempty"`
-	Test               string                `yaml:"test,omitempty"`
-	Timeout            int                   `yaml:"timeout,omitempty"`
-	Tls                ServiceTls            `yaml:"tls,omitempty"`
-	Volumes            []string              `yaml:"volumes,omitempty"`
-	VolumeOptions      []VolumeOption        `yaml:"volumeOptions,omitempty"`
-	Whitelist          string                `yaml:"whitelist,omitempty"`
-	AccessControl      AccessControlOptions  `yaml:"accessControl,omitempty"`
+	Agent              ServiceAgent           `yaml:"agent,omitempty"`
+	Annotations        Annotations            `yaml:"annotations,omitempty"`
+	Build              ServiceBuild           `yaml:"build,omitempty"`
+	Certificate        Certificate            `yaml:"certificate,omitempty"`
+	Command            string                 `yaml:"command,omitempty"`
+	ConfigMounts       ConfigMounts           `yaml:"configMounts,omitempty"`
+	Deployment         ServiceDeployment      `yaml:"deployment,omitempty"`
+	DnsConfig          ServiceDnsConfig       `yaml:"dnsConfig,omitempty"`
+	Domains            ServiceDomains         `yaml:"domain,omitempty"`
+	Drain              int                    `yaml:"drain,omitempty"`
+	DisableHostUsers   bool                   `yaml:"disableHostUsers,omitempty"`
+	Environment        Environment            `yaml:"environment,omitempty"`
+	GrpcHealthEnabled  bool                   `yaml:"grpcHealthEnabled,omitempty"`
+	Health             ServiceHealth          `yaml:"health,omitempty"`
+	Liveness           ServiceLiveness        `yaml:"liveness,omitempty"`
+	StartupProbe       ServiceStartupProbe    `yaml:"startupProbe,omitempty"`
+	Image              string                 `yaml:"image,omitempty"`
+	Init               bool                   `yaml:"init,omitempty"`
+	InitContainer      *InitContainer         `yaml:"initContainer,omitempty"`
+	Internal           bool                   `yaml:"internal,omitempty"`
+	InternalRouter     bool                   `yaml:"internalRouter,omitempty"`
+	IngressAnnotations Annotations            `yaml:"ingressAnnotations,omitempty"`
+	Labels             Labels                 `yaml:"labels,omitempty"`
+	NodeAffinityLabels Affinities             `yaml:"nodeAffinityLabels,omitempty"`
+	NodeSelectorLabels Labels                 `yaml:"nodeSelectorLabels,omitempty"`
+	Lifecycle          ServiceLifecycle       `yaml:"lifecycle,omitempty"`
+	Port               ServicePortScheme      `yaml:"port,omitempty"`
+	Ports              []ServicePortProtocol  `yaml:"ports,omitempty"`
+	Privileged         bool                   `yaml:"privileged,omitempty"`
+	Resources          []string               `yaml:"resources,omitempty"`
+	SecurityContext    ServiceSecurityContext `yaml:"securityContext,omitempty"`
+	Scale              ServiceScale           `yaml:"scale,omitempty"`
+	Singleton          bool                   `yaml:"singleton,omitempty"`
+	Sticky             bool                   `yaml:"sticky,omitempty"`
+	Termination        ServiceTermination     `yaml:"termination,omitempty"`
+	Test               string                 `yaml:"test,omitempty"`
+	Timeout            int                    `yaml:"timeout,omitempty"`
+	Tls                ServiceTls             `yaml:"tls,omitempty"`
+	Volumes            []string               `yaml:"volumes,omitempty"`
+	VolumeOptions      []VolumeOption         `yaml:"volumeOptions,omitempty"`
+	Whitelist          string                 `yaml:"whitelist,omitempty"`
+	AccessControl      AccessControlOptions   `yaml:"accessControl,omitempty"`
 }
 
 type Affinities []Affinity
@@ -571,6 +573,94 @@ type ServiceTermination struct {
 
 type ServiceTls struct {
 	Redirect bool
+}
+
+// ServiceSecurityContext defines container security settings
+type ServiceSecurityContext struct {
+	RunAsNonRoot             *bool                               `yaml:"runAsNonRoot,omitempty"`
+	RunAsUser                *int64                              `yaml:"runAsUser,omitempty"`
+	RunAsGroup               *int64                              `yaml:"runAsGroup,omitempty"`
+	ReadOnlyRootFilesystem   *bool                               `yaml:"readOnlyRootFilesystem,omitempty"`
+	AllowPrivilegeEscalation *bool                               `yaml:"allowPrivilegeEscalation,omitempty"`
+	Capabilities             *ServiceSecurityContextCapabilities `yaml:"capabilities,omitempty"`
+	SeccompProfile           string                              `yaml:"seccompProfile,omitempty"`
+}
+
+// ServiceSecurityContextCapabilities defines Linux capabilities to add or drop
+type ServiceSecurityContextCapabilities struct {
+	Add  []string `yaml:"add,omitempty"`
+	Drop []string `yaml:"drop,omitempty"`
+}
+
+// HasCapabilities returns true if any add or drop capability is configured.
+// Pointer receiver is nil-safe so this is usable from templates without a wrapper check.
+func (c *ServiceSecurityContextCapabilities) HasCapabilities() bool {
+	if c == nil {
+		return false
+	}
+	return len(c.Add) > 0 || len(c.Drop) > 0
+}
+
+// HasSecurityContext returns true if any security context settings are configured
+func (s ServiceSecurityContext) HasSecurityContext() bool {
+	return s.RunAsNonRoot != nil ||
+		s.RunAsUser != nil ||
+		s.RunAsGroup != nil ||
+		s.ReadOnlyRootFilesystem != nil ||
+		s.AllowPrivilegeEscalation != nil ||
+		s.Capabilities.HasCapabilities() ||
+		s.SeccompProfile != ""
+}
+
+var (
+	validSeccompProfile = map[string]bool{
+		"RuntimeDefault": true,
+		"Unconfined":     true,
+	}
+	validCapabilityName = regexp.MustCompile(`^[A-Z][A-Z0-9_]*$`)
+)
+
+// Validate checks manifest-level security context configuration for shape and
+// internal consistency. It catches errors that would otherwise only surface at
+// kubelet pod admission (seccomp enum, capability names) and flags combinations
+// that render a manifest self-contradictory (privileged + capabilities drop,
+// runAsNonRoot with runAsUser=0).
+func (s ServiceSecurityContext) Validate() error {
+	if s.SeccompProfile != "" && !validSeccompProfile[s.SeccompProfile] {
+		if s.SeccompProfile == "Localhost" {
+			return fmt.Errorf("securityContext.seccompProfile: Localhost is not supported (no localhostProfile field); use RuntimeDefault or Unconfined")
+		}
+		return fmt.Errorf("securityContext.seccompProfile: %q is not a supported value; allowed: RuntimeDefault, Unconfined", s.SeccompProfile)
+	}
+
+	if s.Capabilities != nil {
+		for _, c := range s.Capabilities.Add {
+			if err := validateCapabilityName(c); err != nil {
+				return fmt.Errorf("securityContext.capabilities.add: %s", err)
+			}
+		}
+		for _, c := range s.Capabilities.Drop {
+			if err := validateCapabilityName(c); err != nil {
+				return fmt.Errorf("securityContext.capabilities.drop: %s", err)
+			}
+		}
+	}
+
+	if s.RunAsNonRoot != nil && *s.RunAsNonRoot && s.RunAsUser != nil && *s.RunAsUser == 0 {
+		return fmt.Errorf("securityContext: runAsNonRoot=true is incompatible with runAsUser=0")
+	}
+
+	return nil
+}
+
+func validateCapabilityName(c string) error {
+	if strings.HasPrefix(c, "CAP_") {
+		return fmt.Errorf("%q must not include CAP_ prefix (use %q)", c, strings.TrimPrefix(c, "CAP_"))
+	}
+	if !validCapabilityName.MatchString(c) {
+		return fmt.Errorf("%q is not a valid capability name (expected uppercase letters, digits, underscores)", c)
+	}
+	return nil
 }
 
 // skipcq
