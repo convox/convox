@@ -40,6 +40,12 @@ func (p *Provider) templateHelpers() template.FuncMap {
 		"coalesce": func(ss ...string) string {
 			return common.CoalesceString(ss...)
 		},
+		"deref": func(b *bool) bool {
+			if b == nil {
+				return false
+			}
+			return *b
+		},
 		"domains": func(app string, s manifest.Service) []string {
 			ds := []string{
 				p.ServiceHost(app, s),

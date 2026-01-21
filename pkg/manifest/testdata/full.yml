@@ -116,6 +116,21 @@ services:
       - 5000/udp
       - 5001
       - 5002/tcp
+  secured:
+    build: .
+    port: 8080
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      readOnlyRootFilesystem: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+        add:
+          - NET_BIND_SERVICE
+      seccompProfile: RuntimeDefault
 timers:
   alpha:
     command: bin/alpha

@@ -43,9 +43,10 @@ type Service struct {
 	NodeSelectorLabels Labels                `yaml:"nodeSelectorLabels,omitempty"`
 	Lifecycle          ServiceLifecycle      `yaml:"lifecycle,omitempty"`
 	Port               ServicePortScheme     `yaml:"port,omitempty"`
-	Ports              []ServicePortProtocol `yaml:"ports,omitempty"`
-	Privileged         bool                  `yaml:"privileged,omitempty"`
-	Resources          []string              `yaml:"resources,omitempty"`
+	Ports              []ServicePortProtocol     `yaml:"ports,omitempty"`
+	Privileged         bool                      `yaml:"privileged,omitempty"`
+	Resources          []string                  `yaml:"resources,omitempty"`
+	SecurityContext    ServiceSecurityContext    `yaml:"securityContext,omitempty"`
 	Scale              ServiceScale          `yaml:"scale,omitempty"`
 	Singleton          bool                  `yaml:"singleton,omitempty"`
 	Sticky             bool                  `yaml:"sticky,omitempty"`
@@ -283,6 +284,34 @@ type ServiceTermination struct {
 
 type ServiceTls struct {
 	Redirect bool
+}
+
+// ServiceSecurityContext defines container security settings
+type ServiceSecurityContext struct {
+	RunAsNonRoot             *bool                             `yaml:"runAsNonRoot,omitempty"`
+	RunAsUser                *int64                            `yaml:"runAsUser,omitempty"`
+	RunAsGroup               *int64                            `yaml:"runAsGroup,omitempty"`
+	ReadOnlyRootFilesystem   *bool                             `yaml:"readOnlyRootFilesystem,omitempty"`
+	AllowPrivilegeEscalation *bool                             `yaml:"allowPrivilegeEscalation,omitempty"`
+	Capabilities             *ServiceSecurityContextCapabilities `yaml:"capabilities,omitempty"`
+	SeccompProfile           string                            `yaml:"seccompProfile,omitempty"`
+}
+
+// ServiceSecurityContextCapabilities defines Linux capabilities to add or drop
+type ServiceSecurityContextCapabilities struct {
+	Add  []string `yaml:"add,omitempty"`
+	Drop []string `yaml:"drop,omitempty"`
+}
+
+// HasSecurityContext returns true if any security context settings are configured
+func (s ServiceSecurityContext) HasSecurityContext() bool {
+	return s.RunAsNonRoot != nil ||
+		s.RunAsUser != nil ||
+		s.RunAsGroup != nil ||
+		s.ReadOnlyRootFilesystem != nil ||
+		s.AllowPrivilegeEscalation != nil ||
+		s.Capabilities != nil ||
+		s.SeccompProfile != ""
 }
 
 // skipcq
