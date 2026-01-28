@@ -42,6 +42,7 @@ locals {
     internal_router = var.internal_router
     internet_gateway_id = var.internet_gateway_id
     k8s_version = var.k8s_version
+    keda_enable = var.keda_enable
     key_pair_name = var.key_pair_name
     kube_proxy_version = var.kube_proxy_version
     kubelet_registry_burst = var.kubelet_registry_burst
@@ -128,6 +129,7 @@ locals {
     internal_router = "false"
     internet_gateway_id = ""
     k8s_version = "1.33"
+    keda_enable = "false"
     key_pair_name = ""
     kube_proxy_version = "v1.33.3-eksbuild.10"
     kubelet_registry_burst = "10"

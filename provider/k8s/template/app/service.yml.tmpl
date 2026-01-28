@@ -406,7 +406,7 @@ spec:
               path: {{ .Filename }}
       {{ end }}
  
-{{ if not (eq .Service.Scale.Count.Min .Service.Scale.Count.Max) }}
+{{ if and (not (eq .Service.Scale.Count.Min .Service.Scale.Count.Max)) (not $.KedaIsEnabled) }}
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler

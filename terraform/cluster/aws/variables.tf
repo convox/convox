@@ -108,6 +108,11 @@ variable "internet_gateway_id" {
   default = ""
 }
 
+variable "keda_enable" {
+  type    = bool
+  default = false
+}
+
 variable "key_pair_name" {
   type    = string
   default = ""

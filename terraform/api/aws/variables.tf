@@ -85,6 +85,11 @@ variable "image" {
   type = string
 }
 
+variable "keda_enable" {
+  type    = bool
+  default = false
+}
+
 variable "metrics_scraper_host" {
   default = ""
   type    = string
