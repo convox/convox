@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	yaml "gopkg.in/yaml.v2"
+	kyaml "sigs.k8s.io/yaml"
 )
 
 type DefaultsSetter interface {
@@ -466,6 +467,13 @@ func (v *ServiceScale) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			}
 			v.Targets = t
 		}
+		if w, ok := t["keda"].(interface{}); ok {
+			var k ServiceScaleKeda
+			if err := remarshalUsingKyaml(w, &k); err != nil {
+				return err
+			}
+			v.Keda = &k
+		}
 		if w, ok := t["limit"].(interface{}); ok {
 			var lmt ServiceResourceLimit
 			if err := remarshal(w, &lmt); err != nil {
@@ -624,6 +632,15 @@ func remarshal(in, out interface{}) error {
 	}
 
 	return yaml.Unmarshal(data, out)
+}
+
+func remarshalUsingKyaml(in, out interface{}) error {
+	data, err := yaml.Marshal(in)
+	if err != nil {
+		return err
+	}
+
+	return kyaml.Unmarshal(data, out)
 }
 
 func marshalMapSlice(in interface{}) (interface{}, error) {
