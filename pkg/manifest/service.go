@@ -3,8 +3,13 @@ package manifest
 import (
 	"crypto/sha256"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
+
+	"github.com/convox/convox/pkg/options"
+	kedav1alpha1 "github.com/kedacore/keda/v2/apis/keda/v1alpha1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -234,6 +239,95 @@ type ServiceScale struct {
 	Memory  int
 	Limit   ServiceResourceLimit `yaml:"limit,omitempty"`
 	Targets ServiceScaleTargets  `yaml:"targets,omitempty"`
+	Keda    *ServiceScaleKeda    `yaml:"keda,omitempty"`
+}
+
+func (ss ServiceScale) IsKedaEnabled() bool {
+	return ss.Keda != nil && len(ss.Keda.Triggers) > 0
+}
+
+type KedaScaledObjectParameters struct {
+	MinCount    int32
+	MaxCount    int32
+	ServiceName string
+	Namespace   string
+}
+
+func (ss Service) KedaScaledObject(params KedaScaledObjectParameters) *kedav1alpha1.ScaledObject {
+	so := kedav1alpha1.ScaledObject{}
+	if ss.Scale.Keda == nil {
+		return &so
+	}
+
+	so.TypeMeta.Kind = "ScaledObject"
+	so.TypeMeta.APIVersion = "keda.sh/v1alpha1"
+	so.ObjectMeta.Name = params.ServiceName
+	so.ObjectMeta.Namespace = params.Namespace
+
+	so.Spec.ScaleTargetRef = &kedav1alpha1.ScaleTarget{
+		Name: params.ServiceName,
+		Kind: "Deployment",
+	}
+	so.Spec.Triggers = ss.Scale.Keda.Triggers
+	so.Spec.MinReplicaCount = &params.MinCount
+	so.Spec.MaxReplicaCount = &params.MaxCount
+	so.Spec.CooldownPeriod = ss.Scale.Keda.CooldownPeriod
+	so.Spec.PollingInterval = ss.Scale.Keda.PollingInterval
+	so.Spec.Advanced = ss.Scale.Keda.Advanced
+	so.Spec.Fallback = ss.Scale.Keda.Fallback
+	so.Spec.IdleReplicaCount = ss.Scale.Keda.IdleReplicaCount
+
+	for i := range so.Spec.Triggers {
+		if so.Spec.Triggers[i].AuthenticationRef == nil {
+			auth := ss.DefaultTriggerAuthentionIfAws(params.Namespace)
+			so.Spec.Triggers[i].AuthenticationRef = &kedav1alpha1.AuthenticationRef{
+				Name: auth.ObjectMeta.Name,
+				Kind: auth.TypeMeta.Kind,
+			}
+		}
+	}
+
+	return &so
+}
+
+func (ss Service) DefaultTriggerAuthentionIfAws(namespace string) *kedav1alpha1.TriggerAuthentication {
+	if os.Getenv("PROVIDER") == "aws" {
+		auth := &kedav1alpha1.TriggerAuthentication{
+			TypeMeta: v1.TypeMeta{
+				Kind:       "TriggerAuthentication",
+				APIVersion: "keda.sh/v1alpha1",
+			},
+			ObjectMeta: v1.ObjectMeta{
+				Name:      "keda-aws-auth-default",
+				Namespace: namespace,
+			},
+			Spec: kedav1alpha1.TriggerAuthenticationSpec{
+				PodIdentity: &kedav1alpha1.AuthPodIdentity{
+					Provider:      "aws",
+					IdentityOwner: options.String("keda"),
+				},
+			},
+		}
+		return auth
+	}
+	return nil
+}
+
+type ServiceScaleKeda struct {
+	// +optional
+	PollingInterval *int32 `yaml:"pollingInterval,omitempty"`
+	// +optional
+	InitialCooldownPeriod *int32 `yaml:"initialCooldownPeriod,omitempty"`
+	// +optional
+	CooldownPeriod *int32 `yaml:"cooldownPeriod,omitempty"`
+	// +optional
+	IdleReplicaCount *int32 `yaml:"idleReplicaCount,omitempty"`
+	// +optional
+	Advanced *kedav1alpha1.AdvancedConfig `yaml:"advanced,omitempty"`
+
+	Triggers []kedav1alpha1.ScaleTriggers `yaml:"triggers"`
+	// +optional
+	Fallback *kedav1alpha1.Fallback `yaml:"fallback,omitempty"`
 }
 
 type ServiceResourceLimit struct {

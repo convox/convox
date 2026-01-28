@@ -87,6 +87,7 @@ module "cluster" {
   imds_http_tokens                    = var.imds_http_tokens
   imds_http_hop_limit                 = var.imds_http_hop_limit
   imds_tags_enable                    = var.imds_tags_enable
+  keda_enable                         = var.keda_enable
   key_pair_name                       = var.key_pair_name
   kube_proxy_version                  = var.kube_proxy_version
   k8s_version                         = var.k8s_version
@@ -180,6 +181,7 @@ module "rack" {
   idle_timeout                              = var.idle_timeout
   internal_router                           = var.internal_router
   image                                     = local.image
+  keda_enable                               = var.keda_enable
   lbc_helm_id                               = module.cluster.lbc_helm_id
   name                                      = local.name
   rack_name                                 = local.rack_name

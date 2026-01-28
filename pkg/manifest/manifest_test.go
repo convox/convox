@@ -714,3 +714,13 @@ func TestManifestValidate(t *testing.T) {
 
 	require.EqualError(t, err, fmt.Sprintf("validation errors:\n%s", strings.Join(errors, "\n")))
 }
+
+func TestManifestKeda(t *testing.T) {
+	m, err := testdataManifest("keda", map[string]string{})
+	require.NotNil(t, m)
+	require.NoError(t, err)
+
+	require.Equal(t, 1, len(m.Services))
+	require.Equal(t, true, m.Services[0].Scale.IsKedaEnabled())
+	require.Equal(t, 1, len(m.Services[0].Scale.Keda.Triggers))
+}

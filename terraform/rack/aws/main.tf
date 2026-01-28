@@ -41,6 +41,7 @@ module "api" {
   high_availability                         = var.high_availability
   metrics_scraper_host                      = module.metrics.metrics_scraper_host
   image                                     = var.image
+  keda_enable                               = var.keda_enable
   name                                      = var.name
   rack_name                                 = var.rack_name
   namespace                                 = module.k8s.namespace

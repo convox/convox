@@ -92,6 +92,11 @@ variable "image" {
   type = string
 }
 
+variable "keda_enable" {
+  type    = bool
+  default = false
+}
+
 variable "lbc_helm_id" {
   default = ""
   type    = string
