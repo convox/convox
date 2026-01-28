@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -214,7 +214,7 @@ func (r Resource) String() string {
 // See https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource?tabs=json#resourceid.
 func ParseResourceID(resourceID string) (Resource, error) {
 
-	const resourceIDPatternText = `(?i)subscriptions/(.+)/resourceGroups/(.+)/providers/(.+?)/(.+?)/(.+)`
+	const resourceIDPatternText = `(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/(.+?)/(.+?)/(.+)$`
 	resourceIDPattern := regexp.MustCompile(resourceIDPatternText)
 	match := resourceIDPattern.FindStringSubmatch(resourceID)
 
@@ -333,7 +333,7 @@ func WithErrorUnlessStatusCode(codes ...int) autorest.RespondDecorator {
 				// Copy and replace the Body in case it does not contain an error object.
 				// This will leave the Body available to the caller.
 				b, decodeErr := autorest.CopyAndDecode(encodedAs, resp.Body, &e)
-				resp.Body = ioutil.NopCloser(&b)
+				resp.Body = io.NopCloser(&b)
 				if decodeErr != nil {
 					return fmt.Errorf("autorest/azure: error response cannot be parsed: %q error: %v", b, decodeErr)
 				}
