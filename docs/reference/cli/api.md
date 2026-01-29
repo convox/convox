@@ -8,11 +8,28 @@ url: /reference/cli/api
 
 ## api get
 
-Query the Rack API
+Query [primitives](/reference/primitives/) in JSON format using the Rack API 
 
 ### Usage
 ```html
     convox api get <path>
+```
+
+App primitives
+```html
+    convox api get /apps/
+    convox api get /apps/<app_name>/balancers
+    convox api get /apps/<app_name>/builds 
+    convox api get /apps/<app_name>/processes
+    convox api get /apps/<app_name>/releases 
+    convox api get /apps/<app_name>/resources
+    convox api get /apps/<app_name>/services
+```
+
+Rack primitives
+```html
+    convox api get /instances
+    convox api get /registries
 ```
 ### Examples
 ```html
