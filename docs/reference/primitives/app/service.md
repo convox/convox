@@ -40,6 +40,7 @@ services:
     build:
       manifest: Dockerfile
       path: .
+      target: production
     certificate:
       duration: 2160h 
     command: bin/web
@@ -189,10 +190,12 @@ services:
 
 ### build
 
-| Attribute  | Type   | Default    | Description                                                   |
-| ---------- | ------ | ---------- | ------------------------------------------------------------- |
-| **manifest** | string | Dockerfile | The filename of the Dockerfile                                |
-| **path**     | string | .          | The path (relative to **convox.yml**) to build for this Service |
+| Attribute    | Type   | Default    | Description                                                                  |
+| ------------ | ------ | ---------- | ---------------------------------------------------------------------------- |
+| **manifest** | string | Dockerfile | The filename of the Dockerfile                                               |
+| **path**     | string | .          | The path (relative to **convox.yml**) to build for this Service              |
+| **args**     | map    |            | The build args to apply to the build for this Service                        |
+| **target**   | string |            | The target stage to build for this Service if using a multi-stage Dockerfile |
 
 > Specifying **build** as a string will set the **path** and leave the other values as defaults.
 
@@ -393,7 +396,7 @@ services:
 | Attribute  | Type    | Default | Description                                                                          |
 | ---------- | ------- | ------- | ------------------------------------------------------------------------------------ |
 | **id** | string |     | Required. Id of the volume. |
-| **mountPath** | string |     | Required. Path in the serive file system to mount the volume |
+| **mountPath** | string |     | Required. Path in the Service file system to mount the volume |
 | **medium** | string |     | Optional. Specifies the emptyDir medium. Allowed values: `"Memory"` or `""` |
 
 
