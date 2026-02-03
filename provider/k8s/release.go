@@ -741,6 +741,26 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 				items = append(items, soData)
 			}
 		}
+
+		if s.Scale.IsVpaEnabled() {
+			if !p.IsVpaEnabled {
+				return nil, fmt.Errorf("vpa is not enabled on the rack")
+			}
+			vpaObj, err := s.Scale.VPA.VpaObject(s.Name, p.AppNamespace(a.Name), map[string]string{
+				"system":  "convox",
+				"rack":    p.Name,
+				"app":     a.Name,
+				"service": s.Name,
+			})
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+			vpaData, err := SerializeK8sObjToYaml(vpaObj)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+			items = append(items, vpaData)
+		}
 	}
 
 	return bytes.Join(items, []byte("---\n")), nil
