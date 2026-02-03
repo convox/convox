@@ -118,6 +118,7 @@ module "cluster" {
   user_data_url                       = var.user_data_url
   vpc_cni_version                     = var.vpc_cni_version
   vpc_id                              = var.vpc_id
+  vpa_enable                          = var.vpa_enable
 }
 
 resource "null_resource" "wait_for_cluster" {
@@ -205,4 +206,5 @@ module "rack" {
   whitelist                                 = split(",", var.whitelist)
   ecr_scan_on_push_enable                   = var.ecr_scan_on_push_enable
   vpc_id                                    = module.cluster.vpc
+  vpa_enable                                = var.vpa_enable
 }
