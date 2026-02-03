@@ -192,6 +192,11 @@ variable "vpc_id" {
   type = string
 }
 
+variable "vpa_enable" {
+  type    = bool
+  default = false
+}
+
 variable "whitelist" {
   default = ["0.0.0.0/0"]
 }

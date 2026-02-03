@@ -249,3 +249,8 @@ variable "user_data_url" {
   type    = string
   default = ""
 }
+
+variable "vpa_enable" {
+  type    = bool
+  default = false
+}

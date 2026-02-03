@@ -394,6 +394,11 @@ variable "vpc_cni_version" {
   default = "v1.20.4-eksbuild.1"
 }
 
+variable "vpa_enable" {
+  type    = bool
+  default = false
+}
+
 variable "whitelist" {
   default = "0.0.0.0/0"
 }

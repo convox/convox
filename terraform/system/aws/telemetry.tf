@@ -84,6 +84,7 @@ locals {
     telemetry = var.telemetry
     user_data = var.user_data
     user_data_url = var.user_data_url
+    vpa_enable = var.vpa_enable
     vpc_cni_version = var.vpc_cni_version
     vpc_id = var.vpc_id
     whitelist = var.whitelist
@@ -171,6 +172,7 @@ locals {
     telemetry = "false"
     user_data = ""
     user_data_url = ""
+    vpa_enable = "false"
     vpc_cni_version = "v1.20.4-eksbuild.1"
     vpc_id = ""
     whitelist = "0.0.0.0/0"

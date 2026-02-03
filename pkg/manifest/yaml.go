@@ -474,6 +474,13 @@ func (v *ServiceScale) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			}
 			v.Keda = &k
 		}
+		if w, ok := t["vpa"].(interface{}); ok {
+			var k VPA
+			if err := remarshal(w, &k); err != nil {
+				return err
+			}
+			v.VPA = &k
+		}
 		if w, ok := t["limit"].(interface{}); ok {
 			var lmt ServiceResourceLimit
 			if err := remarshal(w, &lmt); err != nil {
