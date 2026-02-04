@@ -340,7 +340,7 @@ type ServiceScaleKeda struct {
 }
 
 type VPA struct {
-	// default: InPlaceOrRecreate
+	// default: Recreate
 	// allowed: Off, Initial, Recreate, InPlaceOrRecreate
 	UpdateMode        string  `yaml:"updateMode,omitempty"`
 	MinCpu            *string `yaml:"minCpu,omitempty"`
@@ -353,24 +353,24 @@ type VPA struct {
 }
 
 func (vpa *VPA) Validate() error {
-	allowedModes := []string{"Off", "Initial", "Recreate", "InPlaceOrRecreate"}
+	allowedModes := []string{"Off", "Initial", "Recreate"}
 	match := false
 	if vpa.UpdateMode == "" {
-		vpa.UpdateMode = "InPlaceOrRecreate"
-		return nil
+		return fmt.Errorf("vpa.updateMode is required. Allowed values: %s", strings.Join(allowedModes, ", "))
 	}
 
 	for _, mode := range allowedModes {
 		if strings.ToLower(vpa.UpdateMode) == strings.ToLower(mode) {
 			vpa.UpdateMode = mode
 			match = true
-			return nil
 		}
 	}
 
 	if !match {
 		return fmt.Errorf("vpa.updateMode must be one of these values: %s", strings.Join(allowedModes, ", "))
 	}
+
+	fmt.Println(vpa.CpuOnly, vpa.MemOnly)
 
 	if vpa.CpuOnly != nil && vpa.MemOnly != nil && *vpa.CpuOnly && *vpa.MemOnly {
 		return fmt.Errorf("vpa.cpuOnly and vpa.memOnly cannot both be true")
