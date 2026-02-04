@@ -6,4 +6,20 @@ resource "helm_release" "vpa" {
   version          = "4.10.1"
   namespace        = "vpa"
   create_namespace = true
+
+  values = [
+    yamlencode({
+      admissionController = {
+        extraArgs = {
+          feature-gates = "InPlaceOrRecreate=true"
+        }
+      }
+
+      updater = {
+        extraArgs = {
+          feature-gates = "InPlaceOrRecreate=true"
+        }
+      }
+    })
+  ]
 }
