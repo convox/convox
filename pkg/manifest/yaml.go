@@ -480,6 +480,9 @@ func (v *ServiceScale) UnmarshalYAML(unmarshal func(interface{}) error) error {
 				return err
 			}
 			v.VPA = &k
+			if v.VPA.UpdateMode == "false" {
+				v.VPA.UpdateMode = "Off"
+			}
 		}
 		if w, ok := t["limit"].(interface{}); ok {
 			var lmt ServiceResourceLimit
