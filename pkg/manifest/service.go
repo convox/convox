@@ -340,7 +340,7 @@ type ServiceScaleKeda struct {
 }
 
 type VPA struct {
-	// default: InPlaceOrRecreate
+	// default: Recreate
 	// allowed: Off, Initial, Recreate, InPlaceOrRecreate
 	UpdateMode        string  `yaml:"updateMode,omitempty"`
 	MinCpu            *string `yaml:"minCpu,omitempty"`
@@ -356,7 +356,7 @@ func (vpa *VPA) Validate() error {
 	allowedModes := []string{"Off", "Initial", "Recreate", "InPlaceOrRecreate"}
 	match := false
 	if vpa.UpdateMode == "" {
-		vpa.UpdateMode = "InPlaceOrRecreate"
+		vpa.UpdateMode = "Recreate"
 		return nil
 	}
 
