@@ -92,6 +92,11 @@ variable "image" {
   type = string
 }
 
+variable "keda_enable" {
+  type    = bool
+  default = false
+}
+
 variable "lbc_helm_id" {
   default = ""
   type    = string
@@ -185,6 +190,11 @@ variable "telemetry_default_map" {
 
 variable "vpc_id" {
   type = string
+}
+
+variable "vpa_enable" {
+  type    = bool
+  default = false
 }
 
 variable "whitelist" {

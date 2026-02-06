@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -20,7 +21,9 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 	v1 "k8s.io/api/core/v1"
+	kerr "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ktypes "k8s.io/apimachinery/pkg/types"
 )
 
 const (
@@ -667,6 +670,10 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 			return nil, errors.WithStack(err)
 		}
 
+		if !p.IsKedaEnabled && s.Scale.IsKedaEnabled() {
+			return nil, fmt.Errorf("keda is not enabled on the rack")
+		}
+
 		params := map[string]interface{}{
 			"Annotations":    s.AnnotationsMap(),
 			"App":            a,
@@ -680,6 +687,7 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 			"Replicas":       replicas,
 			"Resources":      s.ResourceMap(),
 			"Service":        s,
+			"KedaIsEnabled":  s.Scale.IsKedaEnabled(),
 		}
 
 		if ip, err := p.Engine.ResolverHost(); err == nil {
@@ -696,6 +704,63 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 		}
 
 		items = append(items, data)
+
+		if s.Scale.IsKedaEnabled() && s.Scale.Count.Min >= 0 && s.Scale.Count.Max > s.Scale.Count.Min {
+			scaledObj := s.KedaScaledObject(manifest.KedaScaledObjectParameters{
+				ServiceName: s.Name,
+				Namespace:   p.AppNamespace(a.Name),
+				MinCount:    int32(s.Scale.Count.Min),
+				MaxCount:    int32(s.Scale.Count.Max),
+			})
+			if scaledObj != nil {
+				if p.applyAnnotationsToHPA(a.Name, s.Name, map[string]string{
+					"validations.keda.sh/hpa-ownership": "false",
+				}) != nil {
+					return nil, fmt.Errorf("failed to apply annotations to HPA for service %s", s.Name)
+				}
+
+				scaledObj.Labels = map[string]string{
+					"system":  "convox",
+					"rack":    p.Name,
+					"app":     a.Name,
+					"service": s.Name,
+				}
+				soData, err := SerializeK8sObjToYaml(scaledObj)
+				if err != nil {
+					return nil, errors.WithStack(err)
+				}
+
+				if defaultAuth := s.DefaultTriggerAuthentionIfAws(p.AppNamespace(a.Name)); defaultAuth != nil {
+					authData, err := SerializeK8sObjToYaml(defaultAuth)
+					if err != nil {
+						return nil, errors.WithStack(err)
+					}
+					items = append(items, authData)
+				}
+
+				items = append(items, soData)
+			}
+		}
+
+		if s.Scale.IsVpaEnabled() {
+			if !p.IsVpaEnabled {
+				return nil, fmt.Errorf("vpa is not enabled on the rack")
+			}
+			vpaObj, err := s.Scale.VPA.VpaObject(s.Name, p.AppNamespace(a.Name), map[string]string{
+				"system":  "convox",
+				"rack":    p.Name,
+				"app":     a.Name,
+				"service": s.Name,
+			})
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+			vpaData, err := SerializeK8sObjToYaml(vpaObj)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+			items = append(items, vpaData)
+		}
 	}
 
 	return bytes.Join(items, []byte("---\n")), nil
@@ -985,5 +1050,33 @@ func (p *Provider) releaseAppConfigs(app *structs.App, m *manifest.Manifest) err
 		}
 	}
 
+	return nil
+}
+
+func (p *Provider) applyAnnotationsToHPA(app string, service string, annotations map[string]string) error {
+	// Prepare patch payload for metadata.annotations
+	patch := map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": annotations,
+		},
+	}
+	patchBytes, err := json.Marshal(patch)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	_, err = p.Cluster.AutoscalingV2().HorizontalPodAutoscalers(p.AppNamespace(app)).Patch(
+		p.ctx,
+		service,
+		ktypes.MergePatchType,
+		patchBytes,
+		am.PatchOptions{},
+	)
+	if err != nil {
+		if kerr.IsNotFound(err) {
+			return nil
+		}
+		return errors.WithStack(err)
+	}
 	return nil
 }

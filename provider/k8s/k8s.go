@@ -67,6 +67,8 @@ type Provider struct {
 	Engine                              Engine
 	Image                               string
 	JwtMngr                             *jwt.JwtManager
+	IsKedaEnabled                       bool
+	IsVpaEnabled                        bool
 	Name                                string
 	ReleasesToRetainAfterActive         int
 	ReleasesToRetainTaskRunIntervalHour int
@@ -196,6 +198,8 @@ func FromEnv() (*Provider, error) {
 		VpcID:                            os.Getenv("VPC_ID"),
 		DockerUsername:                   os.Getenv("DOCKER_HUB_USERNAME"),
 		DockerPassword:                   os.Getenv("DOCKER_HUB_PASSWORD"),
+		IsKedaEnabled:                    os.Getenv("KEDA_ENABLED") == "true",
+		IsVpaEnabled:                     os.Getenv("VPA_ENABLED") == "true",
 	}
 
 	p.ReleasesToRetainAfterActive, _ = strconv.Atoi(os.Getenv("RELEASES_TO_RETAIN_AFTER_ACTIVE"))

@@ -87,6 +87,7 @@ module "cluster" {
   imds_http_tokens                    = var.imds_http_tokens
   imds_http_hop_limit                 = var.imds_http_hop_limit
   imds_tags_enable                    = var.imds_tags_enable
+  keda_enable                         = var.keda_enable
   key_pair_name                       = var.key_pair_name
   kube_proxy_version                  = var.kube_proxy_version
   k8s_version                         = var.k8s_version
@@ -117,6 +118,7 @@ module "cluster" {
   user_data_url                       = var.user_data_url
   vpc_cni_version                     = var.vpc_cni_version
   vpc_id                              = var.vpc_id
+  vpa_enable                          = var.vpa_enable
 }
 
 resource "null_resource" "wait_for_cluster" {
@@ -180,6 +182,7 @@ module "rack" {
   idle_timeout                              = var.idle_timeout
   internal_router                           = var.internal_router
   image                                     = local.image
+  keda_enable                               = var.keda_enable
   lbc_helm_id                               = module.cluster.lbc_helm_id
   name                                      = local.name
   rack_name                                 = local.rack_name
@@ -203,4 +206,5 @@ module "rack" {
   whitelist                                 = split(",", var.whitelist)
   ecr_scan_on_push_enable                   = var.ecr_scan_on_push_enable
   vpc_id                                    = module.cluster.vpc
+  vpa_enable                                = var.vpa_enable
 }

@@ -184,6 +184,11 @@ variable "internet_gateway_id" {
   default = ""
 }
 
+variable "keda_enable" {
+  type    = bool
+  default = false
+}
+
 variable "key_pair_name" {
   type    = string
   default = ""
@@ -387,6 +392,11 @@ variable "vpc_id" {
 variable "vpc_cni_version" {
   type    = string
   default = "v1.20.4-eksbuild.1"
+}
+
+variable "vpa_enable" {
+  type    = bool
+  default = false
 }
 
 variable "whitelist" {

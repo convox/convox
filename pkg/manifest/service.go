@@ -3,8 +3,17 @@ package manifest
 import (
 	"crypto/sha256"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
+
+	"github.com/convox/convox/pkg/options"
+	kedav1alpha1 "github.com/kedacore/keda/v2/apis/keda/v1alpha1"
+	autoscaling "k8s.io/api/autoscaling/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	vpav1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 )
 
 const (
@@ -234,6 +243,238 @@ type ServiceScale struct {
 	Memory  int
 	Limit   ServiceResourceLimit `yaml:"limit,omitempty"`
 	Targets ServiceScaleTargets  `yaml:"targets,omitempty"`
+	Keda    *ServiceScaleKeda    `yaml:"keda,omitempty"`
+	VPA     *VPA                 `yaml:"vpa,omitempty"`
+}
+
+func (ss ServiceScale) IsKedaEnabled() bool {
+	return ss.Keda != nil && len(ss.Keda.Triggers) > 0
+}
+
+func (ss ServiceScale) IsVpaEnabled() bool {
+	return ss.VPA != nil
+}
+
+type KedaScaledObjectParameters struct {
+	MinCount    int32
+	MaxCount    int32
+	ServiceName string
+	Namespace   string
+}
+
+func (ss Service) KedaScaledObject(params KedaScaledObjectParameters) *kedav1alpha1.ScaledObject {
+	so := kedav1alpha1.ScaledObject{}
+	if ss.Scale.Keda == nil {
+		return &so
+	}
+
+	so.TypeMeta.Kind = "ScaledObject"
+	so.TypeMeta.APIVersion = "keda.sh/v1alpha1"
+	so.ObjectMeta.Name = params.ServiceName
+	so.ObjectMeta.Namespace = params.Namespace
+
+	so.Spec.ScaleTargetRef = &kedav1alpha1.ScaleTarget{
+		Name: params.ServiceName,
+		Kind: "Deployment",
+	}
+	so.Spec.Triggers = ss.Scale.Keda.Triggers
+	so.Spec.MinReplicaCount = &params.MinCount
+	so.Spec.MaxReplicaCount = &params.MaxCount
+	so.Spec.CooldownPeriod = ss.Scale.Keda.CooldownPeriod
+	so.Spec.PollingInterval = ss.Scale.Keda.PollingInterval
+	so.Spec.Advanced = ss.Scale.Keda.Advanced
+	so.Spec.Fallback = ss.Scale.Keda.Fallback
+	so.Spec.IdleReplicaCount = ss.Scale.Keda.IdleReplicaCount
+
+	for i := range so.Spec.Triggers {
+		if so.Spec.Triggers[i].AuthenticationRef == nil {
+			auth := ss.DefaultTriggerAuthentionIfAws(params.Namespace)
+			so.Spec.Triggers[i].AuthenticationRef = &kedav1alpha1.AuthenticationRef{
+				Name: auth.ObjectMeta.Name,
+				Kind: auth.TypeMeta.Kind,
+			}
+		}
+	}
+
+	return &so
+}
+
+func (ss Service) DefaultTriggerAuthentionIfAws(namespace string) *kedav1alpha1.TriggerAuthentication {
+	if os.Getenv("PROVIDER") == "aws" {
+		auth := &kedav1alpha1.TriggerAuthentication{
+			TypeMeta: v1.TypeMeta{
+				Kind:       "TriggerAuthentication",
+				APIVersion: "keda.sh/v1alpha1",
+			},
+			ObjectMeta: v1.ObjectMeta{
+				Name:      "keda-aws-auth-default",
+				Namespace: namespace,
+			},
+			Spec: kedav1alpha1.TriggerAuthenticationSpec{
+				PodIdentity: &kedav1alpha1.AuthPodIdentity{
+					Provider:      "aws",
+					IdentityOwner: options.String("keda"),
+				},
+			},
+		}
+		return auth
+	}
+	return nil
+}
+
+type ServiceScaleKeda struct {
+	// +optional
+	PollingInterval *int32 `yaml:"pollingInterval,omitempty"`
+	// +optional
+	InitialCooldownPeriod *int32 `yaml:"initialCooldownPeriod,omitempty"`
+	// +optional
+	CooldownPeriod *int32 `yaml:"cooldownPeriod,omitempty"`
+	// +optional
+	IdleReplicaCount *int32 `yaml:"idleReplicaCount,omitempty"`
+	// +optional
+	Advanced *kedav1alpha1.AdvancedConfig `yaml:"advanced,omitempty"`
+
+	Triggers []kedav1alpha1.ScaleTriggers `yaml:"triggers"`
+	// +optional
+	Fallback *kedav1alpha1.Fallback `yaml:"fallback,omitempty"`
+}
+
+type VPA struct {
+	// default: Recreate
+	// allowed: Off, Initial, Recreate, InPlaceOrRecreate
+	UpdateMode        string  `yaml:"updateMode,omitempty"`
+	MinCpu            *string `yaml:"minCpu,omitempty"`
+	MaxCpu            *string `yaml:"maxCpu,omitempty"`
+	MinMem            *string `yaml:"minMem,omitempty"`
+	MaxMem            *string `yaml:"maxMem,omitempty"`
+	CpuOnly           *bool   `yaml:"cpuOnly,omitempty"`
+	MemOnly           *bool   `yaml:"memOnly,omitempty"`
+	UpdateRequestOnly *bool   `yaml:"updateRequestOnly,omitempty"`
+}
+
+func (vpa *VPA) Validate() error {
+	allowedModes := []string{"Off", "Initial", "Recreate"}
+	match := false
+	if vpa.UpdateMode == "" {
+		return fmt.Errorf("vpa.updateMode is required. Allowed values: %s", strings.Join(allowedModes, ", "))
+	}
+
+	for _, mode := range allowedModes {
+		if strings.ToLower(vpa.UpdateMode) == strings.ToLower(mode) {
+			vpa.UpdateMode = mode
+			match = true
+		}
+	}
+
+	if !match {
+		return fmt.Errorf("vpa.updateMode must be one of these values: %s", strings.Join(allowedModes, ", "))
+	}
+
+	fmt.Println(vpa.CpuOnly, vpa.MemOnly)
+
+	if vpa.CpuOnly != nil && vpa.MemOnly != nil && *vpa.CpuOnly && *vpa.MemOnly {
+		return fmt.Errorf("vpa.cpuOnly and vpa.memOnly cannot both be true")
+	}
+	return nil
+}
+
+func (vpa *VPA) VpaObject(serviceName, namespace string, labels map[string]string) (*vpav1.VerticalPodAutoscaler, error) {
+	if vpa.Validate() != nil {
+		return nil, vpa.Validate()
+	}
+
+	updateMode := vpav1.UpdateMode(vpa.UpdateMode)
+	vpaObj := &vpav1.VerticalPodAutoscaler{
+		TypeMeta: v1.TypeMeta{
+			Kind:       "VerticalPodAutoscaler",
+			APIVersion: "autoscaling.k8s.io/v1",
+		},
+		ObjectMeta: v1.ObjectMeta{
+			Name:      serviceName,
+			Namespace: namespace,
+			Labels:    labels,
+		},
+		Spec: vpav1.VerticalPodAutoscalerSpec{
+			TargetRef: &autoscaling.CrossVersionObjectReference{
+				Kind:       "Deployment",
+				Name:       serviceName,
+				APIVersion: "apps/v1",
+			},
+			UpdatePolicy: &vpav1.PodUpdatePolicy{
+				UpdateMode: &updateMode,
+			},
+		},
+	}
+
+	if vpa.MinCpu != nil || vpa.MinMem != nil || vpa.MaxCpu != nil || vpa.MaxMem != nil {
+		vpaObj.Spec.ResourcePolicy = &vpav1.PodResourcePolicy{
+			ContainerPolicies: []vpav1.ContainerResourcePolicy{
+				{
+					ContainerName: "*",
+					MinAllowed:    corev1.ResourceList{},
+					MaxAllowed:    corev1.ResourceList{},
+				},
+			},
+		}
+
+		if vpa.MinCpu != nil {
+			qty, err := resource.ParseQuantity(fmt.Sprintf("%sm", *vpa.MinCpu))
+			if err != nil {
+				return nil, fmt.Errorf("invalid vpa.minCpu value: %v", err)
+			}
+			vpaObj.Spec.ResourcePolicy.ContainerPolicies[0].MinAllowed[corev1.ResourceCPU] = qty
+		}
+		if vpa.MinMem != nil {
+			qty, err := resource.ParseQuantity(fmt.Sprintf("%sMi", *vpa.MinMem))
+			if err != nil {
+				return nil, fmt.Errorf("invalid vpa.minMem value: %v", err)
+			}
+			vpaObj.Spec.ResourcePolicy.ContainerPolicies[0].MinAllowed[corev1.ResourceMemory] = qty
+		}
+		if vpa.MaxCpu != nil {
+			qty, err := resource.ParseQuantity(fmt.Sprintf("%sm", *vpa.MaxCpu))
+			if err != nil {
+				return nil, fmt.Errorf("invalid vpa.maxCpu value: %v", err)
+			}
+			vpaObj.Spec.ResourcePolicy.ContainerPolicies[0].MaxAllowed[corev1.ResourceCPU] = qty
+		}
+		if vpa.MaxMem != nil {
+			qty, err := resource.ParseQuantity(fmt.Sprintf("%sMi", *vpa.MaxMem))
+			if err != nil {
+				return nil, fmt.Errorf("invalid vpa.maxMem value: %v", err)
+			}
+			vpaObj.Spec.ResourcePolicy.ContainerPolicies[0].MaxAllowed[corev1.ResourceMemory] = qty
+		}
+	}
+
+	if vpa.CpuOnly != nil || vpa.MemOnly != nil || vpa.UpdateRequestOnly != nil {
+		if vpaObj.Spec.ResourcePolicy == nil {
+			vpaObj.Spec.ResourcePolicy = &vpav1.PodResourcePolicy{
+				ContainerPolicies: []vpav1.ContainerResourcePolicy{
+					{
+						ContainerName: "*",
+						MinAllowed:    corev1.ResourceList{},
+						MaxAllowed:    corev1.ResourceList{},
+					},
+				},
+			}
+		}
+
+		if vpa.CpuOnly != nil && *vpa.CpuOnly {
+			vpaObj.Spec.ResourcePolicy.ContainerPolicies[0].ControlledResources = &[]corev1.ResourceName{corev1.ResourceCPU}
+		}
+
+		if vpa.MemOnly != nil && *vpa.MemOnly {
+			vpaObj.Spec.ResourcePolicy.ContainerPolicies[0].ControlledResources = &[]corev1.ResourceName{corev1.ResourceMemory}
+		}
+
+		if vpa.UpdateRequestOnly != nil && *vpa.UpdateRequestOnly {
+			v := vpav1.ContainerControlledValuesRequestsOnly
+			vpaObj.Spec.ResourcePolicy.ContainerPolicies[0].ControlledValues = &v
+		}
+	}
+
+	return vpaObj, nil
 }
 
 type ServiceResourceLimit struct {

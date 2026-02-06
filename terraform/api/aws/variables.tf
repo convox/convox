@@ -85,6 +85,11 @@ variable "image" {
   type = string
 }
 
+variable "keda_enable" {
+  type    = bool
+  default = false
+}
+
 variable "metrics_scraper_host" {
   default = ""
   type    = string
@@ -144,4 +149,9 @@ variable "subnets" {
 
 variable "vpc_id" {
   type = string
+}
+
+variable "vpa_enable" {
+  type    = bool
+  default = false
 }
