@@ -12,7 +12,9 @@ The following parameters are available for configuring your Convox rack on Micro
 
 | Parameter                            | Description                                                              |
 |:-------------------------------------|:-------------------------------------------------------------------------|
-| [cert_duration](/configuration/rack-parameters/azure/cert_duration)         | Certification renew period.                                               |
-| [node_type](/configuration/rack-parameters/azure/node_type)                 | Specifies the node instance type.                                         |
-| [region](/configuration/rack-parameters/azure/region)                       | Specifies the Azure region for the rack.                                  |
-| [syslog](/configuration/rack-parameters/azure/syslog)                       | Specifies the endpoint to forward logs to a syslog server.                |
+| [cert_duration](/configuration/rack-parameters/azure/cert_duration)                                             | Certification renew period.                                               |
+| [node_type](/configuration/rack-parameters/azure/node_type)                                                     | Specifies the node instance type.                                         |
+| [nvidia_device_plugin_enable](/configuration/rack-parameters/azure/nvidia_device_plugin_enable)                 | Deploys the NVIDIA GPU Device Plugin to enable GPU workloads.             |
+| [nvidia_device_time_slicing_replicas](/configuration/rack-parameters/azure/nvidia_device_time_slicing_replicas) | Number of virtual GPU replicas per physical GPU for time-slicing.         |
+| [region](/configuration/rack-parameters/azure/region)                                                           | Specifies the Azure region for the rack.                                  |
+| [syslog](/configuration/rack-parameters/azure/syslog)                                                           | Specifies the endpoint to forward logs to a syslog server.                |

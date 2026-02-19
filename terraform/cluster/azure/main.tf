@@ -1,3 +1,19 @@
+provider "kubernetes" {
+  host                   = azurerm_kubernetes_cluster.rack.kube_config[0].host
+  client_certificate     = base64decode(azurerm_kubernetes_cluster.rack.kube_config[0].client_certificate)
+  client_key             = base64decode(azurerm_kubernetes_cluster.rack.kube_config[0].client_key)
+  cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.rack.kube_config[0].cluster_ca_certificate)
+}
+
+provider "helm" {
+  kubernetes {
+    host                   = azurerm_kubernetes_cluster.rack.kube_config[0].host
+    client_certificate     = base64decode(azurerm_kubernetes_cluster.rack.kube_config[0].client_certificate)
+    client_key             = base64decode(azurerm_kubernetes_cluster.rack.kube_config[0].client_key)
+    cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.rack.kube_config[0].cluster_ca_certificate)
+  }
+}
+
 data "azurerm_kubernetes_service_versions" "available" {
   location       = var.region
   version_prefix = "${var.k8s_version}."

@@ -35,13 +35,15 @@ module "cluster" {
     azurerm = azurerm
   }
 
-  k8s_version             = var.k8s_version
-  name                    = local.name
-  node_type               = var.node_type
-  region                  = var.region
-  resource_group          = azurerm_resource_group.rack.id
-  resource_group_name     = azurerm_resource_group.rack.name
-  resource_group_location = azurerm_resource_group.rack.location
+  k8s_version                         = var.k8s_version
+  name                                = local.name
+  node_type                           = var.node_type
+  nvidia_device_plugin_enable         = var.nvidia_device_plugin_enable
+  nvidia_device_time_slicing_replicas = var.nvidia_device_time_slicing_replicas
+  region                              = var.region
+  resource_group                      = azurerm_resource_group.rack.id
+  resource_group_name                 = azurerm_resource_group.rack.name
+  resource_group_location             = azurerm_resource_group.rack.location
 }
 
 module "rack" {
