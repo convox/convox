@@ -1,3 +1,13 @@
+variable "additional_build_groups_config" {
+  type    = string
+  default = ""
+}
+
+variable "additional_node_groups_config" {
+  type    = string
+  default = ""
+}
+
 variable "cert_duration" {
   default = "2160h"
   type    = string

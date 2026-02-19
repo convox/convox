@@ -25,6 +25,8 @@ locals {
     for item in split(",", local.tags_string) :
     split("=", item)[0] => split("=", item)[1]
   } : {}
+  additional_node_groups  = try(jsondecode(var.additional_node_groups_config), jsondecode(base64decode(var.additional_node_groups_config)), [])
+  additional_build_groups = try(jsondecode(var.additional_build_groups_config), jsondecode(base64decode(var.additional_build_groups_config)), [])
 }
 
 data "azurerm_client_config" "current" {}
@@ -42,8 +44,13 @@ module "cluster" {
     azurerm = azurerm
   }
 
+  additional_node_groups              = local.additional_node_groups
+  additional_build_groups             = local.additional_build_groups
   k8s_version                         = var.k8s_version
+  max_on_demand_count                 = var.max_on_demand_count
+  min_on_demand_count                 = var.min_on_demand_count
   name                                = local.name
+  node_disk                           = var.node_disk
   node_type                           = var.node_type
   nvidia_device_plugin_enable         = var.nvidia_device_plugin_enable
   nvidia_device_time_slicing_replicas = var.nvidia_device_time_slicing_replicas
