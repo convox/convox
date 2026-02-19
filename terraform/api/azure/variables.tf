@@ -10,6 +10,16 @@ variable "domain" {
   type = string
 }
 
+variable "domain_internal" {
+  type    = string
+  default = ""
+}
+
+variable "high_availability" {
+  default = true
+  type    = bool
+}
+
 variable "image" {
   type = string
 }
@@ -25,6 +35,11 @@ variable "rack_name" {
 
 variable "namespace" {
   type = string
+}
+
+variable "pdb_default_min_available_percentage" {
+  default = "50"
+  type    = string
 }
 
 variable "region" {
