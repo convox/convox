@@ -10,12 +10,47 @@ variable "docker_hub_password" {
   default = ""
 }
 
+variable "high_availability" {
+  default = true
+  type    = bool
+}
+
+variable "idle_timeout" {
+  default = 4
+  type    = number
+}
+
 variable "image" {
   type = string
 }
 
+variable "internal_router" {
+  default = false
+  type    = bool
+}
+
 variable "name" {
   type = string
+}
+
+variable "nginx_additional_config" {
+  default = ""
+  type    = string
+}
+
+variable "nginx_image" {
+  default = ""
+  type    = string
+}
+
+variable "pdb_default_min_available_percentage" {
+  default = "50"
+  type    = string
+}
+
+variable "proxy_protocol" {
+  default = false
+  type    = bool
 }
 
 variable "rack_name" {
@@ -45,6 +80,21 @@ variable "resource_group_location" {
 
 variable "syslog" {
   default = ""
+}
+
+variable "ssl_ciphers" {
+  default = ""
+  type    = string
+}
+
+variable "ssl_protocols" {
+  default = ""
+  type    = string
+}
+
+variable "tags" {
+  default = {}
+  type    = map(string)
 }
 
 variable "telemetry" {

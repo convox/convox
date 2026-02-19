@@ -59,9 +59,59 @@ variable "nvidia_device_plugin_enable" {
   type    = bool
 }
 
+variable "high_availability" {
+  default = true
+  type    = bool
+}
+
+variable "idle_timeout" {
+  default = 4
+  type    = number
+}
+
+variable "internal_router" {
+  default = false
+  type    = bool
+}
+
 variable "nvidia_device_time_slicing_replicas" {
   type    = number
   default = 0
+}
+
+variable "nginx_additional_config" {
+  default = ""
+  type    = string
+}
+
+variable "nginx_image" {
+  default = ""
+  type    = string
+}
+
+variable "pdb_default_min_available_percentage" {
+  default = "50"
+  type    = string
+}
+
+variable "proxy_protocol" {
+  default = false
+  type    = bool
+}
+
+variable "ssl_ciphers" {
+  default = ""
+  type    = string
+}
+
+variable "ssl_protocols" {
+  default = ""
+  type    = string
+}
+
+variable "tags" {
+  default = ""
+  type    = string
 }
 
 variable "whitelist" {
