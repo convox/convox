@@ -54,6 +54,16 @@ variable "telemetry" {
   default = false
 }
 
+variable "nvidia_device_plugin_enable" {
+  default = false
+  type    = bool
+}
+
+variable "nvidia_device_time_slicing_replicas" {
+  type    = number
+  default = 0
+}
+
 variable "whitelist" {
   default = "0.0.0.0/0"
 }
