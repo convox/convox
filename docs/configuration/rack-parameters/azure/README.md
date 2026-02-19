@@ -29,3 +29,9 @@ The following parameters are available for configuring your Convox rack on Micro
 | [ssl_ciphers](/configuration/rack-parameters/azure/ssl_ciphers)                                           | Custom SSL/TLS cipher suites for nginx.                                   |
 | [ssl_protocols](/configuration/rack-parameters/azure/ssl_protocols)                                       | SSL/TLS protocol versions for nginx.                                      |
 | [tags](/configuration/rack-parameters/azure/tags)                                                         | Custom Azure resource tags.                                               |
+| [additional_build_groups_config](/configuration/rack-parameters/azure/additional_build_groups_config) | Configures additional dedicated build node pools for the cluster. |
+| [additional_node_groups_config](/configuration/rack-parameters/azure/additional_node_groups_config) | Configures additional customized node pools for the cluster. |
+| [max_on_demand_count](/configuration/rack-parameters/azure/max_on_demand_count) | Maximum number of nodes in the default node pool.                     |
+| [min_on_demand_count](/configuration/rack-parameters/azure/min_on_demand_count) | Minimum number of nodes in the default node pool.                     |
+| [node_disk](/configuration/rack-parameters/azure/node_disk)                 | OS disk size in GB for the default node pool.                             |
+| [node_type](/configuration/rack-parameters/azure/node_type)                 | Specifies the node instance type.                                         |

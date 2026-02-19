@@ -50,11 +50,11 @@ resource "azurerm_kubernetes_cluster" "rack" {
     auto_scaling_enabled        = true
     name                        = "default"
     temporary_name_for_rotation = "defaulttemp"
-    min_count                   = 3
-    max_count                   = 100
-    node_count                  = 3
+    min_count                   = var.min_on_demand_count
+    max_count                   = var.max_on_demand_count
+    node_count                  = var.min_on_demand_count
     vm_size                     = var.node_type
-    os_disk_size_gb             = 30
+    os_disk_size_gb             = var.node_disk
     orchestrator_version        = data.azurerm_kubernetes_service_versions.available.latest_version
   }
 

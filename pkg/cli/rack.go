@@ -153,8 +153,8 @@ func (n *NodeGroupConfigParam) Validate() error {
 	if n.MinSize != nil && n.MaxSize != nil && *n.MinSize > *n.MaxSize {
 		return fmt.Errorf("invalid min size: '%d' must be less or equal to max size", *n.MinSize)
 	}
-	if n.CapacityType != nil && (*n.CapacityType != "ON_DEMAND" && *n.CapacityType != "SPOT") {
-		return fmt.Errorf("allowed capasity type: ON_DEMAND or SPOT, found : '%s'", *n.CapacityType)
+	if n.CapacityType != nil && (*n.CapacityType != "ON_DEMAND" && *n.CapacityType != "SPOT" && *n.CapacityType != "Regular" && *n.CapacityType != "Spot") {
+		return fmt.Errorf("allowed capacity type: ON_DEMAND, SPOT, Regular, or Spot, found: '%s'", *n.CapacityType)
 	}
 	if n.Label != nil && !manifest.NameValidator.MatchString(*n.Label) {
 		return fmt.Errorf("label value '%s' invalid, %s", *n.Label, manifest.ValidNameDescription)
