@@ -343,6 +343,22 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 					},
 				},
 			}
+
+			// mount persistent BuildKit cache on dedicated build nodes
+			hostPathType := ac.HostPathDirectoryOrCreate
+			s.Volumes = append(s.Volumes, ac.Volume{
+				Name: "buildkit-cache",
+				VolumeSource: ac.VolumeSource{
+					HostPath: &ac.HostPathVolumeSource{
+						Path: "/mnt/buildkit-cache",
+						Type: &hostPathType,
+					},
+				},
+			})
+			s.Containers[0].VolumeMounts = append(s.Containers[0].VolumeMounts, ac.VolumeMount{
+				Name:      "buildkit-cache",
+				MountPath: "/var/lib/buildkit",
+			})
 		}
 
 		s.Tolerations = []ac.Toleration{
