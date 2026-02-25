@@ -161,6 +161,11 @@ resource "kubernetes_deployment" "api" {
           }
 
           env {
+            name  = "BUILDKIT_HOST_PATH_CACHE_ENABLE"
+            value = var.buildkit_host_path_cache_enable
+          }
+
+          env {
             name  = "CONVOX_DOMAIN_TLS_CERT_DISABLE"
             value = var.convox_domain_tls_cert_disable
           }
