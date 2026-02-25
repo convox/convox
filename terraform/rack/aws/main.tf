@@ -27,6 +27,7 @@ module "api" {
   buildkit_enabled                          = var.buildkit_enabled
   build_disable_convox_resolver             = var.build_disable_convox_resolver
   build_node_enabled                        = var.build_node_enabled
+  buildkit_host_path_cache_enable           = var.buildkit_host_path_cache_enable
   convox_domain_tls_cert_disable            = var.convox_domain_tls_cert_disable
   custom_provided_bucket                    = var.custom_provided_bucket
   docker_hub_authentication                 = module.k8s.docker_hub_authentication

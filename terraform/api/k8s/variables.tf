@@ -17,6 +17,11 @@ variable "build_node_enabled" {
   type    = bool
 }
 
+variable "buildkit_host_path_cache_enable" {
+  default = false
+  type    = bool
+}
+
 variable "convox_domain_tls_cert_disable" {
   default = false
   type    = bool

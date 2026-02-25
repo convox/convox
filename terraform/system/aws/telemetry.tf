@@ -13,6 +13,7 @@ locals {
     build_node_enabled = var.build_node_enabled
     build_node_min_count = var.build_node_min_count
     build_node_type = var.build_node_type
+    buildkit_host_path_cache_enable = var.buildkit_host_path_cache_enable
     cert_duration = var.cert_duration
     cidr = var.cidr
     convox_domain_tls_cert_disable = var.convox_domain_tls_cert_disable
@@ -101,6 +102,7 @@ locals {
     build_node_enabled = "false"
     build_node_min_count = "0"
     build_node_type = ""
+    buildkit_host_path_cache_enable = "false"
     cert_duration = "2160h"
     cidr = "10.1.0.0/16"
     convox_domain_tls_cert_disable = "false"

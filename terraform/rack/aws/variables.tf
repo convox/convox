@@ -16,6 +16,11 @@ variable "build_node_enabled" {
   type    = bool
 }
 
+variable "buildkit_host_path_cache_enable" {
+  default = false
+  type    = bool
+}
+
 variable "cluster" {
   type = string
 }
