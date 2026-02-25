@@ -17,6 +17,7 @@ module "k8s" {
 
   buildkit_enabled               = var.buildkit_enabled
   build_node_enabled             = var.build_node_enabled
+  buildkit_host_path_cache_enable = var.buildkit_host_path_cache_enable
   convox_domain_tls_cert_disable = var.convox_domain_tls_cert_disable
   docker_hub_authentication      = var.docker_hub_authentication
   docker_hub_username            = var.docker_hub_username

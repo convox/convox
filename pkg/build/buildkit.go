@@ -214,6 +214,14 @@ func (bk *BuildKit) build(bb *Build, path, dockerfile, tag string, env map[strin
 	args = append(args, "--opt", fmt.Sprintf("filename=%s", dockerfile))              // skipcq
 	args = append(args, "--output", fmt.Sprintf("type=image,name=%s,push=true", tag)) // skipcq
 
+	localCacheAdded := false
+
+	if os.Getenv("BUILDKIT_HOST_PATH_CACHE_ENABLE") == "true" {
+		args = append(args, "--import-cache", "type=local,src=/var/lib/buildkit")  // skipcq
+		args = append(args, "--export-cache", "type=local,dest=/var/lib/buildkit") // skipcq
+		localCacheAdded = true
+	}
+
 	if bk.cacheProvider(os.Getenv("PROVIDER")) {
 		tagParts := strings.Split(tag, ":")
 		reg := tagParts[0]
@@ -236,7 +244,7 @@ func (bk *BuildKit) build(bb *Build, path, dockerfile, tag string, env map[strin
 		}
 		args = append(args, "--export-cache", fmt.Sprintf("mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true,compression=estargz,type=registry,ref=%s", reg)) // skipcq
 		args = append(args, "--import-cache", fmt.Sprintf("type=registry,ignore-error=true,ref=%s", reg))                                                                      // skipcq
-	} else {
+	} else if !localCacheAdded {
 		// keep a local cache for services using the same Dockerfile
 		args = append(args, "--export-cache", "type=local,dest=/var/lib/buildkit") // skipcq
 		args = append(args, "--import-cache", "type=local,src=/var/lib/buildkit")  // skipcq

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 
@@ -343,8 +344,10 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 					},
 				},
 			}
+		}
 
-			// mount persistent BuildKit cache on dedicated build nodes
+		if os.Getenv("BUILDKIT_HOST_PATH_CACHE_ENABLE") == "true" {
+			// mount persistent BuildKit cache on the host
 			hostPathType := ac.HostPathDirectoryOrCreate
 			s.Volumes = append(s.Volumes, ac.Volume{
 				Name: "buildkit-cache",
