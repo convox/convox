@@ -49,17 +49,18 @@ locals {
 resource "azurerm_kubernetes_cluster_node_pool" "additional" {
   for_each = { for ng in local.additional_node_groups_with_defaults : ng.id => ng }
 
-  kubernetes_cluster_id = azurerm_kubernetes_cluster.rack.id
-  name                  = "np${each.key}"
-  vm_size               = each.value.vm_size
-  os_disk_size_gb       = each.value.os_disk_size
-  auto_scaling_enabled  = true
-  min_count             = each.value.min_count
-  max_count             = each.value.max_count
-  priority              = each.value.priority
-  eviction_policy       = each.value.priority == "Spot" ? "Delete" : null
-  spot_max_price        = each.value.priority == "Spot" ? -1 : null
-  zones                 = length(each.value.zones) > 0 ? each.value.zones : null
+  kubernetes_cluster_id       = azurerm_kubernetes_cluster.rack.id
+  name                        = "np${each.key}"
+  vm_size                     = each.value.vm_size
+  os_disk_size_gb             = each.value.os_disk_size
+  auto_scaling_enabled        = true
+  min_count                   = each.value.min_count
+  max_count                   = each.value.max_count
+  priority                    = each.value.priority
+  eviction_policy             = each.value.priority == "Spot" ? "Delete" : null
+  spot_max_price              = each.value.priority == "Spot" ? -1 : null
+  temporary_name_for_rotation = "nptemp${each.key}"
+  zones                       = length(each.value.zones) > 0 ? each.value.zones : null
 
   node_labels = merge(
     each.value.label != null ? { "convox.io/label" = each.value.label } : {},
@@ -88,17 +89,18 @@ resource "azurerm_kubernetes_cluster_node_pool" "additional" {
 resource "azurerm_kubernetes_cluster_node_pool" "build_additional" {
   for_each = { for ng in local.additional_build_groups_with_defaults : ng.id => ng }
 
-  kubernetes_cluster_id = azurerm_kubernetes_cluster.rack.id
-  name                  = "bp${each.key}"
-  vm_size               = each.value.vm_size
-  os_disk_size_gb       = each.value.os_disk_size
-  auto_scaling_enabled  = true
-  min_count             = each.value.min_count
-  max_count             = each.value.max_count
-  priority              = each.value.priority
-  eviction_policy       = each.value.priority == "Spot" ? "Delete" : null
-  spot_max_price        = each.value.priority == "Spot" ? -1 : null
-  zones                 = length(each.value.zones) > 0 ? each.value.zones : null
+  kubernetes_cluster_id       = azurerm_kubernetes_cluster.rack.id
+  name                        = "bp${each.key}"
+  vm_size                     = each.value.vm_size
+  os_disk_size_gb             = each.value.os_disk_size
+  auto_scaling_enabled        = true
+  min_count                   = each.value.min_count
+  max_count                   = each.value.max_count
+  priority                    = each.value.priority
+  eviction_policy             = each.value.priority == "Spot" ? "Delete" : null
+  spot_max_price              = each.value.priority == "Spot" ? -1 : null
+  temporary_name_for_rotation = "bptemp${each.key}"
+  zones                       = length(each.value.zones) > 0 ? each.value.zones : null
 
   node_labels = merge(
     { "convox-build" = "true" },

@@ -74,12 +74,10 @@ module "rack" {
   high_availability                    = var.high_availability
   idle_timeout                         = var.idle_timeout
   image                                = var.image
-  internal_router                      = var.internal_router
   name                                 = local.name
   nginx_additional_config              = var.nginx_additional_config
   nginx_image                          = var.nginx_image
   pdb_default_min_available_percentage = var.pdb_default_min_available_percentage
-  proxy_protocol                       = var.proxy_protocol
   rack_name                            = local.rack_name
   region                               = var.region
   release                              = local.release
