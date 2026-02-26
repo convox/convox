@@ -11,7 +11,6 @@ locals {
     high_availability = var.high_availability
     idle_timeout = var.idle_timeout
     image = var.image
-    internal_router = var.internal_router
     k8s_version = var.k8s_version
     name = var.name
     nginx_additional_config = var.nginx_additional_config
@@ -20,7 +19,6 @@ locals {
     nvidia_device_plugin_enable = var.nvidia_device_plugin_enable
     nvidia_device_time_slicing_replicas = var.nvidia_device_time_slicing_replicas
     pdb_default_min_available_percentage = var.pdb_default_min_available_percentage
-    proxy_protocol = var.proxy_protocol
     rack_name = var.rack_name
     region = var.region
     release = var.release

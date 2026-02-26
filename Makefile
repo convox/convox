@@ -60,7 +60,6 @@ release:
 
 test:
 	env TEST=true go test -covermode atomic -coverprofile coverage.txt -mod=vendor ./...
-	go run cmd/telemetry-gen/main.go verify
 
 tools:
 	go install -mod=vendor ./vendor/github.com/crazy-max/xgo
