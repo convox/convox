@@ -24,11 +24,6 @@ variable "image" {
   type = string
 }
 
-variable "internal_router" {
-  default = false
-  type    = bool
-}
-
 variable "name" {
   type = string
 }
@@ -46,11 +41,6 @@ variable "nginx_image" {
 variable "pdb_default_min_available_percentage" {
   default = "50"
   type    = string
-}
-
-variable "proxy_protocol" {
-  default = false
-  type    = bool
 }
 
 variable "rack_name" {

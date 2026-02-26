@@ -70,12 +70,10 @@ module "router" {
   docker_hub_authentication = module.k8s.docker_hub_authentication
   high_availability         = var.high_availability
   idle_timeout              = var.idle_timeout
-  internal_router           = var.internal_router
   name                      = var.name
   namespace                 = module.k8s.namespace
   nginx_additional_config   = var.nginx_additional_config
   nginx_image               = var.nginx_image
-  proxy_protocol            = var.proxy_protocol
   region                    = var.region
   release                   = var.release
   ssl_ciphers               = var.ssl_ciphers

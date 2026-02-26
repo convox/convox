@@ -17,11 +17,6 @@ variable "idle_timeout" {
   type    = number
 }
 
-variable "internal_router" {
-  default = false
-  type    = bool
-}
-
 variable "name" {
   type = string
 }
@@ -38,11 +33,6 @@ variable "nginx_additional_config" {
 variable "nginx_image" {
   default = ""
   type    = string
-}
-
-variable "proxy_protocol" {
-  default = false
-  type    = bool
 }
 
 variable "region" {
