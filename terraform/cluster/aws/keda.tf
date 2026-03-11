@@ -57,6 +57,10 @@ resource "aws_iam_role_policy" "keda_aws_scalar" {
 }
 
 resource "helm_release" "keda" {
+  depends_on = [
+    null_resource.wait_k8s_api,
+  ]
+
   count      = var.keda_enable ? 1 : 0
   name       = "keda"
   repository = "https://kedacore.github.io/charts"
@@ -65,6 +69,8 @@ resource "helm_release" "keda" {
   namespace  = local.keda_namespace
 
   create_namespace = true
+  atomic           = true
+  timeout          = 600
 
   values = [
     yamlencode({
