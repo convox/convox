@@ -41,9 +41,11 @@ $ convox certs delete cert-xxxxxxxxxxxxxx
 Deleting certificate cert-xxxxxxxxxxxxxx... OK
 ```
 
-## Advanced SSL Configuration: Let's Encrypt DNS01 Challenge with Route53
+## Advanced SSL Configuration: Let's Encrypt DNS01 Challenge
 
-Convox also supports the Let's Encrypt DNS01 challenge for SSL certificate generation, which is useful when HTTP endpoints are not exposed or when wildcard certificates are required. The DNS01 challenge verifies domain ownership via DNS TXT records, and it is ideal for environments with strict security requirements.
+Convox supports the Let's Encrypt DNS01 challenge for SSL certificate generation, which is useful when HTTP endpoints are not exposed or when wildcard certificates are required. The DNS01 challenge verifies domain ownership via DNS TXT records, and it is ideal for environments with strict security requirements.
+
+### Using AWS Route53
 
 ### Setting Up DNS01 Challenge
 
@@ -127,6 +129,27 @@ convox letsencrypt dns route53 list
 ```
 
 This command will list your DNS zones and hosted zone IDs, confirming that the DNS01 challenge is configured correctly.
+
+### Using Cloudflare
+
+If you manage DNS in Cloudflare, you can hand the token or API key value directly to Convox and it will manage the underlying secret for you.
+
+1. **Configure the DNS Solver**: Run the following command to register the Cloudflare solver with Convox. Supplying `--api-token` causes Convox to store the token in a secret named `cloudflare-dns-credential-<id>` under the `cert-manager` namespace automatically.
+
+```html
+convox letsencrypt dns cloudflare add --id 1 --dns-zones <your.zone> \
+  --api-token <your_api_token>
+```
+
+   To use an API key instead, swap `--api-token` for `--api-key <your_api_key>` and add `--email <cloudflare_account_email>`. Convox stores both the key and email alongside one another in the same secret so cert-manager can authenticate correctly.
+
+2. **Verify Configuration**: Check the configuration:
+
+```html
+convox letsencrypt dns cloudflare list
+```
+
+This command will list your Cloudflare-backed DNS zones and the referenced Kubernetes secrets, confirming that the DNS01 challenge is configured correctly.
 
 ## Wildcard Certificates and Reuse
 
