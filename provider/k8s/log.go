@@ -82,6 +82,9 @@ func (p *Provider) configureLogOptionsForService(app, name string, f cmdutil.Fac
 	}
 
 	o.MaxFollowConcurrency = 20
+	if logConfig.MaxLogRequests != nil {
+		o.MaxFollowConcurrency = *logConfig.MaxLogRequests
+	}
 
 	o.Namespace = p.AppNamespace(app)
 	o.ConsumeRequestFn = logs.DefaultConsumeRequest
