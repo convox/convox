@@ -1,9 +1,0 @@
-old_path,new_path,reason
-/getting-started/introduction,/getting-started/introduction,README.md duplicate removed in Phase 2; URL preserved (no redirect needed)
-/installation/development-rack/macos-m1,/installation/development-rack/macos,macOS Intel and Apple Silicon pages merged into single page
-/reference/quick-apps/,/reference/quick-apps,Trailing slash removed from URL in Phase 2
-/reference/quick-apps/drupal/,/reference/quick-apps/drupal,Trailing slash removed from URL in Phase 2
-/deployment/ci-cd-workflows,/deployment/workflows,Nav path aligned to match file URL in Phase 2
-/console/workflows,/deployment/workflows,Old console workflows link updated in contentful.md
-/cloud/monitoring,/configuration/monitoring,Broken link in migration-guide.md pointed to non-existent cloud/monitoring
-/configuration/rack-parameters/aws/additional_build_groups,/configuration/rack-parameters/aws/additional_build_groups_config,Broken link in app-parameters README missing _config suffix

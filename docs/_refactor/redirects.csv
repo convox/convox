@@ -1,9 +1,0 @@
-old_path,new_path,reason
-/getting-started/introduction,/getting-started/introduction,README.md duplicate removal (file delete only; URL preserved)
-/installation/development-rack/macos-m1,/installation/development-rack/macos,Merge M1 page into unified macOS page
-/configuration/app-parameters/aws/BuildCpu,/configuration/app-parameters/aws/build-cpu,Normalize URL to kebab-case (if URL changes)
-/configuration/app-parameters/aws/BuildLabels,/configuration/app-parameters/aws/build-labels,Normalize URL to kebab-case (if URL changes)
-/configuration/app-parameters/aws/BuildMem,/configuration/app-parameters/aws/build-mem,Normalize URL to kebab-case (if URL changes)
-/deployment/ci-cd-workflows,/deployment/workflows,Nav path alignment (nav says ci-cd-workflows but file url is workflows)
-/reference/quick-apps/,/reference/quick-apps,Remove trailing slash from URL
-/reference/quick-apps/drupal/,/reference/quick-apps/drupal,Remove trailing slash from URL
