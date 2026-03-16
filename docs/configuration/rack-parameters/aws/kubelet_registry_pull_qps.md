@@ -1,6 +1,5 @@
 ---
 title: "kubelet_registry_pull_qps"
-draft: false
 slug: kubelet_registry_pull_qps
 url: /configuration/rack-parameters/aws/kubelet_registry_pull_qps
 ---
@@ -19,7 +18,7 @@ The default value for `kubelet_registry_pull_qps` is `5`.
 
 ## Setting Parameters
 To enable the `kubelet_registry_pull_qps` parameter, use the following command:
-```html
+```bash
 $ convox rack params set kubelet_registry_pull_qps=value -r rackName
 Setting parameters... OK
 ```

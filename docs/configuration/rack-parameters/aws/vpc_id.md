@@ -1,6 +1,5 @@
 ---
 title: "vpc_id"
-draft: false
 slug: vpc_id
 url: /configuration/rack-parameters/aws/vpc_id
 ---

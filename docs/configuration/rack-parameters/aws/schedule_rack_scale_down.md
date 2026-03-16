@@ -1,6 +1,5 @@
 ---
 title: "schedule_rack_scale_down"
-draft: false
 slug: schedule_rack_scale_down
 url: /configuration/rack-parameters/aws/schedule_rack_scale_down
 ---
@@ -21,7 +20,7 @@ If the `schedule_rack_scale_down` parameter is set to an empty string, no scale-
 
 ## Setting Parameters
 To set the `schedule_rack_scale_down` parameter, use the following command:
-```html
+```bash
 $ convox rack params set schedule_rack_scale_down="0 18 * * 5" -r rackName
 Setting parameters... OK
 ```

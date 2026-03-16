@@ -1,7 +1,6 @@
 ---
 title: "Balancer"
-draft: false
-slug: Balancer
+slug: balancer
 url: /reference/primitives/app/balancer
 ---
 # Balancer
@@ -12,7 +11,7 @@ A Balancer accepts incoming traffic and balances it between the [Processes](/ref
 
 A Balancer is defined in [`convox.yml`](/configuration/convox-yml).
 
-```html
+```yaml
 balancers:
   custom:
     annotations:
@@ -41,7 +40,7 @@ services:
 
 ### Listing Balancers
 
-```html
+```bash
 $ convox balancers
 BALANCER  SERVICE  ENDPOINT
 custom    mqtt     1.2.3.4
@@ -53,7 +52,7 @@ custom    mqtt     1.2.3.4
 
 To configure TCP ports on a balancer, you can use the following example:
 
-```html
+```yaml
 balancers:
   custom:
     annotations:
@@ -76,7 +75,7 @@ services:
 
 To configure UDP ports on a balancer, specify the protocol explicitly for UDP ports. The default protocol is TCP, so it does not need to be specified for TCP ports.
 
-```html
+```yaml
 balancers:
   custom:
     annotations:
@@ -109,7 +108,7 @@ services:
 - **port**: Used to define the main port that the service will listen on. This port is exposed via the default ingress and is used for primary traffic, including health checks.
 - **ports**: Used to define additional ports for service-to-service communication within the cluster. These ports can be exposed using a custom balancer for specific protocols like TCP or UDP.
 
-```html
+```yaml
 services:
   web:
     domain: ${HOST}
@@ -128,7 +127,7 @@ By using the `ports` attribute, you can configure additional ports with specific
 
 You can configure an alternate health check port using the `ports` attribute.
 
-```html
+```yaml
 balancers:
   custom:
     annotations:

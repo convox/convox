@@ -1,6 +1,5 @@
 ---
 title: "Machine Management"
-draft: false
 slug: machines
 url: /cloud/machines
 ---

@@ -1,6 +1,5 @@
 ---
 title: "proxy_protocol"
-draft: false
 slug: proxy_protocol
 url: /configuration/rack-parameters/azure/proxy_protocol
 ---
@@ -20,7 +19,7 @@ The default value for `proxy_protocol` is `false`.
 
 ## Setting Parameters
 To set the `proxy_protocol` parameter, use the following command:
-```html
+```bash
 $ convox rack params set proxy_protocol=true -r rackName
 Setting parameters... OK
 ```

@@ -1,6 +1,5 @@
 ---
 title: "version"
-draft: false
 slug: version
 url: /reference/cli/version
 ---
@@ -11,11 +10,11 @@ url: /reference/cli/version
 Display version information
 
 ### Usage
-```html
+```bash
     convox version
 ```
 ### Examples
-```html
+```bash
     $ convox version
     client: 3.0.0.beta40
     server: 20200116125110

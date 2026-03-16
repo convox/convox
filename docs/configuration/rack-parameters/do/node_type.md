@@ -1,6 +1,5 @@
 ---
 title: "node_type"
-draft: false
 slug: node_type
 url: /configuration/rack-parameters/do/node_type
 ---
@@ -19,7 +18,7 @@ The default value for `node_type` is `s-2vcpu-4gb`.
 
 ## Setting Parameters
 To set the `node_type` parameter, use the following command:
-```html
+```bash
 $ convox rack params set node_type=s-2vcpu-4gb -r rackName
 Setting parameters... OK
 ```

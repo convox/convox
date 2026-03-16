@@ -1,6 +1,5 @@
 ---
 title: "ecr_scan_on_push_enable"
-draft: false
 slug: ecr_scan_on_push_enable
 url: /configuration/rack-parameters/aws/ecr_scan_on_push_enable
 ---
@@ -23,18 +22,18 @@ The default value for `ecr_scan_on_push_enable` is `false`.
 
 ## Setting Parameters
 To enable automatic image scanning on push to ECR, use the following command:
-```html
+```bash
 $ convox rack params set ecr_scan_on_push_enable=true -r rackName
 Setting parameters... OK
 ```
 
 When installing a new rack, you can include this parameter:
-```html
+```bash
 $ convox rack install aws rackName ecr_scan_on_push_enable=true
 ```
 
 To verify the parameter is set correctly:
-```html
+```bash
 $ convox rack params -r rackName
 ```
 

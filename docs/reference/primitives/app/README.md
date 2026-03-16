@@ -1,7 +1,6 @@
 ---
 title: "App"
-draft: false
-slug: App
+slug: app
 url: /reference/primitives/app
 ---
 # App
@@ -11,7 +10,7 @@ An App is a logical container for [Primitives](/reference/primitives) that are u
 ## Definition
 
 An App is defined by a single [`convox.yml`](/configuration/convox-yml)
-```html
+```yaml
     labels:
       convox.com/test: true
     resources:
@@ -26,12 +25,12 @@ An App is defined by a single [`convox.yml`](/configuration/convox-yml)
 ## Command Line Interface
 
 ### Creating an App
-```html
+```bash
     $ convox apps create myapp
     Creating myapp... OK
 ```
 ### Getting information about an App
-```html
+```bash
     $ convox apps info myapp
     Name    myapp
     Status  running
@@ -40,28 +39,28 @@ An App is defined by a single [`convox.yml`](/configuration/convox-yml)
     Router  router.0a1b2c3d4e5f.convox.cloud
 ```
 ### Listing Apps
-```html
+```bash
     $ convox apps
     APP    STATUS   RELEASE
     myapp  running  RABCDEFGHI
 ```
 ### Deleting an App
-```html
+```bash
     $ convox apps delete myapp
     Deleting myapp... OK
 ```
 ### Getting logs for an App
-```html
+```bash
     $ convox logs -a myapp
     2000-01-01T00:00:00 service/web/web-zyxwv Starting myapp on port 5000
 ```
 ### Cancelling a deployment that is in progress
-```html
+```bash
     $ convox apps cancel myapp
     Cancelling deployment of myapp... OK
 ```
 ### Preventing accidental deletion of an App
-```html
+```bash
     $ convox apps lock myapp
     Locking myapp... OK
 
@@ -69,7 +68,7 @@ An App is defined by a single [`convox.yml`](/configuration/convox-yml)
     Unlocking myapp... OK
 ```
 ### Exporting an App
-```html
+```bash
     $ convox apps export myapp -f /tmp/myapp.tgz
     Exporting app myapp... OK
     Exporting env... OK
@@ -78,7 +77,7 @@ An App is defined by a single [`convox.yml`](/configuration/convox-yml)
     Packaging export... OK
 ```
 ### Importing an App
-```html
+```bash
     $ convox apps import myapp2 -f /tmp/myapp.tgz
     Creating app myapp2... OK
     Importing build... OK, RIHGFEDCBA

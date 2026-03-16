@@ -1,13 +1,12 @@
 ---
 title: "Console RBAC"
-draft: false
-slug: RBAC
+slug: rbac
 url: /management/rbac
 ---
 
 # Role-Based Access Control (RBAC)
 
-The RBAC feature allows you to define granular access control by assigning specific roles and permission policies to users in your organization. 
+The RBAC feature allows you to define granular access control by assigning specific roles and permission policies to users in your organization.
 
 Existing users retain their **Legacy Role** by default, ensuring that no active changes are made upon this update. Organizations can create, test, and assign new roles without affecting current user access.
 
@@ -97,7 +96,7 @@ Here are the available resource types that can be selected when defining permiss
 
 ### Relation Between Rack and App Permissions
 
-It’s important to note that **Rack** permissions and **App** permissions are related. A user must have access to the **Rack** to make use of **App** permissions. If a user is granted app-level permissions but lacks permissions for the associated rack, the app permissions will not grant access. Rack permissions act as a foundational requirement for app-related actions.
+**Rack** permissions and **App** permissions are related. A user must have access to the **Rack** to make use of **App** permissions. If a user is granted app-level permissions but lacks permissions for the associated rack, the app permissions will not grant access. Rack permissions act as a foundational requirement for app-related actions.
 
 ### Resource Name Options
 

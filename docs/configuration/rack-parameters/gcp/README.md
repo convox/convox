@@ -1,6 +1,5 @@
 ---
 title: "GCP Rack Parameters"
-draft: false
 slug: gcp-rack-parameters
 url: /configuration/rack-parameters/gcp
 ---

@@ -1,7 +1,6 @@
 ---
 title: "Health Checks"
-draft: false
-slug: Health Checks
+slug: health-checks
 url: /configuration/health-checks
 ---
 # Health Checks
@@ -15,7 +14,7 @@ Health checks must return a valid HTTP response code (200-399) within the config
 ## Definition
 
 ### Simple
-```html
+```yaml
 services:
   web:
     health: /check
@@ -24,7 +23,7 @@ services:
 
 ### Advanced
 
-```html
+```yaml
 services:
   web:
     health:
@@ -49,7 +48,7 @@ When a liveness check fails, Kubernetes will restart the container, which can he
 
 ### Liveness Check Configuration
 
-```html
+```yaml
 services:
   web:
     liveness:
@@ -80,7 +79,7 @@ services:
 ### Example Use Cases
 
 **Detecting Deadlocks:**
-```html
+```yaml
 services:
   worker:
     liveness:
@@ -91,7 +90,7 @@ services:
 ```
 
 **Monitoring Memory-Intensive Applications:**
-```html
+```yaml
 services:
   processor:
     liveness:
@@ -110,7 +109,7 @@ When a startup probe is configured, all other probes are disabled until it succe
 
 ### Startup Probe Configuration
 
-```html
+```yaml
 services:
   web:
     build: .
@@ -137,7 +136,7 @@ services:
 
 You can also use an HTTP endpoint for startup probes:
 
-```html
+```yaml
 services:
   api:
     build: .
@@ -170,7 +169,7 @@ Startup probes are ideal for:
 
 ### Example: Application with Long Initialization
 
-```html
+```yaml
 services:
   analytics:
     build: .
@@ -210,7 +209,7 @@ For services that use gRPC instead of HTTP, Convox provides support for gRPC hea
 
 ### Basic Configuration
 
-```html
+```yaml
 services:
   api:
     build: .
@@ -222,7 +221,7 @@ services:
 
 You can customize the gRPC health check behavior using the same `health` attributes as HTTP health checks:
 
-```html
+```yaml
 services:
   api:
     build: .
@@ -297,3 +296,9 @@ With this implementation and the appropriate configuration in your `convox.yml`,
 - Liveness checks: All versions
 - Startup probes: Version 3.19.7+
 - gRPC health checks: All versions
+
+## See Also
+
+- [Load Balancers](/configuration/load-balancers) for configuring traffic routing
+- [Rolling Updates](/deployment/rolling-updates) for how health checks affect deployments
+- [Scaling](/deployment/scaling) for autoscaling configuration

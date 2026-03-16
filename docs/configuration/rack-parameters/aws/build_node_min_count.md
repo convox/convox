@@ -1,6 +1,5 @@
 ---
 title: "build_node_min_count"
-draft: false
 slug: build_node_min_count
 url: /configuration/rack-parameters/aws/build_node_min_count
 ---
@@ -19,7 +18,7 @@ The default value for `build_node_min_count` is `0`.
 
 ## Setting Parameters
 To set the `build_node_min_count` parameter, use the following command:
-```html
+```bash
 $ convox rack params set build_node_min_count=2 -r rackName
 Setting parameters... OK
 ```

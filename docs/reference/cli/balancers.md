@@ -1,6 +1,5 @@
 ---
 title: "balancers"
-draft: false
 slug: balancers
 url: /reference/cli/balancers
 ---
@@ -11,11 +10,11 @@ url: /reference/cli/balancers
 List balancers for an app
 
 ### Usage
-```html
+```bash
     convox balancers
 ```
 ### Examples
-```html
+```bash
     $ convox balancers
     BALANCER  SERVICE  ENDPOINT
     other     web      1.2.3.4

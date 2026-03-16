@@ -1,7 +1,6 @@
 ---
 title: "Rack"
-draft: false
-slug: Rack
+slug: rack
 url: /reference/primitives/rack
 ---
 # Rack
@@ -11,7 +10,7 @@ A Rack is a platform to build, deploy and host your [Apps](/reference/primitives
 ## Command Line Interface
 
 ### Getting information about a Rack
-```html
+```bash
     $ convox rack -r myrack
     Name      myrack
     Provider  aws
@@ -22,14 +21,14 @@ A Rack is a platform to build, deploy and host your [Apps](/reference/primitives
     $ convox rack params -r myrack
 ```
 ### Configuring a Rack
-```html
+```bash
     $ convox rack params set node_type=t3.medium
     Updating parameters... Upgrading modules...
     Downloading github.com/convox/convox?ref=3.0.0 for system...
     ...
 ```
 ### Updating a Rack
-```html
+```bash
     $ convox rack update -r myrack
     Upgrading modules...
     Downloading github.com/convox/convox?ref=3.0.0 for system...
@@ -42,11 +41,11 @@ A Rack is a platform to build, deploy and host your [Apps](/reference/primitives
     provider = aws
 ```
 ### Retrieving Rack logs
-```html
+```bash
     $ convox rack logs -r myrack
     ...
 ```
 ### Uninstalling a Rack
-```html
+```bash
     $ convox rack uninstall myrack
 ```

@@ -1,7 +1,6 @@
 ---
 title: "Dockerfile"
-draft: false
-slug: Dockerfile
+slug: dockerfile
 url: /configuration/dockerfile
 ---
 
@@ -9,7 +8,7 @@ url: /configuration/dockerfile
 
 The `Dockerfile` describes the steps used to create a [Build](/reference/primitives/app/build) from your
 application code.
-```html
+```dockerfile
     FROM ubuntu:18.04
     COPY . .
     RUN ["deps", "install"]
@@ -31,7 +30,7 @@ Each line of a `Dockerfile` will be cached as long as files referenced by it are
 to cache expensive steps such as dependency installation by selectively copying files before running commands.
 
 The following example selectively copies only the files needed to run `npm` before installing dependencies.
-```html
+```dockerfile
     FROM nodejs
 
     COPY package.json package-lock.json .
@@ -53,12 +52,12 @@ deployments.
 > in the resulting image.
 
 You can declare build variables using the `ARG` directive with an optional default value:
-```html
+```text
     ARG COPYRIGHT=2020
     ARG RUBY_VERSION
 ```
 Values for these variables will be read from the [Environment](/configuration/environment) at build time:
-```html
+```bash
     $ convox env set RUBY_VERSION=2.6.4
 ```
 ## See Also

@@ -1,6 +1,5 @@
 ---
 title: "node_capacity_type"
-draft: false
 slug: node_capacity_type
 url: /configuration/rack-parameters/aws/node_capacity_type
 ---
@@ -8,7 +7,7 @@ url: /configuration/rack-parameters/aws/node_capacity_type
 # node_capacity_type
 
 ## Description
-The `node_capacity_type` parameter specifies the type of capacity for the cluster nodes. It can be set to `on_demand`, `spot`, or `mixed`. 
+The `node_capacity_type` parameter specifies the type of capacity for the cluster nodes. It can be set to `on_demand`, `spot`, or `mixed`.
 
 - `on_demand`: Uses AWS on-demand instances for the cluster nodes.
 - `spot`: Uses AWS spot instances for the cluster nodes.
@@ -23,7 +22,7 @@ The default value for `node_capacity_type` is `on_demand`.
 
 ## Setting Parameters
 To set the `node_capacity_type` parameter, use the following command:
-```html
+```bash
 $ convox rack params set node_capacity_type=mixed -r rackName
 Setting parameters... OK
 ```

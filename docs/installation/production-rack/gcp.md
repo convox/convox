@@ -1,11 +1,10 @@
 ---
 title: "Google Cloud"
-draft: false
-slug: Google Cloud
+slug: google-cloud
 url: /installation/production-rack/gcp
 ---
 # Google Cloud
-> Please note that these are instructions for installing a Rack via the command line. The easiest way to install a Rack is with the [Convox Web Console](https://console.convox.com)
+> These are instructions for installing a Rack via the command line. The easiest way to install a Rack is with the [Convox Web Console](https://console.convox.com)
 
 ## Initial Setup
 
@@ -30,7 +29,7 @@ The following environment variables are required:
 - `GOOGLE_PROJECT`
 
 ### Create Project
-```html
+```bash
     $ gcloud projects create <id> --set-as-default
 ```
 - `GOOGLE_PROJECT` is the id you selected
@@ -38,7 +37,7 @@ The following environment variables are required:
 > You will need to enable billing on this new project before proceeding. Visit https://console.cloud.google.com/billing to set up billing for your project.
 
 ### Create Service Account
-```html
+```bash
     $ serviceaccount="convox@${GOOGLE_PROJECT}.iam.gserviceaccount.com"
     $ gcloud iam service-accounts create convox
     $ gcloud iam service-accounts keys create ~/.gcloud.convox --iam-account="${serviceaccount}"
@@ -46,7 +45,7 @@ The following environment variables are required:
 - `GOOGLE_CREDENTIALS` is `~/gcloud.convox`
 
 ### Grant Permissions
-```html
+```bash
     $ gcloud projects add-iam-policy-binding ${GOOGLE_PROJECT} --member="serviceAccount:${serviceaccount}" --role="roles/owner"
 ```
 
@@ -54,7 +53,7 @@ The following environment variables are required:
 
 The following APIs must be enabled for your GCP project:
 
-```html
+```bash
     $ gcloud services enable cloudapis.googleapis.com
     $ gcloud services enable compute.googleapis.com
     $ gcloud services enable cloudresourcemanager.googleapis.com
@@ -64,7 +63,7 @@ The following APIs must be enabled for your GCP project:
 ```
 
 ## Install Rack
-```html
+```bash
     $ convox rack install gcp <name> [param1=value1]...
 ```
 ### Available Parameters

@@ -1,6 +1,5 @@
 ---
 title: "ps"
-draft: false
 slug: ps
 url: /reference/cli/ps
 ---
@@ -11,11 +10,11 @@ url: /reference/cli/ps
 List app processes
 
 ### Usage
-```html
+```bash
     convox ps
 ```
 ### Examples
-```html
+```bash
     $ convox ps
     ID            SERVICE  STATUS   RELEASE      STARTED     COMMAND
     62942430327e  web      running  RCRLBREFPBX  1 week ago
@@ -25,11 +24,11 @@ List app processes
 Get information about a process
 
 ### Usage
-```html
+```bash
     convox ps info
 ```
 ### Examples
-```html
+```bash
     $ convox ps info 62942430327e
     Id        62942430327e
     App       nodejs
@@ -45,11 +44,11 @@ Get information about a process
 Stop a process
 
 ### Usage
-```html
+```bash
     convox ps stop
 ```
 ### Examples
-```html
+```bash
     $ convox ps stop 62942430327e
     Stopping 62942430327e... OK
 ```

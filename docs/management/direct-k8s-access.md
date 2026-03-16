@@ -1,12 +1,11 @@
 ---
 title: "Direct Kubernetes Access"
-draft: false
-slug: Direct Kubernetes Access
+slug: direct-kubernetes-access
 url: /management/direct-k8s-access
 ---
 # Direct Kubernetes Access
 
-Convox makes managing and operating your Kubernetes cluster extremely easy and simple by abstracting a lot of the unnecessary complexities away.  We know, however, that there may be times that you will want to dive deeper and access the Kubernetes primitives and resources yourself.  This could be deep debugging of an edge-case networking issue, examination of an underlying cloud infrastructure issue, gaining a deeper understanding of how everything ties together, or simply to install a Kubernetes native component or plugin directly.
+Convox makes managing and operating your Kubernetes cluster extremely easy and simple by abstracting a lot of the unnecessary complexities away.  We know, however, that there may be times that you will want to dive deeper and access the Kubernetes primitives and resources yourself.  This could be deep debugging of an edge-case networking issue, examination of an underlying cloud infrastructure issue, gaining a deeper understanding of how everything ties together, or to install a Kubernetes native component or plugin directly.
 
 Convox provides an API proxy to Kubernetes that runs on your Rack which allows you to grant availability to the underlying system, whilst delegating per-user access to Kubernetes.  This is actually a lot easier and more manageable than providing direct Kubernetes credentials to the developers in your team!
 
@@ -26,7 +25,7 @@ This will export the proxy configuration to a temporary file and then point your
 
 > By default, `kubectl` looks for a file named `config` in the `$HOME/.kube` directory. You can specify other kubeconfig files by setting the `KUBECONFIG` environment variable or by setting the `--kubeconfig` flag.
 
-In this way, you can produce a kubeconfig file for all the Racks you require and simply change which file your `kubectl` command refers to to change which Rack it talks to.
+In this way, you can produce a kubeconfig file for all the Racks you require and change which file your `kubectl` command refers to to change which Rack it talks to.
 
 If you remove a user's access to your Convox organization, then they will also lose access to the underlying Kubernetes infrastructure, which is important from a security point of view.
 

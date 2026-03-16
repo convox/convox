@@ -1,7 +1,6 @@
 ---
 title: "Preparing An Application"
-draft: false
-slug: Preparing An Application
+slug: preparing-an-application
 url: /tutorials/preparing-an-application
 ---
 
@@ -51,7 +50,7 @@ A timer is effectively a cron job. With a timer you can specify a regular schedu
 
 Let's take a look at an example convox.yml. For this example we will specify a Django app with a web service, a celery worker service, and a timer that sends email reminders every five minutes using the worker service. For this example we will use a single Dockerfile for both services. This app also uses a Postgres database as a primary datastore and a Redis database as a celery broker.
 
-```html
+```yaml
 environment:
   - DEVELOPMENT=True
 resources:
@@ -86,7 +85,7 @@ A few things to note here are that the web service specifies an internal port of
 
 If you are already using `docker-compose.yml` for your application moving to a `convox.yml` is a relatively straightforward process. As an example take a look at the following `docker-compose.yml`
 
-```html
+```yaml
 version: '2'
 services:
   web:
@@ -124,7 +123,7 @@ So here we have 5 different services defined, one a httpd service, one a private
 
 The `convox.yml` manifest for this app would look like
 
-```html
+```yaml
 resources:
   redis:
     type: redis

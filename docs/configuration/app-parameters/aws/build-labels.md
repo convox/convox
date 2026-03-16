@@ -1,7 +1,6 @@
 ---
 title: "BuildLabels"
-draft: false
-slug: BuildLabels
+slug: buildlabels
 url: /configuration/app-parameters/aws/BuildLabels
 ---
 
@@ -24,7 +23,7 @@ By default, no build labels are set, and build pods are scheduled according to s
 ## Setting the Parameter
 To set build node selector labels for an application:
 
-```html
+```bash
 $ convox apps params set BuildLabels=convox.io/label=app-build -a <app-name>
 Setting BuildLabels... OK
 ```
@@ -34,7 +33,7 @@ This configuration directs build pods for the specified application to nodes wit
 ### Using Multiple Labels
 You can specify multiple labels using a comma-separated list:
 
-```html
+```bash
 $ convox apps params set BuildLabels=convox.io/label=app-build,build-type=large -a <app>
 Setting BuildLabels... OK
 ```
@@ -42,7 +41,7 @@ Setting BuildLabels... OK
 ## Viewing Current Configuration
 To view the current build labels for an application:
 
-```html
+```bash
 $ convox apps params -a <app>
 NAME         VALUE
 BuildLabels  convox.io/label=app-build
@@ -51,7 +50,7 @@ BuildLabels  convox.io/label=app-build
 ## Removing Build Labels
 To remove build labels:
 
-```html
+```bash
 $ convox apps params unset BuildLabels -a <app>
 Unsetting BuildLabels... OK
 ```
@@ -61,7 +60,7 @@ Unsetting BuildLabels... OK
 ### BuildCpu
 Sets the CPU request for build pods in millicores:
 
-```html
+```bash
 $ convox apps params set BuildCpu=512 -a <app>
 Setting BuildCpu... OK
 ```
@@ -71,7 +70,7 @@ This allocates 512 millicores (0.5 vCPU) to build pods.
 ### BuildMem
 Sets the memory request for build pods in megabytes:
 
-```html
+```bash
 $ convox apps params set BuildMem=2048 -a <app>
 Setting BuildMem... OK
 ```

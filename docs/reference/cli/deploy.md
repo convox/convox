@@ -1,6 +1,5 @@
 ---
 title: "deploy"
-draft: false
 slug: deploy
 url: /reference/cli/deploy
 ---
@@ -11,11 +10,11 @@ url: /reference/cli/deploy
 Create and promote a build
 
 ### Usage
-```html
+```bash
     convox deploy [dir]
 ```
 ### Examples
-```html
+```bash
     $ convox deploy
     Packaging source... OK
     Uploading source... OK
@@ -40,7 +39,7 @@ Create and promote a build
 
 You can pass env vars that will only exists on the build time. (Supported from version: >= 3.7.2)
 
-```html
+```bash
     $ convox deploy --build-args "BUILD_ENV1=val1" --build-args "BUILD_ENV2=val2"
     Packaging source... OK
     Uploading source... OK

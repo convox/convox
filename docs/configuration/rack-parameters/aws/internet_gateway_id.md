@@ -1,6 +1,5 @@
 ---
 title: "internet_gateway_id"
-draft: false
 slug: internet_gateway_id
 url: /configuration/rack-parameters/aws/internet_gateway_id
 ---

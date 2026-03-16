@@ -1,6 +1,5 @@
 ---
 title: "workflows"
-draft: false
 slug: workflows
 url: /reference/cli/workflows
 ---
@@ -8,14 +7,14 @@ url: /reference/cli/workflows
 
 ## workflows
 
-List of workflows for the organization. 
+List of workflows for the organization.
 
 ### Usage
-```html
+```bash
     convox workflows
 ```
 ### Examples
-```html
+```bash
     $ convox workflows
     ID                                    KIND        NAME
     55dd9440-eb98-4d9b-816f-9923ee77feff  deployment  deployweb-app
@@ -27,12 +26,12 @@ List of workflows for the organization.
 Trigger workflow run for the specified branch or commit. Specified branch or commit must reside on the workflow repository.
 
 ### Usage
-```html
+```bash
     convox workflows run <id>
 ```
 
 Flags:
-```html
+```text
     --app app        -a app
     --branch branch                            
     --commit commit                            
@@ -40,7 +39,7 @@ Flags:
 ```
 
 ### Examples
-```html
+```bash
     $ convox workflows run 55dd9440-eb98-4d9b-816f-99230077feff --branch feat-branch --title "title"
     Successfully trigger the workflow, job id: 65a4160a-27cd-47c6-ba74-aaaaaaaa
 ```

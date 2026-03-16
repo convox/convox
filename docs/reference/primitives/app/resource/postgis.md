@@ -1,7 +1,6 @@
 ---
 title: "Postgis"
-draft: false
-slug: Postgis
+slug: postgis
 url: /reference/primitives/app/resource/postgis
 ---
 # Postgis
@@ -9,7 +8,7 @@ url: /reference/primitives/app/resource/postgis
 ## Definition
 
 A Postgis Resource is defined in [`convox.yml`](/configuration/convox-yml) and linked to one or more [Services](/reference/primitives/app/service).
-```html
+```yaml
     resources:
       main:
         type: postgis
@@ -21,7 +20,7 @@ A Postgis Resource is defined in [`convox.yml`](/configuration/convox-yml) and l
 ## Options
 
 A Postgis Resource can have the following options configured for it (default values are shown):
-```html
+```yaml
     resources:
       main:
         type: postgis

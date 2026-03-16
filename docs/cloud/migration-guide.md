@@ -1,6 +1,5 @@
 ---
 title: "Migration Guide"
-draft: false
 slug: migration-guide
 url: /cloud/migration-guide
 ---
@@ -81,7 +80,7 @@ CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:8000"]
 ### Step 3: Convert Procfile to convox.yml
 
 **Heroku Procfile:**
-```
+```text
 web: node server.js
 worker: node worker.js
 release: node migrate.js
@@ -634,6 +633,6 @@ After migration:
 
 1. [Optimize your machine size](/cloud/machines/sizing-and-pricing)
 2. [Configure Cloud Databases](/cloud/databases)
-3. [Set up monitoring and alerts](/cloud/monitoring)
+3. [Set up monitoring and alerts](/configuration/monitoring)
 4. [Configure autoscaling](/deployment/scaling)
 5. [Implement CI/CD](/deployment/workflows)

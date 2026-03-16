@@ -1,7 +1,6 @@
 ---
 title: "Deploying an Application"
-draft: false
-slug: Deploying an Application
+slug: deploying-an-application
 url: /tutorials/deploying-an-application
 ---
 
@@ -18,7 +17,7 @@ We recommend following the [getting started guide](/getting-started/introduction
 ## Verify installation
 
 Verify that your production Rack is running with `convox rack`:
-```html
+```bash
     $ convox rack
     Name     production
     Provider do
@@ -29,15 +28,15 @@ Verify that your production Rack is running with `convox rack`:
 ## Get an example applicaton
 
 ### Clone the NodeJS example
-```html
+```bash
     $ git clone https://github.com/convox-examples/nodejs.git
 ```
 ### Enter the directory with the example application
-```html
+```bash
     $ cd nodejs
 ```
 ### Look at the convox.yml
-```html
+```bash
     $ cat convox.yml
   
     environment:
@@ -53,11 +52,11 @@ This `convox.yml` defines one [Service](/reference/primitives/app/service) named
 ## Deploy the application
 
 First you will need to create an App:
-```html
+```bash
     $ convox apps create nodejs
 ```
 Once this completes, you can deploy the code:
-```html
+```bash
     $ convox deploy
     Packaging source... OK
     Uploading source... OK
@@ -127,7 +126,7 @@ Once this completes, you can deploy the code:
 ## View the application in a browser
 
 You can get the URL for your running services with the `convox services` command:
-```html
+```bash
     $ convox services
     SERVICE  DOMAIN                               PORTS
     web      web.nodejs.0a1b2c3d4e5f.convox.cloud  443:3000
@@ -135,13 +134,13 @@ You can get the URL for your running services with the `convox services` command
 In your browser navigate to the hostname shown for the `web` service. (i.e. `https://web.nodejs.0a1b2c3d4e5f.convox.cloud/`)
 
 ## List the processes of the application
-```html
+```bash
     $ convox ps
     ID                    SERVICE  STATUS   RELEASE     STARTED       COMMAND
     web-0123456789-abcde  web      running  RBCDEFGHIJ  1 minute ago
 ```
 ## View the application logs
-```html
+```bash
     $ convox logs
     2020-01-01T00:00:00Z service/web/web-0123456789-abcde Processing by Rails::WelcomeController#index as HTML
     2020-01-01T00:00:00Z service/web/web-0123456789-abcde   Rendering /usr/local/bundle/gems/railties-6.0.0/lib/rails/templates/rails/welcome/index.html.erb
@@ -151,10 +150,10 @@ In your browser navigate to the hostname shown for the `web` service. (i.e. `htt
 Notice that the prefix of each log line contains the time that it was received along with the name
 of the Service and the ID of the Process that produced it.
 
-Use Ctrl-C to stop following the logs. 
+Use Ctrl-C to stop following the logs.
 
 ## Scale the application
-```html
+```bash
     $ convox scale web --count=2
     Scaling web...
     2020-01-01T00:00:00Z system/k8s/web-0123456789-zwxwv Pulling image "registry.dev.convox/rails:web.BABCDEFGHI"
@@ -164,19 +163,19 @@ Use Ctrl-C to stop following the logs.
     OK
 ```
 Now try listing the processes again:
-```html
+```text
     ID                    SERVICE  STATUS   RELEASE     STARTED        COMMAND
     web-0123456789-abcde  web      running  RBCDEFGHIJ  2 minutes ago
     web-0123456789-zwxwv  web      running  RBCDEFGHIJ  1 minute ago
 ```
 ## Set an environment variable
-```html
+```bash
     $ convox env set TEST=hello
     Setting TEST... OK
     Release: RCDEFGHIJK
 ```
 List the Releases to see your change:
-```html
+```bash
     $ convox releases
     ID          STATUS  BUILD       CREATED         DESCRIPTION
     RCDEFGHIJK          BABCDEFGHI  1 minute ago    env add:TEST
@@ -185,7 +184,7 @@ List the Releases to see your change:
 ## Promote the new release
 
 Promoting a Release starts a rolling deployment:
-```html
+```bash
     $ convox releases promote
     Promoting RQLOXWGZOLK...
     2020-01-01T00:00:00Z system/k8s/atom/app Status: Running => Pending

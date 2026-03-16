@@ -1,6 +1,5 @@
 ---
 title: "node_type"
-draft: false
 slug: node_type
 url: /configuration/rack-parameters/aws/node_type
 ---
@@ -19,7 +18,7 @@ The default value for `node_type` is `t3.small`.
 
 ## Setting Parameters
 To set the `node_type` parameter, use the following command:
-```html
+```bash
 $ convox rack params set node_type=c5.large -r rackName
 Setting parameters... OK
 ```

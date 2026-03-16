@@ -1,6 +1,5 @@
 ---
 title: "pdb_default_min_available_percentage"
-draft: false
 slug: pdb_default_min_available_percentage
 url: /configuration/rack-parameters/azure/pdb_default_min_available_percentage
 ---
@@ -20,7 +19,7 @@ The default value for `pdb_default_min_available_percentage` is `50`.
 
 ## Setting Parameters
 To set the `pdb_default_min_available_percentage` parameter, use the following command:
-```html
+```bash
 $ convox rack params set pdb_default_min_available_percentage=75 -r rackName
 Setting parameters... OK
 ```

@@ -1,7 +1,6 @@
 ---
 title: "BuildCpu"
-draft: false
-slug: BuildCpu
+slug: buildcpu
 url: /configuration/app-parameters/aws/BuildCpu
 ---
 
@@ -24,7 +23,7 @@ By default, build pods use the standard CPU allocation defined at the rack level
 ## Setting the Parameter
 To set the CPU request for build pods:
 
-```html
+```bash
 $ convox apps params set BuildCpu=<value> -a <app>
 Setting BuildCpu... OK
 ```
@@ -34,7 +33,7 @@ This configuration allocates 512 millicores (0.5 vCPU) to build pods for the spe
 ## Viewing Current Configuration
 To view the current BuildCpu setting:
 
-```html
+```bash
 $ convox apps params -a <app>
 NAME         VALUE
 BuildCpu     512
@@ -45,7 +44,7 @@ BuildCpu     512
 ### BuildMem
 Sets the memory request for build pods:
 
-```html
+```bash
 $ convox apps params set BuildMem=2048 -a <app>
 Setting BuildMem... OK
 ```
@@ -53,7 +52,7 @@ Setting BuildMem... OK
 ### BuildLabels
 Directs build pods to specific node groups:
 
-```html
+```bash
 $ convox apps params set BuildLabels=convox.io/label=app-build -a <app>
 Setting BuildLabels... OK
 ```

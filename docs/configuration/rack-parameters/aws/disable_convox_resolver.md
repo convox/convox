@@ -1,6 +1,5 @@
 ---
 title: "disable_convox_resolver"
-draft: false
 slug: disable_convox_resolver
 url: /configuration/rack-parameters/aws/disable_convox_resolver
 ---
@@ -22,13 +21,13 @@ The default value for `disable_convox_resolver` is `false`, meaning the Convox r
 
 ## Setting Parameters
 To disable the Convox resolver and use the Kubernetes resolver instead:
-```html
+```bash
 $ convox rack params set disable_convox_resolver=true -r rackName
 Setting parameters... OK
 ```
 
 To re-enable the Convox resolver (default behavior):
-```html
+```bash
 $ convox rack params set disable_convox_resolver=false -r rackName
 Setting parameters... OK
 ```
@@ -36,7 +35,7 @@ Setting parameters... OK
 ## Common Configuration Pattern
 This parameter is specifically required when you need to use both `proxy_protocol=true` and internal service routing:
 
-```html
+```bash
 $ convox rack params set proxy_protocol=true -r rackName
 $ convox rack params set disable_convox_resolver=true -r rackName
 ```
@@ -56,7 +55,7 @@ $ convox rack params set disable_convox_resolver=true -r rackName
 ## Troubleshooting
 If you experience DNS resolution issues or internal service communication problems, particularly when using proxy protocol, try enabling this parameter:
 
-```html
+```bash
 $ convox rack params set disable_convox_resolver=true -r rackName
 ```
 

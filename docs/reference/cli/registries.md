@@ -1,6 +1,5 @@
 ---
 title: "registries"
-draft: false
 slug: registries
 url: /reference/cli/registries
 ---
@@ -11,11 +10,11 @@ url: /reference/cli/registries
 List private registries
 
 ### Usage
-```html
+```bash
     convox registries
 ```
 ### Examples
-```html
+```bash
     $ convox registries
     SERVER                                        USERNAME
     123456789012.dkr.ecr.us-east-1.amazonaws.com  AKIAABCDE1F2GHIJKLMN
@@ -28,11 +27,11 @@ List private registries
 Add a private registry
 
 ### Usage
-```html
+```bash
     convox registries add <server> <username> <password>
 ```
 ### Examples
-```html
+```bash
     $ convox registries add 123456789012.dkr.ecr.us-east-1.amazonaws.com AKIAABCDE1F2GHIJKLMN l0nG+4nD/c0mpl3X+p455w0RD
     Adding registry... OK
 ```
@@ -41,11 +40,11 @@ Add a private registry
 Remove private registry
 
 ### Usage
-```html
+```bash
     convox registries remove <server>
 ```
 ### Examples
-```html
+```bash
     $ convox registries remove 123456789012.dkr.ecr.us-east-1.amazonaws.com
     Removing registry... OK
 ```

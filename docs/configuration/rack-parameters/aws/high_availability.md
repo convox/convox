@@ -1,6 +1,5 @@
 ---
 title: "high_availability"
-draft: false
 slug: high_availability
 url: /configuration/rack-parameters/aws/high_availability
 ---

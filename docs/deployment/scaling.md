@@ -1,12 +1,11 @@
 ---
 title: "Scaling"
-draft: false
-slug: Scaling
+slug: scaling
 url: /deployment/scaling
 ---
 # Scaling
 
-Convox allows you to easily scale any [Service](/reference/primitives/app/service) on the following dimensions:
+Convox allows you to scale any [Service](/reference/primitives/app/service) on the following dimensions:
 
 - Horizontal concurrency (number of [Processes](/reference/primitives/app/process))
 - CPU allocation (in CPU units where 1000 units is one full CPU)
@@ -16,7 +15,7 @@ Convox allows you to easily scale any [Service](/reference/primitives/app/servic
 ## Initial Defaults
 
 You can specify the scale for any [Service](/reference/primitives/app/service) in your [convox.yml](/configuration/convox-yml)
-```html
+```yaml
     services:
       web:
         scale:
@@ -27,7 +26,7 @@ You can specify the scale for any [Service](/reference/primitives/app/service) i
 > If you specify a static `count` it will only be used on first deploy. Subsequent changes must be made using the `convox` CLI.
 
 For GPU-accelerated workloads, you can specify the number of GPUs required:
-```html
+```yaml
     services:
       ml-worker:
         scale:
@@ -40,13 +39,13 @@ For GPU-accelerated workloads, you can specify the number of GPUs required:
 ## Manual Scaling
 
 ### Determine Current Scale
-```html
+```bash
     $ convox scale
     NAME  DESIRED  RUNNING  CPU  MEMORY
     web   2        2        250  512
 ```
 ### Scaling Count Horizontally
-```html
+```bash
     $ convox scale web --count=3
     Scaling web...
     2020-01-01T00:00:00Z system/k8s/web Scaled up replica set web-65f45567d to 2
@@ -63,7 +62,7 @@ For GPU-accelerated workloads, you can specify the number of GPUs required:
 
 To use autoscaling you must specify a range for allowable [Process](/reference/primitives/app/process) count and
 target values for CPU and Memory utilization (in percent):
-```html
+```yaml
     service:
       web:
         scale:
@@ -76,7 +75,7 @@ The number of [Processes](/reference/primitives/app/process) will be continually
 
 You must consider that the targets for CPU and Memory use the service replicas limits to calculate the utilization percentage. So if you set the target for CPU as `70` and have two replicas, it will trigger the auto-scale only if the utilization percentage sum divided by the replica's count is bigger than 70%. The desired replicas will be calculated to satisfy the percentage. Being the `currentMetricValue` computed by taking the average of the given metric across all service replicas.
 
-```html
+```text
 desiredReplicas = ceil[currentReplicas * ( currentMetricValue / desiredMetricValue )]
 ```
 
@@ -90,7 +89,7 @@ Before using GPU scaling:
 
 1. Your rack must be running on GPU-capable instances (such as AWS EC2 p3, p4, g4, or g5 families)
 2. The NVIDIA device plugin must be enabled on your rack:
-```html
+```bash
 $ convox rack params set nvidia_device_plugin_enable=true -r rackName
 ```
 
@@ -98,7 +97,7 @@ $ convox rack params set nvidia_device_plugin_enable=true -r rackName
 
 You can specify GPU requirements in the `scale` section of your service definition:
 
-```html
+```yaml
 services:
   ml-trainer:
     build: .
@@ -124,7 +123,7 @@ This configuration requests 1 GPU for each process of the `ml-trainer` service.
 
 GPU-enabled services can be configured with autoscaling:
 
-```html
+```yaml
 services:
   ml-inference:
     build: .
@@ -146,12 +145,11 @@ The service will scale based on CPU utilization while ensuring that each process
 
 *To use Datadog metrics for autoscaling your rack must be updated to [version 3.9.1](https://github.com/convox/convox/releases/tag/3.9.1) or later.  You can find your rack's version by running `convox rack -r rackNAME`. If you are on an older version, please [update your rack](https://docs.convox.com/management/cli-rack-management/) to use this feature.
 
-
 To autoscale based on Datadog metrics you must first have Datadog and the Datadog Cluster Agent installed. If you used the `datadog-agent-all-features.yaml` when [configuring Datadog](/integrations/monitoring/datadog/) then you will already have the Datadog Cluster Agent installed.
 
 You can check your cluster's pods to see what is installed:
 * If you installed into a custom namespace you will have to add the appropriate `-n NAMESPACE_NAME` option to the end of the command
-```html 
+```bash
     $ kubectl get pods                                                          
     NAME                                    READY   STATUS    RESTARTS   AGE 
     datadog-bjw2m                           5/5     Running   0          16m 
@@ -159,29 +157,27 @@ You can check your cluster's pods to see what is installed:
     datadog-j9c9t                           5/5     Running   0          15m 
     datadog-pnrln                           5/5     Running   0          16m 
     datadog-vdzc5                           5/5     Running   0          16m 
-``` 
+```
 
-If your installation does not have an active datadog-cluster-agent pod you can install the Datadog Cluster Agent by following the instructions from the [Datadog Documentation](https://docs.datadoghq.com/containers/cluster_agent/setup/?tab=daemonset). 
-
+If your installation does not have an active datadog-cluster-agent pod you can install the Datadog Cluster Agent by following the instructions from the [Datadog Documentation](https://docs.datadoghq.com/containers/cluster_agent/setup/?tab=daemonset).
 
 Once the Datadog Cluster Agent is setup follow this [Datadog Documentation](https://docs.datadoghq.com/containers/guide/cluster_agent_autoscaling_metrics/?tab=daemonset#register-the-external-metrics-provider-service) to configure your Datadog Cluster Agent with an external metrics provider service.
-
 
 Next to setup DatadogMetric follow these steps from the [Datadog Documentation](https://docs.datadoghq.com/containers/guide/cluster_agent_autoscaling_metrics/?tab=daemonset#datadog-cluster-agent).
 
 You can now create scaling manifests based on Datadog's provided template:
-```html 
+```yaml
 apiVersion: datadoghq.com/v1alpha1
 kind: DatadogMetric
 metadata:
   name: <your_datadogmetric_name>
 spec:
   query: <your_custom_query>
-``` 
+```
 You can deploy these metrics with `kubectl apply -f your-custom-metric-file.yaml`
 
 You will finally then need to deploy a service for your apps to push metrics to Datadog.  You can use this example or write your own based on your own custom configurations:
-```html 
+```bash
 $ cat dd-agent-service.yaml
 apiVersion: v1 
 kind: Service 
@@ -194,14 +190,13 @@ spec:
     - protocol: UDP 
       port: 8125 
       targetPort: 8125 
-``` 
+```
 Deploy the service with `kubectl apply -f dd-agent-service.yaml`
 
+In this example we will start with a [nodejs app](https://github.com/convox-examples/nodejs-dd-autoscale) that has been configured to scale with Datadog to demonstrate how to setup scaling with this method.
 
-In this example we will start with a [nodejs app](https://github.com/convox-examples/nodejs-dd-autoscale) that has been configured to scale with Datadog to demonstrate how to setup scaling with this method. 
-
-Based on the provided template we can make a basic page views metric for the node application: 
-```html 
+Based on the provided template we can make a basic page views metric for the node application:
+```bash
 $ cat page-views-metrics.yaml
 apiVersion: datadoghq.com/v1alpha1 
 kind: DatadogMetric 
@@ -212,14 +207,13 @@ spec:
 ```
 Then add the metric to your cluster via `kubectl apply -f page-views-metrics.yaml`
 
-
 Now we are going to look at the configuration of the `convox.yaml` from our nodejs app to autoscale based on this newly created metric.
 
  We will specify the `datadogmetric` object name in the `scale.targets[].external section`. The `datadogmetric` object name convention to use in `scale.targets[].external` section is : `datadogmetric@<namespace>:<datadogmetric_name>`
 
 We set the env var `DD_AGENT_HOST` to point at the dd-agent service we previously made to push information to Datadog.
 
-```html 
+```yaml
 environment:
   - PORT=3000
 services:
@@ -234,13 +228,13 @@ services:
         external:
           - name: "datadogmetric@default:page-views-metrics"
             averageValue: 5
-``` 
+```
 [Configured Nodejs app](https://github.com/convox-examples/nodejs-dd-autoscale)
 
 You can now deploy the application with `convox apps create -a nodejs` then `convox deploy -a nodejs`
 
 Once deployed you can check the replica count and deployed services:
-```html
+```bash
 $ convox ps -a nodejs            
 ID                    SERVICE  STATUS   RELEASE      STARTED        COMMAND
 web-5bc58fb455-psd9h  web      running  RMOGLKGFMOW  7 minutes ago
@@ -254,7 +248,7 @@ You can simulate some views to make the application scale via:
 `$ while true; do curl https://<YOUR_SERVICE_DOMAIN>/; sleep 0.2; done`
 
 You can then see that the application is beginning to scale up:
-```html
+```bash
 $ convox ps -a nodejs                
 ID                    SERVICE  STATUS   RELEASE      STARTED         COMMAND
 web-5675cccf75-chmcc  web      running  RAZUSIKBQGX  25 seconds ago  
@@ -262,8 +256,37 @@ web-5675cccf75-dm6kb  web      running  RAZUSIKBQGX  6 minutes ago
 ```
 
 When you end the view simulation it will scale down again:
-```html
+```bash
 $ convox ps -a nodejs
 ID                    SERVICE  STATUS   RELEASE      STARTED         COMMAND
 web-5675cccf75-dm6kb  web      running  RAZUSIKBQGX  11 minutes ago  
 ```
+
+## Troubleshooting Cluster Scale-Down
+
+If your cluster is not scaling down despite low resource usage, the Kubernetes Cluster Autoscaler may be blocked from removing nodes. Common causes:
+
+- **Restrictive PodDisruptionBudgets (PDBs)**: A PDB with `minAvailable: 1` on a service with one replica prevents that pod from being evicted. Adjust with the [`pdb_default_min_available_percentage`](/configuration/rack-parameters/aws/pdb_default_min_available_percentage) rack parameter.
+- **System pods**: Pods in the `kube-system` namespace may have rules preventing eviction.
+- **Pods without a controller**: Pods not managed by a Deployment or ReplicaSet will not be evicted.
+- **Pods with local storage**: Pods using `hostPath` or `emptyDir` volumes cannot be moved.
+- **Scheduling constraints**: Node selectors or anti-affinity rules may prevent rescheduling onto other nodes.
+
+To diagnose, inspect the Cluster Autoscaler logs:
+
+```bash
+$ kubectl logs -n kube-system deployment/cluster-autoscaler
+```
+
+Look for messages like `pod <namespace>/<pod_name> is blocking scale down`. You can also check for restrictive PDBs:
+
+```bash
+$ kubectl get pdb -A
+```
+
+A PDB with `ALLOWED DISRUPTIONS` of `0` will block evictions on that node.
+
+## See Also
+
+- [convox.yml](/configuration/convox-yml) for configuring scale defaults
+- [Workload Placement](/configuration/workload-placement) for controlling where services run

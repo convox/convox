@@ -1,6 +1,5 @@
 ---
 title: "availability_zones"
-draft: false
 slug: availability_zones
 url: /configuration/rack-parameters/aws/availability_zones
 ---

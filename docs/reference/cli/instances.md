@@ -1,6 +1,5 @@
 ---
 title: "instances"
-draft: false
 slug: instances
 url: /reference/cli/instances
 ---
@@ -11,11 +10,11 @@ url: /reference/cli/instances
 List instances
 
 ### Usage
-```html
+```bash
     convox instances
 ```
 ### Examples
-```html
+```bash
     $ convox instances
     ID                   STATUS  STARTED       PS  CPU     MEM     PUBLIC          PRIVATE
     i-029382969778a743a  active  2 months ago  3   18.75%  45.08%  32.207.218.250  10.0.2.39
@@ -29,11 +28,11 @@ List instances
 Terminate an instance
 
 ### Usage
-```html
+```bash
     convox instances terminate <instance_id>
 ```
 ### Examples
-```html
+```bash
     $ convox instances terminate i-029382969778a743a
     Terminating instance... OK
 ```
@@ -43,12 +42,12 @@ Terminate an instance
 Roll ssh key on instances
 
 ### Usage
-```html
+```bash
     convox instances keyroll
 ```
 For v3 rack it will generate a private key and show it as output. Please save the generated private key and use it when sshing into an instance
 ### Examples
-```html
+```bash
     $ convox instances keyroll
     Rolling instance key... OK
     Updating parameters... OK
@@ -64,16 +63,16 @@ Run a shell on an instance
 
 ### Usage
 **For v2 rack:**
-```html
+```bash
     convox instances ssh <instance_id>
 ```
 
 **For v3 rack:**
-```html
+```bash
     convox instances ssh <instance_id> --key <private_key_file>
 ```
 
 ### Examples
-```html
+```bash
     $ convox instances ssh ip-10-1-80-201.ec2.internal --key ~/.ssh/rack/priv.pem
 ```

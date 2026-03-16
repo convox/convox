@@ -1,6 +1,5 @@
 ---
 title: "Convox to Kubernetes Resource Mapping"
-draft: false
 slug: convox-k8s-mapping
 url: /reference/convox-k8s-mapping
 ---
@@ -104,7 +103,7 @@ resources:
       storage: 20
 
   # --- Containerized Redis ----------------------------------------------
-  # K8s: Deployment, Service (NodePort), ConfigMap  (no PVC — stateless)
+  # K8s: Deployment, Service (NodePort), ConfigMap  (no PVC  -  stateless)
   cache:
     type: redis
 
@@ -140,12 +139,12 @@ resources:
 services:
   # --- Web Service (public-facing) --------------------------------------
   # K8s Resources:
-  #   Deployment    "web"          — runs the application containers
-  #   Service       "web"          — ClusterIP routing to pods
-  #   Ingress       "web"          — external HTTPS termination & routing
-  #   HPA           "web"          — autoscaling (because scale.count is a range)
-  #   Secret        "env-web"      — environment variables
-  #   ServiceAccount "web"         — pod identity (if accessControl is set)
+  #   Deployment    "web"           -  runs the application containers
+  #   Service       "web"           -  ClusterIP routing to pods
+  #   Ingress       "web"           -  external HTTPS termination & routing
+  #   HPA           "web"           -  autoscaling (because scale.count is a range)
+  #   Secret        "env-web"       -  environment variables
+  #   ServiceAccount "web"          -  pod identity (if accessControl is set)
   #
   # kubectl: kubectl get deploy,svc,ing,hpa -l service=web
 
@@ -270,9 +269,9 @@ services:
 
   # --- Worker Service (background) -------------------------------------
   # K8s Resources:
-  #   Deployment    "worker"       — runs background job processors
-  #   Secret        "env-worker"   — environment variables
-  #   (No Service/Ingress — no public ports)
+  #   Deployment    "worker"        -  runs background job processors
+  #   Secret        "env-worker"    -  environment variables
+  #   (No Service/Ingress  -  no public ports)
   #
   # kubectl: kubectl get deploy -l service=worker
 
@@ -297,9 +296,9 @@ services:
 
   # --- Agent Service (DaemonSet) ----------------------------------------
   # K8s Resources:
-  #   DaemonSet     "agent"        — one pod per node
-  #   Service       "agent"        — because ports are defined
-  #   Secret        "env-agent"    — environment variables
+  #   DaemonSet     "agent"         -  one pod per node
+  #   Service       "agent"         -  because ports are defined
+  #   Secret        "env-agent"     -  environment variables
   #
   # kubectl: kubectl get ds -l service=agent
 
@@ -312,10 +311,10 @@ services:
 
   # --- Jobs Template Service (scaled to zero) ---------------------------
   # K8s Resources:
-  #   Deployment    "jobs"         — 0 replicas (template only)
-  #   Secret        "env-jobs"     — environment variables
+  #   Deployment    "jobs"          -  0 replicas (template only)
+  #   Secret        "env-jobs"      -  environment variables
   #
-  # No running pods — used only as the image source for Timers.
+  # No running pods  -  used only as the image source for Timers.
 
   jobs:
     build: ./jobs
@@ -375,7 +374,7 @@ balancers:
 
 The diagram below summarizes the relationship between the `convox.yml` sections above and the Kubernetes resources Convox generates:
 
-```
+```text
 convox.yml Section        Kubernetes Resources Created
 ─────────────────         ──────────────────────────────────────────────
 environment:         ──►  Secret         (env-<service>)

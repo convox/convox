@@ -1,6 +1,5 @@
 ---
 title: "Rack Parameters"
-draft: false
 slug: rack-parameters
 url: /configuration/rack-parameters
 ---
@@ -72,14 +71,14 @@ This example configuration:
 
 ### Viewing Current Parameters
 To view the current rack parameters, use the following command:
-```html
+```bash
 $ convox rack params -r rackName
 ```
 This command displays the current values of all rack parameters for the specified rack.
 
 ### Setting Parameters
 To set a rack parameter, use the following command:
-```html
+```bash
 $ convox rack params set parameterName=value -r rackName
 Setting parameters... OK
 ```

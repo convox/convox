@@ -1,6 +1,5 @@
 ---
 title: "MariaDB"
-draft: false
 slug: mariadb
 url: /cloud/databases/mariadb
 ---
@@ -169,7 +168,7 @@ services:
 
 When linked to a service, the following environment variables are injected (assuming resource name `database`):
 
-```
+```text
 DATABASE_URL=mariadb://username:password@host.name:3306/database
 DATABASE_USER=username
 DATABASE_PASS=password

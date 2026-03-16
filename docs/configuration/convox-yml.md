@@ -1,14 +1,13 @@
 ---
 title: "convox.yml"
-draft: false
-slug: convox.yml
+slug: convox-yml
 url: /configuration/convox-yml
 ---
 
 # convox.yml
 
 `convox.yml` is a manifest used to describe your application and all of its infrastructure needs.
-```html
+```yaml
     environment:
       - COMPANY=Convox
       - DOCS_URL
@@ -71,7 +70,7 @@ url: /configuration/convox-yml
 
 The top-level `environment` section defines [Environment Variables](/configuration/environment) that are available to every
 [Service](/reference/primitives/app/service).
-```html
+```yaml
     environment:
       - COMPANY=Convox  # has a default value of "Convox"
       - DOCS_URL        # must be set before deployment
@@ -82,7 +81,7 @@ See [Environment Variables](/configuration/environment) for configuration option
 
 The `appSettings` section defines settings that apply exclusively to a particular app within the rack. These settings are independent of the global rack-level parameters and provide a mechanism for tailoring configuration to individual applications.
 
-```html
+```yaml
     appSettings:
       awsLogs:
         cwRetention: 31
@@ -94,7 +93,7 @@ See [App Settings](/configuration/app-settings) for configuration options.
 
 The `resources` section defines network-accessible [Resources](/reference/primitives/app/resource)
 such as databases that can be made available to [Services](/reference/primitives/app/service).
-```html
+```yaml
     resources:
       database:
         type: postgres
@@ -107,7 +106,7 @@ See [Resource](/reference/primitives/app/resource) for configuration options.
 
 The `services` section horizontally-scalable [Services](/reference/primitives/app/service)
 that can be optionally placed behind a load balancer.
-```html
+```yaml
     services:
       api:
         build: .
@@ -128,7 +127,7 @@ See [Service](/reference/primitives/app/service) for configuration options.
 
 The `timers` section defines [Processes](/reference/primitives/app/process)
 that run periodically on a set interval.
-```html
+```yaml
     timers:
       cleanup:
         schedule: "0 3 * * * *"
@@ -136,3 +135,9 @@ that run periodically on a set interval.
         service: worker
 ```
 See [Timer](/reference/primitives/app/timer) for configuration options.
+
+## See Also
+
+- [Environment Variables](/configuration/environment) for configuring app settings
+- [Health Checks](/configuration/health-checks) for configuring service health checks
+- [Scaling](/deployment/scaling) for controlling service scale and autoscaling

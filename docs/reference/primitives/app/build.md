@@ -1,7 +1,6 @@
 ---
 title: "Build"
-draft: false
-slug: Build
+slug: build
 url: /reference/primitives/app/build
 ---
 # Build
@@ -14,7 +13,7 @@ Convox uses `docker` to compile code into a Build.
 
 You can define the location to build for each [Service](/reference/primitives/app/service) in [`convox.yml`](/configuration/convox-yml).
 
-```html
+```yaml
     services:
       api:
         build: ./api
@@ -27,7 +26,7 @@ You can define the location to build for each [Service](/reference/primitives/ap
 
 ### Creating a Build
 
-```html
+```bash
     $ convox build -a myapp
     Packaging source... OK
     Uploading source... OK
@@ -41,7 +40,7 @@ You can define the location to build for each [Service](/reference/primitives/ap
 
 ### Listing Builds
 
-```html
+```bash
     $ convox builds -a myapp
     ID          STATUS    RELEASE     STARTED       ELAPSED
     BABCDEFGHI  complete  RBCDEFGHIJ  1 minute ago  25s
@@ -49,7 +48,7 @@ You can define the location to build for each [Service](/reference/primitives/ap
 
 ### Getting Information about a Build
 
-```html
+```bash
     $ convox builds info BABCDEFGHI -a myapp
     ID           BABCDEFGHI
     Status       complete
@@ -61,7 +60,7 @@ You can define the location to build for each [Service](/reference/primitives/ap
 
 ### Getting logs for a Build
 
-```html
+```bash
     $ convox builds logs BABCDEFGHI -a myapp
     Sending build context to Docker daemon  4.2MB
     Step 1/34 : FROM golang AS development
@@ -70,14 +69,14 @@ You can define the location to build for each [Service](/reference/primitives/ap
 
 ### Exporting a Build
 
-```html
+```bash
     $ convox builds export BABCDEFGHI -a myapp -f /tmp/build.tgz
     Exporting build... OK
 ```
 
 ### Importing a Build
 
-```html
+```bash
     convox builds import -a myapp2 -f /tmp/build.tgz
 ```
 
@@ -105,12 +104,12 @@ Starting from version 3.22.0, Convox provides the following managed build argume
 ### Using Build Arguments via CLI
 
 Pass Convox-managed build arguments:
-```html
+```bash
     $ convox build --build-args=BUILD_APP --build-args=BUILD_ID --build-args=BUILD_GIT_SHA
 ```
 
 Combine Convox-managed arguments with custom build arguments:
-```html
+```bash
     $ convox build --build-args=BUILD_APP --build-args=FOO=BAR --build-args=VERSION=1.2.3
 ```
 
@@ -145,7 +144,7 @@ ENV APP_NAME=${BUILD_APP}
 - Exposed in build output
 
 Example of `BUILD_AUTH` content structure (contains sensitive data):
-```
+```text
 BUILD_AUTH: {"registry.url":{"Username":"AWS","Password":"[base64-encoded-token]"}}
 ```
 
@@ -170,7 +169,7 @@ We have added support for using Docker credentials in Convox build and service p
 
 ### Requirements
 
-- You must be on at least Convox rack version `3.18.8` to use this feature. 
+- You must be on at least Convox rack version `3.18.8` to use this feature.
 
 ### How to Use Docker Credentials in Convox
 
@@ -186,7 +185,7 @@ To use Docker Hub credentials during the build process, follow these steps:
 
    Run the following command to set the Docker Hub credentials on your rack. Be sure to use the read-only access token to avoid storing your Docker password in plain text.
 
-   ```html
+   ```bash
    $ convox rack params set docker_hub_username=<your-docker-hub-username> docker_hub_password=<your-read-only-token> -r <rackName>
    ```
 
@@ -194,7 +193,7 @@ To use Docker Hub credentials during the build process, follow these steps:
 
    After setting the credentials, you can confirm they have been successfully configured by running:
 
-   ```html
+   ```bash
    $ convox rack params -r <rackName>
    ```
 

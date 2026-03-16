@@ -1,6 +1,5 @@
 ---
 title: "App Parameters"
-draft: false
 slug: app-parameters
 url: /configuration/app-parameters
 ---
@@ -12,14 +11,14 @@ App parameters are configuration settings that control various aspects of your C
 
 ### Viewing Current Parameters
 To view the current app parameters, use the following command:
-```html
+```bash
 $ convox apps params -a appName
 ```
 This command displays the current values of all app parameters for the specified application.
 
 ### Setting Parameters
 To set an app parameter, use the following command:
-```html
+```bash
 $ convox apps params set parameterName=value -a appName
 Setting parameters... OK
 ```

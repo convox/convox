@@ -1,6 +1,5 @@
 ---
 title: "test"
-draft: false
 slug: test
 url: /reference/cli/test
 ---
@@ -11,11 +10,11 @@ url: /reference/cli/test
 Run tests
 
 ### Usage
-```html
+```bash
     convox test
 ```
 ### Examples
-```html
+```bash
     $ convox test
     Packaging source... OK
     Uploading source... OK

@@ -1,6 +1,5 @@
 ---
 title: "gpu_tag_enable"
-draft: false
 slug: gpu_tag_enable
 url: /configuration/rack-parameters/aws/gpu_tag_enable
 ---
@@ -19,7 +18,7 @@ The default value for `gpu_tag_enable` is `false`.
 
 ## Setting Parameters
 To enable GPU tagging, use the following command:
-```html
+```bash
 $ convox rack params set gpu_tag_enable=true -r rackName
 Setting parameters... OK
 ```

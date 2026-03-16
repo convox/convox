@@ -1,7 +1,6 @@
 ---
 title: "Console Rack Management"
-draft: false
-slug: Console Rack Management
+slug: console-rack-management
 url: /management/console-rack-management
 ---
 # Console Rack Management
@@ -10,18 +9,18 @@ url: /management/console-rack-management
 
 When you install a Rack from your CLI, the Terraform state (and subsequently the ability to update it) is kept locally.  If you want your teammates to be able to manage, interact and update the Rack with you, you should move the Rack to be owned by an organization within the Convox Console.
 
-> Create a free Convox account if you don't already have one, simply signup [here](https://console.convox.com/signup). We recommend using your company email address if you have one, and using your actual company name as the organization name.  Make sure you have logged in to your Convox account from the CLI by copying the login command from the web console.
+> Create a free Convox account if you don't already have one, sign up [here](https://console.convox.com/signup). We recommend using your company email address if you have one, and using your actual company name as the organization name.  Make sure you have logged in to your Convox account from the CLI by copying the login command from the web console.
 
 ## Moving your Rack to the Console
 
-A CLI installed Rack will just have a Rack name with no organization prefix:
-```html
+A CLI installed Rack will have a Rack name with no organization prefix:
+```bash
     $ convox racks
     NAME               PROVIDER  STATUS
     staging            gcp       running
 ```
 You can transfer the Rack state to the Console by using the `rack mv` command.  Use the organization name you created in the Console as the prefix before the Rack name you wish to move to:
-```html
+```bash
     $ convox rack mv staging acme/staging
     moving rack staging to acme/staging
 
@@ -50,7 +49,7 @@ Due to an underlying issue with the way that AWS manages permissions when instal
 ## Moving your Rack from the Console
 
 You can move any Console-managed Rack back to being locally managed only with the same command:
-```html
+```bash
     $ convox rack mv acme/staging staging
     moving rack acme/staging to staging
 
@@ -60,13 +59,13 @@ You can move any Console-managed Rack back to being locally managed only with th
 ```
 Terraform state will be transferred to your local machine for exclusive management.
 ## Access rack cluster in the EKS UI (AWS only)
-You can view the Kubernetes resources deployed to your cluster with the AWS Management Console.  
+You can view the Kubernetes resources deployed to your cluster with the AWS Management Console.
 
 ### Steps:
 If your rack version is > 3.6.4, you don’t need to create the cluster role and the cluster role binding.
 
 - Create a Kubernetes clusterrolebinding that is bound to a Kubernetes clusterrole that has the necessary permissions to view the Kubernetes resources. To learn more about Kubernetes roles and role bindings, see [Using RBAC Authorization in the Kubernetes documentation](https://kubernetes.io/docs/reference/access-authn-authz/rbac/). You can apply one of the following manifests to your cluster that create a role and role binding or a cluster role and cluster role binding with the necessary Kubernetes permissions*:
-```
+```bash
 kubectl apply -f https://s3.us-west-2.amazonaws.com/amazon-eks/docs/eks-console-full-access.yaml
 ```
 - Make sure that the eks:AccessKubernetesApi, and other necessary IAM permissions to view Kubernetes resources, are assigned to either the user that you sign into the AWS Management Console with, or the role that you switch to once you've signed in to the console.
@@ -130,3 +129,8 @@ When you edit the `aws-auth` ConfigMap, proceed with caution, if you misconfigur
 Rack cpu and memory usages metrics support added from version `3.6.3`. So If your rack version is >= `3.6.3`, you'll be able to visualize resource consumption for your rack nodes and workloads.
 
 ![Dashboard](/images/documentation/management/console-rack-management/metrics_dashboard.png)
+
+## See Also
+
+- [CLI Rack Management](/management/cli-rack-management) for managing racks from the command line
+- [RBAC](/management/rbac) for configuring access controls

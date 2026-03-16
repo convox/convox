@@ -1,6 +1,5 @@
 ---
 title: "nlb_security_group"
-draft: false
 slug: nlb_security_group
 url: /configuration/rack-parameters/aws/nlb_security_group
 ---
@@ -19,7 +18,7 @@ The default value for `nlb_security_group` is an empty string. When set to an em
 
 ## Setting Parameters
 To set the `nlb_security_group` parameter, use the following command:
-```html
+```bash
 $ convox rack params set nlb_security_group=sg-12345678 -r rackName
 Setting parameters... OK
 ```

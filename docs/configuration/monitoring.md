@@ -1,16 +1,15 @@
 ---
-title: "Monitoring & Alerting"
-draft: false
-slug: Monitoring & Alerting
+title: "Monitoring and Alerting"
+slug: monitoring-and-alerting
 url: /configuration/monitoring
 ---
-# Monitoring & Alerting
+# Monitoring and Alerting
 
 Convox provides integrated metrics collection and alerting capabilities that give you comprehensive visibility into your applications and infrastructure. Built directly into the Convox platform, monitoring requires no additional tools or complex configuration.
 
 ## Overview
 
-Convox Monitoring & Alerting offers:
+Convox Monitoring and Alerting offers:
 
 - **Automatic metrics collection** from your racks and applications
 - **Pre-configured dashboards** with essential infrastructure metrics
@@ -190,3 +189,9 @@ convox logs -a myapp --since 1h
 
 # Tail application logs
 convox logs -a myapp --follow
+```
+
+## See Also
+
+- [Logging](/configuration/logging) for configuring log collection
+- [Datadog Integration](/integrations/monitoring/datadog) for detailed Datadog setup instructions

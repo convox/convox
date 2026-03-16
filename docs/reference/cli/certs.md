@@ -1,6 +1,5 @@
 ---
 title: "certs"
-draft: false
 slug: certs
 url: /reference/cli/certs
 ---
@@ -13,17 +12,17 @@ List certificates.
 ### Usage
 To list all certificates
 
-```html
+```bash
     convox certs
 ```
 
 To list generated certificates:
-```html
+```bash
     convox certs --generated
 ```
 
 ### Examples
-```html
+```bash
     $ convox certs
 ```
 
@@ -34,20 +33,20 @@ Generate certificates. These certificate can be reused with convox apps. For exa
 ### Usage
 To list all certificates
 
-```html
+```bash
     convox certs generate <domain> [domain...]
 ```
 
 Option flags:
-- `--duration`: Duration of the certificate.                      
-- `--issuer`: Certificate issuer. For example: `letsencrypt`                          
+- `--duration`: Duration of the certificate.
+- `--issuer`: Certificate issuer. For example: `letsencrypt`
 
 ### Examples
-```html
+```bash
     $ convox certs generate mydomain.com --duration 4200h --issuer letsencrypt
 ```
 
 To list generated certificates:
-```html
+```bash
     convox certs --generated
 ```

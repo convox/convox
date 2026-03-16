@@ -1,7 +1,6 @@
 ---
 title: "Headless CMS"
-draft: false
-slug: Headless CMS
+slug: headless-cms
 url: /integrations/headless-cms
 ---
 # Headless CMS Integrations

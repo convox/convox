@@ -1,6 +1,5 @@
 ---
 title: "public_subnets_ids"
-draft: false
 slug: public_subnets_ids
 url: /configuration/rack-parameters/aws/public_subnets_ids
 ---

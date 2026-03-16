@@ -1,6 +1,5 @@
 ---
 title: "tags"
-draft: false
 slug: tags
 url: /configuration/rack-parameters/aws/tags
 ---
@@ -19,7 +18,7 @@ The default value for `tags` is ``. When set to ``, no custom tags are applied. 
 
 ## Setting Parameters
 To set the `tags` parameter, use the following command:
-```html
+```bash
 $ convox rack params set tags=key1=val1,key2=val2 -r rackName
 Setting parameters... OK
 ```

@@ -1,6 +1,5 @@
 ---
 title: "Digital Ocean Rack Parameters"
-draft: false
 slug: do-rack-parameters
 url: /configuration/rack-parameters/do
 ---

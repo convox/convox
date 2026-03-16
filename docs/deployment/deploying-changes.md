@@ -1,7 +1,6 @@
 ---
 title: "Deploying Changes"
-draft: false
-slug: Deploying Changes
+slug: deploying-changes
 url: /deployment/deploying-changes
 ---
 # Deploying Changes
@@ -16,7 +15,7 @@ has been completely rolled back.
 ## One Step
 
 To create a [Release](/reference/primitives/app/release) and promote it in one step, use `convox deploy`:
-```html
+```bash
     $ convox deploy -a myapp
     Packaging source... OK
     Uploading source... OK
@@ -42,7 +41,7 @@ You can also perform the steps of creating the [Release](/reference/primitives/a
 promoting it with two different commands. This is useful if you would like to make changes to
 [Environment Variables](/configuration/environment) or [run migrations](/management/run)
 against the new [Release](/reference/primitives/app/release) before it is pushed live.
-```html
+```bash
     $ convox build -a myapp
     Packaging source... OK
     Uploading source... OK
@@ -64,3 +63,9 @@ against the new [Release](/reference/primitives/app/release) before it is pushed
     2019-01-01T00:00:56Z system/k8s/web-745f845dc-rzl2q Started container main
     OK
 ```
+
+## See Also
+
+- [Rolling Updates](/deployment/rolling-updates) for how Convox handles zero-downtime deployments
+- [Rollbacks](/deployment/rollbacks) for reverting to a previous release
+- [CI/CD Workflows](/deployment/workflows) for automating deployments

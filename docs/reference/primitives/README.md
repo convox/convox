@@ -1,14 +1,13 @@
 ---
 title: "Primitives"
-draft: false
-slug: Primitives
+slug: primitives
 url: /reference/primitives
 ---
 # Primitives
 
 Primitives are the building blocks available to build an [App](/reference/primitives/app) on Convox. Apps are deployed and run on your [Rack](/reference/primitives/rack), the platform overlaid on your cloud infrastructure.
 
-Primitives can be easily composed to provide useful functionality that lets you
+Primitives can be composed to provide useful functionality that lets you
 focus on the things that make your [App](/reference/primitives/app) unique.
 
 ## App Primitives

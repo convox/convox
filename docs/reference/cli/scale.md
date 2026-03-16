@@ -1,6 +1,5 @@
 ---
 title: "scale"
-draft: false
 slug: scale
 url: /reference/cli/scale
 ---
@@ -11,11 +10,11 @@ url: /reference/cli/scale
 Scale a service
 
 ### Usage
-```html
+```bash
     convox scale <service>
 ```
 ### Examples
-```html
+```bash
     $ convox scale web --count 3 --cpu 256 --memory 1024
     Scaling web...
     2020-01-22T14:54:50Z system/cloudformation aws/cfm test-nodejs UPDATE_IN_PROGRESS test-nodejs User Initiated

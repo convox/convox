@@ -1,7 +1,6 @@
 ---
 title: "Support"
-draft: false
-slug: Support
+slug: support
 url: /help/support
 ---
 # Support

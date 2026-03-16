@@ -1,7 +1,6 @@
 ---
 title: "Command Line Interface"
-draft: false
-slug: Command Line Interface
+slug: command-line-interface
 url: /installation/cli
 ---
 # Command Line Interface
@@ -10,7 +9,7 @@ url: /installation/cli
 
 ### x86_64 / amd64
 
-```html
+```bash
     $ curl -L https://github.com/convox/convox/releases/latest/download/convox-linux -o /tmp/convox
     $ sudo mv /tmp/convox /usr/local/bin/convox
     $ sudo chmod 755 /usr/local/bin/convox
@@ -18,7 +17,7 @@ url: /installation/cli
 
 ### arm64
 
-```html
+```bash
     $ curl -L https://github.com/convox/convox/releases/latest/download/convox-linux-arm64 -o /tmp/convox
     $ sudo mv /tmp/convox /usr/local/bin/convox
     $ sudo chmod 755 /usr/local/bin/convox
@@ -28,7 +27,7 @@ url: /installation/cli
 
 ### x86_64 / amd64
 
-```html
+```bash
     $ curl -L https://github.com/convox/convox/releases/latest/download/convox-macos -o /tmp/convox
     $ sudo mv /tmp/convox /usr/local/bin/convox
     $ sudo chmod 755 /usr/local/bin/convox
@@ -36,8 +35,13 @@ url: /installation/cli
 
 ### arm64
 
-```html
+```bash
     $ curl -L https://github.com/convox/convox/releases/latest/download/convox-macos-arm64 -o /tmp/convox
     $ sudo mv /tmp/convox /usr/local/bin/convox
     $ sudo chmod 755 /usr/local/bin/convox
 ```
+
+## See Also
+
+- [Development Rack](/installation/development-rack) for setting up a local development environment
+- [Production Rack](/installation/production-rack) for deploying to cloud providers

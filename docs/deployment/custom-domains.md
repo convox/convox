@@ -1,7 +1,6 @@
 ---
 title: "Custom Domains"
-draft: false
-slug: Custom Domains
+slug: custom-domains
 url: /deployment/custom-domains
 ---
 # Custom Domains
@@ -9,7 +8,7 @@ url: /deployment/custom-domains
 Custom domains allow you to route one or more domains to a [Service](/reference/primitives/app/service).
 
 ## Definition examples
-```html
+```yaml
     services:
       simpleweb:
         domain: myapp.example.org
@@ -23,19 +22,19 @@ Multiple domains should be comma separated.  Due to limitations in the LetsEncry
 
 You can avoid hardcoding your custom domains in `convox.yml` using
 [Environment Interpolation](/configuration/environment#interpolation).
-```html
+```yaml
     services:
       web:
         domain: ${HOST}
 ```
-```html
+```bash
 $ convox env set HOST=myapp.example.org,myapp2.example.org
 ```
 
 ## Configuring DNS
 
 You will need to alias your custom domain to your Rack's router endpoint. You can find this with `convox rack`:
-```html
+```bash
     $ convox rack
     Name      convox
     Provider  gcp
@@ -44,6 +43,11 @@ You will need to alias your custom domain to your Rack's router endpoint. You ca
     Version   master
 ```
 In this example you would set up the following DNS entry:
-```html
+```bash
     myapp.example.org CNAME router.0a1b2c3d4e5f.convox.cloud
 ```
+
+## See Also
+
+- [SSL](/deployment/ssl) for configuring SSL certificates for your domains
+- [Load Balancers](/configuration/load-balancers) for advanced load balancer configuration

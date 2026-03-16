@@ -1,6 +1,5 @@
 ---
 title: "node_type"
-draft: false
 slug: node_type
 url: /configuration/rack-parameters/gcp/node_type
 ---
@@ -19,7 +18,7 @@ The default value for `node_type` is `n1-standard-1`.
 
 ## Setting Parameters
 To set the `node_type` parameter, use the following command:
-```html
+```bash
 $ convox rack params set node_type=n1-standard-1 -r rackName
 Setting parameters... OK
 ```

@@ -1,7 +1,6 @@
 ---
 title: "Timer"
-draft: false
-slug: Timer
+slug: timer
 url: /reference/primitives/app/timer
 ---
 # Timer
@@ -11,7 +10,7 @@ A Timer spawns a [Process](/reference/primitives/app/process) on a schedule that
 ## Definition
 
 A Timer is defined in [`convox.yml`](/configuration/convox-yml).
-```html
+```yaml
     services:
       worker:
         build: ./worker
@@ -38,7 +37,7 @@ A Timer is defined in [`convox.yml`](/configuration/convox-yml).
 
 Cron expressions use the following format. All times are UTC.
 
-```html
+```text
 .----------------- minute (0 - 59)
 |  .-------------- hour (0 - 23)
 |  |  .----------- day-of-month (1 - 31)
@@ -54,7 +53,7 @@ Please notice that the smallest unit of time here is **minute**.
 
 Timers can run against any [Service](/reference/primitives/app/service), even one that is scaled to zero. You can use this to create a
 template [Service](/reference/primitives/app/service) for your Timers.
-```html
+```yaml
     services:
       web:
         build: .
@@ -85,7 +84,7 @@ Timers support running multiple parallel replicas for increased throughput and d
 
 To enable parallel execution, use the `parallelCount` attribute:
 
-```html
+```yaml
     services:
       worker:
         build: ./worker
@@ -103,7 +102,7 @@ In this example, the `data-processor` timer will spawn **5 parallel replicas** e
 
 Each parallel replica receives a unique `TIMER_INDEX` environment variable (starting from 0) that can be used to partition work across instances:
 
-```html
+```yaml
     timers:
       cleanup:
         command: ./cleanup.sh
@@ -114,7 +113,7 @@ Each parallel replica receives a unique `TIMER_INDEX` environment variable (star
 
 Each replica receives:
 - First container: `TIMER_INDEX=0`
-- Second container: `TIMER_INDEX=1`  
+- Second container: `TIMER_INDEX=1`
 - Third container: `TIMER_INDEX=2`
 
 ### Example: Partitioned Data Processing
@@ -169,7 +168,7 @@ When using parallel timers, keep in mind:
 
 ### Complete Example with Parallel Execution
 
-```html
+```yaml
     services:
       web:
         build: .

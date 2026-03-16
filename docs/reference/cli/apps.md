@@ -1,6 +1,5 @@
 ---
 title: "apps"
-draft: false
 slug: apps
 url: /reference/cli/apps
 ---
@@ -11,11 +10,11 @@ url: /reference/cli/apps
 List apps
 
 ### Usage
-```html
+```bash
     convox apps
 ```
 ### Examples
-```html
+```bash
     $ convox apps
     APP          STATUS   RELEASE
     myapp        running  RABCDEFGHI
@@ -26,11 +25,11 @@ List apps
 Cancel an app update
 
 ### Usage
-```html
+```bash
     convox apps cancel [app]
 ```
 ### Examples
-```html
+```bash
     $ convox apps cancel
     Cancelling deployment of myapp... OK
 ```
@@ -39,11 +38,11 @@ Cancel an app update
 Create an app
 
 ### Usage
-```html
+```bash
     convox apps create [app]
 ```
 ### Examples
-```html
+```bash
     $ convox apps create myapp
     Creating myapp... OK
 ```
@@ -52,11 +51,11 @@ Create an app
 Delete an app
 
 ### Usage
-```html
+```bash
     convox apps delete <app>
 ```
 ### Examples
-```html
+```bash
     $ convox apps delete myapp
 ```
 ## apps export
@@ -64,11 +63,11 @@ Delete an app
 Export an app
 
 ### Usage
-```html
+```bash
     convox apps export [app]
 ```
 ### Examples
-```html
+```bash
     $ convox apps export --file myapp.tgz
     Exporting app myapp... OK
     Exporting env... OK
@@ -81,11 +80,11 @@ Export an app
 Import an app
 
 ### Usage
-```html
+```bash
     convox apps import [app]
 ```
 ### Examples
-```html
+```bash
     $ convox apps import myapp2 --file myapp.tgz
     Creating app myapp2... OK
     Importing build... OK, RIHGFEDCBA
@@ -98,11 +97,11 @@ Import an app
 Get information about an app
 
 ### Usage
-```html
+```bash
     convox apps info [app]
 ```
 ### Examples
-```html
+```bash
     $ convox apps info
     Name        myapp
     Status      running
@@ -115,11 +114,11 @@ Get information about an app
 Enable termination protection
 
 ### Usage
-```html
+```bash
     convox apps lock [app]
 ```
 ### Examples
-```html
+```bash
     $ convox apps lock
     Locking myapp... OK
 ```
@@ -128,11 +127,11 @@ Enable termination protection
 Disable termination protection
 
 ### Usage
-```html
+```bash
     convox apps unlock [app]
 ```
 ### Examples
-```html
+```bash
     $ convox apps unlock
     Unlocking myapp... OK
 ```

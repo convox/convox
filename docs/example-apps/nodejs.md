@@ -1,7 +1,6 @@
 ---
 title: "Node.js"
-draft: false
-slug: Node.js
+slug: node-js
 url: /example-apps/nodejs
 ---
 # Node.js
@@ -25,7 +24,7 @@ You should now be able to access your application by going to [https://web.nodej
 
 #### Dockerfile
 
-Starting from the [node:10.16.3-alpine](https://hub.docker.com/_/ruby/) image, the [Dockerfile](https://github.com/convox-examples/nodejs/blob/master/Dockerfile) simply sets up a basic nodejs app by copying the app files into the container, exposing port 3000 and specifying the command to be executed.
+Starting from the [node:10.16.3-alpine](https://hub.docker.com/_/ruby/) image, the [Dockerfile](https://github.com/convox-examples/nodejs/blob/master/Dockerfile) sets up a basic nodejs app by copying the app files into the container, exposing port 3000 and specifying the command to be executed.
 
 #### convox.yml
 

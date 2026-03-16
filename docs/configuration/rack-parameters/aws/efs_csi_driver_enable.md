@@ -1,6 +1,5 @@
 ---
 title: "efs_csi_driver_enable"
-draft: false
 slug: efs_csi_driver_enable
 url: /configuration/rack-parameters/aws/efs_csi_driver_enable
 ---
@@ -19,14 +18,14 @@ The default value for `efs_csi_driver_enable` is `false`.
 
 ## Setting Parameters
 To enable the EFS CSI driver, use the following command:
-```html
+```bash
 $ convox rack params set efs_csi_driver_enable=true -r rackName
 Setting parameters... OK
 ```
 This command enables the AWS EFS volume feature for your rack.
 
 ## Additional Information
-AWS EFS provides a scalable file storage solution that supports multiple instances accessing the same file system, making it ideal for shared data storage across service replicas. 
+AWS EFS provides a scalable file storage solution that supports multiple instances accessing the same file system, making it ideal for shared data storage across service replicas.
 
 ### Example Configuration
 To configure your services to use AWS EFS for persistent storage, you can set up your `convox.yml` as follows:

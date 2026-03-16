@@ -1,7 +1,6 @@
 ---
 title: "Upgrading"
-draft: false
-slug: Upgrading
+slug: upgrading
 url: /help/upgrading
 ---
 # Upgrading
@@ -24,3 +23,7 @@ url: /help/upgrading
 - Create and then [Import](/reference/cli/apps#apps-import) your Apps from your previous exports.
 - Once satisfied that your Apps are running successfully on your new Rack, you can redirect any DNS / custom Domains to your new apps.
 - Then delete and remove your previous Apps and Rack.  This should be performed with the older version of the CLI. `convox-old apps delete <appname>` and `convox-old rack uninstall -r <rackname>` etc.
+
+## See Also
+
+- [Changes from v2](/help/changes) for a detailed list of what changed between v2 and v3

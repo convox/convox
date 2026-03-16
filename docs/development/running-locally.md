@@ -1,7 +1,6 @@
 ---
 title: "Running Locally"
-draft: false
-slug: Running Locally
+slug: running-locally
 url: /development/running-locally
 ---
 
@@ -12,7 +11,7 @@ Running your application locally requires a [Development Rack](/installation/dev
 ## Starting Your Application
 
 Once you have a Development Rack, you can go to the directory containing your application code and run `convox start`.
-```html
+```bash
     $ convox start
     build  | uploading source
     build  | starting build
@@ -57,7 +56,7 @@ synchronized.
 
 You can use a build target named `development` in your `Dockerfile` to work locally on an application that will be
 later compiled to a binary and have its source code removed before deploying to production.
-```html
+```dockerfile
     FROM golang:1.13 AS development
     ENV DEVELOPMENT=true
     COPY . .
@@ -75,3 +74,8 @@ recompiles and reloads the application when the source code is changed.
 
 When deploying to production the entire Dockerfile would be run and you would end up with a bare `ubuntu:18.04` container
 with only the compiled binary copied into it.
+
+## See Also
+
+- [Local Development Tutorial](/tutorials/local-development) for a guided walkthrough
+- [Development Rack](/installation/development-rack) for setting up a local rack

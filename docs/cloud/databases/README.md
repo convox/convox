@@ -1,6 +1,5 @@
 ---
 title: "Cloud Databases"
-draft: false
 slug: databases
 url: /cloud/databases
 ---
@@ -78,7 +77,7 @@ services:
 
 The following environment variables are automatically set:
 
-```
+```text
 MAIN_URL=postgres://username:password@host.name:port/database
 MAIN_USER=username
 MAIN_PASS=password

@@ -1,6 +1,5 @@
 ---
 title: "api"
-draft: false
 slug: api
 url: /reference/cli/api
 ---
@@ -11,11 +10,11 @@ url: /reference/cli/api
 Query the Rack API
 
 ### Usage
-```html
+```bash
     convox api get <path>
 ```
 ### Examples
-```html
+```bash
     $ convox api get /apps
     [
       {

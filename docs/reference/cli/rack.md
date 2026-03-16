@@ -1,6 +1,5 @@
 ---
 title: "rack"
-draft: false
 slug: rack
 url: /reference/cli/rack
 ---
@@ -11,11 +10,11 @@ url: /reference/cli/rack
 Get information about the rack
 
 ### Usage
-```html
+```bash
     convox rack
 ```
 ### Examples
-```html
+```bash
     $ convox rack
     Name      test
     Provider  aws
@@ -30,14 +29,14 @@ Install a new Rack
 > note: To install the rack into the console with the specified runtime, region, and optional [parameters](https://docs.convox.com/configuration/rack-parameters/): provide orgname/rackname in place of `<name>`
 
 ### Usage
-```html
+```bash
     convox rack install <provider> <name> [option=value]...
 
     convox rack install <provider> <orgname>/<rackname> region=<region> --runtime=<runtime-id> [option=value]...
 ```
 
 flags:
-  - `runtime`: runtime integration ID 
+  - `runtime`: runtime integration ID
   - `version`: specify the rack version to install
 
 > note: To install a rack into an organization with runtime integration, ensure your CLI is updated to the latest version. For detailed instructions on updating CLI, please see [CLI Management](https://docs.convox.com/management/cli-rack-management/).
@@ -45,7 +44,7 @@ flags:
 > note: Obtain the runtime ID by running `convox runtimes <orgname>`.
 
 ### Examples
-```html
+```bash
     $ convox rack install local dev
     ...
 
@@ -61,11 +60,11 @@ flags:
 Output a Kubernetes configuration file for connecting to the underlying cluster
 
 ### Usage
-```html
+```bash
     convox rack kubeconfig
 ```
 ### Examples
-```html
+```bash
     $ convox rack kubeconfig
     apiVersion: v1
     clusters:
@@ -91,11 +90,11 @@ Output a Kubernetes configuration file for connecting to the underlying cluster
 Get logs for the rack
 
 ### Usage
-```html
+```bash
     convox rack logs
 ```
 ### Examples
-```html
+```bash
     $ convox rack logs
     2020-02-10T13:37:22Z service/web/a55eb25e-90f5-4301-99fd-e35c91128592 ns=provider.aws at=SystemGet state=success elapsed=275.683
     2020-02-10T13:37:22Z service/web/a55eb25e-90f5-4301-99fd-e35c91128592 id=8d3ec85dc324 ns=api at=SystemGet method="GET" path="/system" response=200 elapsed=276.086
@@ -109,11 +108,11 @@ Transfer the management of a Rack from an individual user to an organization or 
 > note: rack name should be same
 
 ### Usage
-```html
+```bash
     convox rack mv <from> <to>
 ```
 ### Examples
-```html
+```bash
     $ convox rack mv dev acme/dev
     moving rack dev to acme/dev... OK
 
@@ -125,11 +124,11 @@ Transfer the management of a Rack from an individual user to an organization or 
 List rack processes
 
 ### Usage
-```html
+```bash
     convox rack ps
 ```
 ### Examples
-```html
+```bash
     $ convox rack ps
     ID                       APP     SERVICE        STATUS   RELEASE       STARTED      COMMAND
     api-9749b7ccb-29zh5      system  api            running  3.0.0.beta44  2 weeks ago  api
@@ -146,11 +145,11 @@ List rack processes
 List rack processes as well as essential system ones running on the Rack
 
 ### Usage
-```html
+```bash
     convox rack ps --all
 ```
 ### Examples
-```html
+```bash
     $ convox rack ps --all
     ID                       APP     SERVICE        STATUS   RELEASE       STARTED      COMMAND
     api-9749b7ccb-29zh5      system  api            running  3.0.0.beta44  2 weeks ago  api
@@ -180,11 +179,11 @@ List rack processes as well as essential system ones running on the Rack
 List of attachable runtime integrations
 
 ### Usage
-```html
+```bash
     convox rack runtimes
 ```
 ### Examples
-```html
+```bash
     $ convox rack runtimes
     ID                                    TITLE
     20e58437-fab7-4124-aa5a-2e5978f1149e  047979207916
@@ -195,11 +194,11 @@ List of attachable runtime integrations
 Attach runtime integration to the rack
 
 ### Usage
-```html
+```bash
     convox rack runtime attach <runtime_id>
 ```
 ### Examples
-```html
+```bash
     $ convox rack runtime attach 20e58437-fab7-4124-aa5a-2e5978f11
     OK
 ```
@@ -209,11 +208,11 @@ Attach runtime integration to the rack
 Uninstalls a Rack
 
 ### Usage
-```html
+```bash
     convox rack uninstall <name>
 ```
 ### Examples
-```html
+```bash
     $ convox rack uninstall my-rack
     Upgrading modules...
     Downloading github.com/convox/convox?ref=3.0.15 for system...
@@ -225,11 +224,11 @@ Uninstalls a Rack
 Updates a Rack to a new version.
 
 ### Usage
-```html
+```bash
     convox rack update [version]
 ```
 ### Examples
-```html
+```bash
     $ convox rack update
     Upgrading modules...
     Downloading github.com/convox/convox?ref=3.0.15 for system...
@@ -250,7 +249,7 @@ Generates rack access credential
 > supported from: 3.14.1
 
 ### Usage
-```html
+```bash
     convox rack access --role [role] --duration-in-hours [duration]
 ```
 flags:
@@ -258,7 +257,7 @@ flags:
   - `duration-in-hours`: TTL for the credential.
 
 ### Examples
-```html
+```bash
     $ convox rack access --role read --duration-in-hours 1
     RACK_URL=https://...
 
@@ -279,12 +278,12 @@ Rotates the rack access key that is used for rack access credential. It will inv
 > supported from: 3.14.1
 
 ### Usage
-```html
+```bash
     convox rack access key rotate
 ```
 
 ### Examples
-```html
+```bash
     $ convox rack access key rotate              
     OK
 

@@ -1,6 +1,5 @@
 ---
 title: "tags"
-draft: false
 slug: tags
 url: /configuration/rack-parameters/azure/tags
 ---
@@ -20,7 +19,7 @@ The default value is an empty string (`""`), which means no additional tags are 
 
 ## Setting Parameters
 The value should be a comma-separated list of `key=value` pairs. It can be provided as plain text or base64-encoded:
-```html
+```bash
 $ convox rack params set tags=env=production,team=platform -r rackName
 Setting parameters... OK
 ```

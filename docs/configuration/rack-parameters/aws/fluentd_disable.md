@@ -1,6 +1,5 @@
 ---
 title: "fluentd_disable"
-draft: false
 slug: fluentd_disable
 url: /configuration/rack-parameters/aws/fluentd_disable
 ---
@@ -19,7 +18,7 @@ The default value for `fluentd_disable` is `false`.
 
 ## Setting Parameters
 To disable Fluentd, use the following command:
-```html
+```bash
 $ convox rack params set fluentd_disable=true -r rackName
 Setting parameters... OK
 ```

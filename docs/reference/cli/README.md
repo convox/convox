@@ -1,12 +1,11 @@
 ---
 title: "CLI"
-draft: false
-slug: CLI
+slug: cli
 url: /reference/cli
 ---
 # Command Line Interface
 
-Explore detailed documentation on how to use the Convox Command Line Interface (CLI) to manage your applications and resources. 
+Explore detailed documentation on how to use the Convox Command Line Interface (CLI) to manage your applications and resources.
 
 For a quick overview of some commonly used commands, you may find this [blog post on common Convox CLI commands](https://www.convox.com/blog/common-convox-cli-commands) helpful.
 

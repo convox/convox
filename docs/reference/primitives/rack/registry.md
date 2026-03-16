@@ -1,7 +1,6 @@
 ---
 title: "Registry"
-draft: false
-slug: Registry
+slug: registry
 url: /reference/primitives/rack/registry
 ---
 # Registry
@@ -10,7 +9,7 @@ A Registry is a set of stored credentials for a private Docker registry that can
 
 ## Adding Registries
 
-```html
+```bash
     $ convox registries add registry.example.org user password
     Adding registry... OK
 ```
@@ -19,7 +18,7 @@ Use `https://index.docker.io/v1/` for DockerHub.
 
 ## Listing Registries
 
-```html
+```bash
     $ convox registries
     SERVER                       USERNAME
     registry.example.org          user
@@ -27,7 +26,7 @@ Use `https://index.docker.io/v1/` for DockerHub.
 
 ## Deleting Registries
 
-```html
+```bash
     $ convox registries remove registry.example.org
     Removing registry... OK
 ```

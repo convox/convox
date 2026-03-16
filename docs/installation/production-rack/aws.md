@@ -1,11 +1,10 @@
 ---
 title: "Amazon Web Services"
-draft: false
-slug: Amazon Web Services
+slug: amazon-web-services
 url: /installation/production-rack/aws
 ---
 # Amazon Web Services
-> Please note that these are instructions for installing a Rack via the command line. The easiest way to install a Rack is with the [Convox Web Console](https://console.convox.com)
+> These are instructions for installing a Rack via the command line. The easiest way to install a Rack is with the [Convox Web Console](https://console.convox.com)
 
 ## Initial Setup
 
@@ -29,7 +28,7 @@ The following environment variables are required:
 - `AWS_SECRET_ACCESS_KEY`
 
 ### Create IAM User
-```html
+```bash
     $ aws iam create-user --user-name convox
     $ aws iam attach-user-policy --user-name convox --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
     $ aws iam create-access-key --user-name convox
@@ -38,7 +37,7 @@ The following environment variables are required:
 - `AWS_SECRET_ACCESS_KEY` is `SecretAccessKey`
 
 ## Install Rack
-```html
+```bash
     $ convox rack install aws <name> [param1=value1]...
 ```
 ### Available Parameters
@@ -50,7 +49,7 @@ The following environment variables are required:
 | **build_node_enabled**   |     false              | Enabled dedicated build node for build |
 | **build_node_type**      | same as **node_type**  | Node type for the build node |
 | **build_node_min_count** |     0                  | Minimum number of build nodes to keep running |
-| **cert_duration**        | **2160h**              | Certification renew period                                                                                     | 
+| **cert_duration**        | **2160h**              | Certification renew period                                                                                     |
 | **cidr**                 | **10.1.0.0/16**        | CIDR range for VPC                                                                                             |
 | **convox_domain_tls_cert_disable** | false        | Disable convox domain(*.convox.cloud) tls certificate generation for services |
 | **efs_csi_driver_enable**       | **false**              | Enable efs csi driver to use AWS EFS volume feature |
@@ -89,7 +88,6 @@ The following environment variables are required:
 
 \* **schedule_rack_scale_down** and **schedule_rack_scale_up** are mutually exclusive. So you have to set both of them properly for the scheduled timed off. If you set only **schedule_rack_scale_down**, it will not scale up on its own.
 
-
 ### Cluster Endpoint Access
 
 Convox allows you to configure access to the Kubernetes API server endpoint for your EKS cluster. This functionality is accessible through the Convox Console under the Rack Settings menu in the Security tab. To configure the cluster endpoint access mode, navigate to your rack, select it, and click the cogwheel in the upper right-hand corner of the screen.
@@ -102,7 +100,7 @@ There are three modes available for configuring the cluster endpoint access:
 
 - **Public-Private**: This hybrid mode enables both public and private network access to your EKS cluster API server simultaneously. External clients (such as CI/CD systems and developer machines) can connect via the public endpoint, while in-VPC resources (pods, services, and internal tools) automatically use the private endpoint for improved performance and security. This mode provides a balance between operational flexibility and security, allowing you to maintain external management capabilities while keeping node-to-control-plane communication private. It's ideal for organizations transitioning to more restrictive configurations or those requiring both external tool access and compliance with private network requirements.
 
-- **Semi-Private**: In this mode, the cluster temporarily switches to public access during updates or configuration changes, then reverts to private when complete. This mode is suitable for older racks and any version, but note that enabling Semi-Private mode will add approximately 15 minutes to each update.
+- **Semi-Private**: In this mode, the cluster temporarily switches to public access during updates or configuration changes, then reverts to private when complete. This mode is suitable for older racks and any version, but enabling Semi-Private mode will add approximately 15 minutes to each update.
 
 - **Private**: The EKS cluster endpoint is restricted to VPC access only, ensuring that only internal traffic can access it. This mode provides the highest level of security by limiting access to within the VPC while maintaining full Convox API functionality.
 

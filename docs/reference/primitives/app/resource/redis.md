@@ -1,7 +1,6 @@
 ---
 title: "Redis"
-draft: false
-slug: Redis
+slug: redis
 url: /reference/primitives/app/resource/redis
 ---
 # Redis
@@ -10,7 +9,7 @@ url: /reference/primitives/app/resource/redis
 
 A Redis Resource is defined in [```convox.yml```](/configuration/convox-yml) and linked to one or more [Services](/reference/primitives/app/service).
 
-```html
+```yaml
 resources:
   main:
     type: redis
@@ -24,7 +23,7 @@ services:
 
 In addition to containerized resources, Convox v3 allows the creation of Redis resources via AWS ElastiCache. This provides enhanced durability and managed service benefits. Below is a general example of how to define AWS ElastiCache Redis resources:
 
-```html
+```yaml
 resources:
   cache:
     type: elasticache-redis
@@ -62,21 +61,19 @@ Below is a chart of configuration options available for AWS ElastiCache Redis re
 | **autoMinorVersionUpgrade** | boolean | Whether to allow automatic minor version upgrades for the cache engine.                              |
 | **import**                  | string  | The cache identifier used for cache import.                                                          |
 
-
 > **Important:** The `deletionProtection` option is managed by Convox and is not an AWS feature. It is used to prevent the resource from being removed if accidentally deleted from the `convox.yml` file. If `deletionProtection` is enabled, the resource will not be deleted even if it is removed from the manifest.
-
 
 ### Command Line Interface
 
 #### Listing Resources
-```html
+```bash
 $ convox resources -a myapp
 NAME      TYPE       URL
 cache     elasticache-redis  redis://hostname:port
 ```
 
 #### Getting Information about a Resource
-```html
+```bash
 $ convox resources info cache -a myapp
 Name  cache
 Type  elasticache-redis
@@ -84,13 +81,13 @@ URL   redis://hostname:port
 ```
 
 #### Getting the URL for a Resource
-```html
+```bash
 $ convox resources url cache -a myapp
 redis://hostname:port
 ```
 
 #### Starting a Proxy to a Resource
-```html
+```bash
 $ convox resources proxy cache -a myapp
 Proxying localhost:6379 to hostname:port
 ```

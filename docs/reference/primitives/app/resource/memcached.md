@@ -1,7 +1,6 @@
 ---
 title: "Memcached"
-draft: false
-slug: Memcached
+slug: memcached
 url: /reference/primitives/app/resource/memcached
 ---
 # Memcached
@@ -10,7 +9,7 @@ url: /reference/primitives/app/resource/memcached
 
 A Memcached Resource is defined in [```convox.yml```](/configuration/convox-yml) and linked to one or more [Services](/reference/primitives/app/service).
 
-```html
+```yaml
 resources:
   main:
     type: memcached
@@ -20,12 +19,11 @@ services:
       - main
 ```
 
-
 ### AWS ElastiCache Managed Memcached Resources
 
 In addition to containerized resources, Convox v3 allows the creation of Memcached resources via AWS ElastiCache. This provides enhanced durability and managed service benefits. Below is a general example of how to define AWS ElastiCache Memcached resources:
 
-```html
+```yaml
 resources:
   cache:
     type: elasticache-memcached
@@ -65,21 +63,19 @@ Below is a chart of configuration options available for AWS ElastiCache Memcache
 | **autoMinorVersionUpgrade** | boolean | Whether to allow automatic minor version upgrades for the cache engine.                              |
 | **import**                  | string  | The cache identifier used for cache import.                                                          |
 
-
-
 > **Important:** The `deletionProtection` option is managed by Convox and is not an AWS feature. It is used to prevent the resource from being removed if accidentally deleted from the `convox.yml` file. If `deletionProtection` is enabled, the resource will not be deleted even if it is removed from the manifest.
 
 ### Command Line Interface
 
 #### Listing Resources
-```html
+```bash
 $ convox resources -a myapp
 NAME      TYPE       URL
 cache     elasticache-memcached  memcached://hostname:port
 ```
 
 #### Getting Information about a Resource
-```html
+```bash
 $ convox resources info cache -a myapp
 Name  cache
 Type  elasticache-memcached
@@ -87,13 +83,13 @@ URL   memcached://hostname:port
 ```
 
 #### Getting the URL for a Resource
-```html
+```bash
 $ convox resources url cache -a myapp
 memcached://hostname:port
 ```
 
 #### Starting a Proxy to a Resource
-```html
+```bash
 $ convox resources proxy cache -a myapp
 Proxying localhost:11211 to hostname:port
 ```

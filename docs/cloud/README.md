@@ -1,6 +1,5 @@
 ---
 title: "Convox Cloud"
-draft: false
 slug: cloud
 url: /cloud
 ---

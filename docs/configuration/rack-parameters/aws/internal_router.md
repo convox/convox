@@ -1,6 +1,5 @@
 ---
 title: "internal_router"
-draft: false
 slug: internal_router
 url: /configuration/rack-parameters/aws/internal_router
 ---
@@ -19,7 +18,7 @@ The default value for `internal_router` is `false`.
 
 ## Setting Parameters
 To enable the internal router, use the following command:
-```html
+```bash
 $ convox rack params set internal_router=true -r rackName
 Setting parameters... OK
 ```

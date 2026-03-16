@@ -1,7 +1,6 @@
 ---
 title: "CLI Rack Management"
-draft: false
-slug: CLI Rack Management
+slug: cli-rack-management
 url: /management/cli-rack-management
 ---
 # CLI Rack Management
@@ -9,12 +8,12 @@ url: /management/cli-rack-management
 ## Updating a Rack
 
 ### Updating to the latest version
-```html
+```bash
     $ convox rack update
     Updating rack... OK
 ```
 
-v3 racks need to be updated through every minor version.  We suggest you [locate the latest minor rack version](https://github.com/convox/convox/releases) that you are updating through and then continuing up versions "step-wise" until you reach your desired version.  This is to ensure no internal rack or cluster services fall out of sync/version with each other.  
+v3 racks need to be updated through every minor version.  We suggest you [locate the latest minor rack version](https://github.com/convox/convox/releases) that you are updating through and then continuing up versions "step-wise" until you reach your desired version.  This is to ensure no internal rack or cluster services fall out of sync/version with each other.
 
 E.g. a rack on Version `3.13.x` would need update to the latest `3.14.x` version before proceeding to the latest `3.15.x` version and so on.
 
@@ -25,21 +24,34 @@ E.g. a rack on Version `3.13.1` should update directly to `3.14.5` (the latest v
 _Note on Versioning: In the `major.minor.patch` format, `minor` versions indicate updates for significant dependencies like Kubernetes, while `patch` versions introduce feature additions or bug fixes._
 
 ### Updating to a specific version
-```html
+```bash
     $ convox rack update 3.16.1
     Updating rack... OK
 ```
 
+### Best Practices for Rack Updates
+
+1. **Review the [release notes](https://github.com/convox/convox/releases)** for the target version before updating. Look for breaking changes or special instructions.
+2. **Update a staging rack first** to test the new version with your applications before touching production.
+3. **Ensure you have recent backups** of critical application data (databases, persistent volumes).
+4. **Run updates during a low-traffic window.** Rack updates are designed for zero downtime, but a maintenance window is still recommended.
+5. **Monitor progress** by watching rack logs during the update:
+    ```bash
+    $ convox rack logs -r <rack_name>
+    ```
+    The update is complete when the rack status returns to `running`.
+6. **Update step-wise through minor versions.** A rack on `3.13.x` should update to the latest `3.14.x` before proceeding to `3.15.x`.
+
 ## Managing Parameters
 
 ### Viewing current parameters
-```html
+```bash
     $ convox rack params
     node_disk  20
     node_type  t3.small
 ```
 ### Setting parameters
-```html
+```bash
     $ convox rack params set node_disk=30 node_type=c5.large
     Setting parameters... OK
 ```
@@ -144,3 +156,8 @@ For detailed descriptions and instructions, visit the [Microsoft Azure Rack Para
 | **region**              | **eastus**        |
 | **syslog**              |                   |
 | **telemetry**           | **true**          |
+
+## See Also
+
+- [Console Rack Management](/management/console-rack-management) for managing racks through the web console
+- [Rack Parameters](/configuration/rack-parameters) for configuring rack settings

@@ -1,6 +1,5 @@
 ---
 title: "releases"
-draft: false
 slug: releases
 url: /reference/cli/releases
 ---
@@ -11,11 +10,11 @@ url: /reference/cli/releases
 List releases for an app
 
 ### Usage
-```html
+```bash
     convox releases
 ```
 ### Examples
-```html
+```bash
     $ convox releases
     ID          STATUS  BUILD        CREATED         DESCRIPTION
     RIABCDEFGH          BJABCDEFGHI  30 seconds ago
@@ -27,11 +26,11 @@ List releases for an app
 Get information about a release
 
 ### Usage
-```html
+```bash
     convox releases info <release>
 ```
 ### Examples
-```html
+```bash
     $ convox releases info RABCDEFGHI
     Id           RABCDEFGHI
     Build        BABCDEFGHIJ
@@ -44,11 +43,11 @@ Get information about a release
 Get manifest for a release
 
 ### Usage
-```html
+```bash
     convox releases manifest <release>
 ```
 ### Examples
-```html
+```bash
     $ convox releases manifest RABCDEFGHI
     services:
         web:
@@ -60,11 +59,11 @@ Get manifest for a release
 Promote a release
 
 ### Usage
-```html
+```bash
     convox releases promote <release>
 ```
 ### Examples
-```html
+```bash
     $ convox releases promote RIABCDEFGH
     Promoting RIABCDEFGH...
     2020-02-11T20:55:37Z system/k8s/atom/app Status: Running => Pending
@@ -85,11 +84,11 @@ Promote a release
 Copy an old release forward and promote it
 
 ### Usage
-```html
+```bash
     convox releases rollback <release>
 ```
 ### Examples
-```html
+```bash
     $ convox releases rollback RABCDEFGHI
     Rolling back to RABCDEFGHI... OK, RHIABCDEFG
     Promoting RHIABCDEFG...

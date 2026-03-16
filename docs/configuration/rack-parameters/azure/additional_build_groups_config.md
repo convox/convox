@@ -1,6 +1,5 @@
 ---
 title: "additional_build_groups_config"
-draft: false
 slug: additional_build_groups_config
 url: /configuration/rack-parameters/azure/additional_build_groups_config
 ---
@@ -41,7 +40,7 @@ Build node pools automatically get the following labels and taints:
 ## Setting Parameters
 
 ### Using a JSON File (Recommended)
-```html
+```bash
 $ convox rack params set additional_build_groups_config=/path/to/build-config.json -r rackName
 Setting parameters... OK
 ```
@@ -62,7 +61,7 @@ Example JSON file:
 ```
 
 ### Using a Raw JSON String
-```html
+```bash
 $ convox rack params set 'additional_build_groups_config=[{"id":201,"type":"Standard_D8s_v3","disk":100,"min_size":0,"max_size":3,"label":"builds"}]' -r rackName
 Setting parameters... OK
 ```

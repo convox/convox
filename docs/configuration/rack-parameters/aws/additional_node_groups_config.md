@@ -1,6 +1,5 @@
 ---
 title: "additional_node_groups_config"
-draft: false
 slug: additional_node_groups_config
 url: /configuration/rack-parameters/aws/additional_node_groups_config
 ---
@@ -43,7 +42,7 @@ The `additional_node_groups_config` parameter takes a JSON array of node group c
 To set the `additional_node_groups_config` parameter, there are several methods:
 
 ### Using a JSON File (Recommended)
-```html
+```bash
 $ convox rack params set additional_node_groups_config=/path/to/node-config.json -r rackName
 Setting parameters... OK
 ```
@@ -75,10 +74,10 @@ The JSON file should be structured as follows:
 ]
 ```
 
-> **Important Note on AWS Rate Limits**: When adding or removing multiple node groups, it's recommended to modify no more than three node groups at a time to avoid hitting AWS API rate limits. If you receive a rate limit error during an update simply run the parameter set command again. The operation will resume from where it left off, creating the remaining node groups without duplicating the ones that were already successfully created.
+> **Important Note on AWS Rate Limits**: When adding or removing multiple node groups, it's recommended to modify no more than three node groups at a time to avoid hitting AWS API rate limits. If you receive a rate limit error during an update run the parameter set command again. The operation will resume from where it left off, creating the remaining node groups without duplicating the ones that were already successfully created.
 
 ### Using a Raw JSON String
-```html
+```bash
 $ convox rack params set 'additional_node_groups_config=[{"id":101,"type":"t3.medium","disk":50,"capacity_type":"ON_DEMAND","min_size":1,"max_size":3,"label":"app-workers","tags":"environment=production,team=backend"}]' -r rackName
 Setting parameters... OK
 ```

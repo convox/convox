@@ -1,6 +1,5 @@
 ---
 title: "private"
-draft: false
 slug: private
 url: /configuration/rack-parameters/aws/private
 ---

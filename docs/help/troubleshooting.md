@@ -1,7 +1,6 @@
 ---
 title: "Troubleshooting"
-draft: false
-slug: Troubleshooting
+slug: troubleshooting
 url: /help/troubleshooting
 ---
 # Troubleshooting
@@ -25,7 +24,7 @@ Sometimes the Cloud providers will have internal issues which can prevent certai
 - [Digital Ocean](https://status.digitalocean.com/)
 - [GCP](https://status.cloud.google.com/)
 
-A failed Rack install should either be able to continued with, or be uninstalled successfully as required.  You can retry the installation by simply running `convox rack update -r <rackname>`.
+A failed Rack install should either be able to continued with, or be uninstalled successfully as required.  You can retry the installation by running `convox rack update -r <rackname>`.
 If your Rack consistently fails to install into your Cloud provider and there are no relevant issues reported then please raise a [support ticket](/help/support) for us to investigate.
 
 ## I get an error when I deploy my app to Convox
@@ -47,7 +46,7 @@ Convox uses LetsEncrypt to automatically and seamlessly provision SSL certificat
 
 Any Services within your App that expose a port will require a passing [health check](/configuration/health-checks) before receiving traffic.  Deploying a Release of your App that does not pass the health checks will result in a rollback to the previous release.  If this is your first release of a new App, a failing health check will result in a failed deployment.
 Failing health checks will be reported when promoting your Release:
-```html
+```text
     Promoting RABCDEFGHIJ...
     2020-02-15T21:16:50Z system/k8s/atom/app Status: Running => Pending
     2020-02-15T21:16:53Z system/k8s/atom/app Status: Pending => Updating
@@ -78,7 +77,7 @@ You can perform a remote restart of an entire App (all running processes) from t
 $ convox restart -a app1
 ```
 
-Or alternatively to just restart the `web` service processes, you can perform:
+Or alternatively to restart the `web` service processes, you can perform:
 
 ```sh
 $ convox services restart web -a app1
@@ -87,6 +86,55 @@ $ convox services restart web -a app1
 ## My CLI commands take a long time to return
 
 If your local Kubernetes setup does not point to a valid cluster, that can slow down your Convox CLI operations as it tries to interrogate the invalid endpoint.  In this case, you can set a local env var `$ export CONVOX_LOCAL=disable` to stop the CLI from doing this and speed up your commands.
+
+## A rack uninstall is stuck or failed
+
+When a rack uninstall fails, it is typically because a cloud resource cannot be deleted due to dependencies.
+
+1. **Attempt a forced uninstall from the CLI.**
+    ```bash
+    $ convox rack uninstall <rack_name>
+    ```
+
+2. **Identify the blocking resource in CloudFormation (AWS).**
+    If the CLI command fails, go to the AWS CloudFormation console. Find the stack for your rack (e.g., `convox-my-rack`). Its status will be `DELETE_FAILED`. Check the "Events" or "Resources" tab to find the specific resource that failed to delete.
+
+3. **Manually delete the blocking resource.**
+    Navigate to the appropriate service console (e.g., EC2 for Network Interfaces, VPC for Security Groups) and delete the resource identified in the previous step. You may need to detach or delete other dependent resources first.
+
+4. **Retry the CloudFormation stack deletion.**
+    Return to the CloudFormation console, select the failed stack, and click "Delete". In the deletion dialog, check the box next to the resource you manually deleted and proceed.
+
+Once the CloudFormation stack is gone, the rack will be removed from your Convox console.
+
+## My environment variables disappear after deploying
+
+This happens because of how Convox manages state through [Releases](/reference/primitives/app/release). Running `convox env set` creates a new, unpromoted release. Running `convox deploy` creates a release based on the **currently active** release's environment, not the latest unpromoted one.
+
+If you set an environment variable but deploy before promoting it, the deployment overwrites your change:
+
+1. `R1` is active.
+2. `convox env set FOO=bar` creates `R2` (not promoted). `R1` is still active.
+3. `convox deploy` creates `R3` based on `R1`'s environment. `FOO=bar` is lost.
+
+**To avoid this**, promote your environment changes before deploying:
+
+```bash
+$ convox env set FOO=bar -a myapp
+# Creates release R2
+$ convox releases promote R2 -a myapp
+# Now R2 is active
+$ convox deploy -a myapp
+# New release inherits FOO=bar from R2
+```
+
+Or use the `--promote` flag to set and promote in one step:
+
+```bash
+$ convox env set FOO=bar --promote -a myapp
+```
+
+See [Environment Variables](/configuration/environment) for more details.
 
 ## Still having trouble?
 

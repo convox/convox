@@ -1,7 +1,6 @@
 ---
 title: "Rails"
-draft: false
-slug: Rails
+slug: rails
 url: /example-apps/rails
 ---
 # Rails
@@ -45,7 +44,7 @@ Create a file in the root of your project with the name `convox.yml` and the fol
 
 > Note: Check [convox.yml](/configuration/convox-yml) to see all the possible configurations.
 
-```html
+```yaml
 resources: # Here we are creating a database resource to use in our application.
   database:
     type: postgres
@@ -78,8 +77,7 @@ In your `config/development.rb` add:
 
 By default, the name of your `app` is taken to be the name of the directory you are in.  You can use a different app name by adding the `--app/-a` flags to any Convox command.
 
-**5.** Assuming you want to use postgres in your application, in your gemfile add the following line `gem 'pg'`. If you want to use a different database you just need to install the gem and define it on the `resources` section of `convox.yml`. You can find information about the databases we currently natively support [here](/reference/primitives/app/resource#types)
-
+**5.** Assuming you want to use postgres in your application, in your gemfile add the following line `gem 'pg'`. If you want to use a different database you need to install the gem and define it on the `resources` section of `convox.yml`. You can find information about the databases we currently natively support [here](/reference/primitives/app/resource#types)
 
 **6.** As mentioned in step **#2**, when you define a resource Convox will create an environment variable with that name for your application to access it. For more information on how it works check it [here](/reference/primitives/app/resource#linking). To use Convox' database resource as in our convox.yml, in your `config/database.yml` add the following line under `default`:
 
@@ -89,7 +87,7 @@ Your `database.yml` should look like [this](https://github.com/convox-examples/r
 
 **7.** Given that Convox manages the SSL certificates, we need to disable the rails configuration to force SSL. Please go to `config/environments/production.rb` and comment the line
 
-```html
+```bash
 # config.force_ssl = true
 ```
 

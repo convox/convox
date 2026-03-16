@@ -1,7 +1,6 @@
 ---
 title: "Example Apps"
-draft: false
-slug: Example Apps
+slug: example-apps
 url: /example-apps
 ---
 # Example Apps
@@ -150,5 +149,5 @@ Can't find an example for your stack? We're constantly adding new examples based
 - [Convox Documentation](https://docs.convox.com)
 - [convox.yml Reference](/configuration/convox-yml)
 - [Dockerfile Best Practices](/configuration/dockerfile)
-- [Deployment Guide](/deployment)
+- [Deployment Guide](/deployment/deploying-changes)
 - [Environment Variables](/configuration/environment)

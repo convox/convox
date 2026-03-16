@@ -1,7 +1,6 @@
 ---
 title: "Private Registries"
-draft: false
-slug: Private Registries
+slug: private-registries
 url: /configuration/private-registries
 ---
 # Private Registries
@@ -11,18 +10,18 @@ Convox can pull base images from private registries during the build process.
 ## Command Line Interface
 
 ### Adding a Registry
-```html
+```bash
     $ convox registries add registry.example.org username password
     Adding registry... OK
 ```
 ### Listing Registries
-```html
+```bash
     $ convox registries
     SERVER                USERNAME
     registry.example.org  username
 ```
 ### Removing a Registry
-```html
+```bash
     $ convox registries remove registry.example.org
     Removing registry... OK
 ```

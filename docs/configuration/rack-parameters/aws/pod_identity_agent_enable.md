@@ -1,6 +1,5 @@
 ---
 title: "pod_identity_agent_enable"
-draft: false
 slug: pod_identity_agent_enable
 url: /configuration/rack-parameters/aws/pod_identity_agent_enable
 ---
@@ -23,7 +22,7 @@ The default value for `pod_identity_agent_enable` is `false`.
 
 ## Setting Parameters
 To enable the AWS Pod Identity Agent, use the following command:
-```html
+```bash
 $ convox rack params set pod_identity_agent_enable=true -r rackName
 Setting parameters... OK
 ```

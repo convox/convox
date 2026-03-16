@@ -1,11 +1,10 @@
 ---
 title: "Digital Ocean"
-draft: false
-slug: Digital Ocean
+slug: digital-ocean
 url: /installation/production-rack/do
 ---
 # Digital Ocean
-> Please note that these are instructions for installing a Rack via the command line. The easiest way to install a Rack is with the [Convox Web Console](https://console.convox.com)
+> These are instructions for installing a Rack via the command line. The easiest way to install a Rack is with the [Convox Web Console](https://console.convox.com)
 
 ## Initial Setup
 
@@ -29,7 +28,7 @@ The following environment variables are required:
 
 Go to https://cloud.digitalocean.com/account/api/tokens and generate a new Personal Access Token.
 
-- `DIGITALOCEAN_TOKEN` is the token you just created
+- `DIGITALOCEAN_TOKEN` is the token you created
 
 ### Create Spaces Access Key
 
@@ -39,7 +38,7 @@ Go to https://cloud.digitalocean.com/account/api/tokens and generate a new Space
 - `DIGITALOCEAN_SECRET_KEY` is the Secret
 
 ## Install Rack
-```html
+```bash
     $ convox rack install do <name> [param1=value1]...
 ```
 ### Available Parameters

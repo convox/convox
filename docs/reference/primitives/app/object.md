@@ -1,7 +1,6 @@
 ---
 title: "Object"
-draft: false
-slug: Object
+slug: object
 url: /reference/primitives/app/object
 ---
 # Object

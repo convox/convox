@@ -1,6 +1,5 @@
 ---
 title: "pdb_default_min_available_percentage"
-draft: false
 slug: pdb_default_min_available_percentage
 url: /configuration/rack-parameters/aws/pdb_default_min_available_percentage
 ---
@@ -23,7 +22,7 @@ The default value for `pdb_default_min_available_percentage` is `50`.
 
 ## Setting Parameters
 To set the default minimum available percentage for Pod Disruption Budgets, use the following command:
-```html
+```bash
 $ convox rack params set pdb_default_min_available_percentage=40 -r rackName
 Setting parameters... OK
 ```

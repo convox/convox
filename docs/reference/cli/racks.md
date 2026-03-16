@@ -1,6 +1,5 @@
 ---
 title: "racks"
-draft: false
 slug: racks
 url: /reference/cli/racks
 ---
@@ -11,11 +10,11 @@ url: /reference/cli/racks
 List available Racks and their state.
 
 ### Usage
-```html
+```bash
     convox racks
 ```
 ### Examples
-```html
+```bash
     $ convox racks
     NAME               PROVIDER  STATUS
     dev                local     running

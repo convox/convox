@@ -1,7 +1,6 @@
 ---
 title: "Postgres"
-draft: false
-slug: Postgres
+slug: postgres
 url: /reference/primitives/app/resource/postgres
 ---
 # Postgres
@@ -10,7 +9,7 @@ url: /reference/primitives/app/resource/postgres
 
 A Postgres Resource is defined in [`convox.yml`](/configuration/convox-yml) and linked to one or more [Services](/reference/primitives/app/service).
 
-```html
+```yaml
 resources:
   database:
     type: postgres
@@ -24,7 +23,7 @@ services:
 
 A Postgres Resource can have the following options configured for it (default values are shown):
 
-```html
+```yaml
 resources:
   database:
     type: postgres
@@ -37,7 +36,7 @@ resources:
 
 In addition to containerized resources, Convox v3 allows the creation of Postgres resources via AWS RDS. This provides enhanced durability and managed service benefits. Below is a general example of how to define AWS RDS resources:
 
-```html
+```yaml
 resources:
   database:
     type: rds-postgres
@@ -60,7 +59,7 @@ services:
 ### Features
 
 - **Read Replica Support**: AWS RDS resources support integrated AWS read replicas. You can configure read replicas for improved read scalability and reliability. Additionally, read replicas can be promoted to active primaries if needed.
-- **Snapshot Restoration**: Easily restore from a snapshot to create a new database instance with your desired specifications.
+- **Snapshot Restoration**: Restore from a snapshot to create a new database instance with your desired specifications.
 - **Import Existing RDS Database**: Import existing AWS RDS databases into a Convox rack for management or access via linking.
 
 ### Configuration Options
@@ -96,14 +95,14 @@ Below is a chart of configuration options available for AWS RDS Postgres resourc
 ### Command Line Interface
 
 #### Listing Resources
-```html
+```bash
 $ convox resources -a myapp
 NAME      TYPE          URL
 database  rds-postgres  postgres://username:password@host.name:port/database
 ```
 
 #### Getting Information about a Resource
-```html
+```bash
 $ convox resources info database -a myapp
 Name  database
 Type  rds-postgres
@@ -111,13 +110,13 @@ URL   postgres://username:password@host.name:port/database
 ```
 
 #### Getting the URL for a Resource
-```html
+```bash
 $ convox resources url database -a myapp
 postgres://username:password@host.name:port/database
 ```
 
 #### Launching a Console
-```html
+```bash
 $ convox resources console database -a myapp
 psql (13.3 (Debian 13.3-1.pgdg90+1), server 13.3 (Debian 13.3-2.pgdg90+1))
 Type "help" for help.
@@ -125,20 +124,20 @@ database=#
 ```
 
 #### Starting a Proxy to a Resource
-```html
+```bash
 $ convox resources proxy database -a myapp
 Proxying localhost:5432 to host.name:port
 ```
 > Proxying allows you to connect tools on your local machine to Resources running inside the Rack.
 
 #### Exporting Data from a Resource
-```html
+```bash
 $ convox resources export database -f /tmp/db.sql
 Exporting data from database... OK
 ```
 
 #### Importing Data to a Resource
-```html
+```bash
 $ convox resources import database -f /tmp/db.sql
 Importing data to database... OK
 ```

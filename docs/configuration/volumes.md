@@ -1,6 +1,5 @@
 ---
 title: "Volumes"
-draft: false
 slug: volumes
 url: /configuration/volumes
 ---
@@ -23,7 +22,7 @@ AWS EFS (Elastic File System) provides a scalable, persistent storage solution t
 
 To use AWS EFS volumes, you must enable the EFS CSI driver on your rack. Run the following command to enable it:
 
-```html
+```bash
 convox rack params set efs_csi_driver_enable=true -r rackName
 ```
 
@@ -31,7 +30,7 @@ convox rack params set efs_csi_driver_enable=true -r rackName
 
 After enabling the driver, define your EFS volumes in the `convox.yml` file:
 
-```html
+```yaml
 environment:
   - PORT=3000
 services:
@@ -57,7 +56,7 @@ services:
 
 Starting from version 3.19.7, you can specify a custom storage class for your EFS volumes. This provides greater flexibility for defining AWS storage behaviors and allows custom storage policies for specific workloads.
 
-```html
+```yaml
 environment:
   - PORT=3000
 services:
@@ -101,7 +100,7 @@ For more details, refer to the [Updating a Rack](https://docs.convox.com/managem
 
 You can configure **emptyDir** volumes directly in the `convox.yml` file. Here's an example:
 
-```html
+```yaml
 environment:
   - PORT=3000
 services:
@@ -136,3 +135,8 @@ In this configuration:
 You must be on at least rack version `3.16.0` to use emptyDir volumes. Update your rack with the following command:
 
 Ensure your rack is updated to version `3.16.0` or later. For detailed instructions on updating your rack, see the [Updating a Rack](https://docs.convox.com/management/cli-rack-management/) page.
+
+## See Also
+
+- [convox.yml](/configuration/convox-yml) for the full configuration reference
+- [Scaling](/deployment/scaling) for how volumes interact with scaling

@@ -1,6 +1,5 @@
 ---
 title: "ssl_ciphers"
-draft: false
 slug: ssl_ciphers
 url: /configuration/rack-parameters/azure/ssl_ciphers
 ---
@@ -20,7 +19,7 @@ The default value is an empty string (`""`), which uses the nginx default cipher
 
 ## Setting Parameters
 To set the `ssl_ciphers` parameter, use the following command:
-```html
+```bash
 $ convox rack params set ssl_ciphers=ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384 -r rackName
 Setting parameters... OK
 ```

@@ -1,6 +1,5 @@
 ---
 title: "idle_timeout"
-draft: false
 slug: idle_timeout
 url: /configuration/rack-parameters/azure/idle_timeout
 ---
@@ -20,7 +19,7 @@ The default value for `idle_timeout` is `4` (minutes).
 
 ## Setting Parameters
 To set the `idle_timeout` parameter, use the following command:
-```html
+```bash
 $ convox rack params set idle_timeout=10 -r rackName
 Setting parameters... OK
 ```

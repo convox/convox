@@ -1,10 +1,8 @@
 ---
-
 title: "Microsoft Azure"
-draft: false
-slug: Microsoft Azure
+slug: microsoft-azure
 url: /installation/production-rack/azure
-----------------------------------------
+---
 
 # Microsoft Azure
 
@@ -20,13 +18,13 @@ url: /installation/production-rack/azure
 | **Terraform** (optional)  | [https://developer.hashicorp.com/terraform/tutorials](https://developer.hashicorp.com/terraform/tutorials)       |
 | **Convox CLI**            | [/installation/cli](/installation/cli)                                                                           |
 
-```html
+```bash
 # sign‑in to Azure
 az login
 ```
 
 **Expected output:**
-```html
+```text
 A web browser has been opened at https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize. 
 Please continue the login in the web browser.
 
@@ -50,7 +48,7 @@ The default is marked with an *; the default tenant is 'YourTenant' and subscrip
 
 ## 3 Select your subscription and set environment variables
 
-```html
+```bash
 # List available subscriptions
 az account list --output table
 
@@ -65,7 +63,7 @@ echo "Subscription ID: $ARM_SUBSCRIPTION_ID"
 ```
 
 **Expected output:**
-```html
+```bash
 # az account list --output table
 Name             CloudName    SubscriptionId                        State    IsDefault
 ---------------  -----------  ------------------------------------  -------  -----------
@@ -77,7 +75,7 @@ Subscription ID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 
 ## 4 Create the Terraform service‑principal
 
-```html
+```bash
 az ad sp create-for-rbac \
   --name terraform \
   --role Owner \
@@ -85,7 +83,7 @@ az ad sp create-for-rbac \
 ```
 
 **Expected output:**
-```html
+```json
 {
   "appId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
   "displayName": "terraform",
@@ -95,7 +93,7 @@ az ad sp create-for-rbac \
 ```
 
 **Set environment variables from the output:**
-```html
+```bash
 # Copy the appId from the output above
 export ARM_CLIENT_ID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 
@@ -110,7 +108,7 @@ export ARM_TENANT_ID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 
 **Note:** The original documentation had an incorrect permission ID. Use the corrected commands below:
 
-```html
+```bash
 # Add User.Read delegated permission (corrected permission ID)
 az ad app permission add --id $ARM_CLIENT_ID \
   --api 00000003-0000-0000-c000-000000000000 \
@@ -126,7 +124,7 @@ az ad app permission admin-consent --id $ARM_CLIENT_ID
 ```
 
 **Expected output:**
-```html
+```bash
 # First command output:
 Invoking `az ad app permission grant --id xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --api 00000003-0000-0000-c000-000000000000` is needed to make the change effective
 
@@ -150,7 +148,7 @@ Terraform/Convox must be able to create Azure AD (Entra) application objects. Be
 
 > The quickest safe choice is **Application Administrator**. (Cloud Application Administrator also works.)
 
-```html
+```bash
 # 1) Get the internal roleDefinitionId for "Application Administrator"
 ROLE_ID=$(az rest --method GET \
   --url "https://graph.microsoft.com/v1.0/roleManagement/directory/roleDefinitions?\$filter=displayName eq 'Application Administrator'" \
@@ -173,7 +171,7 @@ az rest --method POST \
 ```
 
 **Expected output:**
-```html
+```bash
 # echo "Role ID: $ROLE_ID"
 Role ID: 9b895d92-2cd3-44c7-9d02-a6ac2d5ea5c3
 
@@ -194,7 +192,7 @@ Service Principal Object ID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 
 Before proceeding to install the Rack, verify all required environment variables are set:
 
-```html
+```bash
 echo "ARM_SUBSCRIPTION_ID: $ARM_SUBSCRIPTION_ID"
 echo "ARM_CLIENT_ID: $ARM_CLIENT_ID"  
 echo "ARM_CLIENT_SECRET: $ARM_CLIENT_SECRET"
@@ -202,7 +200,7 @@ echo "ARM_TENANT_ID: $ARM_TENANT_ID"
 ```
 
 **Expected output:**
-```html
+```yaml
 ARM_SUBSCRIPTION_ID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 ARM_CLIENT_ID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 ARM_CLIENT_SECRET: xxxxx~xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -213,7 +211,7 @@ ARM_TENANT_ID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 
 ## 8 Install the Rack
 
-```html
+```bash
 convox rack install azure <name> [param=value]…
 ```
 
@@ -225,7 +223,7 @@ convox rack install azure <name> [param=value]…
 | `syslog`        |                  | Forward logs to a syslog endpoint |
 
 **Example:**
-```html
+```bash
 convox rack install azure my-rack region=westus2 node_type=Standard_D2_v3
 ```
 ## 9 Troubleshooting
@@ -242,10 +240,10 @@ convox rack install azure my-rack region=westus2 node_type=Standard_D2_v3
 
 #### Issue: "Insufficient privileges" (403) errors during Terraform apply
 **Cause:** Application Administrator role assignment failed or incomplete.
-**Solution:** 
+**Solution:**
 1. Verify step 6 completed successfully
 2. Check that the service principal has the role assigned:
-   ```html
+   ```bash
    az rest --method GET \
      --url "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?\$filter=principalId eq '${SP_OBJECT_ID}'"
    ```
@@ -253,7 +251,7 @@ convox rack install azure my-rack region=westus2 node_type=Standard_D2_v3
 #### Issue: Environment variables not persisting
 **Cause:** Variables only exist in current shell session.
 **Solution:** Either re-export them or add them to your shell profile:
-```html
+```bash
 # Add to ~/.bashrc or ~/.zshrc
 export ARM_SUBSCRIPTION_ID="your-subscription-id"
 export ARM_CLIENT_ID="your-client-id"
@@ -265,7 +263,7 @@ export ARM_TENANT_ID="your-tenant-id"
 
 To verify your setup is correct before installing:
 
-```html
+```bash
 # Test Azure CLI authentication
 az account show
 
@@ -303,7 +301,7 @@ You'll need the following values from the previous steps. Here's where to find e
 
 From your service principal creation output:
 
-```html
+```json
 {
   "appId": "abcdef12-3456-7890-abcd-ef1234567890",      ← Client ID
   "displayName": "terraform",
@@ -313,7 +311,7 @@ From your service principal creation output:
 ```
 
 **Quick reference commands to get these values:**
-```html
+```bash
 # Subscription ID
 echo "Subscription ID: $ARM_SUBSCRIPTION_ID"
 

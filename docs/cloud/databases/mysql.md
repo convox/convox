@@ -1,6 +1,5 @@
 ---
 title: "MySQL"
-draft: false
 slug: mysql
 url: /cloud/databases/mysql
 ---
@@ -151,7 +150,7 @@ services:
 
 When linked to a service, the following environment variables are injected (assuming resource name `database`):
 
-```
+```text
 DATABASE_URL=mysql://username:password@host.name:3306/database
 DATABASE_USER=username
 DATABASE_PASS=password

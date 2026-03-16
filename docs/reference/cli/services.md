@@ -1,6 +1,5 @@
 ---
 title: "services"
-draft: false
 slug: services
 url: /reference/cli/services
 ---
@@ -11,11 +10,11 @@ url: /reference/cli/services
 List services for an app
 
 ### Usage
-```html
+```bash
     convox services
 ```
 ### Examples
-```html
+```bash
     $ convox services 
     SERVICE  DOMAIN                                                                PORTS
     web      nodejs-web.test-Router-ABCDEF0123456-1234567890.us-east-1.convox.site  80:3000 443:3000
@@ -25,11 +24,11 @@ List services for an app
 Restart a service
 
 ### Usage
-```html
+```bash
     convox services restart <service>
 ```
 ### Examples
-```html
+```bash
     $ convox services restart web
     Restarting web... OK
 ```

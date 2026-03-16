@@ -1,7 +1,6 @@
 ---
 title: "Rolling Updates"
-draft: false
-slug: Rolling Updates
+slug: rolling-updates
 url: /deployment/rolling-updates
 ---
 # Rolling Updates
@@ -37,3 +36,8 @@ Any of these issues will appear in the logs that display during the promotion to
 what is going wrong.
 
 See [Troubleshooting](/help/troubleshooting) for some tips on diagnosing common failure cases.
+
+## See Also
+
+- [Health Checks](/configuration/health-checks) for configuring how Convox verifies new processes
+- [Rollbacks](/deployment/rollbacks) for reverting a failed deployment

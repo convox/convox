@@ -1,7 +1,6 @@
 ---
 title: "Introduction"
-draft: false
-slug: Introduction
+slug: introduction
 url: /getting-started/introduction
 ---
 
@@ -23,7 +22,7 @@ Here are some helpful tutorials to get started with Convox:
 
 ## Create a Free Convox Account
 
-To create a Convox account, simply sign up [here](https://console.convox.com/signup). We recommend using your company or organization's email address.
+To create a Convox account, sign up [here](https://console.convox.com/signup). We recommend using your company or organization's email address.
 
 The first time you log in, you will be prompted to create an Organization. An Organization can have multiple users, such as colleagues or project collaborators, who you can invite to join. You can rename your Organization at any time from the Console Settings page.
 
@@ -50,7 +49,6 @@ You can further customize your Rack configurations with [Rack Parameters](/confi
 Finally, click install to begin creating your infrastructure. Rack installation typically takes between 5-20 minutes depending on the cloud provider. If you click on the Rack as it is being installed, you can follow along with the Rack creation progress.
 
 ![Rack Install](/images/documentation/getting-started/introduction/rack_install.png)
-
 
 ## Install the Convox CLI and Log In
 
@@ -150,7 +148,7 @@ NAME               PROVIDER  STATUS
 org/dev            aws       running
 ```
 
-Then, connect to the Rack you just created with `convox switch`:
+Then, connect to the Rack you created with `convox switch`:
 
 ```bash
 $ convox switch dev
@@ -247,3 +245,9 @@ Hopefully, this small example has given you an idea of how easy and powerful Con
 ## Take a Tour of the Convox Console
 
 To get familiar with the Convox Console and some of its additional features, watch our [Convox - Console Tour](https://www.youtube.com/watch?v=p7f_MzAFxSg&t=25s) video on YouTube. This video provides a comprehensive overview of the console, helping you navigate and utilize its various functionalities effectively.
+
+## See Also
+
+- [Preparing an Application](/tutorials/preparing-an-application) for structuring your app for Convox
+- [Deploying an Application](/tutorials/deploying-an-application) for a step-by-step deployment walkthrough
+- [CLI Reference](/reference/cli) for the full list of CLI commands

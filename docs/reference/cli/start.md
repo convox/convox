@@ -1,6 +1,5 @@
 ---
 title: "start"
-draft: false
 slug: start
 url: /reference/cli/start
 ---
@@ -11,15 +10,15 @@ url: /reference/cli/start
 Start an application for local development
 
 ### Usage
-```html
+```bash
     convox start [service] [service...] [options]
 ```
 ### Options
-```html
+```bash
     -m <file.yml> allows to specify an alternative manifest file (convox.yml by default)
 ```
 ### Examples
-```html
+```bash
     $ convox start
     build  | uploading source
     build  | starting build

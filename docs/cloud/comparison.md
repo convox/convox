@@ -1,6 +1,5 @@
 ---
 title: "Cloud vs Rack Comparison"
-draft: false
 slug: comparison
 url: /cloud/comparison
 ---

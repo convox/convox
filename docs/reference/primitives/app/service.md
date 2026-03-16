@@ -1,7 +1,6 @@
 ---
 title: "Service"
-draft: false
-slug: Service
+slug: service
 url: /reference/primitives/app/service
 ---
 # Service
@@ -14,7 +13,7 @@ Services can be scaled to a static count or autoscaled in a range based on metri
 
 ## Definition
 
-```html
+```yaml
 services:
   web:
     build: .
@@ -23,7 +22,7 @@ services:
     scale: 3
 ```
 
-```html
+```yaml
 services:
   grpc:
     build: .
@@ -31,7 +30,7 @@ services:
     grpcHealthEnabled: true
 ```
 
-```html
+```yaml
 services:
   web:
     agent: false
@@ -166,7 +165,7 @@ services:
 | ---------- | ------ | ---------- | ------------------------------------------------------------- |
 | **awsPodIdentity** | map |  | The specification for IAM Role for AWS Pod Identity. This will only work if pod identity is enable on the rack. |
 
-```html
+```yaml
 services:
   web:
     ...
@@ -185,7 +184,6 @@ services:
 | **policyArns** | list |  | The of policy arns for the IAM role |
 
 > Pod identity must be enabled on rack before specifying this.
-
 
 ### build
 
@@ -224,7 +222,7 @@ services:
 
 This accepts list of strings where in each string annotation key and value is separated by `=` sign:
 
-```html
+```yaml
 services:
   web:
     ...
@@ -396,7 +394,6 @@ services:
 | **mountPath** | string |     | Required. Path in the serive file system to mount the volume |
 | **medium** | string |     | Optional. Specifies the emptyDir medium. Allowed values: `"Memory"` or `""` |
 
-
 ```yaml
 environment:
   - PORT=3000
@@ -420,7 +417,6 @@ services:
 | **mountPath** | string |     | Required. Path in the serive file system to mount the volume |
 | **accessMode** | string |     | Required. Specifies the access mode for the volume. Allowed values are: `ReadWriteOnce`, `ReadOnlyMany`, `ReadWriteMany` |
 
-
 ```yaml
 environment:
   - PORT=3000
@@ -440,18 +436,18 @@ services:
 ## Command Line Interface
 
 ### Listing Services
-```html
+```bash
     $ convox services -a myapp
     SERVICE  DOMAIN                                PORTS
     web      web.convox.0a1b2c3d4e5f.convox.cloud  443:5000
 ```
 ### Scaling a Service
-```html
+```bash
     $ convox scale web --count 3 --cpu 256 --memory 1024 -a myapp`1
     Scaling web... OK
 ```
 ### Restarting a Service
-```html
+```bash
     $ convox services restart web -a myapp
     Restarting web... OK
 ```

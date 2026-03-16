@@ -1,6 +1,5 @@
 ---
 title: "cidr"
-draft: false
 slug: cidr
 url: /configuration/rack-parameters/aws/cidr
 ---

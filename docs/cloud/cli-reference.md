@@ -1,6 +1,5 @@
 ---
 title: "Cloud CLI Reference"
-draft: false
 slug: cli-reference
 url: /cloud/cli-reference
 ---

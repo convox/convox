@@ -1,6 +1,5 @@
 ---
 title: "releases_to_retain_after_active"
-draft: false
 slug: releases_to_retain_after_active
 url: /configuration/rack-parameters/aws/releases_to_retain_after_active
 ---
@@ -24,7 +23,7 @@ The default value for `releases_to_retain_after_active` is **unset** (no automat
 
 ## Setting Parameters
 To set the `releases_to_retain_after_active` parameter, use the following command:
-```html
+```bash
 $ convox rack params set releases_to_retain_after_active=100 -r rackName
 Setting parameters... OK
 ```
@@ -34,12 +33,12 @@ This command configures the rack to retain the active release plus 100 releases 
 ### Example Configurations
 
 To retain only the active release plus 50 recent releases:
-```html
+```bash
 $ convox rack params set releases_to_retain_after_active=50 -r rackName
 ```
 
 To enable minimal retention (active release plus 10 recent releases):
-```html
+```bash
 $ convox rack params set releases_to_retain_after_active=10 -r rackName
 ```
 
@@ -61,7 +60,7 @@ Starting with version 3.23.2, the cleanup process includes improved error handli
 - **Error Visibility**: Any errors encountered during image removal are reported in the Convox API pod logs, making it easier to diagnose and resolve issues such as ECR permission problems or service disruptions.
 
 To view cleanup errors, check the Convox API pod logs:
-```html
+```bash
 $ convox rack logs -r rackName | grep -i "ecr\|cleanup\|release"
 ```
 

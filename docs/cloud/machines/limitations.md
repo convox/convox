@@ -1,6 +1,5 @@
 ---
 title: "Limitations and Differences"
-draft: false
 slug: limitations
 url: /cloud/machines/limitations
 ---
@@ -15,7 +14,7 @@ While Convox Cloud provides the same application deployment capabilities as self
 
 **Limitation**: You cannot use `kubectl` to directly interact with the underlying Kubernetes cluster.
 
-**Impact**: 
+**Impact**:
 - Cannot apply custom Kubernetes manifests
 - Cannot install cluster-level operators or CRDs
 - Cannot modify cluster configurations
@@ -289,7 +288,7 @@ volumes:
 
 **Not Supported**:
 - Kubernetes operators
-- Admission webhooks  
+- Admission webhooks
 - Custom controllers
 - Cluster-wide services
 - DaemonSets
@@ -327,7 +326,7 @@ volumes:
 | Medium | 2000m | 4 GB |
 | Large | 4000m | 8 GB |
 
-**Impact**: 
+**Impact**:
 - Single service cannot exceed machine resources
 - All services combined cannot exceed machine limits
 

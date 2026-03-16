@@ -1,6 +1,5 @@
 ---
 title: "nvidia_device_time_slicing_replicas"
-draft: false
 slug: nvidia_device_time_slicing_replicas
 url: /configuration/rack-parameters/azure/nvidia_device_time_slicing_replicas
 ---
@@ -21,12 +20,12 @@ The default value is `0` (time-slicing disabled; each GPU is advertised as a sin
 - **Cost Optimisation**: Maximise GPU utilisation on expensive VM sizes like `Standard_NC`.
 
 ## Setting Parameters
-```html
+```bash
 $ convox rack params set nvidia_device_time_slicing_replicas=4 -r rackName
 Setting parameters... OK
 ```
 
 ## Additional Information
-Time-slicing is a software-level feature — it does not provide memory isolation between pods. Each pod can access the full GPU memory. For true isolation and guaranteed memory partitioning, use [NVIDIA MIG](https://docs.nvidia.com/datacenter/tesla/mig-user-guide/) (available on A100 instances such as `Standard_NC24ads_A100_v4`).
+Time-slicing is a software-level feature. It does not provide memory isolation between pods. Each pod can access the full GPU memory. For true isolation and guaranteed memory partitioning, use [NVIDIA MIG](https://docs.nvidia.com/datacenter/tesla/mig-user-guide/) (available on A100 instances such as `Standard_NC24ads_A100_v4`).
 
 Setting this to `1` is equivalent to disabling time-slicing (the default 1:1 GPU-to-resource mapping).

@@ -1,6 +1,5 @@
 ---
 title: "kubelet_registry_pull_qps and kubelet_registry_burst"
-draft: false
 slug: kubelet_registry_pull_params
 url: /configuration/rack-parameters/aws/kubelet_registry_pull_params
 ---
@@ -28,7 +27,7 @@ These parameters are particularly useful in environments with high deployment fr
 
 ## Setting Parameters
 To configure these parameters, use the following command:
-```html
+```bash
 $ convox rack params set kubelet_registry_pull_qps=10 kubelet_registry_burst=20 -r rackName
 Setting parameters... OK
 ```

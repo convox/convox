@@ -1,6 +1,5 @@
 ---
 title: "letsencrypt"
-draft: false
 slug: letsencrypt
 url: /reference/cli/letsencrypt
 ---
@@ -11,11 +10,11 @@ url: /reference/cli/letsencrypt
 List configured letsencrypt dns solvers for route53
 
 ### Usage
-```html
+```bash
     convox letsencrypt dns route53 list
 ```
 ### Examples
-```html
+```bash
     $ convox letsencrypt dns route53 list
     ID  DNS-ZONES    HOSTED-ZONE-ID  REGION     ROLE
     1   convox.site  XXXXXXXXXXXXX   us-east-1  arn:aws:iam::XXXXXXXXXXXX:role/dns-access
@@ -25,12 +24,12 @@ List configured letsencrypt dns solvers for route53
 Update letsencrypt dns solvers for route53 dns zone
 
 ### Usage
-```html
+```bash
     convox letsencrypt dns route53 update --id [id] --dns-zones [dnz-zone] --role [role] --hosted-zone-id [zone-id] --region [region]
 ```
 
 ### Examples
-```html
+```bash
     $ convox letsencrypt dns route53 update --id 1 --dns-zones xxxx --role arn:aws:iam::XXXXXXXXXXXX:role/dns-access --hosted-zone-id xxxxxxxxxxx --region us-east-1
     OK
 ```
@@ -40,12 +39,12 @@ Update letsencrypt dns solvers for route53 dns zone
 Delete letsencrypt dns solvers for route53 dns zone
 
 ### Usage
-```html
+```bash
     convox letsencrypt dns route53 delete --id [id]
 ```
 
 ### Examples
-```html
+```bash
     $ convox letsencrypt dns route53 delete --id 1
     OK
 ```
@@ -55,12 +54,12 @@ Delete letsencrypt dns solvers for route53 dns zone
 Letsencrypt route53 role
 
 ### Usage
-```html
+```bash
     convox letsencrypt dns route53 role
 ```
 
 ### Examples
-```html
+```bash
     $ convox letsencrypt dns route53 role
     arn:aws:iam::XXXXXXXXXXXX:role/xxx-cert-manager
 ```

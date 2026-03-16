@@ -1,6 +1,5 @@
 ---
 title: "region"
-draft: false
 slug: region
 url: /configuration/rack-parameters/do/region
 ---
@@ -20,7 +19,7 @@ The default value for `region` is `nyc3`.
 
 ## Setting Parameters
 To set the `region` parameter, use the following command:
-```html
+```bash
 $ convox rack params set region=nyc3 -r rackName
 Setting parameters... OK
 ```

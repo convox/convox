@@ -1,6 +1,5 @@
 ---
 title: "resources"
-draft: false
 slug: resources
 url: /reference/cli/resources
 ---
@@ -11,11 +10,11 @@ url: /reference/cli/resources
 List resources
 
 ### Usage
-```html
+```bash
     convox resources
 ```
 ### Examples
-```html
+```bash
     $ convox resources
     NAME      TYPE      URL
     database  postgres  postgres://app:123456-7890-abcd-ef01-234567890abc@test-nodejs-resourcedatabase-abcd.efgh.us-east-1.rds.amazonaws.com:5432/app
@@ -25,11 +24,11 @@ List resources
 Start a console for a resource
 
 ### Usage
-```html
+```bash
     convox resources console <resource>
 ```
 ### Examples
-```html
+```bash
     $ convox resources console database
 ```
 ## resources export
@@ -37,11 +36,11 @@ Start a console for a resource
 Export data from a resource
 
 ### Usage
-```html
+```bash
     convox resources export <resource>
 ```
 ### Examples
-```html
+```bash
     $ convox resources export database
 ```
 ## resources import
@@ -49,11 +48,11 @@ Export data from a resource
 Import data to a resource
 
 ### Usage
-```html
+```bash
     convox resources import
 ```
 ### Examples
-```html
+```bash
     $ convox resources import --file dump.tgz
 ```
 
@@ -62,11 +61,11 @@ Import data to a resource
 Get information about a resource
 
 ### Usage
-```html
+```bash
     convox resources info <resource>
 ```
 ### Examples
-```html
+```bash
     $ convox resources info database
     Name  database
     Type  postgres
@@ -77,11 +76,11 @@ Get information about a resource
 Proxy a local port to a resource
 
 ### Usage
-```html
+```bash
     convox resources proxy <resource>
 ```
 ### Examples
-```html
+```bash
     $ convox resources proxy database
     proxying localhost:5432 to test-nodejs-resourcedatabase-abcd.efgh.us-east-1.rds.amazonaws.com:5432
 
@@ -93,11 +92,11 @@ Proxy a local port to a resource
 Get url for a resource
 
 ### Usage
-```html
+```bash
     convox resources url <resource>
 ```
 ### Examples
-```html
+```bash
     $ convox resources url database
     postgres://app:123456-7890-abcd-ef01-234567890abc@test-nodejs-resourcedatabase-abcd.efgh.us-east-1.rds.amazonaws.com:5432/app
 ```

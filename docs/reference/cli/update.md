@@ -1,6 +1,5 @@
 ---
 title: "update"
-draft: false
 slug: update
 url: /reference/cli/update
 ---
@@ -11,11 +10,11 @@ url: /reference/cli/update
 Check CLI Version:
 
 ### Usage
-```html
+```bash
     convox version
 ```
 ### Examples
-```html
+```bash
     $ convox version
     client: 3.15.1
 ```
@@ -23,11 +22,11 @@ Check CLI Version:
 Update the CLI
 
 ### Usage
-```html
+```bash
     convox update
 ```
 ### Examples
-```html
+```bash
     $ convox update
     Updating to 3.16.0... OK
 ```

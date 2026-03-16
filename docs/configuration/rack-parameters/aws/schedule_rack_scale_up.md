@@ -1,6 +1,5 @@
 ---
 title: "schedule_rack_scale_up"
-draft: false
 slug: schedule_rack_scale_up
 url: /configuration/rack-parameters/aws/schedule_rack_scale_up
 ---
@@ -21,7 +20,7 @@ If the `schedule_rack_scale_up` parameter is set to an empty string, no scale-up
 
 ## Setting Parameters
 To set the `schedule_rack_scale_up` parameter, use the following command:
-```html
+```bash
 $ convox rack params set schedule_rack_scale_up="0 0 * * 0" -r rackName
 Setting parameters... OK
 ```

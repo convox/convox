@@ -1,6 +1,5 @@
 ---
 title: "nginx_additional_config"
-draft: false
 slug: nginx_additional_config
 url: /configuration/rack-parameters/azure/nginx_additional_config
 ---
@@ -21,7 +20,7 @@ The default value is an empty string (`""`).
 
 ## Setting Parameters
 The value should be a comma-separated list of `key=value` pairs. It can be provided as plain text or base64-encoded:
-```html
+```bash
 $ convox rack params set nginx_additional_config=proxy-read-timeout=300,proxy-send-timeout=300 -r rackName
 Setting parameters... OK
 ```

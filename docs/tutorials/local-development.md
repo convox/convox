@@ -1,7 +1,6 @@
 ---
 title: "Local Development"
-draft: false
-slug: Local Development
+slug: local-development
 url: /tutorials/local-development
 ---
 
@@ -20,7 +19,7 @@ Before we begin you will need to install the `convox` CLI and a development Rack
 ## Verify installation
 
 Verify that your development Rack is running with `convox rack`:
-```html
+```bash
     $ convox rack
     Name     dev
     Provider local
@@ -31,15 +30,15 @@ Verify that your development Rack is running with `convox rack`:
 ## Get an example applicaton
 
 ### Clone the Rails example
-```html
+```bash
     $ git clone https://github.com/convox-examples/rails.git
 ```
 ### Enter the directory with the example application
-```html
+```bash
     $ cd rails
 ```
 ### Look at the convox.yml
-```html
+```bash
     $ cat convox.yml
     resources:
       database:
@@ -67,7 +66,7 @@ You can start an app against your development Rack using `convox start`:
 
 > The first time you run `convox start` on an application will take longer than usual
 > because you won't have anything cached.
-```html
+```bash
     $ convox start
     build  | uploading source
     build  | starting build
@@ -155,7 +154,7 @@ You can start an app against your development Rack using `convox start`:
 ## View the application in a browser
 
 In another terminal navigate to the directory where you cloned the example app and run `convox services`:
-```html
+```bash
     $ convox services
     SERVICE  DOMAIN                PORTS
     web      web.rails.dev.convox  443:3000
@@ -165,7 +164,7 @@ Now in your browser navigate to https://web.rails.dev.convox
 > If you named your development Rack something other than `dev` this URL will be slightly different for you.
 
 You should see logs in the first terminal that show your browser requesting the index page.
-```html
+```text
     web    | Processing by Rails::WelcomeController#index as HTML
     web    |   Rendering /usr/local/bundle/gems/railties-6.0.0/lib/rails/templates/rails/welcome/index.html.erb
     web    |   Rendered /usr/local/bundle/gems/railties-6.0.0/lib/rails/templates/rails/welcome/index.html.erb (Duration: 3.8ms | Allocations: 194)
@@ -174,13 +173,13 @@ You should see logs in the first terminal that show your browser requesting the 
 ## Make a change
 
 Edit the file `config/routes.rb` and add the following line just before the final `end`:
-```html
+```text
     get "/test", to: proc { [ 200, {}, ["Hello World!"] ] }
 ```
 This will cause Rails to respond to `GET /test` requests with `Hello World!`.
 
 You will see the change being synchronized up to your development Rack:
-```html
+```bash
     convox | sync: config/routes.rb to /usr/src/app on web
 ```
 Now navigate to https://web.rails.dev.convox/test
@@ -190,7 +189,7 @@ You can make further changes to this route and it will be synchronized every tim
 ## Run a command
 
 You can use `convox run` to run [one-off commands](/management/run) against the App:
-```html
+```bash
     $ convox run web rake db:migrate test
     Finished in 5.053022s, 0.0000 runs/s, 0.0000 assertions/s.
     0 runs, 0 assertions, 0 failures, 0 errors, 0 skips

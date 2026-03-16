@@ -1,6 +1,5 @@
 ---
 title: "additional_node_groups_config"
-draft: false
 slug: additional_node_groups_config
 url: /configuration/rack-parameters/azure/additional_node_groups_config
 ---
@@ -41,7 +40,7 @@ The `additional_node_groups_config` parameter takes a JSON array of node pool co
 To set the `additional_node_groups_config` parameter, there are several methods:
 
 ### Using a JSON File (Recommended)
-```html
+```bash
 $ convox rack params set additional_node_groups_config=/path/to/node-config.json -r rackName
 Setting parameters... OK
 ```
@@ -73,7 +72,7 @@ The JSON file should be structured as follows:
 ```
 
 ### Using a Raw JSON String
-```html
+```bash
 $ convox rack params set 'additional_node_groups_config=[{"id":101,"type":"Standard_D4s_v3","disk":50,"capacity_type":"ON_DEMAND","min_size":1,"max_size":3,"label":"app-workers","tags":"environment=production,team=backend"}]' -r rackName
 Setting parameters... OK
 ```

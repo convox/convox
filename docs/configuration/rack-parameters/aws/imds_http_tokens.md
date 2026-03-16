@@ -1,6 +1,5 @@
 ---
 title: "imds_http_tokens"
-draft: false
 slug: imds_http_tokens
 url: /configuration/rack-parameters/aws/imds_http_tokens
 ---
@@ -19,7 +18,7 @@ The default value for `imds_http_tokens` is `optional`.
 
 ## Setting Parameters
 To set the `imds_http_tokens` parameter, use the following command:
-```html
+```bash
 $ convox rack params set imds_http_tokens=required -r rackName
 Setting parameters... OK
 ```

@@ -1,6 +1,5 @@
 ---
 title: "login"
-draft: false
 slug: login
 url: /reference/cli/login
 ---
@@ -11,11 +10,11 @@ url: /reference/cli/login
 Authenticate your CLI with a Console installation
 
 ### Usage
-```html
+```bash
     convox login [hostname]
 ```
 ### Examples
-```html
+```bash
     $ convox login console.convox.com
     Authenticating with console.convox.com... OK
 

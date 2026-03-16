@@ -1,6 +1,5 @@
 ---
 title: "build_node_enabled"
-draft: false
 slug: build_node_enabled
 url: /configuration/rack-parameters/aws/build_node_enabled
 ---
@@ -19,7 +18,7 @@ The default value for `build_node_enabled` is `false`.
 
 ## Setting Parameters
 To enable a dedicated build node, use the following command:
-```html
+```bash
 $ convox rack params set build_node_enabled=true -r rackName
 Setting parameters... OK
 ```

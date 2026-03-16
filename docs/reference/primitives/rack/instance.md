@@ -1,7 +1,6 @@
 ---
 title: "Instance"
-draft: false
-slug: Instance
+slug: instance
 url: /reference/primitives/rack/instance
 ---
 # Instance
@@ -9,7 +8,7 @@ url: /reference/primitives/rack/instance
 An Instance provides capacity for running [Processes](/reference/primitives/app/process)
 
 ## List Instances
-```html
+```bash
     $ convox rack instances
     ID                            STATUS   STARTED         PS  CPU    MEM    PUBLIC         PRIVATE
     ip-10-1-1-1.ec2.internal      running  10 minutes ago  8   0.00%  0.00%  18.200.200.99  10.1.1.1

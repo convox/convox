@@ -1,6 +1,5 @@
 ---
 title: "exec"
-draft: false
 slug: exec
 url: /reference/cli/exec
 ---
@@ -11,11 +10,11 @@ url: /reference/cli/exec
 Execute a command in a running process
 
 ### Usage
-```html
+```bash
     convox exec <pid-or-service> <command>
 ```
 ### Examples
-```html
+```bash
     $ convox exec 7b6bccfd9fdf bash
     bash-3.2$
 ```

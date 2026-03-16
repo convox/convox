@@ -1,6 +1,5 @@
 ---
 title: "Azure Rack Parameters"
-draft: false
 slug: azure-rack-parameters
 url: /configuration/rack-parameters/azure
 ---

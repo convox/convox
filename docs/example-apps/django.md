@@ -1,7 +1,6 @@
 ---
 title: "Django"
-draft: false
-slug: Django
+slug: django
 url: /example-apps/django
 ---
 # Django

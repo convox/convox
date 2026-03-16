@@ -1,6 +1,5 @@
 ---
 title: "build_node_type"
-draft: false
 slug: build_node_type
 url: /configuration/rack-parameters/aws/build_node_type
 ---
@@ -19,7 +18,7 @@ The default value for `build_node_type` is the same as the [node_type](/configur
 
 ## Setting Parameters
 To set the `build_node_type` parameter, use the following command:
-```html
+```bash
 $ convox rack params set build_node_type=c5.large -r rackName
 Setting parameters... OK
 ```

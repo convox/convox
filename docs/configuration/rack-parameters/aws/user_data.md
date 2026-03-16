@@ -1,6 +1,5 @@
 ---
 title: "user_data"
-draft: false
 slug: user_data
 url: /configuration/rack-parameters/aws/user_data
 ---
@@ -24,13 +23,13 @@ The default value for `user_data` is an empty string, meaning no additional comm
 
 ## Setting Parameters
 To set the `user_data` parameter, use the following command:
-```html
+```bash
 $ convox rack params set user_data="<command>" -r rackName
 Setting parameters... OK
 ```
 
 ### Example
-```html
+```bash
 $ convox rack params set user_data="echo 'Hello, world!' >> /tmp/init.log" -r rackName
 Setting parameters... OK
 ```

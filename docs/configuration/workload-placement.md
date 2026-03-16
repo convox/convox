@@ -1,7 +1,6 @@
 ---
 title: "Workload Placement"
-draft: false
-slug: Workload Placement
+slug: workload-placement
 url: /configuration/workload-placement
 ---
 
@@ -83,11 +82,11 @@ Note the use of:
 
 Then apply the configuration using:
 
-```html
+```bash
 $ convox rack params set additional_node_groups_config=/path/to/node-groups.json -r rackName
 ```
 
-> **Important Note on AWS Rate Limits**: When adding or removing multiple node groups, it's recommended to modify no more than three node groups at a time to avoid hitting AWS API rate limits. If you receive a rate limit error during an update simply run the parameter set command again. The operation will resume from where it left off, creating the remaining node groups without duplicating the ones that were already successfully created.
+> **Important Note on AWS Rate Limits**: When adding or removing multiple node groups, it's recommended to modify no more than three node groups at a time to avoid hitting AWS API rate limits. If you receive a rate limit error during an update run the parameter set command again. The operation will resume from where it left off, creating the remaining node groups without duplicating the ones that were already successfully created.
 
 #### Using a JSON File for Build Node Groups
 
@@ -110,7 +109,7 @@ Similarly, create a JSON file (e.g., `build-groups.json`) for build node configu
 
 Apply it with:
 
-```html
+```bash
 $ convox rack params set additional_build_groups_config=/path/to/build-groups.json -r rackName
 ```
 
@@ -118,11 +117,11 @@ $ convox rack params set additional_build_groups_config=/path/to/build-groups.js
 
 If you prefer to set configuration directly in the command line without creating a file, you can use a JSON string:
 
-```html
+```bash
 $ convox rack params set 'additional_node_groups_config=[{"id":101,"type":"t3.medium","capacity_type":"ON_DEMAND","min_size":1,"max_size":5,"label":"critical-services","tags":"environment=production,team=frontend"}]' -r rackName
 ```
 
-```html
+```bash
 $ convox rack params set 'additional_build_groups_config=[{"id":201,"type":"c5.xlarge","capacity_type":"SPOT","min_size":0,"max_size":3,"label":"app-build","disk":100,"tags":"environment=build,team=devops"}]' -r rackName
 ```
 
@@ -211,7 +210,6 @@ services:
 
 In this case, the service will definitely be scheduled on the `app-workers` group, preferably on a `t3a.large` instance, or if not on a `t3a.medium` instance, or if not, then any other instance in the group.
 
-
 ## Implementation Examples
 
 ### Optimizing for Cost and Performance
@@ -219,7 +217,7 @@ In this case, the service will definitely be scheduled on the `app-workers` grou
 This example creates a cost-optimized infrastructure with dedicated node pools for different workload types:
 
 1. **Rack Configuration**:
-   ```html
+   ```bash
    $ convox rack params set additional_node_groups_config=/path/to/node-groups.json -r production
    $ convox rack params set additional_build_groups_config=/path/to/build-groups.json -r production
    ```
@@ -262,7 +260,7 @@ This example creates a cost-optimized infrastructure with dedicated node pools f
    ```
 
 2. **Application Configuration**:
-   ```html
+   ```bash
    $ convox apps params set BuildLabels=convox.io/label=app-build -a myapp
    $ convox apps params set BuildCpu=1024 BuildMem=4096 -a myapp
    ```
@@ -308,7 +306,7 @@ To create dedicated node groups that exclusively run specific services:
    ```
 
 2. **Apply the configuration**:
-   ```html
+   ```bash
    $ convox rack params set additional_node_groups_config=/path/to/dedicated-nodes.json -r production
    ```
 
@@ -328,13 +326,13 @@ With `dedicated:true`, only services that explicitly select the node group will 
 Convox allows you to implement different levels of customization based on your needs:
 
 1. **Build Isolation Only**: Configure only `additional_build_groups_config` to isolate build processes while keeping services on standard nodes:
-   ```html
+   ```bash
    $ convox rack params set additional_build_groups_config=/path/to/build-groups.json -r production
    $ convox apps params set BuildLabels=convox.io/label=app-build -a myapp
    ```
 
 2. **Service Placement Only**: Configure only `additional_node_groups_config` to customize service placement while letting builds run on standard nodes:
-   ```html
+   ```bash
    $ convox rack params set additional_node_groups_config=/path/to/node-groups.json -r production
    ```
    In your `convox.yml`:

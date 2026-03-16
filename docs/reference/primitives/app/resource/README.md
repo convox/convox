@@ -1,7 +1,6 @@
 ---
 title: "Resource"
-draft: false
-slug: Resource
+slug: resource
 url: /reference/primitives/app/resource
 ---
 # Resource
@@ -12,7 +11,7 @@ A Resource is a network-accessible external service.
 
 A Resource is defined in [`convox.yml`](/configuration/convox-yml) and linked to one or more [Services](/reference/primitives/app/service).
 
-```html
+```yaml
 resources:
   main:
     type: postgres
@@ -41,7 +40,7 @@ The credential details will be stored in the environment variables, and you can 
 
 For example, a `postgres` resource named `main` (as in the example above) would be injected like this:
 
-```html
+```text
 MAIN_URL=postgres://username:password@host.name:port/database
 MAIN_USER=username
 MAIN_PASS=password
@@ -56,7 +55,7 @@ You can also pass a compatible custom image for all resource type.
 
 To use a custom image, include the `image` field in your resource configuration:
 
-```html
+```yaml
 resources:
   main:
     type: postgres
@@ -74,7 +73,7 @@ Note:
 
 Example:
 
-```html
+```yaml
 resources:
   myRedis:
     type: redis
@@ -91,11 +90,11 @@ By default, any Resources you define will be satisfied by starting a containeriz
 
 In your production environment, or for particular usage requirements, you may wish to replace the containerized Resources with a managed cloud service for durability. For instance, on AWS you may wish to utilize RDS to provide you with a Database, or on GCP you may wish to use Memorystore in place of a containerized Redis instance.
 
-Resource Overlays provide you with a simple and effective way to maintain the cheaper and efficient containerized Resources on the environments you wish, while easily switching them out for the cloud-provider managed services on those environments that require them.
+Resource Overlays provide you with a simple and effective way to maintain the cheaper and efficient containerized Resources on the environments you wish, while switching them out for the cloud-provider managed services on those environments that require them.
 
 If you wish to replace any of those containerized Resources on a Rack, to stop them being initiated, you can manually set a matching environment variable on your [App](/reference/primitives/app). The corresponding Resource will then not be started by Convox on that Rack.
 
-```html
+```bash
 $ convox env set MAIN_URL=postgres://username:password@postgres-instance1.123456789012.us-east-1.rds.amazonaws.com:5432/database -r production-rack
 Setting MAIN_URL... OK
 Release: RABCDEFGHI
@@ -111,7 +110,7 @@ In addition to containerized resources, Convox v3 allows the creation of databas
 
 AWS RDS resources are specified with a `rds-` prefix followed by the database type (e.g., `rds-mariadb`, `rds-mysql`, `rds-postgres`). Here is a general example of how to define AWS RDS resources:
 
-```html
+```yaml
 resources:
   database:
     type: rds-postgres
@@ -135,7 +134,6 @@ For detailed configuration options and defaults for each type of AWS RDS resourc
 
 If an application is deleted, it will delete its created RDS databases. We advise enabling `deletionProtection` for any production or critical databases to avoid any accidental removal. If a database is imported, the database will not be removed if the application is deleted and it will need to be manually deleted.
 
-
 ## RDS Features
 
 ### Read Replicas
@@ -144,7 +142,7 @@ Read replicas allow you to create read-only copies of your database to improve r
 
 To configure a read replica, use the `readSourceDB` option to point to another database using the name you've chosen in the `convox.yml`:
 
-```html
+```yaml
 resources:
   mydb:
     type: rds-postgres
@@ -177,7 +175,7 @@ Resource linking works the same with read replicas, meaning environment variable
 
 Database import allows you to integrate any RDS managed database or Elasticache into Convox, whether it was initially created by Convox or not.
 
-```html
+```yaml
 resources:
   mydb-import:
     type: rds-postgres
@@ -198,7 +196,7 @@ services:
 
 You can set the master user password using `convox env set` before deploying:
 
-```html
+```bash
 $ convox env set MYDBPASS=my_secure_password -a myapp
 Setting MYDBPASS... OK
 Release: RABCDEFGHI
@@ -208,7 +206,7 @@ Release: RABCDEFGHI
 
 Snapshots allow you to restore a database from a specific point in time.
 
-```html
+```yaml
 resources:
   db-from-snap:
     type: rds-postgres
@@ -231,7 +229,6 @@ services:
 - Engine version
 - Storage volume
 
-
 ## AWS ElastiCache Redis and Memcached Resources
 
 Convox now supports native AWS ElastiCache Redis and Memcached instances for high-performance caching solutions. These managed cache instances can be defined and linked to services similarly to other managed resources.
@@ -241,7 +238,7 @@ Convox now supports native AWS ElastiCache Redis and Memcached instances for hig
 AWS ElastiCache resources are specified with an `elasticache-` prefix followed by the cache type (`redis` or `memcached`). Below are examples of defining both Redis and Memcached resources:
 
 **Redis Example**:
-```html
+```yaml
 resources:
   cache:
     type: elasticache-redis
@@ -254,8 +251,8 @@ services:
       - cache
 ```
 
-**Memcached Example** (note that the `nodes` parameter must be set):
-```html
+**Memcached Example** (the `nodes` parameter must be set):
+```yaml
 resources:
   cache:
     type: elasticache-memcached
@@ -276,18 +273,17 @@ For detailed configuration options and examples for each type of AWS Elasticache
 - [Redis](/reference/primitives/app/resource/redis/)
 - [Memcached](/reference/primitives/app/resource/memcached/)
 
-
 ## Command Line Interface
 
 ### Listing Resources
-```html
+```bash
 $ convox resources -a myapp
 NAME  TYPE      URL
 main  postgres  postgres://username:password@host.name:port/database
 ```
 
 ### Getting Information about a Resource
-```html
+```bash
 $ convox resources info main -a myapp
 Name  main
 Type  postgres
@@ -295,13 +291,13 @@ URL   postgres://username:password@host.name:port/database
 ```
 
 ### Getting the URL for a Resource
-```html
+```bash
 $ convox resources url main -a myapp
 postgres://username:password@host.name:port/database
 ```
 
 ### Launching a Console
-```html
+```bash
 $ convox resources console main -a myapp
 psql (11.5 (Debian 11.5-1+deb10u1), server 10.5 (Debian 10.5-2.pgdg90+1))
 Type "help" for help.
@@ -309,20 +305,20 @@ database=#
 ```
 
 ### Starting a Proxy to a Resource
-```html
+```bash
 $ convox resources proxy main -a myapp
 Proxying localhost:5432 to host.name:port
 ```
 > Proxying allows you to connect tools on your local machine to Resources running inside the Rack.
 
 ### Exporting Data from a Resource
-```html
+```bash
 $ convox resources export main -f /tmp/db.sql
 Exporting data from main... OK
 ```
 
 ### Importing Data to a Resource
-```html
+```bash
 $ convox resources import main -f /tmp/db.sql
 Importing data to main... OK
 ```

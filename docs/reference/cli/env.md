@@ -1,6 +1,5 @@
 ---
 title: "env"
-draft: false
 slug: env
 url: /reference/cli/env
 ---
@@ -11,11 +10,11 @@ url: /reference/cli/env
 List env vars
 
 ### Usage
-```html
+```bash
     convox env
 ```
 ### Examples
-```html
+```bash
     $ convox env
     COUNT=0
     FOO=bar
@@ -26,11 +25,11 @@ List env vars
 Edit env interactively
 
 ### Usage
-```html
+```bash
     convox env edit
 ```
 ### Examples
-```html
+```bash
     $ convox env edit
     Setting ... OK
     Release: RABCDEFGHI
@@ -40,11 +39,11 @@ Edit env interactively
 Get an env var
 
 ### Usage
-```html
+```bash
     convox env get <var>
 ```
 ### Examples
-```html
+```bash
     $ convox env get FOO
     bar
 ```
@@ -53,11 +52,11 @@ Get an env var
 Set env var(s)
 
 ### Usage
-```html
+```bash
     convox env set <key=value> [key=value]...
 ```
 ### Examples
-```html
+```bash
     $ convox env set FOO=bar
     Setting FOO... OK
     Release: RABCDEFGHI
@@ -67,11 +66,11 @@ Set env var(s)
 Unset env var(s)
 
 ### Usage
-```html
+```bash
     convox env unset <key> [key]...
 ```
 ### Examples
-```html
+```bash
     $ convox env unset FOO
     Unsetting FOO... OK
     Release: RABCDEFGHI

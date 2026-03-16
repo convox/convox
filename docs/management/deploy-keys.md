@@ -1,15 +1,14 @@
 ---
 title: "Deploy Keys"
-draft: false
-slug: Deploy Keys
+slug: deploy-keys
 url: /management/deploy-keys
 ---
 
 # Deploy Keys
 
-Deploy keys are limited scope API keys that allow you to run some limited commands from a remote environment (such as continuous integration systems like Jenkins, Travis, CircleCI etc) without needing to store/use/expose your user credentials.  
+Deploy keys are limited scope API keys that allow you to run some limited commands from a remote environment (such as continuous integration systems like Jenkins, Travis, CircleCI etc) without needing to store/use/expose your user credentials.
 
-> Create a free Convox account if you don't already have one, simply signup [here](https://console.convox.com/signup). We recommend using your company email address if you have one, and using your actual company name as the organization name.
+> Create a free Convox account if you don't already have one, sign up [here](https://console.convox.com/signup). We recommend using your company email address if you have one, and using your actual company name as the organization name.
 
 The commands you can run with a deploy key are limited to the following for security reasons:
 

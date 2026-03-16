@@ -1,7 +1,6 @@
 ---
 title: "BuildMem"
-draft: false
-slug: BuildMem
+slug: buildmem
 url: /configuration/app-parameters/aws/BuildMem
 ---
 
@@ -24,7 +23,7 @@ By default, build pods use the standard memory allocation defined at the rack le
 ## Setting the Parameter
 To set the memory request for build pods:
 
-```html
+```bash
 $ convox apps params set BuildMem=2048 -a <app>
 Setting BuildMem... OK
 ```
@@ -34,7 +33,7 @@ This configuration allocates 2048MB (2GB) of memory to build pods for the specif
 ## Viewing Current Configuration
 To view the current BuildMem setting:
 
-```html
+```bash
 $ convox apps params -a <app>
 NAME         VALUE
 BuildMem     2048
@@ -45,7 +44,7 @@ BuildMem     2048
 ### BuildCpu
 Sets the CPU request for build pods:
 
-```html
+```bash
 $ convox apps params set BuildCpu=512 -a <app>
 Setting BuildCpu... OK
 ```
@@ -53,7 +52,7 @@ Setting BuildCpu... OK
 ### BuildLabels
 Directs build pods to specific node groups:
 
-```html
+```bash
 $ convox apps params set BuildLabels=convox.io/label=app-build -a <app>
 Setting BuildLabels... OK
 ```

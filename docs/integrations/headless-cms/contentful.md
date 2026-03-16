@@ -1,7 +1,6 @@
 ---
 title: "Contentful"
-draft: false
-slug: Contentful
+slug: contentful
 url: /integrations/headless-cms/contentful
 ---
 
@@ -46,7 +45,7 @@ To integrate Contentful with your Convox environment, ensure you have:
 ### Step 3: Configure the Convox App in Contentful
 
 1. In Contentful, navigate to **Apps** > **Installed apps**
-2. Find and select the Convox app you just installed
+2. Find and select the Convox app you installed
 3. In the configuration screen, paste your Convox Deploy Key into the provided field
 4. Click **Add Workflows** to connect to the Convox API
 
@@ -93,5 +92,5 @@ If you encounter issues with the Contentful integration, check the following:
 ## More Resources
 
 * [Contentful Documentation](https://www.contentful.com/developers/docs/)
-* [Convox Deployment Workflows](/console/workflows#deployment-workflows)
+* [Convox CI/CD Workflows](/deployment/workflows)
 * [Convox Deploy Keys](/management/deploy-keys)

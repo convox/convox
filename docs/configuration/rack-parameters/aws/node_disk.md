@@ -1,6 +1,5 @@
 ---
 title: "node_disk"
-draft: false
 slug: node_disk
 url: /configuration/rack-parameters/aws/node_disk
 ---
@@ -19,7 +18,7 @@ The default value for `node_disk` is `20` GB.
 
 ## Setting Parameters
 To set the `node_disk` parameter, use the following command:
-```html
+```bash
 $ convox rack params set node_disk=50 -r rackName
 Setting parameters... OK
 ```

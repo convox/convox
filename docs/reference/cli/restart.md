@@ -1,6 +1,5 @@
 ---
 title: "restart"
-draft: false
 slug: restart
 url: /reference/cli/restart
 ---
@@ -11,11 +10,11 @@ url: /reference/cli/restart
 Restart an app
 
 ### Usage
-```html
+```bash
     convox restart
 ```
 ### Examples
-```html
+```bash
     $ convox restart
     Restarting app... OK
 ```

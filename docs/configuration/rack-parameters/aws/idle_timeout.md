@@ -1,6 +1,5 @@
 ---
 title: "idle_timeout"
-draft: false
 slug: idle_timeout
 url: /configuration/rack-parameters/aws/idle_timeout
 ---
@@ -19,7 +18,7 @@ The default value for `idle_timeout` is `3600` seconds (1 hour).
 
 ## Setting Parameters
 To set the `idle_timeout` parameter, use the following command:
-```html
+```bash
 $ convox rack params set idle_timeout=600 -r rackName
 Setting parameters... OK
 ```

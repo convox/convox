@@ -1,6 +1,5 @@
 ---
 title: "cp"
-draft: false
 slug: cp
 url: /reference/cli/cp
 ---
@@ -11,10 +10,10 @@ url: /reference/cli/cp
 Copy files
 
 ### Usage
-```html
+```bash
     convox cp <[pid:]src> <[pid:]dst>
 ```
 ### Examples
-```html
+```bash
     $ convox cp 7b6bccfd9fdf:/root/test.sh .
 ```

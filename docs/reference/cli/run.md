@@ -1,6 +1,5 @@
 ---
 title: "run"
-draft: false
 slug: run
 url: /reference/cli/run
 ---
@@ -11,7 +10,7 @@ url: /reference/cli/run
 Execute a command in a new process
 
 ### Usage
-```html
+```bash
     convox run <service> <command>
 ```
 
@@ -33,13 +32,13 @@ Execute a command in a new process
 ### Examples
 
 Basic usage:
-```html
+```bash
     $ convox run web sh
     /usr/src/app #
 ```
 
 Run against a specific release:
-```html
+```bash
     $ convox run --release RABCDEFGHIJ web sh
     /usr/src/app #
 ```
@@ -49,20 +48,20 @@ Run against a specific release:
 The `--gpu` flag allows you to request GPU resources for one-off processes. This is particularly useful for machine learning tasks, batch processing, or testing GPU-accelerated code without modifying your service definitions.
 
 ### Request a GPU
-```html
+```bash
     $ convox run web python train-model.py --gpu 1
 ```
 
 ### Target GPU-enabled node groups
 When you have configured dedicated GPU node groups in your rack, you can ensure your GPU workloads run on the appropriate hardware:
 
-```html
+```bash
     $ convox run web python train-model.py --gpu 1 --node-labels "convox.io/label=gpu-nodes"
 ```
 
 This works seamlessly with custom node group configurations. For example, if you've set up GPU nodes:
 
-```html
+```bash
     $ convox rack params set 'additional_node_groups_config=[{"id":201,"type":"g4dn.xlarge","capacity_type":"ON_DEMAND","label":"gpu-nodes"}]' -r rackName
 ```
 
@@ -77,7 +76,7 @@ This works seamlessly with custom node group configurations. For example, if you
 The `--use-service-volume` flag enables one-off processes to access the same persistent volumes configured for the service. This ensures data consistency and enables maintenance operations that require access to persistent storage.
 
 ### Access service volumes
-```html
+```bash
     $ convox run web sh -a myapp --use-service-volume
 ```
 
@@ -108,7 +107,7 @@ services:
 
 Running with `--use-service-volume` ensures the `/data` directory is available in your one-off process:
 
-```html
+```bash
     $ convox run web ls /data --use-service-volume
     file1.txt
     file2.txt
@@ -118,17 +117,17 @@ Running with `--use-service-volume` ensures the `/data` directory is available i
 ## Advanced Examples
 
 ### Combine resource requests with volumes
-```html
+```bash
     $ convox run web python process.py --cpu 2000 --memory 4096 --use-service-volume
 ```
 
 ### GPU workload with specific node targeting
-```html
+```bash
     $ convox run worker python train.py --gpu 2 --node-labels "convox.io/label=ml-nodes" --memory 8192
 ```
 
 ### Detached process with volumes
-```html
+```bash
     $ convox run background-job ./long-running-task.sh --detach --use-service-volume
 ```
 

@@ -1,6 +1,5 @@
 ---
 title: "PostgreSQL"
-draft: false
 slug: postgres
 url: /cloud/databases/postgres
 ---
@@ -171,7 +170,7 @@ services:
 
 When linked to a service, the following environment variables are injected (assuming resource name `database`):
 
-```
+```text
 DATABASE_URL=postgres://username:password@host.name:5432/database
 DATABASE_USER=username
 DATABASE_PASS=password

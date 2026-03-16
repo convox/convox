@@ -1,7 +1,6 @@
 ---
 title: "Agents"
-draft: false
-slug: Agents
+slug: agents
 url: /configuration/agents
 ---
 # Agents
@@ -13,7 +12,7 @@ Agents are specialized [Services](/reference/primitives/app/service) that run a 
 
 You can define any [Service](/reference/primitives/app/service) as an Agent by setting
 its `agent` attribute to `true`
-```html
+```yaml
     services:
       telemetry:
         agent: true
@@ -24,7 +23,7 @@ Often it is useful for other [Processes](/reference/primitives/app/process) to c
 with an Agent running on its [Instance](/reference/primitives/rack/instance).
 
 You can declare ports that will be available to communicate with an Agent using the `ports` attribute:
-```html
+```yaml
     services:
       telemetry:
         agent: true

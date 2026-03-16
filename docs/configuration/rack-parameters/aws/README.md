@@ -1,6 +1,5 @@
 ---
 title: "AWS Rack Parameters"
-draft: false
 slug: aws-rack-parameters
 url: /configuration/rack-parameters/aws
 ---
@@ -65,13 +64,13 @@ The following parameters are available for configuring your Convox rack on Amazo
 ## Setting Parameters
 
 To set an rack parameter, use the following command:
-```html
+```bash
 $ convox rack params set parameterName=value -r rackName
 Updating parameters... OK
 ```
 
 For example, to set the `node_type` parameter:
-```html
+```bash
 $ convox rack params set node_type=m5.xlarge -r rackName
 Updating parameters... OK
 ```
@@ -79,7 +78,7 @@ Updating parameters... OK
 ## Viewing Parameters
 
 To view the current parameters for a rack:
-```html
+```bash
 $ convox rack params -r rackName
 access_log_retention_in_days          7
 build_node_enabled                    true

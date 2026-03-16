@@ -1,6 +1,5 @@
 ---
 title: "Getting Started with Convox Cloud"
-draft: false
 slug: getting-started
 url: /cloud/getting-started
 ---
@@ -188,7 +187,7 @@ $ convox cloud deploy -a my-app -i my-first-machine
 
 The database connection URL is automatically injected as environment variables:
 
-```
+```text
 DATABASE_URL=postgres://username:password@host.name:5432/database
 DATABASE_USER=username
 DATABASE_PASS=password

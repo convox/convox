@@ -1,6 +1,5 @@
 ---
 title: "high_availability"
-draft: false
 slug: high_availability
 url: /configuration/rack-parameters/azure/high_availability
 ---
@@ -20,7 +19,7 @@ The default value for `high_availability` is `true`.
 
 ## Setting Parameters
 To set the `high_availability` parameter, use the following command:
-```html
+```bash
 $ convox rack params set high_availability=true -r rackName
 Setting parameters... OK
 ```
