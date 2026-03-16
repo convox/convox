@@ -320,7 +320,27 @@ func (p *Provider) renewCertificate(crt *cmapi.Certificate) error {
 
 func (p *Provider) LetsEncryptConfigApply(config structs.LetsEncryptConfig) error {
 	config.Defaults()
-	data, err := json.Marshal(config)
+	configForStorage := config
+	configForStorage.Solvers = make([]*structs.Dns01Solver, len(config.Solvers))
+
+	for i := range config.Solvers {
+		solver := config.Solvers[i]
+		solverCopy := *solver
+
+		if solver.Cloudflare != nil {
+			cf := *solver.Cloudflare
+
+			if err := p.ensureCloudflareSecrets(&cf); err != nil {
+				return err
+			}
+
+			solverCopy.Cloudflare = &cf
+		}
+
+		configForStorage.Solvers[i] = &solverCopy
+	}
+
+	data, err := json.Marshal(configForStorage)
 	if err != nil {
 		return err
 	}
@@ -350,6 +370,98 @@ func (p *Provider) LetsEncryptConfigApply(config structs.LetsEncryptConfig) erro
 	return p.applySystemTemplate("cert-manager-letsencrypt", map[string]interface{}{
 		"Config": config,
 	})
+}
+
+func (p *Provider) ensureCloudflareSecrets(cf *structs.Cloudflare) error {
+	if cf == nil {
+		return nil
+	}
+
+	if cf.ApiTokenSecretRefName != nil && *cf.ApiTokenSecretRefName != "" && (cf.ApiTokenSecretRefKey == nil || *cf.ApiTokenSecretRefKey == "") {
+		cf.ApiTokenSecretRefKey = options.String("api-token")
+	}
+
+	if cf.ApiKeySecretRefName != nil && *cf.ApiKeySecretRefName != "" && (cf.ApiKeySecretRefKey == nil || *cf.ApiKeySecretRefKey == "") {
+		cf.ApiKeySecretRefKey = options.String("api-key")
+	}
+
+	secretName := ""
+	data := map[string][]byte{}
+
+	if cf.ApiTokenValue != nil && *cf.ApiTokenValue != "" {
+		if cf.ApiTokenSecretRefName == nil || *cf.ApiTokenSecretRefName == "" {
+			return fmt.Errorf("cloudflare api token secret name is required when providing a token value")
+		}
+
+		secretName = *cf.ApiTokenSecretRefName
+
+		key := "api-token"
+		if cf.ApiTokenSecretRefKey != nil && *cf.ApiTokenSecretRefKey != "" {
+			key = *cf.ApiTokenSecretRefKey
+		} else {
+			cf.ApiTokenSecretRefKey = options.String(key)
+		}
+
+		data[key] = []byte(*cf.ApiTokenValue)
+	}
+
+	if cf.ApiKeyValue != nil && *cf.ApiKeyValue != "" {
+		if cf.ApiKeySecretRefName == nil || *cf.ApiKeySecretRefName == "" {
+			return fmt.Errorf("cloudflare api key secret name is required when providing an api key value")
+		}
+
+		if secretName == "" {
+			secretName = *cf.ApiKeySecretRefName
+		} else if secretName != *cf.ApiKeySecretRefName {
+			return fmt.Errorf("cloudflare api credentials must reference the same secret")
+		}
+
+		key := "api-key"
+		if cf.ApiKeySecretRefKey != nil && *cf.ApiKeySecretRefKey != "" {
+			key = *cf.ApiKeySecretRefKey
+		} else {
+			cf.ApiKeySecretRefKey = options.String(key)
+		}
+
+		data[key] = []byte(*cf.ApiKeyValue)
+		if cf.Email != nil && *cf.Email != "" {
+			data["email"] = []byte(*cf.Email)
+		}
+	}
+
+	if len(data) > 0 {
+		if secretName == "" {
+			return fmt.Errorf("cloudflare secret name is required")
+		}
+
+		if err := p.ensureSecretData(secretName, data); err != nil {
+			return err
+		}
+
+		cf.ApiTokenValue = nil
+		cf.ApiKeyValue = nil
+	}
+
+	return nil
+}
+
+func (p *Provider) ensureSecretData(name string, data map[string][]byte) error {
+	secret := corev1.Secret(name, CERT_MANAGER_NAMESPACE)
+	secret.WithLabels(map[string]string{
+		"system": "convox",
+		"rack":   p.Name,
+	})
+	secret.WithData(data)
+	secret.WithType(ac.SecretTypeOpaque)
+
+	_, err := p.Cluster.CoreV1().Secrets(CERT_MANAGER_NAMESPACE).Apply(context.TODO(), secret, am.ApplyOptions{
+		FieldManager: "convox-system",
+	})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
 }
 
 func (p *Provider) LetsEncryptConfigGet() (*structs.LetsEncryptConfig, error) {
