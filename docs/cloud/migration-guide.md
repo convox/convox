@@ -1,6 +1,5 @@
 ---
 title: "Migration Guide"
-draft: false
 slug: migration-guide
 url: /cloud/migration-guide
 ---
@@ -40,13 +39,13 @@ $ heroku config -a your-heroku-app -s > .env.heroku
 $ heroku buildpacks -a your-heroku-app
 ```
 
-### Step 2: Create Dockerfile
+### Step 2: Create a Dockerfile (Heroku)
 
 Heroku uses buildpacks, but Convox uses Docker. Create a `Dockerfile` based on your buildpack:
 
 **For Node.js apps:**
 ```dockerfile
-FROM node:18-alpine
+FROM node:22-alpine
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production
@@ -57,7 +56,7 @@ CMD ["npm", "start"]
 
 **For Ruby/Rails apps:**
 ```dockerfile
-FROM ruby:3.1-alpine
+FROM ruby:3.3-alpine
 RUN apk add --no-cache build-base postgresql-dev
 WORKDIR /app
 COPY Gemfile Gemfile.lock ./
@@ -81,7 +80,7 @@ CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:8000"]
 ### Step 3: Convert Procfile to convox.yml
 
 **Heroku Procfile:**
-```
+```text
 web: node server.js
 worker: node worker.js
 release: node migrate.js
@@ -99,7 +98,7 @@ services:
       cpu: 250
       memory: 512
     health: /health
-    
+
   worker:
     build: .
     command: node worker.js
@@ -132,11 +131,11 @@ Map Heroku add-ons to Convox resources:
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: small
-      version: 17.5
-      
+      version: "17.5"
+
 services:
   web:
     build: .
@@ -202,7 +201,7 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-    
+
   - type: worker
     name: background-worker
     env: node
@@ -214,10 +213,10 @@ databases:
     plan: starter
 ```
 
-### Step 2: Create Dockerfile
+### Step 2: Create a Dockerfile (Render)
 
 ```dockerfile
-FROM node:18-alpine
+FROM node:22-alpine
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
@@ -236,10 +235,10 @@ environment:
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: dev
-      version: 17.5
+      version: "17.5"
 
 services:
   web:
@@ -252,7 +251,7 @@ services:
       memory: 512
     resources:
       - database
-    
+
   worker:
     build: .
     command: npm run worker
@@ -282,14 +281,14 @@ Railway uses automatic builds and nixpacks. You'll need to be more explicit with
 
 ```dockerfile
 # Example for Next.js app
-FROM node:18-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM node:18-alpine
+FROM node:22-alpine
 WORKDIR /app
 COPY --from=builder /app/package*.json ./
 RUN npm ci --only=production
@@ -305,10 +304,10 @@ CMD ["npm", "start"]
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: small
-      version: 17.5
+      version: "17.5"
 
 services:
   web:
@@ -396,7 +395,7 @@ resources:
     options:
       class: db.t3.micro
       storage: 20
-      version: 13
+      version: "13"
 ```
 
 After (Cloud):
@@ -404,10 +403,10 @@ After (Cloud):
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: dev
-      version: 17.5
+      version: "17.5"
 ```
 
 ### Step 5: Update CI/CD
@@ -441,19 +440,19 @@ services:
     depends_on:
       - db
       - redis
-      
+
   worker:
     build: .
     command: npm run worker
     depends_on:
       - db
       - redis
-      
+
   db:
     image: postgres:13
     environment:
       - POSTGRES_PASSWORD=secret
-      
+
   redis:
     image: redis:alpine
 ```
@@ -466,10 +465,10 @@ environment:
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: dev
-      version: 17.5
+      version: "17.5"
 
 services:
   web:
@@ -477,7 +476,7 @@ services:
     port: 3000
     resources:
       - database
-      
+
   worker:
     build: .
     command: npm run worker
@@ -565,14 +564,14 @@ $ convox cloud env set MONGODB_URI=mongodb+srv://... -a myapp -i production
 
 **Solution**: Optimize Dockerfile with multi-stage builds:
 ```dockerfile
-FROM node:18 AS builder
+FROM node:22 AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM node:18-alpine
+FROM node:22-alpine
 WORKDIR /app
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
@@ -618,7 +617,7 @@ services:
 
 ### Resources
 
-- [Convox Documentation](https://docs.convox.com)
+- [Convox Documentation](/getting-started/introduction)
 - [Community Forum](https://community.convox.com)
 - [GitHub Examples](https://github.com/convox-examples)
 
@@ -634,6 +633,6 @@ After migration:
 
 1. [Optimize your machine size](/cloud/machines/sizing-and-pricing)
 2. [Configure Cloud Databases](/cloud/databases)
-3. [Set up monitoring and alerts](/cloud/monitoring)
-4. [Configure autoscaling](/deployment/scaling)
+3. [Set up monitoring and alerts](/configuration/monitoring)
+4. [Configure autoscaling](/configuration/scaling)
 5. [Implement CI/CD](/deployment/workflows)

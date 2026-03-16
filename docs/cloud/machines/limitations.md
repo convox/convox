@@ -1,6 +1,5 @@
 ---
 title: "Limitations and Differences"
-draft: false
 slug: limitations
 url: /cloud/machines/limitations
 ---
@@ -15,7 +14,7 @@ While Convox Cloud provides the same application deployment capabilities as self
 
 **Limitation**: You cannot use `kubectl` to directly interact with the underlying Kubernetes cluster.
 
-**Impact**: 
+**Impact**:
 - Cannot apply custom Kubernetes manifests
 - Cannot install cluster-level operators or CRDs
 - Cannot modify cluster configurations
@@ -148,10 +147,10 @@ Convox Cloud provides fully managed RDS databases through Cloud Databases:
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: small
-      version: 17.5
+      version: "17.5"
       durable: true
 
 services:
@@ -173,14 +172,14 @@ services:
 
 ### Containerized Databases
 
-You can also use containerized databases (without `provider: aws`):
+You can also use containerized databases (without a managed database type):
 
 ```yaml
 resources:
   database:
     type: postgres
     options:
-      version: 13
+      version: "13"
       storage: 10
 ```
 
@@ -289,7 +288,7 @@ volumes:
 
 **Not Supported**:
 - Kubernetes operators
-- Admission webhooks  
+- Admission webhooks
 - Custom controllers
 - Cluster-wide services
 - DaemonSets
@@ -327,7 +326,7 @@ volumes:
 | Medium | 2000m | 4 GB |
 | Large | 4000m | 8 GB |
 
-**Impact**: 
+**Impact**:
 - Single service cannot exceed machine resources
 - All services combined cannot exceed machine limits
 
@@ -405,6 +404,16 @@ volumes:
    - Use databases for persistence
    - Implement session storage in Redis
 
+   Redis is available as a containerized resource but is not a managed Cloud offering. For production workloads requiring Redis, use an external Redis service (such as AWS ElastiCache or Redis Cloud) and set the connection URL as an environment variable:
+
+   ```bash
+   $ convox env set REDIS_URL=redis://your-redis-host:6379 -a myapp
+   Setting REDIS_URL... OK
+   Release: RABCDEFGHI
+   ```
+
+   Environment variables containing credentials are stored encrypted. Use `convox env` to manage them rather than hardcoding connection strings in your application code.
+
 2. **Optimize Resource Usage**
    ```yaml
    services:
@@ -419,10 +428,10 @@ volumes:
    resources:
      database:
        type: postgres
-       provider: aws
+   
        options:
          class: small
-         version: 17.5
+         version: "17.5"
          durable: true
    ```
 
@@ -449,17 +458,17 @@ Consider a self-hosted Convox Rack if you need:
 
 | Feature | Convox Cloud | Self-Hosted Rack |
 |---------|--------------|------------------|
-| Kubernetes Access | ✗ | ✓ |
-| SSH to Nodes | ✗ | ✓ |
-| Custom Node Types | ✗ | ✓ |
-| VPC Configuration | ✗ | ✓ |
-| Network Policies | ✗ | ✓ |
-| Persistent Volumes | ✗ | ✓ |
-| Custom IAM Roles | ✗ | ✓ |
-| Managed Databases | ✓ (Cloud DBs) | ✓ (RDS Resources) |
-| RDS Read Replicas | ✗ | ✓ |
-| Agent Services | ✗ | ✓ |
-| Custom Build Nodes | ✗ | ✓ |
+| Kubernetes Access | No | Yes |
+| SSH to Nodes | No | Yes |
+| Custom Node Types | No | Yes |
+| VPC Configuration | No | Yes |
+| Network Policies | No | Yes |
+| Persistent Volumes | No | Yes |
+| Custom IAM Roles | No | Yes |
+| Managed Databases | Yes (Cloud DBs) | Yes (RDS Resources) |
+| RDS Read Replicas | No | Yes |
+| Agent Services | No | Yes |
+| Custom Build Nodes | No | Yes |
 | Rack Parameters | Limited | Full |
 | Setup Time | Instant | 10-20 min |
 | Maintenance | None | Required |

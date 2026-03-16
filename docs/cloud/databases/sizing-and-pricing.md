@@ -1,6 +1,5 @@
 ---
 title: "Database Sizing and Pricing"
-draft: false
 slug: sizing-and-pricing
 url: /cloud/databases/sizing-and-pricing
 ---

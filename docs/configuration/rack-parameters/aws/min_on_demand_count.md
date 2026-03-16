@@ -1,6 +1,5 @@
 ---
 title: "min_on_demand_count"
-draft: false
 slug: min_on_demand_count
 url: /configuration/rack-parameters/aws/min_on_demand_count
 ---
@@ -19,7 +18,7 @@ The default value for `min_on_demand_count` is `1`.
 
 ## Setting Parameters
 To set the `min_on_demand_count` parameter, use the following command:
-```html
+```bash
 $ convox rack params set min_on_demand_count=2 -r rackName
 Setting parameters... OK
 ```

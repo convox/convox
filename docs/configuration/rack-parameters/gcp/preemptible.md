@@ -1,6 +1,5 @@
 ---
 title: "preemptible"
-draft: false
 slug: preemptible
 url: /configuration/rack-parameters/gcp/preemptible
 ---
@@ -19,7 +18,7 @@ The default value for `preemptible` is `true`.
 
 ## Setting Parameters
 To set the `preemptible` parameter, use the following command:
-```html
+```bash
 $ convox rack params set preemptible=true -r rackName
 Setting parameters... OK
 ```

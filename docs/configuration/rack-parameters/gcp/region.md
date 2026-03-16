@@ -1,6 +1,5 @@
 ---
 title: "region"
-draft: false
 slug: region
 url: /configuration/rack-parameters/gcp/region
 ---
@@ -20,7 +19,7 @@ The default value for `region` is `us-east1`.
 
 ## Setting Parameters
 To set the `region` parameter, use the following command:
-```html
+```bash
 $ convox rack params set region=us-east1 -r rackName
 Setting parameters... OK
 ```

@@ -1,7 +1,6 @@
 ---
 title: "Build"
-draft: false
-slug: Build
+slug: build
 url: /reference/primitives/app/build
 ---
 # Build
@@ -10,24 +9,25 @@ A Build is a compiled version of the code for each [Service](/reference/primitiv
 
 Convox uses `docker` to compile code into a Build.
 
-## Definition
+## Build Definition
 
 You can define the location to build for each [Service](/reference/primitives/app/service) in [`convox.yml`](/configuration/convox-yml).
 
-```html
-    services:
-      api:
-        build: ./api
-      web:
-        build: ./web
-        manifest: Dockerfile.production
+```yaml
+services:
+  api:
+    build: ./api
+  web:
+    build:
+      path: ./web
+      manifest: Dockerfile.production
 ```
 
 ## Command Line Interface
 
 ### Creating a Build
 
-```html
+```bash
     $ convox build -a myapp
     Packaging source... OK
     Uploading source... OK
@@ -41,7 +41,7 @@ You can define the location to build for each [Service](/reference/primitives/ap
 
 ### Listing Builds
 
-```html
+```bash
     $ convox builds -a myapp
     ID          STATUS    RELEASE     STARTED       ELAPSED
     BABCDEFGHI  complete  RBCDEFGHIJ  1 minute ago  25s
@@ -49,7 +49,7 @@ You can define the location to build for each [Service](/reference/primitives/ap
 
 ### Getting Information about a Build
 
-```html
+```bash
     $ convox builds info BABCDEFGHI -a myapp
     ID           BABCDEFGHI
     Status       complete
@@ -61,7 +61,7 @@ You can define the location to build for each [Service](/reference/primitives/ap
 
 ### Getting logs for a Build
 
-```html
+```bash
     $ convox builds logs BABCDEFGHI -a myapp
     Sending build context to Docker daemon  4.2MB
     Step 1/34 : FROM golang AS development
@@ -70,20 +70,22 @@ You can define the location to build for each [Service](/reference/primitives/ap
 
 ### Exporting a Build
 
-```html
+```bash
     $ convox builds export BABCDEFGHI -a myapp -f /tmp/build.tgz
     Exporting build... OK
 ```
 
 ### Importing a Build
 
-```html
+```bash
     convox builds import -a myapp2 -f /tmp/build.tgz
 ```
 
 > Importing a Build creates a new [Release](/reference/primitives/app/release) that references the Build.
 
 ## Build Arguments
+
+> Build arguments require rack version 3.22.0 or later.
 
 Convox supports both custom build arguments and Convox-managed build arguments that provide build context information. Build arguments must be declared in your Dockerfile using the `ARG` instruction to be available during the build process.
 
@@ -105,13 +107,13 @@ Starting from version 3.22.0, Convox provides the following managed build argume
 ### Using Build Arguments via CLI
 
 Pass Convox-managed build arguments:
-```html
-    $ convox build --build-args=BUILD_APP --build-args=BUILD_ID --build-args=BUILD_GIT_SHA
+```bash
+    $ convox build --build-args "BUILD_APP" --build-args "BUILD_ID" --build-args "BUILD_GIT_SHA"
 ```
 
 Combine Convox-managed arguments with custom build arguments:
-```html
-    $ convox build --build-args=BUILD_APP --build-args=FOO=BAR --build-args=VERSION=1.2.3
+```bash
+    $ convox build --build-args "BUILD_APP" --build-args "FOO=BAR" --build-args "VERSION=1.2.3"
 ```
 
 ### Dockerfile Configuration
@@ -139,13 +141,13 @@ ENV APP_NAME=${BUILD_APP}
 
 ### Security Warning for BUILD_AUTH
 
-⚠️ **Critical Security Notice**: The `BUILD_AUTH` argument contains sensitive Docker registry authentication credentials including usernames and passwords/tokens. This data should never be:
+**Critical Security Notice**: The `BUILD_AUTH` argument contains sensitive Docker registry authentication credentials including usernames and passwords/tokens. This data should never be:
 - Logged or printed during builds
 - Embedded in final images
 - Exposed in build output
 
 Example of `BUILD_AUTH` content structure (contains sensitive data):
-```
+```text
 BUILD_AUTH: {"registry.url":{"Username":"AWS","Password":"[base64-encoded-token]"}}
 ```
 
@@ -160,17 +162,13 @@ When using Convox Deployment and Review Workflows:
 
 ### Build Layers Caching
 
-From version 3.11.0 onward, Convox uses buildkit to build and push images. Buildkit allows us to specify a caching path in remote repositories to store/fetch layers that have already been created. Unfortunately, the only rack registries that support such feature so far are Azure and DigitalOcean(DO racks have a built-in registry).
+Convox uses buildkit to build and push images. Buildkit allows us to specify a caching path in remote repositories to store/fetch layers that have already been created. Unfortunately, the only rack registries that support such feature so far are Azure and DigitalOcean(DO racks have a built-in registry).
 
 ## Using Docker Credentials in Builds
 
-### Overview
+### Docker Hub Rate Limiting
 
 We have added support for using Docker credentials in Convox build and service pods. This feature helps avoid potential rate limits imposed by Docker Hub, particularly when operating large clusters that may perform multiple simultaneous pulls from Docker. By supplying Docker credentials, you can ensure that Docker Hub's rate limits are bypassed, resulting in smoother operations for your services.
-
-### Requirements
-
-- You must be on at least Convox rack version `3.18.8` to use this feature. 
 
 ### How to Use Docker Credentials in Convox
 
@@ -186,7 +184,7 @@ To use Docker Hub credentials during the build process, follow these steps:
 
    Run the following command to set the Docker Hub credentials on your rack. Be sure to use the read-only access token to avoid storing your Docker password in plain text.
 
-   ```html
+   ```bash
    $ convox rack params set docker_hub_username=<your-docker-hub-username> docker_hub_password=<your-read-only-token> -r <rackName>
    ```
 
@@ -194,7 +192,7 @@ To use Docker Hub credentials during the build process, follow these steps:
 
    After setting the credentials, you can confirm they have been successfully configured by running:
 
-   ```html
+   ```bash
    $ convox rack params -r <rackName>
    ```
 
@@ -203,6 +201,4 @@ This will list the current parameters for the rack, including the Docker credent
 ## Version Requirements
 
 - Basic build functionality: All versions
-- Buildkit and caching: Version 3.11.0+
-- Docker credentials support: Version 3.18.8+
 - Convox-managed build arguments: Version 3.22.0+

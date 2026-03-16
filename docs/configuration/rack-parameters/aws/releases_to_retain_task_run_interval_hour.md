@@ -1,6 +1,5 @@
 ---
 title: "releases_to_retain_task_run_interval_hour"
-draft: false
 slug: releases_to_retain_task_run_interval_hour
 url: /configuration/rack-parameters/aws/releases_to_retain_task_run_interval_hour
 ---
@@ -24,7 +23,7 @@ The default value for `releases_to_retain_task_run_interval_hour` is `24` hours 
 
 ## Setting Parameters
 To set the `releases_to_retain_task_run_interval_hour` parameter, use the following command:
-```html
+```bash
 $ convox rack params set releases_to_retain_task_run_interval_hour=12 -r rackName
 Setting parameters... OK
 ```
@@ -34,17 +33,17 @@ This command configures the cleanup task to run every 12 hours.
 ### Example Configurations
 
 For twice-daily cleanup:
-```html
+```bash
 $ convox rack params set releases_to_retain_task_run_interval_hour=12 -r rackName
 ```
 
 For weekly cleanup (every 7 days):
-```html
+```bash
 $ convox rack params set releases_to_retain_task_run_interval_hour=168 -r rackName
 ```
 
 For more frequent cleanup in high-deployment environments:
-```html
+```bash
 $ convox rack params set releases_to_retain_task_run_interval_hour=6 -r rackName
 ```
 

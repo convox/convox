@@ -1,7 +1,6 @@
 ---
 title: "Changes"
-draft: false
-slug: Changes
+slug: changes
 url: /help/changes
 ---
 # Changes
@@ -18,14 +17,14 @@ Generation 1 Apps are no longer supported
 
 #### Version 2
 
-* AWS (ECS)
+- AWS (ECS)
 
 #### Version 3
 
-* AWS (EKS)
-* Digital Ocean
-* Google Cloud
-* Microsoft Azure
+- AWS (EKS)
+- Digital Ocean
+- Google Cloud
+- Microsoft Azure
 
 ## Apps
 
@@ -34,55 +33,60 @@ Generation 1 Apps are no longer supported
 Agent ports are now defined at the service level instead of underneath the `agent:` block:
 
 #### Version 2
-```html
-    services:
-      datadog:
-        agent:
-          ports:
-            - 8125/udp
-            - 8126/tcp
+```yaml
+services:
+  datadog:
+    agent:
+      ports:
+        - 8125/udp
+        - 8126/tcp
 ```
 #### Version 3
-```html
-    services:
-      datadog:
-        agent: true
-        ports:
-          - 8125/udp
-          - 8126/tcp
+```yaml
+services:
+  datadog:
+    agent: true
+    ports:
+      - 8125/udp
+      - 8126/tcp
 ```
 
 ### Scaling
 
-On v3 Racks, the `convox scale {service}` CLI command can be used to update the count value only.  Changes to CPU or Memory values will not be enacted.  These values should be changed in the `convox.yml` directly.
+On v3 Racks, the `convox scale {service}` CLI command can be used to update the count value only. Changes to CPU or Memory values will not be enacted. These values should be changed in the `convox.yml` directly.
 
 ### Sticky Sessions
 
 App services are no longer sticky by default. Sticky sessions can be enabled in `convox.yml`:
-```html
-    services
-      web:
-        sticky: true
+```yaml
+services:
+  web:
+    sticky: true
 ```
 ### Timer Syntax
 
-Timers no longer follow the AWS scheduled events syntax where you must have a `?` in either day-of-week or day-of-month column. 
+Timers no longer follow the AWS scheduled events syntax where you must have a `?` in either day-of-week or day-of-month column.
 
-Timers now follow the standard [cron syntax](https://www.freebsd.org/cgi/man.cgi?query=crontab&sektion=5)
+Timers now follow the standard [cron syntax](https://crontab.guru/)
 
 As an example a Timer that runs every hour has changed as follows:
 
 #### Version 2
-```html
-    timers:
-      hourlyjob:
-        schedule: 0 * * ? *
+```yaml
+timers:
+  hourlyjob:
+    schedule: 0 * * ? *
 ```
 #### Version 3
-```html
-    timers:
-      hourlyjob:
-        schedule: 0 * * * *
+```yaml
+timers:
+  hourlyjob:
+    schedule: 0 * * * *
 ```
 
 You can read more in the [Timer](/reference/primitives/app/timer) documentation section
+
+## See Also
+
+- [Upgrading](/help/upgrading) for step-by-step migration instructions from v2 to v3
+- [Releases](/reference/releases) for the full v3 release history (3.20.0+ are the currently supported versions)

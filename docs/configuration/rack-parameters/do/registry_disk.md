@@ -1,6 +1,5 @@
 ---
 title: "registry_disk"
-draft: false
 slug: registry_disk
 url: /configuration/rack-parameters/do/registry_disk
 ---
@@ -18,7 +17,7 @@ The default value for `registry_disk` is `50Gi`.
 
 ## Setting Parameters
 To set the `registry_disk` parameter, use the following command:
-```html
+```bash
 $ convox rack params set registry_disk=50Gi -r rackName
 Setting parameters... OK
 ```

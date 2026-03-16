@@ -1,6 +1,5 @@
 ---
 title: "MySQL"
-draft: false
 slug: mysql
 url: /cloud/databases/mysql
 ---
@@ -15,10 +14,10 @@ Convox Cloud provides fully managed MySQL databases through AWS RDS.
 resources:
   database:
     type: mysql
-    provider: aws
+
     options:
       class: small
-      version: 8.4.6
+      version: "8.4.6"
 
 services:
   web:
@@ -95,10 +94,10 @@ Enabling `durable: true` doubles the monthly cost.
 resources:
   database:
     type: mysql
-    provider: aws
+
     options:
       class: dev
-      version: 8.4.6
+      version: "8.4.6"
 
 services:
   web:
@@ -114,10 +113,10 @@ services:
 resources:
   database:
     type: mysql
-    provider: aws
+
     options:
       class: large
-      version: 8.4.6
+      version: "8.4.6"
       durable: true
 
 services:
@@ -134,10 +133,10 @@ services:
 resources:
   legacy-db:
     type: mysql
-    provider: aws
+
     options:
       class: medium
-      version: 8.0.44
+      version: "8.0.44"
 
 services:
   web:
@@ -151,7 +150,7 @@ services:
 
 When linked to a service, the following environment variables are injected (assuming resource name `database`):
 
-```
+```text
 DATABASE_URL=mysql://username:password@host.name:3306/database
 DATABASE_USER=username
 DATABASE_PASS=password

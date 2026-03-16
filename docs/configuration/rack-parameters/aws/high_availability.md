@@ -1,6 +1,5 @@
 ---
 title: "high_availability"
-draft: false
 slug: high_availability
 url: /configuration/rack-parameters/aws/high_availability
 ---
@@ -18,12 +17,11 @@ The default value for `high_availability` is `true`.
 - **Resource Management**: Allocate fewer resources for environments where high availability is not critical.
 
 ## Setting Parameters
-The `high availability` parameter must be configured at rack installation. Example:
+The `high_availability` parameter must be configured at rack installation. Example:
+
 | Key                    | Value                                         |
 |------------------------|-----------------------------------------------|
-| `high availability`  | `true` |
-
-&nbsp;
+| `high_availability`  | `true` |
 
 ## Additional Information
 High availability clusters provide increased resilience and uptime by using redundant resources. Disabling high availability can significantly reduce costs, making it suitable for non-production environments, development clusters, or any scenario where uptime is not critical.

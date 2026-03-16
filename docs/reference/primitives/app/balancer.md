@@ -1,18 +1,17 @@
 ---
 title: "Balancer"
-draft: false
-slug: Balancer
+slug: balancer
 url: /reference/primitives/app/balancer
 ---
 # Balancer
 
 A Balancer accepts incoming traffic and balances it between the [Processes](/reference/primitives/app/process) of a [Service](/reference/primitives/app/service).
 
-## Definition
+## Balancer Definition
 
 A Balancer is defined in [`convox.yml`](/configuration/convox-yml).
 
-```html
+```yaml
 balancers:
   custom:
     annotations:
@@ -24,8 +23,7 @@ services:
   mqtt:
     ports:
       - 8883
-    whitelist:
-      - 192.168.0.0/16
+    whitelist: 192.168.0.0/16
 ```
 
 ### Attributes
@@ -41,7 +39,7 @@ services:
 
 ### Listing Balancers
 
-```html
+```bash
 $ convox balancers
 BALANCER  SERVICE  ENDPOINT
 custom    mqtt     1.2.3.4
@@ -53,7 +51,7 @@ custom    mqtt     1.2.3.4
 
 To configure TCP ports on a balancer, you can use the following example:
 
-```html
+```yaml
 balancers:
   custom:
     annotations:
@@ -76,7 +74,7 @@ services:
 
 To configure UDP ports on a balancer, specify the protocol explicitly for UDP ports. The default protocol is TCP, so it does not need to be specified for TCP ports.
 
-```html
+```yaml
 balancers:
   custom:
     annotations:
@@ -109,7 +107,7 @@ services:
 - **port**: Used to define the main port that the service will listen on. This port is exposed via the default ingress and is used for primary traffic, including health checks.
 - **ports**: Used to define additional ports for service-to-service communication within the cluster. These ports can be exposed using a custom balancer for specific protocols like TCP or UDP.
 
-```html
+```yaml
 services:
   web:
     domain: ${HOST}
@@ -122,13 +120,13 @@ services:
 
 By using the `ports` attribute, you can configure additional ports with specific protocols on both the Kubernetes service and pod levels.
 
-> Note: The main `port` must always be defined, and it will use the default ingress. Health checks go over the port defined as `port:`.
+> The main `port` must always be defined, and it will use the default ingress. Health checks go over the port defined as `port:`.
 
 ### Example of Configuring an Alternate Health Check Port
 
 You can configure an alternate health check port using the `ports` attribute.
 
-```html
+```yaml
 balancers:
   custom:
     annotations:
@@ -149,6 +147,6 @@ services:
 
 In this configuration, the main traffic goes through port 3000, while additional service communication uses ports 3001 and 3002.
 
-> Note: Ports defined with the `ports:` attribute will only be accessible within the cluster and through the configured custom balancer.
+> Ports defined with the `ports:` attribute will only be accessible within the cluster and through the configured custom balancer.
 
 For more detailed information on configuring load balancers, refer to the [Load Balancers](/configuration/load-balancers) documentation page.

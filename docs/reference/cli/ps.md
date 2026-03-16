@@ -1,6 +1,5 @@
 ---
 title: "ps"
-draft: false
 slug: ps
 url: /reference/cli/ps
 ---
@@ -11,11 +10,18 @@ url: /reference/cli/ps
 List app processes
 
 ### Usage
-```html
+```bash
     convox ps
 ```
+### Flags
+
+| Flag | Short | Description |
+| ---- | ----- | ----------- |
+| `--release` | | Filter by release |
+| `--service` | `-s` | Filter by service |
+
 ### Examples
-```html
+```bash
     $ convox ps
     ID            SERVICE  STATUS   RELEASE      STARTED     COMMAND
     62942430327e  web      running  RCRLBREFPBX  1 week ago
@@ -25,11 +31,11 @@ List app processes
 Get information about a process
 
 ### Usage
-```html
-    convox ps info
+```bash
+    convox ps info <pid>
 ```
 ### Examples
-```html
+```bash
     $ convox ps info 62942430327e
     Id        62942430327e
     App       nodejs
@@ -45,11 +51,17 @@ Get information about a process
 Stop a process
 
 ### Usage
-```html
-    convox ps stop
+```bash
+    convox ps stop <pid>
 ```
 ### Examples
-```html
+```bash
     $ convox ps stop 62942430327e
     Stopping 62942430327e... OK
 ```
+
+## See Also
+
+- [exec](/reference/cli/exec) for running commands in existing processes
+- [run](/reference/cli/run) for running commands in new processes
+- [scale](/reference/cli/scale) for adjusting process counts and resources

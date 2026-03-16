@@ -1,6 +1,5 @@
 ---
 title: "start"
-draft: false
 slug: start
 url: /reference/cli/start
 ---
@@ -11,22 +10,28 @@ url: /reference/cli/start
 Start an application for local development
 
 ### Usage
-```html
+```bash
     convox start [service] [service...] [options]
 ```
-### Options
-```html
-    -m <file.yml> allows to specify an alternative manifest file (convox.yml by default)
-```
+### Flags
+
+| Flag | Short | Description |
+| ---- | ----- | ----------- |
+| `--manifest` | `-m` | Manifest file (default: `convox.yml`) |
+| `--external` | `-e` | Use external build |
+| `--generation` | `-g` | Generation |
+| `--no-build` | | Skip building |
+| `--no-cache` | | Build without layer cache |
+| `--no-sync` | | Do not sync local changes into running containers |
 ### Examples
-```html
+```bash
     $ convox start
     build  | uploading source
     build  | starting build
     build  | Authenticating registry.convox/nodejs: Login Succeeded
     build  | Building: .
     build  | Sending build context to Docker daemon  171.5kB
-    build  | Step 1/5 : FROM node:10.16.3-alpine
+    build  | Step 1/5 : FROM node:22-alpine
     build  |  ---> b95baba1cfdb
     build  | Step 2/5 : WORKDIR /usr/src/app
     build  |  ---> Using cache
@@ -54,3 +59,8 @@ Start an application for local development
     web    | Server running at http://0.0.0.0:3000/
     web    | Started container main
 ```
+
+## See Also
+
+- [Local Development](/tutorials/local-development) for a guided local development walkthrough
+- [Running Locally](/development/running-locally) for code sync and build target details

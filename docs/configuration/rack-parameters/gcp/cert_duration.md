@@ -1,6 +1,5 @@
 ---
 title: "cert_duration"
-draft: false
 slug: cert_duration
 url: /configuration/rack-parameters/gcp/cert_duration
 ---
@@ -8,7 +7,7 @@ url: /configuration/rack-parameters/gcp/cert_duration
 # cert_duration
 
 ## Description
-The `cert_duration` parameter specifies the certification renewal period. This determines how often your certificates are renewed, ensuring they remain valid and secure.
+The `cert_duration` parameter specifies the certificate renewal period. This determines how often your certificates are renewed, ensuring they remain valid and secure.
 
 ## Default Value
 The default value for `cert_duration` is `2160h` (90 days).
@@ -19,7 +18,7 @@ The default value for `cert_duration` is `2160h` (90 days).
 
 ## Setting Parameters
 To set the `cert_duration` parameter, use the following command:
-```html
+```bash
 $ convox rack params set cert_duration=2160h -r rackName
 Setting parameters... OK
 ```

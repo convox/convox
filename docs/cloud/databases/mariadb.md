@@ -1,6 +1,5 @@
 ---
 title: "MariaDB"
-draft: false
 slug: mariadb
 url: /cloud/databases/mariadb
 ---
@@ -15,10 +14,10 @@ Convox Cloud provides fully managed MariaDB databases through AWS RDS.
 resources:
   database:
     type: mariadb
-    provider: aws
+
     options:
       class: small
-      version: 11.4.8
+      version: "11.4.8"
 
 services:
   web:
@@ -100,10 +99,10 @@ Enabling `durable: true` doubles the monthly cost.
 resources:
   database:
     type: mariadb
-    provider: aws
+
     options:
       class: dev
-      version: 11.4.8
+      version: "11.4.8"
 
 services:
   web:
@@ -119,10 +118,10 @@ services:
 resources:
   database:
     type: mariadb
-    provider: aws
+
     options:
       class: large
-      version: 11.4.8
+      version: "11.4.8"
       durable: true
 
 services:
@@ -139,18 +138,18 @@ services:
 resources:
   primary:
     type: mariadb
-    provider: aws
+
     options:
       class: medium
-      version: 11.4.8
+      version: "11.4.8"
       durable: true
-      
+
   legacy:
     type: mariadb
-    provider: aws
+
     options:
       class: small
-      version: 10.6.24
+      version: "10.6.24"
 
 services:
   web:
@@ -158,7 +157,7 @@ services:
     port: 3000
     resources:
       - primary
-      
+
   legacy-service:
     build: ./legacy
     resources:
@@ -169,7 +168,7 @@ services:
 
 When linked to a service, the following environment variables are injected (assuming resource name `database`):
 
-```
+```text
 DATABASE_URL=mariadb://username:password@host.name:3306/database
 DATABASE_USER=username
 DATABASE_PASS=password

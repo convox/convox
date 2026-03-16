@@ -1,6 +1,5 @@
 ---
 title: "version"
-draft: false
 slug: version
 url: /reference/cli/version
 ---
@@ -8,15 +7,21 @@ url: /reference/cli/version
 
 ## version
 
-Display version information
+Display the current Convox CLI client version and the Rack server version.
 
 ### Usage
-```html
+```bash
     convox version
 ```
 ### Examples
-```html
+```bash
     $ convox version
-    client: 3.0.0.beta40
-    server: 20200116125110
+    client: 3.23.3
+    server: 3.23.3
 ```
+
+The `client` line shows the version of the locally installed CLI. The `server` line shows the version of the currently selected Rack.
+
+## See Also
+
+- [CLI Update](/reference/cli/update) for updating the CLI

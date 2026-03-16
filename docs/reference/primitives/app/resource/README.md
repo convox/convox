@@ -1,18 +1,21 @@
 ---
 title: "Resource"
-draft: false
-slug: Resource
+slug: resource
 url: /reference/primitives/app/resource
 ---
 # Resource
 
-A Resource is a network-accessible external service.
+A Resource is a network-accessible external service such as a database or cache. Convox supports three resource deployment models:
 
-## Definition
+- **Containerized**: Runs the resource inside your Rack cluster. Fast to set up, low cost, ideal for development and staging.
+- **AWS Managed (RDS/ElastiCache)**: Provisions a fully managed AWS service. Use for production workloads requiring durability, backups, and high availability.
+- **Convox Cloud Databases**: Managed databases available on [Convox Cloud](/cloud/databases) with simplified configuration and pricing.
+
+## Resource Definition
 
 A Resource is defined in [`convox.yml`](/configuration/convox-yml) and linked to one or more [Services](/reference/primitives/app/service).
 
-```html
+```yaml
 resources:
   main:
     type: postgres
@@ -24,14 +27,24 @@ services:
 
 ## Types
 
-The following Resource types are currently available:
+### Containerized
 
-* `mariadb`
-* `memcached`
-* `mysql`
-* `postgis`
-* `postgres`
-* `redis`
+- `mariadb`
+- `memcached`
+- `mysql`
+- [`postgis`](/reference/primitives/app/resource/postgis)
+- `postgres`
+- `redis`
+
+### AWS Managed (RDS/ElastiCache)
+
+- `rds-mariadb`
+- `rds-mysql`
+- `rds-postgres`
+- `elasticache-redis`
+- `elasticache-memcached`
+
+See [AWS RDS Managed Database Resources](#aws-rds-managed-database-resources) and [AWS ElastiCache Redis and Memcached Resources](#aws-elasticache-redis-and-memcached-resources) below for configuration details.
 
 ## Linking
 
@@ -41,7 +54,7 @@ The credential details will be stored in the environment variables, and you can 
 
 For example, a `postgres` resource named `main` (as in the example above) would be injected like this:
 
-```html
+```text
 MAIN_URL=postgres://username:password@host.name:port/database
 MAIN_USER=username
 MAIN_PASS=password
@@ -50,13 +63,13 @@ MAIN_PORT=port
 MAIN_NAME=database
 ```
 
-## Custom Images:
+## Custom Images
 
-You can also pass a compatible custom image for all resource type.
+You can also pass a compatible custom image for all resource types.
 
 To use a custom image, include the `image` field in your resource configuration:
 
-```html
+```yaml
 resources:
   main:
     type: postgres
@@ -74,13 +87,13 @@ Note:
 
 Example:
 
-```html
+```yaml
 resources:
-  myRedis:
+  my-redis:
     type: redis
     image: custom-redis-image:6.2
     options:
-      version: 6.0
+      version: "6.0"
 ```
 
 In this example, a custom Redis image named `custom-redis-image` with tag `6.2` will be used.
@@ -89,13 +102,46 @@ In this example, a custom Redis image named `custom-redis-image` with tag `6.2` 
 
 By default, any Resources you define will be satisfied by starting a containerized version on your [Rack](/reference/primitives/rack). This allows you to get up and running as quickly as possible and provides a low-cost solution and more effective usage of your Rack.
 
-In your production environment, or for particular usage requirements, you may wish to replace the containerized Resources with a managed cloud service for durability. For instance, on AWS you may wish to utilize RDS to provide you with a Database, or on GCP you may wish to use Memorystore in place of a containerized Redis instance.
+In your production environment, or for particular usage requirements, you may wish to replace the containerized Resources with a managed cloud service for durability. For instance, on AWS you may wish to utilize RDS to provide you with a Database, or replace a containerized Redis instance with an ElastiCache-managed resource.
 
-Resource Overlays provide you with a simple and effective way to maintain the cheaper and efficient containerized Resources on the environments you wish, while easily switching them out for the cloud-provider managed services on those environments that require them.
+Resource Overlays provide you with a simple and effective way to maintain the cheaper and efficient containerized Resources on the environments you wish, while switching them out for the cloud-provider managed services on those environments that require them.
+
+### Example: Development vs Production Resources
+
+In development, you might use a containerized Postgres resource:
+
+```yaml
+resources:
+  database:
+    type: postgres
+services:
+  web:
+    resources:
+      - database
+```
+
+For production, you can overlay this with an AWS RDS managed database without changing your application code:
+
+```yaml
+resources:
+  database:
+    type: rds-postgres
+    options:
+      class: db.m5.large
+      storage: 100
+      encrypted: true
+      durable: true
+services:
+  web:
+    resources:
+      - database
+```
+
+The environment variable injected into your service (e.g., `DATABASE_URL`) uses the same format in both cases, so your application connects to either resource transparently.
 
 If you wish to replace any of those containerized Resources on a Rack, to stop them being initiated, you can manually set a matching environment variable on your [App](/reference/primitives/app). The corresponding Resource will then not be started by Convox on that Rack.
 
-```html
+```bash
 $ convox env set MAIN_URL=postgres://username:password@postgres-instance1.123456789012.us-east-1.rds.amazonaws.com:5432/database -r production-rack
 Setting MAIN_URL... OK
 Release: RABCDEFGHI
@@ -105,20 +151,20 @@ By doing this, a containerized `main` resource will now no longer be started on 
 
 ## AWS RDS Managed Database Resources
 
-In addition to containerized resources, Convox v3 allows the creation of database resources (mariadb, mysql, and postgres) via AWS RDS. This integration provides enhanced durability and managed service benefits. Below are the basic configurations required for using AWS RDS resources.
+In addition to containerized resources, Convox allows the creation of database resources (mariadb, mysql, and postgres) via AWS RDS. This integration provides enhanced durability and managed service benefits. Below are the basic configurations required for using AWS RDS resources.
 
 ### Defining AWS RDS Resources
 
 AWS RDS resources are specified with a `rds-` prefix followed by the database type (e.g., `rds-mariadb`, `rds-mysql`, `rds-postgres`). Here is a general example of how to define AWS RDS resources:
 
-```html
+```yaml
 resources:
   database:
     type: rds-postgres
     options:
       storage: 100
       class: db.t3.large
-      version: 13
+      version: "16"
 services:
   web:
     resources:
@@ -127,14 +173,13 @@ services:
 
 For detailed configuration options and defaults for each type of AWS RDS resource, refer to the specific resource documentation pages:
 
-- [MariaDB](/reference/primitives/app/resource/mariadb/)
-- [MySQL](/reference/primitives/app/resource/mysql/)
-- [PostgreSQL](/reference/primitives/app/resource/postgres/)
+- [MariaDB](/reference/primitives/app/resource/mariadb)
+- [MySQL](/reference/primitives/app/resource/mysql)
+- [PostgreSQL](/reference/primitives/app/resource/postgres)
 
 ### Advisory
 
 If an application is deleted, it will delete its created RDS databases. We advise enabling `deletionProtection` for any production or critical databases to avoid any accidental removal. If a database is imported, the database will not be removed if the application is deleted and it will need to be manually deleted.
-
 
 ## RDS Features
 
@@ -144,14 +189,14 @@ Read replicas allow you to create read-only copies of your database to improve r
 
 To configure a read replica, use the `readSourceDB` option to point to another database using the name you've chosen in the `convox.yml`:
 
-```html
+```yaml
 resources:
   mydb:
     type: rds-postgres
     options:
       storage: 100
       class: db.t3.large
-      version: 13
+      version: "16"
   dbrr:
     type: rds-postgres
     options:
@@ -177,7 +222,7 @@ Resource linking works the same with read replicas, meaning environment variable
 
 Database import allows you to integrate any RDS managed database or Elasticache into Convox, whether it was initially created by Convox or not.
 
-```html
+```yaml
 resources:
   mydb-import:
     type: rds-postgres
@@ -198,69 +243,41 @@ services:
 
 You can set the master user password using `convox env set` before deploying:
 
-```html
+```bash
 $ convox env set MYDBPASS=my_secure_password -a myapp
 Setting MYDBPASS... OK
 Release: RABCDEFGHI
 ```
 
-### Snapshot Support
-
-Snapshots allow you to restore a database from a specific point in time.
-
-```html
-resources:
-  db-from-snap:
-    type: rds-postgres
-    options:
-      storage: 10
-      snapshot: test-v3-rds-snapshot-postgres
-      version: 13
-services:
-  web:
-    resources:
-      - db-from-snap
-```
-
-**Usage**:
-- Set the `snapshot` option with the snapshot identifier and ensure the `version` matches the engine version of the snapshot.
-- Remove the `snapshot` option and redeploy to enable options management from the `convox.yml`.
-
-**Immutable Attributes for Snapshots**:
-- Storage encryption
-- Engine version
-- Storage volume
-
-
 ## AWS ElastiCache Redis and Memcached Resources
 
-Convox now supports native AWS ElastiCache Redis and Memcached instances for high-performance caching solutions. These managed cache instances can be defined and linked to services similarly to other managed resources.
+Convox supports native AWS ElastiCache Redis and Memcached instances for high-performance caching solutions. These managed cache instances can be defined and linked to services similarly to other managed resources.
 
 ### Defining AWS ElastiCache Resources
 
 AWS ElastiCache resources are specified with an `elasticache-` prefix followed by the cache type (`redis` or `memcached`). Below are examples of defining both Redis and Memcached resources:
 
 **Redis Example**:
-```html
+```yaml
 resources:
   cache:
     type: elasticache-redis
     options:
       class: cache.t3.micro
-      version: 6.2
+      version: "6.2"
 services:
   web:
     resources:
       - cache
 ```
 
-**Memcached Example** (note that the `nodes` parameter must be set):
-```html
+**Memcached Example** (the `nodes` parameter must be set):
+```yaml
 resources:
   cache:
     type: elasticache-memcached
     options:
-      version: 1.6.6
+      version: "1.6.6"
       class: cache.t4g.micro
       nodes: 1
 services:
@@ -273,21 +290,20 @@ services:
 
 For detailed configuration options and examples for each type of AWS Elasticache resource, refer to the specific resource documentation pages:
 
-- [Redis](/reference/primitives/app/resource/redis/)
-- [Memcached](/reference/primitives/app/resource/memcached/)
-
+- [Redis](/reference/primitives/app/resource/redis)
+- [Memcached](/reference/primitives/app/resource/memcached)
 
 ## Command Line Interface
 
 ### Listing Resources
-```html
+```bash
 $ convox resources -a myapp
 NAME  TYPE      URL
 main  postgres  postgres://username:password@host.name:port/database
 ```
 
 ### Getting Information about a Resource
-```html
+```bash
 $ convox resources info main -a myapp
 Name  main
 Type  postgres
@@ -295,13 +311,13 @@ URL   postgres://username:password@host.name:port/database
 ```
 
 ### Getting the URL for a Resource
-```html
+```bash
 $ convox resources url main -a myapp
 postgres://username:password@host.name:port/database
 ```
 
 ### Launching a Console
-```html
+```bash
 $ convox resources console main -a myapp
 psql (11.5 (Debian 11.5-1+deb10u1), server 10.5 (Debian 10.5-2.pgdg90+1))
 Type "help" for help.
@@ -309,20 +325,25 @@ database=#
 ```
 
 ### Starting a Proxy to a Resource
-```html
+```bash
 $ convox resources proxy main -a myapp
 Proxying localhost:5432 to host.name:port
 ```
 > Proxying allows you to connect tools on your local machine to Resources running inside the Rack.
 
 ### Exporting Data from a Resource
-```html
+```bash
 $ convox resources export main -f /tmp/db.sql
 Exporting data from main... OK
 ```
 
 ### Importing Data to a Resource
-```html
+```bash
 $ convox resources import main -f /tmp/db.sql
 Importing data to main... OK
 ```
+
+## See Also
+
+- [Convox Cloud Databases](/cloud/databases) for managed databases with simplified pricing on Convox Cloud
+- [Environment Variables](/configuration/environment) for configuring resource connection strings

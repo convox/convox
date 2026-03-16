@@ -1,6 +1,5 @@
 ---
 title: "ebs_volume_encryption_enabled"
-draft: false
 slug: ebs_volume_encryption_enabled
 url: /configuration/rack-parameters/aws/ebs_volume_encryption_enabled
 ---
@@ -22,13 +21,13 @@ The default value for `ebs_volume_encryption_enabled` is `false`.
 
 ## Setting Parameters
 To enable EBS volume encryption, use the following command:
-```html
+```bash
 $ convox rack params set ebs_volume_encryption_enabled=true -r rackName
 Setting parameters... OK
 ```
 
 To disable EBS volume encryption:
-```html
+```bash
 $ convox rack params set ebs_volume_encryption_enabled=false -r rackName
 Setting parameters... OK
 ```

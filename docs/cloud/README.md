@@ -1,6 +1,5 @@
 ---
 title: "Convox Cloud"
-draft: false
 slug: cloud
 url: /cloud
 ---
@@ -97,10 +96,10 @@ $ convox cloud deploy -i my-machine -a my-app
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: small
-      version: 17.5
+      version: "17.5"
 
 services:
   web:
@@ -114,24 +113,7 @@ services:
       - database
 ```
 
-## Core Concepts
-
-### Machines
-Pre-configured compute units that provide CPU, memory, and storage for your applications. Machines are fully managed and automatically maintained.
-
-### Cloud Databases
-Fully managed RDS database instances. Define databases in your `convox.yml` with `provider: aws` to use Cloud Databases instead of containerized databases.
-
-### Applications
-Standard Convox applications that run on machines. Applications use the same `convox.yml` format and support the same features as rack-based deployments.
-
-### Build Isolation
-Builds run in separate, ephemeral environments to prevent resource contention.
-
-### Automatic Updates
-System components and security patches are automatically applied.
-
-## Use Cases
+## When to Use Convox Cloud
 
 Convox Cloud is suitable for:
 
@@ -151,6 +133,6 @@ Convox Cloud is suitable for:
 
 ## Support
 
-- Documentation: [docs.convox.com](https://docs.convox.com)
+- Documentation: [Convox Docs](/getting-started/introduction)
 - Community: [community.convox.com](https://community.convox.com)
 - Support: cloud-support@convox.com

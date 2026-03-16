@@ -1,6 +1,5 @@
 ---
 title: "build_disable_convox_resolver"
-draft: false
 slug: build_disable_convox_resolver
 url: /configuration/rack-parameters/aws/build_disable_convox_resolver
 ---
@@ -23,13 +22,13 @@ The default value for `build_disable_convox_resolver` is `false`.
 
 ## Setting Parameters
 To disable the Convox DNS resolver during builds, use the following command:
-```html
+```bash
 $ convox rack params set build_disable_convox_resolver=true -r rackName
 Setting parameters... OK
 ```
 
 To re-enable the Convox DNS resolver (if needed):
-```html
+```bash
 $ convox rack params set build_disable_convox_resolver=false -r rackName
 Setting parameters... OK
 ```
@@ -48,6 +47,3 @@ Setting parameters... OK
   - Experiencing intermittent build failures related to network connectivity
 - After changing this parameter, you should perform a build to verify that DNS resolution issues have been resolved.
 - If disabling the Convox DNS resolver does not resolve your build issues, other network-related factors may be involved.
-
-## Version Requirements
-This feature requires at least Convox rack version `3.18.3`.

@@ -1,6 +1,5 @@
 ---
 title: "private"
-draft: false
 slug: private
 url: /configuration/rack-parameters/aws/private
 ---
@@ -21,11 +20,10 @@ The default value for `private` is `true`.
 
 ## Setting Parameters
 The `private` parameter must be configured at rack installation. Example:
+
 | Key                    | Value                                         |
 |------------------------|-----------------------------------------------|
 | `private`  | `true` |
-
-&nbsp;
 
 ## Additional Information
 When the `private` parameter is set to `true`, nodes are placed in private subnets, which enhances security by preventing direct access from the internet.

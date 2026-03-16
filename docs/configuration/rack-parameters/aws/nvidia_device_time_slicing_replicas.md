@@ -1,6 +1,5 @@
 ---
 title: "nvidia_device_time_slicing_replicas"
-draft: false
 slug: nvidia_device_time_slicing_replicas
 url: /configuration/rack-parameters/aws/nvidia_device_time_slicing_replicas
 ---
@@ -23,7 +22,7 @@ The default value for `nvidia_device_time_slicing_replicas` is not set (disabled
 ## Prerequisites
 The NVIDIA device plugin must be enabled on your rack before using time slicing:
 
-```html
+```bash
 $ convox rack params set nvidia_device_plugin_enable=true -r rackName
 Setting parameters... OK
 ```
@@ -31,13 +30,13 @@ Setting parameters... OK
 ## Setting Parameters
 To configure GPU time slicing, set the number of virtual replicas each physical GPU should be divided into:
 
-```html
+```bash
 $ convox rack params set nvidia_device_time_slicing_replicas=5 -r rackName
 Setting parameters... OK
 ```
 
 To disable GPU time slicing:
-```html
+```bash
 $ convox rack params unset nvidia_device_time_slicing_replicas -r rackName
 Unsetting nvidia_device_time_slicing_replicas... OK
 ```
@@ -46,14 +45,14 @@ Unsetting nvidia_device_time_slicing_replicas... OK
 The replica count determines how many virtual GPU resources each physical GPU provides:
 
 - `replicas=2` = Each virtual GPU gets ~50% of physical GPU capacity
-- `replicas=4` = Each virtual GPU gets ~25% of physical GPU capacity  
+- `replicas=4` = Each virtual GPU gets ~25% of physical GPU capacity
 - `replicas=5` = Each virtual GPU gets ~20% of physical GPU capacity
 - `replicas=8` = Each virtual GPU gets ~12.5% of physical GPU capacity
 
 ## Verification
 After applying the configuration, you can verify that nodes are advertising the correct number of GPU resources:
 
-```html
+```bash
 $ kubectl describe node <gpu-node-name>
 ```
 

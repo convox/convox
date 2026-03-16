@@ -1,6 +1,5 @@
 ---
 title: "PostgreSQL"
-draft: false
 slug: postgres
 url: /cloud/databases/postgres
 ---
@@ -15,10 +14,10 @@ Convox Cloud provides fully managed PostgreSQL databases through AWS RDS.
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: small
-      version: 17.5
+      version: "17.5"
 
 services:
   web:
@@ -102,10 +101,10 @@ Enabling `durable: true` doubles the monthly cost.
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: dev
-      version: 17.5
+      version: "17.5"
 
 services:
   web:
@@ -121,10 +120,10 @@ services:
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: large
-      version: 17.5
+      version: "17.5"
       durable: true
 
 services:
@@ -141,18 +140,18 @@ services:
 resources:
   primary:
     type: postgres
-    provider: aws
+
     options:
       class: medium
-      version: 17.5
+      version: "17.5"
       durable: true
-      
+
   analytics:
     type: postgres
-    provider: aws
+
     options:
       class: small
-      version: 16.11
+      version: "16.11"
 
 services:
   web:
@@ -160,7 +159,7 @@ services:
     port: 3000
     resources:
       - primary
-      
+
   reporting:
     build: ./reporting
     resources:
@@ -171,7 +170,7 @@ services:
 
 When linked to a service, the following environment variables are injected (assuming resource name `database`):
 
-```
+```text
 DATABASE_URL=postgres://username:password@host.name:5432/database
 DATABASE_USER=username
 DATABASE_PASS=password

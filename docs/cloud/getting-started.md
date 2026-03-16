@@ -1,6 +1,5 @@
 ---
 title: "Getting Started with Convox Cloud"
-draft: false
 slug: getting-started
 url: /cloud/getting-started
 ---
@@ -14,7 +13,7 @@ This guide walks you through setting up Convox Cloud and deploying your first ap
 Before you begin, ensure you have:
 
 - A Convox account (sign up at [console.convox.com](https://console.convox.com/signup))
-- The latest Convox CLI installed (version 3.19.0 or higher)
+- The latest Convox CLI installed
 - An application with a `Dockerfile` ready to deploy
 
 ## Step 1: Install the Convox CLI
@@ -38,7 +37,7 @@ $ sudo chmod 755 /usr/local/bin/convox
 Verify the installation:
 ```bash
 $ convox version
-client: 3.22.2
+client: 3.23.4
 ```
 
 ## Step 2: Login to Convox
@@ -46,7 +45,7 @@ client: 3.22.2
 Generate a CLI token from the Console Account page and authenticate with your Convox account:
 
 ```bash
-$ convox login console.convox.com -t <CLI Token> 
+$ convox login console.convox.com -t <CLI Token>
 Authenticating with console.convox.com... OK
 ```
 
@@ -115,7 +114,7 @@ Get the URL for your deployed application:
 ```bash
 $ convox cloud services -a my-app -i my-first-machine
 SERVICE  DOMAIN                                    PORTS
-web      web.my-app.cloud.convox.com              443:3000
+web      web.my-app.cloud.convox.com               443:3000
 ```
 
 Visit the URL in your browser to see your running application.
@@ -126,8 +125,8 @@ Monitor your application logs:
 
 ```bash
 $ convox cloud logs -s web -a my-app -i my-first-machine
-2024-01-15T10:30:00Z service/web/abc123 App listening on port 3000
-2024-01-15T10:30:15Z service/web/abc123 GET / 200
+2026-01-15T10:30:00Z service/web/abc123 App listening on port 3000
+2026-01-15T10:30:15Z service/web/abc123 GET / 200
 ```
 
 ## Step 8: Scale Your Application
@@ -167,10 +166,10 @@ To add a managed database to your application, update your `convox.yml`:
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: dev
-      version: 17.5
+      version: "17.5"
 
 services:
   web:
@@ -188,7 +187,7 @@ $ convox cloud deploy -a my-app -i my-first-machine
 
 The database connection URL is automatically injected as environment variables:
 
-```
+```text
 DATABASE_URL=postgres://username:password@host.name:5432/database
 DATABASE_USER=username
 DATABASE_PASS=password
@@ -205,10 +204,10 @@ For production workloads, use a larger class with Multi-AZ failover:
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: small
-      version: 17.5
+      version: "17.5"
       durable: true
 
 services:
@@ -242,7 +241,7 @@ Running... OK
 $ convox cloud releases -a my-app -i my-first-machine
 ID           STATUS  BUILD        CREATED        DESCRIPTION
 RCDEFGHIJK           BABCDEFGHI   1 minute ago   env add:API_KEY
-RABCDEFGHI   active  BABCDEFGHI   5 minutes ago  
+RABCDEFGHI   active  BABCDEFGHI   5 minutes ago
 ```
 
 ### Rolling Back
@@ -318,10 +317,14 @@ $ convox cloud env -a my-app -i my-first-machine
 - [Sizing and Pricing](/cloud/machines/sizing-and-pricing) - Optimize your costs
 - [Limitations](/cloud/machines/limitations) - Understand platform constraints
 
+## See Also
+
+- [Quick Apps](/reference/quick-apps) for ready-to-deploy sample applications you can use to get started quickly
+
 ## Getting Help
 
 If you encounter issues:
 
-- Check the [documentation](https://docs.convox.com)
+- Check the [documentation](/getting-started/introduction)
 - Visit the [community forum](https://community.convox.com)
 - Contact support at cloud-support@convox.com

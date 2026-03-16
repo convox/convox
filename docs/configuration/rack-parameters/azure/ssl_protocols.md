@@ -1,6 +1,5 @@
 ---
 title: "ssl_protocols"
-draft: false
 slug: ssl_protocols
 url: /configuration/rack-parameters/azure/ssl_protocols
 ---
@@ -20,7 +19,7 @@ The default value is an empty string (`""`), which uses the nginx default protoc
 
 ## Setting Parameters
 To set the `ssl_protocols` parameter, use the following command:
-```html
+```bash
 $ convox rack params set ssl_protocols=TLSv1.2+TLSv1.3 -r rackName
 Setting parameters... OK
 ```

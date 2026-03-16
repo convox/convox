@@ -1,7 +1,6 @@
 ---
 title: "Dockerfile"
-draft: false
-slug: Dockerfile
+slug: dockerfile
 url: /configuration/dockerfile
 ---
 
@@ -9,8 +8,8 @@ url: /configuration/dockerfile
 
 The `Dockerfile` describes the steps used to create a [Build](/reference/primitives/app/build) from your
 application code.
-```html
-    FROM ubuntu:18.04
+```dockerfile
+    FROM ubuntu:24.04
     COPY . .
     RUN ["deps", "install"]
     CMD ["bin/start"]
@@ -31,8 +30,8 @@ Each line of a `Dockerfile` will be cached as long as files referenced by it are
 to cache expensive steps such as dependency installation by selectively copying files before running commands.
 
 The following example selectively copies only the files needed to run `npm` before installing dependencies.
-```html
-    FROM nodejs
+```dockerfile
+    FROM node
 
     COPY package.json package-lock.json .
     RUN ["npm", "install"]
@@ -53,15 +52,18 @@ deployments.
 > in the resulting image.
 
 You can declare build variables using the `ARG` directive with an optional default value:
-```html
-    ARG COPYRIGHT=2020
+```text
+    ARG COPYRIGHT=2026
     ARG RUBY_VERSION
 ```
 Values for these variables will be read from the [Environment](/configuration/environment) at build time:
-```html
+```bash
     $ convox env set RUBY_VERSION=2.6.4
 ```
+You can also pass build arguments directly via the CLI using the `--build-args` flag (requires rack version 3.22.0+). See [Build Arguments](/reference/primitives/app/build#build-arguments) for the full range of options including Convox-managed build arguments.
+
 ## See Also
 
+- [Build Arguments](/reference/primitives/app/build#build-arguments) for CLI-based build arguments and Convox-managed args
 - [Dockerfile: Best Practices](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/)
 - [Private Registries](/configuration/private-registries)

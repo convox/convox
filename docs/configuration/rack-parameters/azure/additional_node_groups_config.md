@@ -1,6 +1,5 @@
 ---
 title: "additional_node_groups_config"
-draft: false
 slug: additional_node_groups_config
 url: /configuration/rack-parameters/azure/additional_node_groups_config
 ---
@@ -41,7 +40,7 @@ The `additional_node_groups_config` parameter takes a JSON array of node pool co
 To set the `additional_node_groups_config` parameter, there are several methods:
 
 ### Using a JSON File (Recommended)
-```html
+```bash
 $ convox rack params set additional_node_groups_config=/path/to/node-config.json -r rackName
 Setting parameters... OK
 ```
@@ -73,7 +72,7 @@ The JSON file should be structured as follows:
 ```
 
 ### Using a Raw JSON String
-```html
+```bash
 $ convox rack params set 'additional_node_groups_config=[{"id":101,"type":"Standard_D4s_v3","disk":50,"capacity_type":"ON_DEMAND","min_size":1,"max_size":3,"label":"app-workers","tags":"environment=production,team=backend"}]' -r rackName
 Setting parameters... OK
 ```
@@ -143,6 +142,10 @@ services:
 ```
 
 This will ensure that the `web` service is scheduled only on nodes with the label `convox.io/label: app-workers`.
+
+## Architecture Compatibility
+
+Convox on Azure requires x86-based VM SKUs. ARM-based VM SKUs are not supported. All node pools must use x86 VM SKUs to match the rack's [node_type](/configuration/rack-parameters/azure/node_type).
 
 ## Additional Information
 When using dedicated node pools (with `dedicated: true`), only services with matching node selector labels will be scheduled on those nodes. This provides strong isolation for workloads with specific requirements.

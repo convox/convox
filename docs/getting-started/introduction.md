@@ -1,7 +1,6 @@
 ---
 title: "Introduction"
-draft: false
-slug: Introduction
+slug: introduction
 url: /getting-started/introduction
 ---
 
@@ -13,17 +12,17 @@ Convox is an open-source Platform as a Service (PaaS) that you can install on yo
 
 Here are some helpful tutorials to get started with Convox:
 
-* [Create a Free Convox Account](#create-a-free-convox-account)
-* [Install a Runtime Integration for Your Cloud Provider](#install-a-runtime-integration-for-your-cloud-provider)
-* [Install a Rack](#install-a-rack)
-* [Install the Convox CLI and Log In](#install-the-convox-cli-and-log-in)
-* [Deploy a Sample App](#deploy-a-sample-app)
-* [Make a Code Change and Redeploy](#make-a-code-change-and-redeploy)
-* [Perform a Rollback](#perform-a-rollback)
+- [Create a Free Convox Account](#create-a-free-convox-account)
+- [Install a Runtime Integration for Your Cloud Provider](#install-a-runtime-integration-for-your-cloud-provider)
+- [Install a Rack](#install-a-rack)
+- [Install the Convox CLI and Log In](#install-the-convox-cli-and-log-in)
+- [Deploy a Sample App](#deploy-a-sample-app)
+- [Make a Code Change and Redeploy](#make-a-code-change-and-redeploy)
+- [Perform a Rollback](#perform-a-rollback)
 
 ## Create a Free Convox Account
 
-To create a Convox account, simply sign up [here](https://console.convox.com/signup). We recommend using your company or organization's email address.
+To create a Convox account, sign up [here](https://console.convox.com/signup). We recommend using your company or organization's email address.
 
 The first time you log in, you will be prompted to create an Organization. An Organization can have multiple users, such as colleagues or project collaborators, who you can invite to join. You can rename your Organization at any time from the Console Settings page.
 
@@ -51,14 +50,13 @@ Finally, click install to begin creating your infrastructure. Rack installation 
 
 ![Rack Install](/images/documentation/getting-started/introduction/rack_install.png)
 
-
 ## Install the Convox CLI and Log In
 
 To install the Convox CLI, follow the instructions for your operating system:
 
 ### Linux
 
-#### x86_64 / amd64
+#### Linux x86_64 / amd64
 
 ```bash
 $ curl -L https://github.com/convox/convox/releases/latest/download/convox-linux -o /tmp/convox
@@ -66,7 +64,7 @@ $ sudo mv /tmp/convox /usr/local/bin/convox
 $ sudo chmod 755 /usr/local/bin/convox
 ```
 
-#### arm64
+#### Linux arm64
 
 ```bash
 $ curl -L https://github.com/convox/convox/releases/latest/download/convox-linux-arm64 -o /tmp/convox
@@ -76,7 +74,7 @@ $ sudo chmod 755 /usr/local/bin/convox
 
 ### macOS
 
-#### x86_64 / amd64
+#### macOS x86_64 / amd64
 
 ```bash
 $ curl -L https://github.com/convox/convox/releases/latest/download/convox-macos -o /tmp/convox
@@ -84,7 +82,7 @@ $ sudo mv /tmp/convox /usr/local/bin/convox
 $ sudo chmod 755 /usr/local/bin/convox
 ```
 
-#### arm64
+#### macOS arm64
 
 ```bash
 $ curl -L https://github.com/convox/convox/releases/latest/download/convox-macos-arm64 -o /tmp/convox
@@ -110,7 +108,7 @@ For a quick overview of some commonly used CLI commands, check out this [blog po
 
 ## Deploy a Sample App
 
-One of the easiest ways to get familiar with Convox is to clone one of our sample apps. For this tutorial, we will use a simple [Node.js app](https://github.com/convox-examples/nodejs) from our [example repository](https://github.com/convox-examples).
+A good way to get familiar with Convox is to clone one of our sample apps. For this tutorial, we will use a simple [Node.js app](https://github.com/convox-examples/nodejs) from our [example repository](https://github.com/convox-examples).
 
 ### Clone the Example App
 
@@ -150,7 +148,7 @@ NAME               PROVIDER  STATUS
 org/dev            aws       running
 ```
 
-Then, connect to the Rack you just created with `convox switch`:
+Then, connect to the Rack you created with `convox switch`:
 
 ```bash
 $ convox switch dev
@@ -180,7 +178,7 @@ Starting build... OK
 Authenticating 782231114432.dkr.ecr.us-east-1.amazonaws.com: Login Succeeded
 Building: .
 Sending build context to Docker daemon  48.95MB
-Step 1/5 : FROM node:10.16.3-alpine
+Step 1/5 : FROM node:20-alpine
 ..........
 ```
 
@@ -190,7 +188,7 @@ Once the deployment has completed, verify the app is running by running the `con
 
 ```bash
 $ convox services
-SERVICE  DOMAIN                               PORTS
+SERVICE  DOMAIN                                PORTS
 web      web.nodejs.0a1b2c3d4e5f.convox.cloud  443:3000
 ```
 
@@ -247,3 +245,9 @@ Hopefully, this small example has given you an idea of how easy and powerful Con
 ## Take a Tour of the Convox Console
 
 To get familiar with the Convox Console and some of its additional features, watch our [Convox - Console Tour](https://www.youtube.com/watch?v=p7f_MzAFxSg&t=25s) video on YouTube. This video provides a comprehensive overview of the console, helping you navigate and utilize its various functionalities effectively.
+
+## See Also
+
+- [Preparing an Application](/tutorials/preparing-an-application) for structuring your app for Convox
+- [Deploying an Application](/tutorials/deploying-an-application) for a step-by-step deployment walkthrough
+- [CLI Reference](/reference/cli) for the full list of CLI commands

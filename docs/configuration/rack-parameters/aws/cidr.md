@@ -1,6 +1,5 @@
 ---
 title: "cidr"
-draft: false
 slug: cidr
 url: /configuration/rack-parameters/aws/cidr
 ---
@@ -19,11 +18,10 @@ The default value for `cidr` is `10.1.0.0/16`.
 
 ## Setting Parameters
 The `cidr` parameter must be configured at rack installation. Example:
+
 | Key                    | Value                                         |
 |------------------------|-----------------------------------------------|
 | `cidr`  | `10.2.0.0/16` |
-
-&nbsp;
 
 ## Additional Information
 Choosing an appropriate CIDR range is crucial for the efficient management of your network. Ensure that the CIDR range does not overlap with any existing networks to avoid IP address conflicts. The CIDR range you choose should accommodate the number of subnets and hosts you plan to deploy within your VPC. For more information on CIDR notation and VPC planning, refer to the [AWS VPC documentation](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Subnets.html#VPC_Sizing).

@@ -1,6 +1,5 @@
 ---
 title: "Cloud CLI Reference"
-draft: false
 slug: cli-reference
 url: /cloud/cli-reference
 ---
@@ -257,7 +256,7 @@ $ convox cloud builds logs <build> -a <app> -i <machine>
 ```bash
 $ convox cloud builds logs BABCDEFGHI -a myapp -i production
 Building: .
-Step 1/5 : FROM node:18
+Step 1/5 : FROM node:22
 ...
 Successfully built abc123def456
 ```
@@ -282,7 +281,7 @@ $ convox cloud deploy [dir] -i <machine>
 
 **Example:**
 ```bash
-$ convox cloud deploy . -i production --description "v2.0 release"
+$ convox cloud deploy . -i production --description "weekly release"
 Packaging source... OK
 Uploading source... OK
 Starting build... OK
@@ -309,7 +308,6 @@ $ convox cloud env -a <app> -i <machine>
 ```bash
 $ convox cloud env -a myapp -i production
 DATABASE_URL=postgres://localhost/myapp
-REDIS_URL=redis://localhost:6379
 NODE_ENV=production
 ```
 
@@ -455,7 +453,7 @@ $ convox cloud run web "rake db:migrate" -a myapp -i production
 Running... OK
 
 $ convox cloud run web bash -a myapp -i production
-/app # 
+/app #
 ```
 
 ## Release Management
@@ -477,7 +475,7 @@ $ convox cloud releases -a <app> -i <machine>
 $ convox cloud releases -a myapp -i production
 ID           STATUS  BUILD        CREATED        DESCRIPTION
 RCDEFGHIJK           BABCDEFGHI   1 minute ago   env add:API_KEY
-RABCDEFGHI   active  BABCDEFGHI   5 minutes ago  v2.0 release
+RABCDEFGHI   active  BABCDEFGHI   5 minutes ago  weekly release
 ```
 
 ### releases create-from
@@ -561,9 +559,9 @@ $ convox cloud services -a <app> -i <machine>
 **Example:**
 ```bash
 $ convox cloud services -a myapp -i production
-SERVICE  DOMAIN                                    PORTS
-web      web.myapp.cloud.convox.com              443:3000
-api      api.myapp.cloud.convox.com              443:8080
+SERVICE  DOMAIN                              PORTS
+web      web.myapp.cloud.convox.com            443:3000
+api      api.myapp.cloud.convox.com            443:8080
 ```
 
 ### services restart
@@ -617,7 +615,7 @@ OK
 
 ## Resource Management (Cloud Databases)
 
-Cloud Databases are defined in your `convox.yml` with `provider: aws`. The CLI provides commands to interact with these managed databases.
+Cloud Databases are defined in your `convox.yml` using a managed resource type. The CLI provides commands to interact with these managed databases.
 
 ### resources
 
@@ -635,7 +633,6 @@ $ convox cloud resources -a <app> -i <machine>
 $ convox cloud resources -a myapp -i production
 NAME      TYPE      URL
 database  postgres  postgres://user:pass@host:5432/db
-cache     redis     redis://host:6379/0
 ```
 
 ### resources console
@@ -749,8 +746,8 @@ $ convox cloud logs -a <app> -i <machine>
 **Example:**
 ```bash
 $ convox cloud logs -a myapp -i production --service web --since 1h
-2024-01-15T10:30:00Z service/web/abc123 GET / 200
-2024-01-15T10:30:15Z service/web/abc123 GET /api/users 200
+2026-01-15T10:30:00Z service/web/abc123 GET / 200
+2026-01-15T10:30:15Z service/web/abc123 GET /api/users 200
 ```
 
 ## Configuration Management
@@ -821,7 +818,7 @@ $ convox cloud test -a <app> -i <machine>
 ```bash
 $ convox cloud test -a myapp -i staging
 Running tests...
-✓ All tests passed
+OK
 ```
 
 ## Common Patterns
@@ -839,8 +836,8 @@ $ convox cloud env set DATABASE_URL=postgres://... -a myapp -i prod
 # Scale service
 $ convox cloud scale web --count 3 --cpu 500 -a myapp -i prod
 
-# Monitor logs
-$ convox cloud logs -a myapp -i prod --follow
+# Monitor logs (streams by default; use --no-follow for one-time dump)
+$ convox cloud logs -a myapp -i prod
 ```
 
 ### Development Workflow
@@ -899,6 +896,6 @@ $ convox cloud <command> --help
 ```
 
 For support:
-- Documentation: [docs.convox.com](https://docs.convox.com)
+- Documentation: [Convox Docs](/getting-started/introduction)
 - Community: [community.convox.com](https://community.convox.com)
 - Email: cloud-support@convox.com

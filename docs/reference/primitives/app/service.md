@@ -1,7 +1,6 @@
 ---
 title: "Service"
-draft: false
-slug: Service
+slug: service
 url: /reference/primitives/app/service
 ---
 # Service
@@ -12,9 +11,9 @@ A Service is a horizontally-scalable collection of durable [Processes](/referenc
 
 Services can be scaled to a static count or autoscaled in a range based on metrics.
 
-## Definition
+## Service Definition
 
-```html
+```yaml
 services:
   web:
     build: .
@@ -23,7 +22,7 @@ services:
     scale: 3
 ```
 
-```html
+```yaml
 services:
   grpc:
     build: .
@@ -31,7 +30,7 @@ services:
     grpcHealthEnabled: true
 ```
 
-```html
+```yaml
 services:
   web:
     agent: false
@@ -41,13 +40,12 @@ services:
       manifest: Dockerfile
       path: .
     certificate:
-      duration: 2160h 
+      duration: 2160h
     command: bin/web
     deployment:
       minimum: 25
       maximum: 100
     domain: ${WEB_HOST}
-    drain: 10
     dnsConfig:
       ndots: 5
     environment:
@@ -66,6 +64,8 @@ services:
       successThreshold: 1
       failureThreshold: 3
     internal: false
+    initContainer:
+      command: "bin/migrate"
     ingressAnnotations:
       - nginx.ingress.kubernetes.io/limit-rpm=10
     labels:
@@ -76,14 +76,15 @@ services:
     port: 5000
     ports:
       - 5001
-      - 5002
+      - port: 5002
+        protocol: udp
     privileged: false
     scale:
       count: 1-3
       limit:
-        cpu: 256
+        cpu: 500
         memory: 1024
-      cpu: 128
+      cpu: 250
       memory: 512
       targets:
         cpu: 50
@@ -112,22 +113,27 @@ services:
 | **command**     | string     | **CMD** of Dockerfile | The command to run to start a [Process](/reference/primitives/app/process) for this Service                                                                       |
 | **deployment**  | map        |                     | Manual control over deployment parameters                                                                                                  |
 | **domain**      | string     |                     | A custom domain(s) (comma separated) to route to this Service                                                                              |
-| **dnsConfig**      | map     |                     | Dns config for the service|
-| **drain**       | number     |                     | The number of seconds to wait for connections to drain when terminating a [Process](/reference/primitives/app/process) of this Service. Only applies for version 2 rack services. For version 3 rack services use termination grace period **termination.grace** |
+| **dnsConfig**      | map     |                     | DNS configuration for the service |
 | **environment** | list       |                     | A list of environment variables (with optional defaults) to populate from the [Release](/reference/primitives/app/release) environment                            |
-| **grpcHealthEnabled** | boolean   |      false          | Enables liveliness health check for grpc. It should follow the [grpc health protocol](https://github.com/grpc/grpc/blob/master/doc/health-checking.md) (ref: [k8s](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-grpc-liveness-probe))|
+| **grpcHealthEnabled** | boolean   |      false          | Enables gRPC health checking (configures both readiness and liveness probes). Must follow the [gRPC health protocol](https://github.com/grpc/grpc/blob/master/doc/health-checking.md). See [Health Checks](/configuration/health-checks#grpc-health-checks). |
 | **health**      | string/map | /                   | Health check definition (see below)                                                                                                        |
 | **liveness** | map |      | Liveness check definition (see below). By default it is disabled. If it fails then service will restart |
-| **image**       | string     |                     | An external Docker image to use for this Service (supercedes **build**)                                                                      |
+| **startupProbe** | map |  | Startup probe definition. Set `path` (HTTP) or `tcpSocketPort` (TCP) to enable. All timing parameters are inherited from the **liveness** check; setting timing fields directly on `startupProbe` has no effect. See [Health Checks](/configuration/health-checks#startup-probes) |
+| **image**       | string     |                     | An external Docker image to use for this Service (supersedes **build**)                                                                      |
 | **ingressAnnotations** | list       |                     | A list of annotation keys and values to add in ingress resource. Check below for reserved annotation keys |
-| **initContainer** | map       |                     | Init container configuration. This runs before your main application container. Use it to configure application environment. |
+| **initContainer** | map       |                     | Runs a container to completion before the main service container starts. Use for migrations, dependency checks, or setup tasks (see [initContainer](#initcontainer) below) |
 | **internal**    | boolean    | false               | Set to **true** to make this Service only accessible inside the Rack                                                                         |
-| **internalRouter** | boolean    | false               | Set it to **true** to make this Service only accessible using internal loadbalancer. You also have to set the rack parameter [internal_router](/installation/production-rack/aws) to **true**                 |
-| **labels** |  map  |       | Custom labels for k8s resources. See here for (syntax and character set)[https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set]. Also following keys are reserved: `system`, `rack`, `app`, `name`, `service`, `release`, `type` |
+| **internalRouter** | boolean    | false               | Set to **true** to make this Service only accessible using the internal load balancer. Requires the rack parameter [internal_router](/configuration/rack-parameters/aws/internal_router) to also be **true**. |
+| **init**        | boolean    | true                | Set to **false** to disable the init process for this Service. When enabled, an init process runs as PID 1 and handles signal forwarding and zombie process reaping |
+| **labels** |  map  |       | Custom labels for k8s resources. See here for [syntax and character set](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set). The following keys are reserved: `system`, `rack`, `app`, `name`, `service`, `release`, `type` |
 | **lifecycle** |  map  |       | The prestop and poststart hooks enable running commands before terminating and after starting the container, respectively |
+| **configMounts** | list |     | Mount configuration files into the container filesystem. See [Config Mounts](/configuration/config-mounts) |
+| **nodeAffinityLabels** | map |  | Node affinity rules for workload placement. See [Workload Placement](/configuration/scaling/workload-placement) |
+| **nodeSelectorLabels** | map |  | Node selector labels for workload placement. See [Workload Placement](/configuration/scaling/workload-placement) |
 | **port**        | string     |                     | The port that the default Rack balancer will use to [route incoming traffic](/configuration/load-balancers). For grpc service specify the scheme: `grpc:5051`|
-| **ports**       | list       |                     | A list of ports available for internal [service discovery](/configuration/service-discovery) or custom [Balancers](/reference/primitives/app/balancer) |
-| **privileged**  | boolean    | true                | Set to **false** to prevent [Processes](/reference/primitives/app/process) of this Service from running as root inside their container                              |
+| **ports**       | list       |                     | A list of ports available for internal [service discovery](/configuration/service-discovery) or custom [Balancers](/reference/primitives/app/balancer). Supports TCP (default) and UDP protocols |
+| **privileged**  | boolean    | false               | Set to **true** to allow [Processes](/reference/primitives/app/process) of this Service to run as root inside their container. Use with caution as this grants elevated permissions |
+| **resources**   | list       |                     | A list of [Resources](/reference/primitives/app/resource) to make available to this Service (e.g. databases) |
 | **scale**       | map        | 1                   | Define scaling parameters (see below)                                                                                                      |
 | **singleton**   | boolean    | false               | Set to **true** to prevent extra [Processes](/reference/primitives/app/process) of this Service from being started during deployments                               |
 | **sticky**      | boolean    | false               | Set to **true** to enable sticky sessions                                                                                                    |
@@ -135,19 +141,22 @@ services:
 | **test**        | string     |                     | A command to run to test this Service when running **convox test**                                                                           |
 | **timeout**     | number     | 60                  | Timeout period (in seconds) for reading/writing requests to/from your service                                                              |
 | **tls**         | map        |                     | TLS-related configuration                                                                                                                  |
-| **volumeOptions**  | list    |                     | List of volumes to attach with service |
+| **volumes**        | list    |                     | List of [Volumes](/configuration/volumes) to mount (short-form string syntax, e.g. `/data`) |
+| **volumeOptions**  | list    |                     | List of volumes to attach with service (advanced configuration, see below) |
 | **whitelist**   | string     |                     | Comma delimited list of CIDRs, e.g. `10.0.0.0/24,172.10.0.1`, to allow access to the service                                                                                                                  |
 
 > Environment variables declared on `convox.yml` will be populated for a Service.
 
-### *annotations
+> The `drain` attribute is deprecated. Use `termination.grace` instead.
+
+### annotations
 You can use annotations to attach arbitrary non-identifying metadata to objects. Clients such as tools and libraries can retrieve this metadata. On Convox, annotations will reflect in pods and service accounts.
 
 Here are some examples of information that can be recorded in annotations:
 - Build, release, or image information like timestamps, release IDs, git branch, PR numbers, image hashes, and registry address.
 - Fields managed by a declarative configuration layer. Attaching these fields as annotations distinguishes them from default values set by clients or servers, and from auto-generated fields and fields set by auto-sizing or auto-scaling systems.
 - User or tool/system provenance information, such as URLs of related objects from other ecosystem components.
-- Configure a service to assume an IAM Role(AWS and GCP only). For example:
+- Configure a service to assume an AWS IAM Role via IRSA. For example:
 
 ```yaml
 environment:
@@ -166,31 +175,31 @@ services:
 | ---------- | ------ | ---------- | ------------------------------------------------------------- |
 | **awsPodIdentity** | map |  | The specification for IAM Role for AWS Pod Identity. This will only work if pod identity is enable on the rack. |
 
-```html
+```yaml
 services:
   web:
-    ...
+    build: .
+    port: 3000
     accessControl:
       awsPodIdentity:
         policyArns:
          - "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
          - "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
-  ...
 ```
 
 ### accessControl.awsPodIdentity
 
 | Attribute  | Type   | Default    | Description                                                   |
 | ---------- | ------ | ---------- | ------------------------------------------------------------- |
-| **policyArns** | list |  | The of policy arns for the IAM role |
+| **policyArns** | list |  | The list of policy ARNs for the IAM role |
 
 > Pod identity must be enabled on rack before specifying this.
-
 
 ### build
 
 | Attribute  | Type   | Default    | Description                                                   |
 | ---------- | ------ | ---------- | ------------------------------------------------------------- |
+| **args**     | list   |            | Build arguments to pass during the build. See [Build Arguments](/reference/primitives/app/build#build-arguments) |
 | **manifest** | string | Dockerfile | The filename of the Dockerfile                                |
 | **path**     | string | .          | The path (relative to **convox.yml**) to build for this Service |
 
@@ -201,16 +210,16 @@ services:
 | Attribute  | Type   | Default    | Description                                                   |
 | ---------- | ------ | ---------- | ------------------------------------------------------------- |
 | **duration** | string | 2160h | Certificate renew frequency period                                |
-| **id** | string |  | Id of the generated Certificate to use instead of creating new certificate. If this is specified, then the `duration` vaule will not have any effect on the this, since it is already generated.|
+| **id** | string |  | ID of the generated certificate to use instead of creating a new certificate. If specified, the `duration` value will not have any effect, since the certificate is already generated |
 
 ### deployment
 
 | Attribute | Type   | Default | Description                                                                      |
 | --------- | ------ | ------- | -------------------------------------------------------------------------------- |
-| **maximum** | number | 200     | The maximum percentage of Processes to allow during rolling deploys              |
-| **minimum** | number | 50      | The minimum percentage of healthy Processes to keep alive during rolling deploys |
+| **maximum** | number | 200     | The maximum percentage of Processes to allow during rolling deploys. Defaults to 100 for agents and singletons. |
+| **minimum** | number | 50      | The minimum percentage of healthy Processes to keep alive during rolling deploys. Defaults to 0 for agents and singletons. |
 
-&nbsp;
+
 
 ### dnsConfig
 
@@ -218,20 +227,20 @@ services:
 | --------- | ------ | ------- | ------------------------------------------------------------------------------------------ |
 | **ndots**     | int |         | The ndots option for the dns config |
 
-&nbsp;
+
 
 ### ingressAnnotations
 
 This accepts list of strings where in each string annotation key and value is separated by `=` sign:
 
-```html
+```yaml
 services:
   web:
-    ...
+    build: .
+    port: 3000
     ingressAnnotations:
       - nginx.ingress.kubernetes.io/limit-rpm=10
       - nginx.ingress.kubernetes.io/enable-access-log=false
-  ...
 ```
 
 Reserved annotation keys:
@@ -248,44 +257,112 @@ Reserved annotation keys:
 - `nginx.ingress.kubernetes.io/ssl-redirect`
 - `nginx.ingress.kubernetes.io/whitelist-source-range`
 
-&nbsp;
+
 
 ### initContainer
 
-It takes inputs just like a container and runs before main container. It supports all these arguments-
+An init container runs to completion before the main service container starts. Use init containers to perform setup tasks such as database migrations, waiting for upstream dependencies, or preparing configuration. If the init container exits with a non-zero status, the pod will restart and retry it.
+
+The init container automatically receives:
+- All service [environment variables](/configuration/environment)
+- All service [resource](/reference/primitives/app/resource) connections (e.g. `DATABASE_URL`)
+- An `INIT_CONTAINER=true` environment variable
 
 | Attribute | Type   | Default | Description                                                                                |
 | --------- | ------ | ------- | ------------------------------------------------------------------------------------------ |
-| **image**     | string |         | An external Docker image to be run in the init container, if not set then it will use service image |
-| **command**  | string |         | The command to run in the init container |
-| **volumeOptions**  | list |         | List of volumes to attach with service |
+| **image**     | string | service image | An external Docker image to run. If not set, uses the service image |
+| **command**  | string |         | The command to run. **Required** for the init container to be created |
+| **configMounts** | list |      | Mount configuration files into the init container. See [Config Mounts](/configuration/config-mounts) |
+| **volumeOptions**  | list |         | List of volumes to attach (see [volumeOptions](#volumeoptions)) |
 
-* Setting a command is necessary for creation of initContainer.
+#### Database Migrations
 
-&nbsp;
+Run migrations before the application starts:
+
+```yaml
+services:
+  web:
+    build: .
+    port: 3000
+    resources:
+      - database
+    initContainer:
+      command: "bin/migrate"
+```
+
+The init container connects to the database using the same resource credentials as the main service.
+
+#### Waiting for Dependencies
+
+Use a lightweight image to block startup until upstream services are ready:
+
+```yaml
+services:
+  api:
+    build: .
+    port: 3000
+    initContainer:
+      image: busybox:1.36
+      command: |
+        sh -c '
+        echo "Waiting for service-a...";
+        until wget -qO /dev/null http://service-a:8080/healthz 2>/dev/null; do sleep 5; done;
+        echo "service-a ready";
+        echo "Waiting for service-b...";
+        until wget -qO /dev/null http://service-b:9000/health 2>/dev/null; do sleep 5; done;
+        echo "service-b ready";
+        echo "All dependencies ready!"'
+```
+
+This ensures the main container only starts after its dependencies are healthy. Specifying a minimal `image` like `busybox` avoids building dependency-checking logic into your application image.
+
+
 
 ### lifecycle
 
 | Attribute | Type   | Default | Description                                                                                |
 | --------- | ------ | ------- | ------------------------------------------------------------------------------------------ |
-| **perStop**     | string |         | The pre stop command |
-| **postStart**  | string |         | The post stop command |
+| **preStop**     | string |         | Command to run before the container is terminated |
+| **postStart**  | string |         | Command to run immediately after the container starts |
 
-&nbsp;
+Use lifecycle hooks to manage graceful shutdown and post-start initialization:
+
+```yaml
+services:
+  web:
+    build: .
+    port: 3000
+    lifecycle:
+      preStop: "sleep 10"
+      postStart: "/bin/sh -c 'echo started > /tmp/ready'"
+```
+
+The `preStop` hook runs before a container receives the SIGTERM signal during shutdown. A common pattern is to add a brief sleep to allow in-flight requests to complete and load balancers to deregister the pod:
+
+```yaml
+lifecycle:
+  preStop: "sleep 10"
+```
+
+The `postStart` hook runs immediately after the container starts, in parallel with the main process. Use it for tasks like cache warming or service registration.
+
+See [Health Checks](/configuration/health-checks) for configuring readiness, liveness, and startup probes that work alongside lifecycle hooks.
+
+
 
 ### health
 
 | Attribute  | Type   | Default | Description                                                                                      |
 | ---------- | ------ | ------- | ------------------------------------------------------------------------------------------------ |
-| **grace**    | number | 5       | The number of seconds to wait for a [Process](/reference/primitives/app/process) to start before starting health checks |
+| **grace**    | number | `interval` | The number of seconds to wait for a [Process](/reference/primitives/app/process) to start before starting health checks. Defaults to the value of `interval` |
 | **interval** | number | 5       | The number of seconds between health checks                                                      |
 | **path**     | string | /       | The path to request for health checks                                                            |
-| **timeout**  | number | 4       | The number of seconds to wait for a successful response                                          |
-| **disable**  | bool | false       | To disable the healthcheck |
+| **timeout**  | number | `interval - 1` | The number of seconds to wait for a successful response. Defaults to `interval` minus one |
+| **disable**  | bool | false       | Set to `true` to disable the health check entirely |
 
 > Specifying **health** as a string will set the **path** and leave the other values as defaults.
 
-&nbsp;
+
 
 ### liveness
 
@@ -295,8 +372,8 @@ It takes inputs just like a container and runs before main container. It support
 | **interval** | number | 5       | The number of seconds between health checks                                                      |
 | **path**     | string |        | The path to request for health checks                                                            |
 | **timeout**  | number | 5      | The number of seconds to wait for a successful response                                          |
-| **successThreshold**  | number | 1      | The number of seconds to wait for a successful response                                          |
-| **failureThreshold**  | number | 3      | The number of seconds to wait for a successful response                                          |
+| **successThreshold**  | number | 1      | The number of consecutive successful checks required to consider the probe successful             |
+| **failureThreshold**  | number | 3      | The number of consecutive failed checks required before restarting the container                  |
 
 > If you want to enable liveness check, you have to specify **path** and others are optional
 
@@ -305,10 +382,12 @@ It takes inputs just like a container and runs before main container. It support
 | Attribute | Type   | Default | Description                                                                                                   |
 | --------- | ------ | ------- | ------------------------------------------------------------------------------------------------------------- |
 | **count**   | number | 1       | The number of [Processes](/reference/primitives/app/process) to run for this Service. For autoscaling use a range, e.g. **1-5**        |
-| **cpu**     | number | 256     | The number of CPU units to reserve for [Processes](/reference/primitives/app/process) of this Service where 1000 units is a full CPU |
+| **cpu**     | number | 250     | The number of CPU units to reserve for [Processes](/reference/primitives/app/process) of this Service where 1000 units is a full CPU |
 | **gpu**     | map    |         | The number/type of GPUs to reserve for [Processes](/reference/primitives/app/process) of this Service  |
 | **memory**  | number | 512     | The number of MB of RAM to reserve for [Processes](/reference/primitives/app/process) of this Service                                |
 | **targets** | map    |         | Target metrics to trigger autoscaling |
+| **keda** | map    |         | KEDA event-driven autoscaling configuration. See [KEDA](/configuration/scaling/keda) |
+| **vpa** | map    |         | Vertical Pod Autoscaler configuration. See [VPA](/configuration/scaling/vpa) |
 | **limit** | map    |         | The maximum cpu or memory usage limit |
 
 > Specifying **scale** as a number will set the **count** and leave the other values as defaults.
@@ -344,7 +423,7 @@ It takes inputs just like a container and runs before main container. It support
 | Attribute | Type   | Default | Description                                                                                |
 | --------- | ------ | ------- | ------------------------------------------------------------------------------------------ |
 | **name**     | string |         | The name of the metric |
-| **matchLabels**  | map |         | Key value lablels for the metrics |
+| **matchLabels**  | map |         | Key-value labels for the metrics |
 | **averageValue**  | number |         | The target value of the average of the metric across all relevant pods |
 | **value**  | number |         | The target value of the metric |
 
@@ -361,7 +440,7 @@ services:
             averageValue: 200
 ```
 
-&nbsp;
+
 
 ### termination
 
@@ -369,7 +448,7 @@ services:
 | ---------- | ------- | ------- | ------------------------------------------------------------------------------------------------ |
 | **grace**    | number  | 30      | The number of seconds to wait for [Processes](/reference/primitives/app/process) to gracefully exit before killing them |
 
-&nbsp;
+
 
 ### tls
 
@@ -377,7 +456,7 @@ services:
 | ---------- | ------- | ------- | ------------------------------------------------------------------------------------ |
 | **redirect** | boolean | true    | Whether or not HTTP requests should be redirected to HTTPS using a 308 response code |
 
-&nbsp;
+
 
 ### []volumeOptions
 
@@ -386,16 +465,15 @@ services:
 | **emptyDir** | map |     | Configuration for [emptyDir](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir) volume |
 | **awsEfs** | map |     | Configuration for AWS Efs volume. To use this you have to enable efs csi driver in the rack |
 
-&nbsp;
+
 
 ### []volumeOptions.emptyDir
 
 | Attribute  | Type    | Default | Description                                                                          |
 | ---------- | ------- | ------- | ------------------------------------------------------------------------------------ |
 | **id** | string |     | Required. Id of the volume. |
-| **mountPath** | string |     | Required. Path in the serive file system to mount the volume |
+| **mountPath** | string |     | Required. Path in the service file system to mount the volume |
 | **medium** | string |     | Optional. Specifies the emptyDir medium. Allowed values: `"Memory"` or `""` |
-
 
 ```yaml
 environment:
@@ -410,16 +488,17 @@ services:
           mountPath: "/my/test/vol"
 ```
 
-&nbsp;
+
 
 ### []volumeOptions.awsEfs
 
 | Attribute  | Type    | Default | Description                                                                          |
 | ---------- | ------- | ------- | ------------------------------------------------------------------------------------ |
 | **id** | string |     | Required. Id of the volume. |
-| **mountPath** | string |     | Required. Path in the serive file system to mount the volume |
+| **mountPath** | string |     | Required. Path in the service file system to mount the volume |
 | **accessMode** | string |     | Required. Specifies the access mode for the volume. Allowed values are: `ReadWriteOnce`, `ReadOnlyMany`, `ReadWriteMany` |
-
+| **storageClass** | string |  | Storage class for the EFS volume |
+| **volumeHandle** | string |  | Use an existing EFS access point instead of provisioning a new one. See [Volumes](/configuration/volumes) |
 
 ```yaml
 environment:
@@ -435,24 +514,30 @@ services:
           mountPath: "/my/data/"
 ```
 
-&nbsp;
+
 
 ## Command Line Interface
 
 ### Listing Services
-```html
+```bash
     $ convox services -a myapp
     SERVICE  DOMAIN                                PORTS
     web      web.convox.0a1b2c3d4e5f.convox.cloud  443:5000
 ```
 ### Scaling a Service
-```html
-    $ convox scale web --count 3 --cpu 256 --memory 1024 -a myapp`1
+```bash
+    $ convox scale web --count 3 --cpu 250 --memory 1024 -a myapp
     Scaling web... OK
 ```
 ### Restarting a Service
-```html
+```bash
     $ convox services restart web -a myapp
     Restarting web... OK
 ```
 > Restarting a Service will begin a rolling restart with graceful termination of each [Process](/reference/primitives/app/process) of the Service.
+
+## See Also
+
+- [Agents](/configuration/agents) for running a single process on every node (DaemonSet-style workloads)
+- [Health Checks](/configuration/health-checks) for configuring readiness and liveness probes
+- [Scaling](/configuration/scaling) for autoscaling, VPA, and workload placement

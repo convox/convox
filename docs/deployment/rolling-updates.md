@@ -1,7 +1,6 @@
 ---
 title: "Rolling Updates"
-draft: false
-slug: Rolling Updates
+slug: rolling-updates
 url: /deployment/rolling-updates
 ---
 # Rolling Updates
@@ -20,9 +19,19 @@ The rolling update proceeds in a "make one, break one" process in order to maint
 - Stop 1 old [Process](/reference/primitives/app/process) that is running the old [Release](/reference/primitives/app/release)
 - Repeat until all [Processes](/reference/primitives/app/process) are running the new [Release](/reference/primitives/app/release)
 
-## Minimum / Maximum configuration
+## Minimum and Maximum Deployment Counts
 
-Rolling updates will respect the [deployment configuration](/reference/primitives/app/service#deployment) to control the minimum number of healthy processes and maximum number of overall processes to have running at any one time during the update.  This defaults to a minimum of 50% and a maximum of 200%.
+Rolling updates will respect the [deployment configuration](/reference/primitives/app/service#deployment) to control the minimum number of healthy processes and maximum number of overall processes to have running at any one time during the update. This defaults to a minimum of 50% and a maximum of 200%.
+
+```yaml
+services:
+  web:
+    deployment:
+      minimum: 50
+      maximum: 200
+```
+
+These values are configured as percentages in the `deployment` section of your service definition in `convox.yml`. See the [Service](/reference/primitives/app/service) reference for all deployment options.
 
 ## Automatic Rollback
 
@@ -37,3 +46,8 @@ Any of these issues will appear in the logs that display during the promotion to
 what is going wrong.
 
 See [Troubleshooting](/help/troubleshooting) for some tips on diagnosing common failure cases.
+
+## See Also
+
+- [Health Checks](/configuration/health-checks) for configuring how Convox verifies new processes
+- [Rollbacks](/deployment/rollbacks) for reverting a failed deployment

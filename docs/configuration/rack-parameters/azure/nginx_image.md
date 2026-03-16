@@ -1,6 +1,5 @@
 ---
 title: "nginx_image"
-draft: false
 slug: nginx_image
 url: /configuration/rack-parameters/azure/nginx_image
 ---
@@ -20,7 +19,7 @@ The default value is an empty string (`""`), which uses the built-in default ima
 
 ## Setting Parameters
 To set the `nginx_image` parameter, use the following command:
-```html
+```bash
 $ convox rack params set nginx_image=registry.k8s.io/ingress-nginx/controller:v1.12.0 -r rackName
 Setting parameters... OK
 ```

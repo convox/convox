@@ -1,6 +1,5 @@
 ---
 title: "node_type"
-draft: false
 slug: node_type
 url: /configuration/rack-parameters/azure/node_type
 ---
@@ -11,7 +10,7 @@ url: /configuration/rack-parameters/azure/node_type
 The `node_type` parameter specifies the type of instance to use for nodes in your Convox rack. This allows you to choose the appropriate instance type based on your application's requirements.
 
 ## Default Value
-The default value for `node_type` is `Standard_D3_v3`.
+The default value for `node_type` is `Standard_D2_v3`.
 
 ## Use Cases
 - **Performance Optimization**: Select an instance type that provides the necessary CPU, memory, and network performance for your application.
@@ -19,11 +18,17 @@ The default value for `node_type` is `Standard_D3_v3`.
 
 ## Setting Parameters
 To set the `node_type` parameter, use the following command:
-```html
-$ convox rack params set node_type=Standard_D3_v3 -r rackName
+```bash
+$ convox rack params set node_type=Standard_D2_v3 -r rackName
 Setting parameters... OK
 ```
 This command sets the `node_type` parameter to the specified value.
+
+## CPU Architecture
+
+Convox on Azure requires x86-based VM SKUs. ARM-based VM SKUs (such as the Dpsv5 or Epsv5 series) are not supported. Convox system components and build tooling are x86 images on Azure and will fail to run on ARM nodes.
+
+All additional node groups and build groups must also use x86 VM SKUs to match `node_type`.
 
 ## Additional Information
 Selecting the appropriate `node_type` is crucial for ensuring that your applications run efficiently and cost-effectively. Consider the specific needs of your workload when choosing an instance type. For more information on Azure instance types, refer to the [Azure documentation](https://azure.microsoft.com/en-us/pricing/details/virtual-machines/series/).

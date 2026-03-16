@@ -1,6 +1,5 @@
 ---
 title: "pod_identity_agent_enable"
-draft: false
 slug: pod_identity_agent_enable
 url: /configuration/rack-parameters/aws/pod_identity_agent_enable
 ---
@@ -23,7 +22,7 @@ The default value for `pod_identity_agent_enable` is `false`.
 
 ## Setting Parameters
 To enable the AWS Pod Identity Agent, use the following command:
-```html
+```bash
 $ convox rack params set pod_identity_agent_enable=true -r rackName
 Setting parameters... OK
 ```
@@ -57,6 +56,3 @@ In this example, the `web` service is granted permissions defined in three AWS I
 - This implementation leverages EKS Pod Identity, which is the AWS-recommended approach for pod IAM access.
 - Pod Identity replaces the older kiam/kube2iam pattern as well as the IAM Roles for Service Accounts (IRSA) approach.
 - Each service can have different IAM policies attached, allowing for precise access control.
-
-## Version Requirements
-This feature requires at least Convox rack version `3.18.1`.

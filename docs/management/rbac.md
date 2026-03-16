@@ -1,19 +1,18 @@
 ---
 title: "Console RBAC"
-draft: false
-slug: RBAC
+slug: rbac
 url: /management/rbac
 ---
 
 # Role-Based Access Control (RBAC)
 
-The RBAC feature allows you to define granular access control by assigning specific roles and permission policies to users in your organization. 
+The RBAC feature allows you to define granular access control by assigning specific roles and permission policies to users in your organization.
 
-Existing users retain their **Legacy Role** by default, ensuring that no active changes are made upon this update. Organizations can create, test, and assign new roles without affecting current user access.
+Users who have not been assigned a custom role retain a **Legacy Role** that preserves their original Console permissions. Organizations can create, test, and assign new roles at their own pace.
 
-> **Note**: While legacy roles did not affect CLI access, the new RBAC roles will apply to both the Console and the CLI, ensuring unified permission management across interfaces.
+> RBAC roles apply to both the Console and the CLI, ensuring unified permission management across interfaces.
 
-> **Important**: It is highly recommended to restrict write access to the **Roles** resource. If a user has write access to roles, they could potentially modify or escalate their own permissions, undermining the security of the RBAC configuration. Follow the principle of least privilege to mitigate this risk.
+> Restrict write access to the **Roles** resource. If a user has write access to roles, they could potentially modify or escalate their own permissions, undermining the security of the RBAC configuration. Follow the principle of least privilege to mitigate this risk.
 
 ## Creating Roles
 
@@ -33,7 +32,7 @@ To assign a custom role to a user:
 
 ## Pre-Created Roles
 
-To make role assignment easier, Convox provides a set of **pre-created roles**. These roles come with pre-configured permissions, mirroring the existing legacy Console Roles, and are managed by Convox to cover common use cases and best practices for platform access. The new managed roles also extend to CLI use, ensuring consistent permissions across both the Console and CLI. These roles are cumulative, with each level adding more permissions than the last.
+To make role assignment easier, Convox provides a set of **pre-created roles**. These roles come with pre-configured permissions and are managed by Convox to cover common use cases and best practices for platform access. The managed roles apply to both the Console and CLI, ensuring consistent permissions across interfaces. These roles are cumulative, with each level adding more permissions than the last.
 
 ### Administrator
 
@@ -75,7 +74,7 @@ Each role can have multiple permission policies. Every policy consists of:
 - **Resource Name**: The specific name of the resource (when applicable).
 - **Action**: Defines whether the permission grants `Read` or `Write` access.
 
-> **Note**: Not all resource types require a resource name. For example, the **Billing** page only provides `Read` or `Write` access without the need to specify a resource name.
+> Not all resource types require a resource name. For example, the **Billing** page only provides `Read` or `Write` access without the need to specify a resource name.
 
 ### Resource Types
 
@@ -97,7 +96,7 @@ Here are the available resource types that can be selected when defining permiss
 
 ### Relation Between Rack and App Permissions
 
-It’s important to note that **Rack** permissions and **App** permissions are related. A user must have access to the **Rack** to make use of **App** permissions. If a user is granted app-level permissions but lacks permissions for the associated rack, the app permissions will not grant access. Rack permissions act as a foundational requirement for app-related actions.
+**Rack** permissions and **App** permissions are related. A user must have access to the **Rack** to make use of **App** permissions. If a user is granted app-level permissions but lacks permissions for the associated rack, the app permissions will not grant access. Rack permissions act as a foundational requirement for app-related actions.
 
 ### Resource Name Options
 
@@ -149,7 +148,7 @@ These examples showcase the flexibility of RBAC in managing user access based on
 
 With the RBAC update, you can assign custom roles to [Deploy Keys](/management/deploy-keys), allowing deploy keys to have more flexible permissions. Deploy keys are API keys designed for use in CI environments or other remote systems.
 
-> **Note**: Deploy keys will only utilize permissions related to **Racks** and **Applications**. Permissions such as **Users** or **Billing** will not apply to deploy keys.
+> Deploy keys will only utilize permissions related to **Racks** and **Applications**. Permissions such as **Users** or **Billing** will not apply to deploy keys.
 
 By assigning a custom role to a deploy key, you can extend its default capabilities to include additional commands beyond the predefined set. This lets you configure deploy keys with specific permissions tailored to your organizational needs.
 
@@ -165,3 +164,7 @@ With RBAC, you can now:
 - Extend Deploy Key functionality by assigning custom roles for more flexible use cases.
 
 By setting up permissions correctly, your organization can achieve tighter security controls and more flexible user access management.
+
+## See Also
+
+- [Password Security](/management/password-security) for configuring password policies and authentication security

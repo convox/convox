@@ -1,6 +1,5 @@
 ---
 title: "additional_build_groups_config"
-draft: false
 slug: additional_build_groups_config
 url: /configuration/rack-parameters/aws/additional_build_groups_config
 ---
@@ -41,7 +40,7 @@ The `additional_build_groups_config` parameter takes a JSON array of node group 
 To set the `additional_build_groups_config` parameter, there are several methods:
 
 ### Using a JSON File (Recommended)
-```html
+```bash
 $ convox rack params set additional_build_groups_config=/path/to/build-config.json -r rackName
 Setting parameters... OK
 ```
@@ -61,10 +60,10 @@ The JSON file should be structured as follows:
 ]
 ```
 
-> **Important Note on AWS Rate Limits**: When adding or removing multiple node groups, it's recommended to modify no more than three node groups at a time to avoid hitting AWS API rate limits. If you receive a rate limit error during an update simply run the parameter set command again. The operation will resume from where it left off, creating the remaining node groups without duplicating the ones that were already successfully created.
+> **Important Note on AWS Rate Limits**: When adding or removing multiple node groups, it's recommended to modify no more than three node groups at a time to avoid hitting AWS API rate limits. If you receive a rate limit error during an update run the parameter set command again. The operation will resume from where it left off, creating the remaining node groups without duplicating the ones that were already successfully created.
 
 ### Using a Raw JSON String
-```html
+```bash
 $ convox rack params set 'additional_build_groups_config=[{"type":"c5.2xlarge","disk":100,"capacity_type":"SPOT","min_size":0,"desired_size":1,"max_size":5,"label":"app-build"}]' -r rackName
 Setting parameters... OK
 ```
@@ -72,7 +71,7 @@ Setting parameters... OK
 ## Directing Build Pods to Specific Node Groups
 To direct build pods to specific node groups, use the `BuildLabels` app parameter:
 
-```html
+```bash
 $ convox apps params set BuildLabels=convox.io/label=app-build -a <app>
 ```
 
@@ -81,11 +80,15 @@ This ensures that build processes for the specified app will run on nodes with t
 ## Customizing Build Pod Resources
 You can also specify resource requirements for build pods:
 
-```html
-$ convox apps params set BuildCpu=256 BuildMem=1024 -a <app>
+```bash
+$ convox apps params set BuildCpu=250 BuildMem=1024 -a <app>
 ```
 
-This sets the CPU request to 256 millicores (0.25 vCPU) and memory request to 1024MB (1GB) for build pods.
+This sets the CPU request to 250 millicores (0.25 vCPU) and memory request to 1024MB (1GB) for build pods.
+
+## Architecture Compatibility
+
+All build node groups must use the same CPU architecture (x86 or ARM) as the rack's [node_type](/configuration/rack-parameters/aws/node_type). If your rack runs x86 instances, all build groups must also use x86 instance types. If your rack runs ARM/Graviton instances, all build groups must also use ARM instance types. Mixing architectures causes build failures because the resulting container images target the wrong architecture for the nodes that run them.
 
 ## Additional Information
 Combining the `additional_build_groups_config` parameter with app-specific `BuildLabels` configuration provides:

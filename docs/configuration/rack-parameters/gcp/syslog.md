@@ -1,6 +1,5 @@
 ---
 title: "syslog"
-draft: false
 slug: syslog
 url: /configuration/rack-parameters/gcp/syslog
 ---
@@ -19,7 +18,7 @@ The default value for `syslog` is ``.
 
 ## Setting Parameters
 To set the `syslog` parameter, use the following command:
-```html
+```bash
 $ convox rack params set syslog=tcp+tls://example.org:1234 -r rackName
 Setting parameters... OK
 ```

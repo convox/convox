@@ -1,6 +1,5 @@
 ---
 title: "syslog"
-draft: false
 slug: syslog
 url: /configuration/rack-parameters/azure/syslog
 ---
@@ -19,11 +18,11 @@ The default value for `syslog` is ``.
 
 ## Setting Parameters
 To set the `syslog` parameter, use the following command:
-```html
+```bash
 $ convox rack params set syslog=tcp+tls://example.org:1234 -r rackName
 Setting parameters... OK
 ```
 This command sets the `syslog` parameter to the specified value.
 
 ## Additional Information
-When set to ``, syslog forwarding is not enabled. This parameter is optional and can be configured based on your specific logging needs. Ensure that the syslog endpoint is reachable and properly configured to receive logs from your Convox rack. For more information on setting up a syslog server, refer to the [Azure documentation on logging](https://docs.microsoft.com/en-us/azure/azure-monitor/essentials/logs-overview).
+When set to ``, syslog forwarding is not enabled. This parameter is optional and can be configured based on your specific logging needs. Ensure that the syslog endpoint is reachable and properly configured to receive logs from your Convox rack. For more information on setting up a syslog server, refer to the [Azure documentation on logging](https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/logs-overview).

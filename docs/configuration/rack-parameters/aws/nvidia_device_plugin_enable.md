@@ -1,6 +1,5 @@
 ---
 title: "nvidia_device_plugin_enable"
-draft: false
 slug: nvidia_device_plugin_enable
 url: /configuration/rack-parameters/aws/nvidia_device_plugin_enable
 ---
@@ -22,13 +21,13 @@ The default value for `nvidia_device_plugin_enable` is `false`.
 
 ## Setting Parameters
 To enable the NVIDIA GPU device plugin, use the following command:
-```html
+```bash
 $ convox rack params set nvidia_device_plugin_enable=true -r rackName
 Setting parameters... OK
 ```
 
 To disable the NVIDIA GPU device plugin:
-```html
+```bash
 $ convox rack params set nvidia_device_plugin_enable=false -r rackName
 Setting parameters... OK
 ```
@@ -49,7 +48,7 @@ services:
 ```
 
 - When using GPU-enabled services, you may need to use a custom base image that includes the NVIDIA CUDA toolkit and appropriate drivers.
-- GPU resources are whole units and cannot be fractionally allocated—each container requesting a GPU will receive one or more complete GPUs.
+- GPU resources are whole units and cannot be fractionally allocated. Each container requesting a GPU will receive one or more complete GPUs.
 - When a service requests GPU resources, it will only be scheduled on nodes with available GPUs, which may affect scheduling and scaling behavior.
 
 ## Related Parameters

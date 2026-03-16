@@ -1,6 +1,5 @@
 ---
 title: "Volumes"
-draft: false
 slug: volumes
 url: /configuration/volumes
 ---
@@ -10,6 +9,8 @@ url: /configuration/volumes
 Convox supports multiple types of volumes to manage both persistent and temporary data for your applications. These volumes provide flexibility for different use cases, from high-speed temporary data storage to persistent, scalable file storage across multiple services.
 
 ## AWS EFS Volumes
+
+> AWS only. Requires the [efs_csi_driver_enable](/configuration/rack-parameters/aws/efs_csi_driver_enable) rack parameter.
 
 AWS EFS (Elastic File System) provides a scalable, persistent storage solution that allows multiple Convox services to access the same file system simultaneously. EFS volumes are useful for applications that require shared access to files and need persistent data storage across services and restarts.
 
@@ -23,7 +24,7 @@ AWS EFS (Elastic File System) provides a scalable, persistent storage solution t
 
 To use AWS EFS volumes, you must enable the EFS CSI driver on your rack. Run the following command to enable it:
 
-```html
+```bash
 convox rack params set efs_csi_driver_enable=true -r rackName
 ```
 
@@ -31,7 +32,7 @@ convox rack params set efs_csi_driver_enable=true -r rackName
 
 After enabling the driver, define your EFS volumes in the `convox.yml` file:
 
-```html
+```yaml
 environment:
   - PORT=3000
 services:
@@ -51,13 +52,14 @@ services:
 
 - **awsEfs.id**: The EFS volume ID.
 - **awsEfs.accessMode**: Specifies ReadWriteMany, ReadOnlyMany, or ReadWriteOnce.
-- **mountPath**: Defines the mount point for the volume inside the service.
+- **awsEfs.mountPath**: Defines the mount point for the volume inside the service.
+- **awsEfs.volumeHandle**: (Optional) Specifies an existing EFS access point handle (format: `fs-id::fsap-id`). Use this to mount a pre-existing EFS access point instead of dynamically provisioning one.
 
 ### AWS EFS Storage Classes
 
-Starting from version 3.19.7, you can specify a custom storage class for your EFS volumes. This provides greater flexibility for defining AWS storage behaviors and allows custom storage policies for specific workloads.
+You can specify a custom storage class for your EFS volumes. This provides greater flexibility for defining AWS storage behaviors and allows custom storage policies for specific workloads.
 
-```html
+```yaml
 environment:
   - PORT=3000
 services:
@@ -84,15 +86,6 @@ AWS EFS volumes are ideal for:
 - **Data Processing**: Enables distributed data processing across multiple services.
 - **Custom Storage Policies**: With storage class support, you can implement organization-specific storage policies.
 
-### Version Requirements for AWS EFS Volumes
-
-- Basic EFS support: You must be on at least rack version `3.18.2` to use AWS EFS volumes.
-- Storage class support: You must be on at least rack version `3.19.7` to use the `storageClass` attribute.
-
-If you are on an earlier version, update your rack using the following command:
-
-For more details, refer to the [Updating a Rack](https://docs.convox.com/management/cli-rack-management/) documentation.
-
 ## emptyDir Volumes
 
 **emptyDir** volumes provide a temporary storage solution within your Convox services. These volumes are initially empty when a service starts and are removed when the service is terminated or rescheduled. **emptyDir** volumes are suited for storing non-persistent, ephemeral data.
@@ -101,7 +94,7 @@ For more details, refer to the [Updating a Rack](https://docs.convox.com/managem
 
 You can configure **emptyDir** volumes directly in the `convox.yml` file. Here's an example:
 
-```html
+```yaml
 environment:
   - PORT=3000
 services:
@@ -131,8 +124,7 @@ In this configuration:
 - **Temporary Data Storage**: Useful for non-persistent data that is required only for the lifespan of the service.
 - **High-Speed Access**: When using `Memory` as the medium, it can be used for high-speed access to temporary data.
 
-### Version Requirements for emptyDir Volumes
+## See Also
 
-You must be on at least rack version `3.16.0` to use emptyDir volumes. Update your rack with the following command:
-
-Ensure your rack is updated to version `3.16.0` or later. For detailed instructions on updating your rack, see the [Updating a Rack](https://docs.convox.com/management/cli-rack-management/) page.
+- [convox.yml](/configuration/convox-yml) for the full configuration reference
+- [Scaling](/configuration/scaling) for how volumes interact with scaling

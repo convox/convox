@@ -1,7 +1,6 @@
 ---
 title: "SSL"
-draft: false
-slug: SSL
+slug: ssl
 url: /deployment/ssl
 ---
 # SSL
@@ -14,12 +13,12 @@ If you specify a custom `domain:` attribute for your service, Convox will automa
 
 To minimize delays during your first deployment, you can pre-generate your SSL certificate. This ensures your service is available without waiting for the certificate issuance process.
 
-```html
-$ convox certs generate "*.example.org" "myapp.example.org" --issuer letsencrypt
+```bash
+$ convox certs generate "myapp.example.org" --issuer letsencrypt
 Generating certificate... OK, cert-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-This command will initiate the HTTP-01 challenge or email verification for domain ownership, allowing the certificate to be issued and ready for use during deployment.
+This command will initiate the HTTP-01 challenge or email verification for domain ownership, allowing the certificate to be issued and ready for use during deployment. For wildcard certificates, see [Wildcard Certificates and Reuse](#wildcard-certificates-and-reuse) below (requires DNS-01 validation).
 
 ## Certificate Management
 
@@ -27,7 +26,7 @@ You can view and manage your existing SSL certificates with the following comman
 
 To list your current certificates:
 
-```html
+```bash
 $ convox certs --generated
 ID                          DOMAIN                   EXPIRES
 cert-xxxxxxxxxxxxxx         *.example.com            1 year from now
@@ -36,20 +35,22 @@ cert-yyyyyyyyyyyyyy         myapp.example.org        1 year from now
 
 To delete an existing certificate:
 
-```html
+```bash
 $ convox certs delete cert-xxxxxxxxxxxxxx
 Deleting certificate cert-xxxxxxxxxxxxxx... OK
 ```
 
-## Advanced SSL Configuration: Let's Encrypt DNS01 Challenge with Route53
+## Advanced SSL Configuration: Let's Encrypt DNS-01 Challenge with Route53 (AWS)
 
-Convox also supports the Let's Encrypt DNS01 challenge for SSL certificate generation, which is useful when HTTP endpoints are not exposed or when wildcard certificates are required. The DNS01 challenge verifies domain ownership via DNS TXT records, and it is ideal for environments with strict security requirements.
+> This configuration is currently available for AWS racks using Route53 for DNS management.
 
-### Setting Up DNS01 Challenge
+Convox also supports the Let's Encrypt DNS-01 challenge for SSL certificate generation, which is useful when HTTP endpoints are not exposed or when wildcard certificates are required. The DNS-01 challenge verifies domain ownership via DNS TXT records, and it is ideal for environments with strict security requirements.
+
+### Setting Up DNS-01 Challenge
 
 1. **Retrieve the IAM Role**: Retrieve the IAM role used by the service:
 
-```html
+```bash
 convox letsencrypt dns route53 role
 ```
 
@@ -57,7 +58,7 @@ This will return the ARN of the IAM role (e.g., `arn:aws:iam::XXXXXXXXXX:role/co
 
 2. **Create a Route53 DNS Zone Access Role**: Create a role in AWS IAM with the necessary permissions to manage your Route53 DNS zone. Replace `<zone-id>` with your actual Route53 zone ID:
 
-```html
+```json
 {
    "Version": "2012-10-17",
    "Statement": [
@@ -80,7 +81,7 @@ This will return the ARN of the IAM role (e.g., `arn:aws:iam::XXXXXXXXXX:role/co
 
 3. **Update Trust Policy**: Update the trust policy for this role to allow the `cert-manager` role from your Convox rack to assume it:
 
-```html
+```json
 {
    "Version": "2012-10-17",
    "Statement": [
@@ -99,7 +100,7 @@ This will return the ARN of the IAM role (e.g., `arn:aws:iam::XXXXXXXXXX:role/co
 
 4. **Add Assume Permission**: Add assume role permission to your `cert-manager` role:
 
-```html
+```json
 {
    "Version": "2012-10-17",
    "Statement": [
@@ -116,17 +117,17 @@ This will return the ARN of the IAM role (e.g., `arn:aws:iam::XXXXXXXXXX:role/co
 
 5. **Configure the DNS Solver**: Run the following command to configure the DNS solver for Let's Encrypt:
 
-```html
+```bash
 convox letsencrypt dns route53 add --id 1 --dns-zones <your.zone> --role arn:aws:iam::XXXXXXXXXX:role/dns-access --hosted-zone-id <hosted-zone-id> --region <hosted-zone-region>
 ```
 
 6. **Verify Configuration**: Check the configuration:
 
-```html
+```bash
 convox letsencrypt dns route53 list
 ```
 
-This command will list your DNS zones and hosted zone IDs, confirming that the DNS01 challenge is configured correctly.
+This command will list your DNS zones and hosted zone IDs, confirming that the DNS-01 challenge is configured correctly.
 
 ## Wildcard Certificates and Reuse
 
@@ -136,7 +137,7 @@ Convox allows you to generate wildcard certificates that secure an entire domain
 
 To generate a wildcard certificate:
 
-```html
+```bash
 $ convox certs generate "*.mydomain.com" --issuer letsencrypt
 ```
 
@@ -146,7 +147,7 @@ Once the wildcard certificate is generated, you can reuse it across multiple app
 
 For example, to apply the wildcard certificate to a service:
 
-```html
+```yaml
 environment:
   - PORT=3000
 services:
@@ -160,6 +161,11 @@ services:
 
 This allows you to securely use the same SSL certificate across multiple apps or services, reducing the administrative overhead of managing multiple certificates.
 
-## Conclusion
+## Summary
 
-Convox simplifies SSL certificate management by integrating Let's Encrypt for both standard HTTP-01 validation and more advanced DNS01 challenges. Whether you need to secure single domains, multiple subdomains, or reuse wildcard certificates across apps, Convox provides flexible options for securing your services.
+Convox simplifies SSL certificate management by integrating Let's Encrypt for both standard HTTP-01 validation and more advanced DNS-01 challenges. The DNS-01 challenge is currently supported on AWS racks using Route53. Whether you need to secure single domains, multiple subdomains, or reuse wildcard certificates across apps, Convox provides flexible options for securing your services.
+
+## See Also
+
+- [Custom Domains](/deployment/custom-domains) for routing custom domains to your services
+- [Load Balancers](/configuration/load-balancers) for load balancer configuration

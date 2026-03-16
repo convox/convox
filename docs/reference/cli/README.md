@@ -1,12 +1,11 @@
 ---
 title: "CLI"
-draft: false
-slug: CLI
+slug: cli
 url: /reference/cli
 ---
 # Command Line Interface
 
-Explore detailed documentation on how to use the Convox Command Line Interface (CLI) to manage your applications and resources. 
+Explore detailed documentation on how to use the Convox Command Line Interface (CLI) to manage your applications and resources.
 
 For a quick overview of some commonly used commands, you may find this [blog post on common Convox CLI commands](https://www.convox.com/blog/common-convox-cli-commands) helpful.
 
@@ -17,8 +16,10 @@ For a quick overview of some commonly used commands, you may find this [blog pos
 | [balancers](/reference/cli/balancers) | List balancers for an app.                                                                      |
 | [build](/reference/cli/build)    | Create a build.                                                                                 |
 | [builds](/reference/cli/builds)  | List builds and manage build-specific operations such as importing or exporting builds.         |
+| [certs](/reference/cli/certs)    | List, generate, import, and manage SSL certificates.                                            |
 | [cp](/reference/cli/cp)          | Copy files to and from a running process.                                                       |
 | [deploy](/reference/cli/deploy)  | Create and promote a build.                                                                     |
+| [deploy-debug](/reference/cli/deploy-debug) | Diagnose deploy failures with pod-level diagnostics and actionable hints.               |
 | [env](/reference/cli/env)        | Manage environment variables for an app.                                                        |
 | [exec](/reference/cli/exec)      | Execute a command in a running process.                                                         |
 | [instances](/reference/cli/instances) | List instances or manage specific instance operations.                                         |
@@ -37,6 +38,7 @@ For a quick overview of some commonly used commands, you may find this [blog pos
 | [scale](/reference/cli/scale)    | Scale a service.                                                                               |
 | [services](/reference/cli/services) | List services for an app or restart services.                                                  |
 | [start](/reference/cli/start)    | Start an application for local development.                                                     |
+| switch                           | Switch the active rack context.                                                                 |
 | [test](/reference/cli/test)      | Run tests.                                                                                     |
 | [update](/reference/cli/update)  | Update the CLI or a rack.                                                                       |
 | [version](/reference/cli/version)| Display version information.                                                                    |

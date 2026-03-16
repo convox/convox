@@ -1,7 +1,6 @@
 ---
 title: "Example Apps"
-draft: false
-slug: Example Apps
+slug: example-apps
 url: /example-apps
 ---
 # Example Apps
@@ -139,7 +138,7 @@ We welcome contributions! If you have an example application you'd like to share
 
 ## Need a Specific Example?
 
-Can't find an example for your stack? We're constantly adding new examples based on community needs. Request a specific example by:
+Can't find an example for your stack? Request a specific example by:
 
 - Opening an issue in the [convox-examples](https://github.com/convox-examples/) organization
 - Reaching out through the [Convox Community Forum](https://community.convox.com)
@@ -147,8 +146,8 @@ Can't find an example for your stack? We're constantly adding new examples based
 
 ## Resources
 
-- [Convox Documentation](https://docs.convox.com)
+- [Convox Documentation](/getting-started/introduction)
 - [convox.yml Reference](/configuration/convox-yml)
 - [Dockerfile Best Practices](/configuration/dockerfile)
-- [Deployment Guide](/deployment)
+- [Deployment Guide](/deployment/deploying-changes)
 - [Environment Variables](/configuration/environment)

@@ -1,6 +1,5 @@
 ---
 title: "deploy"
-draft: false
 slug: deploy
 url: /reference/cli/deploy
 ---
@@ -11,11 +10,26 @@ url: /reference/cli/deploy
 Create and promote a build
 
 ### Usage
-```html
+```bash
     convox deploy [dir]
 ```
+
+### Flags
+
+| Flag | Short | Type | Description |
+|------|-------|------|-------------|
+| `--build-args` | | string | Build arguments (repeatable). Requires rack version 3.22.0+ |
+| `--description` | `-d` | string | Description for the build |
+| `--development` | | bool | Build in development mode |
+| `--external` | | bool | Use external build |
+| `--force` | | bool | Force deployment |
+| `--id` | | bool | Output only the build/release ID |
+| `--manifest` | `-m` | string | Path to an alternate manifest file |
+| `--no-cache` | | bool | Build without using the Docker cache |
+| `--wildcard-domain` | | bool | Use wildcard domain for the build |
+
 ### Examples
-```html
+```bash
     $ convox deploy
     Packaging source... OK
     Uploading source... OK
@@ -30,17 +44,19 @@ Create and promote a build
     Promoting RABCDEFGHI...
     ...
     ...
-    2020-01-31T15:41:16Z system/cloudformation aws/cfm test-myapp-ServiceApp-ZNV5T8E1R2XQ DELETE_COMPLETE ExecutionRole
-    2020-01-31T15:41:27Z system/cloudformation aws/cfm test-myapp DELETE_COMPLETE ServiceApp
-    2020-01-31T15:41:27Z system/cloudformation aws/cfm test-myapp UPDATE_COMPLETE test-myapp
+    2026-03-18T15:41:16Z system/k8s/atom/app Status: Running => Pending
+    2026-03-18T15:41:18Z system/k8s/atom/app Status: Pending => Updating
+    2026-03-18T15:41:27Z system/k8s/atom/app Status: Updating => Running
     OK
 ```
 
 ### Pass build time env vars
 
-You can pass env vars that will only exists on the build time. (Supported from version: >= 3.7.2)
+You can pass env vars that will only exist at build time.
 
-```html
+> Build arguments require rack version 3.22.0 or later.
+
+```bash
     $ convox deploy --build-args "BUILD_ENV1=val1" --build-args "BUILD_ENV2=val2"
     Packaging source... OK
     Uploading source... OK
@@ -55,8 +71,13 @@ You can pass env vars that will only exists on the build time. (Supported from v
     Promoting RABCDEFGHI...
     ...
     ...
-    2020-01-31T15:41:16Z system/cloudformation aws/cfm test-myapp-ServiceApp-ZNV5T8E1R2XQ DELETE_COMPLETE ExecutionRole
-    2020-01-31T15:41:27Z system/cloudformation aws/cfm test-myapp DELETE_COMPLETE ServiceApp
-    2020-01-31T15:41:27Z system/cloudformation aws/cfm test-myapp UPDATE_COMPLETE test-myapp
+    2026-03-18T15:41:16Z system/k8s/atom/app Status: Running => Pending
+    2026-03-18T15:41:18Z system/k8s/atom/app Status: Pending => Updating
+    2026-03-18T15:41:27Z system/k8s/atom/app Status: Updating => Running
     OK
 ```
+
+## See Also
+
+- [Deploying Changes](/deployment/deploying-changes) for deployment workflow
+- [Rolling Updates](/deployment/rolling-updates) for deployment strategies

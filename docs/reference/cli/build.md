@@ -1,6 +1,5 @@
 ---
 title: "build"
-draft: false
 slug: build
 url: /reference/cli/build
 ---
@@ -11,12 +10,26 @@ url: /reference/cli/build
 Create a build
 
 ### Usage
-```html
+```bash
     convox build [dir]
 ```
+
+### Flags
+
+| Flag | Short | Type | Description |
+|------|-------|------|-------------|
+| `--build-args` | | string | Build arguments (repeatable). Requires rack version 3.22.0+ |
+| `--description` | `-d` | string | Description for the build |
+| `--development` | | bool | Build in development mode |
+| `--external` | | bool | Use external build |
+| `--id` | | bool | Output only the build ID |
+| `--manifest` | `-m` | string | Path to an alternate manifest file |
+| `--no-cache` | | bool | Build without using the Docker cache |
+| `--wildcard-domain` | | bool | Use wildcard domain for the build |
+
 ### Examples
-```html
-    $ convox build --no-cache --description "My latest build" 
+```bash
+    $ convox build --no-cache --description "My latest build"
     Packaging source... OK
     Uploading source... OK
     Starting build... OK
@@ -33,9 +46,11 @@ Create a build
 
 ### Pass build time env vars
 
-You can pass env vars that will only exists on the build time. (Supported from version: >= 3.7.2)
+You can pass env vars that will only exist at build time.
 
-```html
+> Build arguments require rack version 3.22.0 or later.
+
+```bash
     $ convox build --description "My Test Build" --build-args "BUILD_ENV1=val1" --build-args "BUILD_ENV2=val2"
     Packaging source... OK
     Uploading source... OK
@@ -50,3 +65,8 @@ You can pass env vars that will only exists on the build time. (Supported from v
     Build:   BABCDEFGHI
     Release: RABCDEFGHI
 ```
+
+## See Also
+
+- [Build](/reference/primitives/app/build) for build concepts and build arguments
+- [Deploy](/reference/cli/deploy) for building and promoting in one step

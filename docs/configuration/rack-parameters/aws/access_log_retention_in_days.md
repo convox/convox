@@ -1,6 +1,5 @@
 ---
 title: "access_log_retention_in_days"
-draft: false
 slug: access_log_retention_in_days
 url: /configuration/rack-parameters/aws/access_log_retention_in_days
 ---
@@ -19,7 +18,7 @@ The default value for `access_log_retention_in_days` is `7`.
 
 ## Setting Parameters
 To set the `access_log_retention_in_days` parameter, use the following command:
-```html
+```bash
 $ convox rack params set access_log_retention_in_days=30 -r rackName
 Setting parameters... OK
 ```

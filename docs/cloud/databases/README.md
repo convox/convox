@@ -1,6 +1,5 @@
 ---
 title: "Cloud Databases"
-draft: false
 slug: databases
 url: /cloud/databases
 ---
@@ -19,17 +18,17 @@ Convox Cloud supports three database engines:
 
 ## Definition
 
-Cloud Databases are defined in your `convox.yml` with `provider: aws`:
+Cloud Databases are defined in your `convox.yml` using a managed resource type:
 
 ```yaml
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: small
-      version: 17.5
-      
+      version: "17.5"
+
 services:
   web:
     build: .
@@ -43,7 +42,6 @@ services:
 | Name | Required | Description |
 |------|----------|-------------|
 | **type** | yes | Database engine: `postgres`, `mysql`, or `mariadb` |
-| **provider** | yes | Must be `aws` for Cloud Databases |
 | **options.class** | no | Database size: `dev`, `small`, `medium`, or `large` (default: `dev`) |
 | **options.version** | no | Database engine version (see supported versions below) |
 | **options.durable** | no | Enable Multi-AZ failover for high availability (default: `false`) |
@@ -65,10 +63,10 @@ Linking a database to a [Service](/reference/primitives/app/service) injects env
 resources:
   main:
     type: postgres
-    provider: aws
+
     options:
       class: small
-      version: 17.5
+      version: "17.5"
 
 services:
   web:
@@ -78,7 +76,7 @@ services:
 
 The following environment variables are automatically set:
 
-```
+```text
 MAIN_URL=postgres://username:password@host.name:port/database
 MAIN_USER=username
 MAIN_PASS=password
@@ -95,10 +93,10 @@ Enable Multi-AZ deployment for automatic failover and high availability:
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: medium
-      version: 17.5
+      version: "17.5"
       durable: true
 ```
 
@@ -116,10 +114,10 @@ When `durable: true` is set:
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: dev
-      version: 17.5
+      version: "17.5"
 
 services:
   web:
@@ -135,25 +133,25 @@ services:
 resources:
   postgres-main:
     type: postgres
-    provider: aws
+
     options:
       class: medium
-      version: 17.5
+      version: "17.5"
       durable: true
-      
+
   mysql-legacy:
     type: mysql
-    provider: aws
+
     options:
       class: small
-      version: 8.4.6
-      
+      version: "8.4.6"
+
   mariadb-analytics:
     type: mariadb
-    provider: aws
+
     options:
       class: large
-      version: 11.4.8
+      version: "11.4.8"
 
 services:
   web:
@@ -162,7 +160,7 @@ services:
     resources:
       - postgres-main
       - mysql-legacy
-      
+
   analytics:
     build: ./analytics
     resources:
@@ -223,4 +221,9 @@ Importing data to postgres-main... OK
 - [PostgreSQL](/cloud/databases/postgres) - PostgreSQL-specific configuration and versions
 - [MySQL](/cloud/databases/mysql) - MySQL-specific configuration and versions
 - [MariaDB](/cloud/databases/mariadb) - MariaDB-specific configuration and versions
+
+## See Also
+
+- [Rack Resources](/reference/primitives/app/resource) for containerized and AWS RDS/ElastiCache resources on self-managed racks
+- [Cloud vs Rack Comparison](/cloud/comparison) for understanding the differences between Convox Cloud and Rack
 - [Sizing and Pricing](/cloud/databases/sizing-and-pricing) - Detailed pricing information

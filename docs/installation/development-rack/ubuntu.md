@@ -1,53 +1,126 @@
 ---
-title: "Ubuntu"
-draft: false
-slug: Ubuntu
+title: "Ubuntu / Linux"
+slug: ubuntu
 url: /installation/development-rack/ubuntu
 ---
-# Ubuntu
+# Ubuntu / Linux
 
-## Initial Setup
+## Prerequisites
 
-> **_NOTE:_**:  These instructions are intended for Ubuntu 22.04 LTS.  While alternate versions may function with no issues, version 22.04 LTS is our baseline for updates and testing. 
+Install the following:
+- [Convox CLI](/installation/cli)
+- [Docker Engine](https://docs.docker.com/engine/install/ubuntu/)
+- [Minikube](https://minikube.sigs.k8s.io/docs/start/)
+- [Terraform](https://developer.hashicorp.com/terraform/install)
 
-To use Convox’s local development Rack feature on Ubuntu, you will need install following applications locally: 
-- [Convox](/reference/primitives/getting-started/introduction/#install-the-convox-cli-and-login) 
-- [Docker](https://docs.docker.com/engine/install/ubuntu/) 
-- [Minikube 1.29.0 or later](https://minikube.sigs.k8s.io/docs/start/) 
-- [Terraform](https://developer.hashicorp.com/terraform/downloads) 
+These instructions work on Ubuntu 22.04+ and other Linux distributions including WSL2.
 
 ## Installation
 
-Convox development racks run on Minikube with several required options: 
-- `--insecure-registry=”registry.<RACK_NAME>.localdev.convox.cloud”`
-- `--kubernetes-version=<k8s_VERSION>` 
-- `--static-ip 192.168.212.2` 
+### 1. Choose a rack name
 
-The first thing you must choose is the name for your rack as it will be a component of other installation parameters.  For this documentation we will use the rack name `test-local` 
+Pick a name for your local rack. This name becomes part of the domain used to reach your applications. We will use `dev` throughout this guide.
 
-Then verify the Kubernetes version for the [rack version](https://github.com/convox/convox/releases) you are going to install.  At the time of this writing it is `v1.23.0`
+### 2. Start Minikube
 
-Now start Minikube with: 
-`minikube start --kubernetes-version=v1.23.0 --insecure-registry="https://registry.test-local.localdev.convox.cloud" --static-ip 192.168.212.2` 
+Start Minikube with the Docker driver, the insecure registry flag for your rack name, and the required static IP:
 
-- If you receive an error regarding IP `192.168.212.2`, you can delete the docker networks by running `docker network prune`, and then run the full `minikube start` command above again. 
-- If you receive an error regarding docker permissions, you can run the group command given in the output. 
+```bash
+minikube start \
+  --driver=docker \
+  --kubernetes-version=v1.33.0 \
+  --insecure-registry="registry.dev.localdev.convox.cloud" \
+  --static-ip=192.168.212.2
+```
 
+Replace `dev` with your chosen rack name in the `--insecure-registry` flag.
 
-Now enable Minikube ingress and ingress-dns addons: 
-` minikube addons enable ingress` 
-` minikube addons enable ingress-dns`  
+> The `--static-ip=192.168.212.2` is required because `*.localdev.convox.cloud` resolves to this address.
 
-Finally install the local development rack with the command `convox rack install local <RACK_NAME> -v <VERSION>` 
-> **_NOTE:_**: Rack version `-v` must be 3.10.5 or later 
+> Check the [Convox releases](https://github.com/convox/convox/releases) page to find the Kubernetes version for the rack version you want to install.
 
-For this example the command would be:
-`convox rack install local test-local -v 3.10.5` 
+**Troubleshooting:**
+- If you get an error about IP `192.168.212.2`, run `docker network prune` and try again.
+- If you get a Docker permissions error, follow the instructions in the error output to add your user to the `docker` group.
 
-You can now run `convox rack -r <RACK_NAME>` to see the new rack installed locally. 
- 
+### 3. Enable required addons
+
+```bash
+minikube addons enable ingress
+minikube addons enable ingress-dns
+```
+
+### 4. Install the rack
+
+```bash
+convox rack install local dev -v 3.23.3
+```
+
+Replace `3.23.3` with the latest version from the [releases page](https://github.com/convox/convox/releases).
+
+### 5. Verify the installation
+
+```bash
+convox rack -r dev
+```
+
+You should see output like:
+
+```text
+Name      dev
+Provider  local
+Router    router.dev.localdev.convox.cloud
+Status    running
+Version   3.23.3
+```
+
+## Using the rack
+
+Switch to your new rack:
+
+```bash
+convox switch dev
+```
+
+Now all `convox` commands will target your local rack. You can deploy apps with `convox deploy`, start local development with `convox start`, and use all the same commands you would on a production rack.
+
+Your applications will be available at `https://<service>.<app>.dev.localdev.convox.cloud`.
+
+> Browsers will show a certificate warning because the local rack uses self-signed TLS certificates. This is expected.
+
 ## Management
 
-Local rack files are stored at `~/.config/convox/racks/<RACK_NAME>` 
-If you run into any issues installing and need to delete the local rack you can run: 
-`sudo rm –rf ~/.config/convox/racks/<RACK_NAME>` 
+### Rack files
+
+Local rack configuration is stored at:
+
+```text
+~/.config/convox/racks/<RACK_NAME>
+```
+
+### Stopping and starting
+
+```bash
+minikube stop    # pause the cluster (preserves state)
+minikube start   # resume the cluster
+```
+
+### Uninstalling
+
+To uninstall the rack cleanly:
+
+```bash
+convox rack uninstall -r <RACK_NAME>
+```
+
+If that fails, you can remove the rack files manually:
+
+```bash
+rm -rf ~/.config/convox/racks/<RACK_NAME>
+minikube delete
+```
+
+## See Also
+
+- [Running Locally](/development/running-locally) for using `convox start` to develop locally
+- [Local Development Tutorial](/tutorials/local-development) for a guided walkthrough

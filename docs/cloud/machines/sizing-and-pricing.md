@@ -1,6 +1,5 @@
 ---
 title: "Sizing and Pricing"
-draft: false
 slug: sizing-and-pricing
 url: /cloud/machines/sizing-and-pricing
 ---

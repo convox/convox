@@ -1,6 +1,5 @@
 ---
 title: "convox_domain_tls_cert_disable"
-draft: false
 slug: convox_domain_tls_cert_disable
 url: /configuration/rack-parameters/aws/convox_domain_tls_cert_disable
 ---
@@ -22,13 +21,13 @@ The default value for `convox_domain_tls_cert_disable` is `false`, meaning Convo
 
 ## Setting Parameters
 To disable TLS certificate generation for `convox.cloud` domains, use the following command:
-```html
+```bash
 $ convox rack params set convox_domain_tls_cert_disable=true -r rackName
 Setting parameters... OK
 ```
 
 To re-enable certificate generation (if needed later), use:
-```html
+```bash
 $ convox rack params set convox_domain_tls_cert_disable=false -r rackName
 Setting parameters... OK
 ```
@@ -40,12 +39,9 @@ Setting parameters... OK
   ```bash
   # Configure kubectl to point to your Convox rack
   $ convox rack kubeconfig -r rackName > ~/.kube/config
-  
+
   # List certificates in your application namespace
   $ kubectl get certificate -n rackName-appName
   ```
-- Disabling certificate generation for `convox.cloud` domains does not affect the functionality of your applications—they will still be accessible through their default URLs, but browsers will show security warnings due to the missing certificates.
+- Disabling certificate generation for `convox.cloud` domains does not affect the functionality of your applications. They will still be accessible through their default URLs, but browsers will show security warnings due to the missing certificates.
 - Consider using this parameter in conjunction with [custom domains](/deployment/custom-domains) for your services to maintain secure HTTPS connections.
-
-## Version Requirements
-This feature is available in all recent versions of Convox.

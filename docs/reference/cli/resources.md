@@ -1,6 +1,5 @@
 ---
 title: "resources"
-draft: false
 slug: resources
 url: /reference/cli/resources
 ---
@@ -11,11 +10,11 @@ url: /reference/cli/resources
 List resources
 
 ### Usage
-```html
+```bash
     convox resources
 ```
 ### Examples
-```html
+```bash
     $ convox resources
     NAME      TYPE      URL
     database  postgres  postgres://app:123456-7890-abcd-ef01-234567890abc@test-nodejs-resourcedatabase-abcd.efgh.us-east-1.rds.amazonaws.com:5432/app
@@ -25,11 +24,11 @@ List resources
 Start a console for a resource
 
 ### Usage
-```html
+```bash
     convox resources console <resource>
 ```
 ### Examples
-```html
+```bash
     $ convox resources console database
 ```
 ## resources export
@@ -37,11 +36,17 @@ Start a console for a resource
 Export data from a resource
 
 ### Usage
-```html
+```bash
     convox resources export <resource>
 ```
+### Flags
+
+| Flag | Short | Description |
+| ---- | ----- | ----------- |
+| `--file` | `-f` | Export to file |
+
 ### Examples
-```html
+```bash
     $ convox resources export database
 ```
 ## resources import
@@ -49,12 +54,18 @@ Export data from a resource
 Import data to a resource
 
 ### Usage
-```html
-    convox resources import
+```bash
+    convox resources import <resource>
 ```
+### Flags
+
+| Flag | Short | Description |
+| ---- | ----- | ----------- |
+| `--file` | `-f` | Import from file |
+
 ### Examples
-```html
-    $ convox resources import --file dump.tgz
+```bash
+    $ convox resources import database --file dump.tgz
 ```
 
 ## resources info
@@ -62,11 +73,11 @@ Import data to a resource
 Get information about a resource
 
 ### Usage
-```html
+```bash
     convox resources info <resource>
 ```
 ### Examples
-```html
+```bash
     $ convox resources info database
     Name  database
     Type  postgres
@@ -77,11 +88,18 @@ Get information about a resource
 Proxy a local port to a resource
 
 ### Usage
-```html
+```bash
     convox resources proxy <resource>
 ```
+### Flags
+
+| Flag | Short | Description |
+| ---- | ----- | ----------- |
+| `--port` | `-p` | Local port to listen on |
+| `--tls` | `-t` | Wrap connection in TLS |
+
 ### Examples
-```html
+```bash
     $ convox resources proxy database
     proxying localhost:5432 to test-nodejs-resourcedatabase-abcd.efgh.us-east-1.rds.amazonaws.com:5432
 
@@ -93,11 +111,16 @@ Proxy a local port to a resource
 Get url for a resource
 
 ### Usage
-```html
+```bash
     convox resources url <resource>
 ```
 ### Examples
-```html
+```bash
     $ convox resources url database
     postgres://app:123456-7890-abcd-ef01-234567890abc@test-nodejs-resourcedatabase-abcd.efgh.us-east-1.rds.amazonaws.com:5432/app
 ```
+
+## See Also
+
+- [Resource](/reference/primitives/app/resource) for resource types and configuration
+- [proxy](/reference/cli/proxy) for proxying connections to internal services

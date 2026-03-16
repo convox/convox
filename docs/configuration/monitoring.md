@@ -1,16 +1,15 @@
 ---
-title: "Monitoring & Alerting"
-draft: false
-slug: Monitoring & Alerting
+title: "Monitoring and Alerting"
+slug: monitoring-and-alerting
 url: /configuration/monitoring
 ---
-# Monitoring & Alerting
+# Monitoring and Alerting
 
 Convox provides integrated metrics collection and alerting capabilities that give you comprehensive visibility into your applications and infrastructure. Built directly into the Convox platform, monitoring requires no additional tools or complex configuration.
 
-## Overview
+## Monitoring Capabilities
 
-Convox Monitoring & Alerting offers:
+Convox Monitoring and Alerting offers:
 
 - **Automatic metrics collection** from your racks and applications
 - **Pre-configured dashboards** with essential infrastructure metrics
@@ -131,7 +130,7 @@ Configure notification integrations to receive alerts where your team works.
 
 - **Slack**: Send alerts directly to Slack channels
 - **Discord**: Deliver notifications to Discord channels
-- **PagerDuty**: Coming soon
+- **PagerDuty**: Route alerts to PagerDuty for on-call workflows
 
 ### Setting Up Notifications
 
@@ -188,5 +187,11 @@ convox logs -a myapp --service web
 # View logs for a specific time period
 convox logs -a myapp --since 1h
 
-# Tail application logs
-convox logs -a myapp --follow
+# Stream application logs (default behavior)
+convox logs -a myapp
+```
+
+## See Also
+
+- [Logging](/configuration/logging) for configuring log collection
+- [Datadog Integration](/integrations/monitoring) for detailed Datadog setup instructions

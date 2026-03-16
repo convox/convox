@@ -1,21 +1,22 @@
 ---
 title: "api"
-draft: false
 slug: api
 url: /reference/cli/api
 ---
 # api
+
+The `convox api` command provides low-level access to the Convox Rack API. It is useful for debugging, scripting, or querying API endpoints that are not directly exposed by other CLI commands.
 
 ## api get
 
 Query the Rack API
 
 ### Usage
-```html
+```bash
     convox api get <path>
 ```
 ### Examples
-```html
+```bash
     $ convox api get /apps
     [
       {
@@ -23,8 +24,12 @@ Query the Rack API
         "locked": false,
         "name": "myapp",
         "release": "RABCDEFGHI",
-        "router", "0a1b2c3d4e5f.convox.cloud",
+        "router": "0a1b2c3d4e5f.convox.cloud",
         "status": "running"
       }
     ]
 ```
+
+## See Also
+
+- [Kubernetes Mapping](/reference/convox-k8s-mapping) for how Convox concepts map to K8s resources

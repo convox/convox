@@ -1,6 +1,5 @@
 ---
 title: "Machine Management"
-draft: false
 slug: machines
 url: /cloud/machines
 ---
@@ -64,7 +63,7 @@ Machines come in four pre-configured sizes:
 
 ## Upgrading and Downgrading Machines
 
-Machine resize functionality is coming soon. In the meantime, to change your machine size:
+To change your machine size, follow this migration process:
 
 1. Create a new machine with your desired size through the [Convox Console](https://console.convox.com)
 2. Deploy your application to the new machine
@@ -96,7 +95,7 @@ services:
       count: 2
       cpu: 250
       memory: 512
-  
+
   worker:
     build: .
     command: npm run worker
@@ -104,7 +103,7 @@ services:
       count: 1
       cpu: 250
       memory: 768
-  
+
   cache:
     image: redis:alpine
     port: 6379
@@ -116,6 +115,8 @@ services:
 Total resource usage:
 - CPU: (2 × 250) + 250 + 125 = 875 millicores (under 1000 limit)
 - Memory: (2 × 512) + 768 + 256 = 2048 MB (at 2 GB limit)
+
+> This example uses non-standard CPU and memory values (125m CPU, 768 MB memory) to demonstrate precise resource packing within a Small machine's limits. In general practice, prefer round CPU values (250, 500, 1000) and binary memory increments (256, 512, 1024).
 
 ## Cloud Databases
 
@@ -133,10 +134,10 @@ See [Cloud Databases](/cloud/databases) for configuration details.
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: small
-      version: 17.5
+      version: "17.5"
 
 services:
   web:

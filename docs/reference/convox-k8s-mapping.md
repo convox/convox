@@ -1,12 +1,11 @@
 ---
 title: "Convox to Kubernetes Resource Mapping"
-draft: false
 slug: convox-k8s-mapping
 url: /reference/convox-k8s-mapping
 ---
 # Convox to Kubernetes Resource Mapping Reference
 
-## Overview
+## How Convox Maps to Kubernetes
 
 This document provides a comprehensive mapping of Convox concepts to their underlying Kubernetes implementations. It is intended for DevOps engineers who are familiar with Kubernetes and need to inspect, troubleshoot, or interact with their Convox-managed clusters using `kubectl`.
 
@@ -100,11 +99,11 @@ resources:
   database:
     type: postgres
     options:
-      version: 13
+      version: "13"
       storage: 20
 
   # --- Containerized Redis ----------------------------------------------
-  # K8s: Deployment, Service (NodePort), ConfigMap  (no PVC — stateless)
+  # K8s: Deployment, Service (NodePort), ConfigMap  (no PVC  -  stateless)
   cache:
     type: redis
 
@@ -115,7 +114,7 @@ resources:
     options:
       class: db.t3.large
       storage: 100
-      version: 13
+      version: "13"
       encrypted: true
       durable: true
       deletionProtection: true
@@ -130,7 +129,6 @@ resources:
       class: cache.t3.micro
       version: "6.2"
       encrypted: true
-      transitEncryption: true
       durable: true
 
 # ============================================================================
@@ -140,12 +138,12 @@ resources:
 services:
   # --- Web Service (public-facing) --------------------------------------
   # K8s Resources:
-  #   Deployment    "web"          — runs the application containers
-  #   Service       "web"          — ClusterIP routing to pods
-  #   Ingress       "web"          — external HTTPS termination & routing
-  #   HPA           "web"          — autoscaling (because scale.count is a range)
-  #   Secret        "env-web"      — environment variables
-  #   ServiceAccount "web"         — pod identity (if accessControl is set)
+  #   Deployment    "web"           -  runs the application containers
+  #   Service       "web"           -  ClusterIP routing to pods
+  #   Ingress       "web"           -  external HTTPS termination & routing
+  #   HPA           "web"           -  autoscaling (because scale.count is a range)
+  #   Secret        "env-web"       -  environment variables
+  #   ServiceAccount "web"          -  pod identity (if accessControl is set)
   #
   # kubectl: kubectl get deploy,svc,ing,hpa -l service=web
 
@@ -232,10 +230,10 @@ services:
     #   targets     → HPA metrics
     scale:
       count: 2-10
-      cpu: 256
+      cpu: 250
       memory: 512
       limit:
-        cpu: 512
+        cpu: 500
         memory: 1024
       targets:
         cpu: 70
@@ -270,9 +268,9 @@ services:
 
   # --- Worker Service (background) -------------------------------------
   # K8s Resources:
-  #   Deployment    "worker"       — runs background job processors
-  #   Secret        "env-worker"   — environment variables
-  #   (No Service/Ingress — no public ports)
+  #   Deployment    "worker"        -  runs background job processors
+  #   Secret        "env-worker"    -  environment variables
+  #   Service       "worker"        -  because ports are defined (for balancer)
   #
   # kubectl: kubectl get deploy -l service=worker
 
@@ -281,9 +279,12 @@ services:
     command: bin/worker
     environment:
       - QUEUE_NAME=default
+    ports:
+      - 3001
+      - 3002
     scale:
       count: 2
-      cpu: 512
+      cpu: 500
       memory: 1024
     resources:
       - database
@@ -297,9 +298,9 @@ services:
 
   # --- Agent Service (DaemonSet) ----------------------------------------
   # K8s Resources:
-  #   DaemonSet     "agent"        — one pod per node
-  #   Service       "agent"        — because ports are defined
-  #   Secret        "env-agent"    — environment variables
+  #   DaemonSet     "agent"         -  one pod per node
+  #   Service       "agent"         -  because ports are defined
+  #   Secret        "env-agent"     -  environment variables
   #
   # kubectl: kubectl get ds -l service=agent
 
@@ -312,10 +313,10 @@ services:
 
   # --- Jobs Template Service (scaled to zero) ---------------------------
   # K8s Resources:
-  #   Deployment    "jobs"         — 0 replicas (template only)
-  #   Secret        "env-jobs"     — environment variables
+  #   Deployment    "jobs"          -  0 replicas (template only)
+  #   Secret        "env-jobs"      -  environment variables
   #
-  # No running pods — used only as the image source for Timers.
+  # No running pods  -  used only as the image source for Timers.
 
   jobs:
     build: ./jobs
@@ -339,7 +340,7 @@ timers:
     command: bin/cleanup
     schedule: "0 3 * * *"
     service: jobs
-    concurrency: forbid
+    concurrency: Forbid
 
   # Parallel timer → CronJob "timer-data-import" with parallelism=4
   # Each replica gets a TIMER_INDEX env var (0, 1, 2, 3)
@@ -348,7 +349,7 @@ timers:
     schedule: "0 * * * *"
     service: jobs
     parallelCount: 4
-    concurrency: forbid
+    concurrency: Forbid
     annotations:
       - monitoring.example.com/alert=true
 
@@ -375,7 +376,7 @@ balancers:
 
 The diagram below summarizes the relationship between the `convox.yml` sections above and the Kubernetes resources Convox generates:
 
-```
+```text
 convox.yml Section        Kubernetes Resources Created
 ─────────────────         ──────────────────────────────────────────────
 environment:         ──►  Secret         (env-<service>)
@@ -383,7 +384,7 @@ resources:           ──►  Deployment + Service + PVC + ConfigMap
                           (or cloud-managed + ConfigMap only)
 services:
   web: (port set)    ──►  Deployment + Service + Ingress + HPA
-  worker: (no port)  ──►  Deployment
+  worker: (ports)    ──►  Deployment + Service
   agent: (agent)     ──►  DaemonSet + Service
   jobs: (count: 0)   ──►  Deployment (0 replicas, template only)
   ├─ scale           ──►  HPA + resources.requests/limits

@@ -1,6 +1,5 @@
 ---
 title: "region"
-draft: false
 slug: region
 url: /configuration/rack-parameters/azure/region
 ---
@@ -20,7 +19,7 @@ The default value for `region` is `eastus`.
 
 ## Setting Parameters
 To set the `region` parameter, use the following command:
-```html
+```bash
 $ convox rack params set region=eastus -r rackName
 Setting parameters... OK
 ```

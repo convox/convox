@@ -1,11 +1,10 @@
 ---
 title: "Google Cloud"
-draft: false
-slug: Google Cloud
+slug: google-cloud
 url: /installation/production-rack/gcp
 ---
 # Google Cloud
-> Please note that these are instructions for installing a Rack via the command line. The easiest way to install a Rack is with the [Convox Web Console](https://console.convox.com)
+> These are instructions for installing a Rack via the command line. The recommended way to install a Rack is with the [Convox Web Console](https://console.convox.com)
 
 ## Initial Setup
 
@@ -16,7 +15,7 @@ url: /installation/production-rack/gcp
 
 ### Terraform
 
-- Install [Terraform](https://learn.hashicorp.com/terraform/getting-started/install.html)
+- Install [Terraform](https://developer.hashicorp.com/terraform/install)
 
 ### Convox CLI
 
@@ -30,7 +29,7 @@ The following environment variables are required:
 - `GOOGLE_PROJECT`
 
 ### Create Project
-```html
+```bash
     $ gcloud projects create <id> --set-as-default
 ```
 - `GOOGLE_PROJECT` is the id you selected
@@ -38,7 +37,7 @@ The following environment variables are required:
 > You will need to enable billing on this new project before proceeding. Visit https://console.cloud.google.com/billing to set up billing for your project.
 
 ### Create Service Account
-```html
+```bash
     $ serviceaccount="convox@${GOOGLE_PROJECT}.iam.gserviceaccount.com"
     $ gcloud iam service-accounts create convox
     $ gcloud iam service-accounts keys create ~/.gcloud.convox --iam-account="${serviceaccount}"
@@ -46,7 +45,7 @@ The following environment variables are required:
 - `GOOGLE_CREDENTIALS` is `~/gcloud.convox`
 
 ### Grant Permissions
-```html
+```bash
     $ gcloud projects add-iam-policy-binding ${GOOGLE_PROJECT} --member="serviceAccount:${serviceaccount}" --role="roles/owner"
 ```
 
@@ -54,7 +53,7 @@ The following environment variables are required:
 
 The following APIs must be enabled for your GCP project:
 
-```html
+```bash
     $ gcloud services enable cloudapis.googleapis.com
     $ gcloud services enable compute.googleapis.com
     $ gcloud services enable cloudresourcemanager.googleapis.com
@@ -64,15 +63,36 @@ The following APIs must be enabled for your GCP project:
 ```
 
 ## Install Rack
-```html
+```bash
     $ convox rack install gcp <name> [param1=value1]...
 ```
 ### Available Parameters
 
 | Name          | Default         | Description                                                                              |
 | ------------- | --------------- | ---------------------------------------------------------------------------------------- |
-| **cert_duration** | **2160h**         | Certification renew period                                                                 |
+| **cert_duration** | **2160h**         | Certificate renewal period                                                                 |
 | **node_type**     | **n1-standard-1** | Node instance type                                                                         |
 | **preemptible**   | **true**          | Use [preemptible](https://cloud.google.com/compute/docs/instances/preemptible) instances   |
 | **region**        | **us-east1**      | GCP Region                                                                                 |
 | **syslog**        |                   | Forward logs to a syslog endpoint (e.g. **tcp+tls://example.org:1234**)                    |
+
+## Post-Installation
+
+After the install completes, verify your rack is running:
+
+```bash
+    $ convox rack
+    Name      myrack
+    Provider  gcp
+    Router    router.0a1b2c3d4e5f.convox.cloud
+    Status    running
+    Version   3.23.3
+```
+
+Installation typically takes 10-20 minutes while GKE provisions the cluster and node pools.
+
+## See Also
+
+- [CLI Rack Management](/management/cli-rack-management) for managing and updating your Rack
+- [Deploying an Application](/tutorials/deploying-an-application) to deploy your first app
+- [Rack Parameters: GCP](/configuration/rack-parameters/gcp) for a full list of configurable parameters

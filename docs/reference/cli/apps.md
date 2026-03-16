@@ -1,6 +1,5 @@
 ---
 title: "apps"
-draft: false
 slug: apps
 url: /reference/cli/apps
 ---
@@ -11,11 +10,11 @@ url: /reference/cli/apps
 List apps
 
 ### Usage
-```html
+```bash
     convox apps
 ```
 ### Examples
-```html
+```bash
     $ convox apps
     APP          STATUS   RELEASE
     myapp        running  RABCDEFGHI
@@ -26,11 +25,11 @@ List apps
 Cancel an app update
 
 ### Usage
-```html
+```bash
     convox apps cancel [app]
 ```
 ### Examples
-```html
+```bash
     $ convox apps cancel
     Cancelling deployment of myapp... OK
 ```
@@ -39,11 +38,11 @@ Cancel an app update
 Create an app
 
 ### Usage
-```html
+```bash
     convox apps create [app]
 ```
 ### Examples
-```html
+```bash
     $ convox apps create myapp
     Creating myapp... OK
 ```
@@ -52,11 +51,11 @@ Create an app
 Delete an app
 
 ### Usage
-```html
+```bash
     convox apps delete <app>
 ```
 ### Examples
-```html
+```bash
     $ convox apps delete myapp
 ```
 ## apps export
@@ -64,11 +63,17 @@ Delete an app
 Export an app
 
 ### Usage
-```html
+```bash
     convox apps export [app]
 ```
+### Flags
+
+| Flag | Short | Description |
+| ---- | ----- | ----------- |
+| `--file` | `-f` | Export to file |
+
 ### Examples
-```html
+```bash
     $ convox apps export --file myapp.tgz
     Exporting app myapp... OK
     Exporting env... OK
@@ -81,11 +86,17 @@ Export an app
 Import an app
 
 ### Usage
-```html
+```bash
     convox apps import [app]
 ```
+### Flags
+
+| Flag | Short | Description |
+| ---- | ----- | ----------- |
+| `--file` | `-f` | Import from file |
+
 ### Examples
-```html
+```bash
     $ convox apps import myapp2 --file myapp.tgz
     Creating app myapp2... OK
     Importing build... OK, RIHGFEDCBA
@@ -98,15 +109,15 @@ Import an app
 Get information about an app
 
 ### Usage
-```html
+```bash
     convox apps info [app]
 ```
 ### Examples
-```html
+```bash
     $ convox apps info
     Name        myapp
     Status      running
-    Generation  2
+    Generation  3
     Locked      false
     Release     RABCDEFGHI
 ```
@@ -115,24 +126,60 @@ Get information about an app
 Enable termination protection
 
 ### Usage
-```html
+```bash
     convox apps lock [app]
 ```
 ### Examples
-```html
+```bash
     $ convox apps lock
     Locking myapp... OK
 ```
+## apps params
+
+Display app parameters
+
+### Usage
+```bash
+    convox apps params [app]
+```
+### Examples
+```bash
+    $ convox apps params -a myapp
+    BuildCpu     0
+    BuildLabels
+    BuildMem     0
+```
+
+## apps params set
+
+Set app parameters
+
+### Usage
+```bash
+    convox apps params set <key=value> [key=value]... [app]
+```
+### Examples
+```bash
+    $ convox apps params set BuildCpu=1000 BuildMem=4096 -a myapp
+    Setting parameters... OK
+```
+
 ## apps unlock
 
 Disable termination protection
 
 ### Usage
-```html
+```bash
     convox apps unlock [app]
 ```
 ### Examples
-```html
+```bash
     $ convox apps unlock
     Unlocking myapp... OK
 ```
+
+## See Also
+
+- [App](/reference/primitives/app) for app primitives
+- [App Parameters](/configuration/app-parameters) for available app parameters
+- [Deploy](/reference/cli/deploy) for deploying apps

@@ -1,6 +1,5 @@
 ---
 title: "additional_build_groups_config"
-draft: false
 slug: additional_build_groups_config
 url: /configuration/rack-parameters/azure/additional_build_groups_config
 ---
@@ -25,7 +24,7 @@ The `additional_build_groups_config` parameter takes a JSON array of build node 
 |-------|----------|-------------|---------|
 | `type` | Yes | The Azure VM size to use for the build node pool |  |
 | `disk` | No | The OS disk size in GB for the nodes | Same as main node disk (default: 30) |
-| `capacity_type` | No | Whether to use regular or spot VMs. Accepts `ON_DEMAND`, `SPOT`, `Regular`, or `Spot` | `ON_DEMAND` (Regular) |
+| `capacity_type` | No | Whether to use regular or spot VMs. Use `ON_DEMAND` or `SPOT` (case-insensitive). The aliases `Regular` and `Spot` are also accepted. | `ON_DEMAND` (Regular) |
 | `min_size` | No | Minimum number of nodes | 0 |
 | `max_size` | No | Maximum number of nodes | 100 |
 | `label` | No | Custom label value. Applied as `convox.io/label: <label-value>` | `custom-build` |
@@ -41,7 +40,7 @@ Build node pools automatically get the following labels and taints:
 ## Setting Parameters
 
 ### Using a JSON File (Recommended)
-```html
+```bash
 $ convox rack params set additional_build_groups_config=/path/to/build-config.json -r rackName
 Setting parameters... OK
 ```
@@ -62,10 +61,14 @@ Example JSON file:
 ```
 
 ### Using a Raw JSON String
-```html
+```bash
 $ convox rack params set 'additional_build_groups_config=[{"id":201,"type":"Standard_D8s_v3","disk":100,"min_size":0,"max_size":3,"label":"builds"}]' -r rackName
 Setting parameters... OK
 ```
+
+## Architecture Compatibility
+
+Convox on Azure requires x86-based VM SKUs. ARM-based VM SKUs are not supported. All build node pools must use x86 VM SKUs to match the rack's [node_type](/configuration/rack-parameters/azure/node_type).
 
 ## Additional Information
 For general-purpose node pools, see the [`additional_node_groups_config`](/configuration/rack-parameters/azure/additional_node_groups_config) parameter.

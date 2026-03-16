@@ -1,7 +1,6 @@
 ---
 title: "One-off Commands"
-draft: false
-slug: One-off Commands
+slug: one-off-commands
 url: /management/run
 ---
 # One-off Commands
@@ -18,14 +17,14 @@ Using `convox run` will start a new [Process](/reference/primitives/app/process)
 
 Running an interactive process will start a [Process](/reference/primitives/app/process) and connect
 your local terminal so that you can run commands and see output:
-```html
+```bash
     $ convox run web bash
     root@web#
 ```
 ### Running Detached
 
 Running detached is useful for long-running tasks that you don't want to be disrupted:
-```html
+```bash
     $ convox run web bin/cleanup-database --detach
     Running detached process... OK, web-s43xf
 ```
@@ -36,7 +35,7 @@ Running detached is useful for long-running tasks that you don't want to be disr
 
 Using `convox exec` will run a command inside an existing [Process](/reference/primitives/app/process).
 This can be useful for debugging a running [Process](/reference/primitives/app/process).
-```html
+```bash
     $ convox ps
     ID                    SERVICE  STATUS   RELEASE     STARTED         COMMAND
     web-6844dc6f45-9wdss  web      running  RABCDEFGHI  14 minutes ago  bin/web
@@ -47,7 +46,12 @@ This can be useful for debugging a running [Process](/reference/primitives/app/p
 ```
 You can also use a [Service](/reference/primitives/app/service) name with `convox exec` to select
 a random [Process](/reference/primitives/app/process) of that Service.
-```html
+```bash
     $ convox exec web bash
     root@web#
 ```
+
+## See Also
+
+- [CLI run Reference](/reference/cli/run) for the full `convox run` command reference
+- [CLI exec Reference](/reference/cli/exec) for running commands in existing processes
