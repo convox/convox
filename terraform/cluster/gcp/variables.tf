@@ -1,6 +1,6 @@
 variable "k8s_version" {
   type    = string
-  default = "1.33"
+  default = "1.34"
 }
 
 variable "name" {

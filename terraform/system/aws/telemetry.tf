@@ -131,7 +131,7 @@ locals {
     imds_tags_enable = "false"
     internal_router = "false"
     internet_gateway_id = ""
-    k8s_version = "1.33"
+    k8s_version = "1.34"
     keda_enable = "false"
     key_pair_name = ""
     kube_proxy_version = "v1.33.3-eksbuild.10"
