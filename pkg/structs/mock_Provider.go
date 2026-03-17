@@ -127,7 +127,7 @@ func (_m *MockProvider) AppDelete(name string) error {
 	return r0
 }
 
-/// AppDiagnose provides a mock function with given fields: app, opts
+// AppDiagnose provides a mock function with given fields: app, opts
 func (_m *MockProvider) AppDiagnose(app string, opts AppDiagnoseOptions) (*AppDiagnosticReport, error) {
 	ret := _m.Called(app, opts)
 

@@ -309,7 +309,7 @@ func (p *Provider) diagnoseInitPods(namespace string) ([]structs.DiagnosticInitP
 	return initPods, nil
 }
 
-func classifyPod(pod ac.Pod, ageThreshold int) (classification, stateDetail string) {
+func classifyPod(pod *ac.Pod, ageThreshold int) (classification, stateDetail string) {
 	phase := string(pod.Status.Phase)
 	age := int(time.Since(pod.CreationTimestamp.Time).Seconds())
 
@@ -409,7 +409,7 @@ func (p *Provider) diagnosePods(namespace string, opts structs.AppDiagnoseOption
 			continue
 		}
 
-		classification, stateDetail := classifyPod(pod, ageThreshold)
+		classification, stateDetail := classifyPod(&pod, ageThreshold)
 
 		switch classification {
 		case "unhealthy":
@@ -491,8 +491,8 @@ func (p *Provider) diagnosePods(namespace string, opts structs.AppDiagnoseOption
 				dp.Hint = "Process is waiting to be scheduled -- this usually means the cluster is low on resources"
 			}
 
-			// Get current logs
-			currentLogs, err := p.getAllContainerLogs(namespace, cp.pod.Name, lines)
+			// Get current logs (regular containers only, init containers are in the init section)
+			currentLogs, err := p.getAllContainerLogs(namespace, cp.pod.Name, cp.pod.Spec.Containers, lines)
 			if err == nil {
 				dp.Logs = currentLogs
 			}
@@ -573,22 +573,15 @@ func (p *Provider) getPodLogs(namespace, podName, container string, lines int64)
 	return buf.String(), nil
 }
 
-func (p *Provider) getAllContainerLogs(namespace, podName string, lines int64) (string, error) {
-	opts := &ac.PodLogOptions{
-		TailLines: &lines,
-	}
-
-	// Try with all-containers first (requires iterating containers)
-	pod, err := p.Cluster.CoreV1().Pods(namespace).Get(context.TODO(), podName, am.GetOptions{})
-	if err != nil {
-		return "", err
-	}
-
+func (p *Provider) getAllContainerLogs(namespace, podName string, containers []ac.Container, lines int64) (string, error) {
 	var allLogs strings.Builder
-	containers := append(pod.Spec.InitContainers, pod.Spec.Containers...)
 
 	for _, c := range containers {
-		opts.Container = c.Name
+		opts := &ac.PodLogOptions{
+			Container: c.Name,
+			TailLines: &lines,
+		}
+
 		req := p.Cluster.CoreV1().Pods(namespace).GetLogs(podName, opts)
 		stream, err := req.Stream(context.TODO())
 		if err != nil {

@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	register("deploy-debug", "diagnose deploy failures and non-ready processes", DeployDebug, stdcli.CommandOptions{
+	register("deploy-debug", "diagnose deploy failures and non-ready processes", watch(DeployDebug), stdcli.CommandOptions{
 		Flags: append(stdcli.OptionFlags(structs.AppDiagnoseOptions{}),
 			flagApp,
 			flagRack,

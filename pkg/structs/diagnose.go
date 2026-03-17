@@ -11,7 +11,6 @@ type AppDiagnoseOptions struct {
 	Lines        *int  `flag:"lines,n" query:"lines" default:"200"`
 	Events       *bool `query:"events" default:"true"`
 	Previous     *bool `query:"previous" default:"true"`
-	Describe     *bool `flag:"describe" query:"describe"`
 }
 
 type AppDiagnosticReport struct {
@@ -83,5 +82,4 @@ type DiagnosticPod struct {
 	Logs           string            `json:"logs,omitempty"`
 	PreviousLogs   string            `json:"previousLogs,omitempty"`
 	Events         []DiagnosticEvent `json:"events,omitempty"`
-	Describe       string            `json:"describe,omitempty"`
 }
