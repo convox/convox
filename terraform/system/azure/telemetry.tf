@@ -41,7 +41,7 @@ locals {
     idle_timeout = "4"
     image = "convox/convox"
     internal_router = "false"
-    k8s_version = "1.33"
+    k8s_version = "1.34"
     name = ""
     nginx_additional_config = ""
     nginx_image = ""
