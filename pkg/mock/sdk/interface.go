@@ -133,6 +133,29 @@ func (_m *Interface) AppDelete(name string) error {
 	return r0
 }
 
+// AppDiagnose provides a mock function with given fields: app, opts
+func (_m *Interface) AppDiagnose(app string, opts structs.AppDiagnoseOptions) (*structs.AppDiagnosticReport, error) {
+	ret := _m.Called(app, opts)
+
+	var r0 *structs.AppDiagnosticReport
+	if rf, ok := ret.Get(0).(func(string, structs.AppDiagnoseOptions) *structs.AppDiagnosticReport); ok {
+		r0 = rf(app, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*structs.AppDiagnosticReport)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, structs.AppDiagnoseOptions) error); ok {
+		r1 = rf(app, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // AppGet provides a mock function with given fields: name
 func (_m *Interface) AppGet(name string) (*structs.App, error) {
 	ret := _m.Called(name)

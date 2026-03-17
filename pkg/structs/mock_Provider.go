@@ -127,6 +127,29 @@ func (_m *MockProvider) AppDelete(name string) error {
 	return r0
 }
 
+/// AppDiagnose provides a mock function with given fields: app, opts
+func (_m *MockProvider) AppDiagnose(app string, opts AppDiagnoseOptions) (*AppDiagnosticReport, error) {
+	ret := _m.Called(app, opts)
+
+	var r0 *AppDiagnosticReport
+	if rf, ok := ret.Get(0).(func(string, AppDiagnoseOptions) *AppDiagnosticReport); ok {
+		r0 = rf(app, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*AppDiagnosticReport)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, AppDiagnoseOptions) error); ok {
+		r1 = rf(app, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // AppGet provides a mock function with given fields: name
 func (_m *MockProvider) AppGet(name string) (*App, error) {
 	ret := _m.Called(name)

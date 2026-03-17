@@ -111,6 +111,22 @@ func (s *Server) AppDelete(c *stdapi.Context) error {
 	return c.RenderOK()
 }
 
+func (s *Server) AppDiagnose(c *stdapi.Context) error {
+	app := c.Var("app")
+
+	var opts structs.AppDiagnoseOptions
+	if err := stdapi.UnmarshalOptions(c.Request(), &opts); err != nil {
+		return err
+	}
+
+	v, err := s.provider(c).WithContext(contextFrom(c)).AppDiagnose(app, opts)
+	if err != nil {
+		return err
+	}
+
+	return c.RenderJSON(v)
+}
+
 func (s *Server) AppGet(c *stdapi.Context) error {
 	if err := s.hook("AppGetValidate", c); err != nil {
 		return err

@@ -81,6 +81,21 @@ func (c *Client) AppConfigSet(app, name, valueBase64 string) error {
 	return c.Put(fmt.Sprintf("/apps/%s/configs/%s", app, name), ro, nil)
 }
 
+func (c *Client) AppDiagnose(app string, opts structs.AppDiagnoseOptions) (*structs.AppDiagnosticReport, error) {
+	var err error
+
+	ro, err := stdsdk.MarshalOptions(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	var v *structs.AppDiagnosticReport
+
+	err = c.Get(fmt.Sprintf("/apps/%s/diagnose", app), ro, &v)
+
+	return v, err
+}
+
 func (c *Client) AppGet(name string) (*structs.App, error) {
 	var err error
 
