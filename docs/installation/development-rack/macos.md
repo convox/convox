@@ -5,56 +5,126 @@ url: /installation/development-rack/macos
 ---
 # macOS
 
-These instructions apply to both Intel (x86_64) and Apple Silicon (M1/ARM64) Macs.
+These instructions apply to both Intel (x86_64) and Apple Silicon (M1/M2/M3/ARM64) Macs.
 
-## Initial Setup
+## Prerequisites
 
-To use Convox's local development Rack feature on macOS, you will need the following installed locally:
+Install the following:
 - [Convox CLI](/installation/cli)
 - [Docker Desktop](https://docs.docker.com/desktop/install/mac-install/)
-- [Minikube 1.29.0 or later](https://minikube.sigs.k8s.io/docs/start/)
-- [Terraform](https://developer.hashicorp.com/terraform/downloads)
+- [Minikube](https://minikube.sigs.k8s.io/docs/start/)
+- [Terraform](https://developer.hashicorp.com/terraform/install)
 
 ## Installation
 
-Convox development racks run on Minikube with several required options:
-- `--insecure-registry="registry.<RACK_NAME>.macdev.convox.cloud"`
-- `--kubernetes-version=<k8s_VERSION>`
-- `--driver=docker`
+### 1. Choose a rack name
 
-The first thing you must choose is the name for your rack as it will be a component of other installation parameters. For this documentation we will use the rack name: `test-local`
+Pick a name for your local rack. This name becomes part of the domain used to reach your applications. We will use `dev` throughout this guide.
 
-Then verify the Kubernetes version for the [rack version](https://github.com/convox/convox/releases) you are going to install. At the time of this writing it is `v1.23.0`
+### 2. Start Minikube
 
-You will start Minikube with the command:
-`minikube start --kubernetes-version=<k8s_VERSION> --insecure-registry="https://registry.<RACK_NAME>.macdev.convox.cloud" --driver=docker`
+Start Minikube with the Docker driver and the insecure registry flag for your rack name:
 
-For this example the command would be:
-`minikube start --kubernetes-version=v1.23.0 --insecure-registry="https://registry.test-local.macdev.convox.cloud" --driver=docker`
-- If you receive an error regarding docker permissions, you can run the group command given in the output.
+```bash
+minikube start \
+  --driver=docker \
+  --kubernetes-version=v1.33.0 \
+  --insecure-registry="registry.dev.macdev.convox.cloud"
+```
 
-Now enable Minikube ingress and ingress-dns addons:
-`minikube addons enable ingress`
-`minikube addons enable ingress-dns`
+Replace `dev` with your chosen rack name in the `--insecure-registry` flag.
 
-Then install the local development rack with the command `convox rack install local <RACK_NAME> -v <VERSION> os=mac`
-> **_NOTE:_** Rack version `-v` must be `3.10.5` or later
+> Check the [Convox releases](https://github.com/convox/convox/releases) page to find the Kubernetes version for the rack version you want to install.
 
-For this example the command would be:
-`convox rack install local test-local -v 3.10.5 os=mac`
+### 3. Enable required addons
 
-Once the rack is installed you should be able to see it by running: `convox racks`
+```bash
+minikube addons enable ingress
+minikube addons enable ingress-dns
+```
 
-Finally, to address the rack on macOS you must open a new terminal window and run `minikube tunnel`
-> **_NOTE:_** You must keep the terminal window with the tunnel active open to address the rack
+### 4. Install the rack
 
-You can now run: `convox rack -r <RACK_NAME>` to verify connectivity.
+```bash
+convox rack install local dev -v 3.23.3 os=mac
+```
+
+Replace `3.23.3` with the latest version from the [releases page](https://github.com/convox/convox/releases).
+
+> The `os=mac` parameter is required on macOS. It configures the rack to use `*.macdev.convox.cloud` instead of `*.localdev.convox.cloud`.
+
+### 5. Start the Minikube tunnel
+
+Open a separate terminal window and run:
+
+```bash
+minikube tunnel
+```
+
+> You must keep this terminal open while using the rack. The tunnel allows your Mac to reach services inside the Minikube cluster.
+
+### 6. Verify the installation
+
+```bash
+convox rack -r dev
+```
+
+You should see output like:
+
+```
+Name      dev
+Provider  local
+Router    router.dev.macdev.convox.cloud
+Status    running
+Version   3.23.3
+```
+
+## Using the rack
+
+Switch to your new rack:
+
+```bash
+convox switch dev
+```
+
+Now all `convox` commands will target your local rack. You can deploy apps with `convox deploy`, start local development with `convox start`, and use all the same commands you would on a production rack.
+
+Your applications will be available at `https://<service>.<app>.dev.macdev.convox.cloud`.
+
+> Browsers will show a certificate warning because the local rack uses self-signed TLS certificates. This is expected.
 
 ## Management
 
-Local rack files are stored at `/Users/$USER/Library/Preferences/convox/racks/<RACK_NAME>`
-If you run into any issues installing and need to delete the local rack you can run:
-`sudo rm -rf /Users/$USER/Library/Preferences/convox/racks/<RACK_NAME>`
+### Rack files
+
+Local rack configuration is stored at:
+
+```
+~/Library/Preferences/convox/racks/<RACK_NAME>
+```
+
+### Stopping and starting
+
+```bash
+minikube stop    # pause the cluster (preserves state)
+minikube start   # resume the cluster
+minikube tunnel  # remember to restart the tunnel after starting
+```
+
+### Uninstalling
+
+To uninstall the rack cleanly:
+
+```bash
+convox rack uninstall -r <RACK_NAME>
+```
+
+If that fails, you can remove the rack files manually:
+
+```bash
+rm -rf ~/Library/Preferences/convox/racks/<RACK_NAME>
+minikube delete
+```
 
 ## See Also
 

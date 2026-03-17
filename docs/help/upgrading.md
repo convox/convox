@@ -7,12 +7,19 @@ url: /help/upgrading
 
 ## Local Racks
 
-- To retain your local Apps when moving to the new local Rack, you should [export](/reference/cli/apps#apps-export) them all first.  This will create a local archive of all pertinent data for each app you export.
-- Uninstall your old local rack: `convox rack uninstall local`.  This should be performed with your existing CLI before upgrading that.
-- Deprecate your existing CLI version: `sudo mv /usr/local/bin/convox /usr/local/bin/convox-old`
-- [Install](/installation/cli) the new CLI
-- Install a new [local Rack](/installation/development-rack/)
-- Create and then [Import](/reference/cli/apps#apps-import) your Apps from your previous export archives.
+To upgrade a local development Rack to a newer version:
+
+```bash
+convox rack update -r <RACK_NAME> <VERSION>
+```
+
+If you need to do a clean reinstall:
+
+1. Export any apps you want to keep: `convox apps export <APP_NAME> -f app-backup.tgz`
+2. Uninstall the old rack: `convox rack uninstall -r <RACK_NAME>`
+3. Delete the minikube cluster: `minikube delete`
+4. Follow the [development rack installation instructions](/installation/development-rack) to set up a fresh rack
+5. Import your apps: `convox apps import <APP_NAME> -f app-backup.tgz`
 
 ## ECS (Generation 2 Racks) -> EKS/GCP/Azure/Digital Ocean (Generation 3 Racks)
 
