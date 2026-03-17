@@ -8,6 +8,7 @@ func (s *Server) setupRoutes(r stdapi.Router) {
 	r.Route("POST", "/apps/{name}/cancel", s.AppCancel)
 	r.Route("POST", "/apps", s.AppCreate)
 	r.Route("DELETE", "/apps/{name}", s.AppDelete)
+	r.Route("GET", "/apps/{app}/diagnose", s.AppDiagnose)
 	r.Route("GET", "/apps/{name}", s.AppGet)
 	r.Route("GET", "/apps", s.AppList)
 	r.Route("SOCKET", "/apps/{name}/logs", s.AppLogs)

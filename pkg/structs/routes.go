@@ -8,6 +8,7 @@ func init() {
 	routes["AppCancel"] = "POST /apps/{name}/cancel"
 	routes["AppCreate"] = "POST /apps"
 	routes["AppDelete"] = "DELETE /apps/{name}"
+	routes["AppDiagnose"] = "GET /apps/{app}/diagnose"
 	routes["AppGet"] = "GET /apps/{name}"
 	routes["AppList"] = "GET /apps"
 	routes["AppLogs"] = "SOCKET /apps/{name}/logs"

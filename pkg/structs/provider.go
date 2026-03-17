@@ -18,6 +18,7 @@ type Provider interface {
 	AppConfigSet(app, name, valueBase64 string) error
 	AppGet(name string) (*App, error)
 	AppDelete(name string) error
+	AppDiagnose(app string, opts AppDiagnoseOptions) (*AppDiagnosticReport, error)
 	AppList() (Apps, error)
 	AppLogs(name string, opts LogsOptions) (io.ReadCloser, error)
 	AppMetrics(name string, opts MetricsOptions) (Metrics, error)
