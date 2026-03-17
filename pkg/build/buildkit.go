@@ -212,7 +212,11 @@ func (bk *BuildKit) build(bb *Build, path, dockerfile, tag string, env map[strin
 	args = append(args, "--local", fmt.Sprintf("context=%s", path))                   // skipcq
 	args = append(args, "--local", fmt.Sprintf("dockerfile=%s", path))                // skipcq
 	args = append(args, "--opt", fmt.Sprintf("filename=%s", dockerfile))              // skipcq
-	args = append(args, "--output", fmt.Sprintf("type=image,name=%s,push=true", tag)) // skipcq
+	outputOpt := fmt.Sprintf("type=image,name=%s,push=true", tag)
+	if os.Getenv("PROVIDER") == "local" {
+		outputOpt = fmt.Sprintf("type=image,name=%s,push=true,registry.insecure=true", tag)
+	}
+	args = append(args, "--output", outputOpt) // skipcq
 
 	localCacheAdded := false
 
