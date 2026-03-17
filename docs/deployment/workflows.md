@@ -1,6 +1,6 @@
 ---
 title: "CI/CD Workflows"
-slug: ci-cd-workflows
+slug: workflows
 url: /deployment/workflows
 ---
 # Workflows

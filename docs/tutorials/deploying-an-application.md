@@ -205,5 +205,5 @@ Promoting a Release starts a rolling deployment:
 
 * Learn more about [deploying changes](/deployment/deploying-changes)
 * Learn more about [scaling](/deployment/scaling)
-* Create a [review workflow](https://console-docs.convox.com/console/workflows#review-workflows) to automatically create a review app every time you open a pull request
-* Create a [deployment workflow](https://console-docs.convox.com/console/workflows#deployment-workflows) to automatically deploy your app every time you merge to master
+* Create a [review workflow](/deployment/workflows#review-workflows) to automatically create a review app every time you open a pull request
+* Create a [deployment workflow](/deployment/workflows#deployment-workflows) to automatically deploy your app every time you merge to master
