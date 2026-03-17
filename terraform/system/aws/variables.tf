@@ -23,7 +23,7 @@ variable "availability_zones" {
 
 variable "aws_ebs_csi_driver_version" {
   type    = string
-  default = "v1.51.1-eksbuild.1"
+  default = "v1.56.0-eksbuild.1"
 }
 
 variable "build_disable_convox_resolver" {
@@ -70,7 +70,7 @@ variable "convox_rack_domain" {
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-coredns.html
 variable "coredns_version" {
   type    = string
-  default = "v1.12.4-eksbuild.1"
+  default = "v1.13.2-eksbuild.1"
 }
 
 variable "custom_provided_bucket" {
@@ -133,7 +133,7 @@ variable "efs_csi_driver_enable" {
 
 variable "efs_csi_driver_version" {
   type    = string
-  default = "v2.1.13-eksbuild.1"
+  default = "v2.3.0-eksbuild.2"
 }
 
 variable "eks_api_server_public_access_cidrs" {
@@ -202,7 +202,7 @@ variable "key_pair_name" {
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-kube-proxy.html
 variable "kube_proxy_version" {
   type    = string
-  default = "v1.33.3-eksbuild.10"
+  default = "v1.34.3-eksbuild.2"
 }
 
 variable "kubelet_registry_pull_qps" {
@@ -217,7 +217,7 @@ variable "kubelet_registry_burst" {
 
 variable "k8s_version" {
   type    = string
-  default = "1.33"
+  default = "1.34"
 }
 
 variable "max_on_demand_count" {
@@ -291,7 +291,7 @@ variable "pod_identity_agent_enable" {
 
 variable "pod_identity_agent_version" {
   type    = string
-  default = "v1.3.9-eksbuild.3"
+  default = "v1.3.10-eksbuild.2"
 }
 
 variable "private" {
@@ -396,7 +396,7 @@ variable "vpc_id" {
 // https://docs.aws.amazon.com/eks/latest/userguide/managing-vpc-cni.html
 variable "vpc_cni_version" {
   type    = string
-  default = "v1.20.4-eksbuild.1"
+  default = "v1.21.1-eksbuild.3"
 }
 
 variable "vpa_enable" {

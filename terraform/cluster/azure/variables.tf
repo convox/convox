@@ -10,7 +10,7 @@ variable "additional_build_groups" {
 
 variable "k8s_version" {
   type    = string
-  default = "1.33"
+  default = "1.34"
 }
 
 variable "max_on_demand_count" {
