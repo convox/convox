@@ -27,4 +27,4 @@ Setting parameters... OK
 ## Additional Information
 Enabling KEDA installs the KEDA operator and its components in the cluster. Once enabled, services can use the `scale.keda` section in their `convox.yml` to define event-driven scaling triggers.
 
-See [KEDA Autoscaling](/configuration/keda-autoscaling) for service configuration details.
+See [KEDA Autoscaling](/configuration/scaling/keda) for service configuration details.

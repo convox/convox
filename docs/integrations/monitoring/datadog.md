@@ -64,4 +64,4 @@ The agent configuration above will be listening to `8125/udp` and `8126/tcp` on 
 IP address. This IP address will be available to your [Processes](/reference/primitives/app/process)
 in the `INSTANCE_IP` environment variable.
 
-You can autoscale based on Datadog Metrics with a few [additional steps](/deployment/scaling/).
+You can autoscale based on Datadog Metrics with a few [additional steps](/configuration/scaling/datadog-metrics).

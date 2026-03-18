@@ -87,4 +87,4 @@ For this to be effective, you need to:
 
 Specifying incorrect labels that don't match any existing nodes in your cluster can cause build failures, as Kubernetes won't be able to schedule the build pods. Always verify that the labels you specify match labels that exist on your cluster nodes.
 
-For more information on node selection and workload placement strategies, see the [Workload Placement](/configuration/workload-placement) guide.
+For more information on node selection and workload placement strategies, see the [Workload Placement](/configuration/scaling/workload-placement) guide.

@@ -27,4 +27,4 @@ Setting parameters... OK
 ## Additional Information
 Enabling VPA installs the VPA controller, recommender, and admission controller in the cluster. Once enabled, services can use the `scale.vpa` section in their `convox.yml` to configure vertical autoscaling.
 
-See [Scaling](/deployment/scaling#vertical-pod-autoscaler-vpa) for service configuration details.
+See [VPA](/configuration/scaling/vpa) for service configuration details.

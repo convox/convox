@@ -44,7 +44,7 @@ Services are the heart of your app. Services are scalable processes defined by a
 
 ### Timers
 
-A timer is effectively a cron job. With a timer you can specify a regular schedule to spawn a process and run a specific command. Timers must reference a service defined in your convox.yml which defines the process to be spawned. If you want to define a service that will be used exclusively as a timer job you can define that service with a [scale](/deployment/scaling) of zero. You can read the full specification for timers [here](/reference/primitives/app/timer)
+A timer is effectively a cron job. With a timer you can specify a regular schedule to spawn a process and run a specific command. Timers must reference a service defined in your convox.yml which defines the process to be spawned. If you want to define a service that will be used exclusively as a timer job you can define that service with a [scale](/configuration/scaling) of zero. You can read the full specification for timers [here](/reference/primitives/app/timer)
 
 ### Convox.yml Example
 

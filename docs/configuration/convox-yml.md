@@ -163,5 +163,5 @@ See [Timer](/reference/primitives/app/timer) for configuration options.
 
 - [Environment Variables](/configuration/environment) for configuring app settings
 - [Health Checks](/configuration/health-checks) for configuring service health checks
-- [Scaling](/deployment/scaling) for controlling service scale and autoscaling
+- [Scaling](/configuration/scaling) for controlling service scale and autoscaling
 - [Config Mounts](/configuration/config-mounts) for mounting configuration files into containers

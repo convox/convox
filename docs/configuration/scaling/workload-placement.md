@@ -1,7 +1,7 @@
 ---
 title: "Workload Placement"
 slug: workload-placement
-url: /configuration/workload-placement
+url: /configuration/scaling/workload-placement
 ---
 
 # Workload Placement

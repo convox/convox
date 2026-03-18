@@ -634,5 +634,5 @@ After migration:
 1. [Optimize your machine size](/cloud/machines/sizing-and-pricing)
 2. [Configure Cloud Databases](/cloud/databases)
 3. [Set up monitoring and alerts](/configuration/monitoring)
-4. [Configure autoscaling](/deployment/scaling)
+4. [Configure autoscaling](/configuration/scaling)
 5. [Implement CI/CD](/deployment/workflows)

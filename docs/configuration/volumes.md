@@ -140,4 +140,4 @@ Ensure your rack is updated to version `3.16.0` or later. For detailed instructi
 ## See Also
 
 - [convox.yml](/configuration/convox-yml) for the full configuration reference
-- [Scaling](/deployment/scaling) for how volumes interact with scaling
+- [Scaling](/configuration/scaling) for how volumes interact with scaling

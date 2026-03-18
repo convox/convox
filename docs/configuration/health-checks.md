@@ -302,4 +302,4 @@ With this implementation and the appropriate configuration in your `convox.yml`,
 - [Service Lifecycle Hooks](/reference/primitives/app/service#lifecycle) for preStop and postStart container hooks
 - [Load Balancers](/configuration/load-balancers) for configuring traffic routing
 - [Rolling Updates](/deployment/rolling-updates) for how health checks affect deployments
-- [Scaling](/deployment/scaling) for autoscaling configuration
+- [Scaling](/configuration/scaling) for autoscaling configuration

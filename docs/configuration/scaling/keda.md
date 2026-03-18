@@ -1,7 +1,7 @@
 ---
 title: "KEDA Autoscaling"
-slug: keda-autoscaling
-url: /configuration/keda-autoscaling
+slug: keda
+url: /configuration/scaling/keda
 ---
 
 # KEDA Autoscaling
@@ -177,6 +177,7 @@ On AWS racks, KEDA automatically uses the rack's IAM role for authentication wit
 
 ## See Also
 
-- [Scaling](/deployment/scaling) for standard CPU/memory autoscaling and VPA
+- [Autoscaling](/configuration/scaling/autoscaling) for standard CPU/memory autoscaling
+- [VPA](/configuration/scaling/vpa) for automatic resource right-sizing
 - [keda_enable](/configuration/rack-parameters/aws/keda_enable) rack parameter
 - [KEDA Scalers documentation](https://keda.sh/docs/2.19/scalers/) for all available trigger types and configuration
