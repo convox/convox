@@ -25,6 +25,12 @@ Persistent storage is available through AWS EFS volumes, and ephemeral scratch s
 
 See [Volumes](/configuration/volumes) for details.
 
+## Agents
+
+Agents are specialized services that run exactly one process on every node in your Rack, similar to Kubernetes DaemonSets. Use agents for node-level concerns like log collectors, monitoring sidecars, or network proxies.
+
+See [Agents](/configuration/agents) for details.
+
 ## App Settings
 
 App-level settings control platform behavior for your application, such as CloudWatch log retention.

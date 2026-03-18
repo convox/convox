@@ -125,7 +125,7 @@ that can be optionally placed behind a load balancer.
           - queue
         test: make test
 ```
-See [Service](/reference/primitives/app/service) for configuration options.
+See [Service](/reference/primitives/app/service) for configuration options. A Service can also be declared as an [Agent](/configuration/agents) to run one process on every node.
 
 ## labels
 

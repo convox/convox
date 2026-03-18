@@ -522,3 +522,9 @@ services:
     Restarting web... OK
 ```
 > Restarting a Service will begin a rolling restart with graceful termination of each [Process](/reference/primitives/app/process) of the Service.
+
+## See Also
+
+- [Agents](/configuration/agents) for running a single process on every node (DaemonSet-style workloads)
+- [Health Checks](/configuration/health-checks) for configuring readiness and liveness probes
+- [Scaling](/configuration/scaling) for autoscaling, VPA, and workload placement
