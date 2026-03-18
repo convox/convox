@@ -222,4 +222,9 @@ Importing data to postgres-main... OK
 - [PostgreSQL](/cloud/databases/postgres) - PostgreSQL-specific configuration and versions
 - [MySQL](/cloud/databases/mysql) - MySQL-specific configuration and versions
 - [MariaDB](/cloud/databases/mariadb) - MariaDB-specific configuration and versions
+
+## See Also
+
+- [Rack Resources](/reference/primitives/app/resource) for containerized and AWS RDS/ElastiCache resources on self-managed racks
+- [Cloud vs Rack Comparison](/cloud/comparison) for understanding the differences between Convox Cloud and Rack
 - [Sizing and Pricing](/cloud/databases/sizing-and-pricing) - Detailed pricing information

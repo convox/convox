@@ -50,7 +50,8 @@ services:
 
 - **awsEfs.id**: The EFS volume ID.
 - **awsEfs.accessMode**: Specifies ReadWriteMany, ReadOnlyMany, or ReadWriteOnce.
-- **mountPath**: Defines the mount point for the volume inside the service.
+- **awsEfs.mountPath**: Defines the mount point for the volume inside the service.
+- **awsEfs.volumeHandle**: (Optional) Specifies an existing EFS access point handle (format: `fs-id::fsap-id`). Use this to mount a pre-existing EFS access point instead of dynamically provisioning one.
 
 ### AWS EFS Storage Classes
 

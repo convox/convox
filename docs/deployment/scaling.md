@@ -79,6 +79,59 @@ You must consider that the targets for CPU and Memory use the service replicas l
 desiredReplicas = ceil[currentReplicas * ( currentMetricValue / desiredMetricValue )]
 ```
 
+## Vertical Pod Autoscaler (VPA)
+
+The Vertical Pod Autoscaler automatically adjusts CPU and memory requests for your services based on observed usage. Unlike horizontal autoscaling which changes the number of replicas, VPA right-sizes each replica's resource allocation.
+
+### Prerequisites
+
+Enable VPA on your rack:
+
+```bash
+$ convox rack params set vpa_enable=true -r rackName
+Setting parameters... OK
+```
+
+### Configuration
+
+Define VPA settings in the `scale.vpa` section of your service in `convox.yml`:
+
+```yaml
+services:
+  web:
+    build: .
+    port: 3000
+    scale:
+      count: 3
+      vpa:
+        updateMode: Initial
+        minCpu: "100"
+        maxCpu: "2000"
+        minMem: "256"
+        maxMem: "4096"
+```
+
+### vpa
+
+| Attribute | Type | Default | Description |
+| --------- | ---- | ------- | ----------- |
+| **updateMode** | string | | **Required.** How VPA applies recommendations: `Off`, `Initial`, or `Recreate` |
+| **minCpu** | string | | Minimum CPU in millicores (e.g. `"100"`) |
+| **maxCpu** | string | | Maximum CPU in millicores (e.g. `"2000"`) |
+| **minMem** | string | | Minimum memory in MB (e.g. `"256"`) |
+| **maxMem** | string | | Maximum memory in MB (e.g. `"4096"`) |
+| **cpuOnly** | boolean | false | Only adjust CPU, leave memory unchanged |
+| **memOnly** | boolean | false | Only adjust memory, leave CPU unchanged |
+| **updateRequestOnly** | boolean | false | Only update resource requests, do not modify limits |
+
+### Update Modes
+
+- **Off**: VPA calculates recommendations but does not apply them. Use this to observe recommendations before enabling automatic adjustments.
+- **Initial**: VPA sets resource requests only when pods are first created. Running pods are not restarted.
+- **Recreate**: VPA applies recommendations by evicting pods when significant resource changes are needed.
+
+> `cpuOnly` and `memOnly` cannot both be set to `true`.
+
 ## GPU Scaling
 
 For workloads that require GPU acceleration, Convox supports requesting GPU resources at the service level. This is particularly useful for machine learning, video processing, and scientific computing applications.
@@ -289,4 +342,6 @@ A PDB with `ALLOWED DISRUPTIONS` of `0` will block evictions on that node.
 ## See Also
 
 - [convox.yml](/configuration/convox-yml) for configuring scale defaults
+- [KEDA Autoscaling](/configuration/keda-autoscaling) for event-driven autoscaling with custom triggers
+- [vpa_enable](/configuration/rack-parameters/aws/vpa_enable) rack parameter for enabling VPA
 - [Workload Placement](/configuration/workload-placement) for controlling where services run

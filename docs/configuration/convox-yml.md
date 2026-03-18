@@ -11,6 +11,10 @@ url: /configuration/convox-yml
     environment:
       - COMPANY=Convox
       - DOCS_URL
+    labels:
+      team: platform
+    configs:
+      - id: app-config
     appSettings:
       awsLogs:
         cwRetention: 31
@@ -123,6 +127,25 @@ that can be optionally placed behind a load balancer.
 ```
 See [Service](/reference/primitives/app/service) for configuration options.
 
+## labels
+
+The top-level `labels` section defines labels applied to all [Services](/reference/primitives/app/service) in the app. Service-level labels override top-level labels with the same key.
+```yaml
+    labels:
+      team: platform
+      cost-center: engineering
+```
+The following label keys are reserved and cannot be used: `system`, `rack`, `app`, `name`, `service`, `release`, `type`.
+
+## configs
+
+The `configs` section defines named configuration objects that can be mounted into service containers as files.
+```yaml
+    configs:
+      - id: app-config
+```
+See [Config Mounts](/configuration/config-mounts) for configuration options.
+
 ## timers
 
 The `timers` section defines [Processes](/reference/primitives/app/process)
@@ -141,3 +164,4 @@ See [Timer](/reference/primitives/app/timer) for configuration options.
 - [Environment Variables](/configuration/environment) for configuring app settings
 - [Health Checks](/configuration/health-checks) for configuring service health checks
 - [Scaling](/deployment/scaling) for controlling service scale and autoscaling
+- [Config Mounts](/configuration/config-mounts) for mounting configuration files into containers

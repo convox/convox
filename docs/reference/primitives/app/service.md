@@ -65,6 +65,8 @@ services:
       successThreshold: 1
       failureThreshold: 3
     internal: false
+    initContainer:
+      command: "bin/migrate"
     ingressAnnotations:
       - nginx.ingress.kubernetes.io/limit-rpm=10
     labels:
@@ -75,7 +77,8 @@ services:
     port: 5000
     ports:
       - 5001
-      - 5002
+      - port: 5002
+        protocol: udp
     privileged: false
     scale:
       count: 1-3
@@ -119,13 +122,13 @@ services:
 | **liveness** | map |      | Liveness check definition (see below). By default it is disabled. If it fails then service will restart |
 | **image**       | string     |                     | An external Docker image to use for this Service (supercedes **build**)                                                                      |
 | **ingressAnnotations** | list       |                     | A list of annotation keys and values to add in ingress resource. Check below for reserved annotation keys |
-| **initContainer** | map       |                     | Init container configuration. This runs before your main application container. Use it to configure application environment. |
+| **initContainer** | map       |                     | Runs a container to completion before the main service container starts. Use for migrations, dependency checks, or setup tasks (see [initContainer](#initcontainer) below) |
 | **internal**    | boolean    | false               | Set to **true** to make this Service only accessible inside the Rack                                                                         |
 | **internalRouter** | boolean    | false               | Set it to **true** to make this Service only accessible using internal loadbalancer. You also have to set the rack parameter [internal_router](/installation/production-rack/aws) to **true**                 |
 | **labels** |  map  |       | Custom labels for k8s resources. See here for (syntax and character set)[https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set]. Also following keys are reserved: `system`, `rack`, `app`, `name`, `service`, `release`, `type` |
 | **lifecycle** |  map  |       | The prestop and poststart hooks enable running commands before terminating and after starting the container, respectively |
 | **port**        | string     |                     | The port that the default Rack balancer will use to [route incoming traffic](/configuration/load-balancers). For grpc service specify the scheme: `grpc:5051`|
-| **ports**       | list       |                     | A list of ports available for internal [service discovery](/configuration/service-discovery) or custom [Balancers](/reference/primitives/app/balancer) |
+| **ports**       | list       |                     | A list of ports available for internal [service discovery](/configuration/service-discovery) or custom [Balancers](/reference/primitives/app/balancer). Supports TCP (default) and UDP protocols |
 | **privileged**  | boolean    | true                | Set to **false** to prevent [Processes](/reference/primitives/app/process) of this Service from running as root inside their container                              |
 | **scale**       | map        | 1                   | Define scaling parameters (see below)                                                                                                      |
 | **singleton**   | boolean    | false               | Set to **true** to prevent extra [Processes](/reference/primitives/app/process) of this Service from being started during deployments                               |
@@ -250,15 +253,59 @@ Reserved annotation keys:
 
 ### initContainer
 
-It takes inputs just like a container and runs before main container. It supports all these arguments-
+An init container runs to completion before the main service container starts. Use init containers to perform setup tasks such as database migrations, waiting for upstream dependencies, or preparing configuration. If the init container exits with a non-zero status, the pod will restart and retry it.
+
+The init container automatically receives:
+- All service [environment variables](/configuration/environment)
+- All service [resource](/reference/primitives/app/resource) connections (e.g. `DATABASE_URL`)
+- An `INIT_CONTAINER=true` environment variable
 
 | Attribute | Type   | Default | Description                                                                                |
 | --------- | ------ | ------- | ------------------------------------------------------------------------------------------ |
-| **image**     | string |         | An external Docker image to be run in the init container, if not set then it will use service image |
-| **command**  | string |         | The command to run in the init container |
-| **volumeOptions**  | list |         | List of volumes to attach with service |
+| **image**     | string | service image | An external Docker image to run. If not set, uses the service image |
+| **command**  | string |         | The command to run. **Required** for the init container to be created |
+| **volumeOptions**  | list |         | List of volumes to attach (see [volumeOptions](#volumeoptions)) |
 
-* Setting a command is necessary for creation of initContainer.
+#### Database Migrations
+
+Run migrations before the application starts:
+
+```yaml
+services:
+  web:
+    build: .
+    port: 3000
+    resources:
+      - database
+    initContainer:
+      command: "bin/migrate"
+```
+
+The init container connects to the database using the same resource credentials as the main service.
+
+#### Waiting for Dependencies
+
+Use a lightweight image to block startup until upstream services are ready:
+
+```yaml
+services:
+  api:
+    build: .
+    port: 3000
+    initContainer:
+      image: busybox:1.36
+      command: |
+        sh -c '
+        echo "Waiting for service-a...";
+        until wget -qO /dev/null http://service-a:8080/healthz 2>/dev/null; do sleep 5; done;
+        echo "service-a ready";
+        echo "Waiting for service-b...";
+        until wget -qO /dev/null http://service-b:9000/health 2>/dev/null; do sleep 5; done;
+        echo "service-b ready";
+        echo "All dependencies ready!"'
+```
+
+This ensures the main container only starts after its dependencies are healthy. Specifying a minimal `image` like `busybox` avoids building dependency-checking logic into your application image.
 
 &nbsp;
 
@@ -266,8 +313,31 @@ It takes inputs just like a container and runs before main container. It support
 
 | Attribute | Type   | Default | Description                                                                                |
 | --------- | ------ | ------- | ------------------------------------------------------------------------------------------ |
-| **perStop**     | string |         | The pre stop command |
-| **postStart**  | string |         | The post stop command |
+| **preStop**     | string |         | Command to run before the container is terminated |
+| **postStart**  | string |         | Command to run immediately after the container starts |
+
+Use lifecycle hooks to manage graceful shutdown and post-start initialization:
+
+```yaml
+services:
+  web:
+    build: .
+    port: 3000
+    lifecycle:
+      preStop: "sleep 10"
+      postStart: "/bin/sh -c 'echo started > /tmp/ready'"
+```
+
+The `preStop` hook runs before a container receives the SIGTERM signal during shutdown. A common pattern is to add a brief sleep to allow in-flight requests to complete and load balancers to deregister the pod:
+
+```yaml
+lifecycle:
+  preStop: "sleep 10"
+```
+
+The `postStart` hook runs immediately after the container starts, in parallel with the main process. Use it for tasks like cache warming or service registration.
+
+See [Health Checks](/configuration/health-checks) for configuring readiness, liveness, and startup probes that work alongside lifecycle hooks.
 
 &nbsp;
 

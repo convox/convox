@@ -5,7 +5,11 @@ url: /reference/primitives/app/resource
 ---
 # Resource
 
-A Resource is a network-accessible external service.
+A Resource is a network-accessible external service such as a database or cache. Convox supports three resource deployment models:
+
+- **Containerized**: Runs the resource inside your Rack cluster. Fast to set up, low cost, ideal for development and staging.
+- **AWS Managed (RDS/ElastiCache)**: Provisions a fully managed AWS service. Use for production workloads requiring durability, backups, and high availability.
+- **Convox Cloud Databases**: Managed databases available on [Convox Cloud](/cloud/databases) with simplified configuration and pricing.
 
 ## Definition
 
@@ -322,3 +326,8 @@ Exporting data from main... OK
 $ convox resources import main -f /tmp/db.sql
 Importing data to main... OK
 ```
+
+## See Also
+
+- [Convox Cloud Databases](/cloud/databases) for managed databases with simplified pricing on Convox Cloud
+- [Environment Variables](/configuration/environment) for configuring resource connection strings
