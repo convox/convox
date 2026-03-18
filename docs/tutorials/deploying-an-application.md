@@ -20,12 +20,12 @@ Verify that your production Rack is running with `convox rack`:
 ```bash
     $ convox rack
     Name     production
-    Provider do
+    Provider aws
     Router   router.production.convox
     Status   running
-    Version  3.0.18
+    Version  3.23.3
 ```
-## Get an example applicaton
+## Get an example application
 
 ### Clone the NodeJS example
 ```bash
@@ -38,7 +38,7 @@ Verify that your production Rack is running with `convox rack`:
 ### Look at the convox.yml
 ```bash
     $ cat convox.yml
-  
+
     environment:
         - PORT=3000
     services:
@@ -61,62 +61,40 @@ Once this completes, you can deploy the code:
     Packaging source... OK
     Uploading source... OK
     Starting build... OK
-    Authenticating registry.05456db021737ab6.convox.cloud/nodejs: Login Succeeded
+    Authenticating 782231114432.dkr.ecr.us-east-1.amazonaws.com: Login Succeeded
     Building: .
     Sending build context to Docker daemon  48.96MB
-    Step 1/5 : FROM node:10.16.3-alpine
-    10.16.3-alpine: Pulling from library/node
+    Step 1/5 : FROM node:20-alpine
+    20-alpine: Pulling from library/node
     e7c96db7181b: Pulling fs layer
     50958466d97a: Pulling fs layer
     56174ae7ed1d: Pulling fs layer
     284842a36c0d: Pulling fs layer
-    284842a36c0d: Waiting
-    e7c96db7181b: Verifying Checksum
-    e7c96db7181b: Download complete
-    56174ae7ed1d: Verifying Checksum
-    56174ae7ed1d: Download complete
-    50958466d97a: Verifying Checksum
-    50958466d97a: Download complete
-    e7c96db7181b: Pull complete
-    284842a36c0d: Verifying Checksum
-    284842a36c0d: Download complete
-    50958466d97a: Pull complete
-    56174ae7ed1d: Pull complete
-    284842a36c0d: Pull complete
-    Digest: sha256:77c898d0da5e7bfb6e05c9a64de136ba4e03889a72f3c298e95df822a38f450d
-    Status: Downloaded newer image for node:10.16.3-alpine
+    ...
+    Status: Downloaded newer image for node:20-alpine
     ---> b95baba1cfdb
     Step 2/5 : WORKDIR /usr/src/app
-    ---> Running in 19306c264a03
-    Removing intermediate container 19306c264a03
     ---> 83aac0816456
     Step 3/5 : COPY . /usr/src/app
     ---> 6c88d15e88c9
     Step 4/5 : EXPOSE 3000
-    ---> Running in b99318863aa8
-    Removing intermediate container b99318863aa8
     ---> db735909e450
     Step 5/5 : CMD ["node", "app.js"]
-    ---> Running in f1df464405be
-    Removing intermediate container f1df464405be
     ---> 7bd8ca94d031
     Successfully built 7bd8ca94d031
-    Successfully tagged 81719b4e5da8a821215126cc7edefe7fc2e5751f42db0d920ddbf574:latest
-    Running: docker tag 81719b4e5da8a821215126cc7edefe7fc2e5751f42db0d920ddbf574 do-test/nodejs:web.BNLGVRXMCAP
-    Running: docker tag do-test/nodejs:web.BNLGVRXMCAP registry.05456db021737ab6.convox.cloud/nodejs:web.BNLGVRXMCAP
     Running: docker push registry.05456db021737ab6.convox.cloud/nodejs:web.BNLGVRXMCAP
 
-    Promoting RHQFJKRJNHJ... 
-    2020-05-14T21:37:13Z system/k8s/atom/app Status: Running => Pending
-    2020-05-14T21:37:14Z system/k8s/web-749dd486d8 Created pod: web-749dd486d8-8v4ss
-    2020-05-14T21:37:14Z system/k8s/web-749dd486d8-8v4ss Successfully assigned do-test-nodejs/web-749dd486d8-8v4ss to do-test-node-3n6m6
-    2020-05-14T21:37:14Z system/k8s/web Scaled up replica set web-749dd486d8 to 1
-    2020-05-14T21:37:15Z system/k8s/atom/app Status: Pending => Updating
-    2020-05-14T21:37:16Z system/k8s/web-749dd486d8-8v4ss Pulling image "registry.05456db021737ab6.convox.cloud/nodejs:web.BNLGVRXMCAP"
-    2020-05-14T21:37:22Z system/k8s/web-749dd486d8-8v4ss Successfully pulled image "registry.05456db021737ab6.convox.cloud/nodejs:web.BNLGVRXMCAP"
-    2020-05-14T21:37:22Z system/k8s/web-749dd486d8-8v4ss Created container main
-    2020-05-14T21:37:22Z system/k8s/web-749dd486d8-8v4ss Started container main
-    2020-05-14T21:37:27Z system/k8s/atom/app Status: Updating => Running
+    Promoting RHQFJKRJNHJ...
+    2026-03-18T14:22:13Z system/k8s/atom/app Status: Running => Pending
+    2026-03-18T14:22:14Z system/k8s/web-749dd486d8 Created pod: web-749dd486d8-8v4ss
+    2026-03-18T14:22:14Z system/k8s/web-749dd486d8-8v4ss Successfully assigned nodejs/web-749dd486d8-8v4ss to production-node-3n6m6
+    2026-03-18T14:22:14Z system/k8s/web Scaled up replica set web-749dd486d8 to 1
+    2026-03-18T14:22:15Z system/k8s/atom/app Status: Pending => Updating
+    2026-03-18T14:22:16Z system/k8s/web-749dd486d8-8v4ss Pulling image "registry.05456db021737ab6.convox.cloud/nodejs:web.BNLGVRXMCAP"
+    2026-03-18T14:22:22Z system/k8s/web-749dd486d8-8v4ss Successfully pulled image "registry.05456db021737ab6.convox.cloud/nodejs:web.BNLGVRXMCAP"
+    2026-03-18T14:22:22Z system/k8s/web-749dd486d8-8v4ss Created container main
+    2026-03-18T14:22:22Z system/k8s/web-749dd486d8-8v4ss Started container main
+    2026-03-18T14:22:27Z system/k8s/atom/app Status: Updating => Running
     OK
 ```
 
@@ -142,10 +120,10 @@ In your browser navigate to the hostname shown for the `web` service. (i.e. `htt
 ## View the application logs
 ```bash
     $ convox logs
-    2020-01-01T00:00:00Z service/web/web-0123456789-abcde Processing by Rails::WelcomeController#index as HTML
-    2020-01-01T00:00:00Z service/web/web-0123456789-abcde   Rendering /usr/local/bundle/gems/railties-6.0.0/lib/rails/templates/rails/welcome/index.html.erb
-    2020-01-01T00:00:00Z service/web/web-0123456789-abcde   Rendered /usr/local/bundle/gems/railties-6.0.0/lib/rails/templates/rails/welcome/index.html.erb (Duration: 3.8ms | Allocations: 194)
-    2020-01-01T00:00:00Z service/web/web-0123456789-abcde Completed 200 OK in 8ms (Views: 4.4ms | ActiveRecord: 0.0ms | Allocations: 1053)
+    2026-03-18T14:22:30Z service/web/web-0123456789-abcde Node.js app listening on port 3000
+    2026-03-18T14:22:35Z service/web/web-0123456789-abcde GET / 200 3.241 ms
+    2026-03-18T14:22:36Z service/web/web-0123456789-abcde GET /favicon.ico 404 1.027 ms
+    2026-03-18T14:22:40Z service/web/web-0123456789-abcde GET / 200 0.892 ms
 ```
 Notice that the prefix of each log line contains the time that it was received along with the name
 of the Service and the ID of the Process that produced it.
@@ -156,10 +134,10 @@ Use Ctrl-C to stop following the logs.
 ```bash
     $ convox scale web --count=2
     Scaling web...
-    2020-01-01T00:00:00Z system/k8s/web-0123456789-zwxwv Pulling image "registry.dev.convox/rails:web.BABCDEFGHI"
-    2020-01-01T00:00:00Z system/k8s/web-0123456789-zwxwv Successfully pulled image "registry.dev.convox/rails:web.BABCDEFGHI"
-    2020-01-01T00:00:00Z system/k8s/web-0123456789-zwxwv Created container main
-    2020-01-01T00:00:00Z system/k8s/web-0123456789-zwxwv Started container main
+    2026-03-18T14:25:00Z system/k8s/web-0123456789-zwxwv Pulling image "registry.05456db021737ab6.convox.cloud/nodejs:web.BNLGVRXMCAP"
+    2026-03-18T14:25:03Z system/k8s/web-0123456789-zwxwv Successfully pulled image "registry.05456db021737ab6.convox.cloud/nodejs:web.BNLGVRXMCAP"
+    2026-03-18T14:25:03Z system/k8s/web-0123456789-zwxwv Created container main
+    2026-03-18T14:25:03Z system/k8s/web-0123456789-zwxwv Started container main
     OK
 ```
 Now try listing the processes again:
@@ -186,16 +164,16 @@ List the Releases to see your change:
 Promoting a Release starts a rolling deployment:
 ```bash
     $ convox releases promote
-    Promoting RQLOXWGZOLK...
-    2020-01-01T00:00:00Z system/k8s/atom/app Status: Running => Pending
-    2020-01-01T00:00:00Z system/k8s/atom/app Status: Pending => Updating
-    2020-01-01T00:00:00Z system/k8s/web Scaled up replica set web-9876543210 to 2
-    2020-01-01T00:00:00Z system/k8s/web-9876543210-hijkl Started container main
-    2020-01-01T00:00:00Z system/k8s/web-9876542210-qrstu Started container main
-    2020-01-01T00:00:00Z system/k8s/web Scaled down replica set web-0123456789 to 0
-    2020-01-01T00:00:00Z system/k8s/web-0123456789 Deleted pod: web-0123456789-abcde
-    2020-01-01T00:00:00Z system/k8s/web-0123456789 Deleted pod: web-0123456789-zwxwv
-    2020-01-01T00:00:00Z system/k8s/atom/app Status: Updating => Running
+    Promoting RCDEFGHIJK...
+    2026-03-18T14:30:00Z system/k8s/atom/app Status: Running => Pending
+    2026-03-18T14:30:01Z system/k8s/atom/app Status: Pending => Updating
+    2026-03-18T14:30:02Z system/k8s/web Scaled up replica set web-9876543210 to 2
+    2026-03-18T14:30:04Z system/k8s/web-9876543210-hijkl Started container main
+    2026-03-18T14:30:05Z system/k8s/web-9876542210-qrstu Started container main
+    2026-03-18T14:30:10Z system/k8s/web Scaled down replica set web-0123456789 to 0
+    2026-03-18T14:30:10Z system/k8s/web-0123456789 Deleted pod: web-0123456789-abcde
+    2026-03-18T14:30:10Z system/k8s/web-0123456789 Deleted pod: web-0123456789-zwxwv
+    2026-03-18T14:30:15Z system/k8s/atom/app Status: Updating => Running
     OK
 ```
 > Running `convox releases promote` takes an optional release ID. Running without an

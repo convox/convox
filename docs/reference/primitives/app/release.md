@@ -55,6 +55,8 @@ has been completely rolled back.
 
 The `convox releases create-from` command allows you to create a new release by combining the build from one release with the environment variables from another release. This provides flexibility in managing deployments by letting you mix and match builds and environments from different releases.
 
+The `create-from` command is useful for promoting a known-good release from one app to another, or for creating a release with a specific build and environment combination. Common use cases include cross-app deployments and build-once-deploy-many workflows.
+
 #### Basic Usage
 Create a new release using build from one release and environment from another:
 ```bash

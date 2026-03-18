@@ -7,6 +7,8 @@ url: /configuration/rack-parameters/do
 
 The following parameters are available for configuring your Convox rack on Digital Ocean. These parameters allow you to customize and optimize the behavior of your applications and services running on the Digital Ocean platform.
 
+> Some parameters can only be set during rack installation and cannot be changed afterwards. These include `region`. See individual parameter pages for details.
+
 ## Parameters
 
 | Parameter                            | Description                                                              |

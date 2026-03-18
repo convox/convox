@@ -18,3 +18,5 @@ Proxy a connection inside the rack
     $ convox proxy i-06d0eaf588c96ee5f:5432
     proxying localhost:5432 to i-06d0eaf588c96ee5f:5432
 ```
+
+You can find instance IDs with `convox instances`.

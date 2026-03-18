@@ -84,6 +84,8 @@ You can define the location to build for each [Service](/reference/primitives/ap
 
 ## Build Arguments
 
+> Build arguments require rack version 3.22.0 or later.
+
 Convox supports both custom build arguments and Convox-managed build arguments that provide build context information. Build arguments must be declared in your Dockerfile using the `ARG` instruction to be available during the build process.
 
 ### Convox-Managed Build Arguments
@@ -159,7 +161,7 @@ When using Convox Deployment and Review Workflows:
 
 ### Build Layers Caching
 
-From version 3.11.0 onward, Convox uses buildkit to build and push images. Buildkit allows us to specify a caching path in remote repositories to store/fetch layers that have already been created. Unfortunately, the only rack registries that support such feature so far are Azure and DigitalOcean(DO racks have a built-in registry).
+Convox uses buildkit to build and push images. Buildkit allows us to specify a caching path in remote repositories to store/fetch layers that have already been created. Unfortunately, the only rack registries that support such feature so far are Azure and DigitalOcean(DO racks have a built-in registry).
 
 ## Using Docker Credentials in Builds
 
@@ -202,6 +204,5 @@ This will list the current parameters for the rack, including the Docker credent
 ## Version Requirements
 
 - Basic build functionality: All versions
-- Buildkit and caching: Version 3.11.0+
 - Docker credentials support: Version 3.18.8+
 - Convox-managed build arguments: Version 3.22.0+

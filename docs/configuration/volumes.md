@@ -10,6 +10,8 @@ Convox supports multiple types of volumes to manage both persistent and temporar
 
 ## AWS EFS Volumes
 
+> AWS only. Requires the [efs_csi_driver_enable](/configuration/rack-parameters/aws/efs_csi_driver_enable) rack parameter.
+
 AWS EFS (Elastic File System) provides a scalable, persistent storage solution that allows multiple Convox services to access the same file system simultaneously. EFS volumes are useful for applications that require shared access to files and need persistent data storage across services and restarts.
 
 ### Supported Access Modes
@@ -133,9 +135,7 @@ In this configuration:
 
 ### Version Requirements for emptyDir Volumes
 
-You must be on at least rack version `3.16.0` to use emptyDir volumes. Update your rack with the following command:
-
-Ensure your rack is updated to version `3.16.0` or later. For detailed instructions on updating your rack, see the [Updating a Rack](https://docs.convox.com/management/cli-rack-management/) page.
+For detailed instructions on updating your rack, see the [Updating a Rack](https://docs.convox.com/management/cli-rack-management/) page.
 
 ## See Also
 

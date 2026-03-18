@@ -5,6 +5,8 @@ url: /configuration/scaling/vpa
 ---
 # Vertical Pod Autoscaler (VPA)
 
+> VPA is available on AWS racks.
+
 The Vertical Pod Autoscaler automatically adjusts CPU and memory requests for your services based on observed usage. Unlike horizontal autoscaling which changes the number of replicas, VPA right-sizes each replica's resource allocation.
 
 ## Prerequisites

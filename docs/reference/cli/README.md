@@ -18,6 +18,7 @@ For a quick overview of some commonly used commands, you may find this [blog pos
 | [builds](/reference/cli/builds)  | List builds and manage build-specific operations such as importing or exporting builds.         |
 | [cp](/reference/cli/cp)          | Copy files to and from a running process.                                                       |
 | [deploy](/reference/cli/deploy)  | Create and promote a build.                                                                     |
+| [deploy-debug](/reference/cli/deploy-debug) | Diagnose deploy failures with pod-level diagnostics and actionable hints.               |
 | [env](/reference/cli/env)        | Manage environment variables for an app.                                                        |
 | [exec](/reference/cli/exec)      | Execute a command in a running process.                                                         |
 | [instances](/reference/cli/instances) | List instances or manage specific instance operations.                                         |

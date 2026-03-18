@@ -24,15 +24,15 @@ To create a [Release](/reference/primitives/app/release) and promote it in one s
     Build: BABCDEFGHI
     Release: RBCDEFGHIJ
     Promoting RBCDEFGHIJ...
-    2019-01-01T00:00:49Z system/k8s/atom/app Status: Running => Pending
-    2019-01-01T00:00:51Z system/k8s/web Scaled up replica set web-745f845dc to 1
-    2019-01-01T00:00:51Z system/k8s/web-745f845dc Created pod: web-745f845dc-rzl2q
-    2019-01-01T00:00:51Z system/k8s/web-745f845dc-rzl2q Successfully assigned convox-myapp/web-745f845dc-rzl2q to instance-0a1b2c3d4e5f
-    2019-01-01T00:00:51Z system/k8s/web-745f845dc-rzl2q Pulling image "registry.host/convox/myapp:web.BABCDEFGHI"
-    2019-01-01T00:00:53Z system/k8s/atom/app Status: Pending => Updating
-    2019-01-01T00:00:55Z system/k8s/web-745f845dc-rzl2q Successfully pulled image "registry.host/convox/myapp:web.BABCDEFGHI"
-    2019-01-01T00:00:56Z system/k8s/web-745f845dc-rzl2q Created container main
-    2019-01-01T00:00:56Z system/k8s/web-745f845dc-rzl2q Started container main
+    2026-03-18T14:30:49Z system/k8s/atom/app Status: Running => Pending
+    2026-03-18T14:30:51Z system/k8s/web Scaled up replica set web-745f845dc to 1
+    2026-03-18T14:30:51Z system/k8s/web-745f845dc Created pod: web-745f845dc-rzl2q
+    2026-03-18T14:30:51Z system/k8s/web-745f845dc-rzl2q Successfully assigned convox-myapp/web-745f845dc-rzl2q to instance-0a1b2c3d4e5f
+    2026-03-18T14:30:51Z system/k8s/web-745f845dc-rzl2q Pulling image "registry.host/convox/myapp:web.BABCDEFGHI"
+    2026-03-18T14:30:53Z system/k8s/atom/app Status: Pending => Updating
+    2026-03-18T14:30:55Z system/k8s/web-745f845dc-rzl2q Successfully pulled image "registry.host/convox/myapp:web.BABCDEFGHI"
+    2026-03-18T14:30:56Z system/k8s/web-745f845dc-rzl2q Created container main
+    2026-03-18T14:30:56Z system/k8s/web-745f845dc-rzl2q Started container main
     OK
 ```
 ## Two Steps
@@ -52,17 +52,27 @@ against the new [Release](/reference/primitives/app/release) before it is pushed
 
     $ convox releases promote RCDEFGHIJK -a myapp
     Promoting RCDEFGHIJK...
-    2019-01-01T00:00:49Z system/k8s/atom/app Status: Running => Pending
-    2019-01-01T00:00:51Z system/k8s/web Scaled up replica set web-745f845dc to 1
-    2019-01-01T00:00:51Z system/k8s/web-745f845dc Created pod: web-745f845dc-rzl2q
-    2019-01-01T00:00:51Z system/k8s/web-745f845dc-rzl2q Successfully assigned convox-myapp/web-745f845dc-rzl2q to instance-0a1b2c3d4e5f
-    2019-01-01T00:00:51Z system/k8s/web-745f845dc-rzl2q Pulling image "registry.host/convox/myapp:web.BABCDEFGHI"
-    2019-01-01T00:00:53Z system/k8s/atom/app Status: Pending => Updating
-    2019-01-01T00:00:55Z system/k8s/web-745f845dc-rzl2q Successfully pulled image "registry.host/convox/myapp:web.BABCDEFGHI"
-    2019-01-01T00:00:56Z system/k8s/web-745f845dc-rzl2q Created container main
-    2019-01-01T00:00:56Z system/k8s/web-745f845dc-rzl2q Started container main
+    2026-03-18T14:30:49Z system/k8s/atom/app Status: Running => Pending
+    2026-03-18T14:30:51Z system/k8s/web Scaled up replica set web-745f845dc to 1
+    2026-03-18T14:30:51Z system/k8s/web-745f845dc Created pod: web-745f845dc-rzl2q
+    2026-03-18T14:30:51Z system/k8s/web-745f845dc-rzl2q Successfully assigned convox-myapp/web-745f845dc-rzl2q to instance-0a1b2c3d4e5f
+    2026-03-18T14:30:51Z system/k8s/web-745f845dc-rzl2q Pulling image "registry.host/convox/myapp:web.BABCDEFGHI"
+    2026-03-18T14:30:53Z system/k8s/atom/app Status: Pending => Updating
+    2026-03-18T14:30:55Z system/k8s/web-745f845dc-rzl2q Successfully pulled image "registry.host/convox/myapp:web.BABCDEFGHI"
+    2026-03-18T14:30:56Z system/k8s/web-745f845dc-rzl2q Created container main
+    2026-03-18T14:30:56Z system/k8s/web-745f845dc-rzl2q Started container main
     OK
 ```
+
+## Troubleshooting Failed Deployments
+
+If a deployment fails or hangs, use `convox deploy-debug` to diagnose the issue:
+
+```bash
+    $ convox deploy-debug -a myapp
+```
+
+This command inspects your app's pods and provides actionable hints for common failure states like crash loops, image pull errors, OOM kills, and health check failures. See the [deploy-debug](/reference/cli/deploy-debug) reference for details.
 
 ## See Also
 

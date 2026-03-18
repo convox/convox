@@ -5,21 +5,9 @@ url: /reference/cli/update
 ---
 # update
 
-## CLI
+## update
 
-Check CLI Version:
-
-### Usage
-```bash
-    convox version
-```
-### Examples
-```bash
-    $ convox version
-    client: 3.15.1
-```
-
-Update the CLI
+Update the Convox CLI to the latest version.
 
 ### Usage
 ```bash
@@ -28,9 +16,13 @@ Update the CLI
 ### Examples
 ```bash
     $ convox update
-    Updating to 3.16.0... OK
+    Updating to 3.23.4... OK
 ```
 
-## Rack
+## Rack Updates
 
 For detailed information about updating racks, please visit our [Rack Management](https://docs.convox.com/management/cli-rack-management/) page.
+
+When updating across minor versions, update one minor version at a time. For example, to go from 3.21.x to 3.23.x, first update to the latest 3.22.x release, then to 3.23.x. Patch version updates within the same minor version can be applied directly.
+
+Check your current version with `convox version`. See the [version](/reference/cli/version) command reference.

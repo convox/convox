@@ -14,7 +14,6 @@ The commands you can run with a deploy key are limited to the following for secu
 
 * `build`
 * `builds`
-* `builds`
 * `builds export`
 * `builds import`
 * `deploy`

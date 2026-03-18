@@ -8,6 +8,8 @@ url: /configuration/scaling/workload-placement
 
 Convox provides powerful tools to control where your applications and build processes run within your Kubernetes cluster. By leveraging node group configurations and service placement rules, you can optimize resource usage, improve cost efficiency, and ensure the right workloads run on the right infrastructure.
 
+> Workload Placement is available on AWS and Azure racks.
+
 ## Overview
 
 Workload placement in Convox is achieved through these key features:

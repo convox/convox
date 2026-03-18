@@ -23,6 +23,16 @@ The rolling update proceeds in a "make one, break one" process in order to maint
 
 Rolling updates will respect the [deployment configuration](/reference/primitives/app/service#deployment) to control the minimum number of healthy processes and maximum number of overall processes to have running at any one time during the update.  This defaults to a minimum of 50% and a maximum of 200%.
 
+```yaml
+services:
+  web:
+    deployment:
+      minimum: 50
+      maximum: 200
+```
+
+These values are configured as percentages in the `deployment` section of your service definition in `convox.yml`. See the [Service](/reference/primitives/app/service) reference for all deployment options.
+
 ## Automatic Rollback
 
 If any of the following conditions occur while the new [Release](/reference/primitives/app/release)

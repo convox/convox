@@ -137,7 +137,7 @@ services:
     port: 80
     volumes:
       - /tmp/something
-    enviroment:
+    environment:
       - MY_ENVIRONMENT=development
     resources:
       - redis

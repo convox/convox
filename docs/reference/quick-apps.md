@@ -6,6 +6,8 @@ url: /reference/quick-apps
 
 # Quick Apps
 
+Quick Apps are pre-configured application templates available through the Convox Console. Drupal is currently the available Quick App.
+
 Quick Apps lets you deploy popular applications directly into your Convox Rack from the Console with minimal configuration. Instead of manually configuring a `convox.yml`, Dockerfile, and database resources, Quick Apps handles infrastructure provisioning, configuration, and application setup for you.
 
 ## Drupal

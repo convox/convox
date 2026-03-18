@@ -24,7 +24,7 @@ The `additional_build_groups_config` parameter takes a JSON array of build node 
 |-------|----------|-------------|---------|
 | `type` | Yes | The Azure VM size to use for the build node pool |  |
 | `disk` | No | The OS disk size in GB for the nodes | Same as main node disk (default: 30) |
-| `capacity_type` | No | Whether to use regular or spot VMs. Accepts `ON_DEMAND`, `SPOT`, `Regular`, or `Spot` | `ON_DEMAND` (Regular) |
+| `capacity_type` | No | Whether to use regular or spot VMs. Use `ON_DEMAND` or `SPOT` (case-insensitive). The aliases `Regular` and `Spot` are also accepted. | `ON_DEMAND` (Regular) |
 | `min_size` | No | Minimum number of nodes | 0 |
 | `max_size` | No | Maximum number of nodes | 100 |
 | `label` | No | Custom label value. Applied as `convox.io/label: <label-value>` | `custom-build` |

@@ -7,6 +7,8 @@ url: /configuration/rack-parameters/aws
 
 The following parameters are available for configuring your Convox rack on Amazon Web Services (AWS). These parameters allow you to customize and optimize the behavior of your applications and services running on the AWS platform.
 
+> Some parameters can only be set during rack installation and cannot be changed afterwards. These include `cidr`, `high_availability`, `private`, `private_subnets_ids`, `public_subnets_ids`, `vpc_id`, and `internet_gateway_id`. See individual parameter pages for details.
+
 ## Parameters
 
 | Parameter                            | Description                                                              |

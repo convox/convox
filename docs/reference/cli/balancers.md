@@ -5,6 +5,8 @@ url: /reference/cli/balancers
 ---
 # balancers
 
+Custom [Balancers](/reference/primitives/app/balancer) expose non-HTTP TCP and UDP services through dedicated load balancers.
+
 ## balancers
 
 List balancers for an app

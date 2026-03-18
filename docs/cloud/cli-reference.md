@@ -308,7 +308,6 @@ $ convox cloud env -a <app> -i <machine>
 ```bash
 $ convox cloud env -a myapp -i production
 DATABASE_URL=postgres://localhost/myapp
-REDIS_URL=redis://localhost:6379
 NODE_ENV=production
 ```
 
@@ -634,7 +633,6 @@ $ convox cloud resources -a <app> -i <machine>
 $ convox cloud resources -a myapp -i production
 NAME      TYPE      URL
 database  postgres  postgres://user:pass@host:5432/db
-cache     redis     redis://host:6379/0
 ```
 
 ### resources console

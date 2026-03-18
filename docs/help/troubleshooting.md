@@ -29,8 +29,9 @@ If your Rack consistently fails to install into your Cloud provider and there ar
 
 ## I get an error when I deploy my app to Convox
 
-Sometimes the errors that come back from Kubernetes and/or the cloud providers are useful, sometimes they're more obtuse.
-You can check your Application logs with the `convox logs` command.  Use the `--filter` and `--since` flags to help narrow down your output if needed!
+Start with `convox deploy-debug -a myapp` to get pod-level diagnostics with actionable hints. This command inspects your app's Kubernetes pods and maps failure states to plain-language explanations, without requiring kubectl access. See the [deploy-debug](/reference/cli/deploy-debug) reference for full details.
+
+You can also check your Application logs with the `convox logs` command. Use the `--filter` and `--since` flags to help narrow down your output if needed.
 
 You can view the logs from your App build process with `convox builds logs <build>` if you are having issues at that stage.
 
@@ -48,16 +49,16 @@ Any Services within your App that expose a port will require a passing [health c
 Failing health checks will be reported when promoting your Release:
 ```text
     Promoting RABCDEFGHIJ...
-    2020-02-15T21:16:50Z system/k8s/atom/app Status: Running => Pending
-    2020-02-15T21:16:53Z system/k8s/atom/app Status: Pending => Updating
-    2020-02-15T21:16:53Z system/k8s/web-56f5d77d7 Created pod: web-56f5d77d7-6gx8z
-    2020-02-15T21:16:53Z system/k8s/web Scaled up replica set web-56f5d77d7 to 1
-    2020-02-15T21:16:53Z system/k8s/web-56f5d77d7-6gx8z Successfully assigned abcde-myapp/web-56f5d77d7-6gx8z to gke-abcde-abcde-nodes-n1-highcpu-8-90530fd3-p77q
-    2020-02-15T21:16:54Z system/k8s/web-56f5d77d7-6gx8z Pulling image "gcr.io/abcde-123456/myapp:web.BABCDEFGHIJ"
-    2020-02-15T21:17:06Z system/k8s/web-56f5d77d7-6gx8z Successfully pulled image "gcr.io/abcde-123456/myapp:web.BABCDEFGHIJ"
-    2020-02-15T21:17:09Z system/k8s/web-56f5d77d7-6gx8z Started container main
-    2020-02-15T21:17:09Z system/k8s/web-56f5d77d7-6gx8z Created container main
-    2020-02-15T21:17:17Z system/k8s/web-56f5d77d7-6gx8z Readiness probe failed: HTTP probe failed with statuscode: 404
+    2026-03-18T14:16:50Z system/k8s/atom/app Status: Running => Pending
+    2026-03-18T14:16:53Z system/k8s/atom/app Status: Pending => Updating
+    2026-03-18T14:16:53Z system/k8s/web-56f5d77d7 Created pod: web-56f5d77d7-6gx8z
+    2026-03-18T14:16:53Z system/k8s/web Scaled up replica set web-56f5d77d7 to 1
+    2026-03-18T14:16:53Z system/k8s/web-56f5d77d7-6gx8z Successfully assigned abcde-myapp/web-56f5d77d7-6gx8z to gke-abcde-abcde-nodes-n1-highcpu-8-90530fd3-p77q
+    2026-03-18T14:16:54Z system/k8s/web-56f5d77d7-6gx8z Pulling image "gcr.io/abcde-123456/myapp:web.BABCDEFGHIJ"
+    2026-03-18T14:17:06Z system/k8s/web-56f5d77d7-6gx8z Successfully pulled image "gcr.io/abcde-123456/myapp:web.BABCDEFGHIJ"
+    2026-03-18T14:17:09Z system/k8s/web-56f5d77d7-6gx8z Started container main
+    2026-03-18T14:17:09Z system/k8s/web-56f5d77d7-6gx8z Created container main
+    2026-03-18T14:17:17Z system/k8s/web-56f5d77d7-6gx8z Readiness probe failed: HTTP probe failed with statuscode: 404
 ```
 You should ensure that your App is able to respond to the health check probes to faciliate a successful deployment.
 

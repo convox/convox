@@ -47,6 +47,12 @@ RCDEFGHIJK          BABCDEFGHI  5 minutes ago   env add:FOO
 RBCDEFGHIJ          BABCDEFGHI  10 minutes ago  build 0a1b2c3d4e5f my commit message
 ```
 
+## How Rollbacks Work
+
+Rolling back creates a new Release with the same build and environment as the target release. The original release is not modified. Environment variables from the target release are preserved in the new release.
+
+Database migrations are not automatically reverted during a rollback. If you have applied destructive database changes since the target release, you may need to handle the migration rollback separately.
+
 ## See Also
 
 - [Deploying Changes](/deployment/deploying-changes) for the standard deployment process

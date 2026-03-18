@@ -29,15 +29,15 @@ Create and promote a build
     Promoting RABCDEFGHI...
     ...
     ...
-    2020-01-31T15:41:16Z system/cloudformation aws/cfm test-myapp-ServiceApp-ZNV5T8E1R2XQ DELETE_COMPLETE ExecutionRole
-    2020-01-31T15:41:27Z system/cloudformation aws/cfm test-myapp DELETE_COMPLETE ServiceApp
-    2020-01-31T15:41:27Z system/cloudformation aws/cfm test-myapp UPDATE_COMPLETE test-myapp
+    2026-03-18T15:41:16Z system/cloudformation aws/cfm test-myapp-ServiceApp-ZNV5T8E1R2XQ DELETE_COMPLETE ExecutionRole
+    2026-03-18T15:41:27Z system/cloudformation aws/cfm test-myapp DELETE_COMPLETE ServiceApp
+    2026-03-18T15:41:27Z system/cloudformation aws/cfm test-myapp UPDATE_COMPLETE test-myapp
     OK
 ```
 
 ### Pass build time env vars
 
-You can pass env vars that will only exists on the build time. (Supported from version: >= 3.7.2)
+You can pass env vars that will only exist at build time.
 
 ```bash
     $ convox deploy --build-args "BUILD_ENV1=val1" --build-args "BUILD_ENV2=val2"
@@ -54,8 +54,8 @@ You can pass env vars that will only exists on the build time. (Supported from v
     Promoting RABCDEFGHI...
     ...
     ...
-    2020-01-31T15:41:16Z system/cloudformation aws/cfm test-myapp-ServiceApp-ZNV5T8E1R2XQ DELETE_COMPLETE ExecutionRole
-    2020-01-31T15:41:27Z system/cloudformation aws/cfm test-myapp DELETE_COMPLETE ServiceApp
-    2020-01-31T15:41:27Z system/cloudformation aws/cfm test-myapp UPDATE_COMPLETE test-myapp
+    2026-03-18T15:41:16Z system/cloudformation aws/cfm test-myapp-ServiceApp-ZNV5T8E1R2XQ DELETE_COMPLETE ExecutionRole
+    2026-03-18T15:41:27Z system/cloudformation aws/cfm test-myapp DELETE_COMPLETE ServiceApp
+    2026-03-18T15:41:27Z system/cloudformation aws/cfm test-myapp UPDATE_COMPLETE test-myapp
     OK
 ```

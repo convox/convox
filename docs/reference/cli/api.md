@@ -22,7 +22,7 @@ Query the Rack API
         "locked": false,
         "name": "myapp",
         "release": "RABCDEFGHI",
-        "router", "0a1b2c3d4e5f.convox.cloud",
+        "router": "0a1b2c3d4e5f.convox.cloud",
         "status": "running"
       }
     ]

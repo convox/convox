@@ -92,6 +92,7 @@ Before using GPU scaling:
 ```bash
 $ convox rack params set nvidia_device_plugin_enable=true -r rackName
 ```
+See the [`nvidia_device_plugin_enable`](/configuration/rack-parameters/aws/nvidia_device_plugin_enable) rack parameter for details.
 
 ### Configuring GPU Requirements
 

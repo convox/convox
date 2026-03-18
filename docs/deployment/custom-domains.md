@@ -16,7 +16,13 @@ Custom domains allow you to route one or more domains to a [Service](/reference/
       complexweb:
         domain: subdomain1.example.org,subdomain2.example.org,somethingelse.test.com
 ```
-Multiple domains should be comma separated.  Due to limitations in the LetsEncrypt validation method for SSL certificates, wildcard domains are not currently supported.
+Multiple domains should be comma separated. Wildcard domains (e.g., `*.example.org`) are supported when using DNS-01 validation with a pre-generated wildcard certificate. To use a wildcard domain:
+
+1. Configure [DNS-01 validation](/deployment/ssl#advanced-ssl-configuration-lets-encrypt-dns01-challenge-with-route53-aws) (currently available for AWS Route53).
+2. Generate the wildcard certificate with `convox certs generate "*.example.org" --issuer letsencrypt`.
+3. Reference the certificate ID in your `convox.yml` using the `certificate` attribute (see [SSL](/deployment/ssl#wildcard-certificates-and-reuse)).
+
+Wildcard domains are not supported with the default HTTP-01 automatic certificate flow.
 
 ### Dynamic Configuration
 

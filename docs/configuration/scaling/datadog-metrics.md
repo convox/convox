@@ -13,7 +13,7 @@ Convox passes your Datadog metric configuration directly into Kubernetes HPA ext
 
 ## Prerequisites
 
-- **Rack version 3.9.1 or later.** Check with `convox rack -r rackNAME`. If you are on an older version, [update your rack](/management/cli-rack-management).
+- **A Convox Rack.** Check status with `convox rack -r rackNAME`.
 - **Datadog Agent and Cluster Agent installed.** Follow the [Datadog integration guide](/integrations/monitoring) to deploy the agent to your rack. Use the `datadog-agent-all-features.yaml` manifest to ensure the Cluster Agent is included.
 
 Verify the Cluster Agent is running:
@@ -64,14 +64,14 @@ Deploy with `kubectl apply -f dd-agent-service.yaml`
 
 ## Configure convox.yml
 
-Reference the DatadogMetric in your service's `scale.targets.external` section. The naming convention is `datadogmetric@<namespace>:<datadogmetric_name>`.
+Reference the DatadogMetric in your service's `scale.targets.external` section. The naming convention is `datadogmetric@<namespace>:<datadogmetric_name>`. The `datadogmetric@<namespace>:<metric-name>` format references a DatadogMetric custom resource. The namespace is typically `default` unless your app uses a different Kubernetes namespace.
 
 Convox supports two target types:
 
 | Field | Description |
 |-------|-------------|
-| **averageValue** | Target value per replica. Kubernetes divides the metric by replica count. |
-| **value** | Absolute target value. Scaling is based on the raw metric regardless of replica count. |
+| **averageValue** | Target value per replica (per-pod target). Kubernetes divides the metric by replica count. Use this when scaling should be based on per-replica load — for example, keeping request rate per pod at a steady level. |
+| **value** | Absolute target value. Scaling is based on the raw metric regardless of replica count. Use this when the total metric value should drive scaling — for example, a single queue depth that all replicas consume from. |
 
 ## Example: Scaling on Page Views
 
@@ -101,11 +101,11 @@ services:
     environment:
       - DD_AGENT_HOST=dd-agent.default.svc.cluster.local
     scale:
-      count: 1-3
+      count: 1-3       # min 1, max 3 replicas
       targets:
         external:
-          - name: "datadogmetric@default:page-views-metrics"
-            averageValue: 5
+          - name: "datadogmetric@default:page-views-metrics"  # references the DatadogMetric CR in the "default" namespace
+            averageValue: 5  # target value per pod — HPA will scale to maintain this average across all pods
 ```
 [Configured Nodejs app](https://github.com/convox-examples/nodejs-dd-autoscale)
 

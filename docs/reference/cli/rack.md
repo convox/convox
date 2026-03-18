@@ -5,6 +5,29 @@ url: /reference/cli/rack
 ---
 # rack
 
+## Command Summary
+
+| Command | Description |
+|---------|-------------|
+| **Information** | |
+| `convox rack` | Display rack info |
+| `convox rack ps` | List rack processes |
+| `convox rack ps --all` | List all rack processes including system |
+| `convox rack logs` | Get logs for the rack |
+| **Installation** | |
+| `convox rack install` | Install a new rack |
+| `convox rack uninstall` | Uninstall a rack |
+| `convox rack update` | Update rack to a new version |
+| **Access** | |
+| `convox rack access` | Generate rack access credential |
+| `convox rack access key rotate` | Rotate rack access key |
+| **Runtime** | |
+| `convox rack runtimes` | List attachable runtime integrations |
+| `convox rack runtime attach` | Attach a runtime integration |
+| **Kubernetes** | |
+| `convox rack kubeconfig` | Output kubeconfig for the underlying cluster |
+| `convox rack mv` | Transfer rack management between user and org |
+
 ## rack
 
 Get information about the rack
@@ -20,7 +43,7 @@ Get information about the rack
     Provider  aws
     Router    router.0a1b2c3d4e5f.convox.cloud
     Status    running
-    Version   3.0.0
+    Version   3.23.3
 ```
 ## rack install
 
@@ -131,14 +154,14 @@ List rack processes
 ```bash
     $ convox rack ps
     ID                       APP     SERVICE        STATUS   RELEASE       STARTED      COMMAND
-    api-9749b7ccb-29zh5      system  api            running  3.0.0.beta44  2 weeks ago  api
-    api-9749b7ccb-29zh5      rack    api            running  3.0.0.beta44  2 weeks ago  api
-    api-9749b7ccb-cg4hr      system  api            running  3.0.0.beta44  2 weeks ago  api
-    api-9749b7ccb-cg4hr      rack    api            running  3.0.0.beta44  2 weeks ago  api
-    atom-578cd48bfb-6tm7g    rack    atom           running  3.0.0.beta44  2 weeks ago  atom
-    atom-578cd48bfb-6tm7g    system  atom           running  3.0.0.beta44  2 weeks ago  atom
-    router-846b84d544-ndz76  rack    router         running  3.0.0.beta44  2 weeks ago  router
-    router-846b84d544-ndz76  system  router         running  3.0.0.beta44  2 weeks ago  router
+    api-9749b7ccb-29zh5      system  api            running  3.23.3  2 weeks ago  api
+    api-9749b7ccb-29zh5      rack    api            running  3.23.3  2 weeks ago  api
+    api-9749b7ccb-cg4hr      system  api            running  3.23.3  2 weeks ago  api
+    api-9749b7ccb-cg4hr      rack    api            running  3.23.3  2 weeks ago  api
+    atom-578cd48bfb-6tm7g    rack    atom           running  3.23.3  2 weeks ago  atom
+    atom-578cd48bfb-6tm7g    system  atom           running  3.23.3  2 weeks ago  atom
+    router-846b84d544-ndz76  rack    router         running  3.23.3  2 weeks ago  router
+    router-846b84d544-ndz76  system  router         running  3.23.3  2 weeks ago  router
 ```
 ## rack ps --all
 
@@ -152,26 +175,26 @@ List rack processes as well as essential system ones running on the Rack
 ```bash
     $ convox rack ps --all
     ID                       APP     SERVICE        STATUS   RELEASE       STARTED      COMMAND
-    api-9749b7ccb-29zh5      system  api            running  3.0.0.beta44  2 weeks ago  api
-    api-9749b7ccb-29zh5      rack    api            running  3.0.0.beta44  2 weeks ago  api
-    api-9749b7ccb-cg4hr      system  api            running  3.0.0.beta44  2 weeks ago  api
-    api-9749b7ccb-cg4hr      rack    api            running  3.0.0.beta44  2 weeks ago  api
-    atom-578cd48bfb-6tm7g    rack    atom           running  3.0.0.beta44  2 weeks ago  atom
-    atom-578cd48bfb-6tm7g    system  atom           running  3.0.0.beta44  2 weeks ago  atom
-    elasticsearch-0          rack    elasticsearch  running  3.0.0.beta44  2 weeks ago
-    elasticsearch-0          system  elasticsearch  running  3.0.0.beta44  2 weeks ago
-    elasticsearch-1          rack    elasticsearch  running  3.0.0.beta44  2 weeks ago
-    elasticsearch-1          system  elasticsearch  running  3.0.0.beta44  2 weeks ago
-    fluentd-p56dk            rack    fluentd        running  3.0.0.beta44  2 weeks ago
-    fluentd-p56dk            system  fluentd        running  3.0.0.beta44  2 weeks ago
-    fluentd-qrttw            rack    fluentd        running  3.0.0.beta44  2 weeks ago
-    fluentd-qrttw            system  fluentd        running  3.0.0.beta44  2 weeks ago
-    fluentd-zsv8f            rack    fluentd        running  3.0.0.beta44  2 weeks ago
-    fluentd-zsv8f            system  fluentd        running  3.0.0.beta44  2 weeks ago
-    redis-77b4f65c55-nbx89   rack    redis          running  3.0.0.beta44  2 weeks ago
-    redis-77b4f65c55-nbx89   system  redis          running  3.0.0.beta44  2 weeks ago
-    router-846b84d544-ndz76  rack    router         running  3.0.0.beta44  2 weeks ago  router
-    router-846b84d544-ndz76  system  router         running  3.0.0.beta44  2 weeks ago  router
+    api-9749b7ccb-29zh5      system  api            running  3.23.3  2 weeks ago  api
+    api-9749b7ccb-29zh5      rack    api            running  3.23.3  2 weeks ago  api
+    api-9749b7ccb-cg4hr      system  api            running  3.23.3  2 weeks ago  api
+    api-9749b7ccb-cg4hr      rack    api            running  3.23.3  2 weeks ago  api
+    atom-578cd48bfb-6tm7g    rack    atom           running  3.23.3  2 weeks ago  atom
+    atom-578cd48bfb-6tm7g    system  atom           running  3.23.3  2 weeks ago  atom
+    elasticsearch-0          rack    elasticsearch  running  3.23.3  2 weeks ago
+    elasticsearch-0          system  elasticsearch  running  3.23.3  2 weeks ago
+    elasticsearch-1          rack    elasticsearch  running  3.23.3  2 weeks ago
+    elasticsearch-1          system  elasticsearch  running  3.23.3  2 weeks ago
+    fluentd-p56dk            rack    fluentd        running  3.23.3  2 weeks ago
+    fluentd-p56dk            system  fluentd        running  3.23.3  2 weeks ago
+    fluentd-qrttw            rack    fluentd        running  3.23.3  2 weeks ago
+    fluentd-qrttw            system  fluentd        running  3.23.3  2 weeks ago
+    fluentd-zsv8f            rack    fluentd        running  3.23.3  2 weeks ago
+    fluentd-zsv8f            system  fluentd        running  3.23.3  2 weeks ago
+    redis-77b4f65c55-nbx89   rack    redis          running  3.23.3  2 weeks ago
+    redis-77b4f65c55-nbx89   system  redis          running  3.23.3  2 weeks ago
+    router-846b84d544-ndz76  rack    router         running  3.23.3  2 weeks ago  router
+    router-846b84d544-ndz76  system  router         running  3.23.3  2 weeks ago  router
 ```
 
 ## rack runtimes
@@ -215,7 +238,7 @@ Uninstalls a Rack
 ```bash
     $ convox rack uninstall my-rack
     Upgrading modules...
-    Downloading github.com/convox/convox?ref=3.0.15 for system...
+    Downloading github.com/convox/convox?ref=3.23.3 for system...
     ...
     Destroy complete! Resources: 35 destroyed.
 ```
@@ -231,7 +254,7 @@ Updates a Rack to a new version.
 ```bash
     $ convox rack update
     Upgrading modules...
-    Downloading github.com/convox/convox?ref=3.0.15 for system...
+    Downloading github.com/convox/convox?ref=3.23.3 for system...
     ...
     Apply complete! Resources: 1 added, 4 changed, 1 destroyed.
 
@@ -245,8 +268,6 @@ Updates a Rack to a new version.
 ## rack access credential
 
 Generates rack access credential
-
-> supported from: 3.14.1
 
 ### Usage
 ```bash
@@ -274,8 +295,6 @@ flags:
 ## rack access key rotation
 
 Rotates the rack access key that is used for rack access credential. It will invalidate previous all the credential generated from ` convox rack access --role [role] --duration-in-hours [duration]`.
-
-> supported from: 3.14.1
 
 ### Usage
 ```bash

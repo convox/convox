@@ -35,6 +35,9 @@ Add a private registry
     $ convox registries add 123456789012.dkr.ecr.us-east-1.amazonaws.com AKIAABCDE1F2GHIJKLMN l0nG+4nD/c0mpl3X+p455w0RD
     Adding registry... OK
 ```
+
+> Treat registry credentials with the same care as any other secret. Avoid committing them to version control.
+
 ## registries remove
 
 Remove private registry

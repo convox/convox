@@ -29,6 +29,12 @@ In this way, you can produce a kubeconfig file for all the Racks you require and
 
 If you remove a user's access to your Convox organization, then they will also lose access to the underlying Kubernetes infrastructure, which is important from a security point of view.
 
+## Access Scope
+
+When you connect to the Kubernetes cluster via `convox rack kubeconfig`, your access is scoped to the cluster level. Each Convox app runs in its own Kubernetes namespace (named after the rack and app). You can view resources across namespaces using standard kubectl commands.
+
+> Direct Kubernetes access bypasses Convox RBAC controls. Use caution when granting cluster access, as users can view and modify resources outside of the Convox abstraction layer.
+
 ## Useful Commands
 
 ### See the node metrics as reported by k8s

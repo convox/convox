@@ -7,6 +7,8 @@ url: /configuration/rack-parameters/gcp
 
 The following parameters are available for configuring your Convox rack on Google Cloud Platform (GCP). These parameters allow you to customize and optimize the behavior of your applications and services running on the GCP platform.
 
+> Some parameters can only be set during rack installation and cannot be changed afterwards. These include `region`. See individual parameter pages for details.
+
 ## Parameters
 
 | Parameter                            | Description                                                              |

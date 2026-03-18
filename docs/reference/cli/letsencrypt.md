@@ -5,6 +5,8 @@ url: /reference/cli/letsencrypt
 ---
 # letsencrypt
 
+> These commands are currently available for AWS racks using Route53 for DNS management.
+
 ## letsencrypt dns route53 list
 
 List configured letsencrypt dns solvers for route53

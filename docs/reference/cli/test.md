@@ -21,3 +21,5 @@ Run tests
     Starting build... OK
     ...<Docker output>
 ```
+
+Tests are defined using the `test` attribute on each service in `convox.yml`. See the [Service](/reference/primitives/app/service) reference for configuration details.

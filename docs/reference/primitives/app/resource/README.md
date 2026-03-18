@@ -96,6 +96,39 @@ In your production environment, or for particular usage requirements, you may wi
 
 Resource Overlays provide you with a simple and effective way to maintain the cheaper and efficient containerized Resources on the environments you wish, while switching them out for the cloud-provider managed services on those environments that require them.
 
+### Example: Development vs Production Resources
+
+In development, you might use a containerized Postgres resource:
+
+```yaml
+resources:
+  database:
+    type: postgres
+services:
+  web:
+    resources:
+      - database
+```
+
+For production, you can overlay this with an AWS RDS managed database without changing your application code:
+
+```yaml
+resources:
+  database:
+    type: rds-postgres
+    options:
+      class: db.m5.large
+      storage: 100
+      encrypted: true
+      durable: true
+services:
+  web:
+    resources:
+      - database
+```
+
+The environment variable injected into your service (e.g., `DATABASE_URL`) uses the same format in both cases, so your application connects to either resource transparently.
+
 If you wish to replace any of those containerized Resources on a Rack, to stop them being initiated, you can manually set a matching environment variable on your [App](/reference/primitives/app). The corresponding Resource will then not be started by Convox on that Rack.
 
 ```bash

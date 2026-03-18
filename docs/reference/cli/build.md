@@ -32,7 +32,7 @@ Create a build
 
 ### Pass build time env vars
 
-You can pass env vars that will only exists on the build time. (Supported from version: >= 3.7.2)
+You can pass env vars that will only exist at build time.
 
 ```bash
     $ convox build --description "My Test Build" --build-args "BUILD_ENV1=val1" --build-args "BUILD_ENV2=val2"

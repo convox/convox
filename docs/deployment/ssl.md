@@ -14,11 +14,11 @@ If you specify a custom `domain:` attribute for your service, Convox will automa
 To minimize delays during your first deployment, you can pre-generate your SSL certificate. This ensures your service is available without waiting for the certificate issuance process.
 
 ```bash
-$ convox certs generate "*.example.org" "myapp.example.org" --issuer letsencrypt
+$ convox certs generate "myapp.example.org" --issuer letsencrypt
 Generating certificate... OK, cert-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-This command will initiate the HTTP-01 challenge or email verification for domain ownership, allowing the certificate to be issued and ready for use during deployment.
+This command will initiate the HTTP-01 challenge or email verification for domain ownership, allowing the certificate to be issued and ready for use during deployment. For wildcard certificates, see [Wildcard Certificates and Reuse](#wildcard-certificates-and-reuse) below (requires DNS-01 validation).
 
 ## Certificate Management
 
@@ -40,7 +40,9 @@ $ convox certs delete cert-xxxxxxxxxxxxxx
 Deleting certificate cert-xxxxxxxxxxxxxx... OK
 ```
 
-## Advanced SSL Configuration: Let's Encrypt DNS01 Challenge with Route53
+## Advanced SSL Configuration: Let's Encrypt DNS01 Challenge with Route53 (AWS)
+
+> This configuration is currently available for AWS racks using Route53 for DNS management.
 
 Convox also supports the Let's Encrypt DNS01 challenge for SSL certificate generation, which is useful when HTTP endpoints are not exposed or when wildcard certificates are required. The DNS01 challenge verifies domain ownership via DNS TXT records, and it is ideal for environments with strict security requirements.
 
@@ -161,7 +163,7 @@ This allows you to securely use the same SSL certificate across multiple apps or
 
 ## Conclusion
 
-Convox simplifies SSL certificate management by integrating Let's Encrypt for both standard HTTP-01 validation and more advanced DNS01 challenges. Whether you need to secure single domains, multiple subdomains, or reuse wildcard certificates across apps, Convox provides flexible options for securing your services.
+Convox simplifies SSL certificate management by integrating Let's Encrypt for both standard HTTP-01 validation and more advanced DNS01 challenges. The DNS01 challenge is currently supported on AWS racks using Route53. Whether you need to secure single domains, multiple subdomains, or reuse wildcard certificates across apps, Convox provides flexible options for securing your services.
 
 ## See Also
 

@@ -7,6 +7,8 @@ url: /configuration/rack-parameters/azure
 
 The following parameters are available for configuring your Convox rack on Microsoft Azure. These parameters allow you to customize and optimize the behavior of your applications and services running on the Azure platform.
 
+> Some parameters can only be set during rack installation and cannot be changed afterwards. These include `region`. See individual parameter pages for details.
+
 ## Parameters
 
 | Parameter                            | Description                                                              |

@@ -62,12 +62,6 @@ For v3 rack it will generate a private key and show it as output. Please save th
 Run a shell on an instance
 
 ### Usage
-**For v2 rack:**
-```bash
-    convox instances ssh <instance_id>
-```
-
-**For v3 rack:**
 ```bash
     convox instances ssh <instance_id> --key <private_key_file>
 ```
