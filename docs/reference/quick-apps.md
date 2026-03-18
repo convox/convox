@@ -1,51 +1,32 @@
 ---
-title: "Drupal"
-slug: drupal
-url: /reference/quick-apps/drupal
+title: "Quick Apps"
+slug: quick-apps
+url: /reference/quick-apps
 ---
 
-# Quick Apps - Drupal
+# Quick Apps
 
-## Table of Contents
+Quick Apps lets you deploy popular applications directly into your Convox Rack from the Console with minimal configuration. Instead of manually configuring a `convox.yml`, Dockerfile, and database resources, Quick Apps handles infrastructure provisioning, configuration, and application setup for you.
 
-- [Overview](#overview)
-- [Getting Started](#getting-started)
-- [Installation Steps](#installation-steps)
-  - [Step 1: Configure Convox Settings](#step-1-configure-convox-settings)
-  - [Step 2: Configure Drupal](#step-2-configure-drupal)
-  - [Step 3: Configure Database](#step-3-configure-database)
-  - [Step 4: Review and Install](#step-4-review-and-install)
-- [Post-Installation](#post-installation)
-  - [Monitoring Installation Progress](#monitoring-installation-progress)
-  - [After Installation Completion](#after-installation-completion)
-- [Managing Active Apps](#managing-active-apps)
-  - [Site Actions](#site-actions)
-- [Site Configuration & Settings](#site-configuration--settings)
-  - [Site Information](#site-information)
-  - [Basic Settings](#basic-settings)
-  - [Site Operations](#site-operations)
-  - [Custom Configurations](#custom-configuration)
-  - [Deleting a Site](#deleting-a-site)
+## Drupal
 
-## Overview
+Quick Apps supports deploying a fully functional Drupal site into your Convox Rack. You can set up a new Drupal installation or deploy an existing Git-based site through a streamlined Console wizard.
 
-Quick Apps - Drupal allows you to deploy a fully functional Drupal site into your Convox rack with minimal configuration. Whether you are setting up a new Drupal installation or deploying an existing Git-based site, this streamlined process ensures a smooth setup.
+For a step-by-step walkthrough, check out the **[Guided Tour](https://app.storylane.io/share/dvtwoaxuuakh)**.
 
-For a step-by-step walkthrough of Quick Apps - Drupal, check out our **[Guided Tour](https://app.storylane.io/share/dvtwoaxuuakh)**.
-
-> **⚠ Important Notice:**
-> To use **Quick Apps - Drupal**, your Convox **rack must be on version 3.19.7 or later**. If you are on an older version, you can see the [Updating a Rack](https://docs.convox.com/management/cli-rack-management/#updating-to-the-latest-version) information for additional guidance.
+> **Important:**
+> To use Quick Apps - Drupal, your Convox **rack must be on version 3.19.7 or later**. If you are on an older version, see the [Updating a Rack](/management/cli-rack-management/#updating-to-the-latest-version) instructions.
 > Additionally, you must set the rack parameter **`efs_csi_driver_enable=true`** to enable AWS EFS storage. For details, see the [EFS CSI Driver Configuration](/configuration/rack-parameters/aws/efs_csi_driver_enable) page.
 
-## Getting Started
+### Getting Started
 
 1. Navigate to the **Quick Apps** tab in the Convox Console.
 2. Under the **Installation** tab, select **Setup** for Drupal.
 3. Follow the step-by-step configuration wizard.
 
-## Installation Steps
+### Installation Steps
 
-### Step 1: Configure Convox Settings
+#### Step 1: Configure Convox Settings
 
 You will be prompted to provide the following:
 
@@ -64,7 +45,7 @@ You will be prompted to provide the following:
 
   The app name is how Convox identifies and manages your deployment, including routing, scaling, and service configurations.
 
-### **Labels**
+#### Labels
 Choose whether the application is for **Production**, **Test**, or **Dev** environments.
 - *Production*: Indexed for search results.
 - *Test/Dev*: Used for organization and CI/CD purposes.
@@ -76,7 +57,7 @@ If multiple environments (e.g., Dev, Test, and Production) are deployed for the 
 
 To simplify the deployment of identical configurations across environments, Convox provides a **Clone** functionality after site installation. This allows you to quickly replicate a Drupal installation, ensuring that Dev, Test, and Production instances remain synchronized while maintaining separate environments for development and testing.
 
-### Step 2: Configure Drupal
+#### Step 2: Configure Drupal
 
 - **Site Name**
   This will be the official name of the Drupal installation.
@@ -91,7 +72,7 @@ To simplify the deployment of identical configurations across environments, Conv
 
   These credentials will be used for logging into the Drupal site.
 
-### Step 3: Configure Database
+#### Step 3: Configure Database
 
 - **Use an Existing Database** (Optional)
   If enabled, users can provide their database connection details in one of two ways:
@@ -124,25 +105,25 @@ To simplify the deployment of identical configurations across environments, Conv
     - **Deletion Protection**: Prevents accidental database deletion.
       - If deletion protection is enabled when a Convox site is deleted, the database will persist in your AWS account. It will need to be manually removed from AWS if no longer needed.
     - **Containerized Database**: Runs the database as a containerized service inside the Convox rack.
-      - **Best suited for cost savings** in development and testing environments.
+      - Best suited for cost savings in development and testing environments.
       - Offers lower durability and availability compared to AWS RDS-managed databases.
       - Not recommended for production workloads due to lack of automated failover and managed backups.
 
-### Step 4: Review and Install
+#### Step 4: Review and Install
 
 - A final review page summarizes the Convox, Drupal, and database configurations before deployment.
 - Click **Complete Installation** to begin deployment.
 
-## Post-Installation
+### Post-Installation
 
 After starting an installation, you will be automatically redirected to the **Installation Job** where you can monitor the deployment process in real time. This job logs all actions being executed, including database provisioning, application setup, and service initialization.
 
-### Monitoring Installation Progress
+#### Monitoring Installation Progress
 - You can track the installation job directly from the **Console Jobs** tab under the job labeled **Create Drupal App / <Convox App Name>**.
 - At any time, you can navigate back to the installation job by selecting the **wrench icon** next to the active installation in the **Active Apps** tab of the Quick Apps Console Page.
 - Alternatively, you can browse to the **Jobs** tab in the Convox Console and locate the installation job manually.
 
-### After Installation Completion
+#### After Installation Completion
 - Once the installation job successfully completes, the new site will be listed under **Active Apps** in the Quick Apps section.
 - If the installation fails or encounters an issue, details and error logs will be available in the installation job for troubleshooting.
 - You can immediately access your new site using the **View Site** button in the Active Apps tab.
@@ -150,7 +131,7 @@ After starting an installation, you will be automatically redirected to the **In
 
 > **Next Steps:** After installation, you can configure your site, manage database settings, allocate resources, and apply labels using the **Configuration & Settings** page.
 
-## Managing Active Apps
+### Managing Active Apps
 
 From the **Active Apps** tab in the Quick Apps Console, you can view all existing Drupal sites along with key details such as:
 - **Labels**: Identifies the site as Production, Test, or Dev. Users can also apply **Custom Labels** for internal organization, such as tagging projects, teams, or deployment stages.
@@ -160,29 +141,27 @@ From the **Active Apps** tab in the Quick Apps Console, you can view all existin
 - **Build/Job Status**: Displays active deployments, pending tasks, and any errors from previous builds. If a build or deployment fails, an error message will be shown here for troubleshooting.
 - **Version**: Displays the current Drupal version in use.
 
-### Site Actions
+#### Site Actions
 Each active site includes several management options:
 - **Clone**: Create a new site from an existing one.
 - **View Site**: Open the live site in a new tab.
 - **Configuration & Settings**: Access the site's management dashboard.
 - **Active Installation Job**: During installation, you can click the **wrench icon** next to a site to navigate directly to the active installation job, allowing you to monitor progress and troubleshoot any issues.
 
-## Site Configuration & Settings
+### Site Configuration and Settings
 
 Within the **Settings & Configuration** page, you can:
 - Use the **Site Context** dropdown to switch between related environments (e.g., Dev, Test, Prod) within the same stack.
 - **Rebuild Cache**: Clears the Drupal cache to apply configuration changes or resolve rendering issues.
 - **View Site**: Opens the live Drupal site.
 
-### Settings Tabs Breakdown
-
-### **Site Information**
+#### Site Information
 Displays general details about the Drupal site, including its URL, Convox application settings, database configuration, and resource allocation.
 
-### **Basic Settings**
+#### Basic Settings
 This section includes several subpages:
 
-### General Settings
+**General Settings**
 - **Domain Name**: Assign a custom domain to the site.
   - Convox automatically generates a system domain for each application. See [Custom Domains](/deployment/custom-domains) for details.
 - **PHP Memory Limit**: Defines the maximum amount of memory a PHP script can consume. This setting is critical for performance tuning, particularly in high-traffic Drupal environments.
@@ -198,7 +177,7 @@ This section includes several subpages:
 - **Trusted Domains**: Configures Drupal's `trusted_host_patterns` setting.
   - Helps prevent HTTP Host header attacks by restricting accepted domains.
 
-### Database Settings
+**Database Settings**
 - **Version**: Allows upgrading or changing the database version.
   - **Warning**: Upgrading databases may introduce compatibility issues. Always back up your database before making changes.
 - **Instance Size**: Modify the RDS instance type for performance adjustments.
@@ -213,18 +192,18 @@ This section includes several subpages:
 > - Storage capacity increases are usually applied without downtime, but instance resizing or version upgrades may cause short-term disruptions.
 > - It is recommended to monitor the **RDS instance status** in the AWS Console to ensure changes have fully propagated before making further modifications.
 
-### Resource Allocations
+**Resource Allocations**
 - **vCPU**: Adjust CPU allocation (default is `0.256`).
 - **Memory**: Configure memory allocation (default is `512MB`).
 - **Scale**: Modify the number of application instances.
   - **Warning**: Changing resource allocations may impact site performance and availability.
 
-### Site Labels
+**Site Labels**
 - **Managed Labels**: Required Convox-managed labels (Production, Test, or Dev) determine indexing and searchability.
 - **Custom Labels**: Assign additional labels for organization and filtering.
   - **Examples**: `team-name`, `feature-branch`, `client-project`.
 
-### Cron Settings (Timer Settings)
+**Cron Settings (Timer Settings)**
 - **Command**: The script or command to be executed.
 - **Schedule**: Defines the cron execution schedule. See [Timer Documentation](/reference/primitives/app/timer) for cron syntax details.
   - A scheduling tool is available to simplify configuration.
@@ -236,9 +215,9 @@ This section includes several subpages:
 
 This means that while cron jobs have access to necessary application resources, they operate in an **isolated process** rather than directly modifying the running Drupal container.
 
-### Site Operations
+#### Site Operations
 
-### Clone From Site
+**Clone From Site**
 - **Source Application**: Select the site to copy from.
 - **Copy Code**: Clones the entire Drupal codebase, including configurations, modules, and themes.
 - **Copy Config**: Copies only the site settings, such as database configurations and resource allocations.
@@ -247,29 +226,29 @@ This means that while cron jobs have access to necessary application resources, 
   - **Important**: The selected **source application remains unchanged**. All changes are applied **to the currently selected site**, overwriting any existing configuration.
   - This ensures that cloned sites remain functionally consistent without affecting the original source site.
 
-### Drupal Core Version
+**Drupal Core Version**
 - Change the core version of Drupal for the site.
 - **Warning**: Updating Drupal can break module compatibility. Always test in a staging environment before upgrading.
 
-### Backups & Restore
+**Backups and Restore**
 - **Create Backup**: Generates a full snapshot of the site.
 - **Restore**: Select a previous backup to roll back changes.
 - **Delete Backup**: Removes a stored backup.
   - Backups are timestamped for easy identification.
 
-### Custom Configuration
+#### Custom Configuration
 
-### Custom `settings.php`
+**Custom `settings.php`**
 - Allows modifying the `settings.php` file manually.
 - Use cases include environment variable overrides and caching optimizations.
 - **Changes take effect immediately**, and the service will restart automatically.
 
-### Custom `PHP.ini`
+**Custom `PHP.ini`**
 - Modify PHP settings by pasting a custom `PHP.ini` file.
 - Adjust execution limits, upload sizes, or other PHP parameters.
 - **Changes apply immediately**, and the service will restart automatically.
 
-### Deleting a Site
+#### Deleting a Site
 - Navigate to the **Delete Site** tab.
 - Confirm deletion to permanently remove the application.
 - **Note**: If deletion protection is enabled, the associated RDS database will persist and must be manually removed from AWS.

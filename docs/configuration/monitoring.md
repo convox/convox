@@ -194,4 +194,4 @@ convox logs -a myapp --follow
 ## See Also
 
 - [Logging](/configuration/logging) for configuring log collection
-- [Datadog Integration](/integrations/monitoring/datadog) for detailed Datadog setup instructions
+- [Datadog Integration](/integrations/monitoring) for detailed Datadog setup instructions

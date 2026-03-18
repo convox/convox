@@ -1,13 +1,19 @@
 ---
-title: "Datadog"
-slug: datadog
-url: /integrations/monitoring/datadog
+title: "Monitoring"
+slug: monitoring
+url: /integrations/monitoring
 ---
-# Datadog
+# Monitoring Integrations
 
-You can add operational visibility to your [Rack](/reference/primitives/rack) with Datadog.
+Convox integrates with third-party monitoring platforms to provide deep operational visibility into your [Rack](/reference/primitives/rack) and applications. These integrations complement the [built-in monitoring and alerting](/configuration/monitoring) that Convox provides natively.
 
-## Configure kubectl to Point at Your Rack
+Monitoring integrations are installed by deploying agents directly into your Rack's Kubernetes cluster using `kubectl`. Once deployed, agents collect metrics, traces, and logs from all nodes and forward them to the monitoring platform.
+
+## Datadog
+
+You can add operational visibility to your Rack with Datadog.
+
+### Configure kubectl to Point at Your Rack
 
 Convox allows you to securely connect your `kubectl` to your Convox created Kubernetes cluster by exporting a [kubeconfig](/reference/cli/rack#rack-kubeconfig) that will connect you to a Kubernetes API Proxy running inside your Rack. This allows you to use `kubectl` without directly exposing the credentials for your Kubernetes cluster. For example if your Rack is called `myrack` you could point your local `kubectl` to your Rack cluster as follows
 
@@ -18,7 +24,7 @@ $ export KUBECONFIG=/tmp/myrack-config
 
 This will export the proxy configuration to a temporary file and then point your local `kubectl` environment at that location so you can connect to your Rack's cluster. You will need to perform this step before you can execute any `kubectl` commands against your cluster.
 
-## Deploy the Datadog Agent
+### Deploy the Datadog Agent
 
 Once you have `kubectl` pointing at your Rack you can deploy the datadog agent as a Kubernetes Daemonset. The following is based on the [Datadog Daemonset Installation Instructions](https://docs.datadoghq.com/agent/kubernetes/?tab=daemonset) so please refer back there for any specific tweaks you may want to make.
 
@@ -33,7 +39,7 @@ During installation we recommend adding the following to the environment section
 ```
 This will remove extra noise from the Datadog Agent itself.
 
-## Verify Installation
+### Verify Installation
 
 You can verify the installation by running
 
@@ -55,7 +61,7 @@ Once your `DESIRED` `CURRENT` and `READY` counts are all equal your Agents shoul
 
 For further customization and troubleshooting please refer to the [Datadog Daemonset Config Docs](https://docs.datadoghq.com/containers/kubernetes/configuration?tab=daemonset)
 
-## Metrics and Traces
+### Metrics and Traces
 
 In order to use Datadog's APM, Distributed Tracing, or Runtime Metrics you will need
 to connect to the Datadog agent.
@@ -65,3 +71,8 @@ IP address. This IP address will be available to your [Processes](/reference/pri
 in the `INSTANCE_IP` environment variable.
 
 You can autoscale based on Datadog Metrics with a few [additional steps](/configuration/scaling/datadog-metrics).
+
+## See Also
+
+- [Monitoring and Alerting](/configuration/monitoring) for Convox's built-in monitoring capabilities
+- [Observability](/configuration/observability) for an overview of logging and monitoring options

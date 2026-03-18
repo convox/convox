@@ -5,7 +5,7 @@ url: /configuration/app-parameters
 ---
 # App Parameters
 
-App parameters are configuration settings that control various aspects of your Convox applications. These parameters allow you to customize and optimize the behavior of your applications without modifying your application code.
+App parameters are per-application configuration settings that control build and deployment behavior for a specific app. Unlike [Rack Parameters](/configuration/rack-parameters), which apply to the entire cluster (node types, networking, storage drivers), app parameters let you customize individual applications, such as directing builds to specific node groups or adjusting build resource limits.
 
 ## Managing App Parameters
 

@@ -23,4 +23,4 @@ See [Monitoring and Alerting](/configuration/monitoring) for details.
 
 For advanced observability, Convox integrates with third-party monitoring platforms:
 
-- [Datadog](/integrations/monitoring/datadog) for metrics, APM, and log management
+- [Datadog](/integrations/monitoring) for metrics, APM, and log management

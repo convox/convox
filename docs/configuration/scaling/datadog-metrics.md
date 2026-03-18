@@ -14,7 +14,7 @@ Convox passes your Datadog metric configuration directly into Kubernetes HPA ext
 ## Prerequisites
 
 - **Rack version 3.9.1 or later.** Check with `convox rack -r rackNAME`. If you are on an older version, [update your rack](/management/cli-rack-management).
-- **Datadog Agent and Cluster Agent installed.** Follow the [Datadog integration guide](/integrations/monitoring/datadog) to deploy the agent to your rack. Use the `datadog-agent-all-features.yaml` manifest to ensure the Cluster Agent is included.
+- **Datadog Agent and Cluster Agent installed.** Follow the [Datadog integration guide](/integrations/monitoring) to deploy the agent to your rack. Use the `datadog-agent-all-features.yaml` manifest to ensure the Cluster Agent is included.
 
 Verify the Cluster Agent is running:
 
@@ -23,7 +23,7 @@ $ kubectl get pods | grep cluster-agent
 datadog-cluster-agent-b5fd4b7f5-tmkql   1/1     Running   0          16m
 ```
 
-If you do not see a running `datadog-cluster-agent` pod, revisit the [Datadog integration guide](/integrations/monitoring/datadog) and ensure you used the `datadog-agent-all-features.yaml` manifest.
+If you do not see a running `datadog-cluster-agent` pod, revisit the [Datadog integration guide](/integrations/monitoring) and ensure you used the `datadog-agent-all-features.yaml` manifest.
 
 ## Configure the External Metrics Provider
 
@@ -144,4 +144,4 @@ web-5675cccf75-dm6kb  web      running  RAZUSIKBQGX  11 minutes ago
 
 - [Autoscaling](/configuration/scaling/autoscaling) for CPU/memory-based scaling
 - [KEDA Autoscaling](/configuration/scaling/keda) for event-driven autoscaling
-- [Datadog Integration](/integrations/monitoring/datadog) for setting up Datadog
+- [Datadog Integration](/integrations/monitoring) for setting up Datadog

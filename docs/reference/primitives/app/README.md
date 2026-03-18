@@ -7,6 +7,19 @@ url: /reference/primitives/app
 
 An App is a logical container for [Primitives](/reference/primitives) that are updated together through transactional deployments.
 
+## Primitives
+
+| Primitive | Description |
+|:----------|:------------|
+| [Balancer](/reference/primitives/app/balancer) | Custom TCP load balancers for non-HTTP protocols (e.g., raw TCP, gRPC). Routes external traffic to a Service on specific ports. |
+| [Build](/reference/primitives/app/build) | A compiled snapshot of your codebase, produced from a Dockerfile. Each deploy creates a new Build. |
+| [Object](/reference/primitives/app/object) | Blob/file storage for uploading and downloading files from your application. |
+| [Process](/reference/primitives/app/process) | A running container instance. Processes are created from a Release and managed by a Service or `convox run`. |
+| [Release](/reference/primitives/app/release) | A unit of deployment that pairs a Build with a set of environment variables. Promoting a Release deploys it. |
+| [Resource](/reference/primitives/app/resource) | A network-accessible backing service such as PostgreSQL, MySQL, Redis, or Memcached. Can be containerized or cloud-managed. |
+| [Service](/reference/primitives/app/service) | A horizontally-scalable group of durable Processes defined in `convox.yml`. Services are the primary workload primitive. |
+| [Timer](/reference/primitives/app/timer) | A scheduled task that runs a command on a cron schedule using a Service's image. Maps to a Kubernetes CronJob. |
+
 ## Definition
 
 An App is defined by a single [`convox.yml`](/configuration/convox-yml)

@@ -23,22 +23,6 @@ focus on the things that make your [App](/reference/primitives/app) unique.
 | [Service](/reference/primitives/app/service)   | Horizontally-scalable collections of durable [Processes](/reference/primitives/app/process)                     |
 | [Timer](/reference/primitives/app/timer)       | Runs one-off [Processes](/reference/primitives/app/process) on a scheduled interval                             |
 
-### Coming Soon
-
-| Primitive | Description                                 |
-|:----------|:--------------------------------------------|
-| Cache     | Store data with timed expiration            |
-| Feature   | Toggleable feature flags                    |
-| Identity  | User, group, and permission management      |
-| Key       | Encrypt and decrypt data                    |
-| Lock      | Coordinate exclusive access                 |
-| Mail      | Send and receive email                      |
-| Metric    | Store and analyze time-series data          |
-| Queue     | An expandable list of items to be processed |
-| Search    | Full-text indexing of data                  |
-| Stream    | Subscribable one-to-many data stream        |
-| Table     | Indexable rows of key/value data            |
-
 ## Rack Primitives
 
 | Primitive                    | Description                                                         |

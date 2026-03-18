@@ -33,4 +33,4 @@ Convox automatically captures and stores logs for:
 ## See Also
 
 - [Monitoring and Alerting](/configuration/monitoring) for setting up monitoring
-- [Datadog Integration](/integrations/monitoring/datadog) for forwarding logs to Datadog
+- [Datadog Integration](/integrations/monitoring) for forwarding logs to Datadog
