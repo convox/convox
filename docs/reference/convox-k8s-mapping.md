@@ -5,7 +5,7 @@ url: /reference/convox-k8s-mapping
 ---
 # Convox to Kubernetes Resource Mapping Reference
 
-## Overview
+## How Convox Maps to Kubernetes
 
 This document provides a comprehensive mapping of Convox concepts to their underlying Kubernetes implementations. It is intended for DevOps engineers who are familiar with Kubernetes and need to inspect, troubleshoot, or interact with their Convox-managed clusters using `kubectl`.
 

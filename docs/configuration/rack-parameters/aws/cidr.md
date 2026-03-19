@@ -18,6 +18,7 @@ The default value for `cidr` is `10.1.0.0/16`.
 
 ## Setting Parameters
 The `cidr` parameter must be configured at rack installation. Example:
+
 | Key                    | Value                                         |
 |------------------------|-----------------------------------------------|
 | `cidr`  | `10.2.0.0/16` |

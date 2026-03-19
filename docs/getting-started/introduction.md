@@ -56,7 +56,7 @@ To install the Convox CLI, follow the instructions for your operating system:
 
 ### Linux
 
-#### x86_64 / amd64
+#### Linux x86_64 / amd64
 
 ```bash
 $ curl -L https://github.com/convox/convox/releases/latest/download/convox-linux -o /tmp/convox
@@ -64,7 +64,7 @@ $ sudo mv /tmp/convox /usr/local/bin/convox
 $ sudo chmod 755 /usr/local/bin/convox
 ```
 
-#### arm64
+#### Linux arm64
 
 ```bash
 $ curl -L https://github.com/convox/convox/releases/latest/download/convox-linux-arm64 -o /tmp/convox
@@ -74,7 +74,7 @@ $ sudo chmod 755 /usr/local/bin/convox
 
 ### macOS
 
-#### x86_64 / amd64
+#### macOS x86_64 / amd64
 
 ```bash
 $ curl -L https://github.com/convox/convox/releases/latest/download/convox-macos -o /tmp/convox
@@ -82,7 +82,7 @@ $ sudo mv /tmp/convox /usr/local/bin/convox
 $ sudo chmod 755 /usr/local/bin/convox
 ```
 
-#### arm64
+#### macOS arm64
 
 ```bash
 $ curl -L https://github.com/convox/convox/releases/latest/download/convox-macos-arm64 -o /tmp/convox

@@ -34,6 +34,8 @@ Create a build
 
 You can pass env vars that will only exist at build time.
 
+> Build arguments require rack version 3.22.0 or later.
+
 ```bash
     $ convox build --description "My Test Build" --build-args "BUILD_ENV1=val1" --build-args "BUILD_ENV2=val2"
     Packaging source... OK

@@ -66,7 +66,7 @@ convox rack -r dev
 
 You should see output like:
 
-```
+```text
 Name      dev
 Provider  local
 Router    router.dev.localdev.convox.cloud
@@ -94,7 +94,7 @@ Your applications will be available at `https://<service>.<app>.dev.localdev.con
 
 Local rack configuration is stored at:
 
-```
+```text
 ~/.config/convox/racks/<RACK_NAME>
 ```
 

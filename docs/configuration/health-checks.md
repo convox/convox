@@ -39,6 +39,7 @@ services:
 | **interval** | 5       | The number of seconds between health checks                                      |
 | **path**     | /       | The HTTP endpoint that will be requested                                         |
 | **timeout**  | `interval - 1` | The number of seconds to wait for a valid response. Defaults to `interval` minus one |
+| **disable**  | false   | Set to `true` to disable the health check entirely                               |
 
 ## Liveness Checks
 
@@ -240,6 +241,7 @@ services:
 | **interval** | 5       | The number of seconds between health checks                                      |
 | **path**     | /       | The service name to check within your gRPC health implementation                 |
 | **timeout**  | `interval - 1` | The number of seconds to wait for a valid response. Defaults to `interval` minus one |
+| **disable**  | false   | Set to `true` to disable the health check entirely                               |
 
 ### Implementation Requirements
 

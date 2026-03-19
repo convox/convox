@@ -82,7 +82,7 @@ Once your application is running, find its URL with:
 convox services
 ```
 
-```
+```text
 SERVICE  DOMAIN                               PORTS
 web      web.myapp.dev.localdev.convox.cloud  443:3000
 ```

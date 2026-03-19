@@ -97,7 +97,7 @@ get "/test", to: proc { [200, {}, ["Hello World!"]] }
 
 You will see the file sync in your first terminal:
 
-```
+```text
 convox | sync: config/routes.rb to /usr/src/app on web
 ```
 

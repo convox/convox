@@ -18,6 +18,7 @@ The default value for `vpc_id` is ``. When set to ``, Convox will create a new V
 
 ## Setting Parameters
 The `vpc_id` parameter must be configured at rack installation. Example:
+
 | Key                    | Value                                         |
 |------------------------|-----------------------------------------------|
 | `vpc_id`   | `vpc-12345678` |

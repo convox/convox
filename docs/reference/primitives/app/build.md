@@ -166,7 +166,7 @@ Convox uses buildkit to build and push images. Buildkit allows us to specify a c
 
 ## Using Docker Credentials in Builds
 
-### Overview
+### Docker Hub Rate Limiting
 
 We have added support for using Docker credentials in Convox build and service pods. This feature helps avoid potential rate limits imposed by Docker Hub, particularly when operating large clusters that may perform multiple simultaneous pulls from Docker. By supplying Docker credentials, you can ensure that Docker Hub's rate limits are bypassed, resulting in smoother operations for your services.
 

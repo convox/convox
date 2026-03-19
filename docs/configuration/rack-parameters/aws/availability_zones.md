@@ -18,6 +18,7 @@ The default value for `availability_zones` is an empty string. When set to an em
 
 ## Setting Parameters
 The `availability_zones` parameter must be configured at rack installation. Example:
+
 | Key                    | Value                                         |
 |------------------------|-----------------------------------------------|
 | `availability_zones`  | `east-1a,us-east-1b,us-east-1c` |

@@ -1,13 +1,13 @@
 ---
-title: "Postgis"
+title: "PostGIS"
 slug: postgis
 url: /reference/primitives/app/resource/postgis
 ---
-# Postgis
+# PostGIS
 
 ## Definition
 
-A Postgis Resource is defined in [`convox.yml`](/configuration/convox-yml) and linked to one or more [Services](/reference/primitives/app/service). PostGIS extends PostgreSQL with spatial and geographic data types, functions, and indexes.
+A PostGIS Resource is defined in [`convox.yml`](/configuration/convox-yml) and linked to one or more [Services](/reference/primitives/app/service). PostGIS extends PostgreSQL with spatial and geographic data types, functions, and indexes.
 
 ```yaml
 resources:
@@ -19,25 +19,27 @@ services:
       - geodatabase
 ```
 
-## Options
+## Containerized Options
 
-A Postgis Resource can have the following options configured for it (default values are shown):
+Convox runs PostGIS as a container inside your Rack using the `postgis/postgis` Docker image. PostGIS is containerized-only -- there is no managed RDS equivalent.
+
+For AWS RDS managed PostGIS, use the `rds-postgres` resource type with PostGIS extensions enabled at the RDS level. See the [PostgreSQL](/reference/primitives/app/resource/postgres#aws-rds-managed-postgres-resources) resource documentation for RDS configuration options.
 
 ```yaml
 resources:
   geodatabase:
     type: postgis
     options:
-      version: 10-3.2
-      storage: 10
+      version: "16-3.4"
+      storage: 20
 ```
 
-| Attribute   | Type   | Default  | Description                                  |
-| ----------- | ------ | -------- | -------------------------------------------- |
-| **version** | string | `10-3.2` | The PostGIS image tag (postgres version-postgis version) |
-| **storage** | int    | `10`     | The amount of storage (in GB) to allocate    |
+| Attribute   | Type   | Default  | Description                                                       |
+| ----------- | ------ | -------- | ----------------------------------------------------------------- |
+| **version** | string | `10-3.2` | The PostGIS image tag (format: `postgres_version-postgis_version`) |
+| **storage** | int    | `10`     | The amount of persistent storage (in GB)                          |
 
-> For AWS RDS managed PostGIS databases, use the `rds-postgres` resource type with PostGIS extensions enabled at the RDS level. See the [PostgreSQL](/reference/primitives/app/resource/postgres#aws-rds-managed-postgres-resources) resource documentation for RDS configuration options.
+> Specify a recent version for production use. The default `10-3.2` is the template fallback; most deployments should set an explicit version such as `16-3.4` or `15-3.4`.
 
 ## Command Line Interface
 
@@ -65,7 +67,7 @@ postgres://username:password@host.name:port/geodatabase
 ### Launching a Console
 ```bash
 $ convox resources console geodatabase -a myapp
-psql (10.20, server 10.20 (Debian 10.20-1.pgdg90+1))
+psql (16.2, server 16.2 (Debian 16.2-1+b1))
 Type "help" for help.
 geodatabase=#
 ```

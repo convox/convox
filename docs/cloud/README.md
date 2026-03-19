@@ -113,23 +113,6 @@ services:
       - database
 ```
 
-## Core Concepts
-
-### Machines
-Pre-configured compute units that provide CPU, memory, and storage for your applications. Machines are fully managed and automatically maintained.
-
-### Cloud Databases
-Fully managed RDS database instances. Define databases in your `convox.yml` with `provider: aws` to use Cloud Databases instead of containerized databases.
-
-### Applications
-Standard Convox applications that run on machines. Applications use the same `convox.yml` format and support the same features as rack-based deployments.
-
-### Build Isolation
-Builds run in separate, ephemeral environments to prevent resource contention.
-
-### Automatic Updates
-System components and security patches are automatically applied.
-
 ## Use Cases
 
 Convox Cloud is suitable for:

@@ -191,7 +191,7 @@ services:
 
 | Attribute  | Type   | Default    | Description                                                   |
 | ---------- | ------ | ---------- | ------------------------------------------------------------- |
-| **policyArns** | list |  | The of policy arns for the IAM role |
+| **policyArns** | list |  | The list of policy ARNs for the IAM role |
 
 > Pod identity must be enabled on rack before specifying this.
 
@@ -210,7 +210,7 @@ services:
 | Attribute  | Type   | Default    | Description                                                   |
 | ---------- | ------ | ---------- | ------------------------------------------------------------- |
 | **duration** | string | 2160h | Certificate renew frequency period                                |
-| **id** | string |  | Id of the generated Certificate to use instead of creating new certificate. If this is specified, then the `duration` vaule will not have any effect on the this, since it is already generated.|
+| **id** | string |  | ID of the generated certificate to use instead of creating a new certificate. If specified, the `duration` value will not have any effect, since the certificate is already generated |
 
 ### deployment
 
@@ -358,7 +358,7 @@ See [Health Checks](/configuration/health-checks) for configuring readiness, liv
 | **interval** | number | 5       | The number of seconds between health checks                                                      |
 | **path**     | string | /       | The path to request for health checks                                                            |
 | **timeout**  | number | `interval - 1` | The number of seconds to wait for a successful response. Defaults to `interval` minus one |
-| **disable**  | bool | false       | To disable the healthcheck |
+| **disable**  | bool | false       | Set to `true` to disable the health check entirely |
 
 > Specifying **health** as a string will set the **path** and leave the other values as defaults.
 
@@ -423,7 +423,7 @@ See [Health Checks](/configuration/health-checks) for configuring readiness, liv
 | Attribute | Type   | Default | Description                                                                                |
 | --------- | ------ | ------- | ------------------------------------------------------------------------------------------ |
 | **name**     | string |         | The name of the metric |
-| **matchLabels**  | map |         | Key value lablels for the metrics |
+| **matchLabels**  | map |         | Key-value labels for the metrics |
 | **averageValue**  | number |         | The target value of the average of the metric across all relevant pods |
 | **value**  | number |         | The target value of the metric |
 
@@ -472,7 +472,7 @@ services:
 | Attribute  | Type    | Default | Description                                                                          |
 | ---------- | ------- | ------- | ------------------------------------------------------------------------------------ |
 | **id** | string |     | Required. Id of the volume. |
-| **mountPath** | string |     | Required. Path in the serive file system to mount the volume |
+| **mountPath** | string |     | Required. Path in the service file system to mount the volume |
 | **medium** | string |     | Optional. Specifies the emptyDir medium. Allowed values: `"Memory"` or `""` |
 
 ```yaml
@@ -495,7 +495,7 @@ services:
 | Attribute  | Type    | Default | Description                                                                          |
 | ---------- | ------- | ------- | ------------------------------------------------------------------------------------ |
 | **id** | string |     | Required. Id of the volume. |
-| **mountPath** | string |     | Required. Path in the serive file system to mount the volume |
+| **mountPath** | string |     | Required. Path in the service file system to mount the volume |
 | **accessMode** | string |     | Required. Specifies the access mode for the volume. Allowed values are: `ReadWriteOnce`, `ReadOnlyMany`, `ReadWriteMany` |
 | **storageClass** | string |  | Storage class for the EFS volume |
 | **volumeHandle** | string |  | Use an existing EFS access point instead of provisioning a new one. See [Volumes](/configuration/volumes) |

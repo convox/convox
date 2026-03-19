@@ -18,6 +18,7 @@ The default value for `internet_gateway_id` is an empty string. When set to an e
 
 ## Setting Parameters
 The `internet_gateway_id` parameter must be configured at rack installation. Example:
+
 | Key                    | Value                                         |
 |------------------------|-----------------------------------------------|
 | `internet_gateway_id`   | `igw-1234567890abcdef0` |

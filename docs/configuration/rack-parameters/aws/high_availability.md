@@ -17,10 +17,11 @@ The default value for `high_availability` is `true`.
 - **Resource Management**: Allocate fewer resources for environments where high availability is not critical.
 
 ## Setting Parameters
-The `high availability` parameter must be configured at rack installation. Example:
+The `high_availability` parameter must be configured at rack installation. Example:
+
 | Key                    | Value                                         |
 |------------------------|-----------------------------------------------|
-| `high availability`  | `true` |
+| `high_availability`  | `true` |
 
 &nbsp;
 

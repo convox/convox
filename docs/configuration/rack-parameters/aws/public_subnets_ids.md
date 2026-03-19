@@ -18,6 +18,7 @@ The default value for `public_subnets_ids` is an empty string. When set to an em
 
 ## Setting Parameters
 The `public_subnets_ids` parameter must be configured at rack installation. Example:
+
 | Key                    | Value                                         |
 |------------------------|-----------------------------------------------|
 | `public_subnets_ids`   | `subnet-12345678,subnet-87654321,subnet-11223344` |

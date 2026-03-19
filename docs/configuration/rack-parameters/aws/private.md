@@ -20,6 +20,7 @@ The default value for `private` is `true`.
 
 ## Setting Parameters
 The `private` parameter must be configured at rack installation. Example:
+
 | Key                    | Value                                         |
 |------------------------|-----------------------------------------------|
 | `private`  | `true` |

@@ -141,7 +141,7 @@ By doing this, a containerized `main` resource will now no longer be started on 
 
 ## AWS RDS Managed Database Resources
 
-In addition to containerized resources, Convox v3 allows the creation of database resources (mariadb, mysql, and postgres) via AWS RDS. This integration provides enhanced durability and managed service benefits. Below are the basic configurations required for using AWS RDS resources.
+In addition to containerized resources, Convox allows the creation of database resources (mariadb, mysql, and postgres) via AWS RDS. This integration provides enhanced durability and managed service benefits. Below are the basic configurations required for using AWS RDS resources.
 
 ### Defining AWS RDS Resources
 
@@ -154,7 +154,7 @@ resources:
     options:
       storage: 100
       class: db.t3.large
-      version: 13
+      version: "16"
 services:
   web:
     resources:
@@ -186,7 +186,7 @@ resources:
     options:
       storage: 100
       class: db.t3.large
-      version: 13
+      version: "16"
   dbrr:
     type: rds-postgres
     options:
@@ -250,7 +250,7 @@ resources:
     options:
       storage: 10
       snapshot: test-v3-rds-snapshot-postgres
-      version: 13
+      version: "16"
 services:
   web:
     resources:
@@ -268,7 +268,7 @@ services:
 
 ## AWS ElastiCache Redis and Memcached Resources
 
-Convox now supports native AWS ElastiCache Redis and Memcached instances for high-performance caching solutions. These managed cache instances can be defined and linked to services similarly to other managed resources.
+Convox supports native AWS ElastiCache Redis and Memcached instances for high-performance caching solutions. These managed cache instances can be defined and linked to services similarly to other managed resources.
 
 ### Defining AWS ElastiCache Resources
 

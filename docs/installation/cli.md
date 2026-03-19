@@ -7,7 +7,7 @@ url: /installation/cli
 
 ## Linux
 
-### x86_64 / amd64
+### Linux x86_64 / amd64
 
 ```bash
     $ curl -L https://github.com/convox/convox/releases/latest/download/convox-linux -o /tmp/convox
@@ -15,7 +15,7 @@ url: /installation/cli
     $ sudo chmod 755 /usr/local/bin/convox
 ```
 
-### arm64
+### Linux arm64
 
 ```bash
     $ curl -L https://github.com/convox/convox/releases/latest/download/convox-linux-arm64 -o /tmp/convox
@@ -25,7 +25,7 @@ url: /installation/cli
 
 ## macOS
 
-### x86_64 / amd64
+### macOS x86_64 / amd64
 
 ```bash
     $ curl -L https://github.com/convox/convox/releases/latest/download/convox-macos -o /tmp/convox
@@ -33,7 +33,7 @@ url: /installation/cli
     $ sudo chmod 755 /usr/local/bin/convox
 ```
 
-### arm64
+### macOS arm64
 
 ```bash
     $ curl -L https://github.com/convox/convox/releases/latest/download/convox-macos-arm64 -o /tmp/convox

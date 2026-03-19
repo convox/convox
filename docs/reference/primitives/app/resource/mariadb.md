@@ -19,22 +19,29 @@ services:
       - database
 ```
 
-## Options
+## Containerized Options
 
-A MariaDB Resource can have the following options configured for it (default values are shown):
+By default, Convox runs MariaDB as a container inside your Rack. This is fast to set up and ideal for development and staging environments.
 
 ```yaml
 resources:
   database:
     type: mariadb
     options:
-      version: 10.6.0
-      storage: 10
+      version: "11.4"
+      storage: 20
 ```
 
-### AWS RDS Managed MariaDB Resources
+| Attribute   | Type   | Default  | Description                              |
+| ----------- | ------ | -------- | ---------------------------------------- |
+| **version** | string | `10.6.0` | The MariaDB Docker image tag             |
+| **storage** | int    | `10`     | The amount of persistent storage (in GB) |
 
-In addition to containerized resources, Convox v3 allows the creation of MariaDB resources via AWS RDS. This provides enhanced durability and managed service benefits. Below is a general example of how to define AWS RDS resources:
+> Specify a recent MariaDB version for production use. The default `10.6.0` is the template fallback; most deployments should set an explicit version such as `11.4` or `10.11`.
+
+## AWS RDS Managed MariaDB Resources
+
+Convox allows the creation of MariaDB resources via AWS RDS. This provides enhanced durability, automated backups, and managed service benefits. Use `rds-mariadb` as the resource type:
 
 ```yaml
 resources:
@@ -43,7 +50,7 @@ resources:
     options:
       class: db.m5.large
       storage: 100
-      version: 10.5
+      version: "10.11"
       deletionProtection: true
       durable: true
       encrypted: true
@@ -56,52 +63,44 @@ services:
       - database
 ```
 
-### Features
+### RDS Features
 
-- **Read Replica Support**: AWS RDS resources support integrated AWS read replicas. You can configure read replicas for improved read scalability and reliability. Additionally, read replicas can be promoted to active primaries if needed.
+- **Read Replica Support**: Configure read replicas for improved read scalability and reliability. Read replicas can be promoted to active primaries if needed.
 - **Snapshot Restoration**: Restore from a snapshot to create a new database instance with your desired specifications.
 - **Import Existing RDS Database**: Import existing AWS RDS databases into a Convox rack for management or access via linking.
 
-### Configuration Options
+### RDS Configuration Options
 
-Below is a chart of configuration options available for AWS RDS MariaDB resources:
+| Attribute                     | Type    | Default          | Description                                                                                                   |
+| ----------------------------- | ------- | ---------------- | ------------------------------------------------------------------------------------------------------------- |
+| **class**                     | string  | **Required**     | The compute and memory capacity of the DB instance (e.g., `db.t3.micro`, `db.m5.large`)                     |
+| **version**                   | string  | **Required**     | The version of the database engine (e.g., `10.11`, `10.6`)                                                  |
+| **storage**                   | int     | `20`             | The amount of storage (in GB) to allocate for the DB instance                                                |
+| **encrypted**                 | boolean | `false`          | Whether to enable storage encryption. Immutable after creation                                                |
+| **deletionProtection**        | boolean | `false`          | Whether to enable deletion protection for the DB instance                                                    |
+| **durable**                   | boolean | `false`          | Whether to create a Multi-AZ DB instance for high availability                                               |
+| **backupRetentionPeriod**     | int     | `1`              | The number of days for which automated backups are retained. Set to `0` to disable automated backups         |
+| **preferredBackupWindow**     | string  | AWS managed      | The daily time range for automated backups in UTC (format: `hh24:mi-hh24:mi`, at least 30 minutes)          |
+| **preferredMaintenanceWindow**| string  | AWS managed      | The weekly time range for system maintenance in UTC (format: `ddd:hh24:mi-ddd:hh24:mi`)                     |
+| **iops**                      | int     |                  | The amount of provisioned IOPS                                                                               |
+| **port**                      | int     | `3306`           | The port on which the database accepts connections. Immutable after creation                                  |
+| **masterUserPassword**        | string  | Convox generated | The password for the master user. Set as an environment variable to avoid hardcoding                         |
+| **allowMajorVersionUpgrade**  | boolean | `true`           | Whether major version upgrades are allowed                                                                   |
+| **autoMinorVersionUpgrade**   | boolean | `true`           | Whether minor version upgrades are applied automatically                                                     |
+| **readSourceDB**              | string  |                  | The source database identifier for creating a read replica                                                   |
+| **import**                    | string  |                  | The database identifier for importing an existing RDS instance. Requires `masterUserPassword`                |
+| **snapshot**                  | string  |                  | The snapshot identifier for restoring from a snapshot                                                        |
 
-| Attribute                     | Type    | Default       | Description                                                                                                   |
-| ----------------------------- | ------- | ------------- | ------------------------------------------------------------------------------------------------------------- |
-| **class**                     | string  | `db.t3.micro` | The compute and memory capacity of the DB instance.                                                           |
-| **encrypted**                 | boolean | `false`       | Whether to enable storage encryption.                                                                         |
-| **deletionProtection**        | boolean | `false`       | Whether to enable deletion protection for the DB instance.                                                    |
-| **durable**                   | boolean | `false`       | Whether to create a Multi-AZ DB instance.                                                                     |
-| **storage**                   | int     | `20`          | The amount of storage (in GB) to allocate for the DB instance.                                                |
-| **version**                   | string  | `10.5`        | The version of the database engine.                                                                           |
-| **preferredBackupWindow**     | string  | `AWS managed` | The daily time range during which automated backups are created if automated backups are enabled, using the `backupRetentionPeriod` option. Must be in the format hh24:mi-hh24:mi, in UTC, at least 30 minutes, and must not conflict with the preferred maintenance window. If not set, AWS decides based on usage. |
-| **backupRetentionPeriod**     | int     | `1`           | The number of days for which automated backups are retained. Setting this parameter to a positive number enables backups. Setting this parameter to 0 disables automated backups.             |
-| **iops**                      | int     | `AWS managed` | The amount of provisioned IOPS.                                                                               |
-| **port**                      | int     | `3306`        | The port on which the database accepts connections.                                                           |
-| **masterUserPassword**        | string  | `Convox managed` | The password for the master user. Should be set as an environment variable to avoid hardcoding.               |
-| **allowMajorVersionUpgrade**  | boolean | `true`        | Whether major version upgrades are allowed.                                                                   |
-| **autoMinorVersionUpgrade**   | boolean | `true`        | Whether minor version upgrades are applied automatically.                                                     |
-| **preferredMaintenanceWindow**| string  | `AWS managed` | The weekly time range during which system maintenance can occur. Must be in the format ddd:hh24:mi-ddd:hh24:mi, in UTC, at least 30 minutes, and must not conflict with the preferred backup window. If not set, AWS decides based on usage. |
-| **readSourceDB**              | string  | ``            | The source database identifier for creating a read replica.                                                   |
-| **import**                    | string  | ``            | The database identifier used for database import. Requires the correct `masterUserPassword` option set.       |
-| **snapshot**                  | string  | ``            | The snapshot identifier for restoring from a snapshot.                                                        |
+## Command Line Interface
 
-*Note: The `readSourceDB` option is used for the read replica feature.*
-
-*Note: The `import` option requires the correct `masterUserPassword` to be set for importing a database.*
-
-*Note: The `masterUserPassword` should be set as an environment variable to avoid hardcoding the password.*
-
-### Command Line Interface
-
-#### Listing Resources
+### Listing Resources
 ```bash
 $ convox resources -a myapp
-NAME      TYPE        URL
+NAME      TYPE         URL
 database  rds-mariadb  mariadb://username:password@host.name:port/database
 ```
 
-#### Getting Information about a Resource
+### Getting Information about a Resource
 ```bash
 $ convox resources info database -a myapp
 Name  database
@@ -109,35 +108,35 @@ Type  rds-mariadb
 URL   mariadb://username:password@host.name:port/database
 ```
 
-#### Getting the URL for a Resource
+### Getting the URL for a Resource
 ```bash
 $ convox resources url database -a myapp
 mariadb://username:password@host.name:port/database
 ```
 
-#### Launching a Console
+### Launching a Console
 ```bash
 $ convox resources console database -a myapp
 Welcome to the MariaDB monitor.  Commands end with ; or \g.
 Your MariaDB connection id is 1
-Server version: 10.5.9-MariaDB MariaDB Server
+Server version: 10.11.6-MariaDB MariaDB Server
 Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
 ```
 
-#### Starting a Proxy to a Resource
+### Starting a Proxy to a Resource
 ```bash
 $ convox resources proxy database -a myapp
 Proxying localhost:3306 to host.name:port
 ```
 > Proxying allows you to connect tools on your local machine to Resources running inside the Rack.
 
-#### Exporting Data from a Resource
+### Exporting Data from a Resource
 ```bash
 $ convox resources export database -f /tmp/db.sql
 Exporting data from database... OK
 ```
 
-#### Importing Data to a Resource
+### Importing Data to a Resource
 ```bash
 $ convox resources import database -f /tmp/db.sql
 Importing data to database... OK
