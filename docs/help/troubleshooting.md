@@ -25,7 +25,7 @@ Sometimes the Cloud providers will have internal issues which can prevent certai
 - [GCP](https://status.cloud.google.com/)
 
 A failed Rack install should either be able to be continued with, or be uninstalled successfully as required. You can retry the installation by running `convox rack update -r <rackname>`.
-If your Rack consistently fails to install into your Cloud provider and there are no relevant issues reported then please raise a [support ticket](/help/support) for us to investigate.
+If your Rack consistently fails to install into your Cloud provider and there are no relevant issues reported raise a [support ticket](/help/support) for us to investigate.
 
 ## I get an error when I deploy my app to Convox
 

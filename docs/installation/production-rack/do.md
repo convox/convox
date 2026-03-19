@@ -4,13 +4,13 @@ slug: digital-ocean
 url: /installation/production-rack/do
 ---
 # Digital Ocean
-> These are instructions for installing a Rack via the command line. The easiest way to install a Rack is with the [Convox Web Console](https://console.convox.com)
+> These are instructions for installing a Rack via the command line. The recommended way to install a Rack is with the [Convox Web Console](https://console.convox.com)
 
 ## Initial Setup
 
 ### Terraform
 
-- Install [Terraform](https://learn.hashicorp.com/terraform/getting-started/install.html)
+- Install [Terraform](https://developer.hashicorp.com/terraform/install)
 
 ### Convox CLI
 
@@ -45,7 +45,7 @@ Go to https://cloud.digitalocean.com/account/api/tokens and generate a new Space
 
 | Name              | Default         | Description                                                             |
 | ------------------| ----------------| ----------------------------------------------------------------------- |
-| **cert_duration** | **2160h**       | Certification renew period                                              |
+| **cert_duration** | **2160h**       | Certificate renewal period                                              |
 | **node_type**     | **s-2vcpu-4gb** | [Node instance type](https://slugs.do-api.dev/)                         |
 | **region**        | **nyc3**        | [Digital Ocean region](https://slugs.do-api.dev/)                       |
 | **registry_disk** | **50Gi**        | Registry disk size                                                      |

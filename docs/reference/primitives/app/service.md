@@ -114,10 +114,10 @@ services:
 | **command**     | string     | **CMD** of Dockerfile | The command to run to start a [Process](/reference/primitives/app/process) for this Service                                                                       |
 | **deployment**  | map        |                     | Manual control over deployment parameters                                                                                                  |
 | **domain**      | string     |                     | A custom domain(s) (comma separated) to route to this Service                                                                              |
-| **dnsConfig**      | map     |                     | Dns config for the service|
+| **dnsConfig**      | map     |                     | DNS configuration for the service |
 | **drain**       | number     |                     | Deprecated. Use **termination.grace** instead |
 | **environment** | list       |                     | A list of environment variables (with optional defaults) to populate from the [Release](/reference/primitives/app/release) environment                            |
-| **grpcHealthEnabled** | boolean   |      false          | Enables liveliness health check for grpc. It should follow the [grpc health protocol](https://github.com/grpc/grpc/blob/master/doc/health-checking.md) (ref: [k8s](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-grpc-liveness-probe))|
+| **grpcHealthEnabled** | boolean   |      false          | Enables gRPC health checking (configures both readiness and liveness probes). Must follow the [gRPC health protocol](https://github.com/grpc/grpc/blob/master/doc/health-checking.md). See [Health Checks](/configuration/health-checks#grpc-health-checks). |
 | **health**      | string/map | /                   | Health check definition (see below)                                                                                                        |
 | **liveness** | map |      | Liveness check definition (see below). By default it is disabled. If it fails then service will restart |
 | **startupProbe** | map |  | Startup probe definition. Set `path` (HTTP) or `tcpSocketPort` (TCP) to enable. All timing parameters are inherited from the **liveness** check. See [Health Checks](/configuration/health-checks#startup-probes) |
@@ -125,7 +125,7 @@ services:
 | **ingressAnnotations** | list       |                     | A list of annotation keys and values to add in ingress resource. Check below for reserved annotation keys |
 | **initContainer** | map       |                     | Runs a container to completion before the main service container starts. Use for migrations, dependency checks, or setup tasks (see [initContainer](#initcontainer) below) |
 | **internal**    | boolean    | false               | Set to **true** to make this Service only accessible inside the Rack                                                                         |
-| **internalRouter** | boolean    | false               | Set it to **true** to make this Service only accessible using internal loadbalancer. You also have to set the rack parameter [internal_router](/configuration/rack-parameters/aws/internal_router) to **true**                 |
+| **internalRouter** | boolean    | false               | Set to **true** to make this Service only accessible using the internal load balancer. Requires the rack parameter [internal_router](/configuration/rack-parameters/aws/internal_router) to also be **true**. |
 | **init**        | boolean    | true                | Set to **false** to disable the init process for this Service. When enabled, an init process runs as PID 1 and handles signal forwarding and zombie process reaping |
 | **labels** |  map  |       | Custom labels for k8s resources. See here for [syntax and character set](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set). The following keys are reserved: `system`, `rack`, `app`, `name`, `service`, `release`, `type` |
 | **lifecycle** |  map  |       | The prestop and poststart hooks enable running commands before terminating and after starting the container, respectively |

@@ -5,8 +5,6 @@ url: /reference/cli/instances
 ---
 # instances
 
-## instances
-
 List instances
 
 ### Usage
@@ -45,7 +43,7 @@ Roll ssh key on instances
 ```bash
     convox instances keyroll
 ```
-For v3 rack it will generate a private key and show it as output. Please save the generated private key and use it when sshing into an instance
+This generates a private key and displays it as output. Save the generated private key and use it when connecting via SSH to an instance.
 ### Examples
 ```bash
     $ convox instances keyroll

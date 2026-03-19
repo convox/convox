@@ -163,9 +163,9 @@ services:
 
 For detailed configuration options and defaults for each type of AWS RDS resource, refer to the specific resource documentation pages:
 
-- [MariaDB](/reference/primitives/app/resource/mariadb/)
-- [MySQL](/reference/primitives/app/resource/mysql/)
-- [PostgreSQL](/reference/primitives/app/resource/postgres/)
+- [MariaDB](/reference/primitives/app/resource/mariadb)
+- [MySQL](/reference/primitives/app/resource/mysql)
+- [PostgreSQL](/reference/primitives/app/resource/postgres)
 
 ### Advisory
 
@@ -307,8 +307,8 @@ services:
 
 For detailed configuration options and examples for each type of AWS Elasticache resource, refer to the specific resource documentation pages:
 
-- [Redis](/reference/primitives/app/resource/redis/)
-- [Memcached](/reference/primitives/app/resource/memcached/)
+- [Redis](/reference/primitives/app/resource/redis)
+- [Memcached](/reference/primitives/app/resource/memcached)
 
 ## Command Line Interface
 

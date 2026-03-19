@@ -30,7 +30,7 @@ A Timer is defined in [`convox.yml`](/configuration/convox-yml).
 | **command**      | **yes**  | The command to execute once the [Process](/reference/primitives/app/process) starts                               |
 | **schedule**     | **yes**  | A cron formatted schedule for spawning the [Process](/reference/primitives/app/process). All times are UTC        |
 | **service**      | **yes**  | The name of the [Service](/reference/primitives/app/service) that will be used to spawn the [Process](/reference/primitives/app/process) |
-| **concurrency**  | **no**   | It specifies how to treat concurrent executions of a job that is created by this cron job. The default value for this field is `Allow` if is not defined. Check this [doc](https://kubernetes.io/docs/tasks/job/automated-tasks-with-cron-jobs/#concurrency-policy) for more info. |
+| **concurrency**  | **no**   | Specifies how to treat concurrent executions of a job created by this cron job. Defaults to `Allow` if not defined. See the [Kubernetes concurrency policy documentation](https://kubernetes.io/docs/tasks/job/automated-tasks-with-cron-jobs/#concurrency-policy) for details. |
 | **parallelCount** | **no**  | The number of parallel replicas to run for each timer execution. Defaults to 1. Each replica receives a unique `TIMER_INDEX` environment variable (0-based). Supported version >= 3.22.4 |
 
 ### Cron Expression Format
@@ -47,7 +47,7 @@ Cron expressions use the following format. All times are UTC.
 *  *  *  *  *
 ```
 
-Please notice that the smallest unit of time here is **minute**.
+The smallest unit of time is **minute**.
 
 ### Using a Template Service
 

@@ -5,7 +5,9 @@ url: /configuration/scaling/datadog-metrics
 ---
 # Datadog Metrics Autoscaling
 
-You can autoscale Convox services based on Datadog metrics, allowing scaling decisions driven by business-level signals like request rates or queue depths rather than just CPU and memory utilization.
+> Available on all providers. Requires manual [Datadog Cluster Agent](https://docs.datadoghq.com/containers/cluster_agent/) setup in your cluster.
+
+You can autoscale Convox services based on Datadog metrics, allowing scaling decisions driven by business-level signals like request rates or queue depths beyond CPU and memory utilization.
 
 Convox passes your Datadog metric configuration directly into Kubernetes HPA external metric targets. This requires the Datadog Cluster Agent to be running in your cluster as an external metrics provider.
 
@@ -70,12 +72,12 @@ Convox supports two target types:
 
 | Field | Description |
 |-------|-------------|
-| **averageValue** | Target value per replica (per-pod target). Kubernetes divides the metric by replica count. Use this when scaling should be based on per-replica load — for example, keeping request rate per pod at a steady level. |
-| **value** | Absolute target value. Scaling is based on the raw metric regardless of replica count. Use this when the total metric value should drive scaling — for example, a single queue depth that all replicas consume from. |
+| **averageValue** | Target value per replica (per-pod target). Kubernetes divides the metric by replica count. Use this when scaling should be based on per-replica load, for example, keeping request rate per pod at a steady level. |
+| **value** | Absolute target value. Scaling is based on the raw metric regardless of replica count. Use this when the total metric value should drive scaling, for example, a single queue depth that all replicas consume from. |
 
 ## Example: Scaling on Page Views
 
-In this example we will start with a [nodejs app](https://github.com/convox-examples/nodejs-dd-autoscale) that has been configured to scale with Datadog to demonstrate how to setup scaling with this method.
+In this example we will start with a [nodejs app](https://github.com/convox-examples/nodejs-dd-autoscale) that has been configured to scale with Datadog to demonstrate how to set up scaling with this method.
 
 Create a `DatadogMetric` for page views:
 ```bash
@@ -105,7 +107,7 @@ services:
       targets:
         external:
           - name: "datadogmetric@default:page-views-metrics"  # references the DatadogMetric CR in the "default" namespace
-            averageValue: 5  # target value per pod — HPA will scale to maintain this average across all pods
+            averageValue: 5  # target value per pod - HPA will scale to maintain this average across all pods
 ```
 [Configured Nodejs app](https://github.com/convox-examples/nodejs-dd-autoscale)
 

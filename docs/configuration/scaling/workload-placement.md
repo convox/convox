@@ -350,7 +350,7 @@ Convox allows you to implement different levels of customization based on your n
 ## Best Practices
 
 1. **Use a Consistent CPU Architecture Across All Node Groups**:
-   - All node groups (primary nodes, build nodes, and additional groups) must use the same CPU architecture — either all x86 or all ARM.
+   - All node groups (primary nodes, build nodes, and additional groups) must use the same CPU architecture - either all x86 or all ARM.
    - On AWS, Graviton instances (e.g. `t4g`, `c6g`, `m6g`) are ARM. Standard instances (e.g. `t3`, `c5`, `m5`) are x86. Convox selects AMIs, system images, and build tooling based on the architecture of `node_type`. A mismatch causes pod scheduling failures and build errors.
    - See [node_type](/configuration/rack-parameters/aws/node_type#cpu-architecture-x86-vs-arm) for the full list of supported instance families.
 

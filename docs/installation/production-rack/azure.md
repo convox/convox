@@ -6,7 +6,7 @@ url: /installation/production-rack/azure
 
 # Microsoft Azure
 
-> These are instructions for installing a Rack via the command line. The easiest way to install a Rack is with the [Convox Web Console](https://console.convox.com)
+> These are instructions for installing a Rack via the command line. The recommended way to install a Rack is with the [Convox Web Console](https://console.convox.com)
 
 ## Initial Setup
 
@@ -14,7 +14,7 @@ url: /installation/production-rack/azure
 
 | Tool                      | Docs                                                                                                             |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| **Azure CLI**             | [https://docs.microsoft.com/cli/azure/install-azure-cli](https://docs.microsoft.com/cli/azure/install-azure-cli) |
+| **Azure CLI**             | [https://learn.microsoft.com/cli/azure/install-azure-cli](https://learn.microsoft.com/cli/azure/install-azure-cli) |
 | **Terraform** (optional)  | [https://developer.hashicorp.com/terraform/tutorials](https://developer.hashicorp.com/terraform/tutorials)       |
 | **Convox CLI**            | [/installation/cli](/installation/cli)                                                                           |
 

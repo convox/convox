@@ -21,7 +21,7 @@ To update safely, [find the latest patch release for each minor version](https:/
 
 For example, a rack on version `3.21.x` would need to update to the latest `3.22.x` release before proceeding to the latest `3.23.x` release, and so on.
 
-Always update to the **latest patch version** of each minor version. Fixes are applied throughout the lifecycle of a minor release, and skipping to only the `.0` patch can introduce problems that were already resolved in later patches. You do not need to be on the highest patch of your current minor version before updating to the next minor -- just go directly to the latest patch of the next minor.
+Always update to the **latest patch version** of each minor version. Fixes are applied throughout the lifecycle of a minor release, and skipping to only the `.0` patch can introduce problems that were already resolved in later patches. You do not need to be on the highest patch of your current minor version before updating to the next minor -- go directly to the latest patch of the next minor.
 
 For example, a rack on version `3.22.1` should update directly to `3.23.3` (the latest version in `3.23.x` at the time of this writing), not to `3.23.0`.
 
@@ -135,7 +135,7 @@ For detailed descriptions and instructions, visit the [AWS Rack Parameters](/con
 
 (2) Setting **proxy_protocol** in an existing rack will require a 5 - 10 minutes downtime window.
 
-(3) To avoid CIDR block collision with existing VPC subnets, please add a new CIDR block to your VPC to separate rack resources. Also, remember to pass the **internet_gateway_id** attached to the VPC. If the VPC doesn't have an IG attached, the rack installation will create one automatically, which will also be destroyed if you delete the rack.
+(3) To avoid CIDR block collision with existing VPC subnets, add a new CIDR block to your VPC to separate rack resources. Also, remember to pass the **internet_gateway_id** attached to the VPC. If the VPC doesn't have an IG attached, the rack installation will create one automatically, which will also be destroyed if you delete the rack.
 
 > **schedule_rack_scale_down** and **schedule_rack_scale_up** are mutually exclusive. You must set both for scheduled scale operations. If you set only **schedule_rack_scale_down**, the rack will not scale up on its own.
 

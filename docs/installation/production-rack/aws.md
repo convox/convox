@@ -4,7 +4,7 @@ slug: amazon-web-services
 url: /installation/production-rack/aws
 ---
 # Amazon Web Services
-> These are instructions for installing a Rack via the command line. The easiest way to install a Rack is with the [Convox Web Console](https://console.convox.com)
+> These are instructions for installing a Rack via the command line. The recommended way to install a Rack is with the [Convox Web Console](https://console.convox.com)
 
 ## Initial Setup
 
@@ -14,7 +14,7 @@ url: /installation/production-rack/aws
 
 ### Terraform
 
-- Install [Terraform](https://learn.hashicorp.com/terraform/getting-started/install.html)
+- Install [Terraform](https://developer.hashicorp.com/terraform/install)
 
 ### Convox CLI
 
@@ -46,17 +46,17 @@ The following environment variables are required:
 | -------------------------|------------------------|----------------------------------------------------------------------------------------------------------------|
 | **access_log_retention_in_days**   |         7          | Specify nginx access log retention period in cloudwatch logs. The log group name will be `/convox/<rack-name>/system` and stream name `/nginx-access-logs` |
 | **availability_zones**   |                        | Specify a list of AZ names (minimum 3) to override the random automatic selection from AWS                     |
-| **build_node_enabled**   |     false              | Enabled dedicated build node for build |
+| **build_node_enabled**   |     false              | Enable a dedicated build node |
 | **build_node_type**      | same as **node_type**  | Node type for the build node |
 | **build_node_min_count** |     0                  | Minimum number of build nodes to keep running |
-| **cert_duration**        | **2160h**              | Certification renew period                                                                                     |
+| **cert_duration**        | **2160h**              | Certificate renewal period                                                                                     |
 | **cidr**                 | **10.1.0.0/16**        | CIDR range for VPC                                                                                             |
 | **convox_domain_tls_cert_disable** | false        | Disable convox domain(*.convox.cloud) tls certificate generation for services |
 | **efs_csi_driver_enable**       | **false**              | Enable efs csi driver to use AWS EFS volume feature |
 | **fluentd_disable**       | **false**              | Disable fluentd installation in the rack |
 | **gpu_tag_enable**       | **false**              | Enable gpu tagging. Some AWS regions do not support gpu tagging  |
 | **high_availability**    | **true**               | Setting this to "false" will create a cluster with less redundant resources for cost optimization              |
-| **internal_router**  |     **false**        | Install an internal loadbalancer within the vpc |
+| **internal_router**  |     **false**        | Install an internal load balancer within the VPC |
 | **internet_gateway_id**  |                        | If you're using an existing vpc for your rack, use this field to pass the id of the attached internet gateway  |
 | **idle_timeout**         | **3600**               | Idle timeout value (in seconds) for the Rack Load Balancer                                                     |
 | **imds_http_tokens**         | **optional**               | Whether or not the metadata service requires session tokens, also referred to as Instance Metadata Service Version 2 (IMDSv2). Can be optional or required                                                     |
@@ -84,7 +84,7 @@ The following environment variables are required:
 | **private_subnets_ids**  |                        | Ids of private subnets to use to create the Rack. Make sure to also pass the **vpc_id** and it should be properly configured with nat gateway and route table. Also configure the public subnets since load balancer will use public subnets. For high availability there should be 3 subnets. Use comma to specify multiple subnets(no space)|
 | **public_subnets_ids**   |                        | Ids of public subnets to use to create the Rack. Make sure to also pass the **vpc_id** and it should be properly configured with internet gateway and route table. For high availability there should be 3 subnets. Use comma to specify multiple subnets(no space)|
 
-\* To avoid CIDR block collision with existing VPC subnets, please add a new CIDR block to your VPC to separate rack resources. Also, remember to pass the **internet_gateway_id** attached to the VPC. If the VPC doesn't have an IG attached, the rack installation will create one automatically, which will also be destroyed if you delete the rack.
+\* To avoid CIDR block collision with existing VPC subnets, add a new CIDR block to your VPC to separate rack resources. Also, remember to pass the **internet_gateway_id** attached to the VPC. If the VPC doesn't have an IG attached, the rack installation will create one automatically, which will also be destroyed if you delete the rack.
 
 \* **schedule_rack_scale_down** and **schedule_rack_scale_up** are mutually exclusive. So you have to set both of them properly for the scheduled timed off. If you set only **schedule_rack_scale_down**, it will not scale up on its own.
 

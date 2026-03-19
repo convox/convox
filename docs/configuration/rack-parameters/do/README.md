@@ -13,7 +13,7 @@ The following parameters are available for configuring your Convox rack on Digit
 
 | Parameter                            | Description                                                              |
 |:-------------------------------------|:-------------------------------------------------------------------------|
-| [cert_duration](/configuration/rack-parameters/do/cert_duration)         | Certification renew period.                                               |
+| [cert_duration](/configuration/rack-parameters/do/cert_duration)         | Certificate renewal period.                                               |
 | [docker_hub_password](/configuration/rack-parameters/do/docker_hub_password) | Docker Hub access token for authenticated image pulls. |
 | [docker_hub_username](/configuration/rack-parameters/do/docker_hub_username) | Docker Hub username for authenticated image pulls. |
 | [node_type](/configuration/rack-parameters/do/node_type)                 | Specifies the node instance type.                                         |

@@ -4,7 +4,7 @@ slug: google-cloud
 url: /installation/production-rack/gcp
 ---
 # Google Cloud
-> These are instructions for installing a Rack via the command line. The easiest way to install a Rack is with the [Convox Web Console](https://console.convox.com)
+> These are instructions for installing a Rack via the command line. The recommended way to install a Rack is with the [Convox Web Console](https://console.convox.com)
 
 ## Initial Setup
 
@@ -15,7 +15,7 @@ url: /installation/production-rack/gcp
 
 ### Terraform
 
-- Install [Terraform](https://learn.hashicorp.com/terraform/getting-started/install.html)
+- Install [Terraform](https://developer.hashicorp.com/terraform/install)
 
 ### Convox CLI
 
@@ -70,7 +70,7 @@ The following APIs must be enabled for your GCP project:
 
 | Name          | Default         | Description                                                                              |
 | ------------- | --------------- | ---------------------------------------------------------------------------------------- |
-| **cert_duration** | **2160h**         | Certification renew period                                                                 |
+| **cert_duration** | **2160h**         | Certificate renewal period                                                                 |
 | **node_type**     | **n1-standard-1** | Node instance type                                                                         |
 | **preemptible**   | **true**          | Use [preemptible](https://cloud.google.com/compute/docs/instances/preemptible) instances   |
 | **region**        | **us-east1**      | GCP Region                                                                                 |

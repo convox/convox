@@ -108,7 +108,7 @@ For a quick overview of some commonly used CLI commands, check out this [blog po
 
 ## Deploy a Sample App
 
-One of the easiest ways to get familiar with Convox is to clone one of our sample apps. For this tutorial, we will use a simple [Node.js app](https://github.com/convox-examples/nodejs) from our [example repository](https://github.com/convox-examples).
+A good way to get familiar with Convox is to clone one of our sample apps. For this tutorial, we will use a simple [Node.js app](https://github.com/convox-examples/nodejs) from our [example repository](https://github.com/convox-examples).
 
 ### Clone the Example App
 

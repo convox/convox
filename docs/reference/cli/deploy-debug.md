@@ -41,10 +41,10 @@ The command runs three checks by default. You can select individual checks with 
 **Init Containers** (`--checks init`) finds pods stuck in init container state and fetches logs from each init container. Reports container state (Running, Waiting, Terminated with exit code).
 
 **Services** (`--checks services`) classifies every pod:
-- **unhealthy** — pod phase is not Running
-- **not-ready** — Running but health checks are failing
-- **new** — Running and ready but age is below threshold (default 300s)
-- **healthy** — Running, ready, and established
+- **unhealthy** - pod phase is not Running
+- **not-ready** - Running but health checks are failing
+- **new** - Running and ready but age is below threshold (default 300s)
+- **healthy** - Running, ready, and established
 
 Collects current and previous container logs, per-pod Kubernetes events, and maps failure states to plain-language hints.
 
@@ -107,12 +107,6 @@ JSON output for scripting:
     $ convox deploy-debug -a myapp -o json | jq '.pods[] | {name: .name, hint: .hint}'
 ```
 
-## See Also
-
-- [deploy](/reference/cli/deploy) for creating and promoting builds
-- [Health Checks](/configuration/health-checks) for configuring readiness and liveness probes
-- [Troubleshooting](/help/troubleshooting) for common deployment issues
-
 Filter to a specific service:
 ```bash
     $ convox deploy-debug -a myapp -s web
@@ -122,3 +116,9 @@ Watch mode for ongoing diagnosis:
 ```bash
     $ convox deploy-debug -a myapp --watch 10
 ```
+
+## See Also
+
+- [deploy](/reference/cli/deploy) for creating and promoting builds
+- [Health Checks](/configuration/health-checks) for configuring readiness and liveness probes
+- [Troubleshooting](/help/troubleshooting) for common deployment issues

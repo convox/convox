@@ -120,7 +120,7 @@ data:
         userarn: arn:aws:iam::111122223333:user/my-user
         username: my-user
 ```
-### `Warning`
+### Warning
 When you edit the `aws-auth` ConfigMap, proceed with caution, if you misconfigure it, you can lock the user out of their rack.
 
 ### Console Rack Metrics

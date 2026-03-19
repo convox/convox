@@ -26,7 +26,7 @@ This will export the proxy configuration to a temporary file and then point your
 
 ### Deploy the Datadog Agent
 
-Once you have `kubectl` pointing at your Rack you can deploy the datadog agent as a Kubernetes Daemonset. The following is based on the [Datadog Daemonset Installation Instructions](https://docs.datadoghq.com/agent/kubernetes/?tab=daemonset) so please refer back there for any specific tweaks you may want to make.
+Once you have `kubectl` pointing at your Rack you can deploy the datadog agent as a Kubernetes Daemonset. The following is based on the [Datadog Daemonset Installation Instructions](https://docs.datadoghq.com/agent/kubernetes/?tab=daemonset) so refer back there for any specific tweaks you may want to make.
 
 We recommend that you use the manifest `datadog-agent-all-features.yaml` when applying the agent. This ensures you can enter and edit the desired variables in one manifest file.
 If you prefer, you can install the agent using piecewise manifests.
@@ -59,7 +59,7 @@ datadog-vdzc5                           5/5     Running   0          135m
 
 Once your `DESIRED` `CURRENT` and `READY` counts are all equal your Agents should be up and running. To make any changes to your Agent configuration modify your manifest and repeat the steps.
 
-For further customization and troubleshooting please refer to the [Datadog Daemonset Config Docs](https://docs.datadoghq.com/containers/kubernetes/configuration?tab=daemonset).
+For further customization and troubleshooting, refer to the [Datadog Daemonset Config Docs](https://docs.datadoghq.com/containers/kubernetes/configuration?tab=daemonset).
 
 ### Metrics and Traces
 
