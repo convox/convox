@@ -231,10 +231,10 @@ services:
     #   targets     → HPA metrics
     scale:
       count: 2-10
-      cpu: 256
+      cpu: 250
       memory: 512
       limit:
-        cpu: 512
+        cpu: 500
         memory: 1024
       targets:
         cpu: 70
@@ -282,7 +282,7 @@ services:
       - QUEUE_NAME=default
     scale:
       count: 2
-      cpu: 512
+      cpu: 500
       memory: 1024
     resources:
       - database

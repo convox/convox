@@ -16,24 +16,24 @@ Convox allows you to scale any [Service](/reference/primitives/app/service) on t
 
 You can specify the scale for any [Service](/reference/primitives/app/service) in your [convox.yml](/configuration/convox-yml)
 ```yaml
-    services:
-      web:
-        scale:
-          count: 2
-          cpu: 250
-          memory: 512
+services:
+  web:
+    scale:
+      count: 2
+      cpu: 250
+      memory: 512
 ```
 > If you specify a static `count` it will only be used on first deploy. Subsequent changes must be made using the `convox` CLI.
 
 For GPU-accelerated workloads, you can specify the number of GPUs required:
 ```yaml
-    services:
-      ml-worker:
-        scale:
-          count: 1
-          cpu: 1000
-          memory: 2048
-          gpu: 1
+services:
+  ml-worker:
+    scale:
+      count: 1
+      cpu: 1000
+      memory: 2048
+      gpu: 1
 ```
 
 ## Manual Scaling
@@ -63,13 +63,13 @@ For GPU-accelerated workloads, you can specify the number of GPUs required:
 To use autoscaling you must specify a range for allowable [Process](/reference/primitives/app/process) count and
 target values for CPU and Memory utilization (in percent):
 ```yaml
-    services:
-      web:
-        scale:
-          count: 1-10
-          targets:
-            cpu: 70
-            memory: 90
+services:
+  web:
+    scale:
+      count: 1-10
+      targets:
+        cpu: 70
+        memory: 90
 ```
 The number of [Processes](/reference/primitives/app/process) will be continually adjusted to maintain your target metrics.
 

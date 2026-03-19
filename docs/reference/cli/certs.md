@@ -32,10 +32,10 @@ To list all certificates
 
 ## certs generate
 
-Generate certificates. These certificate can be reused with convox apps. For example, generating a wildcard certificate to reuse it in several apps to reduce letsencrypt rate limit issue.
+Generate certificates. These certificates can be reused with convox apps. For example, generating a wildcard certificate to reuse it in several apps to reduce letsencrypt rate limit issue.
 
 ### Usage
-To list all certificates
+To generate one or more certificates
 
 ```bash
     convox certs generate <domain> [domain...]

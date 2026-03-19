@@ -11,16 +11,16 @@ A Timer spawns a [Process](/reference/primitives/app/process) on a schedule that
 
 A Timer is defined in [`convox.yml`](/configuration/convox-yml).
 ```yaml
-    services:
-      worker:
-        build: ./worker
-    timers:
-      cleanup:
-        annotations:
-          - test.annotation.org/value=foobar
-        command: bin/cleanup
-        schedule: "0 3 * * *"
-        service: worker
+services:
+  worker:
+    build: ./worker
+timers:
+  cleanup:
+    annotations:
+      - test.annotation.org/value=foobar
+    command: bin/cleanup
+    schedule: "0 3 * * *"
+    service: worker
 ```
 ### Attributes
 
@@ -54,21 +54,21 @@ The smallest unit of time is **minute**.
 Timers can run against any [Service](/reference/primitives/app/service), even one that is scaled to zero. You can use this to create a
 template [Service](/reference/primitives/app/service) for your Timers.
 ```yaml
-    services:
-      web:
-        build: .
-        command: bin/web
-        port: 5000
-      jobs:
-        build: ./jobs
-        scale:
-          count: 0
-    timers:
-      cleanup:
-        command: bin/cleanup
-        schedule: "*/2 * * * *"
-        service: jobs
-        concurrency: forbid
+services:
+  web:
+    build: .
+    command: bin/web
+    port: 5000
+  jobs:
+    build: ./jobs
+    scale:
+      count: 0
+timers:
+  cleanup:
+    command: bin/cleanup
+    schedule: "*/2 * * * *"
+    service: jobs
+    concurrency: forbid
 ```
 On this [App](/reference/primitives/app) the `jobs` [Service](/reference/primitives/app/service) is scaled to zero and not running any durable
 [Processes](/reference/primitives/app/process).
@@ -85,15 +85,15 @@ Timers support running multiple parallel replicas for increased throughput and d
 To enable parallel execution, use the `parallelCount` attribute:
 
 ```yaml
-    services:
-      worker:
-        build: ./worker
-    timers:
-      data-processor:
-        command: bin/process-data
-        schedule: "0 * * * *"
-        service: worker
-        parallelCount: 5
+services:
+  worker:
+    build: ./worker
+timers:
+  data-processor:
+    command: bin/process-data
+    schedule: "0 * * * *"
+    service: worker
+    parallelCount: 5
 ```
 
 In this example, the `data-processor` timer will spawn **5 parallel replicas** every hour, each running the `bin/process-data` command simultaneously.
@@ -103,12 +103,12 @@ In this example, the `data-processor` timer will spawn **5 parallel replicas** e
 Each parallel replica receives a unique `TIMER_INDEX` environment variable (starting from 0) that can be used to partition work across instances:
 
 ```yaml
-    timers:
-      cleanup:
-        command: ./cleanup.sh
-        schedule: "*/10 * * * *"
-        service: worker
-        parallelCount: 3
+timers:
+  cleanup:
+    command: ./cleanup.sh
+    schedule: "*/10 * * * *"
+    service: worker
+    parallelCount: 3
 ```
 
 Each replica receives:
@@ -169,29 +169,29 @@ When using parallel timers, keep in mind:
 ### Complete Example with Parallel Execution
 
 ```yaml
-    services:
-      web:
-        build: .
-        command: bin/web
-        port: 5000
-      jobs:
-        build: ./jobs
-        scale:
-          count: 0
-    timers:
-      hourly-import:
-        command: bin/import-data
-        schedule: "0 * * * *"
-        service: jobs
-        parallelCount: 4
-        concurrency: forbid
-      daily-cleanup:
-        command: bin/cleanup
-        schedule: "0 2 * * *"
-        service: jobs
-        parallelCount: 10
-        annotations:
-          - monitoring.example.com/alert=true
+services:
+  web:
+    build: .
+    command: bin/web
+    port: 5000
+  jobs:
+    build: ./jobs
+    scale:
+      count: 0
+timers:
+  hourly-import:
+    command: bin/import-data
+    schedule: "0 * * * *"
+    service: jobs
+    parallelCount: 4
+    concurrency: forbid
+  daily-cleanup:
+    command: bin/cleanup
+    schedule: "0 2 * * *"
+    service: jobs
+    parallelCount: 10
+    annotations:
+      - monitoring.example.com/alert=true
 ```
 
 In this configuration:

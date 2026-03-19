@@ -17,7 +17,7 @@ Scale a service
 ```
 ### Examples
 ```bash
-    $ convox scale web --count 3 --cpu 256 --memory 1024
+    $ convox scale web --count 3 --cpu 250 --memory 1024
     Scaling web...
     2026-01-15T14:54:50Z system/cloudformation aws/cfm test-nodejs UPDATE_IN_PROGRESS test-nodejs User Initiated
     2026-01-15T14:54:55Z system/cloudformation aws/cfm test-nodejs UPDATE_IN_PROGRESS ResourceDatabase
@@ -35,7 +35,7 @@ Scale a service
 | Flag | Description |
 |------|-------------|
 | `--count` | Number of desired replicas for the service |
-| `--cpu` | CPU allocation in millicores (e.g., 256 = 0.25 vCPU) |
+| `--cpu` | CPU allocation in millicores (e.g., 250 = 0.25 vCPU) |
 | `--memory` | Memory allocation in MB |
 
 ## See Also

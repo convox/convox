@@ -23,7 +23,6 @@ Start an application for local development
 | `--no-build` | | Skip building |
 | `--no-cache` | | Build without layer cache |
 | `--no-sync` | | Do not sync local changes into running containers |
-| `--shift` | `-s` | Shift local port numbers (generation 1 only) |
 ### Examples
 ```bash
     $ convox start

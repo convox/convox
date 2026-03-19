@@ -9,12 +9,12 @@ Custom domains allow you to route one or more domains to a [Service](/reference/
 
 ## Definition examples
 ```yaml
-    services:
-      simpleweb:
-        domain: myapp.example.org
-      # ... other services ...
-      complexweb:
-        domain: subdomain1.example.org,subdomain2.example.org,somethingelse.test.com
+services:
+  simpleweb:
+    domain: myapp.example.org
+  # ... other services ...
+  complexweb:
+    domain: subdomain1.example.org,subdomain2.example.org,somethingelse.test.com
 ```
 Multiple domains should be comma separated. Wildcard domains (e.g., `*.example.org`) are supported when using DNS-01 validation with a pre-generated wildcard certificate. To use a wildcard domain:
 
@@ -29,9 +29,9 @@ Wildcard domains are not supported with the default HTTP-01 automatic certificat
 You can avoid hardcoding your custom domains in `convox.yml` using
 [Environment Interpolation](/configuration/environment#interpolation).
 ```yaml
-    services:
-      web:
-        domain: ${HOST}
+services:
+  web:
+    domain: ${HOST}
 ```
 ```bash
 $ convox env set HOST=myapp.example.org,myapp2.example.org

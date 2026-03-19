@@ -14,7 +14,7 @@ Convox provides powerful tools to control where your applications and build proc
 
 Workload placement in Convox is achieved through these key features:
 
-1. **Custom Node Groups**: Define specialized node pools with specific instance types, scaling parameters, labels, and AWS tags.
+1. **Custom Node Groups**: Define specialized node pools with specific instance types, scaling parameters, labels, and tags.
 2. **Node Selectors**: Direct specific services or build processes to appropriate node groups.
 3. **Dedicated Node Pools**: Isolate workloads by creating exclusive node groups for particular services.
 
@@ -24,27 +24,32 @@ These capabilities allow for sophisticated infrastructure optimization strategie
 - Using cost-effective spot instances for non-critical workloads
 - Optimizing instance types for specific workload profiles
 - Creating high-performance node groups for specialized services
-- Tracking resource usage and costs with AWS tags
+- Tracking resource usage and costs with provider tags
 
 ## Configuration Components
 
 ### Rack-level Configuration
 
-At the rack level, you can define custom node groups:
+At the rack level, you can define custom node groups using provider-specific rack parameters:
 
+**AWS:**
 - [`additional_node_groups_config`](/configuration/rack-parameters/aws/additional_node_groups_config): Creates general-purpose node groups
 - [`additional_build_groups_config`](/configuration/rack-parameters/aws/additional_build_groups_config): Creates node groups specifically for build processes
 
+**Azure:**
+- [`additional_node_groups_config`](/configuration/rack-parameters/azure/additional_node_groups_config): Creates general-purpose node pools
+- [`additional_build_groups_config`](/configuration/rack-parameters/azure/additional_build_groups_config): Creates node pools specifically for build processes
+
 These parameters allow you to specify:
-- Instance types
+- Instance types (EC2 instance types on AWS, VM sizes on Azure)
 - Disk sizes
 - Capacity types (on-demand vs. spot)
 - Scaling parameters
 - Custom labels for workload targeting
 - Unique IDs for node group preservation across updates
-- AWS tags for cost allocation and resource organization
+- Provider tags for cost allocation and resource organization
 
-> **Note**: These configurations are independent of each other. You can use either one or both depending on your needs. If you only configure additional node groups, builds will continue using the rack's primary build node (if [build_node_enabled](/configuration/rack-parameters/aws/build_node_enabled) is set) or the primary rack nodes. If you only configure build node groups, your services will continue running on the standard rack nodes while builds will be isolated according to your build configuration.
+> **Note**: These configurations are independent of each other. You can use either one or both depending on your needs. If you only configure additional node groups, builds will continue using the rack's primary build node (if [build_node_enabled](/configuration/rack-parameters/aws/build_node_enabled) is set on AWS) or the primary rack nodes. If you only configure build node groups, your services will continue running on the standard rack nodes while builds will be isolated according to your build configuration.
 
 ### Setting Rack Parameters with JSON Files
 
@@ -52,8 +57,9 @@ While you can set configuration directly using a JSON string, most users find it
 
 #### Using a JSON File for Node Groups
 
-Create a JSON file (e.g., `node-groups.json`) with your configuration:
+Create a JSON file (e.g., `node-groups.json`) with your configuration. The `type` field uses EC2 instance types on AWS and VM sizes on Azure.
 
+**AWS example:**
 ```json
 [
   {
@@ -78,9 +84,34 @@ Create a JSON file (e.g., `node-groups.json`) with your configuration:
 ]
 ```
 
+**Azure example:**
+```json
+[
+  {
+    "id": 101,
+    "type": "Standard_D4s_v3",
+    "capacity_type": "ON_DEMAND",
+    "min_size": 1,
+    "max_size": 5,
+    "label": "critical-services",
+    "tags": "environment=production,team=frontend"
+  },
+  {
+    "id": 102,
+    "type": "Standard_E4s_v3",
+    "capacity_type": "SPOT",
+    "min_size": 0,
+    "max_size": 10,
+    "label": "batch-workers",
+    "disk": 100,
+    "tags": "environment=production,team=data,workload=batch"
+  }
+]
+```
+
 Note the use of:
 - The `id` field to uniquely identify each node group
-- The `tags` field to apply AWS resource tags for organization and cost tracking
+- The `tags` field to apply provider resource tags for organization and cost tracking
 
 Then apply the configuration using:
 
@@ -88,17 +119,34 @@ Then apply the configuration using:
 $ convox rack params set additional_node_groups_config=/path/to/node-groups.json -r rackName
 ```
 
-> **Important Note on AWS Rate Limits**: When adding or removing multiple node groups, it's recommended to modify no more than three node groups at a time to avoid hitting AWS API rate limits. If you receive a rate limit error during an update run the parameter set command again. The operation will resume from where it left off, creating the remaining node groups without duplicating the ones that were already successfully created.
+> **Important Note on AWS Rate Limits**: On AWS, when adding or removing multiple node groups, modify no more than three node groups at a time to avoid hitting AWS API rate limits. If you receive a rate limit error during an update, run the parameter set command again. The operation will resume from where it left off, creating the remaining node groups without duplicating the ones that were already successfully created.
 
 #### Using a JSON File for Build Node Groups
 
 Similarly, create a JSON file (e.g., `build-groups.json`) for build node configuration:
 
+**AWS example:**
 ```json
 [
   {
     "id": 201,
     "type": "c5.xlarge",
+    "capacity_type": "SPOT",
+    "min_size": 0,
+    "max_size": 3,
+    "label": "app-build",
+    "disk": 100,
+    "tags": "environment=build,team=devops"
+  }
+]
+```
+
+**Azure example:**
+```json
+[
+  {
+    "id": 201,
+    "type": "Standard_D8s_v3",
     "capacity_type": "SPOT",
     "min_size": 0,
     "max_size": 3,
@@ -136,15 +184,16 @@ Each node group configuration supports the following fields:
 | Field | Required | Description | Default |
 |-------|----------|-------------|---------|
 | `id` | No | Unique integer identifier for the node group | Auto-generated |
-| `type` | Yes | The EC2 instance type to use for the node group | |
+| `type` | Yes | The instance type to use (AWS EC2 type or Azure VM size) | |
 | `disk` | No | The disk size in GB for the nodes | Same as main node disk |
 | `capacity_type` | No | Whether to use on-demand or spot instances | `ON_DEMAND` |
 | `min_size` | No | Minimum number of nodes | 1 |
 | `max_size` | No | Maximum number of nodes | 100 |
 | `label` | No | Custom label value for the node group. Applied as `convox.io/label: <label-value>` | None |
-| `tags` | No | Custom AWS tags as comma-separated key-value pairs | None |
+| `tags` | No | Custom provider tags as comma-separated key-value pairs | None |
 | `dedicated` | No | When `true`, only services with matching node group labels will be scheduled on these nodes | `false` |
-| `ami_id` | No | Custom AMI ID to use | EKS-optimized AMI |
+| `ami_id` | No | Custom AMI ID to use (AWS only) | EKS-optimized AMI |
+| `zones` | No | Comma-separated list of availability zones (Azure only) | None |
 
 #### About the `id` field
 
@@ -178,8 +227,9 @@ services:
       convox.io/label: batch-workers
 ```
 
-You can also specify nodeAffinityLabels with weights to specify preferences of where to place services:
+You can also specify nodeAffinityLabels with weights to specify preferences of where to place services. The `node.kubernetes.io/instance-type` label uses EC2 instance types on AWS or Azure VM sizes on Azure:
 
+AWS example:
 ```yaml
 services:
   web:
@@ -190,6 +240,19 @@ services:
       - weight: 10
         label: node.kubernetes.io/instance-type
         value: t3a.large
+```
+
+Azure example:
+```yaml
+services:
+  web:
+    nodeAffinityLabels:
+      - weight: 1
+        label: node.kubernetes.io/instance-type
+        value: Standard_D2s_v3
+      - weight: 10
+        label: node.kubernetes.io/instance-type
+        value: Standard_D4s_v3
 ```
 
 Weights will be summed for all matching labels and the node with the highest weight will have the service scheduled on it.
@@ -210,13 +273,13 @@ services:
         value: t3a.large
 ```
 
-In this case, the service will definitely be scheduled on the `app-workers` group, preferably on a `t3a.large` instance, or if not on a `t3a.medium` instance, or if not, then any other instance in the group.
+In this case, the service will definitely be scheduled on the `app-workers` group, preferably on a `t3a.large` instance, or if not on a `t3a.medium` instance, or if not, then any other instance in the group. Use the equivalent Azure VM sizes when running on Azure racks.
 
 ## Implementation Examples
 
 ### Optimizing for Cost and Performance
 
-This example creates a cost-optimized infrastructure with dedicated node pools for different workload types:
+This example creates a cost-optimized infrastructure with dedicated node pools for different workload types.
 
 1. **Rack Configuration**:
    ```bash
@@ -224,7 +287,7 @@ This example creates a cost-optimized infrastructure with dedicated node pools f
    $ convox rack params set additional_build_groups_config=/path/to/build-groups.json -r production
    ```
 
-   With node groups config:
+   Node groups config (AWS):
    ```json
    [
      {
@@ -248,11 +311,48 @@ This example creates a cost-optimized infrastructure with dedicated node pools f
    ]
    ```
 
-   And build groups config:
+   Node groups config (Azure):
+   ```json
+   [
+     {
+       "id": 101,
+       "type": "Standard_D4s_v3",
+       "capacity_type": "ON_DEMAND",
+       "min_size": 1,
+       "max_size": 5,
+       "label": "critical-services",
+       "tags": "department=frontend,environment=production,cost-center=web"
+     },
+     {
+       "id": 102,
+       "type": "Standard_E4s_v3",
+       "capacity_type": "SPOT",
+       "min_size": 0,
+       "max_size": 10,
+       "label": "batch-workers",
+       "tags": "department=data,environment=production,cost-center=analytics"
+     }
+   ]
+   ```
+
+   Build groups config (AWS):
    ```json
    [
      {
        "type": "c5.xlarge",
+       "capacity_type": "SPOT",
+       "min_size": 0,
+       "max_size": 5,
+       "label": "app-build"
+     }
+   ]
+   ```
+
+   Build groups config (Azure):
+   ```json
+   [
+     {
+       "type": "Standard_D8s_v3",
        "capacity_type": "SPOT",
        "min_size": 0,
        "max_size": 5,
@@ -285,18 +385,36 @@ This configuration creates:
 - On-demand nodes for critical services like web frontends
 - Spot instance nodes for batch processing workloads
 - Separate spot instance nodes optimized for build processes
-- AWS tags for accurate cost attribution across teams and environments
+- Provider tags for accurate cost attribution across teams and environments
 
 ### Isolating High-Priority Workloads
 
 To create dedicated node groups that exclusively run specific services:
 
 1. **Create a JSON file for your node group configuration**:
+
+   AWS:
    ```json
    [
      {
        "id": 103,
        "type": "m5.large",
+       "capacity_type": "ON_DEMAND",
+       "min_size": 2,
+       "max_size": 5,
+       "label": "database-workers",
+       "dedicated": true,
+       "tags": "environment=production,team=datastore,criticality=high"
+     }
+   ]
+   ```
+
+   Azure:
+   ```json
+   [
+     {
+       "id": 103,
+       "type": "Standard_E4s_v3",
        "capacity_type": "ON_DEMAND",
        "min_size": 2,
        "max_size": 5,
@@ -350,14 +468,13 @@ Convox allows you to implement different levels of customization based on your n
 ## Best Practices
 
 1. **Use a Consistent CPU Architecture Across All Node Groups**:
-   - All node groups (primary nodes, build nodes, and additional groups) must use the same CPU architecture - either all x86 or all ARM.
-   - On AWS, Graviton instances (e.g. `t4g`, `c6g`, `m6g`) are ARM. Standard instances (e.g. `t3`, `c5`, `m5`) are x86. Convox selects AMIs, system images, and build tooling based on the architecture of `node_type`. A mismatch causes pod scheduling failures and build errors.
-   - See [node_type](/configuration/rack-parameters/aws/node_type#cpu-architecture-x86-vs-arm) for the full list of supported instance families.
+   - All node groups (primary nodes, build nodes, and additional groups) must use the same CPU architecture.
+   - On AWS, Graviton instances (e.g. `t4g`, `c6g`, `m6g`) are ARM. Standard instances (e.g. `t3`, `c5`, `m5`) are x86. Convox selects AMIs, system images, and build tooling based on the architecture of `node_type`. A mismatch causes pod scheduling failures and build errors. See [node_type](/configuration/rack-parameters/aws/node_type#cpu-architecture-x86-vs-arm) for the full list of supported instance families.
+   - On Azure, only x86-based VM SKUs are supported. ARM-based VM SKUs are not available. See [node_type](/configuration/rack-parameters/azure/node_type) for details.
 
 2. **Match Node Resources to Workload Requirements**:
-   - Use compute-optimized instances (c-type) for CPU-intensive workloads
-   - Use memory-optimized instances (r-type) for memory-intensive workloads
-   - Use general-purpose instances (m-type or t-type) for balanced workloads
+   - On AWS: use compute-optimized instances (`c5`, `c6i`) for CPU-intensive workloads, memory-optimized (`r5`, `r6i`) for memory-intensive workloads, and general-purpose (`m5`, `t3`) for balanced workloads
+   - On Azure: use compute-optimized VMs (`Standard_F` series) for CPU-intensive workloads, memory-optimized (`Standard_E` series) for memory-intensive workloads, and general-purpose (`Standard_D` series) for balanced workloads
 
 3. **Cost Optimization**:
    - Use spot instances for interruptible workloads like batch processing
@@ -382,7 +499,7 @@ Convox allows you to implement different levels of customization based on your n
 7. **Tagging Strategy**:
    - Develop a consistent tagging convention for all node groups
    - Include tags for environment, team, cost center, and workload type
-   - Align tags with your organization's AWS tagging policy
+   - Align tags with your organization's cloud provider tagging policy
 
 ## Troubleshooting
 
@@ -401,20 +518,28 @@ If services won't deploy, check:
 ### Node Group Scaling
 If nodes aren't scaling as expected:
 - Verify min/max settings are appropriate
-- Check that instance types are available in your region
-- Monitor for AWS service quotas that might limit scaling
+- Check that instance types or VM sizes are available in your region
+- Monitor for cloud provider service quotas that might limit scaling
 
 ### Node Group Preservation Issues
 If node groups are being recreated unexpectedly:
 - Ensure each node group has a unique `id` field
 - Verify that you're not changing immutable fields (like capacity type)
-- Check for AWS API rate limits during updates
+- On AWS, check for API rate limits during updates
 
 ## Summary
 
-Effective workload placement is a powerful tool for optimizing your Convox infrastructure. By leveraging custom node groups with preserved identities, service placement rules, and AWS tagging, you can create an infrastructure that balances performance, cost, and isolation requirements for your specific application needs.
+Effective workload placement is a powerful tool for optimizing your Convox infrastructure. By leveraging custom node groups with preserved identities, service placement rules, and provider tagging, you can create an infrastructure that balances performance, cost, and isolation requirements for your specific application needs.
 
-For more detailed information, refer to:
+For more detailed information, refer to the provider-specific rack parameter pages:
+
+**AWS:**
 - [additional_node_groups_config](/configuration/rack-parameters/aws/additional_node_groups_config)
 - [additional_build_groups_config](/configuration/rack-parameters/aws/additional_build_groups_config)
+
+**Azure:**
+- [additional_node_groups_config](/configuration/rack-parameters/azure/additional_node_groups_config)
+- [additional_build_groups_config](/configuration/rack-parameters/azure/additional_build_groups_config)
+
+**App Parameters:**
 - [BuildLabels](/configuration/app-parameters/aws/BuildLabels)

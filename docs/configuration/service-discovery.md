@@ -15,11 +15,11 @@ Connecting to this hostname will distribute traffic across all processes of a gi
 
 For an app named `myapp` with a `convox.yml` like this:
 ```yaml
-    services:
-      auth:
-        port: 5000
-      web:
-        port: 3000
+services:
+  auth:
+    port: 5000
+  web:
+    port: 3000
 ```
 You would see a `convox services` output similar to this:
 ```bash
@@ -40,12 +40,12 @@ by setting its `internal` attribute to `true`.
 
 For an app named `myapp` with a `convox.yml` like this:
 ```yaml
-    services:
-      auth:
-        internal: true
-        port: 5000
-      web:
-        port: 3000
+services:
+  auth:
+    internal: true
+    port: 5000
+  web:
+    port: 3000
 ```
 You would see a `convox services` output similar to this:
 ```bash

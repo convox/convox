@@ -83,7 +83,7 @@ services:
     scale:
       count: 1-3
       limit:
-        cpu: 256
+        cpu: 500
         memory: 1024
       cpu: 128
       memory: 512

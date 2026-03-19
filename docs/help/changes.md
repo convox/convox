@@ -34,21 +34,21 @@ Agent ports are now defined at the service level instead of underneath the `agen
 
 #### Version 2
 ```yaml
-    services:
-      datadog:
-        agent:
-          ports:
-            - 8125/udp
-            - 8126/tcp
+services:
+  datadog:
+    agent:
+      ports:
+        - 8125/udp
+        - 8126/tcp
 ```
 #### Version 3
 ```yaml
-    services:
-      datadog:
-        agent: true
-        ports:
-          - 8125/udp
-          - 8126/tcp
+services:
+  datadog:
+    agent: true
+    ports:
+      - 8125/udp
+      - 8126/tcp
 ```
 
 ### Scaling
@@ -73,15 +73,15 @@ As an example a Timer that runs every hour has changed as follows:
 
 #### Version 2
 ```yaml
-    timers:
-      hourlyjob:
-        schedule: 0 * * ? *
+timers:
+  hourlyjob:
+    schedule: 0 * * ? *
 ```
 #### Version 3
 ```yaml
-    timers:
-      hourlyjob:
-        schedule: 0 * * * *
+timers:
+  hourlyjob:
+    schedule: 0 * * * *
 ```
 
 You can read more in the [Timer](/reference/primitives/app/timer) documentation section

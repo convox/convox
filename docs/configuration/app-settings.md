@@ -8,10 +8,10 @@ url: /configuration/app-settings
 App settings are configuration parameters specific to a particular [App](/reference/primitives/app) within a Convox rack. They provide a flexible way to customize the behavior and functionality of an app without affecting the overall rack configuration. This is especially useful for adapting apps to different environments like development, staging, and production.
 
 ```yaml
-    appSettings:
-      awsLogs:
-        cwRetention: 31
-        disableRetention: false
+appSettings:
+  awsLogs:
+    cwRetention: 31
+    disableRetention: false
 ```
 
 Currently, the appSettings section supports the awsLogs parameter.

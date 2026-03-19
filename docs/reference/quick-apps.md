@@ -195,7 +195,7 @@ This section includes several subpages:
 > - It is recommended to monitor the **RDS instance status** in the AWS Console to ensure changes have fully propagated before making further modifications.
 
 **Resource Allocations**
-- **vCPU**: Adjust CPU allocation (default is `0.256`).
+- **vCPU**: Adjust CPU allocation (default is `250` millicores).
 - **Memory**: Configure memory allocation (default is `512MB`).
 - **Scale**: Modify the number of application instances.
   - **Warning**: Changing resource allocations may impact site performance and availability.

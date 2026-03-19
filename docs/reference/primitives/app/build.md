@@ -14,13 +14,13 @@ Convox uses `docker` to compile code into a Build.
 You can define the location to build for each [Service](/reference/primitives/app/service) in [`convox.yml`](/configuration/convox-yml).
 
 ```yaml
-    services:
-      api:
-        build: ./api
-      web:
-        build:
-          path: ./web
-          manifest: Dockerfile.production
+services:
+  api:
+    build: ./api
+  web:
+    build:
+      path: ./web
+      manifest: Dockerfile.production
 ```
 
 ## Command Line Interface

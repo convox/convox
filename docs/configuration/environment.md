@@ -17,16 +17,16 @@ Environment variables that can be used by the application are defined in [`convo
 
 Environment variables defined at the top level affect every service in the application.
 ```yaml
+environment:
+  - ENCRYPTION_KEY
+services:
+  web:
     environment:
-      - ENCRYPTION_KEY
-    services:
-      web:
-        environment:
-          - ALLOWED_IPS
-          - COOKIE_SECRET
-      worker:
-        environment:
-          - QUEUE
+      - ALLOWED_IPS
+      - COOKIE_SECRET
+  worker:
+    environment:
+      - QUEUE
 ```
 This application would require four environment variables to be set: `ALLOWED_IPS`, `COOKIE_SECRET`, `ENCRYPTION_KEY`, and `QUEUE`.
 
@@ -36,14 +36,14 @@ The `ENCRYPTION_KEY` variable will be available to both services.
 
 Environment variables can be defined for each [Service](/reference/primitives/app/service).
 ```yaml
-    services:
-      web:
-        environment:
-          - ALLOWED_IPS
-          - COOKIE_SECRET
-      worker:
-        environment:
-          - QUEUE
+services:
+  web:
+    environment:
+      - ALLOWED_IPS
+      - COOKIE_SECRET
+  worker:
+    environment:
+      - QUEUE
 ```
 This application would require three environment variables to be set: `ALLOWED_IPS`, `COOKIE_SECRET`, and `QUEUE`.
 
@@ -55,16 +55,16 @@ This application would require three environment variables to be set: `ALLOWED_I
 
 You can set a default value for any environment variable in the manifest:
 ```yaml
-    environment:
-      - QUEUE=main
+environment:
+  - QUEUE=main
 ```
 ### Interpolation
 
 You can also use environment variables to add dynamic configuration to your `convox.yml`:
 ```yaml
-    services:
-      web:
-        health: ${HEALTH_CHECK_PATH}
+services:
+  web:
+    health: ${HEALTH_CHECK_PATH}
 ```
 ## Setting Environment Variables
 

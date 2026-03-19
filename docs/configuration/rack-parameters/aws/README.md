@@ -21,7 +21,7 @@ The following parameters are available for configuring your Convox rack on Amazo
 | [build_node_enabled](/configuration/rack-parameters/aws/build_node_enabled)         | Enables a dedicated build node for building applications.                |
 | [build_node_min_count](/configuration/rack-parameters/aws/build_node_min_count)     | Sets the minimum number of build nodes to keep running.                  |
 | [build_node_type](/configuration/rack-parameters/aws/build_node_type)               | Specifies the node type for the build node.                              |
-| [cert_duration](/configuration/rack-parameters/aws/cert_duration)                   | Specifies the certification renewal period.                              |
+| [cert_duration](/configuration/rack-parameters/aws/cert_duration)                   | Specifies the certificate renewal period.                              |
 | [cidr](/configuration/rack-parameters/aws/cidr)                                     | Specifies the CIDR range for the VPC.                                     |
 | [convox_domain_tls_cert_disable](/configuration/rack-parameters/aws/convox_domain_tls_cert_disable) | Disables Convox domain TLS certificate generation for services. |
 | [disable_convox_resolver](/configuration/rack-parameters/aws/disable_convox_resolver) | Disables the Convox resolver and uses the Kubernetes resolver instead. |

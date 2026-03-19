@@ -7,7 +7,7 @@ url: /configuration/rack-parameters/gcp/cert_duration
 # cert_duration
 
 ## Description
-The `cert_duration` parameter specifies the certification renewal period. This determines how often your certificates are renewed, ensuring they remain valid and secure.
+The `cert_duration` parameter specifies the certificate renewal period. This determines how often your certificates are renewed, ensuring they remain valid and secure.
 
 ## Default Value
 The default value for `cert_duration` is `2160h` (90 days).

@@ -13,9 +13,9 @@ Agents are specialized [Services](/reference/primitives/app/service) that run a 
 You can define any [Service](/reference/primitives/app/service) as an Agent by setting
 its `agent` attribute to `true`
 ```yaml
-    services:
-      telemetry:
-        agent: true
+services:
+  telemetry:
+    agent: true
 ```
 ### Communicating with an Agent
 
@@ -24,12 +24,12 @@ with an Agent running on its [Instance](/reference/primitives/rack/instance).
 
 You can declare ports that will be available to communicate with an Agent using the `ports` attribute:
 ```yaml
-    services:
-      telemetry:
-        agent: true
-        ports:
-          - 8125/udp
-          - 8126
+services:
+  telemetry:
+    agent: true
+    ports:
+      - 8125/udp
+      - 8126
 ```
 > Agents will listen on the IP address of the underlying [Instance](/reference/primitives/rack/instance).
 > This means that you can not deploy two Agents on the same Rack that listen on the same port.
