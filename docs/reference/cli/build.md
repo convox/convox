@@ -49,3 +49,8 @@ You can pass env vars that will only exist at build time.
     Build:   BABCDEFGHI
     Release: RABCDEFGHI
 ```
+
+## See Also
+
+- [Build](/reference/primitives/app/build) for build concepts and build arguments
+- [Deploy](/reference/cli/deploy) for building and promoting in one step

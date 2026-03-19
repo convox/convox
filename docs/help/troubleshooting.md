@@ -7,7 +7,7 @@ url: /help/troubleshooting
 
 ## I got an error while installing Convox locally
 
-Ensure you have followed the setup instructions for your local OS [here](/installation/development-rack).  Memory requirements for running Docker/Kubernetes locally can often catch people out.
+Ensure you have followed the setup instructions for your local OS [here](/installation/development-rack). Memory requirements for running Docker/Kubernetes locally can often catch people out.
 
 If you have an existing DNS service running on port 53 on your machine, that can conflict when trying to set up the local DNS resolution for your development Rack. Disabling the service during installation and forwarding traffic for `*.convox` domains should help.
 
@@ -15,16 +15,16 @@ If you have a process running on port 80 or 443 on your machine, that can confli
 
 ## I got an error while installing Convox in my cloud provider
 
-The error message is usually quite informative.  If you have existing resources running in your cloud provider and you are near your account limits, a Rack install can sometimes breach those limits, requiring you to request an increase in the appropriate resource (IP addresses, CPU allowances etc). Once your limit has been increased, the Rack should install successfully.
+The error message is usually quite informative. If you have existing resources running in your cloud provider and you are near your account limits, a Rack install can sometimes breach those limits, requiring you to request an increase in the appropriate resource (IP addresses, CPU allowances etc). Once your limit has been increased, the Rack should install successfully.
 
-Sometimes the Cloud providers will have internal issues which can prevent certain actions.  It's always worth checking the status pages and reporting for your provider and retrying an install once the issue has been resolved.
+Sometimes the Cloud providers will have internal issues which can prevent certain actions. It's always worth checking the status pages and reporting for your provider and retrying an install once the issue has been resolved.
 
 - [AWS](https://status.aws.amazon.com/)
 - [Azure](https://status.azure.com/en-us/status)
 - [Digital Ocean](https://status.digitalocean.com/)
 - [GCP](https://status.cloud.google.com/)
 
-A failed Rack install should either be able to continued with, or be uninstalled successfully as required.  You can retry the installation by running `convox rack update -r <rackname>`.
+A failed Rack install should either be able to be continued with, or be uninstalled successfully as required. You can retry the installation by running `convox rack update -r <rackname>`.
 If your Rack consistently fails to install into your Cloud provider and there are no relevant issues reported then please raise a [support ticket](/help/support) for us to investigate.
 
 ## I get an error when I deploy my app to Convox
@@ -41,11 +41,11 @@ When you know there is an issue and want to stop a deployment, you can run the `
 
 ### SSL Certificate Issues
 
-Convox uses LetsEncrypt to automatically and seamlessly provision SSL certificates for your App's domains if needed. In order for the provisioning to be successful, the DNS records for all the domains you list in your `convox.yml` for your App must resolve to the router address for your Rack.  If you get a certificate warning and see the certificate is listed as a "Kubernetes Ingress Controller Fake Certificate", this means the provisioning has failed, most likely because of DNS resolution issues.  Check these and try again!
+Convox uses LetsEncrypt to automatically and seamlessly provision SSL certificates for your App's domains if needed. In order for the provisioning to be successful, the DNS records for all the domains you list in your `convox.yml` for your App must resolve to the router address for your Rack. If you get a certificate warning and see the certificate is listed as a "Kubernetes Ingress Controller Fake Certificate", this means the provisioning has failed, most likely because of DNS resolution issues. Check these and try again!
 
 ### Health Checks
 
-Any Services within your App that expose a port will require a passing [health check](/configuration/health-checks) before receiving traffic.  Deploying a Release of your App that does not pass the health checks will result in a rollback to the previous release.  If this is your first release of a new App, a failing health check will result in a failed deployment.
+Any Services within your App that expose a port will require a passing [health check](/configuration/health-checks) before receiving traffic. Deploying a Release of your App that does not pass the health checks will result in a rollback to the previous release. If this is your first release of a new App, a failing health check will result in a failed deployment.
 Failing health checks will be reported when promoting your Release:
 ```text
     Promoting RABCDEFGHIJ...
@@ -86,7 +86,7 @@ $ convox services restart web -a app1
 
 ## My CLI commands take a long time to return
 
-If your local Kubernetes setup does not point to a valid cluster, that can slow down your Convox CLI operations as it tries to interrogate the invalid endpoint.  In this case, you can set a local env var `$ export CONVOX_LOCAL=disable` to stop the CLI from doing this and speed up your commands.
+If your local Kubernetes setup does not point to a valid cluster, that can slow down your Convox CLI operations as it tries to interrogate the invalid endpoint. In this case, you can set a local env var `$ export CONVOX_LOCAL=disable` to stop the CLI from doing this and speed up your commands.
 
 ## A rack uninstall is stuck or failed
 

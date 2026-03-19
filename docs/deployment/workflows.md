@@ -7,7 +7,7 @@ url: /deployment/workflows
 
 Workflows enable you to automate continuous integration and continuous delivery processes in your Convox environment. They provide a way to build, test, and deploy your applications automatically in response to events such as code pushes or pull requests.
 
-## Overview
+## Workflow Types
 
 Convox offers two types of workflows:
 

@@ -16,7 +16,7 @@ You will first need to establish connectivity between your racks in your given c
 
 You will need to manually complete this setup process on your own as we cannot predict your existing infrastructure or how you would need to facilitate or secure this connection/peering to suit your requirements.
 
-## Configuration
+## Enabling Rack-to-Rack Communication
 Once connectivity is established you will need to set the [internal_router](/configuration/rack-parameters/aws/internal_router) rack parameter to `true` by running:
 `convox rack params set internal_router=true -r rackNAME`
 * This will install the internal loadbalancer into the VPC that facilitates rack-to-rack communication.

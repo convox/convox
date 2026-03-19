@@ -38,8 +38,8 @@ The following parameters are available for configuring your Convox rack on Amazo
 | [internal_router](/configuration/rack-parameters/aws/internal_router)               | Installs an internal load balancer within the VPC.                       |
 | [internet_gateway_id](/configuration/rack-parameters/aws/internet_gateway_id)       | Specifies the ID of the attached internet gateway when using an existing VPC. |
 | [keda_enable](/configuration/rack-parameters/aws/keda_enable)                       | Enables KEDA (Kubernetes Event-Driven Autoscaling) for event-driven scaling. |
-| [kubelet_registry_burst](/configuration/rack-parameters/aws/kubelet_registry_pull_params) | Sets the maximum burst rate for image pulls. |
-| [kubelet_registry_pull_qps](/configuration/rack-parameters/aws/kubelet_registry_pull_params) | Sets the steady-state rate limit for image pulls (queries per second). |
+| [kubelet_registry_burst](/configuration/rack-parameters/aws/kubelet_registry_burst) | Sets the maximum burst rate for image pulls. |
+| [kubelet_registry_pull_qps](/configuration/rack-parameters/aws/kubelet_registry_pull_qps) | Sets the steady-state rate limit for image pulls (queries per second). |
 | [max_on_demand_count](/configuration/rack-parameters/aws/max_on_demand_count)       | Sets the maximum number of on-demand nodes when using the mixed capacity type. |
 | [min_on_demand_count](/configuration/rack-parameters/aws/min_on_demand_count)       | Sets the minimum number of on-demand nodes when using the mixed capacity type. |
 | [nlb_security_group](/configuration/rack-parameters/aws/nlb_security_group)         | Specifies the ID of the security group to attach to the NLB.             |

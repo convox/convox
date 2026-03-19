@@ -5,6 +5,8 @@ url: /reference/cli/test
 ---
 # test
 
+The `convox test` command builds the app and then runs the `test` command defined on each service in `convox.yml`. If any test command returns a non-zero exit code, the overall test fails.
+
 ## test
 
 Run tests

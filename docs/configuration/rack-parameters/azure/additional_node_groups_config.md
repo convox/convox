@@ -143,6 +143,10 @@ services:
 
 This will ensure that the `web` service is scheduled only on nodes with the label `convox.io/label: app-workers`.
 
+## Architecture Compatibility
+
+Convox on Azure requires x86-based VM SKUs. ARM-based VM SKUs are not supported. All node pools must use x86 VM SKUs to match the rack's [node_type](/configuration/rack-parameters/azure/node_type).
+
 ## Additional Information
 When using dedicated node pools (with `dedicated: true`), only services with matching node selector labels will be scheduled on those nodes. This provides strong isolation for workloads with specific requirements.
 

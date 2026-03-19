@@ -49,11 +49,11 @@ Import data to a resource
 
 ### Usage
 ```bash
-    convox resources import
+    convox resources import <resource>
 ```
 ### Examples
 ```bash
-    $ convox resources import --file dump.tgz
+    $ convox resources import database --file dump.tgz
 ```
 
 ## resources info

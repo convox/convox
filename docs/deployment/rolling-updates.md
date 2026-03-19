@@ -21,7 +21,7 @@ The rolling update proceeds in a "make one, break one" process in order to maint
 
 ## Minimum / Maximum configuration
 
-Rolling updates will respect the [deployment configuration](/reference/primitives/app/service#deployment) to control the minimum number of healthy processes and maximum number of overall processes to have running at any one time during the update.  This defaults to a minimum of 50% and a maximum of 200%.
+Rolling updates will respect the [deployment configuration](/reference/primitives/app/service#deployment) to control the minimum number of healthy processes and maximum number of overall processes to have running at any one time during the update. This defaults to a minimum of 50% and a maximum of 200%.
 
 ```yaml
 services:

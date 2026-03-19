@@ -38,7 +38,7 @@ Convox will automatically configure SSL for the external Services of your app us
 To use a custom SSL certificate, you can upload it to your Rack:
 
 ```bash
-$ convox certs upload -a myapp cert.pem key.pem
+$ convox certs import cert.pem key.pem
 ```
 
 ### Custom Domains

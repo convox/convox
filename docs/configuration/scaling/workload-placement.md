@@ -349,32 +349,37 @@ Convox allows you to implement different levels of customization based on your n
 
 ## Best Practices
 
-1. **Match Node Resources to Workload Requirements**:
+1. **Use a Consistent CPU Architecture Across All Node Groups**:
+   - All node groups (primary nodes, build nodes, and additional groups) must use the same CPU architecture — either all x86 or all ARM.
+   - On AWS, Graviton instances (e.g. `t4g`, `c6g`, `m6g`) are ARM. Standard instances (e.g. `t3`, `c5`, `m5`) are x86. Convox selects AMIs, system images, and build tooling based on the architecture of `node_type`. A mismatch causes pod scheduling failures and build errors.
+   - See [node_type](/configuration/rack-parameters/aws/node_type#cpu-architecture-x86-vs-arm) for the full list of supported instance families.
+
+2. **Match Node Resources to Workload Requirements**:
    - Use compute-optimized instances (c-type) for CPU-intensive workloads
    - Use memory-optimized instances (r-type) for memory-intensive workloads
    - Use general-purpose instances (m-type or t-type) for balanced workloads
 
-2. **Cost Optimization**:
+3. **Cost Optimization**:
    - Use spot instances for interruptible workloads like batch processing
    - Use on-demand instances for critical production services
    - Set appropriate min/max scaling parameters to avoid over-provisioning
    - Apply tags to track costs by team, environment, or application
 
-3. **Build Process Optimization**:
+4. **Build Process Optimization**:
    - Configure build nodes with higher CPU and memory for faster builds
    - Use spot instances for builds to reduce costs
    - Set `min_size: 0` to allow build nodes to scale down when not in use
 
-4. **Service Isolation**:
+5. **Service Isolation**:
    - Use the `dedicated` flag for node groups that need strict isolation
    - Separate services with conflicting resource profiles into different node groups
 
-5. **Node Group Identity Management**:
+6. **Node Group Identity Management**:
    - Always assign a unique `id` to each node group
    - Use consistent, meaningful IDs (e.g., 100-199 for production, 200-299 for builds)
    - Document your ID allocation to avoid conflicts
 
-6. **Tagging Strategy**:
+7. **Tagging Strategy**:
    - Develop a consistent tagging convention for all node groups
    - Include tags for environment, team, cost center, and workload type
    - Align tags with your organization's AWS tagging policy

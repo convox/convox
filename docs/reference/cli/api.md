@@ -5,6 +5,8 @@ url: /reference/cli/api
 ---
 # api
 
+The `convox api` command provides low-level access to the Convox Rack API. It is useful for debugging, scripting, or querying API endpoints that are not directly exposed by other CLI commands.
+
 ## api get
 
 Query the Rack API

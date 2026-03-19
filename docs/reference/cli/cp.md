@@ -5,6 +5,8 @@ url: /reference/cli/cp
 ---
 # cp
 
+The `convox cp` command copies files between your local filesystem and a running process. It is useful for debugging, inspecting container state, or extracting log files and artifacts from running containers. Use `convox ps` to find the process ID.
+
 ## cp
 
 Copy files

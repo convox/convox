@@ -7,7 +7,7 @@ url: /configuration/monitoring
 
 Convox provides integrated metrics collection and alerting capabilities that give you comprehensive visibility into your applications and infrastructure. Built directly into the Convox platform, monitoring requires no additional tools or complex configuration.
 
-## Overview
+## Monitoring Capabilities
 
 Convox Monitoring and Alerting offers:
 

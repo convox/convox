@@ -8,7 +8,7 @@ url: /configuration/agents
 Agents are specialized [Services](/reference/primitives/app/service) that run a single
 [Process](/reference/primitives/app/process) on each [Instance](/reference/primitives/rack/instance).
 
-## Configuration
+## Defining an Agent
 
 You can define any [Service](/reference/primitives/app/service) as an Agent by setting
 its `agent` attribute to `true`
@@ -39,9 +39,9 @@ Each [Process](/reference/primitives/app/process) will have the IP address of it
 
 In the example above, any [Process](/reference/primitives/app/service) on the same Rack can communicate
 with the `telemetry` Agent running on its [Instance](/reference/primitives/rack/instance) using the
-following endpoints**:
+following endpoints:
 
 * `udp://$INSTANCE_IP:8125`
 * `tcp://$INSTANCE_IP:8126`
 
-** A process will be able to communicate with the agent only if its running on the same node. Be sure the `INSTANCE_IP` correspond to the node that the process is running.
+> A process can only communicate with the agent running on the same node. Ensure the `INSTANCE_IP` corresponds to the node that the process is running on.

@@ -18,8 +18,9 @@ You can define the location to build for each [Service](/reference/primitives/ap
       api:
         build: ./api
       web:
-        build: ./web
-        manifest: Dockerfile.production
+        build:
+          path: ./web
+          manifest: Dockerfile.production
 ```
 
 ## Command Line Interface

@@ -5,6 +5,8 @@ url: /reference/cli/scale
 ---
 # scale
 
+The `convox scale` command views and adjusts the scale parameters of a service, including replica count, CPU allocation, and memory allocation. When called without flags, it displays the current scale configuration for all services in the app.
+
 ## scale
 
 Scale a service
@@ -27,3 +29,16 @@ Scale a service
     2026-01-15T14:57:54Z system/cloudformation aws/cfm test-nodejs UPDATE_COMPLETE test-nodejs
     OK
 ```
+
+### Flags
+
+| Flag | Description |
+|------|-------------|
+| `--count` | Number of desired replicas for the service |
+| `--cpu` | CPU allocation in millicores (e.g., 256 = 0.25 vCPU) |
+| `--memory` | Memory allocation in MB |
+
+## See Also
+
+- [Scaling](/configuration/scaling) for autoscaling configuration
+- [Service](/reference/primitives/app/service) for service scale attributes

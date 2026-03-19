@@ -5,9 +5,9 @@ url: /management/direct-k8s-access
 ---
 # Direct Kubernetes Access
 
-Convox makes managing and operating your Kubernetes cluster extremely easy and simple by abstracting a lot of the unnecessary complexities away.  We know, however, that there may be times that you will want to dive deeper and access the Kubernetes primitives and resources yourself.  This could be deep debugging of an edge-case networking issue, examination of an underlying cloud infrastructure issue, gaining a deeper understanding of how everything ties together, or to install a Kubernetes native component or plugin directly.
+Convox makes managing and operating your Kubernetes cluster extremely easy and simple by abstracting a lot of the unnecessary complexities away. We know, however, that there may be times that you will want to dive deeper and access the Kubernetes primitives and resources yourself. This could be deep debugging of an edge-case networking issue, examination of an underlying cloud infrastructure issue, gaining a deeper understanding of how everything ties together, or to install a Kubernetes native component or plugin directly.
 
-Convox provides an API proxy to Kubernetes that runs on your Rack which allows you to grant availability to the underlying system, whilst delegating per-user access to Kubernetes.  This is actually a lot easier and more manageable than providing direct Kubernetes credentials to the developers in your team!
+Convox provides an API proxy to Kubernetes that runs on your Rack which allows you to grant availability to the underlying system, whilst delegating per-user access to Kubernetes. This is actually a lot easier and more manageable than providing direct Kubernetes credentials to the developers in your team!
 
 ## Configure kubectl to Point at Your Rack
 

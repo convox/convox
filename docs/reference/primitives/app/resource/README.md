@@ -92,7 +92,7 @@ In this example, a custom Redis image named `custom-redis-image` with tag `6.2` 
 
 By default, any Resources you define will be satisfied by starting a containerized version on your [Rack](/reference/primitives/rack). This allows you to get up and running as quickly as possible and provides a low-cost solution and more effective usage of your Rack.
 
-In your production environment, or for particular usage requirements, you may wish to replace the containerized Resources with a managed cloud service for durability. For instance, on AWS you may wish to utilize RDS to provide you with a Database, or on GCP you may wish to use Memorystore in place of a containerized Redis instance.
+In your production environment, or for particular usage requirements, you may wish to replace the containerized Resources with a managed cloud service for durability. For instance, on AWS you may wish to utilize RDS to provide you with a Database, or replace a containerized Redis instance with an ElastiCache-managed resource.
 
 Resource Overlays provide you with a simple and effective way to maintain the cheaper and efficient containerized Resources on the environments you wish, while switching them out for the cloud-provider managed services on those environments that require them.
 

@@ -177,9 +177,40 @@ If KEDA fails to read metrics after 3 consecutive attempts, the service scales t
 
 On AWS racks, KEDA automatically uses the rack's IAM role for authentication with AWS services (SQS, CloudWatch, etc.) via IRSA. No additional authentication configuration is required for AWS-native triggers.
 
+## KEDA with Datadog Metrics
+
+KEDA supports a [Datadog scaler](https://keda.sh/docs/2.19/scalers/datadog/) that can drive autoscaling from Datadog queries. This is an alternative to the HPA-based [Datadog Metrics Autoscaling](/configuration/scaling/datadog-metrics) approach.
+
+To use the KEDA Datadog scaler:
+
+1. The Datadog Cluster Agent must be deployed with external metrics enabled. Follow the [Datadog Cluster Agent setup](https://docs.datadoghq.com/containers/guide/cluster_agent_autoscaling_metrics/?tab=daemonset) instructions.
+2. Set `keda_enable=true` on your rack. If Datadog is already installed but the Cluster Agent does not have external metrics enabled, the KEDA Datadog scaler will fail to retrieve metrics.
+3. Configure a `datadog` trigger in the `scale.keda.triggers` block:
+
+```yaml
+services:
+  api:
+    build: .
+    port: 3000
+    scale:
+      count: 1-10
+      keda:
+        triggers:
+          - type: datadog
+            metadata:
+              query: "avg:my.custom.metric{service:api}.rollup(avg, 60)"
+              queryValue: "100"
+              age: "120"
+            authenticationRef:
+              name: datadog-auth
+```
+
+When KEDA is configured for a service, Convox uses a KEDA ScaledObject instead of a native HPA. Any `scale.targets.external` entries for that service are not applied.
+
 ## See Also
 
 - [Autoscaling](/configuration/scaling/autoscaling) for standard CPU/memory autoscaling
+- [Datadog Metrics Autoscaling](/configuration/scaling/datadog-metrics) for HPA-based Datadog scaling (without KEDA)
 - [VPA](/configuration/scaling/vpa) for automatic resource right-sizing
 - [keda_enable](/configuration/rack-parameters/aws/keda_enable) rack parameter
 - [KEDA Scalers documentation](https://keda.sh/docs/2.19/scalers/) for all available trigger types and configuration

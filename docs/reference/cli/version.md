@@ -21,3 +21,7 @@ Display the current Convox CLI client version and the Rack server version.
 ```
 
 The `client` line shows the version of the locally installed CLI. The `server` line shows the version of the currently selected Rack.
+
+## See Also
+
+- [CLI Update](/reference/cli/update) for updating the CLI

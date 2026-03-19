@@ -7,11 +7,11 @@ url: /reference/cli/deploy-debug
 
 Diagnose deploy failures by inspecting an app's Kubernetes pods server-side. This command classifies pods, collects pre-healthcheck logs, gathers Kubernetes events, and maps failure states to actionable hints, all without requiring kubectl or kubeconfig access.
 
-### The Problem
+## The Problem
 
 When a deploy fails, `convox logs` often shows nothing because logs are only returned from pods that have passed health checks and reached a ready state. `deploy-debug` closes this visibility gap by querying Kubernetes directly from the rack API.
 
-### Usage
+## Usage
 ```bash
     convox deploy-debug
 ```
@@ -32,7 +32,7 @@ When a deploy fails, `convox logs` often shows nothing because logs are only ret
 | `--no-previous` | | Skip previous container crash logs | `false` |
 | `--watch` | | Re-run on interval (seconds) | Off |
 
-### Diagnostic Checks
+## Diagnostic Checks
 
 The command runs three checks by default. You can select individual checks with `--checks`.
 
@@ -48,7 +48,7 @@ The command runs three checks by default. You can select individual checks with 
 
 Collects current and previous container logs, per-pod Kubernetes events, and maps failure states to plain-language hints.
 
-### Failure Hints
+## Failure Hints
 
 The command maps common pod failure states to actionable messages:
 
@@ -63,7 +63,7 @@ The command maps common pod failure states to actionable messages:
 | `ContainersNotReady` | Health check may be failing. Check health check configuration. |
 | `PodInitializing` | Init containers may still be running. |
 
-### Examples
+## Examples
 
 Basic usage:
 ```bash

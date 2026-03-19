@@ -5,6 +5,8 @@ url: /reference/cli/restart
 ---
 # restart
 
+The `convox restart` command performs a rolling restart of all services in an app. Each service is restarted sequentially to help maintain availability during the process.
+
 ## restart
 
 Restart an app

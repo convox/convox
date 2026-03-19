@@ -51,3 +51,7 @@ Remove private registry
     $ convox registries remove 123456789012.dkr.ecr.us-east-1.amazonaws.com
     Removing registry... OK
 ```
+
+## See Also
+
+- [Private Registries](/configuration/private-registries) for private registry configuration

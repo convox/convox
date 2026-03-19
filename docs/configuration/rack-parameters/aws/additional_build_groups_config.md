@@ -86,6 +86,10 @@ $ convox apps params set BuildCpu=256 BuildMem=1024 -a <app>
 
 This sets the CPU request to 256 millicores (0.25 vCPU) and memory request to 1024MB (1GB) for build pods.
 
+## Architecture Compatibility
+
+All build node groups must use the same CPU architecture (x86 or ARM) as the rack's [node_type](/configuration/rack-parameters/aws/node_type). If your rack runs x86 instances, all build groups must also use x86 instance types. If your rack runs ARM/Graviton instances, all build groups must also use ARM instance types. Mixing architectures causes build failures because the resulting container images target the wrong architecture for the nodes that run them.
+
 ## Additional Information
 Combining the `additional_build_groups_config` parameter with app-specific `BuildLabels` configuration provides:
 

@@ -66,5 +66,9 @@ $ convox rack params set 'additional_build_groups_config=[{"id":201,"type":"Stan
 Setting parameters... OK
 ```
 
+## Architecture Compatibility
+
+Convox on Azure requires x86-based VM SKUs. ARM-based VM SKUs are not supported. All build node pools must use x86 VM SKUs to match the rack's [node_type](/configuration/rack-parameters/azure/node_type).
+
 ## Additional Information
 For general-purpose node pools, see the [`additional_node_groups_config`](/configuration/rack-parameters/azure/additional_node_groups_config) parameter.

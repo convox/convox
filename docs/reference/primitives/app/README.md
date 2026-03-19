@@ -65,7 +65,7 @@ An App is defined by a single [`convox.yml`](/configuration/convox-yml)
 ### Getting logs for an App
 ```bash
     $ convox logs -a myapp
-    2000-01-01T00:00:00 service/web/web-zyxwv Starting myapp on port 5000
+    2026-01-15T14:30:00 service/web/web-zyxwv Starting myapp on port 5000
 ```
 ### Cancelling a deployment that is in progress
 ```bash

@@ -25,7 +25,7 @@ Get information about a process
 
 ### Usage
 ```bash
-    convox ps info
+    convox ps info <pid>
 ```
 ### Examples
 ```bash
@@ -45,7 +45,7 @@ Stop a process
 
 ### Usage
 ```bash
-    convox ps stop
+    convox ps stop <pid>
 ```
 ### Examples
 ```bash

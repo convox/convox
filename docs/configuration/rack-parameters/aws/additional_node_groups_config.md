@@ -141,6 +141,10 @@ services:
 
 This will ensure that the `web` service is scheduled only on nodes with the label `convox.io/label: app-workers`.
 
+## Architecture Compatibility
+
+All additional node groups must use the same CPU architecture (x86 or ARM) as the rack's [node_type](/configuration/rack-parameters/aws/node_type). Convox selects system images and AMIs based on the primary node architecture. Mixing x86 and ARM instance types across node groups will cause pod scheduling failures because the container images built for one architecture cannot run on nodes of a different architecture.
+
 ## Additional Information
 When using dedicated node groups (with `dedicated: true`), only services with matching node selector labels will be scheduled on those nodes. This provides strong isolation for workloads with specific requirements.
 

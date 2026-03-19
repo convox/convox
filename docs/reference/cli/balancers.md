@@ -21,3 +21,7 @@ List balancers for an app
     BALANCER  SERVICE  ENDPOINT
     other     web      1.2.3.4
 ```
+
+## See Also
+
+- [Load Balancers](/configuration/load-balancers) for load balancer configuration

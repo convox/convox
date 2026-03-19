@@ -39,7 +39,7 @@ $ heroku config -a your-heroku-app -s > .env.heroku
 $ heroku buildpacks -a your-heroku-app
 ```
 
-### Step 2: Create Dockerfile
+### Step 2: Create a Dockerfile
 
 Heroku uses buildpacks, but Convox uses Docker. Create a `Dockerfile` based on your buildpack:
 
@@ -213,7 +213,7 @@ databases:
     plan: starter
 ```
 
-### Step 2: Create Dockerfile
+### Step 2: Create a Dockerfile
 
 ```dockerfile
 FROM node:18-alpine

@@ -53,3 +53,62 @@ To list generated certificates:
 ```bash
     convox certs --generated
 ```
+
+## certs delete
+
+Delete a certificate.
+
+### Usage
+```bash
+    convox certs delete <id>
+```
+
+### Examples
+```bash
+    $ convox certs delete cert-0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d
+    Deleting certificate cert-0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d... OK
+```
+
+## certs import
+
+Import a certificate.
+
+### Usage
+```bash
+    convox certs import <pub> <key>
+```
+
+Option flags:
+- `--chain`: Path to an intermediate certificate chain file.
+
+### Examples
+```bash
+    $ convox certs import cert.pem key.pem
+    Importing certificate... OK, cert-0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d
+
+    $ convox certs import cert.pem key.pem --chain chain.pem
+    Importing certificate... OK, cert-0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d
+```
+
+## certs renew
+
+Renew a certificate for an app.
+
+### Usage
+```bash
+    convox certs renew
+```
+
+Option flags:
+- `--app`: App name. Infers the app name from the current directory if not specified.
+
+### Examples
+```bash
+    $ convox certs renew --app myapp
+    Renewing certificate myapp... OK
+```
+
+## See Also
+
+- [SSL](/deployment/ssl) for SSL certificate configuration
+- [Custom Domains](/deployment/custom-domains) for routing domains to services

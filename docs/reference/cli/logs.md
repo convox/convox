@@ -36,3 +36,7 @@ Get logs for an app
 - `--no-follow` - Prints logs in terminal rather than opening a log stream
 - `--service` or `-s` - Specify the name of the service
 - `--tail` - Specify the number of lines to tail. This is only applicable on service specific logging.
+
+## See Also
+
+- [Logging](/configuration/logging) for log configuration and forwarding

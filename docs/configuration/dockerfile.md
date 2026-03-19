@@ -60,7 +60,10 @@ Values for these variables will be read from the [Environment](/configuration/en
 ```bash
     $ convox env set RUBY_VERSION=2.6.4
 ```
+You can also pass build arguments directly via the CLI using the `--build-args` flag. See [Build Arguments](/reference/primitives/app/build#build-arguments) for the full range of options including Convox-managed build arguments.
+
 ## See Also
 
+- [Build Arguments](/reference/primitives/app/build#build-arguments) for CLI-based build arguments and Convox-managed args
 - [Dockerfile: Best Practices](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/)
 - [Private Registries](/configuration/private-registries)

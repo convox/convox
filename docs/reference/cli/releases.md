@@ -173,3 +173,8 @@ Copy an old release forward and promote it. This creates a new release with the 
     2026-03-18T20:58:34Z system/k8s/atom/service/web Status: Updating => Running
     OK
 ```
+
+## See Also
+
+- [Release](/reference/primitives/app/release) for release concepts
+- [Rollbacks](/deployment/rollbacks) for rollback workflow

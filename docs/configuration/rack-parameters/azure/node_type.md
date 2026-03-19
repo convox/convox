@@ -24,5 +24,11 @@ Setting parameters... OK
 ```
 This command sets the `node_type` parameter to the specified value.
 
+## CPU Architecture
+
+Convox on Azure requires x86-based VM SKUs. ARM-based VM SKUs (such as the Dpsv5 or Epsv5 series) are not supported. Convox system components and build tooling are x86 images on Azure and will fail to run on ARM nodes.
+
+All additional node groups and build groups must also use x86 VM SKUs to match `node_type`.
+
 ## Additional Information
 Selecting the appropriate `node_type` is crucial for ensuring that your applications run efficiently and cost-effectively. Consider the specific needs of your workload when choosing an instance type. For more information on Azure instance types, refer to the [Azure documentation](https://azure.microsoft.com/en-us/pricing/details/virtual-machines/series/).

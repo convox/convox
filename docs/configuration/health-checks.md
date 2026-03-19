@@ -9,7 +9,7 @@ Deploying a [Service](/reference/primitives/app/service) behind a load balancer 
 
 Health checks must return a valid HTTP response code (200-399) within the configured `timeout`.
 
-[Processes](/reference/primitives/app/process) that fail two health checks in a row are assumed dead and will be terminated and replaced.
+[Processes](/reference/primitives/app/process) that fail three consecutive health checks are assumed dead and will be terminated and replaced.
 
 ## Definition
 
@@ -35,10 +35,10 @@ services:
 
 | Attribute  | Default | Description                                                                      |
 | ---------- | ------- | -------------------------------------------------------------------------------- |
-| **grace**    | 5       | The amount of time in seconds to wait for a [Process](/reference/primitives/app/process) to boot before beginning health checks |
+| **grace**    | `interval` | The amount of time in seconds to wait for a [Process](/reference/primitives/app/process) to boot before beginning health checks. Defaults to the value of `interval` |
 | **interval** | 5       | The number of seconds between health checks                                      |
 | **path**     | /       | The HTTP endpoint that will be requested                                         |
-| **timeout**  | 4       | The number of seconds to wait for a valid response                               |
+| **timeout**  | `interval - 1` | The number of seconds to wait for a valid response. Defaults to `interval` minus one |
 
 ## Liveness Checks
 
@@ -236,10 +236,10 @@ services:
 
 | Attribute  | Default | Description                                                                      |
 | ---------- | ------- | -------------------------------------------------------------------------------- |
-| **grace**    | 5       | The amount of time in seconds to wait for a [Process](/reference/primitives/app/process) to boot before beginning health checks |
+| **grace**    | `interval` | The amount of time in seconds to wait for a [Process](/reference/primitives/app/process) to boot before beginning health checks. Defaults to the value of `interval` |
 | **interval** | 5       | The number of seconds between health checks                                      |
 | **path**     | /       | The service name to check within your gRPC health implementation                 |
-| **timeout**  | 4       | The number of seconds to wait for a valid response                               |
+| **timeout**  | `interval - 1` | The number of seconds to wait for a valid response. Defaults to `interval` minus one |
 
 ### Implementation Requirements
 

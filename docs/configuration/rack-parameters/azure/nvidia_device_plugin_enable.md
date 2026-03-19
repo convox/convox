@@ -25,7 +25,7 @@ The default value for `nvidia_device_plugin_enable` is `false`.
 ## Setting Parameters
 This parameter must be set at rack installation time:
 ```bash
-$ convox install azure --params nvidia_device_plugin_enable=true
+$ convox rack install azure <name> nvidia_device_plugin_enable=true
 ```
 
 Or updated after installation:

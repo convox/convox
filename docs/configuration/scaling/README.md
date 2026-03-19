@@ -20,18 +20,18 @@ Automatically right-size CPU and memory requests for your services based on obse
 See [VPA](/configuration/scaling/vpa) for details.
 > AWS only
 
-## Datadog Metrics Autoscaling
-
-Scale services based on business-level metrics from Datadog rather than just CPU and memory. Useful when scaling decisions depend on request rates, queue depths, or other application-specific signals.
-
-See [Datadog Metrics Autoscaling](/configuration/scaling/datadog-metrics) for details.
-
 ## KEDA Autoscaling
 
-Event-driven autoscaling powered by KEDA. Scale from external signals like SQS queue depth, cron schedules, CloudWatch metrics, or any of KEDA's 60+ supported scalers. Supports scale-to-zero for cost optimization.
+Event-driven autoscaling powered by KEDA. Scale from external signals like SQS queue depth, cron schedules, Datadog queries, CloudWatch metrics, or any of KEDA's 60+ supported scalers. Supports scale-to-zero for cost optimization.
 
 See [KEDA Autoscaling](/configuration/scaling/keda) for details.
 > AWS only
+
+## Datadog Metrics Autoscaling
+
+Scale services based on business-level metrics from Datadog via HPA external metrics. Useful when scaling decisions depend on request rates, queue depths, or other application-specific signals. If you use KEDA, you can also scale on Datadog metrics via the KEDA Datadog scaler -- see [KEDA Autoscaling](/configuration/scaling/keda#keda-with-datadog-metrics).
+
+See [Datadog Metrics Autoscaling](/configuration/scaling/datadog-metrics) for details.
 
 ## Workload Placement
 

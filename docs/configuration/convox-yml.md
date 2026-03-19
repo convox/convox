@@ -66,7 +66,7 @@ url: /configuration/convox-yml
         image: awesome/metrics
     timers:
       cleanup:
-        schedule: "0 3 * * * *"
+        schedule: "0 3 * * *"
         command: bin/cleanup
         service: worker
 ```
@@ -153,11 +153,23 @@ that run periodically on a set interval.
 ```yaml
     timers:
       cleanup:
-        schedule: "0 3 * * * *"
+        schedule: "0 3 * * *"
         command: bin/cleanup
         service: worker
 ```
 See [Timer](/reference/primitives/app/timer) for configuration options.
+
+## balancers
+
+The `balancers` section defines custom TCP/UDP load balancers for [Services](/reference/primitives/app/service) that need to expose arbitrary ports.
+```yaml
+    balancers:
+      custom:
+        service: web
+        ports:
+          5000: 5001
+```
+See [Balancer](/reference/primitives/app/balancer) and [Load Balancers](/configuration/load-balancers#custom-load-balancers) for configuration options.
 
 ## See Also
 

@@ -19,7 +19,7 @@ url: /installation/production-rack/azure
 | **Convox CLI**            | [/installation/cli](/installation/cli)                                                                           |
 
 ```bash
-# sign‑in to Azure
+# sign-in to Azure
 az login
 ```
 
@@ -41,7 +41,7 @@ The default is marked with an *; the default tenant is 'YourTenant' and subscrip
 
 | Variable              | Where to get it                                     |
 | --------------------- | --------------------------------------------------- |
-| `ARM_CLIENT_ID`       | **appId** of the service‑principal you create below |
+| `ARM_CLIENT_ID`       | **appId** of the service-principal you create below |
 | `ARM_CLIENT_SECRET`   | **password** returned when the SP is created        |
 | `ARM_SUBSCRIPTION_ID` | `az account show --query id -o tsv`                 |
 | `ARM_TENANT_ID`       | `az account show --query tenantId -o tsv`           |
@@ -73,7 +73,7 @@ Your Subscription AzureCloud   xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx  Enabled  Tr
 Subscription ID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 ```
 
-## 4 Create the Terraform service‑principal
+## 4 Create the Terraform service-principal
 
 ```bash
 az ad sp create-for-rbac \
@@ -144,7 +144,7 @@ Invoking `az ad app permission grant --id xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx -
 
 ## 6 Assign the Application Administrator directory role
 
-Terraform/Convox must be able to create Azure AD (Entra) application objects. Because Azure RBAC roles do **not** flow into Entra ID, you need to grant the service‑principal a **directory role**.
+Terraform/Convox must be able to create Azure AD (Entra) application objects. Because Azure RBAC roles do **not** flow into Entra ID, you need to grant the service-principal a **directory role**.
 
 > The quickest safe choice is **Application Administrator**. (Cloud Application Administrator also works.)
 
@@ -212,7 +212,7 @@ ARM_TENANT_ID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 ## 8 Install the Rack
 
 ```bash
-convox rack install azure <name> [param=value]…
+convox rack install azure <name> [param=value]...
 ```
 
 | Parameter       | Default          | Description                       |
@@ -279,14 +279,14 @@ az login
 
 Instead of installing the Rack via CLI, you can use the **Convox Console** to create and manage your Azure integration. This provides a web-based interface for Rack management.
 
-### 10·1 Navigate to Convox Console
+### 10.1 Navigate to Convox Console
 
 1. Go to [https://console.convox.com/](https://console.convox.com/)
 2. Sign in to your Convox account
 3. Navigate to the **Integrations** page
 4. Select **Install Azure Runtime**
 
-### 10·2 Gather Required Information
+### 10.2 Gather Required Information
 
 You'll need the following values from the previous steps. Here's where to find each one:
 
@@ -297,16 +297,16 @@ You'll need the following values from the previous steps. Here's where to find e
 | **Client ID** | Service principal `appId` field | `abcdef12-3456-7890-abcd-ef1234567890` |
 | **Client Secret** | Service principal `password` field | `ABC8Q~X12DeF34gH56iJ78kL90mN-OpQr23StUv` |
 
-### 10·3 Mapping Service Principal Output to Console Fields
+### 10.3 Mapping Service Principal Output to Console Fields
 
 From your service principal creation output:
 
-```json
+```text
 {
-  "appId": "abcdef12-3456-7890-abcd-ef1234567890",      ← Client ID
+  "appId": "abcdef12-3456-7890-abcd-ef1234567890",      // Client ID
   "displayName": "terraform",
-  "password": "ABC8Q~X12DeF34gH56iJ78kL90mN-OpQr23StUv", ← Client Secret  
-  "tenant": "87654321-4321-4321-4321-cba987654321"       ← Tenant ID
+  "password": "ABC8Q~X12DeF34gH56iJ78kL90mN-OpQr23StUv", // Client Secret
+  "tenant": "87654321-4321-4321-4321-cba987654321"       // Tenant ID
 }
 ```
 
@@ -326,14 +326,14 @@ echo "Client ID: $ARM_CLIENT_ID"
 echo "Client Secret: $ARM_CLIENT_SECRET"
 ```
 
-### 10·4 Complete the Integration
+### 10.4 Complete the Integration
 
 1. **Fill in the form** with the values from above
 2. **Click "Install" or "Create Integration"**
 3. **Wait for validation** - the Console will test the connection
 4. **Create your Rack** through the Console interface
 
-### 10·5 Benefits of Console Integration
+### 10.5 Benefits of Console Integration
 
 - **Visual interface** for Rack management
 - **Automatic updates** and maintenance

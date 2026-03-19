@@ -49,7 +49,7 @@ Get information about the rack
 
 Install a new Rack
 
-> note: To install the rack into the console with the specified runtime, region, and optional [parameters](https://docs.convox.com/configuration/rack-parameters/): provide orgname/rackname in place of `<name>`
+> note: To install the rack into the console with the specified runtime, region, and optional [parameters](/configuration/rack-parameters/): provide orgname/rackname in place of `<name>`
 
 ### Usage
 ```bash
@@ -62,7 +62,7 @@ flags:
   - `runtime`: runtime integration ID
   - `version`: specify the rack version to install
 
-> note: To install a rack into an organization with runtime integration, ensure your CLI is updated to the latest version. For detailed instructions on updating CLI, please see [CLI Management](https://docs.convox.com/management/cli-rack-management/).
+> note: To install a rack into an organization with runtime integration, ensure your CLI is updated to the latest version. For detailed instructions on updating CLI, please see [CLI Management](/management/cli-rack-management).
 
 > note: Obtain the runtime ID by running `convox runtimes <orgname>`.
 
@@ -303,7 +303,12 @@ Rotates the rack access key that is used for rack access credential. It will inv
 
 ### Examples
 ```bash
-    $ convox rack access key rotate              
+    $ convox rack access key rotate
     OK
 
 ```
+
+## See Also
+
+- [Rack Parameters](/configuration/rack-parameters) for parameter reference
+- [CLI Rack Management](/management/cli-rack-management) for management best practices

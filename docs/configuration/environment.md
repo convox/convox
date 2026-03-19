@@ -66,7 +66,7 @@ You can also use environment variables to add dynamic configuration to your `con
       web:
         health: ${HEALTH_CHECK_PATH}
 ```
-## Configuration
+## Setting Environment Variables
 
 You can set values for your environment variables using `convox env set`:
 ```bash

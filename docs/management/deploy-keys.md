@@ -40,7 +40,7 @@ Go to the **Deploy Keys** section, give your deploy key a name, and click on **C
 
 ## Using a Deploy Key
 
-In your CI environment, download the latest version of the [Convox CLI](/getting-started/introduction#install-the-convox-cli-and-login) and use the deploy key like these examples:
+In your CI environment, download the latest version of the [Convox CLI](/getting-started/introduction#install-the-convox-cli-and-log-in) and use the deploy key like these examples:
 
 ```sh
 $ env CONVOX_HOST=console.convox.com CONVOX_PASSWORD=<key> convox deploy

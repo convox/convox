@@ -5,6 +5,8 @@ url: /reference/cli/racks
 ---
 # racks
 
+The `convox racks` command lists all Racks accessible from your current Console login, along with their cloud provider and status. Use `convox switch` to change the active Rack.
+
 ## racks
 
 List available Racks and their state.

@@ -5,6 +5,8 @@ url: /reference/cli/login
 ---
 # login
 
+The `convox login` command authenticates your CLI against a Convox Console. This is required before running most other commands. For CI/CD pipelines, you can set the `CONVOX_HOST` and `CONVOX_PASSWORD` environment variables instead of running `login` interactively.
+
 ## login
 
 Authenticate your CLI with a Console installation
