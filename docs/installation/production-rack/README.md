@@ -11,10 +11,10 @@ A production Rack runs on a cloud provider and hosts your applications in a real
 
 ## Select a Provider
 
-- [Amazon Web Services](aws)
-- [Digital Ocean](do)
-- [Google Cloud](gcp)
-- [Microsoft Azure](azure)
+- [Amazon Web Services](/installation/production-rack/aws)
+- [Digital Ocean](/installation/production-rack/do)
+- [Google Cloud](/installation/production-rack/gcp)
+- [Microsoft Azure](/installation/production-rack/azure)
 
 ## See Also
 

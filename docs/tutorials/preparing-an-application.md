@@ -95,7 +95,7 @@ services:
     volumes:
       - /tmp/something
     environment:
-      - MY_ENVIRONMENT: development
+      - MY_ENVIRONMENT=development
     links:
       - supportservice
       - redis

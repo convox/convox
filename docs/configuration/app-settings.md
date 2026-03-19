@@ -22,8 +22,8 @@ The `awsLogs` section allows you to configure the retention time and policy for 
 
 | Attribute     | Type       | Default             | Description                                                                                                                                |
 | ------------- | ---------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| **cwRetention**       | int    | 7               | Specifies the retention period in days for CloudWatch logs.
-| **disableRetention**       | boolean    | false               | Indicates whether to disable retention and retain logs indefinitely
+| **cwRetention**       | int    | 7               | Specifies the retention period in days for CloudWatch logs. |
+| **disableRetention**       | boolean    | false               | Indicates whether to disable retention and retain logs indefinitely. |
 
 Important Notes:
 

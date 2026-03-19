@@ -5,6 +5,8 @@ url: /reference/cli/instances
 ---
 # instances
 
+## instances
+
 List instances
 
 ### Usage

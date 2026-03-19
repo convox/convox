@@ -70,7 +70,7 @@ template [Service](/reference/primitives/app/service) for your Timers.
         service: jobs
         concurrency: forbid
 ```
-On this [App](..) the `jobs` [Service](/reference/primitives/app/service) is scaled to zero and not running any durable
+On this [App](/reference/primitives/app) the `jobs` [Service](/reference/primitives/app/service) is scaled to zero and not running any durable
 [Processes](/reference/primitives/app/process).
 
 The `cleanup` Timer will spawn a [Process](/reference/primitives/app/process) of the `jobs` [Service](/reference/primitives/app/service) to run
