@@ -48,12 +48,12 @@ For GPU-accelerated workloads, you can specify the number of GPUs required:
 ```bash
     $ convox scale web --count=3
     Scaling web...
-    2020-01-01T00:00:00Z system/k8s/web Scaled up replica set web-65f45567d to 2
-    2020-01-01T00:00:00Z system/k8s/web-65f45567d Created pod: web-65f45567d-c7sdw
-    2020-01-01T00:00:00Z system/k8s/web-65f45567d-c7sdw Successfully assigned dev-convox/web-65f45567d-c7sdw to node
-    2020-01-01T00:00:00Z system/k8s/web-65f45567d-c7sdw Container image "registry.dev.convox/convox:web.BABCDEFGHI" already present on machine
-    2020-01-01T00:00:00Z system/k8s/web-65f45567d-c7sdw Created container main
-    2020-01-01T00:00:00Z system/k8s/web-65f45567d-c7sdw Started container main
+    2026-01-15T14:30:00Z system/k8s/web Scaled up replica set web-65f45567d to 2
+    2026-01-15T14:30:00Z system/k8s/web-65f45567d Created pod: web-65f45567d-c7sdw
+    2026-01-15T14:30:00Z system/k8s/web-65f45567d-c7sdw Successfully assigned dev-convox/web-65f45567d-c7sdw to node
+    2026-01-15T14:30:00Z system/k8s/web-65f45567d-c7sdw Container image "registry.dev.convox/convox:web.BABCDEFGHI" already present on machine
+    2026-01-15T14:30:01Z system/k8s/web-65f45567d-c7sdw Created container main
+    2026-01-15T14:30:01Z system/k8s/web-65f45567d-c7sdw Started container main
     OK
 ```
 > Changes to `cpu`, `memory`, or `gpu` should be done in your `convox.yml`, and a new release of your app deployed.
@@ -63,7 +63,7 @@ For GPU-accelerated workloads, you can specify the number of GPUs required:
 To use autoscaling you must specify a range for allowable [Process](/reference/primitives/app/process) count and
 target values for CPU and Memory utilization (in percent):
 ```yaml
-    service:
+    services:
       web:
         scale:
           count: 1-10

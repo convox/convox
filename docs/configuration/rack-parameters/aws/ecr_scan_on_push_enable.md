@@ -49,6 +49,3 @@ $ convox rack params -r rackName
 - ECR image scanning helps identify vulnerabilities but does not automatically remediate them. Review scan results and take appropriate action based on your security requirements.
 - There are no additional AWS charges for using ECR scan on push, but standard ECR usage costs apply.
 - Only images pushed after enabling this feature will be automatically scanned. Existing images can be scanned manually through the AWS console or CLI.
-
-## Version Requirements
-This feature requires at least Convox rack version `3.18.7`.

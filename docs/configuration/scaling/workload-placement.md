@@ -10,7 +10,7 @@ Convox provides powerful tools to control where your applications and build proc
 
 > Workload Placement is available on AWS and Azure racks.
 
-## Overview
+## Workload Placement Strategies
 
 Workload placement in Convox is achieved through these key features:
 
@@ -256,7 +256,7 @@ This example creates a cost-optimized infrastructure with dedicated node pools f
        "capacity_type": "SPOT",
        "min_size": 0,
        "max_size": 5,
-       "label": "app-build",
+       "label": "app-build"
      }
    ]
    ```
@@ -405,7 +405,7 @@ If node groups are being recreated unexpectedly:
 - Verify that you're not changing immutable fields (like capacity type)
 - Check for AWS API rate limits during updates
 
-## Conclusion
+## Summary
 
 Effective workload placement is a powerful tool for optimizing your Convox infrastructure. By leveraging custom node groups with preserved identities, service placement rules, and AWS tagging, you can create an infrastructure that balances performance, cost, and isolation requirements for your specific application needs.
 

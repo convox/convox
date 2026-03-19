@@ -69,14 +69,14 @@ The following environment variables are required:
 | **node_type**            | **t3.small**           | Node instance type.|
 | **node_max_unavailable_percentage**            |           | Node max unavailable percentage during node update. Value must be between 1 to 100.|
 | **pod_identity_agent_enable** | **false**           | Enable AWS pod identity|
-| **schedule_rack_scale_down**   |                        | Rack scale down schedule is specified by the user following the Unix cron syntax format. Example: "0 18 * * 5". The supported cron expression format consists of five fields separated by white spaces: [Minute] [Hour] [Day_of_Month] [Month_of_Year] [Day_of_Week]. More details on the CRON format can be found in (Crontab)[http://crontab.org/] and (examples)[https://crontab.guru/examples.html]. The time is calculated in **UTC**. |
-| **schedule_rack_scale_up**    |                        | Rack scale up schedule is specified by the user following the Unix cron syntax format.Example: "0 0 * * 0". The supported cron expression format consists of five fields separated by white spaces: [Minute] [Hour] [Day_of_Month] [Month_of_Year] [Day_of_Week]. More details on the CRON format can be found in (Crontab)[http://crontab.org/] and (examples)[https://crontab.guru/examples.html]. The time is calculated in **UTC**. |
+| **schedule_rack_scale_down**   |                        | Rack scale down schedule is specified by the user following the Unix cron syntax format. Example: "0 18 * * 5". The supported cron expression format consists of five fields separated by white spaces: [Minute] [Hour] [Day_of_Month] [Month_of_Year] [Day_of_Week]. More details on the CRON format can be found in [Crontab](http://crontab.org/) and [examples](https://crontab.guru/examples.html). The time is calculated in **UTC**. |
+| **schedule_rack_scale_up**    |                        | Rack scale up schedule is specified by the user following the Unix cron syntax format.Example: "0 0 * * 0". The supported cron expression format consists of five fields separated by white spaces: [Minute] [Hour] [Day_of_Month] [Month_of_Year] [Day_of_Week]. More details on the CRON format can be found in [Crontab](http://crontab.org/) and [examples](https://crontab.guru/examples.html). The time is calculated in **UTC**. |
 | **private**              | **true**               | Put nodes in private subnets behind NAT gateways                                                               |
 | **proxy_protocol**       | **false**               | Enable proxy protocol. With this parameter set, the client source ip will be available in the request header `x-forwarded-for` key. **Requires 5 - 10 minutes downtime**. This is not applicable for **internal_router**        |
 | **region**               | **us-east-1**          | AWS Region                                                                                                     |
 | **syslog**               |                        | Forward logs to a syslog endpoint (e.g. **tcp+tls://example.org:1234**)                                        |
-| **ssl_ciphers**          |                        | SSL ciphers to use for (nginx)[https://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_ciphers]. They must be separated by colon.|
-| **ssl_protocols**        |                        | SSL protocols to use for (nginx)[https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_ssl_protocols] (e.g. **TLSv1.2 TLSv1.3**). They must be separated by spaces.|
+| **ssl_ciphers**          |                        | SSL ciphers to use for [nginx](https://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_ciphers). They must be separated by colon.|
+| **ssl_protocols**        |                        | SSL protocols to use for [nginx](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_ssl_protocols) (e.g. **TLSv1.2 TLSv1.3**). They must be separated by spaces.|
 | **tags**                 |                        | Custom tags to add with AWS resources (e.g. **key1=val1,key2=val2**)|
 | **user_data**            |                        | Custom user data to pass to the instance to be run when it is added to your Rack |
 | **user_data_url**            |                    | URL for script file containing custom user data to pass to the instance to be run when it is added to your Rack. Enables support for large script file |
@@ -106,7 +106,7 @@ There are three modes available for configuring the cluster endpoint access:
 
 ### Requirements
 
-To use the **Private** mode, your rack must be on at least version `3.18.9`. The **Public-Private** mode requires version `3.22.4` or later. The **Semi-Private** mode is available for all rack versions, and **Public** is the default state.
+The **Public-Private** mode requires version `3.22.4` or later. The **Semi-Private** mode is available for all rack versions, and **Public** is the default state.
 
 To access these settings:
 
@@ -116,10 +116,8 @@ To access these settings:
 
 ### How to Use or Test the Feature
 
-1. **Ensure your Convox rack is updated to version 3.18.9 if you wish to use the Private mode**:
+1. **Access the Security tab in the Rack Settings to configure the cluster endpoint access mode.**
 
-2. **Access the Security tab in the Rack Settings to configure the cluster endpoint access mode.**
-
-3. **Wait approximately 10 minutes for the update to apply.**
+2. **Wait approximately 10 minutes for the update to apply.**
 
 For more details on updating your rack, refer to the [Updating a Rack](https://docs.convox.com/management/cli-rack-management/) page.

@@ -45,6 +45,3 @@ Setting parameters... OK
   - For on-premises or self-hosted registries, higher values might be appropriate.
   - For public registries with rate limiting (like Docker Hub), be cautious about setting values too high.
 - The relationship between QPS and burst is important: the burst value should always be greater than or equal to the QPS value to allow for effective rate limiting.
-
-## Version Requirements
-This feature requires at least Convox rack version `3.18.9`.

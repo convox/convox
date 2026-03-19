@@ -47,6 +47,3 @@ Setting parameters... OK
   - Experiencing intermittent build failures related to network connectivity
 - After changing this parameter, you should perform a build to verify that DNS resolution issues have been resolved.
 - If disabling the Convox DNS resolver does not resolve your build issues, other network-related factors may be involved.
-
-## Version Requirements
-This feature requires at least Convox rack version `3.18.3`.

@@ -18,7 +18,7 @@ $ convox rack params set vpa_enable=true -r rackName
 Setting parameters... OK
 ```
 
-## Configuration
+## Defining VPA in convox.yml
 
 Define VPA settings in the `scale.vpa` section of your service in `convox.yml`:
 

@@ -161,7 +161,7 @@ services:
 
 This allows you to securely use the same SSL certificate across multiple apps or services, reducing the administrative overhead of managing multiple certificates.
 
-## Conclusion
+## Summary
 
 Convox simplifies SSL certificate management by integrating Let's Encrypt for both standard HTTP-01 validation and more advanced DNS01 challenges. The DNS01 challenge is currently supported on AWS racks using Route53. Whether you need to secure single domains, multiple subdomains, or reuse wildcard certificates across apps, Convox provides flexible options for securing your services.
 

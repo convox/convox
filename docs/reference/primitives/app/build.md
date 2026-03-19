@@ -169,10 +169,6 @@ Convox uses buildkit to build and push images. Buildkit allows us to specify a c
 
 We have added support for using Docker credentials in Convox build and service pods. This feature helps avoid potential rate limits imposed by Docker Hub, particularly when operating large clusters that may perform multiple simultaneous pulls from Docker. By supplying Docker credentials, you can ensure that Docker Hub's rate limits are bypassed, resulting in smoother operations for your services.
 
-### Requirements
-
-- You must be on at least Convox rack version `3.18.8` to use this feature.
-
 ### How to Use Docker Credentials in Convox
 
 To use Docker Hub credentials during the build process, follow these steps:
@@ -204,5 +200,4 @@ This will list the current parameters for the rack, including the Docker credent
 ## Version Requirements
 
 - Basic build functionality: All versions
-- Docker credentials support: Version 3.18.8+
 - Convox-managed build arguments: Version 3.22.0+

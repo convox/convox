@@ -47,7 +47,7 @@ has been completely rolled back.
     $ convox releases info RCDEFGHIJK -a myapp
     Id           RCDEFGHIJK
     Build        BABCDEFGHI
-    Created      2019-01-01:00:00:00Z
+    Created      2026-01-15T14:30:00Z
     Description  env add:FOO
     Env          FOO=bar
 ```
@@ -144,15 +144,15 @@ Use the currently active release's environment with build from a specific releas
 ```bash
     $ convox releases promote RCDEFGHIJK -a myapp
     Promoting RCDEFGHIJK...
-    2019-01-01T00:00:49Z system/k8s/atom/app Status: Running => Pending
-    2019-01-01T00:00:51Z system/k8s/web Scaled up replica set web-745f845dc to 1
-    2019-01-01T00:00:51Z system/k8s/web-745f845dc Created pod: web-745f845dc-rzl2q
-    2019-01-01T00:00:51Z system/k8s/web-745f845dc-rzl2q Successfully assigned convox-myapp/web-745f845dc-rzl2q to instance-0a1b2c3d4e5f
-    2019-01-01T00:00:51Z system/k8s/web-745f845dc-rzl2q Pulling image "registry.host/convox/myapp:web.BABCDEFGHI"
-    2019-01-01T00:00:53Z system/k8s/atom/app Status: Pending => Updating
-    2019-01-01T00:00:55Z system/k8s/web-745f845dc-rzl2q Successfully pulled image "registry.host/convox/myapp:web.BABCDEFGHI"
-    2019-01-01T00:00:56Z system/k8s/web-745f845dc-rzl2q Created container main
-    2019-01-01T00:00:56Z system/k8s/web-745f845dc-rzl2q Started container main
+    2026-01-15T14:30:49Z system/k8s/atom/app Status: Running => Pending
+    2026-01-15T14:30:51Z system/k8s/web Scaled up replica set web-745f845dc to 1
+    2026-01-15T14:30:51Z system/k8s/web-745f845dc Created pod: web-745f845dc-rzl2q
+    2026-01-15T14:30:51Z system/k8s/web-745f845dc-rzl2q Successfully assigned convox-myapp/web-745f845dc-rzl2q to instance-0a1b2c3d4e5f
+    2026-01-15T14:30:51Z system/k8s/web-745f845dc-rzl2q Pulling image "registry.host/convox/myapp:web.BABCDEFGHI"
+    2026-01-15T14:30:53Z system/k8s/atom/app Status: Pending => Updating
+    2026-01-15T14:30:55Z system/k8s/web-745f845dc-rzl2q Successfully pulled image "registry.host/convox/myapp:web.BABCDEFGHI"
+    2026-01-15T14:30:56Z system/k8s/web-745f845dc-rzl2q Created container main
+    2026-01-15T14:30:56Z system/k8s/web-745f845dc-rzl2q Started container main
     OK
 ```
 ### Getting the Manifest for a Release
@@ -168,15 +168,15 @@ Use the currently active release's environment with build from a specific releas
 ```bash
     $ convox releases rollback RBCDEFGHIJ -a myapp
     Rolling back to RBCDEFGHIJ... OK, RDEFGHIJKL
-    2019-01-01T00:00:49Z system/k8s/atom/app Status: Running => Pending
-    2019-01-01T00:00:51Z system/k8s/web Scaled up replica set web-32f41a279 to 1
-    2019-01-01T00:00:51Z system/k8s/web-32f41a279 Created pod: web-32f41a279-rzl2q
-    2019-01-01T00:00:51Z system/k8s/web-32f41a279-rzl2q Successfully assigned convox-myapp/web-32f41a279-rzl2q to instance-0a1b2c3d4e5f
-    2019-01-01T00:00:51Z system/k8s/web-32f41a279-rzl2q Pulling image "registry.host/convox/myapp:web.BABCDEFGHI"
-    2019-01-01T00:00:53Z system/k8s/atom/app Status: Pending => Updating
-    2019-01-01T00:00:55Z system/k8s/web-32f41a279-rzl2q Successfully pulled image "registry.host/convox/myapp:web.BABCDEFGHI"
-    2019-01-01T00:00:56Z system/k8s/web-32f41a279-rzl2q Created container main
-    2019-01-01T00:00:56Z system/k8s/web-745f845dc-rzl2q Started container main
+    2026-01-15T14:30:49Z system/k8s/atom/app Status: Running => Pending
+    2026-01-15T14:30:51Z system/k8s/web Scaled up replica set web-32f41a279 to 1
+    2026-01-15T14:30:51Z system/k8s/web-32f41a279 Created pod: web-32f41a279-rzl2q
+    2026-01-15T14:30:51Z system/k8s/web-32f41a279-rzl2q Successfully assigned convox-myapp/web-32f41a279-rzl2q to instance-0a1b2c3d4e5f
+    2026-01-15T14:30:51Z system/k8s/web-32f41a279-rzl2q Pulling image "registry.host/convox/myapp:web.BABCDEFGHI"
+    2026-01-15T14:30:53Z system/k8s/atom/app Status: Pending => Updating
+    2026-01-15T14:30:55Z system/k8s/web-32f41a279-rzl2q Successfully pulled image "registry.host/convox/myapp:web.BABCDEFGHI"
+    2026-01-15T14:30:56Z system/k8s/web-32f41a279-rzl2q Created container main
+    2026-01-15T14:30:56Z system/k8s/web-745f845dc-rzl2q Started container main
     OK
 ```
-> Rolling back to a previous Release makes a copy of the that Release and promotes the copy.
+> Rolling back to a previous Release makes a copy of that Release and promotes the copy.

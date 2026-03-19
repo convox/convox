@@ -53,7 +53,7 @@ deployments.
 
 You can declare build variables using the `ARG` directive with an optional default value:
 ```text
-    ARG COPYRIGHT=2020
+    ARG COPYRIGHT=2026
     ARG RUBY_VERSION
 ```
 Values for these variables will be read from the [Environment](/configuration/environment) at build time:

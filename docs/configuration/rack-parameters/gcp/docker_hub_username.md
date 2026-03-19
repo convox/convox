@@ -1,7 +1,7 @@
 ---
 title: "docker_hub_username"
 slug: docker_hub_username
-url: /configuration/rack-parameters/aws/docker_hub_username
+url: /configuration/rack-parameters/gcp/docker_hub_username
 ---
 
 # docker_hub_username
@@ -28,4 +28,4 @@ Generate a read-only access token from [Docker Hub Account Settings](https://hub
 ## Additional Information
 When both credentials are set, the rack creates a Kubernetes image pull secret that authenticates all Docker Hub pulls across the cluster. This applies to both application image pulls and build-time base image pulls.
 
-See [Using Docker Credentials in Builds](/reference/primitives/app/build#using-docker-credentials-in-builds) for more details.
+See [docker_hub_password](/configuration/rack-parameters/gcp/docker_hub_password) for the companion parameter.

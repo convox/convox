@@ -79,7 +79,7 @@ timers:
     service: worker
 ```
 
-A few things to note here are that the web service specifies an internal port of 8001 which will be exposed externally on 443. The web service will also be made available on the domain(s) specified in the the DOMAIN environment variable and Convox will automatically provision a SSL [certificate](/configuration/load-balancers#ssl-termination) for the specified domain. The worker service on the other hand does not expose any external ports. The worker service also uses a unique startup command while the web service uses the command specified within the Dockerfile. Hopefully this gives you a sense of what a typical convox.yml might look like for a production application.
+A few things to note here are that the web service specifies an internal port of 8001 which will be exposed externally on 443. The web service will also be made available on the domain(s) specified in the DOMAIN environment variable and Convox will automatically provision a SSL [certificate](/configuration/load-balancers#ssl-termination) for the specified domain. The worker service on the other hand does not expose any external ports. The worker service also uses a unique startup command while the web service uses the command specified within the Dockerfile. Hopefully this gives you a sense of what a typical convox.yml might look like for a production application.
 
 ## Going From docker-compose.yml to convox.yml
 

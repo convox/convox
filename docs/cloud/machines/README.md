@@ -63,7 +63,7 @@ Machines come in four pre-configured sizes:
 
 ## Upgrading and Downgrading Machines
 
-Machine resize functionality is coming soon. In the meantime, to change your machine size:
+To change your machine size, follow this migration process:
 
 1. Create a new machine with your desired size through the [Convox Console](https://console.convox.com)
 2. Deploy your application to the new machine

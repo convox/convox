@@ -40,6 +40,3 @@ Setting parameters... OK
   - Frequent scaling events
   - Automated node management
 - The parameter affects only voluntary disruptions (like draining a node for updates) and does not provide protection against involuntary disruptions (like node failures).
-
-## Version Requirements
-This feature requires at least Convox rack version `3.18.8`.

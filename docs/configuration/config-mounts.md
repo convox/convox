@@ -23,6 +23,7 @@ services:
     configMounts:
       - id: app-config
         dir: /etc/myapp
+        filename: config.json
 ```
 
 ### configs
@@ -33,6 +34,7 @@ The top-level `configs` section declares named configuration objects.
 | --------- | ---- | ------- | ----------- |
 | **id** | string | | **Required.** Unique identifier for the config, referenced by `configMounts` |
 | **name** | string | | Optional name for the generated Kubernetes Secret |
+| **value** | string | | The configuration value. If omitted, the config must be populated via the Convox API |
 
 ### configMounts
 
@@ -41,13 +43,14 @@ The `configMounts` attribute on a service specifies which configs to mount and w
 | Attribute | Type | Default | Description |
 | --------- | ---- | ------- | ----------- |
 | **id** | string | | **Required.** The `id` of a config defined in the `configs` section |
-| **dir** | string | | **Required.** Directory path inside the container where the config file is mounted |
+| **dir** | string | | **Required.** Directory inside the container where the config file is mounted |
+| **filename** | string | | **Required.** Filename for the mounted config file. The file is mounted at `<dir>/<filename>` |
 
 Config mounts are also supported on [initContainers](/reference/primitives/app/service#initcontainer) using the same syntax.
 
 ## How It Works
 
-Each config defined in the `configs` section creates a Kubernetes Secret. When a service references a config via `configMounts`, the secret is mounted as a file inside the container at the specified directory path. This allows you to manage configuration data separately from your application code and container image.
+Each config defined in the `configs` section creates a Kubernetes Secret. When a service references a config via `configMounts`, the secret is mounted as a file inside the container at `<dir>/<filename>`. This allows you to manage configuration data separately from your application code and container image.
 
 ## See Also
 

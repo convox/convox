@@ -24,7 +24,7 @@ $ convox rack params set keda_enable=true -r rackName
 Setting parameters... OK
 ```
 
-## Configuration
+## Defining KEDA Triggers in convox.yml
 
 Define KEDA triggers in the `scale.keda` section of your service in `convox.yml`:
 

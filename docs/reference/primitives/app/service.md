@@ -120,7 +120,7 @@ services:
 | **grpcHealthEnabled** | boolean   |      false          | Enables liveliness health check for grpc. It should follow the [grpc health protocol](https://github.com/grpc/grpc/blob/master/doc/health-checking.md) (ref: [k8s](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-grpc-liveness-probe))|
 | **health**      | string/map | /                   | Health check definition (see below)                                                                                                        |
 | **liveness** | map |      | Liveness check definition (see below). By default it is disabled. If it fails then service will restart |
-| **image**       | string     |                     | An external Docker image to use for this Service (supercedes **build**)                                                                      |
+| **image**       | string     |                     | An external Docker image to use for this Service (supersedes **build**)                                                                      |
 | **ingressAnnotations** | list       |                     | A list of annotation keys and values to add in ingress resource. Check below for reserved annotation keys |
 | **initContainer** | map       |                     | Runs a container to completion before the main service container starts. Use for migrations, dependency checks, or setup tasks (see [initContainer](#initcontainer) below) |
 | **internal**    | boolean    | false               | Set to **true** to make this Service only accessible inside the Rack                                                                         |

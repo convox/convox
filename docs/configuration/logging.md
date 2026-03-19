@@ -24,9 +24,9 @@ You can view logs for any application using the `convox logs` command. By defaul
 
 ```bash
 $ convox logs -a myapp
-2020-01-01T00:00:00Z service/web/012345689 starting on port 3000
-2020-01-01T00:00:01Z service/web/012345689 GET / 200
-2020-01-01T00:00:02Z service/web/012345689 GET /other 404
+2026-01-15T14:30:00Z service/web/012345689 starting on port 3000
+2026-01-15T14:30:01Z service/web/012345689 GET / 200
+2026-01-15T14:30:02Z service/web/012345689 GET /other 404
 ```
 
 ### Filtering by Service
@@ -59,9 +59,9 @@ By default, `convox logs` streams logs in real-time. Use the `--no-follow` flag 
 
 ```bash
 $ convox logs -a myapp --since 20m --no-follow
-2020-01-01T00:00:00Z service/web/012345689 starting on port 3000
-2020-01-01T00:00:01Z service/web/012345689 GET / 200
-2020-01-01T00:00:02Z service/web/012345689 GET /other 404
+2026-01-15T14:30:00Z service/web/012345689 starting on port 3000
+2026-01-15T14:30:01Z service/web/012345689 GET / 200
+2026-01-15T14:30:02Z service/web/012345689 GET /other 404
 ```
 
 ### Combining Flags

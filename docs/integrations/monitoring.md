@@ -15,7 +15,7 @@ You can add operational visibility to your Rack with Datadog.
 
 ### Configure kubectl to Point at Your Rack
 
-Convox allows you to securely connect your `kubectl` to your Convox created Kubernetes cluster by exporting a [kubeconfig](/reference/cli/rack#rack-kubeconfig) that will connect you to a Kubernetes API Proxy running inside your Rack. This allows you to use `kubectl` without directly exposing the credentials for your Kubernetes cluster. For example if your Rack is called `myrack` you could point your local `kubectl` to your Rack cluster as follows
+Convox allows you to securely connect your `kubectl` to your Convox created Kubernetes cluster by exporting a [kubeconfig](/reference/cli/rack#rack-kubeconfig) that will connect you to a Kubernetes API Proxy running inside your Rack. This allows you to use `kubectl` without directly exposing the credentials for your Kubernetes cluster. For example, if your Rack is called `myrack` you could point your local `kubectl` to your Rack cluster as follows.
 
 ```bash
 $ convox rack kubeconfig > /tmp/myrack-config
@@ -29,7 +29,7 @@ This will export the proxy configuration to a temporary file and then point your
 Once you have `kubectl` pointing at your Rack you can deploy the datadog agent as a Kubernetes Daemonset. The following is based on the [Datadog Daemonset Installation Instructions](https://docs.datadoghq.com/agent/kubernetes/?tab=daemonset) so please refer back there for any specific tweaks you may want to make.
 
 We recommend that you use the manifest `datadog-agent-all-features.yaml` when applying the agent. This ensures you can enter and edit the desired variables in one manifest file.
-If you prefer you can install the agent piecewise manifests.
+If you prefer, you can install the agent using piecewise manifests.
 
 During installation we recommend adding the following to the environment section of the Daemonset spec:
 
@@ -41,7 +41,7 @@ This will remove extra noise from the Datadog Agent itself.
 
 ### Verify Installation
 
-You can verify the installation by running
+You can verify the installation by running:
 
 ```bash
 $ kubectl get daemonset
@@ -59,7 +59,7 @@ datadog-vdzc5                           5/5     Running   0          135m
 
 Once your `DESIRED` `CURRENT` and `READY` counts are all equal your Agents should be up and running. To make any changes to your Agent configuration modify your manifest and repeat the steps.
 
-For further customization and troubleshooting please refer to the [Datadog Daemonset Config Docs](https://docs.datadoghq.com/containers/kubernetes/configuration?tab=daemonset)
+For further customization and troubleshooting please refer to the [Datadog Daemonset Config Docs](https://docs.datadoghq.com/containers/kubernetes/configuration?tab=daemonset).
 
 ### Metrics and Traces
 

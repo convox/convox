@@ -25,7 +25,7 @@ This will export the proxy configuration to a temporary file and then point your
 
 > By default, `kubectl` looks for a file named `config` in the `$HOME/.kube` directory. You can specify other kubeconfig files by setting the `KUBECONFIG` environment variable or by setting the `--kubeconfig` flag.
 
-In this way, you can produce a kubeconfig file for all the Racks you require and change which file your `kubectl` command refers to to change which Rack it talks to.
+In this way, you can produce a kubeconfig file for all the Racks you require and change which file your `kubectl` command references to control which Rack it connects to.
 
 If you remove a user's access to your Convox organization, then they will also lose access to the underlying Kubernetes infrastructure, which is important from a security point of view.
 

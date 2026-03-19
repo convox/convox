@@ -1,7 +1,7 @@
 ---
 title: "docker_hub_password"
 slug: docker_hub_password
-url: /configuration/rack-parameters/aws/docker_hub_password
+url: /configuration/rack-parameters/do/docker_hub_password
 ---
 
 # docker_hub_password
@@ -26,4 +26,4 @@ Setting parameters... OK
 Use a read-only access token generated from [Docker Hub Account Settings](https://hub.docker.com/settings/security) rather than your account password.
 
 ## Additional Information
-See [docker_hub_username](/configuration/rack-parameters/aws/docker_hub_username) and [Using Docker Credentials in Builds](/reference/primitives/app/build#using-docker-credentials-in-builds) for more details.
+See [docker_hub_username](/configuration/rack-parameters/do/docker_hub_username) for the companion parameter.

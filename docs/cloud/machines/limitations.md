@@ -404,6 +404,16 @@ volumes:
    - Use databases for persistence
    - Implement session storage in Redis
 
+   Redis is available as a containerized resource but is not a managed Cloud offering. For production workloads requiring Redis, use an external Redis service (such as AWS ElastiCache or Redis Cloud) and set the connection URL as an environment variable:
+
+   ```bash
+   $ convox env set REDIS_URL=redis://your-redis-host:6379 -a myapp
+   Setting REDIS_URL... OK
+   Release: RABCDEFGHI
+   ```
+
+   Environment variables containing credentials are stored encrypted. Use `convox env` to manage them rather than hardcoding connection strings in your application code.
+
 2. **Optimize Resource Usage**
    ```yaml
    services:

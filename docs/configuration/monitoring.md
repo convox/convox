@@ -130,7 +130,7 @@ Configure notification integrations to receive alerts where your team works.
 
 - **Slack**: Send alerts directly to Slack channels
 - **Discord**: Deliver notifications to Discord channels
-- **PagerDuty**: Coming soon
+- **PagerDuty**: Route alerts to PagerDuty for on-call workflows
 
 ### Setting Up Notifications
 

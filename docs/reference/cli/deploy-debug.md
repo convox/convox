@@ -5,8 +5,6 @@ url: /reference/cli/deploy-debug
 ---
 # deploy-debug
 
-## deploy-debug
-
 Diagnose deploy failures by inspecting an app's Kubernetes pods server-side. This command classifies pods, collects pre-healthcheck logs, gathers Kubernetes events, and maps failure states to actionable hints, all without requiring kubectl or kubeconfig access.
 
 ### The Problem

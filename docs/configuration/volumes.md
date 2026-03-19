@@ -88,7 +88,6 @@ AWS EFS volumes are ideal for:
 
 ### Version Requirements for AWS EFS Volumes
 
-- Basic EFS support: You must be on at least rack version `3.18.2` to use AWS EFS volumes.
 - Storage class support: You must be on at least rack version `3.19.7` to use the `storageClass` attribute.
 
 If you are on an earlier version, update your rack using the following command:

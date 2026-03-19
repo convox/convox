@@ -56,6 +56,3 @@ In this example, the `web` service is granted permissions defined in three AWS I
 - This implementation leverages EKS Pod Identity, which is the AWS-recommended approach for pod IAM access.
 - Pod Identity replaces the older kiam/kube2iam pattern as well as the IAM Roles for Service Accounts (IRSA) approach.
 - Each service can have different IAM policies attached, allowing for precise access control.
-
-## Version Requirements
-This feature requires at least Convox rack version `3.18.1`.

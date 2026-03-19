@@ -16,6 +16,8 @@ The following parameters are available for configuring your Convox rack on Micro
 | [additional_build_groups_config](/configuration/rack-parameters/azure/additional_build_groups_config) | Configures additional dedicated build node pools for the cluster. |
 | [additional_node_groups_config](/configuration/rack-parameters/azure/additional_node_groups_config) | Configures additional customized node pools for the cluster. |
 | [cert_duration](/configuration/rack-parameters/azure/cert_duration) | Certification renew period. |
+| [docker_hub_password](/configuration/rack-parameters/azure/docker_hub_password) | Docker Hub access token for authenticated image pulls. |
+| [docker_hub_username](/configuration/rack-parameters/azure/docker_hub_username) | Docker Hub username for authenticated image pulls. |
 | [high_availability](/configuration/rack-parameters/azure/high_availability) | Enables high availability mode with redundant replicas. |
 | [idle_timeout](/configuration/rack-parameters/azure/idle_timeout) | Load balancer idle timeout in minutes. |
 | [max_on_demand_count](/configuration/rack-parameters/azure/max_on_demand_count) | Maximum number of nodes in the default node pool. |

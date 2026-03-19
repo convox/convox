@@ -46,7 +46,7 @@ You will need to alias your custom domain to your Rack's router endpoint. You ca
     Provider  gcp
     Router    router.0a1b2c3d4e5f.convox.cloud
     Status    running
-    Version   master
+    Version   3.23.4
 ```
 In this example you would set up the following DNS entry:
 ```bash
