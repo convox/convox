@@ -69,8 +69,8 @@ The following environment variables are required:
 | **node_type**            | **t3.small**           | Node instance type.|
 | **node_max_unavailable_percentage**            |           | Node max unavailable percentage during node update. Value must be between 1 to 100.|
 | **pod_identity_agent_enable** | **false**           | Enable AWS pod identity|
-| **schedule_rack_scale_down**   |                        | Rack scale down schedule is specified by the user following the Unix cron syntax format. Example: "0 18 * * 5". The supported cron expression format consists of five fields separated by white spaces: [Minute] [Hour] [Day_of_Month] [Month_of_Year] [Day_of_Week]. More details on the CRON format can be found in [Crontab](http://crontab.org/) and [examples](https://crontab.guru/examples.html). The time is calculated in **UTC**. |
-| **schedule_rack_scale_up**    |                        | Rack scale up schedule is specified by the user following the Unix cron syntax format. Example: "0 0 * * 0". The supported cron expression format consists of five fields separated by white spaces: [Minute] [Hour] [Day_of_Month] [Month_of_Year] [Day_of_Week]. More details on the CRON format can be found in [Crontab](http://crontab.org/) and [examples](https://crontab.guru/examples.html). The time is calculated in **UTC**. |
+| **schedule_rack_scale_down**   |                        | Rack scale down schedule is specified by the user following the Unix cron syntax format. Example: "0 18 * * 5". The supported cron expression format consists of five fields separated by white spaces: [Minute] [Hour] [Day_of_Month] [Month_of_Year] [Day_of_Week]. More details on the CRON format can be found in [Crontab](https://crontab.guru/) and [examples](https://crontab.guru/examples.html). The time is calculated in **UTC**. |
+| **schedule_rack_scale_up**    |                        | Rack scale up schedule is specified by the user following the Unix cron syntax format. Example: "0 0 * * 0". The supported cron expression format consists of five fields separated by white spaces: [Minute] [Hour] [Day_of_Month] [Month_of_Year] [Day_of_Week]. More details on the CRON format can be found in [Crontab](https://crontab.guru/) and [examples](https://crontab.guru/examples.html). The time is calculated in **UTC**. |
 | **private**              | **true**               | Put nodes in private subnets behind NAT gateways                                                               |
 | **proxy_protocol**       | **false**               | Enable proxy protocol. With this parameter set, the client source ip will be available in the request header `x-forwarded-for` key. **Requires 5 - 10 minutes downtime**. This is not applicable for **internal_router**        |
 | **region**               | **us-east-1**          | AWS Region                                                                                                     |
@@ -120,4 +120,4 @@ To access these settings:
 
 2. **Wait approximately 10 minutes for the update to apply.**
 
-For more details on updating your rack, refer to the [Updating a Rack](https://docs.convox.com/management/cli-rack-management/) page.
+For more details on updating your rack, refer to the [Updating a Rack](/management/cli-rack-management) page.

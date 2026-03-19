@@ -66,6 +66,12 @@ Export an app
 ```bash
     convox apps export [app]
 ```
+### Flags
+
+| Flag | Short | Description |
+| ---- | ----- | ----------- |
+| `--file` | `-f` | Export to file |
+
 ### Examples
 ```bash
     $ convox apps export --file myapp.tgz
@@ -83,6 +89,12 @@ Import an app
 ```bash
     convox apps import [app]
 ```
+### Flags
+
+| Flag | Short | Description |
+| ---- | ----- | ----------- |
+| `--file` | `-f` | Import from file |
+
 ### Examples
 ```bash
     $ convox apps import myapp2 --file myapp.tgz
@@ -105,7 +117,7 @@ Get information about an app
     $ convox apps info
     Name        myapp
     Status      running
-    Generation  2
+    Generation  3
     Locked      false
     Release     RABCDEFGHI
 ```
@@ -122,6 +134,36 @@ Enable termination protection
     $ convox apps lock
     Locking myapp... OK
 ```
+## apps params
+
+Display app parameters
+
+### Usage
+```bash
+    convox apps params [app]
+```
+### Examples
+```bash
+    $ convox apps params -a myapp
+    BuildCpu     0
+    BuildLabels
+    BuildMem     0
+```
+
+## apps params set
+
+Set app parameters
+
+### Usage
+```bash
+    convox apps params set <key=value> [key=value]... [app]
+```
+### Examples
+```bash
+    $ convox apps params set BuildCpu=1024 BuildMem=4096 -a myapp
+    Setting parameters... OK
+```
+
 ## apps unlock
 
 Disable termination protection
@@ -135,3 +177,9 @@ Disable termination protection
     $ convox apps unlock
     Unlocking myapp... OK
 ```
+
+## See Also
+
+- [App](/reference/primitives/app) for app primitives
+- [App Parameters](/configuration/app-parameters) for available app parameters
+- [Deploy](/reference/cli/deploy) for deploying apps

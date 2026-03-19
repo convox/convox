@@ -25,3 +25,8 @@ Run tests
 ```
 
 Tests are defined using the `test` attribute on each service in `convox.yml`. See the [Service](/reference/primitives/app/service) reference for configuration details.
+
+## See Also
+
+- [Service](/reference/primitives/app/service) for configuring the `test` attribute
+- [CI/CD Workflows](/deployment/workflows) for running tests in deployment pipelines

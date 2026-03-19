@@ -20,3 +20,9 @@ Restart an app
     $ convox restart
     Restarting app... OK
 ```
+
+## See Also
+
+- [services](/reference/cli/services) for restarting individual services
+- [deploy](/reference/cli/deploy) for deploying new code
+- [Rolling Updates](/deployment/rolling-updates) for how restarts maintain availability

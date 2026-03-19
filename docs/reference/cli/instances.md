@@ -66,7 +66,17 @@ Run a shell on an instance
     convox instances ssh <instance_id> --key <private_key_file>
 ```
 
+### Flags
+
+| Flag | Description |
+| ---- | ----------- |
+| `--key` | Path to private key file (from `instances keyroll`) |
+
 ### Examples
 ```bash
     $ convox instances ssh ip-10-1-80-201.ec2.internal --key ~/.ssh/rack/priv.pem
 ```
+
+## See Also
+
+- [key_pair_name](/configuration/rack-parameters/aws/key_pair_name) for configuring SSH access to cluster nodes

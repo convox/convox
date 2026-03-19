@@ -120,7 +120,7 @@ services:
 | **grpcHealthEnabled** | boolean   |      false          | Enables liveliness health check for grpc. It should follow the [grpc health protocol](https://github.com/grpc/grpc/blob/master/doc/health-checking.md) (ref: [k8s](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-grpc-liveness-probe))|
 | **health**      | string/map | /                   | Health check definition (see below)                                                                                                        |
 | **liveness** | map |      | Liveness check definition (see below). By default it is disabled. If it fails then service will restart |
-| **startupProbe** | map |  | Startup probe definition. See [Health Checks](/configuration/health-checks#startup-probes) |
+| **startupProbe** | map |  | Startup probe definition. Set `path` (HTTP) or `tcpSocketPort` (TCP) to enable. All timing parameters are inherited from the **liveness** check. See [Health Checks](/configuration/health-checks#startup-probes) |
 | **image**       | string     |                     | An external Docker image to use for this Service (supersedes **build**)                                                                      |
 | **ingressAnnotations** | list       |                     | A list of annotation keys and values to add in ingress resource. Check below for reserved annotation keys |
 | **initContainer** | map       |                     | Runs a container to completion before the main service container starts. Use for migrations, dependency checks, or setup tasks (see [initContainer](#initcontainer) below) |
@@ -178,13 +178,13 @@ services:
 ```yaml
 services:
   web:
-    ...
+    build: .
+    port: 3000
     accessControl:
       awsPodIdentity:
         policyArns:
          - "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
          - "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
-  ...
 ```
 
 ### accessControl.awsPodIdentity
@@ -216,8 +216,8 @@ services:
 
 | Attribute | Type   | Default | Description                                                                      |
 | --------- | ------ | ------- | -------------------------------------------------------------------------------- |
-| **maximum** | number | 200     | The maximum percentage of Processes to allow during rolling deploys              |
-| **minimum** | number | 50      | The minimum percentage of healthy Processes to keep alive during rolling deploys |
+| **maximum** | number | 200     | The maximum percentage of Processes to allow during rolling deploys. Defaults to 100 for agents and singletons. |
+| **minimum** | number | 50      | The minimum percentage of healthy Processes to keep alive during rolling deploys. Defaults to 0 for agents and singletons. |
 
 &nbsp;
 
@@ -236,11 +236,11 @@ This accepts list of strings where in each string annotation key and value is se
 ```yaml
 services:
   web:
-    ...
+    build: .
+    port: 3000
     ingressAnnotations:
       - nginx.ingress.kubernetes.io/limit-rpm=10
       - nginx.ingress.kubernetes.io/enable-access-log=false
-  ...
 ```
 
 Reserved annotation keys:

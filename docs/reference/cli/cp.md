@@ -25,3 +25,8 @@ The path format uses `<pid>:<path>` to reference files inside a running process.
 ```bash
     $ convox cp ./local-file.txt web-0123456789-abcde:/tmp/file.txt
 ```
+
+## See Also
+
+- [exec](/reference/cli/exec) for running commands in a process
+- [ps](/reference/cli/ps) for listing process IDs

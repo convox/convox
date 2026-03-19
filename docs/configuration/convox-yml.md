@@ -108,7 +108,7 @@ See [Resource](/reference/primitives/app/resource) for configuration options.
 
 ## services
 
-The `services` section horizontally-scalable [Services](/reference/primitives/app/service)
+The `services` section defines horizontally-scalable [Services](/reference/primitives/app/service)
 that can be optionally placed behind a load balancer.
 ```yaml
     services:

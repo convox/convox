@@ -16,10 +16,11 @@ To list all certificates
     convox certs
 ```
 
-To list generated certificates:
-```bash
-    convox certs --generated
-```
+### Flags
+
+| Flag | Description |
+| ---- | ----------- |
+| `--generated` | List only generated certificates |
 
 ### Examples
 ```bash
@@ -40,9 +41,13 @@ To list all certificates
     convox certs generate <domain> [domain...]
 ```
 
-Option flags:
-- `--duration`: Duration of the certificate.
-- `--issuer`: Certificate issuer. For example: `letsencrypt`
+### Flags
+
+| Flag | Description |
+| ---- | ----------- |
+| `--duration` | Certificate duration (e.g., `4200h`) |
+| `--issuer` | Certificate issuer (e.g., `letsencrypt`) |
+| `--id` | Output only the certificate ID |
 
 ### Examples
 ```bash
@@ -78,8 +83,12 @@ Import a certificate.
     convox certs import <pub> <key>
 ```
 
-Option flags:
-- `--chain`: Path to an intermediate certificate chain file.
+### Flags
+
+| Flag | Description |
+| ---- | ----------- |
+| `--chain` | Path to an intermediate certificate chain file |
+| `--id` | Output only the certificate ID |
 
 ### Examples
 ```bash
@@ -99,8 +108,11 @@ Renew a certificate for an app.
     convox certs renew
 ```
 
-Option flags:
-- `--app`: App name. Infers the app name from the current directory if not specified.
+### Flags
+
+| Flag | Short | Description |
+| ---- | ----- | ----------- |
+| `--app` | `-a` | App name (inferred from current directory if not specified) |
 
 ### Examples
 ```bash

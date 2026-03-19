@@ -13,6 +13,13 @@ List app processes
 ```bash
     convox ps
 ```
+### Flags
+
+| Flag | Short | Description |
+| ---- | ----- | ----------- |
+| `--release` | | Filter by release |
+| `--service` | `-s` | Filter by service |
+
 ### Examples
 ```bash
     $ convox ps
@@ -52,3 +59,9 @@ Stop a process
     $ convox ps stop 62942430327e
     Stopping 62942430327e... OK
 ```
+
+## See Also
+
+- [exec](/reference/cli/exec) for running commands in existing processes
+- [run](/reference/cli/run) for running commands in new processes
+- [scale](/reference/cli/scale) for adjusting process counts and resources

@@ -6,7 +6,7 @@ url: /tutorials/preparing-an-application
 
 # Preparing An Application
 
-In order to deploy you app on Convox you will need two things
+In order to deploy your app on Convox you will need two things
 
 * A `Dockerfile`
 

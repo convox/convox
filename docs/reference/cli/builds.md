@@ -29,6 +29,12 @@ Export a build
 ```bash
     convox builds export <build>
 ```
+### Flags
+
+| Flag | Short | Description |
+| ---- | ----- | ----------- |
+| `--file` | `-f` | Export to file |
+
 ### Examples
 ```bash
     $ convox builds export BABCDEFGHIJ --file build.tgz
@@ -42,6 +48,12 @@ Import a build
 ```bash
     convox builds import
 ```
+### Flags
+
+| Flag | Short | Description |
+| ---- | ----- | ----------- |
+| `--file` | `-f` | Import from file |
+
 ### Examples
 ```bash
     $ convox builds import --file output.tgz

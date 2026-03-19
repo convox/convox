@@ -53,9 +53,9 @@ MAIN_PORT=port
 MAIN_NAME=database
 ```
 
-## Custom Images:
+## Custom Images
 
-You can also pass a compatible custom image for all resource type.
+You can also pass a compatible custom image for all resource types.
 
 To use a custom image, include the `image` field in your resource configuration:
 

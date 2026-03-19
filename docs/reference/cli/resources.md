@@ -39,6 +39,12 @@ Export data from a resource
 ```bash
     convox resources export <resource>
 ```
+### Flags
+
+| Flag | Short | Description |
+| ---- | ----- | ----------- |
+| `--file` | `-f` | Export to file |
+
 ### Examples
 ```bash
     $ convox resources export database
@@ -51,6 +57,12 @@ Import data to a resource
 ```bash
     convox resources import <resource>
 ```
+### Flags
+
+| Flag | Short | Description |
+| ---- | ----- | ----------- |
+| `--file` | `-f` | Import from file |
+
 ### Examples
 ```bash
     $ convox resources import database --file dump.tgz
@@ -79,6 +91,13 @@ Proxy a local port to a resource
 ```bash
     convox resources proxy <resource>
 ```
+### Flags
+
+| Flag | Short | Description |
+| ---- | ----- | ----------- |
+| `--port` | `-p` | Local port to listen on |
+| `--tls` | `-t` | Wrap connection in TLS |
+
 ### Examples
 ```bash
     $ convox resources proxy database
@@ -100,3 +119,8 @@ Get url for a resource
     $ convox resources url database
     postgres://app:123456-7890-abcd-ef01-234567890abc@test-nodejs-resourcedatabase-abcd.efgh.us-east-1.rds.amazonaws.com:5432/app
 ```
+
+## See Also
+
+- [Resource](/reference/primitives/app/resource) for resource types and configuration
+- [proxy](/reference/cli/proxy) for proxying connections to internal services

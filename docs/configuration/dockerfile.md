@@ -9,7 +9,7 @@ url: /configuration/dockerfile
 The `Dockerfile` describes the steps used to create a [Build](/reference/primitives/app/build) from your
 application code.
 ```dockerfile
-    FROM ubuntu:18.04
+    FROM ubuntu:24.04
     COPY . .
     RUN ["deps", "install"]
     CMD ["bin/start"]
@@ -31,7 +31,7 @@ to cache expensive steps such as dependency installation by selectively copying 
 
 The following example selectively copies only the files needed to run `npm` before installing dependencies.
 ```dockerfile
-    FROM nodejs
+    FROM node
 
     COPY package.json package-lock.json .
     RUN ["npm", "install"]

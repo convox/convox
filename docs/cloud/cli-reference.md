@@ -256,7 +256,7 @@ $ convox cloud builds logs <build> -a <app> -i <machine>
 ```bash
 $ convox cloud builds logs BABCDEFGHI -a myapp -i production
 Building: .
-Step 1/5 : FROM node:18
+Step 1/5 : FROM node:22
 ...
 Successfully built abc123def456
 ```
@@ -281,7 +281,7 @@ $ convox cloud deploy [dir] -i <machine>
 
 **Example:**
 ```bash
-$ convox cloud deploy . -i production --description "v2.0 release"
+$ convox cloud deploy . -i production --description "weekly release"
 Packaging source... OK
 Uploading source... OK
 Starting build... OK
@@ -475,7 +475,7 @@ $ convox cloud releases -a <app> -i <machine>
 $ convox cloud releases -a myapp -i production
 ID           STATUS  BUILD        CREATED        DESCRIPTION
 RCDEFGHIJK           BABCDEFGHI   1 minute ago   env add:API_KEY
-RABCDEFGHI   active  BABCDEFGHI   5 minutes ago  v2.0 release
+RABCDEFGHI   active  BABCDEFGHI   5 minutes ago  weekly release
 ```
 
 ### releases create-from
@@ -746,8 +746,8 @@ $ convox cloud logs -a <app> -i <machine>
 **Example:**
 ```bash
 $ convox cloud logs -a myapp -i production --service web --since 1h
-2024-01-15T10:30:00Z service/web/abc123 GET / 200
-2024-01-15T10:30:15Z service/web/abc123 GET /api/users 200
+2026-01-15T10:30:00Z service/web/abc123 GET / 200
+2026-01-15T10:30:15Z service/web/abc123 GET /api/users 200
 ```
 
 ## Configuration Management

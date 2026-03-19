@@ -13,6 +13,20 @@ Create a build
 ```bash
     convox build [dir]
 ```
+
+### Flags
+
+| Flag | Short | Type | Description |
+|------|-------|------|-------------|
+| `--build-args` | | string | Build arguments (repeatable). Requires rack version 3.22.0+ |
+| `--description` | `-d` | string | Description for the build |
+| `--development` | | bool | Build in development mode |
+| `--external` | | bool | Use external build |
+| `--id` | | bool | Output only the build ID |
+| `--manifest` | `-m` | string | Path to an alternate manifest file |
+| `--no-cache` | | bool | Build without using the Docker cache |
+| `--wildcard-domain` | | bool | Use wildcard domain for the build |
+
 ### Examples
 ```bash
     $ convox build --no-cache --description "My latest build" 

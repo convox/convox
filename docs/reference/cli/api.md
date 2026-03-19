@@ -29,3 +29,7 @@ Query the Rack API
       }
     ]
 ```
+
+## See Also
+
+- [Kubernetes Mapping](/reference/convox-k8s-mapping) for how Convox concepts map to K8s resources

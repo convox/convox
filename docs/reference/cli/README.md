@@ -16,6 +16,7 @@ For a quick overview of some commonly used commands, you may find this [blog pos
 | [balancers](/reference/cli/balancers) | List balancers for an app.                                                                      |
 | [build](/reference/cli/build)    | Create a build.                                                                                 |
 | [builds](/reference/cli/builds)  | List builds and manage build-specific operations such as importing or exporting builds.         |
+| [certs](/reference/cli/certs)    | List, generate, import, and manage SSL certificates.                                            |
 | [cp](/reference/cli/cp)          | Copy files to and from a running process.                                                       |
 | [deploy](/reference/cli/deploy)  | Create and promote a build.                                                                     |
 | [deploy-debug](/reference/cli/deploy-debug) | Diagnose deploy failures with pod-level diagnostics and actionable hints.               |
@@ -37,6 +38,7 @@ For a quick overview of some commonly used commands, you may find this [blog pos
 | [scale](/reference/cli/scale)    | Scale a service.                                                                               |
 | [services](/reference/cli/services) | List services for an app or restart services.                                                  |
 | [start](/reference/cli/start)    | Start an application for local development.                                                     |
+| switch                           | Switch the active rack context.                                                                 |
 | [test](/reference/cli/test)      | Run tests.                                                                                     |
 | [update](/reference/cli/update)  | Update the CLI or a rack.                                                                       |
 | [version](/reference/cli/version)| Display version information.                                                                    |

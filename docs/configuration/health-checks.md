@@ -110,6 +110,12 @@ When a startup probe is configured, all other probes are disabled until it succe
 
 ### Startup Probe Configuration
 
+A startup probe requires either a `path` (HTTP check) or `tcpSocketPort` (TCP check) to define what is checked. All timing parameters (grace, interval, timeout, thresholds) are inherited from the **liveness** check configuration and cannot be set independently on the startup probe.
+
+> You must configure a `liveness` check alongside your startup probe. The startup probe uses the liveness timing values for its grace period, interval, timeout, and thresholds. Without a liveness configuration, these values default to zero, which will cause immediate failures.
+
+#### TCP Startup Probe
+
 ```yaml
 services:
   web:
@@ -117,6 +123,8 @@ services:
     port: 3000
     startupProbe:
       tcpSocketPort: 3000
+    liveness:
+      path: /live
       grace: 30
       interval: 10
       timeout: 5
@@ -124,18 +132,11 @@ services:
       failureThreshold: 30
 ```
 
-| Attribute           | Default | Description                                                                      |
-| ------------------- | ------- | -------------------------------------------------------------------------------- |
-| **tcpSocketPort**     | **Required** | The TCP port to check for startup success                               |
-| **grace**             | 0       | The number of seconds to wait before starting startup checks                     |
-| **interval**          | 10      | The number of seconds between startup probe checks                               |
-| **timeout**           | 1       | The number of seconds to wait for a successful response                          |
-| **successThreshold**  | 1       | The number of consecutive successful checks required to consider the startup complete |
-| **failureThreshold**  | 3       | The number of consecutive failed checks before the container is restarted        |
+| Attribute           | Description                                                                      |
+| ------------------- | -------------------------------------------------------------------------------- |
+| **tcpSocketPort**   | **Required** (if `path` not set). The TCP port to check for startup success      |
 
-### HTTP Startup Probe
-
-You can also use an HTTP endpoint for startup probes:
+#### HTTP Startup Probe
 
 ```yaml
 services:
@@ -144,19 +145,39 @@ services:
     port: 8080
     startupProbe:
       path: /startup
+    liveness:
+      path: /live
       grace: 10
       interval: 5
+      timeout: 3
       failureThreshold: 40
 ```
 
-| Attribute           | Default | Description                                                                      |
-| ------------------- | ------- | -------------------------------------------------------------------------------- |
-| **path**              | **Required** | The HTTP endpoint to check for startup success                          |
-| **grace**             | 0       | The number of seconds to wait before starting startup checks                     |
-| **interval**          | 10      | The number of seconds between startup probe checks                               |
-| **timeout**           | 1       | The number of seconds to wait for a successful response                          |
-| **successThreshold**  | 1       | The number of consecutive successful checks required to consider the startup complete |
-| **failureThreshold**  | 3       | The number of consecutive failed checks before the container is restarted        |
+| Attribute           | Description                                                                      |
+| ------------------- | -------------------------------------------------------------------------------- |
+| **path**            | **Required** (if `tcpSocketPort` not set). The HTTP endpoint to check for startup success |
+
+### Timing Inheritance from Liveness
+
+The startup probe inherits all timing parameters from the liveness check:
+
+| Startup Probe Behavior | Inherited From | Liveness Default |
+| ---------------------- | -------------- | ---------------- |
+| Initial delay          | `liveness.grace` | 10             |
+| Check interval         | `liveness.interval` | 5            |
+| Response timeout       | `liveness.timeout` | 5             |
+| Success threshold      | `liveness.successThreshold` | 1     |
+| Failure threshold      | `liveness.failureThreshold` | 3     |
+
+To control how long your application has to start, adjust these liveness attributes:
+
+- **Longer startup window**: Increase `liveness.failureThreshold`. Maximum startup time ≈ `liveness.interval × liveness.failureThreshold`.
+- **Less frequent checks**: Increase `liveness.interval` to reduce probe overhead during startup.
+- **Initial delay before probing**: Set `liveness.grace` to skip the first N seconds entirely.
+
+For example, to allow 5 minutes for startup with checks every 15 seconds: set `liveness.interval: 15` and `liveness.failureThreshold: 20` (15 × 20 = 300 seconds).
+
+> These same liveness timing values will also apply to the liveness probe after startup completes. Choose values that work for both startup and ongoing health monitoring, or consider using a generous `failureThreshold` that is acceptable for both phases.
 
 ### Use Cases for Startup Probes
 
@@ -177,27 +198,27 @@ services:
     port: 5000
     startupProbe:
       tcpSocketPort: 5000
+    liveness:
+      path: /live
       grace: 60
       interval: 15
-      failureThreshold: 20  # Allows up to 5 minutes for startup (15s * 20)
+      timeout: 5
+      failureThreshold: 20
     health:
       path: /health
       interval: 5
-    liveness:
-      path: /live
-      interval: 10
-      failureThreshold: 3
 ```
 
 In this example:
-- The startup probe allows up to 5 minutes for the application to start
-- Once the startup probe succeeds, the health and liveness checks begin
+- The startup probe checks TCP port 5000 using the liveness timing: every 15 seconds, up to 20 failures, allowing approximately 5 minutes for startup (15s × 20)
+- Once the startup probe succeeds, the health (readiness) and liveness checks begin
 - If startup fails after 20 attempts, the container is restarted
 
 ### Important Startup Probe Considerations
 
 - **Relationship with Other Probes**: Liveness and readiness probes are disabled until the startup probe succeeds
-- **Failure Threshold**: Set a high enough `failureThreshold` to accommodate your application's maximum startup time
+- **Liveness Required**: Startup probe timing is always inherited from the liveness configuration. You must define a liveness check with appropriate timing for your startup requirements
+- **Failure Threshold**: Set a high enough `failureThreshold` on the **liveness** check to accommodate your application's maximum startup time
 - **Startup vs. Liveness**: Use startup probes for initialization, liveness probes for ongoing health monitoring
 - **Resource Planning**: Consider that pods may take longer to become ready when using startup probes
 

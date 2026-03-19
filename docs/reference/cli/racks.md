@@ -25,3 +25,8 @@ List available Racks and their state.
     acme/staging       gcp       running
     integration/test   azure     running
 ```
+
+## See Also
+
+- [rack](/reference/cli/rack) for managing a specific rack
+- [login](/reference/cli/login) for authenticating with a Console

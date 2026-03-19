@@ -23,3 +23,14 @@ Authenticate your CLI with a Console installation
     $ convox login console.convox.com -t a1234567-acde-1234-abcde-123abc456def
     Authenticating with console.convox.com... OK
 ```
+
+### Flags
+
+| Flag | Short | Description |
+| ---- | ----- | ----------- |
+| `--token` | `-t` | CLI authentication token |
+
+## See Also
+
+- [Getting Started](/getting-started/introduction) for initial CLI setup
+- [Deploy Keys](/management/deploy-keys) for CI/CD authentication

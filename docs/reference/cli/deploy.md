@@ -13,6 +13,21 @@ Create and promote a build
 ```bash
     convox deploy [dir]
 ```
+
+### Flags
+
+| Flag | Short | Type | Description |
+|------|-------|------|-------------|
+| `--build-args` | | string | Build arguments (repeatable). Requires rack version 3.22.0+ |
+| `--description` | `-d` | string | Description for the build |
+| `--development` | | bool | Build in development mode |
+| `--external` | | bool | Use external build |
+| `--force` | | bool | Force deployment |
+| `--id` | | bool | Output only the build/release ID |
+| `--manifest` | `-m` | string | Path to an alternate manifest file |
+| `--no-cache` | | bool | Build without using the Docker cache |
+| `--wildcard-domain` | | bool | Use wildcard domain for the build |
+
 ### Examples
 ```bash
     $ convox deploy

@@ -38,12 +38,15 @@ The following parameters are available for configuring your Convox rack on Amazo
 | [internal_router](/configuration/rack-parameters/aws/internal_router)               | Installs an internal load balancer within the VPC.                       |
 | [internet_gateway_id](/configuration/rack-parameters/aws/internet_gateway_id)       | Specifies the ID of the attached internet gateway when using an existing VPC. |
 | [keda_enable](/configuration/rack-parameters/aws/keda_enable)                       | Enables KEDA (Kubernetes Event-Driven Autoscaling) for event-driven scaling. |
+| [key_pair_name](/configuration/rack-parameters/aws/key_pair_name)                   | Specifies an EC2 Key Pair for SSH access to cluster nodes.               |
 | [kubelet_registry_burst](/configuration/rack-parameters/aws/kubelet_registry_burst) | Sets the maximum burst rate for image pulls. |
+| [kubelet_registry_pull_params](/configuration/rack-parameters/aws/kubelet_registry_pull_params) | Configures kubelet image pull parameters (burst and QPS) together. |
 | [kubelet_registry_pull_qps](/configuration/rack-parameters/aws/kubelet_registry_pull_qps) | Sets the steady-state rate limit for image pulls (queries per second). |
 | [max_on_demand_count](/configuration/rack-parameters/aws/max_on_demand_count)       | Sets the maximum number of on-demand nodes when using the mixed capacity type. |
 | [min_on_demand_count](/configuration/rack-parameters/aws/min_on_demand_count)       | Sets the minimum number of on-demand nodes when using the mixed capacity type. |
 | [nlb_security_group](/configuration/rack-parameters/aws/nlb_security_group)         | Specifies the ID of the security group to attach to the NLB.             |
 | [node_capacity_type](/configuration/rack-parameters/aws/node_capacity_type)         | Specifies the node capacity type: on-demand, spot, or mixed.             |
+| [node_max_unavailable_percentage](/configuration/rack-parameters/aws/node_max_unavailable_percentage) | Controls the maximum percentage of nodes unavailable during node group updates. |
 | [node_disk](/configuration/rack-parameters/aws/node_disk)                           | Specifies the node disk size in GB.                                      |
 | [node_type](/configuration/rack-parameters/aws/node_type)                           | Specifies the node instance type.                                        |
 | [nvidia_device_plugin_enable](/configuration/rack-parameters/aws/nvidia_device_plugin_enable) | Enables the NVIDIA GPU device plugin for GPU workloads. |
@@ -69,7 +72,7 @@ The following parameters are available for configuring your Convox rack on Amazo
 
 ## Setting Parameters
 
-To set an rack parameter, use the following command:
+To set a rack parameter, use the following command:
 ```bash
 $ convox rack params set parameterName=value -r rackName
 Updating parameters... OK

@@ -17,9 +17,9 @@ List services for an app
 ```
 ### Examples
 ```bash
-    $ convox services 
-    SERVICE  DOMAIN                                                                PORTS
-    web      nodejs-web.test-Router-ABCDEF0123456-1234567890.us-east-1.convox.site  80:3000 443:3000
+    $ convox services
+    SERVICE  DOMAIN                               PORTS
+    web      web.myapp.0a1b2c3d4e5f.convox.cloud  443:3000
 ```
 ## services restart
 

@@ -60,7 +60,7 @@ Failing health checks will be reported when promoting your Release:
     2026-03-18T14:17:09Z system/k8s/web-56f5d77d7-6gx8z Created container main
     2026-03-18T14:17:17Z system/k8s/web-56f5d77d7-6gx8z Readiness probe failed: HTTP probe failed with statuscode: 404
 ```
-You should ensure that your App is able to respond to the health check probes to faciliate a successful deployment.
+You should ensure that your App is able to respond to the health check probes to facilitate a successful deployment.
 
 ## My app deployed but I cannot access it
 
@@ -141,7 +141,7 @@ See [Environment Variables](/configuration/environment) for more details.
 
 Some good places to search are:
 
-- this site, via the search box on in the sidebar
+- this site, via the search box in the sidebar
 - Community support is available on [Stack Overflow](https://stackoverflow.com/questions/tagged/convox).
 
 If you still need help, feel free to:

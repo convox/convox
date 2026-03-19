@@ -15,6 +15,12 @@ Proxy a connection inside the rack
 ```bash
     convox proxy <[port:]host:hostport> [[port:]host:hostport]...
 ```
+### Flags
+
+| Flag | Short | Description |
+| ---- | ----- | ----------- |
+| `--tls` | `-t` | Wrap connection in TLS |
+
 ### Examples
 ```bash
     $ convox proxy i-06d0eaf588c96ee5f:5432

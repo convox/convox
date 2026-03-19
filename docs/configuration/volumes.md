@@ -92,7 +92,7 @@ AWS EFS volumes are ideal for:
 
 If you are on an earlier version, update your rack using the following command:
 
-For more details, refer to the [Updating a Rack](https://docs.convox.com/management/cli-rack-management/) documentation.
+For more details, refer to the [Updating a Rack](/management/cli-rack-management) documentation.
 
 ## emptyDir Volumes
 
@@ -134,7 +134,7 @@ In this configuration:
 
 ### Version Requirements for emptyDir Volumes
 
-For detailed instructions on updating your rack, see the [Updating a Rack](https://docs.convox.com/management/cli-rack-management/) page.
+For detailed instructions on updating your rack, see the [Updating a Rack](/management/cli-rack-management) page.
 
 ## See Also
 

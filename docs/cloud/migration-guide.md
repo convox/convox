@@ -45,7 +45,7 @@ Heroku uses buildpacks, but Convox uses Docker. Create a `Dockerfile` based on y
 
 **For Node.js apps:**
 ```dockerfile
-FROM node:18-alpine
+FROM node:22-alpine
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production
@@ -56,7 +56,7 @@ CMD ["npm", "start"]
 
 **For Ruby/Rails apps:**
 ```dockerfile
-FROM ruby:3.1-alpine
+FROM ruby:3.3-alpine
 RUN apk add --no-cache build-base postgresql-dev
 WORKDIR /app
 COPY Gemfile Gemfile.lock ./
@@ -216,7 +216,7 @@ databases:
 ### Step 2: Create a Dockerfile (Render)
 
 ```dockerfile
-FROM node:18-alpine
+FROM node:22-alpine
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
@@ -281,14 +281,14 @@ Railway uses automatic builds and nixpacks. You'll need to be more explicit with
 
 ```dockerfile
 # Example for Next.js app
-FROM node:18-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM node:18-alpine
+FROM node:22-alpine
 WORKDIR /app
 COPY --from=builder /app/package*.json ./
 RUN npm ci --only=production
@@ -564,14 +564,14 @@ $ convox cloud env set MONGODB_URI=mongodb+srv://... -a myapp -i production
 
 **Solution**: Optimize Dockerfile with multi-stage builds:
 ```dockerfile
-FROM node:18 AS builder
+FROM node:22 AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM node:18-alpine
+FROM node:22-alpine
 WORKDIR /app
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules

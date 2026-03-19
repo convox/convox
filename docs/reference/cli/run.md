@@ -16,18 +16,18 @@ Execute a command in a new process
 
 ### Flags
 
- - `--app`: String. Specifies the app name
- - `--cpu`: Number. Specifies the millicpu units of requests to set for the process
- - `--cpu-limit`: Number. Specifies the millicpu units of limit to set for the process
- - `--detach`: Boolean. To run in detach mode
- - `--entrypoint`: String. Specifies the entrypoint
- - `--memory`: Number. Specifies the memory megabytes of requests to set for the process
- - `--memory-limit`: Number. Specifies the memory megabytes of limit to set for the process
- - `--rack`: String. Specifies the rack name
- - `--release`: String. Specifies the release
- - `--gpu`: Number. Specifies the number of GPUs to allocate for the process (requires version >= 3.21.3)
- - `--node-labels`: String. Specifies node labels for targeting specific node groups (requires version >= 3.21.3)
- - `--use-service-volume`: Boolean. Attaches all service-configured volumes to the run pod (requires version >= 3.22.3)
+| Flag | Type | Description |
+| ---- | ---- | ----------- |
+| `--cpu` | number | CPU request in millicores |
+| `--cpu-limit` | number | CPU limit in millicores |
+| `--detach` | bool | Run in detached mode |
+| `--entrypoint` | string | Override the entrypoint |
+| `--gpu` | number | Number of GPUs to allocate (requires rack >= 3.21.3) |
+| `--memory` | number | Memory request in MB |
+| `--memory-limit` | number | Memory limit in MB |
+| `--node-labels` | string | Node labels for targeting specific node groups (requires rack >= 3.21.3) |
+| `--release` | string | Run against a specific release |
+| `--use-service-volume` | bool | Attach all service-configured volumes to the run pod (requires rack >= 3.22.3) |
 
 ### Examples
 

@@ -32,6 +32,7 @@ See [KEDA Autoscaling](/configuration/scaling/keda) for details.
 Scale services based on business-level metrics from Datadog via HPA external metrics. Useful when scaling decisions depend on request rates, queue depths, or other application-specific signals. If you use KEDA, you can also scale on Datadog metrics via the KEDA Datadog scaler -- see [KEDA Autoscaling](/configuration/scaling/keda#keda-with-datadog-metrics).
 
 See [Datadog Metrics Autoscaling](/configuration/scaling/datadog-metrics) for details.
+> All providers (requires Datadog Cluster Agent)
 
 ## Workload Placement
 

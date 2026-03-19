@@ -101,7 +101,7 @@ custom    web      1.2.3.4
 You could then access this Service using the following endpoints:
 
 * `tcp://1.2.3.4:5000`
-* `tcp://1.2.3.4:5001`
+* `tcp://1.2.3.4:6000`
 
 > Convox will not configure SSL termination for ports on a custom [Balancer](/reference/primitives/app/balancer).
 
@@ -141,7 +141,7 @@ And you could access the Service using the following endpoints:
 
 * `https://web.myapp.0a1b2c3d4e5f.convox.cloud`
 * `http://1.2.3.4:6000`
-* `tcp://1.2.4.5:6001`
+* `tcp://1.2.3.4:6001`
 
 > Port 4000 on this Service is exposed through both the standard and custom load balancers. SSL termination is not provided on the custom [Balancer](/reference/primitives/app/balancer).
 

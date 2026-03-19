@@ -13,7 +13,7 @@ This guide walks you through setting up Convox Cloud and deploying your first ap
 Before you begin, ensure you have:
 
 - A Convox account (sign up at [console.convox.com](https://console.convox.com/signup))
-- The latest Convox CLI installed (version 3.19.0 or higher)
+- The latest Convox CLI installed
 - An application with a `Dockerfile` ready to deploy
 
 ## Step 1: Install the Convox CLI
@@ -125,8 +125,8 @@ Monitor your application logs:
 
 ```bash
 $ convox cloud logs -s web -a my-app -i my-first-machine
-2024-01-15T10:30:00Z service/web/abc123 App listening on port 3000
-2024-01-15T10:30:15Z service/web/abc123 GET / 200
+2026-01-15T10:30:00Z service/web/abc123 App listening on port 3000
+2026-01-15T10:30:15Z service/web/abc123 GET / 200
 ```
 
 ## Step 8: Scale Your Application

@@ -107,6 +107,12 @@ JSON output for scripting:
     $ convox deploy-debug -a myapp -o json | jq '.pods[] | {name: .name, hint: .hint}'
 ```
 
+## See Also
+
+- [deploy](/reference/cli/deploy) for creating and promoting builds
+- [Health Checks](/configuration/health-checks) for configuring readiness and liveness probes
+- [Troubleshooting](/help/troubleshooting) for common deployment issues
+
 Filter to a specific service:
 ```bash
     $ convox deploy-debug -a myapp -s web

@@ -30,13 +30,14 @@ Trigger workflow run for the specified branch or commit. Specified branch or com
     convox workflows run <id>
 ```
 
-Flags:
-```text
-    --app app        -a app
-    --branch branch                            
-    --commit commit                            
-    --title title   
-```
+### Flags
+
+| Flag | Short | Description |
+| ---- | ----- | ----------- |
+| `--app` | `-a` | App name |
+| `--branch` | | Git branch to run the workflow for |
+| `--commit` | | Git commit to run the workflow for |
+| `--title` | | Title for the workflow run |
 
 ### Examples
 ```bash

@@ -24,6 +24,12 @@ url: /reference/cli/rack
 | **Runtime** | |
 | `convox rack runtimes` | List attachable runtime integrations |
 | `convox rack runtime attach` | Attach a runtime integration |
+| **Parameters** | |
+| `convox rack params` | Display rack parameters |
+| `convox rack params set` | Set rack parameters |
+| **Scaling** | |
+| `convox rack releases` | List rack version history |
+| `convox rack scale` | Scale the rack |
 | **Kubernetes** | |
 | `convox rack kubeconfig` | Output kubeconfig for the underlying cluster |
 | `convox rack mv` | Transfer rack management between user and org |
@@ -263,6 +269,87 @@ Updates a Rack to a new version.
     api = https://convox:password@api.dev.convox
     provider = local
     OK
+```
+
+## rack params
+
+Display rack parameters
+
+### Usage
+```bash
+    convox rack params
+```
+### Examples
+```bash
+    $ convox rack params
+    build_node_enabled     false
+    high_availability      true
+    node_disk              20
+    node_type              t3.small
+    private                true
+```
+
+## rack params set
+
+Set rack parameters
+
+### Usage
+```bash
+    convox rack params set <Key=Value> [Key=Value]...
+```
+### Examples
+```bash
+    $ convox rack params set node_type=t3.large
+    Setting parameters... OK
+```
+
+> The `high_availability` parameter can only be set during rack installation and cannot be changed afterwards.
+
+> The `schedule_rack_scale_down` and `schedule_rack_scale_up` parameters must be set together.
+
+## rack releases
+
+List rack version history
+
+### Usage
+```bash
+    convox rack releases
+```
+### Examples
+```bash
+    $ convox rack releases
+    VERSION  UPDATED
+    3.23.4   2 days ago
+    3.23.3   2 weeks ago
+    3.23.2   3 weeks ago
+```
+
+## rack scale
+
+Scale the rack
+
+### Usage
+```bash
+    convox rack scale
+```
+
+### Flags
+
+| Flag | Short | Type | Description |
+|------|-------|------|-------------|
+| `--count` | `-c` | int | Instance count |
+| `--type` | `-t` | string | Instance type |
+
+### Examples
+```bash
+    $ convox rack scale
+    Autoscale  Yes
+    Count      3
+    Status     running
+    Type       t3.small
+
+    $ convox rack scale --count 5 --type t3.large
+    Scaling rack... OK
 ```
 
 ## rack access credential
