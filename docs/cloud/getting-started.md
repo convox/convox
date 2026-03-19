@@ -45,7 +45,7 @@ client: 3.22.2
 Generate a CLI token from the Console Account page and authenticate with your Convox account:
 
 ```bash
-$ convox login console.convox.com -t <CLI Token> 
+$ convox login console.convox.com -t <CLI Token>
 Authenticating with console.convox.com... OK
 ```
 
@@ -114,7 +114,7 @@ Get the URL for your deployed application:
 ```bash
 $ convox cloud services -a my-app -i my-first-machine
 SERVICE  DOMAIN                                    PORTS
-web      web.my-app.cloud.convox.com              443:3000
+web      web.my-app.cloud.convox.com               443:3000
 ```
 
 Visit the URL in your browser to see your running application.
@@ -241,7 +241,7 @@ Running... OK
 $ convox cloud releases -a my-app -i my-first-machine
 ID           STATUS  BUILD        CREATED        DESCRIPTION
 RCDEFGHIJK           BABCDEFGHI   1 minute ago   env add:API_KEY
-RABCDEFGHI   active  BABCDEFGHI   5 minutes ago  
+RABCDEFGHI   active  BABCDEFGHI   5 minutes ago
 ```
 
 ### Rolling Back

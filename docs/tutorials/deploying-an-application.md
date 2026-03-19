@@ -40,11 +40,11 @@ Verify that your production Rack is running with `convox rack`:
     $ cat convox.yml
 
     environment:
-        - PORT=3000
+      - PORT=3000
     services:
-        web:
-            build: .
-            port: 3000
+      web:
+        build: .
+        port: 3000
 ```
 This `convox.yml` defines one [Service](/reference/primitives/app/service) named `web` that will be built from the [Dockerfile](https://github.com/convox-examples/nodejs/blob/master/Dockerfile) in the repo. Each
 [Process](/reference/primitives/app/process) of this Service will listen on port `3000`.
@@ -106,7 +106,7 @@ Once this completes, you can deploy the code:
 You can get the URL for your running services with the `convox services` command:
 ```bash
     $ convox services
-    SERVICE  DOMAIN                               PORTS
+    SERVICE  DOMAIN                                PORTS
     web      web.nodejs.0a1b2c3d4e5f.convox.cloud  443:3000
 ```
 In your browser navigate to the hostname shown for the `web` service. (i.e. `https://web.nodejs.0a1b2c3d4e5f.convox.cloud/`)

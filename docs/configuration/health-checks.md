@@ -313,13 +313,6 @@ func main() {
 
 With this implementation and the appropriate configuration in your `convox.yml`, your gRPC service will properly report its health status to Convox, ensuring that it only receives traffic when it's ready to handle requests.
 
-## Version Requirements
-
-- Basic health checks: All versions
-- Liveness checks: All versions
-- Startup probes: Version 3.19.7+
-- gRPC health checks: All versions
-
 ## See Also
 
 - [Service Lifecycle Hooks](/reference/primitives/app/service#lifecycle) for preStop and postStart container hooks

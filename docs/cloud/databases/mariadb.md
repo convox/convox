@@ -143,7 +143,7 @@ resources:
       class: medium
       version: 11.4.8
       durable: true
-      
+
   legacy:
     type: mariadb
     provider: aws
@@ -157,7 +157,7 @@ services:
     port: 3000
     resources:
       - primary
-      
+
   legacy-service:
     build: ./legacy
     resources:

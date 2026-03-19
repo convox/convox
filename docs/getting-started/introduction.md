@@ -188,7 +188,7 @@ Once the deployment has completed, verify the app is running by running the `con
 
 ```bash
 $ convox services
-SERVICE  DOMAIN                               PORTS
+SERVICE  DOMAIN                                PORTS
 web      web.nodejs.0a1b2c3d4e5f.convox.cloud  443:3000
 ```
 

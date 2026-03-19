@@ -145,7 +145,7 @@ resources:
       class: medium
       version: 17.5
       durable: true
-      
+
   analytics:
     type: postgres
     provider: aws
@@ -159,7 +159,7 @@ services:
     port: 3000
     resources:
       - primary
-      
+
   reporting:
     build: ./reporting
     resources:

@@ -32,7 +32,7 @@ services:
       - 8126
 ```
 > Agents will listen on the IP address of the underlying [Instance](/reference/primitives/rack/instance).
-> This means that you can not deploy two Agents on the same Rack that listen on the same port.
+> This means that you cannot deploy two Agents on the same Rack that listen on the same port.
 
 Each [Process](/reference/primitives/app/process) will have the IP address of its
 [Instance](/reference/primitives/rack/instance) available in the `INSTANCE_IP` environment variable.

@@ -19,14 +19,15 @@ Scale a service
 ```bash
     $ convox scale web --count 3 --cpu 250 --memory 1024
     Scaling web...
-    2026-01-15T14:54:50Z system/cloudformation aws/cfm test-nodejs UPDATE_IN_PROGRESS test-nodejs User Initiated
-    2026-01-15T14:54:55Z system/cloudformation aws/cfm test-nodejs UPDATE_IN_PROGRESS ResourceDatabase
-    2026-01-15T14:54:56Z system/cloudformation aws/cfm test-nodejs UPDATE_COMPLETE ResourceDatabase
-    2026-01-15T14:54:59Z system/cloudformation aws/cfm test-nodejs UPDATE_IN_PROGRESS ServiceWeb
-    ...
-    2026-01-15T14:57:53Z system/cloudformation aws/cfm test-nodejs UPDATE_COMPLETE ServiceWeb
-    2026-01-15T14:57:54Z system/cloudformation aws/cfm test-nodejs UPDATE_COMPLETE ResourceDatabase
-    2026-01-15T14:57:54Z system/cloudformation aws/cfm test-nodejs UPDATE_COMPLETE test-nodejs
+    2026-01-15T14:54:50Z system/k8s/atom/app Status: Running => Pending
+    2026-01-15T14:54:51Z system/k8s/web Scaled up replica set web-745f845dc to 3
+    2026-01-15T14:54:51Z system/k8s/web-745f845dc Created pod: web-745f845dc-abc12
+    2026-01-15T14:54:52Z system/k8s/atom/app Status: Pending => Updating
+    2026-01-15T14:54:53Z system/k8s/web-745f845dc-abc12 Pulling image "registry.0a1b2c3d4e5f.convox.cloud/myapp:web.BABCDEFGHI"
+    2026-01-15T14:54:56Z system/k8s/web-745f845dc-abc12 Successfully pulled image "registry.0a1b2c3d4e5f.convox.cloud/myapp:web.BABCDEFGHI"
+    2026-01-15T14:54:56Z system/k8s/web-745f845dc-abc12 Created container main
+    2026-01-15T14:54:56Z system/k8s/web-745f845dc-abc12 Started container main
+    2026-01-15T14:55:01Z system/k8s/atom/app Status: Updating => Running
     OK
 ```
 

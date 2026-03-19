@@ -25,12 +25,12 @@ Once connectivity is established you will need to set the [internal_router](/con
 Finally, set your desired service to use this internal load balancer by configuring the service attribute [internalRouter](/reference/primitives/app/service) to `true` and deploy the application.
 
 ```yaml
-services: 
-  web: 
-    build: . 
-    port: 3000 
-    internalRouter: true 
-    environment: 
-      - PORT=3000 
+services:
+  web:
+    build: .
+    port: 3000
+    internalRouter: true
+    environment:
+      - PORT=3000
 ```
 * You can verify that this service is being internally routed by running `convox services -a appNAME` and attempting to access the service URL from the public internet and again from a service within your VPC peered Rack.

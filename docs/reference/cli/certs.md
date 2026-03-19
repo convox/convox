@@ -25,7 +25,7 @@ To list all certificates
 ### Examples
 ```bash
     $ convox certs
-    ID                                      DOMAIN             EXPIRES
+    ID                                     DOMAIN             EXPIRES
     cert-0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d  *.example.com      364 days from now
     cert-1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e  myapp.example.org  364 days from now
 ```

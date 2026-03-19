@@ -41,8 +41,8 @@ services:
 ### Determine Current Scale
 ```bash
     $ convox scale
-    NAME  DESIRED  RUNNING  CPU  MEMORY
-    web   2        2        250  512
+    SERVICE  DESIRED  RUNNING  CPU  MEMORY
+    web      2        2        250  512
 ```
 ### Scaling Count Horizontally
 ```bash

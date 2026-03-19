@@ -98,7 +98,7 @@ services:
       cpu: 250
       memory: 512
     health: /health
-    
+
   worker:
     build: .
     command: node worker.js
@@ -135,7 +135,7 @@ resources:
     options:
       class: small
       version: 17.5
-      
+
 services:
   web:
     build: .
@@ -201,7 +201,7 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-    
+
   - type: worker
     name: background-worker
     env: node
@@ -251,7 +251,7 @@ services:
       memory: 512
     resources:
       - database
-    
+
   worker:
     build: .
     command: npm run worker
@@ -440,19 +440,19 @@ services:
     depends_on:
       - db
       - redis
-      
+
   worker:
     build: .
     command: npm run worker
     depends_on:
       - db
       - redis
-      
+
   db:
     image: postgres:13
     environment:
       - POSTGRES_PASSWORD=secret
-      
+
   redis:
     image: redis:alpine
 ```
@@ -476,7 +476,7 @@ services:
     port: 3000
     resources:
       - database
-      
+
   worker:
     build: .
     command: npm run worker

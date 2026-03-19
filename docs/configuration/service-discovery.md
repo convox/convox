@@ -50,9 +50,9 @@ services:
 You would see a `convox services` output similar to this:
 ```bash
     $ convox services
-    SERVICE  DOMAIN                               PORTS
-    auth     auth.myapp.convox.local              5000
-    web      web.myapp.0a1b2c3d4e5f.convox.cloud  443:3000
+    SERVICE  DOMAIN                                PORTS
+    auth     auth.myapp.convox.local               5000
+    web      web.myapp.0a1b2c3d4e5f.convox.cloud   443:3000
 ```
 The `web` [Service](/reference/primitives/app/service) could reach the `auth` [Service](/reference/primitives/app/service) using the following URL:
 

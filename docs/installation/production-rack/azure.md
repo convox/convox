@@ -25,7 +25,7 @@ az login
 
 **Expected output:**
 ```text
-A web browser has been opened at https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize. 
+A web browser has been opened at https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize.
 Please continue the login in the web browser.
 
 [Tenant and subscription selection]
@@ -97,7 +97,7 @@ az ad sp create-for-rbac \
 # Copy the appId from the output above
 export ARM_CLIENT_ID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 
-# Copy the password from the output above  
+# Copy the password from the output above
 export ARM_CLIENT_SECRET="xxxxx~xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
 # Copy the tenant from the output above
@@ -175,7 +175,7 @@ az rest --method POST \
 # echo "Role ID: $ROLE_ID"
 Role ID: 9b895d92-2cd3-44c7-9d02-a6ac2d5ea5c3
 
-# echo "Service Principal Object ID: $SP_OBJECT_ID"  
+# echo "Service Principal Object ID: $SP_OBJECT_ID"
 Service Principal Object ID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 
 # Role assignment command output:
@@ -194,7 +194,7 @@ Before proceeding to install the Rack, verify all required environment variables
 
 ```bash
 echo "ARM_SUBSCRIPTION_ID: $ARM_SUBSCRIPTION_ID"
-echo "ARM_CLIENT_ID: $ARM_CLIENT_ID"  
+echo "ARM_CLIENT_ID: $ARM_CLIENT_ID"
 echo "ARM_CLIENT_SECRET: $ARM_CLIENT_SECRET"
 echo "ARM_TENANT_ID: $ARM_TENANT_ID"
 ```
@@ -255,7 +255,7 @@ convox rack install azure my-rack region=westus2 node_type=Standard_D2_v3
 # Add to ~/.bashrc or ~/.zshrc
 export ARM_SUBSCRIPTION_ID="your-subscription-id"
 export ARM_CLIENT_ID="your-client-id"
-export ARM_CLIENT_SECRET="your-client-secret"  
+export ARM_CLIENT_SECRET="your-client-secret"
 export ARM_TENANT_ID="your-tenant-id"
 ```
 
@@ -318,7 +318,7 @@ echo "Subscription ID: $ARM_SUBSCRIPTION_ID"
 # Or get it directly
 az account show --query id -o tsv
 
-# Tenant ID  
+# Tenant ID
 az account show --query tenantId -o tsv
 
 # Client ID and Secret (from your service principal output above)

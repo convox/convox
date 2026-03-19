@@ -28,7 +28,7 @@ resources:
     options:
       class: small
       version: 17.5
-      
+
 services:
   web:
     build: .
@@ -139,14 +139,14 @@ resources:
       class: medium
       version: 17.5
       durable: true
-      
+
   mysql-legacy:
     type: mysql
     provider: aws
     options:
       class: small
       version: 8.4.6
-      
+
   mariadb-analytics:
     type: mariadb
     provider: aws
@@ -161,7 +161,7 @@ services:
     resources:
       - postgres-main
       - mysql-legacy
-      
+
   analytics:
     build: ./analytics
     resources:

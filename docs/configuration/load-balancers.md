@@ -21,7 +21,7 @@ Convox will automatically set up HTTPS load balancing to this Service when it is
 
 ```bash
 $ convox services
-SERVICE  DOMAIN                               PORTS
+SERVICE  DOMAIN                                PORTS
 web      web.myapp.0a1b2c3d4e5f.convox.cloud  443:3000
 ```
 
@@ -129,7 +129,7 @@ You would see the following at the CLI:
 
 ```bash
 $ convox services
-SERVICE  DOMAIN                               PORTS
+SERVICE  DOMAIN                                PORTS
 web      web.myapp.0a1b2c3d4e5f.convox.cloud  443:4000
 
 $ convox balancers

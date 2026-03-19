@@ -96,7 +96,7 @@ The following example policy includes the necessary permissions for a user or ro
             "Resource": "arn:aws:ssm:*:111122223333:parameter/*"
         }
     ]
-}   
+}
 ```
 - For more information about adding users or roles to the aws-auth ConfigMap, see [Add IAM users, roles, or AWS accounts to the ConfigMap](https://docs.aws.amazon.com/eks/latest/userguide/add-user-role.html#aws-auth-users).
 
@@ -113,7 +113,7 @@ data:
     - groups:
       - eks-console-dashboard-full-access-group
       rolearn: arn:aws:iam::111122223333:role/my-console-viewer-role
-      username: my-console-viewer-role         
+      username: my-console-viewer-role
   mapUsers: |
     - groups:
       - eks-console-dashboard-restricted-access-group

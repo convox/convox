@@ -39,7 +39,7 @@ Setting parameters... OK
   ```bash
   # Configure kubectl to point to your Convox rack
   $ convox rack kubeconfig -r rackName > ~/.kube/config
-  
+
   # List certificates in your application namespace
   $ kubectl get certificate -n rackName-appName
   ```

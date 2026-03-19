@@ -453,7 +453,7 @@ $ convox cloud run web "rake db:migrate" -a myapp -i production
 Running... OK
 
 $ convox cloud run web bash -a myapp -i production
-/app # 
+/app #
 ```
 
 ## Release Management
@@ -559,9 +559,9 @@ $ convox cloud services -a <app> -i <machine>
 **Example:**
 ```bash
 $ convox cloud services -a myapp -i production
-SERVICE  DOMAIN                                    PORTS
-web      web.myapp.cloud.convox.com              443:3000
-api      api.myapp.cloud.convox.com              443:8080
+SERVICE  DOMAIN                              PORTS
+web      web.myapp.cloud.convox.com            443:3000
+api      api.myapp.cloud.convox.com            443:8080
 ```
 
 ### services restart

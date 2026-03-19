@@ -44,9 +44,9 @@ Create and promote a build
     Promoting RABCDEFGHI...
     ...
     ...
-    2026-03-18T15:41:16Z system/cloudformation aws/cfm test-myapp-ServiceApp-ZNV5T8E1R2XQ DELETE_COMPLETE ExecutionRole
-    2026-03-18T15:41:27Z system/cloudformation aws/cfm test-myapp DELETE_COMPLETE ServiceApp
-    2026-03-18T15:41:27Z system/cloudformation aws/cfm test-myapp UPDATE_COMPLETE test-myapp
+    2026-03-18T15:41:16Z system/k8s/atom/app Status: Running => Pending
+    2026-03-18T15:41:18Z system/k8s/atom/app Status: Pending => Updating
+    2026-03-18T15:41:27Z system/k8s/atom/app Status: Updating => Running
     OK
 ```
 
@@ -71,9 +71,9 @@ You can pass env vars that will only exist at build time.
     Promoting RABCDEFGHI...
     ...
     ...
-    2026-03-18T15:41:16Z system/cloudformation aws/cfm test-myapp-ServiceApp-ZNV5T8E1R2XQ DELETE_COMPLETE ExecutionRole
-    2026-03-18T15:41:27Z system/cloudformation aws/cfm test-myapp DELETE_COMPLETE ServiceApp
-    2026-03-18T15:41:27Z system/cloudformation aws/cfm test-myapp UPDATE_COMPLETE test-myapp
+    2026-03-18T15:41:16Z system/k8s/atom/app Status: Running => Pending
+    2026-03-18T15:41:18Z system/k8s/atom/app Status: Pending => Updating
+    2026-03-18T15:41:27Z system/k8s/atom/app Status: Updating => Running
     OK
 ```
 

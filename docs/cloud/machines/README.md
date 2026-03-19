@@ -95,7 +95,7 @@ services:
       count: 2
       cpu: 250
       memory: 512
-  
+
   worker:
     build: .
     command: npm run worker
@@ -103,7 +103,7 @@ services:
       count: 1
       cpu: 250
       memory: 768
-  
+
   cache:
     image: redis:alpine
     port: 6379

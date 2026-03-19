@@ -29,7 +29,7 @@ Create a build
 
 ### Examples
 ```bash
-    $ convox build --no-cache --description "My latest build" 
+    $ convox build --no-cache --description "My latest build"
     Packaging source... OK
     Uploading source... OK
     Starting build... OK
