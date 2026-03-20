@@ -1031,7 +1031,7 @@ func (s *Server) ProxyHttpService(c *stdapi.Context) error {
 
 	u, err := url.Parse(fmt.Sprintf("http://%s:%d", host, port))
 	if err != nil {
-		return fmt.Errorf("invalid host: %s", err)
+		return stdapi.Errorf(400, "invalid host: %s", err)
 	}
 
 	rp := httputil.NewSingleHostReverseProxy(u)
@@ -1484,7 +1484,7 @@ func (s *Server) SystemJwtToken(c *stdapi.Context) error {
 	role := c.Value("role")
 	durationInHour, err := strconv.Atoi(c.Value("durationInHour"))
 	if err != nil {
-		return fmt.Errorf("invalid duration")
+		return stdapi.Errorf(400, "invalid duration")
 	}
 
 	var tk string
