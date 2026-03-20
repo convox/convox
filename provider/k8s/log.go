@@ -115,7 +115,7 @@ func (p *Provider) configureLogOptionsForService(app, name string, f cmdutil.Fac
 		}
 		o.Object = infos[0].Object
 		if o.Selector != "" && len(o.Object.(*corev1.PodList).Items) == 0 {
-			return fmt.Errorf("no resources found in %s namespace", o.Namespace)
+			return structs.ErrNotFound("no resources found in %s namespace", o.Namespace)
 		}
 	}
 

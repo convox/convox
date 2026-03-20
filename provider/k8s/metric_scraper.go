@@ -52,7 +52,7 @@ func (m *MetricScraperClient) ListNodes() (*corev1.NodeList, error) {
 
 func (m *MetricScraperClient) GetRackMetrics(opts structs.MetricsOptions) (structs.Metrics, error) {
 	if m.host == "" {
-		return nil, errors.WithStack(fmt.Errorf("unimplemented"))
+		return nil, errors.WithStack(structs.ErrNotImplemented("unimplemented"))
 	}
 
 	ns, err := m.ListNodes()
@@ -74,7 +74,7 @@ func (m *MetricScraperClient) GetRackMetrics(opts structs.MetricsOptions) (struc
 	}
 
 	if len(cpus.Items) == 0 {
-		return nil, fmt.Errorf("metrics unavailable")
+		return nil, structs.ErrNotImplemented("metrics unavailable")
 	}
 
 	// summation of all nodes metrics represent the rack metrics
@@ -153,7 +153,7 @@ func (m *MetricScraperClient) GetRackMetrics(opts structs.MetricsOptions) (struc
 // nodeNames: single or comma seperated node names
 func (m *MetricScraperClient) GetNodesMetrics(nodeNames string, metricType structs.ScraperMetricType) (*structs.ScraperMetricList, error) {
 	if m.host == "" {
-		return nil, errors.WithStack(fmt.Errorf("unimplemented"))
+		return nil, errors.WithStack(structs.ErrNotImplemented("unimplemented"))
 	}
 
 	resp, err := m.c.Get(fmt.Sprintf("%s/api/v1/dashboard/nodes/%s/metrics/%s/data", m.host, nodeNames, metricType))
