@@ -99,7 +99,7 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 	if opts.BuildArgs != nil {
 		for _, v := range *opts.BuildArgs {
 			if len(strings.SplitN(v, "=", 2)) > 2 {
-				return nil, errors.New("invalid build args:" + v)
+				return nil, structs.ErrBadRequest("invalid build args:%s", v)
 			}
 			buildCmd = fmt.Sprintf("%s -build-args %s", buildCmd, v)
 		}
