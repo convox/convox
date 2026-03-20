@@ -118,7 +118,7 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 	if cpu := appObj.Parameters[structs.AppParamBuildCpu]; cpu != "" {
 		v, err := strconv.ParseInt(cpu, 10, 32)
 		if err != nil {
-			return nil, fmt.Errorf("invalid build cpu: %s, err: %s", cpu, err)
+			return nil, structs.ErrBadRequest("invalid build cpu: %s, err: %s", cpu, err)
 		}
 		psOpts.Cpu = options.Int(int(v))
 	}
@@ -126,7 +126,7 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 	if mem := appObj.Parameters[structs.AppParamBuildMem]; mem != "" {
 		v, err := strconv.ParseInt(mem, 10, 32)
 		if err != nil {
-			return nil, fmt.Errorf("invalid build mem: %s, err: %s", mem, err)
+			return nil, structs.ErrBadRequest("invalid build mem: %s, err: %s", mem, err)
 		}
 		psOpts.Memory = options.Int(int(v))
 	}
@@ -190,7 +190,7 @@ func (p *Provider) BuildExport(app, id string, w io.Writer) error {
 	}
 
 	if len(services) < 1 {
-		return errors.WithStack(fmt.Errorf("no services found to export"))
+		return errors.WithStack(structs.ErrBadRequest("no services found to export"))
 	}
 
 	bjson, err := json.MarshalIndent(build, "", "  ")

@@ -83,11 +83,8 @@ func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*struc
 
 func (p *Provider) AppConfigGet(app, name string) (*structs.AppConfig, error) {
 	cfg, err := p.Cluster.CoreV1().Secrets(p.AppNamespace(app)).Get(context.TODO(), p.GenConfigName(name), am.GetOptions{})
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
 	if ae.IsNotFound(err) {
-		return nil, errors.WithStack(fmt.Errorf("app config not found: %s", name))
+		return nil, errors.WithStack(structs.ErrNotFound("app config not found: %s", name))
 	}
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -129,7 +126,7 @@ func (p *Provider) AppConfigList(app string) ([]structs.AppConfig, error) {
 func (p *Provider) AppConfigSet(app, name, valueBase64 string) error {
 	data, err := base64.StdEncoding.DecodeString(valueBase64)
 	if err != nil {
-		return fmt.Errorf("failed to parse base 64 vaule: %s", err)
+		return structs.ErrBadRequest("failed to parse base 64 value: %s", err)
 	}
 
 	_, err = p.CreateOrPatchSecret(p.ctx, am.ObjectMeta{
@@ -162,7 +159,7 @@ func (p *Provider) AppDelete(name string) error {
 	}
 
 	if a.Locked {
-		return errors.WithStack(fmt.Errorf("app is locked: %s", name))
+		return errors.WithStack(structs.ErrConflict("app is locked: %s", name))
 	}
 
 	if err := p.Cluster.CoreV1().Namespaces().Delete(context.TODO(), p.AppNamespace(name), am.DeleteOptions{}); err != nil {
@@ -175,7 +172,7 @@ func (p *Provider) AppDelete(name string) error {
 func (p *Provider) AppGet(name string) (*structs.App, error) {
 	ns, err := p.GetNamespaceFromInformer(p.AppNamespace(name))
 	if ae.IsNotFound(err) {
-		return nil, errors.WithStack(fmt.Errorf("app not found: %s", name))
+		return nil, errors.WithStack(structs.ErrNotFound("app not found: %s", name))
 	}
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -218,11 +215,11 @@ func (p *Provider) AppList() (structs.Apps, error) {
 }
 
 func (p *Provider) AppLogs(name string, opts structs.LogsOptions) (io.ReadCloser, error) {
-	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
+	return nil, errors.WithStack(structs.ErrNotImplemented("unimplemented"))
 }
 
 func (p *Provider) AppMetrics(name string, opts structs.MetricsOptions) (structs.Metrics, error) {
-	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
+	return nil, errors.WithStack(structs.ErrNotImplemented("unimplemented"))
 }
 
 func (p *Provider) AppNamespace(app string) string {
@@ -415,11 +412,11 @@ func (p *Provider) appFromNamespaceOnly(ns ac.Namespace) (*structs.App, error) {
 func (p *Provider) appNameValidate(name string) error {
 	switch name {
 	case "rack", "system":
-		return errors.WithStack(fmt.Errorf("app name is reserved"))
+		return errors.WithStack(structs.ErrBadRequest("app name is reserved"))
 	}
 
 	if _, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), p.AppNamespace(name), am.GetOptions{}); !ae.IsNotFound(err) {
-		return errors.WithStack(fmt.Errorf("app already exists: %s", name))
+		return errors.WithStack(structs.ErrConflict("app already exists: %s", name))
 	}
 
 	return nil

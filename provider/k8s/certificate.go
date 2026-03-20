@@ -31,7 +31,7 @@ const (
 )
 
 func (*Provider) CertificateApply(_, _ string, _ int, _ string) error {
-	return errors.WithStack(fmt.Errorf("unimplemented"))
+	return errors.WithStack(structs.ErrNotImplemented("unimplemented"))
 }
 
 func (p *Provider) CertificateCreate(pub, key string, opts structs.CertificateCreateOptions) (*structs.Certificate, error) {
@@ -80,16 +80,16 @@ func (p *Provider) CertificateGenerate(domains []string, opts structs.Certificat
 	} else if *opts.Issuer == ISSUER_LETSENCRYPT {
 		return p.certificateGenerateLetsencrypt(domains, opts)
 	}
-	return nil, fmt.Errorf("invalid issuer")
+	return nil, structs.ErrBadRequest("invalid issuer")
 }
 
 func (p *Provider) certificateGenerateSelfSigned(domains []string) (*structs.Certificate, error) {
 	switch len(domains) {
 	case 0:
-		return nil, errors.WithStack(fmt.Errorf("must specify a domain"))
+		return nil, errors.WithStack(structs.ErrBadRequest("must specify a domain"))
 	case 1:
 	default:
-		return nil, errors.WithStack(fmt.Errorf("must specify only one domain"))
+		return nil, errors.WithStack(structs.ErrBadRequest("must specify only one domain"))
 	}
 
 	c, err := common.CertificateSelfSigned(domains[0])
@@ -107,11 +107,11 @@ func (p *Provider) certificateGenerateSelfSigned(domains []string) (*structs.Cer
 
 func (p *Provider) certificateGenerateLetsencrypt(domains []string, opts structs.CertificateGenerateOptions) (*structs.Certificate, error) {
 	if len(domains) == 0 {
-		return nil, errors.WithStack(fmt.Errorf("must specify a domain"))
+		return nil, errors.WithStack(structs.ErrBadRequest("must specify a domain"))
 	}
 
 	if len(domains) > 10 {
-		return nil, errors.WithStack(fmt.Errorf("can not specify more than 10 domain name"))
+		return nil, errors.WithStack(structs.ErrBadRequest("can not specify more than 10 domain name"))
 	}
 
 	duration := 4320 * time.Hour // 6 months
@@ -119,7 +119,7 @@ func (p *Provider) certificateGenerateLetsencrypt(domains []string, opts structs
 		var err error
 		duration, err = time.ParseDuration(*opts.Duration)
 		if err != nil {
-			return nil, fmt.Errorf("invalid duration: %s", err)
+			return nil, structs.ErrBadRequest("invalid duration: %s", err)
 		}
 	}
 
