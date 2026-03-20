@@ -1,6 +1,10 @@
+data "aws_ec2_instance_type" "this" {
+  instance_type = var.node_type
+}
+
 locals {
+  arm_type = contains(data.aws_ec2_instance_type.this.supported_architectures, "arm64")
   gpu_type = substr(var.node_type, 0, 1) == "g" || substr(var.node_type, 0, 1) == "p" || substr(var.node_type, 0, 3) == "inf" || substr(var.node_type, 0, 3) == "trn"
-  arm_type = substr(var.node_type, 0, 2) == "a1" || substr(var.node_type, 0, 5) == "hpc7g" || substr(var.node_type, 0, 4) == "im4g" || substr(var.node_type, 0, 4) == "is4g" || substr(var.node_type, 2, 1) == "g"
 }
 
 variable "node_type" {
