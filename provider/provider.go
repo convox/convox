@@ -36,7 +36,7 @@ func FromEnv() (structs.Provider, error) {
 	case "":
 		return nil, fmt.Errorf("PROVIDER not set")
 	default:
-		return nil, fmt.Errorf("unknown provider: %s", name)
+		return nil, structs.ErrBadRequest("unknown provider: %s", name)
 	}
 }
 
