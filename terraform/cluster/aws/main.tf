@@ -197,6 +197,7 @@ resource "aws_eks_node_group" "cluster-build" {
 
   labels = {
     "convox-build" : "true"
+    "convox-build-arch" : var.build_arm_type ? "arm64" : "amd64"
   }
 
   taint {

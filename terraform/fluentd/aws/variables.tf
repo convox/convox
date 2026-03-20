@@ -3,10 +3,6 @@ variable "access_log_retention_in_days" {
   type    = string
 }
 
-variable "arm_type" {
-  default = false
-}
-
 variable "cluster" {
   type = string
 }

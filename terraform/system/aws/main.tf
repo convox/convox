@@ -44,7 +44,7 @@ locals {
   gpu_type        = substr(local.node_type, 0, 1) == "g" || substr(local.node_type, 0, 1) == "p"
   build_gpu_type  = substr(local.build_node_type, 0, 1) == "g" || substr(local.build_node_type, 0, 1) == "p"
   image           = var.image
-  release         = local.arm_type ? format("%s-%s", coalesce(var.release, local.current), "arm64") : coalesce(var.release, local.current)
+  release         = coalesce(var.release, local.current)
   tag_map = length(var.tags) == 0 ? {} : {
     for v in split(",", var.tags) :
     "${split("=", v)[0]}" => split("=", v)[1]
@@ -140,7 +140,6 @@ module "fluentd" {
   ]
 
   access_log_retention_in_days = var.access_log_retention_in_days
-  arm_type                     = local.arm_type
   cluster                      = module.cluster.id
   eks_addons                   = module.cluster.eks_addons
   fluentd_disable              = var.fluentd_disable

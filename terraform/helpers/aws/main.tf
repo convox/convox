@@ -10,3 +10,7 @@ variable "node_type" {
 output "ami_type" {
   value = local.gpu_type ? "AL2023_x86_64_NVIDIA" : local.arm_type ? "AL2023_ARM_64_STANDARD" : "AL2023_x86_64_STANDARD"
 }
+
+output "is_arm" {
+  value = local.arm_type
+}
