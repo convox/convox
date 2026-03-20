@@ -25,8 +25,6 @@ The `private` parameter must be configured at rack installation. Example:
 |------------------------|-----------------------------------------------|
 | `private`  | `true` |
 
-&nbsp;
-
 ## Additional Information
 When the `private` parameter is set to `true`, nodes are placed in private subnets, which enhances security by preventing direct access from the internet.
 

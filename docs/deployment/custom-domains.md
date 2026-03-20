@@ -7,7 +7,7 @@ url: /deployment/custom-domains
 
 Custom domains allow you to route one or more domains to a [Service](/reference/primitives/app/service).
 
-## Definition examples
+## Defining Custom Domains
 ```yaml
 services:
   simpleweb:

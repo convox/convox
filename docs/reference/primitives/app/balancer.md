@@ -7,7 +7,7 @@ url: /reference/primitives/app/balancer
 
 A Balancer accepts incoming traffic and balances it between the [Processes](/reference/primitives/app/process) of a [Service](/reference/primitives/app/service).
 
-## Definition
+## Balancer Definition
 
 A Balancer is defined in [`convox.yml`](/configuration/convox-yml).
 

@@ -818,7 +818,7 @@ $ convox cloud test -a <app> -i <machine>
 ```bash
 $ convox cloud test -a myapp -i staging
 Running tests...
-✓ All tests passed
+OK
 ```
 
 ## Common Patterns

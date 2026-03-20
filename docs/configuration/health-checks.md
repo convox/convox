@@ -11,9 +11,9 @@ Health checks must return a valid HTTP response code (200-399) within the config
 
 [Processes](/reference/primitives/app/process) that fail three consecutive health checks are assumed dead and will be terminated and replaced.
 
-## Definition
+## Defining Health Checks
 
-### Simple
+### Simple Health Check
 ```yaml
 services:
   web:
@@ -21,7 +21,7 @@ services:
 ```
 > Specifying `health` as a string will set the `path` and leave the other options as defaults.
 
-### Advanced
+### Advanced Health Check
 
 ```yaml
 services:

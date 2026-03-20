@@ -8,7 +8,7 @@ url: /configuration/config-mounts
 
 Config Mounts allow you to mount configuration files into your service containers as Kubernetes Secrets. Use them for configuration files that need to be managed independently from your application image, such as custom config files, certificate bundles, or application settings.
 
-## Definition
+## Defining Config Mounts
 
 Define configurations in the top-level `configs` section of your `convox.yml` and reference them in services via `configMounts`:
 

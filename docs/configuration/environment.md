@@ -9,7 +9,7 @@ Convox encourages the use of environment variables for managing application secr
 variables allows you to keep secrets out of your codebase and to have different configuration values
 for different deployments (i.e. staging and production).
 
-## Definition
+## Defining Environment Variables
 
 Environment variables that can be used by the application are defined in [`convox.yml`](/configuration/convox-yml):
 

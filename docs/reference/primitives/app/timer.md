@@ -7,7 +7,7 @@ url: /reference/primitives/app/timer
 
 A Timer spawns a [Process](/reference/primitives/app/process) on a schedule that is defined using [cron syntax](https://crontab.guru).
 
-## Definition
+## Timer Definition
 
 A Timer is defined in [`convox.yml`](/configuration/convox-yml).
 ```yaml

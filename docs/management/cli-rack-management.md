@@ -139,8 +139,6 @@ For detailed descriptions and instructions, visit the [AWS Rack Parameters](/con
 
 > **schedule_rack_scale_down** and **schedule_rack_scale_up** are mutually exclusive. You must set both for scheduled scale operations. If you set only **schedule_rack_scale_down**, the rack will not scale up on its own.
 
-&nbsp;
-
 ### Digital Ocean
 
 For detailed descriptions and instructions, visit the [Digital Ocean Rack Parameters](/configuration/rack-parameters/do) page.
@@ -157,8 +155,6 @@ For detailed descriptions and instructions, visit the [Digital Ocean Rack Parame
 
 \* Parameter cannot be changed after rack creation
 
-&nbsp;
-
 ### Google Cloud Platform
 
 For detailed descriptions and instructions, visit the [Google Cloud Platform Rack Parameters](/configuration/rack-parameters/gcp) page.
@@ -171,8 +167,6 @@ For detailed descriptions and instructions, visit the [Google Cloud Platform Rac
 | **region**              | **us-east1**      |
 | **syslog**              |                   |
 | **telemetry**           | **true**          |
-
-&nbsp;
 
 ### Microsoft Azure
 

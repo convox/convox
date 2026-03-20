@@ -11,7 +11,7 @@ A Resource is a network-accessible external service such as a database or cache.
 - **AWS Managed (RDS/ElastiCache)**: Provisions a fully managed AWS service. Use for production workloads requiring durability, backups, and high availability.
 - **Convox Cloud Databases**: Managed databases available on [Convox Cloud](/cloud/databases) with simplified configuration and pricing.
 
-## Definition
+## Resource Definition
 
 A Resource is defined in [`convox.yml`](/configuration/convox-yml) and linked to one or more [Services](/reference/primitives/app/service).
 
@@ -89,7 +89,7 @@ Example:
 
 ```yaml
 resources:
-  myRedis:
+  my-redis:
     type: redis
     image: custom-redis-image:6.2
     options:

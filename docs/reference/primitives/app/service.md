@@ -11,7 +11,7 @@ A Service is a horizontally-scalable collection of durable [Processes](/referenc
 
 Services can be scaled to a static count or autoscaled in a range based on metrics.
 
-## Definition
+## Service Definition
 
 ```yaml
 services:
@@ -219,7 +219,7 @@ services:
 | **maximum** | number | 200     | The maximum percentage of Processes to allow during rolling deploys. Defaults to 100 for agents and singletons. |
 | **minimum** | number | 50      | The minimum percentage of healthy Processes to keep alive during rolling deploys. Defaults to 0 for agents and singletons. |
 
-&nbsp;
+
 
 ### dnsConfig
 
@@ -227,7 +227,7 @@ services:
 | --------- | ------ | ------- | ------------------------------------------------------------------------------------------ |
 | **ndots**     | int |         | The ndots option for the dns config |
 
-&nbsp;
+
 
 ### ingressAnnotations
 
@@ -257,7 +257,7 @@ Reserved annotation keys:
 - `nginx.ingress.kubernetes.io/ssl-redirect`
 - `nginx.ingress.kubernetes.io/whitelist-source-range`
 
-&nbsp;
+
 
 ### initContainer
 
@@ -316,7 +316,7 @@ services:
 
 This ensures the main container only starts after its dependencies are healthy. Specifying a minimal `image` like `busybox` avoids building dependency-checking logic into your application image.
 
-&nbsp;
+
 
 ### lifecycle
 
@@ -348,7 +348,7 @@ The `postStart` hook runs immediately after the container starts, in parallel wi
 
 See [Health Checks](/configuration/health-checks) for configuring readiness, liveness, and startup probes that work alongside lifecycle hooks.
 
-&nbsp;
+
 
 ### health
 
@@ -362,7 +362,7 @@ See [Health Checks](/configuration/health-checks) for configuring readiness, liv
 
 > Specifying **health** as a string will set the **path** and leave the other values as defaults.
 
-&nbsp;
+
 
 ### liveness
 
@@ -440,7 +440,7 @@ services:
             averageValue: 200
 ```
 
-&nbsp;
+
 
 ### termination
 
@@ -448,7 +448,7 @@ services:
 | ---------- | ------- | ------- | ------------------------------------------------------------------------------------------------ |
 | **grace**    | number  | 30      | The number of seconds to wait for [Processes](/reference/primitives/app/process) to gracefully exit before killing them |
 
-&nbsp;
+
 
 ### tls
 
@@ -456,7 +456,7 @@ services:
 | ---------- | ------- | ------- | ------------------------------------------------------------------------------------ |
 | **redirect** | boolean | true    | Whether or not HTTP requests should be redirected to HTTPS using a 308 response code |
 
-&nbsp;
+
 
 ### []volumeOptions
 
@@ -465,7 +465,7 @@ services:
 | **emptyDir** | map |     | Configuration for [emptyDir](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir) volume |
 | **awsEfs** | map |     | Configuration for AWS Efs volume. To use this you have to enable efs csi driver in the rack |
 
-&nbsp;
+
 
 ### []volumeOptions.emptyDir
 
@@ -488,7 +488,7 @@ services:
           mountPath: "/my/test/vol"
 ```
 
-&nbsp;
+
 
 ### []volumeOptions.awsEfs
 
@@ -514,7 +514,7 @@ services:
           mountPath: "/my/data/"
 ```
 
-&nbsp;
+
 
 ## Command Line Interface
 

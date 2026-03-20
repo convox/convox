@@ -6,7 +6,7 @@ url: /tutorials/preparing-an-application
 
 # Preparing An Application
 
-In order to deploy your app on Convox you will need two things
+In order to deploy your app on Convox you will need two things:
 
 - A `Dockerfile`
 
@@ -112,8 +112,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.support
-      links:
-        - postgres
+    links:
+      - postgres
   postgres:
     image: postgres:12
 
@@ -141,7 +141,7 @@ services:
       - MY_ENVIRONMENT=development
     resources:
       - redis
-  web_secondary:
+  web-secondary:
     image: myusername/privateimage:latest
     command: override_command.sh
     port: 3001

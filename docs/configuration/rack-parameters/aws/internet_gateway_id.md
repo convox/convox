@@ -23,8 +23,6 @@ The `internet_gateway_id` parameter must be configured at rack installation. Exa
 |------------------------|-----------------------------------------------|
 | `internet_gateway_id`   | `igw-1234567890abcdef0` |
 
-&nbsp;
-
 ## Additional Information
 By setting the `internet_gateway_id` parameter, you enable your rack to utilize the specified internet gateway, ensuring seamless integration with your existing AWS network infrastructure.
 

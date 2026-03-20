@@ -23,8 +23,6 @@ The `high_availability` parameter must be configured at rack installation. Examp
 |------------------------|-----------------------------------------------|
 | `high_availability`  | `true` |
 
-&nbsp;
-
 ## Additional Information
 High availability clusters provide increased resilience and uptime by using redundant resources. Disabling high availability can significantly reduce costs, making it suitable for non-production environments, development clusters, or any scenario where uptime is not critical.
 

@@ -9,7 +9,7 @@ A Build is a compiled version of the code for each [Service](/reference/primitiv
 
 Convox uses `docker` to compile code into a Build.
 
-## Definition
+## Build Definition
 
 You can define the location to build for each [Service](/reference/primitives/app/service) in [`convox.yml`](/configuration/convox-yml).
 
@@ -141,7 +141,7 @@ ENV APP_NAME=${BUILD_APP}
 
 ### Security Warning for BUILD_AUTH
 
-⚠️ **Critical Security Notice**: The `BUILD_AUTH` argument contains sensitive Docker registry authentication credentials including usernames and passwords/tokens. This data should never be:
+**Critical Security Notice**: The `BUILD_AUTH` argument contains sensitive Docker registry authentication credentials including usernames and passwords/tokens. This data should never be:
 - Logged or printed during builds
 - Embedded in final images
 - Exposed in build output

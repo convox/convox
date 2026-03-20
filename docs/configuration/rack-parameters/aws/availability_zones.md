@@ -23,7 +23,5 @@ The `availability_zones` parameter must be configured at rack installation. Exam
 |------------------------|-----------------------------------------------|
 | `availability_zones`  | `east-1a,us-east-1b,us-east-1c` |
 
-&nbsp;
-
 ## Additional Information
 Specifying AZs can help you optimize resource placement based on your application's requirements. For example, you might choose AZs based on their proximity to your user base or other AWS services. Ensure that the chosen AZs are available in your AWS region and that they meet your redundancy and latency requirements.

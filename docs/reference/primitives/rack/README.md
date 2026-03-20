@@ -14,7 +14,7 @@ A Rack is a platform to build, deploy and host your [Apps](/reference/primitives
 | [Instance](/reference/primitives/rack/instance) | A compute node in the Rack's Kubernetes cluster. Instances provide CPU and memory capacity for running Processes. |
 | [Registry](/reference/primitives/rack/registry) | The Rack's private container image registry. Stores Build images and serves them to the cluster during deployments. |
 
-## Command Line Interface
+## Rack CLI Commands
 
 ### Getting information about a Rack
 ```bash

@@ -20,7 +20,7 @@ An App is a logical container for [Primitives](/reference/primitives) that are u
 | [Service](/reference/primitives/app/service) | A horizontally-scalable group of durable Processes defined in `convox.yml`. Services are the primary workload primitive. |
 | [Timer](/reference/primitives/app/timer) | A scheduled task that runs a command on a cron schedule using a Service's image. Maps to a Kubernetes CronJob. |
 
-## Definition
+## App Definition
 
 An App is defined by a single [`convox.yml`](/configuration/convox-yml)
 ```yaml
@@ -35,7 +35,7 @@ services:
     resources:
       - database
 ```
-## Command Line Interface
+## App CLI Commands
 
 ### Creating an App
 ```bash

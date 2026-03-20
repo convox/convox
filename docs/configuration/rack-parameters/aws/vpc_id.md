@@ -23,8 +23,6 @@ The `vpc_id` parameter must be configured at rack installation. Example:
 |------------------------|-----------------------------------------------|
 | `vpc_id`   | `vpc-12345678` |
 
-&nbsp;
-
 ## Additional Information
 When configuring the `vpc_id` parameter, ensure that you also set the [cidr](/configuration/rack-parameters/aws/cidr) block and [internet_gateway_id](/configuration/rack-parameters/aws/internet_gateway_id) parameters. Additionally, configure the [private_subnets_ids](/configuration/rack-parameters/aws/private_subnets_ids) and [public_subnets_ids](/configuration/rack-parameters/aws/public_subnets_ids) parameters for subnet configurations. Proper configuration of these parameters is essential for integrating your Convox rack with an existing VPC and ensuring network connectivity and security.
 
