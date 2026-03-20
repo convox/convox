@@ -11,8 +11,8 @@ Convox automatically captures all output from your application's `stdout` and `s
 
 In addition to application output, Convox also captures:
 
-* State changes triggered by deployments
-* Health check failures
+- State changes triggered by deployments
+- Health check failures
 
 Every log line is prefixed with a timestamp and a source identifier (e.g., `service/web/012345689`), making it easy to trace activity across services and processes.
 

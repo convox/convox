@@ -12,13 +12,13 @@ Convox is an open-source Platform as a Service (PaaS) that you can install on yo
 
 Here are some helpful tutorials to get started with Convox:
 
-* [Create a Free Convox Account](#create-a-free-convox-account)
-* [Install a Runtime Integration for Your Cloud Provider](#install-a-runtime-integration-for-your-cloud-provider)
-* [Install a Rack](#install-a-rack)
-* [Install the Convox CLI and Log In](#install-the-convox-cli-and-log-in)
-* [Deploy a Sample App](#deploy-a-sample-app)
-* [Make a Code Change and Redeploy](#make-a-code-change-and-redeploy)
-* [Perform a Rollback](#perform-a-rollback)
+- [Create a Free Convox Account](#create-a-free-convox-account)
+- [Install a Runtime Integration for Your Cloud Provider](#install-a-runtime-integration-for-your-cloud-provider)
+- [Install a Rack](#install-a-rack)
+- [Install the Convox CLI and Log In](#install-the-convox-cli-and-log-in)
+- [Deploy a Sample App](#deploy-a-sample-app)
+- [Make a Code Change and Redeploy](#make-a-code-change-and-redeploy)
+- [Perform a Rollback](#perform-a-rollback)
 
 ## Create a Free Convox Account
 

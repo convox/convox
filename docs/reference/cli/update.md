@@ -30,4 +30,5 @@ Check your current version with `convox version`. See the [version](/reference/c
 ## See Also
 
 - [CLI Rack Management](/management/cli-rack-management) for rack update best practices
+- [Release History](/reference/releases) for all v3 releases and Kubernetes version compatibility
 - [Version](/reference/cli/version) for checking CLI and rack versions

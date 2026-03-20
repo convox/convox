@@ -17,14 +17,14 @@ Generation 1 Apps are no longer supported
 
 #### Version 2
 
-* AWS (ECS)
+- AWS (ECS)
 
 #### Version 3
 
-* AWS (EKS)
-* Digital Ocean
-* Google Cloud
-* Microsoft Azure
+- AWS (EKS)
+- Digital Ocean
+- Google Cloud
+- Microsoft Azure
 
 ## Apps
 
@@ -89,3 +89,4 @@ You can read more in the [Timer](/reference/primitives/app/timer) documentation 
 ## See Also
 
 - [Upgrading](/help/upgrading) for step-by-step migration instructions from v2 to v3
+- [Releases](/reference/releases) for the full v3 release history from 3.15.0 onward

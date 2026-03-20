@@ -108,12 +108,12 @@ Starting from version 3.22.0, Convox provides the following managed build argume
 
 Pass Convox-managed build arguments:
 ```bash
-    $ convox build --build-args=BUILD_APP --build-args=BUILD_ID --build-args=BUILD_GIT_SHA
+    $ convox build --build-args "BUILD_APP" --build-args "BUILD_ID" --build-args "BUILD_GIT_SHA"
 ```
 
 Combine Convox-managed arguments with custom build arguments:
 ```bash
-    $ convox build --build-args=BUILD_APP --build-args=FOO=BAR --build-args=VERSION=1.2.3
+    $ convox build --build-args "BUILD_APP" --build-args "FOO=BAR" --build-args "VERSION=1.2.3"
 ```
 
 ### Dockerfile Configuration

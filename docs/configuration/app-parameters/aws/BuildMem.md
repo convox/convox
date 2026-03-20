@@ -45,7 +45,7 @@ BuildMem     2048
 Sets the CPU request for build pods:
 
 ```bash
-$ convox apps params set BuildCpu=512 -a <app>
+$ convox apps params set BuildCpu=500 -a <app>
 Setting BuildCpu... OK
 ```
 

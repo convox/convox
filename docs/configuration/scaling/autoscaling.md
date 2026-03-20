@@ -112,6 +112,24 @@ services:
 
 This configuration requests 1 GPU for each process of the `ml-trainer` service.
 
+You can also specify the GPU vendor using the map form:
+
+```yaml
+services:
+  ml-trainer:
+    build: .
+    command: python train.py
+    scale:
+      count: 1-3
+      cpu: 1000
+      memory: 4096
+      gpu:
+        count: 1
+        vendor: nvidia
+```
+
+See the [Service scale.gpu](/reference/primitives/app/service#scalegpu) reference for the full GPU configuration options.
+
 ### Important Notes About GPU Scaling
 
 - GPUs are allocated as whole units (you cannot request a fraction of a GPU)

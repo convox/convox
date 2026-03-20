@@ -7,6 +7,31 @@ url: /reference/cli/letsencrypt
 
 > These commands are currently available for AWS racks using Route53 for DNS management.
 
+## letsencrypt dns route53 add
+
+Configure a new letsencrypt DNS-01 solver for a Route53 DNS zone
+
+### Usage
+```bash
+    convox letsencrypt dns route53 add
+```
+
+### Flags
+
+| Flag | Description |
+| ---- | ----------- |
+| `--id` | DNS solver ID |
+| `--dns-zones` | Comma-separated DNS zones |
+| `--hosted-zone-id` | Route53 hosted zone ID |
+| `--role` | AWS IAM role ARN to assume for DNS access |
+| `--region` | AWS region |
+
+### Examples
+```bash
+    $ convox letsencrypt dns route53 add --id 1 --dns-zones example.com --role arn:aws:iam::XXXXXXXXXXXX:role/dns-access --hosted-zone-id XXXXXXXXXXXXX --region us-east-1
+    OK
+```
+
 ## letsencrypt dns route53 list
 
 List configured letsencrypt dns solvers for route53

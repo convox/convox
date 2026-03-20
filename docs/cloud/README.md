@@ -113,7 +113,7 @@ services:
       - database
 ```
 
-## Use Cases
+## When to Use Convox Cloud
 
 Convox Cloud is suitable for:
 
@@ -133,6 +133,6 @@ Convox Cloud is suitable for:
 
 ## Support
 
-- Documentation: [docs.convox.com](https://docs.convox.com)
+- Documentation: [Convox Docs](/getting-started/introduction)
 - Community: [community.convox.com](https://community.convox.com)
 - Support: cloud-support@convox.com

@@ -8,9 +8,7 @@ url: /installation/production-rack/azure
 
 > These are instructions for installing a Rack via the command line. The recommended way to install a Rack is with the [Convox Web Console](https://console.convox.com)
 
-## Initial Setup
-
-### 1 Install prerequisites
+## 1 Install Prerequisites
 
 | Tool                      | Docs                                                                                                             |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------- |

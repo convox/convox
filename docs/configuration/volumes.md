@@ -57,7 +57,7 @@ services:
 
 ### AWS EFS Storage Classes
 
-Starting from version 3.19.7, you can specify a custom storage class for your EFS volumes. This provides greater flexibility for defining AWS storage behaviors and allows custom storage policies for specific workloads.
+You can specify a custom storage class for your EFS volumes. This provides greater flexibility for defining AWS storage behaviors and allows custom storage policies for specific workloads.
 
 ```yaml
 environment:
@@ -85,14 +85,6 @@ AWS EFS volumes are ideal for:
 - **Content Management Systems**: Allows multiple editors to access and modify shared content.
 - **Data Processing**: Enables distributed data processing across multiple services.
 - **Custom Storage Policies**: With storage class support, you can implement organization-specific storage policies.
-
-### Version Requirements for AWS EFS Volumes
-
-- Storage class support: You must be on at least rack version `3.19.7` to use the `storageClass` attribute.
-
-If you are on an earlier version, update your rack using the following command:
-
-For more details, refer to the [Updating a Rack](/management/cli-rack-management) documentation.
 
 ## emptyDir Volumes
 
@@ -131,10 +123,6 @@ In this configuration:
 
 - **Temporary Data Storage**: Useful for non-persistent data that is required only for the lifespan of the service.
 - **High-Speed Access**: When using `Memory` as the medium, it can be used for high-speed access to temporary data.
-
-### Version Requirements for emptyDir Volumes
-
-For detailed instructions on updating your rack, see the [Updating a Rack](/management/cli-rack-management) page.
 
 ## See Also
 

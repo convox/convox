@@ -896,6 +896,6 @@ $ convox cloud <command> --help
 ```
 
 For support:
-- Documentation: [docs.convox.com](https://docs.convox.com)
+- Documentation: [Convox Docs](/getting-started/introduction)
 - Community: [community.convox.com](https://community.convox.com)
 - Email: cloud-support@convox.com

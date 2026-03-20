@@ -61,11 +61,11 @@ Unsetting BuildLabels... OK
 Sets the CPU request for build pods in millicores:
 
 ```bash
-$ convox apps params set BuildCpu=512 -a <app>
+$ convox apps params set BuildCpu=500 -a <app>
 Setting BuildCpu... OK
 ```
 
-This allocates 512 millicores (0.5 vCPU) to build pods.
+This allocates 500 millicores (0.5 vCPU) to build pods.
 
 ### BuildMem
 Sets the memory request for build pods in megabytes:

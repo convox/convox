@@ -146,7 +146,7 @@ Can't find an example for your stack? We're constantly adding new examples based
 
 ## Resources
 
-- [Convox Documentation](https://docs.convox.com)
+- [Convox Documentation](/getting-started/introduction)
 - [convox.yml Reference](/configuration/convox-yml)
 - [Dockerfile Best Practices](/configuration/dockerfile)
 - [Deployment Guide](/deployment/deploying-changes)

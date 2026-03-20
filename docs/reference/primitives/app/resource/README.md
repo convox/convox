@@ -27,14 +27,24 @@ services:
 
 ## Types
 
-The following Resource types are currently available:
+### Containerized
 
-* `mariadb`
-* `memcached`
-* `mysql`
-* `postgis`
-* `postgres`
-* `redis`
+- `mariadb`
+- `memcached`
+- `mysql`
+- `postgis`
+- `postgres`
+- `redis`
+
+### AWS Managed (RDS/ElastiCache)
+
+- `rds-mariadb`
+- `rds-mysql`
+- `rds-postgres`
+- `elasticache-redis`
+- `elasticache-memcached`
+
+See [AWS RDS Managed Database Resources](#aws-rds-managed-database-resources) and [AWS ElastiCache Redis and Memcached Resources](#aws-elasticache-redis-and-memcached-resources) below for configuration details.
 
 ## Linking
 

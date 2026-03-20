@@ -17,7 +17,7 @@ url: /management/cli-rack-management
 
 v3 racks must be updated through every minor version in sequence. Each minor version may include changes to internal rack services, Kubernetes components, or cluster configuration that depend on the previous minor version being applied first. Skipping minor versions can leave these internal components out of sync, which may cause failures that are difficult to recover from.
 
-To update safely, [find the latest patch release for each minor version](https://github.com/convox/convox/releases) and update through them one at a time until you reach your target version.
+To update safely, find the latest patch release for each minor version in the [release history](/reference/releases) and update through them one at a time until you reach your target version.
 
 For example, a rack on version `3.21.x` would need to update to the latest `3.22.x` release before proceeding to the latest `3.23.x` release, and so on.
 

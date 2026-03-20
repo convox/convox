@@ -19,8 +19,8 @@ You will need to manually complete this setup process on your own as we cannot p
 ## Enabling Rack-to-Rack Communication
 Once connectivity is established you will need to set the [internal_router](/configuration/rack-parameters/aws/internal_router) rack parameter to `true` by running:
 `convox rack params set internal_router=true -r rackNAME`
-* This will install the internal load balancer into the VPC that facilitates rack-to-rack communication.
-* You can verify that the load balancer was created in your cloud environment by checking its applicable service page.
+- This will install the internal load balancer into the VPC that facilitates rack-to-rack communication.
+- You can verify that the load balancer was created in your cloud environment by checking its applicable service page.
 
 Finally, set your desired service to use this internal load balancer by configuring the service attribute [internalRouter](/reference/primitives/app/service) to `true` and deploy the application.
 
@@ -33,4 +33,4 @@ services:
     environment:
       - PORT=3000
 ```
-* You can verify that this service is being internally routed by running `convox services -a appNAME` and attempting to access the service URL from the public internet and again from a service within your VPC peered Rack.
+- You can verify that this service is being internally routed by running `convox services -a appNAME` and attempting to access the service URL from the public internet and again from a service within your VPC peered Rack.

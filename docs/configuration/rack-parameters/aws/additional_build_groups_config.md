@@ -81,10 +81,10 @@ This ensures that build processes for the specified app will run on nodes with t
 You can also specify resource requirements for build pods:
 
 ```bash
-$ convox apps params set BuildCpu=256 BuildMem=1024 -a <app>
+$ convox apps params set BuildCpu=250 BuildMem=1024 -a <app>
 ```
 
-This sets the CPU request to 256 millicores (0.25 vCPU) and memory request to 1024MB (1GB) for build pods.
+This sets the CPU request to 250 millicores (0.25 vCPU) and memory request to 1024MB (1GB) for build pods.
 
 ## Architecture Compatibility
 

@@ -321,6 +321,6 @@ $ convox cloud env -a my-app -i my-first-machine
 
 If you encounter issues:
 
-- Check the [documentation](https://docs.convox.com)
+- Check the [documentation](/getting-started/introduction)
 - Visit the [community forum](https://community.convox.com)
 - Contact support at cloud-support@convox.com

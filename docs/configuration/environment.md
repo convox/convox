@@ -77,8 +77,8 @@ You can set values for your environment variables using `convox env set`:
 Setting environment variables will cause a new [Release](/reference/primitives/app/release) to be created. In order to deploy
 your changes you will need to promote this release.
 ```bash
-    $ convox releases promote RABCDEFGHIJ
-    Promoting RABCDEFGHIJ... OK
+    $ convox releases promote RABCDEFGHI
+    Promoting RABCDEFGHI... OK
 ```
 
 > Environment variables can be set using the CLI or through the Console and their values will be available to the

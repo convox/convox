@@ -8,9 +8,9 @@ url: /tutorials/preparing-an-application
 
 In order to deploy your app on Convox you will need two things
 
-* A `Dockerfile`
+- A `Dockerfile`
 
-* A `convox.yml` manifest
+- A `convox.yml` manifest
 
 ## Dockerfile
 
@@ -22,13 +22,13 @@ Once you have your Dockerfile ready to go you need to create a convox.yml file. 
 
 The Convox manifest has several key sections of which only `services` is required. The most common are:
 
-* Environment
+- Environment
 
-* Resources
+- Resources
 
-* Services
+- Services
 
-* Timers
+- Timers
 
 ### Environment
 
@@ -159,4 +159,4 @@ Here you can see how we have turned the Redis and Postgres services into resourc
 
 ## Next steps
 
-* Check out: [Deploying an Application](/tutorials/deploying-an-application)
+- Check out: [Deploying an Application](/tutorials/deploying-an-application)

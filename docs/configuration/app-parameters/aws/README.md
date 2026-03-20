@@ -40,6 +40,6 @@ To view the current parameters for an application:
 $ convox apps params -a appName
 NAME         VALUE
 BuildLabels  convox.io/label=app-build
-BuildCpu     512
+BuildCpu     500
 BuildMem     1024
 ```

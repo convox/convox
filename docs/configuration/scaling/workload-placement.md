@@ -364,7 +364,7 @@ This example creates a cost-optimized infrastructure with dedicated node pools f
 2. **Application Configuration**:
    ```bash
    $ convox apps params set BuildLabels=convox.io/label=app-build -a myapp
-   $ convox apps params set BuildCpu=1024 BuildMem=4096 -a myapp
+   $ convox apps params set BuildCpu=1000 BuildMem=4096 -a myapp
    ```
 
 3. **Service Configuration** (in `convox.yml`):

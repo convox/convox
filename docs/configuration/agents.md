@@ -41,7 +41,7 @@ In the example above, any [Process](/reference/primitives/app/service) on the sa
 with the `telemetry` Agent running on its [Instance](/reference/primitives/rack/instance) using the
 following endpoints:
 
-* `udp://$INSTANCE_IP:8125`
-* `tcp://$INSTANCE_IP:8126`
+- `udp://$INSTANCE_IP:8125`
+- `tcp://$INSTANCE_IP:8126`
 
 > A process can only communicate with the agent running on the same node. Ensure the `INSTANCE_IP` corresponds to the node that the process is running on.

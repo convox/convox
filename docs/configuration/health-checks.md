@@ -218,6 +218,7 @@ In this example:
 
 - **Relationship with Other Probes**: Liveness and readiness probes are disabled until the startup probe succeeds
 - **Liveness Required**: Startup probe timing is always inherited from the liveness configuration. You must define a liveness check with appropriate timing for your startup requirements
+- **Timing Fields Ignored**: Setting timing fields (`grace`, `interval`, `timeout`, `successThreshold`, `failureThreshold`) directly on the startup probe has no effect. These values are always read from the liveness configuration, even if explicitly specified under `startupProbe:`
 - **Failure Threshold**: Set a high enough `failureThreshold` on the **liveness** check to accommodate your application's maximum startup time
 - **Startup vs. Liveness**: Use startup probes for initialization, liveness probes for ongoing health monitoring
 - **Resource Planning**: Consider that pods may take longer to become ready when using startup probes
@@ -280,6 +281,8 @@ When `grpcHealthEnabled` is set to `true`, Convox configures both:
 The readinessProbe ensures that gRPC services won't receive traffic until they are fully ready, while the livenessProbe monitors the ongoing health of the service and initiates restarts if necessary.
 
 Both probes use the health settings defined in your `convox.yml`, ensuring consistent behavior throughout the service lifecycle.
+
+> gRPC probes use a hardcoded `failureThreshold` of **5** and `successThreshold` of **1** for both readiness and liveness. This differs from HTTP probes, where readiness uses a `failureThreshold` of **3** and liveness uses the configurable `liveness.failureThreshold` (default **3**). The gRPC thresholds are not configurable.
 
 ### Example Implementation
 

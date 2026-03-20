@@ -617,7 +617,7 @@ services:
 
 ### Resources
 
-- [Convox Documentation](https://docs.convox.com)
+- [Convox Documentation](/getting-started/introduction)
 - [Community Forum](https://community.convox.com)
 - [GitHub Examples](https://github.com/convox-examples)
 

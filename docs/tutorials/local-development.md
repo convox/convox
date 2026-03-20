@@ -12,8 +12,8 @@ This tutorial walks you through installing a development Rack and deploying your
 
 Before you begin, install the following:
 
-* [Convox CLI](/installation/cli)
-* [Development Rack](/installation/development-rack)
+- [Convox CLI](/installation/cli)
+- [Development Rack](/installation/development-rack)
 
 ## Verify your rack
 

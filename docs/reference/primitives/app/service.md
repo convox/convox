@@ -85,7 +85,7 @@ services:
       limit:
         cpu: 500
         memory: 1024
-      cpu: 128
+      cpu: 250
       memory: 512
       targets:
         cpu: 50
@@ -115,12 +115,11 @@ services:
 | **deployment**  | map        |                     | Manual control over deployment parameters                                                                                                  |
 | **domain**      | string     |                     | A custom domain(s) (comma separated) to route to this Service                                                                              |
 | **dnsConfig**      | map     |                     | DNS configuration for the service |
-| **drain**       | number     |                     | Deprecated. Use **termination.grace** instead |
 | **environment** | list       |                     | A list of environment variables (with optional defaults) to populate from the [Release](/reference/primitives/app/release) environment                            |
 | **grpcHealthEnabled** | boolean   |      false          | Enables gRPC health checking (configures both readiness and liveness probes). Must follow the [gRPC health protocol](https://github.com/grpc/grpc/blob/master/doc/health-checking.md). See [Health Checks](/configuration/health-checks#grpc-health-checks). |
 | **health**      | string/map | /                   | Health check definition (see below)                                                                                                        |
 | **liveness** | map |      | Liveness check definition (see below). By default it is disabled. If it fails then service will restart |
-| **startupProbe** | map |  | Startup probe definition. Set `path` (HTTP) or `tcpSocketPort` (TCP) to enable. All timing parameters are inherited from the **liveness** check. See [Health Checks](/configuration/health-checks#startup-probes) |
+| **startupProbe** | map |  | Startup probe definition. Set `path` (HTTP) or `tcpSocketPort` (TCP) to enable. All timing parameters are inherited from the **liveness** check; setting timing fields directly on `startupProbe` has no effect. See [Health Checks](/configuration/health-checks#startup-probes) |
 | **image**       | string     |                     | An external Docker image to use for this Service (supersedes **build**)                                                                      |
 | **ingressAnnotations** | list       |                     | A list of annotation keys and values to add in ingress resource. Check below for reserved annotation keys |
 | **initContainer** | map       |                     | Runs a container to completion before the main service container starts. Use for migrations, dependency checks, or setup tasks (see [initContainer](#initcontainer) below) |
@@ -148,6 +147,8 @@ services:
 | **whitelist**   | string     |                     | Comma delimited list of CIDRs, e.g. `10.0.0.0/24,172.10.0.1`, to allow access to the service                                                                                                                  |
 
 > Environment variables declared on `convox.yml` will be populated for a Service.
+
+> The `drain` attribute is deprecated. Use `termination.grace` instead.
 
 ### annotations
 You can use annotations to attach arbitrary non-identifying metadata to objects. Clients such as tools and libraries can retrieve this metadata. On Convox, annotations will reflect in pods and service accounts.

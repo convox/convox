@@ -23,8 +23,7 @@ services:
   mqtt:
     ports:
       - 8883
-    whitelist:
-      - 192.168.0.0/16
+    whitelist: 192.168.0.0/16
 ```
 
 ### Attributes
