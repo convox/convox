@@ -45,7 +45,7 @@ func (p *Provider) ObjectFetch(app, key string) (io.ReadCloser, error) {
 	res, err := p.storageFile(p.objectKey(app, key)).Download(ctx, 0, azfile.CountToEnd, false)
 	if err != nil {
 		if azerr, ok := err.(azfile.StorageError); ok && azerr.ServiceCode() == "ResourceNotFound" {
-			return nil, fmt.Errorf("no such key")
+			return nil, structs.ErrNotFound("no such key")
 		}
 
 		return nil, err

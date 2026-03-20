@@ -2,6 +2,8 @@ package gcp
 
 import (
 	"fmt"
+
+	"github.com/convox/convox/pkg/structs"
 )
 
 func (p *Provider) RepositoryAuth(app string) (string, string, error) {
@@ -17,5 +19,5 @@ func (p *Provider) RepositoryPrefix() string {
 }
 
 func (p *Provider) RepositoryImagesBatchDelete(app string, tags []string) error {
-	return fmt.Errorf("not implemented")
+	return structs.ErrNotImplemented("not implemented")
 }
