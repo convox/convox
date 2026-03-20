@@ -167,7 +167,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		// ingress internal
 		if rss := m.Services.Routable().InternalRouter(); len(rss) > 0 {
 			if p.DomainInternal == "" {
-				return errors.New("please enable the rack's internal router first: convox rack params set internal_router=true")
+				return structs.ErrBadRequest("please enable the rack's internal router first: convox rack params set internal_router=true")
 			}
 			data, err := p.releaseTemplateIngressInternal(a, rss, opts)
 			if err != nil {
