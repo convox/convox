@@ -373,7 +373,7 @@ func (p *Provider) releaseTemplateApp(a *structs.App, opts structs.ReleasePromot
 
 func (p *Provider) releaseTemplateBalancer(a *structs.App, r *structs.Release, b manifest.Balancer, lbs manifest.Labels) ([]byte, error) {
 	if p.FeatureGates[options.FeatureGateBalancerDisable] {
-		return nil, fmt.Errorf("balancer resource is disabled")
+		return nil, structs.ErrBadRequest("balancer resource is disabled")
 	}
 	params := map[string]interface{}{
 		"Annotations": b.AnnotationsMap(),
@@ -671,7 +671,7 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 		}
 
 		if !p.IsKedaEnabled && s.Scale.IsKedaEnabled() {
-			return nil, fmt.Errorf("keda is not enabled on the rack")
+			return nil, structs.ErrBadRequest("keda is not enabled on the rack")
 		}
 
 		params := map[string]interface{}{
@@ -744,7 +744,7 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 
 		if s.Scale.IsVpaEnabled() {
 			if !p.IsVpaEnabled {
-				return nil, fmt.Errorf("vpa is not enabled on the rack")
+				return nil, structs.ErrBadRequest("vpa is not enabled on the rack")
 			}
 			vpaObj, err := s.Scale.VPA.VpaObject(s.Name, p.AppNamespace(a.Name), map[string]string{
 				"system":  "convox",
@@ -802,7 +802,7 @@ func (p *Provider) releaseTemplateTimer(a *structs.App, e structs.Environment, r
 func (p *Provider) releaseTemplateEfs(a *structs.App, s manifest.Service) ([]byte, error) {
 	for i := range s.VolumeOptions {
 		if s.VolumeOptions[i].AwsEfs != nil && len(p.EfsFileSystemId) <= 2 {
-			return nil, fmt.Errorf("efs csi driver is not enabled but efs volume is specified")
+			return nil, structs.ErrBadRequest("efs csi driver is not enabled but efs volume is specified")
 		}
 		if s.VolumeOptions[i].AwsEfs != nil && s.VolumeOptions[i].AwsEfs.VolumeHandle != "" {
 			s.VolumeOptions[i].AwsEfs.ProcessTemplate(p.EfsFileSystemId, a.Name, s.Name)
@@ -868,7 +868,7 @@ func (p *Provider) releaseElasticacheResources(app *structs.App, envs structs.En
 	for _, r := range m.Resources {
 		if r.IsElastiCache() {
 			if p.FeatureGates[options.FeatureGateElasticacheDisable] {
-				return nil, nil, fmt.Errorf("elasticache resource is disabled")
+				return nil, nil, structs.ErrBadRequest("elasticache resource is disabled")
 			}
 			if err := r.ElastiCacheNameValidate(); err != nil {
 				return nil, nil, err
@@ -933,7 +933,7 @@ func (p *Provider) releaseRdsResources(app *structs.App, envs structs.Environmen
 	for _, r := range m.Resources {
 		if r.IsRds() {
 			if p.FeatureGates[options.FeatureGateRdsDisable] {
-				return nil, nil, fmt.Errorf("rds resource is disabled")
+				return nil, nil, structs.ErrBadRequest("rds resource is disabled")
 			}
 			if err := r.RdsNameValidate(); err != nil {
 				return nil, nil, err
