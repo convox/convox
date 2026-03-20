@@ -15,7 +15,7 @@ import (
 )
 
 func (p *Provider) InstanceKeyroll() (*structs.KeyPair, error) {
-	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
+	return nil, errors.WithStack(structs.ErrNotImplemented("unimplemented"))
 }
 
 func (p *Provider) InstanceList() (structs.Instances, error) {
@@ -106,11 +106,11 @@ func (p *Provider) InstanceShell(id string, rw io.ReadWriter, opts structs.Insta
 		}
 	}
 	if instance == nil {
-		return 0, fmt.Errorf("instance not found")
+		return 0, structs.ErrNotFound("instance not found")
 	}
 
 	if opts.PrivateKey == nil || *opts.PrivateKey == "" {
-		return 0, fmt.Errorf("private key is not provided")
+		return 0, structs.ErrBadRequest("private key is not provided")
 	}
 
 	privateKeyBytes, err := base64.StdEncoding.DecodeString(*opts.PrivateKey)
@@ -185,5 +185,5 @@ func (p *Provider) InstanceShell(id string, rw io.ReadWriter, opts structs.Insta
 }
 
 func (p *Provider) InstanceTerminate(id string) error {
-	return errors.WithStack(fmt.Errorf("unimplemented"))
+	return errors.WithStack(structs.ErrNotImplemented("unimplemented"))
 }

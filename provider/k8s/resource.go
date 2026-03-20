@@ -46,7 +46,7 @@ func (p *Provider) ResourceConsole(app, name string, rw io.ReadWriter, opts stru
 	case "redis":
 		return resourceConsoleCommand(rw, opts, "redis-cli", "-u", u)
 	default:
-		return errors.WithStack(fmt.Errorf("console not available for resources of type: %s", r.Type))
+		return errors.WithStack(structs.ErrBadRequest("console not available for resources of type: %s", r.Type))
 	}
 }
 
@@ -67,7 +67,7 @@ func (p *Provider) ResourceExport(app, name string) (io.ReadCloser, error) {
 	case "postgis", "postgres", "rds-postgres":
 		return resourceExportPostgres(u)
 	default:
-		return nil, errors.WithStack(fmt.Errorf("export not available for resources of type: %s", r.Type))
+		return nil, errors.WithStack(structs.ErrBadRequest("export not available for resources of type: %s", r.Type))
 	}
 }
 
@@ -144,7 +144,7 @@ func (p *Provider) ResourceImport(app, name string, r io.Reader) error {
 	case "postgis", "postgres", "rds-postgres":
 		return resourceImportPostgres(rr, r)
 	default:
-		return errors.WithStack(fmt.Errorf("import not available for resources of type: %s", rr.Type))
+		return errors.WithStack(structs.ErrBadRequest("import not available for resources of type: %s", rr.Type))
 	}
 }
 
@@ -191,14 +191,14 @@ func (p *Provider) SystemResourceCreate(kind string, opts structs.ResourceCreate
 	case "webhook":
 		return p.systemResourceCreateWebhook(opts)
 	default:
-		return nil, fmt.Errorf("rack resource type unknown: %s", kind)
+		return nil, structs.ErrBadRequest("rack resource type unknown: %s", kind)
 	}
 }
 
 func (p *Provider) systemResourceCreateWebhook(opts structs.ResourceCreateOptions) (*structs.Resource, error) {
 	url, ok := opts.Parameters["Url"]
 	if !ok {
-		return nil, fmt.Errorf("parameter required: Url")
+		return nil, structs.ErrBadRequest("parameter required: Url")
 	}
 
 	key := fmt.Sprintf("%s-%d", url, rand.Int63())
@@ -221,7 +221,7 @@ func (p *Provider) SystemResourceDelete(name string) error {
 	case "webhook":
 		return p.webhookDelete(r.Name)
 	default:
-		return fmt.Errorf("rack resource type unknown: %s", r.Type)
+		return structs.ErrBadRequest("rack resource type unknown: %s", r.Type)
 	}
 }
 
@@ -237,11 +237,11 @@ func (p *Provider) SystemResourceGet(name string) (*structs.Resource, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("no such resource: %s", name)
+	return nil, structs.ErrNotFound("no such resource: %s", name)
 }
 
 func (p *Provider) SystemResourceLink(name, app string) (*structs.Resource, error) {
-	return nil, errors.WithStack(fmt.Errorf("unavailable on v3 racks"))
+	return nil, errors.WithStack(structs.ErrBadRequest("unavailable on v3 racks"))
 }
 
 func (p *Provider) SystemResourceList() (structs.Resources, error) {
@@ -284,11 +284,11 @@ func (p *Provider) SystemResourceTypes() (structs.ResourceTypes, error) {
 }
 
 func (p *Provider) SystemResourceUnlink(name, app string) (*structs.Resource, error) {
-	return nil, errors.WithStack(fmt.Errorf("unavailable on v3 racks"))
+	return nil, errors.WithStack(structs.ErrBadRequest("unavailable on v3 racks"))
 }
 
 func (p *Provider) SystemResourceUpdate(name string, opts structs.ResourceUpdateOptions) (*structs.Resource, error) {
-	return nil, errors.WithStack(fmt.Errorf("unavailable on v3 racks"))
+	return nil, errors.WithStack(structs.ErrBadRequest("unavailable on v3 racks"))
 }
 
 func (p *Provider) resourceOverlay(app, name string) (bool, error) {
