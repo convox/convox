@@ -72,7 +72,7 @@ CMD ["/app/web"]
 
 During `convox start` only the `development` stage of the Dockerfile is used. This lets you run a version of your application that includes source code, compilers, and development tools.
 
-When deploying to production with `convox deploy`, the entire Dockerfile runs and produces a minimal image with just the compiled binary.
+When deploying to production with `convox deploy`, the entire Dockerfile runs and produces a minimal image with the compiled binary.
 
 ## Accessing Your Application
 

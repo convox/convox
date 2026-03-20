@@ -34,3 +34,8 @@ services:
       - PORT=3000
 ```
 - You can verify that this service is being internally routed by running `convox services -a appNAME` and attempting to access the service URL from the public internet and again from a service within your VPC peered Rack.
+
+## See Also
+
+- [`internal_router` rack parameter](/configuration/rack-parameters/aws/internal_router) for enabling the internal load balancer
+- [Service Discovery](/configuration/service-discovery) for intra-rack service communication

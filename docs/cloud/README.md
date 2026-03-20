@@ -99,7 +99,7 @@ resources:
 
     options:
       class: small
-      version: 17.5
+      version: "17.5"
 
 services:
   web:

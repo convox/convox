@@ -134,7 +134,7 @@ resources:
 
     options:
       class: small
-      version: 17.5
+      version: "17.5"
 
 services:
   web:
@@ -238,7 +238,7 @@ resources:
 
     options:
       class: dev
-      version: 17.5
+      version: "17.5"
 
 services:
   web:
@@ -307,7 +307,7 @@ resources:
 
     options:
       class: small
-      version: 17.5
+      version: "17.5"
 
 services:
   web:
@@ -395,7 +395,7 @@ resources:
     options:
       class: db.t3.micro
       storage: 20
-      version: 13
+      version: "13"
 ```
 
 After (Cloud):
@@ -406,7 +406,7 @@ resources:
 
     options:
       class: dev
-      version: 17.5
+      version: "17.5"
 ```
 
 ### Step 5: Update CI/CD
@@ -468,7 +468,7 @@ resources:
 
     options:
       class: dev
-      version: 17.5
+      version: "17.5"
 
 services:
   web:

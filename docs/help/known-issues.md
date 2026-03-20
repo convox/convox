@@ -17,5 +17,5 @@ url: /help/known-issues
 
 ### Local
 
- * The local development Rack uses self-signed TLS certificates. Your browser will show a certificate warning when accessing applications. This is expected behavior for local development.
- * On macOS, you must keep `minikube tunnel` running in a separate terminal to reach the Rack. If the tunnel is stopped, CLI commands and browser access will fail until it is restarted.
+* The local development Rack uses self-signed TLS certificates. Your browser will show a certificate warning when accessing applications. This is expected behavior for local development.
+* On macOS, you must keep `minikube tunnel` running in a separate terminal to reach the Rack. If the tunnel is stopped, CLI commands and browser access will fail until it is restarted.

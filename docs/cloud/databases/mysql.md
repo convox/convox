@@ -17,7 +17,7 @@ resources:
 
     options:
       class: small
-      version: 8.4.6
+      version: "8.4.6"
 
 services:
   web:
@@ -97,7 +97,7 @@ resources:
 
     options:
       class: dev
-      version: 8.4.6
+      version: "8.4.6"
 
 services:
   web:
@@ -116,7 +116,7 @@ resources:
 
     options:
       class: large
-      version: 8.4.6
+      version: "8.4.6"
       durable: true
 
 services:
@@ -136,7 +136,7 @@ resources:
 
     options:
       class: medium
-      version: 8.0.44
+      version: "8.0.44"
 
 services:
   web:

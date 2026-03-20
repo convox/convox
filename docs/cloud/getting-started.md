@@ -37,7 +37,7 @@ $ sudo chmod 755 /usr/local/bin/convox
 Verify the installation:
 ```bash
 $ convox version
-client: 3.22.2
+client: 3.23.4
 ```
 
 ## Step 2: Login to Convox
@@ -169,7 +169,7 @@ resources:
 
     options:
       class: dev
-      version: 17.5
+      version: "17.5"
 
 services:
   web:
@@ -207,7 +207,7 @@ resources:
 
     options:
       class: small
-      version: 17.5
+      version: "17.5"
       durable: true
 
 services:

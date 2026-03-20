@@ -130,7 +130,7 @@ resources:
   postgres:
     type: postgres
     options:
-      version: 12
+      version: "12"
 services:
   web:
     image: httpd
@@ -155,7 +155,7 @@ services:
       - postgres
 ```
 
-Here you can see how we have turned the Redis and Postgres services into resources, which can be accessed by the other services. As we mentioned above, those resources will be run in containers backed by durable storage (by default) but if you would prefer to use a cloud provider service you can do so using [resource overlays](/reference/primitives/app/resource#overlays). We have also removed the links directive as services in a Rack are able to communicate each other using our built-in [service discovery](/configuration/service-discovery). Otherwise, you will find the manifests to be nearly identical.
+Here you can see how we have turned the Redis and Postgres services into resources, which can be accessed by the other services. As we mentioned above, those resources will be run in containers. Database resources (PostgreSQL, MySQL, MariaDB, PostGIS) are backed by persistent volumes that survive container restarts, while cache resources (Redis, Memcached) are stateless and data is lost if the container restarts. If you would prefer to use a cloud provider managed service you can do so using [resource overlays](/reference/primitives/app/resource#overlays). We have also removed the links directive as services in a Rack are able to communicate with each other using our built-in [service discovery](/configuration/service-discovery). Otherwise, you will find the manifests to be nearly identical.
 
 ## Next steps
 

@@ -37,7 +37,7 @@ services:
 Each [Process](/reference/primitives/app/process) will have the IP address of its
 [Instance](/reference/primitives/rack/instance) available in the `INSTANCE_IP` environment variable.
 
-In the example above, any [Process](/reference/primitives/app/service) on the same Rack can communicate
+In the example above, any [Process](/reference/primitives/app/process) on the same Rack can communicate
 with the `telemetry` Agent running on its [Instance](/reference/primitives/rack/instance) using the
 following endpoints:
 

@@ -6,7 +6,7 @@ url: /configuration/app-parameters/aws/BuildCpu
 
 # BuildCpu
 
-## Description
+## What BuildCpu Controls
 The `BuildCpu` app parameter allows you to specify the CPU request for build pods in millicores. This parameter enables you to control the amount of CPU resources allocated to build processes, allowing you to optimize build performance based on your application's build requirements.
 
 When used in conjunction with [`BuildMem`](/configuration/app-parameters/aws/BuildMem) and [`BuildLabels`](/configuration/app-parameters/aws/BuildLabels), this parameter provides fine-grained control over build resource allocation and placement.
@@ -57,7 +57,7 @@ $ convox apps params set BuildLabels=convox.io/label=app-build -a <app>
 Setting BuildLabels... OK
 ```
 
-## Additional Information
+## Sizing Guidance
 - The `BuildCpu` value is specified in millicores, where 1000 millicores equals 1 vCPU.
 - Common values include:
   - `250` (0.25 vCPU): Suitable for simple builds

@@ -17,7 +17,7 @@ resources:
 
     options:
       class: small
-      version: 17.5
+      version: "17.5"
 
 services:
   web:
@@ -104,7 +104,7 @@ resources:
 
     options:
       class: dev
-      version: 17.5
+      version: "17.5"
 
 services:
   web:
@@ -123,7 +123,7 @@ resources:
 
     options:
       class: large
-      version: 17.5
+      version: "17.5"
       durable: true
 
 services:
@@ -143,7 +143,7 @@ resources:
 
     options:
       class: medium
-      version: 17.5
+      version: "17.5"
       durable: true
 
   analytics:
@@ -151,7 +151,7 @@ resources:
 
     options:
       class: small
-      version: 16.11
+      version: "16.11"
 
 services:
   web:

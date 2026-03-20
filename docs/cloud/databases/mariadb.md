@@ -17,7 +17,7 @@ resources:
 
     options:
       class: small
-      version: 11.4.8
+      version: "11.4.8"
 
 services:
   web:
@@ -102,7 +102,7 @@ resources:
 
     options:
       class: dev
-      version: 11.4.8
+      version: "11.4.8"
 
 services:
   web:
@@ -121,7 +121,7 @@ resources:
 
     options:
       class: large
-      version: 11.4.8
+      version: "11.4.8"
       durable: true
 
 services:
@@ -141,7 +141,7 @@ resources:
 
     options:
       class: medium
-      version: 11.4.8
+      version: "11.4.8"
       durable: true
 
   legacy:
@@ -149,7 +149,7 @@ resources:
 
     options:
       class: small
-      version: 10.6.24
+      version: "10.6.24"
 
 services:
   web:

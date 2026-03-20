@@ -99,7 +99,7 @@ resources:
   database:
     type: postgres
     options:
-      version: 13
+      version: "13"
       storage: 20
 
   # --- Containerized Redis ----------------------------------------------
@@ -114,7 +114,7 @@ resources:
     options:
       class: db.t3.large
       storage: 100
-      version: 13
+      version: "13"
       encrypted: true
       durable: true
       deletionProtection: true
@@ -270,7 +270,7 @@ services:
   # K8s Resources:
   #   Deployment    "worker"        -  runs background job processors
   #   Secret        "env-worker"    -  environment variables
-  #   (No Service/Ingress  -  no public ports)
+  #   Service       "worker"        -  because ports are defined (for balancer)
   #
   # kubectl: kubectl get deploy -l service=worker
 
@@ -279,6 +279,9 @@ services:
     command: bin/worker
     environment:
       - QUEUE_NAME=default
+    ports:
+      - 3001
+      - 3002
     scale:
       count: 2
       cpu: 500
@@ -381,7 +384,7 @@ resources:           ──►  Deployment + Service + PVC + ConfigMap
                           (or cloud-managed + ConfigMap only)
 services:
   web: (port set)    ──►  Deployment + Service + Ingress + HPA
-  worker: (no port)  ──►  Deployment
+  worker: (ports)    ──►  Deployment + Service
   agent: (agent)     ──►  DaemonSet + Service
   jobs: (count: 0)   ──►  Deployment (0 replicas, template only)
   ├─ scale           ──►  HPA + resources.requests/limits

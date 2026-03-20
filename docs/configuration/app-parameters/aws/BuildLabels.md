@@ -6,7 +6,7 @@ url: /configuration/app-parameters/aws/BuildLabels
 
 # BuildLabels
 
-## Description
+## What BuildLabels Controls
 The `BuildLabels` app parameter allows you to specify Kubernetes node selector labels for build pods. This parameter enables you to direct build processes to specific node groups within your cluster, providing control over where builds are executed.
 
 When used in conjunction with [`additional_build_groups_config`](/configuration/rack-parameters/aws/additional_build_groups_config) or [`additional_node_groups_config`](/configuration/rack-parameters/aws/additional_node_groups_config) rack parameters, this feature enables fine-grained control over build workload placement.
@@ -77,7 +77,7 @@ Setting BuildMem... OK
 
 This allocates 2048MB (2GB) of memory to build pods.
 
-## Additional Information
+## How Node Selection Works
 The `BuildLabels` parameter works by adding node selector constraints to Kubernetes build pods. This ensures that pods are only scheduled on nodes with matching labels.
 
 For this to be effective, you need to:

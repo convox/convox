@@ -49,7 +49,7 @@ These parameters allow you to specify:
 - Unique IDs for node group preservation across updates
 - Provider tags for cost allocation and resource organization
 
-> **Note**: These configurations are independent of each other. You can use either one or both depending on your needs. If you only configure additional node groups, builds will continue using the rack's primary build node (if [build_node_enabled](/configuration/rack-parameters/aws/build_node_enabled) is set on AWS) or the primary rack nodes. If you only configure build node groups, your services will continue running on the standard rack nodes while builds will be isolated according to your build configuration.
+> These configurations are independent of each other. You can use either one or both depending on your needs. If you only configure additional node groups, builds will continue using the rack's primary build node (if [build_node_enabled](/configuration/rack-parameters/aws/build_node_enabled) is set on AWS) or the primary rack nodes. If you only configure build node groups, your services will continue running on the standard rack nodes while builds will be isolated according to your build configuration.
 
 ### Setting Rack Parameters with JSON Files
 

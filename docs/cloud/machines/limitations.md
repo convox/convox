@@ -150,7 +150,7 @@ resources:
 
     options:
       class: small
-      version: 17.5
+      version: "17.5"
       durable: true
 
 services:
@@ -179,7 +179,7 @@ resources:
   database:
     type: postgres
     options:
-      version: 13
+      version: "13"
       storage: 10
 ```
 
@@ -431,7 +431,7 @@ volumes:
    
        options:
          class: small
-         version: 17.5
+         version: "17.5"
          durable: true
    ```
 

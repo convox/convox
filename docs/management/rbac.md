@@ -10,9 +10,9 @@ The RBAC feature allows you to define granular access control by assigning speci
 
 Users who have not been assigned a custom role retain a **Legacy Role** that preserves their original Console permissions. Organizations can create, test, and assign new roles at their own pace.
 
-> **Note**: RBAC roles apply to both the Console and the CLI, ensuring unified permission management across interfaces.
+> RBAC roles apply to both the Console and the CLI, ensuring unified permission management across interfaces.
 
-> **Important**: It is highly recommended to restrict write access to the **Roles** resource. If a user has write access to roles, they could potentially modify or escalate their own permissions, undermining the security of the RBAC configuration. Follow the principle of least privilege to mitigate this risk.
+> Restrict write access to the **Roles** resource. If a user has write access to roles, they could potentially modify or escalate their own permissions, undermining the security of the RBAC configuration. Follow the principle of least privilege to mitigate this risk.
 
 ## Creating Roles
 
@@ -74,7 +74,7 @@ Each role can have multiple permission policies. Every policy consists of:
 - **Resource Name**: The specific name of the resource (when applicable).
 - **Action**: Defines whether the permission grants `Read` or `Write` access.
 
-> **Note**: Not all resource types require a resource name. For example, the **Billing** page only provides `Read` or `Write` access without the need to specify a resource name.
+> Not all resource types require a resource name. For example, the **Billing** page only provides `Read` or `Write` access without the need to specify a resource name.
 
 ### Resource Types
 
@@ -148,7 +148,7 @@ These examples showcase the flexibility of RBAC in managing user access based on
 
 With the RBAC update, you can assign custom roles to [Deploy Keys](/management/deploy-keys), allowing deploy keys to have more flexible permissions. Deploy keys are API keys designed for use in CI environments or other remote systems.
 
-> **Note**: Deploy keys will only utilize permissions related to **Racks** and **Applications**. Permissions such as **Users** or **Billing** will not apply to deploy keys.
+> Deploy keys will only utilize permissions related to **Racks** and **Applications**. Permissions such as **Users** or **Billing** will not apply to deploy keys.
 
 By assigning a custom role to a deploy key, you can extend its default capabilities to include additional commands beyond the predefined set. This lets you configure deploy keys with specific permissions tailored to your organizational needs.
 

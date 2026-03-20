@@ -87,12 +87,14 @@ For workloads that require GPU acceleration, Convox supports requesting GPU reso
 
 Before using GPU scaling:
 
-1. Your rack must be running on GPU-capable instances (such as AWS EC2 p3, p4, g4, or g5 families)
+1. Your rack must be running on GPU-capable instances:
+   - **AWS**: EC2 p3, p4, g4, or g5 instance families
+   - **Azure**: NC, ND, or NV series virtual machines
 2. The NVIDIA device plugin must be enabled on your rack:
 ```bash
 $ convox rack params set nvidia_device_plugin_enable=true -r rackName
 ```
-See the [`nvidia_device_plugin_enable`](/configuration/rack-parameters/aws/nvidia_device_plugin_enable) rack parameter for details.
+See the NVIDIA device plugin rack parameter for your provider: [AWS](/configuration/rack-parameters/aws/nvidia_device_plugin_enable) | [Azure](/configuration/rack-parameters/azure/nvidia_device_plugin_enable).
 
 ### Configuring GPU Requirements
 

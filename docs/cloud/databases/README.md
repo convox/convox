@@ -27,7 +27,7 @@ resources:
 
     options:
       class: small
-      version: 17.5
+      version: "17.5"
 
 services:
   web:
@@ -67,7 +67,7 @@ resources:
 
     options:
       class: small
-      version: 17.5
+      version: "17.5"
 
 services:
   web:
@@ -97,7 +97,7 @@ resources:
 
     options:
       class: medium
-      version: 17.5
+      version: "17.5"
       durable: true
 ```
 
@@ -118,7 +118,7 @@ resources:
 
     options:
       class: dev
-      version: 17.5
+      version: "17.5"
 
 services:
   web:
@@ -137,7 +137,7 @@ resources:
 
     options:
       class: medium
-      version: 17.5
+      version: "17.5"
       durable: true
 
   mysql-legacy:
@@ -145,14 +145,14 @@ resources:
 
     options:
       class: small
-      version: 8.4.6
+      version: "8.4.6"
 
   mariadb-analytics:
     type: mariadb
 
     options:
       class: large
-      version: 11.4.8
+      version: "11.4.8"
 
 services:
   web:

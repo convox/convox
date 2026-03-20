@@ -120,7 +120,7 @@ services:
 
 By using the `ports` attribute, you can configure additional ports with specific protocols on both the Kubernetes service and pod levels.
 
-> Note: The main `port` must always be defined, and it will use the default ingress. Health checks go over the port defined as `port:`.
+> The main `port` must always be defined, and it will use the default ingress. Health checks go over the port defined as `port:`.
 
 ### Example of Configuring an Alternate Health Check Port
 
@@ -147,6 +147,6 @@ services:
 
 In this configuration, the main traffic goes through port 3000, while additional service communication uses ports 3001 and 3002.
 
-> Note: Ports defined with the `ports:` attribute will only be accessible within the cluster and through the configured custom balancer.
+> Ports defined with the `ports:` attribute will only be accessible within the cluster and through the configured custom balancer.
 
 For more detailed information on configuring load balancers, refer to the [Load Balancers](/configuration/load-balancers) documentation page.

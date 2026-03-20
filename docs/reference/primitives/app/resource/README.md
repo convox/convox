@@ -93,7 +93,7 @@ resources:
     type: redis
     image: custom-redis-image:6.2
     options:
-      version: 6.0
+      version: "6.0"
 ```
 
 In this example, a custom Redis image named `custom-redis-image` with tag `6.2` will be used.
@@ -291,7 +291,7 @@ resources:
     type: elasticache-redis
     options:
       class: cache.t3.micro
-      version: 6.2
+      version: "6.2"
 services:
   web:
     resources:
@@ -304,7 +304,7 @@ resources:
   cache:
     type: elasticache-memcached
     options:
-      version: 1.6.6
+      version: "1.6.6"
       class: cache.t4g.micro
       nodes: 1
 services:
