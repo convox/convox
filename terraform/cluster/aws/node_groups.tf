@@ -237,7 +237,6 @@ resource "aws_eks_node_group" "build_additional" {
 
   labels = {
     "convox-build" : "true"
-    "convox-build-arch" : module.build_amitype[each.key].is_arm ? "arm64" : "amd64"
     "convox.io/label" = each.value.label != null ? each.value.label : "custom-build"
   }
 

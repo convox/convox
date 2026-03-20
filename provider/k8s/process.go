@@ -334,7 +334,7 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 			}
 			if opts.BuildArch != nil && *opts.BuildArch != "" {
 				matchExprs = append(matchExprs, ac.NodeSelectorRequirement{
-					Key:      "convox-build-arch",
+					Key:      "kubernetes.io/arch",
 					Operator: ac.NodeSelectorOpIn,
 					Values:   []string{*opts.BuildArch},
 				})
