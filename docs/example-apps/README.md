@@ -138,7 +138,7 @@ We welcome contributions! If you have an example application you'd like to share
 
 ## Need a Specific Example?
 
-Can't find an example for your stack? We're constantly adding new examples based on community needs. Request a specific example by:
+Can't find an example for your stack? Request a specific example by:
 
 - Opening an issue in the [convox-examples](https://github.com/convox-examples/) organization
 - Reaching out through the [Convox Community Forum](https://community.convox.com)

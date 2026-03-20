@@ -42,7 +42,6 @@ services:
 | Name | Required | Description |
 |------|----------|-------------|
 | **type** | yes | Database engine: `postgres`, `mysql`, or `mariadb` |
-| **provider** | yes | Must be `aws` for Cloud Databases |
 | **options.class** | no | Database size: `dev`, `small`, `medium`, or `large` (default: `dev`) |
 | **options.version** | no | Database engine version (see supported versions below) |
 | **options.durable** | no | Enable Multi-AZ failover for high availability (default: `false`) |

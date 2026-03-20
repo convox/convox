@@ -249,33 +249,6 @@ Setting MYDBPASS... OK
 Release: RABCDEFGHI
 ```
 
-### Snapshot Support
-
-Snapshots allow you to restore a database from a specific point in time.
-
-```yaml
-resources:
-  db-from-snap:
-    type: rds-postgres
-    options:
-      storage: 10
-      snapshot: test-v3-rds-snapshot-postgres
-      version: "16"
-services:
-  web:
-    resources:
-      - db-from-snap
-```
-
-**Usage**:
-- Set the `snapshot` option with the snapshot identifier and ensure the `version` matches the engine version of the snapshot.
-- Remove the `snapshot` option and redeploy to enable options management from the `convox.yml`.
-
-**Immutable Attributes for Snapshots**:
-- Storage encryption
-- Engine version
-- Storage volume
-
 ## AWS ElastiCache Redis and Memcached Resources
 
 Convox supports native AWS ElastiCache Redis and Memcached instances for high-performance caching solutions. These managed cache instances can be defined and linked to services similarly to other managed resources.
