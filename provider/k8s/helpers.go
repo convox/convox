@@ -256,7 +256,7 @@ func volumeTo(v string) (string, error) {
 	case 2:
 		return parts[1], nil
 	default:
-		return "", errors.WithStack(fmt.Errorf("invalid volume %q", v))
+		return "", errors.WithStack(structs.ErrBadRequest("invalid volume %q", v))
 	}
 }
 
