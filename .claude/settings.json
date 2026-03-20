@@ -1,0 +1,85 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find *)",
+      "Bash(ls *)",
+      "Bash(ls)",
+      "Bash(wc *)",
+      "Bash(sort *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(cat *)",
+      "Bash(grep *)",
+      "Bash(diff *)",
+      "Bash(echo *)",
+      "Bash(test *)",
+      "Bash(pwd)",
+      "Bash(basename *)",
+      "Bash(dirname *)",
+      "Bash(xargs *)",
+      "Bash(rm *)",
+      "Bash(sed *)",
+      "Bash(tr *)",
+      "Bash(cut *)",
+      "Bash(uniq *)",
+      "Bash(awk *)",
+
+      "Bash(git *)",
+
+      "Bash(gh pr *)",
+      "Bash(gh release *)",
+      "Bash(gh api *)",
+
+      "Bash(python3 *)",
+      "Bash(node *)",
+      "Bash(jq *)",
+      "Bash(curl *)",
+
+      "Bash(go build *)",
+      "Bash(go vet *)",
+      "Bash(go test *)",
+      "Bash(docker info *)",
+      "Bash(minikube *)",
+      "Bash(convox *)",
+      "Bash(kubectl *)",
+      "Bash(nslookup *)",
+      "Bash(dig *)",
+      "Bash(host *)",
+
+      "Bash(cd /home/nick/convox*)",
+      "Bash(cd /home/nick/claude-reference*)",
+
+      "Read(//home/nick/.claude/**)",
+      "Read(//home/nick/convox/github-clones/convox/**)",
+      "Read(//home/nick/convox/github-clones/docs-v3/**)",
+      "Read(//home/nick/convox/github-clones/site/**)",
+      "Read(//home/nick/claude-reference/**)",
+      "Read(//tmp/**)",
+
+      "Edit(//home/nick/convox/github-clones/convox/**)",
+      "Edit(//home/nick/convox/github-clones/docs-v3/**)",
+      "Edit(//home/nick/claude-reference/**)",
+
+      "Write(//home/nick/convox/github-clones/convox/**)",
+      "Write(//home/nick/convox/github-clones/docs-v3/**)",
+      "Write(//home/nick/claude-reference/**)",
+
+      "Grep(//home/nick/convox/github-clones/convox/**)",
+      "Grep(//home/nick/convox/github-clones/docs-v3/**)",
+      "Grep(//home/nick/convox/github-clones/site/**)",
+      "Grep(//home/nick/claude-reference/**)",
+
+      "Glob(//home/nick/convox/github-clones/convox/**)",
+      "Glob(//home/nick/convox/github-clones/docs-v3/**)",
+      "Glob(//home/nick/convox/github-clones/site/**)",
+      "Glob(//home/nick/claude-reference/**)",
+
+      "Read(~/claude-reference/_refactor/**)",
+      "Edit(~/claude-reference/_refactor/**)",
+      "Write(~/claude-reference/_refactor/**)",
+      "Grep(~/claude-reference/_refactor/**)",
+      "Glob(~/claude-reference/_refactor/**)"
+    ],
+    "deny": []
+  }
+}
