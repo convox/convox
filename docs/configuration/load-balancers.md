@@ -31,7 +31,7 @@ You can then access the `web` Service of this App using `https://web.myapp.0a1b2
 
 Convox will automatically configure SSL for the external Services of your app using a certificate from [Let's Encrypt](https://letsencrypt.org/).
 
-> Convox will redirect HTTP requests on port 80 to HTTPS on port 443 using an HTTP 301 redirect.
+> Convox will redirect HTTP requests on port 80 to HTTPS on port 443 using an HTTP 308 redirect.
 
 ### Custom SSL Certificates
 

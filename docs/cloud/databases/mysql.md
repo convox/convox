@@ -14,7 +14,7 @@ Convox Cloud provides fully managed MySQL databases through AWS RDS.
 resources:
   database:
     type: mysql
-    provider: aws
+
     options:
       class: small
       version: 8.4.6
@@ -94,7 +94,7 @@ Enabling `durable: true` doubles the monthly cost.
 resources:
   database:
     type: mysql
-    provider: aws
+
     options:
       class: dev
       version: 8.4.6
@@ -113,7 +113,7 @@ services:
 resources:
   database:
     type: mysql
-    provider: aws
+
     options:
       class: large
       version: 8.4.6
@@ -133,7 +133,7 @@ services:
 resources:
   legacy-db:
     type: mysql
-    provider: aws
+
     options:
       class: medium
       version: 8.0.44

@@ -96,7 +96,7 @@ $ convox cloud deploy -i my-machine -a my-app
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: small
       version: 17.5

@@ -19,7 +19,7 @@ The rolling update proceeds in a "make one, break one" process in order to maint
 - Stop 1 old [Process](/reference/primitives/app/process) that is running the old [Release](/reference/primitives/app/release)
 - Repeat until all [Processes](/reference/primitives/app/process) are running the new [Release](/reference/primitives/app/release)
 
-## Minimum / Maximum configuration
+## Minimum and Maximum Deployment Counts
 
 Rolling updates will respect the [deployment configuration](/reference/primitives/app/service#deployment) to control the minimum number of healthy processes and maximum number of overall processes to have running at any one time during the update. This defaults to a minimum of 50% and a maximum of 200%.
 

@@ -17,7 +17,7 @@ focus on the things that make your [App](/reference/primitives/app) unique.
 | [Balancer](/reference/primitives/app/balancer) | Custom TCP load balancers in front of a [Service](/reference/primitives/app/service)                            |
 | [Build](/reference/primitives/app/build)       | Compiled version of a codebase                                                               |
 | [Object](/reference/primitives/app/object)     | Blob/file storage                                                                            |
-| [Process](/reference/primitives/app/process)   | Running containers created by running a command on a [Release](/reference/primitives/app/build)                 |
+| [Process](/reference/primitives/app/process)   | Running containers created by running a command on a [Release](/reference/primitives/app/release)                 |
 | [Release](/reference/primitives/app/release)   | Units of deployment consisting of a [Build](/reference/primitives/app/build) and a set of environment variables |
 | [Resource](/reference/primitives/app/resource) | Network-accessible external services (e.g. Postgres)                                         |
 | [Service](/reference/primitives/app/service)   | Horizontally-scalable collections of durable [Processes](/reference/primitives/app/process)                     |

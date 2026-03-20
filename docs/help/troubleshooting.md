@@ -137,19 +137,13 @@ $ convox env set FOO=bar --promote -a myapp
 
 See [Environment Variables](/configuration/environment) for more details.
 
+## Still Having Trouble?
+
+- Search this site via the search box in the sidebar.
+- Community support is available on [Stack Overflow](https://stackoverflow.com/questions/tagged/convox) using the `convox` tag.
+
 ## See Also
 
 - [Known Issues](/help/known-issues) for a list of current known issues and workarounds
 - [Direct Kubernetes Access](/management/direct-k8s-access) for advanced debugging via kubectl
-
-## Still having trouble?
-
-Some good places to search are:
-
-- this site, via the search box in the sidebar
-- Community support is available on [Stack Overflow](https://stackoverflow.com/questions/tagged/convox).
-
-If you still need help, feel free to:
-
-- post a question on the [Stack Overflow](https://stackoverflow.com/questions/tagged/convox) using the `convox` tag.
 - open a ticket via the Support section [in the Convox web console](https://console.convox.com/)

@@ -14,7 +14,7 @@ Convox Cloud provides fully managed MariaDB databases through AWS RDS.
 resources:
   database:
     type: mariadb
-    provider: aws
+
     options:
       class: small
       version: 11.4.8
@@ -99,7 +99,7 @@ Enabling `durable: true` doubles the monthly cost.
 resources:
   database:
     type: mariadb
-    provider: aws
+
     options:
       class: dev
       version: 11.4.8
@@ -118,7 +118,7 @@ services:
 resources:
   database:
     type: mariadb
-    provider: aws
+
     options:
       class: large
       version: 11.4.8
@@ -138,7 +138,7 @@ services:
 resources:
   primary:
     type: mariadb
-    provider: aws
+
     options:
       class: medium
       version: 11.4.8
@@ -146,7 +146,7 @@ resources:
 
   legacy:
     type: mariadb
-    provider: aws
+
     options:
       class: small
       version: 10.6.24

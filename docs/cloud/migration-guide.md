@@ -131,7 +131,7 @@ Map Heroku add-ons to Convox resources:
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: small
       version: 17.5
@@ -235,7 +235,7 @@ environment:
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: dev
       version: 17.5
@@ -304,7 +304,7 @@ CMD ["npm", "start"]
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: small
       version: 17.5
@@ -403,7 +403,7 @@ After (Cloud):
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: dev
       version: 17.5
@@ -465,7 +465,7 @@ environment:
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: dev
       version: 17.5

@@ -7,7 +7,7 @@ url: /reference/releases
 
 Convox follows semantic versioning (`major.minor.patch`). Minor versions introduce new features, Kubernetes upgrades, and dependency updates. Patch versions contain bug fixes, small improvements, and backported features.
 
-New releases are published on the [Convox GitHub Releases](https://github.com/convox/convox/releases) page. This section provides a structured, browsable history of all releases from 3.15.0 onward.
+New releases are published on the [Convox GitHub Releases](https://github.com/convox/convox/releases) page. This section provides a structured, browsable history of all releases from 3.15.0 onward (3.20.0+ are the currently supported versions).
 
 ## Kubernetes Version Compatibility
 

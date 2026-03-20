@@ -14,7 +14,7 @@ Convox Cloud provides fully managed PostgreSQL databases through AWS RDS.
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: small
       version: 17.5
@@ -101,7 +101,7 @@ Enabling `durable: true` doubles the monthly cost.
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: dev
       version: 17.5
@@ -120,7 +120,7 @@ services:
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: large
       version: 17.5
@@ -140,7 +140,7 @@ services:
 resources:
   primary:
     type: postgres
-    provider: aws
+
     options:
       class: medium
       version: 17.5
@@ -148,7 +148,7 @@ resources:
 
   analytics:
     type: postgres
-    provider: aws
+
     options:
       class: small
       version: 16.11

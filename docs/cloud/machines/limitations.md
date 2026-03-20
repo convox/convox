@@ -147,7 +147,7 @@ Convox Cloud provides fully managed RDS databases through Cloud Databases:
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: small
       version: 17.5
@@ -172,7 +172,7 @@ services:
 
 ### Containerized Databases
 
-You can also use containerized databases (without `provider: aws`):
+You can also use containerized databases (without a managed database type):
 
 ```yaml
 resources:
@@ -428,7 +428,7 @@ volumes:
    resources:
      database:
        type: postgres
-       provider: aws
+   
        options:
          class: small
          version: 17.5

@@ -216,7 +216,7 @@ convox rack install azure <name> [param=value]...
 | Parameter       | Default          | Description                       |
 | --------------- | ---------------- | --------------------------------- |
 | `cert_duration` | `2160h`          | How often certificates renew      |
-| `node_type`     | `Standard_D3_v3` | VM size for Kubernetes nodes      |
+| `node_type`     | `Standard_D2_v3` | VM size for Kubernetes nodes      |
 | `region`        | `eastus`         | Azure region                      |
 | `syslog`        |                  | Forward logs to a syslog endpoint |
 

@@ -166,7 +166,7 @@ To add a managed database to your application, update your `convox.yml`:
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: dev
       version: 17.5
@@ -204,7 +204,7 @@ For production workloads, use a larger class with Multi-AZ failover:
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: small
       version: 17.5

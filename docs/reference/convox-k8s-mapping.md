@@ -129,7 +129,6 @@ resources:
       class: cache.t3.micro
       version: "6.2"
       encrypted: true
-      transitEncryption: true
       durable: true
 
 # ============================================================================
@@ -338,7 +337,7 @@ timers:
     command: bin/cleanup
     schedule: "0 3 * * *"
     service: jobs
-    concurrency: forbid
+    concurrency: Forbid
 
   # Parallel timer → CronJob "timer-data-import" with parallelism=4
   # Each replica gets a TIMER_INDEX env var (0, 1, 2, 3)
@@ -347,7 +346,7 @@ timers:
     schedule: "0 * * * *"
     service: jobs
     parallelCount: 4
-    concurrency: forbid
+    concurrency: Forbid
     annotations:
       - monitoring.example.com/alert=true
 

@@ -18,13 +18,13 @@ Convox Cloud supports three database engines:
 
 ## Definition
 
-Cloud Databases are defined in your `convox.yml` with `provider: aws`:
+Cloud Databases are defined in your `convox.yml` using a managed resource type:
 
 ```yaml
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: small
       version: 17.5
@@ -64,7 +64,7 @@ Linking a database to a [Service](/reference/primitives/app/service) injects env
 resources:
   main:
     type: postgres
-    provider: aws
+
     options:
       class: small
       version: 17.5
@@ -94,7 +94,7 @@ Enable Multi-AZ deployment for automatic failover and high availability:
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: medium
       version: 17.5
@@ -115,7 +115,7 @@ When `durable: true` is set:
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: dev
       version: 17.5
@@ -134,7 +134,7 @@ services:
 resources:
   postgres-main:
     type: postgres
-    provider: aws
+
     options:
       class: medium
       version: 17.5
@@ -142,14 +142,14 @@ resources:
 
   mysql-legacy:
     type: mysql
-    provider: aws
+
     options:
       class: small
       version: 8.4.6
 
   mariadb-analytics:
     type: mariadb
-    provider: aws
+
     options:
       class: large
       version: 11.4.8

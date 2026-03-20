@@ -615,7 +615,7 @@ OK
 
 ## Resource Management (Cloud Databases)
 
-Cloud Databases are defined in your `convox.yml` with `provider: aws`. The CLI provides commands to interact with these managed databases.
+Cloud Databases are defined in your `convox.yml` using a managed resource type. The CLI provides commands to interact with these managed databases.
 
 ### resources
 

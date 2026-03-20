@@ -10,7 +10,7 @@ url: /configuration/rack-parameters/azure/node_type
 The `node_type` parameter specifies the type of instance to use for nodes in your Convox rack. This allows you to choose the appropriate instance type based on your application's requirements.
 
 ## Default Value
-The default value for `node_type` is `Standard_D3_v3`.
+The default value for `node_type` is `Standard_D2_v3`.
 
 ## Use Cases
 - **Performance Optimization**: Select an instance type that provides the necessary CPU, memory, and network performance for your application.
@@ -19,7 +19,7 @@ The default value for `node_type` is `Standard_D3_v3`.
 ## Setting Parameters
 To set the `node_type` parameter, use the following command:
 ```bash
-$ convox rack params set node_type=Standard_D3_v3 -r rackName
+$ convox rack params set node_type=Standard_D2_v3 -r rackName
 Setting parameters... OK
 ```
 This command sets the `node_type` parameter to the specified value.

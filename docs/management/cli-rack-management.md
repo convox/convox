@@ -181,7 +181,7 @@ For detailed descriptions and instructions, visit the [Microsoft Azure Rack Para
 | Name                    | Default           |
 |-------------------------|-------------------|
 | **cert_duration**       | **2160h**         |
-| **node_type**           | **Standard_D3_v3**|
+| **node_type**           | **Standard_D2_v3**|
 | **region**              | **eastus**        |
 | **syslog**              |                   |
 | **telemetry**           | **true**          |

@@ -134,7 +134,7 @@ See [Cloud Databases](/cloud/databases) for configuration details.
 resources:
   database:
     type: postgres
-    provider: aws
+
     options:
       class: small
       version: 17.5

@@ -8,9 +8,9 @@ url: /management/rbac
 
 The RBAC feature allows you to define granular access control by assigning specific roles and permission policies to users in your organization.
 
-Existing users retain their **Legacy Role** by default, ensuring that no active changes are made upon this update. Organizations can create, test, and assign new roles without affecting current user access.
+Users who have not been assigned a custom role retain a **Legacy Role** that preserves their original Console permissions. Organizations can create, test, and assign new roles at their own pace.
 
-> **Note**: While legacy roles did not affect CLI access, the new RBAC roles will apply to both the Console and the CLI, ensuring unified permission management across interfaces.
+> **Note**: RBAC roles apply to both the Console and the CLI, ensuring unified permission management across interfaces.
 
 > **Important**: It is highly recommended to restrict write access to the **Roles** resource. If a user has write access to roles, they could potentially modify or escalate their own permissions, undermining the security of the RBAC configuration. Follow the principle of least privilege to mitigate this risk.
 
@@ -32,7 +32,7 @@ To assign a custom role to a user:
 
 ## Pre-Created Roles
 
-To make role assignment easier, Convox provides a set of **pre-created roles**. These roles come with pre-configured permissions, mirroring the existing legacy Console Roles, and are managed by Convox to cover common use cases and best practices for platform access. The new managed roles also extend to CLI use, ensuring consistent permissions across both the Console and CLI. These roles are cumulative, with each level adding more permissions than the last.
+To make role assignment easier, Convox provides a set of **pre-created roles**. These roles come with pre-configured permissions and are managed by Convox to cover common use cases and best practices for platform access. The managed roles apply to both the Console and CLI, ensuring consistent permissions across interfaces. These roles are cumulative, with each level adding more permissions than the last.
 
 ### Administrator
 
