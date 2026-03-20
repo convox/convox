@@ -41,7 +41,7 @@ func isNvididGpuInstanceType(client *ec2.EC2, instanceTypes []string) ([]string,
 	}
 
 	if len(resp.InstanceTypes) == 0 {
-		return nil, fmt.Errorf("instance type not found")
+		return nil, structs.ErrNotFound("instance type not found")
 	}
 
 	results := []string{}

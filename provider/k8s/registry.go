@@ -70,7 +70,7 @@ func (p *Provider) RegistryList() (structs.Registries, error) {
 
 			parts := strings.SplitN(string(data), ":", 2)
 			if len(parts) != 2 {
-				return nil, errors.WithStack(fmt.Errorf("invalid auth for registry: %s", host))
+				return nil, errors.WithStack(structs.ErrBadRequest("invalid auth for registry: %s", host))
 			}
 
 			rs = append(rs, structs.Registry{
@@ -139,10 +139,10 @@ func (p *Provider) RegistryRemove(server string) error {
 		return errors.WithStack(err)
 	}
 	if dc.Auths == nil {
-		return errors.WithStack(fmt.Errorf("no such registry: %s", server))
+		return errors.WithStack(structs.ErrNotFound("no such registry: %s", server))
 	}
 	if _, ok := dc.Auths[server]; !ok {
-		return errors.WithStack(fmt.Errorf("no such registry: %s", server))
+		return errors.WithStack(structs.ErrNotFound("no such registry: %s", server))
 	}
 
 	delete(dc.Auths, server)
@@ -171,11 +171,11 @@ func (p *Provider) dockerConfigLoad(secret string) (*dockerConfig, error) {
 		return nil, errors.WithStack(err)
 	}
 	if s.Type != ac.SecretTypeDockerConfigJson {
-		return nil, errors.WithStack(fmt.Errorf("invalid type for secret: %s", secret))
+		return nil, errors.WithStack(structs.ErrBadRequest("invalid type for secret: %s", secret))
 	}
 	data, ok := s.Data[".dockerconfigjson"]
 	if !ok {
-		return nil, errors.WithStack(fmt.Errorf("invalid data for secret: %s", secret))
+		return nil, errors.WithStack(structs.ErrBadRequest("invalid data for secret: %s", secret))
 	}
 
 	var dc dockerConfig

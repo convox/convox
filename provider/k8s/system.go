@@ -46,7 +46,7 @@ func (p *Provider) SystemGet() (*structs.System, error) {
 }
 
 func (p *Provider) SystemInstall(w io.Writer, opts structs.SystemInstallOptions) (string, error) {
-	return "", errors.WithStack(fmt.Errorf("unimplemented"))
+	return "", errors.WithStack(structs.ErrNotImplemented("unimplemented"))
 }
 
 func (p *Provider) SystemJwtSignKey() (string, error) {
@@ -96,7 +96,7 @@ func (p *Provider) SystemJwtSignKeyRotate() (string, error) {
 }
 
 func (p *Provider) SystemLogs(opts structs.LogsOptions) (io.ReadCloser, error) {
-	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
+	return nil, errors.WithStack(structs.ErrNotImplemented("unimplemented"))
 }
 
 func (p *Provider) SystemMetrics(opts structs.MetricsOptions) (structs.Metrics, error) {
@@ -154,15 +154,15 @@ func (p *Provider) SystemProcesses(opts structs.SystemProcessesOptions) (structs
 }
 
 func (p *Provider) SystemReleases() (structs.Releases, error) {
-	return nil, errors.WithStack(fmt.Errorf("release history is unavailable"))
+	return nil, errors.WithStack(structs.ErrNotImplemented("release history is unavailable"))
 }
 
 func (p *Provider) SystemUninstall(name string, w io.Writer, opts structs.SystemUninstallOptions) error {
-	return errors.WithStack(fmt.Errorf("direct rack doesn't support uninstall, make sure you are not using RACK_URL environment variable"))
+	return errors.WithStack(structs.ErrNotImplemented("direct rack doesn't support uninstall, make sure you are not using RACK_URL environment variable"))
 }
 
 func (p *Provider) SystemUpdate(opts structs.SystemUpdateOptions) error {
-	return errors.WithStack(fmt.Errorf("direct rack doesn't support update, make sure you are not using RACK_URL environment variable"))
+	return errors.WithStack(structs.ErrNotImplemented("direct rack doesn't support update, make sure you are not using RACK_URL environment variable"))
 }
 
 func (p *Provider) updateJwtSignKey() (string, error) {

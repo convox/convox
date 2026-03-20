@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/convox/convox/pkg/common"
+	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/aws/provisioner/elasticache"
 	"github.com/convox/convox/provider/aws/provisioner/rds"
 	corev1 "k8s.io/api/core/v1"
@@ -38,7 +39,7 @@ func (p *Provider) CreateAwsResourceStateId(app string, resourceName string) str
 func (p *Provider) ParseAppNameFromAwsResourceStateId(id string) (string, error) {
 	parts := strings.Split(id, fmt.Sprintf("-r%sr-", p.Name))
 	if len(parts) != 2 {
-		return "", fmt.Errorf("invalid state id")
+		return "", structs.ErrBadRequest("invalid state id")
 	}
 	return parts[1], nil
 }
@@ -46,7 +47,7 @@ func (p *Provider) ParseAppNameFromAwsResourceStateId(id string) (string, error)
 func (p *Provider) ParseResourceNameFromAwsResourceStateId(id string) (string, error) {
 	parts := strings.Split(id, fmt.Sprintf("-r%sr-", p.Name))
 	if len(parts) != 2 {
-		return "", fmt.Errorf("invalid state id")
+		return "", structs.ErrBadRequest("invalid state id")
 	}
 	return parts[0], nil
 }
@@ -91,14 +92,14 @@ func (p *Provider) GetState(id string) ([]byte, error) {
 	s, err := p.Cluster.CoreV1().Secrets(p.AppNamespace(app)).Get(p.ctx, id, metav1.GetOptions{})
 	if err != nil {
 		if kerr.IsNotFound(err) {
-			return nil, fmt.Errorf("state not found")
+			return nil, structs.ErrNotFound("state not found")
 		}
 		return nil, err
 	}
 
 	data, has := s.Data[StateDataKey]
 	if !has {
-		return nil, fmt.Errorf("state not found")
+		return nil, structs.ErrNotFound("state not found")
 	}
 
 	return data, err
