@@ -13,8 +13,7 @@ url: /help/known-issues
   uninstalling AWS Racks. To work around this issue you must manually delete the ENIs in the VPC
   created for the Rack that are left behind in an "available" state.
   [aws/amazon-vpc-cni-k8s#608](https://github.com/aws/amazon-vpc-cni-k8s/issues/608)
-  * Update:  We have provided a fix for this issue that extends the delete operation timeout
-    for public and private subnets.
+  * Update: Convox has applied a fix that extends the delete operation timeout for public and private subnets (6-hour timeout plus a 5-minute delay). This works around the issue in most cases, but the underlying AWS ENI/subnet deletion race condition has not been fixed by AWS. Users may still encounter this in edge cases during rack uninstallation.
 
 ### Local
 

@@ -52,7 +52,6 @@ resources:
       durable: true
       encrypted: true
       autoMinorVersionUpgrade: true
-      transitEncryption: true
 services:
   web:
     resources:
@@ -73,8 +72,6 @@ services:
 | **deletionProtection**      | boolean | `false`      | Whether to enable deletion protection. Managed by Convox (not an AWS feature). Prevents the resource from being removed if accidentally deleted from `convox.yml` |
 | **durable**                 | boolean | `false`      | Whether to enable automatic failover (Multi-AZ)                                                    |
 | **encrypted**               | boolean | `false`      | Whether to enable encryption at rest. Immutable after creation                                     |
-| **transitEncryption**       | boolean | `false`      | Whether to enable in-transit encryption. Requires `password` to be set                             |
-| **password**                | string  |              | Auth token for in-transit encrypted connections. Required when `transitEncryption` is `true`        |
 | **nodes**                   | int     |              | The number of cache clusters (read replicas) in the replication group                              |
 | **autoMinorVersionUpgrade** | boolean | `false`      | Whether to allow automatic minor version upgrades                                                  |
 | **import**                  | string  |              | The replication group identifier for importing an existing ElastiCache instance                     |

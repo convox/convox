@@ -30,7 +30,7 @@ timers:
 | **command**      | **yes**  | The command to execute once the [Process](/reference/primitives/app/process) starts                               |
 | **schedule**     | **yes**  | A cron formatted schedule for spawning the [Process](/reference/primitives/app/process). All times are UTC        |
 | **service**      | **yes**  | The name of the [Service](/reference/primitives/app/service) that will be used to spawn the [Process](/reference/primitives/app/process) |
-| **concurrency**  | **no**   | Specifies how to treat concurrent executions of a job created by this cron job. Defaults to `Allow` if not defined. See the [Kubernetes concurrency policy documentation](https://kubernetes.io/docs/tasks/job/automated-tasks-with-cron-jobs/#concurrency-policy) for details. |
+| **concurrency**  | **no**   | Specifies how to treat concurrent executions of a job created by this cron job. Valid values: `Allow`, `Forbid`, `Replace`. Defaults to `Allow` if not defined. Values are case-insensitive (Convox normalizes to title case before applying). See the [Kubernetes concurrency policy documentation](https://kubernetes.io/docs/tasks/job/automated-tasks-with-cron-jobs/#concurrency-policy) for details. |
 | **parallelCount** | **no**  | The number of parallel replicas to run for each timer execution. Defaults to 1. Each replica receives a unique `TIMER_INDEX` environment variable (0-based). Supported version >= 3.22.4 |
 
 ### Cron Expression Format
@@ -68,7 +68,7 @@ timers:
     command: bin/cleanup
     schedule: "*/2 * * * *"
     service: jobs
-    concurrency: forbid
+    concurrency: Forbid
 ```
 On this [App](/reference/primitives/app) the `jobs` [Service](/reference/primitives/app/service) is scaled to zero and not running any durable
 [Processes](/reference/primitives/app/process).
@@ -184,7 +184,7 @@ timers:
     schedule: "0 * * * *"
     service: jobs
     parallelCount: 4
-    concurrency: forbid
+    concurrency: Forbid
   daily-cleanup:
     command: bin/cleanup
     schedule: "0 2 * * *"
@@ -195,6 +195,6 @@ timers:
 ```
 
 In this configuration:
-- `hourly-import` runs 4 parallel import processes every hour, with `concurrency: forbid` ensuring no overlapping executions
+- `hourly-import` runs 4 parallel import processes every hour, with `concurrency: Forbid` ensuring no overlapping executions
 - `daily-cleanup` runs 10 parallel cleanup processes at 2 AM UTC daily
 - Both timers use the `jobs` service template which is scaled to zero when not in use

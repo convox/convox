@@ -46,7 +46,6 @@ services:
       minimum: 25
       maximum: 100
     domain: ${WEB_HOST}
-    drain: 10
     dnsConfig:
       ndots: 5
     environment:

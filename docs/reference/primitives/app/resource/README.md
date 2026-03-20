@@ -32,7 +32,7 @@ services:
 - `mariadb`
 - `memcached`
 - `mysql`
-- `postgis`
+- [`postgis`](/reference/primitives/app/resource/postgis)
 - `postgres`
 - `redis`
 

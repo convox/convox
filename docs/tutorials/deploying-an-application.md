@@ -185,3 +185,4 @@ Promoting a Release starts a rolling deployment:
 - Learn more about [scaling](/configuration/scaling)
 - Create a [review workflow](/deployment/workflows#review-workflows) to automatically create a review app every time you open a pull request
 - Create a [deployment workflow](/deployment/workflows#deployment-workflows) to automatically deploy your app every time you merge to master
+- Browse [Example Apps](/example-apps) for ready-to-deploy sample applications in various languages and frameworks

@@ -70,6 +70,3 @@ Setting BuildLabels... OK
 - This parameter sets a request (minimum guaranteed allocation) for CPU resources. The build pod may receive additional CPU time if available on the node.
 - For optimal build performance, consider setting both `BuildCpu` and `BuildMem` appropriately based on your application's build requirements.
 - When using custom build node groups with [`additional_build_groups_config`](/configuration/rack-parameters/aws/additional_build_groups_config), ensure the node groups have sufficient CPU capacity to accommodate your `BuildCpu` settings.
-
-## Version Requirements
-This feature is available in all recent versions of Convox.

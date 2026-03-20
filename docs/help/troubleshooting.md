@@ -137,6 +137,11 @@ $ convox env set FOO=bar --promote -a myapp
 
 See [Environment Variables](/configuration/environment) for more details.
 
+## See Also
+
+- [Known Issues](/help/known-issues) for a list of current known issues and workarounds
+- [Direct Kubernetes Access](/management/direct-k8s-access) for advanced debugging via kubectl
+
 ## Still having trouble?
 
 Some good places to search are:

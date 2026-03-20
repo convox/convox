@@ -45,6 +45,3 @@ Setting parameters... OK
   ```
 - Disabling certificate generation for `convox.cloud` domains does not affect the functionality of your applications. They will still be accessible through their default URLs, but browsers will show security warnings due to the missing certificates.
 - Consider using this parameter in conjunction with [custom domains](/deployment/custom-domains) for your services to maintain secure HTTPS connections.
-
-## Version Requirements
-This feature is available in all recent versions of Convox.

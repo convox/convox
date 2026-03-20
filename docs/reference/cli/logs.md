@@ -7,7 +7,7 @@ url: /reference/cli/logs
 
 ## Logs
 
-Get logs for an app
+Get logs for an app. By default, `convox logs` streams logs continuously. Use `--no-follow` to print current logs and exit.
 
 ### Usage
 ```bash

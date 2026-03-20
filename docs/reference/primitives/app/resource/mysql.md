@@ -66,7 +66,6 @@ services:
 ### RDS Features
 
 - **Read Replica Support**: Configure read replicas for improved read scalability and reliability. Read replicas can be promoted to active primaries if needed.
-- **Snapshot Restoration**: Restore from a snapshot to create a new database instance with your desired specifications.
 - **Import Existing RDS Database**: Import existing AWS RDS databases into a Convox rack for management or access via linking.
 
 ### RDS Configuration Options
@@ -89,7 +88,6 @@ services:
 | **autoMinorVersionUpgrade**   | boolean | `true`           | Whether minor version upgrades are applied automatically                                                     |
 | **readSourceDB**              | string  |                  | The source database identifier for creating a read replica                                                   |
 | **import**                    | string  |                  | The database identifier for importing an existing RDS instance. Requires `masterUserPassword`                |
-| **snapshot**                  | string  |                  | The snapshot identifier for restoring from a snapshot                                                        |
 
 ## Command Line Interface
 

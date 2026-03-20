@@ -76,6 +76,3 @@ Setting BuildLabels... OK
   - Docker build errors during large image creation
 - For optimal build performance, consider setting both `BuildMem` and `BuildCpu` appropriately based on your application's build requirements.
 - When using custom build node groups with [`additional_build_groups_config`](/configuration/rack-parameters/aws/additional_build_groups_config), ensure the node groups have sufficient memory capacity to accommodate your `BuildMem` settings.
-
-## Version Requirements
-This feature is available in all recent versions of Convox.

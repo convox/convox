@@ -11,7 +11,7 @@ Diagnose deploy failures by inspecting an app's Kubernetes pods server-side. Thi
 
 When a deploy fails, `convox logs` often shows nothing because logs are only returned from pods that have passed health checks and reached a ready state. `deploy-debug` closes this visibility gap by querying Kubernetes directly from the rack API.
 
-## Usage
+### Usage
 ```bash
     convox deploy-debug
 ```

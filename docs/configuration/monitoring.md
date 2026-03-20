@@ -187,8 +187,8 @@ convox logs -a myapp --service web
 # View logs for a specific time period
 convox logs -a myapp --since 1h
 
-# Tail application logs
-convox logs -a myapp --follow
+# Stream application logs (default behavior)
+convox logs -a myapp
 ```
 
 ## See Also

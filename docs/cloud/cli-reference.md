@@ -836,8 +836,8 @@ $ convox cloud env set DATABASE_URL=postgres://... -a myapp -i prod
 # Scale service
 $ convox cloud scale web --count 3 --cpu 500 -a myapp -i prod
 
-# Monitor logs
-$ convox cloud logs -a myapp -i prod --follow
+# Monitor logs (streams by default; use --no-follow for one-time dump)
+$ convox cloud logs -a myapp -i prod
 ```
 
 ### Development Workflow

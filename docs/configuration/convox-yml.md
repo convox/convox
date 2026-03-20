@@ -173,6 +173,8 @@ See [Balancer](/reference/primitives/app/balancer) and [Load Balancers](/configu
 
 ## See Also
 
+- [App Definition](/configuration/app-definition) for a hub of all app definition configuration topics
+- [Networking](/configuration/networking) for network configuration including load balancers, DNS, and custom domains
 - [Environment Variables](/configuration/environment) for configuring app settings
 - [Health Checks](/configuration/health-checks) for configuring service health checks
 - [Scaling](/configuration/scaling) for controlling service scale and autoscaling

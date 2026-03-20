@@ -116,6 +116,8 @@ Total resource usage:
 - CPU: (2 × 250) + 250 + 125 = 875 millicores (under 1000 limit)
 - Memory: (2 × 512) + 768 + 256 = 2048 MB (at 2 GB limit)
 
+> This example uses non-standard CPU and memory values (125m CPU, 768 MB memory) to demonstrate precise resource packing within a Small machine's limits. In general practice, prefer round CPU values (250, 500, 1000) and binary memory increments (256, 512, 1024).
+
 ## Cloud Databases
 
 Convox Cloud provides managed database instances separately from machines. Cloud Databases are billed independently and include:
