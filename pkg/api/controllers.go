@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"sort"
@@ -1015,7 +1016,7 @@ func (s *Server) ProxyHttpService(c *stdapi.Context) error {
 
 	u, err := url.Parse(fmt.Sprintf("http://%s:%d", host, port))
 	if err != nil {
-		return stdapi.Errorf(400, "invalid host: %s", err)
+		return stdapi.Errorf(http.StatusBadRequest, "invalid host: %s", err)
 	}
 
 	rp := httputil.NewSingleHostReverseProxy(u)
@@ -1468,7 +1469,7 @@ func (s *Server) SystemJwtToken(c *stdapi.Context) error {
 	role := c.Value("role")
 	durationInHour, err := strconv.Atoi(c.Value("durationInHour"))
 	if err != nil {
-		return stdapi.Errorf(400, "invalid duration")
+		return stdapi.Errorf(http.StatusBadRequest, "invalid duration")
 	}
 
 	var tk string
