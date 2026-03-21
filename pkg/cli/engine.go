@@ -26,7 +26,13 @@ func (e *Engine) Command(command, description string, fn HandlerFunc, opts stdcl
 			return err
 		}
 
-		return fn(rc, c)
+		err = fn(rc, c)
+
+		if err == nil {
+			rack.TrySaveDirectMeta(c, r, rc)
+		}
+
+		return err
 	}
 
 	// the wait command flag is added for making the cli tool v2 backwards compatible
