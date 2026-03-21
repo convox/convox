@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -149,7 +148,7 @@ func (c *Client) u2fCallbackServer(dataChan chan []byte) (string, *http.Server, 
 
 	addr := fmt.Sprintf("http://localhost:%d", listener.Addr().(*net.TCPAddr).Port)
 
-	srv := &http.Server{}
+	srv := &http.Server{ReadHeaderTimeout: 10 * time.Second}
 	srv.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		data := r.URL.Query().Get("data")
 		if data == "" {
@@ -172,7 +171,7 @@ func (c *Client) u2fCallbackServer(dataChan chan []byte) (string, *http.Server, 
 
 	go func() {
 		if err := srv.Serve(listener); err != nil && !strings.Contains(err.Error(), "http: Server closed") {
-			log.Fatalf("failed to start u2f callback server: %s", err)
+			fmt.Fprintf(os.Stderr, "u2f callback server error: %s\n", err)
 		}
 	}()
 
