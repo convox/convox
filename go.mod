@@ -1,8 +1,6 @@
 module github.com/convox/convox
 
-go 1.24.7
-
-toolchain go1.24.9
+go 1.24.13
 
 require (
 	cloud.google.com/go/storage v1.52.0

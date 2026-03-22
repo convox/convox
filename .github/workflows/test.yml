@@ -28,10 +28,10 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v3
-      - name: golang-1.23
+      - name: golang-1.24
         uses: actions/setup-go@v3
         with:
-          go-version: '1.23'
+          go-version: '1.24'
       - name: Install libudev-dev
         run: sudo apt-get update && sudo apt-get install -y libudev-dev
       - name: tools
