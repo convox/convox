@@ -403,3 +403,204 @@ Groups:
         regex: ^\d+(Mi|Gi)$
         description: Memory request and limit for the Fluentd DaemonSet. Increase
           if Fluentd pods are experiencing OOMKills.
+  - name: Karpenter
+    order: 6
+    params:
+      - name: karpenter_enabled
+        default: "false"
+        type: boolean
+        description: |
+          Enable Karpenter node autoscaling as an alternative to Cluster
+          Autoscaler. &l When enabled, deploys Karpenter controller and
+          NodePools for workload scheduling. System nodes remain as managed
+          node groups. &l Bidirectional — can be toggled on and off safely.
+      - name: karpenter_instance_families
+        optional: true
+        default: "null"
+        sideNote: All general-purpose families if not set
+        type: string
+        regex: ^[a-z0-9]+(,[a-z0-9]+)*$
+        description: |
+          Comma-separated EC2 instance families for the workload NodePool. &l
+          &i e.g. &i c5,c6i,m5,m6i,r5 &l
+      - name: karpenter_instance_sizes
+        optional: true
+        default: "null"
+        sideNote: All sizes if not set
+        type: string
+        regex: ^[a-z0-9]+(,[a-z0-9]+)*$
+        description: |
+          Comma-separated instance sizes for the workload NodePool. &l
+          &i e.g. &i large,xlarge,2xlarge &l
+      - name: karpenter_capacity_types
+        default: on-demand
+        type: string
+        description: |
+          Capacity types for Karpenter workload nodes. &l
+          &b on-demand &b - On-demand instances only &l
+          &b spot &b - Spot instances only &l
+          &b on-demand,spot &b - Both (Karpenter optimizes cost) &l
+        allowedValues:
+          - on-demand
+          - spot
+          - on-demand,spot
+      - name: karpenter_arch
+        default: amd64
+        type: string
+        description: |
+          CPU architectures for Karpenter workload nodes. &l
+          &b amd64 &b - x86_64 only &l
+          &b arm64 &b - ARM64 only &l
+          &b amd64,arm64 &b - Both &l
+        allowedValues:
+          - amd64
+          - arm64
+          - amd64,arm64
+      - name: karpenter_cpu_limit
+        default: "100"
+        type: integer
+        description: Maximum total vCPUs Karpenter can provision. Safety limit against runaway scaling.
+        allowedMinValue: 1
+      - name: karpenter_memory_limit_gb
+        default: "400"
+        type: integer
+        description: Maximum total memory (GiB) Karpenter can provision.
+        allowedMinValue: 1
+      - name: karpenter_consolidation_enabled
+        default: "true"
+        type: boolean
+        description: |
+          Enable node consolidation. When true, Karpenter will remove
+          underutilized or empty nodes. When false, only removes empty nodes.
+      - name: karpenter_consolidate_after
+        default: 30s
+        type: string
+        regex: ^\d+[smh]$
+        description: Time before consolidation triggers. &l &i e.g. &i 30s, 5m &l
+      - name: karpenter_node_expiry
+        default: 720h
+        type: string
+        regex: ^\d+h$|^Never$
+        description: |
+          Maximum node lifetime before replacement. Default 30 days. &l
+          Set to &b Never &b to disable node expiry. &l
+      - name: karpenter_disruption_budget_nodes
+        default: "10%"
+        type: string
+        regex: ^\d+%?$
+        description: Maximum nodes that can be disrupted simultaneously. &l &i e.g. &i 10%, 3 &l
+      - name: karpenter_node_disk
+        default: "0"
+        type: integer
+        description: |
+          EBS volume size (GiB) for Karpenter-provisioned nodes. &l
+          &b 0 &b means use the &i node_disk &i value. &l
+        allowedMinValue: 0
+      - name: karpenter_node_volume_type
+        default: gp3
+        type: string
+        description: EBS volume type for Karpenter-provisioned nodes.
+        allowedValues:
+          - gp2
+          - gp3
+          - io1
+          - io2
+      - name: karpenter_node_labels
+        optional: true
+        default: "null"
+        sideNote: No extra labels by default
+        type: string
+        regex: ^([^=\s,]+=[^\s,]+)(,[^=\s,]+=[^\s,]+)*$
+        description: |
+          Custom labels for the workload NodePool nodes. &l Comma-separated
+          key=value pairs. &l &i e.g. &i team=backend,env=production &l &l
+          These labels are added alongside the default
+          &i convox.io/nodepool=workload &i label. Use node selectors in
+          your services to target these labels. &l
+      - name: karpenter_node_taints
+        optional: true
+        default: "null"
+        sideNote: No taints by default
+        type: string
+        description: |
+          Custom taints on workload NodePool nodes. &l Comma-separated
+          &i key=value:Effect &i entries. Effect must be NoSchedule,
+          PreferNoSchedule, or NoExecute. &l &i e.g. &i
+          team=backend:NoSchedule &l &l &b Warning: &b Tainting the
+          workload pool requires matching tolerations on all workload
+          services. &l
+      - name: karpenter_build_instance_families
+        optional: true
+        default: "null"
+        sideNote: Uses workload families if not set
+        type: string
+        regex: ^[a-z0-9]+(,[a-z0-9]+)*$
+        description: |
+          Instance families for the build NodePool. &l
+          Only applies when &i build_node_enabled &i is true. &l
+      - name: karpenter_build_instance_sizes
+        optional: true
+        default: "null"
+        sideNote: Uses workload sizes if not set
+        type: string
+        regex: ^[a-z0-9]+(,[a-z0-9]+)*$
+        description: Instance sizes for the build NodePool.
+      - name: karpenter_build_capacity_types
+        default: on-demand
+        type: string
+        description: Capacity types for build NodePool nodes.
+        allowedValues:
+          - on-demand
+          - spot
+          - on-demand,spot
+      - name: karpenter_build_node_labels
+        optional: true
+        default: "null"
+        sideNote: No extra build labels by default
+        type: string
+        regex: ^([^=\s,]+=[^\s,]+)(,[^=\s,]+=[^\s,]+)*$
+        description: |
+          Extra labels for the build NodePool nodes, added alongside
+          the default &i convox-build=true &i label. &l
+          &i e.g. &i cost-center=builds &l
+      - name: karpenter_build_cpu_limit
+        default: "32"
+        type: integer
+        description: Maximum total vCPUs for the build NodePool.
+        allowedMinValue: 1
+      - name: karpenter_build_consolidate_after
+        default: 60s
+        type: string
+        regex: ^\d+[smh]$
+        description: Time before empty build nodes are removed.
+      - name: karpenter_config
+        optional: true
+        default: "null"
+        sideNote: Use defaults unless you need advanced configuration
+        type: string
+        description: |
+          JSON overrides for the workload NodePool and EC2NodeClass Karpenter
+          configuration. Accepts raw JSON, base64-encoded JSON, or a path to
+          a .json file. &l &l Override any Karpenter setting — instance
+          requirements, disruption budgets with schedules, consolidation
+          policy, AMI selection, block device mappings, metadata options,
+          userData, and more. &l &l Individual karpenter_* parameters set
+          defaults. This config overrides them at the section level. &l &l
+          Protected fields (managed by Convox): &i role &i,
+          &i subnetSelectorTerms &i, &i securityGroupSelectorTerms &i,
+          &i nodeClassRef &i &l &l See
+          (documentation)[https://docs.convox.com/configuration/karpenter/]
+          for the full schema and examples. &l
+      - name: additional_karpenter_nodepools_config
+        optional: true
+        default: "null"
+        sideNote: No additional NodePools by default
+        type: string
+        description: |
+          JSON array of custom Karpenter NodePool configurations. Accepts raw
+          JSON, base64-encoded JSON, or a path to a .json file. &l &l Each
+          NodePool gets its own EC2NodeClass and can have custom labels,
+          taints, instance constraints, and resource limits. &l &l See
+          (documentation)[https://docs.convox.com/configuration/karpenter/]
+          for the full schema. &l &l Example: &l
+          &i [{"name":"gpu","instance_families":"g5,g6","labels":"gpu=true","taints":"gpu=true:NoSchedule","cpu_limit":64}] &i

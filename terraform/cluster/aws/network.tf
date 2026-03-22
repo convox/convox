@@ -70,6 +70,7 @@ resource "aws_subnet" "public" {
     Name = "${var.name} public ${count.index}"
     "kubernetes.io/cluster/${var.name}" : "shared"
     "kubernetes.io/role/elb" : "1"
+    "karpenter.sh/discovery" : var.name
   })
 
   timeouts {
@@ -136,6 +137,7 @@ resource "aws_subnet" "private" {
     Name = "${var.name} private ${count.index}"
     "kubernetes.io/cluster/${var.name}" : "shared"
     "kubernetes.io/role/internal-elb" : "1"
+    "karpenter.sh/discovery" : var.name
   })
 
   timeouts {
@@ -224,7 +226,8 @@ resource "aws_security_group" "cluster" {
   vpc_id      = local.vpc_id
 
   tags = merge(local.tags, {
-    Name = "${var.name}-cluster"
+    Name                     = "${var.name}-cluster"
+    "karpenter.sh/discovery" = var.name
   })
 }
 
@@ -277,4 +280,26 @@ resource "aws_ec2_tag" "public_subnets_tagging2" {
   resource_id = var.public_subnets_ids[count.index]
   key         = "kubernetes.io/role/elb"
   value       = "1"
+}
+
+// karpenter.sh/discovery tags for BYOVPC subnets
+resource "aws_ec2_tag" "private_subnets_karpenter" {
+  count       = length(var.private_subnets_ids)
+  resource_id = var.private_subnets_ids[count.index]
+  key         = "karpenter.sh/discovery"
+  value       = var.name
+}
+
+resource "aws_ec2_tag" "public_subnets_karpenter" {
+  count       = length(var.public_subnets_ids)
+  resource_id = var.public_subnets_ids[count.index]
+  key         = "karpenter.sh/discovery"
+  value       = var.name
+}
+
+// karpenter.sh/discovery tag for the EKS-managed cluster security group
+resource "aws_ec2_tag" "cluster_sg_karpenter" {
+  resource_id = aws_eks_cluster.cluster.vpc_config[0].cluster_security_group_id
+  key         = "karpenter.sh/discovery"
+  value       = var.name
 }

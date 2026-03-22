@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -182,6 +183,146 @@ func (n *NodeGroupConfigParam) Validate() error {
 	return nil
 }
 
+type KarpenterNodePoolConfigParam struct {
+	Name                  string  `json:"name"`
+	InstanceFamilies      *string `json:"instance_families,omitempty"`
+	InstanceSizes         *string `json:"instance_sizes,omitempty"`
+	CapacityTypes         *string `json:"capacity_types,omitempty"`
+	Arch                  *string `json:"arch,omitempty"`
+	CpuLimit              *int    `json:"cpu_limit,omitempty"`
+	MemoryLimitGb         *int    `json:"memory_limit_gb,omitempty"`
+	ConsolidationPolicy   *string `json:"consolidation_policy,omitempty"`
+	ConsolidateAfter      *string `json:"consolidate_after,omitempty"`
+	NodeExpiry            *string `json:"node_expiry,omitempty"`
+	DisruptionBudgetNodes *string `json:"disruption_budget_nodes,omitempty"`
+	Disk                  *int    `json:"disk,omitempty"`
+	VolumeType            *string `json:"volume_type,omitempty"`
+	Labels                *string `json:"labels,omitempty"`
+	Taints                *string `json:"taints,omitempty"`
+	Weight                *int    `json:"weight,omitempty"`
+}
+
+var karpenterNameRe = regexp.MustCompile(`^[a-z][a-z0-9-]{0,62}$`)
+
+func (np *KarpenterNodePoolConfigParam) Validate() error {
+	if np.Name == "" {
+		return fmt.Errorf("karpenter nodepool name is required")
+	}
+	if !karpenterNameRe.MatchString(np.Name) {
+		return fmt.Errorf("karpenter nodepool name '%s' must be lowercase alphanumeric with dashes, max 63 chars", np.Name)
+	}
+	reserved := map[string]bool{"workload": true, "build": true, "default": true, "system": true}
+	if reserved[np.Name] {
+		return fmt.Errorf("karpenter nodepool name '%s' is reserved", np.Name)
+	}
+
+	if np.CapacityTypes != nil {
+		for _, ct := range strings.Split(*np.CapacityTypes, ",") {
+			ct = strings.TrimSpace(ct)
+			if ct != "on-demand" && ct != "spot" {
+				return fmt.Errorf("karpenter nodepool '%s': invalid capacity type '%s' (must be on-demand or spot)", np.Name, ct)
+			}
+		}
+	}
+
+	if np.Arch != nil {
+		for _, a := range strings.Split(*np.Arch, ",") {
+			a = strings.TrimSpace(a)
+			if a != "amd64" && a != "arm64" {
+				return fmt.Errorf("karpenter nodepool '%s': invalid arch '%s' (must be amd64 or arm64)", np.Name, a)
+			}
+		}
+	}
+
+	if np.CpuLimit != nil && *np.CpuLimit <= 0 {
+		return fmt.Errorf("karpenter nodepool '%s': cpu_limit must be positive", np.Name)
+	}
+	if np.MemoryLimitGb != nil && *np.MemoryLimitGb <= 0 {
+		return fmt.Errorf("karpenter nodepool '%s': memory_limit_gb must be positive", np.Name)
+	}
+
+	durationRe := regexp.MustCompile(`^\d+[smh]$`)
+	if np.ConsolidateAfter != nil && !durationRe.MatchString(*np.ConsolidateAfter) {
+		return fmt.Errorf("karpenter nodepool '%s': consolidate_after must be a duration like 30s, 5m, or 1h", np.Name)
+	}
+
+	if np.NodeExpiry != nil {
+		expiryRe := regexp.MustCompile(`^\d+h$`)
+		if *np.NodeExpiry != "Never" && !expiryRe.MatchString(*np.NodeExpiry) {
+			return fmt.Errorf("karpenter nodepool '%s': node_expiry must be a duration like 720h or Never", np.Name)
+		}
+	}
+
+	if np.DisruptionBudgetNodes != nil {
+		budgetRe := regexp.MustCompile(`^\d+%%?$`)
+		if !budgetRe.MatchString(*np.DisruptionBudgetNodes) {
+			return fmt.Errorf("karpenter nodepool '%s': disruption_budget_nodes must be a number or percentage", np.Name)
+		}
+	}
+
+	if np.ConsolidationPolicy != nil {
+		if *np.ConsolidationPolicy != "WhenEmpty" && *np.ConsolidationPolicy != "WhenEmptyOrUnderutilized" {
+			return fmt.Errorf("karpenter nodepool '%s': consolidation_policy must be WhenEmpty or WhenEmptyOrUnderutilized", np.Name)
+		}
+	}
+
+	if np.VolumeType != nil {
+		validVols := map[string]bool{"gp2": true, "gp3": true, "io1": true, "io2": true}
+		if !validVols[*np.VolumeType] {
+			return fmt.Errorf("karpenter nodepool '%s': volume_type must be gp2, gp3, io1, or io2", np.Name)
+		}
+	}
+
+	if np.Disk != nil && *np.Disk < 0 {
+		return fmt.Errorf("karpenter nodepool '%s': disk must be non-negative", np.Name)
+	}
+
+	if np.Weight != nil && (*np.Weight < 0 || *np.Weight > 100) {
+		return fmt.Errorf("karpenter nodepool '%s': weight must be 0-100", np.Name)
+	}
+
+	if np.Labels != nil && *np.Labels != "" {
+		for _, pair := range strings.Split(*np.Labels, ",") {
+			parts := strings.SplitN(strings.TrimSpace(pair), "=", 2)
+			if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+				return fmt.Errorf("karpenter nodepool '%s': invalid label '%s', use format key=value", np.Name, pair)
+			}
+		}
+	}
+
+	if np.Taints != nil && *np.Taints != "" {
+		validEffects := map[string]bool{"NoSchedule": true, "PreferNoSchedule": true, "NoExecute": true}
+		for _, t := range strings.Split(*np.Taints, ",") {
+			t = strings.TrimSpace(t)
+			colonParts := strings.SplitN(t, ":", 2)
+			if len(colonParts) != 2 || colonParts[0] == "" {
+				return fmt.Errorf("karpenter nodepool '%s': invalid taint '%s', use format key=value:Effect or key:Effect", np.Name, t)
+			}
+			if !validEffects[colonParts[1]] {
+				return fmt.Errorf("karpenter nodepool '%s': invalid taint effect '%s' (must be NoSchedule, PreferNoSchedule, or NoExecute)", np.Name, colonParts[1])
+			}
+		}
+	}
+
+	return nil
+}
+
+type KarpenterNodePools []KarpenterNodePoolConfigParam
+
+func (knp KarpenterNodePools) Validate() error {
+	nameMap := map[string]bool{}
+	for i := range knp {
+		if err := knp[i].Validate(); err != nil {
+			return err
+		}
+		if nameMap[knp[i].Name] {
+			return fmt.Errorf("duplicate karpenter nodepool name: %s", knp[i].Name)
+		}
+		nameMap[knp[i].Name] = true
+	}
+	return nil
+}
+
 type AdditionalNodeGroups []NodeGroupConfigParam
 
 func (an AdditionalNodeGroups) Validate() error {
@@ -211,7 +352,7 @@ func (an AdditionalNodeGroups) Validate() error {
 	return nil
 }
 
-func validateAndMutateParams(params map[string]string) error {
+func validateAndMutateParams(params map[string]string, provider string) error {
 	if params["high_availability"] != "" {
 		return errors.New("the high_availability parameter is only supported during rack installation")
 	}
@@ -238,6 +379,82 @@ func validateAndMutateParams(params map[string]string) error {
 		}
 		if d <= 0 {
 			return errors.New("invalid value for terraform_update_timeout: must be a positive duration")
+		}
+	}
+
+	// Reject karpenter_* params for non-AWS racks
+	if provider != "aws" {
+		for k := range params {
+			if strings.HasPrefix(k, "karpenter_") {
+				return fmt.Errorf("karpenter parameters are only supported for AWS racks")
+			}
+		}
+	}
+
+	// Karpenter parameter validation
+	if params["karpenter_enabled"] == "true" {
+		if v, ok := params["karpenter_capacity_types"]; ok && v != "" {
+			for _, ct := range strings.Split(v, ",") {
+				ct = strings.TrimSpace(ct)
+				if ct != "on-demand" && ct != "spot" {
+					return fmt.Errorf("invalid karpenter capacity type: %s (must be on-demand or spot)", ct)
+				}
+			}
+		}
+
+		if v, ok := params["karpenter_arch"]; ok && v != "" {
+			for _, arch := range strings.Split(v, ",") {
+				arch = strings.TrimSpace(arch)
+				if arch != "amd64" && arch != "arm64" {
+					return fmt.Errorf("invalid karpenter architecture: %s (must be amd64 or arm64)", arch)
+				}
+			}
+		}
+
+		if v, ok := params["karpenter_cpu_limit"]; ok && v != "" {
+			n, err := strconv.Atoi(v)
+			if err != nil || n <= 0 {
+				return fmt.Errorf("karpenter_cpu_limit must be a positive integer")
+			}
+		}
+
+		if v, ok := params["karpenter_memory_limit_gb"]; ok && v != "" {
+			n, err := strconv.Atoi(v)
+			if err != nil || n <= 0 {
+				return fmt.Errorf("karpenter_memory_limit_gb must be a positive integer")
+			}
+		}
+
+		durationRe := regexp.MustCompile(`^\d+[smh]$`)
+		for _, dk := range []string{"karpenter_consolidate_after", "karpenter_build_consolidate_after"} {
+			if v, ok := params[dk]; ok && v != "" {
+				if !durationRe.MatchString(v) {
+					return fmt.Errorf("%s must be a duration like 30s, 5m, or 1h", dk)
+				}
+			}
+		}
+
+		if v, ok := params["karpenter_node_expiry"]; ok && v != "" {
+			expiryRe := regexp.MustCompile(`^\d+h$`)
+			if v != "Never" && !expiryRe.MatchString(v) {
+				return fmt.Errorf("karpenter_node_expiry must be a duration like 720h or Never")
+			}
+		}
+
+		if v, ok := params["karpenter_disruption_budget_nodes"]; ok && v != "" {
+			budgetRe := regexp.MustCompile(`^\d+%%?$`)
+			if !budgetRe.MatchString(v) {
+				return fmt.Errorf("karpenter_disruption_budget_nodes must be a number or percentage (e.g. 10%%)")
+			}
+		}
+
+		if v, ok := params["karpenter_build_capacity_types"]; ok && v != "" {
+			for _, ct := range strings.Split(v, ",") {
+				ct = strings.TrimSpace(ct)
+				if ct != "on-demand" && ct != "spot" {
+					return fmt.Errorf("invalid karpenter build capacity type: %s (must be on-demand or spot)", ct)
+				}
+			}
 		}
 	}
 
@@ -282,6 +499,103 @@ func validateAndMutateParams(params map[string]string) error {
 			}
 			params[k] = base64.StdEncoding.EncodeToString(data)
 		}
+	}
+
+	// Karpenter custom NodePools config (same pattern as additional_node_groups_config)
+	if params["additional_karpenter_nodepools_config"] != "" {
+		k := "additional_karpenter_nodepools_config"
+		var err error
+		cfgData := []byte(params[k])
+		if strings.HasSuffix(params[k], ".json") {
+			cfgData, err = os.ReadFile(params[k])
+			if err != nil {
+				return fmt.Errorf("invalid param '%s' value, failed to read the file: %s", k, err)
+			}
+		} else if !strings.HasPrefix(params[k], "[") {
+			data, err := base64.StdEncoding.DecodeString(params[k])
+			if err != nil {
+				return fmt.Errorf("invalid param '%s' value: %s", k, err)
+			}
+			cfgData = data
+		}
+
+		npCfgs := KarpenterNodePools{}
+		if err := json.Unmarshal(cfgData, &npCfgs); err != nil {
+			return fmt.Errorf("invalid karpenter nodepools config: %s", err)
+		}
+
+		if err := npCfgs.Validate(); err != nil {
+			return err
+		}
+
+		sort.Slice(npCfgs, func(i, j int) bool {
+			return npCfgs[i].Name < npCfgs[j].Name
+		})
+
+		data, err := json.Marshal(npCfgs)
+		if err != nil {
+			return fmt.Errorf("failed to process param '%s': %s", k, err)
+		}
+		params[k] = base64.StdEncoding.EncodeToString(data)
+	}
+
+	// karpenter_config — validate JSON and block protected fields
+	if params["karpenter_config"] != "" {
+		k := "karpenter_config"
+		var err error
+		cfgData := []byte(params[k])
+		if strings.HasSuffix(params[k], ".json") {
+			cfgData, err = os.ReadFile(params[k])
+			if err != nil {
+				return fmt.Errorf("invalid param '%s' value, failed to read the file: %s", k, err)
+			}
+		} else if !strings.HasPrefix(params[k], "{") {
+			data, err := base64.StdEncoding.DecodeString(params[k])
+			if err != nil {
+				return fmt.Errorf("invalid param '%s' value: %s", k, err)
+			}
+			cfgData = data
+		}
+
+		var config map[string]interface{}
+		if err := json.Unmarshal(cfgData, &config); err != nil {
+			return fmt.Errorf("invalid karpenter_config JSON: %s", err)
+		}
+
+		// Only nodePool and ec2NodeClass sections are allowed
+		for key := range config {
+			if key != "nodePool" && key != "ec2NodeClass" {
+				return fmt.Errorf("karpenter_config: unknown top-level key '%s' (allowed: nodePool, ec2NodeClass)", key)
+			}
+		}
+
+		// Block protected EC2NodeClass fields that would break infrastructure
+		if ec2, ok := config["ec2NodeClass"].(map[string]interface{}); ok {
+			blocked := []string{"role", "instanceProfile", "subnetSelectorTerms", "securityGroupSelectorTerms"}
+			for _, field := range blocked {
+				if _, exists := ec2[field]; exists {
+					return fmt.Errorf("karpenter_config: ec2NodeClass.%s is managed by Convox and cannot be overridden", field)
+				}
+			}
+		}
+
+		// Block protected NodePool fields
+		if np, ok := config["nodePool"].(map[string]interface{}); ok {
+			if tmpl, ok := np["template"].(map[string]interface{}); ok {
+				if spec, ok := tmpl["spec"].(map[string]interface{}); ok {
+					if _, exists := spec["nodeClassRef"]; exists {
+						return fmt.Errorf("karpenter_config: nodePool.template.spec.nodeClassRef is managed by Convox and cannot be overridden")
+					}
+				}
+			}
+		}
+
+		// Re-encode to base64 for storage (normalized)
+		data, err := json.Marshal(config)
+		if err != nil {
+			return fmt.Errorf("failed to process karpenter_config: %s", err)
+		}
+		params[k] = base64.StdEncoding.EncodeToString(data)
 	}
 
 	return nil
@@ -589,7 +903,7 @@ func RackParamsSet(_ sdk.Interface, c *stdcli.Context) error {
 	c.Startf("Updating parameters")
 
 	params := argsToOptions(c.Args)
-	if err := validateAndMutateParams(params); err != nil {
+	if err := validateAndMutateParams(params, r.Provider()); err != nil {
 		return err
 	}
 
