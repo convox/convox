@@ -625,10 +625,20 @@ func validateAndMutateParams(params map[string]string, provider string) error {
 			if !ok {
 				return fmt.Errorf("karpenter_config: nodePool must be a JSON object")
 			}
-			if tmpl, ok := np["template"].(map[string]interface{}); ok {
-				if spec, ok := tmpl["spec"].(map[string]interface{}); ok {
-					if _, exists := spec["nodeClassRef"]; exists {
-						return fmt.Errorf("karpenter_config: nodePool.template.spec.nodeClassRef is managed by Convox and cannot be overridden")
+			if tmplVal, exists := np["template"]; exists {
+				tmpl, ok := tmplVal.(map[string]interface{})
+				if !ok {
+					fmt.Fprintf(os.Stderr, "warning: karpenter_config: nodePool.template is not a JSON object, skipping deep validation\n")
+				} else {
+					if specVal, exists := tmpl["spec"]; exists {
+						spec, ok := specVal.(map[string]interface{})
+						if !ok {
+							fmt.Fprintf(os.Stderr, "warning: karpenter_config: nodePool.template.spec is not a JSON object, skipping deep validation\n")
+						} else {
+							if _, exists := spec["nodeClassRef"]; exists {
+								return fmt.Errorf("karpenter_config: nodePool.template.spec.nodeClassRef is managed by Convox and cannot be overridden")
+							}
+						}
 					}
 				}
 			}

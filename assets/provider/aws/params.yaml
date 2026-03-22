@@ -522,7 +522,7 @@ Groups:
         default: "null"
         sideNote: No taints by default
         type: string
-        regex: ^([^=\s,:]+=[^=\s,:]*:(NoSchedule|NoExecute|PreferNoSchedule))(,[^=\s,:]+=[^=\s,:]*:(NoSchedule|NoExecute|PreferNoSchedule))*$
+        regex: ^([^=\s,:]+(?:=[^=\s,:]*)?:(NoSchedule|NoExecute|PreferNoSchedule))(,[^=\s,:]+(?:=[^=\s,:]*)?:(NoSchedule|NoExecute|PreferNoSchedule))*$
         description: |
           Custom taints on workload NodePool nodes. &l Comma-separated
           &i key=value:Effect &i entries. Effect must be NoSchedule,
