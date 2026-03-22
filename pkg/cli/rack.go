@@ -597,6 +597,11 @@ func validateAndMutateParams(params map[string]string, provider string) error {
 			cfgData = data
 		}
 
+		const maxKarpenterConfigSize = 64 * 1024 // 64 KB
+		if len(cfgData) > maxKarpenterConfigSize {
+			return fmt.Errorf("karpenter_config exceeds maximum size of 64KB (%d bytes)", len(cfgData))
+		}
+
 		var config map[string]interface{}
 		if err := json.Unmarshal(cfgData, &config); err != nil {
 			return fmt.Errorf("invalid karpenter_config JSON: %s", err)

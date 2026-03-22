@@ -284,14 +284,14 @@ resource "aws_ec2_tag" "public_subnets_tagging2" {
 
 // karpenter.sh/discovery tags for BYOVPC subnets
 resource "aws_ec2_tag" "private_subnets_karpenter" {
-  count       = length(var.private_subnets_ids)
+  count       = var.karpenter_enabled ? length(var.private_subnets_ids) : 0
   resource_id = var.private_subnets_ids[count.index]
   key         = "karpenter.sh/discovery"
   value       = var.name
 }
 
 resource "aws_ec2_tag" "public_subnets_karpenter" {
-  count       = length(var.public_subnets_ids)
+  count       = var.karpenter_enabled ? length(var.public_subnets_ids) : 0
   resource_id = var.public_subnets_ids[count.index]
   key         = "karpenter.sh/discovery"
   value       = var.name
@@ -299,6 +299,7 @@ resource "aws_ec2_tag" "public_subnets_karpenter" {
 
 // karpenter.sh/discovery tag for the EKS-managed cluster security group
 resource "aws_ec2_tag" "cluster_sg_karpenter" {
+  count       = var.karpenter_enabled ? 1 : 0
   resource_id = aws_eks_cluster.cluster.vpc_config[0].cluster_security_group_id
   key         = "karpenter.sh/discovery"
   value       = var.name

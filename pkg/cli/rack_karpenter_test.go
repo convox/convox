@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/base64"
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -146,6 +147,39 @@ func TestValidateAndMutateParams_KarpenterConfigBase64(t *testing.T) {
 				if err := json.Unmarshal(decoded, &out); err != nil {
 					t.Errorf("decoded output not valid JSON: %v", err)
 				}
+			}
+		})
+	}
+}
+
+func TestValidateAndMutateParams_KarpenterConfigSizeLimit(t *testing.T) {
+	tests := []struct {
+		name    string
+		size    int
+		wantErr bool
+	}{
+		{"under limit (1KB)", 1024, false},
+		{"just under limit (63KB)", 63 * 1024, false},
+		{"over limit (65KB)", 65 * 1024, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Build a valid JSON object padded to the target size with a long string value
+			padding := strings.Repeat("x", tt.size)
+			config := `{"nodePool":{"description":"` + padding + `"}}`
+			params := map[string]string{
+				"karpenter_config": config,
+			}
+			err := validateAndMutateParams(params, "aws")
+			if tt.wantErr && err == nil {
+				t.Errorf("size=%d: expected error, got nil", tt.size)
+			}
+			if !tt.wantErr && err != nil {
+				t.Errorf("size=%d: unexpected error: %v", tt.size, err)
+			}
+			if tt.wantErr && err != nil && !strings.Contains(err.Error(), "exceeds maximum size") {
+				t.Errorf("size=%d: expected size error, got: %v", tt.size, err)
 			}
 		})
 	}
