@@ -114,7 +114,7 @@ module "cluster" {
   karpenter_node_volume_type          = var.karpenter_node_volume_type
   karpenter_node_labels               = var.karpenter_node_labels
   karpenter_node_taints               = var.karpenter_node_taints
-  karpenter_config                    = var.karpenter_config != "" ? base64decode(var.karpenter_config) : "{}"
+  karpenter_config                    = var.karpenter_config != "" ? try(base64decode(var.karpenter_config), var.karpenter_config) : "{}"
   karpenter_build_instance_families   = var.karpenter_build_instance_families
   karpenter_build_instance_sizes      = var.karpenter_build_instance_sizes
   karpenter_build_capacity_types      = var.karpenter_build_capacity_types
