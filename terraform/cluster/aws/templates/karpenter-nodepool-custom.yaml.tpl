@@ -3,7 +3,7 @@ kind: NodePool
 metadata:
   name: ${name}
 spec:
-%{ if weight > 0 }
+%{ if weight != null }
   weight: ${weight}
 %{ endif }
   template:

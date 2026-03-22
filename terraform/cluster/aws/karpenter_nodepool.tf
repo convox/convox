@@ -202,7 +202,7 @@ locals {
       disruption_budget_nodes = lookup(np, "disruption_budget_nodes", "10%")
       disk                  = tonumber(lookup(np, "disk", 0))
       volume_type           = lookup(np, "volume_type", "gp3")
-      weight                = tonumber(lookup(np, "weight", 0))
+      weight                = lookup(np, "weight", null) != null ? tonumber(lookup(np, "weight", null)) : null
       labels = {
         for pair in compact(split(",", lookup(np, "labels", ""))) :
         trimspace(split("=", pair)[0]) => trimspace(split("=", pair)[1])
