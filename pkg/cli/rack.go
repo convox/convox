@@ -253,7 +253,7 @@ func (np *KarpenterNodePoolConfigParam) Validate() error {
 	}
 
 	if np.DisruptionBudgetNodes != nil {
-		budgetRe := regexp.MustCompile(`^\d+%%?$`)
+		budgetRe := regexp.MustCompile(`^\d+%?$`)
 		if !budgetRe.MatchString(*np.DisruptionBudgetNodes) {
 			return fmt.Errorf("karpenter nodepool '%s': disruption_budget_nodes must be a number or percentage", np.Name)
 		}
@@ -431,7 +431,7 @@ func validateAndMutateParams(params map[string]string, provider string) error {
 		}
 
 		if v, ok := params["karpenter_disruption_budget_nodes"]; ok && v != "" {
-			budgetRe := regexp.MustCompile(`^\d+%%?$`)
+			budgetRe := regexp.MustCompile(`^\d+%?$`)
 			if !budgetRe.MatchString(v) {
 				return fmt.Errorf("karpenter_disruption_budget_nodes must be a number or percentage (e.g. 10%%)")
 			}
@@ -442,6 +442,42 @@ func validateAndMutateParams(params map[string]string, provider string) error {
 				ct = strings.TrimSpace(ct)
 				if ct != "on-demand" && ct != "spot" {
 					return fmt.Errorf("invalid karpenter build capacity type: %s (must be on-demand or spot)", ct)
+				}
+			}
+		}
+
+		// Validate karpenter_node_taints format: key=value:Effect (same check as KarpenterNodePoolConfigParam.Validate)
+		if v, ok := params["karpenter_node_taints"]; ok && v != "" {
+			validEffects := map[string]bool{"NoSchedule": true, "PreferNoSchedule": true, "NoExecute": true}
+			for _, t := range strings.Split(v, ",") {
+				t = strings.TrimSpace(t)
+				colonParts := strings.SplitN(t, ":", 2)
+				if len(colonParts) != 2 || colonParts[0] == "" {
+					return fmt.Errorf("invalid karpenter_node_taints entry '%s', use format key=value:Effect or key:Effect", t)
+				}
+				if !validEffects[colonParts[1]] {
+					return fmt.Errorf("invalid karpenter_node_taints effect '%s' (must be NoSchedule, PreferNoSchedule, or NoExecute)", colonParts[1])
+				}
+			}
+		}
+
+		// Reject Convox-reserved label keys that would break scheduling
+		reservedWorkloadLabels := map[string]bool{"convox.io/nodepool": true}
+		if v, ok := params["karpenter_node_labels"]; ok && v != "" {
+			for _, pair := range strings.Split(v, ",") {
+				k := strings.TrimSpace(strings.SplitN(pair, "=", 2)[0])
+				if reservedWorkloadLabels[k] {
+					return fmt.Errorf("karpenter_node_labels: '%s' is a Convox-reserved label key and cannot be overridden", k)
+				}
+			}
+		}
+
+		reservedBuildLabels := map[string]bool{"convox-build": true, "convox.io/nodepool": true}
+		if v, ok := params["karpenter_build_node_labels"]; ok && v != "" {
+			for _, pair := range strings.Split(v, ",") {
+				k := strings.TrimSpace(strings.SplitN(pair, "=", 2)[0])
+				if reservedBuildLabels[k] {
+					return fmt.Errorf("karpenter_build_node_labels: '%s' is a Convox-reserved label key and cannot be overridden", k)
 				}
 			}
 		}
@@ -559,7 +595,11 @@ func validateAndMutateParams(params map[string]string, provider string) error {
 		}
 
 		// Block protected EC2NodeClass fields that would break infrastructure
-		if ec2, ok := config["ec2NodeClass"].(map[string]interface{}); ok {
+		if ec2Val, exists := config["ec2NodeClass"]; exists {
+			ec2, ok := ec2Val.(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("karpenter_config: ec2NodeClass must be a JSON object")
+			}
 			blocked := []string{"role", "instanceProfile", "subnetSelectorTerms", "securityGroupSelectorTerms"}
 			for _, field := range blocked {
 				if _, exists := ec2[field]; exists {
@@ -569,7 +609,11 @@ func validateAndMutateParams(params map[string]string, provider string) error {
 		}
 
 		// Block protected NodePool fields
-		if np, ok := config["nodePool"].(map[string]interface{}); ok {
+		if npVal, exists := config["nodePool"]; exists {
+			np, ok := npVal.(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("karpenter_config: nodePool must be a JSON object")
+			}
 			if tmpl, ok := np["template"].(map[string]interface{}); ok {
 				if spec, ok := tmpl["spec"].(map[string]interface{}); ok {
 					if _, exists := spec["nodeClassRef"]; exists {
