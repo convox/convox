@@ -281,6 +281,9 @@ func (np *KarpenterNodePoolConfigParam) Validate() error {
 	}
 
 	if np.Labels != nil && *np.Labels != "" {
+		if strings.Contains(*np.Labels, `"`) {
+			return fmt.Errorf("karpenter nodepool '%s': label keys and values must not contain double quotes", np.Name)
+		}
 		for _, pair := range strings.Split(*np.Labels, ",") {
 			parts := strings.SplitN(strings.TrimSpace(pair), "=", 2)
 			if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
@@ -290,6 +293,9 @@ func (np *KarpenterNodePoolConfigParam) Validate() error {
 	}
 
 	if np.Taints != nil && *np.Taints != "" {
+		if strings.Contains(*np.Taints, `"`) {
+			return fmt.Errorf("karpenter nodepool '%s': taint keys and values must not contain double quotes", np.Name)
+		}
 		validEffects := map[string]bool{"NoSchedule": true, "PreferNoSchedule": true, "NoExecute": true}
 		for _, t := range strings.Split(*np.Taints, ",") {
 			t = strings.TrimSpace(t)
@@ -448,6 +454,9 @@ func validateAndMutateParams(params map[string]string, provider string) error {
 
 		// Validate karpenter_node_taints format: key=value:Effect (same check as KarpenterNodePoolConfigParam.Validate)
 		if v, ok := params["karpenter_node_taints"]; ok && v != "" {
+			if strings.Contains(v, `"`) {
+				return fmt.Errorf("karpenter_node_taints: taint keys and values must not contain double quotes")
+			}
 			validEffects := map[string]bool{"NoSchedule": true, "PreferNoSchedule": true, "NoExecute": true}
 			for _, t := range strings.Split(v, ",") {
 				t = strings.TrimSpace(t)
@@ -461,9 +470,12 @@ func validateAndMutateParams(params map[string]string, provider string) error {
 			}
 		}
 
-		// Reject Convox-reserved label keys that would break scheduling
+		// Reject Convox-reserved label keys and double quotes in label values
 		reservedWorkloadLabels := map[string]bool{"convox.io/nodepool": true}
 		if v, ok := params["karpenter_node_labels"]; ok && v != "" {
+			if strings.Contains(v, `"`) {
+				return fmt.Errorf("karpenter_node_labels: label keys and values must not contain double quotes")
+			}
 			for _, pair := range strings.Split(v, ",") {
 				k := strings.TrimSpace(strings.SplitN(pair, "=", 2)[0])
 				if reservedWorkloadLabels[k] {
@@ -474,6 +486,9 @@ func validateAndMutateParams(params map[string]string, provider string) error {
 
 		reservedBuildLabels := map[string]bool{"convox-build": true, "convox.io/nodepool": true}
 		if v, ok := params["karpenter_build_node_labels"]; ok && v != "" {
+			if strings.Contains(v, `"`) {
+				return fmt.Errorf("karpenter_build_node_labels: label keys and values must not contain double quotes")
+			}
 			for _, pair := range strings.Split(v, ",") {
 				k := strings.TrimSpace(strings.SplitN(pair, "=", 2)[0])
 				if reservedBuildLabels[k] {
