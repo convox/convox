@@ -510,7 +510,7 @@ Groups:
         default: "null"
         sideNote: No extra labels by default
         type: string
-        regex: ^([^=\s,]+=[^\s,]+)(,[^=\s,]+=[^\s,]+)*$
+        regex: ^([^=\s,]+=[^=\s,]+)(,[^=\s,]+=[^=\s,]+)*$
         description: |
           Custom labels for the workload NodePool nodes. &l Comma-separated
           key=value pairs. &l &i e.g. &i team=backend,env=production &l &l
@@ -522,6 +522,7 @@ Groups:
         default: "null"
         sideNote: No taints by default
         type: string
+        regex: ^([^=\s,:]+=[^=\s,:]*:(NoSchedule|NoExecute|PreferNoSchedule))(,[^=\s,:]+=[^=\s,:]*:(NoSchedule|NoExecute|PreferNoSchedule))*$
         description: |
           Custom taints on workload NodePool nodes. &l Comma-separated
           &i key=value:Effect &i entries. Effect must be NoSchedule,
@@ -558,7 +559,7 @@ Groups:
         default: "null"
         sideNote: No extra build labels by default
         type: string
-        regex: ^([^=\s,]+=[^\s,]+)(,[^=\s,]+=[^\s,]+)*$
+        regex: ^([^=\s,]+=[^=\s,]+)(,[^=\s,]+=[^=\s,]+)*$
         description: |
           Extra labels for the build NodePool nodes, added alongside
           the default &i convox-build=true &i label. &l
