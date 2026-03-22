@@ -98,6 +98,8 @@ This reverses the process:
 
 ### Build NodePool (requires `build_node_enabled=true`)
 
+Build nodes always use **amd64** architecture. This is not configurable because most container build toolchains and base images target amd64. If you set `karpenter_arch=arm64` for workloads, builds will still run on amd64 nodes.
+
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `karpenter_build_instance_families` | _(all)_ | Instance families for build pool |
