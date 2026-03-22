@@ -224,6 +224,61 @@ func TestValidateAndMutateParams_KarpenterConfigProtectedFields(t *testing.T) {
 			},
 			true, "nodePool must be a JSON object",
 		},
+		// Reserved tag keys in ec2NodeClass.tags (FIX-014)
+		{
+			"reserved tag: Name",
+			map[string]interface{}{
+				"ec2NodeClass": map[string]interface{}{
+					"tags": map[string]interface{}{"Name": "custom"},
+				},
+			},
+			true, "reserved tag key",
+		},
+		{
+			"reserved tag: Rack",
+			map[string]interface{}{
+				"ec2NodeClass": map[string]interface{}{
+					"tags": map[string]interface{}{"Rack": "custom"},
+				},
+			},
+			true, "reserved tag key",
+		},
+		{
+			"reserved tag: name (lowercase)",
+			map[string]interface{}{
+				"ec2NodeClass": map[string]interface{}{
+					"tags": map[string]interface{}{"name": "custom"},
+				},
+			},
+			true, "reserved tag key",
+		},
+		{
+			"reserved tag: rack (lowercase)",
+			map[string]interface{}{
+				"ec2NodeClass": map[string]interface{}{
+					"tags": map[string]interface{}{"rack": "custom"},
+				},
+			},
+			true, "reserved tag key",
+		},
+		{
+			"reserved tag: RACK (uppercase)",
+			map[string]interface{}{
+				"ec2NodeClass": map[string]interface{}{
+					"tags": map[string]interface{}{"RACK": "custom"},
+				},
+			},
+			true, "reserved tag key",
+		},
+		{
+			"valid tag: Environment (non-reserved)",
+			map[string]interface{}{
+				"ec2NodeClass": map[string]interface{}{
+					"tags": map[string]interface{}{"Environment": "production"},
+				},
+			},
+			false, "",
+		},
 	}
 
 	for _, tt := range tests {
@@ -342,6 +397,59 @@ func TestKarpenterNodePoolConfigParam_Validate(t *testing.T) {
 				if !contains(err.Error(), tt.errMsg) {
 					t.Errorf("error %q does not contain %q", err.Error(), tt.errMsg)
 				}
+			}
+		})
+	}
+}
+
+func TestValidateAndMutateParams_KarpenterDoubleQuoteRejection(t *testing.T) {
+	tests := []struct {
+		name    string
+		param   string
+		value   string
+		wantErr bool
+	}{
+		{"label with quote in value", "karpenter_node_labels", `key=val"ue`, true},
+		{"label without quote", "karpenter_node_labels", "key=value", false},
+		{"taint with quote in value", "karpenter_node_taints", `key=val"ue:NoSchedule`, true},
+		{"taint without quote", "karpenter_node_taints", "key=value:NoSchedule", false},
+		{"build label with quote", "karpenter_build_node_labels", `key=val"ue`, true},
+		{"build label without quote", "karpenter_build_node_labels", "key=value", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := map[string]string{
+				"karpenter_enabled": "true",
+				tt.param:            tt.value,
+			}
+			err := validateAndMutateParams(params, "aws")
+			if (err != nil) != tt.wantErr {
+				t.Errorf("%s=%q: got err=%v, wantErr=%v", tt.param, tt.value, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestKarpenterNodePoolConfigParam_DoubleQuoteRejection(t *testing.T) {
+	strPtr := func(s string) *string { return &s }
+
+	tests := []struct {
+		name    string
+		param   KarpenterNodePoolConfigParam
+		wantErr bool
+	}{
+		{"additional pool label with quote", KarpenterNodePoolConfigParam{Name: "test", Labels: strPtr(`key=val"ue`)}, true},
+		{"additional pool label clean", KarpenterNodePoolConfigParam{Name: "test", Labels: strPtr("key=value")}, false},
+		{"additional pool taint with quote", KarpenterNodePoolConfigParam{Name: "test", Taints: strPtr(`key=val"ue:NoSchedule`)}, true},
+		{"additional pool taint clean", KarpenterNodePoolConfigParam{Name: "test", Taints: strPtr("key=value:NoSchedule")}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.param.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("got err=%v, wantErr=%v", err, tt.wantErr)
 			}
 		})
 	}
