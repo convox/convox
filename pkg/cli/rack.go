@@ -617,6 +617,20 @@ func validateAndMutateParams(params map[string]string, provider string) error {
 					return fmt.Errorf("karpenter_config: ec2NodeClass.%s is managed by Convox and cannot be overridden", field)
 				}
 			}
+
+			// Block reserved tag keys in ec2NodeClass.tags (Name/Rack are forced by Convox)
+			if tagsVal, exists := ec2["tags"]; exists {
+				tags, ok := tagsVal.(map[string]interface{})
+				if !ok {
+					return fmt.Errorf("karpenter_config: ec2NodeClass.tags must be a JSON object")
+				}
+				reservedTags := []string{"name", "rack"}
+				for tagKey := range tags {
+					if common.ContainsInStringSlice(reservedTags, strings.ToLower(tagKey)) {
+						return fmt.Errorf("karpenter_config: reserved tag key '%s' is not allowed in ec2NodeClass.tags (managed by Convox)", tagKey)
+					}
+				}
+			}
 		}
 
 		// Block protected NodePool fields

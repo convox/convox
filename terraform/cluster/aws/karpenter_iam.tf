@@ -162,7 +162,7 @@ data "aws_iam_policy_document" "karpenter_controller_ec2" {
     }
   }
 
-  # PassRole — scoped to Karpenter node role only
+  # PassRole — scoped to Karpenter node role only, restricted to EC2 service
   statement {
     sid    = "AllowPassingRoleToEC2"
     effect = "Allow"
@@ -170,6 +170,11 @@ data "aws_iam_policy_document" "karpenter_controller_ec2" {
       "iam:PassRole",
     ]
     resources = [aws_iam_role.karpenter_nodes[0].arn]
+    condition {
+      test     = "StringEquals"
+      variable = "iam:PassedToService"
+      values   = ["ec2.amazonaws.com"]
+    }
   }
 }
 

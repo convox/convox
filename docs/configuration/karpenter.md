@@ -21,11 +21,19 @@ convox rack params set karpenter_enabled=true
 ```
 
 This single command:
-1. Deploys Karpenter controller and CRDs
+1. Deploys Karpenter controller and CRDs on system nodes
 2. Creates workload NodePool and EC2NodeClass
-3. Scales CAS to 0 replicas
-4. Scales workload node groups to min=0 (system nodes remain active)
+3. Scales CAS to 0 replicas (or switches to explicit ASG mode if `additional_node_groups` exist)
+4. Scales workload node groups to min=0/max=0 (system nodes remain active)
 5. Forces all system nodes to ON_DEMAND capacity type
+
+### What to expect during the transition
+
+**Pod disruption:** Existing pods on workload node groups (HA index 2, build nodes) are terminated by the ASG scale-down. Karpenter is already active at this point and will provision replacement nodes for any pending pods, but expect 60-90 seconds of rescheduling delay.
+
+**Brief autoscaler overlap:** For approximately 30 seconds during the apply, both CAS (still in auto-discovery mode) and Karpenter (newly deployed) may respond to pending pods. If a pending pod triggers both, the result is temporary over-provisioning that self-corrects as each autoscaler consolidates. This window is short and benign.
+
+**Karpenter-provisioned instances:** Once Karpenter is active, it provisions EC2 instances tagged with `kubernetes.io/cluster/<rack-name>: owned`. These instances are managed exclusively by the Karpenter controller.
 
 ## Disabling Karpenter (Rollback to CAS)
 
@@ -35,9 +43,15 @@ convox rack params set karpenter_enabled=false
 
 This reverses the process:
 1. Restores CAS with auto-discovery mode
-2. Restores managed node group scaling
+2. Restores managed node group scaling (min/max return to normal)
 3. Removes Karpenter NodePools (Karpenter drains nodes respecting PDBs)
 4. Removes Karpenter controller, CRDs, and IAM resources
+
+### Rollback caveats
+
+**Karpenter-managed instances:** When the Karpenter controller is removed, any EC2 instances it provisioned become unmanaged. Karpenter's finalizers attempt to drain and terminate these nodes during NodePool deletion, but if the controller is removed before all nodes are cleaned up, orphaned instances may remain. These are tagged with `kubernetes.io/cluster/<rack-name>: owned` and can be identified and terminated manually via the AWS console or CLI.
+
+**Partial apply failure:** If a rollback apply fails mid-way, re-run the update. Terraform's idempotency handles partial state. If Karpenter resources (IAM roles, SQS queues) persist after a failed rollback, the next successful apply will clean them up.
 
 ## Parameters
 
@@ -175,7 +189,7 @@ convox rack params set karpenter_config=karpenter-config.json
 | `nodePool.template.spec.expireAfter` | **Replaced** |
 | `nodePool.template.spec.terminationGracePeriod` | **Added** (no default) |
 | `nodePool.limits` | **Replaced** |
-| `nodePool.disruption` | **Replaced** — include all fields (consolidationPolicy, consolidateAfter, budgets) |
+| `nodePool.disruption` | **Replaced entirely** — see note below |
 | `nodePool.weight` | **Added** (no default) |
 | `ec2NodeClass.blockDeviceMappings` | **Replaced** |
 | `ec2NodeClass.metadataOptions` | **Replaced** |
@@ -186,6 +200,8 @@ convox rack params set karpenter_config=karpenter-config.json
 | `ec2NodeClass.associatePublicIPAddress` | **Added** (no default) |
 | `ec2NodeClass.instanceStorePolicy` | **Added** (no default) |
 
+**Disruption override note:** When you provide `nodePool.disruption` in `karpenter_config`, it replaces the **entire** disruption object — including `consolidationPolicy`, `consolidateAfter`, and `budgets`. The individual parameters (`karpenter_consolidation_enabled`, `karpenter_consolidate_after`, `karpenter_disruption_budget_nodes`) are ignored. You must include all three fields in your override. If you only set `consolidationPolicy`, Karpenter's own server-side defaults apply for the missing fields (not Convox's configured defaults).
+
 ### Protected fields (cannot be overridden)
 
 These are managed by Convox and blocked at validation:
@@ -194,6 +210,7 @@ These are managed by Convox and blocked at validation:
 - `ec2NodeClass.instanceProfile` — managed by Karpenter
 - `ec2NodeClass.subnetSelectorTerms` — uses discovery tags
 - `ec2NodeClass.securityGroupSelectorTerms` — uses discovery tags
+- `ec2NodeClass.tags.Name` / `ec2NodeClass.tags.Rack` — reserved tag keys (case-insensitive)
 - `nodePool.template.spec.nodeClassRef` — links NodePool to its EC2NodeClass
 
 ### Interaction with individual parameters
