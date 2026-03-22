@@ -55,6 +55,49 @@ locals {
     "k8s-addon" : "cluster-autoscaler.addons.k8s.io",
     "k8s-app" : "cluster-autoscaler",
   }
+
+  # CAS/Karpenter coexistence logic
+  has_additional_groups = length(var.additional_node_groups) > 0
+
+  # CAS replicas: 0 when Karpenter + no additional groups, 1 otherwise
+  cas_replicas = var.karpenter_enabled && !local.has_additional_groups ? 0 : 1
+
+  # Build --nodes flags for each additional node group ASG (used in Karpenter mode)
+  cas_additional_nodes_args = [
+    for key, ng in aws_eks_node_group.cluster_additional :
+    "--nodes=${ng.scaling_config[0].min_size}:${ng.scaling_config[0].max_size}:${ng.resources[0].autoscaling_groups[0].name}"
+  ]
+
+  # Base CAS flags (shared between all modes)
+  cas_base_args = [
+    "./cluster-autoscaler",
+    "--v=4",
+    "--stderrthreshold=info",
+    "--cloud-provider=aws",
+    "--skip-nodes-with-local-storage=false",
+    "--expander=least-waste",
+  ]
+
+  # Tail CAS flags (shared between all modes)
+  cas_tail_args = [
+    "--skip-nodes-with-system-pods=false",
+    "--max-pod-eviction-time=5m",
+  ]
+
+  # Mode-specific discovery/targeting flag
+  cas_discovery_args = var.karpenter_enabled ? (
+    # Karpenter mode: explicit ASG targeting for additional groups only
+    local.cas_additional_nodes_args
+  ) : (
+    # CAS mode: auto-discovery (current behavior)
+    [
+      "--node-group-auto-discovery=asg:tag=k8s.io/cluster-autoscaler/enabled,k8s.io/cluster-autoscaler/${aws_eks_cluster.cluster.name}",
+      "--balance-similar-node-groups",
+    ]
+  )
+
+  # Full CAS command
+  cas_command = concat(local.cas_base_args, local.cas_discovery_args, local.cas_tail_args)
 }
 
 resource "kubernetes_service_account" "autoscaler" {
@@ -274,7 +317,8 @@ resource "kubernetes_pod_disruption_budget_v1" "autoscaler" {
 resource "kubernetes_deployment" "autoscaler" {
   depends_on = [
     aws_iam_role_policy.autoscaler_autoscale,
-    null_resource.wait_eks_addons
+    null_resource.wait_eks_addons,
+    kubectl_manifest.karpenter_nodepool_workload,
   ]
 
   metadata {
@@ -287,7 +331,7 @@ resource "kubernetes_deployment" "autoscaler" {
   }
 
   spec {
-    replicas = 1
+    replicas = local.cas_replicas
 
     selector {
       match_labels = {
@@ -317,18 +361,7 @@ resource "kubernetes_deployment" "autoscaler" {
           image_pull_policy = "IfNotPresent"
           name              = "cluster-autoscaler"
 
-          command = [
-            "./cluster-autoscaler",
-            "--v=4",
-            "--stderrthreshold=info",
-            "--cloud-provider=aws",
-            "--skip-nodes-with-local-storage=false",
-            "--expander=least-waste",
-            "--node-group-auto-discovery=asg:tag=k8s.io/cluster-autoscaler/enabled,k8s.io/cluster-autoscaler/${aws_eks_cluster.cluster.name}",
-            "--balance-similar-node-groups",
-            "--skip-nodes-with-system-pods=false",
-            "--max-pod-eviction-time=5m",
-          ]
+          command = local.cas_command
 
           resources {
             limits = {

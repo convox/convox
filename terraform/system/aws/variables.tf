@@ -189,6 +189,121 @@ variable "internet_gateway_id" {
   default = ""
 }
 
+variable "karpenter_enabled" {
+  type    = string
+  default = "false"
+}
+
+variable "karpenter_instance_families" {
+  type    = string
+  default = ""
+}
+
+variable "karpenter_instance_sizes" {
+  type    = string
+  default = ""
+}
+
+variable "karpenter_capacity_types" {
+  type    = string
+  default = "on-demand"
+}
+
+variable "karpenter_arch" {
+  type    = string
+  default = "amd64"
+}
+
+variable "karpenter_cpu_limit" {
+  type    = number
+  default = 100
+}
+
+variable "karpenter_memory_limit_gb" {
+  type    = number
+  default = 400
+}
+
+variable "karpenter_consolidation_enabled" {
+  type    = bool
+  default = true
+}
+
+variable "karpenter_consolidate_after" {
+  type    = string
+  default = "30s"
+}
+
+variable "karpenter_node_expiry" {
+  type    = string
+  default = "720h"
+}
+
+variable "karpenter_disruption_budget_nodes" {
+  type    = string
+  default = "10%"
+}
+
+variable "karpenter_node_disk" {
+  type    = number
+  default = 0
+}
+
+variable "karpenter_node_volume_type" {
+  type    = string
+  default = "gp3"
+}
+
+variable "karpenter_node_labels" {
+  type    = string
+  default = ""
+}
+
+variable "karpenter_node_taints" {
+  type    = string
+  default = ""
+}
+
+variable "karpenter_config" {
+  type    = string
+  default = ""
+}
+
+variable "karpenter_build_instance_families" {
+  type    = string
+  default = ""
+}
+
+variable "karpenter_build_instance_sizes" {
+  type    = string
+  default = ""
+}
+
+variable "karpenter_build_capacity_types" {
+  type    = string
+  default = "on-demand"
+}
+
+variable "karpenter_build_cpu_limit" {
+  type    = number
+  default = 32
+}
+
+variable "karpenter_build_consolidate_after" {
+  type    = string
+  default = "60s"
+}
+
+variable "karpenter_build_node_labels" {
+  type    = string
+  default = ""
+}
+
+variable "additional_karpenter_nodepools_config" {
+  type    = string
+  default = ""
+}
+
 variable "keda_enable" {
   type    = bool
   default = false

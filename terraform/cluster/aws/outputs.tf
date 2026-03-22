@@ -48,3 +48,19 @@ output "lbc_helm_id" {
 output "efs_file_system_id" {
   value = var.efs_csi_driver_enable ? aws_efs_file_system.convox_efs[0].id : ""
 }
+
+output "karpenter_controller_role_arn" {
+  value = var.karpenter_enabled ? aws_iam_role.karpenter_controller[0].arn : ""
+}
+
+output "karpenter_node_role_arn" {
+  value = var.karpenter_enabled ? aws_iam_role.karpenter_nodes[0].arn : ""
+}
+
+output "karpenter_node_role_name" {
+  value = var.karpenter_enabled ? aws_iam_role.karpenter_nodes[0].name : ""
+}
+
+output "karpenter_interruption_queue_name" {
+  value = var.karpenter_enabled ? aws_sqs_queue.karpenter_interruption[0].name : ""
+}

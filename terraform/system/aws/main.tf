@@ -53,6 +53,8 @@ locals {
   additional_node_groups  = try(jsondecode(var.additional_node_groups_config), jsondecode(base64decode(var.additional_node_groups_config)), [])
   additional_build_groups = try(jsondecode(var.additional_build_groups_config), jsondecode(base64decode(var.additional_build_groups_config)), [])
 
+  additional_karpenter_nodepools = try(jsondecode(var.additional_karpenter_nodepools_config), jsondecode(base64decode(var.additional_karpenter_nodepools_config)), [])
+
   public_access_cidrs = var.eks_api_server_public_access_cidrs == "" ? ["0.0.0.0/0"] : split(",", var.eks_api_server_public_access_cidrs)
 }
 
@@ -87,6 +89,29 @@ module "cluster" {
   imds_http_tokens                    = var.imds_http_tokens
   imds_http_hop_limit                 = var.imds_http_hop_limit
   imds_tags_enable                    = var.imds_tags_enable
+  karpenter_enabled                   = var.karpenter_enabled == "true"
+  karpenter_instance_families         = var.karpenter_instance_families
+  karpenter_instance_sizes            = var.karpenter_instance_sizes
+  karpenter_capacity_types            = var.karpenter_capacity_types
+  karpenter_arch                      = var.karpenter_arch
+  karpenter_cpu_limit                 = var.karpenter_cpu_limit
+  karpenter_memory_limit_gb           = var.karpenter_memory_limit_gb
+  karpenter_consolidation_enabled     = var.karpenter_consolidation_enabled
+  karpenter_consolidate_after         = var.karpenter_consolidate_after
+  karpenter_node_expiry               = var.karpenter_node_expiry
+  karpenter_disruption_budget_nodes   = var.karpenter_disruption_budget_nodes
+  karpenter_node_disk                 = var.karpenter_node_disk
+  karpenter_node_volume_type          = var.karpenter_node_volume_type
+  karpenter_node_labels               = var.karpenter_node_labels
+  karpenter_node_taints               = var.karpenter_node_taints
+  karpenter_config                    = try(base64decode(var.karpenter_config), var.karpenter_config)
+  karpenter_build_instance_families   = var.karpenter_build_instance_families
+  karpenter_build_instance_sizes      = var.karpenter_build_instance_sizes
+  karpenter_build_capacity_types      = var.karpenter_build_capacity_types
+  karpenter_build_cpu_limit           = var.karpenter_build_cpu_limit
+  karpenter_build_consolidate_after   = var.karpenter_build_consolidate_after
+  karpenter_build_node_labels         = var.karpenter_build_node_labels
+  additional_karpenter_nodepools      = local.additional_karpenter_nodepools
   keda_enable                         = var.keda_enable
   key_pair_name                       = var.key_pair_name
   kube_proxy_version                  = var.kube_proxy_version
