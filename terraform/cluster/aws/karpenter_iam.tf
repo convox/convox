@@ -35,18 +35,16 @@ resource "aws_iam_role" "karpenter_controller" {
 }
 
 # Controller policy: EC2 node lifecycle
+# Split into scoped statements per Karpenter v1.x reference policy for least privilege.
+# Mutation actions are tag-conditioned to prevent affecting non-Karpenter EC2 resources.
 data "aws_iam_policy_document" "karpenter_controller_ec2" {
   count = var.karpenter_enabled ? 1 : 0
 
+  # Read-only describe actions — no conditions needed
   statement {
-    sid    = "AllowEC2NodeLifecycle"
+    sid    = "AllowEC2Describe"
     effect = "Allow"
     actions = [
-      "ec2:CreateFleet",
-      "ec2:CreateLaunchTemplate",
-      "ec2:CreateTags",
-      "ec2:DeleteLaunchTemplate",
-      "ec2:DeleteTags",
       "ec2:DescribeAvailabilityZones",
       "ec2:DescribeImages",
       "ec2:DescribeInstances",
@@ -56,12 +54,115 @@ data "aws_iam_policy_document" "karpenter_controller_ec2" {
       "ec2:DescribeSecurityGroups",
       "ec2:DescribeSpotPriceHistory",
       "ec2:DescribeSubnets",
-      "ec2:RunInstances",
-      "ec2:TerminateInstances",
     ]
     resources = ["*"]
   }
 
+  # RunInstances/CreateFleet — access to shared resources (AMIs, SGs, subnets)
+  statement {
+    sid    = "AllowEC2RunFromSharedResources"
+    effect = "Allow"
+    actions = [
+      "ec2:RunInstances",
+      "ec2:CreateFleet",
+    ]
+    resources = [
+      "arn:${data.aws_partition.current.partition}:ec2:*::image/*",
+      "arn:${data.aws_partition.current.partition}:ec2:*:*:security-group/*",
+      "arn:${data.aws_partition.current.partition}:ec2:*:*:subnet/*",
+    ]
+  }
+
+  # RunInstances/CreateFleet — launch templates must be cluster-owned
+  statement {
+    sid    = "AllowEC2RunFromOwnedLaunchTemplate"
+    effect = "Allow"
+    actions = [
+      "ec2:RunInstances",
+      "ec2:CreateFleet",
+    ]
+    resources = [
+      "arn:${data.aws_partition.current.partition}:ec2:*:*:launch-template/*",
+    ]
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/kubernetes.io/cluster/${var.name}"
+      values   = ["owned"]
+    }
+  }
+
+  # RunInstances/CreateFleet/CreateLaunchTemplate — created resources must be tagged with cluster
+  statement {
+    sid    = "AllowEC2CreateTagged"
+    effect = "Allow"
+    actions = [
+      "ec2:RunInstances",
+      "ec2:CreateFleet",
+      "ec2:CreateLaunchTemplate",
+    ]
+    resources = [
+      "arn:${data.aws_partition.current.partition}:ec2:*:*:fleet/*",
+      "arn:${data.aws_partition.current.partition}:ec2:*:*:instance/*",
+      "arn:${data.aws_partition.current.partition}:ec2:*:*:volume/*",
+      "arn:${data.aws_partition.current.partition}:ec2:*:*:network-interface/*",
+      "arn:${data.aws_partition.current.partition}:ec2:*:*:launch-template/*",
+      "arn:${data.aws_partition.current.partition}:ec2:*:*:spot-instances-request/*",
+    ]
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestTag/kubernetes.io/cluster/${var.name}"
+      values   = ["owned"]
+    }
+  }
+
+  # CreateTags — only during resource creation, must include cluster tag
+  statement {
+    sid    = "AllowEC2CreateTagsOnCreate"
+    effect = "Allow"
+    actions = [
+      "ec2:CreateTags",
+    ]
+    resources = [
+      "arn:${data.aws_partition.current.partition}:ec2:*:*:fleet/*",
+      "arn:${data.aws_partition.current.partition}:ec2:*:*:instance/*",
+      "arn:${data.aws_partition.current.partition}:ec2:*:*:volume/*",
+      "arn:${data.aws_partition.current.partition}:ec2:*:*:network-interface/*",
+      "arn:${data.aws_partition.current.partition}:ec2:*:*:launch-template/*",
+      "arn:${data.aws_partition.current.partition}:ec2:*:*:spot-instances-request/*",
+    ]
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestTag/kubernetes.io/cluster/${var.name}"
+      values   = ["owned"]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "ec2:CreateAction"
+      values   = ["RunInstances", "CreateFleet", "CreateLaunchTemplate"]
+    }
+  }
+
+  # TerminateInstances/DeleteLaunchTemplate/DeleteTags — only cluster-owned resources
+  statement {
+    sid    = "AllowEC2DeleteOwned"
+    effect = "Allow"
+    actions = [
+      "ec2:TerminateInstances",
+      "ec2:DeleteLaunchTemplate",
+      "ec2:DeleteTags",
+    ]
+    resources = [
+      "arn:${data.aws_partition.current.partition}:ec2:*:*:instance/*",
+      "arn:${data.aws_partition.current.partition}:ec2:*:*:launch-template/*",
+    ]
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/kubernetes.io/cluster/${var.name}"
+      values   = ["owned"]
+    }
+  }
+
+  # PassRole — scoped to Karpenter node role only
   statement {
     sid    = "AllowPassingRoleToEC2"
     effect = "Allow"

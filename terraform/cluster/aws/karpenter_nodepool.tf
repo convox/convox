@@ -144,11 +144,12 @@ locals {
   }
   ec2_final_metadata = lookup(local.kc_ec2, "metadataOptions", local.ec2_default_metadata)
 
-  # Tags: always include Name + Rack + rack tags, merge customer overrides
+  # Tags: rack-level Tags first, then karpenter_config overrides, then Convox reserved (always win).
+  # Merge order matches local.tags convention: customer tags first, Name/Rack forced last.
   ec2_final_tags = merge(
+    var.tags,
+    lookup(local.kc_ec2, "tags", {}),
     { Name = "${var.name}/karpenter/workload", Rack = var.name },
-    local.tags,
-    lookup(local.kc_ec2, "tags", {})
   )
 
   # amiSelectorTerms: override or default
@@ -270,7 +271,7 @@ resource "kubectl_manifest" "karpenter_ec2nodeclass_build" {
     ebs_encrypted              = var.ebs_volume_encryption_enabled
     imds_http_tokens           = var.imds_http_tokens
     imds_http_hop_limit        = var.imds_http_hop_limit
-    extra_tags                 = local.tags
+    extra_tags                 = var.tags
   })
 
   depends_on = [helm_release.karpenter]
@@ -315,7 +316,7 @@ resource "kubectl_manifest" "karpenter_ec2nodeclass_additional" {
     ebs_encrypted              = var.ebs_volume_encryption_enabled
     imds_http_tokens           = var.imds_http_tokens
     imds_http_hop_limit        = var.imds_http_hop_limit
-    extra_tags                 = local.tags
+    extra_tags                 = var.tags
   })
 
   depends_on = [helm_release.karpenter]

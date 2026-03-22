@@ -86,8 +86,8 @@ This reverses the process:
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `karpenter_build_instance_families` | _(workload families)_ | Instance families for build pool |
-| `karpenter_build_instance_sizes` | _(workload sizes)_ | Instance sizes for build pool |
+| `karpenter_build_instance_families` | _(all)_ | Instance families for build pool |
+| `karpenter_build_instance_sizes` | _(all)_ | Instance sizes for build pool |
 | `karpenter_build_capacity_types` | `on-demand` | Capacity types for build pool |
 | `karpenter_build_cpu_limit` | `32` | Max vCPUs for build pool |
 | `karpenter_build_consolidate_after` | `60s` | Time before empty build nodes are removed |
@@ -267,7 +267,7 @@ Each NodePool object supports:
 | `volume_type` | string | `gp3` | `gp2`, `gp3`, `io1`, `io2` |
 | `labels` | string | `""` | Comma-separated `key=value` pairs for node labels |
 | `taints` | string | `""` | Comma-separated `key=value:Effect` (Effect: `NoSchedule`, `PreferNoSchedule`, `NoExecute`) |
-| `weight` | int | `0` | NodePool priority (higher = preferred, 0-100) |
+| `weight` | int | _(not set)_ | NodePool priority (higher = preferred, 0-100). When not set, Karpenter uses default priority. `0` = lowest explicit priority. |
 
 ### Targeting Custom NodePools
 
