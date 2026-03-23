@@ -202,8 +202,11 @@ func watch(fn func(r sdk.Interface, c *stdcli.Context) error) func(sdk.Interface
 }
 
 func checkRackNameRegex(name string) error {
-	if !regexp.MustCompile(`^[a-z0-9-]+$`).MatchString(name) {
-		return fmt.Errorf("only lowercase alphanumeric characters and hyphen allowed and must not start with hyphen")
+	if len(name) > 26 {
+		return fmt.Errorf("rack name must be 26 characters or fewer")
+	}
+	if !regexp.MustCompile(`^[a-z][a-z0-9-]*$`).MatchString(name) {
+		return fmt.Errorf("rack name must start with a lowercase letter and contain only lowercase alphanumeric characters and hyphens")
 	}
 	return nil
 }

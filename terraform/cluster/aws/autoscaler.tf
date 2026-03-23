@@ -299,6 +299,8 @@ resource "kubernetes_role_binding" "autoscaler" {
 }
 
 resource "kubernetes_pod_disruption_budget_v1" "autoscaler" {
+  count = local.cas_replicas > 0 ? 1 : 0
+
   metadata {
     name      = "cluster-autoscaler"
     namespace = "kube-system"

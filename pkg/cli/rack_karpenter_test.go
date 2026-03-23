@@ -344,6 +344,50 @@ func TestValidateAndMutateParams_KarpenterConfigProtectedFields(t *testing.T) {
 			},
 			false, "",
 		},
+		// Requirements validation
+		{
+			"blocked: empty requirements array",
+			map[string]interface{}{
+				"nodePool": map[string]interface{}{
+					"template": map[string]interface{}{
+						"spec": map[string]interface{}{
+							"requirements": []interface{}{},
+						},
+					},
+				},
+			},
+			true, "requirements must not be empty",
+		},
+		{
+			"blocked: requirements not an array",
+			map[string]interface{}{
+				"nodePool": map[string]interface{}{
+					"template": map[string]interface{}{
+						"spec": map[string]interface{}{
+							"requirements": "not-an-array",
+						},
+					},
+				},
+			},
+			true, "requirements must be a JSON array",
+		},
+		{
+			"valid: non-empty requirements array",
+			map[string]interface{}{
+				"nodePool": map[string]interface{}{
+					"template": map[string]interface{}{
+						"spec": map[string]interface{}{
+							"requirements": []interface{}{
+								map[string]interface{}{
+									"key": "karpenter.sh/capacity-type", "operator": "In", "values": []interface{}{"on-demand"},
+								},
+							},
+						},
+					},
+				},
+			},
+			false, "",
+		},
 	}
 
 	for _, tt := range tests {
@@ -1425,6 +1469,122 @@ func TestValidateAndMutateParams_KarpenterNonDedicatedNodeGroups(t *testing.T) {
 			if tt.wantErr && err != nil && tt.errMsg != "" {
 				if !strings.Contains(err.Error(), tt.errMsg) {
 					t.Errorf("error %q does not contain %q", err.Error(), tt.errMsg)
+				}
+			}
+		})
+	}
+}
+
+func TestValidateAndMutateParams_KarpenterReenableValidation(t *testing.T) {
+	tests := []struct {
+		name          string
+		params        map[string]string
+		currentParams map[string]string
+		wantErr       bool
+		errMsg        string
+	}{
+		{
+			"stale invalid capacity_types in currentParams caught on re-enable",
+			map[string]string{"karpenter_enabled": "true", "karpenter_auth_mode": "true"},
+			map[string]string{"karpenter_auth_mode": "true", "karpenter_capacity_types": "INVALID"},
+			true,
+			"invalid karpenter capacity type",
+		},
+		{
+			"stale invalid cpu_limit in currentParams caught on re-enable",
+			map[string]string{"karpenter_enabled": "true", "karpenter_auth_mode": "true"},
+			map[string]string{"karpenter_auth_mode": "true", "karpenter_cpu_limit": "-5"},
+			true,
+			"karpenter_cpu_limit must be a positive integer",
+		},
+		{
+			"valid currentParams pass re-enable validation",
+			map[string]string{"karpenter_enabled": "true", "karpenter_auth_mode": "true"},
+			map[string]string{"karpenter_auth_mode": "true", "karpenter_capacity_types": "on-demand"},
+			false,
+			"",
+		},
+		{
+			"explicit param in call overrides stale currentParam",
+			map[string]string{"karpenter_enabled": "true", "karpenter_auth_mode": "true", "karpenter_capacity_types": "spot"},
+			map[string]string{"karpenter_auth_mode": "true", "karpenter_capacity_types": "INVALID"},
+			false,
+			"",
+		},
+		{
+			"injected keys are not sent to params after validation",
+			map[string]string{"karpenter_enabled": "true", "karpenter_auth_mode": "true"},
+			map[string]string{"karpenter_auth_mode": "true", "karpenter_capacity_types": "on-demand"},
+			false,
+			"",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Copy params so we can check for cleanup
+			paramsCopy := make(map[string]string)
+			for k, v := range tt.params {
+				paramsCopy[k] = v
+			}
+			err := validateAndMutateParams(paramsCopy, "aws", tt.currentParams)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("got err=%v, wantErr=%v", err, tt.wantErr)
+			}
+			if tt.wantErr && err != nil && tt.errMsg != "" {
+				if !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("error %q does not contain %q", err.Error(), tt.errMsg)
+				}
+			}
+		})
+	}
+
+	// Verify injected keys are cleaned up and NOT present in params after validation
+	t.Run("injected keys cleaned up from params", func(t *testing.T) {
+		params := map[string]string{"karpenter_enabled": "true", "karpenter_auth_mode": "true"}
+		currentParams := map[string]string{"karpenter_auth_mode": "true", "karpenter_capacity_types": "on-demand", "karpenter_cpu_limit": "100"}
+		err := validateAndMutateParams(params, "aws", currentParams)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if _, exists := params["karpenter_capacity_types"]; exists {
+			t.Error("injected key karpenter_capacity_types should have been removed from params after validation")
+		}
+		if _, exists := params["karpenter_cpu_limit"]; exists {
+			t.Error("injected key karpenter_cpu_limit should have been removed from params after validation")
+		}
+	})
+}
+
+func TestCheckRackNameRegex(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+		errMsg  string
+	}{
+		{"valid short name", "myrack", false, ""},
+		{"valid with numbers", "rack123", false, ""},
+		{"valid with hyphens", "my-rack-1", false, ""},
+		{"valid 26 chars", "abcdefghijklmnopqrstuvwxyz", false, ""},
+		{"too long 27 chars", "abcdefghijklmnopqrstuvwxyza", true, "26 characters"},
+		{"starts with digit", "1rack", true, "must start with a lowercase letter"},
+		{"starts with hyphen", "-rack", true, "must start with a lowercase letter"},
+		{"uppercase letters", "MyRack", true, "must start with a lowercase letter"},
+		{"special characters", "my_rack", true, "must start with a lowercase letter"},
+		{"empty string", "", true, "must start with a lowercase letter"},
+		{"single char", "a", false, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := checkRackNameRegex(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("name=%q: got err=%v, wantErr=%v", tt.input, err, tt.wantErr)
+			}
+			if tt.wantErr && err != nil && tt.errMsg != "" {
+				if !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("name=%q: error %q does not contain %q", tt.input, err.Error(), tt.errMsg)
 				}
 			}
 		})
