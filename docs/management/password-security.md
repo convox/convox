@@ -12,8 +12,8 @@ Convox Console enforces password complexity requirements to help organizations m
 
 All Convox Console passwords must meet the following criteria:
 
-- **Minimum length**: 8 characters
-- **Complexity**: Must contain at least one uppercase letter and one number
+- **Minimum length**: 12 characters
+- **Complexity**: Must contain at least one uppercase letter, one lowercase letter, one number, and one special character
 
 These requirements are enforced across all password flows, including:
 
@@ -33,8 +33,8 @@ If your organization requires stricter password policies than Convox enforces na
 
 For organizations undergoing compliance audits (e.g., SOC 2), the enforced password requirements align with common control frameworks:
 
-- **Length**: Minimum of 8 characters satisfies most baseline length requirements.
-- **Complexity**: The uppercase letter and number requirement addresses basic complexity controls.
+- **Length**: Minimum of 12 characters satisfies most baseline length requirements.
+- **Complexity**: Requiring an uppercase letter, lowercase letter, number, and special character addresses common complexity controls.
 
 If your auditor requires documentation of Convox's password policy, you can reference this page as evidence of the enforced requirements.
 
