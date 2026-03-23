@@ -509,7 +509,6 @@ func TestValidateAndMutateParams_KarpenterEnabledGating(t *testing.T) {
 		params map[string]string
 	}{
 		{"invalid capacity_types", map[string]string{"karpenter_capacity_types": "invalid"}},
-		{"invalid arch", map[string]string{"karpenter_arch": "x86"}},
 		{"invalid cpu_limit", map[string]string{"karpenter_cpu_limit": "-5"}},
 		{"invalid memory_limit_gb", map[string]string{"karpenter_memory_limit_gb": "abc"}},
 		{"invalid consolidate_after", map[string]string{"karpenter_consolidate_after": "bad"}},
@@ -517,7 +516,7 @@ func TestValidateAndMutateParams_KarpenterEnabledGating(t *testing.T) {
 		{"invalid budget", map[string]string{"karpenter_disruption_budget_nodes": "abc"}},
 		{"invalid taints", map[string]string{"karpenter_node_taints": "nocolon"}},
 		{"reserved labels", map[string]string{"karpenter_node_labels": "convox.io/nodepool=x"}},
-		{"enabled=false explicit", map[string]string{"karpenter_enabled": "false", "karpenter_arch": "x86"}},
+		{"enabled=false explicit", map[string]string{"karpenter_enabled": "false", "karpenter_capacity_types": "invalid"}},
 	}
 	for _, tt := range skippedCases {
 		t.Run("skipped/"+tt.name, func(t *testing.T) {
@@ -581,38 +580,6 @@ func TestValidateAndMutateParams_CapacityTypes(t *testing.T) {
 			err := validateAndMutateParams(params, "aws")
 			if (err != nil) != tt.wantErr {
 				t.Errorf("%s=%q: got err=%v, wantErr=%v", tt.param, tt.value, err, tt.wantErr)
-			}
-		})
-	}
-}
-
-// === Tests for karpenter_arch ===
-
-func TestValidateAndMutateParams_Arch(t *testing.T) {
-	tests := []struct {
-		name    string
-		value   string
-		wantErr bool
-	}{
-		{"valid amd64", "amd64", false},
-		{"valid arm64", "arm64", false},
-		{"valid both", "amd64,arm64", false},
-		{"valid with spaces", "amd64, arm64", false},
-		{"invalid x86", "x86", true},
-		{"mixed valid/invalid", "amd64,x86_64", true},
-		{"empty string", "", false},
-		{"case sensitive AMD64", "AMD64", true},
-		{"trailing comma", "amd64,", true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			params := map[string]string{
-				"karpenter_enabled": "true",
-				"karpenter_arch":    tt.value,
-			}
-			err := validateAndMutateParams(params, "aws")
-			if (err != nil) != tt.wantErr {
-				t.Errorf("arch=%q: got err=%v, wantErr=%v", tt.value, err, tt.wantErr)
 			}
 		})
 	}
@@ -925,7 +892,6 @@ func TestValidateAndMutateParams_KarpenterNotAWS_AllParams(t *testing.T) {
 	karpenterParams := []string{
 		"karpenter_enabled",
 		"karpenter_capacity_types",
-		"karpenter_arch",
 		"karpenter_cpu_limit",
 		"karpenter_config",
 		"karpenter_node_labels",

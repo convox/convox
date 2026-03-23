@@ -316,18 +316,6 @@ Groups:
           - on-demand
           - spot
           - on-demand,spot
-      - name: karpenter_arch
-        default: amd64
-        type: string
-        description: |
-          CPU architectures for Karpenter workload nodes. &l
-          &b amd64 &b - x86_64 only &l
-          &b arm64 &b - ARM64 only &l
-          &b amd64,arm64 &b - Both &l
-        allowedValues:
-          - amd64
-          - arm64
-          - amd64,arm64
       - name: karpenter_cpu_limit
         default: "100"
         type: integer

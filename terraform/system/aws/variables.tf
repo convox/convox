@@ -209,10 +209,6 @@ variable "karpenter_capacity_types" {
   default = "on-demand"
 }
 
-variable "karpenter_arch" {
-  type    = string
-  default = "amd64"
-}
 
 variable "karpenter_cpu_limit" {
   type    = number

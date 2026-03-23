@@ -397,15 +397,6 @@ func validateAndMutateParams(params map[string]string, provider string) error {
 			}
 		}
 
-		if v, ok := params["karpenter_arch"]; ok && v != "" {
-			for _, arch := range strings.Split(v, ",") {
-				arch = strings.TrimSpace(arch)
-				if arch != "amd64" && arch != "arm64" {
-					return fmt.Errorf("invalid karpenter architecture: %s (must be amd64 or arm64)", arch)
-				}
-			}
-		}
-
 		if v, ok := params["karpenter_cpu_limit"]; ok && v != "" {
 			n, err := strconv.Atoi(v)
 			if err != nil || n <= 0 {
