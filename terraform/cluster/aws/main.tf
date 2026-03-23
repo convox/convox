@@ -177,19 +177,21 @@ resource "aws_eks_node_group" "cluster" {
     version = "$Latest"
   }
 
+  # System nodes remain in all AZs regardless of Karpenter state.
+  # Karpenter provisions workload nodes separately across all AZs.
   scaling_config {
     desired_size = var.karpenter_enabled ? (
-      count.index <= 1 ? 1 : 0
+      count.index <= 2 ? 1 : 0
     ) : (
       var.node_capacity_type == "MIXED" ? count.index == 0 ? var.min_on_demand_count : 1 : 1
     )
     min_size = var.karpenter_enabled ? (
-      count.index <= 1 ? 1 : 0
+      count.index <= 2 ? 1 : 0
     ) : (
       var.node_capacity_type == "MIXED" ? count.index == 0 ? var.min_on_demand_count : 1 : 1
     )
     max_size = var.karpenter_enabled ? (
-      count.index <= 1 ? 10 : 0
+      count.index <= 2 ? 10 : 0
     ) : (
       var.node_capacity_type == "MIXED" ? count.index == 0 ? var.max_on_demand_count : 100 : 100
     )
