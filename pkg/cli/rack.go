@@ -284,10 +284,14 @@ func (np *KarpenterNodePoolConfigParam) Validate() error {
 		if strings.Contains(*np.Labels, `"`) {
 			return fmt.Errorf("karpenter nodepool '%s': label keys and values must not contain double quotes", np.Name)
 		}
+		reservedPoolLabels := map[string]bool{"convox.io/nodepool": true}
 		for _, pair := range strings.Split(*np.Labels, ",") {
 			parts := strings.SplitN(strings.TrimSpace(pair), "=", 2)
 			if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
 				return fmt.Errorf("karpenter nodepool '%s': invalid label '%s', use format key=value", np.Name, pair)
+			}
+			if reservedPoolLabels[parts[0]] {
+				return fmt.Errorf("karpenter nodepool '%s': '%s' is a Convox-reserved label key and cannot be overridden", np.Name, parts[0])
 			}
 		}
 	}
@@ -672,16 +676,20 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 				} else {
 					// Block reserved labels in nodePool.template.metadata.labels
 					if metaVal, exists := tmpl["metadata"]; exists {
-						if meta, ok := metaVal.(map[string]interface{}); ok {
-							if labelsVal, exists := meta["labels"]; exists {
-								if labels, ok := labelsVal.(map[string]interface{}); ok {
-									reservedConfigLabels := []string{"convox.io/nodepool"}
-									for labelKey := range labels {
-										for _, reserved := range reservedConfigLabels {
-											if labelKey == reserved {
-												return fmt.Errorf("karpenter_config: '%s' is a Convox-reserved label and cannot be overridden in nodePool.template.metadata.labels", labelKey)
-											}
-										}
+						meta, ok := metaVal.(map[string]interface{})
+						if !ok {
+							return fmt.Errorf("karpenter_config: nodePool.template.metadata must be a JSON object")
+						}
+						if labelsVal, exists := meta["labels"]; exists {
+							labels, ok := labelsVal.(map[string]interface{})
+							if !ok {
+								return fmt.Errorf("karpenter_config: nodePool.template.metadata.labels must be a JSON object")
+							}
+							reservedConfigLabels := []string{"convox.io/nodepool"}
+							for labelKey := range labels {
+								for _, reserved := range reservedConfigLabels {
+									if labelKey == reserved {
+										return fmt.Errorf("karpenter_config: '%s' is a Convox-reserved label and cannot be overridden in nodePool.template.metadata.labels", labelKey)
 									}
 								}
 							}
