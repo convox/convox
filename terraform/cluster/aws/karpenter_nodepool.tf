@@ -57,11 +57,11 @@ locals {
   )
   np_final_requirements = lookup(local.kc_np_template_spec, "requirements", local.np_default_requirements)
 
-  # Labels: always include convox.io/nodepool, merge param labels, then override labels
+  # Labels: merge param labels, then override labels, then force Convox-reserved label last (always wins)
   np_final_labels = merge(
-    { "convox.io/nodepool" = "workload" },
     local.karpenter_workload_extra_labels,
-    lookup(local.kc_np_template_meta, "labels", {})
+    lookup(local.kc_np_template_meta, "labels", {}),
+    { "convox.io/nodepool" = "workload" }
   )
 
   # Taints: use override if provided, otherwise param taints

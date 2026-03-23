@@ -414,6 +414,28 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 	}
 
 	// Karpenter parameter validation
+	// When enabling Karpenter, temporarily inject current params for re-validation so stale
+	// invalid values saved during a previous karpenter_enabled=false call are caught.
+	// Injected keys are removed after validation to avoid sending them to UpdateParams.
+	var karpenterInjectedKeys []string
+	if params["karpenter_enabled"] == "true" {
+		karpenterRevalidateKeys := []string{
+			"karpenter_capacity_types", "karpenter_cpu_limit", "karpenter_memory_limit_gb",
+			"karpenter_consolidate_after", "karpenter_build_consolidate_after",
+			"karpenter_node_expiry", "karpenter_disruption_budget_nodes",
+			"karpenter_build_capacity_types", "karpenter_build_cpu_limit",
+			"karpenter_build_memory_limit_gb", "karpenter_node_taints",
+			"karpenter_node_labels", "karpenter_build_node_labels",
+		}
+		for _, rk := range karpenterRevalidateKeys {
+			if _, inCall := params[rk]; !inCall {
+				if cv, exists := currentParams[rk]; exists && cv != "" {
+					params[rk] = cv
+					karpenterInjectedKeys = append(karpenterInjectedKeys, rk)
+				}
+			}
+		}
+	}
 	if params["karpenter_enabled"] == "true" {
 		if v, ok := params["karpenter_capacity_types"]; ok && v != "" {
 			for _, ct := range strings.Split(v, ",") {
@@ -528,6 +550,11 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 				}
 			}
 		}
+	}
+
+	// Remove temporarily-injected currentParams keys so they aren't sent to UpdateParams
+	for _, rk := range karpenterInjectedKeys {
+		delete(params, rk)
 	}
 
 	ngKeys := []string{"additional_node_groups_config", "additional_build_groups_config"}
@@ -740,6 +767,15 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 						} else {
 							if _, exists := spec["nodeClassRef"]; exists {
 								return fmt.Errorf("karpenter_config: nodePool.template.spec.nodeClassRef is managed by Convox and cannot be overridden")
+							}
+							if reqVal, exists := spec["requirements"]; exists {
+								reqs, ok := reqVal.([]interface{})
+								if !ok {
+									return fmt.Errorf("karpenter_config: nodePool.template.spec.requirements must be a JSON array")
+								}
+								if len(reqs) == 0 {
+									return fmt.Errorf("karpenter_config: nodePool.template.spec.requirements must not be empty (Karpenter needs at least one requirement to provision nodes)")
+								}
 							}
 						}
 					}
