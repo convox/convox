@@ -278,6 +278,18 @@ Groups:
   - name: Karpenter
     order: 6
     params:
+      - name: karpenter_auth_mode
+        default: "false"
+        type: boolean
+        description: |
+          Enable Karpenter authentication mode prerequisites. &l Migrates
+          the EKS cluster to API_AND_CONFIG_MAP access mode and applies
+          karpenter.sh/discovery tags to subnets and security groups. &l &l
+          &b Warning: &b This is a one-way migration and cannot be disabled
+          once enabled (matching AWS EKS behavior). &l &l Must be set to
+          true before or alongside &i karpenter_enabled=true &i. Can be
+          combined in one call: &l
+          &i convox rack params set karpenter_auth_mode=true karpenter_enabled=true &i &l
       - name: karpenter_enabled
         default: "false"
         type: boolean
@@ -286,6 +298,7 @@ Groups:
           Autoscaler. &l When enabled, deploys Karpenter controller and
           NodePools for workload scheduling. System nodes remain as managed
           node groups. &l Bidirectional — can be toggled on and off safely.
+          &l &l Requires &i karpenter_auth_mode=true &i.
       - name: karpenter_instance_families
         optional: true
         default: "null"

@@ -189,6 +189,11 @@ variable "internet_gateway_id" {
   default = ""
 }
 
+variable "karpenter_auth_mode" {
+  type    = string
+  default = "false"
+}
+
 variable "karpenter_enabled" {
   type    = string
   default = "false"
