@@ -854,6 +854,58 @@ func TestValidateAndMutateParams_KarpenterConfigMoreProtectedFields(t *testing.T
 			},
 			true, "nodePool.template.spec must be a JSON object",
 		},
+		{
+			"nodePool.template.metadata not a map (hard error)",
+			map[string]interface{}{
+				"nodePool": map[string]interface{}{
+					"template": map[string]interface{}{
+						"metadata": "not-a-map",
+					},
+				},
+			},
+			true, "nodePool.template.metadata must be a JSON object",
+		},
+		{
+			"nodePool.template.metadata.labels not a map (hard error)",
+			map[string]interface{}{
+				"nodePool": map[string]interface{}{
+					"template": map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"labels": "not-a-map",
+						},
+					},
+				},
+			},
+			true, "nodePool.template.metadata.labels must be a JSON object",
+		},
+		{
+			"nodePool.template.metadata.labels as array (hard error)",
+			map[string]interface{}{
+				"nodePool": map[string]interface{}{
+					"template": map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"labels": []interface{}{"a", "b"},
+						},
+					},
+				},
+			},
+			true, "nodePool.template.metadata.labels must be a JSON object",
+		},
+		{
+			"valid metadata with labels still passes",
+			map[string]interface{}{
+				"nodePool": map[string]interface{}{
+					"template": map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"labels": map[string]interface{}{
+								"custom-label": "value",
+							},
+						},
+					},
+				},
+			},
+			false, "",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1133,6 +1185,9 @@ func TestKarpenterNodePoolConfigParam_PoolFields(t *testing.T) {
 		// Labels edge cases
 		{"labels: empty key", KarpenterNodePoolConfigParam{Name: "test", Labels: strPtr("=value")}, true, "invalid label"},
 		{"labels: empty value", KarpenterNodePoolConfigParam{Name: "test", Labels: strPtr("key=")}, true, "invalid label"},
+		{"labels: reserved convox.io/nodepool", KarpenterNodePoolConfigParam{Name: "test", Labels: strPtr("convox.io/nodepool=custom")}, true, "Convox-reserved label"},
+		{"labels: reserved among others", KarpenterNodePoolConfigParam{Name: "test", Labels: strPtr("ok=fine,convox.io/nodepool=x")}, true, "Convox-reserved label"},
+		{"labels: non-reserved ok", KarpenterNodePoolConfigParam{Name: "test", Labels: strPtr("team=backend,env=prod")}, false, ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
