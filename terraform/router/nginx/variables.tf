@@ -24,6 +24,11 @@ variable "nginx_additional_config" {
   default     = ""
 }
 
+variable "karpenter_enabled" {
+  type    = bool
+  default = false
+}
+
 variable "namespace" {
   type = string
 }
