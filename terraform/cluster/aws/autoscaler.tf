@@ -357,6 +357,7 @@ resource "kubernetes_deployment" "autoscaler" {
         automount_service_account_token = true
         service_account_name            = "cluster-autoscaler"
         priority_class_name             = "system-node-critical"
+        node_selector                   = var.karpenter_enabled ? { "convox.io/system-node" = "true" } : {}
 
         container {
           image             = "registry.k8s.io/autoscaling/cluster-autoscaler:v1.32.0"
