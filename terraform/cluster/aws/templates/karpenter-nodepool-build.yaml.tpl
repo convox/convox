@@ -27,7 +27,7 @@ spec:
           values: [${karpenter_build_capacity_types}]
         - key: kubernetes.io/arch
           operator: In
-          values: [amd64]
+          values: [${karpenter_build_arch}]
 %{ if karpenter_build_instance_families != "" }
         - key: karpenter.k8s.aws/instance-family
           operator: In

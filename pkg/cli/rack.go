@@ -380,7 +380,7 @@ func validateAndMutateParams(params map[string]string, provider string) error {
 	// Reject karpenter_* params for non-AWS racks
 	if provider != "aws" {
 		for k := range params {
-			if strings.HasPrefix(k, "karpenter_") {
+			if strings.HasPrefix(k, "karpenter_") || k == "additional_karpenter_nodepools_config" {
 				return fmt.Errorf("karpenter parameters are only supported for AWS racks")
 			}
 		}

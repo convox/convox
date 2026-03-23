@@ -253,6 +253,7 @@ resource "kubectl_manifest" "karpenter_nodepool_build" {
     karpenter_build_instance_sizes    = var.karpenter_build_instance_sizes
     karpenter_build_cpu_limit         = var.karpenter_build_cpu_limit
     karpenter_build_consolidate_after = var.karpenter_build_consolidate_after
+    karpenter_build_arch              = var.build_arm_type ? "arm64" : "amd64"
     extra_labels                      = local.karpenter_build_extra_labels
   })
 

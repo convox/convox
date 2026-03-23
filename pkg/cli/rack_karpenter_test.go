@@ -500,6 +500,629 @@ func TestValidateAndMutateParams_KarpenterNotAWS(t *testing.T) {
 	}
 }
 
+// === Tests for karpenter_enabled gating ===
+
+func TestValidateAndMutateParams_KarpenterEnabledGating(t *testing.T) {
+	// When karpenter_enabled is not "true", validation inside the enabled block is skipped.
+	skippedCases := []struct {
+		name   string
+		params map[string]string
+	}{
+		{"invalid capacity_types", map[string]string{"karpenter_capacity_types": "invalid"}},
+		{"invalid arch", map[string]string{"karpenter_arch": "x86"}},
+		{"invalid cpu_limit", map[string]string{"karpenter_cpu_limit": "-5"}},
+		{"invalid memory_limit_gb", map[string]string{"karpenter_memory_limit_gb": "abc"}},
+		{"invalid consolidate_after", map[string]string{"karpenter_consolidate_after": "bad"}},
+		{"invalid node_expiry", map[string]string{"karpenter_node_expiry": "bad"}},
+		{"invalid budget", map[string]string{"karpenter_disruption_budget_nodes": "abc"}},
+		{"invalid taints", map[string]string{"karpenter_node_taints": "nocolon"}},
+		{"reserved labels", map[string]string{"karpenter_node_labels": "convox.io/nodepool=x"}},
+		{"enabled=false explicit", map[string]string{"karpenter_enabled": "false", "karpenter_arch": "x86"}},
+	}
+	for _, tt := range skippedCases {
+		t.Run("skipped/"+tt.name, func(t *testing.T) {
+			err := validateAndMutateParams(tt.params, "aws")
+			if err != nil {
+				t.Errorf("expected no error (gating should skip), got: %v", err)
+			}
+		})
+	}
+
+	// karpenter_config is validated OUTSIDE the karpenter_enabled block
+	t.Run("karpenter_config still validated without enabled", func(t *testing.T) {
+		params := map[string]string{"karpenter_config": "{bad"}
+		err := validateAndMutateParams(params, "aws")
+		if err == nil {
+			t.Error("expected error: karpenter_config validated even without karpenter_enabled=true")
+		}
+	})
+
+	t.Run("additional_karpenter_nodepools_config still validated without enabled", func(t *testing.T) {
+		params := map[string]string{"additional_karpenter_nodepools_config": "[bad]"}
+		err := validateAndMutateParams(params, "aws")
+		if err == nil {
+			t.Error("expected error: additional_karpenter_nodepools_config validated even without karpenter_enabled=true")
+		}
+	})
+}
+
+// === Tests for karpenter_capacity_types and karpenter_build_capacity_types ===
+
+func TestValidateAndMutateParams_CapacityTypes(t *testing.T) {
+	tests := []struct {
+		name    string
+		param   string
+		value   string
+		wantErr bool
+	}{
+		{"valid on-demand", "karpenter_capacity_types", "on-demand", false},
+		{"valid spot", "karpenter_capacity_types", "spot", false},
+		{"valid both", "karpenter_capacity_types", "on-demand,spot", false},
+		{"valid with spaces", "karpenter_capacity_types", "on-demand, spot", false},
+		{"invalid type", "karpenter_capacity_types", "reserved", true},
+		{"mixed valid/invalid", "karpenter_capacity_types", "on-demand,invalid", true},
+		{"empty string", "karpenter_capacity_types", "", false},
+		{"case sensitive On-Demand", "karpenter_capacity_types", "On-Demand", true},
+		{"trailing comma", "karpenter_capacity_types", "on-demand,", true},
+		{"leading comma", "karpenter_capacity_types", ",on-demand", true},
+
+		{"build: valid on-demand", "karpenter_build_capacity_types", "on-demand", false},
+		{"build: valid spot", "karpenter_build_capacity_types", "spot", false},
+		{"build: valid both", "karpenter_build_capacity_types", "on-demand,spot", false},
+		{"build: invalid type", "karpenter_build_capacity_types", "reserved", true},
+		{"build: empty string", "karpenter_build_capacity_types", "", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := map[string]string{
+				"karpenter_enabled": "true",
+				tt.param:            tt.value,
+			}
+			err := validateAndMutateParams(params, "aws")
+			if (err != nil) != tt.wantErr {
+				t.Errorf("%s=%q: got err=%v, wantErr=%v", tt.param, tt.value, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// === Tests for karpenter_arch ===
+
+func TestValidateAndMutateParams_Arch(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		wantErr bool
+	}{
+		{"valid amd64", "amd64", false},
+		{"valid arm64", "arm64", false},
+		{"valid both", "amd64,arm64", false},
+		{"valid with spaces", "amd64, arm64", false},
+		{"invalid x86", "x86", true},
+		{"mixed valid/invalid", "amd64,x86_64", true},
+		{"empty string", "", false},
+		{"case sensitive AMD64", "AMD64", true},
+		{"trailing comma", "amd64,", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := map[string]string{
+				"karpenter_enabled": "true",
+				"karpenter_arch":    tt.value,
+			}
+			err := validateAndMutateParams(params, "aws")
+			if (err != nil) != tt.wantErr {
+				t.Errorf("arch=%q: got err=%v, wantErr=%v", tt.value, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// === Tests for karpenter_cpu_limit ===
+
+func TestValidateAndMutateParams_CpuLimit(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		wantErr bool
+	}{
+		{"valid 1", "1", false},
+		{"valid 100", "100", false},
+		{"zero", "0", true},
+		{"negative", "-1", true},
+		{"not a number", "abc", true},
+		{"decimal", "1.5", true},
+		{"empty string", "", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := map[string]string{
+				"karpenter_enabled":   "true",
+				"karpenter_cpu_limit": tt.value,
+			}
+			err := validateAndMutateParams(params, "aws")
+			if (err != nil) != tt.wantErr {
+				t.Errorf("cpu_limit=%q: got err=%v, wantErr=%v", tt.value, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// === Tests for karpenter_memory_limit_gb ===
+
+func TestValidateAndMutateParams_MemoryLimitGb(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		wantErr bool
+	}{
+		{"valid 1", "1", false},
+		{"valid 512", "512", false},
+		{"zero", "0", true},
+		{"negative", "-1", true},
+		{"not a number", "abc", true},
+		{"decimal", "1.5", true},
+		{"empty string", "", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := map[string]string{
+				"karpenter_enabled":         "true",
+				"karpenter_memory_limit_gb": tt.value,
+			}
+			err := validateAndMutateParams(params, "aws")
+			if (err != nil) != tt.wantErr {
+				t.Errorf("memory_limit_gb=%q: got err=%v, wantErr=%v", tt.value, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// === Tests for karpenter_consolidate_after and karpenter_build_consolidate_after ===
+
+func TestValidateAndMutateParams_ConsolidateAfter(t *testing.T) {
+	tests := []struct {
+		name    string
+		param   string
+		value   string
+		wantErr bool
+	}{
+		{"valid 30s", "karpenter_consolidate_after", "30s", false},
+		{"valid 5m", "karpenter_consolidate_after", "5m", false},
+		{"valid 1h", "karpenter_consolidate_after", "1h", false},
+		{"invalid: no unit", "karpenter_consolidate_after", "30", true},
+		{"invalid: days", "karpenter_consolidate_after", "1d", true},
+		{"invalid: text", "karpenter_consolidate_after", "abc", true},
+		{"empty", "karpenter_consolidate_after", "", false},
+		{"invalid: space", "karpenter_consolidate_after", "30 s", true},
+		{"invalid: decimal", "karpenter_consolidate_after", "1.5h", true},
+
+		{"build: valid 30s", "karpenter_build_consolidate_after", "30s", false},
+		{"build: valid 5m", "karpenter_build_consolidate_after", "5m", false},
+		{"build: invalid text", "karpenter_build_consolidate_after", "abc", true},
+		{"build: empty", "karpenter_build_consolidate_after", "", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := map[string]string{
+				"karpenter_enabled": "true",
+				tt.param:            tt.value,
+			}
+			err := validateAndMutateParams(params, "aws")
+			if (err != nil) != tt.wantErr {
+				t.Errorf("%s=%q: got err=%v, wantErr=%v", tt.param, tt.value, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// === Tests for karpenter_node_expiry ===
+
+func TestValidateAndMutateParams_NodeExpiry(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		wantErr bool
+	}{
+		{"valid 720h", "720h", false},
+		{"valid 1h", "1h", false},
+		{"valid Never", "Never", false},
+		{"invalid: minutes", "30m", true},
+		{"invalid: seconds", "60s", true},
+		{"invalid: text", "abc", true},
+		{"invalid: never lowercase", "never", true},
+		{"empty", "", false},
+		{"invalid: no unit", "720", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := map[string]string{
+				"karpenter_enabled":     "true",
+				"karpenter_node_expiry": tt.value,
+			}
+			err := validateAndMutateParams(params, "aws")
+			if (err != nil) != tt.wantErr {
+				t.Errorf("node_expiry=%q: got err=%v, wantErr=%v", tt.value, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// === Additional karpenter_config protected field tests ===
+
+func TestValidateAndMutateParams_KarpenterConfigMoreProtectedFields(t *testing.T) {
+	tests := []struct {
+		name    string
+		config  map[string]interface{}
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			"blocked: ec2NodeClass.instanceProfile",
+			map[string]interface{}{
+				"ec2NodeClass": map[string]interface{}{"instanceProfile": "custom"},
+			},
+			true, "ec2NodeClass.instanceProfile is managed by Convox",
+		},
+		{
+			"blocked: ec2NodeClass.securityGroupSelectorTerms",
+			map[string]interface{}{
+				"ec2NodeClass": map[string]interface{}{"securityGroupSelectorTerms": []interface{}{}},
+			},
+			true, "ec2NodeClass.securityGroupSelectorTerms is managed by Convox",
+		},
+		{
+			"ec2NodeClass.tags not a JSON object",
+			map[string]interface{}{
+				"ec2NodeClass": map[string]interface{}{"tags": "not-a-map"},
+			},
+			true, "ec2NodeClass.tags must be a JSON object",
+		},
+		{
+			"nodePool.template not a map (warning only, no error)",
+			map[string]interface{}{
+				"nodePool": map[string]interface{}{"template": "not-a-map"},
+			},
+			false, "",
+		},
+		{
+			"nodePool.template.spec not a map (warning only, no error)",
+			map[string]interface{}{
+				"nodePool": map[string]interface{}{
+					"template": map[string]interface{}{
+						"spec": "not-a-map",
+					},
+				},
+			},
+			false, "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			raw, _ := json.Marshal(tt.config)
+			params := map[string]string{
+				"karpenter_config": string(raw),
+			}
+			err := validateAndMutateParams(params, "aws")
+			if (err != nil) != tt.wantErr {
+				t.Errorf("got err=%v, wantErr=%v", err, tt.wantErr)
+			}
+			if tt.wantErr && err != nil && tt.errMsg != "" {
+				if !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("error %q does not contain %q", err.Error(), tt.errMsg)
+				}
+			}
+		})
+	}
+}
+
+// === karpenter_config edge cases ===
+
+func TestValidateAndMutateParams_KarpenterConfigEdgeCases(t *testing.T) {
+	// JSON array instead of object (base64-encoded to bypass raw-JSON detection)
+	t.Run("JSON array instead of object", func(t *testing.T) {
+		encoded := base64.StdEncoding.EncodeToString([]byte(`[1,2,3]`))
+		params := map[string]string{
+			"karpenter_config": encoded,
+		}
+		err := validateAndMutateParams(params, "aws")
+		if err == nil {
+			t.Error("expected error for JSON array, got nil")
+		}
+		if err != nil && !strings.Contains(err.Error(), "invalid karpenter_config JSON") {
+			t.Errorf("expected JSON parse error, got: %v", err)
+		}
+	})
+
+	// Exact boundary: 64KB
+	t.Run("exactly 64KB", func(t *testing.T) {
+		padding := strings.Repeat("x", 64*1024-30) // account for JSON wrapper overhead
+		config := `{"nodePool":{"d":"` + padding + `"}}`
+		if len(config) <= 64*1024 {
+			params := map[string]string{"karpenter_config": config}
+			err := validateAndMutateParams(params, "aws")
+			if err != nil && strings.Contains(err.Error(), "exceeds maximum size") {
+				t.Errorf("config at/under 64KB should not fail size check: %v", err)
+			}
+		}
+	})
+}
+
+// === Tests for additional_karpenter_nodepools_config ===
+
+func TestValidateAndMutateParams_AdditionalKarpenterNodepoolsConfig(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		wantErr bool
+		errMsg  string
+	}{
+		{"valid single pool", `[{"name":"gpu"}]`, false, ""},
+		{"valid multiple pools", `[{"name":"gpu"},{"name":"high-mem"}]`, false, ""},
+		{"empty array", `[]`, false, ""},
+		{"missing name", `[{"cpu_limit":4}]`, true, "name is required"},
+		{"duplicate names", `[{"name":"gpu"},{"name":"gpu"}]`, true, "duplicate"},
+		{"reserved name workload", `[{"name":"workload"}]`, true, "reserved"},
+		{"reserved name build", `[{"name":"build"}]`, true, "reserved"},
+		{"reserved name default", `[{"name":"default"}]`, true, "reserved"},
+		{"reserved name system", `[{"name":"system"}]`, true, "reserved"},
+		{"invalid JSON", `[not json]`, true, "invalid karpenter nodepools config"},
+		{"invalid pool field", `[{"name":"gpu","cpu_limit":-1}]`, true, "cpu_limit"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := map[string]string{
+				"additional_karpenter_nodepools_config": tt.value,
+			}
+			err := validateAndMutateParams(params, "aws")
+			if (err != nil) != tt.wantErr {
+				t.Errorf("got err=%v, wantErr=%v", err, tt.wantErr)
+			}
+			if tt.wantErr && err != nil && tt.errMsg != "" {
+				if !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("error %q does not contain %q", err.Error(), tt.errMsg)
+				}
+			}
+			// On success with non-empty input, result should be base64 encoded
+			if err == nil && tt.value != "" && tt.value != "[]" {
+				decoded, derr := base64.StdEncoding.DecodeString(params["additional_karpenter_nodepools_config"])
+				if derr != nil {
+					t.Errorf("output not valid base64: %v", derr)
+				}
+				var out []interface{}
+				if uerr := json.Unmarshal(decoded, &out); uerr != nil {
+					t.Errorf("decoded output not valid JSON array: %v", uerr)
+				}
+			}
+		})
+	}
+}
+
+func TestValidateAndMutateParams_AdditionalKarpenterNodepoolsConfigBase64(t *testing.T) {
+	raw := `[{"name":"gpu"}]`
+	encoded := base64.StdEncoding.EncodeToString([]byte(raw))
+	params := map[string]string{
+		"additional_karpenter_nodepools_config": encoded,
+	}
+	err := validateAndMutateParams(params, "aws")
+	if err != nil {
+		t.Errorf("expected no error for base64-encoded input, got: %v", err)
+	}
+	// Verify output is base64
+	decoded, derr := base64.StdEncoding.DecodeString(params["additional_karpenter_nodepools_config"])
+	if derr != nil {
+		t.Fatalf("output not valid base64: %v", derr)
+	}
+	var out []interface{}
+	if uerr := json.Unmarshal(decoded, &out); uerr != nil {
+		t.Errorf("decoded output not valid JSON: %v", uerr)
+	}
+}
+
+// === Non-AWS rejection for various karpenter_ params ===
+
+func TestValidateAndMutateParams_KarpenterNotAWS_AllParams(t *testing.T) {
+	karpenterParams := []string{
+		"karpenter_enabled",
+		"karpenter_capacity_types",
+		"karpenter_arch",
+		"karpenter_cpu_limit",
+		"karpenter_config",
+		"karpenter_node_labels",
+		"karpenter_node_taints",
+	}
+	for _, param := range karpenterParams {
+		t.Run(param, func(t *testing.T) {
+			params := map[string]string{param: "some-value"}
+			err := validateAndMutateParams(params, "gcp")
+			if err == nil {
+				t.Errorf("expected error for %s on non-AWS, got nil", param)
+			}
+			if err != nil && !strings.Contains(err.Error(), "only supported for AWS") {
+				t.Errorf("unexpected error message: %v", err)
+			}
+		})
+	}
+
+	// additional_karpenter_nodepools_config should also be rejected on non-AWS
+	t.Run("additional_karpenter_nodepools_config rejected on non-AWS", func(t *testing.T) {
+		params := map[string]string{
+			"additional_karpenter_nodepools_config": `[{"name":"gpu"}]`,
+		}
+		err := validateAndMutateParams(params, "gcp")
+		if err == nil {
+			t.Error("expected error for additional_karpenter_nodepools_config on non-AWS, got nil")
+		}
+		if err != nil && !strings.Contains(err.Error(), "only supported for AWS") {
+			t.Errorf("unexpected error message: %v", err)
+		}
+	})
+}
+
+// === Pool name format regex ===
+
+func TestKarpenterNodePoolConfigParam_NameFormat(t *testing.T) {
+	tests := []struct {
+		name     string
+		poolName string
+		wantErr  bool
+	}{
+		{"valid lowercase", "gpu", false},
+		{"valid with dash", "high-mem", false},
+		{"valid with numbers", "pool1", false},
+		{"valid max length 63", strings.Repeat("a", 63), false},
+		{"too long 64", strings.Repeat("a", 64), true},
+		{"starts with number", "1pool", true},
+		{"starts with dash", "-pool", true},
+		{"uppercase", "GPU", true},
+		{"contains underscore", "my_pool", true},
+		{"contains dot", "my.pool", true},
+		{"single char", "a", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := KarpenterNodePoolConfigParam{Name: tt.poolName}
+			err := p.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("name=%q: got err=%v, wantErr=%v", tt.poolName, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// === All reserved pool names ===
+
+func TestKarpenterNodePoolConfigParam_AllReservedNames(t *testing.T) {
+	reserved := []string{"workload", "build", "default", "system"}
+	for _, name := range reserved {
+		t.Run(name, func(t *testing.T) {
+			p := KarpenterNodePoolConfigParam{Name: name}
+			err := p.Validate()
+			if err == nil {
+				t.Errorf("name=%q should be reserved, got no error", name)
+			}
+			if err != nil && !strings.Contains(err.Error(), "reserved") {
+				t.Errorf("expected 'reserved' in error, got: %v", err)
+			}
+		})
+	}
+}
+
+// === Pool-level field validations ===
+
+func TestKarpenterNodePoolConfigParam_PoolFields(t *testing.T) {
+	strPtr := func(s string) *string { return &s }
+	intPtr := func(i int) *int { return &i }
+
+	tests := []struct {
+		name    string
+		param   KarpenterNodePoolConfigParam
+		wantErr bool
+		errMsg  string
+	}{
+		// CapacityTypes
+		{"capacity: valid on-demand", KarpenterNodePoolConfigParam{Name: "test", CapacityTypes: strPtr("on-demand")}, false, ""},
+		{"capacity: valid spot", KarpenterNodePoolConfigParam{Name: "test", CapacityTypes: strPtr("spot")}, false, ""},
+		{"capacity: valid both", KarpenterNodePoolConfigParam{Name: "test", CapacityTypes: strPtr("on-demand,spot")}, false, ""},
+		{"capacity: invalid", KarpenterNodePoolConfigParam{Name: "test", CapacityTypes: strPtr("reserved")}, true, "invalid capacity type"},
+
+		// Arch
+		{"arch: valid amd64", KarpenterNodePoolConfigParam{Name: "test", Arch: strPtr("amd64")}, false, ""},
+		{"arch: valid arm64", KarpenterNodePoolConfigParam{Name: "test", Arch: strPtr("arm64")}, false, ""},
+		{"arch: valid both", KarpenterNodePoolConfigParam{Name: "test", Arch: strPtr("amd64,arm64")}, false, ""},
+		{"arch: invalid", KarpenterNodePoolConfigParam{Name: "test", Arch: strPtr("x86")}, true, "invalid arch"},
+
+		// CpuLimit
+		{"cpu: valid", KarpenterNodePoolConfigParam{Name: "test", CpuLimit: intPtr(4)}, false, ""},
+		{"cpu: zero", KarpenterNodePoolConfigParam{Name: "test", CpuLimit: intPtr(0)}, true, "cpu_limit must be positive"},
+		{"cpu: negative", KarpenterNodePoolConfigParam{Name: "test", CpuLimit: intPtr(-1)}, true, "cpu_limit must be positive"},
+
+		// MemoryLimitGb
+		{"memory: valid", KarpenterNodePoolConfigParam{Name: "test", MemoryLimitGb: intPtr(16)}, false, ""},
+		{"memory: zero", KarpenterNodePoolConfigParam{Name: "test", MemoryLimitGb: intPtr(0)}, true, "memory_limit_gb must be positive"},
+		{"memory: negative", KarpenterNodePoolConfigParam{Name: "test", MemoryLimitGb: intPtr(-1)}, true, "memory_limit_gb must be positive"},
+
+		// ConsolidateAfter
+		{"consolidate: valid 30s", KarpenterNodePoolConfigParam{Name: "test", ConsolidateAfter: strPtr("30s")}, false, ""},
+		{"consolidate: valid 5m", KarpenterNodePoolConfigParam{Name: "test", ConsolidateAfter: strPtr("5m")}, false, ""},
+		{"consolidate: valid 1h", KarpenterNodePoolConfigParam{Name: "test", ConsolidateAfter: strPtr("1h")}, false, ""},
+		{"consolidate: invalid", KarpenterNodePoolConfigParam{Name: "test", ConsolidateAfter: strPtr("abc")}, true, "consolidate_after"},
+
+		// NodeExpiry
+		{"expiry: valid 720h", KarpenterNodePoolConfigParam{Name: "test", NodeExpiry: strPtr("720h")}, false, ""},
+		{"expiry: valid Never", KarpenterNodePoolConfigParam{Name: "test", NodeExpiry: strPtr("Never")}, false, ""},
+		{"expiry: invalid 30m", KarpenterNodePoolConfigParam{Name: "test", NodeExpiry: strPtr("30m")}, true, "node_expiry"},
+
+		// ConsolidationPolicy
+		{"policy: WhenEmpty", KarpenterNodePoolConfigParam{Name: "test", ConsolidationPolicy: strPtr("WhenEmpty")}, false, ""},
+		{"policy: WhenEmptyOrUnderutilized", KarpenterNodePoolConfigParam{Name: "test", ConsolidationPolicy: strPtr("WhenEmptyOrUnderutilized")}, false, ""},
+		{"policy: invalid", KarpenterNodePoolConfigParam{Name: "test", ConsolidationPolicy: strPtr("Always")}, true, "consolidation_policy"},
+
+		// VolumeType
+		{"volume: gp2", KarpenterNodePoolConfigParam{Name: "test", VolumeType: strPtr("gp2")}, false, ""},
+		{"volume: gp3", KarpenterNodePoolConfigParam{Name: "test", VolumeType: strPtr("gp3")}, false, ""},
+		{"volume: io1", KarpenterNodePoolConfigParam{Name: "test", VolumeType: strPtr("io1")}, false, ""},
+		{"volume: io2", KarpenterNodePoolConfigParam{Name: "test", VolumeType: strPtr("io2")}, false, ""},
+		{"volume: invalid", KarpenterNodePoolConfigParam{Name: "test", VolumeType: strPtr("standard")}, true, "volume_type"},
+
+		// Disk
+		{"disk: valid", KarpenterNodePoolConfigParam{Name: "test", Disk: intPtr(20)}, false, ""},
+		{"disk: zero", KarpenterNodePoolConfigParam{Name: "test", Disk: intPtr(0)}, false, ""},
+		{"disk: negative", KarpenterNodePoolConfigParam{Name: "test", Disk: intPtr(-1)}, true, "disk must be non-negative"},
+
+		// Weight (supplementing existing tests)
+		{"weight: negative", KarpenterNodePoolConfigParam{Name: "test", Weight: intPtr(-1)}, true, "weight must be 0-100"},
+
+		// Labels edge cases
+		{"labels: empty key", KarpenterNodePoolConfigParam{Name: "test", Labels: strPtr("=value")}, true, "invalid label"},
+		{"labels: empty value", KarpenterNodePoolConfigParam{Name: "test", Labels: strPtr("key=")}, true, "invalid label"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.param.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("got err=%v, wantErr=%v", err, tt.wantErr)
+			}
+			if tt.wantErr && err != nil && tt.errMsg != "" {
+				if !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("error %q does not contain %q", err.Error(), tt.errMsg)
+				}
+			}
+		})
+	}
+}
+
+// === KarpenterNodePools slice validation ===
+
+func TestKarpenterNodePools_Validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		pools   KarpenterNodePools
+		wantErr bool
+		errMsg  string
+	}{
+		{"empty slice", KarpenterNodePools{}, false, ""},
+		{"single valid", KarpenterNodePools{{Name: "gpu"}}, false, ""},
+		{"multiple valid", KarpenterNodePools{{Name: "gpu"}, {Name: "high-mem"}}, false, ""},
+		{"duplicate names", KarpenterNodePools{{Name: "gpu"}, {Name: "gpu"}}, true, "duplicate"},
+		{"one invalid", KarpenterNodePools{{Name: ""}}, true, "name is required"},
+		{"valid then invalid", KarpenterNodePools{{Name: "gpu"}, {Name: ""}}, true, "name is required"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.pools.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("got err=%v, wantErr=%v", err, tt.wantErr)
+			}
+			if tt.wantErr && err != nil && tt.errMsg != "" {
+				if !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("error %q does not contain %q", err.Error(), tt.errMsg)
+				}
+			}
+		})
+	}
+}
+
 // contains checks if substr is in s
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && searchString(s, substr)
