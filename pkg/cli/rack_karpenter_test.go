@@ -313,6 +313,37 @@ func TestValidateAndMutateParams_KarpenterConfigProtectedFields(t *testing.T) {
 			},
 			false, "",
 		},
+		// Reserved labels in nodePool.template.metadata.labels
+		{
+			"reserved label: convox.io/nodepool in nodePool labels",
+			map[string]interface{}{
+				"nodePool": map[string]interface{}{
+					"template": map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"labels": map[string]interface{}{
+								"convox.io/nodepool": "custom",
+							},
+						},
+					},
+				},
+			},
+			true, "Convox-reserved label",
+		},
+		{
+			"valid label in nodePool labels",
+			map[string]interface{}{
+				"nodePool": map[string]interface{}{
+					"template": map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"labels": map[string]interface{}{
+								"custom-label": "value",
+							},
+						},
+					},
+				},
+			},
+			false, "",
+		},
 	}
 
 	for _, tt := range tests {
@@ -326,7 +357,7 @@ func TestValidateAndMutateParams_KarpenterConfigProtectedFields(t *testing.T) {
 				t.Errorf("got err=%v, wantErr=%v", err, tt.wantErr)
 			}
 			if tt.wantErr && err != nil && tt.errMsg != "" {
-				if !contains(err.Error(), tt.errMsg) {
+				if !strings.Contains(err.Error(), tt.errMsg) {
 					t.Errorf("error %q does not contain %q", err.Error(), tt.errMsg)
 				}
 			}
@@ -428,7 +459,7 @@ func TestKarpenterNodePoolConfigParam_Validate(t *testing.T) {
 				t.Errorf("got err=%v, wantErr=%v", err, tt.wantErr)
 			}
 			if tt.wantErr && err != nil && tt.errMsg != "" {
-				if !contains(err.Error(), tt.errMsg) {
+				if !strings.Contains(err.Error(), tt.errMsg) {
 					t.Errorf("error %q does not contain %q", err.Error(), tt.errMsg)
 				}
 			}
@@ -615,6 +646,66 @@ func TestValidateAndMutateParams_CpuLimit(t *testing.T) {
 	}
 }
 
+// === Tests for karpenter_build_cpu_limit ===
+
+func TestValidateAndMutateParams_BuildCpuLimit(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		wantErr bool
+	}{
+		{"valid 1", "1", false},
+		{"valid 32", "32", false},
+		{"zero", "0", true},
+		{"negative", "-1", true},
+		{"not a number", "abc", true},
+		{"decimal", "1.5", true},
+		{"empty string", "", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := map[string]string{
+				"karpenter_enabled":        "true",
+				"karpenter_build_cpu_limit": tt.value,
+			}
+			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"})
+			if (err != nil) != tt.wantErr {
+				t.Errorf("build_cpu_limit=%q: got err=%v, wantErr=%v", tt.value, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// === Tests for karpenter_build_memory_limit_gb ===
+
+func TestValidateAndMutateParams_BuildMemoryLimitGb(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		wantErr bool
+	}{
+		{"valid 1", "1", false},
+		{"valid 256", "256", false},
+		{"zero", "0", true},
+		{"negative", "-1", true},
+		{"not a number", "abc", true},
+		{"decimal", "1.5", true},
+		{"empty string", "", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := map[string]string{
+				"karpenter_enabled":               "true",
+				"karpenter_build_memory_limit_gb": tt.value,
+			}
+			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"})
+			if (err != nil) != tt.wantErr {
+				t.Errorf("build_memory_limit_gb=%q: got err=%v, wantErr=%v", tt.value, err, tt.wantErr)
+			}
+		})
+	}
+}
+
 // === Tests for karpenter_memory_limit_gb ===
 
 func TestValidateAndMutateParams_MemoryLimitGb(t *testing.T) {
@@ -746,14 +837,14 @@ func TestValidateAndMutateParams_KarpenterConfigMoreProtectedFields(t *testing.T
 			true, "ec2NodeClass.tags must be a JSON object",
 		},
 		{
-			"nodePool.template not a map (warning only, no error)",
+			"nodePool.template not a map (hard error)",
 			map[string]interface{}{
 				"nodePool": map[string]interface{}{"template": "not-a-map"},
 			},
-			false, "",
+			true, "nodePool.template must be a JSON object",
 		},
 		{
-			"nodePool.template.spec not a map (warning only, no error)",
+			"nodePool.template.spec not a map (hard error)",
 			map[string]interface{}{
 				"nodePool": map[string]interface{}{
 					"template": map[string]interface{}{
@@ -761,7 +852,7 @@ func TestValidateAndMutateParams_KarpenterConfigMoreProtectedFields(t *testing.T
 					},
 				},
 			},
-			false, "",
+			true, "nodePool.template.spec must be a JSON object",
 		},
 	}
 	for _, tt := range tests {
@@ -1176,24 +1267,10 @@ func TestValidateAndMutateParams_KarpenterAuthMode(t *testing.T) {
 				t.Errorf("got err=%v, wantErr=%v", err, tt.wantErr)
 			}
 			if tt.wantErr && err != nil && tt.errMsg != "" {
-				if !contains(err.Error(), tt.errMsg) {
+				if !strings.Contains(err.Error(), tt.errMsg) {
 					t.Errorf("error %q does not contain %q", err.Error(), tt.errMsg)
 				}
 			}
 		})
 	}
-}
-
-// contains checks if substr is in s
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && searchString(s, substr)
-}
-
-func searchString(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }

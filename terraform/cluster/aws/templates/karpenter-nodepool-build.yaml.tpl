@@ -40,6 +40,7 @@ spec:
 %{ endif }
   limits:
     cpu: "${karpenter_build_cpu_limit}"
+    memory: "${karpenter_build_memory_limit_gb}Gi"
   disruption:
     consolidationPolicy: WhenEmpty
     consolidateAfter: ${karpenter_build_consolidate_after}

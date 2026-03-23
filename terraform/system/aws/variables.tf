@@ -295,6 +295,11 @@ variable "karpenter_build_cpu_limit" {
   default = 32
 }
 
+variable "karpenter_build_memory_limit_gb" {
+  type    = number
+  default = 256
+}
+
 variable "karpenter_build_consolidate_after" {
   type    = string
   default = "60s"

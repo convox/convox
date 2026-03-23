@@ -570,6 +570,11 @@ Groups:
         type: integer
         description: Maximum total vCPUs for the build NodePool.
         allowedMinValue: 1
+      - name: karpenter_build_memory_limit_gb
+        default: "256"
+        type: integer
+        description: Maximum total memory (GiB) for the build NodePool.
+        allowedMinValue: 1
       - name: karpenter_build_consolidate_after
         default: 60s
         type: string
