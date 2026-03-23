@@ -1329,3 +1329,104 @@ func TestValidateAndMutateParams_KarpenterAuthMode(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateAndMutateParams_KarpenterNonDedicatedNodeGroups(t *testing.T) {
+	dedicatedTrue := `[{"type":"m5.large","dedicated":true,"label":"gpu"}]`
+	dedicatedFalse := `[{"type":"m5.large","dedicated":false}]`
+	noDedicatedField := `[{"type":"m5.large"}]`
+	mixedGroups := `[{"type":"m5.large","dedicated":true,"label":"gpu"},{"type":"c5.xlarge"}]`
+	dedicatedTrueB64 := base64.StdEncoding.EncodeToString([]byte(dedicatedTrue))
+	dedicatedFalseB64 := base64.StdEncoding.EncodeToString([]byte(dedicatedFalse))
+	noDedicatedFieldB64 := base64.StdEncoding.EncodeToString([]byte(noDedicatedField))
+
+	tests := []struct {
+		name          string
+		params        map[string]string
+		currentParams map[string]string
+		wantErr       bool
+		errMsg        string
+	}{
+		{
+			"enabling karpenter with non-dedicated current node groups is an error",
+			map[string]string{"karpenter_enabled": "true", "karpenter_auth_mode": "true"},
+			map[string]string{"additional_node_groups_config": dedicatedFalseB64},
+			true,
+			"dedicated=true",
+		},
+		{
+			"enabling karpenter with dedicated current node groups succeeds",
+			map[string]string{"karpenter_enabled": "true", "karpenter_auth_mode": "true"},
+			map[string]string{"additional_node_groups_config": dedicatedTrueB64},
+			false,
+			"",
+		},
+		{
+			"enabling karpenter with node groups missing dedicated field is an error",
+			map[string]string{"karpenter_enabled": "true", "karpenter_auth_mode": "true"},
+			map[string]string{"additional_node_groups_config": noDedicatedFieldB64},
+			true,
+			"dedicated=true",
+		},
+		{
+			"all-in-one call with dedicated=true in new config succeeds",
+			map[string]string{
+				"karpenter_enabled":            "true",
+				"karpenter_auth_mode":          "true",
+				"additional_node_groups_config": dedicatedTrue,
+			},
+			map[string]string{},
+			false,
+			"",
+		},
+		{
+			"all-in-one call with dedicated=false in new config is an error",
+			map[string]string{
+				"karpenter_enabled":            "true",
+				"karpenter_auth_mode":          "true",
+				"additional_node_groups_config": dedicatedFalse,
+			},
+			map[string]string{},
+			true,
+			"dedicated=true",
+		},
+		{
+			"all-in-one call overrides current params (new config has dedicated=true)",
+			map[string]string{
+				"karpenter_enabled":            "true",
+				"karpenter_auth_mode":          "true",
+				"additional_node_groups_config": dedicatedTrue,
+			},
+			map[string]string{"additional_node_groups_config": noDedicatedFieldB64},
+			false,
+			"",
+		},
+		{
+			"mixed groups where one lacks dedicated is an error",
+			map[string]string{"karpenter_enabled": "true", "karpenter_auth_mode": "true"},
+			map[string]string{"additional_node_groups_config": base64.StdEncoding.EncodeToString([]byte(mixedGroups))},
+			true,
+			"dedicated=true",
+		},
+		{
+			"no additional node groups with karpenter succeeds",
+			map[string]string{"karpenter_enabled": "true", "karpenter_auth_mode": "true"},
+			map[string]string{},
+			false,
+			"",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateAndMutateParams(tt.params, "aws", tt.currentParams)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("got err=%v, wantErr=%v", err, tt.wantErr)
+			}
+			if tt.wantErr && err != nil && tt.errMsg != "" {
+				if !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("error %q does not contain %q", err.Error(), tt.errMsg)
+				}
+			}
+		})
+	}
+}

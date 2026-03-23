@@ -173,7 +173,7 @@ resource "aws_eks_node_group" "cluster" {
   tags            = local.tags
   version         = var.k8s_version
 
-  labels = var.karpenter_enabled ? { "convox.io/system-node" = "true" } : {}
+  labels = var.karpenter_auth_mode ? { "convox.io/system-node" = "true" } : {}
 
   launch_template {
     id      = aws_launch_template.cluster.id

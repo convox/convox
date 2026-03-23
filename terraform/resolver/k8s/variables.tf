@@ -33,6 +33,11 @@ variable "replicas" {
   default = 2
 }
 
+variable "karpenter_enabled" {
+  type    = bool
+  default = false
+}
+
 variable "set_priority_class" {
   default = true
 }

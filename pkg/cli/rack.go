@@ -573,6 +573,33 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		}
 	}
 
+	// Preflight check: warn if enabling Karpenter with non-dedicated additional node groups
+	karpenterBeingEnabled := params["karpenter_enabled"] == "true"
+	karpenterAlreadyEnabled := currentParams["karpenter_enabled"] == "true" && params["karpenter_enabled"] != "false"
+	if karpenterBeingEnabled || karpenterAlreadyEnabled {
+		// Use the config from this call if provided, otherwise check current state
+		ngConfig := params["additional_node_groups_config"]
+		if ngConfig == "" {
+			ngConfig = currentParams["additional_node_groups_config"]
+		}
+		if ngConfig != "" {
+			var ngCfgData []byte
+			if decoded, err := base64.StdEncoding.DecodeString(ngConfig); err == nil {
+				ngCfgData = decoded
+			} else {
+				ngCfgData = []byte(ngConfig)
+			}
+			var ngs AdditionalNodeGroups
+			if err := json.Unmarshal(ngCfgData, &ngs); err == nil {
+				for _, ng := range ngs {
+					if ng.Dedicated == nil || !*ng.Dedicated {
+						return fmt.Errorf("karpenter_enabled=true requires all additional node groups to have dedicated=true to prevent scheduling overlap with Karpenter workload nodes; update your additional_node_groups_config to set dedicated=true on all groups, or include the updated config in the same call")
+					}
+				}
+			}
+		}
+	}
+
 	// Karpenter custom NodePools config (same pattern as additional_node_groups_config)
 	if params["additional_karpenter_nodepools_config"] != "" {
 		k := "additional_karpenter_nodepools_config"

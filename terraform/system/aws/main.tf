@@ -203,6 +203,7 @@ module "rack" {
 
   api_feature_gates                         = var.api_feature_gates
   build_disable_convox_resolver             = var.build_disable_convox_resolver
+  karpenter_enabled                         = var.karpenter_enabled == "true"
   build_node_enabled                        = var.build_node_enabled
   buildkit_host_path_cache_enable           = var.buildkit_host_path_cache_enable
   cluster                                   = module.cluster.id
