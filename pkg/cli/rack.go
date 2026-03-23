@@ -358,7 +358,7 @@ func (an AdditionalNodeGroups) Validate() error {
 	return nil
 }
 
-func validateAndMutateParams(params map[string]string, provider string) error {
+func validateAndMutateParams(params map[string]string, provider string, currentParams map[string]string) error {
 	if params["high_availability"] != "" {
 		return errors.New("the high_availability parameter is only supported during rack installation")
 	}
@@ -394,6 +394,18 @@ func validateAndMutateParams(params map[string]string, provider string) error {
 			if strings.HasPrefix(k, "karpenter_") || k == "additional_karpenter_nodepools_config" {
 				return fmt.Errorf("karpenter parameters are only supported for AWS racks")
 			}
+		}
+	}
+
+	// karpenter_auth_mode: one-way migration (cannot be disabled once enabled)
+	if params["karpenter_auth_mode"] == "false" && currentParams["karpenter_auth_mode"] == "true" {
+		return fmt.Errorf("karpenter_auth_mode cannot be disabled once enabled (AWS EKS access config migration is one-way)")
+	}
+
+	// karpenter_enabled=true requires karpenter_auth_mode to already be true OR be set to true in the same call
+	if params["karpenter_enabled"] == "true" {
+		if currentParams["karpenter_auth_mode"] != "true" && params["karpenter_auth_mode"] != "true" {
+			return fmt.Errorf("karpenter_enabled=true requires karpenter_auth_mode=true (set it first, or include karpenter_auth_mode=true in the same call)")
 		}
 	}
 
@@ -981,8 +993,13 @@ func RackParamsSet(_ sdk.Interface, c *stdcli.Context) error {
 
 	c.Startf("Updating parameters")
 
+	currentParams, err := r.Parameters()
+	if err != nil {
+		return err
+	}
+
 	params := argsToOptions(c.Args)
-	if err := validateAndMutateParams(params, r.Provider()); err != nil {
+	if err := validateAndMutateParams(params, r.Provider(), currentParams); err != nil {
 		return err
 	}
 

@@ -94,8 +94,11 @@ resource "aws_eks_cluster" "cluster" {
   tags     = local.tags
   version  = var.k8s_version
 
-  access_config {
-    authentication_mode = "API_AND_CONFIG_MAP"
+  dynamic "access_config" {
+    for_each = var.karpenter_auth_mode ? [1] : []
+    content {
+      authentication_mode = "API_AND_CONFIG_MAP"
+    }
   }
 
   vpc_config {
