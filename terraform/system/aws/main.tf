@@ -110,6 +110,7 @@ module "cluster" {
   karpenter_build_instance_sizes      = var.karpenter_build_instance_sizes
   karpenter_build_capacity_types      = var.karpenter_build_capacity_types
   karpenter_build_cpu_limit           = var.karpenter_build_cpu_limit
+  karpenter_build_memory_limit_gb     = var.karpenter_build_memory_limit_gb
   karpenter_build_consolidate_after   = var.karpenter_build_consolidate_after
   karpenter_build_node_labels         = var.karpenter_build_node_labels
   additional_karpenter_nodepools      = local.additional_karpenter_nodepools

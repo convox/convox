@@ -455,6 +455,20 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 			}
 		}
 
+		if v, ok := params["karpenter_build_cpu_limit"]; ok && v != "" {
+			n, err := strconv.Atoi(v)
+			if err != nil || n <= 0 {
+				return fmt.Errorf("karpenter_build_cpu_limit must be a positive integer")
+			}
+		}
+
+		if v, ok := params["karpenter_build_memory_limit_gb"]; ok && v != "" {
+			n, err := strconv.Atoi(v)
+			if err != nil || n <= 0 {
+				return fmt.Errorf("karpenter_build_memory_limit_gb must be a positive integer")
+			}
+		}
+
 		// Validate karpenter_node_taints format: key=value:Effect (same check as KarpenterNodePoolConfigParam.Validate)
 		if v, ok := params["karpenter_node_taints"]; ok && v != "" {
 			if strings.Contains(v, `"`) {
@@ -654,12 +668,29 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 			if tmplVal, exists := np["template"]; exists {
 				tmpl, ok := tmplVal.(map[string]interface{})
 				if !ok {
-					fmt.Fprintf(os.Stderr, "warning: karpenter_config: nodePool.template is not a JSON object, skipping deep validation\n")
+					return fmt.Errorf("karpenter_config: nodePool.template must be a JSON object")
 				} else {
+					// Block reserved labels in nodePool.template.metadata.labels
+					if metaVal, exists := tmpl["metadata"]; exists {
+						if meta, ok := metaVal.(map[string]interface{}); ok {
+							if labelsVal, exists := meta["labels"]; exists {
+								if labels, ok := labelsVal.(map[string]interface{}); ok {
+									reservedConfigLabels := []string{"convox.io/nodepool"}
+									for labelKey := range labels {
+										for _, reserved := range reservedConfigLabels {
+											if labelKey == reserved {
+												return fmt.Errorf("karpenter_config: '%s' is a Convox-reserved label and cannot be overridden in nodePool.template.metadata.labels", labelKey)
+											}
+										}
+									}
+								}
+							}
+						}
+					}
 					if specVal, exists := tmpl["spec"]; exists {
 						spec, ok := specVal.(map[string]interface{})
 						if !ok {
-							fmt.Fprintf(os.Stderr, "warning: karpenter_config: nodePool.template.spec is not a JSON object, skipping deep validation\n")
+							return fmt.Errorf("karpenter_config: nodePool.template.spec must be a JSON object")
 						} else {
 							if _, exists := spec["nodeClassRef"]; exists {
 								return fmt.Errorf("karpenter_config: nodePool.template.spec.nodeClassRef is managed by Convox and cannot be overridden")
