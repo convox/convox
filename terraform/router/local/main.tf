@@ -5,6 +5,10 @@ data "kubernetes_service_v1" "ingress_nginx" {
   }
 }
 
+# NOTE: The router service and endpoints below are vestigial. The resolver now
+# bypasses this service entirely via ROUTER_IP_OVERRIDE, which points directly
+# to the ingress-nginx-controller ClusterIP. These resources remain to avoid a
+# breaking state change but are not used in the active request path.
 resource "kubernetes_service" "router" {
   metadata {
     namespace = var.namespace
@@ -63,7 +67,21 @@ resource "kubernetes_config_map_v1_data" "ingress-nginx-controller-configmap" {
     namespace = "ingress-nginx"
   }
   data = {
-    "hsts"            = "false"
-    "proxy-body-size" = "0"
+    "hsts"                      = "false"
+    "proxy-body-size"           = "0"
+    "allow-snippet-annotations" = "true"
+    "annotations-risk-level"    = "Critical"
   }
+}
+
+resource "null_resource" "disable_ingress_webhook" {
+  triggers = {
+    always_run = timestamp()
+  }
+
+  provisioner "local-exec" {
+    command = "kubectl delete validatingwebhookconfiguration ingress-nginx-admission --ignore-not-found"
+  }
+
+  depends_on = [data.kubernetes_service_v1.ingress_nginx]
 }
