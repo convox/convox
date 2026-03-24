@@ -36,6 +36,25 @@ provider "helm" {
   }
 }
 
+provider "kubectl" {
+  host                   = var.private_eks_host != "" ? var.private_eks_host : aws_eks_cluster.cluster.endpoint
+  cluster_ca_certificate = var.private_eks_host != "" ? null : base64decode(aws_eks_cluster.cluster.certificate_authority.0.data)
+  load_config_file       = false # prevents reading local kubeconfig in CI
+
+  dynamic "exec" {
+    for_each = var.private_eks_host != "" ? [] : [1]
+    content {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      args        = ["eks", "get-token", "--cluster-name", var.name]
+      command     = "aws"
+    }
+  }
+
+  insecure = var.private_eks_host != "" ? true : false
+  username = var.private_eks_host != "" ? var.private_eks_user : null
+  password = var.private_eks_host != "" ? var.private_eks_pass : null
+}
+
 locals {
   availability_zones     = var.availability_zones != "" ? compact(split(",", var.availability_zones)) : data.aws_availability_zones.available.names
   network_resource_count = var.high_availability ? 3 : 2
@@ -75,6 +94,13 @@ resource "aws_eks_cluster" "cluster" {
   tags     = local.tags
   version  = var.k8s_version
 
+  dynamic "access_config" {
+    for_each = var.karpenter_auth_mode ? [1] : []
+    content {
+      authentication_mode = "API_AND_CONFIG_MAP"
+    }
+  }
+
   vpc_config {
     endpoint_public_access = var.disable_public_access ? false : true
     // if public access is disabled, then private access must be true
@@ -97,7 +123,10 @@ resource "random_id" "node_group" {
 
   keepers = {
     dummy               = "3"
-    node_capacity_type  = var.node_capacity_type
+    # E1 FIX: Use effective capacity type, not raw variable.
+    # Without this, SPOT/MIXED racks fail on karpenter toggle because
+    # capacity_type is ForceNew but the node group name doesn't change.
+    node_capacity_type  = var.karpenter_enabled ? "ON_DEMAND" : var.node_capacity_type
     node_disk           = var.node_disk
     node_type           = var.node_type
     private             = var.private
@@ -126,12 +155,17 @@ resource "aws_eks_node_group" "cluster" {
   depends_on = [
     aws_eks_cluster.cluster,
     aws_iam_openid_connect_provider.cluster,
+    kubectl_manifest.karpenter_nodepool_workload,
   ]
 
   count = var.high_availability ? 3 : 1
 
-  ami_type        = var.gpu_type ? "AL2023_x86_64_NVIDIA" : var.arm_type ? "AL2023_ARM_64_STANDARD" : "AL2023_x86_64_STANDARD"
-  capacity_type   = var.node_capacity_type == "MIXED" ? count.index == 0 ? "ON_DEMAND" : "SPOT" : var.node_capacity_type
+  ami_type = var.gpu_type ? "AL2023_x86_64_NVIDIA" : var.arm_type ? "AL2023_ARM_64_STANDARD" : "AL2023_x86_64_STANDARD"
+  # When Karpenter is enabled, ALL system nodes must be ON_DEMAND to prevent
+  # spot reclamation of Karpenter controller nodes.
+  capacity_type = var.karpenter_enabled ? "ON_DEMAND" : (
+    var.node_capacity_type == "MIXED" ? count.index == 0 ? "ON_DEMAND" : "SPOT" : var.node_capacity_type
+  )
   cluster_name    = aws_eks_cluster.cluster.name
   node_group_name = "${var.name}-${var.private ? data.aws_subnet.private_subnet_details[count.index].availability_zone : data.aws_subnet.public_subnet_details[count.index].availability_zone}-${count.index}${random_id.node_group.hex}"
   node_role_arn   = random_id.node_group.keepers.role_arn
@@ -139,15 +173,31 @@ resource "aws_eks_node_group" "cluster" {
   tags            = local.tags
   version         = var.k8s_version
 
+  labels = var.karpenter_auth_mode ? { "convox.io/system-node" = "true" } : {}
+
   launch_template {
     id      = aws_launch_template.cluster.id
     version = "$Latest"
   }
 
+  # System nodes remain in all AZs regardless of Karpenter state.
+  # Karpenter provisions workload nodes separately across all AZs.
   scaling_config {
-    desired_size = var.node_capacity_type == "MIXED" ? count.index == 0 ? var.min_on_demand_count : 1 : 1
-    min_size     = var.node_capacity_type == "MIXED" ? count.index == 0 ? var.min_on_demand_count : 1 : 1
-    max_size     = var.node_capacity_type == "MIXED" ? count.index == 0 ? var.max_on_demand_count : 100 : 100
+    desired_size = var.karpenter_enabled ? (
+      count.index <= 2 ? 1 : 0
+    ) : (
+      var.node_capacity_type == "MIXED" ? count.index == 0 ? var.min_on_demand_count : 1 : 1
+    )
+    min_size = var.karpenter_enabled ? (
+      count.index <= 2 ? 1 : 0
+    ) : (
+      var.node_capacity_type == "MIXED" ? count.index == 0 ? var.min_on_demand_count : 1 : 1
+    )
+    max_size = var.karpenter_enabled ? (
+      count.index <= 2 ? 10 : 0
+    ) : (
+      var.node_capacity_type == "MIXED" ? count.index == 0 ? var.max_on_demand_count : 100 : 100
+    )
   }
 
   dynamic "update_config" {
@@ -182,6 +232,7 @@ resource "aws_eks_node_group" "cluster-build" {
   depends_on = [
     aws_eks_cluster.cluster,
     aws_iam_openid_connect_provider.cluster,
+    kubectl_manifest.karpenter_nodepool_build,
   ]
 
   count           = var.build_node_enabled ? 1 : 0
@@ -211,13 +262,14 @@ resource "aws_eks_node_group" "cluster-build" {
   }
 
   scaling_config {
-    desired_size = var.build_node_min_count
-    min_size     = var.build_node_min_count
-    max_size     = 100
+    desired_size = var.karpenter_enabled ? 0 : var.build_node_min_count
+    min_size     = var.karpenter_enabled ? 0 : var.build_node_min_count
+    max_size     = var.karpenter_enabled ? 0 : 100
   }
 
   lifecycle {
     create_before_destroy = true
+    ignore_changes        = [scaling_config[0].desired_size]
   }
 }
 
@@ -509,7 +561,7 @@ resource "null_resource" "wait_eks_addons" {
 }
 
 resource "aws_autoscaling_schedule" "scaledown" {
-  count = length(var.schedule_rack_scale_down) > 6 ? (var.high_availability ? 3 : 1) : 0
+  count = (length(var.schedule_rack_scale_down) > 6 && !var.karpenter_enabled) ? (var.high_availability ? 3 : 1) : 0
 
   scheduled_action_name  = "scaledown${count.index}"
   min_size               = 0
@@ -521,7 +573,7 @@ resource "aws_autoscaling_schedule" "scaledown" {
 }
 
 resource "aws_autoscaling_schedule" "scaleup" {
-  count = length(var.schedule_rack_scale_up) > 6 ? (var.high_availability ? 3 : 1) : 0
+  count = (length(var.schedule_rack_scale_up) > 6 && !var.karpenter_enabled) ? (var.high_availability ? 3 : 1) : 0
 
   scheduled_action_name  = "scaleup${count.index}"
   min_size               = 1

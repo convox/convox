@@ -143,6 +143,7 @@ resource "kubernetes_deployment" "metrics" {
         automount_service_account_token = true
         service_account_name            = kubernetes_service_account.metrics.metadata[0].name
         priority_class_name             = var.set_priority_class ? "system-cluster-critical" : null
+        node_selector                   = var.karpenter_enabled ? { "convox.io/system-node" = "true" } : {}
 
         container {
           name              = "metrics-server"

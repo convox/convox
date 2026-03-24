@@ -135,6 +135,7 @@ resource "kubernetes_deployment" "api" {
         service_account_name            = kubernetes_service_account.api.metadata.0.name
         share_process_namespace         = true
         priority_class_name             = "system-cluster-critical"
+        node_selector                   = var.karpenter_enabled ? { "convox.io/system-node" = "true" } : {}
 
         dynamic "image_pull_secrets" {
           for_each = var.docker_hub_authentication != "NULL" ? [var.docker_hub_authentication] : []
