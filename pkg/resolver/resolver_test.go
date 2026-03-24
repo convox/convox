@@ -157,7 +157,7 @@ func TestSetupRouterOverrideInvalidIP(t *testing.T) {
 
 	err := r.setupRouter()
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "not a valid IP address")
+	require.Contains(t, err.Error(), "not a valid IPv4 address")
 }
 
 func TestSetupRouterOverrideWhitespaceOnly(t *testing.T) {
@@ -172,7 +172,7 @@ func TestSetupRouterOverrideWhitespaceOnly(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestSetupRouterOverrideIPv6(t *testing.T) {
+func TestSetupRouterOverrideIPv6Rejected(t *testing.T) {
 	t.Setenv("ROUTER_IP_OVERRIDE", "::1")
 
 	r := &Resolver{
@@ -181,7 +181,20 @@ func TestSetupRouterOverrideIPv6(t *testing.T) {
 	}
 
 	err := r.setupRouter()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "not a valid IPv4 address")
+}
+
+func TestSetupRouterOverrideTrimmedWhitespace(t *testing.T) {
+	t.Setenv("ROUTER_IP_OVERRIDE", "  10.96.0.1  ")
+
+	r := &Resolver{
+		namespace:  "test-ns",
+		kubernetes: fake.NewSimpleClientset(),
+	}
+
+	err := r.setupRouter()
 	require.NoError(t, err)
-	require.Equal(t, "::1", r.routerInternal)
-	require.Equal(t, "::1", r.routerExternal)
+	require.Equal(t, "10.96.0.1", r.routerInternal)
+	require.Equal(t, "10.96.0.1", r.routerExternal)
 }
