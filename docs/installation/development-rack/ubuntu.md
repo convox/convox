@@ -53,10 +53,10 @@ minikube addons enable ingress-dns
 ### 4. Install the rack
 
 ```bash
-convox rack install local dev -v 3.23.3
+convox rack install local dev -v 3.24.0
 ```
 
-Replace `3.23.3` with the latest version from the [releases page](https://github.com/convox/convox/releases).
+Replace `3.24.0` with the latest version from the [releases page](https://github.com/convox/convox/releases).
 
 ### 5. Verify the installation
 
@@ -71,7 +71,7 @@ Name      dev
 Provider  local
 Router    router.dev.localdev.convox.cloud
 Status    running
-Version   3.23.3
+Version   3.24.0
 ```
 
 ## Using the rack

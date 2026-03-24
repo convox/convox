@@ -322,3 +322,4 @@ With this implementation and the appropriate configuration in your `convox.yml`,
 - [Load Balancers](/configuration/load-balancers) for configuring traffic routing
 - [Rolling Updates](/deployment/rolling-updates) for how health checks affect deployments
 - [Scaling](/configuration/scaling) for autoscaling configuration
+- [deploy-debug](/reference/cli/deploy-debug) for diagnosing health check failures during deployment

@@ -7,6 +7,8 @@ url: /management/direct-k8s-access
 
 Convox abstracts Kubernetes cluster management, but there are times when you need direct access to Kubernetes primitives and resources. Common use cases include debugging edge-case networking issues, examining underlying cloud infrastructure, understanding how components tie together, or installing a Kubernetes-native component or plugin directly.
 
+> If you are troubleshooting a failed deployment, try [convox deploy-debug](/reference/cli/deploy-debug) first. It collects pod logs, events, and failure hints without requiring kubectl or kubeconfig.
+
 Convox provides an API proxy to Kubernetes that runs on your Rack, allowing you to grant access to the underlying system while delegating per-user access to Kubernetes. This is easier and more manageable than providing direct Kubernetes credentials to every developer on your team.
 
 ## Configure kubectl to Point at Your Rack
