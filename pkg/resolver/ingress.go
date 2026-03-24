@@ -19,7 +19,7 @@ type Ingress struct {
 	stopch   chan struct{}
 }
 
-func NewIngress(kc *kubernetes.Clientset) (*Ingress, error) {
+func NewIngress(kc kubernetes.Interface) (*Ingress, error) {
 	i := &Ingress{
 		errch:  make(chan error),
 		hosts:  map[string]bool{},
