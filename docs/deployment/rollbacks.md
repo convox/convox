@@ -57,3 +57,4 @@ Database migrations are not automatically reverted during a rollback. If you hav
 
 - [Deploying Changes](/deployment/deploying-changes) for the standard deployment process
 - [Rolling Updates](/deployment/rolling-updates) for understanding zero-downtime deployments
+- [deploy-debug](/reference/cli/deploy-debug) for diagnosing the failure that triggered a rollback

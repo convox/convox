@@ -41,3 +41,4 @@ Get logs for an app. By default, `convox logs` streams logs continuously. Use `-
 ## See Also
 
 - [Logging](/configuration/logging) for log configuration and forwarding
+- [deploy-debug](/reference/cli/deploy-debug) for diagnosing pods that never reach a ready state

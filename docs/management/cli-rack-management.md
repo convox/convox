@@ -23,7 +23,7 @@ For example, a rack on version `3.21.x` would need to update to the latest `3.22
 
 Always update to the **latest patch version** of each minor version. Fixes are applied throughout the lifecycle of a minor release, and skipping to only the `.0` patch can introduce problems that were already resolved in later patches. You do not need to be on the highest patch of your current minor version before updating to the next minor -- go directly to the latest patch of the next minor.
 
-For example, a rack on version `3.22.1` should update directly to `3.23.3` (the latest version in `3.23.x` at the time of this writing), not to `3.23.0`.
+For example, a rack on version `3.22.1` should update directly to the latest `3.23.x` patch release, not to `3.23.0`. Check the [release history](/reference/releases) to find the latest patch for each minor version.
 
 _Note on Versioning: In the `major.minor.patch` format, `minor` versions indicate updates for significant dependencies like Kubernetes, while `patch` versions introduce feature additions or bug fixes._
 

@@ -19,3 +19,5 @@ url: /help/known-issues
 
 * The local development Rack uses self-signed TLS certificates. Your browser will show a certificate warning when accessing applications. This is expected behavior for local development.
 * On macOS, you must keep `minikube tunnel` running in a separate terminal to reach the Rack. If the tunnel is stopped, CLI commands and browser access will fail until it is restarted.
+
+If you encounter deployment failures or unexpected behavior, see [Troubleshooting](/help/troubleshooting) for common issues or run [convox deploy-debug](/reference/cli/deploy-debug) to inspect failing pods directly.

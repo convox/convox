@@ -178,3 +178,4 @@ Copy an old release forward and promote it. This creates a new release with the 
 
 - [Release](/reference/primitives/app/release) for release concepts
 - [Rollbacks](/deployment/rollbacks) for rollback workflow
+- [deploy-debug](/reference/cli/deploy-debug) for diagnosing why a promotion failed

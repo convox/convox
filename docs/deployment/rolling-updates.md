@@ -45,9 +45,10 @@ to the original [Release](/reference/primitives/app/release):
 Any of these issues will appear in the logs that display during the promotion to help you determine
 what is going wrong.
 
-See [Troubleshooting](/help/troubleshooting) for some tips on diagnosing common failure cases.
+See [Troubleshooting](/help/troubleshooting) for some tips on diagnosing common failure cases, or run [deploy-debug](/reference/cli/deploy-debug) to inspect the failing pods directly.
 
 ## See Also
 
 - [Health Checks](/configuration/health-checks) for configuring how Convox verifies new processes
 - [Rollbacks](/deployment/rollbacks) for reverting a failed deployment
+- [deploy-debug](/reference/cli/deploy-debug) for diagnosing why a rollout was reversed

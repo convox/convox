@@ -54,41 +54,54 @@ The command maps common pod failure states to actionable messages:
 
 | State | Hint |
 |-------|------|
-| `CrashLoopBackOff` | Process is crash-looping on startup. Check the logs for the error. |
-| `ImagePullBackOff` | Failed to pull the container image. Check that the build succeeded and the image tag exists. |
-| `OOMKilled` | Process ran out of memory. Increase `scale.memory` in convox.yml. |
-| `CreateContainerConfigError` | Container config is invalid. Check environment variables and secrets. |
-| `RunContainerError` | Container failed to start. Check the command in convox.yml and that the entrypoint exists. |
-| `Unschedulable` | Not enough resources in the cluster. Check `scale.cpu` and `scale.memory` in convox.yml. |
-| `ContainersNotReady` | Health check may be failing. Check health check configuration. |
-| `PodInitializing` | Init containers may still be running. |
+| `CrashLoopBackOff` | Process is crash-looping on startup -- check the logs below for the error |
+| `ImagePullBackOff` | Failed to pull the container image -- check that the build succeeded and the image tag exists |
+| `ErrImagePull` | Failed to pull the container image -- check registry access and image name |
+| `InvalidImageName` | Image name is invalid -- check build configuration |
+| `OOMKilled` | Process ran out of memory and was killed -- increase scale.memory in convox.yml |
+| `CreateContainerConfigError` | Container config is invalid -- check environment variables and secrets (missing env var or secret reference?) |
+| `RunContainerError` | Container failed to start -- check the command in convox.yml and that the entrypoint exists |
+| `ContainerCannotRun` | Container cannot run -- check that the Dockerfile CMD or convox.yml command is valid |
+| `StartError` | Container failed to start -- check logs below for the startup error |
+| `Completed` | Process exited successfully but is not expected to stop -- check your command does not exit on its own |
+| `Error` | Process exited with an error -- check the logs below |
+| `Unschedulable` | Not enough resources in the cluster to place this process -- check scale.cpu and scale.memory in convox.yml |
+| `ContainersNotReady` | Containers are not ready -- health check may be failing |
+| `PodInitializing` | Pod is still initializing -- init containers may still be running |
 
 ## Examples
 
-Basic usage:
+Basic usage (terminal mode, the default):
 ```bash
     $ convox deploy-debug -a myapp
+
     Deploy Diagnostics: myapp on myrack
     Namespace: myrack-myapp
     Time:      2026-03-18T14:30:00Z
 
-    === Service Overview ===
-    SERVICE  DESIRED  READY  STATUS
-    web      2        0      deploying
+    --- Service Status ---
+      ● web  0/2 processes ready  DEPLOYING
 
-    === Pod Details ===
-    POD                           SERVICE  STATUS     HINT
-    web-749dd486d8-8v4ss          web      not-ready  Health check may be failing
-    web-749dd486d8-k2m9f          web      not-ready  Health check may be failing
+    --- Processes ---
 
-    --- web-749dd486d8-8v4ss ---
-    Container: main (not-ready)
-    Logs:
-      Node.js app listening on port 3000
-      Error: ECONNREFUSED connecting to database
+      ● web  not-ready
+        process: web-749dd486d8-8v4ss
+        state: Running    ready: 0/1    age: 2m    restarts: 0
+        detail:  ContainersNotReady
+        hint:    Containers are not ready -- health check may be failing
 
-    Events:
-      Unhealthy: Readiness probe failed: HTTP probe failed with statuscode: 503
+        --- Current Logs (last 2 lines) ---
+        Node.js app listening on port 3000
+        Error: ECONNREFUSED connecting to database
+
+        --- Events ---
+        2m ago  Warning  Unhealthy            Readiness probe failed: HTTP probe failed with statuscode: 503
+
+      ...
+
+    Summary: 2 total  2 not-ready
+
+    Legend: ● unhealthy  ● not-ready  ● new  ● healthy
 ```
 
 Summary output for quick scanning:
@@ -97,9 +110,9 @@ Summary output for quick scanning:
     SERVICE  DESIRED  READY  STATUS
     web      2        0      deploying
 
-    POD                       STATUS     HINT
-    web-749dd486d8-8v4ss      not-ready  Health check may be failing
-    web-749dd486d8-k2m9f      not-ready  Health check may be failing
+    PROCESS                   SERVICE  STATUS              READY  RESTARTS  AGE  HINT
+    web-749dd486d8-8v4ss      web      ContainersNotReady  0/1    0         2m   Containers are not ready -- health check may be failing
+    web-749dd486d8-k2m9f      web      ContainersNotReady  0/1    0         2m   Containers are not ready -- health check may be failing
 ```
 
 JSON output for scripting:
@@ -120,5 +133,7 @@ Watch mode for ongoing diagnosis:
 ## See Also
 
 - [deploy](/reference/cli/deploy) for creating and promoting builds
+- [Rolling Updates](/deployment/rolling-updates) for how rollouts and rollbacks work
 - [Health Checks](/configuration/health-checks) for configuring readiness and liveness probes
+- [Logs](/reference/cli/logs) for streaming logs from processes that have passed health checks
 - [Troubleshooting](/help/troubleshooting) for common deployment issues

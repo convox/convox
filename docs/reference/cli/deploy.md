@@ -81,3 +81,4 @@ You can pass env vars that will only exist at build time.
 
 - [Deploying Changes](/deployment/deploying-changes) for deployment workflow
 - [Rolling Updates](/deployment/rolling-updates) for deployment strategies
+- [deploy-debug](/reference/cli/deploy-debug) for diagnosing failed deployments
