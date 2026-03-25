@@ -1,5 +1,6 @@
 .env
 .terraform
+.claude/
 coverage.txt
 terraform.tfvars
 terraform/platform/convox.platform
