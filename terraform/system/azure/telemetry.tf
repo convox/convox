@@ -12,9 +12,12 @@ locals {
     idle_timeout = var.idle_timeout
     image = var.image
     k8s_version = var.k8s_version
+    max_on_demand_count = var.max_on_demand_count
+    min_on_demand_count = var.min_on_demand_count
     name = var.name
     nginx_additional_config = var.nginx_additional_config
     nginx_image = var.nginx_image
+    node_disk = var.node_disk
     node_type = var.node_type
     nvidia_device_plugin_enable = var.nvidia_device_plugin_enable
     nvidia_device_time_slicing_replicas = var.nvidia_device_time_slicing_replicas
@@ -28,6 +31,7 @@ locals {
     syslog = var.syslog
     tags = var.tags
     telemetry = var.telemetry
+    terraform_update_timeout = var.terraform_update_timeout
     whitelist = var.whitelist
     }
 
@@ -40,16 +44,17 @@ locals {
     high_availability = "true"
     idle_timeout = "4"
     image = "convox/convox"
-    internal_router = "false"
     k8s_version = "1.34"
+    max_on_demand_count = "100"
+    min_on_demand_count = "3"
     name = ""
     nginx_additional_config = ""
     nginx_image = ""
+    node_disk = "30"
     node_type = "Standard_D2_v3"
     nvidia_device_plugin_enable = "false"
     nvidia_device_time_slicing_replicas = "0"
     pdb_default_min_available_percentage = "50"
-    proxy_protocol = "false"
     rack_name = ""
     region = "eastus"
     release = ""
@@ -59,6 +64,7 @@ locals {
     syslog = ""
     tags = ""
     telemetry = "false"
+    terraform_update_timeout = "2h"
     whitelist = "0.0.0.0/0"
     }
 }

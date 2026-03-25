@@ -255,6 +255,11 @@ variable "node_max_unavailable_percentage" {
   default = 0
 }
 
+variable "terraform_update_timeout" {
+  type    = string
+  default = "2h"
+}
+
 variable "node_type" {
   default = "t3.small"
 }

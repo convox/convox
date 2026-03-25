@@ -33,12 +33,13 @@ module "cluster" {
     google = google
   }
 
-  k8s_version = var.k8s_version
-  name        = local.name
-  node_disk   = var.node_disk
-  node_type   = var.node_type
-  preemptible = var.preemptible
-  project_id  = module.project.id
+  k8s_version              = var.k8s_version
+  name                     = local.name
+  node_disk                = var.node_disk
+  node_type                = var.node_type
+  terraform_update_timeout = var.terraform_update_timeout
+  preemptible              = var.preemptible
+  project_id               = module.project.id
 }
 
 module "rack" {

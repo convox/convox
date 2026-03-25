@@ -127,7 +127,7 @@ resource "aws_eks_node_group" "cluster_additional" {
   }
 
   timeouts {
-    update = "2h"
+    update = var.terraform_update_timeout
     delete = "1h"
     create = "1h"
   }
@@ -255,6 +255,12 @@ resource "aws_eks_node_group" "build_additional" {
     desired_size = each.value.desired_size != null ? each.value.desired_size : 0
     min_size     = each.value.min_size != null ? each.value.min_size : 0
     max_size     = each.value.max_size != null ? each.value.max_size : 100
+  }
+
+  timeouts {
+    update = var.terraform_update_timeout
+    delete = "1h"
+    create = "1h"
   }
 
   lifecycle {

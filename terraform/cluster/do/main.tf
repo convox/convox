@@ -14,6 +14,10 @@ resource "digitalocean_kubernetes_cluster" "rack" {
     min_nodes  = var.high_availability ? 2 : 1
     max_nodes  = var.high_availability ? 10 : 3
   }
+
+  timeouts {
+    update = var.terraform_update_timeout
+  }
 }
 
 # new tokens sometimes take a few seconds to start working
