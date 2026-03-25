@@ -111,7 +111,8 @@ Groups:
       - name: pdb_default_min_available_percentage
         default: "50"
         type: integer
-        description: The minimum percentage of pods that must be available at any time
+        description: Minimum percentage of pods that must remain available during
+          disruptions. Set to -1 to disable.
         allowedMinValue: -1
         allowedMaxValue: 101
       - name: nvidia_device_plugin_enable

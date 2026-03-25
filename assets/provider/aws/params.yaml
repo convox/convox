@@ -109,8 +109,7 @@ Groups:
         default: 2160h
         type: string
         regex: ^\d+h$
-        description: You can change this if the default Let'sEncrypt certificate renewal
-          period (90d) doesn't suit your use-case.
+        description: Certificate renewal period. The default is 90 days (2160h).
       - name: convox_domain_tls_cert_disable
         default: "false"
         type: boolean
@@ -196,7 +195,8 @@ Groups:
           scaling during build time.
       - name: build_node_type
         optional: true
-        default: t3.small
+        default: "null"
+        sideNote: Defaults to node_type value
         type: string
         regex: ^[a-z][a-z0-9-]*\.[a-z0-9]+$
         description: |
@@ -257,7 +257,8 @@ Groups:
       - name: gpu_tag_enable
         default: "false"
         type: boolean
-        description: GPU tagging is not available in all AWS Regions.
+        description: Enables GPU instance tagging for node group scheduling.
+          Not available in all AWS Regions.
       - name: nvidia_device_plugin_enable
         default: "false"
         type: boolean
@@ -288,7 +289,8 @@ Groups:
       - name: pdb_default_min_available_percentage
         default: "50"
         type: integer
-        description: The minimum number of pods that must be available at any time
+        description: Minimum percentage of pods that must remain available during
+          disruptions. Set to -1 to disable.
         allowedMinValue: -1
         allowedMaxValue: 101
       - name: kubelet_registry_pull_qps
@@ -380,7 +382,8 @@ Groups:
       - name: access_log_retention_in_days
         default: "7"
         type: integer
-        description: Nginx access logs stored in CloudWatch
+        description: Number of days to retain Nginx access logs in CloudWatch.
+          Set to -1 to disable retention limits.
         allowedMinValue: -1
       - name: syslog
         default: "null"
