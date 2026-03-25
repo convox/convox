@@ -26,3 +26,7 @@ This command sets the Terraform update timeout to 3 hours.
 
 ## Additional Information
 The value must be a valid Go duration string (e.g., `2h`, `90m`, `2h30m`). This timeout applies to all EKS node group resources, including primary, build, and additional node groups. The default value of `2h` matches the previously hardcoded behavior, so existing racks are unaffected.
+
+## See Also
+- [node_max_unavailable_percentage](/configuration/rack-parameters/aws/node_max_unavailable_percentage) controls how many nodes update simultaneously (affects total update duration)
+- [additional_node_groups_config](/configuration/rack-parameters/aws/additional_node_groups_config) for configuring additional node groups (all respect this timeout)

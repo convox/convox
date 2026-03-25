@@ -217,15 +217,6 @@ Groups:
         description: Idle timeout value (in seconds) for the Rack Load Balancer
         allowedMinValue: 60
         allowedMaxValue: 4000
-      - name: terraform_update_timeout
-        default: 2h
-        type: string
-        regex: ^(\d+h)?(\d+m)?(\d+s)?$
-        description: |
-          Controls how long Terraform waits for managed node group update
-          operations to complete. &l &l Useful for large clusters (50+ nodes)
-          where rolling updates can exceed the default timeout. &l &l Format
-          uses Go duration strings &i e.g. &i - 2h, 3h, 90m, 2h30m &l
       - name: pdb_default_min_available_percentage
         default: "50"
         type: integer
