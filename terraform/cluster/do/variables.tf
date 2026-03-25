@@ -15,6 +15,11 @@ variable "node_type" {
   type = string
 }
 
+variable "terraform_update_timeout" {
+  type    = string
+  default = "2h"
+}
+
 variable "region" {
   type = string
 }

@@ -384,6 +384,106 @@ func TestRackParamsSetError(t *testing.T) {
 	})
 }
 
+func TestRackParamsSetTerraformUpdateTimeout(t *testing.T) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		opts := structs.SystemUpdateOptions{
+			Parameters: map[string]string{
+				"terraform_update_timeout": "3h",
+			},
+		}
+		i.On("SystemUpdate", opts).Return(nil)
+
+		res, err := testExecute(e, "rack params set terraform_update_timeout=3h", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{
+			"Updating parameters... OK",
+		})
+	})
+}
+
+func TestRackParamsSetTerraformUpdateTimeoutCompound(t *testing.T) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		opts := structs.SystemUpdateOptions{
+			Parameters: map[string]string{
+				"terraform_update_timeout": "2h30m",
+			},
+		}
+		i.On("SystemUpdate", opts).Return(nil)
+
+		res, err := testExecute(e, "rack params set terraform_update_timeout=2h30m", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStdout(t, []string{
+			"Updating parameters... OK",
+		})
+	})
+}
+
+func TestRackParamsSetTerraformUpdateTimeoutMinutes(t *testing.T) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		opts := structs.SystemUpdateOptions{
+			Parameters: map[string]string{
+				"terraform_update_timeout": "90m",
+			},
+		}
+		i.On("SystemUpdate", opts).Return(nil)
+
+		res, err := testExecute(e, "rack params set terraform_update_timeout=90m", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStdout(t, []string{
+			"Updating parameters... OK",
+		})
+	})
+}
+
+func TestRackParamsSetTerraformUpdateTimeoutInvalid(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		res, err := testExecute(e, "rack params set terraform_update_timeout=abc", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		res.RequireStderr(t, []string{"ERROR: invalid value for terraform_update_timeout: must be a valid duration (e.g., '2h', '90m', '2h30m'): time: invalid duration \"abc\""})
+	})
+}
+
+func TestRackParamsSetTerraformUpdateTimeoutNegative(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		res, err := testExecute(e, "rack params set terraform_update_timeout=-1h", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		res.RequireStderr(t, []string{"ERROR: invalid value for terraform_update_timeout: must be a positive duration"})
+	})
+}
+
+func TestRackParamsSetTerraformUpdateTimeoutZero(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		res, err := testExecute(e, "rack params set terraform_update_timeout=0s", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		res.RequireStderr(t, []string{"ERROR: invalid value for terraform_update_timeout: must be a positive duration"})
+	})
+}
+
+func TestRackParamsSetTerraformUpdateTimeoutEmpty(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		res, err := testExecute(e, "rack params set terraform_update_timeout=", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		res.RequireStderr(t, []string{"ERROR: invalid value for terraform_update_timeout: must be a valid duration (e.g., '2h', '90m', '2h30m'): time: invalid duration \"\""})
+	})
+}
+
+func TestRackParamsSetTerraformUpdateTimeoutSpecialChars(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		res, err := testExecute(e, "rack params set terraform_update_timeout=${var.foo}", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		res.RequireStderr(t, []string{"ERROR: invalid value for terraform_update_timeout: must be a valid duration (e.g., '2h', '90m', '2h30m'): time: invalid duration \"${var.foo}\""})
+	})
+}
+
 func TestRackPs(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("SystemProcesses", structs.SystemProcessesOptions{}).Return(structs.Processes{*fxProcess(), *fxProcessPending()}, nil)

@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/convox/convox/pkg/common"
@@ -227,6 +228,16 @@ func validateAndMutateParams(params map[string]string) error {
 			if len(strings.Split(p, "=")) != 2 {
 				return errors.New("invalid value for tags param")
 			}
+		}
+	}
+
+	if v, has := params["terraform_update_timeout"]; has {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return fmt.Errorf("invalid value for terraform_update_timeout: must be a valid duration (e.g., '2h', '90m', '2h30m'): %s", err)
+		}
+		if d <= 0 {
+			return errors.New("invalid value for terraform_update_timeout: must be a positive duration")
 		}
 	}
 

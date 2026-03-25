@@ -42,6 +42,7 @@ Setting parameters... OK
 - When combined with [high_availability](/configuration/rack-parameters/aws/high_availability), ensure the percentage allows enough nodes to remain available to run your workloads during updates.
 
 ## See Also
+- [terraform_update_timeout](/configuration/rack-parameters/aws/terraform_update_timeout) controls how long Terraform waits for node group updates to complete (increase if high unavailable percentage still causes timeouts)
 - [pdb_default_min_available_percentage](/configuration/rack-parameters/aws/pdb_default_min_available_percentage) for pod-level disruption budgets
 - [high_availability](/configuration/rack-parameters/aws/high_availability) for cluster redundancy settings
 - [key_pair_name](/configuration/rack-parameters/aws/key_pair_name) for SSH access to nodes

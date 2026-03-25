@@ -58,6 +58,11 @@ variable "nvidia_device_time_slicing_replicas" {
   default = 0
 }
 
+variable "terraform_update_timeout" {
+  type    = string
+  default = "2h"
+}
+
 variable "resource_group_location" {
   type = string
 }
