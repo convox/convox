@@ -4,6 +4,7 @@ const (
 	AppParamBuildLabels = "BuildLabels"
 	AppParamBuildCpu    = "BuildCpu"
 	AppParamBuildMem    = "BuildMem"
+	AppParamBuildArch   = "BuildArch"
 )
 
 type App struct {
