@@ -115,6 +115,13 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 		psOpts.NodeLabels = options.String(nlbs)
 	}
 
+	if arch := appObj.Parameters[structs.AppParamBuildArch]; arch != "" {
+		if arch != "amd64" && arch != "arm64" {
+			return nil, fmt.Errorf("invalid BuildArch: %s, must be amd64 or arm64", arch)
+		}
+		psOpts.BuildArch = options.String(arch)
+	}
+
 	if cpu := appObj.Parameters[structs.AppParamBuildCpu]; cpu != "" {
 		v, err := strconv.ParseInt(cpu, 10, 32)
 		if err != nil {

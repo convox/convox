@@ -55,6 +55,7 @@ type ProcessRunOptions struct {
 	NodeLabels       *string           `flag:"node-labels" header:"Node-Labels"`
 	SystemCritical   *bool             `flag:"system-critical" header:"System-Critical"`
 	IsBuild          bool
+	BuildArch        *string
 }
 
 func (p *Process) sortKey() string {
