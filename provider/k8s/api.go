@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -81,9 +82,9 @@ func (p *Provider) apiProxyAuthenticate(handler http.Handler) http.HandlerFunc {
 }
 
 func (p *apiProxy) ListenAndServe(addr string, port int) error {
-	s := http.Server{Handler: p.handler}
+	s := http.Server{Handler: p.handler, ReadHeaderTimeout: 10 * time.Second}
 
-	ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", addr, port))
+	ln, err := net.Listen("tcp", net.JoinHostPort(addr, strconv.Itoa(port)))
 	if err != nil {
 		return fmt.Errorf("error: could not create kubernetes proxy listener: %v", err)
 	}

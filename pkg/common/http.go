@@ -26,8 +26,11 @@ func Get(url string) ([]byte, error) {
 func InsecureHTTPClient() *http.Client {
 	t := NewDefaultTransport()
 
+	//nolint:gosec // G402: InsecureSkipVerify intentional — internal cluster communication uses self-signed certs
+	// TODO: revisit when internal cluster communication moves to mTLS
 	t.TLSClientConfig = &tls.Config{
 		InsecureSkipVerify: true,
+		MinVersion:         tls.VersionTLS12,
 	}
 
 	return &http.Client{Transport: t}
