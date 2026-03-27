@@ -184,6 +184,46 @@ spec:
                 {{ with .Service.Scale.Memory }}
                 memory: "{{.}}Mi"
                 {{ end }}
+            {{ if or .Service.Privileged .Service.SecurityContext.HasSecurityContext }}
+            securityContext:
+              {{ if .Service.Privileged }}
+              privileged: true
+              {{ end }}
+              {{ with .Service.SecurityContext.RunAsNonRoot }}
+              runAsNonRoot: {{ . }}
+              {{ end }}
+              {{ with .Service.SecurityContext.RunAsUser }}
+              runAsUser: {{ . }}
+              {{ end }}
+              {{ with .Service.SecurityContext.RunAsGroup }}
+              runAsGroup: {{ . }}
+              {{ end }}
+              {{ with .Service.SecurityContext.ReadOnlyRootFilesystem }}
+              readOnlyRootFilesystem: {{ . }}
+              {{ end }}
+              {{ if ne .Service.SecurityContext.AllowPrivilegeEscalation nil }}
+              allowPrivilegeEscalation: {{ deref .Service.SecurityContext.AllowPrivilegeEscalation }}
+              {{ end }}
+              {{ with .Service.SecurityContext.Capabilities }}
+              capabilities:
+                {{ with .Drop }}
+                drop:
+                {{ range . }}
+                  - {{ . }}
+                {{ end }}
+                {{ end }}
+                {{ with .Add }}
+                add:
+                {{ range . }}
+                  - {{ . }}
+                {{ end }}
+                {{ end }}
+              {{ end }}
+              {{ with .Service.SecurityContext.SeccompProfile }}
+              seccompProfile:
+                type: {{ . }}
+              {{ end }}
+            {{ end }}
             volumeMounts:
             - name: ca
               mountPath: /etc/convox

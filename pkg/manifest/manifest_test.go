@@ -10,6 +10,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Helper functions for pointer values in tests
+func ptrBool(b bool) *bool {
+	return &b
+}
+
+func ptrInt64(i int64) *int64 {
+	return &i
+}
+
 func TestManifestLoad(t *testing.T) {
 	n := &manifest.Manifest{
 		Balancers: manifest.Balancers{
@@ -413,6 +422,51 @@ func TestManifestLoad(t *testing.T) {
 					Redirect: true,
 				},
 			},
+			manifest.Service{
+				Name: "secured",
+				Build: manifest.ServiceBuild{
+					Manifest: "Dockerfile",
+					Path:     ".",
+				},
+				Deployment: manifest.ServiceDeployment{
+					Minimum: 50,
+					Maximum: 200,
+				},
+				Drain: 30,
+				Health: manifest.ServiceHealth{
+					Grace:    5,
+					Path:     "/",
+					Interval: 5,
+					Timeout:  4,
+				},
+				Init: true,
+				Port: manifest.ServicePortScheme{Port: 8080, Scheme: "http"},
+				Scale: manifest.ServiceScale{
+					Count:  manifest.ServiceScaleCount{Min: 1, Max: 1},
+					Cpu:    250,
+					Memory: 512,
+				},
+				SecurityContext: manifest.ServiceSecurityContext{
+					RunAsNonRoot:             ptrBool(true),
+					RunAsUser:                ptrInt64(1000),
+					RunAsGroup:               ptrInt64(1000),
+					ReadOnlyRootFilesystem:   ptrBool(true),
+					AllowPrivilegeEscalation: ptrBool(false),
+					Capabilities: &manifest.ServiceSecurityContextCapabilities{
+						Drop: []string{"ALL"},
+						Add:  []string{"NET_BIND_SERVICE"},
+					},
+					SeccompProfile: "RuntimeDefault",
+				},
+				Sticky: false,
+				Termination: manifest.ServiceTermination{
+					Grace: 30,
+				},
+				Timeout: 60,
+				Tls: manifest.ServiceTls{
+					Redirect: true,
+				},
+			},
 		},
 		Timers: manifest.Timers{
 			manifest.Timer{
@@ -543,6 +597,19 @@ func TestManifestLoad(t *testing.T) {
 		"services.scaler.scale.targets.custom.AWS/SQS/ApproximateNumberOfMessagesVisible.value",
 		"services.scaler.scale.targets.memory",
 		"services.scaler.scale.targets.requests",
+		"services.secured",
+		"services.secured.build",
+		"services.secured.port",
+		"services.secured.securityContext",
+		"services.secured.securityContext.allowPrivilegeEscalation",
+		"services.secured.securityContext.capabilities",
+		"services.secured.securityContext.capabilities.add",
+		"services.secured.securityContext.capabilities.drop",
+		"services.secured.securityContext.readOnlyRootFilesystem",
+		"services.secured.securityContext.runAsGroup",
+		"services.secured.securityContext.runAsNonRoot",
+		"services.secured.securityContext.runAsUser",
+		"services.secured.securityContext.seccompProfile",
 		"timers",
 		"timers.alpha",
 		"timers.alpha.command",
