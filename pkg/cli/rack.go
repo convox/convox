@@ -126,7 +126,10 @@ func init() {
 
 type NodeGroupConfigParam struct {
 	Id           *int    `json:"id"`
-	Type         string  `json:"type"`
+	Type         *string `json:"type,omitempty"`
+	Types        *string `json:"types,omitempty"`
+	Cpu          *int    `json:"cpu,omitempty"`
+	Mem          *int    `json:"mem,omitempty"`
 	Disk         *int    `json:"disk,omitempty"`
 	CapacityType *string `json:"capacity_type,omitempty"`
 	MinSize      *int    `json:"min_size,omitempty"`
@@ -138,8 +141,11 @@ type NodeGroupConfigParam struct {
 }
 
 func (n *NodeGroupConfigParam) Validate() error {
-	if n.Type == "" {
-		return fmt.Errorf("node type is required: '%s'", n.Type)
+	if ((n.Cpu == nil || n.Mem == nil) && n.Type == nil) {
+		return fmt.Errorf("One of 'type' or 'cpu & mem' is required")
+	}
+	if (n.Type != nil && (n.Cpu != nil || n.Mem != nil)) {
+		return fmt.Errorf("Can't specify 'type' along with 'cpu' or 'mem'")
 	}
 	if n.Disk != nil && *n.Disk < 20 {
 		return fmt.Errorf("node disk is less than 20: '%d'", *n.Disk)
