@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 
 	ac "k8s.io/api/core/v1"
@@ -12,18 +13,20 @@ import (
 )
 
 type Ingress struct {
-	errch    chan error
-	hosts    map[string]bool
-	informer cache.SharedIndexInformer
-	lock     sync.Mutex
-	stopch   chan struct{}
+	errch         chan error
+	hosts         map[string]bool
+	internalHosts map[string]bool
+	informer      cache.SharedIndexInformer
+	lock          sync.Mutex
+	stopch        chan struct{}
 }
 
 func NewIngress(kc *kubernetes.Clientset) (*Ingress, error) {
 	i := &Ingress{
-		errch:  make(chan error),
-		hosts:  map[string]bool{},
-		stopch: make(chan struct{}),
+		errch:         make(chan error),
+		hosts:         map[string]bool{},
+		internalHosts: map[string]bool{},
+		stopch:        make(chan struct{}),
 	}
 
 	i.informer = ie.NewFilteredIngressInformer(kc, ac.NamespaceAll, 0, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, listOptions)
@@ -54,6 +57,13 @@ func (i *Ingress) HostExists(host string) bool {
 	defer i.lock.Unlock()
 
 	return i.hosts[host]
+}
+
+func (i *Ingress) HostInternal(host string) bool {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+
+	return i.internalHosts[host]
 }
 
 func (i *Ingress) add(obj interface{}) {
@@ -109,14 +119,20 @@ func (i *Ingress) update(prev, cur interface{}) {
 }
 
 func (i *Ingress) addIngress(in *ae.Ingress) {
+	internal := in.Spec.IngressClassName != nil && strings.Contains(*in.Spec.IngressClassName, "internal")
+
 	for _, r := range in.Spec.Rules {
 		i.hosts[r.Host] = true
+		if internal {
+			i.internalHosts[r.Host] = true
+		}
 	}
 }
 
 func (i *Ingress) deleteIngress(in *ae.Ingress) {
 	for _, r := range in.Spec.Rules {
 		delete(i.hosts, r.Host)
+		delete(i.internalHosts, r.Host)
 	}
 }
 
