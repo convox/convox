@@ -18,14 +18,15 @@ const (
 )
 
 type Resolver struct {
-	dnsExternal    *DNS
-	dnsInternal    *DNS
-	ingress        *Ingress
-	kubernetes     *kubernetes.Clientset
-	namespace      string
-	routerExternal string
-	routerInternal string
-	service        *Service
+	dnsExternal             *DNS
+	dnsInternal             *DNS
+	ingress                 *Ingress
+	kubernetes              *kubernetes.Clientset
+	namespace               string
+	routerExternal          string
+	routerExternalClusterIP string
+	routerInternal          string
+	service                 *Service
 }
 
 type Server interface {
@@ -124,7 +125,11 @@ func (r *Resolver) resolveExternal(typ, host string) (string, bool) {
 }
 
 func (r *Resolver) resolveInternal(typ, host string) (string, bool) {
-	return r.resolve(typ, host, r.routerInternal)
+	router := r.routerExternalClusterIP
+	if r.ingress.HostInternal(host) {
+		router = r.routerInternal
+	}
+	return r.resolve(typ, host, router)
 }
 
 func (r *Resolver) setupDNS() error {
@@ -192,9 +197,19 @@ func (r *Resolver) setupRouter() error {
 
 	r.routerInternal = s.Spec.ClusterIP
 	r.routerExternal = s.Spec.ClusterIP
+	r.routerExternalClusterIP = s.Spec.ClusterIP
 
 	if is := s.Status.LoadBalancer.Ingress; len(is) > 0 {
 		r.routerExternal = common.CoalesceString(is[0].IP, is[0].Hostname)
+	}
+
+	si, err := r.kubernetes.CoreV1().Services(r.namespace).Get(context.TODO(), "router-internal", am.GetOptions{})
+	if err == nil {
+		r.routerInternal = si.Spec.ClusterIP
+
+		if is := si.Status.LoadBalancer.Ingress; len(is) > 0 {
+			r.routerInternal = common.CoalesceString(is[0].IP, is[0].Hostname)
+		}
 	}
 
 	return nil
