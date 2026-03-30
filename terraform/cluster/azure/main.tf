@@ -63,6 +63,10 @@ resource "azurerm_kubernetes_cluster" "rack" {
     client_secret = azuread_service_principal_password.cluster.value
   }
 
+  timeouts {
+    update = var.terraform_update_timeout
+  }
+
   lifecycle {
     ignore_changes = [default_node_pool[0].node_count]
   }

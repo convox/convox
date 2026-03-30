@@ -28,11 +28,12 @@ module "cluster" {
     digitalocean = digitalocean
   }
 
-  high_availability = var.high_availability
-  k8s_version       = var.k8s_version
-  name              = local.name
-  node_type         = var.node_type
-  region            = var.region
+  high_availability        = var.high_availability
+  k8s_version              = var.k8s_version
+  name                     = local.name
+  node_type                = var.node_type
+  terraform_update_timeout = var.terraform_update_timeout
+  region                   = var.region
 }
 
 module "rack" {

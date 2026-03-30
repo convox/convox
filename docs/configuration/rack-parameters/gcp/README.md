@@ -21,3 +21,4 @@ The following parameters are available for configuring your Convox rack on Googl
 | [preemptible](/configuration/rack-parameters/gcp/preemptible)             | Use preemptible instances for cost savings.                               |
 | [region](/configuration/rack-parameters/gcp/region)                       | Specifies the GCP region for the rack.                                    |
 | [syslog](/configuration/rack-parameters/gcp/syslog)                       | Specifies the endpoint to forward logs to a syslog server.                |
+| [terraform_update_timeout](/configuration/rack-parameters/gcp/terraform_update_timeout) | Controls how long Terraform waits for node pool update operations to complete. |

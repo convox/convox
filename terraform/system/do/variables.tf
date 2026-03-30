@@ -45,6 +45,11 @@ variable "node_type" {
   default = "s-2vcpu-4gb"
 }
 
+variable "terraform_update_timeout" {
+  type    = string
+  default = "2h"
+}
+
 variable "region" {
   default = "nyc3"
 }

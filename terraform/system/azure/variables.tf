@@ -58,6 +58,11 @@ variable "node_type" {
   default = "Standard_D2_v3"
 }
 
+variable "terraform_update_timeout" {
+  type    = string
+  default = "2h"
+}
+
 variable "region" {
   default = "eastus"
 }

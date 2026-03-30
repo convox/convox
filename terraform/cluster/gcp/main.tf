@@ -77,6 +77,10 @@ resource "google_container_node_pool" "rack" {
     max_unavailable = 1
   }
 
+  timeouts {
+    update = var.terraform_update_timeout
+  }
+
   lifecycle {
     create_before_destroy = true
   }

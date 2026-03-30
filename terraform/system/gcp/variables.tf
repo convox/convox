@@ -41,6 +41,11 @@ variable "node_type" {
   default = "n1-standard-2"
 }
 
+variable "terraform_update_timeout" {
+  type    = string
+  default = "2h"
+}
+
 variable "nginx_additional_config" {
   description = "Comma-separated key=value pairs (e.g., 'key1=value1,key2=value2')"
   type        = string
