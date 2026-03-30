@@ -1,12 +1,14 @@
 package rack
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
@@ -37,6 +39,55 @@ func LoadDirect(client sdk.Interface) (*Direct, error) {
 	dr.status = s.Status
 
 	return dr, nil
+}
+
+func LoadDirectLazy(client sdk.Interface, name string) *Direct {
+	return &Direct{
+		client:   client,
+		name:     name,
+		provider: "unknown",
+		status:   "unknown",
+	}
+}
+
+func TrySaveDirectMeta(c *stdcli.Context, r Rack, client sdk.Interface) {
+	d, ok := r.(Direct)
+	if !ok {
+		return
+	}
+
+	if d.Name() == "direct" {
+		return
+	}
+
+	metaDir, err := c.SettingDirectory("rack-meta")
+	if err != nil {
+		return
+	}
+
+	path := filepath.Join(metaDir, d.Name()+".json")
+
+	if info, err := os.Stat(path); err == nil {
+		if time.Since(info.ModTime()) < 30*time.Minute {
+			return
+		}
+	}
+
+	s, err := client.SystemGet()
+	if err != nil {
+		return
+	}
+
+	data, err := json.Marshal(map[string]string{
+		"provider": s.Provider,
+		"status":   s.Status,
+	})
+	if err != nil {
+		return
+	}
+
+	os.MkdirAll(metaDir, 0700)
+	ioutil.WriteFile(path, data, 0600)
 }
 
 func (d Direct) Client() (sdk.Interface, error) {
@@ -165,6 +216,8 @@ func listDirect(c *stdcli.Context) ([]Direct, error) {
 		return nil, err
 	}
 
+	metaDir, _ := c.SettingDirectory("rack-meta")
+
 	ds := []Direct{}
 
 	for _, sub := range subs {
@@ -174,20 +227,29 @@ func listDirect(c *stdcli.Context) ([]Direct, error) {
 
 		url, err := ioutil.ReadFile(filepath.Join(dir, sub.Name()))
 		if err != nil {
-			return nil, err
+			continue
 		}
 
 		sc, err := sdk.New(strings.TrimSpace(string(url)))
 		if err != nil {
-			return nil, err
+			continue
 		}
 
-		d, err := LoadDirect(sc)
-		if err != nil {
-			return nil, err
-		}
+		d := LoadDirectLazy(sc, sub.Name())
 
-		d.name = sub.Name()
+		if metaDir != "" {
+			if metaBytes, err := ioutil.ReadFile(filepath.Join(metaDir, sub.Name()+".json")); err == nil {
+				var meta map[string]string
+				if json.Unmarshal(metaBytes, &meta) == nil {
+					if v, ok := meta["provider"]; ok {
+						d.provider = v
+					}
+					if v, ok := meta["status"]; ok {
+						d.status = v
+					}
+				}
+			}
+		}
 
 		ds = append(ds, *d)
 	}
