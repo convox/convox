@@ -16,6 +16,7 @@ module "k8s" {
   }
 
   fluentd_disable = var.fluentd_disable
+  fluentd_memory  = var.fluentd_memory
 
   cluster   = var.cluster
   image     = var.arm_type ? "convox/fluentd:1.13-arm64" : "convox/fluentd:1.13"

@@ -397,3 +397,9 @@ Groups:
         type: boolean
         description: Disable fluentd if you're using another monitoring solution. &l This
           will disable CloudWatch metrics. &l
+      - name: fluentd_memory
+        default: 200Mi
+        type: string
+        regex: ^\d+(Mi|Gi)$
+        description: Memory request and limit for the Fluentd DaemonSet. Increase
+          if Fluentd pods are experiencing OOMKills.

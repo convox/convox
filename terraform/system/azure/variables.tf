@@ -129,6 +129,11 @@ variable "tags" {
   type    = string
 }
 
+variable "fluentd_memory" {
+  type    = string
+  default = "200Mi"
+}
+
 variable "whitelist" {
   default = "0.0.0.0/0"
 }

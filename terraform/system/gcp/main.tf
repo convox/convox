@@ -53,6 +53,7 @@ module "rack" {
   cluster                 = module.cluster.id
   docker_hub_username     = var.docker_hub_username
   docker_hub_password     = var.docker_hub_password
+  fluentd_memory          = var.fluentd_memory
   image                   = var.image
   name                    = local.name
   rack_name               = local.rack_name

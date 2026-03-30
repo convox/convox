@@ -144,6 +144,7 @@ module "fluentd" {
   cluster                      = module.cluster.id
   eks_addons                   = module.cluster.eks_addons
   fluentd_disable              = var.fluentd_disable
+  fluentd_memory               = var.fluentd_memory
   namespace                    = "kube-system"
   oidc_arn                     = module.cluster.oidc_arn
   oidc_sub                     = module.cluster.oidc_sub

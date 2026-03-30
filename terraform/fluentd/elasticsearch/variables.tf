@@ -2,6 +2,11 @@ variable "cluster" {
   type = string
 }
 
+variable "fluentd_memory" {
+  type    = string
+  default = "200Mi"
+}
+
 variable "elasticsearch" {
   type = string
 }

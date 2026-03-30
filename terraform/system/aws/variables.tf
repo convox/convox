@@ -96,6 +96,11 @@ variable "fluentd_disable" {
   default = false
 }
 
+variable "fluentd_memory" {
+  type    = string
+  default = "200Mi"
+}
+
 variable "disable_convox_resolver" {
   type    = bool
   default = false
