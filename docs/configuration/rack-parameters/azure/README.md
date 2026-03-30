@@ -34,3 +34,4 @@ The following parameters are available for configuring your Convox rack on Micro
 | [ssl_protocols](/configuration/rack-parameters/azure/ssl_protocols) | SSL/TLS protocol versions for nginx. |
 | [syslog](/configuration/rack-parameters/azure/syslog) | Specifies the endpoint to forward logs to a syslog server. |
 | [tags](/configuration/rack-parameters/azure/tags) | Custom Azure resource tags. |
+| [terraform_update_timeout](/configuration/rack-parameters/azure/terraform_update_timeout) | Controls how long Terraform waits for cluster and node pool update operations to complete. |

@@ -21,3 +21,4 @@ The following parameters are available for configuring your Convox rack on Digit
 | [region](/configuration/rack-parameters/do/region)                       | Specifies the Digital Ocean region for the rack.                          |
 | [registry_disk](/configuration/rack-parameters/do/registry_disk)         | Specifies the size of the registry disk.                                  |
 | [syslog](/configuration/rack-parameters/do/syslog)                       | Specifies the endpoint to forward logs to a syslog server.                |
+| [terraform_update_timeout](/configuration/rack-parameters/do/terraform_update_timeout) | Controls how long Terraform waits for cluster update operations to complete. |

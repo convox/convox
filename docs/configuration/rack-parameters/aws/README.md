@@ -64,6 +64,7 @@ The following parameters are available for configuring your Convox rack on Amazo
 | [ssl_protocols](/configuration/rack-parameters/aws/ssl_protocols)                   | Specifies the SSL protocols to use for Nginx.                            |
 | [syslog](/configuration/rack-parameters/aws/syslog)                                 | Specifies the endpoint to forward logs to a syslog server.               |
 | [tags](/configuration/rack-parameters/aws/tags)                                     | Specifies custom tags to add to AWS resources.                           |
+| [terraform_update_timeout](/configuration/rack-parameters/aws/terraform_update_timeout) | Controls how long Terraform waits for node group update operations to complete. |
 | [user_data](/configuration/rack-parameters/aws/user_data)                           | Specifies custom commands to append to EC2 instance user data scripts.   |
 | [user_data_url](/configuration/rack-parameters/aws/user_data_url)                   | Specifies a URL to a script to append to EC2 instance user data scripts. |
 | [vpa_enable](/configuration/rack-parameters/aws/vpa_enable)                         | Enables the Vertical Pod Autoscaler (VPA) for automatic resource right-sizing. |

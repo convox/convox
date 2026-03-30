@@ -79,6 +79,10 @@ resource "azurerm_kubernetes_cluster_node_pool" "additional" {
 
   tags = length(each.value.tags) > 0 ? each.value.tags : null
 
+  timeouts {
+    update = var.terraform_update_timeout
+  }
+
   lifecycle {
     ignore_changes = [node_count]
   }
@@ -112,6 +116,10 @@ resource "azurerm_kubernetes_cluster_node_pool" "build_additional" {
   ]
 
   tags = length(each.value.tags) > 0 ? each.value.tags : null
+
+  timeouts {
+    update = var.terraform_update_timeout
+  }
 
   lifecycle {
     ignore_changes = [node_count]

@@ -83,6 +83,7 @@ locals {
     syslog = var.syslog
     tags = var.tags
     telemetry = var.telemetry
+    terraform_update_timeout = var.terraform_update_timeout
     user_data = var.user_data
     user_data_url = var.user_data_url
     vpa_enable = var.vpa_enable
@@ -97,7 +98,7 @@ locals {
     additional_node_groups_config = ""
     api_feature_gates = ""
     availability_zones = ""
-    aws_ebs_csi_driver_version = "v1.51.1-eksbuild.1"
+    aws_ebs_csi_driver_version = "v1.56.0-eksbuild.1"
     build_disable_convox_resolver = "false"
     build_node_enabled = "false"
     build_node_min_count = "0"
@@ -107,7 +108,7 @@ locals {
     cidr = "10.1.0.0/16"
     convox_domain_tls_cert_disable = "false"
     convox_rack_domain = ""
-    coredns_version = "v1.12.4-eksbuild.1"
+    coredns_version = "v1.13.2-eksbuild.1"
     custom_provided_bucket = ""
     deploy_extra_nlb = "false"
     disable_convox_resolver = "false"
@@ -118,7 +119,7 @@ locals {
     ebs_volume_encryption_enabled = "false"
     ecr_scan_on_push_enable = "false"
     efs_csi_driver_enable = "false"
-    efs_csi_driver_version = "v2.1.13-eksbuild.1"
+    efs_csi_driver_version = "v2.3.0-eksbuild.2"
     eks_api_server_public_access_cidrs = "0.0.0.0/0"
     enable_private_access = "false"
     fluentd_disable = "false"
@@ -134,7 +135,7 @@ locals {
     k8s_version = "1.34"
     keda_enable = "false"
     key_pair_name = ""
-    kube_proxy_version = "v1.33.3-eksbuild.10"
+    kube_proxy_version = "v1.34.3-eksbuild.2"
     kubelet_registry_burst = "10"
     kubelet_registry_pull_qps = "5"
     max_on_demand_count = "100"
@@ -151,7 +152,7 @@ locals {
     nvidia_device_time_slicing_replicas = "0"
     pdb_default_min_available_percentage = "50"
     pod_identity_agent_enable = "false"
-    pod_identity_agent_version = "v1.3.9-eksbuild.3"
+    pod_identity_agent_version = "v1.3.10-eksbuild.2"
     private = "true"
     private_eks_host = ""
     private_eks_pass = ""
@@ -172,10 +173,11 @@ locals {
     syslog = ""
     tags = ""
     telemetry = "false"
+    terraform_update_timeout = "2h"
     user_data = ""
     user_data_url = ""
     vpa_enable = "false"
-    vpc_cni_version = "v1.20.4-eksbuild.1"
+    vpc_cni_version = "v1.21.1-eksbuild.3"
     vpc_id = ""
     whitelist = "0.0.0.0/0"
     }

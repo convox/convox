@@ -108,6 +108,7 @@ module "cluster" {
   node_disk                           = var.node_disk
   node_type                           = var.node_type
   node_max_unavailable_percentage     = var.node_max_unavailable_percentage
+  terraform_update_timeout            = var.terraform_update_timeout
   nvidia_device_plugin_enable         = var.nvidia_device_plugin_enable
   nvidia_device_time_slicing_replicas = var.nvidia_device_time_slicing_replicas
   private                             = var.private
