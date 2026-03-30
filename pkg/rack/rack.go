@@ -7,6 +7,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/sdk"
@@ -58,7 +59,7 @@ func Current(c *stdcli.Context) (Rack, error) {
 			return nil, err
 		}
 
-		return LoadDirect(client)
+		return LoadDirectLazy(client, "direct"), nil
 	}
 
 	if name := currentRack(c); name != "" {
@@ -103,31 +104,63 @@ func Install(c *stdcli.Context, provider, name, version, runtime string, options
 }
 
 func List(c *stdcli.Context) ([]Rack, error) {
-	rs := []Rack{}
+	var trs []Terraform
+	var drs []Direct
+	var crs []Console
 
-	trs, err := listTerraform(c)
-	if err != nil {
-		return nil, err
+	var terr, derr, cerr error
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+
+	wg.Add(3)
+
+	go func() {
+		defer wg.Done()
+		t, err := listTerraform(c)
+		mu.Lock()
+		trs = t
+		terr = err
+		mu.Unlock()
+	}()
+
+	go func() {
+		defer wg.Done()
+		d, err := listDirect(c)
+		mu.Lock()
+		drs = d
+		derr = err
+		mu.Unlock()
+	}()
+
+	go func() {
+		defer wg.Done()
+		cr, err := listConsole(c)
+		mu.Lock()
+		crs = cr
+		cerr = err
+		mu.Unlock()
+	}()
+
+	wg.Wait()
+
+	if terr != nil {
+		return nil, terr
 	}
+	if derr != nil {
+		return nil, derr
+	}
+	if cerr != nil {
+		return nil, cerr
+	}
+
+	rs := []Rack{}
 
 	for _, tr := range trs {
 		rs = append(rs, tr)
 	}
-
-	drs, err := listDirect(c)
-	if err != nil {
-		return nil, err
-	}
-
 	for _, dr := range drs {
 		rs = append(rs, dr)
 	}
-
-	crs, err := listConsole(c)
-	if err != nil {
-		return nil, err
-	}
-
 	for _, cr := range crs {
 		rs = append(rs, cr)
 	}
