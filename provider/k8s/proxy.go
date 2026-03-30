@@ -20,7 +20,7 @@ func (p *Provider) Proxy(host string, port int, rw io.ReadWriter, opts structs.P
 	}
 
 	if common.DefaultBool(opts.TLS, false) {
-		cn = tls.Client(cn, &tls.Config{MinVersion: tls.VersionTLS12})
+		cn = tls.Client(cn, &tls.Config{})
 	}
 
 	if err := stdsdk.CopyStreamToEachOther(cn, rw); err != nil {

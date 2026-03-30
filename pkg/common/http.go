@@ -30,7 +30,6 @@ func InsecureHTTPClient() *http.Client {
 	// TODO: revisit when internal cluster communication moves to mTLS
 	t.TLSClientConfig = &tls.Config{
 		InsecureSkipVerify: true,
-		MinVersion:         tls.VersionTLS12,
 	}
 
 	return &http.Client{Transport: t}

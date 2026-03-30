@@ -126,7 +126,7 @@ func (p *Provider) RegistryProxy(c *stdapi.Context) error {
 	t := common.NewDefaultTransport()
 	//nolint:gosec // G402: InsecureSkipVerify intentional — internal registry proxy within cluster VPC
 	// TODO: revisit when internal cluster communication moves to mTLS
-	t.TLSClientConfig = &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS12}
+	t.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
 	proxy.Transport = t
 
