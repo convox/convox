@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/miekg/dns"
@@ -21,7 +22,7 @@ type Resolver struct {
 	dnsExternal    *DNS
 	dnsInternal    *DNS
 	ingress        *Ingress
-	kubernetes     *kubernetes.Clientset
+	kubernetes     kubernetes.Interface
 	namespace      string
 	routerExternal string
 	routerInternal string
@@ -185,6 +186,17 @@ func (r *Resolver) setupIngress() error {
 }
 
 func (r *Resolver) setupRouter() error {
+	if override := os.Getenv("ROUTER_IP_OVERRIDE"); override != "" {
+		override = strings.TrimSpace(override)
+		if ip := net.ParseIP(override); ip == nil || ip.To4() == nil {
+			return fmt.Errorf("ROUTER_IP_OVERRIDE is not a valid IPv4 address: %q", override)
+		}
+		fmt.Printf("ns=resolver fn=setupRouter using ROUTER_IP_OVERRIDE=%s\n", override)
+		r.routerInternal = override
+		r.routerExternal = override
+		return nil
+	}
+
 	s, err := r.kubernetes.CoreV1().Services(r.namespace).Get(context.TODO(), "router", am.GetOptions{})
 	if err != nil {
 		return err
