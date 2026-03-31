@@ -187,6 +187,26 @@ func (m *Manifest) ApplyDefaults() error {
 			}
 		}
 
+		s.StartupProbe.Path = strings.TrimSpace(s.StartupProbe.Path)
+		s.StartupProbe.TcpSocketPort = strings.TrimSpace(s.StartupProbe.TcpSocketPort)
+		if s.StartupProbe.Path != "" || s.StartupProbe.TcpSocketPort != "" {
+			if s.StartupProbe.Grace == 0 {
+				m.Services[i].StartupProbe.Grace = m.Services[i].Liveness.Grace
+			}
+			if s.StartupProbe.Interval == 0 {
+				m.Services[i].StartupProbe.Interval = m.Services[i].Liveness.Interval
+			}
+			if s.StartupProbe.Timeout == 0 {
+				m.Services[i].StartupProbe.Timeout = m.Services[i].Liveness.Timeout
+			}
+			if s.StartupProbe.SuccessThreshold == 0 {
+				m.Services[i].StartupProbe.SuccessThreshold = m.Services[i].Liveness.SuccessThreshold
+			}
+			if s.StartupProbe.FailureThreshold == 0 {
+				m.Services[i].StartupProbe.FailureThreshold = m.Services[i].Liveness.FailureThreshold
+			}
+		}
+
 		if !m.AttributeExists(fmt.Sprintf("services.%s.init", s.Name)) {
 			m.Services[i].Init = true
 		}

@@ -715,6 +715,46 @@ func TestManifestValidate(t *testing.T) {
 	require.EqualError(t, err, fmt.Sprintf("validation errors:\n%s", strings.Join(errors, "\n")))
 }
 
+func TestManifestStartupProbe(t *testing.T) {
+	m, err := testdataManifest("startup-probe", map[string]string{})
+	require.NoError(t, err)
+	require.Equal(t, 3, len(m.Services))
+
+	// web-custom: startupProbe with explicit values should use its own values, not liveness
+	custom, err := m.Service("web-custom")
+	require.NoError(t, err)
+	require.Equal(t, "/startup", custom.StartupProbe.Path)
+	require.Equal(t, 60, custom.StartupProbe.Grace)
+	require.Equal(t, 30, custom.StartupProbe.Interval)
+	require.Equal(t, 10, custom.StartupProbe.Timeout)
+	require.Equal(t, 1, custom.StartupProbe.SuccessThreshold)
+	require.Equal(t, 10, custom.StartupProbe.FailureThreshold)
+	// verify liveness is independent
+	require.Equal(t, 10, custom.Liveness.Grace)
+	require.Equal(t, 3, custom.Liveness.FailureThreshold)
+
+	// web-inherited: startupProbe with only path should inherit timing from liveness
+	inherited, err := m.Service("web-inherited")
+	require.NoError(t, err)
+	require.Equal(t, "/startup", inherited.StartupProbe.Path)
+	require.Equal(t, 15, inherited.StartupProbe.Grace)
+	require.Equal(t, 10, inherited.StartupProbe.Interval)
+	require.Equal(t, 3, inherited.StartupProbe.Timeout)
+	require.Equal(t, 1, inherited.StartupProbe.SuccessThreshold)
+	require.Equal(t, 5, inherited.StartupProbe.FailureThreshold)
+
+	// web-tcp: tcpSocket startupProbe with partial overrides
+	tcp, err := m.Service("web-tcp")
+	require.NoError(t, err)
+	require.Equal(t, "8080", tcp.StartupProbe.TcpSocketPort)
+	require.Equal(t, 30, tcp.StartupProbe.Grace)
+	require.Equal(t, 20, tcp.StartupProbe.FailureThreshold)
+	// interval and timeout should inherit from liveness
+	require.Equal(t, 5, tcp.StartupProbe.Interval)
+	require.Equal(t, 5, tcp.StartupProbe.Timeout)
+	require.Equal(t, 1, tcp.StartupProbe.SuccessThreshold)
+}
+
 func TestManifestKeda(t *testing.T) {
 	m, err := testdataManifest("keda", map[string]string{})
 	require.NotNil(t, m)

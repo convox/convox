@@ -254,11 +254,11 @@ spec:
           tcpSocket:
             port: {{$.Service.StartupProbe.TcpSocketPort}}
           {{ end }}
-          initialDelaySeconds: {{$.Service.Liveness.Grace}}
-          periodSeconds: {{$.Service.Liveness.Interval}}
-          timeoutSeconds: {{$.Service.Liveness.Timeout}}
-          successThreshold: {{$.Service.Liveness.SuccessThreshold}}
-          failureThreshold: {{$.Service.Liveness.FailureThreshold}}
+          initialDelaySeconds: {{$.Service.StartupProbe.Grace}}
+          periodSeconds: {{$.Service.StartupProbe.Interval}}
+          timeoutSeconds: {{$.Service.StartupProbe.Timeout}}
+          successThreshold: {{$.Service.StartupProbe.SuccessThreshold}}
+          failureThreshold: {{$.Service.StartupProbe.FailureThreshold}}
         {{ end }}
         {{ if and (not (eq $.Service.Port.Scheme "GRPC")) (not (eq $.Service.Liveness.Path ""))}}
         livenessProbe:

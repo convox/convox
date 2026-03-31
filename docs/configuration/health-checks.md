@@ -157,27 +157,38 @@ services:
 | ------------------- | -------------------------------------------------------------------------------- |
 | **path**            | **Required** (if `tcpSocketPort` not set). The HTTP endpoint to check for startup success |
 
-### Timing Inheritance from Liveness
+### Timing Configuration
 
-The startup probe inherits all timing parameters from the liveness check:
+The startup probe supports its own timing parameters. If not explicitly set, values are inherited from the liveness check:
 
-| Startup Probe Behavior | Inherited From | Liveness Default |
-| ---------------------- | -------------- | ---------------- |
-| Initial delay          | `liveness.grace` | 10             |
-| Check interval         | `liveness.interval` | 5            |
-| Response timeout       | `liveness.timeout` | 5             |
-| Success threshold      | `liveness.successThreshold` | 1     |
-| Failure threshold      | `liveness.failureThreshold` | 3     |
+| Attribute              | Description                              | Default (inherited from liveness) |
+| ---------------------- | ---------------------------------------- | --------------------------------- |
+| **grace**              | Initial delay in seconds before probing  | `liveness.grace` (default: 10)    |
+| **interval**           | Seconds between probe attempts           | `liveness.interval` (default: 5)  |
+| **timeout**            | Seconds before probe times out           | `liveness.timeout` (default: 5)   |
+| **successThreshold**   | Consecutive successes to be considered ready | `liveness.successThreshold` (default: 1) |
+| **failureThreshold**   | Consecutive failures before pod is killed | `liveness.failureThreshold` (default: 3) |
 
-To control how long your application has to start, adjust these liveness attributes:
+You can set these directly on the startup probe to use different values from the liveness check:
 
-- **Longer startup window**: Increase `liveness.failureThreshold`. Maximum startup time ≈ `liveness.interval × liveness.failureThreshold`.
-- **Less frequent checks**: Increase `liveness.interval` to reduce probe overhead during startup.
-- **Initial delay before probing**: Set `liveness.grace` to skip the first N seconds entirely.
+```yaml
+services:
+  api:
+    startupProbe:
+      path: /startup
+      grace: 60
+      interval: 30
+      timeout: 5
+      failureThreshold: 10
+    liveness:
+      path: /live
+      grace: 10
+      interval: 5
+      timeout: 3
+      failureThreshold: 3
+```
 
-For example, to allow 5 minutes for startup with checks every 15 seconds: set `liveness.interval: 15` and `liveness.failureThreshold: 20` (15 × 20 = 300 seconds).
-
-> These same liveness timing values will also apply to the liveness probe after startup completes. Choose values that work for both startup and ongoing health monitoring, or consider using a generous `failureThreshold` that is acceptable for both phases.
+This allows a generous startup window (60s delay + 10 × 30s = 360s) while keeping the liveness probe tight for ongoing health monitoring.
 
 ### Use Cases for Startup Probes
 
