@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"os"
 	"os/exec"
 	"strconv"
@@ -106,10 +105,6 @@ type Provider struct {
 	metrics   *metrics.Metrics
 	templater *templater.Templater
 	webhooks  []string
-}
-
-func init() {
-	rand.Seed(time.Now().Unix())
 }
 
 func FromEnv() (*Provider, error) {

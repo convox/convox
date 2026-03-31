@@ -2,9 +2,9 @@ package k8s
 
 import (
 	"crypto/tls"
-	"fmt"
 	"io"
 	"net"
+	"strconv"
 	"time"
 
 	"github.com/convox/convox/pkg/common"
@@ -14,7 +14,7 @@ import (
 )
 
 func (p *Provider) Proxy(host string, port int, rw io.ReadWriter, opts structs.ProxyOptions) error {
-	cn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", host, port), 5*time.Second)
+	cn, err := net.DialTimeout("tcp", net.JoinHostPort(host, strconv.Itoa(port)), 5*time.Second)
 	if err != nil {
 		return errors.WithStack(err)
 	}

@@ -5,13 +5,11 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/stdsdk"
@@ -39,10 +37,6 @@ type SessionFunc func(c *Client) string
 
 // ensure interface parity
 var _ structs.Provider = &Client{}
-
-func init() {
-	rand.Seed(time.Now().UTC().UnixNano())
-}
 
 func New(endpoint string) (*Client, error) {
 	s, err := stdsdk.New(coalesce(endpoint, "https://rack.convox"))
