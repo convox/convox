@@ -168,6 +168,7 @@ func assertSecret(v interface{}) (*ac.Secret, error) {
 }
 
 func secretDataHash(s *v1.Secret) (string, error) {
+	//nolint:gosec // G401: SHA1 for content change detection, not security — changing would trigger cluster-wide reconciliation
 	h := sha1.New()
 	for k := range s.Data {
 		_, err := h.Write(s.Data[k])
