@@ -209,6 +209,7 @@ Without the `id` field, Convox generates a random identifier that changes when t
 
 At the application level, you can control where specific workloads run:
 
+- `BuildArch`: Directs build pods to build nodes matching a specific CPU architecture (`amd64` or `arm64`)
 - `BuildLabels`: Directs build pods to specific node groups
 - `BuildCpu` and `BuildMem`: Sets resource requests for build pods
 - `nodeSelectorLabels` in `convox.yml`: Directs service pods to specific node groups
@@ -467,10 +468,12 @@ Convox allows you to implement different levels of customization based on your n
 
 ## Best Practices
 
-1. **Use a Consistent CPU Architecture Across All Node Groups**:
-   - All node groups (primary nodes, build nodes, and additional groups) must use the same CPU architecture.
-   - On AWS, Graviton instances (e.g. `t4g`, `c6g`, `m6g`) are ARM. Standard instances (e.g. `t3`, `c5`, `m5`) are x86. Convox selects AMIs, system images, and build tooling based on the architecture of `node_type`. A mismatch causes pod scheduling failures and build errors. See [node_type](/configuration/rack-parameters/aws/node_type#cpu-architecture-x86-vs-arm) for the full list of supported instance families.
-   - On Azure, only x86-based VM SKUs are supported. ARM-based VM SKUs are not available. See [node_type](/configuration/rack-parameters/azure/node_type) for details.
+1. **CPU Architecture — Single or Mixed**:
+   - A rack's primary nodes define the default architecture. Additional node groups can use a different architecture to create a mixed ARM/x86 rack.
+   - On AWS, Graviton instances (e.g. `t4g`, `c7g`, `m7g`) are ARM. Standard instances (e.g. `t3`, `c5`, `m5`) are x86. You can mix architectures by adding additional node groups and build groups with different instance families. See [node_type](/configuration/rack-parameters/aws/node_type#cpu-architecture-x86-vs-arm) for the full list of supported instance families.
+   - On Azure, only x86-based VM SKUs are currently supported. ARM-based VM SKUs are not available. See [node_type](/configuration/rack-parameters/azure/node_type) for details.
+   - **Mixed architecture requires `BuildArch`**: When running mixed-architecture node groups, use the [`BuildArch`](/configuration/app-parameters/aws/BuildArch) app parameter to direct each app's builds to build nodes matching its target architecture. Without `BuildArch`, builds run on any available build node and may produce binaries for the wrong architecture.
+   - **Convox system images are multi-arch**: System components (including Fluentd) are published as multi-arch Docker manifests and run natively on both x86 and ARM nodes with no configuration.
 
 2. **Match Node Resources to Workload Requirements**:
    - On AWS: use compute-optimized instances (`c5`, `c6i`) for CPU-intensive workloads, memory-optimized (`r5`, `r6i`) for memory-intensive workloads, and general-purpose (`m5`, `t3`) for balanced workloads
@@ -542,4 +545,5 @@ For more detailed information, refer to the provider-specific rack parameter pag
 - [additional_build_groups_config](/configuration/rack-parameters/azure/additional_build_groups_config)
 
 **App Parameters:**
+- [BuildArch](/configuration/app-parameters/aws/BuildArch)
 - [BuildLabels](/configuration/app-parameters/aws/BuildLabels)

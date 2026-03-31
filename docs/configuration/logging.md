@@ -82,6 +82,22 @@ $ convox rack params set syslog=tcp+tls://logs.example.com:1234
 
 This will forward all application and system logs to the specified syslog destination. See the [syslog rack parameter](/configuration/rack-parameters/aws/syslog) documentation for full configuration details.
 
+## Fluentd Memory Tuning
+
+Convox uses Fluentd as the log collector DaemonSet running on every node. The default memory allocation of `200Mi` is sufficient for most workloads, but racks with high log throughput may experience Fluentd OOM restarts and temporary log loss. You can tune the memory allocation with the `fluentd_memory` rack parameter:
+
+```bash
+$ convox rack params set fluentd_memory=512Mi -r rackName
+```
+
+See the provider-specific parameter pages for details:
+- [fluentd_memory (AWS)](/configuration/rack-parameters/aws/fluentd_memory)
+- [fluentd_memory (Azure)](/configuration/rack-parameters/azure/fluentd_memory)
+- [fluentd_memory (GCP)](/configuration/rack-parameters/gcp/fluentd_memory)
+- [fluentd_memory (DO)](/configuration/rack-parameters/do/fluentd_memory)
+
+To disable Fluentd entirely (e.g., when using a custom logging solution), see [fluentd_disable](/configuration/rack-parameters/aws/fluentd_disable).
+
 ## Log Retention
 
 Convox streams logs in real-time and does not retain historical logs indefinitely. For long-term log storage and analysis, you should forward logs to an external service using the syslog integration described above, or use the built-in [Monitoring and Alerting](/configuration/monitoring) features.
