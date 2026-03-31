@@ -23,6 +23,10 @@ type Log struct {
 
 type Receiver chan Log
 
+func init() {
+	rand.Seed(time.Now().UTC().UnixNano())
+}
+
 func New() Store {
 	s := Store{streams: map[string][]Log{}}
 
