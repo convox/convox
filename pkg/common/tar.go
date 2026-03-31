@@ -14,11 +14,6 @@ import (
 	"github.com/moby/buildkit/frontend/dockerfile/dockerignore"
 )
 
-var (
-	maxTarEntrySize int64 = 10 * 1024 * 1024 * 1024 // 10GB per entry
-	maxTarTotalSize int64 = 50 * 1024 * 1024 * 1024  // 50GB cumulative
-)
-
 func Archive(file string) (io.Reader, error) {
 	opts := &archive.TarOptions{
 		IncludeFiles: []string{file},
@@ -38,8 +33,6 @@ func RebaseArchive(r io.Reader, src, dst string) (io.Reader, error) {
 	var buf bytes.Buffer
 
 	tw := tar.NewWriter(&buf)
-
-	var totalSize int64
 
 	for {
 		h, err := tr.Next()
@@ -63,16 +56,8 @@ func RebaseArchive(r io.Reader, src, dst string) (io.Reader, error) {
 
 		tw.WriteHeader(h)
 
-		n, err := io.Copy(tw, io.LimitReader(tr, maxTarEntrySize))
-		if err != nil {
+		if _, err := io.Copy(tw, tr); err != nil {
 			return nil, err
-		}
-		if n >= maxTarEntrySize {
-			return nil, fmt.Errorf("tar entry %q exceeds maximum entry size of %d bytes", h.Name, maxTarEntrySize)
-		}
-		totalSize += n
-		if totalSize > maxTarTotalSize {
-			return nil, fmt.Errorf("archive exceeds maximum total size of %d bytes", maxTarTotalSize)
 		}
 	}
 
@@ -124,14 +109,11 @@ func Tarball(dir string) ([]byte, error) {
 		return nil, err
 	}
 
-	return io.ReadAll(io.LimitReader(r, maxTarTotalSize))
+	return ioutil.ReadAll(r)
 }
 
 func Unarchive(r io.Reader, target string) error {
 	tr := tar.NewReader(r)
-
-	cleanTarget := filepath.Clean(target) + string(os.PathSeparator)
-	var totalSize int64
 
 	for {
 		h, err := tr.Next()
@@ -142,37 +124,25 @@ func Unarchive(r io.Reader, target string) error {
 			return err
 		}
 
-		cleanPath := filepath.Clean(filepath.Join(target, h.Name))
-		if !strings.HasPrefix(cleanPath, cleanTarget) && cleanPath != filepath.Clean(target) {
-			return fmt.Errorf("illegal file path in archive: %s", h.Name)
-		}
+		file := filepath.Join(target, h.Name)
 
 		switch h.Typeflag {
 		case tar.TypeDir:
-			if err := os.MkdirAll(cleanPath, os.FileMode(h.Mode)); err != nil {
+			if err := os.MkdirAll(file, os.FileMode(h.Mode)); err != nil {
 				return err
 			}
 		case tar.TypeReg:
-			if err := os.MkdirAll(filepath.Dir(cleanPath), 0700); err != nil {
+			if err := os.MkdirAll(filepath.Dir(file), 0700); err != nil {
 				return err
 			}
 
-			fd, err := os.OpenFile(cleanPath, os.O_CREATE|os.O_WRONLY, os.FileMode(h.Mode))
+			fd, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY, os.FileMode(h.Mode))
 			if err != nil {
 				return err
 			}
 
-			n, err := io.Copy(fd, io.LimitReader(tr, maxTarEntrySize))
-			fd.Close()
-			if err != nil {
+			if _, err := io.Copy(fd, tr); err != nil {
 				return err
-			}
-			if n >= maxTarEntrySize {
-				return fmt.Errorf("tar entry %q exceeds maximum entry size of %d bytes", h.Name, maxTarEntrySize)
-			}
-			totalSize += n
-			if totalSize > maxTarTotalSize {
-				return fmt.Errorf("archive exceeds maximum total size of %d bytes", maxTarTotalSize)
 			}
 		}
 	}

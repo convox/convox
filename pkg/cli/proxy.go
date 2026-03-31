@@ -77,7 +77,7 @@ func proxy(rack sdk.Interface, c *stdcli.Context, localport int, remotehost stri
 
 	lc := &net.ListenConfig{}
 
-	ln, err := lc.Listen(c.Context, "tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(localport)))
+	ln, err := lc.Listen(c.Context, "tcp", fmt.Sprintf("127.0.0.1:%d", localport))
 	if err != nil {
 		c.Error(err)
 		return

@@ -127,7 +127,6 @@ func (p *Provider) certificateGenerateLetsencrypt(domains []string, opts structs
 		domains[i] = strings.TrimSpace(domains[i])
 	}
 
-	//nolint:gosec // G401: SHA1 for deterministic naming, not security — changing hash would alter certificate IDs
 	h := sha1.New()
 	_, err := h.Write([]byte(strings.Join(domains, "-")))
 	if err != nil {
