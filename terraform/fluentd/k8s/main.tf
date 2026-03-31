@@ -134,12 +134,12 @@ resource "kubernetes_daemonset" "fluentd" {
 
           resources {
             limits = {
-              memory = "200Mi"
+              memory = var.fluentd_memory
             }
 
             requests = {
               cpu    = "100m"
-              memory = "200Mi"
+              memory = var.fluentd_memory
             }
           }
 

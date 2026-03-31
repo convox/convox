@@ -87,6 +87,7 @@ module "rack" {
   resource_group_location              = azurerm_resource_group.rack.location
   ssl_ciphers                          = var.ssl_ciphers
   ssl_protocols                        = var.ssl_protocols
+  fluentd_memory                       = var.fluentd_memory
   syslog                               = var.syslog
   tags                                 = local.tags
   telemetry                            = var.telemetry

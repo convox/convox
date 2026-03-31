@@ -24,11 +24,12 @@ module "fluentd" {
     kubernetes = kubernetes
   }
 
-  cluster       = var.cluster
-  elasticsearch = module.elasticsearch.host
-  namespace     = var.namespace
-  rack          = var.name
-  syslog        = var.syslog
+  cluster        = var.cluster
+  elasticsearch  = module.elasticsearch.host
+  fluentd_memory = var.fluentd_memory
+  namespace      = var.namespace
+  rack           = var.name
+  syslog         = var.syslog
 }
 
 module "k8s" {

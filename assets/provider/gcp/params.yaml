@@ -61,3 +61,9 @@ Groups:
         regex: ^(tcp|udp|tcp\+tls|udp\+tls)://[a-zA-Z\d._-]+(:\d+)?$
         description: Forward logs to a syslog endpoint  &l &i e.g. &i - tcp+tls://example.org:1234 &l
         optional: true
+      - name: fluentd_memory
+        default: 200Mi
+        type: string
+        regex: ^\d+(Mi|Gi)$
+        description: Memory request and limit for the Fluentd DaemonSet. Increase
+          if Fluentd pods are experiencing OOMKills.
