@@ -25,4 +25,8 @@ Setting parameters... OK
 This command sets the Terraform update timeout to 3 hours.
 
 ## Additional Information
-The value must be a valid Go duration string (e.g., `2h`, `90m`, `2h30m`). This timeout applies to the AKS cluster resource and all additional node pool resources.
+The value must be a valid Go duration string (e.g., `2h`, `90m`, `2h30m`). This timeout applies to the AKS cluster resource and all additional node pool resources. The default value of `2h` matches the previously hardcoded behavior, so existing racks are unaffected.
+
+## See Also
+- [additional_node_groups_config](/configuration/rack-parameters/azure/additional_node_groups_config) for configuring additional node pools (all respect this timeout)
+- [additional_build_groups_config](/configuration/rack-parameters/azure/additional_build_groups_config) for configuring build node pools

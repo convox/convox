@@ -25,4 +25,8 @@ Setting parameters... OK
 This command sets the Terraform update timeout to 3 hours.
 
 ## Additional Information
-The value must be a valid Go duration string (e.g., `2h`, `90m`, `2h30m`). This timeout applies to the DigitalOcean Kubernetes cluster resource, which includes the node pool.
+The value must be a valid Go duration string (e.g., `2h`, `90m`, `2h30m`). This timeout applies to the DigitalOcean Kubernetes cluster resource, which includes the node pool. The default value of `2h` matches the previously hardcoded behavior, so existing racks are unaffected.
+
+## See Also
+- [node_type](/configuration/rack-parameters/do/node_type) for configuring the node instance type
+- [high_availability](/configuration/rack-parameters/do/high_availability) for enabling high availability mode
