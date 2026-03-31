@@ -15,6 +15,7 @@ Each Convox minor version targets a specific Kubernetes version. Upgrading your 
 
 | Convox Version | Kubernetes Version | Initial Release |
 |----------------|--------------------|-----------------|
+| 3.24.x         | 1.34               | 2026-03-24      |
 | 3.23.x         | 1.33               | 2025-11-05      |
 | 3.22.x         | 1.32               | 2025-08-14      |
 | 3.21.x         | 1.31               | 2025-04-02      |
@@ -27,6 +28,7 @@ Each Convox minor version targets a specific Kubernetes version. Upgrading your 
 
 ## Release History
 
+- [3.24 Releases](/reference/releases/3-24) - K8s 1.34, deploy-debug, mixed ARM/x86, Fluentd memory
 - [3.23 Releases](/reference/releases/3-23) - VPA, KEDA, K8s 1.33, Azure node groups
 - [3.22 Releases](/reference/releases/3-22) - Build args, K8s 1.32, release cleanup
 - [3.21 Releases](/reference/releases/3-21) - K8s 1.31, GPU support, node groups
