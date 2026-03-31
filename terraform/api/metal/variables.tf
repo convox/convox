@@ -6,6 +6,11 @@ variable "domain" {
   type = string
 }
 
+variable "fluentd_memory" {
+  type    = string
+  default = "200Mi"
+}
+
 variable "image" {
   type = string
 }
