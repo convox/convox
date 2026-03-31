@@ -83,6 +83,8 @@ func (c *AtomController) Run() {
 
 	go c.runReleaseBuildCleanup()
 
+	go c.runBuildStatusReconciler()
+
 	for err := range ch {
 		fmt.Printf("err = %+v\n", err)
 	}
@@ -382,6 +384,30 @@ func (a *AtomController) runReleaseBuildCleanup() {
 			a.logger.Logf("release cleanup error: %s", err)
 		}
 		time.Sleep(30 * time.Second)
+	}
+}
+
+func (a *AtomController) runBuildStatusReconciler() {
+	for {
+		time.Sleep(30 * time.Second)
+		if a.controller.IsLeader.Load() {
+			break
+		}
+	}
+
+	reconciler := &buildReconciler{
+		provider: a.provider,
+		cluster:  a.provider.Cluster,
+		convox:   a.provider.Convox,
+		ctx:      a.provider.ctx,
+		logger:   logger.New("ns=build-reconciler"),
+	}
+
+	for {
+		if err := reconciler.Run(); err != nil {
+			a.logger.Logf("build reconciler error: %s", err)
+		}
+		time.Sleep(reconcileInterval)
 	}
 }
 
