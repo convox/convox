@@ -8,7 +8,6 @@ import (
 
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
@@ -111,11 +110,11 @@ func (p *Provider) configureLogOptionsForService(app, name string, f cmdutil.Fac
 			return err
 		}
 		if o.Selector == "" && len(infos) != 1 {
-			return errors.New("expected a resource")
+			return structs.ErrBadRequest("expected a resource")
 		}
 		o.Object = infos[0].Object
 		if o.Selector != "" && len(o.Object.(*corev1.PodList).Items) == 0 {
-			return fmt.Errorf("no resources found in %s namespace", o.Namespace)
+			return structs.ErrNotFound("no resources found in %s namespace", o.Namespace)
 		}
 	}
 

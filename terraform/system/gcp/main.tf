@@ -33,12 +33,13 @@ module "cluster" {
     google = google
   }
 
-  k8s_version = var.k8s_version
-  name        = local.name
-  node_disk   = var.node_disk
-  node_type   = var.node_type
-  preemptible = var.preemptible
-  project_id  = module.project.id
+  k8s_version              = var.k8s_version
+  name                     = local.name
+  node_disk                = var.node_disk
+  node_type                = var.node_type
+  terraform_update_timeout = var.terraform_update_timeout
+  preemptible              = var.preemptible
+  project_id               = module.project.id
 }
 
 module "rack" {
@@ -53,6 +54,7 @@ module "rack" {
   cluster                 = module.cluster.id
   docker_hub_username     = var.docker_hub_username
   docker_hub_password     = var.docker_hub_password
+  fluentd_memory          = var.fluentd_memory
   image                   = var.image
   name                    = local.name
   rack_name               = local.rack_name

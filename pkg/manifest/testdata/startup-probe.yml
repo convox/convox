@@ -1,0 +1,44 @@
+services:
+  web-custom:
+    build: .
+    port: 8080
+    liveness:
+      path: /live
+      grace: 10
+      interval: 5
+      timeout: 5
+      successThreshold: 1
+      failureThreshold: 3
+    startupProbe:
+      path: /startup
+      grace: 60
+      interval: 30
+      timeout: 10
+      successThreshold: 1
+      failureThreshold: 10
+  web-inherited:
+    build: .
+    port: 8080
+    liveness:
+      path: /live
+      grace: 15
+      interval: 10
+      timeout: 3
+      successThreshold: 1
+      failureThreshold: 5
+    startupProbe:
+      path: /startup
+  web-tcp:
+    build: .
+    port: 8080
+    liveness:
+      path: /live
+      grace: 10
+      interval: 5
+      timeout: 5
+      successThreshold: 1
+      failureThreshold: 3
+    startupProbe:
+      tcpSocketPort: "8080"
+      grace: 30
+      failureThreshold: 20

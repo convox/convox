@@ -27,6 +27,7 @@ module "api" {
   buildkit_enabled          = var.buildkit_enabled
   cluster                   = var.cluster
   docker_hub_authentication = module.k8s.docker_hub_authentication
+  fluentd_memory            = var.fluentd_memory
   domain                    = module.router.endpoint
   high_availability         = var.high_availability
   image                     = var.image

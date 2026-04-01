@@ -1,7 +1,7 @@
 package api
 
 import (
-	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/convox/stdapi"
@@ -57,7 +57,7 @@ func (s *Server) ReleasePromoteValidate(c *stdapi.Context) error {
 	}
 
 	if strings.TrimSpace(r.Manifest) == "" {
-		return fmt.Errorf("can not promote a release with an empty manifest")
+		return stdapi.Errorf(http.StatusBadRequest, "can not promote a release with an empty manifest")
 	}
 
 	if a.Release != "" {
@@ -67,7 +67,7 @@ func (s *Server) ReleasePromoteValidate(c *stdapi.Context) error {
 		}
 
 		if r.Created.Before(or.Created) {
-			return fmt.Errorf("can not promote an older release, try rollback")
+			return stdapi.Errorf(http.StatusBadRequest, "can not promote an older release, try rollback")
 		}
 	}
 

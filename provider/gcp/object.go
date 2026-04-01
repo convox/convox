@@ -20,7 +20,7 @@ func (p *Provider) ObjectDelete(app, key string) error {
 	}
 
 	if !exists {
-		return fmt.Errorf("object not found: %s", key)
+		return structs.ErrNotFound("object not found: %s", key)
 	}
 
 	if err := p.storage.Bucket(p.Bucket).Object(p.objectKey(app, key)).Delete(p.Context()); err != nil {

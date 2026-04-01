@@ -28,3 +28,8 @@ This command disables the installation of Fluentd in your rack.
 Disabling Fluentd can be beneficial if you have a different logging infrastructure in place or if you want to reduce the overhead of running additional services. Without Fluentd, you will need to ensure that your logs are still being captured and managed effectively by your alternative logging solution.
 
 Fluentd is an essential component in Convox for forwarding logs to CloudWatch. Make sure to configure your logging system to maintain centralized log management if you choose to disable Fluentd.
+
+## See Also
+- [fluentd_memory](/configuration/rack-parameters/aws/fluentd_memory) to adjust Fluentd memory allocation without disabling it
+- [syslog](/configuration/rack-parameters/aws/syslog) for forwarding logs to an external syslog endpoint
+- [Logging](/configuration/logging) for an overview of Convox logging

@@ -16,16 +16,16 @@ Groups:
         default: "null"
         sideNote: Convox managed if not set
         type: string
-        regex: ^([a-z]+-[a-z]+-\d+[a-z])(,[a-z]+-[a-z]+-\d+[a-z])+$
-        description: Specify Availability Zones if you don't want them to be 
-          chosen at random from your region. &l Comma separated list &i e.g. &i - 
+        regex: ^([a-z]+-[a-z]+-\d+[a-z])(,[a-z]+-[a-z]+-\d+[a-z])*$
+        description: Specify Availability Zones if you don't want them to be
+          chosen at random from your region. &l Comma separated list &i e.g. &i -
           us-east-1b,us-east-1c,us-east-1d &l
       - name: vpc_id
         default: "null"
         sideNote: Convox managed if not set
         type: string
         regex: ^vpc-.+$
-        description: Used for installing a rack into an existing VPC. You must also 
+        description: Used for installing a rack into an existing VPC. You must also
           set the &i cidr &i and &i internet_gateway_id &i parameters
       - name: cidr
         default: 10.1.0.0/16
@@ -49,7 +49,7 @@ Groups:
         regex: ^(subnet-.+)(,subnet-.+)*$
         description: |
           &b Advanced Configuration &b &l This parameter is for edge use cases
-          where cluster needs to be installed into existing subnets. &l &l See 
+          where cluster needs to be installed into existing subnets. &l &l See
           full (documentation)[https://docs.convox.com/configuration/rack-parameters/aws/private_subnets_ids/] if you're considering this configuration. &l
       - name: public_subnets_ids
         default: "null"
@@ -58,7 +58,7 @@ Groups:
         regex: ^(subnet-.+)(,subnet-.+)*$
         description: |
           &b Advanced Configuration &b &l This parameter is for edge use cases
-          where cluster needs to be installed into existing subnets. &l &l See 
+          where cluster needs to be installed into existing subnets. &l &l See
           full (documentation)[https://docs.convox.com/configuration/rack-parameters/aws/public_subnets_ids/] if you're considering this configuration. &l
   - name: Security & Compliance
     order: 2
@@ -71,11 +71,16 @@ Groups:
         default: optional
         type: string
         description: Determines whether or not the metadata service requires session
-          tokens, also referred to as Instance Metadata Service Version 2 
+          tokens, also referred to as Instance Metadata Service Version 2
           ((IMDSv2)[https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html])
         allowedValues:
               - optional
               - required
+      - name: ebs_volume_encryption_enabled
+        default: "false"
+        type: boolean
+        description: Enables encryption for EBS volumes on primary node disks using
+          AWS-managed keys for data at rest encryption
       - name: nlb_security_group
         default: "null"
         sideNote: AWS default created unless set
@@ -86,6 +91,14 @@ Groups:
           default inbound traffic from any IP is allowed. &l &l Be cautious about
           this parameter, you might lose access to services by using improper
           security group. &l
+      - name: key_pair_name
+        default: "null"
+        sideNote: Not set by default
+        optional: true
+        type: string
+        regex: ^[a-zA-Z0-9._-]+$
+        description: AWS EC2 Key Pair name for SSH access to node instances. Applies
+          to all node groups.
       - name: tags
         default: "null"
         type: string
@@ -96,8 +109,7 @@ Groups:
         default: 2160h
         type: string
         regex: ^\d+h$
-        description: You can change this if the default Let'sEncrypt certificate renewal
-          period (90d) doesn't suit your use-case.
+        description: Certificate renewal period. The default is 90 days (2160h).
       - name: convox_domain_tls_cert_disable
         default: "false"
         type: boolean
@@ -117,16 +129,30 @@ Groups:
         default: "null"
         sideNote: Nginx default unless set
         type: string
-        regex: ^(SSLv2|SSLv3|TLSv1|TLSv1\.1|TLSv1\.2|TLSv1\.3)(
-          (SSLv2|SSLv3|TLSv1|TLSv1\.1|TLSv1\.2|TLSv1\.3))*$
+        regex: ^(SSLv2|SSLv3|TLSv1|TLSv1\.1|TLSv1\.2|TLSv1\.3)( (SSLv2|SSLv3|TLSv1|TLSv1\.1|TLSv1\.2|TLSv1\.3))*$
         description: |
           &b Advanced Configuration &b &l SSL protocols to use for
-          (Nginx)[https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_ssl_protocols] &l 
+          (Nginx)[https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_ssl_protocols] &l
           &l They must be listed separated by spaces. &i e.g. &i - TLSv1.2 TLSv1.3 &l
       - name: ecr_scan_on_push_enable
         default: "false"
         type: boolean
         description: Automatically scans images for vulnerabilities upon push to the ECR repository.
+      - name: docker_hub_username
+        default: "null"
+        sideNote: Not set by default
+        optional: true
+        type: string
+        description: Docker Hub username for authenticated image pulls. Must be paired
+          with &i docker_hub_password &i to avoid Docker Hub rate limits.
+      - name: docker_hub_password
+        default: "null"
+        sideNote: Not set by default
+        optional: true
+        type: string
+        description: Docker Hub access token for authenticated image pulls. Must be
+          paired with &i docker_hub_username &i. Use a read-only access token rather
+          than your account password.
   - name: Networking
     order: 3
     params:
@@ -141,14 +167,27 @@ Groups:
         description: With this parameter enabled, the client source IP will be available
           in the request header &i x-forwarded-for &i key. This is not applicable
           for &i internal_router &i
+      - name: build_disable_convox_resolver
+        default: "false"
+        type: boolean
+        description: Disables the Convox DNS resolver during builds to resolve DNS
+          resolution issues with certain package managers
+      - name: disable_convox_resolver
+        default: "false"
+        type: boolean
+        description: Disables the Convox DNS resolver cluster-wide in favor of the
+          Kubernetes resolver. Required when using &i proxy_protocol=true &i with
+          internal service routing.
   - name: Performance & Scaling
     order: 4
     params:
       - name: node_type
         default: t3.small
         type: string
-        regex: ^[a-z]+\d*[a-z]*\.\d*[a-z0-9]+(\.[a-z]+)?$
-        description: AWS EC2 (Instance type)[https://aws.amazon.com/ec2/instance-types/] used for cluster nodes.
+        regex: ^[a-z][a-z0-9-]*\.[a-z0-9]+(,[a-z][a-z0-9-]*\.[a-z0-9]+)*$
+        description: AWS EC2 (Instance type)[https://aws.amazon.com/ec2/instance-types/]
+          used for cluster nodes. Supports comma-separated list for mixed instance
+          configurations.
       - name: build_node_enabled
         default: "false"
         type: boolean
@@ -156,9 +195,10 @@ Groups:
           scaling during build time.
       - name: build_node_type
         optional: true
-        default: t3.small
+        default: "null"
+        sideNote: Defaults to node_type value
         type: string
-        regex: ^[a-z]+\d*[a-z]*\.\d*[a-z0-9]+(\.[a-z]+)?$
+        regex: ^[a-z][a-z0-9-]*\.[a-z0-9]+$
         description: |
           By default the build node will use the same instance type as the
           &i node_type &i
@@ -195,14 +235,21 @@ Groups:
         default: "100"
         type: integer
         description: When used with &b mixed &b &i node_capacity_type &i, can set the maximum
-          possilbe number of on demand nodes
+          possible number of on demand nodes
         allowedMinValue: 0
         allowedMaxValue: 1350
       - name: node_disk
         default: "20"
         type: integer
         description: Node disk size in GB
-        allowedMinValue: 1
+        allowedMinValue: 20
+      - name: node_max_unavailable_percentage
+        default: "0"
+        type: integer
+        description: Maximum percentage of nodes that can be unavailable during EKS
+          node group updates. Applies to all node groups.
+        allowedMinValue: 0
+        allowedMaxValue: 100
       - name: efs_csi_driver_enable
         default: "false"
         type: boolean
@@ -210,7 +257,29 @@ Groups:
       - name: gpu_tag_enable
         default: "false"
         type: boolean
-        description: GPU tagging is not available in all AWS Regions.
+        description: Enables GPU instance tagging for node group scheduling.
+          Not available in all AWS Regions.
+      - name: nvidia_device_plugin_enable
+        default: "false"
+        type: boolean
+        description: Enables the NVIDIA GPU device plugin for GPU-accelerated workloads.
+          Requires GPU-enabled instance types (P3, P4, G4, G5 families).
+      - name: nvidia_device_time_slicing_replicas
+        default: "0"
+        type: integer
+        description: Number of virtual GPU replicas per physical GPU for time-slicing.
+          Requires &i nvidia_device_plugin_enable=true &i.
+        allowedMinValue: 0
+      - name: keda_enable
+        default: "false"
+        type: boolean
+        description: Installs KEDA (Kubernetes Event-Driven Autoscaling) for scaling
+          based on event sources like SQS queue depth, Kafka lag, or custom metrics.
+      - name: vpa_enable
+        default: "false"
+        type: boolean
+        description: Installs Vertical Pod Autoscaler (VPA) for automatic CPU and
+          memory request right-sizing based on observed usage patterns.
       - name: idle_timeout
         default: "3600"
         type: integer
@@ -220,7 +289,8 @@ Groups:
       - name: pdb_default_min_available_percentage
         default: "50"
         type: integer
-        description: The minimum number of pods that must be available at any time
+        description: Minimum percentage of pods that must remain available during
+          disruptions. Set to -1 to disable.
         allowedMinValue: -1
         allowedMaxValue: 101
       - name: kubelet_registry_pull_qps
@@ -255,19 +325,71 @@ Groups:
           Unix cron syntax format. &l &l Example: "0 0 * * 0" &l &l Rack API and
           App's Services will be inaccessible during this time &l &l Must also
           configure &i schedule_rack_scale_down &i &l
+      - name: additional_node_groups_config
+        default: "null"
+        sideNote: Not configured by default
+        optional: true
+        type: string
+        description: |
+          &b Advanced Configuration &b &l JSON array of additional node group
+          configurations for workload-specific optimization. &l &l See
+          full (documentation)[https://docs.convox.com/configuration/rack-parameters/aws/additional_node_groups_config/]
+          for configuration format. &l
+      - name: additional_build_groups_config
+        default: "null"
+        sideNote: Not configured by default
+        optional: true
+        type: string
+        description: |
+          &b Advanced Configuration &b &l JSON array of dedicated build node group
+          configurations for build isolation and performance tuning. &l &l See
+          full (documentation)[https://docs.convox.com/configuration/rack-parameters/aws/additional_build_groups_config/]
+          for configuration format. &l
+      - name: user_data
+        default: "null"
+        sideNote: Not set by default
+        optional: true
+        type: string
+        description: Custom commands appended to EC2 instance user data scripts.
+          Executed during instance initialization with root privileges. Must not
+          include a shebang line.
+      - name: user_data_url
+        default: "null"
+        sideNote: Not set by default
+        optional: true
+        type: string
+        regex: ^https?://.+$
+        description: URL to a script for EC2 instance initialization. Downloaded and
+          executed during instance startup. Must be accessible from EC2 instances.
+      - name: releases_to_retain_after_active
+        default: "0"
+        sideNote: Disabled by default
+        optional: true
+        type: integer
+        description: Number of releases to retain after the active release. Enables
+          automatic cleanup of old releases and ECR images. Works with
+          &i releases_to_retain_task_run_interval_hour &i.
+        allowedMinValue: 0
+      - name: releases_to_retain_task_run_interval_hour
+        default: "24"
+        type: integer
+        description: Interval in hours at which the release cleanup task runs. Requires
+          &i releases_to_retain_after_active &i to be set.
+        allowedMinValue: 1
   - name: Logging & Monitoring
     order: 5
     params:
       - name: access_log_retention_in_days
         default: "7"
         type: integer
-        description: Nginx access logs stored in CloudWatch
+        description: Number of days to retain Nginx access logs in CloudWatch.
+          Set to -1 to disable retention limits.
         allowedMinValue: -1
       - name: syslog
         default: "null"
-        sideNote: Not forwared by default
+        sideNote: Not forwarded by default
         type: string
-        regex: ^(tcp|udp|tcp\+tls|udp\+tls)://[a-zA-Z\d.-]+(:\d+)?$
+        regex: ^(tcp|udp|tcp\+tls|udp\+tls)://[a-zA-Z\d._-]+(:\d+)?$
         description: Forward logs to a syslog endpoint  &l &i e.g. &i - tcp+tls://example.org:1234 &l
         optional: true
       - name: fluentd_disable
@@ -275,3 +397,9 @@ Groups:
         type: boolean
         description: Disable fluentd if you're using another monitoring solution. &l This
           will disable CloudWatch metrics. &l
+      - name: fluentd_memory
+        default: 200Mi
+        type: string
+        regex: ^\d+(Mi|Gi)$
+        description: Memory request and limit for the Fluentd DaemonSet. Increase
+          if Fluentd pods are experiencing OOMKills.

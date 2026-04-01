@@ -3,10 +3,6 @@ variable "access_log_retention_in_days" {
   type    = string
 }
 
-variable "arm_type" {
-  default = false
-}
-
 variable "cluster" {
   type = string
 }
@@ -14,6 +10,11 @@ variable "cluster" {
 variable "fluentd_disable" {
   type    = bool
   default = false
+}
+
+variable "fluentd_memory" {
+  type    = string
+  default = "200Mi"
 }
 
 // for eks addons dependency

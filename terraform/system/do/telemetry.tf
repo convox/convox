@@ -21,6 +21,7 @@ locals {
     settings = var.settings
     syslog = var.syslog
     telemetry = var.telemetry
+    terraform_update_timeout = var.terraform_update_timeout
     token = var.token
     whitelist = var.whitelist
     }
@@ -44,6 +45,7 @@ locals {
     settings = ""
     syslog = ""
     telemetry = "false"
+    terraform_update_timeout = "2h"
     token = ""
     whitelist = "0.0.0.0/0"
     }

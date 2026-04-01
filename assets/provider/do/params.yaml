@@ -1,0 +1,70 @@
+Groups:
+  - name: Immutable
+    order: 1
+    params:
+      - name: high_availability
+        default: "true"
+        type: boolean
+        description: Setting this to false will create a cluster with fewer redundant
+          resources for cost optimization
+      - name: region
+        default: nyc3
+        type: string
+        regex: ^[a-z]{3}\d$
+        description: DigitalOcean region slug where the rack will be deployed. See
+          (DigitalOcean regions)[https://docs.digitalocean.com/platform/regional-availability/]
+          for available options.
+  - name: Security & Compliance
+    order: 2
+    params:
+      - name: cert_duration
+        default: 2160h
+        type: string
+        regex: ^\d+h$
+        description: Certificate renewal period. The default is 90 days (2160h).
+      - name: docker_hub_username
+        default: "null"
+        sideNote: Not set by default
+        optional: true
+        type: string
+        description: Docker Hub username for authenticated image pulls. Must be paired
+          with &i docker_hub_password &i to avoid Docker Hub rate limits.
+      - name: docker_hub_password
+        default: "null"
+        sideNote: Not set by default
+        optional: true
+        type: string
+        description: Docker Hub access token for authenticated image pulls. Must be
+          paired with &i docker_hub_username &i. Use a read-only access token rather
+          than your account password.
+  - name: Performance & Scaling
+    order: 4
+    params:
+      - name: node_type
+        default: s-2vcpu-4gb
+        type: string
+        regex: ^[a-z][a-z0-9_]*-[a-z0-9-]+$
+        description: DigitalOcean (Droplet size)[https://slugs.do-api.dev/] slug used
+          for cluster nodes.
+      - name: registry_disk
+        default: 50Gi
+        type: string
+        regex: ^\d+Gi$
+        description: Size of the internal registry disk in Kubernetes volume format
+          &l &i e.g. &i - 50Gi, 100Gi &l
+  - name: Logging & Monitoring
+    order: 5
+    params:
+      - name: syslog
+        default: "null"
+        sideNote: Not forwarded by default
+        type: string
+        regex: ^(tcp|udp|tcp\+tls|udp\+tls)://[a-zA-Z\d._-]+(:\d+)?$
+        description: Forward logs to a syslog endpoint  &l &i e.g. &i - tcp+tls://example.org:1234 &l
+        optional: true
+      - name: fluentd_memory
+        default: 200Mi
+        type: string
+        regex: ^\d+(Mi|Gi)$
+        description: Memory request and limit for the Fluentd DaemonSet. Increase
+          if Fluentd pods are experiencing OOMKills.

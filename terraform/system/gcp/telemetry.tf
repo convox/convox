@@ -20,6 +20,7 @@ locals {
     settings = var.settings
     syslog = var.syslog
     telemetry = var.telemetry
+    terraform_update_timeout = var.terraform_update_timeout
     whitelist = var.whitelist
     }
 
@@ -41,6 +42,7 @@ locals {
     settings = ""
     syslog = ""
     telemetry = "false"
+    terraform_update_timeout = "2h"
     whitelist = "0.0.0.0/0"
     }
 }

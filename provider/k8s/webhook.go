@@ -2,10 +2,10 @@ package k8s
 
 import (
 	"context"
-	"fmt"
 	"sort"
 	"strings"
 
+	"github.com/convox/convox/pkg/structs"
 	ac "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -50,15 +50,15 @@ func (p *Provider) webhookCreate(name, url string) error {
 	}
 
 	if name == "" {
-		return fmt.Errorf("name required")
+		return structs.ErrBadRequest("name required")
 	}
 
 	if url == "" {
-		return fmt.Errorf("url required")
+		return structs.ErrBadRequest("url required")
 	}
 
 	if _, ok := cm.Data[name]; ok {
-		return fmt.Errorf("webhook already exists: %s", name)
+		return structs.ErrConflict("webhook already exists: %s", name)
 	}
 
 	cm.Data[name] = url
@@ -77,7 +77,7 @@ func (p *Provider) webhookDelete(name string) error {
 	}
 
 	if _, ok := cm.Data[name]; !ok {
-		return fmt.Errorf("webhook does not exist: %s", name)
+		return structs.ErrNotFound("webhook does not exist: %s", name)
 	}
 
 	delete(cm.Data, name)

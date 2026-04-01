@@ -5,9 +5,8 @@ data "http" "releases" {
 locals {
   name      = lower(var.name)
   rack_name = lower(var.rack_name)
-  arm_type  = module.platform.arch == "arm64"
   current   = jsondecode(data.http.releases.response_body).tag_name
-  release   = local.arm_type ? format("%s-%s", coalesce(var.release, local.current), "arm64") : coalesce(var.release, local.current)
+  release   = coalesce(var.release, local.current)
 }
 
 provider "kubernetes" {

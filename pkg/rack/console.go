@@ -500,6 +500,9 @@ func listConsole(c *stdcli.Context) ([]Console, error) {
 		return nil, err
 	case nil:
 	default:
+		if os.Getenv("CONVOX_DEBUG") == "true" {
+			fmt.Fprintf(os.Stderr, "debug: listConsole: unable to reach console at %s: %s\n", host, err)
+		}
 		return []Console{}, nil
 	}
 

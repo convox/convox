@@ -1,0 +1,69 @@
+Groups:
+  - name: Immutable
+    order: 1
+    params:
+      - name: region
+        default: us-east1
+        type: string
+        regex: ^[a-z]+-[a-z]+\d+$
+        description: GCP region where the rack will be deployed. See
+          (GCP regions)[https://cloud.google.com/about/locations] for available options.
+  - name: Security & Compliance
+    order: 2
+    params:
+      - name: cert_duration
+        default: 2160h
+        type: string
+        regex: ^\d+h$
+        description: Certificate renewal period. The default is 90 days (2160h).
+      - name: docker_hub_username
+        default: "null"
+        sideNote: Not set by default
+        optional: true
+        type: string
+        description: Docker Hub username for authenticated image pulls. Must be paired
+          with &i docker_hub_password &i to avoid Docker Hub rate limits.
+      - name: docker_hub_password
+        default: "null"
+        sideNote: Not set by default
+        optional: true
+        type: string
+        description: Docker Hub access token for authenticated image pulls. Must be
+          paired with &i docker_hub_username &i. Use a read-only access token rather
+          than your account password.
+  - name: Performance & Scaling
+    order: 4
+    params:
+      - name: node_type
+        default: n1-standard-2
+        type: string
+        regex: ^[a-z][a-z0-9]+-[a-z0-9-]+$
+        description: GCP (machine type)[https://cloud.google.com/compute/docs/machine-resource]
+          used for cluster nodes.
+      - name: node_disk
+        default: "100"
+        type: integer
+        description: Node disk size in GB
+        allowedMinValue: 10
+      - name: preemptible
+        default: "true"
+        type: boolean
+        description: Use (preemptible)[https://cloud.google.com/compute/docs/instances/preemptible]
+          instances for cost savings. Preemptible instances can be terminated by
+          Google Cloud with short notice.
+  - name: Logging & Monitoring
+    order: 5
+    params:
+      - name: syslog
+        default: "null"
+        sideNote: Not forwarded by default
+        type: string
+        regex: ^(tcp|udp|tcp\+tls|udp\+tls)://[a-zA-Z\d._-]+(:\d+)?$
+        description: Forward logs to a syslog endpoint  &l &i e.g. &i - tcp+tls://example.org:1234 &l
+        optional: true
+      - name: fluentd_memory
+        default: 200Mi
+        type: string
+        regex: ^\d+(Mi|Gi)$
+        description: Memory request and limit for the Fluentd DaemonSet. Increase
+          if Fluentd pods are experiencing OOMKills.

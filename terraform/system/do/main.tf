@@ -28,11 +28,12 @@ module "cluster" {
     digitalocean = digitalocean
   }
 
-  high_availability = var.high_availability
-  k8s_version       = var.k8s_version
-  name              = local.name
-  node_type         = var.node_type
-  region            = var.region
+  high_availability        = var.high_availability
+  k8s_version              = var.k8s_version
+  name                     = local.name
+  node_type                = var.node_type
+  terraform_update_timeout = var.terraform_update_timeout
+  region                   = var.region
 }
 
 module "rack" {
@@ -48,6 +49,7 @@ module "rack" {
   cluster               = module.cluster.id
   docker_hub_username   = var.docker_hub_username
   docker_hub_password   = var.docker_hub_password
+  fluentd_memory        = var.fluentd_memory
   high_availability     = var.high_availability
   image                 = var.image
   name                  = local.name

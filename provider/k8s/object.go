@@ -16,7 +16,7 @@ import (
 func (p *Provider) ObjectDelete(app, key string) error {
 	err := os.Remove(p.objectFilename(app, key))
 	if os.IsNotExist(err) {
-		return errors.WithStack(fmt.Errorf("object not found: %s", key))
+		return errors.WithStack(structs.ErrNotFound("object not found: %s", key))
 	}
 	if err != nil {
 		return errors.WithStack(err)
@@ -40,7 +40,7 @@ func (p *Provider) ObjectExists(app, key string) (bool, error) {
 func (p *Provider) ObjectFetch(app, key string) (io.ReadCloser, error) {
 	fd, err := os.Open(p.objectFilename(app, key))
 	if os.IsNotExist(err) {
-		return nil, errors.WithStack(fmt.Errorf("object not found: %s", key))
+		return nil, errors.WithStack(structs.ErrNotFound("object not found: %s", key))
 	}
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -50,7 +50,7 @@ func (p *Provider) ObjectFetch(app, key string) (io.ReadCloser, error) {
 }
 
 func (p *Provider) ObjectList(app, prefix string) ([]string, error) {
-	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
+	return nil, errors.WithStack(structs.ErrNotImplemented("unimplemented"))
 }
 
 func (p *Provider) ObjectStore(app, key string, r io.Reader, opts structs.ObjectStoreOptions) (*structs.Object, error) {

@@ -2,9 +2,12 @@ package stdapi
 
 import (
 	"context"
+	"encoding/json"
+	stderrors "errors"
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
@@ -184,13 +187,15 @@ func (rt *Router) http(fn HandlerFunc) http.HandlerFunc {
 		}
 
 		if err := rt.handle(fn, c); err != nil {
-			switch t := err.(type) {
-			case Error:
-				c.logger.Append("code=%d", t.Code()).Error(err)
-				http.Error(c.response, t.Error(), t.Code())
-			case error:
+			// errors.As walks the Unwrap chain, so typed errors survive
+			// wrapping (e.g. errors.WithStack) that hides the interface
+			var apiErr Error
+			if stderrors.As(err, &apiErr) {
+				c.logger.Append("code=%d", apiErr.Code()).Error(err)
+				writeErrorResponse(c.response, c.request, apiErr.Error(), apiErr.Code())
+			} else {
 				c.logger.Error(err)
-				http.Error(c.response, t.Error(), http.StatusInternalServerError)
+				writeErrorResponse(c.response, c.request, err.Error(), http.StatusInternalServerError)
 			}
 		}
 	}
@@ -229,6 +234,26 @@ func (rt *Router) wrap(fn HandlerFunc, m ...Middleware) HandlerFunc {
 	}
 
 	return m[0](rt.wrap(fn, m[1:len(m)]...))
+}
+
+func acceptsJSON(r *http.Request) bool {
+	for _, part := range strings.Split(r.Header.Get("Accept"), ",") {
+		mt := strings.TrimSpace(strings.SplitN(part, ";", 2)[0])
+		if mt == "application/json" {
+			return true
+		}
+	}
+	return false
+}
+
+func writeErrorResponse(w http.ResponseWriter, r *http.Request, msg string, code int) {
+	if acceptsJSON(r) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(code)
+		json.NewEncoder(w).Encode(map[string]string{"error": msg})
+		return
+	}
+	http.Error(w, msg, code)
 }
 
 // type responseWriter struct {

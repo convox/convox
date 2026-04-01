@@ -18,7 +18,7 @@ type Service struct {
 	stopch   chan struct{}
 }
 
-func NewService(kc *kubernetes.Clientset) (*Service, error) {
+func NewService(kc kubernetes.Interface) (*Service, error) {
 	s := &Service{
 		errch:  make(chan error),
 		hosts:  map[string]string{},

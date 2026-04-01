@@ -5,10 +5,11 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
-  cluster   = var.cluster
-  image     = "ddollar/fluentd:1.13"
-  namespace = var.namespace
-  rack      = var.rack
+  cluster        = var.cluster
+  fluentd_memory = var.fluentd_memory
+  image          = "ddollar/fluentd:1.13"
+  namespace      = var.namespace
+  rack           = var.rack
 
   target = templatefile("${path.module}/target.conf.tpl", {
     elasticsearch = var.elasticsearch,

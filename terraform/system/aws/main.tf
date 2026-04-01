@@ -38,13 +38,13 @@ locals {
   // var.node_type can be assigned a comma separated list of instance types
   node_type       = split(",", var.node_type)[0]
   build_node_type = var.build_node_type != "" ? var.build_node_type : local.node_type
-  arm_type        = substr(local.node_type, 0, 2) == "a1" || substr(local.node_type, 0, 3) == "c6g" || substr(local.node_type, 0, 3) == "c7g" || substr(local.node_type, 0, 3) == "m6g" || substr(local.node_type, 0, 3) == "r6g" || substr(local.node_type, 0, 3) == "t4g"
-  build_arm_type  = substr(local.build_node_type, 0, 2) == "a1" || substr(local.build_node_type, 0, 3) == "c6g" || substr(local.build_node_type, 0, 3) == "c7g" || substr(local.build_node_type, 0, 3) == "m6g" || substr(local.build_node_type, 0, 3) == "r6g" || substr(local.build_node_type, 0, 3) == "t4g"
+  arm_type        = module.node_arch.is_arm
+  build_arm_type  = module.build_node_arch.is_arm
   current         = jsondecode(data.http.releases.response_body).tag_name
   gpu_type        = substr(local.node_type, 0, 1) == "g" || substr(local.node_type, 0, 1) == "p"
   build_gpu_type  = substr(local.build_node_type, 0, 1) == "g" || substr(local.build_node_type, 0, 1) == "p"
   image           = var.image
-  release         = local.arm_type ? format("%s-%s", coalesce(var.release, local.current), "arm64") : coalesce(var.release, local.current)
+  release         = coalesce(var.release, local.current)
   tag_map = length(var.tags) == 0 ? {} : {
     for v in split(",", var.tags) :
     "${split("=", v)[0]}" => split("=", v)[1]
@@ -54,6 +54,16 @@ locals {
   additional_build_groups = try(jsondecode(var.additional_build_groups_config), jsondecode(base64decode(var.additional_build_groups_config)), [])
 
   public_access_cidrs = var.eks_api_server_public_access_cidrs == "" ? ["0.0.0.0/0"] : split(",", var.eks_api_server_public_access_cidrs)
+}
+
+module "node_arch" {
+  source    = "../../helpers/aws"
+  node_type = local.node_type
+}
+
+module "build_node_arch" {
+  source    = "../../helpers/aws"
+  node_type = local.build_node_type
 }
 
 module "cluster" {
@@ -98,6 +108,7 @@ module "cluster" {
   node_disk                           = var.node_disk
   node_type                           = var.node_type
   node_max_unavailable_percentage     = var.node_max_unavailable_percentage
+  terraform_update_timeout            = var.terraform_update_timeout
   nvidia_device_plugin_enable         = var.nvidia_device_plugin_enable
   nvidia_device_time_slicing_replicas = var.nvidia_device_time_slicing_replicas
   private                             = var.private
@@ -140,10 +151,10 @@ module "fluentd" {
   ]
 
   access_log_retention_in_days = var.access_log_retention_in_days
-  arm_type                     = local.arm_type
   cluster                      = module.cluster.id
   eks_addons                   = module.cluster.eks_addons
   fluentd_disable              = var.fluentd_disable
+  fluentd_memory               = var.fluentd_memory
   namespace                    = "kube-system"
   oidc_arn                     = module.cluster.oidc_arn
   oidc_sub                     = module.cluster.oidc_sub

@@ -54,6 +54,7 @@ module "cluster" {
   node_type                           = var.node_type
   nvidia_device_plugin_enable         = var.nvidia_device_plugin_enable
   nvidia_device_time_slicing_replicas = var.nvidia_device_time_slicing_replicas
+  terraform_update_timeout            = var.terraform_update_timeout
   region                              = var.region
   resource_group                      = azurerm_resource_group.rack.id
   resource_group_name                 = azurerm_resource_group.rack.name
@@ -86,6 +87,7 @@ module "rack" {
   resource_group_location              = azurerm_resource_group.rack.location
   ssl_ciphers                          = var.ssl_ciphers
   ssl_protocols                        = var.ssl_protocols
+  fluentd_memory                       = var.fluentd_memory
   syslog                               = var.syslog
   tags                                 = local.tags
   telemetry                            = var.telemetry

@@ -1,0 +1,164 @@
+Groups:
+  - name: Immutable
+    order: 1
+    params:
+      - name: high_availability
+        default: "true"
+        type: boolean
+        description: Setting this to false will create a cluster with fewer redundant
+          resources for cost optimization
+      - name: region
+        default: eastus
+        type: string
+        regex: ^[a-z]+\d*$
+        description: Azure region where the rack will be deployed. See
+          (Azure regions)[https://azure.microsoft.com/en-us/explore/global-infrastructure/geographies/]
+          for available options.
+  - name: Security & Compliance
+    order: 2
+    params:
+      - name: cert_duration
+        default: 2160h
+        type: string
+        regex: ^\d+h$
+        description: Certificate renewal period. The default is 90 days (2160h).
+      - name: ssl_ciphers
+        default: "null"
+        sideNote: Nginx default unless set
+        type: string
+        regex: ^([A-Za-z0-9_+-]+)(:[A-Za-z0-9_+-]+)*$
+        description: |
+          &b Advanced Configuration &b &l SSL ciphers to use for
+          (Nginx)[https://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_ciphers]. &l
+          &l They must be listed separated by colons. &l
+      - name: ssl_protocols
+        default: "null"
+        sideNote: Nginx default unless set
+        type: string
+        regex: ^(SSLv2|SSLv3|TLSv1|TLSv1\.1|TLSv1\.2|TLSv1\.3)( (SSLv2|SSLv3|TLSv1|TLSv1\.1|TLSv1\.2|TLSv1\.3))*$
+        description: |
+          &b Advanced Configuration &b &l SSL protocols to use for
+          (Nginx)[https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_ssl_protocols] &l
+          &l They must be listed separated by spaces. &i e.g. &i - TLSv1.2 TLSv1.3 &l
+      - name: tags
+        default: "null"
+        type: string
+        regex: ^([^=\s,]+=[^\s,]+)(,[^=\s,]+=[^\s,]+)*$
+        description: Custom tags to add to Azure resources along side Convox managed
+          tags  &l &i e.g. &i key1=val1,key2=val2 &l
+      - name: docker_hub_username
+        default: "null"
+        sideNote: Not set by default
+        optional: true
+        type: string
+        description: Docker Hub username for authenticated image pulls. Must be paired
+          with &i docker_hub_password &i to avoid Docker Hub rate limits.
+      - name: docker_hub_password
+        default: "null"
+        sideNote: Not set by default
+        optional: true
+        type: string
+        description: Docker Hub access token for authenticated image pulls. Must be
+          paired with &i docker_hub_username &i. Use a read-only access token rather
+          than your account password.
+  - name: Networking
+    order: 3
+    params:
+      - name: nginx_additional_config
+        default: "null"
+        sideNote: Not set by default
+        optional: true
+        type: string
+        regex: ^([^=\s,]+=[^\s,]+)(,[^=\s,]+=[^\s,]+)*$
+        description: Additional Nginx configuration as comma-separated key=value pairs
+          &l &i e.g. &i key1=value1,key2=value2 &l
+      - name: nginx_image
+        default: "null"
+        sideNote: Default Nginx image unless set
+        optional: true
+        type: string
+        description: Custom Nginx ingress controller image to use instead of the default.
+  - name: Performance & Scaling
+    order: 4
+    params:
+      - name: node_type
+        default: Standard_D2_v3
+        type: string
+        regex: ^Standard_[A-Za-z][A-Za-z0-9_]+$
+        description: Azure (VM size)[https://learn.microsoft.com/en-us/azure/virtual-machines/sizes/overview]
+          used for cluster nodes. Only x86-based SKUs are supported.
+      - name: node_disk
+        default: "30"
+        type: integer
+        description: Node disk size in GB
+        allowedMinValue: 30
+      - name: min_on_demand_count
+        default: "3"
+        type: integer
+        description: Minimum number of on-demand nodes in the cluster
+        allowedMinValue: 1
+      - name: max_on_demand_count
+        default: "100"
+        type: integer
+        description: Maximum number of on-demand nodes in the cluster
+        allowedMinValue: 1
+      - name: idle_timeout
+        default: "4"
+        type: integer
+        description: Idle timeout value (in minutes) for the Rack Load Balancer
+        allowedMinValue: 4
+        allowedMaxValue: 100
+      - name: pdb_default_min_available_percentage
+        default: "50"
+        type: integer
+        description: Minimum percentage of pods that must remain available during
+          disruptions. Set to -1 to disable.
+        allowedMinValue: -1
+        allowedMaxValue: 101
+      - name: nvidia_device_plugin_enable
+        default: "false"
+        type: boolean
+        description: Enables the NVIDIA GPU device plugin for GPU-accelerated workloads.
+          Requires GPU-enabled VM sizes.
+      - name: nvidia_device_time_slicing_replicas
+        default: "0"
+        type: integer
+        description: Number of virtual GPU replicas per physical GPU for time-slicing.
+          Requires &i nvidia_device_plugin_enable=true &i.
+        allowedMinValue: 0
+      - name: additional_node_groups_config
+        default: "null"
+        sideNote: Not configured by default
+        optional: true
+        type: string
+        description: |
+          &b Advanced Configuration &b &l JSON array of additional node pool
+          configurations for workload-specific optimization. &l &l See
+          full (documentation)[https://docs.convox.com/configuration/rack-parameters/azure/additional_node_groups_config/]
+          for configuration format. &l
+      - name: additional_build_groups_config
+        default: "null"
+        sideNote: Not configured by default
+        optional: true
+        type: string
+        description: |
+          &b Advanced Configuration &b &l JSON array of dedicated build node pool
+          configurations for build isolation and performance tuning. &l &l See
+          full (documentation)[https://docs.convox.com/configuration/rack-parameters/azure/additional_build_groups_config/]
+          for configuration format. &l
+  - name: Logging & Monitoring
+    order: 5
+    params:
+      - name: syslog
+        default: "null"
+        sideNote: Not forwarded by default
+        type: string
+        regex: ^(tcp|udp|tcp\+tls|udp\+tls)://[a-zA-Z\d._-]+(:\d+)?$
+        description: Forward logs to a syslog endpoint  &l &i e.g. &i - tcp+tls://example.org:1234 &l
+        optional: true
+      - name: fluentd_memory
+        default: 200Mi
+        type: string
+        regex: ^\d+(Mi|Gi)$
+        description: Memory request and limit for the Fluentd DaemonSet. Increase
+          if Fluentd pods are experiencing OOMKills.

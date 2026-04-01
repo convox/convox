@@ -31,6 +31,11 @@ variable "syslog" {
   default = ""
 }
 
+variable "fluentd_memory" {
+  type    = string
+  default = "200Mi"
+}
+
 variable "target" {
   type = string
 }

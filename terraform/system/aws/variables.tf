@@ -96,6 +96,11 @@ variable "fluentd_disable" {
   default = false
 }
 
+variable "fluentd_memory" {
+  type    = string
+  default = "200Mi"
+}
+
 variable "disable_convox_resolver" {
   type    = bool
   default = false
@@ -253,6 +258,11 @@ variable "node_disk" {
 variable "node_max_unavailable_percentage" {
   type    = number
   default = 0
+}
+
+variable "terraform_update_timeout" {
+  type    = string
+  default = "2h"
 }
 
 variable "node_type" {
