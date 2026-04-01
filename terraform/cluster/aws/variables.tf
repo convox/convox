@@ -8,6 +8,11 @@ variable "additional_build_groups" {
   default = []
 }
 
+variable "ami_id" {
+  type    = string
+  default = ""
+}
+
 variable "arm_type" {
   default = false
 }

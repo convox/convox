@@ -188,6 +188,19 @@ Groups:
         description: AWS EC2 (Instance type)[https://aws.amazon.com/ec2/instance-types/]
           used for cluster nodes. Supports comma-separated list for mixed instance
           configurations.
+      - name: ami_id
+        default: "null"
+        sideNote: EKS-optimized AL2023 AMI used by default
+        optional: true
+        type: string
+        regex: ^ami-[a-f0-9]{8,17}$
+        description: |
+          &b Advanced Configuration &b &l Custom AMI ID for the core EKS node
+          groups (primary and build). Overrides the default EKS-optimized AL2023
+          AMI. &l &l &b Warning: &b Setting or changing this parameter will trigger
+          a rolling replacement of all core node groups. &l &l AMIs are
+          region-specific and must be AL2023-based and compatible with the
+          cluster's Kubernetes version. &l
       - name: build_node_enabled
         default: "false"
         type: boolean

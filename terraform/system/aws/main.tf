@@ -75,6 +75,7 @@ module "cluster" {
 
   additional_node_groups              = local.additional_node_groups
   additional_build_groups             = local.additional_build_groups
+  ami_id                              = var.ami_id
   arm_type                            = local.arm_type
   aws_ebs_csi_driver_version          = var.aws_ebs_csi_driver_version
   build_arm_type                      = local.build_arm_type

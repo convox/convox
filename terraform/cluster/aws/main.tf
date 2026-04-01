@@ -130,14 +130,14 @@ resource "aws_eks_node_group" "cluster" {
 
   count = var.high_availability ? 3 : 1
 
-  ami_type        = var.gpu_type ? "AL2023_x86_64_NVIDIA" : var.arm_type ? "AL2023_ARM_64_STANDARD" : "AL2023_x86_64_STANDARD"
+  ami_type        = var.ami_id != "" ? "CUSTOM" : var.gpu_type ? "AL2023_x86_64_NVIDIA" : var.arm_type ? "AL2023_ARM_64_STANDARD" : "AL2023_x86_64_STANDARD"
   capacity_type   = var.node_capacity_type == "MIXED" ? count.index == 0 ? "ON_DEMAND" : "SPOT" : var.node_capacity_type
   cluster_name    = aws_eks_cluster.cluster.name
   node_group_name = "${var.name}-${var.private ? data.aws_subnet.private_subnet_details[count.index].availability_zone : data.aws_subnet.public_subnet_details[count.index].availability_zone}-${count.index}${random_id.node_group.hex}"
   node_role_arn   = random_id.node_group.keepers.role_arn
   subnet_ids      = [var.private ? local.private_subnets_ids[count.index] : local.public_subnets_ids[count.index]]
   tags            = local.tags
-  version         = var.k8s_version
+  version         = var.ami_id != "" ? null : var.k8s_version
 
   launch_template {
     id      = aws_launch_template.cluster.id
@@ -185,7 +185,7 @@ resource "aws_eks_node_group" "cluster-build" {
   ]
 
   count           = var.build_node_enabled ? 1 : 0
-  ami_type        = var.build_gpu_type ? "AL2023_x86_64_NVIDIA" : var.build_arm_type ? "AL2023_ARM_64_STANDARD" : "AL2023_x86_64_STANDARD"
+  ami_type        = var.ami_id != "" ? "CUSTOM" : var.build_gpu_type ? "AL2023_x86_64_NVIDIA" : var.build_arm_type ? "AL2023_ARM_64_STANDARD" : "AL2023_x86_64_STANDARD"
   capacity_type   = "ON_DEMAND"
   cluster_name    = aws_eks_cluster.cluster.name
   instance_types  = split(",", random_id.build_node_group[0].keepers.node_type)
@@ -193,7 +193,7 @@ resource "aws_eks_node_group" "cluster-build" {
   node_role_arn   = random_id.build_node_group[0].keepers.role_arn
   subnet_ids      = [var.private ? local.private_subnets_ids[count.index] : local.public_subnets_ids[count.index]]
   tags            = local.tags
-  version         = var.k8s_version
+  version         = var.ami_id != "" ? null : var.k8s_version
 
   labels = {
     "convox-build" : "true"
@@ -311,6 +311,7 @@ resource "aws_launch_template" "cluster" {
     instance_metadata_tags      = var.imds_tags_enable ? "enabled" : "disabled"
   }
 
+  image_id      = var.ami_id != "" ? var.ami_id : null
   instance_type = split(",", random_id.node_group.keepers.node_type)[0]
 
   dynamic "tag_specifications" {
@@ -324,12 +325,20 @@ resource "aws_launch_template" "cluster" {
     }
   }
 
-  user_data = var.user_data_url != "" || var.user_data != "" || var.kubelet_registry_pull_qps != 5 || var.kubelet_registry_burst != 10 ? base64encode(templatefile("${path.module}/files/custom_user_data.sh", {
+  user_data = var.ami_id != "" ? base64encode(templatefile("${path.module}/files/custom_ami_userdata_al2023.sh", {
+    api_server_endpoint = aws_eks_cluster.cluster.endpoint,
+    api_server_ca       = aws_eks_cluster.cluster.certificate_authority[0].data,
+    name                = aws_eks_cluster.cluster.name,
+    cidr                = var.cidr,
+    cluster_dns         = local.kube_dns_ip,
+    node_labels         = "eks.amazonaws.com/nodegroup=${var.name}",
+    user_data           = local.launch_template_user_data_raw,
+  })) : (var.user_data_url != "" || var.user_data != "" || var.kubelet_registry_pull_qps != 5 || var.kubelet_registry_burst != 10 ? base64encode(templatefile("${path.module}/files/custom_user_data.sh", {
     kubelet_registry_pull_qps = var.kubelet_registry_pull_qps
     kubelet_registry_burst    = var.kubelet_registry_burst
     user_data_script_file     = var.user_data_url != "" ? data.http.user_data_content[0].response_body : ""
     user_data                 = var.user_data
-  })) : ""
+  })) : "")
 
   key_name = var.key_pair_name != "" ? var.key_pair_name : null
 }
@@ -343,6 +352,8 @@ resource "aws_launch_template" "cluster-build" {
       encrypted   = var.ebs_volume_encryption_enabled
     }
   }
+
+  image_id = var.ami_id != "" ? var.ami_id : null
 
   metadata_options {
     http_tokens                 = var.imds_http_tokens
@@ -361,6 +372,16 @@ resource "aws_launch_template" "cluster-build" {
       tags          = local.tags
     }
   }
+
+  user_data = var.ami_id != "" ? base64encode(templatefile("${path.module}/files/custom_ami_userdata_al2023.sh", {
+    api_server_endpoint = aws_eks_cluster.cluster.endpoint,
+    api_server_ca       = aws_eks_cluster.cluster.certificate_authority[0].data,
+    name                = aws_eks_cluster.cluster.name,
+    cidr                = var.cidr,
+    cluster_dns         = local.kube_dns_ip,
+    node_labels         = "eks.amazonaws.com/nodegroup=${var.name}-build",
+    user_data           = "",
+  })) : null
 
   key_name = var.key_pair_name != "" ? var.key_pair_name : null
 }
