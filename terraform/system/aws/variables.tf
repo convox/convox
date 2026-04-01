@@ -2,6 +2,11 @@ variable "access_log_retention_in_days" {
   default = "7"
 }
 
+variable "ami_id" {
+  type    = string
+  default = ""
+}
+
 variable "additional_node_groups_config" {
   type    = string
   default = ""
