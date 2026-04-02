@@ -92,6 +92,14 @@ services:
         external:
           - name: "datadogmetric@default:web-requests"
             averageValue: 200
+    securityContext:
+      runAsNonRoot: true
+      readOnlyRootFilesystem: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+      seccompProfile: RuntimeDefault
     singleton: false
     sticky: true
     termination:
@@ -135,6 +143,7 @@ services:
 | **privileged**  | boolean    | false               | Set to **true** to allow [Processes](/reference/primitives/app/process) of this Service to run as root inside their container. Use with caution as this grants elevated permissions |
 | **resources**   | list       |                     | A list of [Resources](/reference/primitives/app/resource) to make available to this Service (e.g. databases) |
 | **scale**       | map        | 1                   | Define scaling parameters (see below)                                                                                                      |
+| **securityContext** | map   |                     | Container security settings including capabilities, read-only filesystem, and seccomp profiles (see below)                               |
 | **singleton**   | boolean    | false               | Set to **true** to prevent extra [Processes](/reference/primitives/app/process) of this Service from being started during deployments                               |
 | **sticky**      | boolean    | false               | Set to **true** to enable sticky sessions                                                                                                    |
 | **termination** | map        |                     | Termination related configuration                                                                                                          |
@@ -441,6 +450,59 @@ services:
 ```
 
 
+
+### securityContext
+
+Container-level security settings. These settings control Linux security features for the container.
+
+| Attribute                  | Type     | Default | Description                                                                                                |
+| -------------------------- | -------- | ------- | ---------------------------------------------------------------------------------------------------------- |
+| **runAsNonRoot**           | boolean  |         | Require the container to run as a non-root user                                                            |
+| **runAsUser**              | number   |         | The UID to run the container as                                                                            |
+| **runAsGroup**             | number   |         | The GID to run the container as                                                                            |
+| **readOnlyRootFilesystem** | boolean  |         | Mount the root filesystem as read-only                                                                     |
+| **allowPrivilegeEscalation** | boolean |        | Whether a process can gain more privileges than its parent process. Set to **false** for security hardening |
+| **capabilities**           | map      |         | Linux capabilities to add or drop (see below)                                                              |
+| **seccompProfile**         | string   |         | The seccomp profile type (e.g., `RuntimeDefault`, `Localhost`, `Unconfined`)                               |
+
+```yaml
+services:
+  web:
+    build: .
+    port: 3000
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      readOnlyRootFilesystem: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+      seccompProfile: RuntimeDefault
+```
+
+### securityContext.capabilities
+
+| Attribute  | Type   | Default | Description                                                                                           |
+| ---------- | ------ | ------- | ----------------------------------------------------------------------------------------------------- |
+| **drop**   | list   |         | List of Linux capabilities to drop. Use `ALL` to drop all capabilities                               |
+| **add**    | list   |         | List of Linux capabilities to add back (typically after dropping ALL)                                |
+
+```yaml
+services:
+  web:
+    build: .
+    port: 3000
+    securityContext:
+      capabilities:
+        drop:
+          - ALL
+        add:
+          - NET_BIND_SERVICE
+```
+
+&nbsp;
 
 ### termination
 
