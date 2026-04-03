@@ -87,7 +87,7 @@ locals {
     consolidateAfter    = var.karpenter_consolidate_after
     budgets             = [{ nodes = var.karpenter_disruption_budget_nodes }]
   }
-  np_final_disruption = length(local.kc_np_disruption) > 0 ? local.kc_np_disruption : local.np_default_disruption
+  np_final_disruption = length(keys(local.kc_np_disruption)) > 0 ? merge(local.np_default_disruption, local.kc_np_disruption) : local.np_default_disruption
 
   # Weight: override or default (0 = not set)
   np_final_weight = lookup(local.kc_np, "weight", null)
