@@ -181,27 +181,38 @@ func build(rack sdk.Interface, c *stdcli.Context, development bool) (*structs.Bu
 		return nil, err
 	}
 
-	count, _ := io.Copy(c, r)
+	count, copyErr := io.Copy(c, r)
+	if copyErr != nil {
+		c.Writef("warning: build log stream interrupted: %s\n", copyErr)
+	}
 	defer finalizeBuildLogs(rack, c, b, count)
 
+	buildTimeout := time.After(60 * time.Minute)
+	tick := time.NewTicker(1 * time.Second)
+	defer tick.Stop()
+
 	for {
-		b, err = rack.BuildGet(app(c), b.Id)
-		if err != nil {
-			return nil, err
-		}
+		select {
+		case <-buildTimeout:
+			return nil, fmt.Errorf("build %s timed out after 60 minutes (status: %s). Check: convox builds info %s", b.Id, b.Status, b.Id)
+		case <-tick.C:
+			b, err = rack.BuildGet(app(c), b.Id)
+			if err != nil {
+				return nil, err
+			}
 
-		if b.Status == "failed" {
-			return nil, fmt.Errorf("build failed")
+			switch b.Status {
+			case "created", "running":
+				// keep waiting
+			case "complete":
+				return b, nil
+			case "failed":
+				return nil, fmt.Errorf("build failed")
+			default:
+				return nil, fmt.Errorf("unexpected build status: %s", b.Status)
+			}
 		}
-
-		if b.Status != "running" {
-			break
-		}
-
-		time.Sleep(1 * time.Second)
 	}
-
-	return b, nil
 }
 
 func buildExternal(rack sdk.Interface, c *stdcli.Context, opts structs.BuildCreateOptions) (*structs.Build, error) {
@@ -290,7 +301,15 @@ func buildExternal(rack sdk.Interface, c *stdcli.Context, opts structs.BuildCrea
 }
 
 func finalizeBuildLogs(rack structs.Provider, c *stdcli.Context, b *structs.Build, count int64) error {
-	r, err := rack.BuildLogs(b.App, b.Id, structs.LogsOptions{})
+	current, err := rack.BuildGet(b.App, b.Id)
+	if err != nil {
+		return err
+	}
+	if current.Status == "running" || current.Status == "created" {
+		return nil
+	}
+
+	r, err := rack.BuildLogs(current.App, current.Id, structs.LogsOptions{})
 	if err != nil {
 		return err
 	}
