@@ -89,6 +89,10 @@ func InstallTerraform(c *stdcli.Context, provider, name, version string, options
 		return err
 	}
 
+	if err := t.reconcileVarsWithModule(version); err != nil {
+		return err
+	}
+
 	if err := t.apply(); err != nil {
 		return err
 	}
