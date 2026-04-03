@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -310,6 +311,10 @@ func (t Terraform) UpdateParams(params map[string]string) error {
 		return err
 	}
 
+	if err := t.reconcileVarsWithModule(release); err != nil {
+		return err
+	}
+
 	if err := t.apply(); err != nil {
 		return err
 	}
@@ -345,6 +350,10 @@ func (t Terraform) UpdateVersion(version string, force bool) error {
 		return err
 	}
 
+	if err := t.reconcileVarsWithModule(version); err != nil {
+		return err
+	}
+
 	if err := t.apply(); err != nil {
 		return err
 	}
@@ -363,6 +372,109 @@ func (t Terraform) apply() error {
 	}
 
 	return nil
+}
+
+// moduleVarNames returns the set of variable names declared by the downloaded
+// system module after terraform init. It reads the Terraform modules manifest
+// to locate the module directory, then scans .tf files for variable blocks.
+func (t Terraform) moduleVarNames() (map[string]bool, error) {
+	dir, err := t.settingsDirectory()
+	if err != nil {
+		return nil, err
+	}
+
+	manifestPath := filepath.Join(dir, ".terraform", "modules", "modules.json")
+	data, err := ioutil.ReadFile(manifestPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var manifest struct {
+		Modules []struct {
+			Key string `json:"Key"`
+			Dir string `json:"Dir"`
+		} `json:"Modules"`
+	}
+
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		return nil, err
+	}
+
+	moduleDir := ""
+	for _, m := range manifest.Modules {
+		if m.Key == "system" {
+			moduleDir = filepath.Join(dir, m.Dir)
+			break
+		}
+	}
+
+	if moduleDir == "" {
+		return nil, fmt.Errorf("system module not found in manifest")
+	}
+
+	files, err := filepath.Glob(filepath.Join(moduleDir, "*.tf"))
+	if err != nil {
+		return nil, err
+	}
+
+	varNames := map[string]bool{}
+	re := regexp.MustCompile(`(?m)^variable\s+"([^"]+)"`)
+
+	for _, f := range files {
+		content, err := ioutil.ReadFile(f)
+		if err != nil {
+			continue
+		}
+		for _, match := range re.FindAllStringSubmatch(string(content), -1) {
+			varNames[match[1]] = true
+		}
+	}
+
+	return varNames, nil
+}
+
+// reconcileVarsWithModule filters rack parameters to only those accepted by
+// the target module version. When a rack changes versions, previously-set
+// parameters may not exist in the new version's module. Without filtering,
+// Terraform errors with "argument not expected." This scans the downloaded
+// module for declared variables and removes any unrecognized parameters from
+// both main.tf and vars.json before apply.
+func (t Terraform) reconcileVarsWithModule(release string) error {
+	accepted, err := t.moduleVarNames()
+	if err != nil {
+		return nil
+	}
+
+	// sanity check: every version should declare name and release
+	if !accepted["name"] || !accepted["release"] {
+		return nil
+	}
+
+	vars, err := t.vars()
+	if err != nil {
+		return err
+	}
+
+	var removed []string
+	for k := range vars {
+		if !accepted[k] {
+			removed = append(removed, k)
+		}
+	}
+
+	if len(removed) == 0 {
+		return nil
+	}
+
+	sort.Strings(removed)
+	fmt.Fprintf(os.Stderr, "NOTICE: removing parameters not supported by version %s: %s\n",
+		release, strings.Join(removed, ", "))
+
+	for _, k := range removed {
+		delete(vars, k)
+	}
+
+	return t.update(release, vars)
 }
 
 func (t Terraform) create(release string, vars map[string]string, state []byte) error {
