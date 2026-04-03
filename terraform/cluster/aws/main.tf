@@ -155,7 +155,6 @@ resource "aws_eks_node_group" "cluster" {
   depends_on = [
     aws_eks_cluster.cluster,
     aws_iam_openid_connect_provider.cluster,
-    kubectl_manifest.karpenter_nodepool_workload,
   ]
 
   count = var.high_availability ? 3 : 1
@@ -232,7 +231,6 @@ resource "aws_eks_node_group" "cluster-build" {
   depends_on = [
     aws_eks_cluster.cluster,
     aws_iam_openid_connect_provider.cluster,
-    kubectl_manifest.karpenter_nodepool_build,
   ]
 
   count           = var.build_node_enabled ? 1 : 0
