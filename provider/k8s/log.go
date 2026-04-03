@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/convox/convox/pkg/options"
@@ -126,7 +128,18 @@ func (p *Provider) newlogsConfigFlags(ns string) *genericclioptions.ConfigFlags 
 	cf.Insecure = options.Bool(true)
 	cf.KubeConfig = nil
 	cf.APIServer = options.String(p.Config.Host)
-	cf.BearerToken = options.String(p.Config.BearerToken)
+	// Read token fresh from disk to handle EKS projected service account
+	// token rotation. The BearerTokenFile is updated by the kubelet when
+	// the token is rotated, but BearerToken is a static string from startup.
+	if p.Config.BearerTokenFile != "" {
+		if token, err := os.ReadFile(p.Config.BearerTokenFile); err == nil {
+			cf.BearerToken = options.String(strings.TrimSpace(string(token)))
+		} else {
+			cf.BearerToken = options.String(p.Config.BearerToken)
+		}
+	} else {
+		cf.BearerToken = options.String(p.Config.BearerToken)
+	}
 	cf.CAFile = options.String(p.Config.CAFile)
 	cf.CertFile = options.String(p.Config.CertFile)
 	cf.DisableCompression = options.Bool(p.Config.DisableCompression)
