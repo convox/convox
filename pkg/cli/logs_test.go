@@ -27,6 +27,36 @@ func TestLogs(t *testing.T) {
 	})
 }
 
+func TestLogsMaxLogRequests(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppLogs", "app1", structs.LogsOptions{Prefix: options.Bool(true), MaxLogRequests: options.Int(50)}).Return(testLogs(fxLogs()), nil)
+
+		res, err := testExecute(e, "logs -a app1 --max-log-requests 50", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{
+			fxLogs()[0],
+			fxLogs()[1],
+		})
+	})
+}
+
+func TestLogsServiceMaxLogRequests(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("ServiceLogs", "app1", "web", structs.LogsOptions{Prefix: options.Bool(true), MaxLogRequests: options.Int(100)}).Return(testLogs(fxLogs()), nil)
+
+		res, err := testExecute(e, "logs -a app1 --service web --max-log-requests 100", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{
+			fxLogs()[0],
+			fxLogs()[1],
+		})
+	})
+}
+
 func TestLogsError(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		// i.On("ClientType").Return("standard")
