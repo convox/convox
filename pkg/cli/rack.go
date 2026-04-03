@@ -406,10 +406,12 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		return fmt.Errorf("karpenter_auth_mode cannot be disabled once enabled (AWS EKS access config migration is one-way)")
 	}
 
-	// karpenter_enabled=true requires karpenter_auth_mode to already be true OR be set to true in the same call
-	if params["karpenter_enabled"] == "true" {
-		if currentParams["karpenter_auth_mode"] != "true" && params["karpenter_auth_mode"] != "true" {
-			return fmt.Errorf("karpenter_enabled=true requires karpenter_auth_mode=true (set it first, or include karpenter_auth_mode=true in the same call)")
+	// karpenter_enabled=true requires karpenter_auth_mode to already be applied.
+	// The EKS access_config change and K8s resource creation cannot coexist in the
+	// same terraform apply — the provider loses its cluster endpoint mid-apply.
+	if params["karpenter_enabled"] == "true" && currentParams["karpenter_enabled"] != "true" {
+		if currentParams["karpenter_auth_mode"] != "true" {
+			return fmt.Errorf("karpenter_enabled=true requires karpenter_auth_mode=true to be applied first in a separate operation.\n  Run: convox rack params set karpenter_auth_mode=true\n  Wait for the update to complete, then set karpenter_enabled=true")
 		}
 	}
 
