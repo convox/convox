@@ -578,8 +578,9 @@ func TestValidateAndMutateParams_KarpenterNotAWS(t *testing.T) {
 // === Tests for karpenter_enabled gating ===
 
 func TestValidateAndMutateParams_KarpenterEnabledGating(t *testing.T) {
-	// When karpenter_enabled is not "true", validation inside the enabled block is skipped.
-	skippedCases := []struct {
+	// Param value validations fire whenever a karpenter param is set,
+	// regardless of whether karpenter_enabled is in the same call.
+	alwaysValidatedCases := []struct {
 		name   string
 		params map[string]string
 	}{
@@ -593,11 +594,11 @@ func TestValidateAndMutateParams_KarpenterEnabledGating(t *testing.T) {
 		{"reserved labels", map[string]string{"karpenter_node_labels": "convox.io/nodepool=x"}},
 		{"enabled=false explicit", map[string]string{"karpenter_enabled": "false", "karpenter_capacity_types": "invalid"}},
 	}
-	for _, tt := range skippedCases {
-		t.Run("skipped/"+tt.name, func(t *testing.T) {
+	for _, tt := range alwaysValidatedCases {
+		t.Run("validated/"+tt.name, func(t *testing.T) {
 			err := validateAndMutateParams(tt.params, "aws", map[string]string{})
-			if err != nil {
-				t.Errorf("expected no error (gating should skip), got: %v", err)
+			if err == nil {
+				t.Errorf("expected error for invalid param, got nil")
 			}
 		})
 	}
@@ -618,6 +619,36 @@ func TestValidateAndMutateParams_KarpenterEnabledGating(t *testing.T) {
 			t.Error("expected error: additional_karpenter_nodepools_config validated even without karpenter_enabled=true")
 		}
 	})
+}
+
+// === Tests for karpenter_arch ===
+
+func TestValidateAndMutateParams_Arch(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		wantErr bool
+	}{
+		{"valid amd64", "amd64", false},
+		{"valid arm64", "arm64", false},
+		{"valid both", "amd64,arm64", false},
+		{"valid with spaces", "amd64, arm64", false},
+		{"invalid arch", "x86_64", true},
+		{"typo amd65", "amd65", true},
+		{"nonsense", "invalid", true},
+		{"mixed valid/invalid", "amd64,x86_64", true},
+		{"empty string", "", false},
+		{"trailing comma", "amd64,", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := map[string]string{"karpenter_arch": tt.value}
+			err := validateAndMutateParams(params, "aws", map[string]string{})
+			if (err != nil) != tt.wantErr {
+				t.Errorf("karpenter_arch=%q: got err=%v, wantErr=%v", tt.value, err, tt.wantErr)
+			}
+		})
+	}
 }
 
 // === Tests for karpenter_capacity_types and karpenter_build_capacity_types ===

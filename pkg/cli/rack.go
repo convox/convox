@@ -421,6 +421,7 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 	var karpenterInjectedKeys []string
 	if params["karpenter_enabled"] == "true" {
 		karpenterRevalidateKeys := []string{
+			"karpenter_arch",
 			"karpenter_capacity_types", "karpenter_cpu_limit", "karpenter_memory_limit_gb",
 			"karpenter_consolidate_after", "karpenter_build_consolidate_after",
 			"karpenter_node_expiry", "karpenter_disruption_budget_nodes",
@@ -437,118 +438,125 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 			}
 		}
 	}
-	if params["karpenter_enabled"] == "true" || currentParams["karpenter_enabled"] == "true" {
-		if v, ok := params["karpenter_capacity_types"]; ok && v != "" {
-			for _, ct := range strings.Split(v, ",") {
-				ct = strings.TrimSpace(ct)
-				if ct != "on-demand" && ct != "spot" {
-					return fmt.Errorf("invalid karpenter capacity type: %s (must be on-demand or spot)", ct)
-				}
+	if v, ok := params["karpenter_arch"]; ok && v != "" {
+		for _, arch := range strings.Split(v, ",") {
+			arch = strings.TrimSpace(arch)
+			if arch != "amd64" && arch != "arm64" {
+				return fmt.Errorf("invalid karpenter architecture: %s (must be amd64 or arm64)", arch)
 			}
 		}
+	}
 
-		if v, ok := params["karpenter_cpu_limit"]; ok && v != "" {
-			n, err := strconv.Atoi(v)
-			if err != nil || n <= 0 {
-				return fmt.Errorf("karpenter_cpu_limit must be a positive integer")
+	if v, ok := params["karpenter_capacity_types"]; ok && v != "" {
+		for _, ct := range strings.Split(v, ",") {
+			ct = strings.TrimSpace(ct)
+			if ct != "on-demand" && ct != "spot" {
+				return fmt.Errorf("invalid karpenter capacity type: %s (must be on-demand or spot)", ct)
 			}
 		}
+	}
 
-		if v, ok := params["karpenter_memory_limit_gb"]; ok && v != "" {
-			n, err := strconv.Atoi(v)
-			if err != nil || n <= 0 {
-				return fmt.Errorf("karpenter_memory_limit_gb must be a positive integer")
+	if v, ok := params["karpenter_cpu_limit"]; ok && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			return fmt.Errorf("karpenter_cpu_limit must be a positive integer")
+		}
+	}
+
+	if v, ok := params["karpenter_memory_limit_gb"]; ok && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			return fmt.Errorf("karpenter_memory_limit_gb must be a positive integer")
+		}
+	}
+
+	durationRe := regexp.MustCompile(`^\d+[smh]$`)
+	for _, dk := range []string{"karpenter_consolidate_after", "karpenter_build_consolidate_after"} {
+		if v, ok := params[dk]; ok && v != "" {
+			if !durationRe.MatchString(v) {
+				return fmt.Errorf("%s must be a duration like 30s, 5m, or 1h", dk)
 			}
 		}
+	}
 
-		durationRe := regexp.MustCompile(`^\d+[smh]$`)
-		for _, dk := range []string{"karpenter_consolidate_after", "karpenter_build_consolidate_after"} {
-			if v, ok := params[dk]; ok && v != "" {
-				if !durationRe.MatchString(v) {
-					return fmt.Errorf("%s must be a duration like 30s, 5m, or 1h", dk)
-				}
+	if v, ok := params["karpenter_node_expiry"]; ok && v != "" {
+		expiryRe := regexp.MustCompile(`^\d+h$`)
+		if v != "Never" && !expiryRe.MatchString(v) {
+			return fmt.Errorf("karpenter_node_expiry must be a duration like 720h or Never")
+		}
+	}
+
+	if v, ok := params["karpenter_disruption_budget_nodes"]; ok && v != "" {
+		budgetRe := regexp.MustCompile(`^\d+%?$`)
+		if !budgetRe.MatchString(v) {
+			return fmt.Errorf("karpenter_disruption_budget_nodes must be a number or percentage (e.g. 10%%)")
+		}
+	}
+
+	if v, ok := params["karpenter_build_capacity_types"]; ok && v != "" {
+		for _, ct := range strings.Split(v, ",") {
+			ct = strings.TrimSpace(ct)
+			if ct != "on-demand" && ct != "spot" {
+				return fmt.Errorf("invalid karpenter build capacity type: %s (must be on-demand or spot)", ct)
 			}
 		}
+	}
 
-		if v, ok := params["karpenter_node_expiry"]; ok && v != "" {
-			expiryRe := regexp.MustCompile(`^\d+h$`)
-			if v != "Never" && !expiryRe.MatchString(v) {
-				return fmt.Errorf("karpenter_node_expiry must be a duration like 720h or Never")
+	if v, ok := params["karpenter_build_cpu_limit"]; ok && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			return fmt.Errorf("karpenter_build_cpu_limit must be a positive integer")
+		}
+	}
+
+	if v, ok := params["karpenter_build_memory_limit_gb"]; ok && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			return fmt.Errorf("karpenter_build_memory_limit_gb must be a positive integer")
+		}
+	}
+
+	// Validate karpenter_node_taints format: key=value:Effect (same check as KarpenterNodePoolConfigParam.Validate)
+	if v, ok := params["karpenter_node_taints"]; ok && v != "" {
+		if strings.Contains(v, `"`) {
+			return fmt.Errorf("karpenter_node_taints: taint keys and values must not contain double quotes")
+		}
+		validEffects := map[string]bool{"NoSchedule": true, "PreferNoSchedule": true, "NoExecute": true}
+		for _, t := range strings.Split(v, ",") {
+			t = strings.TrimSpace(t)
+			colonParts := strings.SplitN(t, ":", 2)
+			if len(colonParts) != 2 || colonParts[0] == "" {
+				return fmt.Errorf("invalid karpenter_node_taints entry '%s', use format key=value:Effect or key:Effect", t)
+			}
+			if !validEffects[colonParts[1]] {
+				return fmt.Errorf("invalid karpenter_node_taints effect '%s' (must be NoSchedule, PreferNoSchedule, or NoExecute)", colonParts[1])
 			}
 		}
+	}
 
-		if v, ok := params["karpenter_disruption_budget_nodes"]; ok && v != "" {
-			budgetRe := regexp.MustCompile(`^\d+%?$`)
-			if !budgetRe.MatchString(v) {
-				return fmt.Errorf("karpenter_disruption_budget_nodes must be a number or percentage (e.g. 10%%)")
+	// Reject Convox-reserved label keys and double quotes in label values
+	reservedWorkloadLabels := map[string]bool{"convox.io/nodepool": true}
+	if v, ok := params["karpenter_node_labels"]; ok && v != "" {
+		if strings.Contains(v, `"`) {
+			return fmt.Errorf("karpenter_node_labels: label keys and values must not contain double quotes")
+		}
+		for _, pair := range strings.Split(v, ",") {
+			k := strings.TrimSpace(strings.SplitN(pair, "=", 2)[0])
+			if reservedWorkloadLabels[k] {
+				return fmt.Errorf("karpenter_node_labels: '%s' is a Convox-reserved label key and cannot be overridden", k)
 			}
 		}
+	}
 
-		if v, ok := params["karpenter_build_capacity_types"]; ok && v != "" {
-			for _, ct := range strings.Split(v, ",") {
-				ct = strings.TrimSpace(ct)
-				if ct != "on-demand" && ct != "spot" {
-					return fmt.Errorf("invalid karpenter build capacity type: %s (must be on-demand or spot)", ct)
-				}
-			}
+	reservedBuildLabels := map[string]bool{"convox-build": true, "convox.io/nodepool": true}
+	if v, ok := params["karpenter_build_node_labels"]; ok && v != "" {
+		if strings.Contains(v, `"`) {
+			return fmt.Errorf("karpenter_build_node_labels: label keys and values must not contain double quotes")
 		}
-
-		if v, ok := params["karpenter_build_cpu_limit"]; ok && v != "" {
-			n, err := strconv.Atoi(v)
-			if err != nil || n <= 0 {
-				return fmt.Errorf("karpenter_build_cpu_limit must be a positive integer")
-			}
-		}
-
-		if v, ok := params["karpenter_build_memory_limit_gb"]; ok && v != "" {
-			n, err := strconv.Atoi(v)
-			if err != nil || n <= 0 {
-				return fmt.Errorf("karpenter_build_memory_limit_gb must be a positive integer")
-			}
-		}
-
-		// Validate karpenter_node_taints format: key=value:Effect (same check as KarpenterNodePoolConfigParam.Validate)
-		if v, ok := params["karpenter_node_taints"]; ok && v != "" {
-			if strings.Contains(v, `"`) {
-				return fmt.Errorf("karpenter_node_taints: taint keys and values must not contain double quotes")
-			}
-			validEffects := map[string]bool{"NoSchedule": true, "PreferNoSchedule": true, "NoExecute": true}
-			for _, t := range strings.Split(v, ",") {
-				t = strings.TrimSpace(t)
-				colonParts := strings.SplitN(t, ":", 2)
-				if len(colonParts) != 2 || colonParts[0] == "" {
-					return fmt.Errorf("invalid karpenter_node_taints entry '%s', use format key=value:Effect or key:Effect", t)
-				}
-				if !validEffects[colonParts[1]] {
-					return fmt.Errorf("invalid karpenter_node_taints effect '%s' (must be NoSchedule, PreferNoSchedule, or NoExecute)", colonParts[1])
-				}
-			}
-		}
-
-		// Reject Convox-reserved label keys and double quotes in label values
-		reservedWorkloadLabels := map[string]bool{"convox.io/nodepool": true}
-		if v, ok := params["karpenter_node_labels"]; ok && v != "" {
-			if strings.Contains(v, `"`) {
-				return fmt.Errorf("karpenter_node_labels: label keys and values must not contain double quotes")
-			}
-			for _, pair := range strings.Split(v, ",") {
-				k := strings.TrimSpace(strings.SplitN(pair, "=", 2)[0])
-				if reservedWorkloadLabels[k] {
-					return fmt.Errorf("karpenter_node_labels: '%s' is a Convox-reserved label key and cannot be overridden", k)
-				}
-			}
-		}
-
-		reservedBuildLabels := map[string]bool{"convox-build": true, "convox.io/nodepool": true}
-		if v, ok := params["karpenter_build_node_labels"]; ok && v != "" {
-			if strings.Contains(v, `"`) {
-				return fmt.Errorf("karpenter_build_node_labels: label keys and values must not contain double quotes")
-			}
-			for _, pair := range strings.Split(v, ",") {
-				k := strings.TrimSpace(strings.SplitN(pair, "=", 2)[0])
-				if reservedBuildLabels[k] {
-					return fmt.Errorf("karpenter_build_node_labels: '%s' is a Convox-reserved label key and cannot be overridden", k)
-				}
+		for _, pair := range strings.Split(v, ",") {
+			k := strings.TrimSpace(strings.SplitN(pair, "=", 2)[0])
+			if reservedBuildLabels[k] {
+				return fmt.Errorf("karpenter_build_node_labels: '%s' is a Convox-reserved label key and cannot be overridden", k)
 			}
 		}
 	}

@@ -197,7 +197,6 @@ func watch(fn func(r sdk.Interface, c *stdcli.Context) error) func(sdk.Interface
 				}
 			}
 		}
-		return nil
 	}
 }
 
