@@ -46,6 +46,7 @@ data "aws_iam_policy_document" "karpenter_controller_ec2" {
     effect = "Allow"
     actions = [
       "ec2:DescribeAvailabilityZones",
+      "ec2:DescribeCapacityReservations",
       "ec2:DescribeImages",
       "ec2:DescribeInstances",
       "ec2:DescribeInstanceTypeOfferings",
@@ -68,6 +69,8 @@ data "aws_iam_policy_document" "karpenter_controller_ec2" {
     ]
     resources = [
       "arn:${data.aws_partition.current.partition}:ec2:*::image/*",
+      "arn:${data.aws_partition.current.partition}:ec2:*::snapshot/*",
+      "arn:${data.aws_partition.current.partition}:ec2:*:*:capacity-reservation/*",
       "arn:${data.aws_partition.current.partition}:ec2:*:*:security-group/*",
       "arn:${data.aws_partition.current.partition}:ec2:*:*:subnet/*",
     ]
@@ -142,6 +145,28 @@ data "aws_iam_policy_document" "karpenter_controller_ec2" {
     }
   }
 
+  # CreateTags on existing cluster-owned instances (e.g. Name, nodeclaim updates)
+  statement {
+    sid    = "AllowEC2TagExistingInstances"
+    effect = "Allow"
+    actions = [
+      "ec2:CreateTags",
+    ]
+    resources = [
+      "arn:${data.aws_partition.current.partition}:ec2:*:*:instance/*",
+    ]
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/kubernetes.io/cluster/${var.name}"
+      values   = ["owned"]
+    }
+    condition {
+      test     = "ForAllValues:StringEquals"
+      variable = "aws:TagKeys"
+      values   = ["eks:eks-cluster-name", "karpenter.sh/nodeclaim", "Name"]
+    }
+  }
+
   # TerminateInstances/DeleteLaunchTemplate/DeleteTags — only cluster-owned resources
   statement {
     sid    = "AllowEC2DeleteOwned"
@@ -197,7 +222,6 @@ data "aws_iam_policy_document" "karpenter_controller_iam" {
       "iam:AddRoleToInstanceProfile",
       "iam:CreateInstanceProfile",
       "iam:DeleteInstanceProfile",
-      "iam:GetInstanceProfile",
       "iam:RemoveRoleFromInstanceProfile",
       "iam:TagInstanceProfile",
     ]
@@ -215,7 +239,6 @@ data "aws_iam_policy_document" "karpenter_controller_iam" {
     actions = [
       "iam:AddRoleToInstanceProfile",
       "iam:DeleteInstanceProfile",
-      "iam:GetInstanceProfile",
       "iam:RemoveRoleFromInstanceProfile",
     ]
     resources = ["*"]
@@ -224,6 +247,18 @@ data "aws_iam_policy_document" "karpenter_controller_iam" {
       variable = "aws:ResourceTag/kubernetes.io/cluster/${var.name}"
       values   = ["owned"]
     }
+  }
+
+  # Read-only instance profile discovery — no tag conditions (GetInstanceProfile
+  # has no request tags and the profile may not yet be tagged when first queried)
+  statement {
+    sid    = "AllowInstanceProfileRead"
+    effect = "Allow"
+    actions = [
+      "iam:GetInstanceProfile",
+      "iam:ListInstanceProfiles",
+    ]
+    resources = ["*"]
   }
 }
 
