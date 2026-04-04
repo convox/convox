@@ -445,6 +445,21 @@ Groups:
         description: |
           Comma-separated instance sizes for the workload NodePool. &l
           &i e.g. &i large,xlarge,2xlarge &l
+      - name: karpenter_arch
+        default: ""
+        sideNote: Auto-detects from node_type
+        type: string
+        description: |
+          CPU architectures for Karpenter workload nodes. &l
+          Empty means auto-detect from &i node_type &i (amd64 or arm64). &l
+          &b amd64 &b - x86_64 instances only &l
+          &b arm64 &b - ARM/Graviton instances only &l
+          &b amd64,arm64 &b - Both (Karpenter optimizes cost) &l
+        allowedValues:
+          - ""
+          - amd64
+          - arm64
+          - amd64,arm64
       - name: karpenter_capacity_types
         default: on-demand
         type: string

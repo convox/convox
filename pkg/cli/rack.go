@@ -406,12 +406,11 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		return fmt.Errorf("karpenter_auth_mode cannot be disabled once enabled (AWS EKS access config migration is one-way)")
 	}
 
-	// karpenter_enabled=true requires karpenter_auth_mode to already be applied.
-	// The EKS access_config change and K8s resource creation cannot coexist in the
-	// same terraform apply — the provider loses its cluster endpoint mid-apply.
+	// karpenter_enabled=true requires karpenter_auth_mode=true — either already
+	// applied or being set in the same call.
 	if params["karpenter_enabled"] == "true" && currentParams["karpenter_enabled"] != "true" {
-		if currentParams["karpenter_auth_mode"] != "true" {
-			return fmt.Errorf("karpenter_enabled=true requires karpenter_auth_mode=true to be applied first in a separate operation.\n  Run: convox rack params set karpenter_auth_mode=true\n  Wait for the update to complete, then set karpenter_enabled=true")
+		if currentParams["karpenter_auth_mode"] != "true" && params["karpenter_auth_mode"] != "true" {
+			return fmt.Errorf("karpenter_enabled=true requires karpenter_auth_mode=true.\n  Either include both: convox rack params set karpenter_auth_mode=true karpenter_enabled=true\n  Or set karpenter_auth_mode=true first and wait for the update to complete")
 		}
 	}
 
@@ -438,7 +437,7 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 			}
 		}
 	}
-	if params["karpenter_enabled"] == "true" {
+	if params["karpenter_enabled"] == "true" || currentParams["karpenter_enabled"] == "true" {
 		if v, ok := params["karpenter_capacity_types"]; ok && v != "" {
 			for _, ct := range strings.Split(v, ",") {
 				ct = strings.TrimSpace(ct)

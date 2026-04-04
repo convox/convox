@@ -104,7 +104,7 @@ module "cluster" {
   karpenter_instance_families         = var.karpenter_instance_families
   karpenter_instance_sizes            = var.karpenter_instance_sizes
   karpenter_capacity_types            = var.karpenter_capacity_types
-  karpenter_arch                      = local.arm_type ? "arm64" : "amd64"
+  karpenter_arch                      = var.karpenter_arch != "" ? var.karpenter_arch : (local.arm_type ? "arm64" : "amd64")
   karpenter_cpu_limit                 = var.karpenter_cpu_limit
   karpenter_memory_limit_gb           = var.karpenter_memory_limit_gb
   karpenter_consolidation_enabled     = var.karpenter_consolidation_enabled

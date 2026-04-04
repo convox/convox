@@ -1311,11 +1311,11 @@ func TestValidateAndMutateParams_KarpenterAuthMode(t *testing.T) {
 			"karpenter_enabled=true requires karpenter_auth_mode=true",
 		},
 		{
-			"both karpenter_auth_mode=true and karpenter_enabled=true in same call is rejected (must be separate operations)",
+			"both karpenter_auth_mode=true and karpenter_enabled=true in same call is allowed",
 			map[string]string{"karpenter_auth_mode": "true", "karpenter_enabled": "true"},
 			map[string]string{},
-			true,
-			"karpenter_enabled=true requires karpenter_auth_mode=true to be applied first",
+			false,
+			"",
 		},
 		{
 			"karpenter_enabled=true with karpenter_auth_mode=true in same call succeeds when auth_mode already applied",

@@ -204,6 +204,11 @@ variable "karpenter_enabled" {
   default = "false"
 }
 
+variable "karpenter_arch" {
+  type    = string
+  default = ""
+}
+
 variable "karpenter_instance_families" {
   type    = string
   default = ""
