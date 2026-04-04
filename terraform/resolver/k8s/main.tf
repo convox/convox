@@ -86,7 +86,9 @@ resource "kubernetes_deployment" "resolver" {
 
     template {
       metadata {
-        annotations = var.annotations
+        annotations = merge(var.annotations, {
+          "convox.com/internal-router" = tostring(var.internal_router)
+        })
 
         labels = {
           app     = "system"
