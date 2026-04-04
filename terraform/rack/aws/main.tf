@@ -83,6 +83,7 @@ module "resolver" {
   docker_hub_authentication = module.k8s.docker_hub_authentication
   high_availability         = var.high_availability
   image                     = var.image
+  internal_router           = var.internal_router
   karpenter_enabled         = var.karpenter_enabled
   namespace                 = module.k8s.namespace
   rack                      = var.name

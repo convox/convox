@@ -15,6 +15,11 @@ variable "karpenter_enabled" {
   default = false
 }
 
+variable "internal_router" {
+  type    = bool
+  default = false
+}
+
 variable "namespace" {
   type = string
 }
