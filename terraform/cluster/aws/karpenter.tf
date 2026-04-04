@@ -98,6 +98,7 @@ resource "helm_release" "karpenter" {
   set {
     name  = "tolerations[0].value"
     value = "true"
+    type  = "string"
   }
 
   set {
