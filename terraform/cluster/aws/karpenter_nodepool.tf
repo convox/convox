@@ -226,7 +226,9 @@ locals {
 resource "kubectl_manifest" "karpenter_nodepool_workload" {
   count     = var.karpenter_enabled ? 1 : 0
   yaml_body = yamlencode(local.np_workload_manifest)
-  depends_on = [helm_release.karpenter]
+  wait      = true
+
+  depends_on = [helm_release.karpenter, helm_release.karpenter_crd]
 }
 
 ###############################################################################
@@ -236,8 +238,11 @@ resource "kubectl_manifest" "karpenter_nodepool_workload" {
 resource "kubectl_manifest" "karpenter_ec2nodeclass_workload" {
   count     = var.karpenter_enabled ? 1 : 0
   yaml_body = yamlencode(local.ec2_workload_manifest)
+  wait      = true
+
   depends_on = [
     helm_release.karpenter,
+    helm_release.karpenter_crd,
     aws_ec2_tag.private_subnets_karpenter,
     aws_ec2_tag.public_subnets_karpenter,
     aws_ec2_tag.cluster_sg_karpenter,
@@ -263,7 +268,8 @@ resource "kubectl_manifest" "karpenter_nodepool_build" {
     extra_labels                      = local.karpenter_build_extra_labels
   })
 
-  depends_on = [helm_release.karpenter]
+  wait       = true
+  depends_on = [helm_release.karpenter, helm_release.karpenter_crd]
 }
 
 resource "kubectl_manifest" "karpenter_ec2nodeclass_build" {
@@ -281,8 +287,11 @@ resource "kubectl_manifest" "karpenter_ec2nodeclass_build" {
     extra_tags                 = var.tags
   })
 
+  wait = true
+
   depends_on = [
     helm_release.karpenter,
+    helm_release.karpenter_crd,
     aws_ec2_tag.private_subnets_karpenter,
     aws_ec2_tag.public_subnets_karpenter,
     aws_ec2_tag.cluster_sg_karpenter,
@@ -313,7 +322,8 @@ resource "kubectl_manifest" "karpenter_nodepool_additional" {
     taints                = each.value.taints
   })
 
-  depends_on = [helm_release.karpenter]
+  wait       = true
+  depends_on = [helm_release.karpenter, helm_release.karpenter_crd]
 }
 
 resource "kubectl_manifest" "karpenter_ec2nodeclass_additional" {
@@ -331,8 +341,11 @@ resource "kubectl_manifest" "karpenter_ec2nodeclass_additional" {
     extra_tags                 = var.tags
   })
 
+  wait = true
+
   depends_on = [
     helm_release.karpenter,
+    helm_release.karpenter_crd,
     aws_ec2_tag.private_subnets_karpenter,
     aws_ec2_tag.public_subnets_karpenter,
     aws_ec2_tag.cluster_sg_karpenter,
