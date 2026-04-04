@@ -8,16 +8,20 @@ import (
 	"time"
 
 	"github.com/convox/convox/pkg/common"
-	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
 	convoxv1 "github.com/convox/convox/provider/k8s/pkg/apis/convox/v1"
 	cv "github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned"
 	"github.com/convox/logger"
+	yaml "gopkg.in/yaml.v2"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 )
+
+type cleanupManifest struct {
+	Services map[string]interface{} `yaml:"services"`
+}
 
 const cleanupAnnotationKey = "convox.io/last-release-build-cleanup"
 
@@ -192,28 +196,32 @@ func (a *releaseCleaner) appReleaseAndBuildCleanup(app *structs.App) error {
 	for _, b := range bs {
 		// also ensure we don't delete builds that are newer than the oldest release we are keeping
 		if _, ok := buildToKeep[b.Name]; !ok && a.toTime(b.Spec.Started).Before(oldestReleaseTimeToKeep) {
-			buildToDelete[b.Name] = []string{}
-			m, err := manifest.Load([]byte(b.Spec.Manifest), structs.Environment{})
-			if err != nil {
-				a.logger.Errorf("failed to load manifest for build '%s' of app '%s': %s", b.Name, app.Name, err)
-				return err
+			var cm cleanupManifest
+			if err := yaml.Unmarshal([]byte(b.Spec.Manifest), &cm); err != nil {
+				a.logger.Errorf("failed to parse manifest for build '%s' of app '%s': %s, skipping build", b.Name, app.Name, err)
+				continue
 			}
-			for _, svc := range m.Services {
-				if svc.Name != "" {
-					buildToDelete[b.Name] = append(buildToDelete[b.Name], fmt.Sprintf("%s.%s", svc.Name, strings.ToUpper(b.Name)))
+
+			tags := []string{}
+			for svcName := range cm.Services {
+				if svcName != "" {
+					tags = append(tags, fmt.Sprintf("%s.%s", svcName, strings.ToUpper(b.Name)))
 				}
 			}
+			buildToDelete[b.Name] = tags
 		}
 	}
 
 	for bName, tags := range buildToDelete {
-		if err := a.engine.RepositoryImagesBatchDelete(app.Name, tags); err != nil {
-			a.logger.Errorf("failed to delete images for builds '%s': %s", strings.Join(tags, ","), err)
-			return err
+		if len(tags) > 0 {
+			if err := a.engine.RepositoryImagesBatchDelete(app.Name, tags); err != nil {
+				a.logger.Errorf("failed to delete images for build '%s': %s", bName, err)
+				continue
+			}
 		}
 		if err := a.convox.ConvoxV1().Builds(appNamespace).Delete(bName, &am.DeleteOptions{}); err != nil {
 			a.logger.Errorf("failed to delete build '%s': %s", bName, err)
-			return err
+			continue
 		}
 		time.Sleep(50 * time.Millisecond) // to avoid rate limit
 	}

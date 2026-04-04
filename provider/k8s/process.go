@@ -233,27 +233,46 @@ func (p *Provider) streamProcessLogs(w io.WriteCloser, app, pid string, opts str
 	}
 
 	service := ""
+	pendingTimeout := time.After(10 * time.Minute)
+	tick := time.NewTicker(1 * time.Second)
+	defer tick.Stop()
+	pendingHeartbeat := time.NewTicker(15 * time.Second)
+	defer pendingHeartbeat.Stop()
 
+pendingLoop:
 	for {
-		pp, err := p.GetPodFromInformer(pid, p.AppNamespace(app))
-		if err != nil {
-			fmt.Printf("err: %+v\n", err)
-			break
+		select {
+		case <-pendingTimeout:
+			fmt.Fprintf(w, "build pod did not start within 10 minutes -- check cluster resources and node availability\n")
+			return
+		case <-pendingHeartbeat.C:
+			if _, err := fmt.Fprintf(w, "waiting for build pod to be scheduled...\n"); err != nil {
+				return
+			}
+		case <-tick.C:
+			pp, err := p.GetPodFromInformer(pid, p.AppNamespace(app))
+			if err != nil {
+				fmt.Printf("err: %+v\n", err)
+				fmt.Fprintf(w, "waiting for build pod...\n")
+				continue
+			}
+
+			service = pp.Labels["service"]
+
+			if pp.Status.Phase != "Pending" {
+				break pendingLoop
+			}
 		}
-
-		service = pp.Labels["service"]
-
-		if pp.Status.Phase != "Pending" {
-			break
-		}
-
-		time.Sleep(1 * time.Second)
 	}
+
+	tick.Stop()
+	pendingHeartbeat.Stop()
 
 	for {
 		r, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).GetLogs(pid, lopts).Stream(context.TODO())
 		if err != nil {
 			fmt.Printf("err: %+v\n", err)
+			fmt.Fprintf(w, "build log stream interrupted, retrying...\n")
 			break
 		}
 

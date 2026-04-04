@@ -10,6 +10,11 @@ variable "image" {
   type = string
 }
 
+variable "karpenter_enabled" {
+  type    = bool
+  default = false
+}
+
 variable "namespace" {
   type = string
 }
