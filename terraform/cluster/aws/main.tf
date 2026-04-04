@@ -94,13 +94,6 @@ resource "aws_eks_cluster" "cluster" {
   tags     = local.tags
   version  = var.k8s_version
 
-  dynamic "access_config" {
-    for_each = var.karpenter_auth_mode ? [1] : []
-    content {
-      authentication_mode = "API_AND_CONFIG_MAP"
-    }
-  }
-
   vpc_config {
     endpoint_public_access = var.disable_public_access ? false : true
     // if public access is disabled, then private access must be true
@@ -108,6 +101,10 @@ resource "aws_eks_cluster" "cluster" {
     public_access_cidrs     = var.public_access_cidrs
     security_group_ids      = [aws_security_group.cluster.id]
     subnet_ids              = concat(local.public_subnets_ids)
+  }
+
+  lifecycle {
+    ignore_changes = [access_config]
   }
 }
 
@@ -323,6 +320,47 @@ resource "null_resource" "wait_k8s_cluster" {
 
   depends_on = [
     aws_eks_node_group.cluster
+  ]
+}
+
+# Enable API_AND_CONFIG_MAP auth mode on the EKS cluster via AWS CLI.
+# This is done outside the aws_eks_cluster resource to avoid modifying
+# the cluster resource in-place, which would cause the endpoint attribute
+# to become "(known after apply)" during planning. That cascading unknown
+# breaks ALL kubernetes/helm/kubectl provider configurations (they fall
+# back to http://localhost:80) because every provider reads host from
+# aws_eks_cluster.cluster.endpoint.
+resource "null_resource" "karpenter_access_config" {
+  count = var.karpenter_auth_mode ? 1 : 0
+
+  triggers = {
+    cluster_name = aws_eks_cluster.cluster.name
+    region       = data.aws_region.current.name
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOF
+      CLUSTER="${self.triggers.cluster_name}"
+      REGION="${self.triggers.region}"
+      CURRENT=$(aws eks describe-cluster --name "$CLUSTER" --region "$REGION" \
+        --query 'cluster.accessConfig.authenticationMode' --output text 2>/dev/null || echo "UNKNOWN")
+      if [ "$CURRENT" = "API_AND_CONFIG_MAP" ] || [ "$CURRENT" = "API" ]; then
+        echo "EKS access config already $CURRENT — skipping"
+      else
+        echo "Updating EKS access config from $CURRENT to API_AND_CONFIG_MAP..."
+        aws eks update-cluster-config \
+          --name "$CLUSTER" --region "$REGION" \
+          --access-config authenticationMode=API_AND_CONFIG_MAP
+        echo "Waiting for cluster to reach ACTIVE state..."
+        aws eks wait cluster-active --name "$CLUSTER" --region "$REGION"
+        echo "EKS access config update complete"
+      fi
+    EOF
+  }
+
+  depends_on = [
+    aws_eks_cluster.cluster,
+    null_resource.wait_k8s_cluster,
   ]
 }
 

@@ -360,6 +360,8 @@ resource "aws_iam_role_policy_attachment" "karpenter_nodes_ebs" {
 resource "aws_eks_access_entry" "karpenter_nodes" {
   count = var.karpenter_enabled ? 1 : 0
 
+  depends_on = [null_resource.karpenter_access_config]
+
   cluster_name  = aws_eks_cluster.cluster.name
   principal_arn = aws_iam_role.karpenter_nodes[0].arn
   type          = "EC2_LINUX"
