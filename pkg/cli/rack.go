@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -182,6 +183,156 @@ func (n *NodeGroupConfigParam) Validate() error {
 	return nil
 }
 
+type KarpenterNodePoolConfigParam struct {
+	Name                  string  `json:"name"`
+	InstanceFamilies      *string `json:"instance_families,omitempty"`
+	InstanceSizes         *string `json:"instance_sizes,omitempty"`
+	CapacityTypes         *string `json:"capacity_types,omitempty"`
+	Arch                  *string `json:"arch,omitempty"`
+	CpuLimit              *int    `json:"cpu_limit,omitempty"`
+	MemoryLimitGb         *int    `json:"memory_limit_gb,omitempty"`
+	ConsolidationPolicy   *string `json:"consolidation_policy,omitempty"`
+	ConsolidateAfter      *string `json:"consolidate_after,omitempty"`
+	NodeExpiry            *string `json:"node_expiry,omitempty"`
+	DisruptionBudgetNodes *string `json:"disruption_budget_nodes,omitempty"`
+	Disk                  *int    `json:"disk,omitempty"`
+	VolumeType            *string `json:"volume_type,omitempty"`
+	Labels                *string `json:"labels,omitempty"`
+	Taints                *string `json:"taints,omitempty"`
+	Weight                *int    `json:"weight,omitempty"`
+}
+
+var karpenterNameRe = regexp.MustCompile(`^[a-z][a-z0-9-]{0,62}$`)
+
+func (np *KarpenterNodePoolConfigParam) Validate() error {
+	if np.Name == "" {
+		return fmt.Errorf("karpenter nodepool name is required")
+	}
+	if !karpenterNameRe.MatchString(np.Name) {
+		return fmt.Errorf("karpenter nodepool name '%s' must be lowercase alphanumeric with dashes, max 63 chars", np.Name)
+	}
+	reserved := map[string]bool{"workload": true, "build": true, "default": true, "system": true}
+	if reserved[np.Name] {
+		return fmt.Errorf("karpenter nodepool name '%s' is reserved", np.Name)
+	}
+
+	if np.CapacityTypes != nil {
+		for _, ct := range strings.Split(*np.CapacityTypes, ",") {
+			ct = strings.TrimSpace(ct)
+			if ct != "on-demand" && ct != "spot" {
+				return fmt.Errorf("karpenter nodepool '%s': invalid capacity type '%s' (must be on-demand or spot)", np.Name, ct)
+			}
+		}
+	}
+
+	if np.Arch != nil {
+		for _, a := range strings.Split(*np.Arch, ",") {
+			a = strings.TrimSpace(a)
+			if a != "amd64" && a != "arm64" {
+				return fmt.Errorf("karpenter nodepool '%s': invalid arch '%s' (must be amd64 or arm64)", np.Name, a)
+			}
+		}
+	}
+
+	if np.CpuLimit != nil && *np.CpuLimit <= 0 {
+		return fmt.Errorf("karpenter nodepool '%s': cpu_limit must be positive", np.Name)
+	}
+	if np.MemoryLimitGb != nil && *np.MemoryLimitGb <= 0 {
+		return fmt.Errorf("karpenter nodepool '%s': memory_limit_gb must be positive", np.Name)
+	}
+
+	durationRe := regexp.MustCompile(`^\d+[smh]$`)
+	if np.ConsolidateAfter != nil && !durationRe.MatchString(*np.ConsolidateAfter) {
+		return fmt.Errorf("karpenter nodepool '%s': consolidate_after must be a duration like 30s, 5m, or 1h", np.Name)
+	}
+
+	if np.NodeExpiry != nil {
+		expiryRe := regexp.MustCompile(`^\d+h$`)
+		if *np.NodeExpiry != "Never" && !expiryRe.MatchString(*np.NodeExpiry) {
+			return fmt.Errorf("karpenter nodepool '%s': node_expiry must be a duration like 720h or Never", np.Name)
+		}
+	}
+
+	if np.DisruptionBudgetNodes != nil {
+		budgetRe := regexp.MustCompile(`^\d+%?$`)
+		if !budgetRe.MatchString(*np.DisruptionBudgetNodes) {
+			return fmt.Errorf("karpenter nodepool '%s': disruption_budget_nodes must be a number or percentage", np.Name)
+		}
+	}
+
+	if np.ConsolidationPolicy != nil {
+		if *np.ConsolidationPolicy != "WhenEmpty" && *np.ConsolidationPolicy != "WhenEmptyOrUnderutilized" {
+			return fmt.Errorf("karpenter nodepool '%s': consolidation_policy must be WhenEmpty or WhenEmptyOrUnderutilized", np.Name)
+		}
+	}
+
+	if np.VolumeType != nil {
+		validVols := map[string]bool{"gp2": true, "gp3": true, "io1": true, "io2": true}
+		if !validVols[*np.VolumeType] {
+			return fmt.Errorf("karpenter nodepool '%s': volume_type must be gp2, gp3, io1, or io2", np.Name)
+		}
+	}
+
+	if np.Disk != nil && *np.Disk < 0 {
+		return fmt.Errorf("karpenter nodepool '%s': disk must be non-negative", np.Name)
+	}
+
+	if np.Weight != nil && (*np.Weight < 0 || *np.Weight > 100) {
+		return fmt.Errorf("karpenter nodepool '%s': weight must be 0-100", np.Name)
+	}
+
+	if np.Labels != nil && *np.Labels != "" {
+		if strings.Contains(*np.Labels, `"`) {
+			return fmt.Errorf("karpenter nodepool '%s': label keys and values must not contain double quotes", np.Name)
+		}
+		reservedPoolLabels := map[string]bool{"convox.io/nodepool": true}
+		for _, pair := range strings.Split(*np.Labels, ",") {
+			parts := strings.SplitN(strings.TrimSpace(pair), "=", 2)
+			if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+				return fmt.Errorf("karpenter nodepool '%s': invalid label '%s', use format key=value", np.Name, pair)
+			}
+			if reservedPoolLabels[parts[0]] {
+				return fmt.Errorf("karpenter nodepool '%s': '%s' is a Convox-reserved label key and cannot be overridden", np.Name, parts[0])
+			}
+		}
+	}
+
+	if np.Taints != nil && *np.Taints != "" {
+		if strings.Contains(*np.Taints, `"`) {
+			return fmt.Errorf("karpenter nodepool '%s': taint keys and values must not contain double quotes", np.Name)
+		}
+		validEffects := map[string]bool{"NoSchedule": true, "PreferNoSchedule": true, "NoExecute": true}
+		for _, t := range strings.Split(*np.Taints, ",") {
+			t = strings.TrimSpace(t)
+			colonParts := strings.SplitN(t, ":", 2)
+			if len(colonParts) != 2 || colonParts[0] == "" {
+				return fmt.Errorf("karpenter nodepool '%s': invalid taint '%s', use format key=value:Effect or key:Effect", np.Name, t)
+			}
+			if !validEffects[colonParts[1]] {
+				return fmt.Errorf("karpenter nodepool '%s': invalid taint effect '%s' (must be NoSchedule, PreferNoSchedule, or NoExecute)", np.Name, colonParts[1])
+			}
+		}
+	}
+
+	return nil
+}
+
+type KarpenterNodePools []KarpenterNodePoolConfigParam
+
+func (knp KarpenterNodePools) Validate() error {
+	nameMap := map[string]bool{}
+	for i := range knp {
+		if err := knp[i].Validate(); err != nil {
+			return err
+		}
+		if nameMap[knp[i].Name] {
+			return fmt.Errorf("duplicate karpenter nodepool name: %s", knp[i].Name)
+		}
+		nameMap[knp[i].Name] = true
+	}
+	return nil
+}
+
 type AdditionalNodeGroups []NodeGroupConfigParam
 
 func (an AdditionalNodeGroups) Validate() error {
@@ -211,7 +362,7 @@ func (an AdditionalNodeGroups) Validate() error {
 	return nil
 }
 
-func validateAndMutateParams(params map[string]string) error {
+func validateAndMutateParams(params map[string]string, provider string, currentParams map[string]string) error {
 	if params["high_availability"] != "" {
 		return errors.New("the high_availability parameter is only supported during rack installation")
 	}
@@ -239,6 +390,180 @@ func validateAndMutateParams(params map[string]string) error {
 		if d <= 0 {
 			return errors.New("invalid value for terraform_update_timeout: must be a positive duration")
 		}
+	}
+
+	// Reject karpenter_* params for non-AWS racks
+	if provider != "aws" {
+		for k := range params {
+			if strings.HasPrefix(k, "karpenter_") || k == "additional_karpenter_nodepools_config" {
+				return fmt.Errorf("karpenter parameters are only supported for AWS racks")
+			}
+		}
+	}
+
+	// karpenter_auth_mode: one-way migration (cannot be disabled once enabled)
+	if params["karpenter_auth_mode"] == "false" && currentParams["karpenter_auth_mode"] == "true" {
+		return fmt.Errorf("karpenter_auth_mode cannot be disabled once enabled (AWS EKS access config migration is one-way)")
+	}
+
+	// karpenter_enabled=true requires karpenter_auth_mode=true — either already
+	// applied or being set in the same call.
+	if params["karpenter_enabled"] == "true" && currentParams["karpenter_enabled"] != "true" {
+		if currentParams["karpenter_auth_mode"] != "true" && params["karpenter_auth_mode"] != "true" {
+			return fmt.Errorf("karpenter_enabled=true requires karpenter_auth_mode=true.\n  Either include both: convox rack params set karpenter_auth_mode=true karpenter_enabled=true\n  Or set karpenter_auth_mode=true first and wait for the update to complete")
+		}
+	}
+
+	// Karpenter parameter validation
+	// When enabling Karpenter, temporarily inject current params for re-validation so stale
+	// invalid values saved during a previous karpenter_enabled=false call are caught.
+	// Injected keys are removed after validation to avoid sending them to UpdateParams.
+	var karpenterInjectedKeys []string
+	if params["karpenter_enabled"] == "true" {
+		karpenterRevalidateKeys := []string{
+			"karpenter_arch",
+			"karpenter_capacity_types", "karpenter_cpu_limit", "karpenter_memory_limit_gb",
+			"karpenter_consolidate_after", "karpenter_build_consolidate_after",
+			"karpenter_node_expiry", "karpenter_disruption_budget_nodes",
+			"karpenter_build_capacity_types", "karpenter_build_cpu_limit",
+			"karpenter_build_memory_limit_gb", "karpenter_node_taints",
+			"karpenter_node_labels", "karpenter_build_node_labels",
+		}
+		for _, rk := range karpenterRevalidateKeys {
+			if _, inCall := params[rk]; !inCall {
+				if cv, exists := currentParams[rk]; exists && cv != "" {
+					params[rk] = cv
+					karpenterInjectedKeys = append(karpenterInjectedKeys, rk)
+				}
+			}
+		}
+	}
+	if v, ok := params["karpenter_arch"]; ok && v != "" {
+		for _, arch := range strings.Split(v, ",") {
+			arch = strings.TrimSpace(arch)
+			if arch != "amd64" && arch != "arm64" {
+				return fmt.Errorf("invalid karpenter architecture: %s (must be amd64 or arm64)", arch)
+			}
+		}
+	}
+
+	if v, ok := params["karpenter_capacity_types"]; ok && v != "" {
+		for _, ct := range strings.Split(v, ",") {
+			ct = strings.TrimSpace(ct)
+			if ct != "on-demand" && ct != "spot" {
+				return fmt.Errorf("invalid karpenter capacity type: %s (must be on-demand or spot)", ct)
+			}
+		}
+	}
+
+	if v, ok := params["karpenter_cpu_limit"]; ok && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			return fmt.Errorf("karpenter_cpu_limit must be a positive integer")
+		}
+	}
+
+	if v, ok := params["karpenter_memory_limit_gb"]; ok && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			return fmt.Errorf("karpenter_memory_limit_gb must be a positive integer")
+		}
+	}
+
+	durationRe := regexp.MustCompile(`^\d+[smh]$`)
+	for _, dk := range []string{"karpenter_consolidate_after", "karpenter_build_consolidate_after"} {
+		if v, ok := params[dk]; ok && v != "" {
+			if !durationRe.MatchString(v) {
+				return fmt.Errorf("%s must be a duration like 30s, 5m, or 1h", dk)
+			}
+		}
+	}
+
+	if v, ok := params["karpenter_node_expiry"]; ok && v != "" {
+		expiryRe := regexp.MustCompile(`^\d+h$`)
+		if v != "Never" && !expiryRe.MatchString(v) {
+			return fmt.Errorf("karpenter_node_expiry must be a duration like 720h or Never")
+		}
+	}
+
+	if v, ok := params["karpenter_disruption_budget_nodes"]; ok && v != "" {
+		budgetRe := regexp.MustCompile(`^\d+%?$`)
+		if !budgetRe.MatchString(v) {
+			return fmt.Errorf("karpenter_disruption_budget_nodes must be a number or percentage (e.g. 10%%)")
+		}
+	}
+
+	if v, ok := params["karpenter_build_capacity_types"]; ok && v != "" {
+		for _, ct := range strings.Split(v, ",") {
+			ct = strings.TrimSpace(ct)
+			if ct != "on-demand" && ct != "spot" {
+				return fmt.Errorf("invalid karpenter build capacity type: %s (must be on-demand or spot)", ct)
+			}
+		}
+	}
+
+	if v, ok := params["karpenter_build_cpu_limit"]; ok && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			return fmt.Errorf("karpenter_build_cpu_limit must be a positive integer")
+		}
+	}
+
+	if v, ok := params["karpenter_build_memory_limit_gb"]; ok && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			return fmt.Errorf("karpenter_build_memory_limit_gb must be a positive integer")
+		}
+	}
+
+	// Validate karpenter_node_taints format: key=value:Effect (same check as KarpenterNodePoolConfigParam.Validate)
+	if v, ok := params["karpenter_node_taints"]; ok && v != "" {
+		if strings.Contains(v, `"`) {
+			return fmt.Errorf("karpenter_node_taints: taint keys and values must not contain double quotes")
+		}
+		validEffects := map[string]bool{"NoSchedule": true, "PreferNoSchedule": true, "NoExecute": true}
+		for _, t := range strings.Split(v, ",") {
+			t = strings.TrimSpace(t)
+			colonParts := strings.SplitN(t, ":", 2)
+			if len(colonParts) != 2 || colonParts[0] == "" {
+				return fmt.Errorf("invalid karpenter_node_taints entry '%s', use format key=value:Effect or key:Effect", t)
+			}
+			if !validEffects[colonParts[1]] {
+				return fmt.Errorf("invalid karpenter_node_taints effect '%s' (must be NoSchedule, PreferNoSchedule, or NoExecute)", colonParts[1])
+			}
+		}
+	}
+
+	// Reject Convox-reserved label keys and double quotes in label values
+	reservedWorkloadLabels := map[string]bool{"convox.io/nodepool": true}
+	if v, ok := params["karpenter_node_labels"]; ok && v != "" {
+		if strings.Contains(v, `"`) {
+			return fmt.Errorf("karpenter_node_labels: label keys and values must not contain double quotes")
+		}
+		for _, pair := range strings.Split(v, ",") {
+			k := strings.TrimSpace(strings.SplitN(pair, "=", 2)[0])
+			if reservedWorkloadLabels[k] {
+				return fmt.Errorf("karpenter_node_labels: '%s' is a Convox-reserved label key and cannot be overridden", k)
+			}
+		}
+	}
+
+	reservedBuildLabels := map[string]bool{"convox-build": true, "convox.io/nodepool": true}
+	if v, ok := params["karpenter_build_node_labels"]; ok && v != "" {
+		if strings.Contains(v, `"`) {
+			return fmt.Errorf("karpenter_build_node_labels: label keys and values must not contain double quotes")
+		}
+		for _, pair := range strings.Split(v, ",") {
+			k := strings.TrimSpace(strings.SplitN(pair, "=", 2)[0])
+			if reservedBuildLabels[k] {
+				return fmt.Errorf("karpenter_build_node_labels: '%s' is a Convox-reserved label key and cannot be overridden", k)
+			}
+		}
+	}
+
+	// Remove temporarily-injected currentParams keys so they aren't sent to UpdateParams
+	for _, rk := range karpenterInjectedKeys {
+		delete(params, rk)
 	}
 
 	ngKeys := []string{"additional_node_groups_config", "additional_build_groups_config"}
@@ -282,6 +607,197 @@ func validateAndMutateParams(params map[string]string) error {
 			}
 			params[k] = base64.StdEncoding.EncodeToString(data)
 		}
+	}
+
+	// Preflight check: warn if enabling Karpenter with non-dedicated additional node groups
+	karpenterBeingEnabled := params["karpenter_enabled"] == "true"
+	karpenterAlreadyEnabled := currentParams["karpenter_enabled"] == "true" && params["karpenter_enabled"] != "false"
+	if karpenterBeingEnabled || karpenterAlreadyEnabled {
+		// Use the config from this call if provided, otherwise check current state
+		ngConfig := params["additional_node_groups_config"]
+		if ngConfig == "" {
+			ngConfig = currentParams["additional_node_groups_config"]
+		}
+		if ngConfig != "" {
+			var ngCfgData []byte
+			if decoded, err := base64.StdEncoding.DecodeString(ngConfig); err == nil {
+				ngCfgData = decoded
+			} else {
+				ngCfgData = []byte(ngConfig)
+			}
+			var ngs AdditionalNodeGroups
+			if err := json.Unmarshal(ngCfgData, &ngs); err == nil {
+				for _, ng := range ngs {
+					if ng.Dedicated == nil || !*ng.Dedicated {
+						return fmt.Errorf("karpenter_enabled=true requires all additional node groups to have dedicated=true to prevent scheduling overlap with Karpenter workload nodes; update your additional_node_groups_config to set dedicated=true on all groups, or include the updated config in the same call")
+					}
+				}
+			}
+		}
+	}
+
+	// Karpenter custom NodePools config (same pattern as additional_node_groups_config)
+	if params["additional_karpenter_nodepools_config"] != "" {
+		k := "additional_karpenter_nodepools_config"
+		var err error
+		cfgData := []byte(params[k])
+		if strings.HasSuffix(params[k], ".json") {
+			cfgData, err = os.ReadFile(params[k])
+			if err != nil {
+				return fmt.Errorf("invalid param '%s' value, failed to read the file: %s", k, err)
+			}
+		} else if !strings.HasPrefix(params[k], "[") {
+			data, err := base64.StdEncoding.DecodeString(params[k])
+			if err != nil {
+				return fmt.Errorf("invalid param '%s' value: %s", k, err)
+			}
+			cfgData = data
+		}
+
+		npCfgs := KarpenterNodePools{}
+		if err := json.Unmarshal(cfgData, &npCfgs); err != nil {
+			return fmt.Errorf("invalid karpenter nodepools config: %s", err)
+		}
+
+		if err := npCfgs.Validate(); err != nil {
+			return err
+		}
+
+		sort.Slice(npCfgs, func(i, j int) bool {
+			return npCfgs[i].Name < npCfgs[j].Name
+		})
+
+		data, err := json.Marshal(npCfgs)
+		if err != nil {
+			return fmt.Errorf("failed to process param '%s': %s", k, err)
+		}
+		params[k] = base64.StdEncoding.EncodeToString(data)
+	}
+
+	// karpenter_config — validate JSON and block protected fields
+	if params["karpenter_config"] != "" {
+		k := "karpenter_config"
+		var err error
+		cfgData := []byte(params[k])
+		if strings.HasSuffix(params[k], ".json") {
+			cfgData, err = os.ReadFile(params[k])
+			if err != nil {
+				return fmt.Errorf("invalid param '%s' value, failed to read the file: %s", k, err)
+			}
+		} else if !strings.HasPrefix(params[k], "{") {
+			data, err := base64.StdEncoding.DecodeString(params[k])
+			if err != nil {
+				return fmt.Errorf("invalid param '%s' value: %s", k, err)
+			}
+			cfgData = data
+		}
+
+		const maxKarpenterConfigSize = 64 * 1024 // 64 KB
+		if len(cfgData) > maxKarpenterConfigSize {
+			return fmt.Errorf("karpenter_config exceeds maximum size of 64KB (%d bytes)", len(cfgData))
+		}
+
+		var config map[string]interface{}
+		if err := json.Unmarshal(cfgData, &config); err != nil {
+			return fmt.Errorf("invalid karpenter_config JSON: %s", err)
+		}
+
+		// Only nodePool and ec2NodeClass sections are allowed
+		for key := range config {
+			if key != "nodePool" && key != "ec2NodeClass" {
+				return fmt.Errorf("karpenter_config: unknown top-level key '%s' (allowed: nodePool, ec2NodeClass)", key)
+			}
+		}
+
+		// Block protected EC2NodeClass fields that would break infrastructure
+		if ec2Val, exists := config["ec2NodeClass"]; exists {
+			ec2, ok := ec2Val.(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("karpenter_config: ec2NodeClass must be a JSON object")
+			}
+			blocked := []string{"role", "instanceProfile", "subnetSelectorTerms", "securityGroupSelectorTerms"}
+			for _, field := range blocked {
+				if _, exists := ec2[field]; exists {
+					return fmt.Errorf("karpenter_config: ec2NodeClass.%s is managed by Convox and cannot be overridden", field)
+				}
+			}
+
+			// Block reserved tag keys in ec2NodeClass.tags (Name/Rack are forced by Convox)
+			if tagsVal, exists := ec2["tags"]; exists {
+				tags, ok := tagsVal.(map[string]interface{})
+				if !ok {
+					return fmt.Errorf("karpenter_config: ec2NodeClass.tags must be a JSON object")
+				}
+				reservedTags := []string{"name", "rack"}
+				for tagKey := range tags {
+					if common.ContainsInStringSlice(reservedTags, strings.ToLower(tagKey)) {
+						return fmt.Errorf("karpenter_config: reserved tag key '%s' is not allowed in ec2NodeClass.tags (managed by Convox)", tagKey)
+					}
+				}
+			}
+		}
+
+		// Block protected NodePool fields
+		if npVal, exists := config["nodePool"]; exists {
+			np, ok := npVal.(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("karpenter_config: nodePool must be a JSON object")
+			}
+			if tmplVal, exists := np["template"]; exists {
+				tmpl, ok := tmplVal.(map[string]interface{})
+				if !ok {
+					return fmt.Errorf("karpenter_config: nodePool.template must be a JSON object")
+				} else {
+					// Block reserved labels in nodePool.template.metadata.labels
+					if metaVal, exists := tmpl["metadata"]; exists {
+						meta, ok := metaVal.(map[string]interface{})
+						if !ok {
+							return fmt.Errorf("karpenter_config: nodePool.template.metadata must be a JSON object")
+						}
+						if labelsVal, exists := meta["labels"]; exists {
+							labels, ok := labelsVal.(map[string]interface{})
+							if !ok {
+								return fmt.Errorf("karpenter_config: nodePool.template.metadata.labels must be a JSON object")
+							}
+							reservedConfigLabels := []string{"convox.io/nodepool"}
+							for labelKey := range labels {
+								for _, reserved := range reservedConfigLabels {
+									if labelKey == reserved {
+										return fmt.Errorf("karpenter_config: '%s' is a Convox-reserved label and cannot be overridden in nodePool.template.metadata.labels", labelKey)
+									}
+								}
+							}
+						}
+					}
+					if specVal, exists := tmpl["spec"]; exists {
+						spec, ok := specVal.(map[string]interface{})
+						if !ok {
+							return fmt.Errorf("karpenter_config: nodePool.template.spec must be a JSON object")
+						} else {
+							if _, exists := spec["nodeClassRef"]; exists {
+								return fmt.Errorf("karpenter_config: nodePool.template.spec.nodeClassRef is managed by Convox and cannot be overridden")
+							}
+							if reqVal, exists := spec["requirements"]; exists {
+								reqs, ok := reqVal.([]interface{})
+								if !ok {
+									return fmt.Errorf("karpenter_config: nodePool.template.spec.requirements must be a JSON array")
+								}
+								if len(reqs) == 0 {
+									return fmt.Errorf("karpenter_config: nodePool.template.spec.requirements must not be empty (Karpenter needs at least one requirement to provision nodes)")
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// Re-encode to base64 for storage (normalized)
+		data, err := json.Marshal(config)
+		if err != nil {
+			return fmt.Errorf("failed to process karpenter_config: %s", err)
+		}
+		params[k] = base64.StdEncoding.EncodeToString(data)
 	}
 
 	return nil
@@ -588,8 +1104,13 @@ func RackParamsSet(_ sdk.Interface, c *stdcli.Context) error {
 
 	c.Startf("Updating parameters")
 
+	currentParams, err := r.Parameters()
+	if err != nil {
+		return err
+	}
+
 	params := argsToOptions(c.Args)
-	if err := validateAndMutateParams(params); err != nil {
+	if err := validateAndMutateParams(params, r.Provider(), currentParams); err != nil {
 		return err
 	}
 

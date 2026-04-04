@@ -102,6 +102,7 @@ resource "kubernetes_deployment" "resolver" {
         automount_service_account_token = true
         service_account_name            = "resolver"
         priority_class_name             = var.set_priority_class ? "system-cluster-critical" : null
+        node_selector                   = var.karpenter_enabled ? { "convox.io/system-node" = "true" } : {}
 
         affinity {
           pod_anti_affinity {

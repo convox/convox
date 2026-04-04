@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime/debug"
 	"sort"
 	"strconv"
 	"strings"
@@ -422,19 +423,138 @@ func (p *Provider) BuildLogs(app, id string, opts structs.LogsOptions) (io.ReadC
 
 	switch b.Status {
 	case "running":
+		if b.Process == "" {
+			return nil, fmt.Errorf("build %s has running status but no process ID", id)
+		}
 		return p.ProcessLogs(app, b.Process, opts)
+	case "created":
+		return p.buildLogsStreamFromCreated(app, id, opts)
 	default:
-		u, err := url.Parse(b.Logs)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
+		return p.buildLogsFromStorage(app, id, b)
+	}
+}
 
-		switch u.Scheme {
-		case "object":
-			return p.ObjectFetch(u.Hostname(), u.Path)
-		default:
-			return nil, errors.WithStack(fmt.Errorf("unable to read logs for build: %s", id))
+func (p *Provider) buildLogsStreamFromCreated(app, id string, opts structs.LogsOptions) (io.ReadCloser, error) {
+	r, w := io.Pipe()
+	go p.streamBuildLogsFromCreated(w, app, id, opts)
+	return r, nil
+}
+
+func (p *Provider) streamBuildLogsFromCreated(w io.WriteCloser, app, id string, opts structs.LogsOptions) {
+	defer w.Close()
+
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("panic in streamBuildLogsFromCreated for build %s: %v\nstack: %s\n", id, r, debug.Stack())
 		}
+	}()
+
+	timeout := time.After(5 * time.Minute)
+	tick := time.NewTicker(1 * time.Second)
+	defer tick.Stop()
+
+	heartbeat := time.NewTicker(10 * time.Second)
+	defer heartbeat.Stop()
+
+	startTime := time.Now()
+	useDirectAPI := false
+
+	for {
+		select {
+		case <-timeout:
+			fmt.Fprintf(w, "build %s did not start within 5 minutes\n", id)
+			return
+
+		case <-heartbeat.C:
+			if _, err := fmt.Fprintf(w, "waiting for build to start...\n"); err != nil {
+				return
+			}
+
+		case <-tick.C:
+			if !useDirectAPI && time.Since(startTime) >= 10*time.Second {
+				useDirectAPI = true
+			}
+
+			b, err := p.getBuildStatus(app, id, useDirectAPI)
+			if err != nil {
+				fmt.Printf("err: build status check for %s: %+v\n", id, err)
+				continue
+			}
+
+			switch b.Status {
+			case "running":
+				if b.Process == "" {
+					continue
+				}
+				tick.Stop()
+				heartbeat.Stop()
+				p.streamProcessLogs(w, app, b.Process, opts)
+				return
+			case "failed", "complete":
+				p.writeStoredBuildLogs(w, app, id, b)
+				return
+			case "created":
+				continue
+			default:
+				fmt.Fprintf(w, "unexpected build status: %s\n", b.Status)
+				return
+			}
+		}
+	}
+}
+
+func (p *Provider) getBuildStatus(app, id string, useDirectAPI bool) (*structs.Build, error) {
+	if useDirectAPI {
+		kb, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(app)).Get(
+			strings.ToLower(id), am.GetOptions{},
+		)
+		if err != nil {
+			return nil, err
+		}
+		return p.buildUnmarshal(kb)
+	}
+	return p.BuildGet(app, id)
+}
+
+func (p *Provider) writeStoredBuildLogs(w io.Writer, app, id string, b *structs.Build) {
+	if b.Logs == "" {
+		if b.Status == "failed" {
+			fmt.Fprintf(w, "build failed -- no build logs available\n")
+		}
+		return
+	}
+
+	u, err := url.Parse(b.Logs)
+	if err != nil {
+		fmt.Printf("err: parse build %s logs URL: %+v\n", id, err)
+		return
+	}
+
+	switch u.Scheme {
+	case "object":
+		r, err := p.ObjectFetch(u.Hostname(), u.Path)
+		if err != nil {
+			fmt.Printf("err: fetch stored logs for build %s: %+v\n", id, err)
+			return
+		}
+		defer r.Close()
+		io.Copy(w, r)
+	default:
+		fmt.Printf("err: unknown log scheme %q for build %s\n", u.Scheme, id)
+	}
+}
+
+func (p *Provider) buildLogsFromStorage(app, id string, b *structs.Build) (io.ReadCloser, error) {
+	u, err := url.Parse(b.Logs)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	switch u.Scheme {
+	case "object":
+		return p.ObjectFetch(u.Hostname(), u.Path)
+	default:
+		return nil, errors.WithStack(fmt.Errorf("unable to read logs for build: %s", id))
 	}
 }
 

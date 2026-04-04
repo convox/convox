@@ -273,6 +273,7 @@ resource "kubernetes_deployment" "ingress-nginx" {
         service_account_name             = "ingress-nginx"
         automount_service_account_token  = true
         priority_class_name              = var.set_priority_class ? "system-cluster-critical" : null
+        node_selector                    = var.karpenter_enabled ? { "convox.io/system-node" = "true" } : {}
 
         dynamic "image_pull_secrets" {
           for_each = var.docker_hub_authentication != "NULL" ? [var.docker_hub_authentication] : []
@@ -468,6 +469,7 @@ resource "kubernetes_deployment" "ingress-nginx-internal" {
         service_account_name             = "ingress-nginx"
         automount_service_account_token  = true
         priority_class_name              = var.set_priority_class ? "system-cluster-critical" : null
+        node_selector                    = var.karpenter_enabled ? { "convox.io/system-node" = "true" } : {}
 
         container {
           name  = "system"
