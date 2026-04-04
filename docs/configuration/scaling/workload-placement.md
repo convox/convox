@@ -209,6 +209,7 @@ Without the `id` field, Convox generates a random identifier that changes when t
 
 At the application level, you can control where specific workloads run:
 
+- `BuildArch`: Directs build pods to build nodes matching a specific CPU architecture (`amd64` or `arm64`)
 - `BuildLabels`: Directs build pods to specific node groups
 - `BuildCpu` and `BuildMem`: Sets resource requests for build pods
 - `nodeSelectorLabels` in `convox.yml`: Directs service pods to specific node groups
@@ -441,6 +442,85 @@ To create dedicated node groups that exclusively run specific services:
 
 With `dedicated:true`, only services that explicitly select the node group will run on it, ensuring isolation for sensitive workloads.
 
+### Mixed ARM/x86 Architecture
+
+This example sets up an x86 primary rack with ARM worker nodes and ARM build nodes, allowing cost-optimized Graviton instances for selected apps while keeping x86 available for compatibility-sensitive workloads.
+
+> Mixed architecture support is available on AWS racks running version 3.24.1 or later.
+
+1. **Add ARM worker nodes** (dedicated so only targeted apps land on them):
+
+   ```json
+   [
+     {
+       "id": 104,
+       "type": "t4g.medium",
+       "capacity_type": "ON_DEMAND",
+       "min_size": 1,
+       "max_size": 5,
+       "label": "arm-workers",
+       "dedicated": true,
+       "tags": "architecture=arm64,environment=production"
+     }
+   ]
+   ```
+
+   ```bash
+   $ convox rack params set additional_node_groups_config=/path/to/arm-nodes.json -r production
+   ```
+
+2. **Add ARM build nodes** so ARM apps build natively without emulation:
+
+   ```json
+   [
+     {
+       "id": 201,
+       "type": "t4g.medium",
+       "capacity_type": "ON_DEMAND",
+       "min_size": 1,
+       "max_size": 2
+     }
+   ]
+   ```
+
+   ```bash
+   $ convox rack params set additional_build_groups_config=/path/to/arm-build-nodes.json -r production
+   ```
+
+3. **Configure each ARM app** to build on the correct architecture:
+
+   ```bash
+   $ convox apps params set BuildArch=arm64 -a myapp
+   ```
+
+4. **Target the app to ARM workers** in `convox.yml`:
+
+   ```yaml
+   services:
+     web:
+       build: .
+       port: 3000
+       nodeSelectorLabels:
+         convox.io/label: arm-workers
+   ```
+
+5. **Deploy**:
+
+   ```bash
+   $ convox deploy -a myapp
+   ```
+
+The build runs on an ARM build node (via `BuildArch=arm64`), producing a native ARM binary. The resulting pods run on the dedicated ARM worker nodes (via `nodeSelectorLabels`). Apps without `BuildArch` continue building and running on x86 nodes as before.
+
+**Reverse direction** works the same way: if your primary rack uses ARM (e.g., `node_type=t4g.medium`), add x86 additional groups and set `BuildArch=amd64` on apps that need Intel/AMD compatibility.
+
+**Key considerations:**
+- `BuildArch` is per-app, not per-service. Apps with services targeting different architectures should be split into separate apps.
+- Convox system images (including Fluentd) are multi-arch manifests and run natively on both architectures with no configuration.
+- The `kubernetes.io/arch` label is set automatically by the kubelet, so this works on AWS, Azure, and GCP without provider-specific setup.
+
+For full `BuildArch` parameter details, see [BuildArch](/configuration/app-parameters/aws/BuildArch).
+
 ### Flexible Configuration Options
 
 Convox allows you to implement different levels of customization based on your needs:
@@ -467,10 +547,12 @@ Convox allows you to implement different levels of customization based on your n
 
 ## Best Practices
 
-1. **Use a Consistent CPU Architecture Across All Node Groups**:
-   - All node groups (primary nodes, build nodes, and additional groups) must use the same CPU architecture.
-   - On AWS, Graviton instances (e.g. `t4g`, `c6g`, `m6g`) are ARM. Standard instances (e.g. `t3`, `c5`, `m5`) are x86. Convox selects AMIs, system images, and build tooling based on the architecture of `node_type`. A mismatch causes pod scheduling failures and build errors. See [node_type](/configuration/rack-parameters/aws/node_type#cpu-architecture-x86-vs-arm) for the full list of supported instance families.
-   - On Azure, only x86-based VM SKUs are supported. ARM-based VM SKUs are not available. See [node_type](/configuration/rack-parameters/azure/node_type) for details.
+1. **CPU Architecture — Single or Mixed**:
+   - A rack's primary nodes define the default architecture. Additional node groups can use a different architecture to create a mixed ARM/x86 rack.
+   - On AWS, Graviton instances (e.g. `t4g`, `c7g`, `m7g`) are ARM. Standard instances (e.g. `t3`, `c5`, `m5`) are x86. You can mix architectures by adding additional node groups and build groups with different instance families. See [node_type](/configuration/rack-parameters/aws/node_type#cpu-architecture-x86-vs-arm) for the full list of supported instance families.
+   - On Azure, only x86-based VM SKUs are currently supported. ARM-based VM SKUs are not available. See [node_type](/configuration/rack-parameters/azure/node_type) for details.
+   - **Mixed architecture requires `BuildArch`**: When running mixed-architecture node groups, use the [`BuildArch`](/configuration/app-parameters/aws/BuildArch) app parameter to direct each app's builds to build nodes matching its target architecture. Without `BuildArch`, builds run on any available build node and may produce binaries for the wrong architecture.
+   - **Convox system images are multi-arch**: System components (including Fluentd) are published as multi-arch Docker manifests and run natively on both x86 and ARM nodes with no configuration.
 
 2. **Match Node Resources to Workload Requirements**:
    - On AWS: use compute-optimized instances (`c5`, `c6i`) for CPU-intensive workloads, memory-optimized (`r5`, `r6i`) for memory-intensive workloads, and general-purpose (`m5`, `t3`) for balanced workloads
@@ -542,4 +624,5 @@ For more detailed information, refer to the provider-specific rack parameter pag
 - [additional_build_groups_config](/configuration/rack-parameters/azure/additional_build_groups_config)
 
 **App Parameters:**
+- [BuildArch](/configuration/app-parameters/aws/BuildArch)
 - [BuildLabels](/configuration/app-parameters/aws/BuildLabels)

@@ -348,6 +348,7 @@ func TestRackParamsError(t *testing.T) {
 
 func TestRackParamsSet(t *testing.T) {
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystem(), nil)
 		opts := structs.SystemUpdateOptions{
 			Parameters: map[string]string{
 				"Foo": "bar",
@@ -368,6 +369,7 @@ func TestRackParamsSet(t *testing.T) {
 
 func TestRackParamsSetError(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystem(), nil)
 		opts := structs.SystemUpdateOptions{
 			Parameters: map[string]string{
 				"Foo": "bar",
@@ -386,6 +388,7 @@ func TestRackParamsSetError(t *testing.T) {
 
 func TestRackParamsSetTerraformUpdateTimeout(t *testing.T) {
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystem(), nil)
 		opts := structs.SystemUpdateOptions{
 			Parameters: map[string]string{
 				"terraform_update_timeout": "3h",
@@ -405,6 +408,7 @@ func TestRackParamsSetTerraformUpdateTimeout(t *testing.T) {
 
 func TestRackParamsSetTerraformUpdateTimeoutCompound(t *testing.T) {
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystem(), nil)
 		opts := structs.SystemUpdateOptions{
 			Parameters: map[string]string{
 				"terraform_update_timeout": "2h30m",
@@ -423,6 +427,7 @@ func TestRackParamsSetTerraformUpdateTimeoutCompound(t *testing.T) {
 
 func TestRackParamsSetTerraformUpdateTimeoutMinutes(t *testing.T) {
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystem(), nil)
 		opts := structs.SystemUpdateOptions{
 			Parameters: map[string]string{
 				"terraform_update_timeout": "90m",
@@ -441,6 +446,7 @@ func TestRackParamsSetTerraformUpdateTimeoutMinutes(t *testing.T) {
 
 func TestRackParamsSetTerraformUpdateTimeoutInvalid(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystem(), nil)
 		res, err := testExecute(e, "rack params set terraform_update_timeout=abc", nil)
 		require.NoError(t, err)
 		require.Equal(t, 1, res.Code)
@@ -450,6 +456,7 @@ func TestRackParamsSetTerraformUpdateTimeoutInvalid(t *testing.T) {
 
 func TestRackParamsSetTerraformUpdateTimeoutNegative(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystem(), nil)
 		res, err := testExecute(e, "rack params set terraform_update_timeout=-1h", nil)
 		require.NoError(t, err)
 		require.Equal(t, 1, res.Code)
@@ -459,6 +466,7 @@ func TestRackParamsSetTerraformUpdateTimeoutNegative(t *testing.T) {
 
 func TestRackParamsSetTerraformUpdateTimeoutZero(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystem(), nil)
 		res, err := testExecute(e, "rack params set terraform_update_timeout=0s", nil)
 		require.NoError(t, err)
 		require.Equal(t, 1, res.Code)
@@ -468,6 +476,7 @@ func TestRackParamsSetTerraformUpdateTimeoutZero(t *testing.T) {
 
 func TestRackParamsSetTerraformUpdateTimeoutEmpty(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystem(), nil)
 		res, err := testExecute(e, "rack params set terraform_update_timeout=", nil)
 		require.NoError(t, err)
 		require.Equal(t, 1, res.Code)
@@ -477,6 +486,7 @@ func TestRackParamsSetTerraformUpdateTimeoutEmpty(t *testing.T) {
 
 func TestRackParamsSetTerraformUpdateTimeoutSpecialChars(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystem(), nil)
 		res, err := testExecute(e, "rack params set terraform_update_timeout=${var.foo}", nil)
 		require.NoError(t, err)
 		require.Equal(t, 1, res.Code)

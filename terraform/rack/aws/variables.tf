@@ -97,6 +97,11 @@ variable "image" {
   type = string
 }
 
+variable "karpenter_enabled" {
+  type    = bool
+  default = false
+}
+
 variable "keda_enable" {
   type    = bool
   default = false

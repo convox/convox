@@ -25,4 +25,8 @@ Setting parameters... OK
 This command sets the Terraform update timeout to 3 hours.
 
 ## Additional Information
-The value must be a valid Go duration string (e.g., `2h`, `90m`, `2h30m`). This timeout applies to the GKE node pool update operation.
+The value must be a valid Go duration string (e.g., `2h`, `90m`, `2h30m`). This timeout applies to the GKE node pool update operation. The default value of `2h` matches the previously hardcoded behavior, so existing racks are unaffected.
+
+## See Also
+- [node_type](/configuration/rack-parameters/gcp/node_type) for configuring the node instance type
+- [syslog](/configuration/rack-parameters/gcp/syslog) for forwarding logs to an external syslog endpoint

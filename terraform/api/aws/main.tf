@@ -26,6 +26,7 @@ module "k8s" {
   domain_internal                = var.domain_internal
   disable_image_manifest_cache   = var.disable_image_manifest_cache
   image                          = var.image
+  karpenter_enabled              = var.karpenter_enabled
   metrics_scraper_host           = var.metrics_scraper_host
   namespace                      = var.namespace
   rack                           = var.name

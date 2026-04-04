@@ -18,6 +18,7 @@ The following parameters are available for configuring your Convox rack on Micro
 | [cert_duration](/configuration/rack-parameters/azure/cert_duration) | Certificate renewal period. |
 | [docker_hub_password](/configuration/rack-parameters/azure/docker_hub_password) | Docker Hub access token for authenticated image pulls. |
 | [docker_hub_username](/configuration/rack-parameters/azure/docker_hub_username) | Docker Hub username for authenticated image pulls. |
+| [fluentd_memory](/configuration/rack-parameters/azure/fluentd_memory) | Configures memory allocation for the Fluentd log collector DaemonSet. |
 | [high_availability](/configuration/rack-parameters/azure/high_availability) | Enables high availability mode with redundant replicas. |
 | [idle_timeout](/configuration/rack-parameters/azure/idle_timeout) | Load balancer idle timeout in minutes. |
 | [max_on_demand_count](/configuration/rack-parameters/azure/max_on_demand_count) | Maximum number of nodes in the default node pool. |

@@ -15,9 +15,8 @@ resource "digitalocean_kubernetes_cluster" "rack" {
     max_nodes  = var.high_availability ? 10 : 3
   }
 
-  timeouts {
-    update = var.terraform_update_timeout
-  }
+  # digitalocean_kubernetes_cluster currently does not support an "update" timeout in
+  # this provider version, so we keep the implicit default behavior.
 }
 
 # new tokens sometimes take a few seconds to start working
