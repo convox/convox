@@ -24,6 +24,7 @@ resource "helm_release" "karpenter_crd" {
   repository = "oci://public.ecr.aws/karpenter"
   chart      = "karpenter-crd"
   version    = var.karpenter_version
+  timeout    = 600
 }
 
 resource "helm_release" "karpenter" {
@@ -196,6 +197,12 @@ KUBEEOF
         echo "WARNING: Kubernetes API unreachable. Skipping cleanup."
         exit 0
       fi
+
+      # Scale controller to 0 first so it stops recreating resources
+      echo "--- Scaling Karpenter controller to 0 ---"
+      kubectl scale deployment karpenter -n kube-system --replicas=0 --timeout=60s 2>/dev/null || true
+      # Wait for controller pods to terminate
+      kubectl wait --for=delete pod -l app.kubernetes.io/name=karpenter -n kube-system --timeout=60s 2>/dev/null || true
 
       echo "--- Stripping finalizers from NodeClaims ---"
       for nc in $(kubectl get nodeclaims.karpenter.sh -o name 2>/dev/null || true); do
