@@ -92,6 +92,10 @@ resource "kubernetes_daemonset" "fluentd" {
         service_account_name            = "fluentd"
         automount_service_account_token = true
 
+        toleration {
+          operator = "Exists"
+        }
+
         init_container {
           name    = "config"
           image   = "busybox"

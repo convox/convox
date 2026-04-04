@@ -275,6 +275,16 @@ resource "kubernetes_deployment" "ingress-nginx" {
         priority_class_name              = var.set_priority_class ? "system-cluster-critical" : null
         node_selector                    = var.karpenter_enabled ? { "convox.io/system-node" = "true" } : {}
 
+        dynamic "toleration" {
+          for_each = var.karpenter_enabled ? [1] : []
+          content {
+            key      = "convox.io/system-node"
+            operator = "Equal"
+            value    = "true"
+            effect   = "NoSchedule"
+          }
+        }
+
         dynamic "image_pull_secrets" {
           for_each = var.docker_hub_authentication != "NULL" ? [var.docker_hub_authentication] : []
           content {
@@ -470,6 +480,16 @@ resource "kubernetes_deployment" "ingress-nginx-internal" {
         automount_service_account_token  = true
         priority_class_name              = var.set_priority_class ? "system-cluster-critical" : null
         node_selector                    = var.karpenter_enabled ? { "convox.io/system-node" = "true" } : {}
+
+        dynamic "toleration" {
+          for_each = var.karpenter_enabled ? [1] : []
+          content {
+            key      = "convox.io/system-node"
+            operator = "Equal"
+            value    = "true"
+            effect   = "NoSchedule"
+          }
+        }
 
         container {
           name  = "system"

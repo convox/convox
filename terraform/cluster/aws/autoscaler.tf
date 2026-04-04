@@ -359,6 +359,16 @@ resource "kubernetes_deployment" "autoscaler" {
         priority_class_name             = "system-node-critical"
         node_selector                   = var.karpenter_enabled ? { "convox.io/system-node" = "true" } : {}
 
+        dynamic "toleration" {
+          for_each = var.karpenter_enabled ? [1] : []
+          content {
+            key      = "convox.io/system-node"
+            operator = "Equal"
+            value    = "true"
+            effect   = "NoSchedule"
+          }
+        }
+
         container {
           image             = "registry.k8s.io/autoscaling/cluster-autoscaler:v1.32.0"
           image_pull_policy = "IfNotPresent"

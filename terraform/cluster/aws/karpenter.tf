@@ -84,6 +84,27 @@ resource "helm_release" "karpenter" {
     type  = "string"
   }
 
+  # Tolerate the system-node taint
+  set {
+    name  = "tolerations[0].key"
+    value = "convox.io/system-node"
+  }
+
+  set {
+    name  = "tolerations[0].operator"
+    value = "Equal"
+  }
+
+  set {
+    name  = "tolerations[0].value"
+    value = "true"
+  }
+
+  set {
+    name  = "tolerations[0].effect"
+    value = "NoSchedule"
+  }
+
   # Prevent Karpenter from evicting its own controller pods
   set {
     name  = "podAnnotations.karpenter\\.sh/do-not-disrupt"
