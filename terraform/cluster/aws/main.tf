@@ -351,6 +351,8 @@ resource "null_resource" "karpenter_access_config" {
         aws eks update-cluster-config \
           --name "$CLUSTER" --region "$REGION" \
           --access-config authenticationMode=API_AND_CONFIG_MAP
+        echo "Waiting for cluster update to start..."
+        sleep 15
         echo "Waiting for cluster to reach ACTIVE state..."
         aws eks wait cluster-active --name "$CLUSTER" --region "$REGION"
         echo "EKS access config update complete"

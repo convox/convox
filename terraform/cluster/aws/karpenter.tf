@@ -81,12 +81,14 @@ resource "helm_release" "karpenter" {
   set {
     name  = "nodeSelector.convox\\.io/system-node"
     value = "true"
+    type  = "string"
   }
 
   # Prevent Karpenter from evicting its own controller pods
   set {
     name  = "podAnnotations.karpenter\\.sh/do-not-disrupt"
     value = "true"
+    type  = "string"
   }
 
   # Topology spread for HA — distribute controller replicas across nodes
