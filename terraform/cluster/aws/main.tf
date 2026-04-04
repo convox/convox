@@ -171,6 +171,15 @@ resource "aws_eks_node_group" "cluster" {
 
   labels = var.karpenter_auth_mode ? { "convox.io/system-node" = "true" } : {}
 
+  dynamic "taint" {
+    for_each = var.karpenter_enabled ? [1] : []
+    content {
+      key    = "convox.io/system-node"
+      value  = "true"
+      effect = "NO_SCHEDULE"
+    }
+  }
+
   launch_template {
     id      = aws_launch_template.cluster.id
     version = "$Latest"

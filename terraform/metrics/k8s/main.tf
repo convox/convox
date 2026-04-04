@@ -145,6 +145,16 @@ resource "kubernetes_deployment" "metrics" {
         priority_class_name             = var.set_priority_class ? "system-cluster-critical" : null
         node_selector                   = var.karpenter_enabled ? { "convox.io/system-node" = "true" } : {}
 
+        dynamic "toleration" {
+          for_each = var.karpenter_enabled ? [1] : []
+          content {
+            key      = "convox.io/system-node"
+            operator = "Equal"
+            value    = "true"
+            effect   = "NoSchedule"
+          }
+        }
+
         container {
           name              = "metrics-server"
           image             = "registry.k8s.io/metrics-server/metrics-server:v0.7.2"

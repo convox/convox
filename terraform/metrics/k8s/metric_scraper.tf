@@ -65,6 +65,17 @@ resource "kubernetes_deployment" "metrics_scraper" {
       spec {
         automount_service_account_token = true
         service_account_name            = kubernetes_service_account.metrics_scraper.metadata.0.name
+        node_selector                   = var.karpenter_enabled ? { "convox.io/system-node" = "true" } : {}
+
+        dynamic "toleration" {
+          for_each = var.karpenter_enabled ? [1] : []
+          content {
+            key      = "convox.io/system-node"
+            operator = "Equal"
+            value    = "true"
+            effect   = "NoSchedule"
+          }
+        }
 
         container {
           name              = "metrics-scraper"
