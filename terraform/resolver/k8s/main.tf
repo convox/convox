@@ -86,7 +86,9 @@ resource "kubernetes_deployment" "resolver" {
 
     template {
       metadata {
-        annotations = var.annotations
+        annotations = merge(var.annotations, {
+          "convox.com/internal-router" = tostring(var.internal_router)
+        })
 
         labels = {
           app     = "system"
@@ -102,6 +104,17 @@ resource "kubernetes_deployment" "resolver" {
         automount_service_account_token = true
         service_account_name            = "resolver"
         priority_class_name             = var.set_priority_class ? "system-cluster-critical" : null
+        node_selector                   = var.karpenter_enabled ? { "convox.io/system-node" = "true" } : {}
+
+        dynamic "toleration" {
+          for_each = var.karpenter_enabled ? [1] : []
+          content {
+            key      = "convox.io/system-node"
+            operator = "Equal"
+            value    = "true"
+            effect   = "NoSchedule"
+          }
+        }
 
         affinity {
           pod_anti_affinity {

@@ -23,6 +23,7 @@ module "nginx" {
 
   cloud_provider            = "aws"
   docker_hub_authentication = var.docker_hub_authentication
+  karpenter_enabled         = var.karpenter_enabled
   internal_router           = var.internal_router
   namespace                 = var.namespace
   nginx_image               = var.nginx_image

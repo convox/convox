@@ -237,7 +237,7 @@ jobs:
           asset_path: ./convox-darwin-arm64
           upload_url: "${{ needs.release.outputs.upload_url }}"
   ci:
-    if: github.repository == 'convox/convox'
+    if: github.repository == 'convox/convox' && !contains(github.ref_name, 'rc')
     needs:
       - create-manifests
       - release-cli-linux
@@ -306,7 +306,7 @@ jobs:
         run: ci/uninstall.sh
         if: always()
   ci-downgrade:
-    if: github.repository == 'convox/convox'
+    if: github.repository == 'convox/convox' && !contains(github.ref_name, 'rc')
     environment: 'UpgradeDowngradeTests'
     needs:
       - create-manifests
@@ -354,7 +354,7 @@ jobs:
         run: ci/uninstall.sh
         if: always()
   ci-upgrade:
-    if: github.repository == 'convox/convox'
+    if: github.repository == 'convox/convox' && !contains(github.ref_name, 'rc')
     environment: 'UpgradeDowngradeTests'
     needs:
       - create-manifests
@@ -402,7 +402,7 @@ jobs:
         run: ci/uninstall.sh
         if: always()
   ci-ssh:
-    if: github.repository == 'convox/convox'
+    if: github.repository == 'convox/convox' && !contains(github.ref_name, 'rc')
     needs:
       - create-manifests
       - release-cli-linux

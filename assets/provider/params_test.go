@@ -302,6 +302,7 @@ func TestParamsYAML_GroupOrderConsistent(t *testing.T) {
 		"Networking":           3,
 		"Performance & Scaling": 4,
 		"Logging & Monitoring":  5,
+		"Karpenter":            6,
 	}
 
 	for _, provider := range providers {

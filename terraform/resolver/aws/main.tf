@@ -7,6 +7,8 @@ module "k8s" {
 
   docker_hub_authentication = var.docker_hub_authentication
   image                     = var.image
+  internal_router           = var.internal_router
+  karpenter_enabled         = var.karpenter_enabled
   namespace                 = var.namespace
   rack                      = var.rack
   release                   = var.release

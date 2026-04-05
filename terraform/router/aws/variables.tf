@@ -30,6 +30,11 @@ variable "high_availability" {
   default = true
 }
 
+variable "karpenter_enabled" {
+  type    = bool
+  default = false
+}
+
 variable "lbc_helm_id" {
   default = ""
   type    = string
