@@ -7,7 +7,11 @@
 # and public ECR needs no authentication.
 
 resource "helm_release" "karpenter_crd" {
-  count = var.karpenter_enabled ? 1 : 0
+  # CRDs are installed when auth_mode is enabled (one-way migration) and never
+  # uninstalled. Helm CRD uninstall deadlocks on Karpenter finalizers — this is
+  # a known upstream issue (aws/karpenter-provider-aws#6870). Empty CRDs with
+  # no instances are harmless.
+  count = var.karpenter_auth_mode ? 1 : 0
 
   depends_on = [
     null_resource.wait_k8s_api,
