@@ -23,6 +23,7 @@ func TestDeploy(t *testing.T) {
 		i.On("BuildCreate", "app1", "object://test", structs.BuildCreateOptions{Description: options.String("foo")}).Return(fxBuild(), nil)
 		i.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(testLogs(fxLogs()), nil)
 		i.On("BuildGet", "app1", "build1").Return(fxBuildRunning(), nil).Once()
+		i.On("BuildGet", "app1", "build1").Return(fxBuild(), nil)
 		i.On("BuildGet", "app1", "build4").Return(fxBuild(), nil)
 		i.On("AppGet", "app1").Return(fxApp(), nil).Once()
 		i.On("ReleasePromote", "app1", "release1", structs.ReleasePromoteOptions{
@@ -61,6 +62,7 @@ func TestDeployError(t *testing.T) {
 		i.On("BuildCreate", "app1", "object://test", structs.BuildCreateOptions{Description: options.String("foo")}).Return(fxBuild(), nil)
 		i.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(testLogs(fxLogs()), nil)
 		i.On("BuildGet", "app1", "build1").Return(fxBuildRunning(), nil).Once()
+		i.On("BuildGet", "app1", "build1").Return(fxBuild(), nil)
 		i.On("BuildGet", "app1", "build4").Return(fxBuild(), nil)
 		i.On("AppGet", "app1").Return(fxApp(), nil)
 		i.On("ReleasePromote", "app1", "release1", structs.ReleasePromoteOptions{

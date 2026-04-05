@@ -41,6 +41,7 @@ func testClientWait(t *testing.T, wait time.Duration, fn func(*cli.Engine, *mock
 	os.Unsetenv("CONVOX_PASSWORD")
 	os.Unsetenv("CONVOX_RACK")
 	os.Unsetenv("RACK_URL")
+	os.Setenv("TEST", "true")
 
 	i := &mocksdk.Interface{}
 
