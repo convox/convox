@@ -140,39 +140,57 @@ resource "null_resource" "karpenter_finalizer_cleanup" {
   provisioner "local-exec" {
     when    = destroy
     command = <<-CLEANUP
-      echo "=== Karpenter cleanup: stripping finalizers from CRD resources ==="
+      echo "=== Karpenter cleanup: stopping controller then stripping finalizers ==="
 
       # The API container has kubectl with in-cluster auth via service account.
-      # No aws CLI or external kubeconfig needed.
       if ! kubectl cluster-info --request-timeout=10s >/dev/null 2>&1; then
         echo "WARNING: Kubernetes API unreachable. Skipping cleanup."
         exit 0
       fi
 
-      # Scale controller to 0 first so it stops recreating resources
-      echo "--- Scaling Karpenter controller to 0 ---"
-      kubectl scale deployment karpenter -n kube-system --replicas=0 --timeout=60s 2>/dev/null || true
-      kubectl wait --for=delete pod -l app.kubernetes.io/name=karpenter -n kube-system --timeout=60s 2>/dev/null || true
+      # Step 1: Kill the controller so it cannot re-add finalizers.
+      # Scale to 0 AND delete the deployment entirely to prevent any reconciliation.
+      echo "--- Stopping Karpenter controller ---"
+      kubectl delete deployment karpenter -n kube-system --timeout=60s 2>/dev/null || true
+      kubectl wait --for=delete pod -l app.kubernetes.io/name=karpenter -n kube-system --timeout=90s 2>/dev/null || true
+      echo "--- Controller stopped ---"
 
-      echo "--- Stripping finalizers from NodeClaims ---"
-      for nc in $(kubectl get nodeclaims.karpenter.sh -o name 2>/dev/null || true); do
-        kubectl patch "$nc" --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
+      # Step 2: Strip finalizers and delete instances. Run in a loop because
+      # Kubernetes foregroundDeletion finalizer can re-queue dependents.
+      for attempt in 1 2 3; do
+        echo "--- Cleanup pass $attempt ---"
+
+        for nc in $(kubectl get nodeclaims.karpenter.sh -o name 2>/dev/null || true); do
+          kubectl patch "$nc" --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
+        done
+
+        for np in $(kubectl get nodepools.karpenter.sh -o name 2>/dev/null || true); do
+          kubectl patch "$np" --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
+        done
+
+        for ec2nc in $(kubectl get ec2nodeclasses.karpenter.k8s.aws -o name 2>/dev/null || true); do
+          kubectl patch "$ec2nc" --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
+        done
+
+        kubectl delete nodeclaims.karpenter.sh --all --timeout=30s 2>/dev/null || true
+        kubectl delete nodepools.karpenter.sh --all --timeout=30s 2>/dev/null || true
+        kubectl delete ec2nodeclasses.karpenter.k8s.aws --all --timeout=30s 2>/dev/null || true
+
+        # Check if everything is gone
+        REMAINING=$(kubectl get nodeclaims.karpenter.sh,nodepools.karpenter.sh,ec2nodeclasses.karpenter.k8s.aws --no-headers 2>/dev/null | wc -l || echo "0")
+        if [ "$REMAINING" = "0" ]; then
+          echo "--- All CRD instances removed ---"
+          break
+        fi
+        echo "--- $REMAINING resources remaining, retrying in 5s ---"
+        sleep 5
       done
 
-      echo "--- Stripping finalizers from NodePools ---"
-      for np in $(kubectl get nodepools.karpenter.sh -o name 2>/dev/null || true); do
-        kubectl patch "$np" --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
+      # Step 3: Strip finalizers from the CRDs themselves to unblock Helm uninstall
+      echo "--- Stripping CRD finalizers ---"
+      for crd in nodeclaims.karpenter.sh nodepools.karpenter.sh ec2nodeclasses.karpenter.k8s.aws; do
+        kubectl patch crd "$crd" --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
       done
-
-      echo "--- Stripping finalizers from EC2NodeClasses ---"
-      for ec2nc in $(kubectl get ec2nodeclasses.karpenter.k8s.aws -o name 2>/dev/null || true); do
-        kubectl patch "$ec2nc" --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
-      done
-
-      echo "--- Deleting all Karpenter CRD resources ---"
-      kubectl delete nodeclaims.karpenter.sh --all --timeout=60s 2>/dev/null || true
-      kubectl delete nodepools.karpenter.sh --all --timeout=60s 2>/dev/null || true
-      kubectl delete ec2nodeclasses.karpenter.k8s.aws --all --timeout=60s 2>/dev/null || true
 
       echo "=== Karpenter cleanup complete ==="
     CLEANUP
