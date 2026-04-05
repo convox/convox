@@ -128,11 +128,6 @@ resource "helm_release" "karpenter" {
 resource "null_resource" "karpenter_finalizer_cleanup" {
   count = var.karpenter_enabled ? 1 : 0
 
-  triggers = {
-    cluster_name = var.name
-    region       = data.aws_region.current.name
-  }
-
   depends_on = [
     kubectl_manifest.karpenter_nodepool_workload,
     kubectl_manifest.karpenter_ec2nodeclass_workload,
@@ -145,54 +140,10 @@ resource "null_resource" "karpenter_finalizer_cleanup" {
   provisioner "local-exec" {
     when    = destroy
     command = <<-CLEANUP
-      set -e
-      CLUSTER="${self.triggers.cluster_name}"
-      REGION="${self.triggers.region}"
-
       echo "=== Karpenter cleanup: stripping finalizers from CRD resources ==="
 
-      ENDPOINT=$(aws eks describe-cluster --name "$CLUSTER" --region "$REGION" \
-        --query 'cluster.endpoint' --output text 2>/dev/null || true)
-      CA_DATA=$(aws eks describe-cluster --name "$CLUSTER" --region "$REGION" \
-        --query 'cluster.certificateAuthority.data' --output text 2>/dev/null || true)
-
-      if [ -z "$ENDPOINT" ] || [ -z "$CA_DATA" ] || [ "$ENDPOINT" = "None" ]; then
-        echo "WARNING: Could not reach EKS cluster $CLUSTER. Skipping cleanup."
-        exit 0
-      fi
-
-      export KUBECONFIG=$(mktemp)
-      trap 'rm -f "$KUBECONFIG"' EXIT
-
-      cat > "$KUBECONFIG" <<KUBEEOF
-apiVersion: v1
-kind: Config
-clusters:
-- cluster:
-    server: $ENDPOINT
-    certificate-authority-data: $CA_DATA
-  name: $CLUSTER
-contexts:
-- context:
-    cluster: $CLUSTER
-    user: $CLUSTER
-  name: $CLUSTER
-current-context: $CLUSTER
-users:
-- name: $CLUSTER
-  user:
-    exec:
-      apiVersion: client.authentication.k8s.io/v1beta1
-      command: aws
-      args:
-      - eks
-      - get-token
-      - --cluster-name
-      - $CLUSTER
-      - --region
-      - $REGION
-KUBEEOF
-
+      # The API container has kubectl with in-cluster auth via service account.
+      # No aws CLI or external kubeconfig needed.
       if ! kubectl cluster-info --request-timeout=10s >/dev/null 2>&1; then
         echo "WARNING: Kubernetes API unreachable. Skipping cleanup."
         exit 0
@@ -201,7 +152,6 @@ KUBEEOF
       # Scale controller to 0 first so it stops recreating resources
       echo "--- Scaling Karpenter controller to 0 ---"
       kubectl scale deployment karpenter -n kube-system --replicas=0 --timeout=60s 2>/dev/null || true
-      # Wait for controller pods to terminate
       kubectl wait --for=delete pod -l app.kubernetes.io/name=karpenter -n kube-system --timeout=60s 2>/dev/null || true
 
       echo "--- Stripping finalizers from NodeClaims ---"
