@@ -102,7 +102,7 @@ These parameters control how Karpenter provisions nodes for your application Ser
 | Parameter | Type | Default | Validation | Description |
 |-----------|------|---------|------------|-------------|
 | `karpenter_node_labels` | string | _(none)_ | Comma-separated `key=value`; no double quotes; `convox.io/nodepool` reserved | Custom labels added alongside the default `convox.io/nodepool=workload` label. |
-| `karpenter_node_taints` | string | _(none)_ | Comma-separated `key=value:Effect`; effect must be `NoSchedule`, `PreferNoSchedule`, or `NoExecute` | Custom taints on workload nodes. Requires matching tolerations on all workload Services. |
+| `karpenter_node_taints` | string | _(none)_ | Comma-separated `key=value:Effect`; effect must be `NoSchedule`, `PreferNoSchedule`, or `NoExecute` | Custom taints on workload nodes. Prevents pods without matching tolerations from scheduling on these nodes. See [Using Taints to Protect Nodes](#using-taints-to-protect-nodes) below. |
 
 ## Build NodePool Parameters
 
@@ -238,9 +238,9 @@ Use this for dedicated GPU pools, tenant isolation, specialized instance require
 | `volume_type` | string | `gp3` | no | `gp2`, `gp3`, `io1`, `io2`. |
 | `weight` | integer | _(unset)_ | no | Scheduling weight (0-100). Higher = preferred. |
 | `labels` | string | _(none)_ | no | Comma-separated `key=value`. `convox.io/nodepool` is reserved. |
-| `taints` | string | _(none)_ | no | Comma-separated `key=value:Effect`. Valid effects: `NoSchedule`, `PreferNoSchedule`, `NoExecute`. |
+| `taints` | string | _(none)_ | no | Comma-separated `key=value:Effect`. Valid effects: `NoSchedule`, `PreferNoSchedule`, `NoExecute`. Prevents pods without matching tolerations from scheduling on these nodes. See [Using Taints to Protect Nodes](#using-taints-to-protect-nodes) below. |
 
-Every custom pool automatically gets a `convox.io/nodepool={name}` label. Target Services to a custom pool using `nodeSelectorLabels` and `tolerations` in `convox.yml`:
+Every custom pool automatically gets a `convox.io/nodepool={name}` label. Target Services to a custom pool using `nodeSelectorLabels` in `convox.yml`:
 
 ```yaml
 services:
@@ -248,18 +248,53 @@ services:
     build: .
     nodeSelectorLabels:
       convox.io/nodepool: gpu
-    tolerations:
-      - key: nvidia.com/gpu
-        value: "true"
-        effect: NoSchedule
 ```
 
 **Example: GPU pool and high-memory pool**
 
 ```bash
-$ convox rack params set additional_karpenter_nodepools_config='[{"name":"gpu","instance_families":"g5,g6","capacity_types":"on-demand","cpu_limit":64,"memory_limit_gb":256,"labels":"gpu=true","taints":"nvidia.com/gpu=true:NoSchedule","disk":200},{"name":"high-mem","instance_families":"r5,r6i","instance_sizes":"xlarge,2xlarge,4xlarge","capacity_types":"on-demand,spot","cpu_limit":200,"memory_limit_gb":1600,"labels":"pool=high-mem"}]' -r rackName
+$ convox rack params set additional_karpenter_nodepools_config='[{"name":"gpu","instance_families":"g5,g6","capacity_types":"on-demand","cpu_limit":64,"memory_limit_gb":256,"taints":"nvidia.com/gpu=true:NoSchedule","disk":200},{"name":"high-mem","instance_families":"r5,r6i","instance_sizes":"xlarge,2xlarge,4xlarge","capacity_types":"on-demand,spot","cpu_limit":200,"memory_limit_gb":1600,"labels":"pool=high-mem"}]' -r rackName
 Setting parameters... OK
 ```
+
+### Using Taints to Protect Nodes
+
+Without taints, any pod can land on a custom NodePool's nodes if they have spare capacity — even pods that don't need those resources. For example, a basic web service could get scheduled to an expensive GPU instance. Taints prevent this by rejecting pods that lack a matching toleration.
+
+> **Important:** `convox.yml` does not have a `tolerations` field. You cannot manually specify tolerations in your Service definition. Instead, tolerations are handled automatically through the mechanisms described below.
+
+#### GPU workloads
+
+For GPU pools with an `nvidia.com/gpu` taint, use [`scale.gpu`](/configuration/scaling/autoscaling) in `convox.yml` to request GPU resources:
+
+```yaml
+services:
+  ml-worker:
+    build: .
+    scale:
+      gpu:
+        count: 1
+        vendor: nvidia
+    nodeSelectorLabels:
+      convox.io/nodepool: gpu
+```
+
+When a Service declares `scale.gpu`, Convox adds `nvidia.com/gpu` to the pod's resource requests. Kubernetes' `ExtendedResourceToleration` admission controller then auto-adds the matching toleration. No manual toleration configuration is needed.
+
+You must also enable the NVIDIA device plugin on the Rack:
+
+```bash
+$ convox rack params set nvidia_device_plugin_enable=true -r rackName
+Setting parameters... OK
+```
+
+#### Non-GPU taints
+
+For non-GPU custom taints (e.g., tenant isolation), Convox does not currently auto-inject tolerations. Pods targeting pools with non-GPU taints will need tolerations added through an external mechanism such as a Kubernetes mutating admission webhook. For most non-GPU use cases, using `labels` + `nodeSelectorLabels` without taints is the recommended approach — Karpenter only provisions nodes for pods that need them, so unwanted pods won't cause unnecessary GPU-class nodes to spin up.
+
+#### DaemonSets on tainted nodes
+
+Node-level DaemonSets (fluentd, `aws-node`, `kube-proxy`, `ebs-csi-node`, `efs-csi-node`, `eks-pod-identity-agent`) use `operator: Exists` tolerations and are **not affected** by custom taints. They will continue to run on all nodes, including tainted custom NodePool nodes.
 
 You can also use a JSON file:
 
