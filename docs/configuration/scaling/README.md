@@ -34,6 +34,13 @@ Scale services based on business-level metrics from Datadog via HPA external met
 See [Datadog Metrics Autoscaling](/configuration/scaling/datadog-metrics) for details.
 > All providers (requires Datadog Cluster Agent)
 
+## Karpenter
+
+Opt-in alternative to Cluster Autoscaler for AWS EKS node provisioning. Karpenter provisions the optimal instance type and size in seconds rather than minutes, supports scale-to-zero builds, automatic node consolidation, and cost-aware instance selection across spot and on-demand capacity.
+
+See [Karpenter](/configuration/scaling/karpenter) for details.
+> AWS only
+
 ## Workload Placement
 
 Control which nodes your services run on using custom node groups, node selectors, and dedicated node pools. Use this to isolate workloads, target GPU nodes, or optimize cost by routing services to specific instance types.

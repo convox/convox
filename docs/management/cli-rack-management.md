@@ -37,6 +37,18 @@ _Note on Versioning: In the `major.minor.patch` format, `minor` versions indicat
 
 When you run `convox rack update`, Convox applies infrastructure changes (Terraform), updates internal services, and may roll Kubernetes components. The rack status changes from `running` to `updating` and back to `running` when complete. Your application containers continue running during the update -- rack updates are designed for zero downtime.
 
+### Automatic Parameter Reconciliation
+
+Starting with version `3.24.2`, Convox automatically reconciles Rack parameters during version transitions. After downloading the target version's Terraform module, Convox scans it for declared variables and compares them against the Rack's stored parameters. Any parameters not accepted by the target version are automatically removed before `terraform apply`, preventing failures from unrecognized arguments.
+
+This handles common failure scenarios:
+
+- **Downgrades:** Rolling back to a version that predates a parameter
+- **Version pinning:** Switching to a specific release that doesn't include a recently added parameter
+- **Hotfix branches:** Applying a patch built from an older code base
+
+When parameters are removed, a `NOTICE` is printed listing the dropped parameters so operators have visibility into what changed. If no unrecognized parameters are found, the reconciliation is a no-op.
+
 If an update fails or the rack remains in `updating` status for an extended period, check the rack logs for errors:
 
 ```bash
@@ -110,6 +122,8 @@ For detailed descriptions and instructions, visit the [AWS Rack Parameters](/con
 | **idle_timeout**                          | **3600**               |
 | **imds_http_tokens**                      | **optional**           |
 | **internal_router**                       | **false**              |
+| **karpenter_auth_mode**                   | **false**              |
+| **karpenter_enabled**                     | **false**              |
 | **internet_gateway_id**                   |                        |
 | **max_on_demand_count**                   | **100**                |
 | **min_on_demand_count**                   | **1**                  |
