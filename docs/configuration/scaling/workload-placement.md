@@ -626,3 +626,6 @@ For more detailed information, refer to the provider-specific rack parameter pag
 **App Parameters:**
 - [BuildArch](/configuration/app-parameters/aws/BuildArch)
 - [BuildLabels](/configuration/app-parameters/aws/BuildLabels)
+
+**Node Autoscaling:**
+- [Karpenter](/configuration/scaling/karpenter) for pod-level node provisioning with cost optimization and scale-to-zero builds (AWS only)

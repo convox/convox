@@ -162,6 +162,8 @@ The service will scale based on CPU utilization while ensuring that each process
 
 ## Troubleshooting Cluster Scale-Down
 
+> If you are using [Karpenter](/configuration/scaling/karpenter) for node provisioning, Karpenter handles node consolidation automatically based on `karpenter_consolidation_enabled` and `karpenter_consolidate_after`. The Cluster Autoscaler troubleshooting below applies only to Racks using the default Cluster Autoscaler.
+
 If your cluster is not scaling down despite low resource usage, the Kubernetes Cluster Autoscaler may be blocked from removing nodes. Common causes:
 
 - **Restrictive PodDisruptionBudgets (PDBs)**: A PDB with `minAvailable: 1` on a service with one replica prevents that pod from being evicted. Adjust with the [`pdb_default_min_available_percentage`](/configuration/rack-parameters/aws/pdb_default_min_available_percentage) rack parameter.
@@ -190,3 +192,4 @@ A PDB with `ALLOWED DISRUPTIONS` of `0` will block evictions on that node.
 - [VPA](/configuration/scaling/vpa) for automatic resource right-sizing
 - [KEDA Autoscaling](/configuration/scaling/keda) for event-driven autoscaling
 - [Datadog Metrics](/configuration/scaling/datadog-metrics) for Datadog-based autoscaling
+- [Karpenter](/configuration/scaling/karpenter) for pod-level node provisioning as an alternative to Cluster Autoscaler (AWS only)

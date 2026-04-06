@@ -38,6 +38,30 @@ The following parameters are available for configuring your Convox rack on Amazo
 | [imds_http_tokens](/configuration/rack-parameters/aws/imds_http_tokens)             | Determines whether the Instance Metadata Service requires session tokens (IMDSv2). |
 | [internal_router](/configuration/rack-parameters/aws/internal_router)               | Installs an internal load balancer within the VPC.                       |
 | [internet_gateway_id](/configuration/rack-parameters/aws/internet_gateway_id)       | Specifies the ID of the attached internet gateway when using an existing VPC. |
+| [karpenter_arch](/configuration/rack-parameters/aws/karpenter_arch)                 | Karpenter workload node CPU architecture. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_auth_mode](/configuration/rack-parameters/aws/karpenter_auth_mode)       | One-way migration preparing EKS for Karpenter. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_build_capacity_types](/configuration/rack-parameters/aws/karpenter_build_capacity_types) | Purchasing model for Karpenter build nodes. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_build_consolidate_after](/configuration/rack-parameters/aws/karpenter_build_consolidate_after) | Delay before empty Karpenter build nodes are consolidated. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_build_cpu_limit](/configuration/rack-parameters/aws/karpenter_build_cpu_limit) | Maximum total vCPUs for the Karpenter build NodePool. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_build_instance_families](/configuration/rack-parameters/aws/karpenter_build_instance_families) | Instance families for Karpenter build nodes. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_build_instance_sizes](/configuration/rack-parameters/aws/karpenter_build_instance_sizes) | Instance sizes for Karpenter build nodes. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_build_memory_limit_gb](/configuration/rack-parameters/aws/karpenter_build_memory_limit_gb) | Maximum total memory for the Karpenter build NodePool. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_build_node_labels](/configuration/rack-parameters/aws/karpenter_build_node_labels) | Custom labels for Karpenter build nodes. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_capacity_types](/configuration/rack-parameters/aws/karpenter_capacity_types) | EC2 purchasing model for Karpenter workload nodes. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_config](/configuration/rack-parameters/aws/karpenter_config)             | JSON override for the Karpenter workload NodePool. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_consolidate_after](/configuration/rack-parameters/aws/karpenter_consolidate_after) | Delay before Karpenter consolidation triggers. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_consolidation_enabled](/configuration/rack-parameters/aws/karpenter_consolidation_enabled) | Enables Karpenter node consolidation. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_cpu_limit](/configuration/rack-parameters/aws/karpenter_cpu_limit)       | Maximum total vCPUs Karpenter can provision. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_disruption_budget_nodes](/configuration/rack-parameters/aws/karpenter_disruption_budget_nodes) | Maximum Karpenter nodes disrupted simultaneously. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_enabled](/configuration/rack-parameters/aws/karpenter_enabled)           | Enables Karpenter node autoscaling. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_instance_families](/configuration/rack-parameters/aws/karpenter_instance_families) | EC2 instance families for Karpenter workload nodes. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_instance_sizes](/configuration/rack-parameters/aws/karpenter_instance_sizes) | Instance sizes for Karpenter workload nodes. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_memory_limit_gb](/configuration/rack-parameters/aws/karpenter_memory_limit_gb) | Maximum total memory Karpenter can provision. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_node_disk](/configuration/rack-parameters/aws/karpenter_node_disk)       | EBS volume size for Karpenter-provisioned nodes. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_node_expiry](/configuration/rack-parameters/aws/karpenter_node_expiry)   | Maximum Karpenter node lifetime before replacement. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_node_labels](/configuration/rack-parameters/aws/karpenter_node_labels)   | Custom labels for Karpenter workload nodes. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_node_taints](/configuration/rack-parameters/aws/karpenter_node_taints)   | Custom taints for Karpenter workload nodes. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_node_volume_type](/configuration/rack-parameters/aws/karpenter_node_volume_type) | EBS volume type for Karpenter-provisioned nodes. See [Karpenter](/configuration/scaling/karpenter). |
 | [keda_enable](/configuration/rack-parameters/aws/keda_enable)                       | Enables KEDA (Kubernetes Event-Driven Autoscaling) for event-driven scaling. |
 | [key_pair_name](/configuration/rack-parameters/aws/key_pair_name)                   | Specifies an EC2 Key Pair for SSH access to cluster nodes.               |
 | [kubelet_registry_burst](/configuration/rack-parameters/aws/kubelet_registry_burst) | Sets the maximum burst rate for image pulls. See also [combined reference](/configuration/rack-parameters/aws/kubelet_registry_pull_params). |
@@ -68,6 +92,7 @@ The following parameters are available for configuring your Convox rack on Amazo
 | [terraform_update_timeout](/configuration/rack-parameters/aws/terraform_update_timeout) | Controls how long Terraform waits for node group update operations to complete. |
 | [user_data](/configuration/rack-parameters/aws/user_data)                           | Specifies custom commands to append to EC2 instance user data scripts.   |
 | [user_data_url](/configuration/rack-parameters/aws/user_data_url)                   | Specifies a URL to a script to append to EC2 instance user data scripts. |
+| [additional_karpenter_nodepools_config](/configuration/rack-parameters/aws/additional_karpenter_nodepools_config) | Creates custom Karpenter NodePools for specialized workloads. See [Karpenter](/configuration/scaling/karpenter). |
 | [vpa_enable](/configuration/rack-parameters/aws/vpa_enable)                         | Enables the Vertical Pod Autoscaler (VPA) for automatic resource right-sizing. |
 | [vpc_id](/configuration/rack-parameters/aws/vpc_id)                                 | Specifies the ID of an existing VPC to use for cluster creation.         |
 

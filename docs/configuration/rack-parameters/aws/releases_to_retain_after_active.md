@@ -86,11 +86,12 @@ If releases are not being cleaned up as expected, review the API pod logs to ide
 ### Releases Not Being Cleaned Up
 If releases are not being removed as expected:
 
-1. **Check API Pod Logs**: Review the Convox API pod logs for errors related to ECR image removal.
-2. **Verify ECR Permissions**: Ensure the rack has appropriate permissions to delete images from ECR repositories.
-3. **Confirm Parameter Setting**: Verify the parameter is set correctly with `convox rack params -r rackName`.
-4. **Check Cleanup Interval**: The cleanup runs on a schedule defined by `releases_to_retain_task_run_interval_hour` (default: 24 hours).
-5. **Active Release Requirement**: Applications without an active release will be skipped during cleanup.
+1. **Check Rack Version**: Racks prior to `3.24.2` silently skip cleanup for apps with required environment variables in `convox.yml`. Update the Rack to `3.24.2` or later.
+2. **Check API Pod Logs**: Review the Convox API pod logs for errors related to ECR image removal.
+3. **Verify ECR Permissions**: Ensure the rack has appropriate permissions to delete images from ECR repositories.
+4. **Confirm Parameter Setting**: Verify the parameter is set correctly with `convox rack params -r rackName`.
+5. **Check Cleanup Interval**: The cleanup runs on a schedule defined by `releases_to_retain_task_run_interval_hour` (default: 24 hours).
+6. **Active Release Requirement**: Applications without an active release will be skipped during cleanup.
 
 ### Common ECR Errors
 - **Access Denied**: The rack IAM role may lack permissions to delete ECR images.
@@ -103,3 +104,4 @@ If releases are not being removed as expected:
 ## Version Requirements
 - Basic release cleanup functionality requires at least Convox rack version `3.22.3`.
 - Improved error handling and retry behavior requires at least Convox rack version `3.23.2`.
+- Correct cleanup for apps with required environment variables (e.g., `DATABASE_URL`, `API_KEY` declared without defaults in `convox.yml`) requires at least Convox rack version `3.24.2`. Prior versions silently skipped cleanup for these apps.
