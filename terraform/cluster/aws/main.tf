@@ -592,13 +592,39 @@ resource "aws_eks_addon" "aws_ebs_csi_driver" {
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
 
-  configuration_values = jsonencode({
-    sidecars = {
-      snapshotter = {
-        forceEnable = false
+  configuration_values = jsonencode(merge(
+    {
+      sidecars = {
+        snapshotter = {
+          forceEnable = false
+        }
       }
-    }
-  })
+    },
+    var.karpenter_enabled ? {
+      controller = {
+        nodeSelector = {
+          "convox.io/system-node" = "true"
+        }
+        tolerations = [
+          {
+            key      = "CriticalAddonsOnly"
+            operator = "Exists"
+          },
+          {
+            operator          = "Exists"
+            effect            = "NoExecute"
+            tolerationSeconds = 300
+          },
+          {
+            key      = "convox.io/system-node"
+            operator = "Equal"
+            value    = "true"
+            effect   = "NoSchedule"
+          },
+        ]
+      }
+    } : {}
+  ))
 }
 
 resource "null_resource" "wait_eks_addons" {
