@@ -12,6 +12,22 @@ resource "aws_eks_addon" "aws_efs_csi_driver" {
   addon_version               = var.efs_csi_driver_version
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
+
+  configuration_values = var.karpenter_enabled ? jsonencode({
+    controller = {
+      nodeSelector = {
+        "convox.io/system-node" = "true"
+      }
+      tolerations = [
+        {
+          key      = "convox.io/system-node"
+          operator = "Equal"
+          value    = "true"
+          effect   = "NoSchedule"
+        }
+      ]
+    }
+  }) : null
 }
 
 // setup iam permissions
