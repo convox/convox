@@ -412,6 +412,7 @@ func TestValidateAndMutateParams_KarpenterConfigProtectedFields(t *testing.T) {
 func TestKarpenterNodePoolConfigParam_Validate(t *testing.T) {
 	strPtr := func(s string) *string { return &s }
 	intPtr := func(i int) *int { return &i }
+	boolPtr := func(b bool) *bool { return &b }
 
 	tests := []struct {
 		name    string
@@ -422,6 +423,26 @@ func TestKarpenterNodePoolConfigParam_Validate(t *testing.T) {
 		{
 			"minimal valid",
 			KarpenterNodePoolConfigParam{Name: "test"},
+			false, "",
+		},
+		{
+			"dedicated true valid",
+			KarpenterNodePoolConfigParam{Name: "gpu", Dedicated: boolPtr(true)},
+			false, "",
+		},
+		{
+			"dedicated false valid",
+			KarpenterNodePoolConfigParam{Name: "gpu", Dedicated: boolPtr(false)},
+			false, "",
+		},
+		{
+			"dedicated nil valid",
+			KarpenterNodePoolConfigParam{Name: "gpu"},
+			false, "",
+		},
+		{
+			"dedicated true with taints valid",
+			KarpenterNodePoolConfigParam{Name: "gpu", Dedicated: boolPtr(true), Taints: strPtr("nvidia.com/gpu=true:NoSchedule")},
 			false, "",
 		},
 		{
@@ -1621,6 +1642,123 @@ func TestCheckRackNameRegex(t *testing.T) {
 				if !strings.Contains(err.Error(), tt.errMsg) {
 					t.Errorf("name=%q: error %q does not contain %q", tt.input, err.Error(), tt.errMsg)
 				}
+			}
+		})
+	}
+}
+
+func TestKarpenterNodePoolConfigParam_DedicatedJSONRoundtrip(t *testing.T) {
+	boolPtr := func(b bool) *bool { return &b }
+
+	tests := []struct {
+		name       string
+		input      string
+		wantDedicated *bool
+		wantJSON   string
+	}{
+		{
+			"dedicated true roundtrips",
+			`[{"name":"gpu","dedicated":true}]`,
+			boolPtr(true),
+			`true`,
+		},
+		{
+			"dedicated false roundtrips",
+			`[{"name":"gpu","dedicated":false}]`,
+			boolPtr(false),
+			`false`,
+		},
+		{
+			"dedicated absent stays nil",
+			`[{"name":"gpu"}]`,
+			nil,
+			"",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var npCfgs KarpenterNodePools
+			if err := json.Unmarshal([]byte(tt.input), &npCfgs); err != nil {
+				t.Fatalf("unmarshal: %v", err)
+			}
+			if len(npCfgs) != 1 {
+				t.Fatalf("expected 1 pool, got %d", len(npCfgs))
+			}
+
+			got := npCfgs[0].Dedicated
+			if tt.wantDedicated == nil {
+				if got != nil {
+					t.Errorf("expected nil Dedicated, got %v", *got)
+				}
+			} else {
+				if got == nil {
+					t.Fatalf("expected Dedicated=%v, got nil", *tt.wantDedicated)
+				}
+				if *got != *tt.wantDedicated {
+					t.Errorf("expected Dedicated=%v, got %v", *tt.wantDedicated, *got)
+				}
+			}
+
+			data, err := json.Marshal(npCfgs)
+			if err != nil {
+				t.Fatalf("marshal: %v", err)
+			}
+
+			if tt.wantDedicated == nil {
+				if strings.Contains(string(data), `"dedicated"`) {
+					t.Errorf("nil dedicated should be omitted from JSON, got: %s", data)
+				}
+			} else {
+				if !strings.Contains(string(data), `"dedicated":`+tt.wantJSON) {
+					t.Errorf("expected JSON to contain dedicated:%s, got: %s", tt.wantJSON, data)
+				}
+			}
+		})
+	}
+}
+
+func TestValidateAndMutateParams_KarpenterDedicatedNodepools(t *testing.T) {
+	tests := []struct {
+		name    string
+		params  map[string]string
+		wantErr bool
+	}{
+		{
+			"dedicated true passes validation",
+			map[string]string{
+				"additional_karpenter_nodepools_config": `[{"name":"gpu","dedicated":true}]`,
+			},
+			false,
+		},
+		{
+			"dedicated false passes validation",
+			map[string]string{
+				"additional_karpenter_nodepools_config": `[{"name":"gpu","dedicated":false}]`,
+			},
+			false,
+		},
+		{
+			"dedicated absent passes validation",
+			map[string]string{
+				"additional_karpenter_nodepools_config": `[{"name":"gpu"}]`,
+			},
+			false,
+		},
+		{
+			"dedicated true with taints passes validation",
+			map[string]string{
+				"additional_karpenter_nodepools_config": `[{"name":"gpu","dedicated":true,"taints":"nvidia.com/gpu=true:NoSchedule"}]`,
+			},
+			false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateAndMutateParams(tt.params, "aws", map[string]string{})
+			if (err != nil) != tt.wantErr {
+				t.Errorf("got err=%v, wantErr=%v", err, tt.wantErr)
 			}
 		})
 	}
