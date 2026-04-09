@@ -548,6 +548,20 @@ resource "aws_eks_addon" "coredns" {
   addon_version               = var.coredns_version
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
+
+  configuration_values = var.karpenter_enabled ? jsonencode({
+    nodeSelector = {
+      "convox.io/system-node" = "true"
+    }
+    tolerations = [
+      {
+        key      = "convox.io/system-node"
+        operator = "Equal"
+        value    = "true"
+        effect   = "NoSchedule"
+      }
+    ]
+  }) : null
 }
 
 resource "aws_eks_addon" "kube_proxy" {
