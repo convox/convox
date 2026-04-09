@@ -175,14 +175,45 @@ resource "null_resource" "karpenter_pre_disable_cleanup" {
         exit 0
       fi
 
-      # Step 1: Scale controller to 0 to stop reconciliation, then delete
+      # Step 1: Kill the controller COMPLETELY before touching any finalizers.
+      # CRITICAL: helm_release.karpenter may be destroying in parallel, putting
+      # controller pods into graceful shutdown. During graceful shutdown the
+      # reconciliation loop re-adds finalizers. We MUST force-kill all pods
+      # and verify zero exist before proceeding.
       echo "--- Stopping Karpenter controller ---"
-      kubectl scale deployment karpenter -n kube-system --replicas=0 --timeout=30s 2>/dev/null || true
-      kubectl wait --for=delete pod -l app.kubernetes.io/name=karpenter -n kube-system --timeout=90s 2>/dev/null || true
-      kubectl delete deployment karpenter -n kube-system --timeout=60s 2>/dev/null || true
-      echo "--- Controller stopped ---"
 
-      # Step 2: Strip ALL finalizers first, then delete
+      # Delete deployment (may already be gone if Helm destroyed it first)
+      kubectl delete deployment karpenter -n kube-system --timeout=30s 2>/dev/null || true
+
+      # Force-kill all controller pods -- skip graceful shutdown entirely
+      kubectl delete pods -n kube-system -l app.kubernetes.io/name=karpenter \
+        --force --grace-period=0 2>/dev/null || true
+
+      # VERIFY: wait until zero karpenter pods exist in any state
+      # This is the critical gate -- do NOT proceed until confirmed dead
+      DEAD=false
+      for i in $(seq 1 60); do
+        KARP_PODS=$(kubectl get pods -n kube-system -l app.kubernetes.io/name=karpenter \
+          --no-headers 2>/dev/null | wc -l || echo "0")
+        if [ "$KARP_PODS" = "0" ]; then
+          echo "--- Controller confirmed dead after $${i}s ---"
+          DEAD=true
+          break
+        fi
+        echo "--- Waiting for $KARP_PODS controller pod(s) to terminate ($i/60) ---"
+        # Re-attempt force-kill every 10s in case new pods appeared
+        if [ $((i % 10)) -eq 0 ]; then
+          kubectl delete pods -n kube-system -l app.kubernetes.io/name=karpenter \
+            --force --grace-period=0 2>/dev/null || true
+        fi
+        sleep 1
+      done
+
+      if [ "$DEAD" != "true" ]; then
+        echo "WARNING: Controller pods still exist after 60s. Proceeding with cleanup anyway."
+      fi
+
+      # Step 2: Strip ALL finalizers then delete CRD instances
       for attempt in 1 2 3 4 5; do
         echo "--- Cleanup pass $attempt ---"
 
@@ -213,6 +244,28 @@ resource "null_resource" "karpenter_pre_disable_cleanup" {
         echo "--- $REMAINING resources remaining, retrying in 5s ---"
         sleep 5
       done
+
+      # Step 2.5: Terminate orphaned Karpenter EC2 instances.
+      # When we strip karpenter.sh/termination and delete NodeClaims, the
+      # controller's termination handler (which calls ec2:TerminateInstances)
+      # never runs. The EC2 instances become orphaned. Clean them up directly.
+      # Scoped to THIS cluster only via kubernetes.io/cluster tag.
+      echo "--- Terminating orphaned Karpenter EC2 instances ---"
+      KARP_INSTANCES=$(aws ec2 describe-instances \
+        --region "${data.aws_region.current.name}" \
+        --filters "Name=tag:karpenter.sh/nodepool,Values=*" \
+                  "Name=tag:kubernetes.io/cluster/${aws_eks_cluster.cluster.name},Values=owned" \
+                  "Name=instance-state-name,Values=running,pending" \
+        --query 'Reservations[].Instances[].InstanceId' \
+        --output text 2>/dev/null || true)
+      if [ -n "$KARP_INSTANCES" ] && [ "$KARP_INSTANCES" != "None" ]; then
+        echo "Terminating orphaned instances: $KARP_INSTANCES"
+        aws ec2 terminate-instances \
+          --region "${data.aws_region.current.name}" \
+          --instance-ids $KARP_INSTANCES 2>/dev/null || true
+      else
+        echo "No orphaned Karpenter instances found."
+      fi
 
       # Step 3: Strip CRD-level finalizers
       echo "--- Stripping CRD finalizers ---"
