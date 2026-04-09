@@ -199,6 +199,7 @@ type KarpenterNodePoolConfigParam struct {
 	VolumeType            *string `json:"volume_type,omitempty"`
 	Labels                *string `json:"labels,omitempty"`
 	Taints                *string `json:"taints,omitempty"`
+	Dedicated             *bool   `json:"dedicated,omitempty"`
 	Weight                *int    `json:"weight,omitempty"`
 }
 
