@@ -412,6 +412,7 @@ func TestValidateAndMutateParams_KarpenterConfigProtectedFields(t *testing.T) {
 func TestKarpenterNodePoolConfigParam_Validate(t *testing.T) {
 	strPtr := func(s string) *string { return &s }
 	intPtr := func(i int) *int { return &i }
+	boolPtr := func(b bool) *bool { return &b }
 
 	tests := []struct {
 		name    string
@@ -422,6 +423,26 @@ func TestKarpenterNodePoolConfigParam_Validate(t *testing.T) {
 		{
 			"minimal valid",
 			KarpenterNodePoolConfigParam{Name: "test"},
+			false, "",
+		},
+		{
+			"dedicated true valid",
+			KarpenterNodePoolConfigParam{Name: "gpu", Dedicated: boolPtr(true)},
+			false, "",
+		},
+		{
+			"dedicated false valid",
+			KarpenterNodePoolConfigParam{Name: "gpu", Dedicated: boolPtr(false)},
+			false, "",
+		},
+		{
+			"dedicated nil valid",
+			KarpenterNodePoolConfigParam{Name: "gpu"},
+			false, "",
+		},
+		{
+			"dedicated true with taints valid",
+			KarpenterNodePoolConfigParam{Name: "gpu", Dedicated: boolPtr(true), Taints: strPtr("nvidia.com/gpu=true:NoSchedule")},
 			false, "",
 		},
 		{
@@ -1621,6 +1642,213 @@ func TestCheckRackNameRegex(t *testing.T) {
 				if !strings.Contains(err.Error(), tt.errMsg) {
 					t.Errorf("name=%q: error %q does not contain %q", tt.input, err.Error(), tt.errMsg)
 				}
+			}
+		})
+	}
+}
+
+func TestAdditionalNodeGroups_Validate_AutoAssignIdsFromZero(t *testing.T) {
+	ngs := AdditionalNodeGroups{
+		{Type: "m5.large"},
+		{Type: "c5.xlarge"},
+	}
+	if err := ngs.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	if ngs[0].Id == nil || *ngs[0].Id != 0 {
+		t.Errorf("expected first id=0, got %v", ngs[0].Id)
+	}
+	if ngs[1].Id == nil || *ngs[1].Id != 1 {
+		t.Errorf("expected second id=1, got %v", ngs[1].Id)
+	}
+}
+
+func TestValidateAndMutateParams_PreserveExistingNodeGroupIds(t *testing.T) {
+	id5 := 5
+	lbl := "gpu"
+	existingWithId := AdditionalNodeGroups{{Type: "g6.xlarge", Id: &id5, Dedicated: boolPtr(true), Label: &lbl}}
+	existingWithIdJSON, _ := json.Marshal(existingWithId)
+	existingWithIdB64 := base64.StdEncoding.EncodeToString(existingWithIdJSON)
+
+	existingNoId := `[{"type":"g6.xlarge","dedicated":true,"label":"gpu"}]`
+	existingNoIdB64 := base64.StdEncoding.EncodeToString([]byte(existingNoId))
+
+	tests := []struct {
+		name          string
+		newConfig     string
+		currentConfig string
+		wantId        int
+	}{
+		{
+			"preserves existing id from currentParams",
+			`[{"type":"g6.xlarge","dedicated":true,"label":"gpu"}]`,
+			existingWithIdB64,
+			5,
+		},
+		{
+			"legacy config without id gets 0-based index",
+			`[{"type":"g6.xlarge","dedicated":true,"label":"gpu"}]`,
+			existingNoIdB64,
+			0,
+		},
+		{
+			"no currentParams — auto-assigns 0-based",
+			`[{"type":"g6.xlarge","dedicated":true,"label":"gpu"}]`,
+			"",
+			0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := map[string]string{
+				"additional_node_groups_config": tt.newConfig,
+			}
+			currentParams := map[string]string{}
+			if tt.currentConfig != "" {
+				currentParams["additional_node_groups_config"] = tt.currentConfig
+			}
+
+			if err := validateAndMutateParams(params, "aws", currentParams); err != nil {
+				t.Fatal(err)
+			}
+
+			// Decode the result
+			decoded, err := base64.StdEncoding.DecodeString(params["additional_node_groups_config"])
+			if err != nil {
+				t.Fatal(err)
+			}
+			var result AdditionalNodeGroups
+			if err := json.Unmarshal(decoded, &result); err != nil {
+				t.Fatal(err)
+			}
+			if len(result) != 1 {
+				t.Fatalf("expected 1 node group, got %d", len(result))
+			}
+			if result[0].Id == nil {
+				t.Fatal("expected non-nil id")
+			}
+			if *result[0].Id != tt.wantId {
+				t.Errorf("expected id=%d, got id=%d", tt.wantId, *result[0].Id)
+			}
+		})
+	}
+}
+
+func TestKarpenterNodePoolConfigParam_DedicatedJSONRoundtrip(t *testing.T) {
+	boolPtr := func(b bool) *bool { return &b }
+
+	tests := []struct {
+		name          string
+		input         string
+		wantDedicated *bool
+		wantJSON      string
+	}{
+		{
+			"dedicated true roundtrips",
+			`[{"name":"gpu","dedicated":true}]`,
+			boolPtr(true),
+			`true`,
+		},
+		{
+			"dedicated false roundtrips",
+			`[{"name":"gpu","dedicated":false}]`,
+			boolPtr(false),
+			`false`,
+		},
+		{
+			"dedicated absent stays nil",
+			`[{"name":"gpu"}]`,
+			nil,
+			"",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var npCfgs KarpenterNodePools
+			if err := json.Unmarshal([]byte(tt.input), &npCfgs); err != nil {
+				t.Fatalf("unmarshal: %v", err)
+			}
+			if len(npCfgs) != 1 {
+				t.Fatalf("expected 1 pool, got %d", len(npCfgs))
+			}
+
+			got := npCfgs[0].Dedicated
+			if tt.wantDedicated == nil {
+				if got != nil {
+					t.Errorf("expected nil Dedicated, got %v", *got)
+				}
+			} else {
+				if got == nil {
+					t.Fatalf("expected Dedicated=%v, got nil", *tt.wantDedicated)
+				}
+				if *got != *tt.wantDedicated {
+					t.Errorf("expected Dedicated=%v, got %v", *tt.wantDedicated, *got)
+				}
+			}
+
+			data, err := json.Marshal(npCfgs)
+			if err != nil {
+				t.Fatalf("marshal: %v", err)
+			}
+
+			if tt.wantDedicated == nil {
+				if strings.Contains(string(data), `"dedicated"`) {
+					t.Errorf("nil dedicated should be omitted from JSON, got: %s", data)
+				}
+			} else {
+				if !strings.Contains(string(data), `"dedicated":`+tt.wantJSON) {
+					t.Errorf("expected JSON to contain dedicated:%s, got: %s", tt.wantJSON, data)
+				}
+			}
+		})
+	}
+}
+
+func boolPtr(b bool) *bool { return &b }
+
+func TestValidateAndMutateParams_KarpenterDedicatedNodepools(t *testing.T) {
+	tests := []struct {
+		name    string
+		params  map[string]string
+		wantErr bool
+	}{
+		{
+			"dedicated true passes validation",
+			map[string]string{
+				"additional_karpenter_nodepools_config": `[{"name":"gpu","dedicated":true}]`,
+			},
+			false,
+		},
+		{
+			"dedicated false passes validation",
+			map[string]string{
+				"additional_karpenter_nodepools_config": `[{"name":"gpu","dedicated":false}]`,
+			},
+			false,
+		},
+		{
+			"dedicated absent passes validation",
+			map[string]string{
+				"additional_karpenter_nodepools_config": `[{"name":"gpu"}]`,
+			},
+			false,
+		},
+		{
+			"dedicated true with taints passes validation",
+			map[string]string{
+				"additional_karpenter_nodepools_config": `[{"name":"gpu","dedicated":true,"taints":"nvidia.com/gpu=true:NoSchedule"}]`,
+			},
+			false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateAndMutateParams(tt.params, "aws", map[string]string{})
+			if (err != nil) != tt.wantErr {
+				t.Errorf("got err=%v, wantErr=%v", err, tt.wantErr)
 			}
 		})
 	}

@@ -199,6 +199,7 @@ type KarpenterNodePoolConfigParam struct {
 	VolumeType            *string `json:"volume_type,omitempty"`
 	Labels                *string `json:"labels,omitempty"`
 	Taints                *string `json:"taints,omitempty"`
+	Dedicated             *bool   `json:"dedicated,omitempty"`
 	Weight                *int    `json:"weight,omitempty"`
 }
 
@@ -356,7 +357,7 @@ func (an AdditionalNodeGroups) Validate() error {
 
 	if idCnt == 0 {
 		for i := range an {
-			an[i].Id = options.Int(i + 1)
+			an[i].Id = options.Int(i)
 		}
 	}
 	return nil
@@ -588,6 +589,41 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 			nCfgs := AdditionalNodeGroups{}
 			if err := json.Unmarshal(cfgData, &nCfgs); err != nil {
 				return err
+			}
+
+			// Preserve existing ids from currentParams when new config omits them.
+			// This prevents Terraform for_each key changes (destroy+create cycles)
+			// when a user modifies config without specifying ids.
+			hasNilId := false
+			for _, ng := range nCfgs {
+				if ng.Id == nil {
+					hasNilId = true
+					break
+				}
+			}
+			if hasNilId && currentParams[k] != "" {
+				var existingData []byte
+				if decoded, err := base64.StdEncoding.DecodeString(currentParams[k]); err == nil {
+					existingData = decoded
+				} else {
+					existingData = []byte(currentParams[k])
+				}
+				var existing AdditionalNodeGroups
+				if err := json.Unmarshal(existingData, &existing); err == nil {
+					for i := range nCfgs {
+						if nCfgs[i].Id != nil {
+							continue
+						}
+						if i < len(existing) {
+							if existing[i].Id != nil {
+								nCfgs[i].Id = existing[i].Id
+							} else {
+								// Legacy entry without id — use 0-based index to match Terraform's idx default
+								nCfgs[i].Id = options.Int(i)
+							}
+						}
+					}
+				}
 			}
 
 			if err := nCfgs.Validate(); err != nil {
