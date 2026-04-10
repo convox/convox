@@ -163,6 +163,14 @@ resource "null_resource" "karpenter_pre_disable_cleanup" {
     command = <<-CLEANUP
       echo "=== Karpenter pre-disable cleanup ==="
 
+      # Configure kubectl access (local-exec has no kubeconfig)
+      echo "--- Configuring kubectl access ---"
+      export KUBECONFIG=/tmp/karpenter-cleanup-kubeconfig
+      aws eks update-kubeconfig \
+        --name "${aws_eks_cluster.cluster.name}" \
+        --region "${data.aws_region.current.name}" \
+        --kubeconfig "$KUBECONFIG" 2>&1 || true
+
       if ! kubectl cluster-info --request-timeout=10s >/dev/null 2>&1; then
         echo "WARNING: Kubernetes API unreachable. Skipping cleanup."
         exit 0
@@ -212,6 +220,10 @@ resource "null_resource" "karpenter_pre_disable_cleanup" {
       if [ "$DEAD" != "true" ]; then
         echo "WARNING: Controller pods still exist after 60s. Proceeding with cleanup anyway."
       fi
+
+      # Wait for in-flight reconciliation after last pod exits
+      echo "--- Waiting 15s for in-flight reconciliation to settle ---"
+      sleep 15
 
       # Step 2: Strip ALL finalizers then delete CRD instances
       for attempt in 1 2 3 4 5; do
