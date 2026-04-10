@@ -344,7 +344,7 @@ resource "null_resource" "karpenter_pre_disable_cleanup" {
       for i in $(seq 1 180); do
         NC_COUNT=$(kubectl get nodeclaims.karpenter.sh --no-headers 2>/dev/null | wc -l || echo "0")
         if [ "$NC_COUNT" = "0" ]; then
-          echo "--- All NodeClaims gone after ${i}s ---"
+          echo "--- All NodeClaims gone after $${i}s ---"
           break
         fi
         if [ $((i % 30)) -eq 0 ]; then
@@ -370,7 +370,7 @@ resource "null_resource" "karpenter_pre_disable_cleanup" {
       for i in $(seq 1 60); do
         EC2NC_COUNT=$(kubectl get ec2nodeclasses.karpenter.k8s.aws --no-headers 2>/dev/null | wc -l || echo "0")
         if [ "$EC2NC_COUNT" = "0" ]; then
-          echo "--- All EC2NodeClasses gone after ${i}s ---"
+          echo "--- All EC2NodeClasses gone after $${i}s ---"
           break
         fi
         sleep 1
