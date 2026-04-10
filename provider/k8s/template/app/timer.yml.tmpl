@@ -81,14 +81,14 @@ spec:
           {{ if .Service.NodeSelectorLabels }}
           {{ $hasTolerations := false }}
           {{ range keyValue .Service.NodeSelectorLabels }}
-            {{ if eq .Key "convox.io/label" }}
+            {{ if or (eq .Key "convox.io/label") (eq .Key "convox.io/nodepool") }}
               {{ $hasTolerations = true }}
             {{ end }}
           {{ end }}
           {{ if $hasTolerations }}
           tolerations:
             {{ range keyValue .Service.NodeSelectorLabels }}
-            {{ if eq .Key "convox.io/label" }}
+            {{ if or (eq .Key "convox.io/label") (eq .Key "convox.io/nodepool") }}
             - key: "dedicated-node"
               operator: "Equal"
               value: "{{.Value}}"

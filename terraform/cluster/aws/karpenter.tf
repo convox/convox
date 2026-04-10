@@ -34,7 +34,7 @@ resource "helm_release" "karpenter_crd" {
 resource "helm_release" "karpenter" {
   count = var.karpenter_enabled ? 1 : 0
 
-  depends_on = [helm_release.karpenter_crd]
+  depends_on = [helm_release.karpenter_crd, null_resource.karpenter_pre_disable_cleanup]
 
   name       = "karpenter"
   namespace  = "kube-system"
@@ -143,60 +143,159 @@ resource "null_resource" "karpenter_finalizer_cleanup" {
 
   provisioner "local-exec" {
     when    = destroy
+    command = "echo 'Karpenter finalizer cleanup handled by API endpoint'"
+  }
+}
+
+# Pre-disable cleanup — runs as a CREATE provisioner when karpenter_enabled
+# transitions from true to false. Calls the rack API's Go-based cleanup endpoint
+# which handles controller shutdown, finalizer stripping, and CRD instance deletion
+# using in-cluster auth. EC2 instance termination runs as a safety net via AWS CLI.
+resource "null_resource" "karpenter_pre_disable_cleanup" {
+  count = var.karpenter_enabled ? 0 : (var.karpenter_auth_mode ? 1 : 0)
+
+  triggers = {
+    karpenter_disabled = "true"
+  }
+
+  provisioner "local-exec" {
     command = <<-CLEANUP
-      echo "=== Karpenter cleanup: stopping controller then stripping finalizers ==="
+      echo "=== Karpenter pre-disable cleanup ==="
+      NAMESPACE="${var.name}-system"
 
-      # The API container has kubectl with in-cluster auth via service account.
-      if ! kubectl cluster-info --request-timeout=10s >/dev/null 2>&1; then
-        echo "WARNING: Kubernetes API unreachable. Skipping cleanup."
-        exit 0
-      fi
+      # Generate kubeconfig using the SAME auth method as the TF providers.
+      # The kubernetes/helm/kubectl providers use aws eks get-token with the
+      # cluster endpoint directly. We replicate that here instead of using
+      # aws eks update-kubeconfig (which failed in RC10 and RC11).
+      export KUBECONFIG=/tmp/karpenter-cleanup-kubeconfig
 
-      # Step 1: Kill the controller so it cannot re-add finalizers.
-      # Scale to 0 AND delete the deployment entirely to prevent any reconciliation.
-      echo "--- Stopping Karpenter controller ---"
-      kubectl delete deployment karpenter -n kube-system --timeout=60s 2>/dev/null || true
-      kubectl wait --for=delete pod -l app.kubernetes.io/name=karpenter -n kube-system --timeout=90s 2>/dev/null || true
-      echo "--- Controller stopped ---"
+      # Generate kubeconfig using SAME auth as TF providers (main.tf provider blocks).
+      # Uses grouped echo instead of nested heredoc to avoid indentation issues.
+      %{ if var.private_eks_host != "" }
+      # Private EKS cluster — direct host with username/password
+      {
+        echo 'apiVersion: v1'
+        echo 'kind: Config'
+        echo 'clusters:'
+        echo '- cluster:'
+        echo "    server: ${var.private_eks_host}"
+        echo '    insecure-skip-tls-verify: true'
+        echo '  name: karpenter-cleanup'
+        echo 'contexts:'
+        echo '- context:'
+        echo '    cluster: karpenter-cleanup'
+        echo '    user: karpenter-cleanup'
+        echo '  name: karpenter-cleanup'
+        echo 'current-context: karpenter-cleanup'
+        echo 'users:'
+        echo '- name: karpenter-cleanup'
+        echo '  user:'
+        echo "    username: ${var.private_eks_user}"
+        echo "    password: ${var.private_eks_pass}"
+      } > "$KUBECONFIG"
+      %{ else }
+      # Public EKS cluster — exec-based token (same as TF provider block)
+      {
+        echo 'apiVersion: v1'
+        echo 'kind: Config'
+        echo 'clusters:'
+        echo '- cluster:'
+        echo "    server: ${aws_eks_cluster.cluster.endpoint}"
+        echo "    certificate-authority-data: ${aws_eks_cluster.cluster.certificate_authority.0.data}"
+        echo '  name: karpenter-cleanup'
+        echo 'contexts:'
+        echo '- context:'
+        echo '    cluster: karpenter-cleanup'
+        echo '    user: karpenter-cleanup'
+        echo '  name: karpenter-cleanup'
+        echo 'current-context: karpenter-cleanup'
+        echo 'users:'
+        echo '- name: karpenter-cleanup'
+        echo '  user:'
+        echo '    exec:'
+        echo '      apiVersion: client.authentication.k8s.io/v1beta1'
+        echo '      command: aws'
+        echo '      args:'
+        echo '      - eks'
+        echo '      - get-token'
+        echo '      - --cluster-name'
+        echo "      - ${var.name}"
+      } > "$KUBECONFIG"
+      %{ endif }
 
-      # Step 2: Strip finalizers and delete instances. Run in a loop because
-      # Kubernetes foregroundDeletion finalizer can re-queue dependents.
-      for attempt in 1 2 3; do
-        echo "--- Cleanup pass $attempt ---"
-
-        for nc in $(kubectl get nodeclaims.karpenter.sh -o name 2>/dev/null || true); do
-          kubectl patch "$nc" --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
-        done
-
-        for np in $(kubectl get nodepools.karpenter.sh -o name 2>/dev/null || true); do
-          kubectl patch "$np" --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
-        done
-
-        for ec2nc in $(kubectl get ec2nodeclasses.karpenter.k8s.aws -o name 2>/dev/null || true); do
-          kubectl patch "$ec2nc" --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
-        done
-
-        kubectl delete nodeclaims.karpenter.sh --all --timeout=30s 2>/dev/null || true
-        kubectl delete nodepools.karpenter.sh --all --timeout=30s 2>/dev/null || true
-        kubectl delete ec2nodeclasses.karpenter.k8s.aws --all --timeout=30s 2>/dev/null || true
-
-        # Check if everything is gone
-        REMAINING=$(kubectl get nodeclaims.karpenter.sh,nodepools.karpenter.sh,ec2nodeclasses.karpenter.k8s.aws --no-headers 2>/dev/null | wc -l || echo "0")
-        if [ "$REMAINING" = "0" ]; then
-          echo "--- All CRD instances removed ---"
+      API_READY=false
+      for attempt in 1 2 3 4 5 6; do
+        if kubectl cluster-info --request-timeout=30s >/dev/null 2>&1; then
+          echo "K8s API reachable (attempt $attempt/6)"
+          API_READY=true
           break
         fi
-        echo "--- $REMAINING resources remaining, retrying in 5s ---"
-        sleep 5
+        echo "K8s API unreachable (attempt $attempt/6), retrying in 15s..."
+        sleep 15
       done
 
-      # Step 3: Strip finalizers from the CRDs themselves to unblock Helm uninstall
-      echo "--- Stripping CRD finalizers ---"
-      for crd in nodeclaims.karpenter.sh nodepools.karpenter.sh ec2nodeclasses.karpenter.k8s.aws; do
-        kubectl patch crd "$crd" --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
-      done
+      if [ "$API_READY" = "true" ]; then
+        # Get API password from deployment env
+        API_PASSWORD=$(kubectl get deploy api -n "$NAMESPACE" \
+          -o jsonpath='{.spec.template.spec.containers[?(@.name=="system")].env[?(@.name=="PASSWORD")].value}' 2>/dev/null)
 
-      echo "=== Karpenter cleanup complete ==="
+        if [ -n "$API_PASSWORD" ]; then
+          # Port-forward to rack API and call Go cleanup endpoint
+          kubectl port-forward -n "$NAMESPACE" svc/api 15443:5443 >/dev/null 2>&1 &
+          PF_PID=$!
+          sleep 3
+
+          echo "Calling rack API cleanup endpoint..."
+          HTTP_CODE=$(curl -sk -X POST "https://localhost:15443/system/karpenter/cleanup" \
+            -u "convox:$API_PASSWORD" \
+            --max-time 300 --retry 2 --retry-delay 10 \
+            -o /dev/null -w '%%{http_code}' 2>/dev/null) || true
+
+          kill $PF_PID 2>/dev/null || true
+          wait $PF_PID 2>/dev/null || true
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "Cleanup endpoint returned 200 OK"
+          else
+            echo "WARNING: Cleanup endpoint returned HTTP $HTTP_CODE (expected 200)."
+            echo "Falling back to kubectl-based cleanup..."
+            # Inline fallback for cross-version (404), partial failure (5xx), or any non-200
+            kubectl delete deployment karpenter -n kube-system --timeout=30s 2>/dev/null || true
+            kubectl delete pods -n kube-system -l app.kubernetes.io/name=karpenter --force --grace-period=0 2>/dev/null || true
+            sleep 10
+            for crd in nodeclaims.karpenter.sh nodepools.karpenter.sh ec2nodeclasses.karpenter.k8s.aws; do
+              for resource in $(kubectl get "$crd" -o name 2>/dev/null); do
+                kubectl patch "$resource" --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
+              done
+              kubectl delete "$crd" --all --timeout=30s 2>/dev/null || true
+            done
+          fi
+        else
+          echo "WARNING: Could not read API password. Skipping API cleanup."
+        fi
+      else
+        echo "WARNING: K8s API unreachable after 6 attempts. Skipping API cleanup."
+      fi
+
+      # EC2 safety net — ALWAYS runs regardless of API cleanup result
+      echo "--- EC2 safety net: checking for orphaned Karpenter instances ---"
+      KARP_INSTANCES=$(aws ec2 describe-instances \
+        --region "${data.aws_region.current.name}" \
+        --filters "Name=tag:karpenter.sh/nodepool,Values=*" \
+                  "Name=tag:kubernetes.io/cluster/${aws_eks_cluster.cluster.name},Values=owned" \
+                  "Name=instance-state-name,Values=running,pending" \
+        --query 'Reservations[].Instances[].InstanceId' \
+        --output text 2>/dev/null || true)
+      if [ -n "$KARP_INSTANCES" ] && [ "$KARP_INSTANCES" != "None" ]; then
+        echo "Terminating orphaned instances: $KARP_INSTANCES"
+        aws ec2 terminate-instances \
+          --region "${data.aws_region.current.name}" \
+          --instance-ids $KARP_INSTANCES 2>/dev/null || true
+      else
+        echo "No orphaned Karpenter instances found."
+      fi
+
+      echo "=== Karpenter pre-disable cleanup complete ==="
     CLEANUP
   }
 }

@@ -509,6 +509,7 @@ func (p *Provider) podSpecFromService(app, service, release string, isBuild bool
 	})
 
 	serviceAccountName := ""
+	var nodeSelectorLabels map[string]string
 	if !isBuild && release != "" {
 		m, r, err := common.ReleaseManifest(p, app, release)
 		if err != nil {
@@ -577,6 +578,8 @@ func (p *Provider) podSpecFromService(app, service, release string, isBuild bool
 					MountPath: to,
 				})
 			}
+
+			nodeSelectorLabels = s.NodeSelectorLabels
 		}
 
 		for k, v := range env {
@@ -589,6 +592,40 @@ func (p *Provider) podSpecFromService(app, service, release string, isBuild bool
 		Containers:            []ac.Container{c},
 		ShareProcessNamespace: options.Bool(true),
 		Volumes:               vs,
+	}
+
+	if len(nodeSelectorLabels) > 0 {
+		matchExpressions := []ac.NodeSelectorRequirement{}
+		for k, v := range nodeSelectorLabels {
+			matchExpressions = append(matchExpressions, ac.NodeSelectorRequirement{
+				Key:      k,
+				Operator: ac.NodeSelectorOpIn,
+				Values:   []string{v},
+			})
+		}
+		ps.Affinity = &ac.Affinity{
+			NodeAffinity: &ac.NodeAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: &ac.NodeSelector{
+					NodeSelectorTerms: []ac.NodeSelectorTerm{
+						{MatchExpressions: matchExpressions},
+					},
+				},
+			},
+		}
+
+		for k, v := range nodeSelectorLabels {
+			if k == "convox.io/label" || k == "convox.io/nodepool" {
+				if ps.Tolerations == nil {
+					ps.Tolerations = []ac.Toleration{}
+				}
+				ps.Tolerations = append(ps.Tolerations, ac.Toleration{
+					Key:      "dedicated-node",
+					Operator: ac.TolerationOpEqual,
+					Value:    v,
+					Effect:   ac.TaintEffectNoSchedule,
+				})
+			}
+		}
 	}
 
 	if !isBuild {
@@ -702,6 +739,8 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 	}
 
 	if opts.NodeLabels != nil {
+		s.Affinity = nil
+		s.Tolerations = nil
 		labelStrList := strings.Split(*opts.NodeLabels, ",")
 		for _, lb := range labelStrList {
 			parts := strings.SplitN(lb, "=", 2)
