@@ -364,6 +364,8 @@ resource "null_resource" "karpenter_access_config" {
         sleep 15
         echo "Waiting for cluster to reach ACTIVE state..."
         aws eks wait cluster-active --name "$CLUSTER" --region "$REGION"
+        echo "Waiting 30s for auth mode to propagate..."
+        sleep 30
         echo "EKS access config update complete"
       fi
     EOF

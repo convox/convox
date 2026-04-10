@@ -21,6 +21,7 @@ resource "helm_release" "karpenter_crd" {
     aws_iam_role_policy.karpenter_controller_eks,
     aws_iam_role_policy.karpenter_controller_sqs,
     aws_iam_role_policy.karpenter_controller_pricing,
+    null_resource.karpenter_crd_pre_destroy_cleanup, # Cleanup runs before CRD uninstall
   ]
 
   name       = "karpenter-crd"
@@ -29,6 +30,127 @@ resource "helm_release" "karpenter_crd" {
   chart      = "karpenter-crd"
   version    = var.karpenter_version
   timeout    = 600
+}
+
+# Pre-CRD-destroy cleanup — runs as a CREATE provisioner when karpenter_auth_mode
+# transitions from true to false. Follows the same pattern as
+# karpenter_pre_disable_cleanup (line 155): CREATE-time provisioners have reliable
+# dependency ordering, unlike destroy-time provisioners on null_resource.
+# helm_release.karpenter_crd depends on this, so Terraform creates this
+# (running cleanup) BEFORE destroying karpenter_crd.
+resource "null_resource" "karpenter_crd_pre_destroy_cleanup" {
+  count = var.karpenter_auth_mode ? 0 : 1
+
+  triggers = {
+    crd_cleanup = "true"
+  }
+
+  provisioner "local-exec" {
+    command = <<-CLEANUP
+      echo "=== Pre-CRD-destroy cleanup ==="
+
+      export KUBECONFIG=/tmp/karpenter-crd-cleanup-kubeconfig
+      aws eks update-kubeconfig \
+        --name "${aws_eks_cluster.cluster.name}" \
+        --region "${data.aws_region.current.name}" \
+        --kubeconfig "$KUBECONFIG" 2>&1 || true
+
+      if ! kubectl cluster-info --request-timeout=10s >/dev/null 2>&1; then
+        echo "WARNING: Kubernetes API unreachable. Skipping CRD cleanup."
+        exit 0
+      fi
+
+      # Check if any Karpenter CRD instances exist
+      EXISTING=0
+      for crd in nodeclaims.karpenter.sh nodepools.karpenter.sh ec2nodeclasses.karpenter.k8s.aws; do
+        COUNT=$(kubectl get "$crd" --no-headers 2>/dev/null | wc -l || echo "0")
+        EXISTING=$((EXISTING + COUNT))
+      done
+      if [ "$EXISTING" = "0" ]; then
+        echo "No Karpenter CRD instances found. Nothing to clean up."
+        exit 0
+      fi
+
+      # Kill Karpenter controller if still running
+      kubectl delete deployment karpenter -n kube-system --timeout=30s 2>/dev/null || true
+      kubectl delete pods -n kube-system -l app.kubernetes.io/name=karpenter \
+        --force --grace-period=0 2>/dev/null || true
+
+      # Wait for controller to die
+      DEAD=false
+      for i in $(seq 1 60); do
+        KARP_PODS=$(kubectl get pods -n kube-system -l app.kubernetes.io/name=karpenter \
+          --no-headers 2>/dev/null | wc -l || echo "0")
+        if [ "$KARP_PODS" = "0" ]; then
+          echo "--- Controller confirmed dead after $${i}s ---"
+          DEAD=true
+          break
+        fi
+        if [ $((i % 10)) -eq 0 ]; then
+          kubectl delete pods -n kube-system -l app.kubernetes.io/name=karpenter \
+            --force --grace-period=0 2>/dev/null || true
+        fi
+        sleep 1
+      done
+
+      if [ "$DEAD" != "true" ]; then
+        echo "WARNING: Controller pods still exist after 60s. Proceeding anyway."
+      fi
+
+      # Wait for in-flight reconciliation to settle
+      sleep 15
+
+      # Strip ALL instance finalizers and delete instances
+      for attempt in 1 2 3 4 5; do
+        echo "--- Cleanup pass $attempt ---"
+
+        for crd in nodeclaims.karpenter.sh nodepools.karpenter.sh ec2nodeclasses.karpenter.k8s.aws; do
+          for resource in $(kubectl get "$crd" -o name 2>/dev/null); do
+            kubectl patch "$resource" --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
+          done
+          kubectl delete "$crd" --all --timeout=30s 2>/dev/null || true
+        done
+
+        REMAINING=0
+        for crd in nodeclaims.karpenter.sh nodepools.karpenter.sh ec2nodeclasses.karpenter.k8s.aws; do
+          COUNT=$(kubectl get "$crd" --no-headers 2>/dev/null | wc -l || echo "0")
+          REMAINING=$((REMAINING + COUNT))
+        done
+        if [ "$REMAINING" = "0" ]; then
+          echo "--- All CRD instances removed ---"
+          break
+        fi
+        echo "--- $REMAINING resources remaining, retrying in 5s ---"
+        sleep 5
+      done
+
+      # Terminate orphaned EC2 instances
+      echo "--- Terminating orphaned Karpenter EC2 instances ---"
+      KARP_INSTANCES=$(aws ec2 describe-instances \
+        --region "${data.aws_region.current.name}" \
+        --filters "Name=tag:karpenter.sh/nodepool,Values=*" \
+                  "Name=tag:kubernetes.io/cluster/${aws_eks_cluster.cluster.name},Values=owned" \
+                  "Name=instance-state-name,Values=running,pending" \
+        --query 'Reservations[].Instances[].InstanceId' \
+        --output text 2>/dev/null || true)
+      if [ -n "$KARP_INSTANCES" ] && [ "$KARP_INSTANCES" != "None" ]; then
+        echo "Terminating orphaned instances: $KARP_INSTANCES"
+        aws ec2 terminate-instances \
+          --region "${data.aws_region.current.name}" \
+          --instance-ids $KARP_INSTANCES 2>/dev/null || true
+      else
+        echo "No orphaned Karpenter instances found."
+      fi
+
+      # Strip CRD-level finalizers
+      echo "--- Stripping CRD finalizers ---"
+      for crd in nodeclaims.karpenter.sh nodepools.karpenter.sh ec2nodeclasses.karpenter.k8s.aws; do
+        kubectl patch crd "$crd" --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
+      done
+
+      echo "=== Pre-CRD-destroy cleanup complete ==="
+    CLEANUP
+  }
 }
 
 resource "helm_release" "karpenter" {

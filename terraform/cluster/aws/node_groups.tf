@@ -87,6 +87,7 @@ resource "aws_eks_node_group" "cluster_additional" {
   depends_on = [
     aws_eks_cluster.cluster,
     aws_iam_openid_connect_provider.cluster,
+    null_resource.karpenter_access_config, # Wait for auth mode transition to settle
   ]
 
   for_each = { for ng in local.additional_node_groups_with_defaults : ng.id => ng }
