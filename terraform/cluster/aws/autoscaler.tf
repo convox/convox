@@ -320,7 +320,6 @@ resource "kubernetes_deployment" "autoscaler" {
   depends_on = [
     aws_iam_role_policy.autoscaler_autoscale,
     null_resource.wait_eks_addons,
-    kubectl_manifest.karpenter_nodepool_workload,
   ]
 
   metadata {
