@@ -124,78 +124,73 @@ resource "helm_release" "karpenter" {
   })] : []
 }
 
-# Finalizer cleanup — strips Karpenter finalizers before destroy to prevent
-# CRD deletion deadlock. By depending on kubectl_manifest resources, this is
-# destroyed BEFORE them (Terraform reverses dependency order on destroy).
-# The controller is still running at this point, but we strip finalizers
-# explicitly to guarantee no deadlock.
-resource "null_resource" "karpenter_finalizer_cleanup" {
+# Karpenter disable cleanup — drain wait + EC2 safety net.
+#
+# Architecture: When karpenter_enabled goes true→false, Terraform destroys
+# resources in REVERSE dependency order. This resource exists while Karpenter
+# is enabled and sits between kubectl_manifest resources and helm_release in
+# the dependency chain. On destroy, its provisioner runs AFTER manifest DELETEs
+# are sent (controller starts processing finalizers) but BEFORE the Helm release
+# is uninstalled (controller stays alive during the wait).
+#
+# The destroy provisioner sleeps to give the controller time to:
+#   1. Drain pods from Karpenter nodes (PDB-respecting eviction)
+#   2. Terminate EC2 instances
+#   3. Remove karpenter.sh/termination finalizers from NodeClaims
+#   4. Process karpenter.k8s.aws/termination finalizers on EC2NodeClasses
+#
+# After the wait, the EC2 safety net terminates any remaining orphaned instances
+# via the AWS API (which always works from the TF worker).
+#
+# Execution order on disable:
+#   1. kubectl_manifest.* DESTROYED (DELETE sent to K8s API — 5-6s)
+#   2. terraform_data.karpenter_drain DESTROYED (this provisioner: sleep + EC2 cleanup)
+#   3. helm_release.karpenter DESTROYED (Helm uninstall kills controller)
+resource "terraform_data" "karpenter_drain" {
   count = var.karpenter_enabled ? 1 : 0
 
-  depends_on = [
-    kubectl_manifest.karpenter_nodepool_workload,
-    kubectl_manifest.karpenter_ec2nodeclass_workload,
-    kubectl_manifest.karpenter_nodepool_build,
-    kubectl_manifest.karpenter_ec2nodeclass_build,
-    kubectl_manifest.karpenter_nodepool_additional,
-    kubectl_manifest.karpenter_ec2nodeclass_additional,
-  ]
+  # Sit between Helm release and kubectl_manifests in the dependency chain.
+  # kubectl_manifests depend on this → they're destroyed BEFORE this.
+  # This depends on helm_release → helm_release is destroyed AFTER this.
+  depends_on = [helm_release.karpenter]
+
+  # Store values needed by the destroy provisioner (destroy provisioners
+  # can only reference self, not other resources)
+  input = {
+    region       = data.aws_region.current.name
+    cluster_name = aws_eks_cluster.cluster.name
+  }
 
   provisioner "local-exec" {
     when    = destroy
     command = <<-CLEANUP
-      echo "=== Karpenter cleanup: stopping controller then stripping finalizers ==="
+      echo "=== Karpenter drain wait ==="
+      echo "Waiting 300s for Karpenter controller to process CRD finalizers..."
+      echo "The controller is draining pods, terminating EC2 instances, and"
+      echo "removing finalizers from NodeClaims and EC2NodeClasses."
+      echo ""
+      echo "Progress: kubectl_manifest DELETEs were just sent. The controller"
+      echo "received them and is processing. Helm release (controller) will be"
+      echo "destroyed after this wait completes."
+      sleep 300
+      echo "Drain wait complete."
 
-      # The API container has kubectl with in-cluster auth via service account.
-      if ! kubectl cluster-info --request-timeout=10s >/dev/null 2>&1; then
-        echo "WARNING: Kubernetes API unreachable. Skipping cleanup."
-        exit 0
+      echo "--- EC2 safety net: checking for orphaned Karpenter instances ---"
+      KARP_INSTANCES=$(aws ec2 describe-instances \
+        --region "${self.output.region}" \
+        --filters "Name=tag:karpenter.sh/nodepool,Values=*" \
+                  "Name=tag:kubernetes.io/cluster/${self.output.cluster_name},Values=owned" \
+                  "Name=instance-state-name,Values=running,pending" \
+        --query 'Reservations[].Instances[].InstanceId' \
+        --output text 2>/dev/null || true)
+      if [ -n "$KARP_INSTANCES" ] && [ "$KARP_INSTANCES" != "None" ]; then
+        echo "Terminating orphaned instances: $KARP_INSTANCES"
+        aws ec2 terminate-instances \
+          --region "${self.output.region}" \
+          --instance-ids $KARP_INSTANCES 2>/dev/null || true
+      else
+        echo "No orphaned Karpenter instances found."
       fi
-
-      # Step 1: Kill the controller so it cannot re-add finalizers.
-      # Scale to 0 AND delete the deployment entirely to prevent any reconciliation.
-      echo "--- Stopping Karpenter controller ---"
-      kubectl delete deployment karpenter -n kube-system --timeout=60s 2>/dev/null || true
-      kubectl wait --for=delete pod -l app.kubernetes.io/name=karpenter -n kube-system --timeout=90s 2>/dev/null || true
-      echo "--- Controller stopped ---"
-
-      # Step 2: Strip finalizers and delete instances. Run in a loop because
-      # Kubernetes foregroundDeletion finalizer can re-queue dependents.
-      for attempt in 1 2 3; do
-        echo "--- Cleanup pass $attempt ---"
-
-        for nc in $(kubectl get nodeclaims.karpenter.sh -o name 2>/dev/null || true); do
-          kubectl patch "$nc" --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
-        done
-
-        for np in $(kubectl get nodepools.karpenter.sh -o name 2>/dev/null || true); do
-          kubectl patch "$np" --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
-        done
-
-        for ec2nc in $(kubectl get ec2nodeclasses.karpenter.k8s.aws -o name 2>/dev/null || true); do
-          kubectl patch "$ec2nc" --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
-        done
-
-        kubectl delete nodeclaims.karpenter.sh --all --timeout=30s 2>/dev/null || true
-        kubectl delete nodepools.karpenter.sh --all --timeout=30s 2>/dev/null || true
-        kubectl delete ec2nodeclasses.karpenter.k8s.aws --all --timeout=30s 2>/dev/null || true
-
-        # Check if everything is gone
-        REMAINING=$(kubectl get nodeclaims.karpenter.sh,nodepools.karpenter.sh,ec2nodeclasses.karpenter.k8s.aws --no-headers 2>/dev/null | wc -l || echo "0")
-        if [ "$REMAINING" = "0" ]; then
-          echo "--- All CRD instances removed ---"
-          break
-        fi
-        echo "--- $REMAINING resources remaining, retrying in 5s ---"
-        sleep 5
-      done
-
-      # Step 3: Strip finalizers from the CRDs themselves to unblock Helm uninstall
-      echo "--- Stripping CRD finalizers ---"
-      for crd in nodeclaims.karpenter.sh nodepools.karpenter.sh ec2nodeclasses.karpenter.k8s.aws; do
-        kubectl patch crd "$crd" --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
-      done
-
       echo "=== Karpenter cleanup complete ==="
     CLEANUP
   }

@@ -204,17 +204,23 @@ locals {
       disk                  = tonumber(lookup(np, "disk", 0))
       volume_type           = lookup(np, "volume_type", "gp3")
       weight                = lookup(np, "weight", null) != null ? tonumber(lookup(np, "weight", null)) : null
+      dedicated             = tobool(lookup(np, "dedicated", false))
       labels = {
         for pair in compact(split(",", lookup(np, "labels", ""))) :
         trimspace(split("=", pair)[0]) => trimspace(split("=", pair)[1])
       }
-      taints = [
-        for t in compact(split(",", lookup(np, "taints", ""))) : {
+      taints = concat(
+        tobool(lookup(np, "dedicated", false)) ? [{
+          key    = "dedicated-node"
+          value  = lookup(np, "name", "custom-${idx}")
+          effect = "NoSchedule"
+        }] : [],
+        [for t in compact(split(",", lookup(np, "taints", ""))) : {
           key    = split("=", split(":", t)[0])[0]
           value  = length(split("=", split(":", t)[0])) > 1 ? split("=", split(":", t)[0])[1] : ""
           effect = element(split(":", t), length(split(":", t)) - 1)
-        }
-      ]
+        }]
+      )
     }
   }
 }
@@ -228,7 +234,7 @@ resource "kubectl_manifest" "karpenter_nodepool_workload" {
   yaml_body = yamlencode(local.np_workload_manifest)
   wait      = true
 
-  depends_on = [helm_release.karpenter, helm_release.karpenter_crd]
+  depends_on = [helm_release.karpenter, helm_release.karpenter_crd, terraform_data.karpenter_drain]
 }
 
 ###############################################################################
@@ -243,6 +249,7 @@ resource "kubectl_manifest" "karpenter_ec2nodeclass_workload" {
   depends_on = [
     helm_release.karpenter,
     helm_release.karpenter_crd,
+    terraform_data.karpenter_drain,
     aws_ec2_tag.private_subnets_karpenter,
     aws_ec2_tag.public_subnets_karpenter,
     aws_ec2_tag.cluster_sg_karpenter,
@@ -269,7 +276,7 @@ resource "kubectl_manifest" "karpenter_nodepool_build" {
   })
 
   wait       = true
-  depends_on = [helm_release.karpenter, helm_release.karpenter_crd]
+  depends_on = [helm_release.karpenter, helm_release.karpenter_crd, terraform_data.karpenter_drain]
 }
 
 resource "kubectl_manifest" "karpenter_ec2nodeclass_build" {
@@ -292,6 +299,7 @@ resource "kubectl_manifest" "karpenter_ec2nodeclass_build" {
   depends_on = [
     helm_release.karpenter,
     helm_release.karpenter_crd,
+    terraform_data.karpenter_drain,
     aws_ec2_tag.private_subnets_karpenter,
     aws_ec2_tag.public_subnets_karpenter,
     aws_ec2_tag.cluster_sg_karpenter,
@@ -323,7 +331,7 @@ resource "kubectl_manifest" "karpenter_nodepool_additional" {
   })
 
   wait       = true
-  depends_on = [helm_release.karpenter, helm_release.karpenter_crd]
+  depends_on = [helm_release.karpenter, helm_release.karpenter_crd, terraform_data.karpenter_drain]
 }
 
 resource "kubectl_manifest" "karpenter_ec2nodeclass_additional" {
@@ -346,6 +354,7 @@ resource "kubectl_manifest" "karpenter_ec2nodeclass_additional" {
   depends_on = [
     helm_release.karpenter,
     helm_release.karpenter_crd,
+    terraform_data.karpenter_drain,
     aws_ec2_tag.private_subnets_karpenter,
     aws_ec2_tag.public_subnets_karpenter,
     aws_ec2_tag.cluster_sg_karpenter,

@@ -91,6 +91,7 @@ func (s *Server) setupRoutes(r stdapi.Router) {
 	r.Route("PUT", "/resources/{name}", s.SystemResourceUpdate)
 	r.Route("", "", s.SystemUninstall)
 	r.Route("PUT", "/system", s.SystemUpdate)
+	r.Route("POST", "/system/karpenter/cleanup", s.KarpenterCleanup)
 	r.Route("", "", s.Workers)
 
 	r.Route("ANY", "/custom/http/proxy/{path:.*}", s.ProxyHttpService)

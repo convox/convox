@@ -303,6 +303,21 @@ func (t Terraform) UpdateParams(params map[string]string) error {
 		return fmt.Errorf("could not determine current release")
 	}
 
+	// Pre-Terraform cleanup: if Karpenter is being disabled, call the rack API's
+	// cleanup endpoint to gracefully drain nodes and strip CRD finalizers BEFORE
+	// Terraform destroys the controller. Best-effort — the TF drain wait is the
+	// safety net if this fails.
+	if vars["karpenter_enabled"] == "true" && params["karpenter_enabled"] == "false" {
+		fmt.Println("Karpenter disable detected — calling rack API cleanup endpoint...")
+		if c, err := t.Client(); err != nil {
+			fmt.Printf("WARNING: could not create rack client for cleanup (proceeding with TF apply): %v\n", err)
+		} else if err := c.KarpenterCleanup(); err != nil {
+			fmt.Printf("WARNING: KarpenterCleanup returned error (proceeding with TF apply): %v\n", err)
+		} else {
+			fmt.Println("KarpenterCleanup completed successfully")
+		}
+	}
+
 	for k, v := range params {
 		vars[k] = v
 	}
