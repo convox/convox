@@ -79,6 +79,7 @@ func init() {
 	routes["SystemResourceUnlink"] = "DELETE /resources/{name}/links/{app}"
 	routes["SystemResourceUpdate"] = "PUT /resources/{name}"
 	routes["SystemUninstall"] = ""
+	routes["KarpenterCleanup"] = "POST /system/karpenter/cleanup"
 	routes["SystemUpdate"] = "PUT /system"
 	routes["Workers"] = ""
 }
