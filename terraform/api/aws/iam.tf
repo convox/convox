@@ -219,6 +219,32 @@ resource "aws_iam_role_policy" "rds_provisioner" {
   policy = data.aws_iam_policy_document.rds_provisioner.json
 }
 
+data "aws_iam_policy_document" "karpenter_cleanup" {
+  statement {
+    effect  = "Allow"
+    actions = ["ec2:TerminateInstances"]
+    resources = [
+      "arn:${data.aws_partition.current.partition}:ec2:*:*:instance/*",
+    ]
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/kubernetes.io/cluster/${var.name}"
+      values   = ["owned"]
+    }
+    condition {
+      test     = "StringLike"
+      variable = "aws:ResourceTag/karpenter.sh/nodepool"
+      values   = ["*"]
+    }
+  }
+}
+
+resource "aws_iam_role_policy" "api_karpenter_cleanup" {
+  name   = "api-karpenter-cleanup"
+  role   = aws_iam_role.api.name
+  policy = data.aws_iam_policy_document.karpenter_cleanup.json
+}
+
 data "aws_iam_policy_document" "assume_cert_manager" {
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]

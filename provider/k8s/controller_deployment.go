@@ -189,6 +189,8 @@ func (c *DeployController) SyncPDB(d *apps.Deployment, remove bool) error {
 			pdb.Spec.MinAvailable = pdbMinAvailable
 			pdb.Spec.Selector = d.Spec.Selector
 			pdb.Spec.Selector.MatchLabels["type"] = "service"
+			alwaysAllow := policyv1.AlwaysAllow
+			pdb.Spec.UnhealthyPodEvictionPolicy = &alwaysAllow
 			return pdb
 		}, metav1.PatchOptions{
 			FieldManager: "convox",

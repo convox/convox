@@ -532,6 +532,16 @@ func (c *Client) InstanceTerminate(id string) error {
 	return err
 }
 
+func (c *Client) KarpenterCleanup() error {
+	var err error
+
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+
+	err = c.Post("/system/karpenter/cleanup", ro, nil)
+
+	return err
+}
+
 func (c *Client) LetsEncryptConfigGet() (*structs.LetsEncryptConfig, error) {
 	var err error
 

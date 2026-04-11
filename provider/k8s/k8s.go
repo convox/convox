@@ -100,6 +100,7 @@ type Provider struct {
 
 	RdsProvisioner         *rds.Provisioner
 	ElasticacheProvisioner *elasticache.Provisioner
+	TerminateKarpenterEC2  func(instanceIDs []string) error
 
 	ctx       context.Context
 	logger    *logger.Logger

@@ -104,6 +104,8 @@ type Provider interface {
 	SystemUninstall(name string, w io.Writer, opts SystemUninstallOptions) error
 	SystemUpdate(opts SystemUpdateOptions) error
 
+	KarpenterCleanup() error
+
 	SystemResourceCreate(kind string, opts ResourceCreateOptions) (*Resource, error)
 	SystemResourceDelete(name string) error
 	SystemResourceGet(name string) (*Resource, error)

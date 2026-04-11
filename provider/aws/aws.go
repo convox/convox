@@ -105,6 +105,8 @@ func (p *Provider) initializeAwsServices() error {
 	p.S3 = s3.New(s)
 	p.SQS = sqs.New(s)
 
+	p.Provider.TerminateKarpenterEC2 = p.terminateKarpenterEC2
+
 	return nil
 }
 
