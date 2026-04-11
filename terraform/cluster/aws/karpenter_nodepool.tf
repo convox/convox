@@ -204,17 +204,23 @@ locals {
       disk                  = tonumber(lookup(np, "disk", 0))
       volume_type           = lookup(np, "volume_type", "gp3")
       weight                = lookup(np, "weight", null) != null ? tonumber(lookup(np, "weight", null)) : null
+      dedicated             = tobool(lookup(np, "dedicated", false))
       labels = {
         for pair in compact(split(",", lookup(np, "labels", ""))) :
         trimspace(split("=", pair)[0]) => trimspace(split("=", pair)[1])
       }
-      taints = [
-        for t in compact(split(",", lookup(np, "taints", ""))) : {
+      taints = concat(
+        tobool(lookup(np, "dedicated", false)) ? [{
+          key    = "dedicated-node"
+          value  = lookup(np, "name", "custom-${idx}")
+          effect = "NoSchedule"
+        }] : [],
+        [for t in compact(split(",", lookup(np, "taints", ""))) : {
           key    = split("=", split(":", t)[0])[0]
           value  = length(split("=", split(":", t)[0])) > 1 ? split("=", split(":", t)[0])[1] : ""
           effect = element(split(":", t), length(split(":", t)) - 1)
-        }
-      ]
+        }]
+      )
     }
   }
 }
