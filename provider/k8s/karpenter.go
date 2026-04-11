@@ -60,6 +60,12 @@ func (p *Provider) cleanupNode(ctx context.Context, node *ac.Node) error {
 		return errors.WithStack(fmt.Errorf("failed to drain: %s", err))
 	}
 
+	// Strip Karpenter finalizer — the controller that would process it is dead.
+	finalizerPatch := []byte(`{"metadata":{"finalizers":null}}`)
+	if _, err := p.Cluster.CoreV1().Nodes().Patch(ctx, node.Name, types.MergePatchType, finalizerPatch, am.PatchOptions{}); err != nil && !ae.IsNotFound(err) {
+		return errors.WithStack(fmt.Errorf("failed to strip finalizers: %s", err))
+	}
+
 	if err := p.Cluster.CoreV1().Nodes().Delete(ctx, node.Name, am.DeleteOptions{}); err != nil && !ae.IsNotFound(err) {
 		return errors.WithStack(fmt.Errorf("failed to delete node: %s", err))
 	}
