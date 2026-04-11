@@ -1625,3 +1625,93 @@ func TestCheckRackNameRegex(t *testing.T) {
 		})
 	}
 }
+
+func TestAdditionalNodeGroups_Validate_AutoAssignIdsFromZero(t *testing.T) {
+	ngs := AdditionalNodeGroups{
+		{Type: "m5.large"},
+		{Type: "c5.xlarge"},
+	}
+	if err := ngs.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	if ngs[0].Id == nil || *ngs[0].Id != 0 {
+		t.Errorf("expected first id=0, got %v", ngs[0].Id)
+	}
+	if ngs[1].Id == nil || *ngs[1].Id != 1 {
+		t.Errorf("expected second id=1, got %v", ngs[1].Id)
+	}
+}
+
+func TestValidateAndMutateParams_PreserveExistingNodeGroupIds(t *testing.T) {
+	id5 := 5
+	lbl := "gpu"
+	existingWithId := AdditionalNodeGroups{{Type: "g6.xlarge", Id: &id5, Dedicated: boolPtr(true), Label: &lbl}}
+	existingWithIdJSON, _ := json.Marshal(existingWithId)
+	existingWithIdB64 := base64.StdEncoding.EncodeToString(existingWithIdJSON)
+
+	existingNoId := `[{"type":"g6.xlarge","dedicated":true,"label":"gpu"}]`
+	existingNoIdB64 := base64.StdEncoding.EncodeToString([]byte(existingNoId))
+
+	tests := []struct {
+		name          string
+		newConfig     string
+		currentConfig string
+		wantId        int
+	}{
+		{
+			"preserves existing id from currentParams",
+			`[{"type":"g6.xlarge","dedicated":true,"label":"gpu"}]`,
+			existingWithIdB64,
+			5,
+		},
+		{
+			"legacy config without id gets 0-based index",
+			`[{"type":"g6.xlarge","dedicated":true,"label":"gpu"}]`,
+			existingNoIdB64,
+			0,
+		},
+		{
+			"no currentParams — auto-assigns 0-based",
+			`[{"type":"g6.xlarge","dedicated":true,"label":"gpu"}]`,
+			"",
+			0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := map[string]string{
+				"additional_node_groups_config": tt.newConfig,
+			}
+			currentParams := map[string]string{}
+			if tt.currentConfig != "" {
+				currentParams["additional_node_groups_config"] = tt.currentConfig
+			}
+
+			if err := validateAndMutateParams(params, "aws", currentParams); err != nil {
+				t.Fatal(err)
+			}
+
+			// Decode the result
+			decoded, err := base64.StdEncoding.DecodeString(params["additional_node_groups_config"])
+			if err != nil {
+				t.Fatal(err)
+			}
+			var result AdditionalNodeGroups
+			if err := json.Unmarshal(decoded, &result); err != nil {
+				t.Fatal(err)
+			}
+			if len(result) != 1 {
+				t.Fatalf("expected 1 node group, got %d", len(result))
+			}
+			if result[0].Id == nil {
+				t.Fatal("expected non-nil id")
+			}
+			if *result[0].Id != tt.wantId {
+				t.Errorf("expected id=%d, got id=%d", tt.wantId, *result[0].Id)
+			}
+		})
+	}
+}
+
+func boolPtr(b bool) *bool { return &b }
