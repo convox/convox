@@ -93,4 +93,44 @@ resource "helm_release" "aws_lbc" {
     name  = "enableServiceMutatorWebhook"
     value = "false"
   }
+
+  dynamic "set" {
+    for_each = var.karpenter_enabled ? [1] : []
+    content {
+      name  = "nodeSelector.convox\\.io/system-node"
+      value = "true"
+    }
+  }
+
+  dynamic "set" {
+    for_each = var.karpenter_enabled ? [1] : []
+    content {
+      name  = "tolerations[0].key"
+      value = "convox.io/system-node"
+    }
+  }
+
+  dynamic "set" {
+    for_each = var.karpenter_enabled ? [1] : []
+    content {
+      name  = "tolerations[0].operator"
+      value = "Equal"
+    }
+  }
+
+  dynamic "set" {
+    for_each = var.karpenter_enabled ? [1] : []
+    content {
+      name  = "tolerations[0].value"
+      value = "true"
+    }
+  }
+
+  dynamic "set" {
+    for_each = var.karpenter_enabled ? [1] : []
+    content {
+      name  = "tolerations[0].effect"
+      value = "NoSchedule"
+    }
+  }
 }
