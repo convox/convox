@@ -99,6 +99,7 @@ resource "helm_release" "aws_lbc" {
     content {
       name  = "nodeSelector.convox\\.io/system-node"
       value = "true"
+      type  = "string"
     }
   }
 
@@ -123,6 +124,7 @@ resource "helm_release" "aws_lbc" {
     content {
       name  = "tolerations[0].value"
       value = "true"
+      type  = "string"
     }
   }
 
