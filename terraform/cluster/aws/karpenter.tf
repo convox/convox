@@ -137,11 +137,14 @@ resource "null_resource" "wait_karpenter_ready" {
   provisioner "local-exec" {
     command = <<-WAIT
       echo "Waiting for Karpenter controller to be ready..."
-      kubectl wait --for=condition=Available deployment/karpenter \
-        -n kube-system --timeout=120s 2>/dev/null || true
-      kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=karpenter \
-        -n kube-system --timeout=120s 2>/dev/null || true
-      echo "Karpenter controller ready"
+      if kubectl wait --for=condition=Available deployment/karpenter \
+           -n kube-system --timeout=120s 2>/dev/null && \
+         kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=karpenter \
+           -n kube-system --timeout=120s 2>/dev/null; then
+        echo "Karpenter controller ready"
+      else
+        echo "WARNING: Karpenter controller may not be ready. NodePools might need a re-apply."
+      fi
     WAIT
   }
 }
