@@ -102,7 +102,7 @@ resource "aws_eks_node_group" "cluster_additional" {
 
   launch_template {
     id      = aws_launch_template.cluster_additional[each.key].id
-    version = "$Latest"
+    version = aws_launch_template.cluster_additional[each.key].latest_version
   }
 
   scaling_config {
@@ -266,7 +266,7 @@ resource "aws_eks_node_group" "build_additional" {
 
   launch_template {
     id      = aws_launch_template.build_additional[each.key].id
-    version = "$Latest"
+    version = aws_launch_template.build_additional[each.key].latest_version
   }
 
   scaling_config {

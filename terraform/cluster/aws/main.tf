@@ -182,7 +182,7 @@ resource "aws_eks_node_group" "cluster" {
 
   launch_template {
     id      = aws_launch_template.cluster.id
-    version = "$Latest"
+    version = aws_launch_template.cluster.latest_version
   }
 
   # System nodes remain in all AZs regardless of Karpenter state.
@@ -262,7 +262,7 @@ resource "aws_eks_node_group" "cluster-build" {
 
   launch_template {
     id      = aws_launch_template.cluster-build.id
-    version = "$Latest"
+    version = aws_launch_template.cluster-build.latest_version
   }
 
   scaling_config {
