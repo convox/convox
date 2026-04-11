@@ -32,10 +32,10 @@ func (p *Provider) KarpenterCleanup() error {
 		}
 	}
 
-	if err := p.Provider.KarpenterCleanup(); err != nil {
-		return err
-	}
-
+	// Terminate EC2 instances FIRST. If this fails (e.g., missing IAM permission),
+	// nodes remain in k8s (cordoned but intact) and the command can be retried.
+	// If we deleted k8s nodes first, a failed EC2 terminate would orphan instances
+	// with no node objects to track them.
 	if len(instanceIDs) > 0 {
 		_, err := p.Ec2.TerminateInstances(&ec2.TerminateInstancesInput{
 			InstanceIds: instanceIDs,
@@ -43,6 +43,13 @@ func (p *Provider) KarpenterCleanup() error {
 		if err != nil {
 			return errors.WithStack(fmt.Errorf("failed to terminate EC2 instances: %s", err))
 		}
+	}
+
+	// Now cordon, drain, and delete k8s node objects.
+	// EC2 instances are already terminating, so pods will be evicted naturally,
+	// but we drain explicitly to respect PDBs and ensure graceful shutdown.
+	if err := p.Provider.KarpenterCleanup(); err != nil {
+		return err
 	}
 
 	return nil
