@@ -1267,6 +1267,12 @@ func (c *Client) SystemUpdate(opts structs.SystemUpdateOptions) error {
 	return err
 }
 
+func (c *Client) KarpenterCleanup() error {
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+
+	return c.Post("/system/karpenter/cleanup", ro, nil)
+}
+
 // skipcq
 func (*Client) Workers() error {
 	err := fmt.Errorf("not available via api")

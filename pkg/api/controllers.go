@@ -1747,6 +1747,19 @@ func (s *Server) SystemUpdate(c *stdapi.Context) error {
 	return c.RenderOK()
 }
 
+func (s *Server) KarpenterCleanup(c *stdapi.Context) error {
+	if err := s.hook("KarpenterCleanupValidate", c); err != nil {
+		return err
+	}
+
+	err := s.provider(c).WithContext(contextFrom(c)).KarpenterCleanup()
+	if err != nil {
+		return err
+	}
+
+	return c.RenderOK()
+}
+
 func (*Server) Workers(_ *stdapi.Context) error {
 	return stdapi.Errorf(404, "not available via api")
 }
