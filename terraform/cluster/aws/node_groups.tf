@@ -67,10 +67,20 @@ resource "random_id" "additional_node_groups" {
   }
 }
 
-module "amitype" {
-  source    = "../../helpers/aws"
-  for_each  = { for ng in local.additional_node_groups_with_defaults : ng.id => ng }
-  node_type = each.value.type
+data "aws_ec2_instance_type" "additional_node_type" {
+  for_each      = { for ng in local.additional_node_groups_with_defaults : ng.id => ng }
+  instance_type = each.value.type
+}
+
+locals {
+  additional_node_ami_type = {
+    for key, inst in data.aws_ec2_instance_type.additional_node_type : key => (
+      (substr(inst.instance_type, 0, 1) == "g" || substr(inst.instance_type, 0, 1) == "p" ||
+        substr(inst.instance_type, 0, 3) == "inf" || substr(inst.instance_type, 0, 3) == "trn")
+      ? "AL2023_x86_64_NVIDIA"
+      : contains(inst.supported_architectures, "arm64") ? "AL2023_ARM_64_STANDARD" : "AL2023_x86_64_STANDARD"
+    )
+  }
 }
 
 resource "aws_eks_node_group" "cluster_additional" {
@@ -81,7 +91,7 @@ resource "aws_eks_node_group" "cluster_additional" {
 
   for_each = { for ng in local.additional_node_groups_with_defaults : ng.id => ng }
 
-  ami_type        = random_id.additional_node_groups[each.key].keepers.ami_id != null ? "CUSTOM" : module.amitype[each.key].ami_type
+  ami_type        = random_id.additional_node_groups[each.key].keepers.ami_id != null ? "CUSTOM" : local.additional_node_ami_type[each.key]
   capacity_type   = random_id.additional_node_groups[each.key].keepers.node_capacity_type
   cluster_name    = aws_eks_cluster.cluster.name
   node_group_name = "${var.name}-additional-${each.key}-${random_id.additional_node_groups[each.key].hex}"
@@ -109,8 +119,7 @@ resource "aws_eks_node_group" "cluster_additional" {
   }
 
   lifecycle {
-    create_before_destroy = true
-    ignore_changes        = [scaling_config[0].desired_size]
+    ignore_changes = [scaling_config[0].desired_size]
   }
 
   labels = {
@@ -211,12 +220,21 @@ resource "random_id" "build_node_additional" {
   }
 }
 
-module "build_amitype" {
-  source    = "../../helpers/aws"
-  for_each  = { for ng in local.additional_build_groups_with_defaults : ng.id => ng }
-  node_type = each.value.type
+data "aws_ec2_instance_type" "build_node_type" {
+  for_each      = { for ng in local.additional_build_groups_with_defaults : ng.id => ng }
+  instance_type = each.value.type
 }
 
+locals {
+  build_node_ami_type = {
+    for key, inst in data.aws_ec2_instance_type.build_node_type : key => (
+      (substr(inst.instance_type, 0, 1) == "g" || substr(inst.instance_type, 0, 1) == "p" ||
+        substr(inst.instance_type, 0, 3) == "inf" || substr(inst.instance_type, 0, 3) == "trn")
+      ? "AL2023_x86_64_NVIDIA"
+      : contains(inst.supported_architectures, "arm64") ? "AL2023_ARM_64_STANDARD" : "AL2023_x86_64_STANDARD"
+    )
+  }
+}
 
 resource "aws_eks_node_group" "build_additional" {
   depends_on = [
@@ -226,7 +244,7 @@ resource "aws_eks_node_group" "build_additional" {
 
   for_each = { for idx, ng in local.additional_build_groups_with_defaults : ng.id => ng }
 
-  ami_type        = random_id.build_node_additional[each.key].keepers.ami_id != null ? "CUSTOM" : module.build_amitype[each.key].ami_type
+  ami_type        = random_id.build_node_additional[each.key].keepers.ami_id != null ? "CUSTOM" : local.build_node_ami_type[each.key]
   capacity_type   = random_id.build_node_additional[each.key].keepers.capacity_type != null ? random_id.build_node_additional[each.key].keepers.capacity_type : "ON_DEMAND"
   cluster_name    = aws_eks_cluster.cluster.name
   node_group_name = "${var.name}-build-additional-${each.key}-${random_id.build_node_additional[each.key].hex}"
@@ -263,9 +281,6 @@ resource "aws_eks_node_group" "build_additional" {
     create = "1h"
   }
 
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 resource "aws_launch_template" "build_additional" {
