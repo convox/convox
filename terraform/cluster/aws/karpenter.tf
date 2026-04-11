@@ -124,6 +124,28 @@ resource "helm_release" "karpenter" {
   })] : []
 }
 
+# Wait for Karpenter controller to be ready before creating NodePools.
+# The Helm release completes when the chart is installed, but the controller
+# pods and webhooks need time to start. Without this gate, kubectl_manifest
+# resources can be created before the webhooks are registered, causing them
+# to silently disappear.
+resource "null_resource" "wait_karpenter_ready" {
+  count = var.karpenter_enabled ? 1 : 0
+
+  depends_on = [helm_release.karpenter]
+
+  provisioner "local-exec" {
+    command = <<-WAIT
+      echo "Waiting for Karpenter controller to be ready..."
+      kubectl wait --for=condition=Available deployment/karpenter \
+        -n kube-system --timeout=120s 2>/dev/null || true
+      kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=karpenter \
+        -n kube-system --timeout=120s 2>/dev/null || true
+      echo "Karpenter controller ready"
+    WAIT
+  }
+}
+
 # Finalizer cleanup — strips Karpenter finalizers before destroy to prevent
 # CRD deletion deadlock. By depending on kubectl_manifest resources, this is
 # destroyed BEFORE them (Terraform reverses dependency order on destroy).
