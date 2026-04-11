@@ -234,7 +234,7 @@ resource "kubectl_manifest" "karpenter_nodepool_workload" {
   yaml_body = yamlencode(local.np_workload_manifest)
   wait      = true
 
-  depends_on = [helm_release.karpenter, helm_release.karpenter_crd]
+  depends_on = [null_resource.wait_karpenter_ready, helm_release.karpenter_crd]
 }
 
 ###############################################################################
@@ -247,7 +247,7 @@ resource "kubectl_manifest" "karpenter_ec2nodeclass_workload" {
   wait      = true
 
   depends_on = [
-    helm_release.karpenter,
+    null_resource.wait_karpenter_ready,
     helm_release.karpenter_crd,
     aws_ec2_tag.private_subnets_karpenter,
     aws_ec2_tag.public_subnets_karpenter,
@@ -275,7 +275,7 @@ resource "kubectl_manifest" "karpenter_nodepool_build" {
   })
 
   wait       = true
-  depends_on = [helm_release.karpenter, helm_release.karpenter_crd]
+  depends_on = [null_resource.wait_karpenter_ready, helm_release.karpenter_crd]
 }
 
 resource "kubectl_manifest" "karpenter_ec2nodeclass_build" {
@@ -296,7 +296,7 @@ resource "kubectl_manifest" "karpenter_ec2nodeclass_build" {
   wait = true
 
   depends_on = [
-    helm_release.karpenter,
+    null_resource.wait_karpenter_ready,
     helm_release.karpenter_crd,
     aws_ec2_tag.private_subnets_karpenter,
     aws_ec2_tag.public_subnets_karpenter,
@@ -329,7 +329,7 @@ resource "kubectl_manifest" "karpenter_nodepool_additional" {
   })
 
   wait       = true
-  depends_on = [helm_release.karpenter, helm_release.karpenter_crd]
+  depends_on = [null_resource.wait_karpenter_ready, helm_release.karpenter_crd]
 }
 
 resource "kubectl_manifest" "karpenter_ec2nodeclass_additional" {
@@ -350,7 +350,7 @@ resource "kubectl_manifest" "karpenter_ec2nodeclass_additional" {
   wait = true
 
   depends_on = [
-    helm_release.karpenter,
+    null_resource.wait_karpenter_ready,
     helm_release.karpenter_crd,
     aws_ec2_tag.private_subnets_karpenter,
     aws_ec2_tag.public_subnets_karpenter,
