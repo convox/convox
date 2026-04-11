@@ -80,6 +80,7 @@ func init() {
 	routes["SystemResourceUpdate"] = "PUT /resources/{name}"
 	routes["SystemUninstall"] = ""
 	routes["SystemUpdate"] = "PUT /system"
+	routes["KarpenterCleanup"] = "POST /system/karpenter/cleanup"
 	routes["Workers"] = ""
 }
 

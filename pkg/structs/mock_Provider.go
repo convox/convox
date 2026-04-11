@@ -1730,6 +1730,19 @@ func (_m *MockProvider) SystemUpdate(opts SystemUpdateOptions) error {
 	return r0
 }
 
+func (_m *MockProvider) KarpenterCleanup() error {
+	ret := _m.Called()
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // WithContext provides a mock function with given fields: ctx
 func (_m *MockProvider) WithContext(ctx context.Context) Provider {
 	ret := _m.Called(ctx)

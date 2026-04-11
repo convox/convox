@@ -54,6 +54,12 @@ func init() {
 		Validate: stdcli.ArgsMin(2),
 	})
 
+	register("rack karpenter cleanup", "clean up orphaned Karpenter nodes after disabling Karpenter", RackKarpenterCleanup, stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagRack},
+		Usage:    "",
+		Validate: stdcli.Args(0),
+	})
+
 	registerWithoutProvider("rack kubeconfig", "generate kubeconfig for rack", RackKubeconfig, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagRack},
 		Validate: stdcli.Args(0),
@@ -973,6 +979,16 @@ func RackInstall(_ sdk.Interface, c *stdcli.Context) error {
 	}
 
 	return nil
+}
+
+func RackKarpenterCleanup(rack sdk.Interface, c *stdcli.Context) error {
+	c.Startf("Cleaning up Karpenter nodes")
+
+	if err := rack.KarpenterCleanup(); err != nil {
+		return err
+	}
+
+	return c.OK()
 }
 
 func RackKubeconfig(_ sdk.Interface, c *stdcli.Context) error {
