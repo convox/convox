@@ -19,7 +19,7 @@ func TestValidateAndMutateParams_BudgetRegex(t *testing.T) {
 		{"hundred percent", "100%", false},
 		{"double percent", "10%%", true},
 		{"text", "abc", true},
-		{"empty", "", false}, // empty is allowed (not set)
+		{"empty", "", true}, // empty is now rejected (nonEmptyRequired guard)
 		{"negative", "-1", true},
 		{"decimal", "1.5", true},
 	}
@@ -658,7 +658,7 @@ func TestValidateAndMutateParams_Arch(t *testing.T) {
 		{"typo amd65", "amd65", true},
 		{"nonsense", "invalid", true},
 		{"mixed valid/invalid", "amd64,x86_64", true},
-		{"empty string", "", false},
+		{"empty string", "", true},
 		{"trailing comma", "amd64,", true},
 	}
 	for _, tt := range tests {
@@ -687,7 +687,7 @@ func TestValidateAndMutateParams_CapacityTypes(t *testing.T) {
 		{"valid with spaces", "karpenter_capacity_types", "on-demand, spot", false},
 		{"invalid type", "karpenter_capacity_types", "reserved", true},
 		{"mixed valid/invalid", "karpenter_capacity_types", "on-demand,invalid", true},
-		{"empty string", "karpenter_capacity_types", "", false},
+		{"empty string", "karpenter_capacity_types", "", true},
 		{"case sensitive On-Demand", "karpenter_capacity_types", "On-Demand", true},
 		{"trailing comma", "karpenter_capacity_types", "on-demand,", true},
 		{"leading comma", "karpenter_capacity_types", ",on-demand", true},
@@ -696,7 +696,7 @@ func TestValidateAndMutateParams_CapacityTypes(t *testing.T) {
 		{"build: valid spot", "karpenter_build_capacity_types", "spot", false},
 		{"build: valid both", "karpenter_build_capacity_types", "on-demand,spot", false},
 		{"build: invalid type", "karpenter_build_capacity_types", "reserved", true},
-		{"build: empty string", "karpenter_build_capacity_types", "", false},
+		{"build: empty string", "karpenter_build_capacity_types", "", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -726,7 +726,7 @@ func TestValidateAndMutateParams_CpuLimit(t *testing.T) {
 		{"negative", "-1", true},
 		{"not a number", "abc", true},
 		{"decimal", "1.5", true},
-		{"empty string", "", false},
+		{"empty string", "", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -756,7 +756,7 @@ func TestValidateAndMutateParams_BuildCpuLimit(t *testing.T) {
 		{"negative", "-1", true},
 		{"not a number", "abc", true},
 		{"decimal", "1.5", true},
-		{"empty string", "", false},
+		{"empty string", "", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -786,7 +786,7 @@ func TestValidateAndMutateParams_BuildMemoryLimitGb(t *testing.T) {
 		{"negative", "-1", true},
 		{"not a number", "abc", true},
 		{"decimal", "1.5", true},
-		{"empty string", "", false},
+		{"empty string", "", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -816,7 +816,7 @@ func TestValidateAndMutateParams_MemoryLimitGb(t *testing.T) {
 		{"negative", "-1", true},
 		{"not a number", "abc", true},
 		{"decimal", "1.5", true},
-		{"empty string", "", false},
+		{"empty string", "", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -847,14 +847,14 @@ func TestValidateAndMutateParams_ConsolidateAfter(t *testing.T) {
 		{"invalid: no unit", "karpenter_consolidate_after", "30", true},
 		{"invalid: days", "karpenter_consolidate_after", "1d", true},
 		{"invalid: text", "karpenter_consolidate_after", "abc", true},
-		{"empty", "karpenter_consolidate_after", "", false},
+		{"empty", "karpenter_consolidate_after", "", true},
 		{"invalid: space", "karpenter_consolidate_after", "30 s", true},
 		{"invalid: decimal", "karpenter_consolidate_after", "1.5h", true},
 
 		{"build: valid 30s", "karpenter_build_consolidate_after", "30s", false},
 		{"build: valid 5m", "karpenter_build_consolidate_after", "5m", false},
 		{"build: invalid text", "karpenter_build_consolidate_after", "abc", true},
-		{"build: empty", "karpenter_build_consolidate_after", "", false},
+		{"build: empty", "karpenter_build_consolidate_after", "", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -885,7 +885,7 @@ func TestValidateAndMutateParams_NodeExpiry(t *testing.T) {
 		{"invalid: seconds", "60s", true},
 		{"invalid: text", "abc", true},
 		{"invalid: never lowercase", "never", true},
-		{"empty", "", false},
+		{"empty", "", true},
 		{"invalid: no unit", "720", true},
 	}
 	for _, tt := range tests {
@@ -1845,6 +1845,133 @@ func TestValidateAndMutateParams_KarpenterDedicatedNodepools(t *testing.T) {
 			err := validateAndMutateParams(tt.params, "aws", map[string]string{})
 			if (err != nil) != tt.wantErr {
 				t.Errorf("got err=%v, wantErr=%v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateAndMutateParams_EmptyParamRejection(t *testing.T) {
+	tests := []struct {
+		name    string
+		param   string
+		value   string
+		wantErr bool
+		errMsg  string
+	}{
+		{"empty karpenter_arch", "karpenter_arch", "", true, "requires an explicit value"},
+		{"whitespace karpenter_arch", "karpenter_arch", "  ", true, "requires an explicit value"},
+		{"empty karpenter_capacity_types", "karpenter_capacity_types", "", true, "requires an explicit value"},
+		{"empty karpenter_build_capacity_types", "karpenter_build_capacity_types", "", true, "requires an explicit value"},
+		{"empty karpenter_cpu_limit", "karpenter_cpu_limit", "", true, "requires an explicit value"},
+		{"empty karpenter_memory_limit_gb", "karpenter_memory_limit_gb", "", true, "requires an explicit value"},
+		{"empty karpenter_build_cpu_limit", "karpenter_build_cpu_limit", "", true, "requires an explicit value"},
+		{"empty karpenter_build_memory_limit_gb", "karpenter_build_memory_limit_gb", "", true, "requires an explicit value"},
+		{"empty karpenter_consolidate_after", "karpenter_consolidate_after", "", true, "requires an explicit value"},
+		{"empty karpenter_build_consolidate_after", "karpenter_build_consolidate_after", "", true, "requires an explicit value"},
+		{"empty karpenter_node_expiry", "karpenter_node_expiry", "", true, "requires an explicit value"},
+		{"empty karpenter_disruption_budget_nodes", "karpenter_disruption_budget_nodes", "", true, "requires an explicit value"},
+		// Valid values still pass
+		{"valid karpenter_arch", "karpenter_arch", "amd64", false, ""},
+		{"valid karpenter_cpu_limit", "karpenter_cpu_limit", "100", false, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := map[string]string{tt.param: tt.value}
+			err := validateAndMutateParams(params, "aws", map[string]string{})
+			if (err != nil) != tt.wantErr {
+				t.Errorf("param %s=%q: got err=%v, wantErr=%v", tt.param, tt.value, err, tt.wantErr)
+			}
+			if tt.wantErr && err != nil && tt.errMsg != "" {
+				if !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("error %q does not contain %q", err.Error(), tt.errMsg)
+				}
+			}
+		})
+	}
+}
+
+func TestValidateAndMutateParams_EmptyClearableParams(t *testing.T) {
+	// These params have valid "clear to empty" semantics and must NOT be rejected.
+	clearable := []struct {
+		name  string
+		param string
+	}{
+		{"tags", "tags"},
+		{"schedule_rack_scale_down with pair", "schedule_rack_scale_down"},
+		{"karpenter_node_labels", "karpenter_node_labels"},
+		{"karpenter_node_taints", "karpenter_node_taints"},
+		{"karpenter_build_node_labels", "karpenter_build_node_labels"},
+		{"karpenter_instance_families", "karpenter_instance_families"},
+		{"karpenter_instance_sizes", "karpenter_instance_sizes"},
+		{"karpenter_build_instance_families", "karpenter_build_instance_families"},
+		{"karpenter_build_instance_sizes", "karpenter_build_instance_sizes"},
+	}
+
+	for _, tt := range clearable {
+		t.Run(tt.name, func(t *testing.T) {
+			params := map[string]string{tt.param: ""}
+			// Schedule params must be paired — send both empty
+			if tt.param == "schedule_rack_scale_down" {
+				params["schedule_rack_scale_up"] = ""
+			}
+			err := validateAndMutateParams(params, "aws", map[string]string{})
+			if err != nil {
+				t.Errorf("param %s=\"\" should be allowed (clearable), got err: %v", tt.param, err)
+			}
+		})
+	}
+}
+
+func TestValidateAndMutateParams_SchedulePairValidation(t *testing.T) {
+	tests := []struct {
+		name    string
+		params  map[string]string
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			"both set",
+			map[string]string{
+				"schedule_rack_scale_down": "0 18 * * 5",
+				"schedule_rack_scale_up":   "0 0 * * 0",
+			},
+			false, "",
+		},
+		{
+			"both empty (clear schedule)",
+			map[string]string{
+				"schedule_rack_scale_down": "",
+				"schedule_rack_scale_up":   "",
+			},
+			false, "",
+		},
+		{
+			"only down set",
+			map[string]string{
+				"schedule_rack_scale_down": "0 18 * * 5",
+			},
+			true, "schedule_rack_scale_down",
+		},
+		{
+			"only up set",
+			map[string]string{
+				"schedule_rack_scale_up": "0 0 * * 0",
+			},
+			true, "schedule_rack_scale_up",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateAndMutateParams(tt.params, "aws", map[string]string{})
+			if (err != nil) != tt.wantErr {
+				t.Errorf("got err=%v, wantErr=%v", err, tt.wantErr)
+			}
+			if tt.wantErr && err != nil && tt.errMsg != "" {
+				if !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("error %q does not contain %q", err.Error(), tt.errMsg)
+				}
 			}
 		})
 	}
