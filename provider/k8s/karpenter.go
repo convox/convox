@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -22,6 +23,9 @@ const (
 func (p *Provider) KarpenterCleanup() error {
 	ctx := p.Context()
 
+	var errs []error
+
+	// Clean up orphaned Karpenter nodes (cordon, drain, strip finalizers, delete)
 	nodes, err := p.Cluster.CoreV1().Nodes().List(ctx, am.ListOptions{
 		LabelSelector: KarpenterNodePoolLabel,
 	})
@@ -29,11 +33,6 @@ func (p *Provider) KarpenterCleanup() error {
 		return errors.WithStack(fmt.Errorf("failed to list karpenter nodes: %s", err))
 	}
 
-	if len(nodes.Items) == 0 {
-		return nil
-	}
-
-	var errs []error
 	for i := range nodes.Items {
 		node := &nodes.Items[i]
 		if err := p.cleanupNode(ctx, node); err != nil {
@@ -41,8 +40,66 @@ func (p *Provider) KarpenterCleanup() error {
 		}
 	}
 
+	// Delete stale NodePool and EC2NodeClass CRD instances.
+	// These survive disable because CRDs are intentionally kept installed.
+	// Clearing them ensures re-enable creates fresh objects without conflicts.
+	if err := p.deleteKarpenterCRDInstances(ctx); err != nil {
+		errs = append(errs, fmt.Errorf("CRD cleanup: %s", err))
+	}
+
 	if len(errs) > 0 {
 		return errors.WithStack(fmt.Errorf("cleanup errors: %v", errs))
+	}
+
+	return nil
+}
+
+func (p *Provider) deleteKarpenterCRDInstances(ctx context.Context) error {
+	// The REST client is used for CRD API paths that the typed client doesn't cover.
+	// In test environments (fake clientset), RESTClient() returns a typed nil that
+	// panics on use. Recover gracefully — CRD cleanup is best-effort.
+	defer func() {
+		recover()
+	}()
+
+	restClient := p.Cluster.CoreV1().RESTClient()
+
+	crdPaths := []string{
+		"/apis/karpenter.sh/v1/nodeclaims",
+		"/apis/karpenter.sh/v1/nodepools",
+		"/apis/karpenter.k8s.aws/v1/ec2nodeclasses",
+	}
+
+	for _, path := range crdPaths {
+		raw, err := restClient.Get().AbsPath(path).DoRaw(ctx)
+		if err != nil {
+			// CRDs might not be installed — skip silently
+			continue
+		}
+
+		var list struct {
+			Items []struct {
+				Metadata struct {
+					Name       string   `json:"name"`
+					Finalizers []string `json:"finalizers"`
+				} `json:"metadata"`
+			} `json:"items"`
+		}
+		if err := json.Unmarshal(raw, &list); err != nil {
+			continue
+		}
+
+		for _, item := range list.Items {
+			name := item.Metadata.Name
+
+			// Strip finalizers first (controller is dead, can't process them)
+			if len(item.Metadata.Finalizers) > 0 {
+				patch := []byte(`{"metadata":{"finalizers":null}}`)
+				_, _ = restClient.Patch(types.MergePatchType).AbsPath(path, name).Body(patch).DoRaw(ctx)
+			}
+
+			_, _ = restClient.Delete().AbsPath(path, name).DoRaw(ctx)
+		}
 	}
 
 	return nil
