@@ -1405,6 +1405,13 @@ func TestValidateAndMutateParams_KarpenterAuthMode(t *testing.T) {
 			"",
 		},
 		{
+			"empty karpenter_auth_mode when enabled is blocked (one-way bypass prevention)",
+			map[string]string{"karpenter_auth_mode": ""},
+			map[string]string{"karpenter_auth_mode": "true"},
+			true,
+			"requires an explicit value",
+		},
+		{
 			"non-AWS rejection takes precedence over auth_mode check",
 			map[string]string{"karpenter_auth_mode": "true"},
 			map[string]string{},
@@ -1870,6 +1877,8 @@ func TestValidateAndMutateParams_EmptyParamRejection(t *testing.T) {
 		{"empty karpenter_build_consolidate_after", "karpenter_build_consolidate_after", "", true, "requires an explicit value"},
 		{"empty karpenter_node_expiry", "karpenter_node_expiry", "", true, "requires an explicit value"},
 		{"empty karpenter_disruption_budget_nodes", "karpenter_disruption_budget_nodes", "", true, "requires an explicit value"},
+		{"empty karpenter_auth_mode", "karpenter_auth_mode", "", true, "requires an explicit value"},
+		{"empty karpenter_enabled", "karpenter_enabled", "", true, "requires an explicit value"},
 		// Valid values still pass
 		{"valid karpenter_arch", "karpenter_arch", "amd64", false, ""},
 		{"valid karpenter_cpu_limit", "karpenter_cpu_limit", "100", false, ""},
@@ -1972,6 +1981,45 @@ func TestValidateAndMutateParams_SchedulePairValidation(t *testing.T) {
 				if !strings.Contains(err.Error(), tt.errMsg) {
 					t.Errorf("error %q does not contain %q", err.Error(), tt.errMsg)
 				}
+			}
+		})
+	}
+}
+
+func TestValidateAndMutateParams_InstallOnlyParams(t *testing.T) {
+	installOnly := []string{
+		"high_availability",
+		"private",
+		"cidr",
+		"vpc_id",
+		"internet_gateway_id",
+		"private_subnets_ids",
+		"public_subnets_ids",
+		"availability_zones",
+		"region",
+	}
+
+	for _, param := range installOnly {
+		t.Run(param, func(t *testing.T) {
+			params := map[string]string{param: "anything"}
+			err := validateAndMutateParams(params, "aws", map[string]string{})
+			if err == nil {
+				t.Errorf("param %s should be blocked post-install, got nil error", param)
+			}
+			if err != nil && !strings.Contains(err.Error(), "can only be set during rack installation") {
+				t.Errorf("error %q does not contain expected message", err.Error())
+			}
+		})
+
+		// Also test empty value — should still be blocked (install-only, not just non-empty)
+		t.Run(param+"_empty", func(t *testing.T) {
+			params := map[string]string{param: ""}
+			err := validateAndMutateParams(params, "aws", map[string]string{})
+			if err == nil {
+				t.Errorf("param %s=\"\" should be blocked post-install, got nil error", param)
+			}
+			if err != nil && !strings.Contains(err.Error(), "can only be set during rack installation") {
+				t.Errorf("error %q does not contain expected message", err.Error())
 			}
 		})
 	}
