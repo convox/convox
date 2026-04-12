@@ -141,7 +141,22 @@ resource "null_resource" "wait_karpenter_ready" {
            -n kube-system --timeout=120s 2>/dev/null && \
          kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=karpenter \
            -n kube-system --timeout=120s 2>/dev/null; then
-        echo "Karpenter controller ready"
+        # Webhook registration happens shortly after pod Ready.
+        # Wait for the webhook endpoint to be populated.
+        echo "Waiting for webhook registration..."
+        WEBHOOK_READY=false
+        for i in $(seq 1 30); do
+          ENDPOINTS=$(kubectl get endpoints karpenter -n kube-system -o jsonpath='{.subsets[*].addresses[0].ip}' 2>/dev/null)
+          if [ -n "$ENDPOINTS" ]; then
+            echo "Karpenter controller and webhooks ready"
+            WEBHOOK_READY=true
+            break
+          fi
+          sleep 2
+        done
+        if [ "$WEBHOOK_READY" = "false" ]; then
+          echo "WARNING: Karpenter webhook endpoints not populated after 60s. NodePools might need a re-apply."
+        fi
       else
         echo "WARNING: Karpenter controller may not be ready. NodePools might need a re-apply."
       fi
