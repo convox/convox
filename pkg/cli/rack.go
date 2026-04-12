@@ -370,8 +370,29 @@ func (an AdditionalNodeGroups) Validate() error {
 }
 
 func validateAndMutateParams(params map[string]string, provider string, currentParams map[string]string) error {
-	if params["high_availability"] != "" {
-		return errors.New("the high_availability parameter is only supported during rack installation")
+	// Install-only params — these define infrastructure that cannot be changed
+	// after rack creation without catastrophic consequences (network recreation,
+	// subnet destruction, cluster replacement). Block ANY post-install modification.
+	//
+	// MAINTENANCE: Keep in sync with immutableRackParams in console3
+	// api/controller/cli.go. Add any new TF variable here if changing it
+	// post-install would destroy or recreate core infrastructure.
+	installOnlyParams := map[string]bool{
+		"high_availability":  true,
+		"private":            true,
+		"cidr":               true,
+		"vpc_id":             true,
+		"internet_gateway_id": true,
+		"private_subnets_ids": true,
+		"public_subnets_ids": true,
+		"availability_zones": true,
+		"region":             true,
+	}
+
+	for k := range params {
+		if installOnlyParams[k] {
+			return fmt.Errorf("param '%s' can only be set during rack installation", k)
+		}
 	}
 
 	// Reject empty values for params that require explicit values.
@@ -393,6 +414,8 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		"karpenter_build_consolidate_after": true,
 		"karpenter_node_expiry":             true,
 		"karpenter_disruption_budget_nodes": true,
+		"karpenter_auth_mode":              true, // one-way migration — empty would revert to "false"
+		"karpenter_enabled":                true, // stringly-typed bool — empty silently disables
 	}
 
 	for k, v := range params {
@@ -436,6 +459,7 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 	}
 
 	// karpenter_auth_mode: one-way migration (cannot be disabled once enabled)
+	// Empty string is caught by nonEmptyRequired above; this guards against explicit "false".
 	if params["karpenter_auth_mode"] == "false" && currentParams["karpenter_auth_mode"] == "true" {
 		return fmt.Errorf("karpenter_auth_mode cannot be disabled once enabled (AWS EKS access config migration is one-way)")
 	}
