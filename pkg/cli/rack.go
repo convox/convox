@@ -379,8 +379,8 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		return errors.New("to schedule your rack to turn on/off you need both ScheduleRackScaleDown and ScheduleRackScaleUp parameters")
 	}
 
-	// format: "key1=val1,key2=val2"
-	if tags, has := params["tags"]; has {
+	// format: "key1=val1,key2=val2" — empty string clears all tags
+	if tags, has := params["tags"]; has && tags != "" {
 		tList := strings.Split(tags, ",")
 		for _, p := range tList {
 			if len(strings.Split(p, "=")) != 2 {
