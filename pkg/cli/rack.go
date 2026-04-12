@@ -573,6 +573,17 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		delete(params, rk)
 	}
 
+	// Normalize empty values for JSON config params — users clear with param= or param=""
+	// but TF needs valid base64-encoded JSON (empty array or empty object).
+	for _, k := range []string{"additional_node_groups_config", "additional_build_groups_config", "additional_karpenter_nodepools_config"} {
+		if v, ok := params[k]; ok && (v == "" || v == `""`) {
+			params[k] = base64.StdEncoding.EncodeToString([]byte("[]"))
+		}
+	}
+	if v, ok := params["karpenter_config"]; ok && (v == "" || v == `""`) {
+		params["karpenter_config"] = base64.StdEncoding.EncodeToString([]byte("{}"))
+	}
+
 	ngKeys := []string{"additional_node_groups_config", "additional_build_groups_config"}
 	for _, k := range ngKeys {
 		if params[k] != "" {
@@ -1127,8 +1138,8 @@ func RackParams(_ sdk.Interface, c *stdcli.Context) error {
 		keys = append(keys, k)
 	}
 
-	ngKeys := []string{"additional_node_groups_config", "additional_build_groups_config"}
-	for _, k := range ngKeys {
+	b64Keys := []string{"additional_node_groups_config", "additional_build_groups_config", "additional_karpenter_nodepools_config", "karpenter_config"}
+	for _, k := range b64Keys {
 		if params[k] != "" {
 			v, err := base64.StdEncoding.DecodeString(params[k])
 			if err == nil {
