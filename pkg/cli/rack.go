@@ -374,9 +374,36 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		return errors.New("the high_availability parameter is only supported during rack installation")
 	}
 
-	srdown, srup := params["ScheduleRackScaleDown"], params["ScheduleRackScaleUp"]
+	// Reject empty values for params that require explicit values.
+	// Enum, numeric, and duration params have no valid "empty" state —
+	// empty strings cause TF type errors or silent default reversion.
+	//
+	// MAINTENANCE: When adding a new TF variable with type=number, type=bool,
+	// or type=string with a non-empty default (like "30s" or "on-demand"),
+	// add it here. See also preserveEmpty in pkg/rack/terraform.go.
+	nonEmptyRequired := map[string]bool{
+		"karpenter_arch":                    true,
+		"karpenter_capacity_types":          true,
+		"karpenter_build_capacity_types":    true,
+		"karpenter_cpu_limit":               true,
+		"karpenter_memory_limit_gb":         true,
+		"karpenter_build_cpu_limit":         true,
+		"karpenter_build_memory_limit_gb":   true,
+		"karpenter_consolidate_after":       true,
+		"karpenter_build_consolidate_after": true,
+		"karpenter_node_expiry":             true,
+		"karpenter_disruption_budget_nodes": true,
+	}
+
+	for k, v := range params {
+		if nonEmptyRequired[k] && strings.TrimSpace(v) == "" {
+			return fmt.Errorf("param '%s' requires an explicit value (omit to keep current)", k)
+		}
+	}
+
+	srdown, srup := params["schedule_rack_scale_down"], params["schedule_rack_scale_up"]
 	if (srdown == "" || srup == "") && (srdown != "" || srup != "") {
-		return errors.New("to schedule your rack to turn on/off you need both ScheduleRackScaleDown and ScheduleRackScaleUp parameters")
+		return errors.New("to schedule your rack to turn on/off you need both schedule_rack_scale_down and schedule_rack_scale_up parameters")
 	}
 
 	// format: "key1=val1,key2=val2" — empty string clears all tags

@@ -656,8 +656,44 @@ func (t Terraform) varsFile() (string, error) {
 }
 
 func (t Terraform) writeVars(vars map[string]string) error {
+	// Preserve empty values for string-type TF variables where clearing
+	// is a valid operation (e.g., karpenter_node_labels="" to clear labels).
+	// Strip empties for everything else to prevent TF type errors on
+	// number/bool variables (e.g., idle_timeout="" would fail TF).
+	//
+	// MAINTENANCE: When adding a new TF variable with type=string and
+	// default="", add it here if users should be able to clear it after
+	// setting a value. See also nonEmptyRequired in pkg/cli/rack.go.
+	preserveEmpty := map[string]bool{
+		"tags":                              true,
+		"karpenter_node_labels":             true,
+		"karpenter_node_taints":             true,
+		"karpenter_build_node_labels":       true,
+		"karpenter_instance_families":       true,
+		"karpenter_instance_sizes":          true,
+		"karpenter_build_instance_families": true,
+		"karpenter_build_instance_sizes":    true,
+		"schedule_rack_scale_down":          true,
+		"schedule_rack_scale_up":            true,
+		"ssl_ciphers":                       true,
+		"ssl_protocols":                     true,
+		"build_node_type":                   true,
+		"key_pair_name":                     true,
+		"nginx_additional_config":           true,
+		"private_eks_host":                  true,
+		"private_eks_user":                  true,
+		"private_eks_pass":                  true,
+		"docker_hub_username":  true,
+		"docker_hub_password":  true,
+		"syslog":               true,
+		"convox_rack_domain":   true,
+		"user_data":            true,
+		"user_data_url":        true,
+		"api_feature_gates":    true,
+	}
+
 	for k, v := range vars {
-		if strings.TrimSpace(v) == "" {
+		if strings.TrimSpace(v) == "" && !preserveEmpty[k] {
 			delete(vars, k)
 		}
 	}
