@@ -54,6 +54,17 @@ Karpenter uses a two-parameter enablement model:
 
 Both can be set in the same call. If setting them separately, `karpenter_auth_mode` must be set first and the update must complete before setting `karpenter_enabled`.
 
+### Migrating Workloads to Karpenter Nodes
+
+Once Karpenter is enabled, the system (EKS managed) node group continues running your application workloads alongside core Rack services. To gracefully migrate workloads onto Karpenter-provisioned nodes, set `node_type` to a smaller instance type:
+
+```bash
+$ convox rack params set node_type=t3.medium -r rackName
+Setting parameters... OK
+```
+
+System nodes only need to run core Rack services (API server, router, resolver, Karpenter controller, and pinned add-on controllers). A smaller instance type like `t3.medium` is typically sufficient. Changing `node_type` triggers a rolling update of the managed node group — Kubernetes drains pods off old nodes and Karpenter provisions right-sized workload nodes to absorb them.
+
 ## Enablement Parameters
 
 | Parameter | Type | Default | Description |
@@ -345,6 +356,10 @@ When `karpenter_enabled=true`:
   - Metrics server
   - Cluster Autoscaler (if running)
   - Karpenter controller
+  - CoreDNS
+  - EBS CSI controller
+  - EFS CSI controller
+  - AWS Load Balancer Controller
 - Fluentd DaemonSet is **not** pinned — it runs on all nodes for log collection
 
 > The `convox.io/system-node=true` label is tied to `karpenter_auth_mode` (not `karpenter_enabled`) to ensure labels persist during enable/disable transitions.
@@ -363,13 +378,32 @@ Enabling Karpenter requires all existing [`additional_node_groups_config`](/conf
 
 ## Disabling Karpenter
 
-Setting `karpenter_enabled=false` cleanly reverses the deployment:
+When disabling Karpenter, set `node_type` to a larger instance alongside `karpenter_enabled=false` so the managed node group can accommodate workloads returning from Karpenter-provisioned nodes:
+
+```bash
+$ convox rack params set karpenter_enabled=false node_type=t3.xlarge -r rackName
+Setting parameters... OK
+```
+
+This triggers the following sequence:
 
 1. Karpenter controller drains workload and build nodes (5-minute graceful drain window)
 2. All Karpenter NodePools, EC2NodeClasses, IAM resources, and SQS queue are destroyed
-3. The managed build node group scales back up from zero to `build_node_min_count`
-4. Cluster Autoscaler resumes normal auto-discovery mode
-5. System pod `nodeSelector` for `convox.io/system-node` is removed
+3. The managed node group scales up with the new `node_type` to absorb workloads
+4. The managed build node group scales back up from zero to `build_node_min_count`
+5. Cluster Autoscaler resumes normal auto-discovery mode
+6. System pod `nodeSelector` for `convox.io/system-node` is removed
+
+### Cleaning Up Orphaned Nodes
+
+If Karpenter nodes remain after disabling (for example, due to finalizer deadlocks or interrupted applies), use the cleanup command:
+
+```bash
+$ convox rack karpenter cleanup -r rackName
+Cleaning up Karpenter nodes... OK
+```
+
+This cordons, drains, and deletes any remaining Karpenter-labeled nodes, terminates their backing EC2 instances, and removes stale NodePool and EC2NodeClass CRD objects. Safe to run multiple times.
 
 > `karpenter_auth_mode` cannot be reverted. The EKS access config migration and discovery tags remain. This is safe and has no cost or operational impact — it means the cluster is ready for Karpenter to be re-enabled at any time.
 

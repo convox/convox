@@ -30,6 +30,8 @@ url: /reference/cli/rack
 | **Scaling** | |
 | `convox rack releases` | List rack version history |
 | `convox rack scale` | Scale the rack |
+| **Karpenter** | |
+| `convox rack karpenter cleanup` | Clean up orphaned Karpenter nodes after disabling |
 | **Kubernetes** | |
 | `convox rack kubeconfig` | Output kubeconfig for the underlying cluster |
 | `convox rack mv` | Transfer rack management between user and org |
@@ -295,17 +297,56 @@ Set rack parameters
 
 ### Usage
 ```bash
-    convox rack params set <Key=Value> [Key=Value]...
+    convox rack params set <Key=Value> [Key=Value]... [--force]
 ```
+
+### Flags
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--force` | `-f` | Override unknown-key and managed-parameter guards |
+
 ### Examples
 ```bash
     $ convox rack params set node_type=t3.large
     Setting parameters... OK
 ```
 
-> The `high_availability` parameter can only be set during rack installation and cannot be changed afterwards.
+### Parameter Validation
+
+The CLI validates parameters before sending them to the Rack. This catches common errors before they reach Terraform:
+
+- **Unknown parameters** are rejected with a suggestion if a close match exists:
+  ```
+  unknown parameter 'node_tyep' for aws provider
+         Did you mean 'node_type'?
+         Run 'sudo convox update' to get the latest parameter support, or use --force to override.
+  ```
+- **Install-only parameters** (`high_availability`, `private`, `cidr`, `vpc_id`, `region`, `availability_zones`, subnet IDs) cannot be changed after rack creation.
+- **Managed parameters** (`image`, `release`, `k8s_version`, addon versions) are set automatically by `convox rack update` and cannot be modified directly.
+- **Empty values** are rejected for parameters that require explicit values. Parameters that support clearing (labels, taints, schedules, credentials) accept empty strings.
+- **Type validation** is enforced for specific parameters (e.g., `karpenter_auth_mode` must be `true` or `false`, `node_capacity_type` must be `on_demand`, `spot`, or `mixed`).
+
+Use `--force` to bypass the unknown-key and managed-parameter guards. Install-only, empty-value, and type validators cannot be overridden.
 
 > The `schedule_rack_scale_down` and `schedule_rack_scale_up` parameters must be set together.
+
+## rack karpenter cleanup
+
+Clean up orphaned Karpenter nodes after disabling Karpenter. Terminates backing EC2 instances, cordons and drains Kubernetes nodes (respecting PodDisruptionBudgets), strips Karpenter finalizers, and removes stale CRD objects (NodePools, NodeClaims, EC2NodeClasses).
+
+Safe to run multiple times. See [Disabling Karpenter](/configuration/scaling/karpenter#disabling-karpenter) for the full workflow.
+
+### Usage
+```bash
+    convox rack karpenter cleanup
+```
+
+### Examples
+```bash
+    $ convox rack karpenter cleanup -r rackName
+    Cleaning up Karpenter nodes... OK
+```
 
 ## rack releases
 

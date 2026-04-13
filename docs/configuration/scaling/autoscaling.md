@@ -166,7 +166,7 @@ The service will scale based on CPU utilization while ensuring that each process
 
 If your cluster is not scaling down despite low resource usage, the Kubernetes Cluster Autoscaler may be blocked from removing nodes. Common causes:
 
-- **Restrictive PodDisruptionBudgets (PDBs)**: A PDB with `minAvailable: 1` on a service with one replica prevents that pod from being evicted. Adjust with the [`pdb_default_min_available_percentage`](/configuration/rack-parameters/aws/pdb_default_min_available_percentage) rack parameter.
+- **Restrictive PodDisruptionBudgets (PDBs)**: A PDB with `minAvailable: 1` on a service with one replica prevents that healthy pod from being evicted. Adjust with the [`pdb_default_min_available_percentage`](/configuration/rack-parameters/aws/pdb_default_min_available_percentage) rack parameter. Unhealthy pods (CrashLoopBackOff, Error) do not block eviction — Convox PDBs use `unhealthyPodEvictionPolicy: AlwaysAllow` so that stuck pods cannot prevent node scale-down.
 - **System pods**: Pods in the `kube-system` namespace may have rules preventing eviction.
 - **Pods without a controller**: Pods not managed by a Deployment or ReplicaSet will not be evicted.
 - **Pods with local storage**: Pods using `hostPath` or `emptyDir` volumes cannot be moved.

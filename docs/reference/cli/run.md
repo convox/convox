@@ -71,6 +71,44 @@ This works seamlessly with custom node group configurations. For example, if you
 - **Batch Processing**: Process computationally intensive workloads occasionally
 - **Diagnostics**: Run GPU diagnostics or benchmarking tools
 
+## Automatic Node Placement
+
+When a Service has `nodeSelectorLabels` configured in `convox.yml`, `convox run` automatically inherits those labels as node placement constraints. The run pod targets the same nodes as the deployed Service, including `dedicated-node` tolerations for pools using `convox.io/nodepool` or `convox.io/label`.
+
+For example, if your `convox.yml` has:
+
+```yaml
+services:
+  gpu-worker:
+    build: .
+    nodeSelectorLabels:
+      convox.io/nodepool: gpu
+```
+
+Then `convox run gpu-worker bash` automatically runs on the `gpu` pool — no `--node-labels` flag needed.
+
+### Override with `--node-labels`
+
+To send a run pod to a different node pool (for example, to debug a GPU service on general-purpose nodes):
+
+```bash
+    $ convox run gpu-worker bash --node-labels "convox.io/nodepool=workload"
+```
+
+This clears the inherited placement and applies the specified labels instead.
+
+### Clear inherited node placement
+
+To remove the inherited node affinity and allow the pod to schedule on general cluster nodes:
+
+```bash
+    $ convox run gpu-worker bash --node-labels ""
+```
+
+This is useful for debugging when you want to run a one-off process outside its usual dedicated pool.
+
+> Builds are not affected by automatic node placement — `convox build` always uses the configured build nodes regardless of `nodeSelectorLabels`.
+
 ## Service Volume Support
 
 The `--use-service-volume` flag enables one-off processes to access the same persistent volumes configured for the service. This ensures data consistency and enables maintenance operations that require access to persistent storage.
@@ -136,7 +174,10 @@ Running with `--use-service-volume` ensures the `/data` directory is available i
 - Basic `convox run` functionality: All versions
 - GPU support (`--gpu`, `--node-labels`): Requires CLI and rack version >= 3.21.3
 - Volume support (`--use-service-volume`): Requires CLI and rack version >= 3.22.3
+- Automatic node placement (inherits `nodeSelectorLabels`): Requires CLI and rack version >= 3.24.3
 
 ## See Also
 
 - [One-off Commands](/management/run) for run command patterns
+- [Workload Placement](/configuration/scaling/workload-placement) for `nodeSelectorLabels` configuration
+- [Karpenter](/configuration/scaling/karpenter) for dedicated pool isolation with `dedicated: true`
