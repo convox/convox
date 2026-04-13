@@ -390,3 +390,19 @@ variable "vpa_enable" {
   type    = bool
   default = false
 }
+
+variable "ecr_docker_hub_cache" {
+  type    = bool
+  default = false
+}
+
+variable "docker_hub_username" {
+  type    = string
+  default = ""
+}
+
+variable "docker_hub_password" {
+  type    = string
+  default = ""
+  sensitive = true
+}

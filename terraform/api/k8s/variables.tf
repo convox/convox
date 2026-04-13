@@ -42,6 +42,11 @@ variable "docker_hub_password" {
   default = ""
 }
 
+variable "ecr_docker_hub_cache_prefix" {
+  type    = string
+  default = ""
+}
+
 variable "domain" {
   type = string
 }
