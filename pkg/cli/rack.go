@@ -395,31 +395,61 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		}
 	}
 
-	// Reject empty values for params that require explicit values.
-	// Enum, numeric, and duration params have no valid "empty" state —
-	// empty strings cause TF type errors or silent default reversion.
+	// Only these params accept empty strings — empty means "clear this setting."
+	// ALL other params require explicit values. Empty strings for non-clearable
+	// params cause TF type errors, silent default reversion, or state divergence
+	// between what convox rack params shows and what TF actually applies.
 	//
-	// MAINTENANCE: When adding a new TF variable with type=number, type=bool,
-	// or type=string with a non-empty default (like "30s" or "on-demand"),
-	// add it here. See also preserveEmpty in pkg/rack/terraform.go.
-	nonEmptyRequired := map[string]bool{
-		"karpenter_arch":                    true,
-		"karpenter_capacity_types":          true,
-		"karpenter_build_capacity_types":    true,
-		"karpenter_cpu_limit":               true,
-		"karpenter_memory_limit_gb":         true,
-		"karpenter_build_cpu_limit":         true,
-		"karpenter_build_memory_limit_gb":   true,
-		"karpenter_consolidate_after":       true,
-		"karpenter_build_consolidate_after": true,
-		"karpenter_node_expiry":             true,
-		"karpenter_disruption_budget_nodes": true,
-		"karpenter_auth_mode":              true, // one-way migration — empty would revert to "false"
-		"karpenter_enabled":                true, // stringly-typed bool — empty silently disables
+	// MAINTENANCE: When adding a new TF variable where users should be able to
+	// clear a previously-set value with param="", add it here AND to preserveEmpty
+	// in pkg/rack/terraform.go. Default is REJECT — only add if clearing makes sense.
+	clearableParams := map[string]bool{
+		// Labels/taints — clear means "remove all"
+		"karpenter_node_labels":             true,
+		"karpenter_node_taints":             true,
+		"karpenter_build_node_labels":       true,
+		// Instance restrictions — clear means "no restriction"
+		"karpenter_instance_families":       true,
+		"karpenter_instance_sizes":          true,
+		"karpenter_build_instance_families": true,
+		"karpenter_build_instance_sizes":    true,
+		// Schedule — clear means "disable schedule" (must be paired)
+		"schedule_rack_scale_down":          true,
+		"schedule_rack_scale_up":            true,
+		// Tags — clear means "remove all custom tags"
+		"tags":                              true,
+		// SSL — clear means "use defaults"
+		"ssl_ciphers":                       true,
+		"ssl_protocols":                     true,
+		// Optional overrides — clear means "use auto/default"
+		"build_node_type":                   true,
+		"key_pair_name":                     true,
+		"nginx_additional_config":           true,
+		// Credentials — clear means "remove auth"
+		"docker_hub_username":               true,
+		"docker_hub_password":               true,
+		// Logging — clear means "stop shipping"
+		"syslog":                            true,
+		// Domain — clear means "use auto-managed"
+		"convox_rack_domain":                true,
+		// Custom launch scripts — clear means "remove"
+		"user_data":                         true,
+		"user_data_url":                     true,
+		// Feature gates — clear means "disable all"
+		"api_feature_gates":                 true,
+		// Private EKS — cleared by console during mode changes
+		"private_eks_host":                  true,
+		"private_eks_user":                  true,
+		"private_eks_pass":                  true,
+		// JSON config — normalized to base64 later in this function
+		"additional_node_groups_config":         true,
+		"additional_build_groups_config":        true,
+		"additional_karpenter_nodepools_config": true,
+		"karpenter_config":                     true,
 	}
 
 	for k, v := range params {
-		if nonEmptyRequired[k] && strings.TrimSpace(v) == "" {
+		if strings.TrimSpace(v) == "" && !clearableParams[k] {
 			return fmt.Errorf("param '%s' requires an explicit value (omit to keep current)", k)
 		}
 	}
@@ -433,7 +463,7 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 	if tags, has := params["tags"]; has && tags != "" {
 		tList := strings.Split(tags, ",")
 		for _, p := range tList {
-			if len(strings.Split(p, "=")) != 2 {
+			if len(strings.SplitN(p, "=", 2)) != 2 {
 				return errors.New("invalid value for tags param")
 			}
 		}
@@ -458,8 +488,15 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		}
 	}
 
+	// karpenter_auth_mode and karpenter_enabled are type=string in TF (not bool).
+	// Reject junk values — only "true" or "false" are valid.
+	for _, boolishParam := range []string{"karpenter_auth_mode", "karpenter_enabled"} {
+		if v, ok := params[boolishParam]; ok && v != "" && v != "true" && v != "false" {
+			return fmt.Errorf("param '%s' must be 'true' or 'false'", boolishParam)
+		}
+	}
+
 	// karpenter_auth_mode: one-way migration (cannot be disabled once enabled)
-	// Empty string is caught by nonEmptyRequired above; this guards against explicit "false".
 	if params["karpenter_auth_mode"] == "false" && currentParams["karpenter_auth_mode"] == "true" {
 		return fmt.Errorf("karpenter_auth_mode cannot be disabled once enabled (AWS EKS access config migration is one-way)")
 	}

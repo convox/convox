@@ -661,9 +661,11 @@ func (t Terraform) writeVars(vars map[string]string) error {
 	// Strip empties for everything else to prevent TF type errors on
 	// number/bool variables (e.g., idle_timeout="" would fail TF).
 	//
-	// MAINTENANCE: When adding a new TF variable with type=string and
-	// default="", add it here if users should be able to clear it after
-	// setting a value. See also nonEmptyRequired in pkg/cli/rack.go.
+	// MAINTENANCE: This list is a subset of clearableParams in pkg/cli/rack.go.
+	// JSON config params (additional_*_config, karpenter_config) are excluded
+	// because the CLI normalizes them to base64 before reaching writeVars.
+	// When adding a new clearable param to rack.go, add it here too unless
+	// it has similar pre-processing that prevents empty values at this point.
 	preserveEmpty := map[string]bool{
 		"tags":                              true,
 		"karpenter_node_labels":             true,

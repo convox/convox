@@ -480,7 +480,7 @@ func TestRackParamsSetTerraformUpdateTimeoutEmpty(t *testing.T) {
 		res, err := testExecute(e, "rack params set terraform_update_timeout=", nil)
 		require.NoError(t, err)
 		require.Equal(t, 1, res.Code)
-		res.RequireStderr(t, []string{"ERROR: invalid value for terraform_update_timeout: must be a valid duration (e.g., '2h', '90m', '2h30m'): time: invalid duration \"\""})
+		res.RequireStderr(t, []string{"ERROR: param 'terraform_update_timeout' requires an explicit value (omit to keep current)"})
 	})
 }
 
