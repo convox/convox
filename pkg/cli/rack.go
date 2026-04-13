@@ -24,6 +24,131 @@ import (
 	"github.com/convox/stdcli"
 )
 
+var providerKnownParams = map[string]map[string]bool{
+	"aws":   awsKnownParams,
+	"gcp":   gcpKnownParams,
+	"azure": azureKnownParams,
+	"do":    doKnownParams,
+	"metal": metalKnownParams,
+	"local": localKnownParams,
+}
+
+var awsKnownParams = map[string]bool{
+	"access_log_retention_in_days": true, "additional_build_groups_config": true,
+	"additional_karpenter_nodepools_config": true, "additional_node_groups_config": true,
+	"api_feature_gates": true, "availability_zones": true,
+	"aws_ebs_csi_driver_version": true, "build_disable_convox_resolver": true,
+	"build_node_enabled": true, "build_node_min_count": true,
+	"build_node_type": true, "buildkit_host_path_cache_enable": true,
+	"cert_duration": true, "cidr": true,
+	"convox_domain_tls_cert_disable": true, "convox_rack_domain": true,
+	"coredns_version": true, "custom_provided_bucket": true,
+	"deploy_extra_nlb": true, "disable_convox_resolver": true,
+	"disable_image_manifest_cache": true, "disable_public_access": true,
+	"docker_hub_password": true, "docker_hub_username": true,
+	"ebs_volume_encryption_enabled": true, "ecr_scan_on_push_enable": true,
+	"efs_csi_driver_enable": true, "efs_csi_driver_version": true,
+	"eks_api_server_public_access_cidrs": true, "enable_private_access": true,
+	"fluentd_disable": true, "fluentd_memory": true,
+	"gpu_tag_enable": true, "high_availability": true,
+	"idle_timeout": true, "image": true,
+	"imds_http_hop_limit": true, "imds_http_tokens": true,
+	"imds_tags_enable": true, "internal_router": true,
+	"internet_gateway_id": true, "k8s_version": true,
+	"karpenter_arch": true, "karpenter_auth_mode": true,
+	"karpenter_build_capacity_types": true, "karpenter_build_consolidate_after": true,
+	"karpenter_build_cpu_limit": true, "karpenter_build_instance_families": true,
+	"karpenter_build_instance_sizes": true, "karpenter_build_memory_limit_gb": true,
+	"karpenter_build_node_labels": true, "karpenter_capacity_types": true,
+	"karpenter_config": true, "karpenter_consolidate_after": true,
+	"karpenter_consolidation_enabled": true, "karpenter_cpu_limit": true,
+	"karpenter_disruption_budget_nodes": true, "karpenter_enabled": true,
+	"karpenter_instance_families": true, "karpenter_instance_sizes": true,
+	"karpenter_memory_limit_gb": true, "karpenter_node_disk": true,
+	"karpenter_node_expiry": true, "karpenter_node_labels": true,
+	"karpenter_node_taints": true, "karpenter_node_volume_type": true,
+	"keda_enable": true, "key_pair_name": true,
+	"kube_proxy_version": true, "kubelet_registry_burst": true,
+	"kubelet_registry_pull_qps": true, "max_on_demand_count": true,
+	"min_on_demand_count": true, "name": true,
+	"nginx_additional_config": true, "nginx_image": true,
+	"nlb_security_group": true, "node_capacity_type": true,
+	"node_disk": true, "node_max_unavailable_percentage": true,
+	"node_type": true, "nvidia_device_plugin_enable": true,
+	"nvidia_device_time_slicing_replicas": true, "pdb_default_min_available_percentage": true,
+	"pod_identity_agent_enable": true, "pod_identity_agent_version": true,
+	"private": true, "private_eks_host": true,
+	"private_eks_pass": true, "private_eks_user": true,
+	"private_subnets_ids": true, "proxy_protocol": true,
+	"public_subnets_ids": true, "rack_name": true,
+	"region": true, "release": true,
+	"releases_to_retain_after_active": true, "releases_to_retain_task_run_interval_hour": true,
+	"schedule_rack_scale_down": true, "schedule_rack_scale_up": true,
+	"settings": true, "ssl_ciphers": true,
+	"ssl_protocols": true, "sync_tf_now": true,
+	"syslog": true, "tags": true,
+	"telemetry": true, "terraform_update_timeout": true,
+	"user_data": true, "user_data_url": true,
+	"vpa_enable": true, "vpc_cni_version": true,
+	"vpc_id": true, "whitelist": true,
+}
+
+var gcpKnownParams = map[string]bool{
+	"buildkit_enabled": true, "cert_duration": true, "docker_hub_password": true,
+	"docker_hub_username": true, "fluentd_memory": true, "image": true,
+	"k8s_version": true, "name": true, "nginx_additional_config": true,
+	"node_disk": true, "node_type": true, "preemptible": true,
+	"rack_name": true, "region": true, "release": true, "settings": true,
+	"sync_tf_now": true, "syslog": true, "telemetry": true,
+	"terraform_update_timeout": true, "whitelist": true,
+}
+
+var azureKnownParams = map[string]bool{
+	"additional_build_groups_config": true, "additional_node_groups_config": true,
+	"cert_duration": true, "docker_hub_password": true, "docker_hub_username": true,
+	"fluentd_memory": true, "high_availability": true, "idle_timeout": true,
+	"image": true, "k8s_version": true, "max_on_demand_count": true,
+	"min_on_demand_count": true, "name": true, "nginx_additional_config": true,
+	"nginx_image": true, "node_disk": true, "node_type": true,
+	"nvidia_device_plugin_enable": true, "nvidia_device_time_slicing_replicas": true,
+	"pdb_default_min_available_percentage": true, "rack_name": true, "region": true,
+	"release": true, "settings": true, "ssl_ciphers": true, "ssl_protocols": true,
+	"sync_tf_now": true, "syslog": true, "tags": true, "telemetry": true,
+	"terraform_update_timeout": true, "whitelist": true,
+}
+
+var doKnownParams = map[string]bool{
+	"access_id": true, "buildkit_enabled": true, "cert_duration": true,
+	"docker_hub_password": true, "docker_hub_username": true, "fluentd_memory": true,
+	"high_availability": true, "image": true, "k8s_version": true,
+	"name": true, "node_type": true, "rack_name": true, "region": true,
+	"registry_disk": true, "release": true, "secret_key": true,
+	"settings": true, "sync_tf_now": true, "syslog": true, "telemetry": true,
+	"terraform_update_timeout": true, "token": true, "whitelist": true,
+}
+
+var metalKnownParams = map[string]bool{
+	"docker_hub_password": true, "docker_hub_username": true, "domain": true,
+	"fluentd_memory": true, "image": true, "name": true, "rack_name": true,
+	"registry_disk": true, "release": true, "sync_tf_now": true,
+	"syslog": true, "whitelist": true,
+}
+
+var localKnownParams = map[string]bool{
+	"docker_hub_password": true, "docker_hub_username": true, "image": true,
+	"name": true, "os": true, "rack_name": true, "release": true,
+	"settings": true, "sync_tf_now": true, "telemetry": true,
+}
+
+var managedParams = map[string]bool{
+	"image": true, "name": true, "rack_name": true, "release": true, "settings": true,
+	"nginx_image": true, "k8s_version": true, "aws_ebs_csi_driver_version": true,
+	"coredns_version": true, "efs_csi_driver_version": true, "kube_proxy_version": true,
+	"pod_identity_agent_version": true, "vpc_cni_version": true,
+	"disable_public_access": true, "enable_private_access": true,
+	"eks_api_server_public_access_cidrs": true,
+}
+
 func init() {
 	register("rack", "get information about the rack", watch(Rack), stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagRack, flagWatchInterval},
@@ -81,7 +206,7 @@ func init() {
 	})
 
 	registerWithoutProvider("rack params set", "set rack parameters", RackParamsSet, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagRack},
+		Flags:    []stdcli.Flag{flagRack, flagForceParams},
 		Usage:    "<Key=Value> [Key=Value]...",
 		Validate: stdcli.ArgsMin(1),
 	})
@@ -369,7 +494,53 @@ func (an AdditionalNodeGroups) Validate() error {
 	return nil
 }
 
-func validateAndMutateParams(params map[string]string, provider string, currentParams map[string]string) error {
+func levenshtein(a, b string) int {
+	la, lb := len(a), len(b)
+	if la == 0 {
+		return lb
+	}
+	if lb == 0 {
+		return la
+	}
+	prev := make([]int, lb+1)
+	for j := 0; j <= lb; j++ {
+		prev[j] = j
+	}
+	for i := 1; i <= la; i++ {
+		curr := make([]int, lb+1)
+		curr[0] = i
+		for j := 1; j <= lb; j++ {
+			cost := 1
+			if a[i-1] == b[j-1] {
+				cost = 0
+			}
+			ins := curr[j-1] + 1
+			del := prev[j] + 1
+			sub := prev[j-1] + cost
+			curr[j] = ins
+			if del < curr[j] {
+				curr[j] = del
+			}
+			if sub < curr[j] {
+				curr[j] = sub
+			}
+		}
+		prev = curr
+	}
+	return prev[lb]
+}
+
+func suggestParam(key string, known map[string]bool) string {
+	best, bestDist := "", 4
+	for k := range known {
+		if d := levenshtein(key, k); d < bestDist {
+			best, bestDist = k, d
+		}
+	}
+	return best
+}
+
+func validateAndMutateParams(params map[string]string, provider string, currentParams map[string]string, force bool) error {
 	// Install-only params — these define infrastructure that cannot be changed
 	// after rack creation without catastrophic consequences (network recreation,
 	// subnet destruction, cluster replacement). Block ANY post-install modification.
@@ -387,11 +558,78 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		"public_subnets_ids": true,
 		"availability_zones": true,
 		"region":             true,
+		"access_id":          true,
+		"secret_key":         true,
+		"token":              true,
 	}
 
 	for k := range params {
 		if installOnlyParams[k] {
 			return fmt.Errorf("param '%s' can only be set during rack installation", k)
+		}
+	}
+
+	for k := range params {
+		if k == "" {
+			return fmt.Errorf("parameter name cannot be empty")
+		}
+	}
+
+	// V2 racks use PascalCase params (e.g. "HighAvailability", "BuildMemory").
+	// V3 racks use snake_case (e.g. "high_availability", "build_node_type").
+	// Detect V2 by checking if any currentParam key starts with an uppercase letter.
+	// Only check when provider is a known V3 provider — unknown providers (e.g. test
+	// fixtures) skip the known-key check via known==nil but should still run
+	// other validation (empty-value, terraform_update_timeout, etc.).
+	isV3Rack := true
+	if providerKnownParams[provider] != nil {
+		for k := range currentParams {
+			if len(k) > 0 && k[0] >= 'A' && k[0] <= 'Z' {
+				isV3Rack = false
+				break
+			}
+		}
+	}
+
+	if !isV3Rack {
+		return nil
+	}
+
+	known := providerKnownParams[provider]
+
+	if !force {
+		// Managed params are set automatically by `convox rack update` (image, release,
+		// k8s_version, etc.). Block direct modification unless --force is used.
+		for k := range params {
+			if managedParams[k] && (known == nil || known[k]) {
+				return fmt.Errorf("param '%s' is managed internally — to update it use 'convox rack update'. Use --force to override", k)
+			}
+		}
+
+		// Spellcheck: reject unknown keys with a suggestion when close to a known param.
+		if known != nil {
+			for k := range params {
+				// Karpenter params on non-AWS providers are caught later with a
+				// provider-specific error — don't shadow that with "unknown parameter".
+				if provider != "aws" && (strings.HasPrefix(k, "karpenter_") || k == "additional_karpenter_nodepools_config") {
+					continue
+				}
+				if !known[k] {
+					msg := fmt.Sprintf("unknown parameter '%s' for %s provider", k, provider)
+					if suggestion := suggestParam(k, known); suggestion != "" {
+						msg += fmt.Sprintf("\n       Did you mean '%s'?", suggestion)
+					}
+					msg += "\n       Run 'sudo convox update' to get the latest parameter support, or use --force to override."
+					return fmt.Errorf("%s", msg)
+				}
+			}
+		}
+	} else {
+		// --force bypasses managed and unknown-key guards, but still warn about managed params.
+		for k := range params {
+			if managedParams[k] && (known == nil || known[k]) {
+				fmt.Fprintf(os.Stderr, "WARNING: '%s' is a managed parameter — setting it directly may break your rack.\n", k)
+			}
 		}
 	}
 
@@ -479,6 +717,25 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		}
 	}
 
+	if v, has := params["imds_http_tokens"]; has && v != "" {
+		if v != "optional" && v != "required" {
+			return fmt.Errorf("param 'imds_http_tokens' must be 'optional' or 'required'")
+		}
+	}
+
+	if v, has := params["node_capacity_type"]; has && v != "" {
+		lower := strings.ToLower(v)
+		if lower != "on_demand" && lower != "spot" && lower != "mixed" {
+			return fmt.Errorf("param 'node_capacity_type' must be 'on_demand', 'spot', or 'mixed'")
+		}
+	}
+
+	if v, has := params["access_log_retention_in_days"]; has && v != "" {
+		if _, err := strconv.Atoi(v); err != nil {
+			return fmt.Errorf("param 'access_log_retention_in_days' must be an integer")
+		}
+	}
+
 	// Reject karpenter_* params for non-AWS racks
 	if provider != "aws" {
 		for k := range params {
@@ -506,6 +763,13 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 	if params["karpenter_enabled"] == "true" && currentParams["karpenter_enabled"] != "true" {
 		if currentParams["karpenter_auth_mode"] != "true" && params["karpenter_auth_mode"] != "true" {
 			return fmt.Errorf("karpenter_enabled=true requires karpenter_auth_mode=true.\n  Either include both: convox rack params set karpenter_auth_mode=true karpenter_enabled=true\n  Or set karpenter_auth_mode=true first and wait for the update to complete")
+		}
+	}
+
+	if v, has := params["karpenter_node_volume_type"]; has && v != "" {
+		validVolTypes := map[string]bool{"gp2": true, "gp3": true, "io1": true, "io2": true}
+		if !validVolTypes[v] {
+			return fmt.Errorf("param 'karpenter_node_volume_type' must be gp2, gp3, io1, or io2")
 		}
 	}
 
@@ -1261,7 +1525,8 @@ func RackParamsSet(_ sdk.Interface, c *stdcli.Context) error {
 	}
 
 	params := argsToOptions(c.Args)
-	if err := validateAndMutateParams(params, r.Provider(), currentParams); err != nil {
+	force, _ := c.Value("force").(bool)
+	if err := validateAndMutateParams(params, r.Provider(), currentParams, force); err != nil {
 		return err
 	}
 
