@@ -30,7 +30,7 @@ func TestValidateAndMutateParams_BudgetRegex(t *testing.T) {
 				"karpenter_enabled":              "true",
 				"karpenter_disruption_budget_nodes": tt.value,
 			}
-			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"})
+			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"}, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("budget=%q: got err=%v, wantErr=%v", tt.value, err, tt.wantErr)
 			}
@@ -63,7 +63,7 @@ func TestValidateAndMutateParams_TaintFormat(t *testing.T) {
 				"karpenter_enabled":    "true",
 				"karpenter_node_taints": tt.value,
 			}
-			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"})
+			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"}, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("taint=%q: got err=%v, wantErr=%v", tt.value, err, tt.wantErr)
 			}
@@ -97,7 +97,7 @@ func TestValidateAndMutateParams_ReservedLabels(t *testing.T) {
 				"karpenter_enabled": "true",
 				tt.param:            tt.value,
 			}
-			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"})
+			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"}, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("%s=%q: got err=%v, wantErr=%v", tt.param, tt.value, err, tt.wantErr)
 			}
@@ -133,7 +133,7 @@ func TestValidateAndMutateParams_KarpenterConfigBase64(t *testing.T) {
 			params := map[string]string{
 				"karpenter_config": tt.input,
 			}
-			err := validateAndMutateParams(params, "aws", map[string]string{})
+			err := validateAndMutateParams(params, "aws", map[string]string{}, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("config=%q: got err=%v, wantErr=%v", tt.input, err, tt.wantErr)
 			}
@@ -171,7 +171,7 @@ func TestValidateAndMutateParams_KarpenterConfigSizeLimit(t *testing.T) {
 			params := map[string]string{
 				"karpenter_config": config,
 			}
-			err := validateAndMutateParams(params, "aws", map[string]string{})
+			err := validateAndMutateParams(params, "aws", map[string]string{}, false)
 			if tt.wantErr && err == nil {
 				t.Errorf("size=%d: expected error, got nil", tt.size)
 			}
@@ -396,7 +396,7 @@ func TestValidateAndMutateParams_KarpenterConfigProtectedFields(t *testing.T) {
 			params := map[string]string{
 				"karpenter_config": string(raw),
 			}
-			err := validateAndMutateParams(params, "aws", map[string]string{})
+			err := validateAndMutateParams(params, "aws", map[string]string{}, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("got err=%v, wantErr=%v", err, tt.wantErr)
 			}
@@ -553,7 +553,7 @@ func TestValidateAndMutateParams_KarpenterDoubleQuoteRejection(t *testing.T) {
 				"karpenter_enabled": "true",
 				tt.param:            tt.value,
 			}
-			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"})
+			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"}, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("%s=%q: got err=%v, wantErr=%v", tt.param, tt.value, err, tt.wantErr)
 			}
@@ -590,7 +590,7 @@ func TestValidateAndMutateParams_KarpenterNotAWS(t *testing.T) {
 	params := map[string]string{
 		"karpenter_enabled": "true",
 	}
-	err := validateAndMutateParams(params, "gcp", map[string]string{})
+	err := validateAndMutateParams(params, "gcp", map[string]string{}, false)
 	if err == nil {
 		t.Error("expected error for non-AWS karpenter_enabled, got nil")
 	}
@@ -617,7 +617,7 @@ func TestValidateAndMutateParams_KarpenterEnabledGating(t *testing.T) {
 	}
 	for _, tt := range alwaysValidatedCases {
 		t.Run("validated/"+tt.name, func(t *testing.T) {
-			err := validateAndMutateParams(tt.params, "aws", map[string]string{})
+			err := validateAndMutateParams(tt.params, "aws", map[string]string{}, false)
 			if err == nil {
 				t.Errorf("expected error for invalid param, got nil")
 			}
@@ -627,7 +627,7 @@ func TestValidateAndMutateParams_KarpenterEnabledGating(t *testing.T) {
 	// karpenter_config is validated OUTSIDE the karpenter_enabled block
 	t.Run("karpenter_config still validated without enabled", func(t *testing.T) {
 		params := map[string]string{"karpenter_config": "{bad"}
-		err := validateAndMutateParams(params, "aws", map[string]string{})
+		err := validateAndMutateParams(params, "aws", map[string]string{}, false)
 		if err == nil {
 			t.Error("expected error: karpenter_config validated even without karpenter_enabled=true")
 		}
@@ -635,7 +635,7 @@ func TestValidateAndMutateParams_KarpenterEnabledGating(t *testing.T) {
 
 	t.Run("additional_karpenter_nodepools_config still validated without enabled", func(t *testing.T) {
 		params := map[string]string{"additional_karpenter_nodepools_config": "[bad]"}
-		err := validateAndMutateParams(params, "aws", map[string]string{})
+		err := validateAndMutateParams(params, "aws", map[string]string{}, false)
 		if err == nil {
 			t.Error("expected error: additional_karpenter_nodepools_config validated even without karpenter_enabled=true")
 		}
@@ -664,7 +664,7 @@ func TestValidateAndMutateParams_Arch(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			params := map[string]string{"karpenter_arch": tt.value}
-			err := validateAndMutateParams(params, "aws", map[string]string{})
+			err := validateAndMutateParams(params, "aws", map[string]string{}, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("karpenter_arch=%q: got err=%v, wantErr=%v", tt.value, err, tt.wantErr)
 			}
@@ -704,7 +704,7 @@ func TestValidateAndMutateParams_CapacityTypes(t *testing.T) {
 				"karpenter_enabled": "true",
 				tt.param:            tt.value,
 			}
-			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"})
+			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"}, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("%s=%q: got err=%v, wantErr=%v", tt.param, tt.value, err, tt.wantErr)
 			}
@@ -734,7 +734,7 @@ func TestValidateAndMutateParams_CpuLimit(t *testing.T) {
 				"karpenter_enabled":   "true",
 				"karpenter_cpu_limit": tt.value,
 			}
-			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"})
+			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"}, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("cpu_limit=%q: got err=%v, wantErr=%v", tt.value, err, tt.wantErr)
 			}
@@ -764,7 +764,7 @@ func TestValidateAndMutateParams_BuildCpuLimit(t *testing.T) {
 				"karpenter_enabled":        "true",
 				"karpenter_build_cpu_limit": tt.value,
 			}
-			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"})
+			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"}, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("build_cpu_limit=%q: got err=%v, wantErr=%v", tt.value, err, tt.wantErr)
 			}
@@ -794,7 +794,7 @@ func TestValidateAndMutateParams_BuildMemoryLimitGb(t *testing.T) {
 				"karpenter_enabled":               "true",
 				"karpenter_build_memory_limit_gb": tt.value,
 			}
-			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"})
+			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"}, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("build_memory_limit_gb=%q: got err=%v, wantErr=%v", tt.value, err, tt.wantErr)
 			}
@@ -824,7 +824,7 @@ func TestValidateAndMutateParams_MemoryLimitGb(t *testing.T) {
 				"karpenter_enabled":         "true",
 				"karpenter_memory_limit_gb": tt.value,
 			}
-			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"})
+			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"}, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("memory_limit_gb=%q: got err=%v, wantErr=%v", tt.value, err, tt.wantErr)
 			}
@@ -862,7 +862,7 @@ func TestValidateAndMutateParams_ConsolidateAfter(t *testing.T) {
 				"karpenter_enabled": "true",
 				tt.param:            tt.value,
 			}
-			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"})
+			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"}, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("%s=%q: got err=%v, wantErr=%v", tt.param, tt.value, err, tt.wantErr)
 			}
@@ -894,7 +894,7 @@ func TestValidateAndMutateParams_NodeExpiry(t *testing.T) {
 				"karpenter_enabled":     "true",
 				"karpenter_node_expiry": tt.value,
 			}
-			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"})
+			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"}, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("node_expiry=%q: got err=%v, wantErr=%v", tt.value, err, tt.wantErr)
 			}
@@ -1009,7 +1009,7 @@ func TestValidateAndMutateParams_KarpenterConfigMoreProtectedFields(t *testing.T
 			params := map[string]string{
 				"karpenter_config": string(raw),
 			}
-			err := validateAndMutateParams(params, "aws", map[string]string{})
+			err := validateAndMutateParams(params, "aws", map[string]string{}, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("got err=%v, wantErr=%v", err, tt.wantErr)
 			}
@@ -1031,7 +1031,7 @@ func TestValidateAndMutateParams_KarpenterConfigEdgeCases(t *testing.T) {
 		params := map[string]string{
 			"karpenter_config": encoded,
 		}
-		err := validateAndMutateParams(params, "aws", map[string]string{})
+		err := validateAndMutateParams(params, "aws", map[string]string{}, false)
 		if err == nil {
 			t.Error("expected error for JSON array, got nil")
 		}
@@ -1046,7 +1046,7 @@ func TestValidateAndMutateParams_KarpenterConfigEdgeCases(t *testing.T) {
 		config := `{"nodePool":{"d":"` + padding + `"}}`
 		if len(config) <= 64*1024 {
 			params := map[string]string{"karpenter_config": config}
-			err := validateAndMutateParams(params, "aws", map[string]string{})
+			err := validateAndMutateParams(params, "aws", map[string]string{}, false)
 			if err != nil && strings.Contains(err.Error(), "exceeds maximum size") {
 				t.Errorf("config at/under 64KB should not fail size check: %v", err)
 			}
@@ -1080,7 +1080,7 @@ func TestValidateAndMutateParams_AdditionalKarpenterNodepoolsConfig(t *testing.T
 			params := map[string]string{
 				"additional_karpenter_nodepools_config": tt.value,
 			}
-			err := validateAndMutateParams(params, "aws", map[string]string{})
+			err := validateAndMutateParams(params, "aws", map[string]string{}, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("got err=%v, wantErr=%v", err, tt.wantErr)
 			}
@@ -1110,7 +1110,7 @@ func TestValidateAndMutateParams_AdditionalKarpenterNodepoolsConfigBase64(t *tes
 	params := map[string]string{
 		"additional_karpenter_nodepools_config": encoded,
 	}
-	err := validateAndMutateParams(params, "aws", map[string]string{})
+	err := validateAndMutateParams(params, "aws", map[string]string{}, false)
 	if err != nil {
 		t.Errorf("expected no error for base64-encoded input, got: %v", err)
 	}
@@ -1139,7 +1139,7 @@ func TestValidateAndMutateParams_KarpenterNotAWS_AllParams(t *testing.T) {
 	for _, param := range karpenterParams {
 		t.Run(param, func(t *testing.T) {
 			params := map[string]string{param: "some-value"}
-			err := validateAndMutateParams(params, "gcp", map[string]string{})
+			err := validateAndMutateParams(params, "gcp", map[string]string{}, false)
 			if err == nil {
 				t.Errorf("expected error for %s on non-AWS, got nil", param)
 			}
@@ -1154,7 +1154,7 @@ func TestValidateAndMutateParams_KarpenterNotAWS_AllParams(t *testing.T) {
 		params := map[string]string{
 			"additional_karpenter_nodepools_config": `[{"name":"gpu"}]`,
 		}
-		err := validateAndMutateParams(params, "gcp", map[string]string{})
+		err := validateAndMutateParams(params, "gcp", map[string]string{}, false)
 		if err == nil {
 			t.Error("expected error for additional_karpenter_nodepools_config on non-AWS, got nil")
 		}
@@ -1427,7 +1427,7 @@ func TestValidateAndMutateParams_KarpenterAuthMode(t *testing.T) {
 			if tt.name == "non-AWS rejection takes precedence over auth_mode check" {
 				provider = "gcp"
 			}
-			err := validateAndMutateParams(tt.params, provider, tt.currentParams)
+			err := validateAndMutateParams(tt.params, provider, tt.currentParams, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("got err=%v, wantErr=%v", err, tt.wantErr)
 			}
@@ -1525,7 +1525,7 @@ func TestValidateAndMutateParams_KarpenterNonDedicatedNodeGroups(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateAndMutateParams(tt.params, "aws", tt.currentParams)
+			err := validateAndMutateParams(tt.params, "aws", tt.currentParams, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("got err=%v, wantErr=%v", err, tt.wantErr)
 			}
@@ -1590,7 +1590,7 @@ func TestValidateAndMutateParams_KarpenterReenableValidation(t *testing.T) {
 			for k, v := range tt.params {
 				paramsCopy[k] = v
 			}
-			err := validateAndMutateParams(paramsCopy, "aws", tt.currentParams)
+			err := validateAndMutateParams(paramsCopy, "aws", tt.currentParams, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("got err=%v, wantErr=%v", err, tt.wantErr)
 			}
@@ -1606,7 +1606,7 @@ func TestValidateAndMutateParams_KarpenterReenableValidation(t *testing.T) {
 	t.Run("injected keys cleaned up from params", func(t *testing.T) {
 		params := map[string]string{"karpenter_enabled": "true", "karpenter_auth_mode": "true"}
 		currentParams := map[string]string{"karpenter_auth_mode": "true", "karpenter_capacity_types": "on-demand", "karpenter_cpu_limit": "100"}
-		err := validateAndMutateParams(params, "aws", currentParams)
+		err := validateAndMutateParams(params, "aws", currentParams, false)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -1716,7 +1716,7 @@ func TestValidateAndMutateParams_PreserveExistingNodeGroupIds(t *testing.T) {
 				currentParams["additional_node_groups_config"] = tt.currentConfig
 			}
 
-			if err := validateAndMutateParams(params, "aws", currentParams); err != nil {
+			if err := validateAndMutateParams(params, "aws", currentParams, false); err != nil {
 				t.Fatal(err)
 			}
 
@@ -1849,7 +1849,7 @@ func TestValidateAndMutateParams_KarpenterDedicatedNodepools(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateAndMutateParams(tt.params, "aws", map[string]string{})
+			err := validateAndMutateParams(tt.params, "aws", map[string]string{}, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("got err=%v, wantErr=%v", err, tt.wantErr)
 			}
@@ -1884,7 +1884,7 @@ func TestValidateAndMutateParams_EmptyParamRejection(t *testing.T) {
 		{"empty node_type", "node_type", "", true, "requires an explicit value"},
 		{"empty node_disk", "node_disk", "", true, "requires an explicit value"},
 		{"empty fluentd_memory", "fluentd_memory", "", true, "requires an explicit value"},
-		{"empty k8s_version", "k8s_version", "", true, "requires an explicit value"},
+		{"empty k8s_version", "k8s_version", "", true, "managed internally"},
 		{"empty node_capacity_type", "node_capacity_type", "", true, "requires an explicit value"},
 		// Valid values still pass
 		{"valid karpenter_arch", "karpenter_arch", "amd64", false, ""},
@@ -1896,7 +1896,7 @@ func TestValidateAndMutateParams_EmptyParamRejection(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			params := map[string]string{tt.param: tt.value}
-			err := validateAndMutateParams(params, "aws", map[string]string{})
+			err := validateAndMutateParams(params, "aws", map[string]string{}, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("param %s=%q: got err=%v, wantErr=%v", tt.param, tt.value, err, tt.wantErr)
 			}
@@ -1933,7 +1933,7 @@ func TestValidateAndMutateParams_EmptyClearableParams(t *testing.T) {
 			if tt.param == "schedule_rack_scale_down" {
 				params["schedule_rack_scale_up"] = ""
 			}
-			err := validateAndMutateParams(params, "aws", map[string]string{})
+			err := validateAndMutateParams(params, "aws", map[string]string{}, false)
 			if err != nil {
 				t.Errorf("param %s=\"\" should be allowed (clearable), got err: %v", tt.param, err)
 			}
@@ -1982,7 +1982,7 @@ func TestValidateAndMutateParams_SchedulePairValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateAndMutateParams(tt.params, "aws", map[string]string{})
+			err := validateAndMutateParams(tt.params, "aws", map[string]string{}, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("got err=%v, wantErr=%v", err, tt.wantErr)
 			}
@@ -2011,7 +2011,7 @@ func TestValidateAndMutateParams_InstallOnlyParams(t *testing.T) {
 	for _, param := range installOnly {
 		t.Run(param, func(t *testing.T) {
 			params := map[string]string{param: "anything"}
-			err := validateAndMutateParams(params, "aws", map[string]string{})
+			err := validateAndMutateParams(params, "aws", map[string]string{}, false)
 			if err == nil {
 				t.Errorf("param %s should be blocked post-install, got nil error", param)
 			}
@@ -2023,7 +2023,7 @@ func TestValidateAndMutateParams_InstallOnlyParams(t *testing.T) {
 		// Also test empty value — should still be blocked (install-only, not just non-empty)
 		t.Run(param+"_empty", func(t *testing.T) {
 			params := map[string]string{param: ""}
-			err := validateAndMutateParams(params, "aws", map[string]string{})
+			err := validateAndMutateParams(params, "aws", map[string]string{}, false)
 			if err == nil {
 				t.Errorf("param %s=\"\" should be blocked post-install, got nil error", param)
 			}
