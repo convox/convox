@@ -122,7 +122,15 @@ func build(rack sdk.Interface, c *stdcli.Context, development bool) (*structs.Bu
 
 	c.Startf("Packaging source")
 
-	data, err := common.Tarball(dir)
+	var ignorefile string
+
+	if c.String("ignore") == "" {
+		ignorefile = ".dockerignore"
+	} else {
+		ignorefile = c.String("ignore")
+	}
+
+	data, err := common.Tarball(dir, ignorefile)
 	if err != nil {
 		return nil, err
 	}
