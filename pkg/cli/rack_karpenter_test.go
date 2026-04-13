@@ -19,7 +19,7 @@ func TestValidateAndMutateParams_BudgetRegex(t *testing.T) {
 		{"hundred percent", "100%", false},
 		{"double percent", "10%%", true},
 		{"text", "abc", true},
-		{"empty", "", true}, // empty is now rejected (nonEmptyRequired guard)
+		{"empty", "", true}, // empty is now rejected (clearableParams guard)
 		{"negative", "-1", true},
 		{"decimal", "1.5", true},
 	}
@@ -1879,9 +1879,18 @@ func TestValidateAndMutateParams_EmptyParamRejection(t *testing.T) {
 		{"empty karpenter_disruption_budget_nodes", "karpenter_disruption_budget_nodes", "", true, "requires an explicit value"},
 		{"empty karpenter_auth_mode", "karpenter_auth_mode", "", true, "requires an explicit value"},
 		{"empty karpenter_enabled", "karpenter_enabled", "", true, "requires an explicit value"},
+		// Non-karpenter params also rejected when empty
+		{"empty idle_timeout", "idle_timeout", "", true, "requires an explicit value"},
+		{"empty node_type", "node_type", "", true, "requires an explicit value"},
+		{"empty node_disk", "node_disk", "", true, "requires an explicit value"},
+		{"empty fluentd_memory", "fluentd_memory", "", true, "requires an explicit value"},
+		{"empty k8s_version", "k8s_version", "", true, "requires an explicit value"},
+		{"empty node_capacity_type", "node_capacity_type", "", true, "requires an explicit value"},
 		// Valid values still pass
 		{"valid karpenter_arch", "karpenter_arch", "amd64", false, ""},
 		{"valid karpenter_cpu_limit", "karpenter_cpu_limit", "100", false, ""},
+		{"valid idle_timeout", "idle_timeout", "7200", false, ""},
+		{"valid node_type", "node_type", "t3.large", false, ""},
 	}
 
 	for _, tt := range tests {
