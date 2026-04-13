@@ -67,6 +67,10 @@ spec:
         type: resource
         resource: {{.Name}}
     spec:
+      {{ if .DockerHubAuth }}
+      imagePullSecrets:
+      - name: docker-hub-authentication
+      {{ end }}
       containers:
       - name: mysql
         image: {{ if not .Image }}mysql:{{ coalesce (index .Parameters "version") "5.7.23" }}{{ else }}{{ .Image }}{{ end }}

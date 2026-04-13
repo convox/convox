@@ -571,13 +571,20 @@ func (p *Provider) releaseTemplateResource(a *structs.App, e structs.Environment
 	}
 
 	params := map[string]interface{}{
-		"App":        a.Name,
-		"Namespace":  p.AppNamespace(a.Name),
-		"Name":       r.Name,
-		"Parameters": r.Options,
-		"Password":   fmt.Sprintf("%x", sha256.Sum256([]byte(p.Name)))[0:30],
-		"Rack":       p.Name,
-		"Image":      r.Image,
+		"App":            a.Name,
+		"Namespace":      p.AppNamespace(a.Name),
+		"Name":           r.Name,
+		"Parameters":     r.Options,
+		"Password":       fmt.Sprintf("%x", sha256.Sum256([]byte(p.Name)))[0:30],
+		"Rack":           p.Name,
+		"Image":          r.Image,
+		"DockerHubAuth":  p.hasDockerHubAuth(),
+	}
+
+	if p.hasDockerHubAuth() {
+		if err := p.ensureDockerHubSecret(p.AppNamespace(a.Name)); err != nil {
+			return nil, errors.WithStack(err)
+		}
 	}
 
 	data, err := p.RenderTemplate(fmt.Sprintf("resource/%s", r.Type), params)
@@ -688,6 +695,13 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 			"Resources":      s.ResourceMap(),
 			"Service":        s,
 			"KedaIsEnabled":  s.Scale.IsKedaEnabled(),
+			"DockerHubAuth":  p.hasDockerHubAuth(),
+		}
+
+		if p.hasDockerHubAuth() {
+			if err := p.ensureDockerHubSecret(p.AppNamespace(a.Name)); err != nil {
+				return nil, errors.WithStack(err)
+			}
 		}
 
 		if ip, err := p.Engine.ResolverHost(); err == nil {

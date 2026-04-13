@@ -155,6 +155,10 @@ spec:
         {{ end }}
         {{ end }}
       {{ end }}
+      {{ if .DockerHubAuth }}
+      imagePullSecrets:
+      - name: docker-hub-authentication
+      {{ end }}
       serviceAccountName: {{.Service.Name}}
       shareProcessNamespace: {{.Service.Init}}
       terminationGracePeriodSeconds: {{$.Service.Termination.Grace}}
