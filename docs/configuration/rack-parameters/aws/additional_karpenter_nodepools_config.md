@@ -51,7 +51,8 @@ Setting parameters... OK
 - **Input formats:** Raw JSON string, base64-encoded JSON, or a `.json` file path.
 - Every custom pool automatically gets a `convox.io/nodepool={name}` label. Target Services to a custom pool using `nodeSelectorLabels` in `convox.yml`.
 - **Pool name validation:** Lowercase alphanumeric with dashes, max 63 chars. Reserved names: `workload`, `build`, `default`, `system`. Duplicate names are rejected.
-- For pools with taints, see [Using Taints to Protect Nodes](/configuration/scaling/karpenter#using-taints-to-protect-nodes) for how tolerations are handled (GPU taints are auto-tolerated via `scale.gpu`; `convox.yml` does not have a `tolerations` field).
+- **Pool isolation:** Set `"dedicated": true` on a pool entry to automatically add a `dedicated-node={name}:NoSchedule` taint. Convox auto-injects the matching toleration for Services targeting the pool via `nodeSelectorLabels`. This is the simplest way to isolate a pool without manual taint configuration.
+- For pools with custom taints beyond `dedicated`, see [Using Taints to Protect Nodes](/configuration/scaling/karpenter#using-taints-to-protect-nodes) for how tolerations are handled (GPU taints are auto-tolerated via `scale.gpu`; `convox.yml` does not have a `tolerations` field).
 - See the [Karpenter](/configuration/scaling/karpenter#additional_karpenter_nodepools_config--custom-nodepools) feature page for the full per-pool field reference and examples.
 
 ## See Also
