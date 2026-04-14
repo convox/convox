@@ -764,3 +764,143 @@ func TestManifestKeda(t *testing.T) {
 	require.Equal(t, true, m.Services[0].Scale.IsKedaEnabled())
 	require.Equal(t, 1, len(m.Services[0].Scale.Keda.Triggers))
 }
+
+func TestLoadPortDeduplication(t *testing.T) {
+	// port and ports with same value — ports entry removed
+	data := []byte(`services:
+  web:
+    port: 4001
+    ports:
+      - 4001
+`)
+	m, err := manifest.Load(data, map[string]string{})
+	require.NoError(t, err)
+	require.Equal(t, 4001, m.Services[0].Port.Port)
+	require.Len(t, m.Services[0].Ports, 0)
+}
+
+func TestLoadPortDeduplicationDifferentPorts(t *testing.T) {
+	// port and ports with different values — no dedup
+	data := []byte(`services:
+  web:
+    port: 4001
+    ports:
+      - 8080
+`)
+	m, err := manifest.Load(data, map[string]string{})
+	require.NoError(t, err)
+	require.Equal(t, 4001, m.Services[0].Port.Port)
+	require.Len(t, m.Services[0].Ports, 1)
+	require.Equal(t, 8080, m.Services[0].Ports[0].Port)
+	require.Equal(t, "tcp", m.Services[0].Ports[0].Protocol)
+}
+
+func TestLoadPortDeduplicationDifferentProtocol(t *testing.T) {
+	// port: 4001 (TCP) + ports: [4001/udp] — NOT a duplicate
+	// K8s uses (port, protocol) as composite merge key
+	data := []byte(`services:
+  web:
+    port: 4001
+    ports:
+      - 4001/udp
+`)
+	m, err := manifest.Load(data, map[string]string{})
+	require.NoError(t, err)
+	require.Equal(t, 4001, m.Services[0].Port.Port)
+	require.Len(t, m.Services[0].Ports, 1)
+	require.Equal(t, 4001, m.Services[0].Ports[0].Port)
+	require.Equal(t, "udp", m.Services[0].Ports[0].Protocol)
+}
+
+func TestLoadPortDeduplicationPartial(t *testing.T) {
+	// port overlaps one of several ports entries — only duplicate removed
+	data := []byte(`services:
+  web:
+    port: 4001
+    ports:
+      - 4001
+      - 8080
+`)
+	m, err := manifest.Load(data, map[string]string{})
+	require.NoError(t, err)
+	require.Equal(t, 4001, m.Services[0].Port.Port)
+	require.Len(t, m.Services[0].Ports, 1)
+	require.Equal(t, 8080, m.Services[0].Ports[0].Port)
+	require.Equal(t, "tcp", m.Services[0].Ports[0].Protocol)
+}
+
+func TestLoadPortDeduplicationMultiService(t *testing.T) {
+	// only the service with overlapping ports gets deduped
+	data := []byte(`services:
+  api:
+    port: 3000
+    ports:
+      - 3000
+      - 8080
+  worker:
+    ports:
+      - 9090
+`)
+	m, err := manifest.Load(data, map[string]string{})
+	require.NoError(t, err)
+	api, err := m.Service("api")
+	require.NoError(t, err)
+	require.Equal(t, 3000, api.Port.Port)
+	require.Len(t, api.Ports, 1)
+	require.Equal(t, 8080, api.Ports[0].Port)
+	worker, err := m.Service("worker")
+	require.NoError(t, err)
+	require.Equal(t, 0, worker.Port.Port)
+	require.Len(t, worker.Ports, 1)
+	require.Equal(t, 9090, worker.Ports[0].Port)
+}
+
+func TestLoadPortDeduplicationWithScheme(t *testing.T) {
+	// port with https scheme + same port in ports — still deduped
+	data := []byte(`services:
+  web:
+    port: https:4001
+    ports:
+      - 4001
+`)
+	m, err := manifest.Load(data, map[string]string{})
+	require.NoError(t, err)
+	require.Equal(t, 4001, m.Services[0].Port.Port)
+	require.Equal(t, "https", m.Services[0].Port.Scheme)
+	require.Len(t, m.Services[0].Ports, 0)
+}
+
+func TestLoadPortNoDeduplicationPortOnly(t *testing.T) {
+	// port only — no change
+	data := []byte(`services:
+  web:
+    port: 4001
+`)
+	m, err := manifest.Load(data, map[string]string{})
+	require.NoError(t, err)
+	require.Equal(t, 4001, m.Services[0].Port.Port)
+	require.Len(t, m.Services[0].Ports, 0)
+}
+
+func TestLoadPortNoDeduplicationPortsOnly(t *testing.T) {
+	// ports only — no change
+	data := []byte(`services:
+  web:
+    ports:
+      - 4001
+`)
+	m, err := manifest.Load(data, map[string]string{})
+	require.NoError(t, err)
+	require.Equal(t, 0, m.Services[0].Port.Port)
+	require.Len(t, m.Services[0].Ports, 1)
+}
+
+func TestLoadPortDeduplicationEmptyProtocol(t *testing.T) {
+	// Quoted string port without protocol suffix parses Protocol=""
+	// The dedup normalizes empty protocol to "tcp" before comparison
+	data := []byte("services:\n  web:\n    port: 4001\n    ports:\n      - \"4001\"\n")
+	m, err := manifest.Load(data, map[string]string{})
+	require.NoError(t, err)
+	require.Equal(t, 4001, m.Services[0].Port.Port)
+	require.Len(t, m.Services[0].Ports, 0)
+}
