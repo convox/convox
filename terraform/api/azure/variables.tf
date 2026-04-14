@@ -2,6 +2,11 @@ variable "cluster" {
   type = string
 }
 
+variable "azure_files_enabled" {
+  default = false
+  type    = bool
+}
+
 variable "fluentd_memory" {
   type    = string
   default = "200Mi"

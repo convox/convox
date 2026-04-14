@@ -66,3 +66,8 @@ variable "terraform_update_timeout" {
 variable "resource_group_location" {
   type = string
 }
+
+variable "azure_files_enable" {
+  default = false
+  type    = bool
+}

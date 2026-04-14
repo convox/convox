@@ -651,6 +651,15 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 			items = append(items, vdata)
 		}
 
+		// azure files
+		afdata, err := p.releaseTemplateAzureFiles(a, ss[i])
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		if afdata != nil {
+			items = append(items, afdata)
+		}
+
 		s := ss[i]
 		min := s.Deployment.Minimum
 		max := s.Deployment.Maximum
@@ -820,6 +829,39 @@ func (p *Provider) releaseTemplateEfs(a *structs.App, s manifest.Service) ([]byt
 	}
 
 	data, err := p.RenderTemplate("app/efs", params)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return data, nil
+}
+
+func (p *Provider) releaseTemplateAzureFiles(a *structs.App, s manifest.Service) ([]byte, error) {
+	hasAzureFiles := false
+	for i := range s.VolumeOptions {
+		if s.VolumeOptions[i].AzureFiles != nil {
+			hasAzureFiles = true
+			if p.AzureFilesEnabled == "" || p.AzureFilesEnabled == "false" {
+				return nil, structs.ErrBadRequest("azure files is not enabled but azureFiles volume is specified")
+			}
+		}
+		if err := s.VolumeOptions[i].Validate(); err != nil {
+			return nil, err
+		}
+	}
+
+	if !hasAzureFiles {
+		return nil, nil
+	}
+
+	params := map[string]interface{}{
+		"App":       a,
+		"Namespace": p.AppNamespace(a.Name),
+		"Rack":      p.Name,
+		"Service":   s,
+	}
+
+	data, err := p.RenderTemplate("app/azurefiles", params)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

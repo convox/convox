@@ -91,8 +91,9 @@ type InitContainer struct {
 }
 
 type VolumeOption struct {
-	EmptyDir *VolumeEmptyDir `yaml:"emptyDir,omitempty"`
-	AwsEfs   *VolumeAwsEfs   `yaml:"awsEfs,omitempty"`
+	EmptyDir   *VolumeEmptyDir   `yaml:"emptyDir,omitempty"`
+	AwsEfs     *VolumeAwsEfs     `yaml:"awsEfs,omitempty"`
+	AzureFiles *VolumeAzureFiles `yaml:"azureFiles,omitempty"`
 }
 
 func (v VolumeOption) Validate() error {
@@ -101,6 +102,9 @@ func (v VolumeOption) Validate() error {
 	}
 	if v.AwsEfs != nil {
 		return v.AwsEfs.Validate()
+	}
+	if v.AzureFiles != nil {
+		return v.AzureFiles.Validate()
 	}
 	return nil
 }
@@ -162,6 +166,34 @@ func (v *VolumeAwsEfs) ProcessTemplate(efsFsId, app, service string) {
 
 	v.VolumeHandle = strings.ReplaceAll(v.VolumeHandle, "[APP]", app)
 	v.VolumeHandle = strings.ReplaceAll(v.VolumeHandle, "[SERVICE]", service)
+}
+
+type VolumeAzureFiles struct {
+	Id string `yaml:"id"`
+
+	AccessMode string `yaml:"accessMode,omitempty"`
+	MountPath  string `yaml:"mountPath"`
+	ShareSize  string `yaml:"shareSize,omitempty"`
+}
+
+func (v VolumeAzureFiles) Validate() error {
+	if v.Id == "" {
+		return fmt.Errorf("azureFiles.id is required")
+	}
+	if v.MountPath == "" {
+		return fmt.Errorf("azureFiles.mountPath is required")
+	}
+
+	allowedModes := []string{
+		PVCAccessModeReadOnlyMany,
+		PVCAccessModeReadWriteMany,
+		PVCAccessModeReadWriteOnce,
+	}
+
+	if !containsInStringSlice(allowedModes, v.AccessMode) {
+		return fmt.Errorf("azureFiles.accessMode must be one of these values: %s", strings.Join(allowedModes, ", "))
+	}
+	return nil
 }
 
 type Services []Service

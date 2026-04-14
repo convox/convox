@@ -120,6 +120,12 @@ Groups:
         type: boolean
         description: Enables the NVIDIA GPU device plugin for GPU-accelerated workloads.
           Requires GPU-enabled VM sizes.
+      - name: azure_files_enable
+        default: "false"
+        type: boolean
+        description: Enable Azure Files NFS volumes for shared persistent storage
+          across service replicas. Creates a Premium FileStorage account and NFS
+          StorageClass.
       - name: nvidia_device_time_slicing_replicas
         default: "0"
         type: integer

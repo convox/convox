@@ -21,3 +21,7 @@ output "id" {
 output "workspace" {
   value = azurerm_log_analytics_workspace.rack.workspace_id
 }
+
+output "azure_files_enabled" {
+  value = var.azure_files_enable
+}

@@ -764,3 +764,76 @@ func TestManifestKeda(t *testing.T) {
 	require.Equal(t, true, m.Services[0].Scale.IsKedaEnabled())
 	require.Equal(t, 1, len(m.Services[0].Scale.Keda.Triggers))
 }
+
+func TestVolumeAzureFilesValidate(t *testing.T) {
+	tests := []struct {
+		name    string
+		vol     manifest.VolumeAzureFiles
+		wantErr string
+	}{
+		{
+			name: "valid",
+			vol: manifest.VolumeAzureFiles{
+				Id:         "models",
+				AccessMode: "ReadWriteMany",
+				MountPath:  "/mnt/data",
+			},
+		},
+		{
+			name: "missing id",
+			vol: manifest.VolumeAzureFiles{
+				AccessMode: "ReadWriteMany",
+				MountPath:  "/mnt/data",
+			},
+			wantErr: "azureFiles.id is required",
+		},
+		{
+			name: "missing mountPath",
+			vol: manifest.VolumeAzureFiles{
+				Id:         "models",
+				AccessMode: "ReadWriteMany",
+			},
+			wantErr: "azureFiles.mountPath is required",
+		},
+		{
+			name: "invalid accessMode",
+			vol: manifest.VolumeAzureFiles{
+				Id:         "models",
+				AccessMode: "Invalid",
+				MountPath:  "/mnt/data",
+			},
+			wantErr: "azureFiles.accessMode must be one of these values: ReadOnlyMany, ReadWriteMany, ReadWriteOnce",
+		},
+		{
+			name: "valid with shareSize",
+			vol: manifest.VolumeAzureFiles{
+				Id:         "models",
+				AccessMode: "ReadWriteMany",
+				MountPath:  "/mnt/data",
+				ShareSize:  "200Gi",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.vol.Validate()
+			if tt.wantErr != "" {
+				require.EqualError(t, err, tt.wantErr)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestVolumeOptionAzureFilesValidate(t *testing.T) {
+	vo := manifest.VolumeOption{
+		AzureFiles: &manifest.VolumeAzureFiles{
+			Id:         "shared",
+			AccessMode: "ReadWriteMany",
+			MountPath:  "/data",
+		},
+	}
+	require.NoError(t, vo.Validate())
+}

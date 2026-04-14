@@ -1,0 +1,22 @@
+{{ range .Service.VolumeOptions }}
+{{ with .AzureFiles }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: azurefiles-{{$.Service.Name}}-{{.Id}}
+  namespace: {{$.Namespace}}
+  labels:
+    system: convox
+    {{ range keyValue $.Service.Labels }}
+    {{.Key}}: "{{.Value}}"
+    {{ end }}
+spec:
+  accessModes:
+    - {{.AccessMode}}
+  storageClassName: azurefile-csi-nfs
+  resources:
+    requests:
+      storage: {{ if .ShareSize }}{{.ShareSize}}{{ else }}100Gi{{ end }}
+{{ end }}
+{{ end }}

@@ -191,6 +191,10 @@ spec:
         - name: efs-{{ .Id }}
           mountPath: {{ .MountPath }}
         {{ end }}
+        {{ with .AzureFiles }}
+        - name: azurefiles-{{ .Id }}
+          mountPath: {{ .MountPath }}
+        {{ end }}
         {{ end }}
         {{ range .Service.InitContainer.ConfigMounts }}
         - name: cfg-{{ .Id }}
@@ -366,6 +370,10 @@ spec:
         - name: efs-{{ .Id }}
           mountPath: {{ .MountPath }}
         {{ end }}
+        {{ with .AzureFiles }}
+        - name: azurefiles-{{ .Id }}
+          mountPath: {{ .MountPath }}
+        {{ end }}
         {{ end }}
       volumes:
       - name: ca
@@ -395,6 +403,11 @@ spec:
       - name: efs-{{ .Id }}
         persistentVolumeClaim:
           claimName: efs-{{$.Service.Name}}-{{.Id}}
+      {{ end }}
+      {{ with .AzureFiles }}
+      - name: azurefiles-{{ .Id }}
+        persistentVolumeClaim:
+          claimName: azurefiles-{{$.Service.Name}}-{{.Id}}
       {{ end }}
       {{ end }}
       {{ range $.Service.ConfigMounts }}
