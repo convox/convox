@@ -8,6 +8,63 @@ url: /configuration/volumes
 
 Convox supports multiple types of volumes to manage both persistent and temporary data for your applications. These volumes provide flexibility for different use cases, from high-speed temporary data storage to persistent, scalable file storage across multiple services.
 
+## Azure Files Volumes
+
+> Azure only. Requires the [azure_files_enable](/configuration/rack-parameters/azure/azure_files_enable) rack parameter.
+
+Azure Files provides a scalable, persistent NFS storage solution that allows multiple Convox services to access the same file system simultaneously. Azure Files volumes use a Premium FileStorage account with the NFS protocol for high-performance shared storage.
+
+### Supported Access Modes
+
+- **ReadWriteOnce (RWO)**: Single-service write operations. Each service has dedicated write access to its own files.
+- **ReadOnlyMany (ROM)**: Multiple-service read operations. Suitable for distributing read-only content like model weights or configuration files across services.
+- **ReadWriteMany (RWM)**: Multi-service read/write operations. Useful for shared file access among multiple services.
+
+### Enabling Azure Files Volumes
+
+To use Azure Files volumes, you must enable Azure Files on your rack. Run the following command to enable it:
+
+```bash
+convox rack params set azure_files_enable=true -r rackName
+```
+
+### Configuring Azure Files Volumes in convox.yml
+
+After enabling the feature, define your Azure Files volumes in the `convox.yml` file:
+
+```yaml
+environment:
+  - PORT=3000
+services:
+  web:
+    build: .
+    port: 3000
+    volumeOptions:
+      - azureFiles:
+          id: "shared-data"
+          accessMode: ReadWriteMany
+          mountPath: "/mnt/data/"
+      - azureFiles:
+          id: "models"
+          accessMode: ReadOnlyMany
+          mountPath: "/mnt/models/"
+          shareSize: "200Gi"
+```
+
+- **azureFiles.id**: A unique identifier for the volume.
+- **azureFiles.accessMode**: Specifies ReadWriteMany, ReadOnlyMany, or ReadWriteOnce.
+- **azureFiles.mountPath**: Defines the mount point for the volume inside the service.
+- **azureFiles.shareSize**: (Optional) The size of the NFS share. Defaults to 100Gi. Azure Premium Files has a minimum share size of 100GiB.
+
+### Best Practices and Use Cases for Azure Files Volumes
+
+Azure Files volumes are ideal for:
+
+- **Shared Storage**: Ensures data is accessible to multiple service replicas.
+- **Persistent Storage Across Restarts**: Maintains data persistence even after service restarts or scaling events.
+- **ML Model Storage**: Store large model weights on a shared NFS volume accessible by all replicas without downloading on each startup.
+- **Content Management Systems**: Allows multiple editors to access and modify shared content.
+
 ## AWS EFS Volumes
 
 > AWS only. Requires the [efs_csi_driver_enable](/configuration/rack-parameters/aws/efs_csi_driver_enable) rack parameter.
