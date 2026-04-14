@@ -45,6 +45,7 @@ resource "azurerm_kubernetes_cluster" "rack" {
   resource_group_name = var.resource_group_name
   dns_prefix          = var.name
   kubernetes_version  = data.azurerm_kubernetes_service_versions.available.latest_version
+  oidc_issuer_enabled = true
 
   default_node_pool {
     auto_scaling_enabled        = true

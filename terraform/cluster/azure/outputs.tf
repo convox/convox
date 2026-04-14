@@ -18,6 +18,10 @@ output "id" {
   value = azurerm_kubernetes_cluster.rack.name
 }
 
+output "oidc_issuer_url" {
+  value = azurerm_kubernetes_cluster.rack.oidc_issuer_url
+}
+
 output "workspace" {
   value = azurerm_log_analytics_workspace.rack.workspace_id
 }
