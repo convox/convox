@@ -796,6 +796,8 @@ func terraform(c *stdcli.Context, dir string, args ...string) error {
 	signal.Ignore(os.Interrupt)
 	defer signal.Reset(os.Interrupt)
 
+	os.Setenv("AWS_STS_REGIONAL_ENDPOINTS", "regional")
+
 	if err := c.Terminal("terraform", args...); err != nil {
 		return err
 	}

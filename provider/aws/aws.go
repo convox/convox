@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
@@ -90,7 +91,9 @@ func (p *Provider) WithContext(ctx context.Context) structs.Provider {
 }
 
 func (p *Provider) initializeAwsServices() error {
-	s, err := session.NewSession()
+	s, err := session.NewSession(aws.NewConfig().
+		WithSTSRegionalEndpoint(endpoints.RegionalSTSEndpoint),
+	)
 	if err != nil {
 		return err
 	}

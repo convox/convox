@@ -1,5 +1,6 @@
 provider "aws" {
-  region = var.region
+  region     = var.region
+  sts_region = var.region
 }
 
 provider "kubernetes" {
