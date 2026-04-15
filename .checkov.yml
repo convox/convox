@@ -42,3 +42,8 @@ skip-check:
   - CKV_AWS_144   # S3 cross-region replication
   # Internal traffic — default SG needed for intra-cluster communication
   - CKV2_AWS_12   # default security group
+  # --- Deferred security hardening (enable when non-downgradeable version ships) ---
+  # EKS secrets-at-rest encryption requires KMS key + encryption_config on
+  # aws_eks_cluster. Non-downgradeable once enabled, so gated on a version
+  # boundary. Plan ready in 2026-04-08-eks-secrets-encryption/.
+  - CKV_AWS_58    # EKS secrets encryption
