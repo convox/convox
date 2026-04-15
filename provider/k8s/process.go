@@ -723,7 +723,7 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 		})
 	}
 
-	if p.DockerUsername != "" && p.DockerPassword != "" {
+	if p.hasDockerHubAuth() {
 		if err := p.ensureDockerHubSecret(p.AppNamespace(app)); err != nil {
 			return nil, errors.WithStack(err)
 		}

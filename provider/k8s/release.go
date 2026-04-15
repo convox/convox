@@ -144,6 +144,13 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 			return errors.WithStack(err)
 		}
 
+		// docker hub auth secret (once per promote, before resource/service/timer loops)
+		if p.hasDockerHubAuth() {
+			if err := p.ensureDockerHubSecret(p.AppNamespace(app)); err != nil {
+				return errors.WithStack(err)
+			}
+		}
+
 		// balancers
 		for _, b := range m.Balancers {
 			data, err := p.releaseTemplateBalancer(a, r, b, m.Labels)
@@ -581,12 +588,6 @@ func (p *Provider) releaseTemplateResource(a *structs.App, e structs.Environment
 		"DockerHubAuth":  p.hasDockerHubAuth(),
 	}
 
-	if p.hasDockerHubAuth() {
-		if err := p.ensureDockerHubSecret(p.AppNamespace(a.Name)); err != nil {
-			return nil, errors.WithStack(err)
-		}
-	}
-
 	data, err := p.RenderTemplate(fmt.Sprintf("resource/%s", r.Type), params)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -698,12 +699,6 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 			"DockerHubAuth":  p.hasDockerHubAuth(),
 		}
 
-		if p.hasDockerHubAuth() {
-			if err := p.ensureDockerHubSecret(p.AppNamespace(a.Name)); err != nil {
-				return nil, errors.WithStack(err)
-			}
-		}
-
 		if ip, err := p.Engine.ResolverHost(); err == nil {
 			params["Resolver"] = ip
 		}
@@ -787,14 +782,15 @@ func (p *Provider) releaseTemplateTimer(a *structs.App, e structs.Environment, r
 	}
 
 	params := map[string]interface{}{
-		"Annotations": t.AnnotationsMap(),
-		"App":         a,
-		"Namespace":   p.AppNamespace(a.Name),
-		"Rack":        p.Name,
-		"Release":     r,
-		"Resources":   s.ResourceMap(),
-		"Service":     s,
-		"Timer":       t,
+		"Annotations":   t.AnnotationsMap(),
+		"App":           a,
+		"Namespace":     p.AppNamespace(a.Name),
+		"Rack":          p.Name,
+		"Release":       r,
+		"Resources":     s.ResourceMap(),
+		"Service":       s,
+		"Timer":         t,
+		"DockerHubAuth": p.hasDockerHubAuth(),
 	}
 
 	if ip, err := p.Engine.ResolverHost(); err == nil {

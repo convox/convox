@@ -121,6 +121,10 @@ spec:
             {{ end }}
             {{ end }}
           {{ end }}
+          {{ if .DockerHubAuth }}
+          imagePullSecrets:
+          - name: docker-hub-authentication
+          {{ end }}
           restartPolicy: Never
           shareProcessNamespace: {{.Service.Init}}
           serviceAccountName: timer-{{.Timer.Name}}
