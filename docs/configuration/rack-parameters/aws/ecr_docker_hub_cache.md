@@ -43,3 +43,4 @@ The cache also works without Docker Hub credentials (anonymous upstream pulls), 
 - Cached images follow your ECR lifecycle policies and region configuration.
 - This feature complements `docker_hub_username` and `docker_hub_password` — those parameters authenticate direct pulls for build pods and service images, while `ecr_docker_hub_cache` specifically caches the images used by Convox-managed resource pods.
 - Standard ECR storage costs apply for cached images.
+- The ECR pull-through cache rule uses the prefix `docker-hub`, which is an account+region level resource in AWS. Only one rack per AWS account per region should enable this parameter. If multiple racks in the same account and region enable it, the second rack's update will fail because the cache rule already exists.
