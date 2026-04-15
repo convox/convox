@@ -841,7 +841,7 @@ func (p *Provider) releaseTemplateAzureFiles(a *structs.App, s manifest.Service)
 	for i := range s.VolumeOptions {
 		if s.VolumeOptions[i].AzureFiles != nil {
 			hasAzureFiles = true
-			if p.AzureFilesEnabled == "" || p.AzureFilesEnabled == "false" {
+			if p.AzureFilesEnabled != "true" {
 				return nil, structs.ErrBadRequest("azure files is not enabled but azureFiles volume is specified")
 			}
 		}

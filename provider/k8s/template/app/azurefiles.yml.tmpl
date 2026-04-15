@@ -15,6 +15,7 @@ spec:
   accessModes:
     - {{.AccessMode}}
   storageClassName: azurefile-csi-nfs
+  volumeMode: Filesystem
   resources:
     requests:
       storage: {{ if .ShareSize }}{{.ShareSize}}{{ else }}100Gi{{ end }}

@@ -2,7 +2,7 @@ variable "cluster" {
   type = string
 }
 
-variable "azure_files_enabled" {
+variable "azure_files_enable" {
   default = false
   type    = bool
 }

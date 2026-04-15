@@ -71,7 +71,7 @@ module "rack" {
   }
 
   cluster                              = module.cluster.id
-  azure_files_enabled                  = module.cluster.azure_files_enabled
+  azure_files_enable                   = module.cluster.azure_files_enable
   docker_hub_username                  = var.docker_hub_username
   docker_hub_password                  = var.docker_hub_password
   high_availability                    = var.high_availability

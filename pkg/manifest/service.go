@@ -180,6 +180,9 @@ func (v VolumeAzureFiles) Validate() error {
 	if v.Id == "" {
 		return fmt.Errorf("azureFiles.id is required")
 	}
+	if !NameValidator.MatchString(v.Id) {
+		return fmt.Errorf("azureFiles.id must match %s", NameValidator.String())
+	}
 	if v.MountPath == "" {
 		return fmt.Errorf("azureFiles.mountPath is required")
 	}
@@ -193,6 +196,18 @@ func (v VolumeAzureFiles) Validate() error {
 	if !containsInStringSlice(allowedModes, v.AccessMode) {
 		return fmt.Errorf("azureFiles.accessMode must be one of these values: %s", strings.Join(allowedModes, ", "))
 	}
+
+	if v.ShareSize != "" {
+		qty, err := resource.ParseQuantity(v.ShareSize)
+		if err != nil {
+			return fmt.Errorf("azureFiles.shareSize is invalid: %s", v.ShareSize)
+		}
+		minQty := resource.MustParse("100Gi")
+		if qty.Cmp(minQty) < 0 {
+			return fmt.Errorf("azureFiles.shareSize must be at least 100Gi (Azure Premium NFS minimum)")
+		}
+	}
+
 	return nil
 }
 

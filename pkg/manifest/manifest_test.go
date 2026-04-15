@@ -788,6 +788,15 @@ func TestVolumeAzureFilesValidate(t *testing.T) {
 			wantErr: "azureFiles.id is required",
 		},
 		{
+			name: "invalid id format",
+			vol: manifest.VolumeAzureFiles{
+				Id:         "My Volume/data",
+				AccessMode: "ReadWriteMany",
+				MountPath:  "/mnt/data",
+			},
+			wantErr: "azureFiles.id must match ^[a-z][a-z0-9-]*$",
+		},
+		{
 			name: "missing mountPath",
 			vol: manifest.VolumeAzureFiles{
 				Id:         "models",
@@ -812,6 +821,26 @@ func TestVolumeAzureFilesValidate(t *testing.T) {
 				MountPath:  "/mnt/data",
 				ShareSize:  "200Gi",
 			},
+		},
+		{
+			name: "invalid shareSize format",
+			vol: manifest.VolumeAzureFiles{
+				Id:         "models",
+				AccessMode: "ReadWriteMany",
+				MountPath:  "/mnt/data",
+				ShareSize:  "banana",
+			},
+			wantErr: "azureFiles.shareSize is invalid: banana",
+		},
+		{
+			name: "shareSize below minimum",
+			vol: manifest.VolumeAzureFiles{
+				Id:         "models",
+				AccessMode: "ReadWriteMany",
+				MountPath:  "/mnt/data",
+				ShareSize:  "1Gi",
+			},
+			wantErr: "azureFiles.shareSize must be at least 100Gi (Azure Premium NFS minimum)",
 		},
 	}
 
