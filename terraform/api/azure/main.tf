@@ -59,6 +59,10 @@ module "k8s" {
   replicas                  = var.high_availability ? 2 : 1
   resolver                  = var.resolver
 
+  annotations = {
+    "cert-manager.io/cluster-issuer" = "letsencrypt"
+  }
+
   labels = {
     "aadpodidbinding" : "api"
   }
