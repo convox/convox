@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -52,12 +51,12 @@ func testClientWait(t *testing.T, wait time.Duration, fn func(*cli.Engine, *mock
 
 	rack.TestClient = i
 
-	tmp, err := ioutil.TempDir("", "")
+	tmp, err := os.MkdirTemp("", "")
 	require.NoError(t, err)
 	e.Settings = tmp
 	defer os.RemoveAll(tmp)
 
-	err = ioutil.WriteFile(filepath.Join(tmp, "current"), []byte(`{"type":"test","name":"rack1"}`), 0600)
+	err = os.WriteFile(filepath.Join(tmp, "current"), []byte(`{"type":"test","name":"rack1"}`), 0600)
 	require.NoError(t, err)
 
 	i.On("ClientType").Return("standard").Maybe()
@@ -111,7 +110,7 @@ func testLocalRack(e *cli.Engine, name, provider, api string) error {
 		return err
 	}
 
-	if err := ioutil.WriteFile(filepath.Join(dir, "main.tf"), []byte{}, 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "main.tf"), []byte{}, 0600); err != nil {
 		return err
 	}
 
@@ -125,7 +124,7 @@ func testLocalRack(e *cli.Engine, name, provider, api string) error {
 }
 
 func testLogs(logs []string) io.ReadCloser {
-	return ioutil.NopCloser(strings.NewReader(fmt.Sprintf("%s\n", strings.Join(logs, "\n"))))
+	return io.NopCloser(strings.NewReader(fmt.Sprintf("%s\n", strings.Join(logs, "\n"))))
 }
 
 type result struct {

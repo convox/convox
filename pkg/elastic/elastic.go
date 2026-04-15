@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"sort"
 	"strings"
 	"time"
@@ -102,7 +101,7 @@ func (c *Client) Stream(ctx context.Context, w io.WriteCloser, index string, opt
 			}
 			defer res.Body.Close()
 
-			data, err = ioutil.ReadAll(res.Body)
+			data, err = io.ReadAll(res.Body)
 			if err != nil {
 				fmt.Fprintf(w, "error: %v\n", err)
 				return
