@@ -69,8 +69,6 @@ resource "helm_release" "keda" {
   namespace  = local.keda_namespace
 
   create_namespace = true
-  atomic           = true
-  timeout          = 600
 
   values = [
     yamlencode({

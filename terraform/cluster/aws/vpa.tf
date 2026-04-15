@@ -10,8 +10,6 @@ resource "helm_release" "vpa" {
   version          = "4.10.1"
   namespace        = "vpa"
   create_namespace = true
-  atomic           = true
-  timeout          = 600
 
   values = [
     yamlencode({
