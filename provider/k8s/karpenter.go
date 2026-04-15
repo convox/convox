@@ -8,7 +8,6 @@ import (
 
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
-	policyv1 "k8s.io/api/policy/v1"
 	ae "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -16,8 +15,6 @@ import (
 
 const (
 	KarpenterNodePoolLabel = "karpenter.sh/nodepool"
-	drainTimeout           = 5 * time.Minute
-	evictionRetryInterval  = 5 * time.Second
 )
 
 func (p *Provider) KarpenterCleanup() error {
@@ -146,11 +143,11 @@ func (p *Provider) drainKarpenterNode(ctx context.Context, nodeName string) erro
 		if _, isMirror := pod.Annotations[ac.MirrorPodAnnotationKey]; isMirror {
 			continue
 		}
-		if isDaemonSetManaged(pod) {
+		if isDaemonSetPod(pod) {
 			continue
 		}
 
-		if err := p.evictPodWithRetry(ctx, pod, deadline); err != nil {
+		if err := p.evictPod(ctx, pod, deadline); err != nil {
 			return err
 		}
 	}
@@ -158,52 +155,4 @@ func (p *Provider) drainKarpenterNode(ctx context.Context, nodeName string) erro
 	return nil
 }
 
-func isDaemonSetManaged(pod *ac.Pod) bool {
-	for _, ref := range pod.OwnerReferences {
-		if ref.Kind == "DaemonSet" {
-			return true
-		}
-	}
-	return false
-}
 
-func (p *Provider) evictPodWithRetry(ctx context.Context, pod *ac.Pod, deadline time.Time) error {
-	eviction := &policyv1.Eviction{
-		ObjectMeta: am.ObjectMeta{
-			Name:      pod.Name,
-			Namespace: pod.Namespace,
-		},
-	}
-
-	for {
-		err := p.Cluster.CoreV1().Pods(pod.Namespace).EvictV1(ctx, eviction)
-		if err == nil {
-			return nil
-		}
-
-		if ae.IsNotFound(err) {
-			return nil
-		}
-
-		if ae.IsTooManyRequests(err) {
-			if time.Now().After(deadline) {
-				return p.forceDeletePod(ctx, pod)
-			}
-			time.Sleep(evictionRetryInterval)
-			continue
-		}
-
-		return p.forceDeletePod(ctx, pod)
-	}
-}
-
-func (p *Provider) forceDeletePod(ctx context.Context, pod *ac.Pod) error {
-	grace := int64(0)
-	err := p.Cluster.CoreV1().Pods(pod.Namespace).Delete(ctx, pod.Name, am.DeleteOptions{
-		GracePeriodSeconds: &grace,
-	})
-	if err != nil && !ae.IsNotFound(err) {
-		return errors.WithStack(fmt.Errorf("failed to force-delete pod %s/%s: %s", pod.Namespace, pod.Name, err))
-	}
-	return nil
-}
