@@ -34,13 +34,13 @@ The cache also works without Docker Hub credentials (anonymous upstream pulls), 
 
 ## Additional Information
 - When enabled, Convox creates:
-  - An ECR pull-through cache rule with prefix `docker-hub` pointing to `registry-1.docker.io`
+  - An ECR pull-through cache rule with prefix `docker-hub-<rack-name>` pointing to `registry-1.docker.io`
   - An AWS Secrets Manager secret with Docker Hub credentials (if `docker_hub_username` and `docker_hub_password` are set)
   - An IAM policy granting cluster nodes permission to create ECR repositories and import upstream images
-- Resource images are automatically rewritten to use the ECR cache URL. For example, `redis:4.0.10` becomes `<account_id>.dkr.ecr.<region>.amazonaws.com/docker-hub/library/redis:4.0.10`.
+- Resource images are automatically rewritten to use the ECR cache URL. For example, `redis:4.0.10` becomes `<account_id>.dkr.ecr.<region>.amazonaws.com/docker-hub-<rack-name>/library/redis:4.0.10`.
 - Docker Hub "library" images (redis, postgres, mysql, mariadb, memcached) get a `library/` prefix in the ECR path per Docker Hub convention. Non-library images (e.g., `postgis/postgis`) use their full path.
 - ECR repositories are created automatically on first pull — no manual setup is needed.
 - Cached images follow your ECR lifecycle policies and region configuration.
 - This feature complements `docker_hub_username` and `docker_hub_password` — those parameters authenticate direct pulls for build pods and service images, while `ecr_docker_hub_cache` specifically caches the images used by Convox-managed resource pods.
 - Standard ECR storage costs apply for cached images.
-- The ECR pull-through cache rule uses the prefix `docker-hub`, which is an account+region level resource in AWS. Only one rack per AWS account per region should enable this parameter. If multiple racks in the same account and region enable it, the second rack's update will fail because the cache rule already exists.
+- Each rack gets its own ECR pull-through cache rule with a rack-specific prefix (`docker-hub-<rack-name>`), so multiple racks in the same AWS account can each enable this feature independently.

@@ -21,7 +21,7 @@ resource "aws_secretsmanager_secret_version" "docker_hub_pull_through" {
 resource "aws_ecr_pull_through_cache_rule" "docker_hub" {
   count = var.ecr_docker_hub_cache ? 1 : 0
 
-  ecr_repository_prefix = "docker-hub"
+  ecr_repository_prefix = "docker-hub-${var.name}"
   upstream_registry_url = "registry-1.docker.io"
   credential_arn        = var.docker_hub_username != "" && var.docker_hub_password != "" ? aws_secretsmanager_secret.docker_hub_pull_through[0].arn : null
 }
@@ -39,7 +39,7 @@ resource "aws_iam_policy" "ecr_pull_through" {
           "ecr:BatchImportUpstreamImage",
           "ecr:CreateRepository",
         ]
-        Resource = "arn:${data.aws_partition.current.partition}:ecr:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:repository/docker-hub/*"
+        Resource = "arn:${data.aws_partition.current.partition}:ecr:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:repository/docker-hub-${var.name}/*"
       },
     ]
   })
