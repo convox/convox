@@ -68,6 +68,10 @@ spec:
         type: resource
         resource: {{.Name}}
     spec:
+      {{ if .DockerHubAuth }}
+      imagePullSecrets:
+      - name: docker-hub-authentication
+      {{ end }}
       containers:
       - name: postgis
         image: {{ if not .Image }}postgis/postgis:{{ coalesce (index .Parameters "version") "10-3.2" }}{{ else }}{{ .Image }}{{ end }}

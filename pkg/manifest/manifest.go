@@ -215,6 +215,23 @@ func (m *Manifest) ApplyDefaults() error {
 			m.Services[i].Port.Scheme = "http"
 		}
 
+		// deduplicate ports: remove entries from Ports that match Port.Port
+		// with the same effective protocol. Port (main) takes priority because
+		// it controls health checks, probes, and ingress routing.
+		if s.Port.Port > 0 && len(s.Ports) > 0 {
+			filtered := make([]ServicePortProtocol, 0, len(s.Ports))
+			for _, p := range s.Ports {
+				proto := strings.ToLower(p.Protocol)
+				if proto == "" {
+					proto = "tcp"
+				}
+				if p.Port != s.Port.Port || proto != "tcp" {
+					filtered = append(filtered, p)
+				}
+			}
+			m.Services[i].Ports = filtered
+		}
+
 		sp := fmt.Sprintf("services.%s.scale", s.Name)
 
 		// if no scale attributes set

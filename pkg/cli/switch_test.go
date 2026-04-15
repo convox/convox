@@ -1,10 +1,10 @@
 package cli_test
 
 import (
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -30,7 +30,7 @@ func TestSwitch(t *testing.T) {
 		tsu, err := url.Parse(ts.URL)
 		require.NoError(t, err)
 
-		err = ioutil.WriteFile(filepath.Join(e.Settings, "console"), []byte(tsu.Host), 0644)
+		err = os.WriteFile(filepath.Join(e.Settings, "console"), []byte(tsu.Host), 0644)
 		require.NoError(t, err)
 
 		res, err := testExecute(e, "switch foo", nil)
@@ -63,7 +63,7 @@ func TestSwitchUnknown(t *testing.T) {
 		tsu, err := url.Parse(ts.URL)
 		require.NoError(t, err)
 
-		err = ioutil.WriteFile(filepath.Join(e.Settings, "console"), []byte(tsu.Host), 0644)
+		err = os.WriteFile(filepath.Join(e.Settings, "console"), []byte(tsu.Host), 0644)
 		require.NoError(t, err)
 
 		res, err := testExecute(e, "switch rack1", nil)

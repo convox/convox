@@ -46,6 +46,7 @@ module "cluster" {
 
   additional_node_groups              = local.additional_node_groups
   additional_build_groups             = local.additional_build_groups
+  azure_files_enable                  = var.azure_files_enable
   k8s_version                         = var.k8s_version
   max_on_demand_count                 = var.max_on_demand_count
   min_on_demand_count                 = var.min_on_demand_count
@@ -70,6 +71,7 @@ module "rack" {
   }
 
   cluster                              = module.cluster.id
+  azure_files_enable                   = module.cluster.azure_files_enable
   docker_hub_username                  = var.docker_hub_username
   docker_hub_password                  = var.docker_hub_password
   high_availability                    = var.high_availability

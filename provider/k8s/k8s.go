@@ -60,10 +60,12 @@ type Provider struct {
 	DiscoveryClient                     discovery.DiscoveryInterface
 	DockerUsername                      string
 	DockerPassword                      string
+	EcrDockerHubCachePrefix             string
 	Domain                              string
 	DomainInternal                      string
 	DynamicClient                       dynamic.Interface
 	EfsFileSystemId                     string
+	AzureFilesEnabled                   string
 	Engine                              Engine
 	Image                               string
 	JwtMngr                             *jwt.JwtManager
@@ -179,6 +181,7 @@ func FromEnv() (*Provider, error) {
 		DomainInternal:                   os.Getenv("DOMAIN_INTERNAL"),
 		DynamicClient:                    dc,
 		EfsFileSystemId:                  os.Getenv("EFS_FILE_SYSTEM_ID"),
+		AzureFilesEnabled:                os.Getenv("AZURE_FILES_ENABLED"),
 		Image:                            os.Getenv("IMAGE"),
 		MetricScraper:                    ms,
 		MetricsClient:                    mc,
@@ -198,6 +201,7 @@ func FromEnv() (*Provider, error) {
 		VpcID:                            os.Getenv("VPC_ID"),
 		DockerUsername:                   os.Getenv("DOCKER_HUB_USERNAME"),
 		DockerPassword:                   os.Getenv("DOCKER_HUB_PASSWORD"),
+		EcrDockerHubCachePrefix:          os.Getenv("ECR_DOCKER_HUB_CACHE_PREFIX"),
 		IsKedaEnabled:                    os.Getenv("KEDA_ENABLED") == "true",
 		IsVpaEnabled:                     os.Getenv("VPA_ENABLED") == "true",
 	}

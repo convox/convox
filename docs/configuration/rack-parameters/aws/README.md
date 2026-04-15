@@ -28,6 +28,7 @@ The following parameters are available for configuring your Convox rack on Amazo
 | [docker_hub_username](/configuration/rack-parameters/aws/docker_hub_username) | Configures Docker Hub username for authenticated image pulls (avoids rate limits). |
 | [docker_hub_password](/configuration/rack-parameters/aws/docker_hub_password) | Sets Docker Hub access token for authenticated image pulls. Use with docker_hub_username. |
 | [ebs_volume_encryption_enabled](/configuration/rack-parameters/aws/ebs_volume_encryption_enabled) | Enables encryption for EBS volumes used by primary node disks. |
+| [ecr_docker_hub_cache](/configuration/rack-parameters/aws/ecr_docker_hub_cache) | Enables ECR pull-through cache for Docker Hub images to avoid rate limits. |
 | [ecr_scan_on_push_enable](/configuration/rack-parameters/aws/ecr_scan_on_push_enable) | Enables automatic vulnerability scanning for images pushed to ECR. |
 | [efs_csi_driver_enable](/configuration/rack-parameters/aws/efs_csi_driver_enable)   | Enables the EFS CSI driver to use AWS EFS volumes.                       |
 | [fluentd_disable](/configuration/rack-parameters/aws/fluentd_disable)               | Disables Fluentd installation in the rack.                               |

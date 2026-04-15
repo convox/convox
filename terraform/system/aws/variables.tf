@@ -91,6 +91,11 @@ variable "docker_hub_password" {
   default = ""
 }
 
+variable "ecr_docker_hub_cache" {
+  type    = bool
+  default = false
+}
+
 variable "fluentd_disable" {
   type    = bool
   default = false

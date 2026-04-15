@@ -3,7 +3,7 @@ package rack
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -198,7 +198,7 @@ func (t Terraform) Metadata() (*Metadata, error) {
 		return nil, err
 	}
 
-	state, err := ioutil.ReadFile(filepath.Join(dir, "terraform.tfstate"))
+	state, err := os.ReadFile(filepath.Join(dir, "terraform.tfstate"))
 	if err != nil {
 		return nil, err
 	}
@@ -388,7 +388,7 @@ func (t Terraform) moduleVarNames() (map[string]bool, error) {
 	}
 
 	manifestPath := filepath.Join(dir, ".terraform", "modules", "modules.json")
-	data, err := ioutil.ReadFile(manifestPath)
+	data, err := os.ReadFile(manifestPath)
 	if err != nil {
 		return nil, err
 	}
@@ -425,7 +425,7 @@ func (t Terraform) moduleVarNames() (map[string]bool, error) {
 	re := regexp.MustCompile(`(?m)^variable\s+"([^"]+)"`)
 
 	for _, f := range files {
-		content, err := ioutil.ReadFile(f)
+		content, err := os.ReadFile(f)
 		if err != nil {
 			continue
 		}
@@ -504,7 +504,7 @@ func (t Terraform) create(release string, vars map[string]string, state []byte) 
 	}
 
 	if state != nil {
-		if err := ioutil.WriteFile(filepath.Join(dir, "terraform.tfstate"), state, 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "terraform.tfstate"), state, 0644); err != nil {
 			return err
 		}
 	}
@@ -627,7 +627,7 @@ func (t Terraform) vars() (map[string]string, error) {
 	}
 
 	if _, err := os.Stat(vf); !os.IsNotExist(err) {
-		data, err := ioutil.ReadFile(vf)
+		data, err := os.ReadFile(vf)
 		if err != nil {
 			return nil, err
 		}
@@ -710,7 +710,7 @@ func (t Terraform) writeVars(vars map[string]string) error {
 		return err
 	}
 
-	if err := ioutil.WriteFile(vf, data, 0600); err != nil {
+	if err := os.WriteFile(vf, data, 0600); err != nil {
 		return err
 	}
 
@@ -727,7 +727,7 @@ func listTerraform(c *stdcli.Context) ([]Terraform, error) {
 		return []Terraform{}, nil
 	}
 
-	subs, err := ioutil.ReadDir(dir)
+	subs, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
@@ -796,6 +796,8 @@ func terraform(c *stdcli.Context, dir string, args ...string) error {
 	signal.Ignore(os.Interrupt)
 	defer signal.Reset(os.Interrupt)
 
+	os.Setenv("AWS_STS_REGIONAL_ENDPOINTS", "regional")
+
 	if err := c.Terminal("terraform", args...); err != nil {
 		return err
 	}
@@ -863,7 +865,7 @@ func getGitHubReleaseData(url string, response interface{}) error {
 	}
 	defer res.Body.Close()
 
-	data, err := ioutil.ReadAll(res.Body)
+	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		return err
 	}

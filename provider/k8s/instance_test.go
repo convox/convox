@@ -23,6 +23,27 @@ import (
 	metricfake "k8s.io/metrics/pkg/client/clientset/versioned/fake"
 )
 
+func newTestProvider() (*k8s.Provider, *fake.Clientset) {
+	c := fake.NewSimpleClientset()
+	cc := cvfake.NewSimpleClientset()
+	mc := metricfake.NewSimpleClientset()
+	a := &atom.MockInterface{}
+
+	p := &k8s.Provider{
+		Atom:          a,
+		Cluster:       c,
+		Convox:        cc,
+		Domain:        "domain1",
+		Engine:        &mock.TestEngine{},
+		MetricsClient: mc,
+		Name:          "rack1",
+		Namespace:     "ns1",
+		Provider:      "test",
+	}
+
+	return p, c
+}
+
 func nodeCreator(c kubernetes.Interface, name string, fn func(n *ac.Node)) error {
 	n := &ac.Node{
 		ObjectMeta: am.ObjectMeta{
@@ -106,4 +127,164 @@ func TestInstanceShellError(t *testing.T) {
 	})
 	require.Error(t, err)
 	require.Equal(t, 0, code)
+}
+
+func TestInstanceTerminateNotFound(t *testing.T) {
+	p, _ := newTestProvider()
+
+	err := p.InstanceTerminate("nonexistent-node")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "instance not found")
+}
+
+func TestInstanceTerminateReadyNode(t *testing.T) {
+	p, c := newTestProvider()
+
+	// create a Ready node
+	_, err := c.CoreV1().Nodes().Create(context.TODO(), &ac.Node{
+		ObjectMeta: am.ObjectMeta{Name: "node-ready"},
+		Status: ac.NodeStatus{
+			Conditions: []ac.NodeCondition{
+				{Type: ac.NodeReady, Status: ac.ConditionTrue},
+			},
+		},
+	}, am.CreateOptions{})
+	require.NoError(t, err)
+
+	// create a regular pod on the node
+	_, err = c.CoreV1().Pods("default").Create(context.TODO(), &ac.Pod{
+		ObjectMeta: am.ObjectMeta{Name: "app-pod", Namespace: "default"},
+		Spec:       ac.PodSpec{NodeName: "node-ready"},
+	}, am.CreateOptions{})
+	require.NoError(t, err)
+
+	// create a DaemonSet pod on the node — should be skipped
+	_, err = c.CoreV1().Pods("kube-system").Create(context.TODO(), &ac.Pod{
+		ObjectMeta: am.ObjectMeta{
+			Name:      "ds-pod",
+			Namespace: "kube-system",
+			OwnerReferences: []am.OwnerReference{
+				{Kind: "DaemonSet", Name: "fluentd", APIVersion: "apps/v1"},
+			},
+		},
+		Spec: ac.PodSpec{NodeName: "node-ready"},
+	}, am.CreateOptions{})
+	require.NoError(t, err)
+
+	err = p.InstanceTerminate("node-ready")
+	require.NoError(t, err)
+
+	// node should be deleted
+	_, err = c.CoreV1().Nodes().Get(context.TODO(), "node-ready", am.GetOptions{})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "not found")
+
+	// DaemonSet pod should still exist (was skipped)
+	_, err = c.CoreV1().Pods("kube-system").Get(context.TODO(), "ds-pod", am.GetOptions{})
+	require.NoError(t, err)
+
+	// verify eviction was called for app-pod in default namespace
+	// (fake client records actions but doesn't actually delete pods on eviction)
+	evictionCalled := false
+	for _, action := range c.Actions() {
+		if action.GetVerb() == "create" && action.GetResource().Resource == "pods" &&
+			action.GetSubresource() == "eviction" && action.GetNamespace() == "default" {
+			evictionCalled = true
+			break
+		}
+	}
+	require.True(t, evictionCalled, "eviction should have been called for app-pod in default namespace")
+}
+
+func TestInstanceTerminateNotReadyNode(t *testing.T) {
+	p, c := newTestProvider()
+
+	// create a NotReady node
+	_, err := c.CoreV1().Nodes().Create(context.TODO(), &ac.Node{
+		ObjectMeta: am.ObjectMeta{Name: "node-notready"},
+		Status: ac.NodeStatus{
+			Conditions: []ac.NodeCondition{
+				{Type: ac.NodeReady, Status: ac.ConditionFalse},
+			},
+		},
+	}, am.CreateOptions{})
+	require.NoError(t, err)
+
+	// create stuck pods on the NotReady node
+	for _, name := range []string{"stuck-pod-1", "stuck-pod-2"} {
+		_, err = c.CoreV1().Pods("app-ns").Create(context.TODO(), &ac.Pod{
+			ObjectMeta: am.ObjectMeta{Name: name, Namespace: "app-ns"},
+			Spec:       ac.PodSpec{NodeName: "node-notready"},
+		}, am.CreateOptions{})
+		require.NoError(t, err)
+	}
+
+	err = p.InstanceTerminate("node-notready")
+	require.NoError(t, err)
+
+	// node should be deleted
+	_, err = c.CoreV1().Nodes().Get(context.TODO(), "node-notready", am.GetOptions{})
+	require.Error(t, err)
+
+	// pods should be force-deleted
+	pods, err := c.CoreV1().Pods("app-ns").List(context.TODO(), am.ListOptions{})
+	require.NoError(t, err)
+	require.Empty(t, pods.Items)
+}
+
+func TestInstanceTerminateAlreadyCordoned(t *testing.T) {
+	p, c := newTestProvider()
+
+	// create an already-cordoned node
+	_, err := c.CoreV1().Nodes().Create(context.TODO(), &ac.Node{
+		ObjectMeta: am.ObjectMeta{Name: "node-cordoned"},
+		Spec:       ac.NodeSpec{Unschedulable: true},
+		Status: ac.NodeStatus{
+			Conditions: []ac.NodeCondition{
+				{Type: ac.NodeReady, Status: ac.ConditionTrue},
+			},
+		},
+	}, am.CreateOptions{})
+	require.NoError(t, err)
+
+	err = p.InstanceTerminate("node-cordoned")
+	require.NoError(t, err)
+
+	// node should be deleted
+	_, err = c.CoreV1().Nodes().Get(context.TODO(), "node-cordoned", am.GetOptions{})
+	require.Error(t, err)
+}
+
+func TestInstanceTerminateMirrorPodSkipped(t *testing.T) {
+	p, c := newTestProvider()
+
+	_, err := c.CoreV1().Nodes().Create(context.TODO(), &ac.Node{
+		ObjectMeta: am.ObjectMeta{Name: "node-mirror"},
+		Status: ac.NodeStatus{
+			Conditions: []ac.NodeCondition{
+				{Type: ac.NodeReady, Status: ac.ConditionTrue},
+			},
+		},
+	}, am.CreateOptions{})
+	require.NoError(t, err)
+
+	// create a mirror pod (managed by kubelet)
+	_, err = c.CoreV1().Pods("kube-system").Create(context.TODO(), &ac.Pod{
+		ObjectMeta: am.ObjectMeta{
+			Name:      "kube-apiserver-node-mirror",
+			Namespace: "kube-system",
+			Annotations: map[string]string{
+				ac.MirrorPodAnnotationKey: "mirror-hash",
+			},
+		},
+		Spec: ac.PodSpec{NodeName: "node-mirror"},
+	}, am.CreateOptions{})
+	require.NoError(t, err)
+
+	err = p.InstanceTerminate("node-mirror")
+	require.NoError(t, err)
+
+	// mirror pod should still exist (was skipped)
+	_, err = c.CoreV1().Pods("kube-system").Get(context.TODO(), "kube-apiserver-node-mirror", am.GetOptions{})
+	require.NoError(t, err)
 }

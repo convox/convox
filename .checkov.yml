@@ -1,0 +1,49 @@
+framework:
+  - terraform
+directory:
+  - terraform
+output:
+  - cli
+soft-fail: true
+skip-check:
+  # --- Kubernetes deployment checks (not applicable) ---
+  # Convox generates K8s resources dynamically at deploy time.
+  # These TF-defined deployments are system scaffolding, not customer workloads.
+  - CKV_K8S_8   # liveness probe
+  - CKV_K8S_9   # readiness probe
+  - CKV_K8S_10  # CPU requests
+  - CKV_K8S_11  # CPU limits
+  - CKV_K8S_12  # memory limits
+  - CKV_K8S_13  # memory requests
+  - CKV_K8S_14  # image tag fixed
+  - CKV_K8S_15  # image pull policy always
+  - CKV_K8S_22  # read-only filesystem
+  - CKV_K8S_25  # added capabilities
+  - CKV_K8S_27  # docker daemon socket
+  - CKV_K8S_28  # NET_RAW capability
+  - CKV_K8S_29  # pod security context
+  - CKV_K8S_30  # container security context
+  - CKV_K8S_43  # image digest
+  - CKV_K8S_49  # wildcard roles — platform needs broad cluster access
+  # --- Intentional architecture decisions ---
+  # Public endpoints required for Convox CLI access
+  - CKV_AWS_39    # EKS public endpoint
+  - CKV_AZURE_115 # AKS private cluster
+  - CKV_GCP_25    # GKE private cluster
+  - CKV_GCP_64    # GKE private nodes
+  # Platform needs broad IAM access to manage customer workloads
+  - CKV_AWS_356   # IAM wildcard resources
+  # Customer flexibility — can't restrict legacy usage patterns
+  - CKV_AWS_79    # IMDSv1 — customers may need it
+  - CKV_AZURE_44  # TLS version — older client compatibility
+  # Cost — not justified for every customer rack
+  - CKV_AWS_18    # S3 access logging
+  - CKV_AWS_37    # EKS control plane logging
+  - CKV_AWS_144   # S3 cross-region replication
+  # Internal traffic — default SG needed for intra-cluster communication
+  - CKV2_AWS_12   # default security group
+  # --- Deferred security hardening (enable when non-downgradeable version ships) ---
+  # EKS secrets-at-rest encryption requires KMS key + encryption_config on
+  # aws_eks_cluster. Non-downgradeable once enabled, so gated on a version
+  # boundary. Plan ready in 2026-04-08-eks-secrets-encryption/.
+  - CKV_AWS_58    # EKS secrets encryption

@@ -68,6 +68,11 @@ variable "ecr_scan_on_push_enable" {
   default = false
 }
 
+variable "ecr_docker_hub_cache_prefix" {
+  type    = string
+  default = ""
+}
+
 variable "efs_csi_driver_enable" {
   type    = bool
   default = false

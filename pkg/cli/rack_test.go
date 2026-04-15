@@ -2,7 +2,6 @@ package cli_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -73,10 +72,10 @@ func TestRackInstall(t *testing.T) {
 		_, err = os.Stat(tf)
 		require.NoError(t, err)
 
-		tfdata, err := ioutil.ReadFile(tf)
+		tfdata, err := os.ReadFile(tf)
 		require.NoError(t, err)
 
-		testdata, err := ioutil.ReadFile("testdata/terraform/dev1.tf")
+		testdata, err := os.ReadFile("testdata/terraform/dev1.tf")
 		require.NoError(t, err)
 
 		require.Equal(t, strings.Trim(removeSettingsLine(string(tfdata)), "\n"), removeSettingsLine(strings.Trim(string(testdata), "\n")))
@@ -127,10 +126,10 @@ func TestRackInstallArgs(t *testing.T) {
 		_, err = os.Stat(tf)
 		require.NoError(t, err)
 
-		tfdata, err := ioutil.ReadFile(tf)
+		tfdata, err := os.ReadFile(tf)
 		require.NoError(t, err)
 
-		testdata, err := ioutil.ReadFile("testdata/terraform/dev1.args.tf")
+		testdata, err := os.ReadFile("testdata/terraform/dev1.args.tf")
 		require.NoError(t, err)
 
 		require.Equal(t, strings.Trim(removeSettingsLine(string(tfdata)), "\n"), removeSettingsLine(strings.Trim(string(testdata), "\n")))
@@ -162,10 +161,10 @@ func TestRackInstallPrepare(t *testing.T) {
 		_, err = os.Stat(tf)
 		require.NoError(t, err)
 
-		tfdata, err := ioutil.ReadFile(tf)
+		tfdata, err := os.ReadFile(tf)
 		require.NoError(t, err)
 
-		testdata, err := ioutil.ReadFile("testdata/terraform/dev1.tf")
+		testdata, err := os.ReadFile("testdata/terraform/dev1.tf")
 		require.NoError(t, err)
 
 		require.Equal(t, strings.Trim(removeSettingsLine(string(tfdata)), "\n"), removeSettingsLine(strings.Trim(string(testdata), "\n")))
@@ -202,10 +201,10 @@ func TestRackInstallSwitch(t *testing.T) {
 		_, err = os.Stat(tf)
 		require.NoError(t, err)
 
-		tfdata, err := ioutil.ReadFile(tf)
+		tfdata, err := os.ReadFile(tf)
 		require.NoError(t, err)
 
-		testdata, err := ioutil.ReadFile("testdata/terraform/dev1.tf")
+		testdata, err := os.ReadFile("testdata/terraform/dev1.tf")
 		require.NoError(t, err)
 
 		require.Equal(t, strings.Trim(removeSettingsLine(string(tfdata)), "\n"), removeSettingsLine(strings.Trim(string(testdata), "\n")))
@@ -243,10 +242,10 @@ func TestRackInstallVersion(t *testing.T) {
 		_, err = os.Stat(tf)
 		require.NoError(t, err)
 
-		tfdata, err := ioutil.ReadFile(tf)
+		tfdata, err := os.ReadFile(tf)
 		require.NoError(t, err)
 
-		testdata, err := ioutil.ReadFile("testdata/terraform/dev1.version.tf")
+		testdata, err := os.ReadFile("testdata/terraform/dev1.version.tf")
 		require.NoError(t, err)
 
 		require.Equal(t, strings.Trim(removeSettingsLine(string(tfdata)), "\n"), removeSettingsLine(strings.Trim(string(testdata), "\n")))

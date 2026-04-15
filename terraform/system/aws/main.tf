@@ -1,5 +1,6 @@
 provider "aws" {
-  region = var.region
+  region     = var.region
+  sts_region = var.region
 }
 
 provider "kubernetes" {
@@ -157,6 +158,9 @@ module "cluster" {
   vpc_cni_version                     = var.vpc_cni_version
   vpc_id                              = var.vpc_id
   vpa_enable                          = var.vpa_enable
+  ecr_docker_hub_cache                = var.ecr_docker_hub_cache
+  docker_hub_username                 = var.docker_hub_username
+  docker_hub_password                 = var.docker_hub_password
 }
 
 resource "null_resource" "wait_for_cluster" {
@@ -245,6 +249,7 @@ module "rack" {
   telemetry_default_map                     = local.telemetry_default_map
   whitelist                                 = split(",", var.whitelist)
   ecr_scan_on_push_enable                   = var.ecr_scan_on_push_enable
+  ecr_docker_hub_cache_prefix               = module.cluster.ecr_docker_hub_cache_prefix
   vpc_id                                    = module.cluster.vpc
   vpa_enable                                = var.vpa_enable
 }

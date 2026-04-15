@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -230,7 +229,7 @@ func buildExternal(rack sdk.Interface, c *stdcli.Context, opts structs.BuildCrea
 
 	manifest := common.DefaultString(opts.Manifest, "convox.yml")
 
-	data, err := ioutil.ReadFile(filepath.Join(dir, manifest))
+	data, err := os.ReadFile(filepath.Join(dir, manifest))
 	if err != nil {
 		return nil, err
 	}
@@ -315,7 +314,7 @@ func finalizeBuildLogs(rack structs.Provider, c *stdcli.Context, b *structs.Buil
 	}
 	defer r.Close()
 
-	data, err := ioutil.ReadAll(r)
+	data, err := io.ReadAll(r)
 	if err != nil {
 		return err
 	}
@@ -398,7 +397,7 @@ func BuildsImport(rack sdk.Interface, c *stdcli.Context) error {
 		if c.Reader().IsTerminal() {
 			return fmt.Errorf("pipe a file into this command or specify --file")
 		}
-		r = ioutil.NopCloser(c.Reader())
+		r = io.NopCloser(c.Reader())
 	}
 
 	defer r.Close()

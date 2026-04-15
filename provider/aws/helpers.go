@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/convox/convox/pkg/common"
@@ -44,7 +45,8 @@ func (p *Provider) ecrAuth(host, access, secret string) (string, string, error) 
 	m := ecrHostMatcher.FindStringSubmatch(host)
 
 	c := &aws.Config{
-		Region: aws.String(m[2]),
+		Region:              aws.String(m[2]),
+		STSRegionalEndpoint: endpoints.RegionalSTSEndpoint,
 	}
 
 	if access != "" {

@@ -139,6 +139,11 @@ variable "fluentd_memory" {
   default = "200Mi"
 }
 
+variable "azure_files_enable" {
+  default = false
+  type    = bool
+}
+
 variable "whitelist" {
   default = "0.0.0.0/0"
 }
