@@ -2,7 +2,6 @@ package k8s
 
 import (
 	"io"
-	"io/ioutil"
 	"strings"
 
 	"github.com/convox/convox/pkg/structs"
@@ -31,7 +30,7 @@ func (p *Provider) FilesDelete(app, pid string, files []string) error {
 		return errors.WithStack(err)
 	}
 
-	if err := exec.Stream(remotecommand.StreamOptions{Stdout: ioutil.Discard}); err != nil {
+	if err := exec.Stream(remotecommand.StreamOptions{Stdout: io.Discard}); err != nil {
 		return errors.WithStack(err)
 	}
 

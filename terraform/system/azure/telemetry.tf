@@ -5,6 +5,7 @@ locals {
   telemetry_map = {
     additional_build_groups_config = var.additional_build_groups_config
     additional_node_groups_config = var.additional_node_groups_config
+    azure_files_enable = var.azure_files_enable
     cert_duration = var.cert_duration
     docker_hub_password = var.docker_hub_password
     docker_hub_username = var.docker_hub_username
@@ -38,6 +39,7 @@ locals {
   telemetry_default_map = {
     additional_build_groups_config = ""
     additional_node_groups_config = ""
+    azure_files_enable = "false"
     cert_duration = "2160h"
     docker_hub_password = ""
     docker_hub_username = ""

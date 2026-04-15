@@ -192,6 +192,11 @@ resource "kubernetes_deployment" "api" {
           }
 
           env {
+            name  = "ECR_DOCKER_HUB_CACHE_PREFIX"
+            value = var.ecr_docker_hub_cache_prefix
+          }
+
+          env {
             name  = "DOMAIN"
             value = var.domain
           }

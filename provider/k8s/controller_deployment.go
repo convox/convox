@@ -30,8 +30,9 @@ var labelsForDeployment = []string{
 }
 
 const (
-	AnnotationPdbDisabled     = "convox.com/pdb-disbaled"
-	AnnotationPdbMinAvailable = "convox.com/pdb-minavailable"
+	AnnotationPdbDisabled           = "convox.com/pdb-disabled"
+	AnnotationPdbDisabledDeprecated = "convox.com/pdb-disbaled" // preserved for backward compat
+	AnnotationPdbMinAvailable       = "convox.com/pdb-minavailable"
 )
 
 type DeployController struct {
@@ -150,7 +151,7 @@ func (c *DeployController) SyncPDB(d *apps.Deployment, remove bool) error {
 		return fmt.Errorf("invalid deployment selector: %s/%s", d.Namespace, d.Name)
 	}
 
-	if d.Annotations[AnnotationPdbDisabled] == "true" || d.Spec.Template.Annotations[AnnotationPdbDisabled] == "true" {
+	if isPdbDisabled(d) {
 		remove = true
 	}
 
@@ -216,6 +217,19 @@ func assertDeployment(v interface{}) (*apps.Deployment, error) {
 	}
 
 	return d, nil
+}
+
+// isPdbDisabled checks whether PDB creation should be skipped for a deployment.
+// Accepts both the corrected annotation ("pdb-disabled") and the legacy typo
+// ("pdb-disbaled") for backward compatibility. If either annotation is set to
+// "true" on either the deployment or pod template, PDB is disabled.
+func isPdbDisabled(d *apps.Deployment) bool {
+	for _, key := range []string{AnnotationPdbDisabled, AnnotationPdbDisabledDeprecated} {
+		if d.Annotations[key] == "true" || d.Spec.Template.Annotations[key] == "true" {
+			return true
+		}
+	}
+	return false
 }
 
 func (p *Provider) CreateOrPatchPDB(ctx context.Context, meta metav1.ObjectMeta, transform func(*policyv1.PodDisruptionBudget) *policyv1.PodDisruptionBudget, opts metav1.PatchOptions) (*policyv1.PodDisruptionBudget, error) {

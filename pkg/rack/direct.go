@@ -3,7 +3,6 @@ package rack
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -87,7 +86,7 @@ func TrySaveDirectMeta(c *stdcli.Context, r Rack, client sdk.Interface) {
 	}
 
 	os.MkdirAll(metaDir, 0700)
-	ioutil.WriteFile(path, data, 0600)
+	os.WriteFile(path, data, 0600)
 }
 
 func (d Direct) Client() (sdk.Interface, error) {
@@ -211,7 +210,7 @@ func listDirect(c *stdcli.Context) ([]Direct, error) {
 		return []Direct{}, nil
 	}
 
-	subs, err := ioutil.ReadDir(dir)
+	subs, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
@@ -225,7 +224,7 @@ func listDirect(c *stdcli.Context) ([]Direct, error) {
 			continue
 		}
 
-		url, err := ioutil.ReadFile(filepath.Join(dir, sub.Name()))
+		url, err := os.ReadFile(filepath.Join(dir, sub.Name()))
 		if err != nil {
 			continue
 		}
@@ -238,7 +237,7 @@ func listDirect(c *stdcli.Context) ([]Direct, error) {
 		d := LoadDirectLazy(sc, sub.Name())
 
 		if metaDir != "" {
-			if metaBytes, err := ioutil.ReadFile(filepath.Join(metaDir, sub.Name()+".json")); err == nil {
+			if metaBytes, err := os.ReadFile(filepath.Join(metaDir, sub.Name()+".json")); err == nil {
 				var meta map[string]string
 				if json.Unmarshal(metaBytes, &meta) == nil {
 					if v, ok := meta["provider"]; ok {

@@ -144,6 +144,13 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 			return errors.WithStack(err)
 		}
 
+		// docker hub auth secret (once per promote, before resource/service/timer loops)
+		if p.hasDockerHubAuth() {
+			if err := p.ensureDockerHubSecret(p.AppNamespace(app)); err != nil {
+				return errors.WithStack(err)
+			}
+		}
+
 		// balancers
 		for _, b := range m.Balancers {
 			data, err := p.releaseTemplateBalancer(a, r, b, m.Labels)
@@ -571,13 +578,20 @@ func (p *Provider) releaseTemplateResource(a *structs.App, e structs.Environment
 	}
 
 	params := map[string]interface{}{
-		"App":        a.Name,
-		"Namespace":  p.AppNamespace(a.Name),
-		"Name":       r.Name,
-		"Parameters": r.Options,
-		"Password":   fmt.Sprintf("%x", sha256.Sum256([]byte(p.Name)))[0:30],
-		"Rack":       p.Name,
-		"Image":      r.Image,
+		"App":            a.Name,
+		"Namespace":      p.AppNamespace(a.Name),
+		"Name":           r.Name,
+		"Parameters":     r.Options,
+		"Password":       fmt.Sprintf("%x", sha256.Sum256([]byte(p.Name)))[0:30],
+		"Rack":           p.Name,
+		"Image":          r.Image,
+		"DockerHubAuth":  p.hasDockerHubAuth(),
+	}
+
+	if r.Image == "" && p.EcrDockerHubCachePrefix != "" {
+		if img := ecrCachedResourceImage(p.EcrDockerHubCachePrefix, r.Type, r.Options); img != "" {
+			params["Image"] = img
+		}
 	}
 
 	data, err := p.RenderTemplate(fmt.Sprintf("resource/%s", r.Type), params)
@@ -651,6 +665,15 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 			items = append(items, vdata)
 		}
 
+		// azure files
+		afdata, err := p.releaseTemplateAzureFiles(a, ss[i])
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		if afdata != nil {
+			items = append(items, afdata)
+		}
+
 		s := ss[i]
 		min := s.Deployment.Minimum
 		max := s.Deployment.Maximum
@@ -688,6 +711,7 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 			"Resources":      s.ResourceMap(),
 			"Service":        s,
 			"KedaIsEnabled":  s.Scale.IsKedaEnabled(),
+			"DockerHubAuth":  p.hasDockerHubAuth(),
 		}
 
 		if ip, err := p.Engine.ResolverHost(); err == nil {
@@ -773,14 +797,15 @@ func (p *Provider) releaseTemplateTimer(a *structs.App, e structs.Environment, r
 	}
 
 	params := map[string]interface{}{
-		"Annotations": t.AnnotationsMap(),
-		"App":         a,
-		"Namespace":   p.AppNamespace(a.Name),
-		"Rack":        p.Name,
-		"Release":     r,
-		"Resources":   s.ResourceMap(),
-		"Service":     s,
-		"Timer":       t,
+		"Annotations":   t.AnnotationsMap(),
+		"App":           a,
+		"Namespace":     p.AppNamespace(a.Name),
+		"Rack":          p.Name,
+		"Release":       r,
+		"Resources":     s.ResourceMap(),
+		"Service":       s,
+		"Timer":         t,
+		"DockerHubAuth": p.hasDockerHubAuth(),
 	}
 
 	if ip, err := p.Engine.ResolverHost(); err == nil {
@@ -820,6 +845,39 @@ func (p *Provider) releaseTemplateEfs(a *structs.App, s manifest.Service) ([]byt
 	}
 
 	data, err := p.RenderTemplate("app/efs", params)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return data, nil
+}
+
+func (p *Provider) releaseTemplateAzureFiles(a *structs.App, s manifest.Service) ([]byte, error) {
+	hasAzureFiles := false
+	for i := range s.VolumeOptions {
+		if s.VolumeOptions[i].AzureFiles != nil {
+			hasAzureFiles = true
+			if p.AzureFilesEnabled != "true" {
+				return nil, structs.ErrBadRequest("azure files is not enabled but azureFiles volume is specified")
+			}
+		}
+		if err := s.VolumeOptions[i].Validate(); err != nil {
+			return nil, err
+		}
+	}
+
+	if !hasAzureFiles {
+		return nil, nil
+	}
+
+	params := map[string]interface{}{
+		"App":       a,
+		"Namespace": p.AppNamespace(a.Name),
+		"Rack":      p.Name,
+		"Service":   s,
+	}
+
+	data, err := p.RenderTemplate("app/azurefiles", params)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -1079,4 +1137,40 @@ func (p *Provider) applyAnnotationsToHPA(app string, service string, annotations
 		return errors.WithStack(err)
 	}
 	return nil
+}
+
+// resourceDefaultImages maps resource types to their default Docker Hub image references.
+// Library images use just the name (e.g. "redis"), non-library images include the org (e.g. "postgis/postgis").
+var resourceDefaultImages = map[string]struct {
+	image          string
+	defaultVersion string
+	isLibrary      bool
+}{
+	"redis":     {image: "redis", defaultVersion: "4.0.10", isLibrary: true},
+	"postgres":  {image: "postgres", defaultVersion: "10.5", isLibrary: true},
+	"mysql":     {image: "mysql", defaultVersion: "5.7.23", isLibrary: true},
+	"mariadb":   {image: "mariadb", defaultVersion: "10.6.0", isLibrary: true},
+	"memcached": {image: "memcached", defaultVersion: "1.4.34", isLibrary: true},
+	"postgis":   {image: "postgis/postgis", defaultVersion: "10-3.2", isLibrary: false},
+}
+
+// ecrCachedResourceImage returns the ECR pull-through cache URL for a resource's Docker Hub image.
+// Returns empty string if the resource type is not recognized.
+func ecrCachedResourceImage(prefix, resourceType string, options map[string]string) string {
+	info, ok := resourceDefaultImages[resourceType]
+	if !ok {
+		return ""
+	}
+
+	version := info.defaultVersion
+	if v, ok := options["version"]; ok && v != "" {
+		version = v
+	}
+
+	imagePath := info.image
+	if info.isLibrary {
+		imagePath = "library/" + imagePath
+	}
+
+	return fmt.Sprintf("%s/%s:%s", strings.TrimRight(prefix, "/"), imagePath, version)
 }

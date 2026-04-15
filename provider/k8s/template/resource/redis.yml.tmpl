@@ -48,6 +48,10 @@ spec:
         type: resource
         resource: {{.Name}}
     spec:
+      {{ if .DockerHubAuth }}
+      imagePullSecrets:
+      - name: docker-hub-authentication
+      {{ end }}
       containers:
       - name: redis
         image: {{ if not .Image }}redis:{{ coalesce (index .Parameters "version") "4.0.10" }}{{ else }}{{ .Image }}{{ end }}

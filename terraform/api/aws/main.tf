@@ -22,6 +22,7 @@ module "k8s" {
   docker_hub_authentication      = var.docker_hub_authentication
   docker_hub_username            = var.docker_hub_username
   docker_hub_password            = var.docker_hub_password
+  ecr_docker_hub_cache_prefix    = var.ecr_docker_hub_cache_prefix
   domain                         = var.domain
   domain_internal                = var.domain_internal
   disable_image_manifest_cache   = var.disable_image_manifest_cache

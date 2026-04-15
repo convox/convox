@@ -2,10 +2,10 @@ package cli_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -59,7 +59,7 @@ func TestRacksRemote(t *testing.T) {
 		tsu, err := url.Parse(ts.URL)
 		require.NoError(t, err)
 
-		err = ioutil.WriteFile(filepath.Join(e.Settings, "console"), []byte(tsu.Host), 0644)
+		err = os.WriteFile(filepath.Join(e.Settings, "console"), []byte(tsu.Host), 0644)
 		require.NoError(t, err)
 
 		res, err := testExecute(e, "racks", nil)
@@ -92,7 +92,7 @@ func TestRacksLocalAndRemote(t *testing.T) {
 		tsu, err := url.Parse(ts.URL)
 		require.NoError(t, err)
 
-		err = ioutil.WriteFile(filepath.Join(e.Settings, "console"), []byte(tsu.Host), 0644)
+		err = os.WriteFile(filepath.Join(e.Settings, "console"), []byte(tsu.Host), 0644)
 		require.NoError(t, err)
 
 		res, err := testExecute(e, "racks", nil)
@@ -122,7 +122,7 @@ func TestRacksError(t *testing.T) {
 		tsu, err := url.Parse(ts.URL)
 		require.NoError(t, err)
 
-		err = ioutil.WriteFile(filepath.Join(e.Settings, "host"), []byte(tsu.Host), 0644)
+		err = os.WriteFile(filepath.Join(e.Settings, "host"), []byte(tsu.Host), 0644)
 		require.NoError(t, err)
 
 		me := &mockstdcli.Executor{}

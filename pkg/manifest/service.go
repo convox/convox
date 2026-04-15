@@ -91,8 +91,9 @@ type InitContainer struct {
 }
 
 type VolumeOption struct {
-	EmptyDir *VolumeEmptyDir `yaml:"emptyDir,omitempty"`
-	AwsEfs   *VolumeAwsEfs   `yaml:"awsEfs,omitempty"`
+	EmptyDir   *VolumeEmptyDir   `yaml:"emptyDir,omitempty"`
+	AwsEfs     *VolumeAwsEfs     `yaml:"awsEfs,omitempty"`
+	AzureFiles *VolumeAzureFiles `yaml:"azureFiles,omitempty"`
 }
 
 func (v VolumeOption) Validate() error {
@@ -101,6 +102,9 @@ func (v VolumeOption) Validate() error {
 	}
 	if v.AwsEfs != nil {
 		return v.AwsEfs.Validate()
+	}
+	if v.AzureFiles != nil {
+		return v.AzureFiles.Validate()
 	}
 	return nil
 }
@@ -162,6 +166,49 @@ func (v *VolumeAwsEfs) ProcessTemplate(efsFsId, app, service string) {
 
 	v.VolumeHandle = strings.ReplaceAll(v.VolumeHandle, "[APP]", app)
 	v.VolumeHandle = strings.ReplaceAll(v.VolumeHandle, "[SERVICE]", service)
+}
+
+type VolumeAzureFiles struct {
+	Id string `yaml:"id"`
+
+	AccessMode string `yaml:"accessMode,omitempty"`
+	MountPath  string `yaml:"mountPath"`
+	ShareSize  string `yaml:"shareSize,omitempty"`
+}
+
+func (v VolumeAzureFiles) Validate() error {
+	if v.Id == "" {
+		return fmt.Errorf("azureFiles.id is required")
+	}
+	if !NameValidator.MatchString(v.Id) {
+		return fmt.Errorf("azureFiles.id must match %s", NameValidator.String())
+	}
+	if v.MountPath == "" {
+		return fmt.Errorf("azureFiles.mountPath is required")
+	}
+
+	allowedModes := []string{
+		PVCAccessModeReadOnlyMany,
+		PVCAccessModeReadWriteMany,
+		PVCAccessModeReadWriteOnce,
+	}
+
+	if !containsInStringSlice(allowedModes, v.AccessMode) {
+		return fmt.Errorf("azureFiles.accessMode must be one of these values: %s", strings.Join(allowedModes, ", "))
+	}
+
+	if v.ShareSize != "" {
+		qty, err := resource.ParseQuantity(v.ShareSize)
+		if err != nil {
+			return fmt.Errorf("azureFiles.shareSize is invalid: %s", v.ShareSize)
+		}
+		minQty := resource.MustParse("100Gi")
+		if qty.Cmp(minQty) < 0 {
+			return fmt.Errorf("azureFiles.shareSize must be at least 100Gi (Azure Premium NFS minimum)")
+		}
+	}
+
+	return nil
 }
 
 type Services []Service

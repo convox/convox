@@ -762,28 +762,8 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 		})
 	}
 
-	if p.DockerUsername != "" && p.DockerPassword != "" {
-		_, err = p.CreateOrPatchSecret(p.ctx, am.ObjectMeta{
-			Name:      "docker-hub-authentication",
-			Namespace: p.AppNamespace(app),
-		}, func(s *ac.Secret) *ac.Secret {
-			s.Data = map[string][]byte{
-				".dockerconfigjson": []byte(fmt.Sprintf(
-					`{
-				"auths": {
-				  "https://index.docker.io/v2/": {
-					"auth": "%s" 
-				  }
-				}
-			  }`, base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", p.DockerUsername, p.DockerPassword))))),
-			}
-			s.Type = "kubernetes.io/dockerconfigjson"
-			return s
-		}, am.PatchOptions{
-			FieldManager: "convox",
-		},
-		)
-		if err != nil {
+	if p.hasDockerHubAuth() {
+		if err := p.ensureDockerHubSecret(p.AppNamespace(app)); err != nil {
 			return nil, errors.WithStack(err)
 		}
 
@@ -847,6 +827,33 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 	s.RestartPolicy = "Never"
 
 	return s, nil
+}
+
+func (p *Provider) ensureDockerHubSecret(namespace string) error {
+	_, err := p.CreateOrPatchSecret(p.ctx, am.ObjectMeta{
+		Name:      "docker-hub-authentication",
+		Namespace: namespace,
+	}, func(s *ac.Secret) *ac.Secret {
+		s.Data = map[string][]byte{
+			".dockerconfigjson": []byte(fmt.Sprintf(
+				`{
+				"auths": {
+				  "https://index.docker.io/v1/": {
+					"auth": "%s"
+				  }
+				}
+			  }`, base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", p.DockerUsername, p.DockerPassword))))),
+		}
+		s.Type = "kubernetes.io/dockerconfigjson"
+		return s
+	}, am.PatchOptions{
+		FieldManager: "convox",
+	})
+	return errors.WithStack(err)
+}
+
+func (p *Provider) hasDockerHubAuth() bool {
+	return p.DockerUsername != "" && p.DockerPassword != ""
 }
 
 func (p *Provider) podVolume(app, from string) ac.Volume {

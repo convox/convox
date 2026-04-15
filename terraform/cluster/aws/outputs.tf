@@ -64,3 +64,7 @@ output "karpenter_node_role_name" {
 output "karpenter_interruption_queue_name" {
   value = var.karpenter_enabled ? aws_sqs_queue.karpenter_interruption[0].name : ""
 }
+
+output "ecr_docker_hub_cache_prefix" {
+  value = var.ecr_docker_hub_cache ? "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/docker-hub-${var.name}" : ""
+}

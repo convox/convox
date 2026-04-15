@@ -41,7 +41,7 @@ resource "kubernetes_secret" "docker_hub_authentication" {
     ".dockerconfigjson" = <<DOCKER
 {
   "auths": {
-    "https://index.docker.io/v2/": {
+    "https://index.docker.io/v1/": {
       "auth": "${base64encode("${var.docker_hub_username}:${var.docker_hub_password}")}"
     }
   }

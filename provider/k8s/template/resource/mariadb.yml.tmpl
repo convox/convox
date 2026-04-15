@@ -67,6 +67,10 @@ spec:
         type: resource
         resource: {{.Name}}
     spec:
+      {{ if .DockerHubAuth }}
+      imagePullSecrets:
+      - name: docker-hub-authentication
+      {{ end }}
       containers:
       - name: mariadb
         image: {{ if not .Image }}mariadb:{{ coalesce (index .Parameters "version") "10.6.0" }}{{ else }}{{ .Image }}{{ end }}

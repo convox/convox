@@ -48,6 +48,10 @@ spec:
         type: resource
         resource: {{.Name}}
     spec:
+      {{ if .DockerHubAuth }}
+      imagePullSecrets:
+      - name: docker-hub-authentication
+      {{ end }}
       containers:
       - name: memcached
         image: {{ if not .Image }}memcached:{{ coalesce (index .Parameters "version") "1.4.34" }}{{ else }}{{ .Image }}{{ end }}

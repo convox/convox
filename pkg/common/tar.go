@@ -77,7 +77,7 @@ func Tarball(dir string) ([]byte, error) {
 		return nil, err
 	}
 
-	data, err := ioutil.ReadFile(filepath.Join(sym, ".dockerignore"))
+	data, err := os.ReadFile(filepath.Join(sym, ".dockerignore"))
 	if err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}

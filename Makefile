@@ -1,4 +1,4 @@
-.PHONY: all build clean clean-package compress dev generate generate-k8s generate-provider mocks package release test tools vendor
+.PHONY: all build clean clean-package compress dev generate generate-k8s generate-provider lint lint-new lint-tf lint-security lint-all mocks package release setup test tools validate vendor
 
 commands = api atom build convox docs resolver
 
@@ -60,6 +60,35 @@ release:
 
 test:
 	env TEST=true go test -covermode atomic -coverprofile coverage.txt -mod=vendor ./...
+
+lint:
+	golangci-lint run --timeout 5m ./...
+
+lint-new:
+	golangci-lint run --timeout 5m --new-from-rev=$$(git merge-base HEAD master) ./...
+
+lint-tf:
+	@for dir in $$(find terraform -name '*.tf' -not -path './vendor/*' -not -path '*/.terraform/*' -exec dirname {} \; | sort -u); do \
+		echo "==> tflint $$dir"; \
+		(cd $$dir && tflint --config $$(git rev-parse --show-toplevel)/.tflint.hcl) || exit 1; \
+		echo "==> terraform validate $$dir"; \
+		(cd $$dir && terraform init -backend=false -input=false > /dev/null 2>&1 && terraform validate) || exit 1; \
+	done
+
+validate:
+	@for dir in $$(find terraform -name '*.tf' -not -path './vendor/*' -not -path '*/.terraform/*' -exec dirname {} \; | sort -u); do \
+		echo "==> terraform validate $$dir"; \
+		(cd $$dir && terraform init -backend=false -input=false > /dev/null 2>&1 && terraform validate) || exit 1; \
+	done
+
+lint-security:
+	checkov -d terraform --framework terraform --compact
+
+lint-all: lint lint-tf lint-security
+
+setup:
+	pip install pre-commit
+	pre-commit install
 
 tools:
 	go install -mod=vendor ./vendor/github.com/crazy-max/xgo
