@@ -44,6 +44,50 @@ Create a build
     Release: RABCDEFGHI
 ```
 
+### External Builds
+
+> External builds are available since Convox **3.0.50**.
+
+The `--external` flag runs the Docker build **locally** on your machine (or CI runner) instead of uploading the source to the rack for in-cluster building. This is useful when:
+
+- Your source directory is large (e.g., ML model weights, large assets)
+- Source uploads are timing out through the load balancer
+- You want to leverage local Docker layer caching for faster builds
+- You are building from a CI pipeline that already has the source checked out
+
+#### How It Works
+
+A standard build packages the entire source directory into a tarball, uploads it through the rack's load balancer, and builds the image in-cluster. With `--external`, the flow changes:
+
+1. The CLI creates a build record on the rack (a small API call)
+2. The rack returns container registry credentials (ECR on AWS, ACR on Azure)
+3. Docker builds the image **locally** using your source directory
+4. The CLI pushes the built image **directly** to the rack's container registry
+5. A release is created on the rack referencing the pushed image
+
+The source tarball never passes through the load balancer, so there are no upload size or timeout constraints.
+
+#### Requirements
+
+- Docker must be running on the machine executing the build
+- The machine must have network access to the rack's container registry
+
+#### Example
+
+```bash
+    $ convox build --external -a myapp
+    Building: .
+    Sending build context to Docker daemon  2.51GB
+    Step 1/10 : FROM python:3.11-slim AS base
+     ---> a1b2c3d4e5f6
+    ...
+    Running: docker push 1234567890.dkr.ecr.us-east-1.amazonaws.com/test-regis-1mjiluel3aiv3:web.BABCDEFGHI
+    Build:   BABCDEFGHI
+    Release: RABCDEFGHI
+```
+
+> **Note:** `convox deploy --external` works the same way but also promotes the release after building.
+
 ### Pass build time env vars
 
 You can pass env vars that will only exist at build time.

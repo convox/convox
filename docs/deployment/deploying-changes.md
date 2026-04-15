@@ -64,12 +64,40 @@ against the new [Release](/reference/primitives/app/release) before it is pushed
     OK
 ```
 
+## External Builds
+
+By default, `convox build` and `convox deploy` package your entire source directory into a tarball and upload it to the rack for in-cluster building. For applications with large source directories (e.g., machine learning model weights, large binary assets), this upload can be slow or hit load balancer timeout limits.
+
+The `--external` flag changes this flow by building the Docker image **locally** and pushing it directly to the rack's container registry:
+
+```bash
+    convox build --external -a myapp
+    convox deploy --external -a myapp
+```
+
+With external builds:
+
+1. The CLI creates a build record on the rack (a small API call)
+2. The rack returns container registry credentials
+3. Docker builds the image locally using your source directory
+4. The CLI pushes the built image directly to the rack's container registry (ECR on AWS, ACR on Azure)
+5. A release is created on the rack
+
+The source tarball never passes through the rack's load balancer, eliminating upload size and timeout constraints. This approach also benefits from local Docker layer caching for faster rebuilds.
+
+**Requirements:**
+
+- Docker must be installed and running on the build machine
+- The build machine must have network access to the rack's container registry
+
+External builds work on all cloud providers (AWS, Azure, GCP) and are well-suited for CI/CD pipelines. See the [build](/reference/cli/build#external-builds) CLI reference for more details.
+
 ## Troubleshooting Failed Deployments
 
 If a deployment fails or hangs, use `convox deploy-debug` to diagnose the issue:
 
 ```bash
-    $ convox deploy-debug -a myapp
+    convox deploy-debug -a myapp
 ```
 
 This command inspects your app's pods and provides actionable hints for common failure states like crash loops, image pull errors, OOM kills, and health check failures. See the [deploy-debug](/reference/cli/deploy-debug) reference for details.
