@@ -2,11 +2,16 @@ package aws
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/pkg/errors"
+	ae "k8s.io/apimachinery/pkg/api/errors"
+	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (p *Provider) InstanceKeyroll() (*structs.KeyPair, error) {
@@ -23,6 +28,47 @@ func (p *Provider) InstanceKeyroll() (*structs.KeyPair, error) {
 		Name:       &key,
 		PrivateKey: res.KeyMaterial,
 	}, nil
+}
+
+func (p *Provider) InstanceTerminate(id string) error {
+	ctx := p.Provider.Context()
+
+	node, err := p.Cluster.CoreV1().Nodes().Get(ctx, id, am.GetOptions{})
+	if err != nil {
+		if ae.IsNotFound(err) {
+			return errors.WithStack(structs.ErrNotFound("instance not found: %s", id))
+		}
+		return errors.WithStack(err)
+	}
+
+	instanceID := parseInstanceID(node.Spec.ProviderID)
+
+	if err := p.Provider.InstanceTerminate(id); err != nil {
+		return err
+	}
+
+	if instanceID != "" {
+		_, err := p.Ec2.TerminateInstances(&ec2.TerminateInstancesInput{
+			InstanceIds: []*string{aws.String(instanceID)},
+		})
+		if err != nil {
+			return errors.WithStack(fmt.Errorf("failed to terminate EC2 instance %s: %s", instanceID, err))
+		}
+	}
+
+	return nil
+}
+
+func parseInstanceID(providerID string) string {
+	if !strings.HasPrefix(providerID, "aws://") {
+		return ""
+	}
+	parts := strings.Split(strings.TrimPrefix(providerID, "aws://"), "/")
+	instanceID := parts[len(parts)-1]
+	if !strings.HasPrefix(instanceID, "i-") {
+		return ""
+	}
+	return instanceID
 }
 
 func (p *Provider) GPUIntanceList(instanceTypes []string) ([]string, error) {

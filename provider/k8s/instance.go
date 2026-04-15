@@ -188,6 +188,11 @@ func (p *Provider) InstanceShell(id string, rw io.ReadWriter, opts structs.Insta
 	return code, nil
 }
 
+const (
+	drainTimeout          = 5 * time.Minute
+	evictionRetryInterval = 5 * time.Second
+)
+
 func (p *Provider) InstanceTerminate(id string) error {
 	ctx := context.TODO()
 
@@ -203,21 +208,19 @@ func (p *Provider) InstanceTerminate(id string) error {
 	if !node.Spec.Unschedulable {
 		patch := []byte(`{"spec":{"unschedulable":true}}`)
 		if _, err := p.Cluster.CoreV1().Nodes().Patch(ctx, id, types.StrategicMergePatchType, patch, am.PatchOptions{}); err != nil {
-			return errors.WithStack(fmt.Errorf("failed to cordon node %s: %w", id, err))
+			return errors.WithStack(fmt.Errorf("failed to cordon node %s: %s", id, err))
 		}
 	}
 
 	nodeReady := isNodeReady(node)
 
-	// evict or force-delete pods on the node
 	if err := p.drainNode(ctx, id, nodeReady); err != nil {
-		return errors.WithStack(fmt.Errorf("failed to drain node %s: %w", id, err))
+		return errors.WithStack(fmt.Errorf("failed to drain node %s: %s", id, err))
 	}
 
-	// delete the node object
 	if err := p.Cluster.CoreV1().Nodes().Delete(ctx, id, am.DeleteOptions{}); err != nil {
 		if !ae.IsNotFound(err) {
-			return errors.WithStack(fmt.Errorf("failed to delete node %s: %w", id, err))
+			return errors.WithStack(fmt.Errorf("failed to delete node %s: %s", id, err))
 		}
 	}
 
@@ -241,6 +244,8 @@ func (p *Provider) drainNode(ctx context.Context, nodeName string, nodeReady boo
 		return errors.WithStack(err)
 	}
 
+	deadline := time.Now().Add(drainTimeout)
+
 	for i := range pods.Items {
 		pod := &pods.Items[i]
 
@@ -249,17 +254,17 @@ func (p *Provider) drainNode(ctx context.Context, nodeName string, nodeReady boo
 			continue
 		}
 
-		// skip DaemonSet-managed pods — they're expected on every node
+		// skip DaemonSet-managed pods
 		if isDaemonSetPod(pod) {
 			continue
 		}
 
 		if nodeReady {
-			if err := p.evictPod(ctx, pod); err != nil {
+			if err := p.evictPod(ctx, pod, deadline); err != nil {
 				return err
 			}
 		} else {
-			// on NotReady nodes the kubelet can't process evictions, force-delete
+			// on NotReady nodes the kubelet can't process evictions
 			if err := p.forceDeletePod(ctx, pod); err != nil {
 				return err
 			}
@@ -278,7 +283,7 @@ func isDaemonSetPod(pod *ac.Pod) bool {
 	return false
 }
 
-func (p *Provider) evictPod(ctx context.Context, pod *ac.Pod) error {
+func (p *Provider) evictPod(ctx context.Context, pod *ac.Pod, deadline time.Time) error {
 	eviction := &policyv1.Eviction{
 		ObjectMeta: am.ObjectMeta{
 			Name:      pod.Name,
@@ -286,26 +291,28 @@ func (p *Provider) evictPod(ctx context.Context, pod *ac.Pod) error {
 		},
 	}
 
-	err := p.Cluster.CoreV1().Pods(pod.Namespace).EvictV1(ctx, eviction)
-	if err != nil {
+	for {
+		err := p.Cluster.CoreV1().Pods(pod.Namespace).EvictV1(ctx, eviction)
+		if err == nil {
+			return nil
+		}
+
 		if ae.IsNotFound(err) {
 			return nil
 		}
-		// if eviction fails (e.g. PDB blocks it), fall back to force-delete
+
+		// PDB is blocking eviction — retry until deadline
+		if ae.IsTooManyRequests(err) {
+			if time.Now().After(deadline) {
+				return p.forceDeletePod(ctx, pod)
+			}
+			time.Sleep(evictionRetryInterval)
+			continue
+		}
+
+		// other errors — force delete
 		return p.forceDeletePod(ctx, pod)
 	}
-
-	// wait up to 30 seconds for the pod to be removed
-	for i := 0; i < 30; i++ {
-		_, err := p.Cluster.CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, am.GetOptions{})
-		if ae.IsNotFound(err) {
-			return nil
-		}
-		time.Sleep(1 * time.Second)
-	}
-
-	// pod still exists after timeout, force-delete it
-	return p.forceDeletePod(ctx, pod)
 }
 
 func (p *Provider) forceDeletePod(ctx context.Context, pod *ac.Pod) error {
@@ -314,7 +321,7 @@ func (p *Provider) forceDeletePod(ctx context.Context, pod *ac.Pod) error {
 		GracePeriodSeconds: &grace,
 	})
 	if err != nil && !ae.IsNotFound(err) {
-		return errors.WithStack(fmt.Errorf("failed to force-delete pod %s/%s: %w", pod.Namespace, pod.Name, err))
+		return errors.WithStack(fmt.Errorf("failed to force-delete pod %s/%s: %s", pod.Namespace, pod.Name, err))
 	}
 	return nil
 }

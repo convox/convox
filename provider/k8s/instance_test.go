@@ -182,6 +182,18 @@ func TestInstanceTerminateReadyNode(t *testing.T) {
 	// DaemonSet pod should still exist (was skipped)
 	_, err = c.CoreV1().Pods("kube-system").Get(context.TODO(), "ds-pod", am.GetOptions{})
 	require.NoError(t, err)
+
+	// verify eviction was called for app-pod in default namespace
+	// (fake client records actions but doesn't actually delete pods on eviction)
+	evictionCalled := false
+	for _, action := range c.Actions() {
+		if action.GetVerb() == "create" && action.GetResource().Resource == "pods" &&
+			action.GetSubresource() == "eviction" && action.GetNamespace() == "default" {
+			evictionCalled = true
+			break
+		}
+	}
+	require.True(t, evictionCalled, "eviction should have been called for app-pod in default namespace")
 }
 
 func TestInstanceTerminateNotReadyNode(t *testing.T) {
