@@ -2,7 +2,6 @@ package aws
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -55,15 +54,3 @@ func (p *Provider) KarpenterCleanup() error {
 	return nil
 }
 
-func parseInstanceID(providerID string) string {
-	if !strings.HasPrefix(providerID, "aws://") {
-		return ""
-	}
-	id := strings.TrimPrefix(providerID, "aws://")
-	parts := strings.Split(id, "/")
-	instanceID := parts[len(parts)-1]
-	if !strings.HasPrefix(instanceID, "i-") {
-		return ""
-	}
-	return instanceID
-}
