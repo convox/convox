@@ -1514,10 +1514,20 @@ func RackParams(_ sdk.Interface, c *stdcli.Context) error {
 
 	sort.Strings(keys)
 
+	sensitiveParams := map[string]bool{
+		"docker_hub_password": true,
+		"secret_key":          true,
+		"token":               true,
+	}
+
 	i := c.Info()
 
 	for _, k := range keys {
-		i.Add(k, params[k])
+		v := params[k]
+		if sensitiveParams[k] && v != "" {
+			v = "**********"
+		}
+		i.Add(k, v)
 	}
 
 	return i.Print()
