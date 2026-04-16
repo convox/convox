@@ -15,7 +15,7 @@ func TestVersion(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		require.NoError(t, testLocalRack(e, "dev1", "local", "https://host1"))
 
-		err := os.WriteFile(filepath.Join(e.Settings, "host"), []byte("host1"), 0644)
+		err := os.WriteFile(filepath.Join(e.Settings, "host"), []byte("host1"), 0600)
 		require.NoError(t, err)
 
 		i.On("SystemGet").Return(fxSystem(), nil)
@@ -35,7 +35,7 @@ func TestVersionError(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		require.NoError(t, testLocalRack(e, "dev1", "local", "https://host1"))
 
-		err := os.WriteFile(filepath.Join(e.Settings, "host"), []byte("host1"), 0644)
+		err := os.WriteFile(filepath.Join(e.Settings, "host"), []byte("host1"), 0600)
 		require.NoError(t, err)
 
 		i.On("SystemGet").Return(nil, fmt.Errorf("err1"))

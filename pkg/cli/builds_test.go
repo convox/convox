@@ -161,7 +161,7 @@ func TestBuildsExport(t *testing.T) {
 		data, err := os.ReadFile("testdata/build.tgz")
 		require.NoError(t, err)
 		i.On("BuildExport", "app1", "build1", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
-			args.Get(2).(io.Writer).Write(data)
+			args.Get(2).(io.Writer).Write(data) //nolint:errcheck // mock type assertion
 		})
 		tmpd, err := os.MkdirTemp("", "")
 		require.NoError(t, err)
@@ -183,7 +183,7 @@ func TestBuildsExportStdout(t *testing.T) {
 		data, err := os.ReadFile("testdata/build.tgz")
 		require.NoError(t, err)
 		i.On("BuildExport", "app1", "build1", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
-			args.Get(2).(io.Writer).Write(data)
+			args.Get(2).(io.Writer).Write(data) //nolint:errcheck // mock type assertion
 		})
 
 		res, err := testExecute(e, "builds export build1 -a app1", nil)
@@ -212,7 +212,7 @@ func TestBuildsImport(t *testing.T) {
 		require.NoError(t, err)
 		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("BuildImport", "app1", mock.Anything).Return(fxBuild(), nil).Run(func(args mock.Arguments) {
-			rdata, err := io.ReadAll(args.Get(1).(io.Reader))
+			rdata, err := io.ReadAll(args.Get(1).(io.Reader)) //nolint:errcheck // mock type assertion
 			require.NoError(t, err)
 			require.Equal(t, data, rdata)
 		})
@@ -244,7 +244,7 @@ func TestBuildsImportClassic(t *testing.T) {
 		require.NoError(t, err)
 		i.On("SystemGet").Return(fxSystemClassic(), nil)
 		i.On("BuildImportMultipart", "app1", mock.Anything).Return(fxBuild(), nil).Run(func(args mock.Arguments) {
-			rdata, err := io.ReadAll(args.Get(1).(io.Reader))
+			rdata, err := io.ReadAll(args.Get(1).(io.Reader)) //nolint:errcheck // mock type assertion
 			require.NoError(t, err)
 			require.Equal(t, data, rdata)
 		})

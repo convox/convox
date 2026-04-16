@@ -123,7 +123,7 @@ func TestObjectStore(t *testing.T) {
 			},
 		}
 		p.On("ObjectStore", "app1", "path/object1.ext", mock.Anything, opts).Return(&o1, nil).Run(func(args mock.Arguments) {
-			data, err := io.ReadAll(args.Get(2).(io.Reader))
+			data, err := io.ReadAll(args.Get(2).(io.Reader)) //nolint:errcheck // mock type assertion
 			require.NoError(t, err)
 			require.Equal(t, "data", string(data))
 		})

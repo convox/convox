@@ -85,8 +85,8 @@ func TrySaveDirectMeta(c *stdcli.Context, r Rack, client sdk.Interface) {
 		return
 	}
 
-	os.MkdirAll(metaDir, 0700)
-	os.WriteFile(path, data, 0600)
+	os.MkdirAll(metaDir, 0700)     //nolint:errcheck // best-effort metadata cache
+	os.WriteFile(path, data, 0600) //nolint:errcheck // best-effort metadata cache
 }
 
 func (d Direct) Client() (sdk.Interface, error) {

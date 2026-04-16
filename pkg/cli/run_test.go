@@ -21,10 +21,10 @@ func TestRun(t *testing.T) {
 		i.On("ProcessGet", "app1", "pid1").Return(fxProcess(), nil)
 		opts := structs.ProcessExecOptions{Entrypoint: options.Bool(true), Tty: options.Bool(false)}
 		i.On("ProcessExec", "app1", "pid1", "bash", mock.Anything, opts).Return(4, nil).Run(func(args mock.Arguments) {
-			data, err := io.ReadAll(args.Get(3).(io.Reader))
+			data, err := io.ReadAll(args.Get(3).(io.Reader)) //nolint:errcheck // mock type assertion
 			require.NoError(t, err)
 			require.Equal(t, "in", string(data))
-			args.Get(3).(io.Writer).Write([]byte("out"))
+			args.Get(3).(io.Writer).Write([]byte("out")) //nolint:errcheck // mock type assertion
 		})
 		i.On("ProcessStop", "app1", "pid1").Return(nil)
 
