@@ -46,7 +46,7 @@ var awsKnownParams = map[string]bool{
 	"deploy_extra_nlb": true, "disable_convox_resolver": true,
 	"disable_image_manifest_cache": true, "disable_public_access": true,
 	"docker_hub_password": true, "docker_hub_username": true,
-	"ebs_volume_encryption_enabled": true, "ecr_scan_on_push_enable": true,
+	"ebs_volume_encryption_enabled": true, "ecr_docker_hub_cache": true, "ecr_scan_on_push_enable": true,
 	"efs_csi_driver_enable": true, "efs_csi_driver_version": true,
 	"eks_api_server_public_access_cidrs": true, "enable_private_access": true,
 	"fluentd_disable": true, "fluentd_memory": true,
