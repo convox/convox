@@ -18,10 +18,10 @@ func TestExec(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		opts := structs.ProcessExecOptions{Tty: options.Bool(false)}
 		i.On("ProcessExec", "app1", "0123456789", "bash", mock.Anything, opts).Return(4, nil).Run(func(args mock.Arguments) {
-			data, err := io.ReadAll(args.Get(3).(io.Reader))
+			data, err := io.ReadAll(args.Get(3).(io.Reader)) //nolint:errcheck // mock type assertion
 			require.NoError(t, err)
 			require.Equal(t, "in", string(data))
-			args.Get(3).(io.Writer).Write([]byte("out"))
+			args.Get(3).(io.Writer).Write([]byte("out")) //nolint:errcheck // mock type assertion
 		})
 
 		res, err := testExecute(e, "exec 0123456789 bash -a app1", strings.NewReader("in"))

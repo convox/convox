@@ -76,7 +76,7 @@ func TestFilesUpload(t *testing.T) {
 			Body: strings.NewReader("data"),
 		}
 		p.On("FilesUpload", "app1", "pid1", mock.Anything, mock.Anything).Return(nil).Run(func(args mock.Arguments) {
-			data, err := io.ReadAll(args.Get(2).(io.Reader))
+			data, err := io.ReadAll(args.Get(2).(io.Reader)) //nolint:errcheck // mock type assertion
 			require.NoError(t, err)
 			require.Equal(t, "data", string(data))
 		})

@@ -137,7 +137,7 @@ func TestBuildImport(t *testing.T) {
 			Body: strings.NewReader("data"),
 		}
 		p.On("BuildImport", "app1", mock.Anything).Return(&b1, nil).Run(func(args mock.Arguments) {
-			data, err := io.ReadAll(args.Get(1).(io.Reader))
+			data, err := io.ReadAll(args.Get(1).(io.Reader)) //nolint:errcheck // mock type assertion
 			require.NoError(t, err)
 			require.Equal(t, "data", string(data))
 		})

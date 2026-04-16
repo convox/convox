@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"context"
 	"io"
 	"strings"
 
@@ -30,7 +31,7 @@ func (p *Provider) FilesDelete(app, pid string, files []string) error {
 		return errors.WithStack(err)
 	}
 
-	if err := exec.Stream(remotecommand.StreamOptions{Stdout: io.Discard}); err != nil {
+	if err := exec.StreamWithContext(p.ctx, remotecommand.StreamOptions{Stdout: io.Discard}); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -56,7 +57,7 @@ func (p *Provider) FilesDownload(app, pid, file string) (io.Reader, error) {
 	r, w := io.Pipe()
 
 	go func() {
-		exec.Stream(remotecommand.StreamOptions{Stdout: w})
+		exec.StreamWithContext(context.Background(), remotecommand.StreamOptions{Stdout: w}) //nolint:errcheck // fire-and-forget stream; pipe EOF signals completion
 		w.Close()
 	}()
 
@@ -86,7 +87,7 @@ func (p *Provider) FilesUpload(app, pid string, r io.Reader, opts structs.FileTr
 		return errors.WithStack(err)
 	}
 
-	if err := exec.Stream(remotecommand.StreamOptions{Stdin: r}); err != nil {
+	if err := exec.StreamWithContext(p.ctx, remotecommand.StreamOptions{Stdin: r}); err != nil {
 		return errors.WithStack(err)
 	}
 

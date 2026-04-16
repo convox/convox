@@ -176,7 +176,7 @@ func TestAppsExport(t *testing.T) {
 		bdata, err := os.ReadFile("testdata/build.tgz")
 		require.NoError(t, err)
 		i.On("BuildExport", "app1", "build1", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
-			args.Get(2).(io.Writer).Write(bdata)
+			args.Get(2).(io.Writer).Write(bdata) //nolint:errcheck // mock type assertion
 		})
 		i.On("ResourceList", "app1").Return(structs.Resources{*fxResource()}, nil)
 		rdata, err := os.ReadFile("testdata/resource.export")
@@ -231,14 +231,14 @@ func TestAppsImport(t *testing.T) {
 		bdata, err := os.ReadFile("testdata/build.tgz")
 		require.NoError(t, err)
 		i.On("BuildImport", "app1", mock.Anything).Return(fxBuild(), nil).Run(func(args mock.Arguments) {
-			rdata, err := io.ReadAll(args.Get(1).(io.Reader))
+			rdata, err := io.ReadAll(args.Get(1).(io.Reader)) //nolint:errcheck // mock type assertion
 			require.NoError(t, err)
 			require.Equal(t, bdata, rdata)
 		})
 		i.On("ReleaseCreate", "app1", structs.ReleaseCreateOptions{Env: options.String("ALPHA=one\nBRAVO=two\n")}).Return(fxRelease(), nil)
 		i.On("ReleasePromote", "app1", "release1", structs.ReleasePromoteOptions{}).Return(nil)
 		i.On("ResourceImport", "app1", "resource1", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
-			rdata, err := io.ReadAll(args.Get(2).(io.Reader))
+			rdata, err := io.ReadAll(args.Get(2).(io.Reader)) //nolint:errcheck // mock type assertion
 			require.NoError(t, err)
 			require.Equal(t, "resourcedata\n", string(rdata))
 		})
@@ -291,7 +291,7 @@ func TestAppsImportNoParams(t *testing.T) {
 		bdata, err := os.ReadFile("testdata/build.tgz")
 		require.NoError(t, err)
 		i.On("BuildImport", "app1", mock.Anything).Return(fxBuild(), nil).Run(func(args mock.Arguments) {
-			rdata, err := io.ReadAll(args.Get(1).(io.Reader))
+			rdata, err := io.ReadAll(args.Get(1).(io.Reader)) //nolint:errcheck // mock type assertion
 			require.NoError(t, err)
 			require.Equal(t, bdata, rdata)
 		})
@@ -320,7 +320,7 @@ func TestAppsImportSameParams(t *testing.T) {
 		bdata, err := os.ReadFile("testdata/build.tgz")
 		require.NoError(t, err)
 		i.On("BuildImport", "app1", mock.Anything).Return(fxBuild(), nil).Run(func(args mock.Arguments) {
-			rdata, err := io.ReadAll(args.Get(1).(io.Reader))
+			rdata, err := io.ReadAll(args.Get(1).(io.Reader)) //nolint:errcheck // mock type assertion
 			require.NoError(t, err)
 			require.Equal(t, bdata, rdata)
 		})
@@ -349,7 +349,7 @@ func TestAppsImportNoResources(t *testing.T) {
 		bdata, err := os.ReadFile("testdata/build.tgz")
 		require.NoError(t, err)
 		i.On("BuildImport", "app1", mock.Anything).Return(fxBuild(), nil).Run(func(args mock.Arguments) {
-			rdata, err := io.ReadAll(args.Get(1).(io.Reader))
+			rdata, err := io.ReadAll(args.Get(1).(io.Reader)) //nolint:errcheck // mock type assertion
 			require.NoError(t, err)
 			require.Equal(t, bdata, rdata)
 		})

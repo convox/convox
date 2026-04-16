@@ -578,14 +578,14 @@ func (p *Provider) releaseTemplateResource(a *structs.App, e structs.Environment
 	}
 
 	params := map[string]interface{}{
-		"App":            a.Name,
-		"Namespace":      p.AppNamespace(a.Name),
-		"Name":           r.Name,
-		"Parameters":     r.Options,
-		"Password":       fmt.Sprintf("%x", sha256.Sum256([]byte(p.Name)))[0:30],
-		"Rack":           p.Name,
-		"Image":          r.Image,
-		"DockerHubAuth":  p.hasDockerHubAuth(),
+		"App":           a.Name,
+		"Namespace":     p.AppNamespace(a.Name),
+		"Name":          r.Name,
+		"Parameters":    r.Options,
+		"Password":      fmt.Sprintf("%x", sha256.Sum256([]byte(p.Name)))[0:30],
+		"Rack":          p.Name,
+		"Image":         r.Image,
+		"DockerHubAuth": p.hasDockerHubAuth(),
 	}
 
 	if r.Image == "" && p.EcrDockerHubCachePrefix != "" {
@@ -666,7 +666,7 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 		}
 
 		// azure files
-		afdata, err := p.releaseTemplateAzureFiles(a, ss[i])
+		afdata, err := p.releaseTemplateAzureFiles(a, &ss[i])
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -852,7 +852,7 @@ func (p *Provider) releaseTemplateEfs(a *structs.App, s manifest.Service) ([]byt
 	return data, nil
 }
 
-func (p *Provider) releaseTemplateAzureFiles(a *structs.App, s manifest.Service) ([]byte, error) {
+func (p *Provider) releaseTemplateAzureFiles(a *structs.App, s *manifest.Service) ([]byte, error) {
 	hasAzureFiles := false
 	for i := range s.VolumeOptions {
 		if s.VolumeOptions[i].AzureFiles != nil {
