@@ -767,6 +767,17 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		}
 	}
 
+	// ecr_docker_hub_cache=true requires docker_hub_username and docker_hub_password —
+	// either already applied or being set in the same call. AWS ECR pull-through
+	// cache rules require authenticated Docker Hub credentials.
+	if params["ecr_docker_hub_cache"] == "true" && currentParams["ecr_docker_hub_cache"] != "true" {
+		hasUsername := (currentParams["docker_hub_username"] != "" || params["docker_hub_username"] != "")
+		hasPassword := (currentParams["docker_hub_password"] != "" || params["docker_hub_password"] != "")
+		if !hasUsername || !hasPassword {
+			return fmt.Errorf("ecr_docker_hub_cache=true requires docker_hub_username and docker_hub_password.\n  Set all three: convox rack params set ecr_docker_hub_cache=true docker_hub_username=USER docker_hub_password=TOKEN\n  Or set docker_hub_username and docker_hub_password first")
+		}
+	}
+
 	if v, has := params["karpenter_node_volume_type"]; has && v != "" {
 		validVolTypes := map[string]bool{"gp2": true, "gp3": true, "io1": true, "io2": true}
 		if !validVolTypes[v] {
