@@ -3,7 +3,7 @@ data "aws_caller_identity" "current" {}
 resource "aws_secretsmanager_secret" "docker_hub_pull_through" {
   count = var.ecr_docker_hub_cache && var.docker_hub_username != "" && var.docker_hub_password != "" ? 1 : 0
 
-  name                    = "${var.name}-docker-hub-pull-through"
+  name                    = "ecr-pullthroughcache/${var.name}"
   description             = "Docker Hub credentials for ECR pull-through cache"
   recovery_window_in_days = 0
 }
