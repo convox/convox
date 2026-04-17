@@ -291,6 +291,8 @@ Display rack parameters
     private                true
 ```
 
+Values for `docker_hub_password`, `secret_key`, and `token` are displayed as `**********` to prevent accidental disclosure via terminal output, shell history, screen shares, or captured logs. Empty values display as empty so you can tell whether a sensitive parameter is set. The stored values are unchanged.
+
 ## rack params set
 
 Set rack parameters

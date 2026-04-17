@@ -45,3 +45,8 @@ Setting parameters... OK
   - For on-premises or self-hosted registries, higher values might be appropriate.
   - For public registries with rate limiting (like Docker Hub), be cautious about setting values too high.
 - The relationship between QPS and burst is important: the burst value should always be greater than or equal to the QPS value to allow for effective rate limiting.
+
+## See Also
+
+- [ecr_docker_hub_cache](/configuration/rack-parameters/aws/ecr_docker_hub_cache) for eliminating Docker Hub pulls entirely by caching upstream images through ECR
+- [docker_hub_username](/configuration/rack-parameters/aws/docker_hub_username) for authenticating Docker Hub pulls to raise the rate limit

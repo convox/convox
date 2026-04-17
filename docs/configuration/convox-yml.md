@@ -179,3 +179,4 @@ See [Balancer](/reference/primitives/app/balancer) and [Load Balancers](/configu
 - [Health Checks](/configuration/health-checks) for configuring service health checks
 - [Scaling](/configuration/scaling) for controlling service scale and autoscaling
 - [Config Mounts](/configuration/config-mounts) for mounting configuration files into containers
+- [Deploying Changes](/deployment/deploying-changes#external-builds) for the `--external` build flag that bypasses source upload
