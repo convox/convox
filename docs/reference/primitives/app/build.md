@@ -168,7 +168,9 @@ Convox uses buildkit to build and push images. Buildkit allows us to specify a c
 
 ### Docker Hub Rate Limiting
 
-We have added support for using Docker credentials in Convox build and service pods. This feature helps avoid potential rate limits imposed by Docker Hub, particularly when operating large clusters that may perform multiple simultaneous pulls from Docker. By supplying Docker credentials, you can ensure that Docker Hub's rate limits are bypassed, resulting in smoother operations for your services.
+Convox supports using Docker Hub credentials to avoid rate limits imposed on anonymous pulls (100 pulls per 6 hours per source IP). When `docker_hub_username` and `docker_hub_password` are set as rack parameters, Docker Hub credentials are attached to build pods, `convox run` pods, service deployments, resource deployments (Redis, Postgres, MySQL, MariaDB, Memcached, PostGIS), and timer CronJobs — so every Convox-managed pull from Docker Hub is authenticated.
+
+For AWS racks, [`ecr_docker_hub_cache`](/configuration/rack-parameters/aws/ecr_docker_hub_cache) complements Docker Hub credentials by serving resource images through an ECR pull-through cache, eliminating per-node Docker Hub pulls during node churn.
 
 ### How to Use Docker Credentials in Convox
 

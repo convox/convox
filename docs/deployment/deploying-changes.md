@@ -64,6 +64,34 @@ against the new [Release](/reference/primitives/app/release) before it is pushed
     OK
 ```
 
+## External Builds
+
+By default, `convox build` and `convox deploy` package the source directory into a tarball and upload it through the rack's load balancer for in-cluster building. For applications with large source directories (e.g., model weights, large binary assets), that upload can be slow or hit load balancer idle-timeout limits.
+
+The `--external` flag builds the Docker image on your local machine (or CI runner) and pushes it directly to the rack's container registry, skipping the source upload entirely:
+
+```bash
+    $ convox build --external -a myapp
+    $ convox deploy --external -a myapp
+```
+
+With external builds:
+
+1. The CLI creates a Build record on the rack via a small API call
+2. The rack returns a container registry URL with embedded push credentials (ECR on AWS, ACR on Azure, GCR on GCP)
+3. Docker builds the image locally using your source directory
+4. The CLI pushes the built image directly to the rack's container registry
+5. A Release is created on the rack referencing the pushed image (and promoted, if using `convox deploy --external`)
+
+The source tarball never passes through the load balancer, eliminating upload-size and idle-timeout constraints. External builds also benefit from local Docker layer caching for faster incremental rebuilds.
+
+**Requirements:**
+
+- Docker must be installed and running on the machine executing the build
+- The machine must have network access to the rack's container registry
+
+External builds work on all v3 cloud providers and are well suited for CI pipelines that already have the source checked out. See [build — External Builds](/reference/cli/build#external-builds) for the full CLI reference.
+
 ## Troubleshooting Failed Deployments
 
 If a deployment fails or hangs, use `convox deploy-debug` to diagnose the issue:
@@ -79,3 +107,5 @@ This command inspects your app's pods and provides actionable hints for common f
 - [Rolling Updates](/deployment/rolling-updates) for how Convox handles zero-downtime deployments
 - [Rollbacks](/deployment/rollbacks) for reverting to a previous release
 - [CI/CD Workflows](/deployment/workflows) for automating deployments
+- [build](/reference/cli/build) for the `convox build` command reference
+- [deploy](/reference/cli/deploy) for the `convox deploy` command reference

@@ -26,6 +26,11 @@ Setting parameters... OK
 Generate a read-only access token from [Docker Hub Account Settings](https://hub.docker.com/settings/security) rather than using your account password.
 
 ## Additional Information
-When both credentials are set, the rack creates a Kubernetes image pull secret that authenticates all Docker Hub pulls across the cluster. This applies to both application image pulls and build-time base image pulls.
+When both credentials are set, the rack creates a Kubernetes image pull secret that authenticates all Docker Hub pulls across the cluster. This applies to build pods, `convox run` pods, service deployments, resource deployments (Redis, Postgres, MySQL, MariaDB, Memcached, PostGIS), and timer CronJobs.
 
 See [Using Docker Credentials in Builds](/reference/primitives/app/build#using-docker-credentials-in-builds) for more details.
+
+## See Also
+
+- [docker_hub_password](/configuration/rack-parameters/aws/docker_hub_password) for the access token parameter
+- [ecr_docker_hub_cache](/configuration/rack-parameters/aws/ecr_docker_hub_cache) for an ECR pull-through cache that complements authenticated pulls

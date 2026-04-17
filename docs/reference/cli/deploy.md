@@ -77,6 +77,16 @@ You can pass env vars that will only exist at build time.
     OK
 ```
 
+### External Builds
+
+The `--external` flag runs the Docker build locally instead of uploading the source to the rack. `convox deploy --external` uses the same flow as `convox build --external` and additionally promotes the resulting Release.
+
+```bash
+    $ convox deploy --external -a myapp
+```
+
+See [build — External Builds](/reference/cli/build#external-builds) for the flow, requirements, and example output.
+
 ## See Also
 
 - [Deploying Changes](/deployment/deploying-changes) for deployment workflow

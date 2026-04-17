@@ -37,6 +37,8 @@ Terminate an instance
     Terminating instance... OK
 ```
 
+See [Instance](/reference/primitives/rack/instance#termination-behavior) for details on the drain sequence, PodDisruptionBudget handling, and per-provider cloud VM reclamation.
+
 ## instances keyroll
 
 Roll ssh key on instances
@@ -80,3 +82,4 @@ Run a shell on an instance
 ## See Also
 
 - [key_pair_name](/configuration/rack-parameters/aws/key_pair_name) for configuring SSH access to cluster nodes
+- [Instance](/reference/primitives/rack/instance) for termination behavior and stuck-node cleanup

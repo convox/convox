@@ -166,7 +166,7 @@ The service will scale based on CPU utilization while ensuring that each process
 
 If your cluster is not scaling down despite low resource usage, the Kubernetes Cluster Autoscaler may be blocked from removing nodes. Common causes:
 
-- **Restrictive PodDisruptionBudgets (PDBs)**: A PDB with `minAvailable: 1` on a service with one replica prevents that healthy pod from being evicted. Adjust with the [`pdb_default_min_available_percentage`](/configuration/rack-parameters/aws/pdb_default_min_available_percentage) rack parameter. Unhealthy pods (CrashLoopBackOff, Error) do not block eviction — Convox PDBs use `unhealthyPodEvictionPolicy: AlwaysAllow` so that stuck pods cannot prevent node scale-down.
+- **Restrictive PodDisruptionBudgets (PDBs)**: A PDB with `minAvailable: 1` on a service with one replica prevents that healthy pod from being evicted. Adjust with the [`pdb_default_min_available_percentage`](/configuration/rack-parameters/aws/pdb_default_min_available_percentage) rack parameter. Unhealthy pods (CrashLoopBackOff, Error) do not block eviction — Convox PDBs use `unhealthyPodEvictionPolicy: AlwaysAllow` so that stuck pods cannot prevent node scale-down. To opt a specific service out of the Convox-managed PDB entirely, set the `convox.com/pdb-disabled=true` annotation on the service (see [Disabling PDB for a Service](#disabling-pdb-for-a-service) below).
 - **System pods**: Pods in the `kube-system` namespace may have rules preventing eviction.
 - **Pods without a controller**: Pods not managed by a Deployment or ReplicaSet will not be evicted.
 - **Pods with local storage**: Pods using `hostPath` or `emptyDir` volumes cannot be moved.
@@ -185,6 +185,23 @@ $ kubectl get pdb -A
 ```
 
 A PDB with `ALLOWED DISRUPTIONS` of `0` will block evictions on that node.
+
+### Disabling PDB for a Service
+
+Convox creates a PodDisruptionBudget for each service by default. To opt a specific service out, add the `convox.com/pdb-disabled=true` annotation:
+
+```yaml
+services:
+  web:
+    build: .
+    port: 3000
+    annotations:
+      - convox.com/pdb-disabled=true
+```
+
+With PDB disabled, the service's pods can be evicted without budget protection during node scale-down, node drain, or maintenance events. Use only on services that tolerate unplanned disruption — for example, stateless workers that can be restarted anywhere at any time.
+
+Both `convox.com/pdb-disabled` (canonical) and `convox.com/pdb-disbaled` (legacy spelling, kept for backward compatibility) are accepted. New configurations should use the canonical spelling.
 
 ## See Also
 
