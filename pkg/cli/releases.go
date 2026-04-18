@@ -26,7 +26,7 @@ func init() {
 	}, WithCloud())
 
 	register("releases info", "get information about a release", ReleasesInfo, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagApp, flagRack},
+		Flags:    []stdcli.Flag{flagApp, flagRack, stdcli.BoolFlag("reveal", "", "show unmasked env values")},
 		Validate: stdcli.Args(1),
 	}, WithCloud())
 
@@ -151,7 +151,19 @@ func ReleasesInfo(rack sdk.Interface, c *stdcli.Context) error {
 	i.Add("Build", r.Build)
 	i.Add("Created", r.Created.Format(time.RFC3339))
 	i.Add("Description", r.Description)
-	i.Add("Env", r.Env)
+
+	envDisplay := r.Env
+	if !c.Bool("reveal") && c.Writer().IsTerminal() {
+		if masked := maskedKeysSet(rack, app(c)); masked != nil {
+			env := structs.Environment{}
+			if err := env.Load([]byte(r.Env)); err == nil {
+				envDisplay = env.StringMasked(masked)
+			}
+			// env.Load failure: fall through with raw r.Env (no masking, but no crash)
+		}
+	}
+
+	i.Add("Env", envDisplay)
 
 	return i.Print()
 }
