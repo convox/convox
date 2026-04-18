@@ -130,6 +130,14 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 			Ports:  serviceContainerPorts(*c, ms.Internal),
 		}
 
+		if v := c.Resources.Requests.Cpu(); v != nil {
+			s.Cpu = int(v.MilliValue())
+		}
+
+		if v := c.Resources.Requests.Memory(); v != nil {
+			s.Memory = int(v.Value() / (1024 * 1024)) // Mi
+		}
+
 		for key, vendor := range gpuKeyToVendor {
 			if q, ok := c.Resources.Requests[v1.ResourceName(key)]; ok {
 				s.Gpu = int(q.Value())
