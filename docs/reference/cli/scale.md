@@ -38,6 +38,19 @@ Scale a service
 | `--count` | Number of desired replicas for the service |
 | `--cpu` | CPU allocation in millicores (e.g., 250 = 0.25 vCPU) |
 | `--memory` | Memory allocation in MB |
+| `--gpu` | Number of GPU devices to reserve per pod |
+| `--gpu-vendor` | GPU vendor. Supported: `nvidia` (default), `amd` |
+
+### GPU Column
+
+When no flags are passed, `convox scale` prints a table including a `GPU` column. Services with no GPU reservation render as `-`.
+
+```bash
+    $ convox scale
+    SERVICE  DESIRED  RUNNING  CPU  MEMORY  GPU
+    web      1        1        256  1024    -
+    vllm     1        1        4000 16384   1
+```
 
 ## See Also
 

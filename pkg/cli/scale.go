@@ -15,7 +15,7 @@ func init() {
 		Flags: append(stdcli.OptionFlags(structs.ServiceUpdateOptions{}), flagApp, flagRack, flagWatchInterval),
 		Usage: "<service>",
 		Validate: func(c *stdcli.Context) error {
-			if c.Value("count") != nil || c.Value("cpu") != nil || c.Value("memory") != nil {
+			if c.Value("count") != nil || c.Value("cpu") != nil || c.Value("memory") != nil || c.Value("gpu") != nil || c.Value("gpu-vendor") != nil {
 				if len(c.Args) < 1 {
 					return fmt.Errorf("service name required")
 				} else {
@@ -35,7 +35,7 @@ func Scale(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	if opts.Count != nil || opts.Cpu != nil || opts.Memory != nil {
+	if opts.Count != nil || opts.Cpu != nil || opts.Memory != nil || opts.Gpu != nil || opts.GpuVendor != nil {
 		service := c.Arg(0)
 
 		c.Startf("Scaling <service>%s</service>", service)
@@ -72,10 +72,14 @@ func Scale(rack sdk.Interface, c *stdcli.Context) error {
 			running[p.Name] += 1
 		}
 
-		t := c.Table("SERVICE", "DESIRED", "RUNNING", "CPU", "MEMORY")
+		t := c.Table("SERVICE", "DESIRED", "RUNNING", "CPU", "MEMORY", "GPU")
 
 		for _, s := range ss {
-			t.AddRow(s.Name, fmt.Sprintf("%d", s.Count), fmt.Sprintf("%d", running[s.Name]), fmt.Sprintf("%d", s.Cpu), fmt.Sprintf("%d", s.Memory))
+			gpu := "-"
+			if s.Gpu > 0 {
+				gpu = fmt.Sprintf("%d", s.Gpu)
+			}
+			t.AddRow(s.Name, fmt.Sprintf("%d", s.Count), fmt.Sprintf("%d", running[s.Name]), fmt.Sprintf("%d", s.Cpu), fmt.Sprintf("%d", s.Memory), gpu)
 		}
 
 		return t.Print()

@@ -10,6 +10,8 @@ type Instance struct {
 	Cpu               float64   `json:"cpu"`
 	CpuCapacity       float64   `json:"cpu-capacity"`
 	CpuAllocatable    float64   `json:"cpu-allocatable"`
+	GpuCapacity       int       `json:"gpu-capacity"`
+	GpuAllocatable    int       `json:"gpu-allocatable"`
 	Id                string    `json:"id"`
 	Memory            float64   `json:"memory"`
 	MemoryCapacity    float64   `json:"memory-capacity"`

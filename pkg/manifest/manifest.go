@@ -189,6 +189,13 @@ func (m *Manifest) ApplyDefaults() error {
 
 		s.StartupProbe.Path = strings.TrimSpace(s.StartupProbe.Path)
 		s.StartupProbe.TcpSocketPort = strings.TrimSpace(s.StartupProbe.TcpSocketPort)
+
+		if s.Scale.Gpu.Count > 0 && s.StartupProbe.Path == "" && s.StartupProbe.TcpSocketPort == "" && s.Port.Port > 0 {
+			port := strconv.Itoa(s.Port.Port)
+			m.Services[i].StartupProbe.TcpSocketPort = port
+			s.StartupProbe.TcpSocketPort = port
+		}
+
 		if s.StartupProbe.Path != "" || s.StartupProbe.TcpSocketPort != "" {
 			if s.StartupProbe.Grace == 0 {
 				m.Services[i].StartupProbe.Grace = m.Services[i].Liveness.Grace
@@ -204,6 +211,24 @@ func (m *Manifest) ApplyDefaults() error {
 			}
 			if s.StartupProbe.FailureThreshold == 0 {
 				m.Services[i].StartupProbe.FailureThreshold = m.Services[i].Liveness.FailureThreshold
+			}
+		}
+
+		if s.Scale.Gpu.Count > 0 && m.Services[i].StartupProbe.TcpSocketPort != "" {
+			if m.Services[i].StartupProbe.Grace == 0 {
+				m.Services[i].StartupProbe.Grace = 300
+			}
+			if m.Services[i].StartupProbe.Interval == 0 {
+				m.Services[i].StartupProbe.Interval = 10
+			}
+			if m.Services[i].StartupProbe.Timeout == 0 {
+				m.Services[i].StartupProbe.Timeout = 5
+			}
+			if m.Services[i].StartupProbe.FailureThreshold == 0 {
+				m.Services[i].StartupProbe.FailureThreshold = 30
+			}
+			if m.Services[i].StartupProbe.SuccessThreshold == 0 {
+				m.Services[i].StartupProbe.SuccessThreshold = 1
 			}
 		}
 
