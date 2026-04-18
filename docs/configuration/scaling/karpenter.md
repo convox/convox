@@ -313,7 +313,7 @@ services:
       convox.io/nodepool: gpu
 ```
 
-When a Service declares `scale.gpu`, Convox adds `nvidia.com/gpu` to the pod's resource requests. Kubernetes' `ExtendedResourceToleration` admission controller then auto-adds the matching toleration. No manual toleration configuration is needed.
+When a Service declares `scale.gpu`, Convox adds the GPU extended-resource key (e.g. `nvidia.com/gpu` or `amd.com/gpu`) to the pod's resource requests AND emits a matching `tolerations:` entry (`operator: Exists`, `effect: NoSchedule`) directly in the pod spec. Pods schedule onto tainted GPU nodepools without requiring the Kubernetes `ExtendedResourceToleration` admission controller (which is not enabled by default on EKS).
 
 You must also enable the NVIDIA device plugin on the Rack:
 

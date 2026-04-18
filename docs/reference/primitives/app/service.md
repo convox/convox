@@ -476,6 +476,7 @@ services:
 | **id** | string |     | Required. Id of the volume. |
 | **mountPath** | string |     | Required. Path in the service file system to mount the volume |
 | **medium** | string |     | Optional. Specifies the emptyDir medium. Allowed values: `"Memory"` or `""` |
+| **sizeLimit** | string |     | Optional. Kubernetes [resource quantity](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/) (e.g. `"2Gi"`). Kubernetes evicts the pod if usage of this emptyDir volume exceeds the limit. |
 
 ```yaml
 environment:
@@ -488,6 +489,7 @@ services:
       - emptyDir:
           id: "test-vol"
           mountPath: "/my/test/vol"
+          sizeLimit: "2Gi"
 ```
 
 

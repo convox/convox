@@ -84,6 +84,14 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 			s.Memory = int(v.Value() / (1024 * 1024)) // Mi
 		}
 
+		for key, vendor := range gpuKeyToVendor {
+			if q, ok := c.Resources.Requests[v1.ResourceName(key)]; ok {
+				s.Gpu = int(q.Value())
+				s.GpuVendor = vendor
+				break
+			}
+		}
+
 		ss = append(ss, s)
 	}
 
@@ -120,6 +128,22 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 			Domain: p.ServiceHost(app, *ms),
 			Name:   d.ObjectMeta.Name,
 			Ports:  serviceContainerPorts(*c, ms.Internal),
+		}
+
+		if v := c.Resources.Requests.Cpu(); v != nil {
+			s.Cpu = int(v.MilliValue())
+		}
+
+		if v := c.Resources.Requests.Memory(); v != nil {
+			s.Memory = int(v.Value() / (1024 * 1024)) // Mi
+		}
+
+		for key, vendor := range gpuKeyToVendor {
+			if q, ok := c.Resources.Requests[v1.ResourceName(key)]; ok {
+				s.Gpu = int(q.Value())
+				s.GpuVendor = vendor
+				break
+			}
 		}
 
 		ss = append(ss, s)
@@ -214,6 +238,42 @@ func (p *Provider) ServiceUpdate(app, name string, opts structs.ServiceUpdateOpt
 
 		d.Spec.Template.Spec.Containers[0].Resources.
 			Requests[v1.ResourceMemory] = memorySize
+	}
+
+	if opts.Gpu != nil {
+		vendor := ""
+		if opts.GpuVendor != nil {
+			vendor = *opts.GpuVendor
+		}
+		key := v1.ResourceName(gpuResourceKey(vendor))
+		qty := resource.MustParse(fmt.Sprintf("%d", *opts.Gpu))
+
+		if d.Spec.Template.Spec.Containers[0].Resources.Requests == nil {
+			d.Spec.Template.Spec.Containers[0].Resources.Requests = v1.ResourceList{}
+		}
+		d.Spec.Template.Spec.Containers[0].Resources.Requests[key] = qty
+
+		if d.Spec.Template.Spec.Containers[0].Resources.Limits == nil {
+			d.Spec.Template.Spec.Containers[0].Resources.Limits = v1.ResourceList{}
+		}
+		d.Spec.Template.Spec.Containers[0].Resources.Limits[key] = qty
+
+		if *opts.Gpu > 0 {
+			hasGpuToleration := false
+			for _, t := range d.Spec.Template.Spec.Tolerations {
+				if t.Key == string(key) && t.Effect == v1.TaintEffectNoSchedule && t.Operator == v1.TolerationOpExists {
+					hasGpuToleration = true
+					break
+				}
+			}
+			if !hasGpuToleration {
+				d.Spec.Template.Spec.Tolerations = append(d.Spec.Template.Spec.Tolerations, v1.Toleration{
+					Key:      string(key),
+					Operator: v1.TolerationOpExists,
+					Effect:   v1.TaintEffectNoSchedule,
+				})
+			}
+		}
 	}
 
 	if _, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).Update(context.TODO(), d, am.UpdateOptions{}); err != nil {

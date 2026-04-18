@@ -35,6 +35,25 @@ Restart a service
     Restarting web... OK
 ```
 
+## services update
+
+Update a service in place. Mirrors the effect of editing `scale.*` fields in
+`convox.yml` and redeploying, without a new release. Accepts the same flags as
+`convox scale` (`--count`, `--cpu`, `--memory`, `--gpu`, `--gpu-vendor`).
+
+### Usage
+```bash
+    convox services update <service> [--count N] [--cpu M] [--memory M] [--gpu N] [--gpu-vendor VENDOR]
+```
+### Examples
+```bash
+    $ convox services update web --gpu 1 --gpu-vendor nvidia
+    Updating web... OK
+
+    $ convox services update web --count 3 --memory 2048
+    Updating web... OK
+```
+
 ## See Also
 
 - [Service](/reference/primitives/app/service) for service configuration

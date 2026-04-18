@@ -50,6 +50,9 @@ func (p *Provider) templateHelpers() template.FuncMap {
 			}
 			return ds
 		},
+		"gpuResourceKey": func(vendor string) string {
+			return gpuResourceKey(vendor)
+		},
 		"hasSuffix": func(s, suffix string) bool {
 			return strings.HasSuffix(s, suffix)
 		},
