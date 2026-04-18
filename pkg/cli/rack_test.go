@@ -305,6 +305,21 @@ func TestRackLogs(t *testing.T) {
 	})
 }
 
+func TestRackLogsMaxLogRequests(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemLogs", structs.LogsOptions{Prefix: options.Bool(true), MaxLogRequests: options.Int(50)}).Return(testLogs(fxLogs()), nil)
+
+		res, err := testExecute(e, "rack logs --max-log-requests 50", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{
+			fxLogs()[0],
+			fxLogs()[1],
+		})
+	})
+}
+
 func TestRackLogsError(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("SystemLogs", structs.LogsOptions{Prefix: options.Bool(true)}).Return(nil, fmt.Errorf("err1"))
