@@ -78,10 +78,22 @@ func (p *Provider) InstanceList() (structs.Instances, error) {
 		cpuAllocatable := toCpuCore(n.Status.Allocatable.Cpu().MilliValue())
 		memAllocatable := toMemMB(n.Status.Allocatable.Memory().Value())
 
+		var gpuCapacity, gpuAllocatable int
+		for key := range gpuKeyToVendor {
+			if q, ok := n.Status.Capacity[ac.ResourceName(key)]; ok {
+				gpuCapacity += int(q.Value())
+			}
+			if q, ok := n.Status.Allocatable[ac.ResourceName(key)]; ok {
+				gpuAllocatable += int(q.Value())
+			}
+		}
+
 		is = append(is, structs.Instance{
 			Cpu:               cpu,
 			CpuCapacity:       cpuCapacity,
 			CpuAllocatable:    cpuAllocatable,
+			GpuCapacity:       gpuCapacity,
+			GpuAllocatable:    gpuAllocatable,
 			Id:                n.ObjectMeta.Name,
 			Memory:            mem,
 			MemoryCapacity:    memCapacity,

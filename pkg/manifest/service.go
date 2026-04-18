@@ -113,6 +113,7 @@ type VolumeEmptyDir struct {
 	Id        string `yaml:"id"`
 	Medium    string `yaml:"medium,omitempty"`
 	MountPath string `yaml:"mountPath"`
+	SizeLimit string `yaml:"sizeLimit,omitempty"`
 }
 
 func (v VolumeEmptyDir) Validate() error {
@@ -125,6 +126,11 @@ func (v VolumeEmptyDir) Validate() error {
 	if v.Medium != "" {
 		if v.Medium != "Memory" {
 			return fmt.Errorf("emptyDir.medium's allowed values: Memory")
+		}
+	}
+	if v.SizeLimit != "" {
+		if _, err := resource.ParseQuantity(v.SizeLimit); err != nil {
+			return fmt.Errorf("emptyDir.sizeLimit is not a valid quantity: %v", err)
 		}
 	}
 	return nil

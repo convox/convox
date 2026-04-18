@@ -11,6 +11,7 @@ type Process struct {
 	App      string    `json:"app"`
 	Command  string    `json:"command"`
 	Cpu      float64   `json:"cpu"`
+	Gpu      int       `json:"gpu"`
 	Host     string    `json:"host"`
 	Image    string    `json:"image"`
 	Instance string    `json:"instance"`
@@ -43,6 +44,7 @@ type ProcessRunOptions struct {
 	CpuLimit         *int              `flag:"cpu-limit" header:"Cpu-Limit"`
 	Environment      map[string]string `header:"Environment"`
 	Gpu              *int              `flag:"gpu" header:"Gpu"`
+	GpuVendor        *string           `flag:"gpu-vendor" header:"Gpu-Vendor"`
 	Height           *int              `header:"Height"`
 	Image            *string           `header:"Image"`
 	Memory           *int              `flag:"memory" header:"Memory"`
