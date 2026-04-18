@@ -120,6 +120,8 @@ func fxInstance() *structs.Instance {
 		Agent:             true,
 		Cpu:               0.423,
 		CpuAllocatable:    1,
+		GpuCapacity:       0,
+		GpuAllocatable:    0,
 		Id:                "instance1",
 		Memory:            718,
 		MemoryAllocatable: 1000,
@@ -277,11 +279,13 @@ func fxResourceUpdating() *structs.Resource {
 
 func fxService() *structs.Service {
 	return &structs.Service{
-		Name:   "service1",
-		Count:  1,
-		Cpu:    2,
-		Domain: "domain",
-		Memory: 3,
+		Name:      "service1",
+		Count:     1,
+		Cpu:       2,
+		Domain:    "domain",
+		Gpu:       0,
+		GpuVendor: "",
+		Memory:    3,
 		Ports: []structs.ServicePort{
 			{Balancer: 1, Certificate: "cert1", Container: 2},
 			{Balancer: 1, Certificate: "cert1", Container: 2},

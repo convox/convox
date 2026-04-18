@@ -2,6 +2,7 @@ package k8s_test
 
 import (
 	"context"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -106,5 +107,39 @@ func processCreateResources(c kubernetes.Interface, ns, name, labels, cpu, mem s
 				ac.ResourceMemory: resource.MustParse(mem),
 			}
 		}
+	})
+}
+
+func processCreateGpu(c kubernetes.Interface, ns, name, labels, gpuKey string, gpuCount int) error {
+	return processCreator(c, ns, name, labels, func(p *ac.Pod) {
+		for i := range p.Spec.Containers {
+			p.Spec.Containers[i].Resources.Requests = ac.ResourceList{
+				ac.ResourceName(gpuKey): resource.MustParse(strconv.Itoa(gpuCount)),
+			}
+		}
+	})
+}
+
+func TestProcessListGpu(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, ok := p.Cluster.(*fake.Clientset)
+		require.True(t, ok)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		require.NoError(t, processCreateGpu(kk, "rack1-app1", "gpu-nvidia", "system=convox,rack=rack1,app=app1,service=svc,type=service", "nvidia.com/gpu", 1))
+		require.NoError(t, processCreateGpu(kk, "rack1-app1", "gpu-amd", "system=convox,rack=rack1,app=app1,service=svc,type=service", "amd.com/gpu", 2))
+		require.NoError(t, processCreate(kk, "rack1-app1", "cpu-only", "system=convox,rack=rack1,app=app1,service=svc,type=service"))
+
+		pss, err := p.ProcessList("app1", structs.ProcessListOptions{})
+		require.NoError(t, err)
+		require.Len(t, pss, 3)
+
+		byId := map[string]structs.Process{}
+		for _, ps := range pss {
+			byId[ps.Id] = ps
+		}
+		require.Equal(t, 1, byId["gpu-nvidia"].Gpu)
+		require.Equal(t, 2, byId["gpu-amd"].Gpu)
+		require.Equal(t, 0, byId["cpu-only"].Gpu)
 	})
 }

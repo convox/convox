@@ -15,15 +15,17 @@ import (
 )
 
 var fxInstance = structs.Instance{
-	Agent:     true,
-	Cpu:       1.0,
-	Id:        "instance1",
-	Memory:    2.0,
-	PrivateIp: "private",
-	Processes: 3,
-	PublicIp:  "public",
-	Status:    "status",
-	Started:   time.Now().UTC(),
+	Agent:          true,
+	Cpu:            1.0,
+	GpuCapacity:    1,
+	GpuAllocatable: 1,
+	Id:             "instance1",
+	Memory:         2.0,
+	PrivateIp:      "private",
+	Processes:      3,
+	PublicIp:       "public",
+	Status:         "status",
+	Started:        time.Now().UTC(),
 }
 
 func TestInstanceKeyroll(t *testing.T) {

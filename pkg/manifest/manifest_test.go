@@ -755,6 +755,59 @@ func TestManifestStartupProbe(t *testing.T) {
 	require.Equal(t, 1, tcp.StartupProbe.SuccessThreshold)
 }
 
+func TestManifestStartupProbeGpu(t *testing.T) {
+	m, err := testdataManifest("startup-probe-gpu", map[string]string{})
+	require.NoError(t, err)
+	require.Equal(t, 5, len(m.Services))
+
+	// gpu-defaults: GPU service with no Liveness and no StartupProbe should
+	// get a TCP startup probe pointed at Port.Port plus GPU-aware defaults.
+	defaults, err := m.Service("gpu-defaults")
+	require.NoError(t, err)
+	require.Equal(t, "", defaults.StartupProbe.Path)
+	require.Equal(t, "8080", defaults.StartupProbe.TcpSocketPort)
+	require.Equal(t, 300, defaults.StartupProbe.Grace)
+	require.Equal(t, 10, defaults.StartupProbe.Interval)
+	require.Equal(t, 5, defaults.StartupProbe.Timeout)
+	require.Equal(t, 30, defaults.StartupProbe.FailureThreshold)
+	require.Equal(t, 1, defaults.StartupProbe.SuccessThreshold)
+
+	// gpu-with-liveness: GPU service inheriting from Liveness — should take
+	// Liveness timings, not the GPU fallback defaults.
+	liveness, err := m.Service("gpu-with-liveness")
+	require.NoError(t, err)
+	require.Equal(t, "8080", liveness.StartupProbe.TcpSocketPort)
+	require.Equal(t, 10, liveness.StartupProbe.Grace)
+	require.Equal(t, 5, liveness.StartupProbe.Interval)
+	require.Equal(t, 5, liveness.StartupProbe.Timeout)
+	require.Equal(t, 3, liveness.StartupProbe.FailureThreshold)
+	require.Equal(t, 1, liveness.StartupProbe.SuccessThreshold)
+
+	// gpu-explicit-http: user-specified HTTP startup probe should NOT receive
+	// the GPU fallback (gate is TcpSocketPort != "").
+	explicit, err := m.Service("gpu-explicit-http")
+	require.NoError(t, err)
+	require.Equal(t, "/ready", explicit.StartupProbe.Path)
+	require.Equal(t, "", explicit.StartupProbe.TcpSocketPort)
+	require.Equal(t, 45, explicit.StartupProbe.Grace)
+	require.Equal(t, 15, explicit.StartupProbe.Interval)
+
+	// gpu-no-port: GPU service with no Port.Port should get no startup probe
+	// at all (user opts in via explicit startupProbe.path).
+	noPort, err := m.Service("gpu-no-port")
+	require.NoError(t, err)
+	require.Equal(t, "", noPort.StartupProbe.Path)
+	require.Equal(t, "", noPort.StartupProbe.TcpSocketPort)
+	require.Equal(t, 0, noPort.StartupProbe.Grace)
+
+	// cpu-no-probe: non-GPU service with no probe should remain unchanged.
+	cpu, err := m.Service("cpu-no-probe")
+	require.NoError(t, err)
+	require.Equal(t, "", cpu.StartupProbe.Path)
+	require.Equal(t, "", cpu.StartupProbe.TcpSocketPort)
+	require.Equal(t, 0, cpu.StartupProbe.Grace)
+}
+
 func TestManifestKeda(t *testing.T) {
 	m, err := testdataManifest("keda", map[string]string{})
 	require.NotNil(t, m)

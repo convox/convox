@@ -422,6 +422,32 @@ func (t *tempStateLogStorage) Reset(key string) {
 	t.s[key] = []string{}
 }
 
+// gpuResourceKey maps a convox.yml gpu.vendor value to the Kubernetes
+// extended-resource key. Accepts both the short form (e.g. "nvidia") and the
+// ".com"-suffixed form (e.g. "nvidia.com") for backward compatibility with the
+// pre-R1 template heuristic. Unknown or unset vendors default to
+// "nvidia.com/gpu" (the most common case) instead of emitting garbage.
+func gpuResourceKey(vendor string) string {
+	switch vendor {
+	case "nvidia", "nvidia.com":
+		return "nvidia.com/gpu"
+	case "amd", "amd.com":
+		return "amd.com/gpu"
+	default:
+		return "nvidia.com/gpu"
+	}
+}
+
+// gpuKeyToVendor is the reverse of gpuResourceKey: for each supported resource
+// key, the short vendor string that appears on the Service.GpuVendor / Process
+// fields returned by the rack API. Kept in sync with gpuResourceKey — adding a
+// new vendor here without adding it to gpuResourceKey (or vice versa) will
+// produce a rack that reports a vendor it cannot emit.
+var gpuKeyToVendor = map[string]string{
+	"nvidia.com/gpu": "nvidia",
+	"amd.com/gpu":    "amd",
+}
+
 func resourceSubstitutionId(app, rType, rName string) string {
 	return fmt.Sprintf("##|app:%s|type:%s|resource:%s|##", app, rType, rName)
 }
