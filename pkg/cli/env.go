@@ -3,10 +3,12 @@ package cli
 import (
 	"bufio"
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -17,11 +19,34 @@ import (
 	"github.com/convox/stdcli"
 )
 
+const maskedEnvKeysConfigName = "cli-env-mask"
+
+// envKeyPattern accepts any non-empty string without whitespace or '='.
+// This matches the permissiveness of Environment.Load in pkg/structs/environment.go.
+// A stricter POSIX regex would reject keys like "FOO.BAR" that `env set` accepts.
+var envKeyPattern = regexp.MustCompile(`^[^\s=]+$`)
+
+// containsControlChar rejects keys containing ASCII control chars (< 0x20 or 0x7F).
+// Control chars pass the whitespace-and-equals regex above but, when printed through
+// the CLI's display paths (`convox env mask`, `<info>%s</info>` wraps, masked `KEY=****`
+// output), would render as terminal escape sequences. A user with app-write could
+// poison the mask list with ANSI codes that another user's terminal would interpret
+// on display. Reject at write time to close this.
+func containsControlChar(s string) bool {
+	for _, r := range s {
+		if r < 0x20 || r == 0x7F {
+			return true
+		}
+	}
+	return false
+}
+
 func init() {
 	register("env", "list env vars", watch(Env), stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
 			flagRack, flagApp, flagWatchInterval,
 			stdcli.StringFlag("release", "", "id of the release"),
+			stdcli.BoolFlag("reveal", "", "show unmasked env values"),
 		},
 		Validate: stdcli.Args(0),
 	}, WithCloud())
@@ -68,6 +93,23 @@ func init() {
 		Usage:    "<key> [key]...",
 		Validate: stdcli.ArgsMin(1),
 	}, WithCloud())
+
+	register("env mask", "list masked env keys", EnvMask, stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagRack, flagApp},
+		Validate: stdcli.Args(0),
+	}, WithCloud())
+
+	register("env mask set", "mark env keys as masked", EnvMaskSet, stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagRack, flagApp},
+		Usage:    "<key> [key]...",
+		Validate: stdcli.ArgsMin(1),
+	}, WithCloud())
+
+	register("env mask unset", "unmark masked env keys", EnvMaskUnset, stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagRack, flagApp},
+		Usage:    "<key> [key]...",
+		Validate: stdcli.ArgsMin(1),
+	}, WithCloud())
 }
 
 func Env(rack sdk.Interface, c *stdcli.Context) error {
@@ -78,7 +120,16 @@ func Env(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	c.Writef("%s\n", env.String())
+	// Short-circuit: skip masking path entirely when --reveal is set OR stdout is not a TTY.
+	// Avoids an extra AppConfigGet call and keeps existing TestEnv mocks unchanged.
+	if !c.Bool("reveal") && c.Writer().IsTerminal() {
+		if masked := maskedKeysSet(rack, app(c)); masked != nil {
+			_ = c.Writef("%s\n", env.StringMasked(masked))
+			return nil
+		}
+	}
+
+	_ = c.Writef("%s\n", env.String())
 
 	return nil
 }
@@ -366,4 +417,202 @@ func getEnvHelper(rack sdk.Interface, appName, releaseId string) (structs.Enviro
 	}
 
 	return common.AppEnvironment(rack, appName)
+}
+
+func EnvMask(rack sdk.Interface, c *stdcli.Context) error {
+	keys, err := getMaskedEnvKeys(rack, app(c))
+	if err != nil {
+		return err
+	}
+
+	if len(keys) > 0 {
+		sort.Strings(keys)
+		for _, k := range keys {
+			_ = c.Writef("%s\n", k)
+		}
+	}
+
+	return nil
+}
+
+func EnvMaskSet(rack sdk.Interface, c *stdcli.Context) error {
+	for _, arg := range c.Args {
+		if strings.Contains(arg, "=") {
+			return fmt.Errorf("use `convox env set KEY=VALUE` to set env values. `convox env mask set` takes key names only")
+		}
+		if !envKeyPattern.MatchString(arg) {
+			return fmt.Errorf("invalid env key name: %q (must not contain whitespace or '=')", arg)
+		}
+		if containsControlChar(arg) {
+			return fmt.Errorf("invalid env key name: %q (must not contain control characters)", arg)
+		}
+	}
+
+	existing, _ := getMaskedEnvKeys(rack, app(c))
+
+	keySet := map[string]bool{}
+	for _, k := range existing {
+		keySet[k] = true
+	}
+	for _, k := range c.Args {
+		keySet[k] = true
+	}
+
+	if len(keySet) > 500 {
+		return fmt.Errorf("too many masked keys (max 500, got %d)", len(keySet))
+	}
+
+	keys := make([]string, 0, len(keySet))
+	for k := range keySet {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	display := make([]string, 0, len(c.Args))
+	seen := map[string]bool{}
+	for _, k := range c.Args {
+		if seen[k] {
+			continue
+		}
+		seen[k] = true
+		display = append(display, fmt.Sprintf("<info>%s</info>", k))
+	}
+	sort.Strings(display)
+	c.Startf("Setting masked env keys %s", strings.Join(display, ", "))
+
+	value := strings.Join(keys, ",")
+	encoded := base64.StdEncoding.EncodeToString([]byte(value))
+
+	if err := rack.AppConfigSet(app(c), maskedEnvKeysConfigName, encoded); err != nil {
+		if isAppConfigUnsupported(err) {
+			_ = c.Writef("\nWarning: this rack version may not support env masking\n")
+			//nolint:nilerr // intentional: old rack warning is user-friendly exit-0, not an error
+			return nil
+		}
+		return err
+	}
+
+	cfg, err := rack.AppConfigGet(app(c), maskedEnvKeysConfigName)
+	if err != nil || cfg == nil || strings.TrimSpace(cfg.Value) != value {
+		_ = c.Writef("\nWarning: this rack version may not support env masking\n")
+		//nolint:nilerr // intentional: unverified write warning, exit-0 is user-friendly
+		return nil
+	}
+
+	return c.OK()
+}
+
+func EnvMaskUnset(rack sdk.Interface, c *stdcli.Context) error {
+	existing, _ := getMaskedEnvKeys(rack, app(c))
+
+	remove := map[string]bool{}
+	for _, k := range c.Args {
+		remove[k] = true
+	}
+
+	keys := []string{}
+	for _, k := range existing {
+		if !remove[k] {
+			keys = append(keys, k)
+		}
+	}
+	sort.Strings(keys)
+
+	display := make([]string, 0, len(c.Args))
+	seen := map[string]bool{}
+	for _, k := range c.Args {
+		if seen[k] {
+			continue
+		}
+		seen[k] = true
+		display = append(display, fmt.Sprintf("<info>%s</info>", k))
+	}
+	sort.Strings(display)
+	c.Startf("Unsetting masked env keys %s", strings.Join(display, ", "))
+
+	value := strings.Join(keys, ",")
+	encoded := base64.StdEncoding.EncodeToString([]byte(value))
+
+	if err := rack.AppConfigSet(app(c), maskedEnvKeysConfigName, encoded); err != nil {
+		if isAppConfigUnsupported(err) {
+			_ = c.Writef("\nWarning: this rack version may not support env masking\n")
+			//nolint:nilerr // intentional: old rack warning is user-friendly exit-0, not an error
+			return nil
+		}
+		return err
+	}
+
+	cfg, err := rack.AppConfigGet(app(c), maskedEnvKeysConfigName)
+	if err != nil || cfg == nil || strings.TrimSpace(cfg.Value) != value {
+		_ = c.Writef("\nWarning: this rack version may not support env masking\n")
+		//nolint:nilerr // intentional: unverified write warning, exit-0 is user-friendly
+		return nil
+	}
+
+	return c.OK()
+}
+
+// getMaskedEnvKeys reads the mask list from AppConfig. Returns empty slice on any error
+// (old racks, missing config, transient failures) — never surfaces an error to the caller.
+func getMaskedEnvKeys(rack sdk.Interface, appName string) ([]string, error) {
+	cfg, err := rack.AppConfigGet(appName, maskedEnvKeysConfigName)
+	if err != nil || cfg == nil {
+		//nolint:nilerr // intentional: swallow read errors; absent mask list = no masking
+		return nil, nil
+	}
+
+	trimmed := strings.TrimSpace(cfg.Value)
+	if trimmed == "" {
+		return nil, nil
+	}
+
+	parts := strings.Split(trimmed, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+
+	return out, nil
+}
+
+// maskedKeysSet converts the mask list to a lookup map. Returns nil (not empty map)
+// when the list is empty — callers use `if masked := maskedKeysSet(...); masked != nil`
+// to branch on "masking configured" vs "no masking".
+func maskedKeysSet(rack sdk.Interface, appName string) map[string]bool {
+	keys, _ := getMaskedEnvKeys(rack, appName)
+	if len(keys) == 0 {
+		return nil
+	}
+	set := make(map[string]bool, len(keys))
+	for _, k := range keys {
+		set[k] = true
+	}
+	return set
+}
+
+// isAppConfigUnsupported detects errors from racks that don't have the AppConfig
+// endpoint (V2 racks, V3 pre-3.19.7). The SDK flattens HTTP errors to plain Go
+// errors.
+//
+// We match two specific substrings only:
+//   - "response status 404" — stdsdk's fallback string when the server returns
+//     a bare 404 with no body (route truly missing on V2 / old V3).
+//   - "app config not found" — the provider-level error (pkg/structs ErrNotFound)
+//     when the endpoint exists but the config key doesn't. Safe to treat as
+//     "unsupported" in the write path: if the rack supports AppConfig, the first
+//     write creates the key; getting this error on a SET is odd but benign.
+//
+// We DO NOT match bare "404" or bare "not found" because those substrings appear
+// in errors we must NOT swallow — notably `namespaces "my-app" not found` when the
+// user mistypes the app name. Hiding that behind a version-warning would mislead.
+func isAppConfigUnsupported(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "response status 404") ||
+		strings.Contains(msg, "app config not found")
 }
