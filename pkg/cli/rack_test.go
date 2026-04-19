@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/rack"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/stdcli"
 	"github.com/stretchr/testify/require"
 )
 
@@ -767,5 +769,142 @@ func TestRackUpdateForce(t *testing.T) {
 		res, err := testExecute(e, "rack update 3.10.12 --force", nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code)
+	})
+}
+
+func TestRackParamsDefaultPipe(t *testing.T) {
+	// Default test harness: IsTerminalFn wraps c.Writer().IsTerminal() which
+	// returns false for *bytes.Buffer. Result: shouldMask=false, pipe-bypass.
+	// This test verifies sensitive values render RAW when stdout is not a TTY,
+	// which is the intentional behavior revert from 3.24.4-always-mask.
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystemSensitive(), nil)
+
+		res, err := testExecute(e, "rack params", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+
+		require.Regexp(t, regexp.MustCompile(`(?m)^secret_key\s+KEY-SENSITIVE$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^docker_hub_password\s+HUB-PASS$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^token\s+TOK-SENSITIVE$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^access_id\s+ACCESS-ID$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^private_eks_host\s+eks-host-1$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^private_eks_user\s+eks-user-1$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^private_eks_pass\s+eks-pass-1$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^region\s+us-east-1$`), res.Stdout)
+		require.NotContains(t, res.Stdout, "**********")
+	})
+}
+
+func TestRackParamsMaskedTTY(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return true }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystemSensitive(), nil)
+
+		res, err := testExecute(e, "rack params", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+
+		require.Regexp(t, regexp.MustCompile(`(?m)^secret_key\s+\*{10}$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^docker_hub_password\s+\*{10}$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^token\s+\*{10}$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^access_id\s+\*{10}$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^private_eks_host\s+\*{10}$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^private_eks_user\s+\*{10}$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^private_eks_pass\s+\*{10}$`), res.Stdout)
+
+		require.Regexp(t, regexp.MustCompile(`(?m)^region\s+us-east-1$`), res.Stdout)
+
+		require.NotContains(t, res.Stdout, "KEY-SENSITIVE")
+		require.NotContains(t, res.Stdout, "HUB-PASS")
+		require.NotContains(t, res.Stdout, "TOK-SENSITIVE")
+		require.NotContains(t, res.Stdout, "ACCESS-ID")
+		require.NotContains(t, res.Stdout, "eks-host-1")
+		require.NotContains(t, res.Stdout, "eks-user-1")
+		require.NotContains(t, res.Stdout, "eks-pass-1")
+	})
+}
+
+func TestRackParamsRevealTTY(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return true }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystemSensitive(), nil)
+
+		res, err := testExecute(e, "rack params --reveal", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+
+		require.Regexp(t, regexp.MustCompile(`(?m)^secret_key\s+KEY-SENSITIVE$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^docker_hub_password\s+HUB-PASS$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^token\s+TOK-SENSITIVE$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^access_id\s+ACCESS-ID$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^private_eks_host\s+eks-host-1$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^private_eks_user\s+eks-user-1$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^private_eks_pass\s+eks-pass-1$`), res.Stdout)
+
+		require.NotContains(t, res.Stdout, "**********")
+	})
+}
+
+func TestRackParamsMaskedTTYWithGroupFilter(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return true }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystemSensitive(), nil)
+
+		res, err := testExecute(e, "rack params -g security", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+
+		require.Regexp(t, regexp.MustCompile(`(?m)^access_id\s+\*{10}$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^secret_key\s+\*{10}$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^docker_hub_password\s+\*{10}$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^token\s+\*{10}$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^private_eks_host\s+\*{10}$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^private_eks_user\s+\*{10}$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^private_eks_pass\s+\*{10}$`), res.Stdout)
+
+		require.NotRegexp(t, regexp.MustCompile(`(?m)^region\s`), res.Stdout)
+		require.NotRegexp(t, regexp.MustCompile(`(?m)^ParamOther\s`), res.Stdout)
+		require.NotContains(t, res.Stdout, "us-east-1")
+	})
+}
+
+func TestRackParamsRevealTTYWithGroupFilter(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return true }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystemSensitive(), nil)
+
+		res, err := testExecute(e, "rack params -g security --reveal", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+
+		require.Regexp(t, regexp.MustCompile(`(?m)^access_id\s+ACCESS-ID$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^secret_key\s+KEY-SENSITIVE$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^docker_hub_password\s+HUB-PASS$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^token\s+TOK-SENSITIVE$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^private_eks_host\s+eks-host-1$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^private_eks_user\s+eks-user-1$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^private_eks_pass\s+eks-pass-1$`), res.Stdout)
+
+		require.NotContains(t, res.Stdout, "**********")
+		require.NotRegexp(t, regexp.MustCompile(`(?m)^region\s`), res.Stdout)
+		require.NotContains(t, res.Stdout, "us-east-1")
 	})
 }

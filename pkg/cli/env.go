@@ -122,7 +122,7 @@ func Env(rack sdk.Interface, c *stdcli.Context) error {
 
 	// Short-circuit: skip masking path entirely when --reveal is set OR stdout is not a TTY.
 	// Avoids an extra AppConfigGet call and keeps existing TestEnv mocks unchanged.
-	if !c.Bool("reveal") && c.Writer().IsTerminal() {
+	if !c.Bool("reveal") && IsTerminalFn(c) {
 		if masked := maskedKeysSet(rack, app(c)); masked != nil {
 			_ = c.Writef("%s\n", env.StringMasked(masked))
 			return nil

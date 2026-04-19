@@ -2,12 +2,14 @@ package cli_test
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/convox/convox/pkg/cli"
 	mocksdk "github.com/convox/convox/pkg/mock/sdk"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/stdcli"
 	"github.com/stretchr/testify/require"
 )
 
@@ -405,5 +407,51 @@ func TestEnvRevealFlag(t *testing.T) {
 			"BAZ=quux",
 			"FOO=bar",
 		})
+	})
+}
+
+func TestEnvMaskedTTY(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return true }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		opts := structs.ReleaseListOptions{Limit: options.Int(1)}
+		i.On("ReleaseList", "app1", opts).Return(structs.Releases{*fxRelease()}, nil)
+		i.On("ReleaseGet", "app1", "release1").Return(fxRelease(), nil)
+		i.On("AppConfigGet", "app1", "cli-env-mask").Return(&structs.AppConfig{
+			Name:  "cli-env-mask",
+			Value: "BAZ",
+		}, nil)
+
+		res, err := testExecute(e, "env -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+
+		require.Regexp(t, regexp.MustCompile(`(?m)^BAZ=\*{4}$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^FOO=bar$`), res.Stdout)
+		require.NotContains(t, res.Stdout, "BAZ=quux")
+	})
+}
+
+func TestEnvRevealTTY(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return true }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		opts := structs.ReleaseListOptions{Limit: options.Int(1)}
+		i.On("ReleaseList", "app1", opts).Return(structs.Releases{*fxRelease()}, nil)
+		i.On("ReleaseGet", "app1", "release1").Return(fxRelease(), nil)
+
+		res, err := testExecute(e, "env --reveal -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+
+		require.Regexp(t, regexp.MustCompile(`(?m)^BAZ=quux$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^FOO=bar$`), res.Stdout)
+		require.NotContains(t, res.Stdout, "****")
 	})
 }

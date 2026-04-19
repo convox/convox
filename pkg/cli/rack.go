@@ -150,6 +150,24 @@ var managedParams = map[string]bool{
 	"eks_api_server_public_access_cidrs": true,
 }
 
+// sensitiveParams enumerates rack params whose values are rendered as
+// "**********" on a TTY when --reveal is not passed. Pipe output and
+// --reveal bypass masking.
+//
+// Lineage: always-mask introduced in 3.24.4 (docker_hub_password,
+// secret_key, token); list extended and TTY-gating + --reveal added
+// alongside this var's package-level promotion in 3.24.5 (access_id,
+// private_eks_host, private_eks_user, private_eks_pass).
+var sensitiveParams = map[string]bool{
+	"docker_hub_password": true,
+	"secret_key":          true,
+	"token":               true,
+	"access_id":           true,
+	"private_eks_host":    true,
+	"private_eks_user":    true,
+	"private_eks_pass":    true,
+}
+
 // paramGroups categorizes rack params into curated logical groups for the
 // `convox rack params -g <group>` filter. A param may belong to multiple
 // groups. Params not listed here are shown in the default view but not
@@ -494,6 +512,7 @@ func init() {
 		Flags: []stdcli.Flag{
 			flagRack,
 			stdcli.StringFlag("group", "g", "filter to a param group (invalid name lists all)"),
+			stdcli.BoolFlag("reveal", "", "show unmasked param values"),
 		},
 		Validate: stdcli.Args(0),
 	})
@@ -1819,15 +1838,7 @@ func RackParams(_ sdk.Interface, c *stdcli.Context) error {
 
 	sort.Strings(keys)
 
-	sensitiveParams := map[string]bool{
-		"docker_hub_password": true,
-		"secret_key":          true,
-		"token":               true,
-		"access_id":           true,
-		"private_eks_host":    true,
-		"private_eks_user":    true,
-		"private_eks_pass":    true,
-	}
+	shouldMask := !c.Bool("reveal") && IsTerminalFn(c)
 
 	i := c.Info()
 	rowsAdded := 0
@@ -1837,7 +1848,7 @@ func RackParams(_ sdk.Interface, c *stdcli.Context) error {
 			continue
 		}
 		v := params[k]
-		if sensitiveParams[k] && v != "" {
+		if shouldMask && sensitiveParams[k] && v != "" {
 			v = "**********"
 		}
 		i.Add(k, v)
