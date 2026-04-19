@@ -254,16 +254,18 @@ type ServiceHealth struct {
 	Grace    int
 	Interval int
 	Path     string
+	Port     ServicePortScheme `yaml:"port,omitempty"`
 	Timeout  int
 }
 
 type ServiceLiveness struct {
-	Grace            int    `yaml:"grace,omitempty"`
-	Interval         int    `yaml:"interval,omitempty"`
-	Path             string `yaml:"path,omitempty"`
-	Timeout          int    `yaml:"timeout,omitempty"`
-	SuccessThreshold int    `yaml:"successThreshold,omitempty"`
-	FailureThreshold int    `yaml:"failureThreshold,omitempty"`
+	Grace            int               `yaml:"grace,omitempty"`
+	Interval         int               `yaml:"interval,omitempty"`
+	Path             string            `yaml:"path,omitempty"`
+	Port             ServicePortScheme `yaml:"port,omitempty"`
+	Timeout          int               `yaml:"timeout,omitempty"`
+	SuccessThreshold int               `yaml:"successThreshold,omitempty"`
+	FailureThreshold int               `yaml:"failureThreshold,omitempty"`
 }
 
 type ServiceStartupProbe struct {
