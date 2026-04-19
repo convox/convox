@@ -75,7 +75,13 @@ services:
     drain: 60
     health:
       grace: 2
+      port:
+        port: 3001
+        scheme: http
       timeout: 3
+    liveness:
+      path: /live
+      port: 3002
     port:
       scheme: https
       port: 3000
