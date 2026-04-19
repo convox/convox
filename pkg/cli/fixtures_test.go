@@ -362,6 +362,27 @@ func fxSystemUpdating() *structs.System {
 	}
 }
 
+func fxSystemSensitive() *structs.System {
+	return &structs.System{
+		Name:     "name1",
+		Provider: "provider1",
+		Region:   "region1",
+		Status:   "running",
+		Version:  "version1",
+		Parameters: map[string]string{
+			"docker_hub_password": "HUB-PASS",
+			"secret_key":          "KEY-SENSITIVE",
+			"token":               "TOK-SENSITIVE",
+			"access_id":           "ACCESS-ID",
+			"private_eks_host":    "eks-host-1",
+			"private_eks_user":    "eks-user-1",
+			"private_eks_pass":    "eks-pass-1",
+			"region":              "us-east-1",
+			"ParamOther":          "value2",
+		},
+	}
+}
+
 func fxRuntime() *structs.Runtime {
 	return &structs.Runtime{
 		Id:    "b29266a2-0d25-4194-b375-a7ac722f82a5",
