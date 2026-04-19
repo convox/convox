@@ -274,23 +274,26 @@ spec:
           successThreshold: {{$.Service.StartupProbe.SuccessThreshold}}
           failureThreshold: {{$.Service.StartupProbe.FailureThreshold}}
         {{ end }}
-        {{ if and (not (eq $.Service.Port.Scheme "GRPC")) (not (eq $.Service.Liveness.Path ""))}}
+        {{ if and (not (eq $.Service.Port.Scheme "GRPC")) (not (eq (coalesce $.Service.Liveness.Port.Scheme $.Service.Port.Scheme) "GRPC")) (not (eq $.Service.Liveness.Path ""))}}
         livenessProbe:
           httpGet:
             path: "{{$.Service.Liveness.Path}}"
-            port: {{.}}
+            port: {{ if gt $.Service.Liveness.Port.Port 0 }}{{ $.Service.Liveness.Port.Port }}{{ else }}{{.}}{{ end }}
+            {{ if not (eq $.Service.Liveness.Port.Scheme "") }}
+            scheme: "{{ upper $.Service.Liveness.Port.Scheme }}"
+            {{ end }}
           initialDelaySeconds: {{$.Service.Liveness.Grace}}
           periodSeconds: {{$.Service.Liveness.Interval}}
           timeoutSeconds: {{$.Service.Liveness.Timeout}}
           successThreshold: {{$.Service.Liveness.SuccessThreshold}}
           failureThreshold: {{$.Service.Liveness.FailureThreshold}}
         {{ end }}
-        {{ if and (not (eq $.Service.Port.Scheme "GRPC")) (not $.Service.Health.Disable) }}
+        {{ if and (not (eq $.Service.Port.Scheme "GRPC")) (not (eq (coalesce $.Service.Health.Port.Scheme $.Service.Port.Scheme) "GRPC")) (not $.Service.Health.Disable) }}
         readinessProbe:
           httpGet:
             path: "{{$.Service.Health.Path}}"
-            port: {{.}}
-            scheme: "{{ upper $.Service.Port.Scheme }}"
+            port: {{ if gt $.Service.Health.Port.Port 0 }}{{ $.Service.Health.Port.Port }}{{ else }}{{.}}{{ end }}
+            scheme: "{{ upper (coalesce $.Service.Health.Port.Scheme $.Service.Port.Scheme) }}"
           initialDelaySeconds: {{$.Service.Health.Grace}}
           periodSeconds: {{$.Service.Health.Interval}}
           timeoutSeconds: {{$.Service.Health.Timeout}}
@@ -299,7 +302,7 @@ spec:
         {{ else if $.Service.GrpcHealthEnabled }}
         readinessProbe:
           grpc:
-            port: {{.}}
+            port: {{ if gt $.Service.Health.Port.Port 0 }}{{ $.Service.Health.Port.Port }}{{ else }}{{.}}{{ end }}
           initialDelaySeconds: {{$.Service.Health.Grace}}
           periodSeconds: {{$.Service.Health.Interval}}
           timeoutSeconds: {{$.Service.Health.Timeout}}
@@ -307,7 +310,7 @@ spec:
           failureThreshold: 5
         livenessProbe:
           grpc:
-            port: {{.}}
+            port: {{ if gt $.Service.Liveness.Port.Port 0 }}{{ $.Service.Liveness.Port.Port }}{{ else }}{{.}}{{ end }}
           initialDelaySeconds: {{$.Service.Health.Grace}}
           periodSeconds: {{$.Service.Health.Interval}}
           timeoutSeconds: {{$.Service.Health.Timeout}}

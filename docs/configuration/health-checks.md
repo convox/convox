@@ -30,6 +30,7 @@ services:
       grace: 5
       interval: 5
       path: /check
+      port: 8080
       timeout: 3
 ```
 
@@ -38,8 +39,32 @@ services:
 | **grace**    | `interval` | The amount of time in seconds to wait for a [Process](/reference/primitives/app/process) to boot before beginning health checks. Defaults to the value of `interval` |
 | **interval** | 5       | The number of seconds between health checks                                      |
 | **path**     | /       | The HTTP endpoint that will be requested                                         |
+| **port**     | Main service port | The port the readiness probe connects to. Set when the health endpoint listens on a different port than the main service port. Accepts a scalar (`port: 8080`) or a map with `port` and `scheme` |
 | **timeout**  | `interval - 1` | The number of seconds to wait for a valid response. Defaults to `interval` minus one |
 | **disable**  | false   | Set to `true` to disable the health check entirely                               |
+
+### Separate Health Port
+
+When your health endpoint runs on a different port than the main service port, set `health.port` so the readiness probe targets the right port without changing the load-balanced service port.
+
+```yaml
+services:
+  web:
+    port: https:8080
+    health:
+      path: /healthz
+      port:
+        port: 9090
+        scheme: http
+```
+
+With this configuration, traffic flows to the service on HTTPS port 8080, while the readiness probe queries `http://<pod>:9090/healthz` — a plain-HTTP diagnostics endpoint fronted by an HTTPS service port.
+
+If `scheme` is omitted, the readiness probe inherits the scheme of the main service port. The scalar form `port: 9090` is equivalent to the map form `port: { port: 9090 }` and inherits the service scheme. Provide `scheme` explicitly only when you need to override the inherited value.
+
+> **Scope.** `health.port` only affects the readiness probe. Startup probes continue to target the main service port regardless of `health.port`, and liveness probes use their own `liveness.port` override (see below). If your service speaks gRPC (`port: grpc:...` with `grpcHealthEnabled: true`), a `health.port` override redirects the gRPC health check to the new port; `scheme` is ignored in that case.
+
+> **Valid scheme values.** Only `http` and `https` are valid under `health.port.scheme` and `liveness.port.scheme`. Setting `scheme: grpc` on a service whose main port is **not** gRPC will silently skip the probe — use `grpcHealthEnabled: true` with a gRPC main port instead. See [gRPC Health Checks](#grpc-health-checks) below.
 
 ## Liveness Checks
 
@@ -54,6 +79,7 @@ services:
   web:
     liveness:
       path: /liveness/check
+      port: 9090
       grace: 15
       interval: 5
       timeout: 3
@@ -64,6 +90,7 @@ services:
 | Attribute           | Default | Description                                                                      |
 | ------------------- | ------- | -------------------------------------------------------------------------------- |
 | **path**              |         | **Required.** The HTTP endpoint that will be requested for liveness checks      |
+| **port**              | Main service port | The port the liveness probe connects to. Set when the liveness endpoint listens on a different port than the main service port. Accepts a scalar (`port: 9090`) or a map with `port` and `scheme` |
 | **grace**             | 10      | The amount of time in seconds to wait for a [Process](/reference/primitives/app/process) to start before beginning liveness checks |
 | **interval**          | 5       | The number of seconds between liveness checks                                    |
 | **timeout**           | 5       | The number of seconds to wait for a successful response                          |
@@ -72,7 +99,8 @@ services:
 
 ### Important Considerations
 
-- **Path is Required**: Unlike health checks, you must specify a `path` to enable liveness checks
+- **Path is Required**: Unlike health checks, you must specify a `path` to enable liveness checks. Setting `liveness.port` without `liveness.path` is a silent no-op — no liveness probe is generated
+- **`port` is optional**: If unset, the liveness probe targets the main service port, mirroring the `health.port` behavior. Startup probes ignore `liveness.port` and continue to target the main service port. If you need the liveness probe to use a specific scheme (for example, HTTPS), set `liveness.port.scheme` explicitly — unlike readiness, liveness does not auto-inherit the main service scheme
 - **Conservative Configuration**: Liveness checks should be configured conservatively to avoid unnecessary restarts. False positives can cause service disruption
 - **Separate Endpoints**: Consider using different endpoints for health checks and liveness checks to monitor different aspects of your application
 - **Startup Time**: Set an appropriate `grace` period to allow your application to fully initialize before liveness checks begin
