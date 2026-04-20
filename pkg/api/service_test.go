@@ -11,11 +11,13 @@ import (
 )
 
 var fxService = structs.Service{
-	Name:   "service1",
-	Count:  1,
-	Cpu:    2,
-	Domain: "domain",
-	Memory: 3,
+	Name:      "service1",
+	Count:     1,
+	Cpu:       2,
+	Domain:    "domain",
+	Gpu:       0,
+	GpuVendor: "",
+	Memory:    3,
 	Ports: []structs.ServicePort{
 		{Balancer: 1, Certificate: "cert1", Container: 2},
 		{Balancer: 1, Certificate: "cert1", Container: 2},
@@ -68,5 +70,25 @@ func TestServiceUpdateError(t *testing.T) {
 		p.On("ServiceUpdate", "app1", "service1", structs.ServiceUpdateOptions{}).Return(fmt.Errorf("err1"))
 		err := c.Put("/apps/app1/services/service1", stdsdk.RequestOptions{}, nil)
 		require.EqualError(t, err, "err1")
+	})
+}
+
+func TestServiceUpdateGpu(t *testing.T) {
+	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
+		opts := structs.ServiceUpdateOptions{
+			Count:     options.Int(1),
+			Gpu:       options.Int(2),
+			GpuVendor: options.String("nvidia"),
+		}
+		ro := stdsdk.RequestOptions{
+			Params: stdsdk.Params{
+				"count":      "1",
+				"gpu":        "2",
+				"gpu-vendor": "nvidia",
+			},
+		}
+		p.On("ServiceUpdate", "app1", "service1", opts).Return(nil)
+		err := c.Put("/apps/app1/services/service1", ro, nil)
+		require.NoError(t, err)
 	})
 }

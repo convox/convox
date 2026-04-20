@@ -150,6 +150,313 @@ var managedParams = map[string]bool{
 	"eks_api_server_public_access_cidrs": true,
 }
 
+// sensitiveParams enumerates rack params whose values are rendered as
+// "**********" on a TTY when --reveal is not passed. Pipe output and
+// --reveal bypass masking.
+//
+// Lineage: always-mask introduced in 3.24.4 (docker_hub_password,
+// secret_key, token); list extended and TTY-gating + --reveal added
+// alongside this var's package-level promotion in 3.24.5 (access_id,
+// private_eks_host, private_eks_user, private_eks_pass).
+var sensitiveParams = map[string]bool{
+	"docker_hub_password": true,
+	"secret_key":          true,
+	"token":               true,
+	"access_id":           true,
+	"private_eks_host":    true,
+	"private_eks_user":    true,
+	"private_eks_pass":    true,
+}
+
+// paramGroups categorizes rack params into curated logical groups for the
+// `convox rack params -g <group>` filter. A param may belong to multiple
+// groups. Params not listed here are shown in the default view but not
+// surfaced by any group filter.
+var paramGroups = map[string]map[string]bool{
+	"karpenter": {
+		"additional_karpenter_nodepools_config": true,
+		"karpenter_arch":                        true,
+		"karpenter_auth_mode":                   true,
+		"karpenter_build_capacity_types":        true,
+		"karpenter_build_consolidate_after":     true,
+		"karpenter_build_cpu_limit":             true,
+		"karpenter_build_instance_families":     true,
+		"karpenter_build_instance_sizes":        true,
+		"karpenter_build_memory_limit_gb":       true,
+		"karpenter_build_node_labels":           true,
+		"karpenter_capacity_types":              true,
+		"karpenter_config":                      true,
+		"karpenter_consolidate_after":           true,
+		"karpenter_consolidation_enabled":       true,
+		"karpenter_cpu_limit":                   true,
+		"karpenter_disruption_budget_nodes":     true,
+		"karpenter_enabled":                     true,
+		"karpenter_instance_families":           true,
+		"karpenter_instance_sizes":              true,
+		"karpenter_memory_limit_gb":             true,
+		"karpenter_node_disk":                   true,
+		"karpenter_node_expiry":                 true,
+		"karpenter_node_labels":                 true,
+		"karpenter_node_taints":                 true,
+		"karpenter_node_volume_type":            true,
+	},
+	"network": {
+		"availability_zones":      true,
+		"cidr":                    true,
+		"deploy_extra_nlb":        true,
+		"disable_convox_resolver": true,
+		"internal_router":         true,
+		"internet_gateway_id":     true,
+		"nlb_security_group":      true,
+		"private_eks_host":        true,
+		"private_subnets_ids":     true,
+		"proxy_protocol":          true,
+		"public_subnets_ids":      true,
+		"vpc_id":                  true,
+	},
+	"security": {
+		"access_id":                          true,
+		"disable_public_access":              true,
+		"docker_hub_password":                true,
+		"ebs_volume_encryption_enabled":      true,
+		"ecr_scan_on_push_enable":            true,
+		"eks_api_server_public_access_cidrs": true,
+		"enable_private_access":              true,
+		"imds_http_hop_limit":                true,
+		"imds_http_tokens":                   true,
+		"imds_tags_enable":                   true,
+		"nlb_security_group":                 true,
+		"pod_identity_agent_enable":          true,
+		"private_eks_host":                   true,
+		"private_eks_pass":                   true,
+		"private_eks_user":                   true,
+		"secret_key":                         true,
+		"ssl_ciphers":                        true,
+		"ssl_protocols":                      true,
+		"token":                              true,
+		"whitelist":                          true,
+	},
+	"scaling": {
+		"high_availability":                    true,
+		"karpenter_disruption_budget_nodes":    true,
+		"keda_enable":                          true,
+		"max_on_demand_count":                  true,
+		"min_on_demand_count":                  true,
+		"node_max_unavailable_percentage":      true,
+		"pdb_default_min_available_percentage": true,
+		"schedule_rack_scale_down":             true,
+		"schedule_rack_scale_up":               true,
+		"vpa_enable":                           true,
+	},
+	"nodes": {
+		"additional_node_groups_config":       true,
+		"gpu_tag_enable":                      true,
+		"key_pair_name":                       true,
+		"kubelet_registry_burst":              true,
+		"kubelet_registry_pull_qps":           true,
+		"node_capacity_type":                  true,
+		"node_disk":                           true,
+		"node_max_unavailable_percentage":     true,
+		"node_type":                           true,
+		"nvidia_device_plugin_enable":         true,
+		"nvidia_device_time_slicing_replicas": true,
+		"os":                                  true,
+		"preemptible":                         true,
+		"user_data":                           true,
+		"user_data_url":                       true,
+	},
+	"build": {
+		"additional_build_groups_config":    true,
+		"build_disable_convox_resolver":     true,
+		"build_node_enabled":                true,
+		"build_node_min_count":              true,
+		"build_node_type":                   true,
+		"buildkit_enabled":                  true,
+		"buildkit_host_path_cache_enable":   true,
+		"karpenter_build_capacity_types":    true,
+		"karpenter_build_consolidate_after": true,
+		"karpenter_build_cpu_limit":         true,
+		"karpenter_build_instance_families": true,
+		"karpenter_build_instance_sizes":    true,
+		"karpenter_build_memory_limit_gb":   true,
+		"karpenter_build_node_labels":       true,
+	},
+	// docker_hub_password is dual-listed in "security" (above) because it is
+	// a masked credential; docker_hub_username stays registry-only as a
+	// public identifier (matches existing non-masked convention).
+	"registry": {
+		"custom_provided_bucket":       true,
+		"disable_image_manifest_cache": true,
+		"docker_hub_password":          true,
+		"docker_hub_username":          true,
+		"ecr_docker_hub_cache":         true,
+		"ecr_scan_on_push_enable":      true,
+	},
+	"logging": {
+		"access_log_retention_in_days": true,
+		"fluentd_disable":              true,
+		"fluentd_memory":               true,
+		"syslog":                       true,
+		"telemetry":                    true,
+	},
+	"ingress": {
+		"cert_duration":           true,
+		"idle_timeout":            true,
+		"nginx_additional_config": true,
+		"nginx_image":             true,
+		"ssl_ciphers":             true,
+		"ssl_protocols":           true,
+	},
+	"domain": {
+		"convox_domain_tls_cert_disable": true,
+		"convox_rack_domain":             true,
+		"domain":                         true,
+	},
+	"storage": {
+		"aws_ebs_csi_driver_version":    true,
+		"azure_files_enable":            true,
+		"ebs_volume_encryption_enabled": true,
+		"efs_csi_driver_enable":         true,
+		"efs_csi_driver_version":        true,
+		"registry_disk":                 true,
+	},
+	"retention": {
+		"releases_to_retain_after_active":           true,
+		"releases_to_retain_task_run_interval_hour": true,
+	},
+	"versions": {
+		"aws_ebs_csi_driver_version": true,
+		"coredns_version":            true,
+		"efs_csi_driver_version":     true,
+		"k8s_version":                true,
+		"kube_proxy_version":         true,
+		"nginx_image":                true,
+		"pod_identity_agent_version": true,
+		"vpc_cni_version":            true,
+	},
+}
+
+// groupDescriptions provides the one-line label shown next to each group
+// name in error output (e.g., unknown-group and ambiguous-prefix errors).
+// Keep in sync with paramGroups keys.
+var groupDescriptions = map[string]string{
+	"karpenter": "Karpenter autoscaling configuration",
+	"network":   "VPC, subnets, CIDR, routing, NLB, DNS resolver",
+	"security":  "access controls, whitelist, IAM, encryption, private EKS, IMDS, TLS, credentials",
+	"scaling":   "capacity counts, HA, HPA/VPA/KEDA, schedules, PDB, disruption budgets",
+	"nodes":     "default node-group config, user-data, GPU, kubelet tuning",
+	"build":     "build node config, buildkit, additional build groups",
+	"registry":  "Docker Hub, ECR, image caching, storage buckets",
+	"logging":   "syslog, telemetry, fluentd",
+	"ingress":   "NGINX, idle timeout, TLS cert duration",
+	"domain":    "rack domain and TLS toggle",
+	"storage":   "CSI drivers, EBS/EFS/Azure Files, registry disk",
+	"retention": "release retention policy",
+	"versions":  "K8s and managed component versions",
+}
+
+// resolveGroup resolves a possibly-partial group name to an exact group key.
+// Priority: exact match > unique prefix match. Case-insensitive. Whitespace
+// is trimmed. Returns an error listing candidates or all groups on
+// ambiguous / unknown input.
+func resolveGroup(input string) (string, error) {
+	input = strings.ToLower(strings.TrimSpace(input))
+	if input == "" {
+		return "", fmt.Errorf("group name required\n  %s", formatGroupList())
+	}
+
+	if _, ok := paramGroups[input]; ok {
+		return input, nil
+	}
+
+	var matches []string
+	for g := range paramGroups {
+		if strings.HasPrefix(g, input) {
+			matches = append(matches, g)
+		}
+	}
+	sort.Strings(matches)
+
+	switch len(matches) {
+	case 0:
+		return "", fmt.Errorf("group '%s' not found\n  %s", input, formatGroupList())
+	case 1:
+		return matches[0], nil
+	default:
+		return "", fmt.Errorf("group '%s' matches multiple groups: %s %s\n  %s",
+			input, strings.Join(matches, ", "), formatAmbiguousHint(matches), formatGroupList())
+	}
+}
+
+// formatGroupList returns a sorted, padded two-column listing of all
+// available groups for inclusion in error output.
+func formatGroupList() string {
+	names := make([]string, 0, len(groupDescriptions))
+	maxLen := 0
+	for g := range groupDescriptions {
+		names = append(names, g)
+		if len(g) > maxLen {
+			maxLen = len(g)
+		}
+	}
+	sort.Strings(names)
+
+	var b strings.Builder
+	b.WriteString("available groups:\n")
+	for _, g := range names {
+		b.WriteString(fmt.Sprintf("  %-*s    %s\n", maxLen, g, groupDescriptions[g]))
+	}
+	return strings.TrimRight(b.String(), "\n")
+}
+
+// formatAmbiguousHint returns a parenthesized hint showing a short-but-
+// readable disambiguating prefix for each ambiguous candidate, e.g.,
+// "(use 'net' or 'nod')" for candidates ["network", "nodes"].
+func formatAmbiguousHint(candidates []string) string {
+	if len(candidates) == 0 {
+		return ""
+	}
+	hints := make([]string, 0, len(candidates))
+	for _, c := range candidates {
+		hints = append(hints, "'"+disambiguatingPrefix(c)+"'")
+	}
+	switch len(hints) {
+	case 1:
+		return "(use " + hints[0] + ")"
+	case 2:
+		return "(use " + hints[0] + " or " + hints[1] + ")"
+	default:
+		return "(use " + strings.Join(hints[:len(hints)-1], ", ") + ", or " + hints[len(hints)-1] + ")"
+	}
+}
+
+// disambiguatingPrefix returns a short-but-readable prefix of `group` that
+// resolves uniquely against all paramGroups keys. Uses a 3-character
+// minimum for human readability — a technically-unique 1- or 2-char
+// prefix like "no" for "nodes" reads like negation and is avoided.
+func disambiguatingPrefix(group string) string {
+	const minLen = 3
+	if len(group) <= minLen {
+		return group
+	}
+	for n := minLen; n <= len(group); n++ {
+		prefix := group[:n]
+		hits := 0
+		for g := range paramGroups {
+			if strings.HasPrefix(g, prefix) {
+				hits++
+				if hits > 1 {
+					break
+				}
+			}
+		}
+		if hits == 1 {
+			return prefix
+		}
+	}
+	return group
+}
+
 func init() {
 	register("rack", "get information about the rack", watch(Rack), stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagRack, flagWatchInterval},
@@ -202,7 +509,11 @@ func init() {
 	})
 
 	registerWithoutProvider("rack params", "display rack parameters", RackParams, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagRack},
+		Flags: []stdcli.Flag{
+			flagRack,
+			stdcli.StringFlag("group", "g", "filter to a param group (invalid name lists all)"),
+			stdcli.BoolFlag("reveal", "", "show unmasked param values"),
+		},
 		Validate: stdcli.Args(0),
 	})
 
@@ -1247,6 +1558,23 @@ func Rack(rack sdk.Interface, c *stdcli.Context) error {
 		i.Add("RouterInternal", s.RouterInternal)
 	}
 
+	if nlb := s.Outputs["NLBHost"]; nlb != "" {
+		var eips []string
+		for _, k := range []string{"NLBEIP0", "NLBEIP1", "NLBEIP2"} {
+			if v := s.Outputs[k]; v != "" {
+				eips = append(eips, v)
+			}
+		}
+		if len(eips) > 0 {
+			i.Add("NLB", fmt.Sprintf("%s (%s)", nlb, strings.Join(eips, ", ")))
+		} else {
+			i.Add("NLB", nlb)
+		}
+	}
+	if nlbi := s.Outputs["NLBInternalHost"]; nlbi != "" {
+		i.Add("NLB Internal", nlbi)
+	}
+
 	i.Add("Status", s.Status)
 	i.Add("Version", s.Version)
 
@@ -1486,6 +1814,19 @@ func RackMv(_ sdk.Interface, c *stdcli.Context) error {
 }
 
 func RackParams(_ sdk.Interface, c *stdcli.Context) error {
+	var (
+		groupFilter   map[string]bool
+		resolvedGroup string
+	)
+	if groupInput := c.String("group"); groupInput != "" {
+		resolved, rerr := resolveGroup(groupInput)
+		if rerr != nil {
+			return rerr
+		}
+		resolvedGroup = resolved
+		groupFilter = paramGroups[resolved]
+	}
+
 	r, err := rack.Current(c)
 	if err != nil {
 		return err
@@ -1514,23 +1855,32 @@ func RackParams(_ sdk.Interface, c *stdcli.Context) error {
 
 	sort.Strings(keys)
 
-	sensitiveParams := map[string]bool{
-		"docker_hub_password": true,
-		"secret_key":          true,
-		"token":               true,
-	}
+	shouldMask := !c.Bool("reveal") && IsTerminalFn(c)
 
 	i := c.Info()
+	rowsAdded := 0
 
 	for _, k := range keys {
+		if groupFilter != nil && !groupFilter[k] {
+			continue
+		}
 		v := params[k]
-		if sensitiveParams[k] && v != "" {
+		if shouldMask && sensitiveParams[k] && v != "" {
 			v = "**********"
 		}
 		i.Add(k, v)
+		rowsAdded++
 	}
 
-	return i.Print()
+	if err := i.Print(); err != nil {
+		return err
+	}
+
+	if groupFilter != nil && rowsAdded == 0 {
+		fmt.Fprintf(os.Stderr, "NOTICE: no params in group '%s' for this rack\n", resolvedGroup)
+	}
+
+	return nil
 }
 
 func RackParamsSet(_ sdk.Interface, c *stdcli.Context) error {

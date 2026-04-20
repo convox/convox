@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/convox/convox/pkg/common"
+	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
 )
@@ -18,6 +20,12 @@ func init() {
 		Flags:    []stdcli.Flag{flagApp, flagRack},
 		Validate: stdcli.Args(1),
 	}, WithCloud())
+
+	register("services update", "update a service", ServicesUpdate, stdcli.CommandOptions{
+		Flags:    append(stdcli.OptionFlags(structs.ServiceUpdateOptions{}), flagApp, flagRack),
+		Usage:    "<service>",
+		Validate: stdcli.Args(1),
+	}, WithCloud())
 }
 
 func Services(rack sdk.Interface, c *stdcli.Context) error {
@@ -27,7 +35,22 @@ func Services(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	t := c.Table("SERVICE", "DOMAIN", "PORTS")
+	// NLB PORTS column only renders when at least one service declares nlb: ports.
+	// v3 racks never populate Nlb; v2 racks populate it from the release manifest.
+	// Index-based iteration avoids copying the full Service struct per scan step.
+	hasNlb := false
+	for i := range ss {
+		if len(ss[i].Nlb) > 0 {
+			hasNlb = true
+			break
+		}
+	}
+
+	headers := []string{"SERVICE", "DOMAIN", "PORTS"}
+	if hasNlb {
+		headers = append(headers, "NLB PORTS")
+	}
+	t := c.Table(headers...)
 
 	for _, s := range ss {
 		ports := []string{}
@@ -42,7 +65,21 @@ func Services(rack sdk.Interface, c *stdcli.Context) error {
 			ports = append(ports, port)
 		}
 
-		t.AddRow(s.Name, s.Domain, strings.Join(ports, " "))
+		row := []string{s.Name, s.Domain, strings.Join(ports, " ")}
+
+		if hasNlb {
+			nlbs := []string{}
+			for _, np := range s.Nlb {
+				cell := fmt.Sprintf("%d:%d", np.Port, np.ContainerPort)
+				if np.Scheme == "internal" {
+					cell += "(internal)"
+				}
+				nlbs = append(nlbs, cell)
+			}
+			row = append(row, strings.Join(nlbs, " "))
+		}
+
+		t.AddRow(row...)
 	}
 
 	return t.Print()
@@ -54,6 +91,32 @@ func ServicesRestart(rack sdk.Interface, c *stdcli.Context) error {
 	c.Startf("Restarting <service>%s</service>", name)
 
 	if err := rack.ServiceRestart(app(c), name); err != nil {
+		return err
+	}
+
+	return c.OK()
+}
+
+func ServicesUpdate(rack sdk.Interface, c *stdcli.Context) error {
+	var opts structs.ServiceUpdateOptions
+
+	if err := c.Options(&opts); err != nil {
+		return err
+	}
+
+	name := c.Arg(0)
+
+	c.Startf("Updating <service>%s</service>", name)
+
+	if err := rack.ServiceUpdate(app(c), name, opts); err != nil {
+		return err
+	}
+
+	if err := c.Writef("\n"); err != nil {
+		return err
+	}
+
+	if err := common.WaitForAppWithLogs(rack, c, app(c)); err != nil {
 		return err
 	}
 

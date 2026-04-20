@@ -78,15 +78,16 @@ spec:
               {{ end }}
               {{ end }}
           {{ end }}
-          {{ if .Service.NodeSelectorLabels }}
-          {{ $hasTolerations := false }}
+          {{ $hasDedicatedNode := false }}
           {{ range keyValue .Service.NodeSelectorLabels }}
             {{ if or (eq .Key "convox.io/label") (eq .Key "convox.io/nodepool") }}
-              {{ $hasTolerations = true }}
+              {{ $hasDedicatedNode = true }}
             {{ end }}
           {{ end }}
-          {{ if $hasTolerations }}
+          {{ $hasGpu := gt .Service.Scale.Gpu.Count 0 }}
+          {{ if or $hasDedicatedNode $hasGpu }}
           tolerations:
+            {{ if $hasDedicatedNode }}
             {{ range keyValue .Service.NodeSelectorLabels }}
             {{ if or (eq .Key "convox.io/label") (eq .Key "convox.io/nodepool") }}
             - key: "dedicated-node"
@@ -95,7 +96,12 @@ spec:
               effect: "NoSchedule"
             {{ end }}
             {{ end }}
-          {{ end }}
+            {{ end }}
+            {{ if $hasGpu }}
+            - key: {{ gpuResourceKey .Service.Scale.Gpu.Vendor }}
+              operator: Exists
+              effect: NoSchedule
+            {{ end }}
           {{ end }}
           {{ if .Service.DisableHostUsers }}
           hostUsers: false
@@ -163,11 +169,7 @@ spec:
                 cpu: "{{.Service.Scale.Limit.Cpu}}m"
                 {{ end }}
                 {{ with .Service.Scale.Gpu.Count }}
-                {{ if hasSuffix $.Service.Scale.Gpu.Vendor ".com"}}
-                {{$.Service.Scale.Gpu.Vendor}}/gpu: "{{.}}"
-                {{ else }}
-                {{$.Service.Scale.Gpu.Vendor}}.com/gpu: "{{.}}"
-                {{ end }}
+                {{ gpuResourceKey $.Service.Scale.Gpu.Vendor }}: "{{.}}"
                 {{ end }}
                 {{ if (gt .Service.Scale.Limit.Memory 0)}}
                 memory: "{{.Service.Scale.Limit.Memory}}Mi"
@@ -179,15 +181,51 @@ spec:
                 cpu: "{{.}}m"
                 {{ end }}
                 {{ with .Service.Scale.Gpu.Count }}
-                {{ if hasSuffix $.Service.Scale.Gpu.Vendor ".com"}}
-                {{$.Service.Scale.Gpu.Vendor}}/gpu: "{{.}}"
-                {{ else }}
-                {{$.Service.Scale.Gpu.Vendor}}.com/gpu: "{{.}}"
-                {{ end }}
+                {{ gpuResourceKey $.Service.Scale.Gpu.Vendor }}: "{{.}}"
                 {{ end }}
                 {{ with .Service.Scale.Memory }}
                 memory: "{{.}}Mi"
                 {{ end }}
+            {{ if or .Service.Privileged .Service.SecurityContext.HasSecurityContext }}
+            securityContext:
+              {{ if .Service.Privileged }}
+              privileged: true
+              {{ end }}
+              {{ with .Service.SecurityContext.RunAsNonRoot }}
+              runAsNonRoot: {{ . }}
+              {{ end }}
+              {{ with .Service.SecurityContext.RunAsUser }}
+              runAsUser: {{ . }}
+              {{ end }}
+              {{ with .Service.SecurityContext.RunAsGroup }}
+              runAsGroup: {{ . }}
+              {{ end }}
+              {{ with .Service.SecurityContext.ReadOnlyRootFilesystem }}
+              readOnlyRootFilesystem: {{ . }}
+              {{ end }}
+              {{ if ne .Service.SecurityContext.AllowPrivilegeEscalation nil }}
+              allowPrivilegeEscalation: {{ deref .Service.SecurityContext.AllowPrivilegeEscalation }}
+              {{ end }}
+              {{ if .Service.SecurityContext.Capabilities.HasCapabilities }}
+              capabilities:
+                {{ with .Service.SecurityContext.Capabilities.Drop }}
+                drop:
+                {{ range . }}
+                  - {{ . }}
+                {{ end }}
+                {{ end }}
+                {{ with .Service.SecurityContext.Capabilities.Add }}
+                add:
+                {{ range . }}
+                  - {{ . }}
+                {{ end }}
+                {{ end }}
+              {{ end }}
+              {{ with .Service.SecurityContext.SeccompProfile }}
+              seccompProfile:
+                type: {{ . }}
+              {{ end }}
+            {{ end }}
             volumeMounts:
             - name: ca
               mountPath: /etc/convox
@@ -228,9 +266,14 @@ spec:
           {{ range .Service.VolumeOptions }}
           {{ with .EmptyDir }}
           - name: ed-{{ .Id }}
-            {{ if .Medium }}
+            {{ if or .Medium .SizeLimit }}
             emptyDir:
+              {{ if .Medium }}
               medium: {{ .Medium }}
+              {{ end }}
+              {{ if .SizeLimit }}
+              sizeLimit: {{ .SizeLimit }}
+              {{ end }}
             {{ else }}
             emptyDir: {}
             {{ end }}

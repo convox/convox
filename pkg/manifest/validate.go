@@ -144,6 +144,10 @@ func (m *Manifest) validateServices() []error {
 			}
 		}
 
+		if err := s.SecurityContext.Validate(); err != nil {
+			errs = append(errs, fmt.Errorf("service %s: %s", s.Name, err))
+		}
+
 		for i := range s.ConfigMounts {
 			cm := &s.ConfigMounts[i]
 			if err := cm.Validate(); err != nil {

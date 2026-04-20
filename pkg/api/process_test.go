@@ -19,6 +19,7 @@ var fxProcess = structs.Process{
 	App:      "app1",
 	Command:  "command",
 	Cpu:      1.0,
+	Gpu:      0,
 	Host:     "host",
 	Image:    "image",
 	Instance: "instance",
@@ -177,6 +178,32 @@ func TestProcessRun(t *testing.T) {
 				"Memory":      "2",
 				"Release":     "release",
 				"Width":       "3",
+			},
+		}
+		p.On("ProcessRun", "app1", "service1", opts).Return(&p1, nil)
+		err := c.Post("/apps/app1/services/service1/processes", ro, &p2)
+		require.NoError(t, err)
+		require.Equal(t, p1, p2)
+	})
+}
+
+func TestProcessRunGpu(t *testing.T) {
+	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
+		a1 := fxApp
+		p.On("AppGet", "app1").Return(&a1, nil)
+		p1 := fxProcess
+		p2 := structs.Process{}
+		opts := structs.ProcessRunOptions{
+			Command:   options.String("nvidia-smi"),
+			Gpu:       options.Int(1),
+			GpuVendor: options.String("nvidia"),
+		}
+		ro := stdsdk.RequestOptions{
+			Body: strings.NewReader(""),
+			Headers: stdsdk.Headers{
+				"Command":    "nvidia-smi",
+				"Gpu":        "1",
+				"Gpu-Vendor": "nvidia",
 			},
 		}
 		p.On("ProcessRun", "app1", "service1", opts).Return(&p1, nil)

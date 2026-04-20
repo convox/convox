@@ -580,6 +580,10 @@ func (p *Provider) podSpecFromService(app, service, release string, isBuild bool
 			}
 
 			nodeSelectorLabels = s.NodeSelectorLabels
+
+			if sc := serviceSecurityContext(s); sc != nil {
+				c.SecurityContext = sc
+			}
 		}
 
 		for k, v := range env {
@@ -715,11 +719,18 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 	}
 
 	if opts.Gpu != nil {
-		s.Containers[0].Resources.Requests["nvidia.com/gpu"] = resource.MustParse(fmt.Sprintf("%d", *opts.Gpu))
+		vendor := ""
+		if opts.GpuVendor != nil {
+			vendor = *opts.GpuVendor
+		}
+		gpuKey := ac.ResourceName(gpuResourceKey(vendor))
+		gpuQty := resource.MustParse(fmt.Sprintf("%d", *opts.Gpu))
+
+		s.Containers[0].Resources.Requests[gpuKey] = gpuQty
 		if s.Containers[0].Resources.Limits == nil {
 			s.Containers[0].Resources.Limits = ac.ResourceList{}
 		}
-		s.Containers[0].Resources.Limits["nvidia.com/gpu"] = resource.MustParse(fmt.Sprintf("%d", *opts.Gpu))
+		s.Containers[0].Resources.Limits[gpuKey] = gpuQty
 	}
 
 	if opts.Memory != nil {
@@ -760,6 +771,28 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 			Operator: ac.TolerationOpExists,
 			Effect:   ac.TaintEffectNoSchedule,
 		})
+	}
+
+	if opts.Gpu != nil && *opts.Gpu > 0 {
+		vendor := ""
+		if opts.GpuVendor != nil {
+			vendor = *opts.GpuVendor
+		}
+		gpuKey := gpuResourceKey(vendor)
+		hasGpuToleration := false
+		for _, t := range s.Tolerations {
+			if t.Key == gpuKey && t.Effect == ac.TaintEffectNoSchedule && t.Operator == ac.TolerationOpExists {
+				hasGpuToleration = true
+				break
+			}
+		}
+		if !hasGpuToleration {
+			s.Tolerations = append(s.Tolerations, ac.Toleration{
+				Key:      gpuKey,
+				Operator: ac.TolerationOpExists,
+				Effect:   ac.TaintEffectNoSchedule,
+			})
+		}
 	}
 
 	if p.hasDockerHubAuth() {
@@ -936,6 +969,13 @@ func (p *Provider) processFromPod(pd ac.Pod) (*structs.Process, error) {
 		Release:  pd.ObjectMeta.Labels["release"],
 		Started:  pd.CreationTimestamp.Time,
 		Status:   status,
+	}
+
+	for key := range gpuKeyToVendor {
+		if q, ok := c.Resources.Requests[ac.ResourceName(key)]; ok {
+			ps.Gpu = int(q.Value())
+			break
+		}
 	}
 
 	if ps.App == "system" {

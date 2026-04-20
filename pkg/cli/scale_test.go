@@ -23,9 +23,9 @@ func TestScale(t *testing.T) {
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
-			"SERVICE   DESIRED  RUNNING  CPU  MEMORY",
-			"service1  1        0        2    3",
-			"service1  1        0        2    3",
+			"SERVICE   DESIRED  RUNNING  CPU  MEMORY  GPU",
+			"service1  1        0        2    3       -",
+			"service1  1        0        2    3       -",
 		})
 	})
 }

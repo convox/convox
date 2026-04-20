@@ -222,3 +222,22 @@ func TestReleasesRollbackErrorPromote(t *testing.T) {
 		})
 	})
 }
+
+func TestReleasesInfoRevealFlag(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("ReleaseGet", "app1", "release1").Return(fxRelease(), nil)
+
+		res, err := testExecute(e, "releases info release1 --reveal -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{
+			"Id           release1",
+			"Build        build1",
+			fmt.Sprintf("Created      %s", fxRelease().Created.Format(time.RFC3339)),
+			"Description  description1",
+			"Env          FOO=bar",
+			"             BAZ=quux",
+		})
+	})
+}

@@ -187,6 +187,22 @@ func TestAppLogs(t *testing.T) {
 	})
 }
 
+func TestAppLogsMaxLogRequests(t *testing.T) {
+	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
+		d1 := []byte("test")
+		r1 := io.NopCloser(bytes.NewReader(d1))
+		opts := structs.LogsOptions{Since: options.Duration(2 * time.Minute), MaxLogRequests: options.Int(50)}
+		p.On("AppLogs", "app1", opts).Return(r1, nil)
+		r2, err := c.Websocket("/apps/app1/logs", stdsdk.RequestOptions{
+			Headers: stdsdk.Headers{"Maxlogrequests": "50"},
+		})
+		require.NoError(t, err)
+		d2, err := io.ReadAll(r2)
+		require.NoError(t, err)
+		require.Equal(t, d1, d2)
+	})
+}
+
 func TestAppLogsError(t *testing.T) {
 	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
 		opts := structs.LogsOptions{Since: options.Duration(2 * time.Minute)}

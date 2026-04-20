@@ -120,6 +120,8 @@ func fxInstance() *structs.Instance {
 		Agent:             true,
 		Cpu:               0.423,
 		CpuAllocatable:    1,
+		GpuCapacity:       0,
+		GpuAllocatable:    0,
 		Id:                "instance1",
 		Memory:            718,
 		MemoryAllocatable: 1000,
@@ -277,16 +279,27 @@ func fxResourceUpdating() *structs.Resource {
 
 func fxService() *structs.Service {
 	return &structs.Service{
-		Name:   "service1",
-		Count:  1,
-		Cpu:    2,
-		Domain: "domain",
-		Memory: 3,
+		Name:      "service1",
+		Count:     1,
+		Cpu:       2,
+		Domain:    "domain",
+		Gpu:       0,
+		GpuVendor: "",
+		Memory:    3,
 		Ports: []structs.ServicePort{
 			{Balancer: 1, Certificate: "cert1", Container: 2},
 			{Balancer: 1, Certificate: "cert1", Container: 2},
 		},
 	}
+}
+
+func fxServiceNLB() *structs.Service {
+	s := fxService()
+	s.Nlb = []structs.ServiceNlbPort{
+		{Port: 8443, Protocol: "tcp", ContainerPort: 8443, Scheme: "public"},
+		{Port: 9443, Protocol: "tcp", ContainerPort: 8080, Scheme: "internal"},
+	}
+	return s
 }
 
 func fxSystem() *structs.System {
@@ -343,6 +356,26 @@ func fxSystemInternal() *structs.System {
 	}
 }
 
+func fxSystemNLB() *structs.System {
+	s := fxSystem()
+	s.Outputs = map[string]string{
+		"NLBHost": "nlb-abc.elb.amazonaws.com",
+		"NLBEIP0": "1.2.3.4",
+		"NLBEIP1": "5.6.7.8",
+	}
+	return s
+}
+
+func fxSystemNLBInternal() *structs.System {
+	s := fxSystem()
+	s.Outputs = map[string]string{
+		"NLBHost":         "nlb-abc.elb.amazonaws.com",
+		"NLBEIP0":         "1.2.3.4",
+		"NLBInternalHost": "nlb-int-xyz.elb.amazonaws.com",
+	}
+	return s
+}
+
 func fxSystemUpdating() *structs.System {
 	return &structs.System{
 		Count:      1,
@@ -355,6 +388,27 @@ func fxSystemUpdating() *structs.System {
 		Status:     "updating",
 		Type:       "type",
 		Version:    "21000101000000",
+	}
+}
+
+func fxSystemSensitive() *structs.System {
+	return &structs.System{
+		Name:     "name1",
+		Provider: "provider1",
+		Region:   "region1",
+		Status:   "running",
+		Version:  "version1",
+		Parameters: map[string]string{
+			"docker_hub_password": "HUB-PASS",
+			"secret_key":          "KEY-SENSITIVE",
+			"token":               "TOK-SENSITIVE",
+			"access_id":           "ACCESS-ID",
+			"private_eks_host":    "eks-host-1",
+			"private_eks_user":    "eks-user-1",
+			"private_eks_pass":    "eks-pass-1",
+			"region":              "us-east-1",
+			"ParamOther":          "value2",
+		},
 	}
 }
 

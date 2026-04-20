@@ -10,6 +10,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Helper functions for pointer values in tests
+func ptrBool(b bool) *bool {
+	return &b
+}
+
+func ptrInt64(i int64) *int64 {
+	return &i
+}
+
 func TestManifestLoad(t *testing.T) {
 	n := &manifest.Manifest{
 		Balancers: manifest.Balancers{
@@ -173,7 +182,17 @@ func TestManifestLoad(t *testing.T) {
 					Grace:    2,
 					Interval: 5,
 					Path:     "/",
+					Port:     manifest.ServicePortScheme{Port: 3001, Scheme: "http"},
 					Timeout:  3,
+				},
+				Liveness: manifest.ServiceLiveness{
+					Grace:            10,
+					Interval:         5,
+					Path:             "/live",
+					Port:             manifest.ServicePortScheme{Port: 3002},
+					Timeout:          5,
+					SuccessThreshold: 1,
+					FailureThreshold: 3,
 				},
 				Init: true,
 				Port: manifest.ServicePortScheme{Port: 3000, Scheme: "https"},
@@ -413,6 +432,51 @@ func TestManifestLoad(t *testing.T) {
 					Redirect: true,
 				},
 			},
+			manifest.Service{
+				Name: "secured",
+				Build: manifest.ServiceBuild{
+					Manifest: "Dockerfile",
+					Path:     ".",
+				},
+				Deployment: manifest.ServiceDeployment{
+					Minimum: 50,
+					Maximum: 200,
+				},
+				Drain: 30,
+				Health: manifest.ServiceHealth{
+					Grace:    5,
+					Path:     "/",
+					Interval: 5,
+					Timeout:  4,
+				},
+				Init: true,
+				Port: manifest.ServicePortScheme{Port: 8080, Scheme: "http"},
+				Scale: manifest.ServiceScale{
+					Count:  manifest.ServiceScaleCount{Min: 1, Max: 1},
+					Cpu:    250,
+					Memory: 512,
+				},
+				SecurityContext: manifest.ServiceSecurityContext{
+					RunAsNonRoot:             ptrBool(true),
+					RunAsUser:                ptrInt64(1000),
+					RunAsGroup:               ptrInt64(1000),
+					ReadOnlyRootFilesystem:   ptrBool(true),
+					AllowPrivilegeEscalation: ptrBool(false),
+					Capabilities: &manifest.ServiceSecurityContextCapabilities{
+						Drop: []string{"ALL"},
+						Add:  []string{"NET_BIND_SERVICE"},
+					},
+					SeccompProfile: "RuntimeDefault",
+				},
+				Sticky: false,
+				Termination: manifest.ServiceTermination{
+					Grace: 30,
+				},
+				Timeout: 60,
+				Tls: manifest.ServiceTls{
+					Redirect: true,
+				},
+			},
 		},
 		Timers: manifest.Timers{
 			manifest.Timer{
@@ -495,7 +559,13 @@ func TestManifestLoad(t *testing.T) {
 		"services.foo.drain",
 		"services.foo.health",
 		"services.foo.health.grace",
+		"services.foo.health.port",
+		"services.foo.health.port.port",
+		"services.foo.health.port.scheme",
 		"services.foo.health.timeout",
+		"services.foo.liveness",
+		"services.foo.liveness.path",
+		"services.foo.liveness.port",
 		"services.foo.port",
 		"services.foo.port.port",
 		"services.foo.port.scheme",
@@ -543,6 +613,19 @@ func TestManifestLoad(t *testing.T) {
 		"services.scaler.scale.targets.custom.AWS/SQS/ApproximateNumberOfMessagesVisible.value",
 		"services.scaler.scale.targets.memory",
 		"services.scaler.scale.targets.requests",
+		"services.secured",
+		"services.secured.build",
+		"services.secured.port",
+		"services.secured.securityContext",
+		"services.secured.securityContext.allowPrivilegeEscalation",
+		"services.secured.securityContext.capabilities",
+		"services.secured.securityContext.capabilities.add",
+		"services.secured.securityContext.capabilities.drop",
+		"services.secured.securityContext.readOnlyRootFilesystem",
+		"services.secured.securityContext.runAsGroup",
+		"services.secured.securityContext.runAsNonRoot",
+		"services.secured.securityContext.runAsUser",
+		"services.secured.securityContext.seccompProfile",
 		"timers",
 		"timers.alpha",
 		"timers.alpha.command",
@@ -753,6 +836,59 @@ func TestManifestStartupProbe(t *testing.T) {
 	require.Equal(t, 5, tcp.StartupProbe.Interval)
 	require.Equal(t, 5, tcp.StartupProbe.Timeout)
 	require.Equal(t, 1, tcp.StartupProbe.SuccessThreshold)
+}
+
+func TestManifestStartupProbeGpu(t *testing.T) {
+	m, err := testdataManifest("startup-probe-gpu", map[string]string{})
+	require.NoError(t, err)
+	require.Equal(t, 5, len(m.Services))
+
+	// gpu-defaults: GPU service with no Liveness and no StartupProbe should
+	// get a TCP startup probe pointed at Port.Port plus GPU-aware defaults.
+	defaults, err := m.Service("gpu-defaults")
+	require.NoError(t, err)
+	require.Equal(t, "", defaults.StartupProbe.Path)
+	require.Equal(t, "8080", defaults.StartupProbe.TcpSocketPort)
+	require.Equal(t, 300, defaults.StartupProbe.Grace)
+	require.Equal(t, 10, defaults.StartupProbe.Interval)
+	require.Equal(t, 5, defaults.StartupProbe.Timeout)
+	require.Equal(t, 30, defaults.StartupProbe.FailureThreshold)
+	require.Equal(t, 1, defaults.StartupProbe.SuccessThreshold)
+
+	// gpu-with-liveness: GPU service inheriting from Liveness — should take
+	// Liveness timings, not the GPU fallback defaults.
+	liveness, err := m.Service("gpu-with-liveness")
+	require.NoError(t, err)
+	require.Equal(t, "8080", liveness.StartupProbe.TcpSocketPort)
+	require.Equal(t, 10, liveness.StartupProbe.Grace)
+	require.Equal(t, 5, liveness.StartupProbe.Interval)
+	require.Equal(t, 5, liveness.StartupProbe.Timeout)
+	require.Equal(t, 3, liveness.StartupProbe.FailureThreshold)
+	require.Equal(t, 1, liveness.StartupProbe.SuccessThreshold)
+
+	// gpu-explicit-http: user-specified HTTP startup probe should NOT receive
+	// the GPU fallback (gate is TcpSocketPort != "").
+	explicit, err := m.Service("gpu-explicit-http")
+	require.NoError(t, err)
+	require.Equal(t, "/ready", explicit.StartupProbe.Path)
+	require.Equal(t, "", explicit.StartupProbe.TcpSocketPort)
+	require.Equal(t, 45, explicit.StartupProbe.Grace)
+	require.Equal(t, 15, explicit.StartupProbe.Interval)
+
+	// gpu-no-port: GPU service with no Port.Port should get no startup probe
+	// at all (user opts in via explicit startupProbe.path).
+	noPort, err := m.Service("gpu-no-port")
+	require.NoError(t, err)
+	require.Equal(t, "", noPort.StartupProbe.Path)
+	require.Equal(t, "", noPort.StartupProbe.TcpSocketPort)
+	require.Equal(t, 0, noPort.StartupProbe.Grace)
+
+	// cpu-no-probe: non-GPU service with no probe should remain unchanged.
+	cpu, err := m.Service("cpu-no-probe")
+	require.NoError(t, err)
+	require.Equal(t, "", cpu.StartupProbe.Path)
+	require.Equal(t, "", cpu.StartupProbe.TcpSocketPort)
+	require.Equal(t, 0, cpu.StartupProbe.Grace)
 }
 
 func TestManifestKeda(t *testing.T) {

@@ -49,6 +49,28 @@ func (e Environment) String() string {
 	return strings.Join(lines, "\n")
 }
 
+// StringMasked returns the same sorted KEY=VALUE output as String(), but replaces
+// values of keys in the maskedKeys set with "****".
+//
+// WARNING: Only use in display paths (Env(), ReleasesInfo()). NEVER in write paths
+// (EnvSet, EnvEdit, EnvUnset, ReleaseCreate) — using it in a write path would
+// permanently replace real values with "****".
+func (e Environment) StringMasked(maskedKeys map[string]bool) string {
+	lines := []string{}
+
+	for k, v := range e {
+		if maskedKeys[k] {
+			lines = append(lines, fmt.Sprintf("%s=****", k))
+		} else {
+			lines = append(lines, fmt.Sprintf("%s=%s", k, v))
+		}
+	}
+
+	sort.Strings(lines)
+
+	return strings.Join(lines, "\n")
+}
+
 // SortedNames returns a slice of environment variables sorted by name.
 // func (e Environment) SortedNames() []string {
 //   names := []string{}

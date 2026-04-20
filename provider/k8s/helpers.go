@@ -422,6 +422,32 @@ func (t *tempStateLogStorage) Reset(key string) {
 	t.s[key] = []string{}
 }
 
+// gpuResourceKey maps a convox.yml gpu.vendor value to the Kubernetes
+// extended-resource key. Accepts both the short form (e.g. "nvidia") and the
+// ".com"-suffixed form (e.g. "nvidia.com") for backward compatibility with the
+// pre-R1 template heuristic. Unknown or unset vendors default to
+// "nvidia.com/gpu" (the most common case) instead of emitting garbage.
+func gpuResourceKey(vendor string) string {
+	switch vendor {
+	case "nvidia", "nvidia.com":
+		return "nvidia.com/gpu"
+	case "amd", "amd.com":
+		return "amd.com/gpu"
+	default:
+		return "nvidia.com/gpu"
+	}
+}
+
+// gpuKeyToVendor is the reverse of gpuResourceKey: for each supported resource
+// key, the short vendor string that appears on the Service.GpuVendor / Process
+// fields returned by the rack API. Kept in sync with gpuResourceKey — adding a
+// new vendor here without adding it to gpuResourceKey (or vice versa) will
+// produce a rack that reports a vendor it cannot emit.
+var gpuKeyToVendor = map[string]string{
+	"nvidia.com/gpu": "nvidia",
+	"amd.com/gpu":    "amd",
+}
+
 func resourceSubstitutionId(app, rType, rName string) string {
 	return fmt.Sprintf("##|app:%s|type:%s|resource:%s|##", app, rType, rName)
 }
@@ -443,4 +469,55 @@ func parseResourceSubstitutionId(id string) (string, string, string) {
 
 func patchBytes(patch map[string]interface{}) ([]byte, error) {
 	return gojson.Marshal(patch)
+}
+
+// serviceSecurityContext maps a manifest service's Privileged flag and
+// ServiceSecurityContext block to a Kubernetes container SecurityContext.
+// Returns nil when no settings are configured so callers can leave the
+// container SecurityContext unset. Mirrors the rendering logic in
+// provider/k8s/template/app/{service,timer}.yml.tmpl so one-off `convox run`
+// pods apply the same hardening as Deployment and CronJob pods.
+func serviceSecurityContext(s *manifest.Service) *ac.SecurityContext {
+	if s == nil {
+		return nil
+	}
+	if !s.Privileged && !s.SecurityContext.HasSecurityContext() {
+		return nil
+	}
+
+	sc := &ac.SecurityContext{}
+
+	if s.Privileged {
+		sc.Privileged = options.Bool(true)
+	}
+	if s.SecurityContext.RunAsNonRoot != nil {
+		sc.RunAsNonRoot = options.Bool(*s.SecurityContext.RunAsNonRoot)
+	}
+	if s.SecurityContext.RunAsUser != nil {
+		sc.RunAsUser = options.Int64(*s.SecurityContext.RunAsUser)
+	}
+	if s.SecurityContext.RunAsGroup != nil {
+		sc.RunAsGroup = options.Int64(*s.SecurityContext.RunAsGroup)
+	}
+	if s.SecurityContext.ReadOnlyRootFilesystem != nil {
+		sc.ReadOnlyRootFilesystem = options.Bool(*s.SecurityContext.ReadOnlyRootFilesystem)
+	}
+	if s.SecurityContext.AllowPrivilegeEscalation != nil {
+		sc.AllowPrivilegeEscalation = options.Bool(*s.SecurityContext.AllowPrivilegeEscalation)
+	}
+	if s.SecurityContext.Capabilities.HasCapabilities() {
+		caps := &ac.Capabilities{}
+		for _, c := range s.SecurityContext.Capabilities.Add {
+			caps.Add = append(caps.Add, ac.Capability(c))
+		}
+		for _, c := range s.SecurityContext.Capabilities.Drop {
+			caps.Drop = append(caps.Drop, ac.Capability(c))
+		}
+		sc.Capabilities = caps
+	}
+	if s.SecurityContext.SeccompProfile != "" {
+		sc.SeccompProfile = &ac.SeccompProfile{Type: ac.SeccompProfileType(s.SecurityContext.SeccompProfile)}
+	}
+
+	return sc
 }
