@@ -293,6 +293,15 @@ func fxService() *structs.Service {
 	}
 }
 
+func fxServiceNLB() *structs.Service {
+	s := fxService()
+	s.Nlb = []structs.ServiceNlbPort{
+		{Port: 8443, Protocol: "tcp", ContainerPort: 8443, Scheme: "public"},
+		{Port: 9443, Protocol: "tcp", ContainerPort: 8080, Scheme: "internal"},
+	}
+	return s
+}
+
 func fxSystem() *structs.System {
 	return &structs.System{
 		Count:      1,
@@ -345,6 +354,26 @@ func fxSystemInternal() *structs.System {
 		Type:       "type",
 		Version:    "20180901000000",
 	}
+}
+
+func fxSystemNLB() *structs.System {
+	s := fxSystem()
+	s.Outputs = map[string]string{
+		"NLBHost": "nlb-abc.elb.amazonaws.com",
+		"NLBEIP0": "1.2.3.4",
+		"NLBEIP1": "5.6.7.8",
+	}
+	return s
+}
+
+func fxSystemNLBInternal() *structs.System {
+	s := fxSystem()
+	s.Outputs = map[string]string{
+		"NLBHost":         "nlb-abc.elb.amazonaws.com",
+		"NLBEIP0":         "1.2.3.4",
+		"NLBInternalHost": "nlb-int-xyz.elb.amazonaws.com",
+	}
+	return s
 }
 
 func fxSystemUpdating() *structs.System {

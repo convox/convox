@@ -292,6 +292,120 @@ func TestRackInternal(t *testing.T) {
 	})
 }
 
+func TestRackNLB(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystemNLB(), nil)
+
+		res, err := testExecute(e, "rack", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{
+			"Name      name",
+			"Provider  provider",
+			"Region    region",
+			"Router    domain",
+			"NLB       nlb-abc.elb.amazonaws.com (1.2.3.4, 5.6.7.8)",
+			"Status    running",
+			"Version   21000101000000",
+		})
+	})
+}
+
+func TestRackNLBInternal(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystemNLBInternal(), nil)
+
+		res, err := testExecute(e, "rack", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{
+			"Name          name",
+			"Provider      provider",
+			"Region        region",
+			"Router        domain",
+			"NLB           nlb-abc.elb.amazonaws.com (1.2.3.4)",
+			"NLB Internal  nlb-int-xyz.elb.amazonaws.com",
+			"Status        running",
+			"Version       21000101000000",
+		})
+	})
+}
+
+func TestRackNLBHostOnly(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		s := fxSystem()
+		s.Outputs = map[string]string{
+			"NLBHost": "nlb-abc.elb.amazonaws.com",
+		}
+		i.On("SystemGet").Return(s, nil)
+
+		res, err := testExecute(e, "rack", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{
+			"Name      name",
+			"Provider  provider",
+			"Region    region",
+			"Router    domain",
+			"NLB       nlb-abc.elb.amazonaws.com",
+			"Status    running",
+			"Version   21000101000000",
+		})
+	})
+}
+
+func TestRackNLBInternalOnly(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		s := fxSystem()
+		s.Outputs = map[string]string{
+			"NLBInternalHost": "nlb-int-xyz.elb.amazonaws.com",
+		}
+		i.On("SystemGet").Return(s, nil)
+
+		res, err := testExecute(e, "rack", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{
+			"Name          name",
+			"Provider      provider",
+			"Region        region",
+			"Router        domain",
+			"NLB Internal  nlb-int-xyz.elb.amazonaws.com",
+			"Status        running",
+			"Version       21000101000000",
+		})
+	})
+}
+
+func TestRackNLBEIPGaps(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		s := fxSystem()
+		s.Outputs = map[string]string{
+			"NLBHost": "nlb-abc.elb.amazonaws.com",
+			"NLBEIP1": "5.6.7.8",
+		}
+		i.On("SystemGet").Return(s, nil)
+
+		res, err := testExecute(e, "rack", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{
+			"Name      name",
+			"Provider  provider",
+			"Region    region",
+			"Router    domain",
+			"NLB       nlb-abc.elb.amazonaws.com (5.6.7.8)",
+			"Status    running",
+			"Version   21000101000000",
+		})
+	})
+}
+
 func TestRackLogs(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("SystemLogs", structs.LogsOptions{Prefix: options.Bool(true)}).Return(testLogs(fxLogs()), nil)
