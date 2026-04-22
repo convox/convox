@@ -3,6 +3,7 @@ package cli_test
 import (
 	"time"
 
+	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 )
 
@@ -312,6 +313,65 @@ func fxServiceNLBTLS() *structs.Service {
 		{Port: 9443, Protocol: "tcp", ContainerPort: 8080, Scheme: "internal"},
 	}
 	return s
+}
+
+func fxServiceNLBHardening() *structs.Service {
+	s := fxService()
+	s.Nlb = []structs.ServiceNlbPort{
+		{
+			Port: 8443, Protocol: "tcp", ContainerPort: 8443, Scheme: "public",
+			CrossZone:        options.Bool(true),
+			AllowCIDR:        []string{"10.0.0.0/24", "10.1.0.0/24"},
+			PreserveClientIP: options.Bool(false),
+		},
+	}
+	return s
+}
+
+// fxSystemV2WithSensitive returns a System shaped like a v2 rack response:
+// PascalCase Parameters keys including the two v2 sensitive params the v3
+// CLI now masks on TTY. v3 rack responses never look like this (snake_case
+// only); this fixture exercises the v2-against-v3-CLI code path.
+func fxSystemV2WithSensitive() *structs.System {
+	return &structs.System{
+		Count:    1,
+		Domain:   "domain",
+		Name:     "name",
+		Provider: "aws",
+		Region:   "region",
+		Status:   "running",
+		Type:     "type",
+		Version:  "21000101000000",
+		Parameters: map[string]string{
+			"Password":     "secret123",
+			"HttpProxy":    "http://user:pass@proxy.corp:8080",
+			"VPCCIDR":      "10.0.0.0/16",
+			"Autoscale":    "Yes",
+			"InstanceType": "t3.medium",
+		},
+	}
+}
+
+// fxSystemV2NLB returns a System shaped like a v2 rack response with the
+// CloudFormation NLB hardening parameters populated.
+func fxSystemV2NLB() *structs.System {
+	return &structs.System{
+		Count:    1,
+		Domain:   "domain",
+		Name:     "name",
+		Provider: "aws",
+		Region:   "region",
+		Status:   "running",
+		Type:     "type",
+		Version:  "21000101000000",
+		Parameters: map[string]string{
+			"NLB":                   "Yes",
+			"NLBAllowCIDR":          "10.0.0.0/8,192.168.0.0/16",
+			"NLBCrossZone":          "true",
+			"NLBDeletionProtection": "No",
+			"NLBPreserveClientIP":   "true",
+		},
+	}
 }
 
 func fxSystem() *structs.System {

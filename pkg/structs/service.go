@@ -19,12 +19,21 @@ type Services []Service
 // Nlb) rather than the manifest package's all-caps initialism style. v3 has no
 // NLB manifest schema today; this wire shape exists so v3 CLI (and Console,
 // which vendors this package) can surface NLB info returned by v2 racks.
+//
+// CrossZone and PreserveClientIP are pointers so nil signals "no per-port
+// override — inherit the NLB-level setting," distinct from a non-nil false
+// which is a meaningful explicit override. AllowCIDR omitempty + len-based
+// display gating means nil slice, JSON null, and empty slice all render as
+// no-bracket equivalently.
 type ServiceNlbPort struct {
-	ContainerPort int    `json:"container-port"`
-	Port          int    `json:"port"`
-	Protocol      string `json:"protocol"`
-	Scheme        string `json:"scheme"`
-	Certificate   string `json:"certificate"`
+	ContainerPort    int      `json:"container-port"`
+	Port             int      `json:"port"`
+	Protocol         string   `json:"protocol"`
+	Scheme           string   `json:"scheme"`
+	Certificate      string   `json:"certificate"`
+	CrossZone        *bool    `json:"cross-zone,omitempty"`
+	AllowCIDR        []string `json:"allow-cidr,omitempty"`
+	PreserveClientIP *bool    `json:"preserve-client-ip,omitempty"`
 }
 
 type ServicePort struct {

@@ -449,6 +449,10 @@ func TestRackLogsError(t *testing.T) {
 }
 
 func TestRackParams(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("SystemGet").Return(fxSystem(), nil)
 
@@ -465,6 +469,10 @@ func TestRackParams(t *testing.T) {
 }
 
 func TestRackParamsError(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("SystemGet").Return(nil, fmt.Errorf("err1"))
 
@@ -477,6 +485,10 @@ func TestRackParamsError(t *testing.T) {
 }
 
 func TestRackParamsSet(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("SystemGet").Return(fxSystem(), nil)
 		opts := structs.SystemUpdateOptions{
@@ -498,6 +510,10 @@ func TestRackParamsSet(t *testing.T) {
 }
 
 func TestRackParamsSetError(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("SystemGet").Return(fxSystem(), nil)
 		opts := structs.SystemUpdateOptions{
@@ -517,6 +533,10 @@ func TestRackParamsSetError(t *testing.T) {
 }
 
 func TestRackParamsSetTerraformUpdateTimeout(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("SystemGet").Return(fxSystem(), nil)
 		opts := structs.SystemUpdateOptions{
@@ -537,6 +557,10 @@ func TestRackParamsSetTerraformUpdateTimeout(t *testing.T) {
 }
 
 func TestRackParamsSetTerraformUpdateTimeoutCompound(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("SystemGet").Return(fxSystem(), nil)
 		opts := structs.SystemUpdateOptions{
@@ -556,6 +580,10 @@ func TestRackParamsSetTerraformUpdateTimeoutCompound(t *testing.T) {
 }
 
 func TestRackParamsSetTerraformUpdateTimeoutMinutes(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("SystemGet").Return(fxSystem(), nil)
 		opts := structs.SystemUpdateOptions{
@@ -575,6 +603,10 @@ func TestRackParamsSetTerraformUpdateTimeoutMinutes(t *testing.T) {
 }
 
 func TestRackParamsSetTerraformUpdateTimeoutInvalid(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("SystemGet").Return(fxSystem(), nil)
 		res, err := testExecute(e, "rack params set terraform_update_timeout=abc", nil)
@@ -585,6 +617,10 @@ func TestRackParamsSetTerraformUpdateTimeoutInvalid(t *testing.T) {
 }
 
 func TestRackParamsSetTerraformUpdateTimeoutNegative(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("SystemGet").Return(fxSystem(), nil)
 		res, err := testExecute(e, "rack params set terraform_update_timeout=-1h", nil)
@@ -595,6 +631,10 @@ func TestRackParamsSetTerraformUpdateTimeoutNegative(t *testing.T) {
 }
 
 func TestRackParamsSetTerraformUpdateTimeoutZero(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("SystemGet").Return(fxSystem(), nil)
 		res, err := testExecute(e, "rack params set terraform_update_timeout=0s", nil)
@@ -605,6 +645,10 @@ func TestRackParamsSetTerraformUpdateTimeoutZero(t *testing.T) {
 }
 
 func TestRackParamsSetTerraformUpdateTimeoutEmpty(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("SystemGet").Return(fxSystem(), nil)
 		res, err := testExecute(e, "rack params set terraform_update_timeout=", nil)
@@ -615,6 +659,10 @@ func TestRackParamsSetTerraformUpdateTimeoutEmpty(t *testing.T) {
 }
 
 func TestRackParamsSetTerraformUpdateTimeoutSpecialChars(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("SystemGet").Return(fxSystem(), nil)
 		res, err := testExecute(e, "rack params set terraform_update_timeout=${var.foo}", nil)
@@ -1020,5 +1068,272 @@ func TestRackParamsRevealTTYWithGroupFilter(t *testing.T) {
 		require.NotContains(t, res.Stdout, "**********")
 		require.NotRegexp(t, regexp.MustCompile(`(?m)^region\s`), res.Stdout)
 		require.NotContains(t, res.Stdout, "us-east-1")
+	})
+}
+
+// --- V2-key masking tests (§2.2 C.2) ---------------------------------------
+
+func TestRackParamsMasksV2Password(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return true }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystemV2WithSensitive(), nil)
+
+		res, err := testExecute(e, "rack params", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.Regexp(t, regexp.MustCompile(`(?m)^Password\s+\*{10}$`), res.Stdout)
+		require.NotContains(t, res.Stdout, "secret123")
+	})
+}
+
+func TestRackParamsMasksV2HttpProxy(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return true }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystemV2WithSensitive(), nil)
+
+		res, err := testExecute(e, "rack params", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.Regexp(t, regexp.MustCompile(`(?m)^HttpProxy\s+\*{10}$`), res.Stdout)
+		require.NotContains(t, res.Stdout, "user:pass@proxy.corp")
+	})
+}
+
+func TestRackParamsRevealsV2Password(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return true }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystemV2WithSensitive(), nil)
+
+		res, err := testExecute(e, "rack params --reveal", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.Regexp(t, regexp.MustCompile(`(?m)^Password\s+secret123$`), res.Stdout)
+		require.NotContains(t, res.Stdout, "**********")
+	})
+}
+
+func TestRackParamsNonTTYUnmaskedV2Password(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystemV2WithSensitive(), nil)
+
+		res, err := testExecute(e, "rack params", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.Regexp(t, regexp.MustCompile(`(?m)^Password\s+secret123$`), res.Stdout)
+		require.NotContains(t, res.Stdout, "**********")
+	})
+}
+
+func TestRackParamsEmptyV2PasswordNotMasked(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return true }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(&structs.System{
+			Parameters: map[string]string{
+				"Password":    "",
+				"NLBInternal": "No",
+			},
+		}, nil)
+
+		res, err := testExecute(e, "rack params", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		// Empty Password must render empty (trailing whitespace only), not masked.
+		require.Regexp(t, regexp.MustCompile(`(?m)^Password\s*$`), res.Stdout)
+		require.NotContains(t, res.Stdout, "**********")
+	})
+}
+
+// TestRackParamsGroupNetworkV2RackHttpProxyMasked — HttpProxy is dual-listed
+// in both network and security groups; `-g network` on TTY must still mask it.
+func TestRackParamsGroupNetworkV2RackHttpProxyMasked(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return true }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(&structs.System{
+			Parameters: map[string]string{
+				"HttpProxy": "http://user:pass@proxy:8080",
+				"VPCCIDR":   "10.0.0.0/16",
+				"Internal":  "Yes",
+			},
+		}, nil)
+
+		res, err := testExecute(e, "rack params -g network", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.Regexp(t, regexp.MustCompile(`(?m)^HttpProxy\s+\*{10}$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^VPCCIDR\s+10\.0\.0\.0/16$`), res.Stdout)
+	})
+}
+
+// --- Group filter tests (§2.3 E) -------------------------------------------
+
+// TestRackParamsGroupNLBV2Rack — v2 fixture + -g nlb shows NLB keys.
+func TestRackParamsGroupNLBV2Rack(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystemV2NLB(), nil)
+
+		res, err := testExecute(e, "rack params -g nlb", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		require.Regexp(t, regexp.MustCompile(`(?m)^NLB\s+Yes$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^NLBAllowCIDR\s+10\.0\.0\.0/8,192\.168\.0\.0/16$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^NLBCrossZone\s+true$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^NLBDeletionProtection\s+No$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^NLBPreserveClientIP\s+true$`), res.Stdout)
+	})
+}
+
+// TestRackParamsGroupNLBV3Rack — v3 fixture + -g nlb emits NOTICE, exit 0,
+// empty stdout table. Asserts NOTICE exactly once on captured stderr.
+func TestRackParamsGroupNLBV3Rack(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystem(), nil)
+
+		res, err := testExecute(e, "rack params -g nlb", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.Contains(t, res.Stderr, "NOTICE: no params in group 'nlb' for this rack")
+		require.Equal(t, 1, strings.Count(res.Stderr, "NOTICE:"))
+		require.Equal(t, "", strings.TrimSpace(res.Stdout))
+	})
+}
+
+// TestRackParamsGroupNLBV3RackWithReveal — --reveal is orthogonal to NOTICE.
+func TestRackParamsGroupNLBV3RackWithReveal(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return true }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystem(), nil)
+
+		res, err := testExecute(e, "rack params -g nlb --reveal", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.Contains(t, res.Stderr, "NOTICE: no params in group 'nlb' for this rack")
+		require.Equal(t, 1, strings.Count(res.Stderr, "NOTICE:"))
+		require.Equal(t, "", strings.TrimSpace(res.Stdout))
+	})
+}
+
+// TestRackParamsGroupNetworkV2Rack — VPCCIDR appears, v3-only keys don't.
+func TestRackParamsGroupNetworkV2Rack(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystemV2WithSensitive(), nil)
+
+		res, err := testExecute(e, "rack params -g network", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.Regexp(t, regexp.MustCompile(`(?m)^VPCCIDR\s+10\.0\.0\.0/16$`), res.Stdout)
+		// v2 sensitive `Password` is in security not network — must not appear.
+		require.NotRegexp(t, regexp.MustCompile(`(?m)^Password\s`), res.Stdout)
+		require.NotRegexp(t, regexp.MustCompile(`(?m)^Autoscale\s`), res.Stdout)
+	})
+}
+
+// TestRackParamsGroupSecurityV2RackMaskedOnTTY — -g security on v2 fixture
+// on TTY masks Password and reveals VPCCIDR not present (filter excludes it).
+func TestRackParamsGroupSecurityV2RackMaskedOnTTY(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return true }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystemV2WithSensitive(), nil)
+
+		res, err := testExecute(e, "rack params -g security", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.Regexp(t, regexp.MustCompile(`(?m)^Password\s+\*{10}$`), res.Stdout)
+		require.NotContains(t, res.Stdout, "secret123")
+		require.NotRegexp(t, regexp.MustCompile(`(?m)^VPCCIDR\s`), res.Stdout)
+	})
+}
+
+// --- V2 edge-case group filter tests (§2.3 F) ------------------------------
+
+// TestRackParamsGroupFilterEmptyFallthrough — -g ” falls through to full dump.
+func TestRackParamsGroupFilterEmptyFallthrough(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystem(), nil)
+
+		res, err := testExecute(e, "rack params -g ''", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		// Expect the full unfiltered set from fxSystem, same as `rack params`.
+		require.Regexp(t, regexp.MustCompile(`(?m)^Autoscale\s+Yes$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^ParamFoo\s+value1$`), res.Stdout)
+		require.Regexp(t, regexp.MustCompile(`(?m)^ParamOther\s+value2$`), res.Stdout)
+	})
+}
+
+// TestRackParamsGroupFilterWhitespaceOnlyErrors — -g '   ' errors "group name required".
+func TestRackParamsGroupFilterWhitespaceOnlyErrors(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystem(), nil).Maybe()
+
+		res, err := testExecute(e, "rack params -g '   '", nil)
+		require.NoError(t, err)
+		require.NotEqual(t, 0, res.Code)
+		require.Contains(t, res.Stderr, "group name required")
+	})
+}
+
+// TestRackParamsGroupFilterUnknownErrors — -g <bogus> errors with available
+// groups listed, including the new `nlb` group.
+func TestRackParamsGroupFilterUnknownErrors(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystem(), nil).Maybe()
+
+		res, err := testExecute(e, "rack params -g notarealgroup", nil)
+		require.NoError(t, err)
+		require.NotEqual(t, 0, res.Code)
+		require.Contains(t, res.Stderr, "group 'notarealgroup' not found")
+		require.Contains(t, res.Stderr, "nlb")
+		require.Contains(t, res.Stderr, "network")
 	})
 }

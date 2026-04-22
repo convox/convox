@@ -25,6 +25,8 @@ func TestResolveGroupPrefixUnique(t *testing.T) {
 		{"k", "karpenter"},
 		{"net", "network"},
 		{"nod", "nodes"},
+		{"nl", "nlb"},
+		{"nlb", "nlb"},
 		{"sec", "security"},
 		{"sca", "scaling"},
 		{"sto", "storage"},
@@ -75,7 +77,7 @@ func TestResolveGroupAmbiguousPrefix(t *testing.T) {
 		wantMatches []string
 		wantHint    string
 	}{
-		{"n", []string{"network", "nodes"}, "(use 'net' or 'nod')"},
+		{"n", []string{"network", "nlb", "nodes"}, "(use 'net', 'nlb', or 'nod')"},
 		{"s", []string{"scaling", "security", "storage"}, "(use 'sca', 'sec', or 'sto')"},
 		{"r", []string{"registry", "retention"}, "(use 'reg' or 'ret')"},
 		{"re", []string{"registry", "retention"}, "(use 'reg' or 'ret')"},
@@ -138,8 +140,8 @@ func TestResolveGroupCaseInsensitiveAmbiguous(t *testing.T) {
 	if !strings.Contains(msg, "matches multiple groups") {
 		t.Errorf("error should mention 'matches multiple groups', got: %s", msg)
 	}
-	if !strings.Contains(msg, "network") || !strings.Contains(msg, "nodes") {
-		t.Errorf("error should name candidates network and nodes, got: %s", msg)
+	if !strings.Contains(msg, "network") || !strings.Contains(msg, "nodes") || !strings.Contains(msg, "nlb") {
+		t.Errorf("error should name candidates network, nlb, and nodes, got: %s", msg)
 	}
 }
 
@@ -179,6 +181,19 @@ func TestFormatGroupList(t *testing.T) {
 		}
 		lastIdx = idx
 	}
+
+	// `nlb` belongs between `network` and `nodes` (lexicographic: n-e < n-l < n-o).
+	t.Run("nlb_between_network_and_nodes", func(t *testing.T) {
+		networkIdx := strings.Index(out, "  network ")
+		nlbIdx := strings.Index(out, "  nlb ")
+		nodesIdx := strings.Index(out, "  nodes ")
+		if networkIdx < 0 || nlbIdx < 0 || nodesIdx < 0 {
+			t.Fatalf("expected network, nlb, nodes all present in output; got indexes %d %d %d", networkIdx, nlbIdx, nodesIdx)
+		}
+		if !(networkIdx < nlbIdx && nlbIdx < nodesIdx) {
+			t.Errorf("expected network < nlb < nodes ordering; got network=%d nlb=%d nodes=%d", networkIdx, nlbIdx, nodesIdx)
+		}
+	})
 }
 
 func TestFormatAmbiguousHint(t *testing.T) {
@@ -215,6 +230,7 @@ func TestDisambiguatingPrefix(t *testing.T) {
 		{"versions", "ver"},
 		{"network", "net"},
 		{"nodes", "nod"},
+		{"nlb", "nlb"},
 		{"security", "sec"},
 		{"scaling", "sca"},
 		{"storage", "sto"},
@@ -229,4 +245,55 @@ func TestDisambiguatingPrefix(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestSensitiveParamsExactMembership pins sensitiveParams to an exact set.
+// Guards against accidental widening (or narrowing) of masking coverage.
+// Adjust the `want` map when a new key is added with intent; do not adjust
+// without a corresponding spec/doc update.
+func TestSensitiveParamsExactMembership(t *testing.T) {
+	want := map[string]bool{
+		// v3 native (snake_case)
+		"docker_hub_password": true,
+		"secret_key":          true,
+		"token":               true,
+		"access_id":           true,
+		"private_eks_host":    true,
+		"private_eks_user":    true,
+		"private_eks_pass":    true,
+		// v2 PascalCase added for v3 CLI against v2 racks
+		"Password":  true,
+		"HttpProxy": true,
+	}
+	if len(sensitiveParams) != len(want) {
+		t.Fatalf("sensitiveParams length: got %d, want %d; diff = %v", len(sensitiveParams), len(want), diffKeys(sensitiveParams, want))
+	}
+	for k, v := range want {
+		if sensitiveParams[k] != v {
+			t.Errorf("sensitiveParams[%q] = %v, want %v", k, sensitiveParams[k], v)
+		}
+	}
+	// Explicit negative assertions — these v2 keys must NOT be masked even
+	// though they're referenced across the paramGroups code. Matches v2 PR
+	// 3795's deliberate narrow scope.
+	for _, k := range []string{"Encryption", "Key", "WhiteList", "VPCCIDR", "Autoscale", "Version", "InstanceBootCommand", "LogBucket", "SyslogDestination"} {
+		if sensitiveParams[k] {
+			t.Errorf("sensitiveParams[%q] must be false per spec (narrow mask matches v2 PR 3795)", k)
+		}
+	}
+}
+
+func diffKeys(a, b map[string]bool) []string {
+	var out []string
+	for k := range a {
+		if _, ok := b[k]; !ok {
+			out = append(out, "+"+k)
+		}
+	}
+	for k := range b {
+		if _, ok := a[k]; !ok {
+			out = append(out, "-"+k)
+		}
+	}
+	return out
 }
