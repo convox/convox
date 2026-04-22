@@ -138,3 +138,4 @@ The following environment variables are automatically set by Convox.
 - [convox.yml](/configuration/convox-yml) for the full configuration reference
 - [Deploying Changes](/deployment/deploying-changes) for how environment changes create new releases
 - [App Settings](/configuration/app-settings) for app-level configuration
+- [env mask](/reference/cli/env#env-mask) for masking sensitive env values in terminal output

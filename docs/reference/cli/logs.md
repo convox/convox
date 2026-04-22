@@ -37,6 +37,23 @@ Get logs for an app. By default, `convox logs` streams logs continuously. Use `-
 | `--service` | `-s` | Filter to a specific service |
 | `--tail` | | Number of lines to tail (service-specific logging only) |
 | `--allow-previous` | | Include logs from previous container instances |
+| `--max-log-requests` | | Maximum number of concurrent log follow streams (default `20`) |
+
+### Tailing High-Concurrency Services
+
+`convox logs --service <name>` streams logs from every pod that matches the selector. The underlying kubectl plumbing caps concurrency at 20 follow streams by default. When a service runs with more than 20 pods, the command fails with:
+
+```text
+ERROR: you are attempting to follow 50 log streams, but maximum allowed concurrency is 20, use --max-log-requests to increase the limit
+```
+
+Pass `--max-log-requests N` to raise the concurrency cap. The flag is also wired into `convox rack logs` for rack-level system log streams.
+
+```bash
+    $ convox logs --service pii-worker --since 5m --max-log-requests 50
+```
+
+Set the value to at least the pod count of the target service. Log streams are persistent HTTP connections, so very large values put sustained load on the API server — prefer filtering by `--service` and a modest concurrency over tailing the full app stream without the flag.
 
 ## See Also
 

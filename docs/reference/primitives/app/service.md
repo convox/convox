@@ -368,6 +368,7 @@ See [Health Checks](/configuration/health-checks) for configuring readiness, liv
 | **grace**    | number | `interval` | The number of seconds to wait for a [Process](/reference/primitives/app/process) to start before starting health checks. Defaults to the value of `interval` |
 | **interval** | number | 5       | The number of seconds between health checks                                                      |
 | **path**     | string | /       | The path to request for health checks                                                            |
+| **port**     | number or map | Main service port | The port the readiness probe connects to. Accepts a scalar (`port: 8080`) or a map (`port: { port: 8080, scheme: https }`). Scheme inherits from the main service port when omitted. See [Separate Health Port](/configuration/health-checks#separate-health-port) |
 | **timeout**  | number | `interval - 1` | The number of seconds to wait for a successful response. Defaults to `interval` minus one |
 | **disable**  | bool | false       | Set to `true` to disable the health check entirely |
 
@@ -382,6 +383,7 @@ See [Health Checks](/configuration/health-checks) for configuring readiness, liv
 | **grace**    | number | 10       | The number of seconds to wait for a [Process](/reference/primitives/app/process) to start before starting liveness checks |
 | **interval** | number | 5       | The number of seconds between health checks                                                      |
 | **path**     | string |        | The path to request for health checks                                                            |
+| **port**     | number or map | Main service port | The port the liveness probe connects to. Same form as `health.port`. Unlike readiness, liveness does **not** auto-inherit the main service scheme — set `scheme` explicitly when the probe needs HTTPS. See [Separate Health Port](/configuration/health-checks#separate-health-port) |
 | **timeout**  | number | 5      | The number of seconds to wait for a successful response                                          |
 | **successThreshold**  | number | 1      | The number of consecutive successful checks required to consider the probe successful             |
 | **failureThreshold**  | number | 3      | The number of consecutive failed checks required before restarting the container                  |
