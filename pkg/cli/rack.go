@@ -157,7 +157,10 @@ var managedParams = map[string]bool{
 // Lineage: always-mask introduced in 3.24.4 (docker_hub_password,
 // secret_key, token); list extended and TTY-gating + --reveal added
 // alongside this var's package-level promotion in 3.24.5 (access_id,
-// private_eks_host, private_eks_user, private_eks_pass).
+// private_eks_host, private_eks_user, private_eks_pass). Password and
+// HttpProxy are v2-rack PascalCase keys included so v3 CLI against a
+// v2 rack masks the same values v2 CLI post-PR-3795 does; they never
+// appear in v3 rack Parameters responses (v3 uses snake_case).
 var sensitiveParams = map[string]bool{
 	"docker_hub_password": true,
 	"secret_key":          true,
@@ -166,6 +169,8 @@ var sensitiveParams = map[string]bool{
 	"private_eks_host":    true,
 	"private_eks_user":    true,
 	"private_eks_pass":    true,
+	"Password":            true,
+	"HttpProxy":           true,
 }
 
 // paramGroups categorizes rack params into curated logical groups for the
@@ -201,6 +206,7 @@ var paramGroups = map[string]map[string]bool{
 		"karpenter_node_volume_type":            true,
 	},
 	"network": {
+		// v3 native (snake_case)
 		"availability_zones":      true,
 		"cidr":                    true,
 		"deploy_extra_nlb":        true,
@@ -213,8 +219,26 @@ var paramGroups = map[string]map[string]bool{
 		"proxy_protocol":          true,
 		"public_subnets_ids":      true,
 		"vpc_id":                  true,
+		// v2 PascalCase (no-op on v3 racks; surfaced on v2 racks)
+		"AvailabilityZones":    true,
+		"ExistingVpc":          true,
+		"HttpProxy":            true, // dual-listed in security
+		"Internal":             true,
+		"InternalOnly":         true,
+		"InternetGateway":      true,
+		"MaxAvailabilityZones": true,
+		"PlaceLambdaInVpc":     true,
+		"Private":              true,
+		"Subnet0CIDR":          true,
+		"Subnet1CIDR":          true,
+		"Subnet2CIDR":          true,
+		"SubnetPrivate0CIDR":   true,
+		"SubnetPrivate1CIDR":   true,
+		"SubnetPrivate2CIDR":   true,
+		"VPCCIDR":              true,
 	},
 	"security": {
+		// v3 native (snake_case)
 		"access_id":                          true,
 		"disable_public_access":              true,
 		"docker_hub_password":                true,
@@ -235,8 +259,29 @@ var paramGroups = map[string]map[string]bool{
 		"ssl_protocols":                      true,
 		"token":                              true,
 		"whitelist":                          true,
+		// v2 PascalCase (no-op on v3 racks; surfaced on v2 racks)
+		"BuildInstancePolicy":                   true, // dual-listed in build
+		"BuildInstanceSecurityGroup":            true,
+		"EnableContainerReadonlyRootFilesystem": true,
+		"EnableSharedEFSVolumeEncryption":       true, // dual-listed in storage
+		"EncryptEbs":                            true, // dual-listed in storage
+		"Encryption":                            true,
+		"HttpProxy":                             true, // dual-listed in network
+		"IMDSHttpPutResponseHopLimit":           true,
+		"IMDSHttpTokens":                        true,
+		"InstancePolicy":                        true, // dual-listed in nodes
+		"InstanceSecurityGroup":                 true,
+		"InstancesIpToIncludInWhiteListing":     true,
+		"Key":                                   true,
+		"Password":                              true,
+		"PrivateApiSecurityGroup":               true,
+		"RouterInternalSecurityGroup":           true,
+		"RouterSecurityGroup":                   true,
+		"SslPolicy":                             true,
+		"WhiteList":                             true,
 	},
 	"scaling": {
+		// v3 native (snake_case)
 		"high_availability":                    true,
 		"karpenter_disruption_budget_nodes":    true,
 		"keda_enable":                          true,
@@ -247,8 +292,29 @@ var paramGroups = map[string]map[string]bool{
 		"schedule_rack_scale_down":             true,
 		"schedule_rack_scale_up":               true,
 		"vpa_enable":                           true,
+		// v2 PascalCase (no-op on v3 racks; surfaced on v2 racks)
+		"Autoscale":                      true,
+		"AutoscaleExtra":                 true,
+		"HighAvailability":               true,
+		"InstanceCount":                  true,
+		"InstanceUpdateBatchSize":        true,
+		"NoHAAutoscaleExtra":             true,
+		"NoHaInstanceCount":              true,
+		"OnDemandMinCount":               true,
+		"ScheduleRackScaleDown":          true,
+		"ScheduleRackScaleUp":            true,
+		"SpotFleetAllocationStrategy":    true,
+		"SpotFleetAllowedInstanceTypes":  true,
+		"SpotFleetExcludedInstanceTypes": true,
+		"SpotFleetMaxPrice":              true,
+		"SpotFleetMinMemoryMiB":          true,
+		"SpotFleetMinOnDemandCount":      true,
+		"SpotFleetMinVcpuCount":          true,
+		"SpotFleetTargetType":            true,
+		"SpotInstanceBid":                true,
 	},
 	"nodes": {
+		// v3 native (snake_case)
 		"additional_node_groups_config":       true,
 		"gpu_tag_enable":                      true,
 		"key_pair_name":                       true,
@@ -264,8 +330,21 @@ var paramGroups = map[string]map[string]bool{
 		"preemptible":                         true,
 		"user_data":                           true,
 		"user_data_url":                       true,
+		// v2 PascalCase (no-op on v3 racks; v2 "instances" group content)
+		"Ami":                 true,
+		"CpuCredits":          true,
+		"DefaultAmi":          true,
+		"DefaultAmiArm":       true,
+		"InstanceBootCommand": true,
+		"InstancePolicy":      true, // dual-listed in security
+		"InstanceRunCommand":  true,
+		"InstanceType":        true,
+		"SwapSize":            true,
+		"Tenancy":             true,
+		"VolumeSize":          true,
 	},
 	"build": {
+		// v3 native (snake_case)
 		"additional_build_groups_config":    true,
 		"build_disable_convox_resolver":     true,
 		"build_node_enabled":                true,
@@ -280,6 +359,19 @@ var paramGroups = map[string]map[string]bool{
 		"karpenter_build_instance_sizes":    true,
 		"karpenter_build_memory_limit_gb":   true,
 		"karpenter_build_node_labels":       true,
+		// v2 PascalCase (no-op on v3 racks; surfaced on v2 racks)
+		"BuildCpu":                    true,
+		"BuildImage":                  true,
+		"BuildInstance":               true,
+		"BuildInstancePolicy":         true, // dual-listed in security
+		"BuildMemory":                 true,
+		"BuildMethod":                 true,
+		"BuildVolumeSize":             true,
+		"FargateBuildCpu":             true,
+		"FargateBuildMemory":          true,
+		"PrivateBuild":                true,
+		"PruneOlderImagesCronRunFreq": true,
+		"PruneOlderImagesInHour":      true,
 	},
 	// docker_hub_password is dual-listed in "security" (above) because it is
 	// a masked credential; docker_hub_username stays registry-only as a
@@ -293,11 +385,18 @@ var paramGroups = map[string]map[string]bool{
 		"ecr_scan_on_push_enable":      true,
 	},
 	"logging": {
+		// v3 native (snake_case)
 		"access_log_retention_in_days": true,
 		"fluentd_disable":              true,
 		"fluentd_memory":               true,
 		"syslog":                       true,
 		"telemetry":                    true,
+		// v2 PascalCase (no-op on v3 racks; surfaced on v2 racks)
+		"LogBucket":         true,
+		"LogDriver":         true,
+		"LogRetention":      true,
+		"SyslogDestination": true,
+		"SyslogFormat":      true,
 	},
 	"ingress": {
 		"cert_duration":           true,
@@ -313,12 +412,19 @@ var paramGroups = map[string]map[string]bool{
 		"domain":                         true,
 	},
 	"storage": {
+		// v3 native (snake_case)
 		"aws_ebs_csi_driver_version":    true,
 		"azure_files_enable":            true,
 		"ebs_volume_encryption_enabled": true,
 		"efs_csi_driver_enable":         true,
 		"efs_csi_driver_version":        true,
 		"registry_disk":                 true,
+		// v2 PascalCase (no-op on v3 racks; surfaced on v2 racks)
+		"DynamoDbTableDeletionProtectionEnabled":  true,
+		"DynamoDbTablePointInTimeRecoveryEnabled": true,
+		"EnableS3Versioning":                      true,
+		"EnableSharedEFSVolumeEncryption":         true, // dual-listed in security
+		"EncryptEbs":                              true, // dual-listed in security
 	},
 	"retention": {
 		"releases_to_retain_after_active":           true,
@@ -334,6 +440,24 @@ var paramGroups = map[string]map[string]bool{
 		"pod_identity_agent_version": true,
 		"vpc_cni_version":            true,
 	},
+	// nlb is v2-only content (v3 has no CloudFormation NLB config params; v3's
+	// NLB-adjacent keys — nlb_security_group, deploy_extra_nlb — live in the
+	// network group above). The group exists so v2 rack users running `convox
+	// rack params -g nlb` through v3 CLI get the same filter surface they have
+	// in v2 CLI. On a v3 rack the groupFilter matches zero keys and the
+	// "no params in group 'nlb' for this rack" NOTICE fires.
+	"nlb": {
+		"NLB":                           true,
+		"NLBAllowCIDR":                  true,
+		"NLBCrossZone":                  true,
+		"NLBDeletionProtection":         true,
+		"NLBInternal":                   true,
+		"NLBInternalAllowCIDR":          true,
+		"NLBInternalCrossZone":          true,
+		"NLBInternalDeletionProtection": true,
+		"NLBInternalPreserveClientIP":   true,
+		"NLBPreserveClientIP":           true,
+	},
 }
 
 // groupDescriptions provides the one-line label shown next to each group
@@ -342,6 +466,7 @@ var paramGroups = map[string]map[string]bool{
 var groupDescriptions = map[string]string{
 	"karpenter": "Karpenter autoscaling configuration",
 	"network":   "VPC, subnets, CIDR, routing, NLB, DNS resolver",
+	"nlb":       "NLB config: listeners, cross-zone, allow-CIDR, preserve-client-IP, deletion protection (v2 racks)",
 	"security":  "access controls, whitelist, IAM, encryption, private EKS, IMDS, TLS, credentials",
 	"scaling":   "capacity counts, HA, HPA/VPA/KEDA, schedules, PDB, disruption budgets",
 	"nodes":     "default node-group config, user-data, GPU, kubelet tuning",
@@ -861,18 +986,18 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 	// api/controller/cli.go. Add any new TF variable here if changing it
 	// post-install would destroy or recreate core infrastructure.
 	installOnlyParams := map[string]bool{
-		"high_availability":  true,
-		"private":            true,
-		"cidr":               true,
-		"vpc_id":             true,
+		"high_availability":   true,
+		"private":             true,
+		"cidr":                true,
+		"vpc_id":              true,
 		"internet_gateway_id": true,
 		"private_subnets_ids": true,
-		"public_subnets_ids": true,
-		"availability_zones": true,
-		"region":             true,
-		"access_id":          true,
-		"secret_key":         true,
-		"token":              true,
+		"public_subnets_ids":  true,
+		"availability_zones":  true,
+		"region":              true,
+		"access_id":           true,
+		"secret_key":          true,
+		"token":               true,
 	}
 
 	for k := range params {
@@ -955,47 +1080,47 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 	// in pkg/rack/terraform.go. Default is REJECT — only add if clearing makes sense.
 	clearableParams := map[string]bool{
 		// Labels/taints — clear means "remove all"
-		"karpenter_node_labels":             true,
-		"karpenter_node_taints":             true,
-		"karpenter_build_node_labels":       true,
+		"karpenter_node_labels":       true,
+		"karpenter_node_taints":       true,
+		"karpenter_build_node_labels": true,
 		// Instance restrictions — clear means "no restriction"
 		"karpenter_instance_families":       true,
 		"karpenter_instance_sizes":          true,
 		"karpenter_build_instance_families": true,
 		"karpenter_build_instance_sizes":    true,
 		// Schedule — clear means "disable schedule" (must be paired)
-		"schedule_rack_scale_down":          true,
-		"schedule_rack_scale_up":            true,
+		"schedule_rack_scale_down": true,
+		"schedule_rack_scale_up":   true,
 		// Tags — clear means "remove all custom tags"
-		"tags":                              true,
+		"tags": true,
 		// SSL — clear means "use defaults"
-		"ssl_ciphers":                       true,
-		"ssl_protocols":                     true,
+		"ssl_ciphers":   true,
+		"ssl_protocols": true,
 		// Optional overrides — clear means "use auto/default"
-		"build_node_type":                   true,
-		"key_pair_name":                     true,
-		"nginx_additional_config":           true,
+		"build_node_type":         true,
+		"key_pair_name":           true,
+		"nginx_additional_config": true,
 		// Credentials — clear means "remove auth"
-		"docker_hub_username":               true,
-		"docker_hub_password":               true,
+		"docker_hub_username": true,
+		"docker_hub_password": true,
 		// Logging — clear means "stop shipping"
-		"syslog":                            true,
+		"syslog": true,
 		// Domain — clear means "use auto-managed"
-		"convox_rack_domain":                true,
+		"convox_rack_domain": true,
 		// Custom launch scripts — clear means "remove"
-		"user_data":                         true,
-		"user_data_url":                     true,
+		"user_data":     true,
+		"user_data_url": true,
 		// Feature gates — clear means "disable all"
-		"api_feature_gates":                 true,
+		"api_feature_gates": true,
 		// Private EKS — cleared by console during mode changes
-		"private_eks_host":                  true,
-		"private_eks_user":                  true,
-		"private_eks_pass":                  true,
+		"private_eks_host": true,
+		"private_eks_user": true,
+		"private_eks_pass": true,
 		// JSON config — normalized to base64 later in this function
 		"additional_node_groups_config":         true,
 		"additional_build_groups_config":        true,
 		"additional_karpenter_nodepools_config": true,
-		"karpenter_config":                     true,
+		"karpenter_config":                      true,
 	}
 
 	for k, v := range params {
@@ -1877,7 +2002,10 @@ func RackParams(_ sdk.Interface, c *stdcli.Context) error {
 	}
 
 	if groupFilter != nil && rowsAdded == 0 {
-		fmt.Fprintf(os.Stderr, "NOTICE: no params in group '%s' for this rack\n", resolvedGroup)
+		// Write via stdcli's captured writer so test harnesses observe the
+		// NOTICE. The underlying stdcli.Writer.Stderr defaults to os.Stderr,
+		// so this is byte-identical in production; only test buffers differ.
+		fmt.Fprintf(c.Writer().Stderr, "NOTICE: no params in group '%s' for this rack\n", resolvedGroup)
 	}
 
 	return nil
