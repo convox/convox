@@ -279,8 +279,16 @@ Display rack parameters
 
 ### Usage
 ```bash
-    convox rack params
+    convox rack params [--group <name>] [--reveal]
 ```
+
+### Flags
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--group` | `-g` | Filter output to a curated logical group. Accepts exact names and unique prefixes |
+| `--reveal` | | Show unmasked values for sensitive parameters on a TTY |
+
 ### Examples
 ```bash
     $ convox rack params
@@ -291,7 +299,75 @@ Display rack parameters
     private                true
 ```
 
-Values for `docker_hub_password`, `secret_key`, and `token` are displayed as `**********` to prevent accidental disclosure via terminal output, shell history, screen shares, or captured logs. Empty values display as empty so you can tell whether a sensitive parameter is set. The stored values are unchanged.
+### Masking Sensitive Values
+
+Values for `docker_hub_password`, `secret_key`, `token`, `access_id`, `private_eks_host`, `private_eks_user`, and `private_eks_pass` render as `**********` on a TTY to prevent accidental disclosure via terminal output, shell history, screen shares, or captured logs. Empty values display as empty so you can tell whether a sensitive parameter is set. The stored values are unchanged.
+
+Piped and non-TTY output is always unmasked, so backup and automation flows (`convox rack params > rack-state.txt`, `| grep`, `| jq`) continue to return real values. Use `--reveal` on a TTY for one-off inspection when the real value is needed.
+
+```bash
+    $ convox rack params | grep docker_hub_password    # pipe: real value
+    docker_hub_password    s3cret-t0ken
+
+    $ convox rack params                                # TTY: masked
+    docker_hub_password    **********
+
+    $ convox rack params --reveal                       # TTY override: real value
+    docker_hub_password    s3cret-t0ken
+```
+
+### Group Filter
+
+Pass `-g` / `--group` to narrow the output to one of a curated set of logical groups. Useful when a fully featured rack emits 100+ parameters and you want the handful relevant to a specific task.
+
+| Group | Covers |
+|-------|--------|
+| `build` | build node config, buildkit, additional build groups |
+| `domain` | rack domain and TLS toggle |
+| `ingress` | NGINX, idle timeout, TLS cert duration |
+| `karpenter` | Karpenter autoscaling configuration |
+| `logging` | syslog, telemetry, fluentd |
+| `network` | VPC, subnets, CIDR, routing, NLB, DNS resolver |
+| `nodes` | default node-group config, user-data, GPU, kubelet tuning |
+| `registry` | Docker Hub, ECR, image caching, storage buckets |
+| `retention` | release retention policy |
+| `scaling` | capacity counts, HA, HPA/VPA/KEDA, schedules, PDB, disruption budgets |
+| `security` | access controls, whitelist, IAM, encryption, private EKS, IMDS, TLS, credentials |
+| `storage` | CSI drivers, EBS/EFS/Azure Files, registry disk |
+| `versions` | K8s and managed component versions |
+
+Exact names and unique prefixes both resolve:
+
+```bash
+    $ convox rack params -g karpenter -r prod
+    karpenter_arch                    amd64
+    karpenter_auth_mode               true
+    karpenter_enabled                 true
+    ...
+
+    $ convox rack params -g karp -r prod              # prefix match
+    ...
+
+    $ convox rack params --group security -r prod     # long form
+    access_id                          **********
+    disable_public_access              false
+    docker_hub_password                **********
+    private_eks_host                   **********
+    ...
+```
+
+Ambiguous prefixes print a disambiguating hint and the full group list so names are discoverable without leaving the command:
+
+```bash
+    $ convox rack params -g s
+    ERROR: group 's' matches multiple groups: scaling, security, storage (use 'sca', 'sec', or 'sto')
+      available groups:
+      build        build node config, buildkit, additional build groups
+      domain       rack domain and TLS toggle
+      ...
+```
+
+Unknown groups print the same list. The filter is applied client-side on top of the rack response, so sensitive-value masking and `--reveal` compose with `--group` (`convox rack params -g security --reveal` shows unmasked credentials).
 
 ## rack params set
 

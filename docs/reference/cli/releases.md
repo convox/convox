@@ -23,12 +23,19 @@ List releases for an app
 ```
 ## releases info
 
-Get information about a release
+Get information about a release.
 
 ### Usage
 ```bash
-    convox releases info <release>
+    convox releases info <release> [--reveal]
 ```
+
+### Flags
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--reveal` | bool | Show unmasked values for env keys in the mask list. See [env mask](/reference/cli/env#env-mask) |
+
 ### Examples
 ```bash
     $ convox releases info RABCDEFGHI
@@ -38,6 +45,9 @@ Get information about a release
     Description
     Env
 ```
+
+The `Env` field respects the per-app mask list managed by `convox env mask`. On a TTY, values for masked keys render as `****`. Piped output and `--reveal` both show real values.
+
 ## releases create-from
 
 Create a new release using a build from one release and env from another. This is useful for combining specific builds and environments, cross-app deployments, and build-once-deploy-many workflows.
