@@ -50,6 +50,18 @@ func init() {
 		Validate: stdcli.Args(0),
 	}, WithCloud())
 
+	register("builds import-image", "import a prebuilt container image into a new build", BuildsImportImage, stdcli.CommandOptions{
+		Flags: []stdcli.Flag{
+			flagRack,
+			flagApp,
+			stdcli.StringFlag("manifest", "m", "path to convox.yml manifest"),
+			stdcli.StringFlag("src-creds-user", "", "source registry username"),
+			stdcli.StringFlag("src-creds-pass", "", "source registry password"),
+		},
+		Usage:    "<source-image>",
+		Validate: stdcli.Args(1),
+	}, WithCloud())
+
 	register("builds info", "get information about a build", BuildsInfo, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagRack, flagApp},
 		Usage:    "<build>",
@@ -437,6 +449,109 @@ func BuildsImport(rack sdk.Interface, c *stdcli.Context) error {
 	}
 
 	return nil
+}
+
+func BuildsImportImage(rack sdk.Interface, c *stdcli.Context) error {
+	source := c.Arg(0)
+
+	manifestPath := coalesce(c.String("manifest"), "convox.yml")
+	data, err := os.ReadFile(manifestPath)
+	if err != nil {
+		return fmt.Errorf("read manifest %s: %w", manifestPath, err)
+	}
+
+	c.Startf("Creating build")
+	b, err := rack.BuildCreate(app(c), "", structs.BuildCreateOptions{
+		External: options.Bool(true),
+	})
+	if err != nil {
+		return err
+	}
+
+	if _, err := rack.BuildUpdate(app(c), b.Id, structs.BuildUpdateOptions{
+		Manifest: options.String(string(data)),
+	}); err != nil {
+		return err
+	}
+	if err := c.OK(b.Id); err != nil {
+		return err
+	}
+
+	var opts structs.BuildImportImageOptions
+	if u := c.String("src-creds-user"); u != "" {
+		opts.SrcCredsUser = options.String(u)
+	}
+	if p := c.String("src-creds-pass"); p != "" {
+		opts.SrcCredsPass = options.String(p)
+	}
+
+	c.Startf("Relaying image %s", source)
+	if err := rack.BuildImportImage(app(c), b.Id, source, opts); err != nil {
+		return err
+	}
+	if err := c.OK(); err != nil {
+		return err
+	}
+
+	c.Startf("Waiting for import to complete")
+	// 2 hours covers a multi-service manifest where the rack's 30-min
+	// per-service skopeo timeout can legitimately stack (e.g. 3 services
+	// ⇒ 90 min worst case). Single-service wizard flows complete in minutes.
+	deadline := time.After(2 * time.Hour)
+	tick := time.NewTicker(2 * time.Second)
+	defer tick.Stop()
+
+	var consecutiveFails int
+	for {
+		select {
+		case <-deadline:
+			return fmt.Errorf("import %s timed out after 2 hours; check: convox builds info %s", b.Id, b.Id)
+		case <-tick.C:
+			cur, err := rack.BuildGet(app(c), b.Id)
+			if err != nil {
+				consecutiveFails++
+				if consecutiveFails > 5 {
+					return fmt.Errorf("build %s still running on rack; check: convox builds info %s (last poll error: %w)", b.Id, b.Id, err)
+				}
+				continue
+			}
+			consecutiveFails = 0
+			switch cur.Status {
+			case "created", "running":
+				continue
+			case "complete":
+				if err := c.OK(); err != nil {
+					return err
+				}
+				c.Startf("Creating release")
+				r, err := rack.ReleaseCreate(app(c), structs.ReleaseCreateOptions{
+					Build: options.String(cur.Id),
+				})
+				if err != nil {
+					return err
+				}
+				if _, err := rack.BuildUpdate(app(c), cur.Id, structs.BuildUpdateOptions{
+					Release: options.String(r.Id),
+				}); err != nil {
+					return err
+				}
+				if err := c.OK(r.Id); err != nil {
+					return err
+				}
+				if err := c.Writef("Build:   <build>%s</build>\n", cur.Id); err != nil {
+					return err
+				}
+				return c.Writef("Release: <release>%s</release>\n", r.Id)
+			case "failed":
+				if cur.Reason != "" {
+					return fmt.Errorf("import failed: %s", cur.Reason)
+				}
+				return fmt.Errorf("import failed")
+			default:
+				return fmt.Errorf("unexpected build status: %s", cur.Status)
+			}
+		}
+	}
 }
 
 func BuildsInfo(rack sdk.Interface, c *stdcli.Context) error {
