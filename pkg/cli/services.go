@@ -39,16 +39,36 @@ func Services(rack sdk.Interface, c *stdcli.Context) error {
 	// v3 racks never populate Nlb; v2 racks populate it from the release manifest.
 	// Index-based iteration avoids copying the full Service struct per scan step.
 	hasNlb := false
+	hasAutoscale := false
+	hasCold := false
+	hasScale := false
 	for i := range ss {
 		if len(ss[i].Nlb) > 0 {
 			hasNlb = true
-			break
+		}
+		if ss[i].Autoscale != nil && ss[i].Autoscale.Enabled {
+			hasAutoscale = true
+		}
+		if ss[i].ColdStart != nil && *ss[i].ColdStart {
+			hasCold = true
+		}
+		if ss[i].Min != nil || ss[i].Max != nil {
+			hasScale = true
 		}
 	}
 
 	headers := []string{"SERVICE", "DOMAIN", "PORTS"}
 	if hasNlb {
 		headers = append(headers, "NLB PORTS")
+	}
+	if hasScale {
+		headers = append(headers, "SCALE")
+	}
+	if hasAutoscale {
+		headers = append(headers, "AUTOSCALE")
+	}
+	if hasCold {
+		headers = append(headers, "COLD")
 	}
 	t := c.Table(headers...)
 
@@ -97,10 +117,40 @@ func Services(rack sdk.Interface, c *stdcli.Context) error {
 			row = append(row, strings.Join(nlbs, " "))
 		}
 
+		if hasScale {
+			row = append(row, formatScaleCell(s.Min, s.Max))
+		}
+		if hasAutoscale {
+			row = append(row, formatAutoscaleSummary(s.Autoscale))
+		}
+		if hasCold {
+			cold := "-"
+			if s.ColdStart != nil && *s.ColdStart {
+				cold = "yes"
+			}
+			row = append(row, cold)
+		}
+
 		t.AddRow(row...)
 	}
 
 	return t.Print()
+}
+
+func formatScaleCell(min, max *int) string {
+	if min == nil && max == nil {
+		return "-"
+	}
+	if min != nil && max != nil {
+		if *min == *max {
+			return fmt.Sprintf("%d", *min)
+		}
+		return fmt.Sprintf("%d-%d", *min, *max)
+	}
+	if min != nil {
+		return fmt.Sprintf("%d-", *min)
+	}
+	return fmt.Sprintf("-%d", *max)
 }
 
 func ServicesRestart(rack sdk.Interface, c *stdcli.Context) error {

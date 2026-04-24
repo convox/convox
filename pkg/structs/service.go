@@ -1,15 +1,29 @@
 package structs
 
 type Service struct {
-	Count     int              `json:"count"`
-	Cpu       int              `json:"cpu"`
-	Domain    string           `json:"domain"`
-	Gpu       int              `json:"gpu"`
-	GpuVendor string           `json:"gpu-vendor"`
-	Memory    int              `json:"memory"`
-	Name      string           `json:"name"`
-	Nlb       []ServiceNlbPort `json:"nlb"`
-	Ports     []ServicePort    `json:"ports"`
+	Count     int                    `json:"count"`
+	Cpu       int                    `json:"cpu"`
+	Domain    string                 `json:"domain"`
+	Gpu       int                    `json:"gpu"`
+	GpuVendor string                 `json:"gpu-vendor"`
+	Memory    int                    `json:"memory"`
+	Name      string                 `json:"name"`
+	Nlb       []ServiceNlbPort       `json:"nlb"`
+	Ports     []ServicePort          `json:"ports"`
+	Min       *int                   `json:"min,omitempty"`
+	Max       *int                   `json:"max,omitempty"`
+	ColdStart *bool                  `json:"cold-start,omitempty"`
+	Autoscale *ServiceAutoscaleState `json:"autoscale,omitempty"`
+}
+
+type ServiceAutoscaleState struct {
+	Enabled        bool   `json:"enabled"`
+	CpuThreshold   *int   `json:"cpu-threshold,omitempty"`
+	MemThreshold   *int   `json:"mem-threshold,omitempty"`
+	GpuThreshold   *int   `json:"gpu-threshold,omitempty"`
+	QueueThreshold *int   `json:"queue-threshold,omitempty"`
+	MetricName     string `json:"metric-name,omitempty"`
+	CustomTriggers int    `json:"custom-triggers,omitempty"`
 }
 
 type Services []Service
@@ -48,4 +62,6 @@ type ServiceUpdateOptions struct {
 	Gpu       *int    `flag:"gpu" param:"gpu"`
 	GpuVendor *string `flag:"gpu-vendor" param:"gpu-vendor"`
 	Memory    *int    `flag:"memory" param:"memory"`
+	Min       *int    `flag:"min" param:"min"`
+	Max       *int    `flag:"max" param:"max"`
 }

@@ -2,6 +2,7 @@ package manifest
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"strconv"
 	"strings"
@@ -479,6 +480,19 @@ func (v *ServiceScale) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			}
 			v.Keda = &k
 		}
+		if w, ok := scaleBoundInt(t["min"]); ok {
+			v.Min = &w
+		}
+		if w, ok := scaleBoundInt(t["max"]); ok {
+			v.Max = &w
+		}
+		if w, ok := t["autoscale"]; ok {
+			var a ServiceAutoscale
+			if err := remarshalUsingKyaml(w, &a); err != nil {
+				return err
+			}
+			v.Autoscale = &a
+		}
 		if w, ok := t["vpa"].(interface{}); ok {
 			var k VPA
 			if err := remarshal(w, &k); err != nil {
@@ -769,4 +783,22 @@ func yamlAttributes(data []byte) (map[string]bool, error) {
 	}
 
 	return attrs, nil
+}
+
+func scaleBoundInt(v interface{}) (int, bool) {
+	switch t := v.(type) {
+	case int:
+		return t, true
+	case int64:
+		return int(t), true
+	case float64:
+		if math.IsNaN(t) || math.IsInf(t, 0) {
+			return 0, false
+		}
+		if t != math.Trunc(t) {
+			return 0, false
+		}
+		return int(t), true
+	}
+	return 0, false
 }
