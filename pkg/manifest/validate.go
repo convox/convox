@@ -2,7 +2,9 @@ package manifest
 
 import (
 	"fmt"
+	"math"
 	"net"
+	"net/url"
 	"regexp"
 	"strings"
 )
@@ -12,7 +14,8 @@ const (
 )
 
 var (
-	NameValidator = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
+	NameValidator         = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
+	prometheusMetricNameR = regexp.MustCompile(`^[a-zA-Z_:][a-zA-Z0-9_:]*$`)
 )
 
 func (m *Manifest) validate() []error {
@@ -159,8 +162,166 @@ func (m *Manifest) validateServices() []error {
 			}
 		}
 
+		errs = append(errs, validateServiceScale(&s)...)
 	}
 	return errs
+}
+
+func validateServiceScale(s *Service) []error {
+	var errs []error
+
+	if s.Agent.Enabled && (s.Scale.Autoscale.IsEnabled() || s.Scale.IsKedaEnabled()) {
+		errs = append(errs, fmt.Errorf("service %s: agent services render as DaemonSet and cannot use scale.autoscale or scale.keda", s.Name))
+	}
+
+	// Validate against EFFECTIVE Count (populated by ApplyDefaults from both
+	// the legacy scale.count shape and the new scale.min/scale.max pointer
+	// shape). Checking pointer-only would let legacy scale.count: 1-5 callers
+	// bypass every autoscale-aware rule.
+	effMin := s.Scale.Count.Min
+	effMax := s.Scale.Count.Max
+
+	if effMin < 0 {
+		errs = append(errs, fmt.Errorf("service %s: scale.min must be >= 0", s.Name))
+	}
+	if effMax < 0 {
+		errs = append(errs, fmt.Errorf("service %s: scale.max must be >= 0", s.Name))
+	}
+	if effMax < effMin {
+		errs = append(errs, fmt.Errorf("service %s: scale.max must be >= scale.min", s.Name))
+	}
+
+	a := s.Scale.Autoscale
+	if !a.IsEnabled() {
+		return errs
+	}
+
+	if effMax < 1 {
+		errs = append(errs, fmt.Errorf("service %s: scale.max must be >= 1 when autoscale is enabled", s.Name))
+	}
+	if effMax == effMin && effMax >= 1 {
+		errs = append(errs, fmt.Errorf("service %s: scale.max must be > scale.min when autoscale is enabled (ScaledObject would be a no-op)", s.Name))
+	}
+
+	if a.Cpu != nil && invalidPercent(a.Cpu.Threshold) {
+		errs = append(errs, fmt.Errorf("service %s: scale.autoscale.cpu.threshold must be between 1 and 100", s.Name))
+	}
+	if a.Memory != nil && invalidPercent(a.Memory.Threshold) {
+		errs = append(errs, fmt.Errorf("service %s: scale.autoscale.memory.threshold must be between 1 and 100", s.Name))
+	}
+	if a.GpuUtilization != nil {
+		if invalidPercent(a.GpuUtilization.Threshold) {
+			errs = append(errs, fmt.Errorf("service %s: scale.autoscale.gpu_utilization.threshold must be > 0 and <= 100", s.Name))
+		}
+		if s.Scale.Gpu.Count == 0 {
+			errs = append(errs, fmt.Errorf("service %s: scale.autoscale.gpu_utilization requires scale.gpu.count >= 1", s.Name))
+		}
+	}
+	if a.QueueDepth != nil {
+		if math.IsNaN(a.QueueDepth.Threshold) || a.QueueDepth.Threshold <= 0 {
+			errs = append(errs, fmt.Errorf("service %s: scale.autoscale.queue_depth.threshold must be > 0", s.Name))
+		}
+	}
+
+	errs = append(errs, validateAutoscaleThreshold(s.Name, "cpu", a.Cpu)...)
+	errs = append(errs, validateAutoscaleThreshold(s.Name, "memory", a.Memory)...)
+	errs = append(errs, validateAutoscaleThreshold(s.Name, "gpu_utilization", a.GpuUtilization)...)
+	errs = append(errs, validateAutoscaleQueueDepth(s.Name, a.QueueDepth)...)
+
+	for i, trig := range a.Custom {
+		if trig.Name != "" && !NameValidator.MatchString(trig.Name) {
+			errs = append(errs, fmt.Errorf("service %s: scale.autoscale.custom[%d].name %q invalid, %s", s.Name, i, trig.Name, ValidNameDescription))
+		}
+		if strings.HasPrefix(strings.ToLower(trig.Name), "convox-") {
+			errs = append(errs, fmt.Errorf("service %s: scale.autoscale.custom[%d].name: %q uses reserved prefix 'convox-'", s.Name, i, trig.Name))
+		}
+		if trig.AuthenticationRef != nil && trig.AuthenticationRef.Kind == "ClusterTriggerAuthentication" {
+			errs = append(errs, fmt.Errorf("service %s: scale.autoscale.custom[%d].authenticationRef.kind: ClusterTriggerAuthentication is not permitted", s.Name, i))
+		}
+	}
+
+	if effMin == 0 && !autoscaleCanScaleToZero(a) {
+		errs = append(errs, fmt.Errorf(
+			"service %s: scale.min: 0 combined with only always-active autoscale triggers (cpu/memory/cron) will never scale to zero; "+
+				"KEDA's cpu/memory/cron scalers are always active. Add scale.autoscale.queue_depth, scale.autoscale.gpu_utilization, "+
+				"or a scale.autoscale.custom[] prometheus/external trigger, or raise scale.min to 1.",
+			s.Name,
+		))
+	}
+
+	return errs
+}
+
+func invalidPercent(v float64) bool {
+	return math.IsNaN(v) || v <= 0 || v > 100
+}
+
+// autoscaleCanScaleToZero returns true when the autoscale spec contains at
+// least one trigger type that KEDA's scale_handler will let drop to zero.
+// KEDA's cpu, memory, and cron scalers are always-active (IsActive=true
+// unconditionally), so a service configured with only those never scales to
+// zero regardless of scale.min. Returns false when the config is made up
+// entirely of always-active triggers.
+func autoscaleCanScaleToZero(a *ServiceAutoscale) bool {
+	if a == nil {
+		return false
+	}
+	if a.GpuUtilization != nil || a.QueueDepth != nil {
+		return true
+	}
+	for i := range a.Custom {
+		t := strings.ToLower(a.Custom[i].Type)
+		if t != "cpu" && t != "memory" && t != "cron" {
+			return true
+		}
+	}
+	return false
+}
+
+func validateAutoscaleThreshold(service, field string, t *AutoscaleThreshold) []error {
+	if t == nil {
+		return nil
+	}
+	var errs []error
+	if t.PrometheusUrl != "" {
+		if err := validatePrometheusURL(t.PrometheusUrl); err != nil {
+			errs = append(errs, fmt.Errorf("service %s: scale.autoscale.%s.prometheus_url %s", service, field, err))
+		}
+	}
+	if t.MetricName != "" && !prometheusMetricNameR.MatchString(t.MetricName) {
+		errs = append(errs, fmt.Errorf("service %s: scale.autoscale.%s.metric_name %q must match %s", service, field, t.MetricName, prometheusMetricNameR.String()))
+	}
+	return errs
+}
+
+func validateAutoscaleQueueDepth(service string, q *AutoscaleQueueDepth) []error {
+	if q == nil {
+		return nil
+	}
+	var errs []error
+	if q.PrometheusUrl != "" {
+		if err := validatePrometheusURL(q.PrometheusUrl); err != nil {
+			errs = append(errs, fmt.Errorf("service %s: scale.autoscale.queue_depth.prometheus_url %s", service, err))
+		}
+	}
+	if q.MetricName != "" && !prometheusMetricNameR.MatchString(q.MetricName) {
+		errs = append(errs, fmt.Errorf("service %s: scale.autoscale.queue_depth.metric_name %q must match %s", service, q.MetricName, prometheusMetricNameR.String()))
+	}
+	return errs
+}
+
+func validatePrometheusURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("is not a valid URL: %s", err)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("must use http or https scheme, got %q", u.Scheme)
+	}
+	if u.Host == "" {
+		return fmt.Errorf("must include a host")
+	}
+	return nil
 }
 
 func (m *Manifest) validateTimers() []error {
