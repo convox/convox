@@ -161,9 +161,14 @@ spec:
         {{ end }}
         {{ end }}
       {{ end }}
-      {{ if .DockerHubAuth }}
+      {{ if or .DockerHubAuth .ImagePullSecretNames }}
       imagePullSecrets:
+      {{ if .DockerHubAuth }}
       - name: docker-hub-authentication
+      {{ end }}
+      {{ range .ImagePullSecretNames }}
+      - name: {{ . }}
+      {{ end }}
       {{ end }}
       serviceAccountName: {{.Service.Name}}
       shareProcessNamespace: {{.Service.Init}}

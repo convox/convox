@@ -26,48 +26,82 @@ const (
 type Service struct {
 	Name string `yaml:"-"`
 
-	Agent              ServiceAgent           `yaml:"agent,omitempty"`
-	Annotations        Annotations            `yaml:"annotations,omitempty"`
-	Build              ServiceBuild           `yaml:"build,omitempty"`
-	Certificate        Certificate            `yaml:"certificate,omitempty"`
-	Command            string                 `yaml:"command,omitempty"`
-	ConfigMounts       ConfigMounts           `yaml:"configMounts,omitempty"`
-	Deployment         ServiceDeployment      `yaml:"deployment,omitempty"`
-	DnsConfig          ServiceDnsConfig       `yaml:"dnsConfig,omitempty"`
-	Domains            ServiceDomains         `yaml:"domain,omitempty"`
-	Drain              int                    `yaml:"drain,omitempty"`
-	DisableHostUsers   bool                   `yaml:"disableHostUsers,omitempty"`
-	Environment        Environment            `yaml:"environment,omitempty"`
-	GrpcHealthEnabled  bool                   `yaml:"grpcHealthEnabled,omitempty"`
-	Health             ServiceHealth          `yaml:"health,omitempty"`
-	Liveness           ServiceLiveness        `yaml:"liveness,omitempty"`
-	StartupProbe       ServiceStartupProbe    `yaml:"startupProbe,omitempty"`
-	Image              string                 `yaml:"image,omitempty"`
-	Init               bool                   `yaml:"init,omitempty"`
-	InitContainer      *InitContainer         `yaml:"initContainer,omitempty"`
-	Internal           bool                   `yaml:"internal,omitempty"`
-	InternalRouter     bool                   `yaml:"internalRouter,omitempty"`
-	IngressAnnotations Annotations            `yaml:"ingressAnnotations,omitempty"`
-	Labels             Labels                 `yaml:"labels,omitempty"`
-	NodeAffinityLabels Affinities             `yaml:"nodeAffinityLabels,omitempty"`
-	NodeSelectorLabels Labels                 `yaml:"nodeSelectorLabels,omitempty"`
-	Lifecycle          ServiceLifecycle       `yaml:"lifecycle,omitempty"`
-	Port               ServicePortScheme      `yaml:"port,omitempty"`
-	Ports              []ServicePortProtocol  `yaml:"ports,omitempty"`
-	Privileged         bool                   `yaml:"privileged,omitempty"`
-	Resources          []string               `yaml:"resources,omitempty"`
-	SecurityContext    ServiceSecurityContext `yaml:"securityContext,omitempty"`
-	Scale              ServiceScale           `yaml:"scale,omitempty"`
-	Singleton          bool                   `yaml:"singleton,omitempty"`
-	Sticky             bool                   `yaml:"sticky,omitempty"`
-	Termination        ServiceTermination     `yaml:"termination,omitempty"`
-	Test               string                 `yaml:"test,omitempty"`
-	Timeout            int                    `yaml:"timeout,omitempty"`
-	Tls                ServiceTls             `yaml:"tls,omitempty"`
-	Volumes            []string               `yaml:"volumes,omitempty"`
-	VolumeOptions      []VolumeOption         `yaml:"volumeOptions,omitempty"`
-	Whitelist          string                 `yaml:"whitelist,omitempty"`
-	AccessControl      AccessControlOptions   `yaml:"accessControl,omitempty"`
+	Agent              ServiceAgent             `yaml:"agent,omitempty"`
+	Annotations        Annotations              `yaml:"annotations,omitempty"`
+	Build              ServiceBuild             `yaml:"build,omitempty"`
+	Certificate        Certificate              `yaml:"certificate,omitempty"`
+	Command            string                   `yaml:"command,omitempty"`
+	ConfigMounts       ConfigMounts             `yaml:"configMounts,omitempty"`
+	Deployment         ServiceDeployment        `yaml:"deployment,omitempty"`
+	DnsConfig          ServiceDnsConfig         `yaml:"dnsConfig,omitempty"`
+	Domains            ServiceDomains           `yaml:"domain,omitempty"`
+	Drain              int                      `yaml:"drain,omitempty"`
+	DisableHostUsers   bool                     `yaml:"disableHostUsers,omitempty"`
+	Environment        Environment              `yaml:"environment,omitempty"`
+	GrpcHealthEnabled  bool                     `yaml:"grpcHealthEnabled,omitempty"`
+	Health             ServiceHealth            `yaml:"health,omitempty"`
+	Liveness           ServiceLiveness          `yaml:"liveness,omitempty"`
+	StartupProbe       ServiceStartupProbe      `yaml:"startupProbe,omitempty"`
+	Image              string                   `yaml:"image,omitempty"`
+	ImagePullSecrets   []ServiceImagePullSecret `yaml:"imagePullSecrets,omitempty" json:"imagePullSecrets,omitempty"`
+	Init               bool                     `yaml:"init,omitempty"`
+	InitContainer      *InitContainer           `yaml:"initContainer,omitempty"`
+	Internal           bool                     `yaml:"internal,omitempty"`
+	InternalRouter     bool                     `yaml:"internalRouter,omitempty"`
+	IngressAnnotations Annotations              `yaml:"ingressAnnotations,omitempty"`
+	Labels             Labels                   `yaml:"labels,omitempty"`
+	NodeAffinityLabels Affinities               `yaml:"nodeAffinityLabels,omitempty"`
+	NodeSelectorLabels Labels                   `yaml:"nodeSelectorLabels,omitempty"`
+	Lifecycle          ServiceLifecycle         `yaml:"lifecycle,omitempty"`
+	Port               ServicePortScheme        `yaml:"port,omitempty"`
+	Ports              []ServicePortProtocol    `yaml:"ports,omitempty"`
+	Privileged         bool                     `yaml:"privileged,omitempty"`
+	Resources          []string                 `yaml:"resources,omitempty"`
+	SecurityContext    ServiceSecurityContext   `yaml:"securityContext,omitempty"`
+	Scale              ServiceScale             `yaml:"scale,omitempty"`
+	Singleton          bool                     `yaml:"singleton,omitempty"`
+	Sticky             bool                     `yaml:"sticky,omitempty"`
+	Termination        ServiceTermination       `yaml:"termination,omitempty"`
+	Test               string                   `yaml:"test,omitempty"`
+	Timeout            int                      `yaml:"timeout,omitempty"`
+	Tls                ServiceTls               `yaml:"tls,omitempty"`
+	Volumes            []string                 `yaml:"volumes,omitempty"`
+	VolumeOptions      []VolumeOption           `yaml:"volumeOptions,omitempty"`
+	Whitelist          string                   `yaml:"whitelist,omitempty"`
+	AccessControl      AccessControlOptions     `yaml:"accessControl,omitempty"`
+}
+
+// ServiceImagePullSecret declares a private-registry credential for pulling a
+// service's container image. Password is the literal credential (quick-test
+// path). PasswordEnv references an app env var holding the credential and is
+// the recommended form. Exactly one must be set.
+//
+// Password is intentionally excluded from JSON marshaling (`json:"-"`) so that
+// it cannot leak through any API boundary that encodes Service as JSON. The
+// yaml tag keeps Password parseable so users can write `password: literal`
+// in convox.yml, but a custom MarshalYAML method strips it on the way back
+// out — any code path that yaml.Marshals a Service (tests, future tooling,
+// debug dumps) will NOT emit the literal credential.
+type ServiceImagePullSecret struct {
+	Registry    string `yaml:"registry" json:"registry"`
+	Username    string `yaml:"username" json:"username"`
+	Password    string `yaml:"password,omitempty" json:"-"`
+	PasswordEnv string `yaml:"passwordEnv,omitempty" json:"passwordEnv,omitempty"`
+}
+
+// MarshalYAML strips the literal Password from any yaml.Marshal output.
+// Parsing (default UnmarshalYAML) is unaffected — the yaml tag still binds
+// the field for reads. This is purely an egress guard.
+func (s ServiceImagePullSecret) MarshalYAML() (interface{}, error) {
+	return struct {
+		Registry    string `yaml:"registry"`
+		Username    string `yaml:"username"`
+		PasswordEnv string `yaml:"passwordEnv,omitempty"`
+	}{
+		Registry:    s.Registry,
+		Username:    s.Username,
+		PasswordEnv: s.PasswordEnv,
+	}, nil
 }
 
 type Affinities []Affinity
@@ -850,6 +884,49 @@ func (ss Services) Routable() Services {
 
 type AccessControlOptions struct {
 	AWSPodIdentity *AWSPodIdentityOptions `yaml:"awsPodIdentity,omitempty"`
+}
+
+// registryHostValidator matches a lowercase DNS hostname with optional port.
+// Rejects uppercase letters, schemes, and paths.
+var registryHostValidator = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*(:[0-9]+)?$`)
+
+func (s ServiceImagePullSecret) Validate() error {
+	if strings.TrimSpace(s.Registry) == "" {
+		return fmt.Errorf("registry is required")
+	}
+
+	if strings.Contains(s.Registry, "://") {
+		return fmt.Errorf("registry %q must not include a scheme (drop http:// or https://)", s.Registry)
+	}
+
+	if strings.Contains(s.Registry, "/") {
+		return fmt.Errorf("registry %q must not include a path (use the host only)", s.Registry)
+	}
+
+	if s.Registry != strings.ToLower(s.Registry) {
+		return fmt.Errorf("registry %q must be lowercase", s.Registry)
+	}
+
+	if !registryHostValidator.MatchString(s.Registry) {
+		return fmt.Errorf("registry %q is not a valid registry hostname", s.Registry)
+	}
+
+	if strings.TrimSpace(s.Username) == "" {
+		return fmt.Errorf("username is required")
+	}
+
+	hasPassword := s.Password != ""
+	hasPasswordEnv := s.PasswordEnv != ""
+
+	if hasPassword && hasPasswordEnv {
+		return fmt.Errorf("use passwordEnv to reference an env var, OR password for a literal value, not both")
+	}
+
+	if !hasPassword && !hasPasswordEnv {
+		return fmt.Errorf("password or passwordEnv is required")
+	}
+
+	return nil
 }
 
 type AWSPodIdentityOptions struct {

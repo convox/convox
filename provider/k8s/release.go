@@ -697,21 +697,31 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 			return nil, structs.ErrBadRequest("keda is not enabled on the rack")
 		}
 
+		ipsBlocks, ipsNames, err := renderImagePullSecrets(a.Name, p.AppNamespace(a.Name), &s, func(k string) (string, bool) {
+			v, ok := env[k]
+			return v, ok
+		})
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		items = append(items, ipsBlocks...)
+
 		params := map[string]interface{}{
-			"Annotations":    s.AnnotationsMap(),
-			"App":            a,
-			"Environment":    env,
-			"MaxSurge":       max - 100,
-			"MaxUnavailable": 100 - min,
-			"Namespace":      p.AppNamespace(a.Name),
-			"Password":       p.Password,
-			"Rack":           p.Name,
-			"Release":        r,
-			"Replicas":       replicas,
-			"Resources":      s.ResourceMap(),
-			"Service":        s,
-			"KedaIsEnabled":  s.Scale.IsKedaEnabled(),
-			"DockerHubAuth":  p.hasDockerHubAuth(),
+			"Annotations":          s.AnnotationsMap(),
+			"App":                  a,
+			"Environment":          env,
+			"MaxSurge":             max - 100,
+			"MaxUnavailable":       100 - min,
+			"Namespace":            p.AppNamespace(a.Name),
+			"Password":             p.Password,
+			"Rack":                 p.Name,
+			"Release":              r,
+			"Replicas":             replicas,
+			"Resources":            s.ResourceMap(),
+			"Service":              s,
+			"KedaIsEnabled":        s.Scale.IsKedaEnabled(),
+			"DockerHubAuth":        p.hasDockerHubAuth(),
+			"ImagePullSecretNames": ipsNames,
 		}
 
 		if ip, err := p.Engine.ResolverHost(); err == nil {
@@ -797,15 +807,16 @@ func (p *Provider) releaseTemplateTimer(a *structs.App, e structs.Environment, r
 	}
 
 	params := map[string]interface{}{
-		"Annotations":   t.AnnotationsMap(),
-		"App":           a,
-		"Namespace":     p.AppNamespace(a.Name),
-		"Rack":          p.Name,
-		"Release":       r,
-		"Resources":     s.ResourceMap(),
-		"Service":       s,
-		"Timer":         t,
-		"DockerHubAuth": p.hasDockerHubAuth(),
+		"Annotations":          t.AnnotationsMap(),
+		"App":                  a,
+		"Namespace":            p.AppNamespace(a.Name),
+		"Rack":                 p.Name,
+		"Release":              r,
+		"Resources":            s.ResourceMap(),
+		"Service":              s,
+		"Timer":                t,
+		"DockerHubAuth":        p.hasDockerHubAuth(),
+		"ImagePullSecretNames": imagePullSecretNames(a.Name, s.Name, s.ImagePullSecrets),
 	}
 
 	if ip, err := p.Engine.ResolverHost(); err == nil {
