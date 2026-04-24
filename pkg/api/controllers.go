@@ -341,6 +341,32 @@ func (s *Server) BuildImport(c *stdapi.Context) error {
 	return c.RenderJSON(v)
 }
 
+func (s *Server) BuildImportImage(c *stdapi.Context) error {
+	if err := s.hook("BuildImportImageValidate", c); err != nil {
+		return err
+	}
+
+	app := c.Var("app")
+	id := c.Var("id")
+	image := c.Value("image")
+
+	if image == "" {
+		return structs.ErrUnprocessable("image param required")
+	}
+
+	var opts structs.BuildImportImageOptions
+	if err := stdapi.UnmarshalOptions(c.Request(), &opts); err != nil {
+		return err
+	}
+
+	if err := s.provider(c).WithContext(contextFrom(c)).BuildImportImage(app, id, image, opts); err != nil {
+		return err
+	}
+
+	c.Response().WriteHeader(http.StatusAccepted)
+	return nil
+}
+
 func (s *Server) BuildList(c *stdapi.Context) error {
 	if err := s.hook("BuildListValidate", c); err != nil {
 		return err
