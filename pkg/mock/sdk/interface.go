@@ -22,6 +22,80 @@ type Interface struct {
 	mock.Mock
 }
 
+// AppBudgetClear provides a mock function with given fields: app, ackBy
+func (_m *Interface) AppBudgetClear(app string, ackBy string) error {
+	ret := _m.Called(app, ackBy)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = rf(app, ackBy)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// AppBudgetGet provides a mock function with given fields: app
+func (_m *Interface) AppBudgetGet(app string) (*structs.AppBudget, *structs.AppBudgetState, error) {
+	ret := _m.Called(app)
+
+	var r0 *structs.AppBudget
+	if rf, ok := ret.Get(0).(func(string) *structs.AppBudget); ok {
+		r0 = rf(app)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*structs.AppBudget)
+		}
+	}
+
+	var r1 *structs.AppBudgetState
+	if rf, ok := ret.Get(1).(func(string) *structs.AppBudgetState); ok {
+		r1 = rf(app)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*structs.AppBudgetState)
+		}
+	}
+
+	var r2 error
+	if rf, ok := ret.Get(2).(func(string) error); ok {
+		r2 = rf(app)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// AppBudgetReset provides a mock function with given fields: app, ackBy
+func (_m *Interface) AppBudgetReset(app string, ackBy string) error {
+	ret := _m.Called(app, ackBy)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = rf(app, ackBy)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// AppBudgetSet provides a mock function with given fields: app, opts, ackBy
+func (_m *Interface) AppBudgetSet(app string, opts structs.AppBudgetOptions, ackBy string) error {
+	ret := _m.Called(app, opts, ackBy)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, structs.AppBudgetOptions, string) error); ok {
+		r0 = rf(app, opts, ackBy)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // AppCancel provides a mock function with given fields: name
 func (_m *Interface) AppCancel(name string) error {
 	ret := _m.Called(name)
@@ -94,6 +168,29 @@ func (_m *Interface) AppConfigSet(app string, name string, valueBase64 string) e
 	}
 
 	return r0
+}
+
+// AppCost provides a mock function with given fields: app
+func (_m *Interface) AppCost(app string) (*structs.AppCost, error) {
+	ret := _m.Called(app)
+
+	var r0 *structs.AppCost
+	if rf, ok := ret.Get(0).(func(string) *structs.AppCost); ok {
+		r0 = rf(app)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*structs.AppCost)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(app)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // AppCreate provides a mock function with given fields: name, opts
@@ -700,6 +797,20 @@ func (_m *Interface) CertificateRenew(id string) error {
 	return r0
 }
 
+// ClientType provides a mock function with given fields:
+func (_m *Interface) ClientType() string {
+	ret := _m.Called()
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}
+
 // Endpoint provides a mock function with given fields:
 func (_m *Interface) Endpoint() (*url.URL, error) {
 	ret := _m.Called()
@@ -1039,6 +1150,29 @@ func (_m *Interface) LetsEncryptConfigGet() (*structs.LetsEncryptConfig, error) 
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*structs.LetsEncryptConfig)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MachineList provides a mock function with given fields:
+func (_m *Interface) MachineList() (structs.Machines, error) {
+	ret := _m.Called()
+
+	var r0 structs.Machines
+	if rf, ok := ret.Get(0).(func() structs.Machines); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(structs.Machines)
 		}
 	}
 
@@ -2450,37 +2584,4 @@ func (_m *Interface) WorkflowList(rackOrgSlug string) (structs.WorkflowListResp,
 	}
 
 	return r0, r1
-}
-
-func (_m *Interface) MachineList() (structs.Machines, error) {
-	ret := _m.Called()
-
-	var r0 structs.Machines
-	if rf, ok := ret.Get(0).(func() structs.Machines); ok {
-		r0 = rf()
-	} else {
-		r0 = ret.Get(0).(structs.Machines)
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func() error); ok {
-		r1 = rf()
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-func (_m *Interface) ClientType() string {
-	ret := _m.Called()
-
-	var r0 string
-	if rf, ok := ret.Get(0).(func() string); ok {
-		r0 = rf()
-	} else {
-		r0 = ret.Get(0).(string)
-	}
-
-	return r0
 }

@@ -16,6 +16,80 @@ type MockProvider struct {
 	mock.Mock
 }
 
+// AppBudgetClear provides a mock function with given fields: app, ackBy
+func (_m *MockProvider) AppBudgetClear(app string, ackBy string) error {
+	ret := _m.Called(app, ackBy)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = rf(app, ackBy)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// AppBudgetGet provides a mock function with given fields: app
+func (_m *MockProvider) AppBudgetGet(app string) (*AppBudget, *AppBudgetState, error) {
+	ret := _m.Called(app)
+
+	var r0 *AppBudget
+	if rf, ok := ret.Get(0).(func(string) *AppBudget); ok {
+		r0 = rf(app)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*AppBudget)
+		}
+	}
+
+	var r1 *AppBudgetState
+	if rf, ok := ret.Get(1).(func(string) *AppBudgetState); ok {
+		r1 = rf(app)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*AppBudgetState)
+		}
+	}
+
+	var r2 error
+	if rf, ok := ret.Get(2).(func(string) error); ok {
+		r2 = rf(app)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// AppBudgetReset provides a mock function with given fields: app, ackBy
+func (_m *MockProvider) AppBudgetReset(app string, ackBy string) error {
+	ret := _m.Called(app, ackBy)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = rf(app, ackBy)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// AppBudgetSet provides a mock function with given fields: app, opts, ackBy
+func (_m *MockProvider) AppBudgetSet(app string, opts AppBudgetOptions, ackBy string) error {
+	ret := _m.Called(app, opts, ackBy)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, AppBudgetOptions, string) error); ok {
+		r0 = rf(app, opts, ackBy)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // AppCancel provides a mock function with given fields: name
 func (_m *MockProvider) AppCancel(name string) error {
 	ret := _m.Called(name)
@@ -88,6 +162,29 @@ func (_m *MockProvider) AppConfigSet(app string, name string, valueBase64 string
 	}
 
 	return r0
+}
+
+// AppCost provides a mock function with given fields: app
+func (_m *MockProvider) AppCost(app string) (*AppCost, error) {
+	ret := _m.Called(app)
+
+	var r0 *AppCost
+	if rf, ok := ret.Get(0).(func(string) *AppCost); ok {
+		r0 = rf(app)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*AppCost)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(app)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // AppCreate provides a mock function with given fields: name, opts
