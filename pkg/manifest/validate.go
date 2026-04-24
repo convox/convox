@@ -148,6 +148,20 @@ func (m *Manifest) validateServices() []error {
 			errs = append(errs, fmt.Errorf("service %s: %s", s.Name, err))
 		}
 
+		seenRegistries := map[string]int{}
+		for i := range s.ImagePullSecrets {
+			if err := s.ImagePullSecrets[i].Validate(); err != nil {
+				errs = append(errs, fmt.Errorf("service %s imagePullSecrets[%d]: %s", s.Name, i, err))
+				continue
+			}
+			reg := strings.ToLower(s.ImagePullSecrets[i].Registry)
+			if prev, has := seenRegistries[reg]; has {
+				errs = append(errs, fmt.Errorf("service %s imagePullSecrets[%d]: duplicate registry %q (also declared at index %d); each registry may be declared at most once per service", s.Name, i, s.ImagePullSecrets[i].Registry, prev))
+				continue
+			}
+			seenRegistries[reg] = i
+		}
+
 		for i := range s.ConfigMounts {
 			cm := &s.ConfigMounts[i]
 			if err := cm.Validate(); err != nil {
