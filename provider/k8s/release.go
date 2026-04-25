@@ -111,6 +111,10 @@ func (p *Provider) ReleaseList(app string, opts structs.ReleaseListOptions) (str
 }
 
 func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOptions) error {
+	if err := p.budgetCircuitBreakerTripped(app); err != nil {
+		return errors.WithStack(err)
+	}
+
 	a, err := p.AppGet(app)
 	if err != nil {
 		return errors.WithStack(err)

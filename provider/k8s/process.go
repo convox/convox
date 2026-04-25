@@ -317,6 +317,20 @@ pendingLoop:
 }
 
 func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOptions) (*structs.Process, error) {
+	// Gate ProcessRun on the budget breaker, EXCEPT for build pods. The
+	// `service` URL-path parameter is caller-controlled and cannot be
+	// trusted for this exemption — instead we key on `opts.IsBuild`, a
+	// server-side struct flag set only by BuildCreate at build.go:112.
+	// The flag has no `header:` / `flag:` tag so it is not wire-exposed;
+	// a client spoofing `service="build"` gets blocked because IsBuild
+	// stays false. Build pods themselves must pass to allow customers to
+	// ship a fix when over cap.
+	if !opts.IsBuild {
+		if err := p.budgetCircuitBreakerTripped(app); err != nil {
+			return nil, errors.WithStack(err)
+		}
+	}
+
 	s, err := p.podSpecFromRunOptions(app, service, opts)
 	if err != nil {
 		return nil, errors.WithStack(err)

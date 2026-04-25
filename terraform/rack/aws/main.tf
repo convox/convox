@@ -40,6 +40,7 @@ module "api" {
   ecr_docker_hub_cache_prefix               = var.ecr_docker_hub_cache_prefix
   efs_csi_driver_enable                     = var.efs_csi_driver_enable
   efs_file_system_id                        = var.efs_file_system_id
+  cost_tracking_enable                      = var.cost_tracking_enable
   high_availability                         = var.high_availability
   metrics_scraper_host                      = module.metrics.metrics_scraper_host
   image                                     = var.image

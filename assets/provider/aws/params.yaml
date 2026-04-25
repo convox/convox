@@ -626,3 +626,14 @@ Groups:
           (documentation)[https://docs.convox.com/configuration/karpenter/]
           for the full schema. &l &l Example: &l
           &i [{"name":"gpu","instance_families":"g5,g6","labels":"gpu=true","taints":"gpu=true:NoSchedule","cpu_limit":64}] &i
+  - name: Cost & Budget
+    order: 7
+    params:
+      - name: cost_tracking_enable
+        default: "false"
+        type: boolean
+        description: |
+          Enables the rack-side cost accumulator that attributes estimated
+          EC2 on-demand spend to each app and enforces per-app monthly
+          budget caps configured via &i convox budget set &i. &l &l Off by
+          default — existing customers see no change until opted in.

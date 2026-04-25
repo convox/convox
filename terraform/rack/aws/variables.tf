@@ -102,6 +102,11 @@ variable "image" {
   type = string
 }
 
+variable "cost_tracking_enable" {
+  type    = bool
+  default = false
+}
+
 variable "karpenter_enabled" {
   type    = bool
   default = false

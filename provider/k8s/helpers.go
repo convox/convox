@@ -335,7 +335,7 @@ func caculatePercentage(cur, total float64) float64 {
 	return (cur / total) * 100
 }
 
-func RunUsingLeaderElection(ns, name string, cluster kubernetes.Interface, onStarted func(context.Context), onStopped func()) error {
+func RunUsingLeaderElection(ctx context.Context, ns, name string, cluster kubernetes.Interface, onStarted func(context.Context), onStopped func()) error {
 	identifier, err := os.Hostname()
 	if err != nil {
 		return err
@@ -370,8 +370,6 @@ func RunUsingLeaderElection(ns, name string, cluster kubernetes.Interface, onSta
 	if err != nil {
 		return err
 	}
-
-	ctx, _ := context.WithCancel(context.Background())
 
 	go el.Run(ctx)
 

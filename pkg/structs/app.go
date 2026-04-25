@@ -15,6 +15,8 @@ type App struct {
 	Router     string `json:"router"`
 	Status     string `json:"status"`
 
+	Budget *AppBudget `json:"budget,omitempty"`
+
 	Outputs    map[string]string `json:"-"`
 	Parameters map[string]string `json:"parameters"`
 	Tags       map[string]string `json:"-"`

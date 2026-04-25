@@ -240,6 +240,86 @@ func (s *Server) AppUpdate(c *stdapi.Context) error {
 	return c.RenderOK()
 }
 
+func (s *Server) AppBudgetGet(c *stdapi.Context) error {
+	if err := s.hook("AppBudgetGetValidate", c); err != nil {
+		return err
+	}
+
+	app := c.Var("app")
+
+	cfg, state, err := s.provider(c).WithContext(contextFrom(c)).AppBudgetGet(app)
+	if err != nil {
+		return err
+	}
+
+	return c.RenderJSON(map[string]interface{}{"config": cfg, "state": state})
+}
+
+func (s *Server) AppBudgetSet(c *stdapi.Context) error {
+	if err := s.hook("AppBudgetSetValidate", c); err != nil {
+		return err
+	}
+
+	app := c.Var("app")
+	ackBy := c.Value("ack_by")
+
+	var opts structs.AppBudgetOptions
+	if err := stdapi.UnmarshalOptions(c.Request(), &opts); err != nil {
+		return err
+	}
+
+	if err := s.provider(c).WithContext(contextFrom(c)).AppBudgetSet(app, opts, ackBy); err != nil {
+		return err
+	}
+
+	return c.RenderOK()
+}
+
+func (s *Server) AppBudgetClear(c *stdapi.Context) error {
+	if err := s.hook("AppBudgetClearValidate", c); err != nil {
+		return err
+	}
+
+	app := c.Var("app")
+	ackBy := c.Value("ack_by")
+
+	if err := s.provider(c).WithContext(contextFrom(c)).AppBudgetClear(app, ackBy); err != nil {
+		return err
+	}
+
+	return c.RenderOK()
+}
+
+func (s *Server) AppBudgetReset(c *stdapi.Context) error {
+	if err := s.hook("AppBudgetResetValidate", c); err != nil {
+		return err
+	}
+
+	app := c.Var("app")
+	ackBy := c.Value("ack_by")
+
+	if err := s.provider(c).WithContext(contextFrom(c)).AppBudgetReset(app, ackBy); err != nil {
+		return err
+	}
+
+	return c.RenderOK()
+}
+
+func (s *Server) AppCost(c *stdapi.Context) error {
+	if err := s.hook("AppCostValidate", c); err != nil {
+		return err
+	}
+
+	app := c.Var("app")
+
+	v, err := s.provider(c).WithContext(contextFrom(c)).AppCost(app)
+	if err != nil {
+		return err
+	}
+
+	return c.RenderJSON(v)
+}
+
 func (s *Server) BalancerList(c *stdapi.Context) error {
 	if err := s.hook("BalancerListValidate", c); err != nil {
 		return err

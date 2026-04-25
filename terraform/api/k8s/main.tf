@@ -197,6 +197,11 @@ resource "kubernetes_deployment" "api" {
           }
 
           env {
+            name  = "COST_TRACKING_ENABLE"
+            value = var.cost_tracking_enable ? "true" : "false"
+          }
+
+          env {
             name  = "DOMAIN"
             value = var.domain
           }
