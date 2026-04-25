@@ -259,13 +259,40 @@ func (m *Manifest) ApplyDefaults() error {
 
 		sp := fmt.Sprintf("services.%s.scale", s.Name)
 
+		{
+			svc := &m.Services[i]
+			switch {
+			case svc.Scale.Min != nil && svc.Scale.Max != nil:
+				svc.Scale.Count = ServiceScaleCount{Min: *svc.Scale.Min, Max: *svc.Scale.Max}
+			case svc.Scale.Min != nil && svc.Scale.Max == nil:
+				svc.Scale.Count.Min = *svc.Scale.Min
+				if svc.Scale.Autoscale.IsEnabled() {
+					if svc.Scale.Count.Max == 0 {
+						svc.Scale.Count.Max = 10
+					}
+				} else {
+					svc.Scale.Count.Max = *svc.Scale.Min
+				}
+			case svc.Scale.Max != nil && svc.Scale.Min == nil:
+				svc.Scale.Count.Max = *svc.Scale.Max
+				if svc.Scale.Count.Min == 0 && !svc.Scale.Autoscale.IsEnabled() {
+					svc.Scale.Count.Min = *svc.Scale.Max
+				}
+			}
+
+			if svc.Scale.Autoscale.IsEnabled() && svc.Scale.Count.Max == 0 {
+				svc.Scale.Count.Max = 10
+			}
+		}
+
 		// if no scale attributes set
 		if len(m.AttributesByPrefix(sp)) == 0 {
 			m.Services[i].Scale.Count = ServiceScaleCount{Min: 1, Max: 1}
 		}
 
 		// if no explicit count attribute set yet has multiple scale attributes other than count
-		if !m.AttributeExists(fmt.Sprintf("%s.count", sp)) && len(m.AttributesByPrefix(sp)) > 1 {
+		if !m.AttributeExists(fmt.Sprintf("%s.count", sp)) && len(m.AttributesByPrefix(sp)) > 1 &&
+			!m.Services[i].Scale.Autoscale.IsEnabled() && m.Services[i].Scale.Min == nil && m.Services[i].Scale.Max == nil {
 			m.Services[i].Scale.Count = ServiceScaleCount{Min: 1, Max: 1}
 		}
 

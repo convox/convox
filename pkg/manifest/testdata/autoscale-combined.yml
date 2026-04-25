@@ -1,0 +1,19 @@
+services:
+  inference:
+    build: .
+    port: 8000
+    scale:
+      min: 1
+      max: 8
+      gpu:
+        count: 1
+        vendor: nvidia
+      autoscale:
+        cpu:
+          threshold: 70
+        gpu_utilization:
+          threshold: 75
+        queue_depth:
+          threshold: 3
+        cooldown_period: 300
+        polling_interval: 15

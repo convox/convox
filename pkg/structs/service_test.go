@@ -2,6 +2,7 @@ package structs
 
 import (
 	"encoding/json"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -56,4 +57,63 @@ func TestServiceNlbPortJSONNullHandling(t *testing.T) {
 	require.Nil(t, got.AllowCIDR)
 	require.Nil(t, got.CrossZone)
 	require.Nil(t, got.PreserveClientIP)
+}
+
+func TestServiceJsonRoundTripOldRackShape(t *testing.T) {
+	raw := `{"name":"svc","count":3,"cpu":100,"memory":256,"gpu":0,"gpu-vendor":"","domain":"","nlb":null,"ports":null}`
+	var got Service
+	require.NoError(t, json.Unmarshal([]byte(raw), &got))
+	require.Equal(t, "svc", got.Name)
+	require.Equal(t, 3, got.Count)
+	require.Nil(t, got.Min)
+	require.Nil(t, got.Max)
+	require.Nil(t, got.ColdStart)
+	require.Nil(t, got.Autoscale)
+}
+
+func TestServiceJsonRoundTripFullShape(t *testing.T) {
+	mn, mx := 0, 10
+	cold := true
+	c, q := 70, 5
+	want := Service{
+		Name:      "vllm",
+		Count:     0,
+		Min:       &mn,
+		Max:       &mx,
+		ColdStart: &cold,
+		Autoscale: &ServiceAutoscaleState{
+			Enabled:        true,
+			CpuThreshold:   &c,
+			QueueThreshold: &q,
+			MetricName:     "vllm:num_requests_waiting",
+			CustomTriggers: 2,
+		},
+	}
+	data, err := json.Marshal(want)
+	require.NoError(t, err)
+
+	var got Service
+	require.NoError(t, json.Unmarshal(data, &got))
+	require.Equal(t, want, got)
+}
+
+func TestServiceUpdateOptionsTags(t *testing.T) {
+	rt := reflect.TypeOf(ServiceUpdateOptions{})
+	for _, field := range []string{"Min", "Max"} {
+		f, ok := rt.FieldByName(field)
+		require.True(t, ok, "field %s missing", field)
+		want := map[string]string{"Min": "min", "Max": "max"}[field]
+		require.Equal(t, want, f.Tag.Get("flag"))
+		require.Equal(t, want, f.Tag.Get("param"))
+	}
+}
+
+func TestServiceAutoscaleStateOmitempty(t *testing.T) {
+	s := Service{Name: "svc", Count: 1}
+	data, err := json.Marshal(s)
+	require.NoError(t, err)
+	require.NotContains(t, string(data), "autoscale")
+	require.NotContains(t, string(data), "cold-start")
+	require.NotContains(t, string(data), `"min"`)
+	require.NotContains(t, string(data), `"max"`)
 }

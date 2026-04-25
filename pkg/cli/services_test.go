@@ -451,6 +451,42 @@ func TestServicesNLBDifferentHardeningPerPort(t *testing.T) {
 	})
 }
 
+func TestServicesScaleAutoscaleColdColumns(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		mn, mx := 0, 10
+		cold := true
+		gpu, queue := 70, 5
+		vllm := structs.Service{
+			Name:      "vllm",
+			Domain:    "vllm.d",
+			Ports:     []structs.ServicePort{{Balancer: 80, Container: 8000}},
+			Min:       &mn,
+			Max:       &mx,
+			ColdStart: &cold,
+			Autoscale: &structs.ServiceAutoscaleState{Enabled: true, GpuThreshold: &gpu, QueueThreshold: &queue},
+		}
+		two := 2
+		web := structs.Service{
+			Name:   "web",
+			Domain: "web.d",
+			Ports:  []structs.ServicePort{{Balancer: 80, Container: 80}},
+			Min:    &two,
+			Max:    &two,
+		}
+
+		i.On("ServiceList", "app1").Return(structs.Services{vllm, web}, nil)
+
+		res, err := testExecute(e, "services -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStdout(t, []string{
+			"SERVICE  DOMAIN  PORTS    SCALE  AUTOSCALE            COLD",
+			"vllm     vllm.d  80:8000  0-10   gpu-util>70 queue>5  yes",
+			"web      web.d   80:80    2      -                    -",
+		})
+	})
+}
+
 // TestServicesNLBEmptyAllowCIDRNoBracket — explicit empty slice must not render `allow=0`.
 func TestServicesNLBEmptyAllowCIDRNoBracket(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
