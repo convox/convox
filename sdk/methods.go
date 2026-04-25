@@ -188,6 +188,52 @@ func (c *Client) AppUpdate(name string, opts structs.AppUpdateOptions) error {
 	return err
 }
 
+type appBudgetResponse struct {
+	Config *structs.AppBudget      `json:"config"`
+	State  *structs.AppBudgetState `json:"state"`
+}
+
+func (c *Client) AppBudgetGet(app string) (*structs.AppBudget, *structs.AppBudgetState, error) {
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+
+	var v appBudgetResponse
+	if err := c.Get(fmt.Sprintf("/apps/%s/budget", app), ro, &v); err != nil {
+		return nil, nil, err
+	}
+	return v.Config, v.State, nil
+}
+
+func (c *Client) AppBudgetSet(app string, opts structs.AppBudgetOptions, ackBy string) error {
+	ro, err := stdsdk.MarshalOptions(opts)
+	if err != nil {
+		return err
+	}
+	ro.Params["ack_by"] = ackBy
+	return c.Post(fmt.Sprintf("/apps/%s/budget", app), ro, nil)
+}
+
+func (c *Client) AppBudgetClear(app string, ackBy string) error {
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+	ro.Params["ack_by"] = ackBy
+	return c.Delete(fmt.Sprintf("/apps/%s/budget", app), ro, nil)
+}
+
+func (c *Client) AppBudgetReset(app string, ackBy string) error {
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+	ro.Params["ack_by"] = ackBy
+	return c.Post(fmt.Sprintf("/apps/%s/budget/reset", app), ro, nil)
+}
+
+func (c *Client) AppCost(app string) (*structs.AppCost, error) {
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+
+	var v *structs.AppCost
+	if err := c.Get(fmt.Sprintf("/apps/%s/cost", app), ro, &v); err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
 func (c *Client) BalancerList(app string) (structs.Balancers, error) {
 	var err error
 

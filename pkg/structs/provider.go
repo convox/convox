@@ -24,6 +24,12 @@ type Provider interface {
 	AppMetrics(name string, opts MetricsOptions) (Metrics, error)
 	AppUpdate(name string, opts AppUpdateOptions) error
 
+	AppBudgetGet(app string) (*AppBudget, *AppBudgetState, error)
+	AppBudgetSet(app string, opts AppBudgetOptions, ackBy string) error
+	AppBudgetClear(app string, ackBy string) error
+	AppBudgetReset(app string, ackBy string) error
+	AppCost(app string) (*AppCost, error)
+
 	BalancerList(app string) (Balancers, error)
 
 	BuildCreate(app, url string, opts BuildCreateOptions) (*Build, error)

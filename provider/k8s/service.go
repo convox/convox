@@ -236,6 +236,10 @@ func (p *Provider) serviceRestartDeployment(app, name string) error {
 }
 
 func (p *Provider) ServiceUpdate(app, name string, opts structs.ServiceUpdateOptions) error {
+	if err := p.budgetCircuitBreakerTripped(app); err != nil {
+		return errors.WithStack(err)
+	}
+
 	d, err := p.GetDeploymentFromInformer(name, p.AppNamespace(app))
 	if err != nil {
 		return errors.WithStack(err)

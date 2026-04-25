@@ -327,6 +327,18 @@ func (p *Provider) Start() error {
 		go p.RunSharedInformer(make(chan struct{}))
 	}
 
+	if os.Getenv("COST_TRACKING_ENABLE") == "true" {
+		// Lease lives in the api pod's own namespace (rack-system). Using
+		// p.Namespace guarantees the namespace exists and avoids a broken
+		// RACK_NAME env leading to a "-system" bogus namespace.
+		leaseNs := p.Namespace
+		if err := RunUsingLeaderElection(context.Background(), leaseNs, budgetLeaseName, p.Cluster, p.runBudgetAccumulator, func() {
+			fmt.Printf("ns=budget_accumulator at=lost_leadership\n")
+		}); err != nil {
+			_ = log.Errorf("budget accumulator elector failed to start: %v", err)
+		}
+	}
+
 	return log.Success()
 }
 
