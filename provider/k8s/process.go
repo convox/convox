@@ -803,6 +803,17 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 		s.ImagePullSecrets = append(s.ImagePullSecrets, ac.LocalObjectReference{Name: "docker-hub-authentication"})
 	}
 
+	// Per-service private-registry pull secrets declared in convox.yml.
+	// The Secrets themselves are created by the release promote flow; here we
+	// only reference them so convox run Pods can pull from those registries.
+	if m, _, merr := common.AppManifest(p, app); merr == nil {
+		if sm, serr := m.Service(service); serr == nil {
+			for _, name := range imagePullSecretNames(app, service, sm.ImagePullSecrets) {
+				s.ImagePullSecrets = append(s.ImagePullSecrets, ac.LocalObjectReference{Name: name})
+			}
+		}
+	}
+
 	if opts.Volumes != nil && opts.UseServiceVolume == nil {
 		var vs []string
 
