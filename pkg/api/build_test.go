@@ -157,6 +157,58 @@ func TestBuildImportError(t *testing.T) {
 	})
 }
 
+func TestBuildImportImage(t *testing.T) {
+	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
+		opts := structs.BuildImportImageOptions{}
+		p.On("BuildImportImage", "app1", "build1", "vllm/vllm-openai:v0.6.3", opts).Return(nil)
+		ro := stdsdk.RequestOptions{
+			Params: stdsdk.Params{"image": "vllm/vllm-openai:v0.6.3"},
+		}
+		err := c.Post("/apps/app1/builds/build1/image", ro, nil)
+		require.NoError(t, err)
+	})
+}
+
+func TestBuildImportImageWithCreds(t *testing.T) {
+	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
+		opts := structs.BuildImportImageOptions{
+			SrcCredsUser: options.String("$oauthtoken"),
+			SrcCredsPass: options.String("nvapi-key"),
+		}
+		p.On("BuildImportImage", "app1", "build1", "nvcr.io/nim/x:1.0", opts).Return(nil)
+		ro := stdsdk.RequestOptions{
+			Params: stdsdk.Params{
+				"image":          "nvcr.io/nim/x:1.0",
+				"src_creds_user": "$oauthtoken",
+				"src_creds_pass": "nvapi-key",
+			},
+		}
+		err := c.Post("/apps/app1/builds/build1/image", ro, nil)
+		require.NoError(t, err)
+	})
+}
+
+func TestBuildImportImageMissingImage(t *testing.T) {
+	testServer(t, func(c *stdsdk.Client, _ *structs.MockProvider) {
+		ro := stdsdk.RequestOptions{Params: stdsdk.Params{}}
+		err := c.Post("/apps/app1/builds/build1/image", ro, nil)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "image param required")
+	})
+}
+
+func TestBuildImportImageProviderError(t *testing.T) {
+	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
+		opts := structs.BuildImportImageOptions{}
+		p.On("BuildImportImage", "app1", "build1", "vllm/vllm-openai:v0.6.3", opts).Return(fmt.Errorf("downstream rack fail"))
+		ro := stdsdk.RequestOptions{
+			Params: stdsdk.Params{"image": "vllm/vllm-openai:v0.6.3"},
+		}
+		err := c.Post("/apps/app1/builds/build1/image", ro, nil)
+		require.EqualError(t, err, "downstream rack fail")
+	})
+}
+
 func TestBuildLogs(t *testing.T) {
 	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
 		d1 := []byte("test")

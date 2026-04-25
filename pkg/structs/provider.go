@@ -30,6 +30,7 @@ type Provider interface {
 	BuildExport(app, id string, w io.Writer) error
 	BuildGet(app, id string) (*Build, error)
 	BuildImport(app string, r io.Reader) (*Build, error)
+	BuildImportImage(app, id, image string, opts BuildImportImageOptions) error
 	BuildLogs(app, id string, opts LogsOptions) (io.ReadCloser, error)
 	BuildList(app string, opts BuildListOptions) (Builds, error)
 	BuildUpdate(app, id string, opts BuildUpdateOptions) (*Build, error)

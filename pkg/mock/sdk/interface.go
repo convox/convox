@@ -428,6 +428,20 @@ func (_m *Interface) BuildImport(app string, r io.Reader) (*structs.Build, error
 	return r0, r1
 }
 
+// BuildImportImage provides a mock function with given fields: app, id, image, opts
+func (_m *Interface) BuildImportImage(app string, id string, image string, opts structs.BuildImportImageOptions) error {
+	ret := _m.Called(app, id, image, opts)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string, string, structs.BuildImportImageOptions) error); ok {
+		r0 = rf(app, id, image, opts)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // BuildImportMultipart provides a mock function with given fields: _a0, _a1
 func (_m *Interface) BuildImportMultipart(_a0 string, _a1 io.Reader) (*structs.Build, error) {
 	ret := _m.Called(_a0, _a1)
@@ -695,6 +709,20 @@ func (_m *Interface) CertificateRenew(id string) error {
 		r0 = rf(id)
 	} else {
 		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ClientType provides a mock function with given fields:
+func (_m *Interface) ClientType() string {
+	ret := _m.Called()
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
 	}
 
 	return r0
@@ -1039,6 +1067,29 @@ func (_m *Interface) LetsEncryptConfigGet() (*structs.LetsEncryptConfig, error) 
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*structs.LetsEncryptConfig)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MachineList provides a mock function with given fields:
+func (_m *Interface) MachineList() (structs.Machines, error) {
+	ret := _m.Called()
+
+	var r0 structs.Machines
+	if rf, ok := ret.Get(0).(func() structs.Machines); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(structs.Machines)
 		}
 	}
 
@@ -2450,37 +2501,4 @@ func (_m *Interface) WorkflowList(rackOrgSlug string) (structs.WorkflowListResp,
 	}
 
 	return r0, r1
-}
-
-func (_m *Interface) MachineList() (structs.Machines, error) {
-	ret := _m.Called()
-
-	var r0 structs.Machines
-	if rf, ok := ret.Get(0).(func() structs.Machines); ok {
-		r0 = rf()
-	} else {
-		r0 = ret.Get(0).(structs.Machines)
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func() error); ok {
-		r1 = rf()
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-func (_m *Interface) ClientType() string {
-	ret := _m.Called()
-
-	var r0 string
-	if rf, ok := ret.Get(0).(func() string); ok {
-		r0 = rf()
-	} else {
-		r0 = ret.Get(0).(string)
-	}
-
-	return r0
 }
