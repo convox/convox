@@ -44,3 +44,7 @@ func ErrConflict(format string, args ...interface{}) *HttpError {
 func ErrNotImplemented(format string, args ...interface{}) *HttpError {
 	return newHttpError(http.StatusNotImplemented, format, args...)
 }
+
+func ErrUnprocessable(format string, args ...interface{}) *HttpError {
+	return newHttpError(http.StatusUnprocessableEntity, format, args...)
+}

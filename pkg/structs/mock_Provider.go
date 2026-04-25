@@ -362,6 +362,20 @@ func (_m *MockProvider) BuildImport(app string, r io.Reader) (*Build, error) {
 	return r0, r1
 }
 
+// BuildImportImage provides a mock function with given fields: app, id, image, opts
+func (_m *MockProvider) BuildImportImage(app string, id string, image string, opts BuildImportImageOptions) error {
+	ret := _m.Called(app, id, image, opts)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string, string, BuildImportImageOptions) error); ok {
+		r0 = rf(app, id, image, opts)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // BuildList provides a mock function with given fields: app, opts
 func (_m *MockProvider) BuildList(app string, opts BuildListOptions) (Builds, error) {
 	ret := _m.Called(app, opts)

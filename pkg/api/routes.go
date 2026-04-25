@@ -19,6 +19,7 @@ func (s *Server) setupRoutes(r stdapi.Router) {
 	r.Route("GET", "/apps/{app}/builds/{id}.tgz", s.BuildExport)
 	r.Route("GET", "/apps/{app}/builds/{id}", s.BuildGet)
 	r.Route("POST", "/apps/{app}/builds/import", s.BuildImport)
+	r.Route("POST", "/apps/{app}/builds/{id}/image", s.BuildImportImage)
 	r.Route("GET", "/apps/{app}/builds", s.BuildList)
 	r.Route("SOCKET", "/apps/{app}/builds/{id}/logs", s.BuildLogs)
 	r.Route("PUT", "/apps/{app}/builds/{id}", s.BuildUpdate)

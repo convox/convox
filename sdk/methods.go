@@ -262,6 +262,17 @@ func (c *Client) BuildImport(app string, r io.Reader) (*structs.Build, error) {
 	return v, err
 }
 
+func (c *Client) BuildImportImage(app, id, image string, opts structs.BuildImportImageOptions) error {
+	ro, err := stdsdk.MarshalOptions(opts)
+	if err != nil {
+		return err
+	}
+
+	ro.Params["image"] = image
+
+	return c.Post(fmt.Sprintf("/apps/%s/builds/%s/image", app, id), ro, nil)
+}
+
 func (c *Client) BuildList(app string, opts structs.BuildListOptions) (structs.Builds, error) {
 	var err error
 

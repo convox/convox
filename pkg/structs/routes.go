@@ -19,6 +19,7 @@ func init() {
 	routes["BuildExport"] = "GET /apps/{app}/builds/{id}.tgz"
 	routes["BuildGet"] = "GET /apps/{app}/builds/{id}"
 	routes["BuildImport"] = "POST /apps/{app}/builds/import"
+	routes["BuildImportImage"] = "POST /apps/{app}/builds/{id}/image"
 	routes["BuildLogs"] = "SOCKET /apps/{app}/builds/{id}/logs"
 	routes["BuildList"] = "GET /apps/{app}/builds"
 	routes["BuildUpdate"] = "PUT /apps/{app}/builds/{id}"

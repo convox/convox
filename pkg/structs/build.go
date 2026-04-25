@@ -38,6 +38,11 @@ type BuildCreateOptions struct {
 	GitSha *string `param:"git-sha"`
 }
 
+type BuildImportImageOptions struct {
+	SrcCredsUser *string `flag:"src-creds-user" param:"src_creds_user" json:"src_creds_user,omitempty"`
+	SrcCredsPass *string `flag:"src-creds-pass" param:"src_creds_pass" json:"src_creds_pass,omitempty"`
+}
+
 type BuildListOptions struct {
 	Limit *int `flag:"limit,l" query:"limit"`
 }
