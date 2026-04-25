@@ -1,0 +1,13 @@
+services:
+  vllm:
+    build: .
+    port: 8000
+    scale:
+      min: 0
+      max: 10
+      gpu:
+        count: 1
+        vendor: nvidia
+      autoscale:
+        gpu_utilization:
+          threshold: 70

@@ -11,6 +11,7 @@ import (
 	"github.com/convox/convox/pkg/options"
 	kedav1alpha1 "github.com/kedacore/keda/v2/apis/keda/v1alpha1"
 	autoscaling "k8s.io/api/autoscaling/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -328,14 +329,41 @@ type ServicePortScheme struct {
 }
 
 type ServiceScale struct {
-	Count   ServiceScaleCount
-	Cpu     int
-	Gpu     ServiceScaleGpu `yaml:"gpu,omitempty"`
-	Memory  int
-	Limit   ServiceResourceLimit `yaml:"limit,omitempty"`
-	Targets ServiceScaleTargets  `yaml:"targets,omitempty"`
-	Keda    *ServiceScaleKeda    `yaml:"keda,omitempty"`
-	VPA     *VPA                 `yaml:"vpa,omitempty"`
+	Count     ServiceScaleCount
+	Cpu       int
+	Gpu       ServiceScaleGpu `yaml:"gpu,omitempty"`
+	Memory    int
+	Limit     ServiceResourceLimit `yaml:"limit,omitempty"`
+	Targets   ServiceScaleTargets  `yaml:"targets,omitempty"`
+	Keda      *ServiceScaleKeda    `yaml:"keda,omitempty"`
+	VPA       *VPA                 `yaml:"vpa,omitempty"`
+	Min       *int                 `yaml:"min,omitempty"       json:"min,omitempty"`
+	Max       *int                 `yaml:"max,omitempty"       json:"max,omitempty"`
+	Autoscale *ServiceAutoscale    `yaml:"autoscale,omitempty" json:"autoscale,omitempty"`
+}
+
+type ServiceAutoscale struct {
+	Cpu             *AutoscaleThreshold          `yaml:"cpu,omitempty"              json:"cpu,omitempty"`
+	Memory          *AutoscaleThreshold          `yaml:"memory,omitempty"           json:"memory,omitempty"`
+	GpuUtilization  *AutoscaleThreshold          `yaml:"gpu_utilization,omitempty"  json:"gpu_utilization,omitempty"`
+	QueueDepth      *AutoscaleQueueDepth         `yaml:"queue_depth,omitempty"      json:"queue_depth,omitempty"`
+	Custom          []kedav1alpha1.ScaleTriggers `yaml:"custom,omitempty"           json:"custom,omitempty"`
+	CooldownPeriod  *int32                       `yaml:"cooldown_period,omitempty"  json:"cooldown_period,omitempty"`
+	PollingInterval *int32                       `yaml:"polling_interval,omitempty" json:"polling_interval,omitempty"`
+}
+
+type AutoscaleThreshold struct {
+	Threshold     float64 `yaml:"threshold"                json:"threshold"`
+	MetricName    string  `yaml:"metric_name,omitempty"    json:"metric_name,omitempty"`
+	PrometheusUrl string  `yaml:"prometheus_url,omitempty" json:"prometheus_url,omitempty"`
+	Query         string  `yaml:"query,omitempty"          json:"query,omitempty"`
+}
+
+type AutoscaleQueueDepth struct {
+	Threshold     float64 `yaml:"threshold"                json:"threshold"`
+	MetricName    string  `yaml:"metric_name,omitempty"    json:"metric_name,omitempty"`
+	PrometheusUrl string  `yaml:"prometheus_url,omitempty" json:"prometheus_url,omitempty"`
+	Query         string  `yaml:"query,omitempty"          json:"query,omitempty"`
 }
 
 func (ss ServiceScale) IsKedaEnabled() bool {
@@ -346,19 +374,141 @@ func (ss ServiceScale) IsVpaEnabled() bool {
 	return ss.VPA != nil
 }
 
+func (a *ServiceAutoscale) IsEnabled() bool {
+	if a == nil {
+		return false
+	}
+	return a.Cpu != nil || a.Memory != nil || a.GpuUtilization != nil ||
+		a.QueueDepth != nil || len(a.Custom) > 0
+}
+
+func (a *ServiceAutoscale) NeedsPrometheus() bool {
+	if a == nil {
+		return false
+	}
+	if a.GpuUtilization != nil && a.GpuUtilization.PrometheusUrl == "" {
+		return true
+	}
+	if a.QueueDepth != nil && a.QueueDepth.PrometheusUrl == "" {
+		return true
+	}
+	return false
+}
+
+func (a *ServiceAutoscale) BuildTriggers(app, service, defaultPromURL string) []kedav1alpha1.ScaleTriggers {
+	if a == nil {
+		return nil
+	}
+
+	var triggers []kedav1alpha1.ScaleTriggers
+
+	if a.Cpu != nil {
+		triggers = append(triggers, kedav1alpha1.ScaleTriggers{
+			Type:       "cpu",
+			Name:       "convox-cpu",
+			MetricType: autoscalingv2.UtilizationMetricType,
+			Metadata: map[string]string{
+				"value": fmt.Sprintf("%g", a.Cpu.Threshold),
+			},
+		})
+	}
+
+	if a.Memory != nil {
+		triggers = append(triggers, kedav1alpha1.ScaleTriggers{
+			Type:       "memory",
+			Name:       "convox-memory",
+			MetricType: autoscalingv2.UtilizationMetricType,
+			Metadata: map[string]string{
+				"value": fmt.Sprintf("%g", a.Memory.Threshold),
+			},
+		})
+	}
+
+	if a.GpuUtilization != nil {
+		metric := a.GpuUtilization.MetricName
+		if metric == "" {
+			metric = "DCGM_FI_DEV_GPU_UTIL"
+		}
+		query := a.GpuUtilization.Query
+		if query == "" {
+			query = fmt.Sprintf("max(%s{app=%q,service=%q})", metric, app, service)
+		}
+		promURL := a.GpuUtilization.PrometheusUrl
+		if promURL == "" {
+			promURL = defaultPromURL
+		}
+		activation := a.GpuUtilization.Threshold / 2
+		if activation < 1 {
+			activation = 1
+		}
+		triggers = append(triggers, kedav1alpha1.ScaleTriggers{
+			Type: "prometheus",
+			Name: "convox-gpu-utilization",
+			Metadata: map[string]string{
+				"serverAddress":       promURL,
+				"metricName":          metric,
+				"threshold":           fmt.Sprintf("%g", a.GpuUtilization.Threshold),
+				"activationThreshold": fmt.Sprintf("%g", activation),
+				"query":               query,
+			},
+		})
+	}
+
+	if a.QueueDepth != nil {
+		metric := a.QueueDepth.MetricName
+		if metric == "" {
+			metric = "vllm:num_requests_waiting"
+		}
+		query := a.QueueDepth.Query
+		if query == "" {
+			query = fmt.Sprintf("max(%s{app=%q,service=%q})", metric, app, service)
+		}
+		promURL := a.QueueDepth.PrometheusUrl
+		if promURL == "" {
+			promURL = defaultPromURL
+		}
+		activation := a.QueueDepth.Threshold / 2
+		if activation < 1 {
+			activation = 1
+		}
+		triggers = append(triggers, kedav1alpha1.ScaleTriggers{
+			Type: "prometheus",
+			Name: "convox-queue-depth",
+			Metadata: map[string]string{
+				"serverAddress":       promURL,
+				"metricName":          metric,
+				"threshold":           fmt.Sprintf("%g", a.QueueDepth.Threshold),
+				"activationThreshold": fmt.Sprintf("%g", activation),
+				"query":               query,
+			},
+		})
+	}
+
+	if len(a.Custom) > 0 {
+		triggers = append(triggers, a.Custom...)
+	}
+
+	return triggers
+}
+
 type KedaScaledObjectParameters struct {
 	MinCount    int32
 	MaxCount    int32
 	ServiceName string
 	Namespace   string
+	Triggers    []kedav1alpha1.ScaleTriggers
 }
 
 func (ss Service) KedaScaledObject(params KedaScaledObjectParameters) *kedav1alpha1.ScaledObject {
-	so := kedav1alpha1.ScaledObject{}
-	if ss.Scale.Keda == nil {
-		return &so
+	triggers := params.Triggers
+	if len(triggers) == 0 && ss.Scale.Keda != nil {
+		triggers = ss.Scale.Keda.Triggers
+	}
+	if len(triggers) == 0 {
+		return nil
 	}
 
+	so := kedav1alpha1.ScaledObject{}
 	so.TypeMeta.Kind = "ScaledObject"
 	so.TypeMeta.APIVersion = "keda.sh/v1alpha1"
 	so.ObjectMeta.Name = params.ServiceName
@@ -368,18 +518,30 @@ func (ss Service) KedaScaledObject(params KedaScaledObjectParameters) *kedav1alp
 		Name: params.ServiceName,
 		Kind: "Deployment",
 	}
-	so.Spec.Triggers = ss.Scale.Keda.Triggers
+	so.Spec.Triggers = triggers
 	so.Spec.MinReplicaCount = &params.MinCount
 	so.Spec.MaxReplicaCount = &params.MaxCount
-	so.Spec.CooldownPeriod = ss.Scale.Keda.CooldownPeriod
-	so.Spec.PollingInterval = ss.Scale.Keda.PollingInterval
-	so.Spec.Advanced = ss.Scale.Keda.Advanced
-	so.Spec.Fallback = ss.Scale.Keda.Fallback
-	so.Spec.IdleReplicaCount = ss.Scale.Keda.IdleReplicaCount
 
-	for i := range so.Spec.Triggers {
-		if so.Spec.Triggers[i].AuthenticationRef == nil {
-			auth := ss.DefaultTriggerAuthentionIfAws(params.Namespace)
+	if ss.Scale.Keda != nil {
+		so.Spec.CooldownPeriod = ss.Scale.Keda.CooldownPeriod
+		so.Spec.PollingInterval = ss.Scale.Keda.PollingInterval
+		so.Spec.Advanced = ss.Scale.Keda.Advanced
+		so.Spec.Fallback = ss.Scale.Keda.Fallback
+		so.Spec.IdleReplicaCount = ss.Scale.Keda.IdleReplicaCount
+	} else if ss.Scale.Autoscale != nil {
+		so.Spec.CooldownPeriod = ss.Scale.Autoscale.CooldownPeriod
+		so.Spec.PollingInterval = ss.Scale.Autoscale.PollingInterval
+	}
+
+	auth := ss.DefaultTriggerAuthentionIfAws(params.Namespace)
+	if auth != nil {
+		for i := range so.Spec.Triggers {
+			if so.Spec.Triggers[i].AuthenticationRef != nil {
+				continue
+			}
+			if !strings.HasPrefix(so.Spec.Triggers[i].Type, "aws-") {
+				continue
+			}
 			so.Spec.Triggers[i].AuthenticationRef = &kedav1alpha1.AuthenticationRef{
 				Name: auth.ObjectMeta.Name,
 				Kind: auth.TypeMeta.Kind,
