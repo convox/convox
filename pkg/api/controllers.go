@@ -329,11 +329,6 @@ func (s *Server) AppBudgetReset(c *stdapi.Context) error {
 		return err
 	}
 
-	if !CanAdmin(c) {
-		// Pinned by R3 amendments § Set E (E.2 UX). Customer tooling parses this body for migration guidance.
-		return stdapi.Errorf(http.StatusForbidden, "AppBudgetReset requires Admin role; current role is 'w'. Contact rack admin or use Admin token.")
-	}
-
 	app := c.Var("app")
 
 	derivedAckBy, _ := c.Get(structs.ConvoxJwtUserParam).(string)
@@ -354,10 +349,18 @@ func (s *Server) AppBudgetReset(c *stdapi.Context) error {
 			app, rawAckBy, derivedAckBy)
 	}
 
-	// Set G: --force-clear-cooldown flag passes through to
-	// AppBudgetResetWithOptions when present. CanAdmin already gated above.
+	// Set G: --force-clear-cooldown is the Admin-gated escape hatch that
+	// drops the 24h flap-prevention cooldown. The plain reset path is
+	// CanWrite (rw) — sufficient role for the routine ACTIVE→recover flow
+	// that GUI Reset buttons drive. CanAdmin is enforced ONLY when
+	// force_clear_cooldown=true. Pinned by R3 amendments § Set E (E.2 UX).
+	// Customer tooling parses the 403 body for migration guidance — the
+	// "requires Admin role; current role is 'w'" substring is preserved.
 	forceClear := c.Value("force_clear_cooldown") == "true"
 	if forceClear {
+		if !CanAdmin(c) {
+			return stdapi.Errorf(http.StatusForbidden, "AppBudgetReset --force-clear-cooldown requires Admin role; current role is 'w'. Contact rack admin or use Admin token.")
+		}
 		opts := structs.AppBudgetResetOptions{ForceClearCooldown: true}
 		if err := s.provider(c).WithContext(contextFrom(c)).AppBudgetResetWithOptions(app, derivedAckBy, opts); err != nil {
 			return err
