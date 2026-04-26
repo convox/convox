@@ -354,3 +354,151 @@ func TestAuthenticate_BasicAuth_SetsConvoxJwtUserParam_RackPassword_E2E(t *testi
 	// with that internal one to provide end-to-end coverage from HTTP request
 	// through the middleware to a successful response.
 }
+
+// TestAppBudgetReset_PlainReset_WriteRoleSucceeds locks in the audit-aligned
+// gate semantics: a plain (no force_clear_cooldown) Reset call by a w-role
+// JWT must succeed. This is the customer-visible regression coverage for
+// the unblock that lets Console3 wire its Reset button without elevating
+// to Admin.
+func TestAppBudgetReset_PlainReset_WriteRoleSucceeds(t *testing.T) {
+	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
+		tk, err := jm.WriteToken(time.Hour)
+		require.NoError(t, err)
+
+		// JwtMngr.WriteToken hard-codes user="system-write".
+		p.On("AppBudgetReset", "myapp", "system-write").Return(nil)
+
+		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget/reset", strings.NewReader(""))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.SetBasicAuth("jwt", tk)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		bodyBytes, _ := io.ReadAll(res.Body)
+		require.Equal(t, http.StatusOK, res.StatusCode, "w-token plain reset must succeed — got body %q", string(bodyBytes))
+	})
+}
+
+// TestAppBudgetReset_ForceClearCooldown_AdminRoleSucceeds locks in the
+// happy-path for the gated escape hatch: rwa role + force_clear_cooldown=true
+// reaches AppBudgetResetWithOptions with the flag set.
+func TestAppBudgetReset_ForceClearCooldown_AdminRoleSucceeds(t *testing.T) {
+	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
+		tk, err := jm.AdminToken(time.Hour)
+		require.NoError(t, err)
+
+		p.On("AppBudgetResetWithOptions", "myapp", "system-admin",
+			mock.MatchedBy(func(opts structs.AppBudgetResetOptions) bool {
+				return opts.ForceClearCooldown
+			})).Return(nil)
+
+		body := url.Values{"force_clear_cooldown": {"true"}}.Encode()
+		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget/reset", strings.NewReader(body))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.SetBasicAuth("jwt", tk)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		bodyBytes, _ := io.ReadAll(res.Body)
+		require.Equal(t, http.StatusOK, res.StatusCode, "Admin token + force_clear_cooldown=true must succeed — got body %q", string(bodyBytes))
+	})
+}
+
+// TestAppBudgetReset_ForceClearCooldown_WriteRoleRejected verifies the
+// Admin-only escape hatch: a w-role JWT presenting force_clear_cooldown=true
+// must 403 BEFORE any provider call (the Reset path is blocked even though
+// the router-level CanWrite gate would otherwise admit the call). Captures
+// the body substring contract for CLI/GUI parsers.
+func TestAppBudgetReset_ForceClearCooldown_WriteRoleRejected(t *testing.T) {
+	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
+		tk, err := jm.WriteToken(time.Hour)
+		require.NoError(t, err)
+
+		// No p.On(...) — the CanAdmin gate inside forceClear must fire BEFORE
+		// any provider call. AssertExpectations validates no unexpected calls.
+
+		body := url.Values{"force_clear_cooldown": {"true"}}.Encode()
+		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget/reset", strings.NewReader(body))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Accept", "application/json")
+		req.SetBasicAuth("jwt", tk)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		bodyBytes, err := io.ReadAll(res.Body)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusForbidden, res.StatusCode, "w-token + force_clear_cooldown=true must 403 — got body %q", string(bodyBytes))
+
+		got := strings.TrimRight(string(bodyBytes), "\n")
+		require.Contains(t, got, "AppBudgetReset --force-clear-cooldown")
+		require.Contains(t, got, "requires Admin role; current role is 'w'")
+		require.Contains(t, got, "Contact rack admin or use Admin token.")
+
+		p.AssertNotCalled(t, "AppBudgetReset")
+		p.AssertNotCalled(t, "AppBudgetResetWithOptions")
+	})
+}
+
+// TestAppBudgetReset_DeprecationHeadersFire_RegressionForBothPaths verifies
+// that the RFC 8594 deprecation headers (Sunset/Link/Deprecation) continue
+// to fire when a client-supplied ack_by overrides the JWT-derived one,
+// independent of which gate path runs. Covers a subtle invariant: the
+// header-emission block sits BEFORE the forceClear branch, so it must
+// execute regardless of which provider method ultimately runs.
+func TestAppBudgetReset_DeprecationHeadersFire_RegressionForBothPaths(t *testing.T) {
+	t.Run("plain-path-emits-headers", func(t *testing.T) {
+		budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, _ *cjwt.JwtManager) {
+			tk := mintCustomJwtToken(t, "test", "bob", structs.ConvoxRoleReadWrite, time.Hour)
+
+			p.On("AppBudgetReset", "myapp", "bob").Return(nil)
+
+			body := url.Values{"ack_by": {"alice"}}.Encode()
+			req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget/reset", strings.NewReader(body))
+			require.NoError(t, err)
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			req.SetBasicAuth("jwt", tk)
+
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+			defer res.Body.Close()
+
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, "true", res.Header.Get("Deprecation"), "Deprecation header must fire on override (plain path)")
+			require.NotEmpty(t, res.Header.Get("Sunset"), "Sunset header must fire on override (plain path)")
+		})
+	})
+
+	t.Run("force-clear-path-emits-headers", func(t *testing.T) {
+		budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, _ *cjwt.JwtManager) {
+			tk := mintCustomJwtToken(t, "test", "bob", structs.ConvoxRoleAdmin, time.Hour)
+
+			p.On("AppBudgetResetWithOptions", "myapp", "bob",
+				mock.MatchedBy(func(opts structs.AppBudgetResetOptions) bool {
+					return opts.ForceClearCooldown
+				})).Return(nil)
+
+			body := url.Values{"ack_by": {"alice"}, "force_clear_cooldown": {"true"}}.Encode()
+			req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget/reset", strings.NewReader(body))
+			require.NoError(t, err)
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			req.SetBasicAuth("jwt", tk)
+
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+			defer res.Body.Close()
+
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, "true", res.Header.Get("Deprecation"), "Deprecation header must fire on override (force-clear path)")
+			require.NotEmpty(t, res.Header.Get("Sunset"), "Sunset header must fire on override (force-clear path)")
+		})
+	})
+}
