@@ -16,6 +16,177 @@ type MockProvider struct {
 	mock.Mock
 }
 
+// AppBudgetClear provides a mock function with given fields: app, ackBy
+func (_m *MockProvider) AppBudgetClear(app string, ackBy string) error {
+	ret := _m.Called(app, ackBy)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = rf(app, ackBy)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// AppBudgetGet provides a mock function with given fields: app
+func (_m *MockProvider) AppBudgetGet(app string) (*AppBudget, *AppBudgetState, error) {
+	ret := _m.Called(app)
+
+	var r0 *AppBudget
+	if rf, ok := ret.Get(0).(func(string) *AppBudget); ok {
+		r0 = rf(app)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*AppBudget)
+		}
+	}
+
+	var r1 *AppBudgetState
+	if rf, ok := ret.Get(1).(func(string) *AppBudgetState); ok {
+		r1 = rf(app)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*AppBudgetState)
+		}
+	}
+
+	var r2 error
+	if rf, ok := ret.Get(2).(func(string) error); ok {
+		r2 = rf(app)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// AppBudgetReset provides a mock function with given fields: app, ackBy
+func (_m *MockProvider) AppBudgetReset(app string, ackBy string) error {
+	ret := _m.Called(app, ackBy)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = rf(app, ackBy)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// AppBudgetResetWithOptions provides a mock function with given fields: app, ackBy, opts
+func (_m *MockProvider) AppBudgetResetWithOptions(app string, ackBy string, opts AppBudgetResetOptions) error {
+	ret := _m.Called(app, ackBy, opts)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string, AppBudgetResetOptions) error); ok {
+		r0 = rf(app, ackBy, opts)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// AppBudgetShutdownStateGet provides a mock function with given fields: app
+func (_m *MockProvider) AppBudgetShutdownStateGet(app string) (*AppBudgetShutdownState, error) {
+	ret := _m.Called(app)
+
+	var r0 *AppBudgetShutdownState
+	if rf, ok := ret.Get(0).(func(string) *AppBudgetShutdownState); ok {
+		r0 = rf(app)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*AppBudgetShutdownState)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(app)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// AppBudgetSimulate provides a mock function with given fields: app
+func (_m *MockProvider) AppBudgetSimulate(app string) (*AppBudgetSimulationResult, error) {
+	ret := _m.Called(app)
+
+	var r0 *AppBudgetSimulationResult
+	if rf, ok := ret.Get(0).(func(string) *AppBudgetSimulationResult); ok {
+		r0 = rf(app)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*AppBudgetSimulationResult)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(app)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// AppBudgetDismissRecovery provides a mock function with given fields: app, ackBy
+func (_m *MockProvider) AppBudgetDismissRecovery(app string, ackBy string) error {
+	ret := _m.Called(app, ackBy)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = rf(app, ackBy)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// AppBudgetDismissRecoveryWithResult provides a mock function with given fields: app, ackBy
+func (_m *MockProvider) AppBudgetDismissRecoveryWithResult(app string, ackBy string) (*AppBudgetDismissRecoveryResult, error) {
+	ret := _m.Called(app, ackBy)
+
+	var r0 *AppBudgetDismissRecoveryResult
+	if rf, ok := ret.Get(0).(func(string, string) *AppBudgetDismissRecoveryResult); ok {
+		r0 = rf(app, ackBy)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*AppBudgetDismissRecoveryResult)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, string) error); ok {
+		r1 = rf(app, ackBy)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// AppBudgetSet provides a mock function with given fields: app, opts, ackBy
+func (_m *MockProvider) AppBudgetSet(app string, opts AppBudgetOptions, ackBy string) error {
+	ret := _m.Called(app, opts, ackBy)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, AppBudgetOptions, string) error); ok {
+		r0 = rf(app, opts, ackBy)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // AppCancel provides a mock function with given fields: name
 func (_m *MockProvider) AppCancel(name string) error {
 	ret := _m.Called(name)
@@ -88,6 +259,29 @@ func (_m *MockProvider) AppConfigSet(app string, name string, valueBase64 string
 	}
 
 	return r0
+}
+
+// AppCost provides a mock function with given fields: app
+func (_m *MockProvider) AppCost(app string) (*AppCost, error) {
+	ret := _m.Called(app)
+
+	var r0 *AppCost
+	if rf, ok := ret.Get(0).(func(string) *AppCost); ok {
+		r0 = rf(app)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*AppCost)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(app)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // AppCreate provides a mock function with given fields: name, opts
@@ -360,6 +554,20 @@ func (_m *MockProvider) BuildImport(app string, r io.Reader) (*Build, error) {
 	}
 
 	return r0, r1
+}
+
+// BuildImportImage provides a mock function with given fields: app, id, image, opts
+func (_m *MockProvider) BuildImportImage(app string, id string, image string, opts BuildImportImageOptions) error {
+	ret := _m.Called(app, id, image, opts)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string, string, BuildImportImageOptions) error); ok {
+		r0 = rf(app, id, image, opts)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // BuildList provides a mock function with given fields: app, opts

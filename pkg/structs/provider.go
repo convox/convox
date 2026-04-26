@@ -24,12 +24,24 @@ type Provider interface {
 	AppMetrics(name string, opts MetricsOptions) (Metrics, error)
 	AppUpdate(name string, opts AppUpdateOptions) error
 
+	AppBudgetGet(app string) (*AppBudget, *AppBudgetState, error)
+	AppBudgetSet(app string, opts AppBudgetOptions, ackBy string) error
+	AppBudgetClear(app string, ackBy string) error
+	AppBudgetReset(app string, ackBy string) error
+	AppBudgetResetWithOptions(app string, ackBy string, opts AppBudgetResetOptions) error
+	AppBudgetShutdownStateGet(app string) (*AppBudgetShutdownState, error)
+	AppBudgetSimulate(app string) (*AppBudgetSimulationResult, error)
+	AppBudgetDismissRecovery(app string, ackBy string) error
+	AppBudgetDismissRecoveryWithResult(app string, ackBy string) (*AppBudgetDismissRecoveryResult, error)
+	AppCost(app string) (*AppCost, error)
+
 	BalancerList(app string) (Balancers, error)
 
 	BuildCreate(app, url string, opts BuildCreateOptions) (*Build, error)
 	BuildExport(app, id string, w io.Writer) error
 	BuildGet(app, id string) (*Build, error)
 	BuildImport(app string, r io.Reader) (*Build, error)
+	BuildImportImage(app, id, image string, opts BuildImportImageOptions) error
 	BuildLogs(app, id string, opts LogsOptions) (io.ReadCloser, error)
 	BuildList(app string, opts BuildListOptions) (Builds, error)
 	BuildUpdate(app, id string, opts BuildUpdateOptions) (*Build, error)

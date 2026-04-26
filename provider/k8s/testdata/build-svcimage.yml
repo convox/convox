@@ -1,0 +1,8 @@
+description: per-service image override
+ended: 20200101.000000.000000000
+manifest:
+  services:
+    web:
+      image: override.example.com/baked:v1
+      port: 5000
+started: 20200101.000000.000000000

@@ -1,15 +1,35 @@
 package structs
 
 type Service struct {
-	Count     int              `json:"count"`
-	Cpu       int              `json:"cpu"`
-	Domain    string           `json:"domain"`
-	Gpu       int              `json:"gpu"`
-	GpuVendor string           `json:"gpu-vendor"`
-	Memory    int              `json:"memory"`
-	Name      string           `json:"name"`
-	Nlb       []ServiceNlbPort `json:"nlb"`
-	Ports     []ServicePort    `json:"ports"`
+	Count     int                    `json:"count"`
+	Cpu       int                    `json:"cpu"`
+	Domain    string                 `json:"domain"`
+	Gpu       int                    `json:"gpu"`
+	GpuVendor string                 `json:"gpu-vendor"`
+	Memory    int                    `json:"memory"`
+	Name      string                 `json:"name"`
+	Nlb       []ServiceNlbPort       `json:"nlb"`
+	Ports     []ServicePort          `json:"ports"`
+	Min       *int                   `json:"min,omitempty"`
+	Max       *int                   `json:"max,omitempty"`
+	ColdStart *bool                  `json:"cold-start,omitempty"`
+	Autoscale *ServiceAutoscaleState `json:"autoscale,omitempty"`
+}
+
+// ServiceAutoscaleState is the wire shape returned by the rack for the
+// "autoscale" portion of a service description. It mirrors the user-supplied
+// `scale.autoscale` block from convox.yml but reports CURRENT state rather
+// than configured intent — Enabled reflects whether KEDA ScaledObjects are
+// in place, and the *Threshold pointers are nil when the matching trigger
+// is unconfigured.
+type ServiceAutoscaleState struct {
+	Enabled        bool   `json:"enabled"`
+	CpuThreshold   *int   `json:"cpu-threshold,omitempty"`
+	MemThreshold   *int   `json:"mem-threshold,omitempty"`
+	GpuThreshold   *int   `json:"gpu-threshold,omitempty"`
+	QueueThreshold *int   `json:"queue-threshold,omitempty"`
+	MetricName     string `json:"metric-name,omitempty"`
+	CustomTriggers int    `json:"custom-triggers,omitempty"`
 }
 
 type Services []Service
@@ -48,4 +68,6 @@ type ServiceUpdateOptions struct {
 	Gpu       *int    `flag:"gpu" param:"gpu"`
 	GpuVendor *string `flag:"gpu-vendor" param:"gpu-vendor"`
 	Memory    *int    `flag:"memory" param:"memory"`
+	Min       *int    `flag:"min" param:"min"`
+	Max       *int    `flag:"max" param:"max"`
 }

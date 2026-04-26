@@ -3,6 +3,8 @@ package k8s
 import (
 	"archive/tar"
 	"compress/gzip"
+	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,10 +12,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime/debug"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/convox/convox/pkg/common"
@@ -22,6 +26,7 @@ import (
 	"github.com/convox/convox/pkg/structs"
 	ca "github.com/convox/convox/provider/k8s/pkg/apis/convox/v1"
 	"github.com/pkg/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -304,6 +309,377 @@ func (p *Provider) BuildGet(app, id string) (*structs.Build, error) {
 	}
 
 	return b, nil
+}
+
+// skopeoExec wraps the external `skopeo` binary so tests can substitute a fake
+// without shelling out. Production code runs the binary baked into the rack API
+// image (Dockerfile installs it under apt). The ctx deadline bounds long copies
+// so a hung registry cannot pin the goroutine indefinitely.
+var skopeoExec = func(ctx context.Context, args ...string) ([]byte, error) {
+	return exec.CommandContext(ctx, "skopeo", args...).CombinedOutput()
+}
+
+// skopeoCopyTimeout caps a single `skopeo copy` invocation. Multi-GB inference
+// images over a constrained rack uplink can legitimately need 10+ minutes; 30
+// minutes is the upper bound we'll wait before failing the build.
+const skopeoCopyTimeout = 30 * time.Minute
+
+// maxConcurrentImports caps the number of in-flight BuildImportImage calls per
+// rack API pod. Skopeo copies are network/CPU bound (multi-GB image relays);
+// without a cap a misbehaving caller can saturate the rack with parallel
+// goroutines. 4 covers the realistic deploy-wizard concurrency for a single
+// app + a co-deployed CI pipeline; importing more services in parallel exceeds
+// what a single rack uplink can sustain anyway.
+//
+// Exposed as a var so tests can lower it for parallel-cap verification.
+var maxConcurrentImports = 4
+
+// importSlots is a counting semaphore via a buffered channel; capacity matches
+// maxConcurrentImports. Acquire = send; release = receive. Initialized lazily
+// so a test override of maxConcurrentImports can take effect before any call.
+// importSlotsMu guards reassignment of the channel itself (test resets); reads
+// take a local snapshot under the mutex and operate on that, so a concurrent
+// reset can never race with an in-flight acquire/release.
+var (
+	importSlotsMu   sync.Mutex
+	importSlotsOnce sync.Once
+	importSlots     chan struct{}
+)
+
+// snapshotImportSlots returns the current channel under the mutex. Callers
+// receive a stable reference even if the channel is later reassigned by a
+// test reset; sends/receives on a buffered channel are inherently
+// goroutine-safe.
+func snapshotImportSlots() chan struct{} {
+	importSlotsMu.Lock()
+	defer importSlotsMu.Unlock()
+	importSlotsOnce.Do(func() {
+		importSlots = make(chan struct{}, maxConcurrentImports)
+	})
+	return importSlots
+}
+
+// acquireImportSlotOn attempts a non-blocking send on the supplied channel.
+// Returns true if a slot was reserved, false if the rack is at capacity.
+// Callers obtain ch via snapshotImportSlots so a paired release uses the
+// same channel instance.
+func acquireImportSlotOn(ch chan struct{}) bool {
+	if ch == nil {
+		return false
+	}
+	select {
+	case ch <- struct{}{}:
+		return true
+	default:
+		return false
+	}
+}
+
+// releaseImportSlot frees one slot on the snapshot held by the goroutine that
+// originally acquired it. Safe to call when no slot was acquired (no-op via
+// the default branch).
+func releaseImportSlot(ch chan struct{}) {
+	if ch == nil {
+		return
+	}
+	select {
+	case <-ch:
+	default:
+	}
+}
+
+// validImageRef is a permissive docker-reference allowlist. The character set
+// covers registry hosts (`.`, `:`), image paths (`/`), tags (`:`), and
+// digests (`@`). The leading anchor blocks values starting with `-` which
+// skopeo could parse as a flag. isDangerousImageRef below rejects sequences
+// that still look valid per the allowlist but would confuse skopeo or the
+// registry URL parser.
+var validImageRef = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$`)
+
+// isDangerousImageRef catches sequences that pass validImageRef but could
+// either smuggle a flag into skopeo (`@-`, `:-`, `/-`), produce a malformed
+// docker reference (double separators, trailing separators) that skopeo
+// would spend minutes failing to resolve, or open a path-traversal-shaped
+// registry URL (`//`).
+func isDangerousImageRef(image string) bool {
+	bad := []string{"//", "@-", ":-", "/-", "::", "@@", ":@", "/@"}
+	for _, b := range bad {
+		if strings.Contains(image, b) {
+			return true
+		}
+	}
+	if strings.HasSuffix(image, ":") || strings.HasSuffix(image, "@") || strings.HasSuffix(image, "/") {
+		return true
+	}
+	return false
+}
+
+// credScrub matches docker-style inline credentials in URLs (user:pass@host),
+// anchored on the `://` scheme prefix so benign `service:port@host` strings
+// that appear in K8s event messages aren't redacted. bearerScrub catches
+// Authorization: Bearer tokens echoed by skopeo during auth challenges.
+// registryAuthScrub catches the X-Registry-Auth header form used by some
+// registry middleware. All run before storing error text in Build.Reason
+// (visible via `kubectl get build -o yaml`).
+var credScrub = regexp.MustCompile(`(://)[A-Za-z0-9._+-]*:[^\s@/]+@`)
+var bearerScrub = regexp.MustCompile(`([Bb]earer\s+)[A-Za-z0-9._~+/=-]{10,}`)
+var registryAuthScrub = regexp.MustCompile(`([Xx]-[Rr]egistry-[Aa]uth:\s*)[A-Za-z0-9._~+/=-]+`)
+
+func scrubCredentials(s string) string {
+	s = credScrub.ReplaceAllString(s, "${1}[REDACTED]@")
+	s = bearerScrub.ReplaceAllString(s, "${1}[REDACTED]")
+	s = registryAuthScrub.ReplaceAllString(s, "${1}[REDACTED]")
+	if len(s) > 500 {
+		s = s[:500]
+	}
+	return s
+}
+
+// parseRegistryHost extracts the registry host from a docker image reference.
+// Defaults to docker.io when the first path component has no dot/colon (i.e.
+// `user/image` or `image`), matching Docker's canonical interpretation.
+func parseRegistryHost(image string) string {
+	if i := strings.Index(image, "/"); i != -1 {
+		first := image[:i]
+		if strings.ContainsAny(first, ".:") || first == "localhost" {
+			return first
+		}
+	}
+	return "docker.io"
+}
+
+// writeImportAuthFile writes a docker-style auth.json containing BOTH source
+// and destination registry credentials to a 0600-mode temp file and returns
+// its path. Using a unified `--authfile` instead of `--src-creds` / `--dest-creds`
+// on argv keeps all secrets out of /proc/<pid>/cmdline where they could be read
+// by any sidecar or co-located process. Skopeo resolves per-registry entries
+// by host at copy time so one authfile correctly authenticates both directions.
+// Source entries are optional (public pulls need no auth); destination entries
+// are required whenever the destination host writer needs credentials.
+// Callers must os.Remove(path) when done.
+func writeImportAuthFile(srcImage, srcUser, srcPass, destHost, destUser, destPass string) (string, error) {
+	auths := map[string]map[string]string{}
+	if srcUser != "" && srcPass != "" {
+		srcHost := parseRegistryHost(srcImage)
+		auths[srcHost] = map[string]string{"auth": base64.StdEncoding.EncodeToString([]byte(srcUser + ":" + srcPass))}
+	}
+	if destUser != "" && destHost != "" {
+		// destHost returned by Engine.RepositoryHost may include a repository
+		// path (e.g. `acct.dkr.ecr.region.amazonaws.com/rack/app`); strip to
+		// the bare host so skopeo's auth lookup matches.
+		bareDest := destHost
+		if i := strings.Index(bareDest, "/"); i != -1 {
+			bareDest = bareDest[:i]
+		}
+		auths[bareDest] = map[string]string{"auth": base64.StdEncoding.EncodeToString([]byte(destUser + ":" + destPass))}
+	}
+	data, err := json.Marshal(map[string]map[string]map[string]string{"auths": auths})
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	f, err := os.CreateTemp("", "convox-import-auth-*.json")
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	path := f.Name()
+	if err := os.Chmod(path, 0600); err != nil {
+		_ = f.Close()
+		_ = os.Remove(path)
+		return "", errors.WithStack(err)
+	}
+	if _, err := f.Write(data); err != nil {
+		_ = f.Close()
+		_ = os.Remove(path)
+		return "", errors.WithStack(err)
+	}
+	if err := f.Close(); err != nil {
+		_ = os.Remove(path)
+		return "", errors.WithStack(err)
+	}
+	return path, nil
+}
+
+// finalizeImportImageBuild records the terminal state of an import-image build.
+// Runs in the goroutine's happy path and (via defer/recover) on panic. Falls
+// back to the in-memory Build captured before the goroutine started if a fresh
+// BuildGet fails, so the record is never left at "running" forever.
+func (p *Provider) finalizeImportImageBuild(app string, captured *structs.Build, runErr error) *structs.Build {
+	fresh, getErr := p.BuildGet(app, captured.Id)
+	if getErr != nil {
+		fmt.Printf("err: BuildImportImage refresh %s: %+v\n", captured.Id, getErr)
+		fresh = captured
+	}
+	fresh.Ended = time.Now().UTC()
+	if runErr != nil {
+		fresh.Status = "failed"
+		fresh.Reason = scrubCredentials(runErr.Error())
+	} else {
+		fresh.Status = "complete"
+		fresh.Reason = ""
+	}
+	if _, err := p.buildUpdate(fresh); err != nil {
+		fmt.Printf("err: BuildImportImage final update %s: %+v\n", captured.Id, err)
+	}
+	return fresh
+}
+
+func (p *Provider) BuildImportImage(app, id, image string, opts structs.BuildImportImageOptions) error {
+	if image == "" {
+		return errors.WithStack(structs.ErrUnprocessable("image ref required"))
+	}
+	if !validImageRef.MatchString(image) || isDangerousImageRef(image) {
+		return errors.WithStack(structs.ErrUnprocessable("invalid image ref: must start with a letter or digit, contain only A-Z a-z 0-9 . _ : / @ + -, and not include // @- :- or /-"))
+	}
+
+	b, err := p.BuildGet(app, id)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	// Reject re-invocation on a build already in flight. The informer may be a
+	// few hundred ms behind reality; the buildUpdate below closes any remaining
+	// TOCTOU window via K8s optimistic concurrency on ResourceVersion.
+	if b.Status == "running" {
+		return errors.WithStack(structs.ErrConflict("build %s is already importing; wait for completion before retrying", id))
+	}
+
+	if strings.TrimSpace(b.Manifest) == "" {
+		return errors.WithStack(structs.ErrUnprocessable("build %s has no manifest; populate via BuildUpdate before BuildImportImage", id))
+	}
+
+	m, err := manifest.Load([]byte(b.Manifest), map[string]string{})
+	if err != nil {
+		return errors.WithStack(structs.ErrUnprocessable("manifest parse failed: %s", err.Error()))
+	}
+	if len(m.Services) == 0 {
+		return errors.WithStack(structs.ErrUnprocessable("manifest has no services to relay"))
+	}
+
+	// Acquire a concurrency slot BEFORE flipping Status to running so a
+	// rejection leaves no half-mutated build behind. Snapshot the channel so
+	// the goroutine's release operates on the same instance even if a test
+	// reset reassigns the package-level pointer mid-flight (production code
+	// never reassigns it). Released inside the goroutine's outermost defer
+	// (and on the buildUpdate-fail path below).
+	importSlot := snapshotImportSlots()
+	if !acquireImportSlotOn(importSlot) {
+		return errors.WithStack(structs.ErrConflict("rack at concurrent-import cap (%d in flight); wait and retry", maxConcurrentImports))
+	}
+
+	b.Status = "running"
+	b.Started = time.Now().UTC()
+	b.Reason = ""
+	if _, err := p.buildUpdate(b); err != nil {
+		// We acquired a slot but the buildUpdate failed; release before
+		// returning so a Conflict here doesn't leak a slot.
+		releaseImportSlot(importSlot)
+		// K8s returns a Conflict (HTTP 409) when the informer-cached
+		// ResourceVersion is stale — a concurrent writer (including a racing
+		// BuildImportImage caller) beat us to the update. Surface as a clean
+		// 409 so clients see the same status they'd get from the running guard.
+		if k8serrors.IsConflict(err) {
+			return errors.WithStack(structs.ErrConflict("build %s is currently being modified; wait and retry", id))
+		}
+		return errors.WithStack(err)
+	}
+
+	// Capture the opts values into locals so the goroutine doesn't hold pointers
+	// into the caller's request-scoped memory once the HTTP handler returns.
+	var srcUser, srcPass string
+	if opts.SrcCredsUser != nil {
+		srcUser = *opts.SrcCredsUser
+	}
+	if opts.SrcCredsPass != nil {
+		srcPass = *opts.SrcCredsPass
+	}
+
+	// Snapshot the audit actor BEFORE the synchronous :start emit. The same
+	// captured value is passed to the asynchronous :done emit so a future
+	// refactor that swaps p.ctx between launch and goroutine entry still pairs
+	// :start/:done with the same actor (the goroutine must NOT re-read
+	// p.ContextActor() after launch — see TestBuildImportImage_DoneEventReadsCapturedNotReReadFromCtx).
+	capturedActor := p.ContextActor()
+
+	// Emit :start synchronously before launching the goroutine so subscribers
+	// cannot observe :done before :start when the webhook dispatcher fans out
+	// on its own goroutines.
+	_ = p.EventSend("build:import-image:start", structs.EventSendOptions{
+		Data: map[string]string{"actor": capturedActor, "app": app, "build": b.Id, "image": image},
+	})
+
+	// Copy the build by value for the goroutine. Tags is a map — we nil it
+	// defensively rather than deep-copy because buildMarshal does not persist
+	// it and we do not want the goroutine aliasing the caller's map.
+	captured := *b
+	captured.Tags = nil
+	go func() {
+		var runErr error
+		defer func() {
+			// Outermost cleanup: release the concurrency slot LAST so even a
+			// panic inside finalize or EventSend does not leak the slot.
+			defer releaseImportSlot(importSlot)
+			if r := recover(); r != nil {
+				fmt.Printf("panic in BuildImportImage for build %s: %v\nstack: %s\n", captured.Id, r, debug.Stack())
+				runErr = fmt.Errorf("panic during image import: %v", r)
+			}
+			final := p.finalizeImportImageBuild(app, &captured, runErr)
+			_ = p.EventSend("build:import-image:done", structs.EventSendOptions{
+				Data: map[string]string{"actor": capturedActor, "app": app, "build": captured.Id, "status": final.Status},
+			})
+		}()
+
+		runErr = p.buildImportImageRun(app, &captured, m, image, srcUser, srcPass)
+	}()
+
+	return nil
+}
+
+func (p *Provider) buildImportImageRun(app string, b *structs.Build, m *manifest.Manifest, imageRef, srcUser, srcPass string) error {
+	repo, _, err := p.Engine.RepositoryHost(app)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	destUser, destPass, err := p.Engine.RepositoryAuth(app)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	// Unified authfile covers both source (optional) and destination creds so
+	// neither touches /proc/<pid>/cmdline. `--authfile` works for both lookups.
+	authPath, err := writeImportAuthFile(imageRef, srcUser, srcPass, repo, destUser, destPass)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer func() { _ = os.Remove(authPath) }()
+
+	for i := range m.Services {
+		svc := &m.Services[i]
+		src := imageRef
+		if svc.Image != "" {
+			src = svc.Image
+		}
+		if !validImageRef.MatchString(src) || isDangerousImageRef(src) {
+			return fmt.Errorf("invalid image ref for service %s", svc.Name)
+		}
+		dst := fmt.Sprintf("%s:%s.%s", repo, svc.Name, b.Id)
+
+		args := []string{
+			"copy",
+			"--authfile", authPath,
+			"--",
+			fmt.Sprintf("docker://%s", src),
+			fmt.Sprintf("docker://%s", dst),
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), skopeoCopyTimeout)
+		out, runErr := skopeoExec(ctx, args...)
+		cancel()
+		if runErr != nil {
+			return fmt.Errorf("image relay failed for service %s: %s (output: %s)", svc.Name, runErr, strings.TrimSpace(string(out)))
+		}
+	}
+
+	return nil
 }
 
 func (p *Provider) BuildImport(app string, r io.Reader) (*structs.Build, error) {
@@ -735,6 +1111,7 @@ func (p *Provider) buildMarshal(b *structs.Build) *ca.Build {
 			Logs:        b.Logs,
 			Manifest:    b.Manifest,
 			Process:     b.Process,
+			Reason:      b.Reason,
 			Release:     b.Release,
 			Started:     b.Started.UTC().Format(common.SortableTime),
 			Status:      b.Status,
@@ -764,6 +1141,7 @@ func (p *Provider) buildUnmarshal(kb *ca.Build) (*structs.Build, error) {
 		Logs:        kb.Spec.Logs,
 		Manifest:    kb.Spec.Manifest,
 		Process:     kb.Spec.Process,
+		Reason:      kb.Spec.Reason,
 		Release:     kb.Spec.Release,
 		Started:     started,
 		Status:      kb.Spec.Status,

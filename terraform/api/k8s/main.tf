@@ -197,6 +197,11 @@ resource "kubernetes_deployment" "api" {
           }
 
           env {
+            name  = "COST_TRACKING_ENABLE"
+            value = var.cost_tracking_enable ? "true" : "false"
+          }
+
+          env {
             name  = "DOMAIN"
             value = var.domain
           }
@@ -237,8 +242,18 @@ resource "kubernetes_deployment" "api" {
           }
 
           env {
+            name  = "PROMETHEUS_URL"
+            value = var.prometheus_url
+          }
+
+          env {
             name  = "RACK_NAME"
             value = var.rack_name
+          }
+
+          env {
+            name  = "WEBHOOK_SIGNING_KEY"
+            value = var.webhook_signing_key
           }
 
           env {

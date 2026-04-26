@@ -2,9 +2,13 @@ package manifest
 
 import (
 	"fmt"
+	"math"
 	"net"
+	"net/url"
+	"os"
 	"regexp"
 	"strings"
+	"time"
 )
 
 const (
@@ -12,7 +16,8 @@ const (
 )
 
 var (
-	NameValidator = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
+	NameValidator         = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
+	prometheusMetricNameR = regexp.MustCompile(`^[a-zA-Z_:][a-zA-Z0-9_:]*$`)
 )
 
 func (m *Manifest) validate() []error {
@@ -26,6 +31,7 @@ func (m *Manifest) validate() []error {
 	}
 
 	errs = append(errs, m.validateBalancers()...)
+	errs = append(errs, m.validateBudget()...)
 	errs = append(errs, m.validateEnv()...)
 	errs = append(errs, m.validateResources()...)
 	errs = append(errs, m.validateServices()...)
@@ -148,6 +154,20 @@ func (m *Manifest) validateServices() []error {
 			errs = append(errs, fmt.Errorf("service %s: %s", s.Name, err))
 		}
 
+		seenRegistries := map[string]int{}
+		for i := range s.ImagePullSecrets {
+			if err := s.ImagePullSecrets[i].Validate(); err != nil {
+				errs = append(errs, fmt.Errorf("service %s imagePullSecrets[%d]: %s", s.Name, i, err))
+				continue
+			}
+			reg := strings.ToLower(s.ImagePullSecrets[i].Registry)
+			if prev, has := seenRegistries[reg]; has {
+				errs = append(errs, fmt.Errorf("service %s imagePullSecrets[%d]: duplicate registry %q (also declared at index %d); each registry may be declared at most once per service", s.Name, i, s.ImagePullSecrets[i].Registry, prev))
+				continue
+			}
+			seenRegistries[reg] = i
+		}
+
 		for i := range s.ConfigMounts {
 			cm := &s.ConfigMounts[i]
 			if err := cm.Validate(); err != nil {
@@ -159,8 +179,150 @@ func (m *Manifest) validateServices() []error {
 			}
 		}
 
+		errs = append(errs, validateServiceScale(&s)...)
 	}
 	return errs
+}
+
+func validateServiceScale(s *Service) []error {
+	var errs []error
+
+	if s.Agent.Enabled && (s.Scale.Autoscale.IsEnabled() || s.Scale.IsKedaEnabled()) {
+		errs = append(errs, fmt.Errorf("service %s: agent services render as DaemonSet and cannot use scale.autoscale or scale.keda", s.Name))
+	}
+
+	// Validate against EFFECTIVE Count (populated by ApplyDefaults from both
+	// the legacy scale.count shape and the new scale.min/scale.max pointer
+	// shape). Checking pointer-only would let legacy scale.count: 1-5 callers
+	// bypass every autoscale-aware rule.
+	effMin := s.Scale.Count.Min
+	effMax := s.Scale.Count.Max
+
+	if effMin < 0 {
+		errs = append(errs, fmt.Errorf("service %s: scale.min must be >= 0", s.Name))
+	}
+	if effMax < 0 {
+		errs = append(errs, fmt.Errorf("service %s: scale.max must be >= 0", s.Name))
+	}
+	if effMax < effMin {
+		errs = append(errs, fmt.Errorf("service %s: scale.max must be >= scale.min", s.Name))
+	}
+
+	a := s.Scale.Autoscale
+	if !a.IsEnabled() {
+		return errs
+	}
+
+	if effMax < 1 {
+		errs = append(errs, fmt.Errorf("service %s: scale.max must be >= 1 when autoscale is enabled", s.Name))
+	}
+	if effMax == effMin && effMax >= 1 {
+		errs = append(errs, fmt.Errorf("service %s: scale.max must be > scale.min when autoscale is enabled (ScaledObject would be a no-op)", s.Name))
+	}
+
+	if a.Cpu != nil && invalidPercent(a.Cpu.Threshold) {
+		errs = append(errs, fmt.Errorf("service %s: scale.autoscale.cpu.threshold must be between 1 and 100", s.Name))
+	}
+	if a.Memory != nil && invalidPercent(a.Memory.Threshold) {
+		errs = append(errs, fmt.Errorf("service %s: scale.autoscale.memory.threshold must be between 1 and 100", s.Name))
+	}
+	if a.GpuUtilization != nil {
+		if invalidPercent(a.GpuUtilization.Threshold) {
+			errs = append(errs, fmt.Errorf("service %s: scale.autoscale.gpuUtilization.threshold must be > 0 and <= 100", s.Name))
+		}
+		if s.Scale.Gpu.Count == 0 {
+			errs = append(errs, fmt.Errorf("service %s: scale.autoscale.gpuUtilization requires scale.gpu.count >= 1", s.Name))
+		}
+	}
+	if a.QueueDepth != nil {
+		if math.IsNaN(a.QueueDepth.Threshold) || a.QueueDepth.Threshold <= 0 {
+			errs = append(errs, fmt.Errorf("service %s: scale.autoscale.queueDepth.threshold must be > 0", s.Name))
+		}
+	}
+
+	errs = append(errs, validateAutoscaleMode(s.Name, "cpu", a.Cpu)...)
+	errs = append(errs, validateAutoscaleMode(s.Name, "memory", a.Memory)...)
+	errs = append(errs, validateAutoscaleMode(s.Name, "gpuUtilization", a.GpuUtilization)...)
+	errs = append(errs, validateAutoscaleMode(s.Name, "queueDepth", a.QueueDepth)...)
+
+	for i, trig := range a.Custom {
+		if trig.Name != "" && !NameValidator.MatchString(trig.Name) {
+			errs = append(errs, fmt.Errorf("service %s: scale.autoscale.custom[%d].name %q invalid, %s", s.Name, i, trig.Name, ValidNameDescription))
+		}
+		if strings.HasPrefix(strings.ToLower(trig.Name), "convox-") {
+			errs = append(errs, fmt.Errorf("service %s: scale.autoscale.custom[%d].name: %q uses reserved prefix 'convox-'", s.Name, i, trig.Name))
+		}
+		if trig.AuthenticationRef != nil && trig.AuthenticationRef.Kind == "ClusterTriggerAuthentication" {
+			errs = append(errs, fmt.Errorf("service %s: scale.autoscale.custom[%d].authenticationRef.kind: ClusterTriggerAuthentication is not permitted", s.Name, i))
+		}
+	}
+
+	if effMin == 0 && !autoscaleCanScaleToZero(a) {
+		errs = append(errs, fmt.Errorf(
+			"service %s: scale.min: 0 combined with only always-active autoscale triggers (cpu/memory/cron) will never scale to zero; "+
+				"KEDA's cpu/memory/cron scalers are always active. Add scale.autoscale.queueDepth, scale.autoscale.gpuUtilization, "+
+				"or a scale.autoscale.custom[] prometheus/external trigger, or raise scale.min to 1.",
+			s.Name,
+		))
+	}
+
+	return errs
+}
+
+func invalidPercent(v float64) bool {
+	return math.IsNaN(v) || v <= 0 || v > 100
+}
+
+// autoscaleCanScaleToZero returns true when the autoscale spec contains at
+// least one trigger type that KEDA's scale_handler will let drop to zero.
+// KEDA's cpu, memory, and cron scalers are always-active (IsActive=true
+// unconditionally), so a service configured with only those never scales to
+// zero regardless of scale.min. Returns false when the config is made up
+// entirely of always-active triggers.
+func autoscaleCanScaleToZero(a *ServiceAutoscale) bool {
+	if a == nil {
+		return false
+	}
+	if a.GpuUtilization != nil || a.QueueDepth != nil {
+		return true
+	}
+	for i := range a.Custom {
+		t := strings.ToLower(a.Custom[i].Type)
+		if t != "cpu" && t != "memory" && t != "cron" {
+			return true
+		}
+	}
+	return false
+}
+
+func validateAutoscaleMode(service, field string, t *AutoscaleMode) []error {
+	if t == nil {
+		return nil
+	}
+	var errs []error
+	if t.PrometheusUrl != "" {
+		if err := validatePrometheusURL(t.PrometheusUrl); err != nil {
+			errs = append(errs, fmt.Errorf("service %s: scale.autoscale.%s.prometheusUrl %s", service, field, err))
+		}
+	}
+	if t.MetricName != "" && !prometheusMetricNameR.MatchString(t.MetricName) {
+		errs = append(errs, fmt.Errorf("service %s: scale.autoscale.%s.metricName %q must match %s", service, field, t.MetricName, prometheusMetricNameR.String()))
+	}
+	return errs
+}
+
+func validatePrometheusURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("is not a valid URL: %s", err)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("must use http or https scheme, got %q", u.Scheme)
+	}
+	if u.Host == "" {
+		return fmt.Errorf("must include a host")
+	}
+	return nil
 }
 
 func (m *Manifest) validateTimers() []error {
@@ -179,6 +341,157 @@ func (m *Manifest) validateTimers() []error {
 
 		if strings.Contains(t.Schedule, "?") {
 			errs = append(errs, fmt.Errorf("timer %s invalid, schedule cannot contain ?", t.Name))
+		}
+	}
+
+	return errs
+}
+
+// validateBudget enforces the 11 cross-field rules from Set G v2 spec
+// §3.1. 10 rules are HARD-FAIL; rule 3 is WARN-only (printed to
+// stderr, parse succeeds).
+func (m *Manifest) validateBudget() []error {
+	b := m.Budget
+	errs := []error{}
+
+	// Skip the entire pass when no budget block is configured. This
+	// preserves backward compatibility -- manifests that never declare
+	// budget see zero behavior change.
+	if b.AtCapAction == "" && b.MonthlyCapUsd == 0 && b.AtCapWebhookUrl == "" &&
+		len(b.NeverAutoShutdown) == 0 && b.ShutdownOrder == "" &&
+		b.NotifyBeforeMinutes == 0 && b.ShutdownGracePeriod == "" &&
+		b.RecoveryMode == "" {
+		return errs
+	}
+
+	if b.AtCapAction != "" {
+		switch b.AtCapAction {
+		case "alert-only", "block-new-deploys", "auto-shutdown":
+		default:
+			errs = append(errs, fmt.Errorf(
+				"budget.atCapAction must be one of %q, %q, %q; got %q",
+				"alert-only", "block-new-deploys", "auto-shutdown", b.AtCapAction))
+		}
+	}
+
+	autoShutdown := b.AtCapAction == "auto-shutdown"
+
+	// Rule 1: refuse auto-shutdown without atCapWebhookUrl
+	if autoShutdown && strings.TrimSpace(b.AtCapWebhookUrl) == "" {
+		errs = append(errs, fmt.Errorf(
+			"budget.atCapAction %q requires budget.atCapWebhookUrl to be set; auto-shutdown silently killing services without notification is rejected by design",
+			"auto-shutdown"))
+	}
+	// Rule 2: refuse auto-shutdown without monthlyCapUsd > 0
+	if autoShutdown && !(b.MonthlyCapUsd > 0) {
+		errs = append(errs, fmt.Errorf(
+			"budget.atCapAction %q requires budget.monthlyCapUsd > 0; cannot shut down on cap breach without a cap",
+			"auto-shutdown"))
+	}
+
+	// Rule 3 (WARN only): unknown service in neverAutoShutdown
+	if len(b.NeverAutoShutdown) > 0 {
+		known := map[string]bool{}
+		for i := range m.Services {
+			known[m.Services[i].Name] = true
+		}
+		for _, name := range b.NeverAutoShutdown {
+			if !known[name] {
+				fmt.Fprintf(os.Stderr,
+					"WARNING: budget.neverAutoShutdown contains %q which is not a service in this manifest; ignoring at runtime\n",
+					name)
+			}
+		}
+	}
+
+	// Rule 4: notifyBeforeMinutes range
+	if b.NotifyBeforeMinutes != 0 {
+		if b.NotifyBeforeMinutes < 5 || b.NotifyBeforeMinutes > 1440 {
+			errs = append(errs, fmt.Errorf(
+				"budget.notifyBeforeMinutes must be between 5 and 1440; got %d",
+				b.NotifyBeforeMinutes))
+		}
+	}
+
+	// Rule 5/6: shutdownGracePeriod parse + range
+	if strings.TrimSpace(b.ShutdownGracePeriod) != "" {
+		d, err := time.ParseDuration(b.ShutdownGracePeriod)
+		if err != nil {
+			errs = append(errs, fmt.Errorf(
+				"budget.shutdownGracePeriod must be a Go duration string (e.g. %q, %q); got %q",
+				"5m", "30s", b.ShutdownGracePeriod))
+		} else {
+			if d < 0 || d > time.Hour {
+				errs = append(errs, fmt.Errorf(
+					"budget.shutdownGracePeriod must be between 0s and 1h; got %s",
+					b.ShutdownGracePeriod))
+			}
+		}
+	}
+
+	// Rule 7/7a: shutdownOrder enum
+	if b.ShutdownOrder != "" {
+		switch b.ShutdownOrder {
+		case "largest-cost", "newest":
+		case "priority-annotation":
+			errs = append(errs, fmt.Errorf(
+				"budget.shutdownOrder %q reserved for 3.24.7; use %q or %q",
+				"priority-annotation", "largest-cost", "newest"))
+		default:
+			errs = append(errs, fmt.Errorf(
+				"budget.shutdownOrder must be one of %q, %q; got %q",
+				"largest-cost", "newest", b.ShutdownOrder))
+		}
+	}
+
+	// Rule 8/9: recoveryMode enum
+	if b.RecoveryMode != "" {
+		switch b.RecoveryMode {
+		case "auto-on-reset", "manual":
+		case "scheduled":
+			errs = append(errs, fmt.Errorf(
+				"budget.recoveryMode %q reserved for 3.25.0; use %q or %q",
+				"scheduled", "auto-on-reset", "manual"))
+		default:
+			errs = append(errs, fmt.Errorf(
+				"budget.recoveryMode must be one of %q, %q; got %q",
+				"auto-on-reset", "manual", b.RecoveryMode))
+		}
+	}
+
+	if autoShutdown {
+		// Rule 10a: timer-only (no services)
+		if len(m.Services) == 0 {
+			errs = append(errs, fmt.Errorf(
+				"budget.atCapAction %q requires at least one service in the services block; timer-only apps cannot be auto-shut. Use %q or remove auto-shutdown.",
+				"auto-shutdown", "block-new-deploys"))
+		} else {
+			// Rule 10: every service exempt. Exempt entries that do not
+			// match a service name (rule 3) are silently skipped at
+			// runtime, so they do not count toward "all eligible
+			// excluded" here.
+			exempt := map[string]bool{}
+			knownService := map[string]bool{}
+			for i := range m.Services {
+				knownService[m.Services[i].Name] = true
+			}
+			for _, s := range b.NeverAutoShutdown {
+				if knownService[s] {
+					exempt[s] = true
+				}
+			}
+			anyEligible := false
+			for i := range m.Services {
+				if !exempt[m.Services[i].Name] {
+					anyEligible = true
+					break
+				}
+			}
+			if !anyEligible {
+				errs = append(errs, fmt.Errorf(
+					"budget.atCapAction %q with all services listed in neverAutoShutdown leaves no services eligible; either remove a service from neverAutoShutdown or use atCapAction %q",
+					"auto-shutdown", "block-new-deploys"))
+			}
 		}
 	}
 

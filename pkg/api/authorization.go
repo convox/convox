@@ -40,10 +40,22 @@ func CanWrite(c *stdapi.Context) bool {
 	return false
 }
 
+func CanAdmin(c *stdapi.Context) bool {
+	if d := c.Get(structs.ConvoxRoleParam); d != nil {
+		v, _ := d.(string)
+		return strings.Contains(v, "a")
+	}
+	return false
+}
+
 func SetReadRole(c *stdapi.Context) {
 	c.Set(structs.ConvoxRoleParam, structs.ConvoxRoleRead)
 }
 
 func SetReadWriteRole(c *stdapi.Context) {
 	c.Set(structs.ConvoxRoleParam, structs.ConvoxRoleReadWrite)
+}
+
+func SetAdminRole(c *stdapi.Context) {
+	c.Set(structs.ConvoxRoleParam, structs.ConvoxRoleAdmin)
 }

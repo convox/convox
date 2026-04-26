@@ -42,7 +42,7 @@ var awsKnownParams = map[string]bool{
 	"build_node_type": true, "buildkit_host_path_cache_enable": true,
 	"cert_duration": true, "cidr": true,
 	"convox_domain_tls_cert_disable": true, "convox_rack_domain": true,
-	"coredns_version": true, "custom_provided_bucket": true,
+	"coredns_version": true, "cost_tracking_enable": true, "custom_provided_bucket": true,
 	"deploy_extra_nlb": true, "disable_convox_resolver": true,
 	"disable_image_manifest_cache": true, "disable_public_access": true,
 	"docker_hub_password": true, "docker_hub_username": true,
@@ -591,7 +591,7 @@ func init() {
 	register("rack access", "get rack access credential", RackAccess, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
 			flagRack,
-			stdcli.StringFlag("role", "", "access role: read or write"),
+			stdcli.StringFlag("role", "", "access role: read, write, or admin"),
 			stdcli.IntFlag("duration-in-hours", "", "duration in hours"),
 		},
 		Validate: stdcli.Args(0),

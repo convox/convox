@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -17,6 +18,7 @@ import (
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/aws/provisioner"
 	ca "github.com/convox/convox/provider/k8s/pkg/apis/convox/v1"
+	kedav1alpha1 "github.com/kedacore/keda/v2/apis/keda/v1alpha1"
 	"github.com/pkg/errors"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -25,6 +27,8 @@ import (
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ktypes "k8s.io/apimachinery/pkg/types"
 )
+
+const defaultPrometheusURL = "http://prometheus-server.kube-system.svc.cluster.local:80"
 
 const (
 	APP_CONFIG_KEY = "app.json"
@@ -107,6 +111,10 @@ func (p *Provider) ReleaseList(app string, opts structs.ReleaseListOptions) (str
 }
 
 func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOptions) error {
+	if err := p.budgetCircuitBreakerTripped(app); err != nil {
+		return errors.WithStack(err)
+	}
+
 	a, err := p.AppGet(app)
 	if err != nil {
 		return errors.WithStack(err)
@@ -693,25 +701,61 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 			return nil, errors.WithStack(err)
 		}
 
-		if !p.IsKedaEnabled && s.Scale.IsKedaEnabled() {
-			return nil, structs.ErrBadRequest("keda is not enabled on the rack")
+		wantsAutoscale := s.Scale.Autoscale.IsEnabled() || s.Scale.IsKedaEnabled()
+		// Agent services render as DaemonSets; KEDA ScaledObject only targets
+		// Deployments, so skip the autoscale path entirely.
+		if s.Agent.Enabled {
+			wantsAutoscale = false
+		}
+		if !p.IsKedaEnabled && wantsAutoscale {
+			_ = p.EventSend("release:autoscale-disabled", structs.EventSendOptions{
+				Data: map[string]string{
+					"actor":   "system",
+					"app":     a.Name,
+					"service": s.Name,
+					"reason":  "rack has keda_enable=false; autoscale ignored, using Count.Min static replicas",
+				},
+			})
+			wantsAutoscale = false
 		}
 
+		if !s.Agent.Enabled && s.Scale.Min != nil && *s.Scale.Min == 0 && !s.Scale.Autoscale.IsEnabled() && !s.Scale.IsKedaEnabled() {
+			_ = p.EventSend("release:manifest-advisory", structs.EventSendOptions{
+				Data: map[string]string{
+					"actor":   "system",
+					"app":     a.Name,
+					"service": s.Name,
+					"reason":  "scale.min=0 without autoscale fields will keep the service at zero replicas permanently; set scale.autoscale.cpu.threshold or equivalent to enable scale-up",
+				},
+			})
+		}
+
+		ipsBlocks, ipsNames, err := renderImagePullSecrets(a.Name, p.AppNamespace(a.Name), &s, func(k string) (string, bool) {
+			v, ok := env[k]
+			return v, ok
+		})
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		items = append(items, ipsBlocks...)
+
 		params := map[string]interface{}{
-			"Annotations":    s.AnnotationsMap(),
-			"App":            a,
-			"Environment":    env,
-			"MaxSurge":       max - 100,
-			"MaxUnavailable": 100 - min,
-			"Namespace":      p.AppNamespace(a.Name),
-			"Password":       p.Password,
-			"Rack":           p.Name,
-			"Release":        r,
-			"Replicas":       replicas,
-			"Resources":      s.ResourceMap(),
-			"Service":        s,
-			"KedaIsEnabled":  s.Scale.IsKedaEnabled(),
-			"DockerHubAuth":  p.hasDockerHubAuth(),
+			"Annotations":          s.AnnotationsMap(),
+			"App":                  a,
+			"Environment":          env,
+			"MaxSurge":             max - 100,
+			"MaxUnavailable":       100 - min,
+			"Namespace":            p.AppNamespace(a.Name),
+			"Password":             p.Password,
+			"Rack":                 p.Name,
+			"Release":              r,
+			"Replicas":             replicas,
+			"Resources":            s.ResourceMap(),
+			"Service":              s,
+			"KedaIsEnabled":        s.Scale.IsKedaEnabled() && !s.Agent.Enabled,
+			"AutoscaleIsEnabled":   s.Scale.Autoscale.IsEnabled() && !s.Agent.Enabled,
+			"DockerHubAuth":        p.hasDockerHubAuth(),
+			"ImagePullSecretNames": ipsNames,
 		}
 
 		if ip, err := p.Engine.ResolverHost(); err == nil {
@@ -729,12 +773,36 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 
 		items = append(items, data)
 
-		if s.Scale.IsKedaEnabled() && s.Scale.Count.Min >= 0 && s.Scale.Count.Max > s.Scale.Count.Min {
+		if wantsAutoscale && p.IsKedaEnabled && s.Scale.Count.Max > s.Scale.Count.Min {
+			promURL := defaultPrometheusURL
+			if v := os.Getenv("PROMETHEUS_URL"); v != "" {
+				promURL = v
+			} else if s.Scale.Autoscale.NeedsPrometheus() {
+				_ = p.EventSend("release:prometheus-default", structs.EventSendOptions{
+					Data: map[string]string{
+						"actor":   "system",
+						"app":     a.Name,
+						"service": s.Name,
+						"url":     promURL,
+						"reason":  "no explicit prometheus_url and PROMETHEUS_URL env unset; using in-cluster default. Install the observability bundle OR set scale.autoscale.*.prometheus_url if this URL is wrong.",
+					},
+				})
+			}
+
+			var triggers []kedav1alpha1.ScaleTriggers
+			if s.Scale.Autoscale.IsEnabled() {
+				triggers = append(triggers, s.Scale.Autoscale.BuildTriggers(a.Name, s.Name, promURL)...)
+			}
+			if s.Scale.IsKedaEnabled() {
+				triggers = append(triggers, s.Scale.Keda.Triggers...)
+			}
+
 			scaledObj := s.KedaScaledObject(manifest.KedaScaledObjectParameters{
 				ServiceName: s.Name,
 				Namespace:   p.AppNamespace(a.Name),
 				MinCount:    int32(s.Scale.Count.Min),
 				MaxCount:    int32(s.Scale.Count.Max),
+				Triggers:    triggers,
 			})
 			if scaledObj != nil {
 				if p.applyAnnotationsToHPA(a.Name, s.Name, map[string]string{
@@ -797,15 +865,16 @@ func (p *Provider) releaseTemplateTimer(a *structs.App, e structs.Environment, r
 	}
 
 	params := map[string]interface{}{
-		"Annotations":   t.AnnotationsMap(),
-		"App":           a,
-		"Namespace":     p.AppNamespace(a.Name),
-		"Rack":          p.Name,
-		"Release":       r,
-		"Resources":     s.ResourceMap(),
-		"Service":       s,
-		"Timer":         t,
-		"DockerHubAuth": p.hasDockerHubAuth(),
+		"Annotations":          t.AnnotationsMap(),
+		"App":                  a,
+		"Namespace":            p.AppNamespace(a.Name),
+		"Rack":                 p.Name,
+		"Release":              r,
+		"Resources":            s.ResourceMap(),
+		"Service":              s,
+		"Timer":                t,
+		"DockerHubAuth":        p.hasDockerHubAuth(),
+		"ImagePullSecretNames": imagePullSecretNames(a.Name, s.Name, s.ImagePullSecrets),
 	}
 
 	if ip, err := p.Engine.ResolverHost(); err == nil {

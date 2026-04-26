@@ -57,6 +57,12 @@ variable "cidr" {
   default = "10.1.0.0/16"
 }
 
+variable "cost_tracking_enable" {
+  type        = bool
+  default     = false
+  description = "Enable the rack-side cost accumulator and budget enforcement. Opt-in; false preserves existing behaviour."
+}
+
 variable "convox_domain_tls_cert_disable" {
   default = false
   type    = bool
@@ -444,6 +450,12 @@ variable "private_subnets_ids" {
   default = ""
 }
 
+variable "prometheus_url" {
+  type        = string
+  default     = ""
+  description = "External Prometheus URL for KEDA autoscale triggers and observability. When empty, falls back to the in-cluster default (http://prometheus-server.kube-system.svc.cluster.local:80). Set this for managed Prometheus, Grafana Cloud, or AMP deployments."
+}
+
 variable "public_subnets_ids" {
   type    = string
   default = ""
@@ -543,6 +555,12 @@ variable "vpc_cni_version" {
 variable "vpa_enable" {
   type    = bool
   default = false
+}
+
+variable "webhook_signing_key" {
+  type        = string
+  default     = ""
+  description = "Optional HMAC-SHA256 key(s) for signing outbound webhook payloads. Hex-encoded; comma-separated for rotation (max 2). When set, emits Convox-Signature header. Empty preserves 3.24.5 behavior (unsigned)."
 }
 
 variable "whitelist" {

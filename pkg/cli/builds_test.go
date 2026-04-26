@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -235,6 +236,271 @@ func TestBuildsImportError(t *testing.T) {
 		require.Equal(t, 1, res.Code)
 		res.RequireStderr(t, []string{"ERROR: err1"})
 		res.RequireStdout(t, []string{"Importing build... "})
+	})
+}
+
+func TestBuildsImportImage(t *testing.T) {
+	testClientWait(t, 10*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		manifestData, err := os.ReadFile("testdata/import-manifest/convox.yml")
+		require.NoError(t, err)
+
+		bExternal := &structs.Build{Id: "build1", App: "app1", Status: "created"}
+		bRunning := &structs.Build{Id: "build1", App: "app1", Status: "running"}
+		bComplete := &structs.Build{Id: "build1", App: "app1", Status: "complete"}
+
+		i.On("BuildCreate", "app1", "", structs.BuildCreateOptions{External: options.Bool(true)}).Return(bExternal, nil)
+		i.On("BuildUpdate", "app1", "build1", structs.BuildUpdateOptions{Manifest: options.String(string(manifestData))}).Return(bExternal, nil).Once()
+		i.On("BuildImportImage", "app1", "build1", "vllm/vllm-openai:v0.6.3", structs.BuildImportImageOptions{}).Return(nil)
+		i.On("BuildGet", "app1", "build1").Return(bRunning, nil).Once()
+		i.On("BuildGet", "app1", "build1").Return(bComplete, nil)
+		i.On("ReleaseCreate", "app1", structs.ReleaseCreateOptions{Build: options.String("build1")}).Return(&structs.Release{Id: "release1"}, nil)
+		i.On("BuildUpdate", "app1", "build1", structs.BuildUpdateOptions{Release: options.String("release1")}).Return(bComplete, nil).Once()
+
+		res, err := testExecute(e, "builds import-image vllm/vllm-openai:v0.6.3 -a app1 -m testdata/import-manifest/convox.yml", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStdout(t, []string{
+			"Creating build... OK, build1",
+			"Relaying image vllm/vllm-openai:v0.6.3... OK",
+			"Waiting for import to complete... OK",
+			"Creating release... OK, release1",
+			"Build:   build1",
+			"Release: release1",
+		})
+	})
+}
+
+func TestBuildsImportImageFailure(t *testing.T) {
+	testClientWait(t, 10*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		bExternal := &structs.Build{Id: "build1", App: "app1", Status: "created"}
+		bFailed := &structs.Build{Id: "build1", App: "app1", Status: "failed", Reason: "manifest unknown"}
+
+		i.On("BuildCreate", "app1", "", structs.BuildCreateOptions{External: options.Bool(true)}).Return(bExternal, nil)
+		i.On("BuildUpdate", "app1", "build1", mock.Anything).Return(bExternal, nil).Once()
+		i.On("BuildImportImage", "app1", "build1", "bad/image:1", structs.BuildImportImageOptions{}).Return(nil)
+		i.On("BuildGet", "app1", "build1").Return(bFailed, nil)
+
+		res, err := testExecute(e, "builds import-image bad/image:1 -a app1 -m testdata/import-manifest/convox.yml", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		res.RequireStderr(t, []string{"ERROR: import failed: manifest unknown"})
+	})
+}
+
+func TestBuildsImportImageWithCreds(t *testing.T) {
+	testClientWait(t, 10*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		t.Setenv("CONVOX_SRC_CREDS_PASS", "nvapi-key")
+
+		bExternal := &structs.Build{Id: "build1", App: "app1", Status: "created"}
+		bComplete := &structs.Build{Id: "build1", App: "app1", Status: "complete"}
+
+		opts := structs.BuildImportImageOptions{
+			SrcCredsUser: options.String("$oauthtoken"),
+			SrcCredsPass: options.String("nvapi-key"),
+		}
+
+		i.On("BuildCreate", "app1", "", structs.BuildCreateOptions{External: options.Bool(true)}).Return(bExternal, nil)
+		i.On("BuildUpdate", "app1", "build1", mock.Anything).Return(bExternal, nil).Once()
+		i.On("BuildImportImage", "app1", "build1", "nvcr.io/nim/x:1.0", opts).Return(nil)
+		i.On("BuildGet", "app1", "build1").Return(bComplete, nil)
+		i.On("ReleaseCreate", "app1", mock.Anything).Return(&structs.Release{Id: "release1"}, nil)
+		i.On("BuildUpdate", "app1", "build1", mock.MatchedBy(func(o structs.BuildUpdateOptions) bool {
+			return o.Release != nil && *o.Release == "release1"
+		})).Return(bComplete, nil).Once()
+
+		res, err := testExecute(e, "builds import-image nvcr.io/nim/x:1.0 -a app1 -m testdata/import-manifest/convox.yml --src-creds-user $oauthtoken --src-creds-pass-env CONVOX_SRC_CREDS_PASS", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.NotContains(t, res.Stderr, "WARNING")
+	})
+}
+
+func TestBuildsImportImage_SrcCredsPassEnv_ReadsFromEnvVar(t *testing.T) {
+	testClientWait(t, 10*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		t.Setenv("MY_REGISTRY_PASS", "secret123")
+
+		bExternal := &structs.Build{Id: "build1", App: "app1", Status: "created"}
+		bComplete := &structs.Build{Id: "build1", App: "app1", Status: "complete"}
+
+		var captured structs.BuildImportImageOptions
+		i.On("BuildCreate", "app1", "", structs.BuildCreateOptions{External: options.Bool(true)}).Return(bExternal, nil)
+		i.On("BuildUpdate", "app1", "build1", mock.Anything).Return(bExternal, nil).Once()
+		i.On("BuildImportImage", "app1", "build1", "vllm/vllm:v1", mock.AnythingOfType("structs.BuildImportImageOptions")).Return(nil).Run(func(args mock.Arguments) {
+			captured = args.Get(3).(structs.BuildImportImageOptions) //nolint:errcheck // mock type assertion
+		})
+		i.On("BuildGet", "app1", "build1").Return(bComplete, nil)
+		i.On("ReleaseCreate", "app1", mock.Anything).Return(&structs.Release{Id: "release1"}, nil)
+		i.On("BuildUpdate", "app1", "build1", mock.MatchedBy(func(o structs.BuildUpdateOptions) bool {
+			return o.Release != nil && *o.Release == "release1"
+		})).Return(bComplete, nil).Once()
+
+		res, err := testExecute(e, "builds import-image vllm/vllm:v1 -a app1 -m testdata/import-manifest/convox.yml --src-creds-pass-env MY_REGISTRY_PASS", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.NotNil(t, captured.SrcCredsPass)
+		require.Equal(t, "secret123", *captured.SrcCredsPass)
+		require.NotContains(t, res.Stderr, "WARNING")
+	})
+}
+
+func TestBuildsImportImage_SrcCredsPassStdin_ReadsLine(t *testing.T) {
+	testClientWait(t, 10*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		bExternal := &structs.Build{Id: "build1", App: "app1", Status: "created"}
+		bComplete := &structs.Build{Id: "build1", App: "app1", Status: "complete"}
+
+		var captured structs.BuildImportImageOptions
+		i.On("BuildCreate", "app1", "", structs.BuildCreateOptions{External: options.Bool(true)}).Return(bExternal, nil)
+		i.On("BuildUpdate", "app1", "build1", mock.Anything).Return(bExternal, nil).Once()
+		i.On("BuildImportImage", "app1", "build1", "vllm/vllm:v1", mock.AnythingOfType("structs.BuildImportImageOptions")).Return(nil).Run(func(args mock.Arguments) {
+			captured = args.Get(3).(structs.BuildImportImageOptions) //nolint:errcheck // mock type assertion
+		})
+		i.On("BuildGet", "app1", "build1").Return(bComplete, nil)
+		i.On("ReleaseCreate", "app1", mock.Anything).Return(&structs.Release{Id: "release1"}, nil)
+		i.On("BuildUpdate", "app1", "build1", mock.MatchedBy(func(o structs.BuildUpdateOptions) bool {
+			return o.Release != nil && *o.Release == "release1"
+		})).Return(bComplete, nil).Once()
+
+		res, err := testExecute(e, "builds import-image vllm/vllm:v1 -a app1 -m testdata/import-manifest/convox.yml --src-creds-pass-stdin", strings.NewReader("secret456\n"))
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.NotNil(t, captured.SrcCredsPass)
+		require.Equal(t, "secret456", *captured.SrcCredsPass)
+		require.NotContains(t, res.Stderr, "WARNING")
+	})
+}
+
+func TestBuildsImportImage_SrcCredsPassEnv_UnsetReturnsError(t *testing.T) {
+	testClientWait(t, 10*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		os.Unsetenv("MY_REGISTRY_PASS_UNSET")
+
+		bExternal := &structs.Build{Id: "build1", App: "app1", Status: "created"}
+		i.On("BuildCreate", "app1", "", structs.BuildCreateOptions{External: options.Bool(true)}).Return(bExternal, nil)
+		i.On("BuildUpdate", "app1", "build1", mock.Anything).Return(bExternal, nil).Once()
+
+		res, err := testExecute(e, "builds import-image vllm/vllm:v1 -a app1 -m testdata/import-manifest/convox.yml --src-creds-pass-env MY_REGISTRY_PASS_UNSET", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		require.Contains(t, res.Stderr, "--src-creds-pass-env=MY_REGISTRY_PASS_UNSET: environment variable not set")
+		i.AssertNotCalled(t, "BuildImportImage", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	})
+}
+
+func TestBuildsImportImage_SrcCredsPassStdin_EmptyReturnsError(t *testing.T) {
+	testClientWait(t, 10*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		bExternal := &structs.Build{Id: "build1", App: "app1", Status: "created"}
+		i.On("BuildCreate", "app1", "", structs.BuildCreateOptions{External: options.Bool(true)}).Return(bExternal, nil)
+		i.On("BuildUpdate", "app1", "build1", mock.Anything).Return(bExternal, nil).Once()
+
+		res, err := testExecute(e, "builds import-image vllm/vllm:v1 -a app1 -m testdata/import-manifest/convox.yml --src-creds-pass-stdin", strings.NewReader(""))
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		require.Contains(t, res.Stderr, "--src-creds-pass-stdin: no input received")
+		i.AssertNotCalled(t, "BuildImportImage", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	})
+}
+
+func TestBuildsImportImage_SrcCredsPass_MutualExclusion(t *testing.T) {
+	cases := []string{
+		"builds import-image vllm/vllm:v1 -a app1 -m testdata/import-manifest/convox.yml --src-creds-pass=p1 --src-creds-pass-env MYV",
+		"builds import-image vllm/vllm:v1 -a app1 -m testdata/import-manifest/convox.yml --src-creds-pass=p1 --src-creds-pass-stdin",
+		"builds import-image vllm/vllm:v1 -a app1 -m testdata/import-manifest/convox.yml --src-creds-pass-env MYV --src-creds-pass-stdin",
+		"builds import-image vllm/vllm:v1 -a app1 -m testdata/import-manifest/convox.yml --src-creds-pass=p1 --src-creds-pass-env MYV --src-creds-pass-stdin",
+	}
+	for _, cmd := range cases {
+		t.Run(cmd, func(t *testing.T) {
+			testClientWait(t, 10*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+				bExternal := &structs.Build{Id: "build1", App: "app1", Status: "created"}
+				i.On("BuildCreate", "app1", "", structs.BuildCreateOptions{External: options.Bool(true)}).Return(bExternal, nil)
+				i.On("BuildUpdate", "app1", "build1", mock.Anything).Return(bExternal, nil).Once()
+
+				res, err := testExecute(e, cmd, nil)
+				require.NoError(t, err)
+				require.Equal(t, 1, res.Code)
+				require.Contains(t, res.Stderr, "at most one of --src-creds-pass, --src-creds-pass-env, --src-creds-pass-stdin may be specified")
+				i.AssertNotCalled(t, "BuildImportImage", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+			})
+		})
+	}
+}
+
+func TestBuildsImportImage_PlaintextSrcCredsPass_EmitsDeprecationWarning(t *testing.T) {
+	testClientWait(t, 10*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		bExternal := &structs.Build{Id: "build1", App: "app1", Status: "created"}
+		bComplete := &structs.Build{Id: "build1", App: "app1", Status: "complete"}
+
+		var captured structs.BuildImportImageOptions
+		i.On("BuildCreate", "app1", "", structs.BuildCreateOptions{External: options.Bool(true)}).Return(bExternal, nil)
+		i.On("BuildUpdate", "app1", "build1", mock.Anything).Return(bExternal, nil).Once()
+		i.On("BuildImportImage", "app1", "build1", "vllm/vllm:v1", mock.AnythingOfType("structs.BuildImportImageOptions")).Return(nil).Run(func(args mock.Arguments) {
+			captured = args.Get(3).(structs.BuildImportImageOptions) //nolint:errcheck // mock type assertion
+		})
+		i.On("BuildGet", "app1", "build1").Return(bComplete, nil)
+		i.On("ReleaseCreate", "app1", mock.Anything).Return(&structs.Release{Id: "release1"}, nil)
+		i.On("BuildUpdate", "app1", "build1", mock.MatchedBy(func(o structs.BuildUpdateOptions) bool {
+			return o.Release != nil && *o.Release == "release1"
+		})).Return(bComplete, nil).Once()
+
+		res, err := testExecute(e, "builds import-image vllm/vllm:v1 -a app1 -m testdata/import-manifest/convox.yml --src-creds-pass=secret789", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.NotNil(t, captured.SrcCredsPass)
+		require.Equal(t, "secret789", *captured.SrcCredsPass)
+		// Pinned warning text — locks R3 UX wording in source. Any future PR that
+		// changes the wording must update this assertion.
+		require.Contains(t, res.Stderr, "WARNING: --src-creds-pass=<plaintext> exposes credentials via process listings. Use --src-creds-pass-env <NAME> or --src-creds-pass-stdin instead. Plaintext form will be rejected in 3.25.0.")
+	})
+}
+
+func TestBuildsImportImage_PlaintextSrcCredsPass_WarningGoesToStderrNotStdout(t *testing.T) {
+	testClientWait(t, 10*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		bExternal := &structs.Build{Id: "build1", App: "app1", Status: "created"}
+		bComplete := &structs.Build{Id: "build1", App: "app1", Status: "complete"}
+
+		i.On("BuildCreate", "app1", "", structs.BuildCreateOptions{External: options.Bool(true)}).Return(bExternal, nil)
+		i.On("BuildUpdate", "app1", "build1", mock.Anything).Return(bExternal, nil).Once()
+		i.On("BuildImportImage", "app1", "build1", "vllm/vllm:v1", mock.AnythingOfType("structs.BuildImportImageOptions")).Return(nil)
+		i.On("BuildGet", "app1", "build1").Return(bComplete, nil)
+		i.On("ReleaseCreate", "app1", mock.Anything).Return(&structs.Release{Id: "release1"}, nil)
+		i.On("BuildUpdate", "app1", "build1", mock.MatchedBy(func(o structs.BuildUpdateOptions) bool {
+			return o.Release != nil && *o.Release == "release1"
+		})).Return(bComplete, nil).Once()
+
+		res, err := testExecute(e, "builds import-image vllm/vllm:v1 -a app1 -m testdata/import-manifest/convox.yml --src-creds-pass=secret789", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		// Channel discipline: warning must appear ONLY on stderr.
+		require.NotContains(t, res.Stdout, "WARNING")
+		require.NotContains(t, res.Stdout, "src-creds-pass")
+		require.NotContains(t, res.Stdout, "deprecat")
+		require.Contains(t, res.Stderr, "WARNING")
+	})
+}
+
+func TestBuildsImportImage_NoCredsAtAll_NoWarning(t *testing.T) {
+	testClientWait(t, 10*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		manifestData, err := os.ReadFile("testdata/import-manifest/convox.yml")
+		require.NoError(t, err)
+
+		bExternal := &structs.Build{Id: "build1", App: "app1", Status: "created"}
+		bComplete := &structs.Build{Id: "build1", App: "app1", Status: "complete"}
+
+		var captured structs.BuildImportImageOptions
+		i.On("BuildCreate", "app1", "", structs.BuildCreateOptions{External: options.Bool(true)}).Return(bExternal, nil)
+		i.On("BuildUpdate", "app1", "build1", structs.BuildUpdateOptions{Manifest: options.String(string(manifestData))}).Return(bExternal, nil).Once()
+		i.On("BuildImportImage", "app1", "build1", "vllm/vllm:v1", mock.AnythingOfType("structs.BuildImportImageOptions")).Return(nil).Run(func(args mock.Arguments) {
+			captured = args.Get(3).(structs.BuildImportImageOptions) //nolint:errcheck // mock type assertion
+		})
+		i.On("BuildGet", "app1", "build1").Return(bComplete, nil)
+		i.On("ReleaseCreate", "app1", mock.Anything).Return(&structs.Release{Id: "release1"}, nil)
+		i.On("BuildUpdate", "app1", "build1", mock.MatchedBy(func(o structs.BuildUpdateOptions) bool {
+			return o.Release != nil && *o.Release == "release1"
+		})).Return(bComplete, nil).Once()
+
+		res, err := testExecute(e, "builds import-image vllm/vllm:v1 -a app1 -m testdata/import-manifest/convox.yml", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.Nil(t, captured.SrcCredsPass)
+		require.NotContains(t, res.Stderr, "WARNING")
 	})
 }
 

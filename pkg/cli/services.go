@@ -39,16 +39,47 @@ func Services(rack sdk.Interface, c *stdcli.Context) error {
 	// v3 racks never populate Nlb; v2 racks populate it from the release manifest.
 	// Index-based iteration avoids copying the full Service struct per scan step.
 	hasNlb := false
+	hasAutoscale := false
+	hasCold := false
+	hasScale := false
 	for i := range ss {
 		if len(ss[i].Nlb) > 0 {
 			hasNlb = true
-			break
+		}
+		if ss[i].Autoscale != nil && ss[i].Autoscale.Enabled {
+			hasAutoscale = true
+		}
+		if ss[i].ColdStart != nil && *ss[i].ColdStart {
+			hasCold = true
+		}
+		if ss[i].Min != nil || ss[i].Max != nil {
+			hasScale = true
 		}
 	}
+
+	// budgetCapStatusWithServices is best-effort and CLI-side only. The BUDGET
+	// column only renders when the app is at-cap so customers without budget
+	// configured see zero output difference (per CLAUDE.md backward-compat rule).
+	// Use the WithServices variant since we already have ss in hand — avoids a
+	// redundant rack.ServiceList round-trip.
+	cs, _ := budgetCapStatusWithServices(rack, app(c), ss, c.Writer().Stderr)
+	hasBudget := cs.AtCap
 
 	headers := []string{"SERVICE", "DOMAIN", "PORTS"}
 	if hasNlb {
 		headers = append(headers, "NLB PORTS")
+	}
+	if hasScale {
+		headers = append(headers, "SCALE")
+	}
+	if hasAutoscale {
+		headers = append(headers, "AUTOSCALE")
+	}
+	if hasCold {
+		headers = append(headers, "COLD")
+	}
+	if hasBudget {
+		headers = append(headers, "BUDGET")
 	}
 	t := c.Table(headers...)
 
@@ -97,10 +128,43 @@ func Services(rack sdk.Interface, c *stdcli.Context) error {
 			row = append(row, strings.Join(nlbs, " "))
 		}
 
+		if hasScale {
+			row = append(row, formatScaleCell(s.Min, s.Max))
+		}
+		if hasAutoscale {
+			row = append(row, formatAutoscaleSummary(s.Autoscale))
+		}
+		if hasCold {
+			cold := "-"
+			if s.ColdStart != nil && *s.ColdStart {
+				cold = "yes"
+			}
+			row = append(row, cold)
+		}
+		if hasBudget {
+			row = append(row, capSubStateToken(s.Name, cs))
+		}
+
 		t.AddRow(row...)
 	}
 
 	return t.Print()
+}
+
+func formatScaleCell(min, max *int) string {
+	if min == nil && max == nil {
+		return "-"
+	}
+	if min != nil && max != nil {
+		if *min == *max {
+			return fmt.Sprintf("%d", *min)
+		}
+		return fmt.Sprintf("%d-%d", *min, *max)
+	}
+	if min != nil {
+		return fmt.Sprintf("%d-", *min)
+	}
+	return fmt.Sprintf("-%d", *max)
 }
 
 func ServicesRestart(rack sdk.Interface, c *stdcli.Context) error {

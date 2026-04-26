@@ -38,6 +38,14 @@ type BuildCreateOptions struct {
 	GitSha *string `param:"git-sha"`
 }
 
+// BuildImportImageOptions carries optional source-registry credentials for
+// `convox builds import-image`. SrcCredsPass is never serialized to JSON
+// (json:"-") to prevent accidental leakage in logs or telemetry.
+type BuildImportImageOptions struct {
+	SrcCredsUser *string `flag:"src-creds-user" param:"src-creds-user" json:"src-creds-user,omitempty"`
+	SrcCredsPass *string `flag:"src-creds-pass" param:"src-creds-pass" json:"-"`
+}
+
 type BuildListOptions struct {
 	Limit *int `flag:"limit,l" query:"limit"`
 }

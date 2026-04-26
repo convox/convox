@@ -297,12 +297,13 @@ func TestParamsYAML_RegexAcceptsValidInputs(t *testing.T) {
 func TestParamsYAML_GroupOrderConsistent(t *testing.T) {
 	// All providers should use consistent group order numbers
 	expectedOrders := map[string]int32{
-		"Immutable":            1,
+		"Immutable":             1,
 		"Security & Compliance": 2,
-		"Networking":           3,
+		"Networking":            3,
 		"Performance & Scaling": 4,
 		"Logging & Monitoring":  5,
-		"Karpenter":            6,
+		"Karpenter":             6,
+		"Cost & Budget":         7,
 	}
 
 	for _, provider := range providers {

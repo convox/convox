@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
@@ -12,9 +13,14 @@ import (
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	kerr "k8s.io/apimachinery/pkg/api/errors"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	ktypes "k8s.io/apimachinery/pkg/types"
 )
+
+var scaledObjectGVR = schema.GroupVersionResource{Group: "keda.sh", Version: "v1alpha1", Resource: "scaledobjects"}
 
 func (p *Provider) ServiceHost(app string, s manifest.Service) string {
 	if s.Internal {
@@ -92,6 +98,18 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 			}
 		}
 
+		min := ms.Scale.Count.Min
+		max := ms.Scale.Count.Max
+		s.Min = &min
+		s.Max = &max
+		if min == 0 && s.Count == 0 {
+			cold := true
+			s.ColdStart = &cold
+		}
+		if ms.Scale.Autoscale.IsEnabled() {
+			s.Autoscale = buildServiceAutoscaleState(ms.Scale.Autoscale)
+		}
+
 		ss = append(ss, s)
 	}
 
@@ -145,6 +163,11 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 				break
 			}
 		}
+
+		min := ms.Scale.Count.Min
+		max := ms.Scale.Count.Max
+		s.Min = &min
+		s.Max = &max
 
 		ss = append(ss, s)
 	}
@@ -213,14 +236,32 @@ func (p *Provider) serviceRestartDeployment(app, name string) error {
 }
 
 func (p *Provider) ServiceUpdate(app, name string, opts structs.ServiceUpdateOptions) error {
+	if err := p.budgetCircuitBreakerTripped(app); err != nil {
+		return errors.WithStack(err)
+	}
+
 	d, err := p.GetDeploymentFromInformer(name, p.AppNamespace(app))
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
+	if opts.Min != nil || opts.Max != nil {
+		if err := p.serviceUpdateScaledObject(app, name, opts); err != nil {
+			return err
+		}
+	}
+
+	countHandledByScaledObject := false
 	if opts.Count != nil {
-		c := int32(*opts.Count)
-		d.Spec.Replicas = &c
+		countHandled, err := p.serviceUpdateCount(app, name, *opts.Count)
+		if err != nil {
+			return err
+		}
+		countHandledByScaledObject = countHandled
+		if !countHandled {
+			c := int32(*opts.Count) //nolint:gosec // replica counts are user-validated and bounded
+			d.Spec.Replicas = &c
+		}
 	}
 
 	if opts.Cpu != nil {
@@ -276,6 +317,15 @@ func (p *Provider) ServiceUpdate(app, name string, opts structs.ServiceUpdateOpt
 		}
 	}
 
+	// When only --count was supplied AND the ScaledObject claimed ownership,
+	// skip the Deployment Update. The informer-cached d.Spec.Replicas is
+	// likely stale, and writing it back would briefly fight KEDA's reconciler
+	// before KEDA converges on the patched minReplicaCount/maxReplicaCount.
+	countOnly := opts.Count != nil && opts.Cpu == nil && opts.Memory == nil && opts.Gpu == nil && opts.Min == nil && opts.Max == nil
+	if countOnly && countHandledByScaledObject {
+		return nil
+	}
+
 	if _, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).Update(context.TODO(), d, am.UpdateOptions{}); err != nil {
 		return errors.WithStack(err)
 	}
@@ -305,4 +355,151 @@ func serviceContainerPorts(c v1.Container, internal bool) []structs.ServicePort 
 	}
 
 	return ps
+}
+
+func buildServiceAutoscaleState(a *manifest.ServiceAutoscale) *structs.ServiceAutoscaleState {
+	if !a.IsEnabled() {
+		return nil
+	}
+	st := &structs.ServiceAutoscaleState{Enabled: true}
+	if a.Cpu != nil {
+		v := int(a.Cpu.Threshold)
+		st.CpuThreshold = &v
+	}
+	if a.Memory != nil {
+		v := int(a.Memory.Threshold)
+		st.MemThreshold = &v
+	}
+	if a.GpuUtilization != nil {
+		v := int(a.GpuUtilization.Threshold)
+		st.GpuThreshold = &v
+		if a.GpuUtilization.MetricName != "" {
+			st.MetricName = a.GpuUtilization.MetricName
+		}
+	}
+	if a.QueueDepth != nil {
+		v := int(a.QueueDepth.Threshold)
+		st.QueueThreshold = &v
+		if a.QueueDepth.MetricName != "" {
+			st.MetricName = a.QueueDepth.MetricName
+		}
+	}
+	st.CustomTriggers = len(a.Custom)
+	return st
+}
+
+func (p *Provider) serviceUpdateScaledObject(app, name string, opts structs.ServiceUpdateOptions) error {
+	ns := p.AppNamespace(app)
+
+	_, err := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Get(context.TODO(), name, am.GetOptions{})
+	hasScaledObject := err == nil
+	if err != nil && !kerr.IsNotFound(err) {
+		return errors.WithStack(err)
+	}
+
+	if opts.Min != nil && *opts.Min == 0 {
+		if err := p.ensureWakeMechanism(app, name, hasScaledObject); err != nil {
+			return err
+		}
+	}
+
+	if !hasScaledObject {
+		return nil
+	}
+
+	spec := map[string]interface{}{}
+	if opts.Min != nil {
+		spec["minReplicaCount"] = *opts.Min
+	}
+	if opts.Max != nil {
+		spec["maxReplicaCount"] = *opts.Max
+	}
+	patch := map[string]interface{}{"spec": spec}
+	patchBytes, err := json.Marshal(patch)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if _, err := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Patch(
+		context.TODO(), name, ktypes.MergePatchType, patchBytes, am.PatchOptions{},
+	); err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
+}
+
+// serviceUpdateCount patches the ScaledObject CRD when one owns the deployment;
+// returns handled=true in that case so the caller knows to skip the subsequent
+// deployment.Spec.Replicas write (which would race with KEDA's reconciler).
+// Returns handled=false when no ScaledObject exists, letting the caller fall
+// back to the normal Deployment patch path.
+func (p *Provider) serviceUpdateCount(app, name string, count int) (handled bool, err error) {
+	ns := p.AppNamespace(app)
+
+	_, getErr := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Get(context.TODO(), name, am.GetOptions{})
+	if kerr.IsNotFound(getErr) {
+		return false, nil
+	}
+	if getErr != nil {
+		return false, errors.WithStack(getErr)
+	}
+
+	patch := map[string]interface{}{
+		"spec": map[string]interface{}{
+			"minReplicaCount": count,
+			"maxReplicaCount": count,
+		},
+	}
+	patchBytes, err := json.Marshal(patch)
+	if err != nil {
+		return false, errors.WithStack(err)
+	}
+
+	if _, err := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Patch(
+		context.TODO(), name, ktypes.MergePatchType, patchBytes, am.PatchOptions{},
+	); err != nil {
+		return false, errors.WithStack(err)
+	}
+
+	_ = p.EventSend("release:imperative-patch-note", structs.EventSendOptions{
+		Data: map[string]string{
+			"actor":   "system",
+			"app":     app,
+			"service": name,
+			"reason":  "KEDA ScaledObject owns replicas; patched scaledobject spec.minReplicaCount / spec.maxReplicaCount instead of deployment replicas",
+		},
+	})
+
+	return true, nil
+}
+
+func (p *Provider) ensureWakeMechanism(app, name string, hasScaledObject bool) error {
+	if hasScaledObject {
+		return nil
+	}
+
+	a, err := p.AppGet(app)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if a.Release != "" {
+		m, _, err := common.ReleaseManifest(p, app, a.Release)
+		if err != nil {
+			return errors.WithStack(fmt.Errorf("could not verify wake mechanism for service %s: %w", name, err))
+		}
+		ms, mErr := m.Service(name)
+		if mErr != nil {
+			return structs.ErrBadRequest("service %s not found in current release manifest", name)
+		}
+		if ms.Scale.Autoscale.IsEnabled() || ms.Scale.IsKedaEnabled() {
+			return nil
+		}
+	}
+
+	return structs.ErrBadRequest(
+		"cannot set --min 0 on service %s: no autoscale mechanism is configured to wake pods back up. Set scale.autoscale.* in convox.yml and promote a release first, or use --min 1 (or higher)",
+		name,
+	)
 }

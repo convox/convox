@@ -1,0 +1,27 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: ml-batch
+  namespace: rack1-app1
+  annotations:
+    autoscaling.keda.sh/paused-replicas: "0"
+spec:
+  scaleTargetRef:
+    name: ml-batch
+  minReplicaCount: 1
+  maxReplicaCount: 5
+  triggers:
+    - type: cpu
+      metadata:
+        value: "60"
+        type: Utilization
+    - type: memory
+      metadata:
+        value: "75"
+        type: Utilization
+    - type: prometheus
+      metadata:
+        serverAddress: http://prom:9090
+        metricName: queue_depth
+        threshold: "100"
+        query: sum(queue_depth)

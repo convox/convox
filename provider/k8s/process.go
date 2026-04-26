@@ -317,6 +317,20 @@ pendingLoop:
 }
 
 func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOptions) (*structs.Process, error) {
+	// Gate ProcessRun on the budget breaker, EXCEPT for build pods. The
+	// `service` URL-path parameter is caller-controlled and cannot be
+	// trusted for this exemption — instead we key on `opts.IsBuild`, a
+	// server-side struct flag set only by BuildCreate at build.go:112.
+	// The flag has no `header:` / `flag:` tag so it is not wire-exposed;
+	// a client spoofing `service="build"` gets blocked because IsBuild
+	// stays false. Build pods themselves must pass to allow customers to
+	// ship a fix when over cap.
+	if !opts.IsBuild {
+		if err := p.budgetCircuitBreakerTripped(app); err != nil {
+			return nil, errors.WithStack(err)
+		}
+	}
+
 	s, err := p.podSpecFromRunOptions(app, service, opts)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -801,6 +815,21 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 		}
 
 		s.ImagePullSecrets = append(s.ImagePullSecrets, ac.LocalObjectReference{Name: "docker-hub-authentication"})
+	}
+
+	// Per-service private-registry pull secrets declared in convox.yml.
+	// The Secrets themselves are created by the release promote flow; here we
+	// only reference them so convox run Pods can pull from those registries.
+	// Build pods use the rack's internal build image and have no user
+	// imagePullSecrets to apply, so skip the manifest read in that case.
+	if !opts.IsBuild {
+		if m, _, merr := common.AppManifest(p, app); merr == nil {
+			if sm, serr := m.Service(service); serr == nil {
+				for _, name := range imagePullSecretNames(app, service, sm.ImagePullSecrets) {
+					s.ImagePullSecrets = append(s.ImagePullSecrets, ac.LocalObjectReference{Name: name})
+				}
+			}
+		}
 	}
 
 	if opts.Volumes != nil && opts.UseServiceVolume == nil {

@@ -161,9 +161,14 @@ spec:
         {{ end }}
         {{ end }}
       {{ end }}
-      {{ if .DockerHubAuth }}
+      {{ if or .DockerHubAuth .ImagePullSecretNames }}
       imagePullSecrets:
+      {{ if .DockerHubAuth }}
       - name: docker-hub-authentication
+      {{ end }}
+      {{ range .ImagePullSecretNames }}
+      - name: {{ . }}
+      {{ end }}
       {{ end }}
       serviceAccountName: {{.Service.Name}}
       shareProcessNamespace: {{.Service.Init}}
@@ -469,7 +474,7 @@ spec:
               path: {{ .Filename }}
       {{ end }}
  
-{{ if and (not (eq .Service.Scale.Count.Min .Service.Scale.Count.Max)) (not $.KedaIsEnabled) }}
+{{ if and (and (and (not (eq .Service.Scale.Count.Min .Service.Scale.Count.Max)) (not $.KedaIsEnabled)) (not $.AutoscaleIsEnabled)) (not .Service.Agent.Enabled) }}
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler

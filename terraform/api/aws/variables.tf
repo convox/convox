@@ -95,6 +95,11 @@ variable "image" {
   type = string
 }
 
+variable "cost_tracking_enable" {
+  type    = bool
+  default = false
+}
+
 variable "karpenter_enabled" {
   type    = bool
   default = false
@@ -129,6 +134,11 @@ variable "oidc_sub" {
 variable "pdb_default_min_available_percentage" {
   type    = number
   default = 50
+}
+
+variable "prometheus_url" {
+  type    = string
+  default = ""
 }
 
 variable "rack_name" {
@@ -169,4 +179,9 @@ variable "vpc_id" {
 variable "vpa_enable" {
   type    = bool
   default = false
+}
+
+variable "webhook_signing_key" {
+  type    = string
+  default = ""
 }

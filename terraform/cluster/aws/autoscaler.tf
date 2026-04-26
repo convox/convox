@@ -88,7 +88,7 @@ locals {
   cas_discovery_args = var.karpenter_enabled ? (
     # Karpenter mode: explicit ASG targeting for additional groups only
     local.cas_additional_nodes_args
-  ) : (
+    ) : (
     # CAS mode: auto-discovery (current behavior)
     [
       "--node-group-auto-discovery=asg:tag=k8s.io/cluster-autoscaler/enabled,k8s.io/cluster-autoscaler/${aws_eks_cluster.cluster.name}",

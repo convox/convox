@@ -29,14 +29,14 @@ locals {
   # karpenter_config overrides — decode customer JSON (empty = no overrides)
   ###########################################################################
 
-  karpenter_config_raw      = var.karpenter_config != "" ? var.karpenter_config : "{}"
-  karpenter_config_parsed   = jsondecode(local.karpenter_config_raw)
-  kc_np                     = lookup(local.karpenter_config_parsed, "nodePool", {})
-  kc_np_template            = lookup(local.kc_np, "template", {})
-  kc_np_template_meta       = lookup(local.kc_np_template, "metadata", {})
-  kc_np_template_spec       = lookup(local.kc_np_template, "spec", {})
-  kc_np_disruption          = lookup(local.kc_np, "disruption", {})
-  kc_ec2                    = lookup(local.karpenter_config_parsed, "ec2NodeClass", {})
+  karpenter_config_raw    = var.karpenter_config != "" ? var.karpenter_config : "{}"
+  karpenter_config_parsed = jsondecode(local.karpenter_config_raw)
+  kc_np                   = lookup(local.karpenter_config_parsed, "nodePool", {})
+  kc_np_template          = lookup(local.kc_np, "template", {})
+  kc_np_template_meta     = lookup(local.kc_np_template, "metadata", {})
+  kc_np_template_spec     = lookup(local.kc_np_template, "spec", {})
+  kc_np_disruption        = lookup(local.kc_np, "disruption", {})
+  kc_ec2                  = lookup(local.karpenter_config_parsed, "ec2NodeClass", {})
 
   ###########################################################################
   # Workload NodePool — build defaults, merge overrides, force protected fields
@@ -138,9 +138,9 @@ locals {
 
   # metadataOptions: override or params
   ec2_default_metadata = {
-    httpTokens                 = var.imds_http_tokens
-    httpPutResponseHopLimit    = var.imds_http_hop_limit
-    httpEndpoint               = "enabled"
+    httpTokens              = var.imds_http_tokens
+    httpPutResponseHopLimit = var.imds_http_hop_limit
+    httpEndpoint            = "enabled"
   }
   ec2_final_metadata = lookup(local.kc_ec2, "metadataOptions", local.ec2_default_metadata)
 
@@ -171,14 +171,14 @@ locals {
     spec = merge(
       {
         # Protected: Convox always controls these
-        role = var.karpenter_enabled ? aws_iam_role.karpenter_nodes[0].name : ""
-        subnetSelectorTerms         = [{ tags = { "karpenter.sh/discovery" = var.name } }]
-        securityGroupSelectorTerms  = [{ tags = { "karpenter.sh/discovery" = var.name } }]
+        role                       = var.karpenter_enabled ? aws_iam_role.karpenter_nodes[0].name : ""
+        subnetSelectorTerms        = [{ tags = { "karpenter.sh/discovery" = var.name } }]
+        securityGroupSelectorTerms = [{ tags = { "karpenter.sh/discovery" = var.name } }]
         # Configurable with defaults
-        amiSelectorTerms     = local.ec2_final_ami
-        blockDeviceMappings  = local.ec2_final_block_devices
-        metadataOptions      = local.ec2_final_metadata
-        tags                 = local.ec2_final_tags
+        amiSelectorTerms    = local.ec2_final_ami
+        blockDeviceMappings = local.ec2_final_block_devices
+        metadataOptions     = local.ec2_final_metadata
+        tags                = local.ec2_final_tags
       },
       local.ec2_optional_fields,
     )
@@ -190,21 +190,21 @@ locals {
 
   additional_karpenter_nodepools_with_defaults = {
     for idx, np in var.additional_karpenter_nodepools : lookup(np, "name", "custom-${idx}") => {
-      name                  = lookup(np, "name", "custom-${idx}")
-      instance_families     = lookup(np, "instance_families", "")
-      instance_sizes        = lookup(np, "instance_sizes", "")
-      capacity_types        = lookup(np, "capacity_types", "on-demand")
-      arch                  = lookup(np, "arch", "amd64")
-      cpu_limit             = tonumber(lookup(np, "cpu_limit", 100))
-      memory_limit_gb       = tonumber(lookup(np, "memory_limit_gb", 400))
-      consolidation_policy  = lookup(np, "consolidation_policy", "WhenEmptyOrUnderutilized")
-      consolidate_after     = lookup(np, "consolidate_after", "30s")
-      node_expiry           = lookup(np, "node_expiry", "720h")
+      name                    = lookup(np, "name", "custom-${idx}")
+      instance_families       = lookup(np, "instance_families", "")
+      instance_sizes          = lookup(np, "instance_sizes", "")
+      capacity_types          = lookup(np, "capacity_types", "on-demand")
+      arch                    = lookup(np, "arch", "amd64")
+      cpu_limit               = tonumber(lookup(np, "cpu_limit", 100))
+      memory_limit_gb         = tonumber(lookup(np, "memory_limit_gb", 400))
+      consolidation_policy    = lookup(np, "consolidation_policy", "WhenEmptyOrUnderutilized")
+      consolidate_after       = lookup(np, "consolidate_after", "30s")
+      node_expiry             = lookup(np, "node_expiry", "720h")
       disruption_budget_nodes = lookup(np, "disruption_budget_nodes", "10%")
-      disk                  = tonumber(lookup(np, "disk", 0))
-      volume_type           = lookup(np, "volume_type", "gp3")
-      weight                = lookup(np, "weight", null) != null ? tonumber(lookup(np, "weight", null)) : null
-      dedicated             = tobool(lookup(np, "dedicated", false))
+      disk                    = tonumber(lookup(np, "disk", 0))
+      volume_type             = lookup(np, "volume_type", "gp3")
+      weight                  = lookup(np, "weight", null) != null ? tonumber(lookup(np, "weight", null)) : null
+      dedicated               = tobool(lookup(np, "dedicated", false))
       labels = {
         for pair in compact(split(",", lookup(np, "labels", ""))) :
         trimspace(split("=", pair)[0]) => trimspace(split("=", pair)[1])
@@ -267,9 +267,9 @@ resource "kubectl_manifest" "karpenter_nodepool_build" {
     karpenter_build_capacity_types    = var.karpenter_build_capacity_types
     karpenter_build_instance_families = var.karpenter_build_instance_families
     karpenter_build_instance_sizes    = var.karpenter_build_instance_sizes
-    karpenter_build_cpu_limit           = var.karpenter_build_cpu_limit
-    karpenter_build_memory_limit_gb     = var.karpenter_build_memory_limit_gb
-    karpenter_build_consolidate_after   = var.karpenter_build_consolidate_after
+    karpenter_build_cpu_limit         = var.karpenter_build_cpu_limit
+    karpenter_build_memory_limit_gb   = var.karpenter_build_memory_limit_gb
+    karpenter_build_consolidate_after = var.karpenter_build_consolidate_after
     karpenter_build_arch              = var.build_arm_type ? "arm64" : "amd64"
     extra_labels                      = local.karpenter_build_extra_labels
   })
@@ -312,20 +312,20 @@ resource "kubectl_manifest" "karpenter_nodepool_additional" {
   for_each = var.karpenter_enabled ? local.additional_karpenter_nodepools_with_defaults : {}
 
   yaml_body = templatefile("${path.module}/templates/karpenter-nodepool-custom.yaml.tpl", {
-    name                  = each.value.name
-    instance_families     = each.value.instance_families
-    instance_sizes        = each.value.instance_sizes
-    capacity_types        = each.value.capacity_types
-    arch                  = each.value.arch
-    cpu_limit             = each.value.cpu_limit
-    memory_limit_gb       = each.value.memory_limit_gb
-    consolidation_policy  = each.value.consolidation_policy
-    consolidate_after     = each.value.consolidate_after
-    node_expiry           = each.value.node_expiry
+    name                    = each.value.name
+    instance_families       = each.value.instance_families
+    instance_sizes          = each.value.instance_sizes
+    capacity_types          = each.value.capacity_types
+    arch                    = each.value.arch
+    cpu_limit               = each.value.cpu_limit
+    memory_limit_gb         = each.value.memory_limit_gb
+    consolidation_policy    = each.value.consolidation_policy
+    consolidate_after       = each.value.consolidate_after
+    node_expiry             = each.value.node_expiry
     disruption_budget_nodes = each.value.disruption_budget_nodes
-    weight                = each.value.weight
-    labels                = each.value.labels
-    taints                = each.value.taints
+    weight                  = each.value.weight
+    labels                  = each.value.labels
+    taints                  = each.value.taints
   })
 
   wait       = true

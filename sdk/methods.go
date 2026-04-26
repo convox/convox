@@ -188,6 +188,113 @@ func (c *Client) AppUpdate(name string, opts structs.AppUpdateOptions) error {
 	return err
 }
 
+type appBudgetResponse struct {
+	Config *structs.AppBudget      `json:"config"`
+	State  *structs.AppBudgetState `json:"state"`
+}
+
+func (c *Client) AppBudgetGet(app string) (*structs.AppBudget, *structs.AppBudgetState, error) {
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+
+	var v appBudgetResponse
+	if err := c.Get(fmt.Sprintf("/apps/%s/budget", app), ro, &v); err != nil {
+		return nil, nil, err
+	}
+	return v.Config, v.State, nil
+}
+
+func (c *Client) AppBudgetSet(app string, opts structs.AppBudgetOptions, ackBy string) error {
+	ro, err := stdsdk.MarshalOptions(opts)
+	if err != nil {
+		return err
+	}
+	ro.Params["ack_by"] = ackBy
+	return c.Post(fmt.Sprintf("/apps/%s/budget", app), ro, nil)
+}
+
+func (c *Client) AppBudgetClear(app string, ackBy string) error {
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+	ro.Params["ack_by"] = ackBy
+	return c.Delete(fmt.Sprintf("/apps/%s/budget", app), ro, nil)
+}
+
+func (c *Client) AppBudgetReset(app string, ackBy string) error {
+	return c.AppBudgetResetWithOptions(app, ackBy, structs.AppBudgetResetOptions{})
+}
+
+// AppBudgetResetWithOptions extends AppBudgetReset with the
+// --force-clear-cooldown flag (Set G). Server-side CanAdmin gate.
+// Existing AppBudgetReset(app, ackBy) wraps this with default options
+// to preserve the SDK contract for older callers.
+func (c *Client) AppBudgetResetWithOptions(app string, ackBy string, opts structs.AppBudgetResetOptions) error {
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+	ro.Params["ack_by"] = ackBy
+	if opts.ForceClearCooldown {
+		ro.Params["force_clear_cooldown"] = "true"
+	}
+	return c.Post(fmt.Sprintf("/apps/%s/budget/reset", app), ro, nil)
+}
+
+// AppBudgetSimulate runs a dry-run shutdown simulation. The cluster is
+// not modified; the response describes what WOULD happen if a real
+// shutdown fired now. Per Set G v2 spec §17.
+func (c *Client) AppBudgetSimulate(app string) (*structs.AppBudgetSimulationResult, error) {
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+	var v *structs.AppBudgetSimulationResult
+	if err := c.Post(fmt.Sprintf("/apps/%s/budget/simulate-shutdown", app), ro, &v); err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+// AppBudgetShutdownStateGet returns the shutdown-state annotation for
+// an app. Used by `convox budget show` to render the
+// ARMED/ACTIVE/RECOVERED/FAILED banner per Set G v2 spec §16.3. Returns
+// (nil, nil) when no annotation is present (no shutdown is armed/active).
+func (c *Client) AppBudgetShutdownStateGet(app string) (*structs.AppBudgetShutdownState, error) {
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+	var v *structs.AppBudgetShutdownState
+	if err := c.Get(fmt.Sprintf("/apps/%s/budget/shutdown-state", app), ro, &v); err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+// AppBudgetDismissRecovery dismisses the sticky recovery banner shown
+// post-restore by `convox budget show`. Idempotent. Per Set G v2 spec
+// §10.9. Wraps AppBudgetDismissRecoveryWithResult and discards the
+// status to preserve the legacy SDK contract (Set G impl v1).
+func (c *Client) AppBudgetDismissRecovery(app string, ackBy string) error {
+	_, err := c.AppBudgetDismissRecoveryWithResult(app, ackBy)
+	return err
+}
+
+// AppBudgetDismissRecoveryWithResult is the 3-case dismiss-recovery
+// path per Set G v2 spec advisory #3. Returns one of:
+//
+//   - "dismissed"        : a banner was active; now dismissed
+//   - "already-dismissed": banner exists but was previously dismissed
+//   - "no-banner"        : no recovery banner is active for this app
+func (c *Client) AppBudgetDismissRecoveryWithResult(app string, ackBy string) (*structs.AppBudgetDismissRecoveryResult, error) {
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+	ro.Params["ack_by"] = ackBy
+	var v *structs.AppBudgetDismissRecoveryResult
+	if err := c.Post(fmt.Sprintf("/apps/%s/budget/dismiss-recovery", app), ro, &v); err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+func (c *Client) AppCost(app string) (*structs.AppCost, error) {
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+
+	var v *structs.AppCost
+	if err := c.Get(fmt.Sprintf("/apps/%s/cost", app), ro, &v); err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
 func (c *Client) BalancerList(app string) (structs.Balancers, error) {
 	var err error
 
@@ -260,6 +367,17 @@ func (c *Client) BuildImport(app string, r io.Reader) (*structs.Build, error) {
 	err = c.Post(fmt.Sprintf("/apps/%s/builds/import", app), ro, &v)
 
 	return v, err
+}
+
+func (c *Client) BuildImportImage(app, id, image string, opts structs.BuildImportImageOptions) error {
+	ro, err := stdsdk.MarshalOptions(opts)
+	if err != nil {
+		return err
+	}
+
+	ro.Params["image"] = image
+
+	return c.Post(fmt.Sprintf("/apps/%s/builds/%s/image", app, id), ro, nil)
 }
 
 func (c *Client) BuildList(app string, opts structs.BuildListOptions) (structs.Builds, error) {

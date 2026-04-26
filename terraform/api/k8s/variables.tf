@@ -69,6 +69,11 @@ variable "image" {
   type = string
 }
 
+variable "cost_tracking_enable" {
+  type    = bool
+  default = false
+}
+
 variable "karpenter_enabled" {
   type    = bool
   default = false
@@ -81,6 +86,11 @@ variable "labels" {
 variable "metrics_scraper_host" {
   default = ""
   type    = string
+}
+
+variable "prometheus_url" {
+  type    = string
+  default = ""
 }
 
 variable "namespace" {
@@ -118,4 +128,9 @@ variable "volumes" {
 variable "rack_name" {
   default = ""
   type    = string
+}
+
+variable "webhook_signing_key" {
+  type    = string
+  default = ""
 }

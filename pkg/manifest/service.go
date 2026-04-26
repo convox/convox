@@ -11,6 +11,7 @@ import (
 	"github.com/convox/convox/pkg/options"
 	kedav1alpha1 "github.com/kedacore/keda/v2/apis/keda/v1alpha1"
 	autoscaling "k8s.io/api/autoscaling/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,48 +27,82 @@ const (
 type Service struct {
 	Name string `yaml:"-"`
 
-	Agent              ServiceAgent           `yaml:"agent,omitempty"`
-	Annotations        Annotations            `yaml:"annotations,omitempty"`
-	Build              ServiceBuild           `yaml:"build,omitempty"`
-	Certificate        Certificate            `yaml:"certificate,omitempty"`
-	Command            string                 `yaml:"command,omitempty"`
-	ConfigMounts       ConfigMounts           `yaml:"configMounts,omitempty"`
-	Deployment         ServiceDeployment      `yaml:"deployment,omitempty"`
-	DnsConfig          ServiceDnsConfig       `yaml:"dnsConfig,omitempty"`
-	Domains            ServiceDomains         `yaml:"domain,omitempty"`
-	Drain              int                    `yaml:"drain,omitempty"`
-	DisableHostUsers   bool                   `yaml:"disableHostUsers,omitempty"`
-	Environment        Environment            `yaml:"environment,omitempty"`
-	GrpcHealthEnabled  bool                   `yaml:"grpcHealthEnabled,omitempty"`
-	Health             ServiceHealth          `yaml:"health,omitempty"`
-	Liveness           ServiceLiveness        `yaml:"liveness,omitempty"`
-	StartupProbe       ServiceStartupProbe    `yaml:"startupProbe,omitempty"`
-	Image              string                 `yaml:"image,omitempty"`
-	Init               bool                   `yaml:"init,omitempty"`
-	InitContainer      *InitContainer         `yaml:"initContainer,omitempty"`
-	Internal           bool                   `yaml:"internal,omitempty"`
-	InternalRouter     bool                   `yaml:"internalRouter,omitempty"`
-	IngressAnnotations Annotations            `yaml:"ingressAnnotations,omitempty"`
-	Labels             Labels                 `yaml:"labels,omitempty"`
-	NodeAffinityLabels Affinities             `yaml:"nodeAffinityLabels,omitempty"`
-	NodeSelectorLabels Labels                 `yaml:"nodeSelectorLabels,omitempty"`
-	Lifecycle          ServiceLifecycle       `yaml:"lifecycle,omitempty"`
-	Port               ServicePortScheme      `yaml:"port,omitempty"`
-	Ports              []ServicePortProtocol  `yaml:"ports,omitempty"`
-	Privileged         bool                   `yaml:"privileged,omitempty"`
-	Resources          []string               `yaml:"resources,omitempty"`
-	SecurityContext    ServiceSecurityContext `yaml:"securityContext,omitempty"`
-	Scale              ServiceScale           `yaml:"scale,omitempty"`
-	Singleton          bool                   `yaml:"singleton,omitempty"`
-	Sticky             bool                   `yaml:"sticky,omitempty"`
-	Termination        ServiceTermination     `yaml:"termination,omitempty"`
-	Test               string                 `yaml:"test,omitempty"`
-	Timeout            int                    `yaml:"timeout,omitempty"`
-	Tls                ServiceTls             `yaml:"tls,omitempty"`
-	Volumes            []string               `yaml:"volumes,omitempty"`
-	VolumeOptions      []VolumeOption         `yaml:"volumeOptions,omitempty"`
-	Whitelist          string                 `yaml:"whitelist,omitempty"`
-	AccessControl      AccessControlOptions   `yaml:"accessControl,omitempty"`
+	Agent              ServiceAgent             `yaml:"agent,omitempty"`
+	Annotations        Annotations              `yaml:"annotations,omitempty"`
+	Build              ServiceBuild             `yaml:"build,omitempty"`
+	Certificate        Certificate              `yaml:"certificate,omitempty"`
+	Command            string                   `yaml:"command,omitempty"`
+	ConfigMounts       ConfigMounts             `yaml:"configMounts,omitempty"`
+	Deployment         ServiceDeployment        `yaml:"deployment,omitempty"`
+	DnsConfig          ServiceDnsConfig         `yaml:"dnsConfig,omitempty"`
+	Domains            ServiceDomains           `yaml:"domain,omitempty"`
+	Drain              int                      `yaml:"drain,omitempty"`
+	DisableHostUsers   bool                     `yaml:"disableHostUsers,omitempty"`
+	Environment        Environment              `yaml:"environment,omitempty"`
+	GrpcHealthEnabled  bool                     `yaml:"grpcHealthEnabled,omitempty"`
+	Health             ServiceHealth            `yaml:"health,omitempty"`
+	Liveness           ServiceLiveness          `yaml:"liveness,omitempty"`
+	StartupProbe       ServiceStartupProbe      `yaml:"startupProbe,omitempty"`
+	Image              string                   `yaml:"image,omitempty"`
+	ImagePullSecrets   []ServiceImagePullSecret `yaml:"imagePullSecrets,omitempty" json:"imagePullSecrets,omitempty"`
+	Init               bool                     `yaml:"init,omitempty"`
+	InitContainer      *InitContainer           `yaml:"initContainer,omitempty"`
+	Internal           bool                     `yaml:"internal,omitempty"`
+	InternalRouter     bool                     `yaml:"internalRouter,omitempty"`
+	IngressAnnotations Annotations              `yaml:"ingressAnnotations,omitempty"`
+	Labels             Labels                   `yaml:"labels,omitempty"`
+	NodeAffinityLabels Affinities               `yaml:"nodeAffinityLabels,omitempty"`
+	NodeSelectorLabels Labels                   `yaml:"nodeSelectorLabels,omitempty"`
+	Lifecycle          ServiceLifecycle         `yaml:"lifecycle,omitempty"`
+	Port               ServicePortScheme        `yaml:"port,omitempty"`
+	Ports              []ServicePortProtocol    `yaml:"ports,omitempty"`
+	Privileged         bool                     `yaml:"privileged,omitempty"`
+	Resources          []string                 `yaml:"resources,omitempty"`
+	SecurityContext    ServiceSecurityContext   `yaml:"securityContext,omitempty"`
+	Scale              ServiceScale             `yaml:"scale,omitempty"`
+	Singleton          bool                     `yaml:"singleton,omitempty"`
+	Sticky             bool                     `yaml:"sticky,omitempty"`
+	Termination        ServiceTermination       `yaml:"termination,omitempty"`
+	Test               string                   `yaml:"test,omitempty"`
+	Timeout            int                      `yaml:"timeout,omitempty"`
+	Tls                ServiceTls               `yaml:"tls,omitempty"`
+	Volumes            []string                 `yaml:"volumes,omitempty"`
+	VolumeOptions      []VolumeOption           `yaml:"volumeOptions,omitempty"`
+	Whitelist          string                   `yaml:"whitelist,omitempty"`
+	AccessControl      AccessControlOptions     `yaml:"accessControl,omitempty"`
+}
+
+// ServiceImagePullSecret declares a private-registry credential for pulling a
+// service's container image. Password is the literal credential (quick-test
+// path). PasswordEnv references an app env var holding the credential and is
+// the recommended form. Exactly one must be set.
+//
+// Password is intentionally excluded from JSON marshaling (`json:"-"`) so that
+// it cannot leak through any API boundary that encodes Service as JSON. The
+// yaml tag keeps Password parseable so users can write `password: literal`
+// in convox.yml, but a custom MarshalYAML method strips it on the way back
+// out — any code path that yaml.Marshals a Service (tests, future tooling,
+// debug dumps) will NOT emit the literal credential.
+type ServiceImagePullSecret struct {
+	Registry    string `yaml:"registry" json:"registry"`
+	Username    string `yaml:"username" json:"username"`
+	Password    string `yaml:"password,omitempty" json:"-"`
+	PasswordEnv string `yaml:"passwordEnv,omitempty" json:"passwordEnv,omitempty"`
+}
+
+// MarshalYAML strips the literal Password from any yaml.Marshal output.
+// Parsing (default UnmarshalYAML) is unaffected — the yaml tag still binds
+// the field for reads. This is purely an egress guard.
+func (s ServiceImagePullSecret) MarshalYAML() (interface{}, error) {
+	return struct {
+		Registry    string `yaml:"registry"`
+		Username    string `yaml:"username"`
+		PasswordEnv string `yaml:"passwordEnv,omitempty"`
+	}{
+		Registry:    s.Registry,
+		Username:    s.Username,
+		PasswordEnv: s.PasswordEnv,
+	}, nil
 }
 
 type Affinities []Affinity
@@ -294,15 +329,49 @@ type ServicePortScheme struct {
 }
 
 type ServiceScale struct {
-	Count   ServiceScaleCount
-	Cpu     int
-	Gpu     ServiceScaleGpu `yaml:"gpu,omitempty"`
-	Memory  int
-	Limit   ServiceResourceLimit `yaml:"limit,omitempty"`
-	Targets ServiceScaleTargets  `yaml:"targets,omitempty"`
-	Keda    *ServiceScaleKeda    `yaml:"keda,omitempty"`
-	VPA     *VPA                 `yaml:"vpa,omitempty"`
+	Count     ServiceScaleCount
+	Cpu       int
+	Gpu       ServiceScaleGpu `yaml:"gpu,omitempty"`
+	Memory    int
+	Limit     ServiceResourceLimit `yaml:"limit,omitempty"`
+	Targets   ServiceScaleTargets  `yaml:"targets,omitempty"`
+	Keda      *ServiceScaleKeda    `yaml:"keda,omitempty"`
+	VPA       *VPA                 `yaml:"vpa,omitempty"`
+	Min       *int                 `yaml:"min,omitempty"       json:"min,omitempty"`
+	Max       *int                 `yaml:"max,omitempty"       json:"max,omitempty"`
+	Autoscale *ServiceAutoscale    `yaml:"autoscale,omitempty" json:"autoscale,omitempty"`
 }
+
+type ServiceAutoscale struct {
+	Cpu             *AutoscaleMode               `yaml:"cpu,omitempty"             json:"cpu,omitempty"`
+	Memory          *AutoscaleMode               `yaml:"memory,omitempty"          json:"memory,omitempty"`
+	GpuUtilization  *AutoscaleMode               `yaml:"gpuUtilization,omitempty"  json:"gpuUtilization,omitempty"`
+	QueueDepth      *AutoscaleMode               `yaml:"queueDepth,omitempty"      json:"queueDepth,omitempty"`
+	Custom          []kedav1alpha1.ScaleTriggers `yaml:"custom,omitempty"          json:"custom,omitempty"`
+	CooldownPeriod  *int32                       `yaml:"cooldownPeriod,omitempty"  json:"cooldownPeriod,omitempty"`
+	PollingInterval *int32                       `yaml:"pollingInterval,omitempty" json:"pollingInterval,omitempty"`
+}
+
+// AutoscaleMode is the unified shape for an autoscale trigger configuration.
+// Mode is a discriminator naming the trigger family — `threshold` for
+// utilization-based triggers (cpu/memory/gpuUtilization) and `queue` for
+// queue-depth triggers. Customers do not write `mode:` in their YAML; the
+// value is populated post-load from the parent slot name and emitted only
+// when explicitly set (omitempty keeps the customer wire format clean).
+type AutoscaleMode struct {
+	Mode          string  `yaml:"mode,omitempty"          json:"mode,omitempty"`
+	Threshold     float64 `yaml:"threshold"               json:"threshold"`
+	MetricName    string  `yaml:"metricName,omitempty"    json:"metricName,omitempty"`
+	PrometheusUrl string  `yaml:"prometheusUrl,omitempty" json:"prometheusUrl,omitempty"`
+	Query         string  `yaml:"query,omitempty"         json:"query,omitempty"`
+}
+
+// AutoscaleMode discriminator values. Pinned to single-word lowercase strings
+// to dodge YAML/JSON dual-tag drift on the value itself.
+const (
+	AutoscaleModeThreshold = "threshold"
+	AutoscaleModeQueue     = "queue"
+)
 
 func (ss ServiceScale) IsKedaEnabled() bool {
 	return ss.Keda != nil && len(ss.Keda.Triggers) > 0
@@ -312,19 +381,164 @@ func (ss ServiceScale) IsVpaEnabled() bool {
 	return ss.VPA != nil
 }
 
+// applyModeDiscriminator populates the Mode field of each populated
+// AutoscaleMode slot from its parent field name. Called from ApplyDefaults
+// so that customer YAML (which does not write `mode:`) round-trips through
+// to in-memory triggers with the discriminator set. Mode values are pinned
+// per V3 §0a Convention R2 F-NEW-2 to single-word lowercase strings.
+func (a *ServiceAutoscale) applyModeDiscriminator() {
+	if a == nil {
+		return
+	}
+	if a.Cpu != nil && a.Cpu.Mode == "" {
+		a.Cpu.Mode = AutoscaleModeThreshold
+	}
+	if a.Memory != nil && a.Memory.Mode == "" {
+		a.Memory.Mode = AutoscaleModeThreshold
+	}
+	if a.GpuUtilization != nil && a.GpuUtilization.Mode == "" {
+		a.GpuUtilization.Mode = AutoscaleModeThreshold
+	}
+	if a.QueueDepth != nil && a.QueueDepth.Mode == "" {
+		a.QueueDepth.Mode = AutoscaleModeQueue
+	}
+}
+
+func (a *ServiceAutoscale) IsEnabled() bool {
+	if a == nil {
+		return false
+	}
+	return a.Cpu != nil || a.Memory != nil || a.GpuUtilization != nil ||
+		a.QueueDepth != nil || len(a.Custom) > 0
+}
+
+func (a *ServiceAutoscale) NeedsPrometheus() bool {
+	if a == nil {
+		return false
+	}
+	if a.GpuUtilization != nil && a.GpuUtilization.PrometheusUrl == "" {
+		return true
+	}
+	if a.QueueDepth != nil && a.QueueDepth.PrometheusUrl == "" {
+		return true
+	}
+	return false
+}
+
+func (a *ServiceAutoscale) BuildTriggers(app, service, defaultPromURL string) []kedav1alpha1.ScaleTriggers {
+	if a == nil {
+		return nil
+	}
+
+	var triggers []kedav1alpha1.ScaleTriggers
+
+	if a.Cpu != nil {
+		triggers = append(triggers, kedav1alpha1.ScaleTriggers{
+			Type:       "cpu",
+			Name:       "convox-cpu",
+			MetricType: autoscalingv2.UtilizationMetricType,
+			Metadata: map[string]string{
+				"value": fmt.Sprintf("%g", a.Cpu.Threshold),
+			},
+		})
+	}
+
+	if a.Memory != nil {
+		triggers = append(triggers, kedav1alpha1.ScaleTriggers{
+			Type:       "memory",
+			Name:       "convox-memory",
+			MetricType: autoscalingv2.UtilizationMetricType,
+			Metadata: map[string]string{
+				"value": fmt.Sprintf("%g", a.Memory.Threshold),
+			},
+		})
+	}
+
+	if a.GpuUtilization != nil {
+		metric := a.GpuUtilization.MetricName
+		if metric == "" {
+			metric = "DCGM_FI_DEV_GPU_UTIL"
+		}
+		query := a.GpuUtilization.Query
+		if query == "" {
+			query = fmt.Sprintf("max(%s{app=%q,service=%q})", metric, app, service)
+		}
+		promURL := a.GpuUtilization.PrometheusUrl
+		if promURL == "" {
+			promURL = defaultPromURL
+		}
+		activation := a.GpuUtilization.Threshold / 2
+		if activation < 1 {
+			activation = 1
+		}
+		triggers = append(triggers, kedav1alpha1.ScaleTriggers{
+			Type: "prometheus",
+			Name: "convox-gpu-utilization",
+			Metadata: map[string]string{
+				"serverAddress":       promURL,
+				"metricName":          metric,
+				"threshold":           fmt.Sprintf("%g", a.GpuUtilization.Threshold),
+				"activationThreshold": fmt.Sprintf("%g", activation),
+				"query":               query,
+			},
+		})
+	}
+
+	if a.QueueDepth != nil {
+		metric := a.QueueDepth.MetricName
+		if metric == "" {
+			metric = "vllm:num_requests_waiting"
+		}
+		query := a.QueueDepth.Query
+		if query == "" {
+			query = fmt.Sprintf("max(%s{app=%q,service=%q})", metric, app, service)
+		}
+		promURL := a.QueueDepth.PrometheusUrl
+		if promURL == "" {
+			promURL = defaultPromURL
+		}
+		activation := a.QueueDepth.Threshold / 2
+		if activation < 1 {
+			activation = 1
+		}
+		triggers = append(triggers, kedav1alpha1.ScaleTriggers{
+			Type: "prometheus",
+			Name: "convox-queue-depth",
+			Metadata: map[string]string{
+				"serverAddress":       promURL,
+				"metricName":          metric,
+				"threshold":           fmt.Sprintf("%g", a.QueueDepth.Threshold),
+				"activationThreshold": fmt.Sprintf("%g", activation),
+				"query":               query,
+			},
+		})
+	}
+
+	if len(a.Custom) > 0 {
+		triggers = append(triggers, a.Custom...)
+	}
+
+	return triggers
+}
+
 type KedaScaledObjectParameters struct {
 	MinCount    int32
 	MaxCount    int32
 	ServiceName string
 	Namespace   string
+	Triggers    []kedav1alpha1.ScaleTriggers
 }
 
 func (ss Service) KedaScaledObject(params KedaScaledObjectParameters) *kedav1alpha1.ScaledObject {
-	so := kedav1alpha1.ScaledObject{}
-	if ss.Scale.Keda == nil {
-		return &so
+	triggers := params.Triggers
+	if len(triggers) == 0 && ss.Scale.Keda != nil {
+		triggers = ss.Scale.Keda.Triggers
+	}
+	if len(triggers) == 0 {
+		return nil
 	}
 
+	so := kedav1alpha1.ScaledObject{}
 	so.TypeMeta.Kind = "ScaledObject"
 	so.TypeMeta.APIVersion = "keda.sh/v1alpha1"
 	so.ObjectMeta.Name = params.ServiceName
@@ -334,18 +548,30 @@ func (ss Service) KedaScaledObject(params KedaScaledObjectParameters) *kedav1alp
 		Name: params.ServiceName,
 		Kind: "Deployment",
 	}
-	so.Spec.Triggers = ss.Scale.Keda.Triggers
+	so.Spec.Triggers = triggers
 	so.Spec.MinReplicaCount = &params.MinCount
 	so.Spec.MaxReplicaCount = &params.MaxCount
-	so.Spec.CooldownPeriod = ss.Scale.Keda.CooldownPeriod
-	so.Spec.PollingInterval = ss.Scale.Keda.PollingInterval
-	so.Spec.Advanced = ss.Scale.Keda.Advanced
-	so.Spec.Fallback = ss.Scale.Keda.Fallback
-	so.Spec.IdleReplicaCount = ss.Scale.Keda.IdleReplicaCount
 
-	for i := range so.Spec.Triggers {
-		if so.Spec.Triggers[i].AuthenticationRef == nil {
-			auth := ss.DefaultTriggerAuthentionIfAws(params.Namespace)
+	if ss.Scale.Keda != nil {
+		so.Spec.CooldownPeriod = ss.Scale.Keda.CooldownPeriod
+		so.Spec.PollingInterval = ss.Scale.Keda.PollingInterval
+		so.Spec.Advanced = ss.Scale.Keda.Advanced
+		so.Spec.Fallback = ss.Scale.Keda.Fallback
+		so.Spec.IdleReplicaCount = ss.Scale.Keda.IdleReplicaCount
+	} else if ss.Scale.Autoscale != nil {
+		so.Spec.CooldownPeriod = ss.Scale.Autoscale.CooldownPeriod
+		so.Spec.PollingInterval = ss.Scale.Autoscale.PollingInterval
+	}
+
+	auth := ss.DefaultTriggerAuthentionIfAws(params.Namespace)
+	if auth != nil {
+		for i := range so.Spec.Triggers {
+			if so.Spec.Triggers[i].AuthenticationRef != nil {
+				continue
+			}
+			if !strings.HasPrefix(so.Spec.Triggers[i].Type, "aws-") {
+				continue
+			}
 			so.Spec.Triggers[i].AuthenticationRef = &kedav1alpha1.AuthenticationRef{
 				Name: auth.ObjectMeta.Name,
 				Kind: auth.TypeMeta.Kind,
@@ -852,6 +1078,76 @@ type AccessControlOptions struct {
 	AWSPodIdentity *AWSPodIdentityOptions `yaml:"awsPodIdentity,omitempty"`
 }
 
+// registryHostValidator matches a lowercase DNS hostname with optional port.
+// Rejects uppercase letters, schemes, and paths.
+var registryHostValidator = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*(:[0-9]+)?$`)
+
+func (s ServiceImagePullSecret) Validate() error {
+	if strings.TrimSpace(s.Registry) == "" {
+		return fmt.Errorf("registry is required")
+	}
+
+	if strings.Contains(s.Registry, "://") {
+		return fmt.Errorf("registry %q must not include a scheme (drop http:// or https://)", s.Registry)
+	}
+
+	if strings.Contains(s.Registry, "/") {
+		return fmt.Errorf("registry %q must not include a path (use the host only)", s.Registry)
+	}
+
+	if s.Registry != strings.ToLower(s.Registry) {
+		return fmt.Errorf("registry %q must be lowercase", s.Registry)
+	}
+
+	if !registryHostValidator.MatchString(s.Registry) {
+		return fmt.Errorf("registry %q is not a valid registry hostname", s.Registry)
+	}
+
+	if strings.TrimSpace(s.Username) == "" {
+		return fmt.Errorf("username is required")
+	}
+
+	hasPassword := s.Password != ""
+	hasPasswordEnv := s.PasswordEnv != ""
+
+	if hasPassword && hasPasswordEnv {
+		return fmt.Errorf("use passwordEnv to reference an env var, OR password for a literal value, not both")
+	}
+
+	if !hasPassword && !hasPasswordEnv {
+		return fmt.Errorf("password or passwordEnv is required")
+	}
+
+	return nil
+}
+
 type AWSPodIdentityOptions struct {
 	PolicyArns []string `yaml:"policyArns"`
+}
+
+// BudgetSettings is the manifest-tier budget block. The 5 Set G
+// auto-shutdown fields ride alongside the existing 3.24.5 fields
+// (monthlyCapUsd, alertThresholdPercent, atCapAction,
+// pricingAdjustment, atCapWebhookUrl). All fields are camelCase per
+// convention F-NEW-1; defaults applied at parse time when non-zero
+// behavior is desired.
+//
+// A customer who never sets any of these fields sees zero behavior
+// change (BudgetSettings is the YAML manifest tier; rack-side
+// AppBudget is the runtime state derived from it).
+type BudgetSettings struct {
+	MonthlyCapUsd         float64 `yaml:"monthlyCapUsd,omitempty"`
+	AlertThresholdPercent float64 `yaml:"alertThresholdPercent,omitempty"`
+	AtCapAction           string  `yaml:"atCapAction,omitempty"`
+	AtCapWebhookUrl       string  `yaml:"atCapWebhookUrl,omitempty"`
+	PricingAdjustment     float64 `yaml:"pricingAdjustment,omitempty"`
+
+	// Set G (auto-shutdown) fields — ignored when AtCapAction is not
+	// "auto-shutdown"; manifest validation enforces the cross-field
+	// rules at parse time (per spec §3.1).
+	NeverAutoShutdown   []string `yaml:"neverAutoShutdown,omitempty"`
+	ShutdownOrder       string   `yaml:"shutdownOrder,omitempty"`
+	NotifyBeforeMinutes int      `yaml:"notifyBeforeMinutes,omitempty"`
+	ShutdownGracePeriod string   `yaml:"shutdownGracePeriod,omitempty"`
+	RecoveryMode        string   `yaml:"recoveryMode,omitempty"`
 }

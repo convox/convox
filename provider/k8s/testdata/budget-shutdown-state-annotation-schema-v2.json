@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 2,
+  "shutdownAt": "2026-04-25T14:30:00Z",
+  "armedAt": "2026-04-25T14:00:00Z",
+  "restoredAt": null,
+  "expiredAt": null,
+  "recoveryMode": "auto-on-reset",
+  "shutdownOrder": "largest-cost",
+  "shutdownTickId": "tick-2026-04-25T14:30:00Z-uuid4",
+  "manifestSha256": "abc123",
+  "eligibleServiceCount": 1,
+  "services": [
+    {
+      "name": "ml-batch",
+      "originalScale": {"count": 0, "min": 1, "max": 5, "replicas": 3},
+      "originalGracePeriodSeconds": 60,
+      "kedaScaledObject": null,
+      "shutdownSequenceIndex": 0,
+      "shutdownAt": "2026-04-25T14:30:00Z"
+    }
+  ],
+  "predictiveModelMetadata": {"hypothetical-v2-field": "observational-only"}
+}

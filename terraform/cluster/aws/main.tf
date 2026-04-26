@@ -119,7 +119,7 @@ resource "random_id" "node_group" {
   byte_length = 8
 
   keepers = {
-    dummy               = "3"
+    dummy = "3"
     # E1 FIX: Use effective capacity type, not raw variable.
     # Without this, SPOT/MIXED racks fail on karpenter toggle because
     # capacity_type is ForceNew but the node group name doesn't change.
@@ -190,17 +190,17 @@ resource "aws_eks_node_group" "cluster" {
   scaling_config {
     desired_size = var.karpenter_enabled ? (
       count.index <= 2 ? 1 : 0
-    ) : (
+      ) : (
       var.node_capacity_type == "MIXED" ? count.index == 0 ? var.min_on_demand_count : 1 : 1
     )
     min_size = var.karpenter_enabled ? (
       count.index <= 2 ? 1 : 0
-    ) : (
+      ) : (
       var.node_capacity_type == "MIXED" ? count.index == 0 ? var.min_on_demand_count : 1 : 1
     )
     max_size = var.karpenter_enabled ? (
       count.index <= 2 ? 10 : 0
-    ) : (
+      ) : (
       var.node_capacity_type == "MIXED" ? count.index == 0 ? var.max_on_demand_count : 100 : 100
     )
   }
