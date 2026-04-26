@@ -28,6 +28,11 @@ type Provider interface {
 	AppBudgetSet(app string, opts AppBudgetOptions, ackBy string) error
 	AppBudgetClear(app string, ackBy string) error
 	AppBudgetReset(app string, ackBy string) error
+	AppBudgetResetWithOptions(app string, ackBy string, opts AppBudgetResetOptions) error
+	AppBudgetShutdownStateGet(app string) (*AppBudgetShutdownState, error)
+	AppBudgetSimulate(app string) (*AppBudgetSimulationResult, error)
+	AppBudgetDismissRecovery(app string, ackBy string) error
+	AppBudgetDismissRecoveryWithResult(app string, ackBy string) (*AppBudgetDismissRecoveryResult, error)
 	AppCost(app string) (*AppCost, error)
 
 	BalancerList(app string) (Balancers, error)

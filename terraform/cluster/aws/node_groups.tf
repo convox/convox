@@ -76,7 +76,7 @@ locals {
   additional_node_ami_type = {
     for key, inst in data.aws_ec2_instance_type.additional_node_type : key => (
       (substr(inst.instance_type, 0, 1) == "g" || substr(inst.instance_type, 0, 1) == "p" ||
-        substr(inst.instance_type, 0, 3) == "inf" || substr(inst.instance_type, 0, 3) == "trn")
+      substr(inst.instance_type, 0, 3) == "inf" || substr(inst.instance_type, 0, 3) == "trn")
       ? "AL2023_x86_64_NVIDIA"
       : contains(inst.supported_architectures, "arm64") ? "AL2023_ARM_64_STANDARD" : "AL2023_x86_64_STANDARD"
     )
@@ -229,7 +229,7 @@ locals {
   build_node_ami_type = {
     for key, inst in data.aws_ec2_instance_type.build_node_type : key => (
       (substr(inst.instance_type, 0, 1) == "g" || substr(inst.instance_type, 0, 1) == "p" ||
-        substr(inst.instance_type, 0, 3) == "inf" || substr(inst.instance_type, 0, 3) == "trn")
+      substr(inst.instance_type, 0, 3) == "inf" || substr(inst.instance_type, 0, 3) == "trn")
       ? "AL2023_x86_64_NVIDIA"
       : contains(inst.supported_architectures, "arm64") ? "AL2023_ARM_64_STANDARD" : "AL2023_x86_64_STANDARD"
     )

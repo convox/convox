@@ -16,6 +16,7 @@ import (
 func TestScale(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("ServiceList", "app1").Return(structs.Services{*fxService(), *fxService()}, nil)
+		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 		i.On("ProcessList", "app1", structs.ProcessListOptions{}).Return(structs.Processes{*fxProcess(), *fxProcess()}, nil)
 
 		res, err := testExecute(e, "scale -a app1", nil)
@@ -51,6 +52,7 @@ func TestScaleShowsAutoscaleAndCold(t *testing.T) {
 		warm.Count = 2
 
 		i.On("ServiceList", "app1").Return(structs.Services{svc, warm}, nil)
+		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 		i.On("ProcessList", "app1", structs.ProcessListOptions{}).Return(structs.Processes{}, nil)
 
 		res, err := testExecute(e, "scale -a app1", nil)
@@ -135,6 +137,7 @@ func TestScaleMinZeroDeadPodsFastFail(t *testing.T) {
 		svc := *fxService()
 		svc.Name = "web"
 		i.On("ServiceList", "app1").Return(structs.Services{svc}, nil)
+		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
 		res, err := testExecute(e, "scale web --min 0 --max 5 -a app1", nil)
 		require.NoError(t, err)
@@ -164,6 +167,7 @@ func TestScaleMinGreaterThanMax(t *testing.T) {
 func TestScaleMinZeroServiceNotFound(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("ServiceList", "app1").Return(structs.Services{*fxService()}, nil)
+		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
 		res, err := testExecute(e, "scale missing --min 0 -a app1", nil)
 		require.NoError(t, err)
@@ -179,6 +183,7 @@ func TestScaleMinZeroWithAutoscale(t *testing.T) {
 		svc.Name = "web"
 		svc.Autoscale = &structs.ServiceAutoscaleState{Enabled: true, GpuThreshold: &gpu}
 		i.On("ServiceList", "app1").Return(structs.Services{svc}, nil)
+		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
 		opts := structs.ServiceUpdateOptions{Min: options.Int(0), Max: options.Int(10)}
 		i.On("ServiceUpdate", "app1", "web", opts).Return(nil)
@@ -203,6 +208,7 @@ func TestScaleDaemonsetRow(t *testing.T) {
 		agent.Count = 2
 
 		i.On("ServiceList", "app1").Return(structs.Services{agent}, nil)
+		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 		i.On("ProcessList", "app1", structs.ProcessListOptions{}).Return(structs.Processes{}, nil)
 
 		res, err := testExecute(e, "scale -a app1", nil)

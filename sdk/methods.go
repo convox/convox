@@ -219,9 +219,70 @@ func (c *Client) AppBudgetClear(app string, ackBy string) error {
 }
 
 func (c *Client) AppBudgetReset(app string, ackBy string) error {
+	return c.AppBudgetResetWithOptions(app, ackBy, structs.AppBudgetResetOptions{})
+}
+
+// AppBudgetResetWithOptions extends AppBudgetReset with the
+// --force-clear-cooldown flag (Set G). Server-side CanAdmin gate.
+// Existing AppBudgetReset(app, ackBy) wraps this with default options
+// to preserve the SDK contract for older callers.
+func (c *Client) AppBudgetResetWithOptions(app string, ackBy string, opts structs.AppBudgetResetOptions) error {
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
 	ro.Params["ack_by"] = ackBy
+	if opts.ForceClearCooldown {
+		ro.Params["force_clear_cooldown"] = "true"
+	}
 	return c.Post(fmt.Sprintf("/apps/%s/budget/reset", app), ro, nil)
+}
+
+// AppBudgetSimulate runs a dry-run shutdown simulation. The cluster is
+// not modified; the response describes what WOULD happen if a real
+// shutdown fired now. Per Set G v2 spec §17.
+func (c *Client) AppBudgetSimulate(app string) (*structs.AppBudgetSimulationResult, error) {
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+	var v *structs.AppBudgetSimulationResult
+	if err := c.Post(fmt.Sprintf("/apps/%s/budget/simulate-shutdown", app), ro, &v); err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+// AppBudgetShutdownStateGet returns the shutdown-state annotation for
+// an app. Used by `convox budget show` to render the
+// ARMED/ACTIVE/RECOVERED/FAILED banner per Set G v2 spec §16.3. Returns
+// (nil, nil) when no annotation is present (no shutdown is armed/active).
+func (c *Client) AppBudgetShutdownStateGet(app string) (*structs.AppBudgetShutdownState, error) {
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+	var v *structs.AppBudgetShutdownState
+	if err := c.Get(fmt.Sprintf("/apps/%s/budget/shutdown-state", app), ro, &v); err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+// AppBudgetDismissRecovery dismisses the sticky recovery banner shown
+// post-restore by `convox budget show`. Idempotent. Per Set G v2 spec
+// §10.9. Wraps AppBudgetDismissRecoveryWithResult and discards the
+// status to preserve the legacy SDK contract (Set G impl v1).
+func (c *Client) AppBudgetDismissRecovery(app string, ackBy string) error {
+	_, err := c.AppBudgetDismissRecoveryWithResult(app, ackBy)
+	return err
+}
+
+// AppBudgetDismissRecoveryWithResult is the 3-case dismiss-recovery
+// path per Set G v2 spec advisory #3. Returns one of:
+//
+//   - "dismissed"        : a banner was active; now dismissed
+//   - "already-dismissed": banner exists but was previously dismissed
+//   - "no-banner"        : no recovery banner is active for this app
+func (c *Client) AppBudgetDismissRecoveryWithResult(app string, ackBy string) (*structs.AppBudgetDismissRecoveryResult, error) {
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+	ro.Params["ack_by"] = ackBy
+	var v *structs.AppBudgetDismissRecoveryResult
+	if err := c.Post(fmt.Sprintf("/apps/%s/budget/dismiss-recovery", app), ro, &v); err != nil {
+		return nil, err
+	}
+	return v, nil
 }
 
 func (c *Client) AppCost(app string) (*structs.AppCost, error) {

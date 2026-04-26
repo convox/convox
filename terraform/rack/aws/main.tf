@@ -52,6 +52,7 @@ module "api" {
   oidc_arn                                  = var.oidc_arn
   oidc_sub                                  = var.oidc_sub
   pdb_default_min_available_percentage      = var.pdb_default_min_available_percentage
+  prometheus_url                            = var.prometheus_url
   release                                   = var.release
   disable_convox_resolver                   = var.disable_convox_resolver
   resolver                                  = module.resolver.endpoint
@@ -61,6 +62,7 @@ module "api" {
   subnets                                   = var.subnets
   vpc_id                                    = var.vpc_id
   vpa_enable                                = var.vpa_enable
+  webhook_signing_key                       = var.webhook_signing_key
   api_feature_gates                         = var.api_feature_gates
 }
 

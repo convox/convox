@@ -13,6 +13,7 @@ import (
 func TestPs(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("ProcessList", "app1", structs.ProcessListOptions{}).Return(structs.Processes{*fxProcess(), *fxProcessPending()}, nil)
+		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
 		res, err := testExecute(e, "ps -a app1", nil)
 		require.NoError(t, err)

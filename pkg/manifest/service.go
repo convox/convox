@@ -343,28 +343,35 @@ type ServiceScale struct {
 }
 
 type ServiceAutoscale struct {
-	Cpu             *AutoscaleThreshold          `yaml:"cpu,omitempty"              json:"cpu,omitempty"`
-	Memory          *AutoscaleThreshold          `yaml:"memory,omitempty"           json:"memory,omitempty"`
-	GpuUtilization  *AutoscaleThreshold          `yaml:"gpu_utilization,omitempty"  json:"gpu_utilization,omitempty"`
-	QueueDepth      *AutoscaleQueueDepth         `yaml:"queue_depth,omitempty"      json:"queue_depth,omitempty"`
-	Custom          []kedav1alpha1.ScaleTriggers `yaml:"custom,omitempty"           json:"custom,omitempty"`
-	CooldownPeriod  *int32                       `yaml:"cooldown_period,omitempty"  json:"cooldown_period,omitempty"`
-	PollingInterval *int32                       `yaml:"polling_interval,omitempty" json:"polling_interval,omitempty"`
+	Cpu             *AutoscaleMode               `yaml:"cpu,omitempty"             json:"cpu,omitempty"`
+	Memory          *AutoscaleMode               `yaml:"memory,omitempty"          json:"memory,omitempty"`
+	GpuUtilization  *AutoscaleMode               `yaml:"gpuUtilization,omitempty"  json:"gpuUtilization,omitempty"`
+	QueueDepth      *AutoscaleMode               `yaml:"queueDepth,omitempty"      json:"queueDepth,omitempty"`
+	Custom          []kedav1alpha1.ScaleTriggers `yaml:"custom,omitempty"          json:"custom,omitempty"`
+	CooldownPeriod  *int32                       `yaml:"cooldownPeriod,omitempty"  json:"cooldownPeriod,omitempty"`
+	PollingInterval *int32                       `yaml:"pollingInterval,omitempty" json:"pollingInterval,omitempty"`
 }
 
-type AutoscaleThreshold struct {
-	Threshold     float64 `yaml:"threshold"                json:"threshold"`
-	MetricName    string  `yaml:"metric_name,omitempty"    json:"metric_name,omitempty"`
-	PrometheusUrl string  `yaml:"prometheus_url,omitempty" json:"prometheus_url,omitempty"`
-	Query         string  `yaml:"query,omitempty"          json:"query,omitempty"`
+// AutoscaleMode is the unified shape for an autoscale trigger configuration.
+// Mode is a discriminator naming the trigger family — `threshold` for
+// utilization-based triggers (cpu/memory/gpuUtilization) and `queue` for
+// queue-depth triggers. Customers do not write `mode:` in their YAML; the
+// value is populated post-load from the parent slot name and emitted only
+// when explicitly set (omitempty keeps the customer wire format clean).
+type AutoscaleMode struct {
+	Mode          string  `yaml:"mode,omitempty"          json:"mode,omitempty"`
+	Threshold     float64 `yaml:"threshold"               json:"threshold"`
+	MetricName    string  `yaml:"metricName,omitempty"    json:"metricName,omitempty"`
+	PrometheusUrl string  `yaml:"prometheusUrl,omitempty" json:"prometheusUrl,omitempty"`
+	Query         string  `yaml:"query,omitempty"         json:"query,omitempty"`
 }
 
-type AutoscaleQueueDepth struct {
-	Threshold     float64 `yaml:"threshold"                json:"threshold"`
-	MetricName    string  `yaml:"metric_name,omitempty"    json:"metric_name,omitempty"`
-	PrometheusUrl string  `yaml:"prometheus_url,omitempty" json:"prometheus_url,omitempty"`
-	Query         string  `yaml:"query,omitempty"          json:"query,omitempty"`
-}
+// AutoscaleMode discriminator values. Pinned to single-word lowercase strings
+// to dodge YAML/JSON dual-tag drift on the value itself.
+const (
+	AutoscaleModeThreshold = "threshold"
+	AutoscaleModeQueue     = "queue"
+)
 
 func (ss ServiceScale) IsKedaEnabled() bool {
 	return ss.Keda != nil && len(ss.Keda.Triggers) > 0
@@ -372,6 +379,29 @@ func (ss ServiceScale) IsKedaEnabled() bool {
 
 func (ss ServiceScale) IsVpaEnabled() bool {
 	return ss.VPA != nil
+}
+
+// applyModeDiscriminator populates the Mode field of each populated
+// AutoscaleMode slot from its parent field name. Called from ApplyDefaults
+// so that customer YAML (which does not write `mode:`) round-trips through
+// to in-memory triggers with the discriminator set. Mode values are pinned
+// per V3 §0a Convention R2 F-NEW-2 to single-word lowercase strings.
+func (a *ServiceAutoscale) applyModeDiscriminator() {
+	if a == nil {
+		return
+	}
+	if a.Cpu != nil && a.Cpu.Mode == "" {
+		a.Cpu.Mode = AutoscaleModeThreshold
+	}
+	if a.Memory != nil && a.Memory.Mode == "" {
+		a.Memory.Mode = AutoscaleModeThreshold
+	}
+	if a.GpuUtilization != nil && a.GpuUtilization.Mode == "" {
+		a.GpuUtilization.Mode = AutoscaleModeThreshold
+	}
+	if a.QueueDepth != nil && a.QueueDepth.Mode == "" {
+		a.QueueDepth.Mode = AutoscaleModeQueue
+	}
 }
 
 func (a *ServiceAutoscale) IsEnabled() bool {
@@ -1093,4 +1123,31 @@ func (s ServiceImagePullSecret) Validate() error {
 
 type AWSPodIdentityOptions struct {
 	PolicyArns []string `yaml:"policyArns"`
+}
+
+// BudgetSettings is the manifest-tier budget block. The 5 Set G
+// auto-shutdown fields ride alongside the existing 3.24.5 fields
+// (monthlyCapUsd, alertThresholdPercent, atCapAction,
+// pricingAdjustment, atCapWebhookUrl). All fields are camelCase per
+// convention F-NEW-1; defaults applied at parse time when non-zero
+// behavior is desired.
+//
+// A customer who never sets any of these fields sees zero behavior
+// change (BudgetSettings is the YAML manifest tier; rack-side
+// AppBudget is the runtime state derived from it).
+type BudgetSettings struct {
+	MonthlyCapUsd         float64 `yaml:"monthlyCapUsd,omitempty"`
+	AlertThresholdPercent float64 `yaml:"alertThresholdPercent,omitempty"`
+	AtCapAction           string  `yaml:"atCapAction,omitempty"`
+	AtCapWebhookUrl       string  `yaml:"atCapWebhookUrl,omitempty"`
+	PricingAdjustment     float64 `yaml:"pricingAdjustment,omitempty"`
+
+	// Set G (auto-shutdown) fields — ignored when AtCapAction is not
+	// "auto-shutdown"; manifest validation enforces the cross-field
+	// rules at parse time (per spec §3.1).
+	NeverAutoShutdown   []string `yaml:"neverAutoShutdown,omitempty"`
+	ShutdownOrder       string   `yaml:"shutdownOrder,omitempty"`
+	NotifyBeforeMinutes int      `yaml:"notifyBeforeMinutes,omitempty"`
+	ShutdownGracePeriod string   `yaml:"shutdownGracePeriod,omitempty"`
+	RecoveryMode        string   `yaml:"recoveryMode,omitempty"`
 }

@@ -17,6 +17,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/convox/convox/pkg/common"
@@ -323,6 +324,70 @@ var skopeoExec = func(ctx context.Context, args ...string) ([]byte, error) {
 // minutes is the upper bound we'll wait before failing the build.
 const skopeoCopyTimeout = 30 * time.Minute
 
+// maxConcurrentImports caps the number of in-flight BuildImportImage calls per
+// rack API pod. Skopeo copies are network/CPU bound (multi-GB image relays);
+// without a cap a misbehaving caller can saturate the rack with parallel
+// goroutines. 4 covers the realistic deploy-wizard concurrency for a single
+// app + a co-deployed CI pipeline; importing more services in parallel exceeds
+// what a single rack uplink can sustain anyway.
+//
+// Exposed as a var so tests can lower it for parallel-cap verification.
+var maxConcurrentImports = 4
+
+// importSlots is a counting semaphore via a buffered channel; capacity matches
+// maxConcurrentImports. Acquire = send; release = receive. Initialized lazily
+// so a test override of maxConcurrentImports can take effect before any call.
+// importSlotsMu guards reassignment of the channel itself (test resets); reads
+// take a local snapshot under the mutex and operate on that, so a concurrent
+// reset can never race with an in-flight acquire/release.
+var (
+	importSlotsMu   sync.Mutex
+	importSlotsOnce sync.Once
+	importSlots     chan struct{}
+)
+
+// snapshotImportSlots returns the current channel under the mutex. Callers
+// receive a stable reference even if the channel is later reassigned by a
+// test reset; sends/receives on a buffered channel are inherently
+// goroutine-safe.
+func snapshotImportSlots() chan struct{} {
+	importSlotsMu.Lock()
+	defer importSlotsMu.Unlock()
+	importSlotsOnce.Do(func() {
+		importSlots = make(chan struct{}, maxConcurrentImports)
+	})
+	return importSlots
+}
+
+// acquireImportSlotOn attempts a non-blocking send on the supplied channel.
+// Returns true if a slot was reserved, false if the rack is at capacity.
+// Callers obtain ch via snapshotImportSlots so a paired release uses the
+// same channel instance.
+func acquireImportSlotOn(ch chan struct{}) bool {
+	if ch == nil {
+		return false
+	}
+	select {
+	case ch <- struct{}{}:
+		return true
+	default:
+		return false
+	}
+}
+
+// releaseImportSlot frees one slot on the snapshot held by the goroutine that
+// originally acquired it. Safe to call when no slot was acquired (no-op via
+// the default branch).
+func releaseImportSlot(ch chan struct{}) {
+	if ch == nil {
+		return
+	}
+	select {
+	case <-ch:
+	default:
+	}
+}
+
 // validImageRef is a permissive docker-reference allowlist. The character set
 // covers registry hosts (`.`, `:`), image paths (`/`), tags (`:`), and
 // digests (`@`). The leading anchor blocks values starting with `-` which
@@ -490,10 +555,24 @@ func (p *Provider) BuildImportImage(app, id, image string, opts structs.BuildImp
 		return errors.WithStack(structs.ErrUnprocessable("manifest has no services to relay"))
 	}
 
+	// Acquire a concurrency slot BEFORE flipping Status to running so a
+	// rejection leaves no half-mutated build behind. Snapshot the channel so
+	// the goroutine's release operates on the same instance even if a test
+	// reset reassigns the package-level pointer mid-flight (production code
+	// never reassigns it). Released inside the goroutine's outermost defer
+	// (and on the buildUpdate-fail path below).
+	importSlot := snapshotImportSlots()
+	if !acquireImportSlotOn(importSlot) {
+		return errors.WithStack(structs.ErrConflict("rack at concurrent-import cap (%d in flight); wait and retry", maxConcurrentImports))
+	}
+
 	b.Status = "running"
 	b.Started = time.Now().UTC()
 	b.Reason = ""
 	if _, err := p.buildUpdate(b); err != nil {
+		// We acquired a slot but the buildUpdate failed; release before
+		// returning so a Conflict here doesn't leak a slot.
+		releaseImportSlot(importSlot)
 		// K8s returns a Conflict (HTTP 409) when the informer-cached
 		// ResourceVersion is stale — a concurrent writer (including a racing
 		// BuildImportImage caller) beat us to the update. Surface as a clean
@@ -514,11 +593,18 @@ func (p *Provider) BuildImportImage(app, id, image string, opts structs.BuildImp
 		srcPass = *opts.SrcCredsPass
 	}
 
+	// Snapshot the audit actor BEFORE the synchronous :start emit. The same
+	// captured value is passed to the asynchronous :done emit so a future
+	// refactor that swaps p.ctx between launch and goroutine entry still pairs
+	// :start/:done with the same actor (the goroutine must NOT re-read
+	// p.ContextActor() after launch — see TestBuildImportImage_DoneEventReadsCapturedNotReReadFromCtx).
+	capturedActor := p.ContextActor()
+
 	// Emit :start synchronously before launching the goroutine so subscribers
 	// cannot observe :done before :start when the webhook dispatcher fans out
 	// on its own goroutines.
 	_ = p.EventSend("build:import-image:start", structs.EventSendOptions{
-		Data: map[string]string{"app": app, "build": b.Id, "image": image},
+		Data: map[string]string{"actor": capturedActor, "app": app, "build": b.Id, "image": image},
 	})
 
 	// Copy the build by value for the goroutine. Tags is a map — we nil it
@@ -529,13 +615,16 @@ func (p *Provider) BuildImportImage(app, id, image string, opts structs.BuildImp
 	go func() {
 		var runErr error
 		defer func() {
+			// Outermost cleanup: release the concurrency slot LAST so even a
+			// panic inside finalize or EventSend does not leak the slot.
+			defer releaseImportSlot(importSlot)
 			if r := recover(); r != nil {
 				fmt.Printf("panic in BuildImportImage for build %s: %v\nstack: %s\n", captured.Id, r, debug.Stack())
 				runErr = fmt.Errorf("panic during image import: %v", r)
 			}
 			final := p.finalizeImportImageBuild(app, &captured, runErr)
 			_ = p.EventSend("build:import-image:done", structs.EventSendOptions{
-				Data: map[string]string{"app": app, "build": captured.Id, "status": final.Status},
+				Data: map[string]string{"actor": capturedActor, "app": app, "build": captured.Id, "status": final.Status},
 			})
 		}()
 

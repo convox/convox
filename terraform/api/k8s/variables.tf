@@ -88,6 +88,11 @@ variable "metrics_scraper_host" {
   type    = string
 }
 
+variable "prometheus_url" {
+  type    = string
+  default = ""
+}
+
 variable "namespace" {
   type = string
 }
@@ -123,4 +128,9 @@ variable "volumes" {
 variable "rack_name" {
   default = ""
   type    = string
+}
+
+variable "webhook_signing_key" {
+  type    = string
+  default = ""
 }

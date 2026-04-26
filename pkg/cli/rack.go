@@ -591,7 +591,7 @@ func init() {
 	register("rack access", "get rack access credential", RackAccess, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
 			flagRack,
-			stdcli.StringFlag("role", "", "access role: read or write"),
+			stdcli.StringFlag("role", "", "access role: read, write, or admin"),
 			stdcli.IntFlag("duration-in-hours", "", "duration in hours"),
 		},
 		Validate: stdcli.Args(0),

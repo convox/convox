@@ -8,6 +8,7 @@ import (
 	"os"
 	"runtime/debug"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/convox/convox/pkg/billing"
@@ -24,6 +25,14 @@ const (
 	budgetMinPollInterval      = 1 * time.Minute
 	budgetMaxPollInterval      = 1 * time.Hour
 	budgetWriteConflictRetries = 3
+	// budgetTickShutdownGrace bounds how long runBudgetAccumulator waits
+	// for an in-flight tick to drain after ctx cancel before logging
+	// at=shutdown_timeout and returning. Picked to be longer than the
+	// usual k8s API call (sub-second under healthy conditions, up to
+	// ~2-3s under load) but short enough that an api-pod SIGTERM during
+	// a rack update is not blocked indefinitely on a stuck namespace
+	// Get/Update.
+	budgetTickShutdownGrace = 5 * time.Second
 )
 
 // AppBudgetGet returns the app's budget config and state from namespace annotations.
@@ -70,6 +79,16 @@ func (p *Provider) AppBudgetSet(app string, opts structs.AppBudgetOptions, ackBy
 		prev = *cfg
 		if err := applyBudgetOptions(cfg, opts); err != nil {
 			return errors.WithStack(err)
+		}
+		// MF-6 fix (R6 γ-1 carry-forward NIT): record the JWT-derived
+		// caller on every cap-changing mutation so the accumulator can
+		// surface the originating user when it later fires
+		// :cancelled reason="cap-raised". Spec §8.4 line 777 mandates
+		// JWT-derived actor for cap-raise; previously hardcoded "system"
+		// because the detection runs in the accumulator goroutine where
+		// no HTTP context is in scope.
+		if opts.MonthlyCapUsd != nil {
+			cfg.LastCapMutationBy = ackBy
 		}
 		cfg.ApplyDefaults()
 		if err := cfg.Validate(); err != nil {
@@ -213,6 +232,13 @@ func (p *Provider) AppBudgetClear(app string, ackBy string) error {
 // app:budget:reset event. Resilient to missing config — if the user cleared
 // config while the breaker was tripped, reset must still unblock deploys.
 func (p *Provider) AppBudgetReset(app string, ackBy string) error {
+	// F-19 fix (catalog D-7): per-app advisory lock around the reset
+	// path so the accumulator's reconcileAutoShutdown cannot race with
+	// reset and emit two `:cancelled` events with different reasons.
+	mu := appBudgetLock(app)
+	mu.Lock()
+	defer mu.Unlock()
+
 	nsName := p.AppNamespace(app)
 
 	ackBy = sanitizeAckBy(ackBy)
@@ -271,6 +297,28 @@ func (p *Provider) AppBudgetReset(app string, ackBy string) error {
 			"cap_usd":        strconv.FormatFloat(capUsd, 'f', 2, 64),
 			"reset_at":       state.CircuitBreakerAckAt.Format(time.RFC3339),
 		}})
+
+		// F1 + F8 fix: if a shutdown-state annotation exists in the
+		// armed-window state (armedAt set, shutdownAt nil), reset
+		// arrived during the notify window. Fire :cancelled
+		// reason="reset-during-armed" and GC the orphan annotation so
+		// next cap re-breach re-arms cleanly. Best-effort — do not
+		// abort the reset on any annotation failure.
+		// R7.5 F-3 fix: GC annotation BEFORE emit (matches F-20 dedup-
+		// write-then-emit pattern). If delete fails, abort emit so the
+		// next accumulator tick re-detects and retries cleanly via the
+		// F8 manual-detected branch (or this site if reset reruns).
+		// NotFound is treated as success (already GC'd).
+		shutdownState, parseErr := readBudgetShutdownStateAnnotation(ns.Annotations)
+		if parseErr == nil && shutdownState != nil &&
+			shutdownState.ArmedAt != nil && !shutdownState.ArmedAt.IsZero() &&
+			(shutdownState.ShutdownAt == nil || shutdownState.ShutdownAt.IsZero()) {
+			ctx := context.TODO()
+			derr := p.deleteBudgetShutdownStateAnnotation(ctx, app)
+			if derr == nil || ae.IsNotFound(derr) {
+				p.fireCancelledEventRich(app, cfg, state, shutdownState, ackBy, "reset-during-armed", 0, 0, "", time.Now().UTC())
+			}
+		}
 		return nil
 	}
 	return errors.WithStack(fmt.Errorf("failed to reset budget after %d retries", budgetWriteConflictRetries))
@@ -335,10 +383,10 @@ func applyBudgetOptions(dst *structs.AppBudget, opts structs.AppBudgetOptions) e
 	if opts.MonthlyCapUsd != nil {
 		v, err := strconv.ParseFloat(*opts.MonthlyCapUsd, 64)
 		if err != nil {
-			return structs.ErrBadRequest("monthly_cap_usd must be a number: %v", err)
+			return structs.ErrBadRequest("monthly-cap-usd must be a number: %v", err)
 		}
 		if math.IsNaN(v) || math.IsInf(v, 0) {
-			return structs.ErrBadRequest("monthly_cap_usd must be a finite number")
+			return structs.ErrBadRequest("monthly-cap-usd must be a finite number")
 		}
 		dst.MonthlyCapUsd = v
 	}
@@ -351,10 +399,10 @@ func applyBudgetOptions(dst *structs.AppBudget, opts structs.AppBudgetOptions) e
 	if opts.PricingAdjustment != nil {
 		v, err := strconv.ParseFloat(*opts.PricingAdjustment, 64)
 		if err != nil {
-			return structs.ErrBadRequest("pricing_adjustment must be a number: %v", err)
+			return structs.ErrBadRequest("pricing-adjustment must be a number: %v", err)
 		}
 		if math.IsNaN(v) || math.IsInf(v, 0) {
-			return structs.ErrBadRequest("pricing_adjustment must be a finite number")
+			return structs.ErrBadRequest("pricing-adjustment must be a finite number")
 		}
 		dst.PricingAdjustment = v
 	}
@@ -392,6 +440,17 @@ func startOfMonth(t time.Time) time.Time {
 // runBudgetAccumulator is invoked by the leader-election callback; runs
 // until ctx cancels. Panics are recovered per-tick so a single bad tick
 // cannot silently kill the loop while this pod keeps the lease renewed.
+//
+// Lifecycle: each safeBudgetTick invocation runs in a tracked goroutine
+// so a ctx cancellation arriving mid-tick (api-pod SIGTERM, leadership
+// loss) interleaves with the for-select instead of waiting for the tick
+// to complete synchronously. On ctx.Done the loop calls wg.Wait() with a
+// budgetTickShutdownGrace deadline; if the in-flight tick honors ctx
+// cancellation through the threaded ctx (B.2), wg.Wait returns promptly
+// and the loop logs at=stop. If the tick is wedged past the grace
+// window, the loop logs at=shutdown_timeout and returns anyway --
+// blocking the api pod indefinitely on a stuck k8s call would defeat
+// graceful shutdown.
 func (p *Provider) runBudgetAccumulator(ctx context.Context) {
 	interval := budgetDefaultPollInterval
 	if v := os.Getenv("BUDGET_POLL_INTERVAL"); v != "" {
@@ -409,7 +468,13 @@ func (p *Provider) runBudgetAccumulator(ctx context.Context) {
 	}
 
 	fmt.Printf("ns=budget_accumulator at=start interval=%s\n", interval)
-	p.safeBudgetTick()
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		p.safeBudgetTick(ctx)
+	}()
 
 	tick := time.NewTicker(interval)
 	defer tick.Stop()
@@ -417,31 +482,51 @@ func (p *Provider) runBudgetAccumulator(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			fmt.Printf("ns=budget_accumulator at=stop\n")
+			done := make(chan struct{})
+			go func() {
+				wg.Wait()
+				close(done)
+			}()
+			select {
+			case <-done:
+				fmt.Printf("ns=budget_accumulator at=stop\n")
+			case <-time.After(budgetTickShutdownGrace):
+				fmt.Printf("ns=budget_accumulator at=shutdown_timeout grace=%s\n", budgetTickShutdownGrace)
+			}
 			return
 		case <-tick.C:
-			p.safeBudgetTick()
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				p.safeBudgetTick(ctx)
+			}()
 		}
 	}
 }
 
 // safeBudgetTick runs one tick with its own panic-recovery scope so a
-// goroutine that panics once can still run on the next interval.
-func (p *Provider) safeBudgetTick() {
+// goroutine that panics once can still run on the next interval. The ctx
+// is the leader-election context threaded from runBudgetAccumulator so a
+// graceful api-pod shutdown (SIGTERM during a rack update) can cancel any
+// in-flight namespace Get/Update mid-tick instead of orphaning the
+// goroutine on the client-go default timeout.
+func (p *Provider) safeBudgetTick(ctx context.Context) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Printf("ns=budget_accumulator at=panic recover=%q stack=%q\n", r, debug.Stack())
 		}
 	}()
-	if err := p.accumulateBudgetTick(); err != nil {
+	if err := p.accumulateBudgetTick(ctx); err != nil {
 		fmt.Printf("ns=budget_accumulator at=tick error=%q\n", err)
 	}
 }
 
 // accumulateBudgetTick iterates all apps with budget configured and updates
 // spend + alert + breaker state. The namespace list is rack-scoped so shared
-// clusters with two V3 racks do not cross-attribute.
-func (p *Provider) accumulateBudgetTick() error {
+// clusters with two V3 racks do not cross-attribute. The ctx is forwarded
+// through accumulateBudgetApp into the namespace Get/Update RPCs so a
+// graceful shutdown cancels any in-flight write at the client-go layer.
+func (p *Provider) accumulateBudgetTick(ctx context.Context) error {
 	// Defense in depth: an empty rack name would produce a selector like
 	// `rack=` which matches nothing in a healthy cluster, but short-circuit
 	// explicitly to avoid the wasted API call and to make the intent clear
@@ -458,6 +543,14 @@ func (p *Provider) accumulateBudgetTick() error {
 	now := time.Now().UTC()
 
 	for i := range ns.Items {
+		// B.3: abort the per-app walk promptly if ctx cancels mid-tick
+		// (api-pod SIGTERM, leadership loss). Without this check the
+		// loop would walk every namespace before noticing cancellation
+		// since the per-app k8s calls are the only natural cancellation
+		// points and a cached informer Get returns instantly.
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		n := &ns.Items[i]
 		cfg, err := readBudgetConfigAnnotation(n.Annotations)
 		if err != nil {
@@ -471,18 +564,26 @@ func (p *Provider) accumulateBudgetTick() error {
 		if app == "" {
 			continue
 		}
-		if err := p.accumulateBudgetApp(app, now); err != nil {
+		if err := p.accumulateBudgetApp(ctx, app, now); err != nil {
 			fmt.Printf("ns=budget_accumulator app=%s error=%q\n", app, err)
 		}
 	}
 	return nil
 }
 
-func (p *Provider) accumulateBudgetApp(app string, now time.Time) error {
+func (p *Provider) accumulateBudgetApp(ctx context.Context, app string, now time.Time) error {
 	nsName := p.AppNamespace(app)
 
 	for i := 0; i < budgetWriteConflictRetries; i++ {
-		ns, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), nsName, am.GetOptions{})
+		// B.3: abort the retry loop promptly if ctx cancels between
+		// retries (e.g. shutdown arrives during a backoff after a write
+		// conflict). The Namespaces().Get below also honors ctx, but
+		// checking here surfaces ctx.Err() as the return value rather
+		// than burying it inside an errors.WithStack of an HTTP error.
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		ns, err := p.Cluster.CoreV1().Namespaces().Get(ctx, nsName, am.GetOptions{})
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -515,7 +616,7 @@ func (p *Provider) accumulateBudgetApp(app string, now time.Time) error {
 			state = &structs.AppBudgetState{MonthStart: startOfMonth(now), CurrentMonthSpendAsOf: now}
 		}
 
-		delta, warnings, err := p.computeBudgetDelta(app, state.CurrentMonthSpendAsOf, now, cfg.PricingAdjustment)
+		delta, warnings, err := p.computeBudgetDelta(ctx, app, state.CurrentMonthSpendAsOf, now, cfg.PricingAdjustment)
 		if err != nil {
 			return err
 		}
@@ -549,7 +650,7 @@ func (p *Provider) accumulateBudgetApp(app string, now time.Time) error {
 		}
 		ns.Annotations[structs.BudgetStateAnnotation] = string(data)
 
-		if _, err := p.Cluster.CoreV1().Namespaces().Update(context.TODO(), ns, am.UpdateOptions{}); err != nil {
+		if _, err := p.Cluster.CoreV1().Namespaces().Update(ctx, ns, am.UpdateOptions{}); err != nil {
 			if ae.IsConflict(err) {
 				continue
 			}
@@ -560,6 +661,7 @@ func (p *Provider) accumulateBudgetApp(app string, now time.Time) error {
 			fmt.Printf("ns=budget_accumulator at=alert kind=threshold app=%s spend_usd=%.2f cap_usd=%.2f pct=%.0f\n",
 				app, state.CurrentMonthSpendUsd, cfg.MonthlyCapUsd, cfg.AlertThresholdPercent)
 			_ = p.EventSend("app:budget:threshold", structs.EventSendOptions{Data: map[string]string{
+				"actor":     "system",
 				"app":       app,
 				"spend_usd": strconv.FormatFloat(state.CurrentMonthSpendUsd, 'f', 2, 64),
 				"cap_usd":   strconv.FormatFloat(cfg.MonthlyCapUsd, 'f', 2, 64),
@@ -570,12 +672,27 @@ func (p *Provider) accumulateBudgetApp(app string, now time.Time) error {
 			fmt.Printf("ns=budget_accumulator at=alert kind=cap app=%s spend_usd=%.2f cap_usd=%.2f action=%s tripped=%t\n",
 				app, state.CurrentMonthSpendUsd, cfg.MonthlyCapUsd, cfg.AtCapAction, state.CircuitBreakerTripped)
 			_ = p.EventSend("app:budget:cap", structs.EventSendOptions{Data: map[string]string{
+				"actor":     "system",
 				"app":       app,
 				"spend_usd": strconv.FormatFloat(state.CurrentMonthSpendUsd, 'f', 2, 64),
 				"cap_usd":   strconv.FormatFloat(cfg.MonthlyCapUsd, 'f', 2, 64),
 				"action":    cfg.AtCapAction,
 			}})
 		}
+
+		// Set G: per-tick auto-shutdown reconciliation. Runs AFTER the
+		// state annotation is persisted so :armed and :fired can read
+		// fresh AlertFiredAtCap. Runs UNCONDITIONALLY of willFireCap so
+		// the armed-window-elapsed transition fires on later ticks (the
+		// :armed write happens on the willFireCap tick; :fired happens
+		// notifyBeforeMinutes later).
+		p.reconcileAutoShutdown(ctx, app, cfg, state, now)
+
+		// Stale-annotation GC runs unconditionally per spec §7.4 — defaults
+		// to a 10-minute interval cleanup window. Best-effort; logs but
+		// does not abort on any annotation read/write failure.
+		_ = p.runStaleAnnotationGC(ctx, app, budgetDefaultPollInterval)
+
 		return nil
 	}
 	return fmt.Errorf("failed to write budget state for %s after %d retries", app, budgetWriteConflictRetries)
@@ -583,7 +700,13 @@ func (p *Provider) accumulateBudgetApp(app string, now time.Time) error {
 
 // computeBudgetDelta walks pods in the app namespace and attributes cost
 // over elapsed = now - lastTick. Returns (delta_usd, warnings, err).
-func (p *Provider) computeBudgetDelta(app string, lastTick, now time.Time, adjustment float64) (float64, int, error) {
+//
+// ctx is accepted for future non-informer fallback paths; the current
+// ListNodesFromInformer / ListPodsFromInformer reads are cache-only and do
+// not take a ctx parameter. Plumbing it now keeps signatures stable when a
+// future patch adds a direct-API fallback for cold-cache scenarios.
+func (p *Provider) computeBudgetDelta(ctx context.Context, app string, lastTick, now time.Time, adjustment float64) (float64, int, error) {
+	_ = ctx // see godoc above; reserved for non-informer fallback.
 	if lastTick.IsZero() {
 		lastTick = now
 	}
@@ -755,9 +878,20 @@ func maxInt64(a, b int64) int64 {
 }
 
 // budgetCircuitBreakerTripped is the enforcement pre-flight used by
-// ReleasePromote and ServiceUpdate. Returns ErrConflict with guidance text
-// when the breaker is tripped; nil otherwise.
+// ReleasePromote, ServiceUpdate, and ProcessRun. Returns ErrConflict with
+// guidance text when the breaker is tripped; nil otherwise.
+//
+// Gated on cost_tracking_enable: when cost tracking is OFF (rack param
+// cost_tracking_enable=false, or env var unset), the breaker reader returns
+// nil unconditionally. This treats any persisted CircuitBreakerTripped
+// annotation as inert when the accumulator that would otherwise reset it is
+// not running. Without this gate, a customer who disables cost tracking
+// while a tripped breaker annotation is persisted on the namespace would be
+// permanently blocked from deploying with no recovery path.
 func (p *Provider) budgetCircuitBreakerTripped(app string) error {
+	if !p.costTrackingEnabled() {
+		return nil
+	}
 	ns, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), p.AppNamespace(app), am.GetOptions{})
 	if err != nil {
 		if ae.IsNotFound(err) {
@@ -774,8 +908,35 @@ func (p *Provider) budgetCircuitBreakerTripped(app string) error {
 	if cfg != nil {
 		capUsd = cfg.MonthlyCapUsd
 	}
+	// Per Set G v2 spec §10.10 — when the breaker is tripped the customer
+	// has THREE recovery paths, not one. Spell them all out so the customer
+	// does not assume `budget reset` is the only option (a `cap raise` is
+	// often what they actually want when traffic legitimately grew).
+	// `auto-shutdown` carries the same 3-action message — services already
+	// scaled to 0 will restore via the same `budget reset` path that
+	// re-arms the breaker. F-25 fix: dropped the AtCapAction read because
+	// the 409 text is uniform; the variable was previously assigned only
+	// to satisfy "declared but not used" via `_ = atCapAction`.
+	// F-2 fix: include the app name in the `cap raise` hint so the
+	// customer can paste the recommendation verbatim. The ARMED banner
+	// at pkg/cli/budget.go:180 already cites the same command with
+	// `<app>` populated; this keeps the two surfaces consistent.
 	return structs.ErrConflict(
-		"budget cap exceeded for app %s: spent $%.2f of $%.2f cap this month; run 'convox budget reset %s' to acknowledge and re-enable deploys",
-		app, state.CurrentMonthSpendUsd, capUsd, app,
+		"budget cap exceeded for app %s: spent $%.2f of $%.2f cap this month; "+
+			"recovery options: (1) `convox budget reset %s` to acknowledge and re-enable deploys, "+
+			"(2) `convox budget cap raise --monthly-cap-usd <higher> %s` to raise the cap (alias for `budget set --monthly-cap`), "+
+			"or (3) wait for month rollover (caps reset automatically on the 1st)",
+		app, state.CurrentMonthSpendUsd, capUsd, app, app,
 	)
+}
+
+// costTrackingEnabled reports whether the rack is configured with
+// cost_tracking_enable=true. The Terraform module injects
+// COST_TRACKING_ENABLE on the api pod from the rack param; runtime reads
+// the env var. This is the single canonical accessor used by the
+// accumulator dispatch (k8s.go) and the breaker reader gate. Future
+// stuck-state and enforcement gates should reuse it rather than inlining
+// os.Getenv calls.
+func (p *Provider) costTrackingEnabled() bool {
+	return os.Getenv("COST_TRACKING_ENABLE") == "true"
 }

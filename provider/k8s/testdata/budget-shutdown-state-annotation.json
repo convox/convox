@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "shutdownAt": "2026-04-25T14:30:00Z",
+  "armedAt": "2026-04-25T14:00:00Z",
+  "restoredAt": null,
+  "expiredAt": null,
+  "recoveryMode": "auto-on-reset",
+  "shutdownOrder": "largest-cost",
+  "shutdownTickId": "tick-2026-04-25T14:30:00Z-uuid4",
+  "manifestSha256": "abc123",
+  "eligibleServiceCount": 2,
+  "services": [
+    {
+      "name": "ml-batch",
+      "originalScale": {"count": 0, "min": 1, "max": 5, "replicas": 3},
+      "originalGracePeriodSeconds": 60,
+      "kedaScaledObject": {"name": "ml-batch", "pausedReplicasAnnotationSet": true},
+      "shutdownSequenceIndex": 0,
+      "shutdownAt": "2026-04-25T14:30:00Z"
+    },
+    {
+      "name": "worker",
+      "originalScale": {"count": 2, "min": 0, "max": 0, "replicas": 2},
+      "originalGracePeriodSeconds": 30,
+      "kedaScaledObject": null,
+      "shutdownSequenceIndex": 1,
+      "shutdownAt": "2026-04-25T14:30:01Z"
+    }
+  ],
+  "flapSuppressedUntil": null,
+  "armedNotificationFiredAt": "2026-04-25T14:00:00Z",
+  "firedNotificationFiredAt": "2026-04-25T14:30:00Z",
+  "noopNotificationFiredAt": null,
+  "cancelledNotificationFiredAt": null,
+  "expiredNotificationFiredAt": null,
+  "flapSuppressedNotificationFiredAt": null,
+  "failedNotificationFiredAt": null,
+  "restoredNotificationFiredAt": null
+}

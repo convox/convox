@@ -70,8 +70,8 @@ func TestAppBudgetSetWirePath(t *testing.T) {
 		PricingAdjustment:     &pa,
 	}, "tester"))
 
-	require.Equal(t, []string{"500"}, got["monthly_cap_usd"], "monthly_cap_usd not propagated on the wire")
-	require.Equal(t, []string{"80"}, got["alert_threshold_percent"], "alert_threshold_percent not propagated")
-	require.Equal(t, []string{"alert-only"}, got["at_cap_action"], "at_cap_action not propagated")
-	require.Equal(t, []string{"1.0"}, got["pricing_adjustment"], "pricing_adjustment not propagated")
+	require.Equal(t, []string{"500"}, got["monthly-cap-usd"], "monthly-cap-usd not propagated on the wire")
+	require.Equal(t, []string{"80"}, got["alert-threshold-percent"], "alert-threshold-percent not propagated")
+	require.Equal(t, []string{"alert-only"}, got["at-cap-action"], "at-cap-action not propagated")
+	require.Equal(t, []string{"1.0"}, got["pricing-adjustment"], "pricing-adjustment not propagated")
 }

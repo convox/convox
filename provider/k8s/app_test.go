@@ -115,6 +115,47 @@ func TestAppDeleteMissingApp(t *testing.T) {
 	})
 }
 
+// TestRemoveAppLock_DeletesEntry — MF-8 fix (catalog A-1).
+// AppDelete must drop the per-app sync.Mutex from appBudgetLockMap so the
+// map doesn't grow unbounded on long-lived racks with high app churn.
+// This test exercises the helper directly; the AppDelete integration is
+// covered by TestAppDelete_DropsAppBudgetLockEntry below.
+func TestRemoveAppLock_DeletesEntry(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		k8s.AcquireAppBudgetLockForTest("mf8-app1")
+		require.True(t, k8s.AppBudgetLockMapHasForTest("mf8-app1"), "lock entry must exist after acquire")
+
+		p.RemoveAppLock("mf8-app1")
+		assert.False(t, k8s.AppBudgetLockMapHasForTest("mf8-app1"), "RemoveAppLock must delete the lockMap entry")
+
+		// Idempotent: calling on a missing key is a no-op.
+		p.RemoveAppLock("mf8-app1")
+		assert.False(t, k8s.AppBudgetLockMapHasForTest("mf8-app1"), "RemoveAppLock must remain idempotent")
+	})
+}
+
+// TestAppDelete_DropsAppBudgetLockEntry — MF-8 fix (catalog A-1) end-to-end.
+// AppDelete must call RemoveAppLock on success so apps that were ever
+// reconciled don't leave their *sync.Mutex stuck in appBudgetLockMap forever.
+func TestAppDelete_DropsAppBudgetLockEntry(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		aa, _ := p.Atom.(*atom.MockInterface)
+		kk, _ := p.Cluster.(*fake.Clientset)
+
+		require.NoError(t, appCreate(kk, "rack1", "mf8-del-app"))
+
+		// Simulate a prior reconciliation having taken the lock.
+		k8s.AcquireAppBudgetLockForTest("mf8-del-app")
+		require.True(t, k8s.AppBudgetLockMapHasForTest("mf8-del-app"))
+
+		aa.On("Status", "rack1-mf8-del-app", "app").Return("Updating", "R1234567", nil).Once()
+
+		require.NoError(t, p.AppDelete("mf8-del-app"))
+
+		assert.False(t, k8s.AppBudgetLockMapHasForTest("mf8-del-app"), "AppDelete must drop the per-app lockMap entry")
+	})
+}
+
 func TestNamespaceApp(t *testing.T) {
 	tests := []struct {
 		Name      string

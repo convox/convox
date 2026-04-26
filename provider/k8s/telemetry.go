@@ -18,13 +18,23 @@ var (
 		"region",
 	}, ",")
 
+	// redactedParams: rack params whose VALUE is a credential or otherwise
+	// sensitive, but whose PRESENCE is informative for telemetry. Values are
+	// SHA-256-hashed before emission to metrics.convox.com — the receiver sees
+	// an opaque hex string per param, signaling set-vs-unset, key-rotation
+	// events (hash changes), and per-customer uniqueness without leaking the
+	// plaintext. Maintain ALPHABETICAL ORDER for ease of review when adding
+	// new entries.
 	redactedParams = strings.Join([]string{
 		"cidr",
-		"key_pair_name",
+		"docker_hub_password",
 		"internet_gateway_id",
+		"key_pair_name",
+		"private_eks_pass",
 		"syslog",
 		"tags",
 		"vpc_id",
+		"webhook_signing_key",
 		"whitelist",
 	}, ",")
 )

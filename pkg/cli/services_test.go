@@ -15,6 +15,7 @@ func TestServices(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		// i.On("ClientType").Return("standard")
 		i.On("ServiceList", "app1").Return(structs.Services{*fxService(), *fxService()}, nil)
+		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
 		res, err := testExecute(e, "services -a app1", nil)
 		require.NoError(t, err)
@@ -68,6 +69,7 @@ func TestServicesRestartError(t *testing.T) {
 func TestServicesWithNLB(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("ServiceList", "app1").Return(structs.Services{*fxServiceNLB(), *fxService()}, nil)
+		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
 		res, err := testExecute(e, "services -a app1", nil)
 		require.NoError(t, err)
@@ -84,6 +86,7 @@ func TestServicesWithNLB(t *testing.T) {
 func TestServicesAllWithNLB(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("ServiceList", "app1").Return(structs.Services{*fxServiceNLB(), *fxServiceNLB()}, nil)
+		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
 		res, err := testExecute(e, "services -a app1", nil)
 		require.NoError(t, err)
@@ -100,6 +103,7 @@ func TestServicesAllWithNLB(t *testing.T) {
 func TestServicesWithNLBTLS(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("ServiceList", "app1").Return(structs.Services{*fxServiceNLBTLS(), *fxService()}, nil)
+		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
 		res, err := testExecute(e, "services -a app1", nil)
 		require.NoError(t, err)
@@ -121,6 +125,7 @@ func TestServicesMixedSchemesSingleService(t *testing.T) {
 			{Port: 9443, Protocol: "tcp", ContainerPort: 8080, Scheme: "internal"},
 		}
 		i.On("ServiceList", "app1").Return(structs.Services{*s}, nil)
+		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
 		res, err := testExecute(e, "services -a app1", nil)
 		require.NoError(t, err)
@@ -141,6 +146,7 @@ func TestServicesMixedSchemesOrderPreserved(t *testing.T) {
 				{Port: 9443, Protocol: "tcp", ContainerPort: 8080, Scheme: "internal"},
 			}
 			i.On("ServiceList", "app1").Return(structs.Services{*s}, nil)
+			i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
 			res, err := testExecute(e, "services -a app1", nil)
 			require.NoError(t, err)
@@ -159,6 +165,7 @@ func TestServicesMixedSchemesOrderPreserved(t *testing.T) {
 				{Port: 8443, Protocol: "tcp", ContainerPort: 8443, Scheme: "public"},
 			}
 			i.On("ServiceList", "app1").Return(structs.Services{*s}, nil)
+			i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
 			res, err := testExecute(e, "services -a app1", nil)
 			require.NoError(t, err)
@@ -175,6 +182,7 @@ func TestServicesEmptyNlbSlice(t *testing.T) {
 		s := fxService()
 		s.Nlb = []structs.ServiceNlbPort{}
 		i.On("ServiceList", "app1").Return(structs.Services{*s}, nil)
+		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
 		res, err := testExecute(e, "services -a app1", nil)
 		require.NoError(t, err)
@@ -198,6 +206,7 @@ func TestServicesWorkerOnlyNLB(t *testing.T) {
 			Ports:  []structs.ServicePort{{Balancer: 1, Container: 2}},
 		}
 		i.On("ServiceList", "app1").Return(structs.Services{*worker, *web}, nil)
+		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
 		res, err := testExecute(e, "services -a app1", nil)
 		require.NoError(t, err)
@@ -218,6 +227,7 @@ func TestServicesNLBAllDefaults(t *testing.T) {
 			{Port: 8443, Protocol: "tcp", ContainerPort: 8443, Scheme: "public"},
 		}
 		i.On("ServiceList", "app1").Return(structs.Services{*s}, nil)
+		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
 		res, err := testExecute(e, "services -a app1", nil)
 		require.NoError(t, err)
@@ -237,6 +247,7 @@ func TestServicesNLBCrossZone(t *testing.T) {
 				{Port: 8443, Protocol: "tcp", ContainerPort: 8443, Scheme: "public", CrossZone: options.Bool(true)},
 			}
 			i.On("ServiceList", "app1").Return(structs.Services{*s}, nil)
+			i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
 			res, err := testExecute(e, "services -a app1", nil)
 			require.NoError(t, err)
@@ -255,6 +266,7 @@ func TestServicesNLBCrossZone(t *testing.T) {
 				{Port: 8443, Protocol: "tcp", ContainerPort: 8443, Scheme: "public", CrossZone: options.Bool(false)},
 			}
 			i.On("ServiceList", "app1").Return(structs.Services{*s}, nil)
+			i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
 			res, err := testExecute(e, "services -a app1", nil)
 			require.NoError(t, err)
@@ -277,6 +289,7 @@ func TestServicesNLBAllowCIDR(t *testing.T) {
 			},
 		}
 		i.On("ServiceList", "app1").Return(structs.Services{*s}, nil)
+		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
 		res, err := testExecute(e, "services -a app1", nil)
 		require.NoError(t, err)
@@ -296,6 +309,7 @@ func TestServicesNLBPreserveClientIP(t *testing.T) {
 				{Port: 8443, Protocol: "tcp", ContainerPort: 8443, Scheme: "public", PreserveClientIP: options.Bool(true)},
 			}
 			i.On("ServiceList", "app1").Return(structs.Services{*s}, nil)
+			i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
 			res, err := testExecute(e, "services -a app1", nil)
 			require.NoError(t, err)
@@ -314,6 +328,7 @@ func TestServicesNLBPreserveClientIP(t *testing.T) {
 				{Port: 8443, Protocol: "tcp", ContainerPort: 8443, Scheme: "public", PreserveClientIP: options.Bool(false)},
 			}
 			i.On("ServiceList", "app1").Return(structs.Services{*s}, nil)
+			i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
 			res, err := testExecute(e, "services -a app1", nil)
 			require.NoError(t, err)
@@ -329,6 +344,7 @@ func TestServicesNLBPreserveClientIP(t *testing.T) {
 func TestServicesNLBAllThree(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("ServiceList", "app1").Return(structs.Services{*fxServiceNLBHardening()}, nil)
+		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
 		res, err := testExecute(e, "services -a app1", nil)
 		require.NoError(t, err)
@@ -353,6 +369,7 @@ func TestServicesNLBTLSWithHardening(t *testing.T) {
 			},
 		}
 		i.On("ServiceList", "app1").Return(structs.Services{*s}, nil)
+		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
 		res, err := testExecute(e, "services -a app1", nil)
 		require.NoError(t, err)
@@ -375,6 +392,7 @@ func TestServicesNLBInternalWithHardening(t *testing.T) {
 			},
 		}
 		i.On("ServiceList", "app1").Return(structs.Services{*s}, nil)
+		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
 		res, err := testExecute(e, "services -a app1", nil)
 		require.NoError(t, err)
@@ -400,6 +418,7 @@ func TestServicesNLBTLSInternalAllThree(t *testing.T) {
 			},
 		}
 		i.On("ServiceList", "app1").Return(structs.Services{*s}, nil)
+		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
 		res, err := testExecute(e, "services -a app1", nil)
 		require.NoError(t, err)
@@ -420,6 +439,7 @@ func TestServicesNLBPerPortIndependentBrackets(t *testing.T) {
 			{Port: 9443, Protocol: "tcp", ContainerPort: 8080, Scheme: "public"},
 		}
 		i.On("ServiceList", "app1").Return(structs.Services{*s}, nil)
+		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
 		res, err := testExecute(e, "services -a app1", nil)
 		require.NoError(t, err)
@@ -440,6 +460,7 @@ func TestServicesNLBDifferentHardeningPerPort(t *testing.T) {
 			{Port: 9443, Protocol: "tcp", ContainerPort: 8080, Scheme: "public", AllowCIDR: []string{"10.0.0.0/24", "10.1.0.0/24"}},
 		}
 		i.On("ServiceList", "app1").Return(structs.Services{*s}, nil)
+		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
 		res, err := testExecute(e, "services -a app1", nil)
 		require.NoError(t, err)
@@ -475,6 +496,7 @@ func TestServicesScaleAutoscaleColdColumns(t *testing.T) {
 		}
 
 		i.On("ServiceList", "app1").Return(structs.Services{vllm, web}, nil)
+		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
 		res, err := testExecute(e, "services -a app1", nil)
 		require.NoError(t, err)
@@ -495,6 +517,7 @@ func TestServicesNLBEmptyAllowCIDRNoBracket(t *testing.T) {
 			{Port: 8443, Protocol: "tcp", ContainerPort: 8443, Scheme: "public", AllowCIDR: []string{}},
 		}
 		i.On("ServiceList", "app1").Return(structs.Services{*s}, nil)
+		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
 		res, err := testExecute(e, "services -a app1", nil)
 		require.NoError(t, err)
