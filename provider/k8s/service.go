@@ -464,6 +464,7 @@ func (p *Provider) serviceUpdateCount(app, name string, count int) (handled bool
 
 	_ = p.EventSend("release:imperative-patch-note", structs.EventSendOptions{
 		Data: map[string]string{
+			"actor":   "system",
 			"app":     app,
 			"service": name,
 			"reason":  "KEDA ScaledObject owns replicas; patched scaledobject spec.minReplicaCount / spec.maxReplicaCount instead of deployment replicas",

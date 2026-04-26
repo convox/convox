@@ -11,9 +11,9 @@ services:
       autoscale:
         cpu:
           threshold: 70
-        gpu_utilization:
+        gpuUtilization:
           threshold: 75
-        queue_depth:
+        queueDepth:
           threshold: 3
-        cooldown_period: 300
-        polling_interval: 15
+        cooldownPeriod: 300
+        pollingInterval: 15

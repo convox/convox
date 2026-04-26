@@ -1,0 +1,1 @@
+{"action":"app:budget:cap","data":{"app":"demo","cap":"100","rack":"smoke-1021","spend":"12.34"},"status":"success","timestamp":"2026-04-24T12:00:00Z"}

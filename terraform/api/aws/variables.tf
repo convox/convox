@@ -136,6 +136,11 @@ variable "pdb_default_min_available_percentage" {
   default = 50
 }
 
+variable "prometheus_url" {
+  type    = string
+  default = ""
+}
+
 variable "rack_name" {
   default = ""
   type    = string
@@ -174,4 +179,9 @@ variable "vpc_id" {
 variable "vpa_enable" {
   type    = bool
   default = false
+}
+
+variable "webhook_signing_key" {
+  type    = string
+  default = ""
 }

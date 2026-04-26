@@ -5,6 +5,6 @@ services:
       min: 0
       max: 5
       autoscale:
-        queue_depth:
+        queueDepth:
           threshold: 5
-          metric_name: vllm:num_requests_waiting
+          metricName: vllm:num_requests_waiting

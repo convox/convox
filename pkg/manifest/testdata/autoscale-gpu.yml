@@ -9,5 +9,5 @@ services:
         count: 1
         vendor: nvidia
       autoscale:
-        gpu_utilization:
+        gpuUtilization:
           threshold: 70

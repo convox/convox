@@ -2,7 +2,9 @@ package k8s_test
 
 import (
 	"context"
+	stderrors "errors"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 	"testing"
@@ -774,4 +776,141 @@ func TestBuildImportImage(t *testing.T) {
 			require.Error(t, err)
 		})
 	})
+
+	t.Run("ConcurrentImportSlotAcquiredAndReleased", func(t *testing.T) {
+		// Cap of 2 — run two sequential imports, then a third, all succeed.
+		// Proves slots are released on the happy path so steady-state callers
+		// are unaffected by the limiter.
+		origCap := *k8s.MaxConcurrentImportsForTest
+		*k8s.MaxConcurrentImportsForTest = 2
+		k8s.ResetImportSlotsForTest()
+		defer func() {
+			*k8s.MaxConcurrentImportsForTest = origCap
+			k8s.ResetImportSlotsForTest()
+		}()
+
+		testProvider(t, func(p *k8s.Provider) {
+			kk, ok := p.Cluster.(*fake.Clientset)
+			require.True(t, ok)
+			require.NoError(t, appCreate(kk, "rack1", "app1"))
+			require.NoError(t, buildCreate(p.Convox, "rack1-app1", "buildc1", "basic"))
+			require.NoError(t, buildCreate(p.Convox, "rack1-app1", "buildc2", "basic"))
+			require.NoError(t, buildCreate(p.Convox, "rack1-app1", "buildc3", "basic"))
+
+			*k8s.SkopeoExecForTest = func(ctx context.Context, args ...string) ([]byte, error) {
+				return []byte("ok"), nil
+			}
+
+			require.NoError(t, p.BuildImportImage("app1", "buildc1", "vllm/vllm-openai:v0.6.3", structs.BuildImportImageOptions{}))
+			waitForBuildStatus(t, p, "app1", "buildc1", "complete")
+
+			require.NoError(t, p.BuildImportImage("app1", "buildc2", "vllm/vllm-openai:v0.6.3", structs.BuildImportImageOptions{}))
+			waitForBuildStatus(t, p, "app1", "buildc2", "complete")
+
+			// Third call after both above release proves slots are recycled,
+			// not leaked one-shot.
+			require.NoError(t, p.BuildImportImage("app1", "buildc3", "vllm/vllm-openai:v0.6.3", structs.BuildImportImageOptions{}))
+			waitForBuildStatus(t, p, "app1", "buildc3", "complete")
+		})
+	})
+
+	t.Run("ConcurrentImportCap_Returns409", func(t *testing.T) {
+		// Cap of 1 — block the first import in skopeo, prove the second is
+		// rejected with HTTP 409 and a "concurrent-import cap" message.
+		origCap := *k8s.MaxConcurrentImportsForTest
+		*k8s.MaxConcurrentImportsForTest = 1
+		k8s.ResetImportSlotsForTest()
+		defer func() {
+			*k8s.MaxConcurrentImportsForTest = origCap
+			k8s.ResetImportSlotsForTest()
+		}()
+
+		testProvider(t, func(p *k8s.Provider) {
+			kk, ok := p.Cluster.(*fake.Clientset)
+			require.True(t, ok)
+			require.NoError(t, appCreate(kk, "rack1", "app1"))
+			require.NoError(t, buildCreate(p.Convox, "rack1-app1", "buildcap1", "basic"))
+			require.NoError(t, buildCreate(p.Convox, "rack1-app1", "buildcap2", "basic"))
+			require.NoError(t, buildCreate(p.Convox, "rack1-app1", "buildcap3", "basic"))
+
+			release := make(chan struct{})
+			*k8s.SkopeoExecForTest = func(ctx context.Context, args ...string) ([]byte, error) {
+				<-release
+				return []byte("ok"), nil
+			}
+
+			// Build A: succeeds synchronously (returns nil); goroutine blocks
+			// in skopeo, holding the only slot.
+			require.NoError(t, p.BuildImportImage("app1", "buildcap1", "vllm/vllm-openai:v0.6.3", structs.BuildImportImageOptions{}))
+			// Wait for build A to enter running state (informer-side visibility).
+			waitForBuildStatus(t, p, "app1", "buildcap1", "running")
+
+			// Build B: rack at cap → 409.
+			err := p.BuildImportImage("app1", "buildcap2", "vllm/vllm-openai:v0.6.3", structs.BuildImportImageOptions{})
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "concurrent-import cap")
+			assert.Contains(t, err.Error(), "wait and retry")
+
+			// Verify the error wraps structs.HttpError with code 409.
+			var httpErr *structs.HttpError
+			require.True(t, stderrors.As(err, &httpErr), "error must wrap structs.HttpError")
+			assert.Equal(t, http.StatusConflict, httpErr.Code())
+
+			// Release build A; once it completes the slot is freed and a
+			// fresh call succeeds, proving release happened.
+			close(release)
+			waitForBuildStatus(t, p, "app1", "buildcap1", "complete")
+
+			*k8s.SkopeoExecForTest = func(ctx context.Context, args ...string) ([]byte, error) {
+				return []byte("ok"), nil
+			}
+			require.NoError(t, p.BuildImportImage("app1", "buildcap3", "vllm/vllm-openai:v0.6.3", structs.BuildImportImageOptions{}))
+			waitForBuildStatus(t, p, "app1", "buildcap3", "complete")
+		})
+	})
+
+	t.Run("ConcurrentImportCap_PanicReleasesSlot", func(t *testing.T) {
+		// Cap of 1 — first build's skopeo panics; verify the goroutine's
+		// recover defer + the outermost releaseImportSlot still free the
+		// slot so a second call succeeds.
+		origCap := *k8s.MaxConcurrentImportsForTest
+		*k8s.MaxConcurrentImportsForTest = 1
+		k8s.ResetImportSlotsForTest()
+		defer func() {
+			*k8s.MaxConcurrentImportsForTest = origCap
+			k8s.ResetImportSlotsForTest()
+		}()
+
+		testProvider(t, func(p *k8s.Provider) {
+			kk, ok := p.Cluster.(*fake.Clientset)
+			require.True(t, ok)
+			require.NoError(t, appCreate(kk, "rack1", "app1"))
+			require.NoError(t, buildCreate(p.Convox, "rack1-app1", "buildp1", "basic"))
+			require.NoError(t, buildCreate(p.Convox, "rack1-app1", "buildp2", "basic"))
+
+			*k8s.SkopeoExecForTest = func(ctx context.Context, args ...string) ([]byte, error) {
+				panic("synthetic panic to verify slot release")
+			}
+
+			// Synchronous return is nil; the panic is in the goroutine.
+			require.NoError(t, p.BuildImportImage("app1", "buildp1", "vllm/vllm-openai:v0.6.3", structs.BuildImportImageOptions{}))
+			// Wait for failure path to settle (recover defer flips status to failed).
+			waitForBuildStatus(t, p, "app1", "buildp1", "failed")
+
+			// Restore success stub; second call must succeed, proving the
+			// panic-recover path released the slot via the outermost defer.
+			*k8s.SkopeoExecForTest = func(ctx context.Context, args ...string) ([]byte, error) {
+				return []byte("ok"), nil
+			}
+			require.NoError(t, p.BuildImportImage("app1", "buildp2", "vllm/vllm-openai:v0.6.3", structs.BuildImportImageOptions{}))
+			waitForBuildStatus(t, p, "app1", "buildp2", "complete")
+		})
+	})
+}
+
+// TestBuildImportImage_DefaultCapIsFour locks the production cap at 4. A
+// future PR raising the cap must update this test deliberately so the
+// change appears in the diff log alongside the source bump.
+func TestBuildImportImage_DefaultCapIsFour(t *testing.T) {
+	assert.Equal(t, 4, *k8s.MaxConcurrentImportsForTest)
 }

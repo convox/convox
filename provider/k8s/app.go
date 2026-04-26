@@ -166,6 +166,10 @@ func (p *Provider) AppDelete(name string) error {
 		return errors.WithStack(err)
 	}
 
+	// MF-8: drop the per-app budget lock entry so appBudgetLockMap doesn't
+	// grow unbounded on long-lived racks with high app churn.
+	p.RemoveAppLock(name)
+
 	return nil
 }
 

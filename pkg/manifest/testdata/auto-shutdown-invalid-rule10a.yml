@@ -1,0 +1,10 @@
+timers:
+  hourly:
+    schedule: "0 * * * *"
+    service: ""
+    command: "/bin/echo hello"
+
+budget:
+  monthlyCapUsd: 100
+  atCapAction: auto-shutdown
+  atCapWebhookUrl: https://hooks.example.com/budget

@@ -82,6 +82,103 @@ func (_m *Interface) AppBudgetReset(app string, ackBy string) error {
 	return r0
 }
 
+// AppBudgetResetWithOptions provides a mock function with given fields: app, ackBy, opts
+func (_m *Interface) AppBudgetResetWithOptions(app string, ackBy string, opts structs.AppBudgetResetOptions) error {
+	ret := _m.Called(app, ackBy, opts)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string, structs.AppBudgetResetOptions) error); ok {
+		r0 = rf(app, ackBy, opts)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// AppBudgetShutdownStateGet provides a mock function with given fields: app
+func (_m *Interface) AppBudgetShutdownStateGet(app string) (*structs.AppBudgetShutdownState, error) {
+	ret := _m.Called(app)
+
+	var r0 *structs.AppBudgetShutdownState
+	if rf, ok := ret.Get(0).(func(string) *structs.AppBudgetShutdownState); ok {
+		r0 = rf(app)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*structs.AppBudgetShutdownState)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(app)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// AppBudgetSimulate provides a mock function with given fields: app
+func (_m *Interface) AppBudgetSimulate(app string) (*structs.AppBudgetSimulationResult, error) {
+	ret := _m.Called(app)
+
+	var r0 *structs.AppBudgetSimulationResult
+	if rf, ok := ret.Get(0).(func(string) *structs.AppBudgetSimulationResult); ok {
+		r0 = rf(app)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*structs.AppBudgetSimulationResult)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(app)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// AppBudgetDismissRecovery provides a mock function with given fields: app, ackBy
+func (_m *Interface) AppBudgetDismissRecovery(app string, ackBy string) error {
+	ret := _m.Called(app, ackBy)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = rf(app, ackBy)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// AppBudgetDismissRecoveryWithResult provides a mock function with given fields: app, ackBy
+func (_m *Interface) AppBudgetDismissRecoveryWithResult(app string, ackBy string) (*structs.AppBudgetDismissRecoveryResult, error) {
+	ret := _m.Called(app, ackBy)
+
+	var r0 *structs.AppBudgetDismissRecoveryResult
+	if rf, ok := ret.Get(0).(func(string, string) *structs.AppBudgetDismissRecoveryResult); ok {
+		r0 = rf(app, ackBy)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*structs.AppBudgetDismissRecoveryResult)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, string) error); ok {
+		r1 = rf(app, ackBy)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // AppBudgetSet provides a mock function with given fields: app, opts, ackBy
 func (_m *Interface) AppBudgetSet(app string, opts structs.AppBudgetOptions, ackBy string) error {
 	ret := _m.Called(app, opts, ackBy)

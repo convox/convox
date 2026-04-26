@@ -3,46 +3,46 @@
 
 locals {
   telemetry_map = {
-    buildkit_enabled = var.buildkit_enabled
-    cert_duration = var.cert_duration
-    docker_hub_password = var.docker_hub_password
-    docker_hub_username = var.docker_hub_username
-    image = var.image
-    k8s_version = var.k8s_version
-    name = var.name
-    nginx_additional_config = var.nginx_additional_config
-    node_disk = var.node_disk
-    node_type = var.node_type
-    preemptible = var.preemptible
-    rack_name = var.rack_name
-    region = var.region
-    release = var.release
-    settings = var.settings
-    syslog = var.syslog
-    telemetry = var.telemetry
+    buildkit_enabled         = var.buildkit_enabled
+    cert_duration            = var.cert_duration
+    docker_hub_password      = var.docker_hub_password
+    docker_hub_username      = var.docker_hub_username
+    image                    = var.image
+    k8s_version              = var.k8s_version
+    name                     = var.name
+    nginx_additional_config  = var.nginx_additional_config
+    node_disk                = var.node_disk
+    node_type                = var.node_type
+    preemptible              = var.preemptible
+    rack_name                = var.rack_name
+    region                   = var.region
+    release                  = var.release
+    settings                 = var.settings
+    syslog                   = var.syslog
+    telemetry                = var.telemetry
     terraform_update_timeout = var.terraform_update_timeout
-    whitelist = var.whitelist
-    }
+    whitelist                = var.whitelist
+  }
 
   telemetry_default_map = {
-    buildkit_enabled = "false"
-    cert_duration = "2160h"
-    docker_hub_password = ""
-    docker_hub_username = ""
-    image = "convox/convox"
-    k8s_version = "1.34"
-    name = ""
-    nginx_additional_config = ""
-    node_disk = "100"
-    node_type = "n1-standard-2"
-    preemptible = "true"
-    rack_name = ""
-    region = "us-east1"
-    release = ""
-    settings = ""
-    syslog = ""
-    telemetry = "false"
+    buildkit_enabled         = "false"
+    cert_duration            = "2160h"
+    docker_hub_password      = ""
+    docker_hub_username      = ""
+    image                    = "convox/convox"
+    k8s_version              = "1.34"
+    name                     = ""
+    nginx_additional_config  = ""
+    node_disk                = "100"
+    node_type                = "n1-standard-2"
+    preemptible              = "true"
+    rack_name                = ""
+    region                   = "us-east1"
+    release                  = ""
+    settings                 = ""
+    syslog                   = ""
+    telemetry                = "false"
     terraform_update_timeout = "2h"
-    whitelist = "0.0.0.0/0"
-    }
+    whitelist                = "0.0.0.0/0"
+  }
 }

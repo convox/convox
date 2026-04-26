@@ -261,14 +261,31 @@ func (s *Server) AppBudgetSet(c *stdapi.Context) error {
 	}
 
 	app := c.Var("app")
-	ackBy := c.Value("ack_by")
+
+	derivedAckBy, _ := c.Get(structs.ConvoxJwtUserParam).(string)
+	derivedAckBy = strings.TrimSpace(derivedAckBy)
+	if derivedAckBy == "" {
+		derivedAckBy = "unknown" // sanitizeAckBy maps "" → "unknown"; defense in depth
+	}
+
+	if rawAckBy := c.Value("ack_by"); rawAckBy != "" && rawAckBy != derivedAckBy {
+		// RFC 8594 deprecation headers (Nick-confirmed pivot replacing v0's
+		// X-Convox-Deprecation custom header). Sunset is HTTP-date per RFC 7231
+		// §7.1.1.1; Link rel="deprecation" follows RFC 8631 §4.6 + RFC 8288.
+		c.Response().Header().Set("Deprecation", "true")
+		c.Response().Header().Set("Sunset", deprecationSunsetDate())
+		c.Response().Header().Set("Link", `<https://docs.convox.com/migration/ack-by-derivation>; rel="deprecation"; type="text/html"`)
+		// stdout audit trail of the override (operator-side via fluentd):
+		fmt.Printf("ns=api at=warn kind=ack_by_override app=%s client_supplied=%q jwt_user=%q\n",
+			app, rawAckBy, derivedAckBy)
+	}
 
 	var opts structs.AppBudgetOptions
 	if err := stdapi.UnmarshalOptions(c.Request(), &opts); err != nil {
 		return err
 	}
 
-	if err := s.provider(c).WithContext(contextFrom(c)).AppBudgetSet(app, opts, ackBy); err != nil {
+	if err := s.provider(c).WithContext(contextFrom(c)).AppBudgetSet(app, opts, derivedAckBy); err != nil {
 		return err
 	}
 
@@ -281,9 +298,26 @@ func (s *Server) AppBudgetClear(c *stdapi.Context) error {
 	}
 
 	app := c.Var("app")
-	ackBy := c.Value("ack_by")
 
-	if err := s.provider(c).WithContext(contextFrom(c)).AppBudgetClear(app, ackBy); err != nil {
+	derivedAckBy, _ := c.Get(structs.ConvoxJwtUserParam).(string)
+	derivedAckBy = strings.TrimSpace(derivedAckBy)
+	if derivedAckBy == "" {
+		derivedAckBy = "unknown"
+	}
+
+	if rawAckBy := c.Value("ack_by"); rawAckBy != "" && rawAckBy != derivedAckBy {
+		// RFC 8594 deprecation headers (Nick-confirmed pivot replacing v0's
+		// X-Convox-Deprecation custom header). Sunset is HTTP-date per RFC 7231
+		// §7.1.1.1; Link rel="deprecation" follows RFC 8631 §4.6 + RFC 8288.
+		c.Response().Header().Set("Deprecation", "true")
+		c.Response().Header().Set("Sunset", deprecationSunsetDate())
+		c.Response().Header().Set("Link", `<https://docs.convox.com/migration/ack-by-derivation>; rel="deprecation"; type="text/html"`)
+		// stdout audit trail of the override (operator-side via fluentd):
+		fmt.Printf("ns=api at=warn kind=ack_by_override app=%s client_supplied=%q jwt_user=%q\n",
+			app, rawAckBy, derivedAckBy)
+	}
+
+	if err := s.provider(c).WithContext(contextFrom(c)).AppBudgetClear(app, derivedAckBy); err != nil {
 		return err
 	}
 
@@ -295,14 +329,103 @@ func (s *Server) AppBudgetReset(c *stdapi.Context) error {
 		return err
 	}
 
-	app := c.Var("app")
-	ackBy := c.Value("ack_by")
+	if !CanAdmin(c) {
+		// Pinned by R3 amendments § Set E (E.2 UX). Customer tooling parses this body for migration guidance.
+		return stdapi.Errorf(http.StatusForbidden, "AppBudgetReset requires Admin role; current role is 'w'. Contact rack admin or use Admin token.")
+	}
 
-	if err := s.provider(c).WithContext(contextFrom(c)).AppBudgetReset(app, ackBy); err != nil {
-		return err
+	app := c.Var("app")
+
+	derivedAckBy, _ := c.Get(structs.ConvoxJwtUserParam).(string)
+	derivedAckBy = strings.TrimSpace(derivedAckBy)
+	if derivedAckBy == "" {
+		derivedAckBy = "unknown"
+	}
+
+	if rawAckBy := c.Value("ack_by"); rawAckBy != "" && rawAckBy != derivedAckBy {
+		// RFC 8594 deprecation headers (Nick-confirmed pivot replacing v0's
+		// X-Convox-Deprecation custom header). Sunset is HTTP-date per RFC 7231
+		// §7.1.1.1; Link rel="deprecation" follows RFC 8631 §4.6 + RFC 8288.
+		c.Response().Header().Set("Deprecation", "true")
+		c.Response().Header().Set("Sunset", deprecationSunsetDate())
+		c.Response().Header().Set("Link", `<https://docs.convox.com/migration/ack-by-derivation>; rel="deprecation"; type="text/html"`)
+		// stdout audit trail of the override (operator-side via fluentd):
+		fmt.Printf("ns=api at=warn kind=ack_by_override app=%s client_supplied=%q jwt_user=%q\n",
+			app, rawAckBy, derivedAckBy)
+	}
+
+	// Set G: --force-clear-cooldown flag passes through to
+	// AppBudgetResetWithOptions when present. CanAdmin already gated above.
+	forceClear := c.Value("force_clear_cooldown") == "true"
+	if forceClear {
+		opts := structs.AppBudgetResetOptions{ForceClearCooldown: true}
+		if err := s.provider(c).WithContext(contextFrom(c)).AppBudgetResetWithOptions(app, derivedAckBy, opts); err != nil {
+			return err
+		}
+	} else {
+		if err := s.provider(c).WithContext(contextFrom(c)).AppBudgetReset(app, derivedAckBy); err != nil {
+			return err
+		}
 	}
 
 	return c.RenderOK()
+}
+
+// AppBudgetShutdownStateGet returns the shutdown-state annotation for
+// an app. Used by the CLI banner renderer per Set G v2 spec §16.3.
+// Read-only path; standard CanRead gate.
+func (s *Server) AppBudgetShutdownStateGet(c *stdapi.Context) error {
+	if err := s.hook("AppBudgetShutdownStateGetValidate", c); err != nil {
+		return err
+	}
+	app := c.Var("app")
+	v, err := s.provider(c).WithContext(contextFrom(c)).AppBudgetShutdownStateGet(app)
+	if err != nil {
+		return err
+	}
+	return c.RenderJSON(v)
+}
+
+// AppBudgetSimulate runs a dry-run shutdown simulation per Set G v2 §17.
+// Read-only path; CanWrite gate via the default Authorize middleware
+// (POST → write-role check).
+func (s *Server) AppBudgetSimulate(c *stdapi.Context) error {
+	if err := s.hook("AppBudgetSimulateValidate", c); err != nil {
+		return err
+	}
+
+	app := c.Var("app")
+
+	v, err := s.provider(c).WithContext(contextFrom(c)).AppBudgetSimulate(app)
+	if err != nil {
+		return err
+	}
+	return c.RenderJSON(v)
+}
+
+// AppBudgetDismissRecovery dismisses the sticky recovery banner.
+// Idempotent. CanWrite gate via the default Authorize middleware.
+// Renders an AppBudgetDismissRecoveryResult JSON body so the CLI can
+// surface the 3-case status: dismissed / already-dismissed / no-banner.
+func (s *Server) AppBudgetDismissRecovery(c *stdapi.Context) error {
+	if err := s.hook("AppBudgetDismissRecoveryValidate", c); err != nil {
+		return err
+	}
+
+	app := c.Var("app")
+
+	derivedAckBy, _ := c.Get(structs.ConvoxJwtUserParam).(string)
+	derivedAckBy = strings.TrimSpace(derivedAckBy)
+	if derivedAckBy == "" {
+		derivedAckBy = "unknown"
+	}
+
+	v, err := s.provider(c).WithContext(contextFrom(c)).AppBudgetDismissRecoveryWithResult(app, derivedAckBy)
+	if err != nil {
+		return err
+	}
+
+	return c.RenderJSON(v)
 }
 
 func (s *Server) AppCost(c *stdapi.Context) error {
@@ -1607,6 +1730,13 @@ func (s *Server) SystemJwtToken(c *stdapi.Context) error {
 		if err != nil {
 			return err
 		}
+	case "admin":
+		tk, err = s.JwtMngr.AdminToken(time.Hour * time.Duration(durationInHour))
+		if err != nil {
+			return err
+		}
+	default:
+		return stdapi.Errorf(http.StatusBadRequest, "invalid role: must be read, write, or admin")
 	}
 
 	return c.RenderJSON(structs.SystemJwt{

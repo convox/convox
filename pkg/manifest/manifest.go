@@ -27,9 +27,10 @@ var (
 )
 
 type Manifest struct {
-	AppSettings AppSettings `yaml:"appSettings,omitempty"`
-	Balancers   Balancers   `yaml:"balancers,omitempty"`
-	Configs     AppConfigs  `yaml:"configs,omitempty"`
+	AppSettings AppSettings    `yaml:"appSettings,omitempty"`
+	Balancers   Balancers      `yaml:"balancers,omitempty"`
+	Budget      BudgetSettings `yaml:"budget,omitempty"`
+	Configs     AppConfigs     `yaml:"configs,omitempty"`
 	Environment Environment `yaml:"environment,omitempty"`
 	Labels      Labels      `yaml:"labels,omitempty"`
 	Params      Params      `yaml:"params,omitempty"`
@@ -214,6 +215,9 @@ func (m *Manifest) ApplyDefaults() error {
 			}
 		}
 
+		// GPU services may take 10-25min to load large models from cold cache (vLLM, Triton, HF Transformers).
+		// Defaults: Grace=300s + Interval=10s x FailureThreshold=180 = 30-min cold-start ceiling.
+		// Customers with longer cold-start should set explicit failureThreshold in convox.yml.
 		if s.Scale.Gpu.Count > 0 && m.Services[i].StartupProbe.TcpSocketPort != "" {
 			if m.Services[i].StartupProbe.Grace == 0 {
 				m.Services[i].StartupProbe.Grace = 300
@@ -225,7 +229,7 @@ func (m *Manifest) ApplyDefaults() error {
 				m.Services[i].StartupProbe.Timeout = 5
 			}
 			if m.Services[i].StartupProbe.FailureThreshold == 0 {
-				m.Services[i].StartupProbe.FailureThreshold = 30
+				m.Services[i].StartupProbe.FailureThreshold = 180
 			}
 			if m.Services[i].StartupProbe.SuccessThreshold == 0 {
 				m.Services[i].StartupProbe.SuccessThreshold = 1
@@ -256,6 +260,12 @@ func (m *Manifest) ApplyDefaults() error {
 			}
 			m.Services[i].Ports = filtered
 		}
+
+		// F.1 — populate AutoscaleMode discriminators from parent slot name.
+		// Customer YAML does not set `mode:`; we derive it post-load so that
+		// downstream code can switch on `a.Cpu.Mode` etc. without inspecting
+		// which pointer is non-nil.
+		m.Services[i].Scale.Autoscale.applyModeDiscriminator()
 
 		sp := fmt.Sprintf("services.%s.scale", s.Name)
 

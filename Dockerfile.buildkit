@@ -17,7 +17,9 @@ FROM moby/buildkit:v0.28.0-rootless as rootless
 
 USER root
 
-RUN apk add skopeo --update
+# skopeo version pin — see Dockerfile:54 comment block for cadence policy. Alpine
+# version may differ from Ubuntu's; both must be bumped together when policy fires.
+RUN apk add skopeo=1.20.0-r7 --update
 
 COPY --from=package /go/bin/build /usr/bin
 
@@ -34,7 +36,8 @@ ENTRYPOINT [ "./buildctl-daemonless.sh" ]
 
 FROM moby/buildkit:v0.28.0 as privileged
 
-RUN apk add skopeo --update
+# skopeo version pin — see Dockerfile:54 comment block for cadence policy.
+RUN apk add skopeo=1.20.0-r7 --update
 
 COPY --from=package /go/bin/build /usr/bin
 

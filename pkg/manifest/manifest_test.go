@@ -852,7 +852,7 @@ func TestManifestStartupProbeGpu(t *testing.T) {
 	require.Equal(t, 300, defaults.StartupProbe.Grace)
 	require.Equal(t, 10, defaults.StartupProbe.Interval)
 	require.Equal(t, 5, defaults.StartupProbe.Timeout)
-	require.Equal(t, 30, defaults.StartupProbe.FailureThreshold)
+	require.Equal(t, 180, defaults.StartupProbe.FailureThreshold)
 	require.Equal(t, 1, defaults.StartupProbe.SuccessThreshold)
 
 	// gpu-with-liveness: GPU service inheriting from Liveness — should take
@@ -889,6 +889,113 @@ func TestManifestStartupProbeGpu(t *testing.T) {
 	require.Equal(t, "", cpu.StartupProbe.Path)
 	require.Equal(t, "", cpu.StartupProbe.TcpSocketPort)
 	require.Equal(t, 0, cpu.StartupProbe.Grace)
+}
+
+// TestManifestStartupProbeGpu_FailureThreshold180LocksMinimum locks the GPU-service
+// startup-probe FailureThreshold default at 180 (= 30-min cold-start ceiling at the
+// 10s default Interval). This is intentionally redundant with the assertion in
+// TestManifestStartupProbeGpu — the duplication exists to surface a clear failure
+// if a future commit silently lowers the GPU cold-start ceiling.
+//
+// LOCKED 2026-04-25: 30-min cold-start ceiling = 180 attempts x 10s interval.
+// Do not lower without opening a release-notes ticket. R3-pinned default per
+// master plan §1 Set C.
+func TestManifestStartupProbeGpu_FailureThreshold180LocksMinimum(t *testing.T) {
+	m, err := testdataManifest("startup-probe-gpu", map[string]string{})
+	require.NoError(t, err)
+
+	defaults, err := m.Service("gpu-defaults")
+	require.NoError(t, err)
+
+	require.Equal(t, 180, defaults.StartupProbe.FailureThreshold)
+}
+
+// TestManifestStartupProbeGpu_GraceIntervalTimeoutUnchanged guards against a wider
+// edit on the same lines accidentally changing OTHER GPU defaults. The 180
+// FailureThreshold was the only intended change in 3.24.6.
+func TestManifestStartupProbeGpu_GraceIntervalTimeoutUnchanged(t *testing.T) {
+	m, err := testdataManifest("startup-probe-gpu", map[string]string{})
+	require.NoError(t, err)
+
+	defaults, err := m.Service("gpu-defaults")
+	require.NoError(t, err)
+
+	require.Equal(t, 300, defaults.StartupProbe.Grace, "GPU Grace default must remain 300s")
+	require.Equal(t, 10, defaults.StartupProbe.Interval, "GPU Interval default must remain 10s")
+	require.Equal(t, 5, defaults.StartupProbe.Timeout, "GPU Timeout default must remain 5s")
+	require.Equal(t, 1, defaults.StartupProbe.SuccessThreshold, "GPU SuccessThreshold default must remain 1")
+}
+
+// TestManifestStartupProbeGpu_ExplicitFailureThresholdOverrides180 locks the
+// "user-supplied wins" semantic: if a customer sets failureThreshold explicitly
+// on a GPU service, the 180 default must NOT clobber it.
+func TestManifestStartupProbeGpu_ExplicitFailureThresholdOverrides180(t *testing.T) {
+	data := []byte(`services:
+  gpu-explicit:
+    build: .
+    port: 8080
+    startupProbe:
+      failureThreshold: 60
+    scale:
+      gpu:
+        count: 1
+        vendor: nvidia
+`)
+	m, err := manifest.Load(data, map[string]string{})
+	require.NoError(t, err)
+
+	svc, err := m.Service("gpu-explicit")
+	require.NoError(t, err)
+	require.Equal(t, 60, svc.StartupProbe.FailureThreshold, "explicit failureThreshold must override the 180 GPU default")
+	// TcpSocketPort still gets auto-wired since the user did not specify path or tcpSocketPort.
+	require.Equal(t, "8080", svc.StartupProbe.TcpSocketPort)
+	// Other GPU defaults still fire when not explicit.
+	require.Equal(t, 300, svc.StartupProbe.Grace)
+	require.Equal(t, 10, svc.StartupProbe.Interval)
+	require.Equal(t, 5, svc.StartupProbe.Timeout)
+}
+
+// TestManifestStartupProbe_NonGpuFailureThresholdUnchanged locks the GPU-only
+// scope of the 180 default. Non-GPU services must still report their pre-existing
+// values (explicit, inherited from liveness, or partial-override) — the 180
+// default must not leak into CPU paths.
+func TestManifestStartupProbe_NonGpuFailureThresholdUnchanged(t *testing.T) {
+	m, err := testdataManifest("startup-probe", map[string]string{})
+	require.NoError(t, err)
+
+	// web-custom: explicit failureThreshold=10 on startupProbe must remain 10.
+	custom, err := m.Service("web-custom")
+	require.NoError(t, err)
+	require.Equal(t, 10, custom.StartupProbe.FailureThreshold, "non-GPU explicit FailureThreshold must not be replaced by 180")
+
+	// web-inherited: failureThreshold not set on startupProbe — should inherit
+	// from liveness (5), NOT pick up the GPU 180 default.
+	inherited, err := m.Service("web-inherited")
+	require.NoError(t, err)
+	require.Equal(t, 5, inherited.StartupProbe.FailureThreshold, "non-GPU inherited FailureThreshold must come from liveness, not the GPU 180 default")
+
+	// web-tcp: explicit failureThreshold=20 on startupProbe must remain 20.
+	tcp, err := m.Service("web-tcp")
+	require.NoError(t, err)
+	require.Equal(t, 20, tcp.StartupProbe.FailureThreshold, "non-GPU explicit tcp FailureThreshold must not be replaced by 180")
+}
+
+// TestManifestStartupProbeGpu_NoPortService_NoFailureThresholdSet re-verifies that
+// the gate condition `s.Scale.Gpu.Count > 0 && TcpSocketPort != ""` is unchanged:
+// a GPU service with no Port.Port gets NO startup probe at all, and FailureThreshold
+// stays at the zero value (180 must NOT be written into a service without a TCP port).
+func TestManifestStartupProbeGpu_NoPortService_NoFailureThresholdSet(t *testing.T) {
+	m, err := testdataManifest("startup-probe-gpu", map[string]string{})
+	require.NoError(t, err)
+
+	noPort, err := m.Service("gpu-no-port")
+	require.NoError(t, err)
+	require.Equal(t, "", noPort.StartupProbe.Path)
+	require.Equal(t, "", noPort.StartupProbe.TcpSocketPort)
+	require.Equal(t, 0, noPort.StartupProbe.Grace)
+	require.Equal(t, 0, noPort.StartupProbe.FailureThreshold, "GPU service with no port must not receive the 180 default")
+	require.Equal(t, 0, noPort.StartupProbe.Interval)
+	require.Equal(t, 0, noPort.StartupProbe.Timeout)
 }
 
 func TestManifestKeda(t *testing.T) {

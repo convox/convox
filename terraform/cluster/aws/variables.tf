@@ -194,8 +194,8 @@ variable "karpenter_node_taints" {
 }
 
 variable "karpenter_config" {
-  type    = string
-  default = ""
+  type        = string
+  default     = ""
   description = "JSON overrides for the workload NodePool and EC2NodeClass specs"
 }
 

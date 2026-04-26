@@ -87,12 +87,24 @@ func (s *Server) authenticate(next stdapi.HandlerFunc) stdapi.HandlerFunc {
 				return stdapi.Errorf(http.StatusUnauthorized, "invalid authentication: %s", err)
 			}
 			c.Set(structs.ConvoxRoleParam, data.Role)
+			// Audit: stash the verified JWT subject so contextFrom can thread it
+			// into the provider context for ContextActor / EventSend "actor"
+			// derivation. Basic-auth callers (rack-password) take a separate
+			// path covered by the SetReadWriteRole branch.
+			c.Set(structs.ConvoxJwtUserParam, data.User)
 		} else {
 			if s.Password != "" && s.Password != pass {
 				c.Response().Header().Set("WWW-Authenticate", `Basic realm="convox"`)
 				return stdapi.Errorf(http.StatusUnauthorized, "invalid authentication")
 			}
 			SetReadWriteRole(c)
+			// Audit: basic-auth callers (rack-password) have no JWT identity, so
+			// stash the literal "rack-password" sentinel for ContextActor /
+			// EventSend audit-event derivation. The literal is uniquely greppable
+			// (no other "rack-password" string in the rack source path) and
+			// distinct from the empty-JWT-user "unknown" fallback. See D.4 spec
+			// set-d4-e1-spec-v2.md §B.1.1.
+			c.Set(structs.ConvoxJwtUserParam, "rack-password")
 		}
 
 		return next(c)

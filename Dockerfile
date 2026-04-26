@@ -51,7 +51,12 @@ FROM ubuntu:24.04
 ARG DOCKER_ARCH=x86_64
 ARG KUBECTL_ARCH=amd64
 
-RUN apt-get -qq update && apt-get -qq -y install curl default-mysql-client postgresql-client redis-tools telnet skopeo
+# skopeo version pin — bump in lockstep with: (a) annual review (Convox release
+# cycle), (b) on `convox builds import-image` smoke-test failure (signals an
+# upstream regression), or (c) on Ubuntu base-image major version bump. The
+# pinned version must be present in the active Ubuntu repository before
+# updating; check with `apt-cache madison skopeo` on the chosen base.
+RUN apt-get -qq update && apt-get -qq -y install curl default-mysql-client postgresql-client redis-tools telnet skopeo=1.13.3+ds1-2ubuntu0.24.04.3
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 

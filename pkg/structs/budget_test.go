@@ -21,8 +21,8 @@ func TestAppBudgetJSONRoundtrip(t *testing.T) {
 
 	data, err := json.Marshal(b)
 	require.NoError(t, err)
-	require.Contains(t, string(data), `"monthly_cap_usd":500`)
-	require.Contains(t, string(data), `"at_cap_action":"alert-only"`)
+	require.Contains(t, string(data), `"monthly-cap-usd":500`)
+	require.Contains(t, string(data), `"at-cap-action":"alert-only"`)
 
 	var got structs.AppBudget
 	require.NoError(t, json.Unmarshal(data, &got))
@@ -225,7 +225,7 @@ func TestAppBudgetPointerOnApp(t *testing.T) {
 	data2, err := json.Marshal(a)
 	require.NoError(t, err)
 	assert.Contains(t, string(data2), `"budget"`)
-	assert.Contains(t, string(data2), `"monthly_cap_usd":100`)
+	assert.Contains(t, string(data2), `"monthly-cap-usd":100`)
 }
 
 // TestAppWithBudget_OldSDKUnmarshal proves the vendored-console3 compat
@@ -238,7 +238,7 @@ func TestAppWithBudget_OldSDKUnmarshal(t *testing.T) {
 		Release string `json:"release"`
 		Status  string `json:"status"`
 	}
-	payload := []byte(`{"name":"foo","release":"r1","status":"running","budget":{"monthly_cap_usd":100,"at_cap_action":"alert-only"}}`)
+	payload := []byte(`{"name":"foo","release":"r1","status":"running","budget":{"monthly-cap-usd":100,"at-cap-action":"alert-only"}}`)
 
 	var old oldApp
 	require.NoError(t, json.Unmarshal(payload, &old))
@@ -269,4 +269,123 @@ func TestServiceCostLineJSONRoundtrip(t *testing.T) {
 	var got structs.ServiceCostLine
 	require.NoError(t, json.Unmarshal(data, &got))
 	assert.Equal(t, line, got)
+}
+
+// TestAppBudget_KebabJSON_RoundTrip is the explicit kebab-form contract
+// (R3 Tests R2 T-7). Asserts the JSON wire format uses "monthly-cap-usd"
+// and "at-cap-action" — NOT the legacy snake form.
+func TestAppBudget_KebabJSON_RoundTrip(t *testing.T) {
+	b := structs.AppBudget{
+		MonthlyCapUsd:         500,
+		AlertThresholdPercent: 80,
+		AtCapAction:           "alert-only",
+		PricingAdjustment:     1.0,
+	}
+	data, err := json.Marshal(b)
+	require.NoError(t, err)
+	require.Contains(t, string(data), `"monthly-cap-usd":500`)
+	require.Contains(t, string(data), `"at-cap-action":"alert-only"`)
+	// Also assert the kebab forms appear and the snake legacy forms do NOT.
+	require.NotContains(t, string(data), "monthly_cap_usd")
+	require.NotContains(t, string(data), "at_cap_action")
+	var got structs.AppBudget
+	require.NoError(t, json.Unmarshal(data, &got))
+	assert.Equal(t, b, got)
+}
+
+// TestAppBudgetValidate_KebabErrorMessages — Validate() error strings
+// must echo the kebab form so users see the same identifier across CLI
+// flags, JSON wire, and error text.
+func TestAppBudgetValidate_KebabErrorMessages(t *testing.T) {
+	// Negative monthly-cap-usd path
+	b1 := structs.AppBudget{MonthlyCapUsd: -1, AlertThresholdPercent: 80, AtCapAction: "alert-only", PricingAdjustment: 1.0}
+	err := b1.Validate()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "monthly-cap-usd")
+	assert.NotContains(t, err.Error(), "monthly_cap_usd")
+
+	// Out-of-range alert-threshold-percent
+	b2 := structs.AppBudget{MonthlyCapUsd: 100, AlertThresholdPercent: 200, AtCapAction: "alert-only", PricingAdjustment: 1.0}
+	err = b2.Validate()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "alert-threshold-percent")
+	assert.NotContains(t, err.Error(), "alert_threshold_percent")
+
+	// Bad at-cap-action
+	b3 := structs.AppBudget{MonthlyCapUsd: 100, AlertThresholdPercent: 80, AtCapAction: "nope", PricingAdjustment: 1.0}
+	err = b3.Validate()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "at-cap-action")
+	assert.NotContains(t, err.Error(), "at_cap_action")
+
+	// Out-of-range pricing-adjustment
+	b4 := structs.AppBudget{MonthlyCapUsd: 100, AlertThresholdPercent: 80, AtCapAction: "alert-only", PricingAdjustment: 5}
+	err = b4.Validate()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "pricing-adjustment")
+	assert.NotContains(t, err.Error(), "pricing_adjustment")
+}
+
+// TestAppBudget_SnakeCaseJSON_RejectsWithError is the negative regression
+// guard required by R3 Tests R2 T-7. A JSON payload using the legacy
+// snake-case keys must NOT bind to AppBudget fields — encoding/json
+// silent-drops unknown keys, so we observe binding failure as zero values
+// on the round-trip target.
+//
+// This test exists to fail loudly if a future encoder tweak (e.g. a custom
+// UnmarshalJSON or a permissive decoder option) accidentally restored
+// snake-case acceptance. The kebab form is the contract; the legacy form
+// must not silently work as a fallback.
+func TestAppBudget_SnakeCaseJSON_RejectsWithError(t *testing.T) {
+	snake := []byte(`{"monthly_cap_usd":500,"at_cap_action":"alert-only","alert_threshold_percent":80,"pricing_adjustment":1.0}`)
+	var got structs.AppBudget
+	require.NoError(t, json.Unmarshal(snake, &got),
+		"json.Unmarshal must not error on unknown keys; it silent-drops them")
+
+	// All four fields must be ZERO — proves the snake-case keys did NOT bind.
+	assert.Equal(t, 0.0, got.MonthlyCapUsd, "snake monthly_cap_usd must not bind")
+	assert.Equal(t, "", got.AtCapAction, "snake at_cap_action must not bind")
+	assert.Equal(t, 0.0, got.AlertThresholdPercent, "snake alert_threshold_percent must not bind")
+	assert.Equal(t, 0.0, got.PricingAdjustment, "snake pricing_adjustment must not bind")
+}
+
+
+// TestServiceCostLine_KebabJSON_RoundTrip — F-9 fix (catalog F-9).
+// Verifies the JSON tag rename from snake to kebab on the InstanceType
+// field. Wire format must use `instance-type` (matching the rest of the
+// pkg/structs/budget.go convention) — the snake form `instance_type`
+// must NOT bind on Unmarshal of the new wire format.
+func TestServiceCostLine_KebabJSON_RoundTrip(t *testing.T) {
+	line := structs.ServiceCostLine{
+		Service:      "ml-batch",
+		GpuHours:     1.5,
+		CpuHours:     0.25,
+		MemGbHours:   2.0,
+		InstanceType: "g5.xlarge",
+		SpendUsd:     12.34,
+		Attribution:  "test",
+	}
+
+	data, err := json.Marshal(line)
+	require.NoError(t, err)
+	wire := string(data)
+
+	// Wire format MUST use kebab.
+	require.Contains(t, wire, `"instance-type":"g5.xlarge"`,
+		"InstanceType must marshal as kebab-case `instance-type` per convention")
+	require.NotContains(t, wire, `"instance_type"`,
+		"snake-form `instance_type` must NOT appear in wire output (catalog F-9)")
+
+	// Round-trip from kebab wire format.
+	var got structs.ServiceCostLine
+	require.NoError(t, json.Unmarshal([]byte(wire), &got))
+	assert.Equal(t, "g5.xlarge", got.InstanceType, "kebab-tagged field must bind on Unmarshal")
+
+	// Snake-form input MUST NOT bind (defensive — catches a future
+	// regression that adds a duplicate snake tag).
+	snake := `{"service":"ml-batch","instance_type":"g5.xlarge"}`
+	var got2 structs.ServiceCostLine
+	require.NoError(t, json.Unmarshal([]byte(snake), &got2))
+	assert.Equal(t, "", got2.InstanceType,
+		"snake `instance_type` must NOT bind to InstanceType field — kebab tag is the only valid wire form")
 }

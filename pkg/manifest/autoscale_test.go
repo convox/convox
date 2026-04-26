@@ -8,6 +8,7 @@ import (
 	"github.com/convox/convox/pkg/manifest"
 	kedav1alpha1 "github.com/kedacore/keda/v2/apis/keda/v1alpha1"
 	"github.com/stretchr/testify/require"
+	yaml "gopkg.in/yaml.v2"
 )
 
 func TestAutoscaleIsEnabled(t *testing.T) {
@@ -17,7 +18,7 @@ func TestAutoscaleIsEnabled(t *testing.T) {
 	a = &manifest.ServiceAutoscale{}
 	require.False(t, a.IsEnabled(), "zero value returns false")
 
-	a = &manifest.ServiceAutoscale{Cpu: &manifest.AutoscaleThreshold{Threshold: 70}}
+	a = &manifest.ServiceAutoscale{Cpu: &manifest.AutoscaleMode{Mode: manifest.AutoscaleModeThreshold, Threshold: 70}}
 	require.True(t, a.IsEnabled())
 
 	a = &manifest.ServiceAutoscale{Custom: []kedav1alpha1.ScaleTriggers{{Type: "cron", Name: "nightly"}}}
@@ -28,16 +29,16 @@ func TestAutoscaleNeedsPrometheus(t *testing.T) {
 	var a *manifest.ServiceAutoscale
 	require.False(t, a.NeedsPrometheus())
 
-	a = &manifest.ServiceAutoscale{GpuUtilization: &manifest.AutoscaleThreshold{Threshold: 80}}
+	a = &manifest.ServiceAutoscale{GpuUtilization: &manifest.AutoscaleMode{Mode: manifest.AutoscaleModeThreshold, Threshold: 80}}
 	require.True(t, a.NeedsPrometheus(), "gpu util without explicit URL needs Prometheus")
 
-	a = &manifest.ServiceAutoscale{GpuUtilization: &manifest.AutoscaleThreshold{Threshold: 80, PrometheusUrl: "http://prom:9090"}}
+	a = &manifest.ServiceAutoscale{GpuUtilization: &manifest.AutoscaleMode{Mode: manifest.AutoscaleModeThreshold, Threshold: 80, PrometheusUrl: "http://prom:9090"}}
 	require.False(t, a.NeedsPrometheus(), "explicit URL satisfies")
 
-	a = &manifest.ServiceAutoscale{QueueDepth: &manifest.AutoscaleQueueDepth{Threshold: 5}}
+	a = &manifest.ServiceAutoscale{QueueDepth: &manifest.AutoscaleMode{Mode: manifest.AutoscaleModeQueue, Threshold: 5}}
 	require.True(t, a.NeedsPrometheus())
 
-	a = &manifest.ServiceAutoscale{Cpu: &manifest.AutoscaleThreshold{Threshold: 70}}
+	a = &manifest.ServiceAutoscale{Cpu: &manifest.AutoscaleMode{Mode: manifest.AutoscaleModeThreshold, Threshold: 70}}
 	require.False(t, a.NeedsPrometheus(), "cpu-only never queries Prometheus")
 }
 
@@ -137,7 +138,7 @@ func TestScaleMinMaxCountResolution(t *testing.T) {
       gpu:
         count: 1
       autoscale:
-        gpu_utilization:
+        gpuUtilization:
           threshold: 70
 `,
 			expectedMin:   0,
@@ -167,7 +168,7 @@ func TestScaleMinMaxCountResolution(t *testing.T) {
       autoscale:
         cpu:
           threshold: 80
-        queue_depth:
+        queueDepth:
           threshold: 3
 `,
 			expectedMin:   2,
@@ -232,7 +233,7 @@ func TestValidateScaleMinZeroCpuPlusQueueOk(t *testing.T) {
       autoscale:
         cpu:
           threshold: 70
-        queue_depth:
+        queueDepth:
           threshold: 3
 `
 	m, err := manifest.Load([]byte(y), map[string]string{})
@@ -296,10 +297,10 @@ func TestValidateAutoscaleBounds(t *testing.T) {
       gpu:
         count: 1
       autoscale:
-        gpu_utilization:
+        gpuUtilization:
           threshold: 120
 `,
-			want: "scale.autoscale.gpu_utilization.threshold must be > 0 and <= 100",
+			want: "scale.autoscale.gpuUtilization.threshold must be > 0 and <= 100",
 		},
 		{
 			name: "queue threshold zero",
@@ -310,10 +311,10 @@ func TestValidateAutoscaleBounds(t *testing.T) {
       min: 0
       max: 5
       autoscale:
-        queue_depth:
+        queueDepth:
           threshold: 0
 `,
-			want: "scale.autoscale.queue_depth.threshold must be > 0",
+			want: "scale.autoscale.queueDepth.threshold must be > 0",
 		},
 		{
 			name: "gpu util requires gpu count",
@@ -324,10 +325,10 @@ func TestValidateAutoscaleBounds(t *testing.T) {
       min: 0
       max: 5
       autoscale:
-        gpu_utilization:
+        gpuUtilization:
           threshold: 70
 `,
-			want: "scale.autoscale.gpu_utilization requires scale.gpu.count >= 1",
+			want: "scale.autoscale.gpuUtilization requires scale.gpu.count >= 1",
 		},
 		{
 			name: "invalid prometheus URL",
@@ -338,11 +339,11 @@ func TestValidateAutoscaleBounds(t *testing.T) {
       min: 0
       max: 5
       autoscale:
-        queue_depth:
+        queueDepth:
           threshold: 3
-          prometheus_url: "://bad"
+          prometheusUrl: "://bad"
 `,
-			want: "scale.autoscale.queue_depth.prometheus_url is not a valid URL",
+			want: "scale.autoscale.queueDepth.prometheusUrl is not a valid URL",
 		},
 		{
 			name: "invalid metric name",
@@ -353,11 +354,11 @@ func TestValidateAutoscaleBounds(t *testing.T) {
       min: 0
       max: 5
       autoscale:
-        queue_depth:
+        queueDepth:
           threshold: 3
-          metric_name: "1-bad-name"
+          metricName: "1-bad-name"
 `,
-			want: "metric_name",
+			want: "metricName",
 		},
 		{
 			name: "negative scale.min",
@@ -396,12 +397,14 @@ func TestValidateAutoscaleBounds(t *testing.T) {
 
 func TestBuildTriggers_Shapes(t *testing.T) {
 	a := &manifest.ServiceAutoscale{
-		Cpu:    &manifest.AutoscaleThreshold{Threshold: 70},
-		Memory: &manifest.AutoscaleThreshold{Threshold: 80},
-		GpuUtilization: &manifest.AutoscaleThreshold{
+		Cpu:    &manifest.AutoscaleMode{Mode: manifest.AutoscaleModeThreshold, Threshold: 70},
+		Memory: &manifest.AutoscaleMode{Mode: manifest.AutoscaleModeThreshold, Threshold: 80},
+		GpuUtilization: &manifest.AutoscaleMode{
+			Mode:      manifest.AutoscaleModeThreshold,
 			Threshold: 75,
 		},
-		QueueDepth: &manifest.AutoscaleQueueDepth{
+		QueueDepth: &manifest.AutoscaleMode{
+			Mode:      manifest.AutoscaleModeQueue,
 			Threshold: 4,
 		},
 	}
@@ -431,7 +434,7 @@ func TestBuildTriggers_Shapes(t *testing.T) {
 
 func TestBuildTriggers_ActivationThresholdFloorOne(t *testing.T) {
 	a := &manifest.ServiceAutoscale{
-		QueueDepth: &manifest.AutoscaleQueueDepth{Threshold: 1},
+		QueueDepth: &manifest.AutoscaleMode{Mode: manifest.AutoscaleModeQueue, Threshold: 1},
 	}
 	triggers := a.BuildTriggers("a", "s", "http://prom/")
 	require.Equal(t, "1", triggers[0].Metadata["activationThreshold"], "floor of 1 applies")
@@ -508,7 +511,7 @@ func TestValidateRejectsNaNThreshold(t *testing.T) {
 			Scale: manifest.ServiceScale{
 				Min: ptrInt(1), Max: ptrInt(5),
 				Autoscale: &manifest.ServiceAutoscale{
-					Cpu: &manifest.AutoscaleThreshold{Threshold: math.NaN()},
+					Cpu: &manifest.AutoscaleMode{Mode: manifest.AutoscaleModeThreshold, Threshold: math.NaN()},
 				},
 			},
 		}},
@@ -538,9 +541,9 @@ func TestValidateRejectsPrometheusURLScheme(t *testing.T) {
       min: 0
       max: 5
       autoscale:
-        queue_depth:
+        queueDepth:
           threshold: 3
-          prometheus_url: "` + tc.url + `"
+          prometheusUrl: "` + tc.url + `"
 `
 			m, err := manifest.Load([]byte(y), map[string]string{})
 			require.NoError(t, err)
@@ -559,7 +562,7 @@ func TestValidateRejectsMaxEqualsMinWithAutoscale(t *testing.T) {
       min: 3
       max: 3
       autoscale:
-        queue_depth:
+        queueDepth:
           threshold: 5
 `
 	m, err := manifest.Load([]byte(y), map[string]string{})
@@ -703,7 +706,7 @@ func TestYamlParseMinMaxAllowsInt64(t *testing.T) {
       min: 0
       max: 10
       autoscale:
-        queue_depth:
+        queueDepth:
           threshold: 5
 `
 	m, err := manifest.Load([]byte(y), map[string]string{})
@@ -725,7 +728,7 @@ func TestValidateRejectsAgentAutoscale(t *testing.T) {
       min: 0
       max: 5
       autoscale:
-        queue_depth:
+        queueDepth:
           threshold: 3
 `
 	m, err := manifest.Load([]byte(y), map[string]string{})
@@ -763,7 +766,7 @@ func TestValidateCatchesMaxEqualsMinInCountForm(t *testing.T) {
     scale:
       count: 2-2
       autoscale:
-        queue_depth:
+        queueDepth:
           threshold: 3
 `
 	m, err := manifest.Load([]byte(y), map[string]string{})
@@ -781,4 +784,213 @@ func TestValidateRejectsUnicodeCustomName(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "custom[0].name")
 	require.Contains(t, err.Error(), "must contain only lowercase alphanumeric")
+}
+
+// TestParseAutoscaleManifest_CamelCaseFields_Succeeds verifies that an inline
+// manifest using camelCase autoscale keys (gpuUtilization, queueDepth,
+// cooldownPeriod, pollingInterval, metricName, prometheusUrl) loads and
+// validates cleanly with all fields populated. Self-contained so a future
+// fixture rename does not silently break coverage.
+func TestParseAutoscaleManifest_CamelCaseFields_Succeeds(t *testing.T) {
+	y := `services:
+  svc:
+    build: .
+    port: 8000
+    scale:
+      min: 1
+      max: 8
+      gpu:
+        count: 1
+        vendor: nvidia
+      autoscale:
+        cpu:
+          threshold: 70
+        gpuUtilization:
+          threshold: 75
+          metricName: DCGM_FI_DEV_GPU_UTIL
+          prometheusUrl: http://prom:9090
+        queueDepth:
+          threshold: 3
+          metricName: vllm:num_requests_waiting
+          prometheusUrl: http://prom:9090
+        cooldownPeriod: 300
+        pollingInterval: 15
+`
+	m, err := manifest.Load([]byte(y), map[string]string{})
+	require.NoError(t, err, "load")
+	require.NoError(t, m.Validate(), "validate")
+	require.Len(t, m.Services, 1)
+
+	a := m.Services[0].Scale.Autoscale
+	require.NotNil(t, a)
+	require.True(t, a.IsEnabled())
+
+	require.NotNil(t, a.Cpu)
+	require.Equal(t, float64(70), a.Cpu.Threshold)
+
+	require.NotNil(t, a.GpuUtilization)
+	require.Equal(t, float64(75), a.GpuUtilization.Threshold)
+	require.Equal(t, "DCGM_FI_DEV_GPU_UTIL", a.GpuUtilization.MetricName)
+	require.Equal(t, "http://prom:9090", a.GpuUtilization.PrometheusUrl)
+
+	require.NotNil(t, a.QueueDepth)
+	require.Equal(t, float64(3), a.QueueDepth.Threshold)
+	require.Equal(t, "vllm:num_requests_waiting", a.QueueDepth.MetricName)
+	require.Equal(t, "http://prom:9090", a.QueueDepth.PrometheusUrl)
+
+	require.NotNil(t, a.CooldownPeriod)
+	require.Equal(t, int32(300), *a.CooldownPeriod)
+	require.NotNil(t, a.PollingInterval)
+	require.Equal(t, int32(15), *a.PollingInterval)
+}
+
+// TestParseAutoscaleManifest_InvalidThreshold_Returns422 verifies the renamed
+// camelCase error message surface — gpuUtilization.threshold above 100 must
+// produce a 422-equivalent validation error containing the new key path.
+func TestParseAutoscaleManifest_InvalidThreshold_Returns422(t *testing.T) {
+	y := `services:
+  svc:
+    build: .
+    scale:
+      min: 0
+      max: 5
+      gpu:
+        count: 1
+      autoscale:
+        gpuUtilization:
+          threshold: 150
+`
+	m, err := manifest.Load([]byte(y), map[string]string{})
+	require.NoError(t, err, "load")
+	err = m.Validate()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "scale.autoscale.gpuUtilization.threshold must be > 0 and <= 100")
+}
+
+// TestParseAutoscaleManifest_SnakeCaseFields_RejectsWithError is a regression
+// guard against silent-drop on lenient yaml unmarshal. Legacy snake_case keys
+// (gpu_utilization) must NOT bind to the camelCase struct tags. Asserts the
+// observable consequence: GpuUtilization stays nil, autoscale block reports
+// not-enabled, and a min:0 manifest with no real autoscale triggers fails
+// validation (proving the snake_case key was silently ignored, NOT bound).
+func TestParseAutoscaleManifest_SnakeCaseFields_RejectsWithError(t *testing.T) {
+	y := `services:
+  svc:
+    build: .
+    scale:
+      min: 0
+      max: 5
+      gpu:
+        count: 1
+      autoscale:
+        gpu_utilization:
+          threshold: 70
+`
+	m, err := manifest.Load([]byte(y), map[string]string{})
+	require.NoError(t, err, "load")
+
+	// Observable proof of silent-drop: GpuUtilization never bound.
+	require.NotNil(t, m.Services[0].Scale.Autoscale, "autoscale block parsed (key recognized) but children dropped")
+	require.Nil(t, m.Services[0].Scale.Autoscale.GpuUtilization,
+		"snake_case gpu_utilization key must NOT bind to camelCase struct tag")
+	require.False(t, m.Services[0].Scale.Autoscale.IsEnabled(),
+		"autoscale must report not-enabled when only snake_case keys are present")
+}
+
+// TestAutoscaleMode_CollapsedStruct_ParsesIdentically is the F.1 refactor
+// regression test required by R3 Tests R2: collapsed Mode struct doesn't
+// break existing parsing. Loads each fixture and asserts every populated
+// slot has the discriminator set, threshold round-trips correctly, and
+// optional sibling fields land where the pre-collapse types had them.
+func TestAutoscaleMode_CollapsedStruct_ParsesIdentically(t *testing.T) {
+	t.Run("autoscale-combined", func(t *testing.T) {
+		m, err := testdataManifest("autoscale-combined", map[string]string{})
+		require.NoError(t, err)
+		require.NoError(t, m.Validate())
+		a := m.Services[0].Scale.Autoscale
+		require.NotNil(t, a)
+
+		require.NotNil(t, a.Cpu)
+		require.Equal(t, manifest.AutoscaleModeThreshold, a.Cpu.Mode)
+		require.Equal(t, "threshold", a.Cpu.Mode, "Mode value pinned to single-word lowercase per V3 §0a Convention R2 F-NEW-2")
+		require.Equal(t, float64(70), a.Cpu.Threshold)
+
+		require.NotNil(t, a.GpuUtilization)
+		require.Equal(t, "threshold", a.GpuUtilization.Mode)
+		require.Equal(t, float64(75), a.GpuUtilization.Threshold)
+
+		require.NotNil(t, a.QueueDepth)
+		require.Equal(t, manifest.AutoscaleModeQueue, a.QueueDepth.Mode)
+		require.Equal(t, "queue", a.QueueDepth.Mode, "Mode value pinned per V3 §0a Convention R2 F-NEW-2")
+		require.Equal(t, float64(3), a.QueueDepth.Threshold)
+	})
+
+	t.Run("autoscale-gpu", func(t *testing.T) {
+		m, err := testdataManifest("autoscale-gpu", map[string]string{})
+		require.NoError(t, err)
+		require.NoError(t, m.Validate())
+		a := m.Services[0].Scale.Autoscale
+		require.NotNil(t, a)
+		require.NotNil(t, a.GpuUtilization)
+		require.Equal(t, "threshold", a.GpuUtilization.Mode)
+		require.Equal(t, float64(70), a.GpuUtilization.Threshold)
+		require.Nil(t, a.QueueDepth)
+	})
+
+	t.Run("autoscale-queue", func(t *testing.T) {
+		m, err := testdataManifest("autoscale-queue", map[string]string{})
+		require.NoError(t, err)
+		require.NoError(t, m.Validate())
+		a := m.Services[0].Scale.Autoscale
+		require.NotNil(t, a)
+		require.NotNil(t, a.QueueDepth)
+		require.Equal(t, "queue", a.QueueDepth.Mode)
+		require.Equal(t, float64(5), a.QueueDepth.Threshold)
+		require.Equal(t, "vllm:num_requests_waiting", a.QueueDepth.MetricName)
+		require.Nil(t, a.GpuUtilization)
+	})
+}
+
+// TestAutoscaleMode_OmitemptyMode_CrossVersionEmission locks the cross-version
+// YAML emission contract required by R3 (V3 §0a Rollback): `omitempty` on the
+// Mode field MUST drop the discriminator from emitted YAML when Mode is unset,
+// so customer YAML written by 3.24.6 stays readable by 3.24.5 (which doesn't
+// know about the Mode field). When Mode IS explicitly set, omitempty allows
+// it through. Option B (KEEP Mode field with omitempty) is the only path per
+// R3 mandate; Option A (drop the field entirely) was rejected.
+func TestAutoscaleMode_OmitemptyMode_CrossVersionEmission(t *testing.T) {
+	t.Run("Mode_unset_dropped_on_emit", func(t *testing.T) {
+		m := manifest.AutoscaleMode{Threshold: 70}
+		out, err := yaml.Marshal(&m)
+		require.NoError(t, err)
+		require.NotContains(t, string(out), "mode:", "omitempty must drop unset Mode from emitted YAML (cross-version emission contract)")
+		require.Contains(t, string(out), "threshold: 70", "Threshold has no omitempty and is always emitted")
+	})
+
+	t.Run("Mode_set_emitted", func(t *testing.T) {
+		m := manifest.AutoscaleMode{Mode: manifest.AutoscaleModeThreshold, Threshold: 70}
+		out, err := yaml.Marshal(&m)
+		require.NoError(t, err)
+		require.Contains(t, string(out), "mode: threshold", "Mode set explicitly is allowed through (forward-compat for future modes)")
+		require.Contains(t, string(out), "threshold: 70")
+	})
+
+	t.Run("Mode_queue_emitted", func(t *testing.T) {
+		m := manifest.AutoscaleMode{Mode: manifest.AutoscaleModeQueue, Threshold: 5}
+		out, err := yaml.Marshal(&m)
+		require.NoError(t, err)
+		require.Contains(t, string(out), "mode: queue")
+	})
+}
+
+// TestAutoscaleMode_AllFixturesStillParse is the Phase γ smoke required by R3:
+// guard that no fixture broke after the F.1 refactor.
+func TestAutoscaleMode_AllFixturesStillParse(t *testing.T) {
+	for _, name := range []string{"autoscale-combined", "autoscale-gpu", "autoscale-queue"} {
+		t.Run(name, func(t *testing.T) {
+			m, err := testdataManifest(name, map[string]string{})
+			require.NoError(t, err, "load %s", name)
+			require.NoError(t, m.Validate(), "validate %s", name)
+		})
+	}
 }

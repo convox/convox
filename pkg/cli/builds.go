@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -17,6 +18,62 @@ import (
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
 )
+
+// resolveSrcCredsPass returns the source registry password from one of the
+// three input modes (plaintext flag, env var, stdin) honoring mutual
+// exclusion. Emits a deprecation warning to stderr when the plaintext form is
+// used. Returns nil + nil error when no form is set (caller leaves
+// opts.SrcCredsPass unset; no source-creds path).
+//
+// Deprecation contract: 3.24.6 warns + continues; 3.25.0 will reject the
+// plaintext form. RFC 8594 deprecation pattern.
+func resolveSrcCredsPass(c *stdcli.Context) (*string, error) {
+	plain := c.String("src-creds-pass")
+	envName := c.String("src-creds-pass-env")
+	stdinFlag := c.Bool("src-creds-pass-stdin")
+
+	setCount := 0
+	if plain != "" {
+		setCount++
+	}
+	if envName != "" {
+		setCount++
+	}
+	if stdinFlag {
+		setCount++
+	}
+	if setCount > 1 {
+		return nil, fmt.Errorf("at most one of --src-creds-pass, --src-creds-pass-env, --src-creds-pass-stdin may be specified")
+	}
+	if setCount == 0 {
+		return nil, nil
+	}
+
+	if plain != "" {
+		// Pin by R3 (UX): exact text reviewed; do NOT alter wording without re-pinning.
+		fmt.Fprintln(c.Writer().Stderr, "WARNING: --src-creds-pass=<plaintext> exposes credentials via process listings. Use --src-creds-pass-env <NAME> or --src-creds-pass-stdin instead. Plaintext form will be rejected in 3.25.0.")
+		return options.String(plain), nil
+	}
+
+	if envName != "" {
+		v := os.Getenv(envName)
+		if v == "" {
+			return nil, fmt.Errorf("--src-creds-pass-env=%s: environment variable not set", envName)
+		}
+		return options.String(v), nil
+	}
+
+	// stdinFlag must be true here.
+	raw, err := bufio.NewReader(c.Reader()).ReadString('\n')
+	if err != nil && err != io.EOF {
+		return nil, fmt.Errorf("--src-creds-pass-stdin: read failed: %w", err)
+	}
+	raw = strings.TrimRight(raw, "\r\n")
+	if raw == "" {
+		return nil, fmt.Errorf("--src-creds-pass-stdin: no input received")
+	}
+	return options.String(raw), nil
+}
 
 func init() {
 	register("build", "create a build", Build, stdcli.CommandOptions{
@@ -56,7 +113,9 @@ func init() {
 			flagApp,
 			stdcli.StringFlag("manifest", "m", "path to convox.yml manifest"),
 			stdcli.StringFlag("src-creds-user", "", "source registry username"),
-			stdcli.StringFlag("src-creds-pass", "", "source registry password"),
+			stdcli.StringFlag("src-creds-pass", "", "source registry password (DEPRECATED — use --src-creds-pass-env or --src-creds-pass-stdin; will be rejected in 3.25.0)"),
+			stdcli.StringFlag("src-creds-pass-env", "", "read source registry password from named environment variable"),
+			stdcli.BoolFlag("src-creds-pass-stdin", "", "read source registry password from stdin (single line)"),
 		},
 		Usage:    "<source-image>",
 		Validate: stdcli.Args(1),
@@ -481,8 +540,12 @@ func BuildsImportImage(rack sdk.Interface, c *stdcli.Context) error {
 	if u := c.String("src-creds-user"); u != "" {
 		opts.SrcCredsUser = options.String(u)
 	}
-	if p := c.String("src-creds-pass"); p != "" {
-		opts.SrcCredsPass = options.String(p)
+	pass, err := resolveSrcCredsPass(c)
+	if err != nil {
+		return err
+	}
+	if pass != nil {
+		opts.SrcCredsPass = pass
 	}
 
 	c.Startf("Relaying image %s", source)

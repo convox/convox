@@ -710,6 +710,7 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 		if !p.IsKedaEnabled && wantsAutoscale {
 			_ = p.EventSend("release:autoscale-disabled", structs.EventSendOptions{
 				Data: map[string]string{
+					"actor":   "system",
 					"app":     a.Name,
 					"service": s.Name,
 					"reason":  "rack has keda_enable=false; autoscale ignored, using Count.Min static replicas",
@@ -721,6 +722,7 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 		if !s.Agent.Enabled && s.Scale.Min != nil && *s.Scale.Min == 0 && !s.Scale.Autoscale.IsEnabled() && !s.Scale.IsKedaEnabled() {
 			_ = p.EventSend("release:manifest-advisory", structs.EventSendOptions{
 				Data: map[string]string{
+					"actor":   "system",
 					"app":     a.Name,
 					"service": s.Name,
 					"reason":  "scale.min=0 without autoscale fields will keep the service at zero replicas permanently; set scale.autoscale.cpu.threshold or equivalent to enable scale-up",
@@ -778,6 +780,7 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 			} else if s.Scale.Autoscale.NeedsPrometheus() {
 				_ = p.EventSend("release:prometheus-default", structs.EventSendOptions{
 					Data: map[string]string{
+						"actor":   "system",
 						"app":     a.Name,
 						"service": s.Name,
 						"url":     promURL,

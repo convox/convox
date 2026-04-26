@@ -16,6 +16,12 @@ type Service struct {
 	Autoscale *ServiceAutoscaleState `json:"autoscale,omitempty"`
 }
 
+// ServiceAutoscaleState is the wire shape returned by the rack for the
+// "autoscale" portion of a service description. It mirrors the user-supplied
+// `scale.autoscale` block from convox.yml but reports CURRENT state rather
+// than configured intent — Enabled reflects whether KEDA ScaledObjects are
+// in place, and the *Threshold pointers are nil when the matching trigger
+// is unconfigured.
 type ServiceAutoscaleState struct {
 	Enabled        bool   `json:"enabled"`
 	CpuThreshold   *int   `json:"cpu-threshold,omitempty"`

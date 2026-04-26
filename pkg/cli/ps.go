@@ -36,10 +36,14 @@ func Ps(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
+	// budgetCapStatus is best-effort: errors are logged to stderr inside the
+	// helper so a budget-API hiccup never degrades the user-visible ps output.
+	cs, _ := budgetCapStatus(rack, app(c), c.Writer().Stderr)
+
 	t := c.Table("ID", "SERVICE", "STATUS", "RELEASE", "STARTED", "COMMAND")
 
 	for _, p := range ps {
-		t.AddRow(p.Id, p.Name, p.Status, p.Release, common.Ago(p.Started), p.Command)
+		t.AddRow(p.Id, p.Name, decorateStatusForBudgetCap(p.Status, p.Name, cs), p.Release, common.Ago(p.Started), p.Command)
 	}
 
 	return t.Print()

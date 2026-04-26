@@ -46,9 +46,9 @@ resource "aws_sqs_queue_policy" "karpenter_interruption" {
 resource "aws_cloudwatch_event_rule" "karpenter_scheduled_change" {
   count = var.karpenter_enabled ? 1 : 0
 
-  name          = "${var.name}-karpenter-scheduled-change"
-  description   = "Karpenter - AWS Health scheduled change events"
-  tags          = local.tags
+  name        = "${var.name}-karpenter-scheduled-change"
+  description = "Karpenter - AWS Health scheduled change events"
+  tags        = local.tags
   event_pattern = jsonencode({
     source      = ["aws.health"]
     detail-type = ["AWS Health Event"]
@@ -66,9 +66,9 @@ resource "aws_cloudwatch_event_target" "karpenter_scheduled_change" {
 resource "aws_cloudwatch_event_rule" "karpenter_spot_interruption" {
   count = var.karpenter_enabled ? 1 : 0
 
-  name          = "${var.name}-karpenter-spot-interruption"
-  description   = "Karpenter - EC2 Spot Instance interruption warnings"
-  tags          = local.tags
+  name        = "${var.name}-karpenter-spot-interruption"
+  description = "Karpenter - EC2 Spot Instance interruption warnings"
+  tags        = local.tags
   event_pattern = jsonencode({
     source      = ["aws.ec2"]
     detail-type = ["EC2 Spot Instance Interruption Warning"]
@@ -86,9 +86,9 @@ resource "aws_cloudwatch_event_target" "karpenter_spot_interruption" {
 resource "aws_cloudwatch_event_rule" "karpenter_rebalance" {
   count = var.karpenter_enabled ? 1 : 0
 
-  name          = "${var.name}-karpenter-rebalance"
-  description   = "Karpenter - EC2 Instance rebalance recommendations"
-  tags          = local.tags
+  name        = "${var.name}-karpenter-rebalance"
+  description = "Karpenter - EC2 Instance rebalance recommendations"
+  tags        = local.tags
   event_pattern = jsonencode({
     source      = ["aws.ec2"]
     detail-type = ["EC2 Instance Rebalance Recommendation"]
@@ -106,9 +106,9 @@ resource "aws_cloudwatch_event_target" "karpenter_rebalance" {
 resource "aws_cloudwatch_event_rule" "karpenter_instance_state_change" {
   count = var.karpenter_enabled ? 1 : 0
 
-  name          = "${var.name}-karpenter-instance-state-change"
-  description   = "Karpenter - EC2 Instance state change notifications"
-  tags          = local.tags
+  name        = "${var.name}-karpenter-instance-state-change"
+  description = "Karpenter - EC2 Instance state change notifications"
+  tags        = local.tags
   event_pattern = jsonencode({
     source      = ["aws.ec2"]
     detail-type = ["EC2 Instance State-change Notification"]

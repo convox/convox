@@ -166,7 +166,7 @@ func TestServiceUpdateCountPatchesScaledObject(t *testing.T) {
 func TestKedaScaledObjectFromAutoscale(t *testing.T) {
 	svc := manifest.Service{Name: "vllm"}
 	svc.Scale.Autoscale = &manifest.ServiceAutoscale{
-		GpuUtilization: &manifest.AutoscaleThreshold{Threshold: 70},
+		GpuUtilization: &manifest.AutoscaleMode{Mode: manifest.AutoscaleModeThreshold, Threshold: 70},
 	}
 	triggers := svc.Scale.Autoscale.BuildTriggers("myapp", "vllm", "http://prom/")
 

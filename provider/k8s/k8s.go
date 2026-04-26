@@ -13,6 +13,7 @@ import (
 
 	"github.com/convox/convox/pkg/atom"
 	"github.com/convox/convox/pkg/common"
+	cxhmac "github.com/convox/convox/pkg/hmac"
 	"github.com/convox/convox/pkg/jwt"
 	"github.com/convox/convox/pkg/metrics"
 	"github.com/convox/convox/pkg/options"
@@ -90,6 +91,7 @@ type Provider struct {
 	SubnetIDs                           string
 	Version                             string
 	VpcID                               string
+	WebhookSigningKey                   string
 	FeatureGates                        map[string]bool
 
 	nc                 *NodeController
@@ -210,6 +212,29 @@ func FromEnv() (*Provider, error) {
 	p.ReleasesToRetainTaskRunIntervalHour, _ = strconv.Atoi(os.Getenv("RELEASES_TO_RETAIN_TASK_RUN_INTERVAL_HOUR"))
 	p.FeatureGates = options.GetFeatureGates()
 
+	// webhook_signing_key is optional. If set and valid, outbound webhook
+	// POSTs carry a Convox-Signature header. If set but invalid (typo,
+	// short key, weak entropy, mixed case), validate at boot and degrade
+	// to unsigned dispatch — crashing the api pod over a typo is hostile
+	// to customers. The structured WARN gives the operator an actionable
+	// pointer (regenerate with openssl rand -hex 32).
+	if rawKey := os.Getenv("WEBHOOK_SIGNING_KEY"); rawKey != "" {
+		if err := cxhmac.ValidateSigningKeys(rawKey); err != nil {
+			fmt.Printf("ns=k8s at=webhook_signing_key result=invalid error=%q signing=disabled remediation=%q\n",
+				err.Error(),
+				"regenerate with: openssl rand -hex 32; see https://docs.convox.com/configuration/webhooks#signing")
+		} else {
+			p.WebhookSigningKey = rawKey
+			n := 1
+			for _, c := range rawKey {
+				if c == ',' {
+					n++
+				}
+			}
+			fmt.Printf("ns=k8s at=webhook_signing_key result=configured keys=%d signing=enabled\n", n)
+		}
+	}
+
 	p.RdsProvisioner = rds.NewProvisioner(p)
 	p.ElasticacheProvisioner = elasticache.NewProvisioner(p)
 
@@ -227,10 +252,27 @@ func (p *Provider) ContextTID() string {
 		return ""
 	}
 
-	if tid, ok := p.ctx.Value("X-Convox-TID").(string); ok {
+	if tid, ok := p.ctx.Value(structs.ConvoxTIDCtxKey).(string); ok {
 		return tid
 	}
 	return ""
+}
+
+// ContextActor returns the JWT-authenticated user (e.g. "system-read",
+// "system-write", "system-admin") propagated through the provider's
+// request-scoped ctx, or "unknown" when no actor identity is available.
+// It is panic-safe and nil-safe by design: a nil receiver, nil ctx, missing
+// claim, or empty-string claim all collapse to "unknown" so callers can
+// emit an audit-event "actor" field without nil-checking. Whitespace is
+// propagated verbatim — receivers see whatever the JWT minted.
+func (p *Provider) ContextActor() string {
+	if p == nil || p.ctx == nil {
+		return "unknown"
+	}
+	if v, ok := p.ctx.Value(structs.ConvoxJwtUserCtxKey).(string); ok && v != "" {
+		return v
+	}
+	return "unknown"
 }
 
 func (p *Provider) Initialize(opts structs.ProviderOptions) error {
@@ -327,13 +369,20 @@ func (p *Provider) Start() error {
 		go p.RunSharedInformer(make(chan struct{}))
 	}
 
-	if os.Getenv("COST_TRACKING_ENABLE") == "true" {
+	if p.costTrackingEnabled() {
 		// Lease lives in the api pod's own namespace (rack-system). Using
 		// p.Namespace guarantees the namespace exists and avoids a broken
 		// RACK_NAME env leading to a "-system" bogus namespace.
 		leaseNs := p.Namespace
 		if err := RunUsingLeaderElection(context.Background(), leaseNs, budgetLeaseName, p.Cluster, p.runBudgetAccumulator, func() {
-			fmt.Printf("ns=budget_accumulator at=lost_leadership\n")
+			// Lifecycle observability (B.3): include the timestamp and
+			// pod identity so an operator scanning api-pod logs across
+			// a rack rotation can correlate a leadership loss with the
+			// specific pod that gave up the lease and when. Identifier
+			// matches the elector's resourcelock identity (os.Hostname).
+			identity, _ := os.Hostname()
+			fmt.Printf("ns=budget_accumulator at=lost_leadership at_time=%s identity=%q\n",
+				time.Now().UTC().Format(time.RFC3339), identity)
 		}); err != nil {
 			_ = log.Errorf("budget accumulator elector failed to start: %v", err)
 		}

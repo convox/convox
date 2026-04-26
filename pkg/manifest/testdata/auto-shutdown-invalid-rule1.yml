@@ -1,0 +1,7 @@
+services:
+  web:
+    image: example/web:latest
+
+budget:
+  monthlyCapUsd: 100
+  atCapAction: auto-shutdown

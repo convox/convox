@@ -237,6 +237,7 @@ module "rack" {
   oidc_arn                                  = module.cluster.oidc_arn
   oidc_sub                                  = module.cluster.oidc_sub
   pdb_default_min_available_percentage      = var.pdb_default_min_available_percentage
+  prometheus_url                            = var.prometheus_url
   proxy_protocol                            = var.proxy_protocol
   release                                   = local.release
   releases_to_retain_after_active           = var.releases_to_retain_after_active
@@ -253,4 +254,5 @@ module "rack" {
   ecr_docker_hub_cache_prefix               = module.cluster.ecr_docker_hub_cache_prefix
   vpc_id                                    = module.cluster.vpc
   vpa_enable                                = var.vpa_enable
+  webhook_signing_key                       = var.webhook_signing_key
 }
