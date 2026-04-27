@@ -72,14 +72,15 @@ operator actions):
 
 - `app:budget:auto-shutdown:dismissed` — 3.24.6+; emitted when the recovery
   banner is dismissed.
-- `app:budget:auto-shutdown:breaker-cleared` — 3.24.6+; emitted when a
-  cap-raise clears the breaker mid-countdown after `:fired`.
+- `app:budget:breaker-cleared` — 3.24.6+; top-level event emitted when a
+  cap-raise clears the deploy circuit breaker (both during the armed
+  countdown and post-`:fired`). NOT a sub-type of `auto-shutdown`.
 
 ### Signing <a id="signing"></a>
 
 See [Webhook Signing](/console/webhook-signing) for the full HMAC-SHA256
-signing protocol, the `Convox-Signature` and `Convox-Signature-Timestamp`
-headers, and an example verification routine.
+signing protocol, the single `Convox-Signature` header (format
+`t=<unix-ts>,v1=<hex>`), and an example verification routine.
 
 ## Payload shape
 

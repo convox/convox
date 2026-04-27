@@ -14,9 +14,11 @@ For a quick overview of some commonly used commands, you may find this [blog pos
 | [api](/reference/cli/api)        | Query the Rack API.                                                                             |
 | [apps](/reference/cli/apps)      | List, create, or delete apps and manage app-specific operations like locks and parameter settings. |
 | [balancers](/reference/cli/balancers) | List balancers for an app.                                                                      |
+| [budget](/reference/cli/budget)  | Configure per-app monthly spend caps, view current state, and recover from cap-trips.           |
 | [build](/reference/cli/build)    | Create a build.                                                                                 |
 | [builds](/reference/cli/builds)  | List builds and manage build-specific operations such as importing or exporting builds.         |
 | [certs](/reference/cli/certs)    | List, generate, import, and manage SSL certificates.                                            |
+| [cost](/reference/cli/cost)      | Inspect per-app spend, service breakdowns, and forecasted month-end totals.                     |
 | [cp](/reference/cli/cp)          | Copy files to and from a running process.                                                       |
 | [deploy](/reference/cli/deploy)  | Create and promote a build.                                                                     |
 | [deploy-debug](/reference/cli/deploy-debug) | Diagnose deploy failures with pod-level diagnostics and actionable hints.               |

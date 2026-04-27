@@ -35,12 +35,13 @@ lock, persists the new cap, and clears the `CircuitBreakerTripped` flag plus
 the alert-fired timestamps in the same critical section. There is no observable
 window where the new cap is set but the old breaker is still tripped.
 
-After `:fired` (mid-countdown), cap-raise clears the breaker but does NOT
-restart already-shutdown services. Run `convox apps restore --app myapp` to
-recover them.
+After `:fired` (post-shutdown), cap-raise clears the breaker but does NOT
+restart already-shutdown services. Run `convox budget reset myapp` to
+restore replicas from the persisted shutdown-state annotation.
 
-A cap-raise that clears the breaker emits the `app:budget:auto-shutdown:breaker-cleared`
-audit event in 3.24.6+. Receivers parsing webhook events should fail-open on
+A cap-raise that clears the breaker emits the `app:budget:breaker-cleared`
+audit event in 3.24.6+ (top-level event, not a sub-type of
+`auto-shutdown`). Receivers parsing webhook events should fail-open on
 unknown event types or be updated to handle the new type. See
 [Webhook Signing](/console/webhook-signing#receiver-migration).
 

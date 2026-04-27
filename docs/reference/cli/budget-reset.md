@@ -39,8 +39,10 @@ resolved):
   `FlapSuppressFiredAt` annotations) unless `--force-clear-cooldown` is set.
 - Emits `app:budget:auto-shutdown:cancelled` reason=`reset-during-armed` if
   the reset interrupts an in-flight armed countdown.
-- Does NOT restart services that were already shutdown by `:fired`. Run
-  `convox apps restore --app myapp` to recover them.
+- Restarts services that were already shutdown by `:fired` (calls
+  `restoreFromAnnotation` to reapply the persisted replica counts).
+  Cap-raise alone clears the breaker but does NOT restart services;
+  `convox budget reset` is the canonical post-`:fired` recovery path.
 - Does NOT reset the current month's spend; spend continues accumulating
   toward the cap. Reset is the breaker-clear, not a spend-zero.
 

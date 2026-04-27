@@ -12,6 +12,7 @@ An App is a logical container for [Primitives](/reference/primitives) that are u
 | Primitive | Description |
 |:----------|:------------|
 | [Balancer](/reference/primitives/app/balancer) | Custom TCP load balancers for non-HTTP protocols (e.g., raw TCP, gRPC). Routes external traffic to a Service on specific ports. |
+| [Budget](/reference/primitives/app/budget) | Per-app monthly spend cap, alert threshold, at-cap action (block-deploys / auto-shutdown / alert-only), and the persisted cap-trip recovery state. |
 | [Build](/reference/primitives/app/build) | A compiled snapshot of your codebase, produced from a Dockerfile. Each deploy creates a new Build. |
 | [Object](/reference/primitives/app/object) | Blob/file storage for uploading and downloading files from your application. |
 | [Process](/reference/primitives/app/process) | A running container instance. Processes are created from a Release and managed by a Service or `convox run`. |
