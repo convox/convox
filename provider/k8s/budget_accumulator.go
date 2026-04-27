@@ -436,8 +436,8 @@ func (p *Provider) AppBudgetReset(app string, ackBy string) error {
 //     attacks (e.g. "alice@example.com‮" reverses rendered text).
 //   - Line/paragraph separators (U+2028, U+2029) — legacy JSON parser
 //     break-out and renderer-line-break injection.
-//   - BOM/zero-width joiner (U+FEFF, U+200D) — invisible-character
-//     spoofing of audit-log values.
+//   - BOM/zero-width characters (U+FEFF, U+200B-U+200F) — invisible-
+//     character spoofing of audit-log values (ZWSP, ZWNJ, ZWJ, LRM, RLM).
 //   - Whitespace-only input collapses to "unknown" so a pathological
 //     "   " ack_by cannot stamp a misleading actor on the event.
 func sanitizeAckBy(in string) string {
@@ -451,7 +451,8 @@ func sanitizeAckBy(in string) string {
 			continue
 		}
 		switch r {
-		case 0x2028, 0x2029, 0x200d, 0xfeff,
+		case 0x2028, 0x2029, 0xfeff,
+			0x200b, 0x200c, 0x200d, 0x200e, 0x200f,
 			0x202a, 0x202b, 0x202c, 0x202d, 0x202e,
 			0x2066, 0x2067, 0x2068, 0x2069:
 			continue

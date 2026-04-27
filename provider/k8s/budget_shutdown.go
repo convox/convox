@@ -656,6 +656,15 @@ func (p *Provider) AppBudgetDismissRecovery(app, ackBy string) error {
 // annotation GCs (one tick after RestoredAt + tick interval, or earlier
 // via dismiss-recovery).
 func (p *Provider) AppBudgetDismissRecoveryWithResult(app, ackBy string) (*structs.AppBudgetDismissRecoveryResult, error) {
+	// F-EVT-3 (Decision 7) — extend the per-app lock surface to dismiss.
+	// Without this lock, two concurrent dismiss clicks both observe
+	// existing=nil and both write the annotation, producing duplicate
+	// :dismissed events with idempotent=false. Same pattern as the
+	// accumulator-coordination surface enumerated at budget_app_lock.go.
+	mu := appBudgetLock(app)
+	mu.Lock()
+	defer mu.Unlock()
+
 	ctx := p.Context()
 	if ctx == nil {
 		ctx = context.TODO()
@@ -1075,15 +1084,22 @@ func (p *Provider) releaseManifestForApp(app string) (*manifest.Manifest, *struc
 	return common.AppManifest(p, app)
 }
 
-// runStaleAnnotationGC removes shutdown-state and flap-suppressed
-// annotations whose terminal-state timestamp passed > 1 tick ago. Per
-// spec §7.4 — runs UNCONDITIONALLY on every tick (NOT gated on
-// cost_tracking_enable) so kubectl drift cleans up.
+// runStaleAnnotationGC removes shutdown-state, flap-suppressed, and
+// banner-dismissed annotations whose terminal-state timestamp passed
+// > 1 tick ago. Per spec §7.4 — runs UNCONDITIONALLY on every tick
+// (NOT gated on cost_tracking_enable) so kubectl drift cleans up.
 //
 // Sigils:
-//   - state.RestoredAt > 1 tick ago    → delete state annotation; carry-over flap
-//   - state.ExpiredAt > 1 tick ago     → delete state annotation; carry-over flap
-//   - flap-suppressed-until expired    → delete flap-suppressed AND flap-fired-at
+//   - state.RestoredAt > 1 tick ago    → delete state annotation; carry-over flap; clear dismissed
+//   - state.ExpiredAt > 1 tick ago     → delete state annotation; carry-over flap; clear dismissed
+//   - flap-suppressed-until expired    → delete flap-suppressed AND flap-fired-at TOGETHER
+//   - dismissed annotation             → cleared together with state annotation (D6.1 re-arm fix)
+//
+// Invariant: FlapSuppressFiredAt and FlapSuppressedUntil are always
+// written and cleared together. The accumulator dedup-write at
+// budget_auto_shutdown.go gated on the live state's FlapSuppressedUntil
+// being set; the GC and Reset paths clear both in the same block. No
+// orphan annotation can persist past one tick.
 func (p *Provider) runStaleAnnotationGC(ctx context.Context, app string, tickInterval time.Duration) error {
 	nsName := p.AppNamespace(app)
 	ns, err := p.Cluster.CoreV1().Namespaces().Get(ctx, nsName, am.GetOptions{})
@@ -1109,6 +1125,14 @@ func (p *Provider) runStaleAnnotationGC(ctx context.Context, app string, tickInt
 				_ = p.writeFlapSuppressedUntilAnnotation(ctx, app, *state.FlapSuppressedUntil)
 			}
 			_ = p.deleteBudgetShutdownStateAnnotation(ctx, app)
+			// D6.1 re-arm fix — clear the dismissed banner annotation
+			// alongside the shutdown-state annotation. Without this clear,
+			// cycle-N's dismiss timestamp leaks into cycle-N+1's RECOVERED
+			// state; Decision 6's GET-aggregation surfaces the stale
+			// timestamp; Vue suppresses the new banner silently.
+			if err := p.deleteNamespaceAnnotation(ctx, app, structs.BudgetRecoveryBannerDismissedAnnotation); err != nil {
+				fmt.Printf("ns=budget_shutdown at=warn kind=stale_gc_dismissed_annotation_delete app=%s err=%q\n", app, err.Error())
+			}
 		}
 	}
 

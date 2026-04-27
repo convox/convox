@@ -171,6 +171,39 @@ balancers:
 ```
 See [Balancer](/reference/primitives/app/balancer) and [Load Balancers](/configuration/load-balancers#custom-load-balancers) for configuration options.
 
+## budget
+
+The `budget` section configures monthly cost caps and the action taken when an app
+exceeds them. See [Budget Caps](/management/budget-caps) for the operational guide
+and [Cost Tracking](/management/cost-tracking) for how spend is computed.
+
+```yaml
+budget:
+  monthlyCapUsd: 250
+  alertThresholdPercent: 80
+  atCapAction: auto-shutdown
+  pricingAdjustment: 0
+  notifyBeforeMinutes: 15
+  shutdownGracePeriod: 30s
+  recoveryMode: auto-on-reset
+  shutdownOrder: largest-cost
+  neverAutoShutdown:
+    - api
+```
+
+| Field | Description |
+|-------|-------------|
+| `monthlyCapUsd` | Monthly cap in USD. Reset on the first of each month. |
+| `alertThresholdPercent` | Percent of cap at which `app:budget:threshold` fires. Default 80. |
+| `atCapAction` | One of `alert-only`, `block-new-deploys`, `auto-shutdown`. |
+| `atCapWebhookUrl` | Optional webhook URL to notify when the cap fires. |
+| `pricingAdjustment` | Multiplier applied to compute spend (e.g. 1.10 for a 10% markup). |
+| `notifyBeforeMinutes` | (auto-shutdown only) Minutes between `:armed` and `:fired`. |
+| `shutdownGracePeriod` | (auto-shutdown only) Pod terminationGracePeriod for shutdown. |
+| `recoveryMode` | (auto-shutdown only) `auto-on-reset` or `manual`. |
+| `shutdownOrder` | (auto-shutdown only) `largest-cost` or `newest`. |
+| `neverAutoShutdown` | (auto-shutdown only) List of services that must remain up. |
+
 ## See Also
 
 - [App Definition](/configuration/app-definition) for a hub of all app definition configuration topics

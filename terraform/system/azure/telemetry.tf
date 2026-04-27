@@ -9,6 +9,7 @@ locals {
     cert_duration                        = var.cert_duration
     docker_hub_password                  = var.docker_hub_password
     docker_hub_username                  = var.docker_hub_username
+    fluentd_memory                       = var.fluentd_memory
     high_availability                    = var.high_availability
     idle_timeout                         = var.idle_timeout
     image                                = var.image
@@ -33,6 +34,7 @@ locals {
     tags                                 = var.tags
     telemetry                            = var.telemetry
     terraform_update_timeout             = var.terraform_update_timeout
+    webhook_signing_key                  = var.webhook_signing_key
     whitelist                            = var.whitelist
   }
 
@@ -43,6 +45,7 @@ locals {
     cert_duration                        = "2160h"
     docker_hub_password                  = ""
     docker_hub_username                  = ""
+    fluentd_memory                       = "200Mi"
     high_availability                    = "true"
     idle_timeout                         = "4"
     image                                = "convox/convox"
@@ -67,6 +70,7 @@ locals {
     tags                                 = ""
     telemetry                            = "false"
     terraform_update_timeout             = "2h"
+    webhook_signing_key                  = ""
     whitelist                            = "0.0.0.0/0"
   }
 }

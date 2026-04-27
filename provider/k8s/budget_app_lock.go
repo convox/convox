@@ -22,10 +22,18 @@ import "sync"
 // after our clear lands.
 //
 // Scoped to the auto-shutdown coordination surface (AppBudgetReset,
-// AppBudgetSet, budget_auto_shutdown reconcileAutoShutdown). Read-only
-// paths (AppBudgetGet) and AppBudgetClear remain unsynchronized —
-// AppBudgetClear's full-annotation delete races neither :cancelled nor
-// breaker-state mutations.
+// AppBudgetSet, budget_auto_shutdown reconcileAutoShutdown,
+// AppBudgetDismissRecoveryWithResult). Read-only paths (AppBudgetGet)
+// and AppBudgetClear remain unsynchronized — AppBudgetClear's
+// full-annotation delete races neither :cancelled nor breaker-state
+// mutations.
+//
+// F-EVT-3 (Decision 7) added AppBudgetDismissRecoveryWithResult to the
+// surface: two concurrent dismiss clicks both observed existing=nil
+// and both wrote the annotation, producing duplicate :dismissed events
+// with idempotent=false. The lock collapses the read-decide-write into
+// a critical section so the second click sees existing != nil and
+// returns Status="already-dismissed".
 var (
 	appBudgetLockMapMu sync.Mutex
 	appBudgetLockMap   = map[string]*sync.Mutex{}

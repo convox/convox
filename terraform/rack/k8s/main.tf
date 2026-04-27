@@ -60,7 +60,16 @@ resource "kubernetes_config_map" "telemetry_configuration" {
     name      = "telemetry-rack-params"
   }
 
-  data = var.telemetry_map
+  # Decision 8 — keys in redacted_param_keys are stubbed to empty
+  # strings here. Real plaintext lives in
+  # kubernetes_secret.telemetry_redacted_params and is overlaid by
+  # the Go RackParams() consumer before SHA-256 hashing. Pre-D8
+  # callers reading the ConfigMap directly see empty strings for
+  # those keys (documented in 3.24.6 release notes).
+  data = {
+    for k, v in var.telemetry_map :
+    k => contains(var.redacted_param_keys, k) ? "" : v
+  }
 }
 
 resource "kubernetes_config_map" "telemetry_default_configuration" {
@@ -72,4 +81,26 @@ resource "kubernetes_config_map" "telemetry_default_configuration" {
   }
 
   data = var.telemetry_default_map
+}
+
+# Decision 8 — sidecar Secret holding the plaintext credential values
+# for the keys listed in var.redacted_param_keys. Co-located with the
+# telemetry ConfigMap so the Go RackParams() consumer can overlay the
+# Secret values over the ConfigMap stubs before SHA-256 hashing for
+# off-rack telemetry. Additive resource: pre-D8 racks have no Secret
+# and the consumer falls back to ConfigMap values gracefully.
+resource "kubernetes_secret" "telemetry_redacted_params" {
+  count = var.telemetry ? 1 : 0
+
+  metadata {
+    namespace = kubernetes_namespace.system.metadata[0].name
+    name      = "telemetry-rack-params-redacted"
+  }
+
+  type = "Opaque"
+
+  data = {
+    for k, v in var.telemetry_map :
+    k => v if contains(var.redacted_param_keys, k)
+  }
 }

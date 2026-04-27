@@ -27,6 +27,9 @@ func TestRackParams(t *testing.T) {
 		fc, ok := p.Cluster.(*fake.Clientset)
 		require.True(t, ok)
 
+		// Decision 8 post-rc4 shape: ConfigMap holds stubs for redacted
+		// keys; the sidecar Secret holds the real plaintext that the
+		// Go consumer overlays before SHA-256 hashing.
 		cm := &ac.ConfigMap{
 			ObjectMeta: am.ObjectMeta{
 				Namespace: p.Namespace,
@@ -40,12 +43,26 @@ func TestRackParams(t *testing.T) {
 				"params5":             "test5",
 				"rack_name":           "rack",
 				"cidr":                "test6",
-				"docker_hub_password": "secret-pw",
-				"private_eks_pass":    "eks-secret",
+				"docker_hub_password": "",
+				"private_eks_pass":    "",
 			},
 		}
 
 		_, err := fc.CoreV1().ConfigMaps(p.Namespace).Create(context.TODO(), cm, am.CreateOptions{})
+		require.NoError(t, err)
+
+		sec := &ac.Secret{
+			ObjectMeta: am.ObjectMeta{
+				Namespace: p.Namespace,
+				Name:      "telemetry-rack-params-redacted",
+			},
+			Type: ac.SecretTypeOpaque,
+			Data: map[string][]byte{
+				"docker_hub_password": []byte("secret-pw"),
+				"private_eks_pass":    []byte("eks-secret"),
+			},
+		}
+		_, err = fc.CoreV1().Secrets(p.Namespace).Create(context.TODO(), sec, am.CreateOptions{})
 		require.NoError(t, err)
 
 		params := p.RackParams()
@@ -80,19 +97,34 @@ func TestRackParamsRedactsCredentials(t *testing.T) {
 		const dockerSecret = "mysecret123"
 		const eksSecret = "ekspass456"
 
+		// Decision 8 post-rc4 shape: ConfigMap stubs the redacted keys.
 		cm := &ac.ConfigMap{
 			ObjectMeta: am.ObjectMeta{
 				Namespace: p.Namespace,
 				Name:      "telemetry-rack-params",
 			},
 			Data: map[string]string{
-				"docker_hub_password": dockerSecret,
-				"private_eks_pass":    eksSecret,
+				"docker_hub_password": "",
+				"private_eks_pass":    "",
 				"region":              "us-west-2",
 			},
 		}
 
 		_, err := fc.CoreV1().ConfigMaps(p.Namespace).Create(context.TODO(), cm, am.CreateOptions{})
+		require.NoError(t, err)
+
+		sec := &ac.Secret{
+			ObjectMeta: am.ObjectMeta{
+				Namespace: p.Namespace,
+				Name:      "telemetry-rack-params-redacted",
+			},
+			Type: ac.SecretTypeOpaque,
+			Data: map[string][]byte{
+				"docker_hub_password": []byte(dockerSecret),
+				"private_eks_pass":    []byte(eksSecret),
+			},
+		}
+		_, err = fc.CoreV1().Secrets(p.Namespace).Create(context.TODO(), sec, am.CreateOptions{})
 		require.NoError(t, err)
 
 		params := p.RackParams()
@@ -142,6 +174,20 @@ func TestRackParamsLeavesNonRedactedPlaintext(t *testing.T) {
 		_, err := fc.CoreV1().ConfigMaps(p.Namespace).Create(context.TODO(), cm, am.CreateOptions{})
 		require.NoError(t, err)
 
+		// Decision 8 post-rc4 shape: even when the test exercises a
+		// non-redacted key, the canonical fixture co-creates an empty
+		// sidecar Secret so the consumer's Get path is exercised.
+		sec := &ac.Secret{
+			ObjectMeta: am.ObjectMeta{
+				Namespace: p.Namespace,
+				Name:      "telemetry-rack-params-redacted",
+			},
+			Type: ac.SecretTypeOpaque,
+			Data: map[string][]byte{},
+		}
+		_, err = fc.CoreV1().Secrets(p.Namespace).Create(context.TODO(), sec, am.CreateOptions{})
+		require.NoError(t, err)
+
 		params := p.RackParams()
 		require.Equal(t, "plainvalue", params["non_secret_param"],
 			"non-redacted params must remain plaintext")
@@ -182,10 +228,70 @@ func TestRackParamsEmptyCredentialNotEmitted(t *testing.T) {
 		_, err = fc.CoreV1().ConfigMaps(p.Namespace).Create(context.TODO(), dcm, am.CreateOptions{})
 		require.NoError(t, err)
 
+		// Decision 8 post-rc4 shape: the sidecar Secret exists with an
+		// empty value when the credential is unset. After overlay the
+		// merged value still equals the default empty string, so the
+		// existing skip-default carve-out continues to drop it from
+		// telemetry. Locks the post-D8 unset-credential path.
+		sec := &ac.Secret{
+			ObjectMeta: am.ObjectMeta{
+				Namespace: p.Namespace,
+				Name:      "telemetry-rack-params-redacted",
+			},
+			Type: ac.SecretTypeOpaque,
+			Data: map[string][]byte{
+				"docker_hub_password": []byte(""),
+			},
+		}
+		_, err = fc.CoreV1().Secrets(p.Namespace).Create(context.TODO(), sec, am.CreateOptions{})
+		require.NoError(t, err)
+
 		params := p.RackParams()
 		_, present := params["docker_hub_password"]
 		require.False(t, present,
 			"docker_hub_password equal to default must be skipped, not emitted as hash of empty string")
+	})
+}
+
+// TestRackParamsSecretAbsent_FallsBackToConfigMap pins the pre-Decision-8
+// graceful-degrade path: a 3.24.5 rack that has not yet applied the new
+// rack/k8s module has no telemetry-rack-params-redacted Secret. The
+// ConfigMap still carries plaintext credential values (not yet stubbed).
+// RackParams() must not error and must hash the ConfigMap values directly.
+// Without this fallback an upgrade would silently drop the credentials
+// from the heartbeat between rack-Go-deploy and TF-apply.
+func TestRackParamsSecretAbsent_FallsBackToConfigMap(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		fc, ok := p.Cluster.(*fake.Clientset)
+		require.True(t, ok)
+
+		const dockerSecret = "preD8-docker-pw" //nolint:gosec // test fixture, not a real credential
+		const eksSecret = "preD8-eks-pass"     //nolint:gosec // test fixture, not a real credential
+
+		cm := &ac.ConfigMap{
+			ObjectMeta: am.ObjectMeta{
+				Namespace: p.Namespace,
+				Name:      "telemetry-rack-params",
+			},
+			Data: map[string]string{
+				"docker_hub_password": dockerSecret,
+				"private_eks_pass":    eksSecret,
+				"non_secret_param":    "ok",
+			},
+		}
+		_, err := fc.CoreV1().ConfigMaps(p.Namespace).Create(context.TODO(), cm, am.CreateOptions{})
+		require.NoError(t, err)
+
+		// Deliberately do NOT create the redacted-params Secret —
+		// pre-D8 rack shape.
+
+		params := p.RackParams()
+		require.Equal(t, sha256Hex(dockerSecret), params["docker_hub_password"],
+			"pre-D8 rack: ConfigMap plaintext value must be hashed when Secret is absent")
+		require.Equal(t, sha256Hex(eksSecret), params["private_eks_pass"],
+			"pre-D8 rack: ConfigMap plaintext value must be hashed when Secret is absent")
+		require.Equal(t, "ok", params["non_secret_param"],
+			"pre-D8 rack: non-redacted ConfigMap values must pass through plaintext")
 	})
 }
 

@@ -25,6 +25,8 @@ var (
 		Category{"development", "Development"},
 		Category{"deployment", "Deployment"},
 		Category{"management", "Management"},
+		Category{"console", "Console"},
+		Category{"migration", "Migration"},
 		Category{"reference", "Reference"},
 		Category{"integrations", "Integrations"},
 		Category{"help", "Help"},
