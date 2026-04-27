@@ -26,6 +26,21 @@ List app processes
     ID            SERVICE  STATUS   RELEASE      STARTED     COMMAND
     62942430327e  web      running  RCRLBREFPBX  1 week ago
 ```
+
+When the app's budget cap has been breached (3.24.6+), `convox ps` adds a
+`BUDGET` column showing the per-process sub-state. Possible values:
+
+| Value | Meaning |
+|:------|:--------|
+| `armed-Nm` | Auto-shutdown is armed; `N` minutes remain in the notify-before window. |
+| `at-cap-keda` | Process belongs to a KEDA-managed Service that has been paused via `autoscaling.keda.sh/paused-replicas`. |
+| `at-cap-auto` | Process belongs to a deployment-only Service that has been scaled to 0 by auto-shutdown. |
+| `at-cap` | Process belongs to a Service whose deploys have been blocked (cap action `block-new-deploys`); existing replicas continue to run. |
+
+The column is omitted when the cap is not tripped to keep healthy-state
+output table-width-stable. See [Budget Caps](/management/budget-caps) for
+the full sub-state lifecycle and recovery flow.
+
 ## ps info
 
 Get information about a process

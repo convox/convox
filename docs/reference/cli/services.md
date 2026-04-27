@@ -21,6 +21,13 @@ List services for an app
     SERVICE  DOMAIN                                PORTS
     web      web.myapp.0a1b2c3d4e5f.convox.cloud  443:3000
 ```
+
+When the app's budget cap has been breached (3.24.6+), `convox services`
+adds a `BUDGET` column showing the per-service sub-state (`armed-Nm`,
+`at-cap-keda`, `at-cap-auto`, `at-cap`) — see [`convox ps`](/reference/cli/ps)
+for the full value reference and [Budget Caps](/management/budget-caps)
+for recovery flows.
+
 ## services restart
 
 Restart a service

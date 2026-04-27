@@ -13,41 +13,76 @@ payload originated from your rack and was not tampered with in transit.
 ## Signing <a id="signing"></a>
 
 The rack signs each webhook payload with HMAC-SHA256 using the
-`webhook_signing_key` rack parameter as the key. The signature is encoded as
-hex and sent in the `Convox-Signature` header alongside a `Convox-Signature-Timestamp`
-header carrying the UTC unix timestamp of the dispatch.
+`webhook_signing_key` rack parameter as the key. Both the timestamp and
+the signature(s) are packed into a single `Convox-Signature` header as
+comma-separated `key=value` segments:
+
+```
+Convox-Signature: t=<unix-ts>,v1=<hex1>[,v1=<hex2>]
+```
+
+- `t=<unix-ts>` — UTC unix timestamp of dispatch (seconds since epoch).
+- `v1=<hex>` — hex-encoded HMAC-SHA256 signature. The signed input is
+  `fmt.Sprintf("%d.%s", t, body)` — the timestamp, a literal `.`, then
+  the raw response body bytes. Multiple `v1=` segments may appear when
+  the rack is in the middle of a key rotation (one signature per active
+  key). Receivers verify against ANY one of the listed `v1=` values.
+
+Example header:
 
 ```
 POST /webhooks/budget HTTP/1.1
 Content-Type: application/json
-Convox-Signature: 4b2c5f7a8b9d6e3a1f0c5e8d7b4a3c2f1e9d8c7b6a5f4e3d2c1b0a9e8d7c6b5a
-Convox-Signature-Timestamp: 1714233600
+Convox-Signature: t=1714233600,v1=4b2c5f7a8b9d6e3a1f0c5e8d7b4a3c2f1e9d8c7b6a5f4e3d2c1b0a9e8d7c6b5a
 
 {"event":"app:budget:cap","app":"myapp","actor":"alice@example.com",...}
 ```
 
-To verify, recompute `HMAC-SHA256(webhook_signing_key, timestamp + "." + raw_body)`
-and constant-time compare to the header value. The timestamp prefix prevents
-replay across rotation events.
+To verify, parse the header, recompute
+`HMAC-SHA256(webhook_signing_key, fmt.Sprintf("%d.%s", t, body))`,
+hex-encode, and constant-time compare against any `v1=` segment.
+Reject if the timestamp is outside your tolerance window (Convox
+recommends 5 minutes).
 
 Example verification (Python):
 
 ```python
 import hmac, hashlib, time
 
+def parse_header(header):
+    """Return (t, [sigs]) from 't=<n>,v1=<hex>[,v1=<hex>]'."""
+    t = None
+    sigs = []
+    for part in header.split(","):
+        k, _, v = part.strip().partition("=")
+        if k == "t":
+            t = int(v)
+        elif k == "v1":
+            sigs.append(v)
+    return t, sigs
+
 def verify(req, signing_key):
-    sig = req.headers["Convox-Signature"]
-    ts  = req.headers["Convox-Signature-Timestamp"]
-    if abs(time.time() - int(ts)) > 300:
+    header = req.headers["Convox-Signature"]
+    t, sigs = parse_header(header)
+    if t is None or not sigs:
+        return False
+    if abs(time.time() - t) > 300:
         return False  # too old, reject
     body = req.body  # raw bytes, before any JSON parse
     expected = hmac.new(
         signing_key.encode("utf-8"),
-        f"{ts}.".encode("utf-8") + body,
+        f"{t}.".encode("utf-8") + body,
         hashlib.sha256,
     ).hexdigest()
-    return hmac.compare_digest(sig, expected)
+    return any(hmac.compare_digest(s, expected) for s in sigs)
 ```
+
+The multi-`v1=` form is what enables zero-downtime key rotation: when
+rotating, configure the new key on the rack and BOTH keys (old + new)
+on the receiver. The rack will sign with both for a grace window;
+receiver accepts either; once the receiver has fully cut over, the old
+key is removed from rack config and signing collapses back to one
+`v1=`.
 
 ## Configuring the signing key
 
@@ -83,22 +118,24 @@ new event types in 3.24.6:
 
 - `app:budget:auto-shutdown:dismissed` — sent when the recovery banner is
   dismissed via `convox budget dismiss-recovery` or the Console UI.
-- `app:budget:auto-shutdown:breaker-cleared` — sent when a cap-raise clears
-  the breaker mid-countdown (Decision 3, post-:fired recovery).
+- `app:budget:breaker-cleared` — top-level event (NOT a sub-type of
+  `auto-shutdown`); sent when a cap-raise clears the deploy circuit
+  breaker (both during the armed countdown and post-`:fired`).
 
 Receivers that fail-closed on unknown event types should either fail-open
 (treat unknown events as informational) or be updated to handle the new types.
 
-The `actor` field on `app:budget:auto-shutdown:*` events is now per-user (the
+The `actor` field on `app:budget:*` events is now per-user (the
 authenticated email of the operator who triggered the action) instead of the
 historical `"rack-password"` constant. Receivers that key on actor for audit
 should expect emails for Console3-driven mutations.
 
 Webhooks are best-effort, fire-and-forget, and not retried. Receivers must
-handle ordering by the `Convox-Signature-Timestamp` header (or by the `at`
-field in the JSON body). The Events tab in the Console is best-effort
-persistence for the same stream — Slack/Discord webhooks are the source of
-truth on a gap.
+handle ordering by the `timestamp` field in the JSON body (or by parsing
+the `t=<unix-ts>` segment from the `Convox-Signature` header — both
+reflect the same rack-side emit time). The Events tab in the Console is
+best-effort persistence for the same stream — Slack/Discord webhooks are
+the source of truth on a gap.
 
 ## See Also
 

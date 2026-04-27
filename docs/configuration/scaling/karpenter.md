@@ -12,6 +12,8 @@ Karpenter is **bidirectional** — `karpenter_enabled` can be toggled on and off
 
 > Karpenter is available on **AWS only**. Karpenter parameters are rejected for GCP, Azure, and DigitalOcean Racks.
 
+> **Disambiguation:** the term "budget" on this page refers exclusively to **Karpenter disruption budgets** — a Kubernetes scheduling primitive that limits how many nodes Karpenter may disrupt simultaneously during consolidation, expiry, or drift cycles. This is unrelated to the **per-app monthly spend cap** introduced in Convox 3.24.6 (see [Budget Caps](/management/budget-caps) for app-level cost controls and the `convox.yml` `budget:` block). The two concepts share a name but operate at different layers (cluster node scheduling vs. application spend) and have no shared configuration surface.
+
 ## How Karpenter Works with Convox
 
 When Karpenter is enabled, your Rack's node provisioning is split into three tiers:

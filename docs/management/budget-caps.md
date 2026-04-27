@@ -46,9 +46,10 @@ If the new cap is below current spend, the cap-raise rejects with an explicit
 error and the breaker remains tripped. Use `convox cost --app myapp` to confirm
 current spend before raising.
 
-After `:fired` (mid-countdown), a cap raise clears the breaker but does NOT
-restart already-shutdown services. Run `convox apps restore --app myapp` to
-recover the services. See the [3.24.6 release notes](https://github.com/convox/convox/releases)
+After `:fired` (post-shutdown), a cap raise clears the breaker but does NOT
+restart already-shutdown services on its own. Run `convox budget reset myapp`
+to restore replicas from the persisted shutdown-state annotation
+(`restoreFromAnnotation`). See the [3.24.6 release notes](https://github.com/convox/convox/releases)
 for the full sequence.
 
 ## Reset and force-clear cooldown <a id="force-clear-cooldown"></a>
@@ -116,8 +117,9 @@ not `:fired`, the countdown may still be running (`notifyBeforeMinutes`).
 
 ### `:fired` fired but I want to keep services running
 
-Cap-raise mid-countdown clears the breaker but does not undo the shutdown.
-Run `convox apps restore --app myapp` to bring services back up.
+Cap-raise post-`:fired` clears the breaker but does not restart shutdown
+services. Run `convox budget reset myapp` to restore replicas from the
+persisted shutdown-state annotation.
 
 ## See Also
 
@@ -125,3 +127,5 @@ Run `convox apps restore --app myapp` to bring services back up.
 - [convox.yml budget block](/configuration/convox-yml#budget) — schema reference
 - [budget CLI reference](/reference/cli/budget) — command reference
 - [Webhooks](/configuration/webhooks) — receiving cap events at an external URL
+
+> **Note on terminology:** this page covers the **per-app monthly spend cap** introduced in 3.24.6. The unrelated **Karpenter disruption budget** (cluster-level node-scheduling primitive — see [Karpenter](/configuration/scaling/karpenter)) shares the word "budget" but is a separate concept with no shared configuration surface.

@@ -35,9 +35,9 @@ If the new cap is below current spend, the request is rejected:
 
 Use `convox cost --app myapp` to confirm current spend before raising.
 
-After `:fired` (mid-countdown), cap-raise clears the breaker but does NOT
-restart already-shutdown services. Run `convox apps restore --app myapp` to
-recover them.
+After `:fired` (post-shutdown), cap-raise clears the breaker but does NOT
+restart already-shutdown services. Run `convox budget reset myapp` to
+restore replicas from the persisted shutdown-state annotation.
 
 ## See Also
 

@@ -65,8 +65,8 @@ allowlist must update for the new cardinality. Either:
 - Treat the actor field as opaque and key on the event type for routing.
 
 Webhook receivers that derive identity from a different signal (e.g. the
-`Convox-Signature-Timestamp` plus a per-rack secret) can continue ignoring
-the actor field.
+HMAC verification of the `Convox-Signature` header proving rack identity)
+can continue ignoring the actor field.
 
 ## Backward compatibility
 
