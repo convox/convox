@@ -57,13 +57,35 @@ func (p *Provider) AppBudgetGet(app string) (*structs.AppBudget, *structs.AppBud
 // grep-able stdout log) see the cap/threshold/action transition with the
 // asserting actor identity.
 func (p *Provider) AppBudgetSet(app string, opts structs.AppBudgetOptions, ackBy string) error {
+	// Per-app advisory lock — serializes against AppBudgetReset and the
+	// accumulator's reconcileAutoShutdown so the breaker-clear path
+	// cannot interleave with their reads-then-decides-then-writes on
+	// CircuitBreakerTripped / AlertFiredAt*. Without this, a concurrent
+	// reconcileAutoShutdown could observe pre-clear state, decide to
+	// fire :armed, and write a stale decision after our clear lands.
+	mu := appBudgetLock(app)
+	mu.Lock()
+	defer mu.Unlock()
+
 	nsName := p.AppNamespace(app)
 	ackBy = sanitizeAckBy(ackBy)
 
 	var prev structs.AppBudget
 	var final structs.AppBudget
+	var breakerClearedFromCapRaise bool
+	var breakerClearedPrevSpend, breakerClearedPrevCap, breakerClearedNewCap float64
+	var breakerClearedAckAt time.Time
 
 	for i := 0; i < budgetWriteConflictRetries; i++ {
+		// Reset every per-iteration capture so a prior iteration's gate
+		// firing cannot leak values into a successful retry where the
+		// gate doesn't fire (defensive against future reorders).
+		breakerClearedFromCapRaise = false
+		breakerClearedPrevSpend = 0
+		breakerClearedPrevCap = 0
+		breakerClearedNewCap = 0
+		breakerClearedAckAt = time.Time{}
+
 		ns, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), nsName, am.GetOptions{})
 		if err != nil {
 			if ae.IsNotFound(err) {
@@ -96,6 +118,50 @@ func (p *Provider) AppBudgetSet(app string, opts structs.AppBudgetOptions, ackBy
 		}
 		final = *cfg
 
+		// When the customer truly RAISES the monthly cap (new > prev)
+		// AND the new cap is above current month-to-date spend AND the
+		// breaker is currently tripped, clear the breaker atomically
+		// with the config write. The 409 body's option (2) "raise the
+		// cap to unblock deploys" then actually works without a
+		// separate `convox budget reset`.
+		//
+		// The `final > prev` check is the dominant guard against:
+		//   (a) no-op cap "set" (same value) clearing a stuck breaker
+		//       and emitting a misleading audit event labeled
+		//       "cap-raised" with prev_cap == new_cap.
+		//   (b) cap LOWERED while still > spend silently clearing a
+		//       breaker. Per Decision 3 §1, cap-lower is orthogonal to
+		//       breaker-clear; only an explicit raise should unblock.
+		//   (c) partial AppBudgetSet calls that don't touch
+		//       MonthlyCapUsd at all. applyBudgetOptions only mutates
+		//       cfg.MonthlyCapUsd when opts.MonthlyCapUsd != nil, and
+		//       ApplyDefaults never touches MonthlyCapUsd, so a partial
+		//       update leaves final == prev and `final > prev` is false.
+		//       (No separate opts.MonthlyCapUsd != nil clause is needed
+		//       — it would be subsumed by `final > prev` and add no
+		//       coverage.)
+		//
+		// Edge case: cap raised to a value still <= current spend. The
+		// cap-raise persists but the breaker stays tripped (customer
+		// hasn't actually solved the over-cap problem). At the next
+		// accumulator tick willFireCap evaluates against the new cap; if
+		// spend still >= new cap, the breaker stays tripped.
+		state, _ := readBudgetStateAnnotation(ns.Annotations)
+		if state != nil && state.CircuitBreakerTripped &&
+			final.MonthlyCapUsd > prev.MonthlyCapUsd &&
+			final.MonthlyCapUsd > state.CurrentMonthSpendUsd {
+			breakerClearedPrevSpend = state.CurrentMonthSpendUsd
+			breakerClearedPrevCap = prev.MonthlyCapUsd
+			breakerClearedNewCap = final.MonthlyCapUsd
+			breakerClearedAckAt = time.Now().UTC()
+			state.CircuitBreakerTripped = false
+			state.AlertFiredAtThreshold = time.Time{}
+			state.AlertFiredAtCap = time.Time{}
+			state.CircuitBreakerAckBy = ackBy
+			state.CircuitBreakerAckAt = breakerClearedAckAt
+			breakerClearedFromCapRaise = true
+		}
+
 		data, err := json.Marshal(cfg)
 		if err != nil {
 			return errors.WithStack(err)
@@ -105,6 +171,17 @@ func (p *Provider) AppBudgetSet(app string, opts structs.AppBudgetOptions, ackBy
 			ns.Annotations = map[string]string{}
 		}
 		ns.Annotations[structs.BudgetConfigAnnotation] = string(data)
+
+		if breakerClearedFromCapRaise {
+			// State annotation is updated atomically with the config in
+			// the same Namespaces().Update() call below — k8s atomic per
+			// object, so the conflict-retry loop covers both annotations.
+			stateData, err := json.Marshal(state)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			ns.Annotations[structs.BudgetStateAnnotation] = string(stateData)
+		}
 
 		if _, err := p.Cluster.CoreV1().Namespaces().Update(context.TODO(), ns, am.UpdateOptions{}); err != nil {
 			if ae.IsConflict(err) {
@@ -129,6 +206,31 @@ func (p *Provider) AppBudgetSet(app string, opts structs.AppBudgetOptions, ackBy
 			"new_adjustment":  strconv.FormatFloat(final.PricingAdjustment, 'f', 2, 64),
 			"set_at":          time.Now().UTC().Format(time.RFC3339),
 		}})
+
+		if breakerClearedFromCapRaise {
+			// Discrete :breaker-cleared event with reason="cap-raised" so
+			// the audit trail shows that a cap-raise (not a manual reset)
+			// unblocked deploys. Mirrors the :reset event shape so existing
+			// webhook consumers can generalize. Idempotent — emitted only
+			// when the breaker-clear gate actually fired.
+			//
+			// cleared_at uses the same timestamp persisted into
+			// state.CircuitBreakerAckAt so the audit-event field and the
+			// k8s annotation field are bit-exact rather than drifting by
+			// the microseconds between two time.Now() calls.
+			fmt.Printf("ns=budget_accumulator at=alert kind=breaker_cleared app=%s ack_by=%q reason=cap-raised prev_spend_usd=%.2f prev_cap_usd=%.2f new_cap_usd=%.2f\n",
+				app, ackBy, breakerClearedPrevSpend, breakerClearedPrevCap, breakerClearedNewCap)
+			_ = p.EventSend("app:budget:breaker-cleared", structs.EventSendOptions{Data: map[string]string{
+				"app":            app,
+				"ack_by":         ackBy,
+				"reason":         "cap-raised",
+				"prev_spend_usd": strconv.FormatFloat(breakerClearedPrevSpend, 'f', 2, 64),
+				"prev_cap_usd":   strconv.FormatFloat(breakerClearedPrevCap, 'f', 2, 64),
+				"new_cap_usd":    strconv.FormatFloat(breakerClearedNewCap, 'f', 2, 64),
+				"cleared_at":     breakerClearedAckAt.Format(time.RFC3339),
+			}})
+		}
+
 		return nil
 	}
 	return errors.WithStack(fmt.Errorf("failed to set budget after %d retries", budgetWriteConflictRetries))

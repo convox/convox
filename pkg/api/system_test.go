@@ -444,13 +444,15 @@ func TestAppBudgetReset_ForceClearCooldown_RequiresAdminRole_403sOnWriteRole(t *
 // JWT token presented to AppBudgetReset proceeds past the CanAdmin guard and
 // reaches the provider call (HTTP 200; mock's AppBudgetReset called once).
 // Complements the matrix admin-token-200 row by also exercising the ackBy
-// pass-through in the same call.
+// pass-through in the same call. The client-supplied ack_by override is
+// honored as the persisted actor (replaces the JWT-derived "system-admin").
 func TestAppBudgetReset_AcceptsAdminRole_NoGuardBlock(t *testing.T) {
 	jwtAuthTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
 		tk, err := jm.AdminToken(time.Hour)
 		require.NoError(t, err)
 
-		p.On("AppBudgetReset", "myapp", "system-admin").Return(nil)
+		// Override is honored as the persisted actor; provider receives "alice".
+		p.On("AppBudgetReset", "myapp", "alice").Return(nil)
 
 		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget/reset", strings.NewReader("ack_by=alice"))
 		require.NoError(t, err)

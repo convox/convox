@@ -2,8 +2,8 @@ package k8s
 
 import "sync"
 
-// appBudgetLockMap holds a per-app sync.Mutex used to serialize
-// AppBudgetReset against accumulator-driven reconcileAutoShutdown.
+// appBudgetLockMap holds a per-app sync.Mutex used to serialize budget
+// state mutations against accumulator-driven reconcileAutoShutdown.
 //
 // F-19 fix (catalog D-7 — reset-during-tick race): without this lock
 // reset (which fires :cancelled reason="reset-during-armed" then deletes
@@ -13,10 +13,19 @@ import "sync"
 // sub-second window. Acquiring the per-app lock at both entry points
 // closes that race.
 //
-// Deliberately scoped to the auto-shutdown coordination surface
-// (budget_accumulator AppBudgetReset + budget_auto_shutdown
-// reconcileAutoShutdown). Other budget paths (AppBudgetGet,
-// AppBudgetSet) remain unsynchronized — they don't fire :cancelled.
+// Decision 3 (cap-raise clears breaker) extended the lock surface to
+// AppBudgetSet: when a cap-raise to a value above current spend clears
+// CircuitBreakerTripped + AlertFiredAt*, those are the same fields the
+// accumulator's reconcileAutoShutdown reads-then-decides-then-writes.
+// Without the lock a concurrent reconcileAutoShutdown could observe
+// pre-clear state, decide to fire :armed, and persist a stale decision
+// after our clear lands.
+//
+// Scoped to the auto-shutdown coordination surface (AppBudgetReset,
+// AppBudgetSet, budget_auto_shutdown reconcileAutoShutdown). Read-only
+// paths (AppBudgetGet) and AppBudgetClear remain unsynchronized —
+// AppBudgetClear's full-annotation delete races neither :cancelled nor
+// breaker-state mutations.
 var (
 	appBudgetLockMapMu sync.Mutex
 	appBudgetLockMap   = map[string]*sync.Mutex{}
