@@ -52,6 +52,7 @@ module "k8s" {
   release                   = var.release
   resolver                  = var.resolver
   replicas                  = var.high_availability ? 2 : 1
+  webhook_signing_key       = var.webhook_signing_key
 
 
   annotations = {

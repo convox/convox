@@ -58,6 +58,7 @@ module "k8s" {
   release                   = var.release
   replicas                  = var.high_availability ? 2 : 1
   resolver                  = var.resolver
+  webhook_signing_key       = var.webhook_signing_key
 
   annotations = {
     "cert-manager.io/cluster-issuer" = "letsencrypt"

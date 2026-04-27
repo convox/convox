@@ -177,9 +177,11 @@ func captureEventActorByActionWithProviderHook(
 }
 
 // TestAppBudgetSet_NoContext_EmitsUnknown: AppBudgetSet without a JWT ctx
-// emits actor=unknown (defense-in-depth fallback). The accumulator-driven
-// events get explicit "system" but interactive AppBudgetSet uses central
-// injection.
+// AND without an ack_by override emits actor=unknown. Post-Decision-4 the
+// event actor is derived from Data["ack_by"] (sanitizeAckBy("") returns
+// "unknown" — see budget_accumulator.go:444), not directly from
+// ContextActor. The semantic is preserved: no caller-attributable actor
+// surfaces as "unknown" in the audit row.
 func TestAppBudgetSet_NoContext_EmitsUnknown(t *testing.T) {
 	got := captureEventActorByAction(t, "app:budget:set", func(p *k8s.Provider) error {
 		kk, _ := p.Cluster.(*fake.Clientset)
@@ -189,13 +191,17 @@ func TestAppBudgetSet_NoContext_EmitsUnknown(t *testing.T) {
 			AlertThresholdPercent: intPtr(80),
 			AtCapAction:           options.String("alert-only"),
 			PricingAdjustment:     strPtr("1.0"),
-		}, "test")
+		}, "")
 	})
 	assert.Equal(t, "unknown", got)
 }
 
-// TestAppBudgetSet_EmitsActorFromContext: AppBudgetSet via a Provider with a
-// JWT ctx emits actor=<user> via central injection.
+// TestAppBudgetSet_EmitsActorFromContext: AppBudgetSet via a Provider with
+// a JWT ctx emits actor matching the resolved ackBy. Post-Decision-4 the
+// handler-layer resolveAckByOverride returns the ctx user as ackBy when
+// no form-param override is supplied, so ackBy=ctx-user and the event
+// actor field equals the JWT-derived user via the new ack_by precedence
+// at provider/k8s/event.go:73-86.
 func TestAppBudgetSet_EmitsActorFromContext(t *testing.T) {
 	got := captureEventActorByActionWithProviderHook(t, "app:budget:set",
 		func(p *k8s.Provider) *k8s.Provider {
@@ -211,13 +217,16 @@ func TestAppBudgetSet_EmitsActorFromContext(t *testing.T) {
 				AlertThresholdPercent: intPtr(80),
 				AtCapAction:           options.String("alert-only"),
 				PricingAdjustment:     strPtr("1.0"),
-			}, "test")
+			}, "system-write")
 		})
 	assert.Equal(t, "system-write", got)
 }
 
 // TestAppBudgetSet_AdminContext_EmitsSystemAdmin: ctx populated with the
-// admin claim should propagate verbatim through ContextActor.
+// admin claim should propagate as the resolved ackBy → event actor.
+// Post-Decision-4 the actor is derived from Data["ack_by"]; the handler's
+// resolveAckByOverride returns the ctx user as ackBy when no form-param
+// override is present.
 func TestAppBudgetSet_AdminContext_EmitsSystemAdmin(t *testing.T) {
 	got := captureEventActorByActionWithProviderHook(t, "app:budget:set",
 		func(p *k8s.Provider) *k8s.Provider {
@@ -233,12 +242,16 @@ func TestAppBudgetSet_AdminContext_EmitsSystemAdmin(t *testing.T) {
 				AlertThresholdPercent: intPtr(80),
 				AtCapAction:           options.String("alert-only"),
 				PricingAdjustment:     strPtr("1.0"),
-			}, "test")
+			}, "system-admin")
 		})
 	assert.Equal(t, "system-admin", got)
 }
 
-// TestAppBudgetReset_EmitsActorFromContext: reset path also threads JWT user.
+// TestAppBudgetReset_EmitsActorFromContext: reset path also threads JWT
+// user via ackBy. Post-Decision-4 the event actor is derived from
+// Data["ack_by"]; the handler's resolveAckByOverride returns the ctx user
+// as ackBy when no form-param override is present, so the reset event's
+// actor field equals the JWT-derived user.
 func TestAppBudgetReset_EmitsActorFromContext(t *testing.T) {
 	got := captureEventActorByActionWithProviderHook(t, "app:budget:reset",
 		func(p *k8s.Provider) *k8s.Provider {
@@ -251,8 +264,8 @@ func TestAppBudgetReset_EmitsActorFromContext(t *testing.T) {
 			require.NoError(t, appCreate(kk, "rack1", "app1"))
 			require.NoError(t, p.AppBudgetSet("app1", structs.AppBudgetOptions{
 				MonthlyCapUsd: strPtr("500"),
-			}, "test"))
-			return p.AppBudgetReset("app1", "alice@convox.com")
+			}, "system-admin"))
+			return p.AppBudgetReset("app1", "system-admin")
 		})
 	assert.Equal(t, "system-admin", got)
 }

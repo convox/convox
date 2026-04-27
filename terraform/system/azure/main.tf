@@ -95,6 +95,7 @@ module "rack" {
   telemetry                            = var.telemetry
   telemetry_map                        = local.telemetry_map
   telemetry_default_map                = local.telemetry_default_map
+  webhook_signing_key                  = var.webhook_signing_key
   whitelist                            = split(",", var.whitelist)
   workspace                            = module.cluster.workspace
 }

@@ -68,10 +68,20 @@ func (p *Provider) EventSend(action string, opts structs.EventSendOptions) error
 	// Central injection: derive the audit actor from the provider's
 	// request-scoped ctx unless the caller pre-set it (per-call-site
 	// override at "system"-emit sites: budget accumulator, release
-	// advisories, service patch notes). ContextActor is panic-safe and
-	// returns "unknown" when no actor is available.
+	// advisories, service patch notes). When the emit site supplies an
+	// `ack_by` field but not `actor`, prefer ack_by (so a Console3-
+	// driven budget mutation lands "alice@example.com" in the event's
+	// actor field, matching what the AppBudgetSet provider call already
+	// persists into the k8s annotation via the resolveAckByOverride
+	// helper at pkg/api/deprecation.go:56-78). ContextActor is panic-
+	// safe and returns "unknown" when no actor is available; it is the
+	// fallback when neither actor nor ack_by is present.
 	if _, ok := local["actor"]; !ok {
-		local["actor"] = p.ContextActor()
+		if ackBy, ok := local["ack_by"]; ok && ackBy != "" {
+			local["actor"] = ackBy
+		} else {
+			local["actor"] = p.ContextActor()
+		}
 	}
 
 	e := event{

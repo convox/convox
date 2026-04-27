@@ -44,6 +44,7 @@ module "k8s" {
   rack                      = var.name
   release                   = var.release
   resolver                  = var.resolver
+  webhook_signing_key       = var.webhook_signing_key
 
   annotations = {
     "cert-manager.io/cluster-issuer" = "self-signed"

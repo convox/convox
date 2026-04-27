@@ -2113,7 +2113,9 @@ func TestBudgetAccumulatorCapRaise_EmitsBreakerClearedEvent_WithCapRaisedReason(
 			data, ok := evt["data"].(map[string]interface{})
 			require.True(t, ok, ":breaker-cleared event must include data field")
 			assert.Equal(t, "app1", data["app"])
-			assert.Equal(t, "alice@example.com", data["ack_by"], "actor must be the cap-raiser")
+			assert.Equal(t, "alice@example.com", data["ack_by"], "ack_by must be the cap-raiser")
+			assert.Equal(t, "alice@example.com", data["actor"],
+				"Decision 4: actor must equal ack_by (was rack-password pre-D4 via ContextActor central injection)")
 			assert.Equal(t, "cap-raised", data["reason"])
 			assert.Equal(t, "110.00", data["prev_spend_usd"])
 			assert.Equal(t, "100.00", data["prev_cap_usd"])

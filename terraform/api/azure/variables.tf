@@ -84,6 +84,11 @@ variable "syslog" {
   default = ""
 }
 
+variable "webhook_signing_key" {
+  type    = string
+  default = ""
+}
+
 variable "workspace" {
   type = string
 }

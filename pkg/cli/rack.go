@@ -161,6 +161,11 @@ var managedParams = map[string]bool{
 // HttpProxy are v2-rack PascalCase keys included so v3 CLI against a
 // v2 rack masks the same values v2 CLI post-PR-3795 does; they never
 // appear in v3 rack Parameters responses (v3 uses snake_case).
+// webhook_signing_key added in 3.24.6 (Decision 5) — HMAC-SHA256 secret
+// for outbound webhook signing. Cannot use Terraform `sensitive = true`
+// because the customer base spans TF versions older than 0.14 where
+// sensitive on variable blocks is unsupported; CLI-display masking
+// matches the existing redaction approach for other secret params.
 var sensitiveParams = map[string]bool{
 	"docker_hub_password": true,
 	"secret_key":          true,
@@ -169,6 +174,7 @@ var sensitiveParams = map[string]bool{
 	"private_eks_host":    true,
 	"private_eks_user":    true,
 	"private_eks_pass":    true,
+	"webhook_signing_key": true,
 	"Password":            true,
 	"HttpProxy":           true,
 }

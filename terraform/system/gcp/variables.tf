@@ -82,6 +82,12 @@ variable "fluentd_memory" {
   default = "200Mi"
 }
 
+variable "webhook_signing_key" {
+  type        = string
+  default     = ""
+  description = "Optional HMAC-SHA256 key(s) for signing outbound webhook payloads. Hex-encoded; comma-separated for rotation (max 2). When set, emits Convox-Signature header. Empty preserves 3.24.5 behavior (unsigned)."
+}
+
 variable "whitelist" {
   default = "0.0.0.0/0"
 }
