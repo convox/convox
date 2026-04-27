@@ -261,6 +261,7 @@ func TestSensitiveParamsExactMembership(t *testing.T) {
 		"private_eks_host":    true,
 		"private_eks_user":    true,
 		"private_eks_pass":    true,
+		"webhook_signing_key": true,
 		// v2 PascalCase added for v3 CLI against v2 racks
 		"Password":  true,
 		"HttpProxy": true,

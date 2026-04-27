@@ -252,6 +252,20 @@ type AppBudgetShutdownState struct {
 
 	FlapSuppressedUntil *time.Time `json:"flapSuppressedUntil"`
 
+	// RecoveryBannerDismissedAt is the timestamp the user dismissed the
+	// RECOVERED banner via app_budget_dismiss_recovery. The canonical
+	// source of truth is the separate
+	// `convox.com/budget-recovery-banner-dismissed` namespace
+	// annotation; AppBudgetShutdownStateGet aggregates both annotations
+	// into this struct on the GET path so the SDK round-trip surfaces a
+	// single view. The shutdown-state annotation persistence path
+	// (writeBudgetShutdownStateAnnotation) MUST nil this field before
+	// json.Marshal to keep the annotation byte-stable — the field is
+	// GET-only aggregation.
+	//
+	// Phase G round 1 G.2 FIX-2 / Decision 6.
+	RecoveryBannerDismissedAt *time.Time `json:"recoveryBannerDismissedAt,omitempty"`
+
 	// Per-event dedup-firing trackers (8 of 9 events covered;
 	// :simulated is CLI-driven and excluded). All fire-once-per-shutdown
 	// semantics rely on these. See Set G v2 spec §7.2 + §9.2.

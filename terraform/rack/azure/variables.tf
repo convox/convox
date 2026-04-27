@@ -109,6 +109,11 @@ variable "telemetry_default_map" {
   type = any
 }
 
+variable "webhook_signing_key" {
+  type    = string
+  default = ""
+}
+
 variable "whitelist" {
   default = ["0.0.0.0/0"]
 }

@@ -71,3 +71,8 @@ variable "secret_key" {
 variable "syslog" {
   default = ""
 }
+
+variable "webhook_signing_key" {
+  type    = string
+  default = ""
+}

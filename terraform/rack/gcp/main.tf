@@ -39,6 +39,7 @@ module "api" {
   resolver                  = module.resolver.endpoint
   router                    = module.router.endpoint
   syslog                    = var.syslog
+  webhook_signing_key       = var.webhook_signing_key
 }
 
 module "resolver" {

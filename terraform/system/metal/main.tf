@@ -27,6 +27,7 @@ module "rack" {
   release             = local.release
   registry_disk       = var.registry_disk
   syslog              = var.syslog
+  webhook_signing_key = var.webhook_signing_key
   whitelist           = split(",", var.whitelist)
 }
 

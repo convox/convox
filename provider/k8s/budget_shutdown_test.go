@@ -822,6 +822,136 @@ func TestBudgetShutdown_StandardReset_PreservesCarryoverAnnotations(t *testing.T
 	})
 }
 
+// TestAppBudgetShutdownStateGet_AggregatesDismissedAnnotation pins
+// Decision 6 (Phase G round 1 G.2 FIX-2): the GET path aggregates
+// both the shutdown-state annotation AND the dismissed-banner
+// annotation into a single struct. Without this aggregation, Console3
+// cannot read the dismissed timestamp from a fresh page load — the
+// RECOVERED banner re-renders during the up-to-10-min stale-GC
+// window even though the user dismissed it.
+func TestAppBudgetShutdownStateGet_AggregatesDismissedAnnotation(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		armed := time.Date(2026, 4, 27, 11, 0, 0, 0, time.UTC)
+		shutdown := time.Date(2026, 4, 27, 11, 30, 0, 0, time.UTC)
+		restored := time.Date(2026, 4, 27, 11, 45, 0, 0, time.UTC)
+		dismissedAt := time.Date(2026, 4, 27, 12, 0, 0, 0, time.UTC)
+
+		state := &structs.AppBudgetShutdownState{
+			SchemaVersion:        1,
+			ArmedAt:              &armed,
+			ShutdownAt:           &shutdown,
+			RestoredAt:           &restored,
+			RecoveryMode:         "auto-on-reset",
+			ShutdownOrder:        "largest-cost",
+			ShutdownTickId:       "tick-1",
+			EligibleServiceCount: 1,
+			Services: []structs.AppBudgetShutdownStateService{
+				{Name: "ml-batch", OriginalScale: structs.AppBudgetShutdownStateOriginalScale{Count: 0, Min: 1, Max: 5, Replicas: 3}},
+			},
+		}
+		require.NoError(t, k8s.WriteBudgetShutdownStateAnnotationForTest(p, "app1", state))
+
+		ns, err := kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
+		require.NoError(t, err)
+		if ns.Annotations == nil {
+			ns.Annotations = map[string]string{}
+		}
+		ns.Annotations[structs.BudgetRecoveryBannerDismissedAnnotation] = dismissedAt.Format(time.RFC3339)
+		_, err = kk.CoreV1().Namespaces().Update(context.TODO(), ns, am.UpdateOptions{})
+		require.NoError(t, err)
+
+		got, err := p.AppBudgetShutdownStateGet("app1")
+		require.NoError(t, err)
+		require.NotNil(t, got)
+		require.NotNil(t, got.RecoveryBannerDismissedAt,
+			"GET path must aggregate dismissed annotation timestamp into RecoveryBannerDismissedAt field")
+		assert.WithinDuration(t, dismissedAt, *got.RecoveryBannerDismissedAt, time.Second,
+			"aggregated RecoveryBannerDismissedAt must equal the persisted annotation timestamp")
+		// Sanity: state-machine fields still present.
+		require.NotNil(t, got.RestoredAt)
+		assert.Equal(t, "auto-on-reset", got.RecoveryMode)
+	})
+}
+
+// TestAppBudgetShutdownStateGet_NilDismissedWhenAbsent pins the
+// graceful-degrade case: when the dismissed annotation is absent
+// (banner not yet dismissed), RecoveryBannerDismissedAt is nil.
+// Vue's `state` computed treats this as the pre-Decision-6 fallback
+// (rely on in-session local flag).
+func TestAppBudgetShutdownStateGet_NilDismissedWhenAbsent(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		armed := time.Date(2026, 4, 27, 11, 0, 0, 0, time.UTC)
+		state := &structs.AppBudgetShutdownState{
+			SchemaVersion:        1,
+			ArmedAt:              &armed,
+			RecoveryMode:         "auto-on-reset",
+			ShutdownOrder:        "largest-cost",
+			ShutdownTickId:       "tick-1",
+			EligibleServiceCount: 1,
+			Services: []structs.AppBudgetShutdownStateService{
+				{Name: "ml-batch", OriginalScale: structs.AppBudgetShutdownStateOriginalScale{Count: 0, Min: 1, Max: 5, Replicas: 3}},
+			},
+		}
+		require.NoError(t, k8s.WriteBudgetShutdownStateAnnotationForTest(p, "app1", state))
+
+		got, err := p.AppBudgetShutdownStateGet("app1")
+		require.NoError(t, err)
+		require.NotNil(t, got)
+		assert.Nil(t, got.RecoveryBannerDismissedAt,
+			"absent dismissed annotation must surface as nil RecoveryBannerDismissedAt")
+	})
+}
+
+// TestWriteBudgetShutdownStateAnnotation_DropsRecoveryBannerDismissedAt
+// pins Decision 6's defensive nil-clear: the persisted shutdown-state
+// annotation MUST NOT include `recoveryBannerDismissedAt`. The
+// dismissed marker lives in its own annotation; this defensive nil
+// keeps the two annotations orthogonal even if a caller leaves the
+// GET-time-aggregated field set on a struct it then writes back.
+func TestWriteBudgetShutdownStateAnnotation_DropsRecoveryBannerDismissedAt(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		now := time.Date(2026, 4, 27, 12, 0, 0, 0, time.UTC)
+		state := &structs.AppBudgetShutdownState{
+			SchemaVersion:        1,
+			ArmedAt:              &now,
+			RecoveryMode:         "auto-on-reset",
+			ShutdownOrder:        "largest-cost",
+			ShutdownTickId:       "tick-1",
+			EligibleServiceCount: 1,
+			Services: []structs.AppBudgetShutdownStateService{
+				{Name: "ml-batch", OriginalScale: structs.AppBudgetShutdownStateOriginalScale{Count: 0, Min: 1, Max: 5, Replicas: 3}},
+			},
+			// Caller accidentally leaves the GET-time-aggregated field
+			// populated; the writer must scrub before marshal.
+			RecoveryBannerDismissedAt: ptrTime(now),
+		}
+		// Snapshot the caller's pointer to verify we don't mutate it.
+		preserved := state.RecoveryBannerDismissedAt
+
+		require.NoError(t, k8s.WriteBudgetShutdownStateAnnotationForTest(p, "app1", state))
+
+		ns, err := kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
+		require.NoError(t, err)
+		raw, ok := ns.Annotations[structs.BudgetShutdownStateAnnotation]
+		require.True(t, ok)
+		assert.NotContains(t, raw, "recoveryBannerDismissedAt",
+			"persisted shutdown-state annotation MUST NOT contain recoveryBannerDismissedAt — it lives in its own annotation")
+
+		// Caller's struct was not mutated by the writer.
+		assert.Equal(t, preserved, state.RecoveryBannerDismissedAt,
+			"writer must not nil out the caller's RecoveryBannerDismissedAt")
+	})
+}
+
 func ptrTime(t time.Time) *time.Time { return &t }
 
 // unstructuredField extracts a nested field from an unstructured object.

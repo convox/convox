@@ -38,3 +38,8 @@ variable "router" {
 variable "secret" {
   type = string
 }
+
+variable "webhook_signing_key" {
+  type    = string
+  default = ""
+}

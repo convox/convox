@@ -156,6 +156,20 @@ func readRecoveryBannerDismissedAnnotation(ann map[string]string) (*time.Time, e
 // stuck-state A3.
 func (p *Provider) writeBudgetShutdownStateAnnotation(ctx context.Context, app string, s *structs.AppBudgetShutdownState, resourceVersion string) error {
 	nsName := p.AppNamespace(app)
+
+	// Decision 6 — RecoveryBannerDismissedAt is GET-time-only aggregation.
+	// Nil the field before marshal so the persisted shutdown-state
+	// annotation contains only state-machine fields. The dismissed
+	// annotation is written separately via writeRecoveryBannerDismissed-
+	// Annotation; this nil-clear keeps the two annotations as orthogonal
+	// sources of truth. The local copy via cleaned := *s avoids mutating
+	// the caller's struct.
+	if s != nil {
+		cleaned := *s
+		cleaned.RecoveryBannerDismissedAt = nil
+		s = &cleaned
+	}
+
 	raw, err := json.Marshal(s)
 	if err != nil {
 		return errors.WithStack(err)
@@ -526,6 +540,30 @@ func (p *Provider) AppBudgetShutdownStateGet(app string) (*structs.AppBudgetShut
 	if parseErr != nil {
 		return nil, parseErr
 	}
+	if state == nil {
+		return nil, nil
+	}
+
+	// Decision 6 — aggregate the separate dismissed-banner annotation
+	// into the read-side view. The dismissed annotation is set by
+	// writeRecoveryBannerDismissedAnnotation (this file) and persists
+	// independently of the shutdown-state annotation. Surfacing it on
+	// the same struct lets Console3 read both via one SDK call and
+	// suppress the RECOVERED banner across page reloads (Phase G round
+	// 1 G.2 FIX-2). Errors on the dismissed-annotation read are
+	// non-fatal — the field stays nil and the customer sees the
+	// pre-Decision-6 in-session-only suppression. Log the parse error
+	// at structured-stdout severity so an operator chasing a "banner
+	// won't dismiss" report has a diagnostic trail; corrupt-annotation
+	// is admin-trusted territory (kubectl annotate) so this is rare.
+	dismissedAt, dismErr := readRecoveryBannerDismissedAnnotation(ns.Annotations)
+	if dismErr != nil {
+		fmt.Printf("ns=budget_shutdown at=dismiss_annotation_parse_failed app=%s error=%q\n", app, dismErr)
+	}
+	if dismErr == nil && dismissedAt != nil {
+		state.RecoveryBannerDismissedAt = dismissedAt
+	}
+
 	return state, nil
 }
 

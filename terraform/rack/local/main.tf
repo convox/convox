@@ -32,6 +32,7 @@ module "api" {
   resolver                  = module.resolver.endpoint
   router                    = module.router.endpoint
   secret                    = random_string.secret.result
+  webhook_signing_key       = var.webhook_signing_key
 }
 
 module "resolver" {

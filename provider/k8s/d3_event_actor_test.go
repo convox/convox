@@ -182,6 +182,87 @@ func TestEventSend_ConcurrentCallers_NoRace(t *testing.T) {
 	})
 }
 
+// TestEventSend_AckByOverridesContextActor pins the precedence rule
+// established by Decision 4: when an emit site supplies ack_by but
+// not actor, the emitted event's actor field equals ack_by — so a
+// Console3-driven budget mutation surfaces "alice@example.com" as
+// the audit actor in the persisted event payload, matching what
+// the AppBudgetSet provider call already wrote into the k8s
+// annotation. Without this precedence, central-injection would
+// stamp the JWT-derived ContextActor() ("rack-password" for
+// Console3 basic-auth) and the dialog footer "Audit-logged as
+// alice" becomes a half-truth.
+func TestEventSend_AckByOverridesContextActor(t *testing.T) {
+	payload := captureOnePayload(t, func(p *k8s.Provider) error {
+		// Set ContextActor to "rack-password" via JWT ctx — the
+		// Console3 basic-auth derivation in real prod. Decision 4 says
+		// ack_by overrides this for events that supply it.
+		ctx := context.WithValue(context.Background(), structs.ConvoxJwtUserCtxKey, "rack-password")
+		pp := p.WithContext(ctx)
+		return pp.EventSend("app:budget:set", structs.EventSendOptions{
+			Data: map[string]string{
+				"app":          "alpha",
+				"ack_by":       "alice@example.com",
+				"new_cap_usd":  "500.00",
+				"prev_cap_usd": "100.00",
+			},
+		})
+	})
+
+	data, ok := payload["data"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "alice@example.com", data["actor"],
+		"event actor must equal ack_by when ack_by is supplied; ContextActor must lose")
+	assert.Equal(t, "alice@example.com", data["ack_by"],
+		"ack_by must be preserved alongside actor")
+}
+
+// TestEventSend_NoAckBy_FallsBackToContextActor pins the OTHER half of
+// the precedence ladder: when an emit site supplies neither actor nor
+// ack_by, the central-injection fallback fires and the event actor
+// equals ContextActor(). This preserves backward compatibility for
+// every emit site that does not opt into the ack_by pattern.
+func TestEventSend_NoAckBy_FallsBackToContextActor(t *testing.T) {
+	payload := captureOnePayload(t, func(p *k8s.Provider) error {
+		ctx := context.WithValue(context.Background(), structs.ConvoxJwtUserCtxKey, "system-write")
+		pp := p.WithContext(ctx)
+		return pp.EventSend("rack:converge", structs.EventSendOptions{
+			Data: map[string]string{
+				"id": "build-123",
+			},
+		})
+	})
+
+	data, ok := payload["data"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "system-write", data["actor"])
+	_, hasAckBy := data["ack_by"]
+	assert.False(t, hasAckBy, "ack_by must not appear when emit site did not supply it")
+}
+
+// TestEventSend_EmptyAckBy_FallsBackToContextActor pins the empty-string
+// guard in the new precedence ladder: ack_by="" is treated as absent so
+// the central-injection fallback to ContextActor still fires. Without
+// this guard, an emit site that defensively threads ack_by="" would
+// stamp the actor as empty string (regression).
+func TestEventSend_EmptyAckBy_FallsBackToContextActor(t *testing.T) {
+	payload := captureOnePayload(t, func(p *k8s.Provider) error {
+		ctx := context.WithValue(context.Background(), structs.ConvoxJwtUserCtxKey, "system-write")
+		pp := p.WithContext(ctx)
+		return pp.EventSend("app:budget:threshold", structs.EventSendOptions{
+			Data: map[string]string{
+				"app":    "alpha",
+				"ack_by": "",
+			},
+		})
+	})
+
+	data, ok := payload["data"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "system-write", data["actor"],
+		"empty ack_by must fall through to ContextActor, not stamp empty actor")
+}
+
 // TestEventSend_LegacyPayloadParses asserts that an event payload missing
 // "actor" still decodes cleanly into the canonical 4-field struct (3.24.5
 // receivers must process 3.24.6 events; 3.24.6 receivers must process 3.24.5
