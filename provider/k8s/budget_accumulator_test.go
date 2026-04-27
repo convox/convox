@@ -429,7 +429,14 @@ func TestBudgetAccumulatorMonthRollover(t *testing.T) {
 
 // Cap raise while tripped must not auto-clear CircuitBreakerTripped. Only
 // an explicit AppBudgetReset does that.
-func TestBudgetAccumulatorCapRaiseKeepsBreakerTripped(t *testing.T) {
+// TestBudgetAccumulatorCapRaiseClearsBreaker_WhenNewCapAboveSpend — when
+// the customer raises the monthly cap to a value above current
+// month-to-date spend, AND the breaker is currently tripped,
+// AppBudgetSet clears the breaker atomically with the config write. The
+// customer's mental model: "I raised my cap, deploys should work"
+// becomes truthful. Cap-raise IS the explicit acknowledgment, and the
+// 409 body promises "raise the cap" as a recovery path.
+func TestBudgetAccumulatorCapRaiseClearsBreaker_WhenNewCapAboveSpend(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
@@ -445,23 +452,41 @@ func TestBudgetAccumulatorCapRaiseKeepsBreakerTripped(t *testing.T) {
 			MonthStart:            startOfApril(),
 			CurrentMonthSpendUsd:  110,
 			CurrentMonthSpendAsOf: frozen,
+			AlertFiredAtThreshold: frozen,
 			AlertFiredAtCap:       frozen,
 			CircuitBreakerTripped: true,
 		})
 
 		// Operator raises the cap from 100 to 500 (without running reset).
+		// New cap (500) > current spend (110), so the breaker MUST clear.
 		require.NoError(t, p.AppBudgetSet("app1", structs.AppBudgetOptions{
 			MonthlyCapUsd: strPtr("500"),
 			AtCapAction:   options.String("block-new-deploys"),
-		}, "test"))
+		}, "alice@example.com"))
 
-		// Tick: spend 110 is below new cap 500, but the breaker must stay tripped.
-		require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", frozen))
-
+		// Assert post-cap-raise state: breaker cleared, alert dedupes
+		// re-armed, ack-by/at recorded for audit.
 		_, got, err := p.AppBudgetGet("app1")
 		require.NoError(t, err)
 		require.NotNil(t, got)
-		assert.True(t, got.CircuitBreakerTripped, "cap raise must not clear breaker")
+		assert.False(t, got.CircuitBreakerTripped, "cap raise to value above spend MUST clear breaker")
+		assert.True(t, got.AlertFiredAtThreshold.IsZero(), "AlertFiredAtThreshold must re-arm so threshold can re-fire on next breach")
+		assert.True(t, got.AlertFiredAtCap.IsZero(), "AlertFiredAtCap must re-arm so cap can re-fire on next breach")
+		assert.Equal(t, "alice@example.com", got.CircuitBreakerAckBy, "audit trail records the cap-raiser as the ack actor")
+		assert.False(t, got.CircuitBreakerAckAt.IsZero(), "CircuitBreakerAckAt must be set")
+
+		// Spend ($110) is preserved across cap-raise. Reset zeroes nothing
+		// in the accumulated spend; only month rollover does.
+		assert.Equal(t, float64(110), got.CurrentMonthSpendUsd, "spend must not be zeroed by cap-raise breaker-clear")
+
+		// Tick: spend 110 is below new cap 500, willFireCap is false,
+		// breaker stays cleared.
+		require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", frozen))
+
+		_, got, err = p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		require.NotNil(t, got)
+		assert.False(t, got.CircuitBreakerTripped, "post-tick: spend below new cap, breaker stays cleared")
 	})
 }
 
@@ -1842,5 +1867,258 @@ func TestCancelled_ResetDuringArmed_ActorIsJwtDerived(t *testing.T) {
 		assert.Equal(t, "user@example.com", actor,
 			"reset-during-armed :cancelled event must carry the JWT-derived actor (catalog F-3); not 'system'")
 		require.Equal(t, "reset-during-armed", data["cancel_reason"], "cancel_reason must be reset-during-armed")
+	})
+}
+
+// TestBudgetAccumulatorCapRaiseStaysTripped_WhenNewCapBelowSpend — when
+// the customer raises the cap to a value still at or below current
+// month-to-date spend, the cap-raise persists (config update accepted)
+// but the breaker stays tripped (customer hasn't actually solved the
+// over-cap problem; deploys still blocked). Customer must either raise
+// more or reset.
+func TestBudgetAccumulatorCapRaiseStaysTripped_WhenNewCapBelowSpend(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		frozen := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 100, AlertThresholdPercent: 80, AtCapAction: "block-new-deploys", PricingAdjustment: 1,
+		})
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{
+			MonthStart:            startOfApril(),
+			CurrentMonthSpendUsd:  150,
+			CurrentMonthSpendAsOf: frozen,
+			AlertFiredAtCap:       frozen,
+			CircuitBreakerTripped: true,
+		})
+
+		// Cap raised from 100 to 120 — but spend (150) > new cap (120),
+		// so breaker stays tripped.
+		require.NoError(t, p.AppBudgetSet("app1", structs.AppBudgetOptions{
+			MonthlyCapUsd: strPtr("120"),
+			AtCapAction:   options.String("block-new-deploys"),
+		}, "test"))
+
+		cfg, got, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		require.NotNil(t, got)
+		require.NotNil(t, cfg)
+		assert.True(t, got.CircuitBreakerTripped, "cap raise to value still <= spend must NOT clear breaker")
+		assert.False(t, got.AlertFiredAtCap.IsZero(), "AlertFiredAtCap must be preserved (no re-arm) when breaker stays tripped")
+		assert.Equal(t, float64(120), cfg.MonthlyCapUsd, "cap-raise still persists even though breaker stays tripped")
+	})
+}
+
+// TestBudgetAccumulatorPartialUpdate_DoesNotClearBreaker_WhenNoCapChange —
+// contract: a partial AppBudgetSet that doesn't touch MonthlyCapUsd
+// (e.g. AlertThresholdPercent-only) leaves the breaker untouched.
+//
+// Mechanically: applyBudgetOptions does not modify cfg.MonthlyCapUsd
+// when opts.MonthlyCapUsd is nil, and ApplyDefaults never touches
+// MonthlyCapUsd, so a partial update produces final == prev. The gate's
+// `final.MonthlyCapUsd > prev.MonthlyCapUsd` clause is therefore false
+// and the breaker stays tripped — even when the OTHER gate clauses
+// (CircuitBreakerTripped, final > spend) are both satisfied. Catches a
+// regression that would drop the `final > prev` clause and clear the
+// breaker on any partial AppBudgetSet against a stuck-tripped app.
+func TestBudgetAccumulatorPartialUpdate_DoesNotClearBreaker_WhenNoCapChange(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		frozen := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+
+		// Cap=1000, spend=50 — well above spend. The other gate clauses
+		// (breaker tripped, final > spend) would BOTH hold; only the
+		// `final > prev` clause distinguishes. With the partial update
+		// (cap untouched → final == prev), the gate stays closed.
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 1000, AlertThresholdPercent: 80, AtCapAction: "block-new-deploys", PricingAdjustment: 1,
+		})
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{
+			MonthStart:            startOfApril(),
+			CurrentMonthSpendUsd:  50,
+			CurrentMonthSpendAsOf: frozen,
+			AlertFiredAtCap:       frozen,
+			CircuitBreakerTripped: true,
+		})
+
+		// Update AlertThresholdPercent only — MonthlyCapUsd unchanged.
+		// Breaker MUST stay tripped (final == prev, no cap raise).
+		require.NoError(t, p.AppBudgetSet("app1", structs.AppBudgetOptions{
+			AlertThresholdPercent: intPtr(90),
+		}, "test"))
+
+		_, got, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		require.NotNil(t, got)
+		assert.True(t, got.CircuitBreakerTripped, "partial update without cap change must NOT touch breaker")
+		assert.False(t, got.AlertFiredAtCap.IsZero(), "AlertFiredAtCap must be preserved (no re-arm) when breaker untouched")
+	})
+}
+
+// TestBudgetAccumulatorCapNoOpSet_DoesNotClearBreaker — gate guard for
+// the "cap-set with the same value" case. Customer at cap=$500 spend=$50
+// with breaker tripped (stuck from a prior cycle) calls AppBudgetSet
+// with the same cap. Without `final > prev`, the gate would fire and
+// the audit event would record `prev_cap=500, new_cap=500,
+// reason=cap-raised` — misleading. The tightened gate keeps the
+// breaker tripped (no actual cap-raise occurred). Customer must
+// explicitly reset.
+func TestBudgetAccumulatorCapNoOpSet_DoesNotClearBreaker(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		frozen := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 500, AlertThresholdPercent: 80, AtCapAction: "block-new-deploys", PricingAdjustment: 1,
+		})
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{
+			MonthStart:            startOfApril(),
+			CurrentMonthSpendUsd:  50,
+			CurrentMonthSpendAsOf: frozen,
+			AlertFiredAtCap:       frozen,
+			CircuitBreakerTripped: true,
+		})
+
+		// "Cap raise" to the same value — not actually a raise.
+		require.NoError(t, p.AppBudgetSet("app1", structs.AppBudgetOptions{
+			MonthlyCapUsd: strPtr("500"),
+		}, "test"))
+
+		_, got, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		require.NotNil(t, got)
+		assert.True(t, got.CircuitBreakerTripped, "no-op cap set (final == prev) must NOT clear breaker")
+		assert.False(t, got.AlertFiredAtCap.IsZero(), "AlertFiredAtCap must be preserved when breaker stays tripped")
+	})
+}
+
+// TestBudgetAccumulatorCapLowered_DoesNotClearBreaker — gate guard for
+// the "cap lowered while still above spend" case. Decision 3 §1
+// explicitly says cap-lower is orthogonal to breaker-clear; only an
+// explicit cap-raise should auto-unblock. Without `final > prev`, a
+// cap drop from $1000 to $200 (with spend=$50, breaker stuck-tripped
+// from prior cycle) would clear the breaker. The tightened gate
+// preserves the customer's explicit-ack contract: customer must run
+// `convox budget reset` to clear, since they DECREASED the cap.
+func TestBudgetAccumulatorCapLowered_DoesNotClearBreaker(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		frozen := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 1000, AlertThresholdPercent: 80, AtCapAction: "block-new-deploys", PricingAdjustment: 1,
+		})
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{
+			MonthStart:            startOfApril(),
+			CurrentMonthSpendUsd:  50,
+			CurrentMonthSpendAsOf: frozen,
+			AlertFiredAtCap:       frozen,
+			CircuitBreakerTripped: true,
+		})
+
+		// Cap lowered from 1000 to 200, still > spend (50). Without
+		// `final > prev`, the gate would fire (200 > 50). With it,
+		// 200 > 1000 is false → gate stays closed → breaker tripped.
+		require.NoError(t, p.AppBudgetSet("app1", structs.AppBudgetOptions{
+			MonthlyCapUsd: strPtr("200"),
+		}, "test"))
+
+		cfg, got, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		require.NotNil(t, got)
+		require.NotNil(t, cfg)
+		assert.True(t, got.CircuitBreakerTripped, "cap lowered (final < prev) must NOT clear breaker even when above spend")
+		assert.Equal(t, float64(200), cfg.MonthlyCapUsd, "lowered cap still persists")
+	})
+}
+
+// TestBudgetAccumulatorCapRaise_EmitsBreakerClearedEvent_WithCapRaisedReason
+// — audit-event regression. When cap-raise clears the breaker, a
+// discrete app:budget:breaker-cleared event fires alongside the
+// existing app:budget:set event. The webhook payload includes the
+// cap-raise reason, prev/new caps, prev spend, and the actor.
+func TestBudgetAccumulatorCapRaise_EmitsBreakerClearedEvent_WithCapRaisedReason(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		// In-process webhook capture.
+		var (
+			mu      sync.Mutex
+			actions []map[string]interface{}
+		)
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			defer r.Body.Close()
+			body, _ := io.ReadAll(r.Body)
+			var evt map[string]interface{}
+			if jerr := json.Unmarshal(body, &evt); jerr == nil {
+				mu.Lock()
+				actions = append(actions, evt)
+				mu.Unlock()
+			}
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer srv.Close()
+		k8s.SetWebhooksForTest(p, []string{srv.URL})
+
+		frozen := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 100, AlertThresholdPercent: 80, AtCapAction: "block-new-deploys", PricingAdjustment: 1,
+		})
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{
+			MonthStart:            startOfApril(),
+			CurrentMonthSpendUsd:  110,
+			CurrentMonthSpendAsOf: frozen,
+			AlertFiredAtCap:       frozen,
+			CircuitBreakerTripped: true,
+		})
+
+		require.NoError(t, p.AppBudgetSet("app1", structs.AppBudgetOptions{
+			MonthlyCapUsd: strPtr("500"),
+		}, "alice@example.com"))
+
+		// Drain webhook delivery. 5s timeout gives slow CI runners
+		// headroom; in-process loopback completes in milliseconds on
+		// a healthy box.
+		require.Eventually(t, func() bool {
+			mu.Lock()
+			defer mu.Unlock()
+			for _, evt := range actions {
+				if action, ok := evt["action"].(string); ok && action == "app:budget:breaker-cleared" {
+					return true
+				}
+			}
+			return false
+		}, 5*time.Second, 50*time.Millisecond, ":breaker-cleared event must fire")
+
+		// Verify the event payload.
+		mu.Lock()
+		defer mu.Unlock()
+		var found bool
+		for _, evt := range actions {
+			action, _ := evt["action"].(string)
+			if action != "app:budget:breaker-cleared" {
+				continue
+			}
+			found = true
+			data, ok := evt["data"].(map[string]interface{})
+			require.True(t, ok, ":breaker-cleared event must include data field")
+			assert.Equal(t, "app1", data["app"])
+			assert.Equal(t, "alice@example.com", data["ack_by"], "actor must be the cap-raiser")
+			assert.Equal(t, "cap-raised", data["reason"])
+			assert.Equal(t, "110.00", data["prev_spend_usd"])
+			assert.Equal(t, "100.00", data["prev_cap_usd"])
+			assert.Equal(t, "500.00", data["new_cap_usd"])
+		}
+		require.True(t, found, ":breaker-cleared event must be observed in webhook stream")
 	})
 }

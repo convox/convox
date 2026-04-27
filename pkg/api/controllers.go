@@ -262,30 +262,14 @@ func (s *Server) AppBudgetSet(c *stdapi.Context) error {
 
 	app := c.Var("app")
 
-	derivedAckBy, _ := c.Get(structs.ConvoxJwtUserParam).(string)
-	derivedAckBy = strings.TrimSpace(derivedAckBy)
-	if derivedAckBy == "" {
-		derivedAckBy = "unknown" // sanitizeAckBy maps "" → "unknown"; defense in depth
-	}
-
-	if rawAckBy := c.Value("ack_by"); rawAckBy != "" && rawAckBy != derivedAckBy {
-		// RFC 8594 deprecation headers (Nick-confirmed pivot replacing v0's
-		// X-Convox-Deprecation custom header). Sunset is HTTP-date per RFC 7231
-		// §7.1.1.1; Link rel="deprecation" follows RFC 8631 §4.6 + RFC 8288.
-		c.Response().Header().Set("Deprecation", "true")
-		c.Response().Header().Set("Sunset", deprecationSunsetDate())
-		c.Response().Header().Set("Link", `<https://docs.convox.com/migration/ack-by-derivation>; rel="deprecation"; type="text/html"`)
-		// stdout audit trail of the override (operator-side via fluentd):
-		fmt.Printf("ns=api at=warn kind=ack_by_override app=%s client_supplied=%q jwt_user=%q\n",
-			app, rawAckBy, derivedAckBy)
-	}
+	ackBy := resolveAckByOverride(c, app)
 
 	var opts structs.AppBudgetOptions
 	if err := stdapi.UnmarshalOptions(c.Request(), &opts); err != nil {
 		return err
 	}
 
-	if err := s.provider(c).WithContext(contextFrom(c)).AppBudgetSet(app, opts, derivedAckBy); err != nil {
+	if err := s.provider(c).WithContext(contextFrom(c)).AppBudgetSet(app, opts, ackBy); err != nil {
 		return err
 	}
 
@@ -299,25 +283,9 @@ func (s *Server) AppBudgetClear(c *stdapi.Context) error {
 
 	app := c.Var("app")
 
-	derivedAckBy, _ := c.Get(structs.ConvoxJwtUserParam).(string)
-	derivedAckBy = strings.TrimSpace(derivedAckBy)
-	if derivedAckBy == "" {
-		derivedAckBy = "unknown"
-	}
+	ackBy := resolveAckByOverride(c, app)
 
-	if rawAckBy := c.Value("ack_by"); rawAckBy != "" && rawAckBy != derivedAckBy {
-		// RFC 8594 deprecation headers (Nick-confirmed pivot replacing v0's
-		// X-Convox-Deprecation custom header). Sunset is HTTP-date per RFC 7231
-		// §7.1.1.1; Link rel="deprecation" follows RFC 8631 §4.6 + RFC 8288.
-		c.Response().Header().Set("Deprecation", "true")
-		c.Response().Header().Set("Sunset", deprecationSunsetDate())
-		c.Response().Header().Set("Link", `<https://docs.convox.com/migration/ack-by-derivation>; rel="deprecation"; type="text/html"`)
-		// stdout audit trail of the override (operator-side via fluentd):
-		fmt.Printf("ns=api at=warn kind=ack_by_override app=%s client_supplied=%q jwt_user=%q\n",
-			app, rawAckBy, derivedAckBy)
-	}
-
-	if err := s.provider(c).WithContext(contextFrom(c)).AppBudgetClear(app, derivedAckBy); err != nil {
+	if err := s.provider(c).WithContext(contextFrom(c)).AppBudgetClear(app, ackBy); err != nil {
 		return err
 	}
 
@@ -331,23 +299,7 @@ func (s *Server) AppBudgetReset(c *stdapi.Context) error {
 
 	app := c.Var("app")
 
-	derivedAckBy, _ := c.Get(structs.ConvoxJwtUserParam).(string)
-	derivedAckBy = strings.TrimSpace(derivedAckBy)
-	if derivedAckBy == "" {
-		derivedAckBy = "unknown"
-	}
-
-	if rawAckBy := c.Value("ack_by"); rawAckBy != "" && rawAckBy != derivedAckBy {
-		// RFC 8594 deprecation headers (Nick-confirmed pivot replacing v0's
-		// X-Convox-Deprecation custom header). Sunset is HTTP-date per RFC 7231
-		// §7.1.1.1; Link rel="deprecation" follows RFC 8631 §4.6 + RFC 8288.
-		c.Response().Header().Set("Deprecation", "true")
-		c.Response().Header().Set("Sunset", deprecationSunsetDate())
-		c.Response().Header().Set("Link", `<https://docs.convox.com/migration/ack-by-derivation>; rel="deprecation"; type="text/html"`)
-		// stdout audit trail of the override (operator-side via fluentd):
-		fmt.Printf("ns=api at=warn kind=ack_by_override app=%s client_supplied=%q jwt_user=%q\n",
-			app, rawAckBy, derivedAckBy)
-	}
+	ackBy := resolveAckByOverride(c, app)
 
 	// Set G: --force-clear-cooldown is the Admin-gated escape hatch that
 	// drops the 24h flap-prevention cooldown. The plain reset path is
@@ -362,11 +314,11 @@ func (s *Server) AppBudgetReset(c *stdapi.Context) error {
 			return stdapi.Errorf(http.StatusForbidden, "AppBudgetReset --force-clear-cooldown requires Admin role; current role is 'w'. Contact rack admin or use Admin token.")
 		}
 		opts := structs.AppBudgetResetOptions{ForceClearCooldown: true}
-		if err := s.provider(c).WithContext(contextFrom(c)).AppBudgetResetWithOptions(app, derivedAckBy, opts); err != nil {
+		if err := s.provider(c).WithContext(contextFrom(c)).AppBudgetResetWithOptions(app, ackBy, opts); err != nil {
 			return err
 		}
 	} else {
-		if err := s.provider(c).WithContext(contextFrom(c)).AppBudgetReset(app, derivedAckBy); err != nil {
+		if err := s.provider(c).WithContext(contextFrom(c)).AppBudgetReset(app, ackBy); err != nil {
 			return err
 		}
 	}
@@ -417,13 +369,9 @@ func (s *Server) AppBudgetDismissRecovery(c *stdapi.Context) error {
 
 	app := c.Var("app")
 
-	derivedAckBy, _ := c.Get(structs.ConvoxJwtUserParam).(string)
-	derivedAckBy = strings.TrimSpace(derivedAckBy)
-	if derivedAckBy == "" {
-		derivedAckBy = "unknown"
-	}
+	ackBy := resolveAckByOverride(c, app)
 
-	v, err := s.provider(c).WithContext(contextFrom(c)).AppBudgetDismissRecoveryWithResult(app, derivedAckBy)
+	v, err := s.provider(c).WithContext(contextFrom(c)).AppBudgetDismissRecoveryWithResult(app, ackBy)
 	if err != nil {
 		return err
 	}

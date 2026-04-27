@@ -109,14 +109,19 @@ func TestAppBudgetReset_AdminJWT_AckByIsSystemAdmin(t *testing.T) {
 	})
 }
 
-// TestAppBudgetReset_AckByOverridesClientSupplied_EmitsHeader — D.4 contract.
-// JWT user "bob"; client sends ack_by=alice; provider receives "bob"; RFC 8594
-// headers populated.
-func TestAppBudgetReset_AckByOverridesClientSupplied_EmitsHeader(t *testing.T) {
+// TestAppBudgetReset_AckByOverride_HonoredAsActor_EmitsHeader — when the
+// client supplies ack_by via form param, the rack USES IT as the persisted
+// actor passed to the provider (replacing the JWT-derived value). The
+// Sunset/Link/Deprecation headers continue to fire — the form-param path
+// is deprecated AND the override is honored until per-user JWT plumbing
+// in 3.25.0. Customer-truthfulness: a Console dialog footer that says
+// "Audit-logged as: alice@example.com" is now a contract the rack upholds.
+func TestAppBudgetReset_AckByOverride_HonoredAsActor_EmitsHeader(t *testing.T) {
 	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, _ *cjwt.JwtManager) {
 		tk := mintCustomJwtToken(t, "test", "bob", structs.ConvoxRoleAdmin, time.Hour)
 
-		p.On("AppBudgetReset", "myapp", "bob").Return(nil)
+		// Provider receives the override string, NOT the JWT-derived "bob".
+		p.On("AppBudgetReset", "myapp", "alice").Return(nil)
 
 		body := url.Values{"ack_by": []string{"alice"}}.Encode()
 		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget/reset", strings.NewReader(body))
@@ -129,7 +134,7 @@ func TestAppBudgetReset_AckByOverridesClientSupplied_EmitsHeader(t *testing.T) {
 		defer res.Body.Close()
 
 		require.Equal(t, http.StatusOK, res.StatusCode)
-		require.Equal(t, "true", res.Header.Get("Deprecation"), "Deprecation header must be true on override")
+		require.Equal(t, "true", res.Header.Get("Deprecation"), "Deprecation header must fire on override")
 		require.Equal(t, "Thu, 01 Oct 2026 00:00:00 GMT", res.Header.Get("Sunset"), "Sunset must match SunsetDate3250")
 		link := res.Header.Get("Link")
 		require.Contains(t, link, "https://docs.convox.com/migration/ack-by-derivation")
@@ -137,12 +142,22 @@ func TestAppBudgetReset_AckByOverridesClientSupplied_EmitsHeader(t *testing.T) {
 	})
 }
 
-// TestAppBudgetReset_AckBySameAsJWT_NoHeader — when client-supplied ack_by
-// matches the JWT user, no override is signaled (headers absent).
-func TestAppBudgetReset_AckBySameAsJWT_NoHeader(t *testing.T) {
+// TestAppBudgetReset_AckByOverride_SameAsJWT_StillEmitsHeader — the
+// deprecation signal is about the form-param being the deprecated path,
+// not about whether the value differs from the JWT-derived actor. A
+// client that sends ack_by=bob when the JWT user is also "bob" is still
+// using the deprecated path, so the Deprecation/Sunset/Link headers
+// still fire to nudge that client to drop the form param. The persisted
+// actor is "bob" either way (JWT-derived and override happen to match),
+// so this test does NOT exercise a behavior change in the persistence —
+// only the header-emission rule.
+func TestAppBudgetReset_AckByOverride_SameAsJWT_StillEmitsHeader(t *testing.T) {
 	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, _ *cjwt.JwtManager) {
 		tk := mintCustomJwtToken(t, "test", "bob", structs.ConvoxRoleAdmin, time.Hour)
 
+		// Override matches JWT — provider still receives "bob" (override
+		// is honored, value happens to match). The header-emission rule
+		// is what flipped.
 		p.On("AppBudgetReset", "myapp", "bob").Return(nil)
 
 		body := url.Values{"ack_by": []string{"bob"}}.Encode()
@@ -156,9 +171,10 @@ func TestAppBudgetReset_AckBySameAsJWT_NoHeader(t *testing.T) {
 		defer res.Body.Close()
 
 		require.Equal(t, http.StatusOK, res.StatusCode)
-		require.Empty(t, res.Header.Get("Deprecation"), "matching ack_by must NOT emit Deprecation header")
-		require.Empty(t, res.Header.Get("Sunset"), "matching ack_by must NOT emit Sunset header")
-		require.Empty(t, res.Header.Get("Link"), "matching ack_by must NOT emit Link header")
+		// Any non-empty ack_by fires the deprecation signal.
+		require.Equal(t, "true", res.Header.Get("Deprecation"), "matching ack_by must STILL emit Deprecation header (form-param path is deprecated regardless of value comparison)")
+		require.NotEmpty(t, res.Header.Get("Sunset"), "matching ack_by must STILL emit Sunset header")
+		require.NotEmpty(t, res.Header.Get("Link"), "matching ack_by must STILL emit Link header")
 	})
 }
 
@@ -448,18 +464,17 @@ func TestAppBudgetReset_ForceClearCooldown_WriteRoleRejected(t *testing.T) {
 	})
 }
 
-// TestAppBudgetReset_DeprecationHeadersFire_RegressionForBothPaths verifies
-// that the RFC 8594 deprecation headers (Sunset/Link/Deprecation) continue
-// to fire when a client-supplied ack_by overrides the JWT-derived one,
-// independent of which gate path runs. Covers a subtle invariant: the
-// header-emission block sits BEFORE the forceClear branch, so it must
-// execute regardless of which provider method ultimately runs.
-func TestAppBudgetReset_DeprecationHeadersFire_RegressionForBothPaths(t *testing.T) {
-	t.Run("plain-path-emits-headers", func(t *testing.T) {
+// TestAppBudgetReset_AckByOverride_HonoredAcrossBothPaths verifies the
+// override-takes-effect contract for both the plain reset path AND the
+// force-clear-cooldown path. The deprecation headers fire in both, AND
+// the persisted actor is the override string.
+func TestAppBudgetReset_AckByOverride_HonoredAcrossBothPaths(t *testing.T) {
+	t.Run("plain-path-honors-override", func(t *testing.T) {
 		budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, _ *cjwt.JwtManager) {
 			tk := mintCustomJwtToken(t, "test", "bob", structs.ConvoxRoleReadWrite, time.Hour)
 
-			p.On("AppBudgetReset", "myapp", "bob").Return(nil)
+			// Provider receives "alice" (override), NOT "bob" (JWT).
+			p.On("AppBudgetReset", "myapp", "alice").Return(nil)
 
 			body := url.Values{"ack_by": {"alice"}}.Encode()
 			req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget/reset", strings.NewReader(body))
@@ -477,11 +492,11 @@ func TestAppBudgetReset_DeprecationHeadersFire_RegressionForBothPaths(t *testing
 		})
 	})
 
-	t.Run("force-clear-path-emits-headers", func(t *testing.T) {
+	t.Run("force-clear-path-honors-override", func(t *testing.T) {
 		budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, _ *cjwt.JwtManager) {
 			tk := mintCustomJwtToken(t, "test", "bob", structs.ConvoxRoleAdmin, time.Hour)
 
-			p.On("AppBudgetResetWithOptions", "myapp", "bob",
+			p.On("AppBudgetResetWithOptions", "myapp", "alice",
 				mock.MatchedBy(func(opts structs.AppBudgetResetOptions) bool {
 					return opts.ForceClearCooldown
 				})).Return(nil)
@@ -500,5 +515,165 @@ func TestAppBudgetReset_DeprecationHeadersFire_RegressionForBothPaths(t *testing
 			require.Equal(t, "true", res.Header.Get("Deprecation"), "Deprecation header must fire on override (force-clear path)")
 			require.NotEmpty(t, res.Header.Get("Sunset"), "Sunset header must fire on override (force-clear path)")
 		})
+	})
+}
+
+// TestAppBudgetSet_AckByOverride_PersistedAsActor — the override string
+// lands in cfg.LastCapMutationBy via the AppBudgetSet provider call; the
+// :set event payload uses the same value. Verifies the controller-level
+// override-resolution path passes the customer-presented actor through
+// to the provider.
+func TestAppBudgetSet_AckByOverride_PersistedAsActor(t *testing.T) {
+	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, _ *cjwt.JwtManager) {
+		tk := mintCustomJwtToken(t, "test", "bob", structs.ConvoxRoleAdmin, time.Hour)
+
+		p.On("AppBudgetSet", "myapp",
+			mock.MatchedBy(func(o structs.AppBudgetOptions) bool {
+				return o.MonthlyCapUsd != nil && *o.MonthlyCapUsd == "500"
+			}),
+			"alice@example.com",
+		).Return(nil)
+
+		body := url.Values{
+			"ack_by":          {"alice@example.com"},
+			"monthly-cap-usd": {"500"},
+		}.Encode()
+		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget", strings.NewReader(body))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.SetBasicAuth("jwt", tk)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		require.Equal(t, http.StatusOK, res.StatusCode)
+		require.Equal(t, "true", res.Header.Get("Deprecation"), "Deprecation header must fire on override")
+	})
+}
+
+// TestAppBudgetClear_AckByOverride_PersistedAsActor — the :clear event
+// payload includes the override actor, not the JWT-derived value.
+// Critical for audit-trail truthfulness when Console (basic-auth) presents
+// an override.
+func TestAppBudgetClear_AckByOverride_PersistedAsActor(t *testing.T) {
+	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, _ *cjwt.JwtManager) {
+		tk := mintCustomJwtToken(t, "test", "bob", structs.ConvoxRoleAdmin, time.Hour)
+
+		p.On("AppBudgetClear", "myapp", "alice@example.com").Return(nil)
+
+		body := url.Values{"ack_by": {"alice@example.com"}}.Encode()
+		req, err := http.NewRequest(http.MethodDelete, ht.URL+"/apps/myapp/budget", strings.NewReader(body))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.SetBasicAuth("jwt", tk)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		require.Equal(t, http.StatusOK, res.StatusCode)
+		require.Equal(t, "true", res.Header.Get("Deprecation"))
+	})
+}
+
+// TestAppBudgetDismissRecovery_AckByOverride_PersistedAsActor_AndEmitsHeader
+// — the DismissRecovery handler now emits the deprecation header on
+// override, AND the override is honored as the persisted actor. Renders
+// the AppBudgetDismissRecoveryResult JSON body so the test mocks the
+// *WithResult provider variant.
+func TestAppBudgetDismissRecovery_AckByOverride_PersistedAsActor_AndEmitsHeader(t *testing.T) {
+	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, _ *cjwt.JwtManager) {
+		tk := mintCustomJwtToken(t, "test", "bob", structs.ConvoxRoleAdmin, time.Hour)
+
+		p.On("AppBudgetDismissRecoveryWithResult", "myapp", "alice@example.com").
+			Return(&structs.AppBudgetDismissRecoveryResult{Status: "dismissed"}, nil)
+
+		body := url.Values{"ack_by": {"alice@example.com"}}.Encode()
+		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget/dismiss-recovery", strings.NewReader(body))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.SetBasicAuth("jwt", tk)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		require.Equal(t, http.StatusOK, res.StatusCode)
+		require.Equal(t, "true", res.Header.Get("Deprecation"), "DismissRecovery must emit Deprecation header on override")
+		require.NotEmpty(t, res.Header.Get("Sunset"))
+		require.NotEmpty(t, res.Header.Get("Link"))
+	})
+}
+
+// TestAppBudgetClear_BasicAuth_WithAckByOverride_HonorsOverride — the
+// customer-truthfulness regression test. Console talks to the rack via
+// basic-auth (rack password); without per-user JWT, every basic-auth
+// caller has effective JWT user "rack-password". The Console dialog
+// footer promises "Audit-logged as: alice@example.com" — that promise
+// is now truthful because the override is the persisted actor.
+func TestAppBudgetClear_BasicAuth_WithAckByOverride_HonorsOverride(t *testing.T) {
+	p := &structs.MockProvider{}
+	p.On("Initialize", mock.Anything).Return(nil)
+	p.On("Start").Return(nil)
+	p.On("WithContext", mock.Anything).Return(p).Maybe()
+	p.On("SystemJwtSignKey").Return("test", nil)
+	// Provider receives "alice@example.com" (override), NOT "rack-password" (basic-auth derived).
+	p.On("AppBudgetClear", "myapp", "alice@example.com").Return(nil)
+
+	s := api.NewWithProvider(p)
+	s.Logger = logger.Discard
+	s.Password = "supersecret"
+	s.Server.Recover = func(err error, c *stdapi.Context) {
+		require.NoError(t, err, "httptest server panic")
+	}
+
+	ht := httptest.NewServer(s)
+	defer ht.Close()
+
+	body := url.Values{"ack_by": {"alice@example.com"}}.Encode()
+	req, err := http.NewRequest(http.MethodDelete, ht.URL+"/apps/myapp/budget", strings.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.SetBasicAuth("convox", "supersecret")
+
+	res, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer res.Body.Close()
+
+	bodyBytes, _ := io.ReadAll(res.Body)
+	require.Equal(t, http.StatusOK, res.StatusCode, "basic-auth + override must reach handler — got body %q", string(bodyBytes))
+	require.Equal(t, "true", res.Header.Get("Deprecation"), "Deprecation header must fire on override")
+
+	p.AssertExpectations(t)
+}
+
+// TestAppBudgetClear_AckByOverride_ViaQueryString_HonorsOverride —
+// regression for the alternate wire shape: a DELETE request that
+// presents `ack_by` as a URL query parameter (instead of a form-encoded
+// body) must also honor the override. Go's stdlib `r.ParseForm` always
+// parses the URL query for any method, so this path works via the
+// stdapi `c.Value` fallback in `formValue` without invoking the manual
+// DELETE-body parser. Locks in the contract that BOTH wire shapes are
+// supported and that the formValue helper doesn't accidentally clobber
+// query-string values.
+func TestAppBudgetClear_AckByOverride_ViaQueryString_HonorsOverride(t *testing.T) {
+	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, _ *cjwt.JwtManager) {
+		tk := mintCustomJwtToken(t, "test", "bob", structs.ConvoxRoleAdmin, time.Hour)
+
+		p.On("AppBudgetClear", "myapp", "alice@example.com").Return(nil)
+
+		// No body — ack_by lives in URL query string.
+		u := ht.URL + "/apps/myapp/budget?ack_by=" + url.QueryEscape("alice@example.com")
+		req, err := http.NewRequest(http.MethodDelete, u, nil)
+		require.NoError(t, err)
+		req.SetBasicAuth("jwt", tk)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		require.Equal(t, http.StatusOK, res.StatusCode)
+		require.Equal(t, "true", res.Header.Get("Deprecation"), "query-string override must also emit Deprecation header")
 	})
 }
