@@ -609,6 +609,121 @@ func TestBudgetShutdown_StaleAnnotationGC_ExpiredAtPath(t *testing.T) {
 	})
 }
 
+// TestRunStaleAnnotationGC_ClearsDismissedAnnotation verifies that when
+// the shutdown-state annotation is GC'd (terminal-state > 1 tick ago),
+// the BudgetRecoveryBannerDismissedAnnotation is cleared in the same
+// tick. Without this clear, cycle-N's dismiss timestamp leaks into
+// cycle-N+1's RECOVERED state and silently suppresses the new banner.
+func TestRunStaleAnnotationGC_ClearsDismissedAnnotation(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		oldRestoredAt := time.Now().Add(-30 * time.Minute)
+		armed := oldRestoredAt.Add(-2 * time.Hour)
+		shut := oldRestoredAt.Add(-1 * time.Hour)
+		state := &structs.AppBudgetShutdownState{
+			SchemaVersion:        1,
+			ShutdownAt:           &shut,
+			ArmedAt:              &armed,
+			RestoredAt:           &oldRestoredAt,
+			RecoveryMode:         "auto-on-reset",
+			ShutdownOrder:        "largest-cost",
+			ShutdownTickId:       "tick-dismissed-gc",
+			EligibleServiceCount: 1,
+			Services:             []structs.AppBudgetShutdownStateService{{Name: "ml-batch"}},
+		}
+		raw, err := json.Marshal(state)
+		require.NoError(t, err)
+
+		dismissedAt := oldRestoredAt.Add(5 * time.Minute)
+		ns, err := kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
+		require.NoError(t, err)
+		if ns.Annotations == nil {
+			ns.Annotations = map[string]string{}
+		}
+		ns.Annotations[structs.BudgetShutdownStateAnnotation] = string(raw)
+		ns.Annotations[structs.BudgetRecoveryBannerDismissedAnnotation] = dismissedAt.Format(time.RFC3339)
+		_, err = kk.CoreV1().Namespaces().Update(context.TODO(), ns, am.UpdateOptions{})
+		require.NoError(t, err)
+
+		require.NoError(t, k8s.RunStaleAnnotationGCForTest(p, "app1", 10*time.Minute))
+
+		ns2, err := kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
+		require.NoError(t, err)
+		_, statePresent := ns2.Annotations[structs.BudgetShutdownStateAnnotation]
+		assert.False(t, statePresent, "stale shutdown-state annotation should have been GC'd")
+		_, dismissedPresent := ns2.Annotations[structs.BudgetRecoveryBannerDismissedAnnotation]
+		assert.False(t, dismissedPresent, "dismissed annotation must be cleared alongside the state annotation")
+	})
+}
+
+// TestRunStaleAnnotationGC_ReArmCycle_DoesNotLeakDismissedAt simulates
+// the full re-arm cycle: customer dismisses banner in cycle-1, GC fires,
+// then cycle-2 ARMs+SHUTS+RESTORES. The aggregated GET must report
+// RecoveryBannerDismissedAt == nil for cycle-2 — otherwise the cycle-1
+// dismiss timestamp leaks into cycle-2 and Vue suppresses the fresh
+// RECOVERED banner.
+func TestRunStaleAnnotationGC_ReArmCycle_DoesNotLeakDismissedAt(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		// Cycle 1 — restored 30 minutes ago, dismissed 25 minutes ago.
+		c1RestoredAt := time.Now().Add(-30 * time.Minute)
+		c1Armed := c1RestoredAt.Add(-2 * time.Hour)
+		c1Shut := c1RestoredAt.Add(-1 * time.Hour)
+		c1Dismissed := c1RestoredAt.Add(5 * time.Minute)
+		c1State := &structs.AppBudgetShutdownState{
+			SchemaVersion:        1,
+			ShutdownAt:           &c1Shut,
+			ArmedAt:              &c1Armed,
+			RestoredAt:           &c1RestoredAt,
+			RecoveryMode:         "auto-on-reset",
+			ShutdownOrder:        "largest-cost",
+			ShutdownTickId:       "tick-cycle-1",
+			EligibleServiceCount: 1,
+			Services:             []structs.AppBudgetShutdownStateService{{Name: "ml-batch"}},
+		}
+		c1Raw, err := json.Marshal(c1State)
+		require.NoError(t, err)
+
+		ns, err := kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
+		require.NoError(t, err)
+		if ns.Annotations == nil {
+			ns.Annotations = map[string]string{}
+		}
+		ns.Annotations[structs.BudgetShutdownStateAnnotation] = string(c1Raw)
+		ns.Annotations[structs.BudgetRecoveryBannerDismissedAnnotation] = c1Dismissed.Format(time.RFC3339)
+		_, err = kk.CoreV1().Namespaces().Update(context.TODO(), ns, am.UpdateOptions{})
+		require.NoError(t, err)
+
+		// GC fires — both annotations cleared.
+		require.NoError(t, k8s.RunStaleAnnotationGCForTest(p, "app1", 10*time.Minute))
+
+		// Cycle 2 — fresh ARM with no dismiss. Write only the new state.
+		c2Armed := time.Now().Add(-2 * time.Minute)
+		c2State := &structs.AppBudgetShutdownState{
+			SchemaVersion:        1,
+			ArmedAt:              &c2Armed,
+			RecoveryMode:         "auto-on-reset",
+			ShutdownOrder:        "largest-cost",
+			ShutdownTickId:       "tick-cycle-2",
+			EligibleServiceCount: 1,
+			Services:             []structs.AppBudgetShutdownStateService{{Name: "ml-batch"}},
+		}
+		require.NoError(t, k8s.WriteBudgetShutdownStateAnnotationForTest(p, "app1", c2State))
+
+		got, err := p.AppBudgetShutdownStateGet("app1")
+		require.NoError(t, err)
+		require.NotNil(t, got)
+		assert.Nil(t, got.RecoveryBannerDismissedAt,
+			"cycle-2 GET must report nil RecoveryBannerDismissedAt — cycle-1's dismiss timestamp must not leak through GC")
+		require.NotNil(t, got.ArmedAt)
+		assert.WithinDuration(t, c2Armed, *got.ArmedAt, time.Second)
+	})
+}
+
 // TestBudgetShutdown_DismissRecoveryAnnotation verifies dismiss-recovery
 // produces 3 distinct outcomes (per Set G v2 spec advisory #3):
 //
@@ -660,6 +775,75 @@ func TestBudgetShutdown_DismissRecoveryAnnotation(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, res3)
 		assert.Equal(t, structs.BudgetDismissRecoveryStatusAlreadyDismissed, res3.Status)
+	})
+}
+
+// TestAppBudgetDismissRecoveryWithResult_ConcurrentDismiss_FirstWins
+// pins F-EVT-3: two concurrent dismiss clicks must collapse into one
+// fresh dismiss + one already-dismissed via the per-app lock. Without
+// the lock both goroutines observe existing=nil and both fall through
+// to the write branch, producing duplicate :dismissed events with
+// idempotent=false. The lock serializes the read-decide-write so the
+// second click sees the freshly-written annotation.
+func TestAppBudgetDismissRecoveryWithResult_ConcurrentDismiss_FirstWins(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		// Set up an active recovery banner — shutdown-state with RestoredAt.
+		now := time.Now().UTC()
+		armed := now.Add(-1 * time.Hour)
+		shut := now.Add(-30 * time.Minute)
+		restored := now.Add(-1 * time.Minute)
+		state := &structs.AppBudgetShutdownState{
+			SchemaVersion: 1, ArmedAt: &armed, ShutdownAt: &shut, RestoredAt: &restored,
+			RecoveryMode: "auto-on-reset", ShutdownOrder: "largest-cost",
+			ShutdownTickId: "tick-concurrent-dismiss", EligibleServiceCount: 1,
+			Services: []structs.AppBudgetShutdownStateService{{Name: "ml-batch"}},
+		}
+		require.NoError(t, k8s.WriteBudgetShutdownStateAnnotationForTest(p, "app1", state))
+
+		const goroutines = 8
+		var wg sync.WaitGroup
+		results := make([]*structs.AppBudgetDismissRecoveryResult, goroutines)
+		errs := make([]error, goroutines)
+		start := make(chan struct{})
+		for i := 0; i < goroutines; i++ {
+			wg.Add(1)
+			go func(idx int) {
+				defer wg.Done()
+				<-start
+				res, err := p.AppBudgetDismissRecoveryWithResult("app1", "test-actor")
+				results[idx] = res
+				errs[idx] = err
+			}(i)
+		}
+		close(start)
+		wg.Wait()
+
+		dismissed := 0
+		alreadyDismissed := 0
+		for i, r := range results {
+			require.NoError(t, errs[i])
+			require.NotNil(t, r)
+			switch r.Status {
+			case structs.BudgetDismissRecoveryStatusDismissed:
+				dismissed++
+			case structs.BudgetDismissRecoveryStatusAlreadyDismissed:
+				alreadyDismissed++
+			default:
+				t.Fatalf("unexpected status %q from goroutine %d", r.Status, i)
+			}
+		}
+		assert.Equal(t, 1, dismissed,
+			"exactly one dismiss must win — concurrent calls must NOT both write fresh dismissed annotations")
+		assert.Equal(t, goroutines-1, alreadyDismissed,
+			"all losing goroutines must observe already-dismissed status")
+
+		ns, err := kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
+		require.NoError(t, err)
+		_, ok := ns.Annotations[structs.BudgetRecoveryBannerDismissedAnnotation]
+		assert.True(t, ok, "dismissed annotation must be present after the winning goroutine writes")
 	})
 }
 

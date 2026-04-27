@@ -42,6 +42,8 @@ func VerifyAll() error {
 		"azure",
 		"do",
 		"gcp",
+		"local",
+		"metal",
 	}
 
 	for _, p := range providers {

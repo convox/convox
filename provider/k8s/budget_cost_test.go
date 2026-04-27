@@ -212,8 +212,12 @@ func TestSanitizeAckBy_DefenseInDepthStrips(t *testing.T) {
 		{"LSEP_U2028", "alice\u2028bob", "alicebob"},
 		{"PSEP_U2029", "alice\u2029bob", "alicebob"},
 
-		// Zero-width joiner — invisible-character spoofing.
+		// Zero-width characters — invisible-character spoofing of audit-log values.
+		{"ZWSP_U200B", "alice\u200bbob", "alicebob"},
+		{"ZWNJ_U200C", "alice\u200cbob", "alicebob"},
 		{"ZWJ_U200D", "alice\u200dbob", "alicebob"},
+		{"LRM_U200E", "alice\u200ebob", "alicebob"},
+		{"RLM_U200F", "alice\u200fbob", "alicebob"},
 
 		// Byte order mark — invisible-character spoofing.
 		{"BOM_UFEFF", "alice\ufeffbob", "alicebob"},
