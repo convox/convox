@@ -40,17 +40,44 @@ Scale a service
 | `--memory` | Memory allocation in MB |
 | `--gpu` | Number of GPU devices to reserve per pod |
 | `--gpu-vendor` | GPU vendor. Supported: `nvidia` (default), `amd` |
+| `--min` | Minimum replica count when autoscale is configured (3.24.6+) |
+| `--max` | Maximum replica count when autoscale is configured (3.24.6+) |
 
-### GPU Column
+### Output Table
 
-When no flags are passed, `convox scale` prints a table including a `GPU` column. Services with no GPU reservation render as `-`.
+When no flags are passed, `convox scale` prints a table of the configured scale for every service in the app. Columns 1-6 (`SERVICE`, `DESIRED`, `RUNNING`, `CPU`, `MEMORY`, `GPU`) match the 3.24.5 layout exactly so existing scripts that parse the output positionally with `awk` or `cut` continue to work unchanged. 3.24.6 appends `MIN`, `MAX`, an optional `AUTOSCALE`, and a trailing `STATUS` column at positions 7+.
 
 ```bash
     $ convox scale
-    SERVICE  DESIRED  RUNNING  CPU  MEMORY  GPU
-    web      1        1        256  1024    -
-    vllm     1        1        4000 16384   1
+    SERVICE  DESIRED  RUNNING  CPU   MEMORY  GPU  MIN  MAX  AUTOSCALE    STATUS
+    web      2        2        256   1024    -    2    2    -            
+    vllm     0        0        4000  16384   1    0    10   gpu-util>70  COLD (~2-5m first req)
 ```
+
+The `vllm` row above is at rest with zero replicas — the cold-start hint
+(`COLD (~2-5m first req)`) only renders when both `DESIRED=0` and `RUNNING=0`
+on a service whose autoscale `min` is 0 (a `min: 0` service that has scaled
+back down to zero). Once a request triggers the first replica, `DESIRED` and
+`RUNNING` become 1+ and the STATUS cell clears.
+
+The `AUTOSCALE` column appears between `MAX` and `STATUS` when at least one service in the app has autoscaling enabled. Its cell summarizes the configured trigger (e.g. `cpu>70`, `gpu-util>80 queue>10`) — services without autoscale render `-` in that column.
+
+The trailing `STATUS` column carries the cold-start hint (`COLD (~2-5m first req)` for services with `min: 0` autoscale) and, when the app's budget cap is breached, the per-service sub-state token (`armed-Nm`, `at-cap-keda`, `at-cap-auto`, `at-cap`).
+
+#### Column-Position Contract
+
+| Position | Header | Source | Stable since |
+|---:|--------|--------|--------------|
+| 1 | `SERVICE` | service name | 3.24.5 |
+| 2 | `DESIRED` | configured replica count (`s.Count`) | 3.24.5 |
+| 3 | `RUNNING` | live process count (from `ProcessList`) | 3.24.5 |
+| 4 | `CPU` | CPU allocation in millicores | 3.24.5 |
+| 5 | `MEMORY` | memory allocation in MB | 3.24.5 |
+| 6 | `GPU` | GPU count per pod (or `-`) | 3.24.5 |
+| 7 | `MIN` | min replica count from `scale.autoscale` (or `-`) | 3.24.6 |
+| 8 | `MAX` | max replica count from `scale.autoscale` (or `-`) | 3.24.6 |
+| 9 (optional) | `AUTOSCALE` | configured trigger summary | 3.24.6 |
+| trailing | `STATUS` | cold-start hint and budget sub-state | 3.24.6 |
 
 ## See Also
 

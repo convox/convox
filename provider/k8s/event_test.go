@@ -283,10 +283,10 @@ func TestRedactedWebhookURL_PreservesSchemeAndHost(t *testing.T) {
 		"https://hooks.example.com/path?token=abc":      "https://hooks.example.com",
 		"http://10.0.0.1:8080/?key=secret":              "http://10.0.0.1:8080",
 		"https://discord.com/api/webhooks/12345/TOKEN":  "https://discord.com",
-		"":         "<empty>",
+		"":          "<empty>",
 		"://broken": "<unparseable>",
-		"http://":  "<unparseable>", // missing host
-		"//host":   "<unparseable>", // missing scheme
+		"http://":   "<unparseable>", // missing host
+		"//host":    "<unparseable>", // missing scheme
 	}
 	for in, want := range cases {
 		got := k8s.RedactedWebhookURLForTest(in)

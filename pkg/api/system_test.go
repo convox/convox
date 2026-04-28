@@ -380,11 +380,13 @@ func TestAppBudgetReset_RoleMatrix(t *testing.T) {
 				require.NoError(t, err)
 
 				if tc.providerCalled {
+					// B-6 fix: plain reset routes through AppBudgetResetWithOptions
+					// (ForceClearCooldown=false) per the unified entry point.
 					switch tc.name {
 					case "write-token-200":
-						p.On("AppBudgetReset", "myapp", "system-write").Return(nil)
+						p.On("AppBudgetResetWithOptions", "myapp", "system-write", mock.MatchedBy(resetOptsPlain)).Return(nil)
 					case "admin-token-200":
-						p.On("AppBudgetReset", "myapp", "system-admin").Return(nil)
+						p.On("AppBudgetResetWithOptions", "myapp", "system-admin", mock.MatchedBy(resetOptsPlain)).Return(nil)
 					}
 				}
 
@@ -452,7 +454,9 @@ func TestAppBudgetReset_AcceptsAdminRole_NoGuardBlock(t *testing.T) {
 		require.NoError(t, err)
 
 		// Override is honored as the persisted actor; provider receives "alice".
-		p.On("AppBudgetReset", "myapp", "alice").Return(nil)
+		// B-6 fix: plain reset routes through AppBudgetResetWithOptions
+		// (ForceClearCooldown=false) per the unified entry point.
+		p.On("AppBudgetResetWithOptions", "myapp", "alice", mock.MatchedBy(resetOptsPlain)).Return(nil)
 
 		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget/reset", strings.NewReader("ack_by=alice"))
 		require.NoError(t, err)

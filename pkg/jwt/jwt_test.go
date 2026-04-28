@@ -97,7 +97,6 @@ func TestAdminTokenContainsRWSubstrings_LiveMint(t *testing.T) {
 	assert.True(t, strings.Contains(data.Role, "w"), "Admin role must contain \"w\" for 3.24.5 rollback safety")
 }
 
-
 // TestVerify_ClaimsMissing_ReturnsErr — F-24 fix (catalog F-24).
 // The Verify path used to do unguarded type assertions on jwt.MapClaims,
 // which would panic the api pod if a malformed token (missing claim) hit

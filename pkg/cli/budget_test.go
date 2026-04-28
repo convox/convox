@@ -648,7 +648,6 @@ func TestBudgetShow_FailedBanner_NoReason_FallsBackToLegacy(t *testing.T) {
 	})
 }
 
-
 // TestBudgetShow_ArmedBanner_RendersFireAt — F-12 fix (catalog F-12).
 // Locks in the [ARMED] branch of renderShutdownStateBanner. Covers the
 // computed fireAt = ArmedAt + notifyBeforeMinutes (default 30) and the

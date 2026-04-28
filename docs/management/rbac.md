@@ -168,4 +168,4 @@ By setting up permissions correctly, your organization can achieve tighter secur
 ## See Also
 
 - [Password Security](/management/password-security) for configuring password policies and authentication security
-- [Rack Roles](/console/rack-roles) for the per-rack Owner/Admin/Operator/Viewer role surface (separate from the org-level RBAC roles documented above)
+- [Rack Roles](/console/rack-roles) for the organization-administrator gate that controls sensitive rack-tier operations (e.g. the `webhook_signing_key` reveal in Console)

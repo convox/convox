@@ -735,13 +735,33 @@ func (p *Provider) fireDismissedEvent(ctx context.Context, app, ackBy string, di
 //  3. budget-flap-suppressed-until:        PRESERVE (or DELETE w/ force flag)
 //  4. budget-recovery-banner-dismissed:    optional (clear so banner re-shows)
 //  5. budget-flap-suppress-fired-at:       DELETE (if cooldown cleared)
+//
+// F-A06-1 fix: holds the per-app lock for the FULL duration of the
+// function (Step 1 breaker-clear AND Step 2 restoreFromAnnotation +
+// annotation delete) so a concurrent accumulator tick cannot acquire
+// the lock between Step 1 unlock and Step 2 entry, observe the still-
+// present armed shutdown-state annotation, and fire its own
+// :cancelled / :restored event before our restoreFromAnnotation emit
+// lands. The inner reset routine is split into appBudgetResetLocked
+// (lock-already-held variant) so we acquire once at the outer scope.
 func (p *Provider) AppBudgetResetWithOptions(app, ackBy string, opts structs.AppBudgetResetOptions) error {
 	ctx := p.Context()
 	if ctx == nil {
 		ctx = context.TODO()
 	}
-	// Step 1: existing reset path clears (1) budget-state + breaker.
-	if err := p.AppBudgetReset(app, ackBy); err != nil {
+
+	// F-A06-1 fix: hold the per-app advisory lock across Step 1 + Step 2
+	// so restoreFromAnnotation's emits and the unconditional annotation
+	// delete are atomic with the breaker-clear. The accumulator's
+	// reconcileAutoShutdown also acquires this lock; a concurrent tick
+	// queues until our full critical section completes.
+	mu := appBudgetLock(app)
+	mu.Lock()
+	defer mu.Unlock()
+
+	// Step 1: clear (1) budget-state + breaker via the lock-already-held
+	// helper (we already hold the lock at the outer scope).
+	if err := p.appBudgetResetLocked(app, ackBy); err != nil {
 		return err
 	}
 

@@ -21,6 +21,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// resetOptsPlain matches AppBudgetResetWithOptions calls where the
+// --force-clear-cooldown flag is OFF. The B-6 fix routes plain
+// `convox budget reset` (no force flag) through AppBudgetResetWithOptions
+// with ForceClearCooldown=false so the post-:fired restoreFromAnnotation
+// recovery path is exercised — matches the documented contract in
+// docs/reference/cli/budget-reset.md and docs/management/budget-caps.md.
+func resetOptsPlain(opts structs.AppBudgetResetOptions) bool {
+	return !opts.ForceClearCooldown
+}
+
 // budgetTestServer spins up a full api.Server with a MockProvider for D.4
 // budget-handler tests. JWT signing key matches cjwt.NewJwtManager("test") so
 // tokens minted with the returned JwtManager verify against the server.
@@ -64,12 +74,13 @@ func mintCustomJwtToken(t *testing.T, signKey, user, role string, ttl time.Durat
 
 // TestAppBudgetReset_AckByDerivedFromJWT — happy path for D.4 derivation.
 // Custom JWT user "bob" with admin role; no client-supplied ack_by; provider
-// must receive "bob".
+// must receive "bob". Plain reset (no force flag) routes to
+// AppBudgetResetWithOptions with ForceClearCooldown=false per the B-6 fix.
 func TestAppBudgetReset_AckByDerivedFromJWT(t *testing.T) {
 	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, _ *cjwt.JwtManager) {
 		tk := mintCustomJwtToken(t, "test", "bob", structs.ConvoxRoleAdmin, time.Hour)
 
-		p.On("AppBudgetReset", "myapp", "bob").Return(nil)
+		p.On("AppBudgetResetWithOptions", "myapp", "bob", mock.MatchedBy(resetOptsPlain)).Return(nil)
 
 		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget/reset", strings.NewReader(""))
 		require.NoError(t, err)
@@ -88,13 +99,15 @@ func TestAppBudgetReset_AckByDerivedFromJWT(t *testing.T) {
 
 // TestAppBudgetReset_AdminJWT_AckByIsSystemAdmin — cross-D.4-E.1 integration.
 // Admin token minted via JwtMngr.AdminToken (User="system-admin", Role="rwa");
-// provider must receive "system-admin".
+// provider must receive "system-admin" via the unified AppBudgetResetWithOptions
+// entry point (B-6 fix routes plain reset through the same provider method
+// the force-flag path uses, with ForceClearCooldown=false).
 func TestAppBudgetReset_AdminJWT_AckByIsSystemAdmin(t *testing.T) {
 	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
 		tk, err := jm.AdminToken(time.Hour)
 		require.NoError(t, err)
 
-		p.On("AppBudgetReset", "myapp", "system-admin").Return(nil)
+		p.On("AppBudgetResetWithOptions", "myapp", "system-admin", mock.MatchedBy(resetOptsPlain)).Return(nil)
 
 		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget/reset", strings.NewReader(""))
 		require.NoError(t, err)
@@ -121,7 +134,8 @@ func TestAppBudgetReset_AckByOverride_HonoredAsActor_EmitsHeader(t *testing.T) {
 		tk := mintCustomJwtToken(t, "test", "bob", structs.ConvoxRoleAdmin, time.Hour)
 
 		// Provider receives the override string, NOT the JWT-derived "bob".
-		p.On("AppBudgetReset", "myapp", "alice").Return(nil)
+		// Plain reset path → AppBudgetResetWithOptions, ForceClearCooldown=false.
+		p.On("AppBudgetResetWithOptions", "myapp", "alice", mock.MatchedBy(resetOptsPlain)).Return(nil)
 
 		body := url.Values{"ack_by": []string{"alice"}}.Encode()
 		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget/reset", strings.NewReader(body))
@@ -157,8 +171,8 @@ func TestAppBudgetReset_AckByOverride_SameAsJWT_StillEmitsHeader(t *testing.T) {
 
 		// Override matches JWT — provider still receives "bob" (override
 		// is honored, value happens to match). The header-emission rule
-		// is what flipped.
-		p.On("AppBudgetReset", "myapp", "bob").Return(nil)
+		// is what flipped. Plain reset → ForceClearCooldown=false branch.
+		p.On("AppBudgetResetWithOptions", "myapp", "bob", mock.MatchedBy(resetOptsPlain)).Return(nil)
 
 		body := url.Values{"ack_by": []string{"bob"}}.Encode()
 		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget/reset", strings.NewReader(body))
@@ -238,7 +252,7 @@ func TestAppBudgetReset_EmptyJWTUser_AckByUnknown(t *testing.T) {
 			budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, _ *cjwt.JwtManager) {
 				tk := mintCustomJwtToken(t, "test", tc.user, structs.ConvoxRoleAdmin, time.Hour)
 
-				p.On("AppBudgetReset", "myapp", "unknown").Return(nil)
+				p.On("AppBudgetResetWithOptions", "myapp", "unknown", mock.MatchedBy(resetOptsPlain)).Return(nil)
 
 				req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget/reset", strings.NewReader(""))
 				require.NoError(t, err)
@@ -264,8 +278,11 @@ func TestAppBudgetReset_ConcurrentDifferentJWTs_AckByIsolated(t *testing.T) {
 
 	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, _ *cjwt.JwtManager) {
 		// Pre-register expectations: each user must produce exactly one provider call.
+		// Plain reset routes via AppBudgetResetWithOptions (ForceClearCooldown=false)
+		// per the B-6 fix; the user-isolation contract is unchanged.
 		for _, u := range users {
-			p.On("AppBudgetReset", "myapp", u).Return(nil).Once()
+			user := u
+			p.On("AppBudgetResetWithOptions", "myapp", user, mock.MatchedBy(resetOptsPlain)).Return(nil).Once()
 		}
 
 		var wg sync.WaitGroup
@@ -376,13 +393,18 @@ func TestAuthenticate_BasicAuth_SetsConvoxJwtUserParam_RackPassword_E2E(t *testi
 // JWT must succeed. This is the customer-visible regression coverage for
 // the unblock that lets Console3 wire its Reset button without elevating
 // to Admin.
+//
+// B-6 fix: plain reset routes through AppBudgetResetWithOptions with
+// ForceClearCooldown=false (the unified entry point) so the post-:fired
+// restoreFromAnnotation recovery path is exercised — matching the
+// documented behavior in docs/reference/cli/budget-reset.md.
 func TestAppBudgetReset_PlainReset_WriteRoleSucceeds(t *testing.T) {
 	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
 		tk, err := jm.WriteToken(time.Hour)
 		require.NoError(t, err)
 
 		// JwtMngr.WriteToken hard-codes user="system-write".
-		p.On("AppBudgetReset", "myapp", "system-write").Return(nil)
+		p.On("AppBudgetResetWithOptions", "myapp", "system-write", mock.MatchedBy(resetOptsPlain)).Return(nil)
 
 		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget/reset", strings.NewReader(""))
 		require.NoError(t, err)
@@ -395,6 +417,48 @@ func TestAppBudgetReset_PlainReset_WriteRoleSucceeds(t *testing.T) {
 
 		bodyBytes, _ := io.ReadAll(res.Body)
 		require.Equal(t, http.StatusOK, res.StatusCode, "w-token plain reset must succeed — got body %q", string(bodyBytes))
+	})
+}
+
+// TestAppBudgetReset_PlainReset_RoutesToWithOptions_ForceClearCooldownFalse
+// pins the B-6 fix: a plain `convox budget reset` (no force flag) MUST
+// route to AppBudgetResetWithOptions with ForceClearCooldown=false, NOT
+// to the legacy inner AppBudgetReset (which only cleared the breaker
+// without restoring replicas). The unified routing makes the documented
+// post-:fired recovery contract — restoreFromAnnotation reapplies the
+// persisted replica counts — work for plain reset too. The flag remains
+// additive: it triggers the cooldown-annotation deletion in addition to
+// the shared restore-replicas path.
+//
+// AssertNotCalled on the legacy inner method guards against a future
+// refactor reverting the unified routing.
+func TestAppBudgetReset_PlainReset_RoutesToWithOptions_ForceClearCooldownFalse(t *testing.T) {
+	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
+		tk, err := jm.WriteToken(time.Hour)
+		require.NoError(t, err)
+
+		// Force the matcher to require ForceClearCooldown=false explicitly.
+		p.On("AppBudgetResetWithOptions", "myapp", "system-write",
+			mock.MatchedBy(func(opts structs.AppBudgetResetOptions) bool {
+				return !opts.ForceClearCooldown
+			})).Return(nil).Once()
+
+		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget/reset", strings.NewReader(""))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.SetBasicAuth("jwt", tk)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		require.Equal(t, http.StatusOK, res.StatusCode)
+
+		// B-6 anti-regression: the legacy inner provider method must NOT
+		// be invoked. The split-routing bug ran plain reset through the
+		// inner AppBudgetReset which bypassed restoreFromAnnotation; the
+		// fix unified the routing.
+		p.AssertNotCalled(t, "AppBudgetReset", mock.Anything, mock.Anything)
 	})
 }
 
@@ -474,7 +538,9 @@ func TestAppBudgetReset_AckByOverride_HonoredAcrossBothPaths(t *testing.T) {
 			tk := mintCustomJwtToken(t, "test", "bob", structs.ConvoxRoleReadWrite, time.Hour)
 
 			// Provider receives "alice" (override), NOT "bob" (JWT).
-			p.On("AppBudgetReset", "myapp", "alice").Return(nil)
+			// Plain reset routes via AppBudgetResetWithOptions(force=false)
+			// per the B-6 fix.
+			p.On("AppBudgetResetWithOptions", "myapp", "alice", mock.MatchedBy(resetOptsPlain)).Return(nil)
 
 			body := url.Values{"ack_by": {"alice"}}.Encode()
 			req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget/reset", strings.NewReader(body))

@@ -302,25 +302,27 @@ func (s *Server) AppBudgetReset(c *stdapi.Context) error {
 	ackBy := resolveAckByOverride(c, app)
 
 	// Set G: --force-clear-cooldown is the Admin-gated escape hatch that
-	// drops the 24h flap-prevention cooldown. The plain reset path is
+	// ALSO drops the 24h flap-prevention cooldown. The plain reset path is
 	// CanWrite (rw) — sufficient role for the routine ACTIVE→recover flow
 	// that GUI Reset buttons drive. CanAdmin is enforced ONLY when
 	// force_clear_cooldown=true. Pinned by R3 amendments § Set E (E.2 UX).
 	// Customer tooling parses the 403 body for migration guidance — the
 	// "requires Admin role; current role is 'w'" substring is preserved.
+	//
+	// Both paths route to AppBudgetResetWithOptions so that plain reset
+	// (post-:fired) calls restoreFromAnnotation to restart shutdown
+	// services from the persisted replica counts. The flag is additive —
+	// it triggers the cooldown-annotation deletion in addition to the
+	// shared restore-replicas path. This matches the documented behavior
+	// in docs/reference/cli/budget-reset.md (canonical post-:fired
+	// recovery path) and docs/management/budget-caps.md.
 	forceClear := c.Value("force_clear_cooldown") == "true"
-	if forceClear {
-		if !CanAdmin(c) {
-			return stdapi.Errorf(http.StatusForbidden, "AppBudgetReset --force-clear-cooldown requires Admin role; current role is 'w'. Contact rack admin or use Admin token.")
-		}
-		opts := structs.AppBudgetResetOptions{ForceClearCooldown: true}
-		if err := s.provider(c).WithContext(contextFrom(c)).AppBudgetResetWithOptions(app, ackBy, opts); err != nil {
-			return err
-		}
-	} else {
-		if err := s.provider(c).WithContext(contextFrom(c)).AppBudgetReset(app, ackBy); err != nil {
-			return err
-		}
+	if forceClear && !CanAdmin(c) {
+		return stdapi.Errorf(http.StatusForbidden, "AppBudgetReset --force-clear-cooldown requires Admin role; current role is 'w'. Contact rack admin or use Admin token.")
+	}
+	opts := structs.AppBudgetResetOptions{ForceClearCooldown: forceClear}
+	if err := s.provider(c).WithContext(contextFrom(c)).AppBudgetResetWithOptions(app, ackBy, opts); err != nil {
+		return err
 	}
 
 	return c.RenderOK()
