@@ -103,6 +103,30 @@ type AppBudgetState struct {
 	CircuitBreakerAckBy   string    `json:"circuit-breaker-ack-by,omitempty"`
 	CircuitBreakerAckAt   time.Time `json:"circuit-breaker-ack-at,omitempty"`
 	WarningCount          int       `json:"warning-count,omitempty"`
+
+	// PerServiceSpendUsd is cumulative USD spend per service since
+	// MonthStart. Keys are pod `service` label values (per pod.Labels),
+	// with two reserved buckets: "_build" for build pods (which carry
+	// service-type=build) and "_unattributed" for pods with no service
+	// label. Older annotations (pre-3.24.6rc5) parse with a nil map; the
+	// accumulator lazily initializes on first tick. Per-resource hours
+	// (GPU/CPU/Mem) are NOT stored — the existing pricing model returns
+	// a single dominant-resource fraction, so reliable per-resource
+	// hours can't be derived without a redesign. The wire ServiceCostLine
+	// retains those fields without omitempty so a future pricing-model
+	// rework can populate them without changing the response shape; in
+	// 3.24.6 they always serialize as 0. Hard cap of ~1000 entries is
+	// enforced in the accumulator; truncation emits a per-tick event
+	// (app:budget:per-service-truncated) so dropped entries are
+	// observable without API-server log access.
+	PerServiceSpendUsd map[string]float64 `json:"per-service-spend-usd,omitempty"`
+
+	// PerServiceInstanceType records the most recently observed instance
+	// type per service. Cheap to track and surfaces alongside spend in
+	// the breakdown line for operator recognition. Populated
+	// opportunistically — first observation wins and persists until the
+	// month boundary GC resets the map.
+	PerServiceInstanceType map[string]string `json:"per-service-instance-type,omitempty"`
 }
 
 // AppCost is the response shape for GET /apps/{app}/cost.

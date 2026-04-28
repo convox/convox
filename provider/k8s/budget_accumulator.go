@@ -7,6 +7,7 @@ import (
 	"math"
 	"os"
 	"runtime/debug"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -58,6 +59,15 @@ func (p *Provider) AppBudgetGet(app string) (*structs.AppBudget, *structs.AppBud
 // grep-able stdout log) see the cap/threshold/action transition with the
 // asserting actor identity.
 func (p *Provider) AppBudgetSet(app string, opts structs.AppBudgetOptions, ackBy string) error {
+	// Reject enforcement-bearing options when cost tracking is disabled —
+	// without the accumulator running, caps and alerts persist as
+	// unenforced config (silent no-op). The check is a pure read of opts
+	// + an env var, so it runs before the per-app lock to avoid
+	// serializing rejections behind in-progress writes.
+	if err := p.requireCostTrackingForBudget(opts); err != nil {
+		return err
+	}
+
 	// Per-app advisory lock — serializes against AppBudgetReset and the
 	// accumulator's reconcileAutoShutdown so the breaker-clear path
 	// cannot interleave with their reads-then-decides-then-writes on
@@ -556,12 +566,53 @@ func (p *Provider) AppCost(app string) (*structs.AppCost, error) {
 		MonthStart:          state.MonthStart,
 		AsOf:                state.CurrentMonthSpendAsOf,
 		SpendUsd:            state.CurrentMonthSpendUsd,
-		Breakdown:           []structs.ServiceCostLine{},
+		Breakdown:           buildBreakdown(state),
 		PricingSource:       "on-demand-static-table",
 		PricingTableVersion: billing.PricingTableVersion(),
 		PricingAdjustment:   adjustment,
 		WarningCount:        state.WarningCount,
 	}, nil
+}
+
+// buildBreakdown projects the persisted per-service totals into an
+// AppCost.Breakdown slice. Always returns a non-nil slice (matching the
+// existing wire shape); empty when no per-service data has accumulated.
+//
+// The state struct passed in must be a freshly-loaded copy, NOT a shared
+// in-process pointer also visible to the accumulator goroutine —
+// iterating PerServiceSpendUsd while the tick path is mutating the same
+// map races. AppCost performs a fresh annotation read per call; the
+// accumulator deserializes into its own *AppBudgetState; the two paths
+// never share memory.
+//
+// GpuHours / CpuHours / MemGbHours are intentionally zero — the existing
+// pricing model returns a single dominant-resource fraction so per-resource
+// hours can't be derived without a redesign. The wire fields are retained
+// without omitempty for forward-compatibility with a future per-resource
+// pricing model; they always serialize as 0 in 3.24.6 so downstream
+// parsers see a stable shape.
+func buildBreakdown(state *structs.AppBudgetState) []structs.ServiceCostLine {
+	if state == nil || len(state.PerServiceSpendUsd) == 0 {
+		return []structs.ServiceCostLine{}
+	}
+
+	out := make([]structs.ServiceCostLine, 0, len(state.PerServiceSpendUsd))
+	for svc, spend := range state.PerServiceSpendUsd {
+		out = append(out, structs.ServiceCostLine{
+			Service:      svc,
+			SpendUsd:     spend,
+			InstanceType: state.PerServiceInstanceType[svc],
+		})
+	}
+
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].SpendUsd != out[j].SpendUsd {
+			return out[i].SpendUsd > out[j].SpendUsd
+		}
+		return out[i].Service < out[j].Service
+	})
+
+	return out
 }
 
 func applyBudgetOptions(dst *structs.AppBudget, opts structs.AppBudgetOptions) error {
@@ -801,7 +852,7 @@ func (p *Provider) accumulateBudgetApp(ctx context.Context, app string, now time
 			state = &structs.AppBudgetState{MonthStart: startOfMonth(now), CurrentMonthSpendAsOf: now}
 		}
 
-		delta, warnings, err := p.computeBudgetDelta(ctx, app, state.CurrentMonthSpendAsOf, now, cfg.PricingAdjustment)
+		delta, perSvc, perSvcInst, warnings, err := p.computeBudgetDelta(ctx, app, state.CurrentMonthSpendAsOf, now, cfg.PricingAdjustment)
 		if err != nil {
 			return err
 		}
@@ -809,6 +860,47 @@ func (p *Provider) accumulateBudgetApp(ctx context.Context, app string, now time
 		state.CurrentMonthSpendUsd += delta
 		state.CurrentMonthSpendAsOf = now
 		state.WarningCount = warnings
+
+		// Merge per-service deltas into accumulating state. Pre-rc5
+		// annotations parse with nil maps; lazy-init here.
+		if state.PerServiceSpendUsd == nil {
+			state.PerServiceSpendUsd = map[string]float64{}
+		}
+		if state.PerServiceInstanceType == nil {
+			state.PerServiceInstanceType = map[string]string{}
+		}
+		truncated := 0
+		for svc, dollars := range perSvc {
+			if _, exists := state.PerServiceSpendUsd[svc]; !exists && len(state.PerServiceSpendUsd) >= perServiceMaxEntries {
+				truncated++
+				continue
+			}
+			state.PerServiceSpendUsd[svc] += dollars
+			if _, hadIT := state.PerServiceInstanceType[svc]; !hadIT {
+				if it := perSvcInst[svc]; it != "" {
+					state.PerServiceInstanceType[svc] = it
+				}
+			}
+		}
+		if truncated > 0 {
+			// Surface the truncation as a customer-observable event AND a
+			// log line. The event lands in `convox events list` so a
+			// customer who hits the cap learns that some services are
+			// being dropped from this month's breakdown without needing
+			// API-server log access. The log line keeps the operational
+			// signal visible in rack logs for support diagnosis. Pin
+			// actor=system to match the threshold/cap accumulator-fired
+			// events below — without the pin, central injection falls
+			// through to ContextActor() which is "unknown" in the
+			// accumulator goroutine and would surface inconsistently.
+			_ = p.EventSend("app:budget:per-service-truncated", structs.EventSendOptions{Data: map[string]string{
+				"app":     app,
+				"dropped": strconv.Itoa(truncated),
+				"cap":     strconv.Itoa(perServiceMaxEntries),
+				"actor":   "system",
+			}})
+			fmt.Printf("ns=budget_accumulator at=per_service_truncated app=%s count=%d cap=%d\n", app, truncated, perServiceMaxEntries)
+		}
 
 		willFireThreshold := !state.CurrentMonthSpendAsOf.IsZero() &&
 			state.CurrentMonthSpendUsd >= cfg.MonthlyCapUsd*(cfg.AlertThresholdPercent/100) &&
@@ -883,21 +975,48 @@ func (p *Provider) accumulateBudgetApp(ctx context.Context, app string, now time
 	return fmt.Errorf("failed to write budget state for %s after %d retries", app, budgetWriteConflictRetries)
 }
 
+// Reserved buckets for per-service cost attribution. Build pods carry a
+// `service` label naming the service being built, so without explicit
+// bucketing their spend would inflate that service's normal-operation
+// total. perServiceBucketBuild routes those pods to a separate row.
+// Pods with no service label (system pods like KEDA scalers, anything
+// non-user-deployed) bucket to perServiceBucketUnattributed so their
+// spend stays visible without polluting service totals.
+const (
+	perServiceBucketBuild        = "_build"
+	perServiceBucketUnattributed = "_unattributed"
+)
+
+// perServiceMaxEntries caps the size of state.PerServiceSpendUsd to bound
+// annotation growth (Kubernetes annotation limit is 256 KB total per
+// object). At ~70 bytes per entry, 1000 entries fit well under the limit
+// while covering any realistic app's service count. It is a var (not a
+// const) so the cap test in budget_breakdown_internal_test.go can exercise
+// the truncation path without constructing 1000 fixture pods.
+var perServiceMaxEntries = 1000
+
 // computeBudgetDelta walks pods in the app namespace and attributes cost
-// over elapsed = now - lastTick. Returns (delta_usd, warnings, err).
+// over elapsed = now - lastTick. Returns:
+//   - delta_usd: the total tick spend, summed across all running pods
+//   - perSvc:    per-service tick spend (keys = pod.Labels["service"]
+//     with reserved buckets _build and _unattributed)
+//   - perSvcInst: per-service instance type observed this tick
+//     (first observation wins at the merge site)
+//   - warnings:  count of pods skipped because of unknown instance type
+//     or missing pricing entry
 //
 // ctx is accepted for future non-informer fallback paths; the current
 // ListNodesFromInformer / ListPodsFromInformer reads are cache-only and do
 // not take a ctx parameter. Plumbing it now keeps signatures stable when a
 // future patch adds a direct-API fallback for cold-cache scenarios.
-func (p *Provider) computeBudgetDelta(ctx context.Context, app string, lastTick, now time.Time, adjustment float64) (float64, int, error) {
+func (p *Provider) computeBudgetDelta(ctx context.Context, app string, lastTick, now time.Time, adjustment float64) (float64, map[string]float64, map[string]string, int, error) {
 	_ = ctx // see godoc above; reserved for non-informer fallback.
 	if lastTick.IsZero() {
 		lastTick = now
 	}
 	elapsed := now.Sub(lastTick).Hours()
 	if elapsed <= 0 {
-		return 0, 0, nil
+		return 0, nil, nil, 0, nil
 	}
 	if adjustment <= 0 {
 		adjustment = 1.0
@@ -905,7 +1024,7 @@ func (p *Provider) computeBudgetDelta(ctx context.Context, app string, lastTick,
 
 	nodes, err := p.ListNodesFromInformer("")
 	if err != nil {
-		return 0, 0, errors.WithStack(err)
+		return 0, nil, nil, 0, errors.WithStack(err)
 	}
 	nodeByName := map[string]*v1.Node{}
 	for i := range nodes.Items {
@@ -914,10 +1033,12 @@ func (p *Provider) computeBudgetDelta(ctx context.Context, app string, lastTick,
 
 	pods, err := p.ListPodsFromInformer(p.AppNamespace(app), "")
 	if err != nil {
-		return 0, 0, errors.WithStack(err)
+		return 0, nil, nil, 0, errors.WithStack(err)
 	}
 
 	var delta float64
+	perSvc := map[string]float64{}
+	perSvcInst := map[string]string{}
 	warnings := 0
 
 	for i := range pods.Items {
@@ -941,10 +1062,31 @@ func (p *Provider) computeBudgetDelta(ctx context.Context, app string, lastTick,
 		}
 
 		fraction := dominantResourceFraction(pod, node, price)
-		delta += price.OnDemandUsdPerHour * fraction * elapsed * adjustment
+		podTickSpend := price.OnDemandUsdPerHour * fraction * elapsed * adjustment
+		delta += podTickSpend
+
+		// Bucket selection. Build pods carry service-type=build PLUS a
+		// service label naming what they're building; route them to
+		// _build so the named service's normal-operation cost stays
+		// uninflated. Anything else without a service label buckets
+		// to _unattributed so the spend remains visible.
+		var svc string
+		switch {
+		case pod.Labels["service-type"] == "build":
+			svc = perServiceBucketBuild
+		case pod.Labels["service"] != "":
+			svc = pod.Labels["service"]
+		default:
+			svc = perServiceBucketUnattributed
+		}
+
+		perSvc[svc] += podTickSpend
+		if _, ok := perSvcInst[svc]; !ok {
+			perSvcInst[svc] = instanceType
+		}
 	}
 
-	return delta, warnings, nil
+	return delta, perSvc, perSvcInst, warnings, nil
 }
 
 func nodeInstanceType(n *v1.Node) string {
@@ -1124,4 +1266,32 @@ func (p *Provider) budgetCircuitBreakerTripped(app string) error {
 // os.Getenv calls.
 func (p *Provider) costTrackingEnabled() bool {
 	return os.Getenv("COST_TRACKING_ENABLE") == "true"
+}
+
+// requireCostTrackingForBudget rejects enforcement-bearing budget options
+// (caps, alerts, at-cap actions) when the rack-level cost accumulator is
+// disabled. Without cost_tracking_enable=true the accumulator goroutine
+// never runs, so saving budget config produces zero enforcement: no
+// spend computed, no threshold crossings, no events, no auto-shutdown.
+// Replacing that silent no-op with a loud, actionable error preserves
+// the cap-enforcement contract — a customer-visible knob must either
+// take effect or fail loudly.
+//
+// Recovery operations (AppBudgetClear, AppBudgetReset) are NOT gated;
+// customers must always be able to clear or reset state. PricingAdjustment
+// alone is also not gated — it is a pricing-model multiplier, not an
+// enforcement field.
+func (p *Provider) requireCostTrackingForBudget(opts structs.AppBudgetOptions) error {
+	if opts.MonthlyCapUsd == nil && opts.AlertThresholdPercent == nil && opts.AtCapAction == nil {
+		return nil
+	}
+	if !p.costTrackingEnabled() {
+		return errors.WithStack(structs.ErrUnprocessable(
+			"rack parameter cost_tracking_enable is false. Budget enforcement (caps, alerts, auto-shutdown) requires cost_tracking_enable=true.\n" +
+				"  Set on the rack first:\n" +
+				"    convox rack params set cost_tracking_enable=true\n" +
+				"  Wait ~3 min for the apply to complete, then retry.",
+		))
+	}
+	return nil
 }

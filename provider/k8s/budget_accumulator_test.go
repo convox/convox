@@ -32,6 +32,7 @@ func strPtr(s string) *string { return &s }
 func intPtr(i int) *int       { return &i }
 
 func TestAppBudgetSetAndGet(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
@@ -54,6 +55,7 @@ func TestAppBudgetSetAndGet(t *testing.T) {
 }
 
 func TestAppBudgetSetValidation(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
@@ -67,6 +69,7 @@ func TestAppBudgetSetValidation(t *testing.T) {
 }
 
 func TestAppBudgetSetRejectsNonNumericCap(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
@@ -80,6 +83,7 @@ func TestAppBudgetSetRejectsNonNumericCap(t *testing.T) {
 }
 
 func TestAppBudgetClear(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
@@ -98,6 +102,7 @@ func TestAppBudgetClear(t *testing.T) {
 
 // TestAppBudgetReset re-arms the dedupe flags and emits app:budget:reset.
 func TestAppBudgetReset(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
@@ -395,6 +400,7 @@ func TestBudgetAccumulatorScaleToZero(t *testing.T) {
 // Month rollover: a tick in month N+1 with MonthStart=N must reset spend
 // and dedupe flags.
 func TestBudgetAccumulatorMonthRollover(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
@@ -437,6 +443,7 @@ func TestBudgetAccumulatorMonthRollover(t *testing.T) {
 // becomes truthful. Cap-raise IS the explicit acknowledgment, and the
 // 409 body promises "raise the cap" as a recovery path.
 func TestBudgetAccumulatorCapRaiseClearsBreaker_WhenNewCapAboveSpend(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
@@ -675,6 +682,7 @@ func TestBudgetEnforcementProcessRunBuildSpoofBlocked(t *testing.T) {
 // Validate() guards NaN/Inf finiteness; applyBudgetOptions guards the
 // stdsdk→server path before Validate ever runs.
 func TestAppBudgetSetRejectsNaNAndInf(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
@@ -699,6 +707,7 @@ func TestAppBudgetSetRejectsNaNAndInf(t *testing.T) {
 // — the CLI rejects it before reaching the SDK, but a direct SDK caller can
 // reach here.
 func TestAppBudgetSetRejectsNonNumericAdjustment(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
@@ -1876,6 +1885,7 @@ func TestCancelled_ResetDuringArmed_ActorIsJwtDerived(t *testing.T) {
 // over-cap problem; deploys still blocked). Customer must either raise
 // more or reset.
 func TestBudgetAccumulatorCapRaiseStaysTripped_WhenNewCapBelowSpend(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
@@ -1923,6 +1933,7 @@ func TestBudgetAccumulatorCapRaiseStaysTripped_WhenNewCapBelowSpend(t *testing.T
 // regression that would drop the `final > prev` clause and clear the
 // breaker on any partial AppBudgetSet against a stuck-tripped app.
 func TestBudgetAccumulatorPartialUpdate_DoesNotClearBreaker_WhenNoCapChange(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
@@ -1967,6 +1978,7 @@ func TestBudgetAccumulatorPartialUpdate_DoesNotClearBreaker_WhenNoCapChange(t *t
 // breaker tripped (no actual cap-raise occurred). Customer must
 // explicitly reset.
 func TestBudgetAccumulatorCapNoOpSet_DoesNotClearBreaker(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
@@ -2006,6 +2018,7 @@ func TestBudgetAccumulatorCapNoOpSet_DoesNotClearBreaker(t *testing.T) {
 // preserves the customer's explicit-ack contract: customer must run
 // `convox budget reset` to clear, since they DECREASED the cap.
 func TestBudgetAccumulatorCapLowered_DoesNotClearBreaker(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
@@ -2045,6 +2058,7 @@ func TestBudgetAccumulatorCapLowered_DoesNotClearBreaker(t *testing.T) {
 // existing app:budget:set event. The webhook payload includes the
 // cap-raise reason, prev/new caps, prev spend, and the actor.
 func TestBudgetAccumulatorCapRaise_EmitsBreakerClearedEvent_WithCapRaisedReason(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
@@ -2162,6 +2176,7 @@ func TestBudgetAccumulatorCapRaise_EmitsBreakerClearedEvent_WithCapRaisedReason(
 // transition. Actor on the :cancelled event is the cap-raiser (ackBy)
 // matching spec §8.4 line 777 JWT-derived attribution.
 func TestAppBudgetSet_CapRaiseClearsArmedShutdownStateAnnotation(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
@@ -2253,5 +2268,398 @@ func TestAppBudgetSet_CapRaiseClearsArmedShutdownStateAnnotation(t *testing.T) {
 		assert.Equal(t, "alice@example.com", data["actor"],
 			"actor must be the cap-raiser (ackBy) per spec §8.4")
 		assert.NotEmpty(t, data["armed_at"], "armed_at must populate from saved state")
+	})
+}
+
+func TestAppBudgetSet_CostTrackingDisabled_RejectsCap(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "false")
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		err := p.AppBudgetSet("app1", structs.AppBudgetOptions{
+			MonthlyCapUsd: strPtr("500"),
+		}, "test")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "cost_tracking_enable")
+		var hErr *structs.HttpError
+		require.ErrorAs(t, err, &hErr, "gate must return *structs.HttpError (ErrUnprocessable)")
+		assert.Equal(t, 422, hErr.Code(), "gate must return HTTP 422 (Unprocessable)")
+	})
+}
+
+func TestAppBudgetSet_CostTrackingDisabled_RejectsAlertOnly(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "false")
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		err := p.AppBudgetSet("app1", structs.AppBudgetOptions{
+			AlertThresholdPercent: intPtr(80),
+		}, "test")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "cost_tracking_enable")
+	})
+}
+
+func TestAppBudgetSet_CostTrackingDisabled_RejectsAtCapActionOnly(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "false")
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		err := p.AppBudgetSet("app1", structs.AppBudgetOptions{
+			AtCapAction: options.String("auto-shutdown"),
+		}, "test")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "cost_tracking_enable")
+	})
+}
+
+func TestAppBudgetSet_CostTrackingDisabled_PricingAdjustmentOnlyAllowed(t *testing.T) {
+	// PricingAdjustment is not enforcement-bearing — it's a multiplier
+	// for the displayed pricing model. Must succeed even when cost
+	// tracking is later disabled, so customers can rebalance pricing
+	// estimates without re-enabling the accumulator. Realistic scenario:
+	// budget was set when cost-tracking was enabled, customer disabled it
+	// later, and now wants to update only the pricing adjustment.
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		// Phase 1: cost tracking enabled, set initial budget with cap.
+		t.Setenv("COST_TRACKING_ENABLE", "true")
+		require.NoError(t, p.AppBudgetSet("app1", structs.AppBudgetOptions{
+			MonthlyCapUsd: strPtr("500"),
+		}, "test"))
+
+		// Phase 2: cost tracking disabled, update only PricingAdjustment.
+		// Gate must NOT fire — the partial update touches no enforcement
+		// fields. The existing cap stays in the merged config and passes
+		// validation.
+		t.Setenv("COST_TRACKING_ENABLE", "false")
+		err := p.AppBudgetSet("app1", structs.AppBudgetOptions{
+			PricingAdjustment: strPtr("0.7"),
+		}, "test")
+		require.NoError(t, err)
+	})
+}
+
+func TestAppBudgetClear_CostTrackingDisabled_StillSucceeds(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "false")
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		// Recovery operations must always work, even when cost tracking
+		// is disabled. Otherwise customers cannot clean up after a rack
+		// downgrade.
+		require.NoError(t, p.AppBudgetClear("app1", "test"))
+	})
+}
+
+func TestAppBudgetReset_CostTrackingDisabled_StillSucceeds(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "false")
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		// Recovery — same reasoning as Clear above.
+		require.NoError(t, p.AppBudgetReset("app1", "test"))
+	})
+}
+
+// F5: per-service cost attribution tests.
+
+// servicePodFixture creates a node + pod pair where the pod fully allocates
+// the node's CPU and memory. Pod labels are caller-controlled. Caller
+// controls instance type via nodeName mapping.
+func servicePodFixture(t *testing.T, kk *fake.Clientset, ns, podName, nodeName, instanceType string, labels map[string]string) {
+	t.Helper()
+
+	if _, err := kk.CoreV1().Nodes().Get(context.TODO(), nodeName, am.GetOptions{}); err != nil {
+		_, err := kk.CoreV1().Nodes().Create(context.TODO(), &ac.Node{
+			ObjectMeta: am.ObjectMeta{
+				Name:   nodeName,
+				Labels: map[string]string{"node.kubernetes.io/instance-type": instanceType},
+			},
+			Status: ac.NodeStatus{
+				Allocatable: ac.ResourceList{
+					ac.ResourceCPU:    *resource.NewMilliQuantity(2000, resource.DecimalSI),
+					ac.ResourceMemory: *resource.NewQuantity(8<<30, resource.BinarySI),
+				},
+			},
+		}, am.CreateOptions{})
+		require.NoError(t, err)
+	}
+
+	_, err := kk.CoreV1().Pods(ns).Create(context.TODO(), &ac.Pod{
+		ObjectMeta: am.ObjectMeta{Name: podName, Labels: labels},
+		Spec: ac.PodSpec{
+			NodeName: nodeName,
+			Containers: []ac.Container{{
+				Name: "c",
+				Resources: ac.ResourceRequirements{
+					Requests: ac.ResourceList{
+						ac.ResourceCPU:    *resource.NewMilliQuantity(2000, resource.DecimalSI),
+						ac.ResourceMemory: *resource.NewQuantity(8<<30, resource.BinarySI),
+					},
+				},
+			}},
+		},
+		Status: ac.PodStatus{Phase: ac.PodRunning},
+	}, am.CreateOptions{})
+	require.NoError(t, err)
+}
+
+func TestBudgetAccumulator_PerServicePopulated(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 1000, AlertThresholdPercent: 80, AtCapAction: "alert-only", PricingAdjustment: 1,
+		})
+		frozen := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{
+			MonthStart:            startOfApril(),
+			CurrentMonthSpendAsOf: frozen.Add(-1 * time.Hour),
+		})
+
+		servicePodFixture(t, kk, "rack1-app1", "p1", "node1", "m5.large", map[string]string{"service": "web"})
+		servicePodFixture(t, kk, "rack1-app1", "p2", "node2", "m5.large", map[string]string{"service": "api"})
+
+		require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", frozen))
+
+		_, state, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		require.NotNil(t, state)
+		require.Len(t, state.PerServiceSpendUsd, 2,
+			"two services on two nodes should produce two entries; got: %v", state.PerServiceSpendUsd)
+		assert.InDelta(t, 0.096, state.PerServiceSpendUsd["web"], 0.001)
+		assert.InDelta(t, 0.096, state.PerServiceSpendUsd["api"], 0.001)
+		assert.Equal(t, "m5.large", state.PerServiceInstanceType["web"])
+		assert.Equal(t, "m5.large", state.PerServiceInstanceType["api"])
+
+		cost, err := p.AppCost("app1")
+		require.NoError(t, err)
+		require.Len(t, cost.Breakdown, 2)
+		// Tied spends: alphabetical secondary ordering puts api before web.
+		assert.Equal(t, "api", cost.Breakdown[0].Service)
+		assert.Equal(t, "web", cost.Breakdown[1].Service)
+	})
+}
+
+func TestBudgetAccumulator_BuildPodBucketedAsBuild(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 1000, AlertThresholdPercent: 80, AtCapAction: "alert-only", PricingAdjustment: 1,
+		})
+		frozen := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{
+			MonthStart:            startOfApril(),
+			CurrentMonthSpendAsOf: frozen.Add(-1 * time.Hour),
+		})
+
+		// Build pod carries BOTH service-type=build and a service label.
+		// Without the bucket, web's per-service cost would be inflated.
+		servicePodFixture(t, kk, "rack1-app1", "p1", "node1", "m5.large", map[string]string{
+			"service":      "web",
+			"service-type": "build",
+		})
+
+		require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", frozen))
+
+		_, state, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		require.NotNil(t, state)
+		assert.NotZero(t, state.PerServiceSpendUsd["_build"], "_build bucket should have spend")
+		assert.Zero(t, state.PerServiceSpendUsd["web"],
+			"web service must NOT inherit build pod spend (regression guard)")
+	})
+}
+
+func TestBudgetAccumulator_UnlabeledPodBucketedAsUnattributed(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 1000, AlertThresholdPercent: 80, AtCapAction: "alert-only", PricingAdjustment: 1,
+		})
+		frozen := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{
+			MonthStart:            startOfApril(),
+			CurrentMonthSpendAsOf: frozen.Add(-1 * time.Hour),
+		})
+
+		// Pod with no `service` label and no `service-type=build` (e.g.,
+		// a system-injected sidecar) buckets to _unattributed.
+		servicePodFixture(t, kk, "rack1-app1", "p1", "node1", "m5.large", nil)
+
+		require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", frozen))
+
+		_, state, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		require.NotNil(t, state)
+		assert.NotZero(t, state.PerServiceSpendUsd["_unattributed"],
+			"unlabeled pod should bucket to _unattributed")
+	})
+}
+
+func TestBudgetAccumulator_PreRc5AnnotationParsesAndPopulates(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 1000, AlertThresholdPercent: 80, AtCapAction: "alert-only", PricingAdjustment: 1,
+		})
+		// Pre-rc5 state has no PerServiceSpendUsd / PerServiceInstanceType.
+		// Marshal a state without those fields by writing the legacy shape.
+		frozen := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		legacyJSON := `{"month-start":"2026-04-01T00:00:00Z","current-month-spend-usd":0,"current-month-spend-as-of":"` +
+			frozen.Add(-1*time.Hour).UTC().Format(time.RFC3339) + `"}`
+		patchAnnotation(t, kk, "rack1-app1", structs.BudgetStateAnnotation, legacyJSON)
+
+		servicePodFixture(t, kk, "rack1-app1", "p1", "node1", "m5.large", map[string]string{"service": "web"})
+
+		require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", frozen))
+
+		_, state, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		require.NotNil(t, state)
+		assert.NotEmpty(t, state.PerServiceSpendUsd, "per-service map must initialize lazily on first tick after upgrade")
+		assert.Greater(t, state.PerServiceSpendUsd["web"], 0.0)
+	})
+}
+
+// TestBudgetAccumulator_DeletedServiceRetainsAccumulatedSpend asserts the
+// design's "operator intuition" claim: a service whose pods stop running
+// mid-month keeps its accumulated spend in the breakdown until rollover.
+func TestBudgetAccumulator_DeletedServiceRetainsAccumulatedSpend(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 1000, AlertThresholdPercent: 80, AtCapAction: "alert-only", PricingAdjustment: 1,
+		})
+		t1 := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{
+			MonthStart:            startOfApril(),
+			CurrentMonthSpendAsOf: t1.Add(-1 * time.Hour),
+		})
+		servicePodFixture(t, kk, "rack1-app1", "p1", "node1", "m5.large", map[string]string{"service": "web"})
+
+		// Tick 1: web running, accumulates spend.
+		require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", t1))
+		_, state, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		afterTick1 := state.PerServiceSpendUsd["web"]
+		require.Greater(t, afterTick1, 0.0, "web should accumulate on tick 1")
+
+		// Delete web's pod. Tick 2: no running pod for web.
+		require.NoError(t, kk.CoreV1().Pods("rack1-app1").Delete(context.TODO(), "p1", am.DeleteOptions{}))
+		t2 := t1.Add(1 * time.Hour)
+		require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", t2))
+
+		_, state, err = p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		assert.Equal(t, afterTick1, state.PerServiceSpendUsd["web"],
+			"deleted service must retain its tick-1 accumulated spend; entry must persist until month rollover")
+	})
+}
+
+// TestBudgetAccumulator_RenamedServiceProducesTwoEntries asserts mid-month
+// rename produces TWO entries summing to the running total (per F5 spec).
+func TestBudgetAccumulator_RenamedServiceProducesTwoEntries(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 1000, AlertThresholdPercent: 80, AtCapAction: "alert-only", PricingAdjustment: 1,
+		})
+		t1 := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{
+			MonthStart:            startOfApril(),
+			CurrentMonthSpendAsOf: t1.Add(-1 * time.Hour),
+		})
+
+		// Tick 1: service "web" running.
+		servicePodFixture(t, kk, "rack1-app1", "p1", "node1", "m5.large", map[string]string{"service": "web"})
+		require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", t1))
+
+		// Rename: delete web's pod, create equivalent on a new node labeled service=web-v2.
+		require.NoError(t, kk.CoreV1().Pods("rack1-app1").Delete(context.TODO(), "p1", am.DeleteOptions{}))
+		servicePodFixture(t, kk, "rack1-app1", "p2", "node2", "m5.large", map[string]string{"service": "web-v2"})
+		t2 := t1.Add(1 * time.Hour)
+		require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", t2))
+
+		_, state, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		require.NotNil(t, state)
+		require.Greater(t, state.PerServiceSpendUsd["web"], 0.0, "old name retains tick-1 spend")
+		require.Greater(t, state.PerServiceSpendUsd["web-v2"], 0.0, "new name accumulates from rename forward")
+		assert.InDelta(t,
+			state.CurrentMonthSpendUsd,
+			state.PerServiceSpendUsd["web"]+state.PerServiceSpendUsd["web-v2"],
+			0.001,
+			"sum of per-service rows must equal CurrentMonthSpendUsd (no double-count)")
+	})
+}
+
+// TestBudgetAccumulator_AppCostConcurrentWithTick_NoRace exercises the
+// freshness contract: AppCost re-reads the namespace annotation on every
+// call and deserializes into a fresh AppBudgetState, never sharing a
+// pointer with the in-flight tick goroutine. With -race this catches any
+// future regression that introduces a shared map iteration.
+func TestBudgetAccumulator_AppCostConcurrentWithTick_NoRace(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 1000, AlertThresholdPercent: 80, AtCapAction: "alert-only", PricingAdjustment: 1,
+		})
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{
+			MonthStart:            startOfApril(),
+			CurrentMonthSpendAsOf: time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC).Add(-1 * time.Hour),
+		})
+		servicePodFixture(t, kk, "rack1-app1", "p1", "node1", "m5.large", map[string]string{"service": "web"})
+
+		var wg sync.WaitGroup
+		stop := make(chan struct{})
+
+		// Reader: spin AppCost in a tight loop.
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				select {
+				case <-stop:
+					return
+				default:
+				}
+				cost, err := p.AppCost("app1")
+				if err == nil && cost != nil {
+					_ = cost.Breakdown
+				}
+			}
+		}()
+
+		// Writer: fire 25 sequential ticks, advancing the frozen clock so
+		// elapsed > 0 and each tick produces a real delta.
+		base := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		for i := 0; i < 25; i++ {
+			require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", base.Add(time.Duration(i)*time.Minute)))
+		}
+
+		close(stop)
+		wg.Wait()
 	})
 }

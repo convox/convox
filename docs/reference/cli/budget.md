@@ -45,6 +45,28 @@ to editing the manifest and redeploying, but applied without a redeploy.
     Setting budget for myapp... OK
 ```
 
+### Prerequisite: cost tracking must be enabled
+
+`budget set` rejects with HTTP 422 when the rack parameter
+`cost_tracking_enable` is `false` and you supply any enforcement-bearing
+field (`--monthly-cap`, `--alert-at`, `--at-cap-action`). Without the
+accumulator running, those fields would persist as unenforced config —
+the loud rejection replaces a silent no-op. Set the rack parameter first:
+
+```bash
+$ convox rack params set cost_tracking_enable=true
+# wait ~3 min for apply, then:
+$ convox budget set --monthly-cap 500 --at-cap-action auto-shutdown --app myapp
+```
+
+Updates that touch only `--pricing-adjustment` are not gated; the pricing
+multiplier modifies the displayed model output and does not require the
+accumulator. See
+[Cost tracking prerequisite](/management/budget-caps#cost-tracking-prerequisite)
+for the full rationale and AWS-only-functional scope. Recovery operations
+(`budget clear`, `budget reset`) remain available regardless of cost-tracking
+state.
+
 ## budget clear
 
 Remove the budget config for an app. The app continues running with no cap,

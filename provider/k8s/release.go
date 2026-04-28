@@ -147,6 +147,15 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 			return errors.WithStack(err)
 		}
 
+		// Reject manifest-tier budget enforcement when the rack-level
+		// cost accumulator is disabled. Mirrors the AppBudgetSet gate
+		// (provider/k8s/budget_accumulator.go) so a developer who adds
+		// a budget: block to convox.yml gets a loud, actionable error
+		// rather than a deploy that silently persists unenforced config.
+		if err := p.requireCostTrackingForManifestBudget(m); err != nil {
+			return errors.WithStack(err)
+		}
+
 		e, err := structs.NewEnvironment([]byte(r.Env))
 		if err != nil {
 			return errors.WithStack(err)
@@ -1242,4 +1251,31 @@ func ecrCachedResourceImage(prefix, resourceType string, options map[string]stri
 	}
 
 	return fmt.Sprintf("%s/%s:%s", strings.TrimRight(prefix, "/"), imagePath, version)
+}
+
+// requireCostTrackingForManifestBudget rejects a manifest budget block whose
+// enforcement-bearing fields (MonthlyCapUsd, AlertThresholdPercent,
+// AtCapAction) are set when the rack-level cost accumulator is disabled.
+// Mirrors AppBudgetSet's gate. PricingAdjustment alone does not trigger —
+// it modifies the pricing-model output but does not depend on the
+// accumulator running.
+func (p *Provider) requireCostTrackingForManifestBudget(m *manifest.Manifest) error {
+	if m == nil {
+		return nil
+	}
+	enforcement := m.Budget.MonthlyCapUsd > 0 ||
+		m.Budget.AlertThresholdPercent > 0 ||
+		m.Budget.AtCapAction != ""
+	if !enforcement {
+		return nil
+	}
+	if !p.costTrackingEnabled() {
+		return structs.ErrUnprocessable(
+			"convox.yml budget: block requires cost_tracking_enable=true on the rack.\n" +
+				"  Set on the rack first:\n" +
+				"    convox rack params set cost_tracking_enable=true\n" +
+				"  Wait ~3 min for the apply to complete, then redeploy.",
+		)
+	}
+	return nil
 }

@@ -15,6 +15,26 @@ This page is the operational guide for managing caps in production. For schema
 details see the [convox.yml budget block](/configuration/convox-yml#budget); for
 how spend is computed see [Cost Tracking](/management/cost-tracking).
 
+## Prerequisite: cost tracking must be enabled <a id="cost-tracking-prerequisite"></a>
+
+Budget enforcement (`monthlyCapUsd`, `alertThresholdPercent`, `atCapAction`)
+requires the rack-level cost accumulator. Without it, no spend is computed —
+caps and alerts persist as config but never trip. Enable on AWS racks:
+
+```bash
+$ convox rack params set cost_tracking_enable=true
+```
+
+If you set a `budget:` block in `convox.yml` (or run `convox budget set`)
+against a rack with `cost_tracking_enable=false`, the rack rejects with HTTP
+422 and a message pointing at this command. Set the rack parameter, wait for
+the apply to complete (~3 min), then redeploy or retry.
+
+`cost_tracking_enable` is AWS-only today; non-AWS racks (Azure, GCP,
+DigitalOcean, Equinix Metal, Local) cannot enforce budgets in the current
+release. Recovery operations (`convox budget clear`, `convox budget reset`)
+remain available regardless of cost tracking state so you can always clean up.
+
 ## Cap actions
 
 `atCapAction` selects what happens when an app crosses its `monthlyCapUsd`:
@@ -122,6 +142,53 @@ To recover:
 3. Or accept the cap and reset to re-enable deploys for the rest of the month
    without raising — `convox budget reset`. The breaker clears but the cap
    remains; subsequent cost growth will trip the breaker again.
+
+## Per-service cost breakdown <a id="per-service-breakdown"></a>
+
+`convox cost --app myapp` returns a `breakdown` array with the cumulative
+spend, instance type, and bucket name for every service that has been
+observed running this month. The breakdown populates from accumulator ticks
+(default 10 minutes apart) and grows monotonically until month rollover, at
+which point it resets to zero alongside `currentMonthSpendUsd`.
+
+Two reserved buckets surface alongside service names:
+
+- `_build` — build pods carry `service-type=build` plus a `service` label
+  naming the service being built. Their spend is bucketed away from that
+  service so the named service's normal-operation cost stays uninflated.
+- `_unattributed` — pods with no `service` label (system-injected sidecars,
+  KEDA scalers, anything not user-deployed). Their spend stays visible in
+  the breakdown without polluting any user-deployed service's row.
+
+Edge cases:
+
+- **Service deleted mid-month.** The deleted service's accumulated spend
+  remains in the breakdown until the month rollover. Operator intuition: "I
+  ran this service for a week, it cost $50; deleting it doesn't make the $50
+  go away."
+- **Service renamed mid-month.** The old name keeps its pre-rename spend;
+  the new name accumulates from the rename point forward. Both rows appear
+  until rollover, summing to the correct app total.
+- **Bucket cap.** The breakdown is capped at 1000 entries per app. Once full,
+  existing rows continue to accumulate but new services are dropped from this
+  month's breakdown. The rack logs `at=per_service_truncated count=N` and
+  also fires an `app:budget:per-service-truncated` audit event on every
+  truncating tick (`data.dropped`, `data.cap`, `data.app`); subscribe via
+  webhook or `convox events list -a <app>` to surface it without log
+  access. Practical apps stay well under the cap; if you hit it, audit the
+  per-tick label set for unbounded service-name churn.
+- **Pre-3.24.6rc5 history.** Per-service attribution starts populating from
+  the first tick after upgrade. Spend that accumulated before the upgrade
+  remains in `currentMonthSpendUsd` (the total) but is not retroactively
+  attributed.
+- **Rolling back from rc5.** Total spend (`currentMonthSpendUsd`) survives a
+  downgrade-then-re-upgrade round-trip. Per-service attribution does not —
+  the older binary drops the unknown fields on its first tick. After
+  re-upgrading, the breakdown re-populates from the next tick forward.
+
+The breakdown surfaces in `convox cost`, the Console budget panel, and the
+auto-shutdown `shutdownOrder: largest-cost` ranking. With per-service spends
+populated, `largest-cost` shuts down the most expensive service first.
 
 ## Troubleshooting <a id="troubleshooting"></a>
 

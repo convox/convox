@@ -79,7 +79,8 @@ var awsKnownParams = map[string]bool{
 	"pod_identity_agent_enable": true, "pod_identity_agent_version": true,
 	"private": true, "private_eks_host": true,
 	"private_eks_pass": true, "private_eks_user": true,
-	"private_subnets_ids": true, "proxy_protocol": true,
+	"private_subnets_ids": true, "prometheus_url": true,
+	"proxy_protocol":     true,
 	"public_subnets_ids": true, "rack_name": true,
 	"region": true, "release": true,
 	"releases_to_retain_after_active": true, "releases_to_retain_task_run_interval_hour": true,
@@ -90,7 +91,8 @@ var awsKnownParams = map[string]bool{
 	"telemetry": true, "terraform_update_timeout": true,
 	"user_data": true, "user_data_url": true,
 	"vpa_enable": true, "vpc_cni_version": true,
-	"vpc_id": true, "whitelist": true,
+	"vpc_id": true, "webhook_signing_key": true,
+	"whitelist": true,
 }
 
 var gcpKnownParams = map[string]bool{
@@ -100,7 +102,8 @@ var gcpKnownParams = map[string]bool{
 	"node_disk": true, "node_type": true, "preemptible": true,
 	"rack_name": true, "region": true, "release": true, "settings": true,
 	"sync_tf_now": true, "syslog": true, "telemetry": true,
-	"terraform_update_timeout": true, "whitelist": true,
+	"terraform_update_timeout": true, "webhook_signing_key": true,
+	"whitelist": true,
 }
 
 var azureKnownParams = map[string]bool{
@@ -115,7 +118,8 @@ var azureKnownParams = map[string]bool{
 	"pdb_default_min_available_percentage": true, "rack_name": true, "region": true,
 	"release": true, "settings": true, "ssl_ciphers": true, "ssl_protocols": true,
 	"sync_tf_now": true, "syslog": true, "tags": true, "telemetry": true,
-	"terraform_update_timeout": true, "whitelist": true,
+	"terraform_update_timeout": true, "webhook_signing_key": true,
+	"whitelist": true,
 }
 
 var doKnownParams = map[string]bool{
@@ -125,20 +129,22 @@ var doKnownParams = map[string]bool{
 	"name": true, "node_type": true, "rack_name": true, "region": true,
 	"registry_disk": true, "release": true, "secret_key": true,
 	"settings": true, "sync_tf_now": true, "syslog": true, "telemetry": true,
-	"terraform_update_timeout": true, "token": true, "whitelist": true,
+	"terraform_update_timeout": true, "token": true, "webhook_signing_key": true,
+	"whitelist": true,
 }
 
 var metalKnownParams = map[string]bool{
 	"docker_hub_password": true, "docker_hub_username": true, "domain": true,
 	"fluentd_memory": true, "image": true, "name": true, "rack_name": true,
 	"registry_disk": true, "release": true, "sync_tf_now": true,
-	"syslog": true, "whitelist": true,
+	"syslog": true, "webhook_signing_key": true, "whitelist": true,
 }
 
 var localKnownParams = map[string]bool{
 	"docker_hub_password": true, "docker_hub_username": true, "image": true,
 	"name": true, "os": true, "rack_name": true, "release": true,
 	"settings": true, "sync_tf_now": true, "telemetry": true,
+	"webhook_signing_key": true,
 }
 
 var managedParams = map[string]bool{
@@ -148,6 +154,51 @@ var managedParams = map[string]bool{
 	"pod_identity_agent_version": true, "vpc_cni_version": true,
 	"disable_public_access": true, "enable_private_access": true,
 	"eks_api_server_public_access_cidrs": true,
+}
+
+// boolParams lists rack parameters whose underlying Terraform variable is
+// declared as type=bool. Values, if non-empty, must parse via strconv.ParseBool;
+// otherwise the apply path silently coerces the value back to the prior
+// state (or hits a TF type error and reverts), making "convox rack params set
+// foo=invalid" a confusing no-op. Validation runs after the per-provider
+// KnownParams spellcheck, so entries scoped to one provider (e.g.
+// azure_files_enable) are auto-rejected on other providers' allowlists
+// before bool validation fires.
+//
+// Empty values pass — empty means "clear this setting" and is handled by
+// the empty-string clearing rules below.
+//
+// Maintenance: keep aligned with terraform/{system,rack}/<provider>/variables.tf
+// type=bool declarations. high_availability and nvidia_device_plugin_enable
+// are intentionally excluded — they are bool in azure but untyped (no
+// `type = bool` line) in aws, so adding them would force ParseBool semantics
+// on aws TF variables that historically accepted any string. karpenter_enabled
+// and karpenter_auth_mode are validated separately above with rack-state
+// migration rules.
+var boolParams = map[string]bool{
+	"azure_files_enable":              true,
+	"build_node_enabled":              true,
+	"buildkit_host_path_cache_enable": true,
+	"convox_domain_tls_cert_disable":  true,
+	"cost_tracking_enable":            true,
+	"deploy_extra_nlb":                true,
+	"disable_convox_resolver":         true,
+	"disable_image_manifest_cache":    true,
+	"disable_public_access":           true,
+	"ebs_volume_encryption_enabled":   true,
+	"ecr_docker_hub_cache":            true,
+	"ecr_scan_on_push_enable":         true,
+	"efs_csi_driver_enable":           true,
+	"enable_private_access":           true,
+	"fluentd_disable":                 true,
+	"gpu_tag_enable":                  true,
+	"imds_tags_enable":                true,
+	"internal_router":                 true,
+	"karpenter_consolidation_enabled": true,
+	"keda_enable":                     true,
+	"pod_identity_agent_enable":       true,
+	"telemetry":                       true,
+	"vpa_enable":                      true,
 }
 
 // sensitiveParams enumerates rack params whose values are rendered as
@@ -1257,6 +1308,15 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 			if arch != "amd64" && arch != "arm64" {
 				return fmt.Errorf("invalid karpenter architecture: %s (must be amd64 or arm64)", arch)
 			}
+		}
+	}
+
+	for k, v := range params {
+		if !boolParams[k] || v == "" {
+			continue
+		}
+		if _, err := strconv.ParseBool(v); err != nil {
+			return fmt.Errorf("param '%s' must be 'true' or 'false' (got %q)", k, v)
 		}
 	}
 

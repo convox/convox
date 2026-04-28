@@ -101,6 +101,7 @@ func TestAccumulateBudgetCap_EmitsSystemActor(t *testing.T) {
 // somehow attached to the provider, the explicit "actor": "system" override at
 // the call site MUST win.
 func TestAccumulator_OverridePinsSystemEvenWithJwtCtx(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
 	frozen := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
 	got := captureEventActorByActionWithProviderHook(t, "app:budget:cap",
 		func(p *k8s.Provider) *k8s.Provider {
@@ -183,6 +184,7 @@ func captureEventActorByActionWithProviderHook(
 // ContextActor. The semantic is preserved: no caller-attributable actor
 // surfaces as "unknown" in the audit row.
 func TestAppBudgetSet_NoContext_EmitsUnknown(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
 	got := captureEventActorByAction(t, "app:budget:set", func(p *k8s.Provider) error {
 		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
@@ -203,6 +205,7 @@ func TestAppBudgetSet_NoContext_EmitsUnknown(t *testing.T) {
 // actor field equals the JWT-derived user via the new ack_by precedence
 // at provider/k8s/event.go:73-86.
 func TestAppBudgetSet_EmitsActorFromContext(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
 	got := captureEventActorByActionWithProviderHook(t, "app:budget:set",
 		func(p *k8s.Provider) *k8s.Provider {
 			ctx := context.WithValue(context.Background(), structs.ConvoxJwtUserCtxKey, "system-write")
@@ -228,6 +231,7 @@ func TestAppBudgetSet_EmitsActorFromContext(t *testing.T) {
 // resolveAckByOverride returns the ctx user as ackBy when no form-param
 // override is present.
 func TestAppBudgetSet_AdminContext_EmitsSystemAdmin(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
 	got := captureEventActorByActionWithProviderHook(t, "app:budget:set",
 		func(p *k8s.Provider) *k8s.Provider {
 			ctx := context.WithValue(context.Background(), structs.ConvoxJwtUserCtxKey, "system-admin")
@@ -253,6 +257,7 @@ func TestAppBudgetSet_AdminContext_EmitsSystemAdmin(t *testing.T) {
 // as ackBy when no form-param override is present, so the reset event's
 // actor field equals the JWT-derived user.
 func TestAppBudgetReset_EmitsActorFromContext(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
 	got := captureEventActorByActionWithProviderHook(t, "app:budget:reset",
 		func(p *k8s.Provider) *k8s.Provider {
 			ctx := context.WithValue(context.Background(), structs.ConvoxJwtUserCtxKey, "system-admin")

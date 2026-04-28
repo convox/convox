@@ -307,3 +307,184 @@ func TestValidateAndMutateParams_KarpenterNodeVolumeType(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateAndMutateParams_WebhookSigningKey_AllProviders(t *testing.T) {
+	for _, provider := range []string{"aws", "gcp", "azure", "do", "metal", "local"} {
+		t.Run(provider, func(t *testing.T) {
+			params := map[string]string{"webhook_signing_key": "deadbeefcafe"}
+			err := validateAndMutateParams(params, provider, map[string]string{}, false)
+			if err != nil {
+				t.Errorf("webhook_signing_key should pass on %s, got: %v", provider, err)
+			}
+		})
+	}
+}
+
+func TestValidateAndMutateParams_PrometheusUrl_AwsAccepted(t *testing.T) {
+	params := map[string]string{"prometheus_url": "http://prometheus.example.com:9090"}
+	err := validateAndMutateParams(params, "aws", map[string]string{}, false)
+	if err != nil {
+		t.Errorf("prometheus_url should pass on aws, got: %v", err)
+	}
+}
+
+func TestValidateAndMutateParams_PrometheusUrl_NonAwsRejected(t *testing.T) {
+	for _, provider := range []string{"gcp", "azure", "do", "metal", "local"} {
+		t.Run(provider, func(t *testing.T) {
+			params := map[string]string{"prometheus_url": "http://prometheus.example.com:9090"}
+			err := validateAndMutateParams(params, provider, map[string]string{}, false)
+			if err == nil {
+				t.Fatalf("prometheus_url should be rejected on %s (only declared in AWS Terraform)", provider)
+			}
+			if !strings.Contains(err.Error(), "unknown parameter") {
+				t.Errorf("error %q should mention 'unknown parameter'", err.Error())
+			}
+		})
+	}
+}
+
+func TestValidateAndMutateParams_UnknownParamSpellcheckIntact(t *testing.T) {
+	// Regression guard: adding entries to KnownParams maps must not weaken
+	// the spellcheck path that rejects unknown keys.
+	params := map[string]string{"foo_bar_baz": "value"}
+	err := validateAndMutateParams(params, "aws", map[string]string{}, false)
+	if err == nil {
+		t.Fatal("expected unknown-parameter error for 'foo_bar_baz'")
+	}
+	if !strings.Contains(err.Error(), "unknown parameter") {
+		t.Errorf("error %q should mention 'unknown parameter'", err.Error())
+	}
+}
+
+func TestValidateAndMutateParams_BoolParam_AcceptsParseBoolForms(t *testing.T) {
+	for _, v := range []string{"true", "false", "1", "0", "t", "f", "T", "F", "True", "False", "TRUE", "FALSE"} {
+		t.Run(v, func(t *testing.T) {
+			params := map[string]string{"cost_tracking_enable": v}
+			err := validateAndMutateParams(params, "aws", map[string]string{}, false)
+			if err != nil {
+				t.Errorf("cost_tracking_enable=%q should pass strconv.ParseBool, got: %v", v, err)
+			}
+		})
+	}
+}
+
+func TestValidateAndMutateParams_BoolParam_RejectsNonCanonical(t *testing.T) {
+	for _, v := range []string{"invalid", "yes", "no", "on", "off", "2", "TrUe"} {
+		t.Run(v, func(t *testing.T) {
+			params := map[string]string{"cost_tracking_enable": v}
+			err := validateAndMutateParams(params, "aws", map[string]string{}, false)
+			if err == nil {
+				t.Fatalf("cost_tracking_enable=%q should be rejected", v)
+			}
+			if !strings.Contains(err.Error(), "must be 'true' or 'false'") {
+				t.Errorf("error %q should mention \"must be 'true' or 'false'\"", err.Error())
+			}
+			if !strings.Contains(err.Error(), v) {
+				t.Errorf("error %q should include offending value %q", err.Error(), v)
+			}
+		})
+	}
+}
+
+func TestValidateAndMutateParams_BoolParam_EmptySkipsSweep(t *testing.T) {
+	// Empty values bypass the bool-sweep — they fall through to existing
+	// empty-string rules below the sweep. The sweep itself must not produce
+	// "must be 'true' or 'false'" for empty input.
+	params := map[string]string{"cost_tracking_enable": ""}
+	err := validateAndMutateParams(params, "aws", map[string]string{}, false)
+	if err != nil && strings.Contains(err.Error(), "must be 'true' or 'false'") {
+		t.Errorf("empty cost_tracking_enable hit bool sweep instead of empty-string rule; err: %v", err)
+	}
+}
+
+func TestValidateAndMutateParams_BoolParam_AwsCoverage(t *testing.T) {
+	// Every AWS-listed boolParam accepts canonical 'true' and rejects garbage.
+	// ecr_docker_hub_cache=true triggers a dependency rule (requires
+	// docker_hub_username/password); it's covered by a dedicated test below.
+	for _, k := range []string{
+		"build_node_enabled", "buildkit_host_path_cache_enable", "convox_domain_tls_cert_disable",
+		"cost_tracking_enable", "deploy_extra_nlb", "disable_convox_resolver",
+		"disable_image_manifest_cache", "ebs_volume_encryption_enabled",
+		"ecr_scan_on_push_enable", "efs_csi_driver_enable", "fluentd_disable",
+		"gpu_tag_enable", "imds_tags_enable", "internal_router",
+		"karpenter_consolidation_enabled", "keda_enable", "pod_identity_agent_enable",
+		"telemetry", "vpa_enable",
+	} {
+		t.Run(k, func(t *testing.T) {
+			params := map[string]string{k: "true"}
+			err := validateAndMutateParams(params, "aws", map[string]string{}, false)
+			if err != nil {
+				t.Errorf("%s=true should pass, got: %v", k, err)
+			}
+			params2 := map[string]string{k: "garbage"}
+			err2 := validateAndMutateParams(params2, "aws", map[string]string{}, false)
+			if err2 == nil {
+				t.Errorf("%s=garbage should be rejected", k)
+			}
+			if err2 != nil && !strings.Contains(err2.Error(), "must be 'true' or 'false'") {
+				t.Errorf("%s=garbage error %q should mention \"must be 'true' or 'false'\"", k, err2.Error())
+			}
+		})
+	}
+}
+
+func TestValidateAndMutateParams_BoolParam_EcrDockerHubCacheDepsAndType(t *testing.T) {
+	// ecr_docker_hub_cache=garbage is rejected by the bool sweep AFTER the
+	// dependency check; with deps satisfied, =true passes and =garbage
+	// rejects with the bool-sweep message.
+	deps := map[string]string{
+		"ecr_docker_hub_cache": "true",
+		"docker_hub_username":  "u",
+		"docker_hub_password":  "p",
+	}
+	if err := validateAndMutateParams(deps, "aws", map[string]string{}, false); err != nil {
+		t.Errorf("ecr_docker_hub_cache=true with deps should pass, got: %v", err)
+	}
+	depsBad := map[string]string{
+		"ecr_docker_hub_cache": "garbage",
+		"docker_hub_username":  "u",
+		"docker_hub_password":  "p",
+	}
+	err := validateAndMutateParams(depsBad, "aws", map[string]string{}, false)
+	if err == nil {
+		t.Fatal("ecr_docker_hub_cache=garbage should be rejected")
+	}
+	if !strings.Contains(err.Error(), "must be 'true' or 'false'") {
+		t.Errorf("error %q should mention \"must be 'true' or 'false'\"", err.Error())
+	}
+}
+
+func TestValidateAndMutateParams_BoolParam_AzureFilesEnable(t *testing.T) {
+	// azure_files_enable is azure-only-bool; rejected on aws via spellcheck.
+	params := map[string]string{"azure_files_enable": "true"}
+	err := validateAndMutateParams(params, "azure", map[string]string{}, false)
+	if err != nil {
+		t.Errorf("azure_files_enable=true should pass on azure, got: %v", err)
+	}
+	params2 := map[string]string{"azure_files_enable": "garbage"}
+	err2 := validateAndMutateParams(params2, "azure", map[string]string{}, false)
+	if err2 == nil {
+		t.Fatal("azure_files_enable=garbage should be rejected on azure")
+	}
+	if !strings.Contains(err2.Error(), "must be 'true' or 'false'") {
+		t.Errorf("error %q should mention \"must be 'true' or 'false'\"", err2.Error())
+	}
+}
+
+func TestValidateAndMutateParams_BoolParam_KarpenterEnabledStillUsesExistingValidator(t *testing.T) {
+	// karpenter_enabled is type=string in aws/system but has its own
+	// validation block above the bool sweep. Verify the existing message
+	// (without the (got %q) suffix) is still produced — i.e., bool sweep
+	// did not absorb karpenter_enabled.
+	params := map[string]string{"karpenter_enabled": "garbage"}
+	err := validateAndMutateParams(params, "aws", map[string]string{}, false)
+	if err == nil {
+		t.Fatal("karpenter_enabled=garbage should be rejected")
+	}
+	if !strings.Contains(err.Error(), "must be 'true' or 'false'") {
+		t.Errorf("error %q should mention \"must be 'true' or 'false'\"", err.Error())
+	}
+	if strings.Contains(err.Error(), "(got") {
+		t.Errorf("karpenter_enabled error %q should be the existing validator's message, not the bool sweep's", err.Error())
+	}
+}

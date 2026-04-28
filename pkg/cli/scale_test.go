@@ -223,6 +223,89 @@ func TestScaleDaemonsetRow(t *testing.T) {
 	})
 }
 
+func TestScaleReadModePositionalFilter(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		web := *fxService()
+		web.Name = "web"
+		api := *fxService()
+		api.Name = "api"
+		// pre-watch existence check + watch-loop ServiceList both call ServiceList
+		i.On("ServiceList", "app1").Return(structs.Services{web, api}, nil)
+		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
+		i.On("ProcessList", "app1", structs.ProcessListOptions{}).Return(structs.Processes{}, nil)
+
+		res, err := testExecute(e, "scale web -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		// Filtered output: only the row for "web", header preserved.
+		res.RequireStdout(t, []string{
+			"SERVICE  DESIRED  RUNNING  CPU  MEMORY  GPU  MIN  MAX  STATUS",
+			"web      1        0        2    3       -    -    -    ",
+		})
+	})
+}
+
+func TestScaleReadModeNoPositionalShowsAll(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		web := *fxService()
+		web.Name = "web"
+		api := *fxService()
+		api.Name = "api"
+		i.On("ServiceList", "app1").Return(structs.Services{web, api}, nil)
+		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
+		i.On("ProcessList", "app1", structs.ProcessListOptions{}).Return(structs.Processes{}, nil)
+
+		res, err := testExecute(e, "scale -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		// Both services present, alphabetically sorted.
+		res.RequireStdout(t, []string{
+			"SERVICE  DESIRED  RUNNING  CPU  MEMORY  GPU  MIN  MAX  STATUS",
+			"api      1        0        2    3       -    -    -    ",
+			"web      1        0        2    3       -    -    -    ",
+		})
+	})
+}
+
+func TestScaleReadModeServiceNotFound(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		web := *fxService()
+		web.Name = "web"
+		i.On("ServiceList", "app1").Return(structs.Services{web}, nil)
+
+		res, err := testExecute(e, "scale notfound -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		res.RequireStderr(t, []string{`ERROR: service "notfound" not found in app app1`})
+	})
+}
+
+func TestScaleReadModeCaseSensitive(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		web := *fxService()
+		web.Name = "web"
+		i.On("ServiceList", "app1").Return(structs.Services{web}, nil)
+
+		// Case-mismatch ('Web' vs 'web') is rejected at pre-watch validation.
+		res, err := testExecute(e, "scale Web -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		res.RequireStderr(t, []string{`ERROR: service "Web" not found in app app1`})
+	})
+}
+
+func TestScaleImperativeWithoutServiceStillErrors(t *testing.T) {
+	// Imperative mode (--count) without a positional service must keep
+	// erroring "service name required". F7's positional-in-read-mode
+	// loosening must not weaken the imperative contract.
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		res, err := testExecute(e, "scale --count=3 -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		require.Contains(t, res.Stderr, "service name required")
+	})
+}
+
 // TestScaleColumnPositionContract pins the column-position contract against
 // the public 3.24.5 baseline (`SERVICE | DESIRED | RUNNING | CPU | MEMORY |
 // GPU`). Customer scripts that parse `convox scale` output positionally

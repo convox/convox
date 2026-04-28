@@ -10,6 +10,40 @@ in-cluster usage telemetry. Spend is the input to budget caps (see [Budget
 Caps](/management/budget-caps)) and surfaces in the Console and the `convox cost`
 CLI.
 
+## Enabling cost tracking <a id="enable"></a>
+
+Cost tracking is gated by the rack parameter `cost_tracking_enable`, default
+`false`. Without it, the accumulator goroutine does not run — no spend is
+computed and budget enforcement (caps, alerts, auto-shutdown) cannot fire
+even with a `budget:` block in `convox.yml`.
+
+Read paths still return successfully: `convox cost` against a rack with
+`cost_tracking_enable=false` returns a zero spend total and an empty
+breakdown (HTTP 200), so dashboards and scripts that poll the endpoint do
+not break — they just see "no data yet." Write paths, on the other hand,
+reject loud: `convox budget set` and `convox deploy` against a manifest
+with an enforcement-bearing `budget:` block return HTTP 422 with an
+actionable message pointing at the enable command. Recovery operations
+(`convox budget clear`, `convox budget reset`) remain available regardless
+of cost-tracking state.
+
+Enable on AWS racks:
+
+```bash
+$ convox rack params set cost_tracking_enable=true
+```
+
+Wait ~3 minutes for the rack apply to complete, then deploy or set budgets.
+The first accumulator tick after the apply (default tick interval is 10
+minutes) starts populating spend. The Console budget panel and `convox cost`
+become populated from that tick onward.
+
+`cost_tracking_enable` is **AWS-only** today. Non-AWS racks (Azure, GCP,
+DigitalOcean, Equinix Metal, Local) cannot enable cost tracking in the
+current release; their built-in pricing tables and instance-type
+introspection paths only cover AWS. A future release may expand support;
+for now, assume cost-tracking-dependent features are AWS-only.
+
 ## How spend is computed
 
 The rack samples each running pod's CPU, memory, and (where applicable) GPU
@@ -51,19 +85,31 @@ that uses a recognized instance family.
 
 ## Cost breakdown CLI
 
+`convox cost` returns one row per service plus the reserved `_build` and
+`_unattributed` buckets, sorted descending by `SPEND-USD` with alphabetical
+secondary tiebreak:
+
 ```bash
 $ convox cost --app myapp
-SERVICE  INSTANCE-TYPE  CPU      MEMORY    GPU  HOURLY-USD  MONTH-TO-DATE
-web      t3.medium      0.5      512 MiB        0.0418      $18.34
-api      m5.large       1.0      2 GiB          0.096       $42.10
-worker   c5.xlarge      2.0      4 GiB          0.17        $74.21
-TOTAL                                                       $134.65
+SERVICE        GPU-HOURS  CPU-HOURS  MEM-GB-HOURS  INSTANCE     SPEND-USD
+vllm           0.00       0.00       0.00          g4dn.xlarge  $0.30
+api            0.00       0.00       0.00          t3.medium    $0.08
+worker         0.00       0.00       0.00          t3.small     $0.04
+_build         0.00       0.00       0.00          c5.large     $0.02
+_unattributed  0.00       0.00       0.00          t3.medium    $0.01
 ```
+
+The `SPEND-USD` column is populated from the accumulator's per-service totals.
+The `GPU-HOURS` / `CPU-HOURS` / `MEM-GB-HOURS` columns are reserved for a
+future per-resource pricing model; in 3.24.6 they always render `0.00`. App
+totals are surfaced via `convox cost --aggregate` (a single-row table:
+`APP | SPEND-USD | AS-OF | PRICING-SOURCE`). See the
+[cost CLI reference](/reference/cli/cost) for the full flag set.
 
 Service-level numbers help identify which workload is driving spend. Use the
 output to refine `monthlyCapUsd`, decide whether to opt a service out of
-`atCapAction: auto-shutdown` via `neverAutoShutdown`, or scale the workload down
-before cap fire.
+`atCapAction: auto-shutdown` via `neverAutoShutdown`, or scale the workload
+down before cap fire.
 
 ## Per-month rollover
 
