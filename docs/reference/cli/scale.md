@@ -13,8 +13,26 @@ Scale a service
 
 ### Usage
 ```bash
-    convox scale <service>
+    convox scale [<service>]
 ```
+
+The positional `<service>` is required for imperative changes (`--count`,
+`--cpu`, `--memory`, `--gpu`, `--gpu-vendor`, `--min`, `--max`) and optional in
+read-mode. With no service argument, `convox scale` prints the full scale table
+for the app. With a service argument, the table is filtered to that service's
+row only — the same columns, just one row.
+
+```bash
+    $ convox scale web -a myapp
+    SERVICE  DESIRED  RUNNING  CPU  MEMORY  GPU  MIN  MAX  STATUS
+    web      2        2        256  1024    -    2    2    
+```
+
+If the supplied service does not exist in the app, `convox scale <name>` exits
+non-zero with `service "<name>" not found in app <app>`. The check fires once
+before the watch loop starts, so a typo combined with `--watch-interval` does
+not loop forever printing the same error.
+
 ### Examples
 ```bash
     $ convox scale web --count 3 --cpu 250 --memory 1024

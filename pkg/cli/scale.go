@@ -14,7 +14,7 @@ import (
 func init() {
 	register("scale", "scale a service", Scale, stdcli.CommandOptions{
 		Flags: append(stdcli.OptionFlags(structs.ServiceUpdateOptions{}), flagApp, flagRack, flagWatchInterval),
-		Usage: "<service>",
+		Usage: "[<service>]",
 		Validate: func(c *stdcli.Context) error {
 			if scaleHasImperativeFlag(c) {
 				if len(c.Args) < 1 {
@@ -22,7 +22,7 @@ func init() {
 				}
 				return stdcli.Args(1)(c)
 			}
-			return stdcli.Args(0)(c)
+			return stdcli.ArgsMax(1)(c)
 		},
 	}, WithCloud())
 }
@@ -83,12 +83,47 @@ func Scale(rack sdk.Interface, c *stdcli.Context) error {
 		return c.OK()
 	}
 
+	// Read-mode optional positional filters the table to one service.
+	// Pre-watch existence check ensures a typo errors once and exits non-zero
+	// rather than spamming "not found" every watch tick.
+	filterService := c.Arg(0)
+	if filterService != "" {
+		ss, err := rack.ServiceList(app(c))
+		if err != nil {
+			return err
+		}
+		found := false
+		for i := range ss {
+			if ss[i].Name == filterService {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("service %q not found in app %s", filterService, app(c))
+		}
+	}
+
 	return watch(func(r sdk.Interface, c *stdcli.Context) error {
 		running := map[string]int{}
 
 		ss, err := rack.ServiceList(app(c))
 		if err != nil {
 			return err
+		}
+
+		// Filter to the named service. Mid-watch service deletion produces
+		// an empty filtered slice (empty rendered table) rather than per-tick
+		// errors; pre-watch validation already confirmed the service existed.
+		if filterService != "" {
+			filtered := make([]structs.Service, 0, 1)
+			for i := range ss {
+				if ss[i].Name == filterService {
+					filtered = append(filtered, ss[i])
+					break
+				}
+			}
+			ss = filtered
 		}
 
 		sort.Slice(ss, func(i, j int) bool { return ss[i].Name < ss[j].Name })
