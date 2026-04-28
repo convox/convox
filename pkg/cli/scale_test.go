@@ -2,6 +2,7 @@ package cli_test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -24,9 +25,9 @@ func TestScale(t *testing.T) {
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
-			"SERVICE   MIN  MAX  CURRENT  CPU  MEMORY  GPU  STATUS",
-			"service1  -    -    1        2    3       -    ",
-			"service1  -    -    1        2    3       -    ",
+			"SERVICE   DESIRED  RUNNING  CPU  MEMORY  GPU  MIN  MAX  STATUS",
+			"service1  1        0        2    3       -    -    -    ",
+			"service1  1        0        2    3       -    -    -    ",
 		})
 	})
 }
@@ -59,9 +60,9 @@ func TestScaleShowsAutoscaleAndCold(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code)
 		res.RequireStdout(t, []string{
-			"SERVICE  MIN  MAX  CURRENT  CPU  MEMORY  GPU  AUTOSCALE    STATUS",
-			"vllm     0    10   0        2    3       -    gpu-util>70  COLD (~2-5m first req)",
-			"web      2    2    2        2    3       -    -            ",
+			"SERVICE  DESIRED  RUNNING  CPU  MEMORY  GPU  MIN  MAX  AUTOSCALE    STATUS",
+			"vllm     0        0        2    3       -    0    10   gpu-util>70  COLD (~2-5m first req)",
+			"web      2        0        2    3       -    2    2    -            ",
 		})
 	})
 }
@@ -216,8 +217,78 @@ func TestScaleDaemonsetRow(t *testing.T) {
 		require.Equal(t, 0, res.Code)
 		// No AUTOSCALE column (no service has autoscale enabled).
 		res.RequireStdout(t, []string{
-			"SERVICE  MIN  MAX  CURRENT  CPU  MEMORY  GPU  STATUS",
-			"fluentd  2    2    2        2    3       -    ",
+			"SERVICE  DESIRED  RUNNING  CPU  MEMORY  GPU  MIN  MAX  STATUS",
+			"fluentd  2        0        2    3       -    2    2    ",
 		})
+	})
+}
+
+// TestScaleColumnPositionContract pins the column-position contract against
+// the public 3.24.5 baseline (`SERVICE | DESIRED | RUNNING | CPU | MEMORY |
+// GPU`). Customer scripts that parse `convox scale` output positionally
+// (`awk '{print $2}'`, `cut -f3`) MUST keep working unchanged across the
+// 3.24.5 → 3.24.6 upgrade. New columns introduced in 3.24.6 (MIN, MAX,
+// AUTOSCALE, STATUS) must append at positions 7+, never shift the legacy
+// six.
+//
+// If this test fails, the column-position contract for 3.24.5 customers is
+// broken — DO NOT update the assertions to match new output. The fix is in
+// pkg/cli/scale.go header construction.
+func TestScaleColumnPositionContract(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		two := 2
+		web := *fxService()
+		web.Name = "web"
+		web.Count = 2
+		web.Min = &two
+		web.Max = &two
+
+		i.On("ServiceList", "app1").Return(structs.Services{web}, nil)
+		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
+		i.On("ProcessList", "app1", structs.ProcessListOptions{}).Return(structs.Processes{}, nil)
+
+		res, err := testExecute(e, "scale -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+
+		// Parse the header row by whitespace-splitting the first stdout line.
+		stdout := strings.TrimSuffix(res.Stdout, "\n")
+		lines := strings.Split(stdout, "\n")
+		require.NotEmpty(t, lines, "scale output must include at least a header line")
+		header := strings.Fields(lines[0])
+
+		// Positions 1-6 (0-indexed 0-5) must match the 3.24.5 column
+		// names exactly. Anything at position 7+ is new and additive.
+		require.GreaterOrEqual(t, len(header), 6,
+			"header must have at least the 6 columns from 3.24.5; got %d", len(header))
+		require.Equal(t, "SERVICE", header[0], "position 1 must be SERVICE (3.24.5 baseline)")
+		require.Equal(t, "DESIRED", header[1], "position 2 must be DESIRED (3.24.5 baseline)")
+		require.Equal(t, "RUNNING", header[2], "position 3 must be RUNNING (3.24.5 baseline)")
+		require.Equal(t, "CPU", header[3], "position 4 must be CPU (3.24.5 baseline)")
+		require.Equal(t, "MEMORY", header[4], "position 5 must be MEMORY (3.24.5 baseline)")
+		require.Equal(t, "GPU", header[5], "position 6 must be GPU (3.24.5 baseline)")
+
+		// New 3.24.6 columns are MIN, MAX (positions 7-8) and a trailing
+		// STATUS. AUTOSCALE optionally appears between MAX and STATUS.
+		require.Greater(t, len(header), 6,
+			"3.24.6 must add at least one trailing column (MIN/MAX/STATUS)")
+		require.Equal(t, "MIN", header[6], "position 7 must be MIN (3.24.6 additive)")
+		require.Equal(t, "MAX", header[7], "position 8 must be MAX (3.24.6 additive)")
+		require.Equal(t, "STATUS", header[len(header)-1],
+			"trailing column must be STATUS (3.24.6 additive)")
+
+		// Data row positions 1-6 must be parseable as integers (DESIRED,
+		// RUNNING, CPU, MEMORY) and a string ("-" or numeric) for GPU —
+		// the same shape 3.24.5 emitted. This catches any future regression
+		// where the row construction order drifts from the header order.
+		require.Len(t, lines, 2, "expected one header + one data row")
+		row := strings.Fields(lines[1])
+		require.GreaterOrEqual(t, len(row), 6, "data row must have at least 6 fields")
+		require.Equal(t, "web", row[0], "data row position 1 must be SERVICE name")
+		require.Equal(t, "2", row[1], "data row position 2 must be DESIRED count (s.Count)")
+		require.Equal(t, "0", row[2], "data row position 3 must be RUNNING count (ProcessList)")
+		require.Equal(t, "2", row[3], "data row position 4 must be CPU millicores")
+		require.Equal(t, "3", row[4], "data row position 5 must be MEMORY MB")
+		require.Equal(t, "-", row[5], "data row position 6 must be GPU (- when zero)")
 	})
 }

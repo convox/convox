@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/k8s"
 	"github.com/stretchr/testify/assert"
@@ -949,6 +950,138 @@ func TestConcurrentResetAndAccumulatorTick_LosersRetryWithFreshState(t *testing.
 		// on top of the winner's spend, producing 100+ from two ticks.
 		assert.LessOrEqual(t, finalState.CurrentMonthSpendUsd, 100.0, "spend must not double-apply across the race")
 		assert.Equal(t, time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC), finalState.MonthStart, "MonthStart must remain stable")
+	})
+}
+
+// TestAppBudgetResetWithOptions_HoldsLockAcrossStep2_NoDuplicateCancelled
+// (F-A06-1 fix). Pre-fix: AppBudgetResetWithOptions called inner
+// AppBudgetReset (which acquired+released the lock atomically with the
+// breaker-state write), then continued Step 2 (restoreFromAnnotation +
+// annotation delete) WITHOUT holding the lock. A concurrent accumulator
+// tick on the same app could acquire the lock between Step 1 unlock
+// and Step 2 entry, observe the still-present armed shutdown-state
+// annotation, and emit its OWN :cancelled event before the reset's
+// restoreFromAnnotation emit landed — producing TWO :cancelled events
+// for one logical recovery action.
+//
+// Post-fix: AppBudgetResetWithOptions acquires appBudgetLock at the
+// outer scope (defer Unlock) and delegates to the new
+// appBudgetResetLocked helper. Step 1 + Step 2 run as a single
+// critical section. The accumulator tick queues until reset finishes,
+// observes the now-deleted annotation, and is a no-op for the cancel
+// path.
+//
+// This test pre-arms the app and runs reset + reconcileAutoShutdown in
+// parallel (both contending the lock). Uses the manifest-injecting
+// test hook (which bypasses AppGet/Atom-mock requirements) to drive
+// the second goroutine directly through the same lock surface that
+// production reconcileAutoShutdown acquires. The post-race invariant:
+// at most one :cancelled event is emitted; no orphan armed annotation
+// remains. Run with -race.
+func TestAppBudgetResetWithOptions_HoldsLockAcrossStep2_NoDuplicateCancelled(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		installFakeDynamicClient(p)
+
+		cap := newEventCapture(t)
+		k8s.SetWebhooksForTest(p, []string{cap.server.URL})
+
+		// Deployment used by restoreFromAnnotation. Pre-shutdown state
+		// (replicas=0) so the restore patch flow exercises the live
+		// patch path without short-circuiting on equal replicas.
+		zero := int32(0)
+		dep := &appsv1.Deployment{
+			ObjectMeta: am.ObjectMeta{Name: "ml-batch", Namespace: "rack1-app1"},
+			Spec:       appsv1.DeploymentSpec{Replicas: &zero},
+		}
+		_, err := kk.AppsV1().Deployments("rack1-app1").Create(context.TODO(), dep, am.CreateOptions{})
+		require.NoError(t, err)
+
+		// Pre-armed shutdown-state annotation. ArmedAt set, ShutdownAt
+		// NOT set — the lifecycle is in :armed window. Without the F-A06-1
+		// fix, two :cancelled events could fire (one from reset's
+		// restoreFromAnnotation, one from the F8 manual-detected branch
+		// racing against the unlocked window).
+		now := time.Now().UTC()
+		armed := now.Add(-5 * time.Minute)
+		state := &structs.AppBudgetShutdownState{
+			SchemaVersion:        1,
+			ArmedAt:              &armed,
+			RecoveryMode:         "auto-on-reset",
+			ShutdownOrder:        "largest-cost",
+			ShutdownTickId:       "tick-fa06-1-race",
+			EligibleServiceCount: 1,
+			Services: []structs.AppBudgetShutdownStateService{
+				{Name: "ml-batch", OriginalScale: structs.AppBudgetShutdownStateOriginalScale{Count: 1, Replicas: 1}},
+			},
+			ArmedNotificationFiredAt: &armed,
+		}
+		raw, _ := json.Marshal(state)
+		ns, _ := kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
+		if ns.Annotations == nil {
+			ns.Annotations = map[string]string{}
+		}
+		ns.Annotations[structs.BudgetShutdownStateAnnotation] = string(raw)
+		ns.Annotations[structs.BudgetConfigAnnotation] = `{"monthly-cap-usd":100,"alert-threshold-percent":80,"at-cap-action":"auto-shutdown","pricing-adjustment":1}`
+		ns.Annotations[structs.BudgetStateAnnotation] = `{"month-start":"2026-04-01T00:00:00Z","current-month-spend-usd":105,"current-month-spend-as-of":"2026-04-25T12:00:00Z","circuit-breaker-tripped":true,"alert-fired-at-cap":"2026-04-25T11:55:00Z"}`
+		_, err = kk.CoreV1().Namespaces().Update(context.TODO(), ns, am.UpdateOptions{})
+		require.NoError(t, err)
+
+		cfg := &structs.AppBudget{
+			MonthlyCapUsd:         100,
+			AlertThresholdPercent: 80,
+			AtCapAction:           structs.BudgetAtCapActionAutoShutdown,
+			PricingAdjustment:     1,
+		}
+		baseState := &structs.AppBudgetState{
+			MonthStart:            startOfApril(),
+			CurrentMonthSpendUsd:  105,
+			CurrentMonthSpendAsOf: now,
+			AlertFiredAtCap:       now.Add(-30 * time.Second),
+			CircuitBreakerTripped: true,
+		}
+		m := buildAutoShutdownManifest(30)
+		m.Services = manifest.Services{{Name: "ml-batch"}}
+
+		var wg sync.WaitGroup
+		wg.Add(2)
+		errs := make(chan error, 2)
+		go func() {
+			defer wg.Done()
+			// Plain reset (force=false). Outer lock now wraps Step 1+2.
+			errs <- p.AppBudgetResetWithOptions("app1", "alice@example.com", structs.AppBudgetResetOptions{})
+		}()
+		go func() {
+			defer wg.Done()
+			// Drive the manifest-injecting reconciler in parallel. This
+			// hook reaches the same fireCancelledEventRich path that
+			// production's reconcileAutoShutdown would, contending the
+			// per-app lock with the reset goroutine.
+			k8s.ReconcileAutoShutdownWithManifestForTest(p, context.Background(), "app1", cfg, baseState, m, now)
+			errs <- nil
+		}()
+		wg.Wait()
+		close(errs)
+		for e := range errs {
+			require.NoError(t, e)
+		}
+		cap.drain()
+
+		// Post-race invariant 1: at most ONE :cancelled event. The
+		// outer-lock fix ensures the parallel reconcile queues until
+		// reset finishes its annotation delete; once the annotation is
+		// gone the F8 manual-detected branch is skipped (no shutdownState).
+		cancelEvts := cap.findActions(":cancelled")
+		assert.LessOrEqual(t, len(cancelEvts), 1,
+			"F-A06-1: at most one :cancelled may fire under reset+tick race; got %d", len(cancelEvts))
+
+		// Post-race invariant 2: shutdown-state annotation must be deleted
+		// (Step 2 of AppBudgetResetWithOptions unconditionally deletes it).
+		ns2, _ := kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
+		_, hasAnno := ns2.Annotations[structs.BudgetShutdownStateAnnotation]
+		assert.False(t, hasAnno, "shutdown-state annotation must be deleted after reset")
 	})
 }
 

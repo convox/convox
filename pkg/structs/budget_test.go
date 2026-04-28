@@ -349,7 +349,6 @@ func TestAppBudget_SnakeCaseJSON_RejectsWithError(t *testing.T) {
 	assert.Equal(t, 0.0, got.PricingAdjustment, "snake pricing_adjustment must not bind")
 }
 
-
 // TestServiceCostLine_KebabJSON_RoundTrip — F-9 fix (catalog F-9).
 // Verifies the JSON tag rename from snake to kebab on the InstanceType
 // field. Wire format must use `instance-type` (matching the rest of the

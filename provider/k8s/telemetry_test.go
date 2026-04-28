@@ -295,6 +295,80 @@ func TestRackParamsSecretAbsent_FallsBackToConfigMap(t *testing.T) {
 	})
 }
 
+// TestRackParams_PreD8Compat_SecretAbsent (F-A04-2 fix). Pins the
+// upgrade-window contract for the Decision-8 telemetry Secret-overlay
+// graceful-fallback path: a rack that has been deployed with rack-Go
+// code that knows to look for the redacted-params Secret AND has had
+// its ConfigMap re-stubbed to empty values for the redacted keys, but
+// where the Secret resource itself has not yet been applied to the
+// cluster (transient TF-mid-apply state). The Secret Get returns
+// NotFound and the consumer falls through to the ConfigMap empty-stub
+// values directly. Per the existing skip-default rule, an empty value
+// equal to the default (also empty) is dropped from the heartbeat
+// entirely — NEVER hashed-as-empty-string and emitted (which would
+// leak presence-without-value to the receiver and incorrectly imply
+// the credential is set).
+//
+// Mirrors TestRackParamsSecretAbsent_FallsBackToConfigMap (which pins
+// the pre-D8 ConfigMap-plaintext + Secret-absent combination); this
+// test pins the OTHER end of the upgrade window — ConfigMap is
+// already in D8 shape (empty stubs) but Secret has not yet landed.
+func TestRackParams_PreD8Compat_SecretAbsent(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		fc, ok := p.Cluster.(*fake.Clientset)
+		require.True(t, ok)
+
+		// ConfigMap in post-D8 shape: redacted keys stubbed empty.
+		cm := &ac.ConfigMap{
+			ObjectMeta: am.ObjectMeta{
+				Namespace: p.Namespace,
+				Name:      "telemetry-rack-params",
+			},
+			Data: map[string]string{
+				"docker_hub_password": "",
+				"private_eks_pass":    "",
+				"non_secret_param":    "ok",
+			},
+		}
+		_, err := fc.CoreV1().ConfigMaps(p.Namespace).Create(context.TODO(), cm, am.CreateOptions{})
+		require.NoError(t, err)
+
+		// Default-rack-params ConfigMap with the same empty defaults so the
+		// skip-default carve-out fires for the empty stubs (the production
+		// telemetry-default-rack-params CM ships these as empty).
+		dcm := &ac.ConfigMap{
+			ObjectMeta: am.ObjectMeta{
+				Namespace: p.Namespace,
+				Name:      "telemetry-default-rack-params",
+			},
+			Data: map[string]string{
+				"docker_hub_password": "",
+				"private_eks_pass":    "",
+			},
+		}
+		_, err = fc.CoreV1().ConfigMaps(p.Namespace).Create(context.TODO(), dcm, am.CreateOptions{})
+		require.NoError(t, err)
+
+		// Deliberately do NOT create the redacted-params Secret —
+		// Secret-absent transient state during D8 TF apply.
+
+		// Must not panic on Secret Get NotFound; must skip empty stubs.
+		params := p.RackParams()
+
+		// Empty-stub redacted keys must NOT appear (skipped via
+		// equal-to-default carve-out, NOT hashed-empty-string-emitted).
+		_, dockerPresent := params["docker_hub_password"]
+		_, eksPresent := params["private_eks_pass"]
+		assert.False(t, dockerPresent,
+			"docker_hub_password empty-stub + Secret absent must NOT emit hashed empty string")
+		assert.False(t, eksPresent,
+			"private_eks_pass empty-stub + Secret absent must NOT emit hashed empty string")
+		// Non-redacted plaintext values must still pass through.
+		assert.Equal(t, "ok", params["non_secret_param"],
+			"non-redacted ConfigMap values must pass through plaintext")
+	})
+}
+
 // TestRedactedParamsAlphabeticalOrder enforces the alphabetical convention on
 // redactedParams so chain α6 follow-ups (e.g. D.2 webhook_signing_key) have an
 // unambiguous insertion target. Order is for review hygiene; correctness uses

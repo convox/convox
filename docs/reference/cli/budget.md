@@ -36,7 +36,7 @@ to editing the manifest and redeploying, but applied without a redeploy.
 
 ### Usage
 ```bash
-    convox budget set [-a app] [--monthly-cap N] [--alert-threshold-percent N]
+    convox budget set [-a app] [--monthly-cap N] [--alert-at N]
                        [--at-cap-action ACTION] [--pricing-adjustment N]
 ```
 ### Examples
@@ -58,8 +58,11 @@ from `convox.yml`.
 
 ## budget reset
 
-Acknowledge a cap breach and re-enable deploys. Clears the breaker; preserves
-flap-suppress carry-over by default.
+Acknowledge a cap breach and re-enable deploys. Clears the breaker AND, when
+invoked after `:fired`, restores replicas from the persisted shutdown-state
+annotation. Preserves flap-suppress carry-over by default;
+`--force-clear-cooldown` is additive and forces past the 24-hour
+flap-prevention cooldown.
 
 ### Usage
 ```bash

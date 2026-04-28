@@ -1775,7 +1775,6 @@ func TestAutoShutdown_AppBudgetReset_ClearsExistingBreakerAndStateAnnotation(t *
 	})
 }
 
-
 // TestCancelled_ResetDuringArmed_ActorIsJwtDerived — F-3 fix (catalog F-3).
 // Spec §8.4 line 777 mandates JWT-derived actor for the
 // reset-during-armed sub-case. Verifies the actor parameter threads
@@ -2122,5 +2121,137 @@ func TestBudgetAccumulatorCapRaise_EmitsBreakerClearedEvent_WithCapRaisedReason(
 			assert.Equal(t, "500.00", data["new_cap_usd"])
 		}
 		require.True(t, found, ":breaker-cleared event must be observed in webhook stream")
+
+		// N-1 negative pin: a not-armed cap-raise (no
+		// BudgetShutdownStateAnnotation, ArmedAt zero) MUST NOT emit a
+		// :cancelled event. The gate at provider/k8s/budget_accumulator.go
+		// (capRaiseArmedShutdownState != nil check before fireCancelledEventRich)
+		// is the production guard. This assertion pins the absence so a
+		// future regression that drops the gate and unconditionally fires
+		// :cancelled on every cap-raise breaker-clear would fail CI here.
+		// AtCapAction in this test is "block-new-deploys" (not
+		// auto-shutdown), so no shutdown state was ever written — the
+		// cancel-arm-on-cap-raise path is structurally unreachable.
+		var cancelledCount int
+		for _, evt := range actions {
+			action, _ := evt["action"].(string)
+			if strings.HasSuffix(action, ":cancelled") {
+				cancelledCount++
+			}
+		}
+		assert.Equal(t, 0, cancelledCount,
+			"not-armed cap-raise must NOT emit :cancelled (no BudgetShutdownStateAnnotation in scope)")
+	})
+}
+
+// TestAppBudgetSet_CapRaiseClearsArmedShutdownStateAnnotation
+// (F-A06-2 fix). When a cap-raise clears a tripped breaker AND the app
+// was in :armed lifecycle (ArmedAt set, ShutdownAt nil), the orphan
+// shutdown-state annotation MUST also be deleted atomically with the
+// breaker-clear write. Pre-fix: AppBudgetSet only cleared
+// BudgetStateAnnotation fields; the BudgetShutdownStateAnnotation
+// persisted with ArmedAt set so `convox budget show` displayed a stale
+// "ARMED — auto-shutdown scheduled at HH:MM" banner forever (the
+// accumulator's reconcileAutoShutdown gates :fired progression on
+// AlertFiredAtCap.IsZero(), so the lifecycle could never advance).
+//
+// Post-fix: the annotation is deleted in the same Namespace.Update()
+// round-trip as the breaker-clear, AND a discrete
+// :cancelled reason="cap-raised" event fires immediately after the
+// :breaker-cleared event so audit trails reflect the lifecycle
+// transition. Actor on the :cancelled event is the cap-raiser (ackBy)
+// matching spec §8.4 line 777 JWT-derived attribution.
+func TestAppBudgetSet_CapRaiseClearsArmedShutdownStateAnnotation(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		// In-process webhook capture.
+		var (
+			mu      sync.Mutex
+			actions []map[string]interface{}
+		)
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			defer r.Body.Close()
+			body, _ := io.ReadAll(r.Body)
+			var evt map[string]interface{}
+			if jerr := json.Unmarshal(body, &evt); jerr == nil {
+				mu.Lock()
+				actions = append(actions, evt)
+				mu.Unlock()
+			}
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer srv.Close()
+		k8s.SetWebhooksForTest(p, []string{srv.URL})
+
+		frozen := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 100, AlertThresholdPercent: 80, AtCapAction: structs.BudgetAtCapActionAutoShutdown, PricingAdjustment: 1,
+		})
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{
+			MonthStart:            startOfApril(),
+			CurrentMonthSpendUsd:  110,
+			CurrentMonthSpendAsOf: frozen,
+			AlertFiredAtCap:       frozen,
+			CircuitBreakerTripped: true,
+		})
+
+		// Pre-armed shutdown-state annotation.
+		armedAt := frozen.Add(-5 * time.Minute)
+		armedState := &structs.AppBudgetShutdownState{
+			SchemaVersion:        1,
+			ArmedAt:              &armedAt,
+			RecoveryMode:         "auto-on-reset",
+			ShutdownOrder:        "largest-cost",
+			ShutdownTickId:       "tick-fa06-2",
+			EligibleServiceCount: 1,
+			Services: []structs.AppBudgetShutdownStateService{
+				{Name: "ml-batch", OriginalScale: structs.AppBudgetShutdownStateOriginalScale{Count: 1, Replicas: 1}},
+			},
+			ArmedNotificationFiredAt: &armedAt,
+		}
+		require.NoError(t, k8s.WriteBudgetShutdownStateAnnotationForTest(p, "app1", armedState))
+
+		// Cap raised from 100 → 500 (above spend 110), so breaker clears.
+		require.NoError(t, p.AppBudgetSet("app1", structs.AppBudgetOptions{
+			MonthlyCapUsd: strPtr("500"),
+		}, "alice@example.com"))
+
+		// Post-condition 1: shutdown-state annotation deleted.
+		ns2, _ := kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
+		_, hasAnno := ns2.Annotations[structs.BudgetShutdownStateAnnotation]
+		assert.False(t, hasAnno,
+			"F-A06-2: shutdown-state annotation must be deleted when cap-raise clears breaker on armed app")
+
+		// Post-condition 2: :cancelled reason="cap-raised" event fired.
+		require.Eventually(t, func() bool {
+			mu.Lock()
+			defer mu.Unlock()
+			for _, evt := range actions {
+				if action, ok := evt["action"].(string); ok && action == "app:budget:auto-shutdown:cancelled" {
+					return true
+				}
+			}
+			return false
+		}, 5*time.Second, 50*time.Millisecond, ":cancelled cap-raised event must fire")
+
+		mu.Lock()
+		defer mu.Unlock()
+		var cancelledEvt map[string]interface{}
+		for _, evt := range actions {
+			if action, _ := evt["action"].(string); action == "app:budget:auto-shutdown:cancelled" {
+				cancelledEvt = evt
+				break
+			}
+		}
+		require.NotNil(t, cancelledEvt, ":cancelled event must be observed")
+		data, ok := cancelledEvt["data"].(map[string]interface{})
+		require.True(t, ok, ":cancelled event must include data field")
+		assert.Equal(t, "cap-raised", data["cancel_reason"], "reason must be cap-raised")
+		assert.Equal(t, "alice@example.com", data["actor"],
+			"actor must be the cap-raiser (ackBy) per spec §8.4")
+		assert.NotEmpty(t, data["armed_at"], "armed_at must populate from saved state")
 	})
 }

@@ -46,18 +46,48 @@ If the new cap is below current spend, the cap-raise rejects with an explicit
 error and the breaker remains tripped. Use `convox cost --app myapp` to confirm
 current spend before raising.
 
-After `:fired` (post-shutdown), a cap raise clears the breaker but does NOT
-restart already-shutdown services on its own. Run `convox budget reset myapp`
-to restore replicas from the persisted shutdown-state annotation
-(`restoreFromAnnotation`). See the [3.24.6 release notes](https://github.com/convox/convox/releases)
-for the full sequence.
+A cap-raise during the armed window (after `:armed`, before `:fired`) produces
+two related events from one operator action, both emitted synchronously from
+the same HTTP request handler under the per-app lock: first
+`app:budget:breaker-cleared` (with `reason="cap-raised"`) when the cap-raise
+atomically clears the tripped deploy circuit breaker, then immediately
+`app:budget:auto-shutdown:cancelled` (with `cancel_reason="cap-raised"`)
+because the orphan armed shutdown-state annotation is deleted in the same
+Namespace Update round-trip. There is no "next accumulator tick" between
+them — both events are sent before the cap-raise HTTP request returns.
+Receivers correlating the audit pair should match on:
+1. `data.app` — identical on both events.
+2. The operator identity — `data.ack_by` on `:breaker-cleared` and
+   `data.actor` on `:cancelled` (different field names, same JWT-derived
+   value sourced from the cap-raiser).
+3. `data.cleared_at` on `:breaker-cleared` and `data.cancelled_at` on
+   `:cancelled` — bit-identical RFC 3339 timestamps, both populated from
+   the single `breakerClearedAckAt` value captured at the breaker-clear
+   site (not two `time.Now()` calls), so receivers can match on exact
+   string equality.
+Receivers cannot use `tick_id` to correlate the pair: only the auto-shutdown
+lifecycle events carry `tick_id` in their universal payload, and
+`:breaker-cleared` is a top-level audit event whose payload does not include
+that field. The two events are intentional and not duplicates —
+`:breaker-cleared` covers the deploy-circuit-breaker side effect (deploys are
+unblocked), while `:cancelled reason=cap-raised` records that the
+auto-shutdown countdown was aborted.
+
+After `:fired` (post-shutdown), a cap-raise alone clears the breaker but
+does NOT restart already-shutdown services on its own — the cap-raise is
+limited to the cap value and breaker. Run `convox budget reset myapp` to
+clear the breaker AND restore replicas from the persisted shutdown-state
+annotation (`restoreFromAnnotation`). See
+[Reset and force-clear cooldown](#force-clear-cooldown) below.
 
 ## Reset and force-clear cooldown <a id="force-clear-cooldown"></a>
 
 `convox budget reset` acknowledges a cap breach and re-enables deploys. The
-default behavior preserves any flap-suppress carry-over so that an app that
-recently breached, was reset, then breached again does not flip-flop into
-auto-shutdown loops.
+plain reset clears the deploy circuit breaker AND, when invoked after `:fired`,
+restores replicas from the persisted shutdown-state annotation
+(`restoreFromAnnotation`). The default behavior preserves any flap-suppress
+carry-over so that an app that recently breached, was reset, then breached
+again does not flip-flop into auto-shutdown loops.
 
 ```bash
 $ convox budget reset --app myapp
@@ -65,9 +95,11 @@ Resetting budget for myapp... OK
 Breaker cleared.
 ```
 
-`--force-clear-cooldown` additionally clears the flap-suppress annotation so
-the next cap fire will not be suppressed. Use only when you are sure the
-underlying cause is resolved.
+`--force-clear-cooldown` is additive — it does not change the breaker-clear
+or the replica-restore behavior, but it additionally clears the flap-suppress
+annotation so the next cap fire will not be suppressed by the 24-hour
+flap-prevention cooldown. Use only when you are sure the underlying cause is
+resolved.
 
 ```bash
 $ convox budget reset --app myapp --force-clear-cooldown
@@ -117,9 +149,11 @@ not `:fired`, the countdown may still be running (`notifyBeforeMinutes`).
 
 ### `:fired` fired but I want to keep services running
 
-Cap-raise post-`:fired` clears the breaker but does not restart shutdown
-services. Run `convox budget reset myapp` to restore replicas from the
-persisted shutdown-state annotation.
+Run `convox budget reset myapp`. The plain reset clears the breaker AND
+restarts shutdown services from the persisted shutdown-state annotation.
+A cap-raise alone (`convox budget cap raise`) clears the breaker but does
+not restart shutdown services — `budget reset` is the canonical recovery
+path post-`:fired`.
 
 ## See Also
 

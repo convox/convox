@@ -298,7 +298,6 @@ func TestServicesBudgetColumn_OnlyEmittedWhenAnyServiceAtCap(t *testing.T) {
 	})
 }
 
-
 // TestDecorateStatus_ArmedWithNotifyMin_AppendsArmedToken — F-15 fix
 // (catalog F-15). Locks in the `armed-Nm` STATUS column token. The
 // other STATUS tokens (at-cap, at-cap-keda, at-cap-auto) all have tests;

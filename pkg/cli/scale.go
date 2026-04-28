@@ -114,7 +114,15 @@ func Scale(rack sdk.Interface, c *stdcli.Context) error {
 		// Use WithServices variant since the watch closure already has ss.
 		cs, _ := budgetCapStatusWithServices(rack, app(c), ss, c.Writer().Stderr)
 
-		headers := []string{"SERVICE", "MIN", "MAX", "CURRENT", "CPU", "MEMORY", "GPU"}
+		// Column-position contract: positions 1-6 (SERVICE, DESIRED, RUNNING,
+		// CPU, MEMORY, GPU) match 3.24.5 exactly so customer scripts parsing
+		// `convox scale` output positionally (`awk '{print $2}'`, `cut -f3`)
+		// keep working unchanged. New columns (MIN, MAX, AUTOSCALE, STATUS)
+		// append at positions 7+. AUTOSCALE renders only when at least one
+		// service has autoscale enabled. STATUS is always present at the
+		// trailing position so the cap-state sub-token (`armed-Nm`,
+		// `at-cap-keda`, etc.) and the cold-start hint have a stable home.
+		headers := []string{"SERVICE", "DESIRED", "RUNNING", "CPU", "MEMORY", "GPU", "MIN", "MAX"}
 		if showAutoscale {
 			headers = append(headers, "AUTOSCALE")
 		}
@@ -128,7 +136,16 @@ func Scale(rack sdk.Interface, c *stdcli.Context) error {
 				gpu = fmt.Sprintf("%d", s.Gpu)
 			}
 
-			row := []string{s.Name, intPtrCell(s.Min), intPtrCell(s.Max), fmt.Sprintf("%d", s.Count), fmt.Sprintf("%d", s.Cpu), fmt.Sprintf("%d", s.Memory), gpu}
+			row := []string{
+				s.Name,
+				fmt.Sprintf("%d", s.Count),
+				fmt.Sprintf("%d", running[s.Name]),
+				fmt.Sprintf("%d", s.Cpu),
+				fmt.Sprintf("%d", s.Memory),
+				gpu,
+				intPtrCell(s.Min),
+				intPtrCell(s.Max),
+			}
 			if showAutoscale {
 				row = append(row, formatAutoscaleSummary(s.Autoscale))
 			}

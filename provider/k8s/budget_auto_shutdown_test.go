@@ -817,6 +817,103 @@ func TestCancelled_ConfigChanged_ActorStaysSystem(t *testing.T) {
 	})
 }
 
+// TestReconcileAutoShutdown_CancelledConfigChanged_FiresWithNewAction
+// (F-A04-1 fix). Mirror of TestReconcileAutoShutdown_CancelledCapRaised_*
+// for the config-changed sub-case. Customer keeps cap unchanged AND
+// at_cap_action stays auto-shutdown (else the accumulator's early
+// return at budget_auto_shutdown.go:38 skips the tick entirely), but
+// the manifest SHA recomputes to a different value (e.g. service rename
+// or notify_before knob change) such that the saved annotation SHA
+// no longer matches the live plan SHA. The accumulator detects the
+// drift and fires :cancelled reason="config-changed" with the universal
+// payload PLUS the per-reason `new_action` field carrying the current
+// cfg.AtCapAction. Without this positive pin, only the
+// CancelledCapRaised_DistinctFromConfigChanged negative-pin test
+// existed, so a future regression that drops `new_action` from the
+// data map could pass. Asserts both the event name AND the
+// `new_action` field are populated on the wire.
+func TestReconcileAutoShutdown_CancelledConfigChanged_FiresWithNewAction(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		installFakeDynamicClient(p)
+
+		cap := newEventCapture(t)
+		k8s.SetWebhooksForTest(p, []string{cap.server.URL})
+
+		grace := int64(30)
+		makeDeployment(t, kk, "rack1-app1", "web", 3, &grace)
+
+		t0 := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		armed := t0.Add(-5 * time.Minute)
+		// Pre-armed annotation with manifestSha forced different from the
+		// live plan recomputation. Cap stays 100 (spend 105 > cap so the
+		// cap-raised branch CANNOT fire); at_cap_action stays auto-shutdown
+		// (else reconcileAutoShutdown returns early before reaching the
+		// drift-detection branch). The drift is what classifies as
+		// "config-changed" (any non-cap-raised SHA mismatch).
+		state := &structs.AppBudgetShutdownState{
+			SchemaVersion:        1,
+			ArmedAt:              &armed,
+			RecoveryMode:         "auto-on-reset",
+			ShutdownOrder:        "largest-cost",
+			ShutdownTickId:       "tick-config-changed-newaction",
+			ManifestSha256:       "OLD_SHA_DIFFERENT_FROM_PLAN_RECOMPUTE",
+			EligibleServiceCount: 1,
+			Services: []structs.AppBudgetShutdownStateService{
+				{Name: "web", OriginalScale: structs.AppBudgetShutdownStateOriginalScale{Count: 3, Replicas: 3}},
+			},
+			ArmedNotificationFiredAt: &armed,
+		}
+		require.NoError(t, k8s.WriteBudgetShutdownStateAnnotationForTest(p, "app1", state))
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 100, AlertThresholdPercent: 80,
+			AtCapAction: structs.BudgetAtCapActionAutoShutdown, PricingAdjustment: 1,
+		})
+		baseState := &structs.AppBudgetState{
+			MonthStart: startOfApril(), CurrentMonthSpendUsd: 105,
+			CurrentMonthSpendAsOf: t0, AlertFiredAtCap: t0,
+		}
+		writeState(t, kk, "rack1-app1", baseState)
+
+		cfg, _, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		cfg.AtCapAction = structs.BudgetAtCapActionAutoShutdown
+		cfg.MonthlyCapUsd = 100
+
+		m := buildAutoShutdownManifest(30)
+		k8s.ReconcileAutoShutdownWithManifestForTest(p, context.Background(), "app1", cfg, baseState, m, t0)
+		cap.drain()
+
+		cancelEvts := cap.findActions(":cancelled")
+		require.Len(t, cancelEvts, 1, "exactly one :cancelled event must fire on config-changed mid-armed-window")
+		ev := cancelEvts[0]
+		// Event name pin (full action string is the qualified shutdown
+		// lifecycle suffix).
+		assert.Equal(t, "app:budget:auto-shutdown:cancelled", ev.Action,
+			"event name must be the qualified :cancelled shutdown lifecycle suffix")
+		// Reason classification.
+		assert.Equal(t, "config-changed", ev.Data["cancel_reason"],
+			"manifest-mismatch without cap-raise must classify as 'config-changed'")
+		// new_action carries the current cfg.AtCapAction value per spec §8.4.
+		// fireCancelledEventRich populates it via cfg.AtCapAction at the
+		// drift-detect call site (provider/k8s/budget_auto_shutdown.go:225-226).
+		assert.Equal(t, structs.BudgetAtCapActionAutoShutdown, ev.Data["new_action"],
+			"new_action must populate for config-changed and equal cfg.AtCapAction")
+		// Negative pins: prev_cap_usd / new_cap_usd are reserved for
+		// cap-raised; config-changed must NOT carry them.
+		_, hasPrev := ev.Data["prev_cap_usd"]
+		_, hasNew := ev.Data["new_cap_usd"]
+		assert.False(t, hasPrev, "config-changed must NOT carry prev_cap_usd")
+		assert.False(t, hasNew, "config-changed must NOT carry new_cap_usd")
+		// Universal payload sanity — armed_at and eligible_services ride
+		// every :cancelled emit per F11 (R7.5).
+		assert.NotEmpty(t, ev.Data["armed_at"], "armed_at must be present")
+		assert.NotEmpty(t, ev.Data["eligible_services"], "eligible_services must be present")
+	})
+}
+
 // TestReconcileAutoShutdown_FailedExclusiveOfFired_NoConcurrentFire
 // (F3 fix). Spec §8.10: :fired and :failed are MUTUALLY EXCLUSIVE.
 // On partial-shutdown (some succeed, some fail), only :failed fires.

@@ -86,8 +86,9 @@ type AppBudget struct {
 	// changed MonthlyCapUsd via AppBudgetSet (or the cap-raise alias).
 	// The accumulator reads this on cap-raise detection to populate the
 	// `:cancelled reason="cap-raised"` event's `actor` field per spec §8.4.
-	// Empty for older racks (pre-3.24.6) or first-write installs — the
-	// accumulator falls back to "system" so legacy state stays valid.
+	// Empty for first-write installs and for state written by 3.24.6 RCs
+	// that pre-dated the cap-mutation-tracking fix — the accumulator
+	// falls back to "system" so legacy state stays valid.
 	LastCapMutationBy string `json:"last-cap-mutation-by,omitempty"`
 }
 

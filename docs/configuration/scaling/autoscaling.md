@@ -41,9 +41,11 @@ services:
 ### Determine Current Scale
 ```bash
     $ convox scale
-    SERVICE  DESIRED  RUNNING  CPU  MEMORY
-    web      2        2        250  512
+    SERVICE  DESIRED  RUNNING  CPU  MEMORY  GPU  MIN  MAX  STATUS
+    web      2        2        250  512     -    -    -
 ```
+
+> Columns 1-6 (`SERVICE`, `DESIRED`, `RUNNING`, `CPU`, `MEMORY`, `GPU`) match the 3.24.5 layout exactly. 3.24.6 appends `MIN`, `MAX`, an optional `AUTOSCALE`, and a trailing `STATUS` column. See [`convox scale` output reference](/reference/cli/scale#output-table) for the full column-position contract.
 ### Scaling Count Horizontally
 ```bash
     $ convox scale web --count=3

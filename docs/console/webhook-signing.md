@@ -28,14 +28,15 @@ Convox-Signature: t=<unix-ts>,v1=<hex1>[,v1=<hex2>]
   the rack is in the middle of a key rotation (one signature per active
   key). Receivers verify against ANY one of the listed `v1=` values.
 
-Example header:
+Example header (HTTP-handler event — `app:budget:reset` carries the
+JWT-derived `actor` from the operator who ran `convox budget reset`):
 
 ```
 POST /webhooks/budget HTTP/1.1
 Content-Type: application/json
 Convox-Signature: t=1714233600,v1=4b2c5f7a8b9d6e3a1f0c5e8d7b4a3c2f1e9d8c7b6a5f4e3d2c1b0a9e8d7c6b5a
 
-{"event":"app:budget:cap","app":"myapp","actor":"alice@example.com",...}
+{"action":"app:budget:reset","status":"success","timestamp":"2026-04-27T10:30:00Z","data":{"app":"myapp","actor":"alice@example.com",...}}
 ```
 
 To verify, parse the header, recompute
