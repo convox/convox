@@ -12,6 +12,7 @@ func (s *Server) setupRoutes(r stdapi.Router) {
 	r.Route("GET", "/apps/{name}", s.AppGet)
 	r.Route("GET", "/apps", s.AppList)
 	r.Route("SOCKET", "/apps/{name}/logs", s.AppLogs)
+	r.Route("GET", "/apps/{app}/manifest/services/{service}", s.AppManifestService)
 	r.Route("GET", "/apps/{name}/metrics", s.AppMetrics)
 	r.Route("PUT", "/apps/{name}", s.AppUpdate)
 	r.Route("GET", "/apps/{app}/budget", s.AppBudgetGet)

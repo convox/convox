@@ -143,3 +143,34 @@ func TestProcessListGpu(t *testing.T) {
 		require.Equal(t, 0, byId["cpu-only"].Gpu)
 	})
 }
+
+// TestProcessList_PopulatesService verifies Process.Service is populated
+// from the bare "service" pod label (same source as Process.Name). Both
+// fields hold identical values for service / process / timer pods. This
+// backs the Console3 service-detail chart filter (process.service ===
+// serviceName) added in the same release.
+func TestProcessList_PopulatesService(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, ok := p.Cluster.(*fake.Clientset)
+		require.True(t, ok)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		require.NoError(t, processCreatePorts(kk, "rack1-app1", "pod-web", "system=convox,rack=rack1,app=app1,service=web,type=service", "1.2.3.4", 0, 80))
+		require.NoError(t, processCreatePorts(kk, "rack1-app1", "pod-worker", "system=convox,rack=rack1,app=app1,service=worker,type=service", "1.2.3.5", 0, 80))
+
+		pss, err := p.ProcessList("app1", structs.ProcessListOptions{})
+		require.NoError(t, err)
+		require.Len(t, pss, 2)
+
+		byId := map[string]structs.Process{}
+		for _, ps := range pss {
+			byId[ps.Id] = ps
+		}
+		// Both Service and Name populate from pd.ObjectMeta.Labels["service"];
+		// values are identical on a 3.24.6 rack.
+		require.Equal(t, "web", byId["pod-web"].Service, "Service must populate from the 'service' label")
+		require.Equal(t, "web", byId["pod-web"].Name, "Name continues to populate from the 'service' label (back-compat)")
+		require.Equal(t, "worker", byId["pod-worker"].Service)
+		require.Equal(t, "worker", byId["pod-worker"].Name)
+	})
+}

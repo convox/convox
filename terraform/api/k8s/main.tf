@@ -3,6 +3,66 @@ resource "random_string" "password" {
   special = false
 }
 
+resource "kubernetes_secret_v1" "webhook_signing_key" {
+  count = var.webhook_signing_key != "" ? 1 : 0
+
+  metadata {
+    name      = "webhook-signing-key"
+    namespace = var.namespace
+  }
+
+  data = {
+    value = var.webhook_signing_key
+  }
+
+  type = "Opaque"
+}
+
+resource "kubernetes_secret_v1" "prometheus_url" {
+  count = var.prometheus_url != "" ? 1 : 0
+
+  metadata {
+    name      = "prometheus-url"
+    namespace = var.namespace
+  }
+
+  data = {
+    value = var.prometheus_url
+  }
+
+  type = "Opaque"
+}
+
+resource "kubernetes_secret_v1" "docker_hub_password" {
+  count = var.docker_hub_password != "" ? 1 : 0
+
+  metadata {
+    name      = "docker-hub-password"
+    namespace = var.namespace
+  }
+
+  data = {
+    value = var.docker_hub_password
+  }
+
+  type = "Opaque"
+}
+
+resource "kubernetes_secret_v1" "api_password" {
+  count = var.authentication ? 1 : 0
+
+  metadata {
+    name      = "api-password"
+    namespace = var.namespace
+  }
+
+  data = {
+    value = random_string.password.result
+  }
+
+  type = "Opaque"
+}
+
 resource "kubernetes_resource_quota" "gcp-critical-pods" {
   metadata {
     name      = "gcp-critical-pods"
@@ -118,7 +178,12 @@ resource "kubernetes_deployment" "api" {
 
     template {
       metadata {
-        annotations = var.annotations
+        annotations = merge(var.annotations, {
+          "convox.com/secret-checksum-webhook-signing-key" = sha256(var.webhook_signing_key)
+          "convox.com/secret-checksum-prometheus-url"      = sha256(var.prometheus_url)
+          "convox.com/secret-checksum-docker-hub-password" = sha256(var.docker_hub_password)
+          "convox.com/secret-checksum-api-password"        = sha256(random_string.password.result)
+        })
 
         labels = merge(var.labels, {
           app     = "system"
@@ -186,9 +251,17 @@ resource "kubernetes_deployment" "api" {
             value = var.docker_hub_username
           }
 
-          env {
-            name  = "DOCKER_HUB_PASSWORD"
-            value = var.docker_hub_password
+          dynamic "env" {
+            for_each = var.docker_hub_password != "" ? [1] : []
+            content {
+              name = "DOCKER_HUB_PASSWORD"
+              value_from {
+                secret_key_ref {
+                  name = kubernetes_secret_v1.docker_hub_password[0].metadata[0].name
+                  key  = "value"
+                }
+              }
+            }
           }
 
           env {
@@ -236,14 +309,38 @@ resource "kubernetes_deployment" "api" {
             }
           }
 
-          env {
-            name  = "PASSWORD"
-            value = var.authentication ? random_string.password.result : ""
+          dynamic "env" {
+            for_each = var.authentication ? [1] : []
+            content {
+              name = "PASSWORD"
+              value_from {
+                secret_key_ref {
+                  name = kubernetes_secret_v1.api_password[0].metadata[0].name
+                  key  = "value"
+                }
+              }
+            }
           }
 
-          env {
-            name  = "PROMETHEUS_URL"
-            value = var.prometheus_url
+          dynamic "env" {
+            for_each = var.authentication ? [] : [1]
+            content {
+              name  = "PASSWORD"
+              value = ""
+            }
+          }
+
+          dynamic "env" {
+            for_each = var.prometheus_url != "" ? [1] : []
+            content {
+              name = "PROMETHEUS_URL"
+              value_from {
+                secret_key_ref {
+                  name = kubernetes_secret_v1.prometheus_url[0].metadata[0].name
+                  key  = "value"
+                }
+              }
+            }
           }
 
           env {
@@ -251,9 +348,17 @@ resource "kubernetes_deployment" "api" {
             value = var.rack_name
           }
 
-          env {
-            name  = "WEBHOOK_SIGNING_KEY"
-            value = var.webhook_signing_key
+          dynamic "env" {
+            for_each = var.webhook_signing_key != "" ? [1] : []
+            content {
+              name = "WEBHOOK_SIGNING_KEY"
+              value_from {
+                secret_key_ref {
+                  name = kubernetes_secret_v1.webhook_signing_key[0].metadata[0].name
+                  key  = "value"
+                }
+              }
+            }
           }
 
           env {
@@ -341,7 +446,13 @@ resource "kubernetes_deployment" "api" {
       }
     }
   }
-  depends_on = [kubernetes_resource_quota.gcp-critical-pods]
+  depends_on = [
+    kubernetes_resource_quota.gcp-critical-pods,
+    kubernetes_secret_v1.webhook_signing_key,
+    kubernetes_secret_v1.prometheus_url,
+    kubernetes_secret_v1.docker_hub_password,
+    kubernetes_secret_v1.api_password,
+  ]
 }
 
 resource "kubernetes_service" "api" {

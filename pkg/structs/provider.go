@@ -21,6 +21,7 @@ type Provider interface {
 	AppDiagnose(app string, opts AppDiagnoseOptions) (*AppDiagnosticReport, error)
 	AppList() (Apps, error)
 	AppLogs(name string, opts LogsOptions) (io.ReadCloser, error)
+	AppManifestService(app, service string) (*ManifestService, error)
 	AppMetrics(name string, opts MetricsOptions) (Metrics, error)
 	AppUpdate(name string, opts AppUpdateOptions) error
 

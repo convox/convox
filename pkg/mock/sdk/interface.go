@@ -419,6 +419,29 @@ func (_m *Interface) AppLogs(name string, opts structs.LogsOptions) (io.ReadClos
 	return r0, r1
 }
 
+// AppManifestService provides a mock function with given fields: app, service
+func (_m *Interface) AppManifestService(app string, service string) (*structs.ManifestService, error) {
+	ret := _m.Called(app, service)
+
+	var r0 *structs.ManifestService
+	if rf, ok := ret.Get(0).(func(string, string) *structs.ManifestService); ok {
+		r0 = rf(app, service)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*structs.ManifestService)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, string) error); ok {
+		r1 = rf(app, service)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // AppMetrics provides a mock function with given fields: name, opts
 func (_m *Interface) AppMetrics(name string, opts structs.MetricsOptions) (structs.Metrics, error) {
 	ret := _m.Called(name, opts)

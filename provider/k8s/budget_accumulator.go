@@ -1061,8 +1061,11 @@ func (p *Provider) computeBudgetDelta(ctx context.Context, app string, lastTick,
 			continue
 		}
 
+		capacityType := nodeCapacityType(node)
+		hourlyRate := price.EffectiveUsdPerHour(capacityType)
+
 		fraction := dominantResourceFraction(pod, node, price)
-		podTickSpend := price.OnDemandUsdPerHour * fraction * elapsed * adjustment
+		podTickSpend := hourlyRate * fraction * elapsed * adjustment
 		delta += podTickSpend
 
 		// Bucket selection. Build pods carry service-type=build PLUS a
@@ -1096,6 +1099,38 @@ func nodeInstanceType(n *v1.Node) string {
 	for _, k := range []string{"node.kubernetes.io/instance-type", "beta.kubernetes.io/instance-type"} {
 		if v, ok := n.Labels[k]; ok && v != "" {
 			return v
+		}
+	}
+	return ""
+}
+
+// nodeCapacityType returns "spot" or "on-demand" by checking the
+// karpenter.sh/capacity-type label first (Karpenter-managed nodes) and
+// then falling back to the eks.amazonaws.com/capacityType annotation
+// (EKS ANG-managed nodes). Returns "" if neither signal is present so
+// the caller falls through to on-demand pricing — conservative under
+// uncertainty, charges the customer the higher rate when the node
+// origin is unknown.
+//
+// Both signals are AWS-specific. On GCP / Azure / on-prem the labels
+// are absent and the helper returns "" — EffectiveUsdPerHour then
+// returns OnDemandUsdPerHour unchanged. Non-AWS spot pricing is a
+// future patch.
+func nodeCapacityType(n *v1.Node) string {
+	if n == nil {
+		return ""
+	}
+	if n.Labels != nil {
+		if v := strings.ToLower(n.Labels["karpenter.sh/capacity-type"]); v == "spot" || v == "on-demand" {
+			return v
+		}
+	}
+	if n.Annotations != nil {
+		switch strings.ToLower(n.Annotations["eks.amazonaws.com/capacityType"]) {
+		case "spot":
+			return "spot"
+		case "on_demand", "on-demand":
+			return "on-demand"
 		}
 	}
 	return ""

@@ -395,6 +395,133 @@ func TestAppUpdateMissing(t *testing.T) {
 	})
 }
 
+// TestAppManifestService_Found — happy path. The release fixture
+// release-manifest-service.yml declares four services exercising the
+// distinct env/scale shape combinations: pointer form (scale.min/max),
+// env-only with no scale block, legacy scale.count: N-M, neither.
+//
+// IMPORTANT semantic note: manifest.Load runs ApplyDefaults, which
+// populates Scale.Count = {Min: 1, Max: 1} for any service with NO
+// scale attributes at all (manifest.go ~line 299-301). This means
+// after fixture load, even services that omit `scale:` carry an
+// effective Count={1,1}. Our K8s impl's two-form synthesis sees that
+// non-zero Count and emits Min=1/Max=1 — which is the correct,
+// truthful answer for "what does this service actually run as."
+// Customers querying the new endpoint see the resolved replica
+// bounds, not the unfilled YAML state.
+func TestAppManifestService_Found(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		aa, _ := p.Atom.(*atom.MockInterface)
+		kk, _ := p.Cluster.(*fake.Clientset)
+
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		require.NoError(t, releaseCreate(p.Convox, "rack1-app1", "r1234567", "manifest-service"))
+
+		// New form: scale.min / scale.max as top-level pointers + env.
+		// Pointer form wins; Min=1, Max=5 round-trip from yaml verbatim.
+		aa.On("Status", "rack1-app1", "app").Return("Running", "r1234567", nil).Once()
+		ms, err := p.AppManifestService("app1", "api")
+		require.NoError(t, err)
+		require.Equal(t, "api", ms.Name)
+		require.Equal(t, []string{"LOG_LEVEL=info", "DEBUG=false"}, ms.Environment)
+		require.NotNil(t, ms.Scale)
+		require.NotNil(t, ms.Scale.Min)
+		require.Equal(t, 1, *ms.Scale.Min)
+		require.NotNil(t, ms.Scale.Max)
+		require.Equal(t, 5, *ms.Scale.Max)
+
+		// Env-only, no scale block: ApplyDefaults populates Count={1,1};
+		// Min/Max synthesizes to 1/1. Environment passes through verbatim.
+		aa.On("Status", "rack1-app1", "app").Return("Running", "r1234567", nil).Once()
+		ms, err = p.AppManifestService("app1", "worker")
+		require.NoError(t, err)
+		require.Equal(t, "worker", ms.Name)
+		require.Equal(t, []string{"WORKER_QUEUE=default"}, ms.Environment)
+		require.NotNil(t, ms.Scale)
+		require.NotNil(t, ms.Scale.Min)
+		require.Equal(t, 1, *ms.Scale.Min)
+		require.NotNil(t, ms.Scale.Max)
+		require.Equal(t, 1, *ms.Scale.Max)
+
+		// Legacy form: scale.count: 2-8 → Count.Min=2, Count.Max=8.
+		// Pointer form is unset; synthesis falls through to the Count
+		// branch and emits Min=2, Max=8.
+		aa.On("Status", "rack1-app1", "app").Return("Running", "r1234567", nil).Once()
+		ms, err = p.AppManifestService("app1", "legacy")
+		require.NoError(t, err)
+		require.Equal(t, "legacy", ms.Name)
+		require.Empty(t, ms.Environment)
+		require.NotNil(t, ms.Scale)
+		require.NotNil(t, ms.Scale.Min)
+		require.Equal(t, 2, *ms.Scale.Min)
+		require.NotNil(t, ms.Scale.Max)
+		require.Equal(t, 8, *ms.Scale.Max)
+
+		// Neither env nor scale block: ApplyDefaults still sets Count={1,1};
+		// Environment is the empty manifest.Environment which JSON-omitempty
+		// drops on the wire.
+		aa.On("Status", "rack1-app1", "app").Return("Running", "r1234567", nil).Once()
+		ms, err = p.AppManifestService("app1", "unset")
+		require.NoError(t, err)
+		require.Equal(t, "unset", ms.Name)
+		require.Empty(t, ms.Environment)
+		require.NotNil(t, ms.Scale)
+		require.NotNil(t, ms.Scale.Min)
+		require.Equal(t, 1, *ms.Scale.Min)
+		require.NotNil(t, ms.Scale.Max)
+		require.Equal(t, 1, *ms.Scale.Max)
+	})
+}
+
+// TestAppManifestService_ServiceMissing — the release manifest does not
+// declare a service named `ghost`. The provider must return an error
+// containing "not found in manifest" so the caller can render an
+// appropriate 4xx-friendly message.
+func TestAppManifestService_ServiceMissing(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		aa, _ := p.Atom.(*atom.MockInterface)
+		kk, _ := p.Cluster.(*fake.Clientset)
+
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		require.NoError(t, releaseCreate(p.Convox, "rack1-app1", "r1234567", "manifest-service"))
+
+		aa.On("Status", "rack1-app1", "app").Return("Running", "r1234567", nil).Once()
+
+		_, err := p.AppManifestService("app1", "ghost")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "not found in manifest")
+	})
+}
+
+// TestAppManifestService_NoRelease — common.AppManifest fails when the app
+// has no current release (Atom.Status returns ""). The provider must
+// propagate the error rather than panicking or returning a partial
+// response.
+func TestAppManifestService_NoRelease(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		aa, _ := p.Atom.(*atom.MockInterface)
+		kk, _ := p.Cluster.(*fake.Clientset)
+
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		aa.On("Status", "rack1-app1", "app").Return("Running", "", nil).Once()
+
+		_, err := p.AppManifestService("app1", "api")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "no release for app")
+	})
+}
+
+// TestAppManifestService_AppMissing — AppGet returns NotFound when the
+// namespace doesn't exist; common.AppManifest propagates the error.
+func TestAppManifestService_AppMissing(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		_, err := p.AppManifestService("nope", "api")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "app not found: nope")
+	})
+}
+
 func appCreate(c kubernetes.Interface, rack, name string) error {
 	_, err := c.CoreV1().Namespaces().Create(
 		context.TODO(),

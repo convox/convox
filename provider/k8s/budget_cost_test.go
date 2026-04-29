@@ -153,6 +153,98 @@ func TestNodeInstanceType_PriorityOrder(t *testing.T) {
 	assert.Equal(t, "", k8s.NodeInstanceTypeForTest(n3))
 }
 
+// nodeWithLabelsAndAnnotations builds a *v1.Node fixture for capacity-type
+// tests so the helper can be exercised across the dual-signal precedence
+// surface (Karpenter label, ANG annotation, both, neither).
+func nodeWithLabelsAndAnnotations(labels, annotations map[string]string) *v1.Node {
+	return &v1.Node{
+		ObjectMeta: am.ObjectMeta{
+			Labels:      labels,
+			Annotations: annotations,
+		},
+	}
+}
+
+func TestNodeCapacityType_DualSignal(t *testing.T) {
+	cases := []struct {
+		name     string
+		node     *v1.Node
+		expected string
+	}{
+		{
+			name:     "Karpenter_spot_label",
+			node:     nodeWithLabelsAndAnnotations(map[string]string{"karpenter.sh/capacity-type": "spot"}, nil),
+			expected: "spot",
+		},
+		{
+			name:     "Karpenter_on_demand_label",
+			node:     nodeWithLabelsAndAnnotations(map[string]string{"karpenter.sh/capacity-type": "on-demand"}, nil),
+			expected: "on-demand",
+		},
+		{
+			name:     "Karpenter_uppercase_label_normalized_via_ToLower",
+			node:     nodeWithLabelsAndAnnotations(map[string]string{"karpenter.sh/capacity-type": "SPOT"}, nil),
+			expected: "spot",
+		},
+		{
+			name:     "ANG_spot_annotation_uppercase",
+			node:     nodeWithLabelsAndAnnotations(nil, map[string]string{"eks.amazonaws.com/capacityType": "SPOT"}),
+			expected: "spot",
+		},
+		{
+			name:     "ANG_on_demand_annotation_underscore_form",
+			node:     nodeWithLabelsAndAnnotations(nil, map[string]string{"eks.amazonaws.com/capacityType": "ON_DEMAND"}),
+			expected: "on-demand",
+		},
+		{
+			name:     "ANG_on_demand_annotation_hyphen_form",
+			node:     nodeWithLabelsAndAnnotations(nil, map[string]string{"eks.amazonaws.com/capacityType": "on-demand"}),
+			expected: "on-demand",
+		},
+		{
+			name:     "ANG_mixed_case_normalized_via_ToLower",
+			node:     nodeWithLabelsAndAnnotations(nil, map[string]string{"eks.amazonaws.com/capacityType": "Spot"}),
+			expected: "spot",
+		},
+		{
+			name: "Karpenter_label_takes_priority_over_ANG_annotation",
+			node: nodeWithLabelsAndAnnotations(
+				map[string]string{"karpenter.sh/capacity-type": "spot"},
+				map[string]string{"eks.amazonaws.com/capacityType": "ON_DEMAND"}),
+			expected: "spot",
+		},
+		{
+			name: "Unknown_label_value_falls_through_to_annotation",
+			node: nodeWithLabelsAndAnnotations(
+				map[string]string{"karpenter.sh/capacity-type": "weird-value"},
+				map[string]string{"eks.amazonaws.com/capacityType": "SPOT"}),
+			expected: "spot",
+		},
+		{
+			name:     "No_labels_no_annotations_returns_empty",
+			node:     &v1.Node{},
+			expected: "",
+		},
+		{
+			name:     "Empty_label_value_returns_empty",
+			node:     nodeWithLabelsAndAnnotations(map[string]string{"karpenter.sh/capacity-type": ""}, nil),
+			expected: "",
+		},
+		{
+			name:     "Nil_node_returns_empty",
+			node:     nil,
+			expected: "",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := k8s.NodeCapacityTypeForTest(c.node)
+			assert.Equal(t, c.expected, got)
+		})
+	}
+}
+
 func TestSanitizeAckBy(t *testing.T) {
 	// Printable passes through.
 	assert.Equal(t, "nick@convox.com", k8s.SanitizeAckByForTest("nick@convox.com"))

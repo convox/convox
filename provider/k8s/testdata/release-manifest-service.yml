@@ -1,0 +1,25 @@
+build: build1
+created: 20200101.000000.000000000
+env:
+  RELEASE_FOO: bar
+manifest:
+  services:
+    api:
+      build: .
+      port: 5000
+      environment:
+        - LOG_LEVEL=info
+        - DEBUG=false
+      scale:
+        min: 1
+        max: 5
+    worker:
+      build: .
+      environment:
+        - WORKER_QUEUE=default
+    legacy:
+      build: .
+      scale:
+        count: 2-8
+    unset:
+      build: .

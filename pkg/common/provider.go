@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/convox/convox/pkg/manifest"
@@ -17,6 +18,30 @@ import (
 var (
 	ProviderWaitDuration = 5 * time.Second
 )
+
+// safeWriter wraps an io.Writer with a mutex to make Write calls goroutine-safe.
+// Used inside WaitForAppWithLogsContext and WaitForRackWithLogs to coordinate
+// the streamer goroutine and the calling goroutine that share the caller's
+// writer. bytes.Buffer in tests is not goroutine-safe; *os.File on Windows is
+// not guaranteed atomic for concurrent writes; POSIX *os.File is only atomic
+// up to PIPE_BUF.
+type safeWriter struct {
+	mu sync.Mutex
+	w  io.Writer
+}
+
+func (s *safeWriter) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.w.Write(p)
+}
+
+// streamerExitedHookForTest, when non-nil, is invoked at the end of the
+// streamer goroutine inside the wait-with-logs helpers. It is the test hook
+// referenced by provider_race_test.go to assert the streamer-exit-before-
+// helper-return invariant. Production binaries leave this nil and the call
+// is skipped. See export_test.go for the test-side accessor.
+var streamerExitedHookForTest func()
 
 func AppEnvironment(p structs.Provider, app string) (structs.Environment, error) {
 	rs, err := ReleaseLatest(p, app)
@@ -115,7 +140,11 @@ func StreamAppLogs(ctx context.Context, p structs.Provider, w io.Writer, app str
 
 		copySystemLogs(ctx, w, r)
 
-		time.Sleep(1 * time.Second)
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(1 * time.Second):
+		}
 	}
 }
 
@@ -134,7 +163,11 @@ func StreamSystemLogs(ctx context.Context, p structs.Provider, w io.Writer) {
 
 		copySystemLogs(ctx, w, r)
 
-		time.Sleep(1 * time.Second)
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(1 * time.Second):
+		}
 	}
 }
 
@@ -187,13 +220,21 @@ func WaitForAppWithLogs(p structs.Provider, w io.Writer, app string) error {
 }
 
 func WaitForAppWithLogsContext(ctx context.Context, p structs.Provider, w io.Writer, app string) error {
-	go StreamAppLogs(ctx, p, w, app)
+	sw := &safeWriter{w: w}
+	streamCtx, streamCancel := context.WithCancel(ctx)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		if streamerExitedHookForTest != nil {
+			defer streamerExitedHookForTest()
+		}
+		StreamAppLogs(streamCtx, p, sw, app)
+	}()
 
-	if err := WaitForAppRunningContext(ctx, p, app); err != nil {
-		return err
-	}
-
-	return nil
+	err := WaitForAppRunningContext(ctx, p, app)
+	streamCancel()
+	<-done
+	return err
 }
 
 func WaitForProcessRunning(p structs.Provider, w io.Writer, app, pid string) error {
@@ -224,13 +265,21 @@ func WaitForRackWithLogs(p structs.Provider, w io.Writer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go StreamSystemLogs(ctx, p, w)
+	sw := &safeWriter{w: w}
+	streamCtx, streamCancel := context.WithCancel(ctx)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		if streamerExitedHookForTest != nil {
+			defer streamerExitedHookForTest()
+		}
+		StreamSystemLogs(streamCtx, p, sw)
+	}()
 
-	if err := WaitForRackRunning(p, w); err != nil {
-		return err
-	}
-
-	return nil
+	err := WaitForRackRunning(p, w)
+	streamCancel()
+	<-done
+	return err
 }
 
 func copySystemLogs(ctx context.Context, w io.Writer, r io.Reader) {

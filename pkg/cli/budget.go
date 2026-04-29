@@ -204,72 +204,110 @@ func BudgetSet(rack sdk.Interface, c *stdcli.Context) error {
 	app := c.Arg(0)
 
 	capStr := c.String("monthly-cap")
-	if capStr == "" {
-		return fmt.Errorf("--monthly-cap is required")
-	}
-	capVal, err := strconv.ParseFloat(capStr, 64)
-	if err != nil {
-		return fmt.Errorf("--monthly-cap must be a number: %v", err)
-	}
-	if math.IsNaN(capVal) || math.IsInf(capVal, 0) {
-		return fmt.Errorf("--monthly-cap must be a finite number")
-	}
-
-	alertAt := c.Int("alert-at")
-	if alertAt == 0 {
-		alertAt = int(structs.BudgetDefaultAlertThresholdPercent)
-	}
-
-	action := c.String("at-cap-action")
-	if action == "" {
-		action = structs.BudgetDefaultAtCapAction
-	}
-	switch action {
-	case structs.BudgetAtCapActionAlertOnly, structs.BudgetAtCapActionBlockNewDeploys, structs.BudgetAtCapActionAutoShutdown:
-	default:
-		return fmt.Errorf("--at-cap-action must be %q, %q, or %q",
-			structs.BudgetAtCapActionAlertOnly, structs.BudgetAtCapActionBlockNewDeploys, structs.BudgetAtCapActionAutoShutdown)
-	}
-
-	if action == structs.BudgetAtCapActionAutoShutdown {
-		// F-10 fix: tell customers exactly where atCapWebhookUrl lives in
-		// the manifest so the warning is actionable.
-		fmt.Fprintln(c.Writer().Stderr,
-			"WARNING: auto-shutdown will scale eligible services to 0 replicas at cap breach. "+
-				"Verify your atCapWebhookUrl is configured (configured in convox.yml budget block) and your team is paged on :armed events. "+
-				"Run 'convox budget simulate-shutdown <app>' to validate the configuration.")
-		fmt.Fprintln(c.Writer().Stderr,
-			"NOTE: services with KEDA idleReplicaCount: 0 will return to KEDA-driven scaling at restore "+
-				"and may scale back to 0 if triggers are inactive. This is the customer's KEDA config working as intended.")
-	}
-
 	paStr := c.String("pricing-adjustment")
-	if paStr == "" {
-		paStr = strconv.FormatFloat(structs.BudgetDefaultPricingAdjustment, 'f', -1, 64)
-	}
-	paVal, err := strconv.ParseFloat(paStr, 64)
-	if err != nil {
-		return fmt.Errorf("--pricing-adjustment must be a number: %v", err)
-	}
-	if math.IsNaN(paVal) || math.IsInf(paVal, 0) {
-		return fmt.Errorf("--pricing-adjustment must be a finite number")
+	alertAtRaw := c.Int("alert-at")
+	actionRaw := c.String("at-cap-action")
+
+	// Pricing-adjustment-only carve-out (item 22): the rack-side F6 carve-out
+	// at provider/k8s/budget_accumulator.go:requireCostTrackingForBudget
+	// short-circuits to nil when AppBudgetOptions has only PricingAdjustment
+	// populated — pricing-adjustment is treated as a non-enforcement-bearing
+	// pricing multiplier, so the rack accepts it on a cost_tracking_enable=false
+	// rack. Allow the CLI to reach that path by accepting either --monthly-cap
+	// or --pricing-adjustment alone. Any enforcement-bearing flag (--alert-at
+	// or --at-cap-action) still requires --monthly-cap so customers don't
+	// declare enforcement without a cap. Order matters: the enforcement-
+	// without-cap check runs first so a customer who passes only --alert-at
+	// or --at-cap-action gets the targeted error citing the missing cap,
+	// not the generic "--monthly-cap or --pricing-adjustment is required"
+	// (which would be misleading — pricing-adjustment is not a substitute
+	// for cap when enforcement flags are present).
+	if capStr == "" {
+		if alertAtRaw != 0 || actionRaw != "" {
+			return fmt.Errorf("--alert-at and --at-cap-action require --monthly-cap")
+		}
+		if paStr == "" {
+			return fmt.Errorf("--monthly-cap or --pricing-adjustment is required")
+		}
 	}
 
-	opts := structs.AppBudgetOptions{
-		MonthlyCapUsd:         &capStr,
-		AlertThresholdPercent: &alertAt,
-		AtCapAction:           &action,
-		PricingAdjustment:     &paStr,
+	var capVal float64
+	if capStr != "" {
+		var err error
+		capVal, err = strconv.ParseFloat(capStr, 64)
+		if err != nil {
+			return fmt.Errorf("--monthly-cap must be a number: %v", err)
+		}
+		if math.IsNaN(capVal) || math.IsInf(capVal, 0) {
+			return fmt.Errorf("--monthly-cap must be a finite number")
+		}
+	}
+
+	opts := structs.AppBudgetOptions{}
+
+	if capStr != "" {
+		alertAt := alertAtRaw
+		if alertAt == 0 {
+			alertAt = int(structs.BudgetDefaultAlertThresholdPercent)
+		}
+
+		action := actionRaw
+		if action == "" {
+			action = structs.BudgetDefaultAtCapAction
+		}
+		switch action {
+		case structs.BudgetAtCapActionAlertOnly, structs.BudgetAtCapActionBlockNewDeploys, structs.BudgetAtCapActionAutoShutdown:
+		default:
+			return fmt.Errorf("--at-cap-action must be %q, %q, or %q",
+				structs.BudgetAtCapActionAlertOnly, structs.BudgetAtCapActionBlockNewDeploys, structs.BudgetAtCapActionAutoShutdown)
+		}
+
+		if action == structs.BudgetAtCapActionAutoShutdown {
+			// F-10 fix: tell customers exactly where atCapWebhookUrl lives in
+			// the manifest so the warning is actionable.
+			fmt.Fprintln(c.Writer().Stderr,
+				"WARNING: auto-shutdown will scale eligible services to 0 replicas at cap breach. "+
+					"Verify your atCapWebhookUrl is configured (configured in convox.yml budget block) and your team is paged on :armed events. "+
+					"Run 'convox budget simulate-shutdown <app>' to validate the configuration.")
+			fmt.Fprintln(c.Writer().Stderr,
+				"NOTE: services with KEDA idleReplicaCount: 0 will return to KEDA-driven scaling at restore "+
+					"and may scale back to 0 if triggers are inactive. This is the customer's KEDA config working as intended.")
+		}
+
+		opts.MonthlyCapUsd = &capStr
+		opts.AlertThresholdPercent = &alertAt
+		opts.AtCapAction = &action
+	}
+
+	// Item 22 partial-merge semantics: only populate PricingAdjustment when
+	// the customer explicitly passes --pricing-adjustment. Omission is
+	// honored as "preserve prior persisted value" by applyBudgetOptions
+	// (provider/k8s/budget_accumulator.go:618-646), matching BudgetCapRaise
+	// and eliminating the prior foot-gun where omitting --pricing-adjustment
+	// silently reset the multiplier to BudgetDefaultPricingAdjustment.
+	if paStr != "" {
+		paVal, err := strconv.ParseFloat(paStr, 64)
+		if err != nil {
+			return fmt.Errorf("--pricing-adjustment must be a number: %v", err)
+		}
+		if math.IsNaN(paVal) || math.IsInf(paVal, 0) {
+			return fmt.Errorf("--pricing-adjustment must be a finite number")
+		}
+		opts.PricingAdjustment = &paStr
 	}
 
 	// UX R1 #13: warn (non-blocking) when the new cap would already be at or
 	// below the current month-to-date spend. The cap is still set; the next
 	// accumulator tick will trip immediately. Best-effort — a transient
-	// AppCost lookup error MUST NOT block budget set.
-	if cost, err := rack.AppCost(app); err == nil && cost != nil && cost.SpendUsd > capVal {
-		fmt.Fprintf(c.Writer().Stderr,
-			"WARNING: --monthly-cap=$%.2f is below current month-to-date spend $%.2f. Cap will trip immediately on next accumulator tick.\n",
-			capVal, cost.SpendUsd)
+	// AppCost lookup error MUST NOT block budget set. Suppressed on the
+	// pricing-adjustment-only path (capStr=="") because no cap is being
+	// declared — emitting the warning would cite a misleading $0.00 cap.
+	if capStr != "" {
+		if cost, err := rack.AppCost(app); err == nil && cost != nil && cost.SpendUsd > capVal {
+			fmt.Fprintf(c.Writer().Stderr,
+				"WARNING: --monthly-cap=$%.2f is below current month-to-date spend $%.2f. Cap will trip immediately on next accumulator tick.\n",
+				capVal, cost.SpendUsd)
+		}
 	}
 
 	ackBy := c.String("ack-by")
@@ -398,12 +436,20 @@ func BudgetSimulateShutdown(rack sdk.Interface, c *stdcli.Context) error {
 	fmt.Fprintf(w, "  recovery_mode: %s\n", res.RecoveryMode)
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Eligibility:")
+	sawEmDash := false
 	for _, e := range res.Eligibility {
 		if e.Eligible {
-			fmt.Fprintf(w, "  %s: ELIGIBLE -- replicas=%d, cost=$%.2f/hr\n", e.Service, e.Replicas, e.CostUsdPerHour)
+			rate, dashed := formatRateUsdPerHour(e.CostUsdPerHour)
+			if dashed {
+				sawEmDash = true
+			}
+			fmt.Fprintf(w, "  %s: ELIGIBLE -- replicas=%d, cost=%s/hr\n", e.Service, e.Replicas, rate)
 		} else {
 			fmt.Fprintf(w, "  %s: EXEMPT (%s)\n", e.Service, e.Reason)
 		}
+	}
+	if sawEmDash {
+		fmt.Fprintln(w, lowSpendFootnote)
 	}
 	fmt.Fprintln(w)
 	fmt.Fprintf(w, "Shutdown order (%s):\n", res.ShutdownOrder)

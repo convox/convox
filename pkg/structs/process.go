@@ -21,6 +21,33 @@ type Process struct {
 	Release  string    `json:"release"`
 	Started  time.Time `json:"started"`
 	Status   string    `json:"status"`
+
+	// Service identifier — the convox.yml service name this pod was launched
+	// for. Populated at the same processFromPod site that populates Name; both
+	// read pd.ObjectMeta.Labels["service"]. Exists alongside Name (rather than
+	// replacing it) because Name is wire-stable across older rack versions and
+	// CLI column code paths; Service is an explicit named field that the
+	// Console3 service-detail chart filter (`process.service === serviceName`)
+	// compiles against without overloading Name's existing role. Empty string
+	// when the pod has no service label (system pods, build pods); BC-safe
+	// value-typed — an absent JSON key decodes as "" which Console3 / Vue
+	// treat as "no service identity," same path as system / build pods.
+	Service string `json:"service,omitempty"`
+
+	// GPU runtime telemetry, populated by provider/k8s/prometheus.go when
+	// prometheus_url is set on the rack AND the pod has a GPU resource
+	// request. Pointer-typed so:
+	//   nil          → "no data populator wired" (3.24.5 rack on the wire,
+	//                   prometheus_url unset, DCGM not deployed, query
+	//                   timeout, pod has no GPU);
+	//   non-nil zero → "real reading at idle on a real GPU";
+	//   non-nil > 0  → "real reading under load."
+	// Mixed-skew safe: 3.24.5 rack returning JSON without these keys decodes
+	// as nil on the 3.24.6 client side; resolver returns GraphQL null, Vue
+	// renders "no data" empty state.
+	GpuUtil     *float64 `json:"gpu-util,omitempty"`      // percent 0-100
+	GpuMemUsed  *int64   `json:"gpu-mem-used,omitempty"`  // bytes (DCGM_FI_DEV_FB_USED)
+	GpuMemTotal *int64   `json:"gpu-mem-total,omitempty"` // bytes (DCGM_FI_DEV_FB_TOTAL)
 }
 
 type Processes []Process

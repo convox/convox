@@ -361,6 +361,11 @@ func (p *Provider) Start() error {
 	go sc.Run()
 	go atomCtrl.Run()
 
+	// Cold-start recovery + 5-min GC tick for in-flight release-promote
+	// watcher annotations. Survives api-pod restart by re-launching
+	// watchers from the namespace-annotation source of truth.
+	go p.runReleasePromoteWatchGC(p.ctx)
+
 	go common.Tick(1*time.Hour, p.heartbeat)
 
 	go p.startApiProxy()

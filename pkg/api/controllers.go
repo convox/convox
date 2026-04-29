@@ -196,6 +196,22 @@ func (s *Server) AppLogs(c *stdapi.Context) error {
 	return nil
 }
 
+func (s *Server) AppManifestService(c *stdapi.Context) error {
+	if err := s.hook("AppManifestServiceValidate", c); err != nil {
+		return err
+	}
+
+	app := c.Var("app")
+	service := c.Var("service")
+
+	v, err := s.provider(c).WithContext(contextFrom(c)).AppManifestService(app, service)
+	if err != nil {
+		return err
+	}
+
+	return c.RenderJSON(v)
+}
+
 func (s *Server) AppMetrics(c *stdapi.Context) error {
 	if err := s.hook("AppMetricsValidate", c); err != nil {
 		return err

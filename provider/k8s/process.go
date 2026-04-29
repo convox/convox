@@ -994,6 +994,7 @@ func (p *Provider) processFromPod(pd ac.Pod) (*structs.Process, error) {
 		Image:    c.Image,
 		Instance: pd.Spec.NodeName,
 		Name:     pd.ObjectMeta.Labels["service"],
+		Service:  pd.ObjectMeta.Labels["service"],
 		Ports:    ports,
 		Release:  pd.ObjectMeta.Labels["release"],
 		Started:  pd.CreationTimestamp.Time,
