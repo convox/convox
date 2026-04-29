@@ -33,6 +33,8 @@ The following parameters are available for configuring your Convox rack on Amazo
 | [efs_csi_driver_enable](/configuration/rack-parameters/aws/efs_csi_driver_enable)   | Enables the EFS CSI driver to use AWS EFS volumes.                       |
 | [fluentd_disable](/configuration/rack-parameters/aws/fluentd_disable)               | Disables Fluentd installation in the rack.                               |
 | [fluentd_memory](/configuration/rack-parameters/aws/fluentd_memory)                 | Configures memory allocation for the Fluentd log collector DaemonSet.    |
+| [gpu_observability_chart_version](/configuration/rack-parameters/aws/gpu_observability_chart_version) | Pins the Helm chart version for the NVIDIA DCGM exporter.    |
+| [gpu_observability_enable](/configuration/rack-parameters/aws/gpu_observability_enable) | Installs the NVIDIA DCGM exporter DaemonSet to emit GPU telemetry to Prometheus. |
 | [gpu_tag_enable](/configuration/rack-parameters/aws/gpu_tag_enable)                 | Enables GPU tagging.                                                     |
 | [high_availability](/configuration/rack-parameters/aws/high_availability)           | Ensures high availability by creating a cluster with redundant resources. |
 | [idle_timeout](/configuration/rack-parameters/aws/idle_timeout)                     | Specifies the idle timeout value for the Rack Load Balancer.             |

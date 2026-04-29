@@ -426,6 +426,16 @@ variable "nvidia_device_time_slicing_replicas" {
   default = 0
 }
 
+variable "gpu_observability_enable" {
+  type    = bool
+  default = false
+}
+
+variable "gpu_observability_chart_version" {
+  type    = string
+  default = "4.8.1"
+}
+
 variable "pdb_default_min_available_percentage" {
   type    = number
   default = 50

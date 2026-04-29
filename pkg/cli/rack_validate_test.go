@@ -488,3 +488,70 @@ func TestValidateAndMutateParams_BoolParam_KarpenterEnabledStillUsesExistingVali
 		t.Errorf("karpenter_enabled error %q should be the existing validator's message, not the bool sweep's", err.Error())
 	}
 }
+
+// TestValidateRackParams_GPUObservability_RequiresDevicePlugin asserts the
+// cross-validation rule that gpu_observability_enable=true requires
+// nvidia_device_plugin_enable=true (set in the same call OR already enabled
+// on the rack). The DCGM exporter relies on the device plugin's
+// /var/lib/kubelet/pod-resources/ socket for pod->GPU attribution; without
+// the plugin the exporter pods schedule but emit metrics with no pod labels.
+func TestValidateRackParams_GPUObservability_RequiresDevicePlugin(t *testing.T) {
+	t.Run("rejects when device plugin is off and not being enabled", func(t *testing.T) {
+		params := map[string]string{"gpu_observability_enable": "true"}
+		current := map[string]string{"nvidia_device_plugin_enable": "false"}
+		err := validateAndMutateParams(params, "aws", current, false)
+		if err == nil {
+			t.Fatal("gpu_observability_enable=true with device plugin off should be rejected")
+		}
+		if !strings.Contains(err.Error(), "requires nvidia_device_plugin_enable=true") {
+			t.Errorf("error %q should mention 'requires nvidia_device_plugin_enable=true'", err.Error())
+		}
+	})
+
+	t.Run("accepts when same-call enables both", func(t *testing.T) {
+		params := map[string]string{
+			"gpu_observability_enable":    "true",
+			"nvidia_device_plugin_enable": "true",
+		}
+		err := validateAndMutateParams(params, "aws", map[string]string{}, false)
+		if err != nil {
+			t.Errorf("setting both gpu_observability_enable=true and nvidia_device_plugin_enable=true in one call should pass, got: %v", err)
+		}
+	})
+
+	t.Run("accepts when device plugin already enabled on rack", func(t *testing.T) {
+		params := map[string]string{"gpu_observability_enable": "true"}
+		current := map[string]string{"nvidia_device_plugin_enable": "true"}
+		err := validateAndMutateParams(params, "aws", current, false)
+		if err != nil {
+			t.Errorf("gpu_observability_enable=true with device plugin already on should pass, got: %v", err)
+		}
+	})
+
+	t.Run("accepts when gpu_observability_enable already true (idempotent re-set)", func(t *testing.T) {
+		// If the rack already has gpu_observability_enable=true, re-setting it does
+		// not re-validate the device-plugin precondition (the rule fires only on
+		// transitions from off to on; staying on is a no-op for this rule).
+		params := map[string]string{"gpu_observability_enable": "true"}
+		current := map[string]string{
+			"gpu_observability_enable":    "true",
+			"nvidia_device_plugin_enable": "false",
+		}
+		err := validateAndMutateParams(params, "aws", current, false)
+		if err != nil {
+			t.Errorf("re-setting gpu_observability_enable=true while already enabled should not re-trigger the precondition, got: %v", err)
+		}
+	})
+
+	t.Run("disable gpu_observability_enable does not require device plugin", func(t *testing.T) {
+		params := map[string]string{"gpu_observability_enable": "false"}
+		current := map[string]string{
+			"gpu_observability_enable":    "true",
+			"nvidia_device_plugin_enable": "false",
+		}
+		err := validateAndMutateParams(params, "aws", current, false)
+		if err != nil {
+			t.Errorf("setting gpu_observability_enable=false should pass regardless of device plugin state, got: %v", err)
+		}
+	})
+}

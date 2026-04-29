@@ -310,6 +310,86 @@ func TestReconcileVarsWithModule_PrometheusUrlInModuleVarsTf_AcceptedAsValid(t *
 	assert.NotContains(t, string(data), `variable "prometheus-url"`, "kebab-cased TF variable name must NOT appear (snake_case convention)")
 }
 
+// TestReconcileVarsWithModule_StripsGPUObservability_OnDowngrade is the
+// fingertrap exercise for the Plan-5 GPU observability variables. The
+// downgraded module declares neither gpu_observability_enable nor
+// gpu_observability_chart_version; vars.json carries non-empty values for
+// both. Reconcile must (a) remove BOTH keys from vars.json, (b) emit a
+// NOTICE on stderr that names BOTH keys, (c) leave name/release untouched.
+func TestReconcileVarsWithModule_StripsGPUObservability_OnDowngrade(t *testing.T) {
+	settings := t.TempDir()
+	f := reconcileFixture{
+		rackName:   "test-rack",
+		moduleVars: []string{"name", "release"}, // 3.24.5-like: no gpu_observability_*
+		vars: map[string]string{
+			"name":                            "test-rack",
+			"release":                         "3.24.5",
+			"gpu_observability_enable":        "true",
+			"gpu_observability_chart_version": "4.8.1",
+		},
+	}
+	f.setup(t, settings)
+
+	capturedStderr := withTerraform(t, settings, f.rackName, func(t *testing.T, tf Terraform) {
+		require.NoError(t, tf.reconcileVarsWithModule("3.24.5"))
+	})
+
+	got := f.readVars(t)
+	_, hasEnable := got["gpu_observability_enable"]
+	_, hasVersion := got["gpu_observability_chart_version"]
+	assert.False(t, hasEnable, "gpu_observability_enable should be removed on downgrade")
+	assert.False(t, hasVersion, "gpu_observability_chart_version should be removed on downgrade")
+	assert.Equal(t, "test-rack", got["name"], "name must be preserved")
+	assert.Equal(t, "3.24.5", got["release"], "release must be preserved")
+	assert.Contains(t, capturedStderr, "removing parameters not supported by version 3.24.5", "NOTICE must be emitted")
+	assert.Contains(t, capturedStderr, "gpu_observability_enable", "NOTICE must name gpu_observability_enable")
+	assert.Contains(t, capturedStderr, "gpu_observability_chart_version", "NOTICE must name gpu_observability_chart_version")
+}
+
+// TestReconcileVarsWithModule_GPUObservabilityAcceptedByCurrentVersion
+// exercises the happy path: when the target module declares both
+// gpu_observability_* variables, reconcile preserves them.
+func TestReconcileVarsWithModule_GPUObservabilityAcceptedByCurrentVersion(t *testing.T) {
+	settings := t.TempDir()
+	f := reconcileFixture{
+		rackName:   "test-rack",
+		moduleVars: []string{"name", "release", "gpu_observability_enable", "gpu_observability_chart_version"},
+		vars: map[string]string{
+			"name":                            "test-rack",
+			"release":                         "3.24.6",
+			"gpu_observability_enable":        "true",
+			"gpu_observability_chart_version": "4.8.1",
+		},
+	}
+	f.setup(t, settings)
+
+	capturedStderr := withTerraform(t, settings, f.rackName, func(t *testing.T, tf Terraform) {
+		require.NoError(t, tf.reconcileVarsWithModule("3.24.6"))
+	})
+
+	got := f.readVars(t)
+	assert.Equal(t, "true", got["gpu_observability_enable"], "gpu_observability_enable preserved when accepted")
+	assert.Equal(t, "4.8.1", got["gpu_observability_chart_version"], "gpu_observability_chart_version preserved when accepted")
+	assert.NotContains(t, capturedStderr, "removing parameters", "no NOTICE expected when nothing is removed")
+}
+
+// TestReconcileVarsWithModule_GPUObservabilityInModuleVarsTf_AcceptedAsValid
+// pins the convention: the actual on-disk system/aws/variables.tf must
+// declare both gpu_observability_* variables so that reconcileVarsWithModule
+// will accept them when the target version is 3.24.6+. This is a
+// fixture-free guard against accidental removal of the variable declarations
+// in future refactors (mirrors the prometheus_url variant above).
+func TestReconcileVarsWithModule_GPUObservabilityInModuleVarsTf_AcceptedAsValid(t *testing.T) {
+	repoRoot, err := repoRootFromTestFile()
+	require.NoError(t, err)
+	varsPath := filepath.Join(repoRoot, "terraform", "system", "aws", "variables.tf")
+
+	data, err := os.ReadFile(varsPath)
+	require.NoError(t, err, "must be able to read terraform/system/aws/variables.tf")
+	assert.Contains(t, string(data), `variable "gpu_observability_enable"`, "system/aws/variables.tf must declare gpu_observability_enable")
+	assert.Contains(t, string(data), `variable "gpu_observability_chart_version"`, "system/aws/variables.tf must declare gpu_observability_chart_version")
+}
+
 // repoRootFromTestFile walks up from the test's working directory to the
 // repo root by looking for go.mod. Used to read real on-disk module sources
 // to verify conventions.

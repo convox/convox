@@ -139,6 +139,8 @@ module "cluster" {
   terraform_update_timeout            = var.terraform_update_timeout
   nvidia_device_plugin_enable         = var.nvidia_device_plugin_enable
   nvidia_device_time_slicing_replicas = var.nvidia_device_time_slicing_replicas
+  gpu_observability_enable            = var.gpu_observability_enable
+  gpu_observability_chart_version     = var.gpu_observability_chart_version
   private                             = var.private
   private_subnets_ids                 = compact(split(",", var.private_subnets_ids))
   public_subnets_ids                  = compact(split(",", var.public_subnets_ids))
