@@ -216,6 +216,63 @@ func TestAppLogsError(t *testing.T) {
 	})
 }
 
+// TestAppManifestService — item 24 happy path. The new
+// /apps/{app}/manifest/services/{service} route delegates to the provider
+// and renders the ManifestService transport struct as JSON.
+func TestAppManifestService(t *testing.T) {
+	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
+		min, max := 1, 5
+		ms := &structs.ManifestService{
+			Name:        "api",
+			Environment: []string{"FOO=bar", "BAZ=qux"},
+			Scale:       &structs.ManifestServiceScale{Min: &min, Max: &max},
+		}
+		p.On("AppManifestService", "app1", "api").Return(ms, nil)
+
+		var got structs.ManifestService
+		err := c.Get("/apps/app1/manifest/services/api", stdsdk.RequestOptions{}, &got)
+		require.NoError(t, err)
+		require.Equal(t, "api", got.Name)
+		require.Equal(t, []string{"FOO=bar", "BAZ=qux"}, got.Environment)
+		require.NotNil(t, got.Scale)
+		require.NotNil(t, got.Scale.Min)
+		require.Equal(t, 1, *got.Scale.Min)
+		require.NotNil(t, got.Scale.Max)
+		require.Equal(t, 5, *got.Scale.Max)
+	})
+}
+
+// TestAppManifestServiceNoScale — service with no scale block returns
+// Scale=nil; omitempty drops the field from JSON.
+func TestAppManifestServiceNoScale(t *testing.T) {
+	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
+		ms := &structs.ManifestService{
+			Name:        "worker",
+			Environment: []string{"WORKER_QUEUE=default"},
+		}
+		p.On("AppManifestService", "app1", "worker").Return(ms, nil)
+
+		var got structs.ManifestService
+		err := c.Get("/apps/app1/manifest/services/worker", stdsdk.RequestOptions{}, &got)
+		require.NoError(t, err)
+		require.Equal(t, "worker", got.Name)
+		require.Equal(t, []string{"WORKER_QUEUE=default"}, got.Environment)
+		require.Nil(t, got.Scale)
+	})
+}
+
+// TestAppManifestServiceError — provider error propagates as HTTP error to
+// caller. Covers both the service-not-found case (the only synthetic path
+// in the K8s provider implementation) and any underlying common.AppManifest
+// failure (no release, AppGet error).
+func TestAppManifestServiceError(t *testing.T) {
+	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
+		p.On("AppManifestService", "app1", "missing").Return(nil, fmt.Errorf("service missing not found in manifest for app app1"))
+		err := c.Get("/apps/app1/manifest/services/missing", stdsdk.RequestOptions{}, nil)
+		require.EqualError(t, err, "service missing not found in manifest for app app1")
+	})
+}
+
 func TestAppUpdate(t *testing.T) {
 	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
 		opts := structs.AppUpdateOptions{

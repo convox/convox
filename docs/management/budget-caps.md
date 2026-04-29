@@ -190,6 +190,67 @@ The breakdown surfaces in `convox cost`, the Console budget panel, and the
 auto-shutdown `shutdownOrder: largest-cost` ranking. With per-service spends
 populated, `largest-cost` shuts down the most expensive service first.
 
+## Audit actor resolution <a id="audit-actor"></a>
+
+Every budget mutation emits an audit event with an `actor` field identifying
+who triggered the action. From 3.24.6 onward the rack honors a
+`ack_by` form parameter passed alongside the request body and records its
+value as the persisted `actor` instead of the basic-auth literal
+`rack-password`. When the form parameter is absent or empty, the rack falls
+back to the JWT-derived caller (typically `rack-password` for basic-auth
+clients or the system user for internal callers), preserving pre-3.24.6
+behavior.
+
+The four mutation handlers wired through this resolution are:
+
+| Handler | Event | Where the resolved actor lands |
+|---|---|---|
+| `AppBudgetSet` | `app:budget:set` | `cfg.LastCapMutationBy` + `data.actor` |
+| `AppBudgetClear` | `app:budget:clear` | `data.actor` (also `prev_ack_by` metadata) |
+| `AppBudgetReset` | `app:budget:reset` | `state.CircuitBreakerAckBy` + `data.actor` |
+| `AppBudgetDismissRecovery` | `app:budget:dismiss-recovery` | `data.actor` |
+
+Console (3.24.6+) populates the form parameter with the authenticated
+admin's email so the rack records `actor=alice@example.com` rather than
+the generic `rack-password` sentinel. When the form parameter is honored,
+the rack's HTTP response carries an RFC 8594 deprecation triple:
+
+```
+Deprecation: true
+Sunset: Thu, 01 Oct 2026 00:00:00 GMT
+Link: <https://docs.convox.com/migration/ack-by-derivation>; rel="deprecation"; type="text/html"
+```
+
+The `Sunset` date is a courtesy hint per [RFC 8594](https://www.rfc-editor.org/rfc/rfc8594) —
+it signals migration intent, not a binding deadline. The rack will continue
+to accept the form parameter beyond that date and may extend or remove the
+header in any future release. Migration to per-user JWT Bearer authentication
+is targeted for a 3.25.0+ release; until that ships, the form parameter is
+both the bridge and the migration target. Operator scripts and webhook
+receivers ingesting these events should follow the actor-shape guidance in
+[ack_by Derivation](/migration/ack-by-derivation).
+
+### Backward compatibility
+
+Pre-3.24.6 racks (3.24.5 and earlier) silently ignore the deprecation-signal
+layer — they predate the `Sunset`/`Deprecation`/`Link` triple — but still
+record the form-parameter value into audit events. Mixed-version deployments
+are safe in both directions:
+
+- **3.24.6 Console + 3.24.5 rack** — actor still records the authenticated
+  email; no rack-emitted deprecation triple. Console self-mirrors the same
+  triple onto its own GraphQL response so the GUI sunset banner still
+  renders.
+- **3.24.5 Console + 3.24.6 rack** — actor records the older Console's
+  literal fallback (`console`); rack still emits the deprecation triple,
+  but the older Vue layer has no banner widget and silently drops the
+  headers.
+- **Older Console / no form parameter** — rack falls back to the JWT-derived
+  caller with pre-3.24.6 audit behavior; no deprecation triple is emitted.
+
+The deprecation triple is gated on a non-empty form parameter; an empty or
+absent parameter never produces deprecation headers.
+
 ## Troubleshooting <a id="troubleshooting"></a>
 
 ### Breaker re-trips immediately after reset
@@ -228,5 +289,6 @@ path post-`:fired`.
 - [convox.yml budget block](/configuration/convox-yml#budget) — schema reference
 - [budget CLI reference](/reference/cli/budget) — command reference
 - [Webhooks](/configuration/webhooks) — receiving cap events at an external URL
+- [ack_by Derivation](/migration/ack-by-derivation) — actor field semantics for audit-event receivers
 
 > **Note on terminology:** this page covers the **per-app monthly spend cap** introduced in 3.24.6. The unrelated **Karpenter disruption budget** (cluster-level node-scheduling primitive — see [Karpenter](/configuration/scaling/karpenter)) shares the word "budget" but is a separate concept with no shared configuration surface.

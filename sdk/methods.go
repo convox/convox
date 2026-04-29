@@ -160,6 +160,16 @@ func (c *Client) ServiceLogs(app, name string, opts structs.LogsOptions) (io.Rea
 	return v, err
 }
 
+func (c *Client) AppManifestService(app, service string) (*structs.ManifestService, error) {
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+
+	var v structs.ManifestService
+	if err := c.Get(fmt.Sprintf("/apps/%s/manifest/services/%s", app, service), ro, &v); err != nil {
+		return nil, err
+	}
+	return &v, nil
+}
+
 func (c *Client) AppMetrics(name string, opts structs.MetricsOptions) (structs.Metrics, error) {
 	var err error
 

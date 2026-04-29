@@ -141,19 +141,53 @@ func filterCostRange(cost *structs.AppCost, start, end time.Time) *structs.AppCo
 	return cost
 }
 
+// lowSpendFootnote is the disambiguation footnote printed below tables /
+// eligibility lists when at least one row's per-service rate fell below
+// the formatRateUsdPerHour threshold and rendered as an em-dash. The
+// wording is shared by `convox cost` and `convox budget simulate-shutdown`
+// so customer documentation only describes one phrase.
+const lowSpendFootnote = "— : low-spend rates rounded to —; see Spend column for actual cost."
+
+// formatRateUsdPerHour formats a per-service rate (in USD, either total
+// spend or per-hour rate). Rates strictly below $0.001 — the population
+// that rounds to "$0.00" with %.2f — render as "—" (em-dash, U+2014) so
+// customers do not interpret a rounded $0.00 as "this service is free."
+// Exact zero renders as "$0.00" because that is a real, customer-meaningful
+// state (no rate accumulated yet). Returns (formatted, usedEmDash) so the
+// caller can decide whether to print the disambiguation footnote. The
+// helper is shared by cost.go (per-service spend column) and budget.go
+// (simulate-shutdown eligibility list).
+func formatRateUsdPerHour(rate float64) (string, bool) {
+	if rate > 0 && rate < 0.001 {
+		return "—", true
+	}
+	return fmt.Sprintf("$%.2f", rate), false
+}
+
 func printCostBreakdown(c *stdcli.Context, cost *structs.AppCost) error {
 	t := c.Table("SERVICE", "GPU-HOURS", "CPU-HOURS", "MEM-GB-HOURS", "INSTANCE", "SPEND-USD")
+	sawEmDash := false
 	for _, line := range cost.Breakdown {
+		spend, dashed := formatRateUsdPerHour(line.SpendUsd)
+		if dashed {
+			sawEmDash = true
+		}
 		t.AddRow(
 			line.Service,
 			fmt.Sprintf("%.2f", line.GpuHours),
 			fmt.Sprintf("%.2f", line.CpuHours),
 			fmt.Sprintf("%.2f", line.MemGbHours),
 			line.InstanceType,
-			fmt.Sprintf("$%.2f", line.SpendUsd),
+			spend,
 		)
 	}
-	return t.Print()
+	if err := t.Print(); err != nil {
+		return err
+	}
+	if sawEmDash {
+		fmt.Fprintln(c.Writer(), lowSpendFootnote)
+	}
+	return nil
 }
 
 func printCostAggregate(c *stdcli.Context, appName string, cost *structs.AppCost) error {

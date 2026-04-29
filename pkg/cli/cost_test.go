@@ -314,3 +314,148 @@ func TestCost_Subcommand_IntegrationViaRegister(t *testing.T) {
 		require.NotEmpty(t, res.Stdout)
 	})
 }
+
+// --- Item 21 (absorbed into Wave 1.5) — em-dash low-rate format -----------
+//
+// Locks the format-helper threshold and the disambiguation footnote
+// behavior shared by `convox cost` and `convox budget simulate-shutdown`.
+// Helper is internal to the cli package — exercised here through the
+// public `cost` command so we keep the assertions tied to customer-visible
+// output rather than the helper signature.
+
+// C1: TestCostFormat_LowRateAsEmDash — well below 0.001 threshold renders
+// as em-dash; SPEND-USD column shows "—" instead of "$0.00".
+func TestCostFormat_LowRateAsEmDash(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		fx := fxAppCost()
+		fx.Breakdown = []structs.ServiceCostLine{{
+			Service:      "web",
+			GpuHours:     0,
+			CpuHours:     1,
+			MemGbHours:   1,
+			InstanceType: "m5.large",
+			SpendUsd:     0.0005,
+		}}
+		i.On("AppCost", "app1").Return(fx, nil)
+
+		res, err := testExecute(e, "cost -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+		require.Contains(t, res.Stdout, "—", "low-rate row must render em-dash, not $0.00")
+		require.NotContains(t, strings.SplitN(res.Stdout, "\n", 2)[1], "$0.00",
+			"the data row must NOT render $0.00 alongside the em-dash") // header line excluded
+	})
+}
+
+// C2: TestCostFormat_NormalRateNoEmDash — non-trivial spend renders as
+// $X.XX with no footnote.
+func TestCostFormat_NormalRateNoEmDash(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		fx := fxAppCost()
+		fx.Breakdown = []structs.ServiceCostLine{{
+			Service:      "web",
+			InstanceType: "m5.large",
+			SpendUsd:     1.23,
+		}}
+		i.On("AppCost", "app1").Return(fx, nil)
+
+		res, err := testExecute(e, "cost -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+		require.Contains(t, res.Stdout, "$1.23")
+		require.NotContains(t, res.Stdout, "low-spend rates rounded to —",
+			"footnote must NOT appear when no row used em-dash")
+	})
+}
+
+// C3: TestCostFormat_ExplicitZero — exact zero stays as "$0.00", NOT
+// em-dashed (zero is meaningful customer state).
+func TestCostFormat_ExplicitZero(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		fx := fxAppCost()
+		fx.Breakdown = []structs.ServiceCostLine{{
+			Service:      "web",
+			InstanceType: "m5.large",
+			SpendUsd:     0.0,
+		}}
+		i.On("AppCost", "app1").Return(fx, nil)
+
+		res, err := testExecute(e, "cost -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+		require.Contains(t, res.Stdout, "$0.00",
+			"explicit zero must render as $0.00 — em-dash threshold is strictly greater than 0")
+		require.NotContains(t, res.Stdout, "low-spend rates rounded to —",
+			"footnote must NOT appear for exact-zero rows")
+	})
+}
+
+// C4: TestCostFormat_ThresholdBoundary — at-threshold (0.001 exactly)
+// renders as $0.00 because the helper uses strict less-than.
+func TestCostFormat_ThresholdBoundary(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		fx := fxAppCost()
+		fx.Breakdown = []structs.ServiceCostLine{{
+			Service:      "web",
+			InstanceType: "m5.large",
+			SpendUsd:     0.001,
+		}}
+		i.On("AppCost", "app1").Return(fx, nil)
+
+		res, err := testExecute(e, "cost -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+		require.Contains(t, res.Stdout, "$0.00",
+			"threshold boundary 0.001 must render as $0.00 — strictly less-than gating")
+		require.NotContains(t, res.Stdout, "low-spend rates rounded to —",
+			"footnote must NOT appear at the threshold")
+	})
+}
+
+// C5: TestPrintCostBreakdown_FootnoteAppearsWhenAnyEmDash — multi-row
+// table where one row triggers em-dash AND a normal row coexists.
+// Footnote prints once below the table.
+func TestPrintCostBreakdown_FootnoteAppearsWhenAnyEmDash(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		fx := fxAppCost()
+		fx.Breakdown = []structs.ServiceCostLine{
+			{Service: "web", InstanceType: "m5.large", SpendUsd: 0.0005},
+			{Service: "trainer", InstanceType: "p3.2xlarge", SpendUsd: 2.50},
+		}
+		i.On("AppCost", "app1").Return(fx, nil)
+
+		res, err := testExecute(e, "cost -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+		require.Contains(t, res.Stdout, "—",
+			"low-rate row must render em-dash")
+		require.Contains(t, res.Stdout, "$2.50",
+			"normal-rate row must render as cents")
+		require.Contains(t, res.Stdout, "low-spend rates rounded to —",
+			"footnote must appear when any row used the em-dash")
+		// Footnote should appear AFTER the table (below the trainer row).
+		require.Less(t, strings.Index(res.Stdout, "$2.50"), strings.Index(res.Stdout, "low-spend rates"),
+			"footnote must appear below the table rows")
+	})
+}
+
+// C6: TestPrintCostBreakdown_NoFootnoteWhenNoEmDash — regression guard
+// against spurious footnote noise on tables with all rows above threshold.
+func TestPrintCostBreakdown_NoFootnoteWhenNoEmDash(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		fx := fxAppCost()
+		fx.Breakdown = []structs.ServiceCostLine{
+			{Service: "web", InstanceType: "m5.large", SpendUsd: 0.05},
+			{Service: "trainer", InstanceType: "p3.2xlarge", SpendUsd: 2.50},
+		}
+		i.On("AppCost", "app1").Return(fx, nil)
+
+		res, err := testExecute(e, "cost -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+		require.NotContains(t, res.Stdout, "low-spend rates rounded to —",
+			"footnote must NOT appear when no row used em-dash")
+		require.Contains(t, res.Stdout, "$0.05")
+		require.Contains(t, res.Stdout, "$2.50")
+	})
+}

@@ -177,6 +177,7 @@ var managedParams = map[string]bool{
 // migration rules.
 var boolParams = map[string]bool{
 	"azure_files_enable":              true,
+	"build_disable_convox_resolver":   true,
 	"build_node_enabled":              true,
 	"buildkit_host_path_cache_enable": true,
 	"convox_domain_tls_cert_disable":  true,

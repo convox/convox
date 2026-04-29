@@ -53,6 +53,28 @@ func deprecationSunsetDate() string {
 //
 // app is passed in for the stdout audit-trail line (helps operators
 // correlate override events to the affected app).
+//
+// Back-compat firewall: the form-param `ack_by` path predates the 3.24.6
+// deprecation infrastructure and is rack-internal API surface. Per the
+// 3-year AWS-deprecation horizon for rack-internal surfaces, the rack
+// will continue to honor the form-param path indefinitely — Console3
+// callers (Console3 holds the rack password and is today's primary
+// driver of this path) MUST keep sending the form-param so older racks
+// (3.24.5 and below, which lack the `Authorization: Bearer` accept path)
+// remain audit-truthful through a long mixed-version window. Dropping
+// the form-param requires a coordinated 3.25.0+ rack-side Bearer accept
+// path AND a multi-year Console3 dual-path send window. See the spec at
+// gpu-ai-inference-vertical/phase-i-post-rc4/phase-b/items/item-04-actor-resolution-verify.md
+// for the full deferred-3.25.0 enumeration. The Sunset header date
+// emitted below is a courtesy hint per RFC 8594; it is not a binding
+// contract and may be extended or removed in a future release.
+//
+// Empty-string degenerate case: if a caller sends form-param `ack_by`
+// empty (e.g. via a future Console3 regression where authenticatedUser
+// returns nil and the fallback is dropped), formValue returns "" and the
+// `if rawAckBy == ""` short-circuit below returns the JWT-derived actor
+// unchanged with no deprecation triple emitted — pre-3.24.6 audit
+// behavior, no panic, no half-deprecation signal.
 func resolveAckByOverride(c *stdapi.Context, app string) string {
 	derived, _ := c.Get(structs.ConvoxJwtUserParam).(string)
 	derived = strings.TrimSpace(derived)

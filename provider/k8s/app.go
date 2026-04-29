@@ -222,6 +222,56 @@ func (p *Provider) AppLogs(name string, opts structs.LogsOptions) (io.ReadCloser
 	return nil, errors.WithStack(structs.ErrNotImplemented("unimplemented"))
 }
 
+func (p *Provider) AppManifestService(app, service string) (*structs.ManifestService, error) {
+	m, _, err := common.AppManifest(p, app)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	// Index iteration avoids per-iteration value-copy of the large
+	// manifest.Service struct (gocritic rangeValCopy).
+	for i := range m.Services {
+		s := &m.Services[i]
+		if s.Name != service {
+			continue
+		}
+
+		ms := &structs.ManifestService{
+			Name:        s.Name,
+			Environment: []string(s.Environment),
+		}
+
+		// Synthesize min/max from BOTH yaml forms.
+		// New form: scale.min / scale.max (top-level *int pointers).
+		// Legacy form: scale.count: N or N-M (Count.Min / Count.Max ints).
+		// Pointer wins when set; otherwise fall back to non-zero Count fields.
+		scale := &structs.ManifestServiceScale{}
+		switch {
+		case s.Scale.Min != nil:
+			scale.Min = s.Scale.Min
+		case s.Scale.Count.Min != 0:
+			min := s.Scale.Count.Min
+			scale.Min = &min
+		}
+		switch {
+		case s.Scale.Max != nil:
+			scale.Max = s.Scale.Max
+		case s.Scale.Count.Max != 0:
+			max := s.Scale.Count.Max
+			scale.Max = &max
+		}
+		// Emit Scale only when at least one bound is populated (else nil
+		// → omitempty drops the field from the response).
+		if scale.Min != nil || scale.Max != nil {
+			ms.Scale = scale
+		}
+
+		return ms, nil
+	}
+
+	return nil, errors.WithStack(fmt.Errorf("service %s not found in manifest for app %s", service, app))
+}
+
 func (p *Provider) AppMetrics(name string, opts structs.MetricsOptions) (structs.Metrics, error) {
 	return nil, errors.WithStack(structs.ErrNotImplemented("unimplemented"))
 }

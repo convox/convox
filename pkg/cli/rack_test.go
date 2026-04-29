@@ -16,6 +16,7 @@ import (
 	"github.com/convox/convox/pkg/rack"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/stdcli"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -1335,5 +1336,59 @@ func TestRackParamsGroupFilterUnknownErrors(t *testing.T) {
 		require.Contains(t, res.Stderr, "group 'notarealgroup' not found")
 		require.Contains(t, res.Stderr, "nlb")
 		require.Contains(t, res.Stderr, "network")
+	})
+}
+
+// TestRackParamsSet_BuildDisableConvoxResolver_BoolValidation locks the
+// build_disable_convox_resolver entry in boolParams (Wave 1.5 mini-patch
+// item 12 rack-side companion). The TF variable
+// terraform/system/aws/variables.tf declares this as type=bool, so the
+// CLI must reject non-bool values rather than silently coercing them
+// through a confusing TF type-error rollback. boolParams is unexported,
+// so this test exercises it through the customer-visible "rack params set"
+// surface — invalid bool produces the canonical error string.
+func TestRackParamsSet_BuildDisableConvoxResolver_BoolValidation(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
+	t.Run("rejects non-bool value", func(t *testing.T) {
+		testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+			i.On("SystemGet").Return(fxSystem(), nil)
+
+			res, err := testExecute(e, "rack params set build_disable_convox_resolver=garbage", nil)
+			require.NoError(t, err)
+			require.Equal(t, 1, res.Code)
+			require.Contains(t, res.Stderr, "build_disable_convox_resolver")
+			require.Contains(t, res.Stderr, "must be 'true' or 'false'")
+			// SystemUpdate must NOT be called when validation fails.
+			i.AssertNotCalled(t, "SystemUpdate", mock.Anything)
+		})
+	})
+
+	t.Run("accepts true", func(t *testing.T) {
+		testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+			i.On("SystemGet").Return(fxSystem(), nil)
+			i.On("SystemUpdate", structs.SystemUpdateOptions{
+				Parameters: map[string]string{"build_disable_convox_resolver": "true"},
+			}).Return(nil)
+
+			res, err := testExecute(e, "rack params set build_disable_convox_resolver=true", nil)
+			require.NoError(t, err)
+			require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+		})
+	})
+
+	t.Run("accepts false", func(t *testing.T) {
+		testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+			i.On("SystemGet").Return(fxSystem(), nil)
+			i.On("SystemUpdate", structs.SystemUpdateOptions{
+				Parameters: map[string]string{"build_disable_convox_resolver": "false"},
+			}).Return(nil)
+
+			res, err := testExecute(e, "rack params set build_disable_convox_resolver=false", nil)
+			require.NoError(t, err)
+			require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+		})
 	})
 }

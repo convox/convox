@@ -14,6 +14,18 @@ type Service struct {
 	Max       *int                   `json:"max,omitempty"`
 	ColdStart *bool                  `json:"cold-start,omitempty"`
 	Autoscale *ServiceAutoscaleState `json:"autoscale,omitempty"`
+
+	// GPU runtime telemetry aggregated as average across pods in the service.
+	// Populated by provider/k8s/prometheus.go via a single batched Prom query
+	// per ServiceList call. Pointer-typed so:
+	//   nil          → "no data populator wired" (mixed-skew, prom unreachable,
+	//                   no service has GPU > 0);
+	//   non-nil zero → "real averaged reading at idle";
+	//   non-nil > 0  → "real averaged reading under load."
+	// See Process struct doc for the full state-disambiguation rationale.
+	GpuUtilAvg     *float64 `json:"gpu-util-avg,omitempty"`
+	GpuMemUsedAvg  *int64   `json:"gpu-mem-used-avg,omitempty"`
+	GpuMemTotalAvg *int64   `json:"gpu-mem-total-avg,omitempty"`
 }
 
 // ServiceAutoscaleState is the wire shape returned by the rack for the

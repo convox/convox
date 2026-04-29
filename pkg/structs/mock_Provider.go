@@ -413,6 +413,29 @@ func (_m *MockProvider) AppLogs(name string, opts LogsOptions) (io.ReadCloser, e
 	return r0, r1
 }
 
+// AppManifestService provides a mock function with given fields: app, service
+func (_m *MockProvider) AppManifestService(app string, service string) (*ManifestService, error) {
+	ret := _m.Called(app, service)
+
+	var r0 *ManifestService
+	if rf, ok := ret.Get(0).(func(string, string) *ManifestService); ok {
+		r0 = rf(app, service)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ManifestService)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, string) error); ok {
+		r1 = rf(app, service)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // AppMetrics provides a mock function with given fields: name, opts
 func (_m *MockProvider) AppMetrics(name string, opts MetricsOptions) (Metrics, error) {
 	ret := _m.Called(name, opts)

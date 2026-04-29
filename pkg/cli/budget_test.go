@@ -61,11 +61,14 @@ func TestBudgetShowNoBudget(t *testing.T) {
 func TestBudgetSetDefaults(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("AppCost", "app1").Return(&structs.AppCost{App: "app1", SpendUsd: 0.0}, nil)
+		// Item 22 partial-merge semantics: omitted --pricing-adjustment leaves
+		// PricingAdjustment nil so the rack-side applyBudgetOptions preserves
+		// the prior persisted value (matches BudgetCapRaise).
 		i.On("AppBudgetSet", "app1", mock.MatchedBy(func(opts structs.AppBudgetOptions) bool {
 			return opts.MonthlyCapUsd != nil && *opts.MonthlyCapUsd == "500" &&
 				opts.AlertThresholdPercent != nil && *opts.AlertThresholdPercent == 80 &&
 				opts.AtCapAction != nil && *opts.AtCapAction == "alert-only" &&
-				opts.PricingAdjustment != nil && *opts.PricingAdjustment == "1"
+				opts.PricingAdjustment == nil
 		}), mock.AnythingOfType("string")).Return(nil)
 
 		res, err := testExecute(e, "budget set app1 --monthly-cap 500", nil)
@@ -850,4 +853,361 @@ func TestBudgetShow_BannerHonorsNotifyBeforeMinutes(t *testing.T) {
 			})
 		})
 	}
+}
+
+// --- Item 22 — `convox budget set --pricing-adjustment-only` carve-out ----
+//
+// Locks the rack-side F6 carve-out CLI integration: the rack accepts a
+// PricingAdjustment-only AppBudgetOptions on a cost_tracking_enable=false
+// rack (provider/k8s/budget_accumulator.go:requireCostTrackingForBudget).
+// These tests assert the CLI reaches that path and partial-merge semantics
+// hold across the standard and carve-out paths.
+
+// Test 1: TestBudgetSet_MonthlyCapOnly_Accepted — standard path with
+// --monthly-cap alone; PricingAdjustment must be nil (partial-merge).
+func TestBudgetSet_MonthlyCapOnly_Accepted(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppCost", "app1").Return(&structs.AppCost{App: "app1", SpendUsd: 0.0}, nil)
+		i.On("AppBudgetSet", "app1", mock.MatchedBy(func(opts structs.AppBudgetOptions) bool {
+			return opts.MonthlyCapUsd != nil && *opts.MonthlyCapUsd == "500" &&
+				opts.AlertThresholdPercent != nil && *opts.AlertThresholdPercent == 80 &&
+				opts.AtCapAction != nil && *opts.AtCapAction == "alert-only" &&
+				opts.PricingAdjustment == nil
+		}), mock.AnythingOfType("string")).Return(nil)
+
+		res, err := testExecute(e, "budget set app1 --monthly-cap 500", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+		require.Contains(t, res.Stdout, "OK")
+	})
+}
+
+// Test 2: TestBudgetSet_PricingAdjustmentOnly_Accepted — carve-out path.
+// Only PricingAdjustment is sent. AppCost MUST NOT be called (MTD warning
+// suppressed when no cap is being set).
+func TestBudgetSet_PricingAdjustmentOnly_Accepted(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		// AppCost intentionally not mocked — the test fails if it is called.
+		i.On("AppBudgetSet", "app1", mock.MatchedBy(func(opts structs.AppBudgetOptions) bool {
+			return opts.MonthlyCapUsd == nil &&
+				opts.AlertThresholdPercent == nil &&
+				opts.AtCapAction == nil &&
+				opts.PricingAdjustment != nil && *opts.PricingAdjustment == "0.7"
+		}), mock.AnythingOfType("string")).Return(nil)
+
+		res, err := testExecute(e, "budget set app1 --pricing-adjustment 0.7", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+		require.Contains(t, res.Stdout, "OK")
+		i.AssertNotCalled(t, "AppCost", "app1")
+	})
+}
+
+// Test 3: TestBudgetSet_CapAndPricingAdjustment_Accepted — combined path.
+// All four fields populate.
+func TestBudgetSet_CapAndPricingAdjustment_Accepted(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppCost", "app1").Return(&structs.AppCost{App: "app1", SpendUsd: 0.0}, nil)
+		i.On("AppBudgetSet", "app1", mock.MatchedBy(func(opts structs.AppBudgetOptions) bool {
+			return opts.MonthlyCapUsd != nil && *opts.MonthlyCapUsd == "500" &&
+				opts.AlertThresholdPercent != nil && *opts.AlertThresholdPercent == 80 &&
+				opts.AtCapAction != nil && *opts.AtCapAction == "alert-only" &&
+				opts.PricingAdjustment != nil && *opts.PricingAdjustment == "0.7"
+		}), mock.AnythingOfType("string")).Return(nil)
+
+		res, err := testExecute(e, "budget set app1 --monthly-cap 500 --pricing-adjustment 0.7", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+		require.Contains(t, res.Stdout, "OK")
+	})
+}
+
+// Test 4: TestBudgetSet_AlertAtWithoutCap_Rejected — enforcement-bearing
+// flag without --monthly-cap. AppBudgetSet MUST NOT be called (behavioral
+// load-bearing assertion); stderr substring is supplementary signal.
+func TestBudgetSet_AlertAtWithoutCap_Rejected(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		res, err := testExecute(e, "budget set app1 --alert-at 80", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		require.Contains(t, res.Stderr, "--alert-at")
+		require.Contains(t, res.Stderr, "require --monthly-cap")
+		i.AssertNotCalled(t, "AppBudgetSet", mock.Anything, mock.Anything, mock.Anything)
+	})
+}
+
+// Test 5: TestBudgetSet_AtCapActionWithoutCap_Rejected — sibling to test 4.
+func TestBudgetSet_AtCapActionWithoutCap_Rejected(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		res, err := testExecute(e, "budget set app1 --at-cap-action auto-shutdown", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		require.Contains(t, res.Stderr, "--at-cap-action")
+		require.Contains(t, res.Stderr, "require --monthly-cap")
+		i.AssertNotCalled(t, "AppBudgetSet", mock.Anything, mock.Anything, mock.Anything)
+	})
+}
+
+// Test 6: TestBudgetSet_AlertAtWithPricingAdjustment_Rejected — enforcement
+// flag combined with pricing-only attempt. Still requires --monthly-cap.
+func TestBudgetSet_AlertAtWithPricingAdjustment_Rejected(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		res, err := testExecute(e, "budget set app1 --pricing-adjustment 0.7 --alert-at 80", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		require.Contains(t, res.Stderr, "require --monthly-cap")
+		i.AssertNotCalled(t, "AppBudgetSet", mock.Anything, mock.Anything, mock.Anything)
+	})
+}
+
+// Test 7: TestBudgetSet_NoFlags_Rejected — no flags at all. Asserts the
+// canonical phrase substring. R3 corrections — single canonical-phrase
+// substring match (wording-stable for OQ-1 alternatives).
+func TestBudgetSet_NoFlags_Rejected(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		res, err := testExecute(e, "budget set app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		require.Contains(t, res.Stderr, "--monthly-cap or --pricing-adjustment is required")
+		i.AssertNotCalled(t, "AppBudgetSet", mock.Anything, mock.Anything, mock.Anything)
+	})
+}
+
+// Test 8: TestBudgetSet_PricingAdjustmentOnly_RejectsNonNumeric — the
+// carve-out path still validates pricing input.
+func TestBudgetSet_PricingAdjustmentOnly_RejectsNonNumeric(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		res, err := testExecute(e, "budget set app1 --pricing-adjustment xyz", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		require.Contains(t, res.Stderr, "must be a number")
+		i.AssertNotCalled(t, "AppBudgetSet", mock.Anything, mock.Anything, mock.Anything)
+	})
+}
+
+// Test 9: TestBudgetSet_PricingAdjustmentOnly_Idempotent — running the
+// same command twice produces the same partial-merge AppBudgetOptions
+// shape both times.
+func TestBudgetSet_PricingAdjustmentOnly_Idempotent(t *testing.T) {
+	matchPricingOnly := func(opts structs.AppBudgetOptions) bool {
+		return opts.MonthlyCapUsd == nil &&
+			opts.AlertThresholdPercent == nil &&
+			opts.AtCapAction == nil &&
+			opts.PricingAdjustment != nil && *opts.PricingAdjustment == "0.7"
+	}
+
+	for iter := 0; iter < 2; iter++ {
+		testClient(t, func(e *cli.Engine, mockI *mocksdk.Interface) {
+			mockI.On("AppBudgetSet", "app1", mock.MatchedBy(matchPricingOnly), mock.AnythingOfType("string")).Return(nil)
+
+			res, err := testExecute(e, "budget set app1 --pricing-adjustment 0.7", nil)
+			require.NoError(t, err)
+			require.Equal(t, 0, res.Code, "iteration %d stderr: %s", iter, res.Stderr)
+			require.Contains(t, res.Stdout, "OK", "iteration %d", iter)
+		})
+	}
+}
+
+// Test 10: TestBudgetSet_PricingAdjustmentOnly_OmissionPreservesPrior —
+// THE central new behavior. Asserts via mock.MatchedBy that
+// AppBudgetOptions{MonthlyCapUsd: nil, ..., PricingAdjustment: &"0.7"}
+// reaches the SDK (rack-side merge then preserves prior MonthlyCapUsd).
+func TestBudgetSet_PricingAdjustmentOnly_OmissionPreservesPrior(t *testing.T) {
+	t.Run("first set populates cap and pricing", func(t *testing.T) {
+		testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+			i.On("AppCost", "app1").Return(&structs.AppCost{App: "app1", SpendUsd: 0.0}, nil)
+			i.On("AppBudgetSet", "app1", mock.MatchedBy(func(opts structs.AppBudgetOptions) bool {
+				return opts.MonthlyCapUsd != nil && *opts.MonthlyCapUsd == "500" &&
+					opts.PricingAdjustment != nil && *opts.PricingAdjustment == "0.5"
+			}), mock.AnythingOfType("string")).Return(nil)
+
+			res, err := testExecute(e, "budget set app1 --monthly-cap 500 --pricing-adjustment 0.5", nil)
+			require.NoError(t, err)
+			require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+		})
+	})
+
+	t.Run("second set with only pricing leaves cap pointer nil", func(t *testing.T) {
+		testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+			i.On("AppBudgetSet", "app1", mock.MatchedBy(func(opts structs.AppBudgetOptions) bool {
+				return opts.MonthlyCapUsd == nil &&
+					opts.AlertThresholdPercent == nil &&
+					opts.AtCapAction == nil &&
+					opts.PricingAdjustment != nil && *opts.PricingAdjustment == "0.7"
+			}), mock.AnythingOfType("string")).Return(nil)
+
+			res, err := testExecute(e, "budget set app1 --pricing-adjustment 0.7", nil)
+			require.NoError(t, err)
+			require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+			i.AssertNotCalled(t, "AppCost", "app1")
+		})
+	})
+}
+
+// Test 11: TestBudgetSet_PricingAdjustmentExplicitZero_Accepted — explicit
+// zero is a valid value (clears the multiplier).
+func TestBudgetSet_PricingAdjustmentExplicitZero_Accepted(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppBudgetSet", "app1", mock.MatchedBy(func(opts structs.AppBudgetOptions) bool {
+			return opts.MonthlyCapUsd == nil &&
+				opts.PricingAdjustment != nil && *opts.PricingAdjustment == "0"
+		}), mock.AnythingOfType("string")).Return(nil)
+
+		res, err := testExecute(e, "budget set app1 --pricing-adjustment 0", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+		require.Contains(t, res.Stdout, "OK")
+	})
+}
+
+// Test 12: TestBudgetSet_PricingAdjustmentInfNaN_Rejected — Inf and NaN
+// rejected on the carve-out path (validation isn't accidentally skipped).
+func TestBudgetSet_PricingAdjustmentInfNaN_Rejected(t *testing.T) {
+	for _, tv := range []string{"Inf", "NaN"} {
+		t.Run(tv, func(t *testing.T) {
+			testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+				res, err := testExecute(e, "budget set app1 --pricing-adjustment "+tv, nil)
+				require.NoError(t, err)
+				require.Equal(t, 1, res.Code)
+				require.Contains(t, res.Stderr, "must be a finite number")
+				i.AssertNotCalled(t, "AppBudgetSet", mock.Anything, mock.Anything, mock.Anything)
+			})
+		})
+	}
+}
+
+// Test 13: TestBudgetSet_PricingAdjustmentOnly_NoMtdWarning — confirms
+// §3.3 MTD-warning suppression. AppCost is NOT called and the misleading
+// "--monthly-cap=$0.00" warning is NOT emitted on the pricing-only path.
+func TestBudgetSet_PricingAdjustmentOnly_NoMtdWarning(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		// AppCost intentionally not mocked.
+		i.On("AppBudgetSet", "app1", mock.AnythingOfType("structs.AppBudgetOptions"), mock.AnythingOfType("string")).Return(nil)
+
+		res, err := testExecute(e, "budget set app1 --pricing-adjustment 0.7", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+		require.NotContains(t, res.Stderr, "--monthly-cap=$0.00",
+			"MTD warning must NOT cite a misleading $0.00 cap on the pricing-only path")
+		require.NotContains(t, res.Stderr, "below current month-to-date spend",
+			"MTD warning must be suppressed entirely on the pricing-only path")
+		i.AssertNotCalled(t, "AppCost", "app1")
+	})
+}
+
+// Test 14: TestBudgetSet_NoFlags_ErrorMessageContainsMonthlyCapSubstring —
+// pins the customer-CI substring contract per §7 BC row at line 320.
+// Distinct from test 7: even if the canonical phrase is reworded, the
+// literal substring "--monthly-cap" must survive so grep-based CI scripts
+// still match.
+func TestBudgetSet_NoFlags_ErrorMessageContainsMonthlyCapSubstring(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		res, err := testExecute(e, "budget set app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		// Substring guard — wording can change around it, but the literal
+		// "--monthly-cap" must always be present (CI grep contract).
+		require.Contains(t, res.Stderr, "--monthly-cap")
+	})
+}
+
+// --- Item 21 (absorbed) — `simulate-shutdown` em-dash low-rate format ----
+
+// B1: TestSimulateShutdown_LowRateAsEmDash — Eligible row whose rate
+// rounds to <$0.001/hr renders as em-dash with the disambiguation footnote.
+func TestSimulateShutdown_LowRateAsEmDash(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		now := time.Date(2026, 4, 25, 14, 0, 0, 0, time.UTC)
+		i.On("AppBudgetSimulate", "app1").Return(&structs.AppBudgetSimulationResult{
+			App:                          "app1",
+			AtCapAction:                  "auto-shutdown",
+			WebhookUrl:                   "https://hooks.example.com/budget",
+			NotifyBeforeMinutes:          30,
+			ShutdownGracePeriod:          "5m0s",
+			ShutdownOrder:                "largest-cost",
+			RecoveryMode:                 "auto-on-reset",
+			Eligibility:                  []structs.AppBudgetSimulationEligibility{{Service: "web", Eligible: true, Replicas: 1, CostUsdPerHour: 0.0005}},
+			WouldShutDownServices:        []string{"web"},
+			WouldShutDownCount:           1,
+			EstimatedCostSavedUsdPerHour: 0.0005,
+			SimulatedAt:                  now,
+		}, nil)
+
+		res, err := testExecute(e, "budget simulate-shutdown app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+		require.Contains(t, res.Stdout, "cost=—/hr",
+			"low-rate Eligible row must render the em-dash, not $0.00")
+		require.Contains(t, res.Stdout, "low-spend rates rounded to —",
+			"footnote must appear when at least one row used the em-dash")
+	})
+}
+
+// B2: TestSimulateShutdown_NoFootnoteWhenAllAboveThreshold — regression
+// guard against spurious footnote noise when all rows render as cents.
+func TestSimulateShutdown_NoFootnoteWhenAllAboveThreshold(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		now := time.Date(2026, 4, 25, 14, 0, 0, 0, time.UTC)
+		i.On("AppBudgetSimulate", "app1").Return(&structs.AppBudgetSimulationResult{
+			App:                 "app1",
+			AtCapAction:         "auto-shutdown",
+			WebhookUrl:          "https://hooks.example.com/budget",
+			NotifyBeforeMinutes: 30,
+			ShutdownGracePeriod: "5m0s",
+			ShutdownOrder:       "largest-cost",
+			RecoveryMode:        "auto-on-reset",
+			Eligibility: []structs.AppBudgetSimulationEligibility{
+				{Service: "web", Eligible: true, Replicas: 2, CostUsdPerHour: 1.50},
+				{Service: "trainer", Eligible: true, Replicas: 1, CostUsdPerHour: 2.34},
+			},
+			WouldShutDownServices:        []string{"web", "trainer"},
+			WouldShutDownCount:           2,
+			EstimatedCostSavedUsdPerHour: 3.84,
+			SimulatedAt:                  now,
+		}, nil)
+
+		res, err := testExecute(e, "budget simulate-shutdown app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+		require.NotContains(t, res.Stdout, "low-spend rates rounded to —",
+			"footnote must NOT appear when all rows render normally")
+		require.Contains(t, res.Stdout, "cost=$1.50/hr")
+		require.Contains(t, res.Stdout, "cost=$2.34/hr")
+	})
+}
+
+// B3: TestSimulateShutdown_ExemptServicesUnaffected — Exempt rows are
+// unchanged; only Eligible-row rate cells use the em-dash format. Mixed
+// case verifies the dashed flag tracks Eligible rows only.
+func TestSimulateShutdown_ExemptServicesUnaffected(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		now := time.Date(2026, 4, 25, 14, 0, 0, 0, time.UTC)
+		i.On("AppBudgetSimulate", "app1").Return(&structs.AppBudgetSimulationResult{
+			App:                 "app1",
+			AtCapAction:         "auto-shutdown",
+			WebhookUrl:          "https://hooks.example.com/budget",
+			NotifyBeforeMinutes: 30,
+			ShutdownGracePeriod: "5m0s",
+			ShutdownOrder:       "largest-cost",
+			RecoveryMode:        "auto-on-reset",
+			Eligibility: []structs.AppBudgetSimulationEligibility{
+				{Service: "api", Eligible: false, Reason: "in neverAutoShutdown"},
+				{Service: "trainer", Eligible: true, Replicas: 1, CostUsdPerHour: 0.0008},
+			},
+			WouldShutDownServices:        []string{"trainer"},
+			WouldShutDownCount:           1,
+			EstimatedCostSavedUsdPerHour: 0.0008,
+			SimulatedAt:                  now,
+		}, nil)
+
+		res, err := testExecute(e, "budget simulate-shutdown app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+		require.Contains(t, res.Stdout, "api: EXEMPT (in neverAutoShutdown)",
+			"Exempt row format must be unchanged")
+		require.Contains(t, res.Stdout, "trainer: ELIGIBLE -- replicas=1, cost=—/hr",
+			"low-rate Eligible row picks up em-dash")
+		require.Contains(t, res.Stdout, "low-spend rates rounded to —",
+			"footnote appears once due to Eligible row em-dash")
+	})
 }

@@ -279,9 +279,63 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		return errors.WithStack(err)
 	}
 
-	p.EventSend("release:promote", structs.EventSendOptions{Data: map[string]string{"app": app, "id": id}, Status: options.String("start")})
+	// Capture context BEFORE the goroutine launch — the watcher outlives
+	// the request-scoped p.ctx, so it must NOT reference p.ContextActor()
+	// at later points. Mirrors build.go:600-608.
+	capturedActor := p.ContextActor()
+
+	// Read the release-id mirror that p.Apply just wrote, so the watcher
+	// can detect supersession by a NEWER promote. p.Atom.Status() returns
+	// (status, release-id, err); we use the release-id as the watcher's
+	// supersession discriminator and compare to `convox.com/app-release`
+	// (mirrored by the AtomController) on each tick. Fallback to the
+	// inbound `id` parameter if Atom.Status() fails — same value Apply
+	// just wrote, so the version-mismatch check still works correctly.
+	_, atomVer, _ := p.Atom.Status(p.AppNamespace(app), "app")
+	if atomVer == "" {
+		atomVer = id
+	}
+
+	// Persist watch state BEFORE emitting :start. If a fast-fail occurs
+	// between annotation-write and goroutine-launch, the cold-start GC
+	// scan at next api-pod startup recovers it (timeout path).
+	// Annotation-write failures are logged but do NOT block promote
+	// success — the rollout itself proceeded; the customer just doesn't
+	// get a second event.
+	state := structs.ReleasePromoteWatchState{
+		SchemaVersion: 1,
+		ReleaseID:     id,
+		AtomVersion:   atomVer,
+		StartedAt:     time.Now().UTC(),
+		ExpiresAt:     time.Now().UTC().Add(time.Duration(timeout) * time.Second),
+		Actor:         capturedActor,
+	}
+	if err := p.writeReleasePromoteWatchAnnotation(p.ctx, app, &state); err != nil {
+		fmt.Printf("ns=release_watcher at=warn kind=annotation_write app=%s err=%q\n", app, err)
+	}
+
+	// :start emit uses the captured actor (audit-trail consistency with
+	// the future app:promote:completed / app:promote:errored /
+	// app:promote:cancelled events the watcher will emit). The action
+	// name `release:promote` is preserved verbatim — existing prior art
+	// that webhook consumers / audit-log scrapers depend on. New event
+	// types use the canonical app:<resource>:<verb> form.
+	_ = p.EventSend("release:promote", structs.EventSendOptions{
+		Data:   map[string]string{"app": app, "id": id, "actor": capturedActor},
+		Status: options.String("start"),
+	})
 
 	p.FlushStateLog(app)
+
+	// Per-(app, release-id) lock — sync.Map.LoadOrStore is the atomic
+	// check-and-set primitive. If a watcher is already in-flight for
+	// this exact pair, the second promote skips the goroutine launch
+	// (the existing watcher continues; it will see the supersession
+	// via the release annotation mismatch on its next tick).
+	if acquired, release := tryAcquireWatchSlot(app, id); acquired {
+		s := state // own a heap copy so the goroutine doesn't alias
+		go p.runReleasePromoteWatcher(p.ctx, app, &s, release)
+	}
 
 	return nil
 }

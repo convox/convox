@@ -109,6 +109,14 @@ func NodeInstanceTypeForTest(n *v1.Node) string {
 	return nodeInstanceType(n)
 }
 
+// NodeCapacityTypeForTest exposes the dual-signal capacity-type reader for
+// tests that exercise the karpenter.sh/capacity-type label vs
+// eks.amazonaws.com/capacityType annotation precedence + nil-safety.
+// Test-only; production callers use nodeCapacityType directly.
+func NodeCapacityTypeForTest(n *v1.Node) string {
+	return nodeCapacityType(n)
+}
+
 // SanitizeAckByForTest exposes the ack_by audit-string sanitizer for tests.
 // The sanitizer caps length at 256 runes and strips control characters to
 // guard against annotation-size DoS and webhook/log injection. Test-only;
@@ -427,4 +435,88 @@ func AppBudgetLockMapHasForTest(app string) bool {
 // before exercising RemoveAppLock. Test-only.
 func AcquireAppBudgetLockForTest(app string) {
 	_ = appBudgetLock(app)
+}
+
+// RunReleasePromoteWatcherForTest exposes the watcher state machine so unit
+// tests can drive a single watcher goroutine to its terminal emit without
+// going through ReleasePromote's request entry point. The test must seed
+// the namespace's `convox.com/app-status` and `convox.com/app-release`
+// annotations to drive the state transitions. Test-only.
+func RunReleasePromoteWatcherForTest(p *Provider, ctx context.Context, app string, state *structs.ReleasePromoteWatchState) {
+	// Acquire slot (mirror production flow); the watcher's defer releases it.
+	_, release := tryAcquireWatchSlot(app, state.ReleaseID)
+	p.runReleasePromoteWatcher(ctx, app, state, release)
+}
+
+// ScanReleasePromoteAnnotationsForTest exposes the cold-start GC scan so
+// tests can drive recovery scenarios deterministically (single tick;
+// no 15s warmup wait). Test-only.
+func ScanReleasePromoteAnnotationsForTest(p *Provider, ctx context.Context) {
+	p.scanReleasePromoteAnnotations(ctx)
+}
+
+// WriteReleasePromoteWatchAnnotationForTest exposes the writer so tests can
+// seed annotations without going through ReleasePromote. Test-only.
+func WriteReleasePromoteWatchAnnotationForTest(p *Provider, ctx context.Context, app string, state *structs.ReleasePromoteWatchState) error {
+	return p.writeReleasePromoteWatchAnnotation(ctx, app, state)
+}
+
+// DeleteReleasePromoteWatchAnnotationForTest exposes the delete path so
+// tests can clean up between scenarios. Test-only.
+func DeleteReleasePromoteWatchAnnotationForTest(p *Provider, ctx context.Context, app string) error {
+	return p.deleteReleasePromoteWatchAnnotation(ctx, app)
+}
+
+// EmitReleasePromoteResultForTest exposes the emitter so tests can pin
+// the action-name-from-status mapping (success -> app:promote:completed,
+// error -> app:promote:errored, cancelled -> app:promote:cancelled).
+// Test-only.
+func EmitReleasePromoteResultForTest(p *Provider, app string, state *structs.ReleasePromoteWatchState, status, errMsg string) {
+	p.emitReleasePromoteResult(app, state, status, errMsg)
+}
+
+// TryAcquireReleasePromoteWatchSlotForTest exposes the per-(app, release-id)
+// watch-slot acquisition primitive so unit tests can pin the no-double-launch
+// invariant. Test-only.
+func TryAcquireReleasePromoteWatchSlotForTest(app, releaseID string) (bool, func()) {
+	return tryAcquireWatchSlot(app, releaseID)
+}
+
+// ReleasePromoteWatchSlotHeldForTest reports whether a watch slot is
+// currently held for a given (app, release-id) pair. Used to assert
+// per-promote slot teardown after watcher exit. Test-only.
+func ReleasePromoteWatchSlotHeldForTest(app, releaseID string) bool {
+	return releasePromoteWatchSlotHeldForTest(app, releaseID)
+}
+
+// ReleasePromoteWatchPollIntervalForTest exposes the polling cadence
+// constant so tests can choose timing windows aligned with production.
+// Test-only.
+func ReleasePromoteWatchPollIntervalForTest() time.Duration {
+	return releasePromoteWatchPollInterval
+}
+
+// ReleasePromoteWatchGracePeriodForTest exposes the grace-period constant
+// for tests that pin the deadline + 30s grace timing. Test-only.
+func ReleasePromoteWatchGracePeriodForTest() time.Duration {
+	return releasePromoteWatchGracePeriod
+}
+
+// SetReleasePromoteWatchPollIntervalForTest overrides the watcher's tick
+// cadence so unit tests don't sleep 3 real seconds per state transition.
+// Returns a restore function the test must defer to reinstate production
+// timing. Test-only; production callers MUST NOT touch.
+func SetReleasePromoteWatchPollIntervalForTest(d time.Duration) func() {
+	prev := releasePromoteWatchPollInterval
+	releasePromoteWatchPollInterval = d
+	return func() { releasePromoteWatchPollInterval = prev }
+}
+
+// SetReleasePromoteWatchGracePeriodForTest overrides the deadline grace
+// period so tests can assert the timeout behavior without 30s sleeps.
+// Returns a restore function. Test-only.
+func SetReleasePromoteWatchGracePeriodForTest(d time.Duration) func() {
+	prev := releasePromoteWatchGracePeriod
+	releasePromoteWatchGracePeriod = d
+	return func() { releasePromoteWatchGracePeriod = prev }
 }
