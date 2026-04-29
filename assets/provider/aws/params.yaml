@@ -270,6 +270,21 @@ Groups:
         description: Number of virtual GPU replicas per physical GPU for time-slicing.
           Requires &i nvidia_device_plugin_enable=true &i.
         allowedMinValue: 0
+      - name: gpu_observability_enable
+        default: "false"
+        type: boolean
+        description: Installs the NVIDIA DCGM exporter DaemonSet on GPU nodes
+          to emit GPU utilization, VRAM, temperature, and power metrics on
+          port 9400 (scraped by Prometheus via the standard
+          &i prometheus.io/scrape &i pod annotation). Requires
+          &i nvidia_device_plugin_enable=true &i.
+      - name: gpu_observability_chart_version
+        default: "4.8.1"
+        type: string
+        description: Helm chart version for the NVIDIA DCGM exporter.
+          Pin this to a version compatible with the cluster's NVIDIA
+          driver (defaults to chart &i 4.8.1 &i, image tag
+          &i 4.5.2-4.8.1-distroless &i).
       - name: keda_enable
         default: "false"
         type: boolean

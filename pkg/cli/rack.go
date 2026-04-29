@@ -50,6 +50,7 @@ var awsKnownParams = map[string]bool{
 	"efs_csi_driver_enable": true, "efs_csi_driver_version": true,
 	"eks_api_server_public_access_cidrs": true, "enable_private_access": true,
 	"fluentd_disable": true, "fluentd_memory": true,
+	"gpu_observability_chart_version": true, "gpu_observability_enable": true,
 	"gpu_tag_enable": true, "high_availability": true,
 	"idle_timeout": true, "image": true,
 	"imds_http_hop_limit": true, "imds_http_tokens": true,
@@ -192,6 +193,7 @@ var boolParams = map[string]bool{
 	"efs_csi_driver_enable":           true,
 	"enable_private_access":           true,
 	"fluentd_disable":                 true,
+	"gpu_observability_enable":        true,
 	"gpu_tag_enable":                  true,
 	"imds_tags_enable":                true,
 	"internal_router":                 true,
@@ -374,6 +376,8 @@ var paramGroups = map[string]map[string]bool{
 	"nodes": {
 		// v3 native (snake_case)
 		"additional_node_groups_config":       true,
+		"gpu_observability_chart_version":     true,
+		"gpu_observability_enable":            true,
 		"gpu_tag_enable":                      true,
 		"key_pair_name":                       true,
 		"kubelet_registry_burst":              true,
@@ -1258,6 +1262,17 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 	if params["karpenter_enabled"] == "true" && currentParams["karpenter_enabled"] != "true" {
 		if currentParams["karpenter_auth_mode"] != "true" && params["karpenter_auth_mode"] != "true" {
 			return fmt.Errorf("karpenter_enabled=true requires karpenter_auth_mode=true.\n  Either include both: convox rack params set karpenter_auth_mode=true karpenter_enabled=true\n  Or set karpenter_auth_mode=true first and wait for the update to complete")
+		}
+	}
+
+	// gpu_observability_enable=true requires nvidia_device_plugin_enable=true —
+	// either already applied or being set in the same call. The DCGM exporter
+	// relies on the device plugin's /var/lib/kubelet/pod-resources/ socket for
+	// pod->GPU attribution; without the plugin the exporter pods schedule but
+	// emit metrics with no pod labels.
+	if params["gpu_observability_enable"] == "true" && currentParams["gpu_observability_enable"] != "true" {
+		if currentParams["nvidia_device_plugin_enable"] != "true" && params["nvidia_device_plugin_enable"] != "true" {
+			return fmt.Errorf("gpu_observability_enable=true requires nvidia_device_plugin_enable=true.\n  Set both in the same `convox rack params set` invocation, or enable\n  the device plugin first.")
 		}
 	}
 
