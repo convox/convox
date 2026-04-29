@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 
 	"github.com/convox/convox/pkg/structs"
@@ -1147,6 +1148,28 @@ func (c *Client) ServiceRestart(app, name string) error {
 	err = c.Post(fmt.Sprintf("/apps/%s/services/%s/restart", app, name), ro, nil)
 
 	return err
+}
+
+// ServiceScaleOverrideSet toggles the per-service scale-override
+// annotation on the named service. When active=true, future release
+// promotes preserve the runtime replica count instead of applying the
+// yaml-declared scale.count. When active=false, the annotation is
+// removed and yaml-declared scale resumes on next promote. New in
+// rack 3.24.6 — older racks return 404. ackBy carries actor identity
+// for the audit trail; pass empty when unavailable so the rack falls
+// back to JWT-derived actor via resolveAckByOverride.
+func (c *Client) ServiceScaleOverrideSet(app, service string, active bool, ackBy string) error {
+	ro := stdsdk.RequestOptions{
+		Headers: stdsdk.Headers{},
+		Params: stdsdk.Params{
+			"active": strconv.FormatBool(active),
+		},
+		Query: stdsdk.Query{},
+	}
+	if strings.TrimSpace(ackBy) != "" {
+		ro.Params["ack_by"] = ackBy
+	}
+	return c.Post(fmt.Sprintf("/apps/%s/services/%s/scale-override", app, service), ro, nil)
 }
 
 func (c *Client) ServiceUpdate(app, name string, opts structs.ServiceUpdateOptions) error {

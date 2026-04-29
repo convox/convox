@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -726,6 +727,20 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 		sc[s.Name] = s.Count
 	}
 
+	// Populate per-service scale-override map from Service.ScaleOverrideActive
+	// already populated by ServiceList above. Item-23 §4.1 — when the annotation
+	// is strict-literal "true", releaseTemplateServices preserves the runtime
+	// replica count and skips the yaml-declared scale.count.min on this promote.
+	// ServiceList's own populate path tolerates informer error (continue-safe);
+	// services missing from pss inherit overrideActive[name]=false (the safe
+	// default). The override path must NEVER cause a promote to fail outright.
+	overrideActive := map[string]bool{}
+	for _, s := range pss {
+		if s.ScaleOverrideActive != nil && *s.ScaleOverrideActive {
+			overrideActive[s.Name] = true
+		}
+	}
+
 	for i := range ss {
 		// efs
 		vdata, err := p.releaseTemplateEfs(a, ss[i])
@@ -757,7 +772,40 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 			max = *opts.Max
 		}
 
-		replicas := common.CoalesceInt(sc[s.Name], s.Scale.Count.Min)
+		var replicas int
+		if overrideActive[s.Name] {
+			// Item-23 §4.1 — annotation honored: preserve the runtime
+			// replica count regardless of yaml scale.count.min. If
+			// sc[s.Name] is 0 (rare: customer scaled to 0 with
+			// override active), preserve 0 — explicit customer choice,
+			// not yaml fallback. Distinct from the CoalesceInt default
+			// where 0 falls through to yaml min.
+			replicas = sc[s.Name]
+			// Audit-trail emit so customers see in their event stream
+			// that yaml scale was deliberately skipped on this promote.
+			// Event-name format app:<resource>:<verb> — matches
+			// app:budget:set / :cap / :threshold precedent. Service
+			// identity carried in data.service, NOT embedded in the
+			// event name (preserves grep/filter patterns keyed on the
+			// 3-part colon scheme). actor="system" matches the
+			// release:autoscale-disabled and release:manifest-advisory
+			// system-emit convention. Cardinality bounded by service
+			// count which is operator-controlled.
+			_ = p.EventSend("app:scale-override:honored", structs.EventSendOptions{
+				Data: map[string]string{
+					"actor":           "system",
+					"app":             a.Name,
+					"service":         s.Name,
+					"release":         r.Id,
+					"preserved_count": strconv.Itoa(sc[s.Name]),
+					"yaml_count_min":  strconv.Itoa(s.Scale.Count.Min),
+				},
+			})
+		} else {
+			// Existing default — runtime count wins when non-zero,
+			// else yaml min.
+			replicas = common.CoalesceInt(sc[s.Name], s.Scale.Count.Min)
+		}
 
 		env, err := p.environment(a, r, s, e)
 		if err != nil {

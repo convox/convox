@@ -103,6 +103,7 @@ type Provider interface {
 
 	ServiceList(app string) (Services, error)
 	ServiceRestart(app, name string) error
+	ServiceScaleOverrideSet(app, service string, active bool, ackBy string) error
 	ServiceUpdate(app, name string, opts ServiceUpdateOptions) error
 	ServiceLogs(app, name string, opts LogsOptions) (io.ReadCloser, error)
 

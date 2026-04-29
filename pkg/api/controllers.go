@@ -1573,6 +1573,42 @@ func (s *Server) ServiceRestart(c *stdapi.Context) error {
 	return c.RenderOK()
 }
 
+// ServiceScaleOverrideSet toggles the per-service scale-override annotation.
+// Admin-RBAC-gated per item-23 §4.3 (mirrors AppBudgetReset's force-clear
+// gate): scale override bypasses customer-declared yaml semantics in the
+// same way budget reset clears safety state, so both surfaces share the
+// admin-only gating story. The provider call uses ack_by-derived actor
+// identity for the audit event (mirrors AppBudgetSet pattern).
+func (s *Server) ServiceScaleOverrideSet(c *stdapi.Context) error {
+	if err := s.hook("ServiceScaleOverrideSetValidate", c); err != nil {
+		return err
+	}
+
+	if !CanAdmin(c) {
+		return stdapi.Errorf(http.StatusForbidden, "ServiceScaleOverrideSet requires Admin role; current role does not include 'a'. Contact rack admin or use Admin token.")
+	}
+
+	app := c.Var("app")
+	service := c.Var("service")
+
+	ackBy := resolveAckByOverride(c, app)
+
+	activeStr := strings.TrimSpace(formValue(c, "active"))
+	if activeStr == "" {
+		return stdapi.Errorf(http.StatusBadRequest, "active form-param is required (\"true\" or \"false\")")
+	}
+	active, err := strconv.ParseBool(activeStr)
+	if err != nil {
+		return stdapi.Errorf(http.StatusBadRequest, "active must be \"true\" or \"false\": %v", err)
+	}
+
+	if err := s.provider(c).WithContext(contextFrom(c)).ServiceScaleOverrideSet(app, service, active, ackBy); err != nil {
+		return err
+	}
+
+	return c.RenderOK()
+}
+
 func (s *Server) ServiceUpdate(c *stdapi.Context) error {
 	if err := s.hook("ServiceUpdateValidate", c); err != nil {
 		return err

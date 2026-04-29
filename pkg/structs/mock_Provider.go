@@ -1566,6 +1566,20 @@ func (_m *MockProvider) ServiceRestart(app string, name string) error {
 	return r0
 }
 
+// ServiceScaleOverrideSet provides a mock function with given fields: app, service, active, ackBy
+func (_m *MockProvider) ServiceScaleOverrideSet(app string, service string, active bool, ackBy string) error {
+	ret := _m.Called(app, service, active, ackBy)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string, bool, string) error); ok {
+		r0 = rf(app, service, active, ackBy)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // ServiceUpdate provides a mock function with given fields: app, name, opts
 func (_m *MockProvider) ServiceUpdate(app string, name string, opts ServiceUpdateOptions) error {
 	ret := _m.Called(app, name, opts)
