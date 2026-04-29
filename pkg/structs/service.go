@@ -15,6 +15,15 @@ type Service struct {
 	ColdStart *bool                  `json:"cold-start,omitempty"`
 	Autoscale *ServiceAutoscaleState `json:"autoscale,omitempty"`
 
+	// Agent reports whether the service runs as a per-node agent (DaemonSet
+	// in K8s providers; svc.agent: true in convox.yml). Surfaces to Console3
+	// so per-service UI affordances that don't apply to agents (e.g. the
+	// scale-override toggle from item 23) can be hidden client-side. Zero
+	// value preserves existing wire shape on pre-3.24.6 racks (decoded as
+	// false; Console3 fallback shows the affordance). 3.24.6+ rack populates
+	// from the manifest service definition.
+	Agent bool `json:"agent,omitempty"`
+
 	// GPU runtime telemetry aggregated as average across pods in the service.
 	// Populated by provider/k8s/prometheus.go via a single batched Prom query
 	// per ServiceList call. Pointer-typed so:
@@ -26,6 +35,36 @@ type Service struct {
 	GpuUtilAvg     *float64 `json:"gpu-util-avg,omitempty"`
 	GpuMemUsedAvg  *int64   `json:"gpu-mem-used-avg,omitempty"`
 	GpuMemTotalAvg *int64   `json:"gpu-mem-total-avg,omitempty"`
+
+	// ScaleOverrideActive reflects whether the service Deployment has
+	// the convox.com/scale-override-active=true annotation set.
+	// Populated by ServiceList/ServiceGet from the per-Deployment
+	// metadata read path. When *true, future ReleasePromote calls
+	// preserve the runtime replica count and skip yaml-declared
+	// scale.count.min.
+	//
+	// Pointer-nullable per BC-02 mixed-skew reasoning: three distinct
+	// states must be disambiguated on the wire so item 11's Console3
+	// toggle UI can graceful-degrade against pre-3.24.6 racks:
+	//   nil    = "rack does not support scale-override" (pre-3.24.6
+	//            rack returned the Service struct without this field;
+	//            Go decode leaves the pointer nil). Vue side reads
+	//            null and disables the toggle with version-gated
+	//            tooltip.
+	//   *false = "rack supports it; override is currently OFF". Vue
+	//            renders the OFF-state hint correctly.
+	//   *true  = "rack supports it; override is currently ON". Vue
+	//            renders the ON-state banner.
+	//
+	// omitempty strips when nil so old SDK clients (3.24.5 and
+	// earlier) that decode the Service payload see no extra field
+	// (additive, BC-safe). New SDK callers populate via the
+	// ServiceList / ServiceGet enrichment path.
+	//
+	// 3.24.6+ rack code MUST always populate this pointer (never
+	// leave nil). The nil value is reserved as the wire-signal for
+	// pre-3.24.6 rack ("feature not supported").
+	ScaleOverrideActive *bool `json:"scale-override-active,omitempty"`
 }
 
 // ServiceAutoscaleState is the wire shape returned by the rack for the

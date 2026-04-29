@@ -9,6 +9,7 @@ import (
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/manifest"
+	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
@@ -110,6 +111,16 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 			s.Autoscale = buildServiceAutoscaleState(ms.Scale.Autoscale)
 		}
 
+		// Populate scale-override-active from the Deployment annotation.
+		// 3.24.6+ rack ALWAYS sets the pointer (never nil) — nil is
+		// reserved as the wire-signal for pre-3.24.6 racks per item-23
+		// §4.5 / item-11 OQ-14. Strict literal "true" only — see §6.
+		if d.Annotations != nil && d.Annotations[ServiceScaleOverrideAnnotation] == ServiceScaleOverrideValueOn {
+			s.ScaleOverrideActive = options.Bool(true)
+		} else {
+			s.ScaleOverrideActive = options.Bool(false)
+		}
+
 		ss = append(ss, s)
 	}
 
@@ -168,6 +179,18 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 		max := ms.Scale.Count.Max
 		s.Min = &min
 		s.Max = &max
+
+		// Populate scale-override-active from the DaemonSet annotation.
+		// Agent services render as DaemonSets — same annotation contract
+		// as the Deployment path. 3.24.6+ rack ALWAYS sets the pointer
+		// per item-23 §4.5 (nil reserved for pre-3.24.6 wire signal).
+		if d.Annotations != nil && d.Annotations[ServiceScaleOverrideAnnotation] == ServiceScaleOverrideValueOn {
+			s.ScaleOverrideActive = options.Bool(true)
+		} else {
+			s.ScaleOverrideActive = options.Bool(false)
+		}
+
+		s.Agent = true
 
 		ss = append(ss, s)
 	}

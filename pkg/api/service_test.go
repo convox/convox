@@ -2,8 +2,15 @@ package api_test
 
 import (
 	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
+	"time"
 
+	cjwt "github.com/convox/convox/pkg/jwt"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/stdsdk"
@@ -90,5 +97,127 @@ func TestServiceUpdateGpu(t *testing.T) {
 		p.On("ServiceUpdate", "app1", "service1", opts).Return(nil)
 		err := c.Put("/apps/app1/services/service1", ro, nil)
 		require.NoError(t, err)
+	})
+}
+
+// ----- Item-23 §4.3 ServiceScaleOverrideSet — API controller tests -----
+
+// TestServiceScaleOverrideSet_HappyPath — admin token + active=true, expect 200.
+func TestServiceScaleOverrideSet_HappyPath(t *testing.T) {
+	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
+		tk, err := jm.AdminToken(time.Hour)
+		require.NoError(t, err)
+
+		p.On("ServiceScaleOverrideSet", "myapp", "web", true, "system-admin").Return(nil)
+
+		body := url.Values{"active": {"true"}}.Encode()
+		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/services/web/scale-override", strings.NewReader(body))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.SetBasicAuth("jwt", tk)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		bodyBytes, _ := io.ReadAll(res.Body)
+		require.Equal(t, http.StatusOK, res.StatusCode, "happy-path admin call must succeed — got %q", string(bodyBytes))
+	})
+}
+
+// TestServiceScaleOverrideSet_MissingActiveParam — 400 when active form-param absent.
+func TestServiceScaleOverrideSet_MissingActiveParam(t *testing.T) {
+	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
+		tk, err := jm.AdminToken(time.Hour)
+		require.NoError(t, err)
+
+		// no p.On(...) — the controller must reject before provider call.
+
+		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/services/web/scale-override", strings.NewReader(""))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.SetBasicAuth("jwt", tk)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		require.Equal(t, http.StatusBadRequest, res.StatusCode, "missing active param must yield 400")
+		p.AssertNotCalled(t, "ServiceScaleOverrideSet")
+	})
+}
+
+// TestServiceScaleOverrideSet_BadActiveParam — 400 on unparseable bool.
+func TestServiceScaleOverrideSet_BadActiveParam(t *testing.T) {
+	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
+		tk, err := jm.AdminToken(time.Hour)
+		require.NoError(t, err)
+
+		body := url.Values{"active": {"maybe"}}.Encode()
+		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/services/web/scale-override", strings.NewReader(body))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.SetBasicAuth("jwt", tk)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		require.Equal(t, http.StatusBadRequest, res.StatusCode, "active=maybe must yield 400")
+		p.AssertNotCalled(t, "ServiceScaleOverrideSet")
+	})
+}
+
+// TestServiceScaleOverrideSet_AckByForwarded — provider call receives the
+// override ack_by string (mirrors AppBudgetSet ack_by-precedence test).
+func TestServiceScaleOverrideSet_AckByForwarded(t *testing.T) {
+	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, _ *cjwt.JwtManager) {
+		tk := mintCustomJwtToken(t, "test", "bob", structs.ConvoxRoleAdmin, time.Hour)
+
+		p.On("ServiceScaleOverrideSet", "myapp", "web", true, "alice@example.com").Return(nil)
+
+		body := url.Values{"active": {"true"}, "ack_by": {"alice@example.com"}}.Encode()
+		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/services/web/scale-override", strings.NewReader(body))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.SetBasicAuth("jwt", tk)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+		require.Equal(t, http.StatusOK, res.StatusCode)
+		require.Equal(t, "true", res.Header.Get("Deprecation"), "ack_by override must emit Deprecation header (form-param path is deprecated)")
+	})
+}
+
+// TestServiceScaleOverrideSet_AdminRBAC_RequiresAdminRole — w-role must 403
+// before any provider call (mirrors AppBudgetReset --force-clear-cooldown
+// gate). Validates §4.3 RBAC lock from item-23 OQ-4.
+func TestServiceScaleOverrideSet_AdminRBAC_RequiresAdminRole(t *testing.T) {
+	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
+		tk, err := jm.WriteToken(time.Hour)
+		require.NoError(t, err)
+
+		// No p.On(...) — the CanAdmin gate must fire BEFORE any provider call.
+
+		body := url.Values{"active": {"true"}}.Encode()
+		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/services/web/scale-override", strings.NewReader(body))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Accept", "application/json")
+		req.SetBasicAuth("jwt", tk)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		bodyBytes, _ := io.ReadAll(res.Body)
+		require.Equal(t, http.StatusForbidden, res.StatusCode, "w-token must 403 — got body %q", string(bodyBytes))
+
+		got := strings.TrimRight(string(bodyBytes), "\n")
+		require.Contains(t, got, "ServiceScaleOverrideSet")
+		require.Contains(t, got, "requires Admin role")
+
+		p.AssertNotCalled(t, "ServiceScaleOverrideSet")
 	})
 }

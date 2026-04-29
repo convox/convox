@@ -43,6 +43,51 @@ func TestInstanceKeyrollEmptyBody(t *testing.T) {
 	require.NotNil(t, v)
 }
 
+// TestSdkServiceScaleOverrideSet — proves the new SDK method posts the
+// expected URL + form params (active + optional ack_by). Item-23 §4.4.
+func TestSdkServiceScaleOverrideSet(t *testing.T) {
+	t.Run("active=true_with_ack_by", func(t *testing.T) {
+		var (
+			gotPath string
+			gotForm map[string][]string
+		)
+		ht := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			gotPath = r.URL.Path
+			require.NoError(t, r.ParseForm())
+			gotForm = r.PostForm
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer ht.Close()
+
+		c, err := sdk.New(ht.URL)
+		require.NoError(t, err)
+
+		require.NoError(t, c.ServiceScaleOverrideSet("app1", "web", true, "alice@example.com"))
+
+		require.Equal(t, "/apps/app1/services/web/scale-override", gotPath)
+		require.Equal(t, []string{"true"}, gotForm["active"])
+		require.Equal(t, []string{"alice@example.com"}, gotForm["ack_by"])
+	})
+
+	t.Run("active=false_no_ack_by", func(t *testing.T) {
+		var gotForm map[string][]string
+		ht := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			require.NoError(t, r.ParseForm())
+			gotForm = r.PostForm
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer ht.Close()
+
+		c, err := sdk.New(ht.URL)
+		require.NoError(t, err)
+		require.NoError(t, c.ServiceScaleOverrideSet("app1", "web", false, ""))
+
+		require.Equal(t, []string{"false"}, gotForm["active"])
+		_, hasAckBy := gotForm["ack_by"]
+		require.False(t, hasAckBy, "empty ackBy must NOT appear in the wire form")
+	})
+}
+
 // TestAppBudgetSetWirePath proves the budget-set form fields survive
 // stdsdk.MarshalOptions. A prior version used *float64 which stdsdk
 // silently drops, breaking the CLI → rack wire path end-to-end.

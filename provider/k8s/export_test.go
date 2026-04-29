@@ -448,6 +448,16 @@ func RunReleasePromoteWatcherForTest(p *Provider, ctx context.Context, app strin
 	p.runReleasePromoteWatcher(ctx, app, state, release)
 }
 
+// ReleaseTemplateServicesForTest exposes the unexported releaseTemplateServices
+// helper so item-23 §4.1 unit tests can drive the override-honor path
+// without the full ReleasePromote / Atom.Apply / template-render scaffolding.
+// Test-only; production callers must go through ReleasePromote which wraps
+// this helper. Returns the rendered Deployment/Service/Ingress YAML
+// concatenation that the production path passes to atom.Apply.
+func ReleaseTemplateServicesForTest(p *Provider, a *structs.App, e structs.Environment, r *structs.Release, ss manifest.Services, opts structs.ReleasePromoteOptions) ([]byte, error) {
+	return p.releaseTemplateServices(a, e, r, ss, opts)
+}
+
 // ScanReleasePromoteAnnotationsForTest exposes the cold-start GC scan so
 // tests can drive recovery scenarios deterministically (single tick;
 // no 15s warmup wait). Test-only.
