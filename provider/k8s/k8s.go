@@ -77,6 +77,7 @@ type Provider struct {
 	ReleasesToRetainTaskRunIntervalHour int
 	MetricScraper                       *MetricScraperClient
 	MetricsClient                       metricsclientset.Interface
+	PromClient                          *PrometheusClient
 	Namespace                           string
 	Password                            string
 	PdbDefaultMinAvailablePercentage    string
@@ -164,6 +165,18 @@ func FromEnv() (*Provider, error) {
 
 	ms := NewMetricScraperClient(kc, os.Getenv("METRICS_SCRAPER_HOST"))
 
+	// PROMETHEUS_URL is plumbed from the prometheus_url rack param via
+	// terraform/api/k8s/main.tf. Empty (the non-AWS default and any rack
+	// without observability configured) → NewPrometheusClient returns
+	// (nil, nil) and PromClient stays nil; every read site short-circuits.
+	// Bad URL → log and continue with nil client (mirrors MetricsClient
+	// fail-soft posture).
+	pc, err := NewPrometheusClient(os.Getenv("PROMETHEUS_URL"))
+	if err != nil {
+		fmt.Printf("ns=k8s at=prometheus_client result=invalid url=%q error=%q metrics=disabled\n",
+			os.Getenv("PROMETHEUS_URL"), err.Error())
+	}
+
 	rn := common.CoalesceString(os.Getenv("RACK_NAME"), ns.Labels["rack"])
 
 	p := &Provider{
@@ -187,6 +200,7 @@ func FromEnv() (*Provider, error) {
 		Image:                            os.Getenv("IMAGE"),
 		MetricScraper:                    ms,
 		MetricsClient:                    mc,
+		PromClient:                       pc,
 		Name:                             ns.Labels["rack"],
 		Namespace:                        ns.Name,
 		PdbDefaultMinAvailablePercentage: common.CoalesceString(os.Getenv("PDB_DEFAULT_MIN_AVAILABLE_PERCENTAGE"), "50"),

@@ -159,6 +159,27 @@ func (p *Provider) ProcessGet(app, pid string) (*structs.Process, error) {
 		ps.Cpu, ps.Memory = calculatePodCpuAndMem(m)
 	}
 
+	// GPU runtime telemetry — best-effort enrichment from the in-cluster
+	// Prometheus when prometheus_url is set on the rack and the pod has a
+	// GPU resource request. PromClient is nil on racks without
+	// PROMETHEUS_URL (default for non-AWS, default for any rack without
+	// observability configured) → short-circuit. Per-call timeout is
+	// applied inside QueryGPUMetrics. Errors are logged and absorbed:
+	// the existing process record still returns successfully.
+	if p.PromClient != nil && ps.Gpu > 0 {
+		gpuByPod, err := p.PromClient.QueryGPUMetrics(context.TODO(), app, []string{ps.Name})
+		if err != nil {
+			p.logger.Errorf("failed to fetch gpu metrics: %s", err)
+		} else if gm, has := gpuByPod[pid]; has {
+			util := gm.Util
+			memUsed := gm.MemUsed
+			memTotal := gm.MemTotal
+			ps.GpuUtil = &util
+			ps.GpuMemUsed = &memUsed
+			ps.GpuMemTotal = &memTotal
+		}
+	}
+
 	return ps, nil
 }
 
@@ -204,6 +225,37 @@ func (p *Provider) ProcessList(app string, opts structs.ProcessListOptions) (str
 		for i := range pss {
 			if m, has := metricsByPod[pss[i].Id]; has && len(m.Containers) > 0 {
 				pss[i].Cpu, pss[i].Memory = calculatePodCpuAndMem(&m)
+			}
+		}
+	}
+
+	// GPU runtime telemetry — single batched Prom query for the whole
+	// process slice. Skipped when PromClient is nil (rack without
+	// PROMETHEUS_URL). When opts.Service is set, scope the query to that
+	// one service; otherwise QueryGPUMetrics's empty-services branch
+	// matches all services for the app. Each pss entry is allocated
+	// its own pointer to avoid loop-variable aliasing.
+	if p.PromClient != nil {
+		services := []string{}
+		if opts.Service != nil {
+			services = append(services, *opts.Service)
+		}
+		gpuByPod, err := p.PromClient.QueryGPUMetrics(context.TODO(), app, services)
+		if err != nil {
+			p.logger.Errorf("failed to fetch gpu metrics: %s", err)
+		} else {
+			for i := range pss {
+				if pss[i].Gpu == 0 {
+					continue
+				}
+				if gm, has := gpuByPod[pss[i].Id]; has {
+					util := gm.Util
+					memUsed := gm.MemUsed
+					memTotal := gm.MemTotal
+					pss[i].GpuUtil = &util
+					pss[i].GpuMemUsed = &memUsed
+					pss[i].GpuMemTotal = &memTotal
+				}
 			}
 		}
 	}

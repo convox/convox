@@ -132,10 +132,23 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 		}
 	}
 
-	if !hasAgent {
-		return ss, nil
+	if hasAgent {
+		ss, err = p.serviceListAppendDaemonsets(app, ss, lopts, m)
+		if err != nil {
+			return nil, err
+		}
 	}
 
+	// GPU runtime telemetry runs after BOTH deployment and (optional)
+	// daemonset population so agent / non-agent services are aggregated
+	// in one Prom round-trip. p.PromClient is nil on racks without
+	// PROMETHEUS_URL → enrichGpuTelemetry no-ops.
+	p.enrichGpuTelemetry(app, ss)
+
+	return ss, nil
+}
+
+func (p *Provider) serviceListAppendDaemonsets(app string, ss structs.Services, lopts am.ListOptions, m *manifest.Manifest) (structs.Services, error) {
 	dss, err := p.Cluster.AppsV1().DaemonSets(p.AppNamespace(app)).List(context.TODO(), lopts)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -196,6 +209,79 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 	}
 
 	return ss, nil
+}
+
+// enrichGpuTelemetry fans out a single batched Prom query for the given
+// ServiceList result and aggregates the per-pod samples by label_service,
+// writing averaged GPU utilization and memory pointers onto each Service
+// entry where Gpu > 0. No-ops when PromClient is nil (the default on any
+// rack without PROMETHEUS_URL configured) or when no service has Gpu > 0.
+//
+// Aggregation contract: average across pods bucketed by gm.Service. Pods
+// with no label_service value are skipped (they are not Convox-managed
+// service pods); pods labeled for service S that did NOT report a sample
+// for one of the three metrics contribute zero to that metric's sum but
+// still count toward the denominator. This matches the customer-facing
+// definition of "average GPU utilization across this service's pods" —
+// reporting every pod's reading even when one metric is missing.
+func (p *Provider) enrichGpuTelemetry(app string, ss structs.Services) {
+	if p.PromClient == nil {
+		return
+	}
+
+	gpuServices := []string{}
+	for _, s := range ss {
+		if s.Gpu > 0 {
+			gpuServices = append(gpuServices, s.Name)
+		}
+	}
+	if len(gpuServices) == 0 {
+		return
+	}
+
+	gpuByPod, err := p.PromClient.QueryGPUMetrics(context.TODO(), app, gpuServices)
+	if err != nil {
+		p.logger.Errorf("failed to fetch gpu metrics: %s", err)
+		return
+	}
+
+	// Aggregate by service: average across pods labeled
+	// label_service=<name>. GpuMetrics.Service was populated in
+	// QueryGPUMetrics from sample.Metric["label_service"], so the reverse
+	// map is built from gm.Service directly — no second Prom round-trip
+	// and no pre-pass against deployment names.
+	type accum struct {
+		util, memUsed, memTotal float64
+		count                   int
+	}
+	byService := map[string]*accum{}
+	for _, gm := range gpuByPod {
+		if gm.Service == "" {
+			continue // pod was scraped but has no label_service — skip
+		}
+		a := byService[gm.Service]
+		if a == nil {
+			a = &accum{}
+			byService[gm.Service] = a
+		}
+		a.util += gm.Util
+		a.memUsed += float64(gm.MemUsed)
+		a.memTotal += float64(gm.MemTotal)
+		a.count++
+	}
+	for i := range ss {
+		if ss[i].Gpu == 0 {
+			continue
+		}
+		if a, has := byService[ss[i].Name]; has && a.count > 0 {
+			avgUtil := a.util / float64(a.count)
+			avgMemUsed := int64(a.memUsed / float64(a.count))
+			avgMemTotal := int64(a.memTotal / float64(a.count))
+			ss[i].GpuUtilAvg = &avgUtil
+			ss[i].GpuMemUsedAvg = &avgMemUsed
+			ss[i].GpuMemTotalAvg = &avgMemTotal
+		}
+	}
 }
 
 func (p *Provider) ServiceRestart(app, name string) error {
