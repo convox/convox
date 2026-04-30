@@ -56,8 +56,8 @@ func annotatedFixture(t *testing.T, c *fake.Clientset, ns, name string, annotate
 // resolve the manifest.
 func seedReleaseForApp(t *testing.T, p *k8s.Provider, ns, fixture string) {
 	t.Helper()
-	aa := p.Atom.(*atom.MockInterface)
-	cc := p.Convox.(*cvfake.Clientset)
+	aa, _ := p.Atom.(*atom.MockInterface)
+	cc, _ := p.Convox.(*cvfake.Clientset)
 
 	releaseID := "release1"
 	aa.On("Status", ns, "app").Return("Running", releaseID, nil)
@@ -106,7 +106,7 @@ func captureMultiPayload(t *testing.T, fn func(*k8s.Provider) error) []map[strin
 
 func TestServiceScaleOverrideSet_TogglesOn(t *testing.T) {
 	events := captureMultiPayload(t, func(p *k8s.Provider) error {
-		kk := p.Cluster.(*fake.Clientset)
+		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 		annotatedFixture(t, kk, "rack1-app1", "web", false)
 
@@ -135,7 +135,7 @@ func TestServiceScaleOverrideSet_TogglesOn(t *testing.T) {
 
 func TestServiceScaleOverrideSet_TogglesOff(t *testing.T) {
 	events := captureMultiPayload(t, func(p *k8s.Provider) error {
-		kk := p.Cluster.(*fake.Clientset)
+		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 		annotatedFixture(t, kk, "rack1-app1", "web", true)
 
@@ -151,7 +151,7 @@ func TestServiceScaleOverrideSet_TogglesOff(t *testing.T) {
 
 	ev := findEventByAction(events, "app:scale-override:toggled")
 	require.NotNil(t, ev)
-	data := ev["data"].(map[string]any)
+	data, _ := ev["data"].(map[string]any)
 	assert.Equal(t, "off", data["state"])
 }
 
@@ -159,7 +159,7 @@ func TestServiceScaleOverrideSet_TogglesOff(t *testing.T) {
 
 func TestServiceScaleOverrideSet_NoOp_AlreadyOn(t *testing.T) {
 	events := captureMultiPayload(t, func(p *k8s.Provider) error {
-		kk := p.Cluster.(*fake.Clientset)
+		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 		annotatedFixture(t, kk, "rack1-app1", "web", true)
 
@@ -183,7 +183,7 @@ func TestServiceScaleOverrideSet_NoOp_AlreadyOn(t *testing.T) {
 
 func TestServiceScaleOverrideSet_NoOp_AlreadyOff(t *testing.T) {
 	events := captureMultiPayload(t, func(p *k8s.Provider) error {
-		kk := p.Cluster.(*fake.Clientset)
+		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 		annotatedFixture(t, kk, "rack1-app1", "web", false)
 
@@ -207,7 +207,7 @@ func TestServiceScaleOverrideSet_NoOp_AlreadyOff(t *testing.T) {
 
 func TestServiceScaleOverrideSet_NotFound(t *testing.T) {
 	events := captureMultiPayload(t, func(p *k8s.Provider) error {
-		kk := p.Cluster.(*fake.Clientset)
+		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 		// no Deployment fixture
 		err := p.ServiceScaleOverrideSet("app1", "missing", true, "alice")
@@ -222,7 +222,7 @@ func TestServiceScaleOverrideSet_NotFound(t *testing.T) {
 
 func TestServiceScaleOverrideSet_AckByOverride(t *testing.T) {
 	events := captureMultiPayload(t, func(p *k8s.Provider) error {
-		kk := p.Cluster.(*fake.Clientset)
+		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 		annotatedFixture(t, kk, "rack1-app1", "web", false)
 		return p.ServiceScaleOverrideSet("app1", "web", true, "alice@example.com")
@@ -230,7 +230,7 @@ func TestServiceScaleOverrideSet_AckByOverride(t *testing.T) {
 
 	ev := findEventByAction(events, "app:scale-override:toggled")
 	require.NotNil(t, ev)
-	data := ev["data"].(map[string]any)
+	data, _ := ev["data"].(map[string]any)
 	assert.Equal(t, "alice@example.com", data["ack_by"], "ack_by must be preserved verbatim")
 	assert.Equal(t, "alice@example.com", data["actor"], "actor must equal ack_by per AppBudgetSet precedent")
 }
@@ -246,7 +246,7 @@ func TestServiceScaleOverrideSet_SanitizesAckBy(t *testing.T) {
 	restoreStdout := captureStdout(t)
 
 	events := captureMultiPayload(t, func(p *k8s.Provider) error {
-		kk := p.Cluster.(*fake.Clientset)
+		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 		annotatedFixture(t, kk, "rack1-app1", "web", false)
 		// Newline + control chars + a forged log-tail. Sanitizer
@@ -256,7 +256,7 @@ func TestServiceScaleOverrideSet_SanitizesAckBy(t *testing.T) {
 
 	ev := findEventByAction(events, "app:scale-override:toggled")
 	require.NotNil(t, ev)
-	data := ev["data"].(map[string]any)
+	data, _ := ev["data"].(map[string]any)
 	wantSanitized := "alice@example.comINJECTION"
 	assert.Equal(t, wantSanitized, data["ack_by"], "ack_by must be sanitized — control chars stripped")
 	assert.Equal(t, wantSanitized, data["actor"], "actor must equal sanitized ack_by")
@@ -277,7 +277,7 @@ func TestServiceScaleOverrideSet_SanitizesAckBy(t *testing.T) {
 
 func TestServiceList_PopulatesScaleOverrideActive(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
-		kk := p.Cluster.(*fake.Clientset)
+		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 		// Two services: "api" annotated true, "worker" un-annotated.
 		annotatedFixture(t, kk, "rack1-app1", "api", true)
@@ -316,7 +316,7 @@ func TestServiceList_PopulatesScaleOverrideActive(t *testing.T) {
 
 func TestServiceList_NeverReturnsNilScaleOverrideActive_On3246Rack(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
-		kk := p.Cluster.(*fake.Clientset)
+		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 
 		// Mix of annotation states across the three deployments.
@@ -349,7 +349,7 @@ func TestServiceList_NeverReturnsNilScaleOverrideActive_On3246Rack(t *testing.T)
 // Deployments).
 func TestServiceList_PopulatesAgentField(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
-		kk := p.Cluster.(*fake.Clientset)
+		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 
 		// Deployment-backed service.
@@ -382,8 +382,8 @@ func TestServiceList_PopulatesAgentField(t *testing.T) {
 			"    image: docker.io/library/nginx\n" +
 			"    agent: true\n"
 
-		aa := p.Atom.(*atom.MockInterface)
-		cc := p.Convox.(*cvfake.Clientset)
+		aa, _ := p.Atom.(*atom.MockInterface)
+		cc, _ := p.Convox.(*cvfake.Clientset)
 		aa.On("Status", "rack1-app1", "app").Return("Running", "release1", nil)
 		require.NoError(t, releaseCreateInline(cc, "rack1-app1", "release1", manifestYaml))
 
@@ -421,7 +421,7 @@ func TestServiceScaleOverrideSet_AdminRBAC_AdminPermitted(t *testing.T) {
 	// confirm that the provider-method itself executes correctly when
 	// reached — RBAC enforcement is exercised in pkg/api tests.
 	testProvider(t, func(p *k8s.Provider) {
-		kk := p.Cluster.(*fake.Clientset)
+		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 		annotatedFixture(t, kk, "rack1-app1", "web", false)
 
@@ -449,7 +449,7 @@ func TestServiceScaleOverride_RaceWith_ServiceUpdate(t *testing.T) {
 		t.Skip("race test")
 	}
 	testProvider(t, func(p *k8s.Provider) {
-		kk := p.Cluster.(*fake.Clientset)
+		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 		annotatedFixture(t, kk, "rack1-app1", "web", false)
 
@@ -518,7 +518,7 @@ func TestServiceScaleOverride_CrossMutation_RaceWith_ReleasePromote(t *testing.T
 		t.Skip("race test")
 	}
 	testProvider(t, func(p *k8s.Provider) {
-		kk := p.Cluster.(*fake.Clientset)
+		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 		annotatedFixture(t, kk, "rack1-app1", "web", false)
 

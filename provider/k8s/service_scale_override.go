@@ -87,7 +87,7 @@ func (p *Provider) ServiceScaleOverrideSet(app, service string, active bool, ack
 		}
 		patch = b
 	} else {
-		patch = []byte(fmt.Sprintf(`{"metadata":{"annotations":{"%s":null}}}`, ServiceScaleOverrideAnnotation))
+		patch = []byte(fmt.Sprintf(`{"metadata":{"annotations":{%q:null}}}`, ServiceScaleOverrideAnnotation))
 	}
 
 	if _, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).Patch(

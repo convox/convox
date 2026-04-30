@@ -73,7 +73,7 @@ func (pc *PrometheusClient) QueryGPUMetrics(ctx context.Context, app string, ser
 	// Build label_app + label_service filter from the input. The DCGM
 	// chart's enablePodLabels=true emits "label_app" and "label_service"
 	// metric labels mirroring the K8s pod labels.
-	filter := fmt.Sprintf(`label_app="%s"`, app)
+	filter := fmt.Sprintf(`label_app=%q`, app)
 	if len(services) > 0 {
 		// services -> regex alternation
 		alt := ""
@@ -83,7 +83,7 @@ func (pc *PrometheusClient) QueryGPUMetrics(ctx context.Context, app string, ser
 			}
 			alt += s
 		}
-		filter += fmt.Sprintf(`,label_service=~"%s"`, alt)
+		filter += fmt.Sprintf(`,label_service=~%q`, alt)
 	}
 
 	// Issue one query per metric. Per-metric setter writes the parsed

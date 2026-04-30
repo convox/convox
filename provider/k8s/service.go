@@ -133,7 +133,7 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 	}
 
 	if hasAgent {
-		ss, err = p.serviceListAppendDaemonsets(app, ss, lopts, m)
+		ss, err = p.serviceListAppendDaemonsets(app, ss, &lopts, m)
 		if err != nil {
 			return nil, err
 		}
@@ -151,8 +151,8 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 	return ss, nil
 }
 
-func (p *Provider) serviceListAppendDaemonsets(app string, ss structs.Services, lopts am.ListOptions, m *manifest.Manifest) (structs.Services, error) {
-	dss, err := p.Cluster.AppsV1().DaemonSets(p.AppNamespace(app)).List(context.TODO(), lopts)
+func (p *Provider) serviceListAppendDaemonsets(app string, ss structs.Services, lopts *am.ListOptions, m *manifest.Manifest) (structs.Services, error) {
+	dss, err := p.Cluster.AppsV1().DaemonSets(p.AppNamespace(app)).List(context.TODO(), *lopts)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -238,9 +238,9 @@ func (p *Provider) enrichGpuTelemetry(ctx context.Context, app string, ss struct
 	}
 
 	gpuServices := []string{}
-	for _, s := range ss {
-		if s.Gpu > 0 {
-			gpuServices = append(gpuServices, s.Name)
+	for i := range ss {
+		if ss[i].Gpu > 0 {
+			gpuServices = append(gpuServices, ss[i].Name)
 		}
 	}
 	if len(gpuServices) == 0 {
@@ -249,7 +249,7 @@ func (p *Provider) enrichGpuTelemetry(ctx context.Context, app string, ss struct
 
 	gpuByPod, err := p.PromClient.QueryGPUMetrics(ctx, app, gpuServices)
 	if err != nil {
-		p.logger.Errorf("failed to fetch gpu metrics: %s", err)
+		_ = p.logger.Errorf("failed to fetch gpu metrics: %s", err)
 		return
 	}
 

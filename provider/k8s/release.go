@@ -735,9 +735,9 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 	// services missing from pss inherit overrideActive[name]=false (the safe
 	// default). The override path must NEVER cause a promote to fail outright.
 	overrideActive := map[string]bool{}
-	for _, s := range pss {
-		if s.ScaleOverrideActive != nil && *s.ScaleOverrideActive {
-			overrideActive[s.Name] = true
+	for i := range pss {
+		if pss[i].ScaleOverrideActive != nil && *pss[i].ScaleOverrideActive {
+			overrideActive[pss[i].Name] = true
 		}
 	}
 
