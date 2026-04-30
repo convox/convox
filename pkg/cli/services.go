@@ -59,9 +59,9 @@ func Services(rack sdk.Interface, c *stdcli.Context) error {
 
 	// budgetCapStatusWithServices is best-effort and CLI-side only. The BUDGET
 	// column only renders when the app is at-cap so customers without budget
-	// configured see zero output difference (per CLAUDE.md backward-compat rule).
-	// Use the WithServices variant since we already have ss in hand — avoids a
-	// redundant rack.ServiceList round-trip.
+	// configured see zero output difference (purely additive — pre-3.24.6
+	// callers see no new column). Use the WithServices variant since we already
+	// have ss in hand — avoids a redundant rack.ServiceList round-trip.
 	cs, _ := budgetCapStatusWithServices(rack, app(c), ss, c.Writer().Stderr)
 	hasBudget := cs.AtCap
 

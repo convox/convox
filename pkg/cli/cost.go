@@ -3,7 +3,6 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/convox/convox/pkg/common"
@@ -55,11 +54,14 @@ func Cost(rack sdk.Interface, c *stdcli.Context) error {
 
 	cost, err := rack.AppCost(appName)
 	if err != nil {
-		// F-27 fix: detect V2-rack lacks /apps/{app}/cost endpoint and
-		// return a friendly migration hint instead of the generic 404.
-		// Pattern matches isAppConfigUnsupported in env.go.
-		if isCostUnsupported(err) {
-			return fmt.Errorf("cost tracking requires a V3 rack. The current rack appears to be V2 — see https://docs.convox.com/management/cost-tracking for details on cost tracking availability")
+		// F-27 fix + A08 m-1 polish: any rack that lacks /apps/{app}/cost
+		// returns a 404 — that includes V2 racks AND V3 racks pre-3.24.6.
+		// The original "appears to be V2" copy was misleading on the V3
+		// pre-3.24.6 path, so the friendly message now cites the canonical
+		// rack-version requirement and points at the docs for further
+		// detail (V2 cost-tracking flows through a different surface).
+		if isRackVersionGated(err) {
+			return fmt.Errorf("cost tracking requires rack version 3.24.6 or later (V2 racks use a separate cost-tracking surface). See https://docs.convox.com/management/cost-tracking")
 		}
 		return fmt.Errorf("failed to fetch cost for app %s: %v", appName, err)
 	}
@@ -208,18 +210,4 @@ func printCostJSON(c *stdcli.Context, cost *structs.AppCost) error {
 	}
 	fmt.Fprintln(c.Writer(), string(data))
 	return nil
-}
-
-// isCostUnsupported detects errors from racks that don't have the AppCost
-// endpoint (V2 racks). Same substring pattern as isAppConfigUnsupported.
-//
-// F-27 fix: V2 racks return a bare 404 from `/apps/{app}/cost` because the
-// endpoint is V3-only. The CLI surfaces a friendly migration hint instead
-// of leaking the raw "response status 404" error.
-func isCostUnsupported(err error) bool {
-	if err == nil {
-		return false
-	}
-	msg := strings.ToLower(err.Error())
-	return strings.Contains(msg, "response status 404")
 }

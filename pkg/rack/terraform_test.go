@@ -390,6 +390,84 @@ func TestReconcileVarsWithModule_GPUObservabilityInModuleVarsTf_AcceptedAsValid(
 	assert.Contains(t, string(data), `variable "gpu_observability_chart_version"`, "system/aws/variables.tf must declare gpu_observability_chart_version")
 }
 
+// TestReconcileVarsWithModule_StripsWebhookSigningKey_OnDowngrade is the
+// fingertrap exercise for webhook_signing_key — the bundle's most security-
+// sensitive new variable (a customer-supplied HMAC secret) and the only
+// non-AWS-only new variable (declared in azure/gcp/do/local/metal system
+// modules too). The downgraded module does NOT declare webhook_signing_key
+// but vars.json carries a non-empty value. Reconcile must (a) remove the key
+// from vars.json, (b) emit a NOTICE on stderr that names the removed key,
+// (c) leave name/release alone. Mirrors the prometheus_url variant above.
+func TestReconcileVarsWithModule_StripsWebhookSigningKey_OnDowngrade(t *testing.T) {
+	settings := t.TempDir()
+	f := reconcileFixture{
+		rackName:   "test-rack",
+		moduleVars: []string{"name", "release"}, // 3.24.5-like: no webhook_signing_key
+		vars: map[string]string{
+			"name":                "test-rack",
+			"release":             "3.24.5",
+			"webhook_signing_key": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+		},
+	}
+	f.setup(t, settings)
+
+	capturedStderr := withTerraform(t, settings, f.rackName, func(t *testing.T, tf Terraform) {
+		require.NoError(t, tf.reconcileVarsWithModule("3.24.5"))
+	})
+
+	got := f.readVars(t)
+	_, has := got["webhook_signing_key"]
+	assert.False(t, has, "webhook_signing_key should be removed on downgrade to a module that does not declare it")
+	assert.Equal(t, "test-rack", got["name"], "name must be preserved")
+	assert.Equal(t, "3.24.5", got["release"], "release must be preserved")
+	assert.Contains(t, capturedStderr, "removing parameters not supported by version 3.24.5", "NOTICE must be emitted")
+	assert.Contains(t, capturedStderr, "webhook_signing_key", "NOTICE must name the removed key")
+}
+
+// TestReconcileVarsWithModule_WebhookSigningKeyAcceptedByCurrentVersion
+// exercises the happy path: the downloaded module declares webhook_signing_key,
+// so reconcile must preserve it (no removal).
+func TestReconcileVarsWithModule_WebhookSigningKeyAcceptedByCurrentVersion(t *testing.T) {
+	settings := t.TempDir()
+	f := reconcileFixture{
+		rackName:   "test-rack",
+		moduleVars: []string{"name", "release", "webhook_signing_key"},
+		vars: map[string]string{
+			"name":                "test-rack",
+			"release":             "3.24.6",
+			"webhook_signing_key": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+		},
+	}
+	f.setup(t, settings)
+
+	capturedStderr := withTerraform(t, settings, f.rackName, func(t *testing.T, tf Terraform) {
+		require.NoError(t, tf.reconcileVarsWithModule("3.24.6"))
+	})
+
+	got := f.readVars(t)
+	assert.Equal(t, "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", got["webhook_signing_key"], "webhook_signing_key should be preserved when accepted by module")
+	assert.Equal(t, "test-rack", got["name"])
+	assert.Equal(t, "3.24.6", got["release"])
+	assert.NotContains(t, capturedStderr, "removing parameters", "no NOTICE expected when nothing is removed")
+}
+
+// TestReconcileVarsWithModule_WebhookSigningKeyInModuleVarsTf_AcceptedAsValid
+// pins the convention: the actual on-disk system/aws/variables.tf must
+// declare webhook_signing_key so that reconcileVarsWithModule will accept it
+// when the target version is 3.24.6+. Fixture-free guard against accidental
+// removal in future refactors (mirrors the prometheus_url and gpu_observability
+// variants above).
+func TestReconcileVarsWithModule_WebhookSigningKeyInModuleVarsTf_AcceptedAsValid(t *testing.T) {
+	repoRoot, err := repoRootFromTestFile()
+	require.NoError(t, err)
+	varsPath := filepath.Join(repoRoot, "terraform", "system", "aws", "variables.tf")
+
+	data, err := os.ReadFile(varsPath)
+	require.NoError(t, err, "must be able to read terraform/system/aws/variables.tf")
+	assert.Contains(t, string(data), `variable "webhook_signing_key"`, "system/aws/variables.tf must declare webhook_signing_key")
+	assert.NotContains(t, string(data), `variable "webhook-signing-key"`, "kebab-cased TF variable name must NOT appear (snake_case convention)")
+}
+
 // repoRootFromTestFile walks up from the test's working directory to the
 // repo root by looking for go.mod. Used to read real on-disk module sources
 // to verify conventions.

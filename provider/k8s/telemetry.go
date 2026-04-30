@@ -31,6 +31,7 @@ var (
 		"internet_gateway_id",
 		"key_pair_name",
 		"private_eks_pass",
+		"prometheus_url",
 		"syslog",
 		"tags",
 		"vpc_id",

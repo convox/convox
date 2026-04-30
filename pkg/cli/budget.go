@@ -97,7 +97,9 @@ func BudgetShow(rack sdk.Interface, c *stdcli.Context) error {
 
 	cfg, state, err := rack.AppBudgetGet(app)
 	if err != nil {
-		return err
+		// A08 m-3 fix: friendly version-gate message on 3.24.5 racks
+		// instead of leaking raw "response status 404".
+		return wrapVersionGate(err, "budget caps")
 	}
 
 	if cfg == nil {
@@ -318,7 +320,7 @@ func BudgetSet(rack sdk.Interface, c *stdcli.Context) error {
 
 	c.Startf("Setting budget for <app>%s</app>", app)
 	if err := rack.AppBudgetSet(app, opts, ackBy); err != nil {
-		return err
+		return wrapVersionGate(err, "budget caps")
 	}
 	if explicit {
 		// stderr per spec §B.3 R1 deprecation-ux F1 — preserves stdout for CI parsers.
@@ -338,7 +340,7 @@ func BudgetClear(rack sdk.Interface, c *stdcli.Context) error {
 
 	c.Startf("Clearing budget for <app>%s</app>", app)
 	if err := rack.AppBudgetClear(app, ackBy); err != nil {
-		return err
+		return wrapVersionGate(err, "budget caps")
 	}
 	if explicit {
 		fmt.Fprintln(c.Writer().Stderr, "WARNING: --ack-by is deprecated; ack_by is now derived from your JWT identity. Flag will be rejected in 3.25.0.")
@@ -371,11 +373,11 @@ func BudgetReset(rack sdk.Interface, c *stdcli.Context) error {
 	c.Startf("Resetting budget for <app>%s</app>", app)
 	if c.Bool("force-clear-cooldown") {
 		if err := rack.AppBudgetResetWithOptions(app, ackBy, structs.AppBudgetResetOptions{ForceClearCooldown: true}); err != nil {
-			return err
+			return wrapVersionGate(err, "budget caps")
 		}
 	} else {
 		if err := rack.AppBudgetReset(app, ackBy); err != nil {
-			return err
+			return wrapVersionGate(err, "budget caps")
 		}
 	}
 	if explicit {
@@ -419,7 +421,7 @@ func BudgetSimulateShutdown(rack sdk.Interface, c *stdcli.Context) error {
 	app := c.Arg(0)
 	res, err := rack.AppBudgetSimulate(app)
 	if err != nil {
-		return err
+		return wrapVersionGate(err, "budget simulate-shutdown")
 	}
 	if res == nil {
 		fmt.Fprintf(c.Writer(), "no simulation result for app %s\n", app)
@@ -477,7 +479,7 @@ func BudgetDismissRecovery(rack sdk.Interface, c *stdcli.Context) error {
 	ackBy := currentActorIdentifier()
 	res, err := rack.AppBudgetDismissRecoveryWithResult(app, ackBy)
 	if err != nil {
-		return err
+		return wrapVersionGate(err, "budget dismiss-recovery")
 	}
 	if res == nil {
 		// Defensive: a server that pre-dates the WithResult endpoint
@@ -546,7 +548,7 @@ func BudgetCapRaise(rack sdk.Interface, c *stdcli.Context) error {
 
 	c.Startf("Raising monthly cap for <app>%s</app>", app)
 	if err := rack.AppBudgetSet(app, opts, ackBy); err != nil {
-		return err
+		return wrapVersionGate(err, "budget caps")
 	}
 	return c.OK()
 }

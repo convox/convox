@@ -25,7 +25,7 @@ row only — the same columns, just one row.
 ```bash
     $ convox scale web -a myapp
     SERVICE  DESIRED  RUNNING  CPU  MEMORY  GPU  MIN  MAX  STATUS
-    web      2        2        256  1024    -    2    2    
+    web      2        2        256  1024    -    2    2
 ```
 
 If the supplied service does not exist in the app, `convox scale <name>` exits
@@ -68,7 +68,7 @@ When no flags are passed, `convox scale` prints a table of the configured scale 
 ```bash
     $ convox scale
     SERVICE  DESIRED  RUNNING  CPU   MEMORY  GPU  MIN  MAX  AUTOSCALE    STATUS
-    web      2        2        256   1024    -    2    2    -            
+    web      2        2        256   1024    -    2    2    -
     vllm     0        0        4000  16384   1    0    10   gpu-util>70  COLD (~2-5m first req)
 ```
 

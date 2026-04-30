@@ -100,16 +100,17 @@ var releasePromoteCleanupDeferPanicHookForTest func(app, releaseID string)
 // build.go:617-632. State is taken by pointer to avoid copying the
 // 100-byte struct on each launch.
 //
-// Defer ordering (LIFO):
-//  1. Bare `defer release()` registered FIRST so it runs LAST.
-//     Belt-and-suspenders: if the cleanup-emit defer below panics
-//     (e.g. inside emitReleasePromoteResult or the annotation delete
-//     RPC), the slot is still released. Calling release twice is
-//     harmless — sync.Map.Delete is idempotent.
-//  2. Cleanup defer registered SECOND so it runs FIRST. Recovers
-//     panics from the watcher loop body, emits the terminal event,
-//     deletes the watch annotation (supersession-aware), and calls
-//     release() for the normal-path teardown.
+// Defer execution order (Go unwinds LIFO — last-registered defer runs
+// FIRST):
+//  1. INNER (cleanup): runs FIRST on unwind. Registered SECOND in the
+//     function body. Recovers panics from the watcher loop body, emits
+//     the terminal event, deletes the watch annotation (supersession-
+//     aware), and calls release() for the normal-path teardown.
+//  2. OUTER (bare release): runs LAST on unwind. Registered FIRST in the
+//     function body. Belt-and-suspenders: if the inner cleanup defer
+//     itself panics (e.g. inside emitReleasePromoteResult or the
+//     annotation delete RPC), the slot is still released. Calling
+//     release twice is harmless — sync.Map.Delete is idempotent.
 func (p *Provider) runReleasePromoteWatcher(
 	ctx context.Context,
 	app string,
@@ -486,8 +487,18 @@ func (p *Provider) scanReleasePromoteAnnotations(ctx context.Context) {
 			// mid-flight during the 5-15min rolling-upgrade window —
 			// future api-pods that own this schemaVersion handle it
 			// via their own scan pass.
-			fmt.Printf("ns=release_watcher at=warn kind=unknown_schema_version app=%s schemaVersion=%d\n",
-				app, state.SchemaVersion)
+			//
+			// A12 m-3 fix: emit a structured WARN line with all fields an
+			// operator needs to confirm a stuck annotation post-upgrade,
+			// including the manual-recovery hint when an upgrade window
+			// has closed without the future api-pod claiming the state.
+			// `kubectl annotate ns <app-ns> convox.com/release-promote-watch-`
+			// clears it manually if needed. The 5-minute GC tick rate bounds
+			// the log volume — one WARN line per stuck annotation per tick
+			// (~288 lines/day for a persistently-stuck future-schemaVersion
+			// annotation).
+			fmt.Printf("ns=release_watcher at=warn kind=unknown_schema_version app=%s schemaVersion=%d release_id=%s actor=%s expires_at=%q recovery=\"kubectl annotate ns %s convox.com/release-promote-watch-\"\n",
+				app, state.SchemaVersion, state.ReleaseID, state.Actor, state.ExpiresAt.Format(time.RFC3339), p.AppNamespace(app))
 			continue
 		}
 		if state.ExpiresAt.Before(now) {

@@ -114,14 +114,24 @@ during the transition window.
 
 ## Receiver migration
 
-Existing receivers that handle the `app:budget:cap` event family will see two
-new event types in 3.24.6:
+Existing receivers will see seven new event types in 3.24.6. See
+[Webhooks event catalog](/configuration/webhooks#event-catalog) for the
+canonical payload shapes; the migration-relevant additions are:
 
 - `app:budget:auto-shutdown:dismissed` — sent when the recovery banner is
   dismissed via `convox budget dismiss-recovery` or the Console UI.
 - `app:budget:breaker-cleared` — top-level event (NOT a sub-type of
   `auto-shutdown`); sent when a cap-raise clears the deploy circuit
   breaker (both during the armed countdown and post-`:fired`).
+- `app:budget:per-service-truncated` — emitted when the accumulator's
+  per-service breakdown table exceeds its bounded-cardinality cap and
+  drops entries from this month's persisted breakdown.
+- `app:promote:completed`, `app:promote:errored`, `app:promote:cancelled`
+  — terminal-state events from the rack-side rollout watcher; the
+  pre-existing `release:promote` (status=start) event is unchanged.
+- `app:scale-override:toggled`, `app:scale-override:honored` — emitted on
+  the per-service scale-override toggle (handler) and at deploy time
+  when an active override is honored (render-path; `actor: "system"`).
 
 Receivers that fail-closed on unknown event types should either fail-open
 (treat unknown events as informational) or be updated to handle the new types.
