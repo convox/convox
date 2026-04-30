@@ -435,7 +435,7 @@ func (m *Manifest) validateBudget() []error {
 		case "largest-cost", "newest":
 		case "priority-annotation":
 			errs = append(errs, fmt.Errorf(
-				"budget.shutdownOrder %q reserved for 3.24.7; use %q or %q",
+				"budget.shutdownOrder %q reserved for a future release; use %q or %q",
 				"priority-annotation", "largest-cost", "newest"))
 		default:
 			errs = append(errs, fmt.Errorf(

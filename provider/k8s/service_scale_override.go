@@ -36,7 +36,16 @@ const (
 // The ackBy parameter carries actor identity for the audit event;
 // the API layer derives it from JWT or a deprecated form-param via
 // resolveAckByOverride. Mirrors the AppBudgetSet ack_by precedent.
+//
+// Sanitization: ackBy is normalized through sanitizeAckBy at entry —
+// the provider is the canonical sanitization point per the API-layer
+// doc at pkg/api/deprecation.go:43-46. Mirrors the budget_accumulator
+// entry-point pattern; control chars / BiDi overrides / zero-width
+// glyphs are stripped so they cannot stamp a misleading actor on the
+// audit event or inject newlines into the stdout log.
 func (p *Provider) ServiceScaleOverrideSet(app, service string, active bool, ackBy string) error {
+	ackBy = sanitizeAckBy(ackBy)
+
 	// Verify the service exists. NotFound here means the service is
 	// not deployed yet (or was just deleted) — there's nothing to
 	// toggle. Return a structured error so the API layer can map to
@@ -97,7 +106,7 @@ func (p *Provider) ServiceScaleOverrideSet(app, service string, active bool, ack
 	if active {
 		state = "on"
 	}
-	fmt.Printf("ns=k8s at=info kind=scale_override_toggled app=%s service=%s ack_by=%s prev=%t new=%t\n",
+	fmt.Printf("ns=k8s at=info kind=scale_override_toggled app=%s service=%s ack_by=%q prev=%t new=%t\n",
 		app, service, ackBy, prevActive, active)
 	// Event-name format: app:<resource>:<verb> (matches existing
 	// app:budget:set, app:budget:cap, app:budget:threshold precedent).

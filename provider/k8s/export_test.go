@@ -530,3 +530,36 @@ func SetReleasePromoteWatchGracePeriodForTest(d time.Duration) func() {
 	releasePromoteWatchGracePeriod = d
 	return func() { releasePromoteWatchGracePeriod = prev }
 }
+
+// SetReleasePromoteWatcherPanicHookForTest installs an injectable panic
+// trigger that fires from within the watcher's polling tick. Used by
+// the panic-recovery unit test to validate the outer-defer recover()
+// emits app:promote:errored AND that the LIFO bare-defer release()
+// drops the slot even when the cleanup defer also panics. Returns a
+// restore function the test must defer to clear the hook. Test-only;
+// production code paths must NOT touch this hook.
+func SetReleasePromoteWatcherPanicHookForTest(hook func(app, releaseID string)) func() {
+	prev := releasePromoteWatcherPanicHookForTest
+	releasePromoteWatcherPanicHookForTest = hook
+	return func() { releasePromoteWatcherPanicHookForTest = prev }
+}
+
+// SetReleasePromoteCleanupDeferPanicHookForTest installs an injectable
+// panic trigger that fires from inside the cleanup defer (after the
+// inner recover() but before the LIFO bare-defer release() runs). Used
+// by the cleanup-defer-panic test to validate the belt-and-suspenders
+// guarantee that release() is always invoked even when the cleanup
+// defer itself panics. Returns a restore function. Test-only.
+func SetReleasePromoteCleanupDeferPanicHookForTest(hook func(app, releaseID string)) func() {
+	prev := releasePromoteCleanupDeferPanicHookForTest
+	releasePromoteCleanupDeferPanicHookForTest = hook
+	return func() { releasePromoteCleanupDeferPanicHookForTest = prev }
+}
+
+// DeleteReleasePromoteWatchAnnotationIfMatchesForTest exposes the
+// supersession-aware delete variant so unit tests can assert the
+// read-before-delete invariant directly without driving the full
+// watcher lifecycle. Test-only.
+func DeleteReleasePromoteWatchAnnotationIfMatchesForTest(p *Provider, ctx context.Context, app, expectedReleaseID string) error {
+	return p.deleteReleasePromoteWatchAnnotationIfMatches(ctx, app, expectedReleaseID)
+}

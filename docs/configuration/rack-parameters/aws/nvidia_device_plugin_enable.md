@@ -52,6 +52,7 @@ services:
 - When a service requests GPU resources, it will only be scheduled on nodes with available GPUs, which may affect scheduling and scaling behavior.
 
 ## Related Parameters
+- [gpu_observability_enable](/configuration/rack-parameters/aws/gpu_observability_enable): Installs the NVIDIA DCGM exporter for GPU utilization, VRAM, temperature, and power metrics. Requires this parameter to be enabled for the pod-resources socket the exporter relies on.
 - [gpu_tag_enable](/configuration/rack-parameters/aws/gpu_tag_enable): Enables GPU tagging, which helps with identifying and tracking GPU resources in your AWS environment.
 - [node_type](/configuration/rack-parameters/aws/node_type): When using GPUs, this should be set to a GPU-enabled instance type (e.g., `p3.2xlarge`, `g4dn.xlarge`).
 

@@ -73,6 +73,23 @@ func releasePromoteWatchSlotHeldForTest(app, releaseID string) bool {
 	return ok
 }
 
+// releasePromoteWatcherPanicHookForTest is a test-only injection point for
+// triggering a panic from within the watcher's polling loop. Tests set it
+// via SetReleasePromoteWatcherPanicHookForTest to validate the outer
+// recover() and the belt-and-suspenders bare-defer release() that runs
+// last in LIFO order. Production callers MUST NOT touch this hook —
+// nil is the production contract.
+var releasePromoteWatcherPanicHookForTest func(app, releaseID string)
+
+// releasePromoteCleanupDeferPanicHookForTest is a test-only injection
+// point that fires from inside the cleanup defer (after the inner
+// recover() but before the bare-defer release() runs). Tests use it to
+// validate that a panic INSIDE the cleanup defer still leaves the slot
+// released, since the LIFO bare-defer at the top of the function fires
+// even when the cleanup defer itself panics. Production callers MUST
+// NOT touch this hook — nil is the production contract.
+var releasePromoteCleanupDeferPanicHookForTest func(app, releaseID string)
+
 // runReleasePromoteWatcher polls the namespace annotation
 // `convox.com/app-status` until it reaches a terminal AtomStatus value or
 // the deadline (state.ExpiresAt + grace) fires. Emits a single terminal
@@ -82,12 +99,28 @@ func releasePromoteWatchSlotHeldForTest(app, releaseID string) bool {
 // defer recovers panics + always releases the slot — same contract as
 // build.go:617-632. State is taken by pointer to avoid copying the
 // 100-byte struct on each launch.
+//
+// Defer ordering (LIFO):
+//  1. Bare `defer release()` registered FIRST so it runs LAST.
+//     Belt-and-suspenders: if the cleanup-emit defer below panics
+//     (e.g. inside emitReleasePromoteResult or the annotation delete
+//     RPC), the slot is still released. Calling release twice is
+//     harmless — sync.Map.Delete is idempotent.
+//  2. Cleanup defer registered SECOND so it runs FIRST. Recovers
+//     panics from the watcher loop body, emits the terminal event,
+//     deletes the watch annotation (supersession-aware), and calls
+//     release() for the normal-path teardown.
 func (p *Provider) runReleasePromoteWatcher(
 	ctx context.Context,
 	app string,
 	state *structs.ReleasePromoteWatchState,
 	release func(),
 ) {
+	// Outermost LIFO defer — runs LAST, after the cleanup defer below.
+	// Guarantees the slot is released even if cleanup itself panics.
+	// release() must be idempotent; sync.Map.Delete satisfies that.
+	defer release()
+
 	var resultStatus, resultError string
 	defer func() {
 		if r := recover(); r != nil {
@@ -98,8 +131,18 @@ func (p *Provider) runReleasePromoteWatcher(
 		}
 		// Idempotent emit — guarded against double-emit by the per-promote slot.
 		p.emitReleasePromoteResult(app, state, resultStatus, resultError)
-		// Best-effort annotation cleanup — namespace-deletion races handled internally.
-		if err := p.deleteReleasePromoteWatchAnnotation(ctx, app); err != nil {
+		// Test-only hook to validate that a panic from within the cleanup
+		// defer (post-recover) still surfaces release() through the bare
+		// defer above. Fires only when the test explicitly installs it.
+		if hook := releasePromoteCleanupDeferPanicHookForTest; hook != nil {
+			hook(app, state.ReleaseID)
+		}
+		// Supersession-aware annotation cleanup. m-A12-03 fix:
+		// concurrent supersession + steady-state cleanup race could
+		// previously delete a NEWER promote's annotation. Read the
+		// current annotation; only delete it if its release-id still
+		// matches our own (i.e. nothing has overwritten our payload).
+		if err := p.deleteReleasePromoteWatchAnnotationIfMatches(ctx, app, state.ReleaseID); err != nil {
 			fmt.Printf("ns=release_watcher at=warn kind=annotation_delete app=%s err=%q\n", app, err)
 		}
 		release()
@@ -117,6 +160,13 @@ func (p *Provider) runReleasePromoteWatcher(
 			resultStatus = ""
 			return
 		case <-tick.C:
+			// Test-only injectable panic hook — exercises the outer-
+			// defer recover() + the LIFO bare-defer release() in unit
+			// tests. nil in production; the hook check is a single
+			// nil-load and free.
+			if hook := releasePromoteWatcherPanicHookForTest; hook != nil {
+				hook(app, state.ReleaseID)
+			}
 			ns, err := p.GetNamespaceFromInformer(p.AppNamespace(app))
 			if err != nil {
 				if kerr.IsNotFound(err) {
@@ -147,25 +197,9 @@ func (p *Provider) runReleasePromoteWatcher(
 				return
 			}
 			atomStatus := ns.Annotations["convox.com/app-status"]
-			switch atomStatus {
-			case "Running", "Success":
-				resultStatus = "success"
-				return
-			case "Failure", "Reverted":
-				resultStatus = "error"
-				resultError = "rollout-failed: " + atomStatus
-				return
-			case "Cancelled":
-				resultStatus = "error"
-				resultError = "cancelled"
-				return
-			case "Deadline":
-				resultStatus = "error"
-				resultError = "deadline-exceeded"
-				return
-			case "Error", "Rollback":
-				resultStatus = "error"
-				resultError = "rollback: " + atomStatus
+			if status, errMsg, terminal := mapAppStatusToWatchResult(atomStatus); terminal {
+				resultStatus = status
+				resultError = errMsg
 				return
 			}
 			// Pending / Updating — keep polling.
@@ -176,6 +210,39 @@ func (p *Provider) runReleasePromoteWatcher(
 			}
 		}
 	}
+}
+
+// mapAppStatusToWatchResult translates the AtomController-written
+// `convox.com/app-status` annotation into the watcher's emit tuple:
+// (resultStatus, resultError, terminal). When terminal=false the caller
+// keeps polling (atomStatus is Pending / Updating / empty). When
+// terminal=true the resultStatus + resultError pair is what the
+// emitReleasePromoteResult dispatcher should consume — same shape the
+// in-loop steady-state switch produced before the helper extraction.
+//
+// Phase H R2 fix (m-A08-NEW-1 / m-A12-NEW-1): the GC scanner past-
+// deadline branch previously emitted `app:promote:errored` unconditionally
+// without consulting `convox.com/app-status`. That mis-attributed real
+// rollout outcomes (e.g. AtomController had already written
+// app-status=Success but the watch annotation hadn't been cleaned up
+// yet, so the past-deadline cleanup falsely reported the promote as
+// errored). The helper now lets the GC scanner read app-status first
+// and only fall back to watcher-timeout when no terminal status has
+// been recorded.
+func mapAppStatusToWatchResult(atomStatus string) (status, errMsg string, terminal bool) {
+	switch atomStatus {
+	case "Running", "Success":
+		return "success", "", true
+	case "Failure", "Reverted":
+		return "error", "rollout-failed: " + atomStatus, true
+	case "Cancelled":
+		return "error", "cancelled", true
+	case "Deadline":
+		return "error", "deadline-exceeded", true
+	case "Error", "Rollback":
+		return "error", "rollback: " + atomStatus, true
+	}
+	return "", "", false
 }
 
 // emitReleasePromoteResult dispatches the watcher's terminal event using
@@ -251,6 +318,94 @@ func (p *Provider) writeReleasePromoteWatchAnnotation(ctx context.Context, app s
 	}
 	_, err = p.Cluster.CoreV1().Namespaces().Patch(ctx, p.AppNamespace(app), types.MergePatchType, patch, am.PatchOptions{})
 	return errors.WithStack(err)
+}
+
+// deleteReleasePromoteWatchAnnotationIfMatches is the supersession-aware
+// cleanup variant. It first reads the namespace annotation; if the stored
+// `state.ReleaseID` differs from `expectedReleaseID`, the delete is
+// skipped (a newer promote has overwritten the annotation since this
+// watcher launched, and the new watcher needs the payload preserved).
+// On read errors, namespace-not-found, or empty annotation, the call
+// becomes a no-op so the existing best-effort semantics are preserved.
+//
+// m-A12-03 fix: closes the supersession-cleanup race where a fast
+// promote sequence (Watcher A reaches terminal state, then Watcher B
+// starts and writes its own annotation, then A's cleanup defer fires)
+// would previously have A clobber B's payload.
+//
+// Phase H R2 fix (m-A03-01 / m-A05-01 / m-A12-01): the original
+// implementation read the annotation, validated the release-id match,
+// then issued a separate unconditional MergePatch — leaving a narrow
+// TOCTOU window where a concurrent writer could overwrite the
+// annotation between the Get and the Patch. Now uses a JSON-Patch with
+// a `test` op that the apiserver evaluates atomically: if the
+// annotation no longer holds our payload by the time the Patch lands,
+// the apiserver rejects with Invalid (test op failed) or Conflict and
+// we treat that as a supersession-aware skip rather than an error.
+// This eliminates the residual TOCTOU window without changing the
+// observable cleanup contract.
+func (p *Provider) deleteReleasePromoteWatchAnnotationIfMatches(ctx context.Context, app, expectedReleaseID string) error {
+	ns, err := p.Cluster.CoreV1().Namespaces().Get(ctx, p.AppNamespace(app), am.GetOptions{})
+	if err != nil {
+		if kerr.IsNotFound(err) {
+			return nil
+		}
+		return errors.WithStack(err)
+	}
+	raw := ns.Annotations[structs.ReleasePromoteWatchAnnotation]
+	if raw == "" {
+		// Annotation already gone (GC scan, prior cleanup, or never
+		// written). Nothing to delete — no-op.
+		return nil
+	}
+	var state structs.ReleasePromoteWatchState
+	if jerr := json.Unmarshal([]byte(raw), &state); jerr != nil {
+		// Corrupt JSON — defer to GC scan to delete via its own
+		// invalid-payload branch. Safer than letting a steady-state
+		// watcher delete an annotation it can't fully attribute.
+		fmt.Printf("ns=release_watcher at=warn kind=cleanup_corrupt_json app=%s err=%q\n", app, jerr)
+		return nil
+	}
+	if state.ReleaseID != expectedReleaseID {
+		// A newer promote has already overwritten the annotation.
+		// Skip the delete so the new watcher's payload survives —
+		// the new watcher's own cleanup will handle deletion when
+		// it reaches a terminal state.
+		fmt.Printf("ns=release_watcher at=info kind=cleanup_supersession_skip app=%s mine=%s current=%s\n",
+			app, expectedReleaseID, state.ReleaseID)
+		return nil
+	}
+	// JSON-Patch with `test` op: apiserver atomically rejects the patch
+	// if the annotation has been overwritten between our Get above and
+	// this Patch landing on the apiserver. The annotation key
+	// `convox.com/release-promote-watch` contains a `/` which JSON
+	// Pointer (RFC 6901) escapes as `~1`, hence the path
+	// `/metadata/annotations/convox.com~1release-promote-watch`.
+	rawJSON, jerr := json.Marshal(raw)
+	if jerr != nil {
+		return errors.WithStack(jerr)
+	}
+	patch := []byte(fmt.Sprintf(
+		`[{"op":"test","path":"/metadata/annotations/convox.com~1release-promote-watch","value":%s},{"op":"remove","path":"/metadata/annotations/convox.com~1release-promote-watch"}]`,
+		rawJSON,
+	))
+	_, perr := p.Cluster.CoreV1().Namespaces().Patch(ctx, p.AppNamespace(app), types.JSONPatchType, patch, am.PatchOptions{})
+	if perr != nil {
+		if kerr.IsNotFound(perr) {
+			// Namespace gone between Get and Patch — best-effort no-op.
+			return nil
+		}
+		if kerr.IsConflict(perr) || kerr.IsInvalid(perr) {
+			// Test op failed — annotation was overwritten between our
+			// Get and this Patch. Same supersession-skip semantics as
+			// the in-process release-id mismatch branch above.
+			fmt.Printf("ns=release_watcher at=info kind=cleanup_supersession_skip_toctou app=%s mine=%s err=%q\n",
+				app, expectedReleaseID, perr)
+			return nil
+		}
+		return errors.WithStack(perr)
+	}
+	return nil
 }
 
 // deleteReleasePromoteWatchAnnotation removes the watch annotation from the
@@ -336,8 +491,23 @@ func (p *Provider) scanReleasePromoteAnnotations(ctx context.Context) {
 			continue
 		}
 		if state.ExpiresAt.Before(now) {
-			p.emitReleasePromoteResult(app, &state, "error", "watcher-timeout")
-			_ = p.deleteReleasePromoteWatchAnnotation(ctx, app)
+			// Phase H R2 fix (m-A08-NEW-1 / m-A12-NEW-1): past-deadline
+			// no longer assumes errored. Consult `convox.com/app-status`
+			// first — if AtomController has already written a terminal
+			// status (Success / Failure / Cancelled / Deadline / Error /
+			// Rollback / Reverted), surface that as the watch event so
+			// the audit log reflects the real rollout outcome. Only
+			// fall back to watcher-timeout when app-status is non-
+			// terminal (Pending / Updating / empty) — i.e. the watcher
+			// genuinely ran out of clock without ever observing a
+			// terminal AtomController write.
+			atomStatus := ns.Annotations["convox.com/app-status"]
+			if status, errMsg, terminal := mapAppStatusToWatchResult(atomStatus); terminal {
+				p.emitReleasePromoteResult(app, &state, status, errMsg)
+			} else {
+				p.emitReleasePromoteResult(app, &state, "error", "watcher-timeout")
+			}
+			_ = p.deleteReleasePromoteWatchAnnotationIfMatches(ctx, app, state.ReleaseID)
 			continue
 		}
 		// Supersession via release annotation mirror — see runReleasePromoteWatcher
@@ -345,7 +515,7 @@ func (p *Provider) scanReleasePromoteAnnotations(ctx context.Context) {
 		currentRelease := ns.Annotations["convox.com/app-release"]
 		if currentRelease != "" && state.AtomVersion != "" && currentRelease != state.AtomVersion {
 			p.emitReleasePromoteResult(app, &state, "cancelled", "superseded-by-newer-promote")
-			_ = p.deleteReleasePromoteWatchAnnotation(ctx, app)
+			_ = p.deleteReleasePromoteWatchAnnotationIfMatches(ctx, app, state.ReleaseID)
 			continue
 		}
 		// Re-launch watcher. LoadOrStore prevents double-launch when the

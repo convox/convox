@@ -34,8 +34,20 @@ You must enable [`gpu_observability_enable`](/configuration/rack-parameters/aws/
 
 ## Additional Information
 - Stay on the same chart major version (e.g., within `4.x`) when pinning. Chart majors may introduce CRDs or admission webhooks that the Convox installer does not yet handle, which can break clean uninstall on downgrade.
-- The chart audited for `4.8.1` (the default at this rack release) installs zero CRDs and zero admission webhooks, so `helm uninstall` cleanly removes all resources. A future chart major (e.g., `5.x`) requires a re-audit and possibly a Convox rack release before adoption is safe — see the chart-bump checklist Convox maintains for the rack provider.
+- The chart audited for `4.8.1` (the default at this rack release) installs zero CRDs and zero admission webhooks, so `helm uninstall` cleanly removes all resources. A future chart major (e.g., `5.x`) requires a re-audit and possibly a Convox rack release before adoption is safe — see the [Chart-bump checklist](#chart-bump-checklist) below.
 - Always verify the chart you pin to is published at the NVIDIA upstream Helm repo: `https://nvidia.github.io/dcgm-exporter/helm-charts`. Convox does not vendor the chart.
+
+## Chart-bump Checklist
+When bumping the DCGM exporter chart **major** version (e.g., `4.x` → `5.x`), the Convox provider must re-audit the chart before merging the bump. The default chart version on a rack release is set by the Convox rack provider; out-of-band patches via this parameter stay within the same major. Anything that changes the cleanup contract requires provider work, not a customer-side pin.
+
+Audit the new chart major against these four areas:
+
+- **CRD audit**: Inspect `helm template <new-chart-version>` for any `kind: CustomResourceDefinition` outputs. The `4.x` default installs zero CRDs. If a new major adds CRDs, the Convox provider must add a finalizer-cleanup `null_resource` mirroring the [karpenter.tf:172-242 pattern](https://github.com/convox/convox/blob/main/terraform/cluster/aws/karpenter.tf) so `helm uninstall` does not orphan in-cluster resources on disable.
+- **Webhook audit**: Inspect for `kind: ValidatingWebhookConfiguration` or `kind: MutatingWebhookConfiguration` outputs. The `4.x` default installs zero admission webhooks. A webhook on a new major typically requires a cert-manager dependency or a chart-managed self-signing path; the Convox provider must verify the webhook does not block in-cluster traffic during upgrade and that the webhook's owning Deployment cleans up on `helm uninstall`.
+- **Finalizer behavior**: Inspect Deployments, DaemonSets, and ServiceAccounts in the chart for `metadata.finalizers` blocks. The `4.x` default uses Kubernetes-default finalizer behavior (no chart-managed finalizers). A new major that adds finalizers can deadlock `terraform destroy` on the `helm_release.dcgm_exporter` resource — match the karpenter pattern with a pre-uninstall `null_resource` that strips finalizers before the helm release is destroyed.
+- **Kubelet pod-resources socket compatibility**: The DCGM exporter relies on the NVIDIA device plugin's `/var/lib/kubelet/pod-resources/` socket for pod-to-GPU attribution. New chart majors may bump the minimum kubelet API version or change the socket-discovery path. Verify against the EKS-supported Kubernetes versions Convox racks use (currently `1.28`, `1.29`, `1.30`) before bumping.
+
+Once the audit completes cleanly and any required provider-side mitigations land, bump the default chart version in [`terraform/cluster/aws/variables.tf`](https://github.com/convox/convox/blob/main/terraform/cluster/aws/variables.tf) and [`terraform/system/aws/variables.tf`](https://github.com/convox/convox/blob/main/terraform/system/aws/variables.tf) as part of the next Convox rack release.
 
 ## Related Parameters
 - [gpu_observability_enable](/configuration/rack-parameters/aws/gpu_observability_enable): The enable switch that controls whether the chart is installed at all.
