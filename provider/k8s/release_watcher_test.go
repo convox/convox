@@ -571,6 +571,88 @@ func TestRunReleasePromoteWatchGC_Superseded(t *testing.T) {
 	})
 }
 
+// TestRunReleasePromoteWatchGC_PastDeadline_MapsAppStatusToVerb pins the
+// Phase H R2 fix (m-A08-NEW-1 / m-A12-NEW-1): the GC scanner past-
+// deadline branch consults `convox.com/app-status` first instead of
+// always emitting errored. When AtomController has already written a
+// terminal app-status, the GC scan surfaces that as the watch event
+// (so the audit log reflects the real rollout outcome). Only when
+// app-status is non-terminal (Pending / Updating / empty) does it
+// fall back to watcher-timeout.
+//
+// Table-driven: each row pre-seeds a past-deadline annotation with a
+// specific app-status and asserts the GC scan emits the expected
+// (action, status, message) tuple.
+func TestRunReleasePromoteWatchGC_PastDeadline_MapsAppStatusToVerb(t *testing.T) {
+	cases := []struct {
+		name        string
+		appStatus   string
+		nsSuffix    string
+		releaseID   string
+		wantAction  string
+		wantStatus  string
+		wantMessage string // matched against data.message
+	}{
+		{"running_completes", "Running", "appGCD1", "R-GCD-1", "app:promote:completed", "success", ""},
+		{"success_completes", "Success", "appGCD2", "R-GCD-2", "app:promote:completed", "success", ""},
+		{"failure_errors", "Failure", "appGCD3", "R-GCD-3", "app:promote:errored", "error", "rollout-failed: Failure"},
+		{"reverted_errors", "Reverted", "appGCD4", "R-GCD-4", "app:promote:errored", "error", "rollout-failed: Reverted"},
+		{"cancelled_errors", "Cancelled", "appGCD5", "R-GCD-5", "app:promote:errored", "error", "cancelled"},
+		{"deadline_errors", "Deadline", "appGCD6", "R-GCD-6", "app:promote:errored", "error", "deadline-exceeded"},
+		{"rollback_errors", "Rollback", "appGCD7", "R-GCD-7", "app:promote:errored", "error", "rollback: Rollback"},
+		// Non-terminal status — falls back to watcher-timeout (legacy
+		// behavior preserved for genuinely-stuck rollouts).
+		{"updating_falls_back_to_timeout", "Updating", "appGCD8", "R-GCD-8", "app:promote:errored", "error", "watcher-timeout"},
+		{"pending_falls_back_to_timeout", "Pending", "appGCD9", "R-GCD-9", "app:promote:errored", "error", "watcher-timeout"},
+		// Empty app-status (informer hasn't seen the rollout yet) —
+		// falls back to watcher-timeout.
+		{"empty_falls_back_to_timeout", "", "appGCDA", "R-GCDA", "app:promote:errored", "error", "watcher-timeout"},
+	}
+	for _, c := range cases {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			testProvider(t, func(p *k8s.Provider) {
+				// Use the matching release-id on the namespace so the
+				// supersession branch doesn't fire — we want to land on
+				// the past-deadline branch unambiguously.
+				seedAppNamespaceWithStatus(t, p, c.nsSuffix, c.appStatus, c.releaseID)
+				state := structs.ReleasePromoteWatchState{
+					SchemaVersion: 1,
+					ReleaseID:     c.releaseID,
+					AtomVersion:   c.releaseID,
+					StartedAt:     time.Now().UTC().Add(-2 * time.Hour),
+					ExpiresAt:     time.Now().UTC().Add(-1 * time.Hour),
+					Actor:         "alice@example.com",
+				}
+				require.NoError(t, k8s.WriteReleasePromoteWatchAnnotationForTest(
+					p, context.Background(), c.nsSuffix, &state))
+
+				events := captureReleaseWatcherEvents(t, p, func() {
+					k8s.ScanReleasePromoteAnnotationsForTest(p, context.Background())
+				}, 1, 2*time.Second)
+
+				ev := findEventByAction(events, c.wantAction)
+				require.NotNil(t, ev,
+					"app-status=%q past-deadline MUST emit %s; got %v", c.appStatus, c.wantAction, events)
+				assert.Equal(t, c.wantStatus, ev["status"])
+				if c.wantMessage != "" {
+					data, _ := ev["data"].(map[string]any)
+					require.NotNil(t, data, "event data must be present")
+					assert.Equal(t, c.wantMessage, data["message"],
+						"expected data.message=%q for app-status=%q", c.wantMessage, c.appStatus)
+				}
+
+				// Annotation must be cleaned up via the supersession-
+				// aware variant (release-id matches in this scenario).
+				ns, _ := p.Cluster.CoreV1().Namespaces().Get(context.TODO(),
+					fmt.Sprintf("%s-%s", p.Name, c.nsSuffix), am.GetOptions{})
+				assert.Empty(t, ns.Annotations[structs.ReleasePromoteWatchAnnotation],
+					"watch annotation MUST be cleaned up by GC past-deadline branch")
+			})
+		})
+	}
+}
+
 // TestRunReleasePromoteWatchGC_CorruptJSON: GC of unparseable annotation
 // deletes immediately; no event emitted.
 func TestRunReleasePromoteWatchGC_CorruptJSON(t *testing.T) {
@@ -602,38 +684,60 @@ func TestRunReleasePromoteWatchGC_CorruptJSON(t *testing.T) {
 	})
 }
 
-// TestRunReleasePromoteWatchGC_UnknownSchemaVersion_LogAndSkip: future
-// schemaVersion -> annotation NOT deleted, no event emitted (rolling-upgrade
-// safety).
+// TestRunReleasePromoteWatchGC_UnknownSchemaVersion_LogAndSkip: future or
+// out-of-range schemaVersion -> annotation NOT deleted, no event emitted
+// (rolling-upgrade safety). Table-driven so the same invariant is pinned
+// for the immediate next-version (2), a far-future placeholder (99), and
+// an explicit negative (-1) that an attacker or corruption could plant.
+// SchemaVersion=0 (zero value when the field is omitted from JSON) is
+// covered separately by TestRunReleasePromoteWatchGC_SchemaVersionZero_LogAndSkip
+// because a missing field is a distinct write-path scenario.
 func TestRunReleasePromoteWatchGC_UnknownSchemaVersion_LogAndSkip(t *testing.T) {
-	testProvider(t, func(p *k8s.Provider) {
-		seedAppNamespaceWithStatus(t, p, "appGC5", "Updating", "R-GC-5")
-		// schemaVersion=2 (future); rc6 reader must log-and-skip.
-		raw := `{"schemaVersion":2,"releaseId":"R-GC-5","atomVersion":"R-GC-5","actor":"future@convox.com"}`
-		patch := map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"annotations": map[string]string{
-					structs.ReleasePromoteWatchAnnotation: raw,
-				},
-			},
-		}
-		body, _ := json.Marshal(patch)
-		_, err := p.Cluster.CoreV1().Namespaces().Patch(context.TODO(),
-			fmt.Sprintf("%s-appGC5", p.Name), types.MergePatchType, body, am.PatchOptions{})
-		require.NoError(t, err)
+	cases := []struct {
+		name          string
+		nsSuffix      string
+		schemaVersion int
+		releaseID     string
+	}{
+		{"version2_next", "appGC5", 2, "R-GC-5"},
+		{"version99_far_future", "appGC5b", 99, "R-GC-5B"},
+		{"version_negative", "appGC5c", -1, "R-GC-5C"},
+	}
+	for _, c := range cases {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			testProvider(t, func(p *k8s.Provider) {
+				seedAppNamespaceWithStatus(t, p, c.nsSuffix, "Updating", c.releaseID)
+				raw := fmt.Sprintf(
+					`{"schemaVersion":%d,"releaseId":%q,"atomVersion":%q,"actor":"future@convox.com"}`,
+					c.schemaVersion, c.releaseID, c.releaseID,
+				)
+				patch := map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"annotations": map[string]string{
+							structs.ReleasePromoteWatchAnnotation: raw,
+						},
+					},
+				}
+				body, _ := json.Marshal(patch)
+				_, err := p.Cluster.CoreV1().Namespaces().Patch(context.TODO(),
+					fmt.Sprintf("%s-%s", p.Name, c.nsSuffix), types.MergePatchType, body, am.PatchOptions{})
+				require.NoError(t, err)
 
-		events := captureReleaseWatcherEvents(t, p, func() {
-			k8s.ScanReleasePromoteAnnotationsForTest(p, context.Background())
-		}, 0, 200*time.Millisecond)
+				events := captureReleaseWatcherEvents(t, p, func() {
+					k8s.ScanReleasePromoteAnnotationsForTest(p, context.Background())
+				}, 0, 200*time.Millisecond)
 
-		assert.Empty(t, events, "unknown schemaVersion MUST NOT emit; got %v", events)
+				assert.Empty(t, events, "schemaVersion=%d MUST NOT emit; got %v", c.schemaVersion, events)
 
-		// Annotation MUST persist for the future api-pod.
-		ns, _ := p.Cluster.CoreV1().Namespaces().Get(context.TODO(),
-			fmt.Sprintf("%s-appGC5", p.Name), am.GetOptions{})
-		assert.Equal(t, raw, ns.Annotations[structs.ReleasePromoteWatchAnnotation],
-			"unknown schemaVersion annotation MUST be preserved (no delete)")
-	})
+				// Annotation MUST persist for the future api-pod.
+				ns, _ := p.Cluster.CoreV1().Namespaces().Get(context.TODO(),
+					fmt.Sprintf("%s-%s", p.Name, c.nsSuffix), am.GetOptions{})
+				assert.Equal(t, raw, ns.Annotations[structs.ReleasePromoteWatchAnnotation],
+					"schemaVersion=%d annotation MUST be preserved (no delete)", c.schemaVersion)
+			})
+		})
+	}
 }
 
 // TestRunReleasePromoteWatchGC_SchemaVersionZero_LogAndSkip pins the
@@ -750,5 +854,509 @@ func TestReleasePromoteWatcher_GCConcurrentWithSteadyStateNoCorruption(t *testin
 		// At end, slot must be released.
 		assert.False(t, k8s.ReleasePromoteWatchSlotHeldForTest("appCC2", "R-CC-2"),
 			"after concurrent GC+watcher exits, slot MUST be released")
+	})
+}
+
+// TestReleasePromoteWatcher_PanicRecovery exercises the outer-defer
+// recover() guard: a panic from inside the watcher's polling loop must
+// (a) not propagate out of the goroutine, (b) cause the cleanup defer
+// to emit an `app:promote:errored` event with a watcher-panic message,
+// (c) leave the slot released, and (d) clean up the watch annotation.
+// This is the M-A06-1 / row-9 regression test — the production code at
+// release_watcher.go::runReleasePromoteWatcher relies on the recover()
+// to keep the api pod alive when an unexpected nil-pointer or map-write
+// panic strikes the polling tick.
+func TestReleasePromoteWatcher_PanicRecovery(t *testing.T) {
+	defer k8s.SetReleasePromoteWatchPollIntervalForTest(20 * time.Millisecond)()
+
+	const app = "appPanic"
+	const releaseID = "R-PANIC-1"
+
+	// Install a panic hook that fires on the FIRST tick. The watcher
+	// loop's hook check runs BEFORE the namespace read, so the panic
+	// strikes mid-tick — recovery must reroute through the cleanup
+	// defer's emit + delete + release path.
+	var hookFired int32
+	defer k8s.SetReleasePromoteWatcherPanicHookForTest(func(a, rid string) {
+		if a == app && rid == releaseID {
+			if atomic.AddInt32(&hookFired, 1) == 1 {
+				panic("synthetic-panic-from-hook")
+			}
+		}
+	})()
+
+	testProvider(t, func(p *k8s.Provider) {
+		seedAppNamespaceWithStatus(t, p, app, "Updating", releaseID)
+		// Pre-write the watch annotation so the cleanup defer's
+		// supersession-aware delete sees a matching record and removes it.
+		state := structs.ReleasePromoteWatchState{
+			SchemaVersion: 1,
+			ReleaseID:     releaseID,
+			AtomVersion:   releaseID,
+			StartedAt:     time.Now().UTC(),
+			ExpiresAt:     time.Now().UTC().Add(60 * time.Second),
+			Actor:         "alice@example.com",
+		}
+		require.NoError(t, k8s.WriteReleasePromoteWatchAnnotationForTest(p, context.Background(), app, &state))
+
+		events := captureReleaseWatcherEvents(t, p, func() {
+			// MUST NOT panic out of this call — the watcher's recover()
+			// converts the panic into a terminal errored emit.
+			k8s.RunReleasePromoteWatcherForTest(p, context.Background(), app, &state)
+		}, 1, 2*time.Second)
+
+		// Assert the panic actually fired (otherwise the test is a no-op).
+		assert.Equal(t, int32(1), atomic.LoadInt32(&hookFired), "panic hook must have fired exactly once")
+
+		// Recovered panic must surface as an errored event with watcher-panic prefix.
+		ev := findEventByAction(events, "app:promote:errored")
+		require.NotNil(t, ev, "expected app:promote:errored on recovered panic; got %v", events)
+		assert.Equal(t, "error", ev["status"])
+		// EventSend writes opts.Error into data.message (event.go:101-104).
+		// The watcher's panic recovery sets resultError="watcher-panic: ..."
+		// which routes through opts.Error on the error path, so the panic
+		// reason surfaces in payload.data.message — NOT a top-level error
+		// field on the canonical event JSON.
+		data, _ := ev["data"].(map[string]any)
+		require.NotNil(t, data, "errored event must carry data payload")
+		msg, _ := data["message"].(string)
+		assert.Contains(t, msg, "watcher-panic", "expected watcher-panic in data.message; got %q", msg)
+
+		// Slot must be released regardless of panic.
+		assert.False(t, k8s.ReleasePromoteWatchSlotHeldForTest(app, releaseID),
+			"slot MUST be released after a recovered panic")
+
+		// Annotation must be cleaned up (supersession-aware delete confirms our release-id).
+		ns, _ := p.Cluster.CoreV1().Namespaces().Get(context.TODO(),
+			fmt.Sprintf("%s-%s", p.Name, app), am.GetOptions{})
+		assert.Empty(t, ns.Annotations[structs.ReleasePromoteWatchAnnotation],
+			"annotation MUST be deleted after a recovered panic")
+	})
+}
+
+// TestReleasePromoteWatcher_PanicDuringStateMachine_RecoverEmitsAndCleansUp
+// covers the secondary-panic case: the watcher loop body panics, the
+// cleanup defer's emit + annotation-delete logic ALSO panics, and the
+// outermost LIFO bare-defer release() must still drop the slot. This
+// is the row-11a regression test — the m-A05-01 belt-and-suspenders
+// fix exists precisely to keep a slot from being permanently leaked
+// when both the loop body and the cleanup defer fail at once.
+func TestReleasePromoteWatcher_PanicDuringStateMachine_RecoverEmitsAndCleansUp(t *testing.T) {
+	defer k8s.SetReleasePromoteWatchPollIntervalForTest(20 * time.Millisecond)()
+
+	const app = "appPanic2"
+	const releaseID = "R-PANIC-2"
+
+	var loopPanicFired, cleanupPanicFired int32
+	defer k8s.SetReleasePromoteWatcherPanicHookForTest(func(a, rid string) {
+		if a == app && rid == releaseID {
+			if atomic.AddInt32(&loopPanicFired, 1) == 1 {
+				panic("synthetic-loop-panic")
+			}
+		}
+	})()
+	defer k8s.SetReleasePromoteCleanupDeferPanicHookForTest(func(a, rid string) {
+		if a == app && rid == releaseID {
+			if atomic.AddInt32(&cleanupPanicFired, 1) == 1 {
+				panic("synthetic-cleanup-panic")
+			}
+		}
+	})()
+
+	testProvider(t, func(p *k8s.Provider) {
+		seedAppNamespaceWithStatus(t, p, app, "Updating", releaseID)
+		state := structs.ReleasePromoteWatchState{
+			SchemaVersion: 1,
+			ReleaseID:     releaseID,
+			AtomVersion:   releaseID,
+			StartedAt:     time.Now().UTC(),
+			ExpiresAt:     time.Now().UTC().Add(60 * time.Second),
+			Actor:         "alice@example.com",
+		}
+
+		// Run watcher inside a goroutine that catches anything that
+		// the LIFO bare-defer didn't manage to swallow. A test failure
+		// occurs only if the slot leaks (the bare-defer release() did
+		// NOT fire). The cleanup defer's panic propagates past the
+		// current goroutine — testify and t.Fail() handle the runtime
+		// panic via t.FailNow at the assertion below.
+		var ranToCompletion int32
+		done := make(chan struct{})
+		go func() {
+			defer func() {
+				// Cleanup-defer panic propagates here; recover so the
+				// test goroutine terminates cleanly. The release()
+				// path we care about runs BEFORE this recover() in
+				// LIFO order, so by the time we see the panic the
+				// slot is already dropped.
+				_ = recover()
+				atomic.StoreInt32(&ranToCompletion, 1)
+				close(done)
+			}()
+			k8s.RunReleasePromoteWatcherForTest(p, context.Background(), app, &state)
+		}()
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+			t.Fatalf("watcher goroutine did not return")
+		}
+
+		assert.Equal(t, int32(1), atomic.LoadInt32(&ranToCompletion), "watcher goroutine must complete (slot release path)")
+		assert.Equal(t, int32(1), atomic.LoadInt32(&loopPanicFired), "loop-panic hook must have fired")
+		assert.Equal(t, int32(1), atomic.LoadInt32(&cleanupPanicFired), "cleanup-panic hook must have fired")
+
+		// The critical invariant: slot must be released even when the
+		// cleanup defer itself panicked. The LIFO bare-defer at the
+		// top of runReleasePromoteWatcher provides this guarantee.
+		assert.False(t, k8s.ReleasePromoteWatchSlotHeldForTest(app, releaseID),
+			"slot MUST be released even when cleanup defer panics (belt-and-suspenders)")
+	})
+}
+
+// TestReleasePromoteWatcher_SingleEmitPerTerminalState pins the
+// single-emit invariant: each watcher emits EXACTLY one terminal-state
+// event per release-id. Drives the watcher to a `Running` terminal,
+// then asserts only one `app:promote:completed` payload arrives at the
+// webhook receiver — no retry-loop spam, no duplicate event from the
+// cleanup defer's emit path firing twice. Row-11c regression test.
+func TestReleasePromoteWatcher_SingleEmitPerTerminalState(t *testing.T) {
+	defer k8s.SetReleasePromoteWatchPollIntervalForTest(20 * time.Millisecond)()
+
+	testProvider(t, func(p *k8s.Provider) {
+		seedAppNamespaceWithStatus(t, p, "appSingle", "Running", "R-SINGLE-1")
+
+		state := structs.ReleasePromoteWatchState{
+			SchemaVersion: 1,
+			ReleaseID:     "R-SINGLE-1",
+			AtomVersion:   "R-SINGLE-1",
+			StartedAt:     time.Now().UTC(),
+			ExpiresAt:     time.Now().UTC().Add(60 * time.Second),
+			Actor:         "alice@example.com",
+		}
+
+		// Capture *all* events with a timeout that comfortably exceeds
+		// the watcher's first-tick latency (20ms) plus the cleanup
+		// defer drain.
+		events := captureReleaseWatcherEvents(t, p, func() {
+			k8s.RunReleasePromoteWatcherForTest(p, context.Background(), "appSingle", &state)
+		}, 1, 1*time.Second)
+		// Allow extra settle time so any rogue retry-emit would surface.
+		time.Sleep(200 * time.Millisecond)
+
+		// Re-collect after the settle window to confirm no late event.
+		// Phase H R2 fix (m-A06-1 / m-A09-DEAD-CODE): previously this
+		// captured `events2` was discarded as `_ = events2` — the
+		// settle-window second-capture pattern was started but the
+		// invariant was never asserted. Now explicitly asserts no
+		// late terminal event arrives so a future regression that
+		// introduces async webhook emit (e.g. a goroutine launched
+		// from inside emitReleasePromoteResult) would be caught.
+		events2 := captureReleaseWatcherEvents(t, p, func() {}, 0, 100*time.Millisecond)
+		assert.Empty(t, events2, "no late terminal event must arrive after watcher exits; got %v", events2)
+
+		// Count completed/errored/cancelled emits — must total exactly 1.
+		count := 0
+		for _, ev := range events {
+			a, _ := ev["action"].(string)
+			switch a {
+			case "app:promote:completed", "app:promote:errored", "app:promote:cancelled":
+				count++
+			}
+		}
+		assert.Equal(t, 1, count,
+			"watcher MUST emit exactly one terminal event per release-id; got %d (events=%v)", count, events)
+	})
+}
+
+// TestReleasePromoteWatcher_CleanupDeferPanic_StillReleasesSlot is the
+// m-A05-01 regression test. A successful state-machine run is followed
+// by a panic INSIDE the cleanup defer. The outermost LIFO bare-defer
+// release() must still fire so the slot is dropped — without the
+// belt-and-suspenders defer, the slot would leak until api-pod restart.
+func TestReleasePromoteWatcher_CleanupDeferPanic_StillReleasesSlot(t *testing.T) {
+	defer k8s.SetReleasePromoteWatchPollIntervalForTest(20 * time.Millisecond)()
+
+	const app = "appCleanupPanic"
+	const releaseID = "R-CLEAN-PANIC-1"
+
+	var cleanupPanicFired int32
+	defer k8s.SetReleasePromoteCleanupDeferPanicHookForTest(func(a, rid string) {
+		if a == app && rid == releaseID {
+			if atomic.AddInt32(&cleanupPanicFired, 1) == 1 {
+				panic("synthetic-cleanup-only-panic")
+			}
+		}
+	})()
+
+	testProvider(t, func(p *k8s.Provider) {
+		// Happy-path trigger — the watcher exits on Running.
+		seedAppNamespaceWithStatus(t, p, app, "Running", releaseID)
+		state := structs.ReleasePromoteWatchState{
+			SchemaVersion: 1,
+			ReleaseID:     releaseID,
+			AtomVersion:   releaseID,
+			StartedAt:     time.Now().UTC(),
+			ExpiresAt:     time.Now().UTC().Add(60 * time.Second),
+			Actor:         "alice@example.com",
+		}
+
+		done := make(chan struct{})
+		go func() {
+			defer func() {
+				_ = recover() // catch the cleanup-defer panic in this goroutine
+				close(done)
+			}()
+			k8s.RunReleasePromoteWatcherForTest(p, context.Background(), app, &state)
+		}()
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+			t.Fatalf("watcher goroutine did not return")
+		}
+
+		assert.Equal(t, int32(1), atomic.LoadInt32(&cleanupPanicFired), "cleanup-defer panic hook must have fired")
+		assert.False(t, k8s.ReleasePromoteWatchSlotHeldForTest(app, releaseID),
+			"belt-and-suspenders: slot MUST be released even when cleanup defer panics post-emit")
+	})
+}
+
+// TestReleasePromoteWatcher_SupersessionAware_CleanupSkips is the
+// m-A12-03 regression test. Watcher A reaches a terminal state; while
+// A's cleanup is in-flight, Watcher B starts and overwrites the watch
+// annotation. A's cleanup must read the annotation, see the new
+// release-id, and SKIP the delete so B's payload survives.
+//
+// We exercise the read-before-delete primitive directly via
+// DeleteReleasePromoteWatchAnnotationIfMatchesForTest — the
+// race-window orchestration that would arise inside the goroutine is
+// awkward to schedule deterministically with a fake clientset, but
+// the primitive is the load-bearing piece and the production cleanup
+// defer routes through it on every steady-state exit.
+func TestReleasePromoteWatcher_SupersessionAware_CleanupSkips(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		const app = "appSupersess"
+		seedAppNamespaceWithStatus(t, p, app, "Updating", "R2")
+
+		// Step 1 (Watcher A's annotation): write payload for R1.
+		stateA := structs.ReleasePromoteWatchState{
+			SchemaVersion: 1,
+			ReleaseID:     "R1",
+			AtomVersion:   "R1",
+			StartedAt:     time.Now().UTC(),
+			ExpiresAt:     time.Now().UTC().Add(60 * time.Second),
+			Actor:         "alice@example.com",
+		}
+		require.NoError(t, k8s.WriteReleasePromoteWatchAnnotationForTest(p, context.Background(), app, &stateA))
+
+		// Step 2 (Watcher B overwrites): simulate a newer promote
+		// landing before A's cleanup defer runs.
+		stateB := structs.ReleasePromoteWatchState{
+			SchemaVersion: 1,
+			ReleaseID:     "R2",
+			AtomVersion:   "R2",
+			StartedAt:     time.Now().UTC(),
+			ExpiresAt:     time.Now().UTC().Add(60 * time.Second),
+			Actor:         "bob@example.com",
+		}
+		require.NoError(t, k8s.WriteReleasePromoteWatchAnnotationForTest(p, context.Background(), app, &stateB))
+
+		// Step 3 (A's cleanup reads + skips): A's cleanup defer calls
+		// the supersession-aware variant with its own release-id (R1).
+		// It should see R2 in the annotation and SKIP the delete.
+		err := k8s.DeleteReleasePromoteWatchAnnotationIfMatchesForTest(p, context.Background(), app, "R1")
+		require.NoError(t, err, "supersession-aware delete must succeed (no-op skip)")
+
+		// Step 4 (verify): annotation must still hold B's payload.
+		ns, _ := p.Cluster.CoreV1().Namespaces().Get(context.TODO(),
+			fmt.Sprintf("%s-%s", p.Name, app), am.GetOptions{})
+		raw := ns.Annotations[structs.ReleasePromoteWatchAnnotation]
+		require.NotEmpty(t, raw, "B's annotation MUST persist (A skipped delete)")
+		var got structs.ReleasePromoteWatchState
+		require.NoError(t, json.Unmarshal([]byte(raw), &got))
+		assert.Equal(t, "R2", got.ReleaseID, "annotation must still hold B's payload after A's skipped cleanup")
+		assert.Equal(t, "bob@example.com", got.Actor, "actor must reflect B")
+
+		// Step 5: When B's own cleanup runs (with releaseID=R2), the
+		// delete proceeds because the stored release-id matches B's.
+		err = k8s.DeleteReleasePromoteWatchAnnotationIfMatchesForTest(p, context.Background(), app, "R2")
+		require.NoError(t, err, "matching-release cleanup must proceed normally")
+		ns2, _ := p.Cluster.CoreV1().Namespaces().Get(context.TODO(),
+			fmt.Sprintf("%s-%s", p.Name, app), am.GetOptions{})
+		assert.Empty(t, ns2.Annotations[structs.ReleasePromoteWatchAnnotation],
+			"B's cleanup MUST delete the annotation (matching release-id)")
+	})
+}
+
+// TestReleasePromoteWatcher_SupersessionAware_CleanupSkips_TOCTOU_PatchTestOpRejects
+// pins the JSON-Patch `test` op fallback semantics introduced in the
+// Phase H R2 fix (m-A03-01 / m-A05-01 / m-A12-01). The in-process
+// release-id compare in deleteReleasePromoteWatchAnnotationIfMatches
+// correctly catches supersession in the simple sequential case
+// (covered by SupersessionAware_CleanupSkips above), but a fast
+// supersession landing BETWEEN our Get and our Patch leaves a residual
+// TOCTOU window that the test op closes — apiserver atomically
+// rejects the Patch with Invalid (test op failed) when the annotation
+// value differs from what we read.
+//
+// The fake clientset honors JSONPatchType test ops via
+// evanphx/json-patch, so this test directly exercises the rejection
+// path: hand-craft a JSON-Patch with a stale `value` (encoding what
+// USED to be in the annotation), apply it after the annotation has
+// been overwritten, and assert the apiserver rejects with Invalid.
+// Mirrors what would happen in production when a fast B-overwrite
+// races our Patch landing.
+func TestReleasePromoteWatcher_SupersessionAware_CleanupSkips_TOCTOU_PatchTestOpRejects(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		const app = "appTOCTOU"
+		seedAppNamespaceWithStatus(t, p, app, "Updating", "R-TOCTOU-A")
+
+		// Write annotation with payload A (release-id A).
+		stateA := structs.ReleasePromoteWatchState{
+			SchemaVersion: 1,
+			ReleaseID:     "R-TOCTOU-A",
+			AtomVersion:   "R-TOCTOU-A",
+			StartedAt:     time.Now().UTC(),
+			ExpiresAt:     time.Now().UTC().Add(60 * time.Second),
+			Actor:         "alice@example.com",
+		}
+		require.NoError(t, k8s.WriteReleasePromoteWatchAnnotationForTest(p, context.Background(), app, &stateA))
+
+		// Capture the raw annotation string for A — this is the value
+		// the test op would expect if our Get had read it.
+		nsA, _ := p.Cluster.CoreV1().Namespaces().Get(context.TODO(),
+			fmt.Sprintf("%s-%s", p.Name, app), am.GetOptions{})
+		rawA := nsA.Annotations[structs.ReleasePromoteWatchAnnotation]
+		require.NotEmpty(t, rawA)
+
+		// Simulate a concurrent overwrite: B writes its annotation
+		// between our (hypothetical) Get and Patch.
+		stateB := structs.ReleasePromoteWatchState{
+			SchemaVersion: 1,
+			ReleaseID:     "R-TOCTOU-B",
+			AtomVersion:   "R-TOCTOU-B",
+			StartedAt:     time.Now().UTC(),
+			ExpiresAt:     time.Now().UTC().Add(60 * time.Second),
+			Actor:         "bob@example.com",
+		}
+		require.NoError(t, k8s.WriteReleasePromoteWatchAnnotationForTest(p, context.Background(), app, &stateB))
+
+		// Hand-craft the JSON-Patch our production code would have
+		// constructed if it had read rawA and skipped the in-process
+		// check (i.e. it didn't get to compare release-id mismatch).
+		// The test op encodes A's raw value; the apiserver will reject
+		// because the annotation now holds B's value.
+		rawAJSON, jerr := json.Marshal(rawA)
+		require.NoError(t, jerr)
+		patch := []byte(fmt.Sprintf(
+			`[{"op":"test","path":"/metadata/annotations/convox.com~1release-promote-watch","value":%s},{"op":"remove","path":"/metadata/annotations/convox.com~1release-promote-watch"}]`,
+			rawAJSON,
+		))
+		_, perr := p.Cluster.CoreV1().Namespaces().Patch(context.TODO(),
+			fmt.Sprintf("%s-%s", p.Name, app), types.JSONPatchType, patch, am.PatchOptions{})
+		require.Error(t, perr, "apiserver MUST reject JSON-Patch when test op value mismatches current annotation")
+		// Real apiserver wraps test-op failures as Invalid (HTTP 422)
+		// or Conflict (HTTP 409); production code handles both via
+		// kerr.IsInvalid / kerr.IsConflict and treats them as the
+		// supersession-aware skip path. The fake clientset
+		// (vendor/k8s.io/client-go/testing/fixture.go ApplyPatch:246)
+		// surfaces the raw evanphx/json-patch.v4 error directly without
+		// wrapping it as a typed apierror — error message is
+		// "testing value <path> failed: test failed". Both code paths
+		// (typed Invalid/Conflict in production; raw error in fake)
+		// converge on the same behavior: the Patch did NOT land, so
+		// the annotation in the namespace is preserved unchanged.
+		// Production behavior is verified by the Invalid/Conflict
+		// branches in deleteReleasePromoteWatchAnnotationIfMatches;
+		// fake-clientset behavior is verified here via the persistence
+		// assertion below.
+		assert.Contains(t, perr.Error(), "test failed",
+			"fake clientset surfaces JSON-Patch test-op failure with 'test failed' suffix; got %v", perr)
+
+		// Verify B's annotation persists — A's stale Patch did NOT land.
+		nsAfter, _ := p.Cluster.CoreV1().Namespaces().Get(context.TODO(),
+			fmt.Sprintf("%s-%s", p.Name, app), am.GetOptions{})
+		rawAfter := nsAfter.Annotations[structs.ReleasePromoteWatchAnnotation]
+		require.NotEmpty(t, rawAfter, "B's annotation MUST persist after rejected Patch")
+		var got structs.ReleasePromoteWatchState
+		require.NoError(t, json.Unmarshal([]byte(rawAfter), &got))
+		assert.Equal(t, "R-TOCTOU-B", got.ReleaseID, "annotation must still hold B's payload after rejected Patch")
+	})
+}
+
+// TestDeleteReleasePromoteWatchAnnotationIfMatches_NotFound pins the
+// namespace-not-found no-op branch. When the app's namespace doesn't
+// exist (deleted concurrently with the watcher's cleanup defer), the
+// supersession-aware delete returns nil instead of erroring — same
+// best-effort semantics as the unconditional variant. Phase H R2 fix
+// (m-A06-3): exercises one of the three previously-uncovered no-op
+// branches so a regression that converts the no-op into an error
+// would be caught.
+func TestDeleteReleasePromoteWatchAnnotationIfMatches_NotFound(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		// Do NOT seed the namespace — Get returns NotFound.
+		err := k8s.DeleteReleasePromoteWatchAnnotationIfMatchesForTest(
+			p, context.Background(), "appNotFound", "R-NF-1")
+		require.NoError(t, err, "namespace-not-found MUST be a silent no-op")
+	})
+}
+
+// TestDeleteReleasePromoteWatchAnnotationIfMatches_EmptyAnnotation pins
+// the empty-annotation no-op branch. When the app's namespace exists
+// but the watch annotation is absent (already deleted by GC, or never
+// written), the supersession-aware delete returns nil without issuing
+// any patch. Phase H R2 fix (m-A06-3).
+func TestDeleteReleasePromoteWatchAnnotationIfMatches_EmptyAnnotation(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		// Seed namespace WITHOUT the watch annotation. seedAppNamespaceWithStatus
+		// only writes app-status / app-release annotations.
+		seedAppNamespaceWithStatus(t, p, "appEmpty", "Updating", "R-EMPTY-1")
+
+		err := k8s.DeleteReleasePromoteWatchAnnotationIfMatchesForTest(
+			p, context.Background(), "appEmpty", "R-EMPTY-1")
+		require.NoError(t, err, "empty annotation MUST be a silent no-op")
+
+		// Confirm seed annotations are untouched.
+		ns, _ := p.Cluster.CoreV1().Namespaces().Get(context.TODO(),
+			fmt.Sprintf("%s-appEmpty", p.Name), am.GetOptions{})
+		assert.Equal(t, "Updating", ns.Annotations["convox.com/app-status"],
+			"app-status annotation MUST be preserved (no patch issued)")
+	})
+}
+
+// TestDeleteReleasePromoteWatchAnnotationIfMatches_CorruptJSON pins the
+// corrupt-JSON no-op branch. When the watch annotation is present but
+// holds invalid JSON, the supersession-aware delete logs and returns
+// nil without issuing a patch — defers to the GC scan's corrupt-JSON
+// branch which deletes via the unconditional variant (since no
+// release-id is attributable). Phase H R2 fix (m-A06-3).
+func TestDeleteReleasePromoteWatchAnnotationIfMatches_CorruptJSON(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		seedAppNamespaceWithStatus(t, p, "appCorrupt", "Updating", "R-CORRUPT-1")
+		// Plant a corrupt-JSON annotation directly.
+		patch := map[string]interface{}{
+			"metadata": map[string]interface{}{
+				"annotations": map[string]string{
+					structs.ReleasePromoteWatchAnnotation: "{not-valid-json",
+				},
+			},
+		}
+		body, _ := json.Marshal(patch)
+		_, err := p.Cluster.CoreV1().Namespaces().Patch(context.TODO(),
+			fmt.Sprintf("%s-appCorrupt", p.Name), types.MergePatchType, body, am.PatchOptions{})
+		require.NoError(t, err)
+
+		derr := k8s.DeleteReleasePromoteWatchAnnotationIfMatchesForTest(
+			p, context.Background(), "appCorrupt", "R-CORRUPT-1")
+		require.NoError(t, derr, "corrupt-JSON MUST be a silent no-op (deferred to GC scan)")
+
+		// Confirm the corrupt annotation persists — the supersession-aware
+		// variant does NOT delete corrupt JSON (no payload to attribute).
+		// The cold-start GC scan handles this case via its unconditional
+		// delete branch (release_watcher.go scanReleasePromoteAnnotations
+		// corrupt-JSON branch).
+		ns, _ := p.Cluster.CoreV1().Namespaces().Get(context.TODO(),
+			fmt.Sprintf("%s-appCorrupt", p.Name), am.GetOptions{})
+		assert.Equal(t, "{not-valid-json", ns.Annotations[structs.ReleasePromoteWatchAnnotation],
+			"corrupt annotation MUST persist (defer to GC scan; no patch issued)")
 	})
 }

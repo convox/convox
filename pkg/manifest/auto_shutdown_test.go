@@ -104,7 +104,7 @@ func TestParseAutoShutdownManifest_ShutdownOrderInvalid_Rule7_RejectsHardFail(t 
 func TestParseAutoShutdownManifest_ShutdownOrderPriorityAnnotation_Rule7a_RejectsWithDeferralMessage(t *testing.T) {
 	err := loadFixture(t, "auto-shutdown-invalid-rule7a.yml")
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "reserved for 3.24.7")
+	require.Contains(t, err.Error(), "reserved for a future release")
 }
 
 // TestParseAutoShutdownManifest_RecoveryModeScheduled_Rule8_RejectsWithDeferralMessage

@@ -142,8 +142,11 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 	// GPU runtime telemetry runs after BOTH deployment and (optional)
 	// daemonset population so agent / non-agent services are aggregated
 	// in one Prom round-trip. p.PromClient is nil on racks without
-	// PROMETHEUS_URL → enrichGpuTelemetry no-ops.
-	p.enrichGpuTelemetry(app, ss)
+	// PROMETHEUS_URL → enrichGpuTelemetry no-ops. ServiceList does not
+	// receive a caller ctx (interface contract); use Background as the
+	// parent — enrichGpuTelemetry applies its own internal timeout
+	// (5s) on the Prom round-trip so a stalled request cannot leak.
+	p.enrichGpuTelemetry(context.Background(), app, ss)
 
 	return ss, nil
 }
@@ -224,7 +227,12 @@ func (p *Provider) serviceListAppendDaemonsets(app string, ss structs.Services, 
 // still count toward the denominator. This matches the customer-facing
 // definition of "average GPU utilization across this service's pods" —
 // reporting every pod's reading even when one metric is missing.
-func (p *Provider) enrichGpuTelemetry(app string, ss structs.Services) {
+//
+// The ctx parameter is the caller's context — plumbed through for
+// idiomatic cancellation. QueryGPUMetrics still applies its own internal
+// 5s deadline so a missing or never-cancelled parent ctx cannot stall
+// the enrichment path.
+func (p *Provider) enrichGpuTelemetry(ctx context.Context, app string, ss structs.Services) {
 	if p.PromClient == nil {
 		return
 	}
@@ -239,7 +247,7 @@ func (p *Provider) enrichGpuTelemetry(app string, ss structs.Services) {
 		return
 	}
 
-	gpuByPod, err := p.PromClient.QueryGPUMetrics(context.TODO(), app, gpuServices)
+	gpuByPod, err := p.PromClient.QueryGPUMetrics(ctx, app, gpuServices)
 	if err != nil {
 		p.logger.Errorf("failed to fetch gpu metrics: %s", err)
 		return

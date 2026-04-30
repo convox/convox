@@ -28,3 +28,8 @@ This command enables GPU tagging for your instances.
 Enabling GPU tagging helps you manage and monitor GPU resources more effectively by allowing you to assign custom tags to GPU instances. GPU tagging is not supported in all AWS regions, so ensure that your region supports this feature before enabling it. For more information on GPU tagging and supported regions, refer to the [AWS documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html).
 
 Proper tagging of GPU resources can help with cost allocation, operational management, and resource optimization across your cloud infrastructure.
+
+## Related Parameters
+- [gpu_observability_enable](/configuration/rack-parameters/aws/gpu_observability_enable): Installs the NVIDIA DCGM exporter for GPU utilization and VRAM metrics. Pairs with GPU tagging to give you both AWS-side cost allocation and in-cluster utilization visibility.
+- [nvidia_device_plugin_enable](/configuration/rack-parameters/aws/nvidia_device_plugin_enable): Enables the NVIDIA GPU device plugin so Kubernetes can schedule GPU workloads onto tagged instances.
+- [nvidia_device_time_slicing_replicas](/configuration/rack-parameters/aws/nvidia_device_time_slicing_replicas): Time-slices physical GPUs into virtual replicas for higher utilization on tagged GPU instances.

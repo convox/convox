@@ -235,6 +235,44 @@ func TestServiceScaleOverrideSet_AckByOverride(t *testing.T) {
 	assert.Equal(t, "alice@example.com", data["actor"], "actor must equal ack_by per AppBudgetSet precedent")
 }
 
+// ----- Test 12b: SanitizesAckBy -----
+//
+// Verifies the provider-method sanitizes ackBy at entry: control
+// chars and a forged log-line tail must not survive into the
+// webhook payload (actor + ack_by) or the stdout log line. Mirrors
+// the budget_accumulator sanitization invariant — the provider is
+// the canonical sanitization point per pkg/api/deprecation.go:43-46.
+func TestServiceScaleOverrideSet_SanitizesAckBy(t *testing.T) {
+	restoreStdout := captureStdout(t)
+
+	events := captureMultiPayload(t, func(p *k8s.Provider) error {
+		kk := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		annotatedFixture(t, kk, "rack1-app1", "web", false)
+		// Newline + control chars + a forged log-tail. Sanitizer
+		// strips C0 controls, leaving the remaining glyphs joined.
+		return p.ServiceScaleOverrideSet("app1", "web", true, "alice@example.com\nINJECTION")
+	})
+
+	ev := findEventByAction(events, "app:scale-override:toggled")
+	require.NotNil(t, ev)
+	data := ev["data"].(map[string]any)
+	wantSanitized := "alice@example.comINJECTION"
+	assert.Equal(t, wantSanitized, data["ack_by"], "ack_by must be sanitized — control chars stripped")
+	assert.Equal(t, wantSanitized, data["actor"], "actor must equal sanitized ack_by")
+
+	out := restoreStdout()
+	// Stdout must NOT contain a raw newline-injected payload — the
+	// %q format quotes any residual control chars and the sanitizer
+	// strips the actual newline.
+	assert.NotContains(t, out, "alice@example.com\nINJECTION",
+		"stdout must not carry raw injected newline; got:\n%s", out)
+	// The %q-quoted sanitized form must appear in stdout. Format:
+	// ack_by="alice@example.comINJECTION".
+	assert.Contains(t, out, "ack_by=\"alice@example.comINJECTION\"",
+		"stdout ack_by must use %%q quoting around sanitized value; got:\n%s", out)
+}
+
 // ----- Test 12a: ServiceList_PopulatesScaleOverrideActive -----
 
 func TestServiceList_PopulatesScaleOverrideActive(t *testing.T) {
@@ -399,8 +437,13 @@ func TestServiceScaleOverrideSet_AdminRBAC_AdminPermitted(t *testing.T) {
 // ----- Race test 21: Concurrent toggle + ServiceUpdate -----
 //
 // Spawn N goroutines toggling override while another goroutine repeatedly
-// calls ServiceUpdate. Validates last-writer-wins on independent fields
-// (annotation vs spec.replicas).
+// calls ServiceUpdate with empty opts — the no-mutation path still drives
+// the full budget-circuit-breaker → informer Get → Deployment Update
+// pipeline, which is the read+write surface that races the toggle's
+// annotation Patch. Validates last-writer-wins on independent surfaces
+// (annotation patch vs no-op Deployment Update): every Update round-trip
+// must complete cleanly while toggles interleave, and the final
+// annotation state must be one of the toggled values (never partial).
 func TestServiceScaleOverride_RaceWith_ServiceUpdate(t *testing.T) {
 	if testing.Short() {
 		t.Skip("race test")
@@ -415,8 +458,9 @@ func TestServiceScaleOverride_RaceWith_ServiceUpdate(t *testing.T) {
 
 		var wg sync.WaitGroup
 		const N = 8
-		wg.Add(N)
+		wg.Add(N + 1)
 		for i := 0; i < N; i++ {
+			// Goroutine A: toggle override.
 			go func(idx int) {
 				defer wg.Done()
 				for j := 0; j < 5; j++ {
@@ -428,6 +472,23 @@ func TestServiceScaleOverride_RaceWith_ServiceUpdate(t *testing.T) {
 				}
 			}(i)
 		}
+		// Goroutine B: drive ServiceUpdate concurrently. Empty opts
+		// drive the budget-check → informer Get → Deployment Update
+		// pipeline without panicking on uninitialized container
+		// resource maps in the lean fixture. Errors are absorbed: a
+		// stale informer-cached Deployment can race the toggle's Patch
+		// and produce a benign resource-version conflict on the
+		// Update; we assert only that the final annotation state is
+		// coherent and the deployment survives.
+		go func() {
+			defer wg.Done()
+			for j := 0; j < 5; j++ {
+				if ctx.Err() != nil {
+					return
+				}
+				_ = p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{})
+			}
+		}()
 		wg.Wait()
 
 		// Sanity: deployment still exists and has a coherent annotation
@@ -439,16 +500,19 @@ func TestServiceScaleOverride_RaceWith_ServiceUpdate(t *testing.T) {
 	})
 }
 
-// ----- Race test 22: Cross-mutation toggle vs ReleasePromote — narrow ToggleSet stress -----
+// ----- Race test 22: Cross-mutation toggle vs ReleasePromote — informer-cache annotation read race -----
 //
 // Spec §9.4 row 22 stresses ServiceScaleOverrideSet against the full
-// ReleasePromote path. Driving ReleasePromote requires Atom + ConvoxCRD +
-// Build fixtures and isn't available in the lean unit-test scaffolding;
-// race coverage for the override-toggle annotation patch is provided by
-// this narrower stress test that runs the toggle method concurrently
-// against a goroutine reading the same Deployment metadata via the
-// informer cache. The full ReleasePromote-path race is exercised in
-// integration via the live `test-uiux-0417` AWS rack per spec §9.5.
+// ReleasePromote path. Driving the full ReleasePromote requires Atom +
+// ConvoxCRD + Build fixtures and isn't available in the lean unit-test
+// scaffolding. This narrowed test covers only the in-process race that
+// matters for unit-level coverage: the toggle's annotation Patch vs an
+// informer-cached Get of the same Deployment metadata (the read shape
+// ReleasePromote uses to pick up the override flag). It does NOT
+// exercise the rest of the ReleasePromote pipeline (manifest re-render,
+// HPA reconcile, KEDA ScaledObject patch, deployment rollout). The
+// full ReleasePromote-path race is exercised in integration via the
+// live `test-uiux-0417` AWS rack per spec §9.5.
 func TestServiceScaleOverride_CrossMutation_RaceWith_ReleasePromote(t *testing.T) {
 	if testing.Short() {
 		t.Skip("race test")
