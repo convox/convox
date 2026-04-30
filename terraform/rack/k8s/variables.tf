@@ -46,5 +46,5 @@ variable "telemetry_default_map" {
 # telemetry hashes the Secret values via SHA-256 before emission.
 variable "redacted_param_keys" {
   type    = list(string)
-  default = ["webhook_signing_key", "docker_hub_password", "private_eks_pass"]
+  default = ["webhook_signing_key", "docker_hub_password", "private_eks_pass", "prometheus_url"]
 }

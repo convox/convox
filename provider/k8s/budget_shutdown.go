@@ -745,6 +745,13 @@ func (p *Provider) fireDismissedEvent(ctx context.Context, app, ackBy string, di
 // lands. The inner reset routine is split into appBudgetResetLocked
 // (lock-already-held variant) so we acquire once at the outer scope.
 func (p *Provider) AppBudgetResetWithOptions(app, ackBy string, opts structs.AppBudgetResetOptions) error {
+	// A09 m-1 fix: sanitize at outer scope so restoreFromAnnotation
+	// receives the canonical form. The inner appBudgetResetLocked path
+	// also calls sanitizeAckBy() but pass-by-value semantics meant the
+	// outer ackBy used by Step 2 stayed unsanitized. Idempotent —
+	// re-sanitizing an already-sanitized string returns the same value.
+	ackBy = sanitizeAckBy(ackBy)
+
 	ctx := p.Context()
 	if ctx == nil {
 		ctx = context.TODO()

@@ -24,6 +24,7 @@ The following parameters are available for configuring your Convox rack on Amazo
 | [cert_duration](/configuration/rack-parameters/aws/cert_duration)                   | Specifies the certificate renewal period.                              |
 | [cidr](/configuration/rack-parameters/aws/cidr)                                     | Specifies the CIDR range for the VPC.                                     |
 | [convox_domain_tls_cert_disable](/configuration/rack-parameters/aws/convox_domain_tls_cert_disable) | Disables Convox domain TLS certificate generation for services. |
+| [cost_tracking_enable](/configuration/rack-parameters/aws/cost_tracking_enable)     | Turns on the rack-side cost accumulator that powers `convox cost` and per-app budget caps. |
 | [disable_convox_resolver](/configuration/rack-parameters/aws/disable_convox_resolver) | Disables the Convox resolver and uses the Kubernetes resolver instead. |
 | [docker_hub_username](/configuration/rack-parameters/aws/docker_hub_username) | Configures Docker Hub username for authenticated image pulls (avoids rate limits). |
 | [docker_hub_password](/configuration/rack-parameters/aws/docker_hub_password) | Sets Docker Hub access token for authenticated image pulls. Use with docker_hub_username. |
@@ -82,6 +83,7 @@ The following parameters are available for configuring your Convox rack on Amazo
 | [pod_identity_agent_enable](/configuration/rack-parameters/aws/pod_identity_agent_enable) | Enables the AWS Pod Identity Agent. |
 | [private](/configuration/rack-parameters/aws/private)                               | Specifies whether to place nodes in private subnets behind NAT gateways. |
 | [private_subnets_ids](/configuration/rack-parameters/aws/private_subnets_ids)       | Specifies the IDs of private subnets to use for the Rack.                |
+| [prometheus_url](/configuration/rack-parameters/aws/prometheus_url)                 | Points the rack at an external Prometheus endpoint for GPU-utilization queries. |
 | [proxy_protocol](/configuration/rack-parameters/aws/proxy_protocol)                 | Enables the Proxy Protocol to track the original client IP address.      |
 | [public_subnets_ids](/configuration/rack-parameters/aws/public_subnets_ids)         | Specifies the IDs of public subnets to use for the Rack.                 |
 | [releases_to_retain_after_active](/configuration/rack-parameters/aws/releases_to_retain_after_active) | Specifies the number of releases to retain after the currently active release. |
@@ -98,6 +100,7 @@ The following parameters are available for configuring your Convox rack on Amazo
 | [additional_karpenter_nodepools_config](/configuration/rack-parameters/aws/additional_karpenter_nodepools_config) | Creates custom Karpenter NodePools for specialized workloads. See [Karpenter](/configuration/scaling/karpenter). |
 | [vpa_enable](/configuration/rack-parameters/aws/vpa_enable)                         | Enables the Vertical Pod Autoscaler (VPA) for automatic resource right-sizing. |
 | [vpc_id](/configuration/rack-parameters/aws/vpc_id)                                 | Specifies the ID of an existing VPC to use for cluster creation.         |
+| [webhook_signing_key](/configuration/rack-parameters/aws/webhook_signing_key)       | Sets the per-rack HMAC secret for signing outbound webhook deliveries.   |
 
 ## Setting Parameters
 

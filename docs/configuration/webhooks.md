@@ -62,6 +62,17 @@ The actor class for each event is noted alongside the action below.
 - `release:promote` — emitted at promote start (HTTP-handler; JWT actor).
   `status: "start"` on this event distinguishes it from later release
   events.
+- `app:promote:completed`, `app:promote:errored`, `app:promote:cancelled`
+  — terminal-state events from the rack-side rollout watcher (see
+  [Release watcher](/management/release-watcher)). The watcher tracks
+  the Argo Atom or Deployment rollout that backs `convox release promote`
+  and emits exactly one of the three events per `(app, release-id)`
+  lifecycle. Payload `data.id` is the release identifier, `data.actor`
+  carries the JWT actor captured at promote start, and `data.message`
+  holds error or supersession detail on the `:errored` and `:cancelled`
+  paths. The pre-existing `release:promote` start event is unchanged —
+  webhook consumers filtering on `action="release:promote"` continue to
+  work without modification (HTTP-handler-launched watcher; JWT actor).
 - `release:autoscale-disabled` — emitted at render time when a service
   requests autoscale on a rack without `keda_enable=true`
   (accumulator-tick / render-time; `actor: "system"`).
@@ -94,6 +105,27 @@ The actor class for each event is noted alongside the action below.
   circuit breaker (both during the armed countdown and post-`:fired`)
   (HTTP-handler; JWT actor populated from `data.ack_by`). NOT a sub-type
   of `auto-shutdown`.
+- `app:budget:per-service-truncated` — emitted by the accumulator when
+  the per-service breakdown table exceeds its bounded-cardinality cap
+  and entries are dropped from this month's persisted breakdown
+  (accumulator-tick; `actor: "system"`). Payload `data.dropped` is the
+  count of services dropped this tick and `data.cap` is the
+  per-service-entries cap.
+
+### Scale override (3.24.6)
+
+- `app:scale-override:toggled` — emitted after `convox services
+  scale-override` (or the Console-driven toggle) flips the per-service
+  scale-override annotation on or off (HTTP-handler; JWT actor populated
+  from `data.ack_by`). Payload carries `data.service` (target service),
+  `data.state` (`"on"` or `"off"`), and `data.actor` for audit.
+- `app:scale-override:honored` — emitted at deploy time when a service's
+  active scale-override annotation is honored — i.e. the service's yaml
+  scale block was deliberately skipped on this promote so the override
+  is preserved (HTTP-handler-launched render path; `actor: "system"`).
+  Payload carries `data.service`, `data.release` (release id),
+  `data.preserved_count` (the override-pinned replica count), and
+  `data.yaml_count_min` (the yaml scale block's min that was skipped).
 
 ### Auto-shutdown lifecycle (3.24.6)
 
