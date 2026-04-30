@@ -87,9 +87,9 @@ func TestServiceListAggregation_AverageAcrossPods(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		p.PromClient = pc
 
-		kk := p.Cluster.(*fake.Clientset)
-		cc := p.Convox.(*cvfake.Clientset)
-		aa := p.Atom.(*atom.MockInterface)
+		kk, _ := p.Cluster.(*fake.Clientset)
+		cc, _ := p.Convox.(*cvfake.Clientset)
+		aa, _ := p.Atom.(*atom.MockInterface)
 
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 		// Inline a manifest with a single gpu service so ServiceList's
@@ -132,9 +132,9 @@ func TestServiceList_PromNilClient(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		assert.Nil(t, p.PromClient)
 
-		kk := p.Cluster.(*fake.Clientset)
-		cc := p.Convox.(*cvfake.Clientset)
-		aa := p.Atom.(*atom.MockInterface)
+		kk, _ := p.Cluster.(*fake.Clientset)
+		cc, _ := p.Convox.(*cvfake.Clientset)
+		aa, _ := p.Atom.(*atom.MockInterface)
 
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 		manifest := "services:\n  infer:\n    port: 5000\n"
@@ -171,9 +171,9 @@ func TestServiceList_NoGpuServices(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		p.PromClient = pc
 
-		kk := p.Cluster.(*fake.Clientset)
-		cc := p.Convox.(*cvfake.Clientset)
-		aa := p.Atom.(*atom.MockInterface)
+		kk, _ := p.Cluster.(*fake.Clientset)
+		cc, _ := p.Convox.(*cvfake.Clientset)
+		aa, _ := p.Atom.(*atom.MockInterface)
 
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 		manifest := "services:\n  web:\n    port: 5000\n"

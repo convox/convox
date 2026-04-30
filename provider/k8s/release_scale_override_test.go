@@ -94,8 +94,8 @@ func scaleManifestServices(t *testing.T, services map[string]int) manifest.Servi
 // + ReleaseGet (CRD lookup).
 func scaleSeedAppRelease(t *testing.T, p *k8s.Provider, ns, releaseID string, services map[string]int) {
 	t.Helper()
-	aa := p.Atom.(*atom.MockInterface)
-	cc := p.Convox.(*cvfake.Clientset)
+	aa, _ := p.Atom.(*atom.MockInterface)
+	cc, _ := p.Convox.(*cvfake.Clientset)
 
 	aa.On("Status", ns, "app").Return("Running", releaseID, nil)
 
@@ -201,7 +201,7 @@ func runReleaseTemplateServicesEvents(t *testing.T,
 
 func TestReleasePromote_ServiceScaleOverrideHonor_AnnotationPresent(t *testing.T) {
 	out, events, err := runReleaseTemplateServicesEvents(t, func(p *k8s.Provider) (*structs.App, *structs.Release, manifest.Services) {
-		kk := p.Cluster.(*fake.Clientset)
+		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 		// runtime replicas = 5; annotation present.
 		scaleSeedDeployment(t, kk, "rack1-app1", "web", 5, k8s.ServiceScaleOverrideValueOn)
@@ -218,7 +218,7 @@ func TestReleasePromote_ServiceScaleOverrideHonor_AnnotationPresent(t *testing.T
 
 	honored := findAllByAction(events, "app:scale-override:honored")
 	require.Len(t, honored, 1, "exactly one app:scale-override:honored event expected")
-	data := honored[0]["data"].(map[string]any)
+	data, _ := honored[0]["data"].(map[string]any)
 	assert.Equal(t, "system", data["actor"])
 	assert.Equal(t, "app1", data["app"])
 	assert.Equal(t, "web", data["service"])
@@ -231,7 +231,7 @@ func TestReleasePromote_ServiceScaleOverrideHonor_AnnotationPresent(t *testing.T
 
 func TestReleasePromote_ServiceScaleOverrideHonor_AnnotationAbsent(t *testing.T) {
 	_, events, err := runReleaseTemplateServicesEvents(t, func(p *k8s.Provider) (*structs.App, *structs.Release, manifest.Services) {
-		kk := p.Cluster.(*fake.Clientset)
+		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 		// runtime replicas = 5; NO annotation.
 		scaleSeedDeployment(t, kk, "rack1-app1", "web", 5, "")
@@ -272,7 +272,7 @@ func TestReleasePromote_ServiceScaleOverrideHonor_AnnotationStrictTrueOnly(t *te
 		tc := tc
 		t.Run("value="+strconv.Quote(tc.value), func(t *testing.T) {
 			_, events, err := runReleaseTemplateServicesEvents(t, func(p *k8s.Provider) (*structs.App, *structs.Release, manifest.Services) {
-				kk := p.Cluster.(*fake.Clientset)
+				kk, _ := p.Cluster.(*fake.Clientset)
 				require.NoError(t, appCreate(kk, "rack1", "app1"))
 				scaleSeedDeployment(t, kk, "rack1-app1", "web", 5, tc.value)
 
@@ -295,7 +295,7 @@ func TestReleasePromote_ServiceScaleOverrideHonor_AnnotationStrictTrueOnly(t *te
 
 func TestServiceScaleOverride_HonorsYamlMinNonzero(t *testing.T) {
 	_, events, err := runReleaseTemplateServicesEvents(t, func(p *k8s.Provider) (*structs.App, *structs.Release, manifest.Services) {
-		kk := p.Cluster.(*fake.Clientset)
+		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 		// runtime=5, yaml.min=2, override active → preserve 5.
 		scaleSeedDeployment(t, kk, "rack1-app1", "web", 5, k8s.ServiceScaleOverrideValueOn)
@@ -306,7 +306,7 @@ func TestServiceScaleOverride_HonorsYamlMinNonzero(t *testing.T) {
 	require.NoError(t, err)
 	honored := findAllByAction(events, "app:scale-override:honored")
 	require.Len(t, honored, 1)
-	data := honored[0]["data"].(map[string]any)
+	data, _ := honored[0]["data"].(map[string]any)
 	assert.Equal(t, "5", data["preserved_count"])
 	assert.Equal(t, "2", data["yaml_count_min"])
 }
@@ -315,7 +315,7 @@ func TestServiceScaleOverride_HonorsYamlMinNonzero(t *testing.T) {
 
 func TestReleasePromote_ServiceScaleOverrideHonor_RuntimeCountZeroYamlMinNonzero(t *testing.T) {
 	_, events, err := runReleaseTemplateServicesEvents(t, func(p *k8s.Provider) (*structs.App, *structs.Release, manifest.Services) {
-		kk := p.Cluster.(*fake.Clientset)
+		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 		// runtime=0, yaml.min=2, override active → preserve 0 (NOT yaml.min).
 		scaleSeedDeployment(t, kk, "rack1-app1", "web", 0, k8s.ServiceScaleOverrideValueOn)
@@ -326,7 +326,7 @@ func TestReleasePromote_ServiceScaleOverrideHonor_RuntimeCountZeroYamlMinNonzero
 	require.NoError(t, err)
 	honored := findAllByAction(events, "app:scale-override:honored")
 	require.Len(t, honored, 1)
-	data := honored[0]["data"].(map[string]any)
+	data, _ := honored[0]["data"].(map[string]any)
 	assert.Equal(t, "0", data["preserved_count"], "preserved_count must equal sc[s.Name]=0 — explicit zero, NOT yaml fallback")
 	assert.Equal(t, "2", data["yaml_count_min"])
 }
@@ -335,7 +335,7 @@ func TestReleasePromote_ServiceScaleOverrideHonor_RuntimeCountZeroYamlMinNonzero
 
 func TestReleasePromote_ServiceScaleOverrideHonor_DeploymentNotYetExists(t *testing.T) {
 	_, events, err := runReleaseTemplateServicesEvents(t, func(p *k8s.Provider) (*structs.App, *structs.Release, manifest.Services) {
-		kk := p.Cluster.(*fake.Clientset)
+		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 		// NO Deployment fixture — first-time deploy scenario.
 		scaleSeedAppRelease(t, p, "rack1-app1", "release1", map[string]int{"web": 2})
@@ -361,7 +361,7 @@ func TestReleasePromote_ServiceScaleOverrideHonor_DeploymentNotYetExists(t *test
 // flag the regression.
 func TestReleasePromote_ServiceScaleOverrideHonor_GetTransientError_NoEffect(t *testing.T) {
 	_, events, err := runReleaseTemplateServicesEvents(t, func(p *k8s.Provider) (*structs.App, *structs.Release, manifest.Services) {
-		kk := p.Cluster.(*fake.Clientset)
+		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 		scaleSeedDeployment(t, kk, "rack1-app1", "web", 5, k8s.ServiceScaleOverrideValueOn)
 		scaleSeedAppRelease(t, p, "rack1-app1", "release1", map[string]int{"web": 2})

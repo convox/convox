@@ -169,7 +169,7 @@ func (p *Provider) ProcessGet(app, pid string) (*structs.Process, error) {
 	if p.PromClient != nil && ps.Gpu > 0 {
 		gpuByPod, err := p.PromClient.QueryGPUMetrics(context.TODO(), app, []string{ps.Name})
 		if err != nil {
-			p.logger.Errorf("failed to fetch gpu metrics: %s", err)
+			_ = p.logger.Errorf("failed to fetch gpu metrics: %s", err)
 		} else if gm, has := gpuByPod[pid]; has {
 			util := gm.Util
 			memUsed := gm.MemUsed
@@ -242,7 +242,7 @@ func (p *Provider) ProcessList(app string, opts structs.ProcessListOptions) (str
 		}
 		gpuByPod, err := p.PromClient.QueryGPUMetrics(context.TODO(), app, services)
 		if err != nil {
-			p.logger.Errorf("failed to fetch gpu metrics: %s", err)
+			_ = p.logger.Errorf("failed to fetch gpu metrics: %s", err)
 		} else {
 			for i := range pss {
 				if pss[i].Gpu == 0 {
