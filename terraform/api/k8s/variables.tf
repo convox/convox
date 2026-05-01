@@ -93,6 +93,11 @@ variable "prometheus_url" {
   default = ""
 }
 
+variable "effective_prometheus_url" {
+  type    = string
+  default = ""
+}
+
 variable "namespace" {
   type = string
 }

@@ -83,7 +83,9 @@ The following parameters are available for configuring your Convox rack on Amazo
 | [pod_identity_agent_enable](/configuration/rack-parameters/aws/pod_identity_agent_enable) | Enables the AWS Pod Identity Agent. |
 | [private](/configuration/rack-parameters/aws/private)                               | Specifies whether to place nodes in private subnets behind NAT gateways. |
 | [private_subnets_ids](/configuration/rack-parameters/aws/private_subnets_ids)       | Specifies the IDs of private subnets to use for the Rack.                |
-| [prometheus_url](/configuration/rack-parameters/aws/prometheus_url)                 | Points the rack at an external Prometheus endpoint for GPU-utilization queries. |
+| [prometheus_gpu_metrics_chart_version](/configuration/rack-parameters/aws/prometheus_gpu_metrics_chart_version) | Pins the Helm chart version for the free-path GPU-metrics Prometheus. |
+| [prometheus_gpu_metrics_retention](/configuration/rack-parameters/aws/prometheus_gpu_metrics_retention) | Sets the retention window for the free-path GPU-metrics Prometheus. |
+| [prometheus_url](/configuration/rack-parameters/aws/prometheus_url)                 | Overrides the rack's auto-resolved Prometheus endpoint with a customer-supplied URL. |
 | [proxy_protocol](/configuration/rack-parameters/aws/proxy_protocol)                 | Enables the Proxy Protocol to track the original client IP address.      |
 | [public_subnets_ids](/configuration/rack-parameters/aws/public_subnets_ids)         | Specifies the IDs of public subnets to use for the Rack.                 |
 | [releases_to_retain_after_active](/configuration/rack-parameters/aws/releases_to_retain_after_active) | Specifies the number of releases to retain after the currently active release. |

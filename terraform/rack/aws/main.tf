@@ -53,6 +53,7 @@ module "api" {
   oidc_sub                                  = var.oidc_sub
   pdb_default_min_available_percentage      = var.pdb_default_min_available_percentage
   prometheus_url                            = var.prometheus_url
+  effective_prometheus_url                  = var.effective_prometheus_url
   release                                   = var.release
   disable_convox_resolver                   = var.disable_convox_resolver
   resolver                                  = module.resolver.endpoint

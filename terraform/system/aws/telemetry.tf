@@ -37,6 +37,8 @@ locals {
     enable_private_access                     = var.enable_private_access
     fluentd_disable                           = var.fluentd_disable
     fluentd_memory                            = var.fluentd_memory
+    gpu_observability_chart_version           = var.gpu_observability_chart_version
+    gpu_observability_enable                  = var.gpu_observability_enable
     gpu_tag_enable                            = var.gpu_tag_enable
     high_availability                         = var.high_availability
     idle_timeout                              = var.idle_timeout
@@ -78,6 +80,7 @@ locals {
     kubelet_registry_pull_qps                 = var.kubelet_registry_pull_qps
     max_on_demand_count                       = var.max_on_demand_count
     min_on_demand_count                       = var.min_on_demand_count
+    monitoring_metrics_provisioned            = var.monitoring_metrics_provisioned
     name                                      = var.name
     nginx_additional_config                   = var.nginx_additional_config
     nginx_image                               = var.nginx_image
@@ -96,6 +99,8 @@ locals {
     private_eks_pass                          = var.private_eks_pass
     private_eks_user                          = var.private_eks_user
     private_subnets_ids                       = var.private_subnets_ids
+    prometheus_gpu_metrics_chart_version      = var.prometheus_gpu_metrics_chart_version
+    prometheus_gpu_metrics_retention          = var.prometheus_gpu_metrics_retention
     prometheus_url                            = var.prometheus_url
     proxy_protocol                            = var.proxy_protocol
     public_subnets_ids                        = var.public_subnets_ids
@@ -157,6 +162,8 @@ locals {
     enable_private_access                     = "false"
     fluentd_disable                           = "false"
     fluentd_memory                            = "200Mi"
+    gpu_observability_chart_version           = "4.8.1"
+    gpu_observability_enable                  = "false"
     gpu_tag_enable                            = "false"
     high_availability                         = "true"
     idle_timeout                              = "3600"
@@ -198,6 +205,7 @@ locals {
     kubelet_registry_pull_qps                 = "5"
     max_on_demand_count                       = "100"
     min_on_demand_count                       = "1"
+    monitoring_metrics_provisioned            = "false"
     name                                      = ""
     nginx_additional_config                   = ""
     nginx_image                               = "registry.k8s.io/ingress-nginx/controller:v1.12.6@sha256:c371fbf42b4f23584ce879d99303463131f4f31612f0875482b983354eeca7e6"
@@ -216,6 +224,8 @@ locals {
     private_eks_pass                          = ""
     private_eks_user                          = ""
     private_subnets_ids                       = ""
+    prometheus_gpu_metrics_chart_version      = "27.9.0"
+    prometheus_gpu_metrics_retention          = "24h"
     prometheus_url                            = ""
     proxy_protocol                            = "false"
     public_subnets_ids                        = ""

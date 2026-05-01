@@ -1,0 +1,17 @@
+job_name: dcgm-exporter
+metrics_path: /metrics
+honor_labels: true
+kubernetes_sd_configs:
+  - role: pod
+    namespaces:
+      names:
+        - kube-system
+relabel_configs:
+  - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+    action: keep
+    regex: dcgm-exporter
+  - source_labels: [__meta_kubernetes_pod_container_port_number]
+    action: keep
+    regex: "9400"
+  - source_labels: [__meta_kubernetes_pod_node_name]
+    target_label: node

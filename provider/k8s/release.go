@@ -29,7 +29,11 @@ import (
 	ktypes "k8s.io/apimachinery/pkg/types"
 )
 
-const defaultPrometheusURL = "http://prometheus-server.kube-system.svc.cluster.local:80"
+// defaultPrometheusURL is the in-cluster URL of the FREE GPU-metrics Prometheus
+// installed by gpu_observability_enable=true. Used as a last-resort fallback for
+// KEDA scale-target trigger spec writes when neither prometheus_url nor
+// effective_prometheus_url is set.
+const defaultPrometheusURL = "http://prometheus-gpu-metrics-server.kube-system.svc.cluster.local:80"
 
 const (
 	APP_CONFIG_KEY = "app.json"
@@ -895,7 +899,7 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 						"app":     a.Name,
 						"service": s.Name,
 						"url":     promURL,
-						"reason":  "no explicit prometheus_url and PROMETHEUS_URL env unset; using in-cluster default. Install the observability bundle OR set scale.autoscale.*.prometheus_url if this URL is wrong.",
+						"reason":  "no explicit prometheus_url and PROMETHEUS_URL env unset; using in-cluster default. Install the GPU observability stack OR set scale.autoscale.*.prometheus_url if this URL is wrong.",
 					},
 				})
 			}

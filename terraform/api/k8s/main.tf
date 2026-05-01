@@ -19,7 +19,7 @@ resource "kubernetes_secret_v1" "webhook_signing_key" {
 }
 
 resource "kubernetes_secret_v1" "prometheus_url" {
-  count = var.prometheus_url != "" ? 1 : 0
+  count = var.effective_prometheus_url != "" ? 1 : 0
 
   metadata {
     name      = "prometheus-url"
@@ -27,7 +27,7 @@ resource "kubernetes_secret_v1" "prometheus_url" {
   }
 
   data = {
-    value = var.prometheus_url
+    value = var.effective_prometheus_url
   }
 
   type = "Opaque"
@@ -180,7 +180,7 @@ resource "kubernetes_deployment" "api" {
       metadata {
         annotations = merge(var.annotations, {
           "convox.com/secret-checksum-webhook-signing-key" = sha256(var.webhook_signing_key)
-          "convox.com/secret-checksum-prometheus-url"      = sha256(var.prometheus_url)
+          "convox.com/secret-checksum-prometheus-url"      = sha256(var.effective_prometheus_url)
           "convox.com/secret-checksum-docker-hub-password" = sha256(var.docker_hub_password)
           "convox.com/secret-checksum-api-password"        = sha256(random_string.password.result)
         })
@@ -331,7 +331,7 @@ resource "kubernetes_deployment" "api" {
           }
 
           dynamic "env" {
-            for_each = var.prometheus_url != "" ? [1] : []
+            for_each = var.effective_prometheus_url != "" ? [1] : []
             content {
               name = "PROMETHEUS_URL"
               value_from {

@@ -31,9 +31,11 @@ resource "helm_release" "dcgm_exporter" {
 
   values = [
     yamlencode({
-      # Prometheus Operator is NOT installed on Convox racks; disable the
-      # ServiceMonitor CR. Plan-5 Prometheus scrape uses kubernetes_sd
-      # Pod role + the podAnnotations below instead.
+      # Both free path (helm_release.prometheus_gpu_metrics in kube-system ns,
+      # prometheus-community/prometheus chart) and paid metered metrics path
+      # (kube-prometheus-stack in convox-monitoring ns, Console3-managed) discover
+      # this exporter via the app.kubernetes.io/name=dcgm-exporter pod label on
+      # a kubernetes_sd_configs Pod-role scrape. ServiceMonitor disabled.
       serviceMonitor = {
         enabled = false
       }
@@ -56,10 +58,10 @@ resource "helm_release" "dcgm_exporter" {
         port   = 9400
       }
 
-      # Scrape annotations consumed by the in-cluster Prometheus job's
-      # kubernetes_sd_configs (Pod role) + relabel_configs that keeps
-      # targets where __meta_kubernetes_pod_annotation_prometheus_io_scrape
-      # == "true".
+      # Pod annotations preserved for compatibility with customer self-installed
+      # Prometheus (e.g. kube-prometheus-stack self-managed which expects them).
+      # Convox's free + paid paths use kubernetes_sd Pod role + label selector;
+      # they do NOT consume these annotations.
       podAnnotations = {
         "prometheus.io/scrape" = "true"
         "prometheus.io/port"   = "9400"
