@@ -28,6 +28,61 @@ const (
 	PATCH_RACK_NAME_SUPPORT = 2
 )
 
+// preserveEmpty is the writeVars carve-out: for these TF variables, an empty
+// value is preserved through to vars.json (instead of stripped) because empty
+// is a valid clear operation. Subset of pkg/cli.clearableParams; JSON-config
+// params are excluded because the CLI base64-encodes them before writeVars
+// runs.
+//
+// MAINTENANCE: when adding a new clearable param in pkg/cli/rack.go, add it
+// here too. TestClearableMatchesPreserveEmpty in pkg/cli reflects this map
+// via PreserveEmptyParams() and asserts parity.
+var preserveEmpty = map[string]bool{
+	"tags":                              true,
+	"karpenter_node_labels":             true,
+	"karpenter_node_taints":             true,
+	"karpenter_build_node_labels":       true,
+	"karpenter_instance_families":       true,
+	"karpenter_instance_sizes":          true,
+	"karpenter_build_instance_families": true,
+	"karpenter_build_instance_sizes":    true,
+	"schedule_rack_scale_down":          true,
+	"schedule_rack_scale_up":            true,
+	"ssl_ciphers":                       true,
+	"ssl_protocols":                     true,
+	"build_node_type":                   true,
+	"key_pair_name":                     true,
+	"nginx_additional_config":           true,
+	"private_eks_host":                  true,
+	"private_eks_user":                  true,
+	"private_eks_pass":                  true,
+	"docker_hub_username":               true,
+	"docker_hub_password":               true,
+	"syslog":                            true,
+	"convox_rack_domain":                true,
+	"user_data":                         true,
+	"user_data_url":                     true,
+	"api_feature_gates":                 true,
+	// Clearable Prometheus + DCGM overrides. Empty falls through to TF
+	// defaults via coalesce() guards in cluster/aws/prometheus.tf and dcgm.tf.
+	"prometheus_url":                       true,
+	"prometheus_gpu_metrics_chart_version": true,
+	"prometheus_gpu_metrics_retention":     true,
+	"gpu_observability_chart_version":      true,
+}
+
+// PreserveEmptyParams returns a copy of the writeVars empty-preservation
+// allowlist. Exported only for cross-package parity tests in pkg/cli —
+// production code should not call this. A defensive copy is returned so
+// callers cannot accidentally mutate the package-level map.
+func PreserveEmptyParams() map[string]bool {
+	out := make(map[string]bool, len(preserveEmpty))
+	for k, v := range preserveEmpty {
+		out[k] = v
+	}
+	return out
+}
+
 type Terraform struct {
 	ctx      *stdcli.Context
 	endpoint string
@@ -656,44 +711,6 @@ func (t Terraform) varsFile() (string, error) {
 }
 
 func (t Terraform) writeVars(vars map[string]string) error {
-	// Preserve empty values for string-type TF variables where clearing
-	// is a valid operation (e.g., karpenter_node_labels="" to clear labels).
-	// Strip empties for everything else to prevent TF type errors on
-	// number/bool variables (e.g., idle_timeout="" would fail TF).
-	//
-	// MAINTENANCE: This list is a subset of clearableParams in pkg/cli/rack.go.
-	// JSON config params (additional_*_config, karpenter_config) are excluded
-	// because the CLI normalizes them to base64 before reaching writeVars.
-	// When adding a new clearable param to rack.go, add it here too unless
-	// it has similar pre-processing that prevents empty values at this point.
-	preserveEmpty := map[string]bool{
-		"tags":                              true,
-		"karpenter_node_labels":             true,
-		"karpenter_node_taints":             true,
-		"karpenter_build_node_labels":       true,
-		"karpenter_instance_families":       true,
-		"karpenter_instance_sizes":          true,
-		"karpenter_build_instance_families": true,
-		"karpenter_build_instance_sizes":    true,
-		"schedule_rack_scale_down":          true,
-		"schedule_rack_scale_up":            true,
-		"ssl_ciphers":                       true,
-		"ssl_protocols":                     true,
-		"build_node_type":                   true,
-		"key_pair_name":                     true,
-		"nginx_additional_config":           true,
-		"private_eks_host":                  true,
-		"private_eks_user":                  true,
-		"private_eks_pass":                  true,
-		"docker_hub_username":  true,
-		"docker_hub_password":  true,
-		"syslog":               true,
-		"convox_rack_domain":   true,
-		"user_data":            true,
-		"user_data_url":        true,
-		"api_feature_gates":    true,
-	}
-
 	for k, v := range vars {
 		if strings.TrimSpace(v) == "" && !preserveEmpty[k] {
 			delete(vars, k)

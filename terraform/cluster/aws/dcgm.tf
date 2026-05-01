@@ -26,14 +26,17 @@ resource "helm_release" "dcgm_exporter" {
   name       = "dcgm-exporter"
   repository = "https://nvidia.github.io/dcgm-exporter/helm-charts"
   chart      = "dcgm-exporter"
-  version    = var.gpu_observability_chart_version
-  namespace  = "kube-system"
+  # MAINTENANCE: literal default MUST match terraform/cluster/aws/variables.tf
+  # default for gpu_observability_chart_version. Empty value falls through so
+  # the user can clear the override; coalesce keeps helm_release valid.
+  version   = coalesce(var.gpu_observability_chart_version, "4.8.1")
+  namespace = "kube-system"
 
   values = [
     yamlencode({
       # Both free path (helm_release.prometheus_gpu_metrics in kube-system ns,
       # prometheus-community/prometheus chart) and paid metered metrics path
-      # (kube-prometheus-stack in convox-monitoring ns, Console3-managed) discover
+      # (kube-prometheus-stack in convox-monitoring ns, Console-managed) discover
       # this exporter via the app.kubernetes.io/name=dcgm-exporter pod label on
       # a kubernetes_sd_configs Pod-role scrape. ServiceMonitor disabled.
       serviceMonitor = {

@@ -72,8 +72,8 @@ the same HTTP request handler under the per-app lock: first
 `app:budget:breaker-cleared` (with `reason="cap-raised"`) when the cap-raise
 atomically clears the tripped deploy circuit breaker, then immediately
 `app:budget:auto-shutdown:cancelled` (with `cancel_reason="cap-raised"`)
-because the orphan armed shutdown-state annotation is deleted in the same
-Namespace Update round-trip. There is no "next accumulator tick" between
+because the orphan armed shutdown-state annotation is deleted atomically
+with the breaker clear. There is no "next accumulator tick" between
 them — both events are sent before the cap-raise HTTP request returns.
 Receivers correlating the audit pair should match on:
 1. `data.app` — identical on both events.
@@ -177,11 +177,11 @@ Edge cases:
   webhook or `convox events list -a <app>` to surface it without log
   access. Practical apps stay well under the cap; if you hit it, audit the
   per-tick label set for unbounded service-name churn.
-- **Pre-3.24.6rc5 history.** Per-service attribution starts populating from
+- **Pre-3.24.6 history.** Per-service attribution starts populating from
   the first tick after upgrade. Spend that accumulated before the upgrade
   remains in `currentMonthSpendUsd` (the total) but is not retroactively
   attributed.
-- **Rolling back from rc5.** Total spend (`currentMonthSpendUsd`) survives a
+- **Rolling back.** Total spend (`currentMonthSpendUsd`) survives a
   downgrade-then-re-upgrade round-trip. Per-service attribution does not —
   the older binary drops the unknown fields on its first tick. After
   re-upgrading, the breakdown re-populates from the next tick forward.

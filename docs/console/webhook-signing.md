@@ -100,7 +100,7 @@ old payloads cannot be re-signed.
 
 The CLI masks the value in `convox rack params` output as of 3.24.6. Older CLIs
 print the value plaintext to the TTY — upgrade the CLI before running param
-introspection commands against rc4+ racks. See the 3.24.6 release notes.
+introspection commands against 3.24.6 racks. See the 3.24.6 release notes.
 
 ## Cross-provider availability
 
@@ -139,7 +139,7 @@ Receivers that fail-closed on unknown event types should either fail-open
 The `actor` field on `app:budget:*` events is now per-user (the
 authenticated email of the operator who triggered the action) instead of the
 historical `"rack-password"` constant. Receivers that key on actor for audit
-should expect emails for Console3-driven mutations.
+should expect emails for Console-driven mutations.
 
 Webhooks are best-effort, fire-and-forget, and not retried. Receivers must
 handle ordering by the `timestamp` field in the JSON body (or by parsing

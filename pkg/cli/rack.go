@@ -242,6 +242,10 @@ var sensitiveParams = map[string]bool{
 // groups. Params not listed here are shown in the default view but not
 // surfaced by any group filter.
 var paramGroups = map[string]map[string]bool{
+	"cost": {
+		"cost_tracking_enable": true,
+		"tags":                 true,
+	},
 	"karpenter": {
 		"additional_karpenter_nodepools_config": true,
 		"karpenter_arch":                        true,
@@ -321,7 +325,9 @@ var paramGroups = map[string]map[string]bool{
 		"secret_key":                         true,
 		"ssl_ciphers":                        true,
 		"ssl_protocols":                      true,
+		"tags":                               true, // dual-listed in cost
 		"token":                              true,
+		"webhook_signing_key":                true,
 		"whitelist":                          true,
 		// v2 PascalCase (no-op on v3 racks; surfaced on v2 racks)
 		"BuildInstancePolicy":                   true, // dual-listed in build
@@ -355,6 +361,7 @@ var paramGroups = map[string]map[string]bool{
 		"pdb_default_min_available_percentage": true,
 		"schedule_rack_scale_down":             true,
 		"schedule_rack_scale_up":               true,
+		"terraform_update_timeout":             true,
 		"vpa_enable":                           true,
 		// v2 PascalCase (no-op on v3 racks; surfaced on v2 racks)
 		"Autoscale":                      true,
@@ -397,6 +404,7 @@ var paramGroups = map[string]map[string]bool{
 		"preemptible":                          true,
 		"prometheus_gpu_metrics_chart_version": true,
 		"prometheus_gpu_metrics_retention":     true,
+		"prometheus_url":                       true,
 		"user_data":                            true,
 		"user_data_url":                        true,
 		// v2 PascalCase (no-op on v3 racks; v2 "instances" group content)
@@ -547,6 +555,74 @@ var groupDescriptions = map[string]string{
 	"storage":   "CSI drivers, EBS/EFS/Azure Files, registry disk",
 	"retention": "release retention policy",
 	"versions":  "K8s and managed component versions",
+	"cost":      "cost tracking and allocation tags",
+}
+
+// clearableParams enumerates the params that accept empty strings ("" means
+// "clear this setting"). All other params require explicit values; empty
+// strings on non-clearable params would cause TF type errors, silent default
+// reversion, or state divergence between what convox rack params shows and
+// what TF actually applies.
+//
+// MAINTENANCE: when adding a new TF variable where users should be able to
+// clear a previously-set value with param="", add it here AND to preserveEmpty
+// in pkg/rack/terraform.go. TestClearableMatchesPreserveEmpty asserts the two
+// sets stay in sync. Default is REJECT — only add if clearing makes sense.
+var clearableParams = map[string]bool{
+	// Labels/taints — clear means "remove all"
+	"karpenter_node_labels":       true,
+	"karpenter_node_taints":       true,
+	"karpenter_build_node_labels": true,
+	// Instance restrictions — clear means "no restriction"
+	"karpenter_instance_families":       true,
+	"karpenter_instance_sizes":          true,
+	"karpenter_build_instance_families": true,
+	"karpenter_build_instance_sizes":    true,
+	// Schedule — clear means "disable schedule" (must be paired)
+	"schedule_rack_scale_down": true,
+	"schedule_rack_scale_up":   true,
+	// Tags — clear means "remove all custom tags"
+	"tags": true,
+	// SSL — clear means "use defaults"
+	"ssl_ciphers":   true,
+	"ssl_protocols": true,
+	// Optional overrides — clear means "use auto/default"
+	"build_node_type":         true,
+	"key_pair_name":           true,
+	"nginx_additional_config": true,
+	// Credentials — clear means "remove auth"
+	"docker_hub_username": true,
+	"docker_hub_password": true,
+	// Logging — clear means "stop shipping"
+	"syslog": true,
+	// Domain — clear means "use auto-managed"
+	"convox_rack_domain": true,
+	// Custom launch scripts — clear means "remove"
+	"user_data":     true,
+	"user_data_url": true,
+	// Feature gates — clear means "disable all"
+	"api_feature_gates": true,
+	// Private EKS — cleared by console during mode changes
+	"private_eks_host": true,
+	"private_eks_user": true,
+	"private_eks_pass": true,
+	// JSON config — normalized to base64 later in validateAndMutateParams
+	"additional_node_groups_config":         true,
+	"additional_build_groups_config":        true,
+	"additional_karpenter_nodepools_config": true,
+	"karpenter_config":                      true,
+	// External Prometheus override — empty reverts to in-cluster
+	// auto-resolution (paid → free → unset).
+	"prometheus_url": true,
+	// Free-chart Helm version override — empty falls back to TF default
+	// ("27.9.0") via coalesce() guard in cluster/aws/prometheus.tf.
+	"prometheus_gpu_metrics_chart_version": true,
+	// Free-chart Prometheus retention override — empty falls back to TF
+	// default ("24h") via coalesce() guard in cluster/aws/prometheus.tf.
+	"prometheus_gpu_metrics_retention": true,
+	// DCGM exporter Helm version override — empty falls back to TF default
+	// ("4.8.1") via coalesce() guard in cluster/aws/dcgm.tf.
+	"gpu_observability_chart_version": true,
 }
 
 // resolveGroup resolves a possibly-partial group name to an exact group key.
@@ -1103,6 +1179,14 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 
 	known := providerKnownParams[provider]
 
+	// SECURITY NOTE: webhook_signing_key rotation has an admin-only gate via
+	// the Console GraphQL layer (api/resolver/mutation.go RackSetWebhookSigningKey,
+	// organization-Administrator check). The convox CLI path does NOT have an
+	// equivalent admin gate — any user with rack-write capability can rotate
+	// the key. This asymmetry is intentional: CLI is operator-tooling already
+	// trusted with rack mutations; the Console is multi-tenant and exposes
+	// webhook-signing rotation to non-admin org members unless gated. Do NOT
+	// "fix" by adding a CLI admin gate without consulting the spec.
 	if !force {
 		// Managed params are set automatically by `convox rack update` (image, release,
 		// k8s_version, etc.). Block direct modification unless --force is used.
@@ -1139,62 +1223,20 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		}
 	}
 
-	// Only these params accept empty strings — empty means "clear this setting."
-	// ALL other params require explicit values. Empty strings for non-clearable
-	// params cause TF type errors, silent default reversion, or state divergence
-	// between what convox rack params shows and what TF actually applies.
-	//
-	// MAINTENANCE: When adding a new TF variable where users should be able to
-	// clear a previously-set value with param="", add it here AND to preserveEmpty
-	// in pkg/rack/terraform.go. Default is REJECT — only add if clearing makes sense.
-	clearableParams := map[string]bool{
-		// Labels/taints — clear means "remove all"
-		"karpenter_node_labels":       true,
-		"karpenter_node_taints":       true,
-		"karpenter_build_node_labels": true,
-		// Instance restrictions — clear means "no restriction"
-		"karpenter_instance_families":       true,
-		"karpenter_instance_sizes":          true,
-		"karpenter_build_instance_families": true,
-		"karpenter_build_instance_sizes":    true,
-		// Schedule — clear means "disable schedule" (must be paired)
-		"schedule_rack_scale_down": true,
-		"schedule_rack_scale_up":   true,
-		// Tags — clear means "remove all custom tags"
-		"tags": true,
-		// SSL — clear means "use defaults"
-		"ssl_ciphers":   true,
-		"ssl_protocols": true,
-		// Optional overrides — clear means "use auto/default"
-		"build_node_type":         true,
-		"key_pair_name":           true,
-		"nginx_additional_config": true,
-		// Credentials — clear means "remove auth"
-		"docker_hub_username": true,
-		"docker_hub_password": true,
-		// Logging — clear means "stop shipping"
-		"syslog": true,
-		// Domain — clear means "use auto-managed"
-		"convox_rack_domain": true,
-		// Custom launch scripts — clear means "remove"
-		"user_data":     true,
-		"user_data_url": true,
-		// Feature gates — clear means "disable all"
-		"api_feature_gates": true,
-		// Private EKS — cleared by console during mode changes
-		"private_eks_host": true,
-		"private_eks_user": true,
-		"private_eks_pass": true,
-		// JSON config — normalized to base64 later in this function
-		"additional_node_groups_config":         true,
-		"additional_build_groups_config":        true,
-		"additional_karpenter_nodepools_config": true,
-		"karpenter_config":                      true,
-	}
-
 	for k, v := range params {
 		if strings.TrimSpace(v) == "" && !clearableParams[k] {
 			return fmt.Errorf("param '%s' requires an explicit value (omit to keep current)", k)
+		}
+	}
+
+	// Normalize whitespace-only inputs to empty for clearable params, so
+	// preserveEmpty + TF coalesce guards see an actual empty string. Without
+	// this, a user typing `=" "` (quoted whitespace) would write " " to
+	// vars.json; helm_release would receive " " (non-empty), bypassing the
+	// coalesce fallback and crashing helm install.
+	for k, v := range params {
+		if clearableParams[k] && strings.TrimSpace(v) == "" && v != "" {
+			params[k] = ""
 		}
 	}
 
@@ -1338,9 +1380,17 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		if !boolParams[k] || v == "" {
 			continue
 		}
-		if _, err := strconv.ParseBool(v); err != nil {
+		b, err := strconv.ParseBool(v)
+		if err != nil {
 			return fmt.Errorf("param '%s' must be 'true' or 'false' (got %q)", k, v)
 		}
+		// Canonicalize: ParseBool accepts "1", "0", "t", "T", "f", "F",
+		// "true", "True", "TRUE", "false", "False", "FALSE"; FormatBool
+		// produces canonical "true"/"false". Stored canonical form keeps
+		// vars.json + display output consistent. String-typed bool-likes
+		// (karpenter_auth_mode, karpenter_enabled, nvidia_device_plugin_enable,
+		// high_availability) are NOT in boolParams; pass through unchanged.
+		params[k] = strconv.FormatBool(b)
 	}
 
 	if v, ok := params["karpenter_capacity_types"]; ok && v != "" {

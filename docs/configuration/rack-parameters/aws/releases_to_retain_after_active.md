@@ -57,14 +57,14 @@ Starting with version 3.23.2, the cleanup process includes improved error handli
 
 - **Atomic Operations**: Releases are only removed when their corresponding ECR images have been successfully deleted. If an error occurs during ECR image removal, the associated Convox release will not be deleted.
 - **Automatic Retry**: When ECR image removal fails, the cleanup will automatically retry on the next scheduled interval rather than skipping the release permanently.
-- **Error Visibility**: Any errors encountered during image removal are reported in the Convox API pod logs, making it easier to diagnose and resolve issues such as ECR permission problems or service disruptions.
+- **Error Visibility**: Any errors encountered during image removal are reported in the rack logs (`convox rack logs`), making it easier to diagnose and resolve issues such as ECR permission problems or service disruptions.
 
-To view cleanup errors, check the Convox API pod logs:
+To view cleanup errors, check the rack logs (`convox rack logs`):
 ```bash
 $ convox rack logs -r rackName | grep -i "ecr\|cleanup\|release"
 ```
 
-If releases are not being cleaned up as expected, review the API pod logs to identify any underlying issues preventing ECR image removal.
+If releases are not being cleaned up as expected, review the rack logs (`convox rack logs`) to identify any underlying issues preventing ECR image removal.
 
 ## Best Practices
 - **Production Environments**: Set a higher retention value (50-100) to maintain adequate rollback options.
@@ -72,14 +72,14 @@ If releases are not being cleaned up as expected, review the API pod logs to ide
 - **High-Frequency Deployments**: Consider lower retention values if you deploy multiple times per day.
 - **Compliance Requirements**: Align retention values with your organization's disaster recovery and audit policies.
 - **Cost Optimization**: Monitor ECR storage costs and adjust retention accordingly.
-- **Monitor Cleanup Logs**: Periodically review API pod logs to ensure cleanup operations are completing successfully.
+- **Monitor Cleanup Logs**: Periodically review rack logs (`convox rack logs`) to ensure cleanup operations are completing successfully.
 
 ## Important Considerations
 - Ensure that the retention value aligns with your disaster recovery and rollback procedures.
 - Once releases are cleaned up, they cannot be recovered.
 - The cleanup process is permanent and removes both release metadata and container images.
 - Consider your deployment frequency when setting this value - more frequent deployments may require lower retention values.
-- If cleanup operations are failing, check the Convox API pod logs for error details before assuming the feature is not working.
+- If cleanup operations are failing, check the rack logs (`convox rack logs`) for error details before assuming the feature is not working.
 
 ## Troubleshooting
 
@@ -87,7 +87,7 @@ If releases are not being cleaned up as expected, review the API pod logs to ide
 If releases are not being removed as expected:
 
 1. **Check Rack Version**: Racks prior to `3.24.2` silently skip cleanup for apps with required environment variables in `convox.yml`. Update the Rack to `3.24.2` or later.
-2. **Check API Pod Logs**: Review the Convox API pod logs for errors related to ECR image removal.
+2. **Check Rack Logs**: Review `convox rack logs` for errors related to ECR image removal.
 3. **Verify ECR Permissions**: Ensure the rack has appropriate permissions to delete images from ECR repositories.
 4. **Confirm Parameter Setting**: Verify the parameter is set correctly with `convox rack params -r rackName`.
 5. **Check Cleanup Interval**: The cleanup runs on a schedule defined by `releases_to_retain_task_run_interval_hour` (default: 24 hours).

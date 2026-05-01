@@ -13,7 +13,7 @@ CLI.
 ## Enabling cost tracking <a id="enable"></a>
 
 Cost tracking is gated by the rack parameter `cost_tracking_enable`, default
-`false`. Without it, the accumulator goroutine does not run — no spend is
+`false`. Without it, the cost accumulator does not run — no spend is
 computed and budget enforcement (caps, alerts, auto-shutdown) cannot fire
 even with a `budget:` block in `convox.yml`.
 

@@ -38,7 +38,7 @@ You must enable [`gpu_observability_enable`](/configuration/rack-parameters/aws/
 - Always verify the chart you pin to is published at the NVIDIA upstream Helm repo: `https://nvidia.github.io/dcgm-exporter/helm-charts`. Convox does not vendor the chart.
 
 ## Chart-bump Checklist
-When bumping the DCGM exporter chart **major** version (e.g., `4.x` → `5.x`), the Convox provider must re-audit the chart before merging the bump. The default chart version on a rack release is set by the Convox rack provider; out-of-band patches via this parameter stay within the same major. Anything that changes the cleanup contract requires provider work, not a customer-side pin.
+When bumping the DCGM exporter chart **major** version (e.g., `4.x` → `5.x`), the Convox provider must re-audit the chart before merging the bump. The default chart version on a rack release is set by the Convox rack provider; out-of-band patches via this parameter stay within the same major. Anything that changes the cleanup contract requires provider work, not a user-side pin.
 
 Audit the new chart major against these four areas:
 

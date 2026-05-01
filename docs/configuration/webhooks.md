@@ -35,8 +35,8 @@ future rack versions.
 Webhook events fall into two classes:
 
 - **HTTP-handler events** — emitted synchronously from a request handler in
-  response to a customer or operator action. The request's authenticated
-  identity propagates to `data.actor` (JWT-derived email for Console3-driven
+  response to a user or operator action. The request's authenticated
+  identity propagates to `data.actor` (JWT-derived email for Console-driven
   mutations, the rack's audit actor for CLI-driven mutations).
 - **Accumulator-tick events** — emitted asynchronously by the in-rack budget
   accumulator or render-time advisory paths, with no HTTP request in scope.
@@ -56,7 +56,7 @@ The actor class for each event is noted alongside the action below.
   failure (`"error"` with `data.message` carrying the build error).
 - `build:import-image:start`, `build:import-image:done` — emitted at the
   start and end of `convox build import-image` (HTTP-handler; JWT actor
-  captured before the async finalize goroutine).
+  captured before the async finalize step).
 - `release:create` — emitted after a release is created from a successful
   build (HTTP-handler; JWT actor).
 - `release:promote` — emitted at promote start (HTTP-handler; JWT actor).
@@ -131,7 +131,7 @@ The actor class for each event is noted alongside the action below.
 
 Auto-shutdown is a sub-family of budget events. Most lifecycle events are
 accumulator-tick driven and emit `actor: "system"`. Sub-cases driven by
-HTTP handlers (a customer action that aborts an armed countdown) carry the
+HTTP handlers (a user action that aborts an armed countdown) carry the
 JWT-derived actor.
 
 - `app:budget:auto-shutdown:armed` — armed countdown begins
@@ -153,7 +153,7 @@ JWT-derived actor.
   `cfg.LastCapMutationBy` on both paths), `manual-detected` (an out-of-band manual
   scale-up resolved the breach — accumulator-tick with `actor: "system"`
   on the primary path; HTTP-handler with JWT-derived actor when
-  `convox budget reset` is run during the armed window and the customer
+  `convox budget reset` is run during the armed window and the user
   has already manually scaled some services back up, with the operator's
   identity flowing through `data.ack_by`), `config-changed` (the
   budget config was edited mid-armed-window in a way that altered
@@ -163,7 +163,7 @@ JWT-derived actor.
   unless triggered by `convox budget reset` post-`:fired`, in which case
   the JWT-derived actor flows through.
 - `app:budget:auto-shutdown:expired` — manual-mode month rollover with
-  customer absent (accumulator-tick; `actor: "system"`).
+  user absent (accumulator-tick; `actor: "system"`).
 - `app:budget:auto-shutdown:flap-suppressed` — a cap-fire was suppressed
   by the 24-hour cooldown after a recent recovery (accumulator-tick;
   `actor: "system"`).
