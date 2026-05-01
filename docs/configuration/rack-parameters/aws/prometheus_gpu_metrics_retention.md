@@ -39,7 +39,7 @@ Setting parameters... OK
 ## Related Parameters
 - [gpu_observability_enable](/configuration/rack-parameters/aws/gpu_observability_enable): The enable switch that controls whether the free chart is installed.
 - [prometheus_gpu_metrics_chart_version](/configuration/rack-parameters/aws/prometheus_gpu_metrics_chart_version): Pin the chart version for the free-path Prometheus.
-- `monitoring_metrics_provisioned`: Internal flag set by the Convox metered metrics offering. When `true`, the free chart is suppressed. Not customer-settable.
+- `monitoring_metrics_provisioned`: Internal flag set by the Convox metered metrics offering. When `true`, the free chart is suppressed. Not user-settable.
 
 ## Version Requirements
 This parameter requires at least Convox rack version `3.24.6`.

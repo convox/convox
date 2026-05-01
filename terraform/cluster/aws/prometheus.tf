@@ -3,7 +3,7 @@
 # Subcomponents disabled. Chart ships ZERO CRDs and ZERO webhooks.
 #
 # Gated on gpu_observability_enable=true AND monitoring_metrics_provisioned=false.
-# Console3 mutation flips monitoring_metrics_provisioned=true after paid install.
+# Console mutation flips monitoring_metrics_provisioned=true after paid install.
 
 resource "helm_release" "prometheus_gpu_metrics" {
   depends_on = [
@@ -16,8 +16,11 @@ resource "helm_release" "prometheus_gpu_metrics" {
   name       = "prometheus-gpu-metrics"
   repository = "https://prometheus-community.github.io/helm-charts"
   chart      = "prometheus"
-  version    = var.prometheus_gpu_metrics_chart_version
-  namespace  = "kube-system"
+  # MAINTENANCE: literal default MUST match terraform/cluster/aws/variables.tf
+  # default for prometheus_gpu_metrics_chart_version. Empty value falls through
+  # so the user can clear the override; coalesce keeps helm_release valid.
+  version   = coalesce(var.prometheus_gpu_metrics_chart_version, "27.9.0")
+  namespace = "kube-system"
 
   values = [
     yamlencode({
@@ -26,7 +29,9 @@ resource "helm_release" "prometheus_gpu_metrics" {
           scrape_interval = "30s"
         }
         persistentVolume = { enabled = false }
-        retention        = var.prometheus_gpu_metrics_retention
+        # MAINTENANCE: literal default MUST match variables.tf default for
+        # prometheus_gpu_metrics_retention. Empty falls through to allow clear.
+        retention = coalesce(var.prometheus_gpu_metrics_retention, "24h")
         resources = {
           requests = { cpu = "100m", memory = "512Mi" }
           limits   = { cpu = "500m", memory = "1024Mi" }
@@ -40,7 +45,7 @@ resource "helm_release" "prometheus_gpu_metrics" {
       # the user-provided list REPLACES the chart's default scrape_configs entirely.
       # NOTE: do NOT set `global` here — chart already emits `global:` from server.global.
       # DCGM scrape config sourced from shared YAML asset (single source of truth
-      # consumed by both this rack TF and Console3 helm values; see SPEC §3.25).
+      # consumed by both this rack TF and Console-side helm values; see SPEC §3.25).
       serverFiles = {
         "prometheus.yml" = {
           scrape_configs = [

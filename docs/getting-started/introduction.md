@@ -38,7 +38,7 @@ Convox currently supports AWS, Google Cloud, Digital Ocean, and Microsoft Azure.
 
 Each time you install Convox, you create a new [Rack](/reference/primitives/rack).
 
-A Rack is an isolated set of computing resources, network infrastructure, and storage that can contain one or more [Apps](/reference/primitives/app). You can use multiple Racks to isolate different environments, customers, or business units.
+A Rack is an isolated set of computing resources, network infrastructure, and storage that can contain one or more [Apps](/reference/primitives/app). You can use multiple Racks to isolate different environments, users, or business units.
 
 Many users have two Racks: one for staging and one for production. You can also run a Rack on your local development workstation to develop your app in an environment nearly identical to production.
 

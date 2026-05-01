@@ -13,7 +13,7 @@ Enabling this parameter ALSO installs a lightweight free-tier Prometheus (releas
 
 **Resource overhead per GPU rack:** ~512Mi memory request, 1024Mi limit; 100m CPU request, 500m limit. Sizing rule-of-thumb: budget 1Gi per 50 concurrent GPU pods.
 
-**If your rack has the Convox metered metrics offering enabled** (the internal flag `monitoring_metrics_provisioned=true`, set automatically by the metered metrics enable/disable flow — not customer-settable), the free chart is suppressed and DCGM is scraped by the metered `kube-prometheus-stack` Prometheus in `convox-monitoring` ns instead. Both paths populate the same GraphQL fields.
+**If your rack has the Convox metered metrics offering enabled** (the internal flag `monitoring_metrics_provisioned=true`, set automatically by the metered metrics enable/disable flow — not user-settable), the free chart is suppressed and DCGM is scraped by the metered `kube-prometheus-stack` Prometheus in `convox-monitoring` ns instead. Both paths populate the same GraphQL fields.
 
 ## Default Value
 The default value for `gpu_observability_enable` is `false`.
@@ -21,7 +21,7 @@ The default value for `gpu_observability_enable` is `false`.
 ## Use Cases
 - **GPU job throughput monitoring**: Track per-pod and per-service GPU utilization so you can size your fleet to actual demand rather than guess at peak headroom.
 - **VRAM saturation alerting**: Set Prometheus alerts on `DCGM_FI_DEV_FB_USED / DCGM_FI_DEV_FB_TOTAL` to catch out-of-memory crashes before they happen, particularly for inference workloads near framebuffer limits.
-- **GPU cost / utilization reporting**: Combine GPU utilization metrics with `cost_tracking_enable` data to surface dollars-per-GPU-hour vs dollars-per-actual-utilization across your services in Console3 dashboards.
+- **GPU cost / utilization reporting**: Combine GPU utilization metrics with `cost_tracking_enable` data to surface dollars-per-GPU-hour vs dollars-per-actual-utilization across your services in the Convox Console dashboards.
 - **Capacity planning for time-sliced GPUs**: When `nvidia_device_time_slicing_replicas` is non-zero, DCGM exposes the underlying physical-GPU saturation so you can verify your slicing ratio matches workload behavior.
 
 ## Setting Parameters
@@ -58,7 +58,7 @@ Disabling cleanly uninstalls BOTH Helm releases — the DCGM exporter (DaemonSet
 - [gpu_observability_chart_version](/configuration/rack-parameters/aws/gpu_observability_chart_version): Pin the DCGM exporter chart version. Use to roll forward to a CVE hotfix without waiting for a Convox release.
 - [prometheus_gpu_metrics_chart_version](/configuration/rack-parameters/aws/prometheus_gpu_metrics_chart_version): Pin the chart version for the free-path GPU-metrics Prometheus installed alongside the DCGM exporter.
 - [prometheus_gpu_metrics_retention](/configuration/rack-parameters/aws/prometheus_gpu_metrics_retention): Retention window for the free-path GPU-metrics Prometheus.
-- [prometheus_url](/configuration/rack-parameters/aws/prometheus_url): Override the rack's auto-resolved Prometheus endpoint with a customer-supplied URL.
+- [prometheus_url](/configuration/rack-parameters/aws/prometheus_url): Override the rack's auto-resolved Prometheus endpoint with a user-supplied URL.
 - [gpu_tag_enable](/configuration/rack-parameters/aws/gpu_tag_enable): Tags GPU resources for AWS-side cost allocation; complements observability metrics for full GPU cost visibility.
 
 ## Version Requirements

@@ -14,7 +14,7 @@ Convox offers several levels of support to help you get the most out of the plat
 | **Channel** | Community Forums | In-Console Support | Dedicated Slack Channel |
 | **Response Time** | Best effort | 24-hour SLA | Custom SLA |
 | **Urgent Tickets (24/7)** | -- | -- | Included |
-| **Availability** | All users | Pro plan customers | Enterprise plan customers |
+| **Availability** | All users | Pro plan users | Enterprise plan users |
 
 ### Community
 
@@ -22,11 +22,11 @@ All Convox users have access to community-driven support through the [Convox Com
 
 ### Pro
 
-Pro plan customers receive direct support through the [Convox Console](https://console.convox.com). You can open a support ticket from within the console and expect a response within 24 hours. This tier is well suited for production teams that need reliable access to the Convox support team.
+Pro plan users receive direct support through the [Convox Console](https://console.convox.com). You can open a support ticket from within the console and expect a response within 24 hours. This tier is well suited for production teams that need reliable access to the Convox support team.
 
 ### Enterprise
 
-Enterprise plan customers receive the highest level of support, including:
+Enterprise plan users receive the highest level of support, including:
 
 - **Dedicated Slack channel** for direct, real-time communication with the Convox team.
 - **Custom SLA response times** tailored to your organization's requirements.
