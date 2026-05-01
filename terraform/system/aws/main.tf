@@ -57,6 +57,13 @@ locals {
   additional_karpenter_nodepools = try(jsondecode(var.additional_karpenter_nodepools_config), jsondecode(base64decode(var.additional_karpenter_nodepools_config)), [])
 
   public_access_cidrs = var.eks_api_server_public_access_cidrs == "" ? ["0.0.0.0/0"] : split(",", var.eks_api_server_public_access_cidrs)
+
+  effective_prometheus_url = (
+    var.prometheus_url != "" ? var.prometheus_url :
+    var.monitoring_metrics_provisioned ? "http://convox-kube-prometheus-sta-prometheus.convox-monitoring.svc.cluster.local:9090" :
+    var.gpu_observability_enable ? "http://prometheus-gpu-metrics-server.kube-system.svc.cluster.local:80" :
+    ""
+  )
 }
 
 module "node_arch" {
@@ -163,6 +170,10 @@ module "cluster" {
   ecr_docker_hub_cache                = var.ecr_docker_hub_cache
   docker_hub_username                 = var.docker_hub_username
   docker_hub_password                 = var.docker_hub_password
+
+  monitoring_metrics_provisioned       = var.monitoring_metrics_provisioned
+  prometheus_gpu_metrics_chart_version = var.prometheus_gpu_metrics_chart_version
+  prometheus_gpu_metrics_retention     = var.prometheus_gpu_metrics_retention
 }
 
 resource "null_resource" "wait_for_cluster" {
@@ -257,4 +268,6 @@ module "rack" {
   vpc_id                                    = module.cluster.vpc
   vpa_enable                                = var.vpa_enable
   webhook_signing_key                       = var.webhook_signing_key
+
+  effective_prometheus_url = local.effective_prometheus_url
 }

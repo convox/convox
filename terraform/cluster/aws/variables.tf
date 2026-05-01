@@ -415,3 +415,18 @@ variable "docker_hub_password" {
   type    = string
   default = ""
 }
+
+variable "monitoring_metrics_provisioned" {
+  type    = bool
+  default = false
+}
+
+variable "prometheus_gpu_metrics_chart_version" {
+  type    = string
+  default = "27.9.0"
+}
+
+variable "prometheus_gpu_metrics_retention" {
+  type    = string
+  default = "24h"
+}

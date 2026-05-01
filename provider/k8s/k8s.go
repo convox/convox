@@ -165,10 +165,11 @@ func FromEnv() (*Provider, error) {
 
 	ms := NewMetricScraperClient(kc, os.Getenv("METRICS_SCRAPER_HOST"))
 
-	// PROMETHEUS_URL is plumbed from the prometheus_url rack param via
-	// terraform/api/k8s/main.tf. Empty (the non-AWS default and any rack
-	// without observability configured) → NewPrometheusClient returns
-	// (nil, nil) and PromClient stays nil; every read site short-circuits.
+	// PROMETHEUS_URL is plumbed from the rack's effective_prometheus_url
+	// (priority: customer-set prometheus_url > paid metered Prometheus >
+	// free-tier GPU Prometheus from gpu_observability_enable > none) via
+	// terraform/api/k8s/main.tf. Empty (no priority match) → NewPrometheusClient
+	// returns (nil, nil) and PromClient stays nil; every read site short-circuits.
 	// Bad URL → log and continue with nil client (mirrors MetricsClient
 	// fail-soft posture).
 	pc, err := NewPrometheusClient(os.Getenv("PROMETHEUS_URL"))

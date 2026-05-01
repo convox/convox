@@ -165,6 +165,11 @@ variable "prometheus_url" {
   default = ""
 }
 
+variable "effective_prometheus_url" {
+  type    = string
+  default = ""
+}
+
 variable "proxy_protocol" {
   default = false
 }

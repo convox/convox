@@ -141,6 +141,11 @@ variable "prometheus_url" {
   default = ""
 }
 
+variable "effective_prometheus_url" {
+  type    = string
+  default = ""
+}
+
 variable "rack_name" {
   default = ""
   type    = string
