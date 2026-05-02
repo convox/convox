@@ -27,9 +27,37 @@ Metrics collection is enabled at the rack level through the Rack Settings page.
 2. Click **Rack Settings** in the left sidebar
 3. Scroll to the **Dashboard Settings** section
 4. Toggle the **Enable Metrics Agent** switch to on
-5. Wait approximately 2 minutes for agents to install and begin collecting data
+5. In the plan picker modal, choose **Free** (lightweight Prometheus chart, no metered billing) or **Paid** (kube-prometheus-stack with metered billing; requires payment method on file).
+6. Wait approximately 5-15 minutes for the chart to install. Status updates in the same panel.
 
-Once enabled, the Metrics Agent automatically installs into your rack and begins collecting performance data from all running services.
+Once enabled, the Metrics Agent installs into your rack and begins collecting performance data from all running services.
+
+### Switching Plans
+
+When monitoring is enabled, the Rack Settings → Dashboard Settings panel shows a **Switch Plan** button alongside the existing toggle. Switching between Free and Paid:
+
+- Uninstalls the current plan's chart, then installs the new plan's chart. Total ~5-15 minutes.
+- During the switch, `convox ps` GPU enrichment fields show em-dash sentinels until the new chart is installed and `prometheus_url` is wired (see below).
+- Free → Paid requires a payment method on file. The Console surfaces a card-on-file gate before the switch begins.
+- Paid → Free preserves the underlying Stripe subscription (metering stops; no auto-cancellation).
+
+### Setting `prometheus_url` for `convox ps` GPU enrichment
+
+Post-3.24.6, the rack does not auto-resolve a Prometheus URL. To populate GPU fields in `convox ps` after enabling monitoring, set [`prometheus_url`](/configuration/rack-parameters/aws/prometheus_url) on your rack.
+
+> **Note:** the free-plan Prometheus chart depends on the Convox Console monitoring-redesign deploy. If your Convox Console version does not yet show the **Free** vs **Paid** plan picker in Rack Settings → Dashboard Settings, the free-plan service URL below will not resolve (no chart deployed). Use the paid-plan URL or wait until the redesign rolls out to your Convox Console.
+
+
+
+```bash
+# Paid plan in-cluster Prometheus:
+convox rack params set prometheus_url=http://convox-kube-prometheus-sta-prometheus.convox-monitoring.svc.cluster.local:9090
+
+# Free plan in-cluster Prometheus:
+convox rack params set prometheus_url=http://prometheus-gpu-metrics-server.kube-system.svc.cluster.local:80
+```
+
+Until `prometheus_url` is set, `convox ps` GPU fields render as em-dash sentinels (`—`) even after monitoring is enabled in the Console.
 
 ## Default Dashboards
 
@@ -191,7 +219,29 @@ convox logs -a myapp --since 1h
 convox logs -a myapp
 ```
 
+## Customer-Visible Regressions in 3.24.6
+
+Acknowledged regressions introduced by the monitoring ownership redesign. Each is documented to set expectations:
+
+- **Rack-only customers (no Convox Console connection) lose access to GPU-observability Prometheus charts.** The DCGM exporter still installs via `gpu_observability_enable=true`, but no Prometheus chart scrapes it. Connect to Convox Console and enable monitoring to restore full functionality.
+- **`convox rack params` no longer shows `monitoring_metrics_provisioned`.** Diagnostic visibility moves to the Console audit log + UI rack-detail panel.
+- **`convox rack params set monitoring_metrics_provisioned=...` returns an error**: "removed in 3.24.6; monitoring is now Convox-Console-driven (Convox Console → Rack Settings → Dashboard Settings → Enable Metrics Agent)". One-time customer surprise.
+- **Chart-version overrides require Disable→Enable cycle to take effect.** Setting [`prometheus_gpu_metrics_chart_version`](/configuration/rack-parameters/aws/prometheus_gpu_metrics_chart_version) or [`prometheus_gpu_metrics_retention`](/configuration/rack-parameters/aws/prometheus_gpu_metrics_retention) on a rack with monitoring enabled does not immediately re-deploy — the new value applies on the next Disable→Enable cycle from the Console.
+- **`convox ps` GPU fields show em-dash sentinels when `prometheus_url` is unset.** Even with monitoring enabled in the Console, the rack does not auto-resolve a Prometheus URL. See "Setting `prometheus_url`" above.
+- **DCGM-only customer state**: a customer who sets `gpu_observability_enable=true` on the rack but never enables monitoring in the Console has DCGM running with no scraper. Customer dashboards stay empty until monitoring is enabled in the Console.
+- **api-pod rolling restart at upgrade**: ~30-90s rolling restart triggered by the `prometheus_url` secret-checksum hash change. Expected behavior during the upgrade window.
+- **Customers using KEDA Prometheus-backed autoscaling (`scale.autoscale.gpuUtilization` or `scale.autoscale.queueDepth` without an explicit per-trigger `prometheusUrl`) MUST set `prometheus_url` explicitly.** The pre-3.24.6-final implicit fallback is removed; only the Prometheus-backed trigger is skipped when `prometheus_url` is empty — CPU-, memory-, and `scale.keda.triggers`-based autoscale (e.g. `aws-sqs-queue`, `kafka`, `cron`) continue to render and work normally without a Prometheus URL. Set `prometheus_url` to restore Prometheus-backed autoscale.
+- **Plan-switch requires 3.24.6+ rack version.** Customers on downgraded (3.24.5 or earlier) racks cannot switch between free and paid plans via the Console; legacy disable still works for both plans. Upgrade rack to 3.24.6+ to use plan-switch.
+- **Downgrade from 3.24.6-final to 3.24.5 with monitoring enabled in Convox Console will fail at TF apply.** Console-installed `prometheus-gpu-metrics` chart in `kube-system` ns conflicts with 3.24.5's rack-TF-managed chart (helm "cannot re-use a name that is still in use"). **Mitigation:** disable monitoring in Convox Console BEFORE downgrading the rack (Rack Settings → Dashboard Settings → toggle off); wait ~5 minutes for chart uninstall to complete; then `convox rack update --version 3.24.5`.
+- **Telemetry receivers no longer see the `monitoring_metrics_provisioned` field.** Removed from the rack telemetry payload alongside the parameter removal. Telemetry consumers parsing the field should treat it as removed (no schema migration required; the field simply stops appearing).
+- **Free-chart memory budget**: the free-plan Prometheus chart includes the upstream chart's default scrape jobs (kubernetes-pods, kubernetes-service-endpoints, kubernetes-nodes) in addition to the DCGM scrape. Memory budget: <500Mi typical; <1024Mi peak; zero OOMKilled events at default 24h retention. Larger clusters may need to drop retention via [`prometheus_gpu_metrics_retention`](/configuration/rack-parameters/aws/prometheus_gpu_metrics_retention) to stay within the typical budget.
+- **GraphQL `plan` arg defaults to `paid` server-side for backward compat** with old clients (cached browser bundles, third-party tooling). Mutations without a `plan` arg fall back to the prior `paid` behavior.
+- **BillingEnabled-disabled environments (dev/staging/on-prem)**: when `settings.StripePublicKey=""`, paid-plan Enable creates no Stripe subscription. Plan is recorded as `paid` but `o.StripeMonitoringSubscription` stays empty. `sendBillingMeterEvent` skips. Dev-environment expectation; documented for on-prem operators.
+- **Restart-mid-Enable customer recovery time (~50min worst case)**: customer clicks Enable; mutation returns "ok"; Console pod restarts before the chart install completes. State-machine guard rejects re-clicks on `enabling` status. Recovery: worker tick (≤5min) + helm install timeout (≤25min) + stale-pending recovery threshold (≤45min) + retry tick (5min). UI shows "Enabling..." spinner throughout. SRE manual override is the only fast-path.
+
 ## See Also
 
 - [Logging](/configuration/logging) for configuring log collection
 - [Datadog Integration](/integrations/monitoring) for detailed Datadog setup instructions
+- [`prometheus_url`](/configuration/rack-parameters/aws/prometheus_url) for `convox ps` GPU enrichment migration
+- [`gpu_observability_enable`](/configuration/rack-parameters/aws/gpu_observability_enable) for the DCGM exporter rack parameter

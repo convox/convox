@@ -1392,3 +1392,29 @@ func TestRackParamsSet_BuildDisableConvoxResolver_BoolValidation(t *testing.T) {
 		})
 	})
 }
+
+// TestMonitoringMetricsProvisionedRejectsAsRemovedParam locks the special-case
+// rejection of monitoring_metrics_provisioned in validateAndMutateParams. The
+// param was removed in 3.24.6; setting it must surface a customer-friendly
+// "removed in 3.24.6" message naming the new Console UI path, NOT the default
+// "unknown parameter" suggestion (Levenshtein distance from any remaining
+// awsKnownParams entry is too large for a useful suggestion).
+func TestMonitoringMetricsProvisionedRejectsAsRemovedParam(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystem(), nil)
+
+		res, err := testExecute(e, "rack params set monitoring_metrics_provisioned=true", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		require.Contains(t, res.Stderr, "monitoring_metrics_provisioned")
+		require.Contains(t, res.Stderr, "removed in 3.24.6")
+		require.Contains(t, res.Stderr, "Convox-Console-driven")
+		require.Contains(t, res.Stderr, "Convox Console → Rack Settings → Dashboard Settings → Enable Metrics Agent")
+		// SystemUpdate must NOT be called when validation fails.
+		i.AssertNotCalled(t, "SystemUpdate", mock.Anything)
+	})
+}

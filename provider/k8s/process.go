@@ -159,14 +159,11 @@ func (p *Provider) ProcessGet(app, pid string) (*structs.Process, error) {
 		ps.Cpu, ps.Memory = calculatePodCpuAndMem(m)
 	}
 
-	// GPU runtime telemetry — best-effort enrichment from the rack's effective
-	// Prometheus endpoint when the pod has a GPU resource request. The endpoint
-	// is resolved by the cluster TF in priority order: customer-set prometheus_url
-	// > paid metered metrics Prometheus (convox-monitoring) > free-tier GPU
-	// Prometheus (kube-system, gpu_observability_enable) > none. PromClient is nil
-	// on racks where none of those resolve → short-circuit. Per-call timeout is
-	// applied inside QueryGPUMetrics. Errors are logged and absorbed:
-	// the existing process record still returns successfully.
+	// GPU runtime telemetry — best-effort enrichment from the rack's
+	// prometheus_url when the pod has a GPU resource request. PromClient is nil
+	// when prometheus_url is unset → short-circuit. Per-call timeout is applied
+	// inside QueryGPUMetrics. Errors are logged and absorbed: the existing
+	// process record still returns successfully.
 	if p.PromClient != nil && ps.Gpu > 0 {
 		gpuByPod, err := p.PromClient.QueryGPUMetrics(context.TODO(), app, []string{ps.Name})
 		if err != nil {

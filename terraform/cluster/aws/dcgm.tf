@@ -34,11 +34,11 @@ resource "helm_release" "dcgm_exporter" {
 
   values = [
     yamlencode({
-      # Both free path (helm_release.prometheus_gpu_metrics in kube-system ns,
-      # prometheus-community/prometheus chart) and paid metered metrics path
-      # (kube-prometheus-stack in convox-monitoring ns, Console-managed) discover
-      # this exporter via the app.kubernetes.io/name=dcgm-exporter pod label on
-      # a kubernetes_sd_configs Pod-role scrape. ServiceMonitor disabled.
+      # Both free path (Convox-Console-installed prometheus-gpu-metrics in
+      # kube-system ns, prometheus-community/prometheus chart) and paid path
+      # (kube-prometheus-stack in convox-monitoring ns, Convox-Console-managed)
+      # discover this exporter via the app.kubernetes.io/name=dcgm-exporter
+      # pod label on a kubernetes_sd_configs Pod-role scrape. ServiceMonitor disabled.
       serviceMonitor = {
         enabled = false
       }

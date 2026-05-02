@@ -80,7 +80,6 @@ locals {
     kubelet_registry_pull_qps                 = var.kubelet_registry_pull_qps
     max_on_demand_count                       = var.max_on_demand_count
     min_on_demand_count                       = var.min_on_demand_count
-    monitoring_metrics_provisioned            = var.monitoring_metrics_provisioned
     name                                      = var.name
     nginx_additional_config                   = var.nginx_additional_config
     nginx_image                               = var.nginx_image
@@ -205,7 +204,6 @@ locals {
     kubelet_registry_pull_qps                 = "5"
     max_on_demand_count                       = "100"
     min_on_demand_count                       = "1"
-    monitoring_metrics_provisioned            = "false"
     name                                      = ""
     nginx_additional_config                   = ""
     nginx_image                               = "registry.k8s.io/ingress-nginx/controller:v1.12.6@sha256:c371fbf42b4f23584ce879d99303463131f4f31612f0875482b983354eeca7e6"

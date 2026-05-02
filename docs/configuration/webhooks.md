@@ -79,9 +79,11 @@ The actor class for each event is noted alongside the action below.
 - `release:manifest-advisory` — emitted at render time when a service
   configuration is degenerate (e.g., `scale.min: 0` without autoscale)
   (render-time; `actor: "system"`).
-- `release:prometheus-default` — emitted at render time when KEDA needs
-  Prometheus and no explicit `prometheus_url` is configured
-  (render-time; `actor: "system"`).
+- `release:prometheus-skipped` — emitted at render time when KEDA's
+  Prometheus-based trigger creation is skipped because `prometheus_url`
+  is empty and the service's autoscale config requires Prometheus
+  (gpu-utilization or queue-depth without an explicit per-trigger
+  prometheusUrl) (render-time; `actor: "system"`; `Status: "skipped"`).
 - `release:imperative-patch-note` — emitted when `convox scale` rewrites
   a KEDA-managed service to patch the ScaledObject instead of the
   Deployment (HTTP-handler; `actor: "system"`).

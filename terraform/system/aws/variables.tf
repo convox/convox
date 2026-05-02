@@ -463,12 +463,7 @@ variable "private_subnets_ids" {
 variable "prometheus_url" {
   type        = string
   default     = ""
-  description = "External Prometheus URL for KEDA autoscale triggers and observability. Customer-set non-empty value always wins. When empty (default), the rack auto-resolves in priority order: monitoring_metrics_provisioned=true → in-cluster paid-path Prometheus (convox-kube-prometheus-sta-prometheus.convox-monitoring.svc.cluster.local:9090); else gpu_observability_enable=true → in-cluster free-path Prometheus (prometheus-gpu-metrics-server.kube-system.svc.cluster.local:80); else unset. Set this for external Prometheus (managed AMP, Grafana Cloud, federation hub)."
-}
-
-variable "monitoring_metrics_provisioned" {
-  type    = bool
-  default = false
+  description = "External Prometheus URL for KEDA autoscale triggers and observability. Customer-set value enables GPU enrichment in `convox ps`. When empty (default), GPU fields show em-dash sentinels even when a chart is installed via the Convox Console. Set to the in-cluster service URL for Convox-Console-managed monitoring (paid: `http://convox-kube-prometheus-sta-prometheus.convox-monitoring.svc.cluster.local:9090`; free: `http://prometheus-gpu-metrics-server.kube-system.svc.cluster.local:80`) or to your external Prometheus."
 }
 
 variable "prometheus_gpu_metrics_chart_version" {
