@@ -281,8 +281,6 @@ func TestCoalesceLiteralsMatchTFDefaults(t *testing.T) {
 		variable string
 		file     string
 	}{
-		{"prometheus_gpu_metrics_chart_version", "../../terraform/cluster/aws/prometheus.tf"},
-		{"prometheus_gpu_metrics_retention", "../../terraform/cluster/aws/prometheus.tf"},
 		{"gpu_observability_chart_version", "../../terraform/cluster/aws/dcgm.tf"},
 	}
 

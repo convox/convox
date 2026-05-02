@@ -35,13 +35,11 @@ type Process struct {
 	Service string `json:"service,omitempty"`
 
 	// GPU runtime telemetry, populated by provider/k8s/prometheus.go when the
-	// rack's effective Prometheus endpoint (priority: customer-set prometheus_url
-	// > paid metered metrics Prometheus > free-tier GPU Prometheus from
-	// gpu_observability_enable) is reachable AND the pod has a GPU resource
-	// request. Pointer-typed so:
+	// rack's prometheus_url points to a reachable Prometheus AND the pod has a
+	// GPU resource request. Pointer-typed so:
 	//   nil          → "no data populator wired" (3.24.5 rack on the wire,
-	//                   no effective_prometheus_url resolved, DCGM not deployed,
-	//                   query timeout, pod has no GPU);
+	//                   prometheus_url unset, DCGM not deployed, query timeout,
+	//                   pod has no GPU);
 	//   non-nil zero → "real reading at idle on a real GPU";
 	//   non-nil > 0  → "real reading under load."
 	// Mixed-skew safe: 3.24.5 rack returning JSON without these keys decodes

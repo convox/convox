@@ -488,3 +488,129 @@ func repoRootFromTestFile() (string, error) {
 		dir = parent
 	}
 }
+
+// TestReconcileVarsWithModule_StripsMonitoringMetricsProvisioned_OnDowngrade is
+// the fingertrap exercise for the rc8→3.24.6-final transition. The downgraded
+// (3.24.6-final) module no longer declares monitoring_metrics_provisioned;
+// vars.json carries it from the rc8-era state. Reconcile must (a) remove the
+// key from vars.json, (b) emit a NOTICE on stderr that names it, (c) leave
+// name/release untouched.
+func TestReconcileVarsWithModule_StripsMonitoringMetricsProvisioned_OnDowngrade(t *testing.T) {
+	settings := t.TempDir()
+	f := reconcileFixture{
+		rackName:   "test-rack",
+		moduleVars: []string{"name", "release"}, // 3.24.6-final-like: no monitoring_metrics_provisioned
+		vars: map[string]string{
+			"name":                           "test-rack",
+			"release":                        "3.24.5",
+			"monitoring_metrics_provisioned": "true",
+		},
+	}
+	f.setup(t, settings)
+
+	capturedStderr := withTerraform(t, settings, f.rackName, func(t *testing.T, tf Terraform) {
+		require.NoError(t, tf.reconcileVarsWithModule("3.24.5"))
+	})
+
+	got := f.readVars(t)
+	_, has := got["monitoring_metrics_provisioned"]
+	assert.False(t, has, "monitoring_metrics_provisioned should be removed on downgrade")
+	assert.Equal(t, "test-rack", got["name"], "name must be preserved")
+	assert.Equal(t, "3.24.5", got["release"], "release must be preserved")
+	assert.Contains(t, capturedStderr, "removing parameters not supported by version 3.24.5", "NOTICE must be emitted")
+	assert.Contains(t, capturedStderr, "monitoring_metrics_provisioned", "NOTICE must name monitoring_metrics_provisioned")
+
+	// main.tf rewrite assertion (mirrors TestReconcileVarsWithModule_PrometheusUrlRemovedFromMainTf
+	// at lines 232-254): the reconciler's t.update(release, vars) rewrites both
+	// vars.json AND main.tf; if the main.tf rewrite regresses for the
+	// cleaned-vars path, terraform apply would fail with "argument not expected"
+	// — exactly the fingertrap class this test exists to catch.
+	mainTfData, err := os.ReadFile(filepath.Join(f.rackDir, "main.tf"))
+	require.NoError(t, err)
+	assert.NotContains(t, string(mainTfData), "monitoring_metrics_provisioned", "main.tf must not reference removed variable")
+	assert.Contains(t, string(mainTfData), `name = "test-rack"`, "main.tf must still reference name")
+	assert.Contains(t, string(mainTfData), `release = "3.24.5"`, "main.tf must still reference release")
+}
+
+// TestReconcileVarsWithModule_StripsOrphanedPromVars_OnDowngrade is a
+// fixture-only future-proofing exercise. The 3.24.5 system/aws/variables.tf
+// STILL declares prometheus_gpu_metrics_chart_version + retention, and 3.24.6
+// KEEPS them per SPEC §3.8 for SystemRaw consumption — so neither version
+// actually triggers stripping in real downgrades. This test uses synthetic
+// moduleVars excluding both prom-params to exercise the reconciler in a
+// hypothetical future-removal path. Catches regressions in future minor-bump
+// downgrades that drop the prom-vars from variables.tf.
+func TestReconcileVarsWithModule_StripsOrphanedPromVars_OnDowngrade(t *testing.T) {
+	settings := t.TempDir()
+	f := reconcileFixture{
+		rackName:   "test-rack",
+		moduleVars: []string{"name", "release"}, // synthetic; excludes prom-vars
+		vars: map[string]string{
+			"name":                                 "test-rack",
+			"release":                              "3.24.5",
+			"prometheus_gpu_metrics_chart_version": "27.9.0",
+			"prometheus_gpu_metrics_retention":     "24h",
+		},
+	}
+	f.setup(t, settings)
+
+	capturedStderr := withTerraform(t, settings, f.rackName, func(t *testing.T, tf Terraform) {
+		require.NoError(t, tf.reconcileVarsWithModule("3.24.5"))
+	})
+
+	got := f.readVars(t)
+	_, hasVer := got["prometheus_gpu_metrics_chart_version"]
+	_, hasRet := got["prometheus_gpu_metrics_retention"]
+	assert.False(t, hasVer, "prometheus_gpu_metrics_chart_version should be removed when module no longer declares it")
+	assert.False(t, hasRet, "prometheus_gpu_metrics_retention should be removed when module no longer declares it")
+	assert.Equal(t, "test-rack", got["name"], "name must be preserved")
+	assert.Contains(t, capturedStderr, "prometheus_gpu_metrics_chart_version", "NOTICE must name prometheus_gpu_metrics_chart_version")
+	assert.Contains(t, capturedStderr, "prometheus_gpu_metrics_retention", "NOTICE must name prometheus_gpu_metrics_retention")
+
+	mainTfData, err := os.ReadFile(filepath.Join(f.rackDir, "main.tf"))
+	require.NoError(t, err)
+	assert.NotContains(t, string(mainTfData), "prometheus_gpu_metrics_chart_version", "main.tf must not reference removed variable")
+	assert.NotContains(t, string(mainTfData), "prometheus_gpu_metrics_retention", "main.tf must not reference removed variable")
+	assert.Contains(t, string(mainTfData), `name = "test-rack"`, "main.tf must still reference name")
+}
+
+// TestReconcileVarsWithModule_StripsMonitoringMetricsProvisioned_OnRc8ToFinalUpgrade
+// covers SPEC §7.1 cell M33 at the unit-test layer (per PR2-4-M3 fix). vars.json
+// contains monitoring_metrics_provisioned=true (rc8 paid-customer state); module
+// variables.tf does NOT declare it (3.24.6-final). Reconciler strips the var and
+// emits NOTICE — same mechanism as the downgrade path. Real customer impact = 0
+// (zero customer-facing rc8 racks); test catches future regressions in
+// reconciler upgrade-path orphan stripping.
+func TestReconcileVarsWithModule_StripsMonitoringMetricsProvisioned_OnRc8ToFinalUpgrade(t *testing.T) {
+	settings := t.TempDir()
+	f := reconcileFixture{
+		rackName:   "test-rack",
+		moduleVars: []string{"name", "release", "gpu_observability_enable"}, // 3.24.6-final declares these
+		vars: map[string]string{
+			"name":                           "test-rack",
+			"release":                        "3.24.6",
+			"monitoring_metrics_provisioned": "true",
+			"gpu_observability_enable":       "true",
+		},
+	}
+	f.setup(t, settings)
+
+	capturedStderr := withTerraform(t, settings, f.rackName, func(t *testing.T, tf Terraform) {
+		require.NoError(t, tf.reconcileVarsWithModule("3.24.6"))
+	})
+
+	got := f.readVars(t)
+	_, hasMMP := got["monitoring_metrics_provisioned"]
+	assert.False(t, hasMMP, "monitoring_metrics_provisioned should be stripped on rc8→final upgrade")
+	assert.Equal(t, "true", got["gpu_observability_enable"], "gpu_observability_enable must be preserved")
+	assert.Equal(t, "test-rack", got["name"], "name must be preserved")
+	assert.Equal(t, "3.24.6", got["release"], "release must reflect the 3.24.6 final upgrade target")
+	assert.Contains(t, capturedStderr, "removing parameters not supported by version 3.24.6", "NOTICE must be emitted")
+	assert.Contains(t, capturedStderr, "monitoring_metrics_provisioned", "NOTICE must name monitoring_metrics_provisioned")
+
+	mainTfData, err := os.ReadFile(filepath.Join(f.rackDir, "main.tf"))
+	require.NoError(t, err)
+	assert.NotContains(t, string(mainTfData), "monitoring_metrics_provisioned", "main.tf must not reference removed variable")
+	assert.Contains(t, string(mainTfData), `gpu_observability_enable = "true"`, "main.tf must still reference gpu_observability_enable")
+	assert.Contains(t, string(mainTfData), `name = "test-rack"`, "main.tf must still reference name")
+}

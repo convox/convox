@@ -71,7 +71,7 @@ var awsKnownParams = map[string]bool{
 	"keda_enable": true, "key_pair_name": true,
 	"kube_proxy_version": true, "kubelet_registry_burst": true,
 	"kubelet_registry_pull_qps": true, "max_on_demand_count": true,
-	"min_on_demand_count": true, "monitoring_metrics_provisioned": true,
+	"min_on_demand_count":     true,
 	"name":                    true,
 	"nginx_additional_config": true, "nginx_image": true,
 	"nlb_security_group": true, "node_capacity_type": true,
@@ -157,7 +157,6 @@ var managedParams = map[string]bool{
 	"pod_identity_agent_version": true, "vpc_cni_version": true,
 	"disable_public_access": true, "enable_private_access": true,
 	"eks_api_server_public_access_cidrs": true,
-	"monitoring_metrics_provisioned":     true,
 }
 
 // boolParams lists rack parameters whose underlying Terraform variable is
@@ -202,7 +201,6 @@ var boolParams = map[string]bool{
 	"internal_router":                 true,
 	"karpenter_consolidation_enabled": true,
 	"keda_enable":                     true,
-	"monitoring_metrics_provisioned":  true,
 	"pod_identity_agent_enable":       true,
 	"telemetry":                       true,
 	"vpa_enable":                      true,
@@ -393,7 +391,6 @@ var paramGroups = map[string]map[string]bool{
 		"key_pair_name":                        true,
 		"kubelet_registry_burst":               true,
 		"kubelet_registry_pull_qps":            true,
-		"monitoring_metrics_provisioned":       true,
 		"node_capacity_type":                   true,
 		"node_disk":                            true,
 		"node_max_unavailable_percentage":      true,
@@ -611,18 +608,26 @@ var clearableParams = map[string]bool{
 	"additional_build_groups_config":        true,
 	"additional_karpenter_nodepools_config": true,
 	"karpenter_config":                      true,
-	// External Prometheus override — empty reverts to in-cluster
-	// auto-resolution (paid → free → unset).
+	// External Prometheus URL — customer must set explicitly post-3.24.6 (no rack-side auto-resolution)
 	"prometheus_url": true,
-	// Free-chart Helm version override — empty falls back to TF default
-	// ("27.9.0") via coalesce() guard in cluster/aws/prometheus.tf.
+	// Free-chart Helm version override — empty falls back to Convox Console worker
+	// default (`27.9.0`) on next Disable→Enable cycle. No rack TF consumer post-3.24.6 final.
 	"prometheus_gpu_metrics_chart_version": true,
-	// Free-chart Prometheus retention override — empty falls back to TF
-	// default ("24h") via coalesce() guard in cluster/aws/prometheus.tf.
+	// Free-chart Prometheus retention override — empty falls back to Convox Console worker
+	// default (`24h`) on next Disable→Enable cycle. No rack TF consumer post-3.24.6 final.
 	"prometheus_gpu_metrics_retention": true,
 	// DCGM exporter Helm version override — empty falls back to TF default
 	// ("4.8.1") via coalesce() guard in cluster/aws/dcgm.tf.
 	"gpu_observability_chart_version": true,
+}
+
+// removedIn3_24_6 enumerates rack params hard-removed in 3.24.6 with a
+// customer-friendly rejection message keyed by param name. Validation in
+// validateAndMutateParams returns this message instead of the default
+// "unknown parameter" suggestion (Levenshtein distance from any remaining
+// awsKnownParams entry is too large for a useful suggestion).
+var removedIn3_24_6 = map[string]string{
+	"monitoring_metrics_provisioned": "removed in 3.24.6; monitoring is now Convox-Console-driven (Convox Console → Rack Settings → Dashboard Settings → Enable Metrics Agent)",
 }
 
 // resolveGroup resolves a possibly-partial group name to an exact group key.
@@ -1154,6 +1159,12 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 	for k := range params {
 		if k == "" {
 			return fmt.Errorf("parameter name cannot be empty")
+		}
+	}
+
+	for k := range params {
+		if reason, ok := removedIn3_24_6[k]; ok {
+			return fmt.Errorf("param '%s' was %s", k, reason)
 		}
 	}
 

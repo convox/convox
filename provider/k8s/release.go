@@ -29,12 +29,6 @@ import (
 	ktypes "k8s.io/apimachinery/pkg/types"
 )
 
-// defaultPrometheusURL is the in-cluster URL of the FREE GPU-metrics Prometheus
-// installed by gpu_observability_enable=true. Used as a last-resort fallback for
-// KEDA scale-target trigger spec writes when neither prometheus_url nor
-// effective_prometheus_url is set.
-const defaultPrometheusURL = "http://prometheus-gpu-metrics-server.kube-system.svc.cluster.local:80"
-
 const (
 	APP_CONFIG_KEY = "app.json"
 )
@@ -889,63 +883,70 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 		items = append(items, data)
 
 		if wantsAutoscale && p.IsKedaEnabled && s.Scale.Count.Max > s.Scale.Count.Min {
-			promURL := defaultPrometheusURL
-			if v := os.Getenv("PROMETHEUS_URL"); v != "" {
-				promURL = v
-			} else if s.Scale.Autoscale.NeedsPrometheus() {
-				_ = p.EventSend("release:prometheus-default", structs.EventSendOptions{
+			promURL := os.Getenv("PROMETHEUS_URL")
+			if promURL == "" && s.Scale.Autoscale.NeedsPrometheus() {
+				// Service requires Prometheus (gpu-utilization or queue-depth
+				// autoscale without an explicit per-trigger prometheusUrl) but
+				// PROMETHEUS_URL is empty. Skip the ScaledObject build for this
+				// service and emit an audit-trail event. Non-Prometheus triggers
+				// (cpu, memory, manual scale.keda.triggers) take the else branch
+				// below and render normally. VPA rendering further down also
+				// continues unconditionally for this service — the skip is scoped
+				// to the ScaledObject only, not the entire iteration.
+				skippedStatus := "skipped"
+				_ = p.EventSend("release:prometheus-skipped", structs.EventSendOptions{
 					Data: map[string]string{
 						"actor":   "system",
 						"app":     a.Name,
 						"service": s.Name,
-						"url":     promURL,
-						"reason":  "no explicit prometheus_url and PROMETHEUS_URL env unset; using in-cluster default. Install the GPU observability stack OR set scale.autoscale.*.prometheus_url if this URL is wrong.",
+						"reason":  "PROMETHEUS_URL not set; skipping KEDA prometheus trigger creation",
 					},
+					Status: &skippedStatus,
 				})
-			}
-
-			var triggers []kedav1alpha1.ScaleTriggers
-			if s.Scale.Autoscale.IsEnabled() {
-				triggers = append(triggers, s.Scale.Autoscale.BuildTriggers(a.Name, s.Name, promURL)...)
-			}
-			if s.Scale.IsKedaEnabled() {
-				triggers = append(triggers, s.Scale.Keda.Triggers...)
-			}
-
-			scaledObj := s.KedaScaledObject(manifest.KedaScaledObjectParameters{
-				ServiceName: s.Name,
-				Namespace:   p.AppNamespace(a.Name),
-				MinCount:    int32(s.Scale.Count.Min),
-				MaxCount:    int32(s.Scale.Count.Max),
-				Triggers:    triggers,
-			})
-			if scaledObj != nil {
-				if p.applyAnnotationsToHPA(a.Name, s.Name, map[string]string{
-					"validations.keda.sh/hpa-ownership": "false",
-				}) != nil {
-					return nil, fmt.Errorf("failed to apply annotations to HPA for service %s", s.Name)
+			} else {
+				var triggers []kedav1alpha1.ScaleTriggers
+				if s.Scale.Autoscale.IsEnabled() {
+					triggers = append(triggers, s.Scale.Autoscale.BuildTriggers(a.Name, s.Name, promURL)...)
+				}
+				if s.Scale.IsKedaEnabled() {
+					triggers = append(triggers, s.Scale.Keda.Triggers...)
 				}
 
-				scaledObj.Labels = map[string]string{
-					"system":  "convox",
-					"rack":    p.Name,
-					"app":     a.Name,
-					"service": s.Name,
-				}
-				soData, err := SerializeK8sObjToYaml(scaledObj)
-				if err != nil {
-					return nil, errors.WithStack(err)
-				}
+				scaledObj := s.KedaScaledObject(manifest.KedaScaledObjectParameters{
+					ServiceName: s.Name,
+					Namespace:   p.AppNamespace(a.Name),
+					MinCount:    int32(s.Scale.Count.Min),
+					MaxCount:    int32(s.Scale.Count.Max),
+					Triggers:    triggers,
+				})
+				if scaledObj != nil {
+					if p.applyAnnotationsToHPA(a.Name, s.Name, map[string]string{
+						"validations.keda.sh/hpa-ownership": "false",
+					}) != nil {
+						return nil, fmt.Errorf("failed to apply annotations to HPA for service %s", s.Name)
+					}
 
-				if defaultAuth := s.DefaultTriggerAuthentionIfAws(p.AppNamespace(a.Name)); defaultAuth != nil {
-					authData, err := SerializeK8sObjToYaml(defaultAuth)
+					scaledObj.Labels = map[string]string{
+						"system":  "convox",
+						"rack":    p.Name,
+						"app":     a.Name,
+						"service": s.Name,
+					}
+					soData, err := SerializeK8sObjToYaml(scaledObj)
 					if err != nil {
 						return nil, errors.WithStack(err)
 					}
-					items = append(items, authData)
-				}
 
-				items = append(items, soData)
+					if defaultAuth := s.DefaultTriggerAuthentionIfAws(p.AppNamespace(a.Name)); defaultAuth != nil {
+						authData, err := SerializeK8sObjToYaml(defaultAuth)
+						if err != nil {
+							return nil, errors.WithStack(err)
+						}
+						items = append(items, authData)
+					}
+
+					items = append(items, soData)
+				}
 			}
 		}
 

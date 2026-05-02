@@ -274,14 +274,10 @@ Groups:
         default: "false"
         type: boolean
         description: |
-          Installs the NVIDIA DCGM exporter as a DaemonSet on every GPU node,
-          AND a lightweight free-tier Prometheus (release &i prometheus-gpu-metrics &i in
-          &i kube-system &i ns, chart &i prometheus-community/prometheus &i) scoped to
-          scraping DCGM. If the Convox metered metrics offering is enabled
-          (&i monitoring_metrics_provisioned=true &i), the free chart is suppressed and
-          DCGM is scraped by the metered Prometheus instead. Resource overhead per GPU rack
-          is ~512Mi memory request, 1024Mi limit; 100m/500m CPU. Sizing rule-of-thumb is
-          1Gi per 50 concurrent GPU pods. Requires &i nvidia_device_plugin_enable=true &i.
+          Enable GPU observability infrastructure (DCGM exporter DaemonSet) on this
+          rack. With Convox Console connection, additionally enables free or paid
+          Prometheus chart via Console mutation. Without Convox Console, DCGM emits
+          metrics with no scraper.
       - name: gpu_observability_chart_version
         default: "4.8.1"
         type: string
@@ -289,23 +285,19 @@ Groups:
           Pin this to a version compatible with the cluster's NVIDIA
           driver (defaults to chart &i 4.8.1 &i, image tag
           &i 4.5.2-4.8.1-distroless &i).
-      - name: monitoring_metrics_provisioned
-        default: "false"
-        type: boolean
-        description: Internal — set by Convox metered metrics enable/disable flow.
-          When true, suppresses the rack-managed free GPU Prometheus chart.
-          Listed in &i managedParams &i; do not modify manually.
       - name: prometheus_gpu_metrics_chart_version
         default: "27.9.0"
         type: string
-        description: Helm chart version pin for free-path GPU-metrics Prometheus
-          (&i prometheus-community/prometheus &i).
+        description: Helm chart version pin for the free-plan Prometheus chart deployed via
+          the Convox Console (&i prometheus-community/prometheus &i). Applies on next
+          Disable→Enable cycle from the Convox Console.
       - name: prometheus_gpu_metrics_retention
         default: "24h"
         type: string
-        description: Retention window for free-path GPU-metrics Prometheus.
-          Accepts Prometheus duration syntax (e.g. &i 24h &i, &i 7d &i, &i 2h30m &i).
-          Storage is emptyDir; longer retention requires more memory.
+        description: Retention window for the free-plan Prometheus chart deployed via the
+          Convox Console. Accepts Prometheus duration syntax (e.g. &i 24h &i,
+          &i 7d &i, &i 2h30m &i). Storage is emptyDir; longer retention requires more
+          memory. Applies on next Disable→Enable cycle from the Convox Console.
       - name: keda_enable
         default: "false"
         type: boolean

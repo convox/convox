@@ -7,9 +7,9 @@ url: /configuration/rack-parameters/aws/prometheus_gpu_metrics_retention
 # prometheus_gpu_metrics_retention
 
 ## Description
-The `prometheus_gpu_metrics_retention` parameter sets the retention window for the free-path GPU-metrics Prometheus installed when [`gpu_observability_enable=true`](/configuration/rack-parameters/aws/gpu_observability_enable) and the Convox metered metrics offering is NOT enabled. The free Prometheus is scoped to scraping the NVIDIA DCGM exporter only and serves the rack-API's GPU metric enrichment for `convox ps` and Console GPU dashboards.
+The `prometheus_gpu_metrics_retention` parameter sets the retention window for the free-plan Prometheus chart deployed via the Convox Console. Applies on next Disable→Enable cycle from the Convox Console. The free Prometheus is scoped to scraping the NVIDIA DCGM exporter only and serves the rack-API's GPU metric enrichment for `convox ps` and Console GPU dashboards.
 
-Accepts Prometheus duration syntax — for example `24h`, `7d`, `2h30m`, or `54s321ms`.
+Accepts Prometheus duration syntax — for example `24h`, `7d`, `2h30m`, or `54s321ms`. Storage is `emptyDir`; longer retention requires more memory.
 
 ## Default Value
 The default value is `24h`.
@@ -37,9 +37,8 @@ Setting parameters... OK
 - Default 24h is sufficient for "what was happening yesterday" debugging. For longer-window analysis, enable Convox metered metrics (paid tier) which provides remote_write to managed long-term storage.
 
 ## Related Parameters
-- [gpu_observability_enable](/configuration/rack-parameters/aws/gpu_observability_enable): The enable switch that controls whether the free chart is installed.
-- [prometheus_gpu_metrics_chart_version](/configuration/rack-parameters/aws/prometheus_gpu_metrics_chart_version): Pin the chart version for the free-path Prometheus.
-- `monitoring_metrics_provisioned`: Internal flag set by the Convox metered metrics offering. When `true`, the free chart is suppressed. Not user-settable.
+- [gpu_observability_enable](/configuration/rack-parameters/aws/gpu_observability_enable): Enables the DCGM exporter on this rack. The Console-deployed Prometheus chart scrapes DCGM when monitoring is enabled in the Console.
+- [prometheus_gpu_metrics_chart_version](/configuration/rack-parameters/aws/prometheus_gpu_metrics_chart_version): Pin the chart version for the free-plan Prometheus chart deployed via the Convox Console.
 
 ## Version Requirements
 This parameter requires at least Convox rack version `3.24.6`.

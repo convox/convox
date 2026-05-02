@@ -1,4 +1,4 @@
-.PHONY: all build clean clean-package compress dev generate generate-k8s generate-provider lint lint-new lint-tf lint-security lint-all mocks package release setup test tools validate vendor
+.PHONY: all build clean clean-package compress dev generate generate-k8s generate-provider grep-no-monitoring-metrics-provisioned lint lint-new lint-tf lint-security lint-all mocks package release setup test tools validate vendor
 
 commands = api atom build convox docs resolver
 
@@ -64,8 +64,21 @@ test:
 lint:
 	golangci-lint run --timeout 5m ./...
 
-lint-new:
+lint-new: grep-no-monitoring-metrics-provisioned
 	golangci-lint run --timeout 5m --new-from-rev=$$(git merge-base HEAD master) ./...
+
+grep-no-monitoring-metrics-provisioned:
+	@matches=$$(find . -type f \( -name '*.go' -o -name '*.tf' -o -name '*.yaml' -o -name '*.yml' -o -name '*.md' -o -name '*.vue' -o -name '*.graphql' \) \
+	  -not -path './.git/*' -not -path './vendor/*' -not -path './node_modules/*' \
+	  -not -path './docs/reference/releases/3-24.md' \
+	  -not -path './docs/configuration/monitoring.md' \
+	  -not -path './Makefile' \
+	  -not -path './pkg/cli/rack.go' \
+	  -not -path './pkg/cli/rack_test.go' \
+	  -not -path './pkg/rack/terraform_test.go' \
+	  -not -path './pkg/rack/terraform_bounded_restart_test.go' \
+	  -print0 | xargs -0 grep -n 'monitoring_metrics_provisioned' 2>/dev/null); \
+	if [ -n "$$matches" ]; then printf '%s\n' "$$matches"; echo 'FAIL: monitoring_metrics_provisioned references outside the explicit allowlist'; exit 1; fi
 
 lint-tf:
 	@for dir in $$(find terraform -name '*.tf' -not -path './vendor/*' -not -path '*/.terraform/*' -exec dirname {} \; | sort -u); do \

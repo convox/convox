@@ -7,7 +7,7 @@ url: /configuration/rack-parameters/aws/prometheus_gpu_metrics_chart_version
 # prometheus_gpu_metrics_chart_version
 
 ## Description
-The `prometheus_gpu_metrics_chart_version` parameter pins the Helm chart version for the free-path GPU-metrics Prometheus installed when [`gpu_observability_enable=true`](/configuration/rack-parameters/aws/gpu_observability_enable) and the Convox metered metrics offering is NOT enabled. Change this value to roll forward to a CVE hotfix release without waiting for a Convox rack version that bumps the default.
+The `prometheus_gpu_metrics_chart_version` parameter pins the Helm chart version for the free-plan Prometheus chart deployed via the Convox Console (`prometheus-community/prometheus`). Applies on next Disable→Enable cycle from the Convox Console. Change this value to roll forward to a CVE hotfix release without waiting for a Convox rack version that bumps the default.
 
 The chart is `prometheus-community/prometheus` from the upstream `https://prometheus-community.github.io/helm-charts` repo. The release is named `prometheus-gpu-metrics` and lives in the `kube-system` namespace.
 
@@ -31,7 +31,7 @@ $ convox rack params set prometheus_gpu_metrics_chart_version=27.9.0 -r rackName
 Setting parameters... OK
 ```
 
-You must enable [`gpu_observability_enable`](/configuration/rack-parameters/aws/gpu_observability_enable) AND have `monitoring_metrics_provisioned` at its default `false` (this internal flag is managed by the Convox metered metrics enable/disable flow) for the free-path Prometheus chart to be installed at all — pinning the version is otherwise a no-op.
+You must enable monitoring (free plan) in the Convox Console for the free-plan Prometheus chart to be deployed at all — pinning the version is otherwise a no-op until you enable monitoring. The new chart version takes effect on the next Disable→Enable cycle from the Console.
 
 ## Additional Information
 - Stay on the same chart major version (e.g., within `27.x`) when pinning. Chart majors may introduce subchart name changes or values-schema breakage that the Convox provider does not yet handle.
@@ -39,9 +39,8 @@ You must enable [`gpu_observability_enable`](/configuration/rack-parameters/aws/
 - Always verify the chart you pin to is published at the prometheus-community upstream Helm repo: `https://prometheus-community.github.io/helm-charts`. Convox does not vendor the chart.
 
 ## Related Parameters
-- [gpu_observability_enable](/configuration/rack-parameters/aws/gpu_observability_enable): The enable switch that controls whether the free chart is installed.
-- [prometheus_gpu_metrics_retention](/configuration/rack-parameters/aws/prometheus_gpu_metrics_retention): Retention window for the free-path Prometheus.
-- `monitoring_metrics_provisioned`: Internal flag set by the Convox metered metrics offering. When `true`, the free chart is suppressed. Not user-settable.
+- [gpu_observability_enable](/configuration/rack-parameters/aws/gpu_observability_enable): Enables the DCGM exporter on this rack. The Console-deployed Prometheus chart scrapes DCGM when monitoring is enabled in the Console.
+- [prometheus_gpu_metrics_retention](/configuration/rack-parameters/aws/prometheus_gpu_metrics_retention): Retention window for the free-plan Prometheus chart deployed via the Convox Console.
 
 ## Version Requirements
 This parameter requires at least Convox rack version `3.24.6`.

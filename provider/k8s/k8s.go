@@ -165,13 +165,11 @@ func FromEnv() (*Provider, error) {
 
 	ms := NewMetricScraperClient(kc, os.Getenv("METRICS_SCRAPER_HOST"))
 
-	// PROMETHEUS_URL is plumbed from the rack's effective_prometheus_url
-	// (priority: customer-set prometheus_url > paid metered Prometheus >
-	// free-tier GPU Prometheus from gpu_observability_enable > none) via
-	// terraform/api/k8s/main.tf. Empty (no priority match) → NewPrometheusClient
-	// returns (nil, nil) and PromClient stays nil; every read site short-circuits.
-	// Bad URL → log and continue with nil client (mirrors MetricsClient
-	// fail-soft posture).
+	// PROMETHEUS_URL is plumbed from the rack's prometheus_url directly via
+	// terraform/api/k8s/main.tf (no auto-resolution; customer-set or empty).
+	// Empty → NewPrometheusClient returns (nil, nil) and PromClient stays nil;
+	// every read site short-circuits. Bad URL → log and continue with nil client
+	// (mirrors MetricsClient fail-soft posture).
 	pc, err := NewPrometheusClient(os.Getenv("PROMETHEUS_URL"))
 	if err != nil {
 		fmt.Printf("ns=k8s at=prometheus_client result=invalid url=%q error=%q metrics=disabled\n",
