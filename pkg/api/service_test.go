@@ -190,21 +190,23 @@ func TestServiceScaleOverrideSet_AckByForwarded(t *testing.T) {
 	})
 }
 
-// TestServiceScaleOverrideSet_AdminRBAC_RequiresAdminRole — w-role must 403
-// before any provider call (mirrors AppBudgetReset --force-clear-cooldown
-// gate). Validates §4.3 RBAC lock from item-23 OQ-4.
-func TestServiceScaleOverrideSet_AdminRBAC_RequiresAdminRole(t *testing.T) {
+// TestServiceScaleOverrideSet_RBAC_ReadWriteAllowed — rw-role must succeed
+// (no admin escalation required). Spec 03: scale override gates on the
+// per-app Write permission, mirroring all other operational service controls
+// (deploy, rollback, env edit). Console3 enforces the per-app Write check at
+// api/resolver/mutation.go:5744-5750; this rack-side gate matches.
+func TestServiceScaleOverrideSet_RBAC_ReadWriteAllowed(t *testing.T) {
 	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
 		tk, err := jm.WriteToken(time.Hour)
 		require.NoError(t, err)
 
-		// No p.On(...) — the CanAdmin gate must fire BEFORE any provider call.
+		// JwtMngr.WriteToken hard-codes user="system-write".
+		p.On("ServiceScaleOverrideSet", "myapp", "web", true, "system-write").Return(nil)
 
 		body := url.Values{"active": {"true"}}.Encode()
 		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/services/web/scale-override", strings.NewReader(body))
 		require.NoError(t, err)
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		req.Header.Set("Accept", "application/json")
 		req.SetBasicAuth("jwt", tk)
 
 		res, err := http.DefaultClient.Do(req)
@@ -212,12 +214,68 @@ func TestServiceScaleOverrideSet_AdminRBAC_RequiresAdminRole(t *testing.T) {
 		defer res.Body.Close()
 
 		bodyBytes, _ := io.ReadAll(res.Body)
-		require.Equal(t, http.StatusForbidden, res.StatusCode, "w-token must 403 — got body %q", string(bodyBytes))
+		require.Equal(t, http.StatusOK, res.StatusCode, "rw-token must succeed — got body %q", string(bodyBytes))
+	})
+}
 
-		got := strings.TrimRight(string(bodyBytes), "\n")
-		require.Contains(t, got, "ServiceScaleOverrideSet")
-		require.Contains(t, got, "requires Admin role")
+// TestServiceScaleOverrideSet_RBAC_ReadOnlyForbidden — r-role must 403
+// before any provider call. Spec 03: read-only callers cannot mutate the
+// override annotation. The Authorize middleware would already 401 a GET-only
+// token on a POST, but the explicit gate produces a clearer endpoint-named
+// error and acts as defense-in-depth if the middleware is ever skipped.
+func TestServiceScaleOverrideSet_RBAC_ReadOnlyForbidden(t *testing.T) {
+	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
+		tk, err := jm.ReadToken(time.Hour)
+		require.NoError(t, err)
+
+		// No p.On(...) — the gate must fire BEFORE any provider call.
+
+		body := url.Values{"active": {"true"}}.Encode()
+		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/services/web/scale-override", strings.NewReader(body))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.SetBasicAuth("jwt", tk)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		bodyBytes, _ := io.ReadAll(res.Body)
+		// Either the Authorize middleware (401 "you are unauthorized") or the
+		// explicit endpoint gate (403 "requires Read+Write role") must reject;
+		// in practice the middleware fires first for a pure-r token. Accept
+		// either status to keep the test robust to middleware ordering changes
+		// while still proving r-role cannot mutate.
+		require.Contains(t, []int{http.StatusUnauthorized, http.StatusForbidden}, res.StatusCode,
+			"r-token must be denied — got %d body %q", res.StatusCode, string(bodyBytes))
 
 		p.AssertNotCalled(t, "ServiceScaleOverrideSet")
+	})
+}
+
+// TestServiceScaleOverrideSet_RBAC_AdminAllowed — rwa-role must continue to
+// succeed. The HappyPath test above already covers the admin token via
+// JwtMngr.AdminToken (User="system-admin", Role="rwa"); this test names the
+// behavior explicitly so the rwa→200 contract is locked under its own test
+// rather than coincidentally inheriting from a non-RBAC happy-path test.
+func TestServiceScaleOverrideSet_RBAC_AdminAllowed(t *testing.T) {
+	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
+		tk, err := jm.AdminToken(time.Hour)
+		require.NoError(t, err)
+
+		p.On("ServiceScaleOverrideSet", "myapp", "web", false, "system-admin").Return(nil)
+
+		body := url.Values{"active": {"false"}}.Encode()
+		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/services/web/scale-override", strings.NewReader(body))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.SetBasicAuth("jwt", tk)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		bodyBytes, _ := io.ReadAll(res.Body)
+		require.Equal(t, http.StatusOK, res.StatusCode, "rwa-token must continue to succeed — got body %q", string(bodyBytes))
 	})
 }

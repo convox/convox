@@ -1574,18 +1574,22 @@ func (s *Server) ServiceRestart(c *stdapi.Context) error {
 }
 
 // ServiceScaleOverrideSet toggles the per-service scale-override annotation.
-// Admin-RBAC-gated per item-23 §4.3 (mirrors AppBudgetReset's force-clear
-// gate): scale override bypasses customer-declared yaml semantics in the
-// same way budget reset clears safety state, so both surfaces share the
-// admin-only gating story. The provider call uses ack_by-derived actor
-// identity for the audit event (mirrors AppBudgetSet pattern).
+// Read+Write-RBAC-gated: scale override is an operational service control
+// (alongside deploy, rollback, env edit) and gates on the same per-app Write
+// permission those controls use. Console3 enforces the per-app Write check
+// at api/resolver/mutation.go:5744-5750; this rack-side gate matches.
+// Defense-in-depth: the default Authorize middleware already enforces
+// CanWrite for non-GET methods; this explicit check produces an
+// endpoint-named error and acts as a backstop if middleware is bypassed.
+// The provider call uses ack_by-derived actor identity for the audit event
+// (mirrors AppBudgetSet pattern).
 func (s *Server) ServiceScaleOverrideSet(c *stdapi.Context) error {
 	if err := s.hook("ServiceScaleOverrideSetValidate", c); err != nil {
 		return err
 	}
 
-	if !CanAdmin(c) {
-		return stdapi.Errorf(http.StatusForbidden, "ServiceScaleOverrideSet requires Admin role; current role does not include 'a'. Contact rack admin or use Admin token.")
+	if !CanWrite(c) {
+		return stdapi.Errorf(http.StatusForbidden, "ServiceScaleOverrideSet requires Read+Write role; current role does not include 'w'. Contact rack admin or use a Read+Write or Admin token.")
 	}
 
 	app := c.Var("app")
