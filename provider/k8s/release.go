@@ -812,9 +812,22 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 
 		wantsAutoscale := s.Scale.Autoscale.IsEnabled() || s.Scale.IsKedaEnabled()
 		// Agent services render as DaemonSets; KEDA ScaledObject only targets
-		// Deployments, so skip the autoscale path entirely.
-		if s.Agent.Enabled {
+		// Deployments, so skip the autoscale path entirely. Spec 04 demoted the
+		// pkg/manifest hard-fail on this combo to a stderr WARNING; emit a
+		// matching release-time audit event so the customer's webhook stream
+		// reflects the runtime ignore decision (parallel to release:autoscale-
+		// disabled / release:prometheus-skipped). actor=system per the
+		// d3_call_site_actor_test pin convention.
+		if s.Agent.Enabled && wantsAutoscale {
 			wantsAutoscale = false
+			_ = p.EventSend("release:agent-autoscale-ignored", structs.EventSendOptions{
+				Data: map[string]string{
+					"actor":   "system",
+					"app":     a.Name,
+					"service": s.Name,
+					"release": r.Id,
+				},
+			})
 		}
 		if !p.IsKedaEnabled && wantsAutoscale {
 			_ = p.EventSend("release:autoscale-disabled", structs.EventSendOptions{

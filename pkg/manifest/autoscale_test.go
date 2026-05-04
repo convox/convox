@@ -1,8 +1,11 @@
 package manifest_test
 
 import (
+	"io"
 	"math"
+	"os"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/convox/convox/pkg/manifest"
@@ -10,6 +13,40 @@ import (
 	"github.com/stretchr/testify/require"
 	yaml "gopkg.in/yaml.v2"
 )
+
+// captureStderr swaps os.Stderr for an os.Pipe, runs fn, restores os.Stderr,
+// and returns whatever fn wrote. Tests using this helper MUST NOT call
+// t.Parallel: stderr is process-global and concurrent swappers would
+// interleave/lose output.
+func captureStderr(t *testing.T, fn func()) string {
+	t.Helper()
+	orig := os.Stderr
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stderr = w
+
+	var (
+		mu       sync.Mutex
+		captured string
+		done     = make(chan struct{})
+	)
+	go func() {
+		data, _ := io.ReadAll(r)
+		mu.Lock()
+		captured = string(data)
+		mu.Unlock()
+		close(done)
+	}()
+
+	fn()
+	require.NoError(t, w.Close())
+	<-done
+	os.Stderr = orig
+
+	mu.Lock()
+	defer mu.Unlock()
+	return captured
+}
 
 func TestAutoscaleIsEnabled(t *testing.T) {
 	var a *manifest.ServiceAutoscale
@@ -719,7 +756,12 @@ func TestYamlParseMinMaxAllowsInt64(t *testing.T) {
 
 func ptrInt(i int) *int { return &i }
 
-func TestValidateRejectsAgentAutoscale(t *testing.T) {
+// Spec 04 (round-4): agent + scale.autoscale|keda used to hard-fail. Demoted
+// to a stderr WARNING with early-return so subsequent autoscale-aware
+// validations don't double-fire on the now-ignored config. Tests below are NOT
+// parallel because they swap os.Stderr.
+
+func TestValidateWarnsAgentAutoscale(t *testing.T) {
 	y := `services:
   collector:
     build: .
@@ -733,12 +775,17 @@ func TestValidateRejectsAgentAutoscale(t *testing.T) {
 `
 	m, err := manifest.Load([]byte(y), map[string]string{})
 	require.NoError(t, err)
-	err = m.Validate()
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "agent services render as DaemonSet")
+
+	var verr error
+	stderr := captureStderr(t, func() { verr = m.Validate() })
+
+	require.NoError(t, verr, "agent + autoscale must no longer hard-fail; emit WARNING and accept")
+	require.Contains(t, stderr, "WARNING")
+	require.Contains(t, stderr, "collector")
+	require.Contains(t, stderr, "agent runs as DaemonSet")
 }
 
-func TestValidateRejectsAgentKeda(t *testing.T) {
+func TestValidateWarnsAgentKeda(t *testing.T) {
 	y := `services:
   collector:
     build: .
@@ -751,9 +798,154 @@ func TestValidateRejectsAgentKeda(t *testing.T) {
 `
 	m, err := manifest.Load([]byte(y), map[string]string{})
 	require.NoError(t, err)
-	err = m.Validate()
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "agent services render as DaemonSet")
+
+	var verr error
+	stderr := captureStderr(t, func() { verr = m.Validate() })
+
+	require.NoError(t, verr)
+	require.Contains(t, stderr, "WARNING")
+	require.Contains(t, stderr, "collector")
+}
+
+// Test #3 — agent + autoscale + keda must produce ONE WARNING (single early
+// return, not two), no errors.
+func TestValidateWarnsAgentAutoscaleAndKedaOnce(t *testing.T) {
+	y := `services:
+  collector:
+    build: .
+    agent: true
+    scale:
+      min: 0
+      max: 5
+      autoscale:
+        queueDepth:
+          threshold: 3
+      keda:
+        triggers:
+        - type: aws-sqs-queue
+          metadata: {queueURL: "http://x/", queueLength: "1", awsRegion: "us-east-1"}
+`
+	m, err := manifest.Load([]byte(y), map[string]string{})
+	require.NoError(t, err)
+
+	var verr error
+	stderr := captureStderr(t, func() { verr = m.Validate() })
+
+	require.NoError(t, verr)
+	require.Equal(t, 1, strings.Count(stderr, "WARNING"),
+		"agent + both autoscale AND keda must produce exactly one WARNING (early-return prevents double-emit)")
+}
+
+// Test #4 — agent without autoscale or keda is silent (no WARNING, no error).
+func TestValidateAgentWithoutAutoscaleSilent(t *testing.T) {
+	y := `services:
+  collector:
+    build: .
+    agent: true
+`
+	m, err := manifest.Load([]byte(y), map[string]string{})
+	require.NoError(t, err)
+
+	var verr error
+	stderr := captureStderr(t, func() { verr = m.Validate() })
+
+	require.NoError(t, verr)
+	require.NotContains(t, stderr, "agent runs as DaemonSet",
+		"agent without autoscale/keda must not warn")
+}
+
+// Test #5 — non-agent service with autoscale must NOT warn (intended use).
+func TestValidateNonAgentAutoscaleNoWarning(t *testing.T) {
+	y := `services:
+  api:
+    build: .
+    scale:
+      min: 1
+      max: 5
+      autoscale:
+        queueDepth:
+          threshold: 3
+`
+	m, err := manifest.Load([]byte(y), map[string]string{})
+	require.NoError(t, err)
+
+	var verr error
+	stderr := captureStderr(t, func() { verr = m.Validate() })
+
+	require.NoError(t, verr)
+	require.NotContains(t, stderr, "agent runs as DaemonSet")
+}
+
+// Test #6 — multi-service manifest mixing offending agents and clean services
+// must emit exactly one WARNING per offending service.
+func TestValidateMultiServiceMixWarnsPerOffender(t *testing.T) {
+	y := `services:
+  api:
+    build: .
+    scale:
+      min: 1
+      max: 5
+      autoscale:
+        queueDepth:
+          threshold: 3
+  collector:
+    build: .
+    agent: true
+    scale:
+      min: 0
+      max: 5
+      autoscale:
+        queueDepth:
+          threshold: 3
+  shipper:
+    build: .
+    agent: true
+    scale:
+      keda:
+        triggers:
+        - type: aws-sqs-queue
+          metadata: {queueURL: "http://x/", queueLength: "1", awsRegion: "us-east-1"}
+  worker:
+    build: .
+    agent: true
+`
+	m, err := manifest.Load([]byte(y), map[string]string{})
+	require.NoError(t, err)
+
+	var verr error
+	stderr := captureStderr(t, func() { verr = m.Validate() })
+
+	require.NoError(t, verr)
+	require.Equal(t, 2, strings.Count(stderr, "WARNING"),
+		"two offending agents (collector, shipper) must each warn once; clean api and bare-agent worker must not warn")
+	require.Contains(t, stderr, "collector")
+	require.Contains(t, stderr, "shipper")
+}
+
+// Test #7 — legacy scale.count: 1-5 form + agent. Count form is the
+// pre-pointer autoscale shorthand; the same WARNING must fire because
+// effective Min/Max derived from count gates the autoscale-aware validators.
+func TestValidateWarnsAgentLegacyScaleCount(t *testing.T) {
+	y := `services:
+  collector:
+    build: .
+    agent: true
+    scale:
+      count: 1-5
+      autoscale:
+        queueDepth:
+          threshold: 3
+`
+	m, err := manifest.Load([]byte(y), map[string]string{})
+	require.NoError(t, err)
+
+	var verr error
+	stderr := captureStderr(t, func() { verr = m.Validate() })
+
+	require.NoError(t, verr)
+	require.Contains(t, stderr, "WARNING")
+	require.Contains(t, stderr, "collector")
+	require.Contains(t, stderr, "agent runs as DaemonSet")
 }
 
 func TestValidateCatchesMaxEqualsMinInCountForm(t *testing.T) {

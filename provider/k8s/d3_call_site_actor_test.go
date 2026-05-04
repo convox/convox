@@ -70,6 +70,7 @@ func TestRelease_AdvisoryEvents_PinSystemActor(t *testing.T) {
 		"release:autoscale-disabled",
 		"release:manifest-advisory",
 		"release:prometheus-skipped",
+		"release:agent-autoscale-ignored",
 	}
 	for _, action := range cases {
 		t.Run(action, func(t *testing.T) {
