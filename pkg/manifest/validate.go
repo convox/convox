@@ -187,8 +187,18 @@ func (m *Manifest) validateServices() []error {
 func validateServiceScale(s *Service) []error {
 	var errs []error
 
+	// Spec 04: agent + scale.autoscale|keda used to hard-fail; demoted to a
+	// stderr WARNING so legacy manifests in the wild keep parsing. Early-return
+	// stops the function from running the autoscale-aware checks below against
+	// a config the runtime will ignore (releaseTemplateServices drops
+	// wantsAutoscale for agent services and emits release:agent-autoscale-
+	// ignored). Without the early-return, scale.min==max / threshold-range /
+	// trigger-name rules would re-fire on already-ignored config.
 	if s.Agent.Enabled && (s.Scale.Autoscale.IsEnabled() || s.Scale.IsKedaEnabled()) {
-		errs = append(errs, fmt.Errorf("service %s: agent services render as DaemonSet and cannot use scale.autoscale or scale.keda", s.Name))
+		fmt.Fprintf(os.Stderr,
+			"WARNING: service %q: agent runs as DaemonSet; scale.autoscale and scale.keda configuration is ignored. Remove autoscale/keda or set agent:false to use autoscaling.\n",
+			s.Name)
+		return errs
 	}
 
 	// Validate against EFFECTIVE Count (populated by ApplyDefaults from both
