@@ -18,7 +18,7 @@ The default value for `gpu_observability_enable` is `false`.
 
 ## Use Cases
 - **GPU job throughput monitoring**: Track per-pod and per-service GPU utilization so you can size your fleet to actual demand rather than guess at peak headroom.
-- **VRAM saturation alerting**: Set Prometheus alerts on `DCGM_FI_DEV_FB_USED / DCGM_FI_DEV_FB_TOTAL` to catch out-of-memory crashes before they happen, particularly for inference workloads near framebuffer limits.
+- **VRAM saturation alerting**: Set Prometheus alerts on `DCGM_FI_DEV_FB_USED / (DCGM_FI_DEV_FB_USED + DCGM_FI_DEV_FB_FREE + DCGM_FI_DEV_FB_RESERVED)` to catch out-of-memory crashes before they happen, particularly for inference workloads near framebuffer limits. (DCGM's default counters file emits FB_USED, FB_FREE, and FB_RESERVED separately; total framebuffer is the sum of the three.)
 - **GPU cost / utilization reporting**: Combine GPU utilization metrics with `cost_tracking_enable` data to surface dollars-per-GPU-hour vs dollars-per-actual-utilization across your services in the Convox Console dashboards.
 - **Capacity planning for time-sliced GPUs**: When `nvidia_device_time_slicing_replicas` is non-zero, DCGM exposes the underlying physical-GPU saturation so you can verify your slicing ratio matches workload behavior.
 

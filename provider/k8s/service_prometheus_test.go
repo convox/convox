@@ -73,10 +73,18 @@ func TestServiceListAggregation_AverageAcrossPods(t *testing.T) {
 			{Pod: "pod-b", Service: "infer", Value: "2048"},
 			{Pod: "pod-c", Service: "infer", Value: "512"},
 		}),
-		"DCGM_FI_DEV_FB_TOTAL": promResponse("DCGM_FI_DEV_FB_TOTAL", []promSample{
-			{Pod: "pod-a", Service: "infer", Value: "8192"},
-			{Pod: "pod-b", Service: "infer", Value: "8192"},
-			{Pod: "pod-c", Service: "infer", Value: "8192"},
+		// MemTotal is derived from FB_USED + FB_FREE + FB_RESERVED — the
+		// DCGM exporter's default-counters.csv does not emit FB_TOTAL. Each
+		// pod's three values sum to 8192 MiB.
+		"DCGM_FI_DEV_FB_FREE": promResponse("DCGM_FI_DEV_FB_FREE", []promSample{
+			{Pod: "pod-a", Service: "infer", Value: "7104"},
+			{Pod: "pod-b", Service: "infer", Value: "6080"},
+			{Pod: "pod-c", Service: "infer", Value: "7616"},
+		}),
+		"DCGM_FI_DEV_FB_RESERVED": promResponse("DCGM_FI_DEV_FB_RESERVED", []promSample{
+			{Pod: "pod-a", Service: "infer", Value: "64"},
+			{Pod: "pod-b", Service: "infer", Value: "64"},
+			{Pod: "pod-c", Service: "infer", Value: "64"},
 		}),
 	}, nil)
 	defer srv.Close()

@@ -47,7 +47,7 @@ type Process struct {
 	// renders "no data" empty state.
 	GpuUtil     *float64 `json:"gpu-util,omitempty"`      // percent 0-100
 	GpuMemUsed  *int64   `json:"gpu-mem-used,omitempty"`  // bytes (DCGM_FI_DEV_FB_USED)
-	GpuMemTotal *int64   `json:"gpu-mem-total,omitempty"` // bytes (DCGM_FI_DEV_FB_TOTAL)
+	GpuMemTotal *int64   `json:"gpu-mem-total,omitempty"` // bytes (derived: FB_USED + FB_FREE + FB_RESERVED — DCGM default-counters.csv does not emit FB_TOTAL)
 }
 
 type Processes []Process

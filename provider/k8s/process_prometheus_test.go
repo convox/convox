@@ -25,8 +25,14 @@ func TestProcessList_PromEnrichment_HappyPath(t *testing.T) {
 		"DCGM_FI_DEV_FB_USED": promResponse("DCGM_FI_DEV_FB_USED", []promSample{
 			{Pod: "gpu-pod-1", Service: "infer", Value: "4096"},
 		}),
-		"DCGM_FI_DEV_FB_TOTAL": promResponse("DCGM_FI_DEV_FB_TOTAL", []promSample{
-			{Pod: "gpu-pod-1", Service: "infer", Value: "8192"},
+		// MemTotal is derived from FB_USED + FB_FREE + FB_RESERVED — the DCGM
+		// exporter's default-counters.csv does not emit FB_TOTAL. Sum here is
+		// 8192 MiB (matches T4 16 GiB / 2 partitions or simulated half-card).
+		"DCGM_FI_DEV_FB_FREE": promResponse("DCGM_FI_DEV_FB_FREE", []promSample{
+			{Pod: "gpu-pod-1", Service: "infer", Value: "4032"},
+		}),
+		"DCGM_FI_DEV_FB_RESERVED": promResponse("DCGM_FI_DEV_FB_RESERVED", []promSample{
+			{Pod: "gpu-pod-1", Service: "infer", Value: "64"},
 		}),
 	}, nil)
 	defer srv.Close()
