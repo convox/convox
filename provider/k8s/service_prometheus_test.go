@@ -57,7 +57,7 @@ func gpuDeploymentFixture(t *testing.T, c *fake.Clientset, ns, name string) {
 // Spec test name: TestServiceListAggregation_AverageAcrossPods
 // (R1 BLOCK-3-IT7 / R2 MR-09 — load-bearing aggregation arithmetic).
 func TestServiceListAggregation_AverageAcrossPods(t *testing.T) {
-	// 3 pods labeled label_service=infer with util 70, 80, 90.
+	// 3 pods labeled service=infer with util 70, 80, 90.
 	// Average = 80.0; sum mem-used = 1024+2048+512 = 3584 MiB → avg = 1194.66 MiB.
 	srv := promServer(t, map[string]string{
 		"DCGM_FI_DEV_GPU_UTIL": promResponse("DCGM_FI_DEV_GPU_UTIL", []promSample{

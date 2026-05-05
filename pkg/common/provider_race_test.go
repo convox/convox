@@ -50,6 +50,13 @@ type fakeProvider struct {
 	systemCallNum    int
 	systemMu         sync.Mutex
 	logsBody         string
+	// processReturns scripts the per-call ProcessList result. The poller
+	// in WaitForAppWithLogsContext (Streamer #2) calls ProcessList every
+	// processStatePollInterval; without this field tests would panic on
+	// the nil embedded provider.
+	processReturns []structs.Processes
+	processCallNum int
+	processMu      sync.Mutex
 }
 
 func (f *fakeProvider) AppGet(name string) (*structs.App, error) {
@@ -64,6 +71,19 @@ func (f *fakeProvider) AppGet(name string) (*structs.App, error) {
 
 func (f *fakeProvider) AppLogs(name string, opts structs.LogsOptions) (io.ReadCloser, error) {
 	return io.NopCloser(strings.NewReader(f.logsBody)), nil
+}
+
+func (f *fakeProvider) ProcessList(app string, opts structs.ProcessListOptions) (structs.Processes, error) {
+	f.processMu.Lock()
+	defer f.processMu.Unlock()
+	if len(f.processReturns) == 0 {
+		return structs.Processes{}, nil
+	}
+	ps := f.processReturns[f.processCallNum]
+	if f.processCallNum < len(f.processReturns)-1 {
+		f.processCallNum++
+	}
+	return ps, nil
 }
 
 func (f *fakeProvider) SystemGet() (*structs.System, error) {
@@ -238,5 +258,114 @@ func TestStreamSystemLogs_CancelAwareSleep(t *testing.T) {
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("streamer never exited after ctx cancel")
+	}
+}
+
+// TestStreamAppProcessStates_EmitsTransitions verifies the V3 deploy
+// progress streamer (introduced because provider/k8s/app.go::AppLogs is
+// unimplemented). Confirms:
+//   - first observation in non-running state IS emitted (deploy starting)
+//   - first observation in running state is suppressed (pre-existing healthy)
+//   - subsequent transitions are emitted exactly once per (pod, status) pair
+//   - terminal failure states (crashed, unhealthy, failed) are surfaced
+func TestStreamAppProcessStates_EmitsTransitions(t *testing.T) {
+	prev := processStatePollInterval
+	processStatePollInterval = 5 * time.Millisecond
+	defer func() { processStatePollInterval = prev }()
+
+	p := &fakeProvider{
+		processReturns: []structs.Processes{
+			{
+				{Id: "new-abc123", Name: "gpu-burn", Status: "pending"},
+				{Id: "old-xyz789", Name: "gpu-burn", Status: "running"},
+			},
+			{
+				{Id: "new-abc123", Name: "gpu-burn", Status: "running"},
+				{Id: "old-xyz789", Name: "gpu-burn", Status: "running"},
+			},
+			{
+				{Id: "new-abc123", Name: "gpu-burn", Status: "running"},
+				{Id: "new-def456", Name: "gpu-burn", Status: "crashed"},
+			},
+			{
+				{Id: "new-abc123", Name: "gpu-burn", Status: "running"},
+				{Id: "new-def456", Name: "gpu-burn", Status: "crashed"},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+
+	StreamAppProcessStates(ctx, p, &buf, "gpu-burn")
+
+	out := buf.String()
+
+	if got := strings.Count(out, "new-abc123"); got < 2 {
+		t.Errorf("expected new-abc123 to emit at least twice (pending + running); got %d in:\n%s", got, out)
+	}
+	if !strings.Contains(out, "pending") {
+		t.Errorf("missing initial pending emission; got:\n%s", out)
+	}
+	if strings.Contains(out, "old-xyz789") {
+		t.Errorf("first-observation-running suppression failed for pre-existing pod; got:\n%s", out)
+	}
+	if !strings.Contains(out, "new-def456") || !strings.Contains(out, "crashed") {
+		t.Errorf("missing crashed terminal-state emission for new-def456; got:\n%s", out)
+	}
+	if got := strings.Count(out, "running\n"); got > 1 {
+		t.Errorf("expected exactly one running line (no dedup spam); got %d in:\n%s", got, out)
+	}
+}
+
+// TestStreamAppProcessStates_ProcessListErrorsAreSilent — empty / error
+// ProcessList responses must not break the streamer. Next tick retries.
+func TestStreamAppProcessStates_ProcessListErrorsAreSilent(t *testing.T) {
+	prev := processStatePollInterval
+	processStatePollInterval = 5 * time.Millisecond
+	defer func() { processStatePollInterval = prev }()
+
+	p := &fakeProvider{}
+	var buf bytes.Buffer
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	StreamAppProcessStates(ctx, p, &buf, "app1")
+
+	if got := buf.String(); got != "" {
+		t.Errorf("expected no output for empty ProcessList; got %q", got)
+	}
+}
+
+// TestStreamAppProcessStates_CancelStopsImmediately verifies ctx
+// cancellation is observed within one tick + processing slack.
+func TestStreamAppProcessStates_CancelStopsImmediately(t *testing.T) {
+	prev := processStatePollInterval
+	processStatePollInterval = 50 * time.Millisecond
+	defer func() { processStatePollInterval = prev }()
+
+	p := &fakeProvider{}
+	var buf bytes.Buffer
+	ctx, cancel := context.WithCancel(context.Background())
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		StreamAppProcessStates(ctx, p, &buf, "app1")
+	}()
+
+	time.Sleep(60 * time.Millisecond)
+	t0 := time.Now()
+	cancel()
+
+	select {
+	case <-done:
+		elapsed := time.Since(t0)
+		if elapsed > 100*time.Millisecond {
+			t.Fatalf("StreamAppProcessStates took %s to observe ctx cancel; expected <100ms", elapsed)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("StreamAppProcessStates never exited after ctx cancel")
 	}
 }

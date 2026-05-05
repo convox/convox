@@ -14,15 +14,15 @@ import (
 // Zero values on a key indicate "metric absent in the response Vector"
 // (e.g. DCGM exporter is not yet emitting that field).
 //
-// Service carries the value of the DCGM `label_service` Prometheus label
-// (set when the chart's kubernetes.enablePodLabels=true mirrors the K8s
-// pod label `service` onto every metric). Used by service.go aggregation
-// to bucket pods by service without a second Prom round-trip.
+// Service carries the value of the DCGM `service` Prometheus label —
+// the DCGM exporter in kubernetes mode mirrors the pod's K8s `service`
+// label directly (plain key, no `label_` prefix). Used by service.go
+// aggregation to bucket pods by service without a second Prom round-trip.
 type GpuMetrics struct {
 	Util     float64 // percent 0-100
 	MemUsed  int64   // bytes (FB used)
 	MemTotal int64   // bytes (FB total)
-	Service  string  // value of Prom `label_service` (pod's `service` K8s label)
+	Service  string  // value of Prom `service` label (pod's `service` K8s label)
 }
 
 // PrometheusClient is a thin wrapper around the v1 query API. It is safe
@@ -70,10 +70,15 @@ func (pc *PrometheusClient) QueryGPUMetrics(ctx context.Context, app string, ser
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	// Build label_app + label_service filter from the input. The DCGM
-	// chart's enablePodLabels=true emits "label_app" and "label_service"
-	// metric labels mirroring the K8s pod labels.
-	filter := fmt.Sprintf(`label_app=%q`, app)
+	// Build app + service filter from the input. The DCGM exporter in
+	// kubernetes mode (configured via gpu_observability_enable=true) emits
+	// the K8s pod labels DIRECTLY as Prometheus labels — plain `app=`,
+	// `service=`, `pod=`, `namespace=` — with no `label_` prefix. The earlier
+	// claim that `enablePodLabels=true` adds `label_app`/`label_service` was
+	// wrong: that prefix is a kube-state-metrics convention, not a DCGM one.
+	// Verified against DCGM chart 4.8.1 emitting:
+	//   DCGM_FI_DEV_GPU_UTIL{app="...", service="...", pod="...", ...}
+	filter := fmt.Sprintf(`app=%q`, app)
 	if len(services) > 0 {
 		// services -> regex alternation
 		alt := ""
@@ -83,7 +88,7 @@ func (pc *PrometheusClient) QueryGPUMetrics(ctx context.Context, app string, ser
 			}
 			alt += s
 		}
-		filter += fmt.Sprintf(`,label_service=~%q`, alt)
+		filter += fmt.Sprintf(`,service=~%q`, alt)
 	}
 
 	// Issue one query per metric. Per-metric setter writes the parsed
@@ -115,12 +120,13 @@ func (pc *PrometheusClient) QueryGPUMetrics(ctx context.Context, app string, ser
 			}
 			gm := out[pod]
 			q.set(&gm, float64(sample.Value))
-			// Always populate Service from the DCGM `label_service` mirror
-			// (chart sets enablePodLabels=true). Empty when the pod has no
-			// `service` K8s label, which is the case for non-Convox-managed
-			// pods scraped through the same Prom job.
+			// Always populate Service from the DCGM `service` label (the
+			// exporter mirrors K8s pod labels directly — plain key, no
+			// `label_` prefix). Empty when the pod has no `service` K8s
+			// label, which is the case for non-Convox-managed pods scraped
+			// through the same Prom job.
 			if gm.Service == "" {
-				gm.Service = string(sample.Metric[model.LabelName("label_service")])
+				gm.Service = string(sample.Metric[model.LabelName("service")])
 			}
 			out[pod] = gm
 		}

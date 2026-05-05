@@ -215,13 +215,14 @@ func (p *Provider) serviceListAppendDaemonsets(app string, ss structs.Services, 
 }
 
 // enrichGpuTelemetry fans out a single batched Prom query for the given
-// ServiceList result and aggregates the per-pod samples by label_service,
-// writing averaged GPU utilization and memory pointers onto each Service
-// entry where Gpu > 0. No-ops when PromClient is nil (the default on any
-// rack without PROMETHEUS_URL configured) or when no service has Gpu > 0.
+// ServiceList result and aggregates the per-pod samples by the `service`
+// pod label, writing averaged GPU utilization and memory pointers onto
+// each Service entry where Gpu > 0. No-ops when PromClient is nil (the
+// default on any rack without PROMETHEUS_URL configured) or when no
+// service has Gpu > 0.
 //
 // Aggregation contract: average across pods bucketed by gm.Service. Pods
-// with no label_service value are skipped (they are not Convox-managed
+// with no `service` label value are skipped (they are not Convox-managed
 // service pods); pods labeled for service S that did NOT report a sample
 // for one of the three metrics contribute zero to that metric's sum but
 // still count toward the denominator. This matches the customer-facing
@@ -253,11 +254,11 @@ func (p *Provider) enrichGpuTelemetry(ctx context.Context, app string, ss struct
 		return
 	}
 
-	// Aggregate by service: average across pods labeled
-	// label_service=<name>. GpuMetrics.Service was populated in
-	// QueryGPUMetrics from sample.Metric["label_service"], so the reverse
-	// map is built from gm.Service directly — no second Prom round-trip
-	// and no pre-pass against deployment names.
+	// Aggregate by service: average across pods labeled service=<name>.
+	// GpuMetrics.Service was populated in QueryGPUMetrics from
+	// sample.Metric["service"], so the reverse map is built from
+	// gm.Service directly — no second Prom round-trip and no pre-pass
+	// against deployment names.
 	type accum struct {
 		util, memUsed, memTotal float64
 		count                   int
@@ -265,7 +266,7 @@ func (p *Provider) enrichGpuTelemetry(ctx context.Context, app string, ss struct
 	byService := map[string]*accum{}
 	for _, gm := range gpuByPod {
 		if gm.Service == "" {
-			continue // pod was scraped but has no label_service — skip
+			continue // pod was scraped but has no `service` label — skip
 		}
 		a := byService[gm.Service]
 		if a == nil {

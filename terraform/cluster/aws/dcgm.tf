@@ -44,9 +44,18 @@ resource "helm_release" "dcgm_exporter" {
       }
 
       # Pod-attribution: emits "pod" and "namespace" labels on every metric.
-      # enablePodLabels=true additionally surfaces each pod's K8s labels as
-      # "label_<key>" metric labels, so item 7's Prom queries can filter
-      # by label_app and label_service.
+      # enablePodLabels=true additionally surfaces each pod's K8s labels
+      # DIRECTLY as Prometheus labels — plain `app=`, `service=`, etc. NO
+      # `label_` prefix is added by DCGM. (The `label_` prefix is a
+      # kube-state-metrics convention, not a DCGM one — confusing the two
+      # is what produced the empty-dashboard regression that this comment
+      # now exists to prevent.)
+      #
+      # Convox's Prom queries (provider/k8s/prometheus.go::QueryGPUMetrics
+      # + pkg/manifest/service.go KEDA triggers) filter by plain `app=` and
+      # `service=`. Load-bearing dependency: the scrape config at
+      # pkg/structs/dcgm-scrape.yaml MUST keep `honor_labels: true` so
+      # Prometheus does not prepend `exported_` on label collisions.
       kubernetes = {
         enablePodLabels = true
         enablePodUID    = true

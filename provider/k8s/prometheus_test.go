@@ -16,15 +16,18 @@ import (
 )
 
 // promResponse renders a Prometheus-API instant-query JSON response for
-// the given metric, mapping each (pod, label_service, value) tuple to a
-// model.Vector sample. Used by the httptest server below.
+// the given metric, mapping each (pod, service, value) tuple to a
+// model.Vector sample. The labels emitted match what the DCGM exporter
+// in kubernetes mode actually produces: plain `app`, `service`, `pod`
+// (no `label_` prefix — that's a kube-state-metrics convention, not a
+// DCGM one). Used by the httptest server below.
 func promResponse(metric string, samples []promSample) string {
 	results := []string{}
 	now := time.Now().Unix()
 	for _, s := range samples {
-		labels := fmt.Sprintf(`"__name__":%q,"pod":%q,"label_app":"app1"`, metric, s.Pod)
+		labels := fmt.Sprintf(`"__name__":%q,"pod":%q,"app":"app1"`, metric, s.Pod)
 		if s.Service != "" {
-			labels += fmt.Sprintf(`,"label_service":%q`, s.Service)
+			labels += fmt.Sprintf(`,"service":%q`, s.Service)
 		}
 		results = append(results, fmt.Sprintf(
 			`{"metric":{%s},"value":[%d,%q]}`,
@@ -60,7 +63,7 @@ func promServer(t *testing.T, byMetric map[string]string, requestCount *int64) *
 		// Content-Type=application/x-www-form-urlencoded) into r.Form.
 		_ = r.ParseForm()
 		q := r.Form.Get("query")
-		// q looks like: DCGM_FI_DEV_GPU_UTIL{label_app="app1",label_service=~"web|inf"}
+		// q looks like: DCGM_FI_DEV_GPU_UTIL{app="app1",service=~"web|inf"}
 		// Extract the leading metric name.
 		metric := q
 		if i := strings.Index(q, "{"); i >= 0 {
@@ -123,7 +126,7 @@ func TestQueryGPUMetrics_EmptyVector(t *testing.T) {
 
 // TestQueryGPUMetrics_TypicalSample — happy path. Three pods, one util
 // query, one mem-used query, one mem-total query. Result map has correct
-// per-pod aggregation and Service field populated from label_service.
+// per-pod aggregation and Service field populated from the `service` label.
 func TestQueryGPUMetrics_TypicalSample(t *testing.T) {
 	byMetric := map[string]string{
 		"DCGM_FI_DEV_GPU_UTIL": promResponse("DCGM_FI_DEV_GPU_UTIL", []promSample{
@@ -164,7 +167,8 @@ func TestQueryGPUMetrics_TypicalSample(t *testing.T) {
 	assert.Equal(t, int64(512*1024*1024), got["pod-c"].MemUsed)
 	assert.Equal(t, int64(8192*1024*1024), got["pod-a"].MemTotal)
 
-	// Service mirrored from label_service.
+	// Service mirrored from the `service` label (DCGM exporter emits
+	// pod labels directly, no `label_` prefix).
 	assert.Equal(t, "web", got["pod-a"].Service)
 	assert.Equal(t, "web", got["pod-b"].Service)
 	assert.Equal(t, "inference", got["pod-c"].Service)
@@ -266,7 +270,7 @@ func TestQueryGPUMetrics_Timeout(t *testing.T) {
 }
 
 // TestQueryGPUMetrics_NoServicesArg — when called with no services
-// filter, must still issue the query (filtered only by label_app) and
+// filter, must still issue the query (filtered only by app) and
 // parse the response. Tests the empty-services branch of the filter
 // builder.
 func TestQueryGPUMetrics_NoServicesArg(t *testing.T) {
@@ -284,10 +288,10 @@ func TestQueryGPUMetrics_NoServicesArg(t *testing.T) {
 
 	_, err = pc.QueryGPUMetrics(context.Background(), "app1", nil)
 	require.NoError(t, err)
-	assert.Contains(t, capturedQuery, `label_app="app1"`,
-		"empty services must still send label_app filter")
-	assert.NotContains(t, capturedQuery, "label_service",
-		"empty services must NOT add label_service regex filter")
+	assert.Contains(t, capturedQuery, `app="app1"`,
+		"empty services must still send app filter")
+	assert.NotContains(t, capturedQuery, "service=",
+		"empty services must NOT add service regex filter")
 }
 
 // TestQueryGPUMetrics_ConcurrentSafe — race-test surface for callers that
@@ -323,7 +327,7 @@ func TestQueryGPUMetrics_ConcurrentSafe(t *testing.T) {
 }
 
 // TestQueryGPUMetrics_ServiceWithSpecialChars — service names matching
-// the convox.yml pattern ([a-z0-9-]+) are safe in the label_service
+// the convox.yml pattern ([a-z0-9-]+) are safe in the service
 // regex alternation. This test pins that no escaping is needed for the
 // canonical character set; if a future scheme introduces dots / slashes
 // that break PromQL, the regression surfaces here.
@@ -344,6 +348,6 @@ func TestQueryGPUMetrics_ServiceWithSpecialChars(t *testing.T) {
 	_, err = pc.QueryGPUMetrics(context.Background(), "app1",
 		[]string{"web-api", "inference-cuda", "worker-gpu"})
 	require.NoError(t, err)
-	assert.Contains(t, capturedQuery, `label_service=~"web-api|inference-cuda|worker-gpu"`,
+	assert.Contains(t, capturedQuery, `service=~"web-api|inference-cuda|worker-gpu"`,
 		"service alternation must be pipe-joined inside a regex match")
 }
