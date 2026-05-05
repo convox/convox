@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/convox/convox/pkg/audit"
 	"github.com/convox/convox/pkg/billing"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/pkg/errors"
@@ -501,43 +502,18 @@ func (p *Provider) appBudgetResetLocked(app string, ackBy string) error {
 
 // sanitizeAckBy caps the ack_by audit string and strips control characters.
 // Guards against annotation-size DoS and webhook/log injection via
-// unvalidated client input. Strips:
-//   - C0 controls (< 0x20) and DEL (0x7f) — log-injection.
-//   - C1 controls (0x80-0x9f) — legacy terminal escape sequences.
-//   - BiDi overrides (U+202A-U+202E, U+2066-U+2069) — display-spoofing
-//     attacks (e.g. "alice@example.com‮" reverses rendered text).
-//   - Line/paragraph separators (U+2028, U+2029) — legacy JSON parser
-//     break-out and renderer-line-break injection.
-//   - BOM/zero-width characters (U+FEFF, U+200B-U+200F) — invisible-
-//     character spoofing of audit-log values (ZWSP, ZWNJ, ZWJ, LRM, RLM).
-//   - Whitespace-only input collapses to "unknown" so a pathological
-//     "   " ack_by cannot stamp a misleading actor on the event.
+// unvalidated client input. Behavior + strip rules documented on the
+// underlying canonical implementation at pkg/audit/sanitize.go.
+//
+// The implementation was promoted from this package into pkg/audit so the
+// rack auth middleware (pkg/api) can sanitize header-supplied actor
+// strings without crossing a layering boundary (importing provider/k8s
+// from pkg/api would invert the dependency direction). This wrapper is
+// retained so existing in-package callers keep their current call shape
+// and the budget_cost_test.go suite continues to act as a regression
+// guard against accidental sanitizer drift across the move.
 func sanitizeAckBy(in string) string {
-	const maxLen = 256
-	out := make([]rune, 0, len(in))
-	for _, r := range in {
-		if r < 0x20 || r == 0x7f {
-			continue
-		}
-		if r >= 0x80 && r <= 0x9f {
-			continue
-		}
-		switch r {
-		case 0x2028, 0x2029, 0xfeff,
-			0x200b, 0x200c, 0x200d, 0x200e, 0x200f,
-			0x202a, 0x202b, 0x202c, 0x202d, 0x202e,
-			0x2066, 0x2067, 0x2068, 0x2069:
-			continue
-		}
-		out = append(out, r)
-		if len(out) >= maxLen {
-			break
-		}
-	}
-	if strings.TrimSpace(string(out)) == "" {
-		return "unknown"
-	}
-	return string(out)
+	return audit.SanitizeActor(in)
 }
 
 // AppCost returns the computed spend summary for the app.
