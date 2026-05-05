@@ -128,6 +128,9 @@ func TestQueryGPUMetrics_EmptyVector(t *testing.T) {
 // query, one mem-used query, one mem-total query. Result map has correct
 // per-pod aggregation and Service field populated from the `service` label.
 func TestQueryGPUMetrics_TypicalSample(t *testing.T) {
+	// Three pods on a 16 GiB T4 each: USED + FREE + RESERVED == 16384 MiB.
+	// Total is DERIVED from the three FB_* metrics (DCGM exporter's
+	// default-counters.csv does not emit DCGM_FI_DEV_FB_TOTAL).
 	byMetric := map[string]string{
 		"DCGM_FI_DEV_GPU_UTIL": promResponse("DCGM_FI_DEV_GPU_UTIL", []promSample{
 			{Pod: "pod-a", Service: "web", Value: "70"},
@@ -139,10 +142,15 @@ func TestQueryGPUMetrics_TypicalSample(t *testing.T) {
 			{Pod: "pod-b", Service: "web", Value: "2048"},
 			{Pod: "pod-c", Service: "inference", Value: "512"},
 		}),
-		"DCGM_FI_DEV_FB_TOTAL": promResponse("DCGM_FI_DEV_FB_TOTAL", []promSample{
-			{Pod: "pod-a", Service: "web", Value: "8192"},
-			{Pod: "pod-b", Service: "web", Value: "8192"},
-			{Pod: "pod-c", Service: "inference", Value: "8192"},
+		"DCGM_FI_DEV_FB_FREE": promResponse("DCGM_FI_DEV_FB_FREE", []promSample{
+			{Pod: "pod-a", Service: "web", Value: "15048"},
+			{Pod: "pod-b", Service: "web", Value: "14024"},
+			{Pod: "pod-c", Service: "inference", Value: "15560"},
+		}),
+		"DCGM_FI_DEV_FB_RESERVED": promResponse("DCGM_FI_DEV_FB_RESERVED", []promSample{
+			{Pod: "pod-a", Service: "web", Value: "312"},
+			{Pod: "pod-b", Service: "web", Value: "312"},
+			{Pod: "pod-c", Service: "inference", Value: "312"},
 		}),
 	}
 	var queryCount int64
@@ -165,7 +173,11 @@ func TestQueryGPUMetrics_TypicalSample(t *testing.T) {
 	assert.Equal(t, int64(1024*1024*1024), got["pod-a"].MemUsed)
 	assert.Equal(t, int64(2048*1024*1024), got["pod-b"].MemUsed)
 	assert.Equal(t, int64(512*1024*1024), got["pod-c"].MemUsed)
-	assert.Equal(t, int64(8192*1024*1024), got["pod-a"].MemTotal)
+
+	// Total derived from USED + FREE + RESERVED == 16384 MiB.
+	assert.Equal(t, int64(16384*1024*1024), got["pod-a"].MemTotal)
+	assert.Equal(t, int64(16384*1024*1024), got["pod-b"].MemTotal)
+	assert.Equal(t, int64(16384*1024*1024), got["pod-c"].MemTotal)
 
 	// Service mirrored from the `service` label (DCGM exporter emits
 	// pod labels directly, no `label_` prefix).
@@ -173,10 +185,9 @@ func TestQueryGPUMetrics_TypicalSample(t *testing.T) {
 	assert.Equal(t, "web", got["pod-b"].Service)
 	assert.Equal(t, "inference", got["pod-c"].Service)
 
-	// Single batched query per metric (not one per pod). 3 metrics → 3
-	// queries. The "lower latency, lower Prom load" contract from the
-	// spec.
-	assert.Equal(t, int64(3), atomic.LoadInt64(&queryCount),
+	// One batched query per metric (NOT one per pod). 4 metrics → 4
+	// queries: GPU_UTIL + FB_USED + FB_FREE + FB_RESERVED.
+	assert.Equal(t, int64(4), atomic.LoadInt64(&queryCount),
 		"QueryGPUMetrics must issue exactly one Prom round-trip per metric")
 }
 
@@ -193,7 +204,8 @@ func TestQueryGPUMetrics_PartialMetricSet(t *testing.T) {
 		"DCGM_FI_DEV_GPU_UTIL": promResponse("DCGM_FI_DEV_GPU_UTIL", []promSample{
 			{Pod: "pod-a", Service: "web", Value: "73"},
 		}),
-		// FB_USED and FB_TOTAL not in the map → server returns empty Vector.
+		// FB_USED, FB_FREE, FB_RESERVED not in the map → server returns
+		// empty Vector for each. MemTotal stays at zero (sum of zeros).
 	}
 	srv := promServer(t, byMetric, nil)
 	defer srv.Close()

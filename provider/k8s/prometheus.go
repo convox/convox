@@ -94,13 +94,23 @@ func (pc *PrometheusClient) QueryGPUMetrics(ctx context.Context, app string, ser
 	// Issue one query per metric. Per-metric setter writes the parsed
 	// SampleValue into the correct field on the per-pod accumulator.
 	// Memory metrics convert MiB→bytes; util passes through as percent.
+	//
+	// Total framebuffer is DERIVED rather than scraped because the DCGM
+	// exporter's default counters file (/etc/dcgm-exporter/default-counters.csv)
+	// does NOT emit DCGM_FI_DEV_FB_TOTAL — only FB_USED, FB_FREE, FB_RESERVED.
+	// Querying FB_TOTAL on the default config returns empty Vector, leaving
+	// MemTotal=0 and the dashboard showing "<used> / 0 B". Sum of the three
+	// emitted fields equals card capacity (FB_USED + FB_FREE + FB_RESERVED ==
+	// total VRAM); we accumulate them into MemTotal in setter form so the
+	// caller still gets a single int64 bytes total.
 	queries := []struct {
 		metric string
 		set    func(*GpuMetrics, float64)
 	}{
 		{"DCGM_FI_DEV_GPU_UTIL", func(g *GpuMetrics, v float64) { g.Util = v }},
-		{"DCGM_FI_DEV_FB_USED", func(g *GpuMetrics, v float64) { g.MemUsed = int64(v) * 1024 * 1024 }},
-		{"DCGM_FI_DEV_FB_TOTAL", func(g *GpuMetrics, v float64) { g.MemTotal = int64(v) * 1024 * 1024 }},
+		{"DCGM_FI_DEV_FB_USED", func(g *GpuMetrics, v float64) { g.MemUsed = int64(v) * 1024 * 1024; g.MemTotal += int64(v) * 1024 * 1024 }},
+		{"DCGM_FI_DEV_FB_FREE", func(g *GpuMetrics, v float64) { g.MemTotal += int64(v) * 1024 * 1024 }},
+		{"DCGM_FI_DEV_FB_RESERVED", func(g *GpuMetrics, v float64) { g.MemTotal += int64(v) * 1024 * 1024 }},
 	}
 
 	for _, q := range queries {
