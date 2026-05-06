@@ -23,7 +23,7 @@ const maxHexLen = 4096
 const maxKeys = 2
 
 // hexCharClass matches one or more lowercase hex characters. Uppercase is
-// REJECTED so the validator can give the customer an actionable "use
+// REJECTED so the validator can give the user an actionable "use
 // lowercase" hint without ambiguity. See spec §5.1.
 var hexCharClass = regexp.MustCompile(`^[0-9a-f]+$`)
 
@@ -40,6 +40,14 @@ var placeholderHexValues = []string{
 	"deadbeef" + strings.Repeat("0", 56),
 	// "changeme" + 56 zero hex chars
 	"6368616e67656d65" + strings.Repeat("0", 48),
+	// All-F bytes (64 lowercase f characters)
+	strings.Repeat("f", 64),
+	// "testkey" zero-padded to 32 bytes
+	"746573746b657900000000000000000000000000000000000000000000000000",
+	// "password" zero-padded to 32 bytes
+	"70617373776f7264000000000000000000000000000000000000000000000000",
+	// Sequential hex digit pattern repeated 4x (trivially guessable)
+	"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
 }
 
 // abs returns the absolute value of x. Provided here because Go has no
@@ -238,7 +246,7 @@ func ParseSigningKeys(rackParam string) ([][]byte, error) {
 
 // ValidateSigningKeys enforces hex format, minimum length (32 bytes after
 // decode), weak-key rejection, and max-key-count rules per spec §5.
-// Returns nil on success. Error messages are customer-actionable: they
+// Returns nil on success. Error messages are user-actionable: they
 // describe key shape (offset, length, hex-vs-not) without echoing key
 // contents to logs.
 func ValidateSigningKeys(rackParam string) error {

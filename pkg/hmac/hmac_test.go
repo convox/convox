@@ -659,3 +659,30 @@ func TestHmacPackage_NoKeyLeakInLogs(t *testing.T) {
 	assert.NotContains(t, combined, string(body), "raw body bytes must not appear in logs")
 	assert.NotContains(t, combined, hexSig, "computed hex signature must not appear in logs")
 }
+
+// TestValidateSigningKeys_NewPlaceholders_Rejected locks the S4 blocklist
+// extension: four new placeholder patterns must be rejected at validation time.
+func TestValidateSigningKeys_NewPlaceholders_Rejected(t *testing.T) {
+	tests := []struct {
+		name string
+		key  string
+	}{
+		{"all-f (64 lowercase f chars)", strings.Repeat("f", 64)},
+		{"testkey zero-padded", "746573746b657900000000000000000000000000000000000000000000000000"},
+		{"password zero-padded", "70617373776f7264000000000000000000000000000000000000000000000000"},
+		{"sequential hex pattern 4x", "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Len(t, tt.key, 64, "test fixture must be exactly 64 hex chars")
+			err := cxhmac.ValidateSigningKeys(tt.key)
+			require.Error(t, err, "placeholder key must be rejected")
+			assert.True(t,
+				strings.Contains(err.Error(), "placeholder") ||
+					strings.Contains(err.Error(), "entropy") ||
+					strings.Contains(err.Error(), "repeating") ||
+					strings.Contains(err.Error(), "all-zero"),
+				"expected a placeholder/entropy rejection message, got: %s", err.Error())
+		})
+	}
+}

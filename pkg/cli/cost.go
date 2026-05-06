@@ -147,14 +147,14 @@ func filterCostRange(cost *structs.AppCost, start, end time.Time) *structs.AppCo
 // eligibility lists when at least one row's per-service rate fell below
 // the formatRateUsdPerHour threshold and rendered as an em-dash. The
 // wording is shared by `convox cost` and `convox budget simulate-shutdown`
-// so customer documentation only describes one phrase.
+// so user documentation only describes one phrase.
 const lowSpendFootnote = "— : low-spend rates rounded to —; see Spend column for actual cost."
 
 // formatRateUsdPerHour formats a per-service rate (in USD, either total
 // spend or per-hour rate). Rates strictly below $0.001 — the population
 // that rounds to "$0.00" with %.2f — render as "—" (em-dash, U+2014) so
-// customers do not interpret a rounded $0.00 as "this service is free."
-// Exact zero renders as "$0.00" because that is a real, customer-meaningful
+// users do not interpret a rounded $0.00 as "this service is free."
+// Exact zero renders as "$0.00" because that is a real, user-meaningful
 // state (no rate accumulated yet). Returns (formatted, usedEmDash) so the
 // caller can decide whether to print the disambiguation footnote. The
 // helper is shared by cost.go (per-service spend column) and budget.go

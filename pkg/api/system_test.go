@@ -332,7 +332,7 @@ func TestSystemJwtToken_AdminTokenWorksOnWriteEndpoint(t *testing.T) {
 }
 
 // TestAppBudgetReset_RoleMatrix is the table-driven r/w/Admin matrix test
-// that consolidates the customer-visible matrix into one place for the
+// that consolidates the user-visible matrix into one place for the
 // PLAIN reset path (no force_clear_cooldown). Failure on any row indicates
 // a regression.
 //
@@ -473,7 +473,7 @@ func TestAppBudgetReset_AcceptsAdminRole_NoGuardBlock(t *testing.T) {
 }
 
 // TestAppBudgetReset_ForceClearCooldown_403BodyMatchesPinnedString locks in
-// the pinned 403 body for the force-clear-cooldown gate. Customer tooling
+// the pinned 403 body for the force-clear-cooldown gate. User tooling
 // (CLI "convox budget reset --force-clear-cooldown" failure renderer; future
 // Phase 1 GUI guidance modal) parses this body for migration guidance —
 // wording, role identifier ('w'), the "--force-clear-cooldown" qualifier,

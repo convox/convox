@@ -127,7 +127,7 @@ func TestAppBudgetReset_AdminJWT_AckByIsSystemAdmin(t *testing.T) {
 // actor passed to the provider (replacing the JWT-derived value). The
 // Sunset/Link/Deprecation headers continue to fire — the form-param path
 // is deprecated AND the override is honored until per-user JWT plumbing
-// in 3.25.0. Customer-truthfulness: a Console dialog footer that says
+// in 3.25.0. User-truthfulness: a Console dialog footer that says
 // "Audit-logged as: alice@example.com" is now a contract the rack upholds.
 func TestAppBudgetReset_AckByOverride_HonoredAsActor_EmitsHeader(t *testing.T) {
 	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, _ *cjwt.JwtManager) {
@@ -390,7 +390,7 @@ func TestAuthenticate_BasicAuth_SetsConvoxJwtUserParam_RackPassword_E2E(t *testi
 
 // TestAppBudgetReset_PlainReset_WriteRoleSucceeds locks in the audit-aligned
 // gate semantics: a plain (no force_clear_cooldown) Reset call by a w-role
-// JWT must succeed. This is the customer-visible regression coverage for
+// JWT must succeed. This is the user-visible regression coverage for
 // the unblock that lets Console3 wire its Reset button without elevating
 // to Admin.
 //
@@ -587,7 +587,7 @@ func TestAppBudgetReset_AckByOverride_HonoredAcrossBothPaths(t *testing.T) {
 // TestAppBudgetSet_AckByOverride_PersistedAsActor — the override string
 // lands in cfg.LastCapMutationBy via the AppBudgetSet provider call; the
 // :set event payload uses the same value. Verifies the controller-level
-// override-resolution path passes the customer-presented actor through
+// override-resolution path passes the user-presented actor through
 // to the provider.
 func TestAppBudgetSet_AckByOverride_PersistedAsActor(t *testing.T) {
 	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, _ *cjwt.JwtManager) {
@@ -673,7 +673,7 @@ func TestAppBudgetDismissRecovery_AckByOverride_PersistedAsActor_AndEmitsHeader(
 }
 
 // TestAppBudgetClear_BasicAuth_WithAckByOverride_HonorsOverride — the
-// customer-truthfulness regression test. Console talks to the rack via
+// user-truthfulness regression test. Console talks to the rack via
 // basic-auth (rack password); without per-user JWT, every basic-auth
 // caller has effective JWT user "rack-password". The Console dialog
 // footer promises "Audit-logged as: alice@example.com" — that promise
@@ -741,5 +741,63 @@ func TestAppBudgetClear_AckByOverride_ViaQueryString_HonorsOverride(t *testing.T
 
 		require.Equal(t, http.StatusOK, res.StatusCode)
 		require.Equal(t, "true", res.Header.Get("Deprecation"), "query-string override must also emit Deprecation header")
+	})
+}
+
+// TestAppBudgetSet_AdminGate_CapChange_NonAdminRejected verifies that a
+// non-admin (w-role) caller cannot change MonthlyCapUsd via AppBudgetSet.
+// The CanAdmin gate inside the handler must fire BEFORE any provider call.
+func TestAppBudgetSet_AdminGate_CapChange_NonAdminRejected(t *testing.T) {
+	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
+		tk, err := jm.WriteToken(time.Hour)
+		require.NoError(t, err)
+
+		// No p.On(...) — the admin gate must fire before any provider call.
+
+		body := url.Values{"monthly-cap-usd": {"500"}}.Encode()
+		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget", strings.NewReader(body))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.SetBasicAuth("jwt", tk)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		bodyBytes, _ := io.ReadAll(res.Body)
+		require.Equal(t, http.StatusForbidden, res.StatusCode,
+			"w-token + monthly-cap-usd must 403 -- got body %q", string(bodyBytes))
+		require.Contains(t, string(bodyBytes), "AppBudgetSet: admin role required",
+			"body must include AppBudgetSet admin gate message")
+
+		p.AssertNotCalled(t, "AppBudgetSet")
+	})
+}
+
+// TestAppBudgetSet_AdminGate_CapChange_AdminSucceeds verifies that an admin
+// caller can change MonthlyCapUsd via AppBudgetSet without hitting the gate.
+func TestAppBudgetSet_AdminGate_CapChange_AdminSucceeds(t *testing.T) {
+	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
+		tk, err := jm.AdminToken(time.Hour)
+		require.NoError(t, err)
+
+		p.On("AppBudgetSet", "myapp",
+			mock.MatchedBy(func(o structs.AppBudgetOptions) bool {
+				return o.MonthlyCapUsd != nil && *o.MonthlyCapUsd == "500"
+			}),
+			"system-admin",
+		).Return(nil)
+
+		body := url.Values{"monthly-cap-usd": {"500"}}.Encode()
+		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget", strings.NewReader(body))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.SetBasicAuth("jwt", tk)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		require.Equal(t, http.StatusOK, res.StatusCode, "admin token + monthly-cap-usd must succeed")
 	})
 }

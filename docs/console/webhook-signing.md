@@ -78,6 +78,169 @@ def verify(req, signing_key):
     return any(hmac.compare_digest(s, expected) for s in sigs)
 ```
 
+Example verification (Go):
+
+```go
+package main
+
+import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+	"strconv"
+	"strings"
+	"time"
+)
+
+const maxAgeSeconds = 300
+
+func parseHeader(header string) (int64, []string) {
+	var t int64
+	var sigs []string
+	for _, part := range strings.Split(header, ",") {
+		k, v, ok := strings.Cut(strings.TrimSpace(part), "=")
+		if !ok {
+			continue
+		}
+		switch k {
+		case "t":
+			t, _ = strconv.ParseInt(v, 10, 64)
+		case "v1":
+			sigs = append(sigs, v)
+		}
+	}
+	return t, sigs
+}
+
+// Verify returns nil when the signature is valid and the timestamp is within
+// the 5-minute tolerance window. Pass signingKey as a UTF-8 string and body
+// as the raw (unparsed) request body bytes.
+func Verify(header, signingKey string, body []byte) error {
+	t, sigs := parseHeader(header)
+	if t == 0 || len(sigs) == 0 {
+		return errors.New("missing timestamp or signature")
+	}
+	if abs(time.Now().Unix()-t) > maxAgeSeconds {
+		return errors.New("timestamp outside 5-minute tolerance window")
+	}
+	mac := hmac.New(sha256.New, []byte(signingKey))
+	mac.Write([]byte(strconv.FormatInt(t, 10) + "."))
+	mac.Write(body)
+	expected := hex.EncodeToString(mac.Sum(nil))
+	for _, sig := range sigs {
+		if hmac.Equal([]byte(sig), []byte(expected)) {
+			return nil
+		}
+	}
+	return errors.New("signature mismatch")
+}
+
+func abs(n int64) int64 {
+	if n < 0 {
+		return -n
+	}
+	return n
+}
+```
+
+Example verification (Node.js / TypeScript):
+
+```typescript
+import { createHmac, timingSafeEqual } from "crypto";
+
+const MAX_AGE_SECONDS = 300;
+
+function parseHeader(header: string): { t: number; sigs: string[] } {
+  let t = 0;
+  const sigs: string[] = [];
+  for (const part of header.split(",")) {
+    const [k, v] = part.trim().split("=");
+    if (k === "t") t = parseInt(v, 10);
+    else if (k === "v1") sigs.push(v);
+  }
+  return { t, sigs };
+}
+
+/**
+ * Returns true when the signature is valid and the timestamp is within the
+ * 5-minute tolerance window.
+ *
+ * @param header  The raw Convox-Signature header value.
+ * @param key     The webhook_signing_key rack parameter value (UTF-8 string).
+ * @param body    The raw request body as a Buffer or string.
+ */
+export function verify(header: string, key: string, body: Buffer | string): boolean {
+  const { t, sigs } = parseHeader(header);
+  if (!t || sigs.length === 0) return false;
+  if (Math.abs(Date.now() / 1000 - t) > MAX_AGE_SECONDS) return false; // 5-minute tolerance
+
+  const mac = createHmac("sha256", key);
+  mac.update(`${t}.`);
+  mac.update(body);
+  const expected = mac.digest("hex");
+  const expectedBuf = Buffer.from(expected, "utf8");
+
+  return sigs.some((sig) => {
+    try {
+      return timingSafeEqual(Buffer.from(sig, "utf8"), expectedBuf);
+    } catch {
+      return false; // length mismatch — safe to reject
+    }
+  });
+}
+```
+
+Example verification (shell / openssl):
+
+```bash
+#!/usr/bin/env bash
+# Verify a Convox webhook payload from shell.
+#
+# Usage: CONVOX_KEY=<signing_key> verify_convox_webhook "<header>" "<body>"
+#
+# Requires: openssl, xxd, awk
+
+MAX_AGE=300  # 5-minute tolerance
+
+verify_convox_webhook() {
+  local header="$1" body="$2"
+  local t="" sig=""
+
+  # Parse t= and first v1= from the header
+  for seg in $(echo "$header" | tr ',' '
+'); do
+    key="${seg%%=*}"; val="${seg#*=}"
+    [[ "$key" == "t"  ]] && t="$val"
+    [[ "$key" == "v1" && -z "$sig" ]] && sig="$val"
+  done
+
+  [[ -z "$t" || -z "$sig" ]] && { echo "INVALID: missing fields"; return 1; }
+
+  # 5-minute timestamp tolerance
+  now=$(date +%s)
+  age=$(( now - t < 0 ? t - now : now - t ))
+  (( age > MAX_AGE )) && { echo "INVALID: timestamp too old ($age s)"; return 1; }
+
+  # Compute HMAC-SHA256: key=$CONVOX_KEY, input="${t}.${body}"
+  signed_input="${t}.${body}"
+  expected=$(printf '%s' "$signed_input"     | openssl dgst -sha256 -hmac "$CONVOX_KEY" -binary     | xxd -p -c 256)
+
+  if [[ "$expected" == "$sig" ]]; then
+    echo "VALID"
+  else
+    echo "INVALID: signature mismatch"
+    return 1
+  fi
+}
+```
+
+> **Note:** The shell example uses a single-pass `printf | openssl` pipeline.
+> Some openssl builds behave differently with `-hmac` vs `-mac hmac -macopt key:...`;
+> if your environment requires the latter form, replace the `openssl dgst` line with:
+> `openssl dgst -sha256 -mac hmac -macopt "key:$CONVOX_KEY" -binary`.
+
+
 The multi-`v1=` form is what enables zero-downtime key rotation: when
 rotating, configure the new key on the rack and BOTH keys (old + new)
 on the receiver. The rack will sign with both for a grace window;

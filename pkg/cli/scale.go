@@ -150,7 +150,7 @@ func Scale(rack sdk.Interface, c *stdcli.Context) error {
 		cs, _ := budgetCapStatusWithServices(rack, app(c), ss, c.Writer().Stderr)
 
 		// Column-position contract: positions 1-6 (SERVICE, DESIRED, RUNNING,
-		// CPU, MEMORY, GPU) match 3.24.5 exactly so customer scripts parsing
+		// CPU, MEMORY, GPU) match 3.24.5 exactly so user scripts parsing
 		// `convox scale` output positionally (`awk '{print $2}'`, `cut -f3`)
 		// keep working unchanged. New columns (MIN, MAX, AUTOSCALE, STATUS)
 		// append at positions 7+. AUTOSCALE renders only when at least one

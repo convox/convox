@@ -7,7 +7,7 @@ url: /configuration/rack-parameters/aws/prometheus_url
 # prometheus_url
 
 ## Description
-External Prometheus URL for KEDA autoscale triggers and observability. Customer-set value enables GPU enrichment in `convox ps`. When empty (default), GPU fields show em-dash sentinels even when a chart is installed via Console.
+External Prometheus URL for KEDA autoscale triggers and observability. User-configured value enables GPU enrichment in `convox ps`. When empty (default), GPU fields show em-dash sentinels even when a chart is installed via Console.
 
 Post-3.24.6 there is no auto-resolution — the rack queries this URL directly. Set the in-cluster service URL when you enable Convox Console monitoring, or point at an external Prometheus aggregator (Grafana Cloud, AWS AMP, federation hub).
 
@@ -17,7 +17,7 @@ The parameter value is treated as a credential and is stored only in a Kubernete
 The default is `""` (empty string). When empty, GPU metric enrichment in `convox ps` is silently skipped (no error; `convox ps` returns responses without GPU fields populated, rendering as em-dash sentinels).
 
 ## Use Cases
-- **Convox-Console-managed customers**: must explicitly set this to surface GPU fields in `convox ps`. Use the in-cluster service URL: paid → `http://convox-kube-prometheus-sta-prometheus.convox-monitoring.svc.cluster.local:9090`, free → `http://prometheus-gpu-metrics-server.kube-system.svc.cluster.local:80`.
+- **Convox-Console-managed users**: must explicitly set this to surface GPU fields in `convox ps`. Use the in-cluster service URL: paid → `http://convox-kube-prometheus-sta-prometheus.convox-monitoring.svc.cluster.local:9090`, free → `http://prometheus-gpu-metrics-server.kube-system.svc.cluster.local:80`.
 - **Grafana Cloud federation**: Point the rack at your Grafana Cloud Prometheus URL (with HTTP Basic auth credentials embedded in the URL) so GPU metrics surface in Convox dashboards while your central observability stack also retains them.
 - **AWS Managed Prometheus (AMP)**: Direct rack queries to your AMP workspace for centralized retention and longer query windows than the in-cluster Prometheus offers.
 - **Self-hosted federation hub**: When you run a multi-cluster Prometheus federation, point the rack at the federated query endpoint for cross-rack metric aggregation.
@@ -44,7 +44,7 @@ Updating parameters... OK
 Note: clearing `prometheus_url` removes KEDA autoscale based on Prometheus metrics and disables `convox ps` GPU enrichment until the parameter is re-set. There is no rack-side auto-resolution post-3.24.6 — empty means empty.
 
 ## Additional Information
-- This parameter is AWS-only at this time. GCP, Azure, DigitalOcean, and Equinix Metal racks ship parallel Prometheus integrations in subsequent releases.
+- This parameter is AWS-only at this time.
 - The value is treated as sensitive: stored as a Kubernetes Secret (not a ConfigMap), never logged in plaintext, never serialized into rack deploy-spec annotations, and SHA-256-hashed before emission to telemetry.
 - The rack's HTTP client uses a 5-second timeout per query so a misconfigured or unreachable endpoint cannot stall `convox ps` indefinitely. On query timeout the rack returns the response without GPU enrichment fields populated; the UI displays an em-dash sentinel rather than an error.
 - The rack queries the Prometheus standard `/api/v1/query` endpoint for four DCGM metric series: `DCGM_FI_DEV_GPU_UTIL`, `DCGM_FI_DEV_FB_USED`, `DCGM_FI_DEV_FB_FREE`, and `DCGM_FI_DEV_FB_RESERVED`. Total framebuffer is derived as the sum of the three FB_* fields (the DCGM exporter's default counters file does not emit `DCGM_FI_DEV_FB_TOTAL`). If your external Prometheus does not have those metric series, GPU enrichment falls through to the empty state.

@@ -16,8 +16,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-// release-watcher constants — see phase-i-post-rc4/phase-b/items/item-18-rollout-watcher.md
-// for the rationale on each value.
+// release-watcher constants — timing rationale: poll interval balances UX
+// latency (Console events page repaints within ~3s of rollout completion)
+// against load (cached annotation read, effectively free).
 //
 // These are vars (not const) so unit tests can override timing without
 // burning real wall-clock seconds. Production code MUST NOT mutate these
@@ -31,7 +32,7 @@ var (
 
 	// releasePromoteWatchGracePeriod extends the watcher's deadline past
 	// state.ExpiresAt. Lets the AtomController's own `Deadline` transition
-	// land before we declare watcher-timeout — preferring the customer-
+	// land before we declare watcher-timeout — preferring the user-
 	// truth (Atom Status) over our derived emit.
 	releasePromoteWatchGracePeriod = 30 * time.Second
 
@@ -138,7 +139,7 @@ func (p *Provider) runReleasePromoteWatcher(
 		if hook := releasePromoteCleanupDeferPanicHookForTest; hook != nil {
 			hook(app, state.ReleaseID)
 		}
-		// Supersession-aware annotation cleanup. m-A12-03 fix:
+		// Supersession-aware annotation cleanup.
 		// concurrent supersession + steady-state cleanup race could
 		// previously delete a NEWER promote's annotation. Read the
 		// current annotation; only delete it if its release-id still
@@ -221,8 +222,7 @@ func (p *Provider) runReleasePromoteWatcher(
 // emitReleasePromoteResult dispatcher should consume — same shape the
 // in-loop steady-state switch produced before the helper extraction.
 //
-// Phase H R2 fix (m-A08-NEW-1 / m-A12-NEW-1): the GC scanner past-
-// deadline branch previously emitted `app:promote:errored` unconditionally
+// The GC scanner past-deadline branch previously emitted `app:promote:errored` unconditionally
 // without consulting `convox.com/app-status`. That mis-attributed real
 // rollout outcomes (e.g. AtomController had already written
 // app-status=Success but the watch annotation hadn't been cleaned up
@@ -272,7 +272,7 @@ func (p *Provider) emitReleasePromoteResult(app string, state *structs.ReleasePr
 		action = "app:promote:cancelled"
 	default:
 		// Unknown status — log defensively and emit on the canonical
-		// errored action so the customer sees SOMETHING in the timeline.
+		// errored action so the user sees SOMETHING in the timeline.
 		fmt.Printf("ns=release_watcher at=warn kind=unknown_status app=%s status=%q\n", app, status)
 		action = "app:promote:errored"
 	}
@@ -329,13 +329,12 @@ func (p *Provider) writeReleasePromoteWatchAnnotation(ctx context.Context, app s
 // On read errors, namespace-not-found, or empty annotation, the call
 // becomes a no-op so the existing best-effort semantics are preserved.
 //
-// m-A12-03 fix: closes the supersession-cleanup race where a fast
+// Closes the supersession-cleanup race where a fast
 // promote sequence (Watcher A reaches terminal state, then Watcher B
 // starts and writes its own annotation, then A's cleanup defer fires)
 // would previously have A clobber B's payload.
 //
-// Phase H R2 fix (m-A03-01 / m-A05-01 / m-A12-01): the original
-// implementation read the annotation, validated the release-id match,
+// The original implementation read the annotation, validated the release-id match,
 // then issued a separate unconditional MergePatch — leaving a narrow
 // TOCTOU window where a concurrent writer could overwrite the
 // annotation between the Get and the Patch. Now uses a JSON-Patch with
@@ -502,8 +501,7 @@ func (p *Provider) scanReleasePromoteAnnotations(ctx context.Context) {
 			continue
 		}
 		if state.ExpiresAt.Before(now) {
-			// Phase H R2 fix (m-A08-NEW-1 / m-A12-NEW-1): past-deadline
-			// no longer assumes errored. Consult `convox.com/app-status`
+			// Past-deadline no longer assumes errored. Consult `convox.com/app-status`
 			// first — if AtomController has already written a terminal
 			// status (Success / Failure / Cancelled / Deadline / Error /
 			// Rollback / Reverted), surface that as the watch event so

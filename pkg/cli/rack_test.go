@@ -1340,12 +1340,11 @@ func TestRackParamsGroupFilterUnknownErrors(t *testing.T) {
 }
 
 // TestRackParamsSet_BuildDisableConvoxResolver_BoolValidation locks the
-// build_disable_convox_resolver entry in boolParams (Wave 1.5 mini-patch
-// item 12 rack-side companion). The TF variable
+// build_disable_convox_resolver entry in boolParams. The TF variable
 // terraform/system/aws/variables.tf declares this as type=bool, so the
 // CLI must reject non-bool values rather than silently coercing them
 // through a confusing TF type-error rollback. boolParams is unexported,
-// so this test exercises it through the customer-visible "rack params set"
+// so this test exercises it through the user-visible "rack params set"
 // surface — invalid bool produces the canonical error string.
 func TestRackParamsSet_BuildDisableConvoxResolver_BoolValidation(t *testing.T) {
 	prev := cli.IsTerminalFn
@@ -1395,7 +1394,7 @@ func TestRackParamsSet_BuildDisableConvoxResolver_BoolValidation(t *testing.T) {
 
 // TestMonitoringMetricsProvisionedRejectsAsRemovedParam locks the special-case
 // rejection of monitoring_metrics_provisioned in validateAndMutateParams. The
-// param was removed in 3.24.6; setting it must surface a customer-friendly
+// param was removed in 3.24.6; setting it must surface a user-friendly
 // "removed in 3.24.6" message naming the new Console UI path, NOT the default
 // "unknown parameter" suggestion (Levenshtein distance from any remaining
 // awsKnownParams entry is too large for a useful suggestion).

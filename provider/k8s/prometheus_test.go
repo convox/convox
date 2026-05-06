@@ -193,7 +193,7 @@ func TestQueryGPUMetrics_TypicalSample(t *testing.T) {
 
 // TestQueryGPUMetrics_PartialMetricSet — DCGM emits a Vector for util
 // but errors / empty for memory queries. Per-metric fail-soft on a
-// partial response is the customer-facing reliability deliverable
+// partial response is the user-facing reliability deliverable
 // (R1 BLOCK-3-IT7 / R2 MR-09 / MR-19).
 //
 // Util populates; mem-used / mem-total stay zero (default); the call

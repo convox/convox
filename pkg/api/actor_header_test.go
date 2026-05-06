@@ -16,11 +16,11 @@ import (
 // middleware uses the header value as the audit actor identity instead of
 // the generic "rack-password" sentinel. The header value flows through
 // ContextActor() to EventSend's central injection, so every audit event
-// stamped during the request lands the customer-truthful actor without
+// stamped during the request lands the user-truthful actor without
 // per-controller form-param plumbing.
 //
 // Trust model: anyone with the rack password can already do anything as
-// root; the header is a customer-truthfulness override, not a security
+// root; the header is a user-truthfulness override, not a security
 // boundary. Forged identities through this header are no worse than
 // forged identities passed via the existing form-param `ack_by` path.
 func TestAuthenticate_BasicAuthWithConvoxActorHeader_SetsActor(t *testing.T) {
@@ -161,7 +161,7 @@ func TestAuthenticate_JwtAuth_IgnoresActorHeader(t *testing.T) {
 }
 
 // TestAuthenticate_BasicAuthCanonicalHostileOnly_FallsBackToLegacy pins the
-// round-2 review finding R2-A1-1 fix: when the canonical Convox-Actor header
+// fix: when the canonical Convox-Actor header
 // contains ONLY strip-set chars (e.g. bidi overrides, zero-width characters
 // that TrimSpace does NOT recognize as whitespace), SanitizeActor returns
 // "unknown" — and the auth middleware MUST fall through to the legacy

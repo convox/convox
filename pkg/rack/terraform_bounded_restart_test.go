@@ -50,8 +50,8 @@ func TestEffectivePrometheusUrlSimplification_HashChange(t *testing.T) {
 //
 // progressDeadlineSeconds is NOT asserted: K8s default is 600s (10 min) and
 // the field is NOT declared in the TF source — implicit default applies. The
-// "≤30-90s typical" customer-experience expectation per SPEC §7.4 #7 is NOT
-// asserted here (it's a customer expectation, not a TF-source guarantee).
+// "≤30-90s typical" user-experience expectation is NOT
+// asserted here (it's a user expectation, not a TF-source guarantee).
 func TestEffectivePrometheusUrlSimplification_HashChange_BoundedRestart(t *testing.T) {
 	repoRoot, err := repoRootFromTestFile()
 	require.NoError(t, err)

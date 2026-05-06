@@ -141,7 +141,7 @@ func TestBudgetCapStatus_BudgetSetButNotBreached_ReturnsClear(t *testing.T) {
 // TestBudgetCapStatus_AppBudgetGetError_LogsAndReturnsClear — budget API
 // returns an error. Helper logs to stderr only and returns a clear capStatus
 // so the user-visible STATUS column renders unchanged. Budget API hiccups
-// must NEVER make `convox ps` worse for the customer.
+// must NEVER make `convox ps` worse for the user.
 func TestBudgetCapStatus_AppBudgetGetError_LogsAndReturnsClear(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("ProcessList", "app1", structs.ProcessListOptions{}).Return(structs.Processes{*fxProcess()}, nil)
@@ -159,7 +159,7 @@ func TestBudgetCapStatus_AppBudgetGetError_LogsAndReturnsClear(t *testing.T) {
 // TestBudgetShowBanner_KedaServiceDetected_PrintsLongFormBanner — when the
 // app has at least one KEDA-driven service AND the budget is at-cap, the
 // long-form disclosure banner appears in `convox budget show` stdout.
-// Banner text is R3-pinned exact verbatim.
+// Banner text must match verbatim.
 func TestBudgetShowBanner_KedaServiceDetected_PrintsLongFormBanner(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("AppBudgetGet", "app1").Return(fxAppBudgetCap(structs.BudgetAtCapActionBlockNewDeploys), fxAppBudgetStateTripped(), nil)
@@ -168,7 +168,7 @@ func TestBudgetShowBanner_KedaServiceDetected_PrintsLongFormBanner(t *testing.T)
 		res, err := testExecute(e, "budget show app1", nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code)
-		// R3-pinned banner text — must match verbatim.
+		// Banner text must match verbatim.
 		require.Contains(t, res.Stdout, "KEDA-managed services may scale despite block-new-deploys")
 		require.Contains(t, res.Stdout, "v1 limitation; auto-shutdown closes gap in 3.24.6")
 		require.Contains(t, res.Stdout, "see release notes")

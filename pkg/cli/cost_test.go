@@ -315,12 +315,12 @@ func TestCost_Subcommand_IntegrationViaRegister(t *testing.T) {
 	})
 }
 
-// --- Item 21 (absorbed into Wave 1.5) — em-dash low-rate format -----------
+// --- em-dash low-rate format -----------
 //
 // Locks the format-helper threshold and the disambiguation footnote
 // behavior shared by `convox cost` and `convox budget simulate-shutdown`.
 // Helper is internal to the cli package — exercised here through the
-// public `cost` command so we keep the assertions tied to customer-visible
+// public `cost` command so we keep the assertions tied to user-visible
 // output rather than the helper signature.
 
 // C1: TestCostFormat_LowRateAsEmDash — well below 0.001 threshold renders
@@ -369,7 +369,7 @@ func TestCostFormat_NormalRateNoEmDash(t *testing.T) {
 }
 
 // C3: TestCostFormat_ExplicitZero — exact zero stays as "$0.00", NOT
-// em-dashed (zero is meaningful customer state).
+// em-dashed (zero is meaningful user state).
 func TestCostFormat_ExplicitZero(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		fx := fxAppCost()

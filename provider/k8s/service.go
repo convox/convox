@@ -225,7 +225,7 @@ func (p *Provider) serviceListAppendDaemonsets(app string, ss structs.Services, 
 // with no `service` label value are skipped (they are not Convox-managed
 // service pods); pods labeled for service S that did NOT report a sample
 // for one of the three metrics contribute zero to that metric's sum but
-// still count toward the denominator. This matches the customer-facing
+// still count toward the denominator. This matches the user-facing
 // definition of "average GPU utilization across this service's pods" —
 // reporting every pod's reading even when one metric is missing.
 //

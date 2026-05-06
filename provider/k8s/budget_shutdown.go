@@ -386,7 +386,7 @@ func (p *Provider) clearPausedReplicasAnnotation(ctx context.Context, ns, name s
 	_, err := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Get(ctx, name, am.GetOptions{})
 	if err != nil {
 		if ae.IsNotFound(err) {
-			return nil // no ScaledObject; no-op (re-render path is the customer's responsibility)
+			return nil // no ScaledObject; no-op (re-render path is the user's responsibility)
 		}
 		return errors.WithStack(err)
 	}
@@ -397,7 +397,7 @@ func (p *Provider) clearPausedReplicasAnnotation(ctx context.Context, ns, name s
 }
 
 // restoreServiceFromState restores a single service per the saved
-// state entry. Pre-flight check (spec §6.3 step 2): if the customer
+// state entry. Pre-flight check (§6.3 step 2): if the user
 // already manually scaled the service back up, skip restore for this
 // service and return manualDetected=true. Drift merge: saved values
 // WIN per spec §6.3 step 4.
@@ -414,7 +414,7 @@ func (p *Provider) restoreServiceFromState(ctx context.Context, app string, svc 
 	if dep.Spec.Replicas != nil {
 		currentReplicas = *dep.Spec.Replicas
 	}
-	// Pre-flight: customer already manually scaled service back up
+	// Pre-flight: user already manually scaled service back up
 	// (spec §6.3 step 2). Skip restore for this service.
 	if currentReplicas > 0 {
 		return true, nil
@@ -469,7 +469,7 @@ type shutdownPlan struct {
 	LastUpdated time.Time
 }
 
-// orderShutdownPlans applies the customer-configured shutdown order.
+// orderShutdownPlans applies the user-configured shutdown order.
 // Two algorithms in 3.24.6: largest-cost (default) and newest. Ties
 // broken by lexicographic service name ascending. Per spec §5.
 func orderShutdownPlans(plans []shutdownPlan, order string) []shutdownPlan {
@@ -549,9 +549,8 @@ func (p *Provider) AppBudgetShutdownStateGet(app string) (*structs.AppBudgetShut
 	// writeRecoveryBannerDismissedAnnotation (this file) and persists
 	// independently of the shutdown-state annotation. Surfacing it on
 	// the same struct lets Console3 read both via one SDK call and
-	// suppress the RECOVERED banner across page reloads (Phase G round
-	// 1 G.2 FIX-2). Errors on the dismissed-annotation read are
-	// non-fatal — the field stays nil and the customer sees the
+	// suppress the RECOVERED banner across page reloads. Errors on the dismissed-annotation read are
+	// non-fatal — the field stays nil and the user sees the
 	// pre-Decision-6 in-session-only suppression. Log the parse error
 	// at structured-stdout severity so an operator chasing a "banner
 	// won't dismiss" report has a diagnostic trail; corrupt-annotation
@@ -656,7 +655,7 @@ func (p *Provider) AppBudgetDismissRecovery(app, ackBy string) error {
 // annotation GCs (one tick after RestoredAt + tick interval, or earlier
 // via dismiss-recovery).
 func (p *Provider) AppBudgetDismissRecoveryWithResult(app, ackBy string) (*structs.AppBudgetDismissRecoveryResult, error) {
-	// F-EVT-3 (Decision 7) — extend the per-app lock surface to dismiss.
+	// Extend the per-app lock surface to dismiss (Decision 7).
 	// Without this lock, two concurrent dismiss clicks both observe
 	// existing=nil and both write the annotation, producing duplicate
 	// :dismissed events with idempotent=false. Same pattern as the

@@ -263,13 +263,13 @@ func TestBudgetShutdown_RestoreFromAnnotation_ReplicasRestored(t *testing.T) {
 }
 
 // TestBudgetShutdown_RestorePreFlightCheck_ManualScaledIsSkipped verifies
-// the §6.3 step 2 pre-flight check: if the customer manually scaled
+// the §6.3 step 2 pre-flight check: if the user manually scaled
 // the service back up, restore skips the PATCH.
 func TestBudgetShutdown_RestorePreFlightCheck_ManualScaledIsSkipped(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
-		// Customer manually scaled to 5 (was 0 at :fired).
+		// User manually scaled to 5 (was 0 at :fired).
 		current := int32(5)
 		dep := &appsv1.Deployment{
 			ObjectMeta: am.ObjectMeta{Name: "ml-batch", Namespace: "rack1-app1"},
@@ -295,7 +295,7 @@ func TestBudgetShutdown_RestorePreFlightCheck_ManualScaledIsSkipped(t *testing.T
 		}
 		require.NoError(t, k8s.RestoreFromAnnotationForTest(p, "app1", "test-actor", state, "reset"))
 
-		// Customer's 5 replicas should be preserved (no PATCH applied).
+		// User's 5 replicas should be preserved (no PATCH applied).
 		got, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "ml-batch", am.GetOptions{})
 		require.NoError(t, err)
 		require.NotNil(t, got.Spec.Replicas)
@@ -660,7 +660,7 @@ func TestRunStaleAnnotationGC_ClearsDismissedAnnotation(t *testing.T) {
 }
 
 // TestRunStaleAnnotationGC_ReArmCycle_DoesNotLeakDismissedAt simulates
-// the full re-arm cycle: customer dismisses banner in cycle-1, GC fires,
+// the full re-arm cycle: user dismisses banner in cycle-1, GC fires,
 // then cycle-2 ARMs+SHUTS+RESTORES. The aggregated GET must report
 // RecoveryBannerDismissedAt == nil for cycle-2 — otherwise the cycle-1
 // dismiss timestamp leaks into cycle-2 and Vue suppresses the fresh
@@ -1056,7 +1056,7 @@ func TestAppBudgetResetWithOptions_HoldsLockAcrossStep2_NoDuplicateCancelled(t *
 		go func() {
 			defer wg.Done()
 			// Drive the manifest-injecting reconciler in parallel. This
-			// hook reaches the same fireCancelledEventRich path that
+			// hook reaches the same fireCancelledEvent path that
 			// production's reconcileAutoShutdown would, contending the
 			// per-app lock with the reset goroutine.
 			k8s.ReconcileAutoShutdownWithManifestForTest(p, context.Background(), "app1", cfg, baseState, m, now)
@@ -1115,7 +1115,7 @@ func TestBudgetShutdown_ForceClearCooldown_DeletesCarryoverAnnotations(t *testin
 
 // TestBudgetShutdown_StandardReset_PreservesCarryoverAnnotations verifies
 // the default reset path PRESERVES the cooldown carry-over (per spec
-// §15.2: customer must opt in via --force-clear-cooldown).
+// §15.2: user must opt in via --force-clear-cooldown).
 func TestBudgetShutdown_StandardReset_PreservesCarryoverAnnotations(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
@@ -1140,7 +1140,7 @@ func TestBudgetShutdown_StandardReset_PreservesCarryoverAnnotations(t *testing.T
 }
 
 // TestAppBudgetShutdownStateGet_AggregatesDismissedAnnotation pins
-// Decision 6 (Phase G round 1 G.2 FIX-2): the GET path aggregates
+// Decision 6: the GET path aggregates
 // both the shutdown-state annotation AND the dismissed-banner
 // annotation into a single struct. Without this aggregation, Console3
 // cannot read the dismissed timestamp from a fresh page load — the

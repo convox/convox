@@ -299,7 +299,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 	// between annotation-write and goroutine-launch, the cold-start GC
 	// scan at next api-pod startup recovers it (timeout path).
 	// Annotation-write failures are logged but do NOT block promote
-	// success — the rollout itself proceeded; the customer just doesn't
+	// success — the rollout itself proceeded; the user just doesn't
 	// get a second event.
 	state := structs.ReleasePromoteWatchState{
 		SchemaVersion: 1,
@@ -774,12 +774,12 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 		if overrideActive[s.Name] {
 			// Item-23 §4.1 — annotation honored: preserve the runtime
 			// replica count regardless of yaml scale.count.min. If
-			// sc[s.Name] is 0 (rare: customer scaled to 0 with
-			// override active), preserve 0 — explicit customer choice,
+			// sc[s.Name] is 0 (rare: user scaled to 0 with
+			// override active), preserve 0 — explicit user choice,
 			// not yaml fallback. Distinct from the CoalesceInt default
 			// where 0 falls through to yaml min.
 			replicas = sc[s.Name]
-			// Audit-trail emit so customers see in their event stream
+			// Audit-trail emit so users see in their event stream
 			// that yaml scale was deliberately skipped on this promote.
 			// Event-name format app:<resource>:<verb> — matches
 			// app:budget:set / :cap / :threshold precedent. Service
@@ -814,7 +814,7 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 		// Agent services render as DaemonSets; KEDA ScaledObject only targets
 		// Deployments, so skip the autoscale path entirely. Spec 04 demoted the
 		// pkg/manifest hard-fail on this combo to a stderr WARNING; emit a
-		// matching release-time audit event so the customer's webhook stream
+		// matching release-time audit event so the user's webhook stream
 		// reflects the runtime ignore decision (parallel to release:autoscale-
 		// disabled / release:prometheus-skipped). actor=system per the
 		// d3_call_site_actor_test pin convention.

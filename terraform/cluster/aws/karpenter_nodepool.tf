@@ -26,7 +26,7 @@ locals {
   }
 
   ###########################################################################
-  # karpenter_config overrides — decode customer JSON (empty = no overrides)
+  # karpenter_config overrides — decode user JSON (empty = no overrides)
   ###########################################################################
 
   karpenter_config_raw    = var.karpenter_config != "" ? var.karpenter_config : "{}"
@@ -145,7 +145,7 @@ locals {
   ec2_final_metadata = lookup(local.kc_ec2, "metadataOptions", local.ec2_default_metadata)
 
   # Tags: rack-level Tags first, then karpenter_config overrides, then Convox reserved (always win).
-  # Merge order matches local.tags convention: customer tags first, Name/Rack forced last.
+  # Merge order matches local.tags convention: user tags first, Name/Rack forced last.
   ec2_final_tags = merge(
     var.tags,
     lookup(local.kc_ec2, "tags", {}),

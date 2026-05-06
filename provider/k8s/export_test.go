@@ -181,7 +181,7 @@ func RedactURLHostForTest(raw string) string {
 
 // RedactedWebhookURLForTest exposes the scheme+host URL redactor used by
 // :armed/:fired payload emit sites. Distinct from RedactURLHostForTest:
-// returns an RFC 3986-valid URL so customer webhook receivers parsing
+// returns an RFC 3986-valid URL so user webhook receivers parsing
 // payload.webhook_url with new URL(...) don't throw. MF-4 fix.
 func RedactedWebhookURLForTest(raw string) string {
 	return redactedWebhookURL(raw)
@@ -362,7 +362,7 @@ func ReconcileAutoShutdownWithManifestForTest(p *Provider, ctx context.Context, 
 		if p.armedWindowManuallyScaledUp(ctx, app, state.Services) {
 			derr := p.deleteBudgetShutdownStateAnnotation(ctx, app)
 			if derr == nil || ae.IsNotFound(derr) {
-				p.fireCancelledEventRich(app, cfg, baseState, state, "system", "manual-detected", 0, 0, "", now)
+				p.fireCancelledEvent(app, cfg, baseState, state, "system", "manual-detected", 0, 0, "", now)
 			}
 			return
 		}
@@ -562,4 +562,19 @@ func SetReleasePromoteCleanupDeferPanicHookForTest(hook func(app, releaseID stri
 // watcher lifecycle. Test-only.
 func DeleteReleasePromoteWatchAnnotationIfMatchesForTest(p *Provider, ctx context.Context, app, expectedReleaseID string) error {
 	return p.deleteReleasePromoteWatchAnnotationIfMatches(ctx, app, expectedReleaseID)
+}
+
+// HashParamValueForTest exposes the per-Provider hashParamValue method so
+// telemetry_test.go can assert the salting invariant (same rack = same hash,
+// different rack UIDs = different hash). Test-only; production code must not
+// reference this hook.
+func HashParamValueForTest(p *Provider, value string) string {
+	return p.hashParamValue(value)
+}
+
+// ResetRackUIDCacheForTest clears the rackUIDByNamespace sync.Map entry for
+// the given namespace. Allows tests to simulate a fresh startup or different
+// UID for the same namespace name without process restart.
+func ResetRackUIDCacheForTest(namespace string) {
+	rackUIDByNamespace.Delete(namespace)
 }

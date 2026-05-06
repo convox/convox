@@ -85,7 +85,7 @@ The following parameters are available for configuring your Convox rack on Amazo
 | [private_subnets_ids](/configuration/rack-parameters/aws/private_subnets_ids)       | Specifies the IDs of private subnets to use for the Rack.                |
 | [prometheus_gpu_metrics_chart_version](/configuration/rack-parameters/aws/prometheus_gpu_metrics_chart_version) | Helm chart version pin for the free-plan Prometheus chart deployed via the Convox Console. |
 | [prometheus_gpu_metrics_retention](/configuration/rack-parameters/aws/prometheus_gpu_metrics_retention) | Retention window for the free-plan Prometheus chart deployed via the Convox Console. |
-| [prometheus_url](/configuration/rack-parameters/aws/prometheus_url)                 | External Prometheus URL for KEDA autoscale and `convox ps` GPU enrichment. Customer must set explicitly post-3.24.6 (no auto-resolution). |
+| [prometheus_url](/configuration/rack-parameters/aws/prometheus_url)                 | External Prometheus URL for KEDA autoscale and `convox ps` GPU enrichment. Must be set explicitly post-3.24.6 (no auto-resolution). |
 | [proxy_protocol](/configuration/rack-parameters/aws/proxy_protocol)                 | Enables the Proxy Protocol to track the original client IP address.      |
 | [public_subnets_ids](/configuration/rack-parameters/aws/public_subnets_ids)         | Specifies the IDs of public subnets to use for the Rack.                 |
 | [releases_to_retain_after_active](/configuration/rack-parameters/aws/releases_to_retain_after_active) | Specifies the number of releases to retain after the currently active release. |

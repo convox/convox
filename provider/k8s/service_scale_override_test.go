@@ -99,7 +99,7 @@ func captureMultiPayload(t *testing.T, fn func(*k8s.Provider) error) []map[strin
 	return out
 }
 
-// findEventByAction is provided by release_watcher_test.go (Wave 2.5).
+// findEventByAction is provided by release_watcher_test.go.
 // Reused here to avoid a duplicate declaration.
 
 // ----- Test 7: TogglesOn -----
@@ -373,7 +373,7 @@ func TestServiceList_PopulatesAgentField(t *testing.T) {
 
 		// Inline manifest declares `api` (regular service) and
 		// `fluentd` (agent: true). releaseCreateInline lives in
-		// release_scale_override_test.go (Wave 2.6 helper).
+		// release_scale_override_test.go.
 		manifestYaml := "services:\n" +
 			"  api:\n" +
 			"    image: docker.io/library/nginx\n" +

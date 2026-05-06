@@ -214,7 +214,7 @@ func (b *AppBudget) Validate() error {
 // AppBudgetSimulationResult is the response body for the
 // POST /apps/{app}/budget/simulate-shutdown dry-run endpoint. The
 // simulation does not modify cluster state; it returns the eligibility
-// list, ordering, and estimated savings the customer would see if a
+// list, ordering, and estimated savings the user would see if a
 // real auto-shutdown fired now. Per Set G v2 spec §17.
 type AppBudgetSimulationResult struct {
 	App                          string                           `json:"app"`
@@ -242,6 +242,15 @@ type AppBudgetSimulationEligibility struct {
 	CostUsdPerHour float64 `json:"cost-usd-per-hour"`
 }
 
+// ============================================================================
+// ANNOTATION-INTERNAL TYPES (camelCase JSON tags)
+//
+// The types below are persisted as Kubernetes annotation values, not exposed
+// through the rack API wire surface. They use camelCase JSON tags by intent
+// — annotation values are not pkg/structs/ wire surface. Do NOT copy this
+// tag style for new wire surface types; use kebab-case (the convention of
+// the public types above this block).
+// ============================================================================
 // AppBudgetShutdownState is the JSON shape for the
 // `convox.com/budget-shutdown-state` namespace annotation. Per Set G v2
 // spec §7.2 this is provider/k8s/-private serialization; JSON tags are
@@ -261,7 +270,7 @@ type AppBudgetShutdownState struct {
 	ExpiredAt  *time.Time `json:"expiredAt"`
 
 	// NotifyBeforeMinutes is persisted at arm time so the renderer
-	// (CLI banner + STATUS countdown) reads the customer-configured
+	// (CLI banner + STATUS countdown) reads the user-configured
 	// value rather than the 30-minute default. Cross-version compat:
 	// older racks lack this field; readers fall back to the default
 	// when zero. Per Set G v2 spec §10.10 + 3.24.6 fixup F-18.
@@ -288,7 +297,6 @@ type AppBudgetShutdownState struct {
 	// json.Marshal to keep the annotation byte-stable — the field is
 	// GET-only aggregation.
 	//
-	// Phase G round 1 G.2 FIX-2 / Decision 6.
 	RecoveryBannerDismissedAt *time.Time `json:"recoveryBannerDismissedAt,omitempty"`
 
 	// Per-event dedup-firing trackers (8 of 9 events covered;
@@ -306,7 +314,7 @@ type AppBudgetShutdownState struct {
 	// DiscoveryReason is set on annotations created via the external-
 	// edit-detection path (§13.3). When non-empty, the annotation was
 	// constructed from observed cluster state, not from the normal
-	// :armed/:fired write path. Customer-displayable.
+	// :armed/:fired write path. User-displayable.
 	DiscoveryReason string `json:"discoveryReason,omitempty"`
 
 	// FailureReason is set when a :failed event is fired, capturing the
@@ -398,12 +406,13 @@ type AppBudgetResetOptions struct {
 	// The kebab form was a stale tag — manually-constructed SDK params
 	// bypass struct-tag marshaling, so the kebab tag never reached the
 	// wire. Renaming to snake locks tag, SDK, and server-read in agreement.
+	// snake_case JSON tag is wire-pinned (matches HTTP form-param name); do not change without 3.25.0 deprecation cycle.
 	ForceClearCooldown bool `param:"force_clear_cooldown"`
 }
 
 // AppBudgetDismissRecoveryResult is the response body for the
 // dismiss-recovery endpoint per Set G v2 spec advisory #3 — three
-// distinct outcomes the customer must be able to distinguish in the
+// distinct outcomes the user must be able to distinguish in the
 // CLI:
 //
 //   - "dismissed"      : a recovery banner was active; it is now dismissed

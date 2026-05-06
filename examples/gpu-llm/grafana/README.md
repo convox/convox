@@ -20,8 +20,6 @@ The source-of-truth manifest is `promql-source-of-truth.yaml`.
 | `06-vllm.json` | LLM Inference Server (vLLM) | ML engineer | Adapted from upstream — Apache 2.0 |
 | `07-karpenter.json` | GPU Node Lifecycle (Karpenter) | platform engineer | Convox-authored |
 
-A GPU cost overlay dashboard is on the roadmap for a future release.
-
 ## Manual import (BYO Grafana)
 
 ```text

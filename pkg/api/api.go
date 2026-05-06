@@ -113,11 +113,11 @@ func (s *Server) authenticate(next stdapi.HandlerFunc) stdapi.HandlerFunc {
 			// the audit actor identity instead of the generic "rack-password"
 			// sentinel. The header value flows through ContextActor() to
 			// EventSend's central injection (provider/k8s/event.go), so every
-			// audit event written during the request lands the customer-truthful
+			// audit event written during the request lands the user-attributed
 			// actor without per-controller form-param plumbing.
 			//
 			// Trust model: anyone with the rack password can already do anything
-			// as root; the header is a customer-truthfulness override, not a
+			// as root; the header is a user-attribution override, not a
 			// security boundary. Forged identities are no worse than calling the
 			// SDK with a forged identity. The header is purely additive — pre-
 			// 3.24.6 racks ignore unknown headers, so the behavior on older racks
@@ -148,7 +148,7 @@ func (s *Server) authenticate(next stdapi.HandlerFunc) stdapi.HandlerFunc {
 			// browser extension / buggy proxy that injects e.g.
 			// "Convox-Actor: ‮‮‮" while leaving X-Convox-Actor
 			// clean would suppress the real attribution and stamp "unknown"
-			// on the audit event. Round-2 review finding R2-A1-1.
+			// on the audit event.
 			// pickActor is a local closure — its empty-return signal flows
 			// directly into the canonical → legacy → "rack-password" fallback
 			// chain below. Future refactor that lifts this out (e.g. for

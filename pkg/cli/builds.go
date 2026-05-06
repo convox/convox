@@ -552,7 +552,7 @@ func BuildsImportImage(rack sdk.Interface, c *stdcli.Context) error {
 	if err := rack.BuildImportImage(app(c), b.Id, source, opts); err != nil {
 		// A08 m-2 fix: wrap version-gate 404 with a friendly message
 		// pointing at the canonical rack-version requirement instead of
-		// leaking the raw "response status 404" to the customer.
+		// leaking the raw "response status 404" to the user.
 		return wrapVersionGate(err, "convox builds import-image")
 	}
 	if err := c.OK(); err != nil {

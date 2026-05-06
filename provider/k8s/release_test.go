@@ -257,7 +257,7 @@ func TestKedaPrometheusTrigger_PromURLSet_CreatesTrigger(t *testing.T) {
 // TestKedaPrometheusTrigger_NeedsPrometheusEvent_EmittedOnSkip pins the
 // observability contract: when PROMETHEUS_URL is empty AND the service's
 // autoscale config NeedsPrometheus(), a release:prometheus-skipped event is
-// emitted with Data.reason populated so customers can diagnose the missing
+// emitted with Data.reason populated so users can diagnose the missing
 // trigger from audit log / event stream.
 func TestKedaPrometheusTrigger_NeedsPrometheusEvent_EmittedOnSkip(t *testing.T) {
 	t.Setenv("PROMETHEUS_URL", "")
@@ -268,7 +268,7 @@ func TestKedaPrometheusTrigger_NeedsPrometheusEvent_EmittedOnSkip(t *testing.T) 
 	require.Len(t, skipped, 1, "exactly one release:prometheus-skipped event expected")
 	data, _ := skipped[0]["data"].(map[string]any)
 	require.NotNil(t, data, "event payload must include data block")
-	assert.NotEmpty(t, data["reason"], "Data.reason must be populated to aid customer diagnosis")
+	assert.NotEmpty(t, data["reason"], "Data.reason must be populated to aid user diagnosis")
 	assert.Equal(t, "worker", data["service"], "Data.service must name the affected service")
 	assert.Equal(t, "app1", data["app"], "Data.app must name the affected app")
 	assert.Equal(t, "system", data["actor"], "Data.actor must be 'system' for system-emitted events")
@@ -384,7 +384,7 @@ func TestKedaScaledObject_CpuOnly_PromURLEmpty_RendersScaledObject(t *testing.T)
 // TestKedaScaledObject_ManualKedaTriggers_PromURLEmpty_RendersScaledObject
 // pins manual `scale.keda.triggers` (e.g., aws-sqs-queue) render correctly
 // even when PROMETHEUS_URL is empty — these triggers don't need Prometheus.
-// Without this guard, customers using SQS-driven autoscale silently lose
+// Without this guard, users using SQS-driven autoscale silently lose
 // their autoscaler on upgrade.
 func TestKedaScaledObject_ManualKedaTriggers_PromURLEmpty_RendersScaledObject(t *testing.T) {
 	t.Setenv("PROMETHEUS_URL", "")
