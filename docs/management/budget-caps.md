@@ -222,13 +222,9 @@ Link: <https://docs.convox.com/migration/ack-by-derivation>; rel="deprecation"; 
 ```
 
 The `Sunset` date is a courtesy hint per [RFC 8594](https://www.rfc-editor.org/rfc/rfc8594) —
-it signals migration intent, not a binding deadline. The rack will continue
-to accept the form parameter beyond that date and may extend or remove the
-header in any future release. Migration to per-user JWT Bearer authentication
-is targeted for a 3.25.0+ release; until that ships, the form parameter is
-both the bridge and the migration target. Operator scripts and webhook
-receivers ingesting these events should follow the actor-shape guidance in
-[ack_by Derivation](/migration/ack-by-derivation).
+it signals migration intent, not a binding deadline. Operator scripts and
+webhook receivers ingesting these events should follow the actor-shape
+guidance in [ack_by Derivation](/migration/ack-by-derivation).
 
 ### Backward compatibility
 

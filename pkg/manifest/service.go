@@ -355,9 +355,9 @@ type ServiceAutoscale struct {
 // AutoscaleMode is the unified shape for an autoscale trigger configuration.
 // Mode is a discriminator naming the trigger family — `threshold` for
 // utilization-based triggers (cpu/memory/gpuUtilization) and `queue` for
-// queue-depth triggers. Customers do not write `mode:` in their YAML; the
+// queue-depth triggers. Users do not write `mode:` in their YAML; the
 // value is populated post-load from the parent slot name and emitted only
-// when explicitly set (omitempty keeps the customer wire format clean).
+// when explicitly set (omitempty keeps the user wire format clean).
 type AutoscaleMode struct {
 	Mode          string  `yaml:"mode,omitempty"          json:"mode,omitempty"`
 	Threshold     float64 `yaml:"threshold"               json:"threshold"`
@@ -383,7 +383,7 @@ func (ss ServiceScale) IsVpaEnabled() bool {
 
 // applyModeDiscriminator populates the Mode field of each populated
 // AutoscaleMode slot from its parent field name. Called from ApplyDefaults
-// so that customer YAML (which does not write `mode:`) round-trips through
+// so that user YAML (which does not write `mode:`) round-trips through
 // to in-memory triggers with the discriminator set. Mode values are pinned
 // per V3 §0a Convention R2 F-NEW-2 to single-word lowercase strings.
 func (a *ServiceAutoscale) applyModeDiscriminator() {
@@ -1132,7 +1132,7 @@ type AWSPodIdentityOptions struct {
 // convention F-NEW-1; defaults applied at parse time when non-zero
 // behavior is desired.
 //
-// A customer who never sets any of these fields sees zero behavior
+// A user who never sets any of these fields sees zero behavior
 // change (BudgetSettings is the YAML manifest tier; rack-side
 // AppBudget is the runtime state derived from it).
 type BudgetSettings struct {

@@ -298,6 +298,20 @@ Groups:
           Convox Console. Accepts Prometheus duration syntax (e.g. &i 24h &i,
           &i 7d &i, &i 2h30m &i). Storage is emptyDir; longer retention requires more
           memory. Applies on next Disable→Enable cycle from the Convox Console.
+      - name: in_cluster_grafana_enable
+        default: "false"
+        type: boolean
+        description: Opt-in — enable the in-cluster Grafana sidecar bundled with
+          kube-prometheus-stack. When true the rack's GPU dashboards auto-import
+          via the sidecar's ConfigMap label selector. Default false keeps the
+          monitoring footprint unchanged for racks that do not need bundled Grafana.
+      - name: in_cluster_grafana_admin_password
+        default: ""
+        type: string
+        description: Admin password for the in-cluster Grafana sidecar (when
+          &i in_cluster_grafana_enable=true &i). Empty default lets the Helm chart
+          generate a random password stored in a Kubernetes Secret; retrieve it with
+          &i kubectl -n convox-monitoring get secret ... -o jsonpath=... | base64 -d &i.
       - name: keda_enable
         default: "false"
         type: boolean
@@ -664,4 +678,4 @@ Groups:
           Enables the rack-side cost accumulator that attributes estimated
           EC2 on-demand spend to each app and enforces per-app monthly
           budget caps configured via &i convox budget set &i. &l &l Off by
-          default — existing customers see no change until opted in.
+          default — existing users see no change until opted in.

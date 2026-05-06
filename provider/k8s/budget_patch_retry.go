@@ -14,12 +14,12 @@ import (
 )
 
 // patchWithRetryAttempts is the number of attempts (1 initial + 2 retries
-// per the spec §8.7 promise of 3-attempt exponential backoff).
+// for 3-attempt exponential backoff).
 const patchWithRetryAttempts = 3
 
 // patchWithRetryBackoffsForTest lists the sleeps applied after attempts
-// 1 and 2 (the third attempt is the last, no sleep follows). Per spec
-// §8.7 line 848: "1s, 4s, 16s exponential backoff". Two retries means we
+// 1 and 2 (the third attempt is the last, no sleep follows).
+// Backoff sequence: 1s, 4s, 16s exponential. Two retries means we
 // sleep once after attempt 1 and once after attempt 2; the third failure
 // surfaces. Tests override this to install zero-duration backoffs so
 // retry-classification assertions don't require real sleeps.

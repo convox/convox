@@ -2,6 +2,7 @@ package k8s_test
 
 import (
 	"context"
+	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"sort"
@@ -22,12 +23,20 @@ func sha256Hex(s string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
+// hmacSHA256Hex computes HMAC-SHA256(key, value) and returns the hex string.
+// Used by tests to compute the expected hash output for the new salted hashParamValue.
+func hmacSHA256Hex(key, value string) string {
+	mac := hmac.New(sha256.New, []byte(key))
+	mac.Write([]byte(value))
+	return hex.EncodeToString(mac.Sum(nil))
+}
+
 func TestRackParams(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		fc, ok := p.Cluster.(*fake.Clientset)
 		require.True(t, ok)
 
-		// Decision 8 post-rc4 shape: ConfigMap holds stubs for redacted
+		// ConfigMap holds stubs for redacted
 		// keys; the sidecar Secret holds the real plaintext that the
 		// Go consumer overlays before SHA-256 hashing.
 		cm := &ac.ConfigMap{
@@ -72,9 +81,9 @@ func TestRackParams(t *testing.T) {
 			"params3":             "test3",
 			"params4":             "test4",
 			"params5":             "test5",
-			"cidr":                sha256Hex("test6"),
-			"docker_hub_password": sha256Hex("secret-pw"),
-			"private_eks_pass":    sha256Hex("eks-secret"),
+			"cidr":                hmacSHA256Hex("uid1", "test6"),
+			"docker_hub_password": hmacSHA256Hex("uid1", "secret-pw"),
+			"private_eks_pass":    hmacSHA256Hex("uid1", "eks-secret"),
 		}, params)
 	})
 }
@@ -97,7 +106,7 @@ func TestRackParamsRedactsCredentials(t *testing.T) {
 		const dockerSecret = "mysecret123"
 		const eksSecret = "ekspass456"
 
-		// Decision 8 post-rc4 shape: ConfigMap stubs the redacted keys.
+		// ConfigMap stubs the redacted keys.
 		cm := &ac.ConfigMap{
 			ObjectMeta: am.ObjectMeta{
 				Namespace: p.Namespace,
@@ -130,8 +139,8 @@ func TestRackParamsRedactsCredentials(t *testing.T) {
 		params := p.RackParams()
 
 		// Credential params hashed, not plaintext.
-		require.Equal(t, sha256Hex(dockerSecret), params["docker_hub_password"])
-		require.Equal(t, sha256Hex(eksSecret), params["private_eks_pass"])
+		require.Equal(t, hmacSHA256Hex("uid1", dockerSecret), params["docker_hub_password"])
+		require.Equal(t, hmacSHA256Hex("uid1", eksSecret), params["private_eks_pass"])
 		require.NotEqual(t, dockerSecret, params["docker_hub_password"])
 		require.NotEqual(t, eksSecret, params["private_eks_pass"])
 
@@ -286,9 +295,9 @@ func TestRackParamsSecretAbsent_FallsBackToConfigMap(t *testing.T) {
 		// pre-D8 rack shape.
 
 		params := p.RackParams()
-		require.Equal(t, sha256Hex(dockerSecret), params["docker_hub_password"],
+		require.Equal(t, hmacSHA256Hex("uid1", dockerSecret), params["docker_hub_password"],
 			"pre-D8 rack: ConfigMap plaintext value must be hashed when Secret is absent")
-		require.Equal(t, sha256Hex(eksSecret), params["private_eks_pass"],
+		require.Equal(t, hmacSHA256Hex("uid1", eksSecret), params["private_eks_pass"],
 			"pre-D8 rack: ConfigMap plaintext value must be hashed when Secret is absent")
 		require.Equal(t, "ok", params["non_secret_param"],
 			"pre-D8 rack: non-redacted ConfigMap values must pass through plaintext")
@@ -379,4 +388,41 @@ func TestRedactedParamsAlphabeticalOrder(t *testing.T) {
 	sort.Strings(sorted)
 	assert.Equal(t, sorted, parts,
 		"redactedParams must be alphabetical for review hygiene + chain α6 ordering")
+}
+
+// TestHashParamValue_SaltedByNamespaceUID pins the S2 security invariant: two
+// Providers backed by namespaces with DIFFERENT UIDs must produce DIFFERENT
+// hashes for the same plaintext; a single Provider must produce the SAME hash
+// for the same plaintext on repeated calls (deterministic-per-rack).
+func TestHashParamValue_SaltedByNamespaceUID(t *testing.T) {
+	// Build two independent fake clientsets with different namespace UIDs.
+	fc1 := fake.NewSimpleClientset()
+	fc2 := fake.NewSimpleClientset()
+
+	ns1 := &ac.Namespace{ObjectMeta: am.ObjectMeta{Name: "rack-ns-a", UID: "uid-rack-a"}}
+	ns2 := &ac.Namespace{ObjectMeta: am.ObjectMeta{Name: "rack-ns-b", UID: "uid-rack-b"}}
+
+	_, err := fc1.CoreV1().Namespaces().Create(context.TODO(), ns1, am.CreateOptions{})
+	require.NoError(t, err)
+	_, err = fc2.CoreV1().Namespaces().Create(context.TODO(), ns2, am.CreateOptions{})
+	require.NoError(t, err)
+
+	p1 := &k8s.Provider{Cluster: fc1, Namespace: "rack-ns-a"}
+	p2 := &k8s.Provider{Cluster: fc2, Namespace: "rack-ns-b"}
+
+	const plaintext = "super-secret-credential"
+
+	hash1a := k8s.HashParamValueForTest(p1, plaintext)
+	hash1b := k8s.HashParamValueForTest(p1, plaintext) // repeat: must be same
+	hash2 := k8s.HashParamValueForTest(p2, plaintext)
+
+	// Same rack, same plaintext -> same hash (deterministic).
+	assert.Equal(t, hash1a, hash1b, "same rack same plaintext must produce same hash")
+
+	// Different rack -> different hash (salted by UID).
+	assert.NotEqual(t, hash1a, hash2, "different rack UIDs must produce different hashes for same plaintext")
+
+	// Neither hash must equal bare sha256 of the plaintext (no unsalted leakage).
+	assert.NotEqual(t, sha256Hex(plaintext), hash1a, "output must not be bare sha256")
+	assert.NotEqual(t, sha256Hex(plaintext), hash2, "output must not be bare sha256")
 }

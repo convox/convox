@@ -166,7 +166,7 @@ func FromEnv() (*Provider, error) {
 	ms := NewMetricScraperClient(kc, os.Getenv("METRICS_SCRAPER_HOST"))
 
 	// PROMETHEUS_URL is plumbed from the rack's prometheus_url directly via
-	// terraform/api/k8s/main.tf (no auto-resolution; customer-set or empty).
+	// terraform/api/k8s/main.tf (no auto-resolution; user-set or empty).
 	// Empty → NewPrometheusClient returns (nil, nil) and PromClient stays nil;
 	// every read site short-circuits. Bad URL → log and continue with nil client
 	// (mirrors MetricsClient fail-soft posture).
@@ -229,7 +229,7 @@ func FromEnv() (*Provider, error) {
 	// POSTs carry a Convox-Signature header. If set but invalid (typo,
 	// short key, weak entropy, mixed case), validate at boot and degrade
 	// to unsigned dispatch — crashing the api pod over a typo is hostile
-	// to customers. The structured WARN gives the operator an actionable
+	// to users. The structured WARN gives the operator an actionable
 	// pointer (regenerate with openssl rand -hex 32).
 	if rawKey := os.Getenv("WEBHOOK_SIGNING_KEY"); rawKey != "" {
 		if err := cxhmac.ValidateSigningKeys(rawKey); err != nil {

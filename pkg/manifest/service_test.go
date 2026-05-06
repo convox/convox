@@ -250,7 +250,7 @@ func TestServicePasswordNotInJSONViaNestedMarshal(t *testing.T) {
 	}
 }
 
-// TestManifestLoadImagePullSecrets exercises the real customer flow:
+// TestManifestLoadImagePullSecrets exercises the real user flow:
 // convox.yml BYTES → Manifest.Load() → field populated + Validate passes.
 func TestManifestLoadImagePullSecrets(t *testing.T) {
 	y := []byte(`services:

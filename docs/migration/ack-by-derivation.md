@@ -72,10 +72,9 @@ can continue ignoring the actor field.
 
 Pre-3.24.6 racks that have not been upgraded continue to emit
 `actor = "rack-password"`. Cross-rack receivers (Slack/Discord webhooks,
-external SIEMs) handling events from a mix of rack versions should plan to
-parse both shapes through the deprecation cycle. 3.25.0 will remove the
-fallback path; from 3.25.0 onward the `actor` field is always either an
-email or `system`.
+external SIEMs) handling events from a mix of rack versions should parse
+both shapes — the literal `"rack-password"` from older racks, and an email
+or `"system"` value from 3.24.6+ racks.
 
 ## See Also
 

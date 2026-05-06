@@ -407,7 +407,7 @@ func TestAppUpdateMissing(t *testing.T) {
 // effective Count={1,1}. Our K8s impl's two-form synthesis sees that
 // non-zero Count and emits Min=1/Max=1 — which is the correct,
 // truthful answer for "what does this service actually run as."
-// Customers querying the new endpoint see the resolved replica
+// Users querying the new endpoint see the resolved replica
 // bounds, not the unfilled YAML state.
 func TestAppManifestService_Found(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {

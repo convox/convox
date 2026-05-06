@@ -139,7 +139,7 @@ func (p *Provider) AppBudgetSet(app string, opts structs.AppBudgetOptions, ackBy
 		}
 		final = *cfg
 
-		// When the customer truly RAISES the monthly cap (new > prev)
+		// When the user truly RAISES the monthly cap (new > prev)
 		// AND the new cap is above current month-to-date spend AND the
 		// breaker is currently tripped, clear the breaker atomically
 		// with the config write. The 409 body's option (2) "raise the
@@ -163,7 +163,7 @@ func (p *Provider) AppBudgetSet(app string, opts structs.AppBudgetOptions, ackBy
 		//       coverage.)
 		//
 		// Edge case: cap raised to a value still <= current spend. The
-		// cap-raise persists but the breaker stays tripped (customer
+		// cap-raise persists but the breaker stays tripped (user
 		// hasn't actually solved the over-cap problem). At the next
 		// accumulator tick willFireCap evaluates against the new cap; if
 		// spend still >= new cap, the breaker stays tripped.
@@ -285,7 +285,7 @@ func (p *Provider) AppBudgetSet(app string, opts structs.AppBudgetOptions, ackBy
 			// pattern at budget_accumulator.go reset-during-armed (and
 			// the F-20 persist-then-emit family more generally).
 			if capRaiseArmedShutdownState != nil {
-				p.fireCancelledEventRich(app, &final, capRaiseShutdownStateBaseState, capRaiseArmedShutdownState, ackBy, "cap-raised", breakerClearedPrevCap, breakerClearedNewCap, "", breakerClearedAckAt)
+				p.fireCancelledEvent(app, &final, capRaiseShutdownStateBaseState, capRaiseArmedShutdownState, ackBy, "cap-raised", breakerClearedPrevCap, breakerClearedNewCap, "", breakerClearedAckAt)
 			}
 		}
 
@@ -419,6 +419,12 @@ func (p *Provider) appBudgetResetLocked(app string, ackBy string) error {
 
 	ackBy = sanitizeAckBy(ackBy)
 
+	// Capture a single stable timestamp for both the CircuitBreakerAckAt field
+	// and the fireCancelledEvent call so all audit fields agree on when the
+	// reset was requested. Using separate time.Now() calls could drift by
+	// milliseconds if the namespace update conflicts and loops.
+	now := time.Now().UTC()
+
 	var prevSpend, capUsd float64
 
 	for i := 0; i < budgetWriteConflictRetries; i++ {
@@ -445,7 +451,7 @@ func (p *Provider) appBudgetResetLocked(app string, ackBy string) error {
 		state.AlertFiredAtThreshold = time.Time{}
 		state.AlertFiredAtCap = time.Time{}
 		state.CircuitBreakerAckBy = ackBy
-		state.CircuitBreakerAckAt = time.Now().UTC()
+		state.CircuitBreakerAckAt = now
 
 		data, err := json.Marshal(state)
 		if err != nil {
@@ -492,7 +498,7 @@ func (p *Provider) appBudgetResetLocked(app string, ackBy string) error {
 			ctx := context.TODO()
 			derr := p.deleteBudgetShutdownStateAnnotation(ctx, app)
 			if derr == nil || ae.IsNotFound(derr) {
-				p.fireCancelledEventRich(app, cfg, state, shutdownState, ackBy, "reset-during-armed", 0, 0, "", time.Now().UTC())
+				p.fireCancelledEvent(app, cfg, state, shutdownState, ackBy, "reset-during-armed", 0, 0, "", now)
 			}
 		}
 		return nil
@@ -859,9 +865,9 @@ func (p *Provider) accumulateBudgetApp(ctx context.Context, app string, now time
 			}
 		}
 		if truncated > 0 {
-			// Surface the truncation as a customer-observable event AND a
+			// Surface the truncation as a user-observable event AND a
 			// log line. The event lands in `convox events list` so a
-			// customer who hits the cap learns that some services are
+			// user who hits the cap learns that some services are
 			// being dropped from this month's breakdown without needing
 			// API-server log access. The log line keeps the operational
 			// signal visible in rack logs for support diagnosis. Pin
@@ -1085,7 +1091,7 @@ func nodeInstanceType(n *v1.Node) string {
 // then falling back to the eks.amazonaws.com/capacityType annotation
 // (EKS ANG-managed nodes). Returns "" if neither signal is present so
 // the caller falls through to on-demand pricing — conservative under
-// uncertainty, charges the customer the higher rate when the node
+// uncertainty, charges the user the higher rate when the node
 // origin is unknown.
 //
 // Both signals are AWS-specific. On GCP / Azure / on-prem the labels
@@ -1223,7 +1229,7 @@ func maxInt64(a, b int64) int64 {
 // cost_tracking_enable=false, or env var unset), the breaker reader returns
 // nil unconditionally. This treats any persisted CircuitBreakerTripped
 // annotation as inert when the accumulator that would otherwise reset it is
-// not running. Without this gate, a customer who disables cost tracking
+// not running. Without this gate, a user who disables cost tracking
 // while a tripped breaker annotation is persisted on the namespace would be
 // permanently blocked from deploying with no recovery path.
 func (p *Provider) budgetCircuitBreakerTripped(app string) error {
@@ -1246,8 +1252,8 @@ func (p *Provider) budgetCircuitBreakerTripped(app string) error {
 	if cfg != nil {
 		capUsd = cfg.MonthlyCapUsd
 	}
-	// Per Set G v2 spec §10.10 — when the breaker is tripped the customer
-	// has THREE recovery paths, not one. Spell them all out so the customer
+	// When the breaker is tripped the user
+	// has THREE recovery paths, not one. Spell them all out so the user
 	// does not assume `budget reset` is the only option (a `cap raise` is
 	// often what they actually want when traffic legitimately grew).
 	// `auto-shutdown` carries the same 3-action message — services already
@@ -1256,7 +1262,7 @@ func (p *Provider) budgetCircuitBreakerTripped(app string) error {
 	// the 409 text is uniform; the variable was previously assigned only
 	// to satisfy "declared but not used" via `_ = atCapAction`.
 	// F-2 fix: include the app name in the `cap raise` hint so the
-	// customer can paste the recommendation verbatim. The ARMED banner
+	// user can paste the recommendation verbatim. The ARMED banner
 	// at pkg/cli/budget.go:180 already cites the same command with
 	// `<app>` populated; this keeps the two surfaces consistent.
 	return structs.ErrConflict(
@@ -1285,11 +1291,11 @@ func (p *Provider) costTrackingEnabled() bool {
 // never runs, so saving budget config produces zero enforcement: no
 // spend computed, no threshold crossings, no events, no auto-shutdown.
 // Replacing that silent no-op with a loud, actionable error preserves
-// the cap-enforcement contract — a customer-visible knob must either
+// the cap-enforcement contract — a user-visible knob must either
 // take effect or fail loudly.
 //
 // Recovery operations (AppBudgetClear, AppBudgetReset) are NOT gated;
-// customers must always be able to clear or reset state. PricingAdjustment
+// users must always be able to clear or reset state. PricingAdjustment
 // alone is also not gated — it is a pricing-model multiplier, not an
 // enforcement field.
 func (p *Provider) requireCostTrackingForBudget(opts structs.AppBudgetOptions) error {

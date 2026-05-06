@@ -234,7 +234,7 @@ func TestPriceTable_StructLiteral_Compatibility(t *testing.T) {
 // where two entries' OnDemand values are inadvertently transposed (e.g.,
 // t3.medium=$0.0832 and t3.large=$0.0416 — both > 0 so the StructLiteral
 // guard would pass, but within-family ordering violates the natural
-// invariant). Phase C R5 MINOR-5.
+// invariant).
 //
 // Bucketing: entries are grouped by (family, gpuCount) so families with
 // mixed-GPU SKUs (e.g. g4dn.12xlarge has 4 GPUs at $3.912 while

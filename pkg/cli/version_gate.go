@@ -43,7 +43,7 @@ func isRackVersionGated(err error) bool {
 //
 //	"<feature> requires rack version 3.24.6 or later"
 //
-// Customer-facing surface — every caller MUST use this exact form so
+// User-facing surface — every caller MUST use this exact form so
 // release notes and help text can refer to a single canonical phrasing.
 func wrapVersionGate(err error, feature string) error {
 	if !isRackVersionGated(err) {

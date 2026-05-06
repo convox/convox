@@ -4,3 +4,9 @@ services:
     command: nvidia-smi
     scale:
       gpu: 1
+
+# Uncomment to expose vLLM/Triton/SGLang /metrics for the GPU observability dashboard:
+#     annotations:
+#       prometheus.io/scrape: "true"
+#       prometheus.io/port: "8000"
+#       prometheus.io/path: "/metrics"

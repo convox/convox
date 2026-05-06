@@ -21,7 +21,7 @@ func contextFrom(c *stdapi.Context) context.Context {
 	// Cloud (console3) on every proxied request and consumed by the rack
 	// for namespace labeling, app-list scoping, service URL routing,
 	// build-env injection, and pod-env injection. Hard rename would break
-	// every Cloud-hosted customer.
+	// every Cloud-hosted user.
 	//
 	// RFC 6648 (2012) deprecates the `X-` prefix for new HTTP headers.
 	// Canonical going forward: `Convox-TID`. Both forms are accepted; the

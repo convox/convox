@@ -2,13 +2,21 @@ package k8s
 
 import (
 	"context"
+	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"strings"
+	"sync"
 
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// rackUIDByNamespace caches namespace UID lookups keyed by namespace name.
+// Kubernetes UIDs are immutable once set. Using sync.Map per namespace (not a
+// single global string) means multiple Providers in the same process (unit
+// tests, multi-rack CLI) get independent cached values.
+var rackUIDByNamespace sync.Map
 
 var (
 	skipParams = strings.Join([]string{
@@ -22,7 +30,7 @@ var (
 	// sensitive, but whose PRESENCE is informative for telemetry. Values are
 	// SHA-256-hashed before emission to metrics.convox.com — the receiver sees
 	// an opaque hex string per param, signaling set-vs-unset, key-rotation
-	// events (hash changes), and per-customer uniqueness without leaking the
+	// events (hash changes), and per-user uniqueness without leaking the
 	// plaintext. Maintain ALPHABETICAL ORDER for ease of review when adding
 	// new entries.
 	redactedParams = strings.Join([]string{
@@ -84,7 +92,7 @@ func (p *Provider) RackParams() map[string]interface{} {
 		}
 
 		if strings.Contains(redactedParams, k) {
-			v = hashParamValue(v)
+			v = p.hashParamValue(v)
 		}
 
 		toSync[k] = v
@@ -93,8 +101,37 @@ func (p *Provider) RackParams() map[string]interface{} {
 	return toSync
 }
 
-func hashParamValue(value string) string {
-	hasher := sha256.New()
-	hasher.Write([]byte(value))
-	return hex.EncodeToString(hasher.Sum(nil))
+// hashParamValue hashes the given plaintext credential value using HMAC-SHA256
+// keyed by the rack namespace UID. This ensures that two racks hashing the same
+// credential produce DIFFERENT ciphertext, preventing cross-rack correlation of
+// credential rotation events in the telemetry receiver.
+//
+// Fallback: if the namespace UID lookup fails (e.g. during tests with a fake
+// clientset that has no real UID), the HMAC key is derived from the rack name
+// with a stable prefix so the result remains deterministic-per-rack without
+// leaking the plaintext.
+func (p *Provider) hashParamValue(value string) string {
+	// Fast path: cached UID for this namespace.
+	if cached, ok := rackUIDByNamespace.Load(p.Namespace); ok {
+		mac := hmac.New(sha256.New, []byte(cached.(string)))
+		mac.Write([]byte(value))
+		return hex.EncodeToString(mac.Sum(nil))
+	}
+
+	// Slow path: fetch namespace to obtain its UID.
+	uid := "convox-telemetry-v1:" + p.Namespace // fallback
+	ns, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), p.Namespace, am.GetOptions{})
+	if err == nil && ns != nil && string(ns.UID) != "" {
+		uid = string(ns.UID)
+	}
+	// Store under namespace name so different Providers (different namespaces)
+	// get independent cached values. LoadOrStore is a no-op if another goroutine
+	// raced and stored first; we still use the just-computed uid for this call.
+	rackUIDByNamespace.LoadOrStore(p.Namespace, uid)
+
+	mac := hmac.New(sha256.New, []byte(uid))
+	mac.Write([]byte(value))
+	return hex.EncodeToString(mac.Sum(nil))
 }
+
+

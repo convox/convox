@@ -285,6 +285,16 @@ func (s *Server) AppBudgetSet(c *stdapi.Context) error {
 		return err
 	}
 
+	// Admin gate: setting a monthly cap, at-cap action, or pricing adjustment
+	// is a privileged operation. Threshold-only changes remain rw-gated via the
+	// default Authorize middleware. This mirrors the Console GraphQL admin check
+	// and closes the rack-direct path for non-admin callers.
+	if opts.MonthlyCapUsd != nil || opts.AtCapAction != nil || opts.PricingAdjustment != nil {
+		if !CanAdmin(c) {
+			return stdapi.Errorf(http.StatusForbidden, "AppBudgetSet: admin role required to set budget cap")
+		}
+	}
+
 	if err := s.provider(c).WithContext(contextFrom(c)).AppBudgetSet(app, opts, ackBy); err != nil {
 		return err
 	}
@@ -322,7 +332,7 @@ func (s *Server) AppBudgetReset(c *stdapi.Context) error {
 	// CanWrite (rw) — sufficient role for the routine ACTIVE→recover flow
 	// that GUI Reset buttons drive. CanAdmin is enforced ONLY when
 	// force_clear_cooldown=true. Pinned by R3 amendments § Set E (E.2 UX).
-	// Customer tooling parses the 403 body for migration guidance — the
+	// User tooling parses the 403 body for migration guidance — the
 	// "requires Admin role; current role is 'w'" substring is preserved.
 	//
 	// Both paths route to AppBudgetResetWithOptions so that plain reset

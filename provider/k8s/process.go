@@ -397,7 +397,7 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 	// server-side struct flag set only by BuildCreate at build.go:112.
 	// The flag has no `header:` / `flag:` tag so it is not wire-exposed;
 	// a client spoofing `service="build"` gets blocked because IsBuild
-	// stays false. Build pods themselves must pass to allow customers to
+	// stays false. Build pods themselves must pass to allow users to
 	// ship a fix when over cap.
 	if !opts.IsBuild {
 		if err := p.budgetCircuitBreakerTripped(app); err != nil {

@@ -486,13 +486,13 @@ variable "grafana_url" {
 # kube-prometheus-stack `grafana` sub-chart so the dashboards auto-import via
 # sidecar. Default false keeps the rack's monitoring footprint identical for
 # users who don't want bundled Grafana.
-variable "enable_in_cluster_grafana" {
+variable "in_cluster_grafana_enable" {
   type        = bool
   default     = false
   description = "Opt-in: enable the in-cluster Grafana sidecar bundled with kube-prometheus-stack. When true the rack's six GPU dashboards auto-import via the sidecar's ConfigMap label selector. Default false."
 }
 
-# Sensitive admin password for the in-cluster Grafana when enable_in_cluster_grafana
+# Sensitive admin password for the in-cluster Grafana when in_cluster_grafana_enable
 # is true. Empty default lets the chart generate a random password and store it
 # in a Kubernetes Secret; users running `convox rack params get` will see the
 # empty string but can recover the password via
@@ -501,7 +501,7 @@ variable "in_cluster_grafana_admin_password" {
   type        = string
   default     = ""
   sensitive   = true
-  description = "Admin password for the in-cluster Grafana sidecar (when enable_in_cluster_grafana=true). Empty default lets the Helm chart generate a random password and store it in a K8s Secret."
+  description = "Admin password for the in-cluster Grafana sidecar (when in_cluster_grafana_enable=true). Empty default lets the Helm chart generate a random password and store it in a K8s Secret."
 }
 
 variable "prometheus_gpu_metrics_retention" {

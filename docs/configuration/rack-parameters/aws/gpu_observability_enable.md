@@ -47,7 +47,7 @@ Disabling cleanly uninstalls the DCGM exporter Helm release (DaemonSet, Service,
 - This parameter is AWS-only. The Convox-supported NVIDIA GPU instance families (P3, P4, G4, G5) are EKS-only at this time.
 - Enabling this parameter without `nvidia_device_plugin_enable=true` is rejected at the CLI. The DCGM exporter cannot attribute GPU samples to specific pods without the device plugin's pod-resources socket.
 - The DCGM exporter pod schedules only on nodes carrying the `convox.io/gpu-vendor=nvidia` label, which the rack controller applies at runtime when a node's instance type is in the NVIDIA GPU list. If you have no GPU nodes in your cluster, the DaemonSet is created but no pods are scheduled — no error, just an empty DaemonSet.
-- Scraping requires a Prometheus chart deployed via the Convox Console (free or paid plan). Enable monitoring in the Console to install the chart that scrapes DCGM. Without Console monitoring, DCGM emits metrics with no scraper and customer dashboards stay empty. See [`prometheus_url`](/configuration/rack-parameters/aws/prometheus_url) to wire `convox ps` GPU enrichment to the Console-deployed Prometheus.
+- Scraping requires a Prometheus chart deployed via the Convox Console (free or paid plan). Enable monitoring in the Console to install the chart that scrapes DCGM. Without Console monitoring, DCGM emits metrics with no scraper and user dashboards stay empty. See [`prometheus_url`](/configuration/rack-parameters/aws/prometheus_url) to wire `convox ps` GPU enrichment to the Console-deployed Prometheus.
 - Resource footprint per GPU node: 100m CPU request / 200m CPU limit; 128Mi memory request / 512Mi memory limit. Modest overhead even on dense GPU instance types.
 
 ## Related Parameters

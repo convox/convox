@@ -927,7 +927,7 @@ func TestManifestStartupProbeGpu_GraceIntervalTimeoutUnchanged(t *testing.T) {
 }
 
 // TestManifestStartupProbeGpu_ExplicitFailureThresholdOverrides180 locks the
-// "user-supplied wins" semantic: if a customer sets failureThreshold explicitly
+// "user-supplied wins" semantic: if a user sets failureThreshold explicitly
 // on a GPU service, the 180 default must NOT clobber it.
 func TestManifestStartupProbeGpu_ExplicitFailureThresholdOverrides180(t *testing.T) {
 	data := []byte(`services:

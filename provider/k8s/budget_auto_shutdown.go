@@ -23,10 +23,10 @@ import (
 //
 //	:armed             — cap breach with auto-shutdown configured + no prior annotation
 //	:fired             — armed-window elapsed; PATCH services to 0 + persist shutdownAt
-//	:expired           — month rollover with manual recovery + no customer reset
+//	:expired           — month rollover with manual recovery + no user reset
 //	:flap-suppressed   — re-trip within 24h cooldown carry-over
 //	:noop              — eligibility check returns 0 services
-//	:restored (manual) — customer manually scaled all eligible services back up
+//	:restored (manual) — user manually scaled all eligible services back up
 //	:cancelled (cfg)   — manifestSha256 mismatch in armed window
 //	:restored (cfg)    — manifestSha256 mismatch post-shutdown
 //
@@ -81,7 +81,7 @@ func (p *Provider) reconcileAutoShutdown(ctx context.Context, app string, cfg *s
 		_ = p.deleteNamespaceAnnotation(ctx, app, structs.BudgetShutdownStateCorruptFiredAtAnnotation)
 	}
 
-	// F8 fix: if customer scaled services back up DURING armed window
+	// If user scaled services back up DURING armed window
 	// (no PATCH yet applied) — fire :cancelled reason="manual-detected"
 	// and GC the orphan annotation so next cap re-breach re-arms cleanly.
 	// R7.5 F-3 fix: GC annotation BEFORE emit (matches F-20 dedup-write-
@@ -95,7 +95,7 @@ func (p *Provider) reconcileAutoShutdown(ctx context.Context, app string, cfg *s
 		if p.armedWindowManuallyScaledUp(ctx, app, shutdownState.Services) {
 			derr := p.deleteBudgetShutdownStateAnnotation(ctx, app)
 			if derr == nil || ae.IsNotFound(derr) {
-				p.fireCancelledEventRich(app, cfg, baseState, shutdownState, "system", "manual-detected", 0, 0, "", now)
+				p.fireCancelledEvent(app, cfg, baseState, shutdownState, "system", "manual-detected", 0, 0, "", now)
 			}
 			return
 		}
@@ -121,7 +121,7 @@ func (p *Provider) reconcileAutoShutdown(ctx context.Context, app string, cfg *s
 
 // reconcileAutoShutdownPreManifest runs the lifecycle branches that do not
 // require a release manifest — :expired (month rollover with manual mode)
-// and :restored reason="manual-detected" (customer manually scaled
+// and :restored reason="manual-detected" (user manually scaled
 // everything back up). Returns true when one of these branches handled
 // the tick (caller should not proceed to the manifest-bearing branches).
 // Split out so end-to-end tests can drive these branches without
@@ -235,14 +235,14 @@ func (p *Provider) reconcileAutoShutdownWithManifest(ctx context.Context, app st
 					if reason == "cap-raised" && cfg != nil && cfg.LastCapMutationBy != "" {
 						actor = cfg.LastCapMutationBy
 					}
-					p.fireCancelledEventRich(app, cfg, baseState, shutdownState, actor, reason, prevCap, newCap, newAction, now)
+					p.fireCancelledEvent(app, cfg, baseState, shutdownState, actor, reason, prevCap, newCap, newAction, now)
 				}
 			}
 			// Drop the armed annotation since config no longer matches.
 			_ = p.deleteBudgetShutdownStateAnnotation(ctx, app)
 			return
 		}
-		// post-shutdown :restored reason=config-changed (customer-side cleanup)
+		// post-shutdown :restored reason=config-changed (user-side cleanup)
 		if shutdownState.RestoredAt == nil {
 			shutdownState.RestoredAt = ptrTimePackage(now)
 			if shutdownState.RestoredNotificationFiredAt == nil {
@@ -339,7 +339,7 @@ func (p *Provider) reconcileAutoShutdownWithManifest(ctx context.Context, app st
 		armedNow := now
 		shutdownTickID := generateShutdownTickID(armedNow)
 		// F-18 fix: persist NotifyBeforeMinutes from the manifest so the
-		// CLI banner + STATUS countdown reflect the customer-configured
+		// CLI banner + STATUS countdown reflect the user-configured
 		// value rather than the 30-minute default. Falls back to default
 		// when plan.notifyBeforeMinutes <= 0.
 		notifyMin := plan.notifyBeforeMinutes
@@ -473,7 +473,7 @@ func (p *Provider) reconcileAutoShutdownWithManifest(ctx context.Context, app st
 }
 
 // allServicesScaledUp returns true when every saved service shows
-// Replicas > 0 in the cluster (customer manually restored). Used by the
+// Replicas > 0 in the cluster (user manually restored). Used by the
 // manual-recovery detection path. Best-effort: a missing deployment counts
 // as "scaled up" because there's nothing for us to restore.
 func (p *Provider) allServicesScaledUp(ctx context.Context, app string, svcs []structs.AppBudgetShutdownStateService) bool {
@@ -496,7 +496,7 @@ func (p *Provider) allServicesScaledUp(ctx context.Context, app string, svcs []s
 	return true
 }
 
-// armedWindowManuallyScaledUp returns true when the customer has scaled
+// armedWindowManuallyScaledUp returns true when the user has scaled
 // services back up DURING the armed window beyond the original snapshot
 // (before any PATCH to 0 has applied). Distinct from allServicesScaledUp
 // which checks post-fired recovery. F8 fix.
@@ -516,7 +516,7 @@ func (p *Provider) armedWindowManuallyScaledUp(ctx context.Context, app string, 
 		if dep.Spec.Replicas == nil {
 			return false
 		}
-		// Customer scaled UP from the snapshot value — explicit intervention.
+		// User scaled UP from the snapshot value — explicit intervention.
 		if int(*dep.Spec.Replicas) > svcs[i].OriginalScale.Replicas {
 			return true
 		}
@@ -705,7 +705,7 @@ func (p *Provider) fireFiredEvent(app string, cfg *structs.AppBudget, baseState 
 		app, state.ShutdownTickId, len(succeeded))
 }
 
-// fireExpiredEvent emits :expired per spec §8.5 (manual-mode month rollover, customer absent).
+// fireExpiredEvent emits :expired on manual-mode month rollover when no user reset occurred.
 func (p *Provider) fireExpiredEvent(app string, cfg *structs.AppBudget, baseState *structs.AppBudgetState, state *structs.AppBudgetShutdownState, now time.Time) {
 	// F4 fix: cap_usd from cfg (new month's cap). spend_usd per spec §8.5
 	// line 809 is "0.00" (new month resets); final_spend_usd carries the
@@ -781,11 +781,11 @@ func (p *Provider) fireNoopEvent(app string, cfg *structs.AppBudget, baseState *
 	fmt.Printf("ns=auto_shutdown at=noop app=%s reason=%s\n", app, reason)
 }
 
-// fireCancelledEventRich emits :cancelled with a reason + the full §8.4
+// fireCancelledEvent emits :cancelled with a reason + the full §8.4
 // payload field set per spec. F11 fix: armed_at, expected_shutdown_at,
 // prev_cap_usd, new_cap_usd (cap-raised case), eligible_services,
 // new_action (config-changed case). Plus the universal payload.
-func (p *Provider) fireCancelledEventRich(app string, cfg *structs.AppBudget, baseState *structs.AppBudgetState, state *structs.AppBudgetShutdownState, actor string, reason string, prevCapUsd, newCapUsd float64, newAction string, now time.Time) {
+func (p *Provider) fireCancelledEvent(app string, cfg *structs.AppBudget, baseState *structs.AppBudgetState, state *structs.AppBudgetShutdownState, actor string, reason string, prevCapUsd, newCapUsd float64, newAction string, now time.Time) {
 	// F4 fix: cap_usd from cfg (or new cap if cap-raised), spend_usd from baseState.
 	capValue := capUsdFor(cfg)
 	if reason == "cap-raised" && newCapUsd > 0 {
@@ -901,12 +901,12 @@ func (p *Provider) fireFailedEventStateCorrupt(app string, cfg *structs.AppBudge
 //
 //   - "no-eligible-services" — manifest has 0 services OR every service was
 //     filtered for a STATIC-config reason (in neverAutoShutdown / agent
-//     DaemonSet). Customer's webhook receiver should treat this as a
+//     DaemonSet). The webhook receiver should treat this as a
 //     persistent configuration outcome.
 //   - "runtime-drift"        — manifest has services but at least one was
 //     filtered for a RUNTIME reason (Deployment not yet created on first
 //     deploy, etc.). The cluster state has not converged on the manifest yet;
-//     customer should expect the :armed firing on a later tick.
+//     the :armed event will fire on a later tick.
 //   - "external-edit-detected" — branch handled by the caller before this
 //     function (plan.ordered > 0 but all replicas == 0). Documented here for
 //     completeness; this function returns one of the first two for the

@@ -555,3 +555,39 @@ func TestValidateRackParams_GPUObservability_RequiresDevicePlugin(t *testing.T) 
 		}
 	})
 }
+
+func TestValidateAndMutateParams_PrometheusUrl_SSRF(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		wantErr bool
+		errMsg  string
+	}{
+		{"public dns http accepted",    "http://prom.example.com:9090", false, ""},
+		{"public dns https accepted",   "https://prom.example.com",     false, ""},
+		{"empty value accepted (clear)", "",                            false, ""},
+		{"file:// rejected",            "file:///etc/passwd",           true,  "only http://"},
+		{"gopher:// rejected",          "gopher://x",                   true,  "only http://"},
+		{"link-local 169.254 rejected", "https://169.254.169.254/",     true,  "private/loopback"},
+		{"private 10.x rejected",       "http://10.0.0.1",              true,  "private/loopback"},
+		{"private 192.168 rejected",    "http://192.168.1.1",           true,  "private/loopback"},
+		{"loopback localhost rejected",  "http://localhost",             true,  "private/loopback"},
+		{"loopback 127.0.0.1 rejected", "http://127.0.0.1",             true,  "private/loopback"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := map[string]string{"prometheus_url": tt.value}
+			// Use a V3-rack context (empty current params + known aws provider).
+			err := validateAndMutateParams(params, "aws", map[string]string{}, false)
+			if tt.wantErr && err == nil {
+				t.Fatalf("expected error for %q, got nil", tt.value)
+			}
+			if !tt.wantErr && err != nil {
+				t.Fatalf("unexpected error for %q: %v", tt.value, err)
+			}
+			if tt.wantErr && tt.errMsg != "" && !strings.Contains(err.Error(), tt.errMsg) {
+				t.Errorf("error %q should contain %q", err.Error(), tt.errMsg)
+			}
+		})
+	}
+}

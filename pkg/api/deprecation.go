@@ -28,7 +28,7 @@ func deprecationSunsetDate() string {
 //     "unknown" if empty.
 //
 //  2. If the request body has a non-empty ack_by form param, USE THAT as
-//     the persisted actor. This is the customer-truthfulness override
+//     the persisted actor. This is the user-truthfulness override
 //     that Console relies on today (no per-user JWT plumbing — every
 //     basic-auth caller is "rack-password" without this override).
 //
@@ -63,9 +63,9 @@ func deprecationSunsetDate() string {
 // (3.24.5 and below, which lack the `Authorization: Bearer` accept path)
 // remain audit-truthful through a long mixed-version window. Dropping
 // the form-param requires a coordinated 3.25.0+ rack-side Bearer accept
-// path AND a multi-year Console3 dual-path send window. See the spec at
-// gpu-ai-inference-vertical/phase-i-post-rc4/phase-b/items/item-04-actor-resolution-verify.md
-// for the full deferred-3.25.0 enumeration. The Sunset header date
+// path AND a multi-year Console3 dual-path send window; dropping it requires
+// coordinated 3.25.0+ rack-side Bearer accept AND a multi-year Console3
+// dual-path send period. The Sunset header date
 // emitted below is a courtesy hint per RFC 8594; it is not a binding
 // contract and may be extended or removed in a future release.
 //
@@ -104,7 +104,7 @@ func resolveAckByOverride(c *stdapi.Context, app string) string {
 // sends ack_by via x-www-form-urlencoded body on DELETE for the
 // AppBudgetClear endpoint; without this manual parse, c.Value("ack_by")
 // returns "" on DELETE and the override is silently dropped, defeating
-// the customer-truthfulness contract.
+// the user-truthfulness contract.
 //
 // Idempotent: parses at most once per request (gated on r.PostForm ==
 // nil). Body is re-buffered into r.Body so any downstream consumer that

@@ -39,7 +39,7 @@ type capStatus struct {
 	// auto-shutdown :fired (per Set G v2 spec §16.3 + corrective scope).
 	// Populated only when an active shutdown-state annotation has ArmedAt
 	// set and ShutdownAt empty. -1 means "not currently armed". Values < 1
-	// when armed clamp to 1m (the customer cannot see "armed-0m" — that
+	// when armed clamp to 1m (the user cannot see "armed-0m" — that
 	// transitions to "fired" before the next render).
 	ArmedCountdownMinutes int
 }
@@ -47,7 +47,7 @@ type capStatus struct {
 // budgetCapStatus fetches the app's budget config + state and a service list,
 // returning a capStatus suitable for decoration. Errors are logged to stderr
 // (ns=cli_budget) and swallowed — a budget-API hiccup must never make
-// `convox ps` worse for the customer.
+// `convox ps` worse for the user.
 func budgetCapStatus(rack sdk.Interface, appName string, stderr io.Writer) (capStatus, error) {
 	cs, ok := budgetCapStatusBase(rack, appName, stderr)
 	if !ok {
@@ -87,7 +87,7 @@ func budgetCapStatusBase(rack sdk.Interface, appName string, stderr io.Writer) (
 		return capStatus{}, false
 	}
 	// Surface only when AtCapAction is one of the cap-enforcing values.
-	// alert-only does NOT surface — the customer asked us not to enforce.
+	// alert-only does NOT surface — the user asked us not to enforce.
 	// F-8 fix: use the canonical constant from pkg/structs so any future
 	// rename of the at-cap-action value lands here automatically.
 	cs := capStatus{
@@ -111,7 +111,7 @@ func budgetCapStatusBase(rack sdk.Interface, appName string, stderr io.Writer) (
 		if shutdownState.ArmedAt != nil && !shutdownState.ArmedAt.IsZero() &&
 			(shutdownState.ShutdownAt == nil || shutdownState.ShutdownAt.IsZero()) {
 			// F-18 fix: read NotifyBeforeMinutes from the persisted state
-			// so the STATUS countdown reflects the customer-configured
+			// so the STATUS countdown reflects the user-configured
 			// notify window. Older-rack state without the field falls
 			// back to the 30-minute default.
 			notifyMin := shutdownState.NotifyBeforeMinutes
@@ -198,7 +198,7 @@ func decorateStatusForBudgetCap(podStatus, serviceName string, cs capStatus) str
 //
 // KEDA presence wins over auto-shutdown when NOT armed (the bypass is the
 // more surprising value); armed wins over both because the imminent scale-to-0
-// is the most important thing the customer must see.
+// is the most important thing the user must see.
 //
 // STATUS column tokens are formally pinned by Set G v2 spec §16.4 "STATUS
 // token formal enumeration" (MF-9 amendment). The four tokens are stable
@@ -212,7 +212,7 @@ func decorateStatusForBudgetCap(podStatus, serviceName string, cs capStatus) str
 //
 // KEDA presence wins over auto-shutdown when NOT armed because the bypass is
 // the more surprising value; armed wins over both because the imminent
-// scale-to-0 is the most important thing the customer must see.
+// scale-to-0 is the most important thing the user must see.
 func capSubStateToken(serviceName string, cs capStatus) string {
 	switch {
 	case cs.AutoShutdown && cs.ArmedCountdownMinutes > 0:

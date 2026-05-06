@@ -36,7 +36,7 @@ Updating parameters... OK
 Disabling stops the cost accumulator on the next rack restart. Existing budget-state annotations on each app are left intact (no data destruction); they simply stop receiving new samples until the parameter is re-enabled.
 
 ## Additional Information
-- This parameter is currently AWS-only. GCP, Azure, DigitalOcean, and Equinix Metal racks ship parallel cost-tracking backends in subsequent releases.
+- This parameter is currently AWS-only.
 - The cost accumulator runs inside the rack control plane, not as a sidecar — sampling cadence is bounded by the rack's existing resource budget. There is no additional CPU or memory allocation introduced by enabling this parameter.
 - The pricing table is updated per Convox release. Pin a custom multiplier (e.g., to model your AWS Enterprise Discount Program) via the per-app `pricing-adjustment` budget option (`convox budget set --pricing-adjustment 0.7 <app>`).
 - Spot capacity-type discount is applied automatically (a default factor of `0.30`) when the underlying NodePool is configured for spot. Per-instance overrides are configurable via the rack's pricing table.

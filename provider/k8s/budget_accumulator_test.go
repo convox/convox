@@ -436,10 +436,10 @@ func TestBudgetAccumulatorMonthRollover(t *testing.T) {
 // Cap raise while tripped must not auto-clear CircuitBreakerTripped. Only
 // an explicit AppBudgetReset does that.
 // TestBudgetAccumulatorCapRaiseClearsBreaker_WhenNewCapAboveSpend — when
-// the customer raises the monthly cap to a value above current
+// the user raises the monthly cap to a value above current
 // month-to-date spend, AND the breaker is currently tripped,
 // AppBudgetSet clears the breaker atomically with the config write. The
-// customer's mental model: "I raised my cap, deploys should work"
+// user's mental model: "I raised my cap, deploys should work"
 // becomes truthful. Cap-raise IS the explicit acknowledgment, and the
 // 409 body promises "raise the cap" as a recovery path.
 func TestBudgetAccumulatorCapRaiseClearsBreaker_WhenNewCapAboveSpend(t *testing.T) {
@@ -893,7 +893,7 @@ func TestBudgetAccumulator_NonRunningPodSkipped(t *testing.T) {
 // B.6: Breaker reader gate on cost_tracking_enable
 // ----------------------------------------------------------------------------
 //
-// budgetCircuitBreakerTripped is gated on COST_TRACKING_ENABLE so a customer
+// budgetCircuitBreakerTripped is gated on COST_TRACKING_ENABLE so a user
 // who turns off cost tracking with a stale tripped breaker annotation
 // persisted on the namespace is not permanently blocked from deploying.
 // When the env var is absent or "false", the breaker reader returns nil
@@ -906,7 +906,7 @@ func TestBudgetAccumulator_NonRunningPodSkipped(t *testing.T) {
 // TestBreakerReader_CostTrackingEnabledFalse_ReturnsFalse_StaleAnnotationIgnored
 // is the R3-mandated regression guard. With env unset (the typical state on
 // a rack with cost_tracking_enable=false), a tripped CircuitBreakerTripped
-// annotation must NOT block ReleasePromote — otherwise the customer is
+// annotation must NOT block ReleasePromote — otherwise the user is
 // permanently stuck with no recovery path because the accumulator that
 // would otherwise reset the breaker is not running.
 func TestBreakerReader_CostTrackingEnabledFalse_ReturnsFalse_StaleAnnotationIgnored(t *testing.T) {
@@ -1231,7 +1231,7 @@ func TestBudgetCircuitBreaker_CostTrackingDisabled_StaleAnnotationIgnored(t *tes
 // CoreV1().Namespaces().Get/Update RPCs. A graceful api-pod shutdown
 // (SIGTERM during a rack update) cancels in-flight namespace mutations
 // cleanly instead of orphaning the goroutine on the client-go default
-// timeout. Customer-API entry points (AppBudgetGet/Set/Clear/Reset and
+// timeout. User-API entry points (AppBudgetGet/Set/Clear/Reset and
 // AppCost) and the breaker reader retain context.TODO() for now -- they
 // are HTTP-driven and stdapi handles request-scoped shutdown elsewhere.
 //
@@ -1787,7 +1787,7 @@ func TestAutoShutdown_AppBudgetReset_ClearsExistingBreakerAndStateAnnotation(t *
 // TestCancelled_ResetDuringArmed_ActorIsJwtDerived — F-3 fix (catalog F-3).
 // Spec §8.4 line 777 mandates JWT-derived actor for the
 // reset-during-armed sub-case. Verifies the actor parameter threads
-// through fireCancelledEventRich rather than the previous always-"system"
+// through fireCancelledEvent rather than the previous always-"system"
 // hardcode. The other accumulator-detected sub-cases (manual-detected,
 // cap-raised, config-changed) keep "system" intentionally.
 func TestCancelled_ResetDuringArmed_ActorIsJwtDerived(t *testing.T) {
@@ -1879,10 +1879,10 @@ func TestCancelled_ResetDuringArmed_ActorIsJwtDerived(t *testing.T) {
 }
 
 // TestBudgetAccumulatorCapRaiseStaysTripped_WhenNewCapBelowSpend — when
-// the customer raises the cap to a value still at or below current
+// the user raises the cap to a value still at or below current
 // month-to-date spend, the cap-raise persists (config update accepted)
-// but the breaker stays tripped (customer hasn't actually solved the
-// over-cap problem; deploys still blocked). Customer must either raise
+// but the breaker stays tripped (user hasn't actually solved the
+// over-cap problem; deploys still blocked). User must either raise
 // more or reset.
 func TestBudgetAccumulatorCapRaiseStaysTripped_WhenNewCapBelowSpend(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
@@ -1970,12 +1970,12 @@ func TestBudgetAccumulatorPartialUpdate_DoesNotClearBreaker_WhenNoCapChange(t *t
 }
 
 // TestBudgetAccumulatorCapNoOpSet_DoesNotClearBreaker — gate guard for
-// the "cap-set with the same value" case. Customer at cap=$500 spend=$50
+// the "cap-set with the same value" case. User at cap=$500 spend=$50
 // with breaker tripped (stuck from a prior cycle) calls AppBudgetSet
 // with the same cap. Without `final > prev`, the gate would fire and
 // the audit event would record `prev_cap=500, new_cap=500,
 // reason=cap-raised` — misleading. The tightened gate keeps the
-// breaker tripped (no actual cap-raise occurred). Customer must
+// breaker tripped (no actual cap-raise occurred). User must
 // explicitly reset.
 func TestBudgetAccumulatorCapNoOpSet_DoesNotClearBreaker(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
@@ -2015,7 +2015,7 @@ func TestBudgetAccumulatorCapNoOpSet_DoesNotClearBreaker(t *testing.T) {
 // explicit cap-raise should auto-unblock. Without `final > prev`, a
 // cap drop from $1000 to $200 (with spend=$50, breaker stuck-tripped
 // from prior cycle) would clear the breaker. The tightened gate
-// preserves the customer's explicit-ack contract: customer must run
+// preserves the user's explicit-ack contract: user must run
 // `convox budget reset` to clear, since they DECREASED the cap.
 func TestBudgetAccumulatorCapLowered_DoesNotClearBreaker(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
@@ -2139,7 +2139,7 @@ func TestBudgetAccumulatorCapRaise_EmitsBreakerClearedEvent_WithCapRaisedReason(
 		// N-1 negative pin: a not-armed cap-raise (no
 		// BudgetShutdownStateAnnotation, ArmedAt zero) MUST NOT emit a
 		// :cancelled event. The gate at provider/k8s/budget_accumulator.go
-		// (capRaiseArmedShutdownState != nil check before fireCancelledEventRich)
+		// (capRaiseArmedShutdownState != nil check before fireCancelledEvent)
 		// is the production guard. This assertion pins the absence so a
 		// future regression that drops the gate and unconditionally fires
 		// :cancelled on every cap-raise breaker-clear would fail CI here.
@@ -2319,9 +2319,9 @@ func TestAppBudgetSet_CostTrackingDisabled_RejectsAtCapActionOnly(t *testing.T) 
 func TestAppBudgetSet_CostTrackingDisabled_PricingAdjustmentOnlyAllowed(t *testing.T) {
 	// PricingAdjustment is not enforcement-bearing — it's a multiplier
 	// for the displayed pricing model. Must succeed even when cost
-	// tracking is later disabled, so customers can rebalance pricing
+	// tracking is later disabled, so users can rebalance pricing
 	// estimates without re-enabling the accumulator. Realistic scenario:
-	// budget was set when cost-tracking was enabled, customer disabled it
+	// budget was set when cost-tracking was enabled, user disabled it
 	// later, and now wants to update only the pricing adjustment.
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
@@ -2352,7 +2352,7 @@ func TestAppBudgetClear_CostTrackingDisabled_StillSucceeds(t *testing.T) {
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 
 		// Recovery operations must always work, even when cost tracking
-		// is disabled. Otherwise customers cannot clean up after a rack
+		// is disabled. Otherwise users cannot clean up after a rack
 		// downgrade.
 		require.NoError(t, p.AppBudgetClear("app1", "test"))
 	})

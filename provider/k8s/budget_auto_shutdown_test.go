@@ -114,13 +114,12 @@ func buildAutoShutdownManifest(notifyBeforeMin int) *manifest.Manifest {
 // Tick 2: now > armedAt + notifyBeforeMinutes → :fired; Deployment
 // replicas patched to 0; shutdownAt persisted.
 //
-// Tick 3: customer manually scales the service back up; reconciler
+// Tick 3: user manually scales the service back up; reconciler
 // detects manual recovery → :restored reason="manual-detected" + 24h
 // flap-suppressed-until carry-over written.
 //
-// This is the corrective Wave 8D advisory A3 fix — provides behavioral
-// coverage of the central reconcile dispatch (was previously only
-// covered by helper-level tests + grep verification).
+// Provides behavioral coverage of the central reconcile dispatch
+// (was previously only covered by helper-level tests + grep verification).
 func TestReconcileAutoShutdown_FullLifecycle_ArmedFiredRestored(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
@@ -215,7 +214,7 @@ func TestReconcileAutoShutdown_FullLifecycle_ArmedFiredRestored(t *testing.T) {
 		require.NotNil(t, firedState.ShutdownAt, "ShutdownAt must be persisted after :fired")
 		require.NotNil(t, firedState.FiredNotificationFiredAt)
 
-		// Tick 3: customer manually scales web back to 5 replicas →
+		// Tick 3: user manually scales web back to 5 replicas →
 		// reconciler observes manual recovery → :restored.
 		five := int32(5)
 		dep2.Spec.Replicas = &five
@@ -251,10 +250,9 @@ func TestReconcileAutoShutdown_FullLifecycle_ArmedFiredRestored(t *testing.T) {
 //
 //   - manifest specifies recoveryMode: manual
 //   - shutdown previously :fired in month N
-//   - now is in month N+1 (rollover) WITHOUT a customer reset
+//   - now is in month N+1 (rollover) WITHOUT a user reset
 //
-// This test is the regression guard for advisory A1 (corrective Wave
-// 8D): the original code compared `startOfMonth(now)` against the
+// The original code compared `startOfMonth(now)` against the
 // budget-state's MonthStart, which the accumulator had already reset to
 // startOfMonth(now) BEFORE reconcileAutoShutdown ran — so the comparison
 // was always false and :expired never fired. The fix compares against
@@ -270,7 +268,7 @@ func TestReconcileAutoShutdown_FiresExpiredOnMonthRollover(t *testing.T) {
 		k8s.SetWebhooksForTest(p, []string{cap.server.URL})
 
 		// Pre-write a fired shutdown-state from March 28 (recoveryMode:
-		// manual; no customer reset; no expiredAt yet).
+		// manual; no user reset; no expiredAt yet).
 		armed := time.Date(2026, 3, 28, 11, 30, 0, 0, time.UTC)
 		shut := time.Date(2026, 3, 28, 12, 0, 0, 0, time.UTC)
 		state := &structs.AppBudgetShutdownState{
@@ -317,7 +315,7 @@ func TestReconcileAutoShutdown_FiresExpiredOnMonthRollover(t *testing.T) {
 		cap.drain()
 
 		expiredEvts := cap.findActions(":expired")
-		require.Len(t, expiredEvts, 1, "exactly one :expired event must fire on month rollover with recoveryMode=manual; advisory A1 regression guard")
+		require.Len(t, expiredEvts, 1, "exactly one :expired event must fire on month rollover with recoveryMode=manual")
 		ev := expiredEvts[0]
 		assert.Equal(t, "app1", ev.Data["app"])
 		assert.Equal(t, "manual", ev.Data["recovery_mode"])
@@ -483,7 +481,7 @@ func TestReconcileAutoShutdown_NoopReason_ExternalEditDetected(t *testing.T) {
 		assert.Empty(t, armedEvts, ":armed must NOT fire when external edit is detected")
 
 		// No annotation must be written for the external-edit branch
-		// (the customer's hand-recovery is the source of truth — we
+		// (the user's hand-recovery is the source of truth — we
 		// observe-only and report).
 		ns, err := kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
 		require.NoError(t, err)
@@ -493,11 +491,11 @@ func TestReconcileAutoShutdown_NoopReason_ExternalEditDetected(t *testing.T) {
 }
 
 // =================================================================
-// Phase γ Round 1.5 corrective patch — F1-F13b regression tests.
+// F1-F13 regression tests.
 // =================================================================
 
 // TestReconcileAutoShutdown_CancelledResetDuringArmed_FiresCorrectReason
-// (F1 fix). Customer runs `convox budget reset` during the armed window.
+// User runs `convox budget reset` during the armed window.
 // AppBudgetReset must fire :cancelled reason="reset-during-armed" and
 // GC the orphan annotation.
 func TestReconcileAutoShutdown_CancelledResetDuringArmed_FiresCorrectReason(t *testing.T) {
@@ -556,7 +554,7 @@ func TestReconcileAutoShutdown_CancelledResetDuringArmed_FiresCorrectReason(t *t
 }
 
 // TestReconcileAutoShutdown_CancelledCapRaised_DistinctFromConfigChanged
-// (F2 fix). Customer raises cap during armed window; reason must be
+// User raises cap during armed window; reason must be
 // "cap-raised" with prev_cap_usd / new_cap_usd populated, NOT
 // "config-changed".
 func TestReconcileAutoShutdown_CancelledCapRaised_DistinctFromConfigChanged(t *testing.T) {
@@ -655,7 +653,7 @@ func TestCancelled_CapRaised_ActorIsJwtDerived(t *testing.T) {
 			ArmedNotificationFiredAt: &armed,
 		}
 		require.NoError(t, k8s.WriteBudgetShutdownStateAnnotationForTest(p, "app1", state))
-		// LastCapMutationBy populated as if customer just raised the cap.
+		// LastCapMutationBy populated as if user just raised the cap.
 		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
 			MonthlyCapUsd: 200, AlertThresholdPercent: 80,
 			AtCapAction: structs.BudgetAtCapActionAutoShutdown, PricingAdjustment: 1,
@@ -819,7 +817,7 @@ func TestCancelled_ConfigChanged_ActorStaysSystem(t *testing.T) {
 
 // TestReconcileAutoShutdown_CancelledConfigChanged_FiresWithNewAction
 // (F-A04-1 fix). Mirror of TestReconcileAutoShutdown_CancelledCapRaised_*
-// for the config-changed sub-case. Customer keeps cap unchanged AND
+// for the config-changed sub-case. User keeps cap unchanged AND
 // at_cap_action stays auto-shutdown (else the accumulator's early
 // return at budget_auto_shutdown.go:38 skips the tick entirely), but
 // the manifest SHA recomputes to a different value (e.g. service rename
@@ -897,7 +895,7 @@ func TestReconcileAutoShutdown_CancelledConfigChanged_FiresWithNewAction(t *test
 		assert.Equal(t, "config-changed", ev.Data["cancel_reason"],
 			"manifest-mismatch without cap-raise must classify as 'config-changed'")
 		// new_action carries the current cfg.AtCapAction value per spec §8.4.
-		// fireCancelledEventRich populates it via cfg.AtCapAction at the
+		// fireCancelledEvent populates it via cfg.AtCapAction at the
 		// drift-detect call site (provider/k8s/budget_auto_shutdown.go:225-226).
 		assert.Equal(t, structs.BudgetAtCapActionAutoShutdown, ev.Data["new_action"],
 			"new_action must populate for config-changed and equal cfg.AtCapAction")
@@ -1199,7 +1197,7 @@ func TestFiredPayload_HasSnapshotAnnotationAndRecoveryCommand(t *testing.T) {
 }
 
 // TestArmedWindowManualCancel_GCsAnnotation_NoImmediateFireOnRebreath
-// (F8 fix). Customer scales back up during armed window → :cancelled
+// User scales back up during armed window → :cancelled
 // reason="manual-detected" + annotation GC'd. Next cap re-breach
 // re-arms cleanly with :armed (no immediate :fired).
 func TestArmedWindowManualCancel_GCsAnnotation_NoImmediateFireOnRebreath(t *testing.T) {
@@ -1213,7 +1211,7 @@ func TestArmedWindowManualCancel_GCsAnnotation_NoImmediateFireOnRebreath(t *test
 		k8s.SetWebhooksForTest(p, []string{cap.server.URL})
 
 		grace := int64(30)
-		// Deployment at 5 (customer scaled UP from snapshot of 3).
+		// Deployment at 5 (user scaled UP from snapshot of 3).
 		makeDeployment(t, kk, "rack1-app1", "web", 5, &grace)
 
 		t0 := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
@@ -1226,7 +1224,7 @@ func TestArmedWindowManualCancel_GCsAnnotation_NoImmediateFireOnRebreath(t *test
 			ShutdownTickId:       "tick-armed-manual",
 			EligibleServiceCount: 1,
 			Services: []structs.AppBudgetShutdownStateService{
-				// snapshot was 3, but live is 5 → customer scaled UP.
+				// snapshot was 3, but live is 5 → user scaled UP.
 				{Name: "web", OriginalScale: structs.AppBudgetShutdownStateOriginalScale{Count: 3, Replicas: 3}},
 			},
 			ArmedNotificationFiredAt: &armed,
@@ -1544,7 +1542,7 @@ func TestFiredPersistThenEmit_LeaderFailoverNoDoublefire(t *testing.T) {
 
 // TestArmedPayload_WebhookUrlIsRedacted_NoSecretLeak — MF-2 fix
 // (R4 γ-6 NIT + γ-12 NIT). F-1 redacts data["webhook_url"] in the :armed
-// payload to scheme+host so customer Slack/Discord bearer tokens embedded
+// payload to scheme+host so user Slack/Discord bearer tokens embedded
 // in atCapWebhookUrl never reach rack-level webhook subscribers. The
 // helper-tier test (TestRedactURLHost_StripsSecrets in event_test.go)
 // locks the function; this test locks the wire-up: an end-to-end :armed
@@ -1929,7 +1927,7 @@ func TestManualDetectedDeleteFails_NoEmit(t *testing.T) {
 		k8s.SetWebhooksForTest(p, []string{cap.server.URL})
 
 		grace := int64(30)
-		// Customer scaled UP from snapshot (was 3, now 5) — F8 detects.
+		// User scaled UP from snapshot (was 3, now 5) — F8 detects.
 		makeDeployment(t, kk, "rack1-app1", "web", 5, &grace)
 
 		t0 := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)

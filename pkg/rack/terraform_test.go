@@ -392,7 +392,7 @@ func TestReconcileVarsWithModule_GPUObservabilityInModuleVarsTf_AcceptedAsValid(
 
 // TestReconcileVarsWithModule_StripsWebhookSigningKey_OnDowngrade is the
 // fingertrap exercise for webhook_signing_key — the bundle's most security-
-// sensitive new variable (a customer-supplied HMAC secret) and the only
+// sensitive new variable (a user-supplied HMAC secret) and the only
 // non-AWS-only new variable (declared in azure/gcp/do/local/metal system
 // modules too). The downgraded module does NOT declare webhook_signing_key
 // but vars.json carries a non-empty value. Reconcile must (a) remove the key
@@ -576,10 +576,10 @@ func TestReconcileVarsWithModule_StripsOrphanedPromVars_OnDowngrade(t *testing.T
 
 // TestReconcileVarsWithModule_StripsMonitoringMetricsProvisioned_OnRc8ToFinalUpgrade
 // covers SPEC §7.1 cell M33 at the unit-test layer (per PR2-4-M3 fix). vars.json
-// contains monitoring_metrics_provisioned=true (rc8 paid-customer state); module
+// contains monitoring_metrics_provisioned=true (rc8 paid-monitoring state); module
 // variables.tf does NOT declare it (3.24.6-final). Reconciler strips the var and
-// emits NOTICE — same mechanism as the downgrade path. Real customer impact = 0
-// (zero customer-facing rc8 racks); test catches future regressions in
+// emits NOTICE — same mechanism as the downgrade path. Real impact = 0
+// (zero user-facing rc8 racks); test catches future regressions in
 // reconciler upgrade-path orphan stripping.
 func TestReconcileVarsWithModule_StripsMonitoringMetricsProvisioned_OnRc8ToFinalUpgrade(t *testing.T) {
 	settings := t.TempDir()

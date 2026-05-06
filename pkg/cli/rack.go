@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
+	"net/url"
 	"os"
 	"regexp"
 	"sort"
@@ -48,7 +50,7 @@ var awsKnownParams = map[string]bool{
 	"docker_hub_password": true, "docker_hub_username": true,
 	"ebs_volume_encryption_enabled": true, "ecr_docker_hub_cache": true, "ecr_scan_on_push_enable": true,
 	"efs_csi_driver_enable": true, "efs_csi_driver_version": true,
-	"eks_api_server_public_access_cidrs": true, "enable_in_cluster_grafana": true,
+	"eks_api_server_public_access_cidrs": true, "in_cluster_grafana_enable": true,
 	"enable_private_access": true,
 	"fluentd_disable": true, "fluentd_memory": true,
 	"gpu_observability_chart_version": true, "gpu_observability_enable": true,
@@ -196,7 +198,7 @@ var boolParams = map[string]bool{
 	"ecr_docker_hub_cache":            true,
 	"ecr_scan_on_push_enable":         true,
 	"efs_csi_driver_enable":           true,
-	"enable_in_cluster_grafana":       true,
+	"in_cluster_grafana_enable":       true,
 	"enable_private_access":           true,
 	"fluentd_disable":                 true,
 	"gpu_observability_enable":        true,
@@ -223,7 +225,7 @@ var boolParams = map[string]bool{
 // appear in v3 rack Parameters responses (v3 uses snake_case).
 // webhook_signing_key added in 3.24.6 (Decision 5) — HMAC-SHA256 secret
 // for outbound webhook signing. Cannot use Terraform `sensitive = true`
-// because the customer base spans TF versions older than 0.14 where
+// because the user base spans TF versions older than 0.14 where
 // sensitive on variable blocks is unsupported; CLI-display masking
 // matches the existing redaction approach for other secret params.
 var sensitiveParams = map[string]bool{
@@ -408,7 +410,7 @@ var paramGroups = map[string]map[string]bool{
 		"prometheus_gpu_metrics_retention":     true,
 		"prometheus_url":                       true,
 		"grafana_url":                          true,
-		"enable_in_cluster_grafana":            true,
+		"in_cluster_grafana_enable":            true,
 		"in_cluster_grafana_admin_password":    true,
 		"user_data":                            true,
 		"user_data_url":                        true,
@@ -616,7 +618,7 @@ var clearableParams = map[string]bool{
 	"additional_build_groups_config":        true,
 	"additional_karpenter_nodepools_config": true,
 	"karpenter_config":                      true,
-	// External Prometheus URL — customer must set explicitly post-3.24.6 (no rack-side auto-resolution)
+	// External Prometheus URL — must be set explicitly post-3.24.6 (no rack-side auto-resolution)
 	"prometheus_url": true,
 	// External Grafana URL — clear means "Open in your Grafana" deep-link button
 	// is hidden in the Console GPU views. Optional; only relevant for users
@@ -638,7 +640,7 @@ var clearableParams = map[string]bool{
 }
 
 // removedIn3_24_6 enumerates rack params hard-removed in 3.24.6 with a
-// customer-friendly rejection message keyed by param name. Validation in
+// user-friendly rejection message keyed by param name. Validation in
 // validateAndMutateParams returns this message instead of the default
 // "unknown parameter" suggestion (Levenshtein distance from any remaining
 // awsKnownParams entry is too large for a useful suggestion).
@@ -1817,6 +1819,36 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 			return fmt.Errorf("failed to process karpenter_config: %s", err)
 		}
 		params[k] = base64.StdEncoding.EncodeToString(data)
+	}
+
+	// prometheus_url: validate scheme and reject private/loopback/link-local hosts.
+	// This is a best-effort SSRF defence at the param-validation layer; DNS-resolved
+	// IPs are not checked (that would require a network call at validate time).
+	if v, has := params["prometheus_url"]; has && v != "" {
+		parsed, parseErr := url.Parse(v)
+		scheme := ""
+		if parsed != nil {
+			scheme = strings.ToLower(parsed.Scheme)
+		}
+		// Validate scheme first so the error message is specific.
+		if parseErr != nil || scheme == "" || (scheme != "http" && scheme != "https") {
+			return fmt.Errorf("prometheus_url: only http:// and https:// schemes are accepted")
+		}
+		if parsed.Host == "" {
+			return fmt.Errorf("prometheus_url: must be a valid URL with scheme and host (e.g. http://prom.example.com:9090)")
+		}
+		// Strip port for IP parsing — net.ParseIP does not accept host:port.
+		host := parsed.Hostname()
+		// Reject the "localhost" reserved name in addition to IP-range checks.
+		if strings.EqualFold(host, "localhost") {
+			return fmt.Errorf("prometheus_url: private/loopback/link-local hosts are not allowed (see docs for SSRF protection)")
+		}
+		if ip := net.ParseIP(host); ip != nil {
+			if ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() {
+				return fmt.Errorf("prometheus_url: private/loopback/link-local hosts are not allowed (see docs for SSRF protection)")
+			}
+		}
+		// DNS hostnames (non-IP) other than localhost are accepted — let TF apply / runtime fail visibly.
 	}
 
 	return nil

@@ -1,10 +1,10 @@
 ---
-title: "enable_in_cluster_grafana"
-slug: enable_in_cluster_grafana
-url: /configuration/rack-parameters/aws/enable_in_cluster_grafana
+title: "in_cluster_grafana_enable"
+slug: in_cluster_grafana_enable
+url: /configuration/rack-parameters/aws/in_cluster_grafana_enable
 ---
 
-# enable_in_cluster_grafana
+# in_cluster_grafana_enable
 
 ## Description
 Enable the bundled Grafana sub-chart inside the paid `kube-prometheus-stack` Helm release. When set to `true`, a Grafana pod runs inside the rack alongside the Convox-managed Prometheus, with sidecar discovery enabled for ConfigMaps carrying the `grafana_dashboard=1` label. The in-cluster Grafana auto-imports the GPU observability dashboards Convox ships at `terraform/cluster/aws/dashboards/`.
@@ -14,7 +14,7 @@ Defaults to `false` because most users either run their own external Grafana (Gr
 The bundled Grafana ships ephemerally — its SQLite database lives in the pod's emptyDir, so user-saved tweaks are lost on pod restart. The dashboards re-provision idempotently from ConfigMap discovery, so the dashboard set itself is durable. For persistent state, use one of the alternatives in the Use Cases below.
 
 ## Default Value
-The default value for `enable_in_cluster_grafana` is `false`.
+The default value for `in_cluster_grafana_enable` is `false`.
 
 ## Use Cases
 - **Quick-start GPU observability**: Enable for a turnkey in-cluster Grafana that auto-imports the Convox-authored GPU dashboards (cluster overview, per-app GPU, inference performance, GPU health, vLLM, Karpenter node lifecycle). Useful for early evaluation or single-rack environments.
@@ -24,13 +24,13 @@ The default value for `enable_in_cluster_grafana` is `false`.
 ## Setting Parameters
 To enable the bundled Grafana, also set an admin password (defense-in-depth — the chart refuses to render Grafana with an unset admin password):
 ```bash
-$ convox rack params set enable_in_cluster_grafana=true in_cluster_grafana_admin_password=<your-strong-password> -r rackName
+$ convox rack params set in_cluster_grafana_enable=true in_cluster_grafana_admin_password=<your-strong-password> -r rackName
 Setting parameters... OK
 ```
 
 To disable:
 ```bash
-$ convox rack params set enable_in_cluster_grafana=false -r rackName
+$ convox rack params set in_cluster_grafana_enable=false -r rackName
 Setting parameters... OK
 ```
 
@@ -38,7 +38,7 @@ Disabling removes the Grafana pod and its Service. The dashboard ConfigMaps rema
 
 ## Additional Information
 - This parameter is AWS-only at this time. GCP, Azure, DigitalOcean, and Equinix Metal racks ship parallel Grafana integrations in subsequent releases.
-- `enable_in_cluster_grafana=true` requires `in_cluster_grafana_admin_password` to be set. The chart will not render an unauthenticated Grafana.
+- `in_cluster_grafana_enable=true` requires `in_cluster_grafana_admin_password` to be set. The chart will not render an unauthenticated Grafana.
 - The bundled Grafana SQLite database is **ephemeral** — pod restart resets user-saved tweaks (custom panels, alert rules, API keys, anonymous-viewer counters). The Convox-authored dashboards re-import on every pod start, so the dashboard set itself is durable.
 - For persistent state, one of:
   - Add a `database:` Postgres resource to your convox stack and configure Grafana with `GF_DATABASE_TYPE=postgres`

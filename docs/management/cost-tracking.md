@@ -38,11 +38,11 @@ The first accumulator tick after the apply (default tick interval is 10
 minutes) starts populating spend. The Console budget panel and `convox cost`
 become populated from that tick onward.
 
-`cost_tracking_enable` is **AWS-only** today. Non-AWS racks (Azure, GCP,
-DigitalOcean, Equinix Metal, Local) cannot enable cost tracking in the
-current release; their built-in pricing tables and instance-type
-introspection paths only cover AWS. A future release may expand support;
-for now, assume cost-tracking-dependent features are AWS-only.
+`cost_tracking_enable` is **AWS-only**. Non-AWS racks (Azure, GCP,
+DigitalOcean, Equinix Metal, Local) cannot enable cost tracking; their
+built-in pricing tables and instance-type introspection paths only cover
+AWS. Cost-tracking-dependent features (Console budget panel populated,
+`convox cost`, per-service spend attribution) are AWS-only.
 
 ## How spend is computed
 

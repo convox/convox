@@ -29,7 +29,7 @@ type InstancePrice struct {
 // SpotDefaultFactor is the on-demand → spot multiplier applied when an
 // InstancePrice entry has SpotUsdPerHourFactor=0. 0.30 (= 70 % off the
 // list price) tracks the AWS spot historical average across stable
-// instance families. Conservative on the customer-favorable side: the
+// instance families. Conservative on the user-favorable side: the
 // average actual savings tend to exceed what the cost report shows,
 // which is the safer reporting direction.
 //

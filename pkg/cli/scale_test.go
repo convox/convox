@@ -308,13 +308,13 @@ func TestScaleImperativeWithoutServiceStillErrors(t *testing.T) {
 
 // TestScaleColumnPositionContract pins the column-position contract against
 // the public 3.24.5 baseline (`SERVICE | DESIRED | RUNNING | CPU | MEMORY |
-// GPU`). Customer scripts that parse `convox scale` output positionally
+// GPU`). User scripts that parse `convox scale` output positionally
 // (`awk '{print $2}'`, `cut -f3`) MUST keep working unchanged across the
 // 3.24.5 → 3.24.6 upgrade. New columns introduced in 3.24.6 (MIN, MAX,
 // AUTOSCALE, STATUS) must append at positions 7+, never shift the legacy
 // six.
 //
-// If this test fails, the column-position contract for 3.24.5 customers is
+// If this test fails, the column-position contract for 3.24.5 users is
 // broken — DO NOT update the assertions to match new output. The fix is in
 // pkg/cli/scale.go header construction.
 func TestScaleColumnPositionContract(t *testing.T) {

@@ -314,7 +314,7 @@ func TestBudgetClear_ExplicitAckByFlag_PrintsDeprecationWarning(t *testing.T) {
 
 // TestBudgetSet_AutoShutdownActionPrintsWarning — Set G.
 // `--at-cap-action=auto-shutdown` MUST emit a stderr WARNING the
-// customer sees before they ship the manifest into prod.
+// user sees before they ship the manifest into prod.
 func TestBudgetSet_AutoShutdownActionPrintsWarning(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("AppCost", "app1").Return(&structs.AppCost{App: "app1", SpendUsd: 0}, nil)
@@ -345,7 +345,7 @@ func TestBudgetReset_ForceClearCooldownFlag_PassesThroughToSDK(t *testing.T) {
 }
 
 // TestBudgetSimulateShutdown_OutputFormatMatchesSpec — Set G.
-// CLI output must include the section labels customers script around.
+// CLI output must include the section labels users script around.
 func TestBudgetSimulateShutdown_OutputFormatMatchesSpec(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		now := time.Date(2026, 4, 25, 14, 0, 0, 0, time.UTC)
@@ -458,7 +458,7 @@ func TestBudgetCapRaise_HappyPath(t *testing.T) {
 }
 
 // TestBudgetCapRaise_AcceptsMonthlyCapAlias — MF-2 fix (R4 γ-4 A6 + γ-7 test gap).
-// F-5 added `--monthly-cap` as an alias for `--monthly-cap-usd` so customers
+// `--monthly-cap` is an alias for `--monthly-cap-usd` so users
 // who already learned `convox budget set --monthly-cap` from 3.24.5 don't
 // have to memorize a different flag for cap raise. The alias must work
 // alone, AND the canonical flag must win when both are provided.
@@ -516,7 +516,7 @@ func TestBudgetCapRaise_RejectsNonNumericCap(t *testing.T) {
 }
 
 // TestBudgetCapRaise_BelowMtdSpend_EmitsWarning — parity with BudgetSet's UX
-// R1 #13 cap-vs-MTD warning. Customer raising the cap to a value still below
+// cap-vs-MTD warning. User raising the cap to a value still below
 // current MTD spend gets the non-blocking heads-up; the cap is still set.
 func TestBudgetCapRaise_BelowMtdSpend_EmitsWarning(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
@@ -579,7 +579,7 @@ func TestBudgetSimulateShutdown_OutputDoesNotReferenceUnimplementedCommand(t *te
 		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
 		require.NotContains(t, res.Stdout, "convox events", "B2: simulate-shutdown must not cite unimplemented `convox events` subcommand")
 		require.NotContains(t, res.Stdout, "events --rack", "B2: simulate-shutdown must not cite `events --rack` flag")
-		// Verify the replacement text is present so customers have a real surface to look at.
+		// Verify the replacement text is present so users have a real surface to look at.
 		require.Contains(t, res.Stdout, "atCapWebhookUrl", "B2: simulate-shutdown must point at the real webhook surface")
 		require.Contains(t, res.Stdout, "rack log aggregation", "B2: simulate-shutdown must also point at log aggregation as fallback")
 	})
@@ -654,7 +654,7 @@ func TestBudgetShow_FailedBanner_NoReason_FallsBackToLegacy(t *testing.T) {
 // TestBudgetShow_ArmedBanner_RendersFireAt — F-12 fix (catalog F-12).
 // Locks in the [ARMED] branch of renderShutdownStateBanner. Covers the
 // computed fireAt = ArmedAt + notifyBeforeMinutes (default 30) and the
-// pinned customer-facing recovery commands.
+// pinned user-facing recovery commands.
 func TestBudgetShow_ArmedBanner_RendersFireAt(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		now := time.Date(2026, 4, 25, 14, 0, 0, 0, time.UTC)
@@ -779,7 +779,7 @@ func TestBudgetShow_RecoveredBanner_RendersWithAndWithoutFlapWindow(t *testing.T
 // (catalog D-2 promoted). After a manual recovery completes (RestoredAt
 // set), the banner shows [RECOVERED] not [FAILED] even when
 // FailedNotificationFiredAt is still set in the annotation pending GC.
-// Customer-truthful: a successful manual recovery is the operative state.
+// User-truthful: a successful manual recovery is the operative state.
 func TestBudgetShow_RecoveredOverridesFailed_AfterManualRecovery(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		now := time.Date(2026, 4, 25, 14, 0, 0, 0, time.UTC)
@@ -1096,7 +1096,7 @@ func TestBudgetSet_PricingAdjustmentOnly_NoMtdWarning(t *testing.T) {
 }
 
 // Test 14: TestBudgetSet_NoFlags_ErrorMessageContainsMonthlyCapSubstring —
-// pins the customer-CI substring contract per §7 BC row at line 320.
+// pins the user-CI substring contract per §7 BC row at line 320.
 // Distinct from test 7: even if the canonical phrase is reworded, the
 // literal substring "--monthly-cap" must survive so grep-based CI scripts
 // still match.
