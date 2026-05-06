@@ -1,0 +1,115 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Total GPUs allocated (FB used > 0) vs available cluster-wide.",
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 0.9}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "textMode": "auto"},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "GpuAllocatedCount", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(DCGM_FI_DEV_FB_USED > 0)", "legendFormat": "Allocated", "refId": "A"},
+        {"_source": "GpuTotalCount", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "count(DCGM_FI_DEV_FB_FREE)", "legendFormat": "Total", "refId": "B"}
+      ],
+      "title": "GPUs Allocated / Total",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Average tensor-core active percentage across all GPUs in cluster.",
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "unit": "percent"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 6, "y": 0},
+      "id": 2,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "single"}},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "GpuTensorActiveCluster", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "avg(DCGM_FI_PROF_PIPE_TENSOR_ACTIVE) * 100", "legendFormat": "Tensor Active", "refId": "A"},
+        {"_source": "GpuSmActiveCluster", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "avg(DCGM_FI_PROF_SM_ACTIVE) * 100", "legendFormat": "SM Active", "refId": "B"},
+        {"_source": "GpuDramActiveCluster", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "avg(DCGM_FI_PROF_DRAM_ACTIVE) * 100", "legendFormat": "DRAM Active", "refId": "C"}
+      ],
+      "title": "Cluster GPU Activity",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Total GPU power draw across cluster.",
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "unit": "watt"}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 4},
+      "id": 3,
+      "options": {"colorMode": "value", "graphMode": "area", "orientation": "auto", "textMode": "auto"},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "GpuTotalPowerCluster", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(DCGM_FI_DEV_POWER_USAGE)", "refId": "A"}
+      ],
+      "title": "Total GPU Power",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "GPU temperature across cluster.",
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 75}, {"color": "red", "value": 85}]}, "unit": "celsius"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 18, "x": 0, "y": 8},
+      "id": 4,
+      "options": {"calculate": false, "cellGap": 1, "color": {"exponent": 0.5, "fill": "dark-orange", "mode": "scheme", "reverse": false, "scale": "exponential", "scheme": "Turbo", "steps": 64}, "filterValues": {"le": 1e-9}, "legend": {"show": true}, "rowsFrame": {"layout": "auto"}, "tooltip": {"show": true, "yHistogram": false}, "yAxis": {"axisPlacement": "left", "reverse": false}},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "GpuTempHeatmap", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "DCGM_FI_DEV_GPU_TEMP", "format": "heatmap", "legendFormat": "{{Hostname}}/{{UUID}}", "refId": "A"}
+      ],
+      "title": "GPU Temperature Heatmap",
+      "type": "heatmap"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Top throttle reasons across cluster (decoded by Convox bitmask logic in rack PromQL methods).",
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}}, "overrides": []},
+      "gridPos": {"h": 8, "w": 6, "x": 18, "y": 8},
+      "id": 5,
+      "options": {"showHeader": true},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "GpuTopThrottleReasons", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "topk(5, max_over_time((DCGM_FI_DEV_CLOCK_THROTTLE_REASONS != 0)[5m:30s])) by (UUID, Hostname)", "format": "table", "instant": true, "refId": "A"}
+      ],
+      "title": "Top Throttle Reasons",
+      "type": "table"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["convox", "gpu", "cluster"],
+  "templating": {
+    "list": [
+      {
+        "current": {"selected": false, "text": "All", "value": "$__all"},
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "definition": "label_values(DCGM_FI_DEV_GPU_UTIL, rack)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Rack",
+        "multi": false,
+        "name": "rack",
+        "options": [],
+        "query": {"query": "label_values(DCGM_FI_DEV_GPU_UTIL, rack)", "refId": "StandardVariableQuery"},
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {"from": "now-1h", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "title": "Convox GPU — Cluster Overview",
+  "uid": "convox-gpu-cluster-overview",
+  "version": 1,
+  "weekStart": ""
+}

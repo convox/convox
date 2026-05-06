@@ -48,10 +48,13 @@ var awsKnownParams = map[string]bool{
 	"docker_hub_password": true, "docker_hub_username": true,
 	"ebs_volume_encryption_enabled": true, "ecr_docker_hub_cache": true, "ecr_scan_on_push_enable": true,
 	"efs_csi_driver_enable": true, "efs_csi_driver_version": true,
-	"eks_api_server_public_access_cidrs": true, "enable_private_access": true,
+	"eks_api_server_public_access_cidrs": true, "enable_in_cluster_grafana": true,
+	"enable_private_access": true,
 	"fluentd_disable": true, "fluentd_memory": true,
 	"gpu_observability_chart_version": true, "gpu_observability_enable": true,
-	"gpu_tag_enable": true, "high_availability": true,
+	"gpu_tag_enable": true, "grafana_url": true,
+	"high_availability": true,
+	"in_cluster_grafana_admin_password": true,
 	"idle_timeout": true, "image": true,
 	"imds_http_hop_limit": true, "imds_http_tokens": true,
 	"imds_tags_enable": true, "internal_router": true,
@@ -193,6 +196,7 @@ var boolParams = map[string]bool{
 	"ecr_docker_hub_cache":            true,
 	"ecr_scan_on_push_enable":         true,
 	"efs_csi_driver_enable":           true,
+	"enable_in_cluster_grafana":       true,
 	"enable_private_access":           true,
 	"fluentd_disable":                 true,
 	"gpu_observability_enable":        true,
@@ -223,16 +227,17 @@ var boolParams = map[string]bool{
 // sensitive on variable blocks is unsupported; CLI-display masking
 // matches the existing redaction approach for other secret params.
 var sensitiveParams = map[string]bool{
-	"docker_hub_password": true,
-	"secret_key":          true,
-	"token":               true,
-	"access_id":           true,
-	"private_eks_host":    true,
-	"private_eks_user":    true,
-	"private_eks_pass":    true,
-	"webhook_signing_key": true,
-	"Password":            true,
-	"HttpProxy":           true,
+	"docker_hub_password":               true,
+	"secret_key":                        true,
+	"token":                             true,
+	"access_id":                         true,
+	"private_eks_host":                  true,
+	"private_eks_user":                  true,
+	"private_eks_pass":                  true,
+	"webhook_signing_key":               true,
+	"in_cluster_grafana_admin_password": true,
+	"Password":                          true,
+	"HttpProxy":                         true,
 }
 
 // paramGroups categorizes rack params into curated logical groups for the
@@ -402,6 +407,9 @@ var paramGroups = map[string]map[string]bool{
 		"prometheus_gpu_metrics_chart_version": true,
 		"prometheus_gpu_metrics_retention":     true,
 		"prometheus_url":                       true,
+		"grafana_url":                          true,
+		"enable_in_cluster_grafana":            true,
+		"in_cluster_grafana_admin_password":    true,
 		"user_data":                            true,
 		"user_data_url":                        true,
 		// v2 PascalCase (no-op on v3 racks; v2 "instances" group content)
@@ -610,6 +618,14 @@ var clearableParams = map[string]bool{
 	"karpenter_config":                      true,
 	// External Prometheus URL — customer must set explicitly post-3.24.6 (no rack-side auto-resolution)
 	"prometheus_url": true,
+	// External Grafana URL — clear means "Open in your Grafana" deep-link button
+	// is hidden in the Console GPU views. Optional; only relevant for users
+	// running their own Grafana instance.
+	"grafana_url": true,
+	// In-cluster Grafana admin password — clear means "regenerate on next
+	// helm release of the Grafana sub-chart in the paid kube-prometheus-stack."
+	// Sensitive; redacted in `convox rack params` output.
+	"in_cluster_grafana_admin_password": true,
 	// Free-chart Helm version override — empty falls back to Convox Console worker
 	// default (`27.9.0`) on next Disable→Enable cycle. No rack TF consumer post-3.24.6 final.
 	"prometheus_gpu_metrics_chart_version": true,

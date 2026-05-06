@@ -1,0 +1,145 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "HTTP request rate by service (user-instrumented metric).",
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "unit": "reqps"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "single"}},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "HttpRequestRateByService", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(rate(http_requests_total{namespace=~\"$namespace\",service=~\"$service\"}[5m]))", "legendFormat": "Requests/s", "refId": "A"}
+      ],
+      "title": "Request Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "HTTP error rate by status class (4xx/5xx).",
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "unit": "reqps"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "id": 2,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "single"}},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "HttpErrorRateByStatusClass", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (status_code) (rate(http_requests_total{namespace=~\"$namespace\",service=~\"$service\",status_code=~\"4..|5..\"}[5m]))", "legendFormat": "{{status_code}}", "refId": "A"}
+      ],
+      "title": "Error Rate by Status",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Request latency percentiles (P50/P95/P99) for inference workloads.",
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "unit": "s"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "id": 3,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "HttpLatencyP50ByService", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.5, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=~\"$namespace\"}[5m])))", "legendFormat": "P50", "refId": "A"},
+        {"_source": "HttpLatencyP95ByService", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=~\"$namespace\"}[5m])))", "legendFormat": "P95", "refId": "B"},
+        {"_source": "HttpLatencyP99ByService", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=~\"$namespace\"}[5m])))", "legendFormat": "P99", "refId": "C"}
+      ],
+      "title": "Latency Percentiles",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Pending requests in user queue (returns 0 if metric absent).",
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 8},
+      "id": 4,
+      "options": {"colorMode": "value", "graphMode": "area", "orientation": "auto", "textMode": "auto"},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "HttpPendingByService", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(http_requests_pending{namespace=~\"$namespace\",service=~\"$service\"}) or vector(0)", "refId": "A"}
+      ],
+      "title": "Pending Requests",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Replica count by service (cross-joins kube_pod_status_phase × kube_pod_labels — requires KSM allowlist arg).",
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 8},
+      "id": 5,
+      "options": {"colorMode": "value", "graphMode": "area", "orientation": "auto", "textMode": "auto"},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "K8sReplicaCountByService", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(kube_pod_status_phase{namespace=~\"$namespace\",phase=\"Running\",pod=~\"$service-.*\"})", "refId": "A"}
+      ],
+      "title": "Running Replicas",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Container restart count over last hour.",
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 1}, {"color": "red", "value": 5}]}}, "overrides": []},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16},
+      "id": 6,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "single"}},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "K8sRestartsByService", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=~\"$namespace\"}[1h]))", "legendFormat": "Restarts (1h)", "refId": "A"}
+      ],
+      "title": "Container Restarts (1h)",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["convox", "gpu", "inference", "performance"],
+  "templating": {
+    "list": [
+      {
+        "current": {"selected": false, "text": "default", "value": "default"},
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "definition": "label_values(http_requests_total, namespace)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Namespace",
+        "multi": false,
+        "name": "namespace",
+        "options": [],
+        "query": {"query": "label_values(http_requests_total, namespace)", "refId": "StandardVariableQuery"},
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {"selected": false, "text": "All", "value": "$__all"},
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "definition": "label_values(http_requests_total{namespace=~\"$namespace\"}, service)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Service",
+        "multi": false,
+        "name": "service",
+        "options": [],
+        "query": {"query": "label_values(http_requests_total{namespace=~\"$namespace\"}, service)", "refId": "StandardVariableQuery"},
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {"from": "now-1h", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "title": "Convox GPU — Inference Performance",
+  "uid": "convox-gpu-inference-performance",
+  "version": 1,
+  "weekStart": ""
+}

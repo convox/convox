@@ -1,4 +1,4 @@
-.PHONY: all build clean clean-package compress dev generate generate-k8s generate-provider grep-no-monitoring-metrics-provisioned lint lint-new lint-tf lint-security lint-all mocks package release setup test tools validate vendor
+.PHONY: all build clean clean-package compress dev generate generate-k8s generate-provider grep-no-monitoring-metrics-provisioned lint lint-new lint-tf lint-security lint-all mocks package release setup sync-dashboards test tools validate vendor verify-dashboards-synced
 
 commands = api atom build convox docs resolver
 
@@ -98,6 +98,43 @@ lint-security:
 	checkov -d terraform --framework terraform --compact
 
 lint-all: lint lint-tf lint-security
+
+# GPU observability dashboards — manual sync from source-of-truth dir into
+# the rack-side TF location. Source: examples/gpu-llm/grafana/*.json. The
+# rack TF (terraform/cluster/aws/dashboards/) consumes these JSONs at apply
+# time; the standalone Grafana convox app at convox-examples/grafana-gpu-dashboards
+# ships dashboards inline. Run after editing any JSON dashboard.
+sync-dashboards:
+	@mkdir -p terraform/cluster/aws/dashboards
+	@find terraform/cluster/aws/dashboards -maxdepth 1 -name '*.json' -delete
+	@if ls examples/gpu-llm/grafana/*.json >/dev/null 2>&1; then \
+		cp examples/gpu-llm/grafana/*.json terraform/cluster/aws/dashboards/; \
+	fi
+	@touch terraform/cluster/aws/dashboards/.gitkeep
+	@echo "synced JSON dashboards to terraform/cluster/aws/dashboards"
+
+# CI prereq — fails when downstream copy drifts from source. Run after edits
+# without sync-dashboards. Manual-only sync target prevents auto-mutation.
+verify-dashboards-synced:
+	@srcs=$$(cd examples/gpu-llm/grafana 2>/dev/null && ls *.json 2>/dev/null | sort); \
+	tfs=$$(cd terraform/cluster/aws/dashboards 2>/dev/null && ls *.json 2>/dev/null | sort); \
+	if [ "$$srcs" != "$$tfs" ]; then \
+		echo "FAIL: terraform/cluster/aws/dashboards out of sync with examples/gpu-llm/grafana"; \
+		echo "  source files: $$srcs"; \
+		echo "  tf files:     $$tfs"; \
+		echo "  run: make sync-dashboards"; \
+		exit 1; \
+	fi; \
+	for f in examples/gpu-llm/grafana/*.json; do \
+		[ -e "$$f" ] || continue; \
+		base=$$(basename "$$f"); \
+		if ! diff -q "$$f" "terraform/cluster/aws/dashboards/$$base" >/dev/null; then \
+			echo "FAIL: $$base differs between source and terraform/cluster/aws/dashboards"; \
+			echo "  run: make sync-dashboards"; \
+			exit 1; \
+		fi; \
+	done
+	@echo "OK: dashboard JSON in sync (source + terraform/cluster/aws/dashboards)"
 
 setup:
 	pip install pre-commit

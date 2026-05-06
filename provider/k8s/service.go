@@ -260,8 +260,9 @@ func (p *Provider) enrichGpuTelemetry(ctx context.Context, app string, ss struct
 	// gm.Service directly — no second Prom round-trip and no pre-pass
 	// against deployment names.
 	type accum struct {
-		util, memUsed, memTotal float64
-		count                   int
+		util, memUsed, memTotal                                  float64
+		tensorActive, smActive, dramActive, fp16, fp32, powerW   float64
+		count                                                    int
 	}
 	byService := map[string]*accum{}
 	for _, gm := range gpuByPod {
@@ -276,6 +277,12 @@ func (p *Provider) enrichGpuTelemetry(ctx context.Context, app string, ss struct
 		a.util += gm.Util
 		a.memUsed += float64(gm.MemUsed)
 		a.memTotal += float64(gm.MemTotal)
+		a.tensorActive += gm.TensorActive
+		a.smActive += gm.SmActive
+		a.dramActive += gm.DramActive
+		a.fp16 += gm.Fp16Active
+		a.fp32 += gm.Fp32Active
+		a.powerW += gm.PowerW
 		a.count++
 	}
 	for i := range ss {
@@ -283,12 +290,25 @@ func (p *Provider) enrichGpuTelemetry(ctx context.Context, app string, ss struct
 			continue
 		}
 		if a, has := byService[ss[i].Name]; has && a.count > 0 {
-			avgUtil := a.util / float64(a.count)
-			avgMemUsed := int64(a.memUsed / float64(a.count))
-			avgMemTotal := int64(a.memTotal / float64(a.count))
+			n := float64(a.count)
+			avgUtil := a.util / n
+			avgMemUsed := int64(a.memUsed / n)
+			avgMemTotal := int64(a.memTotal / n)
+			avgTensor := a.tensorActive / n
+			avgSm := a.smActive / n
+			avgDram := a.dramActive / n
+			avgFp16 := a.fp16 / n
+			avgFp32 := a.fp32 / n
+			avgPowerW := a.powerW / n
 			ss[i].GpuUtilAvg = &avgUtil
 			ss[i].GpuMemUsedAvg = &avgMemUsed
 			ss[i].GpuMemTotalAvg = &avgMemTotal
+			ss[i].GpuTensorActiveAvg = &avgTensor
+			ss[i].GpuSmActiveAvg = &avgSm
+			ss[i].GpuDramActiveAvg = &avgDram
+			ss[i].GpuFp16ActiveAvg = &avgFp16
+			ss[i].GpuFp32ActiveAvg = &avgFp32
+			ss[i].GpuPowerWAvg = &avgPowerW
 		}
 	}
 }

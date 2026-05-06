@@ -255,13 +255,14 @@ func TestSensitiveParamsExactMembership(t *testing.T) {
 	want := map[string]bool{
 		// v3 native (snake_case)
 		"docker_hub_password": true,
-		"secret_key":          true,
-		"token":               true,
-		"access_id":           true,
-		"private_eks_host":    true,
-		"private_eks_user":    true,
-		"private_eks_pass":    true,
-		"webhook_signing_key": true,
+		"secret_key":                        true,
+		"token":                             true,
+		"access_id":                         true,
+		"private_eks_host":                  true,
+		"private_eks_user":                  true,
+		"private_eks_pass":                  true,
+		"webhook_signing_key":               true,
+		"in_cluster_grafana_admin_password": true,
 		// v2 PascalCase added for v3 CLI against v2 racks
 		"Password":  true,
 		"HttpProxy": true,
