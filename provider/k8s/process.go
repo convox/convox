@@ -172,9 +172,21 @@ func (p *Provider) ProcessGet(app, pid string) (*structs.Process, error) {
 			util := gm.Util
 			memUsed := gm.MemUsed
 			memTotal := gm.MemTotal
+			tensor := gm.TensorActive
+			sm := gm.SmActive
+			dram := gm.DramActive
+			fp16 := gm.Fp16Active
+			fp32 := gm.Fp32Active
+			powerW := gm.PowerW
 			ps.GpuUtil = &util
 			ps.GpuMemUsed = &memUsed
 			ps.GpuMemTotal = &memTotal
+			ps.GpuTensorActive = &tensor
+			ps.GpuSmActive = &sm
+			ps.GpuDramActive = &dram
+			ps.GpuFp16Active = &fp16
+			ps.GpuFp32Active = &fp32
+			ps.GpuPowerW = &powerW
 		}
 	}
 
@@ -250,9 +262,21 @@ func (p *Provider) ProcessList(app string, opts structs.ProcessListOptions) (str
 					util := gm.Util
 					memUsed := gm.MemUsed
 					memTotal := gm.MemTotal
+					tensor := gm.TensorActive
+					sm := gm.SmActive
+					dram := gm.DramActive
+					fp16 := gm.Fp16Active
+					fp32 := gm.Fp32Active
+					powerW := gm.PowerW
 					pss[i].GpuUtil = &util
 					pss[i].GpuMemUsed = &memUsed
 					pss[i].GpuMemTotal = &memTotal
+					pss[i].GpuTensorActive = &tensor
+					pss[i].GpuSmActive = &sm
+					pss[i].GpuDramActive = &dram
+					pss[i].GpuFp16Active = &fp16
+					pss[i].GpuFp32Active = &fp32
+					pss[i].GpuPowerW = &powerW
 				}
 			}
 		}

@@ -23,6 +23,19 @@ type GpuMetrics struct {
 	MemUsed  int64   // bytes (FB used)
 	MemTotal int64   // bytes (FB total)
 	Service  string  // value of Prom `service` label (pod's `service` K8s label)
+
+	// Extended DCGM profiling counters. All optional — zero values mean the
+	// dcgm-exporter chart isn't yet emitting that field (older default-
+	// counters.csv) OR the GPU type doesn't support the metric (e.g. FP16
+	// active on H100 where DCGM may not expose tensor-pipe FP16). Vue side
+	// renders "no data" empty state when the corresponding pointer is nil
+	// after the resolver decode.
+	TensorActive float64 // percent 0-100 (DCGM_FI_PROF_PIPE_TENSOR_ACTIVE × 100)
+	SmActive     float64 // percent 0-100 (DCGM_FI_PROF_SM_ACTIVE × 100)
+	DramActive   float64 // percent 0-100 (DCGM_FI_PROF_DRAM_ACTIVE × 100)
+	Fp16Active   float64 // active fraction 0-1 (DCGM_FI_PROF_PIPE_FP16_ACTIVE)
+	Fp32Active   float64 // active fraction 0-1 (DCGM_FI_PROF_PIPE_FP32_ACTIVE)
+	PowerW       float64 // watts (DCGM_FI_DEV_POWER_USAGE)
 }
 
 // PrometheusClient is a thin wrapper around the v1 query API. It is safe
@@ -111,6 +124,15 @@ func (pc *PrometheusClient) QueryGPUMetrics(ctx context.Context, app string, ser
 		{"DCGM_FI_DEV_FB_USED", func(g *GpuMetrics, v float64) { g.MemUsed = int64(v) * 1024 * 1024; g.MemTotal += int64(v) * 1024 * 1024 }},
 		{"DCGM_FI_DEV_FB_FREE", func(g *GpuMetrics, v float64) { g.MemTotal += int64(v) * 1024 * 1024 }},
 		{"DCGM_FI_DEV_FB_RESERVED", func(g *GpuMetrics, v float64) { g.MemTotal += int64(v) * 1024 * 1024 }},
+		// Extended profiling counters. DCGM emits these as ratios in [0,1]
+		// for *_ACTIVE metrics; we multiply by 100 here to align with the
+		// percent convention already used for GPU_UTIL. PowerW passes through.
+		{"DCGM_FI_PROF_PIPE_TENSOR_ACTIVE", func(g *GpuMetrics, v float64) { g.TensorActive = v * 100 }},
+		{"DCGM_FI_PROF_SM_ACTIVE", func(g *GpuMetrics, v float64) { g.SmActive = v * 100 }},
+		{"DCGM_FI_PROF_DRAM_ACTIVE", func(g *GpuMetrics, v float64) { g.DramActive = v * 100 }},
+		{"DCGM_FI_PROF_PIPE_FP16_ACTIVE", func(g *GpuMetrics, v float64) { g.Fp16Active = v }},
+		{"DCGM_FI_PROF_PIPE_FP32_ACTIVE", func(g *GpuMetrics, v float64) { g.Fp32Active = v }},
+		{"DCGM_FI_DEV_POWER_USAGE", func(g *GpuMetrics, v float64) { g.PowerW = v }},
 	}
 
 	for _, q := range queries {

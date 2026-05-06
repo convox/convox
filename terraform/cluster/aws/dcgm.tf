@@ -1,5 +1,5 @@
 # DCGM exporter — emits NVIDIA GPU utilization, VRAM, temp, power metrics
-# on port 9400. Source of truth for the Plan-5 GPU observability slice.
+# on port 9400. Source of truth for the GPU observability slice.
 #
 # Chart: NVIDIA upstream dcgm-exporter
 # (https://nvidia.github.io/dcgm-exporter/helm-charts).
@@ -14,11 +14,35 @@
 # checklist in docs/configuration/rack-parameters/aws/gpu_observability_chart_version.md
 # before merging — a future major may introduce CRDs / webhooks that require
 # a finalizer-cleanup null_resource (mirror karpenter.tf:172-242 pattern).
+#
+# DCGM counter override: chart 4.8.1's stock default-counters.csv leaves XID,
+# ECC SBE/DBE, NVLINK_REPLAY, CLOCK_THROTTLE_REASONS, SM_ACTIVE, FP16/32/64
+# ACTIVE disabled. files/dcp-metrics-included.csv (this directory) ships them
+# enabled; the ConfigMap + extraConfigMapVolumes/extraVolumeMounts pattern
+# below mounts the file at /etc/dcgm-exporter-convox/ and points the
+# exporter's -f arg there. Verified upstream chart 4.8.1 supports the keys
+# (deployment/templates/daemonset.yaml `{{- with .Values.extraConfigMapVolumes }}`).
+
+resource "kubernetes_config_map" "dcgm_metrics_convox" {
+  count = var.gpu_observability_enable && var.nvidia_device_plugin_enable ? 1 : 0
+  metadata {
+    name      = "convox-dcgm-metrics"
+    namespace = "kube-system"
+    labels = {
+      "app.kubernetes.io/managed-by" = "convox"
+      "convox.com/role"              = "dcgm-counters"
+    }
+  }
+  data = {
+    "dcp-metrics-included.csv" = file("${path.module}/files/dcp-metrics-included.csv")
+  }
+}
 
 resource "helm_release" "dcgm_exporter" {
   depends_on = [
     null_resource.wait_k8s_api,
     helm_release.nvidia_device_plugin,
+    kubernetes_config_map.dcgm_metrics_convox,
   ]
 
   count = var.gpu_observability_enable && var.nvidia_device_plugin_enable ? 1 : 0
@@ -70,7 +94,7 @@ resource "helm_release" "dcgm_exporter" {
         port   = 9400
       }
 
-      # Pod annotations preserved for compatibility with customer self-installed
+      # Pod annotations preserved for compatibility with user self-installed
       # Prometheus (e.g. kube-prometheus-stack self-managed which expects them).
       # Convox's free + paid paths use kubernetes_sd Pod role + label selector;
       # they do NOT consume these annotations.
@@ -130,6 +154,39 @@ resource "helm_release" "dcgm_exporter" {
           memory = "512Mi"
         }
       }
+
+      # Override stock default-counters.csv with Convox's superset CSV that
+      # enables the 9 fields D1/D2/D5 panels need. ConfigMap
+      # `convox-dcgm-metrics` is provisioned above (kubernetes_config_map.dcgm_metrics_convox).
+      # Mount under a Convox-specific path to avoid colliding with the chart's
+      # baked-in default-counters.csv at /etc/dcgm-exporter/.
+      extraConfigMapVolumes = [
+        {
+          name = "convox-dcgm-metrics"
+          configMap = {
+            name = "convox-dcgm-metrics"
+            items = [
+              {
+                key  = "dcp-metrics-included.csv"
+                path = "dcp-metrics-included.csv"
+              },
+            ]
+          }
+        },
+      ]
+
+      extraVolumeMounts = [
+        {
+          name      = "convox-dcgm-metrics"
+          mountPath = "/etc/dcgm-exporter-convox"
+          readOnly  = true
+        },
+      ]
+
+      # Override the default `["-f", "/etc/dcgm-exporter/default-counters.csv"]`
+      # to point at Convox's superset file. Chart 4.8.1's daemonset template
+      # passes `arguments` verbatim to the container args.
+      arguments = ["-f", "/etc/dcgm-exporter-convox/dcp-metrics-included.csv"]
     })
   ]
 }

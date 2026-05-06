@@ -463,12 +463,45 @@ variable "private_subnets_ids" {
 variable "prometheus_url" {
   type        = string
   default     = ""
-  description = "External Prometheus URL for KEDA autoscale triggers and observability. Customer-set value enables GPU enrichment in `convox ps`. When empty (default), GPU fields show em-dash sentinels even when a chart is installed via the Convox Console. Set to the in-cluster service URL for Convox-Console-managed monitoring (paid: `http://convox-kube-prometheus-sta-prometheus.convox-monitoring.svc.cluster.local:9090`; free: `http://prometheus-gpu-metrics-server.kube-system.svc.cluster.local:80`) or to your external Prometheus."
+  description = "External Prometheus URL for KEDA autoscale triggers and observability. User-set value enables GPU enrichment in `convox ps`. When empty (default), GPU fields show em-dash sentinels even when a chart is installed via the Convox Console. Set to the in-cluster service URL for Convox-Console-managed monitoring (paid: `http://convox-kube-prometheus-sta-prometheus.convox-monitoring.svc.cluster.local:9090`; free: `http://prometheus-gpu-metrics-server.kube-system.svc.cluster.local:80`) or to your external Prometheus."
 }
 
 variable "prometheus_gpu_metrics_chart_version" {
   type    = string
   default = "27.9.0"
+}
+
+# User-facing Grafana base URL for the Console "Open in your Grafana"
+# deep-link button. Empty default keeps the button inert (renders a hint
+# instead of a link). Reconciler-safe: additive new variable with safe
+# zero-value default; downgrade leaves the rack working.
+variable "grafana_url" {
+  type        = string
+  default     = ""
+  description = "User-facing Grafana base URL for the Console deep-link button. Optional. Empty default keeps the button inert."
+}
+
+# Opt-in in-cluster Grafana sidecar. ConfigMaps for the six GPU dashboards
+# always ship to the cluster; this flag additionally enables the
+# kube-prometheus-stack `grafana` sub-chart so the dashboards auto-import via
+# sidecar. Default false keeps the rack's monitoring footprint identical for
+# users who don't want bundled Grafana.
+variable "enable_in_cluster_grafana" {
+  type        = bool
+  default     = false
+  description = "Opt-in: enable the in-cluster Grafana sidecar bundled with kube-prometheus-stack. When true the rack's six GPU dashboards auto-import via the sidecar's ConfigMap label selector. Default false."
+}
+
+# Sensitive admin password for the in-cluster Grafana when enable_in_cluster_grafana
+# is true. Empty default lets the chart generate a random password and store it
+# in a Kubernetes Secret; users running `convox rack params get` will see the
+# empty string but can recover the password via
+#   kubectl -n convox-monitoring get secret convox-kube-prometheus-sta-grafana -o jsonpath='{.data.admin-password}' | base64 -d
+variable "in_cluster_grafana_admin_password" {
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "Admin password for the in-cluster Grafana sidecar (when enable_in_cluster_grafana=true). Empty default lets the Helm chart generate a random password and store it in a K8s Secret."
 }
 
 variable "prometheus_gpu_metrics_retention" {

@@ -1,0 +1,121 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Hardware XID error rate per GPU (any non-zero is a fault signal).",
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 0.001}]}}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "single"}},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "GpuXidErrorRateByGpu", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (UUID, Hostname) (rate(DCGM_FI_DEV_XID_ERRORS[5m]))", "legendFormat": "{{Hostname}} {{UUID}}", "refId": "A"}
+      ],
+      "title": "XID Error Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "ECC double-bit errors total (cumulative). Non-zero indicates VRAM failure.",
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "id": 2,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "single"}},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "GpuEccDbeTotalByGpu", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "DCGM_FI_DEV_ECC_DBE_VOL_TOTAL", "legendFormat": "{{Hostname}} {{UUID}}", "refId": "A"}
+      ],
+      "title": "ECC Double-Bit Errors (cumulative)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "ECC single-bit error rate per hour (correctable; high rate signals memory degradation).",
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "id": 3,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "single"}},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "GpuEccSbeRateByGpu", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (UUID) (rate(DCGM_FI_DEV_ECC_SBE_VOL_TOTAL[1h]))", "legendFormat": "{{UUID}}", "refId": "A"}
+      ],
+      "title": "ECC Single-Bit Error Rate (1h)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "NVLink replay error rate per GPU/link.",
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "id": 4,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "single"}},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "GpuNvlinkReplayByGpu", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (UUID, link) (rate(DCGM_FI_DEV_NVLINK_REPLAY_ERROR_COUNT_TOTAL[5m]))", "legendFormat": "{{UUID}} link {{link}}", "refId": "A"}
+      ],
+      "title": "NVLink Replay Errors",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "GPU temperature per device.",
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "unit": "celsius", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 75}, {"color": "red", "value": 85}]}}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+      "id": 5,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "single"}},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "GpuTempByGpu", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "DCGM_FI_DEV_GPU_TEMP", "legendFormat": "{{Hostname}} {{UUID}}", "refId": "A"},
+        {"_source": "GpuMemTempByGpu", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "DCGM_FI_DEV_MEMORY_TEMP", "legendFormat": "Mem {{Hostname}} {{UUID}}", "refId": "B"}
+      ],
+      "title": "Temperature (GPU + Memory)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Power draw per GPU.",
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "unit": "watt"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+      "id": 6,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "single"}},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "GpuPowerByGpu", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "DCGM_FI_DEV_POWER_USAGE", "legendFormat": "{{Hostname}} {{UUID}}", "refId": "A"}
+      ],
+      "title": "Power Draw",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Throttle bitmask raw values per GPU. Decode in Go via DecodeThrottleReasons in prometheus_health.go.",
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}}, "overrides": []},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 24},
+      "id": 7,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "single"}},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "GpuThrottleBitmaskByGpu", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "DCGM_FI_DEV_CLOCK_THROTTLE_REASONS", "legendFormat": "{{Hostname}} {{UUID}}", "refId": "A"}
+      ],
+      "title": "Throttle Bitmask (raw)",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["convox", "gpu", "health", "errors"],
+  "templating": {"list": []},
+  "time": {"from": "now-1h", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "title": "Convox GPU — Health & Errors",
+  "uid": "convox-gpu-health",
+  "version": 1,
+  "weekStart": ""
+}
