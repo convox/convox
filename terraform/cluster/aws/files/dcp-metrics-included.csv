@@ -16,9 +16,8 @@
 #   - DCGM_FI_DEV_XID_ERRORS              (D5 panels 1+2; explicitly enabled
 #     here to guarantee emission across chart versions)
 #
-# Verified against rack test-v3-3246rc11 2026-05-06 — chart 4.8.1's
-# default-counters.csv exposes only 20 DCGM_FI_* fields; this override adds
-# the 9 fields above plus the upstream profiling set.
+# Chart 4.8.1's default-counters.csv exposes only 20 DCGM_FI_* fields;
+# this override adds the 9 fields above plus the upstream profiling set.
 #
 # Format: comma-separated DCGM FIELD, Prometheus type, help message. Comment
 # lines start with '#'.
@@ -52,7 +51,7 @@ DCGM_FI_DEV_DEC_UTIL,      gauge, Decoder utilization (in %).
 
 # Errors and violations (D5 health panels)
 DCGM_FI_DEV_XID_ERRORS,            gauge,   Value of the last XID error encountered.
-DCGM_FI_DEV_CLOCKS_EVENT_REASONS, gauge, Current clock event reasons (bitmask). NVIDIA renamed the legacy throttle-reasons field in DCGM 4.x; the runtime exporter image rejects the old alias with "unknown ExporterCounter field" on startup.
+DCGM_FI_DEV_CLOCKS_EVENT_REASONS, gauge, Current clock event reasons (bitmask). Renamed in DCGM 4.x from the legacy throttle-reasons field name.
 
 # Memory usage
 DCGM_FI_DEV_FB_FREE,     gauge, Framebuffer memory free (in MiB).

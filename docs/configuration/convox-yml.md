@@ -173,9 +173,18 @@ See [Balancer](/reference/primitives/app/balancer) and [Load Balancers](/configu
 
 ## budget
 
-The `budget` section configures monthly cost caps and the action taken when an app
-exceeds them. See [Budget Caps](/management/budget-caps) for the operational guide
-and [Cost Tracking](/management/cost-tracking) for how spend is computed.
+The `budget` section declares the schema for monthly cost caps and the action
+taken when an app exceeds them. See [Budget Caps](/management/budget-caps) for
+the operational guide and [Cost Tracking](/management/cost-tracking) for how
+spend is computed.
+
+Persistence: enforcement-bearing fields (`monthlyCapUsd`, `alertThresholdPercent`,
+`atCapAction`, `pricingAdjustment`) are set at runtime via `convox budget set`
+or the Console budget tab — `convox releases promote` validates the manifest's
+`budget:` block but does not auto-write these fields. Auto-shutdown runtime
+fields (`atCapWebhookUrl`, `notifyBeforeMinutes`, `shutdownGracePeriod`,
+`recoveryMode`, `shutdownOrder`, `neverAutoShutdown`) are read fresh from the
+manifest each accumulator tick and take effect on the next deploy.
 
 ```yaml
 budget:

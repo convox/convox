@@ -7,9 +7,12 @@ url: /management/budget-caps
 
 Convox tracks per-app cloud spend and lets you enforce a monthly cap. When the
 cap fires, the rack can alert, block new deploys, or auto-shut services down to
-prevent overrun. Caps are configured in `convox.yml` (see the [budget block in
-convox.yml](/configuration/convox-yml#budget)) and managed at runtime via the
-`convox budget` CLI.
+prevent overrun. Caps are managed at runtime via the `convox budget` CLI or the
+Console budget tab. The [budget block in convox.yml](/configuration/convox-yml#budget)
+declares the schema and is validated on `convox releases promote`, but does not
+itself persist runtime cap values — set caps via `convox budget set` so cap
+changes are explicit, audit-attributed, and not implicitly overwritten by the
+next deploy.
 
 This page is the operational guide for managing caps in production. For schema
 details see the [convox.yml budget block](/configuration/convox-yml#budget); for
@@ -25,7 +28,7 @@ caps and alerts persist as config but never trip. Enable on AWS racks:
 $ convox rack params set cost_tracking_enable=true
 ```
 
-If you set a `budget:` block in `convox.yml` (or run `convox budget set`)
+If you run `convox budget set` (or deploy a manifest with a `budget:` block)
 against a rack with `cost_tracking_enable=false`, the rack rejects with HTTP
 422 and a message pointing at this command. Set the rack parameter, wait for
 the apply to complete (~3 min), then redeploy or retry.

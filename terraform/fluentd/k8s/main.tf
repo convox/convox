@@ -127,6 +127,27 @@ resource "kubernetes_daemonset" "fluentd" {
             value = sha256(var.target)
           }
 
+          # Same configMap-staleness rolling-update pattern as TARGET_HASH
+          # above. fluent.conf and containers.conf are mounted into the pod
+          # via the kubernetes_config_map.fluentd resource at lines 40-51;
+          # when a rack upgrade ships a new version of either file, kubelet
+          # does NOT auto-restart the daemonset on configMap data update,
+          # and the fluentd process does not re-read the file. Embedding
+          # the file's content hash as an env var changes the daemonset's
+          # podSpec on file change, forcing a rolling update so new pods
+          # mount the freshly-updated configMap content. Mirror of the
+          # convox.com/dcgm-csv-sha256 podAnnotation pattern in
+          # terraform/cluster/aws/dcgm.tf.
+          env {
+            name  = "FLUENT_CONF_HASH"
+            value = filesha256("${path.module}/fluent.conf")
+          }
+
+          env {
+            name  = "CONTAINERS_CONF_HASH"
+            value = filesha256("${path.module}/containers.conf")
+          }
+
           dynamic "env" {
             for_each = var.env
 
