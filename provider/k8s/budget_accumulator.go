@@ -752,6 +752,18 @@ func (p *Provider) accumulateBudgetTick(ctx context.Context) error {
 	if p.Name == "" {
 		return nil
 	}
+
+	// Cost tracking is universal when the rack-level switch is on — every
+	// app namespace is walked, not just those with budget config set. The
+	// per-app function (accumulateBudgetApp) routes the work: cost-only
+	// tracking when cfg is nil; cost tracking PLUS budget enforcement
+	// (threshold / cap / auto-shutdown) when cfg is set. Documented
+	// behavior per docs/management/cost-tracking.md — cost_tracking_enable
+	// gates the accumulator at the rack tier; per-app budget config is
+	// only required for cap enforcement, not for spend visibility.
+	if !p.costTrackingEnabled() {
+		return nil
+	}
 	selector := fmt.Sprintf("system=convox,rack=%s,type=app", p.Name)
 	ns, err := p.ListNamespacesFromInformer(selector)
 	if err != nil {
@@ -770,14 +782,6 @@ func (p *Provider) accumulateBudgetTick(ctx context.Context) error {
 			return err
 		}
 		n := &ns.Items[i]
-		cfg, err := readBudgetConfigAnnotation(n.Annotations)
-		if err != nil {
-			fmt.Printf("ns=budget_accumulator at=config_parse namespace=%s error=%q\n", n.Name, err)
-			continue
-		}
-		if cfg == nil {
-			continue
-		}
 		app := n.Labels["app"]
 		if app == "" {
 			continue
@@ -810,14 +814,18 @@ func (p *Provider) accumulateBudgetApp(ctx context.Context, app string, now time
 			fmt.Printf("ns=budget_accumulator at=config_parse app=%s error=%q\n", app, err)
 			return nil
 		}
-		if cfg == nil {
-			return nil
-		}
-		// Defense in depth: a corrupt annotation with MonthlyCapUsd <= 0, NaN,
-		// or Inf would otherwise fire a cap alert on every tick or silently
-		// suppress alerts (NaN comparisons return false). Validate() rejects
-		// these at write time, but hand-edited annotations could bypass that.
-		if cfg.MonthlyCapUsd <= 0 || math.IsNaN(cfg.MonthlyCapUsd) || math.IsInf(cfg.MonthlyCapUsd, 0) {
+		// cfg may be nil — that's the cost-tracking-only path (no budget
+		// cap configured for this app). The accumulator still computes
+		// spend deltas and updates PerServiceSpendUsd so `convox cost`
+		// and the Console budget panel report real numbers; the threshold
+		// / cap / auto-shutdown enforcement below is gated on cfg != nil.
+		//
+		// Defense in depth (config-set path only): a corrupt annotation
+		// with MonthlyCapUsd <= 0, NaN, or Inf would otherwise fire a cap
+		// alert on every tick or silently suppress alerts (NaN
+		// comparisons return false). Validate() rejects these at write
+		// time, but hand-edited annotations could bypass that.
+		if cfg != nil && (cfg.MonthlyCapUsd <= 0 || math.IsNaN(cfg.MonthlyCapUsd) || math.IsInf(cfg.MonthlyCapUsd, 0)) {
 			fmt.Printf("ns=budget_accumulator at=invalid_cap app=%s cap=%v\n", app, cfg.MonthlyCapUsd)
 			return nil
 		}
@@ -834,7 +842,15 @@ func (p *Provider) accumulateBudgetApp(ctx context.Context, app string, now time
 			state = &structs.AppBudgetState{MonthStart: startOfMonth(now), CurrentMonthSpendAsOf: now}
 		}
 
-		delta, perSvc, perSvcInst, warnings, err := p.computeBudgetDelta(ctx, app, state.CurrentMonthSpendAsOf, now, cfg.PricingAdjustment)
+		// Pricing adjustment defaults to 1.0 when no budget config is set
+		// (cost-tracking-only path). This matches AppCost's default and
+		// the docs at docs/management/cost-tracking.md ("pricingAdjustment
+		// of 1.0 = no adjustment").
+		adjustment := 1.0
+		if cfg != nil && cfg.PricingAdjustment > 0 {
+			adjustment = cfg.PricingAdjustment
+		}
+		delta, perSvc, perSvcInst, warnings, err := p.computeBudgetDelta(ctx, app, state.CurrentMonthSpendAsOf, now, adjustment)
 		if err != nil {
 			return err
 		}
@@ -884,18 +900,24 @@ func (p *Provider) accumulateBudgetApp(ctx context.Context, app string, now time
 			fmt.Printf("ns=budget_accumulator at=per_service_truncated app=%s count=%d cap=%d\n", app, truncated, perServiceMaxEntries)
 		}
 
-		willFireThreshold := !state.CurrentMonthSpendAsOf.IsZero() &&
-			state.CurrentMonthSpendUsd >= cfg.MonthlyCapUsd*(cfg.AlertThresholdPercent/100) &&
-			state.AlertFiredAtThreshold.IsZero()
-		willFireCap := state.CurrentMonthSpendUsd >= cfg.MonthlyCapUsd && state.AlertFiredAtCap.IsZero()
+		// Threshold + cap enforcement only fires when a budget config is
+		// set. Cost-tracking-only path (cfg == nil) skips straight to
+		// state persistence.
+		var willFireThreshold, willFireCap bool
+		if cfg != nil {
+			willFireThreshold = !state.CurrentMonthSpendAsOf.IsZero() &&
+				state.CurrentMonthSpendUsd >= cfg.MonthlyCapUsd*(cfg.AlertThresholdPercent/100) &&
+				state.AlertFiredAtThreshold.IsZero()
+			willFireCap = state.CurrentMonthSpendUsd >= cfg.MonthlyCapUsd && state.AlertFiredAtCap.IsZero()
 
-		if willFireThreshold {
-			state.AlertFiredAtThreshold = now
-		}
-		if willFireCap {
-			state.AlertFiredAtCap = now
-			if cfg.AtCapAction == structs.BudgetAtCapActionBlockNewDeploys {
-				state.CircuitBreakerTripped = true
+			if willFireThreshold {
+				state.AlertFiredAtThreshold = now
+			}
+			if willFireCap {
+				state.AlertFiredAtCap = now
+				if cfg.AtCapAction == structs.BudgetAtCapActionBlockNewDeploys {
+					state.CircuitBreakerTripped = true
+				}
 			}
 		}
 
@@ -945,7 +967,13 @@ func (p *Provider) accumulateBudgetApp(ctx context.Context, app string, now time
 		// the armed-window-elapsed transition fires on later ticks (the
 		// :armed write happens on the willFireCap tick; :fired happens
 		// notifyBeforeMinutes later).
-		p.reconcileAutoShutdown(ctx, app, cfg, state, now)
+		//
+		// Skipped on the cost-tracking-only path (cfg == nil): no cap
+		// configured means no :armed transition is possible, so there's
+		// nothing to reconcile.
+		if cfg != nil {
+			p.reconcileAutoShutdown(ctx, app, cfg, state, now)
+		}
 
 		// Stale-annotation GC runs unconditionally per spec §7.4 — defaults
 		// to a 10-minute interval cleanup window. Best-effort; logs but

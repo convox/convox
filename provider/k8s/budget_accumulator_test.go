@@ -514,6 +514,54 @@ func TestAppCost_NoBudget(t *testing.T) {
 	})
 }
 
+// TestAccumulateBudgetTick_UniversalCostTracking pins the contract that
+// the accumulator updates spend state for ALL apps when
+// cost_tracking_enable=true, NOT only apps with explicit budget config.
+// This matches the documented behavior at
+// docs/management/cost-tracking.md ("the rack samples each running pod
+// on every accumulator tick"); the per-app budget config gates only
+// the cap-enforcement path, not spend visibility.
+//
+// Pre-fix: an app without budget config returned $0.00 from
+// `convox cost <app>` and a blank Console budget panel even after
+// running for hours, because the tick loop short-circuited at
+// `if cfg == nil { continue }` before computing any spend delta.
+func TestAccumulateBudgetTick_UniversalCostTracking(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+
+		// app1: no budget config, no cap
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		// app2: has budget config (control case — unchanged behavior)
+		require.NoError(t, appCreate(kk, "rack1", "app2"))
+		writeConfig(t, kk, "rack1-app2", &structs.AppBudget{
+			MonthlyCapUsd: 100, AlertThresholdPercent: 80, AtCapAction: "alert-only", PricingAdjustment: 1,
+		})
+
+		// Run the tick. Expectation: BOTH apps get a state annotation
+		// written even though only app2 has cfg. Pre-fix, app1 was
+		// skipped entirely.
+		require.NoError(t, k8s.AccumulateBudgetTickForTest(p, context.Background()))
+
+		// app1: no cfg → cost-tracking-only path. State annotation
+		// should exist with MonthStart populated; spend may be 0
+		// (no pods in fixture) but the annotation proves the tick
+		// did NOT skip the app.
+		ns1, err := kk.CoreV1().Namespaces().Get(context.Background(), "rack1-app1", am.GetOptions{})
+		require.NoError(t, err)
+		assert.NotEmpty(t, ns1.Annotations[structs.BudgetStateAnnotation],
+			"app without budget config must still have state annotation written when cost_tracking_enable=true (pre-fix this was empty)")
+
+		// app2: cfg set → full enforcement path. State annotation
+		// should also exist (control).
+		ns2, err := kk.CoreV1().Namespaces().Get(context.Background(), "rack1-app2", am.GetOptions{})
+		require.NoError(t, err)
+		assert.NotEmpty(t, ns2.Annotations[structs.BudgetStateAnnotation],
+			"app with budget config must have state annotation written")
+	})
+}
+
 // AppCost with budget set reports the stored PricingAdjustment.
 func TestAppCost_WithBudget(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
@@ -1580,6 +1628,11 @@ func TestAccumulator_LifecycleInterruptedTick_GraceExceeded(t *testing.T) {
 // fired (proves the loop aborted mid-walk, not after touching every
 // app).
 func TestAccumulateBudgetTick_CancelMidApp_AbortsRemainingApps(t *testing.T) {
+	// accumulateBudgetTick gates the iteration on costTrackingEnabled —
+	// without this the rack-level switch is OFF and the function
+	// returns nil without touching any app namespace, so the cancel
+	// reactor below would never fire.
+	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
 
