@@ -55,6 +55,19 @@ func New(endpoint string) (*Client, error) {
 		Debug:  os.Getenv("CONVOX_DEBUG") == "true",
 	}
 
+	// Auto-populate the audit-actor header from the CONVOX_ACTOR env
+	// var when set. Used by the workflow worker (which spawns convox
+	// CLI subprocesses with CONVOX_ACTOR=<user-email>) and the build
+	// pod (which is launched with the same env injected by the rack
+	// provider). Pre-3.24.6 racks ignore the header and fall back to
+	// the existing rack-password behavior — back-compat clean.
+	if a := strings.TrimSpace(os.Getenv("CONVOX_ACTOR")); a != "" {
+		if c.ExtraHeaders == nil {
+			c.ExtraHeaders = map[string]string{}
+		}
+		c.ExtraHeaders["X-Convox-Actor"] = a
+	}
+
 	c.Client.Headers = c.Headers
 
 	return c, nil

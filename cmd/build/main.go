@@ -137,9 +137,16 @@ func execute() error {
 		return err
 	}
 
-	rack.ExtraHeaders = map[string]string{
-		"X-Convox-TID": os.Getenv("CONVOX_TID"),
+	// Preserve any headers `sdk.New()` already populated (e.g., the
+	// X-Convox-Actor header sourced from the CONVOX_ACTOR env var
+	// injected by the rack provider when the build pod was launched).
+	// Replacing the map outright would silently drop the actor
+	// attribution, leaving every build:create / release:create event
+	// emitted by the build pod stamped with the rack-password literal.
+	if rack.ExtraHeaders == nil {
+		rack.ExtraHeaders = map[string]string{}
 	}
+	rack.ExtraHeaders["X-Convox-TID"] = os.Getenv("CONVOX_TID")
 
 	var engine build.Engine = &build.BuildKit{}
 	b, err := build.New(rack, opts, engine)
