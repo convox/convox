@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/convox/convox/pkg/atom"
@@ -110,7 +111,46 @@ type Provider struct {
 	logger    *logger.Logger
 	metrics   *metrics.Metrics
 	templater *templater.Templater
-	webhooks  []string
+
+	// webhookState holds the cached webhook URL list and a guarding
+	// mutex. The leader pod's controller_webhook informer rewrites
+	// urls from a goroutine while EventSend reads them from any
+	// HTTP-handler goroutine — the mutex protects the slice-header
+	// generation under -race.
+	//
+	// MUST be a pointer: WithContext does `pp := *p` to derive a
+	// per-request Provider, so any sync.Mutex / sync.RWMutex stored
+	// directly on Provider would be COPIED on every request, which
+	// (a) violates sync's no-copy contract, (b) detaches each request's
+	// view from the leader's informer rewrites, and (c) trips `go vet`.
+	// The pointer keeps every Provider copy pointing at the same
+	// shared lock + slice, so reads from per-request derivatives see
+	// the leader's writes immediately.
+	//
+	// Init-order invariant: Initialize must complete before any
+	// goroutine derives a per-request Provider via WithContext —
+	// otherwise pp := *p snapshots a nil webhookState pointer and
+	// that derivative is permanently disconnected from the leader's
+	// informer rewrites. The pkg/api boot path satisfies this by
+	// sequencing Initialize → Start → Listen synchronously in
+	// NewWithProvider; nil-guards in event.go::EventSend and
+	// controller_webhook.go::setWebhooks are defense-in-depth for
+	// the test-harness paths that bypass Initialize.
+	webhookState *webhookState
+}
+
+type webhookState struct {
+	mu sync.RWMutex
+	// populated is set once the informer has observed the webhooks
+	// configmap (Add/Update/Delete fires from leaderStart). EventSend
+	// distinguishes "informer has populated; result is authoritative
+	// (even when empty)" from "no informer has run on this pod —
+	// fall back to a synchronous configmap read". Without this flag,
+	// a leader pod on a rack with zero webhooks configured would do
+	// one configmap GET per event despite the informer having
+	// already confirmed the empty state.
+	populated bool
+	urls      []string
 }
 
 func init() {
@@ -293,7 +333,9 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 	p.logger = logger.New("ns=k8s")
 	p.metrics = metrics.New("https://metrics.convox.com/metrics/rack")
 	p.templater = templater.New(template.TemplatesFS)
-	p.webhooks = []string{}
+	if p.webhookState == nil {
+		p.webhookState = &webhookState{}
+	}
 
 	if os.Getenv("TEST") == "true" {
 		return nil

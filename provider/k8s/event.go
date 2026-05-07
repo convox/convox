@@ -138,8 +138,68 @@ func (p *Provider) EventSend(action string, opts structs.EventSendOptions) error
 		}
 	}
 
-	for _, wh := range p.webhooks {
-		go dispatchWebhookSafely(wh, msg, signingKeys)
+	// Resolve the webhook URL list. The cached p.webhookState.urls slice
+	// is populated by an informer that only runs on the LEADER pod
+	// (pkg/kctl/kctl.go:leaderStart). Non-leader api pods see an empty
+	// urls slice and would silently drop every event their HTTP
+	// handlers emit (release:promote, app:create, scale-override, etc.)
+	// causing the user-visible "App Events tab is empty for half my
+	// requests" symptom on multi-replica racks.
+	//
+	// Strategy: prefer the in-memory cache (leader-fast-path, no API
+	// call) when populated, otherwise fall back to a synchronous
+	// configmap read (non-leader fallback). The fallback adds one k8s
+	// API call per emitted event on non-leader pods — cheap relative
+	// to the dispatch goroutines below — and eliminates the leader
+	// dependency for webhook fan-out.
+	//
+	// Snapshot the cache under the read lock so the informer's
+	// concurrent slice-header rewrite (controller_webhook.go::Add /
+	// Delete / Update assigns urls = newSlice) cannot tear the read.
+	// webhookState is a pointer so derivative providers built via
+	// WithContext share the same lock + slice — see Provider.webhookState.
+	//
+	// Also capture `populated` under the same RLock: it distinguishes
+	// "informer has run on this pod; cache is authoritative even if
+	// empty" from "informer has never run on this pod; fall back to
+	// configmap". Without this distinction, a rack with zero webhooks
+	// configured would issue one configmap GET per emitted event on
+	// the leader pod despite the informer having already confirmed
+	// the empty state.
+	var cached []string
+	var cachePopulated bool
+	if p.webhookState != nil {
+		p.webhookState.mu.RLock()
+		cachePopulated = p.webhookState.populated
+		cached = append([]string(nil), p.webhookState.urls...)
+		p.webhookState.mu.RUnlock()
+	}
+
+	var urls []string
+	if cachePopulated {
+		urls = cached
+	} else {
+		whs, err := p.webhookList()
+		if err != nil {
+			// Fail open: webhook fan-out has always been best-effort
+			// fire-and-forget (the dispatch goroutines below swallow
+			// non-2xx, panic, hung-receiver errors via
+			// dispatchWebhookSafely). Pre-3ff30dc0 racks NEVER returned
+			// an error from the webhook step; propagating a configmap
+			// read failure here turns transient kube-apiserver hiccups
+			// into 5xx for callers like ReleasePromote / AppCreate /
+			// scale-override whose primary contract has nothing to do
+			// with webhook delivery. Log and continue.
+			fmt.Printf("ns=event_dispatch at=webhook_list_failed error=%q dispatch=skipped\n", err)
+			return nil
+		}
+		for _, wh := range whs {
+			urls = append(urls, wh.URL)
+		}
+	}
+
+	for _, url := range urls {
+		go dispatchWebhookSafely(url, msg, signingKeys)
 	}
 
 	return nil

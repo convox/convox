@@ -92,14 +92,24 @@ func (s *Server) authenticate(next stdapi.HandlerFunc) stdapi.HandlerFunc {
 			// Audit: stash the verified JWT subject so contextFrom can thread it
 			// into the provider context for ContextActor / EventSend "actor"
 			// derivation. Basic-auth callers (rack-password) take a separate
-			// path covered by the SetReadWriteRole branch.
+			// path covered by the SetAdminRole branch below — basic-auth is
+			// root-equivalent by trust model so it holds the admin role for
+			// admin-gated endpoints (e.g. AppBudgetSet cap-change). JWT
+			// WriteToken callers continue to be gated by their issued role.
 			c.Set(structs.ConvoxJwtUserParam, data.User)
 		} else {
 			if s.Password != "" && s.Password != pass {
 				c.Response().Header().Set("WWW-Authenticate", `Basic realm="convox"`)
 				return stdapi.Errorf(http.StatusUnauthorized, "invalid authentication")
 			}
-			SetReadWriteRole(c)
+			// Basic-auth callers hold the rack password — by trust model
+			// they already have full root access (CLI deploys, params,
+			// release rollbacks, app delete, etc.). Stamp the admin role
+			// so admin-gated endpoints (e.g. AppBudgetSet cap-change)
+			// don't reject the CLI / Console3-via-rack-password path.
+			// Pure JWT-write callers (third-party integrations using
+			// WriteToken) still hit the rw role and stay correctly gated.
+			SetAdminRole(c)
 			// Audit: basic-auth callers (rack-password) have no JWT identity, so
 			// stash the literal "rack-password" sentinel for ContextActor /
 			// EventSend audit-event derivation. The literal is uniquely greppable

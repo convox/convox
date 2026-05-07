@@ -774,6 +774,50 @@ func TestAppBudgetSet_AdminGate_CapChange_NonAdminRejected(t *testing.T) {
 	})
 }
 
+// TestAppBudgetSet_AdminGate_CapChange_BasicAuth_Allowed pins the api.go
+// SetAdminRole-on-basic-auth contract: a basic-auth caller (rack-password,
+// the path the convox CLI and Console3-via-rack-client both take) MUST
+// reach AppBudgetSet for cap-change calls, not bounce off the CanAdmin gate.
+//
+// Earlier in the 3.24.6 development cycle the basic-auth branch landed
+// on SetReadWriteRole ("rw"); CanAdmin requires substring "a"; cap-change
+// returned 403. The api.go switch to SetAdminRole on the basic-auth
+// branch is what unblocks Console budget save and `convox budget set`
+// from the CLI. A future revert to SetReadWriteRole would silently
+// re-introduce the production 403; this test is the regression gate
+// for that change.
+//
+// Distinct from TestAppBudgetSet_AdminGate_CapChange_NonAdminRejected
+// (which exercises a JWT WriteToken role=w; that path is correctly gated
+// and remains rejected — the JWT branch above the basic-auth branch in
+// api.go::authenticate does not stamp admin).
+func TestAppBudgetSet_AdminGate_CapChange_BasicAuth_Allowed(t *testing.T) {
+	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, _ *cjwt.JwtManager) {
+		p.On("AppBudgetSet", "myapp",
+			mock.MatchedBy(func(o structs.AppBudgetOptions) bool {
+				return o.MonthlyCapUsd != nil && *o.MonthlyCapUsd == "500"
+			}),
+			"rack-password",
+		).Return(nil)
+
+		body := url.Values{"monthly-cap-usd": {"500"}}.Encode()
+		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget", strings.NewReader(body))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.SetBasicAuth("convox", "supersecret")
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		bodyBytes, _ := io.ReadAll(res.Body)
+		require.Equal(t, http.StatusOK, res.StatusCode,
+			"basic-auth + monthly-cap-usd must NOT 403 (admin role granted to rack-password); got %q",
+			string(bodyBytes))
+		p.AssertExpectations(t)
+	})
+}
+
 // TestAppBudgetSet_AdminGate_CapChange_AdminSucceeds verifies that an admin
 // caller can change MonthlyCapUsd via AppBudgetSet without hitting the gate.
 func TestAppBudgetSet_AdminGate_CapChange_AdminSucceeds(t *testing.T) {
