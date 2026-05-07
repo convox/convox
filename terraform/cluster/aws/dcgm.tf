@@ -16,7 +16,7 @@
 # a finalizer-cleanup null_resource (mirror karpenter.tf:172-242 pattern).
 #
 # DCGM counter override: chart 4.8.1's stock default-counters.csv leaves XID,
-# ECC SBE/DBE, NVLINK_REPLAY, CLOCK_THROTTLE_REASONS, SM_ACTIVE, FP16/32/64
+# ECC SBE/DBE, NVLINK_REPLAY, CLOCKS_EVENT_REASONS, SM_ACTIVE, FP16/32/64
 # ACTIVE disabled. files/dcp-metrics-included.csv (this directory) ships them
 # enabled; the ConfigMap + extraConfigMapVolumes/extraVolumeMounts pattern
 # below mounts the file at /etc/dcgm-exporter-convox/ and points the

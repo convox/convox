@@ -94,14 +94,14 @@
     },
     {
       "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "description": "Throttle bitmask raw values per GPU. Decode in Go via DecodeThrottleReasons in prometheus_health.go.",
+      "description": "Throttle bitmask raw values per GPU. Bitmask interpretation: see NVIDIA DCGM docs for DCGM_FI_DEV_CLOCKS_EVENT_REASONS.",
       "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}}, "overrides": []},
       "gridPos": {"h": 8, "w": 24, "x": 0, "y": 24},
       "id": 7,
       "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "single"}},
       "pluginVersion": "10.4.2",
       "targets": [
-        {"_source": "GpuThrottleBitmaskByGpu", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "DCGM_FI_DEV_CLOCK_THROTTLE_REASONS", "legendFormat": "{{Hostname}} {{UUID}}", "refId": "A"}
+        {"_source": "GpuThrottleBitmaskByGpu", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "DCGM_FI_DEV_CLOCKS_EVENT_REASONS", "legendFormat": "{{Hostname}} {{UUID}}", "refId": "A"}
       ],
       "title": "Throttle Bitmask (raw)",
       "type": "timeseries"

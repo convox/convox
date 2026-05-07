@@ -75,7 +75,7 @@
       "options": {"showHeader": true},
       "pluginVersion": "10.4.2",
       "targets": [
-        {"_source": "GpuTopThrottleReasons", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "topk(5, max_over_time((DCGM_FI_DEV_CLOCK_THROTTLE_REASONS != 0)[5m:30s])) by (UUID, Hostname)", "format": "table", "instant": true, "refId": "A"}
+        {"_source": "GpuTopThrottleReasons", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "topk(5, max_over_time((DCGM_FI_DEV_CLOCKS_EVENT_REASONS != 0)[5m:30s])) by (UUID, Hostname)", "format": "table", "instant": true, "refId": "A"}
       ],
       "title": "Top Throttle Reasons",
       "type": "table"

@@ -71,7 +71,9 @@ func NewPrometheusClient(host string) (*PrometheusClient, error) {
 // Returns (empty-map, nil) when no samples are found — distinguishes
 // "Prometheus reachable, no data yet" from a transport error.
 //
-// Total queries per call: 3 (one per metric). Caller pays one Prom
+// Total queries per call: 10 (one per metric — util, fb-used, fb-free,
+// fb-reserved, tensor-active, sm-active, dram-active, fp16-active,
+// fp32-active, power-usage). Caller pays one Prom
 // round-trip per metric, NOT one per pod. Lower latency, lower Prom
 // load. See MG-4 OQ-5.
 func (pc *PrometheusClient) QueryGPUMetrics(ctx context.Context, app string, services []string) (map[string]GpuMetrics, error) {
