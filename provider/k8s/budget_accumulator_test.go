@@ -1501,6 +1501,11 @@ func TestAccumulator_LifecyclePreCancelledCtx_StopsCleanly(t *testing.T) {
 // honours ctx cancellation.
 func TestAccumulator_LifecycleInterruptedTick_GracefulDrain(t *testing.T) {
 	t.Setenv("BUDGET_POLL_INTERVAL", "1m")
+	// accumulateBudgetTick gates iteration on costTrackingEnabled — without
+	// this setenv the function returns nil before reaching the wedged reactor,
+	// so the test would pass vacuously without exercising the in-flight-drain
+	// path. Mirror the comment at TestAccumulateBudgetTick_CancelMidApp:1635-1640.
+	t.Setenv("COST_TRACKING_ENABLE", "true")
 
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
@@ -1560,6 +1565,11 @@ func TestAccumulator_LifecycleInterruptedTick_GracefulDrain(t *testing.T) {
 // and the orphan tick goroutine returns even on assertion failure.
 func TestAccumulator_LifecycleInterruptedTick_GraceExceeded(t *testing.T) {
 	t.Setenv("BUDGET_POLL_INTERVAL", "1m")
+	// accumulateBudgetTick gates iteration on costTrackingEnabled — without
+	// this setenv the function returns nil before reaching the wedged reactor,
+	// so the test would pass vacuously without exercising the bounded-wg.Wait
+	// shutdown-grace path. Mirror the comment at TestAccumulateBudgetTick_CancelMidApp:1635-1640.
+	t.Setenv("COST_TRACKING_ENABLE", "true")
 
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)

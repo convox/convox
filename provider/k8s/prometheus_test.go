@@ -185,9 +185,13 @@ func TestQueryGPUMetrics_TypicalSample(t *testing.T) {
 	assert.Equal(t, "web", got["pod-b"].Service)
 	assert.Equal(t, "inference", got["pod-c"].Service)
 
-	// One batched query per metric (NOT one per pod). 4 metrics → 4
-	// queries: GPU_UTIL + FB_USED + FB_FREE + FB_RESERVED.
-	assert.Equal(t, int64(4), atomic.LoadInt64(&queryCount),
+	// One batched query per metric (NOT one per pod). 10 metrics →
+	// 10 queries: GPU_UTIL + FB_USED + FB_FREE + FB_RESERVED + the
+	// 6 extended profiling counters (PROF_PIPE_TENSOR_ACTIVE,
+	// PROF_SM_ACTIVE, PROF_DRAM_ACTIVE, PROF_PIPE_FP16_ACTIVE,
+	// PROF_PIPE_FP32_ACTIVE, DCGM_FI_DEV_POWER_USAGE) added in the
+	// 3.24.6 GPU observability work.
+	assert.Equal(t, int64(10), atomic.LoadInt64(&queryCount),
 		"QueryGPUMetrics must issue exactly one Prom round-trip per metric")
 }
 

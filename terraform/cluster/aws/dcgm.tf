@@ -98,10 +98,21 @@ resource "helm_release" "dcgm_exporter" {
       # Prometheus (e.g. kube-prometheus-stack self-managed which expects them).
       # Convox's free + paid paths use kubernetes_sd Pod role + label selector;
       # they do NOT consume these annotations.
+      #
+      # convox.com/dcgm-csv-sha256: rolling-update trigger. When the CSV
+      # contents change (e.g. a chart bump renames a metric like the
+      # CLOCK_THROTTLE_REASONS → CLOCKS_EVENT_REASONS rename in DCGM 4.x),
+      # the configMap data changes but kubelet does NOT restart the pods
+      # (mounted volume is updated lazily and the dcgm-exporter process
+      # does not re-read its counter file). Including the file's sha256
+      # in podAnnotations makes the helm values diff non-empty on CSV
+      # change, helm rolls the DaemonSet, new pods read the new CSV, and
+      # the rack heals without a manual `kubectl rollout restart`.
       podAnnotations = {
-        "prometheus.io/scrape" = "true"
-        "prometheus.io/port"   = "9400"
-        "prometheus.io/path"   = "/metrics"
+        "prometheus.io/scrape"       = "true"
+        "prometheus.io/port"         = "9400"
+        "prometheus.io/path"         = "/metrics"
+        "convox.com/dcgm-csv-sha256" = filesha256("${path.module}/files/dcp-metrics-included.csv")
       }
 
       # Schedule on GPU nodes only. The convox.io/gpu-vendor=nvidia label

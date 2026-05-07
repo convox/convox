@@ -5,16 +5,26 @@ url: /reference/primitives/app/budget
 ---
 # Budget
 
-A **Budget** is a per-app monthly spend cap, alert threshold, at-cap action, and persisted cap-trip recovery state. The Budget primitive ships with 3.24.6 and is rack-managed; it lives outside the per-app `convox.yml` to avoid coupling the cap value to deploy lifecycles.
+A **Budget** is a per-app monthly spend cap, alert threshold, at-cap action, and persisted cap-trip recovery state. The Budget primitive ships with 3.24.6 and is rack-managed; it lives outside the per-app `convox.yml` to avoid coupling the cap value to deploy lifecycles. Cap values, threshold percent, at-cap action, and pricing adjustment are set via `convox budget set` (or the Console budget tab); the auto-shutdown runtime fields below are read fresh from the manifest at simulate/tick time and take effect on the next deploy.
 
 ## Fields
 
-The Budget primitive's user-configurable fields are written to `convox.yml` under
-the `budget` block (camelCase keys to match the established Convox manifest
-convention). The wire/annotation JSON form uses kebab-case (e.g.
-`monthly-cap-usd`); the CLI param form on `convox budget set` and `convox budget
-cap raise` matches the wire form. See [convox.yml budget block](/configuration/convox-yml#budget)
+The Budget primitive's schema is declared in `convox.yml` under the `budget`
+block (camelCase keys to match the established Convox manifest convention).
+The wire/annotation JSON form uses kebab-case (e.g. `monthly-cap-usd`); the
+CLI param form on `convox budget set` and `convox budget cap raise` matches
+the wire form. See [convox.yml budget block](/configuration/convox-yml#budget)
 for the full schema reference.
+
+Persistence semantics: enforcement-bearing fields (`monthlyCapUsd`,
+`alertThresholdPercent`, `atCapAction`, `pricingAdjustment`) are set via
+`convox budget set` or the Console — `convox releases promote` validates the
+manifest's `budget:` block but does not auto-write these fields, so a deploy
+cannot silently overwrite an operator-set cap. Auto-shutdown runtime fields
+(`atCapWebhookUrl`, `notifyBeforeMinutes`, `shutdownGracePeriod`, `recoveryMode`,
+`shutdownOrder`, `neverAutoShutdown`) are read fresh from the manifest each
+accumulator tick and take effect on the next deploy without requiring a
+separate `convox budget set` call.
 
 | Field | Type | Description |
 |:------|:-----|:------------|
