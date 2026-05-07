@@ -59,6 +59,17 @@ type fakeProvider struct {
 	processMu      sync.Mutex
 }
 
+// WithContext returns the receiver unchanged — fakeProvider has no
+// per-context state to track. Defensive stub: the embedded nil
+// structs.Provider auto-generated wrapper would panic if a future
+// refactor of StreamAppLogs / StreamSystemLogs starts plumbing
+// context via WithContext. Today the close-on-cancel goroutine in
+// those streamers handles cancellation directly without the
+// WithContext detour.
+func (f *fakeProvider) WithContext(ctx context.Context) structs.Provider {
+	return f
+}
+
 func (f *fakeProvider) AppGet(name string) (*structs.App, error) {
 	f.appMu.Lock()
 	defer f.appMu.Unlock()
@@ -367,5 +378,110 @@ func TestStreamAppProcessStates_CancelStopsImmediately(t *testing.T) {
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("StreamAppProcessStates never exited after ctx cancel")
+	}
+}
+
+// blockingReader implements io.ReadCloser. Read blocks until Close is
+// called, then returns io.EOF. Models a real websocket-via-Console-proxy
+// AppLogs scenario where the upstream keeps the connection open forever
+// with no data flowing — the failure mode that caused the V3 +
+// Console-proxy promote-hang regression.
+type blockingReader struct {
+	once   sync.Once
+	closed chan struct{}
+}
+
+func newBlockingReader() *blockingReader {
+	return &blockingReader{closed: make(chan struct{})}
+}
+
+func (b *blockingReader) Read(p []byte) (int, error) {
+	<-b.closed
+	return 0, io.EOF
+}
+
+func (b *blockingReader) Close() error {
+	b.once.Do(func() { close(b.closed) })
+	return nil
+}
+
+// blockingLogsProvider returns a never-EOFing reader from AppLogs and
+// SystemLogs, modeling the V3+Console-proxy path where the websocket
+// stays open with no bytes flowing.
+type blockingLogsProvider struct {
+	fakeProvider
+	r *blockingReader
+}
+
+func (b *blockingLogsProvider) AppLogs(string, structs.LogsOptions) (io.ReadCloser, error) {
+	return b.r, nil
+}
+
+func (b *blockingLogsProvider) SystemLogs(structs.LogsOptions) (io.ReadCloser, error) {
+	return b.r, nil
+}
+
+// TestStreamAppLogs_CtxCancelClosesBlockedReader pins the close-on-cancel
+// goroutine in StreamAppLogs. The original promote-hang bug was that
+// Scanner.Scan blocked forever on a websocket-backed reader that never
+// EOFed and whose ctx cancellation didn't propagate to the pipe. The
+// fix spawns a per-iteration goroutine that closes the reader on
+// ctx.Done — without it, this test deadlocks. With it, StreamAppLogs
+// returns within a few ms of cancel().
+func TestStreamAppLogs_CtxCancelClosesBlockedReader(t *testing.T) {
+	p := &blockingLogsProvider{
+		fakeProvider: fakeProvider{appReturns: []*structs.App{{Status: "updating"}}},
+		r:            newBlockingReader(),
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	var buf bytes.Buffer
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		StreamAppLogs(ctx, p, &buf, "app1")
+	}()
+
+	time.Sleep(30 * time.Millisecond)
+	t0 := time.Now()
+	cancel()
+
+	select {
+	case <-done:
+		if d := time.Since(t0); d > 500*time.Millisecond {
+			t.Fatalf("StreamAppLogs took %s after cancel — close-on-cancel goroutine missing", d)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("StreamAppLogs blocked indefinitely on Scanner.Scan after cancel — close-on-cancel goroutine missing")
+	}
+}
+
+// TestStreamSystemLogs_CtxCancelClosesBlockedReader is the twin-site
+// version of the above test, covering StreamSystemLogs.
+func TestStreamSystemLogs_CtxCancelClosesBlockedReader(t *testing.T) {
+	p := &blockingLogsProvider{
+		fakeProvider: fakeProvider{systemReturns: []*structs.System{{Status: "running"}}},
+		r:            newBlockingReader(),
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	var buf bytes.Buffer
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		StreamSystemLogs(ctx, p, &buf)
+	}()
+
+	time.Sleep(30 * time.Millisecond)
+	t0 := time.Now()
+	cancel()
+
+	select {
+	case <-done:
+		if d := time.Since(t0); d > 500*time.Millisecond {
+			t.Fatalf("StreamSystemLogs took %s after cancel — close-on-cancel goroutine missing", d)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("StreamSystemLogs blocked indefinitely on Scanner.Scan after cancel — close-on-cancel goroutine missing")
 	}
 }

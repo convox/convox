@@ -212,7 +212,31 @@ func StreamAppLogs(ctx context.Context, p structs.Provider, w io.Writer, app str
 			return
 		}
 
+		// Close the reader on ctx cancel so Scanner.Scan in
+		// copySystemLogs unblocks. Without this, the V3 +
+		// Console-proxy path holds the websocket open with no data
+		// flowing — the streamer stays parked in
+		// bufio.Scanner.Scan() and the CLI hangs waiting on
+		// `<-logsDone` forever after the deploy reaches running.
+		// Close fires in BOTH branches: the cancel branch unblocks
+		// Scanner.Scan, and the closed branch cleans up the
+		// underlying ReadCloser when copySystemLogs returns by EOF
+		// — without that, every iteration past the first would leak
+		// one websocket / HTTP-body resource for the lifetime of the
+		// outer streamer.
+		closed := make(chan struct{})
+		go func(rc io.ReadCloser) {
+			select {
+			case <-ctx.Done():
+			case <-closed:
+			}
+			if rc != nil {
+				rc.Close()
+			}
+		}(r)
+
 		copySystemLogs(ctx, w, r)
+		close(closed)
 
 		select {
 		case <-ctx.Done():
@@ -235,7 +259,21 @@ func StreamSystemLogs(ctx context.Context, p structs.Provider, w io.Writer) {
 			return
 		}
 
+		// Twin-site of StreamAppLogs: close in BOTH branches so
+		// EOF-driven loop iterations don't leak the underlying reader.
+		closed := make(chan struct{})
+		go func(rc io.ReadCloser) {
+			select {
+			case <-ctx.Done():
+			case <-closed:
+			}
+			if rc != nil {
+				rc.Close()
+			}
+		}(r)
+
 		copySystemLogs(ctx, w, r)
+		close(closed)
 
 		select {
 		case <-ctx.Done():

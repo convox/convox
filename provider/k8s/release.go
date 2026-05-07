@@ -151,6 +151,21 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		// (provider/k8s/budget_accumulator.go) so a developer who adds
 		// a budget: block to convox.yml gets a loud, actionable error
 		// rather than a deploy that silently persists unenforced config.
+		//
+		// Note on persistence: the manifest budget block validates here
+		// but does NOT persist runtime state via AppBudgetSet. Per
+		// docs/reference/primitives/app/budget.md the AppBudget primitive
+		// is rack-managed and lives outside the per-app convox.yml on
+		// purpose — coupling cap values to deploy lifecycles would let
+		// every promote silently overwrite operator-set values, escalate
+		// non-admin write tokens into admin-tier cap changes, and emit
+		// noise webhook events on every redeploy. Set the budget via
+		// `convox budget set` or the Console budget tab; manifest Set G
+		// runtime fields (NeverAutoShutdown, ShutdownOrder, RecoveryMode,
+		// ShutdownGracePeriod, NotifyBeforeMinutes) are read fresh from
+		// the manifest at simulate/tick time per
+		// provider/k8s/budget_shutdown.go, so they take effect without
+		// persistence.
 		if err := p.requireCostTrackingForManifestBudget(m); err != nil {
 			return errors.WithStack(err)
 		}

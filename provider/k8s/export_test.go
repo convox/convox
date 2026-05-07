@@ -155,7 +155,13 @@ func newWebhookClientForTest(d time.Duration) *http.Client {
 // tests can drive EventSend's dispatch loop without booting the
 // controller_webhook informer. Test-only.
 func SetWebhooksForTest(p *Provider, urls []string) {
-	p.webhooks = urls
+	if p.webhookState == nil {
+		p.webhookState = &webhookState{}
+	}
+	p.webhookState.mu.Lock()
+	p.webhookState.urls = urls
+	p.webhookState.populated = true
+	p.webhookState.mu.Unlock()
 }
 
 // DispatchWebhookForTest exposes the package-private dispatch entry point

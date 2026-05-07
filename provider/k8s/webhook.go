@@ -4,11 +4,21 @@ import (
 	"context"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/convox/convox/pkg/structs"
 	ac "k8s.io/api/core/v1"
+	ae "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// webhookConfigMapTimeout bounds the synchronous configmap fetch in
+// webhookConfigMap. EventSend on non-leader pods now reads via this
+// helper on every event emission; without a deadline a slow / partitioned
+// kube-apiserver would hang ReleasePromote / AppCreate / scale-override
+// indefinitely waiting for a webhook-list that has never delivered.
+// 5s is generous for a single configmap GET — typical p99 is sub-50ms.
+var webhookConfigMapTimeout = 5 * time.Second
 
 type Webhook struct {
 	Name string
@@ -18,7 +28,10 @@ type Webhook struct {
 func (p *Provider) webhookConfigMap() (*ac.ConfigMap, error) {
 	cms := p.Cluster.CoreV1().ConfigMaps(p.Namespace)
 
-	cm, err := cms.Get(context.TODO(), "webhooks", am.GetOptions{})
+	ctx, cancel := context.WithTimeout(context.Background(), webhookConfigMapTimeout)
+	defer cancel()
+
+	cm, err := cms.Get(ctx, "webhooks", am.GetOptions{})
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			cm = &ac.ConfigMap{
@@ -28,8 +41,24 @@ func (p *Provider) webhookConfigMap() (*ac.ConfigMap, error) {
 				},
 			}
 
-			if _, err := cms.Create(context.TODO(), cm, am.CreateOptions{}); err != nil {
-				return nil, err
+			created, cerr := cms.Create(ctx, cm, am.CreateOptions{})
+			if cerr != nil {
+				// Non-leader pods may race with each other to Create
+				// the missing configmap on first traffic; the loser
+				// gets AlreadyExists. Re-Get and proceed; the winner
+				// already wrote the (empty) configmap so the second
+				// Get returns it.
+				if ae.IsAlreadyExists(cerr) {
+					if reread, rerr := cms.Get(ctx, "webhooks", am.GetOptions{}); rerr == nil {
+						cm = reread
+					} else {
+						return nil, rerr
+					}
+				} else {
+					return nil, cerr
+				}
+			} else {
+				cm = created
 			}
 		} else {
 			return nil, err

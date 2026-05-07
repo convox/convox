@@ -1,8 +1,10 @@
 package k8s_test
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -19,6 +21,11 @@ import (
 	"github.com/convox/convox/provider/k8s"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	ac "k8s.io/api/core/v1"
+	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/fake"
+	ktesting "k8s.io/client-go/testing"
 )
 
 // captureStdout redirects os.Stdout into a pipe and returns a function that
@@ -85,6 +92,77 @@ func TestDispatchWebhook_2xxResponse_ReturnsNil(t *testing.T) {
 	assert.Equal(t, "POST", gotMethod)
 	assert.Equal(t, "application/json", gotCT)
 	assert.JSONEq(t, string(body), string(gotBody))
+}
+
+// TestEventSend_FallsBackToConfigMap_WhenCacheEmpty pins the non-leader
+// pod fallback. Pre-fix, EventSend iterated p.webhooks (empty on
+// non-leader) and silently dropped every event. Post-fix, when
+// p.webhooks is empty, EventSend reads the configmap synchronously
+// and dispatches to the URLs stored there. This test seeds the
+// configmap directly without touching p.webhooks.
+func TestEventSend_FallsBackToConfigMap_WhenCacheEmpty(t *testing.T) {
+	var hits int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&hits, 1)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	testProvider(t, func(p *k8s.Provider) {
+		// Seed the webhooks configmap directly (mirrors what
+		// webhookCreate does). Do NOT call SetWebhooksForTest so
+		// EventSend exercises the configmap-fallback path.
+		cm := &ac.ConfigMap{
+			ObjectMeta: am.ObjectMeta{Name: "webhooks", Namespace: p.Namespace},
+			Data:       map[string]string{"hook1": srv.URL},
+		}
+		_, err := p.Cluster.CoreV1().ConfigMaps(p.Namespace).Create(context.TODO(), cm, am.CreateOptions{})
+		require.NoError(t, err)
+
+		err = p.EventSend("app:create", structs.EventSendOptions{
+			Data: map[string]string{"app": "demo"},
+		})
+		require.NoError(t, err)
+
+		drainPendingDispatches()
+
+		assert.Equal(t, int32(1), atomic.LoadInt32(&hits),
+			"non-leader fallback must read configmap synchronously and dispatch")
+	})
+}
+
+// TestEventSend_WebhookListError_FailsOpen pins the silent-degrade
+// contract. EventSend has always been best-effort fan-out; the new
+// configmap-fallback path must NOT propagate transient kube-apiserver
+// errors into the caller (release:promote, app:create, scale-override
+// have nothing to do with webhook delivery). When webhookList fails,
+// EventSend logs and returns nil.
+//
+// Also asserts the operator-grep log line is emitted with the
+// canonical `ns=event_dispatch at=webhook_list_failed` shape — without
+// that, a regression that swaps the log statement for a panic or a
+// silent suppression would still pass the no-error assertion.
+func TestEventSend_WebhookListError_FailsOpen(t *testing.T) {
+	testProviderManual(t, func(p *k8s.Provider, c *fake.Clientset) {
+		// Make every configmap GET return an error.
+		c.PrependReactor("get", "configmaps", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
+			return true, nil, fmt.Errorf("kube-apiserver unavailable")
+		})
+
+		readStdout := captureStdout(t)
+
+		// Do NOT seed p.webhooks; force fallback path.
+		err := p.EventSend("app:create", structs.EventSendOptions{
+			Data: map[string]string{"app": "demo"},
+		})
+		captured := readStdout()
+
+		assert.NoError(t, err, "EventSend must fail open when webhookList errors — webhook fan-out is best-effort")
+		assert.Contains(t, captured, "ns=event_dispatch at=webhook_list_failed",
+			"failure path must emit the canonical operator-grep log line")
+		assert.Contains(t, captured, "dispatch=skipped",
+			"log line must include dispatch=skipped so operators can correlate to dropped event")
+	})
 }
 
 func TestEventSend_FiresAllConfiguredWebhooks(t *testing.T) {
