@@ -30,7 +30,7 @@ queries:
   GpuTotalPowerCluster: 'sum(DCGM_FI_DEV_POWER_USAGE)'
   GpuAllocatedCount: 'sum(DCGM_FI_DEV_FB_USED > 0)'
   GpuTotalCount: 'count(DCGM_FI_DEV_FB_FREE)'
-  GpuTopThrottleReasons: 'topk(5, max_over_time((DCGM_FI_DEV_CLOCK_THROTTLE_REASONS != 0)[5m:30s])) by (UUID, Hostname)'
+  GpuTopThrottleReasons: 'topk(5, max_over_time((DCGM_FI_DEV_CLOCKS_EVENT_REASONS != 0)[5m:30s])) by (UUID, Hostname)'
   GpuTempHeatmap: 'DCGM_FI_DEV_GPU_TEMP'
   # ===== END SECTION: Cluster-aggregate DCGM =====
 
@@ -42,7 +42,7 @@ queries:
   GpuTempByGpu: 'DCGM_FI_DEV_GPU_TEMP'
   GpuMemTempByGpu: 'DCGM_FI_DEV_MEMORY_TEMP'
   GpuPowerByGpu: 'DCGM_FI_DEV_POWER_USAGE'
-  GpuThrottleBitmaskByGpu: 'DCGM_FI_DEV_CLOCK_THROTTLE_REASONS'
+  GpuThrottleBitmaskByGpu: 'DCGM_FI_DEV_CLOCKS_EVENT_REASONS'
   # ===== END SECTION: Health per-GPU DCGM =====
 
   # ===== SECTION: HTTP RED + KSM (D3) =====

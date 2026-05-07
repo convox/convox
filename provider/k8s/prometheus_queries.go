@@ -70,14 +70,16 @@ const (
 	GpuTotalPowerCluster   = `sum(DCGM_FI_DEV_POWER_USAGE)`
 	GpuAllocatedCount      = `sum(DCGM_FI_DEV_FB_USED > 0)`
 	GpuTotalCount          = `count(DCGM_FI_DEV_FB_FREE)`
-	GpuTopThrottleReasons  = `topk(5, max_over_time((DCGM_FI_DEV_CLOCK_THROTTLE_REASONS != 0)[5m:30s])) by (UUID, Hostname)`
+	GpuTopThrottleReasons  = `topk(5, max_over_time((DCGM_FI_DEV_CLOCKS_EVENT_REASONS != 0)[5m:30s])) by (UUID, Hostname)`
 	GpuTempHeatmap         = `DCGM_FI_DEV_GPU_TEMP`
 	// ===== END SECTION: Cluster-aggregate DCGM =====
 
 	// ===== SECTION: Health per-GPU DCGM (D5) =====
 	// DCGM-source. Per-GPU aggregation — no $namespace filter (operator view,
-	// not app-scoped). The throttle bitmask is decoded in Go (see
-	// prometheus_health.go DecodeThrottleReasons).
+	// not app-scoped). The clock-event-reasons bitmask carries the same data
+	// the field formerly named DCGM_FI_DEV_CLOCK_THROTTLE_REASONS held;
+	// NVIDIA renamed it in the DCGM 4.x C library, and the dcgm-exporter
+	// counters file rejects the deprecated alias.
 	GpuXidErrorRateByGpu    = `sum by (UUID, Hostname) (rate(DCGM_FI_DEV_XID_ERRORS[5m]))`
 	GpuEccDbeTotalByGpu     = `DCGM_FI_DEV_ECC_DBE_VOL_TOTAL`
 	GpuEccSbeRateByGpu      = `sum by (UUID) (rate(DCGM_FI_DEV_ECC_SBE_VOL_TOTAL[1h]))`
@@ -85,7 +87,7 @@ const (
 	GpuTempByGpu            = `DCGM_FI_DEV_GPU_TEMP`
 	GpuMemTempByGpu         = `DCGM_FI_DEV_MEMORY_TEMP`
 	GpuPowerByGpu           = `DCGM_FI_DEV_POWER_USAGE`
-	GpuThrottleBitmaskByGpu = `DCGM_FI_DEV_CLOCK_THROTTLE_REASONS`
+	GpuThrottleBitmaskByGpu = `DCGM_FI_DEV_CLOCKS_EVENT_REASONS`
 	// ===== END SECTION: Health per-GPU DCGM =====
 
 	// ===== SECTION: HTTP RED + KSM (D3) =====
