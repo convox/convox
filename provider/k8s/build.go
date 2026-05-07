@@ -92,6 +92,12 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 		"BUILDKIT_HOST_PATH_CACHE_ENABLE": os.Getenv("BUILDKIT_HOST_PATH_CACHE_ENABLE"),
 		"RACK_URL":                        fmt.Sprintf("https://convox:%s@api.%s.svc.cluster.local:5443", p.Password, p.Namespace),
 		"CONVOX_TID":                      p.ContextTID(),
+		// Propagate the audit-actor identity so the build pod's SDK
+		// client sets X-Convox-Actor on its callbacks (release:create,
+		// build:status, etc.) — otherwise those events emit with the
+		// rack-password literal. The CONVOX_ACTOR env var is read by
+		// sdk.New() on the build binary side; empty string is harmless.
+		"CONVOX_ACTOR":                    p.ContextActor(),
 	}
 
 	repo, _, err := p.Engine.RepositoryHost(app)
