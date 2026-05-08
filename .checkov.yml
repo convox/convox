@@ -8,7 +8,7 @@ soft-fail: true
 skip-check:
   # --- Kubernetes deployment checks (not applicable) ---
   # Convox generates K8s resources dynamically at deploy time.
-  # These TF-defined deployments are system scaffolding, not customer workloads.
+  # These TF-defined deployments are system scaffolding, not user workloads.
   - CKV_K8S_8   # liveness probe
   - CKV_K8S_9   # readiness probe
   - CKV_K8S_10  # CPU requests
@@ -31,12 +31,12 @@ skip-check:
   - CKV_AZURE_115 # AKS private cluster
   - CKV_GCP_25    # GKE private cluster
   - CKV_GCP_64    # GKE private nodes
-  # Platform needs broad IAM access to manage customer workloads
+  # Platform needs broad IAM access to manage user workloads
   - CKV_AWS_356   # IAM wildcard resources
-  # Customer flexibility — can't restrict legacy usage patterns
-  - CKV_AWS_79    # IMDSv1 — customers may need it
+  # User flexibility — can't restrict legacy usage patterns
+  - CKV_AWS_79    # IMDSv1 — users may need it
   - CKV_AZURE_44  # TLS version — older client compatibility
-  # Cost — not justified for every customer rack
+  # Cost — not justified for every user rack
   - CKV_AWS_18    # S3 access logging
   - CKV_AWS_37    # EKS control plane logging
   - CKV_AWS_144   # S3 cross-region replication

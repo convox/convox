@@ -394,8 +394,8 @@ func (p *Provider) AppBudgetClear(app string, ackBy string) error {
 //
 // Public entry point — acquires the per-app advisory lock and delegates
 // to the locked helper. AppBudgetResetWithOptions calls the locked
-// helper directly so Step 1 (breaker clear) and Step 2 (annotation
-// restore + delete) execute atomically under a single lock acquisition.
+// helper directly so the breaker-clear and annotation restore/delete
+// stages execute atomically under a single lock acquisition.
 func (p *Provider) AppBudgetReset(app string, ackBy string) error {
 	// F-19 fix (catalog D-7): per-app advisory lock around the reset
 	// path so the accumulator's reconcileAutoShutdown cannot race with
@@ -410,10 +410,10 @@ func (p *Provider) AppBudgetReset(app string, ackBy string) error {
 // AppBudgetReset. Caller MUST hold appBudgetLock(app) for the duration
 // of the call. Internal helper — used by AppBudgetReset (which acquires
 // the lock first) and AppBudgetResetWithOptions (which acquires the
-// lock at the outer scope so Step 2 restoreFromAnnotation runs under
-// the same critical section, closing the F-A06-1 race where a
-// concurrent accumulator tick could fire its own emit between Step 1
-// breaker clear and Step 2 annotation delete).
+// lock at the outer scope so restoreFromAnnotation runs under the same
+// critical section, closing the race where a concurrent accumulator
+// tick could fire its own emit between the breaker clear and the
+// annotation delete).
 func (p *Provider) appBudgetResetLocked(app string, ackBy string) error {
 	nsName := p.AppNamespace(app)
 

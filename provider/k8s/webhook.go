@@ -55,21 +55,21 @@ type webhookEntry struct {
 // skip=true) when the entry is malformed and must be silently dropped (with
 // a structured warning log line emitted for operator visibility).
 //
-// Branch semantics (locked by F-R9-5 review):
+// Branch semantics:
 //
 //   - Empty / whitespace-only raw: SKIP (no entry to dispatch).
 //   - Raw begins with `{`: attempt JSON parse.
 //   - parse succeeds AND url is non-empty: USE parsed entry. Timeout
 //     falls back to defaultWebhookTimeout when absent or unparseable.
-//   - parse succeeds AND url is empty/whitespace: SKIP. Per F-R9-5 we
-//     do NOT fall through to plain-URL semantics — raw is a JSON object
-//     (not a URL string), so treating it as a URL would corrupt
-//     dispatch. Operators see a structured WARN.
+//   - parse succeeds AND url is empty/whitespace: SKIP. Do NOT fall
+//     through to plain-URL semantics — raw is a JSON object (not a
+//     URL string), so treating it as a URL would corrupt dispatch.
+//     Operators see a structured WARN.
 //   - parse fails (malformed JSON beginning with `{`): SKIP. Same
 //     reasoning — raw is not parseable as either form.
 //   - Raw does NOT begin with `{`: treat as plain URL. Timeout =
 //     defaultWebhookTimeout. Existing operator behavior; identical to
-//     pre-2B dispatch.
+//     the pre-per-URL-timeout dispatch.
 func parseWebhookEntry(name, raw string) (webhookEntry, bool) {
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" {
@@ -84,7 +84,7 @@ func parseWebhookEntry(name, raw string) (webhookEntry, bool) {
 		if err := json.Unmarshal([]byte(trimmed), &je); err == nil {
 			url := strings.TrimSpace(je.URL)
 			if url == "" {
-				// F-R9-5: JSON object with empty/missing url field. Do NOT
+				// JSON object with empty/missing url field. Do NOT
 				// fall through to plain-URL — raw is a JSON object, not a URL.
 				fmt.Printf("ns=webhook_parse at=skip reason=empty_url_in_json name=%s\n", name)
 				return webhookEntry{}, true

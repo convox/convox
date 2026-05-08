@@ -735,19 +735,19 @@ func (p *Provider) fireDismissedEvent(ctx context.Context, app, ackBy string, di
 //  4. budget-recovery-banner-dismissed:    optional (clear so banner re-shows)
 //  5. budget-flap-suppress-fired-at:       DELETE (if cooldown cleared)
 //
-// F-A06-1 fix: holds the per-app lock for the FULL duration of the
-// function (Step 1 breaker-clear AND Step 2 restoreFromAnnotation +
-// annotation delete) so a concurrent accumulator tick cannot acquire
-// the lock between Step 1 unlock and Step 2 entry, observe the still-
-// present armed shutdown-state annotation, and fire its own
-// :cancelled / :restored event before our restoreFromAnnotation emit
-// lands. The inner reset routine is split into appBudgetResetLocked
-// (lock-already-held variant) so we acquire once at the outer scope.
+// Holds the per-app lock for the FULL duration of the function
+// (breaker-clear AND restoreFromAnnotation + annotation delete) so a
+// concurrent accumulator tick cannot acquire the lock between the two
+// stages, observe the still-present armed shutdown-state annotation,
+// and fire its own :cancelled / :restored event before our
+// restoreFromAnnotation emit lands. The inner reset routine is split
+// into appBudgetResetLocked (lock-already-held variant) so we acquire
+// once at the outer scope.
 func (p *Provider) AppBudgetResetWithOptions(app, ackBy string, opts structs.AppBudgetResetOptions) error {
-	// A09 m-1 fix: sanitize at outer scope so restoreFromAnnotation
-	// receives the canonical form. The inner appBudgetResetLocked path
-	// also calls sanitizeAckBy() but pass-by-value semantics meant the
-	// outer ackBy used by Step 2 stayed unsanitized. Idempotent —
+	// Sanitize at outer scope so restoreFromAnnotation receives the
+	// canonical form. The inner appBudgetResetLocked path also calls
+	// sanitizeAckBy() but pass-by-value semantics meant the outer ackBy
+	// used by the restore stage stayed unsanitized. Idempotent —
 	// re-sanitizing an already-sanitized string returns the same value.
 	ackBy = sanitizeAckBy(ackBy)
 
@@ -756,8 +756,8 @@ func (p *Provider) AppBudgetResetWithOptions(app, ackBy string, opts structs.App
 		ctx = context.TODO()
 	}
 
-	// F-A06-1 fix: hold the per-app advisory lock across Step 1 + Step 2
-	// so restoreFromAnnotation's emits and the unconditional annotation
+	// Hold the per-app advisory lock across all reset stages so
+	// restoreFromAnnotation's emits and the unconditional annotation
 	// delete are atomic with the breaker-clear. The accumulator's
 	// reconcileAutoShutdown also acquires this lock; a concurrent tick
 	// queues until our full critical section completes.
@@ -765,13 +765,13 @@ func (p *Provider) AppBudgetResetWithOptions(app, ackBy string, opts structs.App
 	mu.Lock()
 	defer mu.Unlock()
 
-	// Step 1: clear (1) budget-state + breaker via the lock-already-held
-	// helper (we already hold the lock at the outer scope).
+	// Clear (1) budget-state + breaker via the lock-already-held helper
+	// (we already hold the lock at the outer scope).
 	if err := p.appBudgetResetLocked(app, ackBy); err != nil {
 		return err
 	}
 
-	// Step 2: handle (2) budget-shutdown-state via restore-or-unconditional-delete.
+	// Handle (2) budget-shutdown-state via restore-or-unconditional-delete.
 	nsName := p.AppNamespace(app)
 	ns, err := p.Cluster.CoreV1().Namespaces().Get(ctx, nsName, am.GetOptions{})
 	if err != nil {
@@ -802,13 +802,13 @@ func (p *Provider) AppBudgetResetWithOptions(app, ackBy string, opts structs.App
 		_ = p.deleteBudgetShutdownStateAnnotation(ctx, app)
 	}
 
-	// Step 3: cooldown carry-over (3 + 5).
+	// Cooldown carry-over (3 + 5).
 	if opts.ForceClearCooldown {
 		_ = p.deleteNamespaceAnnotation(ctx, app, structs.BudgetFlapSuppressedUntilAnnotation)
 		_ = p.deleteNamespaceAnnotation(ctx, app, structs.BudgetFlapSuppressFiredAtAnnotation)
 	}
 
-	// Step 4: recovery-banner annotation. We clear it on a fresh
+	// Recovery-banner annotation. We clear it on a fresh
 	// restore so the recovery banner is shown for the new restore;
 	// keep it intact otherwise.
 	if state != nil && state.RestoredAt == nil {

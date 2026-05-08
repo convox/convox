@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestServiceMetricsConcurrencyCap503 covers F-PERF-R2-2: the
+// TestServiceMetricsConcurrencyCap503 verifies that the
 // semaphore at the controller layer caps concurrent QueryRange calls.
 // When N concurrent requests exceed the cap, the (cap+1)th must
 // return 503 fail-fast — NOT block waiting for a slot. The semaphore

@@ -474,8 +474,8 @@ func TestAppBudgetReset_AcceptsAdminRole_NoGuardBlock(t *testing.T) {
 
 // TestAppBudgetReset_ForceClearCooldown_403BodyMatchesPinnedString locks in
 // the pinned 403 body for the force-clear-cooldown gate. User tooling
-// (CLI "convox budget reset --force-clear-cooldown" failure renderer; future
-// Phase 1 GUI guidance modal) parses this body for migration guidance —
+// (CLI "convox budget reset --force-clear-cooldown" failure renderer and
+// the Console GUI guidance modal) parses this body for migration guidance —
 // wording, role identifier ('w'), the "--force-clear-cooldown" qualifier,
 // and the "use Admin token" clause are deterministic. Any future PR that
 // changes the wording MUST update this test.

@@ -20,6 +20,16 @@ The default value for `cost_tracking_enable` is `false`. Users must opt in to en
 - **Cost-per-utilization analysis**: Combined with `gpu_observability_enable`, surface dollars-per-actual-GPU-hour rather than dollars-per-allocated-GPU-hour for inference and training workloads.
 - **Spend forecasting**: The accumulator emits a rolling spend rate that feeds Convox Console forecasting widgets so users can see "at this burn rate, you'll hit your cap in 6 days."
 
+## Capacity Considerations
+The rack-side cost accumulator itself runs inside the existing rack control plane and adds no separately-allocated CPU or memory on the cluster. However, surfacing cost data in the Convox Console additionally installs the kube-prometheus-stack helm chart (Prometheus operator + state-metrics + a single-replica Prometheus statefulset + node-exporter daemonset) into the `convox-monitoring` namespace when the user enables monitoring through the Console UI. The chart's combined steady-state footprint is roughly 1 vCPU and 2 GiB of memory; transient install-time spikes can be 1.5x that.
+
+For racks with a single small workload node (e.g. `t3.small`, `t3.medium`), enabling Console monitoring on top of cost tracking can overcommit the node and trigger a kubelet failure that drags pods into a stuck Terminating state. Recommended minimums for clusters that intend to surface cost data through the Console:
+- One workload node of `t3.large` or larger (or any 2 vCPU / 4+ GiB instance), OR
+- Two or more workload nodes of any size where the user-workload pods can spread off the prometheus statefulset's node, OR
+- Karpenter enabled on the rack (`karpenter_enable=true`) so the rack can grow capacity on demand.
+
+Convox 3.24.6 ships explicit resource requests on the prometheus statefulset and a PodDisruptionBudget so Karpenter pre-provisions a fitting node before scheduling and so voluntary disruption pauses while a replacement reschedules. Smaller clusters still benefit from enabling Karpenter so the rack can react to chart-install spikes.
+
 ## Setting Parameters
 To enable cost tracking on an existing rack:
 ```bash

@@ -203,6 +203,18 @@ func (p *Provider) InstanceShell(id string, rw io.ReadWriter, opts structs.Insta
 const (
 	drainTimeout          = 5 * time.Minute
 	evictionRetryInterval = 5 * time.Second
+
+	// orphanedPodReaperNotReadyThreshold is how long a node must remain
+	// NotReady (or Unknown) before its Terminating pods are force-deleted.
+	// 5 minutes is comfortably longer than the kubelet's typical recovery
+	// window (~minutes for OOM/crash-loop) but short enough to unblock
+	// stuck StatefulSet replacements within an operator-noticeable window.
+	orphanedPodReaperNotReadyThreshold = 5 * time.Minute
+
+	// orphanedPodReaperTickInterval is the cadence between reaper passes.
+	// Each pass is a node list + per-NotReady-node pod list, so 60s keeps
+	// API server load negligible even on large clusters.
+	orphanedPodReaperTickInterval = 60 * time.Second
 )
 
 func (p *Provider) InstanceTerminate(id string) error {

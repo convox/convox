@@ -252,10 +252,9 @@ type AppBudgetSimulationEligibility struct {
 // the public types above this block).
 // ============================================================================
 // AppBudgetShutdownState is the JSON shape for the
-// `convox.com/budget-shutdown-state` namespace annotation. Per Set G v2
-// spec §7.2 this is provider/k8s/-private serialization; JSON tags are
-// camelCase per the convention R3 F-NEW-R3-4 carve-out (annotation
-// values are not pkg/structs/ surface).
+// `convox.com/budget-shutdown-state` namespace annotation. This is
+// provider/k8s/-private serialization; JSON tags are camelCase as a
+// carve-out (annotation values are not pkg/structs/ surface).
 //
 // SchemaVersion is currently 1. Required fields (validated post-
 // Unmarshal): SchemaVersion, ArmedAt, RecoveryMode, ShutdownOrder,

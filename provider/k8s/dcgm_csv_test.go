@@ -110,7 +110,7 @@ var validDCGMFields = map[string]struct{}{
 // at the new name. This is the explicit catch for the
 // DCGM_FI_DEV_CLOCK_THROTTLE_REASONS → DCGM_FI_DEV_CLOCKS_EVENT_REASONS
 // rename — adding a deprecated name to the CSV would have been caught
-// in CI instead of crashlooping every customer's exporter pod.
+// in CI instead of crashlooping every user's exporter pod.
 //
 // Add new entries here when NVIDIA deprecates more fields in future
 // DCGM major versions. Fields removed entirely (no replacement) should
@@ -134,7 +134,7 @@ var fieldNamePattern = regexp.MustCompile(`^(DCGM_FI_[A-Z0-9_]+)\s*,`)
 // gpu_observability_chart_version.
 //
 // Without this test, a deprecated or typo'd field name crashloops every
-// customer's exporter pod on rack startup with the error:
+// user's exporter pod on rack startup with the error:
 //
 //	"could not find DCGM field; err: unknown ExporterCounter field <name>"
 //
@@ -143,7 +143,7 @@ var fieldNamePattern = regexp.MustCompile(`^(DCGM_FI_[A-Z0-9_]+)\s*,`)
 // after rack deploy. Backstops the failure mode where
 // DCGM_FI_DEV_CLOCK_THROTTLE_REASONS slipped into the CSV after being
 // deprecated upstream — the runtime exporter rejects the unknown name
-// on startup, killing every customer's GPU scrape.
+// on startup, killing every user's GPU scrape.
 func TestDcgmExporterCSV_FieldsValid(t *testing.T) {
 	csvPath := filepath.Join("..", "..", "terraform", "cluster", "aws", "files", "dcp-metrics-included.csv")
 	data, err := os.ReadFile(csvPath)
@@ -314,7 +314,7 @@ func TestDcgmExporterCSV_ArgsPathInvariant(t *testing.T) {
 	}
 	src := string(data)
 
-	// Step 1+2: configMap data block. The `<key>.csv = file(...basename.csv)`
+	// configMap data block. The `<key>.csv = file(...basename.csv)`
 	// pattern MUST have LHS == RHS basename — partial renames that desynchronize
 	// the two slip past a single-capture regex. Capturing both and asserting
 	// equality catches that drift.
@@ -328,7 +328,7 @@ func TestDcgmExporterCSV_ArgsPathInvariant(t *testing.T) {
 	}
 	cmDataKey := dataMatch[1]
 
-	// Step 1: kubernetes_config_map.dcgm_metrics_convox metadata.name —
+	// kubernetes_config_map.dcgm_metrics_convox metadata.name —
 	// the canonical configMap object name. All three downstream refs
 	// (extraConfigMapVolumes[].configMap.name, extraConfigMapVolumes[].name,
 	// extraVolumeMounts[].name) MUST equal this value.
@@ -339,7 +339,7 @@ func TestDcgmExporterCSV_ArgsPathInvariant(t *testing.T) {
 	}
 	cmName := mustExtractField(t, cmResMatch[1], "name", "kubernetes_config_map.dcgm_metrics_convox metadata.name")
 
-	// Step 3+4: extraConfigMapVolumes — anchor to the entry where
+	// extraConfigMapVolumes — anchor to the entry where
 	// `name = $cmName`. extractListEntryByName walks the list section
 	// `extraConfigMapVolumes = [...]` and returns the {...} entry
 	// containing `name = $cmName`. Eliminates the first-match-wins hazard.
@@ -388,7 +388,7 @@ func TestDcgmExporterCSV_ArgsPathInvariant(t *testing.T) {
 		}
 	}
 
-	// Step 5: extraVolumeMounts — same anchoring strategy as the volume
+	// extraVolumeMounts — same anchoring strategy as the volume
 	// lookup. Bound to the entry where `name = $cmName`.
 	mountEntry, ok := extractListEntryByName(src, "extraVolumeMounts", cmName)
 	if !ok {
@@ -396,7 +396,7 @@ func TestDcgmExporterCSV_ArgsPathInvariant(t *testing.T) {
 	}
 	mountPath := mustExtractField(t, mountEntry, "mountPath", "extraVolumeMounts mountPath")
 
-	// Step 6: arguments = ["-f", "<path>"] — the `-f` flag is what
+	// arguments = ["-f", "<path>"] — the `-f` flag is what
 	// points the exporter at the override CSV. Without it the exporter
 	// falls back to the chart's bundled default-counters.csv and the
 	// 9 Convox-required fields go silent.
@@ -561,7 +561,7 @@ loop:
 //
 // This is exactly the upgrade-path failure the
 // CLOCK_THROTTLE_REASONS → CLOCKS_EVENT_REASONS rename produced in the
-// field: customers on a rack with the old CSV would have stayed
+// field: users on a rack with the old CSV would have stayed
 // crashlooping after a rack upgrade unless they manually
 // `kubectl rollout restart daemonset/dcgm-exporter`. A
 // content-hash-derived annotation forces helm to detect a values diff
@@ -602,7 +602,7 @@ func TestDcgmExporterCSV_RolloutAnnotationPresent(t *testing.T) {
 	}
 	src := string(data)
 
-	// Step 1: the annotation MUST live inside `podAnnotations = { ... }`.
+	// The annotation MUST live inside `podAnnotations = { ... }`.
 	// extractBracedBlock returns the content between the outer braces of
 	// the named block; if a maintainer moved the annotation to
 	// commonAnnotations or any other annotations surface, this lookup
@@ -613,7 +613,7 @@ func TestDcgmExporterCSV_RolloutAnnotationPresent(t *testing.T) {
 		t.Fatalf("dcgm.tf: could not locate podAnnotations = { ... } block. The CSV-hash annotation MUST live inside podAnnotations specifically; chart-level annotations (commonAnnotations, deployment.annotations, etc.) apply to ConfigMaps/Services/etc. but NOT to DaemonSet pods, and would NOT trigger a rolling update on CSV change.")
 	}
 
-	// Step 2: within that block, match an annotation key prefixed
+	// Within that block, match an annotation key prefixed
 	// `convox.com/dcgm-csv-` (suffix tolerant) bound to a
 	// file<hash>("...dcp-metrics-included.csv") call. Any of
 	// filesha256/filesha1/filemd5 produces a deterministic content-
@@ -628,7 +628,7 @@ func TestDcgmExporterCSV_RolloutAnnotationPresent(t *testing.T) {
 			"Required pattern (any suffix, any deterministic hash function):\n\n" +
 			"\t\"convox.com/dcgm-csv-<suffix>\" = file<hash>(\"${path.module}/files/dcp-metrics-included.csv\")\n\n" +
 			"where <suffix> is any identifier (sha256/sha1/md5/hash/content/...) and <hash> is one of filesha256/filesha1/filemd5.\n\n" +
-			"Without this, helm sees no values diff when the CSV configMap content changes — kubelet does NOT restart pods on configMap data update, the dcgm-exporter process keeps reading the OLD CSV from its already-mounted volume, and customers stay on the broken CSV until a manual `kubectl rollout restart daemonset/dcgm-exporter`.")
+			"Without this, helm sees no values diff when the CSV configMap content changes — kubelet does NOT restart pods on configMap data update, the dcgm-exporter process keeps reading the OLD CSV from its already-mounted volume, and users stay on the broken CSV until a manual `kubectl rollout restart daemonset/dcgm-exporter`.")
 	}
 }
 
@@ -671,7 +671,7 @@ func extractBracedBlock(src string, openPattern *regexp.Regexp) (string, bool) {
 //   - provider/k8s/prometheus.go (the GpuMetrics parser table)
 //   - pkg/manifest/service.go (KEDA autoscaler default Prometheus
 //     metric — highest-blast-radius site, a typo there breaks every
-//     customer's GPU autoscaler)
+//     user's GPU autoscaler)
 //
 // A typo or upstream rename in any of these files would silently
 // produce empty dashboards (the PromQL would query a metric Prometheus

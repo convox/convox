@@ -168,8 +168,7 @@ func SetWebhooksForTest(p *Provider, urls []string) {
 // with parsed (url + per-URL timeout) entries. EventSend prefers
 // receivers when populated; this lets per-URL timeout tests bypass the
 // urls-string-to-entry parse path and assert dispatch behavior at the
-// transient-client boundary. Added in 3.24.6 polish wave (Item 2B).
-// Test-only.
+// transient-client boundary. Test-only.
 func SetWebhookReceiversForTest(p *Provider, entries []WebhookEntryForTest) {
 	if p.webhookState == nil {
 		p.webhookState = &webhookState{}
@@ -230,8 +229,8 @@ func DispatchWebhookSafelyForTest(url string, body []byte, signingKeys ...[]byte
 }
 
 // DispatchWebhookSafelyWithTimeoutForTest is the per-URL timeout entry
-// point added in 3.24.6 polish wave (Item 2B). Tests that exercise the
-// JSON-encoded receiver config form pass an explicit timeout here. Test-only.
+// point. Tests that exercise the JSON-encoded receiver config form pass
+// an explicit timeout here. Test-only.
 func DispatchWebhookSafelyWithTimeoutForTest(url string, body []byte, signingKeys [][]byte, timeout time.Duration) {
 	dispatchWebhookSafely(url, body, signingKeys, timeout)
 }
@@ -287,7 +286,7 @@ func DispatchWebhookSignedForTest(url string, body []byte, signingKeys [][]byte)
 }
 
 // DispatchWebhookSignedWithTimeoutForTest is the per-URL timeout entry
-// point for the signed dispatcher (Item 2B). Tests that assert the per-URL
+// point for the signed dispatcher. Tests that assert the per-URL
 // timeout value reaches the http.Client use this form. Test-only.
 func DispatchWebhookSignedWithTimeoutForTest(url string, body []byte, signingKeys [][]byte, timeout time.Duration) error {
 	return dispatchWebhookSigned(url, body, signingKeys, timeout)

@@ -252,7 +252,7 @@ key is removed from rack config and signing collapses back to one
 ## Rotation depth
 
 A rack accepts up to 4 active webhook signing keys at once (bumped from 2
-in 3.24.6, Item 2A). The rotation pattern is unchanged — operators stack a
+in 3.24.6). The rotation pattern is unchanged — operators stack a
 new key, update receivers in lockstep, then drop the oldest — but a
 4-deep rotation depth handles the common case of staging long rollouts
 across multiple receiver fleets without losing the original key during

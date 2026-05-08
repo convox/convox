@@ -207,8 +207,8 @@ func TestMetricsByService_BoundsValidation_RejectsRangeOver24h(t *testing.T) {
 // aggregate-points cap at controllers.go:491-505: the batched handler
 // must reject before reaching the provider when
 // services * timestamps * wireCount(=8) > gpuMetricsMaxAggregatePoints
-// (50000). Per plan F-FAIL-R3-1: 100 services x 24h x 30s x 11 metrics
-// would be 3.16M points without the cap. Fixture: 50 services x
+// (50000). Without the cap, 100 services x 24h x 30s x 11 metrics
+// would be 3.16M points. Fixture: 50 services x
 // interval=1h x period=5s -> timestamps=720 -> 50 x 720 x 8 = 288000 >
 // 50000. 50 services is below gpuMetricsMaxPodsDefault (100) and
 // single-series points (720) is below the per-series cap (5000), so

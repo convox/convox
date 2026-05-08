@@ -575,12 +575,11 @@ func TestReconcileVarsWithModule_StripsOrphanedPromVars_OnDowngrade(t *testing.T
 }
 
 // TestReconcileVarsWithModule_StripsMonitoringMetricsProvisioned_OnRc8ToFinalUpgrade
-// covers SPEC §7.1 cell M33 at the unit-test layer (per PR2-4-M3 fix). vars.json
+// pins reconciler behavior at the unit-test layer. vars.json
 // contains monitoring_metrics_provisioned=true (rc8 paid-monitoring state); module
 // variables.tf does NOT declare it (3.24.6-final). Reconciler strips the var and
-// emits NOTICE — same mechanism as the downgrade path. Real impact = 0
-// (zero user-facing rc8 racks); test catches future regressions in
-// reconciler upgrade-path orphan stripping.
+// emits NOTICE — same mechanism as the downgrade path. Test catches future
+// regressions in reconciler upgrade-path orphan stripping.
 func TestReconcileVarsWithModule_StripsMonitoringMetricsProvisioned_OnRc8ToFinalUpgrade(t *testing.T) {
 	settings := t.TempDir()
 	f := reconcileFixture{

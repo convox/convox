@@ -281,7 +281,7 @@ func BudgetSet(rack sdk.Interface, c *stdcli.Context) error {
 		opts.AtCapAction = &action
 	}
 
-	// Item 22 partial-merge semantics: only populate PricingAdjustment when
+	// Partial-merge semantics: only populate PricingAdjustment when
 	// the user explicitly passes --pricing-adjustment. Omission is
 	// honored as "preserve prior persisted value" by applyBudgetOptions
 	// (provider/k8s/budget_accumulator.go:618-646), matching BudgetCapRaise

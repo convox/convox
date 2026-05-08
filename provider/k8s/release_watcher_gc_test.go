@@ -109,14 +109,14 @@ func TestRunReleasePromoteWatchGC_Superseded(t *testing.T) {
 	})
 }
 
-// TestRunReleasePromoteWatchGC_PastDeadline_MapsAppStatusToVerb pins the
-// Phase H R2 fix (m-A08-NEW-1 / m-A12-NEW-1): the GC scanner past-
-// deadline branch consults `convox.com/app-status` first instead of
-// always emitting errored. When AtomController has already written a
-// terminal app-status, the GC scan surfaces that as the watch event
-// (so the audit log reflects the real rollout outcome). Only when
-// app-status is non-terminal (Pending / Updating / empty) does it
-// fall back to watcher-timeout.
+// TestRunReleasePromoteWatchGC_PastDeadline_MapsAppStatusToVerb pins
+// the GC scanner past-deadline behavior: the past-deadline branch
+// consults `convox.com/app-status` first instead of always emitting
+// errored. When AtomController has already written a terminal
+// app-status, the GC scan surfaces that as the watch event (so the
+// audit log reflects the real rollout outcome). Only when app-status
+// is non-terminal (Pending / Updating / empty) does it fall back to
+// watcher-timeout.
 //
 // Table-driven: each row pre-seeds a past-deadline annotation with a
 // specific app-status and asserts the GC scan emits the expected

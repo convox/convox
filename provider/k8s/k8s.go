@@ -152,10 +152,10 @@ type webhookState struct {
 	populated bool
 	urls      []string
 	// receivers caches parsed webhookEntry rows (URL + per-URL Timeout)
-	// derived from the configmap value strings. Added in 3.24.6 polish
-	// wave (Item 2B): operators can encode each value as JSON
-	// `{"url":"...", "timeout":"5s"}` to override the package-default
-	// 30s dispatch deadline per receiver. The slice is parsed lazily by
+	// derived from the configmap value strings. Operators can encode
+	// each value as JSON `{"url":"...", "timeout":"5s"}` to override
+	// the package-default 30s dispatch deadline per receiver. The slice
+	// is parsed lazily by
 	// EventSend from urls when receivers is empty; tests may pre-populate
 	// it directly via SetWebhookReceiversForTest to drive per-URL timeout
 	// assertions without going through the configmap informer.
@@ -460,6 +460,11 @@ func (p *Provider) Start() error {
 	// watcher annotations. Survives api-pod restart by re-launching
 	// watchers from the namespace-annotation source of truth.
 	go p.runReleasePromoteWatchGC(p.ctx)
+
+	// Reaper for pods stuck in Terminating on long-NotReady nodes
+	// (kubelet death scenarios). See orphaned_pod_reaper.go for the
+	// gating criteria and rationale.
+	go p.runOrphanedPodReaper(p.ctx)
 
 	go common.Tick(1*time.Hour, p.heartbeat)
 

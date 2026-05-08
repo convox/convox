@@ -737,12 +737,11 @@ func TestReleasePromoteWatcher_SingleEmitPerTerminalState(t *testing.T) {
 		time.Sleep(200 * time.Millisecond)
 
 		// Re-collect after the settle window to confirm no late event.
-		// Phase H R2 fix (m-A06-1 / m-A09-DEAD-CODE): previously this
-		// captured `events2` was discarded as `_ = events2` — the
-		// settle-window second-capture pattern was started but the
-		// invariant was never asserted. Now explicitly asserts no
-		// late terminal event arrives so a future regression that
-		// introduces async webhook emit (e.g. a goroutine launched
+		// Previously this captured `events2` was discarded as `_ =
+		// events2` — the settle-window second-capture pattern was
+		// started but the invariant was never asserted. Now explicitly
+		// asserts no late terminal event arrives so a future regression
+		// that introduces async webhook emit (e.g. a goroutine launched
 		// from inside emitReleasePromoteResult) would be caught.
 		events2 := captureReleaseWatcherEvents(t, p, func() {}, 0, 100*time.Millisecond)
 		assert.Empty(t, events2, "no late terminal event must arrive after watcher exits; got %v", events2)
@@ -830,7 +829,7 @@ func TestReleasePromoteWatcher_SupersessionAware_CleanupSkips(t *testing.T) {
 		const app = "appSupersess"
 		seedAppNamespaceWithStatus(t, p, app, "Updating", "R2")
 
-		// Step 1 (Watcher A's annotation): write payload for R1.
+		// Watcher A's annotation: write payload for R1.
 		stateA := structs.ReleasePromoteWatchState{
 			SchemaVersion: 1,
 			ReleaseID:     "R1",
@@ -841,7 +840,7 @@ func TestReleasePromoteWatcher_SupersessionAware_CleanupSkips(t *testing.T) {
 		}
 		require.NoError(t, k8s.WriteReleasePromoteWatchAnnotationForTest(p, context.Background(), app, &stateA))
 
-		// Step 2 (Watcher B overwrites): simulate a newer promote
+		// Watcher B overwrites: simulate a newer promote
 		// landing before A's cleanup defer runs.
 		stateB := structs.ReleasePromoteWatchState{
 			SchemaVersion: 1,
@@ -853,13 +852,13 @@ func TestReleasePromoteWatcher_SupersessionAware_CleanupSkips(t *testing.T) {
 		}
 		require.NoError(t, k8s.WriteReleasePromoteWatchAnnotationForTest(p, context.Background(), app, &stateB))
 
-		// Step 3 (A's cleanup reads + skips): A's cleanup defer calls
+		// A's cleanup reads + skips: A's cleanup defer calls
 		// the supersession-aware variant with its own release-id (R1).
 		// It should see R2 in the annotation and SKIP the delete.
 		err := k8s.DeleteReleasePromoteWatchAnnotationIfMatchesForTest(p, context.Background(), app, "R1")
 		require.NoError(t, err, "supersession-aware delete must succeed (no-op skip)")
 
-		// Step 4 (verify): annotation must still hold B's payload.
+		// Verify: annotation must still hold B's payload.
 		ns, _ := p.Cluster.CoreV1().Namespaces().Get(context.TODO(),
 			fmt.Sprintf("%s-%s", p.Name, app), am.GetOptions{})
 		raw := ns.Annotations[structs.ReleasePromoteWatchAnnotation]
@@ -869,7 +868,7 @@ func TestReleasePromoteWatcher_SupersessionAware_CleanupSkips(t *testing.T) {
 		assert.Equal(t, "R2", got.ReleaseID, "annotation must still hold B's payload after A's skipped cleanup")
 		assert.Equal(t, "bob@example.com", got.Actor, "actor must reflect B")
 
-		// Step 5: When B's own cleanup runs (with releaseID=R2), the
+		// When B's own cleanup runs (with releaseID=R2), the
 		// delete proceeds because the stored release-id matches B's.
 		err = k8s.DeleteReleasePromoteWatchAnnotationIfMatchesForTest(p, context.Background(), app, "R2")
 		require.NoError(t, err, "matching-release cleanup must proceed normally")
@@ -881,8 +880,7 @@ func TestReleasePromoteWatcher_SupersessionAware_CleanupSkips(t *testing.T) {
 }
 
 // TestReleasePromoteWatcher_SupersessionAware_CleanupSkips_TOCTOU_PatchTestOpRejects
-// pins the JSON-Patch `test` op fallback semantics introduced in the
-// Phase H R2 fix (m-A03-01 / m-A05-01 / m-A12-01). The in-process
+// pins the JSON-Patch `test` op fallback semantics. The in-process
 // release-id compare in deleteReleasePromoteWatchAnnotationIfMatches
 // correctly catches supersession in the simple sequential case
 // (covered by SupersessionAware_CleanupSkips above), but a fast
@@ -980,10 +978,9 @@ func TestReleasePromoteWatcher_SupersessionAware_CleanupSkips_TOCTOU_PatchTestOp
 // namespace-not-found no-op branch. When the app's namespace doesn't
 // exist (deleted concurrently with the watcher's cleanup defer), the
 // supersession-aware delete returns nil instead of erroring — same
-// best-effort semantics as the unconditional variant. Phase H R2 fix
-// (m-A06-3): exercises one of the three previously-uncovered no-op
-// branches so a regression that converts the no-op into an error
-// would be caught.
+// best-effort semantics as the unconditional variant. Exercises one
+// of the three previously-uncovered no-op branches so a regression
+// that converts the no-op into an error would be caught.
 func TestDeleteReleasePromoteWatchAnnotationIfMatches_NotFound(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		// Do NOT seed the namespace — Get returns NotFound.
@@ -997,7 +994,7 @@ func TestDeleteReleasePromoteWatchAnnotationIfMatches_NotFound(t *testing.T) {
 // the empty-annotation no-op branch. When the app's namespace exists
 // but the watch annotation is absent (already deleted by GC, or never
 // written), the supersession-aware delete returns nil without issuing
-// any patch. Phase H R2 fix (m-A06-3).
+// any patch.
 func TestDeleteReleasePromoteWatchAnnotationIfMatches_EmptyAnnotation(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		// Seed namespace WITHOUT the watch annotation. seedAppNamespaceWithStatus
@@ -1021,7 +1018,7 @@ func TestDeleteReleasePromoteWatchAnnotationIfMatches_EmptyAnnotation(t *testing
 // holds invalid JSON, the supersession-aware delete logs and returns
 // nil without issuing a patch — defers to the GC scan's corrupt-JSON
 // branch which deletes via the unconditional variant (since no
-// release-id is attributable). Phase H R2 fix (m-A06-3).
+// release-id is attributable).
 func TestDeleteReleasePromoteWatchAnnotationIfMatches_CorruptJSON(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		seedAppNamespaceWithStatus(t, p, "appCorrupt", "Updating", "R-CORRUPT-1")

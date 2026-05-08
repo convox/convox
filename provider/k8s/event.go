@@ -253,7 +253,7 @@ func (p *Provider) EventSend(action string, opts structs.EventSendOptions) error
 // param webhook_signing_key is unset; in that case the wire format is
 // byte-identical to 3.24.5.
 //
-// timeout is the per-URL deadline (Item 2B): non-zero values come from a
+// timeout is the per-URL deadline: non-zero values come from a
 // JSON-encoded configmap entry of the form `{"url":"...", "timeout":"5s"}`;
 // zero falls back to the package-default 30s via the webhookClient timeout.
 func dispatchWebhookSafely(url string, body []byte, signingKeys [][]byte, timeout time.Duration) {
