@@ -509,6 +509,76 @@ variable "prometheus_gpu_metrics_retention" {
   default = "24h"
 }
 
+# DCGM exporter scrape interval. Read by the Console-installed Prometheus
+# scrape config (Console writes the operator override into the Prometheus
+# Helm values; rack TF declares the variable so the reconciler accepts it
+# on upgrade and strips it cleanly on downgrade). Range 15s-300s; empty
+# defaults to 15s. Process-config classification per CLUSTER-1 1C.
+variable "dcgm_scrape_interval" {
+  type        = string
+  default     = "15s"
+  description = "DCGM exporter scrape interval (e.g. 15s, 30s). Empty defaults to 15s. Read by the Console-installed Prometheus scrape config; rack TF declares the variable so reconciler accepts it on upgrade and strips on downgrade."
+}
+
+# Per-service GPU time-range query handler caps. The rack-side handler bounds
+# the number of pods returned and the number of concurrent Prom QueryRange
+# calls to prevent a fan-out DoS from a busy app (many pods) or many
+# simultaneous chart fetches. Plumbed system->rack->api->env map so the rack
+# api Deployment surfaces GPU_METRICS_MAX_PODS / GPU_METRICS_MAX_CONCURRENT
+# which the handler reads at request time. String-typed (matches
+# release_watcher_gc_interval pattern) so empty/unset falls back to handler
+# defaults cleanly without type coercion in the api/aws/main.tf env block.
+variable "gpu_metrics_max_pods" {
+  type        = string
+  default     = "100"
+  description = "Max pods returned by the GPU metrics handler per request. Range 1-500; default 100. Read by the handler at request time via GPU_METRICS_MAX_PODS env on the api Deployment."
+}
+
+variable "gpu_metrics_max_concurrent" {
+  type        = string
+  default     = "10"
+  description = "Max concurrent GPU metrics QueryRange calls. Range 1-50; default 10. Read by the handler at request time via GPU_METRICS_MAX_CONCURRENT env on the api Deployment."
+}
+
+# Release-watcher GC sweep interval. Read once at provider Initialize from
+# the RELEASE_WATCHER_GC_INTERVAL env var on the api Deployment; updates the
+# package-level `releasePromoteWatchGCTickInterval` var which controls the
+# periodic GC ticker. Range 60s-1h; empty defaults to 5m. Process-config.
+variable "release_watcher_gc_interval" {
+  type        = string
+  default     = "5m"
+  description = "Release-watcher GC sweep interval (e.g. 5m, 30m). Range 60s-1h; empty defaults to 5m. Read by the provider at Initialize via RELEASE_WATCHER_GC_INTERVAL env on the api Deployment."
+}
+
+# Grafana deep-link template variable name overrides. Operators with imported
+# dashboards using non-default var names (e.g. `var-cluster_name` instead of
+# `var-rack`) configure the substitutions here. Console reads from the rack
+# params response and substitutes into Grafana URLs; absent → falls back to
+# canonical defaults (rack/namespace/service/app). Process-config.
+variable "grafana_dashboard_var_rack" {
+  type        = string
+  default     = "rack"
+  description = "Grafana dashboard template variable name for the rack/cluster filter. Default 'rack'. Set if your imported dashboards use a different name (e.g. 'cluster_name')."
+}
+
+variable "grafana_dashboard_var_namespace" {
+  type        = string
+  default     = "namespace"
+  description = "Grafana dashboard template variable name for the namespace filter. Default 'namespace'."
+}
+
+variable "grafana_dashboard_var_service" {
+  type        = string
+  default     = "service"
+  description = "Grafana dashboard template variable name for the service filter. Default 'service'."
+}
+
+variable "grafana_dashboard_var_app" {
+  type        = string
+  default     = "app"
+  description = "Grafana dashboard template variable name for the app filter. Default 'app'."
+}
+
 variable "public_subnets_ids" {
   type    = string
   default = ""

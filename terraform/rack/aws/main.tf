@@ -60,6 +60,9 @@ module "api" {
   router                                    = module.router.endpoint
   releases_to_retain_after_active           = var.releases_to_retain_after_active
   releases_to_retain_task_run_interval_hour = var.releases_to_retain_task_run_interval_hour
+  release_watcher_gc_interval               = var.release_watcher_gc_interval
+  gpu_metrics_max_pods                      = var.gpu_metrics_max_pods
+  gpu_metrics_max_concurrent                = var.gpu_metrics_max_concurrent
   subnets                                   = var.subnets
   vpc_id                                    = var.vpc_id
   vpa_enable                                = var.vpa_enable

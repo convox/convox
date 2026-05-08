@@ -26,7 +26,8 @@ Convox-Signature: t=<unix-ts>,v1=<hex1>[,v1=<hex2>]
   `fmt.Sprintf("%d.%s", t, body)` — the timestamp, a literal `.`, then
   the raw response body bytes. Multiple `v1=` segments may appear when
   the rack is in the middle of a key rotation (one signature per active
-  key). Receivers verify against ANY one of the listed `v1=` values.
+  key; up to 4 keys are supported per rotation, see "Rotation depth"
+  below). Receivers verify against ANY one of the listed `v1=` values.
 
 Example header (HTTP-handler event — `app:budget:reset` carries the
 JWT-derived `actor` from the operator who ran `convox budget reset`):
@@ -247,6 +248,44 @@ on the receiver. The rack will sign with both for a grace window;
 receiver accepts either; once the receiver has fully cut over, the old
 key is removed from rack config and signing collapses back to one
 `v1=`.
+
+## Rotation depth
+
+A rack accepts up to 4 active webhook signing keys at once (bumped from 2
+in 3.24.6, Item 2A). The rotation pattern is unchanged — operators stack a
+new key, update receivers in lockstep, then drop the oldest — but a
+4-deep rotation depth handles the common case of staging long rollouts
+across multiple receiver fleets without losing the original key during
+the transition.
+
+Setting more than 4 keys (e.g. `webhook_signing_key=k1,k2,k3,k4,k5`) is
+rejected with a structured `audit_type=webhook_signing_key:eviction
+reason=key_count_exceeded max=4 evicted_count=N` audit row on api-pod
+stdout. The audit row contains the count only — no key bytes, hashes, or
+prefixes — so operators can grep for the misconfiguration without leaking
+secret material to logs (per F-SEC-4).
+
+Wire size: 4 active keys produce a `Convox-Signature` header of about 280
+bytes (4 × 64 hex chars + delimiters + timestamp), well under the 8KB
+header limit on Cloudflare and the 4KB baseline on AWS Lambda receivers.
+Per-event CPU cost is 4 HMAC-SHA256 operations vs 2 — negligible relative
+to the network round-trip.
+
+### Downgrade caveat
+
+3.24.5 and earlier did not have webhook signing at all. A rack on 3.24.6
+with any `webhook_signing_key` set blocks any downgrade below 3.24.6 —
+the parameter is unknown to older versions. To downgrade, clear the
+parameter first (`convox rack params set webhook_signing_key=`) and
+reconfigure receivers to accept unsigned payloads during the transition.
+This caveat is unchanged from the 3.24.6 GA — bumping the rotation depth
+from 2 to 4 in the polish wave does not introduce a new downgrade trap;
+the same "no signing pre-3.24.6" boundary applies.
+
+If the operator rotates the webhook_signing_key to >2 keys and then
+downgrades to a hypothetical future N+1 release that rolls the cap back
+to 2 (no such release exists today), the trim must be performed before
+downgrade.
 
 ## Configuring the signing key
 

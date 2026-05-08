@@ -188,6 +188,24 @@ variable "releases_to_retain_task_run_interval_hour" {
   default = 24
 }
 
+variable "release_watcher_gc_interval" {
+  type        = string
+  default     = "5m"
+  description = "Release-watcher GC sweep interval (e.g. 5m, 30m). Range 60s-1h enforced by pkg/cli/rack.go validator. Plumbed into the api Deployment as RELEASE_WATCHER_GC_INTERVAL env var."
+}
+
+variable "gpu_metrics_max_pods" {
+  type        = string
+  default     = "100"
+  description = "Max pods returned by the GPU metrics handler per request. Range 1-500 enforced by pkg/cli/rack.go validator. Plumbed into the api Deployment as GPU_METRICS_MAX_PODS env var; empty falls back to handler default 100."
+}
+
+variable "gpu_metrics_max_concurrent" {
+  type        = string
+  default     = "10"
+  description = "Max concurrent GPU metrics QueryRange calls. Range 1-50 enforced by pkg/cli/rack.go validator. Plumbed into the api Deployment as GPU_METRICS_MAX_CONCURRENT env var; empty falls back to handler default 10."
+}
+
 variable "tags" {
   default = {}
 }

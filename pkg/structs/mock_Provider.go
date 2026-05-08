@@ -459,6 +459,29 @@ func (_m *MockProvider) AppMetrics(name string, opts MetricsOptions) (Metrics, e
 	return r0, r1
 }
 
+// MetricsByService provides a mock function with given fields: app, services, opts
+func (_m *MockProvider) MetricsByService(app string, services []string, opts MetricsOptions) ([]ServiceMetricsRow, error) {
+	ret := _m.Called(app, services, opts)
+
+	var r0 []ServiceMetricsRow
+	if rf, ok := ret.Get(0).(func(string, []string, MetricsOptions) []ServiceMetricsRow); ok {
+		r0 = rf(app, services, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]ServiceMetricsRow)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, []string, MetricsOptions) error); ok {
+		r1 = rf(app, services, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // AppUpdate provides a mock function with given fields: name, opts
 func (_m *MockProvider) AppUpdate(name string, opts AppUpdateOptions) error {
 	ret := _m.Called(name, opts)
@@ -1545,6 +1568,29 @@ func (_m *MockProvider) ServiceLogs(app string, name string, opts LogsOptions) (
 	var r1 error
 	if rf, ok := ret.Get(1).(func(string, string, LogsOptions) error); ok {
 		r1 = rf(app, name, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ServiceMetrics provides a mock function with given fields: app, service, opts
+func (_m *MockProvider) ServiceMetrics(app string, service string, opts MetricsOptions) (Metrics, error) {
+	ret := _m.Called(app, service, opts)
+
+	var r0 Metrics
+	if rf, ok := ret.Get(0).(func(string, string, MetricsOptions) Metrics); ok {
+		r0 = rf(app, service, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(Metrics)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, string, MetricsOptions) error); ok {
+		r1 = rf(app, service, opts)
 	} else {
 		r1 = ret.Error(1)
 	}

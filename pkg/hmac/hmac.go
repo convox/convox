@@ -20,7 +20,18 @@ const minHexLen = 64
 const maxHexLen = 4096
 
 // maxKeys caps the rotation list length per spec §2.5.
-const maxKeys = 2
+//
+// Bumped from 2 to 4 in 3.24.6 polish wave so operators have a comfortable
+// rotation depth (current + previous + prev-previous + prev-prev-previous).
+// Wire size: 4 × 64 chars + timestamp ≈ 280 bytes header — well under any
+// reasonable receiver header limit (8KB cloudflare, 4KB lambda baseline).
+// Per-event CPU: 4 HMAC operations vs 2 — negligible.
+const maxKeys = 4
+
+// MaxSigningKeys is the exported view of maxKeys for cross-package callers
+// that need to compute "evicted_count" diagnostics or guard parameter
+// validation. Not used by the package's own validation/signing helpers.
+const MaxSigningKeys = maxKeys
 
 // hexCharClass matches one or more lowercase hex characters. Uppercase is
 // REJECTED so the validator can give the user an actionable "use

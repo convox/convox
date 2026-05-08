@@ -221,13 +221,17 @@ func (p *Provider) serviceListAppendDaemonsets(app string, ss structs.Services, 
 // default on any rack without PROMETHEUS_URL configured) or when no
 // service has Gpu > 0.
 //
-// Aggregation contract: average across pods bucketed by gm.Service. Pods
-// with no `service` label value are skipped (they are not Convox-managed
-// service pods); pods labeled for service S that did NOT report a sample
-// for one of the three metrics contribute zero to that metric's sum but
-// still count toward the denominator. This matches the user-facing
-// definition of "average GPU utilization across this service's pods" —
-// reporting every pod's reading even when one metric is missing.
+// Aggregation contract: per-metric average across pods bucketed by
+// gm.Service. Pods with no `service` label value are skipped (not
+// Convox-managed). For each pod-metric pair, only non-nil GpuMetrics
+// pointers contribute to that metric's sum AND its denominator —
+// pods that did NOT report a sample for a given metric are silently
+// excluded from THAT metric's average without pulling other metrics
+// toward zero. A service whose 4 pods all report Util but only 2 report
+// Tensor will publish Util as the 4-pod mean and Tensor as the 2-pod
+// mean. If no pod reports a metric, the service's pointer for that
+// metric stays nil, which decodes through the resolver as null and
+// renders as `—` in the UI.
 //
 // The ctx parameter is the caller's context — plumbed through for
 // idiomatic cancellation. QueryGPUMetrics still applies its own internal
@@ -254,15 +258,19 @@ func (p *Provider) enrichGpuTelemetry(ctx context.Context, app string, ss struct
 		return
 	}
 
-	// Aggregate by service: average across pods labeled service=<name>.
+	// Aggregate by service. Per-metric independent counters — a pod that
+	// reports Util but not Tensor lifts utilCount and not tensorCount, so
+	// missing samples can't pull a different metric's average toward zero.
 	// GpuMetrics.Service was populated in QueryGPUMetrics from
 	// sample.Metric["service"], so the reverse map is built from
-	// gm.Service directly — no second Prom round-trip and no pre-pass
-	// against deployment names.
+	// gm.Service directly — no second Prom round-trip.
 	type accum struct {
-		util, memUsed, memTotal                                  float64
-		tensorActive, smActive, dramActive, fp16, fp32, powerW   float64
-		count                                                    int
+		util, memUsed, memTotal                float64
+		utilCount, memUsedCount, memTotalCount int
+		tensorActive, smActive, dramActive     float64
+		tensorCount, smCount, dramCount        int
+		fp16, fp32, powerW                     float64
+		fp16Count, fp32Count, powerWCount      int
 	}
 	byService := map[string]*accum{}
 	for _, gm := range gpuByPod {
@@ -274,43 +282,139 @@ func (p *Provider) enrichGpuTelemetry(ctx context.Context, app string, ss struct
 			a = &accum{}
 			byService[gm.Service] = a
 		}
-		a.util += gm.Util
-		a.memUsed += float64(gm.MemUsed)
-		a.memTotal += float64(gm.MemTotal)
-		a.tensorActive += gm.TensorActive
-		a.smActive += gm.SmActive
-		a.dramActive += gm.DramActive
-		a.fp16 += gm.Fp16Active
-		a.fp32 += gm.Fp32Active
-		a.powerW += gm.PowerW
-		a.count++
+		if gm.Util != nil {
+			a.util += *gm.Util
+			a.utilCount++
+		}
+		if gm.MemUsed != nil {
+			a.memUsed += float64(*gm.MemUsed)
+			a.memUsedCount++
+		}
+		if gm.MemTotal != nil {
+			a.memTotal += float64(*gm.MemTotal)
+			a.memTotalCount++
+		}
+		if gm.TensorActive != nil {
+			a.tensorActive += *gm.TensorActive
+			a.tensorCount++
+		}
+		if gm.SmActive != nil {
+			a.smActive += *gm.SmActive
+			a.smCount++
+		}
+		if gm.DramActive != nil {
+			a.dramActive += *gm.DramActive
+			a.dramCount++
+		}
+		if gm.Fp16Active != nil {
+			a.fp16 += *gm.Fp16Active
+			a.fp16Count++
+		}
+		if gm.Fp32Active != nil {
+			a.fp32 += *gm.Fp32Active
+			a.fp32Count++
+		}
+		if gm.PowerW != nil {
+			a.powerW += *gm.PowerW
+			a.powerWCount++
+		}
 	}
 	for i := range ss {
 		if ss[i].Gpu == 0 {
 			continue
 		}
-		if a, has := byService[ss[i].Name]; has && a.count > 0 {
-			n := float64(a.count)
-			avgUtil := a.util / n
-			avgMemUsed := int64(a.memUsed / n)
-			avgMemTotal := int64(a.memTotal / n)
-			avgTensor := a.tensorActive / n
-			avgSm := a.smActive / n
-			avgDram := a.dramActive / n
-			avgFp16 := a.fp16 / n
-			avgFp32 := a.fp32 / n
-			avgPowerW := a.powerW / n
-			ss[i].GpuUtilAvg = &avgUtil
-			ss[i].GpuMemUsedAvg = &avgMemUsed
-			ss[i].GpuMemTotalAvg = &avgMemTotal
-			ss[i].GpuTensorActiveAvg = &avgTensor
-			ss[i].GpuSmActiveAvg = &avgSm
-			ss[i].GpuDramActiveAvg = &avgDram
-			ss[i].GpuFp16ActiveAvg = &avgFp16
-			ss[i].GpuFp32ActiveAvg = &avgFp32
-			ss[i].GpuPowerWAvg = &avgPowerW
+		a, has := byService[ss[i].Name]
+		if !has {
+			continue
+		}
+		if a.utilCount > 0 {
+			v := a.util / float64(a.utilCount)
+			ss[i].GpuUtil = &v
+		}
+		if a.memUsedCount > 0 {
+			v := int64(a.memUsed / float64(a.memUsedCount))
+			ss[i].GpuMemUsed = &v
+		}
+		if a.memTotalCount > 0 {
+			v := int64(a.memTotal / float64(a.memTotalCount))
+			ss[i].GpuMemTotal = &v
+		}
+		if a.tensorCount > 0 {
+			v := a.tensorActive / float64(a.tensorCount)
+			ss[i].GpuTensorActive = &v
+		}
+		if a.smCount > 0 {
+			v := a.smActive / float64(a.smCount)
+			ss[i].GpuSmActive = &v
+		}
+		if a.dramCount > 0 {
+			v := a.dramActive / float64(a.dramCount)
+			ss[i].GpuDramActive = &v
+		}
+		if a.fp16Count > 0 {
+			v := a.fp16 / float64(a.fp16Count)
+			ss[i].GpuFp16Active = &v
+		}
+		if a.fp32Count > 0 {
+			v := a.fp32 / float64(a.fp32Count)
+			ss[i].GpuFp32Active = &v
+		}
+		if a.powerWCount > 0 {
+			v := a.powerW / float64(a.powerWCount)
+			ss[i].GpuPowerW = &v
 		}
 	}
+}
+
+// ServiceMetrics returns time-range GPU + base metrics for a single
+// service in the app. Mirrors the V2 rack ServiceMetrics shape (one
+// row per metric, []MetricValue per row) so the console resolver can
+// pass through results from V2 or V3 racks unchanged for the cpu/memory
+// rows; V3 3.24.6+ adds the gpu-* wire-names.
+//
+// Bounds and name validation happen at the controller layer
+// (pkg/api/controllers.go::ServiceMetrics) — by the time we're here,
+// app/service have been validated against manifest.NameValidator and
+// the concurrency semaphore is held.
+//
+// V3 first ship: returns GPU dimensions only. CPU/memory rows are
+// dropped at this provider until the V3 cAdvisor/kubelet path lands —
+// the resolver's contract with the UI is "passthrough whatever rows
+// arrive", so a V3 rack that returns 8 GPU rows is correct.
+func (p *Provider) ServiceMetrics(app, service string, opts structs.MetricsOptions) (structs.Metrics, error) {
+	if p.PromClient == nil {
+		return structs.Metrics{}, nil
+	}
+
+	ctx := p.Context()
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	byMetric, err := p.PromClient.QueryGPURange(ctx, app, []string{service}, opts)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	// Project map[wire]map[service][]MetricValue → flat []Metric, one
+	// per wire-name in stable order. The single-service variant collapses
+	// per-service buckets into a single series — typically `byService` has
+	// at most one key matching `service`, but if the operator's PromQL
+	// emits multiple series under the same service label we concatenate.
+	names := GpuRangeWireNames()
+	metrics := make(structs.Metrics, 0, len(names))
+	for _, wire := range names {
+		byService := byMetric[wire]
+		values := byService[service]
+		if values == nil {
+			values = structs.MetricValues{}
+		}
+		metrics = append(metrics, structs.Metric{
+			Name:   wire,
+			Values: structs.MetricValues(values),
+		})
+	}
+	return metrics, nil
 }
 
 func (p *Provider) ServiceRestart(app, name string) error {

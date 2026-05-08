@@ -169,24 +169,20 @@ func (p *Provider) ProcessGet(app, pid string) (*structs.Process, error) {
 		if err != nil {
 			_ = p.logger.Errorf("failed to fetch gpu metrics: %s", err)
 		} else if gm, has := gpuByPod[pid]; has {
-			util := gm.Util
-			memUsed := gm.MemUsed
-			memTotal := gm.MemTotal
-			tensor := gm.TensorActive
-			sm := gm.SmActive
-			dram := gm.DramActive
-			fp16 := gm.Fp16Active
-			fp32 := gm.Fp32Active
-			powerW := gm.PowerW
-			ps.GpuUtil = &util
-			ps.GpuMemUsed = &memUsed
-			ps.GpuMemTotal = &memTotal
-			ps.GpuTensorActive = &tensor
-			ps.GpuSmActive = &sm
-			ps.GpuDramActive = &dram
-			ps.GpuFp16Active = &fp16
-			ps.GpuFp32Active = &fp32
-			ps.GpuPowerW = &powerW
+			// Per-metric per-pod presence: gm fields are now *float64 / *int64.
+			// Nil propagates straight through to the Process struct. Each field
+			// gets a fresh pointer (allocated by QueryGPUMetrics setter) so no
+			// loop-variable aliasing concern remains. Resolver decode of nil =
+			// "metric absent for this pod" — UI renders `—`.
+			ps.GpuUtil = gm.Util
+			ps.GpuMemUsed = gm.MemUsed
+			ps.GpuMemTotal = gm.MemTotal
+			ps.GpuTensorActive = gm.TensorActive
+			ps.GpuSmActive = gm.SmActive
+			ps.GpuDramActive = gm.DramActive
+			ps.GpuFp16Active = gm.Fp16Active
+			ps.GpuFp32Active = gm.Fp32Active
+			ps.GpuPowerW = gm.PowerW
 		}
 	}
 
@@ -259,24 +255,17 @@ func (p *Provider) ProcessList(app string, opts structs.ProcessListOptions) (str
 					continue
 				}
 				if gm, has := gpuByPod[pss[i].Id]; has {
-					util := gm.Util
-					memUsed := gm.MemUsed
-					memTotal := gm.MemTotal
-					tensor := gm.TensorActive
-					sm := gm.SmActive
-					dram := gm.DramActive
-					fp16 := gm.Fp16Active
-					fp32 := gm.Fp32Active
-					powerW := gm.PowerW
-					pss[i].GpuUtil = &util
-					pss[i].GpuMemUsed = &memUsed
-					pss[i].GpuMemTotal = &memTotal
-					pss[i].GpuTensorActive = &tensor
-					pss[i].GpuSmActive = &sm
-					pss[i].GpuDramActive = &dram
-					pss[i].GpuFp16Active = &fp16
-					pss[i].GpuFp32Active = &fp32
-					pss[i].GpuPowerW = &powerW
+					// Per-metric per-pod presence: gm fields are now *float64 / *int64.
+					// Direct pointer propagation — nil = "metric absent for this pod".
+					pss[i].GpuUtil = gm.Util
+					pss[i].GpuMemUsed = gm.MemUsed
+					pss[i].GpuMemTotal = gm.MemTotal
+					pss[i].GpuTensorActive = gm.TensorActive
+					pss[i].GpuSmActive = gm.SmActive
+					pss[i].GpuDramActive = gm.DramActive
+					pss[i].GpuFp16Active = gm.Fp16Active
+					pss[i].GpuFp32Active = gm.Fp32Active
+					pss[i].GpuPowerW = gm.PowerW
 				}
 			}
 		}

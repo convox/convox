@@ -118,81 +118,81 @@ func TestServiceAutoscaleStateOmitempty(t *testing.T) {
 	require.NotContains(t, string(data), `"max"`)
 }
 
-// TestServiceGpuAvgFieldsOmitEmpty — nil pointers on the new GPU averaged
+// TestServiceGpuFieldsOmitEmpty — nil pointers on the new GPU averaged
 // telemetry fields are stripped from JSON output by omitempty (non-GPU
 // services, mixed-skew with rack that has not populated readings).
-func TestServiceGpuAvgFieldsOmitEmpty(t *testing.T) {
+func TestServiceGpuFieldsOmitEmpty(t *testing.T) {
 	s := Service{Name: "svc", Count: 1}
 	data, err := json.Marshal(s)
 	require.NoError(t, err)
-	require.NotContains(t, string(data), "gpu-util-avg", "nil gpu-util-avg must be omitted")
-	require.NotContains(t, string(data), "gpu-mem-used-avg", "nil gpu-mem-used-avg must be omitted")
-	require.NotContains(t, string(data), "gpu-mem-total-avg", "nil gpu-mem-total-avg must be omitted")
+	require.NotContains(t, string(data), "gpu-util", "nil gpu-util must be omitted")
+	require.NotContains(t, string(data), "gpu-mem-used", "nil gpu-mem-used must be omitted")
+	require.NotContains(t, string(data), "gpu-mem-total", "nil gpu-mem-total must be omitted")
 }
 
-// TestServiceGpuAvgFieldsZeroPointerNotStripped — pointer-to-zero must
+// TestServiceGpuFieldsZeroPointerNotStripped — pointer-to-zero must
 // serialize. BC firewall: distinguish "no data" (nil → omitted → null) from
-// "real averaged reading at idle" (pointer to 0 → "gpu-util-avg":0).
-func TestServiceGpuAvgFieldsZeroPointerNotStripped(t *testing.T) {
+// "real averaged reading at idle" (pointer to 0 → "gpu-util":0).
+func TestServiceGpuFieldsZeroPointerNotStripped(t *testing.T) {
 	zeroF := 0.0
 	var zeroI int64 = 0
-	s := Service{Name: "svc", GpuUtilAvg: &zeroF, GpuMemUsedAvg: &zeroI, GpuMemTotalAvg: &zeroI}
+	s := Service{Name: "svc", GpuUtil: &zeroF, GpuMemUsed: &zeroI, GpuMemTotal: &zeroI}
 	data, err := json.Marshal(s)
 	require.NoError(t, err)
 	out := string(data)
-	require.Contains(t, out, `"gpu-util-avg":0`, "pointer-to-zero must serialize")
-	require.Contains(t, out, `"gpu-mem-used-avg":0`)
-	require.Contains(t, out, `"gpu-mem-total-avg":0`)
+	require.Contains(t, out, `"gpu-util":0`, "pointer-to-zero must serialize")
+	require.Contains(t, out, `"gpu-mem-used":0`)
+	require.Contains(t, out, `"gpu-mem-total":0`)
 }
 
-// TestServiceGpuAvgFieldsKebabCase — JSON tag shape is kebab-case.
-func TestServiceGpuAvgFieldsKebabCase(t *testing.T) {
+// TestServiceGpuFieldsKebabCase — JSON tag shape is kebab-case.
+func TestServiceGpuFieldsKebabCase(t *testing.T) {
 	util := 60.5
 	var memUsed int64 = 32 * 1024 * 1024 * 1024
 	var memTotal int64 = 80 * 1024 * 1024 * 1024
-	s := Service{Name: "vllm", Gpu: 1, GpuUtilAvg: &util, GpuMemUsedAvg: &memUsed, GpuMemTotalAvg: &memTotal}
+	s := Service{Name: "vllm", Gpu: 1, GpuUtil: &util, GpuMemUsed: &memUsed, GpuMemTotal: &memTotal}
 	data, err := json.Marshal(s)
 	require.NoError(t, err)
 	out := string(data)
-	require.Contains(t, out, `"gpu-util-avg":60.5`, "tag must be kebab-case")
-	require.Contains(t, out, `"gpu-mem-used-avg":34359738368`)
-	require.Contains(t, out, `"gpu-mem-total-avg":85899345920`)
+	require.Contains(t, out, `"gpu-util":60.5`, "tag must be kebab-case")
+	require.Contains(t, out, `"gpu-mem-used":34359738368`)
+	require.Contains(t, out, `"gpu-mem-total":85899345920`)
 }
 
-// TestService_OldRackDecode_GpuAvgKeysAbsentMeansNil — a 3.24.5 rack
+// TestService_OldRackDecode_GpuFieldsAbsentMeansNil — a 3.24.5 rack
 // returning Service JSON without the new GPU avg keys must decode them as
 // nil pointers on the 3.24.6 client side, NOT as zero values.
-func TestService_OldRackDecode_GpuAvgKeysAbsentMeansNil(t *testing.T) {
+func TestService_OldRackDecode_GpuFieldsAbsentMeansNil(t *testing.T) {
 	raw := []byte(`{"name":"svc","count":3,"cpu":100,"memory":256,"gpu":1,"gpu-vendor":"nvidia"}`)
 	var s Service
 	require.NoError(t, json.Unmarshal(raw, &s))
-	require.Nil(t, s.GpuUtilAvg, "missing key must decode as nil pointer")
-	require.Nil(t, s.GpuMemUsedAvg)
-	require.Nil(t, s.GpuMemTotalAvg)
+	require.Nil(t, s.GpuUtil, "missing key must decode as nil pointer")
+	require.Nil(t, s.GpuMemUsed)
+	require.Nil(t, s.GpuMemTotal)
 }
 
-// TestServiceGpuAvgFields_RoundTrip — marshal a Service with all GPU avg
+// TestServiceGpuFields_RoundTrip — marshal a Service with all GPU avg
 // fields populated, unmarshal into a new struct, assert pointer-deref equality.
-func TestServiceGpuAvgFields_RoundTrip(t *testing.T) {
+func TestServiceGpuFields_RoundTrip(t *testing.T) {
 	util := 55.5
 	var memUsed int64 = 16 * 1024 * 1024 * 1024
 	var memTotal int64 = 80 * 1024 * 1024 * 1024
 	want := Service{
-		Name:           "vllm",
-		Gpu:            1,
-		GpuVendor:      "nvidia",
-		GpuUtilAvg:     &util,
-		GpuMemUsedAvg:  &memUsed,
-		GpuMemTotalAvg: &memTotal,
+		Name:        "vllm",
+		Gpu:         1,
+		GpuVendor:   "nvidia",
+		GpuUtil:     &util,
+		GpuMemUsed:  &memUsed,
+		GpuMemTotal: &memTotal,
 	}
 	data, err := json.Marshal(want)
 	require.NoError(t, err)
 	var got Service
 	require.NoError(t, json.Unmarshal(data, &got))
-	require.NotNil(t, got.GpuUtilAvg)
-	require.NotNil(t, got.GpuMemUsedAvg)
-	require.NotNil(t, got.GpuMemTotalAvg)
-	require.Equal(t, util, *got.GpuUtilAvg)
-	require.Equal(t, memUsed, *got.GpuMemUsedAvg)
-	require.Equal(t, memTotal, *got.GpuMemTotalAvg)
+	require.NotNil(t, got.GpuUtil)
+	require.NotNil(t, got.GpuMemUsed)
+	require.NotNil(t, got.GpuMemTotal)
+	require.Equal(t, util, *got.GpuUtil)
+	require.Equal(t, memUsed, *got.GpuMemUsed)
+	require.Equal(t, memTotal, *got.GpuMemTotal)
 }

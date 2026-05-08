@@ -71,6 +71,20 @@ var preserveEmpty = map[string]bool{
 	"prometheus_gpu_metrics_chart_version": true,
 	"prometheus_gpu_metrics_retention":     true,
 	"gpu_observability_chart_version":      true,
+	// 3.24.6 polish-wave additions: process-config rack params with
+	// safe-default fallback semantics. Empty values flow through writeVars
+	// to vars.json so subsequent applies see the cleared override (handler
+	// or chart default re-applies). The reconciler at terraform.go:440-482
+	// strips them on downgrade to versions whose system module does not
+	// declare them.
+	"dcgm_scrape_interval":            true,
+	"gpu_metrics_max_pods":            true,
+	"gpu_metrics_max_concurrent":      true,
+	"release_watcher_gc_interval":     true,
+	"grafana_dashboard_var_rack":      true,
+	"grafana_dashboard_var_namespace": true,
+	"grafana_dashboard_var_service":   true,
+	"grafana_dashboard_var_app":       true,
 }
 
 // PreserveEmptyParams returns a copy of the writeVars empty-preservation

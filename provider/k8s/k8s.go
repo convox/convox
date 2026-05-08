@@ -151,6 +151,15 @@ type webhookState struct {
 	// already confirmed the empty state.
 	populated bool
 	urls      []string
+	// receivers caches parsed webhookEntry rows (URL + per-URL Timeout)
+	// derived from the configmap value strings. Added in 3.24.6 polish
+	// wave (Item 2B): operators can encode each value as JSON
+	// `{"url":"...", "timeout":"5s"}` to override the package-default
+	// 30s dispatch deadline per receiver. The slice is parsed lazily by
+	// EventSend from urls when receivers is empty; tests may pre-populate
+	// it directly via SetWebhookReceiversForTest to drive per-URL timeout
+	// assertions without going through the configmap informer.
+	receivers []webhookEntry
 }
 
 func init() {
@@ -335,6 +344,37 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 	p.templater = templater.New(template.TemplatesFS)
 	if p.webhookState == nil {
 		p.webhookState = &webhookState{}
+	}
+
+	// Apply RELEASE_WATCHER_GC_INTERVAL env var (TF param
+	// `release_watcher_gc_interval`) to the package-level
+	// releasePromoteWatchGCTickInterval. Read ONCE at Initialize so
+	// every subsequent GC ticker.NewTicker call observes the same
+	// value, regardless of how many times Initialize is invoked
+	// (it shouldn't be invoked more than once per process; defense
+	// in depth). Out-of-range values clamp to the documented
+	// 60s-1h range; invalid duration strings fall back to the
+	// existing default with a warn log. See
+	// applyReleaseWatcherGCIntervalEnv for full clamp/log
+	// semantics. Runs BEFORE the TEST=true short-circuit so unit
+	// tests can also assert the env-var path; tests that want the
+	// default 5m simply don't set the env var.
+	applyReleaseWatcherGCIntervalEnv()
+
+	// SSRF startup re-validation (F-SEC-26): re-apply the prometheus_url
+	// SSRF allowlist to whatever value reached Initialize via env. The
+	// param-set validator at pkg/cli/rack.go:1857-1885 catches `convox
+	// rack params set` requests, but a pre-F-01 stored value or an
+	// operator-edited configmap can still hit Initialize with a hostile
+	// URL. On reject: emit a structured WARN, drop PromClient to nil so
+	// every read short-circuits to "no metrics".
+	if raw := os.Getenv("PROMETHEUS_URL"); raw != "" {
+		if err := ValidatePrometheusURL(raw); err != nil {
+			fmt.Printf("ns=k8s at=prometheus_url result=invalid_ssrf url=%q error=%q metrics=disabled remediation=%q\n",
+				raw, err.Error(),
+				"convox rack params set prometheus_url=<valid http:// or https:// URL>; see CLUSTER-1 1E SSRF section")
+			p.PromClient = nil
+		}
 	}
 
 	if os.Getenv("TEST") == "true" {

@@ -276,6 +276,68 @@ func (p *Provider) AppMetrics(name string, opts structs.MetricsOptions) (structs
 	return nil, errors.WithStack(structs.ErrNotImplemented("unimplemented"))
 }
 
+// MetricsByService is the batched per-app companion to ServiceMetrics:
+// one rack call returns a row per requested service, each carrying the
+// GPU metric series for that service. The implementation reuses the
+// shared QueryGPURange path (regex alternation on services) so all
+// services in the app are fetched in N PromQL QueryRange calls (one per
+// metric), not N×M (one per metric per service). Wire shape: see
+// pkg/structs/metric.go::ServiceMetricsRow comment for invariants.
+//
+// Empty services slice → no Prom call, returns []. Per-service rows are
+// returned in the same order as the input `services` slice; rows for
+// services with no Prom data are emitted with an empty `Metrics` slice
+// so the UI can distinguish "requested but empty" from "not requested".
+//
+// Bounds, name validation, and concurrency capping happen at the
+// controller layer (pkg/api/controllers.go::MetricsByService) — by the
+// time we're here, `services` is sanitised and the semaphore is held.
+func (p *Provider) MetricsByService(app string, services []string, opts structs.MetricsOptions) ([]structs.ServiceMetricsRow, error) {
+	if p.PromClient == nil {
+		// No Prom client configured — return one empty row per requested
+		// service so the UI can show "requested but empty".
+		rows := make([]structs.ServiceMetricsRow, 0, len(services))
+		for _, s := range services {
+			rows = append(rows, structs.ServiceMetricsRow{Name: s, Metrics: structs.Metrics{}})
+		}
+		return rows, nil
+	}
+	if len(services) == 0 {
+		return []structs.ServiceMetricsRow{}, nil
+	}
+
+	ctx := p.Context()
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	byMetric, err := p.PromClient.QueryGPURange(ctx, app, services, opts)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	// For each requested service, build one row containing one Metric
+	// per wire-name (in stable order). Wire-names for which a service
+	// has no series come through with an empty Values slice — preserve
+	// rather than skip so chart code can render an empty axis.
+	rows := make([]structs.ServiceMetricsRow, 0, len(services))
+	for _, svc := range services {
+		metrics := make(structs.Metrics, 0, len(GpuRangeWireNames()))
+		for _, wire := range GpuRangeWireNames() {
+			values := byMetric[wire][svc]
+			if values == nil {
+				values = structs.MetricValues{}
+			}
+			metrics = append(metrics, structs.Metric{
+				Name:   wire,
+				Values: structs.MetricValues(values),
+			})
+		}
+		rows = append(rows, structs.ServiceMetricsRow{Name: svc, Metrics: metrics})
+	}
+	return rows, nil
+}
+
 func (p *Provider) AppNamespace(app string) string {
 	switch app {
 	case "system":

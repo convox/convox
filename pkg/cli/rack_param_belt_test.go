@@ -282,6 +282,7 @@ func TestCoalesceLiteralsMatchTFDefaults(t *testing.T) {
 		file     string
 	}{
 		{"gpu_observability_chart_version", "../../terraform/cluster/aws/dcgm.tf"},
+		{"dcgm_scrape_interval", "../../terraform/cluster/aws/dcgm.tf"},
 	}
 
 	clusterDefaults := parseTFVariableDefaults(t, "../../terraform/cluster/aws/variables.tf")

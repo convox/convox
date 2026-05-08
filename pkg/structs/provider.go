@@ -23,6 +23,7 @@ type Provider interface {
 	AppLogs(name string, opts LogsOptions) (io.ReadCloser, error)
 	AppManifestService(app, service string) (*ManifestService, error)
 	AppMetrics(name string, opts MetricsOptions) (Metrics, error)
+	MetricsByService(app string, services []string, opts MetricsOptions) ([]ServiceMetricsRow, error)
 	AppUpdate(name string, opts AppUpdateOptions) error
 
 	AppBudgetGet(app string) (*AppBudget, *AppBudgetState, error)
@@ -102,6 +103,7 @@ type Provider interface {
 	ResourceList(app string) (Resources, error)
 
 	ServiceList(app string) (Services, error)
+	ServiceMetrics(app, service string, opts MetricsOptions) (Metrics, error)
 	ServiceRestart(app, name string) error
 	ServiceScaleOverrideSet(app, service string, active bool, ackBy string) error
 	ServiceUpdate(app, name string, opts ServiceUpdateOptions) error

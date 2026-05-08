@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
+	b64 "encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -27,6 +28,11 @@ const fixedTimestamp int64 = 1745497200
 
 // secondKeyHex is a distinct high-entropy 32-byte key used in rotation tests.
 const secondKeyHex = "8c1f3e0b9d4a7f2e6c5b8a3d4f9e2c1a7b6d5f4e3c2b1a9d8f7e6c5b4a3d2e10"
+
+// thirdKeyHex / fourthKeyHex are 3rd/4th rotation keys used in 4-key fan-out
+// tests after the 3.24.6 polish wave bumped maxKeys from 2 to 4 (Item 2A).
+const thirdKeyHex = "1a2b3c4d5e6f70819293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5"
+const fourthKeyHex = "9f8e7d6c5b4a39281f0e1d2c3b4a5968778695a4b3c2d1e0f9a8b7c6d5e4f3c2"
 
 func mustDecode(t testing.TB, s string) []byte {
 	t.Helper()
@@ -77,6 +83,50 @@ func TestSignedHeader_MultipleKeys_AllSignaturesEmitted(t *testing.T) {
 		}
 	}
 	assert.Equal(t, 2, v1count, "two-key list must emit two v1= segments")
+}
+
+// TestSignedHeader_FourKeys_AllSignaturesEmitted pins the fan-out cap
+// after maxKeys was bumped from 2 to 4 in 3.24.6 polish wave (Item 2A).
+// Header MUST emit exactly 4 v1= segments + the t= prefix.
+func TestSignedHeader_FourKeys_AllSignaturesEmitted(t *testing.T) {
+	keys := [][]byte{
+		mustDecode(t, fixedKeyHex),
+		mustDecode(t, secondKeyHex),
+		mustDecode(t, thirdKeyHex),
+		mustDecode(t, fourthKeyHex),
+	}
+	body := []byte(`{"x":1}`)
+
+	header := cxhmac.SignedHeader(fixedTimestamp, body, keys)
+	require.NotEmpty(t, header)
+
+	parts := strings.Split(header, ",")
+	var v1count int
+	for _, p := range parts {
+		if strings.HasPrefix(strings.TrimSpace(p), "v1=") {
+			v1count++
+		}
+	}
+	assert.Equal(t, 4, v1count, "four-key rotation list must emit four v1= segments")
+}
+
+// TestVerify_FourKeys_AnyMatches confirms a receiver that knows ANY one
+// of the four active keys can validate the payload — the keystore-on-the-
+// receiver-side semantics for 4-deep rotation work.
+func TestVerify_FourKeys_AnyMatches(t *testing.T) {
+	k := [][]byte{
+		mustDecode(t, fixedKeyHex),
+		mustDecode(t, secondKeyHex),
+		mustDecode(t, thirdKeyHex),
+		mustDecode(t, fourthKeyHex),
+	}
+	body := []byte(`{"action":"app:create"}`)
+	header := cxhmac.SignedHeader(time.Now().Unix(), body, k)
+	for i, key := range k {
+		t.Run(fmt.Sprintf("key-%d", i), func(t *testing.T) {
+			require.NoError(t, cxhmac.Verify(body, header, [][]byte{key}, 5*time.Minute))
+		})
+	}
 }
 
 func TestVerify_AcceptsAnyOfMultipleSigs(t *testing.T) {
@@ -351,10 +401,42 @@ func TestValidateSigningKeys_PlaceholderSubstring_Accepts(t *testing.T) {
 }
 
 func TestValidateSigningKeys_TooManyKeys_Rejects(t *testing.T) {
-	bad := fixedKeyHex + "," + secondKeyHex + "," + fixedKeyHex
+	// maxKeys was bumped from 2 to 4 in 3.24.6 polish wave (Item 2A).
+	// 5 keys must trigger the "at most" rejection; 4 keys must NOT.
+	bad := strings.Join([]string{fixedKeyHex, secondKeyHex, fixedKeyHex, secondKeyHex, fixedKeyHex}, ",")
 	err := cxhmac.ValidateSigningKeys(bad)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "at most")
+	assert.Contains(t, err.Error(), "4")
+}
+
+// TestValidateSigningKeys_FourValid_Accepts pins the post-2A boundary:
+// exactly maxKeys (4) keys must be accepted with no error.
+func TestValidateSigningKeys_FourValid_Accepts(t *testing.T) {
+	good := strings.Join([]string{fixedKeyHex, secondKeyHex, fixedKeyHex, secondKeyHex}, ",")
+	require.NoError(t, cxhmac.ValidateSigningKeys(good))
+}
+
+// TestValidateSigningKeys_TooManyError_NoKeyMaterial — the rejection
+// message must NOT contain any key bytes, hashes, or hex/base64/base64url
+// encodings of the key material. The sole information surfaced is the
+// count + the cap (count > cap), per F-SEC-4.
+func TestValidateSigningKeys_TooManyError_NoKeyMaterial(t *testing.T) {
+	candidates := []string{fixedKeyHex, secondKeyHex}
+	bad := strings.Join([]string{fixedKeyHex, secondKeyHex, fixedKeyHex, secondKeyHex, fixedKeyHex}, ",")
+	err := cxhmac.ValidateSigningKeys(bad)
+	require.Error(t, err)
+	msg := err.Error()
+	for _, c := range candidates {
+		rawBytes, err := hex.DecodeString(c)
+		require.NoError(t, err)
+		assert.NotContains(t, msg, c, "raw hex key must not appear in too-many-keys error")
+		assert.NotContains(t, msg, string(rawBytes), "raw decoded bytes must not appear in error")
+		hash := sha256.Sum256(rawBytes)
+		assert.NotContains(t, msg, hex.EncodeToString(hash[:]), "sha256 hex of key must not appear in error")
+		assert.NotContains(t, msg, b64.StdEncoding.EncodeToString(hash[:]), "sha256 base64 of key must not appear")
+		assert.NotContains(t, msg, b64.URLEncoding.EncodeToString(hash[:]), "sha256 base64url of key must not appear")
+	}
 }
 
 func TestValidateSigningKeys_EmptyEntry_Rejects(t *testing.T) {
@@ -685,4 +767,11 @@ func TestValidateSigningKeys_NewPlaceholders_Rejected(t *testing.T) {
 				"expected a placeholder/entropy rejection message, got: %s", err.Error())
 		})
 	}
+}
+
+// TestMaxSigningKeysConstant pins the exported MaxSigningKeys value to 4
+// after the 3.24.6 polish wave bump (Item 2A). Cross-package consumers
+// (provider/k8s/event.go) read this constant for diagnostic purposes.
+func TestMaxSigningKeysConstant(t *testing.T) {
+	assert.Equal(t, 4, cxhmac.MaxSigningKeys, "MaxSigningKeys must be 4 in 3.24.6")
 }
