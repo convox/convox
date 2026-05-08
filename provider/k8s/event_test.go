@@ -653,7 +653,7 @@ func TestDispatchWebhook_LegacyHookOverridesSigned(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Item 2A — Webhook signing key eviction audit (no key material)
+// Webhook signing key eviction audit (no key material)
 // ---------------------------------------------------------------------------
 
 // TestWebhookSigningKeyEvictionAuditNoMaterial — when EventSend's parse
@@ -662,7 +662,7 @@ func TestDispatchWebhook_LegacyHookOverridesSigned(t *testing.T) {
 // emitted to stdout. The row's wire format is fixed
 // (`audit_type=webhook_signing_key:eviction count=1 reason=key_count_exceeded
 // max=N evicted_count=M`) and MUST contain NO key bytes, key hashes, or
-// hex/base64/base64url encodings of the key material. Per F-SEC-4.
+// hex/base64/base64url encodings of the key material.
 func TestWebhookSigningKeyEvictionAuditNoMaterial(t *testing.T) {
 	// Five distinct 64-char high-entropy hex keys: max=4 → evicted_count=1.
 	candidates := []string{
@@ -719,7 +719,7 @@ func TestWebhookSigningKeyEvictionAuditNoMaterial(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Item 2B — Per-URL webhook timeout via JSON receiver config
+// Per-URL webhook timeout via JSON receiver config
 // ---------------------------------------------------------------------------
 
 // TestWebhookConfigmapJsonParseCache — receivers cache populated via
@@ -851,7 +851,7 @@ func TestParseFallsThroughOnInvalidJSON(t *testing.T) {
 	}
 }
 
-// TestSkipsEntryWithEmptyURL — F-R9-5 anti-trap: when a JSON entry parses
+// TestSkipsEntryWithEmptyURL — anti-trap: when a JSON entry parses
 // successfully but the url field is empty/whitespace, the entry is SKIPPED
 // (a structured WARN is emitted). Critical: the parser must NOT fall
 // through to the plain-URL branch — the raw value is a JSON object string,
@@ -869,12 +869,12 @@ func TestSkipsEntryWithEmptyURL(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			entry, skip := k8s.ParseWebhookEntryForTest("test-name", tc.raw)
-			assert.True(t, skip, "empty/whitespace url in JSON must trigger skip (F-R9-5)")
+			assert.True(t, skip, "empty/whitespace url in JSON must trigger skip")
 			// Skipped entries return zero — the parser MUST NOT have fallen
 			// through to plain-URL with the raw JSON string as a URL.
 			assert.Empty(t, entry.URL,
 				"skipped entry must NOT have a populated URL — falling through to plain-URL "+
-					"semantics would dispatch the raw JSON object as a URL (F-R9-5)")
+					"semantics would dispatch the raw JSON object as a URL")
 		})
 	}
 }

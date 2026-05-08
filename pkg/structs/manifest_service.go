@@ -23,8 +23,8 @@ type ManifestService struct {
 //
 // ColdStart is NOT included — it's runtime state populated from
 // Deployment annotations and exposed via the existing
-// structs.Service.ColdStart returned by ServiceList/ServiceGet. Item 11
-// §5.3 reads cold-start from there.
+// structs.Service.ColdStart returned by ServiceList/ServiceGet. The
+// per-service detail page reads cold-start from there.
 type ManifestServiceScale struct {
 	Min *int `json:"min,omitempty"`
 	Max *int `json:"max,omitempty"`

@@ -44,7 +44,7 @@ func TestParseWebhookEntry_JSONForm_AbsentTimeout_UsesDefault(t *testing.T) {
 		"absent timeout in JSON form must fall back to default")
 }
 
-// F-R9-5 anti-trap: empty URL in JSON form must skip, NOT fall through to
+// Anti-trap: empty URL in JSON form must skip, NOT fall through to
 // plain-URL semantics. If the parser fell through, dispatch would attempt
 // to POST to the literal JSON-object string as a URL, corrupting wire
 // behavior.
@@ -57,9 +57,9 @@ func TestParseWebhookEntry_JSONForm_EmptyURL_Skips_NotPlainURLFallthrough(t *tes
 	for _, raw := range raws {
 		t.Run(raw, func(t *testing.T) {
 			entry, skip := k8s.ParseWebhookEntryForTest("name", raw)
-			assert.True(t, skip, "F-R9-5: empty URL in JSON must skip")
+			assert.True(t, skip, "empty URL in JSON must skip")
 			assert.Empty(t, entry.URL,
-				"F-R9-5: skipped JSON entries must NOT have raw value treated as URL")
+				"skipped JSON entries must NOT have raw value treated as URL")
 		})
 	}
 }

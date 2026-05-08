@@ -2390,13 +2390,13 @@ func TestAppBudgetSet_CostTrackingDisabled_PricingAdjustmentOnlyAllowed(t *testi
 		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 
-		// Phase 1: cost tracking enabled, set initial budget with cap.
+		// First: cost tracking enabled, set initial budget with cap.
 		t.Setenv("COST_TRACKING_ENABLE", "true")
 		require.NoError(t, p.AppBudgetSet("app1", structs.AppBudgetOptions{
 			MonthlyCapUsd: strPtr("500"),
 		}, "test"))
 
-		// Phase 2: cost tracking disabled, update only PricingAdjustment.
+		// Then: cost tracking disabled, update only PricingAdjustment.
 		// Gate must NOT fire — the partial update touches no enforcement
 		// fields. The existing cap stays in the merged config and passes
 		// validation.

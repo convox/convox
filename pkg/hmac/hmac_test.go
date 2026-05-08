@@ -30,7 +30,7 @@ const fixedTimestamp int64 = 1745497200
 const secondKeyHex = "8c1f3e0b9d4a7f2e6c5b8a3d4f9e2c1a7b6d5f4e3c2b1a9d8f7e6c5b4a3d2e10"
 
 // thirdKeyHex / fourthKeyHex are 3rd/4th rotation keys used in 4-key fan-out
-// tests after the 3.24.6 polish wave bumped maxKeys from 2 to 4 (Item 2A).
+// tests; maxKeys was bumped from 2 to 4 in 3.24.6.
 const thirdKeyHex = "1a2b3c4d5e6f70819293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5"
 const fourthKeyHex = "9f8e7d6c5b4a39281f0e1d2c3b4a5968778695a4b3c2d1e0f9a8b7c6d5e4f3c2"
 
@@ -86,7 +86,7 @@ func TestSignedHeader_MultipleKeys_AllSignaturesEmitted(t *testing.T) {
 }
 
 // TestSignedHeader_FourKeys_AllSignaturesEmitted pins the fan-out cap
-// after maxKeys was bumped from 2 to 4 in 3.24.6 polish wave (Item 2A).
+// after maxKeys was bumped from 2 to 4 in 3.24.6.
 // Header MUST emit exactly 4 v1= segments + the t= prefix.
 func TestSignedHeader_FourKeys_AllSignaturesEmitted(t *testing.T) {
 	keys := [][]byte{
@@ -401,7 +401,7 @@ func TestValidateSigningKeys_PlaceholderSubstring_Accepts(t *testing.T) {
 }
 
 func TestValidateSigningKeys_TooManyKeys_Rejects(t *testing.T) {
-	// maxKeys was bumped from 2 to 4 in 3.24.6 polish wave (Item 2A).
+	// maxKeys was bumped from 2 to 4 in 3.24.6.
 	// 5 keys must trigger the "at most" rejection; 4 keys must NOT.
 	bad := strings.Join([]string{fixedKeyHex, secondKeyHex, fixedKeyHex, secondKeyHex, fixedKeyHex}, ",")
 	err := cxhmac.ValidateSigningKeys(bad)
@@ -529,7 +529,7 @@ func TestEventSendBody_BytesIdenticalTo_JSONMarshal(t *testing.T) {
 }
 
 func TestEventCanonicalization_AllEventTypes_BackwardCompat(t *testing.T) {
-	// Per spec §8.1 R2-26: per-fixture, the test pins
+	// Per-fixture, the test pins
 	// expectedSignatureHex to literal hex bytes from
 	// pkg/hmac/testdata/expected-sigs.json so the assertion is stable
 	// across hypothetical Go-version changes.
@@ -770,7 +770,7 @@ func TestValidateSigningKeys_NewPlaceholders_Rejected(t *testing.T) {
 }
 
 // TestMaxSigningKeysConstant pins the exported MaxSigningKeys value to 4
-// after the 3.24.6 polish wave bump (Item 2A). Cross-package consumers
+// (bumped from 2 in 3.24.6). Cross-package consumers
 // (provider/k8s/event.go) read this constant for diagnostic purposes.
 func TestMaxSigningKeysConstant(t *testing.T) {
 	assert.Equal(t, 4, cxhmac.MaxSigningKeys, "MaxSigningKeys must be 4 in 3.24.6")

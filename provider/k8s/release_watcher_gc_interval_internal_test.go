@@ -9,7 +9,7 @@ import (
 // private and mutates the package-level releasePromoteWatchGCTickInterval
 // var, so the tests live in package k8s rather than k8s_test.
 //
-// Per (3.24.6 polish wave Item 3A): operators set the
+// Operators set the
 // `release_watcher_gc_interval` rack param; the TF module plumbs it as
 // `RELEASE_WATCHER_GC_INTERVAL` env var on the api Deployment; the
 // provider reads it ONCE at Initialize and assigns to the package-level

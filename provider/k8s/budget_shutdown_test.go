@@ -954,22 +954,23 @@ func TestConcurrentResetAndAccumulatorTick_LosersRetryWithFreshState(t *testing.
 }
 
 // TestAppBudgetResetWithOptions_HoldsLockAcrossStep2_NoDuplicateCancelled
-// (F-A06-1 fix). Pre-fix: AppBudgetResetWithOptions called inner
-// AppBudgetReset (which acquired+released the lock atomically with the
-// breaker-state write), then continued Step 2 (restoreFromAnnotation +
-// annotation delete) WITHOUT holding the lock. A concurrent accumulator
-// tick on the same app could acquire the lock between Step 1 unlock
-// and Step 2 entry, observe the still-present armed shutdown-state
-// annotation, and emit its OWN :cancelled event before the reset's
-// restoreFromAnnotation emit landed — producing TWO :cancelled events
-// for one logical recovery action.
+// covers a previous race. Pre-fix: AppBudgetResetWithOptions called
+// inner AppBudgetReset (which acquired+released the lock atomically
+// with the breaker-state write), then continued the restore stage
+// (restoreFromAnnotation + annotation delete) WITHOUT holding the lock.
+// A concurrent accumulator tick on the same app could acquire the lock
+// between the breaker-clear unlock and the restore entry, observe the
+// still-present armed shutdown-state annotation, and emit its OWN
+// :cancelled event before the reset's restoreFromAnnotation emit
+// landed — producing TWO :cancelled events for one logical recovery
+// action.
 //
 // Post-fix: AppBudgetResetWithOptions acquires appBudgetLock at the
 // outer scope (defer Unlock) and delegates to the new
-// appBudgetResetLocked helper. Step 1 + Step 2 run as a single
-// critical section. The accumulator tick queues until reset finishes,
-// observes the now-deleted annotation, and is a no-op for the cancel
-// path.
+// appBudgetResetLocked helper. The breaker-clear and the restore stage
+// run as a single critical section. The accumulator tick queues until
+// reset finishes, observes the now-deleted annotation, and is a no-op
+// for the cancel path.
 //
 // This test pre-arms the app and runs reset + reconcileAutoShutdown in
 // parallel (both contending the lock). Uses the manifest-injecting
@@ -1050,7 +1051,7 @@ func TestAppBudgetResetWithOptions_HoldsLockAcrossStep2_NoDuplicateCancelled(t *
 		errs := make(chan error, 2)
 		go func() {
 			defer wg.Done()
-			// Plain reset (force=false). Outer lock now wraps Step 1+2.
+			// Plain reset (force=false). Outer lock now wraps the full reset.
 			errs <- p.AppBudgetResetWithOptions("app1", "alice@example.com", structs.AppBudgetResetOptions{})
 		}()
 		go func() {
@@ -1078,7 +1079,7 @@ func TestAppBudgetResetWithOptions_HoldsLockAcrossStep2_NoDuplicateCancelled(t *
 			"F-A06-1: at most one :cancelled may fire under reset+tick race; got %d", len(cancelEvts))
 
 		// Post-race invariant 2: shutdown-state annotation must be deleted
-		// (Step 2 of AppBudgetResetWithOptions unconditionally deletes it).
+		// (the restore stage of AppBudgetResetWithOptions unconditionally deletes it).
 		ns2, _ := kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
 		_, hasAnno := ns2.Annotations[structs.BudgetShutdownStateAnnotation]
 		assert.False(t, hasAnno, "shutdown-state annotation must be deleted after reset")

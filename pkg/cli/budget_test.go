@@ -61,7 +61,7 @@ func TestBudgetShowNoBudget(t *testing.T) {
 func TestBudgetSetDefaults(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("AppCost", "app1").Return(&structs.AppCost{App: "app1", SpendUsd: 0.0}, nil)
-		// Item 22 partial-merge semantics: omitted --pricing-adjustment leaves
+		// Partial-merge semantics: omitted --pricing-adjustment leaves
 		// PricingAdjustment nil so the rack-side applyBudgetOptions preserves
 		// the prior persisted value (matches BudgetCapRaise).
 		i.On("AppBudgetSet", "app1", mock.MatchedBy(func(opts structs.AppBudgetOptions) bool {
@@ -855,7 +855,7 @@ func TestBudgetShow_BannerHonorsNotifyBeforeMinutes(t *testing.T) {
 	}
 }
 
-// --- Item 22 — `convox budget set --pricing-adjustment-only` carve-out ----
+// --- `convox budget set --pricing-adjustment-only` carve-out ----
 //
 // Locks the rack-side F6 carve-out CLI integration: the rack accepts a
 // PricingAdjustment-only AppBudgetOptions on a cost_tracking_enable=false
@@ -1111,7 +1111,7 @@ func TestBudgetSet_NoFlags_ErrorMessageContainsMonthlyCapSubstring(t *testing.T)
 	})
 }
 
-// --- Item 21 (absorbed) — `simulate-shutdown` em-dash low-rate format ----
+// --- `simulate-shutdown` em-dash low-rate format ----
 
 // B1: TestSimulateShutdown_LowRateAsEmDash — Eligible row whose rate
 // rounds to <$0.001/hr renders as em-dash with the disambiguation footnote.

@@ -330,8 +330,8 @@ func TestReleasePromote_FullPath_Supersession_EmitsCancelled(t *testing.T) {
 		assert.False(t, k8s.ReleasePromoteWatchSlotHeldForTest(app, release1),
 			"slot MUST be released after cancelled watcher exit")
 
-		// Phase H R2 fix (m-A06-2): mirror the happy-path + errored
-		// variants' annotation-cleanup assertion. The supersession
+		// Mirror the happy-path + errored variants'
+		// annotation-cleanup assertion. The supersession
 		// path drives `deleteReleasePromoteWatchAnnotationIfMatches`
 		// with the watcher's own release-id (R1). The watch annotation
 		// in the namespace also holds R1 (written by

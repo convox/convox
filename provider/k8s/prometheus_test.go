@@ -238,13 +238,13 @@ func TestQueryGPUMetrics_PartialMetricSet(t *testing.T) {
 		"no FB_* at all is the no-data path; counter only fires on partial")
 }
 
-// TestMemTotalPartialSeries (Item 1B / 1L) — per-pod presence tracking
-// for the FB_* trio. MemTotal is set ONLY when all three of FB_USED,
-// FB_FREE, FB_RESERVED arrived for the pod; otherwise MemTotal stays
-// nil (resolver decodes as null, Vue renders `—`). Per-pod accounting:
+// TestMemTotalPartialSeries — per-pod presence tracking for the FB_*
+// trio. MemTotal is set ONLY when all three of FB_USED, FB_FREE,
+// FB_RESERVED arrived for the pod; otherwise MemTotal stays nil
+// (resolver decodes as null, Vue renders `—`). Per-pod accounting:
 // pod A may have all three while pod B has only two.
 //
-// Spec (CLUSTER-1 1B) acceptance:
+// Acceptance:
 //   - all three present → MemTotal correct (USED + FREE + RESERVED)
 //   - one missing → MemTotal nil
 //   - two missing → MemTotal nil
@@ -357,15 +357,15 @@ func TestMemTotalPartialSeries(t *testing.T) {
 	}
 }
 
-// TestPerMetricPerPodPresence (Item 1L) — every one of the 10 DCGM
-// metrics is independently presence-tracked per pod. A pod that reports
-// Util but not Tensor leaves Util non-nil and Tensor nil. Aggregation
-// in service.go skips nil pointers per metric so a missing sample for
+// TestPerMetricPerPodPresence — every one of the 10 DCGM metrics is
+// independently presence-tracked per pod. A pod that reports Util but
+// not Tensor leaves Util non-nil and Tensor nil. Aggregation in
+// service.go skips nil pointers per metric so a missing sample for
 // one metric cannot pull a different metric's average toward zero.
 //
 // Table-driven: 8 metrics × {present, absent_others_unaffected} cases
-// + an "all 10 metrics present" baseline + a 1A regression for the 5
-// active counters.
+// + an "all 10 metrics present" baseline + a regression covering the
+// 5 active counters.
 func TestPerMetricPerPodPresence(t *testing.T) {
 	type metricCase struct {
 		metricName    string
@@ -538,18 +538,16 @@ func TestPerMetricPerPodPresence(t *testing.T) {
 		assert.NotNil(t, gm.Fp32Active)
 		assert.NotNil(t, gm.PowerW)
 
-		// Item 1A regression spot: fp16/fp32 raw 0.5 must produce 50.0
+		// Regression spot: fp16/fp32 raw 0.5 must produce 50.0
 		// (×100 to align with util/sm/dram/tensor convention).
 		assert.Equal(t, 50.0, *gm.Fp16Active,
-			"Item 1A — fp16 raw 0.5 must become 50.0 (×100)")
+			"fp16 raw 0.5 must become 50.0 (×100)")
 		assert.Equal(t, 50.0, *gm.Fp32Active,
-			"Item 1A — fp32 raw 0.5 must become 50.0 (×100)")
+			"fp32 raw 0.5 must become 50.0 (×100)")
 	})
 
-	// Item 1A regression: assert ALL 5 active-pipe counters convert raw
+	// Regression: assert ALL 5 active-pipe counters convert raw
 	// 0.5 → 50.0 in lockstep. Guards against any setter dropping ×100.
-	// Spec CLUSTER-1 1A acceptance: "rack unit test: 5 active counters
-	// convert 0.5 → 50.0".
 	t.Run("active_counters_5x_convert_0.5_to_50.0", func(t *testing.T) {
 		byMetric := map[string]string{
 			"DCGM_FI_PROF_PIPE_TENSOR_ACTIVE": promResponse("DCGM_FI_PROF_PIPE_TENSOR_ACTIVE", []promSample{
@@ -712,7 +710,7 @@ func TestQueryGPUMetrics_ServiceWithSpecialChars(t *testing.T) {
 		"service alternation must be pipe-joined inside a regex match")
 }
 
-// TestServiceGPUFieldsJSONNilRoundtrip (Item 1L / F-R9-4) — wire-boundary
+// TestServiceGPUFieldsJSONNilRoundtrip — wire-boundary
 // roundtrip for the rack-side Service struct's pointer-typed GPU fields.
 //
 // The contract: a rack-side Service with some GPU fields nil and others
@@ -763,7 +761,7 @@ func TestServiceGPUFieldsJSONNilRoundtrip(t *testing.T) {
 	require.NotContains(t, body, "gpu-fp16-active")
 	require.NotContains(t, body, "gpu-fp32-active")
 	// And the OLD (pre-rename) tags MUST NOT appear at all — guards
-	// against regression of the 1D rename:
+	// against regression of the rename:
 	require.NotContains(t, body, "gpu-util-avg")
 	require.NotContains(t, body, "gpu-mem-used-avg")
 	require.NotContains(t, body, "gpu-mem-total-avg")
@@ -775,7 +773,7 @@ func TestServiceGPUFieldsJSONNilRoundtrip(t *testing.T) {
 	require.NotContains(t, body, "gpu-power-w-avg")
 
 	// Round-trip — populated fields preserved; nil preserved as nil
-	// pointers. Load-bearing F-R9-4 wire-boundary guarantee.
+	// pointers. Load-bearing wire-boundary guarantee.
 	var got structs.Service
 	require.NoError(t, json.Unmarshal(data, &got))
 
