@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"runtime/debug"
 	"sync"
 	"time"
@@ -40,6 +41,19 @@ var (
 	// re-sweeps every app namespace. 5min is cheap enough not to matter
 	// and frequent enough that a multi-pod restart in a 30-min window
 	// self-heals.
+	//
+	// Default 5m; mutated ONCE at provider Initialize via the
+	// `RELEASE_WATCHER_GC_INTERVAL` env var (TF param
+	// `release_watcher_gc_interval`). Range 60s-1h enforced by
+	// applyReleaseWatcherGCIntervalEnv — invalid / out-of-range values
+	// fall back to the default with a structured warn log so the
+	// provider never starts with a tighter sweep than 60s (at 200 apps
+	// a sub-60s sweep would be 200/60 = 3.3 K8s API ops/sec for GC
+	// alone — F-FAIL-27 rationale). Tests override directly via the
+	// package-level assignment pattern
+	// (`releasePromoteWatchGCTickInterval = 100 * time.Millisecond`)
+	// without going through the env var, mirroring the existing
+	// pattern for the other release-watcher timing vars in this block.
 	releasePromoteWatchGCTickInterval = 5 * time.Minute
 
 	// releasePromoteWatchInformerWarmupDelay is the wait before the FIRST
@@ -539,4 +553,74 @@ func (p *Provider) scanReleasePromoteAnnotations(ctx context.Context) {
 		s := state
 		go p.runReleasePromoteWatcher(ctx, app, &s, release)
 	}
+}
+
+// releaseWatcherGCIntervalLowerBound is the minimum permitted sweep
+// interval. Values below this are clamped UP to it; the rationale is
+// that a sub-60s sweep with 200 apps yields ~3.3 K8s API ops/sec for
+// GC alone (F-FAIL-27), which inflates apiserver QPS without any
+// observable UX benefit (steady-state watchers already poll at 3s
+// per-app for in-flight promotes; the GC ticker is the cold-start /
+// resume-from-prior-pod safety net, not the primary signal path).
+const releaseWatcherGCIntervalLowerBound = 60 * time.Second
+
+// releaseWatcherGCIntervalUpperBound is the maximum permitted sweep
+// interval. Values above this are clamped DOWN to it. Rationale:
+// 1h is already deep into "cold-start GC plus sweep is slower than
+// most rollout windows" territory; raising further would let stale
+// annotations sit indefinitely after an api-pod restart that lost
+// the steady-state watcher goroutine before the rollout finished.
+const releaseWatcherGCIntervalUpperBound = 1 * time.Hour
+
+// releaseWatcherGCIntervalEnv is the env-var name read at provider
+// Initialize. Plumbed by terraform/api/aws/main.tf into the api
+// Deployment's env block, sourced from the TF variable
+// `release_watcher_gc_interval`.
+const releaseWatcherGCIntervalEnv = "RELEASE_WATCHER_GC_INTERVAL"
+
+// applyReleaseWatcherGCIntervalEnv reads the
+// `RELEASE_WATCHER_GC_INTERVAL` env var ONCE and assigns the parsed
+// duration to the package-level `releasePromoteWatchGCTickInterval`
+// var if it parses cleanly AND falls within the supported range.
+// Out-of-range values are clamped (>=lowerBound, <=upperBound)
+// rather than rejected so an operator who set 30s during early
+// experimentation still gets a working sweep at the minimum. Parse
+// failures (e.g. `release_watcher_gc_interval=abc`) leave the
+// existing default in place and emit a structured warn log so the
+// operator can see in api-pod stdout that the value was rejected.
+//
+// Returns true when a non-empty env value was observed (regardless
+// of whether it was applied verbatim, clamped, or rejected). Used
+// by tests to assert the env-var path was taken.
+//
+// Called from (*Provider).Initialize before any goroutine that
+// reads `releasePromoteWatchGCTickInterval` launches (the GC
+// goroutine starts in (*Provider).Start, which Initialize precedes).
+// Concurrent reads from the GC goroutine after Initialize finishes
+// are safe: assignment is atomic for word-sized types on every
+// platform Go supports, and `time.Duration` is int64.
+func applyReleaseWatcherGCIntervalEnv() bool {
+	v := os.Getenv(releaseWatcherGCIntervalEnv)
+	if v == "" {
+		return false
+	}
+	d, err := time.ParseDuration(v)
+	if err != nil {
+		fmt.Printf("ns=release_watcher at=warn kind=invalid_gc_interval value=%q err=%q falling_back=%s\n",
+			v, err.Error(), releasePromoteWatchGCTickInterval)
+		return true
+	}
+	switch {
+	case d < releaseWatcherGCIntervalLowerBound:
+		fmt.Printf("ns=release_watcher at=warn kind=gc_interval_below_min value=%q clamped_to=%s\n",
+			v, releaseWatcherGCIntervalLowerBound)
+		releasePromoteWatchGCTickInterval = releaseWatcherGCIntervalLowerBound
+	case d > releaseWatcherGCIntervalUpperBound:
+		fmt.Printf("ns=release_watcher at=warn kind=gc_interval_above_max value=%q clamped_to=%s\n",
+			v, releaseWatcherGCIntervalUpperBound)
+		releasePromoteWatchGCTickInterval = releaseWatcherGCIntervalUpperBound
+	default:
+		releasePromoteWatchGCTickInterval = d
+	}
+	return true
 }

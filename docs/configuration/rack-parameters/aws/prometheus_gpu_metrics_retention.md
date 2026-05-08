@@ -31,10 +31,19 @@ $ convox rack params set prometheus_gpu_metrics_retention=24h -r rackName
 Setting parameters... OK
 ```
 
+To clear the override (equivalent to reverting to default — the Console worker reads the empty value as "use the default"):
+```bash
+$ convox rack params set prometheus_gpu_metrics_retention= -r rackName
+Setting parameters... OK
+```
+
 ## Operational Notes
 - Storage is `emptyDir` (pod-local, ephemeral). Pod restart drops data.
 - Sizing rule-of-thumb: budget 1Gi memory per 50 concurrent GPU pods at default 24h retention. Doubling retention to 48h doubles memory needs.
 - Default 24h is sufficient for "what was happening yesterday" debugging. For longer-window analysis, enable Convox metered metrics (paid tier) which provides remote_write to managed long-term storage.
+- Clearing this parameter resets retention to the default `24h`. Existing samples are retained until the new retention window expires them; the chart is upgraded in place (no data loss from the clear itself, only from the natural retention rolloff).
+- Increasing retention does NOT retroactively recover data older than the previous window. The chart's TSDB only holds samples that fell within whatever retention was in effect when those samples were written; a stretch from `24h` to `7d` widens the window going forward, it does not undo prior compaction.
+- Param updates that land while a rack-level update is in flight (Terraform state lock held) return the canonical `state lock` error. Re-issue the change after the in-flight rack update finishes; the Console reconciler converges to the new retention on the next tick.
 
 ## Related Parameters
 - [gpu_observability_enable](/configuration/rack-parameters/aws/gpu_observability_enable): Enables the DCGM exporter on this rack. The Console-deployed Prometheus chart scrapes DCGM when monitoring is enabled in the Console.

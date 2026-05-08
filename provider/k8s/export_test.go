@@ -164,6 +164,52 @@ func SetWebhooksForTest(p *Provider, urls []string) {
 	p.webhookState.mu.Unlock()
 }
 
+// SetWebhookReceiversForTest pre-populates the receivers cache directly
+// with parsed (url + per-URL timeout) entries. EventSend prefers
+// receivers when populated; this lets per-URL timeout tests bypass the
+// urls-string-to-entry parse path and assert dispatch behavior at the
+// transient-client boundary. Added in 3.24.6 polish wave (Item 2B).
+// Test-only.
+func SetWebhookReceiversForTest(p *Provider, entries []WebhookEntryForTest) {
+	if p.webhookState == nil {
+		p.webhookState = &webhookState{}
+	}
+	internal := make([]webhookEntry, 0, len(entries))
+	for _, e := range entries {
+		internal = append(internal, webhookEntry{Name: e.Name, URL: e.URL, Timeout: e.Timeout})
+	}
+	p.webhookState.mu.Lock()
+	p.webhookState.receivers = internal
+	p.webhookState.populated = true
+	p.webhookState.mu.Unlock()
+}
+
+// WebhookEntryForTest is the test-facing alias of the package-private
+// webhookEntry struct. Mirrors the same shape; callers do not need to
+// import the unexported type. Test-only.
+type WebhookEntryForTest struct {
+	Name    string
+	URL     string
+	Timeout time.Duration
+}
+
+// ParseWebhookEntryForTest exposes the package-private parser so unit tests
+// can assert the JSON / plain-URL / empty-URL branch table directly. The
+// (entry, skip) tuple matches the production helper's contract.
+// Test-only.
+func ParseWebhookEntryForTest(name, raw string) (WebhookEntryForTest, bool) {
+	entry, skip := parseWebhookEntry(name, raw)
+	return WebhookEntryForTest{Name: entry.Name, URL: entry.URL, Timeout: entry.Timeout}, skip
+}
+
+// DefaultWebhookTimeoutForTest returns the package-private
+// defaultWebhookTimeout constant so unit tests can compare per-URL
+// timeouts against the production default without a magic-number
+// duplicate. Test-only.
+func DefaultWebhookTimeoutForTest() time.Duration {
+	return defaultWebhookTimeout
+}
+
 // DispatchWebhookForTest exposes the package-private dispatch entry point
 // for unit tests that exercise transport, status, and timeout paths without
 // going through EventSend's goroutine fan-out. Test-only.
@@ -175,8 +221,19 @@ func DispatchWebhookForTest(url string, body []byte) error {
 // tests that need to assert recover() catches a deliberate panic. The
 // signingKeys arg is variadic so existing call sites that pre-date D.2
 // keep working with no source change. Test-only.
+//
+// timeout uses the package default (webhookClientTimeout) when callers
+// pass no signingKeys (i.e. the legacy entry point); per-URL timeouts
+// are exercised via DispatchWebhookSafelyWithTimeoutForTest.
 func DispatchWebhookSafelyForTest(url string, body []byte, signingKeys ...[]byte) {
-	dispatchWebhookSafely(url, body, signingKeys)
+	dispatchWebhookSafely(url, body, signingKeys, webhookClientTimeout)
+}
+
+// DispatchWebhookSafelyWithTimeoutForTest is the per-URL timeout entry
+// point added in 3.24.6 polish wave (Item 2B). Tests that exercise the
+// JSON-encoded receiver config form pass an explicit timeout here. Test-only.
+func DispatchWebhookSafelyWithTimeoutForTest(url string, body []byte, signingKeys [][]byte, timeout time.Duration) {
+	dispatchWebhookSafely(url, body, signingKeys, timeout)
 }
 
 // RedactURLHostForTest exposes the host-only URL redactor so tests can
@@ -212,10 +269,10 @@ func SetDispatchWebhookFnForTest(fn func(url string, body []byte) error) func() 
 }
 
 // SetDispatchWebhookSignedFnForTest swaps the signed dispatcher so D.2
-// integration tests can intercept (url, body, signingKeys) calls and
-// assert keys are threaded through correctly. Returns a restore function.
-// Test-only; production callers MUST NOT touch this hook.
-func SetDispatchWebhookSignedFnForTest(fn func(url string, body []byte, signingKeys [][]byte) error) func() {
+// integration tests can intercept (url, body, signingKeys, timeout) calls
+// and assert keys + timeout are threaded through correctly. Returns a
+// restore function. Test-only; production callers MUST NOT touch this hook.
+func SetDispatchWebhookSignedFnForTest(fn func(url string, body []byte, signingKeys [][]byte, timeout time.Duration) error) func() {
 	prev := dispatchWebhookSignedFn
 	dispatchWebhookSignedFn = fn
 	return func() { dispatchWebhookSignedFn = prev }
@@ -223,9 +280,17 @@ func SetDispatchWebhookSignedFnForTest(fn func(url string, body []byte, signingK
 
 // DispatchWebhookSignedForTest exposes the signed dispatcher so unit tests
 // can drive a single signed POST without going through EventSend's
-// goroutine fan-out. Test-only.
+// goroutine fan-out. Uses the package-default webhookClientTimeout to
+// preserve pre-2B test-stub semantics. Test-only.
 func DispatchWebhookSignedForTest(url string, body []byte, signingKeys [][]byte) error {
-	return dispatchWebhookSigned(url, body, signingKeys)
+	return dispatchWebhookSigned(url, body, signingKeys, webhookClientTimeout)
+}
+
+// DispatchWebhookSignedWithTimeoutForTest is the per-URL timeout entry
+// point for the signed dispatcher (Item 2B). Tests that assert the per-URL
+// timeout value reaches the http.Client use this form. Test-only.
+func DispatchWebhookSignedWithTimeoutForTest(url string, body []byte, signingKeys [][]byte, timeout time.Duration) error {
+	return dispatchWebhookSigned(url, body, signingKeys, timeout)
 }
 
 // SetWebhookSigningKeyForTest installs a webhook signing key on a test

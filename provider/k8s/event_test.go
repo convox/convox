@@ -2,6 +2,8 @@ package k8s_test
 
 import (
 	"context"
+	"crypto/sha256"
+	b64 "encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -648,4 +650,247 @@ func TestDispatchWebhook_LegacyHookOverridesSigned(t *testing.T) {
 
 	k8s.DispatchWebhookSafelyForTest("https://example.invalid/x", []byte(`{}`))
 	assert.Equal(t, int32(1), atomic.LoadInt32(&hits))
+}
+
+// ---------------------------------------------------------------------------
+// Item 2A — Webhook signing key eviction audit (no key material)
+// ---------------------------------------------------------------------------
+
+// TestWebhookSigningKeyEvictionAuditNoMaterial — when EventSend's parse
+// returns an "at most" rejection because the configured webhook_signing_key
+// has more keys than cxhmac.MaxSigningKeys (4 in 3.24.6), an audit row is
+// emitted to stdout. The row's wire format is fixed
+// (`audit_type=webhook_signing_key:eviction count=1 reason=key_count_exceeded
+// max=N evicted_count=M`) and MUST contain NO key bytes, key hashes, or
+// hex/base64/base64url encodings of the key material. Per F-SEC-4.
+func TestWebhookSigningKeyEvictionAuditNoMaterial(t *testing.T) {
+	// Five distinct 64-char high-entropy hex keys: max=4 → evicted_count=1.
+	candidates := []string{
+		"5257a869e7ecebeda32affa62cdca3fa37e8c0a98c3f2db5a8f5da3b2a3e9c4e",
+		"8c1f3e0b9d4a7f2e6c5b8a3d4f9e2c1a7b6d5f4e3c2b1a9d8f7e6c5b4a3d2e10",
+		"1a2b3c4d5e6f70819293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5",
+		"9f8e7d6c5b4a39281f0e1d2c3b4a5968778695a4b3c2d1e0f9a8b7c6d5e4f3c2",
+		"2c4e6f81a3b5d7e9b1c2d3e4f50617283940a1b2c3d4e5f60718293a4b5c6d7e",
+	}
+
+	testProvider(t, func(p *k8s.Provider) {
+		k8s.SetWebhookSigningKeyForTest(p, strings.Join(candidates, ","))
+		// No webhooks configured — no dispatch goroutines to drain.
+		k8s.SetWebhooksForTest(p, []string{})
+
+		getOutput := captureStdout(t)
+		err := p.EventSend("app:create", structs.EventSendOptions{
+			Data: map[string]string{"app": "demo"},
+		})
+		require.NoError(t, err)
+		captured := getOutput()
+
+		// Audit line shape (no key material substring permitted).
+		assert.Contains(t, captured, "audit_type=webhook_signing_key:eviction",
+			"audit row must use the canonical type prefix")
+		assert.Contains(t, captured, "reason=key_count_exceeded",
+			"reason must be the canonical key_count_exceeded")
+		assert.Contains(t, captured, "max=4",
+			"max must reflect cxhmac.MaxSigningKeys (4) in 3.24.6")
+		assert.Contains(t, captured, "evicted_count=1",
+			"5 keys minus max=4 -> evicted_count=1")
+		assert.Contains(t, captured, "count=1",
+			"count is per-emit (one audit row per EventSend)")
+
+		// No key bytes / no hashes (hex / base64 / base64url) anywhere in stdout.
+		for i, c := range candidates {
+			assert.NotContainsf(t, captured, c,
+				"raw hex key #%d must not appear in audit log", i+1)
+
+			rawBytes, derr := hex.DecodeString(c)
+			require.NoError(t, derr)
+			assert.NotContainsf(t, captured, string(rawBytes),
+				"decoded key bytes #%d must not appear", i+1)
+
+			hash := sha256.Sum256(rawBytes)
+			assert.NotContainsf(t, captured, hex.EncodeToString(hash[:]),
+				"sha256 hex of key #%d must not appear", i+1)
+			assert.NotContainsf(t, captured, b64.StdEncoding.EncodeToString(hash[:]),
+				"sha256 base64 of key #%d must not appear", i+1)
+			assert.NotContainsf(t, captured, b64.URLEncoding.EncodeToString(hash[:]),
+				"sha256 base64url of key #%d must not appear", i+1)
+		}
+	})
+}
+
+// ---------------------------------------------------------------------------
+// Item 2B — Per-URL webhook timeout via JSON receiver config
+// ---------------------------------------------------------------------------
+
+// TestWebhookConfigmapJsonParseCache — receivers cache populated via
+// SetWebhookReceiversForTest is consumed in preference to the urls slice;
+// EventSend dispatches to each entry's URL with the entry's per-URL
+// timeout.
+func TestWebhookConfigmapJsonParseCache(t *testing.T) {
+	var hits int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&hits, 1)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	testProvider(t, func(p *k8s.Provider) {
+		k8s.SetWebhookReceiversForTest(p, []k8s.WebhookEntryForTest{
+			{Name: "json_form", URL: srv.URL, Timeout: 5 * time.Second},
+		})
+
+		err := p.EventSend("app:create", structs.EventSendOptions{
+			Data: map[string]string{"app": "demo"},
+		})
+		require.NoError(t, err)
+
+		drainPendingDispatches()
+		assert.Equal(t, int32(1), atomic.LoadInt32(&hits),
+			"receivers-cache entry must be dispatched")
+	})
+}
+
+// TestWebhookPerUrlTimeout — a 5s per-URL timeout fires before the
+// 30s package default would; a 30s entry honors the package default.
+// Asserts the dispatch chain threads the per-URL timeout to the
+// transient http.Client built inside dispatchWebhookSigned.
+func TestWebhookPerUrlTimeout(t *testing.T) {
+	// Server blocks until the test releases or the client gives up.
+	released := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-released:
+		case <-r.Context().Done():
+		}
+	}))
+	defer srv.Close()
+	defer close(released)
+
+	t.Run("5s per-URL timeout fires before 30s package default", func(t *testing.T) {
+		start := time.Now()
+		keys := [][]byte{}
+		err := k8s.DispatchWebhookSignedWithTimeoutForTest(srv.URL, []byte(`{}`), keys, 100*time.Millisecond)
+		elapsed := time.Since(start)
+
+		require.Error(t, err)
+		assert.Less(t, elapsed, 5*time.Second,
+			"per-URL 100ms must fire long before the package 30s default")
+	})
+
+	t.Run("default timeout uses package webhookClientTimeout", func(t *testing.T) {
+		restore := k8s.SetWebhookClientTimeoutForTest(100 * time.Millisecond)
+		defer restore()
+
+		start := time.Now()
+		keys := [][]byte{}
+		err := k8s.DispatchWebhookSignedForTest(srv.URL, []byte(`{}`), keys)
+		elapsed := time.Since(start)
+
+		require.Error(t, err)
+		assert.Less(t, elapsed, 5*time.Second,
+			"package default (100ms) must apply when no per-URL timeout supplied")
+	})
+}
+
+// TestParseFallsThroughOnInvalidJSON — a configmap value that does NOT
+// begin with `{` is treated as a plain URL (3.24.5-compatible). A value
+// that DOES begin with `{` but is malformed JSON is SKIPPED (not dispatched).
+func TestParseFallsThroughOnInvalidJSON(t *testing.T) {
+	cases := []struct {
+		name        string
+		raw         string
+		wantSkip    bool
+		wantURL     string
+		wantTimeout time.Duration
+	}{
+		{
+			name:        "plain url uses default timeout",
+			raw:         "https://hooks.example.com/path",
+			wantSkip:    false,
+			wantURL:     "https://hooks.example.com/path",
+			wantTimeout: k8s.DefaultWebhookTimeoutForTest(),
+		},
+		{
+			name:     "malformed json beginning with brace is skipped",
+			raw:      `{this is not json at all`,
+			wantSkip: true,
+		},
+		{
+			name:        "valid json with url + timeout uses parsed timeout",
+			raw:         `{"url":"https://hooks.example.com/path","timeout":"5s"}`,
+			wantSkip:    false,
+			wantURL:     "https://hooks.example.com/path",
+			wantTimeout: 5 * time.Second,
+		},
+		{
+			name:        "valid json with url, no timeout -> default",
+			raw:         `{"url":"https://hooks.example.com/path"}`,
+			wantSkip:    false,
+			wantURL:     "https://hooks.example.com/path",
+			wantTimeout: k8s.DefaultWebhookTimeoutForTest(),
+		},
+		{
+			name:        "valid json with url + invalid timeout -> default",
+			raw:         `{"url":"https://hooks.example.com/path","timeout":"5xyz"}`,
+			wantSkip:    false,
+			wantURL:     "https://hooks.example.com/path",
+			wantTimeout: k8s.DefaultWebhookTimeoutForTest(),
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			entry, skip := k8s.ParseWebhookEntryForTest("test-name", tc.raw)
+			if tc.wantSkip {
+				assert.True(t, skip, "must skip malformed entry")
+				return
+			}
+			require.False(t, skip, "valid entry must not be skipped")
+			assert.Equal(t, tc.wantURL, entry.URL, "URL must round-trip")
+			assert.Equal(t, tc.wantTimeout, entry.Timeout, "Timeout must match expected")
+		})
+	}
+}
+
+// TestSkipsEntryWithEmptyURL — F-R9-5 anti-trap: when a JSON entry parses
+// successfully but the url field is empty/whitespace, the entry is SKIPPED
+// (a structured WARN is emitted). Critical: the parser must NOT fall
+// through to the plain-URL branch — the raw value is a JSON object string,
+// not a URL, so dispatch would corrupt the URL field.
+func TestSkipsEntryWithEmptyURL(t *testing.T) {
+	cases := []struct {
+		name string
+		raw  string
+	}{
+		{name: "empty url field", raw: `{"url":"","timeout":"5s"}`},
+		{name: "whitespace-only url field", raw: `{"url":"   ","timeout":"5s"}`},
+		{name: "missing url field", raw: `{"timeout":"5s"}`},
+		{name: "url field with tab and newline", raw: `{"url":"\t\n","timeout":"5s"}`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			entry, skip := k8s.ParseWebhookEntryForTest("test-name", tc.raw)
+			assert.True(t, skip, "empty/whitespace url in JSON must trigger skip (F-R9-5)")
+			// Skipped entries return zero — the parser MUST NOT have fallen
+			// through to plain-URL with the raw JSON string as a URL.
+			assert.Empty(t, entry.URL,
+				"skipped entry must NOT have a populated URL — falling through to plain-URL "+
+					"semantics would dispatch the raw JSON object as a URL (F-R9-5)")
+		})
+	}
+}
+
+// TestEmptyURLEntrySkipsLogsWarning — assert the structured WARN is emitted
+// to stdout so operators can grep for misconfigured webhooks.
+func TestEmptyURLEntrySkipsLogsWarning(t *testing.T) {
+	getOutput := captureStdout(t)
+	_, skip := k8s.ParseWebhookEntryForTest("audit_internal", `{"url":"","timeout":"5s"}`)
+	captured := getOutput()
+
+	assert.True(t, skip)
+	assert.Contains(t, captured, "ns=webhook_parse",
+		"skip path must emit ns=webhook_parse log line")
+	assert.Contains(t, captured, "reason=empty_url_in_json",
+		"skip reason must surface for operator grep")
+	assert.Contains(t, captured, "name=audit_internal",
+		"skip log must include the entry name for operator visibility")
 }

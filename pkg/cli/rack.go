@@ -47,14 +47,19 @@ var awsKnownParams = map[string]bool{
 	"coredns_version": true, "cost_tracking_enable": true, "custom_provided_bucket": true,
 	"deploy_extra_nlb": true, "disable_convox_resolver": true,
 	"disable_image_manifest_cache": true, "disable_public_access": true,
-	"docker_hub_password": true, "docker_hub_username": true,
+	"dcgm_scrape_interval": true,
+	"docker_hub_password":  true, "docker_hub_username": true,
 	"ebs_volume_encryption_enabled": true, "ecr_docker_hub_cache": true, "ecr_scan_on_push_enable": true,
 	"efs_csi_driver_enable": true, "efs_csi_driver_version": true,
 	"eks_api_server_public_access_cidrs": true, "in_cluster_grafana_enable": true,
 	"enable_private_access": true,
 	"fluentd_disable": true, "fluentd_memory": true,
+	"gpu_metrics_max_concurrent": true, "gpu_metrics_max_pods": true,
 	"gpu_observability_chart_version": true, "gpu_observability_enable": true,
-	"gpu_tag_enable": true, "grafana_url": true,
+	"gpu_tag_enable": true,
+	"grafana_dashboard_var_app":       true, "grafana_dashboard_var_namespace": true,
+	"grafana_dashboard_var_rack":      true, "grafana_dashboard_var_service": true,
+	"grafana_url": true,
 	"high_availability": true,
 	"in_cluster_grafana_admin_password": true,
 	"idle_timeout": true, "image": true,
@@ -91,6 +96,7 @@ var awsKnownParams = map[string]bool{
 	"proxy_protocol":     true,
 	"public_subnets_ids": true, "rack_name": true,
 	"region": true, "release": true,
+	"release_watcher_gc_interval":     true,
 	"releases_to_retain_after_active": true, "releases_to_retain_task_run_interval_hour": true,
 	"schedule_rack_scale_down": true, "schedule_rack_scale_up": true,
 	"settings": true, "ssl_ciphers": true,
@@ -392,6 +398,9 @@ var paramGroups = map[string]map[string]bool{
 	"nodes": {
 		// v3 native (snake_case)
 		"additional_node_groups_config":        true,
+		"dcgm_scrape_interval":                 true,
+		"gpu_metrics_max_concurrent":           true,
+		"gpu_metrics_max_pods":                 true,
 		"gpu_observability_chart_version":      true,
 		"gpu_observability_enable":             true,
 		"gpu_tag_enable":                       true,
@@ -409,6 +418,10 @@ var paramGroups = map[string]map[string]bool{
 		"prometheus_gpu_metrics_chart_version": true,
 		"prometheus_gpu_metrics_retention":     true,
 		"prometheus_url":                       true,
+		"grafana_dashboard_var_app":            true,
+		"grafana_dashboard_var_namespace":      true,
+		"grafana_dashboard_var_rack":           true,
+		"grafana_dashboard_var_service":        true,
 		"grafana_url":                          true,
 		"in_cluster_grafana_enable":            true,
 		"in_cluster_grafana_admin_password":    true,
@@ -511,6 +524,7 @@ var paramGroups = map[string]map[string]bool{
 		"EncryptEbs":                              true, // dual-listed in security
 	},
 	"retention": {
+		"release_watcher_gc_interval":               true,
 		"releases_to_retain_after_active":           true,
 		"releases_to_retain_task_run_interval_hour": true,
 	},
@@ -637,6 +651,25 @@ var clearableParams = map[string]bool{
 	// DCGM exporter Helm version override — empty falls back to TF default
 	// ("4.8.1") via coalesce() guard in cluster/aws/dcgm.tf.
 	"gpu_observability_chart_version": true,
+	// DCGM scrape interval — empty falls back to TF default (`15s`). Range 15s-300s.
+	// Process-config: read by Console3 monitoring worker which writes to Prometheus
+	// scrape job values; no rack TF resource directly consumes the variable.
+	"dcgm_scrape_interval": true,
+	// Time-range GPU metrics handler caps — empty falls back to handler defaults
+	// (100 pods, 10 concurrent). Process-config: handler reads at request time.
+	"gpu_metrics_max_pods":       true,
+	"gpu_metrics_max_concurrent": true,
+	// Release-watcher GC sweep interval — empty falls back to package default (`5m`).
+	// Range 60s-1h. Process-config: provider reads RELEASE_WATCHER_GC_INTERVAL env
+	// once at Initialize and writes the var-level interval used by the watcher.
+	"release_watcher_gc_interval": true,
+	// Grafana deep-link template variable name overrides — empty falls back to
+	// canonical defaults (`rack`, `namespace`, `service`, `app`). Process-config:
+	// console reads from rack-params response and substitutes into Grafana URLs.
+	"grafana_dashboard_var_rack":      true,
+	"grafana_dashboard_var_namespace": true,
+	"grafana_dashboard_var_service":   true,
+	"grafana_dashboard_var_app":       true,
 }
 
 // removedIn3_24_6 enumerates rack params hard-removed in 3.24.6 with a
@@ -1849,6 +1882,67 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 			}
 		}
 		// DNS hostnames (non-IP) other than localhost are accepted — let TF apply / runtime fail visibly.
+	}
+
+	// dcgm_scrape_interval: bounded duration (15s-300s). Empty falls back to TF default 15s.
+	if v, has := params["dcgm_scrape_interval"]; has && v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return fmt.Errorf("dcgm_scrape_interval: must be a valid duration (e.g. '15s', '30s', '60s'): %s", err)
+		}
+		if d < 15*time.Second || d > 5*time.Minute {
+			return fmt.Errorf("dcgm_scrape_interval: must be between 15s and 300s (got %s)", v)
+		}
+	}
+
+	// release_watcher_gc_interval: bounded duration (60s-1h). Empty falls back to provider package default 5m.
+	if v, has := params["release_watcher_gc_interval"]; has && v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return fmt.Errorf("release_watcher_gc_interval: must be a valid duration (e.g. '60s', '5m', '1h'): %s", err)
+		}
+		if d < 60*time.Second || d > time.Hour {
+			return fmt.Errorf("release_watcher_gc_interval: must be between 60s and 1h (got %s)", v)
+		}
+	}
+
+	// gpu_metrics_max_pods: positive integer, hard cap 500 to prevent operator from defeating the DoS bound.
+	if v, has := params["gpu_metrics_max_pods"]; has && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			return fmt.Errorf("gpu_metrics_max_pods: must be a positive integer (got %q)", v)
+		}
+		if n > 500 {
+			return fmt.Errorf("gpu_metrics_max_pods: must be at most 500 (got %d)", n)
+		}
+	}
+
+	// gpu_metrics_max_concurrent: positive integer, range 1-50.
+	if v, has := params["gpu_metrics_max_concurrent"]; has && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			return fmt.Errorf("gpu_metrics_max_concurrent: must be a positive integer (got %q)", v)
+		}
+		if n > 50 {
+			return fmt.Errorf("gpu_metrics_max_concurrent: must be at most 50 (got %d)", n)
+		}
+	}
+
+	// grafana_dashboard_var_*: simple identifier strings used as URL var-name segments.
+	// Empty (clear) falls back to canonical default. Reject characters that would
+	// break URL substitution or Grafana template syntax.
+	grafanaVarRe := regexp.MustCompile(`^[A-Za-z0-9_]+$`)
+	for _, k := range []string{
+		"grafana_dashboard_var_rack",
+		"grafana_dashboard_var_namespace",
+		"grafana_dashboard_var_service",
+		"grafana_dashboard_var_app",
+	} {
+		if v, has := params[k]; has && v != "" {
+			if !grafanaVarRe.MatchString(v) {
+				return fmt.Errorf("%s: must contain only letters, digits, and underscore (got %q)", k, v)
+			}
+		}
 	}
 
 	return nil

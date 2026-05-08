@@ -1,4 +1,12 @@
 job_name: dcgm-exporter
+# scrape_interval is job-local and intentionally independent of the global
+# scrape interval (default 30s in both lightweight and paid charts). 15s
+# matches the DCGM exporter's typical scrape budget and the buffer-cap math
+# the Console GPU dashboard panel uses. Operators can override at runtime
+# via the `dcgm_scrape_interval` rack param (range 15s-300s); the override
+# replaces this value before the scrape config is rendered. See
+# docs/configuration/rack-parameters/aws/dcgm_scrape_interval.md.
+scrape_interval: 15s
 metrics_path: /metrics
 honor_labels: true
 kubernetes_sd_configs:

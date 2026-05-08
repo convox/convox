@@ -143,6 +143,7 @@ module "cluster" {
   nvidia_device_time_slicing_replicas = var.nvidia_device_time_slicing_replicas
   gpu_observability_enable            = var.gpu_observability_enable
   gpu_observability_chart_version     = var.gpu_observability_chart_version
+  dcgm_scrape_interval                = var.dcgm_scrape_interval
   private                             = var.private
   private_subnets_ids                 = compact(split(",", var.private_subnets_ids))
   public_subnets_ids                  = compact(split(",", var.public_subnets_ids))
@@ -246,6 +247,9 @@ module "rack" {
   release                                   = local.release
   releases_to_retain_after_active           = var.releases_to_retain_after_active
   releases_to_retain_task_run_interval_hour = var.releases_to_retain_task_run_interval_hour
+  release_watcher_gc_interval               = var.release_watcher_gc_interval
+  gpu_metrics_max_pods                      = var.gpu_metrics_max_pods
+  gpu_metrics_max_concurrent                = var.gpu_metrics_max_concurrent
   ssl_ciphers                               = var.ssl_ciphers
   ssl_protocols                             = var.ssl_protocols
   subnets                                   = module.cluster.subnets

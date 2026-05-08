@@ -322,6 +322,12 @@ variable "gpu_observability_chart_version" {
   default = "4.8.1"
 }
 
+variable "dcgm_scrape_interval" {
+  type        = string
+  default     = "15s"
+  description = "DCGM exporter scrape interval applied to the helm release values (e.g. 15s, 30s). Empty value falls back to 15s via coalesce() in dcgm.tf. Range 15s-300s enforced by pkg/cli/rack.go validator."
+}
+
 variable "pod_identity_agent_enable" {
   type    = bool
   default = false

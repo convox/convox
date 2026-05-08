@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	neturl "net/url"
+	"strings"
 	"time"
 
 	"github.com/convox/convox/pkg/common"
@@ -38,9 +39,10 @@ var webhookClient = &http.Client{Timeout: webhookClientTimeout}
 var dispatchWebhookFn = dispatchWebhook
 
 // dispatchWebhookSignedFn is the per-dispatch hook that lets EventSend
-// pass parsed signing keys down to dispatchWebhook without changing the
-// (url, body) signature that older test stubs install. Tests may override
-// to assert the keys-passed-through path. Production code MUST NOT touch.
+// pass parsed signing keys + per-URL timeout down to dispatchWebhook
+// without changing the (url, body) signature that older test stubs
+// install. Tests may override to assert the keys-and-timeout-passed-
+// through path. Production code MUST NOT touch.
 var dispatchWebhookSignedFn = dispatchWebhookSigned
 
 // dispatchHookOverridden is set by SetDispatchWebhookFnForTest so the
@@ -134,6 +136,21 @@ func (p *Provider) EventSend(action string, opts structs.EventSendOptions) error
 		}()
 		if parseErr != nil {
 			fmt.Printf("ns=event_dispatch at=parse_keys_failed error=%q signing=disabled\n", parseErr)
+			// Emit a structured audit row when the configured key count exceeds
+			// the rotation cap (cxhmac.MaxSigningKeys). Audit format intentionally
+			// excludes any key bytes, hashes, or prefixes (F-SEC-4); operators get
+			// a count-only signal that something they configured was over the cap.
+			if strings.Contains(parseErr.Error(), "at most") {
+				count := 0
+				trimmed := strings.TrimSpace(p.WebhookSigningKey)
+				if trimmed != "" {
+					count = strings.Count(trimmed, ",") + 1
+				}
+				if count > cxhmac.MaxSigningKeys {
+					fmt.Printf("audit_type=webhook_signing_key:eviction count=1 reason=key_count_exceeded max=%d evicted_count=%d\n",
+						cxhmac.MaxSigningKeys, count-cxhmac.MaxSigningKeys)
+				}
+			}
 			signingKeys = nil
 		}
 	}
@@ -167,18 +184,33 @@ func (p *Provider) EventSend(action string, opts structs.EventSendOptions) error
 	// the leader pod despite the informer having already confirmed
 	// the empty state.
 	var cached []string
+	var cachedReceivers []webhookEntry
 	var cachePopulated bool
 	if p.webhookState != nil {
 		p.webhookState.mu.RLock()
 		cachePopulated = p.webhookState.populated
 		cached = append([]string(nil), p.webhookState.urls...)
+		cachedReceivers = append([]webhookEntry(nil), p.webhookState.receivers...)
 		p.webhookState.mu.RUnlock()
 	}
 
-	var urls []string
-	if cachePopulated {
-		urls = cached
-	} else {
+	// Resolve into []webhookEntry. Preference order:
+	//
+	//   1. cachedReceivers (test-injected via SetWebhookReceiversForTest, or
+	//      a future leader-side cache that populates parsed entries directly)
+	//   2. cached (raw URL strings from the urls cache; parse on demand)
+	//   3. fallback to webhookList() (non-leader pods, or test paths that
+	//      seed only the configmap)
+	//
+	// Per-event parse cost on (2) is microseconds — dominated by the HTTP
+	// dispatch below — so caching parsed entries is not a perf requirement.
+	var entries []webhookEntry
+	switch {
+	case cachePopulated && len(cachedReceivers) > 0:
+		entries = cachedReceivers
+	case cachePopulated:
+		entries = parseWebhookEntries(cached)
+	default:
 		whs, err := p.webhookList()
 		if err != nil {
 			// Fail open: webhook fan-out has always been best-effort
@@ -194,12 +226,20 @@ func (p *Provider) EventSend(action string, opts structs.EventSendOptions) error
 			return nil
 		}
 		for _, wh := range whs {
-			urls = append(urls, wh.URL)
+			timeout := wh.Timeout
+			if timeout <= 0 {
+				timeout = defaultWebhookTimeout
+			}
+			entries = append(entries, webhookEntry{Name: wh.Name, URL: wh.URL, Timeout: timeout})
 		}
 	}
 
-	for _, url := range urls {
-		go dispatchWebhookSafely(url, msg, signingKeys)
+	for _, e := range entries {
+		timeout := e.Timeout
+		if timeout <= 0 {
+			timeout = defaultWebhookTimeout
+		}
+		go dispatchWebhookSafely(e.URL, msg, signingKeys, timeout)
 	}
 
 	return nil
@@ -212,7 +252,11 @@ func (p *Provider) EventSend(action string, opts structs.EventSendOptions) error
 // strings never leak into logs. The signingKeys slice is nil when the rack
 // param webhook_signing_key is unset; in that case the wire format is
 // byte-identical to 3.24.5.
-func dispatchWebhookSafely(url string, body []byte, signingKeys [][]byte) {
+//
+// timeout is the per-URL deadline (Item 2B): non-zero values come from a
+// JSON-encoded configmap entry of the form `{"url":"...", "timeout":"5s"}`;
+// zero falls back to the package-default 30s via the webhookClient timeout.
+func dispatchWebhookSafely(url string, body []byte, signingKeys [][]byte, timeout time.Duration) {
 	defer func() {
 		if r := recover(); r != nil {
 			// F-23 fix: drop debug.Stack() from the panic recovery log.
@@ -237,7 +281,7 @@ func dispatchWebhookSafely(url string, body []byte, signingKeys [][]byte) {
 		return
 	}
 
-	if err := dispatchWebhookSignedFn(url, body, signingKeys); err != nil {
+	if err := dispatchWebhookSignedFn(url, body, signingKeys, timeout); err != nil {
 		fmt.Printf("ns=event_dispatch at=error url_host=%s error=%q\n", redactURLHost(url), redactErrorURL(err, url))
 	}
 }
@@ -261,16 +305,26 @@ func redactErrorURL(err error, raw string) string {
 // dispatchWebhook is the unsigned production dispatcher kept for tests
 // that pre-date D.2 (they install via SetDispatchWebhookFnForTest using
 // the (url, body) signature). It delegates to dispatchWebhookSigned with
-// nil keys — so wire-format is byte-identical to 3.24.5.
+// nil keys and the package-default timeout — so wire-format is
+// byte-identical to 3.24.5 and SetWebhookClientTimeoutForTest semantics
+// are preserved for legacy callers.
 func dispatchWebhook(url string, body []byte) error {
-	return dispatchWebhookSigned(url, body, nil)
+	return dispatchWebhookSigned(url, body, nil, webhookClientTimeout)
 }
 
 // dispatchWebhookSigned posts body to url and, when signingKeys is
 // non-empty, sets the Convox-Signature header. B.1's defer-recover scope
 // is owned by dispatchWebhookSafely above; HMAC sign runs here AFTER the
 // recover engages and BEFORE client.Do, so a hmac panic is caught.
-func dispatchWebhookSigned(url string, body []byte, signingKeys [][]byte) error {
+//
+// timeout is the per-URL dispatch deadline. Zero means "use the
+// package-default webhookClientTimeout"; non-zero values come from
+// JSON-encoded receiver configs that override the default. To honor
+// per-URL deadlines we build a transient http.Client per dispatch when
+// timeout differs from webhookClientTimeout — this preserves the
+// SetWebhookClientTimeoutForTest hook's effect on the package client
+// while letting individual webhook entries set their own deadline.
+func dispatchWebhookSigned(url string, body []byte, signingKeys [][]byte, timeout time.Duration) error {
 	req, err := http.NewRequest("POST", url, bytes.NewReader(body))
 	if err != nil {
 		return err
@@ -287,7 +341,18 @@ func dispatchWebhookSigned(url string, body []byte, signingKeys [][]byte) error 
 		}
 	}
 
-	res, err := webhookClient.Do(req)
+	client := webhookClient
+	if timeout > 0 && timeout != webhookClientTimeout {
+		// Build a transient client carrying the same RoundTripper as
+		// webhookClient (so test-installed transports — see
+		// SetWebhookClientTransportForTest — observe per-URL dispatches
+		// just like default-timeout dispatches) but with the per-URL
+		// Timeout. RoundTripper inheritance matters because tests assert
+		// the request as it leaves the client.
+		client = &http.Client{Timeout: timeout, Transport: webhookClient.Transport}
+	}
+
+	res, err := client.Do(req)
 	if err != nil {
 		return err
 	}

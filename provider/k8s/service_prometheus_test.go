@@ -117,19 +117,19 @@ func TestServiceListAggregation_AverageAcrossPods(t *testing.T) {
 		require.Equal(t, 1, s.Gpu)
 
 		// Aggregation arithmetic: 3 pods, util sum = 240, avg = 80.
-		require.NotNil(t, s.GpuUtilAvg)
-		assert.InDelta(t, 80.0, *s.GpuUtilAvg, 0.001)
+		require.NotNil(t, s.GpuUtil)
+		assert.InDelta(t, 80.0, *s.GpuUtil, 0.001)
 
 		// MemUsed: (1024+2048+512) MiB / 3 = 1194.66 MiB → bytes.
 		// integer division on the bytes after MiB→bytes conversion:
 		// (1024+2048+512)*1024*1024 = 3,758,096,384; /3 = 1,252,698,794.
-		require.NotNil(t, s.GpuMemUsedAvg)
-		assert.InDelta(t, int64(1252698794), *s.GpuMemUsedAvg, 1<<20,
-			"GpuMemUsedAvg within 1 MiB of (1024+2048+512)/3 MiB in bytes")
+		require.NotNil(t, s.GpuMemUsed)
+		assert.InDelta(t, int64(1252698794), *s.GpuMemUsed, 1<<20,
+			"GpuMemUsed within 1 MiB of (1024+2048+512)/3 MiB in bytes")
 
 		// MemTotal: all 3 = 8192 MiB → avg = 8192 MiB in bytes.
-		require.NotNil(t, s.GpuMemTotalAvg)
-		assert.Equal(t, int64(8192*1024*1024), *s.GpuMemTotalAvg)
+		require.NotNil(t, s.GpuMemTotal)
+		assert.Equal(t, int64(8192*1024*1024), *s.GpuMemTotal)
 	})
 }
 
@@ -158,9 +158,9 @@ func TestServiceList_PromNilClient(t *testing.T) {
 		assert.Equal(t, 1, ss[0].Gpu)
 		// Pointers stay nil on the no-Prom path; omitempty strips the
 		// keys from JSON output.
-		assert.Nil(t, ss[0].GpuUtilAvg)
-		assert.Nil(t, ss[0].GpuMemUsedAvg)
-		assert.Nil(t, ss[0].GpuMemTotalAvg)
+		assert.Nil(t, ss[0].GpuUtil)
+		assert.Nil(t, ss[0].GpuMemUsed)
+		assert.Nil(t, ss[0].GpuMemTotal)
 	})
 }
 
@@ -209,7 +209,7 @@ func TestServiceList_NoGpuServices(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, ss, 1)
 		assert.Equal(t, 0, ss[0].Gpu)
-		assert.Nil(t, ss[0].GpuUtilAvg)
+		assert.Nil(t, ss[0].GpuUtil)
 
 		// Critical assertion: zero queries — the gpuServices slice was
 		// empty so QueryGPUMetrics was skipped entirely.

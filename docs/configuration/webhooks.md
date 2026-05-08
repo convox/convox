@@ -64,7 +64,7 @@ The actor class for each event is noted alongside the action below.
   events.
 - `app:promote:completed`, `app:promote:errored`, `app:promote:cancelled`
   — terminal-state events from the rack-side rollout watcher (see
-  [Release watcher](/management/release-watcher)). The watcher tracks
+  [release watcher](/configuration/rack-parameters/aws/release_watcher_gc_interval)). The watcher tracks
   the Argo Atom or Deployment rollout that backs `convox release promote`
   and emits exactly one of the three events per `(app, release-id)`
   lifecycle. Payload `data.id` is the release identifier, `data.actor`
@@ -240,6 +240,64 @@ handle:
 - **Source of truth** — when the Events tab persistence has a gap, the
   Slack/Discord webhook receiver is the authoritative source for the event
   log. Persist webhook payloads if you need replay.
+
+## Webhook delivery hardening
+
+The webhooks configmap (`webhooks` in the rack namespace) maps a receiver
+`name` to its dispatch config. Two value forms are supported, both safe for
+mixed-version coexistence:
+
+- **Plain URL** (3.24.5-compatible): the configmap value is a URL string
+  and the rack dispatches with the package-default 30-second timeout.
+- **JSON-encoded** (3.24.6+): the configmap value is a JSON object with
+  `url` and optional `timeout` fields. Operators that need a per-receiver
+  override of the 30-second default — a fast-fail Slack receiver at 5s, or
+  a slow on-prem audit log at 60s — supply the JSON form. Both forms can
+  coexist within the same configmap.
+
+```yaml
+# Example: webhooks ConfigMap, Data field (name-keyed map)
+data:
+  slack_alerts: "https://hooks.slack.com/services/T01/B01/abc"
+  audit_internal: '{"url":"https://audit.internal.corp/v1/events","timeout":"60s"}'
+  pagerduty_critical: '{"url":"https://events.pagerduty.com/v2/enqueue","timeout":"5s"}'
+```
+
+The `timeout` field accepts any Go-format duration string (`5s`, `30s`,
+`1m`, `90s`). Invalid or missing timeouts fall back to the 30-second
+default. Per-URL deadlines are enforced by the dispatch goroutine via a
+transient `http.Client` so individual slow receivers can't starve fast
+ones.
+
+### Skip-on-bad-config behavior
+
+The rack parses each configmap value at dispatch time. Entries that
+match any of the following are SKIPPED — no event is dispatched for that
+receiver — and a structured `ns=webhook_parse at=skip reason=...` line is
+emitted to api-pod stdout for operator grep:
+
+| Condition | `reason=` |
+|---|---|
+| Empty or whitespace-only value | `empty_value` |
+| Value starts with `{` but JSON parse fails | `invalid_json` |
+| Value parses as JSON but `url` field is empty / missing / whitespace-only | `empty_url_in_json` |
+
+The third case (`empty_url_in_json`) is critical: a JSON object with no
+`url` is NOT silently treated as a plain URL — the raw JSON-object string
+would not be a valid URL, and the previous behavior would corrupt
+dispatch. The skip-on-bad-config rule prevents that mode.
+
+To rotate a receiver to the JSON form:
+
+```bash
+$ kubectl -n convox-system get configmap webhooks -o yaml > webhooks.yaml
+$ # edit webhooks.yaml — change the value for the target receiver from a
+$ # plain URL string to a JSON-encoded object with timeout
+$ kubectl -n convox-system apply -f webhooks.yaml
+```
+
+The informer detects the change and the next event dispatched after the
+update uses the new timeout.
 
 ## Filtering and routing
 

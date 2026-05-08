@@ -1125,6 +1125,37 @@ func (c *Client) ServiceList(app string) (structs.Services, error) {
 	return v, err
 }
 
+// MetricsByService is the batched per-app companion to ServiceMetrics:
+// one HTTP round-trip returns one ServiceMetricsRow per requested
+// service (each row carries the same Metric series shape as
+// ServiceMetrics). The batched endpoint exists so the console
+// GpuDashboard does not fan out to N round-trips for an N-service
+// app — the chart re-renders on a single resolver call.
+//
+// services is the comma-joined list passed as the `services=` query
+// param. Element validation (manifest.NameValidator) runs at the rack
+// controller; passing meta-chars from the SDK side will return a 400.
+//
+// Available on V3 racks running 3.24.6+. Pre-3.24.6 V3 racks return
+// 404 (route not registered); V2 racks also return 404 (no batched
+// endpoint). Console resolver catches 404 → returns empty list +
+// banner.
+func (c *Client) MetricsByService(app string, services []string, opts structs.MetricsOptions) ([]structs.ServiceMetricsRow, error) {
+	ro, err := stdsdk.MarshalOptions(opts)
+	if err != nil {
+		return nil, err
+	}
+	if ro.Query == nil {
+		ro.Query = stdsdk.Query{}
+	}
+	if len(services) > 0 {
+		ro.Query["services"] = strings.Join(services, ",")
+	}
+	var v []structs.ServiceMetricsRow
+	err = c.Get(fmt.Sprintf("/apps/%s/metrics-by-service", app), ro, &v)
+	return v, err
+}
+
 func (c *Client) ServiceMetrics(app, name string, opts structs.MetricsOptions) (structs.Metrics, error) {
 	var err error
 

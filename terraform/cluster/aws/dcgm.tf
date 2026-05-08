@@ -112,6 +112,14 @@ resource "helm_release" "dcgm_exporter" {
         "prometheus.io/scrape"       = "true"
         "prometheus.io/port"         = "9400"
         "prometheus.io/path"         = "/metrics"
+        # Scrape interval hint for self-installed Prometheus operators discovering
+        # via prometheus.io/* pod annotations. Convox's free in-cluster Prometheus
+        # path uses pkg/structs/dcgm-scrape.yaml (Console-managed) which carries
+        # an explicit `scrape_interval` keyed off the same dcgm_scrape_interval
+        # rack param; this annotation surfaces the value to operators running their
+        # own Prometheus that watches pod annotations. coalesce() guards an
+        # operator-cleared rack param falling through as empty string.
+        "prometheus.io/scrape-interval" = coalesce(var.dcgm_scrape_interval, "15s")
         "convox.com/dcgm-csv-sha256" = filesha256("${path.module}/files/dcp-metrics-included.csv")
       }
 

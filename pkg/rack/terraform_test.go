@@ -614,3 +614,274 @@ func TestReconcileVarsWithModule_StripsMonitoringMetricsProvisioned_OnRc8ToFinal
 	assert.Contains(t, string(mainTfData), `gpu_observability_enable = "true"`, "main.tf must still reference gpu_observability_enable")
 	assert.Contains(t, string(mainTfData), `name = "test-rack"`, "main.tf must still reference name")
 }
+
+// TestReconcile_RemovesDcgmScrapeInterval is the fingertrap exercise for the
+// dcgm_scrape_interval variable introduced in 3.24.6. The downgraded module
+// does NOT declare the variable but vars.json carries a non-empty value;
+// reconcile must (a) remove the key from vars.json, (b) emit a NOTICE on
+// stderr that names the removed key, (c) leave name/release alone, (d) rewrite
+// main.tf without referencing the removed variable.
+func TestReconcile_RemovesDcgmScrapeInterval(t *testing.T) {
+	settings := t.TempDir()
+	f := reconcileFixture{
+		rackName:   "test-rack",
+		moduleVars: []string{"name", "release"}, // 3.24.5-like: no dcgm_scrape_interval
+		vars: map[string]string{
+			"name":                 "test-rack",
+			"release":              "3.24.5",
+			"dcgm_scrape_interval": "30s",
+		},
+	}
+	f.setup(t, settings)
+
+	capturedStderr := withTerraform(t, settings, f.rackName, func(t *testing.T, tf Terraform) {
+		require.NoError(t, tf.reconcileVarsWithModule("3.24.5"))
+	})
+
+	got := f.readVars(t)
+	_, has := got["dcgm_scrape_interval"]
+	assert.False(t, has, "dcgm_scrape_interval should be removed on downgrade to a module that does not declare it")
+	assert.Equal(t, "test-rack", got["name"], "name must be preserved")
+	assert.Equal(t, "3.24.5", got["release"], "release must be preserved")
+	assert.Contains(t, capturedStderr, "removing parameters not supported by version 3.24.5", "NOTICE must be emitted")
+	assert.Contains(t, capturedStderr, "dcgm_scrape_interval", "NOTICE must name the removed key")
+
+	mainTfData, err := os.ReadFile(filepath.Join(f.rackDir, "main.tf"))
+	require.NoError(t, err)
+	assert.NotContains(t, string(mainTfData), "dcgm_scrape_interval", "main.tf must not reference removed variable")
+	assert.Contains(t, string(mainTfData), `name = "test-rack"`, "main.tf must still reference name")
+}
+
+// TestReconcile_RemovesGpuMetricsMaxPods is the fingertrap exercise for the
+// gpu_metrics_max_pods variable introduced in 3.24.6. Pattern matches
+// TestReconcile_RemovesDcgmScrapeInterval — the variable's classification is
+// "process-config" (handler-side enforcement) so the reconciler removes it
+// cleanly on downgrade and the handler falls back to its default 100.
+func TestReconcile_RemovesGpuMetricsMaxPods(t *testing.T) {
+	settings := t.TempDir()
+	f := reconcileFixture{
+		rackName:   "test-rack",
+		moduleVars: []string{"name", "release"},
+		vars: map[string]string{
+			"name":                 "test-rack",
+			"release":              "3.24.5",
+			"gpu_metrics_max_pods": "200",
+		},
+	}
+	f.setup(t, settings)
+
+	capturedStderr := withTerraform(t, settings, f.rackName, func(t *testing.T, tf Terraform) {
+		require.NoError(t, tf.reconcileVarsWithModule("3.24.5"))
+	})
+
+	got := f.readVars(t)
+	_, has := got["gpu_metrics_max_pods"]
+	assert.False(t, has, "gpu_metrics_max_pods should be removed on downgrade")
+	assert.Equal(t, "test-rack", got["name"], "name must be preserved")
+	assert.Equal(t, "3.24.5", got["release"], "release must be preserved")
+	assert.Contains(t, capturedStderr, "removing parameters not supported by version 3.24.5", "NOTICE must be emitted")
+	assert.Contains(t, capturedStderr, "gpu_metrics_max_pods", "NOTICE must name the removed key")
+
+	mainTfData, err := os.ReadFile(filepath.Join(f.rackDir, "main.tf"))
+	require.NoError(t, err)
+	assert.NotContains(t, string(mainTfData), "gpu_metrics_max_pods", "main.tf must not reference removed variable")
+}
+
+// TestReconcile_RemovesGpuMetricsMaxConcurrent is the fingertrap exercise for
+// the gpu_metrics_max_concurrent variable introduced in 3.24.6. Process-config
+// classification — handler-side semaphore falls back to default 10.
+func TestReconcile_RemovesGpuMetricsMaxConcurrent(t *testing.T) {
+	settings := t.TempDir()
+	f := reconcileFixture{
+		rackName:   "test-rack",
+		moduleVars: []string{"name", "release"},
+		vars: map[string]string{
+			"name":                       "test-rack",
+			"release":                    "3.24.5",
+			"gpu_metrics_max_concurrent": "20",
+		},
+	}
+	f.setup(t, settings)
+
+	capturedStderr := withTerraform(t, settings, f.rackName, func(t *testing.T, tf Terraform) {
+		require.NoError(t, tf.reconcileVarsWithModule("3.24.5"))
+	})
+
+	got := f.readVars(t)
+	_, has := got["gpu_metrics_max_concurrent"]
+	assert.False(t, has, "gpu_metrics_max_concurrent should be removed on downgrade")
+	assert.Equal(t, "test-rack", got["name"], "name must be preserved")
+	assert.Equal(t, "3.24.5", got["release"], "release must be preserved")
+	assert.Contains(t, capturedStderr, "removing parameters not supported by version 3.24.5", "NOTICE must be emitted")
+	assert.Contains(t, capturedStderr, "gpu_metrics_max_concurrent", "NOTICE must name the removed key")
+
+	mainTfData, err := os.ReadFile(filepath.Join(f.rackDir, "main.tf"))
+	require.NoError(t, err)
+	assert.NotContains(t, string(mainTfData), "gpu_metrics_max_concurrent", "main.tf must not reference removed variable")
+}
+
+// TestReconcile_RemovesReleaseWatcherGCInterval is the fingertrap exercise for
+// the release_watcher_gc_interval variable introduced in 3.24.6. The variable
+// is plumbed system→rack→api and surfaces as the RELEASE_WATCHER_GC_INTERVAL
+// env var on the api Deployment. On downgrade the api Deployment env block
+// loses the entry; the provider package falls back to its 5m default.
+func TestReconcile_RemovesReleaseWatcherGCInterval(t *testing.T) {
+	settings := t.TempDir()
+	f := reconcileFixture{
+		rackName:   "test-rack",
+		moduleVars: []string{"name", "release"},
+		vars: map[string]string{
+			"name":                        "test-rack",
+			"release":                     "3.24.5",
+			"release_watcher_gc_interval": "10m",
+		},
+	}
+	f.setup(t, settings)
+
+	capturedStderr := withTerraform(t, settings, f.rackName, func(t *testing.T, tf Terraform) {
+		require.NoError(t, tf.reconcileVarsWithModule("3.24.5"))
+	})
+
+	got := f.readVars(t)
+	_, has := got["release_watcher_gc_interval"]
+	assert.False(t, has, "release_watcher_gc_interval should be removed on downgrade")
+	assert.Equal(t, "test-rack", got["name"], "name must be preserved")
+	assert.Equal(t, "3.24.5", got["release"], "release must be preserved")
+	assert.Contains(t, capturedStderr, "removing parameters not supported by version 3.24.5", "NOTICE must be emitted")
+	assert.Contains(t, capturedStderr, "release_watcher_gc_interval", "NOTICE must name the removed key")
+
+	mainTfData, err := os.ReadFile(filepath.Join(f.rackDir, "main.tf"))
+	require.NoError(t, err)
+	assert.NotContains(t, string(mainTfData), "release_watcher_gc_interval", "main.tf must not reference removed variable")
+}
+
+// TestReconcile_RemovesGrafanaDashboardVarRack is the fingertrap exercise for
+// the grafana_dashboard_var_rack variable introduced in 3.24.6. Process-config:
+// console reads the value via rack-params and substitutes into Grafana deep
+// links; on downgrade the absent value falls back to the canonical default
+// "rack" in console code.
+func TestReconcile_RemovesGrafanaDashboardVarRack(t *testing.T) {
+	settings := t.TempDir()
+	f := reconcileFixture{
+		rackName:   "test-rack",
+		moduleVars: []string{"name", "release"},
+		vars: map[string]string{
+			"name":                       "test-rack",
+			"release":                    "3.24.5",
+			"grafana_dashboard_var_rack": "cluster_name",
+		},
+	}
+	f.setup(t, settings)
+
+	capturedStderr := withTerraform(t, settings, f.rackName, func(t *testing.T, tf Terraform) {
+		require.NoError(t, tf.reconcileVarsWithModule("3.24.5"))
+	})
+
+	got := f.readVars(t)
+	_, has := got["grafana_dashboard_var_rack"]
+	assert.False(t, has, "grafana_dashboard_var_rack should be removed on downgrade")
+	assert.Equal(t, "test-rack", got["name"], "name must be preserved")
+	assert.Equal(t, "3.24.5", got["release"], "release must be preserved")
+	assert.Contains(t, capturedStderr, "removing parameters not supported by version 3.24.5", "NOTICE must be emitted")
+	assert.Contains(t, capturedStderr, "grafana_dashboard_var_rack", "NOTICE must name the removed key")
+
+	mainTfData, err := os.ReadFile(filepath.Join(f.rackDir, "main.tf"))
+	require.NoError(t, err)
+	assert.NotContains(t, string(mainTfData), "grafana_dashboard_var_rack", "main.tf must not reference removed variable")
+}
+
+// TestReconcile_RemovesGrafanaDashboardVarNamespace mirrors the var_rack test
+// for grafana_dashboard_var_namespace.
+func TestReconcile_RemovesGrafanaDashboardVarNamespace(t *testing.T) {
+	settings := t.TempDir()
+	f := reconcileFixture{
+		rackName:   "test-rack",
+		moduleVars: []string{"name", "release"},
+		vars: map[string]string{
+			"name":                            "test-rack",
+			"release":                         "3.24.5",
+			"grafana_dashboard_var_namespace": "k8s_namespace",
+		},
+	}
+	f.setup(t, settings)
+
+	capturedStderr := withTerraform(t, settings, f.rackName, func(t *testing.T, tf Terraform) {
+		require.NoError(t, tf.reconcileVarsWithModule("3.24.5"))
+	})
+
+	got := f.readVars(t)
+	_, has := got["grafana_dashboard_var_namespace"]
+	assert.False(t, has, "grafana_dashboard_var_namespace should be removed on downgrade")
+	assert.Equal(t, "test-rack", got["name"], "name must be preserved")
+	assert.Equal(t, "3.24.5", got["release"], "release must be preserved")
+	assert.Contains(t, capturedStderr, "removing parameters not supported by version 3.24.5", "NOTICE must be emitted")
+	assert.Contains(t, capturedStderr, "grafana_dashboard_var_namespace", "NOTICE must name the removed key")
+
+	mainTfData, err := os.ReadFile(filepath.Join(f.rackDir, "main.tf"))
+	require.NoError(t, err)
+	assert.NotContains(t, string(mainTfData), "grafana_dashboard_var_namespace", "main.tf must not reference removed variable")
+}
+
+// TestReconcile_RemovesGrafanaDashboardVarService mirrors the var_rack test
+// for grafana_dashboard_var_service.
+func TestReconcile_RemovesGrafanaDashboardVarService(t *testing.T) {
+	settings := t.TempDir()
+	f := reconcileFixture{
+		rackName:   "test-rack",
+		moduleVars: []string{"name", "release"},
+		vars: map[string]string{
+			"name":                          "test-rack",
+			"release":                       "3.24.5",
+			"grafana_dashboard_var_service": "workload",
+		},
+	}
+	f.setup(t, settings)
+
+	capturedStderr := withTerraform(t, settings, f.rackName, func(t *testing.T, tf Terraform) {
+		require.NoError(t, tf.reconcileVarsWithModule("3.24.5"))
+	})
+
+	got := f.readVars(t)
+	_, has := got["grafana_dashboard_var_service"]
+	assert.False(t, has, "grafana_dashboard_var_service should be removed on downgrade")
+	assert.Equal(t, "test-rack", got["name"], "name must be preserved")
+	assert.Equal(t, "3.24.5", got["release"], "release must be preserved")
+	assert.Contains(t, capturedStderr, "removing parameters not supported by version 3.24.5", "NOTICE must be emitted")
+	assert.Contains(t, capturedStderr, "grafana_dashboard_var_service", "NOTICE must name the removed key")
+
+	mainTfData, err := os.ReadFile(filepath.Join(f.rackDir, "main.tf"))
+	require.NoError(t, err)
+	assert.NotContains(t, string(mainTfData), "grafana_dashboard_var_service", "main.tf must not reference removed variable")
+}
+
+// TestReconcile_RemovesGrafanaDashboardVarApp mirrors the var_rack test
+// for grafana_dashboard_var_app.
+func TestReconcile_RemovesGrafanaDashboardVarApp(t *testing.T) {
+	settings := t.TempDir()
+	f := reconcileFixture{
+		rackName:   "test-rack",
+		moduleVars: []string{"name", "release"},
+		vars: map[string]string{
+			"name":                      "test-rack",
+			"release":                   "3.24.5",
+			"grafana_dashboard_var_app": "application",
+		},
+	}
+	f.setup(t, settings)
+
+	capturedStderr := withTerraform(t, settings, f.rackName, func(t *testing.T, tf Terraform) {
+		require.NoError(t, tf.reconcileVarsWithModule("3.24.5"))
+	})
+
+	got := f.readVars(t)
+	_, has := got["grafana_dashboard_var_app"]
+	assert.False(t, has, "grafana_dashboard_var_app should be removed on downgrade")
+	assert.Equal(t, "test-rack", got["name"], "name must be preserved")
+	assert.Equal(t, "3.24.5", got["release"], "release must be preserved")
+	assert.Contains(t, capturedStderr, "removing parameters not supported by version 3.24.5", "NOTICE must be emitted")
+	assert.Contains(t, capturedStderr, "grafana_dashboard_var_app", "NOTICE must name the removed key")
+
+	mainTfData, err := os.ReadFile(filepath.Join(f.rackDir, "main.tf"))
+	require.NoError(t, err)
+	assert.NotContains(t, string(mainTfData), "grafana_dashboard_var_app", "main.tf must not reference removed variable")
+}

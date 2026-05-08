@@ -7,11 +7,14 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/stdapi"
 	"github.com/convox/stdsdk"
@@ -235,6 +238,285 @@ func (s *Server) AppMetrics(c *stdapi.Context) error {
 
 	return c.RenderJSON(v)
 }
+
+
+
+// gpuMetricsConcurrencyDefault is the default concurrency cap when the
+// `gpu_metrics_max_concurrent` rack param / GPU_METRICS_MAX_CONCURRENT
+// env var is unset. The TF variable defaults are mirrored here so a
+// rack that never set the param still has a sane bound. When set, the
+// value is read at request time so a `convox rack params set
+// gpu_metrics_max_concurrent=20` followed by a chart refresh observes
+// the new cap without an api pod restart.
+const (
+	gpuMetricsConcurrencyDefault = 10
+	gpuMetricsConcurrencyMax     = 50
+	gpuMetricsMaxPodsDefault     = 100
+	gpuMetricsMaxPodsMax         = 500
+	gpuMetricsMaxRange           = 24 * time.Hour
+	gpuMetricsMinPeriod          = 5 * time.Second
+	gpuMetricsMaxPointsPerSeries = 5000
+	gpuMetricsMaxAggregatePoints = 50000
+)
+
+// gpuMetricsSemMu guards the lazy-init of the singleton semaphore — the
+// first request reads the env var and creates the semaphore at that
+// cap. Subsequent param-change-then-refresh loops keep the original
+// semaphore (cap is not hot-reloadable post-init; documented in the
+// param spec). A future enhancement could swap the semaphore on param
+// change but the failure mode is contained: an operator who lowers the
+// cap then needs the api pod to restart for the new lower cap to take
+// effect (raising the cap mid-flight is also constrained to the next
+// pod restart). For 3.24.6 this is acceptable.
+var (
+	gpuMetricsSemMu sync.Mutex
+	gpuMetricsSem   chan struct{}
+)
+
+// gpuMetricsAcquireSem returns true if a slot was acquired (caller is
+// responsible for calling release on completion). Returns false when
+// the semaphore is at capacity — caller fails fast with 503.
+func gpuMetricsAcquireSem() bool {
+	sem := gpuMetricsGetSem()
+	select {
+	case sem <- struct{}{}:
+		return true
+	default:
+		return false
+	}
+}
+
+func gpuMetricsReleaseSem() {
+	sem := gpuMetricsGetSem()
+	select {
+	case <-sem:
+	default:
+	}
+}
+
+func gpuMetricsGetSem() chan struct{} {
+	gpuMetricsSemMu.Lock()
+	defer gpuMetricsSemMu.Unlock()
+	if gpuMetricsSem == nil {
+		cap := gpuMetricsConcurrencyDefault
+		if s := os.Getenv("GPU_METRICS_MAX_CONCURRENT"); s != "" {
+			if n, err := strconv.Atoi(s); err == nil && n > 0 {
+				if n > gpuMetricsConcurrencyMax {
+					n = gpuMetricsConcurrencyMax
+				}
+				cap = n
+			}
+		}
+		gpuMetricsSem = make(chan struct{}, cap)
+	}
+	return gpuMetricsSem
+}
+
+// gpuMetricsResetSemForTest is a test-only helper to drop and re-init
+// the semaphore (so a test can lower the cap via env var and observe
+// the new bound). Not exported in the wire — only available to the
+// pkg/api in-package tests.
+func gpuMetricsResetSemForTest() {
+	gpuMetricsSemMu.Lock()
+	defer gpuMetricsSemMu.Unlock()
+	gpuMetricsSem = nil
+}
+
+// gpuMetricsMaxPods reads the operator-configured pod cap from the
+// GPU_METRICS_MAX_PODS env var (set by terraform from the
+// gpu_metrics_max_pods rack param). Falls back to the default when
+// unset; clamps to [1, gpuMetricsMaxPodsMax] when set out-of-range.
+func gpuMetricsMaxPods() int {
+	n := gpuMetricsMaxPodsDefault
+	if s := os.Getenv("GPU_METRICS_MAX_PODS"); s != "" {
+		if v, err := strconv.Atoi(s); err == nil && v > 0 {
+			if v > gpuMetricsMaxPodsMax {
+				v = gpuMetricsMaxPodsMax
+			}
+			n = v
+		}
+	}
+	return n
+}
+
+// validateMetricsRange enforces the bounds documented at
+// CLUSTER-1 1E:385-392 — End-Start ≤ 24h, Period ≥ 5s, max points
+// per series ≤ 5000. End defaults to time.Now() (eliminates client
+// clock skew per F-FAIL-12) when nil. Mutates `opts` so handlers
+// pass the normalized window through to the provider.
+func validateMetricsRange(opts *structs.MetricsOptions) error {
+	now := time.Now()
+	if opts.End == nil {
+		end := now
+		opts.End = &end
+	}
+	if opts.Start == nil {
+		// Default 30 minutes — matches the most-common dropdown value.
+		start := opts.End.Add(-30 * time.Minute)
+		opts.Start = &start
+	}
+	if !opts.End.After(*opts.Start) {
+		return stdapi.Errorf(http.StatusBadRequest, "metrics: end must be after start")
+	}
+	rng := opts.End.Sub(*opts.Start)
+	if rng > gpuMetricsMaxRange {
+		return stdapi.Errorf(http.StatusBadRequest, "metrics: end-start must be at most 24h (got %s)", rng)
+	}
+	period := time.Duration(0)
+	if opts.Period != nil && *opts.Period > 0 {
+		period = time.Duration(*opts.Period) * time.Second
+	} else {
+		defP := int64(30) // 30s default step
+		opts.Period = &defP
+		period = 30 * time.Second
+	}
+	if period < gpuMetricsMinPeriod {
+		return stdapi.Errorf(http.StatusBadRequest, "metrics: period must be at least 5s (got %s)", period)
+	}
+	points := int64(rng / period)
+	if points > gpuMetricsMaxPointsPerSeries {
+		return stdapi.Errorf(http.StatusBadRequest, "metrics: too many points per series (%d > %d); widen period or shrink range", points, gpuMetricsMaxPointsPerSeries)
+	}
+	return nil
+}
+
+// validateAppName runs the manifest.NameValidator regex against an
+// `app` path var or `services` list element. Returns a 400 stdapi
+// error when invalid, suitable for direct return from a handler.
+// Centralised so SSRF / regex meta-char rejection lives in one place
+// (F-SEC-20).
+func validateAppName(name string) error {
+	if !manifest.NameValidator.MatchString(name) {
+		return stdapi.Errorf(http.StatusBadRequest, "metrics: invalid name %q (must match %s)", name, manifest.NameValidator.String())
+	}
+	return nil
+}
+
+// ServiceMetrics returns time-range GPU metric series for a single
+// service in the app. Validates app + service against
+// manifest.NameValidator, enforces 24h / 5s / 5000-point bounds,
+// acquires the gpu_metrics_max_concurrent semaphore (fail-fast 503
+// when full), and forwards to the provider.
+//
+// New in 3.24.6 polish wave (CLUSTER-1 1E). Pre-3.24.6 racks return
+// 404 from the route — the console resolver catches that and renders
+// the "Time-range data requires rack 3.24.6+" banner.
+func (s *Server) ServiceMetrics(c *stdapi.Context) error {
+	if err := s.hook("ServiceMetricsValidate", c); err != nil {
+		return err
+	}
+
+	app := c.Var("app")
+	if err := validateAppName(app); err != nil {
+		return err
+	}
+	service := c.Var("service")
+	if err := validateAppName(service); err != nil {
+		return err
+	}
+
+	var opts structs.MetricsOptions
+	if err := stdapi.UnmarshalOptions(c.Request(), &opts); err != nil {
+		return err
+	}
+	if err := validateMetricsRange(&opts); err != nil {
+		return err
+	}
+
+	if !gpuMetricsAcquireSem() {
+		return stdapi.Errorf(http.StatusServiceUnavailable, "metrics: server busy, retry shortly")
+	}
+	defer gpuMetricsReleaseSem()
+
+	v, err := s.provider(c).WithContext(contextFrom(c)).ServiceMetrics(app, service, opts)
+	if err != nil {
+		return err
+	}
+
+	return c.RenderJSON(v)
+}
+
+// MetricsByService is the batched per-app companion to ServiceMetrics.
+// One rack call → one Prom QueryRange per metric (regex alternation on
+// services) → one ServiceMetricsRow per requested service in the
+// response. Bounds + name validation + concurrency cap are shared with
+// ServiceMetrics; an additional aggregate-points cap (services ×
+// timestamps × metrics ≤ 50000) protects against the multiplicative
+// blowup a single huge request could cause.
+//
+// `services` query param is comma-separated. Each element is name-
+// validated (rejecting regex meta-chars at the boundary — F-SEC-20).
+// Caller MUST sanitise; the provider trusts what we forward.
+func (s *Server) MetricsByService(c *stdapi.Context) error {
+	if err := s.hook("MetricsByServiceValidate", c); err != nil {
+		return err
+	}
+
+	app := c.Var("app")
+	if err := validateAppName(app); err != nil {
+		return err
+	}
+
+	var opts structs.MetricsOptions
+	if err := stdapi.UnmarshalOptions(c.Request(), &opts); err != nil {
+		return err
+	}
+	if err := validateMetricsRange(&opts); err != nil {
+		return err
+	}
+
+	// services= comes through as a comma-joined string; split and
+	// validate each element. UnmarshalOptions doesn't help here because
+	// the field shape is custom (we want a query string `services=a,b,c`
+	// not a repeated key).
+	raw := c.Request().URL.Query().Get("services")
+	services := []string{}
+	if raw != "" {
+		for _, s := range strings.Split(raw, ",") {
+			s = strings.TrimSpace(s)
+			if s == "" {
+				continue
+			}
+			if err := validateAppName(s); err != nil {
+				return err
+			}
+			services = append(services, s)
+		}
+	}
+
+	if len(services) > gpuMetricsMaxPods() {
+		return stdapi.Errorf(http.StatusBadRequest, "metrics: too many services (%d > %d); reduce services list", len(services), gpuMetricsMaxPods())
+	}
+
+	// Aggregate-points cap (services × timestamps × metrics ≤ 50000)
+	// protects against the multiplicative blowup. Wire-name count is
+	// fixed at 8 GPU metrics today; keep the multiplier dynamic so
+	// future additions don't silently grow the cap.
+	wireCount := 8
+	period := *opts.Period
+	range_ := opts.End.Sub(*opts.Start)
+	timestamps := int64(range_) / int64(time.Duration(period)*time.Second)
+	if timestamps < 1 {
+		timestamps = 1
+	}
+	aggregate := int64(len(services)) * timestamps * int64(wireCount)
+	if aggregate > int64(gpuMetricsMaxAggregatePoints) {
+		return stdapi.Errorf(http.StatusBadRequest, "metrics: aggregate points (%d) exceed cap (%d); reduce services / range", aggregate, gpuMetricsMaxAggregatePoints)
+	}
+
+	if !gpuMetricsAcquireSem() {
+		return stdapi.Errorf(http.StatusServiceUnavailable, "metrics: server busy, retry shortly")
+	}
+	defer gpuMetricsReleaseSem()
+
+	v, err := s.provider(c).WithContext(contextFrom(c)).MetricsByService(app, services, opts)
+	if err != nil {
+		return err
+	}
+
+	return c.RenderJSON(v)
+}
+
 
 func (s *Server) AppUpdate(c *stdapi.Context) error {
 	if err := s.hook("AppUpdateValidate", c); err != nil {

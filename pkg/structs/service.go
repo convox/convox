@@ -24,35 +24,42 @@ type Service struct {
 	// from the manifest service definition.
 	Agent bool `json:"agent,omitempty"`
 
-	// GPU runtime telemetry aggregated as average across pods in the service.
-	// Populated by provider/k8s/prometheus.go via a single batched Prom query
-	// per ServiceList call. Pointer-typed so:
-	//   nil          → "no data populator wired" (mixed-skew, prom unreachable,
-	//                   no service has GPU > 0);
+	// GPU runtime telemetry — per-metric mean across pods in the service at
+	// the most recent scrape. Populated by provider/k8s/prometheus.go via
+	// a single batched Prom query per ServiceList call. Pointer-typed so:
+	//   nil          → "no pod reported this metric" (mixed-skew with
+	//                   pre-3.24.6 rack, prom unreachable, no GPU service,
+	//                   or DCGM exporter version skew leaving this metric
+	//                   absent across every pod in the service);
 	//   non-nil zero → "real averaged reading at idle";
 	//   non-nil > 0  → "real averaged reading under load."
 	// See Process struct doc for the full state-disambiguation rationale.
-	GpuUtilAvg     *float64 `json:"gpu-util-avg,omitempty"`
-	GpuMemUsedAvg  *int64   `json:"gpu-mem-used-avg,omitempty"`
-	GpuMemTotalAvg *int64   `json:"gpu-mem-total-avg,omitempty"`
+	//
+	// Naming note: dropped the `_avg` suffix in 3.24.6 (the field name read
+	// as a temporal average; reality is spatial across pods at one instant).
+	// 3.24.6 RC builds are the only pre-public exposure; no external
+	// consumer existed yet, so the rename is free in this window.
+	GpuUtil     *float64 `json:"gpu-util,omitempty"`
+	GpuMemUsed  *int64   `json:"gpu-mem-used,omitempty"`
+	GpuMemTotal *int64   `json:"gpu-mem-total,omitempty"`
 
 	// Extended GPU runtime telemetry — DCGM profiling counters averaged across
-	// pods in the service. Same pointer-tri-state semantics as GpuUtilAvg
+	// pods in the service. Same pointer-tri-state semantics as GpuUtil
 	// above. Populated by the same batched Prom query in
-	// provider/k8s/service.go alongside GpuUtilAvg/GpuMemUsedAvg/GpuMemTotalAvg.
+	// provider/k8s/service.go alongside GpuUtil/GpuMemUsed/GpuMemTotal.
 	//
-	//   GpuTensorActiveAvg → DCGM_FI_PROF_PIPE_TENSOR_ACTIVE × 100 (percent)
-	//   GpuSmActiveAvg     → DCGM_FI_PROF_SM_ACTIVE × 100 (percent)
-	//   GpuDramActiveAvg   → DCGM_FI_PROF_DRAM_ACTIVE × 100 (percent)
-	//   GpuFp16ActiveAvg   → DCGM_FI_PROF_PIPE_FP16_ACTIVE (active fraction)
-	//   GpuFp32ActiveAvg   → DCGM_FI_PROF_PIPE_FP32_ACTIVE (active fraction)
-	//   GpuPowerWAvg       → DCGM_FI_DEV_POWER_USAGE (watts)
-	GpuTensorActiveAvg *float64 `json:"gpu-tensor-active-avg,omitempty"`
-	GpuSmActiveAvg     *float64 `json:"gpu-sm-active-avg,omitempty"`
-	GpuDramActiveAvg   *float64 `json:"gpu-dram-active-avg,omitempty"`
-	GpuFp16ActiveAvg   *float64 `json:"gpu-fp16-active-avg,omitempty"`
-	GpuFp32ActiveAvg   *float64 `json:"gpu-fp32-active-avg,omitempty"`
-	GpuPowerWAvg       *float64 `json:"gpu-power-w-avg,omitempty"`
+	//   GpuTensorActive → DCGM_FI_PROF_PIPE_TENSOR_ACTIVE × 100 (percent)
+	//   GpuSmActive     → DCGM_FI_PROF_SM_ACTIVE × 100 (percent)
+	//   GpuDramActive   → DCGM_FI_PROF_DRAM_ACTIVE × 100 (percent)
+	//   GpuFp16Active   → DCGM_FI_PROF_PIPE_FP16_ACTIVE × 100 (percent)
+	//   GpuFp32Active   → DCGM_FI_PROF_PIPE_FP32_ACTIVE × 100 (percent)
+	//   GpuPowerW       → DCGM_FI_DEV_POWER_USAGE (watts)
+	GpuTensorActive *float64 `json:"gpu-tensor-active,omitempty"`
+	GpuSmActive     *float64 `json:"gpu-sm-active,omitempty"`
+	GpuDramActive   *float64 `json:"gpu-dram-active,omitempty"`
+	GpuFp16Active   *float64 `json:"gpu-fp16-active,omitempty"`
+	GpuFp32Active   *float64 `json:"gpu-fp32-active,omitempty"`
+	GpuPowerW       *float64 `json:"gpu-power-w,omitempty"`
 
 	// ScaleOverrideActive reflects whether the service Deployment has
 	// the convox.com/scale-override-active=true annotation set.
