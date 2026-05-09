@@ -2676,6 +2676,52 @@ func TestBudgetAccumulator_RenamedServiceProducesTwoEntries(t *testing.T) {
 	})
 }
 
+// TestBudgetAccumulator_InstanceTypeRefreshesEachTick asserts that when a
+// service's pods migrate to a new node type mid-month (Karpenter rebalance,
+// scheduler eviction, manual node pool change), the accumulator's recorded
+// instance type follows the actual placement. The pre-fix accumulator used
+// "first observation wins", which left a stale instance type cached forever
+// once captured — leading to user-visible mismatches in `convox cost` output
+// when the original GPU node was replaced by a CPU node but the breakdown
+// still reported the GPU type. Last-observation-wins is good enough for the
+// homogeneous-replicas common case; heterogeneous services (replicas split
+// across types) report whichever pod was sampled last in a given tick.
+func TestBudgetAccumulator_InstanceTypeRefreshesEachTick(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 1000, AlertThresholdPercent: 80, AtCapAction: "alert-only", PricingAdjustment: 1,
+		})
+		t1 := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		// Prime the state annotation with a stale instance type — simulates
+		// an earlier tick that captured the service on a g4dn.xlarge node
+		// before the workload migrated to t3.large.
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{
+			MonthStart:            startOfApril(),
+			CurrentMonthSpendAsOf: t1.Add(-1 * time.Hour),
+			PerServiceSpendUsd:    map[string]float64{"web": 0.50},
+			PerServiceInstanceType: map[string]string{
+				"web": "g4dn.xlarge",
+			},
+		})
+
+		// Current placement is t3.large — the previous GPU node is gone.
+		servicePodFixture(t, kk, "rack1-app1", "p1", "node-cpu", "t3.large",
+			map[string]string{"service": "web"})
+
+		require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", t1))
+
+		_, state, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		require.NotNil(t, state)
+		assert.Equal(t, "t3.large", state.PerServiceInstanceType["web"],
+			"recorded instance type must follow current pod placement after migration; "+
+				"got %q (stale = pre-fix bug)", state.PerServiceInstanceType["web"])
+	})
+}
+
 // TestBudgetAccumulator_AppCostConcurrentWithTick_NoRace exercises the
 // freshness contract: AppCost re-reads the namespace annotation on every
 // call and deserializes into a fresh AppBudgetState, never sharing a
