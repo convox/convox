@@ -155,7 +155,7 @@ func TestNodeInstanceType_PriorityOrder(t *testing.T) {
 
 // nodeWithLabelsAndAnnotations builds a *v1.Node fixture for capacity-type
 // tests so the helper can be exercised across the dual-signal precedence
-// surface (Karpenter label, ANG annotation, both, neither).
+// surface (Karpenter label, ANG label, both, neither).
 func nodeWithLabelsAndAnnotations(labels, annotations map[string]string) *v1.Node {
 	return &v1.Node{
 		ObjectMeta: am.ObjectMeta{
@@ -165,6 +165,12 @@ func nodeWithLabelsAndAnnotations(labels, annotations map[string]string) *v1.Nod
 	}
 }
 
+// TestNodeCapacityType_DualSignal exercises the dual-signal capacity reader.
+// Both AWS sources are LABELS, not annotations: Karpenter writes
+// `karpenter.sh/capacity-type` lowercase ("spot"/"on-demand"); EKS managed
+// node groups write `eks.amazonaws.com/capacityType` uppercase
+// ("SPOT"/"ON_DEMAND"). The helper normalises both into the same lowercase
+// dash form ("spot"/"on-demand") so downstream pricing math sees one shape.
 func TestNodeCapacityType_DualSignal(t *testing.T) {
 	cases := []struct {
 		name     string
@@ -187,37 +193,46 @@ func TestNodeCapacityType_DualSignal(t *testing.T) {
 			expected: "spot",
 		},
 		{
-			name:     "ANG_spot_annotation_uppercase",
+			// Live-EKS observation (test rack). EKS managed node groups
+			// publish capacity type as a node LABEL, value uppercase
+			// "SPOT" or "ON_DEMAND" — never an annotation. Reading the
+			// label here returns "spot".
+			name:     "EKS_label_SPOT_normalized_to_spot",
+			node:     nodeWithLabelsAndAnnotations(map[string]string{"eks.amazonaws.com/capacityType": "SPOT"}, nil),
+			expected: "spot",
+		},
+		{
+			name:     "EKS_label_ON_DEMAND_normalized_to_on_demand",
+			node:     nodeWithLabelsAndAnnotations(map[string]string{"eks.amazonaws.com/capacityType": "ON_DEMAND"}, nil),
+			expected: "on-demand",
+		},
+		{
+			// Annotation-only nodes (the pre-fix code path) must NOT
+			// detect capacity. A real EKS-ANG node never has the value
+			// in annotations — only labels — so an annotation-only
+			// fixture exercises the case where the label was missing
+			// AND somebody set the annotation by mistake. Result: empty,
+			// because annotations are not consulted.
+			name:     "EKS_annotation_only_returns_empty_no_label",
 			node:     nodeWithLabelsAndAnnotations(nil, map[string]string{"eks.amazonaws.com/capacityType": "SPOT"}),
-			expected: "spot",
+			expected: "",
 		},
 		{
-			name:     "ANG_on_demand_annotation_underscore_form",
-			node:     nodeWithLabelsAndAnnotations(nil, map[string]string{"eks.amazonaws.com/capacityType": "ON_DEMAND"}),
-			expected: "on-demand",
-		},
-		{
-			name:     "ANG_on_demand_annotation_hyphen_form",
-			node:     nodeWithLabelsAndAnnotations(nil, map[string]string{"eks.amazonaws.com/capacityType": "on-demand"}),
-			expected: "on-demand",
-		},
-		{
-			name:     "ANG_mixed_case_normalized_via_ToLower",
-			node:     nodeWithLabelsAndAnnotations(nil, map[string]string{"eks.amazonaws.com/capacityType": "Spot"}),
-			expected: "spot",
-		},
-		{
-			name: "Karpenter_label_takes_priority_over_ANG_annotation",
+			name: "Karpenter_label_takes_priority_over_EKS_label",
 			node: nodeWithLabelsAndAnnotations(
-				map[string]string{"karpenter.sh/capacity-type": "spot"},
-				map[string]string{"eks.amazonaws.com/capacityType": "ON_DEMAND"}),
+				map[string]string{
+					"karpenter.sh/capacity-type":      "spot",
+					"eks.amazonaws.com/capacityType":  "ON_DEMAND",
+				}, nil),
 			expected: "spot",
 		},
 		{
-			name: "Unknown_label_value_falls_through_to_annotation",
+			name: "Unknown_karpenter_value_falls_through_to_EKS_label",
 			node: nodeWithLabelsAndAnnotations(
-				map[string]string{"karpenter.sh/capacity-type": "weird-value"},
-				map[string]string{"eks.amazonaws.com/capacityType": "SPOT"}),
+				map[string]string{
+					"karpenter.sh/capacity-type":     "weird-value",
+					"eks.amazonaws.com/capacityType": "SPOT",
+				}, nil),
 			expected: "spot",
 		},
 		{
@@ -226,8 +241,13 @@ func TestNodeCapacityType_DualSignal(t *testing.T) {
 			expected: "",
 		},
 		{
-			name:     "Empty_label_value_returns_empty",
+			name:     "Empty_karpenter_value_returns_empty",
 			node:     nodeWithLabelsAndAnnotations(map[string]string{"karpenter.sh/capacity-type": ""}, nil),
+			expected: "",
+		},
+		{
+			name:     "Empty_EKS_value_returns_empty",
+			node:     nodeWithLabelsAndAnnotations(map[string]string{"eks.amazonaws.com/capacityType": ""}, nil),
 			expected: "",
 		},
 		{

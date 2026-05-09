@@ -211,9 +211,12 @@ func printCostBreakdown(c *stdcli.Context, cost *structs.AppCost) error {
 // printCostVariantBreakdown renders the per-variant table: one row per
 // (service, instance-type, capacity-type) triple. Capacity values
 // surface verbatim ("on-demand", "spot", "unknown") so operators see
-// the actual signal rather than a normalized label.
+// the actual signal rather than a normalized label. REPLICAS reflects
+// the pod count on this variant in the most recent tick — an em-dash
+// when the count is 0 (legacy rack that doesn't emit the field, or
+// an in-flight tick that hasn't yet recorded placement).
 func printCostVariantBreakdown(c *stdcli.Context, cost *structs.AppCost) error {
-	t := c.Table("SERVICE", "INSTANCE", "CAPACITY", "SPEND-USD")
+	t := c.Table("SERVICE", "INSTANCE", "CAPACITY", "REPLICAS", "SPEND-USD")
 	sawEmDash := false
 	var total float64
 	for _, line := range cost.VariantBreakdown {
@@ -222,10 +225,15 @@ func printCostVariantBreakdown(c *stdcli.Context, cost *structs.AppCost) error {
 			sawEmDash = true
 		}
 		total += line.SpendUsd
+		replicas := "—"
+		if line.Replicas > 0 {
+			replicas = fmt.Sprintf("%d", line.Replicas)
+		}
 		t.AddRow(
 			line.Service,
 			line.InstanceType,
 			line.CapacityType,
+			replicas,
 			spend,
 		)
 	}

@@ -30,6 +30,31 @@ func (p *Provider) systemLog(tid, app, name string, ts time.Time, message string
 }
 
 func (p *Provider) ServiceLogs(app, name string, opts structs.LogsOptions) (io.ReadCloser, error) {
+	selector := fmt.Sprintf("app=%s,name=%s,type=service", app, name)
+	return p.streamPodLogs(app, selector, opts, "ServiceLogs",
+		fmt.Sprintf("app: %s service: %s", app, name))
+}
+
+// AppLogs streams logs from every pod backing the app's services. The
+// selector matches pods labeled `app=<app>,type=service`, omitting the
+// `name=<svc>` filter so all services are interleaved.
+//
+// Pre-3.24.6rc22 racks returned ErrNotImplemented here, so a user
+// running `convox logs -a my-app` saw no output and no error. Implementing
+// the selector-based fan-out fixes the empty-output regression — the
+// underlying kubectl/log infrastructure (newlogsConfigFlags + RunLogs)
+// is the same path ServiceLogs already uses, so the behaviour matches
+// `convox logs -a my-app -s <each>` interleaved.
+func (p *Provider) AppLogs(name string, opts structs.LogsOptions) (io.ReadCloser, error) {
+	selector := fmt.Sprintf("app=%s,type=service", name)
+	return p.streamPodLogs(name, selector, opts, "AppLogs", fmt.Sprintf("app: %s", name))
+}
+
+// streamPodLogs is the shared kubectl-logs entry point used by both
+// AppLogs and ServiceLogs. The caller passes a label selector and a
+// log-context label so error/completion lines distinguish the two
+// surfaces in rack logs.
+func (p *Provider) streamPodLogs(app, selector string, opts structs.LogsOptions, logCtx, ctxDetail string) (io.ReadCloser, error) {
 	r, w := io.Pipe()
 	logOpts := logs.NewLogsOptions(genericiooptions.IOStreams{
 		In:     r,
@@ -39,16 +64,16 @@ func (p *Provider) ServiceLogs(app, name string, opts structs.LogsOptions) (io.R
 
 	f := cmdutil.NewFactory(p.newlogsConfigFlags(p.AppNamespace(app)))
 
-	if err := p.configureLogOptionsForService(app, name, f, logOpts, opts); err != nil {
+	if err := p.configureLogOptionsBySelector(app, selector, f, logOpts, opts); err != nil {
 		return nil, err
 	}
 
 	go func() {
 		if err := logOpts.RunLogs(); err != nil {
 			w.CloseWithError(err)
-			p.logger.At("ServiceLogs").Errorf("app: %s service: %s err: %s", app, name, err)
+			p.logger.At(logCtx).Errorf("%s err: %s", ctxDetail, err)
 		} else {
-			p.logger.At("ServiceLogs").Logf("complete")
+			p.logger.At(logCtx).Logf("complete")
 			w.CloseWithError(nil)
 		}
 	}()
@@ -56,7 +81,7 @@ func (p *Provider) ServiceLogs(app, name string, opts structs.LogsOptions) (io.R
 	return r, nil
 }
 
-func (p *Provider) configureLogOptionsForService(app, name string, f cmdutil.Factory, o *logs.LogsOptions, logConfig structs.LogsOptions) error {
+func (p *Provider) configureLogOptionsBySelector(app, selector string, f cmdutil.Factory, o *logs.LogsOptions, logConfig structs.LogsOptions) error {
 	var err error
 	o.Follow = true
 	if logConfig.Follow != nil && !*logConfig.Follow {
@@ -90,14 +115,14 @@ func (p *Provider) configureLogOptionsForService(app, name string, f cmdutil.Fac
 	o.Namespace = p.AppNamespace(app)
 	o.ConsumeRequestFn = logs.DefaultConsumeRequest
 	o.GetPodTimeout = 20 * time.Second
-	o.Selector = fmt.Sprintf("app=%s,name=%s,type=service", app, name)
+	o.Selector = selector
 	o.Options, err = o.ToLogOptions()
 	if err != nil {
 		return err
 	}
 
 	logOptsData, _ := json.Marshal(o.Options)
-	p.logger.At("configureLogOptionsForService").Logf("log options %s", string(logOptsData))
+	p.logger.At("configureLogOptionsBySelector").Logf("selector=%q log options %s", selector, string(logOptsData))
 
 	o.RESTClientGetter = f
 	o.LogsForObject = polymorphichelpers.LogsForObjectFn

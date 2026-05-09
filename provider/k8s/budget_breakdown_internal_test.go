@@ -158,6 +158,93 @@ func TestBuildVariantBreakdown_SkipsMalformedKeys(t *testing.T) {
 	}
 }
 
+// TestBuildVariantBreakdown_PopulatesReplicas asserts that pod-count
+// data from PerServiceVariantPodsLastTick is joined onto the projected
+// rows. Heterogeneous services must show distinct counts per variant
+// so the UI can render "3 spot / 2 on-demand" rather than collapsing.
+func TestBuildVariantBreakdown_PopulatesReplicas(t *testing.T) {
+	state := &structs.AppBudgetState{
+		PerServiceSpendByVariant: map[string]map[string]float64{
+			"web": {
+				"t3.large:on-demand": 1.40,
+				"t3.large:spot":      0.94,
+			},
+		},
+		PerServiceVariantPodsLastTick: map[string]map[string]int{
+			"web": {
+				"t3.large:on-demand": 3,
+				"t3.large:spot":      2,
+			},
+		},
+	}
+	got := buildVariantBreakdown(state)
+	if len(got) != 2 {
+		t.Fatalf("expected 2 rows, got %d", len(got))
+	}
+	// Sort order: descending by spend → on-demand first.
+	if got[0].CapacityType != "on-demand" || got[0].Replicas != 3 {
+		t.Errorf("on-demand row: want capacity=on-demand replicas=3, got %+v", got[0])
+	}
+	if got[1].CapacityType != "spot" || got[1].Replicas != 2 {
+		t.Errorf("spot row: want capacity=spot replicas=2, got %+v", got[1])
+	}
+}
+
+// TestBuildVariantBreakdown_MissingPodCountsZero asserts that a state
+// with spend but no pod-count map (legacy / mid-rollout scenario) emits
+// rows with Replicas=0 — the field is forward-compat zero rather than
+// dropping the row entirely.
+func TestBuildVariantBreakdown_MissingPodCountsZero(t *testing.T) {
+	state := &structs.AppBudgetState{
+		PerServiceSpendByVariant: map[string]map[string]float64{
+			"web": {"t3.large:on-demand": 1.40},
+		},
+		// No PerServiceVariantPodsLastTick — simulating a pre-Replicas
+		// rack annotation that was deserialized cleanly.
+	}
+	got := buildVariantBreakdown(state)
+	if len(got) != 1 {
+		t.Fatalf("expected 1 row, got %d", len(got))
+	}
+	if got[0].Replicas != 0 {
+		t.Errorf("missing pod-count map: want Replicas=0, got %d", got[0].Replicas)
+	}
+}
+
+// TestBuildVariantBreakdown_PartialPodCountCoverage asserts that a row
+// for which we have spend but no matching pod-count entry still emits
+// with Replicas=0. The other row in the same service that DOES have
+// a count emits with the populated count. Defensive behaviour for a
+// transient state where one variant was just observed and another has
+// older spend data still on disk.
+func TestBuildVariantBreakdown_PartialPodCountCoverage(t *testing.T) {
+	state := &structs.AppBudgetState{
+		PerServiceSpendByVariant: map[string]map[string]float64{
+			"web": {
+				"t3.large:on-demand": 1.40,
+				"t3.large:spot":      0.94,
+			},
+		},
+		PerServiceVariantPodsLastTick: map[string]map[string]int{
+			"web": {
+				"t3.large:on-demand": 3,
+				// spot variant entry is missing
+			},
+		},
+	}
+	got := buildVariantBreakdown(state)
+	if len(got) != 2 {
+		t.Fatalf("expected 2 rows, got %d", len(got))
+	}
+	// Sort order: on-demand $1.40 wins over spot $0.94.
+	if got[0].CapacityType != "on-demand" || got[0].Replicas != 3 {
+		t.Errorf("on-demand row: want replicas=3, got %+v", got[0])
+	}
+	if got[1].CapacityType != "spot" || got[1].Replicas != 0 {
+		t.Errorf("spot row missing pod-count: want replicas=0, got %+v", got[1])
+	}
+}
+
 func TestDominantInstanceTypeFromVariants_HighestSpendWins(t *testing.T) {
 	// Single-instance heterogeneous capacity: same instance type wins.
 	got := dominantInstanceTypeFromVariants(map[string]float64{

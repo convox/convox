@@ -2822,6 +2822,13 @@ func TestBudgetAccumulator_HeterogeneousVariants(t *testing.T) {
 		// (3 OD pods vs 2 SP pods; spot factor 0.30 also discounts the rate).
 		assert.Greater(t, variants["t3.large:on-demand"], variants["t3.large:spot"],
 			"on-demand variant should outweigh spot here: 3 pods on-demand vs 2 pods spot")
+
+		// Replicas snapshot must reflect this tick's pod placement.
+		require.NotNil(t, state.PerServiceVariantPodsLastTick, "pod-count snapshot must populate alongside spend")
+		pods, ok := state.PerServiceVariantPodsLastTick["web"]
+		require.True(t, ok, "web service must have a pod-count map")
+		assert.Equal(t, 3, pods["t3.large:on-demand"], "on-demand pods this tick = 3")
+		assert.Equal(t, 2, pods["t3.large:spot"], "spot pods this tick = 2")
 	})
 }
 
@@ -2907,6 +2914,56 @@ func TestBudgetAccumulator_UnknownCapacity_LabelMissing(t *testing.T) {
 		require.Contains(t, variants, "t3.large:unknown",
 			"node without capacity-type signal must surface as ':unknown' variant; got: %v", variants)
 		assert.Greater(t, variants["t3.large:unknown"], 0.0, "spend must still accumulate under unknown variant")
+	})
+}
+
+// TestBudgetAccumulator_VariantPodsLastTick_OverwritesAcrossTicks
+// asserts that pod counts are a SNAPSHOT — each tick replaces the
+// previous tick's count for the same service rather than adding. Spend
+// accumulates (covered by the cumulative test below); pods do not. The
+// distinction matters because pod counts represent live placement, not
+// historical activity, so the UI must surface "what's running NOW".
+func TestBudgetAccumulator_VariantPodsLastTick_OverwritesAcrossTicks(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 1000, AlertThresholdPercent: 80, AtCapAction: "alert-only", PricingAdjustment: 1,
+		})
+		t1 := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{
+			MonthStart:            startOfApril(),
+			CurrentMonthSpendAsOf: t1.Add(-1 * time.Hour),
+		})
+
+		// Tick 1: 2 on-demand pods.
+		for i, n := range []string{"od-1", "od-2"} {
+			servicePodFixtureWithCapacity(t, kk, "rack1-app1", "p-od-"+string(rune('a'+i)), n, "t3.large", "on-demand",
+				map[string]string{"service": "web"})
+		}
+		require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", t1))
+
+		_, state1, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		require.Equal(t, 2, state1.PerServiceVariantPodsLastTick["web"]["t3.large:on-demand"],
+			"tick 1 must record 2 on-demand pods")
+
+		// Tick 2: scale up — 3 on-demand pods total. The count must
+		// overwrite (not stack to 5) because pods are a snapshot.
+		servicePodFixtureWithCapacity(t, kk, "rack1-app1", "p-od-c", "od-3", "t3.large", "on-demand",
+			map[string]string{"service": "web"})
+		t2 := t1.Add(1 * time.Hour)
+		require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", t2))
+
+		_, state2, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		assert.Equal(t, 3, state2.PerServiceVariantPodsLastTick["web"]["t3.large:on-demand"],
+			"tick 2 count must REPLACE tick 1's; got accumulator-style add (=5) instead of snapshot (=3)")
+
+		// Spend continues to accumulate across ticks (regression check).
+		odSpend := state2.PerServiceSpendByVariant["web"]["t3.large:on-demand"]
+		assert.Greater(t, odSpend, 0.0, "spend must still accumulate; got 0 = bug")
 	})
 }
 
