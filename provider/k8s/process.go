@@ -1023,10 +1023,27 @@ func (p *Provider) processFromPod(pd ac.Pod) (*structs.Process, error) {
 		status = "complete"
 	}
 
-	if cds := pd.Status.Conditions; len(cds) > 0 && status != "complete" && status != "failed" {
+	if cds := pd.Status.Conditions; len(cds) > 0 && status != "complete" && status != "failed" && status != "pending" {
 		for _, cd := range cds {
 			if cd.Type == "Ready" && cd.Status == "False" {
-				status = "unhealthy"
+				// The kubelet sets Ready=False on two unrelated paths:
+				// the normal-startup window (initial-delay before the
+				// first readiness probe runs, init containers pending,
+				// container still being created) AND a genuine probe
+				// failure or container crash. Routing both to
+				// "unhealthy" leaks a spurious red status into the
+				// CLI/Console for every pod during a normal promote.
+				// Inspect Reason to split the two: documented startup
+				// reasons → "starting"; everything else (including
+				// empty Reason on older kubelets) stays on the
+				// conservative "unhealthy" verdict so we never mask a
+				// real probe failure.
+				switch cd.Reason {
+				case "ContainersNotReady", "PodInitializing", "ContainerCreating":
+					status = "starting"
+				default:
+					status = "unhealthy"
+				}
 			}
 		}
 	}
