@@ -549,6 +549,7 @@ func (p *Provider) AppCost(app string) (*structs.AppCost, error) {
 		AsOf:                state.CurrentMonthSpendAsOf,
 		SpendUsd:            state.CurrentMonthSpendUsd,
 		Breakdown:           buildBreakdown(state),
+		VariantBreakdown:    buildVariantBreakdown(state),
 		PricingSource:       "on-demand-static-table",
 		PricingTableVersion: billing.PricingTableVersion(),
 		PricingAdjustment:   adjustment,
@@ -592,6 +593,57 @@ func buildBreakdown(state *structs.AppBudgetState) []structs.ServiceCostLine {
 			return out[i].SpendUsd > out[j].SpendUsd
 		}
 		return out[i].Service < out[j].Service
+	})
+
+	return out
+}
+
+// buildVariantBreakdown projects PerServiceSpendByVariant into the
+// AppCost.VariantBreakdown slice. Empty/nil state produces an empty
+// slice so the wire shape stays stable across rack versions; older
+// callers ignoring the field continue to work, newer callers see
+// the per-(service, instance-type, capacity-type) projection.
+//
+// Sort order: descending by SpendUsd, then alphabetic by service,
+// instance type, capacity type. Stable across rebuilds.
+//
+// The same memory-isolation contract applied to buildBreakdown
+// applies here — AppCost re-reads the namespace annotation per call,
+// so the iteration here cannot race the accumulator goroutine.
+func buildVariantBreakdown(state *structs.AppBudgetState) []structs.ServiceVariantCostLine {
+	if state == nil || len(state.PerServiceSpendByVariant) == 0 {
+		return []structs.ServiceVariantCostLine{}
+	}
+
+	out := make([]structs.ServiceVariantCostLine, 0)
+	for svc, variants := range state.PerServiceSpendByVariant {
+		for variantKey, spend := range variants {
+			idx := strings.LastIndex(variantKey, ":")
+			if idx <= 0 {
+				// Malformed key — skip rather than emit a row with
+				// empty fields. Defensive only.
+				continue
+			}
+			out = append(out, structs.ServiceVariantCostLine{
+				Service:      svc,
+				InstanceType: variantKey[:idx],
+				CapacityType: variantKey[idx+1:],
+				SpendUsd:     spend,
+			})
+		}
+	}
+
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].SpendUsd != out[j].SpendUsd {
+			return out[i].SpendUsd > out[j].SpendUsd
+		}
+		if out[i].Service != out[j].Service {
+			return out[i].Service < out[j].Service
+		}
+		if out[i].InstanceType != out[j].InstanceType {
+			return out[i].InstanceType < out[j].InstanceType
+		}
+		return out[i].CapacityType < out[j].CapacityType
 	})
 
 	return out
@@ -850,7 +902,7 @@ func (p *Provider) accumulateBudgetApp(ctx context.Context, app string, now time
 		if cfg != nil && cfg.PricingAdjustment > 0 {
 			adjustment = cfg.PricingAdjustment
 		}
-		delta, perSvc, perSvcInst, warnings, err := p.computeBudgetDelta(ctx, app, state.CurrentMonthSpendAsOf, now, adjustment)
+		delta, perSvc, perSvcInst, perSvcVariant, warnings, err := p.computeBudgetDelta(ctx, app, state.CurrentMonthSpendAsOf, now, adjustment)
 		if err != nil {
 			return err
 		}
@@ -867,6 +919,9 @@ func (p *Provider) accumulateBudgetApp(ctx context.Context, app string, now time
 		if state.PerServiceInstanceType == nil {
 			state.PerServiceInstanceType = map[string]string{}
 		}
+		if state.PerServiceSpendByVariant == nil {
+			state.PerServiceSpendByVariant = map[string]map[string]float64{}
+		}
 		truncated := 0
 		for svc, dollars := range perSvc {
 			if _, exists := state.PerServiceSpendUsd[svc]; !exists && len(state.PerServiceSpendUsd) >= perServiceMaxEntries {
@@ -874,17 +929,33 @@ func (p *Provider) accumulateBudgetApp(ctx context.Context, app string, now time
 				continue
 			}
 			state.PerServiceSpendUsd[svc] += dollars
-			// Refresh recorded instance type every tick from the most recent
-			// pod sample. The earlier "first-observation-wins" cache left
-			// stale types pinned forever — when Karpenter or the scheduler
-			// moved a workload to a different node family, `convox cost`
-			// kept reporting the original family. Last-observation-wins
-			// follows real placement for homogeneous replicas; for
-			// services intentionally split across multiple instance types
-			// the breakdown reflects whichever pod was sampled last on
-			// this tick (acknowledged limitation; richer aggregation
-			// requires a schema change).
-			if it := perSvcInst[svc]; it != "" {
+			// Accumulate variant deltas into the persisted variant map.
+			// Each tick adds to existing entries; new variants register
+			// under their (instanceType:capacityType) key and accumulate
+			// from there. Sums across variants for one service equal the
+			// service's PerServiceSpendUsd entry — both projections stay
+			// consistent.
+			if tickVariants, ok := perSvcVariant[svc]; ok {
+				if state.PerServiceSpendByVariant[svc] == nil {
+					state.PerServiceSpendByVariant[svc] = map[string]float64{}
+				}
+				for k, v := range tickVariants {
+					state.PerServiceSpendByVariant[svc][k] += v
+				}
+			}
+			// PerServiceInstanceType records the dominant variant by
+			// cumulative SPEND, not pod count. For homogeneous services
+			// the dominant variant is the only one. For heterogeneous
+			// services (replicas split across instance families or mixed
+			// spot+on-demand), the dominant-by-spend choice surfaces the
+			// real cost driver — a single g4dn.xlarge on-demand pod
+			// outweighs many cheap t3 spot replicas, and that's what the
+			// breakdown row should advertise. Fall back to the
+			// last-sampled instance type when no variant data exists
+			// (e.g. tick where no pods sampled).
+			if it := dominantInstanceTypeFromVariants(state.PerServiceSpendByVariant[svc]); it != "" {
+				state.PerServiceInstanceType[svc] = it
+			} else if it := perSvcInst[svc]; it != "" {
 				state.PerServiceInstanceType[svc] = it
 			}
 		}
@@ -1020,8 +1091,13 @@ var perServiceMaxEntries = 1000
 //     with reserved buckets _build and _unattributed)
 //   - perSvcInst: per-service instance type observed this tick
 //     (first pod sampled within a tick wins for that tick; the merge
-//     site overwrites the persisted type each tick so workload
-//     migrations between node families are reflected)
+//     site uses the dominant variant by spend so heterogeneous
+//     placements report the actual cost driver)
+//   - perSvcVariant: per-service per-variant tick spend keyed by
+//     "<instanceType>:<capacityType>" (capacityType ∈ on-demand / spot
+//     / unknown). Heterogeneous services produce multiple inner
+//     entries; the merge site sums these into state.PerServiceSpendByVariant
+//     so the variant breakdown surfaces in `convox cost` and the Console UI.
 //   - warnings:  count of pods skipped because of unknown instance type
 //     or missing pricing entry
 //
@@ -1029,14 +1105,14 @@ var perServiceMaxEntries = 1000
 // ListNodesFromInformer / ListPodsFromInformer reads are cache-only and do
 // not take a ctx parameter. Plumbing it now keeps signatures stable when a
 // future patch adds a direct-API fallback for cold-cache scenarios.
-func (p *Provider) computeBudgetDelta(ctx context.Context, app string, lastTick, now time.Time, adjustment float64) (float64, map[string]float64, map[string]string, int, error) {
+func (p *Provider) computeBudgetDelta(ctx context.Context, app string, lastTick, now time.Time, adjustment float64) (float64, map[string]float64, map[string]string, map[string]map[string]float64, int, error) {
 	_ = ctx // see godoc above; reserved for non-informer fallback.
 	if lastTick.IsZero() {
 		lastTick = now
 	}
 	elapsed := now.Sub(lastTick).Hours()
 	if elapsed <= 0 {
-		return 0, nil, nil, 0, nil
+		return 0, nil, nil, nil, 0, nil
 	}
 	if adjustment <= 0 {
 		adjustment = 1.0
@@ -1044,7 +1120,7 @@ func (p *Provider) computeBudgetDelta(ctx context.Context, app string, lastTick,
 
 	nodes, err := p.ListNodesFromInformer("")
 	if err != nil {
-		return 0, nil, nil, 0, errors.WithStack(err)
+		return 0, nil, nil, nil, 0, errors.WithStack(err)
 	}
 	nodeByName := map[string]*v1.Node{}
 	for i := range nodes.Items {
@@ -1053,12 +1129,13 @@ func (p *Provider) computeBudgetDelta(ctx context.Context, app string, lastTick,
 
 	pods, err := p.ListPodsFromInformer(p.AppNamespace(app), "")
 	if err != nil {
-		return 0, nil, nil, 0, errors.WithStack(err)
+		return 0, nil, nil, nil, 0, errors.WithStack(err)
 	}
 
 	var delta float64
 	perSvc := map[string]float64{}
 	perSvcInst := map[string]string{}
+	perSvcVariant := map[string]map[string]float64{}
 	warnings := 0
 
 	for i := range pods.Items {
@@ -1107,9 +1184,24 @@ func (p *Provider) computeBudgetDelta(ctx context.Context, app string, lastTick,
 		if _, ok := perSvcInst[svc]; !ok {
 			perSvcInst[svc] = instanceType
 		}
+
+		// Variant key joins instance type + capacity. Capacity defaults
+		// to "unknown" when the dual-signal helper returned empty (no
+		// karpenter.sh/capacity-type, no eks.amazonaws.com/capacityType).
+		// User-facing surfaces render "unknown" verbatim so operators
+		// know detection failed, rather than misclassifying as on-demand.
+		variantCap := capacityType
+		if variantCap == "" {
+			variantCap = structs.CapacityTypeUnknown
+		}
+		variantKey := instanceType + ":" + variantCap
+		if perSvcVariant[svc] == nil {
+			perSvcVariant[svc] = map[string]float64{}
+		}
+		perSvcVariant[svc][variantKey] += podTickSpend
 	}
 
-	return delta, perSvc, perSvcInst, warnings, nil
+	return delta, perSvc, perSvcInst, perSvcVariant, warnings, nil
 }
 
 func nodeInstanceType(n *v1.Node) string {
@@ -1154,6 +1246,44 @@ func nodeCapacityType(n *v1.Node) string {
 		}
 	}
 	return ""
+}
+
+// dominantInstanceTypeFromVariants picks the instance type with the
+// highest cumulative spend across the per-service variant map. Variant
+// keys are "<instanceType>:<capacityType>"; this helper splits on the
+// final colon, sums spend per instance type across capacity types, and
+// returns the instance type whose total dominates. Tie-breaks fall to
+// alphabetic order so output is deterministic across rebuilds. Returns
+// empty when the input is nil/empty so the caller can preserve any
+// previously-recorded instance type without overwriting with "".
+func dominantInstanceTypeFromVariants(variants map[string]float64) string {
+	if len(variants) == 0 {
+		return ""
+	}
+	totalsByInstanceType := map[string]float64{}
+	for variantKey, spend := range variants {
+		idx := strings.LastIndex(variantKey, ":")
+		if idx <= 0 {
+			// Malformed key (no separator) — skip rather than indexing
+			// past bounds. Defensive only; production keys are always
+			// well-formed.
+			continue
+		}
+		it := variantKey[:idx]
+		totalsByInstanceType[it] += spend
+	}
+	if len(totalsByInstanceType) == 0 {
+		return ""
+	}
+	var best string
+	var bestSpend float64
+	for it, spend := range totalsByInstanceType {
+		if spend > bestSpend || (spend == bestSpend && it < best) {
+			best = it
+			bestSpend = spend
+		}
+	}
+	return best
 }
 
 // dominantResourceFraction returns the pod's share of the node, as the max

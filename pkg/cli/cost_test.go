@@ -45,6 +45,19 @@ func fxAppCost() *structs.AppCost {
 	}
 }
 
+// fxAppCostWithVariants returns an AppCost where one service is split
+// across capacity types (web on m5.large on-demand AND m5.large spot).
+// Used by per-variant rendering tests.
+func fxAppCostWithVariants() *structs.AppCost {
+	c := fxAppCost()
+	c.VariantBreakdown = []structs.ServiceVariantCostLine{
+		{Service: "trainer", InstanceType: "p3.2xlarge", CapacityType: "on-demand", SpendUsd: 10.00},
+		{Service: "web", InstanceType: "m5.large", CapacityType: "on-demand", SpendUsd: 1.40},
+		{Service: "web", InstanceType: "m5.large", CapacityType: "spot", SpendUsd: 0.94},
+	}
+	return c
+}
+
 // fxAppCostEmpty returns an AppCost with cost-tracking enabled but zero
 // services in the breakdown (no spend yet).
 func fxAppCostEmpty() *structs.AppCost {
@@ -457,5 +470,130 @@ func TestPrintCostBreakdown_NoFootnoteWhenNoEmDash(t *testing.T) {
 			"footnote must NOT appear when no row used em-dash")
 		require.Contains(t, res.Stdout, "$0.05")
 		require.Contains(t, res.Stdout, "$2.50")
+	})
+}
+
+// --- Per-variant rendering ---------------------------------------------------
+//
+// VariantBreakdown is the (service, instance-type, capacity-type) projection
+// of the same accumulated dollars surfaced by Breakdown. When the rack
+// emits VariantBreakdown rows, the CLI renders one row per variant and
+// adds a CAPACITY column. Older racks (3.24.5 and earlier) emit empty
+// VariantBreakdown — the CLI falls back to the legacy aggregated table.
+
+// V1: TestCost_WithVariants_RendersCapacityColumn — happy path: a rack
+// emitting VariantBreakdown produces a CAPACITY column with on-demand /
+// spot values.
+func TestCost_WithVariants_RendersCapacityColumn(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppCost", "app1").Return(fxAppCostWithVariants(), nil)
+
+		res, err := testExecute(e, "cost -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+
+		require.Contains(t, res.Stdout, "CAPACITY",
+			"variant-aware output must surface a CAPACITY column header")
+		require.Contains(t, res.Stdout, "on-demand", "on-demand variant must render")
+		require.Contains(t, res.Stdout, "spot", "spot variant must render")
+
+		// One row per variant — web appears twice (on-demand $1.40 + spot $0.94).
+		require.Contains(t, res.Stdout, "$1.40")
+		require.Contains(t, res.Stdout, "$0.94")
+		// Trainer is single-variant and still appears.
+		require.Contains(t, res.Stdout, "$10.00")
+	})
+}
+
+// V2: TestCost_WithoutVariants_RendersLegacyTable — pre-3.24.6 rack
+// emits VariantBreakdown empty/nil. CLI falls back to the existing
+// aggregated columns; no CAPACITY column appears.
+func TestCost_WithoutVariants_RendersLegacyTable(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		// fxAppCost has no VariantBreakdown set.
+		i.On("AppCost", "app1").Return(fxAppCost(), nil)
+
+		res, err := testExecute(e, "cost -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+
+		require.NotContains(t, res.Stdout, "CAPACITY",
+			"legacy table must NOT include a CAPACITY column when rack emits no variant data")
+		require.Contains(t, res.Stdout, "GPU-HOURS", "legacy table keeps original columns")
+	})
+}
+
+// V3: TestCost_WithVariants_SpotLegendPresent — variant-mode output
+// includes a one-line spot legend so users understand the discount.
+func TestCost_WithVariants_SpotLegendPresent(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppCost", "app1").Return(fxAppCostWithVariants(), nil)
+
+		res, err := testExecute(e, "cost -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+		require.Contains(t, res.Stdout, "spot",
+			"spot rows render with the literal capacity value")
+		// The legend mentions the discount mechanism so first-time users
+		// understand what they're seeing. Locked phrasing helps tooling
+		// that scrapes for the marker.
+		require.Contains(t, res.Stdout, "Spot pricing",
+			"variant-mode output must include the spot-discount legend")
+	})
+}
+
+// V4: TestCost_AggregateMode_IgnoresVariants — --aggregate continues to
+// produce the single-row APP / SPEND-USD / AS-OF / PRICING-SOURCE
+// summary regardless of variant data. Variant breakdown is per-row
+// detail, not aggregate context.
+func TestCost_AggregateMode_IgnoresVariants(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppCost", "app1").Return(fxAppCostWithVariants(), nil)
+
+		res, err := testExecute(e, "cost -a app1 --aggregate", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+		require.Contains(t, res.Stdout, "APP")
+		require.NotContains(t, res.Stdout, "CAPACITY",
+			"aggregate row is single-line summary; CAPACITY belongs to per-row detail")
+	})
+}
+
+// V5: TestCost_FormatJson_IncludesVariantBreakdown — JSON output emits
+// the variant_breakdown field verbatim so downstream tooling (jq,
+// scripts) can consume it without parsing tables.
+func TestCost_FormatJson_IncludesVariantBreakdown(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		fx := fxAppCostWithVariants()
+		i.On("AppCost", "app1").Return(fx, nil)
+
+		res, err := testExecute(e, "cost -a app1 --format json", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+
+		require.Contains(t, res.Stdout, `"variant-breakdown"`,
+			"JSON output must surface the variant-breakdown field for jq consumers")
+		require.Contains(t, res.Stdout, `"capacity-type": "spot"`,
+			"capacity-type field must serialize per-row")
+	})
+}
+
+// V6: TestCost_VariantTable_UnknownCapacityRendered — variant rows where
+// detection failed render the CAPACITY column as "unknown" verbatim
+// (not "—" or blank). Operators must see the actual signal value so
+// they know whether a node is genuinely unlabeled vs. simply elided.
+func TestCost_VariantTable_UnknownCapacityRendered(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		fx := fxAppCost()
+		fx.VariantBreakdown = []structs.ServiceVariantCostLine{
+			{Service: "worker", InstanceType: "t3.large", CapacityType: "unknown", SpendUsd: 0.42},
+		}
+		i.On("AppCost", "app1").Return(fx, nil)
+
+		res, err := testExecute(e, "cost -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+		require.Contains(t, res.Stdout, "unknown",
+			"unknown-capacity rows render the literal value so operators see detection failed")
 	})
 }

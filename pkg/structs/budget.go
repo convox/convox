@@ -127,19 +127,57 @@ type AppBudgetState struct {
 	// opportunistically — first observation wins and persists until the
 	// month boundary GC resets the map.
 	PerServiceInstanceType map[string]string `json:"per-service-instance-type,omitempty"`
+
+	// PerServiceSpendByVariant breaks each service's spend down by
+	// (instance-type, capacity-type) variant. Inner key format is
+	// "<instanceType>:<capacityType>" (e.g. "t3.large:spot",
+	// "g4dn.xlarge:on-demand", "t3.large:unknown" when neither
+	// karpenter.sh/capacity-type nor eks.amazonaws.com/capacityType is
+	// set on the node). Heterogeneous services — replicas split across
+	// instance families OR mixed spot+on-demand — produce multiple
+	// inner entries; PerServiceSpendUsd is the sum across them.
+	// Pre-3.24.6 annotations parse with this nil; the accumulator
+	// initializes lazily on first tick. Forward-compatible: the field
+	// is omitempty so older clients deserializing into the same struct
+	// definition see no surprise; serialization stays stable when the
+	// inner map is empty.
+	//
+	// Memory bound: realistic deployments stay under ~10 variants per
+	// service (one or two instance families × on-demand/spot). The outer
+	// service-key map inherits the perServiceMaxEntries=1000 cap from
+	// the accumulator merge site (provider/k8s/budget_accumulator.go),
+	// which keeps the total entry count bounded at O(1000 × N_variants).
+	// The inner variant map has no separate cap by design — the variant
+	// key set is determined by Karpenter/EC2 instance-family + capacity
+	// labels, both of which are bounded by AWS itself, so the inner
+	// width cannot grow unboundedly without operator action. If a future
+	// rack genuinely needs hundreds of variants per service, revisit the
+	// inner-cap policy here.
+	PerServiceSpendByVariant map[string]map[string]float64 `json:"per-service-spend-by-variant,omitempty"`
 }
 
 // AppCost is the response shape for GET /apps/{app}/cost.
+//
+// Backward-compat note on Breakdown vs VariantBreakdown:
+// Breakdown is the per-service aggregated rollup retained for SDK and
+// CLI callers that pre-date 3.24.6 cost-tracking polish. VariantBreakdown
+// is purely additive and exposes the (service, instance-type,
+// capacity-type) triple. Heterogeneous services — replicas split across
+// instance families or mixed spot+on-demand — produce one VariantBreakdown
+// row per variant whose SpendUsd values sum to the matching Breakdown
+// row's SpendUsd. Older racks return VariantBreakdown empty/nil and
+// callers fall back to Breakdown rendering.
 type AppCost struct {
-	App                 string            `json:"app"`
-	MonthStart          time.Time         `json:"month-start"`
-	AsOf                time.Time         `json:"as-of"`
-	SpendUsd            float64           `json:"spend-usd"`
-	Breakdown           []ServiceCostLine `json:"breakdown"`
-	PricingSource       string            `json:"pricing-source"`
-	PricingTableVersion string            `json:"pricing-table-version"`
-	PricingAdjustment   float64           `json:"pricing-adjustment"`
-	WarningCount        int               `json:"warning-count,omitempty"`
+	App                 string                   `json:"app"`
+	MonthStart          time.Time                `json:"month-start"`
+	AsOf                time.Time                `json:"as-of"`
+	SpendUsd            float64                  `json:"spend-usd"`
+	Breakdown           []ServiceCostLine        `json:"breakdown"`
+	VariantBreakdown    []ServiceVariantCostLine `json:"variant-breakdown,omitempty"`
+	PricingSource       string                   `json:"pricing-source"`
+	PricingTableVersion string                   `json:"pricing-table-version"`
+	PricingAdjustment   float64                  `json:"pricing-adjustment"`
+	WarningCount        int                      `json:"warning-count,omitempty"`
 }
 
 // ServiceCostLine is one row in an AppCost.Breakdown — the resource consumption
@@ -156,6 +194,29 @@ type ServiceCostLine struct {
 	SpendUsd     float64 `json:"spend-usd"`
 	Attribution  string  `json:"attribution,omitempty"`
 }
+
+// ServiceVariantCostLine is one row in an AppCost.VariantBreakdown — a
+// (service, instance-type, capacity-type) triple's spend over the
+// billing window. CapacityType is one of "on-demand", "spot", or
+// "unknown" (the latter when neither karpenter.sh/capacity-type nor
+// eks.amazonaws.com/capacityType is set on the node, e.g. self-managed
+// nodes or non-AWS clouds where the labels don't apply). Spend math is
+// identical to Breakdown — variants are a finer-grained projection of
+// the same accumulated dollars.
+type ServiceVariantCostLine struct {
+	Service      string  `json:"service"`
+	InstanceType string  `json:"instance-type"`
+	CapacityType string  `json:"capacity-type"`
+	SpendUsd     float64 `json:"spend-usd"`
+}
+
+// CapacityTypeUnknown is the variant suffix used when a node has
+// neither the karpenter.sh/capacity-type label nor the
+// eks.amazonaws.com/capacityType annotation. Surfaces as such in the
+// CLI/UI so the user knows the node origin couldn't be determined; the
+// pricing path still falls through to on-demand (conservative) under
+// the unknown signal.
+const CapacityTypeUnknown = "unknown"
 
 // AppBudgetOptions carries partial updates for AppBudgetSet.
 //
