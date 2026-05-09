@@ -110,20 +110,71 @@ func TestCost_AggregateFlag_RendersOneRow(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
 
-		// Aggregate header is locked.
+		// Aggregate header is locked. Column name PRICING-SOURCE is
+		// retained so existing scripts that grep this column header
+		// keep working; the cell value is the user-facing pricing-
+		// table label rather than the raw rack token.
 		require.Contains(t, res.Stdout, "APP")
 		require.Contains(t, res.Stdout, "SPEND-USD")
 		require.Contains(t, res.Stdout, "AS-OF")
 		require.Contains(t, res.Stdout, "PRICING-SOURCE")
 
-		// Aggregate row content.
+		// Aggregate row content. The pricing-table vintage is
+		// surfaced verbatim; the on-demand-static-table token is
+		// dropped from the user-facing string.
 		require.Contains(t, res.Stdout, "app1")
 		require.Contains(t, res.Stdout, "$12.34")
-		require.Contains(t, res.Stdout, "embedded")
+		require.Contains(t, res.Stdout, "pricing-table:2026-01",
+			"aggregate row must surface the vintage label, not the raw rack token")
+		require.NotContains(t, res.Stdout, "on-demand-static-table",
+			"raw rack-side token must NOT appear in user-facing aggregate output")
 
 		// Aggregate mode must NOT include per-service column headers.
 		require.NotContains(t, res.Stdout, "GPU-HOURS")
 		require.NotContains(t, res.Stdout, "MEM-GB-HOURS")
+	})
+}
+
+// TestFormatPricingTableLabel locks the helper that translates the
+// rack-side AppCost.PricingSource token into a user-facing label.
+// Mirrors the web-side helper at web/src/utils/pricingLabel.js — keep
+// both implementations in sync.
+func TestFormatPricingTableLabel(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		// Vintage present: surface only the vintage; raw token is
+		// dropped from the user-facing label.
+		fx := fxAppCost()
+		fx.PricingSource = "on-demand-static-table"
+		fx.PricingTableVersion = "2026-04-29"
+		i.On("AppCost", "app1").Return(fx, nil)
+
+		res, err := testExecute(e, "cost -a app1 --aggregate", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+		require.Contains(t, res.Stdout, "pricing-table:2026-04-29")
+		require.NotContains(t, res.Stdout, "on-demand-static-table",
+			"raw rack token must never appear in user-facing output")
+	})
+}
+
+// TestFormatPricingTableLabel_NoVintageSurfacesUnknown asserts the
+// helper falls back to the literal "pricing-table:unknown" string when
+// neither a vintage NOR a non-canonical source is present. Pre-3.24.6
+// racks emit no vintage; we still want a stable label so users see
+// something rather than a blank cell.
+func TestFormatPricingTableLabel_NoVintageSurfacesUnknown(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		fx := fxAppCost()
+		fx.PricingSource = "on-demand-static-table"
+		fx.PricingTableVersion = ""
+		i.On("AppCost", "app1").Return(fx, nil)
+
+		res, err := testExecute(e, "cost -a app1 --aggregate", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+		require.Contains(t, res.Stdout, "pricing-table:unknown")
+		require.NotContains(t, res.Stdout, "on-demand-static-table",
+			"raw rack token must never appear in user-facing output")
 	})
 }
 
@@ -600,9 +651,13 @@ func TestCost_VariantTable_UnknownCapacityRendered(t *testing.T) {
 }
 
 // TestCost_VariantTable_RendersReplicasColumn asserts that the
-// REPLICAS column is present and populated when the rack emits
+// ACTIVE-REPLICAS column is present and populated when the rack emits
 // pod counts on each variant. Heterogeneous services display
 // "3" / "2" pods so users can audit where their replicas landed.
+// The "ACTIVE" prefix communicates that 0 means "no pods running on
+// this variant right now" — a row may persist with 0 if pods migrated
+// off that (instance-type, capacity-type) combination during the
+// current accumulation window.
 func TestCost_VariantTable_RendersReplicasColumn(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("AppCost", "app1").Return(fxAppCostWithVariants(), nil)
@@ -611,11 +666,29 @@ func TestCost_VariantTable_RendersReplicasColumn(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
 
-		require.Contains(t, res.Stdout, "REPLICAS",
-			"variant-aware output must surface a REPLICAS column header")
+		require.Contains(t, res.Stdout, "ACTIVE-REPLICAS",
+			"variant-aware output must surface an ACTIVE-REPLICAS column header")
 		// Pod counts from fxAppCostWithVariants: trainer=1, web-od=3, web-sp=2.
 		require.Contains(t, res.Stdout, "3", "web on-demand has 3 replicas in fixture")
 		require.Contains(t, res.Stdout, "2", "web spot has 2 replicas in fixture")
+	})
+}
+
+// TestCost_VariantTable_AccumulationNotePresent asserts that the
+// per-(instance-type, capacity-type) accumulation note prints below
+// the variant table so users understand why a row may show 0 active
+// replicas. Locked phrasing helps tooling that scrapes for the marker.
+func TestCost_VariantTable_AccumulationNotePresent(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppCost", "app1").Return(fxAppCostWithVariants(), nil)
+
+		res, err := testExecute(e, "cost -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+		require.Contains(t, res.Stdout, "Cost accumulates per (instance-type, capacity-type)",
+			"variant-mode output must include the per-variant accumulation note")
+		require.Contains(t, res.Stdout, "0 active replicas",
+			"accumulation note must explain the 0-active-replicas case")
 	})
 }
 

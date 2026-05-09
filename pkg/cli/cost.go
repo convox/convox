@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/convox/convox/pkg/common"
@@ -173,6 +174,14 @@ func formatRateUsdPerHour(rate float64) (string, bool) {
 // describe the mechanism once.
 const spotLegend = `Spot pricing applies a discount automatically when nodes are provisioned via Karpenter or an EKS spot ASG. Capacity "unknown" means the node carried neither label.`
 
+// accumulationNote explains the per-(instance-type, capacity-type)
+// accumulation semantics so users do not misread an ACTIVE-REPLICAS
+// of 0 as "this row is wrong." A row may show 0 active replicas if
+// pods previously ran on that variant in the current month but have
+// since migrated or been removed; the accumulated spend remains
+// attached to the original (instance-type, capacity-type) combination.
+const accumulationNote = `Cost accumulates per (instance-type, capacity-type) combination across the month. A row may show 0 active replicas if pods previously ran on that variant but have since migrated or been removed.`
+
 // printCostBreakdown renders the per-service spend table. When the
 // rack emits VariantBreakdown rows (3.24.6+), each row is one
 // (service, instance-type, capacity-type) triple with a CAPACITY
@@ -211,12 +220,14 @@ func printCostBreakdown(c *stdcli.Context, cost *structs.AppCost) error {
 // printCostVariantBreakdown renders the per-variant table: one row per
 // (service, instance-type, capacity-type) triple. Capacity values
 // surface verbatim ("on-demand", "spot", "unknown") so operators see
-// the actual signal rather than a normalized label. REPLICAS reflects
-// the pod count on this variant in the most recent tick — an em-dash
-// when the count is 0 (legacy rack that doesn't emit the field, or
-// an in-flight tick that hasn't yet recorded placement).
+// the actual signal rather than a normalized label. ACTIVE-REPLICAS
+// reflects the pod count on this variant in the most recent tick —
+// an em-dash when the count is 0 (legacy rack that doesn't emit the
+// field, an in-flight tick that hasn't yet recorded placement, or a
+// row whose accumulated spend belongs to a variant pods have since
+// migrated off of).
 func printCostVariantBreakdown(c *stdcli.Context, cost *structs.AppCost) error {
-	t := c.Table("SERVICE", "INSTANCE", "CAPACITY", "REPLICAS", "SPEND-USD")
+	t := c.Table("SERVICE", "INSTANCE", "CAPACITY", "ACTIVE-REPLICAS", "SPEND-USD")
 	sawEmDash := false
 	var total float64
 	for _, line := range cost.VariantBreakdown {
@@ -241,6 +252,7 @@ func printCostVariantBreakdown(c *stdcli.Context, cost *structs.AppCost) error {
 		return err
 	}
 	fmt.Fprintf(c.Writer(), "TOTAL: $%.2f\n", total)
+	fmt.Fprintln(c.Writer(), accumulationNote)
 	fmt.Fprintln(c.Writer(), spotLegend)
 	if sawEmDash {
 		fmt.Fprintln(c.Writer(), lowSpendFootnote)
@@ -254,9 +266,36 @@ func printCostAggregate(c *stdcli.Context, appName string, cost *structs.AppCost
 		appName,
 		fmt.Sprintf("$%.2f", cost.SpendUsd),
 		common.Ago(cost.AsOf),
-		cost.PricingSource,
+		formatPricingTableLabel(cost.PricingSource, cost.PricingTableVersion),
 	)
 	return t.Print()
+}
+
+// formatPricingTableLabel translates the rack-side AppCost.PricingSource
+// token into a user-facing string. The wire token (e.g.
+// "on-demand-static-table") describes the SOURCE of the rates table —
+// AWS published on-demand list prices — but the rack then applies
+// spot-pricing factors and the per-app pricing_adjustment on top
+// before producing AppCost.SpendUsd. A spot user reading "Pricing
+// source: on-demand-static-table" assumes they are being billed at
+// on-demand rates and opens a support ticket. The user-facing label
+// surfaces only the pricing-table vintage so the user knows how
+// recent the reference rates are.
+//
+// The wire value AppCost.PricingSource continues to flow over JSON /
+// SDK responses unchanged so downstream tooling that depends on the
+// canonical token keeps working. Mirrors web/src/utils/pricingLabel.js
+// — keep both implementations in sync.
+func formatPricingTableLabel(pricingSource, pricingTableVersion string) string {
+	vintage := strings.TrimSpace(pricingTableVersion)
+	if vintage != "" {
+		return fmt.Sprintf("pricing-table:%s", vintage)
+	}
+	source := strings.TrimSpace(pricingSource)
+	if source != "" && source != "on-demand-static-table" {
+		return fmt.Sprintf("pricing-table:%s", source)
+	}
+	return "pricing-table:unknown"
 }
 
 func printCostJSON(c *stdcli.Context, cost *structs.AppCost) error {
