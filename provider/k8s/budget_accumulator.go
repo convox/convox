@@ -874,10 +874,18 @@ func (p *Provider) accumulateBudgetApp(ctx context.Context, app string, now time
 				continue
 			}
 			state.PerServiceSpendUsd[svc] += dollars
-			if _, hadIT := state.PerServiceInstanceType[svc]; !hadIT {
-				if it := perSvcInst[svc]; it != "" {
-					state.PerServiceInstanceType[svc] = it
-				}
+			// Refresh recorded instance type every tick from the most recent
+			// pod sample. The earlier "first-observation-wins" cache left
+			// stale types pinned forever — when Karpenter or the scheduler
+			// moved a workload to a different node family, `convox cost`
+			// kept reporting the original family. Last-observation-wins
+			// follows real placement for homogeneous replicas; for
+			// services intentionally split across multiple instance types
+			// the breakdown reflects whichever pod was sampled last on
+			// this tick (acknowledged limitation; richer aggregation
+			// requires a schema change).
+			if it := perSvcInst[svc]; it != "" {
+				state.PerServiceInstanceType[svc] = it
 			}
 		}
 		if truncated > 0 {
@@ -1011,7 +1019,9 @@ var perServiceMaxEntries = 1000
 //   - perSvc:    per-service tick spend (keys = pod.Labels["service"]
 //     with reserved buckets _build and _unattributed)
 //   - perSvcInst: per-service instance type observed this tick
-//     (first observation wins at the merge site)
+//     (first pod sampled within a tick wins for that tick; the merge
+//     site overwrites the persisted type each tick so workload
+//     migrations between node families are reflected)
 //   - warnings:  count of pods skipped because of unknown instance type
 //     or missing pricing entry
 //
