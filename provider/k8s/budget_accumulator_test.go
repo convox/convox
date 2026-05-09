@@ -2722,6 +2722,248 @@ func TestBudgetAccumulator_InstanceTypeRefreshesEachTick(t *testing.T) {
 	})
 }
 
+// servicePodFixtureWithCapacity is the variant-aware sibling of
+// servicePodFixture: it lets the caller stamp a capacity-type signal on
+// the node so per-variant accumulation tests can drive the
+// karpenter.sh/capacity-type / eks.amazonaws.com/capacityType paths.
+// Empty capacityType creates a node with NO capacity-type label or
+// annotation — the variant key falls through to "unknown".
+func servicePodFixtureWithCapacity(t *testing.T, kk *fake.Clientset, ns, podName, nodeName, instanceType, capacityType string, labels map[string]string) {
+	t.Helper()
+
+	if _, err := kk.CoreV1().Nodes().Get(context.TODO(), nodeName, am.GetOptions{}); err != nil {
+		nodeLabels := map[string]string{"node.kubernetes.io/instance-type": instanceType}
+		if capacityType != "" {
+			nodeLabels["karpenter.sh/capacity-type"] = capacityType
+		}
+		_, err := kk.CoreV1().Nodes().Create(context.TODO(), &ac.Node{
+			ObjectMeta: am.ObjectMeta{
+				Name:   nodeName,
+				Labels: nodeLabels,
+			},
+			Status: ac.NodeStatus{
+				Allocatable: ac.ResourceList{
+					ac.ResourceCPU:    *resource.NewMilliQuantity(2000, resource.DecimalSI),
+					ac.ResourceMemory: *resource.NewQuantity(8<<30, resource.BinarySI),
+				},
+			},
+		}, am.CreateOptions{})
+		require.NoError(t, err)
+	}
+
+	_, err := kk.CoreV1().Pods(ns).Create(context.TODO(), &ac.Pod{
+		ObjectMeta: am.ObjectMeta{Name: podName, Labels: labels},
+		Spec: ac.PodSpec{
+			NodeName: nodeName,
+			Containers: []ac.Container{{
+				Name: "c",
+				Resources: ac.ResourceRequirements{
+					Requests: ac.ResourceList{
+						ac.ResourceCPU:    *resource.NewMilliQuantity(2000, resource.DecimalSI),
+						ac.ResourceMemory: *resource.NewQuantity(8<<30, resource.BinarySI),
+					},
+				},
+			}},
+		},
+		Status: ac.PodStatus{Phase: ac.PodRunning},
+	}, am.CreateOptions{})
+	require.NoError(t, err)
+}
+
+// TestBudgetAccumulator_HeterogeneousVariants asserts that a service
+// with replicas split across capacity types (e.g. some pods on
+// on-demand, some on spot — the same instance family) produces one
+// PerServiceSpendByVariant entry per variant. Sums across variants
+// equal PerServiceSpendUsd[svc] (no double counting).
+func TestBudgetAccumulator_HeterogeneousVariants(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 1000, AlertThresholdPercent: 80, AtCapAction: "alert-only", PricingAdjustment: 1,
+		})
+		t1 := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{
+			MonthStart:            startOfApril(),
+			CurrentMonthSpendAsOf: t1.Add(-1 * time.Hour),
+		})
+
+		// 3 pods on t3.large on-demand, 2 pods on t3.large spot — same
+		// instance family, different capacity. Distinct node names so each
+		// pod resolves to its own capacity label.
+		for i, n := range []string{"od-1", "od-2", "od-3"} {
+			servicePodFixtureWithCapacity(t, kk, "rack1-app1", "p-od-"+string(rune('a'+i)), n, "t3.large", "on-demand",
+				map[string]string{"service": "web"})
+		}
+		for i, n := range []string{"sp-1", "sp-2"} {
+			servicePodFixtureWithCapacity(t, kk, "rack1-app1", "p-sp-"+string(rune('a'+i)), n, "t3.large", "spot",
+				map[string]string{"service": "web"})
+		}
+
+		require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", t1))
+
+		_, state, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		require.NotNil(t, state)
+		require.NotNil(t, state.PerServiceSpendByVariant, "variant breakdown must be populated when pods sample with capacity-type labels")
+
+		variants, ok := state.PerServiceSpendByVariant["web"]
+		require.True(t, ok, "web service must have a variant map; got: %v", state.PerServiceSpendByVariant)
+		require.Contains(t, variants, "t3.large:on-demand", "on-demand variant must be present; got: %v", variants)
+		require.Contains(t, variants, "t3.large:spot", "spot variant must be present; got: %v", variants)
+
+		// Spend math check: variant sum equals per-service total.
+		variantSum := variants["t3.large:on-demand"] + variants["t3.large:spot"]
+		assert.InDelta(t, state.PerServiceSpendUsd["web"], variantSum, 0.0001,
+			"sum across variants must equal PerServiceSpendUsd[web] (no double-count)")
+
+		// On-demand spend is strictly higher than spot at same instance type
+		// (3 OD pods vs 2 SP pods; spot factor 0.30 also discounts the rate).
+		assert.Greater(t, variants["t3.large:on-demand"], variants["t3.large:spot"],
+			"on-demand variant should outweigh spot here: 3 pods on-demand vs 2 pods spot")
+	})
+}
+
+// TestBudgetAccumulator_DominantInstanceTypeByVariantSpend asserts that
+// PerServiceInstanceType reflects the dominant variant by SPEND, not by
+// pod count. This matters when a high-cost instance with one replica
+// outweighs many cheap replicas — the user should see the actual cost
+// driver, not the most numerous pod.
+func TestBudgetAccumulator_DominantInstanceTypeByVariantSpend(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 1000, AlertThresholdPercent: 80, AtCapAction: "alert-only", PricingAdjustment: 1,
+		})
+		t1 := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{
+			MonthStart:            startOfApril(),
+			CurrentMonthSpendAsOf: t1.Add(-1 * time.Hour),
+		})
+
+		// 3 pods on t3.large spot ($0.0832 × 0.30 = $0.025/hr each) vs
+		// 1 pod on g4dn.xlarge on-demand ($0.526/hr). The single g4dn
+		// pod outspends the three t3 spot pods even though it's outnumbered.
+		// Per-pod cost: t3.large spot ≈ $0.025/hr × elapsed, g4dn ≈ $0.526/hr × elapsed.
+		// Across 1 hour elapsed: 3 × $0.025 = $0.075 spot; 1 × $0.526 = $0.526 on-demand.
+		// Dominant variant by spend → g4dn.xlarge.
+		for i, n := range []string{"sp-1", "sp-2", "sp-3"} {
+			servicePodFixtureWithCapacity(t, kk, "rack1-app1", "p-sp-"+string(rune('a'+i)), n, "t3.large", "spot",
+				map[string]string{"service": "web"})
+		}
+		servicePodFixtureWithCapacity(t, kk, "rack1-app1", "p-od-gpu", "od-gpu", "g4dn.xlarge", "on-demand",
+			map[string]string{"service": "web"})
+
+		require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", t1))
+
+		_, state, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		require.NotNil(t, state)
+
+		assert.Equal(t, "g4dn.xlarge", state.PerServiceInstanceType["web"],
+			"PerServiceInstanceType must reflect the dominant variant by SPEND (g4dn.xlarge $0.526/hr × 1 pod outweighs 3 × t3.large spot); got %q",
+			state.PerServiceInstanceType["web"])
+
+		// Spot-check both variants exist in the breakdown.
+		variants := state.PerServiceSpendByVariant["web"]
+		assert.NotZero(t, variants["t3.large:spot"], "t3.large:spot variant must accumulate")
+		assert.NotZero(t, variants["g4dn.xlarge:on-demand"], "g4dn.xlarge:on-demand variant must accumulate")
+	})
+}
+
+// TestBudgetAccumulator_UnknownCapacity_LabelMissing asserts that pods
+// running on nodes with neither karpenter.sh/capacity-type nor
+// eks.amazonaws.com/capacityType set produce a variant key suffixed
+// "unknown" — the user-facing surface signals "we couldn't tell" rather
+// than silently misattributing to on-demand.
+func TestBudgetAccumulator_UnknownCapacity_LabelMissing(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 1000, AlertThresholdPercent: 80, AtCapAction: "alert-only", PricingAdjustment: 1,
+		})
+		t1 := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{
+			MonthStart:            startOfApril(),
+			CurrentMonthSpendAsOf: t1.Add(-1 * time.Hour),
+		})
+
+		// Node with NO capacity-type signal (empty string suppresses the label).
+		servicePodFixtureWithCapacity(t, kk, "rack1-app1", "p1", "node-bare", "t3.large", "",
+			map[string]string{"service": "web"})
+
+		require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", t1))
+
+		_, state, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		require.NotNil(t, state)
+
+		variants := state.PerServiceSpendByVariant["web"]
+		require.Contains(t, variants, "t3.large:unknown",
+			"node without capacity-type signal must surface as ':unknown' variant; got: %v", variants)
+		assert.Greater(t, variants["t3.large:unknown"], 0.0, "spend must still accumulate under unknown variant")
+	})
+}
+
+// TestBudgetAccumulator_VariantBreakdown_AccumulatesAcrossTicks asserts
+// that variant entries are cumulative — each tick adds to the inner
+// map, not overwrites it. Critical for end-of-month reporting where a
+// service may have run on different variant mixes at different points.
+func TestBudgetAccumulator_VariantBreakdown_AccumulatesAcrossTicks(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 1000, AlertThresholdPercent: 80, AtCapAction: "alert-only", PricingAdjustment: 1,
+		})
+		t1 := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{
+			MonthStart:            startOfApril(),
+			CurrentMonthSpendAsOf: t1.Add(-1 * time.Hour),
+		})
+
+		// Tick 1: all on-demand.
+		servicePodFixtureWithCapacity(t, kk, "rack1-app1", "p-od", "od-node", "t3.large", "on-demand",
+			map[string]string{"service": "web"})
+
+		require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", t1))
+
+		_, state1, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		odTick1 := state1.PerServiceSpendByVariant["web"]["t3.large:on-demand"]
+		require.Greater(t, odTick1, 0.0, "tick 1 must record on-demand spend")
+		require.Empty(t, state1.PerServiceSpendByVariant["web"]["t3.large:spot"],
+			"tick 1 had no spot pods; spot variant must not appear yet")
+
+		// Tick 2: same on-demand pod still running, plus a new spot pod.
+		t2 := t1.Add(1 * time.Hour)
+		servicePodFixtureWithCapacity(t, kk, "rack1-app1", "p-sp", "sp-node", "t3.large", "spot",
+			map[string]string{"service": "web"})
+
+		require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", t2))
+
+		_, state2, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		odTick2 := state2.PerServiceSpendByVariant["web"]["t3.large:on-demand"]
+		spTick2 := state2.PerServiceSpendByVariant["web"]["t3.large:spot"]
+
+		assert.Greater(t, odTick2, odTick1,
+			"on-demand variant must accumulate across ticks (tick2 > tick1); got tick1=%v tick2=%v",
+			odTick1, odTick2)
+		assert.Greater(t, spTick2, 0.0, "spot variant appears in tick 2")
+
+		// Variant sums equal the per-service total.
+		assert.InDelta(t, state2.PerServiceSpendUsd["web"], odTick2+spTick2, 0.0001,
+			"sum of variant spend must equal per-service total")
+	})
+}
+
 // TestBudgetAccumulator_AppCostConcurrentWithTick_NoRace exercises the
 // freshness contract: AppCost re-reads the namespace annotation on every
 // call and deserializes into a fresh AppBudgetState, never sharing a

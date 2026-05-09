@@ -79,6 +79,124 @@ func TestBuildBreakdown_PreservesReservedBuckets(t *testing.T) {
 	}
 }
 
+func TestBuildVariantBreakdown_NilState(t *testing.T) {
+	got := buildVariantBreakdown(nil)
+	if got == nil {
+		t.Fatal("must return non-nil slice (wire shape)")
+	}
+	if len(got) != 0 {
+		t.Errorf("expected empty slice, got %d entries", len(got))
+	}
+}
+
+func TestBuildVariantBreakdown_EmptyMap(t *testing.T) {
+	got := buildVariantBreakdown(&structs.AppBudgetState{})
+	if got == nil {
+		t.Fatal("must return non-nil slice (wire shape)")
+	}
+	if len(got) != 0 {
+		t.Errorf("expected empty slice, got %d entries", len(got))
+	}
+}
+
+func TestBuildVariantBreakdown_SortDescendingThenAlphabetic(t *testing.T) {
+	state := &structs.AppBudgetState{
+		PerServiceSpendByVariant: map[string]map[string]float64{
+			"web": {
+				"t3.large:on-demand": 1.40,
+				"t3.large:spot":      0.94,
+			},
+			"trainer": {
+				"p3.2xlarge:on-demand": 10.00,
+			},
+			"worker": {
+				"t3.large:unknown": 0.42,
+			},
+		},
+	}
+	got := buildVariantBreakdown(state)
+	if len(got) != 4 {
+		t.Fatalf("expected 4 rows (2 web + 1 trainer + 1 worker), got %d: %+v", len(got), got)
+	}
+	// Descending by spend, then alphabetic. Expected:
+	//  trainer / p3.2xlarge / on-demand   $10.00
+	//  web     / t3.large   / on-demand   $1.40
+	//  web     / t3.large   / spot        $0.94
+	//  worker  / t3.large   / unknown     $0.42
+	expected := []struct{ svc, it, cap string }{
+		{"trainer", "p3.2xlarge", "on-demand"},
+		{"web", "t3.large", "on-demand"},
+		{"web", "t3.large", "spot"},
+		{"worker", "t3.large", "unknown"},
+	}
+	for i, want := range expected {
+		if got[i].Service != want.svc || got[i].InstanceType != want.it || got[i].CapacityType != want.cap {
+			t.Errorf("position %d: want (%s, %s, %s), got (%s, %s, %s)",
+				i, want.svc, want.it, want.cap, got[i].Service, got[i].InstanceType, got[i].CapacityType)
+		}
+	}
+}
+
+func TestBuildVariantBreakdown_SkipsMalformedKeys(t *testing.T) {
+	// Defensive: production keys are always well-formed but a corrupt
+	// annotation (manual edit, partial deserialize) shouldn't panic.
+	state := &structs.AppBudgetState{
+		PerServiceSpendByVariant: map[string]map[string]float64{
+			"web": {
+				"":                      0.10, // empty key
+				"no-colon-separator":    0.20, // no colon
+				"t3.large:on-demand":    1.40,
+			},
+		},
+	}
+	got := buildVariantBreakdown(state)
+	if len(got) != 1 {
+		t.Errorf("expected 1 well-formed row, got %d: %+v", len(got), got)
+	}
+	if got[0].InstanceType != "t3.large" || got[0].CapacityType != "on-demand" {
+		t.Errorf("unexpected row: %+v", got[0])
+	}
+}
+
+func TestDominantInstanceTypeFromVariants_HighestSpendWins(t *testing.T) {
+	// Single-instance heterogeneous capacity: same instance type wins.
+	got := dominantInstanceTypeFromVariants(map[string]float64{
+		"t3.large:on-demand": 0.70,
+		"t3.large:spot":      0.30,
+	})
+	if got != "t3.large" {
+		t.Errorf("homogeneous instance, mixed capacity: want t3.large, got %q", got)
+	}
+
+	// Heterogeneous instances: spend dominance wins regardless of pod count.
+	got = dominantInstanceTypeFromVariants(map[string]float64{
+		"t3.large:spot":          0.075, // 3 cheap pods
+		"g4dn.xlarge:on-demand":  0.526, // 1 expensive pod — dominant by spend
+	})
+	if got != "g4dn.xlarge" {
+		t.Errorf("expensive single pod must dominate: want g4dn.xlarge, got %q", got)
+	}
+
+	// Sum-across-capacity dominance: t3.large total exceeds c5.large total.
+	got = dominantInstanceTypeFromVariants(map[string]float64{
+		"t3.large:on-demand": 0.40,
+		"t3.large:spot":      0.30,
+		"c5.large:on-demand": 0.50,
+	})
+	if got != "t3.large" {
+		t.Errorf("t3.large totals 0.70 vs c5.large 0.50: want t3.large, got %q", got)
+	}
+}
+
+func TestDominantInstanceTypeFromVariants_EmptyAndNil(t *testing.T) {
+	if got := dominantInstanceTypeFromVariants(nil); got != "" {
+		t.Errorf("nil input: want empty, got %q", got)
+	}
+	if got := dominantInstanceTypeFromVariants(map[string]float64{}); got != "" {
+		t.Errorf("empty input: want empty, got %q", got)
+	}
+}
+
 func TestPerServiceMaxEntries_TruncatesNewEntriesPreservesExisting(t *testing.T) {
 	// Lower the cap to 2 so we can drive truncation with three services
 	// without constructing 1000+ fixtures.

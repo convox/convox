@@ -166,7 +166,23 @@ func formatRateUsdPerHour(rate float64) (string, bool) {
 	return fmt.Sprintf("$%.2f", rate), false
 }
 
+// spotLegend is the one-line explanatory note printed under the
+// variant-aware breakdown table so first-time operators understand
+// what "spot" rows mean. The phrasing is shared with the Console UI
+// (CostBreakdown.vue, ServiceCostPanel.vue) so user docs only need to
+// describe the mechanism once.
+const spotLegend = `Spot pricing applies a discount automatically when nodes are provisioned via Karpenter or an EKS spot ASG. Capacity "unknown" means the node carried neither label.`
+
+// printCostBreakdown renders the per-service spend table. When the
+// rack emits VariantBreakdown rows (3.24.6+), each row is one
+// (service, instance-type, capacity-type) triple with a CAPACITY
+// column. Older racks emit no variant data and we fall back to the
+// pre-3.24.6 aggregated columns (GPU-HOURS / CPU-HOURS / MEM-GB-HOURS /
+// INSTANCE / SPEND-USD) for backward compat.
 func printCostBreakdown(c *stdcli.Context, cost *structs.AppCost) error {
+	if len(cost.VariantBreakdown) > 0 {
+		return printCostVariantBreakdown(c, cost)
+	}
 	t := c.Table("SERVICE", "GPU-HOURS", "CPU-HOURS", "MEM-GB-HOURS", "INSTANCE", "SPEND-USD")
 	sawEmDash := false
 	for _, line := range cost.Breakdown {
@@ -186,6 +202,38 @@ func printCostBreakdown(c *stdcli.Context, cost *structs.AppCost) error {
 	if err := t.Print(); err != nil {
 		return err
 	}
+	if sawEmDash {
+		fmt.Fprintln(c.Writer(), lowSpendFootnote)
+	}
+	return nil
+}
+
+// printCostVariantBreakdown renders the per-variant table: one row per
+// (service, instance-type, capacity-type) triple. Capacity values
+// surface verbatim ("on-demand", "spot", "unknown") so operators see
+// the actual signal rather than a normalized label.
+func printCostVariantBreakdown(c *stdcli.Context, cost *structs.AppCost) error {
+	t := c.Table("SERVICE", "INSTANCE", "CAPACITY", "SPEND-USD")
+	sawEmDash := false
+	var total float64
+	for _, line := range cost.VariantBreakdown {
+		spend, dashed := formatRateUsdPerHour(line.SpendUsd)
+		if dashed {
+			sawEmDash = true
+		}
+		total += line.SpendUsd
+		t.AddRow(
+			line.Service,
+			line.InstanceType,
+			line.CapacityType,
+			spend,
+		)
+	}
+	if err := t.Print(); err != nil {
+		return err
+	}
+	fmt.Fprintf(c.Writer(), "TOTAL: $%.2f\n", total)
+	fmt.Fprintln(c.Writer(), spotLegend)
 	if sawEmDash {
 		fmt.Fprintln(c.Writer(), lowSpendFootnote)
 	}
