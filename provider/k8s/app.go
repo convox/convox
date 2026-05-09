@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
 	"strings"
 
 	"github.com/convox/convox/pkg/common"
@@ -216,10 +215,6 @@ func (p *Provider) AppList() (structs.Apps, error) {
 	}
 
 	return as, nil
-}
-
-func (p *Provider) AppLogs(name string, opts structs.LogsOptions) (io.ReadCloser, error) {
-	return nil, errors.WithStack(structs.ErrNotImplemented("unimplemented"))
 }
 
 func (p *Provider) AppManifestService(app, service string) (*structs.ManifestService, error) {

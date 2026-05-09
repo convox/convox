@@ -599,10 +599,18 @@ func buildBreakdown(state *structs.AppBudgetState) []structs.ServiceCostLine {
 }
 
 // buildVariantBreakdown projects PerServiceSpendByVariant into the
-// AppCost.VariantBreakdown slice. Empty/nil state produces an empty
-// slice so the wire shape stays stable across rack versions; older
-// callers ignoring the field continue to work, newer callers see
-// the per-(service, instance-type, capacity-type) projection.
+// AppCost.VariantBreakdown slice, joining Replicas from the parallel
+// PerServiceVariantPodsLastTick snapshot when present. Empty/nil state
+// produces an empty slice so the wire shape stays stable across rack
+// versions; older callers ignoring the field continue to work, newer
+// callers see the per-(service, instance-type, capacity-type) projection.
+//
+// Replicas sourcing: the pod-count snapshot is overwritten each tick
+// and so reflects CURRENT placement. A pre-3.24.6 state has no snapshot
+// and the field serialises as 0 (UI renders an em-dash placeholder).
+// A row whose variant has no matching pod count entry still emits — the
+// spend was recorded so the row is real; the count just isn't known yet
+// (e.g. immediately after upgrade before the next tick lands).
 //
 // Sort order: descending by SpendUsd, then alphabetic by service,
 // instance type, capacity type. Stable across rebuilds.
@@ -624,12 +632,18 @@ func buildVariantBreakdown(state *structs.AppBudgetState) []structs.ServiceVaria
 				// empty fields. Defensive only.
 				continue
 			}
-			out = append(out, structs.ServiceVariantCostLine{
+			line := structs.ServiceVariantCostLine{
 				Service:      svc,
 				InstanceType: variantKey[:idx],
 				CapacityType: variantKey[idx+1:],
 				SpendUsd:     spend,
-			})
+			}
+			if pods, ok := state.PerServiceVariantPodsLastTick[svc]; ok {
+				if n, ok := pods[variantKey]; ok {
+					line.Replicas = n
+				}
+			}
+			out = append(out, line)
 		}
 	}
 
@@ -902,7 +916,7 @@ func (p *Provider) accumulateBudgetApp(ctx context.Context, app string, now time
 		if cfg != nil && cfg.PricingAdjustment > 0 {
 			adjustment = cfg.PricingAdjustment
 		}
-		delta, perSvc, perSvcInst, perSvcVariant, warnings, err := p.computeBudgetDelta(ctx, app, state.CurrentMonthSpendAsOf, now, adjustment)
+		delta, perSvc, perSvcInst, perSvcVariant, perSvcVariantPods, warnings, err := p.computeBudgetDelta(ctx, app, state.CurrentMonthSpendAsOf, now, adjustment)
 		if err != nil {
 			return err
 		}
@@ -921,6 +935,19 @@ func (p *Provider) accumulateBudgetApp(ctx context.Context, app string, now time
 		}
 		if state.PerServiceSpendByVariant == nil {
 			state.PerServiceSpendByVariant = map[string]map[string]float64{}
+		}
+		if state.PerServiceVariantPodsLastTick == nil {
+			state.PerServiceVariantPodsLastTick = map[string]map[string]int{}
+		}
+		// Drop services that produced no observation this tick — pod
+		// count is a snapshot of CURRENT placement so a service whose
+		// pods all stopped should not retain stale counts. The
+		// truncation gate below guards new-service entries; existing
+		// entries that fall out of perSvcVariantPods get cleared here.
+		for svc := range state.PerServiceVariantPodsLastTick {
+			if _, ok := perSvcVariantPods[svc]; !ok {
+				delete(state.PerServiceVariantPodsLastTick, svc)
+			}
 		}
 		truncated := 0
 		for svc, dollars := range perSvc {
@@ -942,6 +969,19 @@ func (p *Provider) accumulateBudgetApp(ctx context.Context, app string, now time
 				for k, v := range tickVariants {
 					state.PerServiceSpendByVariant[svc][k] += v
 				}
+			}
+			// Pod-count snapshot: replace this service's variant pod
+			// counts with the current tick's observation. A clone keeps
+			// the persisted state independent of the per-tick map so
+			// later tests / callers cannot mutate one through the other.
+			if tickPods, ok := perSvcVariantPods[svc]; ok {
+				clone := make(map[string]int, len(tickPods))
+				for k, v := range tickPods {
+					clone[k] = v
+				}
+				state.PerServiceVariantPodsLastTick[svc] = clone
+			} else {
+				delete(state.PerServiceVariantPodsLastTick, svc)
 			}
 			// PerServiceInstanceType records the dominant variant by
 			// cumulative SPEND, not pod count. For homogeneous services
@@ -1098,6 +1138,12 @@ var perServiceMaxEntries = 1000
 //     / unknown). Heterogeneous services produce multiple inner
 //     entries; the merge site sums these into state.PerServiceSpendByVariant
 //     so the variant breakdown surfaces in `convox cost` and the Console UI.
+//   - perSvcVariantPods: per-service per-variant pod count for THIS
+//     tick only (snapshot, not cumulative). Same key shape as
+//     perSvcVariant. The merge site OVERWRITES (does not add) the
+//     persisted PerServiceVariantPodsLastTick map with this tick's
+//     observation so the UI reflects current pod placement; pre-3.24.6
+//     callers that don't care simply ignore the field.
 //   - warnings:  count of pods skipped because of unknown instance type
 //     or missing pricing entry
 //
@@ -1105,14 +1151,14 @@ var perServiceMaxEntries = 1000
 // ListNodesFromInformer / ListPodsFromInformer reads are cache-only and do
 // not take a ctx parameter. Plumbing it now keeps signatures stable when a
 // future patch adds a direct-API fallback for cold-cache scenarios.
-func (p *Provider) computeBudgetDelta(ctx context.Context, app string, lastTick, now time.Time, adjustment float64) (float64, map[string]float64, map[string]string, map[string]map[string]float64, int, error) {
+func (p *Provider) computeBudgetDelta(ctx context.Context, app string, lastTick, now time.Time, adjustment float64) (float64, map[string]float64, map[string]string, map[string]map[string]float64, map[string]map[string]int, int, error) {
 	_ = ctx // see godoc above; reserved for non-informer fallback.
 	if lastTick.IsZero() {
 		lastTick = now
 	}
 	elapsed := now.Sub(lastTick).Hours()
 	if elapsed <= 0 {
-		return 0, nil, nil, nil, 0, nil
+		return 0, nil, nil, nil, nil, 0, nil
 	}
 	if adjustment <= 0 {
 		adjustment = 1.0
@@ -1120,7 +1166,7 @@ func (p *Provider) computeBudgetDelta(ctx context.Context, app string, lastTick,
 
 	nodes, err := p.ListNodesFromInformer("")
 	if err != nil {
-		return 0, nil, nil, nil, 0, errors.WithStack(err)
+		return 0, nil, nil, nil, nil, 0, errors.WithStack(err)
 	}
 	nodeByName := map[string]*v1.Node{}
 	for i := range nodes.Items {
@@ -1129,13 +1175,14 @@ func (p *Provider) computeBudgetDelta(ctx context.Context, app string, lastTick,
 
 	pods, err := p.ListPodsFromInformer(p.AppNamespace(app), "")
 	if err != nil {
-		return 0, nil, nil, nil, 0, errors.WithStack(err)
+		return 0, nil, nil, nil, nil, 0, errors.WithStack(err)
 	}
 
 	var delta float64
 	perSvc := map[string]float64{}
 	perSvcInst := map[string]string{}
 	perSvcVariant := map[string]map[string]float64{}
+	perSvcVariantPods := map[string]map[string]int{}
 	warnings := 0
 
 	for i := range pods.Items {
@@ -1199,9 +1246,18 @@ func (p *Provider) computeBudgetDelta(ctx context.Context, app string, lastTick,
 			perSvcVariant[svc] = map[string]float64{}
 		}
 		perSvcVariant[svc][variantKey] += podTickSpend
+
+		// Pod-count tracking is a SNAPSHOT — every running pod observed
+		// this tick increments the count for its variant. The merge
+		// site overwrites (not accumulates) the persisted map so the
+		// next tick reflects fresh placement.
+		if perSvcVariantPods[svc] == nil {
+			perSvcVariantPods[svc] = map[string]int{}
+		}
+		perSvcVariantPods[svc][variantKey]++
 	}
 
-	return delta, perSvc, perSvcInst, perSvcVariant, warnings, nil
+	return delta, perSvc, perSvcInst, perSvcVariant, perSvcVariantPods, warnings, nil
 }
 
 func nodeInstanceType(n *v1.Node) string {
@@ -1216,34 +1272,44 @@ func nodeInstanceType(n *v1.Node) string {
 	return ""
 }
 
-// nodeCapacityType returns "spot" or "on-demand" by checking the
-// karpenter.sh/capacity-type label first (Karpenter-managed nodes) and
-// then falling back to the eks.amazonaws.com/capacityType annotation
-// (EKS ANG-managed nodes). Returns "" if neither signal is present so
-// the caller falls through to on-demand pricing — conservative under
-// uncertainty, charges the user the higher rate when the node
-// origin is unknown.
+// nodeCapacityType returns "spot" or "on-demand" by reading two AWS
+// labels on the node:
+//
+//  1. karpenter.sh/capacity-type — written by Karpenter, value lowercase
+//     "spot" / "on-demand".
+//  2. eks.amazonaws.com/capacityType — written by EKS managed node
+//     groups, value uppercase "SPOT" / "ON_DEMAND".
+//
+// Both sources are LABELS, not annotations — confirmed by `kubectl get
+// node --show-labels` against a real EKS cluster. The helper normalises
+// to the lowercase dash form ("spot"/"on-demand") so downstream pricing
+// math sees one shape regardless of which AWS surface populated it.
+//
+// Returns "" if neither signal is present so the caller falls through
+// to on-demand pricing — conservative under uncertainty, charges the
+// user the higher rate when the node origin cannot be determined.
 //
 // Both signals are AWS-specific. On GCP / Azure / on-prem the labels
 // are absent and the helper returns "" — EffectiveUsdPerHour then
 // returns OnDemandUsdPerHour unchanged. Non-AWS spot pricing is a
 // future patch.
 func nodeCapacityType(n *v1.Node) string {
-	if n == nil {
+	if n == nil || n.Labels == nil {
 		return ""
 	}
-	if n.Labels != nil {
-		if v := strings.ToLower(n.Labels["karpenter.sh/capacity-type"]); v == "spot" || v == "on-demand" {
-			return v
-		}
+	// Karpenter values are documented lowercase; ToLower keeps the
+	// helper resilient to controller-side casing variations.
+	if v := strings.ToLower(n.Labels["karpenter.sh/capacity-type"]); v == "spot" || v == "on-demand" {
+		return v
 	}
-	if n.Annotations != nil {
-		switch strings.ToLower(n.Annotations["eks.amazonaws.com/capacityType"]) {
-		case "spot":
-			return "spot"
-		case "on_demand", "on-demand":
-			return "on-demand"
-		}
+	// EKS managed-node-group values are documented uppercase
+	// ("SPOT"/"ON_DEMAND"); ToUpper makes the comparison explicit
+	// about which side of the dual-signal pair normalises which way.
+	switch strings.ToUpper(n.Labels["eks.amazonaws.com/capacityType"]) {
+	case "SPOT":
+		return "spot"
+	case "ON_DEMAND":
+		return "on-demand"
 	}
 	return ""
 }

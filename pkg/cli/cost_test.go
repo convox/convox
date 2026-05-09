@@ -47,13 +47,14 @@ func fxAppCost() *structs.AppCost {
 
 // fxAppCostWithVariants returns an AppCost where one service is split
 // across capacity types (web on m5.large on-demand AND m5.large spot).
-// Used by per-variant rendering tests.
+// Replicas reflect a realistic mixed-placement deployment so the count
+// column is exercised end-to-end.
 func fxAppCostWithVariants() *structs.AppCost {
 	c := fxAppCost()
 	c.VariantBreakdown = []structs.ServiceVariantCostLine{
-		{Service: "trainer", InstanceType: "p3.2xlarge", CapacityType: "on-demand", SpendUsd: 10.00},
-		{Service: "web", InstanceType: "m5.large", CapacityType: "on-demand", SpendUsd: 1.40},
-		{Service: "web", InstanceType: "m5.large", CapacityType: "spot", SpendUsd: 0.94},
+		{Service: "trainer", InstanceType: "p3.2xlarge", CapacityType: "on-demand", SpendUsd: 10.00, Replicas: 1},
+		{Service: "web", InstanceType: "m5.large", CapacityType: "on-demand", SpendUsd: 1.40, Replicas: 3},
+		{Service: "web", InstanceType: "m5.large", CapacityType: "spot", SpendUsd: 0.94, Replicas: 2},
 	}
 	return c
 }
@@ -595,5 +596,49 @@ func TestCost_VariantTable_UnknownCapacityRendered(t *testing.T) {
 		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
 		require.Contains(t, res.Stdout, "unknown",
 			"unknown-capacity rows render the literal value so operators see detection failed")
+	})
+}
+
+// TestCost_VariantTable_RendersReplicasColumn asserts that the
+// REPLICAS column is present and populated when the rack emits
+// pod counts on each variant. Heterogeneous services display
+// "3" / "2" pods so users can audit where their replicas landed.
+func TestCost_VariantTable_RendersReplicasColumn(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppCost", "app1").Return(fxAppCostWithVariants(), nil)
+
+		res, err := testExecute(e, "cost -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+
+		require.Contains(t, res.Stdout, "REPLICAS",
+			"variant-aware output must surface a REPLICAS column header")
+		// Pod counts from fxAppCostWithVariants: trainer=1, web-od=3, web-sp=2.
+		require.Contains(t, res.Stdout, "3", "web on-demand has 3 replicas in fixture")
+		require.Contains(t, res.Stdout, "2", "web spot has 2 replicas in fixture")
+	})
+}
+
+// TestCost_VariantTable_ZeroReplicasRendersEmDash asserts that the
+// REPLICAS column emits an em-dash when the rack predates pod-count
+// tracking (Replicas serializes as 0). Zero is indistinguishable from
+// "no data yet" on the wire so the renderer leans toward em-dash to
+// avoid implying "0 pods running" — that case (a service with spend
+// but no pods) only happens transiently mid-tick and is better
+// communicated as "data not yet captured".
+func TestCost_VariantTable_ZeroReplicasRendersEmDash(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		fx := fxAppCost()
+		fx.VariantBreakdown = []structs.ServiceVariantCostLine{
+			// Replicas: 0 (default) — pre-3.24.6 racks emit nothing.
+			{Service: "web", InstanceType: "m5.large", CapacityType: "on-demand", SpendUsd: 1.40},
+		}
+		i.On("AppCost", "app1").Return(fx, nil)
+
+		res, err := testExecute(e, "cost -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+		require.Contains(t, res.Stdout, "—",
+			"zero-replicas rows must render an em-dash placeholder")
 	})
 }

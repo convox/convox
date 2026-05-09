@@ -154,6 +154,19 @@ type AppBudgetState struct {
 	// rack genuinely needs hundreds of variants per service, revisit the
 	// inner-cap policy here.
 	PerServiceSpendByVariant map[string]map[string]float64 `json:"per-service-spend-by-variant,omitempty"`
+
+	// PerServiceVariantPodsLastTick captures the number of pods seen on
+	// each variant in the most recent accumulator tick. Updated each
+	// tick — does NOT accumulate. Inner key format matches
+	// PerServiceSpendByVariant ("<instanceType>:<capacityType>"). The
+	// UI uses this to render a Replicas/Count column alongside spend
+	// in the variant breakdown so heterogeneous services display
+	// "3 pods on t3.large:on-demand, 2 pods on t3.large:spot" rather
+	// than spend without context. Pre-3.24.6 annotations parse with
+	// nil; the accumulator initialises lazily on first tick. Memory
+	// shape mirrors PerServiceSpendByVariant exactly so the cap and
+	// reasoning above apply unchanged.
+	PerServiceVariantPodsLastTick map[string]map[string]int `json:"per-service-variant-pods-last-tick,omitempty"`
 }
 
 // AppCost is the response shape for GET /apps/{app}/cost.
@@ -203,11 +216,19 @@ type ServiceCostLine struct {
 // nodes or non-AWS clouds where the labels don't apply). Spend math is
 // identical to Breakdown — variants are a finer-grained projection of
 // the same accumulated dollars.
+//
+// Replicas is the pod count on this variant in the most recent
+// accumulator tick — a SNAPSHOT, not cumulative. Heterogeneous
+// services display the live placement (e.g. "3 pods on t3.large:spot,
+// 2 pods on t3.large:on-demand") so users understand mixed-capacity
+// deployments at a glance. Older racks emit no count and the field
+// serialises as 0; the CLI / UI render an em-dash placeholder when 0.
 type ServiceVariantCostLine struct {
 	Service      string  `json:"service"`
 	InstanceType string  `json:"instance-type"`
 	CapacityType string  `json:"capacity-type"`
 	SpendUsd     float64 `json:"spend-usd"`
+	Replicas     int     `json:"replicas,omitempty"`
 }
 
 // CapacityTypeUnknown is the variant suffix used when a node has
