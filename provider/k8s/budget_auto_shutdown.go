@@ -19,7 +19,7 @@ import (
 // app on the current accumulator tick. Called from accumulateBudgetApp
 // AFTER the main spend / breaker / alert update has been written.
 //
-// Lifecycle mapping (per Set G v2 spec §6 + §8):
+// Lifecycle mapping:
 //
 //	:armed             — cap breach with auto-shutdown configured + no prior annotation
 //	:fired             — armed-window elapsed; PATCH services to 0 + persist shutdownAt
@@ -42,9 +42,9 @@ func (p *Provider) reconcileAutoShutdown(ctx context.Context, app string, cfg *s
 		return
 	}
 
-	// F-19 fix (catalog D-7): hold the per-app advisory lock for the
-	// duration of the reconcile tick so a concurrent AppBudgetReset
-	// cannot interleave its `:cancelled` emit with this tick's emit.
+	// Hold the per-app advisory lock for the duration of the reconcile
+	// tick so a concurrent AppBudgetReset cannot interleave its
+	// `:cancelled` emit with this tick's emit.
 	mu := appBudgetLock(app)
 	mu.Lock()
 	defer mu.Unlock()
@@ -59,18 +59,18 @@ func (p *Provider) reconcileAutoShutdown(ctx context.Context, app string, cfg *s
 	shutdownState, parseErr := readBudgetShutdownStateAnnotation(ns.Annotations)
 	if parseErr != nil {
 		fmt.Printf("ns=auto_shutdown at=state_corrupt app=%s err=%q\n", app, parseErr)
-		// F10 fix: dedup state-corrupt :failed via SEPARATE annotation
-		// since the main state annotation is unparseable. Skip emit if
-		// dedup annotation already present and within tick window.
+		// Dedup state-corrupt :failed via a separate annotation since the
+		// main state annotation is unparseable. Skip emit if the dedup
+		// annotation is already present and within tick window.
 		if !p.stateCorruptDedupExpired(ns.Annotations, now) {
 			return
 		}
-		// R8.5 F-1 fix: persist dedup annotation BEFORE emit (matches the
-		// 9-of-9 lifecycle persist-then-emit symmetry locked at R7.5).
-		// Without this gate, a silent annotation-write failure leaves the
-		// dedup unset and the next tick re-emits :failed reason=state-corrupt
-		// — duplicate event on the bus. F10 dedup window (~10 min) bounds
-		// the practical risk but doesn't eliminate it.
+		// Persist the dedup annotation BEFORE emit (matches the lifecycle's
+		// persist-then-emit symmetry across all events). Without this gate,
+		// a silent annotation-write failure leaves the dedup unset and the
+		// next tick re-emits :failed reason=state-corrupt — duplicate event
+		// on the bus. The ~10-minute dedup window bounds the practical risk
+		// but doesn't eliminate it.
 		if perr := p.patchNamespaceStringAnnotation(ctx, app, structs.BudgetShutdownStateCorruptFiredAtAnnotation, now.UTC().Format(time.RFC3339)); perr == nil {
 			p.fireFailedEventStateCorrupt(app, cfg, baseState, now)
 		}
@@ -81,12 +81,12 @@ func (p *Provider) reconcileAutoShutdown(ctx context.Context, app string, cfg *s
 		_ = p.deleteNamespaceAnnotation(ctx, app, structs.BudgetShutdownStateCorruptFiredAtAnnotation)
 	}
 
-	// If user scaled services back up DURING armed window
+	// If the user scaled services back up DURING the armed window
 	// (no PATCH yet applied) — fire :cancelled reason="manual-detected"
 	// and GC the orphan annotation so next cap re-breach re-arms cleanly.
-	// R7.5 F-3 fix: GC annotation BEFORE emit (matches F-20 dedup-write-
-	// then-emit pattern). The annotation deletion IS the dedup signal
-	// here: with the annotation gone, next tick's armedWindowManuallyScaledUp
+	// GC the annotation BEFORE emit (matches the persist-then-emit
+	// pattern). The annotation deletion IS the dedup signal here: with
+	// the annotation gone, next tick's armedWindowManuallyScaledUp
 	// returns nil (no shutdownState) and the manual-detected branch is
 	// skipped. If the delete fails, abort the emit so the next tick can
 	// retry cleanly. NotFound is treated as success (already GC'd).
@@ -134,10 +134,10 @@ func (p *Provider) reconcileAutoShutdownPreManifest(ctx context.Context, app str
 		if startOfMonth(*shutdownState.ShutdownAt).Before(startOfMonth(now)) {
 			shutdownState.ExpiredAt = ptrTimePackage(now)
 			if shutdownState.ExpiredNotificationFiredAt == nil {
-				// MF-7 (F-20 extension): persist BEFORE emit so a silent
-				// persist failure aborts the wire emission. Without this,
-				// next tick reads ExpiredNotificationFiredAt==nil and
-				// re-fires :expired — visible duplicate on the bus.
+				// Persist BEFORE emit so a silent persist failure aborts
+				// the wire emission. Without this, next tick reads
+				// ExpiredNotificationFiredAt==nil and re-fires :expired —
+				// visible duplicate on the bus.
 				shutdownState.ExpiredNotificationFiredAt = ptrTimePackage(now)
 				if perr := p.persistShutdownState(ctx, app, shutdownState); perr == nil {
 					p.fireExpiredEvent(app, cfg, baseState, shutdownState, now)
@@ -158,10 +158,10 @@ func (p *Provider) reconcileAutoShutdownPreManifest(ctx context.Context, app str
 			flap := now.Add(structs.BudgetFlapCooldown)
 			shutdownState.FlapSuppressedUntil = ptrTimePackage(flap)
 			if shutdownState.RestoredNotificationFiredAt == nil {
-				// F13b fix (extended to :restored): persist BEFORE emit
-				// so a leader crash between the two doesn't double-fire.
-				// F-20 fix: abort emit if persist fails — without the
-				// dedup write landing, the next tick re-fires :restored.
+				// Persist BEFORE emit so a leader crash between the two
+				// doesn't double-fire. Abort emit if persist fails —
+				// without the dedup write landing, the next tick re-fires
+				// :restored.
 				shutdownState.RestoredNotificationFiredAt = ptrTimePackage(now)
 				if perr := p.persistShutdownState(ctx, app, shutdownState); perr == nil {
 					p.fireRestoredEvent(app, cfg, baseState, shutdownState, "manual-detected", now)
@@ -182,7 +182,7 @@ func (p *Provider) reconcileAutoShutdownPreManifest(ctx context.Context, app str
 // AppGet/ReleaseGet/Atom mocking surface). Production code path:
 // reconcileAutoShutdown loads the manifest and forwards. Test hook:
 // ReconcileAutoShutdownWithManifestForTest in export_test.go injects a
-// pre-built manifest directly. Call ordering matches the spec §6/§8
+// pre-built manifest directly. Call ordering matches the lifecycle
 // branches preserved from before the refactor.
 func (p *Provider) reconcileAutoShutdownWithManifest(ctx context.Context, app string, cfg *structs.AppBudget, baseState *structs.AppBudgetState, ns *ac.Namespace, shutdownState *structs.AppBudgetShutdownState, m *manifest.Manifest, now time.Time) {
 	plan, pErr := p.computeShutdownPlanForApp(ctx, app, m, cfg)
@@ -196,9 +196,9 @@ func (p *Provider) reconcileAutoShutdownWithManifest(ctx context.Context, app st
 		armed := shutdownState.ArmedAt != nil && !shutdownState.ArmedAt.IsZero() &&
 			(shutdownState.ShutdownAt == nil || shutdownState.ShutdownAt.IsZero())
 		if armed {
-			// F2 fix: classify as "cap-raised" if the new cap is HIGHER
-			// such that spend now sits below it; otherwise treat the
-			// manifest SHA mismatch as a generic "config-changed". Surface
+			// Classify as "cap-raised" if the new cap is HIGHER such that
+			// spend now sits below it; otherwise treat the manifest SHA
+			// mismatch as a generic "config-changed". Surface
 			// prev_cap_usd / new_cap_usd for the cap-raised sub-case.
 			reason := "config-changed"
 			var prevCap, newCap float64
@@ -215,22 +215,21 @@ func (p *Provider) reconcileAutoShutdownWithManifest(ctx context.Context, app st
 				prevCap = baseState.CurrentMonthSpendUsd
 			}
 			if shutdownState.CancelledNotificationFiredAt == nil {
-				// F13b fix (extended to :cancelled): persist BEFORE emit.
-				// F-20 fix: abort emit if persist fails so the dedup write
-				// is observable on the next tick.
+				// Persist BEFORE emit; abort emit if persist fails so
+				// the dedup write is observable on the next tick.
 				shutdownState.CancelledNotificationFiredAt = ptrTimePackage(now)
 				if perr := p.persistShutdownState(ctx, app, shutdownState); perr == nil {
 					newAction := ""
 					if reason == "config-changed" && cfg != nil {
 						newAction = cfg.AtCapAction
 					}
-					// MF-6 fix: spec §8.4 line 777 mandates JWT-derived
-					// actor for cap-raised. AppBudgetSet records the JWT
-					// user in cfg.LastCapMutationBy on every cap mutation;
-					// fall back to "system" if empty (older rack / state
-					// predates 3.24.6). config-changed legitimately stays
-					// "system" because manifest-mismatch detection has no
-					// originating HTTP request.
+					// The cap-raised :cancelled actor must be the JWT user
+					// who raised the cap. AppBudgetSet records that user
+					// in cfg.LastCapMutationBy on every cap mutation;
+					// fall back to "system" if empty (state predates the
+					// LastCapMutationBy field). config-changed legitimately
+					// stays "system" because manifest-mismatch detection
+					// has no originating HTTP request.
 					actor := "system"
 					if reason == "cap-raised" && cfg != nil && cfg.LastCapMutationBy != "" {
 						actor = cfg.LastCapMutationBy
@@ -246,8 +245,7 @@ func (p *Provider) reconcileAutoShutdownWithManifest(ctx context.Context, app st
 		if shutdownState.RestoredAt == nil {
 			shutdownState.RestoredAt = ptrTimePackage(now)
 			if shutdownState.RestoredNotificationFiredAt == nil {
-				// F13b fix (extended to :restored): persist BEFORE emit.
-				// F-20 fix: abort emit if persist fails.
+				// Persist BEFORE emit; abort emit if persist fails.
 				shutdownState.RestoredNotificationFiredAt = ptrTimePackage(now)
 				if perr := p.persistShutdownState(ctx, app, shutdownState); perr == nil {
 					p.fireRestoredEvent(app, cfg, baseState, shutdownState, "config-changed", now)
@@ -263,11 +261,10 @@ func (p *Provider) reconcileAutoShutdownWithManifest(ctx context.Context, app st
 	flap, _ := readFlapSuppressedUntilAnnotation(ns.Annotations)
 	if flap != nil && flap.After(now) {
 		// Suppress new arm; fire :flap-suppressed once via dedup annotation.
-		// R7.5 F-3 fix: persist dedup annotation BEFORE emit (matches F-20
-		// pattern). Without this, a silent annotation-write failure leaves
-		// the dedup unset and the next tick re-fires :flap-suppressed —
-		// duplicate event on the bus. Order: write annotation, only emit
-		// on success.
+		// Persist the dedup annotation BEFORE emit. Without this, a silent
+		// annotation-write failure leaves the dedup unset and the next
+		// tick re-fires :flap-suppressed — duplicate event on the bus.
+		// Order: write annotation, only emit on success.
 		if _, fired := ns.Annotations[structs.BudgetFlapSuppressFiredAtAnnotation]; !fired {
 			if perr := p.patchNamespaceStringAnnotation(ctx, app, structs.BudgetFlapSuppressFiredAtAnnotation, now.UTC().Format(time.RFC3339)); perr == nil {
 				p.fireFlapSuppressedEvent(app, cfg, baseState, *flap, now)
@@ -276,12 +273,12 @@ func (p *Provider) reconcileAutoShutdownWithManifest(ctx context.Context, app st
 		return
 	}
 
-	// (6) External-edit detection (spec §13.3): shutdownState==nil but the
-	// app already has eligible services scaled to 0 — operator hand-recovery,
-	// CD pipeline strip, or policy controller cleared the annotation mid-
+	// (6) External-edit detection: shutdownState==nil but the app already
+	// has eligible services scaled to 0 — operator hand-recovery, CD
+	// pipeline strip, or policy controller cleared the annotation mid-
 	// shutdown. Treat as "discovered shutdown via external edit" and fire
-	// :noop reason="external-edit-detected" instead of re-arming (which would
-	// re-trip on the same outage).
+	// :noop reason="external-edit-detected" instead of re-arming (which
+	// would re-trip on the same outage).
 	if shutdownState == nil && len(plan.ordered) > 0 {
 		allZero := true
 		for _, sp := range plan.ordered {
@@ -292,12 +289,13 @@ func (p *Provider) reconcileAutoShutdownWithManifest(ctx context.Context, app st
 		}
 		if allZero {
 			if p.noopDedupExpired(ns.Annotations, now) {
-				// MF-7 (F-20 extension): write dedup annotation BEFORE emit
-				// so a silent annotation-write failure aborts the wire
-				// emission. The :noop dedup window depends on the
-				// BudgetShutdownNoopFiredAtAnnotation timestamp; without the
-				// write landing, next tick re-fires :noop on every reconcile
-				// loop until the annotation succeeds (visible duplicates).
+				// Write the dedup annotation BEFORE emit so a silent
+				// annotation-write failure aborts the wire emission. The
+				// :noop dedup window depends on the
+				// BudgetShutdownNoopFiredAtAnnotation timestamp; without
+				// the write landing, next tick re-fires :noop on every
+				// reconcile loop until the annotation succeeds (visible
+				// duplicates).
 				if perr := p.patchNamespaceStringAnnotation(ctx, app, structs.BudgetShutdownNoopFiredAtAnnotation, now.UTC().Format(time.RFC3339)); perr == nil {
 					p.fireNoopEvent(app, cfg, baseState, "external-edit-detected", plan, now)
 				}
@@ -307,7 +305,7 @@ func (p *Provider) reconcileAutoShutdownWithManifest(ctx context.Context, app st
 	}
 
 	// (7) Empty eligibility → :noop (only when no annotation present).
-	// 3 distinct reasons per spec §8.9:
+	// Three distinct reasons:
 	//   - "no-eligible-services" — manifest has 0 services OR all filtered
 	//     for static-config reasons (in neverAutoShutdown / agent DaemonSet)
 	//   - "runtime-drift"        — services exist in manifest but cluster
@@ -318,12 +316,12 @@ func (p *Provider) reconcileAutoShutdownWithManifest(ctx context.Context, app st
 	if shutdownState == nil {
 		if len(plan.ordered) == 0 {
 			reason := classifyNoopReason(m, plan)
-			// F9 fix: dedup :noop via dedicated annotation since
-			// shutdownState==nil cannot carry the dedup tracker field.
+			// Dedup :noop via a dedicated annotation since shutdownState==nil
+			// cannot carry the dedup tracker field.
 			if p.noopDedupExpired(ns.Annotations, now) {
-				// MF-7 (F-20 extension): write dedup annotation BEFORE emit
-				// so a silent annotation-write failure aborts the wire
-				// emission and avoids re-firing :noop on every tick.
+				// Write the dedup annotation BEFORE emit so a silent
+				// annotation-write failure aborts the wire emission and
+				// avoids re-firing :noop on every tick.
 				if perr := p.patchNamespaceStringAnnotation(ctx, app, structs.BudgetShutdownNoopFiredAtAnnotation, now.UTC().Format(time.RFC3339)); perr == nil {
 					p.fireNoopEvent(app, cfg, baseState, reason, plan, now)
 				}
@@ -338,10 +336,10 @@ func (p *Provider) reconcileAutoShutdownWithManifest(ctx context.Context, app st
 		}
 		armedNow := now
 		shutdownTickID := generateShutdownTickID(armedNow)
-		// F-18 fix: persist NotifyBeforeMinutes from the manifest so the
-		// CLI banner + STATUS countdown reflect the user-configured
-		// value rather than the 30-minute default. Falls back to default
-		// when plan.notifyBeforeMinutes <= 0.
+		// Persist NotifyBeforeMinutes from the manifest so the CLI banner
+		// and STATUS countdown reflect the user-configured value rather
+		// than the 30-minute default. Falls back to default when
+		// plan.notifyBeforeMinutes <= 0.
 		notifyMin := plan.notifyBeforeMinutes
 		if notifyMin <= 0 {
 			notifyMin = structs.BudgetDefaultNotifyBeforeMinutes
@@ -371,9 +369,9 @@ func (p *Provider) reconcileAutoShutdownWithManifest(ctx context.Context, app st
 				KedaScaledObject:           kedaScaledObjectFromPlan(sp),
 			})
 		}
-		// F-20 fix: gate :armed emit on persist success. Without this,
-		// a silent persist failure means next tick has shutdownState==nil
-		// and re-arms (re-fires :armed) — visible duplicate on the wire.
+		// Gate :armed emit on persist success. Without this, a silent
+		// persist failure means next tick has shutdownState==nil and
+		// re-arms (re-fires :armed) — visible duplicate on the wire.
 		if perr := p.persistShutdownState(ctx, app, newState); perr == nil {
 			p.fireArmedEvent(app, cfg, baseState, newState, plan, now)
 		}
@@ -400,11 +398,11 @@ func (p *Provider) reconcileAutoShutdownWithManifest(ctx context.Context, app st
 			shutNow := now
 			succeeded := []string{}
 			failed := []string{}
-			// F-26 fix: capture the most recent shutdownService error so
-			// the FAILED branch can classify the canonical reason instead
-			// of always reporting "k8s-api-failure". The error wraps the
-			// underlying K8s API error preserved by errors.Wrapf in
-			// shutdownService and the patch-retry helpers.
+			// Capture the most recent shutdownService error so the FAILED
+			// branch can classify the canonical reason instead of always
+			// reporting "k8s-api-failure". The error wraps the underlying
+			// K8s API error preserved by errors.Wrapf in shutdownService
+			// and the patch-retry helpers.
 			var lastShutdownErr error
 			for i := range shutdownState.Services {
 				svc := &shutdownState.Services[i]
@@ -419,23 +417,22 @@ func (p *Provider) reconcileAutoShutdownWithManifest(ctx context.Context, app st
 			}
 			shutdownState.ShutdownAt = &shutNow
 
-			// F3 fix + F13b fix: :fired and :failed are MUTUALLY
-			// EXCLUSIVE per spec §8.10. If ANY service failed, emit
-			// :failed (with partial_state=succeeded count) and DO NOT
-			// emit :fired. Persist dedup BEFORE emit so a leader crash
-			// between persist and emit doesn't double-fire on retry.
+			// :fired and :failed are mutually exclusive. If ANY service
+			// failed, emit :failed (with partial_state=succeeded count)
+			// and do NOT emit :fired. Persist dedup BEFORE emit so a
+			// leader crash between persist and emit doesn't double-fire
+			// on retry.
 			if len(failed) > 0 {
 				if shutdownState.FailedNotificationFiredAt == nil {
-					// Persist FailureReason BEFORE firing the event so the
-					// FAILED banner rendered by `convox budget show` reads
-					// the canonical reason from the state annotation
-					// (per Set G v2 spec §16.3 — γ-7 BLOCKER B3 fix).
-					// F-20 fix: abort fireFailedEvent emit if persist
-					// fails so the dedup write is observable on the next
-					// tick — otherwise next reconcile re-fires :failed.
-					// F-26 fix: classify the underlying K8s API error via
-					// classifyPatchError so the FailureReason reflects the
-					// canonical sub-case (admission-rejected,
+					// Persist FailureReason BEFORE firing the event so
+					// the FAILED banner rendered by `convox budget show`
+					// reads the canonical reason from the state
+					// annotation. Abort fireFailedEvent emit if persist
+					// fails so the dedup write is observable on the
+					// next tick — otherwise next reconcile re-fires
+					// :failed. Classify the underlying K8s API error via
+					// classifyPatchError so the FailureReason reflects
+					// the canonical sub-case (admission-rejected,
 					// annotation-rejected, schema-incompatible) rather
 					// than the generic k8s-api-failure fallback.
 					reason := classifyPatchError(lastShutdownErr, false)
@@ -454,12 +451,13 @@ func (p *Provider) reconcileAutoShutdownWithManifest(ctx context.Context, app st
 			}
 
 			if shutdownState.FiredNotificationFiredAt == nil {
-				// F13b fix: persist BEFORE emit (was: emit then persist).
-				// On leader crash between persist and emit the new leader
+				// Persist BEFORE emit (was: emit then persist). On a
+				// leader crash between persist and emit the new leader
 				// sees FiredNotificationFiredAt set and skips re-emit;
-				// without F13b a crash window let the new leader re-fire.
-				// F-20 fix: abort fireFiredEvent emit if persist fails so
-				// the dedup write is observable on the next tick.
+				// without persist-then-emit a crash window let the new
+				// leader re-fire. Abort fireFiredEvent emit if persist
+				// fails so the dedup write is observable on the next
+				// tick.
 				shutdownState.FiredNotificationFiredAt = &shutNow
 				if perr := p.persistShutdownState(ctx, app, shutdownState); perr == nil {
 					p.fireFiredEvent(app, cfg, baseState, shutdownState, succeeded, plan, now)
@@ -499,7 +497,7 @@ func (p *Provider) allServicesScaledUp(ctx context.Context, app string, svcs []s
 // armedWindowManuallyScaledUp returns true when the user has scaled
 // services back up DURING the armed window beyond the original snapshot
 // (before any PATCH to 0 has applied). Distinct from allServicesScaledUp
-// which checks post-fired recovery. F8 fix.
+// which checks post-fired recovery.
 func (p *Provider) armedWindowManuallyScaledUp(ctx context.Context, app string, svcs []structs.AppBudgetShutdownStateService) bool {
 	if len(svcs) == 0 {
 		return false
@@ -526,8 +524,7 @@ func (p *Provider) armedWindowManuallyScaledUp(ctx context.Context, app string, 
 
 // noopDedupExpired returns true when the noop dedup window has elapsed
 // (or there's no prior noop fired-at marker). The window matches the
-// default tick interval — one :noop emission per tick at most. Per F9
-// fix and spec §7.2 dedup tracker semantics.
+// default tick interval — one :noop emission per tick at most.
 func (p *Provider) noopDedupExpired(ann map[string]string, now time.Time) bool {
 	raw, ok := ann[structs.BudgetShutdownNoopFiredAtAnnotation]
 	if !ok || raw == "" {
@@ -544,9 +541,8 @@ func (p *Provider) noopDedupExpired(ann map[string]string, now time.Time) bool {
 
 // stateCorruptDedupExpired returns true when the state-corrupt dedup
 // window has elapsed (or there's no prior state-corrupt fired-at marker).
-// Per F10 fix: the marker is written to a SEPARATE annotation key (NOT
-// inside the corrupt state JSON) so it survives the unparseable state
-// annotation.
+// The marker is written to a separate annotation key (NOT inside the
+// corrupt state JSON) so it survives the unparseable state annotation.
 func (p *Provider) stateCorruptDedupExpired(ann map[string]string, now time.Time) bool {
 	raw, ok := ann[structs.BudgetShutdownStateCorruptFiredAtAnnotation]
 	if !ok || raw == "" {
@@ -578,8 +574,8 @@ func kedaScaledObjectFromPlan(sp shutdownPlan) *structs.AppBudgetShutdownStateKe
 // resolve cleanly. Logs but does not abort on conflict — the next tick
 // will retry.
 //
-// F-20 fix: returns an error so callers gating event emission on dedup
-// trackers (FiredNotificationFiredAt, FailedNotificationFiredAt,
+// Returns an error so callers gating event emission on dedup trackers
+// (FiredNotificationFiredAt, FailedNotificationFiredAt,
 // CancelledNotificationFiredAt, RestoredNotificationFiredAt) can abort
 // emit when persist failed. Without this, a silent persist failure left
 // the dedup tracker in-memory only — next accumulator tick re-fires the
@@ -624,12 +620,13 @@ func spendUsdFor(baseState *structs.AppBudgetState) float64 {
 	return baseState.CurrentMonthSpendUsd
 }
 
-// fireArmedEvent emits :armed with the universal payload + per-event fields per spec §8.1.
+// fireArmedEvent emits :armed with the universal payload plus per-event fields.
 func (p *Provider) fireArmedEvent(app string, cfg *structs.AppBudget, baseState *structs.AppBudgetState, state *structs.AppBudgetShutdownState, plan *shutdownPlanResult, now time.Time) {
-	// F4 fix: populate cap_usd from cfg, spend_usd from baseState.
+	// Populate cap_usd from cfg, spend_usd from baseState.
 	data := universalEventData("system", state.ShutdownTickId, false, capUsdFor(cfg), spendUsdFor(baseState))
 	data["app"] = app
-	// F6 fix: rename armed_at → scheduled_at; fire_at → expected_shutdown_at per spec §8.1.
+	// scheduled_at and expected_shutdown_at replace the legacy armed_at /
+	// fire_at field names.
 	data["scheduled_at"] = now.Format(time.RFC3339)
 	notifyMin := plan.notifyBeforeMinutes
 	if notifyMin <= 0 {
@@ -645,12 +642,12 @@ func (p *Provider) fireArmedEvent(app string, cfg *structs.AppBudget, baseState 
 	data["eligible_services"] = formatServiceList(names)
 	data["shutdown_order"] = plan.shutdownOrder
 	data["recovery_mode"] = plan.recoveryMode
-	// F7 fix (extended to :armed per spec §8.1 lines 702-703): webhook_url
-	// + over_cap_usd.
-	// F-1 fix: redact webhook_url to scheme+host (e.g. https://hooks.slack.com)
-	// so receivers parsing the field with new URL(...) get a valid RFC 3986
-	// URL without embedded tokens. Helper redactedWebhookURL lives in event.go;
-	// distinct from redactURLHost (bare host) used for log lines.
+	// :armed carries webhook_url and over_cap_usd alongside the
+	// universal payload. Redact webhook_url to scheme+host (e.g.
+	// https://hooks.slack.com) so receivers parsing the field with
+	// new URL(...) get a valid RFC 3986 URL without embedded tokens.
+	// Helper redactedWebhookURL lives in event.go; distinct from
+	// redactURLHost (bare host) used for log lines.
 	if plan.webhookUrl != "" {
 		data["webhook_url"] = redactedWebhookURL(plan.webhookUrl)
 	}
@@ -664,18 +661,19 @@ func (p *Provider) fireArmedEvent(app string, cfg *structs.AppBudget, baseState 
 		app, state.ShutdownTickId, state.EligibleServiceCount, notifyMin)
 }
 
-// fireFiredEvent emits :fired with the universal payload + per-event fields per spec §8.2.
+// fireFiredEvent emits :fired with the universal payload plus per-event fields.
 func (p *Provider) fireFiredEvent(app string, cfg *structs.AppBudget, baseState *structs.AppBudgetState, state *structs.AppBudgetShutdownState, succeeded []string, plan *shutdownPlanResult, now time.Time) {
-	// F4 fix: populate cap_usd from cfg, spend_usd from baseState.
+	// Populate cap_usd from cfg, spend_usd from baseState.
 	data := universalEventData("system", state.ShutdownTickId, false, capUsdFor(cfg), spendUsdFor(baseState))
 	data["app"] = app
-	// F7 fix: rename fired_at → shutdown_at per spec §8.2 line 729.
+	// shutdown_at replaces the legacy fired_at field name.
 	data["shutdown_at"] = now.Format(time.RFC3339)
 	data["shut_down_services"] = formatServiceList(succeeded)
 	data["shut_down_count"] = strconv.Itoa(len(succeeded))
 	data["shutdown_order"] = plan.shutdownOrder
-	// F7 fix: snapshot_annotation (full state JSON), recovery_command,
-	// keda_managed_count, deployment_only_count, webhook_url, over_cap_usd.
+	// :fired also carries snapshot_annotation (full state JSON),
+	// recovery_command, keda_managed_count, deployment_only_count,
+	// webhook_url, and over_cap_usd.
 	if snap, err := json.Marshal(state); err == nil {
 		data["snapshot_annotation"] = string(snap)
 	}
@@ -691,7 +689,7 @@ func (p *Provider) fireFiredEvent(app string, cfg *structs.AppBudget, baseState 
 	}
 	data["keda_managed_count"] = strconv.Itoa(keda)
 	data["deployment_only_count"] = strconv.Itoa(depOnly)
-	// F-1 fix: scheme+host redaction (see :armed site for rationale).
+	// scheme+host redaction (see :armed site for rationale).
 	if plan.webhookUrl != "" {
 		data["webhook_url"] = redactedWebhookURL(plan.webhookUrl)
 	}
@@ -707,23 +705,23 @@ func (p *Provider) fireFiredEvent(app string, cfg *structs.AppBudget, baseState 
 
 // fireExpiredEvent emits :expired on manual-mode month rollover when no user reset occurred.
 func (p *Provider) fireExpiredEvent(app string, cfg *structs.AppBudget, baseState *structs.AppBudgetState, state *structs.AppBudgetShutdownState, now time.Time) {
-	// F4 fix: cap_usd from cfg (new month's cap). spend_usd per spec §8.5
-	// line 809 is "0.00" (new month resets); final_spend_usd carries the
-	// previous month's spend.
+	// cap_usd is the new month's cap from cfg; spend_usd is "0.00"
+	// (new month resets) and the previous month's spend is carried by
+	// final_spend_usd below.
 	data := universalEventData("system", state.ShutdownTickId, false, capUsdFor(cfg), 0)
 	data["app"] = app
 	data["expired_at"] = now.Format(time.RFC3339)
 	data["recovery_mode"] = state.RecoveryMode
-	// F6 fix: rename originally_shut_down_at → original_shutdown_at;
-	// services_left_at_zero → services_still_at_zero.
+	// original_shutdown_at and services_still_at_zero replace the legacy
+	// originally_shut_down_at and services_left_at_zero field names.
 	if state.ShutdownAt != nil {
 		data["original_shutdown_at"] = state.ShutdownAt.UTC().Format(time.RFC3339)
-		// F12 fix: prev_month_label = month of original ShutdownAt.
+		// prev_month_label is the month of the original ShutdownAt.
 		data["prev_month_label"] = state.ShutdownAt.UTC().Format("2006-01")
 	}
-	// F12 fix: original_armed_at, prev_month_label, new_month_label,
+	// :expired also carries original_armed_at, new_month_label,
 	// flap_suppressed_until, requires_manual_action, manual_action_hint,
-	// final_spend_usd.
+	// and final_spend_usd.
 	if state.ArmedAt != nil {
 		data["original_armed_at"] = state.ArmedAt.UTC().Format(time.RFC3339)
 	}
@@ -745,25 +743,25 @@ func (p *Provider) fireExpiredEvent(app string, cfg *structs.AppBudget, baseStat
 	fmt.Printf("ns=auto_shutdown at=expired app=%s tick_id=%s\n", app, state.ShutdownTickId)
 }
 
-// fireFlapSuppressedEvent emits :flap-suppressed per spec §8.6.
+// fireFlapSuppressedEvent emits :flap-suppressed when a re-trip lands inside the cooldown window.
 func (p *Provider) fireFlapSuppressedEvent(app string, cfg *structs.AppBudget, baseState *structs.AppBudgetState, suppressedUntil, now time.Time) {
-	// F4 fix: cap_usd from cfg, spend_usd from baseState.
+	// Populate cap_usd from cfg, spend_usd from baseState.
 	data := universalEventData("system", generateShutdownTickID(now), false, capUsdFor(cfg), spendUsdFor(baseState))
 	data["app"] = app
 	data["suppressed_at"] = now.Format(time.RFC3339)
-	// F6 fix: rename flap_suppressed_until → cooldown_expires_at per spec §8.6 line 841.
+	// cooldown_expires_at replaces the legacy flap_suppressed_until field name.
 	data["cooldown_expires_at"] = suppressedUntil.UTC().Format(time.RFC3339)
 	data["cooldown_remaining_min"] = strconv.Itoa(int(time.Until(suppressedUntil).Minutes()))
 	_ = p.EventSend(shutdownEventName("flap-suppressed"), structs.EventSendOptions{Data: data})
 	fmt.Printf("ns=auto_shutdown at=flap_suppressed app=%s suppressed_until=%s\n", app, suppressedUntil)
 }
 
-// fireNoopEvent emits :noop per spec §8.9.
+// fireNoopEvent emits :noop with a reason explaining why no shutdown was scheduled.
 func (p *Provider) fireNoopEvent(app string, cfg *structs.AppBudget, baseState *structs.AppBudgetState, reason string, plan *shutdownPlanResult, now time.Time) {
-	// F4 fix: cap_usd from cfg, spend_usd from baseState.
+	// Populate cap_usd from cfg, spend_usd from baseState.
 	data := universalEventData("system", generateShutdownTickID(now), false, capUsdFor(cfg), spendUsdFor(baseState))
 	data["app"] = app
-	// F6 fix: rename noop_at → evaluated_at per spec §8.9 line 915.
+	// evaluated_at replaces the legacy noop_at field name.
 	data["evaluated_at"] = now.Format(time.RFC3339)
 	data["reason"] = reason
 	data["eligible_service_count"] = "0"
@@ -781,12 +779,13 @@ func (p *Provider) fireNoopEvent(app string, cfg *structs.AppBudget, baseState *
 	fmt.Printf("ns=auto_shutdown at=noop app=%s reason=%s\n", app, reason)
 }
 
-// fireCancelledEvent emits :cancelled with a reason + the full §8.4
-// payload field set per spec. F11 fix: armed_at, expected_shutdown_at,
-// prev_cap_usd, new_cap_usd (cap-raised case), eligible_services,
-// new_action (config-changed case). Plus the universal payload.
+// fireCancelledEvent emits :cancelled with a reason and the full payload
+// field set: armed_at, expected_shutdown_at, prev_cap_usd, new_cap_usd
+// (cap-raised case), eligible_services, new_action (config-changed
+// case), plus the universal payload.
 func (p *Provider) fireCancelledEvent(app string, cfg *structs.AppBudget, baseState *structs.AppBudgetState, state *structs.AppBudgetShutdownState, actor string, reason string, prevCapUsd, newCapUsd float64, newAction string, now time.Time) {
-	// F4 fix: cap_usd from cfg (or new cap if cap-raised), spend_usd from baseState.
+	// cap_usd is the current cap from cfg, or the new cap if cap-raised;
+	// spend_usd comes from baseState.
 	capValue := capUsdFor(cfg)
 	if reason == "cap-raised" && newCapUsd > 0 {
 		capValue = newCapUsd
@@ -798,15 +797,15 @@ func (p *Provider) fireCancelledEvent(app string, cfg *structs.AppBudget, baseSt
 	if tickID == "" {
 		tickID = generateShutdownTickID(now)
 	}
-	// F-3 fix: actor is passed in by the caller. Spec §8.4 line 777
-	// mandates JWT-derived actor for sub-cases where an HTTP request is
-	// in scope at the trigger point: reset-during-armed (caller is
-	// AppBudgetReset, ackBy is the JWT user) and cap-raised (caller is
-	// the accumulator, but the originating user is recovered from
-	// cfg.LastCapMutationBy which AppBudgetSet persisted on the cap
-	// mutation — see MF-6 fix). Accumulator-only sub-cases without any
-	// caller-side identity (manual-detected, config-changed) legitimately
-	// keep "system" because no user-identity is recoverable at detection.
+	// actor is passed in by the caller. Sub-cases where an HTTP request
+	// is in scope at the trigger point use the JWT-derived actor:
+	// reset-during-armed (caller is AppBudgetReset, ackBy is the JWT
+	// user) and cap-raised (caller is the accumulator, but the
+	// originating user is recovered from cfg.LastCapMutationBy which
+	// AppBudgetSet persisted on the cap mutation). Accumulator-only
+	// sub-cases without any caller-side identity (manual-detected,
+	// config-changed) legitimately keep "system" because no user
+	// identity is recoverable at detection.
 	data := universalEventData(actor, tickID, false, capValue, spendUsdFor(baseState))
 	data["app"] = app
 	data["cancelled_at"] = now.Format(time.RFC3339)
@@ -835,9 +834,9 @@ func (p *Provider) fireCancelledEvent(app string, cfg *structs.AppBudget, baseSt
 	fmt.Printf("ns=auto_shutdown at=cancelled app=%s reason=%s\n", app, reason)
 }
 
-// fireRestoredEvent emits :restored with a recovery-trigger reason per spec §8.10.
-// F4 fix: populates cap_usd and spend_usd. F16 advisory partial fix:
-// also surfaces restored_services / restored_count when state has them.
+// fireRestoredEvent emits :restored with a recovery-trigger reason.
+// Populates cap_usd and spend_usd, and surfaces restored_services /
+// restored_count when state has them.
 func (p *Provider) fireRestoredEvent(app string, cfg *structs.AppBudget, baseState *structs.AppBudgetState, state *structs.AppBudgetShutdownState, trigger string, now time.Time) {
 	data := universalEventData("system", state.ShutdownTickId, false, capUsdFor(cfg), spendUsdFor(baseState))
 	data["app"] = app
@@ -872,8 +871,8 @@ func (p *Provider) fireRestoredEvent(app string, cfg *structs.AppBudget, baseSta
 	fmt.Printf("ns=auto_shutdown at=restored app=%s trigger=%s\n", app, trigger)
 }
 
-// fireFailedEvent emits :failed per spec §8.7. F4 fix: populates cap_usd
-// and spend_usd from cfg/baseState (was 0, 0).
+// fireFailedEvent emits :failed. Populates cap_usd and spend_usd from
+// cfg/baseState.
 func (p *Provider) fireFailedEvent(app string, cfg *structs.AppBudget, baseState *structs.AppBudgetState, actor, tickID string, now time.Time, failed []string, reason string, partialState int) {
 	data := universalEventData(actor, tickID, false, capUsdFor(cfg), spendUsdFor(baseState))
 	data["app"] = app
@@ -891,12 +890,12 @@ func (p *Provider) fireFailedEvent(app string, cfg *structs.AppBudget, baseState
 // annotation. Since the state is unparseable, neither cap nor spend is
 // derivable from state — we use the live cfg + baseState (which the
 // accumulator reads directly from the namespace, NOT via the corrupt
-// shutdown-state annotation). Per F10 fix.
+// shutdown-state annotation).
 func (p *Provider) fireFailedEventStateCorrupt(app string, cfg *structs.AppBudget, baseState *structs.AppBudgetState, now time.Time) {
 	p.fireFailedEvent(app, cfg, baseState, "system", generateShutdownTickID(now), now, []string{}, structs.BudgetShutdownReasonStateCorrupt, 0)
 }
 
-// classifyNoopReason returns the spec §8.9 reason enum for the :noop event
+// classifyNoopReason returns the canonical reason enum for the :noop event
 // when len(plan.ordered) == 0 (zero-eligibility case). Three values:
 //
 //   - "no-eligible-services" — manifest has 0 services OR every service was

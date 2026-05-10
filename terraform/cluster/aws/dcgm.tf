@@ -53,6 +53,8 @@ resource "helm_release" "dcgm_exporter" {
   # MAINTENANCE: literal default MUST match terraform/cluster/aws/variables.tf
   # default for gpu_observability_chart_version. Empty value falls through so
   # the user can clear the override; coalesce keeps helm_release valid.
+  # Drift is asserted by TestCoalesceLiteralsMatchTFDefaults at
+  # pkg/cli/rack_param_belt_test.go.
   version   = coalesce(var.gpu_observability_chart_version, "4.8.1")
   namespace = "kube-system"
 
@@ -109,9 +111,9 @@ resource "helm_release" "dcgm_exporter" {
       # change, helm rolls the DaemonSet, new pods read the new CSV, and
       # the rack heals without a manual `kubectl rollout restart`.
       podAnnotations = {
-        "prometheus.io/scrape"       = "true"
-        "prometheus.io/port"         = "9400"
-        "prometheus.io/path"         = "/metrics"
+        "prometheus.io/scrape" = "true"
+        "prometheus.io/port"   = "9400"
+        "prometheus.io/path"   = "/metrics"
         # Scrape interval hint for self-installed Prometheus operators discovering
         # via prometheus.io/* pod annotations. Convox's free in-cluster Prometheus
         # path uses pkg/structs/dcgm-scrape.yaml (Console-managed) which carries
@@ -120,7 +122,7 @@ resource "helm_release" "dcgm_exporter" {
         # own Prometheus that watches pod annotations. coalesce() guards an
         # operator-cleared rack param falling through as empty string.
         "prometheus.io/scrape-interval" = coalesce(var.dcgm_scrape_interval, "15s")
-        "convox.com/dcgm-csv-sha256" = filesha256("${path.module}/files/dcp-metrics-included.csv")
+        "convox.com/dcgm-csv-sha256"    = filesha256("${path.module}/files/dcp-metrics-included.csv")
       }
 
       # Schedule on GPU nodes only. The convox.io/gpu-vendor=nvidia label

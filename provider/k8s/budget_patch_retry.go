@@ -40,8 +40,7 @@ var patchAttemptTimeoutForTest = 30 * time.Second
 // shape — receivers parsing the failure_reason field can rely on the enum
 // values being stable.
 //
-// F-26 fix (catalog D-4): adds 4 new classifications beyond the prior
-// blanket "k8s-api-failure". Per spec §8.7 the 6 canonical reasons are:
+// The 6 canonical reasons are:
 //
 //	admission-rejected   — apierrors.IsForbidden (admission webhook said no)
 //	annotation-rejected  — apierrors.IsInvalid (PATCH body rejected at validation)
@@ -80,9 +79,9 @@ func classifyPatchError(err error, exhaustedConflict bool) string {
 //   - Final failure returns a reason from classifyPatchError so callers
 //     can populate AppBudgetShutdownState.FailureReason.
 //
-// F-26 fix (catalog D-4): spec §8.7 promised retry; pre-3.24.6 PATCH
-// sites issued a single attempt and surfaced any error as
-// "k8s-api-failure" without classification. Now centralized.
+// Pre-3.24.6 PATCH sites issued a single attempt and surfaced any
+// error as "k8s-api-failure" without classification; this helper
+// centralizes retry + classification.
 func patchDeploymentWithRetry(ctx context.Context, client kubernetes.Interface, ns, name string, pt types.PatchType, data []byte) (string, error) {
 	var lastErr error
 	for attempt := 1; attempt <= patchWithRetryAttempts; attempt++ {

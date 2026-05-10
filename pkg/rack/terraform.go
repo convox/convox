@@ -67,7 +67,6 @@ var preserveEmpty = map[string]bool{
 	// defaults via coalesce() guards in cluster/aws/prometheus.tf and dcgm.tf.
 	"prometheus_url":                       true,
 	"grafana_url":                          true,
-	"in_cluster_grafana_admin_password":    true,
 	"prometheus_gpu_metrics_chart_version": true,
 	"prometheus_gpu_metrics_retention":     true,
 	"gpu_observability_chart_version":      true,

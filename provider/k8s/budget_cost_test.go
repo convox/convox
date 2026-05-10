@@ -221,8 +221,8 @@ func TestNodeCapacityType_DualSignal(t *testing.T) {
 			name: "Karpenter_label_takes_priority_over_EKS_label",
 			node: nodeWithLabelsAndAnnotations(
 				map[string]string{
-					"karpenter.sh/capacity-type":      "spot",
-					"eks.amazonaws.com/capacityType":  "ON_DEMAND",
+					"karpenter.sh/capacity-type":     "spot",
+					"eks.amazonaws.com/capacityType": "ON_DEMAND",
 				}, nil),
 			expected: "spot",
 		},
@@ -286,9 +286,9 @@ func TestSanitizeAckBy(t *testing.T) {
 	assert.Equal(t, "unknown", k8s.SanitizeAckByForTest("\n\t\r"))
 }
 
-// TestSanitizeAckBy_DefenseInDepthStrips locks in the round-2 hardening
-// of sanitizeAckBy. Each case pins a specific Unicode-class strip rule.
-// A regression of any individual rule (e.g. a future refactor that
+// TestSanitizeAckBy_DefenseInDepthStrips locks in the Unicode-class
+// strip rules of sanitizeAckBy. Each case pins a specific rule. A
+// regression of any individual rule (e.g. a future refactor that
 // inlines and accidentally drops the C1 range check) would break the
 // matching case here without changing the integrated audit-event tests.
 // Non-ASCII inputs use Go's \u escape syntax so source-embedded
@@ -337,10 +337,9 @@ func TestSanitizeAckBy_DefenseInDepthStrips(t *testing.T) {
 		// Truthful values pass through unmodified.
 		{"truthful_email", "alice@example.com", "alice@example.com"},
 
-		// Whitespace-only collapses to "unknown" — round-2 added
-		// strings.TrimSpace gating to catch pathological "   " inputs
-		// that pre-round-2 would have stamped a misleading whitespace
-		// actor on the event.
+		// Whitespace-only collapses to "unknown" — strings.TrimSpace
+		// gating catches pathological "   " inputs that would otherwise
+		// stamp a misleading whitespace actor on the event.
 		{"whitespace_spaces", "   ", "unknown"},
 		{"whitespace_tabs", "\t\t", "unknown"},
 		{"whitespace_mixed", " \t \n ", "unknown"},

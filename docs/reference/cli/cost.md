@@ -20,24 +20,45 @@ hours, instance type, and month-to-date spend.
 
 ### Examples
 
+Default per-service / per-variant breakdown on a 3.24.6+ rack:
+
 ```bash
     $ convox cost --app myapp
-    SERVICE        GPU-HOURS  CPU-HOURS  MEM-GB-HOURS  INSTANCE     SPEND-USD
-    vllm           0.00       0.00       0.00          g4dn.xlarge  $0.30
-    api            0.00       0.00       0.00          t3.medium    $0.08
-    worker         0.00       0.00       0.00          t3.small     $0.04
-    _build         0.00       0.00       0.00          c5.large     $0.02
-    _unattributed  0.00       0.00       0.00          t3.medium    $0.01
+    SERVICE        INSTANCE     CAPACITY   ACTIVE-REPLICAS  SPEND-USD
+    vllm           g4dn.xlarge  on-demand  3                $0.30
+    api            t3.medium    spot       2                $0.08
+    worker         t3.small     spot       1                $0.04
+    _build         c5.large     on-demand  —                $0.02
+    _unattributed  t3.medium    on-demand  —                $0.01
+    TOTAL: $0.45
+    Cost accumulates per (instance-type, capacity-type) combination across the month. A row may show 0 active replicas if pods previously ran on that variant but have since migrated or been removed.
+    Spot pricing applies a discount automatically when nodes are provisioned via Karpenter or an EKS spot ASG. Capacity "unknown" means the node carried neither label.
 ```
 
-Each row is one entry in the underlying `AppCost.breakdown` array. The
-`SPEND-USD` column is populated from the accumulator's per-service totals.
-The `GPU-HOURS` / `CPU-HOURS` / `MEM-GB-HOURS` columns are reserved for a
-future per-resource pricing model; in 3.24.6 they always render `0.00` and
-the JSON wire fields serialize as `0` (the field tags are not `omitempty`,
-so `convox cost --format json` always emits the keys with their zero
-values — useful for downstream parsers that expect a stable shape).
-Sort order is descending by `SPEND-USD` with alphabetical secondary tiebreak.
+Aggregated app totals via `--aggregate`:
+
+```bash
+    $ convox cost --app myapp --aggregate
+    APP    SPEND-USD  AS-OF        PRICING-SOURCE
+    myapp  $0.45      2 minutes ago  pricing-table:2026-05
+```
+
+### Output table (3.24.6+)
+
+The default 3.24.6 output is one row per `(service, instance-type,
+capacity-type)` triple. Column-position contract:
+
+| Position | Column | Description |
+|---:|---|---|
+| 1 | `SERVICE` | Service name (`_build` / `_unattributed` for reserved buckets). |
+| 2 | `INSTANCE` | Instance type as labeled on the node (e.g. `g4dn.xlarge`). |
+| 3 | `CAPACITY` | `on-demand`, `spot`, or `unknown` (verbatim from the node label). |
+| 4 | `ACTIVE-REPLICAS` | Pod count on this variant at the most recent tick; `—` if 0. |
+| 5 | `SPEND-USD` | Accumulated spend for this variant in the current billing month. |
+
+Sort order is descending by `SPEND-USD` with alphabetical secondary
+tiebreak. Each row is one entry in the underlying
+`AppCost.variant-breakdown` array (`structs.ServiceVariantCostLine`).
 
 Two reserved buckets may appear alongside service rows:
 
@@ -45,6 +66,44 @@ Two reserved buckets may appear alongside service rows:
   service they are building so normal-operation cost stays uninflated.
 - `_unattributed` — pods without a `service` label (system sidecars, KEDA
   scalers, anything not user-deployed).
+
+### Pre-3.24.6 racks (fallback table)
+
+Older racks (3.24.5 and earlier) emit no `variant-breakdown` array. The
+CLI auto-falls-back to the legacy aggregated columns:
+
+```bash
+    SERVICE        GPU-HOURS  CPU-HOURS  MEM-GB-HOURS  INSTANCE     SPEND-USD
+    vllm           0.00       0.00       0.00          g4dn.xlarge  $0.30
+```
+
+`GPU-HOURS` / `CPU-HOURS` / `MEM-GB-HOURS` are reserved for a future
+per-resource pricing model — they render `0.00` on every release that
+ships this column shape. The `SPEND-USD` column is populated from the
+accumulator's per-service totals.
+
+### JSON output shape
+
+`convox cost --format json` emits the raw `*structs.AppCost` for jq
+consumption. On 3.24.6+ racks the response carries BOTH a `breakdown`
+array (legacy aggregated rows) and a `variant-breakdown` array (one row
+per `(service, instance-type, capacity-type)` triple). The variant
+schema:
+
+```json
+{
+  "service": "vllm",
+  "instance-type": "g4dn.xlarge",
+  "capacity-type": "on-demand",
+  "spend-usd": 0.30,
+  "replicas": 3
+}
+```
+
+Pre-3.24.6 racks omit `variant-breakdown` entirely (the field is
+`omitempty`) and emit only the legacy `breakdown` array. Stable-shape
+consumers should fail-open on a missing `variant-breakdown` and prefer
+that array when present.
 
 See [Per-service cost breakdown](/management/budget-caps#per-service-breakdown)
 for bucket semantics, the 1000-entry truncation cap, and the

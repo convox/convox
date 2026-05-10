@@ -43,6 +43,20 @@ Updating parameters... OK
 ```
 Note: clearing `prometheus_url` removes KEDA autoscale based on Prometheus metrics and disables `convox ps` GPU enrichment until the parameter is re-set. There is no rack-side auto-resolution post-3.24.6 — empty means empty.
 
+## Security: SSRF guard
+
+The rack rejects values that would let it query a sensitive internal endpoint. The validator at `pkg/cli/rack.go` rejects:
+
+- Private CIDRs (`10/8`, `172.16/12`, `192.168/16`)
+- Loopback (`127/8`)
+- Link-local (`169.254/16`)
+- Unspecified (`0.0.0.0`)
+- DNS hostnames whose A records resolve into the deny-set above
+
+Valid endpoints include public hostnames (Grafana Cloud, AWS AMP, your aggregator) AND in-cluster service hostnames matching `*.svc.cluster.local`. The latter explicitly bypasses the deny-set so the in-cluster Prometheus URLs in the "Use Cases" section work.
+
+If your value is rejected, set the in-cluster service URL or a public hostname instead. The boot-time re-validation at `provider/k8s/k8s.go:Initialize` performs the same check; a stored value that bypassed param-set (e.g. via direct configmap edit) gets rejected at startup with a structured log line and `metrics=disabled` until corrected.
+
 ## Additional Information
 - This parameter is AWS-only at this time.
 - The value is treated as sensitive: stored as a Kubernetes Secret (not a ConfigMap), never logged in plaintext, never serialized into rack deploy-spec annotations, and SHA-256-hashed before emission to telemetry.

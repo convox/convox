@@ -14,14 +14,20 @@ or removing the cap is done through `convox budget set` or `convox budget clear`
 Raise the monthly cap. Atomic with breaker-clear when the new cap is above
 current spend.
 
+> **Requires admin role on the rack RBAC.** Mutating the monthly cap is
+> admin-gated end-to-end (`AppBudgetSet` cap-mutation path on the rack).
+> A non-admin caller (`rw` role) receives `403 AppBudgetSet: admin role
+> required to set budget cap`. Basic-auth (rack-password) callers
+> automatically pass the admin check.
+
 ### Usage
 ```bash
-    convox budget cap raise [-a app] --monthly-cap N
+    convox budget cap raise [-a app] --monthly-cap-usd N
 ```
 
 ### Examples
 ```bash
-    $ convox budget cap raise --app myapp --monthly-cap 500
+    $ convox budget cap raise --app myapp --monthly-cap-usd 500
     Raising monthly cap to 500.00 USD... OK
     Breaker cleared.
 ```
@@ -29,7 +35,7 @@ current spend.
 If the new cap is below current spend, the request is rejected:
 
 ```bash
-    $ convox budget cap raise --app myapp --monthly-cap 100
+    $ convox budget cap raise --app myapp --monthly-cap-usd 100
     error: new cap 100.00 USD is below current spend 134.65 USD
 ```
 

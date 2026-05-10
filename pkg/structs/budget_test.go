@@ -271,9 +271,9 @@ func TestServiceCostLineJSONRoundtrip(t *testing.T) {
 	assert.Equal(t, line, got)
 }
 
-// TestAppBudget_KebabJSON_RoundTrip is the explicit kebab-form contract
-// (R3 Tests R2 T-7). Asserts the JSON wire format uses "monthly-cap-usd"
-// and "at-cap-action" — NOT the legacy snake form.
+// TestAppBudget_KebabJSON_RoundTrip is the explicit kebab-form
+// contract: the JSON wire format uses "monthly-cap-usd" and
+// "at-cap-action" — NOT the legacy snake form.
 func TestAppBudget_KebabJSON_RoundTrip(t *testing.T) {
 	b := structs.AppBudget{
 		MonthlyCapUsd:         500,
@@ -327,10 +327,10 @@ func TestAppBudgetValidate_KebabErrorMessages(t *testing.T) {
 }
 
 // TestAppBudget_SnakeCaseJSON_RejectsWithError is the negative regression
-// guard required by R3 Tests R2 T-7. A JSON payload using the legacy
-// snake-case keys must NOT bind to AppBudget fields — encoding/json
-// silent-drops unknown keys, so we observe binding failure as zero values
-// on the round-trip target.
+// guard for the kebab-case wire contract. A JSON payload using the
+// legacy snake-case keys must NOT bind to AppBudget fields —
+// encoding/json silent-drops unknown keys, so we observe binding
+// failure as zero values on the round-trip target.
 //
 // This test exists to fail loudly if a future encoder tweak (e.g. a custom
 // UnmarshalJSON or a permissive decoder option) accidentally restored
@@ -349,11 +349,10 @@ func TestAppBudget_SnakeCaseJSON_RejectsWithError(t *testing.T) {
 	assert.Equal(t, 0.0, got.PricingAdjustment, "snake pricing_adjustment must not bind")
 }
 
-// TestServiceCostLine_KebabJSON_RoundTrip — F-9 fix (catalog F-9).
-// Verifies the JSON tag rename from snake to kebab on the InstanceType
-// field. Wire format must use `instance-type` (matching the rest of the
-// pkg/structs/budget.go convention) — the snake form `instance_type`
-// must NOT bind on Unmarshal of the new wire format.
+// TestServiceCostLine_KebabJSON_RoundTrip verifies the JSON tag is
+// kebab on the InstanceType field. Wire format must use
+// `instance-type` (matching the rest of pkg/structs/budget.go) — the
+// snake form `instance_type` must NOT bind on Unmarshal.
 func TestServiceCostLine_KebabJSON_RoundTrip(t *testing.T) {
 	line := structs.ServiceCostLine{
 		Service:      "ml-batch",

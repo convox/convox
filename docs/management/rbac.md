@@ -144,6 +144,44 @@ This role is designed for compliance or auditing purposes. The user is granted r
 
 These examples showcase the flexibility of RBAC in managing user access based on common organizational roles and responsibilities.
 
+## Rack-tier admin gates
+
+Several rack-side mutations enforce a `CanAdmin` check above the
+standard `Read`/`Write` action set. These gates are enforced by the
+rack itself (not just the Console UI), so they apply equally to
+Console callers, CLI callers using rack-password basic auth, and
+direct API callers using a JWT.
+
+The current set of admin-gated mutations on a 3.24.6 rack:
+
+| Mutation | CLI surface | Rejection message |
+|---|---|---|
+| `AppBudgetSet --monthly-cap` | `convox budget set --monthly-cap`, `convox budget cap raise` | `403 AppBudgetSet: admin role required to set budget cap` |
+| `AppBudgetSet --at-cap-action` | `convox budget set --at-cap-action`, `convox deploy` (when manifest sets `atCapAction`) | `403 AppBudgetSet: admin role required to set budget cap` |
+| `AppBudgetSet --pricing-adjustment` | `convox budget set --pricing-adjustment-only` | `403 AppBudgetSet: admin role required to set budget cap` |
+| `AppBudgetClear` | `convox budget clear` | `403 AppBudgetClear: admin role required to remove budget config` |
+| `AppBudgetReset --force-clear-cooldown` | `convox budget reset --force-clear-cooldown` | `403 AppBudgetReset --force-clear-cooldown requires Admin role; current role is 'w'. Contact rack admin or use Admin token.` |
+| Webhook signing key reveal | Console "Reveal" button on `webhook_signing_key` rack param | `403` (Console resolver layer) |
+
+The pre-created **Administrator** role passes the rack-tier
+`CanAdmin` check; the pre-created **OperatorV2** and
+**DeveloperV2** roles do not. Custom roles pass when they grant
+`Write` access on the **All Resources** type and any cumulative-tier
+admin permissions configured for the organization.
+
+Basic-auth callers (rack-password) automatically pass the admin
+check via `SetAdminRole` at authenticate-time. This means scripted
+flows authenticated with the rack password can mutate caps and
+clear budget config even when the calling human's RBAC role is
+narrower — operators concerned about this should rotate to JWT
+issuance for scripted flows and keep the rack password tightly
+scoped.
+
+For the full Authorization table covering every budget mutation
+(including `rw`-tier paths like the plain reset, dismiss-recovery,
+and simulate-shutdown), see
+[Budget Caps → Authorization](/management/budget-caps#authorization).
+
 ## Deploy Keys and RBAC
 
 With the RBAC update, you can assign custom roles to [Deploy Keys](/management/deploy-keys), allowing deploy keys to have more flexible permissions. Deploy keys are API keys designed for use in CI environments or other remote systems.

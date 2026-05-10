@@ -15,6 +15,11 @@ import (
 
 // fxAppCost returns an AppCost fixture with two services in the breakdown.
 // Use this when a test wants to assert per-service rendering.
+//
+// TrackingEnabled defaults to true here so the standard rendering path
+// (without the tracking-disabled hint banner) is exercised. Tests that
+// want to lock the disabled-rack hint render explicitly clear the flag
+// or use a dedicated fixture.
 func fxAppCost() *structs.AppCost {
 	return &structs.AppCost{
 		App:                 "app1",
@@ -24,6 +29,7 @@ func fxAppCost() *structs.AppCost {
 		PricingSource:       "embedded",
 		PricingTableVersion: "2026-01",
 		PricingAdjustment:   1.0,
+		TrackingEnabled:     true,
 		Breakdown: []structs.ServiceCostLine{
 			{
 				Service:      "web",
@@ -71,6 +77,7 @@ func fxAppCostEmpty() *structs.AppCost {
 		PricingSource:       "embedded",
 		PricingTableVersion: "2026-01",
 		PricingAdjustment:   1.0,
+		TrackingEnabled:     true,
 	}
 }
 
@@ -377,6 +384,53 @@ func TestCost_Subcommand_IntegrationViaRegister(t *testing.T) {
 		require.Equal(t, 0, res.Code, "register('cost', ...) plumbing failed; stderr: %s", res.Stderr)
 		// Smoke: command produced output.
 		require.NotEmpty(t, res.Stdout)
+	})
+}
+
+// TestCost_TrackingDisabled_PrintsHintBanner exercises the cost_tracking_enable
+// gate. When the rack reports TrackingEnabled=false the CLI prefixes the
+// table with a banner explaining the values may be empty or stale,
+// directing the operator to set cost_tracking_enable=true. Older racks
+// that emit the field as zero-value (omitempty / pre-3.24.6) get the
+// same hint, which is the correct behavior — pre-3.24.6 racks have no
+// cost-tracking enforcement either, so the disabled-rack messaging is
+// accurate.
+func TestCost_TrackingDisabled_PrintsHintBanner(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		fx := fxAppCost()
+		fx.TrackingEnabled = false
+		i.On("AppCost", "app1").Return(fx, nil)
+
+		res, err := testExecute(e, "cost -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+
+		require.Contains(t, res.Stdout, "Cost tracking is disabled on this rack",
+			"disabled-rack banner must precede the breakdown table")
+		require.Contains(t, res.Stdout, "convox rack params set cost_tracking_enable=true",
+			"banner must include the actionable remediation command")
+		// Table still renders so existing scripts that grep for SERVICE / SPEND-USD
+		// keep working — the hint is additive, not a replacement.
+		require.Contains(t, res.Stdout, "SERVICE")
+		require.Contains(t, res.Stdout, "SPEND-USD")
+	})
+}
+
+// TestCost_TrackingEnabled_NoHintBanner pins the inverse contract: when the
+// rack reports TrackingEnabled=true, the disabled-rack banner must NOT
+// appear. Belt-and-suspenders against a regression that always renders
+// the banner regardless of the field value.
+func TestCost_TrackingEnabled_NoHintBanner(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		// fxAppCost defaults TrackingEnabled=true.
+		i.On("AppCost", "app1").Return(fxAppCost(), nil)
+
+		res, err := testExecute(e, "cost -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+
+		require.NotContains(t, res.Stdout, "Cost tracking is disabled on this rack",
+			"disabled-rack banner must NOT appear when tracking is enabled")
 	})
 }
 

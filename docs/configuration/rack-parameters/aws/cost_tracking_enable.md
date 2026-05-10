@@ -16,7 +16,7 @@ The default value for `cost_tracking_enable` is `false`. Users must opt in to en
 
 ## Use Cases
 - **Per-app cost visibility**: Surface dollars-per-hour by app and by service in the Convox Console dashboards and the `convox cost` CLI without integrating an external cost-management tool.
-- **Budget-cap enforcement**: Set a monthly USD cap on an app via `convox budget set --monthly-cap-usd 1000 <app>` and have the rack auto-block deploys (or auto-shutdown services) when the rolling 30-day spend reaches the cap.
+- **Budget-cap enforcement**: Set a monthly USD cap on an app via `convox budget set --monthly-cap 1000 <app>` and have the rack auto-block deploys (or auto-shutdown services) when the rolling 30-day spend reaches the cap.
 - **Cost-per-utilization analysis**: Combined with `gpu_observability_enable`, surface dollars-per-actual-GPU-hour rather than dollars-per-allocated-GPU-hour for inference and training workloads.
 - **Spend forecasting**: The accumulator emits a rolling spend rate that feeds Convox Console forecasting widgets so users can see "at this burn rate, you'll hit your cap in 6 days."
 

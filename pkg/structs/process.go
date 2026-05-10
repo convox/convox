@@ -56,8 +56,8 @@ type Process struct {
 	GpuTensorActive *float64 `json:"gpu-tensor-active,omitempty"` // percent 0-100 (DCGM_FI_PROF_PIPE_TENSOR_ACTIVE × 100)
 	GpuSmActive     *float64 `json:"gpu-sm-active,omitempty"`     // percent 0-100 (DCGM_FI_PROF_SM_ACTIVE × 100)
 	GpuDramActive   *float64 `json:"gpu-dram-active,omitempty"`   // percent 0-100 (DCGM_FI_PROF_DRAM_ACTIVE × 100)
-	GpuFp16Active   *float64 `json:"gpu-fp16-active,omitempty"`   // active fraction 0-1 (DCGM_FI_PROF_PIPE_FP16_ACTIVE)
-	GpuFp32Active   *float64 `json:"gpu-fp32-active,omitempty"`   // active fraction 0-1 (DCGM_FI_PROF_PIPE_FP32_ACTIVE)
+	GpuFp16Active   *float64 `json:"gpu-fp16-active,omitempty"`   // percent 0-100 (DCGM_FI_PROF_PIPE_FP16_ACTIVE × 100)
+	GpuFp32Active   *float64 `json:"gpu-fp32-active,omitempty"`   // percent 0-100 (DCGM_FI_PROF_PIPE_FP32_ACTIVE × 100)
 	GpuPowerW       *float64 `json:"gpu-power-w,omitempty"`       // watts (DCGM_FI_DEV_POWER_USAGE)
 }
 

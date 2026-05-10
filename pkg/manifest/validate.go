@@ -187,13 +187,14 @@ func (m *Manifest) validateServices() []error {
 func validateServiceScale(s *Service) []error {
 	var errs []error
 
-	// Spec 04: agent + scale.autoscale|keda used to hard-fail; demoted to a
-	// stderr WARNING so legacy manifests in the wild keep parsing. Early-return
-	// stops the function from running the autoscale-aware checks below against
-	// a config the runtime will ignore (releaseTemplateServices drops
-	// wantsAutoscale for agent services and emits release:agent-autoscale-
-	// ignored). Without the early-return, scale.min==max / threshold-range /
-	// trigger-name rules would re-fire on already-ignored config.
+	// agent + scale.autoscale|keda used to hard-fail; demoted to a
+	// stderr WARNING so legacy manifests in the wild keep parsing.
+	// Early-return stops the function from running the autoscale-aware
+	// checks below against a config the runtime will ignore
+	// (releaseTemplateServices drops wantsAutoscale for agent services
+	// and emits release:agent-autoscale-ignored). Without the
+	// early-return, scale.min==max / threshold-range / trigger-name
+	// rules would re-fire on already-ignored config.
 	if s.Agent.Enabled && (s.Scale.Autoscale.IsEnabled() || s.Scale.IsKedaEnabled()) {
 		fmt.Fprintf(os.Stderr,
 			"WARNING: service %q: agent runs as DaemonSet; scale.autoscale and scale.keda configuration is ignored. Remove autoscale/keda or set agent:false to use autoscaling.\n",
@@ -357,9 +358,9 @@ func (m *Manifest) validateTimers() []error {
 	return errs
 }
 
-// validateBudget enforces the 11 cross-field rules from Set G v2 spec
-// §3.1. 10 rules are HARD-FAIL; rule 3 is WARN-only (printed to
-// stderr, parse succeeds).
+// validateBudget enforces the 11 cross-field rules on the manifest
+// budget block. 10 rules are HARD-FAIL; rule 3 (alertThresholdPercent
+// > 100) is WARN-only (printed to stderr, parse succeeds).
 func (m *Manifest) validateBudget() []error {
 	b := m.Budget
 	errs := []error{}

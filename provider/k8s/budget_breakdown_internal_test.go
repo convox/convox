@@ -143,9 +143,9 @@ func TestBuildVariantBreakdown_SkipsMalformedKeys(t *testing.T) {
 	state := &structs.AppBudgetState{
 		PerServiceSpendByVariant: map[string]map[string]float64{
 			"web": {
-				"":                      0.10, // empty key
-				"no-colon-separator":    0.20, // no colon
-				"t3.large:on-demand":    1.40,
+				"":                   0.10, // empty key
+				"no-colon-separator": 0.20, // no colon
+				"t3.large:on-demand": 1.40,
 			},
 		},
 	}
@@ -257,8 +257,8 @@ func TestDominantInstanceTypeFromVariants_HighestSpendWins(t *testing.T) {
 
 	// Heterogeneous instances: spend dominance wins regardless of pod count.
 	got = dominantInstanceTypeFromVariants(map[string]float64{
-		"t3.large:spot":          0.075, // 3 cheap pods
-		"g4dn.xlarge:on-demand":  0.526, // 1 expensive pod — dominant by spend
+		"t3.large:spot":         0.075, // 3 cheap pods
+		"g4dn.xlarge:on-demand": 0.526, // 1 expensive pod — dominant by spend
 	})
 	if got != "g4dn.xlarge" {
 		t.Errorf("expensive single pod must dominate: want g4dn.xlarge, got %q", got)

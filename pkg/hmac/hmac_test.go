@@ -417,10 +417,10 @@ func TestValidateSigningKeys_FourValid_Accepts(t *testing.T) {
 	require.NoError(t, cxhmac.ValidateSigningKeys(good))
 }
 
-// TestValidateSigningKeys_TooManyError_NoKeyMaterial — the rejection
-// message must NOT contain any key bytes, hashes, or hex/base64/base64url
-// encodings of the key material. The sole information surfaced is the
-// count + the cap (count > cap), per F-SEC-4.
+// TestValidateSigningKeys_TooManyError_NoKeyMaterial verifies that
+// the rejection message does NOT contain any key bytes, hashes, or
+// hex/base64/base64url encodings of the key material. The sole
+// information surfaced is the count + the cap (count > cap).
 func TestValidateSigningKeys_TooManyError_NoKeyMaterial(t *testing.T) {
 	candidates := []string{fixedKeyHex, secondKeyHex}
 	bad := strings.Join([]string{fixedKeyHex, secondKeyHex, fixedKeyHex, secondKeyHex, fixedKeyHex}, ",")
@@ -689,7 +689,7 @@ func TestSignedHeader_PanicInternal_DegradesGracefully(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// No-key-leak in logs (R1 obs §1.1 + R2 cleanup)
+// No-key-leak in logs.
 // ---------------------------------------------------------------------------
 
 func TestHmacPackage_NoKeyLeakInLogs(t *testing.T) {

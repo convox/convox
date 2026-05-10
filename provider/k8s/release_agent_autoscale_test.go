@@ -14,10 +14,11 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
-// agentAutoscaleManifestYaml — agent service with scale.autoscale set. Spec 04
-// demoted manifest validation from hard-fail to WARNING, so this manifest now
-// loads/validates and reaches releaseTemplateServices, which must drop
-// wantsAutoscale and emit release:agent-autoscale-ignored with actor=system.
+// agentAutoscaleManifestYaml — an agent service with scale.autoscale
+// set. Manifest validation is now a WARNING (was hard-fail), so this
+// manifest loads/validates and reaches releaseTemplateServices, which
+// must drop wantsAutoscale and emit release:agent-autoscale-ignored
+// with actor=system.
 func agentAutoscaleManifestYaml() string {
 	return `services:
   collector:
@@ -61,10 +62,27 @@ func setupAgentAutoscaleTest(t *testing.T) func(*k8s.Provider) (*structs.App, *s
 // gate (provider/k8s/k8s.go:298). Without it, every test in this package
 // that uses runReleaseTemplateServicesEvents fails at testProvider setup
 // with "deployments.apps \"api\" not found", regardless of branch state.
+//
+// Also installs a permissive webhook SSRF validator: production rejects
+// loopback/private/IMDS URLs in webhookCreate and dispatchWebhookSafely
+// (added in 3.24.6 to close a pre-existing SSRF gap), but the test
+// scaffolding uses httptest.NewServer URLs that bind to 127.0.0.1.
+// Without this override, every test that exercises EventSend's webhook
+// fan-out path against an httptest server would fail at the SSRF guard.
+// Tests that explicitly verify the strict-mode behavior install a
+// strict validator via SetWebhookSSRFValidatorForTest within the test
+// body, then defer the restore.
 func TestMain(m *testing.M) {
 	if os.Getenv("TEST") == "" {
 		os.Setenv("TEST", "true")
 	}
+	// SetWebhookSSRFValidatorForTest returns a restore fn we don't use
+	// here: TestMain owns the entire test-process lifetime, so leaving
+	// the permissive stub in place until os.Exit is correct. (Deferring
+	// restore() is a no-op because os.Exit skips defers; capturing the
+	// return is intentional to satisfy the lint that exported test
+	// helpers always return a restore func.)
+	_ = k8s.SetWebhookSSRFValidatorForTest(func(string) error { return nil })
 	os.Exit(m.Run())
 }
 

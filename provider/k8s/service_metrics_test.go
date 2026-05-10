@@ -215,17 +215,18 @@ func TestMetricsByService_Impl_EmptyServices(t *testing.T) {
 	require.EqualValues(t, 0, atomic.LoadInt64(&hits), "Prom must not be hit when services is empty")
 }
 
-// TestProviderInitialize_RejectsStoredInvalidPrometheusURL — F-SEC-26:
-// SSRF startup re-validation. A pre-F-01 stored value or an
-// operator-edited configmap may carry a URL that the param-set
-// validator would have rejected. On Initialize, the provider
-// re-validates and drops PromClient to nil if the value is hostile.
+// TestProviderInitialize_RejectsStoredInvalidPrometheusURL — SSRF
+// startup re-validation. A stored value that bypassed the param-set
+// validator (e.g. a manually edited configmap) is re-checked on
+// Initialize; PromClient is dropped to nil when the URL is hostile.
 //
-// We exercise the helper directly (ValidatePrometheusURL) — the full
-// Initialize path goes through a configmap fetch / k8s API which is
-// out of scope for a unit test. The Initialize hook then plumbs the
-// validation outcome to PromClient via the new SSRF-revalidation block
-// added in this wave.
+// This test exercises the helper directly (ValidatePrometheusURL) —
+// the full Initialize path goes through a configmap fetch / k8s API
+// which is out of scope for a unit test. Test cases here cover only
+// inputs that do NOT require live DNS: IP literals, the
+// *.svc.cluster.local allowlist, scheme rejection, and reserved
+// names. DNS-resolution behaviour is exercised in pkg/validator with
+// a stubbed resolver — see pkg/validator/ssrf_test.go.
 func TestProviderInitialize_RejectsStoredInvalidPrometheusURL(t *testing.T) {
 	cases := []struct {
 		name      string
@@ -233,8 +234,8 @@ func TestProviderInitialize_RejectsStoredInvalidPrometheusURL(t *testing.T) {
 		shouldErr bool
 	}{
 		{"empty", "", false},
-		{"valid_https", "https://prom.example.com:9090", false},
-		{"valid_http", "http://prom.example.com:9090", false},
+		{"in_cluster_suffix", "http://prom.kube-system.svc.cluster.local:9090", false},
+		{"in_cluster_paid_recipe", "http://convox-kube-prometheus-sta-prometheus.convox-monitoring.svc.cluster.local:9090", false},
 		{"file_scheme", "file:///etc/passwd", true},
 		{"localhost", "http://localhost:9090", true},
 		{"loopback_ip", "http://127.0.0.1:9090", true},

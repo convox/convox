@@ -26,7 +26,7 @@ import (
 // the saved annotation easier to grep for in audit replays.
 const shutdownTickIDPrefix = "tick-"
 
-// 9 lifecycle event names per Set G v2 spec §8. The accumulator loop
+// Nine lifecycle event names. The accumulator loop
 // (budget_accumulator.go) fires :armed/:fired/:expired/:flap-suppressed/:noop
 // at tick time; this file fires :cancelled/:restored/:failed/:simulated
 // from the shutdown/restore code paths. The names are pinned here so a
@@ -42,8 +42,8 @@ const shutdownTickIDPrefix = "tick-"
 //	app:budget:auto-shutdown:simulated
 //	app:budget:auto-shutdown:noop
 //
-// Plus 1 audit-only (NOT a lifecycle event): app:budget:auto-shutdown:dismissed
-// fired by the dismiss-recovery path per spec §10.9.
+// Plus one audit-only event (not a lifecycle event):
+// app:budget:auto-shutdown:dismissed fired by the dismiss-recovery path.
 const (
 	ShutdownEventArmed          = "app:budget:auto-shutdown:armed"
 	ShutdownEventFired          = "app:budget:auto-shutdown:fired"
@@ -59,23 +59,22 @@ const (
 
 // budgetShutdownPatchRetries is the in-tick retry budget for a single
 // PATCH that fails with admission-webhook denial or 409 conflict before
-// :failed fires (per spec §8.7 — 3 attempts with exponential backoff).
+// :failed fires (3 attempts with exponential backoff).
 const budgetShutdownPatchRetries = 3
 
-// shutdownEventName returns the qualified event name for a Set G
-// lifecycle event (e.g. shutdownEventName("armed") →
+// shutdownEventName returns the qualified event name for a lifecycle
+// event (e.g. shutdownEventName("armed") →
 // "app:budget:auto-shutdown:armed").
 func shutdownEventName(suffix string) string {
 	return "app:budget:auto-shutdown:" + suffix
 }
 
-// universalEventData returns the universal payload fields every Set G
-// lifecycle event carries (per spec §8.0). Caller fills in event-
-// specific fields after calling this helper.
+// universalEventData returns the universal payload fields every
+// lifecycle event carries. Caller fills in event-specific fields after
+// calling this helper.
 //
-// Per spec §8.0 line 657 (F5 fix): cap_usd is emitted as int (no
-// decimals) — receivers parse as int. spend_usd remains decimal per
-// spec line 658.
+// cap_usd is emitted as int (no decimals) so receivers can parse as int;
+// spend_usd remains decimal.
 func universalEventData(actor, tickID string, dryRun bool, capUsd, spendUsd float64) map[string]string {
 	return map[string]string{
 		"actor":          actor,
@@ -89,7 +88,7 @@ func universalEventData(actor, tickID string, dryRun bool, capUsd, spendUsd floa
 
 // generateShutdownTickID returns a fresh UUIDv4-like hex token. Used
 // once per shutdown event sequence; all events in the sequence share
-// the same tick id (per spec §9.2).
+// the same tick id.
 func generateShutdownTickID(now time.Time) string {
 	var b [16]byte
 	_, _ = rand.Read(b[:])
@@ -101,10 +100,9 @@ func generateShutdownTickID(now time.Time) string {
 
 // readBudgetShutdownStateAnnotation parses the
 // `convox.com/budget-shutdown-state` annotation. Returns (nil, nil)
-// when absent. Per spec §3 R5 the 4 corrupt-annotation classes are
-// surfaced as errors so the caller can either fire :failed reason=
-// state-corrupt (accumulator-driven path) or unconditionally delete
-// (reset-driven path).
+// when absent. Corrupt-annotation classes are surfaced as errors so the
+// caller can either fire :failed reason=state-corrupt (accumulator-
+// driven path) or unconditionally delete (reset-driven path).
 func readBudgetShutdownStateAnnotation(ann map[string]string) (*structs.AppBudgetShutdownState, error) {
 	raw, ok := ann[structs.BudgetShutdownStateAnnotation]
 	if !ok || raw == "" {
@@ -152,18 +150,17 @@ func readRecoveryBannerDismissedAnnotation(ann map[string]string) (*time.Time, e
 // writeBudgetShutdownStateAnnotation marshals and writes the state
 // annotation via Update with the provided resourceVersion as
 // optimistic-concurrency precondition. On 409 Conflict the caller is
-// expected to re-read with a fresh resourceVersion and retry. Per R4
-// stuck-state A3.
+// expected to re-read with a fresh resourceVersion and retry.
 func (p *Provider) writeBudgetShutdownStateAnnotation(ctx context.Context, app string, s *structs.AppBudgetShutdownState, resourceVersion string) error {
 	nsName := p.AppNamespace(app)
 
-	// Decision 6 — RecoveryBannerDismissedAt is GET-time-only aggregation.
-	// Nil the field before marshal so the persisted shutdown-state
-	// annotation contains only state-machine fields. The dismissed
-	// annotation is written separately via writeRecoveryBannerDismissed-
-	// Annotation; this nil-clear keeps the two annotations as orthogonal
-	// sources of truth. The local copy via cleaned := *s avoids mutating
-	// the caller's struct.
+	// RecoveryBannerDismissedAt is GET-time-only aggregation; nil the
+	// field before marshal so the persisted shutdown-state annotation
+	// contains only state-machine fields. The dismissed annotation is
+	// written separately via writeRecoveryBannerDismissedAnnotation;
+	// this nil-clear keeps the two annotations as orthogonal sources of
+	// truth. The local copy via cleaned := *s avoids mutating the
+	// caller's struct.
 	if s != nil {
 		cleaned := *s
 		cleaned.RecoveryBannerDismissedAt = nil
@@ -191,8 +188,7 @@ func (p *Provider) writeBudgetShutdownStateAnnotation(ctx context.Context, app s
 }
 
 // deleteBudgetShutdownStateAnnotation removes the state annotation.
-// Used by the GC and the unconditional-delete path on
-// AppBudgetReset (per spec §10.5 stuck-state NIT-4).
+// Used by the GC and the unconditional-delete path on AppBudgetReset.
 func (p *Provider) deleteBudgetShutdownStateAnnotation(ctx context.Context, app string) error {
 	nsName := p.AppNamespace(app)
 	for i := 0; i < budgetWriteConflictRetries; i++ {
@@ -290,13 +286,13 @@ func (p *Provider) deleteNamespaceAnnotation(ctx context.Context, app, key strin
 	return errors.WithStack(fmt.Errorf("failed to delete annotation %s after %d retries", key, budgetWriteConflictRetries))
 }
 
-// shutdownService runs the per-service shutdown algorithm per spec §6.2.
+// shutdownService runs the per-service shutdown algorithm.
 //
 // Order:
-//  1. State annotation FIRST (atomic-pre-PATCH; spec §6.2 step 2).
-//  2. PodSpec terminationGracePeriodSeconds (spec §6.2 step 3).
-//  3. Deployment.Spec.Replicas=0 (spec §6.2 step 4).
-//  4. ScaledObject paused-replicas annotation (spec §6.2 step 5).
+//  1. State annotation FIRST (atomic-pre-PATCH).
+//  2. PodSpec terminationGracePeriodSeconds.
+//  3. Deployment.Spec.Replicas=0.
+//  4. ScaledObject paused-replicas annotation.
 //
 // Returns the names of services that successfully shut down and the
 // names that failed (for the :failed event payload).
@@ -307,7 +303,7 @@ func (p *Provider) shutdownService(ctx context.Context, app, svc string, gracePe
 		return errors.Wrapf(err, "get deployment %s/%s", nsName, svc)
 	}
 
-	// Idempotency: if Replicas already 0, skip the PATCH (spec §9.3).
+	// Idempotency: if Replicas already 0, skip the PATCH.
 	if dep.Spec.Replicas != nil && *dep.Spec.Replicas == 0 {
 		// Still apply paused-replicas annotation if a ScaledObject
 		// exists (idempotent annotation-set).
@@ -315,7 +311,7 @@ func (p *Provider) shutdownService(ctx context.Context, app, svc string, gracePe
 		return nil
 	}
 
-	// PATCH PodSpec grace period (spec §6.2 step 3).
+	// PATCH PodSpec grace period.
 	gracePatch := map[string]interface{}{
 		"spec": map[string]interface{}{
 			"template": map[string]interface{}{
@@ -329,26 +325,26 @@ func (p *Provider) shutdownService(ctx context.Context, app, svc string, gracePe
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	// F-26 fix (catalog D-4): wrap PATCH in 3-attempt retry with
-	// classified reason on final failure. Reason discarded here because
-	// the caller (reconcileAutoShutdown :fired branch) already classifies
-	// from the err shape via classifyPatchError when handling the
+	// Wrap PATCH in a 3-attempt retry with classified reason on final
+	// failure. Reason is discarded here because the caller
+	// (reconcileAutoShutdown :fired branch) already classifies from the
+	// err shape via classifyPatchError when handling the
 	// fireFailedEvent path; preserving the wrapped err preserves the
-	// original error semantics for callers that just want a Boolean
+	// original error semantics for callers that just want a boolean
 	// success.
 	if _, err := patchDeploymentWithRetry(ctx, p.Cluster, nsName, svc, types.MergePatchType, gpBytes); err != nil {
 		return errors.Wrapf(err, "patch grace period %s/%s", nsName, svc)
 	}
 
-	// PATCH Deployment replicas=0 (spec §6.2 step 4).
+	// PATCH Deployment replicas=0.
 	zeroPatch := []byte(`{"spec":{"replicas":0}}`)
-	// F-26 fix: 3-attempt retry on the replicas=0 PATCH so a transient
-	// K8s API hiccup does not immediately surface as :failed.
+	// 3-attempt retry on the replicas=0 PATCH so a transient K8s API
+	// hiccup does not immediately surface as :failed.
 	if _, err := patchDeploymentWithRetry(ctx, p.Cluster, nsName, svc, types.MergePatchType, zeroPatch); err != nil {
 		return errors.Wrapf(err, "patch replicas=0 %s/%s", nsName, svc)
 	}
 
-	// Annotate ScaledObject (if any) with paused-replicas (spec §6.2 step 5).
+	// Annotate ScaledObject (if any) with paused-replicas.
 	if err := p.applyPausedReplicasAnnotation(ctx, nsName, svc); err != nil {
 		return errors.Wrapf(err, "annotate paused-replicas %s/%s", nsName, svc)
 	}
@@ -358,8 +354,9 @@ func (p *Provider) shutdownService(ctx context.Context, app, svc string, gracePe
 
 // applyPausedReplicasAnnotation sets `autoscaling.keda.sh/paused-replicas: "0"`
 // on the ScaledObject if one exists. Idempotent: skip PATCH if already set.
-// Per PIVOT 1 (spec §6.1): does NOT modify spec.minReplicaCount or
-// spec.maxReplicaCount.
+// Does NOT modify spec.minReplicaCount or spec.maxReplicaCount — those
+// belong to the user's chart and the saved-state restore depends on them
+// being unchanged.
 func (p *Provider) applyPausedReplicasAnnotation(ctx context.Context, ns, name string) error {
 	so, err := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Get(ctx, name, am.GetOptions{})
 	if err != nil {
@@ -375,13 +372,13 @@ func (p *Provider) applyPausedReplicasAnnotation(ctx context.Context, ns, name s
 		}
 	}
 	patch := []byte(fmt.Sprintf(`{"metadata":{"annotations":{%q:"0"}}}`, structs.KedaPausedReplicasAnnotation))
-	// F-26 fix: 3-attempt retry on the dynamic-client PATCH.
+	// 3-attempt retry on the dynamic-client PATCH.
 	_, err = patchDynamicWithRetry(ctx, p.DynamicClient, scaledObjectGVR, ns, name, types.MergePatchType, patch)
 	return errors.WithStack(err)
 }
 
 // clearPausedReplicasAnnotation removes the paused-replicas annotation
-// via MergePatch null (idempotent on retry per R2 KEDA N2).
+// via MergePatch null (idempotent on retry).
 func (p *Provider) clearPausedReplicasAnnotation(ctx context.Context, ns, name string) error {
 	_, err := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Get(ctx, name, am.GetOptions{})
 	if err != nil {
@@ -391,16 +388,15 @@ func (p *Provider) clearPausedReplicasAnnotation(ctx context.Context, ns, name s
 		return errors.WithStack(err)
 	}
 	patch := []byte(fmt.Sprintf(`{"metadata":{"annotations":{%q:null}}}`, structs.KedaPausedReplicasAnnotation))
-	// F-26 fix: 3-attempt retry on the dynamic-client PATCH.
+	// 3-attempt retry on the dynamic-client PATCH.
 	_, err = patchDynamicWithRetry(ctx, p.DynamicClient, scaledObjectGVR, ns, name, types.MergePatchType, patch)
 	return errors.WithStack(err)
 }
 
 // restoreServiceFromState restores a single service per the saved
-// state entry. Pre-flight check (§6.3 step 2): if the user
-// already manually scaled the service back up, skip restore for this
-// service and return manualDetected=true. Drift merge: saved values
-// WIN per spec §6.3 step 4.
+// state entry. Pre-flight check: if the user already manually scaled
+// the service back up, skip restore for this service and return
+// manualDetected=true. Drift merge: saved values win.
 func (p *Provider) restoreServiceFromState(ctx context.Context, app string, svc *structs.AppBudgetShutdownStateService) (manualDetected bool, err error) {
 	nsName := p.AppNamespace(app)
 	dep, err := p.Cluster.AppsV1().Deployments(nsName).Get(ctx, svc.Name, am.GetOptions{})
@@ -414,12 +410,12 @@ func (p *Provider) restoreServiceFromState(ctx context.Context, app string, svc 
 	if dep.Spec.Replicas != nil {
 		currentReplicas = *dep.Spec.Replicas
 	}
-	// Pre-flight: user already manually scaled service back up
-	// (spec §6.3 step 2). Skip restore for this service.
+	// Pre-flight: user already manually scaled service back up. Skip
+	// restore for this service.
 	if currentReplicas > 0 {
 		return true, nil
 	}
-	// Restore replicas (spec §6.3 step 3).
+	// Restore replicas.
 	target := int32(svc.OriginalScale.Count) //nolint:gosec // user-set replica counts are clamped at K8s level
 	if target == 0 && svc.OriginalScale.Replicas > 0 {
 		// fallback: if Count was 0 (KEDA-managed at min=0), use last-observed Replicas
@@ -439,17 +435,17 @@ func (p *Provider) restoreServiceFromState(ctx context.Context, app string, svc 
 	if err != nil {
 		return false, errors.WithStack(err)
 	}
-	// F-26 fix: 3-attempt retry on the restore PATCH.
+	// 3-attempt retry on the restore PATCH.
 	if _, err := patchDeploymentWithRetry(ctx, p.Cluster, nsName, svc.Name, types.MergePatchType, patchBytes); err != nil {
 		return false, errors.Wrapf(err, "patch restore %s/%s", nsName, svc.Name)
 	}
-	// γ-10 BLOCK K8S-1 fix: drop the PausedReplicasAnnotationSet gate.
-	// clearPausedReplicasAnnotation is already idempotent (per R2 KEDA N2:
-	// MergePatch null is idempotent on retry; missing-ScaledObject path
-	// returns nil), so the gate was vacuous AND latently buggy — :fired
-	// never flipped the flag to true post-PATCH, leaving KEDA-using
-	// services silently uncleaned after `convox budget reset`. Now any
-	// saved KedaScaledObject triggers the clear regardless of the flag.
+	// clearPausedReplicasAnnotation is idempotent (MergePatch null is
+	// safe on retry; missing-ScaledObject path returns nil). The
+	// PausedReplicasAnnotationSet gate is intentionally absent —
+	// :fired did not always flip the flag to true post-PATCH, which
+	// would have left KEDA-using services silently uncleaned after
+	// `convox budget reset`. Any saved KedaScaledObject triggers the
+	// clear regardless of the flag.
 	if svc.KedaScaledObject != nil {
 		if err := p.clearPausedReplicasAnnotation(ctx, nsName, svc.KedaScaledObject.Name); err != nil {
 			fmt.Printf("ns=budget_shutdown at=restore_scaledobject_missing app=%s service=%s err=%q\n", app, svc.Name, err)
@@ -471,7 +467,7 @@ type shutdownPlan struct {
 
 // orderShutdownPlans applies the user-configured shutdown order.
 // Two algorithms in 3.24.6: largest-cost (default) and newest. Ties
-// broken by lexicographic service name ascending. Per spec §5.
+// broken by lexicographic service name ascending.
 func orderShutdownPlans(plans []shutdownPlan, order string) []shutdownPlan {
 	sorted := make([]shutdownPlan, len(plans))
 	copy(sorted, plans)
@@ -493,15 +489,14 @@ func orderShutdownPlans(plans []shutdownPlan, order string) []shutdownPlan {
 }
 
 // formatServiceList returns "a,b,c" for event Data payload fields
-// (snake_case keys, comma-separated value per spec §8 wire format).
+// (snake_case keys, comma-separated values on the wire).
 func formatServiceList(svcs []string) string {
 	return strings.Join(svcs, ",")
 }
 
 // computeManifestSha256 returns a deterministic hex-encoded SHA-256
-// over the eligible service set + budget config — used to detect
-// drift between shutdown and restore (spec §6.3 step 4 / R1 keda-
-// conflict F4).
+// over the eligible service set plus budget config — used to detect
+// drift between shutdown and restore.
 func computeManifestSha256(eligibleSvcs []string, capUsd float64, atCapAction string) string {
 	h := sha256.New()
 	for _, s := range eligibleSvcs {
@@ -522,7 +517,7 @@ func computeManifestSha256(eligibleSvcs []string, capUsd float64, atCapAction st
 //
 // Read-only — does not mutate cluster state. Used by `convox budget show`
 // to render the ARMED/ACTIVE/RECOVERED/FAILED banner above the JSON
-// payload (per Set G v2 spec §16.3).
+// payload.
 func (p *Provider) AppBudgetShutdownStateGet(app string) (*structs.AppBudgetShutdownState, error) {
 	ctx := p.Context()
 	if ctx == nil {
@@ -544,17 +539,18 @@ func (p *Provider) AppBudgetShutdownStateGet(app string) (*structs.AppBudgetShut
 		return nil, nil
 	}
 
-	// Decision 6 — aggregate the separate dismissed-banner annotation
-	// into the read-side view. The dismissed annotation is set by
+	// Aggregate the separate dismissed-banner annotation into the
+	// read-side view. The dismissed annotation is set by
 	// writeRecoveryBannerDismissedAnnotation (this file) and persists
 	// independently of the shutdown-state annotation. Surfacing it on
-	// the same struct lets Console3 read both via one SDK call and
-	// suppress the RECOVERED banner across page reloads. Errors on the dismissed-annotation read are
-	// non-fatal — the field stays nil and the user sees the
-	// pre-Decision-6 in-session-only suppression. Log the parse error
-	// at structured-stdout severity so an operator chasing a "banner
-	// won't dismiss" report has a diagnostic trail; corrupt-annotation
-	// is admin-trusted territory (kubectl annotate) so this is rare.
+	// the same struct lets Console read both via one SDK call and
+	// suppress the RECOVERED banner across page reloads. Errors on
+	// the dismissed-annotation read are non-fatal — the field stays
+	// nil and the user falls back to in-session-only suppression. Log
+	// the parse error at structured-stdout severity so an operator
+	// chasing a "banner won't dismiss" report has a diagnostic trail;
+	// corrupt-annotation is admin-trusted territory (kubectl annotate)
+	// so this is rare.
 	dismissedAt, dismErr := readRecoveryBannerDismissedAnnotation(ns.Annotations)
 	if dismErr != nil {
 		fmt.Printf("ns=budget_shutdown at=dismiss_annotation_parse_failed app=%s error=%q\n", app, dismErr)
@@ -566,10 +562,10 @@ func (p *Provider) AppBudgetShutdownStateGet(app string) (*structs.AppBudgetShut
 	return state, nil
 }
 
-// AppBudgetSimulate runs a dry-run shutdown simulation (per spec §17).
-// Reads current state, computes eligibility + ordering + estimated
-// savings, fires :simulated event with dry_run=true, returns the
-// simulation result. Does NOT modify cluster state.
+// AppBudgetSimulate runs a dry-run shutdown simulation. Reads current
+// state, computes eligibility + ordering + estimated savings, fires
+// :simulated event with dry_run=true, returns the simulation result.
+// Does NOT modify cluster state.
 func (p *Provider) AppBudgetSimulate(app string) (*structs.AppBudgetSimulationResult, error) {
 	ctx := p.Context()
 	if ctx == nil {
@@ -636,14 +632,14 @@ func (p *Provider) AppBudgetSimulate(app string) (*structs.AppBudgetSimulationRe
 
 // AppBudgetDismissRecovery dismisses the sticky recovery banner. Wraps
 // AppBudgetDismissRecoveryWithResult and discards the status value to
-// preserve the legacy SDK contract (Set G impl v1).
+// preserve the legacy SDK contract.
 func (p *Provider) AppBudgetDismissRecovery(app, ackBy string) error {
 	_, err := p.AppBudgetDismissRecoveryWithResult(app, ackBy)
 	return err
 }
 
-// AppBudgetDismissRecoveryWithResult is the 3-case dismiss-recovery
-// path per Set G v2 spec advisory #3:
+// AppBudgetDismissRecoveryWithResult is the dismiss-recovery path with
+// three return statuses:
 //
 //   - status="dismissed"        : a recovery banner was active; now dismissed
 //   - status="already-dismissed": a banner exists but was previously dismissed
@@ -655,11 +651,11 @@ func (p *Provider) AppBudgetDismissRecovery(app, ackBy string) error {
 // annotation GCs (one tick after RestoredAt + tick interval, or earlier
 // via dismiss-recovery).
 func (p *Provider) AppBudgetDismissRecoveryWithResult(app, ackBy string) (*structs.AppBudgetDismissRecoveryResult, error) {
-	// Extend the per-app lock surface to dismiss (Decision 7).
-	// Without this lock, two concurrent dismiss clicks both observe
-	// existing=nil and both write the annotation, producing duplicate
-	// :dismissed events with idempotent=false. Same pattern as the
-	// accumulator-coordination surface enumerated at budget_app_lock.go.
+	// Extend the per-app lock surface to dismiss. Without this lock,
+	// two concurrent dismiss clicks both observe existing=nil and both
+	// write the annotation, producing duplicate :dismissed events with
+	// idempotent=false. Same pattern as the accumulator-coordination
+	// surface enumerated at budget_app_lock.go.
 	mu := appBudgetLock(app)
 	mu.Lock()
 	defer mu.Unlock()
@@ -707,8 +703,8 @@ func (p *Provider) AppBudgetDismissRecoveryWithResult(app, ackBy string) (*struc
 }
 
 // fireDismissedEvent emits the audit-only `:dismissed` event for the
-// dismiss-recovery action (per spec §10.9). Not one of the 9
-// lifecycle events; separate observability hook.
+// dismiss-recovery action. Not one of the lifecycle events; separate
+// observability hook.
 func (p *Provider) fireDismissedEvent(ctx context.Context, app, ackBy string, dismissedAt time.Time, idempotent bool) error {
 	_ = ctx
 	tickID := generateShutdownTickID(time.Now())
@@ -724,13 +720,13 @@ func (p *Provider) fireDismissedEvent(ctx context.Context, app, ackBy string, di
 }
 
 // AppBudgetResetWithOptions extends AppBudgetReset to honor the
-// --force-clear-cooldown flag (spec §15.2). When ForceClearCooldown is
-// true, the carry-over cooldown annotation is also deleted (CanAdmin
-// gate enforced server-side at the controller layer, not here).
+// --force-clear-cooldown flag. When ForceClearCooldown is true, the
+// carry-over cooldown annotation is also deleted (CanAdmin gate
+// enforced server-side at the controller layer, not here).
 //
-// Per spec §22.1 4-annotation checklist:
+// Annotation handling checklist:
 //  1. budget-state:                        CLEAR (existing AppBudgetReset)
-//  2. budget-shutdown-state:               UNCONDITIONAL DELETE (R2 NIT-4)
+//  2. budget-shutdown-state:               UNCONDITIONAL DELETE
 //  3. budget-flap-suppressed-until:        PRESERVE (or DELETE w/ force flag)
 //  4. budget-recovery-banner-dismissed:    optional (clear so banner re-shows)
 //  5. budget-flap-suppress-fired-at:       DELETE (if cooldown cleared)
@@ -783,7 +779,7 @@ func (p *Provider) AppBudgetResetWithOptions(app, ackBy string, opts structs.App
 	state, parseErr := readBudgetShutdownStateAnnotation(ns.Annotations)
 	switch {
 	case parseErr != nil:
-		// Corrupt-annotation case — unconditionally delete (R2 NIT-4).
+		// Corrupt-annotation case — unconditionally delete.
 		schemaVer := -1
 		if raw, ok := ns.Annotations[structs.BudgetShutdownStateAnnotation]; ok {
 			var probe struct {
@@ -819,23 +815,23 @@ func (p *Provider) AppBudgetResetWithOptions(app, ackBy string, opts structs.App
 }
 
 // restoreFromAnnotation runs the per-service restore loop with pre-
-// flight check (spec §6.3 step 2). Per R4 stuck-state A2: events fire
-// AFTER the loop completes (batched), not per-iteration.
+// flight check. Events fire AFTER the loop completes (batched), not
+// per-iteration.
 //
-// F4 fix: reads the live cfg + baseState before emitting so the
-// universal cap_usd / spend_usd fields carry real values rather than 0.
-// F11 fix: :cancelled payload now carries armed_at / expected_shutdown_at.
-// F3 fix: :failed and :restored remain mutually exclusive — :failed only
-// fires when len(failed) > 0 AND nothing succeeded; partial-shutdown
-// reports succeeded count via partial_state per spec §8.7.
+// Reads the live cfg + baseState before emitting so the universal
+// cap_usd / spend_usd fields carry real values rather than 0. The
+// :cancelled payload carries armed_at / expected_shutdown_at. :failed
+// and :restored remain mutually exclusive — :failed only fires when
+// len(failed) > 0 AND nothing succeeded; partial-shutdown reports
+// succeeded count via partial_state.
 func (p *Provider) restoreFromAnnotation(ctx context.Context, app, ackBy string, state *structs.AppBudgetShutdownState, trigger string) error {
 	if state == nil {
 		return nil
 	}
 	now := time.Now().UTC()
 
-	// F4 fix: load live cfg + baseState so universal cap_usd / spend_usd
-	// values are populated. Best-effort — emit with 0 fallback if read fails.
+	// Load live cfg + baseState so universal cap_usd / spend_usd values
+	// are populated. Best-effort — emit with 0 fallback if read fails.
 	cfg, baseState, _ := p.AppBudgetGet(app)
 
 	// Pre-flight loop.
@@ -864,7 +860,7 @@ func (p *Provider) restoreFromAnnotation(ctx context.Context, app, ackBy string,
 		}
 	}
 
-	// Determine which event to fire (spec §6.3 step 2 + §8.10).
+	// Determine which event to fire.
 	wasArmedOnly := state.ArmedAt != nil && !state.ArmedAt.IsZero() && (state.ShutdownAt == nil || state.ShutdownAt.IsZero())
 
 	tickID := state.ShutdownTickId
@@ -877,13 +873,14 @@ func (p *Provider) restoreFromAnnotation(ctx context.Context, app, ackBy string,
 	}
 
 	if wasArmedOnly && len(manualDetected) > 0 {
-		// F4 + F11 fix: rich :cancelled payload.
+		// Rich :cancelled payload with cap/spend + armed_at /
+		// expected_shutdown_at.
 		data := universalEventData(actor, tickID, false, capUsdFor(cfg), spendUsdFor(baseState))
 		data["app"] = app
 		data["cancelled_at"] = now.Format(time.RFC3339)
 		data["cancel_reason"] = "manual-detected"
 		data["eligible_services"] = formatServiceList(manualDetected)
-		// F11 fix: armed_at + expected_shutdown_at per spec §8.4.
+		// armed_at + expected_shutdown_at on :cancelled.
 		if state.ArmedAt != nil {
 			data["armed_at"] = state.ArmedAt.UTC().Format(time.RFC3339)
 			expected := state.ArmedAt.Add(time.Duration(structs.BudgetDefaultNotifyBeforeMinutes) * time.Minute)
@@ -891,12 +888,12 @@ func (p *Provider) restoreFromAnnotation(ctx context.Context, app, ackBy string,
 		}
 		_ = p.EventSend(shutdownEventName("cancelled"), structs.EventSendOptions{Data: data})
 	} else if len(restoredOK) > 0 || len(manualDetected) > 0 {
-		// F4 fix: real cap_usd + spend_usd in :restored payload.
+		// :restored payload carries cap_usd + spend_usd.
 		data := universalEventData(actor, tickID, false, capUsdFor(cfg), spendUsdFor(baseState))
 		data["app"] = app
 		data["restored_services"] = formatServiceList(append(append([]string{}, restoredOK...), manualDetected...))
 		data["restored_count"] = strconv.Itoa(len(restoredOK) + len(manualDetected))
-		// Spec §8.3 line 756 uses recovery_at (not restored_at).
+		// recovery_at (not restored_at) is the wire field name.
 		data["recovery_at"] = now.Format(time.RFC3339)
 		data["recovery_trigger"] = trigger
 		if len(manualDetected) > 0 && len(restoredOK) == 0 {
@@ -907,7 +904,7 @@ func (p *Provider) restoreFromAnnotation(ctx context.Context, app, ackBy string,
 		data["drift_detected"] = "false"
 		flapUntil := now.Add(structs.BudgetFlapCooldown)
 		data["flap_suppressed_until"] = flapUntil.UTC().Format(time.RFC3339)
-		// F16 advisory partial fix: surface final_spend_usd per spec §8.3 line 762.
+		// Surface final_spend_usd for downstream cost reconciliation.
 		if baseState != nil {
 			data["final_spend_usd"] = strconv.FormatFloat(baseState.CurrentMonthSpendUsd, 'f', 2, 64)
 		}
@@ -917,7 +914,7 @@ func (p *Provider) restoreFromAnnotation(ctx context.Context, app, ackBy string,
 	}
 
 	if len(failed) > 0 {
-		// F4 fix: real cap_usd + spend_usd in :failed payload.
+		// :failed payload carries cap_usd + spend_usd.
 		data := universalEventData("system", tickID, false, capUsdFor(cfg), spendUsdFor(baseState))
 		data["app"] = app
 		data["failed_services"] = formatServiceList(failed)
@@ -932,9 +929,9 @@ func (p *Provider) restoreFromAnnotation(ctx context.Context, app, ackBy string,
 }
 
 // auditActor returns the actor identity from the request-scoped JWT
-// (D.3 ContextActor) or "system" when no actor is in context (accumulator-
-// driven path). The returned value is what lands in the `actor` field of
-// every Set G lifecycle event payload (per spec §8.0 actor mapping table).
+// or "system" when no actor is in context (accumulator-driven path).
+// The returned value is what lands in the `actor` field of every
+// lifecycle event payload.
 //
 // Per D.3 (commit f68fe4db8 2026-04-22): Provider.ContextActor() reads the
 // JWT user claim from p.ctx and falls back to "unknown" when no actor is
@@ -1112,14 +1109,14 @@ func (p *Provider) releaseManifestForApp(app string) (*manifest.Manifest, *struc
 
 // runStaleAnnotationGC removes shutdown-state, flap-suppressed, and
 // banner-dismissed annotations whose terminal-state timestamp passed
-// > 1 tick ago. Per spec §7.4 — runs UNCONDITIONALLY on every tick
-// (NOT gated on cost_tracking_enable) so kubectl drift cleans up.
+// more than one tick ago. Runs UNCONDITIONALLY on every tick (NOT
+// gated on cost_tracking_enable) so kubectl drift cleans up.
 //
 // Sigils:
 //   - state.RestoredAt > 1 tick ago    → delete state annotation; carry-over flap; clear dismissed
 //   - state.ExpiredAt > 1 tick ago     → delete state annotation; carry-over flap; clear dismissed
 //   - flap-suppressed-until expired    → delete flap-suppressed AND flap-fired-at TOGETHER
-//   - dismissed annotation             → cleared together with state annotation (D6.1 re-arm fix)
+//   - dismissed annotation             → cleared together with state annotation
 //
 // Invariant: FlapSuppressFiredAt and FlapSuppressedUntil are always
 // written and cleared together. The accumulator dedup-write at
@@ -1151,11 +1148,11 @@ func (p *Provider) runStaleAnnotationGC(ctx context.Context, app string, tickInt
 				_ = p.writeFlapSuppressedUntilAnnotation(ctx, app, *state.FlapSuppressedUntil)
 			}
 			_ = p.deleteBudgetShutdownStateAnnotation(ctx, app)
-			// D6.1 re-arm fix — clear the dismissed banner annotation
-			// alongside the shutdown-state annotation. Without this clear,
-			// cycle-N's dismiss timestamp leaks into cycle-N+1's RECOVERED
-			// state; Decision 6's GET-aggregation surfaces the stale
-			// timestamp; Vue suppresses the new banner silently.
+			// Clear the dismissed banner annotation alongside the
+			// shutdown-state annotation. Without this clear, cycle-N's
+			// dismiss timestamp leaks into cycle-N+1's RECOVERED state;
+			// the GET-side aggregation surfaces the stale timestamp;
+			// Vue suppresses the new banner silently.
 			if err := p.deleteNamespaceAnnotation(ctx, app, structs.BudgetRecoveryBannerDismissedAnnotation); err != nil {
 				fmt.Printf("ns=budget_shutdown at=warn kind=stale_gc_dismissed_annotation_delete app=%s err=%q\n", app, err.Error())
 			}

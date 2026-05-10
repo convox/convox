@@ -67,7 +67,7 @@ func TestLint_NoLogPackageImports(t *testing.T) {
 	// Belt-and-suspenders: pkg/hmac MUST NOT import any logger package.
 	// Sign / Verify / SignedHeader are internal primitives; they must
 	// NOT emit log lines that could leak key bytes, body bytes, or hex
-	// signatures via WARN/INFO/DEBUG. (R1 obs §1.1)
+	// signatures via WARN/INFO/DEBUG.
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, "hmac.go", nil, parser.ImportsOnly)
 	require.NoError(t, err)

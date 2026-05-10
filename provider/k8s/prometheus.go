@@ -3,14 +3,12 @@ package k8s
 import (
 	"context"
 	"fmt"
-	"net"
-	"net/url"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/convox/pkg/validator"
 	promapi "github.com/prometheus/client_golang/api"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
@@ -126,9 +124,8 @@ func NewPrometheusClient(host string) (*PrometheusClient, error) {
 //
 // Total queries per call: 10 (one per metric — util, fb-used, fb-free,
 // fb-reserved, tensor-active, sm-active, dram-active, fp16-active,
-// fp32-active, power-usage). Caller pays one Prom
-// round-trip per metric, NOT one per pod. Lower latency, lower Prom
-// load. See MG-4 OQ-5.
+// fp32-active, power-usage). Caller pays one Prom round-trip per
+// metric, NOT one per pod. Lower latency, lower Prom load.
 //
 // Per-metric per-pod presence: each setter allocates a fresh pointer
 // per call and stores it on the GpuMetrics struct. Pods that did NOT
@@ -300,8 +297,8 @@ var promCircuitBreaker = newPromBreaker(3, 60*time.Second, 30*time.Second)
 
 // ErrPromCircuitOpen is returned by QueryGPURange when the circuit
 // breaker is open. Callers (controllers / impls) translate this into
-// an empty []Metric / []ServiceMetricsRow with a "prometheusTimedOut"
-// flag at the resolver layer per CLUSTER-1 1E.
+// an empty []Metric / []ServiceMetricsRow and surface the
+// "prometheusTimedOut" flag at the resolver layer.
 var ErrPromCircuitOpen = fmt.Errorf("prometheus circuit breaker open: backend unreachable")
 
 type promBreaker struct {
@@ -392,36 +389,20 @@ func (b *promBreaker) Reset() {
 	b.openedAt = time.Time{}
 }
 
-// ValidatePrometheusURL re-validates a stored prometheus_url against the
-// SSRF allowlist defined in pkg/cli/rack.go:1857-1885 (param-validation
-// layer). On rack startup the provider re-applies these checks to the
-// stored value so a hostile pre-F-01 storage write OR a manually-edited
-// configmap can't slip past. Returns nil on accept; an error otherwise.
+// ValidatePrometheusURL re-validates a stored prometheus_url against
+// the same SSRF allowlist applied at param-set time. The provider runs
+// this on startup so a stored value that bypassed the param-set
+// validator (e.g. a manually edited configmap) cannot reach the
+// PrometheusClient. Returns nil on accept; an error otherwise.
 //
-// Keep this in sync with the param-set validator. F-SEC-26.
+// The shared logic lives in pkg/validator.ValidateExternalURL so the
+// CLI-side and provider-side checks cannot drift.
 func ValidatePrometheusURL(raw string) error {
 	if raw == "" {
-		return nil // empty is allowed → PromClient stays nil
+		return nil // empty is allowed; PromClient stays nil
 	}
-	parsed, err := url.Parse(raw)
-	scheme := ""
-	if parsed != nil {
-		scheme = strings.ToLower(parsed.Scheme)
-	}
-	if err != nil || scheme == "" || (scheme != "http" && scheme != "https") {
-		return fmt.Errorf("prometheus_url: only http:// and https:// schemes are accepted")
-	}
-	if parsed.Host == "" {
-		return fmt.Errorf("prometheus_url: must be a valid URL with scheme and host (e.g. http://prom.example.com:9090)")
-	}
-	host := parsed.Hostname()
-	if strings.EqualFold(host, "localhost") {
-		return fmt.Errorf("prometheus_url: private/loopback/link-local hosts are not allowed (see docs for SSRF protection)")
-	}
-	if ip := net.ParseIP(host); ip != nil {
-		if ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() {
-			return fmt.Errorf("prometheus_url: private/loopback/link-local hosts are not allowed (see docs for SSRF protection)")
-		}
+	if err := validator.ValidateExternalURL(raw, nil); err != nil {
+		return fmt.Errorf("prometheus_url: %s", err)
 	}
 	return nil
 }
@@ -433,9 +414,9 @@ func ValidatePrometheusURL(raw string) error {
 // percent convention used elsewhere in the wire (see QueryGPUMetrics
 // pre-existing scaling — we mirror the same per-metric transform here).
 type gpuMetricSpec struct {
-	prom    string  // PromQL metric name
-	wire    string  // [Metric.Name] on the wire
-	scale   float64 // multiplier (1.0 default; 100 for *_ACTIVE counters; (1<<20) for FB_*)
+	prom  string  // PromQL metric name
+	wire  string  // [Metric.Name] on the wire
+	scale float64 // multiplier (1.0 default; 100 for *_ACTIVE counters; (1<<20) for FB_*)
 }
 
 // gpuRangeQueries lists the metrics emitted by QueryGPURange in stable

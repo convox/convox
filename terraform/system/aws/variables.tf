@@ -481,29 +481,6 @@ variable "grafana_url" {
   description = "User-facing Grafana base URL for the Console deep-link button. Optional. Empty default keeps the button inert."
 }
 
-# Opt-in in-cluster Grafana sidecar. ConfigMaps for the six GPU dashboards
-# always ship to the cluster; this flag additionally enables the
-# kube-prometheus-stack `grafana` sub-chart so the dashboards auto-import via
-# sidecar. Default false keeps the rack's monitoring footprint identical for
-# users who don't want bundled Grafana.
-variable "in_cluster_grafana_enable" {
-  type        = bool
-  default     = false
-  description = "Opt-in: enable the in-cluster Grafana sidecar bundled with kube-prometheus-stack. When true the rack's six GPU dashboards auto-import via the sidecar's ConfigMap label selector. Default false."
-}
-
-# Sensitive admin password for the in-cluster Grafana when in_cluster_grafana_enable
-# is true. Empty default lets the chart generate a random password and store it
-# in a Kubernetes Secret; users running `convox rack params get` will see the
-# empty string but can recover the password via
-#   kubectl -n convox-monitoring get secret convox-kube-prometheus-sta-grafana -o jsonpath='{.data.admin-password}' | base64 -d
-variable "in_cluster_grafana_admin_password" {
-  type        = string
-  default     = ""
-  sensitive   = true
-  description = "Admin password for the in-cluster Grafana sidecar (when in_cluster_grafana_enable=true). Empty default lets the Helm chart generate a random password and store it in a K8s Secret."
-}
-
 variable "prometheus_gpu_metrics_retention" {
   type    = string
   default = "24h"
@@ -513,7 +490,7 @@ variable "prometheus_gpu_metrics_retention" {
 # scrape config (Console writes the operator override into the Prometheus
 # Helm values; rack TF declares the variable so the reconciler accepts it
 # on upgrade and strips it cleanly on downgrade). Range 15s-300s; empty
-# defaults to 15s. Process-config classification per CLUSTER-1 1C.
+# defaults to 15s.
 variable "dcgm_scrape_interval" {
   type        = string
   default     = "15s"
@@ -683,7 +660,7 @@ variable "vpa_enable" {
 variable "webhook_signing_key" {
   type        = string
   default     = ""
-  description = "Optional HMAC-SHA256 key(s) for signing outbound webhook payloads. Hex-encoded; comma-separated for rotation (max 2). When set, emits Convox-Signature header. Empty preserves 3.24.5 behavior (unsigned)."
+  description = "Optional HMAC-SHA256 key(s) for signing outbound webhook payloads. Hex-encoded; comma-separated for rotation (max 4). When set, emits Convox-Signature header. Empty preserves 3.24.5 behavior (unsigned)."
 }
 
 variable "whitelist" {

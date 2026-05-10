@@ -59,6 +59,32 @@ recorded spend than the raw price would; `0.95` produces 5% less. Use this to
 align Convox's internal pricing with the contract pricing your finance team
 sees, or to add a buffer for cap headroom.
 
+## Per-variant cost breakdown <a id="per-variant-breakdown"></a>
+
+Spend is attributed to each `(instance-type, capacity-type)` variant a service
+runs on across the month. A service that started the month on `g4dn.xlarge`
+on-demand and was Karpenter-replaced to `g4dn.xlarge` spot mid-month produces
+two rows in `convox cost --app myapp`: one on-demand row with the early-month
+replicas count, one spot row with the later-month replicas count. Rows are
+sorted by descending spend.
+
+A row showing `0` active replicas indicates pods previously ran on that variant
+but have since migrated or been removed; the accumulated spend for the variant
+is preserved through the rest of the month so the rollup reflects the actual
+cloud bill.
+
+Spot capacity-type rows are automatically discounted by the pricing table's
+spot factor (default `0.30` of the on-demand rate). Per-instance overrides are
+configurable via the `SpotUsdPerHourFactor` field on the rack-side pricing
+table.
+
+The pricing-adjustment multiplier (`pricingAdjustment` in `convox.yml`) applies
+multiplicatively to the variant rates. A value of `0.7` models a 30% AWS
+Enterprise Discount Program / Savings Plan / Reserved Instance discount on top
+of the canonical pricing, so Convox-reported spend tracks your contract
+pricing rather than the raw on-demand rate. A value of `1.10` adds 10% buffer
+for cap headroom.
+
 ## Unpriced instance types <a id="unpriced-instance-types"></a>
 
 The built-in price table covers the common instance families on each provider.

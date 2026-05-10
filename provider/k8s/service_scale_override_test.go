@@ -511,8 +511,8 @@ func TestServiceScaleOverride_RaceWith_ServiceUpdate(t *testing.T) {
 // ReleasePromote uses to pick up the override flag). It does NOT
 // exercise the rest of the ReleasePromote pipeline (manifest re-render,
 // HPA reconcile, KEDA ScaledObject patch, deployment rollout). The
-// full ReleasePromote-path race is exercised in integration via the
-// live `test-uiux-0417` AWS rack per spec §9.5.
+// full ReleasePromote-path race is exercised in integration on a live
+// AWS rack.
 func TestServiceScaleOverride_CrossMutation_RaceWith_ReleasePromote(t *testing.T) {
 	if testing.Short() {
 		t.Skip("race test")

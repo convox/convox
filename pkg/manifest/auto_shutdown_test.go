@@ -23,7 +23,7 @@ func loadFixture(t *testing.T, name string) error {
 }
 
 // TestParseAutoShutdownManifest_FullSchema_Succeeds verifies the full
-// fixture parses with all 5 new fields populated. Per Set G v2 §2.2.
+// fixture parses with all five new fields populated.
 func TestParseAutoShutdownManifest_FullSchema_Succeeds(t *testing.T) {
 	data, err := os.ReadFile("testdata/auto-shutdown-full.yml")
 	require.NoError(t, err)

@@ -183,9 +183,9 @@ func TestRackParamsLeavesNonRedactedPlaintext(t *testing.T) {
 		_, err := fc.CoreV1().ConfigMaps(p.Namespace).Create(context.TODO(), cm, am.CreateOptions{})
 		require.NoError(t, err)
 
-		// Decision 8 post-rc4 shape: even when the test exercises a
-		// non-redacted key, the canonical fixture co-creates an empty
-		// sidecar Secret so the consumer's Get path is exercised.
+		// Even when the test exercises a non-redacted key, the
+		// canonical fixture co-creates an empty sidecar Secret so the
+		// consumer's Get path is exercised.
 		sec := &ac.Secret{
 			ObjectMeta: am.ObjectMeta{
 				Namespace: p.Namespace,
@@ -237,11 +237,11 @@ func TestRackParamsEmptyCredentialNotEmitted(t *testing.T) {
 		_, err = fc.CoreV1().ConfigMaps(p.Namespace).Create(context.TODO(), dcm, am.CreateOptions{})
 		require.NoError(t, err)
 
-		// Decision 8 post-rc4 shape: the sidecar Secret exists with an
-		// empty value when the credential is unset. After overlay the
-		// merged value still equals the default empty string, so the
-		// existing skip-default carve-out continues to drop it from
-		// telemetry. Locks the post-D8 unset-credential path.
+		// The sidecar Secret exists with an empty value when the
+		// credential is unset. After overlay the merged value still
+		// equals the default empty string, so the existing
+		// skip-default carve-out continues to drop it from telemetry.
+		// Locks the unset-credential path.
 		sec := &ac.Secret{
 			ObjectMeta: am.ObjectMeta{
 				Namespace: p.Namespace,
@@ -262,13 +262,14 @@ func TestRackParamsEmptyCredentialNotEmitted(t *testing.T) {
 	})
 }
 
-// TestRackParamsSecretAbsent_FallsBackToConfigMap pins the pre-Decision-8
-// graceful-degrade path: a 3.24.5 rack that has not yet applied the new
-// rack/k8s module has no telemetry-rack-params-redacted Secret. The
-// ConfigMap still carries plaintext credential values (not yet stubbed).
-// RackParams() must not error and must hash the ConfigMap values directly.
-// Without this fallback an upgrade would silently drop the credentials
-// from the heartbeat between rack-Go-deploy and TF-apply.
+// TestRackParamsSecretAbsent_FallsBackToConfigMap pins the pre-3.24.6
+// graceful-degrade path: a 3.24.5 rack that has not yet applied the
+// new rack/k8s module has no telemetry-rack-params-redacted Secret.
+// The ConfigMap still carries plaintext credential values (not yet
+// stubbed). RackParams() must not error and must hash the ConfigMap
+// values directly. Without this fallback an upgrade would silently
+// drop the credentials from the heartbeat between rack-Go-deploy and
+// TF-apply.
 func TestRackParamsSecretAbsent_FallsBackToConfigMap(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		fc, ok := p.Cluster.(*fake.Clientset)
@@ -304,19 +305,19 @@ func TestRackParamsSecretAbsent_FallsBackToConfigMap(t *testing.T) {
 	})
 }
 
-// TestRackParams_PreD8Compat_SecretAbsent (F-A04-2 fix). Pins the
-// upgrade-window contract for the Decision-8 telemetry Secret-overlay
-// graceful-fallback path: a rack that has been deployed with rack-Go
-// code that knows to look for the redacted-params Secret AND has had
-// its ConfigMap re-stubbed to empty values for the redacted keys, but
-// where the Secret resource itself has not yet been applied to the
-// cluster (transient TF-mid-apply state). The Secret Get returns
-// NotFound and the consumer falls through to the ConfigMap empty-stub
-// values directly. Per the existing skip-default rule, an empty value
-// equal to the default (also empty) is dropped from the heartbeat
-// entirely — NEVER hashed-as-empty-string and emitted (which would
-// leak presence-without-value to the receiver and incorrectly imply
-// the credential is set).
+// TestRackParams_PreD8Compat_SecretAbsent pins the upgrade-window
+// contract for the telemetry Secret-overlay graceful-fallback path:
+// a rack deployed with rack-Go code that knows to look for the
+// redacted-params Secret AND has had its ConfigMap re-stubbed to
+// empty values for the redacted keys, but where the Secret resource
+// itself has not yet been applied to the cluster (transient
+// TF-mid-apply state). The Secret Get returns NotFound and the
+// consumer falls through to the ConfigMap empty-stub values directly.
+// Per the existing skip-default rule, an empty value equal to the
+// default (also empty) is dropped from the heartbeat entirely —
+// never hashed-as-empty-string and emitted (which would leak
+// presence-without-value to the receiver and incorrectly imply the
+// credential is set).
 //
 // Mirrors TestRackParamsSecretAbsent_FallsBackToConfigMap (which pins
 // the pre-D8 ConfigMap-plaintext + Secret-absent combination); this

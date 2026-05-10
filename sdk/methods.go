@@ -248,7 +248,7 @@ func (c *Client) AppBudgetResetWithOptions(app string, ackBy string, opts struct
 
 // AppBudgetSimulate runs a dry-run shutdown simulation. The cluster is
 // not modified; the response describes what WOULD happen if a real
-// shutdown fired now. Per Set G v2 spec §17.
+// shutdown fired now.
 func (c *Client) AppBudgetSimulate(app string) (*structs.AppBudgetSimulationResult, error) {
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
 	var v *structs.AppBudgetSimulationResult
@@ -260,8 +260,8 @@ func (c *Client) AppBudgetSimulate(app string) (*structs.AppBudgetSimulationResu
 
 // AppBudgetShutdownStateGet returns the shutdown-state annotation for
 // an app. Used by `convox budget show` to render the
-// ARMED/ACTIVE/RECOVERED/FAILED banner per Set G v2 spec §16.3. Returns
-// (nil, nil) when no annotation is present (no shutdown is armed/active).
+// ARMED/ACTIVE/RECOVERED/FAILED banner. Returns (nil, nil) when no
+// annotation is present (no shutdown is armed/active).
 func (c *Client) AppBudgetShutdownStateGet(app string) (*structs.AppBudgetShutdownState, error) {
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
 	var v *structs.AppBudgetShutdownState
@@ -272,16 +272,16 @@ func (c *Client) AppBudgetShutdownStateGet(app string) (*structs.AppBudgetShutdo
 }
 
 // AppBudgetDismissRecovery dismisses the sticky recovery banner shown
-// post-restore by `convox budget show`. Idempotent. Per Set G v2 spec
-// §10.9. Wraps AppBudgetDismissRecoveryWithResult and discards the
-// status to preserve the legacy SDK contract (Set G impl v1).
+// post-restore by `convox budget show`. Idempotent. Wraps
+// AppBudgetDismissRecoveryWithResult and discards the status to
+// preserve the legacy SDK contract.
 func (c *Client) AppBudgetDismissRecovery(app string, ackBy string) error {
 	_, err := c.AppBudgetDismissRecoveryWithResult(app, ackBy)
 	return err
 }
 
 // AppBudgetDismissRecoveryWithResult is the 3-case dismiss-recovery
-// path per Set G v2 spec advisory #3. Returns one of:
+// path. Returns one of:
 //
 //   - "dismissed"        : a banner was active; now dismissed
 //   - "already-dismissed": banner exists but was previously dismissed

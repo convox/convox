@@ -79,11 +79,11 @@ func TestReleaseWatcherGCIntervalEnvVar_ValidApplied(t *testing.T) {
 	}
 }
 
-// TestReleaseWatcherGCIntervalEnvVar_BelowMin_Clamps — env set to a
-// value below the 60s lower bound: helper clamps UP to 60s. F-FAIL-27
-// rationale (sub-60s sweep at 200 apps inflates apiserver QPS without
+// TestReleaseWatcherGCIntervalEnvVar_BelowMin_Clamps verifies that an
+// env var set to a value below the 60s lower bound clamps UP to 60s.
+// A sub-60s sweep at 200 apps inflates apiserver QPS without
 // observable UX benefit; steady-state watchers already poll at 3s
-// per-app for in-flight promotes).
+// per-app for in-flight promotes.
 func TestReleaseWatcherGCIntervalEnvVar_BelowMin_Clamps(t *testing.T) {
 	cases := []struct {
 		name string

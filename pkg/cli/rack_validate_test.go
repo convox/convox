@@ -321,7 +321,11 @@ func TestValidateAndMutateParams_WebhookSigningKey_AllProviders(t *testing.T) {
 }
 
 func TestValidateAndMutateParams_PrometheusUrl_AwsAccepted(t *testing.T) {
-	params := map[string]string{"prometheus_url": "http://prometheus.example.com:9090"}
+	// Use the in-cluster suffix so the test does not depend on a live
+	// resolver — the SSRF guard short-circuits *.svc.cluster.local
+	// hostnames before the DNS lookup. End-to-end DNS-resolution
+	// behaviour is exercised in pkg/validator with a stubbed resolver.
+	params := map[string]string{"prometheus_url": "http://prom.kube-system.svc.cluster.local:9090"}
 	err := validateAndMutateParams(params, "aws", map[string]string{}, false)
 	if err != nil {
 		t.Errorf("prometheus_url should pass on aws, got: %v", err)
@@ -331,7 +335,7 @@ func TestValidateAndMutateParams_PrometheusUrl_AwsAccepted(t *testing.T) {
 func TestValidateAndMutateParams_PrometheusUrl_NonAwsRejected(t *testing.T) {
 	for _, provider := range []string{"gcp", "azure", "do", "metal", "local"} {
 		t.Run(provider, func(t *testing.T) {
-			params := map[string]string{"prometheus_url": "http://prometheus.example.com:9090"}
+			params := map[string]string{"prometheus_url": "http://prom.kube-system.svc.cluster.local:9090"}
 			err := validateAndMutateParams(params, provider, map[string]string{}, false)
 			if err == nil {
 				t.Fatalf("prometheus_url should be rejected on %s (only declared in AWS Terraform)", provider)
@@ -556,6 +560,12 @@ func TestValidateRackParams_GPUObservability_RequiresDevicePlugin(t *testing.T) 
 	})
 }
 
+// TestValidateAndMutateParams_PrometheusUrl_SSRF exercises the
+// param-level SSRF guard via the real validateAndMutateParams entry
+// point. Only inputs that do NOT require live DNS are covered here:
+// IP literals, the *.svc.cluster.local allowlist, and scheme rejection.
+// DNS-resolution behaviour is exercised in pkg/validator with a
+// stubbed resolver — see pkg/validator/ssrf_test.go.
 func TestValidateAndMutateParams_PrometheusUrl_SSRF(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -563,16 +573,17 @@ func TestValidateAndMutateParams_PrometheusUrl_SSRF(t *testing.T) {
 		wantErr bool
 		errMsg  string
 	}{
-		{"public dns http accepted",    "http://prom.example.com:9090", false, ""},
-		{"public dns https accepted",   "https://prom.example.com",     false, ""},
-		{"empty value accepted (clear)", "",                            false, ""},
-		{"file:// rejected",            "file:///etc/passwd",           true,  "only http://"},
-		{"gopher:// rejected",          "gopher://x",                   true,  "only http://"},
-		{"link-local 169.254 rejected", "https://169.254.169.254/",     true,  "private/loopback"},
-		{"private 10.x rejected",       "http://10.0.0.1",              true,  "private/loopback"},
-		{"private 192.168 rejected",    "http://192.168.1.1",           true,  "private/loopback"},
-		{"loopback localhost rejected",  "http://localhost",             true,  "private/loopback"},
-		{"loopback 127.0.0.1 rejected", "http://127.0.0.1",             true,  "private/loopback"},
+		{"empty value accepted (clear)", "", false, ""},
+		{"in-cluster suffix accepted", "http://prom.kube-system.svc.cluster.local:9090", false, ""},
+		{"in-cluster paid recipe accepted", "http://convox-kube-prometheus-sta-prometheus.convox-monitoring.svc.cluster.local:9090", false, ""},
+		{"file:// rejected", "file:///etc/passwd", true, "http or https"},
+		{"gopher:// rejected", "gopher://x", true, "http or https"},
+		{"link-local 169.254 rejected", "https://169.254.169.254/", true, "non-routable"},
+		{"private 10.x rejected", "http://10.0.0.1", true, "non-routable"},
+		{"private 192.168 rejected", "http://192.168.1.1", true, "non-routable"},
+		{"loopback localhost rejected", "http://localhost", true, "non-routable"},
+		{"loopback 127.0.0.1 rejected", "http://127.0.0.1", true, "non-routable"},
+		{"cgnat 100.64 rejected", "http://100.64.0.1", true, "non-routable"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

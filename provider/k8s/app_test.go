@@ -80,7 +80,11 @@ func TestAppCreate(t *testing.T) {
 			requireYamlFixture(t, cfg.Template, "app.yml")
 		})
 
-		aa.On("Status", "rack1-app1", "app").Return("Updating", "R1234567", nil).Twice()
+		// AppCreate now invokes p.Atom.Status three times: (1) inside
+		// ReleasePromote → AppGet → appFromNamespace, (2) the new
+		// release-watcher supersession-detection capture in ReleasePromote,
+		// (3) the final AppGet → appFromNamespace at the end of AppCreate.
+		aa.On("Status", "rack1-app1", "app").Return("Updating", "R1234567", nil).Times(3)
 
 		a, err := p.AppCreate("app1", structs.AppCreateOptions{})
 		require.NoError(t, err)
@@ -115,11 +119,11 @@ func TestAppDeleteMissingApp(t *testing.T) {
 	})
 }
 
-// TestRemoveAppLock_DeletesEntry — MF-8 fix (catalog A-1).
-// AppDelete must drop the per-app sync.Mutex from appBudgetLockMap so the
-// map doesn't grow unbounded on long-lived racks with high app churn.
-// This test exercises the helper directly; the AppDelete integration is
-// covered by TestAppDelete_DropsAppBudgetLockEntry below.
+// TestRemoveAppLock_DeletesEntry: AppDelete must drop the per-app sync.Mutex
+// from appBudgetLockMap so the map doesn't grow unbounded on long-lived
+// racks with high app churn. This test exercises the helper directly; the
+// AppDelete integration is covered by TestAppDelete_DropsAppBudgetLockEntry
+// below.
 func TestRemoveAppLock_DeletesEntry(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		k8s.AcquireAppBudgetLockForTest("mf8-app1")
@@ -134,9 +138,9 @@ func TestRemoveAppLock_DeletesEntry(t *testing.T) {
 	})
 }
 
-// TestAppDelete_DropsAppBudgetLockEntry — MF-8 fix (catalog A-1) end-to-end.
-// AppDelete must call RemoveAppLock on success so apps that were ever
-// reconciled don't leave their *sync.Mutex stuck in appBudgetLockMap forever.
+// TestAppDelete_DropsAppBudgetLockEntry: end-to-end check that AppDelete
+// calls RemoveAppLock on success so apps that were ever reconciled don't
+// leave their *sync.Mutex stuck in appBudgetLockMap forever.
 func TestAppDelete_DropsAppBudgetLockEntry(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		aa, _ := p.Atom.(*atom.MockInterface)
@@ -334,7 +338,11 @@ func TestAppUpdateLocked(t *testing.T) {
 			requireYamlFixture(t, cfg.Template, "app-locked.yml")
 		})
 
-		aa.On("Status", "rack1-app1", "app").Return("Running", "", nil).Twice()
+		// AppUpdate routes through ReleasePromote, which now invokes
+		// p.Atom.Status three times: (1) AppGet → appFromNamespace inside
+		// ReleasePromote, (2) the release-watcher supersession-detection
+		// capture in ReleasePromote, (3) post-promote AppGet.
+		aa.On("Status", "rack1-app1", "app").Return("Running", "", nil).Times(3)
 
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 
@@ -362,7 +370,9 @@ func TestAppUpdateDoesNotOverwriteExisting(t *testing.T) {
 			requireYamlFixture(t, cfg.Template, "app-locked-params.yml")
 		}).Once()
 
-		aa.On("Status", "rack1-app1", "app").Return("Running", "", nil).Times(4)
+		// Two AppUpdate calls × 3 Status calls each (ReleasePromote AppGet
+		// + release-watcher capture + post-promote AppGet) = 6 total.
+		aa.On("Status", "rack1-app1", "app").Return("Running", "", nil).Times(6)
 
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 
@@ -389,7 +399,9 @@ func TestAppUpdateParameters(t *testing.T) {
 			requireYamlFixture(t, cfg.Template, "app-params.yml")
 		})
 
-		aa.On("Status", "rack1-app1", "app").Return("Running", "", nil).Twice()
+		// AppUpdate routes through ReleasePromote (3 Status calls) per the
+		// release-watcher supersession-detection landing.
+		aa.On("Status", "rack1-app1", "app").Return("Running", "", nil).Times(3)
 
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 

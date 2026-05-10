@@ -137,8 +137,8 @@ func TestBudgetShutdown_NoKedaService_DeploymentReplicasZeroOnly(t *testing.T) {
 }
 
 // TestBudgetShutdown_PausedReplicasAnnotation_Idempotent verifies the
-// GET-before-PATCH idempotency at spec §9.3 — second call does not
-// re-PATCH if the annotation is already at the target value.
+// GET-before-PATCH idempotency — a second call does not re-PATCH if
+// the annotation is already at the target value.
 func TestBudgetShutdown_PausedReplicasAnnotation_Idempotent(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
@@ -303,16 +303,18 @@ func TestBudgetShutdown_RestorePreFlightCheck_ManualScaledIsSkipped(t *testing.T
 	})
 }
 
-// TestRestore_KedaServiceWithoutFlagSet_ClearsAnnotation — γ-10 BLOCK K8S-1
-// regression guard. Pre-fix, restoreServiceFromState gated
-// clearPausedReplicasAnnotation on svc.KedaScaledObject.PausedReplicasAnnotationSet.
-// :fired's PATCH never flipped that flag to true (the latent bug), so KEDA-using
-// services were silently uncleaned after `convox budget reset`. Fix: drop the
-// gate (clearPausedReplicasAnnotation is idempotent — MergePatch null + missing-
-// ScaledObject path returns nil — so the gate was vacuous). This test seeds
-// PausedReplicasAnnotationSet=false (simulates the missing-flag bug) AND a
-// real ScaledObject with the paused-replicas annotation pre-set, then runs
-// restore and asserts the annotation is removed.
+// TestRestore_KedaServiceWithoutFlagSet_ClearsAnnotation pins that
+// restoreServiceFromState clears the paused-replicas annotation
+// regardless of the saved PausedReplicasAnnotationSet flag. An earlier
+// implementation gated the clear on that flag, but :fired's PATCH did
+// not always flip the flag to true, so KEDA-using services were
+// silently uncleaned after `convox budget reset`. The current code
+// drops the gate (clearPausedReplicasAnnotation is idempotent —
+// MergePatch null and the missing-ScaledObject path returns nil — so
+// the gate was vacuous). This test seeds
+// PausedReplicasAnnotationSet=false (simulates the original bug) AND
+// a real ScaledObject with the paused-replicas annotation pre-set,
+// then runs restore and asserts the annotation is removed.
 func TestRestore_KedaServiceWithoutFlagSet_ClearsAnnotation(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
@@ -380,7 +382,7 @@ func TestRestore_KedaServiceWithoutFlagSet_ClearsAnnotation(t *testing.T) {
 		so2, err := p.DynamicClient.Resource(budgetShutdownGVR).Namespace("rack1-app1").Get(context.TODO(), "ml-svc", am.GetOptions{})
 		require.NoError(t, err)
 		_, present := so2.GetAnnotations()["autoscaling.keda.sh/paused-replicas"]
-		assert.False(t, present, "K8S-1: paused-replicas annotation must be cleared on restore even when PausedReplicasAnnotationSet=false (the gate is vacuous and was hiding a latent bug)")
+		assert.False(t, present, "paused-replicas annotation must be cleared on restore even when PausedReplicasAnnotationSet=false (the gate is vacuous and was hiding a latent bug)")
 
 		// Replicas restored to original Count=3.
 		got, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "ml-svc", am.GetOptions{})
@@ -391,7 +393,7 @@ func TestRestore_KedaServiceWithoutFlagSet_ClearsAnnotation(t *testing.T) {
 }
 
 // TestBudgetShutdown_StateAnnotationCorrupt_FiresFailedReasonStateCorrupt
-// verifies §3 R5: malformed JSON produces a parse error on read.
+// verifies that malformed JSON produces a parse error on read.
 func TestBudgetShutdown_StateAnnotationCorrupt_FiresFailedReasonStateCorrupt(t *testing.T) {
 	ann := map[string]string{
 		structs.BudgetShutdownStateAnnotation: "not-valid-json{",
@@ -402,7 +404,7 @@ func TestBudgetShutdown_StateAnnotationCorrupt_FiresFailedReasonStateCorrupt(t *
 }
 
 // TestBudgetShutdown_StateAnnotationFutureSchemaVersionRejected verifies
-// §3 R5 class 3: schemaVersion > current rejects.
+// that an annotation with schemaVersion > the current writer rejects.
 func TestBudgetShutdown_StateAnnotationFutureSchemaVersionRejected(t *testing.T) {
 	state := structs.AppBudgetShutdownState{
 		SchemaVersion:        99,
@@ -422,8 +424,9 @@ func TestBudgetShutdown_StateAnnotationFutureSchemaVersionRejected(t *testing.T)
 }
 
 // TestBudgetShutdown_RequiredFieldValidation_RejectsZeroValuedAnnotation
-// verifies §3 R5 class 4: explicit required-field validation
-// (R4 state-persistence A2 absorbed).
+// verifies the explicit required-field validation that runs after
+// json.Unmarshal succeeds (Go's Unmarshal does not fail on missing
+// required fields by default).
 func TestBudgetShutdown_RequiredFieldValidation_RejectsZeroValuedAnnotation(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -460,8 +463,8 @@ func TestBudgetShutdown_RequiredFieldValidation_RejectsZeroValuedAnnotation(t *t
 	}
 }
 
-// TestBudgetShutdown_StateAnnotationCorrupt_ResetUnconditionalDelete verifies
-// §10.5 R2 NIT-4: AppBudgetReset deletes the annotation unconditionally
+// TestBudgetShutdown_StateAnnotationCorrupt_ResetUnconditionalDelete
+// verifies that AppBudgetReset deletes the annotation unconditionally
 // even when parse fails.
 func TestBudgetShutdown_StateAnnotationCorrupt_ResetUnconditionalDelete(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
@@ -726,7 +729,7 @@ func TestRunStaleAnnotationGC_ReArmCycle_DoesNotLeakDismissedAt(t *testing.T) {
 }
 
 // TestBudgetShutdown_DismissRecoveryAnnotation verifies dismiss-recovery
-// produces 3 distinct outcomes (per Set G v2 spec advisory #3):
+// produces 3 distinct outcomes:
 //
 //	no banner present     → status = no-banner, no annotation written
 //	banner present, fresh → status = dismissed, annotation written
@@ -780,12 +783,12 @@ func TestBudgetShutdown_DismissRecoveryAnnotation(t *testing.T) {
 }
 
 // TestAppBudgetDismissRecoveryWithResult_ConcurrentDismiss_FirstWins
-// pins F-EVT-3: two concurrent dismiss clicks must collapse into one
-// fresh dismiss + one already-dismissed via the per-app lock. Without
-// the lock both goroutines observe existing=nil and both fall through
-// to the write branch, producing duplicate :dismissed events with
-// idempotent=false. The lock serializes the read-decide-write so the
-// second click sees the freshly-written annotation.
+// pins that two concurrent dismiss clicks must collapse into one
+// fresh dismiss plus one already-dismissed via the per-app lock.
+// Without the lock both goroutines observe existing=nil and both
+// fall through to the write branch, producing duplicate :dismissed
+// events with idempotent=false. The lock serializes the read-decide-
+// write so the second click sees the freshly-written annotation.
 func TestAppBudgetDismissRecoveryWithResult_ConcurrentDismiss_FirstWins(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
@@ -868,8 +871,14 @@ func TestConcurrentResetAndAccumulatorTick_LosersRetryWithFreshState(t *testing.
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
-		// pre-write a state annotation so reset has something to handle
-		now := time.Now().UTC()
+		// Fixed clock pinned mid-April 2026 so the accumulator goroutine's
+		// startOfMonth(now) matches the seeded MonthStart=2026-04-01 and
+		// the final assertion (MonthStart must remain stable at 2026-04-01)
+		// is not flaky across month boundaries. Wall-clock time.Now() is
+		// used nowhere in this test's invariants — the shutdown-state
+		// annotation's ShutdownAt/ArmedAt are presence/order-relative and
+		// the budget-state's MonthStart is what's under test.
+		now := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
 		shut := now.Add(-1 * time.Minute)
 		armed := now.Add(-30 * time.Minute)
 		state := &structs.AppBudgetShutdownState{
@@ -921,7 +930,11 @@ func TestConcurrentResetAndAccumulatorTick_LosersRetryWithFreshState(t *testing.
 			defer wg.Done()
 			// AccumulateBudgetAppForTest is the test-only hook that runs
 			// the per-app accumulator tick without leader election.
-			errs <- k8s.AccumulateBudgetAppForTest(p, "app1", time.Now().UTC().Add(15*time.Minute))
+			// Pass the fixed clock + 15min so startOfMonth() returns
+			// 2026-04-01 (matches seeded MonthStart) and the final
+			// MonthStart-stability assertion is deterministic regardless
+			// of when the test runs in the calendar.
+			errs <- k8s.AccumulateBudgetAppForTest(p, "app1", now.Add(15*time.Minute))
 		}()
 		wg.Wait()
 		close(errs)
@@ -1001,10 +1014,10 @@ func TestAppBudgetResetWithOptions_HoldsLockAcrossStep2_NoDuplicateCancelled(t *
 		require.NoError(t, err)
 
 		// Pre-armed shutdown-state annotation. ArmedAt set, ShutdownAt
-		// NOT set — the lifecycle is in :armed window. Without the F-A06-1
-		// fix, two :cancelled events could fire (one from reset's
-		// restoreFromAnnotation, one from the F8 manual-detected branch
-		// racing against the unlocked window).
+		// NOT set — the lifecycle is in the :armed window. Without the
+		// outer-lock guard, two :cancelled events could fire (one from
+		// reset's restoreFromAnnotation, one from the manual-detected
+		// branch racing against the unlocked window).
 		now := time.Now().UTC()
 		armed := now.Add(-5 * time.Minute)
 		state := &structs.AppBudgetShutdownState{
@@ -1073,10 +1086,10 @@ func TestAppBudgetResetWithOptions_HoldsLockAcrossStep2_NoDuplicateCancelled(t *
 		// Post-race invariant 1: at most ONE :cancelled event. The
 		// outer-lock fix ensures the parallel reconcile queues until
 		// reset finishes its annotation delete; once the annotation is
-		// gone the F8 manual-detected branch is skipped (no shutdownState).
+		// gone the manual-detected branch is skipped (no shutdownState).
 		cancelEvts := cap.findActions(":cancelled")
 		assert.LessOrEqual(t, len(cancelEvts), 1,
-			"F-A06-1: at most one :cancelled may fire under reset+tick race; got %d", len(cancelEvts))
+			"at most one :cancelled may fire under reset+tick race; got %d", len(cancelEvts))
 
 		// Post-race invariant 2: shutdown-state annotation must be deleted
 		// (the restore stage of AppBudgetResetWithOptions unconditionally deletes it).
@@ -1141,12 +1154,12 @@ func TestBudgetShutdown_StandardReset_PreservesCarryoverAnnotations(t *testing.T
 }
 
 // TestAppBudgetShutdownStateGet_AggregatesDismissedAnnotation pins
-// Decision 6: the GET path aggregates
-// both the shutdown-state annotation AND the dismissed-banner
-// annotation into a single struct. Without this aggregation, Console3
-// cannot read the dismissed timestamp from a fresh page load — the
-// RECOVERED banner re-renders during the up-to-10-min stale-GC
-// window even though the user dismissed it.
+// the GET-path aggregation: both the shutdown-state annotation AND
+// the dismissed-banner annotation collapse into a single struct.
+// Without this aggregation, Console cannot read the dismissed
+// timestamp from a fresh page load — the RECOVERED banner re-renders
+// during the up-to-10-minute stale-GC window even though the user
+// dismissed it.
 func TestAppBudgetShutdownStateGet_AggregatesDismissedAnnotation(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
@@ -1196,9 +1209,8 @@ func TestAppBudgetShutdownStateGet_AggregatesDismissedAnnotation(t *testing.T) {
 
 // TestAppBudgetShutdownStateGet_NilDismissedWhenAbsent pins the
 // graceful-degrade case: when the dismissed annotation is absent
-// (banner not yet dismissed), RecoveryBannerDismissedAt is nil.
-// Vue's `state` computed treats this as the pre-Decision-6 fallback
-// (rely on in-session local flag).
+// (banner not yet dismissed), RecoveryBannerDismissedAt is nil and
+// the consumer falls back to in-session local state.
 func TestAppBudgetShutdownStateGet_NilDismissedWhenAbsent(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
@@ -1227,7 +1239,7 @@ func TestAppBudgetShutdownStateGet_NilDismissedWhenAbsent(t *testing.T) {
 }
 
 // TestWriteBudgetShutdownStateAnnotation_DropsRecoveryBannerDismissedAt
-// pins Decision 6's defensive nil-clear: the persisted shutdown-state
+// pins the defensive nil-clear: the persisted shutdown-state
 // annotation MUST NOT include `recoveryBannerDismissedAt`. The
 // dismissed marker lives in its own annotation; this defensive nil
 // keeps the two annotations orthogonal even if a caller leaves the

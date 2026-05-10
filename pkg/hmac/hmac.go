@@ -19,11 +19,11 @@ const minHexLen = 64
 // maxHexLen guards against accidental file-paste DoS into a rack param.
 const maxHexLen = 4096
 
-// maxKeys caps the rotation list length per spec §2.5.
+// maxKeys caps the rotation list length.
 //
-// Bumped from 2 to 4 in 3.24.6 polish wave so operators have a comfortable
-// rotation depth (current + previous + prev-previous + prev-prev-previous).
-// Wire size: 4 × 64 chars + timestamp ≈ 280 bytes header — well under any
+// Bumped from 2 to 4 in 3.24.6 so operators have a comfortable rotation
+// depth (current + previous + prev-previous + prev-prev-previous). Wire
+// size: 4 × 64 chars + timestamp ≈ 280 bytes header — well under any
 // reasonable receiver header limit (8KB cloudflare, 4KB lambda baseline).
 // Per-event CPU: 4 HMAC operations vs 2 — negligible.
 const maxKeys = 4
@@ -33,9 +33,9 @@ const maxKeys = 4
 // validation. Not used by the package's own validation/signing helpers.
 const MaxSigningKeys = maxKeys
 
-// hexCharClass matches one or more lowercase hex characters. Uppercase is
-// REJECTED so the validator can give the user an actionable "use
-// lowercase" hint without ambiguity. See spec §5.1.
+// hexCharClass matches one or more lowercase hex characters. Uppercase
+// is rejected so the validator can give the user an actionable "use
+// lowercase" hint without ambiguity.
 var hexCharClass = regexp.MustCompile(`^[0-9a-f]+$`)
 
 // nonHexLowerClass identifies the first offending character in a non-hex
@@ -62,7 +62,7 @@ var placeholderHexValues = []string{
 }
 
 // abs returns the absolute value of x. Provided here because Go has no
-// stdlib int64 abs (math.Abs is float64-only). Spec §12.3.
+// stdlib int64 abs (math.Abs is float64-only).
 func abs(x int64) int64 {
 	if x < 0 {
 		return -x
@@ -111,10 +111,9 @@ func Sign(t int64, body []byte, key []byte) string {
 //
 //	t=<unix-ts>,v1=<hex1>[,v1=<hex2>]
 //
-// for one or more keys. Empty keys list returns "". Per spec §12.2 a
-// runtime panic in the inner sign call is recovered and logged via the
-// returned empty string so callers degrade to unsigned dispatch instead
-// of crashing.
+// for one or more keys. Empty keys list returns "". A runtime panic in
+// the inner sign call is recovered and surfaces as the empty string so
+// callers degrade to unsigned dispatch instead of crashing.
 func SignedHeader(t int64, body []byte, keys [][]byte) (header string) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -184,7 +183,7 @@ func Verify(body []byte, header string, keys [][]byte, tolerance time.Duration) 
 	now := time.Now().Unix()
 	// tolerance.Seconds() returns float64; sub-second tolerance truncates
 	// to 0 and would reject every webhook. Pin tolerance to whole seconds
-	// in callers. (Spec §12.3)
+	// in callers.
 	if abs(now-t) > int64(tolerance.Seconds()) {
 		return errors.New("timestamp outside tolerance window")
 	}
@@ -226,7 +225,6 @@ func Verify(body []byte, header string, keys [][]byte, tolerance time.Duration) 
 // value into a [][]byte of decoded keys. Empty input returns (nil, nil)
 // signaling the disabled state. Decoded keys are returned post-hex-decode
 // once at boot; subsequent comparisons operate on the raw []byte slices.
-// Spec §5.5 boot-time hex-decode-once contract.
 func ParseSigningKeys(rackParam string) ([][]byte, error) {
 	if err := ValidateSigningKeys(rackParam); err != nil {
 		return nil, err
@@ -255,8 +253,8 @@ func ParseSigningKeys(rackParam string) ([][]byte, error) {
 	return out, nil
 }
 
-// ValidateSigningKeys enforces hex format, minimum length (32 bytes after
-// decode), weak-key rejection, and max-key-count rules per spec §5.
+// ValidateSigningKeys enforces hex format, minimum length (32 bytes
+// after decode), weak-key rejection, and the max-key-count rule.
 // Returns nil on success. Error messages are user-actionable: they
 // describe key shape (offset, length, hex-vs-not) without echoing key
 // contents to logs.
@@ -295,7 +293,7 @@ func ValidateSigningKeys(rackParam string) error {
 			}
 			return fmt.Errorf("webhook_signing_key: key #%d contains non-hex character %q at offset %d; hex validation requires lowercase [0-9a-f]; use 'openssl rand -hex 32' to generate", idx, string(char), off)
 		}
-		// Placeholder equality (spec §5.2.4)
+		// Placeholder equality check.
 		for _, ph := range placeholderHexValues {
 			if s == ph {
 				return fmt.Errorf("webhook_signing_key: key #%d matches a known placeholder value; use 'openssl rand -hex 32' to generate a real key", idx)

@@ -97,7 +97,7 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 		// build:status, etc.) — otherwise those events emit with the
 		// rack-password literal. The CONVOX_ACTOR env var is read by
 		// sdk.New() on the build binary side; empty string is harmless.
-		"CONVOX_ACTOR":                    p.ContextActor(),
+		"CONVOX_ACTOR": p.ContextActor(),
 	}
 
 	repo, _, err := p.Engine.RepositoryHost(app)

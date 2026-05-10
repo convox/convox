@@ -15,11 +15,11 @@ func renderStatusCode(w io.Writer, code int) error {
 }
 
 func contextFrom(c *stdapi.Context) context.Context {
-	// MF-13 fix (R6 γ-4 A3 — RFC 6648 dual-read).
+	// RFC 6648 dual-read for the tenant identifier.
 	//
 	// X-Convox-TID is the multi-tenant boundary identifier set by Convox
-	// Cloud (console3) on every proxied request and consumed by the rack
-	// for namespace labeling, app-list scoping, service URL routing,
+	// Cloud on every proxied request and consumed by the rack for
+	// namespace labeling, app-list scoping, service URL routing,
 	// build-env injection, and pod-env injection. Hard rename would break
 	// every Cloud-hosted user.
 	//

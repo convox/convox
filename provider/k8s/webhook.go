@@ -6,13 +6,39 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/convox/pkg/validator"
 	ac "k8s.io/api/core/v1"
 	ae "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// webhookSSRFValidator is the SSRF guard applied to user-supplied webhook
+// URLs at create AND dispatch time. Production points at
+// validator.ValidateExternalURL (with nil resolver → net.LookupIP). Tests
+// may install a permissive stub via SetWebhookSSRFValidatorForTest so
+// httptest.NewServer URLs (which bind 127.0.0.1) are not rejected by the
+// loopback deny-rule.
+//
+// The variable is ALSO consulted by EventSend's dispatch path so a
+// pre-3.24.6 webhook entry that pre-existed in the configmap and points
+// at an internal IP (e.g. 169.254.169.254 for IMDS) is refused at
+// dispatch time, not just at create time. Dispatch-time refusal logs
+// at MOST one line per (URL, pod) pair via webhookSSRFLogged.
+var webhookSSRFValidator = func(raw string) error {
+	return validator.ValidateExternalURL(raw, nil)
+}
+
+// webhookSSRFLogged tracks URLs we have already emitted a structured
+// "ssrf_blocked" log line for. The intent is to keep the log volume
+// bounded when an operator's pre-3.24.6 configmap retains private-IP
+// entries: the first dispatch attempt logs once; subsequent attempts to
+// the same URL are silent. Cleared at process restart (the leader pod's
+// boot is the natural cadence; we do not persist this to the cluster).
+var webhookSSRFLogged sync.Map
 
 // webhookConfigMapTimeout bounds the synchronous configmap fetch in
 // webhookConfigMap. EventSend on non-leader pods now reads via this
@@ -169,17 +195,37 @@ func (p *Provider) webhookConfigMap() (*ac.ConfigMap, error) {
 }
 
 func (p *Provider) webhookCreate(name, url string) error {
-	cm, err := p.webhookConfigMap()
-	if err != nil {
-		return err
-	}
-
 	if name == "" {
 		return structs.ErrBadRequest("name required")
 	}
 
 	if url == "" {
 		return structs.ErrBadRequest("url required")
+	}
+
+	// SSRF guard: reject webhook URLs that resolve to internal/non-routable
+	// addresses BEFORE persisting the configmap row. Pre-3.24.6 racks
+	// accepted any URL string here; an operator with rack-write capability
+	// could register a webhook pointing at IMDS or in-VPC services and the
+	// rack's EventSend fan-out would dutifully POST event bodies to the
+	// target. The validator deny-set covers RFC 1918, loopback, link-local
+	// (incl. 169.254.169.254 IMDS), CGNAT, IPv6 ULA, unspecified, and the
+	// "localhost" reserved name. The documented in-cluster recipe
+	// (.svc.cluster.local hostnames) is allow-listed by suffix so this
+	// does NOT prevent operators from pointing webhooks at sidecar
+	// receivers deployed in the same cluster.
+	//
+	// Friendly-error: surface the validator's message as a 400-class
+	// ErrBadRequest so the CLI / Console renders a single line and not
+	// an internal-error dialog. The validator already produces operator-
+	// readable text; we prefix with "url:" so the field is unambiguous.
+	if err := webhookSSRFValidator(url); err != nil {
+		return structs.ErrBadRequest("url: %s", err)
+	}
+
+	cm, err := p.webhookConfigMap()
+	if err != nil {
+		return err
 	}
 
 	if _, ok := cm.Data[name]; ok {

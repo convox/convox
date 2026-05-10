@@ -216,9 +216,9 @@ func TestAppLogsError(t *testing.T) {
 	})
 }
 
-// TestAppManifestService — item 24 happy path. The new
-// /apps/{app}/manifest/services/{service} route delegates to the provider
-// and renders the ManifestService transport struct as JSON.
+// TestAppManifestService is the happy path for the
+// /apps/{app}/manifest/services/{service} route — delegates to the
+// provider and renders the ManifestService transport struct as JSON.
 func TestAppManifestService(t *testing.T) {
 	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
 		min, max := 1, 5

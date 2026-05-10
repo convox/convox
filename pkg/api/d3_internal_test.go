@@ -169,10 +169,11 @@ func TestContextFrom_PreservesXConvoxTID(t *testing.T) {
 	assert.Equal(t, "tid-1", tid)
 }
 
-// TestContextFrom_AcceptsConvoxTIDCanonical — MF-13 fix (R6 γ-4 A3).
-// RFC 6648 deprecates X-prefix headers. Canonical form is `Convox-TID`.
-// Rack must accept the canonical form so future Cloud (console3) releases
-// can migrate without depending on a coordinated rack upgrade.
+// TestContextFrom_AcceptsConvoxTIDCanonical verifies that the rack
+// accepts the canonical `Convox-TID` form (RFC 6648 deprecates X-
+// prefix headers). The rack must accept the canonical form so future
+// Console releases can migrate without depending on a coordinated
+// rack upgrade.
 func TestContextFrom_AcceptsConvoxTIDCanonical(t *testing.T) {
 	c := stdapi.NewContext(nil, httptest.NewRequest(http.MethodGet, "http://example.com", nil))
 	c.Request().Header.Set("Convox-TID", "tid-canonical")
@@ -183,10 +184,10 @@ func TestContextFrom_AcceptsConvoxTIDCanonical(t *testing.T) {
 		"Convox-TID (canonical, RFC 6648 compliant) must populate the same ctx key as X-Convox-TID")
 }
 
-// TestContextFrom_CanonicalWinsOverLegacy — MF-13 fix.
-// During the migration window, both forms may be sent simultaneously
-// (e.g., a Cloud upgrade in flight where one proxy sends both for safety).
-// Canonical form wins so the rack always sees the modern identifier.
+// TestContextFrom_CanonicalWinsOverLegacy verifies that during the
+// migration window, when both `X-Convox-TID` and `Convox-TID` are
+// present, the canonical form wins so the rack always sees the
+// modern identifier.
 func TestContextFrom_CanonicalWinsOverLegacy(t *testing.T) {
 	c := stdapi.NewContext(nil, httptest.NewRequest(http.MethodGet, "http://example.com", nil))
 	c.Request().Header.Set("X-Convox-TID", "tid-legacy")
@@ -198,10 +199,10 @@ func TestContextFrom_CanonicalWinsOverLegacy(t *testing.T) {
 		"when both forms present, canonical Convox-TID must win over legacy X-Convox-TID")
 }
 
-// TestContextFrom_NoTIDHeader — MF-13 fix.
-// Neither header set → empty string TID (existing behavior preserved).
+// TestContextFrom_NoTIDHeader verifies that when neither header is
+// set, the TID is the empty string (preserving existing behavior).
 // ContextTID downstream returns "" which signals "no tenant context",
-// used by single-tenant on-prem rack deployments where Cloud's
+// used by single-tenant on-prem rack deployments where Console's
 // proxy-injected TID is not in scope.
 func TestContextFrom_NoTIDHeader(t *testing.T) {
 	c := stdapi.NewContext(nil, httptest.NewRequest(http.MethodGet, "http://example.com", nil))

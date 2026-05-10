@@ -108,10 +108,10 @@ func TestNoSystemBudgetAccumulatorActor(t *testing.T) {
 	files := []string{
 		"event.go",
 		"budget_accumulator.go",
-		// F-7 fix (catalog F-7): extend scan list to cover Set G files
-		// where γ-C added the bulk of new actor-bearing code. Direct grep
-		// confirms zero current violations; defensive guard for future
-		// regressions.
+		// Extend scan list to cover the auto-shutdown source files
+		// where the bulk of actor-bearing code lives. Direct grep
+		// confirms zero current violations; this is a defensive guard
+		// against future regressions.
 		"budget_auto_shutdown.go",
 		"budget_shutdown.go",
 		"release.go",

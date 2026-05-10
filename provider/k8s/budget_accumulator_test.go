@@ -585,6 +585,40 @@ func TestAppCost_WithBudget(t *testing.T) {
 	})
 }
 
+// AppCost.TrackingEnabled mirrors the rack's cost_tracking_enable env var
+// at query time. CLI / Console use this to render a "cost tracking
+// disabled — values may be stale" hint instead of presenting persisted
+// state annotations as live spend numbers. When the env var is unset
+// (default) the field is false; when set to "true" the field is true.
+// Older racks emit zero-value (false), which is also the safe rendering
+// — pre-3.24.6 racks have no enforcement either.
+func TestAppCost_TrackingEnabledMirrorsEnv(t *testing.T) {
+	t.Run("env unset → tracking disabled", func(t *testing.T) {
+		testProvider(t, func(p *k8s.Provider) {
+			kk, _ := p.Cluster.(*fake.Clientset)
+			require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+			cost, err := p.AppCost("app1")
+			require.NoError(t, err)
+			assert.False(t, cost.TrackingEnabled,
+				"COST_TRACKING_ENABLE unset → AppCost.TrackingEnabled=false so callers render the disabled-rack hint")
+		})
+	})
+
+	t.Run("env true → tracking enabled", func(t *testing.T) {
+		t.Setenv("COST_TRACKING_ENABLE", "true")
+		testProvider(t, func(p *k8s.Provider) {
+			kk, _ := p.Cluster.(*fake.Clientset)
+			require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+			cost, err := p.AppCost("app1")
+			require.NoError(t, err)
+			assert.True(t, cost.TrackingEnabled,
+				"COST_TRACKING_ENABLE=true → AppCost.TrackingEnabled=true so callers render live spend")
+		})
+	})
+}
+
 // Corrupt MonthlyCapUsd (e.g. hand-edited annotation with cap=0) must be
 // skipped by the accumulator rather than firing a perpetual cap alert.
 func TestBudgetAccumulatorGuardsAgainstZeroCap(t *testing.T) {
@@ -792,9 +826,9 @@ func TestAppBudgetClear_EmitsEvent(t *testing.T) {
 	})
 }
 
-// Pod-seeded integration: the accumulator walks pods on priced nodes and
-// attributes a non-zero delta. Closes the Round-1 coverage gap where the
-// pod-iteration loop ran on zero-pod state only.
+// Pod-seeded integration: the accumulator walks pods on priced nodes
+// and attributes a non-zero delta. Pins the pod-iteration path which
+// would otherwise only be exercised on zero-pod state.
 func TestBudgetAccumulator_ChargesRunningPod(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
@@ -1795,9 +1829,10 @@ func TestAutoShutdown_BudgetCircuitBreakerCheck_AlertOnly(t *testing.T) {
 }
 
 // TestAutoShutdown_AppBudgetReset_ClearsExistingBreakerAndStateAnnotation
-// verifies the canonical 4-annotation reset checklist (per spec §22.1).
-// Pre-conditions: budget config + state + shutdown-state annotations.
-// Post-conditions: budget-state cleared + shutdown-state deleted.
+// verifies the canonical reset checklist for auto-shutdown
+// annotations. Pre-conditions: budget config + state + shutdown-state
+// annotations. Post-conditions: budget-state cleared + shutdown-state
+// deleted.
 func TestAutoShutdown_AppBudgetReset_ClearsExistingBreakerAndStateAnnotation(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
@@ -1847,12 +1882,12 @@ func TestAutoShutdown_AppBudgetReset_ClearsExistingBreakerAndStateAnnotation(t *
 	})
 }
 
-// TestCancelled_ResetDuringArmed_ActorIsJwtDerived — F-3 fix (catalog F-3).
-// Spec §8.4 line 777 mandates JWT-derived actor for the
-// reset-during-armed sub-case. Verifies the actor parameter threads
-// through fireCancelledEvent rather than the previous always-"system"
-// hardcode. The other accumulator-detected sub-cases (manual-detected,
-// cap-raised, config-changed) keep "system" intentionally.
+// TestCancelled_ResetDuringArmed_ActorIsJwtDerived verifies that the
+// reset-during-armed sub-case uses the JWT-derived actor. The actor
+// parameter threads through fireCancelledEvent rather than being
+// hardcoded to "system". The other accumulator-detected sub-cases
+// (manual-detected, cap-raised, config-changed) keep "system"
+// intentionally.
 func TestCancelled_ResetDuringArmed_ActorIsJwtDerived(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
@@ -2072,14 +2107,14 @@ func TestBudgetAccumulatorCapNoOpSet_DoesNotClearBreaker(t *testing.T) {
 	})
 }
 
-// TestBudgetAccumulatorCapLowered_DoesNotClearBreaker — gate guard for
-// the "cap lowered while still above spend" case. Decision 3 §1
-// explicitly says cap-lower is orthogonal to breaker-clear; only an
-// explicit cap-raise should auto-unblock. Without `final > prev`, a
+// TestBudgetAccumulatorCapLowered_DoesNotClearBreaker is the gate
+// guard for the "cap lowered while still above spend" case.
+// Cap-lower is orthogonal to breaker-clear; only an explicit
+// cap-raise should auto-unblock. Without the `final > prev` gate, a
 // cap drop from $1000 to $200 (with spend=$50, breaker stuck-tripped
-// from prior cycle) would clear the breaker. The tightened gate
-// preserves the user's explicit-ack contract: user must run
-// `convox budget reset` to clear, since they DECREASED the cap.
+// from a prior cycle) would clear the breaker. The tightened gate
+// preserves the user's explicit-ack contract: the user must run
+// `convox budget reset` to clear when they DECREASED the cap.
 func TestBudgetAccumulatorCapLowered_DoesNotClearBreaker(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
@@ -2191,7 +2226,7 @@ func TestBudgetAccumulatorCapRaise_EmitsBreakerClearedEvent_WithCapRaisedReason(
 			assert.Equal(t, "app1", data["app"])
 			assert.Equal(t, "alice@example.com", data["ack_by"], "ack_by must be the cap-raiser")
 			assert.Equal(t, "alice@example.com", data["actor"],
-				"Decision 4: actor must equal ack_by (was rack-password pre-D4 via ContextActor central injection)")
+				"actor must equal ack_by (was rack-password under the older ContextActor central injection)")
 			assert.Equal(t, "cap-raised", data["reason"])
 			assert.Equal(t, "110.00", data["prev_spend_usd"])
 			assert.Equal(t, "100.00", data["prev_cap_usd"])
@@ -2221,23 +2256,23 @@ func TestBudgetAccumulatorCapRaise_EmitsBreakerClearedEvent_WithCapRaisedReason(
 	})
 }
 
-// TestAppBudgetSet_CapRaiseClearsArmedShutdownStateAnnotation
-// (F-A06-2 fix). When a cap-raise clears a tripped breaker AND the app
-// was in :armed lifecycle (ArmedAt set, ShutdownAt nil), the orphan
-// shutdown-state annotation MUST also be deleted atomically with the
-// breaker-clear write. Pre-fix: AppBudgetSet only cleared
+// TestAppBudgetSet_CapRaiseClearsArmedShutdownStateAnnotation pins
+// that when a cap-raise clears a tripped breaker AND the app was in
+// the :armed lifecycle (ArmedAt set, ShutdownAt nil), the orphan
+// shutdown-state annotation is deleted atomically with the
+// breaker-clear write. An older implementation cleared only the
 // BudgetStateAnnotation fields; the BudgetShutdownStateAnnotation
-// persisted with ArmedAt set so `convox budget show` displayed a stale
-// "ARMED — auto-shutdown scheduled at HH:MM" banner forever (the
-// accumulator's reconcileAutoShutdown gates :fired progression on
+// persisted with ArmedAt set so `convox budget show` displayed a
+// stale "ARMED — auto-shutdown scheduled at HH:MM" banner forever
+// (reconcileAutoShutdown gates :fired progression on
 // AlertFiredAtCap.IsZero(), so the lifecycle could never advance).
 //
-// Post-fix: the annotation is deleted in the same Namespace.Update()
-// round-trip as the breaker-clear, AND a discrete
+// The current code deletes the annotation in the same
+// Namespace.Update() round-trip as the breaker-clear, AND a discrete
 // :cancelled reason="cap-raised" event fires immediately after the
 // :breaker-cleared event so audit trails reflect the lifecycle
-// transition. Actor on the :cancelled event is the cap-raiser (ackBy)
-// matching spec §8.4 line 777 JWT-derived attribution.
+// transition. The actor on the :cancelled event is the cap-raiser
+// (ackBy).
 func TestAppBudgetSet_CapRaiseClearsArmedShutdownStateAnnotation(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
@@ -2301,7 +2336,7 @@ func TestAppBudgetSet_CapRaiseClearsArmedShutdownStateAnnotation(t *testing.T) {
 		ns2, _ := kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
 		_, hasAnno := ns2.Annotations[structs.BudgetShutdownStateAnnotation]
 		assert.False(t, hasAnno,
-			"F-A06-2: shutdown-state annotation must be deleted when cap-raise clears breaker on armed app")
+			"shutdown-state annotation must be deleted when cap-raise clears breaker on armed app")
 
 		// Post-condition 2: :cancelled reason="cap-raised" event fired.
 		require.Eventually(t, func() bool {
@@ -2329,7 +2364,7 @@ func TestAppBudgetSet_CapRaiseClearsArmedShutdownStateAnnotation(t *testing.T) {
 		require.True(t, ok, ":cancelled event must include data field")
 		assert.Equal(t, "cap-raised", data["cancel_reason"], "reason must be cap-raised")
 		assert.Equal(t, "alice@example.com", data["actor"],
-			"actor must be the cap-raiser (ackBy) per spec §8.4")
+			"actor must be the cap-raiser (ackBy)")
 		assert.NotEmpty(t, data["armed_at"], "armed_at must populate from saved state")
 	})
 }

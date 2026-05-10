@@ -1,9 +1,8 @@
 # GPU observability dashboard ConfigMaps.
 #
 # These ConfigMaps carry the `grafana_dashboard=1` label so a Grafana
-# instance with sidecar discovery (kube-prometheus-stack's bundled
-# Grafana with sidecar enabled, OR a user's BYO Grafana with
-# matching sidecar config) auto-imports the dashboards.
+# instance with sidecar discovery (a user's BYO Grafana with matching
+# sidecar config) auto-imports the dashboards.
 #
 # Users running the standalone Grafana convox app at
 # convox-examples/grafana-gpu-dashboards do not consume these ConfigMaps —

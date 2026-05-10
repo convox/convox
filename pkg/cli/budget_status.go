@@ -14,18 +14,18 @@ import (
 // in `convox ps`, `convox services`, and the `convox scale --watch` table
 // when the app's budget cap is breached. No new API surface is introduced.
 //
-// The struct is deliberately package-private — Set G's auto-shutdown work
-// (3.24.6 follow-up) and Console's status surfacing (out of scope here)
-// will derive their own equivalents.
+// The struct is deliberately package-private — auto-shutdown work
+// and Console's status surfacing (out of scope here) will derive their
+// own equivalents.
 type capStatus struct {
 	// AtCap is true when the budget cap is breached AND the configured
 	// AtCapAction is one we surface to the user (block-new-deploys today,
-	// auto-shutdown when Set G lands). When false, no decoration runs.
+	// auto-shutdown when that action ships). When false, no decoration runs.
 	AtCap bool
 
-	// AutoShutdown is true when AtCapAction == "auto-shutdown" — the value
-	// Set G will write. Pre-Set-G, this is always false. The helper accepts
-	// the value already so Set G's lander does not need to revisit this file.
+	// AutoShutdown is true when AtCapAction == "auto-shutdown". The helper
+	// accepts the value already so future auto-shutdown work does not need
+	// to revisit this file.
 	AutoShutdown bool
 
 	// KedaServiceSet maps service-name -> has-keda-or-equivalent-autoscaler.
@@ -36,11 +36,11 @@ type capStatus struct {
 	KedaServiceSet map[string]bool
 
 	// ArmedCountdownMinutes is the integer remaining minutes until
-	// auto-shutdown :fired (per Set G v2 spec §16.3 + corrective scope).
-	// Populated only when an active shutdown-state annotation has ArmedAt
-	// set and ShutdownAt empty. -1 means "not currently armed". Values < 1
-	// when armed clamp to 1m (the user cannot see "armed-0m" — that
-	// transitions to "fired" before the next render).
+	// auto-shutdown :fired. Populated only when an active shutdown-state
+	// annotation has ArmedAt set and ShutdownAt empty. -1 means "not
+	// currently armed". Values < 1 when armed clamp to 1m (the user
+	// cannot see "armed-0m" — that transitions to "fired" before the
+	// next render).
 	ArmedCountdownMinutes int
 }
 
@@ -88,8 +88,8 @@ func budgetCapStatusBase(rack sdk.Interface, appName string, stderr io.Writer) (
 	}
 	// Surface only when AtCapAction is one of the cap-enforcing values.
 	// alert-only does NOT surface — the user asked us not to enforce.
-	// F-8 fix: use the canonical constant from pkg/structs so any future
-	// rename of the at-cap-action value lands here automatically.
+	// Use the canonical constant from pkg/structs so any future rename
+	// of the at-cap-action value lands here automatically.
 	cs := capStatus{
 		AtCap:                 cfg.AtCapAction == structs.BudgetAtCapActionBlockNewDeploys || cfg.AtCapAction == structs.BudgetAtCapActionAutoShutdown,
 		AutoShutdown:          cfg.AtCapAction == structs.BudgetAtCapActionAutoShutdown,
@@ -110,10 +110,10 @@ func budgetCapStatusBase(rack sdk.Interface, appName string, stderr io.Writer) (
 	if shutdownState != nil {
 		if shutdownState.ArmedAt != nil && !shutdownState.ArmedAt.IsZero() &&
 			(shutdownState.ShutdownAt == nil || shutdownState.ShutdownAt.IsZero()) {
-			// F-18 fix: read NotifyBeforeMinutes from the persisted state
-			// so the STATUS countdown reflects the user-configured
-			// notify window. Older-rack state without the field falls
-			// back to the 30-minute default.
+			// Read NotifyBeforeMinutes from the persisted state so the
+			// STATUS countdown reflects the user-configured notify
+			// window. Older-rack state without the field falls back to
+			// the 30-minute default.
 			notifyMin := shutdownState.NotifyBeforeMinutes
 			if notifyMin <= 0 {
 				notifyMin = structs.BudgetDefaultNotifyBeforeMinutes
@@ -171,7 +171,7 @@ func serviceHasKedaSurface(s *structs.Service) bool {
 // pod's existing STATUS column when the app is at-cap. Token selection:
 //
 //	at-cap-keda  — service is KEDA-driven (autoscaler-bypass disclosure)
-//	at-cap-auto  — Set G auto-shutdown configured
+//	at-cap-auto  — auto-shutdown configured
 //	at-cap       — plain block-new-deploys
 //
 // Long forms (e.g. `at-cap (keda-managed)`) are reserved for the
@@ -193,21 +193,20 @@ func decorateStatusForBudgetCap(podStatus, serviceName string, cs capStatus) str
 //
 //	armed-Nm     — auto-shutdown configured AND in armed window (countdown N min)
 //	at-cap-keda  — service is KEDA-driven (autoscaler-bypass disclosure)
-//	at-cap-auto  — Set G auto-shutdown configured (post-armed-window OR fired)
+//	at-cap-auto  — auto-shutdown configured (post-armed-window OR fired)
 //	at-cap       — plain block-new-deploys
 //
 // KEDA presence wins over auto-shutdown when NOT armed (the bypass is the
 // more surprising value); armed wins over both because the imminent scale-to-0
 // is the most important thing the user must see.
 //
-// STATUS column tokens are formally pinned by Set G v2 spec §16.4 "STATUS
-// token formal enumeration" (MF-9 amendment). The four tokens are stable
-// contract surface — column-fixed scripts and JSON parsers depend on the
-// exact byte sequence. Precedence (top-down):
+// STATUS column tokens are stable contract surface — column-fixed
+// scripts and JSON parsers depend on the exact byte sequence.
+// Precedence (top-down):
 //
 //	armed-Nm     — armed and counting down (most important; trust-critical)
 //	at-cap-keda  — KEDA-bypass disclosure (more surprising than auto-shutdown)
-//	at-cap-auto  — Set G auto-shutdown configured (post-armed-window OR fired)
+//	at-cap-auto  — auto-shutdown configured (post-armed-window OR fired)
 //	at-cap       — plain block-new-deploys (existing 3.24.5)
 //
 // KEDA presence wins over auto-shutdown when NOT armed because the bypass is

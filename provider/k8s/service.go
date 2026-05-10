@@ -112,9 +112,10 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 		}
 
 		// Populate scale-override-active from the Deployment annotation.
-		// 3.24.6+ rack ALWAYS sets the pointer (never nil) — nil is
-		// reserved as the wire-signal for pre-3.24.6 racks per item-23
-		// §4.5 / item-11 OQ-14. Strict literal "true" only — see §6.
+		// 3.24.6+ racks ALWAYS set the pointer (never nil); nil is reserved
+		// as the wire-signal for pre-3.24.6 racks the Console can detect.
+		// Match strict literal "true" — any other annotation value (empty,
+		// "false", "1", legacy markers) reads as override-off.
 		if d.Annotations != nil && d.Annotations[ServiceScaleOverrideAnnotation] == ServiceScaleOverrideValueOn {
 			s.ScaleOverrideActive = options.Bool(true)
 		} else {
@@ -199,7 +200,7 @@ func (p *Provider) serviceListAppendDaemonsets(app string, ss structs.Services, 
 		// Populate scale-override-active from the DaemonSet annotation.
 		// Agent services render as DaemonSets — same annotation contract
 		// as the Deployment path. 3.24.6+ rack ALWAYS sets the pointer
-		// per item-23 §4.5 (nil reserved for pre-3.24.6 wire signal).
+		// (nil reserved for pre-3.24.6 wire signal).
 		if d.Annotations != nil && d.Annotations[ServiceScaleOverrideAnnotation] == ServiceScaleOverrideValueOn {
 			s.ScaleOverrideActive = options.Bool(true)
 		} else {
@@ -488,8 +489,19 @@ func (p *Provider) ServiceUpdate(app, name string, opts structs.ServiceUpdateOpt
 	}
 
 	if opts.Min != nil || opts.Max != nil {
-		if err := p.serviceUpdateScaledObject(app, name, opts); err != nil {
+		handled, err := p.serviceUpdateScaledObject(app, name, opts)
+		if err != nil {
 			return err
+		}
+		// No KEDA ScaledObject owns this service (rack has keda_enable=false,
+		// or the manifest declares no autoscale block). Honor the user's
+		// intent by patching the Deployment's replica count to opts.Min so
+		// the floor is respected. Without this fallback, range-mode min/max
+		// silently no-ops on services whose convox.yml has no scale.autoscale
+		// block — which is the overwhelming majority of services.
+		if !handled && opts.Min != nil {
+			c := int32(*opts.Min) //nolint:gosec // replica counts are user-validated and bounded
+			d.Spec.Replicas = &c
 		}
 	}
 
@@ -630,23 +642,30 @@ func buildServiceAutoscaleState(a *manifest.ServiceAutoscale) *structs.ServiceAu
 	return st
 }
 
-func (p *Provider) serviceUpdateScaledObject(app, name string, opts structs.ServiceUpdateOptions) error {
+// serviceUpdateScaledObject patches the KEDA ScaledObject CRD when one owns
+// the deployment. Returns handled=true in that case so the caller knows the
+// KEDA path took ownership of the request. Returns handled=false when no
+// ScaledObject exists (KEDA disabled OR no autoscale config in convox.yml),
+// letting the caller fall back to a direct Deployment.Spec.Replicas patch
+// using opts.Min as the floor — mirroring the serviceUpdateCount handled-flag
+// pattern.
+func (p *Provider) serviceUpdateScaledObject(app, name string, opts structs.ServiceUpdateOptions) (handled bool, err error) {
 	ns := p.AppNamespace(app)
 
-	_, err := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Get(context.TODO(), name, am.GetOptions{})
-	hasScaledObject := err == nil
-	if err != nil && !kerr.IsNotFound(err) {
-		return errors.WithStack(err)
+	_, getErr := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Get(context.TODO(), name, am.GetOptions{})
+	hasScaledObject := getErr == nil
+	if getErr != nil && !kerr.IsNotFound(getErr) {
+		return false, errors.WithStack(getErr)
 	}
 
 	if opts.Min != nil && *opts.Min == 0 {
 		if err := p.ensureWakeMechanism(app, name, hasScaledObject); err != nil {
-			return err
+			return false, err
 		}
 	}
 
 	if !hasScaledObject {
-		return nil
+		return false, nil
 	}
 
 	spec := map[string]interface{}{}
@@ -659,16 +678,16 @@ func (p *Provider) serviceUpdateScaledObject(app, name string, opts structs.Serv
 	patch := map[string]interface{}{"spec": spec}
 	patchBytes, err := json.Marshal(patch)
 	if err != nil {
-		return errors.WithStack(err)
+		return false, errors.WithStack(err)
 	}
 
 	if _, err := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Patch(
 		context.TODO(), name, ktypes.MergePatchType, patchBytes, am.PatchOptions{},
 	); err != nil {
-		return errors.WithStack(err)
+		return false, errors.WithStack(err)
 	}
 
-	return nil
+	return true, nil
 }
 
 // serviceUpdateCount patches the ScaledObject CRD when one owns the deployment;

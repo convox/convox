@@ -57,7 +57,7 @@ func TestServiceMetrics_Success(t *testing.T) {
 }
 
 // TestServiceMetrics_BoundsValidation_RejectsRangeOver24h covers
-// range > 24h → 400. Per CLUSTER-1 1E:386 (hard cap).
+// the hard cap on range — values over 24h must return 400.
 func TestServiceMetrics_BoundsValidation_RejectsRangeOver24h(t *testing.T) {
 	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
 		var got structs.Metrics
@@ -77,7 +77,7 @@ func TestServiceMetrics_BoundsValidation_RejectsRangeOver24h(t *testing.T) {
 }
 
 // TestServiceMetrics_BoundsValidation_RejectsPeriodUnder5s covers
-// period < 5s → 400. Per CLUSTER-1 1E:387 (hard floor).
+// the hard floor on period — values below 5s must return 400.
 func TestServiceMetrics_BoundsValidation_RejectsPeriodUnder5s(t *testing.T) {
 	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
 		var got structs.Metrics
@@ -95,7 +95,7 @@ func TestServiceMetrics_BoundsValidation_RejectsPeriodUnder5s(t *testing.T) {
 }
 
 // TestServiceMetrics_BoundsValidation_RejectsTooManyPoints covers
-// (range/period) > 5000 → 400. Per CLUSTER-1 1E:388.
+// the cap on (range/period) — values over 5000 points return 400.
 func TestServiceMetrics_BoundsValidation_RejectsTooManyPoints(t *testing.T) {
 	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
 		var got structs.Metrics
@@ -113,10 +113,10 @@ func TestServiceMetrics_BoundsValidation_RejectsTooManyPoints(t *testing.T) {
 	})
 }
 
-// TestServiceMetrics_NameValidatorRejectsRegexMetaChars covers F-SEC-20.
-// A `service` path-var with regex meta-chars must 400 before the call
-// reaches the provider — the regex-alternation in QueryGPURange would
-// otherwise let a hostile name jail-break the filter.
+// TestServiceMetrics_NameValidatorRejectsRegexMetaChars verifies that
+// a `service` path-var with regex meta-chars returns 400 before the
+// call reaches the provider — the regex-alternation in QueryGPURange
+// would otherwise let a hostile name jail-break the filter.
 func TestServiceMetrics_NameValidatorRejectsRegexMetaChars(t *testing.T) {
 	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
 		var got structs.Metrics
@@ -164,8 +164,8 @@ func TestMetricsByService_Success(t *testing.T) {
 }
 
 // TestMetricsByService_NameValidatorRejectsRegexMetaCharsInServicesList
-// covers F-SEC-20 for the batched endpoint — each comma-separated
-// element of services= is name-validated.
+// covers the batched endpoint — each comma-separated element of
+// services= is name-validated to prevent regex jail-break.
 func TestMetricsByService_NameValidatorRejectsRegexMetaCharsInServicesList(t *testing.T) {
 	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
 		var got []structs.ServiceMetricsRow

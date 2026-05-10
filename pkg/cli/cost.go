@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/convox/convox/pkg/billing"
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/sdk"
@@ -13,8 +14,8 @@ import (
 )
 
 func init() {
-	// F-11 fix: register `cost` with WithCloud() so the command appears
-	// in `convox cloud` listings, matching other admin-cloud commands.
+	// register `cost` with WithCloud() so the command appears in
+	// `convox cloud` listings, matching other admin-cloud commands.
 	register("cost", "show cost breakdown for an app", Cost, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
 			flagApp,
@@ -55,12 +56,12 @@ func Cost(rack sdk.Interface, c *stdcli.Context) error {
 
 	cost, err := rack.AppCost(appName)
 	if err != nil {
-		// F-27 fix + A08 m-1 polish: any rack that lacks /apps/{app}/cost
-		// returns a 404 — that includes V2 racks AND V3 racks pre-3.24.6.
-		// The original "appears to be V2" copy was misleading on the V3
-		// pre-3.24.6 path, so the friendly message now cites the canonical
-		// rack-version requirement and points at the docs for further
-		// detail (V2 cost-tracking flows through a different surface).
+		// Any rack that lacks /apps/{app}/cost returns a 404 — that
+		// includes V2 racks AND V3 racks pre-3.24.6. An older "appears
+		// to be V2" copy was misleading on the V3 pre-3.24.6 path, so
+		// the friendly message cites the canonical rack-version
+		// requirement and points at the docs for further detail (V2
+		// cost-tracking flows through a different surface).
 		if isRackVersionGated(err) {
 			return fmt.Errorf("cost tracking requires rack version 3.24.6 or later (V2 racks use a separate cost-tracking surface). See https://docs.convox.com/management/cost-tracking")
 		}
@@ -182,6 +183,18 @@ const spotLegend = `Spot pricing applies a discount automatically when nodes are
 // attached to the original (instance-type, capacity-type) combination.
 const accumulationNote = `Cost accumulates per (instance-type, capacity-type) combination across the month. A row may show 0 active replicas if pods previously ran on that variant but have since migrated or been removed.`
 
+// trackingDisabledNotice prefaces table / aggregate / JSON renderings
+// when the rack reports cost_tracking_enable=false. The accumulator
+// goroutine is dormant so spend numbers reflect the most-recent
+// persisted state — possibly empty (never enabled) or stale (enabled
+// previously, then disabled). Operators who see numbers in the
+// breakdown without this hint can mistakenly assume the rack is
+// actively measuring spend. AppCost.TrackingEnabled is omitempty on
+// the wire, so older racks that never populated the field render the
+// hint by default — which is the correct behavior (a pre-3.24.6 rack
+// has no enforcement on cost-tracking either).
+const trackingDisabledNotice = `Cost tracking is disabled on this rack. Values shown are the most-recent persisted snapshot and may be empty or stale. To enable: convox rack params set cost_tracking_enable=true`
+
 // printCostBreakdown renders the per-service spend table. When the
 // rack emits VariantBreakdown rows (3.24.6+), each row is one
 // (service, instance-type, capacity-type) triple with a CAPACITY
@@ -191,6 +204,9 @@ const accumulationNote = `Cost accumulates per (instance-type, capacity-type) co
 func printCostBreakdown(c *stdcli.Context, cost *structs.AppCost) error {
 	if len(cost.VariantBreakdown) > 0 {
 		return printCostVariantBreakdown(c, cost)
+	}
+	if !cost.TrackingEnabled {
+		fmt.Fprintln(c.Writer(), trackingDisabledNotice)
 	}
 	t := c.Table("SERVICE", "GPU-HOURS", "CPU-HOURS", "MEM-GB-HOURS", "INSTANCE", "SPEND-USD")
 	sawEmDash := false
@@ -227,6 +243,9 @@ func printCostBreakdown(c *stdcli.Context, cost *structs.AppCost) error {
 // row whose accumulated spend belongs to a variant pods have since
 // migrated off of).
 func printCostVariantBreakdown(c *stdcli.Context, cost *structs.AppCost) error {
+	if !cost.TrackingEnabled {
+		fmt.Fprintln(c.Writer(), trackingDisabledNotice)
+	}
 	t := c.Table("SERVICE", "INSTANCE", "CAPACITY", "ACTIVE-REPLICAS", "SPEND-USD")
 	sawEmDash := false
 	var total float64
@@ -261,6 +280,9 @@ func printCostVariantBreakdown(c *stdcli.Context, cost *structs.AppCost) error {
 }
 
 func printCostAggregate(c *stdcli.Context, appName string, cost *structs.AppCost) error {
+	if !cost.TrackingEnabled {
+		fmt.Fprintln(c.Writer(), trackingDisabledNotice)
+	}
 	t := c.Table("APP", "SPEND-USD", "AS-OF", "PRICING-SOURCE")
 	t.AddRow(
 		appName,
@@ -292,7 +314,7 @@ func formatPricingTableLabel(pricingSource, pricingTableVersion string) string {
 		return fmt.Sprintf("pricing-table:%s", vintage)
 	}
 	source := strings.TrimSpace(pricingSource)
-	if source != "" && source != "on-demand-static-table" {
+	if source != "" && source != billing.PricingSourceStaticTable {
 		return fmt.Sprintf("pricing-table:%s", source)
 	}
 	return "pricing-table:unknown"

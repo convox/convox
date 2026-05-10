@@ -46,7 +46,7 @@ Setting parameters... OK
 - The cap does NOT protect Prometheus from runaway query latency. If a single QueryRange takes 30s, that slot is unavailable for new requests for the whole window. Pair this parameter with appropriate Prometheus query timeouts.
 
 ## Related Parameters
-- [gpu_metrics_max_pods](/configuration/rack-parameters/aws/gpu_metrics_max_pods): Companion cap on the number of pods returned per request.
+- [gpu_metrics_max_pods](/configuration/rack-parameters/aws/gpu_metrics_max_pods): Companion cap on the number of services included per request (parameter name is historical).
 - [gpu_observability_enable](/configuration/rack-parameters/aws/gpu_observability_enable): The enable switch for the DCGM exporter chart. `gpu_metrics_max_concurrent` is a no-op when `gpu_observability_enable=false`.
 
 ## Version Requirements

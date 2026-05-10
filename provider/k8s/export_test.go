@@ -175,7 +175,7 @@ func SetWebhookReceiversForTest(p *Provider, entries []WebhookEntryForTest) {
 	}
 	internal := make([]webhookEntry, 0, len(entries))
 	for _, e := range entries {
-		internal = append(internal, webhookEntry{Name: e.Name, URL: e.URL, Timeout: e.Timeout})
+		internal = append(internal, webhookEntry(e))
 	}
 	p.webhookState.mu.Lock()
 	p.webhookState.receivers = internal
@@ -198,7 +198,7 @@ type WebhookEntryForTest struct {
 // Test-only.
 func ParseWebhookEntryForTest(name, raw string) (WebhookEntryForTest, bool) {
 	entry, skip := parseWebhookEntry(name, raw)
-	return WebhookEntryForTest{Name: entry.Name, URL: entry.URL, Timeout: entry.Timeout}, skip
+	return WebhookEntryForTest(entry), skip
 }
 
 // DefaultWebhookTimeoutForTest returns the package-private
@@ -244,7 +244,7 @@ func RedactURLHostForTest(raw string) string {
 // RedactedWebhookURLForTest exposes the scheme+host URL redactor used by
 // :armed/:fired payload emit sites. Distinct from RedactURLHostForTest:
 // returns an RFC 3986-valid URL so user webhook receivers parsing
-// payload.webhook_url with new URL(...) don't throw. MF-4 fix.
+// payload.webhook_url with new URL(...) don't throw.
 func RedactedWebhookURLForTest(raw string) string {
 	return redactedWebhookURL(raw)
 }
@@ -275,6 +275,37 @@ func SetDispatchWebhookSignedFnForTest(fn func(url string, body []byte, signingK
 	prev := dispatchWebhookSignedFn
 	dispatchWebhookSignedFn = fn
 	return func() { dispatchWebhookSignedFn = prev }
+}
+
+// SetWebhookSSRFValidatorForTest swaps the SSRF guard applied to webhook
+// URLs at create AND dispatch time. Tests that use httptest.NewServer
+// (loopback IPs) install a permissive stub via this hook; tests that
+// explicitly verify SSRF rejection install a strict stub. Returns a
+// restore function. Test-only; production callers MUST NOT touch this
+// hook.
+//
+// The default validator (validator.ValidateExternalURL with nil resolver)
+// rejects RFC 1918, loopback, link-local (incl. IMDS), CGNAT, IPv6 ULA,
+// unspecified, and the "localhost" reserved name. The .svc.cluster.local
+// suffix is allow-listed.
+func SetWebhookSSRFValidatorForTest(fn func(url string) error) func() {
+	prev := webhookSSRFValidator
+	webhookSSRFValidator = fn
+	// Reset the per-URL log dedup so a new test doesn't observe a stale
+	// "already logged" entry from a previous test in the same package.
+	webhookSSRFLogged = sync.Map{}
+	return func() {
+		webhookSSRFValidator = prev
+		webhookSSRFLogged = sync.Map{}
+	}
+}
+
+// ResetWebhookSSRFLoggedForTest clears the per-URL "already-logged"
+// dedup map without swapping the validator. Useful for tests that want
+// to assert the dedup behavior itself (first call logs; second call
+// silent). Test-only.
+func ResetWebhookSSRFLoggedForTest() {
+	webhookSSRFLogged = sync.Map{}
 }
 
 // DispatchWebhookSignedForTest exposes the signed dispatcher so unit tests
@@ -410,7 +441,8 @@ func ReconcileAutoShutdownWithManifestForTest(p *Provider, ctx context.Context, 
 	}
 	state, parseErr := readBudgetShutdownStateAnnotation(ns.Annotations)
 	if parseErr != nil {
-		// Mirror production: F10 dedup gate + R8.5 F-1 persist-then-emit.
+		// Mirror production: dedup gate + persist-then-emit ordering
+		// from budget_auto_shutdown.go.
 		if !p.stateCorruptDedupExpired(ns.Annotations, now) {
 			return
 		}
@@ -419,14 +451,13 @@ func ReconcileAutoShutdownWithManifestForTest(p *Provider, ctx context.Context, 
 		}
 		return
 	}
-	// R11.5 F-1 (R11A1): mirror production's clean-parse dedup-clear at
+	// Mirror production's clean-parse dedup-clear at
 	// budget_auto_shutdown.go:79-82.
 	if _, ok := ns.Annotations[structs.BudgetShutdownStateCorruptFiredAtAnnotation]; ok {
 		_ = p.deleteNamespaceAnnotation(ctx, app, structs.BudgetShutdownStateCorruptFiredAtAnnotation)
 	}
-	// R11.5 F-1 (R11A2): mirror production's F8 inline manual-detected
-	// armed-window branch at budget_auto_shutdown.go:84-102 (delete-then-emit
-	// per R7.5 F-3).
+	// Mirror production's inline manual-detected armed-window branch
+	// at budget_auto_shutdown.go:84-102 (delete-then-emit ordering).
 	if state != nil && state.ArmedAt != nil && !state.ArmedAt.IsZero() &&
 		(state.ShutdownAt == nil || state.ShutdownAt.IsZero()) {
 		if p.armedWindowManuallyScaledUp(ctx, app, state.Services) {
@@ -460,14 +491,14 @@ func ReconcileAutoShutdownWithManifestForTest(p *Provider, ctx context.Context, 
 
 // PatchDeploymentWithRetryForTest exposes patchDeploymentWithRetry for
 // unit-testing the retry + classification helper without needing a fully
-// initialized Provider. F-26 fix (catalog F-26).
+// initialized Provider.
 func PatchDeploymentWithRetryForTest(ctx context.Context, client kubernetes.Interface, ns, name string, pt types.PatchType, data []byte) (string, error) {
 	return patchDeploymentWithRetry(ctx, client, ns, name, pt, data)
 }
 
 // SetPatchRetryBackoffsForTest installs a faster backoff schedule for
 // the patch-retry helper so tests do not sleep for 5 real seconds.
-// Returns a restore function. F-26 fix.
+// Returns a restore function.
 func SetPatchRetryBackoffsForTest(backoffs []time.Duration) func() {
 	prev := patchWithRetryBackoffsForTest
 	patchWithRetryBackoffsForTest = backoffs
@@ -476,7 +507,7 @@ func SetPatchRetryBackoffsForTest(backoffs []time.Duration) func() {
 
 // SetPatchAttemptTimeoutForTest overrides the per-attempt timeout used
 // by patchAttemptContext. Pass 0 to disable the timeout entirely. Returns
-// a restore function. MF-5 fix (R4 γ-8 A-5).
+// a restore function.
 func SetPatchAttemptTimeoutForTest(d time.Duration) func() {
 	prev := patchAttemptTimeoutForTest
 	patchAttemptTimeoutForTest = d
@@ -485,13 +516,13 @@ func SetPatchAttemptTimeoutForTest(d time.Duration) func() {
 
 // PatchAttemptContextForTest exposes patchAttemptContext for unit-testing
 // the per-attempt deadline behavior without needing a fully initialized
-// Provider. MF-5 fix.
+// Provider.
 func PatchAttemptContextForTest(parent context.Context) (context.Context, context.CancelFunc) {
 	return patchAttemptContext(parent)
 }
 
 // AppBudgetLockMapHasForTest reports whether appBudgetLockMap currently
-// holds an entry for the given app name. Used by MF-8 tests that verify
+// holds an entry for the given app name. Used by tests that verify
 // AppDelete drops the per-app mutex so the map doesn't grow unbounded.
 func AppBudgetLockMapHasForTest(app string) bool {
 	appBudgetLockMapMu.Lock()

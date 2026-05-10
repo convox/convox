@@ -239,8 +239,6 @@ func (s *Server) AppMetrics(c *stdapi.Context) error {
 	return c.RenderJSON(v)
 }
 
-
-
 // gpuMetricsConcurrencyDefault is the default concurrency cap when the
 // `gpu_metrics_max_concurrent` rack param / GPU_METRICS_MAX_CONCURRENT
 // env var is unset. The TF variable defaults are mirrored here so a
@@ -298,16 +296,16 @@ func gpuMetricsGetSem() chan struct{} {
 	gpuMetricsSemMu.Lock()
 	defer gpuMetricsSemMu.Unlock()
 	if gpuMetricsSem == nil {
-		cap := gpuMetricsConcurrencyDefault
+		concurrency := gpuMetricsConcurrencyDefault
 		if s := os.Getenv("GPU_METRICS_MAX_CONCURRENT"); s != "" {
 			if n, err := strconv.Atoi(s); err == nil && n > 0 {
 				if n > gpuMetricsConcurrencyMax {
 					n = gpuMetricsConcurrencyMax
 				}
-				cap = n
+				concurrency = n
 			}
 		}
-		gpuMetricsSem = make(chan struct{}, cap)
+		gpuMetricsSem = make(chan struct{}, concurrency)
 	}
 	return gpuMetricsSem
 }
@@ -339,11 +337,12 @@ func gpuMetricsMaxPods() int {
 	return n
 }
 
-// validateMetricsRange enforces the bounds documented at
-// CLUSTER-1 1E:385-392 — End-Start ≤ 24h, Period ≥ 5s, max points
-// per series ≤ 5000. End defaults to time.Now() (eliminates client
-// clock skew per F-FAIL-12) when nil. Mutates `opts` so handlers
-// pass the normalized window through to the provider.
+// validateMetricsRange enforces the bounds for time-range metric
+// queries: End-Start ≤ 24h, Period ≥ 5s, max points per series ≤
+// 5000. End defaults to time.Now() (so the server clock — not the
+// caller's clock — is the authoritative window edge) when nil.
+// Mutates `opts` so handlers pass the normalized window through to
+// the provider.
 func validateMetricsRange(opts *structs.MetricsOptions) error {
 	now := time.Now()
 	if opts.End == nil {
@@ -383,8 +382,7 @@ func validateMetricsRange(opts *structs.MetricsOptions) error {
 // validateAppName runs the manifest.NameValidator regex against an
 // `app` path var or `services` list element. Returns a 400 stdapi
 // error when invalid, suitable for direct return from a handler.
-// Centralised so SSRF / regex meta-char rejection lives in one place
-// (F-SEC-20).
+// Centralised so SSRF / regex meta-char rejection lives in one place.
 func validateAppName(name string) error {
 	if !manifest.NameValidator.MatchString(name) {
 		return stdapi.Errorf(http.StatusBadRequest, "metrics: invalid name %q (must match %s)", name, manifest.NameValidator.String())
@@ -398,9 +396,9 @@ func validateAppName(name string) error {
 // acquires the gpu_metrics_max_concurrent semaphore (fail-fast 503
 // when full), and forwards to the provider.
 //
-// New in 3.24.6 polish wave (CLUSTER-1 1E). Pre-3.24.6 racks return
-// 404 from the route — the console resolver catches that and renders
-// the "Time-range data requires rack 3.24.6+" banner.
+// New in 3.24.6. Pre-3.24.6 racks return 404 from the route — the
+// console resolver catches that and renders the "Time-range data
+// requires rack 3.24.6+" banner.
 func (s *Server) ServiceMetrics(c *stdapi.Context) error {
 	if err := s.hook("ServiceMetricsValidate", c); err != nil {
 		return err
@@ -445,8 +443,8 @@ func (s *Server) ServiceMetrics(c *stdapi.Context) error {
 // blowup a single huge request could cause.
 //
 // `services` query param is comma-separated. Each element is name-
-// validated (rejecting regex meta-chars at the boundary — F-SEC-20).
-// Caller MUST sanitise; the provider trusts what we forward.
+// validated (rejecting regex meta-chars at the boundary). Caller
+// MUST sanitise; the provider trusts what we forward.
 func (s *Server) MetricsByService(c *stdapi.Context) error {
 	if err := s.hook("MetricsByServiceValidate", c); err != nil {
 		return err
@@ -516,7 +514,6 @@ func (s *Server) MetricsByService(c *stdapi.Context) error {
 
 	return c.RenderJSON(v)
 }
-
 
 func (s *Server) AppUpdate(c *stdapi.Context) error {
 	if err := s.hook("AppUpdateValidate", c); err != nil {
@@ -589,6 +586,16 @@ func (s *Server) AppBudgetClear(c *stdapi.Context) error {
 		return err
 	}
 
+	// Admin gate: removing the budget config wipes the cap, threshold, and
+	// at-cap action that an admin set. Without this gate, a non-admin caller
+	// could defeat an admin-set cap by Clear+Set (the threshold-only re-set
+	// has no admin gate). Mirrors the AppBudgetSet cap-mutation guard so the
+	// cap lifecycle is admin-only end to end. Basic-auth callers (rack
+	// password) continue to pass via SetAdminRole at authenticate-time.
+	if !CanAdmin(c) {
+		return stdapi.Errorf(http.StatusForbidden, "AppBudgetClear: admin role required to remove budget config")
+	}
+
 	app := c.Var("app")
 
 	ackBy := resolveAckByOverride(c, app)
@@ -609,11 +616,12 @@ func (s *Server) AppBudgetReset(c *stdapi.Context) error {
 
 	ackBy := resolveAckByOverride(c, app)
 
-	// Set G: --force-clear-cooldown is the Admin-gated escape hatch that
-	// ALSO drops the 24h flap-prevention cooldown. The plain reset path is
-	// CanWrite (rw) — sufficient role for the routine ACTIVE→recover flow
-	// that GUI Reset buttons drive. CanAdmin is enforced ONLY when
-	// force_clear_cooldown=true. Pinned by R3 amendments § Set E (E.2 UX).
+	// --force-clear-cooldown is the Admin-gated escape hatch that
+	// ALSO drops the 24h flap-prevention cooldown. The plain reset
+	// path is CanWrite (rw) — sufficient role for the routine
+	// ACTIVE→recover flow that GUI Reset buttons drive. CanAdmin is
+	// enforced ONLY when force_clear_cooldown=true (the cooldown-
+	// bypass path is the only one that requires elevated role).
 	// User tooling parses the 403 body for migration guidance — the
 	// "requires Admin role; current role is 'w'" substring is preserved.
 	//
@@ -637,8 +645,8 @@ func (s *Server) AppBudgetReset(c *stdapi.Context) error {
 }
 
 // AppBudgetShutdownStateGet returns the shutdown-state annotation for
-// an app. Used by the CLI banner renderer per Set G v2 spec §16.3.
-// Read-only path; standard CanRead gate.
+// an app. Used by the CLI banner renderer to drive the post-fired
+// status display. Read-only path; standard CanRead gate.
 func (s *Server) AppBudgetShutdownStateGet(c *stdapi.Context) error {
 	if err := s.hook("AppBudgetShutdownStateGetValidate", c); err != nil {
 		return err
@@ -651,9 +659,10 @@ func (s *Server) AppBudgetShutdownStateGet(c *stdapi.Context) error {
 	return c.RenderJSON(v)
 }
 
-// AppBudgetSimulate runs a dry-run shutdown simulation per Set G v2 §17.
-// Read-only path; CanWrite gate via the default Authorize middleware
-// (POST → write-role check).
+// AppBudgetSimulate runs a dry-run shutdown simulation that previews
+// the planned scale-down without mutating any service. Read-only
+// effect; CanWrite gate via the default Authorize middleware (POST
+// → write-role check).
 func (s *Server) AppBudgetSimulate(c *stdapi.Context) error {
 	if err := s.hook("AppBudgetSimulateValidate", c); err != nil {
 		return err
