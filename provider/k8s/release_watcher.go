@@ -49,8 +49,8 @@ var (
 	// fall back to the default with a structured warn log so the
 	// provider never starts with a tighter sweep than 60s (at 200 apps
 	// a sub-60s sweep would be 200/60 = 3.3 K8s API ops/sec for GC
-	// alone — F-FAIL-27 rationale). Tests override directly via the
-	// package-level assignment pattern
+	// alone, which inflates apiserver QPS without measurable benefit).
+	// Tests override directly via the package-level assignment pattern
 	// (`releasePromoteWatchGCTickInterval = 100 * time.Millisecond`)
 	// without going through the env var, mirroring the existing
 	// pattern for the other release-watcher timing vars in this block.
@@ -558,9 +558,9 @@ func (p *Provider) scanReleasePromoteAnnotations(ctx context.Context) {
 // releaseWatcherGCIntervalLowerBound is the minimum permitted sweep
 // interval. Values below this are clamped UP to it; the rationale is
 // that a sub-60s sweep with 200 apps yields ~3.3 K8s API ops/sec for
-// GC alone (F-FAIL-27), which inflates apiserver QPS without any
-// observable UX benefit (steady-state watchers already poll at 3s
-// per-app for in-flight promotes; the GC ticker is the cold-start /
+// GC alone, which inflates apiserver QPS without any observable UX
+// benefit (steady-state watchers already poll at 3s per-app for
+// in-flight promotes; the GC ticker is the cold-start /
 // resume-from-prior-pod safety net, not the primary signal path).
 const releaseWatcherGCIntervalLowerBound = 60 * time.Second
 

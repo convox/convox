@@ -190,11 +190,12 @@ func TestServiceScaleOverrideSet_AckByForwarded(t *testing.T) {
 	})
 }
 
-// TestServiceScaleOverrideSet_RBAC_ReadWriteAllowed — rw-role must succeed
-// (no admin escalation required). Spec 03: scale override gates on the
-// per-app Write permission, mirroring all other operational service controls
-// (deploy, rollback, env edit). Console3 enforces the per-app Write check at
-// api/resolver/mutation.go:5744-5750; this rack-side gate matches.
+// TestServiceScaleOverrideSet_RBAC_ReadWriteAllowed verifies that the
+// rw-role succeeds (no admin escalation required). Scale override
+// gates on the per-app Write permission, mirroring all other
+// operational service controls (deploy, rollback, env edit). Console
+// enforces the per-app Write check at the mutation layer; this
+// rack-side gate matches.
 func TestServiceScaleOverrideSet_RBAC_ReadWriteAllowed(t *testing.T) {
 	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
 		tk, err := jm.WriteToken(time.Hour)
@@ -218,11 +219,12 @@ func TestServiceScaleOverrideSet_RBAC_ReadWriteAllowed(t *testing.T) {
 	})
 }
 
-// TestServiceScaleOverrideSet_RBAC_ReadOnlyForbidden — r-role must 403
-// before any provider call. Spec 03: read-only callers cannot mutate the
-// override annotation. The Authorize middleware would already 401 a GET-only
-// token on a POST, but the explicit gate produces a clearer endpoint-named
-// error and acts as defense-in-depth if the middleware is ever skipped.
+// TestServiceScaleOverrideSet_RBAC_ReadOnlyForbidden verifies that
+// the r-role gets 403 before any provider call. Read-only callers
+// cannot mutate the override annotation. The Authorize middleware
+// would already 401 a GET-only token on a POST, but the explicit
+// gate produces a clearer endpoint-named error and acts as
+// defense-in-depth if the middleware is ever skipped.
 func TestServiceScaleOverrideSet_RBAC_ReadOnlyForbidden(t *testing.T) {
 	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
 		tk, err := jm.ReadToken(time.Hour)

@@ -756,9 +756,9 @@ func TestYamlParseMinMaxAllowsInt64(t *testing.T) {
 
 func ptrInt(i int) *int { return &i }
 
-// Spec 04 (round-4): agent + scale.autoscale|keda used to hard-fail. Demoted
-// to a stderr WARNING with early-return so subsequent autoscale-aware
-// validations don't double-fire on the now-ignored config. Tests below are NOT
+// agent + scale.autoscale|keda used to hard-fail; demoted to a stderr
+// WARNING with early-return so subsequent autoscale-aware validations
+// don't double-fire on the now-ignored config. Tests below are NOT
 // parallel because they swap os.Stderr.
 
 func TestValidateWarnsAgentAutoscale(t *testing.T) {
@@ -1104,7 +1104,7 @@ func TestAutoscaleMode_CollapsedStruct_ParsesIdentically(t *testing.T) {
 
 		require.NotNil(t, a.Cpu)
 		require.Equal(t, manifest.AutoscaleModeThreshold, a.Cpu.Mode)
-		require.Equal(t, "threshold", a.Cpu.Mode, "Mode value pinned to single-word lowercase per V3 §0a Convention R2 F-NEW-2")
+		require.Equal(t, "threshold", a.Cpu.Mode, "Mode value pinned to single-word lowercase")
 		require.Equal(t, float64(70), a.Cpu.Threshold)
 
 		require.NotNil(t, a.GpuUtilization)
@@ -1113,7 +1113,7 @@ func TestAutoscaleMode_CollapsedStruct_ParsesIdentically(t *testing.T) {
 
 		require.NotNil(t, a.QueueDepth)
 		require.Equal(t, manifest.AutoscaleModeQueue, a.QueueDepth.Mode)
-		require.Equal(t, "queue", a.QueueDepth.Mode, "Mode value pinned per V3 §0a Convention R2 F-NEW-2")
+		require.Equal(t, "queue", a.QueueDepth.Mode, "Mode value pinned to single-word lowercase")
 		require.Equal(t, float64(3), a.QueueDepth.Threshold)
 	})
 

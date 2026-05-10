@@ -16,11 +16,11 @@ type Service struct {
 	Autoscale *ServiceAutoscaleState `json:"autoscale,omitempty"`
 
 	// Agent reports whether the service runs as a per-node agent (DaemonSet
-	// in K8s providers; svc.agent: true in convox.yml). Surfaces to Console3
+	// in K8s providers; svc.agent: true in convox.yml). Surfaces to Console
 	// so per-service UI affordances that don't apply to agents (e.g. the
-	// scale-override toggle from item 23) can be hidden client-side. Zero
-	// value preserves existing wire shape on pre-3.24.6 racks (decoded as
-	// false; Console3 fallback shows the affordance). 3.24.6+ rack populates
+	// scale-override toggle) can be hidden client-side. Zero value
+	// preserves existing wire shape on pre-3.24.6 racks (decoded as false;
+	// the Console fallback shows the affordance). 3.24.6+ racks populate
 	// from the manifest service definition.
 	Agent bool `json:"agent,omitempty"`
 
@@ -68,9 +68,9 @@ type Service struct {
 	// preserve the runtime replica count and skip yaml-declared
 	// scale.count.min.
 	//
-	// Pointer-nullable per BC-02 mixed-skew reasoning: three distinct
-	// states must be disambiguated on the wire so item 11's Console3
-	// toggle UI can graceful-degrade against pre-3.24.6 racks:
+	// Pointer-nullable per cross-version-skew reasoning: three distinct
+	// states must be disambiguated on the wire so the Console toggle
+	// UI can graceful-degrade against pre-3.24.6 racks:
 	//   nil    = "rack does not support scale-override" (pre-3.24.6
 	//            rack returned the Service struct without this field;
 	//            Go decode leaves the pointer nil). Vue side reads

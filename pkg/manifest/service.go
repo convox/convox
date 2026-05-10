@@ -382,10 +382,10 @@ func (ss ServiceScale) IsVpaEnabled() bool {
 }
 
 // applyModeDiscriminator populates the Mode field of each populated
-// AutoscaleMode slot from its parent field name. Called from ApplyDefaults
-// so that user YAML (which does not write `mode:`) round-trips through
-// to in-memory triggers with the discriminator set. Mode values are pinned
-// per V3 §0a Convention R2 F-NEW-2 to single-word lowercase strings.
+// AutoscaleMode slot from its parent field name. Called from
+// ApplyDefaults so that user YAML (which does not write `mode:`)
+// round-trips through to in-memory triggers with the discriminator
+// set. Mode values are pinned to single-word lowercase strings.
 func (a *ServiceAutoscale) applyModeDiscriminator() {
 	if a == nil {
 		return
@@ -1125,12 +1125,12 @@ type AWSPodIdentityOptions struct {
 	PolicyArns []string `yaml:"policyArns"`
 }
 
-// BudgetSettings is the manifest-tier budget block. The 5 Set G
+// BudgetSettings is the manifest-tier budget block. The five
 // auto-shutdown fields ride alongside the existing 3.24.5 fields
 // (monthlyCapUsd, alertThresholdPercent, atCapAction,
 // pricingAdjustment, atCapWebhookUrl). All fields are camelCase per
-// convention F-NEW-1; defaults applied at parse time when non-zero
-// behavior is desired.
+// the manifest convention; defaults applied at parse time when
+// non-zero behavior is desired.
 //
 // A user who never sets any of these fields sees zero behavior
 // change (BudgetSettings is the YAML manifest tier; rack-side
@@ -1142,9 +1142,9 @@ type BudgetSettings struct {
 	AtCapWebhookUrl       string  `yaml:"atCapWebhookUrl,omitempty"`
 	PricingAdjustment     float64 `yaml:"pricingAdjustment,omitempty"`
 
-	// Set G (auto-shutdown) fields — ignored when AtCapAction is not
+	// Auto-shutdown fields — ignored when AtCapAction is not
 	// "auto-shutdown"; manifest validation enforces the cross-field
-	// rules at parse time (per spec §3.1).
+	// rules at parse time.
 	NeverAutoShutdown   []string `yaml:"neverAutoShutdown,omitempty"`
 	ShutdownOrder       string   `yaml:"shutdownOrder,omitempty"`
 	NotifyBeforeMinutes int      `yaml:"notifyBeforeMinutes,omitempty"`

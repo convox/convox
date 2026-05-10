@@ -430,11 +430,11 @@ func TestReconcileAutoShutdown_NoopReason_RuntimeDrift(t *testing.T) {
 	})
 }
 
-// TestReconcileAutoShutdown_NoopReason_ExternalEditDetected verifies the
-// spec §13.3 scenario: shutdownState is nil but every eligible service
-// is already at 0 replicas (operator hand-recovery / CD pipeline strip
-// scenario). The reconciler must fire :noop reason="external-edit-
-// detected" instead of re-arming. Advisory A2 regression guard.
+// TestReconcileAutoShutdown_NoopReason_ExternalEditDetected verifies
+// the external-edit scenario: shutdownState is nil but every eligible
+// service is already at 0 replicas (operator hand-recovery / CD
+// pipeline strip). The reconciler must fire :noop reason="external-
+// edit-detected" instead of re-arming.
 func TestReconcileAutoShutdown_NoopReason_ExternalEditDetected(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
@@ -472,7 +472,7 @@ func TestReconcileAutoShutdown_NoopReason_ExternalEditDetected(t *testing.T) {
 		noopEvts := cap.findActions(":noop")
 		require.Len(t, noopEvts, 1, "exactly one :noop event must fire when external edit is detected")
 		ev := noopEvts[0]
-		assert.Equal(t, "external-edit-detected", ev.Data["reason"], "all-replicas-zero with no annotation must surface reason=external-edit-detected per spec §13.3")
+		assert.Equal(t, "external-edit-detected", ev.Data["reason"], "all-replicas-zero with no annotation must surface reason=external-edit-detected")
 		assert.Equal(t, "app1", ev.Data["app"])
 
 		// :armed must NOT have fired (re-arming an already-zero
@@ -543,7 +543,7 @@ func TestReconcileAutoShutdown_CancelledResetDuringArmed_FiresCorrectReason(t *t
 		ev := cancelEvts[0]
 		assert.Equal(t, "reset-during-armed", ev.Data["cancel_reason"], "cancel_reason must be reset-during-armed")
 		assert.Equal(t, "app1", ev.Data["app"])
-		assert.NotEmpty(t, ev.Data["armed_at"], "armed_at must be populated per spec §8.4")
+		assert.NotEmpty(t, ev.Data["armed_at"], "armed_at must be populated on :cancelled")
 
 		// Annotation must be GC'd so next cap re-breach re-arms cleanly (F8).
 		ns, err := kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
@@ -615,15 +615,15 @@ func TestReconcileAutoShutdown_CancelledCapRaised_DistinctFromConfigChanged(t *t
 		assert.NotEmpty(t, ev.Data["new_cap_usd"], "new_cap_usd must be populated for cap-raised case")
 		assert.Equal(t, "200", ev.Data["new_cap_usd"], "new_cap_usd must equal current cfg.MonthlyCapUsd")
 		// Universal cap_usd should be the NEW cap, not the previous.
-		assert.Equal(t, "200", ev.Data["cap_usd"], "universal cap_usd must reflect new cap on cap-raised (F4 + F5)")
+		assert.Equal(t, "200", ev.Data["cap_usd"], "universal cap_usd must reflect new cap on cap-raised")
 	})
 }
 
-// TestCancelled_CapRaised_ActorIsJwtDerived — MF-6 fix (R6 γ-1 carry-forward
-// NIT). Spec §8.4 line 777: cap-raised :cancelled events carry the JWT-derived
-// actor of the user who raised the cap. AppBudgetSet records ackBy in
-// cfg.LastCapMutationBy on every cap mutation; reconcileAutoShutdown reads
-// it on cap-raise detection. Verifies the round-trip.
+// TestCancelled_CapRaised_ActorIsJwtDerived verifies that cap-raised
+// :cancelled events carry the JWT-derived actor of the user who
+// raised the cap. AppBudgetSet records ackBy in cfg.LastCapMutationBy
+// on every cap mutation; reconcileAutoShutdown reads it on cap-raise
+// detection. Verifies the round-trip.
 func TestCancelled_CapRaised_ActorIsJwtDerived(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
@@ -680,14 +680,14 @@ func TestCancelled_CapRaised_ActorIsJwtDerived(t *testing.T) {
 		ev := cancelEvts[0]
 		assert.Equal(t, "cap-raised", ev.Data["cancel_reason"])
 		assert.Equal(t, "alice@example.com", ev.Data["actor"],
-			"cap-raised actor must be JWT-derived from cfg.LastCapMutationBy per spec §8.4")
+			"cap-raised actor must be JWT-derived from cfg.LastCapMutationBy")
 	})
 }
 
-// TestCancelled_CapRaised_FallsBackToSystemForOlderRack — MF-6 fix.
-// Cross-version compat: pre-3.24.6 racks won't have LastCapMutationBy
-// populated (omitempty drops it from JSON). Accumulator must fall back
-// to "system" rather than emit empty actor.
+// TestCancelled_CapRaised_FallsBackToSystemForOlderRack covers the
+// cross-version compatibility case: pre-3.24.6 racks won't have
+// LastCapMutationBy populated (omitempty drops it from JSON).
+// Accumulator must fall back to "system" rather than emit empty actor.
 func TestCancelled_CapRaised_FallsBackToSystemForOlderRack(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
@@ -747,11 +747,12 @@ func TestCancelled_CapRaised_FallsBackToSystemForOlderRack(t *testing.T) {
 	})
 }
 
-// TestCancelled_ConfigChanged_ActorStaysSystem — MF-6 fix.
-// config-changed sub-case detects manifest mismatch via accumulator-only
-// observation; no originating HTTP request, no JWT in scope. Even when
-// LastCapMutationBy is populated, config-changed must keep actor="system"
-// because the cap-raise plumbing doesn't apply to a manifest mutation.
+// TestCancelled_ConfigChanged_ActorStaysSystem covers the config-
+// changed sub-case where manifest mismatch is detected via accumulator
+// observation only — no originating HTTP request, no JWT in scope.
+// Even when LastCapMutationBy is populated, config-changed must keep
+// actor="system" because the cap-raise plumbing doesn't apply to a
+// manifest mutation.
 func TestCancelled_ConfigChanged_ActorStaysSystem(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
@@ -816,19 +817,18 @@ func TestCancelled_ConfigChanged_ActorStaysSystem(t *testing.T) {
 }
 
 // TestReconcileAutoShutdown_CancelledConfigChanged_FiresWithNewAction
-// (F-A04-1 fix). Mirror of TestReconcileAutoShutdown_CancelledCapRaised_*
-// for the config-changed sub-case. User keeps cap unchanged AND
-// at_cap_action stays auto-shutdown (else the accumulator's early
-// return at budget_auto_shutdown.go:38 skips the tick entirely), but
-// the manifest SHA recomputes to a different value (e.g. service rename
-// or notify_before knob change) such that the saved annotation SHA
-// no longer matches the live plan SHA. The accumulator detects the
-// drift and fires :cancelled reason="config-changed" with the universal
-// payload PLUS the per-reason `new_action` field carrying the current
-// cfg.AtCapAction. Without this positive pin, only the
-// CancelledCapRaised_DistinctFromConfigChanged negative-pin test
-// existed, so a future regression that drops `new_action` from the
-// data map could pass. Asserts both the event name AND the
+// is the positive pin for the config-changed sub-case. User keeps cap
+// unchanged AND at_cap_action stays auto-shutdown (else the
+// accumulator's early return at the top of reconcileAutoShutdown skips
+// the tick entirely), but the manifest SHA recomputes to a different
+// value (e.g. service rename or notify_before knob change) such that
+// the saved annotation SHA no longer matches the live plan SHA. The
+// accumulator detects the drift and fires :cancelled reason="config-
+// changed" with the universal payload plus the per-reason
+// `new_action` field carrying the current cfg.AtCapAction. Without
+// this positive pin, only the CancelledCapRaised_DistinctFromConfigChanged
+// negative pin existed, so a future regression that drops `new_action`
+// from the data map could pass. Asserts both the event name AND the
 // `new_action` field are populated on the wire.
 func TestReconcileAutoShutdown_CancelledConfigChanged_FiresWithNewAction(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
@@ -894,9 +894,9 @@ func TestReconcileAutoShutdown_CancelledConfigChanged_FiresWithNewAction(t *test
 		// Reason classification.
 		assert.Equal(t, "config-changed", ev.Data["cancel_reason"],
 			"manifest-mismatch without cap-raise must classify as 'config-changed'")
-		// new_action carries the current cfg.AtCapAction value per spec §8.4.
+		// new_action carries the current cfg.AtCapAction value.
 		// fireCancelledEvent populates it via cfg.AtCapAction at the
-		// drift-detect call site (provider/k8s/budget_auto_shutdown.go:225-226).
+		// drift-detect call site in budget_auto_shutdown.go.
 		assert.Equal(t, structs.BudgetAtCapActionAutoShutdown, ev.Data["new_action"],
 			"new_action must populate for config-changed and equal cfg.AtCapAction")
 		// Negative pins: prev_cap_usd / new_cap_usd are reserved for
@@ -913,7 +913,7 @@ func TestReconcileAutoShutdown_CancelledConfigChanged_FiresWithNewAction(t *test
 }
 
 // TestReconcileAutoShutdown_FailedExclusiveOfFired_NoConcurrentFire
-// (F3 fix). Spec §8.10: :fired and :failed are MUTUALLY EXCLUSIVE.
+// pins the contract that :fired and :failed are mutually exclusive.
 // On partial-shutdown (some succeed, some fail), only :failed fires.
 func TestReconcileAutoShutdown_FailedExclusiveOfFired_NoConcurrentFire(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
@@ -976,7 +976,7 @@ func TestReconcileAutoShutdown_FailedExclusiveOfFired_NoConcurrentFire(t *testin
 		failedEvts := cap.findActions(":failed")
 		firedEvts := cap.findActions(":fired")
 		assert.Len(t, failedEvts, 1, ":failed must fire when any service fails")
-		assert.Empty(t, firedEvts, ":fired and :failed are mutually exclusive — :fired must NOT fire on partial-shutdown (F3)")
+		assert.Empty(t, firedEvts, ":fired and :failed are mutually exclusive — :fired must NOT fire on partial-shutdown")
 
 		// :failed payload must carry partial_state = succeeded count.
 		if len(failedEvts) == 1 {
@@ -984,10 +984,10 @@ func TestReconcileAutoShutdown_FailedExclusiveOfFired_NoConcurrentFire(t *testin
 			assert.Equal(t, "1", ev.Data["partial_state"], "partial_state must equal succeeded count (1: web succeeded, missing-svc failed)")
 		}
 
-		// F-6 fix (catalog F-6): assert provider-side persistence of
-		// FailureReason on the state annotation. Locks in the persist
-		// path at budget_auto_shutdown.go (which is currently single-line
-		// code with no direct provider-layer test).
+		// Assert provider-side persistence of FailureReason on the
+		// state annotation. Locks in the persist path at
+		// budget_auto_shutdown.go (which is currently single-line code
+		// with no direct provider-layer test).
 		ns2, gerr := kk.CoreV1().Namespaces().Get(context.Background(), "rack1-app1", am.GetOptions{})
 		require.NoError(t, gerr, "post-fire ns get must succeed")
 		raw, ok := ns2.Annotations[structs.BudgetShutdownStateAnnotation]
@@ -995,12 +995,12 @@ func TestReconcileAutoShutdown_FailedExclusiveOfFired_NoConcurrentFire(t *testin
 		var persisted structs.AppBudgetShutdownState
 		require.NoError(t, json.Unmarshal([]byte(raw), &persisted), "persisted state must parse")
 		assert.Equal(t, structs.BudgetShutdownReasonK8sApiFailure, persisted.FailureReason,
-			"FailureReason must persist as k8s-api-failure so the FAILED banner renders the canonical reason (catalog F-6)")
+			"FailureReason must persist as k8s-api-failure so the FAILED banner renders the canonical reason")
 	})
 }
 
-// TestEventPayload_AllNineEvents_PopulateCapUsdAndSpendUsd (F4 fix).
-// Verifies every fire helper passes cap_usd from cfg and spend_usd from
+// TestEventPayload_AllNineEvents_PopulateCapUsdAndSpendUsd verifies
+// every fire helper passes cap_usd from cfg and spend_usd from
 // baseState — never hardcoded 0.
 func TestEventPayload_AllNineEvents_PopulateCapUsdAndSpendUsd(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
@@ -1038,8 +1038,8 @@ func TestEventPayload_AllNineEvents_PopulateCapUsdAndSpendUsd(t *testing.T) {
 
 		armedEvts := cap.findActions(":armed")
 		require.Len(t, armedEvts, 1)
-		assert.Equal(t, "100", armedEvts[0].Data["cap_usd"], ":armed cap_usd must be populated from cfg (F4 + F5)")
-		assert.Equal(t, "105.00", armedEvts[0].Data["spend_usd"], ":armed spend_usd must be populated from baseState (F4)")
+		assert.Equal(t, "100", armedEvts[0].Data["cap_usd"], ":armed cap_usd must be populated from cfg")
+		assert.Equal(t, "105.00", armedEvts[0].Data["spend_usd"], ":armed spend_usd must be populated from baseState")
 
 		// Trigger :fired (advance past notify window).
 		t1 := t0.Add(31 * time.Minute)
@@ -1049,14 +1049,14 @@ func TestEventPayload_AllNineEvents_PopulateCapUsdAndSpendUsd(t *testing.T) {
 
 		firedEvts := cap.findActions(":fired")
 		require.Len(t, firedEvts, 1)
-		assert.Equal(t, "100", firedEvts[0].Data["cap_usd"], ":fired cap_usd must be populated from cfg (F4 + F5)")
-		assert.Equal(t, "105.00", firedEvts[0].Data["spend_usd"], ":fired spend_usd must be populated from baseState (F4)")
+		assert.Equal(t, "100", firedEvts[0].Data["cap_usd"], ":fired cap_usd must be populated from cfg")
+		assert.Equal(t, "105.00", firedEvts[0].Data["spend_usd"], ":fired spend_usd must be populated from baseState")
 	})
 }
 
-// TestEventPayload_CapUsdIsInt_NotDecimal (F5 fix). Spec §8.0 line 657
-// mandates cap_usd as int. Universal payload helper must emit "100" not
-// "100.00" for cap=100.
+// TestEventPayload_CapUsdIsInt_NotDecimal pins the wire-format
+// requirement that cap_usd is emitted as an integer. The universal
+// payload helper must emit "100" not "100.00" for cap=100.
 func TestEventPayload_CapUsdIsInt_NotDecimal(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
@@ -1092,13 +1092,13 @@ func TestEventPayload_CapUsdIsInt_NotDecimal(t *testing.T) {
 		armedEvts := cap.findActions(":armed")
 		require.Len(t, armedEvts, 1)
 		// cap_usd must be "250" (int format) not "250.00" (decimal).
-		assert.Equal(t, "250", armedEvts[0].Data["cap_usd"], "cap_usd must be int format per spec §8.0 (F5)")
+		assert.Equal(t, "250", armedEvts[0].Data["cap_usd"], "cap_usd must be int format")
 		assert.NotContains(t, armedEvts[0].Data["cap_usd"], ".", "cap_usd must NOT contain decimal point")
 	})
 }
 
-// TestEventPayload_SpecFieldNamesMatchVerbatim (F6 fix). Verifies the
-// 6 spec-mandated field name renames per spec §8.x.
+// TestEventPayload_SpecFieldNamesMatchVerbatim pins the six wire-format
+// field name renames so receivers parse the canonical names.
 func TestEventPayload_SpecFieldNamesMatchVerbatim(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
@@ -1133,19 +1133,19 @@ func TestEventPayload_SpecFieldNamesMatchVerbatim(t *testing.T) {
 
 		armedEvts := cap.findActions(":armed")
 		require.Len(t, armedEvts, 1)
-		// F6 fix: :armed uses scheduled_at + expected_shutdown_at.
-		assert.NotEmpty(t, armedEvts[0].Data["scheduled_at"], "spec §8.1 mandates scheduled_at (F6)")
-		assert.NotEmpty(t, armedEvts[0].Data["expected_shutdown_at"], "spec §8.1 mandates expected_shutdown_at (F6)")
+		// :armed uses scheduled_at + expected_shutdown_at.
+		assert.NotEmpty(t, armedEvts[0].Data["scheduled_at"], ":armed must carry scheduled_at")
+		assert.NotEmpty(t, armedEvts[0].Data["expected_shutdown_at"], ":armed must carry expected_shutdown_at")
 		_, hasOldArmedAt := armedEvts[0].Data["armed_at"]
 		_, hasOldFireAt := armedEvts[0].Data["fire_at"]
-		assert.False(t, hasOldArmedAt, ":armed must NOT carry old field name 'armed_at' (F6)")
-		assert.False(t, hasOldFireAt, ":armed must NOT carry old field name 'fire_at' (F6)")
+		assert.False(t, hasOldArmedAt, ":armed must NOT carry old field name 'armed_at'")
+		assert.False(t, hasOldFireAt, ":armed must NOT carry old field name 'fire_at'")
 	})
 }
 
-// TestFiredPayload_HasSnapshotAnnotationAndRecoveryCommand (F7 fix).
-// Spec §8.2 mandates snapshot_annotation + recovery_command + 5 other
-// fields on :fired payload.
+// TestFiredPayload_HasSnapshotAnnotationAndRecoveryCommand pins the
+// :fired payload's snapshot_annotation, recovery_command, and the
+// other mandated fields.
 func TestFiredPayload_HasSnapshotAnnotationAndRecoveryCommand(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
@@ -1186,13 +1186,13 @@ func TestFiredPayload_HasSnapshotAnnotationAndRecoveryCommand(t *testing.T) {
 		firedEvts := cap.findActions(":fired")
 		require.Len(t, firedEvts, 1)
 		ev := firedEvts[0]
-		// F7 mandated fields per spec §8.2.
-		assert.NotEmpty(t, ev.Data["snapshot_annotation"], "snapshot_annotation must be populated (F7)")
+		// Mandated fields on :fired payload.
+		assert.NotEmpty(t, ev.Data["snapshot_annotation"], "snapshot_annotation must be populated")
 		assert.Contains(t, ev.Data["snapshot_annotation"], "shutdownTickId", "snapshot_annotation must contain JSON of state")
-		assert.Equal(t, "convox budget reset app1", ev.Data["recovery_command"], "recovery_command must be populated (F7)")
-		assert.NotEmpty(t, ev.Data["shutdown_at"], "shutdown_at must be populated (F7 — was fired_at)")
-		assert.NotEmpty(t, ev.Data["keda_managed_count"], "keda_managed_count must be populated (F7)")
-		assert.NotEmpty(t, ev.Data["deployment_only_count"], "deployment_only_count must be populated (F7)")
+		assert.Equal(t, "convox budget reset app1", ev.Data["recovery_command"], "recovery_command must be populated")
+		assert.NotEmpty(t, ev.Data["shutdown_at"], "shutdown_at must be populated (was fired_at)")
+		assert.NotEmpty(t, ev.Data["keda_managed_count"], "keda_managed_count must be populated")
+		assert.NotEmpty(t, ev.Data["deployment_only_count"], "deployment_only_count must be populated")
 	})
 }
 
@@ -1240,9 +1240,9 @@ func TestArmedWindowManualCancel_GCsAnnotation_NoImmediateFireOnRebreath(t *test
 		}
 		writeState(t, kk, "rack1-app1", baseState)
 
-		// Use the full reconcileAutoShutdown to drive the F8 detection path
-		// (it's pre-manifest so we must use the entry point, not just the
-		// with-manifest helper).
+		// Use the full reconcileAutoShutdown to drive the manual-detected
+		// detection path (it's pre-manifest so we must use the entry
+		// point, not just the with-manifest helper).
 		cfg, _, err := p.AppBudgetGet("app1")
 		require.NoError(t, err)
 		cfg.AtCapAction = structs.BudgetAtCapActionAutoShutdown
@@ -1253,20 +1253,20 @@ func TestArmedWindowManualCancel_GCsAnnotation_NoImmediateFireOnRebreath(t *test
 		cap.drain()
 
 		cancelEvts := cap.findActions(":cancelled")
-		require.GreaterOrEqual(t, len(cancelEvts), 1, ":cancelled reason=manual-detected must fire on F8 detection")
+		require.GreaterOrEqual(t, len(cancelEvts), 1, ":cancelled reason=manual-detected must fire on detection")
 		// Annotation must be GC'd.
 		ns, err := kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
 		require.NoError(t, err)
 		_, present := ns.Annotations[structs.BudgetShutdownStateAnnotation]
-		assert.False(t, present, "armed-window annotation must be GC'd after manual-detected (F8)")
+		assert.False(t, present, "armed-window annotation must be GC'd after manual-detected")
 		// Best-effort sanity: cfg/baseState passed to fire helper.
 		_ = cfg
 		_ = baseState
 	})
 }
 
-// TestNoopDeduplicationViaNoopFiredAtAnnotation (F9 fix). :noop must
-// NOT re-fire on every tick — dedup via dedicated annotation.
+// TestNoopDeduplicationViaNoopFiredAtAnnotation pins the contract that
+// :noop does NOT re-fire on every tick — dedup via dedicated annotation.
 func TestNoopDeduplicationViaNoopFiredAtAnnotation(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
@@ -1305,20 +1305,20 @@ func TestNoopDeduplicationViaNoopFiredAtAnnotation(t *testing.T) {
 		ns, err := kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
 		require.NoError(t, err)
 		_, dedup := ns.Annotations[structs.BudgetShutdownNoopFiredAtAnnotation]
-		assert.True(t, dedup, "noop dedup annotation must be written (F9)")
+		assert.True(t, dedup, "noop dedup annotation must be written")
 
 		// Second tick at same time → must NOT re-fire (dedup window not expired).
 		baseState.CurrentMonthSpendAsOf = t0.Add(1 * time.Minute)
 		k8s.ReconcileAutoShutdownWithManifestForTest(p, context.Background(), "app1", cfg, baseState, m, t0.Add(1*time.Minute))
 		cap.drain()
 		second := cap.findActions(":noop")
-		assert.Len(t, second, 1, ":noop must NOT re-fire within dedup window (F9)")
+		assert.Len(t, second, 1, ":noop must NOT re-fire within dedup window")
 	})
 }
 
-// TestFailedStateCorrupt_DedupViaSeparateAnnotation (F10 fix). State
-// is unparseable; :failed reason="state-corrupt" must dedup via SEPARATE
-// annotation since the main state is unwritable.
+// TestFailedStateCorrupt_DedupViaSeparateAnnotation pins the contract
+// that when state is unparseable, :failed reason="state-corrupt"
+// dedups via a separate annotation since the main state is unwritable.
 func TestFailedStateCorrupt_DedupViaSeparateAnnotation(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
@@ -1356,13 +1356,14 @@ func TestFailedStateCorrupt_DedupViaSeparateAnnotation(t *testing.T) {
 		require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", t0.Add(1*time.Minute)))
 		cap.drain()
 		second := cap.findActions(":failed")
-		assert.Len(t, second, len(first), ":failed reason=state-corrupt must NOT re-fire within dedup window (F10)")
+		assert.Len(t, second, len(first), ":failed reason=state-corrupt must NOT re-fire within dedup window")
 	})
 }
 
-// TestCancelledPayload_HasAllSpecFields (F11 fix). :cancelled payload
-// must carry armed_at, expected_shutdown_at, eligible_services,
-// cancel_reason, plus prev/new_cap_usd or new_action per sub-case.
+// TestCancelledPayload_HasAllSpecFields pins the contract that the
+// :cancelled payload carries armed_at, expected_shutdown_at,
+// eligible_services, cancel_reason, plus prev/new_cap_usd or new_action
+// per sub-case.
 func TestCancelledPayload_HasAllSpecFields(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
@@ -1406,17 +1407,18 @@ func TestCancelledPayload_HasAllSpecFields(t *testing.T) {
 		cancelEvts := cap.findActions(":cancelled")
 		require.GreaterOrEqual(t, len(cancelEvts), 1)
 		ev := cancelEvts[0]
-		// F11 mandated fields.
+		// Mandated fields on :cancelled payload.
 		assert.NotEmpty(t, ev.Data["cancelled_at"], "cancelled_at must be populated")
 		assert.NotEmpty(t, ev.Data["cancel_reason"], "cancel_reason must be populated")
-		assert.NotEmpty(t, ev.Data["armed_at"], "armed_at must be populated (F11)")
-		assert.NotEmpty(t, ev.Data["expected_shutdown_at"], "expected_shutdown_at must be populated (F11)")
-		assert.NotEmpty(t, ev.Data["eligible_services"], "eligible_services must be populated (F11)")
+		assert.NotEmpty(t, ev.Data["armed_at"], "armed_at must be populated")
+		assert.NotEmpty(t, ev.Data["expected_shutdown_at"], "expected_shutdown_at must be populated")
+		assert.NotEmpty(t, ev.Data["eligible_services"], "eligible_services must be populated")
 	})
 }
 
-// TestExpiredPayload_HasManualActionHint (F12 fix). :expired payload
-// must carry manual_action_hint + requires_manual_action + final_spend_usd.
+// TestExpiredPayload_HasManualActionHint pins the contract that the
+// :expired payload carries manual_action_hint, requires_manual_action,
+// and final_spend_usd.
 func TestExpiredPayload_HasManualActionHint(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
@@ -1464,23 +1466,23 @@ func TestExpiredPayload_HasManualActionHint(t *testing.T) {
 		expiredEvts := cap.findActions(":expired")
 		require.Len(t, expiredEvts, 1)
 		ev := expiredEvts[0]
-		// F12 mandated fields.
+		// Mandated fields on :expired payload.
 		assert.NotEmpty(t, ev.Data["expired_at"], "expired_at must be populated")
-		assert.NotEmpty(t, ev.Data["original_shutdown_at"], "original_shutdown_at must be populated (F6 + F12)")
-		assert.NotEmpty(t, ev.Data["original_armed_at"], "original_armed_at must be populated (F12)")
-		assert.NotEmpty(t, ev.Data["services_still_at_zero"], "services_still_at_zero must be populated (F6)")
-		assert.NotEmpty(t, ev.Data["prev_month_label"], "prev_month_label must be populated (F12)")
-		assert.NotEmpty(t, ev.Data["new_month_label"], "new_month_label must be populated (F12)")
-		assert.Equal(t, "true", ev.Data["requires_manual_action"], "requires_manual_action must be 'true' (F12)")
-		assert.Contains(t, ev.Data["manual_action_hint"], "convox services update", "manual_action_hint must contain command (F12)")
+		assert.NotEmpty(t, ev.Data["original_shutdown_at"], "original_shutdown_at must be populated")
+		assert.NotEmpty(t, ev.Data["original_armed_at"], "original_armed_at must be populated")
+		assert.NotEmpty(t, ev.Data["services_still_at_zero"], "services_still_at_zero must be populated")
+		assert.NotEmpty(t, ev.Data["prev_month_label"], "prev_month_label must be populated")
+		assert.NotEmpty(t, ev.Data["new_month_label"], "new_month_label must be populated")
+		assert.Equal(t, "true", ev.Data["requires_manual_action"], "requires_manual_action must be 'true'")
+		assert.Contains(t, ev.Data["manual_action_hint"], "convox services update", "manual_action_hint must contain command")
 		assert.Equal(t, "2026-03", ev.Data["prev_month_label"])
 		assert.Equal(t, "2026-04", ev.Data["new_month_label"])
 	})
 }
 
-// TestFiredPersistThenEmit_LeaderFailoverNoDoublefire (F13b fix). The
-// persist-before-emit ordering means that if a crash between persist
-// and emit causes a new leader to retry, the dedup check sees
+// TestFiredPersistThenEmit_LeaderFailoverNoDoublefire pins the
+// persist-before-emit ordering: if a crash between persist and emit
+// causes a new leader to retry, the dedup check sees
 // FiredNotificationFiredAt set and skips re-emit.
 func TestFiredPersistThenEmit_LeaderFailoverNoDoublefire(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
@@ -1536,17 +1538,17 @@ func TestFiredPersistThenEmit_LeaderFailoverNoDoublefire(t *testing.T) {
 		cap.drain()
 
 		firedEvts := cap.findActions(":fired")
-		assert.Empty(t, firedEvts, ":fired must NOT re-fire when FiredNotificationFiredAt is already set (F13b)")
+		assert.Empty(t, firedEvts, ":fired must NOT re-fire when FiredNotificationFiredAt is already set")
 	})
 }
 
-// TestArmedPayload_WebhookUrlIsRedacted_NoSecretLeak — MF-2 fix
-// (R4 γ-6 NIT + γ-12 NIT). F-1 redacts data["webhook_url"] in the :armed
-// payload to scheme+host so user Slack/Discord bearer tokens embedded
-// in atCapWebhookUrl never reach rack-level webhook subscribers. The
-// helper-tier test (TestRedactURLHost_StripsSecrets in event_test.go)
-// locks the function; this test locks the wire-up: an end-to-end :armed
-// fire must emit a payload that omits the secret AND yields a scheme+host
+// TestArmedPayload_WebhookUrlIsRedacted_NoSecretLeak pins that the
+// data["webhook_url"] on :armed is redacted to scheme+host so user
+// Slack/Discord bearer tokens embedded in atCapWebhookUrl never reach
+// rack-level webhook subscribers. The helper-tier test
+// (TestRedactURLHost_StripsSecrets in event_test.go) locks the
+// function; this test locks the wire-up: an end-to-end :armed fire
+// must emit a payload that omits the secret AND yields a scheme+host
 // URL receivers can parse with new URL(...) without throwing.
 func TestArmedPayload_WebhookUrlIsRedacted_NoSecretLeak(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
@@ -1605,11 +1607,11 @@ func TestArmedPayload_WebhookUrlIsRedacted_NoSecretLeak(t *testing.T) {
 	})
 }
 
-// TestExpiredPersistFails_NoEmit — MF-7 (F-20 extension to :expired).
-// When persistShutdownState fails on the :expired path, the :expired
-// event must NOT be emitted. Without this gate, next tick reads
-// ExpiredNotificationFiredAt==nil (because the Update never landed) and
-// re-fires :expired — visible duplicate on the wire.
+// TestExpiredPersistFails_NoEmit pins the persist-then-emit gate on
+// :expired. When persistShutdownState fails, the :expired event must
+// NOT be emitted. Without this gate, next tick reads
+// ExpiredNotificationFiredAt==nil (because the Update never landed)
+// and re-fires :expired — visible duplicate on the wire.
 func TestExpiredPersistFails_NoEmit(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
@@ -1660,7 +1662,7 @@ func TestExpiredPersistFails_NoEmit(t *testing.T) {
 		var updateAttempts int
 		kk.PrependReactor("update", "namespaces", func(action k8stesting.Action) (bool, runtime.Object, error) {
 			updateAttempts++
-			return true, nil, fmt.Errorf("synthetic persist failure for MF-7 expired test")
+			return true, nil, fmt.Errorf("synthetic persist failure for expired test")
 		})
 
 		k8s.ReconcileAutoShutdownWithManifestForTest(p, context.Background(), "app1", cfg, baseState, m, now)
@@ -1668,14 +1670,14 @@ func TestExpiredPersistFails_NoEmit(t *testing.T) {
 
 		assert.GreaterOrEqual(t, updateAttempts, 1, "persist must be attempted")
 		expiredEvts := cap.findActions(":expired")
-		assert.Empty(t, expiredEvts, ":expired must NOT be emitted when persistShutdownState fails (MF-7 / F-20 extension)")
+		assert.Empty(t, expiredEvts, ":expired must NOT be emitted when persistShutdownState fails")
 	})
 }
 
-// TestNoopPersistFails_NoEmit — MF-7 (F-20 extension to :noop).
-// When the dedup-annotation write fails on the :noop path, the :noop
-// event must NOT be emitted. Without this gate, next tick re-fires
-// :noop on every reconcile loop until the annotation finally lands.
+// TestNoopPersistFails_NoEmit pins the persist-then-emit gate on
+// :noop. When the dedup-annotation write fails, the :noop event must
+// NOT be emitted. Without this gate, next tick re-fires :noop on
+// every reconcile loop until the annotation finally lands.
 func TestNoopPersistFails_NoEmit(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
@@ -1708,7 +1710,7 @@ func TestNoopPersistFails_NoEmit(t *testing.T) {
 		var updateAttempts int
 		kk.PrependReactor("update", "namespaces", func(action k8stesting.Action) (bool, runtime.Object, error) {
 			updateAttempts++
-			return true, nil, fmt.Errorf("synthetic dedup-annotation failure for MF-7 noop test")
+			return true, nil, fmt.Errorf("synthetic dedup-annotation failure for noop test")
 		})
 
 		k8s.ReconcileAutoShutdownWithManifestForTest(p, context.Background(), "app1", cfg, baseState, m, t0)
@@ -1716,16 +1718,16 @@ func TestNoopPersistFails_NoEmit(t *testing.T) {
 
 		assert.GreaterOrEqual(t, updateAttempts, 1, "annotation write must be attempted")
 		noopEvts := cap.findActions(":noop")
-		assert.Empty(t, noopEvts, ":noop must NOT be emitted when dedup-annotation write fails (MF-7 / F-20 extension)")
+		assert.Empty(t, noopEvts, ":noop must NOT be emitted when dedup-annotation write fails")
 	})
 }
 
-// TestFlapSuppressed_HappyPath_Emits — R8.5 F-2 (γ-5 R8 ADV).
-// Positive-path companion to TestFlapSuppressedPersistFails_NoEmit. Verifies
-// that under normal conditions (annotation write succeeds), the
-// :flap-suppressed event IS emitted and the dedup annotation IS set, so
-// next reconcile tick does NOT re-emit. Without this test, the persist-fail
-// regression test alone could pass while the success path silently breaks.
+// TestFlapSuppressed_HappyPath_Emits is the positive-path companion to
+// TestFlapSuppressedPersistFails_NoEmit. Verifies that under normal
+// conditions (annotation write succeeds) the :flap-suppressed event
+// IS emitted and the dedup annotation IS set, so next reconcile tick
+// does NOT re-emit. Without this test, the persist-fail regression
+// test alone could pass while the success path silently breaks.
 func TestFlapSuppressed_HappyPath_Emits(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
@@ -1780,14 +1782,13 @@ func TestFlapSuppressed_HappyPath_Emits(t *testing.T) {
 	})
 }
 
-// TestStateCorruptPersistFails_NoEmit — R9.5 F-1 (R8.5 F-1 companion).
-// When the dedup-annotation write fails on the state-corrupt :failed
-// branch, the :failed event must NOT be emitted. Without this gate,
-// next reconcile tick re-reads the corrupt annotation, the F10 dedup
-// window check fires (BudgetShutdownStateCorruptFiredAtAnnotation == unset
-// because the prior write failed), and :failed reason="state-corrupt"
-// re-fires — duplicate event. Mirror of TestFlapSuppressedPersistFails_NoEmit
-// (R7.5 F-3) for the 14th lifecycle emit site.
+// TestStateCorruptPersistFails_NoEmit pins the persist-then-emit gate
+// on the state-corrupt :failed branch. When the dedup-annotation write
+// fails, the :failed event must NOT be emitted. Without this gate,
+// next reconcile tick re-reads the corrupt annotation, the dedup
+// window check fires (BudgetShutdownStateCorruptFiredAtAnnotation
+// unset because the prior write failed), and :failed
+// reason="state-corrupt" re-fires — duplicate event.
 func TestStateCorruptPersistFails_NoEmit(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
@@ -1825,7 +1826,7 @@ func TestStateCorruptPersistFails_NoEmit(t *testing.T) {
 
 		// Counter-based reactor — accumulator's main spend Update fires
 		// first; subsequent Updates (the F-1 dedup-annotation write) fail.
-		// Pattern matches TestManualDetectedDeleteFails_NoEmit (R7.5 F-3).
+		// Pattern matches TestManualDetectedDeleteFails_NoEmit.
 		//
 		// NOTE: uses AccumulateBudgetAppForTest (production path via
 		// accumulateBudgetApp → reconcileAutoShutdown) — this is the
@@ -1839,7 +1840,7 @@ func TestStateCorruptPersistFails_NoEmit(t *testing.T) {
 			if updateAttempts == 1 {
 				return false, nil, nil // let accumulator's main spend Update through
 			}
-			return true, nil, fmt.Errorf("synthetic dedup-annotation failure for R9.5 F-1 state-corrupt test")
+			return true, nil, fmt.Errorf("synthetic dedup-annotation failure for state-corrupt test")
 		})
 
 		require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", t0))
@@ -1847,14 +1848,14 @@ func TestStateCorruptPersistFails_NoEmit(t *testing.T) {
 
 		assert.GreaterOrEqual(t, updateAttempts, 1, "annotation write must be attempted")
 		failedEvts := cap.findActions(":failed")
-		assert.Empty(t, failedEvts, ":failed reason=state-corrupt must NOT be emitted when dedup-annotation write fails (R9.5 F-1 / R8.5 F-1 companion)")
+		assert.Empty(t, failedEvts, ":failed reason=state-corrupt must NOT be emitted when dedup-annotation write fails")
 	})
 }
 
-// TestFlapSuppressedPersistFails_NoEmit — R7.5 F-3 (F-20 extension to
-// :flap-suppressed). When the dedup-annotation write fails, the
+// TestFlapSuppressedPersistFails_NoEmit pins the persist-then-emit gate
+// on :flap-suppressed. When the dedup-annotation write fails, the
 // :flap-suppressed event must NOT be emitted. Without this gate, next
-// reconcile tick reads BudgetFlapSuppressFiredAtAnnotation == unset and
+// reconcile tick reads BudgetFlapSuppressFiredAtAnnotation as unset and
 // re-fires :flap-suppressed — duplicate event on the bus.
 func TestFlapSuppressedPersistFails_NoEmit(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
@@ -1897,7 +1898,7 @@ func TestFlapSuppressedPersistFails_NoEmit(t *testing.T) {
 		var updateAttempts int
 		kk.PrependReactor("update", "namespaces", func(action k8stesting.Action) (bool, runtime.Object, error) {
 			updateAttempts++
-			return true, nil, fmt.Errorf("synthetic dedup-annotation failure for R7.5 F-3 flap-suppressed test")
+			return true, nil, fmt.Errorf("synthetic dedup-annotation failure for flap-suppressed test")
 		})
 
 		k8s.ReconcileAutoShutdownWithManifestForTest(p, context.Background(), "app1", cfg, baseState, m, t0)
@@ -1905,12 +1906,12 @@ func TestFlapSuppressedPersistFails_NoEmit(t *testing.T) {
 
 		assert.GreaterOrEqual(t, updateAttempts, 1, "annotation write must be attempted")
 		flapEvts := cap.findActions(":flap-suppressed")
-		assert.Empty(t, flapEvts, ":flap-suppressed must NOT be emitted when dedup-annotation write fails (R7.5 F-3 / F-20 extension)")
+		assert.Empty(t, flapEvts, ":flap-suppressed must NOT be emitted when dedup-annotation write fails")
 	})
 }
 
-// TestManualDetectedDeleteFails_NoEmit — R7.5 F-3 (F-20 extension to
-// F8 :cancelled reason="manual-detected"). When the GC of the orphan
+// TestManualDetectedDeleteFails_NoEmit pins the delete-then-emit gate
+// on :cancelled reason="manual-detected". When the GC of the orphan
 // shutdown-state annotation fails, the :cancelled event must NOT be
 // emitted. The annotation deletion IS the dedup signal: with the
 // annotation gone, next tick's armedWindowManuallyScaledUp returns
@@ -1927,7 +1928,7 @@ func TestManualDetectedDeleteFails_NoEmit(t *testing.T) {
 		k8s.SetWebhooksForTest(p, []string{cap.server.URL})
 
 		grace := int64(30)
-		// User scaled UP from snapshot (was 3, now 5) — F8 detects.
+		// User scaled UP from snapshot (was 3, now 5).
 		makeDeployment(t, kk, "rack1-app1", "web", 5, &grace)
 
 		t0 := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
@@ -1967,7 +1968,7 @@ func TestManualDetectedDeleteFails_NoEmit(t *testing.T) {
 			if updateAttempts == 1 {
 				return false, nil, nil // let accumulator's main spend Update through
 			}
-			return true, nil, fmt.Errorf("synthetic GC failure for R7.5 F-3 manual-detected test")
+			return true, nil, fmt.Errorf("synthetic GC failure for manual-detected test")
 		})
 
 		require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", t0))
@@ -1975,15 +1976,16 @@ func TestManualDetectedDeleteFails_NoEmit(t *testing.T) {
 
 		assert.GreaterOrEqual(t, updateAttempts, 2, "main spend Update + annotation delete Update must both be attempted")
 		cancelEvts := cap.findActions(":cancelled")
-		assert.Empty(t, cancelEvts, ":cancelled reason=manual-detected must NOT be emitted when annotation delete fails (R7.5 F-3 / F-20 extension)")
+		assert.Empty(t, cancelEvts, ":cancelled reason=manual-detected must NOT be emitted when annotation delete fails")
 	})
 }
 
-// TestResetDuringArmedDeleteFails_NoEmit — R7.5 F-3 (F-20 extension to
-// AppBudgetReset's F1+F8 :cancelled reason="reset-during-armed" path).
-// When the GC of the orphan annotation after a successful budget reset
-// fails, the :cancelled event must NOT be emitted. Same pattern as
-// manual-detected: delete-then-emit prevents next-tick re-detect-re-fire.
+// TestResetDuringArmedDeleteFails_NoEmit pins the delete-then-emit
+// gate on AppBudgetReset's :cancelled reason="reset-during-armed"
+// path. When the GC of the orphan annotation after a successful
+// budget reset fails, the :cancelled event must NOT be emitted. Same
+// pattern as manual-detected: delete-then-emit prevents next-tick
+// re-detect-re-fire.
 func TestResetDuringArmedDeleteFails_NoEmit(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
@@ -2031,7 +2033,7 @@ func TestResetDuringArmedDeleteFails_NoEmit(t *testing.T) {
 			if updateAttempts == 1 {
 				return false, nil, nil // let the reset's main update through
 			}
-			return true, nil, fmt.Errorf("synthetic GC failure for R7.5 F-3 reset-during-armed test")
+			return true, nil, fmt.Errorf("synthetic GC failure for reset-during-armed test")
 		})
 
 		require.NoError(t, p.AppBudgetReset("app1", "alice@example.com"))
@@ -2039,7 +2041,7 @@ func TestResetDuringArmedDeleteFails_NoEmit(t *testing.T) {
 
 		assert.GreaterOrEqual(t, updateAttempts, 2, "main reset Update + annotation delete Update must both be attempted")
 		cancelEvts := cap.findActions(":cancelled")
-		assert.Empty(t, cancelEvts, ":cancelled reason=reset-during-armed must NOT be emitted when annotation delete fails (R7.5 F-3 / F-20 extension)")
+		assert.Empty(t, cancelEvts, ":cancelled reason=reset-during-armed must NOT be emitted when annotation delete fails")
 	})
 }
 

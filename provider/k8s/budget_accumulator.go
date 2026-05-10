@@ -87,10 +87,10 @@ func (p *Provider) AppBudgetSet(app string, opts structs.AppBudgetOptions, ackBy
 	var breakerClearedFromCapRaise bool
 	var breakerClearedPrevSpend, breakerClearedPrevCap, breakerClearedNewCap float64
 	var breakerClearedAckAt time.Time
-	// F-A06-2 fix: capture the armed shutdown-state at the moment of
-	// cap-raise so we can emit :cancelled reason="cap-raised" + delete
-	// the orphan annotation atomically with the breaker-clear update.
-	// Without this, the annotation persists with ArmedAt set and the
+	// Capture the armed shutdown-state at the moment of cap-raise so
+	// we can emit :cancelled reason="cap-raised" + delete the orphan
+	// annotation atomically with the breaker-clear update. Without
+	// this, the annotation persists with ArmedAt set and the
 	// `convox budget show` banner reads stale "ARMED" indefinitely.
 	var capRaiseArmedShutdownState *structs.AppBudgetShutdownState
 	var capRaiseShutdownStateBaseState *structs.AppBudgetState
@@ -123,13 +123,12 @@ func (p *Provider) AppBudgetSet(app string, opts structs.AppBudgetOptions, ackBy
 		if err := applyBudgetOptions(cfg, opts); err != nil {
 			return errors.WithStack(err)
 		}
-		// MF-6 fix (R6 γ-1 carry-forward NIT): record the JWT-derived
-		// caller on every cap-changing mutation so the accumulator can
-		// surface the originating user when it later fires
-		// :cancelled reason="cap-raised". Spec §8.4 line 777 mandates
-		// JWT-derived actor for cap-raise; previously hardcoded "system"
-		// because the detection runs in the accumulator goroutine where
-		// no HTTP context is in scope.
+		// Record the JWT-derived caller on every cap-changing mutation
+		// so the accumulator can surface the originating user when it
+		// later fires :cancelled reason="cap-raised". The cap-raise
+		// audit row mandates a JWT-derived actor; previously hardcoded
+		// "system" because the detection runs in the accumulator
+		// goroutine where no HTTP context is in scope.
 		if opts.MonthlyCapUsd != nil {
 			cfg.LastCapMutationBy = ackBy
 		}
@@ -151,8 +150,8 @@ func (p *Provider) AppBudgetSet(app string, opts structs.AppBudgetOptions, ackBy
 		//       and emitting a misleading audit event labeled
 		//       "cap-raised" with prev_cap == new_cap.
 		//   (b) cap LOWERED while still > spend silently clearing a
-		//       breaker. Per Decision 3 §1, cap-lower is orthogonal to
-		//       breaker-clear; only an explicit raise should unblock.
+		//       breaker. Cap-lower is orthogonal to breaker-clear by
+		//       design; only an explicit raise should unblock.
 		//   (c) partial AppBudgetSet calls that don't touch
 		//       MonthlyCapUsd at all. applyBudgetOptions only mutates
 		//       cfg.MonthlyCapUsd when opts.MonthlyCapUsd != nil, and
@@ -182,10 +181,10 @@ func (p *Provider) AppBudgetSet(app string, opts structs.AppBudgetOptions, ackBy
 			state.CircuitBreakerAckAt = breakerClearedAckAt
 			breakerClearedFromCapRaise = true
 
-			// F-A06-2 fix: when the breaker clears via cap-raise AND the
-			// app was in :armed lifecycle (ArmedAt set, ShutdownAt nil),
-			// also delete the BudgetShutdownStateAnnotation atomically
-			// with the breaker-clear write. Otherwise the orphan armed
+			// When the breaker clears via cap-raise AND the app was in
+			// :armed lifecycle (ArmedAt set, ShutdownAt nil), also
+			// delete the BudgetShutdownStateAnnotation atomically with
+			// the breaker-clear write. Otherwise the orphan armed
 			// annotation persists and `convox budget show` displays a
 			// stale "ARMED — auto-shutdown scheduled at HH:MM" banner
 			// forever (the accumulator's reconcileAutoShutdown gates the
@@ -274,16 +273,16 @@ func (p *Provider) AppBudgetSet(app string, opts structs.AppBudgetOptions, ackBy
 				"cleared_at":     breakerClearedAckAt.Format(time.RFC3339),
 			}})
 
-			// F-A06-2 fix: cap-raise during :armed lifecycle deletes the
-			// orphan shutdown-state annotation (above, in the same Update
+			// Cap-raise during :armed lifecycle deletes the orphan
+			// shutdown-state annotation (above, in the same Update
 			// round-trip) and surfaces the lifecycle cancellation as
 			// :cancelled reason="cap-raised". Receivers see the audit
 			// pair (:breaker-cleared then :cancelled) for one user
 			// action; the :cancelled actor is the cap-raiser (ackBy)
-			// matching spec §8.4 line 777 JWT-derived attribution. The
-			// annotation-delete-before-emit ordering matches the F-3
-			// pattern at budget_accumulator.go reset-during-armed (and
-			// the F-20 persist-then-emit family more generally).
+			// using JWT-derived attribution. The annotation-delete-
+			// before-emit ordering mirrors the persist-then-emit
+			// pattern used elsewhere in this file for reset-during-
+			// armed and shutdown lifecycle transitions.
 			if capRaiseArmedShutdownState != nil {
 				p.fireCancelledEvent(app, &final, capRaiseShutdownStateBaseState, capRaiseArmedShutdownState, ackBy, "cap-raised", breakerClearedPrevCap, breakerClearedNewCap, "", breakerClearedAckAt)
 			}
@@ -301,6 +300,14 @@ func (p *Provider) AppBudgetSet(app string, opts structs.AppBudgetOptions, ackBy
 // can reconstruct what was destroyed (spend, cap, alert timestamps,
 // breaker state, prior ack).
 func (p *Provider) AppBudgetClear(app string, ackBy string) error {
+	// Per-app advisory lock matches AppBudgetSet/AppBudgetReset and the
+	// auto-shutdown reconciler tick so a clear that lands mid-tick can
+	// not race the reconciler into writing a stale shutdown-state
+	// annotation back after both config + state have been deleted.
+	mu := appBudgetLock(app)
+	mu.Lock()
+	defer mu.Unlock()
+
 	nsName := p.AppNamespace(app)
 	ackBy = sanitizeAckBy(ackBy)
 
@@ -397,9 +404,9 @@ func (p *Provider) AppBudgetClear(app string, ackBy string) error {
 // helper directly so the breaker-clear and annotation restore/delete
 // stages execute atomically under a single lock acquisition.
 func (p *Provider) AppBudgetReset(app string, ackBy string) error {
-	// F-19 fix (catalog D-7): per-app advisory lock around the reset
-	// path so the accumulator's reconcileAutoShutdown cannot race with
-	// reset and emit two `:cancelled` events with different reasons.
+	// Per-app advisory lock around the reset path so the
+	// accumulator's reconcileAutoShutdown cannot race with reset and
+	// emit two `:cancelled` events with different reasons.
 	mu := appBudgetLock(app)
 	mu.Lock()
 	defer mu.Unlock()
@@ -480,17 +487,19 @@ func (p *Provider) appBudgetResetLocked(app string, ackBy string) error {
 			"reset_at":       state.CircuitBreakerAckAt.Format(time.RFC3339),
 		}})
 
-		// F1 + F8 fix: if a shutdown-state annotation exists in the
-		// armed-window state (armedAt set, shutdownAt nil), reset
-		// arrived during the notify window. Fire :cancelled
-		// reason="reset-during-armed" and GC the orphan annotation so
-		// next cap re-breach re-arms cleanly. Best-effort — do not
-		// abort the reset on any annotation failure.
-		// R7.5 F-3 fix: GC annotation BEFORE emit (matches F-20 dedup-
-		// write-then-emit pattern). If delete fails, abort emit so the
-		// next accumulator tick re-detects and retries cleanly via the
-		// F8 manual-detected branch (or this site if reset reruns).
-		// NotFound is treated as success (already GC'd).
+		// If a shutdown-state annotation exists in the armed-window
+		// state (armedAt set, shutdownAt nil), reset arrived during
+		// the notify window. Fire :cancelled reason="reset-during-
+		// armed" and GC the orphan annotation so the next cap re-
+		// breach re-arms cleanly. Best-effort — do not abort the reset
+		// on any annotation failure.
+		//
+		// GC annotation BEFORE emit (matches the persist-then-emit
+		// pattern used elsewhere in this file). If delete fails, abort
+		// emit so the next accumulator tick re-detects and retries
+		// cleanly via the manual-detected branch in reconcileAuto-
+		// Shutdown (or this site if reset reruns). NotFound is treated
+		// as success (already GC'd).
 		shutdownState, parseErr := readBudgetShutdownStateAnnotation(ns.Annotations)
 		if parseErr == nil && shutdownState != nil &&
 			shutdownState.ArmedAt != nil && !shutdownState.ArmedAt.IsZero() &&
@@ -550,10 +559,11 @@ func (p *Provider) AppCost(app string) (*structs.AppCost, error) {
 		SpendUsd:            state.CurrentMonthSpendUsd,
 		Breakdown:           buildBreakdown(state),
 		VariantBreakdown:    buildVariantBreakdown(state),
-		PricingSource:       "on-demand-static-table",
+		PricingSource:       billing.PricingSourceStaticTable,
 		PricingTableVersion: billing.PricingTableVersion(),
 		PricingAdjustment:   adjustment,
 		WarningCount:        state.WarningCount,
+		TrackingEnabled:     p.costTrackingEnabled(),
 	}, nil
 }
 
@@ -1080,7 +1090,7 @@ func (p *Provider) accumulateBudgetApp(ctx context.Context, app string, now time
 			}})
 		}
 
-		// Set G: per-tick auto-shutdown reconciliation. Runs AFTER the
+		// Per-tick auto-shutdown reconciliation. Runs AFTER the
 		// state annotation is persisted so :armed and :fired can read
 		// fresh AlertFiredAtCap. Runs UNCONDITIONALLY of willFireCap so
 		// the armed-window-elapsed transition fires on later ticks (the
@@ -1094,8 +1104,8 @@ func (p *Provider) accumulateBudgetApp(ctx context.Context, app string, now time
 			p.reconcileAutoShutdown(ctx, app, cfg, state, now)
 		}
 
-		// Stale-annotation GC runs unconditionally per spec §7.4 — defaults
-		// to a 10-minute interval cleanup window. Best-effort; logs but
+		// Stale-annotation GC runs unconditionally — defaults to a
+		// 10-minute interval cleanup window. Best-effort; logs but
 		// does not abort on any annotation read/write failure.
 		_ = p.runStaleAnnotationGC(ctx, app, budgetDefaultPollInterval)
 
@@ -1486,19 +1496,19 @@ func (p *Provider) budgetCircuitBreakerTripped(app string) error {
 	if cfg != nil {
 		capUsd = cfg.MonthlyCapUsd
 	}
-	// When the breaker is tripped the user
-	// has THREE recovery paths, not one. Spell them all out so the user
-	// does not assume `budget reset` is the only option (a `cap raise` is
-	// often what they actually want when traffic legitimately grew).
-	// `auto-shutdown` carries the same 3-action message — services already
-	// scaled to 0 will restore via the same `budget reset` path that
-	// re-arms the breaker. F-25 fix: dropped the AtCapAction read because
-	// the 409 text is uniform; the variable was previously assigned only
-	// to satisfy "declared but not used" via `_ = atCapAction`.
-	// F-2 fix: include the app name in the `cap raise` hint so the
-	// user can paste the recommendation verbatim. The ARMED banner
-	// at pkg/cli/budget.go:180 already cites the same command with
-	// `<app>` populated; this keeps the two surfaces consistent.
+	// When the breaker is tripped the user has THREE recovery paths,
+	// not one. Spell them all out so the user does not assume `budget
+	// reset` is the only option (a `cap raise` is often what they
+	// actually want when traffic legitimately grew). `auto-shutdown`
+	// carries the same 3-action message — services already scaled to
+	// 0 will restore via the same `budget reset` path that re-arms
+	// the breaker.
+	//
+	// The 409 text is uniform across all at-cap-action variants so
+	// AtCapAction is intentionally not read here. Including the app
+	// name in each recovery hint lets the user paste the recommendation
+	// verbatim; the ARMED banner in pkg/cli/budget.go cites the same
+	// command shape so the two surfaces stay consistent.
 	return structs.ErrConflict(
 		"budget cap exceeded for app %s: spent $%.2f of $%.2f cap this month; "+
 			"recovery options: (1) `convox budget reset %s` to acknowledge and re-enable deploys, "+

@@ -298,12 +298,12 @@ func TestServicesBudgetColumn_OnlyEmittedWhenAnyServiceAtCap(t *testing.T) {
 	})
 }
 
-// TestDecorateStatus_ArmedWithNotifyMin_AppendsArmedToken — F-15 fix
-// (catalog F-15). Locks in the `armed-Nm` STATUS column token. The
-// other STATUS tokens (at-cap, at-cap-keda, at-cap-auto) all have tests;
-// only `armed-Nm` lacked one until now. The mock response carries an
-// armed-state shutdownState with ArmedAt set ~25 minutes ago and the
-// default 30-minute notify window — countdown should be ~5 minutes.
+// TestDecorateStatus_ArmedWithNotifyMin_AppendsArmedToken locks in the
+// `armed-Nm` STATUS column token. The other STATUS tokens (at-cap,
+// at-cap-keda, at-cap-auto) have their own tests; this fills the gap.
+// The mock response carries an armed-state shutdownState with ArmedAt
+// set ~25 minutes ago and the default 30-minute notify window —
+// countdown should be ~5 minutes.
 func TestDecorateStatus_ArmedWithNotifyMin_AppendsArmedToken(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		// Armed 25 minutes ago with default 30-minute notify window =

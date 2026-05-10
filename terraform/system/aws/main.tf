@@ -57,8 +57,6 @@ locals {
   additional_karpenter_nodepools = try(jsondecode(var.additional_karpenter_nodepools_config), jsondecode(base64decode(var.additional_karpenter_nodepools_config)), [])
 
   public_access_cidrs = var.eks_api_server_public_access_cidrs == "" ? ["0.0.0.0/0"] : split(",", var.eks_api_server_public_access_cidrs)
-
-  effective_prometheus_url = var.prometheus_url
 }
 
 module "node_arch" {
@@ -263,6 +261,4 @@ module "rack" {
   vpc_id                                    = module.cluster.vpc
   vpa_enable                                = var.vpa_enable
   webhook_signing_key                       = var.webhook_signing_key
-
-  effective_prometheus_url = local.effective_prometheus_url
 }

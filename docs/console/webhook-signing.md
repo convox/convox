@@ -46,6 +46,15 @@ hex-encode, and constant-time compare against any `v1=` segment.
 Reject if the timestamp is outside your tolerance window (Convox
 recommends 5 minutes).
 
+The signature plus timestamp tolerance authenticates the request but
+does NOT include a nonce — within the tolerance window, an attacker
+with man-in-the-middle access could replay the same signed payload.
+Receivers that need replay protection should add their own dedupe
+(e.g. cache `(t, body-hash)` pairs within the tolerance window and
+reject duplicates). Idempotent receivers — Slack notifications,
+PagerDuty pages, append-only audit logs — typically do not need
+replay protection because re-processing the same event is harmless.
+
 Example verification (Python):
 
 ```python
@@ -251,9 +260,9 @@ key is removed from rack config and signing collapses back to one
 
 ## Rotation depth
 
-A rack accepts up to 4 active webhook signing keys at once (bumped from 2
-in 3.24.6). The rotation pattern is unchanged — operators stack a
-new key, update receivers in lockstep, then drop the oldest — but a
+A rack accepts up to 4 active webhook signing keys at once. The rotation
+pattern is the documented production behavior — operators stack a
+new key, update receivers in lockstep, then drop the oldest — and a
 4-deep rotation depth handles the common case of staging long rollouts
 across multiple receiver fleets without losing the original key during
 the transition.
@@ -263,7 +272,7 @@ rejected with a structured `audit_type=webhook_signing_key:eviction
 reason=key_count_exceeded max=4 evicted_count=N` audit row on api-pod
 stdout. The audit row contains the count only — no key bytes, hashes, or
 prefixes — so operators can grep for the misconfiguration without leaking
-secret material to logs (per F-SEC-4).
+secret material to logs.
 
 Wire size: 4 active keys produce a `Convox-Signature` header of about 280
 bytes (4 × 64 hex chars + delimiters + timestamp), well under the 8KB
@@ -271,21 +280,26 @@ header limit on Cloudflare and the 4KB baseline on AWS Lambda receivers.
 Per-event CPU cost is 4 HMAC-SHA256 operations vs 2 — negligible relative
 to the network round-trip.
 
-### Downgrade caveat
+### Downgrade behavior
 
-3.24.5 and earlier did not have webhook signing at all. A rack on 3.24.6
-with any `webhook_signing_key` set blocks any downgrade below 3.24.6 —
-the parameter is unknown to older versions. To downgrade, clear the
-parameter first (`convox rack params set webhook_signing_key=`) and
-reconfigure receivers to accept unsigned payloads during the transition.
-This caveat is unchanged from the 3.24.6 GA — bumping the rotation depth
-from 2 to 4 in the polish wave does not introduce a new downgrade trap;
-the same "no signing pre-3.24.6" boundary applies.
+3.24.5 and earlier do not have webhook signing. When a rack with
+`webhook_signing_key` set is downgraded to a pre-3.24.6 release, the
+older Terraform module does not declare the variable, and the rack-side
+reconciler removes the unrecognized parameter from state automatically
+(emitted as a `NOTICE: removing parameters not supported by version
+<X>: webhook_signing_key` line on stderr during the apply). The
+in-cluster `webhook-signing-key` Secret is also destroyed, since the
+declaring resource is gated on the variable being non-empty. No
+state-surgery or pre-clearing of the parameter is required.
 
-If the operator rotates the webhook_signing_key to >2 keys and then
-downgrades to a hypothetical future N+1 release that rolls the cap back
-to 2 (no such release exists today), the trim must be performed before
-downgrade.
+The user-facing consequence is that the rack stops emitting the
+`Convox-Signature` header on outbound webhooks once the downgrade
+applies. Receivers that fail-closed on missing or mismatched signatures
+will begin rejecting payloads at that point. Before downgrading, update
+receivers to accept unsigned deliveries (or fail-open on missing
+signature). On a subsequent re-upgrade to a signing-capable release, set
+`webhook_signing_key` to a fresh value and restage receivers — the
+previous key is not retained across the downgrade window.
 
 ## Configuring the signing key
 

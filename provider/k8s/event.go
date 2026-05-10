@@ -137,9 +137,10 @@ func (p *Provider) EventSend(action string, opts structs.EventSendOptions) error
 		if parseErr != nil {
 			fmt.Printf("ns=event_dispatch at=parse_keys_failed error=%q signing=disabled\n", parseErr)
 			// Emit a structured audit row when the configured key count exceeds
-			// the rotation cap (cxhmac.MaxSigningKeys). Audit format intentionally
-			// excludes any key bytes, hashes, or prefixes (F-SEC-4); operators get
-			// a count-only signal that something they configured was over the cap.
+			// the rotation cap (cxhmac.MaxSigningKeys). The audit format
+			// intentionally excludes any key bytes, hashes, or prefixes;
+			// operators get a count-only signal that something they
+			// configured was over the cap.
 			if strings.Contains(parseErr.Error(), "at most") {
 				count := 0
 				trimmed := strings.TrimSpace(p.WebhookSigningKey)
@@ -259,14 +260,31 @@ func (p *Provider) EventSend(action string, opts structs.EventSendOptions) error
 func dispatchWebhookSafely(url string, body []byte, signingKeys [][]byte, timeout time.Duration) {
 	defer func() {
 		if r := recover(); r != nil {
-			// F-23 fix: drop debug.Stack() from the panic recovery log.
-			// The stack frames may surface internal arg values; the panic
-			// value `r` is enough operational diagnostic (host + cause).
-			// See pkg/hmac.SignedHeader for the inner panic-recovery scope
-			// that captures details closer to the failing call site.
+			// debug.Stack() is intentionally absent from the panic
+			// recovery log — stack frames may surface internal arg
+			// values; the panic value `r` is enough operational
+			// diagnostic (host + cause). See pkg/hmac.SignedHeader for
+			// the inner panic-recovery scope that captures details
+			// closer to the failing call site.
 			fmt.Printf("ns=event_dispatch at=recover url_host=%s panic=%q\n", redactURLHost(url), r)
 		}
 	}()
+
+	// SSRF guard at dispatch time. webhookCreate validates new URLs as
+	// they are accepted, but pre-3.24.6 racks persisted whatever URL the
+	// operator supplied — an existing configmap row can point at IMDS or
+	// in-VPC services. Re-applying the validator here refuses dispatch
+	// loudly. Bounded log volume: webhookSSRFLogged.LoadOrStore caps
+	// emission to one structured line per (URL, pod-lifetime). Tests that
+	// rely on httptest.NewServer (loopback IPs) install a permissive
+	// stub via SetWebhookSSRFValidatorForTest.
+	if err := webhookSSRFValidator(url); err != nil {
+		if _, loaded := webhookSSRFLogged.LoadOrStore(url, true); !loaded {
+			fmt.Printf("ns=event_dispatch at=ssrf_blocked url_host=%s reason=%q\n",
+				redactURLHost(url), err.Error())
+		}
+		return
+	}
 
 	// Test stubs that pre-date D.2 install via SetDispatchWebhookFnForTest
 	// and use the unsigned (url, body) signature. If a test stub has been

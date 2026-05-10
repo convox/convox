@@ -8,6 +8,17 @@ url: /reference/cli/budget-reset
 Acknowledge a cap breach and re-enable deploys. Clears the breaker. Preserves
 flap-suppress carry-over by default.
 
+> **Plain reset is `rw`-gated.** A read-write user can run
+> `convox budget reset` without admin role for the routine
+> ACTIVE→recover flow.
+>
+> **`--force-clear-cooldown` requires admin role on the rack RBAC.**
+> The 24-hour flap-prevention cooldown is admin-only to drop. A
+> non-admin caller (`rw` role) attempting `--force-clear-cooldown`
+> receives `403 AppBudgetReset --force-clear-cooldown requires Admin
+> role; current role is 'w'. Contact rack admin or use Admin token.`
+> Basic-auth (rack-password) callers automatically pass the admin check.
+
 ### Usage
 ```bash
     convox budget reset [-a app] [--force-clear-cooldown]

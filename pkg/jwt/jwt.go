@@ -90,10 +90,10 @@ func (j *JwtManager) Verify(token string) (*TokenData, error) {
 		return nil, fmt.Errorf("invalid token")
 	}
 
-	// F-24 fix: explicit type-assertion guards on every claim. Without
-	// these, a malformed claim (string where float expected, missing
-	// claim, etc.) panics the api pod. Returning a plain error preserves
-	// the existing failure semantics for legitimate calls and gives
+	// Explicit type-assertion guards on every claim. Without these, a
+	// malformed claim (string where float expected, missing claim,
+	// etc.) panics the api pod. Returning a plain error preserves the
+	// existing failure semantics for legitimate calls and gives
 	// downstream callers a single error path to handle.
 	user, ok := claims["user"].(string)
 	if !ok {

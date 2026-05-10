@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"strconv"
@@ -160,7 +161,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		// every promote silently overwrite operator-set values, escalate
 		// non-admin write tokens into admin-tier cap changes, and emit
 		// noise webhook events on every redeploy. Set the budget via
-		// `convox budget set` or the Console budget tab; manifest Set G
+		// `convox budget set` or the Console budget tab; manifest
 		// runtime fields (NeverAutoShutdown, ShutdownOrder, RecoveryMode,
 		// ShutdownGracePeriod, NotifyBeforeMinutes) are read fresh from
 		// the manifest at simulate/tick time per
@@ -741,9 +742,9 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 	}
 
 	// Populate per-service scale-override map from Service.ScaleOverrideActive
-	// already populated by ServiceList above. Item-23 §4.1 — when the annotation
-	// is strict-literal "true", releaseTemplateServices preserves the runtime
-	// replica count and skips the yaml-declared scale.count.min on this promote.
+	// already populated by ServiceList above. When the annotation is strict-
+	// literal "true", releaseTemplateServices preserves the runtime replica
+	// count and skips the yaml-declared scale.count.min on this promote.
 	// ServiceList's own populate path tolerates informer error (continue-safe);
 	// services missing from pss inherit overrideActive[name]=false (the safe
 	// default). The override path must NEVER cause a promote to fail outright.
@@ -787,8 +788,8 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 
 		var replicas int
 		if overrideActive[s.Name] {
-			// Item-23 §4.1 — annotation honored: preserve the runtime
-			// replica count regardless of yaml scale.count.min. If
+			// Annotation honored: preserve the runtime replica count
+			// regardless of yaml scale.count.min. If
 			// sc[s.Name] is 0 (rare: user scaled to 0 with
 			// override active), preserve 0 — explicit user choice,
 			// not yaml fallback. Distinct from the CoalesceInt default
@@ -827,12 +828,13 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 
 		wantsAutoscale := s.Scale.Autoscale.IsEnabled() || s.Scale.IsKedaEnabled()
 		// Agent services render as DaemonSets; KEDA ScaledObject only targets
-		// Deployments, so skip the autoscale path entirely. Spec 04 demoted the
-		// pkg/manifest hard-fail on this combo to a stderr WARNING; emit a
-		// matching release-time audit event so the user's webhook stream
-		// reflects the runtime ignore decision (parallel to release:autoscale-
-		// disabled / release:prometheus-skipped). actor=system per the
-		// d3_call_site_actor_test pin convention.
+		// Deployments, so skip the autoscale path entirely. The
+		// pkg/manifest validator emits a stderr WARNING for this combo
+		// rather than a hard-fail; emit a matching release-time audit
+		// event so the user's webhook stream reflects the runtime
+		// ignore decision (parallel to release:autoscale-disabled and
+		// release:prometheus-skipped). actor=system because no caller
+		// identity is in scope at the release path.
 		if s.Agent.Enabled && wantsAutoscale {
 			wantsAutoscale = false
 			_ = p.EventSend("release:agent-autoscale-ignored", structs.EventSendOptions{
@@ -940,11 +942,27 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 					triggers = append(triggers, s.Scale.Keda.Triggers...)
 				}
 
+				// MinCount / MaxCount are int in the manifest type but int32 in
+				// KEDA's ScaledObject spec (mirrors upstream `*int32`). Clamp
+				// rather than silently truncating: replica counts above
+				// MaxInt32 are operationally nonsensical (Kubernetes nodes
+				// would be exhausted long before), and silent truncation via
+				// two's-complement could flip large values to small or
+				// negative. Surface intent by clamping to the int32 range.
+				clampReplica := func(n int) int32 {
+					if n < 0 {
+						return 0
+					}
+					if n > math.MaxInt32 {
+						return math.MaxInt32
+					}
+					return int32(n)
+				}
 				scaledObj := s.KedaScaledObject(manifest.KedaScaledObjectParameters{
 					ServiceName: s.Name,
 					Namespace:   p.AppNamespace(a.Name),
-					MinCount:    int32(s.Scale.Count.Min),
-					MaxCount:    int32(s.Scale.Count.Max),
+					MinCount:    clampReplica(s.Scale.Count.Min),
+					MaxCount:    clampReplica(s.Scale.Count.Max),
 					Triggers:    triggers,
 				})
 				if scaledObj != nil {

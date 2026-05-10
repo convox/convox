@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"net/url"
 	"os"
 	"os/exec"
 	"strconv"
@@ -221,8 +222,12 @@ func FromEnv() (*Provider, error) {
 	// (mirrors MetricsClient fail-soft posture).
 	pc, err := NewPrometheusClient(os.Getenv("PROMETHEUS_URL"))
 	if err != nil {
+		// Redact embedded credentials from any URL we log. Mirrors the
+		// SSRF re-validation site at Initialize (~line 374): if an operator
+		// stored prometheus_url=https://user:pass@host, the password
+		// would otherwise land in operator stdout / `kubectl logs`.
 		fmt.Printf("ns=k8s at=prometheus_client result=invalid url=%q error=%q metrics=disabled\n",
-			os.Getenv("PROMETHEUS_URL"), err.Error())
+			redactURLForLog(os.Getenv("PROMETHEUS_URL")), err.Error())
 	}
 
 	rn := common.CoalesceString(os.Getenv("RACK_NAME"), ns.Labels["rack"])
@@ -361,18 +366,18 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 	// default 5m simply don't set the env var.
 	applyReleaseWatcherGCIntervalEnv()
 
-	// SSRF startup re-validation (F-SEC-26): re-apply the prometheus_url
-	// SSRF allowlist to whatever value reached Initialize via env. The
-	// param-set validator at pkg/cli/rack.go:1857-1885 catches `convox
-	// rack params set` requests, but a pre-F-01 stored value or an
-	// operator-edited configmap can still hit Initialize with a hostile
-	// URL. On reject: emit a structured WARN, drop PromClient to nil so
-	// every read short-circuits to "no metrics".
+	// SSRF startup re-validation: re-apply the prometheus_url SSRF
+	// allowlist to whatever value reached Initialize via env. The
+	// param-set validator at pkg/cli/rack.go catches `convox rack params
+	// set` requests, but a stored value that bypassed param-set (e.g.
+	// a manually edited configmap) can still hit Initialize with a
+	// hostile URL. On reject: emit a structured log line and drop
+	// PromClient to nil so every read short-circuits to "no metrics".
 	if raw := os.Getenv("PROMETHEUS_URL"); raw != "" {
 		if err := ValidatePrometheusURL(raw); err != nil {
 			fmt.Printf("ns=k8s at=prometheus_url result=invalid_ssrf url=%q error=%q metrics=disabled remediation=%q\n",
-				raw, err.Error(),
-				"convox rack params set prometheus_url=<valid http:// or https:// URL>; see CLUSTER-1 1E SSRF section")
+				redactURLForLog(raw), err.Error(),
+				"convox rack params set prometheus_url=<valid http:// or https:// URL>; see docs/configuration/rack-parameters/aws/prometheus_url.md")
 			p.PromClient = nil
 		}
 	}
@@ -407,6 +412,31 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 	}
 
 	return nil
+}
+
+// redactURLForLog returns a copy of raw safe to print to operator
+// stdout: any password embedded in user:pass@host form is replaced
+// with "xxxxx" via url.URL.Redacted, AND any query string is
+// stripped so credentials passed via ?password=, ?token=, ?api_key=
+// (etc.) cannot leak through error log lines. If the URL fails to
+// parse the userinfo segment is stripped entirely so a malformed URL
+// with credentials still cannot leak. Returns scheme + host + path
+// when the URL parses cleanly; the query string is never echoed
+// because the validator's error message names the host class
+// (private/loopback/etc.) which is sufficient diagnostic detail.
+func redactURLForLog(raw string) string {
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return "[unparseable url; redacted]"
+	}
+	// Strip query string unconditionally — any credentials passed in
+	// query parameters are scrubbed; no per-key allowlist needed.
+	parsed.RawQuery = ""
+	parsed.Fragment = ""
+	if parsed.User != nil {
+		return parsed.Redacted()
+	}
+	return parsed.String()
 }
 
 func (p *Provider) Start() error {

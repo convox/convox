@@ -21,18 +21,19 @@ const (
 	BudgetStateAnnotation  = "convox.com/budget-state"
 	BudgetConfigAnnotation = "convox.com/budget-config"
 
-	// Set G (auto-shutdown) annotation keys. Kebab-suffixed per
-	// convention. Lifecycle and GC documented in Set G v2 spec §7.
+	// Auto-shutdown annotation keys. Kebab-suffixed per convention.
+	// Lifecycle and GC handled by the accumulator at
+	// provider/k8s/budget_shutdown.go and runStaleAnnotationGC.
 	BudgetShutdownStateAnnotation           = "convox.com/budget-shutdown-state"
 	BudgetFlapSuppressedUntilAnnotation     = "convox.com/budget-flap-suppressed-until"
 	BudgetRecoveryBannerDismissedAnnotation = "convox.com/budget-recovery-banner-dismissed"
 	BudgetFlapSuppressFiredAtAnnotation     = "convox.com/budget-flap-suppress-fired-at"
 
 	// BudgetShutdownStateCorruptFiredAtAnnotation is the dedup annotation
-	// for :failed reason="state-corrupt" — written to a SEPARATE
+	// for :failed reason="state-corrupt" — written to a separate
 	// annotation key (NOT inside the corrupt state JSON) so the next
 	// accumulator tick can still skip the re-fire even though the main
-	// state annotation is unparseable. Per spec §3 R5 + F10 fix.
+	// state annotation is unparseable.
 	BudgetShutdownStateCorruptFiredAtAnnotation = "convox.com/budget-shutdown-state-corrupt-fired-at"
 
 	// BudgetShutdownNoopFiredAtAnnotation is the dedup annotation for
@@ -40,7 +41,6 @@ const (
 	// tracker on the state struct cannot be persisted because no state
 	// annotation exists). Cleared when shutdownState transitions to
 	// non-nil (i.e. :armed fires) or when the cap-fired flag clears.
-	// Per spec §7.2 + §9.2 + F9 fix.
 	BudgetShutdownNoopFiredAtAnnotation = "convox.com/budget-shutdown-noop-fired-at"
 
 	// KedaPausedReplicasAnnotation is the KEDA-blessed pause primitive
@@ -51,23 +51,23 @@ const (
 
 	// BudgetShutdownStateSchemaVersion is the current writer's schema.
 	// Future readers (3.25.0+) MUST tolerate v1 transparently per the
-	// forward-migration contract in Set G v2 spec §7.3.
+	// forward-migration contract in docs/management/budget-caps.md.
 	BudgetShutdownStateSchemaVersion = 1
 
-	// Auto-shutdown lifecycle defaults (per Set G v2 spec §2.1).
+	// Auto-shutdown lifecycle defaults.
 	BudgetDefaultNotifyBeforeMinutes = 30
 	BudgetDefaultShutdownGracePeriod = "5m"
 	BudgetDefaultShutdownOrder       = "largest-cost"
 	BudgetDefaultRecoveryMode        = "auto-on-reset"
 
-	// Auto-shutdown flap-prevention cooldown (24h per Set G v2 spec §15).
+	// Auto-shutdown flap-prevention cooldown (24 hours).
 	BudgetFlapCooldown = 24 * time.Hour
 
-	// Auto-shutdown :failed reason classifications per Set G v2 spec §8.7.
-	// These are written to AppBudgetShutdownState.FailureReason so the
-	// FAILED banner rendered by `convox budget show` can display the
-	// canonical reason. Extend, do not rename — webhook receivers parsing
-	// the failure_reason field treat values as opaque strings.
+	// Auto-shutdown :failed reason classifications. These are written to
+	// AppBudgetShutdownState.FailureReason so the FAILED banner rendered
+	// by `convox budget show` can display the canonical reason. Extend,
+	// do not rename — webhook receivers parsing the failure_reason field
+	// treat values as opaque strings.
 	BudgetShutdownReasonK8sApiFailure       = "k8s-api-failure"
 	BudgetShutdownReasonStateCorrupt        = "state-corrupt"
 	BudgetShutdownReasonAdmissionRejected   = "admission-rejected"
@@ -85,10 +85,10 @@ type AppBudget struct {
 	// LastCapMutationBy records the JWT-derived user who most recently
 	// changed MonthlyCapUsd via AppBudgetSet (or the cap-raise alias).
 	// The accumulator reads this on cap-raise detection to populate the
-	// `:cancelled reason="cap-raised"` event's `actor` field per spec §8.4.
-	// Empty for first-write installs and for state written by 3.24.6 RCs
-	// that pre-dated the cap-mutation-tracking fix — the accumulator
-	// falls back to "system" so legacy state stays valid.
+	// `:cancelled reason="cap-raised"` event's `actor` field. Empty for
+	// first-write installs and for state written by older racks that
+	// pre-dated the cap-mutation-tracking field — the accumulator falls
+	// back to "system" so legacy state stays valid.
 	LastCapMutationBy string `json:"last-cap-mutation-by,omitempty"`
 }
 
@@ -108,8 +108,9 @@ type AppBudgetState struct {
 	// MonthStart. Keys are pod `service` label values (per pod.Labels),
 	// with two reserved buckets: "_build" for build pods (which carry
 	// service-type=build) and "_unattributed" for pods with no service
-	// label. Older annotations (pre-3.24.6rc5) parse with a nil map; the
-	// accumulator lazily initializes on first tick. Per-resource hours
+	// label. Annotations written before this field existed parse with
+	// a nil map; the accumulator lazily initializes on first tick.
+	// Per-resource hours
 	// (GPU/CPU/Mem) are NOT stored — the existing pricing model returns
 	// a single dominant-resource fraction, so reliable per-resource
 	// hours can't be derived without a redesign. The wire ServiceCostLine
@@ -191,6 +192,16 @@ type AppCost struct {
 	PricingTableVersion string                   `json:"pricing-table-version"`
 	PricingAdjustment   float64                  `json:"pricing-adjustment"`
 	WarningCount        int                      `json:"warning-count,omitempty"`
+	// TrackingEnabled reflects the rack's cost_tracking_enable param at
+	// query time. When false, the accumulator goroutine is dormant and
+	// SpendUsd / Breakdown / VariantBreakdown values are the most-recent
+	// persisted state — possibly empty (never enabled) or stale (enabled
+	// previously, then disabled). The CLI and Console use this to render
+	// a "cost tracking disabled" hint instead of presenting stale spend
+	// numbers as live. Older racks omit the field; clients treat the
+	// zero-value (false) as "tracking disabled OR pre-3.24.6 rack" and
+	// fall back to the legacy unconditional rendering, which is safe.
+	TrackingEnabled bool `json:"tracking-enabled,omitempty"`
 }
 
 // ServiceCostLine is one row in an AppCost.Breakdown — the resource consumption
@@ -297,7 +308,7 @@ func (b *AppBudget) Validate() error {
 // POST /apps/{app}/budget/simulate-shutdown dry-run endpoint. The
 // simulation does not modify cluster state; it returns the eligibility
 // list, ordering, and estimated savings the user would see if a
-// real auto-shutdown fired now. Per Set G v2 spec §17.
+// real auto-shutdown fired now.
 type AppBudgetSimulationResult struct {
 	App                          string                           `json:"app"`
 	AtCapAction                  string                           `json:"at-cap-action"`
@@ -354,7 +365,7 @@ type AppBudgetShutdownState struct {
 	// (CLI banner + STATUS countdown) reads the user-configured
 	// value rather than the 30-minute default. Cross-version compat:
 	// older racks lack this field; readers fall back to the default
-	// when zero. Per Set G v2 spec §10.10 + 3.24.6 fixup F-18.
+	// when zero.
 	NotifyBeforeMinutes int `json:"notifyBeforeMinutes,omitempty"`
 
 	RecoveryMode   string `json:"recoveryMode"`
@@ -382,7 +393,7 @@ type AppBudgetShutdownState struct {
 
 	// Per-event dedup-firing trackers (8 of 9 events covered;
 	// :simulated is CLI-driven and excluded). All fire-once-per-shutdown
-	// semantics rely on these. See Set G v2 spec §7.2 + §9.2.
+	// semantics rely on these.
 	ArmedNotificationFiredAt          *time.Time `json:"armedNotificationFiredAt"`
 	FiredNotificationFiredAt          *time.Time `json:"firedNotificationFiredAt"`
 	NoopNotificationFiredAt           *time.Time `json:"noopNotificationFiredAt"`
@@ -393,7 +404,7 @@ type AppBudgetShutdownState struct {
 	RestoredNotificationFiredAt       *time.Time `json:"restoredNotificationFiredAt"`
 
 	// DiscoveryReason is set on annotations created via the external-
-	// edit-detection path (§13.3). When non-empty, the annotation was
+	// edit-detection path. When non-empty, the annotation was
 	// constructed from observed cluster state, not from the normal
 	// :armed/:fired write path. User-displayable.
 	DiscoveryReason string `json:"discoveryReason,omitempty"`
@@ -401,8 +412,8 @@ type AppBudgetShutdownState struct {
 	// FailureReason is set when a :failed event is fired, capturing the
 	// canonical reason enum (e.g. "k8s-api-failure", "state-corrupt",
 	// "admission-webhook-rejected", "annotation-rejected") so the FAILED
-	// banner rendered by `convox budget show` can display it (per Set G
-	// v2 spec §16.3 — `Auto-shutdown FAILED. Reason: <failureReason>.`).
+	// banner rendered by `convox budget show` can display it. The
+	// banner format is "Auto-shutdown FAILED. Reason: <failureReason>."
 	// Persisted to the state annotation BEFORE :failed fires so the
 	// post-failure banner reads the reason from the persisted state.
 	FailureReason string `json:"failureReason,omitempty"`
@@ -434,17 +445,16 @@ type AppBudgetShutdownStateOriginalScale struct {
 }
 
 // AppBudgetShutdownStateKeda carries the KEDA-related per-service
-// state. Per Set G v2 spec §7.2 (state-persistence R2 N1 cleanup): only
-// name + pausedReplicasAnnotationSet — the v0 savedMin/Max fields were
-// dropped (PIVOT 1 paused-replicas never modifies min/max).
+// state — name and pausedReplicasAnnotationSet. Earlier drafts also
+// saved min/max but the paused-replicas approach never modifies them,
+// so the saved fields were dropped.
 type AppBudgetShutdownStateKeda struct {
 	Name                        string `json:"name"`
 	PausedReplicasAnnotationSet bool   `json:"pausedReplicasAnnotationSet"`
 }
 
 // ValidateRequiredFields rejects post-Unmarshal annotation states that
-// pass json.Unmarshal but have zero-valued required fields. Per
-// Set G v2 spec §3 R5 class 4 (R4 state-persistence A2 absorbed). Go's
+// pass json.Unmarshal but have zero-valued required fields. Go's
 // json.Unmarshal does NOT fail on missing fields by default, so this
 // step is required for safe load.
 func (s *AppBudgetShutdownState) ValidateRequiredFields() error {
@@ -481,20 +491,19 @@ func (s *AppBudgetShutdownState) ValidateRequiredFields() error {
 // flap-prevention cooldown. Standard reset preserves the cooldown to
 // protect against accidental flap re-arm.
 type AppBudgetResetOptions struct {
-	// MF-12 fix (R6 γ-4 A2): tag is `force_clear_cooldown` (snake) to
-	// match the actual wire form set by the manually-coded SDK params at
-	// sdk/methods.go:233 and read server-side at pkg/api/controllers.go.
-	// The kebab form was a stale tag — manually-constructed SDK params
-	// bypass struct-tag marshaling, so the kebab tag never reached the
-	// wire. Renaming to snake locks tag, SDK, and server-read in agreement.
-	// snake_case JSON tag is wire-pinned (matches HTTP form-param name); do not change without 3.25.0 deprecation cycle.
+	// Tag is `force_clear_cooldown` (snake_case) to match the wire form
+	// set by the manually-coded SDK params at sdk/methods.go and read
+	// server-side at pkg/api/controllers.go. Manually-constructed SDK
+	// params bypass struct-tag marshaling, so the kebab tag never
+	// reached the wire — snake locks tag, SDK, and server-read in
+	// agreement. The snake_case JSON tag is wire-pinned (matches the
+	// HTTP form-param name); do not change without a deprecation cycle.
 	ForceClearCooldown bool `param:"force_clear_cooldown"`
 }
 
 // AppBudgetDismissRecoveryResult is the response body for the
-// dismiss-recovery endpoint per Set G v2 spec advisory #3 — three
-// distinct outcomes the user must be able to distinguish in the
-// CLI:
+// dismiss-recovery endpoint with three distinct outcomes the user
+// must be able to distinguish in the CLI:
 //
 //   - "dismissed"      : a recovery banner was active; it is now dismissed
 //   - "already-dismissed" : a recovery banner exists but was previously dismissed

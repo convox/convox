@@ -58,8 +58,8 @@ not loop forever printing the same error.
 | `--memory` | Memory allocation in MB |
 | `--gpu` | Number of GPU devices to reserve per pod |
 | `--gpu-vendor` | GPU vendor. Supported: `nvidia` (default), `amd` |
-| `--min` | Minimum replica count when autoscale is configured (3.24.6+) |
-| `--max` | Maximum replica count when autoscale is configured (3.24.6+) |
+| `--min` | Minimum replica count. With autoscale configured, sets the autoscale floor. Without autoscale (3.24.6+), patches the deployment replica count directly — useful for short-lived overrides without editing convox.yml. |
+| `--max` | Maximum replica count when autoscale is configured. No-op without autoscale. |
 
 ### Output Table
 

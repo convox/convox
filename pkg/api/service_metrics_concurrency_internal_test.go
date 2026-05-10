@@ -91,9 +91,8 @@ func TestServiceMetricsConcurrencyCap503(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			resp := get()
+			defer resp.Body.Close()
 			statuses <- resp.StatusCode
-			_ = resp.Body
-			resp.Body.Close()
 		}()
 	}
 
@@ -139,25 +138,24 @@ loop:
 	require.LessOrEqual(t, maxInFlight, 2, "more requests entered provider than cap allowed")
 }
 
-// TestValidateAppName_RejectsRegexMetaChars verifies F-SEC-20 at the
-// helper level — protects against regex meta-chars in path-vars
-// or services= elements that would otherwise jail-break the alternation
-// in QueryGPURange.
+// TestValidateAppName_RejectsRegexMetaChars verifies the helper
+// rejects regex meta-chars in path-vars or services= elements that
+// would otherwise jail-break the alternation in QueryGPURange.
 func TestValidateAppName_RejectsRegexMetaChars(t *testing.T) {
 	cases := []struct {
-		name    string
-		valid   bool
+		name  string
+		valid bool
 	}{
 		{"web", true},
 		{"web-1", true},
 		{"web1", true},
-		{"Web", false},          // uppercase
-		{"web|admin", false},    // alternation
-		{"web.*", false},        // regex meta-chars
-		{"web admin", false},    // space
-		{"-web", false},         // leading dash
-		{"1web", false},         // leading digit
-		{"", false},             // empty
+		{"Web", false},       // uppercase
+		{"web|admin", false}, // alternation
+		{"web.*", false},     // regex meta-chars
+		{"web admin", false}, // space
+		{"-web", false},      // leading dash
+		{"1web", false},      // leading digit
+		{"", false},          // empty
 	}
 	for _, c := range cases {
 		err := validateAppName(c.name)

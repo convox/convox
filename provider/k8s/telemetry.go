@@ -63,13 +63,13 @@ func (p *Provider) RackParams() map[string]interface{} {
 		defaultParamValue = trd.Data
 	}
 
-	// Build the merged param map. Decision 8 — the redacted-params
-	// Secret (if present) carries the real plaintext for keys whose
-	// ConfigMap entry has been stubbed to empty string. Overlay
-	// Secret values over ConfigMap values BEFORE redaction so the
-	// SHA-256 hashing operates on the real credential. Pre-D8 racks
-	// have no Secret; the Get returns NotFound and we proceed with
-	// the ConfigMap values as before (graceful backward compat).
+	// Build the merged param map. The redacted-params Secret (if present)
+	// carries the real plaintext for keys whose ConfigMap entry has been
+	// stubbed to empty string. Overlay Secret values over ConfigMap values
+	// BEFORE redaction so the SHA-256 hashing operates on the real
+	// credential. Older racks have no Secret; the Get returns NotFound
+	// and we proceed with the ConfigMap values as before (graceful
+	// backward compat).
 	merged := map[string]string{}
 	for k, v := range trp.Data {
 		merged[k] = v
@@ -113,9 +113,12 @@ func (p *Provider) RackParams() map[string]interface{} {
 func (p *Provider) hashParamValue(value string) string {
 	// Fast path: cached UID for this namespace.
 	if cached, ok := rackUIDByNamespace.Load(p.Namespace); ok {
-		mac := hmac.New(sha256.New, []byte(cached.(string)))
-		mac.Write([]byte(value))
-		return hex.EncodeToString(mac.Sum(nil))
+		if uid, ok2 := cached.(string); ok2 {
+			mac := hmac.New(sha256.New, []byte(uid))
+			mac.Write([]byte(value))
+			return hex.EncodeToString(mac.Sum(nil))
+		}
+		// Cache poisoned with non-string entry; fall through to recompute.
 	}
 
 	// Slow path: fetch namespace to obtain its UID.
@@ -133,5 +136,3 @@ func (p *Provider) hashParamValue(value string) string {
 	mac.Write([]byte(value))
 	return hex.EncodeToString(mac.Sum(nil))
 }
-
-

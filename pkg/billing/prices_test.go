@@ -180,9 +180,8 @@ func TestEffectiveUsdPerHour(t *testing.T) {
 	}
 }
 
-// TestSpotDefaultFactor pins the default factor at the locked 0.30 value
-// (per item 17 spec — adjustment is post-3.24.6 design work). Catches
-// accidental tuning during refactors.
+// TestSpotDefaultFactor pins the default factor at the locked 0.30
+// value. Catches accidental tuning during refactors.
 func TestSpotDefaultFactor(t *testing.T) {
 	assert.InDelta(t, 0.30, billing.SpotDefaultFactor, 1e-9, "SpotDefaultFactor is locked at 0.30 for 3.24.6")
 }

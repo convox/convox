@@ -237,10 +237,11 @@ gpu_observability_enable     true
 ```
 
 The defaults are sensible for most workloads. Adjust
-`gpu_metrics_max_pods` only if you regularly run more than 100 GPU
-pods per service in one app. Adjust `gpu_metrics_max_concurrent` only
-if you observe rack-side handler saturation under bursty dashboard
-traffic.
+`gpu_metrics_max_pods` only if a single GPU dashboard request would
+fan out across more than 100 services (the parameter name is historical
+— the cap enforces a per-request services count, not a per-service pod
+count). Adjust `gpu_metrics_max_concurrent` only if you observe rack-side
+handler saturation under bursty dashboard traffic.
 
 ### Verifying webhook delivery
 
@@ -303,7 +304,8 @@ releases.
 - [`dcgm_scrape_interval`](/configuration/rack-parameters/aws/dcgm_scrape_interval):
   Tune the DCGM scrape frequency.
 - [`gpu_metrics_max_pods`](/configuration/rack-parameters/aws/gpu_metrics_max_pods):
-  Per-service pod cap for the metrics handler.
+  Per-request services cap for the metrics handler (parameter name is
+  historical).
 - [`gpu_metrics_max_concurrent`](/configuration/rack-parameters/aws/gpu_metrics_max_concurrent):
   Concurrency cap for the metrics handler.
 - [`gpu_observability_chart_version`](/configuration/rack-parameters/aws/gpu_observability_chart_version):

@@ -177,12 +177,12 @@ func captureEventActorByActionWithProviderHook(
 	return actor
 }
 
-// TestAppBudgetSet_NoContext_EmitsUnknown: AppBudgetSet without a JWT ctx
-// AND without an ack_by override emits actor=unknown. Post-Decision-4 the
-// event actor is derived from Data["ack_by"] (sanitizeAckBy("") returns
-// "unknown" — see budget_accumulator.go:444), not directly from
-// ContextActor. The semantic is preserved: no caller-attributable actor
-// surfaces as "unknown" in the audit row.
+// TestAppBudgetSet_NoContext_EmitsUnknown: AppBudgetSet without a JWT
+// ctx AND without an ack_by override emits actor=unknown. The event
+// actor is derived from Data["ack_by"] (sanitizeAckBy("") returns
+// "unknown" — see budget_accumulator.go), not directly from
+// ContextActor. No caller-attributable actor surfaces as "unknown" in
+// the audit row.
 func TestAppBudgetSet_NoContext_EmitsUnknown(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	got := captureEventActorByAction(t, "app:budget:set", func(p *k8s.Provider) error {
@@ -198,12 +198,12 @@ func TestAppBudgetSet_NoContext_EmitsUnknown(t *testing.T) {
 	assert.Equal(t, "unknown", got)
 }
 
-// TestAppBudgetSet_EmitsActorFromContext: AppBudgetSet via a Provider with
-// a JWT ctx emits actor matching the resolved ackBy. Post-Decision-4 the
-// handler-layer resolveAckByOverride returns the ctx user as ackBy when
-// no form-param override is supplied, so ackBy=ctx-user and the event
-// actor field equals the JWT-derived user via the new ack_by precedence
-// at provider/k8s/event.go:73-86.
+// TestAppBudgetSet_EmitsActorFromContext: AppBudgetSet via a Provider
+// with a JWT ctx emits actor matching the resolved ackBy. The
+// handler-layer resolveAckByOverride returns the ctx user as ackBy
+// when no form-param override is supplied, so ackBy=ctx-user and the
+// event actor field equals the JWT-derived user via the ack_by
+// precedence in provider/k8s/event.go.
 func TestAppBudgetSet_EmitsActorFromContext(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	got := captureEventActorByActionWithProviderHook(t, "app:budget:set",
@@ -225,11 +225,11 @@ func TestAppBudgetSet_EmitsActorFromContext(t *testing.T) {
 	assert.Equal(t, "system-write", got)
 }
 
-// TestAppBudgetSet_AdminContext_EmitsSystemAdmin: ctx populated with the
-// admin claim should propagate as the resolved ackBy → event actor.
-// Post-Decision-4 the actor is derived from Data["ack_by"]; the handler's
-// resolveAckByOverride returns the ctx user as ackBy when no form-param
-// override is present.
+// TestAppBudgetSet_AdminContext_EmitsSystemAdmin: ctx populated with
+// the admin claim propagates as the resolved ackBy → event actor.
+// The actor is derived from Data["ack_by"]; the handler's
+// resolveAckByOverride returns the ctx user as ackBy when no
+// form-param override is present.
 func TestAppBudgetSet_AdminContext_EmitsSystemAdmin(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	got := captureEventActorByActionWithProviderHook(t, "app:budget:set",
@@ -251,11 +251,11 @@ func TestAppBudgetSet_AdminContext_EmitsSystemAdmin(t *testing.T) {
 	assert.Equal(t, "system-admin", got)
 }
 
-// TestAppBudgetReset_EmitsActorFromContext: reset path also threads JWT
-// user via ackBy. Post-Decision-4 the event actor is derived from
-// Data["ack_by"]; the handler's resolveAckByOverride returns the ctx user
-// as ackBy when no form-param override is present, so the reset event's
-// actor field equals the JWT-derived user.
+// TestAppBudgetReset_EmitsActorFromContext: the reset path also
+// threads JWT user via ackBy. The event actor is derived from
+// Data["ack_by"]; the handler's resolveAckByOverride returns the ctx
+// user as ackBy when no form-param override is present, so the reset
+// event's actor field equals the JWT-derived user.
 func TestAppBudgetReset_EmitsActorFromContext(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	got := captureEventActorByActionWithProviderHook(t, "app:budget:reset",

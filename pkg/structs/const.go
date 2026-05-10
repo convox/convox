@@ -58,7 +58,7 @@ var ConvoxJwtUserCtxKey = contextJwtUserKey{}
 // OR `X-Convox-TID` (legacy form — still accepted for backward
 // compatibility with older Cloud releases). Both forms map to the same
 // ctx key; canonical wins when both are present. See pkg/api/helpers.go
-// MF-13 fix for the dual-read implementation.
+// for the dual-read implementation.
 //
 // Typed-key avoids the SA1029 collision warning while keeping the
 // header-on-the-wire as the source of identity.

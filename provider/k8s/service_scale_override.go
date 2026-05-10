@@ -21,7 +21,7 @@ const (
 
 	// ServiceScaleOverrideValueOn is the literal annotation value that
 	// activates the override. Strict equality only — variants like
-	// "True", "yes", "1" are treated as inactive. See item-23 spec §6.
+	// "True", "yes", "1" are treated as inactive.
 	ServiceScaleOverrideValueOn = "true"
 )
 

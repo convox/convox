@@ -276,12 +276,12 @@ func TestEventSendGoroutine_PanicInDispatch_RecoveredAndLogged(t *testing.T) {
 	assert.Contains(t, out, "ns=event_dispatch at=recover")
 	assert.Contains(t, out, "url_host=hooks.example.com")
 	assert.Contains(t, out, "boom: simulated transport panic")
-	// F-23 fix (catalog F-23): debug.Stack() was dropped from the
-	// panic-recovery log line because stack frames may surface internal
-	// arg values. The panic value alone is enough operational diagnostic;
-	// inner code paths (cxhmac.SignedHeader) maintain their own
+	// debug.Stack() is intentionally absent from the panic-recovery
+	// log line because stack frames may surface internal arg values.
+	// The panic value alone is enough operational diagnostic; inner
+	// code paths (cxhmac.SignedHeader) maintain their own
 	// recover-and-log discipline closer to the failing call site.
-	assert.NotContains(t, out, "stack=", "stack trace must be dropped from recover log per F-23 redaction policy")
+	assert.NotContains(t, out, "stack=", "stack trace must be dropped from recover log")
 }
 
 func TestDispatchWebhook_URLWithSecretsInQuery_LogsHostOnly(t *testing.T) {
@@ -353,10 +353,10 @@ func TestRedactURLHost_StripsSecrets(t *testing.T) {
 	}
 }
 
-// TestRedactedWebhookURL_PreservesSchemeAndHost — MF-4 fix
-// (R4 γ-10 ADV-K8S-12). The payload-tier helper must return scheme+host
-// so receivers parsing payload.webhook_url with `new URL(...)` get an
-// RFC 3986-valid URL. Distinct from redactURLHost (host-only, log-only).
+// TestRedactedWebhookURL_PreservesSchemeAndHost verifies the
+// payload-tier helper returns scheme+host so receivers parsing
+// payload.webhook_url with `new URL(...)` get an RFC 3986-valid URL.
+// Distinct from redactURLHost (host-only, log-only).
 func TestRedactedWebhookURL_PreservesSchemeAndHost(t *testing.T) {
 	cases := map[string]string{
 		"https://hooks.slack.com/services/T0/B0/SECRET": "https://hooks.slack.com",
@@ -554,9 +554,9 @@ func TestDispatchWebhook_OnlyOneSignatureHeader(t *testing.T) {
 	assert.Len(t, gotValues, 1, "exactly one Convox-Signature header expected")
 }
 
-// TestDispatchWebhook_NoMiddlewareDoubleSet — RoundTripper assertion that
-// no middleware between dispatchWebhookSigned and the wire double-Sets the
-// Convox-Signature header. Per spec §8.1 R2 F-T-NEW-1 BLOCK.
+// TestDispatchWebhook_NoMiddlewareDoubleSet uses a RoundTripper to
+// assert that no middleware between dispatchWebhookSigned and the
+// wire double-Sets the Convox-Signature header.
 func TestDispatchWebhook_NoMiddlewareDoubleSet(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

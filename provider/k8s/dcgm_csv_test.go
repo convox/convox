@@ -691,8 +691,8 @@ func extractBracedBlock(src string, openPattern *regexp.Regexp) (string, bool) {
 // or extend the stripping.
 func TestDcgmExporterFieldsInGoSourceMatchWhitelist(t *testing.T) {
 	files := []string{
-		filepath.Join("prometheus_queries.go"),
-		filepath.Join("prometheus.go"),
+		"prometheus_queries.go",
+		"prometheus.go",
 		filepath.Join("..", "..", "pkg", "manifest", "service.go"),
 	}
 	tokenRe := regexp.MustCompile(`DCGM_FI_[A-Z0-9_]+`)

@@ -182,21 +182,20 @@ func TestEventSend_ConcurrentCallers_NoRace(t *testing.T) {
 	})
 }
 
-// TestEventSend_AckByOverridesContextActor pins the precedence rule
-// established by Decision 4: when an emit site supplies ack_by but
-// not actor, the emitted event's actor field equals ack_by — so a
-// Console3-driven budget mutation surfaces "alice@example.com" as
-// the audit actor in the persisted event payload, matching what
-// the AppBudgetSet provider call already wrote into the k8s
-// annotation. Without this precedence, central-injection would
-// stamp the JWT-derived ContextActor() ("rack-password" for
-// Console3 basic-auth) and the dialog footer "Audit-logged as
-// alice" becomes a half-truth.
+// TestEventSend_AckByOverridesContextActor pins the precedence rule:
+// when an emit site supplies ack_by but not actor, the emitted
+// event's actor field equals ack_by — so a Console-driven budget
+// mutation surfaces "alice@example.com" as the audit actor in the
+// persisted event payload, matching what the AppBudgetSet provider
+// call already wrote into the k8s annotation. Without this
+// precedence, central-injection would stamp the JWT-derived
+// ContextActor() ("rack-password" for Console basic-auth) and the
+// dialog footer "Audit-logged as alice" becomes a half-truth.
 func TestEventSend_AckByOverridesContextActor(t *testing.T) {
 	payload := captureOnePayload(t, func(p *k8s.Provider) error {
 		// Set ContextActor to "rack-password" via JWT ctx — the
-		// Console3 basic-auth derivation in real prod. Decision 4 says
-		// ack_by overrides this for events that supply it.
+		// Console basic-auth derivation in real prod. ack_by overrides
+		// this for events that supply it.
 		ctx := context.WithValue(context.Background(), structs.ConvoxJwtUserCtxKey, "rack-password")
 		pp := p.WithContext(ctx)
 		return pp.EventSend("app:budget:set", structs.EventSendOptions{

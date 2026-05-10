@@ -260,9 +260,8 @@ func TestSensitiveParamsExactMembership(t *testing.T) {
 		"access_id":                         true,
 		"private_eks_host":                  true,
 		"private_eks_user":                  true,
-		"private_eks_pass":                  true,
-		"webhook_signing_key":               true,
-		"in_cluster_grafana_admin_password": true,
+		"private_eks_pass":    true,
+		"webhook_signing_key": true,
 		// v2 PascalCase added for v3 CLI against v2 racks
 		"Password":  true,
 		"HttpProxy": true,

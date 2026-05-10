@@ -124,7 +124,13 @@ func TestServiceUpdateDeadPodsGuard(t *testing.T) {
 	})
 }
 
-func TestServiceUpdateMinAllowsNonZeroWithoutScaledObject(t *testing.T) {
+// TestServiceUpdateMinFallbackToDeploymentReplicas: when no KEDA ScaledObject
+// owns the service (rack has keda_enable=false OR the manifest declares no
+// autoscale block), a range-mode min/max apply must fall through to a direct
+// Deployment.Spec.Replicas patch using opts.Min as the floor. Otherwise the
+// request silently no-ops, which is the failure mode reported in the live
+// rack repro.
+func TestServiceUpdateMinFallbackToDeploymentReplicas(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*kfake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
@@ -132,8 +138,60 @@ func TestServiceUpdateMinAllowsNonZeroWithoutScaledObject(t *testing.T) {
 
 		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
 
-		err := p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{Min: options.Int(1), Max: options.Int(5)})
+		err := p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{Min: options.Int(3), Max: options.Int(10)})
 		require.NoError(t, err)
+
+		d, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, int32(3), *d.Spec.Replicas, "min/max without ScaledObject must patch Deployment.Spec.Replicas to opts.Min (the floor)")
+	})
+}
+
+// TestServiceUpdateRangeWithScaledObjectPatchesKedaNotDeployment: when a KEDA
+// ScaledObject DOES own the service, range-mode min/max applies to the CRD
+// — the Deployment's Spec.Replicas must NOT be touched (writing it would race
+// KEDA's reconciler).
+func TestServiceUpdateRangeWithScaledObjectPatchesKedaNotDeployment(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 2)
+
+		dyn := fake.NewSimpleDynamicClient(newDynamicScheme(), scaledObjectUnstructured("rack1-app1", "web", 1, 5))
+		p.DynamicClient = dyn
+
+		err := p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{Min: options.Int(2), Max: options.Int(8)})
+		require.NoError(t, err)
+
+		got, err := dyn.Resource(testScaledObjectGVR).Namespace("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		spec, _ := got.Object["spec"].(map[string]interface{})
+		require.Equal(t, int64(2), toInt64(spec["minReplicaCount"]))
+		require.Equal(t, int64(8), toInt64(spec["maxReplicaCount"]))
+
+		d, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, int32(2), *d.Spec.Replicas, "deployment replicas must stay at original value when ScaledObject owns replicas")
+	})
+}
+
+// TestServiceUpdateNoOptsLeavesReplicasUntouched: when the caller submits no
+// scale-related opts (no Count, no Min, no Max), Spec.Replicas must remain
+// unchanged through the rest of the update path (cpu / memory / gpu / env).
+func TestServiceUpdateNoOptsLeavesReplicasUntouched(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 4)
+
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
+
+		err := p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{})
+		require.NoError(t, err)
+
+		d, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, int32(4), *d.Spec.Replicas, "no scale opts must leave Deployment.Spec.Replicas untouched")
 	})
 }
 

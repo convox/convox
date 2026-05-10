@@ -15,6 +15,10 @@ For a quick overview of some commonly used commands, you may find this [blog pos
 | [apps](/reference/cli/apps)      | List, create, or delete apps and manage app-specific operations like locks and parameter settings. |
 | [balancers](/reference/cli/balancers) | List balancers for an app.                                                                      |
 | [budget](/reference/cli/budget)  | Configure per-app monthly spend caps, view current state, and recover from cap-trips.           |
+| [budget set](/reference/cli/budget#budget-set) | Set or update the budget config for an app.                                          |
+| [budget show](/reference/cli/budget#budget-show) | Print current budget config and runtime state.                                      |
+| [budget clear](/reference/cli/budget#budget-clear) | Remove the budget config for an app.                                              |
+| [budget simulate-shutdown](/reference/cli/budget#budget-simulate-shutdown) | Dry-run an auto-shutdown plan.                            |
 | [budget cap](/reference/cli/budget-cap) | Operate on the `monthlyCapUsd` field of an app's budget (raise, show).                   |
 | [budget cap raise](/reference/cli/budget-cap-raise) | Raise the monthly cap on an app's budget; atomic with breaker-clear.         |
 | [budget reset](/reference/cli/budget-reset) | Acknowledge a cap breach and re-enable deploys; restores replicas after `:fired`.    |

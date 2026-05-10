@@ -34,10 +34,9 @@ func patchRetryDeploymentFixture(t *testing.T, c *fake.Clientset, ns, name strin
 	require.NoError(t, err)
 }
 
-// TestPatchWithRetry_RetriesThreeTimesOnTransientError — F-26 fix
-// (catalog F-26). Confirms the 3-attempt loop fires on transient errors
-// (Conflict). The final error surfaces with the canonical reason
-// `cooldown-write-failed` per spec §8.7.
+// TestPatchWithRetry_RetriesThreeTimesOnTransientError confirms the
+// 3-attempt loop fires on transient errors (Conflict). The final
+// error surfaces with the canonical reason `cooldown-write-failed`.
 func TestPatchWithRetry_RetriesThreeTimesOnTransientError(t *testing.T) {
 	restore := k8s.SetPatchRetryBackoffsForTest([]time.Duration{0, 0})
 	defer restore()
@@ -58,9 +57,9 @@ func TestPatchWithRetry_RetriesThreeTimesOnTransientError(t *testing.T) {
 	assert.Equal(t, 3, attempts, "must attempt exactly 3 times before surfacing")
 }
 
-// TestPatchWithRetry_ClassifiesForbidden — F-26 fix.
-// Forbidden errors are non-retryable (admission webhook said no); fail
-// fast with the canonical reason `admission-rejected`.
+// TestPatchWithRetry_ClassifiesForbidden verifies that Forbidden
+// errors are non-retryable (admission webhook said no); fail fast
+// with the canonical reason `admission-rejected`.
 func TestPatchWithRetry_ClassifiesForbidden(t *testing.T) {
 	restore := k8s.SetPatchRetryBackoffsForTest([]time.Duration{0, 0})
 	defer restore()
@@ -81,8 +80,8 @@ func TestPatchWithRetry_ClassifiesForbidden(t *testing.T) {
 	assert.Equal(t, 1, attempts, "Forbidden is non-retryable; must attempt exactly once")
 }
 
-// TestPatchWithRetry_ClassifiesInvalid — F-26 fix.
-// Invalid errors are non-retryable; fail fast with `annotation-rejected`.
+// TestPatchWithRetry_ClassifiesInvalid verifies that Invalid errors
+// are non-retryable; fail fast with `annotation-rejected`.
 func TestPatchWithRetry_ClassifiesInvalid(t *testing.T) {
 	restore := k8s.SetPatchRetryBackoffsForTest([]time.Duration{0, 0})
 	defer restore()
@@ -103,11 +102,12 @@ func TestPatchWithRetry_ClassifiesInvalid(t *testing.T) {
 	assert.Equal(t, 1, attempts, "Invalid is non-retryable; must attempt exactly once")
 }
 
-// TestPatchWithRetry_ClassifiesConflictAfterExhausted — F-26 fix.
-// Conflict surfaced after retry exhaustion is `cooldown-write-failed`.
-// Companion to TestPatchWithRetry_RetriesThreeTimesOnTransientError —
-// asserts the underlying error remains a Conflict for callers that
-// want to introspect via apierrors.IsConflict.
+// TestPatchWithRetry_ClassifiesConflictAfterExhausted verifies that
+// a Conflict surfaced after retry exhaustion classifies as
+// `cooldown-write-failed`. Companion to
+// TestPatchWithRetry_RetriesThreeTimesOnTransientError — asserts the
+// underlying error remains a Conflict for callers that want to
+// introspect via apierrors.IsConflict.
 func TestPatchWithRetry_ClassifiesConflictAfterExhausted(t *testing.T) {
 	restore := k8s.SetPatchRetryBackoffsForTest([]time.Duration{0, 0})
 	defer restore()
@@ -126,11 +126,12 @@ func TestPatchWithRetry_ClassifiesConflictAfterExhausted(t *testing.T) {
 		"exhausted Conflict must surface cooldown-write-failed")
 }
 
-// TestPatchWithRetry_ClassifiesServerTimeout — MF-3 fix (R4 γ-10 ADV-K8S-11).
-// ServerTimeout is the K8s-server-side signal for version-skew /
-// serialization-mismatch; classify as `schema-incompatible` so the FAILED
-// banner surfaces a meaningful operator hint. ServerTimeout is treated as
-// a transient class — retry up to 3 times before surfacing.
+// TestPatchWithRetry_ClassifiesServerTimeout verifies that a K8s
+// ServerTimeout (the server-side signal for version-skew /
+// serialization-mismatch) classifies as `schema-incompatible` so the
+// FAILED banner surfaces a meaningful operator hint. ServerTimeout
+// is treated as a transient class — retry up to 3 times before
+// surfacing.
 func TestPatchWithRetry_ClassifiesServerTimeout(t *testing.T) {
 	restore := k8s.SetPatchRetryBackoffsForTest([]time.Duration{0, 0})
 	defer restore()
@@ -152,10 +153,11 @@ func TestPatchWithRetry_ClassifiesServerTimeout(t *testing.T) {
 	assert.Equal(t, 3, attempts, "ServerTimeout is a transient class; must retry 3 times")
 }
 
-// TestPatchAttemptContext_DefaultsToBoundedDeadline — MF-5 fix (R4 γ-8 A-5).
-// Confirms patchAttemptContext wraps each call with a bounded deadline so
-// a hung K8s API server can't hold the per-app advisory lock indefinitely.
-// Default is 30s; deadline must be set on the returned context.
+// TestPatchAttemptContext_DefaultsToBoundedDeadline confirms
+// patchAttemptContext wraps each call with a bounded deadline so a
+// hung K8s API server can't hold the per-app advisory lock
+// indefinitely. Default is 30s; deadline must be set on the returned
+// context.
 func TestPatchAttemptContext_DefaultsToBoundedDeadline(t *testing.T) {
 	ctx, cancel := k8s.PatchAttemptContextForTest(context.Background())
 	defer cancel()
@@ -167,10 +169,10 @@ func TestPatchAttemptContext_DefaultsToBoundedDeadline(t *testing.T) {
 		"deadline should be ~30s in the future, got %v", remaining)
 }
 
-// TestPatchAttemptContext_ZeroTimeoutDisables — MF-5 fix.
-// When patchAttemptTimeoutForTest is zeroed (test override), the helper
-// returns the parent context untouched. This is required for tests that
-// install per-test ctx with shorter deadlines or none at all.
+// TestPatchAttemptContext_ZeroTimeoutDisables verifies that when
+// patchAttemptTimeoutForTest is zeroed (test override), the helper
+// returns the parent context untouched. This is required for tests
+// that install per-test ctx with shorter deadlines or none at all.
 func TestPatchAttemptContext_ZeroTimeoutDisables(t *testing.T) {
 	restore := k8s.SetPatchAttemptTimeoutForTest(0)
 	defer restore()

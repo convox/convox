@@ -539,15 +539,20 @@ func TestAppBudgetSet_StillAcceptsWriteRole_NoElevation(t *testing.T) {
 	})
 }
 
-// TestAppBudgetClear_StillAcceptsWriteRole_NoElevation asserts that
-// AppBudgetClear remains CanWrite-gated. Sibling regression to AppBudgetSet
-// — guards the same gating-taxonomy invariant.
-func TestAppBudgetClear_StillAcceptsWriteRole_NoElevation(t *testing.T) {
+// TestAppBudgetClear_RequiresAdminRole_RejectsWriteOnly asserts that
+// AppBudgetClear rejects a write-only (rw) JWT caller. Removing the budget
+// config wipes the cap and at-cap action that an admin set; without an
+// admin gate, a non-admin caller could defeat an admin-set cap by Clear+Set
+// (the threshold-only re-set has no admin gate). Mirrors the AppBudgetSet
+// cap-mutation guard so the cap lifecycle is admin-only end to end.
+func TestAppBudgetClear_RequiresAdminRole_RejectsWriteOnly(t *testing.T) {
 	jwtAuthTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
 		tk, err := jm.WriteToken(time.Hour)
 		require.NoError(t, err)
 
-		p.On("AppBudgetClear", "myapp", "system-write").Return(nil)
+		// Provider must NOT be called when admin gate rejects the request.
+		// Asserting absence: no `.On("AppBudgetClear", ...)` expectation
+		// means MockProvider.AssertExpectations would fail if it WERE called.
 
 		req, err := http.NewRequest(http.MethodDelete, ht.URL+"/apps/myapp/budget", strings.NewReader(""))
 		require.NoError(t, err)
@@ -559,6 +564,31 @@ func TestAppBudgetClear_StillAcceptsWriteRole_NoElevation(t *testing.T) {
 		defer res.Body.Close()
 
 		bodyBytes, _ := io.ReadAll(res.Body)
-		require.Equal(t, http.StatusOK, res.StatusCode, "AppBudgetClear must stay CanWrite-only — got body %q", string(bodyBytes))
+		require.Equal(t, http.StatusForbidden, res.StatusCode, "AppBudgetClear must require admin role — got body %q", string(bodyBytes))
+		require.Contains(t, string(bodyBytes), "admin role required", "403 body must explain admin requirement")
+	})
+}
+
+// TestAppBudgetClear_AcceptsAdminRole asserts that an admin (rwa) JWT
+// caller can successfully clear the budget. Companion to the rejects-rw
+// regression above.
+func TestAppBudgetClear_AcceptsAdminRole(t *testing.T) {
+	jwtAuthTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
+		tk, err := jm.AdminToken(time.Hour)
+		require.NoError(t, err)
+
+		p.On("AppBudgetClear", "myapp", "system-admin").Return(nil)
+
+		req, err := http.NewRequest(http.MethodDelete, ht.URL+"/apps/myapp/budget", strings.NewReader(""))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.SetBasicAuth("jwt", tk)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		bodyBytes, _ := io.ReadAll(res.Body)
+		require.Equal(t, http.StatusOK, res.StatusCode, "AppBudgetClear must accept admin role — got body %q", string(bodyBytes))
 	})
 }

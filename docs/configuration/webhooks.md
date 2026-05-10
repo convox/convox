@@ -116,11 +116,13 @@ The actor class for each event is noted alongside the action below.
 
 ### Scale override (3.24.6)
 
-- `app:scale-override:toggled` — emitted after `convox services
-  scale-override` (or the Console-driven toggle) flips the per-service
-  scale-override annotation on or off (HTTP-handler; JWT actor populated
-  from `data.ack_by`). Payload carries `data.service` (target service),
-  `data.state` (`"on"` or `"off"`), and `data.actor` for audit.
+- `app:scale-override:toggled` — emitted after the Console-driven
+  scale-override toggle (or a direct API/SDK call to
+  `POST /apps/{app}/services/{service}/scale-override`) flips the
+  per-service scale-override annotation on or off (HTTP-handler;
+  JWT actor populated from `data.ack_by`). Payload carries
+  `data.service` (target service), `data.state` (`"on"` or `"off"`),
+  and `data.actor` for audit.
 - `app:scale-override:honored` — emitted at deploy time when a service's
   active scale-override annotation is honored — i.e. the service's yaml
   scale block was deliberately skipped on this promote so the override

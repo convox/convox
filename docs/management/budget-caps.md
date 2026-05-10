@@ -38,6 +38,37 @@ DigitalOcean, Equinix Metal, Local) cannot enforce budgets in the current
 release. Recovery operations (`convox budget clear`, `convox budget reset`)
 remain available regardless of cost tracking state so you can always clean up.
 
+## Authorization <a id="authorization"></a>
+
+Budget mutations split across two authorization tiers. The split is
+enforced server-side in `AppBudgetSet`, `AppBudgetClear`, and
+`AppBudgetReset` and applies on every provider (AWS, Azure, GCP,
+DigitalOcean, Equinix Metal, Local).
+
+| Mutation | Required role | Rejection on under-privileged caller |
+|---|---|---|
+| `AppBudgetSet --monthly-cap` (cap mutation, alias `convox budget cap raise`) | Admin | `403 AppBudgetSet: admin role required to set budget cap` |
+| `AppBudgetSet --at-cap-action` | Admin | `403 AppBudgetSet: admin role required to set budget cap` |
+| `AppBudgetSet --pricing-adjustment` (alias `--pricing-adjustment-only`) | Admin | `403 AppBudgetSet: admin role required to set budget cap` |
+| `AppBudgetSet --alert-threshold-percent` (threshold-only) | `rw` | n/a |
+| `AppBudgetClear` (alias `convox budget clear`) | Admin | `403 AppBudgetClear: admin role required to remove budget config` |
+| `AppBudgetReset` (plain, alias `convox budget reset`) | `rw` | n/a |
+| `AppBudgetReset --force-clear-cooldown` | Admin | `403 AppBudgetReset --force-clear-cooldown requires Admin role; current role is 'w'. Contact rack admin or use Admin token.` |
+| `AppBudgetDismissRecovery` (alias `convox budget dismiss-recovery`) | `rw` | n/a |
+| `AppBudgetSimulateShutdown` (alias `convox budget simulate-shutdown`) | `rw` (read-only) | n/a |
+| Webhook signing key reveal (`webhook_signing_key`) | Admin | `403` (Console resolver layer) |
+
+The Admin gate on cap mutation, Clear, and `--force-clear-cooldown`
+closes a cap-circumvention path: without it, a non-admin caller could
+defeat an admin-set cap by Clear+Set (the threshold-only re-set has no
+admin gate). End-to-end admin coverage of the cap lifecycle keeps the
+budget guardrail honest.
+
+Basic-auth callers (rack-password) automatically pass the Admin check
+via `SetAdminRole` at authenticate-time. Non-Admin Console users
+attempting an Admin-gated action see the rejection message above
+relayed through the Console UI.
+
 ## Cap actions
 
 `atCapAction` selects what happens when an app crosses its `monthlyCapUsd`:
@@ -48,13 +79,24 @@ remain available regardless of cost tracking state so you can always clean up.
 | `block-new-deploys` | Fires `app:budget:cap`, trips the breaker. New deploys are rejected with an over-cap error. Running services keep running. |
 | `auto-shutdown` | Arms the auto-shutdown countdown. After `notifyBeforeMinutes`, services are scaled to zero per `shutdownOrder`. |
 
+## Sub-state vocabulary <a id="sub-state-vocabulary"></a>
+
+The `convox ps` `STATUS` column and the `convox services` `BUDGET` column both surface a per-service sub-state token when an app's budget cap is breached or arming. The vocabulary is identical across the two CLI surfaces:
+
+| Token | Meaning |
+|-------|---------|
+| `armed-Nm` | Auto-shutdown countdown is active; `N` minutes remain until services scale to zero (e.g. `armed-25m`). |
+| `at-cap-keda` | Service has been scaled to zero by auto-shutdown via the KEDA `paused-replicas` annotation (KEDA-managed services). |
+| `at-cap-auto` | Service has been scaled to zero by auto-shutdown via direct `replicas=0` PATCH (deployment-only services). |
+| `at-cap` | Cap is breached but `atCapAction: block-new-deploys`; no scale-to-zero, deploys are rejected. |
+
 ## Cap raise <a id="cap-raise"></a>
 
 Raising the cap mid-month clears the breaker (when current spend is below the
 new cap) and dismisses any active recovery banner.
 
 ```bash
-$ convox budget cap raise --monthly-cap 500 --app myapp
+$ convox budget cap raise --monthly-cap-usd 500 --app myapp
 Raising monthly cap to 500.00 USD... OK
 Breaker cleared.
 ```
@@ -140,7 +182,7 @@ budget cap exceeded: monthly cap 250.00 USD, current spend 268.42 USD
 To recover:
 
 1. Run `convox cost --app myapp` to confirm current spend.
-2. Either raise the cap (`convox budget cap raise --monthly-cap NEW`) or wait
+2. Either raise the cap (`convox budget cap raise --monthly-cap-usd NEW`) or wait
    for the next month rollover (current spend resets on the 1st).
 3. Or accept the cap and reset to re-enable deploys for the rest of the month
    without raising — `convox budget reset`. The breaker clears but the cap
@@ -211,7 +253,7 @@ The four mutation handlers wired through this resolution are:
 | `AppBudgetSet` | `app:budget:set` | `cfg.LastCapMutationBy` + `data.actor` |
 | `AppBudgetClear` | `app:budget:clear` | `data.actor` (also `prev_ack_by` metadata) |
 | `AppBudgetReset` | `app:budget:reset` | `state.CircuitBreakerAckBy` + `data.actor` |
-| `AppBudgetDismissRecovery` | `app:budget:dismiss-recovery` | `data.actor` |
+| `AppBudgetDismissRecovery` | `app:budget:auto-shutdown:dismissed` | `data.actor` |
 
 Console (3.24.6+) populates the form parameter with the authenticated
 admin's email so the rack records `actor=alice@example.com` rather than

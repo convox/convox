@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
-	"net/url"
 	"os"
 	"regexp"
 	"sort"
@@ -21,6 +19,7 @@ import (
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/rack"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/convox/pkg/validator"
 	"github.com/convox/convox/provider"
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
@@ -51,18 +50,17 @@ var awsKnownParams = map[string]bool{
 	"docker_hub_password":  true, "docker_hub_username": true,
 	"ebs_volume_encryption_enabled": true, "ecr_docker_hub_cache": true, "ecr_scan_on_push_enable": true,
 	"efs_csi_driver_enable": true, "efs_csi_driver_version": true,
-	"eks_api_server_public_access_cidrs": true, "in_cluster_grafana_enable": true,
-	"enable_private_access": true,
-	"fluentd_disable": true, "fluentd_memory": true,
+	"eks_api_server_public_access_cidrs": true,
+	"enable_private_access":              true,
+	"fluentd_disable":                    true, "fluentd_memory": true,
 	"gpu_metrics_max_concurrent": true, "gpu_metrics_max_pods": true,
 	"gpu_observability_chart_version": true, "gpu_observability_enable": true,
-	"gpu_tag_enable": true,
-	"grafana_dashboard_var_app":       true, "grafana_dashboard_var_namespace": true,
-	"grafana_dashboard_var_rack":      true, "grafana_dashboard_var_service": true,
-	"grafana_url": true,
+	"gpu_tag_enable":            true,
+	"grafana_dashboard_var_app": true, "grafana_dashboard_var_namespace": true,
+	"grafana_dashboard_var_rack": true, "grafana_dashboard_var_service": true,
+	"grafana_url":       true,
 	"high_availability": true,
-	"in_cluster_grafana_admin_password": true,
-	"idle_timeout": true, "image": true,
+	"idle_timeout":      true, "image": true,
 	"imds_http_hop_limit": true, "imds_http_tokens": true,
 	"imds_tags_enable": true, "internal_router": true,
 	"internet_gateway_id": true, "k8s_version": true,
@@ -204,7 +202,6 @@ var boolParams = map[string]bool{
 	"ecr_docker_hub_cache":            true,
 	"ecr_scan_on_push_enable":         true,
 	"efs_csi_driver_enable":           true,
-	"in_cluster_grafana_enable":       true,
 	"enable_private_access":           true,
 	"fluentd_disable":                 true,
 	"gpu_observability_enable":        true,
@@ -229,11 +226,11 @@ var boolParams = map[string]bool{
 // HttpProxy are v2-rack PascalCase keys included so v3 CLI against a
 // v2 rack masks the same values v2 CLI post-PR-3795 does; they never
 // appear in v3 rack Parameters responses (v3 uses snake_case).
-// webhook_signing_key added in 3.24.6 (Decision 5) — HMAC-SHA256 secret
-// for outbound webhook signing. Cannot use Terraform `sensitive = true`
-// because the user base spans TF versions older than 0.14 where
-// sensitive on variable blocks is unsupported; CLI-display masking
-// matches the existing redaction approach for other secret params.
+// webhook_signing_key added in 3.24.6 — HMAC-SHA256 secret for outbound
+// webhook signing. Cannot use Terraform `sensitive = true` because the
+// user base spans TF versions older than 0.14 where sensitive on
+// variable blocks is unsupported; CLI-display masking matches the
+// existing redaction approach for other secret params.
 var sensitiveParams = map[string]bool{
 	"docker_hub_password":               true,
 	"secret_key":                        true,
@@ -241,11 +238,10 @@ var sensitiveParams = map[string]bool{
 	"access_id":                         true,
 	"private_eks_host":                  true,
 	"private_eks_user":                  true,
-	"private_eks_pass":                  true,
-	"webhook_signing_key":               true,
-	"in_cluster_grafana_admin_password": true,
-	"Password":                          true,
-	"HttpProxy":                         true,
+	"private_eks_pass":    true,
+	"webhook_signing_key": true,
+	"Password":            true,
+	"HttpProxy":           true,
 }
 
 // paramGroups categorizes rack params into curated logical groups for the
@@ -423,8 +419,6 @@ var paramGroups = map[string]map[string]bool{
 		"grafana_dashboard_var_rack":           true,
 		"grafana_dashboard_var_service":        true,
 		"grafana_url":                          true,
-		"in_cluster_grafana_enable":            true,
-		"in_cluster_grafana_admin_password":    true,
 		"user_data":                            true,
 		"user_data_url":                        true,
 		// v2 PascalCase (no-op on v3 racks; v2 "instances" group content)
@@ -638,10 +632,6 @@ var clearableParams = map[string]bool{
 	// is hidden in the Console GPU views. Optional; only relevant for users
 	// running their own Grafana instance.
 	"grafana_url": true,
-	// In-cluster Grafana admin password — clear means "regenerate on next
-	// helm release of the Grafana sub-chart in the paid kube-prometheus-stack."
-	// Sensitive; redacted in `convox rack params` output.
-	"in_cluster_grafana_admin_password": true,
 	// Free-chart Helm version override — empty falls back to Convox Console worker
 	// default (`27.9.0`) on next Disable→Enable cycle. No rack TF consumer post-3.24.6 final.
 	"prometheus_gpu_metrics_chart_version": true,
@@ -1854,34 +1844,15 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		params[k] = base64.StdEncoding.EncodeToString(data)
 	}
 
-	// prometheus_url: validate scheme and reject private/loopback/link-local hosts.
-	// This is a best-effort SSRF defence at the param-validation layer; DNS-resolved
-	// IPs are not checked (that would require a network call at validate time).
+	// prometheus_url: SSRF-guarded validation. Rejects private, loopback,
+	// and link-local IP literals AND DNS hostnames whose resolved A/AAAA
+	// records land in the deny-set. Allowlists *.svc.cluster.local for
+	// the documented in-cluster Prometheus recipes (see
+	// docs/configuration/rack-parameters/aws/prometheus_url.md).
 	if v, has := params["prometheus_url"]; has && v != "" {
-		parsed, parseErr := url.Parse(v)
-		scheme := ""
-		if parsed != nil {
-			scheme = strings.ToLower(parsed.Scheme)
+		if err := validator.ValidateExternalURL(v, nil); err != nil {
+			return fmt.Errorf("prometheus_url: %s; see docs/configuration/rack-parameters/aws/prometheus_url.md for the in-cluster %s recipe", err, validator.InClusterSuffix)
 		}
-		// Validate scheme first so the error message is specific.
-		if parseErr != nil || scheme == "" || (scheme != "http" && scheme != "https") {
-			return fmt.Errorf("prometheus_url: only http:// and https:// schemes are accepted")
-		}
-		if parsed.Host == "" {
-			return fmt.Errorf("prometheus_url: must be a valid URL with scheme and host (e.g. http://prom.example.com:9090)")
-		}
-		// Strip port for IP parsing — net.ParseIP does not accept host:port.
-		host := parsed.Hostname()
-		// Reject the "localhost" reserved name in addition to IP-range checks.
-		if strings.EqualFold(host, "localhost") {
-			return fmt.Errorf("prometheus_url: private/loopback/link-local hosts are not allowed (see docs for SSRF protection)")
-		}
-		if ip := net.ParseIP(host); ip != nil {
-			if ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() {
-				return fmt.Errorf("prometheus_url: private/loopback/link-local hosts are not allowed (see docs for SSRF protection)")
-			}
-		}
-		// DNS hostnames (non-IP) other than localhost are accepted — let TF apply / runtime fail visibly.
 	}
 
 	// dcgm_scrape_interval: bounded duration (15s-300s). Empty falls back to TF default 15s.

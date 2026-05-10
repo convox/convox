@@ -7,9 +7,9 @@ url: /configuration/rack-parameters/aws/gpu_metrics_max_pods
 # gpu_metrics_max_pods
 
 ## Description
-The `gpu_metrics_max_pods` parameter caps the number of pods returned by a single rack-side GPU metrics request, bounding fan-out from a busy app's per-service GPU dashboard. The Console issues one request per chart load and per dropdown change; without a cap, an app with hundreds of GPU pods can flood the rack with simultaneous Prometheus queries.
+The `gpu_metrics_max_pods` parameter caps the number of services included in a single rack-side GPU metrics request, bounding fan-out from a busy app's per-service GPU dashboard. (The parameter name is historical; the handler enforces the limit on the count of services in the request body, since each service in turn fans out to its own pod set.) The Console issues one request per chart load and per dropdown change; without a cap, an app with many services can flood the rack with simultaneous Prometheus queries.
 
-The cap is enforced at the request boundary in the rack handler. Pods beyond the cap are not queried for that response.
+The cap is enforced at the request boundary in the rack handler. A request whose service list exceeds the cap is rejected with a 400.
 
 ## Default Value
 The default value is `100`.
@@ -41,7 +41,7 @@ Setting parameters... OK
 ```
 
 ## Operational Notes
-- The cap is request-scoped, not service-scoped. A request asking for 5 services with 50 pods each is allowed at the default 100 cap only if the total queried pod count fits.
+- The cap is request-scoped: it limits the count of services the request asks for in a single fetch, not the total pod count those services back onto.
 - The handler returns a 400 if the requested service set would exceed the cap; the Console surfaces this as a banner suggesting a smaller service selection or a higher cap.
 - The cap protects only the chart endpoint; per-pod summary cards in the service detail page are not bounded by this parameter.
 

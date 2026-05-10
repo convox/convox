@@ -32,7 +32,6 @@ module "k8s" {
   metrics_scraper_host            = var.metrics_scraper_host
   namespace                       = var.namespace
   prometheus_url                  = var.prometheus_url
-  effective_prometheus_url        = var.effective_prometheus_url
   rack                            = var.name
   rack_name                       = var.rack_name
   release                         = var.release

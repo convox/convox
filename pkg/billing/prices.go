@@ -55,6 +55,15 @@ const SpotDefaultFactor = 0.30
 
 const pricingTableVersion = "2026-04-29"
 
+// PricingSourceStaticTable is the wire-stable token for the embedded
+// static AWS-on-demand price table. Surfaces on AppCost.PricingSource
+// (json: "pricing-source"). Downstream tooling (CLI, Console,
+// third-party SDK consumers) treats this token as a stable identifier
+// — do NOT change the literal without coordinating a wire-version
+// bump and a renderer update at pkg/cli/cost.go and the Console-side
+// label translator.
+const PricingSourceStaticTable = "on-demand-static-table"
+
 // InstancePricing is the canonical static table consumed by the rack's
 // budget accumulator. Keyed by EC2 instance type. All entries use keyed
 // struct literals so future field additions to InstancePrice (e.g. a

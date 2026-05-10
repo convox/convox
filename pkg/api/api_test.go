@@ -169,7 +169,6 @@ func TestVerify3245LegacyTokenOn3246Rack_CanReadCanWriteCanAdminRoleSpecific(t *
 // with the EXACT 3.24.5 claim shape (User: "system-write", Role: "rw"). Feed
 // through s.JwtMngr.Verify(token). Assert no error. Construct a stdapi.Context
 // and run CanRead(c) → true; CanWrite(c) → true; CanAdmin(c) → false.
-// (R3 amendments § Set E E.3 cited rollback-compat test.)
 func TestSystemJwtToken_3245LegacyRollback_TreatedAsW(t *testing.T) {
 	signKey := []byte("TEST")
 

@@ -380,10 +380,9 @@ func TestBudgetSimulateShutdown_OutputFormatMatchesSpec(t *testing.T) {
 	})
 }
 
-// TestBudgetDismissRecovery_Output — Set G.
-// `convox budget dismiss-recovery` must emit one of three messages
-// distinguishing dismissed / already-dismissed / no-banner states
-// (per Set G v2 spec advisory #3).
+// TestBudgetDismissRecovery_Output verifies that
+// `convox budget dismiss-recovery` emits one of three messages
+// distinguishing dismissed / already-dismissed / no-banner states.
 func TestBudgetDismissRecovery_Output(t *testing.T) {
 	t.Run("dismissed", func(t *testing.T) {
 		testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
@@ -432,11 +431,12 @@ func TestBudgetSet_RejectsUnknownActionValue(t *testing.T) {
 	})
 }
 
-// TestBudgetCapRaise_HappyPath — Set G v2 spec §10.7. The `budget cap raise`
-// subcommand is a partial-update alias for `budget set --monthly-cap`. It MUST
-// be registered so the ARMED banner and the 3-action 409 breaker message can
-// cite a real CLI surface (γ-7 BLOCKER B1). Server-side applyBudgetOptions
-// preserves the unsubmitted fields (alert-at, at-cap-action, pricing-adjustment).
+// TestBudgetCapRaise_HappyPath verifies that the `budget cap raise`
+// subcommand is a partial-update alias for `budget set --monthly-cap`.
+// It MUST be registered so the ARMED banner and the 3-action 409
+// breaker message can cite a real CLI surface. Server-side
+// applyBudgetOptions preserves the unsubmitted fields (alert-at,
+// at-cap-action, pricing-adjustment).
 func TestBudgetCapRaise_HappyPath(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("AppCost", "app1").Return(&structs.AppCost{App: "app1", SpendUsd: 0.0}, nil)
@@ -457,11 +457,11 @@ func TestBudgetCapRaise_HappyPath(t *testing.T) {
 	})
 }
 
-// TestBudgetCapRaise_AcceptsMonthlyCapAlias — MF-2 fix (R4 γ-4 A6 + γ-7 test gap).
-// `--monthly-cap` is an alias for `--monthly-cap-usd` so users
-// who already learned `convox budget set --monthly-cap` from 3.24.5 don't
-// have to memorize a different flag for cap raise. The alias must work
-// alone, AND the canonical flag must win when both are provided.
+// TestBudgetCapRaise_AcceptsMonthlyCapAlias verifies that
+// `--monthly-cap` is an alias for `--monthly-cap-usd` so users who
+// already learned `convox budget set --monthly-cap` from 3.24.5 don't
+// have to memorize a different flag for cap raise. The alias must
+// work alone, AND the canonical flag must win when both are provided.
 func TestBudgetCapRaise_AcceptsMonthlyCapAlias(t *testing.T) {
 	t.Run("alias-only accepted with canonical-equivalent behavior", func(t *testing.T) {
 		testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
@@ -552,10 +552,10 @@ func TestBudgetCapRaise_AppCostError_DoesNotBlock(t *testing.T) {
 	})
 }
 
-// TestBudgetSimulateShutdown_OutputDoesNotReferenceUnimplementedCommand —
-// γ-7 BLOCKER B2. `convox events --rack` is NOT a registered CLI surface, so
-// the simulate-shutdown output MUST NOT cite it. Regression guard against
-// any future "polish" edit that re-introduces the dangling reference.
+// TestBudgetSimulateShutdown_OutputDoesNotReferenceUnimplementedCommand
+// pins that `convox events --rack` is NOT a registered CLI surface,
+// so the simulate-shutdown output MUST NOT cite it. Regression guard
+// against any future edit that re-introduces the dangling reference.
 func TestBudgetSimulateShutdown_OutputDoesNotReferenceUnimplementedCommand(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		now := time.Date(2026, 4, 25, 14, 0, 0, 0, time.UTC)
@@ -577,18 +577,18 @@ func TestBudgetSimulateShutdown_OutputDoesNotReferenceUnimplementedCommand(t *te
 		res, err := testExecute(e, "budget simulate-shutdown app1", nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
-		require.NotContains(t, res.Stdout, "convox events", "B2: simulate-shutdown must not cite unimplemented `convox events` subcommand")
-		require.NotContains(t, res.Stdout, "events --rack", "B2: simulate-shutdown must not cite `events --rack` flag")
+		require.NotContains(t, res.Stdout, "convox events", "simulate-shutdown must not cite unimplemented `convox events` subcommand")
+		require.NotContains(t, res.Stdout, "events --rack", "simulate-shutdown must not cite `events --rack` flag")
 		// Verify the replacement text is present so users have a real surface to look at.
-		require.Contains(t, res.Stdout, "atCapWebhookUrl", "B2: simulate-shutdown must point at the real webhook surface")
-		require.Contains(t, res.Stdout, "rack log aggregation", "B2: simulate-shutdown must also point at log aggregation as fallback")
+		require.Contains(t, res.Stdout, "atCapWebhookUrl", "simulate-shutdown must point at the real webhook surface")
+		require.Contains(t, res.Stdout, "rack log aggregation", "simulate-shutdown must also point at log aggregation as fallback")
 	})
 }
 
-// TestBudgetShow_FailedBanner_RendersReason — γ-7 BLOCKER B3 fix.
-// `convox budget show` FAILED banner must render the canonical
-// FailureReason from the persisted state annotation per Set G v2 spec
-// §16.3 — `Auto-shutdown FAILED. Reason: <failureReason>.`
+// TestBudgetShow_FailedBanner_RendersReason verifies that the
+// `convox budget show` FAILED banner renders the canonical
+// FailureReason from the persisted state annotation. Format:
+// `Auto-shutdown FAILED. Reason: <failureReason>.`
 func TestBudgetShow_FailedBanner_RendersReason(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		now := time.Date(2026, 4, 25, 14, 0, 0, 0, time.UTC)
@@ -612,8 +612,8 @@ func TestBudgetShow_FailedBanner_RendersReason(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
 		require.Contains(t, res.Stdout, "[FAILED]", "FAILED banner sentinel must appear")
-		require.Contains(t, res.Stdout, "Auto-shutdown FAILED for app1", "FAILED banner header text per spec §16.3")
-		require.Contains(t, res.Stdout, "Reason: k8s-api-failure", "Reason: <failureReason> must be rendered per spec §16.3")
+		require.Contains(t, res.Stdout, "Auto-shutdown FAILED for app1", "FAILED banner header text")
+		require.Contains(t, res.Stdout, "Reason: k8s-api-failure", "Reason: <failureReason> must be rendered")
 		require.Contains(t, res.Stdout, "convox budget reset app1", "FAILED banner must still cite the recovery command")
 	})
 }
@@ -646,15 +646,16 @@ func TestBudgetShow_FailedBanner_NoReason_FallsBackToLegacy(t *testing.T) {
 		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
 		require.Contains(t, res.Stdout, "[FAILED]", "FAILED banner sentinel still appears")
 		require.Contains(t, res.Stdout, "Auto-shutdown FAILED for app1", "legacy text retained when reason absent")
+
 		require.NotContains(t, res.Stdout, "Reason: .", "must not render empty Reason: . token when FailureReason is empty")
 		require.NotContains(t, res.Stdout, "Reason: ", "must not render Reason: prefix at all when FailureReason is empty")
 	})
 }
 
-// TestBudgetShow_ArmedBanner_RendersFireAt — F-12 fix (catalog F-12).
-// Locks in the [ARMED] branch of renderShutdownStateBanner. Covers the
-// computed fireAt = ArmedAt + notifyBeforeMinutes (default 30) and the
-// pinned user-facing recovery commands.
+// TestBudgetShow_ArmedBanner_RendersFireAt locks in the [ARMED] branch
+// of renderShutdownStateBanner. Covers the computed fireAt = ArmedAt
+// + notifyBeforeMinutes (default 30) and the pinned user-facing
+// recovery commands.
 func TestBudgetShow_ArmedBanner_RendersFireAt(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		now := time.Date(2026, 4, 25, 14, 0, 0, 0, time.UTC)
@@ -684,10 +685,10 @@ func TestBudgetShow_ArmedBanner_RendersFireAt(t *testing.T) {
 	})
 }
 
-// TestBudgetShow_ActiveBanner_RendersServiceCount — F-13 fix (catalog F-13).
-// Locks in the [ACTIVE] branch — ShutdownAt set, RestoredAt nil,
-// FailedNotificationFiredAt nil. F-29 precedence puts ACTIVE ahead of
-// FAILED so this test asserts the post-fire pre-recovery state.
+// TestBudgetShow_ActiveBanner_RendersServiceCount locks in the [ACTIVE]
+// branch — ShutdownAt set, RestoredAt nil, FailedNotificationFiredAt
+// nil. ACTIVE has precedence over FAILED so this test asserts the
+// post-fire pre-recovery state.
 func TestBudgetShow_ActiveBanner_RendersServiceCount(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		now := time.Date(2026, 4, 25, 14, 0, 0, 0, time.UTC)
@@ -722,9 +723,9 @@ func TestBudgetShow_ActiveBanner_RendersServiceCount(t *testing.T) {
 	})
 }
 
-// TestBudgetShow_RecoveredBanner_RendersWithAndWithoutFlapWindow — F-14
-// fix (catalog F-14). Table-driven coverage of the [RECOVERED] branch
-// with and without the FlapSuppressedUntil cooldown text.
+// TestBudgetShow_RecoveredBanner_RendersWithAndWithoutFlapWindow is a
+// table-driven coverage of the [RECOVERED] branch with and without
+// the FlapSuppressedUntil cooldown text.
 func TestBudgetShow_RecoveredBanner_RendersWithAndWithoutFlapWindow(t *testing.T) {
 	now := time.Date(2026, 4, 25, 14, 0, 0, 0, time.UTC)
 	armed := now.Add(-2 * time.Hour)
@@ -775,11 +776,11 @@ func TestBudgetShow_RecoveredBanner_RendersWithAndWithoutFlapWindow(t *testing.T
 	}
 }
 
-// TestBudgetShow_RecoveredOverridesFailed_AfterManualRecovery — F-29 fix
-// (catalog D-2 promoted). After a manual recovery completes (RestoredAt
-// set), the banner shows [RECOVERED] not [FAILED] even when
-// FailedNotificationFiredAt is still set in the annotation pending GC.
-// User-truthful: a successful manual recovery is the operative state.
+// TestBudgetShow_RecoveredOverridesFailed_AfterManualRecovery pins the
+// banner-precedence rule: after a manual recovery completes
+// (RestoredAt set), the banner shows [RECOVERED] not [FAILED] even
+// when FailedNotificationFiredAt is still set in the annotation
+// pending GC. A successful manual recovery is the operative state.
 func TestBudgetShow_RecoveredOverridesFailed_AfterManualRecovery(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		now := time.Date(2026, 4, 25, 14, 0, 0, 0, time.UTC)
@@ -805,15 +806,15 @@ func TestBudgetShow_RecoveredOverridesFailed_AfterManualRecovery(t *testing.T) {
 		res, err := testExecute(e, "budget show app1", nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
-		require.Contains(t, res.Stdout, "[RECOVERED]", "RECOVERED must take precedence over FAILED after manual recovery (F-29)")
-		require.NotContains(t, res.Stdout, "[FAILED]", "FAILED banner must NOT render when RestoredAt is set (F-29)")
+		require.Contains(t, res.Stdout, "[RECOVERED]", "RECOVERED must take precedence over FAILED after manual recovery")
+		require.NotContains(t, res.Stdout, "[FAILED]", "FAILED banner must NOT render when RestoredAt is set")
 		require.NotContains(t, res.Stdout, "Auto-shutdown FAILED", "FAILED header text must NOT render alongside RECOVERED")
 	})
 }
 
-// TestBudgetShow_BannerHonorsNotifyBeforeMinutes — F-18 fix (catalog F-18).
-// When the persisted state carries NotifyBeforeMinutes != 30 the ARMED
-// banner must render fireAt = ArmedAt + that value. Cross-version compat:
+// TestBudgetShow_BannerHonorsNotifyBeforeMinutes verifies that when
+// the persisted state carries NotifyBeforeMinutes != 30 the ARMED
+// banner renders fireAt = ArmedAt + that value. Cross-version compat:
 // an older state without the field falls back to the 30-minute default.
 func TestBudgetShow_BannerHonorsNotifyBeforeMinutes(t *testing.T) {
 	cases := []struct {
@@ -960,9 +961,9 @@ func TestBudgetSet_AlertAtWithPricingAdjustment_Rejected(t *testing.T) {
 	})
 }
 
-// Test 7: TestBudgetSet_NoFlags_Rejected — no flags at all. Asserts the
-// canonical phrase substring. R3 corrections — single canonical-phrase
-// substring match (wording-stable for OQ-1 alternatives).
+// Test 7: TestBudgetSet_NoFlags_Rejected — no flags at all. Asserts
+// the canonical phrase substring (wording-stable across alternative
+// flag combinations).
 func TestBudgetSet_NoFlags_Rejected(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		res, err := testExecute(e, "budget set app1", nil)

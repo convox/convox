@@ -25,6 +25,7 @@ The following parameters are available for configuring your Convox rack on Amazo
 | [cidr](/configuration/rack-parameters/aws/cidr)                                     | Specifies the CIDR range for the VPC.                                     |
 | [convox_domain_tls_cert_disable](/configuration/rack-parameters/aws/convox_domain_tls_cert_disable) | Disables Convox domain TLS certificate generation for services. |
 | [cost_tracking_enable](/configuration/rack-parameters/aws/cost_tracking_enable)     | Turns on the rack-side cost accumulator that powers `convox cost` and per-app budget caps. |
+| [dcgm_scrape_interval](/configuration/rack-parameters/aws/dcgm_scrape_interval)     | Controls how often the rack-managed Prometheus job scrapes the DCGM exporter for GPU metrics. |
 | [disable_convox_resolver](/configuration/rack-parameters/aws/disable_convox_resolver) | Disables the Convox resolver and uses the Kubernetes resolver instead. |
 | [docker_hub_username](/configuration/rack-parameters/aws/docker_hub_username) | Configures Docker Hub username for authenticated image pulls (avoids rate limits). |
 | [docker_hub_password](/configuration/rack-parameters/aws/docker_hub_password) | Sets Docker Hub access token for authenticated image pulls. Use with docker_hub_username. |
@@ -34,9 +35,16 @@ The following parameters are available for configuring your Convox rack on Amazo
 | [efs_csi_driver_enable](/configuration/rack-parameters/aws/efs_csi_driver_enable)   | Enables the EFS CSI driver to use AWS EFS volumes.                       |
 | [fluentd_disable](/configuration/rack-parameters/aws/fluentd_disable)               | Disables Fluentd installation in the rack.                               |
 | [fluentd_memory](/configuration/rack-parameters/aws/fluentd_memory)                 | Configures memory allocation for the Fluentd log collector DaemonSet.    |
+| [gpu_metrics_max_concurrent](/configuration/rack-parameters/aws/gpu_metrics_max_concurrent) | Caps simultaneous Prometheus QueryRange invocations issued by the rack's GPU metrics handler. |
+| [gpu_metrics_max_pods](/configuration/rack-parameters/aws/gpu_metrics_max_pods)     | Caps the number of services included in a single rack-side GPU metrics request (parameter name is historical). |
 | [gpu_observability_chart_version](/configuration/rack-parameters/aws/gpu_observability_chart_version) | Pins the Helm chart version for the NVIDIA DCGM exporter.    |
 | [gpu_observability_enable](/configuration/rack-parameters/aws/gpu_observability_enable) | Installs the NVIDIA DCGM exporter DaemonSet to emit GPU telemetry to Prometheus. |
 | [gpu_tag_enable](/configuration/rack-parameters/aws/gpu_tag_enable)                 | Enables GPU tagging.                                                     |
+| [grafana_dashboard_var_app](/configuration/rack-parameters/aws/grafana_dashboard_var_app) | Overrides the Grafana dashboard template variable name for the app filter. |
+| [grafana_dashboard_var_namespace](/configuration/rack-parameters/aws/grafana_dashboard_var_namespace) | Overrides the Grafana dashboard template variable name for the namespace filter. |
+| [grafana_dashboard_var_rack](/configuration/rack-parameters/aws/grafana_dashboard_var_rack) | Overrides the Grafana dashboard template variable name for the rack/cluster filter. |
+| [grafana_dashboard_var_service](/configuration/rack-parameters/aws/grafana_dashboard_var_service) | Overrides the Grafana dashboard template variable name for the service filter. |
+| [grafana_url](/configuration/rack-parameters/aws/grafana_url)                       | External Grafana base URL surfaced as the "Open in your Grafana" deep-link button on Console GPU views. |
 | [high_availability](/configuration/rack-parameters/aws/high_availability)           | Ensures high availability by creating a cluster with redundant resources. |
 | [idle_timeout](/configuration/rack-parameters/aws/idle_timeout)                     | Specifies the idle timeout value for the Rack Load Balancer.             |
 | [imds_http_tokens](/configuration/rack-parameters/aws/imds_http_tokens)             | Determines whether the Instance Metadata Service requires session tokens (IMDSv2). |
@@ -88,6 +96,7 @@ The following parameters are available for configuring your Convox rack on Amazo
 | [prometheus_url](/configuration/rack-parameters/aws/prometheus_url)                 | External Prometheus URL for KEDA autoscale and `convox ps` GPU enrichment. Must be set explicitly post-3.24.6 (no auto-resolution). |
 | [proxy_protocol](/configuration/rack-parameters/aws/proxy_protocol)                 | Enables the Proxy Protocol to track the original client IP address.      |
 | [public_subnets_ids](/configuration/rack-parameters/aws/public_subnets_ids)         | Specifies the IDs of public subnets to use for the Rack.                 |
+| [release_watcher_gc_interval](/configuration/rack-parameters/aws/release_watcher_gc_interval) | Controls how frequently the rack's release-watcher subsystem runs garbage collection on orphaned watcher slots. |
 | [releases_to_retain_after_active](/configuration/rack-parameters/aws/releases_to_retain_after_active) | Specifies the number of releases to retain after the currently active release. |
 | [releases_to_retain_task_run_interval_hour](/configuration/rack-parameters/aws/releases_to_retain_task_run_interval_hour) | Defines the interval in hours at which the release cleanup task runs. |
 | [schedule_rack_scale_down](/configuration/rack-parameters/aws/schedule_rack_scale_down) | Specifies the schedule for scaling down the rack.                        |

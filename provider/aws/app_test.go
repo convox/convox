@@ -48,7 +48,12 @@ func TestAppCreate(t *testing.T) {
 		for _, test := range tests {
 			fn := func(t *testing.T) {
 				aa := p.Atom.(*atom.MockInterface)
-				aa.On("Status", test.Namespace, "app").Return("Updating", "R1234567", nil).Twice()
+				// AppCreate now invokes p.Atom.Status three times: (1) inside
+				// ReleasePromote → AppGet → appFromNamespace, (2) the new
+				// release-watcher supersession-detection capture in
+				// ReleasePromote, (3) the final AppGet → appFromNamespace at
+				// the end of AppCreate.
+				aa.On("Status", test.Namespace, "app").Return("Updating", "R1234567", nil).Times(3)
 				aa.On("Apply", test.Namespace, "app", mock.Anything).Return(nil).Once().Run(func(args mock.Arguments) {
 					cfg := args.Get(2).(*atom.ApplyConfig)
 					requireYamlFixture(t, cfg.Template, "app.yml")

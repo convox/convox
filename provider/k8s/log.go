@@ -39,9 +39,9 @@ func (p *Provider) ServiceLogs(app, name string, opts structs.LogsOptions) (io.R
 // selector matches pods labeled `app=<app>,type=service`, omitting the
 // `name=<svc>` filter so all services are interleaved.
 //
-// Pre-3.24.6rc22 racks returned ErrNotImplemented here, so a user
-// running `convox logs -a my-app` saw no output and no error. Implementing
-// the selector-based fan-out fixes the empty-output regression — the
+// Earlier rack versions returned ErrNotImplemented here, so a user
+// running `convox logs -a my-app` saw no output and no error. The
+// selector-based fan-out fixes the empty-output regression — the
 // underlying kubectl/log infrastructure (newlogsConfigFlags + RunLogs)
 // is the same path ServiceLogs already uses, so the behaviour matches
 // `convox logs -a my-app -s <each>` interleaved.
@@ -71,7 +71,7 @@ func (p *Provider) streamPodLogs(app, selector string, opts structs.LogsOptions,
 	go func() {
 		if err := logOpts.RunLogs(); err != nil {
 			w.CloseWithError(err)
-			p.logger.At(logCtx).Errorf("%s err: %s", ctxDetail, err)
+			_ = p.logger.At(logCtx).Errorf("%s err: %s", ctxDetail, err)
 		} else {
 			p.logger.At(logCtx).Logf("complete")
 			w.CloseWithError(nil)

@@ -97,10 +97,10 @@ func TestAdminTokenContainsRWSubstrings_LiveMint(t *testing.T) {
 	assert.True(t, strings.Contains(data.Role, "w"), "Admin role must contain \"w\" for 3.24.5 rollback safety")
 }
 
-// TestVerify_ClaimsMissing_ReturnsErr — F-24 fix (catalog F-24).
-// The Verify path used to do unguarded type assertions on jwt.MapClaims,
-// which would panic the api pod if a malformed token (missing claim) hit
-// the path. Now every assertion is `, ok := ...` and returns an error.
+// TestVerify_ClaimsMissing_ReturnsErr verifies that the Verify path
+// surfaces a clean error rather than panicking when a malformed
+// token (missing claim) reaches it. Every type assertion is guarded
+// and returns an error rather than panicking.
 func TestVerify_ClaimsMissing_ReturnsErr(t *testing.T) {
 	jm := jwt.NewJwtManager("TEST")
 
@@ -117,11 +117,11 @@ func TestVerify_ClaimsMissing_ReturnsErr(t *testing.T) {
 	assert.Nil(t, data, "data must be nil on error")
 }
 
-// TestVerify_ClaimsWrongType_ReturnsErr — F-24 fix.
-// Tests the user/role-as-non-string path explicitly: the golang-jwt
-// library accepts arbitrary value types in MapClaims, so a malformed
-// token can present role=123 (int) where the code expects role=string.
-// The unguarded path used to panic; the guarded path returns an error.
+// TestVerify_ClaimsWrongType_ReturnsErr tests the user/role-as-non-
+// string path explicitly. The golang-jwt library accepts arbitrary
+// value types in MapClaims, so a malformed token can present
+// role=123 (int) where the code expects role=string. The guarded
+// path returns an error rather than panicking.
 func TestVerify_ClaimsWrongType_ReturnsErr(t *testing.T) {
 	jm := jwt.NewJwtManager("TEST")
 
