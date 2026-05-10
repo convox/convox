@@ -28,7 +28,7 @@ const (
 	// update at 3.25.0 release-cut. Day-name "Thu" is calendar-correct for
 	// 2026-10-01 — the format-guard test TestDeprecationSunsetDate_IsValidRFC7231
 	// re-parses via http.ParseTime so a future drift to a wrong day-name will
-	// be caught. Used by D.4's deprecationSunsetDate helper at
+	// be caught. Used by the deprecationSunsetDate helper at
 	// pkg/api/deprecation.go to populate the Sunset response header on
 	// AppBudget* override-detection paths.
 	SunsetDate3250 = "Thu, 01 Oct 2026 00:00:00 GMT"

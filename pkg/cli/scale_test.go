@@ -114,6 +114,7 @@ func TestScaleUpdateError(t *testing.T) {
 func TestScaleMinMax(t *testing.T) {
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
 		opts := structs.ServiceUpdateOptions{Min: options.Int(1), Max: options.Int(5)}
+		i.On("SystemGet").Return(&structs.System{Version: "3.24.6"}, nil)
 		i.On("ServiceUpdate", "app1", "web", opts).Return(nil)
 		i.On("AppGet", "app1").Return(fxApp(), nil)
 		i.On("AppLogs", "app1", mock.Anything).Return(testLogs(fxLogsSystem()), nil)
@@ -121,6 +122,17 @@ func TestScaleMinMax(t *testing.T) {
 		res, err := testExecute(e, "scale web --min 1 --max 5 -a app1", nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code)
+	})
+}
+
+func TestScaleMinMaxRefusedOnPre3246Rack(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(&structs.System{Version: "3.24.5"}, nil)
+
+		res, err := testExecute(e, "scale web --min 1 --max 5 -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		require.Contains(t, res.Stderr, "rack version 3.24.6 or later")
 	})
 }
 
@@ -137,6 +149,7 @@ func TestScaleMinZeroDeadPodsFastFail(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		svc := *fxService()
 		svc.Name = "web"
+		i.On("SystemGet").Return(&structs.System{Version: "3.24.6"}, nil)
 		i.On("ServiceList", "app1").Return(structs.Services{svc}, nil)
 		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
@@ -167,6 +180,7 @@ func TestScaleMinGreaterThanMax(t *testing.T) {
 
 func TestScaleMinZeroServiceNotFound(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(&structs.System{Version: "3.24.6"}, nil)
 		i.On("ServiceList", "app1").Return(structs.Services{*fxService()}, nil)
 		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 
@@ -183,6 +197,7 @@ func TestScaleMinZeroWithAutoscale(t *testing.T) {
 		svc := *fxService()
 		svc.Name = "web"
 		svc.Autoscale = &structs.ServiceAutoscaleState{Enabled: true, GpuThreshold: &gpu}
+		i.On("SystemGet").Return(&structs.System{Version: "3.24.6"}, nil)
 		i.On("ServiceList", "app1").Return(structs.Services{svc}, nil)
 		i.On("AppBudgetGet", "app1").Return(nil, nil, nil).Maybe()
 

@@ -52,7 +52,8 @@ var dispatchHookOverridden = false
 
 // isTestDispatchHookActive reports whether a test has installed a
 // (url, body) dispatcher via SetDispatchWebhookFnForTest. Used by the
-// safely-wrapper to preserve test-stub semantics for pre-D.2 callers.
+// safely-wrapper to preserve test-stub semantics for legacy unsigned
+// dispatcher callers.
 func isTestDispatchHookActive() bool {
 	return dispatchHookOverridden
 }
@@ -286,8 +287,8 @@ func dispatchWebhookSafely(url string, body []byte, signingKeys [][]byte, timeou
 		return
 	}
 
-	// Test stubs that pre-date D.2 install via SetDispatchWebhookFnForTest
-	// and use the unsigned (url, body) signature. If a test stub has been
+	// Legacy test stubs install via SetDispatchWebhookFnForTest and use
+	// the unsigned (url, body) signature. If a test stub has been
 	// installed that replaces dispatchWebhookFn, route through it so the
 	// stub's behavior (panic, error, count) is preserved. Production
 	// always reaches the signed path because dispatchWebhookFn is the
@@ -320,9 +321,9 @@ func redactErrorURL(err error, raw string) string {
 	return err.Error()
 }
 
-// dispatchWebhook is the unsigned production dispatcher kept for tests
-// that pre-date D.2 (they install via SetDispatchWebhookFnForTest using
-// the (url, body) signature). It delegates to dispatchWebhookSigned with
+// dispatchWebhook is the unsigned production dispatcher kept for legacy
+// tests that install via SetDispatchWebhookFnForTest using the
+// (url, body) signature. It delegates to dispatchWebhookSigned with
 // nil keys and the package-default timeout — so wire-format is
 // byte-identical to 3.24.5 and SetWebhookClientTimeoutForTest semantics
 // are preserved for legacy callers.
@@ -331,9 +332,9 @@ func dispatchWebhook(url string, body []byte) error {
 }
 
 // dispatchWebhookSigned posts body to url and, when signingKeys is
-// non-empty, sets the Convox-Signature header. B.1's defer-recover scope
-// is owned by dispatchWebhookSafely above; HMAC sign runs here AFTER the
-// recover engages and BEFORE client.Do, so a hmac panic is caught.
+// non-empty, sets the Convox-Signature header. The defer-recover scope
+// is owned by dispatchWebhookSafely above; HMAC sign runs here AFTER
+// the recover engages and BEFORE client.Do, so a hmac panic is caught.
 //
 // timeout is the per-URL dispatch deadline. Zero means "use the
 // package-default webhookClientTimeout"; non-zero values come from

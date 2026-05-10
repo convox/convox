@@ -110,12 +110,12 @@ func (s *Server) authenticate(next stdapi.HandlerFunc) stdapi.HandlerFunc {
 			// Pure JWT-write callers (third-party integrations using
 			// WriteToken) still hit the rw role and stay correctly gated.
 			SetAdminRole(c)
-			// Audit: basic-auth callers (rack-password) have no JWT identity, so
-			// stash the literal "rack-password" sentinel for ContextActor /
-			// EventSend audit-event derivation. The literal is uniquely greppable
-			// (no other "rack-password" string in the rack source path) and
-			// distinct from the empty-JWT-user "unknown" fallback. See D.4 spec
-			// set-d4-e1-spec-v2.md §B.1.1.
+			// Audit: basic-auth callers (rack-password) have no JWT identity,
+			// so stash the literal "rack-password" sentinel for ContextActor /
+			// EventSend audit-event derivation. The literal is uniquely
+			// greppable (no other "rack-password" string in the rack source
+			// path) and is distinct from the empty-JWT-user "unknown"
+			// fallback.
 			//
 			// Caller-supplied actor header (Console3-driven flow). When the
 			// basic-auth caller (Console3 today, possibly other clients in the

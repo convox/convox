@@ -510,9 +510,9 @@ func (p *Provider) Start() error {
 		// RACK_NAME env leading to a "-system" bogus namespace.
 		leaseNs := p.Namespace
 		if err := RunUsingLeaderElection(context.Background(), leaseNs, budgetLeaseName, p.Cluster, p.runBudgetAccumulator, func() {
-			// Lifecycle observability (B.3): include the timestamp and
-			// pod identity so an operator scanning api-pod logs across
-			// a rack rotation can correlate a leadership loss with the
+			// Lifecycle observability: include the timestamp and pod
+			// identity so an operator scanning api-pod logs across a
+			// rack rotation can correlate a leadership loss with the
 			// specific pod that gave up the lease and when. Identifier
 			// matches the elector's resourcelock identity (os.Hostname).
 			identity, _ := os.Hostname()
