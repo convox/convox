@@ -740,11 +740,11 @@ func startOfMonth(t time.Time) time.Time {
 // loss) interleaves with the for-select instead of waiting for the tick
 // to complete synchronously. On ctx.Done the loop calls wg.Wait() with a
 // budgetTickShutdownGrace deadline; if the in-flight tick honors ctx
-// cancellation through the threaded ctx (B.2), wg.Wait returns promptly
-// and the loop logs at=stop. If the tick is wedged past the grace
-// window, the loop logs at=shutdown_timeout and returns anyway --
-// blocking the api pod indefinitely on a stuck k8s call would defeat
-// graceful shutdown.
+// cancellation through the threaded ctx, wg.Wait returns promptly and
+// the loop logs at=stop. If the tick is wedged past the grace window,
+// the loop logs at=shutdown_timeout and returns anyway -- blocking the
+// api pod indefinitely on a stuck k8s call would defeat graceful
+// shutdown.
 func (p *Provider) runBudgetAccumulator(ctx context.Context) {
 	interval := budgetDefaultPollInterval
 	if v := os.Getenv("BUDGET_POLL_INTERVAL"); v != "" {
@@ -849,7 +849,7 @@ func (p *Provider) accumulateBudgetTick(ctx context.Context) error {
 	now := time.Now().UTC()
 
 	for i := range ns.Items {
-		// B.3: abort the per-app walk promptly if ctx cancels mid-tick
+		// Abort the per-app walk promptly if ctx cancels mid-tick
 		// (api-pod SIGTERM, leadership loss). Without this check the
 		// loop would walk every namespace before noticing cancellation
 		// since the per-app k8s calls are the only natural cancellation
@@ -873,8 +873,8 @@ func (p *Provider) accumulateBudgetApp(ctx context.Context, app string, now time
 	nsName := p.AppNamespace(app)
 
 	for i := 0; i < budgetWriteConflictRetries; i++ {
-		// B.3: abort the retry loop promptly if ctx cancels between
-		// retries (e.g. shutdown arrives during a backoff after a write
+		// Abort the retry loop promptly if ctx cancels between retries
+		// (e.g. shutdown arrives during a backoff after a write
 		// conflict). The Namespaces().Get below also honors ctx, but
 		// checking here surfaces ctx.Err() as the return value rather
 		// than burying it inside an errors.WithStack of an HTTP error.

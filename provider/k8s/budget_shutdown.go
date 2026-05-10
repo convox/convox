@@ -933,12 +933,12 @@ func (p *Provider) restoreFromAnnotation(ctx context.Context, app, ackBy string,
 // The returned value is what lands in the `actor` field of every
 // lifecycle event payload.
 //
-// Per D.3 (commit f68fe4db8 2026-04-22): Provider.ContextActor() reads the
-// JWT user claim from p.ctx and falls back to "unknown" when no actor is
-// available. We map "unknown" -> "system" here so :armed/:fired payloads
-// (always tick-driven, never JWT-bound) carry the canonical "system"
-// actor. CLI-driven paths (simulate, dismiss-recovery, reset) override
-// this with their own ackBy value at the call site.
+// Provider.ContextActor() reads the JWT user claim from p.ctx and falls
+// back to "unknown" when no actor is available. We map "unknown" ->
+// "system" here so :armed/:fired payloads (always tick-driven, never
+// JWT-bound) carry the canonical "system" actor. CLI-driven paths
+// (simulate, dismiss-recovery, reset) override this with their own
+// ackBy value at the call site.
 func (p *Provider) auditActor() string {
 	a := p.ContextActor()
 	if a == "" || a == "unknown" {

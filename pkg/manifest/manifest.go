@@ -261,7 +261,7 @@ func (m *Manifest) ApplyDefaults() error {
 			m.Services[i].Ports = filtered
 		}
 
-		// F.1 — populate AutoscaleMode discriminators from parent slot name.
+		// Populate AutoscaleMode discriminators from parent slot name.
 		// User YAML does not set `mode:`; we derive it post-load so that
 		// downstream code can switch on `a.Cpu.Mode` etc. without inspecting
 		// which pointer is non-nil.

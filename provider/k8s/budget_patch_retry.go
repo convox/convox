@@ -26,12 +26,13 @@ const patchWithRetryAttempts = 3
 var patchWithRetryBackoffsForTest = []time.Duration{1 * time.Second, 4 * time.Second}
 
 // patchAttemptTimeoutForTest bounds each individual Patch call so a hung
-// K8s API server can't hold the per-app advisory lock indefinitely. F-26
-// previously relied on the caller's ctx for cancellation; under typical
-// rack invocation the caller passes context.Background(), giving an
-// effectively unbounded deadline. 30 s is well above any healthy K8s
-// admission/validation latency and bounds worst-case lock-hold to ~90 s
-// across all 3 attempts. Tests override to 0 to skip timing.
+// K8s API server can't hold the per-app advisory lock indefinitely.
+// Earlier patch invocations relied on the caller's ctx for cancellation;
+// under typical rack invocation the caller passes context.Background(),
+// giving an effectively unbounded deadline. 30 s is well above any
+// healthy K8s admission/validation latency and bounds worst-case
+// lock-hold to ~90 s across all 3 attempts. Tests override to 0 to skip
+// timing.
 var patchAttemptTimeoutForTest = 30 * time.Second
 
 // classifyPatchError maps a Kubernetes API error onto one of the canonical

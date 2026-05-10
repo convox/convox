@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/convox/convox/pkg/common"
@@ -39,6 +40,37 @@ func scaleOptsImperative(opts structs.ServiceUpdateOptions) bool {
 		opts.Min != nil || opts.Max != nil
 }
 
+// scaleRackAtLeast3246 reports whether the rack version string parses
+// to 3.24.6 or later. Strips a leading "v", drops any -prerelease or
+// +build suffix, then compares major.minor.patch. Conservatively returns
+// false on parse error so an unparseable version does not bypass the
+// range-mode gate.
+func scaleRackAtLeast3246(version string) bool {
+	v := strings.TrimPrefix(version, "v")
+	if i := strings.IndexAny(v, "-+"); i >= 0 {
+		v = v[:i]
+	}
+	parts := strings.Split(v, ".")
+	if len(parts) < 3 {
+		return false
+	}
+	nums := [3]int{}
+	for i := 0; i < 3; i++ {
+		n, err := strconv.Atoi(parts[i])
+		if err != nil {
+			return false
+		}
+		nums[i] = n
+	}
+	target := [3]int{3, 24, 6}
+	for i := 0; i < 3; i++ {
+		if nums[i] != target[i] {
+			return nums[i] > target[i]
+		}
+	}
+	return true
+}
+
 func Scale(rack sdk.Interface, c *stdcli.Context) error {
 	var opts structs.ServiceUpdateOptions
 
@@ -61,6 +93,23 @@ func Scale(rack sdk.Interface, c *stdcli.Context) error {
 		}
 
 		service := c.Arg(0)
+
+		// Range mode (--min / --max) is a 3.24.6+ rack-side surface.
+		// Older racks silently ignore unknown JSON fields, leaving the
+		// CLI claiming success while the rack does nothing. Probe the
+		// rack version and surface a clean upgrade-required error
+		// instead of letting the user think the scale change applied.
+		// --count is the long-standing wire surface; skip the probe so
+		// existing scripts targeting older racks keep working.
+		if opts.Min != nil || opts.Max != nil {
+			sys, err := rack.SystemGet()
+			if err != nil {
+				return err
+			}
+			if !scaleRackAtLeast3246(sys.Version) {
+				return fmt.Errorf("--min / --max range scale requires rack version 3.24.6 or later; rack reports %q", sys.Version)
+			}
+		}
 
 		if opts.Min != nil && *opts.Min == 0 {
 			if err := scalePreflightDeadPods(rack, c, service); err != nil {
