@@ -41,10 +41,10 @@ func scaleOptsImperative(opts structs.ServiceUpdateOptions) bool {
 }
 
 // scaleRackAtLeast3246 reports whether the rack version string parses
-// to 3.24.6 or later. Strips a leading "v", drops any -prerelease or
-// +build suffix, then compares major.minor.patch. Conservatively returns
-// false on parse error so an unparseable version does not bypass the
-// range-mode gate.
+// to 3.24.6 or later. Strips a leading "v" and any prerelease or
+// build-metadata suffix (semver "-" / "+" markers), then compares
+// major.minor.patch. Conservatively returns false on parse error so
+// an unparseable version does not bypass the range-mode gate.
 func scaleRackAtLeast3246(version string) bool {
 	v := strings.TrimPrefix(version, "v")
 	if i := strings.IndexAny(v, "-+"); i >= 0 {
