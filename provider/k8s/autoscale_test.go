@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	ac "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -124,13 +125,129 @@ func TestServiceUpdateDeadPodsGuard(t *testing.T) {
 	})
 }
 
-// TestServiceUpdateMinFallbackToDeploymentReplicas: when no KEDA ScaledObject
-// owns the service (rack has keda_enable=false OR the manifest declares no
-// autoscale block), a range-mode min/max apply must fall through to a direct
-// Deployment.Spec.Replicas patch using opts.Min as the floor. Otherwise the
-// request silently no-ops, which is the failure mode reported in the live
-// rack repro.
-func TestServiceUpdateMinFallbackToDeploymentReplicas(t *testing.T) {
+// TestServiceUpdateRangeWithoutScaledObject_KedaDisabledPromptsKedaEnable:
+// when the rack has keda_enable=false (Provider.IsKedaEnabled=false), the
+// range-mode error must direct the user to enable KEDA (the actionable
+// fix) rather than tell them to add scale.autoscale (which they may
+// already have).
+func TestServiceUpdateRangeWithoutScaledObject_KedaDisabledPromptsKedaEnable(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 1)
+
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
+		// IsKedaEnabled defaults to false in testProvider — explicit
+		// for clarity.
+		p.IsKedaEnabled = false
+
+		err := p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{Min: options.Int(3), Max: options.Int(10)})
+		require.Error(t, err)
+		require.True(t, strings.Contains(err.Error(), "requires KEDA on this rack"), err.Error())
+		require.True(t, strings.Contains(err.Error(), "convox rack params set keda_enable=true"), err.Error())
+
+		d, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, int32(1), *d.Spec.Replicas, "rejected request must NOT mutate replicas")
+	})
+}
+
+// TestServiceUpdateRangeWithoutScaledObject_KedaEnabledPromptsAutoscaleBlock:
+// when the rack has KEDA enabled but the service's manifest has no
+// scale.autoscale block (so no ScaledObject was created at deploy), the
+// error must direct the user to add the autoscale block. Distinct error
+// text from the keda-disabled branch so the user sees the actionable fix.
+func TestServiceUpdateRangeWithoutScaledObject_KedaEnabledPromptsAutoscaleBlock(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 1)
+
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
+		p.IsKedaEnabled = true
+
+		err := p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{Min: options.Int(3), Max: options.Int(10)})
+		require.Error(t, err)
+		require.True(t, strings.Contains(err.Error(), "requires an autoscale block"), err.Error())
+		require.True(t, strings.Contains(err.Error(), "scale.autoscale"), err.Error())
+
+		d, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, int32(1), *d.Spec.Replicas, "rejected request must NOT mutate replicas")
+	})
+}
+
+// TestServiceUpdateRange_KEDA_CRD_Absent_FallsThroughToFriendlyError verifies
+// the meta.IsNoMatchError handling in serviceUpdateScaledObject. On a rack
+// where KEDA was never installed (keda_enable=false), the apiserver lacks
+// the ScaledObject CRD entirely and the dynamic-client Get returns a
+// meta.NoKindMatchError rather than an IsNotFound. Without the
+// IsNoMatchError guard the raw "no matches for kind" string surfaces in
+// the user-facing error toast — the friendly KEDA-disabled message is
+// what the user actually needs to see.
+func TestServiceUpdateRange_KEDA_CRD_Absent_FallsThroughToFriendlyError(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 1)
+
+		dyn := fake.NewSimpleDynamicClient(newDynamicScheme())
+		// Inject a NoKindMatchError on Get for the SO GVR. Mirrors what
+		// the production dynamic client returns when the ScaledObject
+		// CRD is absent from the apiserver's discovery cache.
+		dyn.PrependReactor("get", "scaledobjects", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+			return true, nil, &meta.NoKindMatchError{
+				GroupKind:        schema.GroupKind{Group: "keda.sh", Kind: "ScaledObject"},
+				SearchedVersions: []string{"v1alpha1"},
+			}
+		})
+		p.DynamicClient = dyn
+		p.IsKedaEnabled = false
+
+		err := p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{Min: options.Int(3), Max: options.Int(10)})
+		require.Error(t, err)
+		// Friendly message — NOT the raw "no matches for kind ScaledObject" string.
+		require.True(t, strings.Contains(err.Error(), "requires KEDA on this rack"), err.Error())
+		require.False(t, strings.Contains(err.Error(), "no matches for kind"), err.Error())
+	})
+}
+
+// TestServiceUpdateCount_KEDA_CRD_Absent_FallsThroughToReplicaPatch verifies
+// the parallel meta.IsNoMatchError handling in serviceUpdateCount. Fixed-
+// count scaling on a KEDA-CRD-absent rack must succeed via deployment-
+// replica patch; without the guard the raw "no matches for kind" error
+// surfaces from `convox scale --count N` and the Console Fixed mode.
+func TestServiceUpdateCount_KEDA_CRD_Absent_FallsThroughToReplicaPatch(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 1)
+
+		dyn := fake.NewSimpleDynamicClient(newDynamicScheme())
+		dyn.PrependReactor("get", "scaledobjects", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+			return true, nil, &meta.NoKindMatchError{
+				GroupKind:        schema.GroupKind{Group: "keda.sh", Kind: "ScaledObject"},
+				SearchedVersions: []string{"v1alpha1"},
+			}
+		})
+		p.DynamicClient = dyn
+
+		err := p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{Count: options.Int(4)})
+		require.NoError(t, err)
+
+		d, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, int32(4), *d.Spec.Replicas, "count-only without ScaledObject must patch Deployment.Spec.Replicas to opts.Count")
+	})
+}
+
+// TestServiceUpdateMinOnlyFallbackToDeploymentReplicas: --min N (no --max) is
+// the long-standing CLI convention. When no ScaledObject owns the service
+// the rack falls back to patching Deployment.Spec.Replicas to opts.Min so
+// `convox scale --min N` keeps working on services without an autoscale
+// block (preserves pre-3.24.6 behavior). Range mode (min AND max) is the
+// path that errors — see TestServiceUpdateRangeWithoutScaledObjectErrors.
+func TestServiceUpdateMinOnlyFallbackToDeploymentReplicas(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*kfake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
@@ -138,12 +255,12 @@ func TestServiceUpdateMinFallbackToDeploymentReplicas(t *testing.T) {
 
 		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
 
-		err := p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{Min: options.Int(3), Max: options.Int(10)})
+		err := p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{Min: options.Int(3)})
 		require.NoError(t, err)
 
 		d, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
 		require.NoError(t, err)
-		require.Equal(t, int32(3), *d.Spec.Replicas, "min/max without ScaledObject must patch Deployment.Spec.Replicas to opts.Min (the floor)")
+		require.Equal(t, int32(3), *d.Spec.Replicas, "--min-only without ScaledObject must patch Deployment.Spec.Replicas to opts.Min (back-compat)")
 	})
 }
 

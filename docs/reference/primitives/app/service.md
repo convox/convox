@@ -399,6 +399,7 @@ See [Health Checks](/configuration/health-checks) for configuring readiness, liv
 | **gpu**     | map    |         | The number/type of GPUs to reserve for [Processes](/reference/primitives/app/process) of this Service  |
 | **memory**  | number | 512     | The number of MB of RAM to reserve for [Processes](/reference/primitives/app/process) of this Service                                |
 | **targets** | map    |         | Target metrics to trigger autoscaling |
+| **autoscale** | map  |         | Structured autoscale configuration. Sub-keys: `cpu`, `memory`, `gpuUtilization`, `queueDepth`, `custom` (each with a `threshold` value), plus optional `cooldownPeriod` / `pollingInterval`. The Console Service > Scaling page reads this to enable Range mode. Requires the rack-side `keda_enable=true` parameter. |
 | **keda** | map    |         | KEDA event-driven autoscaling configuration. See [KEDA](/configuration/scaling/keda) |
 | **vpa** | map    |         | Vertical Pod Autoscaler configuration. See [VPA](/configuration/scaling/vpa) |
 | **limit** | map    |         | The maximum cpu or memory usage limit |

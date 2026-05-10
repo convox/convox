@@ -59,7 +59,7 @@ not loop forever printing the same error.
 | `--gpu` | Number of GPU devices to reserve per pod |
 | `--gpu-vendor` | GPU vendor. Supported: `nvidia` (default), `amd` |
 | `--min` | Minimum replica count. With autoscale configured, sets the autoscale floor. Without autoscale (3.24.6+), patches the deployment replica count directly — useful for short-lived overrides without editing convox.yml. |
-| `--max` | Maximum replica count when autoscale is configured. No-op without autoscale. |
+| `--max` | Maximum replica count when autoscale is configured. Combined with `--min`, requires the service to declare `scale.autoscale` (or `scale.keda`) in convox.yml — without an autoscale block the rack returns an error directing you to add one or use `--count` for a fixed replica count. |
 
 ### Output Table
 

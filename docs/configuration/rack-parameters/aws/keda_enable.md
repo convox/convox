@@ -25,6 +25,8 @@ Setting parameters... OK
 ```
 
 ## Additional Information
-Enabling KEDA installs the KEDA operator and its components in the cluster. Once enabled, services can use the `scale.keda` section in their `convox.yml` to define event-driven scaling triggers.
+Enabling KEDA installs the KEDA operator and its components in the cluster. Once enabled, services can use the `scale.keda` or `scale.autoscale` sections in their `convox.yml` to define autoscaling triggers.
+
+The Console **Service > Scaling** page reads this parameter to gate Range mode (min/max replica editing). When `keda_enable=false` the page surfaces the enable command in an empty-state card; when `keda_enable=true` and the service has a `scale.autoscale` block, Range mode becomes available for adjusting bounds without re-deploying. Services without a `scale.autoscale` (or `scale.keda`) block can still be scaled via Fixed count regardless of this parameter — KEDA only gates the autoscale path, not classic `count: 1-N` bounded scaling.
 
 See [KEDA Autoscaling](/configuration/scaling/keda) for service configuration details.

@@ -15,6 +15,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -493,15 +494,31 @@ func (p *Provider) ServiceUpdate(app, name string, opts structs.ServiceUpdateOpt
 		if err != nil {
 			return err
 		}
-		// No KEDA ScaledObject owns this service (rack has keda_enable=false,
-		// or the manifest declares no autoscale block). Honor the user's
-		// intent by patching the Deployment's replica count to opts.Min so
-		// the floor is respected. Without this fallback, range-mode min/max
-		// silently no-ops on services whose convox.yml has no scale.autoscale
-		// block — which is the overwhelming majority of services.
-		if !handled && opts.Min != nil {
-			c := int32(*opts.Min) //nolint:gosec // replica counts are user-validated and bounded
-			d.Spec.Replicas = &c
+		if !handled {
+			// No KEDA ScaledObject owns this service. Two distinct
+			// causes — surface the actionable one:
+			//   - rack-level KEDA disabled: tell the user to enable
+			//     keda_enable, since their manifest may already
+			//     declare scale.autoscale.
+			//   - rack-level KEDA enabled but service has no
+			//     scale.autoscale block: tell the user to add the block.
+			// Patching only the deployment replica count would
+			// silently drop opts.Max and mislead the caller; an
+			// explicit error is the only honest outcome.
+			if opts.Max != nil {
+				if !p.IsKedaEnabled {
+					return fmt.Errorf("range scaling (min/max) requires KEDA on this rack; run `convox rack params set keda_enable=true` and re-deploy (or use --count for a fixed replica count)")
+				}
+				return fmt.Errorf("range scaling (min/max) requires an autoscale block in convox.yml; set scale.autoscale (or use --count for a fixed replica count)")
+			}
+			// --min-only fallback (no max requested): honor the floor by
+			// patching the Deployment's replica count to opts.Min so the
+			// long-standing `convox scale --min N` workflow continues to
+			// work for services without an autoscale block.
+			if opts.Min != nil {
+				c := int32(*opts.Min) //nolint:gosec // replica counts are user-validated and bounded
+				d.Spec.Replicas = &c
+			}
 		}
 	}
 
@@ -654,7 +671,17 @@ func (p *Provider) serviceUpdateScaledObject(app, name string, opts structs.Serv
 
 	_, getErr := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Get(context.TODO(), name, am.GetOptions{})
 	hasScaledObject := getErr == nil
-	if getErr != nil && !kerr.IsNotFound(getErr) {
+	// Treat "ScaledObject CRD not registered" (KEDA never installed on
+	// this rack — keda_enable=false) the same as "ScaledObject not
+	// found" (KEDA installed but this service has no SO). Both mean
+	// the SO path can't take ownership; the caller falls through to
+	// the friendly "scale.autoscale required" error (range mode) or
+	// the min-only deployment-replica fallback. Without this branch
+	// the dynamic client surfaces a raw `meta.NoKindMatchError` ("no
+	// matches for kind \"ScaledObject\" in version \"keda.sh/v1alpha1\"")
+	// which is confusing for users who just see it in a CLI/Console
+	// toast.
+	if getErr != nil && !kerr.IsNotFound(getErr) && !meta.IsNoMatchError(getErr) {
 		return false, errors.WithStack(getErr)
 	}
 
@@ -700,6 +727,14 @@ func (p *Provider) serviceUpdateCount(app, name string, count int) (handled bool
 
 	_, getErr := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Get(context.TODO(), name, am.GetOptions{})
 	if kerr.IsNotFound(getErr) {
+		return false, nil
+	}
+	// "ScaledObject CRD not registered" (KEDA never installed —
+	// keda_enable=false) presents as meta.NoMatchError rather than
+	// IsNotFound. Treat it the same way the SO-not-found branch does
+	// so the caller falls back to a Deployment.Spec.Replicas patch
+	// instead of surfacing a raw `no matches for kind` error.
+	if meta.IsNoMatchError(getErr) {
 		return false, nil
 	}
 	if getErr != nil {
