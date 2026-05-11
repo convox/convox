@@ -180,6 +180,13 @@ func (p *Provider) ServiceTriggersEnable(app, service string, opts structs.Servi
 		return errors.WithStack(err)
 	}
 
+	minPatch := fmt.Sprintf(`{"spec":{"replicas":%d}}`, opts.Min)
+	if _, err := p.Cluster.AppsV1().Deployments(ns).Patch(
+		context.TODO(), service, types.StrategicMergePatchType,
+		[]byte(minPatch), am.PatchOptions{}); err != nil {
+		return errors.WithStack(err)
+	}
+
 	fmt.Printf("ns=service at=triggers-override-enable app=%s service=%s crd=%s min=%d max=%d ack_by=%q\n",
 		app, service, crdChoice, opts.Min, opts.Max, ackBy)
 

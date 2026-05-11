@@ -145,6 +145,25 @@ func TestServiceTriggersEnable_HPAPath_CPUOnly(t *testing.T) {
 	})
 }
 
+func TestServiceTriggersEnable_ResetsReplicasToMin(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 3)
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
+
+		opts := structs.ServiceTriggersOptions{
+			Min: 1, Max: 9,
+			Triggers: []structs.TriggerSpec{{Type: "cpu", Threshold: 70}},
+		}
+		require.NoError(t, p.ServiceTriggersEnable("app1", "web", opts, "alice"))
+
+		dep, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, int32(1), *dep.Spec.Replicas, "Enable must reset replicas to opts.Min")
+	})
+}
+
 func TestServiceTriggersEnable_HPAPath_CPUAndMemory(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*kfake.Clientset)
