@@ -79,7 +79,7 @@ func TestServiceTriggersDisable_HPAPath(t *testing.T) {
 		kk, _ := p.Cluster.(*kfake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 
-		seedDeployment(t, kk, "rack1-app1", "web", 1)
+		seedDeployment(t, kk, "rack1-app1", "web", 3)
 		dep, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
 		require.NoError(t, err)
 		dep.Annotations = map[string]string{
@@ -96,6 +96,7 @@ func TestServiceTriggersDisable_HPAPath(t *testing.T) {
 		require.NoError(t, err)
 
 		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
+		installManifestServiceHook(p, "app1", "web", 0)
 
 		err = p.ServiceTriggersDisable("app1", "web", "alice@example.com")
 		require.NoError(t, err)
@@ -109,6 +110,7 @@ func TestServiceTriggersDisable_HPAPath(t *testing.T) {
 		_, hasCRD := dep.Annotations[k8s.ServiceTriggersOverrideCRDAnnotation]
 		require.False(t, hasActive, "active annotation must be cleared")
 		require.False(t, hasCRD, "crd annotation must be cleared")
+		require.Equal(t, int32(1), *dep.Spec.Replicas, "replicas must reset to manifest min (floored to 1)")
 	})
 }
 
@@ -901,7 +903,7 @@ func TestServiceTriggersThresholdSet_NoOverride_Rejects(t *testing.T) {
 	})
 }
 
-func TestServiceTriggersThresholdSet_HPA_TriggerNotPresent_Rejects(t *testing.T) {
+func TestServiceTriggersThresholdSet_HPA_UpsertMemory(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*kfake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
@@ -915,8 +917,61 @@ func TestServiceTriggersThresholdSet_HPA_TriggerNotPresent_Rejects(t *testing.T)
 		require.NoError(t, p.ServiceTriggersEnable("app1", "web", opts, "alice"))
 
 		err := p.ServiceTriggersThresholdSet("app1", "web", "memory", 80, "alice")
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "not present")
+		require.NoError(t, err)
+
+		hpa, err := kk.AutoscalingV2().HorizontalPodAutoscalers("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		require.Len(t, hpa.Spec.Metrics, 2)
+
+		var foundCPU, foundMem bool
+		for _, m := range hpa.Spec.Metrics {
+			if m.Resource != nil && string(m.Resource.Name) == "cpu" {
+				foundCPU = true
+				require.Equal(t, int32(70), *m.Resource.Target.AverageUtilization)
+			}
+			if m.Resource != nil && string(m.Resource.Name) == "memory" {
+				foundMem = true
+				require.Equal(t, int32(80), *m.Resource.Target.AverageUtilization)
+			}
+		}
+		require.True(t, foundCPU, "CPU metric must be present")
+		require.True(t, foundMem, "memory metric must be upserted")
+	})
+}
+
+func TestServiceTriggersThresholdSet_HPA_UpsertCPU(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 1)
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
+
+		opts := structs.ServiceTriggersOptions{
+			Min: 1, Max: 5,
+			Triggers: []structs.TriggerSpec{{Type: "memory", Threshold: 80}},
+		}
+		require.NoError(t, p.ServiceTriggersEnable("app1", "web", opts, "alice"))
+
+		err := p.ServiceTriggersThresholdSet("app1", "web", "cpu", 65, "alice")
+		require.NoError(t, err)
+
+		hpa, err := kk.AutoscalingV2().HorizontalPodAutoscalers("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		require.Len(t, hpa.Spec.Metrics, 2)
+
+		var foundCPU, foundMem bool
+		for _, m := range hpa.Spec.Metrics {
+			if m.Resource != nil && string(m.Resource.Name) == "cpu" {
+				foundCPU = true
+				require.Equal(t, int32(65), *m.Resource.Target.AverageUtilization)
+			}
+			if m.Resource != nil && string(m.Resource.Name) == "memory" {
+				foundMem = true
+				require.Equal(t, int32(80), *m.Resource.Target.AverageUtilization)
+			}
+		}
+		require.True(t, foundCPU, "CPU metric must be upserted")
+		require.True(t, foundMem, "memory metric must be present")
 	})
 }
 
@@ -925,7 +980,7 @@ func TestServiceTriggersDisable_KedaPath(t *testing.T) {
 		kk, _ := p.Cluster.(*kfake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 
-		seedDeployment(t, kk, "rack1-app1", "web", 1)
+		seedDeployment(t, kk, "rack1-app1", "web", 4)
 		dep, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
 		require.NoError(t, err)
 		dep.Annotations = map[string]string{
@@ -937,6 +992,7 @@ func TestServiceTriggersDisable_KedaPath(t *testing.T) {
 
 		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme(),
 			scaledObjectUnstructured("rack1-app1", "web", 1, 5))
+		installManifestServiceHook(p, "app1", "web", 0)
 
 		err = p.ServiceTriggersDisable("app1", "web", "alice@example.com")
 		require.NoError(t, err)
@@ -948,6 +1004,7 @@ func TestServiceTriggersDisable_KedaPath(t *testing.T) {
 		require.NoError(t, err)
 		_, hasActive := dep.Annotations[k8s.ServiceTriggersOverrideAnnotation]
 		require.False(t, hasActive)
+		require.Equal(t, int32(1), *dep.Spec.Replicas, "replicas must reset to manifest min (floored to 1)")
 	})
 }
 
@@ -1049,6 +1106,7 @@ func TestServiceTriggers_Orthogonality_ScaleOverridePreserved(t *testing.T) {
 		}
 		_, err = kk.AutoscalingV2().HorizontalPodAutoscalers("rack1-app1").Create(context.TODO(), hpa, am.CreateOptions{})
 		require.NoError(t, err)
+		installManifestServiceHook(p, "app1", "web", 0)
 
 		require.NoError(t, p.ServiceTriggersDisable("app1", "web", "alice"))
 
@@ -1435,6 +1493,7 @@ func TestServiceTriggersDisable_CorruptionRecovery_NoCRDAnnotation(t *testing.T)
 		}
 		_, err = kk.AutoscalingV2().HorizontalPodAutoscalers("rack1-app1").Create(context.TODO(), hpa, am.CreateOptions{})
 		require.NoError(t, err)
+		installManifestServiceHook(p, "app1", "web", 0)
 
 		require.NoError(t, p.ServiceTriggersDisable("app1", "web", "alice"))
 
@@ -1462,7 +1521,7 @@ func TestServiceTriggersEnable_GPU_PrometheusEmpty_Rejects(t *testing.T) {
 		}
 		err := p.ServiceTriggersEnable("app1", "web", opts, "alice")
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "Prometheus")
+		require.Contains(t, err.Error(), "GPU Telemetry")
 	})
 }
 
@@ -1481,7 +1540,7 @@ func TestServiceTriggersEnable_Queue_PrometheusEmpty_Rejects(t *testing.T) {
 		}
 		err := p.ServiceTriggersEnable("app1", "web", opts, "alice")
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "Prometheus")
+		require.Contains(t, err.Error(), "GPU Telemetry")
 	})
 }
 
@@ -1504,7 +1563,7 @@ func TestServiceTriggersEnable_MixedGPUCPU_PrometheusEmpty_Rejects(t *testing.T)
 		}
 		err := p.ServiceTriggersEnable("app1", "web", opts, "alice")
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "Prometheus")
+		require.Contains(t, err.Error(), "GPU Telemetry")
 	})
 }
 

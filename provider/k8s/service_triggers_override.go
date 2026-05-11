@@ -97,7 +97,7 @@ func (p *Provider) ServiceTriggersEnable(app, service string, opts structs.Servi
 		if promURL == "" {
 			for _, t := range opts.Triggers {
 				if t.Type == structs.TriggerTypeGPUUtilization || t.Type == structs.TriggerTypeQueueDepth {
-					return fmt.Errorf("GPU and inference queue triggers require a Prometheus endpoint. Set the prometheus_url rack parameter: convox rack params set prometheus_url=<url>")
+					return fmt.Errorf("GPU and inference queue triggers require GPU Telemetry. Enable it on the rack settings page or set prometheus_url directly: convox rack params set prometheus_url=<url>")
 				}
 			}
 		}
@@ -280,7 +280,7 @@ func (p *Provider) applyTriggersKEDA(app, ns, service string, opts structs.Servi
 	if promURL == "" {
 		for _, t := range opts.Triggers {
 			if t.Type == structs.TriggerTypeGPUUtilization || t.Type == structs.TriggerTypeQueueDepth {
-				return fmt.Errorf("GPU and inference queue triggers require a Prometheus endpoint; set prometheus_url on the rack")
+				return fmt.Errorf("GPU and inference queue triggers require GPU Telemetry; enable it on the rack settings page or set prometheus_url directly")
 			}
 		}
 	}
@@ -634,6 +634,18 @@ func (p *Provider) ServiceTriggersDisable(app, service, ackBy string) error {
 		return errors.WithStack(err)
 	}
 
+	ms, msErr := p.serviceManifestService(app, service)
+	if msErr == nil && ms != nil {
+		manifestCount := int32(ms.Scale.Count.Min)
+		if manifestCount < 1 {
+			manifestCount = 1
+		}
+		scalePatch := fmt.Sprintf(`{"spec":{"replicas":%d}}`, manifestCount)
+		_, _ = p.Cluster.AppsV1().Deployments(ns).Patch(
+			context.TODO(), service, types.StrategicMergePatchType,
+			[]byte(scalePatch), am.PatchOptions{})
+	}
+
 	fmt.Printf("ns=service at=triggers-override-disable app=%s service=%s crd=%s ack_by=%q\n",
 		app, service, crd, ackBy)
 
@@ -733,7 +745,17 @@ func (p *Provider) patchHPAThreshold(ns, service, triggerType string, threshold 
 		}
 	}
 	if !updated {
-		return fmt.Errorf("trigger %q not present on this HPA; enable it first via service triggers enable", triggerType)
+		v := int32(threshold)
+		hpa.Spec.Metrics = append(hpa.Spec.Metrics, autoscalingv2.MetricSpec{
+			Type: autoscalingv2.ResourceMetricSourceType,
+			Resource: &autoscalingv2.ResourceMetricSource{
+				Name: corev1.ResourceName(triggerType),
+				Target: autoscalingv2.MetricTarget{
+					Type:               autoscalingv2.UtilizationMetricType,
+					AverageUtilization: &v,
+				},
+			},
+		})
 	}
 	if _, err := p.Cluster.AutoscalingV2().HorizontalPodAutoscalers(ns).Update(context.TODO(), hpa, am.UpdateOptions{}); err != nil {
 		return errors.WithStack(err)
