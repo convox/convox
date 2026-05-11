@@ -34,6 +34,7 @@ type NodeController struct {
 	provider   *Provider
 	controller *kctl.Controller
 
+	stopMu sync.Mutex
 	stopCh chan struct{}
 	nodeCh chan string
 
@@ -48,7 +49,6 @@ type NodeController struct {
 func NewNodeController(p *Provider) (*NodeController, error) {
 	nc := &NodeController{
 		provider:     p,
-		stopCh:       make(chan struct{}),
 		nodeCh:       make(chan string, 50),
 		nodeMap:      &sync.Map{},
 		logger:       logger.New("ns=node-controller"),
@@ -87,11 +87,56 @@ func (c *NodeController) Run() {
 func (c *NodeController) Start() error {
 	c.start = time.Now().UTC()
 
+	c.stopMu.Lock()
+	if c.stopCh != nil {
+		close(c.stopCh)
+	}
+	c.stopCh = make(chan struct{})
+	stopCh := c.stopCh
+	c.stopMu.Unlock()
+
+	go c.runGpuLabelReconciler(stopCh)
+
 	return nil
 }
 
 func (c *NodeController) Stop() error {
+	c.stopMu.Lock()
+	if c.stopCh != nil {
+		close(c.stopCh)
+		c.stopCh = nil
+	}
+	c.stopMu.Unlock()
+
 	return nil
+}
+
+func (c *NodeController) runGpuLabelReconciler(stopCh <-chan struct{}) {
+	c.ReconcileGpuLabels()
+
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			c.ReconcileGpuLabels()
+		case <-stopCh:
+			return
+		}
+	}
+}
+
+func (c *NodeController) ReconcileGpuLabels() {
+	nodes, err := c.provider.Cluster.CoreV1().Nodes().List(c.provider.ctx, am.ListOptions{})
+	if err != nil {
+		c.logger.Errorf("failed to list nodes for gpu label reconciliation: %s", err)
+		return
+	}
+
+	for i := range nodes.Items {
+		c.AddGpuLabel(&nodes.Items[i])
+	}
 }
 
 func (c *NodeController) Add(obj interface{}) error {
