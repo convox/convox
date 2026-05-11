@@ -125,6 +125,13 @@ func SanitizeAckByForTest(s string) string {
 	return sanitizeAckBy(s)
 }
 
+// TriggersCRDChoiceForTest exposes the internal triggersCRDChoice CRD
+// dispatcher for blackbox tests in package k8s_test. Returns "keda" when
+// any trigger is gpuUtilization or queueDepth; "hpa" otherwise.
+func TriggersCRDChoiceForTest(triggers []structs.TriggerSpec) string {
+	return triggersCRDChoice(triggers)
+}
+
 // RedactedParamsForTest exposes the comma-joined redactedParams string so the
 // alphabetical-order regression test in telemetry_test.go can validate ordering
 // without leaking the package-private symbol into production callers. Test-only;

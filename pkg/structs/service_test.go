@@ -196,3 +196,90 @@ func TestServiceGpuFields_RoundTrip(t *testing.T) {
 	require.Equal(t, memUsed, *got.GpuMemUsed)
 	require.Equal(t, memTotal, *got.GpuMemTotal)
 }
+
+func TestTriggerSpec_Validate(t *testing.T) {
+	cases := []struct {
+		name    string
+		spec    TriggerSpec
+		wantErr string
+	}{
+		{"valid cpu", TriggerSpec{Type: "cpu", Threshold: 70}, ""},
+		{"valid memory", TriggerSpec{Type: "memory", Threshold: 80}, ""},
+		{"valid gpuUtilization", TriggerSpec{Type: "gpuUtilization", Threshold: 75}, ""},
+		{"valid queueDepth", TriggerSpec{Type: "queueDepth", Threshold: 100}, ""},
+		{"unknown type", TriggerSpec{Type: "custom", Threshold: 50}, "unknown trigger type"},
+		{"negative threshold", TriggerSpec{Type: "cpu", Threshold: -1}, "threshold must be positive"},
+		{"zero threshold", TriggerSpec{Type: "cpu", Threshold: 0}, "threshold must be positive"},
+		{"percent over 100", TriggerSpec{Type: "cpu", Threshold: 101}, "percent triggers must be <= 100"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.spec.Validate()
+			if tc.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.Error(t, err)
+			require.Contains(t, err.Error(), tc.wantErr)
+		})
+	}
+}
+
+func TestServiceTriggersOptions_Validate(t *testing.T) {
+	cases := []struct {
+		name    string
+		opts    ServiceTriggersOptions
+		wantErr string
+	}{
+		{
+			name: "valid",
+			opts: ServiceTriggersOptions{Min: 1, Max: 5, Triggers: []TriggerSpec{{Type: "cpu", Threshold: 70}}},
+		},
+		{
+			name:    "negative min",
+			opts:    ServiceTriggersOptions{Min: -1, Max: 5, Triggers: []TriggerSpec{{Type: "cpu", Threshold: 70}}},
+			wantErr: "min must be >= 0",
+		},
+		{
+			name:    "zero max",
+			opts:    ServiceTriggersOptions{Min: 0, Max: 0, Triggers: []TriggerSpec{{Type: "cpu", Threshold: 70}}},
+			wantErr: "max must be >= 1",
+		},
+		{
+			name:    "max less than min",
+			opts:    ServiceTriggersOptions{Min: 5, Max: 1, Triggers: []TriggerSpec{{Type: "cpu", Threshold: 70}}},
+			wantErr: "max must be >= min",
+		},
+		{
+			name:    "no triggers",
+			opts:    ServiceTriggersOptions{Min: 1, Max: 5},
+			wantErr: "at least one trigger is required",
+		},
+		{
+			name: "duplicate triggers",
+			opts: ServiceTriggersOptions{Min: 1, Max: 5, Triggers: []TriggerSpec{
+				{Type: "cpu", Threshold: 70},
+				{Type: "cpu", Threshold: 80},
+			}},
+			wantErr: "duplicate trigger type",
+		},
+		{
+			name: "invalid trigger surfaces",
+			opts: ServiceTriggersOptions{Min: 1, Max: 5, Triggers: []TriggerSpec{
+				{Type: "bogus", Threshold: 50},
+			}},
+			wantErr: "unknown trigger type",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.opts.Validate()
+			if tc.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.Error(t, err)
+			require.Contains(t, err.Error(), tc.wantErr)
+		})
+	}
+}

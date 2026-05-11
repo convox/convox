@@ -61,7 +61,70 @@ Update a service in place. Mirrors the effect of editing `scale.*` fields in
     Updating web... OK
 ```
 
+## services triggers enable
+
+Enable a Console-driven autoscaler for a service. Requires rack version
+3.24.6 or later. See [Autoscale Triggers Override](/console/autoscale-triggers)
+for the full surface (Console + CLI parity).
+
+### Usage
+```bash
+    convox services triggers enable <service> \
+        --min <int> --max <int> \
+        [--cpu <1-100>] [--memory <1-100>] \
+        [--gpu <1-100>] [--queue <int>]
+```
+
+At least one of `--cpu`, `--memory`, `--gpu`, `--queue` is required.
+`--gpu` and `--queue` require KEDA on the rack (`keda_enable=true`).
+`--gpu` additionally requires the service to declare `scale.gpu.count >= 1`
+in `convox.yml`.
+
+### Examples
+```bash
+    $ convox services triggers enable web --min 1 --max 5 --cpu 70
+    Enabling triggers override on web... OK
+
+    $ convox services triggers enable worker --min 0 --max 10 --gpu 75 --queue 100
+    Enabling triggers override on worker... OK
+```
+
+## services triggers disable
+
+Remove the Console-driven autoscaler. The next deploy re-materializes
+the manifest's autoscale config (if any).
+
+### Usage
+```bash
+    convox services triggers disable <service>
+```
+
+### Examples
+```bash
+    $ convox services triggers disable web
+    Disabling triggers override on web... OK
+```
+
+## services triggers threshold-set
+
+Update a single trigger's threshold on a service that already has an
+override active. `--type` accepts `cpu`, `memory`, `gpu`, or `queue`.
+
+### Usage
+```bash
+    convox services triggers threshold-set <service> \
+        --type <cpu|memory|gpu|queue> --threshold <number>
+```
+
+### Examples
+```bash
+    $ convox services triggers threshold-set web --type cpu --threshold 80
+    Setting web cpu threshold to 80... OK
+```
+
 ## See Also
 
 - [Service](/reference/primitives/app/service) for service configuration
 - [Load Balancers](/configuration/load-balancers) for load balancer setup
+- [Autoscale Triggers Override](/console/autoscale-triggers) for the
+  Console UI behind these CLI subcommands

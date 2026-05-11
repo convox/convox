@@ -528,3 +528,72 @@ func TestServicesNLBEmptyAllowCIDRNoBracket(t *testing.T) {
 		})
 	})
 }
+
+func TestServicesTriggersEnable_HPA(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		opts := structs.ServiceTriggersOptions{
+			Min: 1, Max: 5,
+			Triggers: []structs.TriggerSpec{{Type: "cpu", Threshold: 70}},
+		}
+		i.On("SystemGet").Return(&structs.System{Version: "3.24.6"}, nil)
+		i.On("ServiceTriggersEnable", "app1", "web", opts, "").Return(nil)
+
+		res, err := testExecute(e, "services triggers enable web --min 1 --max 5 --cpu 70 -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStdout(t, []string{"Enabling triggers override on web... OK"})
+	})
+}
+
+func TestServicesTriggersEnable_RejectedOnPre3246Rack(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(&structs.System{Version: "3.24.5"}, nil)
+
+		res, err := testExecute(e, "services triggers enable web --min 1 --max 5 --cpu 70 -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		require.Contains(t, res.Stderr, "rack version 3.24.6 or later")
+	})
+}
+
+func TestServicesTriggersEnable_NoTriggers_Rejects(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		res, err := testExecute(e, "services triggers enable web --min 1 --max 5 -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		require.Contains(t, res.Stderr, "at least one of --cpu, --memory, --gpu, --queue")
+	})
+}
+
+func TestServicesTriggersDisable(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(&structs.System{Version: "3.24.6"}, nil)
+		i.On("ServiceTriggersDisable", "app1", "web", "").Return(nil)
+
+		res, err := testExecute(e, "services triggers disable web -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStdout(t, []string{"Disabling triggers override on web... OK"})
+	})
+}
+
+func TestServicesTriggersThresholdSet_GPU(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(&structs.System{Version: "3.24.6"}, nil)
+		i.On("ServiceTriggersThresholdSet", "app1", "web", "gpuUtilization", 80.0, "").Return(nil)
+
+		res, err := testExecute(e, "services triggers threshold-set web --type gpu --threshold 80 -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStdout(t, []string{"Setting web gpu threshold to 80... OK"})
+	})
+}
+
+func TestServicesTriggersThresholdSet_InvalidType_Rejects(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		res, err := testExecute(e, "services triggers threshold-set web --type bogus --threshold 80 -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		require.Contains(t, res.Stderr, "invalid --type")
+	})
+}

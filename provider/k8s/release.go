@@ -755,6 +755,24 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 		}
 	}
 
+	// Per-service Console-driven triggers-override state. When set, the
+	// release loop must skip materialization of the manifest-declared
+	// autoscaler so the user's Console-set HPA/SO survives the deploy.
+	// Read directly off Deployment annotations: ServiceList projection
+	// adds a TriggersOverrideActive field, but we read here as well so
+	// the deploy controller behaves correctly on pre-projection paths
+	// (e.g. when the rack was rolled without a fresh ServiceList sync).
+	triggersOverride := map[string]bool{}
+	for i := range pss {
+		dep, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(a.Name)).Get(context.TODO(), pss[i].Name, am.GetOptions{})
+		if err != nil {
+			continue
+		}
+		if dep.Annotations[ServiceTriggersOverrideAnnotation] == ServiceTriggersOverrideValueOn {
+			triggersOverride[pss[i].Name] = true
+		}
+	}
+
 	for i := range ss {
 		// efs
 		vdata, err := p.releaseTemplateEfs(a, ss[i])
@@ -827,6 +845,15 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 		}
 
 		wantsAutoscale := s.Scale.Autoscale.IsEnabled() || s.Scale.IsKedaEnabled()
+		// Triggers-override services keep their Console-driven autoscaler
+		// across deploys. Skip manifest-driven autoscale materialization
+		// for them so the rack does not fight a user's Console setup.
+		// The template-side gate further down (TriggersOverrideActive
+		// passed into params) ensures the HPA template branch is also
+		// suppressed.
+		if triggersOverride[s.Name] {
+			wantsAutoscale = false
+		}
 		// Agent services render as DaemonSets; KEDA ScaledObject only targets
 		// Deployments, so skip the autoscale path entirely. The
 		// pkg/manifest validator emits a stderr WARNING for this combo
@@ -879,22 +906,23 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 		items = append(items, ipsBlocks...)
 
 		params := map[string]interface{}{
-			"Annotations":          s.AnnotationsMap(),
-			"App":                  a,
-			"Environment":          env,
-			"MaxSurge":             max - 100,
-			"MaxUnavailable":       100 - min,
-			"Namespace":            p.AppNamespace(a.Name),
-			"Password":             p.Password,
-			"Rack":                 p.Name,
-			"Release":              r,
-			"Replicas":             replicas,
-			"Resources":            s.ResourceMap(),
-			"Service":              s,
-			"KedaIsEnabled":        s.Scale.IsKedaEnabled() && !s.Agent.Enabled,
-			"AutoscaleIsEnabled":   s.Scale.Autoscale.IsEnabled() && !s.Agent.Enabled,
-			"DockerHubAuth":        p.hasDockerHubAuth(),
-			"ImagePullSecretNames": ipsNames,
+			"Annotations":            s.AnnotationsMap(),
+			"App":                    a,
+			"Environment":            env,
+			"MaxSurge":               max - 100,
+			"MaxUnavailable":         100 - min,
+			"Namespace":              p.AppNamespace(a.Name),
+			"Password":               p.Password,
+			"Rack":                   p.Name,
+			"Release":                r,
+			"Replicas":               replicas,
+			"Resources":              s.ResourceMap(),
+			"Service":                s,
+			"KedaIsEnabled":          s.Scale.IsKedaEnabled() && !s.Agent.Enabled,
+			"AutoscaleIsEnabled":     s.Scale.Autoscale.IsEnabled() && !s.Agent.Enabled,
+			"TriggersOverrideActive": triggersOverride[s.Name],
+			"DockerHubAuth":          p.hasDockerHubAuth(),
+			"ImagePullSecretNames":   ipsNames,
 		}
 
 		if ip, err := p.Engine.ResolverHost(); err == nil {

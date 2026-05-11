@@ -106,6 +106,9 @@ type Provider interface {
 	ServiceMetrics(app, service string, opts MetricsOptions) (Metrics, error)
 	ServiceRestart(app, name string) error
 	ServiceScaleOverrideSet(app, service string, active bool, ackBy string) error
+	ServiceTriggersEnable(app, service string, opts ServiceTriggersOptions, ackBy string) error
+	ServiceTriggersDisable(app, service, ackBy string) error
+	ServiceTriggersThresholdSet(app, service, triggerType string, threshold float64, ackBy string) error
 	ServiceUpdate(app, name string, opts ServiceUpdateOptions) error
 	ServiceLogs(app, name string, opts LogsOptions) (io.ReadCloser, error)
 

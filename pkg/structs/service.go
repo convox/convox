@@ -1,5 +1,7 @@
 package structs
 
+import "fmt"
+
 type Service struct {
 	Count     int                    `json:"count"`
 	Cpu       int                    `json:"cpu"`
@@ -90,6 +92,20 @@ type Service struct {
 	// leave nil). The nil value is reserved as the wire-signal for
 	// pre-3.24.6 rack ("feature not supported").
 	ScaleOverrideActive *bool `json:"scale-override-active,omitempty"`
+
+	// TriggersOverrideActive reflects whether the service Deployment
+	// carries the convox.com/triggers-override-active=true annotation,
+	// meaning the autoscaler was configured through the Console rather
+	// than the manifest. Pointer-nullable on the same three-state wire
+	// contract as ScaleOverrideActive — nil signals a pre-3.24.6 rack
+	// (Console disables the affordance with a version-gated tooltip);
+	// *false signals "rack supports it, override is OFF"; *true signals
+	// "override is ON, autoscaler driven by Console writes through
+	// service_triggers_enable/disable/threshold_set."
+	//
+	// 3.24.6+ rack code ALWAYS populates this pointer (never nil) so
+	// the Console version-gate signal stays unambiguous.
+	TriggersOverrideActive *bool `json:"triggers-override-active,omitempty"`
 }
 
 // ServiceAutoscaleState is the wire shape returned by the rack for the
@@ -146,4 +162,76 @@ type ServiceUpdateOptions struct {
 	Memory    *int    `flag:"memory" param:"memory"`
 	Min       *int    `flag:"min" param:"min"`
 	Max       *int    `flag:"max" param:"max"`
+}
+
+// Canonical wire-form trigger types shared between rack handler, SDK,
+// GraphQL enum, and CLI. Persisted in the KEDA ScaledObject trigger
+// .name field as `convox-<type>` so reads can disambiguate Console-driven
+// triggers from manifest-driven ones.
+const (
+	TriggerTypeCPU            = "cpu"
+	TriggerTypeMemory         = "memory"
+	TriggerTypeGPUUtilization = "gpuUtilization"
+	TriggerTypeQueueDepth     = "queueDepth"
+)
+
+// TriggerSpec describes a single autoscale trigger requested by the
+// Console-driven triggers override surface.
+type TriggerSpec struct {
+	Type      string  `json:"type"`
+	Threshold float64 `json:"threshold"`
+}
+
+func (t TriggerSpec) Validate() error {
+	switch t.Type {
+	case TriggerTypeCPU, TriggerTypeMemory, TriggerTypeGPUUtilization, TriggerTypeQueueDepth:
+	default:
+		return fmt.Errorf("unknown trigger type %q", t.Type)
+	}
+	if t.Threshold <= 0 {
+		return fmt.Errorf("threshold must be positive")
+	}
+	// queueDepth is an absolute count (>=1), not a percent; CPU/Memory/GPU
+	// utilization are all percentages and capped at 100.
+	if t.Type != TriggerTypeQueueDepth && t.Threshold > 100 {
+		return fmt.Errorf("percent triggers must be <= 100")
+	}
+	return nil
+}
+
+// ServiceTriggersOptions carries the inputs for ServiceTriggersEnable.
+// The caller supplies desired bounds + trigger set; the rack handler
+// validates, runs KEDA + GPU preflight, and materializes the matching CRD
+// (native HPA when all triggers are cpu/memory; KEDA ScaledObject when any
+// trigger is gpuUtilization or queueDepth).
+type ServiceTriggersOptions struct {
+	Min      int           `json:"min"`
+	Max      int           `json:"max"`
+	Triggers []TriggerSpec `json:"triggers"`
+}
+
+func (o ServiceTriggersOptions) Validate() error {
+	if o.Min < 0 {
+		return fmt.Errorf("min must be >= 0")
+	}
+	if o.Max < 1 {
+		return fmt.Errorf("max must be >= 1")
+	}
+	if o.Max < o.Min {
+		return fmt.Errorf("max must be >= min")
+	}
+	if len(o.Triggers) == 0 {
+		return fmt.Errorf("at least one trigger is required")
+	}
+	seen := map[string]bool{}
+	for _, t := range o.Triggers {
+		if err := t.Validate(); err != nil {
+			return err
+		}
+		if seen[t.Type] {
+			return fmt.Errorf("duplicate trigger type %q", t.Type)
+		}
+		seen[t.Type] = true
+	}
+	return nil
 }

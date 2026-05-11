@@ -108,9 +108,26 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 			cold := true
 			s.ColdStart = &cold
 		}
+
+		triggersOverride := d.Annotations != nil && d.Annotations[ServiceTriggersOverrideAnnotation] == ServiceTriggersOverrideValueOn
+		classicHPA := ms.Scale.Count.Max > ms.Scale.Count.Min &&
+			!ms.Scale.Autoscale.IsEnabled() &&
+			!ms.Scale.IsKedaEnabled()
+
 		if ms.Scale.Autoscale.IsEnabled() {
 			s.Autoscale = buildServiceAutoscaleState(ms.Scale.Autoscale)
+		} else if classicHPA || triggersOverride {
+			// Classic HPA path: service has `count: 1-5` (or
+			// scale.min < scale.max) without an explicit autoscale
+			// block, so the manifest renders a native HPA. These
+			// services ARE autoscaled and must surface as such to
+			// Console consumers reading `autoscale.enabled`. Override
+			// case mirrors: a Console-driven autoscaler should look
+			// "enabled" to the same readers.
+			s.Autoscale = &structs.ServiceAutoscaleState{Enabled: true}
 		}
+
+		p.populateLiveCRDThresholds(app, d.ObjectMeta.Name, s.Autoscale)
 
 		// Populate scale-override-active from the Deployment annotation.
 		// 3.24.6+ racks ALWAYS set the pointer (never nil); nil is reserved
@@ -121,6 +138,15 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 			s.ScaleOverrideActive = options.Bool(true)
 		} else {
 			s.ScaleOverrideActive = options.Bool(false)
+		}
+
+		// Triggers-override-active mirrors the scale-override pointer
+		// contract: 3.24.6+ ALWAYS populates so pre-3.24.6 nil signals
+		// "rack does not support the feature."
+		if triggersOverride {
+			s.TriggersOverrideActive = options.Bool(true)
+		} else {
+			s.TriggersOverrideActive = options.Bool(false)
 		}
 
 		ss = append(ss, s)
@@ -207,6 +233,12 @@ func (p *Provider) serviceListAppendDaemonsets(app string, ss structs.Services, 
 		} else {
 			s.ScaleOverrideActive = options.Bool(false)
 		}
+
+		// Agents do not participate in the triggers-override surface
+		// (autoscale doesn't apply to DaemonSets); still emit a *false
+		// pointer so the wire shape stays uniform with Deployment-backed
+		// services.
+		s.TriggersOverrideActive = options.Bool(false)
 
 		s.Agent = true
 
@@ -668,6 +700,22 @@ func buildServiceAutoscaleState(a *manifest.ServiceAutoscale) *structs.ServiceAu
 // pattern.
 func (p *Provider) serviceUpdateScaledObject(app, name string, opts structs.ServiceUpdateOptions) (handled bool, err error) {
 	ns := p.AppNamespace(app)
+
+	// Console-driven triggers override claims priority on the
+	// min/max lookup. When the Deployment carries the
+	// triggers-override-active annotation, the paired
+	// triggers-override-crd annotation says which CRD owns the
+	// bounds. For the HPA path, patch the named HPA directly; for the
+	// KEDA path, fall through to the SO-detection logic below — the
+	// existing path already locates and patches the SO correctly.
+	if d, derr := p.Cluster.AppsV1().Deployments(ns).Get(context.TODO(), name, am.GetOptions{}); derr == nil &&
+		d.Annotations[ServiceTriggersOverrideAnnotation] == ServiceTriggersOverrideValueOn &&
+		d.Annotations[ServiceTriggersOverrideCRDAnnotation] == TriggersCRDHPA {
+		if err := p.patchHPABounds(ns, name, opts); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
 
 	_, getErr := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Get(context.TODO(), name, am.GetOptions{})
 	hasScaledObject := getErr == nil
