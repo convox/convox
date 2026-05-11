@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
@@ -88,16 +89,22 @@ func (p *Provider) ServiceTriggersEnable(app, service string, opts structs.Servi
 	crdChoice := triggersCRDChoice(opts.Triggers)
 
 	if crdChoice == TriggersCRDKeda && !p.IsKedaEnabled {
-		return fmt.Errorf("GPU and queue-depth triggers require KEDA. Run convox rack params set keda_enable=true on the rack and re-deploy, then try again")
+		return fmt.Errorf("GPU and inference queue triggers require KEDA. Run: convox rack params set keda_enable=true")
 	}
 
-	// HPA-path scale-to-zero requires the K8s HPAScaleToZero feature
-	// gate (alpha; not enabled on EKS or most managed K8s). Reject
-	// Min=0 on the HPA path with a friendly error pointing users at a
-	// KEDA-eligible trigger so the K8s API server doesn't surface a
-	// bare HorizontalPodAutoscaler validation error in the toast.
+	if crdChoice == TriggersCRDKeda {
+		promURL := strings.TrimSpace(os.Getenv("PROMETHEUS_URL"))
+		if promURL == "" {
+			for _, t := range opts.Triggers {
+				if t.Type == structs.TriggerTypeGPUUtilization || t.Type == structs.TriggerTypeQueueDepth {
+					return fmt.Errorf("GPU and inference queue triggers require a Prometheus endpoint. Set the prometheus_url rack parameter: convox rack params set prometheus_url=<url>")
+				}
+			}
+		}
+	}
+
 	if crdChoice == TriggersCRDHPA && opts.Min < 1 {
-		return fmt.Errorf("CPU and memory triggers require min >= 1 on this rack. Scale-to-zero (min=0) needs the Kubernetes HPAScaleToZero feature gate, which is alpha and is not enabled on EKS or most managed clusters. To get scale-to-zero, either add a KEDA-eligible trigger (gpuUtilization or queueDepth — these use the KEDA ScaledObject path which supports min=0 natively) or set min >= 1 here and rely on natural CPU/memory scaling")
+		return fmt.Errorf("CPU and memory triggers do not support min=0. To scale to zero, add a GPU utilization or inference queue depth trigger, or set min to 1 or higher")
 	}
 
 	ns := p.AppNamespace(app)
@@ -268,7 +275,15 @@ func (p *Provider) applyTriggersHPA(ns, service string, opts structs.ServiceTrig
 // triggers materialize identically. Idempotent: if an SO already exists,
 // it is updated in place.
 func (p *Provider) applyTriggersKEDA(app, ns, service string, opts structs.ServiceTriggersOptions) error {
-	promURL := os.Getenv("PROMETHEUS_URL")
+	promURL := strings.TrimSpace(os.Getenv("PROMETHEUS_URL"))
+
+	if promURL == "" {
+		for _, t := range opts.Triggers {
+			if t.Type == structs.TriggerTypeGPUUtilization || t.Type == structs.TriggerTypeQueueDepth {
+				return fmt.Errorf("GPU and inference queue triggers require a Prometheus endpoint; set prometheus_url on the rack")
+			}
+		}
+	}
 
 	triggers := []interface{}{}
 	for _, t := range opts.Triggers {
@@ -288,6 +303,10 @@ func (p *Provider) applyTriggersKEDA(app, ns, service string, opts structs.Servi
 				"metadata":   map[string]interface{}{"value": fmt.Sprintf("%g", t.Threshold)},
 			})
 		case structs.TriggerTypeGPUUtilization:
+			// GPU trigger uses the standardized DCGM metric + rack
+			// Prometheus by design. Console-side customization is
+			// out of scope; declare scale.autoscale.gpuUtilization
+			// in convox.yml for non-DCGM metric sources.
 			triggers = append(triggers, map[string]interface{}{
 				"type": "prometheus",
 				"name": "convox-gpu-utilization",
@@ -463,6 +482,52 @@ func (p *Provider) patchHPABounds(ns, service string, opts structs.ServiceUpdate
 		return errors.WithStack(err)
 	}
 	return nil
+}
+
+// overlayLiveCRDBounds reads the active autoscaler CRD (HPA or KEDA
+// ScaledObject) and overlays its min/max replica bounds onto the
+// supplied Service. Without this overlay, `s.Min` and `s.Max` stay
+// pinned to the manifest values — so an operator who ran `convox
+// scale web --min 1 --max 7` (or used the Console Range Apply) would
+// see the bounds card still show the manifest defaults even though
+// the live CRD has the new bounds.
+//
+// Source-of-truth precedence mirrors populateLiveCRDThresholds:
+//   HPA bounds win when an HPA is present; KEDA SO bounds win when
+//   only an SO is present; both-present is the operator-corruption
+//   case and we prefer the SO (the larger configuration surface).
+// Manifest values stay as the fallback when neither CRD exists.
+func (p *Provider) overlayLiveCRDBounds(app, service string, s *structs.Service) {
+	if s == nil {
+		return
+	}
+	ns := p.AppNamespace(app)
+
+	hpa, hpaErr := p.Cluster.AutoscalingV2().HorizontalPodAutoscalers(ns).Get(context.TODO(), service, am.GetOptions{})
+	if hpaErr == nil && hpa != nil {
+		if hpa.Spec.MinReplicas != nil {
+			v := int(*hpa.Spec.MinReplicas)
+			s.Min = &v
+		}
+		v := int(hpa.Spec.MaxReplicas)
+		s.Max = &v
+	}
+
+	if p.DynamicClient == nil {
+		return
+	}
+	so, soErr := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Get(context.TODO(), service, am.GetOptions{})
+	if soErr != nil || so == nil {
+		return
+	}
+	if minVal, found, _ := unstructured.NestedInt64(so.Object, "spec", "minReplicaCount"); found {
+		v := int(minVal)
+		s.Min = &v
+	}
+	if maxVal, found, _ := unstructured.NestedInt64(so.Object, "spec", "maxReplicaCount"); found {
+		v := int(maxVal)
+		s.Max = &v
+	}
 }
 
 // prometheusActivationThreshold mirrors the manifest-driven derivation

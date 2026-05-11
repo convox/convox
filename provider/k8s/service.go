@@ -127,6 +127,15 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 			s.Autoscale = &structs.ServiceAutoscaleState{Enabled: true}
 		}
 
+		// Live-state bounds projection. The manifest values seeded
+		// above describe what convox.yml declared, but `convox scale
+		// --min --max`, Range mode in the Console, and the triggers-
+		// override Enable / threshold pencil all patch the LIVE HPA /
+		// SO instead of the manifest. The bounds card has to reflect
+		// the live state so users see the same numbers they just set.
+		// Fall back to manifest values if no autoscaler exists.
+		p.overlayLiveCRDBounds(app, d.ObjectMeta.Name, &s)
+
 		p.populateLiveCRDThresholds(app, d.ObjectMeta.Name, s.Autoscale)
 
 		// Populate scale-override-active from the Deployment annotation.
