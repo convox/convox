@@ -79,7 +79,7 @@ func TestServiceTriggersDisable_HPAPath(t *testing.T) {
 		kk, _ := p.Cluster.(*kfake.Clientset)
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 
-		seedDeployment(t, kk, "rack1-app1", "web", 3)
+		seedDeployment(t, kk, "rack1-app1", "web", 5)
 		dep, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
 		require.NoError(t, err)
 		dep.Annotations = map[string]string{
@@ -89,8 +89,12 @@ func TestServiceTriggersDisable_HPAPath(t *testing.T) {
 		_, err = kk.AppsV1().Deployments("rack1-app1").Update(context.TODO(), dep, am.UpdateOptions{})
 		require.NoError(t, err)
 
+		minReplicas := int32(3)
 		hpa := &autoscalingv2.HorizontalPodAutoscaler{
 			ObjectMeta: am.ObjectMeta{Name: "web", Namespace: "rack1-app1"},
+			Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
+				MinReplicas: &minReplicas,
+			},
 		}
 		_, err = kk.AutoscalingV2().HorizontalPodAutoscalers("rack1-app1").Create(context.TODO(), hpa, am.CreateOptions{})
 		require.NoError(t, err)
@@ -110,7 +114,7 @@ func TestServiceTriggersDisable_HPAPath(t *testing.T) {
 		_, hasCRD := dep.Annotations[k8s.ServiceTriggersOverrideCRDAnnotation]
 		require.False(t, hasActive, "active annotation must be cleared")
 		require.False(t, hasCRD, "crd annotation must be cleared")
-		require.Equal(t, int32(1), *dep.Spec.Replicas, "replicas must reset to manifest min (floored to 1)")
+		require.Equal(t, int32(3), *dep.Spec.Replicas, "replicas must reset to override min")
 	})
 }
 
@@ -1010,7 +1014,7 @@ func TestServiceTriggersDisable_KedaPath(t *testing.T) {
 		require.NoError(t, err)
 
 		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme(),
-			scaledObjectUnstructured("rack1-app1", "web", 1, 5))
+			scaledObjectUnstructured("rack1-app1", "web", 2, 8))
 		installManifestServiceHook(p, "app1", "web", 0)
 
 		err = p.ServiceTriggersDisable("app1", "web", "alice@example.com")
@@ -1023,7 +1027,7 @@ func TestServiceTriggersDisable_KedaPath(t *testing.T) {
 		require.NoError(t, err)
 		_, hasActive := dep.Annotations[k8s.ServiceTriggersOverrideAnnotation]
 		require.False(t, hasActive)
-		require.Equal(t, int32(1), *dep.Spec.Replicas, "replicas must reset to manifest min (floored to 1)")
+		require.Equal(t, int32(2), *dep.Spec.Replicas, "replicas must reset to override min")
 	})
 }
 
