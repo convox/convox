@@ -17,6 +17,7 @@ import (
 	"github.com/convox/convox/pkg/common"
 	cxhmac "github.com/convox/convox/pkg/hmac"
 	"github.com/convox/convox/pkg/jwt"
+	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/metrics"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
@@ -107,6 +108,16 @@ type Provider struct {
 
 	RdsProvisioner         *rds.Provisioner
 	ElasticacheProvisioner *elasticache.Provisioner
+
+	// TriggersOverrideManifestServiceHook is an optional injection
+	// point for tests. When non-nil, ServiceTriggersEnable's GPU
+	// preflight uses this function instead of the AppGet → ReleaseGet
+	// → manifest.Load chain to read the named service's manifest
+	// definition. Production callers leave this nil; tests inject a
+	// deterministic *manifest.Service without seeding the full release
+	// CRD + informer machinery. Set per-Provider so each test fixture
+	// stays isolated.
+	TriggersOverrideManifestServiceHook func(app, service string) (*manifest.Service, error)
 
 	ctx       context.Context
 	logger    *logger.Logger

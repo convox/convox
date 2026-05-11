@@ -30,6 +30,43 @@ func (_m *MockProvider) AppBudgetClear(app string, ackBy string) error {
 	return r0
 }
 
+// AppBudgetDismissRecovery provides a mock function with given fields: app, ackBy
+func (_m *MockProvider) AppBudgetDismissRecovery(app string, ackBy string) error {
+	ret := _m.Called(app, ackBy)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = rf(app, ackBy)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// AppBudgetDismissRecoveryWithResult provides a mock function with given fields: app, ackBy
+func (_m *MockProvider) AppBudgetDismissRecoveryWithResult(app string, ackBy string) (*AppBudgetDismissRecoveryResult, error) {
+	ret := _m.Called(app, ackBy)
+
+	var r0 *AppBudgetDismissRecoveryResult
+	if rf, ok := ret.Get(0).(func(string, string) *AppBudgetDismissRecoveryResult); ok {
+		r0 = rf(app, ackBy)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*AppBudgetDismissRecoveryResult)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, string) error); ok {
+		r1 = rf(app, ackBy)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // AppBudgetGet provides a mock function with given fields: app
 func (_m *MockProvider) AppBudgetGet(app string) (*AppBudget, *AppBudgetState, error) {
 	ret := _m.Called(app)
@@ -90,6 +127,20 @@ func (_m *MockProvider) AppBudgetResetWithOptions(app string, ackBy string, opts
 	return r0
 }
 
+// AppBudgetSet provides a mock function with given fields: app, opts, ackBy
+func (_m *MockProvider) AppBudgetSet(app string, opts AppBudgetOptions, ackBy string) error {
+	ret := _m.Called(app, opts, ackBy)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, AppBudgetOptions, string) error); ok {
+		r0 = rf(app, opts, ackBy)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // AppBudgetShutdownStateGet provides a mock function with given fields: app
 func (_m *MockProvider) AppBudgetShutdownStateGet(app string) (*AppBudgetShutdownState, error) {
 	ret := _m.Called(app)
@@ -134,57 +185,6 @@ func (_m *MockProvider) AppBudgetSimulate(app string) (*AppBudgetSimulationResul
 	}
 
 	return r0, r1
-}
-
-// AppBudgetDismissRecovery provides a mock function with given fields: app, ackBy
-func (_m *MockProvider) AppBudgetDismissRecovery(app string, ackBy string) error {
-	ret := _m.Called(app, ackBy)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(string, string) error); ok {
-		r0 = rf(app, ackBy)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// AppBudgetDismissRecoveryWithResult provides a mock function with given fields: app, ackBy
-func (_m *MockProvider) AppBudgetDismissRecoveryWithResult(app string, ackBy string) (*AppBudgetDismissRecoveryResult, error) {
-	ret := _m.Called(app, ackBy)
-
-	var r0 *AppBudgetDismissRecoveryResult
-	if rf, ok := ret.Get(0).(func(string, string) *AppBudgetDismissRecoveryResult); ok {
-		r0 = rf(app, ackBy)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*AppBudgetDismissRecoveryResult)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(string, string) error); ok {
-		r1 = rf(app, ackBy)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// AppBudgetSet provides a mock function with given fields: app, opts, ackBy
-func (_m *MockProvider) AppBudgetSet(app string, opts AppBudgetOptions, ackBy string) error {
-	ret := _m.Called(app, opts, ackBy)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(string, AppBudgetOptions, string) error); ok {
-		r0 = rf(app, opts, ackBy)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
 }
 
 // AppCancel provides a mock function with given fields: name
@@ -452,29 +452,6 @@ func (_m *MockProvider) AppMetrics(name string, opts MetricsOptions) (Metrics, e
 	var r1 error
 	if rf, ok := ret.Get(1).(func(string, MetricsOptions) error); ok {
 		r1 = rf(name, opts)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MetricsByService provides a mock function with given fields: app, services, opts
-func (_m *MockProvider) MetricsByService(app string, services []string, opts MetricsOptions) ([]ServiceMetricsRow, error) {
-	ret := _m.Called(app, services, opts)
-
-	var r0 []ServiceMetricsRow
-	if rf, ok := ret.Get(0).(func(string, []string, MetricsOptions) []ServiceMetricsRow); ok {
-		r0 = rf(app, services, opts)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]ServiceMetricsRow)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(string, []string, MetricsOptions) error); ok {
-		r1 = rf(app, services, opts)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1023,6 +1000,29 @@ func (_m *MockProvider) LetsEncryptConfigGet() (*LetsEncryptConfig, error) {
 	var r1 error
 	if rf, ok := ret.Get(1).(func() error); ok {
 		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MetricsByService provides a mock function with given fields: app, services, opts
+func (_m *MockProvider) MetricsByService(app string, services []string, opts MetricsOptions) ([]ServiceMetricsRow, error) {
+	ret := _m.Called(app, services, opts)
+
+	var r0 []ServiceMetricsRow
+	if rf, ok := ret.Get(0).(func(string, []string, MetricsOptions) []ServiceMetricsRow); ok {
+		r0 = rf(app, services, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]ServiceMetricsRow)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, []string, MetricsOptions) error); ok {
+		r1 = rf(app, services, opts)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1619,6 +1619,48 @@ func (_m *MockProvider) ServiceScaleOverrideSet(app string, service string, acti
 	var r0 error
 	if rf, ok := ret.Get(0).(func(string, string, bool, string) error); ok {
 		r0 = rf(app, service, active, ackBy)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ServiceTriggersDisable provides a mock function with given fields: app, service, ackBy
+func (_m *MockProvider) ServiceTriggersDisable(app string, service string, ackBy string) error {
+	ret := _m.Called(app, service, ackBy)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string, string) error); ok {
+		r0 = rf(app, service, ackBy)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ServiceTriggersEnable provides a mock function with given fields: app, service, opts, ackBy
+func (_m *MockProvider) ServiceTriggersEnable(app string, service string, opts ServiceTriggersOptions, ackBy string) error {
+	ret := _m.Called(app, service, opts, ackBy)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string, ServiceTriggersOptions, string) error); ok {
+		r0 = rf(app, service, opts, ackBy)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ServiceTriggersThresholdSet provides a mock function with given fields: app, service, triggerType, threshold, ackBy
+func (_m *MockProvider) ServiceTriggersThresholdSet(app string, service string, triggerType string, threshold float64, ackBy string) error {
+	ret := _m.Called(app, service, triggerType, threshold, ackBy)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string, string, float64, string) error); ok {
+		r0 = rf(app, service, triggerType, threshold, ackBy)
 	} else {
 		r0 = ret.Error(0)
 	}

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/convox/convox/pkg/common"
@@ -23,6 +24,36 @@ func init() {
 
 	register("services update", "update a service", ServicesUpdate, stdcli.CommandOptions{
 		Flags:    append(stdcli.OptionFlags(structs.ServiceUpdateOptions{}), flagApp, flagRack),
+		Usage:    "<service>",
+		Validate: stdcli.Args(1),
+	}, WithCloud())
+
+	register("services triggers enable", "enable Console-driven autoscale triggers for a service", ServicesTriggersEnable, stdcli.CommandOptions{
+		Flags: []stdcli.Flag{
+			flagApp, flagRack,
+			stdcli.IntFlag("min", "", "minimum replicas"),
+			stdcli.IntFlag("max", "", "maximum replicas"),
+			stdcli.IntFlag("cpu", "", "CPU target utilization (1-100)"),
+			stdcli.IntFlag("memory", "", "memory target utilization (1-100)"),
+			stdcli.IntFlag("gpu", "", "GPU target utilization (1-100); requires KEDA"),
+			stdcli.IntFlag("queue", "", "queue-depth target (>=1); requires KEDA"),
+		},
+		Usage:    "<service>",
+		Validate: stdcli.Args(1),
+	}, WithCloud())
+
+	register("services triggers disable", "disable Console-driven autoscale triggers override", ServicesTriggersDisable, stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagApp, flagRack},
+		Usage:    "<service>",
+		Validate: stdcli.Args(1),
+	}, WithCloud())
+
+	register("services triggers threshold-set", "update one trigger threshold on an active override", ServicesTriggersThresholdSet, stdcli.CommandOptions{
+		Flags: []stdcli.Flag{
+			flagApp, flagRack,
+			stdcli.StringFlag("type", "", "trigger type (cpu|memory|gpu|queue)"),
+			stdcli.StringFlag("threshold", "", "new threshold value (numeric)"),
+		},
 		Usage:    "<service>",
 		Validate: stdcli.Args(1),
 	}, WithCloud())
@@ -203,4 +234,104 @@ func ServicesUpdate(rack sdk.Interface, c *stdcli.Context) error {
 	}
 
 	return c.OK()
+}
+
+// cliTriggerTypeAliases maps the CLI-facing short forms to the canonical
+// wire types shared between rack handler, SDK, and GraphQL enum.
+var cliTriggerTypeAliases = map[string]string{
+	"cpu":            structs.TriggerTypeCPU,
+	"memory":         structs.TriggerTypeMemory,
+	"gpu":            structs.TriggerTypeGPUUtilization,
+	"gpuUtilization": structs.TriggerTypeGPUUtilization,
+	"queue":          structs.TriggerTypeQueueDepth,
+	"queueDepth":     structs.TriggerTypeQueueDepth,
+}
+
+func ServicesTriggersEnable(rack sdk.Interface, c *stdcli.Context) error {
+	service := c.Arg(0)
+
+	opts := structs.ServiceTriggersOptions{
+		Min: c.Int("min"),
+		Max: c.Int("max"),
+	}
+	if v := c.Int("cpu"); v > 0 {
+		opts.Triggers = append(opts.Triggers, structs.TriggerSpec{Type: structs.TriggerTypeCPU, Threshold: float64(v)})
+	}
+	if v := c.Int("memory"); v > 0 {
+		opts.Triggers = append(opts.Triggers, structs.TriggerSpec{Type: structs.TriggerTypeMemory, Threshold: float64(v)})
+	}
+	if v := c.Int("gpu"); v > 0 {
+		opts.Triggers = append(opts.Triggers, structs.TriggerSpec{Type: structs.TriggerTypeGPUUtilization, Threshold: float64(v)})
+	}
+	if v := c.Int("queue"); v > 0 {
+		opts.Triggers = append(opts.Triggers, structs.TriggerSpec{Type: structs.TriggerTypeQueueDepth, Threshold: float64(v)})
+	}
+	if len(opts.Triggers) == 0 {
+		return fmt.Errorf("at least one of --cpu, --memory, --gpu, --queue is required")
+	}
+
+	if err := servicesTriggersRackAtLeast3246(rack, "services triggers enable"); err != nil {
+		return err
+	}
+
+	c.Startf("Enabling triggers override on <service>%s</service>", service)
+	if err := rack.ServiceTriggersEnable(app(c), service, opts, ""); err != nil {
+		return err
+	}
+	return c.OK()
+}
+
+func ServicesTriggersDisable(rack sdk.Interface, c *stdcli.Context) error {
+	service := c.Arg(0)
+
+	if err := servicesTriggersRackAtLeast3246(rack, "services triggers disable"); err != nil {
+		return err
+	}
+
+	c.Startf("Disabling triggers override on <service>%s</service>", service)
+	if err := rack.ServiceTriggersDisable(app(c), service, ""); err != nil {
+		return err
+	}
+	return c.OK()
+}
+
+func ServicesTriggersThresholdSet(rack sdk.Interface, c *stdcli.Context) error {
+	service := c.Arg(0)
+	rawType := strings.TrimSpace(c.String("type"))
+	canonical, ok := cliTriggerTypeAliases[rawType]
+	if !ok || canonical == "" {
+		return fmt.Errorf("invalid --type %q; expected cpu|memory|gpu|queue", rawType)
+	}
+	thresholdStr := strings.TrimSpace(c.String("threshold"))
+	if thresholdStr == "" {
+		return fmt.Errorf("--threshold is required")
+	}
+	threshold, err := strconv.ParseFloat(thresholdStr, 64)
+	if err != nil {
+		return fmt.Errorf("--threshold must be a number: %v", err)
+	}
+
+	if err := servicesTriggersRackAtLeast3246(rack, "services triggers threshold-set"); err != nil {
+		return err
+	}
+
+	c.Startf("Setting <service>%s</service> %s threshold to %s", service, rawType, thresholdStr)
+	if err := rack.ServiceTriggersThresholdSet(app(c), service, canonical, threshold, ""); err != nil {
+		return err
+	}
+	return c.OK()
+}
+
+// servicesTriggersRackAtLeast3246 reuses the scale-side rack-version
+// helper so any pre-3.24.6 rack target gets a clean upgrade-required
+// error instead of the older rack silently 404-ing the new endpoint.
+func servicesTriggersRackAtLeast3246(rack sdk.Interface, commandName string) error {
+	sys, err := rack.SystemGet()
+	if err != nil {
+		return err
+	}
+	if !scaleRackAtLeast3246(sys.Version) {
+		return fmt.Errorf("%s requires rack version 3.24.6 or later; rack reports %q", commandName, sys.Version)
+	}
+	return nil
 }

@@ -2099,6 +2099,48 @@ func (_m *Interface) ServiceScaleOverrideSet(app string, service string, active 
 	return r0
 }
 
+// ServiceTriggersDisable provides a mock function with given fields: app, service, ackBy
+func (_m *Interface) ServiceTriggersDisable(app string, service string, ackBy string) error {
+	ret := _m.Called(app, service, ackBy)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string, string) error); ok {
+		r0 = rf(app, service, ackBy)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ServiceTriggersEnable provides a mock function with given fields: app, service, opts, ackBy
+func (_m *Interface) ServiceTriggersEnable(app string, service string, opts structs.ServiceTriggersOptions, ackBy string) error {
+	ret := _m.Called(app, service, opts, ackBy)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string, structs.ServiceTriggersOptions, string) error); ok {
+		r0 = rf(app, service, opts, ackBy)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ServiceTriggersThresholdSet provides a mock function with given fields: app, service, triggerType, threshold, ackBy
+func (_m *Interface) ServiceTriggersThresholdSet(app string, service string, triggerType string, threshold float64, ackBy string) error {
+	ret := _m.Called(app, service, triggerType, threshold, ackBy)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string, string, float64, string) error); ok {
+		r0 = rf(app, service, triggerType, threshold, ackBy)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // ServiceUpdate provides a mock function with given fields: app, name, opts
 func (_m *Interface) ServiceUpdate(app string, name string, opts structs.ServiceUpdateOptions) error {
 	ret := _m.Called(app, name, opts)

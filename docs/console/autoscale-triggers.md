@@ -1,0 +1,166 @@
+---
+title: "Autoscale Triggers Override"
+slug: autoscale-triggers
+url: /console/autoscale-triggers
+---
+# Autoscale Triggers Override
+
+The Convox Console exposes a service-level autoscale configuration surface
+that lets you enable, edit, and disable a service's autoscaler entirely
+through the UI — no `convox.yml` edits required. Console-driven autoscale
+state persists across deploys via an annotation pair on the service
+Deployment, mirroring the existing scale-override pattern.
+
+This page documents the three states the surface walks through, the four
+trigger types you can configure, and what happens to a manifest-declared
+autoscaler when you enable an override.
+
+## States
+
+Each service has one of three autoscale states surfaced in its Scaling tab:
+
+| State | Badge | Action |
+|---|---|---|
+| Not configured | `Autoscale: Not configured` | `Enable triggers` |
+| From `convox.yml` | `Autoscale: From convox.yml` | `Override triggers` |
+| Override active | `Autoscale: Override active` | `Disable override` |
+
+**Not configured** — the manifest has no autoscale block and the user has
+not enabled an override. The service runs at a fixed replica count.
+
+**From convox.yml** — the manifest declares `scale.autoscale` or
+`scale.targets` (or `scale.count: N-M`), and the rack has materialized
+the matching autoscaler (KEDA `ScaledObject` or native HPA). The Console
+shows the configured thresholds and offers an `Override triggers` action.
+
+**Override active** — the user has enabled a Console-driven autoscaler.
+The deploy controller respects the override across deploys; the
+manifest's autoscale config remains in the YAML but does not materialize
+until the override is disabled.
+
+## Trigger types
+
+The Console exposes four trigger types:
+
+| Type | Backing CRD | Requires |
+|---|---|---|
+| CPU utilization | Kubernetes HPA | nothing — works on every rack |
+| Memory utilization | Kubernetes HPA | nothing — works on every rack |
+| GPU utilization | KEDA ScaledObject | `keda_enable=true` and `scale.gpu.count >= 1` on the service |
+| Queue depth | KEDA ScaledObject | `keda_enable=true` |
+
+The hybrid CRD dispatch keeps the autoscaler running with the minimum
+required machinery. A service whose triggers are all CPU and/or memory
+uses a native HPA, even on racks without KEDA installed. A service that
+includes GPU or queue-depth triggers uses a KEDA `ScaledObject`; the
+Console preflight rejects the request when `keda_enable=false`.
+
+GPU triggers additionally require the service to declare
+`scale.gpu.count >= 1` in `convox.yml`. The KEDA Prometheus trigger
+filters by app + service labels, and without a GPU reservation the
+Prometheus query returns nothing forever — autoscale would silently no-op.
+The preflight rejects the request with a friendly error so users know
+what to fix.
+
+## Enable / Override / Disable
+
+### Enable triggers
+
+Click `Enable triggers` on a service with no current autoscale
+configuration. The dialog asks for:
+
+- Min replicas (default: current replica count)
+- Max replicas (default: `max(count * 3, 5)`)
+- Trigger checkboxes. Check the trigger types you want; each row carries
+  an inline threshold input pre-filled with a sensible default (CPU 70%,
+  Memory 80%, GPU utilization 75%, Queue depth 100).
+
+At least one trigger must be checked to save. The action writes the
+`convox.com/triggers-override-active=true` annotation on the service
+Deployment plus a `convox.com/triggers-override-crd=hpa|keda` annotation
+recording which CRD was created.
+
+### Override triggers
+
+Click `Override triggers` on a service that already has a manifest
+autoscale block. The dialog pre-populates with the current manifest
+thresholds; unchecking a row drops that trigger from the override save.
+This is the typical "turn the existing autoscaler over to the Console
+for ongoing edits" path.
+
+### Pencil edits
+
+When override is active, each threshold cell shows a pencil icon.
+Click it to edit the threshold inline; check the value to save. The
+edit fires `service_triggers_threshold_set` against the active CRD —
+no full re-enable required for incremental tuning.
+
+### Disable override
+
+Click `Disable override` to remove the Console-driven autoscaler. The
+matching CRD is deleted, both annotations clear, and on the next deploy
+the manifest's autoscale config (if any) re-materializes. If the
+manifest has no autoscale block, the service falls back to fixed
+replicas at `scale.count`.
+
+## CLI parity
+
+The same operations are available from the CLI for users who prefer it:
+
+```
+convox services triggers enable web --min 1 --max 5 --cpu 70 -a my-app
+convox services triggers disable web -a my-app
+convox services triggers threshold-set web --type cpu --threshold 80 -a my-app
+```
+
+The `--type` argument accepts `cpu`, `memory`, `gpu`, or `queue`. The CLI
+gates the same rack-version preflight (3.24.6+) and surfaces the same
+KEDA / GPU-reservation preflight errors as the Console.
+
+## What persists, what doesn't
+
+Persists across deploys:
+
+- The Console-driven autoscaler (HPA or KEDA `ScaledObject`).
+- Both override annotations on the Deployment.
+- The replica count is governed by the autoscaler — same as
+  manifest-declared autoscale.
+
+Resets on disable:
+
+- The matching CRD is deleted.
+- Both annotations are cleared.
+- The next deploy re-materializes the manifest's autoscale config (or
+  removes the autoscaler entirely if the manifest has none).
+
+## Limits
+
+The Console-driven override is intentionally a focused surface. Advanced
+autoscale knobs stay in `convox.yml`:
+
+- Cooldown / polling interval / stabilization window configuration.
+- Custom KEDA trigger types (`scale.keda.triggers` block with raw KEDA
+  metadata — e.g. SQS, Pub/Sub, custom Prometheus queries).
+- Vertical Pod Autoscaler — independent of triggers and out of scope
+  for this surface.
+
+For those, edit `convox.yml` and redeploy. The Console reflects the
+materialized state but does not edit cooldown / polling / custom
+triggers.
+
+## Authorization
+
+The triggers-override actions are Read+Write RBAC-gated, identical to
+deploy / env edit / scale override. Rack-side controllers enforce
+`CanWrite`; the Console resolver enforces `requireAppWrite`. Each
+action emits an audit event (`app:triggers-override:toggled` or
+`app:triggers-override:threshold-set`) carrying the authenticated
+user's identity for the audit stream.
+
+## Rack version requirements
+
+The override surface and CLI subcommands require rack version 3.24.6 or
+later. Earlier racks do not know about the new annotations or endpoints
+and will return 404 if a 3.24.6 CLI / Console targets them. The Console
+checks the rack version at request time and surfaces a clean
+upgrade-required error rather than letting the call fall through.

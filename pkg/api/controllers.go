@@ -1935,6 +1935,88 @@ func (s *Server) ServiceUpdate(c *stdapi.Context) error {
 	return c.RenderOK()
 }
 
+// ServiceTriggersEnable materializes a Console-driven autoscaler on the
+// named service. Same Read+Write RBAC gate as ServiceScaleOverrideSet
+// (both surfaces are operational per-app writes). The opts form-param
+// carries the JSON-encoded ServiceTriggersOptions; ack_by carries actor
+// identity for the audit event.
+func (s *Server) ServiceTriggersEnable(c *stdapi.Context) error {
+	if err := s.hook("ServiceTriggersEnableValidate", c); err != nil {
+		return err
+	}
+	if !CanWrite(c) {
+		return stdapi.Errorf(http.StatusForbidden, "ServiceTriggersEnable requires Read+Write role; current role does not include 'w'. Contact rack admin or use a Read+Write or Admin token.")
+	}
+
+	app := c.Var("app")
+	service := c.Var("service")
+
+	var opts structs.ServiceTriggersOptions
+	if err := json.Unmarshal([]byte(formValue(c, "opts")), &opts); err != nil {
+		return stdapi.Errorf(http.StatusBadRequest, "invalid opts payload: %s", err.Error())
+	}
+
+	ackBy := resolveAckByOverride(c, app)
+
+	if err := s.provider(c).WithContext(contextFrom(c)).ServiceTriggersEnable(app, service, opts, ackBy); err != nil {
+		return err
+	}
+
+	return c.RenderOK()
+}
+
+// ServiceTriggersDisable clears the Console-driven autoscale override on
+// the named service. Same RBAC gate as ServiceTriggersEnable.
+func (s *Server) ServiceTriggersDisable(c *stdapi.Context) error {
+	if err := s.hook("ServiceTriggersDisableValidate", c); err != nil {
+		return err
+	}
+	if !CanWrite(c) {
+		return stdapi.Errorf(http.StatusForbidden, "ServiceTriggersDisable requires Read+Write role; current role does not include 'w'.")
+	}
+
+	app := c.Var("app")
+	service := c.Var("service")
+	ackBy := resolveAckByOverride(c, app)
+
+	if err := s.provider(c).WithContext(contextFrom(c)).ServiceTriggersDisable(app, service, ackBy); err != nil {
+		return err
+	}
+
+	return c.RenderOK()
+}
+
+// ServiceTriggersThresholdSet updates one trigger's threshold value on
+// the CRD owned by an active Console-driven override.
+func (s *Server) ServiceTriggersThresholdSet(c *stdapi.Context) error {
+	if err := s.hook("ServiceTriggersThresholdSetValidate", c); err != nil {
+		return err
+	}
+	if !CanWrite(c) {
+		return stdapi.Errorf(http.StatusForbidden, "ServiceTriggersThresholdSet requires Read+Write role; current role does not include 'w'.")
+	}
+
+	app := c.Var("app")
+	service := c.Var("service")
+	triggerType := strings.TrimSpace(formValue(c, "type"))
+	thresholdStr := strings.TrimSpace(formValue(c, "threshold"))
+	if thresholdStr == "" {
+		return stdapi.Errorf(http.StatusBadRequest, "threshold form-param is required")
+	}
+	threshold, err := strconv.ParseFloat(thresholdStr, 64)
+	if err != nil {
+		return stdapi.Errorf(http.StatusBadRequest, "invalid threshold: %s", err.Error())
+	}
+
+	ackBy := resolveAckByOverride(c, app)
+
+	if err := s.provider(c).WithContext(contextFrom(c)).ServiceTriggersThresholdSet(app, service, triggerType, threshold, ackBy); err != nil {
+		return err
+	}
+
+	return c.RenderOK()
+}
+
 func (*Server) Start(_ *stdapi.Context) error {
 	return stdapi.Errorf(404, "not available via api")
 }

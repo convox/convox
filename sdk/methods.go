@@ -1203,6 +1203,62 @@ func (c *Client) ServiceScaleOverrideSet(app, service string, active bool, ackBy
 	return c.Post(fmt.Sprintf("/apps/%s/services/%s/scale-override", app, service), ro, nil)
 }
 
+// ServiceTriggersEnable creates a Console-driven autoscale configuration
+// on the named service. Persists via the convox.com/triggers-override-*
+// annotation pair on the service Deployment; the deploy controller respects
+// the annotation on subsequent promotes so the user's choice survives
+// deploys without yaml edits. New in rack 3.24.6 — older racks return 404.
+func (c *Client) ServiceTriggersEnable(app, service string, opts structs.ServiceTriggersOptions, ackBy string) error {
+	body, err := json.Marshal(opts)
+	if err != nil {
+		return err
+	}
+	ro := stdsdk.RequestOptions{
+		Headers: stdsdk.Headers{},
+		Params:  stdsdk.Params{"opts": string(body)},
+		Query:   stdsdk.Query{},
+	}
+	if strings.TrimSpace(ackBy) != "" {
+		ro.Params["ack_by"] = ackBy
+	}
+	return c.Post(fmt.Sprintf("/apps/%s/services/%s/triggers/enable", app, service), ro, nil)
+}
+
+// ServiceTriggersDisable removes the Console-driven autoscale configuration
+// on the named service: deletes whichever CRD (HPA or KEDA ScaledObject)
+// owns the override, then clears both override annotations. Idempotent on
+// services that were never overridden. New in rack 3.24.6.
+func (c *Client) ServiceTriggersDisable(app, service, ackBy string) error {
+	ro := stdsdk.RequestOptions{
+		Headers: stdsdk.Headers{},
+		Params:  stdsdk.Params{},
+		Query:   stdsdk.Query{},
+	}
+	if strings.TrimSpace(ackBy) != "" {
+		ro.Params["ack_by"] = ackBy
+	}
+	return c.Post(fmt.Sprintf("/apps/%s/services/%s/triggers/disable", app, service), ro, nil)
+}
+
+// ServiceTriggersThresholdSet updates a single trigger's threshold value
+// on a service that already has a Console-driven override active. Fails
+// when no override is active or when the requested trigger type is not
+// present on the active CRD. New in rack 3.24.6.
+func (c *Client) ServiceTriggersThresholdSet(app, service, triggerType string, threshold float64, ackBy string) error {
+	ro := stdsdk.RequestOptions{
+		Headers: stdsdk.Headers{},
+		Params: stdsdk.Params{
+			"type":      triggerType,
+			"threshold": strconv.FormatFloat(threshold, 'g', -1, 64),
+		},
+		Query: stdsdk.Query{},
+	}
+	if strings.TrimSpace(ackBy) != "" {
+		ro.Params["ack_by"] = ackBy
+	}
+	return c.Post(fmt.Sprintf("/apps/%s/services/%s/triggers/threshold", app, service), ro, nil)
+}
+
 func (c *Client) ServiceUpdate(app, name string, opts structs.ServiceUpdateOptions) error {
 	var err error
 
