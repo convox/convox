@@ -54,6 +54,15 @@ func scaleRackAtLeast3246(version string) bool {
 	if len(parts) < 3 {
 		return false
 	}
+	// Strip an un-separated rc-infix from the patch segment so forms
+	// like "3.24.6rc5" parse as 3.24.6. Mirrors the Console-side
+	// versionAtLeast tolerance so RC racks gate identically across
+	// both surfaces.
+	if last := parts[2]; len(last) > 0 {
+		if i := strings.Index(last, "rc"); i > 0 {
+			parts[2] = last[:i]
+		}
+	}
 	nums := [3]int{}
 	for i := 0; i < 3; i++ {
 		n, err := strconv.Atoi(parts[i])

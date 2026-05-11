@@ -148,6 +148,15 @@ For those, edit `convox.yml` and redeploy. The Console reflects the
 materialized state but does not edit cooldown / polling / custom
 triggers.
 
+**Heads-up on `scale.keda.triggers` users:** Enabling a Console-driven
+override takes ownership of the service's KEDA ScaledObject `spec.triggers`
+array. The four override-managed triggers (CPU, Memory, GPU utilization,
+Queue depth) replace whatever was in `spec.triggers` previously, including
+any `scale.keda.triggers` passthrough triggers (SQS, Pub/Sub, custom
+Prometheus queries). Cooldown, polling interval, advanced KEDA behaviors,
+and the manifest's `scale.keda.triggers` passthrough come back on the
+next deploy after you click Disable override.
+
 ## Authorization
 
 The triggers-override actions are Read+Write RBAC-gated, identical to
@@ -164,3 +173,36 @@ later. Earlier racks do not know about the new annotations or endpoints
 and will return 404 if a 3.24.6 CLI / Console targets them. The Console
 checks the rack version at request time and surfaces a clean
 upgrade-required error rather than letting the call fall through.
+
+## Operational considerations
+
+- **HPA-backed autoscale requires `min >= 1`.** The Kubernetes
+  `HPAScaleToZero` feature gate is alpha and is typically not enabled on
+  managed clusters (EKS does not enable it). The Console rejects an HPA
+  override request with `min=0` and points you at the KEDA-eligible
+  trigger types — KEDA's `ScaledObject` supports scale-to-zero natively.
+- **Concurrent Enable + in-flight deploy race.** If a `convox deploy`
+  is rendering templates at the moment you enable an override, the
+  deploy's annotation read can land before your annotation write. That
+  particular deploy will emit the manifest autoscaler; the next deploy
+  honors the override and the rack converges. The Console-driven CRD
+  remains in place across this race window — no replica thrash, just a
+  brief moment where two deploys could disagree about who owns the
+  autoscaler.
+- **Two operators enabling concurrently.** If two users click Enable
+  at the same moment (or the same user double-submits), both Enable
+  calls run against the same Deployment. The Kubernetes API server
+  rejects whichever CRD-create or CRD-update arrives second (either
+  `AlreadyExists` if both writes try Create, or `Conflict` on the
+  later Update against a stale ResourceVersion). The losing user sees
+  the rack's API error surfaced in the Console as an error toast and
+  can retry; the next attempt observes the now-active override and
+  performs an in-place update. The annotation pair converges on the
+  last successful write. Operationally safe; no data loss, no
+  duplicate CRD risk.
+- **CRD-state observation.** KEDA's pollingInterval (default 30s) means
+  threshold changes via the pencil affordance take up to one polling
+  cycle to reflect in actual scaling decisions. Native HPA's loop is
+  ~15s. The Console UI updates the threshold immediately, but the
+  cluster's scaling decision honors the new threshold on the next
+  reconcile.
