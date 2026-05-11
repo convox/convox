@@ -614,6 +614,24 @@ func (p *Provider) ServiceTriggersDisable(app, service, ackBy string) error {
 
 	crd := d.Annotations[ServiceTriggersOverrideCRDAnnotation]
 
+	// Capture the override's minReplicas before deleting the CRD so
+	// the replica reset uses the user's chosen min, not the manifest's.
+	var overrideMin int32
+	switch crd {
+	case TriggersCRDHPA:
+		if hpa, hpaErr := p.Cluster.AutoscalingV2().HorizontalPodAutoscalers(ns).Get(
+			context.TODO(), service, am.GetOptions{}); hpaErr == nil && hpa.Spec.MinReplicas != nil {
+			overrideMin = *hpa.Spec.MinReplicas
+		}
+	case TriggersCRDKeda:
+		if so, soErr := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Get(
+			context.TODO(), service, am.GetOptions{}); soErr == nil {
+			if v, ok, _ := unstructured.NestedInt64(so.Object, "spec", "minReplicaCount"); ok {
+				overrideMin = int32(v)
+			}
+		}
+	}
+
 	switch crd {
 	case TriggersCRDHPA:
 		err := p.Cluster.AutoscalingV2().HorizontalPodAutoscalers(ns).Delete(context.TODO(), service, am.DeleteOptions{})
@@ -626,9 +644,6 @@ func (p *Provider) ServiceTriggersDisable(app, service, ackBy string) error {
 			return errors.WithStack(err)
 		}
 	default:
-		// Corruption recovery: active annotation present but the CRD
-		// type was lost (e.g. partial write, hand-edited Deployment).
-		// Try both deletes; whichever resource exists is removed.
 		_ = p.Cluster.AutoscalingV2().HorizontalPodAutoscalers(ns).Delete(context.TODO(), service, am.DeleteOptions{})
 		_ = p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Delete(context.TODO(), service, am.DeleteOptions{})
 	}
@@ -641,17 +656,19 @@ func (p *Provider) ServiceTriggersDisable(app, service, ackBy string) error {
 		return errors.WithStack(err)
 	}
 
-	ms, msErr := p.serviceManifestService(app, service)
-	if msErr == nil && ms != nil {
-		manifestCount := int32(ms.Scale.Count.Min)
-		if manifestCount < 1 {
-			manifestCount = 1
+	replicaTarget := overrideMin
+	if replicaTarget < 1 {
+		if ms, msErr := p.serviceManifestService(app, service); msErr == nil && ms != nil {
+			replicaTarget = int32(ms.Scale.Count.Min)
 		}
-		scalePatch := fmt.Sprintf(`{"spec":{"replicas":%d}}`, manifestCount)
-		_, _ = p.Cluster.AppsV1().Deployments(ns).Patch(
-			context.TODO(), service, types.StrategicMergePatchType,
-			[]byte(scalePatch), am.PatchOptions{})
+		if replicaTarget < 1 {
+			replicaTarget = 1
+		}
 	}
+	scalePatch := fmt.Sprintf(`{"spec":{"replicas":%d}}`, replicaTarget)
+	_, _ = p.Cluster.AppsV1().Deployments(ns).Patch(
+		context.TODO(), service, types.StrategicMergePatchType,
+		[]byte(scalePatch), am.PatchOptions{})
 
 	fmt.Printf("ns=service at=triggers-override-disable app=%s service=%s crd=%s ack_by=%q\n",
 		app, service, crd, ackBy)
