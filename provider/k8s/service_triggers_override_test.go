@@ -225,6 +225,7 @@ func TestServiceTriggersEnable_KedaPath_GPU(t *testing.T) {
 		seedDeployment(t, kk, "rack1-app1", "web", 1)
 		installManifestServiceHook(p, "app1", "web", 1)
 		p.IsKedaEnabled = true
+		t.Setenv("PROMETHEUS_URL", "http://prometheus:9090")
 		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
 
 		opts := structs.ServiceTriggersOptions{
@@ -256,6 +257,7 @@ func TestServiceTriggersEnable_KedaPath_CPUOnKEDA(t *testing.T) {
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 		seedDeployment(t, kk, "rack1-app1", "web", 1)
 		p.IsKedaEnabled = true
+		t.Setenv("PROMETHEUS_URL", "http://prometheus:9090")
 		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
 
 		// Trigger mix: CPU + Queue → KEDA path. CPU trigger should be
@@ -338,8 +340,7 @@ func TestServiceTriggersEnable_HPAPath_MinZero_Rejected(t *testing.T) {
 		}
 		err := p.ServiceTriggersEnable("app1", "web", opts, "alice")
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "min >= 1")
-		require.Contains(t, err.Error(), "HPAScaleToZero")
+		require.Contains(t, err.Error(), "do not support min=0")
 	})
 }
 
@@ -352,6 +353,7 @@ func TestServiceTriggersEnable_KedaPath_MinZero_Allowed(t *testing.T) {
 		seedDeployment(t, kk, "rack1-app1", "web", 1)
 		installManifestServiceHook(p, "app1", "web", 1)
 		p.IsKedaEnabled = true
+		t.Setenv("PROMETHEUS_URL", "http://prometheus:9090")
 		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
 
 		opts := structs.ServiceTriggersOptions{
@@ -444,6 +446,7 @@ func TestServiceTriggersEnable_KEDAUpdate_PreservesAdvancedFields(t *testing.T) 
 		seedDeployment(t, kk, "rack1-app1", "web", 1)
 		installManifestServiceHook(p, "app1", "web", 1)
 		p.IsKedaEnabled = true
+		t.Setenv("PROMETHEUS_URL", "http://prometheus:9090")
 
 		// Seed an SO with advanced fields the override must preserve.
 		so := &unstructured.Unstructured{
@@ -494,6 +497,7 @@ func TestServiceTriggersEnable_KedaPath_AnnotationPatchFails_RollsBackSO(t *test
 		seedDeployment(t, kk, "rack1-app1", "web", 1)
 		installManifestServiceHook(p, "app1", "web", 1)
 		p.IsKedaEnabled = true
+		t.Setenv("PROMETHEUS_URL", "http://prometheus:9090")
 		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
 
 		kk.PrependReactor("patch", "deployments", func(_ k8stesting.Action) (bool, runtime.Object, error) {
@@ -627,6 +631,7 @@ func TestServiceTriggersEnable_HPAtoKEDASwitch(t *testing.T) {
 		seedDeployment(t, kk, "rack1-app1", "web", 1)
 		installManifestServiceHook(p, "app1", "web", 1)
 		p.IsKedaEnabled = true
+		t.Setenv("PROMETHEUS_URL", "http://prometheus:9090")
 
 		hpa := &autoscalingv2.HorizontalPodAutoscaler{
 			ObjectMeta: am.ObjectMeta{Name: "web", Namespace: "rack1-app1"},
@@ -777,6 +782,7 @@ func TestServiceTriggersEnable_ManifestSOOwnershipTransfer(t *testing.T) {
 		seedDeployment(t, kk, "rack1-app1", "web", 1)
 		installManifestServiceHook(p, "app1", "web", 1)
 		p.IsKedaEnabled = true
+		t.Setenv("PROMETHEUS_URL", "http://prometheus:9090")
 		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme(),
 			scaledObjectUnstructured("rack1-app1", "web", 1, 3))
 
@@ -863,6 +869,7 @@ func TestServiceTriggersThresholdSet_KEDA_GPU(t *testing.T) {
 		seedDeployment(t, kk, "rack1-app1", "web", 1)
 		installManifestServiceHook(p, "app1", "web", 1)
 		p.IsKedaEnabled = true
+		t.Setenv("PROMETHEUS_URL", "http://prometheus:9090")
 		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
 
 		opts := structs.ServiceTriggersOptions{
@@ -1244,6 +1251,90 @@ func TestServiceProjection_ClassicHPA_WidensAutoscaleEnabled(t *testing.T) {
 	})
 }
 
+func TestServiceProjection_LiveHPABoundsOverride(t *testing.T) {
+	// `convox scale --min --max` and the Console Range Apply both
+	// patch the live HPA's MinReplicas/MaxReplicas. The manifest
+	// values stay unchanged. Without this overlay the bounds card
+	// would show the manifest-time min/max forever, drifting from
+	// live cluster state. Verify the live HPA bounds win when
+	// present.
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		scaleSeedDeployment(t, kk, "rack1-app1", "web", 1, "")
+		// Manifest says count: 1 → fixed; live HPA was patched to
+		// min=2, max=7 by an out-of-band scale call.
+		scaleSeedAppRelease(t, p, "rack1-app1", "release1", map[string]int{"web": 1})
+
+		liveMin := int32(2)
+		hpa := &autoscalingv2.HorizontalPodAutoscaler{
+			ObjectMeta: am.ObjectMeta{Name: "web", Namespace: "rack1-app1"},
+			Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
+				MinReplicas: &liveMin,
+				MaxReplicas: 7,
+			},
+		}
+		_, err := kk.AutoscalingV2().HorizontalPodAutoscalers("rack1-app1").Create(context.TODO(), hpa, am.CreateOptions{})
+		require.NoError(t, err)
+
+		services, err := p.ServiceList("app1")
+		require.NoError(t, err)
+		require.Len(t, services, 1)
+		require.NotNil(t, services[0].Min)
+		require.NotNil(t, services[0].Max)
+		require.Equal(t, 2, *services[0].Min, "bounds card must reflect live HPA Min, not manifest")
+		require.Equal(t, 7, *services[0].Max, "bounds card must reflect live HPA Max, not manifest")
+	})
+}
+
+func TestServiceProjection_LiveSOBoundsOverride(t *testing.T) {
+	// Symmetric to LiveHPABoundsOverride: when the service is owned
+	// by a KEDA ScaledObject (manifest scale.autoscale.*), live
+	// minReplicaCount / maxReplicaCount win over the manifest's
+	// scale.count.
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		scaleSeedDeployment(t, kk, "rack1-app1", "web", 1, "")
+		scaleSeedAppRelease(t, p, "rack1-app1", "release1", map[string]int{"web": 1})
+
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme(),
+			scaledObjectUnstructured("rack1-app1", "web", 3, 9))
+
+		services, err := p.ServiceList("app1")
+		require.NoError(t, err)
+		require.Len(t, services, 1)
+		require.NotNil(t, services[0].Min)
+		require.NotNil(t, services[0].Max)
+		require.Equal(t, 3, *services[0].Min, "bounds card must reflect live SO minReplicaCount")
+		require.Equal(t, 9, *services[0].Max, "bounds card must reflect live SO maxReplicaCount")
+	})
+}
+
+func TestServiceProjection_NoCRD_FallsBackToManifest(t *testing.T) {
+	// Without any autoscaler CRD, the bounds card shows manifest
+	// values. Default state for fixed-count services.
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		scaleSeedDeployment(t, kk, "rack1-app1", "web", 1, "")
+		// Manifest seeded with count: 1 (via scaleSeedAppRelease default).
+		scaleSeedAppRelease(t, p, "rack1-app1", "release1", map[string]int{"web": 1})
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
+
+		services, err := p.ServiceList("app1")
+		require.NoError(t, err)
+		require.Len(t, services, 1)
+		require.NotNil(t, services[0].Min)
+		require.NotNil(t, services[0].Max)
+		// scaleSeedAppRelease seeds count: N-N+5 shorthand, so manifest
+		// min=1, max=6. The fixture detail; the contract is: no CRD →
+		// manifest values flow through.
+		require.Equal(t, 1, *services[0].Min)
+		require.Equal(t, 6, *services[0].Max)
+	})
+}
+
 func TestServiceProjection_LiveHPAThresholdRead(t *testing.T) {
 	// When an HPA exists for the service, the resolver projection
 	// must surface its threshold(s) on autoscale.cpu_threshold /
@@ -1352,5 +1443,84 @@ func TestServiceTriggersDisable_CorruptionRecovery_NoCRDAnnotation(t *testing.T)
 		dep, _ = kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
 		_, hasActive := dep.Annotations[k8s.ServiceTriggersOverrideAnnotation]
 		require.False(t, hasActive)
+	})
+}
+
+func TestServiceTriggersEnable_GPU_PrometheusEmpty_Rejects(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 1)
+		installManifestServiceHook(p, "app1", "web", 1)
+		p.IsKedaEnabled = true
+		t.Setenv("PROMETHEUS_URL", "")
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
+
+		opts := structs.ServiceTriggersOptions{
+			Min: 1, Max: 5,
+			Triggers: []structs.TriggerSpec{{Type: "gpuUtilization", Threshold: 75}},
+		}
+		err := p.ServiceTriggersEnable("app1", "web", opts, "alice")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "Prometheus")
+	})
+}
+
+func TestServiceTriggersEnable_Queue_PrometheusEmpty_Rejects(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 1)
+		p.IsKedaEnabled = true
+		t.Setenv("PROMETHEUS_URL", "")
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
+
+		opts := structs.ServiceTriggersOptions{
+			Min: 1, Max: 5,
+			Triggers: []structs.TriggerSpec{{Type: "queueDepth", Threshold: 50}},
+		}
+		err := p.ServiceTriggersEnable("app1", "web", opts, "alice")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "Prometheus")
+	})
+}
+
+func TestServiceTriggersEnable_MixedGPUCPU_PrometheusEmpty_Rejects(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 1)
+		installManifestServiceHook(p, "app1", "web", 1)
+		p.IsKedaEnabled = true
+		t.Setenv("PROMETHEUS_URL", "")
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
+
+		opts := structs.ServiceTriggersOptions{
+			Min: 1, Max: 5,
+			Triggers: []structs.TriggerSpec{
+				{Type: "cpu", Threshold: 70},
+				{Type: "gpuUtilization", Threshold: 75},
+			},
+		}
+		err := p.ServiceTriggersEnable("app1", "web", opts, "alice")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "Prometheus")
+	})
+}
+
+func TestServiceTriggersEnable_CPUOnly_PrometheusEmpty_Succeeds(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 1)
+		p.IsKedaEnabled = true
+		t.Setenv("PROMETHEUS_URL", "")
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
+
+		opts := structs.ServiceTriggersOptions{
+			Min: 1, Max: 5,
+			Triggers: []structs.TriggerSpec{{Type: "cpu", Threshold: 70}},
+		}
+		require.NoError(t, p.ServiceTriggersEnable("app1", "web", opts, "alice"))
 	})
 }
