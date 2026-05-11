@@ -556,6 +556,113 @@ func TestServicesTriggersEnable_RejectedOnPre3246Rack(t *testing.T) {
 	})
 }
 
+// Rack reports an unseparated rc-infix version string like "3.24.6rc5".
+// The version gate must tolerate this so RC racks accept the new
+// subcommand — mirrors Console's versionAtLeast tolerance. Without
+// this branch the CLI rejects with a misleading upgrade-required error.
+func TestServicesTriggersEnable_AcceptsRCInfixRack(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		opts := structs.ServiceTriggersOptions{
+			Min: 1, Max: 5,
+			Triggers: []structs.TriggerSpec{{Type: "cpu", Threshold: 70}},
+		}
+		i.On("SystemGet").Return(&structs.System{Version: "3.24.6rc5"}, nil)
+		i.On("ServiceTriggersEnable", "app1", "web", opts, "").Return(nil)
+
+		res, err := testExecute(e, "services triggers enable web --min 1 --max 5 --cpu 70 -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+	})
+}
+
+func TestServicesTriggersEnable_MemoryOnly(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		opts := structs.ServiceTriggersOptions{
+			Min: 1, Max: 5,
+			Triggers: []structs.TriggerSpec{{Type: "memory", Threshold: 80}},
+		}
+		i.On("SystemGet").Return(&structs.System{Version: "3.24.6"}, nil)
+		i.On("ServiceTriggersEnable", "app1", "web", opts, "").Return(nil)
+
+		res, err := testExecute(e, "services triggers enable web --min 1 --max 5 --memory 80 -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+	})
+}
+
+func TestServicesTriggersEnable_GPU(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		opts := structs.ServiceTriggersOptions{
+			Min: 0, Max: 10,
+			Triggers: []structs.TriggerSpec{{Type: "gpuUtilization", Threshold: 75}},
+		}
+		i.On("SystemGet").Return(&structs.System{Version: "3.24.6"}, nil)
+		i.On("ServiceTriggersEnable", "app1", "web", opts, "").Return(nil)
+
+		res, err := testExecute(e, "services triggers enable web --min 0 --max 10 --gpu 75 -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+	})
+}
+
+func TestServicesTriggersEnable_Queue(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		opts := structs.ServiceTriggersOptions{
+			Min: 1, Max: 8,
+			Triggers: []structs.TriggerSpec{{Type: "queueDepth", Threshold: 100}},
+		}
+		i.On("SystemGet").Return(&structs.System{Version: "3.24.6"}, nil)
+		i.On("ServiceTriggersEnable", "app1", "web", opts, "").Return(nil)
+
+		res, err := testExecute(e, "services triggers enable web --min 1 --max 8 --queue 100 -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+	})
+}
+
+func TestServicesTriggersEnable_MultipleTriggers(t *testing.T) {
+	// CLI must accept multiple trigger flags in one call. The order of
+	// the resulting Triggers slice mirrors the cli command's flag-check
+	// sequence: cpu, memory, gpu, queue.
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		opts := structs.ServiceTriggersOptions{
+			Min: 1, Max: 5,
+			Triggers: []structs.TriggerSpec{
+				{Type: "cpu", Threshold: 70},
+				{Type: "memory", Threshold: 80},
+			},
+		}
+		i.On("SystemGet").Return(&structs.System{Version: "3.24.6"}, nil)
+		i.On("ServiceTriggersEnable", "app1", "web", opts, "").Return(nil)
+
+		res, err := testExecute(e, "services triggers enable web --min 1 --max 5 --cpu 70 --memory 80 -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+	})
+}
+
+func TestServicesTriggersDisable_RejectedOnPre3246Rack(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(&structs.System{Version: "3.24.5"}, nil)
+
+		res, err := testExecute(e, "services triggers disable web -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		require.Contains(t, res.Stderr, "rack version 3.24.6 or later")
+	})
+}
+
+func TestServicesTriggersThresholdSet_RejectedOnPre3246Rack(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(&structs.System{Version: "3.24.5"}, nil)
+
+		res, err := testExecute(e, "services triggers threshold-set web --type cpu --threshold 80 -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		require.Contains(t, res.Stderr, "rack version 3.24.6 or later")
+	})
+}
+
 func TestServicesTriggersEnable_NoTriggers_Rejects(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		res, err := testExecute(e, "services triggers enable web --min 1 --max 5 -a app1", nil)

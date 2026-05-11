@@ -2,12 +2,16 @@ package k8s_test
 
 import (
 	"context"
+	"fmt"
+	"sync"
 	"testing"
 
+	"github.com/convox/convox/pkg/atom"
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/k8s"
+	cvfake "github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned/fake"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -15,8 +19,10 @@ import (
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic/fake"
 	kfake "k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 )
 
 // installManifestServiceHook injects a deterministic manifest service
@@ -313,6 +319,306 @@ func TestServiceTriggersEnable_KedaOff_RejectsQueueTrigger(t *testing.T) {
 		require.Contains(t, err.Error(), "require KEDA")
 	})
 }
+
+func TestServiceTriggersEnable_HPAPath_MinZero_Rejected(t *testing.T) {
+	// HPA-backed autoscale requires min >= 1 on standard K8s (the
+	// HPAScaleToZero feature gate is alpha and not enabled on EKS).
+	// Reject Min=0 with a friendly error pointing users at the KEDA
+	// path instead of letting the K8s API server surface a bare
+	// HorizontalPodAutoscaler validation error in the toast.
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 1)
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
+
+		opts := structs.ServiceTriggersOptions{
+			Min: 0, Max: 5,
+			Triggers: []structs.TriggerSpec{{Type: "cpu", Threshold: 70}},
+		}
+		err := p.ServiceTriggersEnable("app1", "web", opts, "alice")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "min >= 1")
+		require.Contains(t, err.Error(), "HPAScaleToZero")
+	})
+}
+
+func TestServiceTriggersEnable_KedaPath_MinZero_Allowed(t *testing.T) {
+	// KEDA's ScaledObject supports scale-to-zero natively. Min=0 on
+	// the KEDA path must NOT be gated by the HPA-specific check.
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 1)
+		installManifestServiceHook(p, "app1", "web", 1)
+		p.IsKedaEnabled = true
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
+
+		opts := structs.ServiceTriggersOptions{
+			Min: 0, Max: 5,
+			Triggers: []structs.TriggerSpec{{Type: "gpuUtilization", Threshold: 75}},
+		}
+		require.NoError(t, p.ServiceTriggersEnable("app1", "web", opts, "alice"))
+	})
+}
+
+func TestServiceTriggersThresholdSet_OverPercentCap_Rejects(t *testing.T) {
+	// ThresholdSet on a percent-bound trigger (cpu / memory / gpu)
+	// must reject values > 100 — same validation rule as Enable's
+	// TriggerSpec.Validate. The earlier implementation only checked
+	// for `threshold <= 0`, letting nonsensical values through.
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 1)
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
+
+		opts := structs.ServiceTriggersOptions{
+			Min: 1, Max: 5,
+			Triggers: []structs.TriggerSpec{{Type: "cpu", Threshold: 70}},
+		}
+		require.NoError(t, p.ServiceTriggersEnable("app1", "web", opts, "alice"))
+
+		err := p.ServiceTriggersThresholdSet("app1", "web", "cpu", 150, "alice")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "percent triggers must be <= 100")
+	})
+}
+
+func TestServiceTriggersEnable_HPAUpdate_PreservesLabelsAndAnnotations(t *testing.T) {
+	// When the user takes ownership of an existing HPA (manifest-
+	// materialized OR Console-driven re-enable), the Update path
+	// must preserve labels, annotations, and Spec.Behavior. Earlier
+	// implementation Update'd a fresh struct, wiping all of those.
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 1)
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
+
+		oldThresh := int32(50)
+		hpa := &autoscalingv2.HorizontalPodAutoscaler{
+			ObjectMeta: am.ObjectMeta{
+				Name:        "web",
+				Namespace:   "rack1-app1",
+				Labels:      map[string]string{"app": "app1", "system": "convox", "custom-label": "keep-me"},
+				Annotations: map[string]string{"convox.com/manifest-version": "v123"},
+			},
+			Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
+				Metrics: []autoscalingv2.MetricSpec{{
+					Type: autoscalingv2.ResourceMetricSourceType,
+					Resource: &autoscalingv2.ResourceMetricSource{
+						Name: "cpu",
+						Target: autoscalingv2.MetricTarget{
+							Type:               autoscalingv2.UtilizationMetricType,
+							AverageUtilization: &oldThresh,
+						},
+					},
+				}},
+			},
+		}
+		_, err := kk.AutoscalingV2().HorizontalPodAutoscalers("rack1-app1").Create(context.TODO(), hpa, am.CreateOptions{})
+		require.NoError(t, err)
+
+		opts := structs.ServiceTriggersOptions{
+			Min: 1, Max: 5,
+			Triggers: []structs.TriggerSpec{{Type: "cpu", Threshold: 70}},
+		}
+		require.NoError(t, p.ServiceTriggersEnable("app1", "web", opts, "alice"))
+
+		got, _ := kk.AutoscalingV2().HorizontalPodAutoscalers("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.Equal(t, int32(70), *got.Spec.Metrics[0].Resource.Target.AverageUtilization, "threshold should be replaced")
+		require.Equal(t, "keep-me", got.Labels["custom-label"], "user-set labels must survive ownership transfer")
+		require.Equal(t, "v123", got.Annotations["convox.com/manifest-version"], "manifest-set annotations must survive ownership transfer")
+	})
+}
+
+func TestServiceTriggersEnable_KEDAUpdate_PreservesAdvancedFields(t *testing.T) {
+	// Symmetric to the HPA preservation test: KEDA ScaledObject's
+	// cooldownPeriod / pollingInterval / advanced behaviors are
+	// yaml-only per the spec. Console-driven re-enable must preserve
+	// those fields when patching the override.
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 1)
+		installManifestServiceHook(p, "app1", "web", 1)
+		p.IsKedaEnabled = true
+
+		// Seed an SO with advanced fields the override must preserve.
+		so := &unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": "keda.sh/v1alpha1",
+				"kind":       "ScaledObject",
+				"metadata": map[string]interface{}{
+					"name":      "web",
+					"namespace": "rack1-app1",
+					"labels":    map[string]interface{}{"custom-label": "keep-me"},
+				},
+				"spec": map[string]interface{}{
+					"scaleTargetRef":   map[string]interface{}{"name": "web"},
+					"minReplicaCount":  int64(1),
+					"maxReplicaCount":  int64(3),
+					"cooldownPeriod":   int64(120),
+					"pollingInterval":  int64(15),
+					"triggers":         []interface{}{},
+				},
+			},
+		}
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme(), so)
+
+		opts := structs.ServiceTriggersOptions{
+			Min: 2, Max: 7,
+			Triggers: []structs.TriggerSpec{{Type: "gpuUtilization", Threshold: 80}},
+		}
+		require.NoError(t, p.ServiceTriggersEnable("app1", "web", opts, "alice"))
+
+		got, _ := p.DynamicClient.Resource(testScaledObjectGVR).Namespace("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		cooldown, _, _ := unstructured.NestedInt64(got.Object, "spec", "cooldownPeriod")
+		polling, _, _ := unstructured.NestedInt64(got.Object, "spec", "pollingInterval")
+		require.Equal(t, int64(120), cooldown, "cooldownPeriod must survive update")
+		require.Equal(t, int64(15), polling, "pollingInterval must survive update")
+		labels, _, _ := unstructured.NestedStringMap(got.Object, "metadata", "labels")
+		require.Equal(t, "keep-me", labels["custom-label"], "user labels must survive update")
+	})
+}
+
+func TestServiceTriggersEnable_KedaPath_AnnotationPatchFails_RollsBackSO(t *testing.T) {
+	// Symmetric to the HPA-path rollback test: KEDA path must
+	// best-effort delete the just-created SO when annotation patch
+	// fails. Mirrors the HPA-path invariant on the dynamic-client
+	// surface.
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 1)
+		installManifestServiceHook(p, "app1", "web", 1)
+		p.IsKedaEnabled = true
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
+
+		kk.PrependReactor("patch", "deployments", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+			return true, nil, fmt.Errorf("simulated patch failure")
+		})
+
+		opts := structs.ServiceTriggersOptions{
+			Min: 1, Max: 5,
+			Triggers: []structs.TriggerSpec{{Type: "gpuUtilization", Threshold: 75}},
+		}
+		err := p.ServiceTriggersEnable("app1", "web", opts, "alice")
+		require.Error(t, err, "annotation patch failure must surface")
+
+		_, getErr := p.DynamicClient.Resource(testScaledObjectGVR).Namespace("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.True(t, kerr.IsNotFound(getErr), "SO must be rolled back when annotation patch fails")
+	})
+}
+
+func TestServiceTriggersEnable_AnnotationPatchFails_RollsBackCRD(t *testing.T) {
+	// Spec at line 271 promises: "if the new CRD create succeeds but
+	// the subsequent annotation write fails, the handler attempts a
+	// best-effort delete of the just-created CRD before returning the
+	// original error." Inject a patch-deployments reactor that errors
+	// AFTER the HPA is created, then verify the HPA is rolled back.
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 1)
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
+
+		// Patch the deployment Patch call to fail unconditionally — this
+		// simulates the annotation-write failure post-CRD-create.
+		kk.PrependReactor("patch", "deployments", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+			return true, nil, fmt.Errorf("simulated patch failure")
+		})
+
+		opts := structs.ServiceTriggersOptions{
+			Min: 1, Max: 5,
+			Triggers: []structs.TriggerSpec{{Type: "cpu", Threshold: 70}},
+		}
+		err := p.ServiceTriggersEnable("app1", "web", opts, "alice")
+		require.Error(t, err, "annotation patch failure must surface")
+
+		// CRD must be rolled back.
+		_, getErr := kk.AutoscalingV2().HorizontalPodAutoscalers("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.True(t, kerr.IsNotFound(getErr), "HPA must be rolled back when annotation patch fails")
+	})
+}
+
+func TestReleaseTemplateServices_TriggersOverrideActive_SkipsKEDABuild(t *testing.T) {
+	// Symmetric to TestReleaseTemplateServices_TriggersOverrideActive_SkipsHPARender
+	// but for the KEDA-build branch. A service with `scale.autoscale.cpu`
+	// + the triggers-override annotation must NOT have a ScaledObject
+	// rebuilt by the deploy controller — the Console-driven override
+	// keeps its own CRD across deploys.
+	out, _, err := runReleaseTemplateServicesEvents(t, func(p *k8s.Provider) (*structs.App, *structs.Release, manifest.Services) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeploymentWithTriggersOverride(t, kk, "rack1-app1", "web", 1)
+		p.IsKedaEnabled = true
+
+		yaml := `services:
+  web:
+    image: docker.io/library/nginx
+    port: 5000
+    scale:
+      min: 1
+      max: 5
+      autoscale:
+        cpu:
+          threshold: 70
+`
+		cc, _ := p.Convox.(*cvfake.Clientset)
+		require.NoError(t, releaseCreateInline(cc, "rack1-app1", "release1", yaml))
+		aa, _ := p.Atom.(*atom.MockInterface)
+		aa.On("Status", "rack1-app1", "app").Return("Running", "release1", nil)
+
+		m, err := manifest.Load([]byte(yaml), structs.Environment{})
+		require.NoError(t, err)
+		return &structs.App{Name: "app1", Release: "release1"},
+			&structs.Release{Id: "release1", App: "app1"},
+			m.Services
+	})
+	require.NoError(t, err)
+	require.NotContains(t, string(out), "ScaledObject",
+		"deploy controller must not rebuild ScaledObject when triggers-override is active")
+}
+
+func TestServiceProjection_DualCRDDetected_EmitsLog(t *testing.T) {
+	// Operator-introduced corruption (both HPA and KEDA SO exist for
+	// same service) must surface a structured log line on every
+	// ServiceList projection invocation. Captures stdout to verify.
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		scaleSeedDeployment(t, kk, "rack1-app1", "web", 1, "")
+		scaleSeedAppRelease(t, p, "rack1-app1", "release1", map[string]int{"web": 1})
+
+		// Seed both an HPA and a ScaledObject for the same service.
+		hpa := &autoscalingv2.HorizontalPodAutoscaler{
+			ObjectMeta: am.ObjectMeta{Name: "web", Namespace: "rack1-app1"},
+			Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
+				MinReplicas: int32Ptr(1),
+				MaxReplicas: 5,
+			},
+		}
+		_, err := kk.AutoscalingV2().HorizontalPodAutoscalers("rack1-app1").Create(context.TODO(), hpa, am.CreateOptions{})
+		require.NoError(t, err)
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme(),
+			scaledObjectUnstructured("rack1-app1", "web", 1, 5))
+
+		stop := captureStdout(t)
+		_, err = p.ServiceList("app1")
+		require.NoError(t, err)
+		stdout := stop()
+		require.Contains(t, stdout, "at=dual-crd-detected",
+			"dual-CRD state must emit operator-corruption log line")
+		require.Contains(t, stdout, `service="web"`)
+	})
+}
+
+// int32Ptr returns a pointer to the value. Used by test fixtures that
+// construct HPA structs with int32 replica bounds; declared once here
+// so the trigger-override test suite stays self-contained.
+func int32Ptr(v int32) *int32 { return &v }
 
 func TestServiceTriggersEnable_HPAtoKEDASwitch(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
@@ -636,6 +942,79 @@ func TestServiceTriggersDisable_KedaPath(t *testing.T) {
 		_, hasActive := dep.Annotations[k8s.ServiceTriggersOverrideAnnotation]
 		require.False(t, hasActive)
 	})
+}
+
+func TestServiceTriggersEnable_Orthogonality_ScaleOverridePreserved(t *testing.T) {
+	// Symmetric to the Disable orthogonality test: Enable must NOT
+	// touch the scale-override annotation. Both override surfaces are
+	// independent and a service can have both active. The
+	// StrategicMergePatch on the triggers annotation pair must leave
+	// the scale-override key intact.
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 5)
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
+
+		// Pre-seed scale-override annotation; no triggers annotation yet.
+		dep, _ := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		dep.Annotations = map[string]string{
+			"convox.com/scale-override-active": "true",
+		}
+		_, err := kk.AppsV1().Deployments("rack1-app1").Update(context.TODO(), dep, am.UpdateOptions{})
+		require.NoError(t, err)
+
+		opts := structs.ServiceTriggersOptions{
+			Min: 1, Max: 5,
+			Triggers: []structs.TriggerSpec{{Type: "cpu", Threshold: 70}},
+		}
+		require.NoError(t, p.ServiceTriggersEnable("app1", "web", opts, "alice"))
+
+		// Both annotations must be present: scale-override (existing) +
+		// triggers-override (just written).
+		dep, _ = kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.Equal(t, "true", dep.Annotations["convox.com/scale-override-active"], "scale-override must be preserved across Enable")
+		require.Equal(t, "true", dep.Annotations[k8s.ServiceTriggersOverrideAnnotation], "triggers-override must be set by Enable")
+	})
+}
+
+func TestServiceTriggersEnable_EmitsBothActorAndAckBy(t *testing.T) {
+	// Wire contract: the triggers-override audit events must include
+	// both `actor` (legacy field) and `ack_by` (canonical 3.24.6+ field)
+	// in the EventSend Data payload. Webhook receivers depending on
+	// either key must work. Mirrors the scale-override precedent.
+	var (
+		mu       sync.Mutex
+		captured []map[string]any
+	)
+	srv := webhookCaptureServer(&mu, &captured)
+	defer srv.Close()
+
+	testProvider(t, func(p *k8s.Provider) {
+		k8s.SetWebhooksForTest(p, []string{srv.URL})
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 1)
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
+
+		opts := structs.ServiceTriggersOptions{
+			Min: 1, Max: 5,
+			Triggers: []structs.TriggerSpec{{Type: "cpu", Threshold: 70}},
+		}
+		require.NoError(t, p.ServiceTriggersEnable("app1", "web", opts, "alice@example.com"))
+		drainPendingDispatches()
+	})
+
+	mu.Lock()
+	defer mu.Unlock()
+	toggled := findAllByAction(captured, "app:triggers-override:toggled")
+	require.Len(t, toggled, 1, "exactly one app:triggers-override:toggled event")
+	data, _ := toggled[0]["data"].(map[string]any)
+	require.NotNil(t, data, "event payload must include data block")
+	require.Equal(t, "alice@example.com", data["actor"], "legacy actor key carried")
+	require.Equal(t, "alice@example.com", data["ack_by"], "canonical ack_by key carried")
+	require.Equal(t, "on", data["state"])
+	require.Equal(t, "hpa", data["crd"])
 }
 
 func TestServiceTriggers_Orthogonality_ScaleOverridePreserved(t *testing.T) {

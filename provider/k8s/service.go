@@ -538,10 +538,14 @@ func (p *Provider) ServiceUpdate(app, name string, opts structs.ServiceUpdateOpt
 			// silently drop opts.Max and mislead the caller; an
 			// explicit error is the only honest outcome.
 			if opts.Max != nil {
+				// Branch the message on the actionable cause so the
+				// user sees the right fix for their rack/service state.
+				// In both branches, also point at Enable triggers as a
+				// Console-actionable alternative (3.24.6+).
 				if !p.IsKedaEnabled {
-					return fmt.Errorf("range scaling (min/max) requires KEDA on this rack; run `convox rack params set keda_enable=true` and re-deploy (or use --count for a fixed replica count)")
+					return fmt.Errorf("range scaling (min/max) requires KEDA on this rack; run `convox rack params set keda_enable=true` and re-deploy, click Enable triggers in the Console to configure one through the UI (CPU/Memory work without KEDA), or use --count for a fixed replica count")
 				}
-				return fmt.Errorf("range scaling (min/max) requires an autoscale block in convox.yml; set scale.autoscale (or use --count for a fixed replica count)")
+				return fmt.Errorf("range scaling (min/max) requires an autoscale block in convox.yml; set scale.autoscale and re-deploy, click Enable triggers in the Console to configure one through the UI, or use --count for a fixed replica count")
 			}
 			// --min-only fallback (no max requested): honor the floor by
 			// patching the Deployment's replica count to opts.Min so the

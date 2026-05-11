@@ -91,6 +91,15 @@ func (p *Provider) ServiceTriggersEnable(app, service string, opts structs.Servi
 		return fmt.Errorf("GPU and queue-depth triggers require KEDA. Run convox rack params set keda_enable=true on the rack and re-deploy, then try again")
 	}
 
+	// HPA-path scale-to-zero requires the K8s HPAScaleToZero feature
+	// gate (alpha; not enabled on EKS or most managed K8s). Reject
+	// Min=0 on the HPA path with a friendly error pointing users at a
+	// KEDA-eligible trigger so the K8s API server doesn't surface a
+	// bare HorizontalPodAutoscaler validation error in the toast.
+	if crdChoice == TriggersCRDHPA && opts.Min < 1 {
+		return fmt.Errorf("CPU and memory triggers require min >= 1 on this rack. Scale-to-zero (min=0) needs the Kubernetes HPAScaleToZero feature gate, which is alpha and is not enabled on EKS or most managed clusters. To get scale-to-zero, either add a KEDA-eligible trigger (gpuUtilization or queueDepth — these use the KEDA ScaledObject path which supports min=0 natively) or set min >= 1 here and rely on natural CPU/memory scaling")
+	}
+
 	ns := p.AppNamespace(app)
 	d, err := p.Cluster.AppsV1().Deployments(ns).Get(context.TODO(), service, am.GetOptions{})
 	if err != nil {
@@ -174,16 +183,22 @@ func (p *Provider) ServiceTriggersEnable(app, service string, opts structs.Servi
 			"state":   "on",
 			"crd":     crdChoice,
 			"actor":   ackBy,
+			"ack_by":  ackBy,
 		},
 	})
 
 	return nil
 }
 
-// applyTriggersHPA creates or patches a native K8s HPA owning the named
-// service Deployment with one metrics entry per requested CPU/memory
-// trigger. Non-CPU/memory triggers are silently skipped (the KEDA branch
-// catches GPU/queue triggers earlier in the dispatch).
+// applyTriggersHPA creates or in-place updates a native K8s HPA owning
+// the named service Deployment with one metrics entry per requested
+// CPU/memory trigger. Non-CPU/memory triggers are silently skipped (the
+// KEDA branch catches GPU/queue triggers earlier in the dispatch).
+//
+// Update preserves labels, annotations, and Spec.Behavior on the existing
+// HPA — only the override-owned fields (ScaleTargetRef, MinReplicas,
+// MaxReplicas, Metrics) are replaced. This avoids wiping manifest-set
+// metadata when the Console takes ownership of an existing HPA.
 func (p *Provider) applyTriggersHPA(ns, service string, opts structs.ServiceTriggersOptions) error {
 	min := int32(opts.Min)
 	max := int32(opts.Max)
@@ -206,21 +221,10 @@ func (p *Provider) applyTriggersHPA(ns, service string, opts structs.ServiceTrig
 		})
 	}
 
-	hpa := &autoscalingv2.HorizontalPodAutoscaler{
-		ObjectMeta: am.ObjectMeta{
-			Name:      service,
-			Namespace: ns,
-		},
-		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
-			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
-				APIVersion: "apps/v1",
-				Kind:       "Deployment",
-				Name:       service,
-			},
-			MinReplicas: &min,
-			MaxReplicas: max,
-			Metrics:     metrics,
-		},
+	scaleTargetRef := autoscalingv2.CrossVersionObjectReference{
+		APIVersion: "apps/v1",
+		Kind:       "Deployment",
+		Name:       service,
 	}
 
 	existing, err := p.Cluster.AutoscalingV2().HorizontalPodAutoscalers(ns).Get(context.TODO(), service, am.GetOptions{})
@@ -228,11 +232,31 @@ func (p *Provider) applyTriggersHPA(ns, service string, opts structs.ServiceTrig
 		return errors.WithStack(err)
 	}
 	if err != nil {
+		// No existing HPA — create fresh.
+		hpa := &autoscalingv2.HorizontalPodAutoscaler{
+			ObjectMeta: am.ObjectMeta{
+				Name:      service,
+				Namespace: ns,
+			},
+			Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
+				ScaleTargetRef: scaleTargetRef,
+				MinReplicas:    &min,
+				MaxReplicas:    max,
+				Metrics:        metrics,
+			},
+		}
 		_, createErr := p.Cluster.AutoscalingV2().HorizontalPodAutoscalers(ns).Create(context.TODO(), hpa, am.CreateOptions{})
 		return errors.WithStack(createErr)
 	}
-	hpa.ObjectMeta.ResourceVersion = existing.ObjectMeta.ResourceVersion
-	_, err = p.Cluster.AutoscalingV2().HorizontalPodAutoscalers(ns).Update(context.TODO(), hpa, am.UpdateOptions{})
+
+	// In-place update: mutate the existing object so Spec.Behavior,
+	// labels, annotations, and OwnerReferences are preserved across
+	// the Update call.
+	existing.Spec.ScaleTargetRef = scaleTargetRef
+	existing.Spec.MinReplicas = &min
+	existing.Spec.MaxReplicas = max
+	existing.Spec.Metrics = metrics
+	_, err = p.Cluster.AutoscalingV2().HorizontalPodAutoscalers(ns).Update(context.TODO(), existing, am.UpdateOptions{})
 	return errors.WithStack(err)
 }
 
@@ -290,33 +314,40 @@ func (p *Provider) applyTriggersKEDA(app, ns, service string, opts structs.Servi
 		}
 	}
 
-	so := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "keda.sh/v1alpha1",
-			"kind":       "ScaledObject",
-			"metadata": map[string]interface{}{
-				"name":      service,
-				"namespace": ns,
-			},
-			"spec": map[string]interface{}{
-				"scaleTargetRef":  map[string]interface{}{"name": service},
-				"minReplicaCount": int64(opts.Min),
-				"maxReplicaCount": int64(opts.Max),
-				"triggers":        triggers,
-			},
-		},
-	}
-
 	existing, getErr := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Get(context.TODO(), service, am.GetOptions{})
 	if getErr != nil && !kerr.IsNotFound(getErr) && !meta.IsNoMatchError(getErr) {
 		return errors.WithStack(getErr)
 	}
 	if getErr != nil {
+		so := &unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": "keda.sh/v1alpha1",
+				"kind":       "ScaledObject",
+				"metadata": map[string]interface{}{
+					"name":      service,
+					"namespace": ns,
+				},
+				"spec": map[string]interface{}{
+					"scaleTargetRef":  map[string]interface{}{"name": service},
+					"minReplicaCount": int64(opts.Min),
+					"maxReplicaCount": int64(opts.Max),
+					"triggers":        triggers,
+				},
+			},
+		}
 		_, err := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Create(context.TODO(), so, am.CreateOptions{})
 		return errors.WithStack(err)
 	}
-	so.SetResourceVersion(existing.GetResourceVersion())
-	_, err := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Update(context.TODO(), so, am.UpdateOptions{})
+
+	// In-place update: mutate existing.Object so non-override fields
+	// (cooldownPeriod, pollingInterval, advanced behaviors, labels,
+	// annotations) survive the Update call. Only the override-owned
+	// fields (scaleTargetRef, min/max, triggers) are replaced.
+	_ = unstructured.SetNestedMap(existing.Object, map[string]interface{}{"name": service}, "spec", "scaleTargetRef")
+	_ = unstructured.SetNestedField(existing.Object, int64(opts.Min), "spec", "minReplicaCount")
+	_ = unstructured.SetNestedField(existing.Object, int64(opts.Max), "spec", "maxReplicaCount")
+	_ = unstructured.SetNestedSlice(existing.Object, triggers, "spec", "triggers")
+	_, err := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Update(context.TODO(), existing, am.UpdateOptions{})
 	return errors.WithStack(err)
 }
 
@@ -548,6 +579,7 @@ func (p *Provider) ServiceTriggersDisable(app, service, ackBy string) error {
 			"state":   "off",
 			"crd":     crd,
 			"actor":   ackBy,
+			"ack_by":  ackBy,
 		},
 	})
 
@@ -562,8 +594,12 @@ func (p *Provider) ServiceTriggersDisable(app, service, ackBy string) error {
 func (p *Provider) ServiceTriggersThresholdSet(app, service, triggerType string, threshold float64, ackBy string) error {
 	ackBy = sanitizeAckBy(ackBy)
 
-	if threshold <= 0 {
-		return fmt.Errorf("threshold must be positive")
+	// Reuse the canonical TriggerSpec.Validate so the same threshold
+	// rules apply on both Enable (full opts) and ThresholdSet (single
+	// trigger): positive value, <=100 for percent types, queueDepth
+	// uncapped. Mirrors structs.TriggerSpec.Validate at pkg/structs/service.go.
+	if err := (structs.TriggerSpec{Type: triggerType, Threshold: threshold}).Validate(); err != nil {
+		return err
 	}
 	ns := p.AppNamespace(app)
 
@@ -602,6 +638,7 @@ func (p *Provider) ServiceTriggersThresholdSet(app, service, triggerType string,
 			"type":      triggerType,
 			"threshold": fmt.Sprintf("%g", threshold),
 			"actor":     ackBy,
+			"ack_by":    ackBy,
 		},
 	})
 

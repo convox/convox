@@ -80,6 +80,15 @@ At least one of `--cpu`, `--memory`, `--gpu`, `--queue` is required.
 `--gpu` additionally requires the service to declare `scale.gpu.count >= 1`
 in `convox.yml`.
 
+CPU- or memory-only overrides materialize a native Kubernetes HPA and
+require `--min` >= 1; the Kubernetes `HPAScaleToZero` feature gate is
+alpha and not enabled on managed clusters. For scale-to-zero behavior,
+include a KEDA-eligible trigger (`--gpu` or `--queue`) — the KEDA
+`ScaledObject` path supports `--min 0` natively. Mixed trigger sets
+that include any of `--gpu` / `--queue` (e.g. `--cpu 70 --gpu 75`)
+dispatch through the KEDA `ScaledObject` path and therefore also
+accept `--min 0`.
+
 ### Examples
 ```bash
     $ convox services triggers enable web --min 1 --max 5 --cpu 70

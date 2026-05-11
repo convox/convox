@@ -145,6 +145,8 @@ func TestServiceUpdateRangeWithoutScaledObject_KedaDisabledPromptsKedaEnable(t *
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), "requires KEDA on this rack"), err.Error())
 		require.True(t, strings.Contains(err.Error(), "convox rack params set keda_enable=true"), err.Error())
+		require.True(t, strings.Contains(err.Error(), "click Enable triggers"),
+			"3.24.6+ message must surface the Console-actionable redirect alongside the CLI command: %s", err.Error())
 
 		d, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
 		require.NoError(t, err)
@@ -170,6 +172,8 @@ func TestServiceUpdateRangeWithoutScaledObject_KedaEnabledPromptsAutoscaleBlock(
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), "requires an autoscale block"), err.Error())
 		require.True(t, strings.Contains(err.Error(), "scale.autoscale"), err.Error())
+		require.True(t, strings.Contains(err.Error(), "click Enable triggers"),
+			"3.24.6+ message must surface the Console-actionable redirect alongside the manifest fix: %s", err.Error())
 
 		d, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
 		require.NoError(t, err)

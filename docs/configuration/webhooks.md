@@ -122,7 +122,7 @@ The actor class for each event is noted alongside the action below.
   per-service scale-override annotation on or off (HTTP-handler;
   JWT actor populated from `data.ack_by`). Payload carries
   `data.service` (target service), `data.state` (`"on"` or `"off"`),
-  and `data.actor` for audit.
+  and `data.actor` / `data.ack_by` for audit.
 - `app:scale-override:honored` — emitted at deploy time when a service's
   active scale-override annotation is honored — i.e. the service's yaml
   scale block was deliberately skipped on this promote so the override
@@ -130,6 +130,24 @@ The actor class for each event is noted alongside the action below.
   Payload carries `data.service`, `data.release` (release id),
   `data.preserved_count` (the override-pinned replica count), and
   `data.yaml_count_min` (the yaml scale block's min that was skipped).
+
+### Triggers override (3.24.6)
+
+- `app:triggers-override:toggled` — emitted after the Console-driven
+  triggers-override surface (or a direct API/SDK call to
+  `POST /apps/{app}/services/{service}/triggers/{enable,disable}`)
+  materializes or removes the per-service autoscaler (HTTP-handler; JWT
+  actor populated from `data.ack_by`). Payload carries `data.service`
+  (target service), `data.state` (`"on"` or `"off"`), `data.crd`
+  (`"hpa"` or `"keda"` — which CRD the override owns), and both
+  `data.actor` and `data.ack_by` for audit-stream consumer
+  back-compat.
+- `app:triggers-override:threshold-set` — emitted after a pencil-edit on
+  the Console scaling table (or `POST /apps/{app}/services/{service}/triggers/threshold`)
+  patches a single trigger's threshold on the active CRD (HTTP-handler;
+  JWT actor populated from `data.ack_by`). Payload carries
+  `data.service`, `data.type` (canonical trigger type), `data.threshold`
+  (new value, formatted via `%g`), and both `data.actor` / `data.ack_by`.
 
 ### Auto-shutdown lifecycle (3.24.6)
 

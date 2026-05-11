@@ -27,8 +27,8 @@ Setting parameters... OK
 ## Additional Information
 Enabling KEDA installs the KEDA operator and its components in the cluster. Once enabled, services can use the `scale.keda` or `scale.autoscale` sections in their `convox.yml` to define autoscaling triggers.
 
-The Console **Service > Scaling** page reads this parameter to gate Range mode (min/max replica editing). When `keda_enable=false` the page surfaces the enable command in an empty-state card; when `keda_enable=true` and the service has a `scale.autoscale` block, Range mode becomes available for adjusting bounds without re-deploying. Services without a `scale.autoscale` (or `scale.keda`) block can still be scaled via Fixed count regardless of this parameter — KEDA only gates the autoscale path, not classic `count: 1-N` bounded scaling.
+The Console **Service > Scaling** page surfaces a status card describing KEDA state on the rack. Whether Range mode (min/max replica editing) is available depends on the service having any autoscaler at all (manifest-declared OR Console-driven). Native HPA backs CPU/memory autoscale on every rack regardless of `keda_enable`; KEDA only gates the event-driven trigger types (GPU utilization, queue depth, custom Prometheus, SQS, etc.).
 
-The Console **Autoscale Triggers Override** surface (3.24.6+) also reads this parameter to gate the KEDA-only trigger types (GPU utilization, queue depth). CPU and memory triggers use native Kubernetes HPA and work on every rack regardless of `keda_enable`. See [Autoscale Triggers Override](/console/autoscale-triggers) for details.
+The Console **Autoscale Triggers Override** surface (3.24.6+) also reads this parameter to gate the KEDA-only trigger types (GPU utilization, queue depth) in the Enable dialog. CPU and memory triggers use native Kubernetes HPA and remain available on every rack regardless of `keda_enable`. See [Autoscale Triggers Override](/console/autoscale-triggers) for details.
 
 See [KEDA Autoscaling](/configuration/scaling/keda) for service configuration details.
