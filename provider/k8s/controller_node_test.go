@@ -17,7 +17,7 @@ type gpuLabelEngine struct {
 	MockEngine
 }
 
-func (e *gpuLabelEngine) GPUIntanceList(instanceTypes []string) ([]string, error) {
+func (*gpuLabelEngine) GPUIntanceList(instanceTypes []string) ([]string, error) {
 	return instanceTypes, nil
 }
 

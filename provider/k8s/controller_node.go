@@ -13,7 +13,6 @@ import (
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	appsv1 "k8s.io/client-go/applyconfigurations/apps/v1"
 	corev1 "k8s.io/client-go/applyconfigurations/core/v1"
@@ -158,7 +157,7 @@ func (c *NodeController) Add(obj interface{}) error {
 	return nil
 }
 
-func (c *NodeController) Delete(obj interface{}) error {
+func (*NodeController) Delete(obj interface{}) error {
 	nd, err := assertNode(obj)
 	if err != nil {
 		return errors.WithStack(err)
@@ -168,7 +167,7 @@ func (c *NodeController) Delete(obj interface{}) error {
 	return nil
 }
 
-func (c *NodeController) Update(prev, cur interface{}) error {
+func (c *NodeController) Update(_, cur interface{}) error {
 	nd, err := assertNode(cur)
 	if err != nil {
 		return errors.WithStack(err)
@@ -338,7 +337,7 @@ func (c *NodeController) PatchNodeLabel(nd *ac.Node, key, value string) error {
 		return fmt.Errorf("Error marshaling patch: %v", err)
 	}
 
-	_, err = c.provider.Cluster.CoreV1().Nodes().Patch(c.provider.ctx, nd.Name, types.StrategicMergePatchType, patchBytes, v1.PatchOptions{})
+	_, err = c.provider.Cluster.CoreV1().Nodes().Patch(c.provider.ctx, nd.Name, types.StrategicMergePatchType, patchBytes, am.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Error patching node: %v", err)
 	}
