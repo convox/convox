@@ -2502,10 +2502,16 @@ func RackUpdate(_ sdk.Interface, c *stdcli.Context) error {
 		}
 	}
 
+	if newVersion != "" {
+		c.Startf("Updating to <release>%s</release>", newVersion)
+	} else {
+		c.Startf("Updating")
+	}
+
 	force, _ := c.Value("force").(bool)
 	if err := r.UpdateVersion(newVersion, force); err != nil {
 		return err
 	}
 
-	return nil
+	return c.OK()
 }
