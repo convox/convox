@@ -836,6 +836,10 @@ func TestRackUninstallUnknown(t *testing.T) {
 }
 
 func TestRackUpdate(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
 		opts := structs.SystemUpdateOptions{
 			Version: options.String("latest"),
@@ -848,7 +852,7 @@ func TestRackUpdate(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
-		res.RequireStdout(t, []string{""})
+		res.RequireStdout(t, []string{"Updating... OK"})
 	})
 }
 
@@ -874,6 +878,10 @@ func TestRackUpdateDowngradeMinorError(t *testing.T) {
 }
 
 func TestRackUpdateSpecific(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
 		opts := structs.SystemUpdateOptions{
 			Version: options.String("ver1"),
@@ -886,11 +894,15 @@ func TestRackUpdateSpecific(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
-		res.RequireStdout(t, []string{""})
+		res.RequireStdout(t, []string{"Updating to ver1... OK"})
 	})
 }
 
 func TestRackUpdateError(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		opts := structs.SystemUpdateOptions{
 			Version: options.String("latest"),
@@ -903,11 +915,15 @@ func TestRackUpdateError(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 1, res.Code)
 		res.RequireStderr(t, []string{"ERROR: err1"})
-		res.RequireStdout(t, []string{""})
+		res.RequireStdout(t, []string{"Updating... "})
 	})
 }
 
 func TestRackUpdateForce(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
 		opts := structs.SystemUpdateOptions{
 			Version: options.String("3.10.12"),
@@ -932,6 +948,8 @@ func TestRackUpdateForce(t *testing.T) {
 		res, err := testExecute(e, "rack update 3.10.12 --force", nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{"Updating to 3.10.12... OK"})
 	})
 }
 
