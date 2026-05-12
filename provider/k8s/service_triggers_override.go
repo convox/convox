@@ -10,12 +10,14 @@ import (
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/pkg/errors"
+	kedav1alpha1 "github.com/kedacore/keda/v2/apis/keda/v1alpha1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -599,6 +601,152 @@ func (p *Provider) serviceManifestService(app, service string) (*manifest.Servic
 	return s, nil
 }
 
+// reinstateManifestAutoscaler recreates the manifest-driven HPA or KEDA
+// ScaledObject after an override is disabled. Without this, the service
+// is left with no autoscaler until the next release promote — the
+// deployment stays frozen at whatever replica count the override set.
+//
+// Best-effort: errors are logged but not propagated — the override
+// disable itself already succeeded (CRD deleted, annotations cleared).
+// The next deploy will create the authoritative autoscaler regardless.
+func (p *Provider) reinstateManifestAutoscaler(ns, app, service string, ms *manifest.Service) {
+	// scale.keda path: raw KEDA triggers bypass the simple trigger model.
+	if ms.Scale.IsKedaEnabled() {
+		p.reinstateKedaScaledObject(ns, app, service, ms)
+		return
+	}
+
+	// autoscale.custom path: raw kedav1alpha1.ScaleTriggers embedded in
+	// the autoscale block also bypass the simple trigger model — they
+	// can't round-trip through ServiceTriggersOptions/TriggerSpec.
+	if ms.Scale.Autoscale != nil && len(ms.Scale.Autoscale.Custom) > 0 {
+		p.reinstateKedaScaledObject(ns, app, service, ms)
+		return
+	}
+
+	opts, ok := manifestToTriggersOptions(ms)
+	if !ok {
+		return
+	}
+	crd := triggersCRDChoice(opts.Triggers)
+	var err error
+	switch crd {
+	case TriggersCRDHPA:
+		err = p.applyTriggersHPA(ns, service, opts)
+	case TriggersCRDKeda:
+		err = p.applyTriggersKEDA(app, ns, service, opts)
+	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "NOTICE: could not reinstate manifest autoscaler for %s/%s: %v\n", app, service, err)
+	}
+}
+
+func (p *Provider) reinstateKedaScaledObject(ns, app, service string, ms *manifest.Service) {
+	if p.DynamicClient == nil {
+		return
+	}
+	min := int32(ms.Scale.Count.Min)
+	max := int32(ms.Scale.Count.Max)
+
+	var triggers []kedav1alpha1.ScaleTriggers
+	if ms.Scale.Autoscale != nil && ms.Scale.Autoscale.IsEnabled() {
+		promURL := strings.TrimSpace(os.Getenv("PROMETHEUS_URL"))
+		triggers = append(triggers, ms.Scale.Autoscale.BuildTriggers(app, service, promURL)...)
+	}
+	if ms.Scale.Keda != nil {
+		triggers = append(triggers, ms.Scale.Keda.Triggers...)
+	}
+
+	so := ms.KedaScaledObject(manifest.KedaScaledObjectParameters{
+		ServiceName: service,
+		Namespace:   ns,
+		MinCount:    min,
+		MaxCount:    max,
+		Triggers:    triggers,
+	})
+	if so == nil {
+		return
+	}
+
+	obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(so)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "NOTICE: could not convert ScaledObject for %s/%s: %v\n", app, service, err)
+		return
+	}
+	u := &unstructured.Unstructured{Object: obj}
+
+	existing, getErr := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Get(context.TODO(), service, am.GetOptions{})
+	if getErr != nil {
+		_, createErr := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Create(context.TODO(), u, am.CreateOptions{})
+		if createErr != nil && !meta.IsNoMatchError(createErr) {
+			fmt.Fprintf(os.Stderr, "NOTICE: could not reinstate KEDA ScaledObject for %s/%s: %v\n", app, service, createErr)
+		}
+		return
+	}
+	u.SetResourceVersion(existing.GetResourceVersion())
+	_, updateErr := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Update(context.TODO(), u, am.UpdateOptions{})
+	if updateErr != nil {
+		fmt.Fprintf(os.Stderr, "NOTICE: could not reinstate KEDA ScaledObject for %s/%s: %v\n", app, service, updateErr)
+	}
+}
+
+// manifestToTriggersOptions converts a manifest.Service's scale config
+// into ServiceTriggersOptions suitable for applyTriggersHPA/applyTriggersKEDA.
+// Returns false if the manifest does not define any autoscale config.
+func manifestToTriggersOptions(ms *manifest.Service) (structs.ServiceTriggersOptions, bool) {
+	min := ms.Scale.Count.Min
+	max := ms.Scale.Count.Max
+	if min == max {
+		return structs.ServiceTriggersOptions{}, false
+	}
+
+	var triggers []structs.TriggerSpec
+
+	if ms.Scale.Autoscale != nil {
+		a := ms.Scale.Autoscale
+		if a.Cpu != nil && a.Cpu.Threshold > 0 {
+			triggers = append(triggers, structs.TriggerSpec{Type: structs.TriggerTypeCPU, Threshold: a.Cpu.Threshold})
+		}
+		if a.Memory != nil && a.Memory.Threshold > 0 {
+			triggers = append(triggers, structs.TriggerSpec{Type: structs.TriggerTypeMemory, Threshold: a.Memory.Threshold})
+		}
+		if a.GpuUtilization != nil && a.GpuUtilization.Threshold > 0 {
+			triggers = append(triggers, structs.TriggerSpec{Type: structs.TriggerTypeGPUUtilization, Threshold: a.GpuUtilization.Threshold})
+		}
+		if a.QueueDepth != nil && a.QueueDepth.Threshold > 0 {
+			triggers = append(triggers, structs.TriggerSpec{Type: structs.TriggerTypeQueueDepth, Threshold: a.QueueDepth.Threshold})
+		}
+	} else {
+		if ms.Scale.Targets.Cpu > 0 {
+			triggers = append(triggers, structs.TriggerSpec{Type: structs.TriggerTypeCPU, Threshold: float64(ms.Scale.Targets.Cpu)})
+		}
+		if ms.Scale.Targets.Memory > 0 {
+			triggers = append(triggers, structs.TriggerSpec{Type: structs.TriggerTypeMemory, Threshold: float64(ms.Scale.Targets.Memory)})
+		}
+	}
+
+	if len(triggers) == 0 {
+		// Range-only services (count: 1-3 with no explicit targets or
+		// autoscale block) get a default CPU=80% HPA from the deploy
+		// template. Synthesize the same default so disable reinstates it.
+		triggers = append(triggers, structs.TriggerSpec{Type: structs.TriggerTypeCPU, Threshold: 80})
+	}
+
+	opts := structs.ServiceTriggersOptions{
+		Min:      min,
+		Max:      max,
+		Triggers: triggers,
+	}
+
+	// HPA does not support minReplicas=0; only KEDA does. When the CRD
+	// choice routes to HPA, clamp min to 1 to avoid K8s API rejection.
+	if triggersCRDChoice(opts.Triggers) == TriggersCRDHPA && opts.Min < 1 {
+		opts.Min = 1
+	}
+
+	return opts, true
+}
+
 // ServiceTriggersDisable removes the Console-driven autoscale configuration
 // from a service: deletes the CRD recorded by the triggers-override-crd
 // annotation, then clears both override annotations on the Deployment.
@@ -622,24 +770,6 @@ func (p *Provider) ServiceTriggersDisable(app, service, ackBy string) error {
 	}
 
 	crd := d.Annotations[ServiceTriggersOverrideCRDAnnotation]
-
-	// Capture the override's minReplicas before deleting the CRD so
-	// the replica reset uses the user's chosen min, not the manifest's.
-	var overrideMin int32
-	switch crd {
-	case TriggersCRDHPA:
-		if hpa, hpaErr := p.Cluster.AutoscalingV2().HorizontalPodAutoscalers(ns).Get(
-			context.TODO(), service, am.GetOptions{}); hpaErr == nil && hpa.Spec.MinReplicas != nil {
-			overrideMin = *hpa.Spec.MinReplicas
-		}
-	case TriggersCRDKeda:
-		if so, soErr := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Get(
-			context.TODO(), service, am.GetOptions{}); soErr == nil {
-			if v, ok, _ := unstructured.NestedInt64(so.Object, "spec", "minReplicaCount"); ok {
-				overrideMin = int32(v)
-			}
-		}
-	}
 
 	switch crd {
 	case TriggersCRDHPA:
@@ -665,14 +795,12 @@ func (p *Provider) ServiceTriggersDisable(app, service, ackBy string) error {
 		return errors.WithStack(err)
 	}
 
-	replicaTarget := overrideMin
-	if replicaTarget < 1 {
-		if ms, msErr := p.serviceManifestService(app, service); msErr == nil && ms != nil {
+	var replicaTarget int32 = 1
+	if ms, msErr := p.serviceManifestService(app, service); msErr == nil && ms != nil {
+		if ms.Scale.Count.Min > 0 {
 			replicaTarget = int32(ms.Scale.Count.Min)
 		}
-		if replicaTarget < 1 {
-			replicaTarget = 1
-		}
+		p.reinstateManifestAutoscaler(ns, app, service, ms)
 	}
 	scalePatch := fmt.Sprintf(`{"spec":{"replicas":%d}}`, replicaTarget)
 	_, _ = p.Cluster.AppsV1().Deployments(ns).Patch(

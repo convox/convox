@@ -12,6 +12,7 @@ import (
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/k8s"
 	cvfake "github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned/fake"
+	kedav1alpha1 "github.com/kedacore/keda/v2/apis/keda/v1alpha1"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -114,7 +115,7 @@ func TestServiceTriggersDisable_HPAPath(t *testing.T) {
 		_, hasCRD := dep.Annotations[k8s.ServiceTriggersOverrideCRDAnnotation]
 		require.False(t, hasActive, "active annotation must be cleared")
 		require.False(t, hasCRD, "crd annotation must be cleared")
-		require.Equal(t, int32(3), *dep.Spec.Replicas, "replicas must reset to override min")
+		require.Equal(t, int32(1), *dep.Spec.Replicas, "replicas must reset to manifest min")
 	})
 }
 
@@ -1027,7 +1028,105 @@ func TestServiceTriggersDisable_KedaPath(t *testing.T) {
 		require.NoError(t, err)
 		_, hasActive := dep.Annotations[k8s.ServiceTriggersOverrideAnnotation]
 		require.False(t, hasActive)
-		require.Equal(t, int32(2), *dep.Spec.Replicas, "replicas must reset to override min")
+		require.Equal(t, int32(1), *dep.Spec.Replicas, "replicas must reset to manifest min")
+	})
+}
+
+func TestServiceTriggersDisable_ReinstatesManifestHPA(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		seedDeployment(t, kk, "rack1-app1", "web", 4)
+		dep, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		dep.Annotations = map[string]string{
+			k8s.ServiceTriggersOverrideAnnotation:    k8s.ServiceTriggersOverrideValueOn,
+			k8s.ServiceTriggersOverrideCRDAnnotation: k8s.TriggersCRDHPA,
+		}
+		_, err = kk.AppsV1().Deployments("rack1-app1").Update(context.TODO(), dep, am.UpdateOptions{})
+		require.NoError(t, err)
+
+		minReplicas := int32(3)
+		hpa := &autoscalingv2.HorizontalPodAutoscaler{
+			ObjectMeta: am.ObjectMeta{Name: "web", Namespace: "rack1-app1"},
+			Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
+				MinReplicas: &minReplicas,
+			},
+		}
+		_, err = kk.AutoscalingV2().HorizontalPodAutoscalers("rack1-app1").Create(context.TODO(), hpa, am.CreateOptions{})
+		require.NoError(t, err)
+
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
+		p.TriggersOverrideManifestServiceHook = func(a, s string) (*manifest.Service, error) {
+			ms := &manifest.Service{Name: s}
+			ms.Scale.Count.Min = 1
+			ms.Scale.Count.Max = 4
+			ms.Scale.Targets.Cpu = 70
+			ms.Scale.Targets.Memory = 80
+			return ms, nil
+		}
+
+		err = p.ServiceTriggersDisable("app1", "web", "alice@example.com")
+		require.NoError(t, err)
+
+		reinstated, err := kk.AutoscalingV2().HorizontalPodAutoscalers("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err, "manifest HPA must be reinstated after disable")
+		require.Equal(t, int32(4), reinstated.Spec.MaxReplicas)
+		require.Equal(t, int32(1), *reinstated.Spec.MinReplicas)
+		require.Len(t, reinstated.Spec.Metrics, 2)
+
+		dep, err = kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, int32(1), *dep.Spec.Replicas, "replicas must reset to manifest min")
+	})
+}
+
+func TestServiceTriggersDisable_ReinstatesManifestKEDA(t *testing.T) {
+	// Manifest autoscale block with cpu+memory routes to HPA via
+	// triggersCRDChoice — only gpu/queue forces KEDA. This test uses
+	// cpu+queueDepth to exercise the KEDA reinstatement path.
+	t.Setenv("PROMETHEUS_URL", "http://prometheus:9090")
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		seedDeployment(t, kk, "rack1-app1", "web", 3)
+		dep, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		dep.Annotations = map[string]string{
+			k8s.ServiceTriggersOverrideAnnotation:    k8s.ServiceTriggersOverrideValueOn,
+			k8s.ServiceTriggersOverrideCRDAnnotation: k8s.TriggersCRDKeda,
+		}
+		_, err = kk.AppsV1().Deployments("rack1-app1").Update(context.TODO(), dep, am.UpdateOptions{})
+		require.NoError(t, err)
+
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme(),
+			scaledObjectUnstructured("rack1-app1", "web", 2, 8))
+
+		p.TriggersOverrideManifestServiceHook = func(a, s string) (*manifest.Service, error) {
+			ms := &manifest.Service{Name: s}
+			ms.Scale.Count.Min = 1
+			ms.Scale.Count.Max = 6
+			ms.Scale.Autoscale = &manifest.ServiceAutoscale{
+				Cpu:        &manifest.AutoscaleMode{Threshold: 70},
+				QueueDepth: &manifest.AutoscaleMode{Threshold: 25},
+			}
+			return ms, nil
+		}
+
+		err = p.ServiceTriggersDisable("app1", "web", "alice@example.com")
+		require.NoError(t, err)
+
+		reinstated, err := p.DynamicClient.Resource(testScaledObjectGVR).Namespace("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err, "manifest ScaledObject must be reinstated after disable")
+
+		maxReplica, _, _ := unstructured.NestedInt64(reinstated.Object, "spec", "maxReplicaCount")
+		require.Equal(t, int64(6), maxReplica)
+
+		dep, err = kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, int32(1), *dep.Spec.Replicas, "replicas must reset to manifest min")
 	})
 }
 
@@ -1604,5 +1703,134 @@ func TestServiceTriggersEnable_CPUOnly_PrometheusEmpty_Succeeds(t *testing.T) {
 			Triggers: []structs.TriggerSpec{{Type: "cpu", Threshold: 70}},
 		}
 		require.NoError(t, p.ServiceTriggersEnable("app1", "web", opts, "alice"))
+	})
+}
+
+func TestServiceTriggersDisable_ReinstatesAutoscaleCustom(t *testing.T) {
+	// scale.autoscale.custom contains raw kedav1alpha1.ScaleTriggers that
+	// can't round-trip through ServiceTriggersOptions/TriggerSpec. The
+	// reinstatement must detect custom triggers and route to
+	// reinstateKedaScaledObject instead of manifestToTriggersOptions.
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		seedDeployment(t, kk, "rack1-app1", "web", 4)
+		dep, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		dep.Annotations = map[string]string{
+			k8s.ServiceTriggersOverrideAnnotation:    k8s.ServiceTriggersOverrideValueOn,
+			k8s.ServiceTriggersOverrideCRDAnnotation: k8s.TriggersCRDKeda,
+		}
+		_, err = kk.AppsV1().Deployments("rack1-app1").Update(context.TODO(), dep, am.UpdateOptions{})
+		require.NoError(t, err)
+
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme(),
+			scaledObjectUnstructured("rack1-app1", "web", 2, 8))
+
+		p.TriggersOverrideManifestServiceHook = func(a, s string) (*manifest.Service, error) {
+			ms := &manifest.Service{Name: s}
+			ms.Scale.Count.Min = 1
+			ms.Scale.Count.Max = 5
+			ms.Scale.Autoscale = &manifest.ServiceAutoscale{
+				Custom: []kedav1alpha1.ScaleTriggers{
+					{
+						Type: "aws-sqs-queue",
+						Name: "my-sqs-trigger",
+						Metadata: map[string]string{
+							"queueURL":    "https://sqs.us-east-1.amazonaws.com/123456789/my-queue",
+							"queueLength": "5",
+						},
+					},
+				},
+			}
+			return ms, nil
+		}
+
+		err = p.ServiceTriggersDisable("app1", "web", "alice@example.com")
+		require.NoError(t, err)
+
+		reinstated, err := p.DynamicClient.Resource(testScaledObjectGVR).Namespace("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err, "autoscale.custom ScaledObject must be reinstated after disable")
+
+		minReplica, _, _ := unstructured.NestedInt64(reinstated.Object, "spec", "minReplicaCount")
+		maxReplica, _, _ := unstructured.NestedInt64(reinstated.Object, "spec", "maxReplicaCount")
+		require.Equal(t, int64(1), minReplica)
+		require.Equal(t, int64(5), maxReplica)
+
+		triggers, _, _ := unstructured.NestedSlice(reinstated.Object, "spec", "triggers")
+		require.Len(t, triggers, 1, "reinstated SO must carry the custom trigger")
+		tr := triggers[0].(map[string]interface{})
+		require.Equal(t, "aws-sqs-queue", tr["type"])
+
+		dep, err = kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, int32(1), *dep.Spec.Replicas, "replicas must reset to manifest min")
+	})
+}
+
+func TestServiceTriggersDisable_ReinstatesScaleKeda(t *testing.T) {
+	// scale.keda is a power-user path with raw kedav1alpha1.ScaleTriggers.
+	// After disabling a KEDA-type override, reinstateManifestAutoscaler
+	// must detect IsKedaEnabled() and call reinstateKedaScaledObject to
+	// rebuild the ScaledObject from the manifest's Keda config.
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		seedDeployment(t, kk, "rack1-app1", "web", 5)
+		dep, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		dep.Annotations = map[string]string{
+			k8s.ServiceTriggersOverrideAnnotation:    k8s.ServiceTriggersOverrideValueOn,
+			k8s.ServiceTriggersOverrideCRDAnnotation: k8s.TriggersCRDKeda,
+		}
+		_, err = kk.AppsV1().Deployments("rack1-app1").Update(context.TODO(), dep, am.UpdateOptions{})
+		require.NoError(t, err)
+
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme(),
+			scaledObjectUnstructured("rack1-app1", "web", 3, 10))
+
+		p.TriggersOverrideManifestServiceHook = func(a, s string) (*manifest.Service, error) {
+			ms := &manifest.Service{Name: s}
+			ms.Scale.Count.Min = 2
+			ms.Scale.Count.Max = 8
+			ms.Scale.Keda = &manifest.ServiceScaleKeda{
+				Triggers: []kedav1alpha1.ScaleTriggers{
+					{
+						Type: "prometheus",
+						Name: "custom-metric",
+						Metadata: map[string]string{
+							"serverAddress": "http://prom:9090",
+							"metricName":    "custom_requests_total",
+							"threshold":     "100",
+							"query":         "sum(rate(custom_requests_total[5m]))",
+						},
+					},
+				},
+			}
+			return ms, nil
+		}
+
+		err = p.ServiceTriggersDisable("app1", "web", "alice@example.com")
+		require.NoError(t, err)
+
+		reinstated, err := p.DynamicClient.Resource(testScaledObjectGVR).Namespace("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err, "scale.keda ScaledObject must be reinstated after disable")
+
+		minReplica, _, _ := unstructured.NestedInt64(reinstated.Object, "spec", "minReplicaCount")
+		maxReplica, _, _ := unstructured.NestedInt64(reinstated.Object, "spec", "maxReplicaCount")
+		require.Equal(t, int64(2), minReplica, "reinstated SO must use manifest min")
+		require.Equal(t, int64(8), maxReplica, "reinstated SO must use manifest max")
+
+		triggers, _, _ := unstructured.NestedSlice(reinstated.Object, "spec", "triggers")
+		require.Len(t, triggers, 1, "reinstated SO must carry the raw keda trigger")
+		tr := triggers[0].(map[string]interface{})
+		require.Equal(t, "prometheus", tr["type"])
+		require.Equal(t, "custom-metric", tr["name"])
+
+		dep, err = kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, int32(2), *dep.Spec.Replicas, "replicas must reset to manifest min")
 	})
 }
