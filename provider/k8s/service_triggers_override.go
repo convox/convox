@@ -264,12 +264,14 @@ func (p *Provider) applyTriggersHPA(ns, service string, opts structs.ServiceTrig
 	}
 
 	// In-place update: mutate the existing object so Spec.Behavior,
-	// labels, annotations, and OwnerReferences are preserved across
-	// the Update call.
+	// annotations, and OwnerReferences are preserved across the Update
+	// call. The atom label is stripped because the Console now owns this
+	// HPA — deploy-time kubectl apply --prune must not delete it.
 	existing.Spec.ScaleTargetRef = scaleTargetRef
 	existing.Spec.MinReplicas = &min
 	existing.Spec.MaxReplicas = max
 	existing.Spec.Metrics = metrics
+	delete(existing.Labels, "atom")
 	_, err = p.Cluster.AutoscalingV2().HorizontalPodAutoscalers(ns).Update(context.TODO(), existing, am.UpdateOptions{})
 	return errors.WithStack(err)
 }
@@ -366,13 +368,19 @@ func (p *Provider) applyTriggersKEDA(app, ns, service string, opts structs.Servi
 	}
 
 	// In-place update: mutate existing.Object so non-override fields
-	// (cooldownPeriod, pollingInterval, advanced behaviors, labels,
-	// annotations) survive the Update call. Only the override-owned
-	// fields (scaleTargetRef, min/max, triggers) are replaced.
+	// (cooldownPeriod, pollingInterval, advanced behaviors, annotations)
+	// survive the Update call. Only the override-owned fields
+	// (scaleTargetRef, min/max, triggers) are replaced. The atom label
+	// is stripped so deploy-time kubectl apply --prune won't delete it.
 	_ = unstructured.SetNestedMap(existing.Object, map[string]interface{}{"name": service}, "spec", "scaleTargetRef")
 	_ = unstructured.SetNestedField(existing.Object, int64(opts.Min), "spec", "minReplicaCount")
 	_ = unstructured.SetNestedField(existing.Object, int64(opts.Max), "spec", "maxReplicaCount")
 	_ = unstructured.SetNestedSlice(existing.Object, triggers, "spec", "triggers")
+	labels, _, _ := unstructured.NestedStringMap(existing.Object, "metadata", "labels")
+	if _, ok := labels["atom"]; ok {
+		delete(labels, "atom")
+		_ = unstructured.SetNestedStringMap(existing.Object, labels, "metadata", "labels")
+	}
 	_, err := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Update(context.TODO(), existing, am.UpdateOptions{})
 	return errors.WithStack(err)
 }
@@ -485,6 +493,7 @@ func (p *Provider) patchHPABounds(ns, service string, opts structs.ServiceUpdate
 	if opts.Max != nil {
 		hpa.Spec.MaxReplicas = int32(*opts.Max)
 	}
+	delete(hpa.Labels, "atom")
 	if _, err := p.Cluster.AutoscalingV2().HorizontalPodAutoscalers(ns).Update(context.TODO(), hpa, am.UpdateOptions{}); err != nil {
 		return errors.WithStack(err)
 	}
@@ -781,6 +790,7 @@ func (p *Provider) patchHPAThreshold(ns, service, triggerType string, threshold 
 			},
 		})
 	}
+	delete(hpa.Labels, "atom")
 	if _, err := p.Cluster.AutoscalingV2().HorizontalPodAutoscalers(ns).Update(context.TODO(), hpa, am.UpdateOptions{}); err != nil {
 		return errors.WithStack(err)
 	}
@@ -838,8 +848,61 @@ func (p *Provider) patchKEDAThreshold(app, ns, service, triggerType string, thre
 	if err := unstructured.SetNestedSlice(obj.Object, triggers, "spec", "triggers"); err != nil {
 		return errors.WithStack(err)
 	}
+	soLabels, _, _ := unstructured.NestedStringMap(obj.Object, "metadata", "labels")
+	if _, ok := soLabels["atom"]; ok {
+		delete(soLabels, "atom")
+		_ = unstructured.SetNestedStringMap(obj.Object, soLabels, "metadata", "labels")
+	}
 	if _, err := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Update(context.TODO(), obj, am.UpdateOptions{}); err != nil {
 		return errors.WithStack(err)
 	}
 	return nil
+}
+
+// stripAtomLabelFromOverrideCRD removes the atom label from a Console-owned
+// HPA or ScaledObject so that deploy-time kubectl apply --prune does not
+// delete it. Called from the release path when triggersOverride is active.
+//
+// When ServiceTriggersEnable in-place updates a manifest-created HPA/SO,
+// the atom label from the original template apply is preserved. On the
+// next deploy, the template skips materializing the HPA/SO (because the
+// override is active), but the prune finds a labeled resource not in the
+// template and deletes it. Stripping the label before the apply runs
+// prevents this.
+//
+// Best-effort: errors are silently absorbed because a failed label strip
+// is preferable to a failed deploy.
+func (p *Provider) stripAtomLabelFromOverrideCRD(app, service, crd string) {
+	ns := p.AppNamespace(app)
+	switch crd {
+	case TriggersCRDHPA:
+		hpa, err := p.Cluster.AutoscalingV2().HorizontalPodAutoscalers(ns).Get(context.TODO(), service, am.GetOptions{})
+		if err != nil {
+			return
+		}
+		if _, ok := hpa.Labels["atom"]; !ok {
+			return
+		}
+		delete(hpa.Labels, "atom")
+		if _, err := p.Cluster.AutoscalingV2().HorizontalPodAutoscalers(ns).Update(context.TODO(), hpa, am.UpdateOptions{}); err != nil {
+			fmt.Printf("ns=service at=strip-atom-label-hpa app=%s service=%s err=%v\n", app, service, err)
+		}
+	case TriggersCRDKeda:
+		if p.DynamicClient == nil {
+			return
+		}
+		so, err := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Get(context.TODO(), service, am.GetOptions{})
+		if err != nil {
+			return
+		}
+		labels, _, _ := unstructured.NestedStringMap(so.Object, "metadata", "labels")
+		if _, ok := labels["atom"]; !ok {
+			return
+		}
+		delete(labels, "atom")
+		_ = unstructured.SetNestedStringMap(so.Object, labels, "metadata", "labels")
+		if _, err := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Update(context.TODO(), so, am.UpdateOptions{}); err != nil {
+			fmt.Printf("ns=service at=strip-atom-label-so app=%s service=%s err=%v\n", app, service, err)
+		}
+	}
 }

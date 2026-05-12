@@ -763,6 +763,7 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 	// the deploy controller behaves correctly on pre-projection paths
 	// (e.g. when the rack was rolled without a fresh ServiceList sync).
 	triggersOverride := map[string]bool{}
+	triggersOverrideCRD := map[string]string{}
 	for i := range pss {
 		dep, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(a.Name)).Get(context.TODO(), pss[i].Name, am.GetOptions{})
 		if err != nil {
@@ -770,6 +771,7 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 		}
 		if dep.Annotations[ServiceTriggersOverrideAnnotation] == ServiceTriggersOverrideValueOn {
 			triggersOverride[pss[i].Name] = true
+			triggersOverrideCRD[pss[i].Name] = dep.Annotations[ServiceTriggersOverrideCRDAnnotation]
 		}
 	}
 
@@ -853,6 +855,7 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 		// suppressed.
 		if triggersOverride[s.Name] {
 			wantsAutoscale = false
+			p.stripAtomLabelFromOverrideCRD(a.Name, s.Name, triggersOverrideCRD[s.Name])
 		}
 		// Agent services render as DaemonSets; KEDA ScaledObject only targets
 		// Deployments, so skip the autoscale path entirely. The
