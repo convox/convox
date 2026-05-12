@@ -124,7 +124,20 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 			// Console consumers reading `autoscale.enabled`. Override
 			// case mirrors: a Console-driven autoscaler should look
 			// "enabled" to the same readers.
+			//
+			// Seed thresholds from scale.targets so that when the
+			// live CRD is absent (e.g. after override disable before
+			// redeploy) the API still returns the manifest-declared
+			// threshold values instead of nil.
 			s.Autoscale = &structs.ServiceAutoscaleState{Enabled: true}
+			if ms.Scale.Targets.Cpu > 0 {
+				cpu := ms.Scale.Targets.Cpu
+				s.Autoscale.CpuThreshold = &cpu
+			}
+			if ms.Scale.Targets.Memory > 0 {
+				mem := ms.Scale.Targets.Memory
+				s.Autoscale.MemThreshold = &mem
+			}
 		}
 
 		// Live-state bounds projection. The manifest values seeded
