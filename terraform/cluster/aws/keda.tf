@@ -101,6 +101,9 @@ resource "helm_release" "keda" {
           }
         }
       }
+
+      nodeSelector = var.karpenter_enabled ? { "convox.io/system-node" = "true" } : {}
+      tolerations  = var.karpenter_enabled ? [{ key = "convox.io/system-node", operator = "Equal", value = "true", effect = "NoSchedule" }] : []
     })
   ]
 }

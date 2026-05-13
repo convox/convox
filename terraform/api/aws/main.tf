@@ -66,6 +66,7 @@ module "k8s" {
     RELEASE_WATCHER_GC_INTERVAL               = var.release_watcher_gc_interval
     GPU_METRICS_MAX_PODS                      = var.gpu_metrics_max_pods
     GPU_METRICS_MAX_CONCURRENT                = var.gpu_metrics_max_concurrent
+    KARPENTER_ENABLED                         = var.karpenter_enabled
     KEDA_ENABLED                              = var.keda_enable
     VPA_ENABLED                               = var.vpa_enable
     FEATURE_GATES                             = var.api_feature_gates
