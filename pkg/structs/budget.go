@@ -499,6 +499,11 @@ type AppBudgetResetOptions struct {
 	// agreement. The snake_case JSON tag is wire-pinned (matches the
 	// HTTP form-param name); do not change without a deprecation cycle.
 	ForceClearCooldown bool `param:"force_clear_cooldown"`
+
+	// ResetPeriod zeros MonthStart, CurrentMonthSpendUsd, and all
+	// per-service spend maps, effectively starting a fresh billing
+	// cycle. Budget config (cap, threshold, action) is preserved.
+	ResetPeriod bool `param:"reset_period"`
 }
 
 // AppBudgetDismissRecoveryResult is the response body for the

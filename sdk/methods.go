@@ -243,6 +243,9 @@ func (c *Client) AppBudgetResetWithOptions(app string, ackBy string, opts struct
 	if opts.ForceClearCooldown {
 		ro.Params["force_clear_cooldown"] = "true"
 	}
+	if opts.ResetPeriod {
+		ro.Params["reset_period"] = "true"
+	}
 	return c.Post(fmt.Sprintf("/apps/%s/budget/reset", app), ro, nil)
 }
 
