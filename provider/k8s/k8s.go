@@ -73,6 +73,7 @@ type Provider struct {
 	Engine                              Engine
 	Image                               string
 	JwtMngr                             *jwt.JwtManager
+	IsKarpenterEnabled                  bool
 	IsKedaEnabled                       bool
 	IsVpaEnabled                        bool
 	Name                                string
@@ -282,6 +283,7 @@ func FromEnv() (*Provider, error) {
 		DockerUsername:                   os.Getenv("DOCKER_HUB_USERNAME"),
 		DockerPassword:                   os.Getenv("DOCKER_HUB_PASSWORD"),
 		EcrDockerHubCachePrefix:          os.Getenv("ECR_DOCKER_HUB_CACHE_PREFIX"),
+		IsKarpenterEnabled:               os.Getenv("KARPENTER_ENABLED") == "true",
 		IsKedaEnabled:                    os.Getenv("KEDA_ENABLED") == "true",
 		IsVpaEnabled:                     os.Getenv("VPA_ENABLED") == "true",
 	}
@@ -645,7 +647,8 @@ func (p *Provider) initializeTemplates() {
 	d, _ := p.Cluster.AppsV1().Deployments(CERT_MANAGER_NAMESPACE).Get(context.TODO(), "cert-manager", am.GetOptions{})
 	if d == nil {
 		if err := p.applySystemTemplate("cert-manager", map[string]interface{}{
-			"Role": p.CertManagerRoleArn,
+			"Role":              p.CertManagerRoleArn,
+			"KarpenterEnabled": p.IsKarpenterEnabled,
 		}); err != nil {
 			panic(errors.WithStack(err))
 		}
@@ -655,7 +658,8 @@ func (p *Provider) initializeTemplates() {
 	if d.Spec.Template.Labels["app.kubernetes.io/version"] != CURRENT_CM_VERSION {
 		fmt.Println("Updating cert-manager")
 		p.deleteSystemTemplate("cert-manager", map[string]interface{}{
-			"Role": p.CertManagerRoleArn,
+			"Role":              p.CertManagerRoleArn,
+			"KarpenterEnabled": p.IsKarpenterEnabled,
 		})
 
 		currentRetry := 0
@@ -675,10 +679,22 @@ func (p *Provider) initializeTemplates() {
 
 		fmt.Println("Installing new cert-manager version")
 		err := p.applySystemTemplate("cert-manager", map[string]interface{}{
-			"Role": p.CertManagerRoleArn,
+			"Role":              p.CertManagerRoleArn,
+			"KarpenterEnabled": p.IsKarpenterEnabled,
 		})
 		if err != nil {
 			panic(errors.WithStack(fmt.Errorf("could not update cert-manager: %+v", err)))
+		}
+	} else {
+		_, hasSystemNode := d.Spec.Template.Spec.NodeSelector["convox.io/system-node"]
+		if p.IsKarpenterEnabled != hasSystemNode {
+			fmt.Println("Reconciling cert-manager node scheduling")
+			if err := p.applySystemTemplate("cert-manager", map[string]interface{}{
+				"Role":             p.CertManagerRoleArn,
+				"KarpenterEnabled": p.IsKarpenterEnabled,
+			}); err != nil {
+				fmt.Printf("cert-manager scheduling reconcile failed: %v\n", err)
+			}
 		}
 	}
 
