@@ -354,9 +354,19 @@ variable "private_eks_pass" {
   default = ""
 }
 
+variable "private_access_cidrs" {
+  type    = list(string)
+  default = []
+}
+
 variable "public_access_cidrs" {
   type    = list(string)
   default = ["0.0.0.0/0"]
+}
+
+variable "eks_log_types" {
+  type    = list(string)
+  default = []
 }
 
 variable "schedule_rack_scale_down" {

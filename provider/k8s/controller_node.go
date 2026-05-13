@@ -13,7 +13,6 @@ import (
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	appsv1 "k8s.io/client-go/applyconfigurations/apps/v1"
 	corev1 "k8s.io/client-go/applyconfigurations/core/v1"
@@ -34,6 +33,7 @@ type NodeController struct {
 	provider   *Provider
 	controller *kctl.Controller
 
+	stopMu sync.Mutex
 	stopCh chan struct{}
 	nodeCh chan string
 
@@ -48,7 +48,6 @@ type NodeController struct {
 func NewNodeController(p *Provider) (*NodeController, error) {
 	nc := &NodeController{
 		provider:     p,
-		stopCh:       make(chan struct{}),
 		nodeCh:       make(chan string, 50),
 		nodeMap:      &sync.Map{},
 		logger:       logger.New("ns=node-controller"),
@@ -85,12 +84,30 @@ func (c *NodeController) Run() {
 }
 
 func (c *NodeController) Start() error {
+	c.stopMu.Lock()
+	defer c.stopMu.Unlock()
+
+	if c.stopCh != nil {
+		close(c.stopCh)
+	}
+
+	c.stopCh = make(chan struct{})
 	c.start = time.Now().UTC()
+
+	go c.runGpuLabelReconciler(c.stopCh)
 
 	return nil
 }
 
 func (c *NodeController) Stop() error {
+	c.stopMu.Lock()
+	defer c.stopMu.Unlock()
+
+	if c.stopCh != nil {
+		close(c.stopCh)
+		c.stopCh = nil
+	}
+
 	return nil
 }
 
@@ -293,11 +310,42 @@ func (c *NodeController) PatchNodeLabel(nd *ac.Node, key, value string) error {
 		return fmt.Errorf("Error marshaling patch: %v", err)
 	}
 
-	_, err = c.provider.Cluster.CoreV1().Nodes().Patch(c.provider.ctx, nd.Name, types.StrategicMergePatchType, patchBytes, v1.PatchOptions{})
+	_, err = c.provider.Cluster.CoreV1().Nodes().Patch(c.provider.ctx, nd.Name, types.StrategicMergePatchType, patchBytes, am.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Error patching node: %v", err)
 	}
 	return nil
+}
+
+func (c *NodeController) runGpuLabelReconciler(stopCh <-chan struct{}) {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-stopCh:
+			return
+		case <-ticker.C:
+			c.ReconcileGpuLabels()
+		}
+	}
+}
+
+func (c *NodeController) ReconcileGpuLabels() {
+	nodes, err := c.provider.Cluster.CoreV1().Nodes().List(
+		c.provider.ctx,
+		am.ListOptions{
+			LabelSelector: "node.kubernetes.io/instance-type,!convox.io/gpu-vendor",
+		},
+	)
+	if err != nil {
+		c.logger.Errorf("gpu label reconcile: list nodes: %s", err)
+		return
+	}
+
+	for i := range nodes.Items {
+		c.AddGpuLabel(&nodes.Items[i])
+	}
 }
 
 func assertNode(v interface{}) (*ac.Node, error) {

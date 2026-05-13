@@ -228,6 +228,17 @@ resource "aws_security_group" "cluster" {
   }, var.karpenter_auth_mode ? { "karpenter.sh/discovery" = var.name } : {})
 }
 
+resource "aws_security_group_rule" "cluster_private_api_access" {
+  for_each          = toset(var.private_access_cidrs)
+  type              = "ingress"
+  from_port         = 443
+  to_port           = 443
+  protocol          = "tcp"
+  cidr_blocks       = [each.value]
+  security_group_id = aws_security_group.cluster.id
+  description       = "Private API access from ${each.value}"
+}
+
 resource "null_resource" "network" {
   depends_on = [
     aws_internet_gateway.nodes,
