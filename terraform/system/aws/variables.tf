@@ -158,6 +158,18 @@ variable "eks_api_server_public_access_cidrs" {
   default     = "0.0.0.0/0"
 }
 
+variable "eks_api_server_private_access_cidrs" {
+  type        = string
+  description = "Comma-separated CIDRs allowed to access the EKS API via the private endpoint (TCP 443 on the cluster security group). Empty string = no rules added."
+  default     = ""
+}
+
+variable "eks_log_types" {
+  type        = string
+  description = "Comma-separated EKS control plane log types to enable (api, audit, authenticator, controllerManager, scheduler). Empty = no logging."
+  default     = ""
+}
+
 variable "gpu_tag_enable" {
   default = false
   type    = bool

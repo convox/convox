@@ -103,6 +103,8 @@ resource "aws_eks_cluster" "cluster" {
     subnet_ids              = concat(local.public_subnets_ids)
   }
 
+  enabled_cluster_log_types = var.eks_log_types
+
   lifecycle {
     ignore_changes = [access_config]
   }

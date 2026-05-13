@@ -56,7 +56,9 @@ locals {
 
   additional_karpenter_nodepools = try(jsondecode(var.additional_karpenter_nodepools_config), jsondecode(base64decode(var.additional_karpenter_nodepools_config)), [])
 
-  public_access_cidrs = var.eks_api_server_public_access_cidrs == "" ? ["0.0.0.0/0"] : split(",", var.eks_api_server_public_access_cidrs)
+  public_access_cidrs  = var.eks_api_server_public_access_cidrs == "" ? ["0.0.0.0/0"] : split(",", var.eks_api_server_public_access_cidrs)
+  private_access_cidrs = var.eks_api_server_private_access_cidrs == "" ? [] : split(",", var.eks_api_server_private_access_cidrs)
+  eks_log_types        = var.eks_log_types == "" ? [] : split(",", var.eks_log_types)
 }
 
 module "node_arch" {
@@ -150,7 +152,9 @@ module "cluster" {
   private_eks_host                    = var.private_eks_host
   private_eks_user                    = var.private_eks_user
   private_eks_pass                    = var.private_eks_pass
+  private_access_cidrs                = local.private_access_cidrs
   public_access_cidrs                 = local.public_access_cidrs
+  eks_log_types                       = local.eks_log_types
   kubelet_registry_pull_qps           = var.kubelet_registry_pull_qps
   kubelet_registry_burst              = var.kubelet_registry_burst
   schedule_rack_scale_down            = var.schedule_rack_scale_down
