@@ -762,8 +762,9 @@ func (p *Provider) AppBudgetResetWithOptions(app, ackBy string, opts structs.App
 	defer mu.Unlock()
 
 	// Clear (1) budget-state + breaker via the lock-already-held helper
-	// (we already hold the lock at the outer scope).
-	if err := p.appBudgetResetLocked(app, ackBy); err != nil {
+	// (we already hold the lock at the outer scope). Pass opts through
+	// so ResetPeriod zeros spend/MonthStart in the same write.
+	if err := p.appBudgetResetLocked(app, ackBy, opts); err != nil {
 		return err
 	}
 

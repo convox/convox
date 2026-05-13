@@ -410,7 +410,7 @@ func (p *Provider) AppBudgetReset(app string, ackBy string) error {
 	mu := appBudgetLock(app)
 	mu.Lock()
 	defer mu.Unlock()
-	return p.appBudgetResetLocked(app, ackBy)
+	return p.appBudgetResetLocked(app, ackBy, structs.AppBudgetResetOptions{})
 }
 
 // appBudgetResetLocked is the lock-already-held variant of
@@ -421,7 +421,7 @@ func (p *Provider) AppBudgetReset(app string, ackBy string) error {
 // critical section, closing the race where a concurrent accumulator
 // tick could fire its own emit between the breaker clear and the
 // annotation delete).
-func (p *Provider) appBudgetResetLocked(app string, ackBy string) error {
+func (p *Provider) appBudgetResetLocked(app string, ackBy string, opts structs.AppBudgetResetOptions) error {
 	nsName := p.AppNamespace(app)
 
 	ackBy = sanitizeAckBy(ackBy)
@@ -460,6 +460,16 @@ func (p *Provider) appBudgetResetLocked(app string, ackBy string) error {
 		state.CircuitBreakerAckBy = ackBy
 		state.CircuitBreakerAckAt = now
 
+		if opts.ResetPeriod {
+			state.MonthStart = now
+			state.CurrentMonthSpendUsd = 0
+			state.CurrentMonthSpendAsOf = time.Time{}
+			state.PerServiceSpendUsd = nil
+			state.PerServiceInstanceType = nil
+			state.PerServiceSpendByVariant = nil
+			state.PerServiceVariantPodsLastTick = nil
+		}
+
 		data, err := json.Marshal(state)
 		if err != nil {
 			return errors.WithStack(err)
@@ -477,14 +487,19 @@ func (p *Provider) appBudgetResetLocked(app string, ackBy string) error {
 			return errors.WithStack(err)
 		}
 
-		fmt.Printf("ns=budget_accumulator at=alert kind=reset app=%s ack_by=%q prev_spend_usd=%.2f cap_usd=%.2f\n",
-			app, ackBy, prevSpend, capUsd)
+		resetKind := "breaker-clear"
+		if opts.ResetPeriod {
+			resetKind = "period-reset"
+		}
+		fmt.Printf("ns=budget_accumulator at=alert kind=%s app=%s ack_by=%q prev_spend_usd=%.2f cap_usd=%.2f\n",
+			resetKind, app, ackBy, prevSpend, capUsd)
 		_ = p.EventSend("app:budget:reset", structs.EventSendOptions{Data: map[string]string{
 			"app":            app,
 			"ack_by":         ackBy,
 			"prev_spend_usd": strconv.FormatFloat(prevSpend, 'f', 2, 64),
 			"cap_usd":        strconv.FormatFloat(capUsd, 'f', 2, 64),
 			"reset_at":       state.CircuitBreakerAckAt.Format(time.RFC3339),
+			"reset_kind":     resetKind,
 		}})
 
 		// If a shutdown-state annotation exists in the armed-window

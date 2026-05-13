@@ -636,7 +636,11 @@ func (s *Server) AppBudgetReset(c *stdapi.Context) error {
 	if forceClear && !CanAdmin(c) {
 		return stdapi.Errorf(http.StatusForbidden, "AppBudgetReset --force-clear-cooldown requires Admin role; current role is 'w'. Contact rack admin or use Admin token.")
 	}
-	opts := structs.AppBudgetResetOptions{ForceClearCooldown: forceClear}
+	resetPeriod := c.Value("reset_period") == "true"
+	opts := structs.AppBudgetResetOptions{
+		ForceClearCooldown: forceClear,
+		ResetPeriod:        resetPeriod,
+	}
 	if err := s.provider(c).WithContext(contextFrom(c)).AppBudgetResetWithOptions(app, ackBy, opts); err != nil {
 		return err
 	}
