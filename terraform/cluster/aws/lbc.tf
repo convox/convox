@@ -60,7 +60,8 @@ resource "helm_release" "aws_lbc" {
   depends_on = [
     null_resource.wait_k8s_api,
     aws_iam_role.lbc,
-    aws_iam_role_policy.lbc_policy
+    aws_iam_role_policy.lbc_policy,
+    aws_eks_node_group.cluster,
   ]
 
   name       = "aws-lbc"
@@ -68,6 +69,7 @@ resource "helm_release" "aws_lbc" {
   chart      = "aws-load-balancer-controller"
   version    = "1.7.2"
   namespace  = "kube-system"
+  timeout    = 600
 
   set {
     name  = "clusterName"

@@ -542,7 +542,8 @@ resource "aws_eks_addon" "vpc_cni" {
 
 resource "aws_eks_addon" "coredns" {
   depends_on = [
-    null_resource.wait_k8s_api
+    null_resource.wait_k8s_api,
+    aws_eks_node_group.cluster,
   ]
 
   cluster_name                = aws_eks_cluster.cluster.name
@@ -596,6 +597,7 @@ resource "aws_eks_addon" "aws_ebs_csi_driver" {
   depends_on = [
     null_resource.wait_k8s_api,
     module.ebs_csi_driver_controller,
+    aws_eks_node_group.cluster,
   ]
 
   cluster_name  = aws_eks_cluster.cluster.name
