@@ -59,6 +59,7 @@ resource "aws_iam_role_policy" "keda_aws_scalar" {
 resource "helm_release" "keda" {
   depends_on = [
     null_resource.wait_k8s_api,
+    aws_eks_node_group.cluster,
   ]
 
   count      = var.keda_enable ? 1 : 0
@@ -67,6 +68,7 @@ resource "helm_release" "keda" {
   chart      = "keda"
   version    = "2.18.3"
   namespace  = local.keda_namespace
+  timeout    = 600
 
   create_namespace = true
 

@@ -2,7 +2,8 @@
 // eks addon
 resource "aws_eks_addon" "aws_efs_csi_driver" {
   depends_on = [
-    null_resource.wait_k8s_api
+    null_resource.wait_k8s_api,
+    aws_eks_node_group.cluster,
   ]
 
   count = var.efs_csi_driver_enable ? 1 : 0
