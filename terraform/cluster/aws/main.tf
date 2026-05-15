@@ -366,6 +366,23 @@ resource "null_resource" "karpenter_access_config" {
         sleep 15
         echo "Waiting for cluster to reach ACTIVE state..."
         aws eks wait cluster-active --name "$CLUSTER" --region "$REGION"
+        echo "Verifying auth mode propagation..."
+        for i in $(seq 1 12); do
+          VERIFIED=$(aws eks describe-cluster --name "$CLUSTER" --region "$REGION" \
+            --query 'cluster.accessConfig.authenticationMode' --output text 2>/dev/null || echo "UNKNOWN")
+          if [ "$VERIFIED" = "API_AND_CONFIG_MAP" ] || [ "$VERIFIED" = "API" ]; then
+            echo "Auth mode verified: $VERIFIED"
+            break
+          fi
+          echo "Auth mode still $VERIFIED, retrying... ($i/12)"
+          sleep 5
+        done
+        if [ "$VERIFIED" != "API_AND_CONFIG_MAP" ] && [ "$VERIFIED" != "API" ]; then
+          echo "ERROR: Auth mode not verified after 60s — still $VERIFIED"
+          exit 1
+        fi
+        echo "Waiting for access entry API propagation..."
+        sleep 30
         echo "EKS access config update complete"
       fi
     EOF
