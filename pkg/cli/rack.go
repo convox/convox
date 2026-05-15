@@ -252,8 +252,12 @@ var sensitiveParams = map[string]bool{
 // surfaced by any group filter.
 var paramGroups = map[string]map[string]bool{
 	"cost": {
-		"cost_tracking_enable": true,
-		"tags":                 true,
+		"cost_tracking_enable":          true,
+		"karpenter_capacity_types":      true, // dual-listed in karpenter
+		"karpenter_consolidate_after":   true, // dual-listed in karpenter
+		"karpenter_consolidation_enabled": true, // dual-listed in karpenter
+		"node_capacity_type":            true, // dual-listed in nodes
+		"tags":                          true,
 	},
 	"karpenter": {
 		"additional_karpenter_nodepools_config": true,
@@ -284,6 +288,8 @@ var paramGroups = map[string]map[string]bool{
 		"keda_enable":                           true,
 	},
 	"gpu": {
+		"additional_karpenter_nodepools_config": true, // dual-listed in karpenter
+		"additional_node_groups_config":         true, // dual-listed in nodes
 		"dcgm_scrape_interval":                 true,
 		"gpu_metrics_max_concurrent":           true,
 		"gpu_metrics_max_pods":                 true,
@@ -427,6 +433,8 @@ var paramGroups = map[string]map[string]bool{
 		"gpu_observability_chart_version":      true,
 		"gpu_observability_enable":             true,
 		"gpu_tag_enable":                       true,
+		"karpenter_node_labels":                true, // dual-listed in karpenter
+		"karpenter_node_taints":                true, // dual-listed in karpenter
 		"key_pair_name":                        true,
 		"kubelet_registry_burst":               true,
 		"kubelet_registry_pull_qps":            true,
@@ -546,6 +554,9 @@ var paramGroups = map[string]map[string]bool{
 		"ebs_volume_encryption_enabled": true,
 		"efs_csi_driver_enable":         true,
 		"efs_csi_driver_version":        true,
+		"karpenter_node_disk":           true, // dual-listed in karpenter
+		"karpenter_node_volume_type":    true, // dual-listed in karpenter
+		"node_disk":                     true, // dual-listed in nodes
 		"registry_disk":                 true,
 		// v2 PascalCase (no-op on v3 racks; surfaced on v2 racks)
 		"DynamoDbTableDeletionProtectionEnabled":  true,
