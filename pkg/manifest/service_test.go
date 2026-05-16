@@ -362,3 +362,45 @@ func TestServiceImagePullSecretRegistryEdgeCases(t *testing.T) {
 		})
 	}
 }
+
+func TestIngressAnnotationsMapReadsIngressAnnotations(t *testing.T) {
+	s := manifest.Service{
+		Name: "web",
+		Annotations: manifest.Annotations{
+			{Key: "pod-key", Value: "pod-val"},
+		},
+		IngressAnnotations: manifest.Annotations{
+			{Key: "nginx.ingress.kubernetes.io/proxy-buffer-size", Value: "16k"},
+			{Key: "nginx.ingress.kubernetes.io/proxy-buffers-number", Value: "8"},
+		},
+	}
+
+	got := s.IngressAnnotationsMap()
+	require.Equal(t, map[string]string{
+		"nginx.ingress.kubernetes.io/proxy-buffer-size":    "16k",
+		"nginx.ingress.kubernetes.io/proxy-buffers-number": "8",
+	}, got)
+
+	require.NotContains(t, got, "pod-key",
+		"IngressAnnotationsMap must not return pod-level annotations")
+}
+
+func TestAnnotationsMapReadsAnnotations(t *testing.T) {
+	s := manifest.Service{
+		Name: "web",
+		Annotations: manifest.Annotations{
+			{Key: "pod-key", Value: "pod-val"},
+		},
+		IngressAnnotations: manifest.Annotations{
+			{Key: "ingress-key", Value: "ingress-val"},
+		},
+	}
+
+	got := s.AnnotationsMap()
+	require.Equal(t, map[string]string{
+		"pod-key": "pod-val",
+	}, got)
+
+	require.NotContains(t, got, "ingress-key",
+		"AnnotationsMap must not return ingress annotations")
+}
