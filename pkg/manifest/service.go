@@ -1003,7 +1003,7 @@ func (s Service) AnnotationsMap() map[string]string {
 func (s Service) IngressAnnotationsMap() map[string]string {
 	annotations := map[string]string{}
 
-	for _, a := range s.Annotations {
+	for _, a := range s.IngressAnnotations {
 		annotations[a.Key] = a.Value
 	}
 
