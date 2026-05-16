@@ -58,7 +58,7 @@ Setting parameters... OK
 - CloudWatch Logs pricing applies: $0.50/GB ingested, $0.03/GB/month stored. The `api` log type on a busy cluster can generate significant volume — consider enabling only `audit` if cost is a concern.
 - **CloudWatch log group lifecycle**: When logging is enabled, AWS automatically creates a log group at `/aws/eks/<cluster-name>/cluster`. When logging is disabled (parameter cleared or rack downgraded), EKS stops writing to the log group but AWS does **not** delete it. Historical logs and the log group persist until manually deleted. This is standard AWS behavior, not a Terraform artifact.
 - Downgrade safety: removing this parameter (or downgrading to a rack version that does not support it) disables logging. The EKS cluster is updated in-place; no destructive changes occur.
-- This parameter prevents the common issue where a customer enables EKS audit logging manually through the AWS console, and Convox's next Terraform apply silently disables it because the `aws_eks_cluster` resource had no `enabled_cluster_log_types` attribute.
+- This parameter prevents the common issue where a user enables EKS audit logging manually through the AWS console, and Convox's next Terraform apply silently disables it because the `aws_eks_cluster` resource had no `enabled_cluster_log_types` attribute.
 
 ## Related Parameters
 - [access_log_retention_in_days](/configuration/rack-parameters/aws/access_log_retention_in_days): Controls Nginx access log retention in CloudWatch (application-level logging, not cluster-level).

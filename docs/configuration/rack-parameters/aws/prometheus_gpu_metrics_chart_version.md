@@ -16,7 +16,7 @@ The default value is the chart version that ships with this rack release — cur
 
 ## Use Cases
 - **CVE response**: When the upstream chart publishes a security fix patch (e.g., `27.9.0` → `27.9.1`), pin to the patched version immediately rather than waiting for the next Convox rack release.
-- **Rollback after a regression**: If a chart patch introduces a regression on your workload, pin back to the prior known-good version while you investigate.
+- **Rollback after an issue**: If a chart patch introduces an issue on your workload, pin back to the prior known-good version while you investigate.
 
 ## Setting Parameters
 To pin to a specific chart version:
