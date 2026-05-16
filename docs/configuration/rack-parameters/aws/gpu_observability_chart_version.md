@@ -15,7 +15,7 @@ The default value is the chart version that ships with this rack release — cur
 ## Use Cases
 - **CVE response**: When NVIDIA publishes a security fix in a new chart patch release (e.g., `4.8.1` → `4.8.2`), pin to the patched version immediately rather than waiting for the next Convox rack release.
 - **Driver compatibility**: If your AMI ships a specific NVIDIA driver version that requires a particular DCGM exporter version for full metric coverage, pin to the matching chart.
-- **Rollback after a regression**: If a chart patch introduces a regression on your workload, pin back to the prior known-good version while you investigate.
+- **Rollback after an issue**: If a chart patch introduces an issue on your workload, pin back to the prior known-good version while you investigate.
 
 ## Setting Parameters
 To pin to a specific chart version:
