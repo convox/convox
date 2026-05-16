@@ -569,7 +569,7 @@ resource "aws_eks_addon" "coredns" {
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
 
-  configuration_values = var.karpenter_enabled ? jsonencode({
+  configuration_values = var.karpenter_auth_mode ? jsonencode({
     nodeSelector = {
       "convox.io/system-node" = "true"
     }
@@ -635,7 +635,7 @@ resource "aws_eks_addon" "aws_ebs_csi_driver" {
         }
       }
     },
-    var.karpenter_enabled ? {
+    var.karpenter_auth_mode ? {
       controller = {
         nodeSelector = {
           "convox.io/system-node" = "true"
