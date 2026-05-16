@@ -2,8 +2,10 @@ package aws
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	k8s "github.com/convox/convox/provider/k8s"
 	"github.com/pkg/errors"
@@ -31,16 +33,18 @@ func (p *Provider) KarpenterCleanup() error {
 		}
 	}
 
-	// Terminate EC2 instances FIRST. If this fails (e.g., missing IAM permission),
-	// nodes remain in k8s (cordoned but intact) and the command can be retried.
-	// If we deleted k8s nodes first, a failed EC2 terminate would orphan instances
-	// with no node objects to track them.
-	if len(instanceIDs) > 0 {
+	// Terminate EC2 instances individually — batch TerminateInstances fails
+	// atomically if any instance is already gone (InvalidInstanceID.NotFound).
+	// Per-instance calls let us skip terminated instances and still clean up the rest.
+	for _, id := range instanceIDs {
 		_, err := p.Ec2.TerminateInstances(&ec2.TerminateInstancesInput{
-			InstanceIds: instanceIDs,
+			InstanceIds: []*string{id},
 		})
 		if err != nil {
-			return errors.WithStack(fmt.Errorf("failed to terminate EC2 instances: %s", err))
+			if aerr, ok := err.(awserr.Error); ok && strings.Contains(aerr.Code(), "InvalidInstanceID") {
+				continue
+			}
+			return errors.WithStack(fmt.Errorf("failed to terminate EC2 instance %s: %s", *id, err))
 		}
 	}
 
