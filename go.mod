@@ -19,7 +19,7 @@ require (
 	github.com/convox/exec v0.0.0-20180905012044-cc13d277f897
 	github.com/convox/go-u2fhost v0.0.1
 	github.com/convox/logger v0.0.0-20180522214415-e39179955b52
-	github.com/convox/stdapi v1.1.3-0.20260517161434-6811a28019ea
+	github.com/convox/stdapi v1.1.3-0.20260517192718-2514b482878f
 	github.com/convox/stdcli v0.0.0-20240813092220-8beeb2dc2420
 	github.com/convox/stdsdk v0.0.2
 	github.com/convox/version v0.0.0-20160822184233-ffefa0d565d2
