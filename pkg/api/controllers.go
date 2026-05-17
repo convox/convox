@@ -1524,11 +1524,29 @@ func (s *Server) Proxy(c *stdapi.Context) error {
 	return nil
 }
 
+func isAllowedProxyHost(host string) bool {
+	h := strings.ToLower(strings.TrimSpace(host))
+	if h == "" {
+		return false
+	}
+	if strings.HasSuffix(h, ".local") {
+		return len(h) > len(".local")
+	}
+	if strings.HasSuffix(h, ".svc.cluster.local") {
+		return len(h) > len(".svc.cluster.local")
+	}
+	return false
+}
+
 func (s *Server) ProxyHttpService(c *stdapi.Context) error {
-	host := c.Header("X-Host")
+	host := strings.TrimSpace(c.Header("X-Host"))
+	if !isAllowedProxyHost(host) {
+		return stdapi.Errorf(http.StatusBadRequest, "invalid proxy host")
+	}
+
 	port, cerr := strconv.Atoi(c.Header("X-Port"))
 	if cerr != nil {
-		return cerr
+		return stdapi.Errorf(http.StatusBadRequest, "invalid proxy port")
 	}
 
 	path := c.Var("path")
@@ -1545,6 +1563,7 @@ func (s *Server) ProxyHttpService(c *stdapi.Context) error {
 	req.Host = u.Hostname()
 	req.URL.Path = fmt.Sprintf("/%s", path)
 	req.URL.RawQuery = c.Request().URL.RawQuery
+	req.Header.Del("Authorization")
 
 	rp.ServeHTTP(c.Response(), req)
 
