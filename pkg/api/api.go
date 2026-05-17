@@ -69,6 +69,7 @@ func NewWithProvider(p structs.Provider) *Server {
 	// })
 
 	s.Subrouter("/", func(auth *stdapi.Router) {
+		auth.Use(securityHeaders)
 		auth.Use(s.authenticate)
 
 		auth.Route("GET", "/auth", func(c *stdapi.Context) error { return c.RenderOK() })
@@ -198,6 +199,14 @@ func (s *Server) authenticate(next stdapi.HandlerFunc) stdapi.HandlerFunc {
 			c.Set(structs.ConvoxJwtUserParam, actor)
 		}
 
+		return next(c)
+	}
+}
+
+func securityHeaders(next stdapi.HandlerFunc) stdapi.HandlerFunc {
+	return func(c *stdapi.Context) error {
+		c.Response().Header().Set("X-Content-Type-Options", "nosniff")
+		c.Response().Header().Set("X-Frame-Options", "DENY")
 		return next(c)
 	}
 }

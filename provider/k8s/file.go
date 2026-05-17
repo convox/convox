@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"strings"
 
@@ -11,6 +12,30 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
 )
+
+var allowedTarFlags = map[string]bool{
+	"--no-same-owner":       true,
+	"--no-same-permissions": true,
+}
+
+func isAllowedTarFlag(flag string) bool {
+	if allowedTarFlags[flag] {
+		return true
+	}
+	if strings.HasPrefix(flag, "--strip-components=") {
+		v := strings.TrimPrefix(flag, "--strip-components=")
+		if len(v) == 0 {
+			return false
+		}
+		for _, c := range v {
+			if c < '0' || c > '9' {
+				return false
+			}
+		}
+		return true
+	}
+	return false
+}
 
 func (p *Provider) FilesDelete(app, pid string, files []string) error {
 	req := p.Cluster.CoreV1().RESTClient().Post().Resource("pods").Name(pid).Namespace(p.AppNamespace(app)).SubResource("exec").Param("container", app)
@@ -69,7 +94,13 @@ func (p *Provider) FilesUpload(app, pid string, r io.Reader, opts structs.FileTr
 
 	cmd := []string{"tar"}
 	if opts.TarExtraFlags != nil {
-		cmd = append(cmd, strings.Split(*opts.TarExtraFlags, ",")...)
+		flags := strings.Split(*opts.TarExtraFlags, ",")
+		for _, f := range flags {
+			if !isAllowedTarFlag(f) {
+				return fmt.Errorf("unsupported tar flag: %s", f)
+			}
+		}
+		cmd = append(cmd, flags...)
 	}
 
 	cmd = append(cmd, []string{"-C", "/", "-xf", "-"}...)

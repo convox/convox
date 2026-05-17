@@ -189,9 +189,40 @@ data "aws_iam_policy_document" "rds_provisioner" {
   }
 }
 
-resource "aws_iam_role_policy_attachment" "api_ecr" {
-  role       = aws_iam_role.api.name
-  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"
+data "aws_iam_policy_document" "ecr" {
+  statement {
+    effect    = "Allow"
+    actions   = ["ecr:GetAuthorizationToken"]
+    resources = ["*"]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "ecr:CreateRepository",
+      "ecr:DeleteRepository",
+      "ecr:DescribeRepositories",
+      "ecr:BatchDeleteImage",
+      "ecr:BatchCheckLayerAvailability",
+      "ecr:BatchGetImage",
+      "ecr:GetDownloadUrlForLayer",
+      "ecr:ListImages",
+      "ecr:PutImage",
+      "ecr:InitiateLayerUpload",
+      "ecr:UploadLayerPart",
+      "ecr:CompleteLayerUpload",
+    ]
+    resources = [
+      "arn:${data.aws_partition.current.partition}:ecr:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:repository/${var.name}/*",
+      "arn:${data.aws_partition.current.partition}:ecr:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:repository/${var.name}-*",
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "api_ecr" {
+  name   = "ecr"
+  role   = aws_iam_role.api.name
+  policy = data.aws_iam_policy_document.ecr.json
 }
 
 resource "aws_iam_role_policy" "api_ec2_key_pair" {
