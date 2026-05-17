@@ -420,7 +420,7 @@ github.com/convox/inotify
 # github.com/convox/logger v0.0.0-20180522214415-e39179955b52
 ## explicit
 github.com/convox/logger
-# github.com/convox/stdapi v1.1.3-0.20260517161434-6811a28019ea
+# github.com/convox/stdapi v1.1.3-0.20260517192718-2514b482878f
 ## explicit; go 1.13
 github.com/convox/stdapi
 # github.com/convox/stdcli v0.0.0-20240813092220-8beeb2dc2420
