@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
+	"time"
 
 	"github.com/convox/logger"
 	"github.com/gorilla/mux"
@@ -65,7 +66,11 @@ func (s *Server) Listen(proto, addr string) error {
 		h = s
 	}
 
-	s.server = http.Server{Handler: h}
+	s.server = http.Server{
+		Handler:           h,
+		ReadHeaderTimeout: 30 * time.Second,
+		IdleTimeout:       120 * time.Second,
+	}
 
 	return s.server.Serve(l)
 }

@@ -15,7 +15,7 @@ import (
 func (p *Provider) FilesDelete(app, pid string, files []string) error {
 	req := p.Cluster.CoreV1().RESTClient().Post().Resource("pods").Name(pid).Namespace(p.AppNamespace(app)).SubResource("exec").Param("container", app)
 
-	command := []string{"rm", "-f"}
+	command := []string{"rm", "-f", "--"}
 	command = append(command, files...)
 
 	eo := &ac.PodExecOptions{
