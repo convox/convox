@@ -8,6 +8,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -1524,18 +1525,26 @@ func (s *Server) Proxy(c *stdapi.Context) error {
 	return nil
 }
 
+// validProxyHost matches cluster-internal DNS names only:
+//
+//	{svc}.{app}.{ns}.local                    — internal services
+//	{svc}.{ns}.svc.cluster.local              — K8s service DNS
+var validProxyHost = regexp.MustCompile(
+	`^[a-z0-9]([a-z0-9-]*[a-z0-9])?` +
+		`(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+` +
+		`\.(local|svc\.cluster\.local)$`)
+
+var bareProxySuffix = map[string]bool{
+	"local": true, "svc.cluster.local": true,
+	"cluster.local": true,
+}
+
 func isAllowedProxyHost(host string) bool {
 	h := strings.ToLower(strings.TrimSpace(host))
-	if h == "" {
+	if bareProxySuffix[h] {
 		return false
 	}
-	if strings.HasSuffix(h, ".local") {
-		return len(h) > len(".local")
-	}
-	if strings.HasSuffix(h, ".svc.cluster.local") {
-		return len(h) > len(".svc.cluster.local")
-	}
-	return false
+	return validProxyHost.MatchString(h)
 }
 
 func (s *Server) ProxyHttpService(c *stdapi.Context) error {
