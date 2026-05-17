@@ -1211,6 +1211,10 @@ func (s *Server) InstanceShell(c *stdapi.Context) error {
 		return err
 	}
 
+	if !CanWrite(c) {
+		return stdapi.Errorf(http.StatusForbidden, "instance shell requires write access")
+	}
+
 	id := c.Var("id")
 
 	var opts structs.InstanceShellOptions
@@ -1393,6 +1397,10 @@ func (s *Server) ObjectStore(c *stdapi.Context) error {
 func (s *Server) ProcessExec(c *stdapi.Context) error {
 	if err := s.hook("ProcessExecValidate", c); err != nil {
 		return err
+	}
+
+	if !CanWrite(c) {
+		return stdapi.Errorf(http.StatusForbidden, "process exec requires write access")
 	}
 
 	app := c.Var("app")
@@ -1601,12 +1609,26 @@ func isSafeProxyTarget(host string) bool {
 				return false
 			}
 		}
+	} else if isNonStandardIP(clean) {
+		return false
 	}
 	h := strings.TrimRight(strings.ToLower(clean), ".")
 	if h == "localhost" || h == "metadata.google.internal" {
 		return false
 	}
 	return true
+}
+
+func isNonStandardIP(s string) bool {
+	if strings.HasPrefix(strings.ToLower(s), "0x") {
+		return true
+	}
+	for _, c := range s {
+		if c != '.' && (c < '0' || c > '9') {
+			return false
+		}
+	}
+	return len(s) > 0
 }
 
 func isAllowedProxyHost(host string) bool {
@@ -1618,13 +1640,17 @@ func isAllowedProxyHost(host string) bool {
 }
 
 func (s *Server) ProxyHttpService(c *stdapi.Context) error {
+	if !CanWrite(c) {
+		return stdapi.Errorf(http.StatusForbidden, "proxy requires write access")
+	}
+
 	host := strings.TrimSpace(c.Header("X-Host"))
 	if !isAllowedProxyHost(host) {
 		return stdapi.Errorf(http.StatusBadRequest, "invalid proxy host")
 	}
 
 	port, cerr := strconv.Atoi(c.Header("X-Port"))
-	if cerr != nil {
+	if cerr != nil || port < 1 || port > 65535 {
 		return stdapi.Errorf(http.StatusBadRequest, "invalid proxy port")
 	}
 
@@ -1809,6 +1835,10 @@ func (s *Server) ReleasePromote(c *stdapi.Context) error {
 func (s *Server) ResourceConsole(c *stdapi.Context) error {
 	if err := s.hook("ResourceConsoleValidate", c); err != nil {
 		return err
+	}
+
+	if !CanWrite(c) {
+		return stdapi.Errorf(http.StatusForbidden, "resource console requires write access")
 	}
 
 	app := c.Var("app")
