@@ -1,6 +1,7 @@
 package api
 
 import (
+	"crypto/subtle"
 	"net/http"
 	"reflect"
 	"strings"
@@ -98,7 +99,7 @@ func (s *Server) authenticate(next stdapi.HandlerFunc) stdapi.HandlerFunc {
 			// WriteToken callers continue to be gated by their issued role.
 			c.Set(structs.ConvoxJwtUserParam, data.User)
 		} else {
-			if s.Password != "" && s.Password != pass {
+			if s.Password != "" && subtle.ConstantTimeCompare([]byte(s.Password), []byte(pass)) != 1 {
 				c.Response().Header().Set("WWW-Authenticate", `Basic realm="convox"`)
 				return stdapi.Errorf(http.StatusUnauthorized, "invalid authentication")
 			}

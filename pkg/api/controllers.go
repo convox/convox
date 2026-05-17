@@ -8,6 +8,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"path"
 	"regexp"
 	"sort"
 	"strconv"
@@ -256,6 +257,8 @@ const (
 	gpuMetricsMinPeriod          = 5 * time.Second
 	gpuMetricsMaxPointsPerSeries = 5000
 	gpuMetricsMaxAggregatePoints = 50000
+
+	maxJwtDurationHours = 8760
 )
 
 // gpuMetricsSemMu guards the lazy-init of the singleton semaphore — the
@@ -1058,8 +1061,6 @@ func (s *Server) LetsEncryptConfigGet(c *stdapi.Context) error {
 		return err
 	}
 
-	fmt.Printf("%#v\n", v)
-
 	return c.RenderJSON(v)
 }
 
@@ -1073,8 +1074,6 @@ func (s *Server) LetsEncryptConfigApply(c *stdapi.Context) error {
 	if err := json.NewDecoder(c).Decode(&config); err != nil {
 		return err
 	}
-
-	fmt.Printf("%#v\n", config)
 
 	err := s.provider(c).WithContext(contextFrom(c)).LetsEncryptConfigApply(config)
 	if err != nil {
@@ -1245,13 +1244,30 @@ func (s *Server) InstanceTerminate(c *stdapi.Context) error {
 	return c.RenderOK()
 }
 
+func sanitizeObjectKey(key string) (string, error) {
+	cleaned := path.Clean("/" + key)
+	cleaned = strings.TrimPrefix(cleaned, "/")
+	if cleaned == "" || cleaned == "." || strings.TrimSpace(cleaned) == "" {
+		return "", stdapi.Errorf(http.StatusBadRequest, "invalid object key")
+	}
+	for _, seg := range strings.Split(key, "/") {
+		if seg == ".." {
+			return "", stdapi.Errorf(http.StatusBadRequest, "invalid object key")
+		}
+	}
+	return cleaned, nil
+}
+
 func (s *Server) ObjectDelete(c *stdapi.Context) error {
 	if err := s.hook("ObjectDeleteValidate", c); err != nil {
 		return err
 	}
 
 	app := c.Var("app")
-	key := c.Var("key")
+	key, kerr := sanitizeObjectKey(c.Var("key"))
+	if kerr != nil {
+		return kerr
+	}
 
 	err := s.provider(c).WithContext(contextFrom(c)).ObjectDelete(app, key)
 	if err != nil {
@@ -1267,7 +1283,10 @@ func (s *Server) ObjectExists(c *stdapi.Context) error {
 	}
 
 	app := c.Var("app")
-	key := c.Var("key")
+	key, kerr := sanitizeObjectKey(c.Var("key"))
+	if kerr != nil {
+		return kerr
+	}
 
 	v, err := s.provider(c).WithContext(contextFrom(c)).ObjectExists(app, key)
 	if err != nil {
@@ -1287,7 +1306,10 @@ func (s *Server) ObjectFetch(c *stdapi.Context) error {
 	}
 
 	app := c.Var("app")
-	key := c.Var("key")
+	key, kerr := sanitizeObjectKey(c.Var("key"))
+	if kerr != nil {
+		return kerr
+	}
 
 	v, err := s.provider(c).WithContext(contextFrom(c)).ObjectFetch(app, key)
 	if err != nil {
@@ -1316,6 +1338,11 @@ func (s *Server) ObjectList(c *stdapi.Context) error {
 
 	app := c.Var("app")
 	prefix := c.Value("prefix")
+	for _, seg := range strings.Split(prefix, "/") {
+		if seg == ".." {
+			return stdapi.Errorf(http.StatusBadRequest, "invalid prefix")
+		}
+	}
 
 	v, err := s.provider(c).WithContext(contextFrom(c)).ObjectList(app, prefix)
 	if err != nil {
@@ -1336,6 +1363,13 @@ func (s *Server) ObjectStore(c *stdapi.Context) error {
 
 	app := c.Var("app")
 	key := c.Var("key")
+	if key != "" {
+		var kerr error
+		key, kerr = sanitizeObjectKey(key)
+		if kerr != nil {
+			return kerr
+		}
+	}
 	r := c
 
 	var opts structs.ObjectStoreOptions
@@ -1509,7 +1543,7 @@ func (s *Server) Proxy(c *stdapi.Context) error {
 
 	port, cerr := strconv.Atoi(c.Var("port"))
 	if cerr != nil {
-		return cerr
+		return stdapi.Errorf(http.StatusBadRequest, "invalid proxy port")
 	}
 
 	var opts structs.ProxyOptions
@@ -2127,6 +2161,10 @@ func (s *Server) SystemMetrics(c *stdapi.Context) error {
 }
 
 func (s *Server) SystemJwtSignKeyRotate(c *stdapi.Context) error {
+	if !CanAdmin(c) {
+		return stdapi.Errorf(http.StatusForbidden, "admin role required")
+	}
+
 	_, err := s.provider(c).WithContext(contextFrom(c)).SystemJwtSignKeyRotate()
 	if err != nil {
 		return err
@@ -2139,6 +2177,9 @@ func (s *Server) SystemJwtToken(c *stdapi.Context) error {
 	durationInHour, err := strconv.Atoi(c.Value("durationInHour"))
 	if err != nil {
 		return stdapi.Errorf(http.StatusBadRequest, "invalid duration")
+	}
+	if durationInHour < 1 || durationInHour > maxJwtDurationHours {
+		return stdapi.Errorf(http.StatusBadRequest, "duration must be between 1 and %d hours", maxJwtDurationHours)
 	}
 
 	var tk string
@@ -2155,6 +2196,9 @@ func (s *Server) SystemJwtToken(c *stdapi.Context) error {
 			return err
 		}
 	case "admin":
+		if !CanAdmin(c) {
+			return stdapi.Errorf(http.StatusForbidden, "admin role required to mint admin tokens")
+		}
 		tk, err = s.JwtMngr.AdminToken(time.Hour * time.Duration(durationInHour))
 		if err != nil {
 			return err

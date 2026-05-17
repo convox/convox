@@ -50,6 +50,8 @@ func NewContext(w http.ResponseWriter, r *http.Request) *Context {
 	s := sessions.NewCookieStore([]byte(SessionSecret))
 	s.Options.MaxAge = SessionExpiration
 	s.Options.SameSite = http.SameSiteLaxMode
+	s.Options.Secure = r.TLS != nil || strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https")
+	s.Options.HttpOnly = true
 
 	return &Context{
 		context:  r.Context(),

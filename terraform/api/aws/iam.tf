@@ -128,9 +128,19 @@ data "aws_iam_policy_document" "rds_provisioner" {
       "ec2:ModifySecurityGroupRules",
       "ec2:CreateTags",
       "ec2:DescribeInstanceTypes",
-      "ec2:TerminateInstances",
     ]
     resources = ["*"]
+  }
+
+  statement {
+    effect    = "Allow"
+    actions   = ["ec2:TerminateInstances"]
+    resources = ["arn:${data.aws_partition.current.partition}:ec2:*:*:instance/*"]
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/kubernetes.io/cluster/${var.name}"
+      values   = ["owned"]
+    }
   }
 
   statement {
