@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -1539,10 +1540,17 @@ func (s *Server) Proxy(c *stdapi.Context) error {
 		return err
 	}
 
-	host := c.Var("host")
+	if !CanWrite(c) {
+		return stdapi.Errorf(http.StatusForbidden, "proxy requires write access")
+	}
+
+	host := strings.TrimSpace(c.Var("host"))
+	if !isSafeProxyTarget(host) {
+		return stdapi.Errorf(http.StatusBadRequest, "invalid proxy host")
+	}
 
 	port, cerr := strconv.Atoi(c.Var("port"))
-	if cerr != nil {
+	if cerr != nil || port < 1 || port > 65535 {
 		return stdapi.Errorf(http.StatusBadRequest, "invalid proxy port")
 	}
 
@@ -1571,6 +1579,34 @@ var validProxyHost = regexp.MustCompile(
 var bareProxySuffix = map[string]bool{
 	"local": true, "svc.cluster.local": true,
 	"cluster.local": true,
+}
+
+func isSafeProxyTarget(host string) bool {
+	if host == "" {
+		return false
+	}
+	clean := strings.TrimPrefix(strings.TrimSuffix(host, "]"), "[")
+	if idx := strings.Index(clean, "%"); idx != -1 {
+		clean = clean[:idx]
+	}
+	if clean == "" {
+		return false
+	}
+	if ip := net.ParseIP(clean); ip != nil {
+		if ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() {
+			return false
+		}
+		if ip.To4() == nil {
+			if ip16 := ip.To16(); ip16 != nil && ip16[0]&0xfe == 0xfc {
+				return false
+			}
+		}
+	}
+	h := strings.TrimRight(strings.ToLower(clean), ".")
+	if h == "localhost" || h == "metadata.google.internal" {
+		return false
+	}
+	return true
 }
 
 func isAllowedProxyHost(host string) bool {
