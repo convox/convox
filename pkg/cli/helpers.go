@@ -33,15 +33,21 @@ func app(c *stdcli.Context) string {
 	return coalesce(c.String("app"), c.LocalSetting("app"), filepath.Base(wd))
 }
 
-func argsToOptions(args []string) map[string]string {
+func argsToOptions(args []string) (map[string]string, error) {
 	options := map[string]string{}
 
 	for _, arg := range args {
 		parts := strings.SplitN(arg, "=", 2)
+		if len(parts) < 2 {
+			return nil, fmt.Errorf("invalid parameter %q, expected Key=Value format (use -r to specify rack)", arg)
+		}
+		if parts[0] == "" {
+			return nil, fmt.Errorf("invalid parameter %q, key must not be empty", arg)
+		}
 		options[parts[0]] = parts[1]
 	}
 
-	return options
+	return options, nil
 }
 
 func coalesce(ss ...string) string {

@@ -673,6 +673,28 @@ func TestRackParamsSetTerraformUpdateTimeoutSpecialChars(t *testing.T) {
 	})
 }
 
+func TestRackParamsSetInvalidArgFormat(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystem(), nil)
+
+		res, err := testExecute(e, "rack params set karpenter=true my-rack", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		res.RequireStderr(t, []string{`ERROR: invalid parameter "my-rack", expected Key=Value format (use -r to specify rack)`})
+	})
+}
+
+func TestRackParamsSetEmptyKey(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(fxSystem(), nil)
+
+		res, err := testExecute(e, "rack params set =value", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		res.RequireStderr(t, []string{`ERROR: invalid parameter "=value", key must not be empty`})
+	})
+}
+
 func TestRackPs(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("SystemProcesses", structs.SystemProcessesOptions{}).Return(structs.Processes{*fxProcess(), *fxProcessPending()}, nil)
