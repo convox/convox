@@ -2089,7 +2089,10 @@ func RackInstall(_ sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	opts := argsToOptions(args)
+	opts, err := argsToOptions(args)
+	if err != nil {
+		return err
+	}
 
 	if c.Bool("prepare") {
 		opts["release"] = version
@@ -2342,7 +2345,10 @@ func RackParamsSet(_ sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	params := argsToOptions(c.Args)
+	params, err := argsToOptions(c.Args)
+	if err != nil {
+		return err
+	}
 	force, _ := c.Value("force").(bool)
 	if err := validateAndMutateParams(params, r.Provider(), currentParams, force); err != nil {
 		return err
