@@ -233,10 +233,7 @@ func (c *Client) AppBudgetReset(app string, ackBy string) error {
 	return c.AppBudgetResetWithOptions(app, ackBy, structs.AppBudgetResetOptions{})
 }
 
-// AppBudgetResetWithOptions extends AppBudgetReset with the
-// --force-clear-cooldown flag (Set G). Server-side CanAdmin gate.
-// Existing AppBudgetReset(app, ackBy) wraps this with default options
-// to preserve the SDK contract for older callers.
+// AppBudgetResetWithOptions extends AppBudgetReset with force-clear-cooldown support.
 func (c *Client) AppBudgetResetWithOptions(app string, ackBy string, opts structs.AppBudgetResetOptions) error {
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
 	ro.Params["ack_by"] = ackBy
@@ -249,9 +246,7 @@ func (c *Client) AppBudgetResetWithOptions(app string, ackBy string, opts struct
 	return c.Post(fmt.Sprintf("/apps/%s/budget/reset", app), ro, nil)
 }
 
-// AppBudgetSimulate runs a dry-run shutdown simulation. The cluster is
-// not modified; the response describes what WOULD happen if a real
-// shutdown fired now.
+// AppBudgetSimulate runs a dry-run shutdown simulation (no mutations).
 func (c *Client) AppBudgetSimulate(app string) (*structs.AppBudgetSimulationResult, error) {
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
 	var v *structs.AppBudgetSimulationResult
@@ -261,10 +256,7 @@ func (c *Client) AppBudgetSimulate(app string) (*structs.AppBudgetSimulationResu
 	return v, nil
 }
 
-// AppBudgetShutdownStateGet returns the shutdown-state annotation for
-// an app. Used by `convox budget show` to render the
-// ARMED/ACTIVE/RECOVERED/FAILED banner. Returns (nil, nil) when no
-// annotation is present (no shutdown is armed/active).
+// AppBudgetShutdownStateGet returns the shutdown-state annotation for an app.
 func (c *Client) AppBudgetShutdownStateGet(app string) (*structs.AppBudgetShutdownState, error) {
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
 	var v *structs.AppBudgetShutdownState
@@ -274,21 +266,13 @@ func (c *Client) AppBudgetShutdownStateGet(app string) (*structs.AppBudgetShutdo
 	return v, nil
 }
 
-// AppBudgetDismissRecovery dismisses the sticky recovery banner shown
-// post-restore by `convox budget show`. Idempotent. Wraps
-// AppBudgetDismissRecoveryWithResult and discards the status to
-// preserve the legacy SDK contract.
+// AppBudgetDismissRecovery dismisses the sticky recovery banner (idempotent).
 func (c *Client) AppBudgetDismissRecovery(app string, ackBy string) error {
 	_, err := c.AppBudgetDismissRecoveryWithResult(app, ackBy)
 	return err
 }
 
-// AppBudgetDismissRecoveryWithResult is the 3-case dismiss-recovery
-// path. Returns one of:
-//
-//   - "dismissed"        : a banner was active; now dismissed
-//   - "already-dismissed": banner exists but was previously dismissed
-//   - "no-banner"        : no recovery banner is active for this app
+// AppBudgetDismissRecoveryWithResult returns dismissed/already-dismissed/no-banner status.
 func (c *Client) AppBudgetDismissRecoveryWithResult(app string, ackBy string) (*structs.AppBudgetDismissRecoveryResult, error) {
 	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
 	ro.Params["ack_by"] = ackBy
@@ -1128,21 +1112,7 @@ func (c *Client) ServiceList(app string) (structs.Services, error) {
 	return v, err
 }
 
-// MetricsByService is the batched per-app companion to ServiceMetrics:
-// one HTTP round-trip returns one ServiceMetricsRow per requested
-// service (each row carries the same Metric series shape as
-// ServiceMetrics). The batched endpoint exists so the console
-// GpuDashboard does not fan out to N round-trips for an N-service
-// app — the chart re-renders on a single resolver call.
-//
-// services is the comma-joined list passed as the `services=` query
-// param. Element validation (manifest.NameValidator) runs at the rack
-// controller; passing meta-chars from the SDK side will return a 400.
-//
-// Available on V3 racks running 3.24.6+. Pre-3.24.6 V3 racks return
-// 404 (route not registered); V2 racks also return 404 (no batched
-// endpoint). Console resolver catches 404 → returns empty list +
-// banner.
+// MetricsByService is the batched companion to ServiceMetrics (one call per app). New in 3.24.6.
 func (c *Client) MetricsByService(app string, services []string, opts structs.MetricsOptions) ([]structs.ServiceMetricsRow, error) {
 	ro, err := stdsdk.MarshalOptions(opts)
 	if err != nil {
@@ -1184,14 +1154,7 @@ func (c *Client) ServiceRestart(app, name string) error {
 	return err
 }
 
-// ServiceScaleOverrideSet toggles the per-service scale-override
-// annotation on the named service. When active=true, future release
-// promotes preserve the runtime replica count instead of applying the
-// yaml-declared scale.count. When active=false, the annotation is
-// removed and yaml-declared scale resumes on next promote. New in
-// rack 3.24.6 — older racks return 404. ackBy carries actor identity
-// for the audit trail; pass empty when unavailable so the rack falls
-// back to JWT-derived actor via resolveAckByOverride.
+// ServiceScaleOverrideSet toggles the per-service scale-override annotation. New in 3.24.6.
 func (c *Client) ServiceScaleOverrideSet(app, service string, active bool, ackBy string) error {
 	ro := stdsdk.RequestOptions{
 		Headers: stdsdk.Headers{},
@@ -1206,11 +1169,7 @@ func (c *Client) ServiceScaleOverrideSet(app, service string, active bool, ackBy
 	return c.Post(fmt.Sprintf("/apps/%s/services/%s/scale-override", app, service), ro, nil)
 }
 
-// ServiceTriggersEnable creates a Console-driven autoscale configuration
-// on the named service. Persists via the convox.com/triggers-override-*
-// annotation pair on the service Deployment; the deploy controller respects
-// the annotation on subsequent promotes so the user's choice survives
-// deploys without yaml edits. New in rack 3.24.6 — older racks return 404.
+// ServiceTriggersEnable creates a Console-driven autoscale override on the named service. New in 3.24.6.
 func (c *Client) ServiceTriggersEnable(app, service string, opts structs.ServiceTriggersOptions, ackBy string) error {
 	body, err := json.Marshal(opts)
 	if err != nil {
@@ -1227,10 +1186,7 @@ func (c *Client) ServiceTriggersEnable(app, service string, opts structs.Service
 	return c.Post(fmt.Sprintf("/apps/%s/services/%s/triggers/enable", app, service), ro, nil)
 }
 
-// ServiceTriggersDisable removes the Console-driven autoscale configuration
-// on the named service: deletes whichever CRD (HPA or KEDA ScaledObject)
-// owns the override, then clears both override annotations. Idempotent on
-// services that were never overridden. New in rack 3.24.6.
+// ServiceTriggersDisable removes the Console-driven autoscale override (idempotent). New in 3.24.6.
 func (c *Client) ServiceTriggersDisable(app, service, ackBy string) error {
 	ro := stdsdk.RequestOptions{
 		Headers: stdsdk.Headers{},
@@ -1243,10 +1199,7 @@ func (c *Client) ServiceTriggersDisable(app, service, ackBy string) error {
 	return c.Post(fmt.Sprintf("/apps/%s/services/%s/triggers/disable", app, service), ro, nil)
 }
 
-// ServiceTriggersThresholdSet updates a single trigger's threshold value
-// on a service that already has a Console-driven override active. Fails
-// when no override is active or when the requested trigger type is not
-// present on the active CRD. New in rack 3.24.6.
+// ServiceTriggersThresholdSet updates a trigger threshold on a service with an active override. New in 3.24.6.
 func (c *Client) ServiceTriggersThresholdSet(app, service, triggerType string, threshold float64, ackBy string) error {
 	ro := stdsdk.RequestOptions{
 		Headers: stdsdk.Headers{},

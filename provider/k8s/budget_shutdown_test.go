@@ -104,7 +104,7 @@ func TestBudgetShutdown_PausedReplicasAnnotationWritten_AndDeploymentReplicasZer
 		anno := so.GetAnnotations()
 		assert.Equal(t, "0", anno["autoscaling.keda.sh/paused-replicas"])
 
-		// PIVOT 1: spec.minReplicaCount and spec.maxReplicaCount untouched.
+		// spec.minReplicaCount and spec.maxReplicaCount must be untouched.
 		soSpec, _, err := unstructuredField(so, "spec", "minReplicaCount")
 		require.NoError(t, err)
 		assert.Equal(t, int64(1), soSpec)
@@ -263,8 +263,8 @@ func TestBudgetShutdown_RestoreFromAnnotation_ReplicasRestored(t *testing.T) {
 }
 
 // TestBudgetShutdown_RestorePreFlightCheck_ManualScaledIsSkipped verifies
-// the §6.3 step 2 pre-flight check: if the user manually scaled
-// the service back up, restore skips the PATCH.
+// the pre-flight check: if the user manually scaled the service back up,
+// restore skips the PATCH.
 func TestBudgetShutdown_RestorePreFlightCheck_ManualScaledIsSkipped(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
@@ -1128,8 +1128,8 @@ func TestBudgetShutdown_ForceClearCooldown_DeletesCarryoverAnnotations(t *testin
 }
 
 // TestBudgetShutdown_StandardReset_PreservesCarryoverAnnotations verifies
-// the default reset path PRESERVES the cooldown carry-over (per spec
-// §15.2: user must opt in via --force-clear-cooldown).
+// the default reset path PRESERVES the cooldown carry-over (user must
+// opt in via --force-clear-cooldown).
 func TestBudgetShutdown_StandardReset_PreservesCarryoverAnnotations(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {

@@ -16,35 +16,22 @@ import (
 // minHexLen is 32 raw bytes after hex decode (64 hex chars).
 const minHexLen = 64
 
-// maxHexLen guards against accidental file-paste DoS into a rack param.
+// maxHexLen guards against file-paste DoS.
 const maxHexLen = 4096
 
-// maxKeys caps the rotation list length.
-//
-// Bumped from 2 to 4 in 3.24.6 so operators have a comfortable rotation
-// depth (current + previous + prev-previous + prev-prev-previous). Wire
-// size: 4 × 64 chars + timestamp ≈ 280 bytes header — well under any
-// reasonable receiver header limit (8KB cloudflare, 4KB lambda baseline).
-// Per-event CPU: 4 HMAC operations vs 2 — negligible.
+// maxKeys caps the rotation list length (4 = comfortable rotation depth).
 const maxKeys = 4
 
-// MaxSigningKeys is the exported view of maxKeys for cross-package callers
-// that need to compute "evicted_count" diagnostics or guard parameter
-// validation. Not used by the package's own validation/signing helpers.
+// MaxSigningKeys exports maxKeys for cross-package validation.
 const MaxSigningKeys = maxKeys
 
-// hexCharClass matches one or more lowercase hex characters. Uppercase
-// is rejected so the validator can give the user an actionable "use
-// lowercase" hint without ambiguity.
+// hexCharClass matches lowercase hex only; uppercase rejected for clear error messages.
 var hexCharClass = regexp.MustCompile(`^[0-9a-f]+$`)
 
-// nonHexLowerClass identifies the first offending character in a non-hex
-// string so the validator can report its offset and value.
+// nonHexLowerClass finds the first non-hex character for error reporting.
 var nonHexLowerClass = regexp.MustCompile(`[^0-9a-f]`)
 
-// placeholderHexValues are exact-equality known-bad hex strings. Substring
-// match is intentionally avoided: a high-entropy random key that happens to
-// contain "changeme" as a substring is statistically harmless.
+// placeholderHexValues are known-bad hex strings checked by exact equality.
 var placeholderHexValues = []string{
 	strings.Repeat("0", 64),
 	strings.Repeat("1", 64),
@@ -61,8 +48,7 @@ var placeholderHexValues = []string{
 	"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
 }
 
-// abs returns the absolute value of x. Provided here because Go has no
-// stdlib int64 abs (math.Abs is float64-only).
+// abs returns |x| (Go has no int64 abs).
 func abs(x int64) int64 {
 	if x < 0 {
 		return -x
@@ -70,8 +56,7 @@ func abs(x int64) int64 {
 	return x
 }
 
-// shannonEntropyBitsPerByte computes Shannon entropy of decoded key bytes
-// in bits per byte. Sequential / repeating / ASCII-text inputs score low.
+// shannonEntropyBitsPerByte computes Shannon entropy of key bytes.
 func shannonEntropyBitsPerByte(b []byte) float64 {
 	if len(b) == 0 {
 		return 0
@@ -92,7 +77,6 @@ func shannonEntropyBitsPerByte(b []byte) float64 {
 	return h
 }
 
-// signOne computes HMAC-SHA256(key, "<t>.<body>") and returns hex(mac).
 func signOne(t int64, body []byte, key []byte) []byte {
 	mac := hmac.New(sha256.New, key)
 	fmt.Fprintf(mac, "%d.", t)
@@ -100,26 +84,17 @@ func signOne(t int64, body []byte, key []byte) []byte {
 	return mac.Sum(nil)
 }
 
-// Sign returns the v1=<hex> segment for a single key, given a Unix
-// timestamp and the body bytes. The signed input is fmt.Sprintf("%d.%s",
-// t, body).
+// Sign returns the v1=<hex> segment for a single key.
 func Sign(t int64, body []byte, key []byte) string {
 	return "v1=" + hex.EncodeToString(signOne(t, body, key))
 }
 
-// SignedHeader returns the full Convox-Signature header value:
-//
-//	t=<unix-ts>,v1=<hex1>[,v1=<hex2>]
-//
-// for one or more keys. Empty keys list returns "". A runtime panic in
-// the inner sign call is recovered and surfaces as the empty string so
-// callers degrade to unsigned dispatch instead of crashing.
+// SignedHeader returns the full Convox-Signature header value for one or
+// more keys. Panics are recovered to degrade to unsigned dispatch.
 func SignedHeader(t int64, body []byte, keys [][]byte) (header string) {
 	defer func() {
 		if r := recover(); r != nil {
-			// Do not log the recovered value: it may carry key or body
-			// bytes via internal stack state. The caller observes the
-			// empty header and decides whether to log a degraded notice.
+			// Do not log: recovered value may carry key material.
 			header = ""
 		}
 	}()
@@ -140,21 +115,13 @@ func SignedHeader(t int64, body []byte, keys [][]byte) (header string) {
 	return strings.Join(parts, ",")
 }
 
-// Verify verifies that the Convox-Signature header value authenticates
-// the given body bytes against AT LEAST ONE of the provided keys, AND
-// that the header timestamp is within the tolerance window. Returns nil
-// on success.
-//
-// Provided in the Go SDK only — Python/Node/Ruby receivers are sampled
-// in webhooks.md.
+// Verify checks body against at least one key within the tolerance window.
 func Verify(body []byte, header string, keys [][]byte, tolerance time.Duration) error {
 	if header == "" {
 		return errors.New("missing Convox-Signature header")
 	}
 
-	// CRLF injection guard: forbid any control byte. Any LF/CR in the
-	// header value is anomalous (header line was already parsed before
-	// reaching this function) and indicates an injection attempt.
+	// CRLF injection guard.
 	for i := 0; i < len(header); i++ {
 		c := header[i]
 		if c == '\r' || c == '\n' || c == '\x00' {
@@ -181,9 +148,7 @@ func Verify(body []byte, header string, keys [][]byte, tolerance time.Duration) 
 	}
 
 	now := time.Now().Unix()
-	// tolerance.Seconds() returns float64; sub-second tolerance truncates
-	// to 0 and would reject every webhook. Pin tolerance to whole seconds
-	// in callers.
+	// Sub-second tolerance truncates to 0; callers must use whole seconds.
 	if abs(now-t) > int64(tolerance.Seconds()) {
 		return errors.New("timestamp outside tolerance window")
 	}
@@ -194,8 +159,7 @@ func Verify(body []byte, header string, keys [][]byte, tolerance time.Duration) 
 	}
 
 	for _, sigHex := range sigs {
-		// Hex-shape guard before const-time compare; rejects truncated /
-		// non-hex / mixed-case sigs without leaking comparison timing.
+		// Hex-shape guard before constant-time compare.
 		if len(sigHex) != 2*sha256.Size {
 			continue
 		}
@@ -221,10 +185,8 @@ func Verify(body []byte, header string, keys [][]byte, tolerance time.Duration) 
 	return errors.New("no signature in Convox-Signature matched any signing key")
 }
 
-// ParseSigningKeys parses a comma-separated webhook_signing_key rack-param
-// value into a [][]byte of decoded keys. Empty input returns (nil, nil)
-// signaling the disabled state. Decoded keys are returned post-hex-decode
-// once at boot; subsequent comparisons operate on the raw []byte slices.
+// ParseSigningKeys parses a comma-separated webhook_signing_key rack param
+// into decoded key bytes. Empty input returns (nil, nil).
 func ParseSigningKeys(rackParam string) ([][]byte, error) {
 	if err := ValidateSigningKeys(rackParam); err != nil {
 		return nil, err
@@ -237,15 +199,13 @@ func ParseSigningKeys(rackParam string) ([][]byte, error) {
 	out := make([][]byte, 0, len(raw))
 	for _, s := range raw {
 		s = strings.TrimSpace(s)
-		// ValidateSigningKeys already rejected empty entries; double-check
-		// here defensively to avoid a degenerate len(0) []byte in the
-		// signing path.
+		// Defensive: validated above but avoid zero-length key in signing path.
 		if s == "" {
 			continue
 		}
 		b, err := hex.DecodeString(s)
 		if err != nil {
-			// Unreachable post-validation but returned for total-correctness.
+			// Unreachable post-validation.
 			return nil, fmt.Errorf("hex decode failure post-validation: %w", err)
 		}
 		out = append(out, b)
@@ -253,11 +213,8 @@ func ParseSigningKeys(rackParam string) ([][]byte, error) {
 	return out, nil
 }
 
-// ValidateSigningKeys enforces hex format, minimum length (32 bytes
-// after decode), weak-key rejection, and the max-key-count rule.
-// Returns nil on success. Error messages are user-actionable: they
-// describe key shape (offset, length, hex-vs-not) without echoing key
-// contents to logs.
+// ValidateSigningKeys enforces hex format, minimum length, weak-key
+// rejection, and max-key-count. Error messages avoid echoing key contents.
 func ValidateSigningKeys(rackParam string) error {
 	trimmed := strings.TrimSpace(rackParam)
 	if trimmed == "" {
@@ -293,7 +250,6 @@ func ValidateSigningKeys(rackParam string) error {
 			}
 			return fmt.Errorf("webhook_signing_key: key #%d contains non-hex character %q at offset %d; hex validation requires lowercase [0-9a-f]; use 'openssl rand -hex 32' to generate", idx, string(char), off)
 		}
-		// Placeholder equality check.
 		for _, ph := range placeholderHexValues {
 			if s == ph {
 				return fmt.Errorf("webhook_signing_key: key #%d matches a known placeholder value; use 'openssl rand -hex 32' to generate a real key", idx)
@@ -301,7 +257,7 @@ func ValidateSigningKeys(rackParam string) error {
 		}
 		decoded, err := hex.DecodeString(s)
 		if err != nil {
-			// Unreachable: hexCharClass + even-length checks already passed.
+			// Unreachable post-validation.
 			return fmt.Errorf("webhook_signing_key: key #%d hex decode failed (%v); regenerate with 'openssl rand -hex 32'", idx, err)
 		}
 		if isAllZero(decoded) {

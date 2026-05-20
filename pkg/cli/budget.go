@@ -68,19 +68,7 @@ func init() {
 		Validate: stdcli.Args(1),
 	})
 
-	// `budget cap raise` is a partial-update alias for `budget set --monthly-cap`
-	// that overrides ONLY the monthly cap. Other budget config (alert-at,
-	// at-cap-action, pricing-adjustment) is preserved by the server-side
-	// partial-merge in applyBudgetOptions. The subcommand is cited verbatim
-	// in the ARMED banner (renderShutdownStateBanner) and the 3-action
-	// 409 breaker message returned by every gated mutation when the
-	// breaker is tripped, so it MUST exist for those user-facing
-	// instructions to actually work.
-	// Accepts either --monthly-cap-usd (canonical) or --monthly-cap
-	// (alias). The pre-existing BudgetSet --monthly-cap flag stays
-	// unchanged (no cross-command rename); users with either flag form
-	// on `budget cap raise` get the same behavior. The canonical form
-	// wins when both are present.
+	// cited by ARMED banner and 409 breaker message; must exist as a real command
 	register("budget cap raise", "raise the monthly cap (alias for `budget set --monthly-cap`)", BudgetCapRaise, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
 			flagRack,
@@ -97,8 +85,6 @@ func BudgetShow(rack sdk.Interface, c *stdcli.Context) error {
 
 	cfg, state, err := rack.AppBudgetGet(app)
 	if err != nil {
-		// Friendly version-gate message on 3.24.5 racks instead of
-		// leaking raw "response status 404".
 		return wrapVersionGate(err, "budget caps")
 	}
 
@@ -107,11 +93,6 @@ func BudgetShow(rack sdk.Interface, c *stdcli.Context) error {
 		return nil
 	}
 
-	// Probe ServiceList for KEDA-driven services to decide whether to print
-	// the cap-bypass disclosure banner. Failure is best-effort: skip the
-	// banner rather than fail the whole command. ServiceList errors do not
-	// surface to the user — `budget show` must remain useful even if the
-	// rack is partially degraded.
 	if state != nil && state.CircuitBreakerTripped {
 		if ss, e := rack.ServiceList(app); e == nil {
 			for i := range ss {
@@ -123,10 +104,6 @@ func BudgetShow(rack sdk.Interface, c *stdcli.Context) error {
 		}
 	}
 
-	// Auto-shutdown banner. Best-effort: a server without the new
-	// endpoint, a missing annotation, or an SDK that does not
-	// implement ShutdownStateGet (older mocks, downgraded racks) all
-	// fall through silently.
 	if shutdownState := safeShutdownStateGet(rack, app); shutdownState != nil {
 		renderShutdownStateBanner(c.Writer(), app, cfg, shutdownState)
 	}
@@ -143,24 +120,6 @@ func BudgetShow(rack sdk.Interface, c *stdcli.Context) error {
 	return nil
 }
 
-// renderShutdownStateBanner prints the ARMED / ACTIVE / RECOVERED /
-// FAILED banner above the BudgetShow JSON payload. Banner-state
-// derivation precedence (most specific first):
-//
-//	ACTIVE      — ShutdownAt populated but RestoredAt empty
-//	RECOVERED   — RestoredAt populated
-//	FAILED      — *NotificationFiredAt for :failed populated AND no ACTIVE/RECOVERED
-//	ARMED       — ArmedAt populated, ShutdownAt empty
-//
-// RECOVERED takes precedence over FAILED after a manual recovery
-// completes. Without this precedence, a user who manually scales
-// services back up sees [FAILED] for one tick window (until
-// runStaleAnnotationGC clears the FailedNotificationFiredAt). Once
-// RestoredAt is set, the system is recovered and the banner reflects
-// that.
-//
-// The user command instructions are pinned text — do NOT edit without
-// updating the corresponding test in budget_test.go.
 func renderShutdownStateBanner(w io.Writer, app string, cfg *structs.AppBudget, s *structs.AppBudgetShutdownState) {
 	if s == nil {
 		return
@@ -178,19 +137,12 @@ func renderShutdownStateBanner(w io.Writer, app string, cfg *structs.AppBudget, 
 		fmt.Fprintf(w, "[RECOVERED] Auto-shutdown RECOVERED for %s at %s.%s Run `convox budget dismiss-recovery %s` to clear banner.\n",
 			app, s.RestoredAt.UTC().Format("2006-01-02T15:04:05Z"), flap, app)
 	case s.FailedNotificationFiredAt != nil && !s.FailedNotificationFiredAt.IsZero():
-		// Render the canonical FailureReason from the persisted state
-		// when present; fall back to the legacy banner when older state
-		// lacks the field (defensive for cross-version compatibility).
 		if s.FailureReason != "" {
 			fmt.Fprintf(w, "[FAILED] Auto-shutdown FAILED for %s. Reason: %s. Run `convox budget reset %s` to clear state.\n", app, s.FailureReason, app)
 		} else {
 			fmt.Fprintf(w, "[FAILED] Auto-shutdown FAILED for %s. Run `convox budget reset %s` to clear state.\n", app, app)
 		}
 	case s.ArmedAt != nil && !s.ArmedAt.IsZero():
-		// Read NotifyBeforeMinutes from the persisted state so the
-		// banner reflects the user-configured notify window.
-		// Cross-version compat: state from older racks lacks the field
-		// (zero); fall back to the 30-minute default in that case.
 		notifyMin := s.NotifyBeforeMinutes
 		if notifyMin <= 0 {
 			notifyMin = structs.BudgetDefaultNotifyBeforeMinutes
@@ -210,22 +162,7 @@ func BudgetSet(rack sdk.Interface, c *stdcli.Context) error {
 	alertAtRaw := c.Int("alert-at")
 	actionRaw := c.String("at-cap-action")
 
-	// Pricing-adjustment-only carve-out: the rack-side carve-out at
-	// provider/k8s/budget_accumulator.go:requireCostTrackingForBudget
-	// short-circuits to nil when AppBudgetOptions has only
-	// PricingAdjustment populated — pricing-adjustment is a
-	// non-enforcement-bearing pricing multiplier, so the rack accepts
-	// it even on a rack with cost_tracking_enable=false. Allow the CLI
-	// to reach that path by accepting either --monthly-cap or
-	// --pricing-adjustment alone. Any enforcement-bearing flag
-	// (--alert-at or --at-cap-action) still requires --monthly-cap so
-	// users don't declare enforcement without a cap. Order matters:
-	// the enforcement-without-cap check runs first so a user who
-	// passes only --alert-at or --at-cap-action gets the targeted
-	// error citing the missing cap, not the generic "--monthly-cap or
-	// --pricing-adjustment is required" (which would be misleading —
-	// pricing-adjustment is not a substitute for cap when enforcement
-	// flags are present).
+	// pricing-adjustment alone is accepted without --monthly-cap (non-enforcement)
 	if capStr == "" {
 		if alertAtRaw != 0 || actionRaw != "" {
 			return fmt.Errorf("--alert-at and --at-cap-action require --monthly-cap")
@@ -267,8 +204,6 @@ func BudgetSet(rack sdk.Interface, c *stdcli.Context) error {
 		}
 
 		if action == structs.BudgetAtCapActionAutoShutdown {
-			// tell users exactly where atCapWebhookUrl lives in
-			// the manifest so the warning is actionable.
 			fmt.Fprintln(c.Writer().Stderr,
 				"WARNING: auto-shutdown will scale eligible services to 0 replicas at cap breach. "+
 					"Verify your atCapWebhookUrl is configured (configured in convox.yml budget block) and your team is paged on :armed events. "+
@@ -283,12 +218,7 @@ func BudgetSet(rack sdk.Interface, c *stdcli.Context) error {
 		opts.AtCapAction = &action
 	}
 
-	// Partial-merge semantics: only populate PricingAdjustment when
-	// the user explicitly passes --pricing-adjustment. Omission is
-	// honored as "preserve prior persisted value" by applyBudgetOptions
-	// (provider/k8s/budget_accumulator.go:618-646), matching BudgetCapRaise
-	// and eliminating the prior foot-gun where omitting --pricing-adjustment
-	// silently reset the multiplier to BudgetDefaultPricingAdjustment.
+	// omission preserves the prior persisted value (partial-merge)
 	if paStr != "" {
 		paVal, err := strconv.ParseFloat(paStr, 64)
 		if err != nil {
@@ -300,12 +230,7 @@ func BudgetSet(rack sdk.Interface, c *stdcli.Context) error {
 		opts.PricingAdjustment = &paStr
 	}
 
-	// UX R1 #13: warn (non-blocking) when the new cap would already be at or
-	// below the current month-to-date spend. The cap is still set; the next
-	// accumulator tick will trip immediately. Best-effort — a transient
-	// AppCost lookup error MUST NOT block budget set. Suppressed on the
-	// pricing-adjustment-only path (capStr=="") because no cap is being
-	// declared — emitting the warning would cite a misleading $0.00 cap.
+	// warn if cap is already below current MTD spend (best-effort)
 	if capStr != "" {
 		if cost, err := rack.AppCost(app); err == nil && cost != nil && cost.SpendUsd > capVal {
 			fmt.Fprintf(c.Writer().Stderr,
@@ -325,7 +250,6 @@ func BudgetSet(rack sdk.Interface, c *stdcli.Context) error {
 		return wrapVersionGate(err, "budget caps")
 	}
 	if explicit {
-		// stderr keeps the deprecation notice off stdout so CI parsers stay clean.
 		fmt.Fprintln(c.Writer().Stderr, "WARNING: --ack-by is deprecated; ack_by is now derived from your JWT identity. Flag will be rejected in 3.25.0.")
 	}
 	return c.OK()
@@ -388,11 +312,7 @@ func BudgetReset(rack sdk.Interface, c *stdcli.Context) error {
 	return c.OK()
 }
 
-// safeShutdownStateGet wraps the SDK call with panic recovery so a
-// downgraded rack (no /budget/shutdown-state endpoint) or an older mock
-// SDK that did not register the method does not crash the CLI. The
-// auto-shutdown banner is strictly observational; never fail a `budget show`
-// because the new endpoint is unavailable.
+// safeShutdownStateGet wraps the SDK call with panic recovery for downgraded racks.
 func safeShutdownStateGet(rack sdk.Interface, app string) (state *structs.AppBudgetShutdownState) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -415,10 +335,6 @@ func currentActorIdentifier() string {
 	return "cli"
 }
 
-// BudgetSimulateShutdown runs `convox budget simulate-shutdown <app>` —
-// dry-run auto-shutdown evaluation. Cluster state is NOT modified;
-// the response describes what WOULD happen if a real shutdown fired
-// now.
 func BudgetSimulateShutdown(rack sdk.Interface, c *stdcli.Context) error {
 	app := c.Arg(0)
 	res, err := rack.AppBudgetSimulate(app)
@@ -469,13 +385,6 @@ func BudgetSimulateShutdown(rack sdk.Interface, c *stdcli.Context) error {
 	return nil
 }
 
-// BudgetDismissRecovery runs `convox budget dismiss-recovery <app>`.
-// Idempotent — second call returns OK with no annotation change.
-// Three-case output:
-//
-//	"Banner dismissed for <app>."             — first dismissal of an active banner
-//	"Banner already dismissed for <app>."     — banner present but already dismissed
-//	"No recovery banner active for <app>."    — no banner is currently shown
 func BudgetDismissRecovery(rack sdk.Interface, c *stdcli.Context) error {
 	app := c.Arg(0)
 	ackBy := currentActorIdentifier()
@@ -484,8 +393,6 @@ func BudgetDismissRecovery(rack sdk.Interface, c *stdcli.Context) error {
 		return wrapVersionGate(err, "budget dismiss-recovery")
 	}
 	if res == nil {
-		// Defensive: a server that pre-dates the WithResult endpoint
-		// will return an empty body; treat as "dismissed" for back-compat.
 		fmt.Fprintf(c.Writer(), "Banner dismissed for %s.\n", app)
 		return nil
 	}
@@ -497,25 +404,14 @@ func BudgetDismissRecovery(rack sdk.Interface, c *stdcli.Context) error {
 	case structs.BudgetDismissRecoveryStatusNoBanner:
 		fmt.Fprintf(c.Writer(), "No recovery banner active for %s.\n", app)
 	default:
-		// Forward-compat: unknown status from a newer server. Render
-		// raw status so the user can still see the response.
 		fmt.Fprintf(c.Writer(), "Banner status for %s: %s.\n", app, res.Status)
 	}
 	return nil
 }
 
-// BudgetCapRaise runs `convox budget cap raise --monthly-cap-usd <higher> <app>`.
-// Partial-update alias for `convox budget set --monthly-cap`: only
-// MonthlyCapUsd is sent in AppBudgetOptions; the server-side
-// applyBudgetOptions partial-merge preserves alert-at, at-cap-action,
-// and pricing-adjustment from the existing budget config. The
-// subcommand exists so the ARMED banner and the 3-action 409 breaker
-// message can cite a real CLI surface. Same MTD warning as BudgetSet —
-// best-effort, AppCost lookup failure does NOT block the call.
 func BudgetCapRaise(rack sdk.Interface, c *stdcli.Context) error {
 	app := c.Arg(0)
 
-	// Prefer --monthly-cap-usd; fall back to --monthly-cap alias.
 	capStr := c.String("monthly-cap-usd")
 	if capStr == "" {
 		capStr = c.String("monthly-cap")
@@ -535,11 +431,6 @@ func BudgetCapRaise(rack sdk.Interface, c *stdcli.Context) error {
 		MonthlyCapUsd: &capStr,
 	}
 
-	// MTD-spend warning parity with BudgetSet. User raising
-	// the cap to a value still below current MTD spend gets the same
-	// non-blocking heads-up that the cap will trip on the next accumulator
-	// tick. Best-effort — a transient AppCost lookup error MUST NOT block
-	// the cap-raise call (matches BudgetSet behavior).
 	if cost, err := rack.AppCost(app); err == nil && cost != nil && cost.SpendUsd > capVal {
 		fmt.Fprintf(c.Writer().Stderr,
 			"WARNING: --monthly-cap-usd=$%.2f is below current month-to-date spend $%.2f. Cap will trip immediately on next accumulator tick.\n",

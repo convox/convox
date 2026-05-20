@@ -71,8 +71,8 @@ func TestSanitizeActor_DefenseInDepthStrips(t *testing.T) {
 		// Truthful values pass through unmodified.
 		{"truthful_email", "alice@example.com", "alice@example.com"},
 
-		// Whitespace-only collapses to "unknown" so a pathological
-		// "   " input cannot stamp a misleading actor on the event.
+		// Whitespace-only collapses to "unknown" so a whitespace-only
+		// input cannot stamp a misleading actor on the event.
 		{"whitespace_spaces", "   ", "unknown"},
 		{"whitespace_tabs", "\t\t", "unknown"},
 		{"whitespace_mixed", " \t \n ", "unknown"},

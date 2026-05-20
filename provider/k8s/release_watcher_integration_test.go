@@ -20,39 +20,11 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
-// SCAFFOLDING NOTE — ReleasePromote integration coverage (M-A06-2)
-// ----------------------------------------------------------------
-// These tests drive the watcher launch + lifecycle through the SAME
-// production write-then-watch path that ReleasePromote uses (annotation
-// write → goroutine spawn → polling → terminal emit), but they bypass
-// the ReleasePromote outer scaffolding because:
-//
-//   1. The full p.ReleasePromote(app, id, opts) entry path requires
-//      AppGet + ReleaseGet (CRD-backed) + manifest.Load + Atom.Apply
-//      + releaseTemplateServices + ingress / balancer / RDS / KEDA
-//      template generation + a healthy Convox CRD informer cache.
-//      The pre-existing TestReleasePromote in release_test.go is
-//      `t.Skip()`-ed for this same reason — the fake clientset
-//      scaffolding cannot exercise the full Atom Apply chain without
-//      wholesale fixture refactoring beyond item-18 scope.
-//
-//   2. The watcher launch + lifecycle behaviors that the M-A06-2 spec
-//      pins (happy-path completed, failure-path errored, supersession
-//      cancelled) are 100% in the watcher's polling-state-machine code
-//      path. The pre-Apply portion of ReleasePromote is unit-tested by
-//      release_scale_override_test.go; the post-Apply emit portion is
-//      unit-tested by TestEmitReleasePromoteResult_StatusToActionMapping.
-//
-// To reduce the "tests stub the helper" gap called out in spec § 10
-// row 18-19a WITHOUT triggering a full-fixture refactor, these tests:
-//
-//   - Compose the same production sequence: writeReleasePromoteWatchAnnotation
-//     followed by tryAcquireWatchSlot + go runReleasePromoteWatcher (mirrors
-//     release.go:314-339 exactly).
-//   - Assert the canonical app:promote:<verb> action names, status codes,
-//     payload shape, and slot teardown that the production path produces.
-//   - Exercise the cleanup defer's annotation delete, the supersession-
-//     aware variant, and the terminal-emit ordering.
+// These tests drive the watcher lifecycle through the same production
+// write-then-watch path that ReleasePromote uses (annotation write,
+// goroutine spawn, polling, terminal emit), bypassing the outer
+// ReleasePromote scaffolding (AppGet, Atom.Apply, etc.) which requires
+// extensive fixture setup unrelated to the watcher behavior under test.
 
 // runReleasePromoteFromAnnotation is the integration-test shim that
 // mirrors the production sequence in release.go after the Atom Apply

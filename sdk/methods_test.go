@@ -43,8 +43,8 @@ func TestInstanceKeyrollEmptyBody(t *testing.T) {
 	require.NotNil(t, v)
 }
 
-// TestSdkServiceScaleOverrideSet — proves the new SDK method posts the
-// expected URL + form params (active + optional ack_by). Item-23 §4.4.
+// TestSdkServiceScaleOverrideSet verifies ServiceScaleOverrideSet posts
+// the expected URL + form params (active + optional ack_by).
 func TestSdkServiceScaleOverrideSet(t *testing.T) {
 	t.Run("active=true_with_ack_by", func(t *testing.T) {
 		var (

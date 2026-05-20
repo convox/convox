@@ -17,16 +17,6 @@ const maxSecretNameLen = 253
 
 var registrySlugReplacer = strings.NewReplacer(".", "-", ":", "-", "/", "-")
 
-// renderImagePullSecrets emits a Kubernetes Secret of kind
-// kubernetes.io/dockerconfigjson for each entry in service.ImagePullSecrets.
-// It returns the serialized YAML blocks (appended to the atom apply manifest
-// so prune-on-remove works automatically via atom=<hash> labelling) and the
-// generated Secret names (added to the Pod spec's imagePullSecrets list
-// alongside docker-hub-authentication).
-//
-// Passwords sourced from passwordEnv are resolved via envResolver, which must
-// expose the already-merged service-scoped environment. A missing env var
-// returns a clear error naming the variable and the service.
 func renderImagePullSecrets(app, namespace string, service *manifest.Service, envResolver func(string) (string, bool)) ([][]byte, []string, error) {
 	if service == nil || len(service.ImagePullSecrets) == 0 {
 		return nil, nil, nil
@@ -85,10 +75,6 @@ func renderImagePullSecrets(app, namespace string, service *manifest.Service, en
 	return blocks, names, nil
 }
 
-// imagePullSecretName generates a deterministic K8s Secret name of the form
-// `convox-<app>-<service>-pull-<registry-slug>`, where <registry-slug> is the
-// registry host with `.`, `:`, and `/` replaced by `-`. Enforces the K8s
-// 253-char name limit with a sha256 suffix if the full name overflows.
 func imagePullSecretName(app, service, registry string) string {
 	slug := registrySlug(registry)
 	full := fmt.Sprintf("convox-%s-%s-pull-%s", app, service, slug)
@@ -105,10 +91,6 @@ func registrySlug(registry string) string {
 	return strings.ToLower(registrySlugReplacer.Replace(registry))
 }
 
-// imagePullSecretNames returns just the Secret names that
-// renderImagePullSecrets would have produced. Used by code paths that need
-// the Pod-spec references (timer render, convox run) but where the Secrets
-// themselves were already emitted by releaseTemplateServices.
 func imagePullSecretNames(app, service string, secrets []manifest.ServiceImagePullSecret) []string {
 	if len(secrets) == 0 {
 		return nil
@@ -120,10 +102,6 @@ func imagePullSecretNames(app, service string, secrets []manifest.ServiceImagePu
 	return names
 }
 
-// buildDockerConfigJSON produces the bytes of a .dockerconfigjson payload for
-// a single registry. json.Marshal escapes the credential strings correctly
-// (passwords containing `"`, `\\`, etc. round-trip safely, unlike the
-// fmt.Sprintf form used by ensureDockerHubSecret for the rack-wide auth).
 func buildDockerConfigJSON(registry, username, password string) ([]byte, error) {
 	auth := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", username, password)))
 	cfg := map[string]interface{}{

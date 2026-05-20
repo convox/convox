@@ -1144,12 +1144,12 @@ func TestAutoscaleMode_CollapsedStruct_ParsesIdentically(t *testing.T) {
 }
 
 // TestAutoscaleMode_OmitemptyMode_CrossVersionEmission locks the cross-version
-// YAML emission contract required by R3 (V3 §0a Rollback): `omitempty` on the
+// YAML emission contract for rollback compatibility: `omitempty` on the
 // Mode field MUST drop the discriminator from emitted YAML when Mode is unset,
 // so user YAML written by 3.24.6 stays readable by 3.24.5 (which doesn't
 // know about the Mode field). When Mode IS explicitly set, omitempty allows
 // it through. Option B (KEEP Mode field with omitempty) is the only path per
-// R3 mandate; Option A (drop the field entirely) was rejected.
+// Option A (drop the field entirely) was rejected.
 func TestAutoscaleMode_OmitemptyMode_CrossVersionEmission(t *testing.T) {
 	t.Run("Mode_unset_dropped_on_emit", func(t *testing.T) {
 		m := manifest.AutoscaleMode{Threshold: 70}

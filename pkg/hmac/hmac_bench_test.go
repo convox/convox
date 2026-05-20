@@ -2,7 +2,7 @@ package hmac_test
 
 // benchmark targets are advisory; CI does not fail on absolute numbers.
 // Hardware variance and Go runtime evolution will drift these targets;
-// use go test -bench=. -benchmem locally to spot pathological regressions.
+// use go test -bench=. -benchmem locally to spot performance regressions.
 
 import (
 	"crypto/rand"

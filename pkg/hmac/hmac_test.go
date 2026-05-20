@@ -742,8 +742,8 @@ func TestHmacPackage_NoKeyLeakInLogs(t *testing.T) {
 	assert.NotContains(t, combined, hexSig, "computed hex signature must not appear in logs")
 }
 
-// TestValidateSigningKeys_NewPlaceholders_Rejected locks the S4 blocklist
-// extension: four new placeholder patterns must be rejected at validation time.
+// TestValidateSigningKeys_NewPlaceholders_Rejected verifies four new
+// placeholder patterns are rejected at validation time.
 func TestValidateSigningKeys_NewPlaceholders_Rejected(t *testing.T) {
 	tests := []struct {
 		name string

@@ -9,8 +9,8 @@ import (
 
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
-	"github.com/pkg/errors"
 	kedav1alpha1 "github.com/kedacore/keda/v2/apis/keda/v1alpha1"
+	"github.com/pkg/errors"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
@@ -22,29 +22,14 @@ import (
 )
 
 const (
-	// ServiceTriggersOverrideAnnotation marks a service Deployment as
-	// having a Console-driven autoscale configuration that the deploy
-	// controller must NOT overwrite from the manifest. Mirrors the
-	// ServiceScaleOverrideAnnotation pattern for replica counts.
-	ServiceTriggersOverrideAnnotation = "convox.com/triggers-override-active"
-
-	// ServiceTriggersOverrideCRDAnnotation records which CRD owns the
-	// Console-driven autoscaler so the Disable path knows which resource
-	// to tear down without re-probing both surfaces.
+	ServiceTriggersOverrideAnnotation    = "convox.com/triggers-override-active"
 	ServiceTriggersOverrideCRDAnnotation = "convox.com/triggers-override-crd"
-
-	// ServiceTriggersOverrideValueOn is the literal annotation value
-	// that activates the override. Strict equality only.
-	ServiceTriggersOverrideValueOn = "true"
+	ServiceTriggersOverrideValueOn       = "true"
 
 	TriggersCRDHPA  = "hpa"
 	TriggersCRDKeda = "keda"
 )
 
-// triggersCRDChoice returns "keda" when any requested trigger requires
-// KEDA (gpuUtilization or queueDepth); "hpa" otherwise. Empty input
-// returns "hpa" — the caller's validation rejects empty trigger sets
-// before reaching this function.
 func triggersCRDChoice(triggers []structs.TriggerSpec) string {
 	for _, t := range triggers {
 		if t.Type == structs.TriggerTypeGPUUtilization || t.Type == structs.TriggerTypeQueueDepth {
@@ -54,20 +39,6 @@ func triggersCRDChoice(triggers []structs.TriggerSpec) string {
 	return TriggersCRDHPA
 }
 
-// ServiceTriggersEnable materializes a Console-driven autoscaler for the
-// service: validates inputs, runs preflight (GPU manifest reservation +
-// KEDA availability), dispatches to the HPA or KEDA branch based on the
-// requested trigger mix, then sets the override annotations on the
-// service Deployment. The annotation patch is the last write so that on
-// any failure the rack is left in a consistent state — best-effort
-// rollback of the just-created CRD prevents an "orphan CRD with no
-// annotation" surface invisible to the Disable path.
-//
-// CRD dispatch:
-//   - All triggers in {cpu, memory} → native autoscaling/v2 HPA. KEDA
-//     is not required.
-//   - Any trigger in {gpuUtilization, queueDepth} → KEDA ScaledObject.
-//     Rejected at preflight when keda_enable=false on the rack.
 func (p *Provider) ServiceTriggersEnable(app, service string, opts structs.ServiceTriggersOptions, ackBy string) error {
 	ackBy = sanitizeAckBy(ackBy)
 
@@ -124,9 +95,6 @@ func (p *Provider) ServiceTriggersEnable(app, service string, opts structs.Servi
 	}
 	switch {
 	case prevCRD != "" && prevCRD != crdChoice:
-		// Cross-CRD-type override switch. Delete the previous CRD
-		// before creating the new one so the new SO/HPA is the sole
-		// autoscaler owning the Deployment.
 		switch prevCRD {
 		case TriggersCRDHPA:
 			delErr := p.Cluster.AutoscalingV2().HorizontalPodAutoscalers(ns).Delete(context.TODO(), service, am.DeleteOptions{})
@@ -140,12 +108,7 @@ func (p *Provider) ServiceTriggersEnable(app, service string, opts structs.Servi
 			}
 		}
 	case prevCRD == "":
-		// No prior override, but a manifest-materialized CRD of the
-		// opposite type may exist (e.g. service has scale.autoscale.cpu
-		// on a KEDA rack → SO exists; user enables HPA-path override).
-		// Delete the opposite-type CRD so the new override is the sole
-		// owner. Best-effort: NotFound / NoMatch are expected and
-		// silently absorbed.
+		// Delete any manifest-materialized CRD of the opposite type.
 		if crdChoice == TriggersCRDHPA {
 			_ = p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Delete(context.TODO(), service, am.DeleteOptions{})
 		} else {
@@ -170,9 +133,7 @@ func (p *Provider) ServiceTriggersEnable(app, service string, opts structs.Servi
 	if _, err := p.Cluster.AppsV1().Deployments(ns).Patch(
 		context.TODO(), service, types.StrategicMergePatchType,
 		[]byte(patch), am.PatchOptions{}); err != nil {
-		// Best-effort rollback: delete the just-created CRD so the
-		// rack does not leak an orphan that the Disable path cannot
-		// see (annotation missing → idempotent no-op skips deletion).
+		// Rollback: delete orphan CRD if annotation patch failed.
 		switch crdChoice {
 		case TriggersCRDHPA:
 			_ = p.Cluster.AutoscalingV2().HorizontalPodAutoscalers(ns).Delete(context.TODO(), service, am.DeleteOptions{})
@@ -206,15 +167,6 @@ func (p *Provider) ServiceTriggersEnable(app, service string, opts structs.Servi
 	return nil
 }
 
-// applyTriggersHPA creates or in-place updates a native K8s HPA owning
-// the named service Deployment with one metrics entry per requested
-// CPU/memory trigger. Non-CPU/memory triggers are silently skipped (the
-// KEDA branch catches GPU/queue triggers earlier in the dispatch).
-//
-// Update preserves labels, annotations, and Spec.Behavior on the existing
-// HPA — only the override-owned fields (ScaleTargetRef, MinReplicas,
-// MaxReplicas, Metrics) are replaced. This avoids wiping manifest-set
-// metadata when the Console takes ownership of an existing HPA.
 func (p *Provider) applyTriggersHPA(ns, service string, opts structs.ServiceTriggersOptions) error {
 	min := int32(opts.Min)
 	max := int32(opts.Max)
@@ -248,7 +200,6 @@ func (p *Provider) applyTriggersHPA(ns, service string, opts structs.ServiceTrig
 		return errors.WithStack(err)
 	}
 	if err != nil {
-		// No existing HPA — create fresh.
 		hpa := &autoscalingv2.HorizontalPodAutoscaler{
 			ObjectMeta: am.ObjectMeta{
 				Name:      service,
@@ -265,10 +216,7 @@ func (p *Provider) applyTriggersHPA(ns, service string, opts structs.ServiceTrig
 		return errors.WithStack(createErr)
 	}
 
-	// In-place update: mutate the existing object so Spec.Behavior,
-	// annotations, and OwnerReferences are preserved across the Update
-	// call. The atom label is stripped because the Console now owns this
-	// HPA — deploy-time kubectl apply --prune must not delete it.
+	// Strip atom label so deploy-time prune won't delete Console-owned HPA.
 	existing.Spec.ScaleTargetRef = scaleTargetRef
 	existing.Spec.MinReplicas = &min
 	existing.Spec.MaxReplicas = max
@@ -278,13 +226,6 @@ func (p *Provider) applyTriggersHPA(ns, service string, opts structs.ServiceTrig
 	return errors.WithStack(err)
 }
 
-// applyTriggersKEDA creates or in-place patches a KEDA ScaledObject for
-// the named service. CPU and memory triggers use KEDA's built-in
-// resource types; GPU utilization and queue-depth triggers use the
-// Prometheus trigger template mirroring manifest.ServiceAutoscale.BuildTriggers
-// (pkg/manifest/service.go:428) so manifest-driven and Console-driven
-// triggers materialize identically. Idempotent: if an SO already exists,
-// it is updated in place.
 func (p *Provider) applyTriggersKEDA(app, ns, service string, opts structs.ServiceTriggersOptions) error {
 	promURL := strings.TrimSpace(os.Getenv("PROMETHEUS_URL"))
 
@@ -314,10 +255,6 @@ func (p *Provider) applyTriggersKEDA(app, ns, service string, opts structs.Servi
 				"metadata":   map[string]interface{}{"value": fmt.Sprintf("%g", t.Threshold)},
 			})
 		case structs.TriggerTypeGPUUtilization:
-			// GPU trigger uses the standardized DCGM metric + rack
-			// Prometheus by design. Console-side customization is
-			// out of scope; declare scale.autoscale.gpuUtilization
-			// in convox.yml for non-DCGM metric sources.
 			triggers = append(triggers, map[string]interface{}{
 				"type": "prometheus",
 				"name": "convox-gpu-utilization",
@@ -369,11 +306,7 @@ func (p *Provider) applyTriggersKEDA(app, ns, service string, opts structs.Servi
 		return errors.WithStack(err)
 	}
 
-	// In-place update: mutate existing.Object so non-override fields
-	// (cooldownPeriod, pollingInterval, advanced behaviors, annotations)
-	// survive the Update call. Only the override-owned fields
-	// (scaleTargetRef, min/max, triggers) are replaced. The atom label
-	// is stripped so deploy-time kubectl apply --prune won't delete it.
+	// Strip atom label so deploy-time prune won't delete Console-owned SO.
 	_ = unstructured.SetNestedMap(existing.Object, map[string]interface{}{"name": service}, "spec", "scaleTargetRef")
 	_ = unstructured.SetNestedField(existing.Object, int64(opts.Min), "spec", "minReplicaCount")
 	_ = unstructured.SetNestedField(existing.Object, int64(opts.Max), "spec", "maxReplicaCount")
@@ -387,19 +320,6 @@ func (p *Provider) applyTriggersKEDA(app, ns, service string, opts structs.Servi
 	return errors.WithStack(err)
 }
 
-// populateLiveCRDThresholds reads the active autoscaler CRD (HPA and/or
-// KEDA ScaledObject) and overlays its threshold values onto the supplied
-// ServiceAutoscaleState. Source of truth for threshold fields surfaces
-// the live CRD when one exists; the manifest values built by
-// buildServiceAutoscaleState remain the fallback when no CRD is present.
-//
-// When both an HPA and a ScaledObject exist for the same service
-// (operator-introduced corruption — manifest emits exactly one), the SO
-// reads win because it carries the larger configuration surface; a
-// structured log line surfaces the corruption to rack-side telemetry.
-//
-// state may be nil — the function returns without effect, so callers do
-// not need to gate.
 func (p *Provider) populateLiveCRDThresholds(app, service string, state *structs.ServiceAutoscaleState) {
 	if state == nil {
 		return
@@ -423,10 +343,6 @@ func (p *Provider) populateLiveCRDThresholds(app, service string, state *structs
 		}
 	}
 
-	// DynamicClient is nil on racks with KEDA never installed and on
-	// test fixtures that don't seed it; the SO read is purely
-	// additive (only contributes when an SO exists), so guard rather
-	// than fail the projection.
 	var (
 		so    *unstructured.Unstructured
 		soErr error
@@ -476,10 +392,6 @@ func (p *Provider) populateLiveCRDThresholds(app, service string, state *structs
 	}
 }
 
-// patchHPABounds applies min/max from ServiceUpdateOptions to the
-// service's HPA. Used by serviceUpdateScaledObject when the
-// triggers-override annotation declares the HPA owns the autoscaler;
-// the Range Apply path on the Console reaches here.
 func (p *Provider) patchHPABounds(ns, service string, opts structs.ServiceUpdateOptions) error {
 	hpa, err := p.Cluster.AutoscalingV2().HorizontalPodAutoscalers(ns).Get(context.TODO(), service, am.GetOptions{})
 	if err != nil {
@@ -502,19 +414,6 @@ func (p *Provider) patchHPABounds(ns, service string, opts structs.ServiceUpdate
 	return nil
 }
 
-// overlayLiveCRDBounds reads the active autoscaler CRD (HPA or KEDA
-// ScaledObject) and overlays its min/max replica bounds onto the
-// supplied Service. Without this overlay, `s.Min` and `s.Max` stay
-// pinned to the manifest values — so an operator who ran `convox
-// scale web --min 1 --max 7` (or used the Console Range Apply) would
-// see the bounds card still show the manifest defaults even though
-// the live CRD has the new bounds.
-//
-// Source-of-truth precedence mirrors populateLiveCRDThresholds:
-//   HPA bounds win when an HPA is present; KEDA SO bounds win when
-//   only an SO is present; both-present is the operator-corruption
-//   case and we prefer the SO (the larger configuration surface).
-// Manifest values stay as the fallback when neither CRD exists.
 func (p *Provider) overlayLiveCRDBounds(app, service string, s *structs.Service) {
 	if s == nil {
 		return
@@ -548,10 +447,7 @@ func (p *Provider) overlayLiveCRDBounds(app, service string, s *structs.Service)
 	}
 }
 
-// prometheusActivationThreshold mirrors the manifest-driven derivation
-// (pkg/manifest/service.go:470-472, 500-502): half the trigger
-// threshold, with a floor of 1, so KEDA only activates when the
-// observed metric is materially non-zero.
+// Half the threshold, floor of 1 — mirrors manifest-driven derivation.
 func prometheusActivationThreshold(threshold float64) float64 {
 	activation := threshold / 2
 	if activation < 1 {
@@ -560,16 +456,6 @@ func prometheusActivationThreshold(threshold float64) float64 {
 	return activation
 }
 
-// serviceGPUCount returns the manifest-declared scale.gpu.count for the
-// named service from the rack's current release. Used by the GPU
-// preflight in ServiceTriggersEnable to reject gpuUtilization triggers
-// on services that don't have a GPU reservation (the Prometheus query
-// behind the KEDA trigger would return nothing forever and autoscale
-// would silently no-op).
-//
-// Tests may set Provider.TriggersOverrideManifestServiceHook to bypass
-// the AppGet → ReleaseGet → manifest.Load chain and inject a manifest
-// service deterministically.
 func (p *Provider) serviceGPUCount(app, service string) (int, error) {
 	s, err := p.serviceManifestService(app, service)
 	if err != nil {
@@ -601,24 +487,13 @@ func (p *Provider) serviceManifestService(app, service string) (*manifest.Servic
 	return s, nil
 }
 
-// reinstateManifestAutoscaler recreates the manifest-driven HPA or KEDA
-// ScaledObject after an override is disabled. Without this, the service
-// is left with no autoscaler until the next release promote — the
-// deployment stays frozen at whatever replica count the override set.
-//
-// Best-effort: errors are logged but not propagated — the override
-// disable itself already succeeded (CRD deleted, annotations cleared).
-// The next deploy will create the authoritative autoscaler regardless.
+// Best-effort: next deploy creates the authoritative autoscaler regardless.
 func (p *Provider) reinstateManifestAutoscaler(ns, app, service string, ms *manifest.Service) {
-	// scale.keda path: raw KEDA triggers bypass the simple trigger model.
 	if ms.Scale.IsKedaEnabled() {
 		p.reinstateKedaScaledObject(ns, app, service, ms)
 		return
 	}
 
-	// autoscale.custom path: raw kedav1alpha1.ScaleTriggers embedded in
-	// the autoscale block also bypass the simple trigger model — they
-	// can't round-trip through ServiceTriggersOptions/TriggerSpec.
 	if ms.Scale.Autoscale != nil && len(ms.Scale.Autoscale.Custom) > 0 {
 		p.reinstateKedaScaledObject(ns, app, service, ms)
 		return
@@ -690,9 +565,6 @@ func (p *Provider) reinstateKedaScaledObject(ns, app, service string, ms *manife
 	}
 }
 
-// manifestToTriggersOptions converts a manifest.Service's scale config
-// into ServiceTriggersOptions suitable for applyTriggersHPA/applyTriggersKEDA.
-// Returns false if the manifest does not define any autoscale config.
 func manifestToTriggersOptions(ms *manifest.Service) (structs.ServiceTriggersOptions, bool) {
 	min := ms.Scale.Count.Min
 	max := ms.Scale.Count.Max
@@ -726,9 +598,7 @@ func manifestToTriggersOptions(ms *manifest.Service) (structs.ServiceTriggersOpt
 	}
 
 	if len(triggers) == 0 {
-		// Range-only services (count: 1-3 with no explicit targets or
-		// autoscale block) get a default CPU=80% HPA from the deploy
-		// template. Synthesize the same default so disable reinstates it.
+		// Range-only services default to CPU=80% HPA in deploy template.
 		triggers = append(triggers, structs.TriggerSpec{Type: structs.TriggerTypeCPU, Threshold: 80})
 	}
 
@@ -738,8 +608,7 @@ func manifestToTriggersOptions(ms *manifest.Service) (structs.ServiceTriggersOpt
 		Triggers: triggers,
 	}
 
-	// HPA does not support minReplicas=0; only KEDA does. When the CRD
-	// choice routes to HPA, clamp min to 1 to avoid K8s API rejection.
+	// HPA rejects minReplicas=0; only KEDA supports scale-to-zero.
 	if triggersCRDChoice(opts.Triggers) == TriggersCRDHPA && opts.Min < 1 {
 		opts.Min = 1
 	}
@@ -747,12 +616,6 @@ func manifestToTriggersOptions(ms *manifest.Service) (structs.ServiceTriggersOpt
 	return opts, true
 }
 
-// ServiceTriggersDisable removes the Console-driven autoscale configuration
-// from a service: deletes the CRD recorded by the triggers-override-crd
-// annotation, then clears both override annotations on the Deployment.
-// Idempotent on a service that was never overridden; tolerant of
-// already-deleted CRDs (kerr.IsNotFound) and of KEDA-not-installed racks
-// (meta.IsNoMatchError on the dynamic-client lookup).
 func (p *Provider) ServiceTriggersDisable(app, service, ackBy string) error {
 	ackBy = sanitizeAckBy(ackBy)
 	ns := p.AppNamespace(app)
@@ -824,18 +687,9 @@ func (p *Provider) ServiceTriggersDisable(app, service, ackBy string) error {
 	return nil
 }
 
-// ServiceTriggersThresholdSet updates a single trigger's threshold value
-// on the CRD owned by an active Console-driven override. Reads the
-// triggers-override-crd annotation to dispatch to the HPA or KEDA branch;
-// rejects when no override is active or when the requested trigger is
-// not present on the active CRD.
 func (p *Provider) ServiceTriggersThresholdSet(app, service, triggerType string, threshold float64, ackBy string) error {
 	ackBy = sanitizeAckBy(ackBy)
 
-	// Reuse the canonical TriggerSpec.Validate so the same threshold
-	// rules apply on both Enable (full opts) and ThresholdSet (single
-	// trigger): positive value, <=100 for percent types, queueDepth
-	// uncapped. Mirrors structs.TriggerSpec.Validate at pkg/structs/service.go.
 	if err := (structs.TriggerSpec{Type: triggerType, Threshold: threshold}).Validate(); err != nil {
 		return err
 	}
@@ -957,9 +811,6 @@ func (p *Provider) patchKEDAThreshold(app, ns, service, triggerType string, thre
 		if md == nil {
 			md = map[string]interface{}{}
 		}
-		// CPU/memory built-in triggers use metadata.value; Prometheus
-		// triggers store the actionable scaling threshold under
-		// metadata.threshold + an activation gate at metadata.activationThreshold.
 		if tm["type"] == "prometheus" {
 			md["threshold"] = fmt.Sprintf("%g", threshold)
 			md["activationThreshold"] = fmt.Sprintf("%g", prometheusActivationThreshold(threshold))
@@ -987,19 +838,7 @@ func (p *Provider) patchKEDAThreshold(app, ns, service, triggerType string, thre
 	return nil
 }
 
-// stripAtomLabelFromOverrideCRD removes the atom label from a Console-owned
-// HPA or ScaledObject so that deploy-time kubectl apply --prune does not
-// delete it. Called from the release path when triggersOverride is active.
-//
-// When ServiceTriggersEnable in-place updates a manifest-created HPA/SO,
-// the atom label from the original template apply is preserved. On the
-// next deploy, the template skips materializing the HPA/SO (because the
-// override is active), but the prune finds a labeled resource not in the
-// template and deletes it. Stripping the label before the apply runs
-// prevents this.
-//
-// Best-effort: errors are silently absorbed because a failed label strip
-// is preferable to a failed deploy.
+// Strip atom label so deploy-time prune won't delete Console-owned CRD.
 func (p *Provider) stripAtomLabelFromOverrideCRD(app, service, crd string) {
 	ns := p.AppNamespace(app)
 	switch crd {

@@ -14,8 +14,6 @@ import (
 )
 
 func init() {
-	// register `cost` with WithCloud() so the command appears in
-	// `convox cloud` listings, matching other admin-cloud commands.
 	register("cost", "show cost breakdown for an app", Cost, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
 			flagApp,
@@ -29,15 +27,6 @@ func init() {
 	}, WithCloud())
 }
 
-// Cost renders the per-app cost breakdown returned by the AppCost API.
-//
-// Modes:
-//   - default: per-service table (SERVICE | GPU-HOURS | CPU-HOURS | MEM-GB-HOURS | INSTANCE | SPEND-USD)
-//   - --aggregate: single-row app totals (APP | SPEND-USD | AS-OF | PRICING-SOURCE)
-//   - --format json: indented JSON of the raw *structs.AppCost (for jq consumption)
-//
-// Date-range flags --start / --end accept YYYY-MM-DD only; absent flags
-// fall through to the API's current-month-to-date default.
 func Cost(rack sdk.Interface, c *stdcli.Context) error {
 	appName := app(c)
 
@@ -56,12 +45,6 @@ func Cost(rack sdk.Interface, c *stdcli.Context) error {
 
 	cost, err := rack.AppCost(appName)
 	if err != nil {
-		// Any rack that lacks /apps/{app}/cost returns a 404 — that
-		// includes V2 racks AND V3 racks pre-3.24.6. An older "appears
-		// to be V2" copy was misleading on the V3 pre-3.24.6 path, so
-		// the friendly message cites the canonical rack-version
-		// requirement and points at the docs for further detail (V2
-		// cost-tracking flows through a different surface).
 		if isRackVersionGated(err) {
 			return fmt.Errorf("cost tracking requires rack version 3.24.6 or later (V2 racks use a separate cost-tracking surface). See https://docs.convox.com/management/cost-tracking")
 		}
@@ -72,10 +55,7 @@ func Cost(rack sdk.Interface, c *stdcli.Context) error {
 		return fmt.Errorf("no cost data returned for app %s", appName)
 	}
 
-	// Apply client-side date-range filter when either bound is set. The
-	// AppCost API does not currently accept a date range, so the CLI filters
-	// the returned breakdown by AsOf rather than introducing a new API
-	// surface.
+	// client-side filter — API does not accept date range yet
 	if !start.IsZero() || !end.IsZero() {
 		cost = filterCostRange(cost, start, end)
 	}
@@ -89,8 +69,6 @@ func Cost(rack sdk.Interface, c *stdcli.Context) error {
 	return printCostBreakdown(c, cost)
 }
 
-// parseCostDateRange parses --start / --end into time.Time values. Empty
-// flags return zero values so the caller can detect "not set".
 func parseCostDateRange(c *stdcli.Context) (time.Time, time.Time, error) {
 	var start, end time.Time
 	if v := c.String("start"); v != "" {
@@ -113,14 +91,6 @@ func parseCostDateRange(c *stdcli.Context) (time.Time, time.Time, error) {
 	return start, end, nil
 }
 
-// filterCostRange returns a copy of cost with breakdown rows filtered to
-// the requested date window. The AppCost API does not currently accept
-// date-range parameters, so the CLI applies the filter at the AppCost-level
-// AsOf timestamp: if the snapshot's AsOf falls outside the requested window
-// the breakdown is zeroed out (preserving metadata so users still see
-// pricing-source context).
-//
-// When either bound is zero it is treated as open-ended on that side.
 func filterCostRange(cost *structs.AppCost, start, end time.Time) *structs.AppCost {
 	if cost == nil {
 		return nil
@@ -134,8 +104,7 @@ func filterCostRange(cost *structs.AppCost, start, end time.Time) *structs.AppCo
 		out.SpendUsd = 0
 		return &out
 	}
-	// Treat --end as inclusive of the calendar day: AsOf must not fall
-	// after end+24h.
+	// --end is inclusive of the calendar day
 	if !end.IsZero() && cost.AsOf.After(end.Add(24*time.Hour)) {
 		out := *cost
 		out.Breakdown = []structs.ServiceCostLine{}
@@ -145,22 +114,9 @@ func filterCostRange(cost *structs.AppCost, start, end time.Time) *structs.AppCo
 	return cost
 }
 
-// lowSpendFootnote is the disambiguation footnote printed below tables /
-// eligibility lists when at least one row's per-service rate fell below
-// the formatRateUsdPerHour threshold and rendered as an em-dash. The
-// wording is shared by `convox cost` and `convox budget simulate-shutdown`
-// so user documentation only describes one phrase.
 const lowSpendFootnote = "— : low-spend rates rounded to —; see Spend column for actual cost."
 
-// formatRateUsdPerHour formats a per-service rate (in USD, either total
-// spend or per-hour rate). Rates strictly below $0.001 — the population
-// that rounds to "$0.00" with %.2f — render as "—" (em-dash, U+2014) so
-// users do not interpret a rounded $0.00 as "this service is free."
-// Exact zero renders as "$0.00" because that is a real, user-meaningful
-// state (no rate accumulated yet). Returns (formatted, usedEmDash) so the
-// caller can decide whether to print the disambiguation footnote. The
-// helper is shared by cost.go (per-service spend column) and budget.go
-// (simulate-shutdown eligibility list).
+// Rates below $0.001 render as em-dash to avoid misleading "$0.00".
 func formatRateUsdPerHour(rate float64) (string, bool) {
 	if rate > 0 && rate < 0.001 {
 		return "—", true
@@ -168,39 +124,12 @@ func formatRateUsdPerHour(rate float64) (string, bool) {
 	return fmt.Sprintf("$%.2f", rate), false
 }
 
-// spotLegend is the one-line explanatory note printed under the
-// variant-aware breakdown table so first-time operators understand
-// what "spot" rows mean. The phrasing is shared with the Console UI
-// (CostBreakdown.vue, ServiceCostPanel.vue) so user docs only need to
-// describe the mechanism once.
 const spotLegend = `Spot pricing applies a discount automatically when nodes are provisioned via Karpenter or an EKS spot ASG. Capacity "unknown" means the node carried neither label.`
 
-// accumulationNote explains the per-(instance-type, capacity-type)
-// accumulation semantics so users do not misread an ACTIVE-REPLICAS
-// of 0 as "this row is wrong." A row may show 0 active replicas if
-// pods previously ran on that variant in the current month but have
-// since migrated or been removed; the accumulated spend remains
-// attached to the original (instance-type, capacity-type) combination.
 const accumulationNote = `Cost accumulates per (instance-type, capacity-type) combination across the month. A row may show 0 active replicas if pods previously ran on that variant but have since migrated or been removed.`
 
-// trackingDisabledNotice prefaces table / aggregate / JSON renderings
-// when the rack reports cost_tracking_enable=false. The accumulator
-// goroutine is dormant so spend numbers reflect the most-recent
-// persisted state — possibly empty (never enabled) or stale (enabled
-// previously, then disabled). Operators who see numbers in the
-// breakdown without this hint can mistakenly assume the rack is
-// actively measuring spend. AppCost.TrackingEnabled is omitempty on
-// the wire, so older racks that never populated the field render the
-// hint by default — which is the correct behavior (a pre-3.24.6 rack
-// has no enforcement on cost-tracking either).
 const trackingDisabledNotice = `Cost tracking is disabled on this rack. Values shown are the most-recent persisted snapshot and may be empty or stale. To enable: convox rack params set cost_tracking_enable=true`
 
-// printCostBreakdown renders the per-service spend table. When the
-// rack emits VariantBreakdown rows (3.24.6+), each row is one
-// (service, instance-type, capacity-type) triple with a CAPACITY
-// column. Older racks emit no variant data and we fall back to the
-// pre-3.24.6 aggregated columns (GPU-HOURS / CPU-HOURS / MEM-GB-HOURS /
-// INSTANCE / SPEND-USD) for backward compat.
 func printCostBreakdown(c *stdcli.Context, cost *structs.AppCost) error {
 	if len(cost.VariantBreakdown) > 0 {
 		return printCostVariantBreakdown(c, cost)
@@ -233,15 +162,6 @@ func printCostBreakdown(c *stdcli.Context, cost *structs.AppCost) error {
 	return nil
 }
 
-// printCostVariantBreakdown renders the per-variant table: one row per
-// (service, instance-type, capacity-type) triple. Capacity values
-// surface verbatim ("on-demand", "spot", "unknown") so operators see
-// the actual signal rather than a normalized label. ACTIVE-REPLICAS
-// reflects the pod count on this variant in the most recent tick —
-// an em-dash when the count is 0 (legacy rack that doesn't emit the
-// field, an in-flight tick that hasn't yet recorded placement, or a
-// row whose accumulated spend belongs to a variant pods have since
-// migrated off of).
 func printCostVariantBreakdown(c *stdcli.Context, cost *structs.AppCost) error {
 	if !cost.TrackingEnabled {
 		fmt.Fprintln(c.Writer(), trackingDisabledNotice)
@@ -293,21 +213,7 @@ func printCostAggregate(c *stdcli.Context, appName string, cost *structs.AppCost
 	return t.Print()
 }
 
-// formatPricingTableLabel translates the rack-side AppCost.PricingSource
-// token into a user-facing string. The wire token (e.g.
-// "on-demand-static-table") describes the SOURCE of the rates table —
-// AWS published on-demand list prices — but the rack then applies
-// spot-pricing factors and the per-app pricing_adjustment on top
-// before producing AppCost.SpendUsd. A spot user reading "Pricing
-// source: on-demand-static-table" assumes they are being billed at
-// on-demand rates and opens a support ticket. The user-facing label
-// surfaces only the pricing-table vintage so the user knows how
-// recent the reference rates are.
-//
-// The wire value AppCost.PricingSource continues to flow over JSON /
-// SDK responses unchanged so downstream tooling that depends on the
-// canonical token keeps working. Mirrors web/src/utils/pricingLabel.js
-// — keep both implementations in sync.
+// Surfaces pricing-table vintage, not the raw wire token which misleads spot users.
 func formatPricingTableLabel(pricingSource, pricingTableVersion string) string {
 	vintage := strings.TrimSpace(pricingTableVersion)
 	if vintage != "" {

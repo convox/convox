@@ -555,7 +555,7 @@ func TestReleasePromoteWatcher_GCConcurrentWithSteadyStateNoCorruption(t *testin
 // (a) not propagate out of the goroutine, (b) cause the cleanup defer
 // to emit an `app:promote:errored` event with a watcher-panic message,
 // (c) leave the slot released, and (d) clean up the watch annotation.
-// This is the M-A06-1 / row-9 regression test — the production code at
+// Regression test — the production code at
 // release_watcher.go::runReleasePromoteWatcher relies on the recover()
 // to keep the api pod alive when an unexpected nil-pointer or map-write
 // panic strikes the polling tick.
@@ -631,9 +631,9 @@ func TestReleasePromoteWatcher_PanicRecovery(t *testing.T) {
 // covers the secondary-panic case: the watcher loop body panics, the
 // cleanup defer's emit + annotation-delete logic ALSO panics, and the
 // outermost LIFO bare-defer release() must still drop the slot. This
-// is the row-11a regression test — the m-A05-01 belt-and-suspenders
-// fix exists precisely to keep a slot from being permanently leaked
-// when both the loop body and the cleanup defer fail at once.
+// is a regression test — the redundant safety defer exists precisely
+// to keep a slot from being permanently leaked when both the loop body
+// and the cleanup defer fail at once.
 func TestReleasePromoteWatcher_PanicDuringStateMachine_RecoverEmitsAndCleansUp(t *testing.T) {
 	defer k8s.SetReleasePromoteWatchPollIntervalForTest(20 * time.Millisecond)()
 
@@ -702,7 +702,7 @@ func TestReleasePromoteWatcher_PanicDuringStateMachine_RecoverEmitsAndCleansUp(t
 		// cleanup defer itself panicked. The LIFO bare-defer at the
 		// top of runReleasePromoteWatcher provides this guarantee.
 		assert.False(t, k8s.ReleasePromoteWatchSlotHeldForTest(app, releaseID),
-			"slot MUST be released even when cleanup defer panics (belt-and-suspenders)")
+			"slot MUST be released even when cleanup defer panics (redundant safety defer)")
 	})
 }
 
@@ -711,7 +711,7 @@ func TestReleasePromoteWatcher_PanicDuringStateMachine_RecoverEmitsAndCleansUp(t
 // event per release-id. Drives the watcher to a `Running` terminal,
 // then asserts only one `app:promote:completed` payload arrives at the
 // webhook receiver — no retry-loop spam, no duplicate event from the
-// cleanup defer's emit path firing twice. Row-11c regression test.
+// cleanup defer's emit path firing twice.
 func TestReleasePromoteWatcher_SingleEmitPerTerminalState(t *testing.T) {
 	defer k8s.SetReleasePromoteWatchPollIntervalForTest(20 * time.Millisecond)()
 
@@ -760,11 +760,12 @@ func TestReleasePromoteWatcher_SingleEmitPerTerminalState(t *testing.T) {
 	})
 }
 
-// TestReleasePromoteWatcher_CleanupDeferPanic_StillReleasesSlot is the
-// m-A05-01 regression test. A successful state-machine run is followed
-// by a panic INSIDE the cleanup defer. The outermost LIFO bare-defer
-// release() must still fire so the slot is dropped — without the
-// belt-and-suspenders defer, the slot would leak until api-pod restart.
+// TestReleasePromoteWatcher_CleanupDeferPanic_StillReleasesSlot is a
+// regression test for cleanup-defer panics. A successful state-machine
+// run is followed by a panic INSIDE the cleanup defer. The outermost
+// LIFO bare-defer release() must still fire so the slot is dropped —
+// without the redundant safety defer, the slot would leak until
+// api-pod restart.
 func TestReleasePromoteWatcher_CleanupDeferPanic_StillReleasesSlot(t *testing.T) {
 	defer k8s.SetReleasePromoteWatchPollIntervalForTest(20 * time.Millisecond)()
 
@@ -808,12 +809,12 @@ func TestReleasePromoteWatcher_CleanupDeferPanic_StillReleasesSlot(t *testing.T)
 
 		assert.Equal(t, int32(1), atomic.LoadInt32(&cleanupPanicFired), "cleanup-defer panic hook must have fired")
 		assert.False(t, k8s.ReleasePromoteWatchSlotHeldForTest(app, releaseID),
-			"belt-and-suspenders: slot MUST be released even when cleanup defer panics post-emit")
+			"slot MUST be released even when cleanup defer panics post-emit")
 	})
 }
 
-// TestReleasePromoteWatcher_SupersessionAware_CleanupSkips is the
-// m-A12-03 regression test. Watcher A reaches a terminal state; while
+// TestReleasePromoteWatcher_SupersessionAware_CleanupSkips is a
+// supersession regression test. Watcher A reaches a terminal state; while
 // A's cleanup is in-flight, Watcher B starts and overwrites the watch
 // annotation. A's cleanup must read the annotation, see the new
 // release-id, and SKIP the delete so B's payload survives.

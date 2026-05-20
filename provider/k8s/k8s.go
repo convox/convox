@@ -110,14 +110,7 @@ type Provider struct {
 	RdsProvisioner         *rds.Provisioner
 	ElasticacheProvisioner *elasticache.Provisioner
 
-	// TriggersOverrideManifestServiceHook is an optional injection
-	// point for tests. When non-nil, ServiceTriggersEnable's GPU
-	// preflight uses this function instead of the AppGet → ReleaseGet
-	// → manifest.Load chain to read the named service's manifest
-	// definition. Production callers leave this nil; tests inject a
-	// deterministic *manifest.Service without seeding the full release
-	// CRD + informer machinery. Set per-Provider so each test fixture
-	// stays isolated.
+	// Test-only hook: bypasses AppGet→ReleaseGet→manifest.Load in ServiceTriggersEnable GPU preflight.
 	TriggersOverrideManifestServiceHook func(app, service string) (*manifest.Service, error)
 
 	ctx       context.Context
@@ -125,54 +118,15 @@ type Provider struct {
 	metrics   *metrics.Metrics
 	templater *templater.Templater
 
-	// webhookState holds the cached webhook URL list and a guarding
-	// mutex. The leader pod's controller_webhook informer rewrites
-	// urls from a goroutine while EventSend reads them from any
-	// HTTP-handler goroutine — the mutex protects the slice-header
-	// generation under -race.
-	//
-	// MUST be a pointer: WithContext does `pp := *p` to derive a
-	// per-request Provider, so any sync.Mutex / sync.RWMutex stored
-	// directly on Provider would be COPIED on every request, which
-	// (a) violates sync's no-copy contract, (b) detaches each request's
-	// view from the leader's informer rewrites, and (c) trips `go vet`.
-	// The pointer keeps every Provider copy pointing at the same
-	// shared lock + slice, so reads from per-request derivatives see
-	// the leader's writes immediately.
-	//
-	// Init-order invariant: Initialize must complete before any
-	// goroutine derives a per-request Provider via WithContext —
-	// otherwise pp := *p snapshots a nil webhookState pointer and
-	// that derivative is permanently disconnected from the leader's
-	// informer rewrites. The pkg/api boot path satisfies this by
-	// sequencing Initialize → Start → Listen synchronously in
-	// NewWithProvider; nil-guards in event.go::EventSend and
-	// controller_webhook.go::setWebhooks are defense-in-depth for
-	// the test-harness paths that bypass Initialize.
+	// Pointer so WithContext's `pp := *p` shares the lock+slice across request copies.
 	webhookState *webhookState
 }
 
 type webhookState struct {
-	mu sync.RWMutex
-	// populated is set once the informer has observed the webhooks
-	// configmap (Add/Update/Delete fires from leaderStart). EventSend
-	// distinguishes "informer has populated; result is authoritative
-	// (even when empty)" from "no informer has run on this pod —
-	// fall back to a synchronous configmap read". Without this flag,
-	// a leader pod on a rack with zero webhooks configured would do
-	// one configmap GET per event despite the informer having
-	// already confirmed the empty state.
-	populated bool
+	mu        sync.RWMutex
+	populated bool // true once informer has observed the webhooks configmap
 	urls      []string
-	// receivers caches parsed webhookEntry rows (URL + per-URL Timeout)
-	// derived from the configmap value strings. Operators can encode
-	// each value as JSON `{"url":"...", "timeout":"5s"}` to override
-	// the package-default 30s dispatch deadline per receiver. The slice
-	// is parsed lazily by
-	// EventSend from urls when receivers is empty; tests may pre-populate
-	// it directly via SetWebhookReceiversForTest to drive per-URL timeout
-	// assertions without going through the configmap informer.
-	receivers []webhookEntry
+	receivers []webhookEntry // parsed lazily from urls; per-URL timeout via JSON encoding
 }
 
 func init() {
@@ -227,17 +181,8 @@ func FromEnv() (*Provider, error) {
 
 	ms := NewMetricScraperClient(kc, os.Getenv("METRICS_SCRAPER_HOST"))
 
-	// PROMETHEUS_URL is plumbed from the rack's prometheus_url directly via
-	// terraform/api/k8s/main.tf (no auto-resolution; user-set or empty).
-	// Empty → NewPrometheusClient returns (nil, nil) and PromClient stays nil;
-	// every read site short-circuits. Bad URL → log and continue with nil client
-	// (mirrors MetricsClient fail-soft posture).
 	pc, err := NewPrometheusClient(os.Getenv("PROMETHEUS_URL"))
 	if err != nil {
-		// Redact embedded credentials from any URL we log. Mirrors the
-		// SSRF re-validation site at Initialize (~line 374): if an operator
-		// stored prometheus_url=https://user:pass@host, the password
-		// would otherwise land in operator stdout / `kubectl logs`.
 		fmt.Printf("ns=k8s at=prometheus_client result=invalid url=%q error=%q metrics=disabled\n",
 			redactURLForLog(os.Getenv("PROMETHEUS_URL")), err.Error())
 	}
@@ -292,12 +237,7 @@ func FromEnv() (*Provider, error) {
 	p.ReleasesToRetainTaskRunIntervalHour, _ = strconv.Atoi(os.Getenv("RELEASES_TO_RETAIN_TASK_RUN_INTERVAL_HOUR"))
 	p.FeatureGates = options.GetFeatureGates()
 
-	// webhook_signing_key is optional. If set and valid, outbound webhook
-	// POSTs carry a Convox-Signature header. If set but invalid (typo,
-	// short key, weak entropy, mixed case), validate at boot and degrade
-	// to unsigned dispatch — crashing the api pod over a typo is hostile
-	// to users. The structured WARN gives the operator an actionable
-	// pointer (regenerate with openssl rand -hex 32).
+	// Invalid signing key degrades to unsigned dispatch rather than crashing.
 	if rawKey := os.Getenv("WEBHOOK_SIGNING_KEY"); rawKey != "" {
 		if err := cxhmac.ValidateSigningKeys(rawKey); err != nil {
 			fmt.Printf("ns=k8s at=webhook_signing_key result=invalid error=%q signing=disabled remediation=%q\n",
@@ -338,13 +278,7 @@ func (p *Provider) ContextTID() string {
 	return ""
 }
 
-// ContextActor returns the JWT-authenticated user (e.g. "system-read",
-// "system-write", "system-admin") propagated through the provider's
-// request-scoped ctx, or "unknown" when no actor identity is available.
-// It is panic-safe and nil-safe by design: a nil receiver, nil ctx, missing
-// claim, or empty-string claim all collapse to "unknown" so callers can
-// emit an audit-event "actor" field without nil-checking. Whitespace is
-// propagated verbatim — receivers see whatever the JWT minted.
+// ContextActor returns the JWT user from ctx, or "unknown". Nil-safe.
 func (p *Provider) ContextActor() string {
 	if p == nil || p.ctx == nil {
 		return "unknown"
@@ -364,28 +298,10 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 		p.webhookState = &webhookState{}
 	}
 
-	// Apply RELEASE_WATCHER_GC_INTERVAL env var (TF param
-	// `release_watcher_gc_interval`) to the package-level
-	// releasePromoteWatchGCTickInterval. Read ONCE at Initialize so
-	// every subsequent GC ticker.NewTicker call observes the same
-	// value, regardless of how many times Initialize is invoked
-	// (it shouldn't be invoked more than once per process; defense
-	// in depth). Out-of-range values clamp to the documented
-	// 60s-1h range; invalid duration strings fall back to the
-	// existing default with a warn log. See
-	// applyReleaseWatcherGCIntervalEnv for full clamp/log
-	// semantics. Runs BEFORE the TEST=true short-circuit so unit
-	// tests can also assert the env-var path; tests that want the
-	// default 5m simply don't set the env var.
+	// Apply env-configurable GC interval (clamps to 60s-1h, default 5m).
 	applyReleaseWatcherGCIntervalEnv()
 
-	// SSRF startup re-validation: re-apply the prometheus_url SSRF
-	// allowlist to whatever value reached Initialize via env. The
-	// param-set validator at pkg/cli/rack.go catches `convox rack params
-	// set` requests, but a stored value that bypassed param-set (e.g.
-	// a manually edited configmap) can still hit Initialize with a
-	// hostile URL. On reject: emit a structured log line and drop
-	// PromClient to nil so every read short-circuits to "no metrics".
+	// Re-validate SSRF allowlist in case env bypassed param-set.
 	if raw := os.Getenv("PROMETHEUS_URL"); raw != "" {
 		if err := ValidatePrometheusURL(raw); err != nil {
 			fmt.Printf("ns=k8s at=prometheus_url result=invalid_ssrf url=%q error=%q metrics=disabled remediation=%q\n",
@@ -427,23 +343,12 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 	return nil
 }
 
-// redactURLForLog returns a copy of raw safe to print to operator
-// stdout: any password embedded in user:pass@host form is replaced
-// with "xxxxx" via url.URL.Redacted, AND any query string is
-// stripped so credentials passed via ?password=, ?token=, ?api_key=
-// (etc.) cannot leak through error log lines. If the URL fails to
-// parse the userinfo segment is stripped entirely so a malformed URL
-// with credentials still cannot leak. Returns scheme + host + path
-// when the URL parses cleanly; the query string is never echoed
-// because the validator's error message names the host class
-// (private/loopback/etc.) which is sufficient diagnostic detail.
+// redactURLForLog strips credentials and query params from a URL for safe logging.
 func redactURLForLog(raw string) string {
 	parsed, err := url.Parse(raw)
 	if err != nil {
 		return "[unparseable url; redacted]"
 	}
-	// Strip query string unconditionally — any credentials passed in
-	// query parameters are scrubbed; no per-key allowlist needed.
 	parsed.RawQuery = ""
 	parsed.Fragment = ""
 	if parsed.User != nil {
@@ -499,14 +404,8 @@ func (p *Provider) Start() error {
 	go sc.Run()
 	go atomCtrl.Run()
 
-	// Cold-start recovery + 5-min GC tick for in-flight release-promote
-	// watcher annotations. Survives api-pod restart by re-launching
-	// watchers from the namespace-annotation source of truth.
 	go p.runReleasePromoteWatchGC(p.ctx)
 
-	// Reaper for pods stuck in Terminating on long-NotReady nodes
-	// (kubelet death scenarios). See orphaned_pod_reaper.go for the
-	// gating criteria and rationale.
 	go p.runOrphanedPodReaper(p.ctx)
 
 	go common.Tick(1*time.Hour, p.heartbeat)
@@ -518,16 +417,8 @@ func (p *Provider) Start() error {
 	}
 
 	if p.costTrackingEnabled() {
-		// Lease lives in the api pod's own namespace (rack-system). Using
-		// p.Namespace guarantees the namespace exists and avoids a broken
-		// RACK_NAME env leading to a "-system" bogus namespace.
 		leaseNs := p.Namespace
 		if err := RunUsingLeaderElection(context.Background(), leaseNs, budgetLeaseName, p.Cluster, p.runBudgetAccumulator, func() {
-			// Lifecycle observability: include the timestamp and pod
-			// identity so an operator scanning api-pod logs across a
-			// rack rotation can correlate a leadership loss with the
-			// specific pod that gave up the lease and when. Identifier
-			// matches the elector's resourcelock identity (os.Hostname).
 			identity, _ := os.Hostname()
 			fmt.Printf("ns=budget_accumulator at=lost_leadership at_time=%s identity=%q\n",
 				time.Now().UTC().Format(time.RFC3339), identity)
@@ -647,7 +538,7 @@ func (p *Provider) initializeTemplates() {
 	d, _ := p.Cluster.AppsV1().Deployments(CERT_MANAGER_NAMESPACE).Get(context.TODO(), "cert-manager", am.GetOptions{})
 	if d == nil {
 		if err := p.applySystemTemplate("cert-manager", map[string]interface{}{
-			"Role":              p.CertManagerRoleArn,
+			"Role":             p.CertManagerRoleArn,
 			"KarpenterEnabled": p.IsKarpenterEnabled,
 		}); err != nil {
 			panic(errors.WithStack(err))
@@ -658,7 +549,7 @@ func (p *Provider) initializeTemplates() {
 	if d.Spec.Template.Labels["app.kubernetes.io/version"] != CURRENT_CM_VERSION {
 		fmt.Println("Updating cert-manager")
 		p.deleteSystemTemplate("cert-manager", map[string]interface{}{
-			"Role":              p.CertManagerRoleArn,
+			"Role":             p.CertManagerRoleArn,
 			"KarpenterEnabled": p.IsKarpenterEnabled,
 		})
 
@@ -679,7 +570,7 @@ func (p *Provider) initializeTemplates() {
 
 		fmt.Println("Installing new cert-manager version")
 		err := p.applySystemTemplate("cert-manager", map[string]interface{}{
-			"Role":              p.CertManagerRoleArn,
+			"Role":             p.CertManagerRoleArn,
 			"KarpenterEnabled": p.IsKarpenterEnabled,
 		})
 		if err != nil {

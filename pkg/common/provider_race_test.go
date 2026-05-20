@@ -37,10 +37,7 @@ func TestSafeWriter_ConcurrentWrites(t *testing.T) {
 }
 
 // fakeProvider satisfies just enough of structs.Provider for the wait+log
-// helpers. All other methods come from the embedded zero-value (a nil
-// interface), which panics if called — those panics surface mistakes
-// cleanly if a future change adds an unexpected provider call to one of
-// the helpers under test.
+// helpers. Unset embedded methods panic on call.
 type fakeProvider struct {
 	structs.Provider // embedded; all unset methods will panic on call
 	appReturns       []*structs.App
@@ -50,22 +47,13 @@ type fakeProvider struct {
 	systemCallNum    int
 	systemMu         sync.Mutex
 	logsBody         string
-	// processReturns scripts the per-call ProcessList result. The poller
-	// in WaitForAppWithLogsContext (Streamer #2) calls ProcessList every
-	// processStatePollInterval; without this field tests would panic on
-	// the nil embedded provider.
+	// processReturns scripts per-call ProcessList results.
 	processReturns []structs.Processes
 	processCallNum int
 	processMu      sync.Mutex
 }
 
-// WithContext returns the receiver unchanged — fakeProvider has no
-// per-context state to track. Defensive stub: the embedded nil
-// structs.Provider auto-generated wrapper would panic if a future
-// refactor of StreamAppLogs / StreamSystemLogs starts plumbing
-// context via WithContext. Today the close-on-cancel goroutine in
-// those streamers handles cancellation directly without the
-// WithContext detour.
+// WithContext returns the receiver unchanged.
 func (f *fakeProvider) WithContext(ctx context.Context) structs.Provider {
 	return f
 }
@@ -111,14 +99,8 @@ func (f *fakeProvider) SystemLogs(opts structs.LogsOptions) (io.ReadCloser, erro
 	return io.NopCloser(strings.NewReader(f.logsBody)), nil
 }
 
-// TestWaitForAppWithLogsContext_RaceFree exercises the twin-site-1 fix.
-// Run with `go test -race ./pkg/common/...` — must report no data races.
-//
-// Pins THE invariant: WaitForAppWithLogsContext returns ONLY after the
-// streamer goroutine exits. Uses a channel signal closed by the streamer-
-// exit hook (NOT a timeout sleep) so the assertion is deterministic — a
-// regression where wait returns while the streamer is still running
-// surfaces immediately as a select default-branch hit.
+// TestWaitForAppWithLogsContext_RaceFree verifies wait returns only after
+// the streamer goroutine exits. Run with `go test -race ./pkg/common/...`.
 func TestWaitForAppWithLogsContext_RaceFree(t *testing.T) {
 	prev := ProviderWaitDuration
 	ProviderWaitDuration = 10 * time.Millisecond
@@ -143,27 +125,18 @@ func TestWaitForAppWithLogsContext_RaceFree(t *testing.T) {
 		t.Fatalf("wait failed: %v", err)
 	}
 
-	// THE assertion: after wait() returns, the streamer-exit hook MUST
-	// already have fired. A non-blocking select catches the regression:
-	// if wait returned while the streamer was still running, the default
-	// branch fires and the test fails with a clear message.
+	// Streamer-exit hook must have fired before wait returned.
 	select {
 	case <-streamerExited:
-		// streamer exited before helper returned — invariant holds
 	default:
 		t.Fatal("WaitForAppWithLogsContext returned before streamer goroutine exited (race-window regression)")
 	}
 
-	// After helper returns AND streamer has exited, the underlying buffer
-	// is safely readable from the test goroutine — under -race this read
-	// would fire a DATA RACE warning if the streamer goroutine were still
-	// writing to it, providing belt-and-suspenders coverage of the same
-	// invariant via the race detector.
+	// Read buf under -race to catch any concurrent write from a still-running streamer.
 	_ = buf.String()
 }
 
-// TestWaitForRackWithLogs_RaceFree exercises the twin-site-2 fix. Pins the
-// same invariant as the twin-site-1 test above.
+// TestWaitForRackWithLogs_RaceFree — same invariant as App variant above.
 func TestWaitForRackWithLogs_RaceFree(t *testing.T) {
 	prev := ProviderWaitDuration
 	ProviderWaitDuration = 10 * time.Millisecond
@@ -186,10 +159,8 @@ func TestWaitForRackWithLogs_RaceFree(t *testing.T) {
 		t.Fatalf("wait failed: %v", err)
 	}
 
-	// THE assertion: streamer-exit-before-helper-return invariant.
 	select {
 	case <-streamerExited:
-		// streamer exited before helper returned — invariant holds
 	default:
 		t.Fatal("WaitForRackWithLogs returned before streamer goroutine exited (race-window regression)")
 	}
@@ -197,12 +168,8 @@ func TestWaitForRackWithLogs_RaceFree(t *testing.T) {
 	_ = buf.String()
 }
 
-// TestStreamAppLogs_CancelAwareSleep is a regression test for the cancel-
-// aware sleep at edit 4 of item-05-race-fix.md. Confirms that ctx
-// cancellation propagates into the streamer's poll-loop sleep within
-// <100ms — NOT the full 1-second sleep duration. A regression where
-// someone reverts the select-block back to time.Sleep would surface as a
-// wall-clock measurement >900ms here.
+// TestStreamAppLogs_CancelAwareSleep verifies ctx cancellation propagates
+// into the streamer's poll-loop sleep within <100ms.
 func TestStreamAppLogs_CancelAwareSleep(t *testing.T) {
 	p := &fakeProvider{
 		appReturns: []*structs.App{{Status: "updating"}},
@@ -218,15 +185,8 @@ func TestStreamAppLogs_CancelAwareSleep(t *testing.T) {
 		StreamAppLogs(ctx, p, sw, "app1")
 	}()
 
-	// Let the streamer spin one iteration and enter the sleep. The fake
-	// provider's logs body is small; one scan + copy + enter-select
-	// completes in <50ms on any modern CPU.
 	time.Sleep(50 * time.Millisecond)
 
-	// Trigger cancellation and measure how long it takes the streamer to
-	// observe it. Pre-fix (time.Sleep), this would be up to 1s. Post-fix
-	// (select on ctx.Done + time.After), it is <10ms in practice; the
-	// 100ms gate is a generous threshold for slow CI hosts.
 	t0 := time.Now()
 	cancel()
 	select {
@@ -240,8 +200,7 @@ func TestStreamAppLogs_CancelAwareSleep(t *testing.T) {
 	}
 }
 
-// TestStreamSystemLogs_CancelAwareSleep is the twin-site-2 equivalent of
-// the regression test above. Same invariant, same threshold.
+// TestStreamSystemLogs_CancelAwareSleep — same invariant as App variant.
 func TestStreamSystemLogs_CancelAwareSleep(t *testing.T) {
 	p := &fakeProvider{
 		systemReturns: []*structs.System{{Status: "updating"}},
@@ -272,13 +231,8 @@ func TestStreamSystemLogs_CancelAwareSleep(t *testing.T) {
 	}
 }
 
-// TestStreamAppProcessStates_EmitsTransitions verifies the V3 deploy
-// progress streamer (introduced because provider/k8s/app.go::AppLogs is
-// unimplemented). Confirms:
-//   - first observation in non-running state IS emitted (deploy starting)
-//   - first observation in running state is suppressed (pre-existing healthy)
-//   - subsequent transitions are emitted exactly once per (pod, status) pair
-//   - terminal failure states (crashed, unhealthy, failed) are surfaced
+// TestStreamAppProcessStates_EmitsTransitions verifies transition dedup,
+// first-observation suppression for running pods, and terminal state emission.
 func TestStreamAppProcessStates_EmitsTransitions(t *testing.T) {
 	prev := processStatePollInterval
 	processStatePollInterval = 5 * time.Millisecond
@@ -330,8 +284,8 @@ func TestStreamAppProcessStates_EmitsTransitions(t *testing.T) {
 	}
 }
 
-// TestStreamAppProcessStates_ProcessListErrorsAreSilent — empty / error
-// ProcessList responses must not break the streamer. Next tick retries.
+// TestStreamAppProcessStates_ProcessListErrorsAreSilent verifies empty
+// ProcessList responses don't break the streamer.
 func TestStreamAppProcessStates_ProcessListErrorsAreSilent(t *testing.T) {
 	prev := processStatePollInterval
 	processStatePollInterval = 5 * time.Millisecond
@@ -349,8 +303,8 @@ func TestStreamAppProcessStates_ProcessListErrorsAreSilent(t *testing.T) {
 	}
 }
 
-// TestStreamAppProcessStates_CancelStopsImmediately verifies ctx
-// cancellation is observed within one tick + processing slack.
+// TestStreamAppProcessStates_CancelStopsImmediately verifies ctx cancel
+// is observed within one tick.
 func TestStreamAppProcessStates_CancelStopsImmediately(t *testing.T) {
 	prev := processStatePollInterval
 	processStatePollInterval = 50 * time.Millisecond
@@ -381,11 +335,7 @@ func TestStreamAppProcessStates_CancelStopsImmediately(t *testing.T) {
 	}
 }
 
-// blockingReader implements io.ReadCloser. Read blocks until Close is
-// called, then returns io.EOF. Models a real websocket-via-Console-proxy
-// AppLogs scenario where the upstream keeps the connection open forever
-// with no data flowing — the failure mode that caused the V3 +
-// Console-proxy promote-hang regression.
+// blockingReader blocks on Read until Close, simulating a never-EOF websocket.
 type blockingReader struct {
 	once   sync.Once
 	closed chan struct{}
@@ -405,9 +355,7 @@ func (b *blockingReader) Close() error {
 	return nil
 }
 
-// blockingLogsProvider returns a never-EOFing reader from AppLogs and
-// SystemLogs, modeling the V3+Console-proxy path where the websocket
-// stays open with no bytes flowing.
+// blockingLogsProvider returns a never-EOF reader from AppLogs/SystemLogs.
 type blockingLogsProvider struct {
 	fakeProvider
 	r *blockingReader
@@ -421,13 +369,8 @@ func (b *blockingLogsProvider) SystemLogs(structs.LogsOptions) (io.ReadCloser, e
 	return b.r, nil
 }
 
-// TestStreamAppLogs_CtxCancelClosesBlockedReader pins the close-on-cancel
-// goroutine in StreamAppLogs. The original promote-hang bug was that
-// Scanner.Scan blocked forever on a websocket-backed reader that never
-// EOFed and whose ctx cancellation didn't propagate to the pipe. The
-// fix spawns a per-iteration goroutine that closes the reader on
-// ctx.Done — without it, this test deadlocks. With it, StreamAppLogs
-// returns within a few ms of cancel().
+// TestStreamAppLogs_CtxCancelClosesBlockedReader verifies the close-on-cancel
+// goroutine unblocks Scanner.Scan on a never-EOF reader.
 func TestStreamAppLogs_CtxCancelClosesBlockedReader(t *testing.T) {
 	p := &blockingLogsProvider{
 		fakeProvider: fakeProvider{appReturns: []*structs.App{{Status: "updating"}}},
@@ -456,8 +399,7 @@ func TestStreamAppLogs_CtxCancelClosesBlockedReader(t *testing.T) {
 	}
 }
 
-// TestStreamSystemLogs_CtxCancelClosesBlockedReader is the twin-site
-// version of the above test, covering StreamSystemLogs.
+// TestStreamSystemLogs_CtxCancelClosesBlockedReader — same as App variant.
 func TestStreamSystemLogs_CtxCancelClosesBlockedReader(t *testing.T) {
 	p := &blockingLogsProvider{
 		fakeProvider: fakeProvider{systemReturns: []*structs.System{{Status: "running"}}},

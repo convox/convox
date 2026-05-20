@@ -38,33 +38,33 @@ const (
 // here too. TestClearableMatchesPreserveEmpty in pkg/cli reflects this map
 // via PreserveEmptyParams() and asserts parity.
 var preserveEmpty = map[string]bool{
-	"tags":                              true,
-	"karpenter_node_labels":             true,
-	"karpenter_node_taints":             true,
-	"karpenter_build_node_labels":       true,
-	"karpenter_instance_families":       true,
-	"karpenter_instance_sizes":          true,
-	"karpenter_build_instance_families": true,
-	"karpenter_build_instance_sizes":    true,
-	"schedule_rack_scale_down":          true,
-	"schedule_rack_scale_up":            true,
-	"ssl_ciphers":                       true,
-	"ssl_protocols":                     true,
-	"build_node_type":                   true,
-	"key_pair_name":                     true,
-	"nginx_additional_config":           true,
-	"private_eks_host":                  true,
-	"private_eks_user":                  true,
-	"private_eks_pass":                  true,
-	"docker_hub_username":               true,
-	"docker_hub_password":               true,
-	"syslog":                                  true,
-	"eks_log_types":                           true,
-	"eks_api_server_private_access_cidrs":     true,
-	"convox_rack_domain":                true,
-	"user_data":                         true,
-	"user_data_url":                     true,
-	"api_feature_gates":                 true,
+	"tags":                                true,
+	"karpenter_node_labels":               true,
+	"karpenter_node_taints":               true,
+	"karpenter_build_node_labels":         true,
+	"karpenter_instance_families":         true,
+	"karpenter_instance_sizes":            true,
+	"karpenter_build_instance_families":   true,
+	"karpenter_build_instance_sizes":      true,
+	"schedule_rack_scale_down":            true,
+	"schedule_rack_scale_up":              true,
+	"ssl_ciphers":                         true,
+	"ssl_protocols":                       true,
+	"build_node_type":                     true,
+	"key_pair_name":                       true,
+	"nginx_additional_config":             true,
+	"private_eks_host":                    true,
+	"private_eks_user":                    true,
+	"private_eks_pass":                    true,
+	"docker_hub_username":                 true,
+	"docker_hub_password":                 true,
+	"syslog":                              true,
+	"eks_log_types":                       true,
+	"eks_api_server_private_access_cidrs": true,
+	"convox_rack_domain":                  true,
+	"user_data":                           true,
+	"user_data_url":                       true,
+	"api_feature_gates":                   true,
 	// Clearable Prometheus + DCGM overrides. Empty falls through to TF
 	// defaults via coalesce() guards in cluster/aws/prometheus.tf and dcgm.tf.
 	"prometheus_url":                       true,
@@ -72,12 +72,8 @@ var preserveEmpty = map[string]bool{
 	"prometheus_gpu_metrics_chart_version": true,
 	"prometheus_gpu_metrics_retention":     true,
 	"gpu_observability_chart_version":      true,
-	// 3.24.6 polish-wave additions: process-config rack params with
-	// safe-default fallback semantics. Empty values flow through writeVars
-	// to vars.json so subsequent applies see the cleared override (handler
-	// or chart default re-applies). The reconciler at terraform.go:440-482
-	// strips them on downgrade to versions whose system module does not
-	// declare them.
+	// GPU observability + release-watcher rack params. Safe defaults;
+	// stripped on downgrade by reconcileVarsWithModule.
 	"dcgm_scrape_interval":            true,
 	"gpu_metrics_max_pods":            true,
 	"gpu_metrics_max_concurrent":      true,

@@ -226,8 +226,8 @@ func setupKedaPrometheusTest(t *testing.T) func(*k8s.Provider) (*structs.App, *s
 // behavior: when PROMETHEUS_URL is empty, the KEDA ScaledObject for a service
 // that needs a Prometheus trigger is NOT created. The for-loop's `continue`
 // skips this service while leaving the rest of the render flow intact. Pins
-// the SPEC §3.13 anti-regression: the rc8 `defaultPrometheusURL` fallback is
-// gone; KEDA prometheus-trigger autoscale requires explicit prometheus_url.
+// Regression test: the rc8 `defaultPrometheusURL` fallback is gone; KEDA
+// prometheus-trigger autoscale requires explicit prometheus_url.
 func TestKedaPrometheusTrigger_PromURLEmpty_SkipsCreation(t *testing.T) {
 	t.Setenv("PROMETHEUS_URL", "")
 	out, _, err := runReleaseTemplateServicesEvents(t, setupKedaPrometheusTest(t))

@@ -255,11 +255,11 @@ func TestSensitiveParamsExactMembership(t *testing.T) {
 	want := map[string]bool{
 		// v3 native (snake_case)
 		"docker_hub_password": true,
-		"secret_key":                        true,
-		"token":                             true,
-		"access_id":                         true,
-		"private_eks_host":                  true,
-		"private_eks_user":                  true,
+		"secret_key":          true,
+		"token":               true,
+		"access_id":           true,
+		"private_eks_host":    true,
+		"private_eks_user":    true,
 		"private_eks_pass":    true,
 		"webhook_signing_key": true,
 		// v2 PascalCase added for v3 CLI against v2 racks
@@ -279,7 +279,7 @@ func TestSensitiveParamsExactMembership(t *testing.T) {
 	// 3795's deliberate narrow scope.
 	for _, k := range []string{"Encryption", "Key", "WhiteList", "VPCCIDR", "Autoscale", "Version", "InstanceBootCommand", "LogBucket", "SyslogDestination"} {
 		if sensitiveParams[k] {
-			t.Errorf("sensitiveParams[%q] must be false per spec (narrow mask matches v2 PR 3795)", k)
+			t.Errorf("sensitiveParams[%q] must be false (narrow mask matches v2 PR 3795)", k)
 		}
 	}
 }

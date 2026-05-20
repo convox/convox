@@ -12,18 +12,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestControllerProvider_AllUseWithContext is a static AST audit that locks
-// the singleton-ctx invariant: every s.provider(c) call site in
-// pkg/api/controllers.go MUST be followed by .WithContext(...). This prevents
-// a future contributor from re-introducing a singleton-ctx bypass that would
-// strand audit fields (actor/TID) outside the request-scoped context chain.
-//
-// If this test fails, the offending call site must be rewritten as
-//
-//	s.provider(c).WithContext(contextFrom(c)).<Method>(...)
-//
-// otherwise EventSend's central injection of "actor" cannot read the
-// request-scoped JWT user.
+// TestControllerProvider_AllUseWithContext verifies every s.provider(c) call
+// in controllers.go chains .WithContext() for request-scoped context.
 func TestControllerProvider_AllUseWithContext(t *testing.T) {
 	_, thisFile, _, ok := runtime.Caller(0)
 	if !ok {

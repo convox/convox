@@ -47,7 +47,7 @@ func TestPromQLConstantsHaveLabelFilters(t *testing.T) {
 		}
 		// Defensive: dcgm consts must NOT use the `label_` prefix. DCGM exporter
 		// emits bare K8s labels — `label_app` is a kube-state-metrics
-		// convention. Guard against regression to the pre-implementation plan draft.
+		// convention. Guard against accidental use of KSM label conventions.
 		if strings.Contains(q, "label_app") || strings.Contains(q, "label_service") {
 			t.Errorf("dcgm per-pod const %s uses label_* prefix (KSM convention); DCGM emits bare labels: %s", name, q)
 		}

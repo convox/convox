@@ -100,7 +100,7 @@ func TestServiceUpdateGpu(t *testing.T) {
 	})
 }
 
-// ----- Item-23 §4.3 ServiceScaleOverrideSet — API controller tests -----
+// ServiceScaleOverrideSet — API controller tests
 
 // TestServiceScaleOverrideSet_HappyPath — admin token + active=true, expect 200.
 func TestServiceScaleOverrideSet_HappyPath(t *testing.T) {
@@ -223,8 +223,7 @@ func TestServiceScaleOverrideSet_RBAC_ReadWriteAllowed(t *testing.T) {
 // the r-role gets 403 before any provider call. Read-only callers
 // cannot mutate the override annotation. The Authorize middleware
 // would already 401 a GET-only token on a POST, but the explicit
-// gate produces a clearer endpoint-named error and acts as
-// defense-in-depth if the middleware is ever skipped.
+// gate produces a clearer endpoint-named error.
 func TestServiceScaleOverrideSet_RBAC_ReadOnlyForbidden(t *testing.T) {
 	budgetTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
 		tk, err := jm.ReadToken(time.Hour)
