@@ -121,10 +121,7 @@ time range:
 - `1 hour` — typical operational window
 - `24 hour` — daily / overnight pattern
 
-Changing the dropdown refetches data from the rack via the
-`App.metricsByService(interval:, services:)` GraphQL field. Chart
-history is server-driven via Prometheus range queries — no
-client-side buffering needed.
+Changing the dropdown refetches data from the Rack. Chart data is sourced from Prometheus range queries on the Rack.
 
 ### Summary cards
 

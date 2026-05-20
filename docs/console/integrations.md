@@ -29,10 +29,10 @@ Runtime integrations allow the Console to create and manage Racks on your cloud 
 2. Click **Create Runtime**
 3. Select your cloud provider
 4. Complete the provider-specific setup:
-   - **AWS / AWS GovCloud** -- click **Launch Stack** to create the IAM role via CloudFormation in your AWS account. No billing fees for the role itself.
-   - **Azure** -- enter your Subscription ID, Tenant ID, Client ID, and Client Secret. Requires the Azure CLI and Convox CLI as prerequisites.
-   - **GCP** -- provide service account credentials with the required permissions.
-   - **DigitalOcean** -- enter your API token.
+   - **AWS / AWS GovCloud:** Click **Launch Stack** to create the IAM role via CloudFormation in your AWS account. No billing fees for the role itself.
+   - **Azure:** Enter your Subscription ID, Tenant ID, Client ID, and Client Secret.
+   - **GCP:** Provide service account credentials with the required permissions.
+   - **DigitalOcean:** Enter your API token.
 
 Once connected, the Console can install and manage Racks on that provider account.
 
@@ -81,6 +81,6 @@ Removing a runtime integration does not uninstall Racks that were created throug
 
 ## See Also
 
-- [Workflows](/console/workflows) -- configure automated CI/CD pipelines using source integrations
-- [Notifications](/console/notifications) -- event types and notification channel details
-- [Console Overview](/console/overview) -- full Console navigation reference
+- [Workflows](/console/workflows)
+- [Notifications](/console/notifications)
+- [Console Overview](/console/overview)

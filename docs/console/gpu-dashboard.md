@@ -23,22 +23,22 @@ Navigate to **Organization > Rack > App > GPU Telemetry** in the Console. The da
 
 The dashboard guides you through setup with contextual banners:
 
-1. **GPU observability disabled** -- If `gpu_observability_enable` is `false`, a banner links to Rack Settings with the CLI command to enable it.
-2. **No GPU Services** -- If the App has no Services with a `gpu` block in `convox.yml`, the dashboard shows example manifests for basic GPU, vendor-specific, and autoscaling configurations.
-3. **Scraper not enabled** -- If the DCGM exporter is running but the Console telemetry scraper has not been toggled on, a banner links to Rack Settings.
-4. **Awaiting telemetry** -- After enabling, metrics appear within 30-90 seconds as DCGM completes its first scrape cycle.
+1. **GPU observability disabled:** If `gpu_observability_enable` is `false`, a banner links to Rack Settings with the CLI command to enable it.
+2. **No GPU Services:** If the App has no Services with a `gpu` block in `convox.yml`, the dashboard shows example manifests for basic GPU, vendor-specific, and autoscaling configurations.
+3. **Scraper not enabled:** If the DCGM exporter is running but the Console telemetry scraper has not been toggled on, a banner links to Rack Settings.
+4. **Awaiting telemetry:** After enabling, metrics appear within 30-90 seconds as the exporter completes its first collection cycle.
 
 ## Per-Service Summary Cards
 
 Each GPU Service displays a summary card showing:
 
-- **GPU utilization** -- Mean utilization across all pods, displayed as a percentage
-- **GPU memory** -- Used vs. total VRAM in bytes
-- **Tensor core active** -- Percentage of tensor core utilization (key efficiency metric for inference workloads)
-- **SM active** -- Streaming multiprocessor activity percentage
-- **DRAM active** -- Device memory bandwidth utilization
-- **Power draw** -- Current power consumption in watts
-- **FP16 / FP32** -- Floating-point precision utilization
+- **GPU utilization:** Mean utilization across all pods, displayed as a percentage.
+- **GPU memory:** Used vs. total VRAM in bytes.
+- **Tensor core active:** Percentage of tensor core utilization (key efficiency metric for inference workloads).
+- **SM active:** Streaming multiprocessor activity percentage.
+- **DRAM active:** Device memory bandwidth utilization.
+- **Power draw:** Current power consumption in watts.
+- **FP16 / FP32:** Floating-point precision utilization.
 
 Hover over the utilization number to see how many GPU pods contribute to the mean.
 
@@ -80,9 +80,9 @@ When more than 25% of settled GPU pods (alive for 90+ seconds) report null utili
 
 The dashboard header displays a status badge showing the DCGM exporter state:
 
-- **Enabled** (green) -- DCGM is active and reporting
-- **Enabled - waiting for GPU node** (blue) -- DCGM is installed but no GPU nodes are scheduled yet (common with Karpenter before a GPU workload triggers provisioning)
-- **Disabled** (grey) -- DCGM exporter is off
+- **Enabled** (green): Active and reporting metrics.
+- **Enabled - waiting for GPU node** (blue): Installed but no GPU nodes are scheduled yet. This is normal with Karpenter before a GPU workload triggers node provisioning.
+- **Disabled** (grey): Exporter is off.
 
 Click the badge to navigate to Rack Settings where the exporter and scraper can be configured.
 

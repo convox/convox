@@ -11,8 +11,8 @@ Notification integrations forward events from your Racks and Workflows to your t
 
 | Channel | Setup |
 |---------|-------|
-| **Slack** | OAuth connection -- click the Slack provider in the Console and authorize access to your workspace |
-| **Discord** | OAuth connection -- click the Discord provider and authorize the webhook |
+| **Slack** | OAuth connection. Click the Slack provider in the Console and authorize access to your workspace. |
+| **Discord** | OAuth connection. Click the Discord provider and authorize the webhook. |
 
 ## Configuration
 
@@ -92,6 +92,6 @@ Notifications include the Rack name, event type, status, and relevant details (A
 
 ## See Also
 
-- [Integrations](/console/integrations) -- manage all integration types
-- [Workflows](/console/workflows) -- Workflow events trigger notifications
-- [Webhook Signing](/console/webhook-signing) -- programmatic webhook delivery with signature verification
+- [Integrations](/console/integrations)
+- [Workflows](/console/workflows)
+- [Webhook Signing](/console/webhook-signing)

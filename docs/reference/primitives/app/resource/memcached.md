@@ -21,7 +21,7 @@ services:
 
 ## Containerized Options
 
-By default, Convox runs Memcached as a container inside your Rack. Containerized Memcached does not use persistent storage -- cached data is lost if the container restarts.
+By default, Convox runs Memcached as a container inside your Rack. Containerized Memcached does not use persistent storage. Cached data is lost if the container restarts.
 
 ```yaml
 resources:

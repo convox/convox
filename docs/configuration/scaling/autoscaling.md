@@ -212,4 +212,4 @@ Both `convox.com/pdb-disabled` (canonical) and `convox.com/pdb-disbaled` (legacy
 - [KEDA Autoscaling](/configuration/scaling/keda) for event-driven autoscaling
 - [Datadog Metrics](/configuration/scaling/datadog-metrics) for Datadog-based autoscaling
 - [Karpenter](/configuration/scaling/karpenter) for pod-level node provisioning as an alternative to Cluster Autoscaler (AWS only)
-- [Console Autoscale Triggers](/console/autoscale-triggers) -- manage autoscale triggers from the Console
+- [Console Autoscale Triggers](/console/autoscale-triggers)

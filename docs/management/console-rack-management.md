@@ -133,4 +133,4 @@ You can visualize resource consumption for your rack nodes and workloads from th
 
 - [CLI Rack Management](/management/cli-rack-management) for managing racks from the command line
 - [RBAC](/management/rbac) for configuring access controls
-- [Rack Settings](/console/rack-settings) -- Console rack-level configuration
+- [Rack Settings](/console/rack-settings)

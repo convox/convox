@@ -9,50 +9,61 @@ The Convox Console is the web management interface for the Convox platform. It p
 
 Access the Console at [console.convox.com](https://console.convox.com).
 
-## Main Sections
+## Sidebar Navigation
 
-The Console sidebar organizes functionality into the following sections:
+The Console sidebar organizes all platform functionality into five sections.
 
 ### Metrics
 
-- **Dashboard** -- overview of Rack and App health, resource utilization, and deployment activity
-- **Alert Manager** -- configure and manage alerts for your infrastructure
+| Page | Description |
+|------|-------------|
+| **Dashboard** | Overview of Rack and App health across your organization. Shows resource utilization, recent deployments, and active alerts at a glance. |
+| **Alert Manager** | Configure alert rules for Rack and App events. Set thresholds, choose notification channels, and manage alert lifecycle (firing, acknowledged, resolved). |
 
 ### Infrastructure
 
-- **Racks** -- install, update, and manage Racks across AWS, GCP, Azure, and DigitalOcean. Drill into individual Racks to view Apps, Instances, Processes, Resources, Logs, and Settings.
-- **Cost Overview** -- track infrastructure costs across your organization
-- **Integrations** -- connect cloud providers, source control, and notification channels. See [Integrations](/console/integrations) for details.
+| Page | Description |
+|------|-------------|
+| **Racks** | Install, update, and manage Racks across AWS, GCP, Azure, and DigitalOcean. Select a Rack to access its Apps, Instances, Processes, Resources, Logs, and Settings. |
+| **Cost Overview** | Organization-wide cost tracking. View month-to-date spend across all Apps and Racks, filter by date range, and export to CSV. See [Cost Tracking](/management/cost-tracking). |
+| **Integrations** | Connect cloud providers (runtime), code repositories (source), and notification channels (Slack, Discord). See [Integrations](/console/integrations). |
 
 ### CI/CD
 
-- **Workflows** -- configure automated deployment and review pipelines triggered by repository events. See [Workflows](/console/workflows) for details.
-- **Jobs** -- view the history and status of Workflow-triggered Builds and deployments
-- **Deploy Keys** -- manage deploy keys for CLI-based and headless deployments
+| Page | Description |
+|------|-------------|
+| **Workflows** | Automated Build and Deploy pipelines triggered by repository events. Supports Deployment Workflows (push-to-deploy) and Review Workflows (PR preview environments). See [Workflows](/console/workflows). |
+| **Jobs** | History and status of every Workflow-triggered Build and deployment. Filter by status, App, or Workflow. |
+| **Deploy Keys** | API keys for CLI-based and headless deployments. Used by CI systems and automation scripts that deploy without a user session. |
 
 ### Auditing
 
-- **Audit Logs** -- searchable history of every action taken across your organization, tagged with the actor who performed it
+| Page | Description |
+|------|-------------|
+| **Audit Logs** | Searchable history of every action taken across your organization. Each entry includes the timestamp, action type, target resource, and the user who performed it. |
 
 ### Settings
 
-- **Users** -- invite and manage team members, assign roles, and control access
-- **Billing** -- manage your subscription plan and payment details
-- **Settings** -- organization-level configuration (name, SAML SSO, etc.)
+| Page | Description |
+|------|-------------|
+| **Users** | Invite and manage team members, assign organization roles, and control access to Racks and Apps. See [RBAC](/management/rbac). |
+| **Billing** | Manage your subscription plan, payment method, and invoice history. |
+| **Settings** | Organization-level configuration including organization name and SAML SSO setup. |
 
-## App Management
+## App Pages
 
-Select a Rack, then select an App to access:
+Select a Rack from the sidebar, then select an App to access the following pages:
 
-- **Services** -- view running Services and their endpoints
-- **Builds** -- Build history and logs
-- **Processes** -- running Process list with status and resource usage
-- **Releases** -- Release history with promote and rollback controls
-- **Environment** -- manage environment variables
-- **Events** -- lifecycle event timeline (deploys, promotes, rollbacks, budget events)
-- **GPU Dashboard** -- real-time GPU telemetry for accelerated Services. See [GPU Dashboard](/console/gpu-dashboard).
-- **Budget** -- per-App spend tracking, caps, and enforcement. See [Budget Management](/console/budget-management).
-- **Service Detail** -- drill into individual Service health, scaling, and resource usage. See [Service Detail](/console/service-detail).
+| Page | Description |
+|------|-------------|
+| **Services** | Running Services with their endpoints, replica counts, and resource allocation. Click a Service name to open its [detail view](/console/service-detail). |
+| **Builds** | Build history with logs. Each Build shows the source commit, duration, status, and manifest used. |
+| **Processes** | Running Process list showing status, uptime, CPU and memory usage per replica. |
+| **Releases** | Release history with promote and rollback controls. Each Release links to its Build and shows the deployment status. |
+| **Environment** | View and edit environment variables for the App. Sensitive values are masked by default. |
+| **Events** | Timeline of lifecycle events including deploys, promotes, rollbacks, scale changes, and budget events. |
+| **GPU Telemetry** | Real-time GPU utilization, memory, tensor core activity, and power draw for accelerated Services. See [GPU Dashboard](/console/gpu-dashboard). |
+| **Budget** | Per-App spend tracking with configurable caps, alert thresholds, and auto-shutdown enforcement. See [Budget Management](/console/budget-management). |
 
 ## Getting Started
 
@@ -65,14 +76,14 @@ Select a Rack, then select an App to access:
 
 ## See Also
 
-- [Workflows](/console/workflows) -- automated deployment and review pipelines
-- [Integrations](/console/integrations) -- runtime, source, and notification connections
-- [Notifications](/console/notifications) -- Slack and Discord event forwarding
-- [Rack Roles](/console/rack-roles) -- organization administrator gate for sensitive operations
-- [Webhook Signing](/console/webhook-signing) -- verify webhook payload authenticity
-- [GPU Dashboard](/console/gpu-dashboard) -- real-time GPU telemetry
-- [Budget Management](/console/budget-management) -- per-App spend tracking and caps
-- [Deploy Wizard](/console/deploy-wizard) -- guided deployment setup
-- [Service Detail](/console/service-detail) -- per-Service health and scaling
-- [Autoscale Triggers](/console/autoscale-triggers) -- Console-driven autoscaling
-- [Rack Settings](/console/rack-settings) -- Rack-level configuration
+- [Workflows](/console/workflows)
+- [Integrations](/console/integrations)
+- [Notifications](/console/notifications)
+- [Rack Roles](/console/rack-roles)
+- [Webhook Signing](/console/webhook-signing)
+- [GPU Dashboard](/console/gpu-dashboard)
+- [Budget Management](/console/budget-management)
+- [Model Deploy Wizard](/console/deploy-wizard)
+- [Service Detail](/console/service-detail)
+- [Autoscale Triggers](/console/autoscale-triggers)
+- [Rack Settings](/console/rack-settings)

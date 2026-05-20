@@ -43,7 +43,7 @@ The GPU Telemetry Scraper card controls the Prometheus scraper that collects GPU
 - The DCGM Exporter (`gpu_observability_enable`) must be enabled first. The scraper toggle is locked until DCGM is active.
 - Rack version 3.24.6 or later.
 
-**Toggle** the scraper on or off directly from the card. The toggle uses optimistic UI and never disables during transitions. Status states:
+**Toggle** the scraper on or off directly from the card. The toggle responds immediately and stays interactive during transitions. Status states:
 
 | Status | Meaning |
 |--------|---------|
@@ -53,7 +53,7 @@ The GPU Telemetry Scraper card controls the Prometheus scraper that collects GPU
 | Disabling... | Rack update in progress to remove the scraper |
 | Error: ... | Worker failure; admin reset may be available |
 
-**Admin Reset** — when the scraper enters a frozen error state, administrators see a Reset link to clear the circuit breaker. The toggle remains interactive so you can request a new intent regardless of the current error.
+**Admin Reset:** When the scraper enters a frozen error state, administrators see a Reset link to clear it. The toggle remains interactive so you can request a new state regardless of the current error.
 
 Toggling applies a non-disruptive Rack update. Running workloads are not affected.
 
@@ -82,9 +82,9 @@ The Webhook Signing Key section manages the HMAC-SHA256 key used to sign outboun
 
 **Actions (Administrator only):**
 
-- **Generate first key** — creates the initial signing key when none exists
-- **Reveal** — shows the current key value (auto-masked after display)
-- **Rotate** — generates a new key. Up to 4 keys remain active during rotation so receivers can transition. The oldest key is evicted when the limit is reached.
+- **Generate first key:** Creates the initial signing key when none exists.
+- **Reveal:** Shows the current key value (auto-masked after display).
+- **Rotate:** Generates a new key. Up to 4 keys remain active during rotation so receivers can transition. The oldest key is evicted when the limit is reached.
 
 A rotation-in-progress banner appears when multiple keys are active, prompting you to update receivers and confirm the rotation.
 

@@ -31,12 +31,12 @@ Each Deployment Workflow specifies:
 
 Each Deployment Workflow contains one or more application tasks. Each task targets an App and supports:
 
-- **App** -- the Rack and App to deploy to
-- **Promote** -- `Automatic` (deploy immediately after build) or `Manual` (require explicit promotion)
-- **Run tests** -- execute the `test:` section from your `convox.yml` after build
-- **Before Promote** -- a command to run on a specific Service before promotion (e.g. `bin/migrate`)
-- **After Promote** -- a command to run on a specific Service after promotion
-- **Rollback if fails** -- automatically roll back the Release if the after-promote command fails
+- **App:** The Rack and App to deploy to.
+- **Promote:** `Automatic` (deploy immediately after build) or `Manual` (require explicit promotion).
+- **Run tests:** Execute the `test:` section from your `convox.yml` after build.
+- **Before Promote:** A command to run on a specific Service before promotion (e.g. `bin/migrate`).
+- **After Promote:** A command to run on a specific Service after promotion.
+- **Rollback if fails:** Automatically roll back the Release if the after-promote command fails.
 
 A single Deployment Workflow can deploy to multiple Apps from one repository push. Each App gets its own promotion strategy and pre/post-deploy hooks.
 
@@ -65,16 +65,16 @@ Review Workflows trigger on pull requests, building your application and optiona
 
 ### Options
 
-- **Deploy demo** -- deploy a temporary App for each PR, automatically removed when the PR is closed
-- **Run tests** -- execute tests and report results to PR status checks
-- **Wildcard Domain** -- generate a unique subdomain for each review App (e.g. `pr-123.yourapp.example.com`)
+- **Deploy demo:** Deploy a temporary App for each PR, automatically removed when the PR is closed.
+- **Run tests:** Execute tests and report results to PR status checks.
+- **Wildcard Domain:** Generate a unique subdomain for each review App (e.g. `pr-123.yourapp.example.com`).
 
 ### Promote Commands
 
 Run commands before or after the Release is promoted:
 
-- **Before Promote** -- Service and command to run before promotion (e.g. database migrations)
-- **After Promote** -- Service and command to run after promotion (e.g. cache clearing)
+- **Before Promote:** Service and command to run before promotion (e.g. database migrations).
+- **After Promote:** Service and command to run after promotion (e.g. cache clearing).
 
 ### Build Args
 
@@ -84,8 +84,8 @@ Same as Deployment Workflows. Pass custom `--build-arg` flags and optionally ena
 
 Override the default Build resource allocation for review Apps:
 
-- **Inherit from app** -- copy Build CPU, memory, and node labels from an existing App
-- **Manual** -- set build CPU (millicores), memory (MB), and node labels directly
+- **Inherit from app:** Copy Build CPU, memory, and node labels from an existing App.
+- **Manual:** Set build CPU (millicores), memory (MB), and node labels directly.
 
 ### Environment
 
@@ -102,7 +102,7 @@ When a Workflow triggers, it creates a **Job** visible under **CI/CD > Jobs**. T
 
 ## See Also
 
-- [Integrations](/console/integrations) -- connect GitHub or GitLab to enable Workflows
-- [Notifications](/console/notifications) -- receive Workflow status events in Slack or Discord
-- [Service](/reference/primitives/app/service) -- configure the `test:` section in `convox.yml`
-- [Deployment Workflows](/deployment/workflows) -- workflow configuration guide
+- [Integrations](/console/integrations)
+- [Notifications](/console/notifications)
+- [Service](/reference/primitives/app/service)
+- [Deployment Workflows](/deployment/workflows)

@@ -152,16 +152,16 @@ rack itself (not just the Console UI), so they apply equally to
 Console callers, CLI callers using rack-password basic auth, and
 direct API callers using a JWT.
 
-The current set of admin-gated mutations on a 3.24.6 rack:
+The current set of admin-gated operations on a 3.24.6 rack:
 
-| Mutation | CLI surface | Rejection message |
+| Operation | CLI surface | Rejection message |
 |---|---|---|
 | `AppBudgetSet --monthly-cap` | `convox budget set --monthly-cap`, `convox budget cap raise` | `403 AppBudgetSet: admin role required to set budget cap` |
 | `AppBudgetSet --at-cap-action` | `convox budget set --at-cap-action`, `convox deploy` (when manifest sets `atCapAction`) | `403 AppBudgetSet: admin role required to set budget cap` |
 | `AppBudgetSet --pricing-adjustment` | `convox budget set --pricing-adjustment-only` | `403 AppBudgetSet: admin role required to set budget cap` |
 | `AppBudgetClear` | `convox budget clear` | `403 AppBudgetClear: admin role required to remove budget config` |
 | `AppBudgetReset --force-clear-cooldown` | `convox budget reset --force-clear-cooldown` | `403 AppBudgetReset --force-clear-cooldown requires Admin role; current role is 'w'. Contact rack admin or use Admin token.` |
-| Webhook signing key reveal | Console "Reveal" button on `webhook_signing_key` rack param | `403` (Console resolver layer) |
+| Webhook signing key reveal | Console "Reveal" button on `webhook_signing_key` rack param | `403` (requires organization administrator) |
 
 The pre-created **Administrator** role passes the rack-tier
 `CanAdmin` check; the pre-created **OperatorV2** and
@@ -177,8 +177,8 @@ narrower — operators concerned about this should rotate to JWT
 issuance for scripted flows and keep the rack password tightly
 scoped.
 
-For the full Authorization table covering every budget mutation
-(including `rw`-tier paths like the plain reset, dismiss-recovery,
+For the full Authorization table covering every budget operation
+(including read+write paths like the plain reset, dismiss-recovery,
 and simulate-shutdown), see
 [Budget Caps → Authorization](/management/budget-caps#authorization).
 
