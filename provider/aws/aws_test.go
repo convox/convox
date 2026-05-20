@@ -58,6 +58,8 @@ func testProvider(t *testing.T, fn func(*aws.Provider)) {
 		Provider:      "test",
 	}
 
+	t.Setenv("TEST", "true")
+
 	err = p.Initialize(structs.ProviderOptions{})
 	require.NoError(t, err)
 
