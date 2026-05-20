@@ -264,10 +264,10 @@ func TestServiceTriggersEnable_KedaPath_GPU(t *testing.T) {
 		require.NoError(t, err)
 		triggers, _, _ := unstructured.NestedSlice(obj.Object, "spec", "triggers") //nolint:errcheck
 		require.Len(t, triggers, 1)
-		tr := triggers[0].(map[string]interface{})
+		tr := triggers[0].(map[string]interface{}) //nolint:errcheck
 		require.Equal(t, "prometheus", tr["type"])
 		require.Equal(t, "convox-gpu-utilization", tr["name"])
-		md := tr["metadata"].(map[string]interface{})
+		md := tr["metadata"].(map[string]interface{}) //nolint:errcheck
 		require.Equal(t, "75", md["threshold"])
 		require.Contains(t, md["query"], "DCGM_FI_DEV_GPU_UTIL")
 
@@ -303,8 +303,8 @@ func TestServiceTriggersEnable_KedaPath_CPUOnKEDA(t *testing.T) {
 		require.Len(t, triggers, 2)
 
 		types := []string{
-			triggers[0].(map[string]interface{})["type"].(string),
-			triggers[1].(map[string]interface{})["type"].(string),
+			triggers[0].(map[string]interface{})["type"].(string), //nolint:errcheck
+			triggers[1].(map[string]interface{})["type"].(string), //nolint:errcheck
 		}
 		require.Contains(t, types, "cpu")
 		require.Contains(t, types, "prometheus")
@@ -907,8 +907,8 @@ func TestServiceTriggersThresholdSet_KEDA_GPU(t *testing.T) {
 
 		obj, _ := p.DynamicClient.Resource(testScaledObjectGVR).Namespace("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
 		triggers, _, _ := unstructured.NestedSlice(obj.Object, "spec", "triggers") //nolint:errcheck
-		tr := triggers[0].(map[string]interface{})
-		md := tr["metadata"].(map[string]interface{})
+		tr := triggers[0].(map[string]interface{})                                 //nolint:errcheck
+		md := tr["metadata"].(map[string]interface{})                              //nolint:errcheck
 		require.Equal(t, "90", md["threshold"])
 		require.Equal(t, "45", md["activationThreshold"], "activation must follow threshold/2 with floor 1")
 	})
@@ -1760,7 +1760,7 @@ func TestServiceTriggersDisable_ReinstatesAutoscaleCustom(t *testing.T) {
 
 		triggers, _, _ := unstructured.NestedSlice(reinstated.Object, "spec", "triggers") //nolint:errcheck
 		require.Len(t, triggers, 1, "reinstated SO must carry the custom trigger")
-		tr := triggers[0].(map[string]interface{})
+		tr := triggers[0].(map[string]interface{}) //nolint:errcheck
 		require.Equal(t, "aws-sqs-queue", tr["type"])
 
 		dep, err = kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
@@ -1825,7 +1825,7 @@ func TestServiceTriggersDisable_ReinstatesScaleKeda(t *testing.T) {
 
 		triggers, _, _ := unstructured.NestedSlice(reinstated.Object, "spec", "triggers") //nolint:errcheck
 		require.Len(t, triggers, 1, "reinstated SO must carry the raw keda trigger")
-		tr := triggers[0].(map[string]interface{})
+		tr := triggers[0].(map[string]interface{}) //nolint:errcheck
 		require.Equal(t, "prometheus", tr["type"])
 		require.Equal(t, "custom-metric", tr["name"])
 
