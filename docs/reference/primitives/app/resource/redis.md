@@ -21,7 +21,7 @@ services:
 
 ## Containerized Options
 
-By default, Convox runs Redis as a container inside your Rack. Containerized Redis does not use persistent storage -- data is lost if the container restarts.
+By default, Convox runs Redis as a container inside your Rack. Containerized Redis does not use persistent storage. Data is lost if the container restarts.
 
 ```yaml
 resources:

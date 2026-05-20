@@ -258,48 +258,20 @@ receiver accepts either; once the receiver has fully cut over, the old
 key is removed from Rack config and signing collapses back to one
 `v1=`.
 
-## Rotation Depth
+## Key Rotation
 
-A Rack accepts up to 4 active webhook signing keys at once. The rotation
-pattern is the documented production behavior — operators stack a
-new key, update receivers in lockstep, then drop the oldest — and a
-4-deep rotation depth handles the common case of staging long rollouts
-across multiple receiver fleets without losing the original key during
-the transition.
+A Rack supports up to 4 active signing keys at once, enabling zero-downtime key rotation:
 
-Setting more than 4 keys (e.g. `webhook_signing_key=k1,k2,k3,k4,k5`) is
-rejected with a structured `audit_type=webhook_signing_key:eviction
-reason=key_count_exceeded max=4 evicted_count=N` audit row on api-pod
-stdout. The audit row contains the count only — no key bytes, hashes, or
-prefixes — so operators can grep for the misconfiguration without leaking
-secret material to logs.
+1. Generate a new key and set it on the Rack.
+2. The Rack signs outbound webhooks with all active keys (multiple `v1=` segments in the header).
+3. Update your receivers to accept the new key.
+4. Remove the old key from the Rack once all receivers have been updated.
 
-Wire size: 4 active keys produce a `Convox-Signature` header of about 280
-bytes (4 × 64 hex chars + delimiters + timestamp), well under the 8KB
-header limit on Cloudflare and the 4KB baseline on AWS Lambda receivers.
-Per-event CPU cost is 4 HMAC-SHA256 operations vs 2 — negligible relative
-to the network round-trip.
+During the rotation window, receivers can verify against any of the listed `v1=` signatures. Setting more than 4 keys is rejected.
 
-### Downgrade Behavior
+### Downgrade Note
 
-3.24.5 and earlier do not have webhook signing. When a Rack with
-`webhook_signing_key` set is downgraded to a pre-3.24.6 release, the
-older Terraform module does not declare the variable, and the Rack-side
-reconciler removes the unrecognized parameter from state automatically
-(emitted as a `NOTICE: removing parameters not supported by version
-<X>: webhook_signing_key` line on stderr during the apply). The
-in-cluster `webhook-signing-key` Secret is also destroyed, since the
-declaring resource is gated on the variable being non-empty. No
-state-surgery or pre-clearing of the parameter is required.
-
-The user-facing consequence is that the Rack stops emitting the
-`Convox-Signature` header on outbound webhooks once the downgrade
-applies. Receivers that fail-closed on missing or mismatched signatures
-will begin rejecting payloads at that point. Before downgrading, update
-receivers to accept unsigned deliveries (or fail-open on missing
-signature). On a subsequent re-upgrade to a signing-capable release, set
-`webhook_signing_key` to a fresh value and restage receivers — the
-previous key is not retained across the downgrade window.
+Rack versions before 3.24.6 do not support webhook signing. If you downgrade to a pre-3.24.6 release, the Rack stops sending the `Convox-Signature` header. Update receivers to accept unsigned deliveries before downgrading. On re-upgrade, set a fresh `webhook_signing_key` value.
 
 ## Configuring the Signing Key
 
@@ -332,42 +304,16 @@ during the transition window.
 
 ## Receiver Migration
 
-Existing receivers will see eight new event types in 3.24.6. See
-[Webhooks event catalog](/configuration/webhooks#event-catalog) for the
-canonical payload shapes; the migration-relevant additions are:
+3.24.6 adds new webhook event types for budget actions, release lifecycle, and scale overrides. See [Webhooks event catalog](/configuration/webhooks#event-catalog) for the full list and payload shapes.
 
-- `app:budget:auto-shutdown:dismissed` — sent when the recovery banner is
-  dismissed via `convox budget dismiss-recovery` or the Console UI.
-- `app:budget:breaker-cleared` — top-level event (NOT a sub-type of
-  `auto-shutdown`); sent when a cap-raise clears the deploy circuit
-  breaker (both during the armed countdown and post-`:fired`).
-- `app:budget:per-service-truncated` — emitted when the accumulator's
-  per-Service breakdown table exceeds its bounded-cardinality cap and
-  drops entries from this month's persisted breakdown.
-- `app:promote:completed`, `app:promote:errored`, `app:promote:cancelled`
-  — terminal-state events from the Rack-side rollout watcher; the
-  pre-existing `release:promote` (status=start) event is unchanged.
-- `app:scale-override:toggled`, `app:scale-override:honored` — emitted on
-  the per-Service scale-override toggle (handler) and at deploy time
-  when an active override is honored (render-path; `actor: "system"`).
+If your receivers reject unknown event types, update them to handle the new types or switch to treating unknown events as informational.
 
-Receivers that fail-closed on unknown event types should either fail-open
-(treat unknown events as informational) or be updated to handle the new types.
+The `actor` field on budget events now contains the email of the user who triggered the action, rather than a fixed string. Update any receivers that filter on the actor field.
 
-The `actor` field on `app:budget:*` events is now per-user (the
-authenticated email of the operator who triggered the action) instead of the
-historical `"rack-password"` constant. Receivers that key on actor for audit
-should expect emails for Console-driven mutations.
-
-Webhooks are best-effort, fire-and-forget, and not retried. Receivers must
-handle ordering by the `timestamp` field in the JSON body (or by parsing
-the `t=<unix-ts>` segment from the `Convox-Signature` header — both
-reflect the same Rack-side emit time). The Events tab in the Console is
-best-effort persistence for the same stream — Slack/Discord webhooks are
-the authoritative record for the gap.
+Webhooks are best-effort and not retried. Use the `timestamp` field in the JSON body for ordering.
 
 ## See Also
 
-- [Webhooks](/configuration/webhooks) — webhook configuration reference
-- [Rack Roles](/console/rack-roles) — Console RBAC and rack ownership
-- [Budget Caps](/management/budget-caps) — events emitted to webhooks
+- [Webhooks](/configuration/webhooks)
+- [Rack Roles](/console/rack-roles)
+- [Budget Caps](/management/budget-caps)

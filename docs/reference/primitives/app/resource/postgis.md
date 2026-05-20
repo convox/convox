@@ -21,7 +21,7 @@ services:
 
 ## Containerized Options
 
-Convox runs PostGIS as a container inside your Rack using the `postgis/postgis` Docker image. PostGIS is containerized-only -- there is no managed RDS equivalent.
+Convox runs PostGIS as a container inside your Rack using the `postgis/postgis` Docker image. PostGIS is containerized-only. There is no managed RDS equivalent.
 
 For AWS RDS managed PostGIS, use the `rds-postgres` resource type with PostGIS extensions enabled at the RDS level. See the [PostgreSQL](/reference/primitives/app/resource/postgres#aws-rds-managed-postgres-resources) resource documentation for RDS configuration options.
 

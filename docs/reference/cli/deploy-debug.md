@@ -54,20 +54,20 @@ The command maps common pod failure states to actionable messages:
 
 | State | Hint |
 |-------|------|
-| `CrashLoopBackOff` | Process is crash-looping on startup -- check the logs below for the error |
-| `ImagePullBackOff` | Failed to pull the container image -- check that the build succeeded and the image tag exists |
-| `ErrImagePull` | Failed to pull the container image -- check registry access and image name |
-| `InvalidImageName` | Image name is invalid -- check build configuration |
-| `OOMKilled` | Process ran out of memory and was killed -- increase scale.memory in convox.yml |
-| `CreateContainerConfigError` | Container config is invalid -- check environment variables and secrets (missing env var or secret reference?) |
-| `RunContainerError` | Container failed to start -- check the command in convox.yml and that the entrypoint exists |
-| `ContainerCannotRun` | Container cannot run -- check that the Dockerfile CMD or convox.yml command is valid |
-| `StartError` | Container failed to start -- check logs below for the startup error |
-| `Completed` | Process exited successfully but is not expected to stop -- check your command does not exit on its own |
-| `Error` | Process exited with an error -- check the logs below |
-| `Unschedulable` | Not enough resources in the cluster to place this process -- check scale.cpu and scale.memory in convox.yml |
-| `ContainersNotReady` | Containers are not ready -- health check may be failing |
-| `PodInitializing` | Pod is still initializing -- init containers may still be running |
+| `CrashLoopBackOff` | Process is crash-looping on startup. Check the logs below for the error. |
+| `ImagePullBackOff` | Failed to pull the container image. Check that the build succeeded and the image tag exists. |
+| `ErrImagePull` | Failed to pull the container image. Check registry access and image name. |
+| `InvalidImageName` | Image name is invalid. Check build configuration. |
+| `OOMKilled` | Process ran out of memory and was killed. Increase `scale.memory` in `convox.yml`. |
+| `CreateContainerConfigError` | Container config is invalid. Check environment variables and secrets (missing env var or secret reference?). |
+| `RunContainerError` | Container failed to start. Check the command in `convox.yml` and that the entrypoint exists. |
+| `ContainerCannotRun` | Container cannot run. Check that the Dockerfile CMD or `convox.yml` command is valid. |
+| `StartError` | Container failed to start. Check logs below for the startup error. |
+| `Completed` | Process exited successfully but is not expected to stop. Check your command does not exit on its own. |
+| `Error` | Process exited with an error. Check the logs below. |
+| `Unschedulable` | Not enough resources in the cluster to place this process. Check `scale.cpu` and `scale.memory` in `convox.yml`. |
+| `ContainersNotReady` | Containers are not ready. Health check may be failing. |
+| `PodInitializing` | Pod is still initializing. Init containers may still be running. |
 
 ## Examples
 

@@ -5,7 +5,7 @@ url: /management/import-rack
 ---
 # Import a Rack into Console
 
-A Rack installed from the CLI is managed locally -- Terraform state lives on the machine that created it, and only that machine can update it. Importing (moving) the Rack into the Console transfers state management to your organization so any team member with access can manage, update, and interact with the Rack.
+A Rack installed from the CLI is managed locally. Terraform state lives on the machine that created it, and only that machine can update it. Importing the Rack into the Console transfers state management to your organization so any team member with access can manage, update, and interact with the Rack.
 
 ## Prerequisites
 
@@ -38,7 +38,7 @@ Use `convox rack mv` to transfer the Rack. The destination uses the format `<org
 $ convox rack mv staging acme/staging
 ```
 
-The Rack name must remain the same -- only the organization prefix changes.
+The Rack name must remain the same. Only the organization prefix changes.
 
 After the move completes, verify:
 

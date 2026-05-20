@@ -182,4 +182,4 @@ By effectively using Convox workflows, you can automate your entire development 
 ## See Also
 
 - [Headless CMS Integration](/integrations/headless-cms) for automating content-driven deployments with CI/CD workflows
-- [Console Workflows](/console/workflows) -- managing workflows from the Console
+- [Console Workflows](/console/workflows)

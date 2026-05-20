@@ -21,7 +21,7 @@ To update safely, find the latest patch release for each minor version in the [r
 
 For example, a rack on version `3.21.x` would need to update to the latest `3.22.x` release before proceeding to the latest `3.23.x` release, and so on.
 
-Always update to the **latest patch version** of each minor version. Fixes are applied throughout the lifecycle of a minor release, and skipping to only the `.0` patch can introduce problems that were already resolved in later patches. You do not need to be on the highest patch of your current minor version before updating to the next minor -- go directly to the latest patch of the next minor.
+Always update to the **latest patch version** of each minor version. Fixes are applied throughout the lifecycle of a minor release, and skipping to only the `.0` patch can introduce problems that were already resolved in later patches. You do not need to be on the highest patch of your current minor version before updating to the next minor. Go directly to the latest patch of the next minor.
 
 For example, a rack on version `3.22.1` should update directly to the latest `3.23.x` patch release, not to `3.23.0`. Check the [release history](/reference/releases) to find the latest patch for each minor version.
 

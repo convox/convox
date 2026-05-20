@@ -1,11 +1,11 @@
 ---
-title: "Deploy Wizard"
+title: "Model Deploy Wizard"
 slug: deploy-wizard
 url: /console/deploy-wizard
 ---
-# Deploy Wizard
+# Model Deploy Wizard
 
-The Deploy Wizard deploys pre-configured or custom inference models to a Rack from the Console. It handles App creation, image import, GPU node placement, access control, and provides a built-in Playground for testing deployed models.
+The Model Deploy Wizard deploys pre-configured or custom inference models to a Rack from the Console. It handles App creation, image import, GPU node placement, access control, and provides a built-in Playground for testing deployed models.
 
 ## Prerequisites
 
@@ -30,9 +30,9 @@ Before displaying templates, the wizard verifies your Rack's GPU readiness:
 
 If checks fail, the wizard displays guided setup commands for three provisioning options:
 
-1. **Karpenter (recommended)** -- Adds GPU instance families to the default Karpenter pool for automatic GPU node provisioning
-2. **Karpenter Custom GPU NodePool** -- Creates a dedicated NodePool isolated from general workloads
-3. **Additional Node Groups (EKS Managed)** -- Provisions fixed GPU capacity via EKS managed node groups
+1. **Karpenter (recommended):** Adds GPU instance families to the default Karpenter pool for automatic GPU node provisioning.
+2. **Karpenter Custom GPU NodePool:** Creates a dedicated NodePool isolated from general workloads.
+3. **Additional Node Groups (EKS Managed):** Provisions fixed GPU capacity via EKS managed node groups.
 
 ### Inference Catalog
 
@@ -54,7 +54,7 @@ Each template card shows GPU requirements, the serving engine (vLLM, SGLang, TGI
 
 ### CLI-Only Templates
 
-Some templates require a source build and cannot be deployed directly from the Console. These appear in an "Advanced -- Deploy via CLI" section with clone and deploy commands.
+Some templates require a source build and cannot be deployed directly from the Console. These appear in an "Advanced: Deploy via CLI" section with clone and deploy commands.
 
 ### Custom Model Deployment
 
@@ -83,21 +83,21 @@ Templates that require credentials (e.g., `HUGGING_FACE_HUB_TOKEN`) prompt for t
 
 Configure how the deployed model is accessed:
 
-- **Private (default)** -- Internal to the Rack network. Accessible from the Console Playground and from other Services via `https://<service>.<app>.<rack>.local`. Private Services are only reachable from within the Rack network. To access from your local machine, use `convox proxy` (shown after deployment completes).
-- **Public** -- Internet-accessible endpoint. For frameworks that support it (vLLM, SGLang, TGI, TEI, Speaches), configure API key authentication with auto-generated or custom keys. Frameworks without built-in auth display a warning requiring explicit acknowledgment.
+- **Private (default):** Internal to the Rack network. Accessible from the Console Playground and from other Services via `https://<service>.<app>.<rack>.local`. To access from your local machine, use `convox proxy` (shown after deployment completes).
+- **Public:** Internet-accessible endpoint. For frameworks that support it (vLLM, SGLang, TGI, TEI, Speaches), configure API key authentication with auto-generated or custom keys. Frameworks without built-in auth display a warning requiring explicit acknowledgment.
 
 ## Step 3: Deploy
 
 The wizard executes three steps:
 
-1. **Creating application** -- Creates the App on the Rack
-2. **Importing image and promoting Release** -- Imports the container image and promotes a Release with the generated `convox.yml`
-3. **Model starting up** -- Waits for the model to pass health checks
+1. **Creating application:** Creates the App on the Rack.
+2. **Importing image and promoting Release:** Imports the container image and promotes a Release with the generated `convox.yml`.
+3. **Model starting up:** Waits for the model to pass health checks.
 
 After deployment completes, the page splits into two panels:
 
-- **Left panel** -- Deployment summary, access configuration, View App link, deployment logs, and CLI access instructions for internal Services (`convox proxy` command)
-- **Right panel** -- Built-in Model Playground
+- **Left panel:** Deployment summary, access configuration, View App link, deployment logs, and CLI access instructions for internal Services (`convox proxy` command).
+- **Right panel:** Built-in Model Playground.
 
 ### Session Persistence
 
@@ -118,7 +118,7 @@ The Playground auto-detects the deployed model's API format and presents the app
 
 For public Services with API key authentication, the Playground forwards the key automatically.
 
-The Playground is also available on each Service's detail page under the "Test Model" tab, independent of the Deploy Wizard.
+The Playground is also available on each Service's detail page under the "Test Model" tab, independent of the Model Deploy Wizard.
 
 ## See Also
 
