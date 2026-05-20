@@ -5,19 +5,19 @@ url: /console/webhook-signing
 ---
 # Webhook Signing
 
-Outbound webhooks from Convox racks (budget events, deploy notifications,
+Outbound webhooks from Convox Racks (budget events, deploy notifications,
 auto-shutdown lifecycle) are signed when a `webhook_signing_key` is configured
-on the rack. Receivers verify the `Convox-Signature` header to confirm the
-payload originated from your rack and was not tampered with in transit.
+on the Rack. Receivers verify the `Convox-Signature` header to confirm the
+payload originated from your Rack and was not tampered with in transit.
 
 ## Signing <a id="signing"></a>
 
-The rack signs each webhook payload with HMAC-SHA256 using the
-`webhook_signing_key` rack parameter as the key. Both the timestamp and
+The Rack signs each webhook payload with HMAC-SHA256 using the
+`webhook_signing_key` Rack parameter as the key. Both the timestamp and
 the signature(s) are packed into a single `Convox-Signature` header as
 comma-separated `key=value` segments:
 
-```
+```text
 Convox-Signature: t=<unix-ts>,v1=<hex1>[,v1=<hex2>]
 ```
 
@@ -25,14 +25,14 @@ Convox-Signature: t=<unix-ts>,v1=<hex1>[,v1=<hex2>]
 - `v1=<hex>` — hex-encoded HMAC-SHA256 signature. The signed input is
   `fmt.Sprintf("%d.%s", t, body)` — the timestamp, a literal `.`, then
   the raw response body bytes. Multiple `v1=` segments may appear when
-  the rack is in the middle of a key rotation (one signature per active
+  the Rack is in the middle of a key rotation (one signature per active
   key; up to 4 keys are supported per rotation, see "Rotation depth"
   below). Receivers verify against ANY one of the listed `v1=` values.
 
 Example header (HTTP-handler event — `app:budget:reset` carries the
 JWT-derived `actor` from the operator who ran `convox budget reset`):
 
-```
+```text
 POST /webhooks/budget HTTP/1.1
 Content-Type: application/json
 Convox-Signature: t=1714233600,v1=4b2c5f7a8b9d6e3a1f0c5e8d7b4a3c2f1e9d8c7b6a5f4e3d2c1b0a9e8d7c6b5a
@@ -252,15 +252,15 @@ verify_convox_webhook() {
 
 
 The multi-`v1=` form is what enables zero-downtime key rotation: when
-rotating, configure the new key on the rack and BOTH keys (old + new)
-on the receiver. The rack will sign with both for a grace window;
+rotating, configure the new key on the Rack and BOTH keys (old + new)
+on the receiver. The Rack will sign with both for a grace window;
 receiver accepts either; once the receiver has fully cut over, the old
-key is removed from rack config and signing collapses back to one
+key is removed from Rack config and signing collapses back to one
 `v1=`.
 
-## Rotation depth
+## Rotation Depth
 
-A rack accepts up to 4 active webhook signing keys at once. The rotation
+A Rack accepts up to 4 active webhook signing keys at once. The rotation
 pattern is the documented production behavior — operators stack a
 new key, update receivers in lockstep, then drop the oldest — and a
 4-deep rotation depth handles the common case of staging long rollouts
@@ -280,11 +280,11 @@ header limit on Cloudflare and the 4KB baseline on AWS Lambda receivers.
 Per-event CPU cost is 4 HMAC-SHA256 operations vs 2 — negligible relative
 to the network round-trip.
 
-### Downgrade behavior
+### Downgrade Behavior
 
-3.24.5 and earlier do not have webhook signing. When a rack with
+3.24.5 and earlier do not have webhook signing. When a Rack with
 `webhook_signing_key` set is downgraded to a pre-3.24.6 release, the
-older Terraform module does not declare the variable, and the rack-side
+older Terraform module does not declare the variable, and the Rack-side
 reconciler removes the unrecognized parameter from state automatically
 (emitted as a `NOTICE: removing parameters not supported by version
 <X>: webhook_signing_key` line on stderr during the apply). The
@@ -292,7 +292,7 @@ in-cluster `webhook-signing-key` Secret is also destroyed, since the
 declaring resource is gated on the variable being non-empty. No
 state-surgery or pre-clearing of the parameter is required.
 
-The user-facing consequence is that the rack stops emitting the
+The user-facing consequence is that the Rack stops emitting the
 `Convox-Signature` header on outbound webhooks once the downgrade
 applies. Receivers that fail-closed on missing or mismatched signatures
 will begin rejecting payloads at that point. Before downgrading, update
@@ -301,36 +301,38 @@ signature). On a subsequent re-upgrade to a signing-capable release, set
 `webhook_signing_key` to a fresh value and restage receivers — the
 previous key is not retained across the downgrade window.
 
-## Configuring the signing key
+## Configuring the Signing Key
 
-Set the rack parameter:
+Set the Rack parameter:
 
 ```bash
 $ convox rack params set webhook_signing_key=$(openssl rand -hex 32)
 ```
 
-The rack uses the value as-is — any string of sufficient entropy works. Convox
+The Rack uses the value as-is — any string of sufficient entropy works. Convox
 recommends a 32-byte random hex string. Rotate by running the same command with
 a new value; receivers must update their copy of the key in lockstep, since
 old payloads cannot be re-signed.
 
 The CLI masks the value in `convox rack params` output as of 3.24.6. Older CLIs
 print the value plaintext to the TTY — upgrade the CLI before running param
-introspection commands against 3.24.6 racks. See the 3.24.6 release notes.
+introspection commands against 3.24.6 Racks. See the 3.24.6 release notes.
 
-## Cross-provider availability
+The Console provides a key management interface under Rack > Settings with controls for generating, revealing, and rotating the signing key. See [Rack Settings](/console/rack-settings).
+
+## Cross-Provider Availability
 
 In 3.24.6, signing is enabled on all 6 providers (AWS, Azure, GCP, DigitalOcean,
-Metal, Local). Pre-3.24.6 racks on non-AWS providers did not sign webhooks even
+Metal, Local). Pre-3.24.6 Racks on non-AWS providers did not sign webhooks even
 when `webhook_signing_key` was set; receivers may have been configured to
-accept unsigned payloads from those racks. Post-3.24.6, those receivers will
+accept unsigned payloads from those Racks. Post-3.24.6, those receivers will
 start receiving the `Convox-Signature` header. Either configure the receiver
-with the rack's signing key (recommended) or explicitly accept unsigned
+with the Rack's signing key (recommended) or explicitly accept unsigned
 during the transition window.
 
-## Receiver migration
+## Receiver Migration
 
-Existing receivers will see seven new event types in 3.24.6. See
+Existing receivers will see eight new event types in 3.24.6. See
 [Webhooks event catalog](/configuration/webhooks#event-catalog) for the
 canonical payload shapes; the migration-relevant additions are:
 
@@ -340,13 +342,13 @@ canonical payload shapes; the migration-relevant additions are:
   `auto-shutdown`); sent when a cap-raise clears the deploy circuit
   breaker (both during the armed countdown and post-`:fired`).
 - `app:budget:per-service-truncated` — emitted when the accumulator's
-  per-service breakdown table exceeds its bounded-cardinality cap and
+  per-Service breakdown table exceeds its bounded-cardinality cap and
   drops entries from this month's persisted breakdown.
 - `app:promote:completed`, `app:promote:errored`, `app:promote:cancelled`
-  — terminal-state events from the rack-side rollout watcher; the
+  — terminal-state events from the Rack-side rollout watcher; the
   pre-existing `release:promote` (status=start) event is unchanged.
 - `app:scale-override:toggled`, `app:scale-override:honored` — emitted on
-  the per-service scale-override toggle (handler) and at deploy time
+  the per-Service scale-override toggle (handler) and at deploy time
   when an active override is honored (render-path; `actor: "system"`).
 
 Receivers that fail-closed on unknown event types should either fail-open
@@ -360,9 +362,9 @@ should expect emails for Console-driven mutations.
 Webhooks are best-effort, fire-and-forget, and not retried. Receivers must
 handle ordering by the `timestamp` field in the JSON body (or by parsing
 the `t=<unix-ts>` segment from the `Convox-Signature` header — both
-reflect the same rack-side emit time). The Events tab in the Console is
+reflect the same Rack-side emit time). The Events tab in the Console is
 best-effort persistence for the same stream — Slack/Discord webhooks are
-the source of truth on a gap.
+the authoritative record for the gap.
 
 ## See Also
 

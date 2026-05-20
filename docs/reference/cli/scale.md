@@ -20,7 +20,7 @@ The positional `<service>` is required for imperative changes (`--count`,
 `--cpu`, `--memory`, `--gpu`, `--gpu-vendor`, `--min`, `--max`) and optional in
 read-mode. With no service argument, `convox scale` prints the full scale table
 for the app. With a service argument, the table is filtered to that service's
-row only — the same columns, just one row.
+row only — the same columns, one row.
 
 ```bash
     $ convox scale web -a myapp

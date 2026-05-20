@@ -214,3 +214,4 @@ When KEDA is configured for a service, Convox uses a KEDA ScaledObject instead o
 - [VPA](/configuration/scaling/vpa) for automatic resource right-sizing
 - [keda_enable](/configuration/rack-parameters/aws/keda_enable) rack parameter
 - [KEDA Scalers documentation](https://keda.sh/docs/2.19/scalers/) for all available trigger types and configuration
+- [Autoscale Triggers Override](/console/autoscale-triggers) for Console-driven trigger management without convox.yml edits (3.24.6+)

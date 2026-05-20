@@ -17,7 +17,7 @@ Accepts a Go-style duration string — for example `5m`, `30m`, or `1h`.
 The default value is `5m`.
 
 ## Allowed Range
-`60s` to `1h`. Values below `60s` produce excessive Kubernetes API churn (200 apps × 60s sweep = 12000 ops/min just for GC); values above `1h` allow orphaned slots to accumulate beyond reasonable bounds. The validator at `pkg/cli/rack.go` rejects out-of-range values.
+`60s` to `1h`. Values below `60s` produce excessive Kubernetes API churn (200 apps × 60s sweep = 12000 ops/min for GC alone); values above `1h` allow orphaned slots to accumulate beyond reasonable bounds. The validator at `pkg/cli/rack.go` rejects out-of-range values.
 
 ## Use Cases
 - **High-churn deployment pipelines**: Bump to `2m` for racks running CI/CD with frequent rolling promotes; tighter sweep prevents orphan accumulation.

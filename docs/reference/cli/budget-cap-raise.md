@@ -18,7 +18,7 @@ is the canonical name on this command).
 
 ### Usage
 ```bash
-    convox budget cap raise [-a app] --monthly-cap-usd N
+    convox budget cap raise <app> --monthly-cap-usd N
 ```
 
 ### Examples
@@ -26,7 +26,7 @@ is the canonical name on this command).
 Raise from 250 USD to 500 USD on myapp; breaker clears:
 
 ```bash
-    $ convox budget cap raise --app myapp --monthly-cap-usd 500
+    $ convox budget cap raise myapp --monthly-cap-usd 500
     Raising monthly cap to 500.00 USD... OK
     Breaker cleared.
 ```
@@ -34,7 +34,7 @@ Raise from 250 USD to 500 USD on myapp; breaker clears:
 Raise rejected when the new cap is below current spend:
 
 ```bash
-    $ convox budget cap raise --app myapp --monthly-cap-usd 100
+    $ convox budget cap raise myapp --monthly-cap-usd 100
     error: new cap 100.00 USD is below current spend 134.65 USD
 ```
 

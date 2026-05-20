@@ -96,7 +96,7 @@ Raising the cap mid-month clears the breaker (when current spend is below the
 new cap) and dismisses any active recovery banner.
 
 ```bash
-$ convox budget cap raise --monthly-cap-usd 500 --app myapp
+$ convox budget cap raise myapp --monthly-cap-usd 500
 Raising monthly cap to 500.00 USD... OK
 Breaker cleared.
 ```
@@ -155,7 +155,7 @@ carry-over so that an app that recently breached, was reset, then breached
 again does not flip-flop into auto-shutdown loops.
 
 ```bash
-$ convox budget reset --app myapp
+$ convox budget reset myapp
 Resetting budget for myapp... OK
 Breaker cleared.
 ```
@@ -167,7 +167,7 @@ flap-prevention cooldown. Use only when you are sure the underlying cause is
 resolved.
 
 ```bash
-$ convox budget reset --app myapp --force-clear-cooldown
+$ convox budget reset myapp --force-clear-cooldown
 Resetting budget for myapp (force-clearing flap-suppress cooldown)... OK
 ```
 
@@ -175,7 +175,7 @@ Resetting budget for myapp (force-clearing flap-suppress cooldown)... OK
 
 When `atCapAction: block-new-deploys` fires, deploys are rejected with:
 
-```
+```text
 budget cap exceeded: monthly cap 250.00 USD, current spend 268.42 USD
 ```
 
@@ -260,7 +260,7 @@ admin's email so the rack records `actor=alice@example.com` rather than
 the generic `rack-password` sentinel. When the form parameter is honored,
 the rack's HTTP response carries an RFC 8594 deprecation triple:
 
-```
+```text
 Deprecation: true
 Sunset: Thu, 01 Oct 2026 00:00:00 GMT
 Link: <https://docs.convox.com/migration/ack-by-derivation>; rel="deprecation"; type="text/html"
@@ -297,7 +297,7 @@ absent parameter never produces deprecation headers.
 ### Breaker re-trips immediately after reset
 
 The cap is below current spend. Either raise the cap or wait for month rollover.
-`convox budget show --app myapp` displays current spend vs cap.
+`convox budget show myapp` displays current spend vs cap.
 
 ### Recovery banner persists across cycles
 
@@ -313,7 +313,7 @@ $ kubectl annotate ns <rack>-<app> convox.com/budget-recovery-banner-dismissed-
 ### Auto-shutdown fired but services did not scale down
 
 Confirm `convox.yml` has `atCapAction: auto-shutdown` set (not `block-new-deploys`).
-Check `convox budget show --app myapp` for the live state. If `:armed` fired but
+Check `convox budget show myapp` for the live state. If `:armed` fired but
 not `:fired`, the countdown may still be running (`notifyBeforeMinutes`).
 
 ### `:fired` fired but I want to keep services running
@@ -331,5 +331,6 @@ path post-`:fired`.
 - [budget CLI reference](/reference/cli/budget) — command reference
 - [Webhooks](/configuration/webhooks) — receiving cap events at an external URL
 - [ack_by Derivation](/migration/ack-by-derivation) — actor field semantics for audit-event receivers
+- [Budget Management](/console/budget-management) — Console UI for budget configuration
 
 > **Note on terminology:** this page covers the **per-app monthly spend cap** introduced in 3.24.6. The unrelated **Karpenter disruption budget** (cluster-level node-scheduling primitive — see [Karpenter](/configuration/scaling/karpenter)) shares the word "budget" but is a separate concept with no shared configuration surface.

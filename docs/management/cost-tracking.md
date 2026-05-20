@@ -20,7 +20,7 @@ even with a `budget:` block in `convox.yml`.
 Read paths still return successfully: `convox cost` against a rack with
 `cost_tracking_enable=false` returns a zero spend total and an empty
 breakdown (HTTP 200), so dashboards and scripts that poll the endpoint do
-not break — they just see "no data yet." Write paths, on the other hand,
+not break — they see "no data yet." Write paths, on the other hand,
 reject loud: `convox budget set` and `convox deploy` against a manifest
 with an enforcement-bearing `budget:` block return HTTP 422 with an
 actionable message pointing at the enable command. Recovery operations
@@ -149,3 +149,4 @@ poll interval (10 min default).
 - [Budget Caps](/management/budget-caps) — operational management of caps
 - [convox.yml budget block](/configuration/convox-yml#budget) — schema reference
 - [cost CLI reference](/reference/cli/cost) — command reference
+- [Budget Management](/console/budget-management) — Console UI for cost and budget management

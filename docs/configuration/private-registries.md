@@ -30,6 +30,31 @@ Registered credentials are used during `convox build` and `convox deploy` to aut
     Removing registry... OK
 ```
 
+## Build-Time vs. Runtime Registry Authentication
+
+`convox registries` provides credentials used during `convox build` and `convox deploy` to pull base images referenced in your Dockerfile. These credentials are consumed by the build process and do not affect running containers.
+
+To authenticate at **runtime** — when Kubernetes pulls the container image specified in the `image` field of `convox.yml` — use the [`imagePullSecrets`](/reference/primitives/app/service#imagepullsecrets) field on a Service:
+
+```yaml
+services:
+  nim:
+    image: nvcr.io/nim/meta/llama-3.1-8b-instruct:latest
+    imagePullSecrets:
+      - registry: nvcr.io
+        username: $oauthtoken
+        passwordEnv: NGC_API_KEY
+```
+
+| Scenario | Mechanism |
+|----------|-----------|
+| Pulling base images during `convox build` | `convox registries add` |
+| Pulling a pre-built `image` at deploy/runtime | `imagePullSecrets` in `convox.yml` |
+
+Both can be used in the same App if a Service builds from a private base image and also runs a separate Service from a pre-built private image.
+
+See [Service imagePullSecrets](/reference/primitives/app/service#imagepullsecrets) for field reference and validation rules.
+
 ## See Also
 
 - [docker_hub_username](/configuration/rack-parameters/aws/docker_hub_username) and [docker_hub_password](/configuration/rack-parameters/aws/docker_hub_password) for authenticating Docker Hub pulls across all Convox-managed pods
