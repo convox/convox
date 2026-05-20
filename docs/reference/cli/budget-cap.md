@@ -22,12 +22,12 @@ current spend.
 
 ### Usage
 ```bash
-    convox budget cap raise [-a app] --monthly-cap-usd N
+    convox budget cap raise <app> --monthly-cap-usd N
 ```
 
 ### Examples
 ```bash
-    $ convox budget cap raise --app myapp --monthly-cap-usd 500
+    $ convox budget cap raise myapp --monthly-cap-usd 500
     Raising monthly cap to 500.00 USD... OK
     Breaker cleared.
 ```
@@ -35,7 +35,7 @@ current spend.
 If the new cap is below current spend, the request is rejected:
 
 ```bash
-    $ convox budget cap raise --app myapp --monthly-cap-usd 100
+    $ convox budget cap raise myapp --monthly-cap-usd 100
     error: new cap 100.00 USD is below current spend 134.65 USD
 ```
 

@@ -10,7 +10,7 @@ recovers. Equivalent to clicking "Dismiss" in the Console banner.
 
 ### Usage
 ```bash
-    convox budget dismiss-recovery [-a app]
+    convox budget dismiss-recovery <app>
 ```
 
 ### Examples
@@ -18,21 +18,21 @@ recovers. Equivalent to clicking "Dismiss" in the Console banner.
 Dismiss the active recovery banner on myapp:
 
 ```bash
-    $ convox budget dismiss-recovery --app myapp
+    $ convox budget dismiss-recovery myapp
     Dismissing recovery banner for myapp... OK
 ```
 
 Idempotent — second call is a no-op:
 
 ```bash
-    $ convox budget dismiss-recovery --app myapp
+    $ convox budget dismiss-recovery myapp
     Recovery banner already dismissed for myapp
 ```
 
 No banner present:
 
 ```bash
-    $ convox budget dismiss-recovery --app myapp
+    $ convox budget dismiss-recovery myapp
     No recovery banner present for myapp
 ```
 

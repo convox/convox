@@ -64,6 +64,12 @@ services:
   metrics:
     agent: true
     image: awesome/metrics
+  inference:
+    image: nvcr.io/nim/meta/llama-3.1-8b-instruct:latest
+    imagePullSecrets:
+      - registry: nvcr.io
+        username: $oauthtoken
+        passwordEnv: NGC_API_KEY
 timers:
   cleanup:
     schedule: "0 3 * * *"

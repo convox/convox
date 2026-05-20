@@ -47,3 +47,9 @@ Control which nodes your services run on using custom node groups, node selector
 
 See [Workload Placement](/configuration/scaling/workload-placement) for details.
 > AWS and Azure
+
+## Console Autoscale Triggers
+
+Enable, disable, and tune autoscaling from the Console without editing convox.yml. Console-driven triggers override the manifest configuration and persist across deploys.
+
+See [Autoscale Triggers](/console/autoscale-triggers) for details.

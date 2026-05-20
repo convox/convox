@@ -21,7 +21,7 @@ flap-suppress carry-over by default.
 
 ### Usage
 ```bash
-    convox budget reset [-a app] [--force-clear-cooldown]
+    convox budget reset <app> [--force-clear-cooldown]
 ```
 
 ### Examples
@@ -29,7 +29,7 @@ flap-suppress carry-over by default.
 Reset the breaker on myapp; flap-suppress carry-over preserved:
 
 ```bash
-    $ convox budget reset --app myapp
+    $ convox budget reset myapp
     Resetting budget for myapp... OK
     Breaker cleared.
 ```
@@ -39,7 +39,7 @@ NOT be suppressed (use only when you are sure the underlying cause is
 resolved):
 
 ```bash
-    $ convox budget reset --app myapp --force-clear-cooldown
+    $ convox budget reset myapp --force-clear-cooldown
     Resetting budget for myapp (force-clearing flap-suppress cooldown)... OK
 ```
 

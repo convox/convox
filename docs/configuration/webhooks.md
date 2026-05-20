@@ -77,7 +77,7 @@ The actor class for each event is noted alongside the action below.
   requests autoscale on a rack without `keda_enable=true`
   (accumulator-tick / render-time; `actor: "system"`).
 - `release:manifest-advisory` — emitted at render time when a service
-  configuration is degenerate (e.g., `scale.min: 0` without autoscale)
+  configuration is invalid (e.g., `scale.min: 0` without autoscale)
   (render-time; `actor: "system"`).
 - `release:prometheus-skipped` — emitted at render time when KEDA's
   Prometheus-based trigger creation is skipped because `prometheus_url`
@@ -257,7 +257,7 @@ handle:
 - **Single-shot** — the rack does not retry on receiver-side 5xx. Persistent
   storage of the audit stream lives in the Console's Events tab; the webhook
   feed is the operator notification channel, not a transactional queue.
-- **Source of truth** — when the Events tab persistence has a gap, the
+- **Authoritative record** — when the Events tab persistence has a gap, the
   Slack/Discord webhook receiver is the authoritative source for the event
   log. Persist webhook payloads if you need replay.
 

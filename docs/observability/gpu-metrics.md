@@ -1,10 +1,10 @@
 ---
-title: "GPU observability"
+title: "GPU Observability"
 slug: gpu-metrics
 url: /observability/gpu-metrics
 ---
 
-# GPU observability
+# GPU Observability
 
 GPU observability gives you per-pod, per-service, and per-app GPU
 telemetry: utilization, memory used and total, tensor / SM / DRAM
@@ -62,6 +62,8 @@ DCGM exporter relies on the device plugin's pod-resources socket for
 pod-to-GPU attribution. Setting `gpu_observability_enable=true` without
 the device plugin is rejected at the CLI.
 
+After enabling the Rack parameters, toggle the GPU Telemetry Scraper on in the Console under Rack > Settings. See [Rack Settings](/console/rack-settings) for details.
+
 Once enabled, the rack installs:
 
 - The DCGM exporter as a DaemonSet on GPU nodes (NVIDIA-only;
@@ -84,7 +86,7 @@ $ convox rack params set dcgm_scrape_interval=30s -r myrack
 Setting parameters... OK
 ```
 
-Allowed values are Go-format duration strings between `5s` and `5m`.
+Allowed values are Go-format duration strings between `15s` and `5m` (300s).
 See [`dcgm_scrape_interval`](/configuration/rack-parameters/aws/dcgm_scrape_interval)
 for details and the trade-off considerations.
 
@@ -104,7 +106,7 @@ CPU- and memory-based triggers, services with an explicit
 `prometheusUrl` set on the autoscale block, and `scale.keda.triggers`
 custom triggers are NOT affected and need no redeploy.
 
-## What you'll see in the Console
+## Console Dashboard
 
 The Convox Console renders GPU telemetry on the per-app GPU dashboard.
 Open the app, select the GPU tab.
@@ -236,7 +238,7 @@ gpu_metrics_max_concurrent   10
 gpu_observability_enable     true
 ```
 
-The defaults are sensible for most workloads. Adjust
+The defaults work for most workloads. Adjust
 `gpu_metrics_max_pods` only if a single GPU dashboard request would
 fan out across more than 100 services (the parameter name is historical
 — the cap enforces a per-request services count, not a per-service pod
@@ -328,3 +330,9 @@ releases.
 GPU observability requires Convox rack version `3.24.6` or later. The
 backend chain (DCGM exporter installed via Helm, Prometheus scrape
 wired into rack-side metrics handlers) is AWS-only for v1.
+
+## See Also
+
+- [GPU Dashboard](/console/gpu-dashboard) — Console dashboard for GPU telemetry
+- [Rack Settings](/console/rack-settings) — toggle the GPU telemetry scraper
+- [gpu_observability_enable](/configuration/rack-parameters/aws/gpu_observability_enable) — Rack parameter reference

@@ -43,7 +43,7 @@ $ convox rack params set cost_tracking_enable=false -r rackName
 Updating parameters... OK
 ```
 
-Disabling stops the cost accumulator on the next rack restart. Existing budget-state annotations on each app are left intact (no data destruction); they simply stop receiving new samples until the parameter is re-enabled.
+Disabling stops the cost accumulator on the next rack restart. Existing budget-state annotations on each app are left intact (no data destruction); they stop receiving new samples until the parameter is re-enabled.
 
 ## Additional Information
 - This parameter is currently AWS-only.

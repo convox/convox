@@ -128,6 +128,7 @@ services:
 | **liveness** | map |      | Liveness check definition (see below). By default it is disabled. If it fails then service will restart |
 | **startupProbe** | map |  | Startup probe definition. Set `path` (HTTP) or `tcpSocketPort` (TCP) to enable. All timing parameters are inherited from the **liveness** check; setting timing fields directly on `startupProbe` has no effect. See [Health Checks](/configuration/health-checks#startup-probes) |
 | **image**       | string     |                     | An external Docker image to use for this Service (supersedes **build**)                                                                      |
+| **imagePullSecrets** | list  |                     | Credentials for pulling container images from private registries at runtime (see [imagePullSecrets](#imagepullsecrets) below). Distinct from [Private Registries](/configuration/private-registries) which apply at build time |
 | **ingressAnnotations** | list       |                     | A list of annotation keys and values to add in ingress resource. Check below for reserved annotation keys |
 | **initContainer** | map       |                     | Runs a container to completion before the main service container starts. Use for migrations, dependency checks, or setup tasks (see [initContainer](#initcontainer) below) |
 | **internal**    | boolean    | false               | Set to **true** to make this Service only accessible inside the Rack                                                                         |
@@ -327,7 +328,57 @@ services:
 
 This ensures the main container only starts after its dependencies are healthy. Specifying a minimal `image` like `busybox` avoids building dependency-checking logic into your application image.
 
+### imagePullSecrets
 
+Runtime credentials for pulling a Service's container image from a private registry. Use this when the `image` field references a registry that requires authentication (e.g. NVIDIA NGC, GitHub Container Registry, a self-hosted Harbor instance).
+
+For build-time registry authentication (pulling base images in a Dockerfile), use [`convox registries`](/configuration/private-registries) instead.
+
+Each entry specifies a single registry. Multiple entries are supported for Services that pull from more than one private registry.
+
+| Attribute      | Type   | Required | Description                                                                                     |
+| -------------- | ------ | -------- | ----------------------------------------------------------------------------------------------- |
+| **registry**   | string | yes      | Registry hostname (lowercase, no scheme, no path). Examples: `nvcr.io`, `ghcr.io`, `harbor.corp:5000` |
+| **username**   | string | yes      | Registry username                                                                               |
+| **passwordEnv** | string | one of `passwordEnv` or `password` | Name of an App environment variable that holds the registry password. Recommended |
+| **password**   | string | one of `passwordEnv` or `password` | Literal registry password. Use `passwordEnv` instead when possible to avoid credentials in source control |
+
+```yaml
+services:
+  nim:
+    image: nvcr.io/nim/meta/llama-3.1-8b-instruct:latest
+    imagePullSecrets:
+      - registry: nvcr.io
+        username: $oauthtoken
+        passwordEnv: NGC_API_KEY
+```
+
+Set the referenced environment variable before promoting:
+
+```bash
+$ convox env set NGC_API_KEY=your-key -a myapp
+```
+
+Multiple registries:
+
+```yaml
+services:
+  web:
+    image: harbor.corp:5000/team/app:latest
+    imagePullSecrets:
+      - registry: harbor.corp:5000
+        username: robot-account
+        passwordEnv: HARBOR_PASSWORD
+      - registry: ghcr.io
+        username: deploy-bot
+        passwordEnv: GHCR_TOKEN
+```
+
+Validation rules:
+- `registry` must be a valid lowercase DNS hostname with an optional port. Do not include `http://`, `https://`, or a path.
+- Exactly one of `password` or `passwordEnv` must be set, not both.
+- Each registry may appear at most once per Service.
+- When using `passwordEnv`, the referenced environment variable must be set (via `convox env set`) before promoting. If it is missing, the Release promote fails with an error identifying the missing variable.
 
 ### lifecycle
 

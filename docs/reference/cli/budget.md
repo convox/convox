@@ -17,11 +17,11 @@ Print the current budget config and runtime state for an app.
 
 ### Usage
 ```bash
-    convox budget show [-a app]
+    convox budget show <app>
 ```
 ### Examples
 ```bash
-    $ convox budget show --app myapp
+    $ convox budget show myapp
     Monthly cap     250.00 USD
     Spend           134.65 USD (53.86%)
     At-cap action   auto-shutdown
@@ -36,12 +36,12 @@ to editing the manifest and redeploying, but applied without a redeploy.
 
 ### Usage
 ```bash
-    convox budget set [-a app] [--monthly-cap N] [--alert-at N]
+    convox budget set <app> [--monthly-cap N] [--alert-at N]
                        [--at-cap-action ACTION] [--pricing-adjustment N]
 ```
 ### Examples
 ```bash
-    $ convox budget set --monthly-cap 500 --at-cap-action auto-shutdown --app myapp
+    $ convox budget set myapp --monthly-cap 500 --at-cap-action auto-shutdown
     Setting budget for myapp... OK
 ```
 
@@ -56,7 +56,7 @@ the loud rejection replaces a silent no-op. Set the rack parameter first:
 ```bash
 $ convox rack params set cost_tracking_enable=true
 # wait ~3 min for apply, then:
-$ convox budget set --monthly-cap 500 --at-cap-action auto-shutdown --app myapp
+$ convox budget set myapp --monthly-cap 500 --at-cap-action auto-shutdown
 ```
 
 Updates that touch only `--pricing-adjustment` are not gated; the pricing
@@ -75,7 +75,7 @@ from `convox.yml`.
 
 ### Usage
 ```bash
-    convox budget clear [-a app]
+    convox budget clear <app>
 ```
 
 ## budget reset
@@ -88,15 +88,15 @@ flap-prevention cooldown.
 
 ### Usage
 ```bash
-    convox budget reset [-a app] [--force-clear-cooldown]
+    convox budget reset <app> [--force-clear-cooldown]
 ```
 ### Examples
 ```bash
-    $ convox budget reset --app myapp
+    $ convox budget reset myapp
     Resetting budget for myapp... OK
     Breaker cleared.
 
-    $ convox budget reset --app myapp --force-clear-cooldown
+    $ convox budget reset myapp --force-clear-cooldown
     Resetting budget for myapp (force-clearing flap-suppress cooldown)... OK
 ```
 
@@ -110,11 +110,11 @@ current spend. Alias for `budget set --monthly-cap`.
 
 ### Usage
 ```bash
-    convox budget cap raise [-a app] --monthly-cap N
+    convox budget cap raise <app> --monthly-cap-usd N
 ```
 ### Examples
 ```bash
-    $ convox budget cap raise --app myapp --monthly-cap 500
+    $ convox budget cap raise myapp --monthly-cap-usd 500
     Raising monthly cap to 500.00 USD... OK
     Breaker cleared.
 ```
@@ -131,11 +131,11 @@ Dry-run an auto-shutdown plan without modifying the app. Emits the
 
 ### Usage
 ```bash
-    convox budget simulate-shutdown [-a app]
+    convox budget simulate-shutdown <app>
 ```
 ### Examples
 ```bash
-    $ convox budget simulate-shutdown --app myapp
+    $ convox budget simulate-shutdown myapp
     Simulating auto-shutdown for myapp...
     Plan (largest-cost order):
       worker (eligible)
@@ -151,11 +151,11 @@ recovers. Equivalent to clicking "Dismiss" in the Console banner.
 
 ### Usage
 ```bash
-    convox budget dismiss-recovery [-a app]
+    convox budget dismiss-recovery <app>
 ```
 ### Examples
 ```bash
-    $ convox budget dismiss-recovery --app myapp
+    $ convox budget dismiss-recovery myapp
     Dismissing recovery banner for myapp... OK
 ```
 
