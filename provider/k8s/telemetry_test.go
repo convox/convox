@@ -95,7 +95,7 @@ func TestRackParamsMissing(t *testing.T) {
 	})
 }
 
-// TestRackParamsRedactsCredentials locks D.7's redaction guarantee for the two
+// TestRackParamsRedactsCredentials locks the redaction guarantee for the two
 // new credential-bearing rack params: heartbeat must emit only the SHA-256 hex
 // fingerprint, never the plaintext.
 func TestRackParamsRedactsCredentials(t *testing.T) {
@@ -204,7 +204,7 @@ func TestRackParamsLeavesNonRedactedPlaintext(t *testing.T) {
 }
 
 // TestRackParamsEmptyCredentialNotEmitted locks the existing skip-default
-// behavior so D.7 does not regress to emitting hashParamValue("") for an
+// behavior so telemetry does not regress to emitting hashParamValue("") for an
 // unset credential. The default-rack-params ConfigMap carries the same empty
 // string for an absent credential, so the carve-out at the param-equals-default
 // branch keeps it out of the heartbeat entirely.
@@ -293,7 +293,7 @@ func TestRackParamsSecretAbsent_FallsBackToConfigMap(t *testing.T) {
 		require.NoError(t, err)
 
 		// Deliberately do NOT create the redacted-params Secret —
-		// pre-D8 rack shape.
+		// simulates a rack that predates the Secret-based redaction.
 
 		params := p.RackParams()
 		require.Equal(t, hmacSHA256Hex("uid1", dockerSecret), params["docker_hub_password"],
@@ -320,9 +320,9 @@ func TestRackParamsSecretAbsent_FallsBackToConfigMap(t *testing.T) {
 // credential is set).
 //
 // Mirrors TestRackParamsSecretAbsent_FallsBackToConfigMap (which pins
-// the pre-D8 ConfigMap-plaintext + Secret-absent combination); this
-// test pins the OTHER end of the upgrade window — ConfigMap is
-// already in D8 shape (empty stubs) but Secret has not yet landed.
+// the pre-Secret ConfigMap-plaintext + Secret-absent combination); this
+// test pins the OTHER end of the upgrade window — ConfigMap already has
+// empty stubs but Secret has not yet landed.
 func TestRackParams_PreD8Compat_SecretAbsent(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		fc, ok := p.Cluster.(*fake.Clientset)
@@ -379,19 +379,17 @@ func TestRackParams_PreD8Compat_SecretAbsent(t *testing.T) {
 	})
 }
 
-// TestRedactedParamsAlphabeticalOrder enforces the alphabetical convention on
-// redactedParams so chain α6 follow-ups (e.g. D.2 webhook_signing_key) have an
-// unambiguous insertion target. Order is for review hygiene; correctness uses
-// strings.Contains and is order-agnostic.
+// TestRedactedParamsAlphabeticalOrder enforces alphabetical order on
+// redactedParams so new entries have an unambiguous insertion point.
 func TestRedactedParamsAlphabeticalOrder(t *testing.T) {
 	parts := strings.Split(*k8s.RedactedParamsForTest, ",")
 	sorted := append([]string(nil), parts...)
 	sort.Strings(sorted)
 	assert.Equal(t, sorted, parts,
-		"redactedParams must be alphabetical for review hygiene + chain α6 ordering")
+		"redactedParams must be alphabetical for consistent insertion order")
 }
 
-// TestHashParamValue_SaltedByNamespaceUID pins the S2 security invariant: two
+// TestHashParamValue_SaltedByNamespaceUID pins the security invariant: two
 // Providers backed by namespaces with DIFFERENT UIDs must produce DIFFERENT
 // hashes for the same plaintext; a single Provider must produce the SAME hash
 // for the same plaintext on repeated calls (deterministic-per-rack).

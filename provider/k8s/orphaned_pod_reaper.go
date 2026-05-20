@@ -9,29 +9,8 @@ import (
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// runOrphanedPodReaper is the rack-side recovery loop for pods stuck in
-// Terminating on NotReady nodes. The trigger scenario is kubelet death
-// (e.g. a workload pod overcommits the node and the kubelet is OOM-killed):
-// every pod on the dead node has a DeletionTimestamp set by the controller
-// that wanted them gone, but the kubelet can't ack the deletion. The pod
-// stays in Terminating forever. For StatefulSet workloads, the new instance
-// can't schedule until the old pod's record is gone (PVC reattachment
-// blocks). Force-deleting with grace=0 unblocks the scheduler.
-//
-// The reaper acts only when ALL three hold:
-//   - node.Status.Conditions[NodeReady].Status != ConditionTrue (False or Unknown)
-//   - LastTransitionTime older than orphanedPodReaperNotReadyThreshold
-//   - pod.DeletionTimestamp is set
-//
-// A Ready node with a pod-in-graceful-shutdown is left alone (graceful is
-// the normal path). A NotReady node where no pod has been asked to delete
-// is left alone (no one wants those pods gone). Brief NotReady blips under
-// the threshold are left alone (kubelet may recover).
-//
-// The 60s tick + 5min threshold means recovery takes 5-6 minutes from
-// kubelet death — slow enough to avoid stomping on transient blips,
-// fast enough that an operator's `kubectl get pods` shows progress
-// within a reasonable window.
+// Force-deletes pods stuck in Terminating on NotReady nodes (kubelet death
+// leaves pods that block StatefulSet PVC reattachment).
 func (p *Provider) runOrphanedPodReaper(ctx context.Context) {
 	tick := time.NewTicker(orphanedPodReaperTickInterval)
 	defer tick.Stop()
@@ -45,13 +24,6 @@ func (p *Provider) runOrphanedPodReaper(ctx context.Context) {
 	}
 }
 
-// reapOrphanedTerminatingPods is one reaper pass. Lists nodes, for each
-// not-ready-past-threshold node lists pods on the node, force-deletes
-// every pod that already has a DeletionTimestamp set. A defer-recover
-// shields the outer goroutine: a panic here (e.g. nil-pointer in client-go
-// during an apiserver disconnect) would otherwise kill the reaper for the
-// remaining lifetime of the rack process, silently disabling recovery
-// from kubelet-OOM deadlocks.
 func (p *Provider) reapOrphanedTerminatingPods(ctx context.Context, threshold time.Duration) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -94,11 +66,6 @@ func (p *Provider) reapOrphanedTerminatingPods(ctx context.Context, threshold ti
 	}
 }
 
-// nodeNotReadyPastCutoff returns true iff the node's NodeReady condition
-// is not True (False or Unknown) AND the LastTransitionTime is older than
-// the cutoff. A node without any NodeReady condition (just-created, never
-// reported in) is treated as Ready: don't reap pods on a node that may
-// just be booting.
 func nodeNotReadyPastCutoff(node *ac.Node, cutoff time.Time) bool {
 	for _, cond := range node.Status.Conditions {
 		if cond.Type != ac.NodeReady {
@@ -107,9 +74,6 @@ func nodeNotReadyPastCutoff(node *ac.Node, cutoff time.Time) bool {
 		if cond.Status == ac.ConditionTrue {
 			return false
 		}
-		// ConditionFalse or ConditionUnknown both mean "kubelet is not
-		// telling us it's healthy". Both qualify if the transition is
-		// old enough.
 		return cond.LastTransitionTime.Time.Before(cutoff)
 	}
 	return false

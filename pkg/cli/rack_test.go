@@ -1112,7 +1112,7 @@ func TestRackParamsRevealTTYWithGroupFilter(t *testing.T) {
 	})
 }
 
-// --- V2-key masking tests (§2.2 C.2) ---------------------------------------
+// V2-key masking tests
 
 func TestRackParamsMasksV2Password(t *testing.T) {
 	prev := cli.IsTerminalFn
@@ -1224,7 +1224,7 @@ func TestRackParamsGroupNetworkV2RackHttpProxyMasked(t *testing.T) {
 	})
 }
 
-// --- Group filter tests (§2.3 E) -------------------------------------------
+// Group filter tests
 
 // TestRackParamsGroupNLBV2Rack — v2 fixture + -g nlb shows NLB keys.
 func TestRackParamsGroupNLBV2Rack(t *testing.T) {
@@ -1322,7 +1322,7 @@ func TestRackParamsGroupSecurityV2RackMaskedOnTTY(t *testing.T) {
 	})
 }
 
-// --- V2 edge-case group filter tests (§2.3 F) ------------------------------
+// V2 edge-case group filter tests
 
 // TestRackParamsGroupFilterEmptyFallthrough — -g ” falls through to full dump.
 func TestRackParamsGroupFilterEmptyFallthrough(t *testing.T) {

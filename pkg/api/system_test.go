@@ -217,14 +217,8 @@ func TestSystemUpdateError(t *testing.T) {
 	})
 }
 
-// TestSystemJwtToken_UnknownRole_Returns400 sets up an httptest server with
-// MockProvider, sends POST /system/jwt/token with an unknown role, and
-// expects HTTP 400 with body containing the substring "invalid role". Locks
-// the new default clause in source.
 func TestSystemJwtToken_UnknownRole_Returns400(t *testing.T) {
 	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
-		// stdsdk doesn't surface the response status code easily, so go through
-		// the underlying http.Client directly.
 		form := url.Values{}
 		form.Set("role", "bogus")
 		form.Set("durationInHour", "1")
@@ -243,11 +237,6 @@ func TestSystemJwtToken_UnknownRole_Returns400(t *testing.T) {
 	})
 }
 
-// TestSystemJwtToken_GeneratesRwaRole_VerifiesOnRack POSTs /system/jwt/token
-// with role=admin and durationInHour=1; asserts HTTP 200; parses response
-// body as structs.SystemJwt; verifies the returned token via a JwtManager
-// matching the test signing key — Role should be "rwa", User should be
-// "system-admin".
 func TestSystemJwtToken_GeneratesRwaRole_VerifiesOnRack(t *testing.T) {
 	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
 		form := url.Values{}
@@ -267,7 +256,6 @@ func TestSystemJwtToken_GeneratesRwaRole_VerifiesOnRack(t *testing.T) {
 		require.NoError(t, decErr)
 		require.NotEmpty(t, jwtRes.Token)
 
-		// Verify the token via a JwtManager with matching signing key.
 		jm := cjwt.NewJwtManager("test")
 		data, err := jm.Verify(jwtRes.Token)
 		require.NoError(t, err)
@@ -276,11 +264,6 @@ func TestSystemJwtToken_GeneratesRwaRole_VerifiesOnRack(t *testing.T) {
 	})
 }
 
-// jwtAuthTestServer spins up a full api.Server (including the s.authenticate
-// middleware) with a MockProvider so that JWT-based Basic Auth is exercised
-// end-to-end. testServer (the existing helper) doesn't go through s.authenticate
-// for the default route case because stdsdk.Client doesn't set Basic Auth by
-// default; this helper is needed for any test that wants to present a JWT.
 func jwtAuthTestServer(t *testing.T, fn func(*httptest.Server, *structs.MockProvider, *cjwt.JwtManager)) {
 	t.Helper()
 	p := &structs.MockProvider{}
@@ -304,12 +287,8 @@ func jwtAuthTestServer(t *testing.T, fn func(*httptest.Server, *structs.MockProv
 	p.AssertExpectations(t)
 }
 
-// TestSystemJwtToken_AdminTokenWorksOnWriteEndpoint mints an Admin token
-// directly via JwtMngr.AdminToken and presents it as Basic Auth (username
-// "jwt") to a CanWrite-gated (non-Admin) endpoint, AppBudgetSet. Asserts
-// HTTP 200 — Admin token successfully writes through CanWrite. Catches a
-// regression where a future PR accidentally narrows CanWrite to exclude
-// Admin tokens (e.g. by replacing strings.Contains(v, "w") with v == "rw").
+// TestSystemJwtToken_AdminTokenWorksOnWriteEndpoint verifies admin tokens
+// pass CanWrite-gated endpoints.
 func TestSystemJwtToken_AdminTokenWorksOnWriteEndpoint(t *testing.T) {
 	jwtAuthTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
 		tk, err := jm.AdminToken(time.Hour)
@@ -331,15 +310,8 @@ func TestSystemJwtToken_AdminTokenWorksOnWriteEndpoint(t *testing.T) {
 	})
 }
 
-// TestAppBudgetReset_RoleMatrix is the table-driven r/w/Admin matrix test
-// that consolidates the user-visible matrix into one place for the
-// PLAIN reset path (no force_clear_cooldown). Failure on any row indicates
-// a regression.
-//
-// Gate semantics (post audit-alignment fix):
-//   - read-token       → 401 (Authorize middleware: GET-only check fails for POST)
-//   - write-token (rw) → 200 (CanWrite middleware passes; controller has no extra gate on plain reset)
-//   - admin-token (rwa) → 200 (passes both)
+// TestAppBudgetReset_RoleMatrix verifies read/write/admin role access for
+// plain budget reset (no force_clear_cooldown).
 func TestAppBudgetReset_RoleMatrix(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -380,8 +352,6 @@ func TestAppBudgetReset_RoleMatrix(t *testing.T) {
 				require.NoError(t, err)
 
 				if tc.providerCalled {
-					// B-6 fix: plain reset routes through AppBudgetResetWithOptions
-					// (ForceClearCooldown=false) per the unified entry point.
 					switch tc.name {
 					case "write-token-200":
 						p.On("AppBudgetResetWithOptions", "myapp", "system-write", mock.MatchedBy(resetOptsPlain)).Return(nil)
@@ -406,19 +376,12 @@ func TestAppBudgetReset_RoleMatrix(t *testing.T) {
 }
 
 // TestAppBudgetReset_ForceClearCooldown_RequiresAdminRole_403sOnWriteRole
-// asserts that a w-role JWT token presented to AppBudgetReset WITH
-// force_clear_cooldown=true returns HTTP 403 AND the mock provider's
-// AppBudgetReset/AppBudgetResetWithOptions is NEVER called (the controller-level
-// CanAdmin gate fires before reaching the provider). Plain reset on w-role
-// is now valid (covered by the role matrix); this test exercises the
-// force-clear-cooldown escape hatch only.
+// verifies write-role is rejected for force-clear-cooldown before any
+// provider call.
 func TestAppBudgetReset_ForceClearCooldown_RequiresAdminRole_403sOnWriteRole(t *testing.T) {
 	jwtAuthTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
 		tk, err := jm.WriteToken(time.Hour)
 		require.NoError(t, err)
-
-		// Intentionally do NOT register p.On(...). The CanAdmin guard inside
-		// the forceClear branch must fire before any provider call.
 
 		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget/reset", strings.NewReader("force_clear_cooldown=true&ack_by=alice"))
 		require.NoError(t, err)
@@ -432,30 +395,19 @@ func TestAppBudgetReset_ForceClearCooldown_RequiresAdminRole_403sOnWriteRole(t *
 
 		bodyBytes, _ := io.ReadAll(res.Body)
 		require.Equal(t, http.StatusForbidden, res.StatusCode, "w-token must 403 on force-clear-cooldown — got body %q", string(bodyBytes))
-		// Discriminating signal: the new error body's "--force-clear-cooldown"
-		// qualifier proves the conditional gate (post-fix) fired, not a
-		// reverted unconditional gate (which would 403 with the old wording).
-		require.Contains(t, string(bodyBytes), "--force-clear-cooldown",
-			"403 body must carry the post-fix qualifier; status-only assertion would pass under a reverted unconditional gate")
+		require.Contains(t, string(bodyBytes), "--force-clear-cooldown")
 		p.AssertNotCalled(t, "AppBudgetReset")
 		p.AssertNotCalled(t, "AppBudgetResetWithOptions")
 	})
 }
 
-// TestAppBudgetReset_AcceptsAdminRole_NoGuardBlock asserts that an Admin-role
-// JWT token presented to AppBudgetReset proceeds past the CanAdmin guard and
-// reaches the provider call (HTTP 200; mock's AppBudgetReset called once).
-// Complements the matrix admin-token-200 row by also exercising the ackBy
-// pass-through in the same call. The client-supplied ack_by override is
-// honored as the persisted actor (replaces the JWT-derived "system-admin").
+// TestAppBudgetReset_AcceptsAdminRole_NoGuardBlock verifies admin-role JWT
+// passes the gate and ack_by override is honored.
 func TestAppBudgetReset_AcceptsAdminRole_NoGuardBlock(t *testing.T) {
 	jwtAuthTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
 		tk, err := jm.AdminToken(time.Hour)
 		require.NoError(t, err)
 
-		// Override is honored as the persisted actor; provider receives "alice".
-		// B-6 fix: plain reset routes through AppBudgetResetWithOptions
-		// (ForceClearCooldown=false) per the unified entry point.
 		p.On("AppBudgetResetWithOptions", "myapp", "alice", mock.MatchedBy(resetOptsPlain)).Return(nil)
 
 		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget/reset", strings.NewReader("ack_by=alice"))
@@ -472,13 +424,8 @@ func TestAppBudgetReset_AcceptsAdminRole_NoGuardBlock(t *testing.T) {
 	})
 }
 
-// TestAppBudgetReset_ForceClearCooldown_403BodyMatchesPinnedString locks in
-// the pinned 403 body for the force-clear-cooldown gate. User tooling
-// (CLI "convox budget reset --force-clear-cooldown" failure renderer and
-// the Console GUI guidance modal) parses this body for migration guidance —
-// wording, role identifier ('w'), the "--force-clear-cooldown" qualifier,
-// and the "use Admin token" clause are deterministic. Any future PR that
-// changes the wording MUST update this test.
+// TestAppBudgetReset_ForceClearCooldown_403BodyMatchesPinnedString verifies
+// the 403 response body matches the exact string CLI/GUI tooling parses.
 func TestAppBudgetReset_ForceClearCooldown_403BodyMatchesPinnedString(t *testing.T) {
 	jwtAuthTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
 		tk, err := jm.WriteToken(time.Hour)
@@ -487,7 +434,6 @@ func TestAppBudgetReset_ForceClearCooldown_403BodyMatchesPinnedString(t *testing
 		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget/reset", strings.NewReader("force_clear_cooldown=true"))
 		require.NoError(t, err)
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		// stdapi.writeErrorResponse only emits JSON when the request advertises it.
 		req.Header.Set("Accept", "application/json")
 		req.SetBasicAuth("jwt", tk)
 
@@ -499,25 +445,17 @@ func TestAppBudgetReset_ForceClearCooldown_403BodyMatchesPinnedString(t *testing
 		bodyBytes, err := io.ReadAll(res.Body)
 		require.NoError(t, err)
 
-		// json.Encoder.Encode appends a trailing newline. The pinned contract
-		// is the JSON object body itself; trim the encoder newline before compare.
 		got := strings.TrimRight(string(bodyBytes), "\n")
 		want := "{\"error\":\"AppBudgetReset --force-clear-cooldown requires Admin role; current role is 'w'. Contact rack admin or use Admin token.\"}"
 		require.Equal(t, want, got, "403 body must match pinned string verbatim")
 
-		// Substring guarantee for downstream parsers — preserved across the
-		// rename. CLI/GUI consumers using strings.Contains MUST keep matching.
 		require.Contains(t, got, "requires Admin role; current role is 'w'")
 		require.Contains(t, got, "Contact rack admin or use Admin token.")
 	})
 }
 
-// TestAppBudgetSet_StillAcceptsWriteRole_NoElevation asserts that AppBudgetSet
-// remains CanWrite-gated and is NOT accidentally elevated to Admin. Guards
-// against an over-eager future PR that "consistently" elevates all
-// AppBudget* endpoints — the gating taxonomy (Set vs Reset) is intentional
-// per spec A.0: Set/Clear are ordinary CRUD writes, Reset is the safety-gate
-// bypass requiring Admin.
+// TestAppBudgetSet_StillAcceptsWriteRole_NoElevation verifies AppBudgetSet
+// stays CanWrite-gated (Set/Clear = write, Reset = admin).
 func TestAppBudgetSet_StillAcceptsWriteRole_NoElevation(t *testing.T) {
 	jwtAuthTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
 		tk, err := jm.WriteToken(time.Hour)
@@ -539,20 +477,12 @@ func TestAppBudgetSet_StillAcceptsWriteRole_NoElevation(t *testing.T) {
 	})
 }
 
-// TestAppBudgetClear_RequiresAdminRole_RejectsWriteOnly asserts that
-// AppBudgetClear rejects a write-only (rw) JWT caller. Removing the budget
-// config wipes the cap and at-cap action that an admin set; without an
-// admin gate, a non-admin caller could defeat an admin-set cap by Clear+Set
-// (the threshold-only re-set has no admin gate). Mirrors the AppBudgetSet
-// cap-mutation guard so the cap lifecycle is admin-only end to end.
+// TestAppBudgetClear_RequiresAdminRole_RejectsWriteOnly verifies write-role
+// callers cannot clear a budget (admin-only).
 func TestAppBudgetClear_RequiresAdminRole_RejectsWriteOnly(t *testing.T) {
 	jwtAuthTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
 		tk, err := jm.WriteToken(time.Hour)
 		require.NoError(t, err)
-
-		// Provider must NOT be called when admin gate rejects the request.
-		// Asserting absence: no `.On("AppBudgetClear", ...)` expectation
-		// means MockProvider.AssertExpectations would fail if it WERE called.
 
 		req, err := http.NewRequest(http.MethodDelete, ht.URL+"/apps/myapp/budget", strings.NewReader(""))
 		require.NoError(t, err)
@@ -569,9 +499,6 @@ func TestAppBudgetClear_RequiresAdminRole_RejectsWriteOnly(t *testing.T) {
 	})
 }
 
-// TestAppBudgetClear_AcceptsAdminRole asserts that an admin (rwa) JWT
-// caller can successfully clear the budget. Companion to the rejects-rw
-// regression above.
 func TestAppBudgetClear_AcceptsAdminRole(t *testing.T) {
 	jwtAuthTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
 		tk, err := jm.AdminToken(time.Hour)

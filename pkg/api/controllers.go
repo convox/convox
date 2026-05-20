@@ -242,13 +242,7 @@ func (s *Server) AppMetrics(c *stdapi.Context) error {
 	return c.RenderJSON(v)
 }
 
-// gpuMetricsConcurrencyDefault is the default concurrency cap when the
-// `gpu_metrics_max_concurrent` rack param / GPU_METRICS_MAX_CONCURRENT
-// env var is unset. The TF variable defaults are mirrored here so a
-// rack that never set the param still has a sane bound. When set, the
-// value is read at request time so a `convox rack params set
-// gpu_metrics_max_concurrent=20` followed by a chart refresh observes
-// the new cap without an api pod restart.
+// GPU metrics concurrency and bounds defaults.
 const (
 	gpuMetricsConcurrencyDefault = 10
 	gpuMetricsConcurrencyMax     = 50
@@ -262,23 +256,13 @@ const (
 	maxJwtDurationHours = 8760
 )
 
-// gpuMetricsSemMu guards the lazy-init of the singleton semaphore — the
-// first request reads the env var and creates the semaphore at that
-// cap. Subsequent param-change-then-refresh loops keep the original
-// semaphore (cap is not hot-reloadable post-init; documented in the
-// param spec). A future enhancement could swap the semaphore on param
-// change but the failure mode is contained: an operator who lowers the
-// cap then needs the api pod to restart for the new lower cap to take
-// effect (raising the cap mid-flight is also constrained to the next
-// pod restart). For 3.24.6 this is acceptable.
+// gpuMetricsSemMu guards lazy-init of the concurrency semaphore (not hot-reloadable; pod restart required).
 var (
 	gpuMetricsSemMu sync.Mutex
 	gpuMetricsSem   chan struct{}
 )
 
-// gpuMetricsAcquireSem returns true if a slot was acquired (caller is
-// responsible for calling release on completion). Returns false when
-// the semaphore is at capacity — caller fails fast with 503.
+// gpuMetricsAcquireSem acquires a slot or returns false (503 fail-fast).
 func gpuMetricsAcquireSem() bool {
 	sem := gpuMetricsGetSem()
 	select {
@@ -315,20 +299,14 @@ func gpuMetricsGetSem() chan struct{} {
 	return gpuMetricsSem
 }
 
-// gpuMetricsResetSemForTest is a test-only helper to drop and re-init
-// the semaphore (so a test can lower the cap via env var and observe
-// the new bound). Not exported in the wire — only available to the
-// pkg/api in-package tests.
+// gpuMetricsResetSemForTest resets the semaphore for testing.
 func gpuMetricsResetSemForTest() {
 	gpuMetricsSemMu.Lock()
 	defer gpuMetricsSemMu.Unlock()
 	gpuMetricsSem = nil
 }
 
-// gpuMetricsMaxPods reads the operator-configured pod cap from the
-// GPU_METRICS_MAX_PODS env var (set by terraform from the
-// gpu_metrics_max_pods rack param). Falls back to the default when
-// unset; clamps to [1, gpuMetricsMaxPodsMax] when set out-of-range.
+// gpuMetricsMaxPods reads GPU_METRICS_MAX_PODS, clamped to [1, gpuMetricsMaxPodsMax].
 func gpuMetricsMaxPods() int {
 	n := gpuMetricsMaxPodsDefault
 	if s := os.Getenv("GPU_METRICS_MAX_PODS"); s != "" {
@@ -342,12 +320,7 @@ func gpuMetricsMaxPods() int {
 	return n
 }
 
-// validateMetricsRange enforces the bounds for time-range metric
-// queries: End-Start ≤ 24h, Period ≥ 5s, max points per series ≤
-// 5000. End defaults to time.Now() (so the server clock — not the
-// caller's clock — is the authoritative window edge) when nil.
-// Mutates `opts` so handlers pass the normalized window through to
-// the provider.
+// validateMetricsRange enforces 24h max range, 5s min period, 5000 max points. Mutates opts.
 func validateMetricsRange(opts *structs.MetricsOptions) error {
 	now := time.Now()
 	if opts.End == nil {
@@ -384,10 +357,7 @@ func validateMetricsRange(opts *structs.MetricsOptions) error {
 	return nil
 }
 
-// validateAppName runs the manifest.NameValidator regex against an
-// `app` path var or `services` list element. Returns a 400 stdapi
-// error when invalid, suitable for direct return from a handler.
-// Centralised so SSRF / regex meta-char rejection lives in one place.
+// validateAppName rejects names that don't match manifest.NameValidator (400).
 func validateAppName(name string) error {
 	if !manifest.NameValidator.MatchString(name) {
 		return stdapi.Errorf(http.StatusBadRequest, "metrics: invalid name %q (must match %s)", name, manifest.NameValidator.String())
@@ -395,15 +365,7 @@ func validateAppName(name string) error {
 	return nil
 }
 
-// ServiceMetrics returns time-range GPU metric series for a single
-// service in the app. Validates app + service against
-// manifest.NameValidator, enforces 24h / 5s / 5000-point bounds,
-// acquires the gpu_metrics_max_concurrent semaphore (fail-fast 503
-// when full), and forwards to the provider.
-//
-// New in 3.24.6. Pre-3.24.6 racks return 404 from the route — the
-// console resolver catches that and renders the "Time-range data
-// requires rack 3.24.6+" banner.
+// ServiceMetrics returns GPU metric series for a single service (new in 3.24.6).
 func (s *Server) ServiceMetrics(c *stdapi.Context) error {
 	if err := s.hook("ServiceMetricsValidate", c); err != nil {
 		return err
@@ -439,17 +401,7 @@ func (s *Server) ServiceMetrics(c *stdapi.Context) error {
 	return c.RenderJSON(v)
 }
 
-// MetricsByService is the batched per-app companion to ServiceMetrics.
-// One rack call → one Prom QueryRange per metric (regex alternation on
-// services) → one ServiceMetricsRow per requested service in the
-// response. Bounds + name validation + concurrency cap are shared with
-// ServiceMetrics; an additional aggregate-points cap (services ×
-// timestamps × metrics ≤ 50000) protects against the multiplicative
-// blowup a single huge request could cause.
-//
-// `services` query param is comma-separated. Each element is name-
-// validated (rejecting regex meta-chars at the boundary). Caller
-// MUST sanitise; the provider trusts what we forward.
+// MetricsByService is the batched companion to ServiceMetrics (one call per app, not per service).
 func (s *Server) MetricsByService(c *stdapi.Context) error {
 	if err := s.hook("MetricsByServiceValidate", c); err != nil {
 		return err
@@ -468,10 +420,7 @@ func (s *Server) MetricsByService(c *stdapi.Context) error {
 		return err
 	}
 
-	// services= comes through as a comma-joined string; split and
-	// validate each element. UnmarshalOptions doesn't help here because
-	// the field shape is custom (we want a query string `services=a,b,c`
-	// not a repeated key).
+	// Split comma-joined services= query param and validate each element.
 	raw := c.Request().URL.Query().Get("services")
 	services := []string{}
 	if raw != "" {
@@ -491,10 +440,7 @@ func (s *Server) MetricsByService(c *stdapi.Context) error {
 		return stdapi.Errorf(http.StatusBadRequest, "metrics: too many services (%d > %d); reduce services list", len(services), gpuMetricsMaxPods())
 	}
 
-	// Aggregate-points cap (services × timestamps × metrics ≤ 50000)
-	// protects against the multiplicative blowup. Wire-name count is
-	// fixed at 8 GPU metrics today; keep the multiplier dynamic so
-	// future additions don't silently grow the cap.
+	// Aggregate-points cap: services × timestamps × metrics ≤ 50000.
 	wireCount := 8
 	period := *opts.Period
 	range_ := opts.End.Sub(*opts.Start)
@@ -569,10 +515,7 @@ func (s *Server) AppBudgetSet(c *stdapi.Context) error {
 		return err
 	}
 
-	// Admin gate: setting a monthly cap, at-cap action, or pricing adjustment
-	// is a privileged operation. Threshold-only changes remain rw-gated via the
-	// default Authorize middleware. This mirrors the Console GraphQL admin check
-	// and closes the rack-direct path for non-admin callers.
+	// Admin gate: cap/action/pricing mutations require admin (threshold-only stays rw).
 	if opts.MonthlyCapUsd != nil || opts.AtCapAction != nil || opts.PricingAdjustment != nil {
 		if !CanAdmin(c) {
 			return stdapi.Errorf(http.StatusForbidden, "AppBudgetSet: admin role required to set budget cap")
@@ -591,12 +534,7 @@ func (s *Server) AppBudgetClear(c *stdapi.Context) error {
 		return err
 	}
 
-	// Admin gate: removing the budget config wipes the cap, threshold, and
-	// at-cap action that an admin set. Without this gate, a non-admin caller
-	// could defeat an admin-set cap by Clear+Set (the threshold-only re-set
-	// has no admin gate). Mirrors the AppBudgetSet cap-mutation guard so the
-	// cap lifecycle is admin-only end to end. Basic-auth callers (rack
-	// password) continue to pass via SetAdminRole at authenticate-time.
+	// Admin gate: clear wipes admin-set cap; prevents non-admin Clear+Set bypass.
 	if !CanAdmin(c) {
 		return stdapi.Errorf(http.StatusForbidden, "AppBudgetClear: admin role required to remove budget config")
 	}
@@ -621,22 +559,7 @@ func (s *Server) AppBudgetReset(c *stdapi.Context) error {
 
 	ackBy := resolveAckByOverride(c, app)
 
-	// --force-clear-cooldown is the Admin-gated escape hatch that
-	// ALSO drops the 24h flap-prevention cooldown. The plain reset
-	// path is CanWrite (rw) — sufficient role for the routine
-	// ACTIVE→recover flow that GUI Reset buttons drive. CanAdmin is
-	// enforced ONLY when force_clear_cooldown=true (the cooldown-
-	// bypass path is the only one that requires elevated role).
-	// User tooling parses the 403 body for migration guidance — the
-	// "requires Admin role; current role is 'w'" substring is preserved.
-	//
-	// Both paths route to AppBudgetResetWithOptions so that plain reset
-	// (post-:fired) calls restoreFromAnnotation to restart shutdown
-	// services from the persisted replica counts. The flag is additive —
-	// it triggers the cooldown-annotation deletion in addition to the
-	// shared restore-replicas path. This matches the documented behavior
-	// in docs/reference/cli/budget-reset.md (canonical post-:fired
-	// recovery path) and docs/management/budget-caps.md.
+	// force_clear_cooldown requires CanAdmin; plain reset is CanWrite (routine ACTIVE→recover).
 	forceClear := c.Value("force_clear_cooldown") == "true"
 	if forceClear && !CanAdmin(c) {
 		return stdapi.Errorf(http.StatusForbidden, "AppBudgetReset --force-clear-cooldown requires Admin role; current role is 'w'. Contact rack admin or use Admin token.")
@@ -653,9 +576,7 @@ func (s *Server) AppBudgetReset(c *stdapi.Context) error {
 	return c.RenderOK()
 }
 
-// AppBudgetShutdownStateGet returns the shutdown-state annotation for
-// an app. Used by the CLI banner renderer to drive the post-fired
-// status display. Read-only path; standard CanRead gate.
+// AppBudgetShutdownStateGet returns the shutdown-state annotation for an app.
 func (s *Server) AppBudgetShutdownStateGet(c *stdapi.Context) error {
 	if err := s.hook("AppBudgetShutdownStateGetValidate", c); err != nil {
 		return err
@@ -668,10 +589,7 @@ func (s *Server) AppBudgetShutdownStateGet(c *stdapi.Context) error {
 	return c.RenderJSON(v)
 }
 
-// AppBudgetSimulate runs a dry-run shutdown simulation that previews
-// the planned scale-down without mutating any service. Read-only
-// effect; CanWrite gate via the default Authorize middleware (POST
-// → write-role check).
+// AppBudgetSimulate runs a dry-run shutdown simulation (no mutations).
 func (s *Server) AppBudgetSimulate(c *stdapi.Context) error {
 	if err := s.hook("AppBudgetSimulateValidate", c); err != nil {
 		return err
@@ -686,10 +604,7 @@ func (s *Server) AppBudgetSimulate(c *stdapi.Context) error {
 	return c.RenderJSON(v)
 }
 
-// AppBudgetDismissRecovery dismisses the sticky recovery banner.
-// Idempotent. CanWrite gate via the default Authorize middleware.
-// Renders an AppBudgetDismissRecoveryResult JSON body so the CLI can
-// surface the 3-case status: dismissed / already-dismissed / no-banner.
+// AppBudgetDismissRecovery dismisses the sticky recovery banner (idempotent).
 func (s *Server) AppBudgetDismissRecovery(c *stdapi.Context) error {
 	if err := s.hook("AppBudgetDismissRecoveryValidate", c); err != nil {
 		return err
@@ -1575,10 +1490,7 @@ func (s *Server) Proxy(c *stdapi.Context) error {
 	return nil
 }
 
-// validProxyHost matches cluster-internal DNS names only:
-//
-//	{svc}.{app}.{ns}.local                    — internal services
-//	{svc}.{ns}.svc.cluster.local              — K8s service DNS
+// validProxyHost matches cluster-internal DNS names (.local / .svc.cluster.local).
 var validProxyHost = regexp.MustCompile(
 	`^[a-z0-9]([a-z0-9-]*[a-z0-9])?` +
 		`(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+` +
@@ -2006,16 +1918,7 @@ func (s *Server) ServiceRestart(c *stdapi.Context) error {
 	return c.RenderOK()
 }
 
-// ServiceScaleOverrideSet toggles the per-service scale-override annotation.
-// Read+Write-RBAC-gated: scale override is an operational service control
-// (alongside deploy, rollback, env edit) and gates on the same per-app Write
-// permission those controls use. Console3 enforces the per-app Write check
-// at api/resolver/mutation.go:5744-5750; this rack-side gate matches.
-// Defense-in-depth: the default Authorize middleware already enforces
-// CanWrite for non-GET methods; this explicit check produces an
-// endpoint-named error and acts as a backstop if middleware is bypassed.
-// The provider call uses ack_by-derived actor identity for the audit event
-// (mirrors AppBudgetSet pattern).
+// ServiceScaleOverrideSet toggles the per-service scale-override annotation. CanWrite gated.
 func (s *Server) ServiceScaleOverrideSet(c *stdapi.Context) error {
 	if err := s.hook("ServiceScaleOverrideSetValidate", c); err != nil {
 		return err
@@ -2067,11 +1970,7 @@ func (s *Server) ServiceUpdate(c *stdapi.Context) error {
 	return c.RenderOK()
 }
 
-// ServiceTriggersEnable materializes a Console-driven autoscaler on the
-// named service. Same Read+Write RBAC gate as ServiceScaleOverrideSet
-// (both surfaces are operational per-app writes). The opts form-param
-// carries the JSON-encoded ServiceTriggersOptions; ack_by carries actor
-// identity for the audit event.
+// ServiceTriggersEnable creates a Console-driven autoscaler on the named service. CanWrite gated.
 func (s *Server) ServiceTriggersEnable(c *stdapi.Context) error {
 	if err := s.hook("ServiceTriggersEnableValidate", c); err != nil {
 		return err

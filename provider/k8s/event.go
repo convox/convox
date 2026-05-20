@@ -21,64 +21,25 @@ type event struct {
 	Timestamp time.Time         `json:"timestamp"`
 }
 
-// webhookClientTimeout is the total deadline for one webhook POST (DNS, dial,
-// TLS, request, response). 30s is generous: typical ALB idle timeout is 60s
-// and healthy receivers ack in <1s. Tests may override via
-// SetWebhookClientTimeoutForTest in export_test.go.
 var webhookClientTimeout = 30 * time.Second
-
-// webhookClient is the package-scoped client used for all webhook POSTs. It
-// is rebuilt by SetWebhookClientTimeoutForTest when tests need a shorter
-// deadline. Production callers always observe the 30s default.
 var webhookClient = &http.Client{Timeout: webhookClientTimeout}
 
-// dispatchWebhookFn is the inner dispatcher invoked by dispatchWebhookSafely
-// inside the recover() scope. Tests substitute a panicking stub via
-// SetDispatchWebhookFnForTest in export_test.go to assert that recover()
-// catches goroutine panics. Production code paths must NOT touch this var.
+// Test seams — tests override via Set*ForTest in export_test.go.
 var dispatchWebhookFn = dispatchWebhook
-
-// dispatchWebhookSignedFn is the per-dispatch hook that lets EventSend
-// pass parsed signing keys + per-URL timeout down to dispatchWebhook
-// without changing the (url, body) signature that older test stubs
-// install. Tests may override to assert the keys-and-timeout-passed-
-// through path. Production code MUST NOT touch.
 var dispatchWebhookSignedFn = dispatchWebhookSigned
-
-// dispatchHookOverridden is set by SetDispatchWebhookFnForTest so the
-// safely-wrapper knows to route through the legacy (url, body) hook
-// instead of the signed dispatcher. Production never touches this.
 var dispatchHookOverridden = false
 
-// isTestDispatchHookActive reports whether a test has installed a
-// (url, body) dispatcher via SetDispatchWebhookFnForTest. Used by the
-// safely-wrapper to preserve test-stub semantics for legacy unsigned
-// dispatcher callers.
 func isTestDispatchHookActive() bool {
 	return dispatchHookOverridden
 }
 
 func (p *Provider) EventSend(action string, opts structs.EventSendOptions) error {
-	// Copy opts.Data into a local map so EventSend never mutates the caller's
-	// map. Concurrent callers may share a Data instance (e.g. ranges over a
-	// shared template); without this copy the rack/actor/message writes below
-	// would race. The local map also lets central injection populate "actor"
-	// from the request-scoped ctx without touching the caller's slice.
+	// Defensive copy — concurrent callers may share opts.Data.
 	local := make(map[string]string, len(opts.Data)+2)
 	for k, v := range opts.Data {
 		local[k] = v
 	}
-	// Central injection: derive the audit actor from the provider's
-	// request-scoped ctx unless the caller pre-set it (per-call-site
-	// override at "system"-emit sites: budget accumulator, release
-	// advisories, service patch notes). When the emit site supplies an
-	// `ack_by` field but not `actor`, prefer ack_by (so a Console3-
-	// driven budget mutation lands "alice@example.com" in the event's
-	// actor field, matching what the AppBudgetSet provider call already
-	// persists into the k8s annotation via the resolveAckByOverride
-	// helper at pkg/api/deprecation.go:56-78). ContextActor is panic-
-	// safe and returns "unknown" when no actor is available; it is the
-	// fallback when neither actor nor ack_by is present.
+	// Prefer explicit actor > ack_by > ContextActor (request-scoped fallback).
 	if _, ok := local["actor"]; !ok {
 		if ackBy, ok := local["ack_by"]; ok && ackBy != "" {
 			local["actor"] = ackBy
@@ -108,22 +69,12 @@ func (p *Provider) EventSend(action string, opts structs.EventSendOptions) error
 
 	e.Data["rack"] = p.Name
 
-	// Marshal the populated event (including the actor field). The HMAC
-	// signature below covers these bytes verbatim, so receivers that
-	// validate signatures see the actor field as part of the signed
-	// payload.
 	msg, err := json.Marshal(e)
 	if err != nil {
 		return err
 	}
 
-	// Parse signing keys ONCE per EventSend call, wrapped in a
-	// synchronous defer-recover so a hmac panic does not crash the
-	// caller (rack-param controller, budget-cap accumulator). On any
-	// parse failure we degrade to unsigned dispatch — the api pod
-	// continues operating; webhook delivery succeeds; receivers
-	// configured to require signatures will reject (operator-facing
-	// degrade is intentional and surfaced via the WARN log below).
+	// Parse signing keys with panic recovery — degrade to unsigned on failure.
 	var signingKeys [][]byte
 	if p.WebhookSigningKey != "" {
 		var parseErr error
@@ -137,11 +88,6 @@ func (p *Provider) EventSend(action string, opts structs.EventSendOptions) error
 		}()
 		if parseErr != nil {
 			fmt.Printf("ns=event_dispatch at=parse_keys_failed error=%q signing=disabled\n", parseErr)
-			// Emit a structured audit row when the configured key count exceeds
-			// the rotation cap (cxhmac.MaxSigningKeys). The audit format
-			// intentionally excludes any key bytes, hashes, or prefixes;
-			// operators get a count-only signal that something they
-			// configured was over the cap.
 			if strings.Contains(parseErr.Error(), "at most") {
 				count := 0
 				trimmed := strings.TrimSpace(p.WebhookSigningKey)
@@ -157,34 +103,8 @@ func (p *Provider) EventSend(action string, opts structs.EventSendOptions) error
 		}
 	}
 
-	// Resolve the webhook URL list. The cached p.webhookState.urls slice
-	// is populated by an informer that only runs on the LEADER pod
-	// (pkg/kctl/kctl.go:leaderStart). Non-leader api pods see an empty
-	// urls slice and would silently drop every event their HTTP
-	// handlers emit (release:promote, app:create, scale-override, etc.)
-	// causing the user-visible "App Events tab is empty for half my
-	// requests" symptom on multi-replica racks.
-	//
-	// Strategy: prefer the in-memory cache (leader-fast-path, no API
-	// call) when populated, otherwise fall back to a synchronous
-	// configmap read (non-leader fallback). The fallback adds one k8s
-	// API call per emitted event on non-leader pods — cheap relative
-	// to the dispatch goroutines below — and eliminates the leader
-	// dependency for webhook fan-out.
-	//
-	// Snapshot the cache under the read lock so the informer's
-	// concurrent slice-header rewrite (controller_webhook.go::Add /
-	// Delete / Update assigns urls = newSlice) cannot tear the read.
-	// webhookState is a pointer so derivative providers built via
-	// WithContext share the same lock + slice — see Provider.webhookState.
-	//
-	// Also capture `populated` under the same RLock: it distinguishes
-	// "informer has run on this pod; cache is authoritative even if
-	// empty" from "informer has never run on this pod; fall back to
-	// configmap". Without this distinction, a rack with zero webhooks
-	// configured would issue one configmap GET per emitted event on
-	// the leader pod despite the informer having already confirmed
-	// the empty state.
+	// Snapshot the informer cache under RLock. Non-leader pods fall back
+	// to a synchronous configmap read when the cache is unpopulated.
 	var cached []string
 	var cachedReceivers []webhookEntry
 	var cachePopulated bool
@@ -196,16 +116,6 @@ func (p *Provider) EventSend(action string, opts structs.EventSendOptions) error
 		p.webhookState.mu.RUnlock()
 	}
 
-	// Resolve into []webhookEntry. Preference order:
-	//
-	//   1. cachedReceivers (test-injected via SetWebhookReceiversForTest, or
-	//      a future leader-side cache that populates parsed entries directly)
-	//   2. cached (raw URL strings from the urls cache; parse on demand)
-	//   3. fallback to webhookList() (non-leader pods, or test paths that
-	//      seed only the configmap)
-	//
-	// Per-event parse cost on (2) is microseconds — dominated by the HTTP
-	// dispatch below — so caching parsed entries is not a perf requirement.
 	var entries []webhookEntry
 	switch {
 	case cachePopulated && len(cachedReceivers) > 0:
@@ -215,15 +125,7 @@ func (p *Provider) EventSend(action string, opts structs.EventSendOptions) error
 	default:
 		whs, err := p.webhookList()
 		if err != nil {
-			// Fail open: webhook fan-out has always been best-effort
-			// fire-and-forget (the dispatch goroutines below swallow
-			// non-2xx, panic, hung-receiver errors via
-			// dispatchWebhookSafely). Pre-3ff30dc0 racks NEVER returned
-			// an error from the webhook step; propagating a configmap
-			// read failure here turns transient kube-apiserver hiccups
-			// into 5xx for callers like ReleasePromote / AppCreate /
-			// scale-override whose primary contract has nothing to do
-			// with webhook delivery. Log and continue.
+			// Fail open — webhook delivery is best-effort; don't 5xx callers.
 			fmt.Printf("ns=event_dispatch at=webhook_list_failed error=%q dispatch=skipped\n", err)
 			return nil
 		}
@@ -247,38 +149,16 @@ func (p *Provider) EventSend(action string, opts structs.EventSendOptions) error
 	return nil
 }
 
-// dispatchWebhookSafely wraps dispatchWebhook in a panic-recovery scope so a
-// hung receiver, a transport panic, or any other dispatch error is logged
-// instead of crashing the api pod. Errors are emitted as structured stdout
-// log lines (ns=event_dispatch) with host-only redaction so URL query
-// strings never leak into logs. The signingKeys slice is nil when the rack
-// param webhook_signing_key is unset; in that case the wire format is
-// byte-identical to 3.24.5.
-//
-// timeout is the per-URL deadline: non-zero values come from a
-// JSON-encoded configmap entry of the form `{"url":"...", "timeout":"5s"}`;
-// zero falls back to the package-default 30s via the webhookClient timeout.
+// dispatchWebhookSafely wraps dispatch in panic recovery so a bad receiver
+// cannot crash the api pod. Logs are host-only redacted.
 func dispatchWebhookSafely(url string, body []byte, signingKeys [][]byte, timeout time.Duration) {
 	defer func() {
 		if r := recover(); r != nil {
-			// debug.Stack() is intentionally absent from the panic
-			// recovery log — stack frames may surface internal arg
-			// values; the panic value `r` is enough operational
-			// diagnostic (host + cause). See pkg/hmac.SignedHeader for
-			// the inner panic-recovery scope that captures details
-			// closer to the failing call site.
 			fmt.Printf("ns=event_dispatch at=recover url_host=%s panic=%q\n", redactURLHost(url), r)
 		}
 	}()
 
-	// SSRF guard at dispatch time. webhookCreate validates new URLs as
-	// they are accepted, but pre-3.24.6 racks persisted whatever URL the
-	// operator supplied — an existing configmap row can point at IMDS or
-	// in-VPC services. Re-applying the validator here refuses dispatch
-	// loudly. Bounded log volume: webhookSSRFLogged.LoadOrStore caps
-	// emission to one structured line per (URL, pod-lifetime). Tests that
-	// rely on httptest.NewServer (loopback IPs) install a permissive
-	// stub via SetWebhookSSRFValidatorForTest.
+	// SSRF guard — also catches pre-3.24.6 configmap entries with internal IPs.
 	if err := webhookSSRFValidator(url); err != nil {
 		if _, loaded := webhookSSRFLogged.LoadOrStore(url, true); !loaded {
 			fmt.Printf("ns=event_dispatch at=ssrf_blocked url_host=%s reason=%q\n",
@@ -287,12 +167,7 @@ func dispatchWebhookSafely(url string, body []byte, signingKeys [][]byte, timeou
 		return
 	}
 
-	// Legacy test stubs install via SetDispatchWebhookFnForTest and use
-	// the unsigned (url, body) signature. If a test stub has been
-	// installed that replaces dispatchWebhookFn, route through it so the
-	// stub's behavior (panic, error, count) is preserved. Production
-	// always reaches the signed path because dispatchWebhookFn is the
-	// production dispatcher and signingKeys is honored.
+	// Legacy test stub path — unsigned (url, body) signature.
 	if isTestDispatchHookActive() {
 		if err := dispatchWebhookFn(url, body); err != nil {
 			fmt.Printf("ns=event_dispatch at=error url_host=%s error=%q\n", redactURLHost(url), redactErrorURL(err, url))
@@ -305,12 +180,7 @@ func dispatchWebhookSafely(url string, body []byte, signingKeys [][]byte, timeou
 	}
 }
 
-// redactErrorURL strips the raw URL from net/http transport error messages
-// before they reach log output. The Go stdlib wraps every transport error in
-// *url.Error{Op, URL, Err} and Error() embeds the full URL — query strings
-// included — into the formatted message. This bypasses redactURLHost, so
-// logs would leak ?token=... despite the host-only convention. We unwrap to
-// the inner error and reformat using only the redacted host.
+// redactErrorURL unwraps *url.Error to avoid leaking query strings in logs.
 func redactErrorURL(err error, raw string) string {
 	if err == nil {
 		return ""
@@ -321,28 +191,10 @@ func redactErrorURL(err error, raw string) string {
 	return err.Error()
 }
 
-// dispatchWebhook is the unsigned production dispatcher kept for legacy
-// tests that install via SetDispatchWebhookFnForTest using the
-// (url, body) signature. It delegates to dispatchWebhookSigned with
-// nil keys and the package-default timeout — so wire-format is
-// byte-identical to 3.24.5 and SetWebhookClientTimeoutForTest semantics
-// are preserved for legacy callers.
 func dispatchWebhook(url string, body []byte) error {
 	return dispatchWebhookSigned(url, body, nil, webhookClientTimeout)
 }
 
-// dispatchWebhookSigned posts body to url and, when signingKeys is
-// non-empty, sets the Convox-Signature header. The defer-recover scope
-// is owned by dispatchWebhookSafely above; HMAC sign runs here AFTER
-// the recover engages and BEFORE client.Do, so a hmac panic is caught.
-//
-// timeout is the per-URL dispatch deadline. Zero means "use the
-// package-default webhookClientTimeout"; non-zero values come from
-// JSON-encoded receiver configs that override the default. To honor
-// per-URL deadlines we build a transient http.Client per dispatch when
-// timeout differs from webhookClientTimeout — this preserves the
-// SetWebhookClientTimeoutForTest hook's effect on the package client
-// while letting individual webhook entries set their own deadline.
 func dispatchWebhookSigned(url string, body []byte, signingKeys [][]byte, timeout time.Duration) error {
 	req, err := http.NewRequest("POST", url, bytes.NewReader(body))
 	if err != nil {
@@ -353,21 +205,13 @@ func dispatchWebhookSigned(url string, body []byte, signingKeys [][]byte, timeou
 	if len(signingKeys) > 0 {
 		sig := cxhmac.SignedHeader(time.Now().Unix(), body, signingKeys)
 		if sig != "" {
-			// Set (not Add): exactly one Convox-Signature header line on the
-			// wire. Header collision verified by RoundTripper test in
-			// event_test.go (TestDispatchWebhook_NoMiddlewareDoubleSet).
 			req.Header.Set("Convox-Signature", sig)
 		}
 	}
 
+	// Per-URL timeout override; inherits Transport for test observability.
 	client := webhookClient
 	if timeout > 0 && timeout != webhookClientTimeout {
-		// Build a transient client carrying the same RoundTripper as
-		// webhookClient (so test-installed transports — see
-		// SetWebhookClientTransportForTest — observe per-URL dispatches
-		// just like default-timeout dispatches) but with the per-URL
-		// Timeout. RoundTripper inheritance matters because tests assert
-		// the request as it leaves the client.
 		client = &http.Client{Timeout: timeout, Transport: webhookClient.Transport}
 	}
 
@@ -385,9 +229,6 @@ func dispatchWebhookSigned(url string, body []byte, signingKeys [][]byte, timeou
 	return nil
 }
 
-// redactURLHost returns the host portion of a webhook URL so log lines never
-// include query-string secrets (e.g. ?token=...). Returns "<unparseable>" if
-// the URL cannot be parsed; returns "<empty>" for blank input.
 func redactURLHost(raw string) string {
 	if raw == "" {
 		return "<empty>"
@@ -399,11 +240,8 @@ func redactURLHost(raw string) string {
 	return u.Host
 }
 
-// redactedWebhookURL returns a payload-safe redacted webhook URL preserving
-// scheme + host so the result is RFC 3986-valid. Distinct from redactURLHost
-// (host-only, for log lines) — receivers parsing payload.webhook_url with
-// new URL(...) need a scheme to avoid a parse error. Returns "<unparseable>"
-// on parse failure or missing scheme/host; returns "<empty>" for blank input.
+// redactedWebhookURL preserves scheme+host (RFC 3986-valid) unlike
+// redactURLHost which returns host-only for log lines.
 func redactedWebhookURL(raw string) string {
 	if raw == "" {
 		return "<empty>"

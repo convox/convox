@@ -16,7 +16,7 @@ button" could not get that signal from the rack's audit log alone.
    chain as the `ack_by` parameter on every mutation route.
 2. Sanitizing the value at the rack edge (control-character strip, zero-width
    strip, max-length truncation, whitespace fallback to `"unknown"`) so a
-   pathological client cannot stamp a misleading actor.
+   malicious client cannot stamp a misleading actor.
 3. Emitting the sanitized value as the `actor` field on every audit event.
 
 This page documents the migration shape for receivers that ingest these

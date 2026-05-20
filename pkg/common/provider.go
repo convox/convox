@@ -19,12 +19,7 @@ var (
 	ProviderWaitDuration = 5 * time.Second
 )
 
-// safeWriter wraps an io.Writer with a mutex to make Write calls goroutine-safe.
-// Used inside WaitForAppWithLogsContext and WaitForRackWithLogs to coordinate
-// the streamer goroutine and the calling goroutine that share the caller's
-// writer. bytes.Buffer in tests is not goroutine-safe; *os.File on Windows is
-// not guaranteed atomic for concurrent writes; POSIX *os.File is only atomic
-// up to PIPE_BUF.
+// safeWriter wraps an io.Writer with a mutex for concurrent goroutine safety.
 type safeWriter struct {
 	mu sync.Mutex
 	w  io.Writer
@@ -36,11 +31,7 @@ func (s *safeWriter) Write(p []byte) (int, error) {
 	return s.w.Write(p)
 }
 
-// streamerExitedHookForTest, when non-nil, is invoked at the end of the
-// streamer goroutine inside the wait-with-logs helpers. It is the test hook
-// referenced by provider_race_test.go to assert the streamer-exit-before-
-// helper-return invariant. Production binaries leave this nil and the call
-// is skipped. See export_test.go for the test-side accessor.
+// streamerExitedHookForTest is a test-only hook; see export_test.go.
 var streamerExitedHookForTest func()
 
 func AppEnvironment(p structs.Provider, app string) (structs.Environment, error) {
@@ -125,30 +116,8 @@ func ReleaseManifest(p structs.Provider, app, release string) (*manifest.Manifes
 	return m, r, nil
 }
 
-// StreamAppProcessStates polls the app's ProcessList every processStatePollInterval
-// and emits one line to w each time a pod's status field transitions. Stops
-// when ctx is cancelled. ProcessList errors are swallowed silently — the next
-// tick retries — so transient rack-API hiccups don't break the deploy wait.
-//
-// First-observation suppression: a pod that's already in `running` status the
-// first time we see it is suppressed (presumed pre-existing healthy pod, not
-// part of the in-flight deploy). Pods that first appear in any other state
-// (pending, unhealthy, etc.) are emitted immediately so a brand-new deploy's
-// first poll cycle isn't silent.
-//
-// Output column order mirrors `convox ps` (ID + service-name + status), but
-// uses fixed-width formatting rather than the auto-sized table — fits a
-// streaming context where order/timing matters more than alignment. One
-// line per (pod_id, status) transition. A typical rolling deploy of one
-// service emits ~3-5 lines per pod (pending → running, or
-// pending → unhealthy → crashed for failures). Bounded by the rollout
-// strategy's pod count + transition cap.
-//
-// Quality-of-life addition introduced because V3 racks have AppLogs
-// unimplemented (provider/k8s/app.go) — `convox deploy` was silent between
-// "Promoting..." and the final OK / rollback. This streamer fills that gap
-// for every caller of WaitForAppWithLogs without requiring the per-engine
-// log-stream implementation work.
+// StreamAppProcessStates polls ProcessList and emits one line per pod status
+// transition. Fills the V3 deploy-progress gap where AppLogs is unimplemented.
 func StreamAppProcessStates(ctx context.Context, p structs.Provider, w io.Writer, app string) {
 	seen := map[string]string{} // pod_id → last status emitted
 	ticker := time.NewTicker(processStatePollInterval)
@@ -163,22 +132,14 @@ func StreamAppProcessStates(ctx context.Context, p structs.Provider, w io.Writer
 
 		psList, err := p.ProcessList(app, structs.ProcessListOptions{})
 		if err != nil {
-			// Transient rack-API hiccup. Don't spam the stream — the next
-			// tick retries. If the rack is genuinely unreachable, the
-			// outer WaitForAppRunning eventually times out and we exit.
-			continue
+			continue // transient error; next tick retries
 		}
 
 		for i := range psList {
 			ps := &psList[i]
 			prev, hadPrev := seen[ps.Id]
 
-			// Suppress pre-existing healthy pods. A pod observed for the
-			// first time in `running` is presumed already-up before the
-			// deploy started; emitting its "running" status would clutter
-			// the deploy log with unrelated noise. New pods that come up
-			// fast (pre-pulled image, no startup probe) skip the pending
-			// state and would also be suppressed — acceptable tradeoff.
+			// Suppress pre-existing healthy pods on first observation.
 			if !hadPrev && ps.Status == "running" {
 				seen[ps.Id] = ps.Status
 				continue
@@ -192,11 +153,7 @@ func StreamAppProcessStates(ctx context.Context, p structs.Provider, w io.Writer
 	}
 }
 
-// processStatePollInterval is the cadence at which StreamAppProcessStates
-// queries ProcessList. 3s balances responsiveness (deploy progress visible
-// within one tick of any state change) against rack-API load (ProcessList
-// touches the K8s API with a label-selector list and node-name resolution
-// per pod). Tunable by tests via the test-only seam below.
+// processStatePollInterval controls StreamAppProcessStates tick rate.
 var processStatePollInterval = 3 * time.Second
 
 func StreamAppLogs(ctx context.Context, p structs.Provider, w io.Writer, app string) {
@@ -212,18 +169,7 @@ func StreamAppLogs(ctx context.Context, p structs.Provider, w io.Writer, app str
 			return
 		}
 
-		// Close the reader on ctx cancel so Scanner.Scan in
-		// copySystemLogs unblocks. Without this, the V3 +
-		// Console-proxy path holds the websocket open with no data
-		// flowing — the streamer stays parked in
-		// bufio.Scanner.Scan() and the CLI hangs waiting on
-		// `<-logsDone` forever after the deploy reaches running.
-		// Close fires in BOTH branches: the cancel branch unblocks
-		// Scanner.Scan, and the closed branch cleans up the
-		// underlying ReadCloser when copySystemLogs returns by EOF
-		// — without that, every iteration past the first would leak
-		// one websocket / HTTP-body resource for the lifetime of the
-		// outer streamer.
+		// Close reader on cancel or EOF to unblock Scanner.Scan and avoid leaks.
 		closed := make(chan struct{})
 		go func(rc io.ReadCloser) {
 			select {
@@ -259,8 +205,7 @@ func StreamSystemLogs(ctx context.Context, p structs.Provider, w io.Writer) {
 			return
 		}
 
-		// Twin-site of StreamAppLogs: close in BOTH branches so
-		// EOF-driven loop iterations don't leak the underlying reader.
+		// Same close-on-cancel/EOF pattern as StreamAppLogs.
 		closed := make(chan struct{})
 		go func(rc io.ReadCloser) {
 			select {
@@ -335,11 +280,7 @@ func WaitForAppWithLogsContext(ctx context.Context, p structs.Provider, w io.Wri
 	sw := &safeWriter{w: w}
 	streamCtx, streamCancel := context.WithCancel(ctx)
 
-	// Streamer #1: app log stream. On V2 racks this surfaces container
-	// stdout/stderr (and the rack's CloudWatch-stitched system events). On
-	// V3 racks AppLogs is unimplemented at the engine layer
-	// (provider/k8s/app.go::AppLogs returns ErrNotImplemented), so this
-	// goroutine returns immediately. Streamer #2 below covers V3.
+	// App log stream (V2 only; V3 AppLogs is unimplemented).
 	logsDone := make(chan struct{})
 	go func() {
 		defer close(logsDone)
@@ -349,11 +290,7 @@ func WaitForAppWithLogsContext(ctx context.Context, p structs.Provider, w io.Wri
 		StreamAppLogs(streamCtx, p, sw, app)
 	}()
 
-	// Streamer #2: per-pod state transitions via ProcessList polling. Cheap
-	// (1 HTTP call / 3s) and works on every provider that implements
-	// ProcessList — which is all of them. Provides the ONLY deploy-progress
-	// signal on V3; on V2 it complements the log stream with explicit
-	// per-pod state markers (pending → running → crashed/unhealthy/failed).
+	// Per-pod state transitions via ProcessList polling (primary signal on V3).
 	statesDone := make(chan struct{})
 	go func() {
 		defer close(statesDone)

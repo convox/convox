@@ -92,11 +92,7 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 		"BUILDKIT_HOST_PATH_CACHE_ENABLE": os.Getenv("BUILDKIT_HOST_PATH_CACHE_ENABLE"),
 		"RACK_URL":                        fmt.Sprintf("https://convox:%s@api.%s.svc.cluster.local:5443", p.Password, p.Namespace),
 		"CONVOX_TID":                      p.ContextTID(),
-		// Propagate the audit-actor identity so the build pod's SDK
-		// client sets X-Convox-Actor on its callbacks (release:create,
-		// build:status, etc.) — otherwise those events emit with the
-		// rack-password literal. The CONVOX_ACTOR env var is read by
-		// sdk.New() on the build binary side; empty string is harmless.
+		// Propagate audit actor so build pod callbacks don't use the rack password as actor.
 		"CONVOX_ACTOR": p.ContextActor(),
 	}
 
@@ -317,45 +313,26 @@ func (p *Provider) BuildGet(app, id string) (*structs.Build, error) {
 	return b, nil
 }
 
-// skopeoExec wraps the external `skopeo` binary so tests can substitute a fake
-// without shelling out. Production code runs the binary baked into the rack API
-// image (Dockerfile installs it under apt). The ctx deadline bounds long copies
-// so a hung registry cannot pin the goroutine indefinitely.
+// skopeoExec wraps the skopeo binary; overridden in tests.
 var skopeoExec = func(ctx context.Context, args ...string) ([]byte, error) {
 	return exec.CommandContext(ctx, "skopeo", args...).CombinedOutput()
 }
 
-// skopeoCopyTimeout caps a single `skopeo copy` invocation. Multi-GB inference
-// images over a constrained rack uplink can legitimately need 10+ minutes; 30
-// minutes is the upper bound we'll wait before failing the build.
+// skopeoCopyTimeout caps a single skopeo copy (multi-GB images need time).
 const skopeoCopyTimeout = 30 * time.Minute
 
-// maxConcurrentImports caps the number of in-flight BuildImportImage calls per
-// rack API pod. Skopeo copies are network/CPU bound (multi-GB image relays);
-// without a cap a misbehaving caller can saturate the rack with parallel
-// goroutines. 4 covers the realistic deploy-wizard concurrency for a single
-// app + a co-deployed CI pipeline; importing more services in parallel exceeds
-// what a single rack uplink can sustain anyway.
-//
-// Exposed as a var so tests can lower it for parallel-cap verification.
+// maxConcurrentImports caps in-flight BuildImportImage calls per API pod.
 var maxConcurrentImports = 4
 
-// importSlots is a counting semaphore via a buffered channel; capacity matches
-// maxConcurrentImports. Acquire = send; release = receive. Initialized lazily
-// so a test override of maxConcurrentImports can take effect before any call.
-// importSlotsMu guards reassignment of the channel itself (test resets); reads
-// take a local snapshot under the mutex and operate on that, so a concurrent
-// reset can never race with an in-flight acquire/release.
+// importSlots is a counting semaphore (buffered channel). Lazily initialized
+// so tests can override maxConcurrentImports before first use.
 var (
 	importSlotsMu   sync.Mutex
 	importSlotsOnce sync.Once
 	importSlots     chan struct{}
 )
 
-// snapshotImportSlots returns the current channel under the mutex. Callers
-// receive a stable reference even if the channel is later reassigned by a
-// test reset; sends/receives on a buffered channel are inherently
-// goroutine-safe.
+// snapshotImportSlots returns the current semaphore channel under the mutex.
 func snapshotImportSlots() chan struct{} {
 	importSlotsMu.Lock()
 	defer importSlotsMu.Unlock()
@@ -365,10 +342,7 @@ func snapshotImportSlots() chan struct{} {
 	return importSlots
 }
 
-// acquireImportSlotOn attempts a non-blocking send on the supplied channel.
-// Returns true if a slot was reserved, false if the rack is at capacity.
-// Callers obtain ch via snapshotImportSlots so a paired release uses the
-// same channel instance.
+// acquireImportSlotOn attempts a non-blocking semaphore acquire.
 func acquireImportSlotOn(ch chan struct{}) bool {
 	if ch == nil {
 		return false
@@ -381,9 +355,7 @@ func acquireImportSlotOn(ch chan struct{}) bool {
 	}
 }
 
-// releaseImportSlot frees one slot on the snapshot held by the goroutine that
-// originally acquired it. Safe to call when no slot was acquired (no-op via
-// the default branch).
+// releaseImportSlot frees one semaphore slot. No-op if none was acquired.
 func releaseImportSlot(ch chan struct{}) {
 	if ch == nil {
 		return
@@ -394,19 +366,11 @@ func releaseImportSlot(ch chan struct{}) {
 	}
 }
 
-// validImageRef is a permissive docker-reference allowlist. The character set
-// covers registry hosts (`.`, `:`), image paths (`/`), tags (`:`), and
-// digests (`@`). The leading anchor blocks values starting with `-` which
-// skopeo could parse as a flag. isDangerousImageRef below rejects sequences
-// that still look valid per the allowlist but would confuse skopeo or the
-// registry URL parser.
+// validImageRef allowlists docker-reference characters. Leading anchor blocks
+// `-` prefix which skopeo would parse as a flag.
 var validImageRef = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$`)
 
-// isDangerousImageRef catches sequences that pass validImageRef but could
-// either smuggle a flag into skopeo (`@-`, `:-`, `/-`), produce a malformed
-// docker reference (double separators, trailing separators) that skopeo
-// would spend minutes failing to resolve, or open a path-traversal-shaped
-// registry URL (`//`).
+// isDangerousImageRef rejects flag-smuggling and malformed separator sequences.
 func isDangerousImageRef(image string) bool {
 	bad := []string{"//", "@-", ":-", "/-", "::", "@@", ":@", "/@"}
 	for _, b := range bad {
@@ -420,13 +384,7 @@ func isDangerousImageRef(image string) bool {
 	return false
 }
 
-// credScrub matches docker-style inline credentials in URLs (user:pass@host),
-// anchored on the `://` scheme prefix so benign `service:port@host` strings
-// that appear in K8s event messages aren't redacted. bearerScrub catches
-// Authorization: Bearer tokens echoed by skopeo during auth challenges.
-// registryAuthScrub catches the X-Registry-Auth header form used by some
-// registry middleware. All run before storing error text in Build.Reason
-// (visible via `kubectl get build -o yaml`).
+// Credential scrubbers run before storing error text in Build.Reason.
 var credScrub = regexp.MustCompile(`(://)[A-Za-z0-9._+-]*:[^\s@/]+@`)
 var bearerScrub = regexp.MustCompile(`([Bb]earer\s+)[A-Za-z0-9._~+/=-]{10,}`)
 var registryAuthScrub = regexp.MustCompile(`([Xx]-[Rr]egistry-[Aa]uth:\s*)[A-Za-z0-9._~+/=-]+`)
@@ -441,9 +399,7 @@ func scrubCredentials(s string) string {
 	return s
 }
 
-// parseRegistryHost extracts the registry host from a docker image reference.
-// Defaults to docker.io when the first path component has no dot/colon (i.e.
-// `user/image` or `image`), matching Docker's canonical interpretation.
+// parseRegistryHost extracts the registry host; defaults to docker.io.
 func parseRegistryHost(image string) string {
 	if i := strings.Index(image, "/"); i != -1 {
 		first := image[:i]
@@ -454,15 +410,9 @@ func parseRegistryHost(image string) string {
 	return "docker.io"
 }
 
-// writeImportAuthFile writes a docker-style auth.json containing BOTH source
-// and destination registry credentials to a 0600-mode temp file and returns
-// its path. Using a unified `--authfile` instead of `--src-creds` / `--dest-creds`
-// on argv keeps all secrets out of /proc/<pid>/cmdline where they could be read
-// by any sidecar or co-located process. Skopeo resolves per-registry entries
-// by host at copy time so one authfile correctly authenticates both directions.
-// Source entries are optional (public pulls need no auth); destination entries
-// are required whenever the destination host writer needs credentials.
-// Callers must os.Remove(path) when done.
+// writeImportAuthFile writes a temp auth.json for skopeo. Uses --authfile
+// instead of --src-creds/--dest-creds to keep secrets out of /proc/cmdline.
+// Caller must os.Remove(path).
 func writeImportAuthFile(srcImage, srcUser, srcPass, destHost, destUser, destPass string) (string, error) {
 	auths := map[string]map[string]string{}
 	if srcUser != "" && srcPass != "" {
@@ -470,9 +420,7 @@ func writeImportAuthFile(srcImage, srcUser, srcPass, destHost, destUser, destPas
 		auths[srcHost] = map[string]string{"auth": base64.StdEncoding.EncodeToString([]byte(srcUser + ":" + srcPass))}
 	}
 	if destUser != "" && destHost != "" {
-		// destHost returned by Engine.RepositoryHost may include a repository
-		// path (e.g. `acct.dkr.ecr.region.amazonaws.com/rack/app`); strip to
-		// the bare host so skopeo's auth lookup matches.
+		// Strip repo path from destHost so skopeo's auth lookup matches.
 		bareDest := destHost
 		if i := strings.Index(bareDest, "/"); i != -1 {
 			bareDest = bareDest[:i]
@@ -505,10 +453,8 @@ func writeImportAuthFile(srcImage, srcUser, srcPass, destHost, destUser, destPas
 	return path, nil
 }
 
-// finalizeImportImageBuild records the terminal state of an import-image build.
-// Runs in the goroutine's happy path and (via defer/recover) on panic. Falls
-// back to the in-memory Build captured before the goroutine started if a fresh
-// BuildGet fails, so the record is never left at "running" forever.
+// finalizeImportImageBuild records terminal state. Falls back to captured build
+// if BuildGet fails so the record is never stuck at "running".
 func (p *Provider) finalizeImportImageBuild(app string, captured *structs.Build, runErr error) *structs.Build {
 	fresh, getErr := p.BuildGet(app, captured.Id)
 	if getErr != nil {
@@ -542,9 +488,7 @@ func (p *Provider) BuildImportImage(app, id, image string, opts structs.BuildImp
 		return errors.WithStack(err)
 	}
 
-	// Reject re-invocation on a build already in flight. The informer may be a
-	// few hundred ms behind reality; the buildUpdate below closes any remaining
-	// TOCTOU window via K8s optimistic concurrency on ResourceVersion.
+	// Reject re-invocation; buildUpdate below closes TOCTOU via K8s optimistic concurrency.
 	if b.Status == "running" {
 		return errors.WithStack(structs.ErrConflict("build %s is already importing; wait for completion before retrying", id))
 	}
@@ -561,12 +505,7 @@ func (p *Provider) BuildImportImage(app, id, image string, opts structs.BuildImp
 		return errors.WithStack(structs.ErrUnprocessable("manifest has no services to relay"))
 	}
 
-	// Acquire a concurrency slot BEFORE flipping Status to running so a
-	// rejection leaves no half-mutated build behind. Snapshot the channel so
-	// the goroutine's release operates on the same instance even if a test
-	// reset reassigns the package-level pointer mid-flight (production code
-	// never reassigns it). Released inside the goroutine's outermost defer
-	// (and on the buildUpdate-fail path below).
+	// Acquire slot before flipping to running so rejection leaves build unchanged.
 	importSlot := snapshotImportSlots()
 	if !acquireImportSlotOn(importSlot) {
 		return errors.WithStack(structs.ErrConflict("rack at concurrent-import cap (%d in flight); wait and retry", maxConcurrentImports))
@@ -576,21 +515,14 @@ func (p *Provider) BuildImportImage(app, id, image string, opts structs.BuildImp
 	b.Started = time.Now().UTC()
 	b.Reason = ""
 	if _, err := p.buildUpdate(b); err != nil {
-		// We acquired a slot but the buildUpdate failed; release before
-		// returning so a Conflict here doesn't leak a slot.
 		releaseImportSlot(importSlot)
-		// K8s returns a Conflict (HTTP 409) when the informer-cached
-		// ResourceVersion is stale — a concurrent writer (including a racing
-		// BuildImportImage caller) beat us to the update. Surface as a clean
-		// 409 so clients see the same status they'd get from the running guard.
+		// Surface K8s 409 (stale ResourceVersion) as a clean conflict.
 		if k8serrors.IsConflict(err) {
 			return errors.WithStack(structs.ErrConflict("build %s is currently being modified; wait and retry", id))
 		}
 		return errors.WithStack(err)
 	}
 
-	// Capture the opts values into locals so the goroutine doesn't hold pointers
-	// into the caller's request-scoped memory once the HTTP handler returns.
 	var srcUser, srcPass string
 	if opts.SrcCredsUser != nil {
 		srcUser = *opts.SrcCredsUser
@@ -599,30 +531,21 @@ func (p *Provider) BuildImportImage(app, id, image string, opts structs.BuildImp
 		srcPass = *opts.SrcCredsPass
 	}
 
-	// Snapshot the audit actor BEFORE the synchronous :start emit. The same
-	// captured value is passed to the asynchronous :done emit so a future
-	// refactor that swaps p.ctx between launch and goroutine entry still pairs
-	// :start/:done with the same actor (the goroutine must NOT re-read
-	// p.ContextActor() after launch — see TestBuildImportImage_DoneEventReadsCapturedNotReReadFromCtx).
+	// Snapshot actor before goroutine launch; goroutine must not re-read p.ContextActor().
 	capturedActor := p.ContextActor()
 
-	// Emit :start synchronously before launching the goroutine so subscribers
-	// cannot observe :done before :start when the webhook dispatcher fans out
-	// on its own goroutines.
+	// :start must be emitted synchronously before :done can fire.
 	_ = p.EventSend("build:import-image:start", structs.EventSendOptions{
 		Data: map[string]string{"actor": capturedActor, "app": app, "build": b.Id, "image": image},
 	})
 
-	// Copy the build by value for the goroutine. Tags is a map — we nil it
-	// defensively rather than deep-copy because buildMarshal does not persist
-	// it and we do not want the goroutine aliasing the caller's map.
+	// Value-copy for goroutine; nil Tags to avoid aliasing caller's map.
 	captured := *b
 	captured.Tags = nil
 	go func() {
 		var runErr error
 		defer func() {
-			// Outermost cleanup: release the concurrency slot LAST so even a
-			// panic inside finalize or EventSend does not leak the slot.
+			// Release slot last so panics in finalize/EventSend don't leak.
 			defer releaseImportSlot(importSlot)
 			if r := recover(); r != nil {
 				fmt.Printf("panic in BuildImportImage for build %s: %v\nstack: %s\n", captured.Id, r, debug.Stack())
@@ -650,8 +573,7 @@ func (p *Provider) buildImportImageRun(app string, b *structs.Build, m *manifest
 		return errors.WithStack(err)
 	}
 
-	// Unified authfile covers both source (optional) and destination creds so
-	// neither touches /proc/<pid>/cmdline. `--authfile` works for both lookups.
+	// Unified authfile keeps creds out of /proc/cmdline.
 	authPath, err := writeImportAuthFile(imageRef, srcUser, srcPass, repo, destUser, destPass)
 	if err != nil {
 		return errors.WithStack(err)

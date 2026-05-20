@@ -374,10 +374,6 @@ func TestRedactedWebhookURL_PreservesSchemeAndHost(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// D.2: HMAC webhook signing
-// ---------------------------------------------------------------------------
-
 const d2FixedKeyHex = "5257a869e7ecebeda32affa62cdca3fa37e8c0a98c3f2db5a8f5da3b2a3e9c4e"
 const d2SecondKeyHex = "8c1f3e0b9d4a7f2e6c5b8a3d4f9e2c1a7b6d5f4e3c2b1a9d8f7e6c5b4a3d2e10"
 
@@ -595,10 +591,10 @@ func (r *recordingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 	return r.inner.RoundTrip(req)
 }
 
-// TestEventSend_HmacPackagePanic_DegradesGracefully — sentinel for the
+// TestEventSend_HmacPackagePanic_DegradesGracefully verifies the
 // synchronous defer-recover at EventSend's parse-keys call. A panic in
 // the hmac parse path must not crash the caller; webhooks dispatch
-// unsigned and a structured WARN is logged. (Spec §8.7.)
+// unsigned and a structured WARN is logged.
 func TestEventSend_HmacPackagePanic_DegradesGracefully(t *testing.T) {
 	// We can't easily force a panic out of cxhmac.ParseSigningKeys with
 	// a valid key — so we use a deliberately-malformed key that hits the
@@ -636,10 +632,10 @@ func TestEventSend_HmacPackagePanic_DegradesGracefully(t *testing.T) {
 	})
 }
 
-// Verifies the order-of-test-precedence: a pre-D.2 dispatcher hook
-// (installed via SetDispatchWebhookFnForTest) takes priority over the
-// signed dispatcher for the duration of the test. This protects existing
-// tests that don't know about signingKeys.
+// TestDispatchWebhook_LegacyHookOverridesSigned verifies the order-of-test-
+// precedence: a legacy dispatcher hook (installed via SetDispatchWebhookFnForTest)
+// takes priority over the signed dispatcher. This protects existing tests
+// that don't know about signingKeys.
 func TestDispatchWebhook_LegacyHookOverridesSigned(t *testing.T) {
 	var hits int32
 	restore := k8s.SetDispatchWebhookFnForTest(func(url string, body []byte) error {
@@ -651,10 +647,6 @@ func TestDispatchWebhook_LegacyHookOverridesSigned(t *testing.T) {
 	k8s.DispatchWebhookSafelyForTest("https://example.invalid/x", []byte(`{}`))
 	assert.Equal(t, int32(1), atomic.LoadInt32(&hits))
 }
-
-// ---------------------------------------------------------------------------
-// Webhook signing key eviction audit (no key material)
-// ---------------------------------------------------------------------------
 
 // TestWebhookSigningKeyEvictionAuditNoMaterial — when EventSend's parse
 // returns an "at most" rejection because the configured webhook_signing_key
@@ -717,10 +709,6 @@ func TestWebhookSigningKeyEvictionAuditNoMaterial(t *testing.T) {
 		}
 	})
 }
-
-// ---------------------------------------------------------------------------
-// Per-URL webhook timeout via JSON receiver config
-// ---------------------------------------------------------------------------
 
 // TestWebhookConfigmapJsonParseCache — receivers cache populated via
 // SetWebhookReceiversForTest is consumed in preference to the urls slice;

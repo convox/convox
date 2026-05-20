@@ -21,53 +21,29 @@ const (
 	BudgetStateAnnotation  = "convox.com/budget-state"
 	BudgetConfigAnnotation = "convox.com/budget-config"
 
-	// Auto-shutdown annotation keys. Kebab-suffixed per convention.
-	// Lifecycle and GC handled by the accumulator at
-	// provider/k8s/budget_shutdown.go and runStaleAnnotationGC.
 	BudgetShutdownStateAnnotation           = "convox.com/budget-shutdown-state"
 	BudgetFlapSuppressedUntilAnnotation     = "convox.com/budget-flap-suppressed-until"
 	BudgetRecoveryBannerDismissedAnnotation = "convox.com/budget-recovery-banner-dismissed"
 	BudgetFlapSuppressFiredAtAnnotation     = "convox.com/budget-flap-suppress-fired-at"
 
-	// BudgetShutdownStateCorruptFiredAtAnnotation is the dedup annotation
-	// for :failed reason="state-corrupt" — written to a separate
-	// annotation key (NOT inside the corrupt state JSON) so the next
-	// accumulator tick can still skip the re-fire even though the main
-	// state annotation is unparseable.
+	// Separate from state annotation so dedup survives corrupt state JSON.
 	BudgetShutdownStateCorruptFiredAtAnnotation = "convox.com/budget-shutdown-state-corrupt-fired-at"
 
-	// BudgetShutdownNoopFiredAtAnnotation is the dedup annotation for
-	// :noop fired from the shutdownState==nil branch (where the dedup
-	// tracker on the state struct cannot be persisted because no state
-	// annotation exists). Cleared when shutdownState transitions to
-	// non-nil (i.e. :armed fires) or when the cap-fired flag clears.
+	// Dedup for :noop when no state annotation exists to persist the tracker.
 	BudgetShutdownNoopFiredAtAnnotation = "convox.com/budget-shutdown-noop-fired-at"
 
-	// KedaPausedReplicasAnnotation is the KEDA-blessed pause primitive
-	// (KEDA 2.0+). Set on the ScaledObject at shutdown; cleared via
-	// MergePatch null on restore. Survives ScaledObject re-render
-	// because the KedaScaledObject builder generates spec.* only.
 	KedaPausedReplicasAnnotation = "autoscaling.keda.sh/paused-replicas"
 
-	// BudgetShutdownStateSchemaVersion is the current writer's schema.
-	// Future readers (3.25.0+) MUST tolerate v1 transparently per the
-	// forward-migration contract in docs/management/budget-caps.md.
 	BudgetShutdownStateSchemaVersion = 1
 
-	// Auto-shutdown lifecycle defaults.
 	BudgetDefaultNotifyBeforeMinutes = 30
 	BudgetDefaultShutdownGracePeriod = "5m"
 	BudgetDefaultShutdownOrder       = "largest-cost"
 	BudgetDefaultRecoveryMode        = "auto-on-reset"
 
-	// Auto-shutdown flap-prevention cooldown (24 hours).
 	BudgetFlapCooldown = 24 * time.Hour
 
-	// Auto-shutdown :failed reason classifications. These are written to
-	// AppBudgetShutdownState.FailureReason so the FAILED banner rendered
-	// by `convox budget show` can display the canonical reason. Extend,
-	// do not rename — webhook receivers parsing the failure_reason field
-	// treat values as opaque strings.
+	// Extend, do not rename -- webhook receivers treat these as stable strings.
 	BudgetShutdownReasonK8sApiFailure       = "k8s-api-failure"
 	BudgetShutdownReasonStateCorrupt        = "state-corrupt"
 	BudgetShutdownReasonAdmissionRejected   = "admission-rejected"
@@ -76,23 +52,14 @@ const (
 	BudgetShutdownReasonSchemaIncompatible  = "schema-incompatible"
 )
 
-// AppBudget is user-configured spend limits for an app.
 type AppBudget struct {
 	MonthlyCapUsd         float64 `json:"monthly-cap-usd"`
 	AlertThresholdPercent float64 `json:"alert-threshold-percent,omitempty"`
 	AtCapAction           string  `json:"at-cap-action,omitempty"`
 	PricingAdjustment     float64 `json:"pricing-adjustment,omitempty"`
-	// LastCapMutationBy records the JWT-derived user who most recently
-	// changed MonthlyCapUsd via AppBudgetSet (or the cap-raise alias).
-	// The accumulator reads this on cap-raise detection to populate the
-	// `:cancelled reason="cap-raised"` event's `actor` field. Empty for
-	// first-write installs and for state written by older racks that
-	// pre-dated the cap-mutation-tracking field — the accumulator falls
-	// back to "system" so legacy state stays valid.
-	LastCapMutationBy string `json:"last-cap-mutation-by,omitempty"`
+	LastCapMutationBy     string  `json:"last-cap-mutation-by,omitempty"`
 }
 
-// AppBudgetState is computed state persisted as a namespace annotation.
 type AppBudgetState struct {
 	MonthStart            time.Time `json:"month-start"`
 	CurrentMonthSpendUsd  float64   `json:"current-month-spend-usd"`
@@ -104,83 +71,18 @@ type AppBudgetState struct {
 	CircuitBreakerAckAt   time.Time `json:"circuit-breaker-ack-at,omitempty"`
 	WarningCount          int       `json:"warning-count,omitempty"`
 
-	// PerServiceSpendUsd is cumulative USD spend per service since
-	// MonthStart. Keys are pod `service` label values (per pod.Labels),
-	// with two reserved buckets: "_build" for build pods (which carry
-	// service-type=build) and "_unattributed" for pods with no service
-	// label. Annotations written before this field existed parse with
-	// a nil map; the accumulator lazily initializes on first tick.
-	// Per-resource hours
-	// (GPU/CPU/Mem) are NOT stored — the existing pricing model returns
-	// a single dominant-resource fraction, so reliable per-resource
-	// hours can't be derived without a redesign. The wire ServiceCostLine
-	// retains those fields without omitempty so a future pricing-model
-	// rework can populate them without changing the response shape; in
-	// 3.24.6 they always serialize as 0. Hard cap of ~1000 entries is
-	// enforced in the accumulator; truncation emits a per-tick event
-	// (app:budget:per-service-truncated) so dropped entries are
-	// observable without API-server log access.
+	// Keyed by service label; "_build" and "_unattributed" are reserved buckets.
 	PerServiceSpendUsd map[string]float64 `json:"per-service-spend-usd,omitempty"`
 
-	// PerServiceInstanceType records the most recently observed instance
-	// type per service. Cheap to track and surfaces alongside spend in
-	// the breakdown line for operator recognition. Populated
-	// opportunistically — first observation wins and persists until the
-	// month boundary GC resets the map.
 	PerServiceInstanceType map[string]string `json:"per-service-instance-type,omitempty"`
 
-	// PerServiceSpendByVariant breaks each service's spend down by
-	// (instance-type, capacity-type) variant. Inner key format is
-	// "<instanceType>:<capacityType>" (e.g. "t3.large:spot",
-	// "g4dn.xlarge:on-demand", "t3.large:unknown" when neither
-	// karpenter.sh/capacity-type nor eks.amazonaws.com/capacityType is
-	// set on the node). Heterogeneous services — replicas split across
-	// instance families OR mixed spot+on-demand — produce multiple
-	// inner entries; PerServiceSpendUsd is the sum across them.
-	// Pre-3.24.6 annotations parse with this nil; the accumulator
-	// initializes lazily on first tick. Forward-compatible: the field
-	// is omitempty so older clients deserializing into the same struct
-	// definition see no surprise; serialization stays stable when the
-	// inner map is empty.
-	//
-	// Memory bound: realistic deployments stay under ~10 variants per
-	// service (one or two instance families × on-demand/spot). The outer
-	// service-key map inherits the perServiceMaxEntries=1000 cap from
-	// the accumulator merge site (provider/k8s/budget_accumulator.go),
-	// which keeps the total entry count bounded at O(1000 × N_variants).
-	// The inner variant map has no separate cap by design — the variant
-	// key set is determined by Karpenter/EC2 instance-family + capacity
-	// labels, both of which are bounded by AWS itself, so the inner
-	// width cannot grow unboundedly without operator action. If a future
-	// rack genuinely needs hundreds of variants per service, revisit the
-	// inner-cap policy here.
+	// Inner key: "<instanceType>:<capacityType>".
 	PerServiceSpendByVariant map[string]map[string]float64 `json:"per-service-spend-by-variant,omitempty"`
 
-	// PerServiceVariantPodsLastTick captures the number of pods seen on
-	// each variant in the most recent accumulator tick. Updated each
-	// tick — does NOT accumulate. Inner key format matches
-	// PerServiceSpendByVariant ("<instanceType>:<capacityType>"). The
-	// UI uses this to render a Replicas/Count column alongside spend
-	// in the variant breakdown so heterogeneous services display
-	// "3 pods on t3.large:on-demand, 2 pods on t3.large:spot" rather
-	// than spend without context. Pre-3.24.6 annotations parse with
-	// nil; the accumulator initialises lazily on first tick. Memory
-	// shape mirrors PerServiceSpendByVariant exactly so the cap and
-	// reasoning above apply unchanged.
+	// Snapshot (not cumulative) -- pod count per variant from the last tick.
 	PerServiceVariantPodsLastTick map[string]map[string]int `json:"per-service-variant-pods-last-tick,omitempty"`
 }
 
-// AppCost is the response shape for GET /apps/{app}/cost.
-//
-// Backward-compat note on Breakdown vs VariantBreakdown:
-// Breakdown is the per-service aggregated rollup retained for SDK and
-// CLI callers that pre-date 3.24.6 cost-tracking polish. VariantBreakdown
-// is purely additive and exposes the (service, instance-type,
-// capacity-type) triple. Heterogeneous services — replicas split across
-// instance families or mixed spot+on-demand — produce one VariantBreakdown
-// row per variant whose SpendUsd values sum to the matching Breakdown
-// row's SpendUsd. Older racks return VariantBreakdown empty/nil and
-// callers fall back to Breakdown rendering.
 type AppCost struct {
 	App                 string                   `json:"app"`
 	MonthStart          time.Time                `json:"month-start"`
@@ -192,23 +94,9 @@ type AppCost struct {
 	PricingTableVersion string                   `json:"pricing-table-version"`
 	PricingAdjustment   float64                  `json:"pricing-adjustment"`
 	WarningCount        int                      `json:"warning-count,omitempty"`
-	// TrackingEnabled reflects the rack's cost_tracking_enable param at
-	// query time. When false, the accumulator goroutine is dormant and
-	// SpendUsd / Breakdown / VariantBreakdown values are the most-recent
-	// persisted state — possibly empty (never enabled) or stale (enabled
-	// previously, then disabled). The CLI and Console use this to render
-	// a "cost tracking disabled" hint instead of presenting stale spend
-	// numbers as live. Older racks omit the field; clients treat the
-	// zero-value (false) as "tracking disabled OR pre-3.24.6 rack" and
-	// fall back to the legacy unconditional rendering, which is safe.
-	TrackingEnabled bool `json:"tracking-enabled,omitempty"`
+	TrackingEnabled     bool                     `json:"tracking-enabled,omitempty"`
 }
 
-// ServiceCostLine is one row in an AppCost.Breakdown — the resource consumption
-// and dollar attribution for a single service over the billing window. GpuHours
-// / CpuHours / MemGbHours are integrated quantities (hours × allocation), not
-// instantaneous values. InstanceType is preserved when available for billing
-// audits.
 type ServiceCostLine struct {
 	Service      string  `json:"service"`
 	GpuHours     float64 `json:"gpu-hours"`
@@ -219,21 +107,6 @@ type ServiceCostLine struct {
 	Attribution  string  `json:"attribution,omitempty"`
 }
 
-// ServiceVariantCostLine is one row in an AppCost.VariantBreakdown — a
-// (service, instance-type, capacity-type) triple's spend over the
-// billing window. CapacityType is one of "on-demand", "spot", or
-// "unknown" (the latter when neither karpenter.sh/capacity-type nor
-// eks.amazonaws.com/capacityType is set on the node, e.g. self-managed
-// nodes or non-AWS clouds where the labels don't apply). Spend math is
-// identical to Breakdown — variants are a finer-grained projection of
-// the same accumulated dollars.
-//
-// Replicas is the pod count on this variant in the most recent
-// accumulator tick — a SNAPSHOT, not cumulative. Heterogeneous
-// services display the live placement (e.g. "3 pods on t3.large:spot,
-// 2 pods on t3.large:on-demand") so users understand mixed-capacity
-// deployments at a glance. Older racks emit no count and the field
-// serialises as 0; the CLI / UI render an em-dash placeholder when 0.
 type ServiceVariantCostLine struct {
 	Service      string  `json:"service"`
 	InstanceType string  `json:"instance-type"`
@@ -242,19 +115,8 @@ type ServiceVariantCostLine struct {
 	Replicas     int     `json:"replicas,omitempty"`
 }
 
-// CapacityTypeUnknown is the variant suffix used when a node has
-// neither the karpenter.sh/capacity-type label nor the
-// eks.amazonaws.com/capacityType annotation. Surfaces as such in the
-// CLI/UI so the user knows the node origin couldn't be determined; the
-// pricing path still falls through to on-demand (conservative) under
-// the unknown signal.
 const CapacityTypeUnknown = "unknown"
 
-// AppBudgetOptions carries partial updates for AppBudgetSet.
-//
-// Float-valued fields use *string so they survive stdsdk form marshalling
-// (which does not natively support *float64). The server parses these
-// strings and rejects non-numeric or out-of-range values.
 type AppBudgetOptions struct {
 	MonthlyCapUsd         *string `param:"monthly-cap-usd"`
 	AlertThresholdPercent *int    `param:"alert-threshold-percent"`
@@ -262,7 +124,6 @@ type AppBudgetOptions struct {
 	PricingAdjustment     *string `param:"pricing-adjustment"`
 }
 
-// ApplyDefaults fills zero-valued fields with documented defaults.
 func (b *AppBudget) ApplyDefaults() {
 	if b.AlertThresholdPercent == 0 {
 		b.AlertThresholdPercent = BudgetDefaultAlertThresholdPercent
@@ -275,7 +136,6 @@ func (b *AppBudget) ApplyDefaults() {
 	}
 }
 
-// Validate returns an error for out-of-range or invalid fields.
 func (b *AppBudget) Validate() error {
 	if math.IsNaN(b.MonthlyCapUsd) || math.IsInf(b.MonthlyCapUsd, 0) {
 		return fmt.Errorf("monthly-cap-usd must be a finite number")
@@ -304,11 +164,6 @@ func (b *AppBudget) Validate() error {
 	return nil
 }
 
-// AppBudgetSimulationResult is the response body for the
-// POST /apps/{app}/budget/simulate-shutdown dry-run endpoint. The
-// simulation does not modify cluster state; it returns the eligibility
-// list, ordering, and estimated savings the user would see if a
-// real auto-shutdown fired now.
 type AppBudgetSimulationResult struct {
 	App                          string                           `json:"app"`
 	AtCapAction                  string                           `json:"at-cap-action"`
@@ -324,9 +179,6 @@ type AppBudgetSimulationResult struct {
 	SimulatedAt                  time.Time                        `json:"simulated-at"`
 }
 
-// AppBudgetSimulationEligibility is one row per service in the
-// simulation eligibility table. Eligible=false rows include the Reason
-// (e.g. "in neverAutoShutdown" or "no service in manifest").
 type AppBudgetSimulationEligibility struct {
 	Service        string  `json:"service"`
 	Eligible       bool    `json:"eligible"`
@@ -335,24 +187,7 @@ type AppBudgetSimulationEligibility struct {
 	CostUsdPerHour float64 `json:"cost-usd-per-hour"`
 }
 
-// ============================================================================
-// ANNOTATION-INTERNAL TYPES (camelCase JSON tags)
-//
-// The types below are persisted as Kubernetes annotation values, not exposed
-// through the rack API wire surface. They use camelCase JSON tags by intent
-// — annotation values are not pkg/structs/ wire surface. Do NOT copy this
-// tag style for new wire surface types; use kebab-case (the convention of
-// the public types above this block).
-// ============================================================================
-// AppBudgetShutdownState is the JSON shape for the
-// `convox.com/budget-shutdown-state` namespace annotation. This is
-// provider/k8s/-private serialization; JSON tags are camelCase as a
-// carve-out (annotation values are not pkg/structs/ surface).
-//
-// SchemaVersion is currently 1. Required fields (validated post-
-// Unmarshal): SchemaVersion, ArmedAt, RecoveryMode, ShutdownOrder,
-// ShutdownTickId, EligibleServiceCount > 0, Services non-empty. ShutdownAt,
-// RestoredAt, ExpiredAt, FlapSuppressedUntil, ManifestSha256 are nullable.
+// camelCase JSON tags: annotation-internal, not wire surface.
 type AppBudgetShutdownState struct {
 	SchemaVersion int `json:"schemaVersion"`
 
@@ -361,11 +196,6 @@ type AppBudgetShutdownState struct {
 	RestoredAt *time.Time `json:"restoredAt"`
 	ExpiredAt  *time.Time `json:"expiredAt"`
 
-	// NotifyBeforeMinutes is persisted at arm time so the renderer
-	// (CLI banner + STATUS countdown) reads the user-configured
-	// value rather than the 30-minute default. Cross-version compat:
-	// older racks lack this field; readers fall back to the default
-	// when zero.
 	NotifyBeforeMinutes int `json:"notifyBeforeMinutes,omitempty"`
 
 	RecoveryMode   string `json:"recoveryMode"`
@@ -378,22 +208,9 @@ type AppBudgetShutdownState struct {
 
 	FlapSuppressedUntil *time.Time `json:"flapSuppressedUntil"`
 
-	// RecoveryBannerDismissedAt is the timestamp the user dismissed the
-	// RECOVERED banner via app_budget_dismiss_recovery. The canonical
-	// source of truth is the separate
-	// `convox.com/budget-recovery-banner-dismissed` namespace
-	// annotation; AppBudgetShutdownStateGet aggregates both annotations
-	// into this struct on the GET path so the SDK round-trip surfaces a
-	// single view. The shutdown-state annotation persistence path
-	// (writeBudgetShutdownStateAnnotation) MUST nil this field before
-	// json.Marshal to keep the annotation byte-stable — the field is
-	// GET-only aggregation.
-	//
+	// GET-only; must be nil'd before persisting the annotation.
 	RecoveryBannerDismissedAt *time.Time `json:"recoveryBannerDismissedAt,omitempty"`
 
-	// Per-event dedup-firing trackers (8 of 9 events covered;
-	// :simulated is CLI-driven and excluded). All fire-once-per-shutdown
-	// semantics rely on these.
 	ArmedNotificationFiredAt          *time.Time `json:"armedNotificationFiredAt"`
 	FiredNotificationFiredAt          *time.Time `json:"firedNotificationFiredAt"`
 	NoopNotificationFiredAt           *time.Time `json:"noopNotificationFiredAt"`
@@ -403,26 +220,11 @@ type AppBudgetShutdownState struct {
 	FailedNotificationFiredAt         *time.Time `json:"failedNotificationFiredAt"`
 	RestoredNotificationFiredAt       *time.Time `json:"restoredNotificationFiredAt"`
 
-	// DiscoveryReason is set on annotations created via the external-
-	// edit-detection path. When non-empty, the annotation was
-	// constructed from observed cluster state, not from the normal
-	// :armed/:fired write path. User-displayable.
 	DiscoveryReason string `json:"discoveryReason,omitempty"`
 
-	// FailureReason is set when a :failed event is fired, capturing the
-	// canonical reason enum (e.g. "k8s-api-failure", "state-corrupt",
-	// "admission-webhook-rejected", "annotation-rejected") so the FAILED
-	// banner rendered by `convox budget show` can display it. The
-	// banner format is "Auto-shutdown FAILED. Reason: <failureReason>."
-	// Persisted to the state annotation BEFORE :failed fires so the
-	// post-failure banner reads the reason from the persisted state.
 	FailureReason string `json:"failureReason,omitempty"`
 }
 
-// AppBudgetShutdownStateService is one entry in
-// AppBudgetShutdownState.Services. Saved at shutdown time; restore
-// reads it back to PATCH replicas + grace period back. KedaScaledObject
-// is null when the service had no ScaledObject at shutdown.
 type AppBudgetShutdownStateService struct {
 	Name                       string                              `json:"name"`
 	OriginalScale              AppBudgetShutdownStateOriginalScale `json:"originalScale"`
@@ -432,11 +234,6 @@ type AppBudgetShutdownStateService struct {
 	ShutdownAt                 *time.Time                          `json:"shutdownAt"`
 }
 
-// AppBudgetShutdownStateOriginalScale captures the per-service replicas
-// at shutdown time. count is Deployment.Spec.Replicas; min/max are the
-// pre-PATCH ScaledObject values (preserved as observational telemetry —
-// PIVOT 1 paused-replicas does NOT modify min/max); replicas is the
-// observed Status.Replicas at shutdown time.
 type AppBudgetShutdownStateOriginalScale struct {
 	Count    int `json:"count"`
 	Min      int `json:"min"`
@@ -444,19 +241,11 @@ type AppBudgetShutdownStateOriginalScale struct {
 	Replicas int `json:"replicas"`
 }
 
-// AppBudgetShutdownStateKeda carries the KEDA-related per-service
-// state — name and pausedReplicasAnnotationSet. Earlier drafts also
-// saved min/max but the paused-replicas approach never modifies them,
-// so the saved fields were dropped.
 type AppBudgetShutdownStateKeda struct {
 	Name                        string `json:"name"`
 	PausedReplicasAnnotationSet bool   `json:"pausedReplicasAnnotationSet"`
 }
 
-// ValidateRequiredFields rejects post-Unmarshal annotation states that
-// pass json.Unmarshal but have zero-valued required fields. Go's
-// json.Unmarshal does NOT fail on missing fields by default, so this
-// step is required for safe load.
 func (s *AppBudgetShutdownState) ValidateRequiredFields() error {
 	if s.SchemaVersion == 0 {
 		return fmt.Errorf("schemaVersion is required and must be > 0")
@@ -486,39 +275,16 @@ func (s *AppBudgetShutdownState) ValidateRequiredFields() error {
 	return nil
 }
 
-// AppBudgetResetOptions carries optional knobs for AppBudgetReset.
-// ForceClearCooldown (CanAdmin-gated server-side) clears the 24h
-// flap-prevention cooldown. Standard reset preserves the cooldown to
-// protect against accidental flap re-arm.
 type AppBudgetResetOptions struct {
-	// Tag is `force_clear_cooldown` (snake_case) to match the wire form
-	// set by the manually-coded SDK params at sdk/methods.go and read
-	// server-side at pkg/api/controllers.go. Manually-constructed SDK
-	// params bypass struct-tag marshaling, so the kebab tag never
-	// reached the wire — snake locks tag, SDK, and server-read in
-	// agreement. The snake_case JSON tag is wire-pinned (matches the
-	// HTTP form-param name); do not change without a deprecation cycle.
 	ForceClearCooldown bool `param:"force_clear_cooldown"`
-
-	// ResetPeriod zeros MonthStart, CurrentMonthSpendUsd, and all
-	// per-service spend maps, effectively starting a fresh billing
-	// cycle. Budget config (cap, threshold, action) is preserved.
-	ResetPeriod bool `param:"reset_period"`
+	ResetPeriod        bool `param:"reset_period"`
 }
 
-// AppBudgetDismissRecoveryResult is the response body for the
-// dismiss-recovery endpoint with three distinct outcomes the user
-// must be able to distinguish in the CLI:
-//
-//   - "dismissed"      : a recovery banner was active; it is now dismissed
-//   - "already-dismissed" : a recovery banner exists but was previously dismissed
-//   - "no-banner"      : no recovery banner is active for this app
 type AppBudgetDismissRecoveryResult struct {
 	App    string `json:"app"`
 	Status string `json:"status"`
 }
 
-// AppBudgetDismissRecovery status enum.
 const (
 	BudgetDismissRecoveryStatusDismissed        = "dismissed"
 	BudgetDismissRecoveryStatusAlreadyDismissed = "already-dismissed"

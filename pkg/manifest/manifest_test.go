@@ -894,12 +894,9 @@ func TestManifestStartupProbeGpu(t *testing.T) {
 // TestManifestStartupProbeGpu_FailureThreshold180LocksMinimum locks the GPU-service
 // startup-probe FailureThreshold default at 180 (= 30-min cold-start ceiling at the
 // 10s default Interval). This is intentionally redundant with the assertion in
-// TestManifestStartupProbeGpu — the duplication exists to surface a clear failure
-// if a future commit silently lowers the GPU cold-start ceiling.
-//
-// LOCKED 2026-04-25: 30-min cold-start ceiling = 180 attempts x 10s interval.
-// Do not lower without opening a release-notes ticket. R3-pinned default per
-// master plan §1 Set C.
+// TestManifestStartupProbeGpu_FailureThreshold180LocksMinimum pins the
+// GPU cold-start ceiling at 180 attempts x 10s = 30 min.
+// Do not lower without a release-notes ticket.
 func TestManifestStartupProbeGpu_FailureThreshold180LocksMinimum(t *testing.T) {
 	m, err := testdataManifest("startup-probe-gpu", map[string]string{})
 	require.NoError(t, err)

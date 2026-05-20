@@ -16,86 +16,34 @@ import (
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// webhookSSRFValidator is the SSRF guard applied to user-supplied webhook
-// URLs at create AND dispatch time. Production points at
-// validator.ValidateExternalURL (with nil resolver → net.LookupIP). Tests
-// may install a permissive stub via SetWebhookSSRFValidatorForTest so
-// httptest.NewServer URLs (which bind 127.0.0.1) are not rejected by the
-// loopback deny-rule.
-//
-// The variable is ALSO consulted by EventSend's dispatch path so a
-// pre-3.24.6 webhook entry that pre-existed in the configmap and points
-// at an internal IP (e.g. 169.254.169.254 for IMDS) is refused at
-// dispatch time, not just at create time. Dispatch-time refusal logs
-// at MOST one line per (URL, pod) pair via webhookSSRFLogged.
+// SSRF guard — applied at both create and dispatch time. Tests override
+// via SetWebhookSSRFValidatorForTest for loopback httptest URLs.
 var webhookSSRFValidator = func(raw string) error {
 	return validator.ValidateExternalURL(raw, nil)
 }
 
-// webhookSSRFLogged tracks URLs we have already emitted a structured
-// "ssrf_blocked" log line for. The intent is to keep the log volume
-// bounded when an operator's pre-3.24.6 configmap retains private-IP
-// entries: the first dispatch attempt logs once; subsequent attempts to
-// the same URL are silent. Cleared at process restart (the leader pod's
-// boot is the natural cadence; we do not persist this to the cluster).
+// webhookSSRFLogged deduplicates SSRF block log lines (one per URL per pod lifetime).
 var webhookSSRFLogged sync.Map
 
-// webhookConfigMapTimeout bounds the synchronous configmap fetch in
-// webhookConfigMap. EventSend on non-leader pods now reads via this
-// helper on every event emission; without a deadline a slow / partitioned
-// kube-apiserver would hang ReleasePromote / AppCreate / scale-override
-// indefinitely waiting for a webhook-list that has never delivered.
-// 5s is generous for a single configmap GET — typical p99 is sub-50ms.
 var webhookConfigMapTimeout = 5 * time.Second
 
-// defaultWebhookTimeout is the per-receiver dispatch deadline applied when an
-// operator does NOT supply a JSON-encoded webhook config that overrides it.
-// 30s matches the package-scoped webhookClient timeout that has been the
-// production default since 3.24.5; plain-URL configmap entries inherit it
-// unchanged so existing operators see byte-identical dispatch behavior.
 const defaultWebhookTimeout = 30 * time.Second
 
 type Webhook struct {
-	Name string
-	URL  string
-	// Timeout is the per-receiver dispatch deadline. Zero means "use the
-	// package default" (defaultWebhookTimeout); non-zero values come from a
-	// JSON-encoded configmap entry of the form `{"url":"...", "timeout":"5s"}`.
+	Name    string
+	URL     string
 	Timeout time.Duration
 }
 
-// webhookEntry is the parsed in-memory form of one configmap data entry.
-// Distinct from Webhook because the API surface area for `webhookList()` is
-// stable and Webhook fields land on the wire (struct shape consumers).
-// webhookEntry is a private cache row and may be reshaped without breaking
-// downstream callers.
 type webhookEntry struct {
 	Name    string
 	URL     string
 	Timeout time.Duration
 }
 
-// parseWebhookEntry inspects one raw configmap value and decides whether to
-// treat it as a plain URL or a JSON-encoded receiver config. Returns
-// (entry, skip=false) when the entry should be dispatched, or (zero,
-// skip=true) when the entry is malformed and must be silently dropped (with
-// a structured warning log line emitted for operator visibility).
-//
-// Branch semantics:
-//
-//   - Empty / whitespace-only raw: SKIP (no entry to dispatch).
-//   - Raw begins with `{`: attempt JSON parse.
-//   - parse succeeds AND url is non-empty: USE parsed entry. Timeout
-//     falls back to defaultWebhookTimeout when absent or unparseable.
-//   - parse succeeds AND url is empty/whitespace: SKIP. Do NOT fall
-//     through to plain-URL semantics — raw is a JSON object (not a
-//     URL string), so treating it as a URL would corrupt dispatch.
-//     Operators see a structured WARN.
-//   - parse fails (malformed JSON beginning with `{`): SKIP. Same
-//     reasoning — raw is not parseable as either form.
-//   - Raw does NOT begin with `{`: treat as plain URL. Timeout =
-//     defaultWebhookTimeout. Existing operator behavior; identical to
-//     the pre-per-URL-timeout dispatch.
+// parseWebhookEntry parses a configmap value as either JSON `{"url":..., "timeout":...}`
+// or a plain URL string. Returns (entry, skip). JSON values with empty/missing url
+// or parse errors are skipped; plain strings use defaultWebhookTimeout.
 func parseWebhookEntry(name, raw string) (webhookEntry, bool) {
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" {
@@ -110,8 +58,6 @@ func parseWebhookEntry(name, raw string) (webhookEntry, bool) {
 		if err := json.Unmarshal([]byte(trimmed), &je); err == nil {
 			url := strings.TrimSpace(je.URL)
 			if url == "" {
-				// JSON object with empty/missing url field. Do NOT
-				// fall through to plain-URL — raw is a JSON object, not a URL.
 				fmt.Printf("ns=webhook_parse at=skip reason=empty_url_in_json name=%s\n", name)
 				return webhookEntry{}, true
 			}
@@ -123,18 +69,12 @@ func parseWebhookEntry(name, raw string) (webhookEntry, bool) {
 			}
 			return webhookEntry{Name: name, URL: url, Timeout: timeout}, false
 		}
-		// Begins with `{` but cannot be parsed as JSON: malformed. Skip.
 		fmt.Printf("ns=webhook_parse at=skip reason=invalid_json name=%s\n", name)
 		return webhookEntry{}, true
 	}
-	// Plain URL form (3.24.5-compatible). Use the package default timeout.
 	return webhookEntry{Name: name, URL: trimmed, Timeout: defaultWebhookTimeout}, false
 }
 
-// parseWebhookEntries transforms a slice of raw configmap values (from the
-// informer's webhookConfigMapURLs cache) into dispatchable webhookEntry
-// rows. Names are not available from the URL-only cache; callers that need
-// names should source them from webhookList() directly.
 func parseWebhookEntries(rawValues []string) []webhookEntry {
 	out := make([]webhookEntry, 0, len(rawValues))
 	for _, raw := range rawValues {
@@ -165,11 +105,7 @@ func (p *Provider) webhookConfigMap() (*ac.ConfigMap, error) {
 
 			created, cerr := cms.Create(ctx, cm, am.CreateOptions{})
 			if cerr != nil {
-				// Non-leader pods may race with each other to Create
-				// the missing configmap on first traffic; the loser
-				// gets AlreadyExists. Re-Get and proceed; the winner
-				// already wrote the (empty) configmap so the second
-				// Get returns it.
+				// Race: another pod created it first.
 				if ae.IsAlreadyExists(cerr) {
 					if reread, rerr := cms.Get(ctx, "webhooks", am.GetOptions{}); rerr == nil {
 						cm = reread
@@ -203,22 +139,7 @@ func (p *Provider) webhookCreate(name, url string) error {
 		return structs.ErrBadRequest("url required")
 	}
 
-	// SSRF guard: reject webhook URLs that resolve to internal/non-routable
-	// addresses BEFORE persisting the configmap row. Pre-3.24.6 racks
-	// accepted any URL string here; an operator with rack-write capability
-	// could register a webhook pointing at IMDS or in-VPC services and the
-	// rack's EventSend fan-out would dutifully POST event bodies to the
-	// target. The validator deny-set covers RFC 1918, loopback, link-local
-	// (incl. 169.254.169.254 IMDS), CGNAT, IPv6 ULA, unspecified, and the
-	// "localhost" reserved name. The documented in-cluster recipe
-	// (.svc.cluster.local hostnames) is allow-listed by suffix so this
-	// does NOT prevent operators from pointing webhooks at sidecar
-	// receivers deployed in the same cluster.
-	//
-	// Friendly-error: surface the validator's message as a 400-class
-	// ErrBadRequest so the CLI / Console renders a single line and not
-	// an internal-error dialog. The validator already produces operator-
-	// readable text; we prefix with "url:" so the field is unambiguous.
+	// SSRF guard — rejects internal/IMDS/loopback IPs; allows .svc.cluster.local.
 	if err := webhookSSRFValidator(url); err != nil {
 		return structs.ErrBadRequest("url: %s", err)
 	}

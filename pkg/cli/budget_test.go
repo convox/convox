@@ -61,9 +61,6 @@ func TestBudgetShowNoBudget(t *testing.T) {
 func TestBudgetSetDefaults(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("AppCost", "app1").Return(&structs.AppCost{App: "app1", SpendUsd: 0.0}, nil)
-		// Partial-merge semantics: omitted --pricing-adjustment leaves
-		// PricingAdjustment nil so the rack-side applyBudgetOptions preserves
-		// the prior persisted value (matches BudgetCapRaise).
 		i.On("AppBudgetSet", "app1", mock.MatchedBy(func(opts structs.AppBudgetOptions) bool {
 			return opts.MonthlyCapUsd != nil && *opts.MonthlyCapUsd == "500" &&
 				opts.AlertThresholdPercent != nil && *opts.AlertThresholdPercent == 80 &&
@@ -175,9 +172,8 @@ func TestBudgetResetError(t *testing.T) {
 // silence unused import when fixtures in other files change
 var _ = options.Int
 
-// TestBudgetSet_BelowMtdSpend_EmitsWarning — UX R1 #13. Setting a cap below
-// current MTD spend emits a non-blocking stderr warning. The cap is still set
-// (assert exit 0 + AppBudgetSet was called).
+// TestBudgetSet_BelowMtdSpend_EmitsWarning verifies setting a cap below
+// current MTD spend emits a non-blocking stderr warning.
 func TestBudgetSet_BelowMtdSpend_EmitsWarning(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("AppCost", "app1").Return(&structs.AppCost{
@@ -264,10 +260,8 @@ func TestBudgetReset_ExplicitAckByFlag_PrintsDeprecationWarning(t *testing.T) {
 	})
 }
 
-// TestBudgetReset_DeprecationWarning_GoesToStderr — channel pivot per spec
-// §B.3 R1 deprecation-ux F1. Stderr captures the warning; stdout is left
-// clean for CI parsers. Regression guard against a future "user-friendly
-// tweak" that moves the warning back to stdout.
+// TestBudgetReset_DeprecationWarning_GoesToStderr verifies the deprecation
+// warning goes to stderr, not stdout, so CI parsers are not affected.
 func TestBudgetReset_DeprecationWarning_GoesToStderr(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("AppBudgetReset", "app1", "alice").Return(nil)
@@ -284,8 +278,8 @@ func TestBudgetReset_DeprecationWarning_GoesToStderr(t *testing.T) {
 	})
 }
 
-// TestBudgetSet_ExplicitAckByFlag_PrintsDeprecationWarning — sibling to the
-// reset test; budget set with --ack-by also emits the stderr warning.
+// TestBudgetSet_ExplicitAckByFlag_PrintsDeprecationWarning verifies
+// --ack-by on budget set emits the stderr deprecation warning.
 func TestBudgetSet_ExplicitAckByFlag_PrintsDeprecationWarning(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("AppCost", "app1").Return(&structs.AppCost{App: "app1", SpendUsd: 0.0}, nil)
@@ -299,8 +293,8 @@ func TestBudgetSet_ExplicitAckByFlag_PrintsDeprecationWarning(t *testing.T) {
 	})
 }
 
-// TestBudgetClear_ExplicitAckByFlag_PrintsDeprecationWarning — sibling to set
-// and reset; budget clear with --ack-by also emits the stderr warning.
+// TestBudgetClear_ExplicitAckByFlag_PrintsDeprecationWarning verifies
+// --ack-by on budget clear emits the stderr deprecation warning.
 func TestBudgetClear_ExplicitAckByFlag_PrintsDeprecationWarning(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("AppBudgetClear", "app1", "alice").Return(nil)
@@ -312,9 +306,8 @@ func TestBudgetClear_ExplicitAckByFlag_PrintsDeprecationWarning(t *testing.T) {
 	})
 }
 
-// TestBudgetSet_AutoShutdownActionPrintsWarning — Set G.
-// `--at-cap-action=auto-shutdown` MUST emit a stderr WARNING the
-// user sees before they ship the manifest into prod.
+// TestBudgetSet_AutoShutdownActionPrintsWarning verifies --at-cap-action=auto-shutdown
+// emits a stderr warning.
 func TestBudgetSet_AutoShutdownActionPrintsWarning(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("AppCost", "app1").Return(&structs.AppCost{App: "app1", SpendUsd: 0}, nil)
@@ -329,8 +322,8 @@ func TestBudgetSet_AutoShutdownActionPrintsWarning(t *testing.T) {
 	})
 }
 
-// TestBudgetReset_ForceClearCooldownFlag_PassesThroughToSDK — Set G.
-// `--force-clear-cooldown` flag must reach the SDK's WithOptions path.
+// TestBudgetReset_ForceClearCooldownFlag_PassesThroughToSDK verifies
+// --force-clear-cooldown reaches the SDK.
 func TestBudgetReset_ForceClearCooldownFlag_PassesThroughToSDK(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("AppBudgetResetWithOptions", "app1", mock.AnythingOfType("string"),
@@ -344,8 +337,8 @@ func TestBudgetReset_ForceClearCooldownFlag_PassesThroughToSDK(t *testing.T) {
 	})
 }
 
-// TestBudgetSimulateShutdown_OutputFormatMatchesSpec — Set G.
-// CLI output must include the section labels users script around.
+// TestBudgetSimulateShutdown_OutputFormatMatchesSpec verifies CLI output
+// includes section labels users script around.
 func TestBudgetSimulateShutdown_OutputFormatMatchesSpec(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		now := time.Date(2026, 4, 25, 14, 0, 0, 0, time.UTC)
@@ -419,9 +412,8 @@ func TestBudgetDismissRecovery_Output(t *testing.T) {
 	})
 }
 
-// TestBudgetSet_RejectsUnknownActionValue verifies the existing flag
-// validation extends to the new auto-shutdown enum value (sanity check
-// — the Set G value is permitted; a totally unknown value still rejects).
+// TestBudgetSet_RejectsUnknownActionValue verifies unknown at-cap-action
+// values are rejected while valid values (including auto-shutdown) pass.
 func TestBudgetSet_RejectsUnknownActionValue(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		res, err := testExecute(e, "budget set app1 --monthly-cap 500 --at-cap-action turbo-shutdown", nil)
@@ -431,18 +423,11 @@ func TestBudgetSet_RejectsUnknownActionValue(t *testing.T) {
 	})
 }
 
-// TestBudgetCapRaise_HappyPath verifies that the `budget cap raise`
-// subcommand is a partial-update alias for `budget set --monthly-cap`.
-// It MUST be registered so the ARMED banner and the 3-action 409
-// breaker message can cite a real CLI surface. Server-side
-// applyBudgetOptions preserves the unsubmitted fields (alert-at,
-// at-cap-action, pricing-adjustment).
+// TestBudgetCapRaise_HappyPath verifies budget cap raise is a partial-update
+// alias for budget set --monthly-cap.
 func TestBudgetCapRaise_HappyPath(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("AppCost", "app1").Return(&structs.AppCost{App: "app1", SpendUsd: 0.0}, nil)
-		// Only MonthlyCapUsd is set; AlertThresholdPercent / AtCapAction /
-		// PricingAdjustment must remain nil so the server-side partial-merge
-		// preserves whatever was previously configured.
 		i.On("AppBudgetSet", "app1", mock.MatchedBy(func(opts structs.AppBudgetOptions) bool {
 			return opts.MonthlyCapUsd != nil && *opts.MonthlyCapUsd == "1000" &&
 				opts.AlertThresholdPercent == nil &&
@@ -457,11 +442,8 @@ func TestBudgetCapRaise_HappyPath(t *testing.T) {
 	})
 }
 
-// TestBudgetCapRaise_AcceptsMonthlyCapAlias verifies that
-// `--monthly-cap` is an alias for `--monthly-cap-usd` so users who
-// already learned `convox budget set --monthly-cap` from 3.24.5 don't
-// have to memorize a different flag for cap raise. The alias must
-// work alone, AND the canonical flag must win when both are provided.
+// TestBudgetCapRaise_AcceptsMonthlyCapAlias verifies --monthly-cap is accepted
+// as an alias for --monthly-cap-usd, and the canonical flag wins when both set.
 func TestBudgetCapRaise_AcceptsMonthlyCapAlias(t *testing.T) {
 	t.Run("alias-only accepted with canonical-equivalent behavior", func(t *testing.T) {
 		testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
@@ -480,8 +462,6 @@ func TestBudgetCapRaise_AcceptsMonthlyCapAlias(t *testing.T) {
 	t.Run("canonical wins when both flags provided", func(t *testing.T) {
 		testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 			i.On("AppCost", "app1").Return(&structs.AppCost{App: "app1", SpendUsd: 0.0}, nil)
-			// Both flags set; canonical (--monthly-cap-usd=300) must take
-			// precedence. The alias value (200) must NOT bind.
 			i.On("AppBudgetSet", "app1", mock.MatchedBy(func(opts structs.AppBudgetOptions) bool {
 				return opts.MonthlyCapUsd != nil && *opts.MonthlyCapUsd == "300"
 			}), mock.AnythingOfType("string")).Return(nil)
@@ -493,8 +473,7 @@ func TestBudgetCapRaise_AcceptsMonthlyCapAlias(t *testing.T) {
 	})
 }
 
-// TestBudgetCapRaise_MissingFlag — without `--monthly-cap-usd`, the command
-// must reject with a clear message rather than silently no-op.
+// TestBudgetCapRaise_MissingFlag verifies --monthly-cap-usd is required.
 func TestBudgetCapRaise_MissingFlag(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		res, err := testExecute(e, "budget cap raise app1", nil)
@@ -504,8 +483,8 @@ func TestBudgetCapRaise_MissingFlag(t *testing.T) {
 	})
 }
 
-// TestBudgetCapRaise_RejectsNonNumericCap — `--monthly-cap-usd` must parse as
-// a finite float; non-numeric input rejected with a clear stderr message.
+// TestBudgetCapRaise_RejectsNonNumericCap verifies non-numeric --monthly-cap-usd
+// is rejected.
 func TestBudgetCapRaise_RejectsNonNumericCap(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		res, err := testExecute(e, "budget cap raise app1 --monthly-cap-usd abc", nil)
@@ -515,9 +494,8 @@ func TestBudgetCapRaise_RejectsNonNumericCap(t *testing.T) {
 	})
 }
 
-// TestBudgetCapRaise_BelowMtdSpend_EmitsWarning — parity with BudgetSet's UX
-// cap-vs-MTD warning. User raising the cap to a value still below
-// current MTD spend gets the non-blocking heads-up; the cap is still set.
+// TestBudgetCapRaise_BelowMtdSpend_EmitsWarning verifies cap below current
+// MTD spend emits a non-blocking warning.
 func TestBudgetCapRaise_BelowMtdSpend_EmitsWarning(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("AppCost", "app1").Return(&structs.AppCost{
@@ -536,9 +514,8 @@ func TestBudgetCapRaise_BelowMtdSpend_EmitsWarning(t *testing.T) {
 	})
 }
 
-// TestBudgetCapRaise_AppCostError_DoesNotBlock — sibling to
-// TestBudgetSet_AppCostError_DoesNotBlock. A transient AppCost lookup
-// failure must NOT block the cap-raise call.
+// TestBudgetCapRaise_AppCostError_DoesNotBlock verifies transient AppCost
+// failure does not block the cap-raise call.
 func TestBudgetCapRaise_AppCostError_DoesNotBlock(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("AppCost", "app1").Return(nil, fmt.Errorf("transient lookup failure"))
@@ -553,9 +530,7 @@ func TestBudgetCapRaise_AppCostError_DoesNotBlock(t *testing.T) {
 }
 
 // TestBudgetSimulateShutdown_OutputDoesNotReferenceUnimplementedCommand
-// pins that `convox events --rack` is NOT a registered CLI surface,
-// so the simulate-shutdown output MUST NOT cite it. Regression guard
-// against any future edit that re-introduces the dangling reference.
+// verifies simulate-shutdown output does not cite unregistered commands.
 func TestBudgetSimulateShutdown_OutputDoesNotReferenceUnimplementedCommand(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		now := time.Date(2026, 4, 25, 14, 0, 0, 0, time.UTC)
@@ -585,10 +560,8 @@ func TestBudgetSimulateShutdown_OutputDoesNotReferenceUnimplementedCommand(t *te
 	})
 }
 
-// TestBudgetShow_FailedBanner_RendersReason verifies that the
-// `convox budget show` FAILED banner renders the canonical
-// FailureReason from the persisted state annotation. Format:
-// `Auto-shutdown FAILED. Reason: <failureReason>.`
+// TestBudgetShow_FailedBanner_RendersReason verifies the FAILED banner
+// renders FailureReason from persisted state.
 func TestBudgetShow_FailedBanner_RendersReason(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		now := time.Date(2026, 4, 25, 14, 0, 0, 0, time.UTC)
@@ -618,10 +591,8 @@ func TestBudgetShow_FailedBanner_RendersReason(t *testing.T) {
 	})
 }
 
-// TestBudgetShow_FailedBanner_NoReason_FallsBackToLegacy — defensive
-// regression guard. Older state annotations or pre-B3 racks may not have
-// FailureReason set. The banner must fall back to the legacy text rather
-// than render "Reason: ." (empty).
+// TestBudgetShow_FailedBanner_NoReason_FallsBackToLegacy verifies empty
+// FailureReason falls back to legacy text instead of rendering "Reason: .".
 func TestBudgetShow_FailedBanner_NoReason_FallsBackToLegacy(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		now := time.Date(2026, 4, 25, 14, 0, 0, 0, time.UTC)
@@ -652,10 +623,8 @@ func TestBudgetShow_FailedBanner_NoReason_FallsBackToLegacy(t *testing.T) {
 	})
 }
 
-// TestBudgetShow_ArmedBanner_RendersFireAt locks in the [ARMED] branch
-// of renderShutdownStateBanner. Covers the computed fireAt = ArmedAt
-// + notifyBeforeMinutes (default 30) and the pinned user-facing
-// recovery commands.
+// TestBudgetShow_ArmedBanner_RendersFireAt verifies the ARMED banner
+// computes fireAt from ArmedAt + notifyBeforeMinutes.
 func TestBudgetShow_ArmedBanner_RendersFireAt(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		now := time.Date(2026, 4, 25, 14, 0, 0, 0, time.UTC)
@@ -685,10 +654,8 @@ func TestBudgetShow_ArmedBanner_RendersFireAt(t *testing.T) {
 	})
 }
 
-// TestBudgetShow_ActiveBanner_RendersServiceCount locks in the [ACTIVE]
-// branch — ShutdownAt set, RestoredAt nil, FailedNotificationFiredAt
-// nil. ACTIVE has precedence over FAILED so this test asserts the
-// post-fire pre-recovery state.
+// TestBudgetShow_ActiveBanner_RendersServiceCount verifies the ACTIVE banner
+// renders service count and shutdown timestamp.
 func TestBudgetShow_ActiveBanner_RendersServiceCount(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		now := time.Date(2026, 4, 25, 14, 0, 0, 0, time.UTC)
@@ -723,9 +690,8 @@ func TestBudgetShow_ActiveBanner_RendersServiceCount(t *testing.T) {
 	})
 }
 
-// TestBudgetShow_RecoveredBanner_RendersWithAndWithoutFlapWindow is a
-// table-driven coverage of the [RECOVERED] branch with and without
-// the FlapSuppressedUntil cooldown text.
+// TestBudgetShow_RecoveredBanner_RendersWithAndWithoutFlapWindow verifies
+// RECOVERED banner with and without cooldown text.
 func TestBudgetShow_RecoveredBanner_RendersWithAndWithoutFlapWindow(t *testing.T) {
 	now := time.Date(2026, 4, 25, 14, 0, 0, 0, time.UTC)
 	armed := now.Add(-2 * time.Hour)
@@ -776,11 +742,8 @@ func TestBudgetShow_RecoveredBanner_RendersWithAndWithoutFlapWindow(t *testing.T
 	}
 }
 
-// TestBudgetShow_RecoveredOverridesFailed_AfterManualRecovery pins the
-// banner-precedence rule: after a manual recovery completes
-// (RestoredAt set), the banner shows [RECOVERED] not [FAILED] even
-// when FailedNotificationFiredAt is still set in the annotation
-// pending GC. A successful manual recovery is the operative state.
+// TestBudgetShow_RecoveredOverridesFailed_AfterManualRecovery verifies
+// RECOVERED takes precedence over FAILED when RestoredAt is set.
 func TestBudgetShow_RecoveredOverridesFailed_AfterManualRecovery(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		now := time.Date(2026, 4, 25, 14, 0, 0, 0, time.UTC)
@@ -812,10 +775,8 @@ func TestBudgetShow_RecoveredOverridesFailed_AfterManualRecovery(t *testing.T) {
 	})
 }
 
-// TestBudgetShow_BannerHonorsNotifyBeforeMinutes verifies that when
-// the persisted state carries NotifyBeforeMinutes != 30 the ARMED
-// banner renders fireAt = ArmedAt + that value. Cross-version compat:
-// an older state without the field falls back to the 30-minute default.
+// TestBudgetShow_BannerHonorsNotifyBeforeMinutes verifies ARMED banner uses
+// persisted NotifyBeforeMinutes, falling back to 30m default when zero.
 func TestBudgetShow_BannerHonorsNotifyBeforeMinutes(t *testing.T) {
 	cases := []struct {
 		name             string
@@ -856,16 +817,8 @@ func TestBudgetShow_BannerHonorsNotifyBeforeMinutes(t *testing.T) {
 	}
 }
 
-// --- `convox budget set --pricing-adjustment-only` carve-out ----
-//
-// Locks the rack-side F6 carve-out CLI integration: the rack accepts a
-// PricingAdjustment-only AppBudgetOptions on a cost_tracking_enable=false
-// rack (provider/k8s/budget_accumulator.go:requireCostTrackingForBudget).
-// These tests assert the CLI reaches that path and partial-merge semantics
-// hold across the standard and carve-out paths.
-
-// Test 1: TestBudgetSet_MonthlyCapOnly_Accepted — standard path with
-// --monthly-cap alone; PricingAdjustment must be nil (partial-merge).
+// Test 1: TestBudgetSet_MonthlyCapOnly_Accepted verifies --monthly-cap alone
+// leaves PricingAdjustment nil (partial-merge).
 func TestBudgetSet_MonthlyCapOnly_Accepted(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("AppCost", "app1").Return(&structs.AppCost{App: "app1", SpendUsd: 0.0}, nil)
@@ -883,12 +836,10 @@ func TestBudgetSet_MonthlyCapOnly_Accepted(t *testing.T) {
 	})
 }
 
-// Test 2: TestBudgetSet_PricingAdjustmentOnly_Accepted — carve-out path.
-// Only PricingAdjustment is sent. AppCost MUST NOT be called (MTD warning
-// suppressed when no cap is being set).
+// Test 2: TestBudgetSet_PricingAdjustmentOnly_Accepted verifies pricing-only
+// path sends only PricingAdjustment; AppCost must not be called.
 func TestBudgetSet_PricingAdjustmentOnly_Accepted(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		// AppCost intentionally not mocked — the test fails if it is called.
 		i.On("AppBudgetSet", "app1", mock.MatchedBy(func(opts structs.AppBudgetOptions) bool {
 			return opts.MonthlyCapUsd == nil &&
 				opts.AlertThresholdPercent == nil &&
@@ -904,8 +855,8 @@ func TestBudgetSet_PricingAdjustmentOnly_Accepted(t *testing.T) {
 	})
 }
 
-// Test 3: TestBudgetSet_CapAndPricingAdjustment_Accepted — combined path.
-// All four fields populate.
+// Test 3: TestBudgetSet_CapAndPricingAdjustment_Accepted verifies combined
+// --monthly-cap and --pricing-adjustment populates all fields.
 func TestBudgetSet_CapAndPricingAdjustment_Accepted(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("AppCost", "app1").Return(&structs.AppCost{App: "app1", SpendUsd: 0.0}, nil)
@@ -923,9 +874,8 @@ func TestBudgetSet_CapAndPricingAdjustment_Accepted(t *testing.T) {
 	})
 }
 
-// Test 4: TestBudgetSet_AlertAtWithoutCap_Rejected — enforcement-bearing
-// flag without --monthly-cap. AppBudgetSet MUST NOT be called (behavioral
-// load-bearing assertion); stderr substring is supplementary signal.
+// Test 4: TestBudgetSet_AlertAtWithoutCap_Rejected verifies --alert-at
+// without --monthly-cap is rejected.
 func TestBudgetSet_AlertAtWithoutCap_Rejected(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		res, err := testExecute(e, "budget set app1 --alert-at 80", nil)
@@ -937,7 +887,8 @@ func TestBudgetSet_AlertAtWithoutCap_Rejected(t *testing.T) {
 	})
 }
 
-// Test 5: TestBudgetSet_AtCapActionWithoutCap_Rejected — sibling to test 4.
+// Test 5: TestBudgetSet_AtCapActionWithoutCap_Rejected verifies
+// --at-cap-action without --monthly-cap is rejected.
 func TestBudgetSet_AtCapActionWithoutCap_Rejected(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		res, err := testExecute(e, "budget set app1 --at-cap-action auto-shutdown", nil)
@@ -949,8 +900,8 @@ func TestBudgetSet_AtCapActionWithoutCap_Rejected(t *testing.T) {
 	})
 }
 
-// Test 6: TestBudgetSet_AlertAtWithPricingAdjustment_Rejected — enforcement
-// flag combined with pricing-only attempt. Still requires --monthly-cap.
+// Test 6: TestBudgetSet_AlertAtWithPricingAdjustment_Rejected verifies
+// --alert-at with --pricing-adjustment still requires --monthly-cap.
 func TestBudgetSet_AlertAtWithPricingAdjustment_Rejected(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		res, err := testExecute(e, "budget set app1 --pricing-adjustment 0.7 --alert-at 80", nil)
@@ -961,9 +912,7 @@ func TestBudgetSet_AlertAtWithPricingAdjustment_Rejected(t *testing.T) {
 	})
 }
 
-// Test 7: TestBudgetSet_NoFlags_Rejected — no flags at all. Asserts
-// the canonical phrase substring (wording-stable across alternative
-// flag combinations).
+// Test 7: TestBudgetSet_NoFlags_Rejected verifies no flags produces an error.
 func TestBudgetSet_NoFlags_Rejected(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		res, err := testExecute(e, "budget set app1", nil)
@@ -974,8 +923,8 @@ func TestBudgetSet_NoFlags_Rejected(t *testing.T) {
 	})
 }
 
-// Test 8: TestBudgetSet_PricingAdjustmentOnly_RejectsNonNumeric — the
-// carve-out path still validates pricing input.
+// Test 8: TestBudgetSet_PricingAdjustmentOnly_RejectsNonNumeric verifies
+// non-numeric pricing adjustment is rejected.
 func TestBudgetSet_PricingAdjustmentOnly_RejectsNonNumeric(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		res, err := testExecute(e, "budget set app1 --pricing-adjustment xyz", nil)
@@ -986,9 +935,8 @@ func TestBudgetSet_PricingAdjustmentOnly_RejectsNonNumeric(t *testing.T) {
 	})
 }
 
-// Test 9: TestBudgetSet_PricingAdjustmentOnly_Idempotent — running the
-// same command twice produces the same partial-merge AppBudgetOptions
-// shape both times.
+// Test 9: TestBudgetSet_PricingAdjustmentOnly_Idempotent verifies repeated
+// pricing-only calls produce the same options shape.
 func TestBudgetSet_PricingAdjustmentOnly_Idempotent(t *testing.T) {
 	matchPricingOnly := func(opts structs.AppBudgetOptions) bool {
 		return opts.MonthlyCapUsd == nil &&
@@ -1009,10 +957,8 @@ func TestBudgetSet_PricingAdjustmentOnly_Idempotent(t *testing.T) {
 	}
 }
 
-// Test 10: TestBudgetSet_PricingAdjustmentOnly_OmissionPreservesPrior —
-// THE central new behavior. Asserts via mock.MatchedBy that
-// AppBudgetOptions{MonthlyCapUsd: nil, ..., PricingAdjustment: &"0.7"}
-// reaches the SDK (rack-side merge then preserves prior MonthlyCapUsd).
+// Test 10: TestBudgetSet_PricingAdjustmentOnly_OmissionPreservesPrior verifies
+// pricing-only update leaves MonthlyCapUsd nil for server-side merge.
 func TestBudgetSet_PricingAdjustmentOnly_OmissionPreservesPrior(t *testing.T) {
 	t.Run("first set populates cap and pricing", func(t *testing.T) {
 		testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
@@ -1045,8 +991,8 @@ func TestBudgetSet_PricingAdjustmentOnly_OmissionPreservesPrior(t *testing.T) {
 	})
 }
 
-// Test 11: TestBudgetSet_PricingAdjustmentExplicitZero_Accepted — explicit
-// zero is a valid value (clears the multiplier).
+// Test 11: TestBudgetSet_PricingAdjustmentExplicitZero_Accepted verifies
+// explicit zero is accepted.
 func TestBudgetSet_PricingAdjustmentExplicitZero_Accepted(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("AppBudgetSet", "app1", mock.MatchedBy(func(opts structs.AppBudgetOptions) bool {
@@ -1061,8 +1007,8 @@ func TestBudgetSet_PricingAdjustmentExplicitZero_Accepted(t *testing.T) {
 	})
 }
 
-// Test 12: TestBudgetSet_PricingAdjustmentInfNaN_Rejected — Inf and NaN
-// rejected on the carve-out path (validation isn't accidentally skipped).
+// Test 12: TestBudgetSet_PricingAdjustmentInfNaN_Rejected verifies Inf and
+// NaN are rejected.
 func TestBudgetSet_PricingAdjustmentInfNaN_Rejected(t *testing.T) {
 	for _, tv := range []string{"Inf", "NaN"} {
 		t.Run(tv, func(t *testing.T) {
@@ -1077,9 +1023,9 @@ func TestBudgetSet_PricingAdjustmentInfNaN_Rejected(t *testing.T) {
 	}
 }
 
-// Test 13: TestBudgetSet_PricingAdjustmentOnly_NoMtdWarning — confirms
-// §3.3 MTD-warning suppression. AppCost is NOT called and the misleading
-// "--monthly-cap=$0.00" warning is NOT emitted on the pricing-only path.
+// Test 13: TestBudgetSet_PricingAdjustmentOnly_NoMtdWarning verifies
+// AppCost is not called and the misleading MTD warning is suppressed on
+// the pricing-only path.
 func TestBudgetSet_PricingAdjustmentOnly_NoMtdWarning(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		// AppCost intentionally not mocked.
@@ -1096,11 +1042,8 @@ func TestBudgetSet_PricingAdjustmentOnly_NoMtdWarning(t *testing.T) {
 	})
 }
 
-// Test 14: TestBudgetSet_NoFlags_ErrorMessageContainsMonthlyCapSubstring —
-// pins the user-CI substring contract per §7 BC row at line 320.
-// Distinct from test 7: even if the canonical phrase is reworded, the
-// literal substring "--monthly-cap" must survive so grep-based CI scripts
-// still match.
+// Test 14: TestBudgetSet_NoFlags_ErrorMessageContainsMonthlyCapSubstring
+// ensures "--monthly-cap" substring survives rewording (CI grep contract).
 func TestBudgetSet_NoFlags_ErrorMessageContainsMonthlyCapSubstring(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		res, err := testExecute(e, "budget set app1", nil)
@@ -1112,10 +1055,8 @@ func TestBudgetSet_NoFlags_ErrorMessageContainsMonthlyCapSubstring(t *testing.T)
 	})
 }
 
-// --- `simulate-shutdown` em-dash low-rate format ----
-
-// B1: TestSimulateShutdown_LowRateAsEmDash — Eligible row whose rate
-// rounds to <$0.001/hr renders as em-dash with the disambiguation footnote.
+// TestSimulateShutdown_LowRateAsEmDash verifies rates below $0.001/hr
+// render as em-dash with disambiguation footnote.
 func TestSimulateShutdown_LowRateAsEmDash(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		now := time.Date(2026, 4, 25, 14, 0, 0, 0, time.UTC)
@@ -1144,8 +1085,8 @@ func TestSimulateShutdown_LowRateAsEmDash(t *testing.T) {
 	})
 }
 
-// B2: TestSimulateShutdown_NoFootnoteWhenAllAboveThreshold — regression
-// guard against spurious footnote noise when all rows render as cents.
+// TestSimulateShutdown_NoFootnoteWhenAllAboveThreshold verifies no
+// footnote appears when all rows render normally.
 func TestSimulateShutdown_NoFootnoteWhenAllAboveThreshold(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		now := time.Date(2026, 4, 25, 14, 0, 0, 0, time.UTC)
@@ -1177,9 +1118,8 @@ func TestSimulateShutdown_NoFootnoteWhenAllAboveThreshold(t *testing.T) {
 	})
 }
 
-// B3: TestSimulateShutdown_ExemptServicesUnaffected — Exempt rows are
-// unchanged; only Eligible-row rate cells use the em-dash format. Mixed
-// case verifies the dashed flag tracks Eligible rows only.
+// TestSimulateShutdown_ExemptServicesUnaffected verifies exempt rows are
+// unchanged and only eligible rows use em-dash format.
 func TestSimulateShutdown_ExemptServicesUnaffected(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		now := time.Date(2026, 4, 25, 14, 0, 0, 0, time.UTC)

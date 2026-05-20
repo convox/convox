@@ -225,12 +225,8 @@ func DispatchWebhookForTest(url string, body []byte) error {
 
 // DispatchWebhookSafelyForTest exposes the panic-recovery wrapper for unit
 // tests that need to assert recover() catches a deliberate panic. The
-// signingKeys arg is variadic so existing call sites that pre-date D.2
-// keep working with no source change. Test-only.
-//
-// timeout uses the package default (webhookClientTimeout) when callers
-// pass no signingKeys (i.e. the legacy entry point); per-URL timeouts
-// are exercised via DispatchWebhookSafelyWithTimeoutForTest.
+// signingKeys arg is variadic so existing unsigned call sites keep
+// working with no source change. Test-only.
 func DispatchWebhookSafelyForTest(url string, body []byte, signingKeys ...[]byte) {
 	dispatchWebhookSafely(url, body, signingKeys, webhookClientTimeout)
 }
@@ -260,7 +256,7 @@ func RedactedWebhookURLForTest(raw string) string {
 // within dispatchWebhookSafely's recover scope so unit tests can install a
 // stub that panics, returns a specific error, or counts invocations.
 // Setting the hook also flips dispatchHookOverridden so the safely-wrapper
-// routes through the (url, body) signature; this preserves pre-D.2 test
+// routes through the (url, body) signature; this preserves legacy test
 // stubs that don't know about signingKeys. Returns a restore function the
 // test must defer to reinstate the production dispatcher. Test-only.
 func SetDispatchWebhookFnForTest(fn func(url string, body []byte) error) func() {
@@ -274,7 +270,7 @@ func SetDispatchWebhookFnForTest(fn func(url string, body []byte) error) func() 
 	}
 }
 
-// SetDispatchWebhookSignedFnForTest swaps the signed dispatcher so D.2
+// SetDispatchWebhookSignedFnForTest swaps the signed dispatcher so
 // integration tests can intercept (url, body, signingKeys, timeout) calls
 // and assert keys + timeout are threaded through correctly. Returns a
 // restore function. Test-only; production callers MUST NOT touch this hook.
@@ -318,7 +314,7 @@ func ResetWebhookSSRFLoggedForTest() {
 // DispatchWebhookSignedForTest exposes the signed dispatcher so unit tests
 // can drive a single signed POST without going through EventSend's
 // goroutine fan-out. Uses the package-default webhookClientTimeout to
-// preserve pre-2B test-stub semantics. Test-only.
+// preserve existing unsigned test-stub semantics. Test-only.
 func DispatchWebhookSignedForTest(url string, body []byte, signingKeys [][]byte) error {
 	return dispatchWebhookSigned(url, body, signingKeys, webhookClientTimeout)
 }
@@ -557,11 +553,9 @@ func RunReleasePromoteWatcherForTest(p *Provider, ctx context.Context, app strin
 }
 
 // ReleaseTemplateServicesForTest exposes the unexported releaseTemplateServices
-// helper so item-23 §4.1 unit tests can drive the override-honor path
-// without the full ReleasePromote / Atom.Apply / template-render scaffolding.
-// Test-only; production callers must go through ReleasePromote which wraps
-// this helper. Returns the rendered Deployment/Service/Ingress YAML
-// concatenation that the production path passes to atom.Apply.
+// helper so unit tests can drive the override-honor path without the full
+// ReleasePromote / Atom.Apply / template-render scaffolding. Test-only;
+// production callers must go through ReleasePromote which wraps this helper.
 func ReleaseTemplateServicesForTest(p *Provider, a *structs.App, e structs.Environment, r *structs.Release, ss manifest.Services, opts structs.ReleasePromoteOptions) ([]byte, error) {
 	return p.releaseTemplateServices(a, e, r, ss, opts)
 }
@@ -655,7 +649,7 @@ func SetReleasePromoteWatcherPanicHookForTest(hook func(app, releaseID string)) 
 // SetReleasePromoteCleanupDeferPanicHookForTest installs an injectable
 // panic trigger that fires from inside the cleanup defer (after the
 // inner recover() but before the LIFO bare-defer release() runs). Used
-// by the cleanup-defer-panic test to validate the belt-and-suspenders
+// by the cleanup-defer-panic test to validate the redundant safety
 // guarantee that release() is always invoked even when the cleanup
 // defer itself panics. Returns a restore function. Test-only.
 func SetReleasePromoteCleanupDeferPanicHookForTest(hook func(app, releaseID string)) func() {

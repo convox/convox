@@ -45,7 +45,7 @@ func TestContextActor_PopulatesActorWhenSet(t *testing.T) {
 		{"system-read", "system-read"},
 		{"system-write", "system-write"},
 		{"system-admin", "system-admin"},
-		// Whitespace propagates verbatim per spec.
+		// Whitespace propagates verbatim.
 		{"whitespace claim", "   "},
 	}
 	for _, tc := range cases {
@@ -68,8 +68,8 @@ func TestContextActor_EmptyClaim_ReturnsUnknown(t *testing.T) {
 }
 
 // TestContextActor_NonStringValue_ReturnsUnknown asserts a non-string value
-// at the key (defense in depth — middleware always writes string but a
-// future bug could write any type) collapses to "unknown".
+// at the key (middleware always writes string but a future bug could write
+// any type) collapses to "unknown".
 func TestContextActor_NonStringValue_ReturnsUnknown(t *testing.T) {
 	p := &k8s.Provider{}
 	ctx := context.WithValue(context.Background(), structs.ConvoxJwtUserCtxKey, 42)

@@ -971,22 +971,9 @@ func TestBudgetAccumulator_NonRunningPodSkipped(t *testing.T) {
 	})
 }
 
-// ----------------------------------------------------------------------------
-// B.6: Breaker reader gate on cost_tracking_enable
-// ----------------------------------------------------------------------------
-//
-// budgetCircuitBreakerTripped is gated on COST_TRACKING_ENABLE so a user
-// who turns off cost tracking with a stale tripped breaker annotation
-// persisted on the namespace is not permanently blocked from deploying.
-// When the env var is absent or "false", the breaker reader returns nil
-// regardless of any persisted state. When the env var is "true", existing
-// behavior is preserved exactly.
-//
-// The helper costTrackingEnabled() is the canonical accessor used by both
-// the breaker reader and the accumulator dispatch in k8s.go.
-
 // TestBreakerReader_CostTrackingEnabledFalse_ReturnsFalse_StaleAnnotationIgnored
-// is the R3-mandated regression guard. With env unset (the typical state on
+// verifies that a stale tripped breaker annotation does not block deploys
+// when cost tracking is disabled. With env unset (the typical state on
 // a rack with cost_tracking_enable=false), a tripped CircuitBreakerTripped
 // annotation must NOT block ReleasePromote — otherwise the user is
 // permanently stuck with no recovery path because the accumulator that
@@ -1267,11 +1254,8 @@ func TestBreakerReader_CostTrackingEnabled_AppNotFound_ReturnsNil(t *testing.T) 
 }
 
 // TestBudgetCircuitBreaker_CostTrackingDisabled_StaleAnnotationIgnored is
-// the spec-named twin of TestBreakerReader_CostTrackingEnabledFalse_ReturnsFalse_StaleAnnotationIgnored
-// from the impl prompt §5. The two test names exist independently so the
-// orchestrator self-check greps (looking for "TestBreakerReader" OR
-// "TestBudgetCircuitBreaker_CostTrackingDisabled_StaleAnnotationIgnored")
-// both succeed.
+// a complementary test to TestBreakerReader_CostTrackingEnabledFalse_ReturnsFalse_StaleAnnotationIgnored.
+// Both verify the same invariant from different entry points.
 func TestBudgetCircuitBreaker_CostTrackingDisabled_StaleAnnotationIgnored(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "")
 	testProvider(t, func(p *k8s.Provider) {
@@ -1304,30 +1288,8 @@ func TestBudgetCircuitBreaker_CostTrackingDisabled_StaleAnnotationIgnored(t *tes
 	})
 }
 
-// ----------------------------------------------------------------------------
-// B.2: Context threading on internal accumulator path
-// ----------------------------------------------------------------------------
-//
-// runBudgetAccumulator now threads the leader-election ctx through
-// safeBudgetTick -> accumulateBudgetTick -> accumulateBudgetApp into the
-// CoreV1().Namespaces().Get/Update RPCs. A graceful api-pod shutdown
-// (SIGTERM during a rack update) cancels in-flight namespace mutations
-// cleanly instead of orphaning the goroutine on the client-go default
-// timeout. User-API entry points (AppBudgetGet/Set/Clear/Reset and
-// AppCost) and the breaker reader retain context.TODO() for now -- they
-// are HTTP-driven and stdapi handles request-scoped shutdown elsewhere.
-//
-// The fake client does not honour ctx cancellation natively, so the
-// cancellation tests install a PrependReactor that blocks on ctx.Done()
-// and returns ctx.Err() once the test cancels. This proves the same ctx
-// instance reaches the namespace Get/Update path; in production, real
-// client-go HTTP transport applies the same cancellation at the network
-// layer.
-
-// TestAccumulator_CtxBackground_TickCompletesNormally is the happy-path
-// smoke test for the new ctx-aware test hook. With context.Background()
-// the accumulator must complete the tick and persist a state annotation,
-// matching the existing AccumulateBudgetAppForTest contract.
+// TestAccumulator_CtxBackground_TickCompletesNormally verifies the ctx-aware
+// accumulator completes normally with context.Background().
 func TestAccumulator_CtxBackground_TickCompletesNormally(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
@@ -1420,31 +1382,8 @@ func TestAccumulator_CtxCanceledMidTick_AbortsK8sCall(t *testing.T) {
 	})
 }
 
-// ----------------------------------------------------------------------------
-// B.3: Accumulator goroutine lifecycle hardening
-// ----------------------------------------------------------------------------
-//
-// runBudgetAccumulator now wraps each safeBudgetTick invocation in a tracked
-// goroutine and calls wg.Wait with a budgetTickShutdownGrace deadline on
-// ctx.Done. Combined with the per-app and per-tick ctx.Err() checks added in
-// this commit, a graceful shutdown (api-pod SIGTERM, leadership loss) drives
-// the loop to: cancel -> in-flight tick honours ctx -> wg.Wait returns ->
-// at=stop logged. If the in-flight tick is wedged past the grace window the
-// loop logs at=shutdown_timeout and returns anyway -- blocking the api pod
-// indefinitely on a stuck k8s call would defeat graceful shutdown.
-//
-// Tests use captureStdout (defined in event_test.go, same package) to
-// observe the lifecycle log lines without coupling to a logger
-// abstraction. BUDGET_POLL_INTERVAL is pinned to 1m to keep the tick loop
-// from firing a second tick during the test window; the initial tick at
-// the top of runBudgetAccumulator fires unconditionally so each test
-// drives ctx around that initial tick.
-
-// TestAccumulator_LifecycleCleanShutdown drives the happy path:
-// runBudgetAccumulator launches, the initial tick processes one app
-// successfully, the test cancels ctx, and the accumulator unwinds inside
-// the grace window with at=stop logged. Exit timing must be well under
-// budgetTickShutdownGrace because the in-flight tick has nothing to drain.
+// TestAccumulator_LifecycleCleanShutdown verifies that the accumulator
+// launches, processes one app, and unwinds cleanly when ctx is cancelled.
 func TestAccumulator_LifecycleCleanShutdown(t *testing.T) {
 	t.Setenv("BUDGET_POLL_INTERVAL", "1m")
 

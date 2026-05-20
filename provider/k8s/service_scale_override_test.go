@@ -65,7 +65,7 @@ func seedReleaseForApp(t *testing.T, p *k8s.Provider, ns, fixture string) {
 }
 
 // captureMultiPayload collects all events emitted via webhooks during the
-// callback. Mirrors captureOnePayload (d3_event_actor_test.go) but returns
+// callback. Mirrors captureOnePayload (event_actor_test.go) but returns
 // every payload posted to the webhook receiver.
 func captureMultiPayload(t *testing.T, fn func(*k8s.Provider) error) []map[string]any {
 	t.Helper()
@@ -102,8 +102,6 @@ func captureMultiPayload(t *testing.T, fn func(*k8s.Provider) error) []map[strin
 // findEventByAction is provided by release_watcher_test.go.
 // Reused here to avoid a duplicate declaration.
 
-// ----- Test 7: TogglesOn -----
-
 func TestServiceScaleOverrideSet_TogglesOn(t *testing.T) {
 	events := captureMultiPayload(t, func(p *k8s.Provider) error {
 		kk, _ := p.Cluster.(*fake.Clientset)
@@ -131,8 +129,6 @@ func TestServiceScaleOverrideSet_TogglesOn(t *testing.T) {
 	assert.Equal(t, "on", data["state"])
 }
 
-// ----- Test 8: TogglesOff -----
-
 func TestServiceScaleOverrideSet_TogglesOff(t *testing.T) {
 	events := captureMultiPayload(t, func(p *k8s.Provider) error {
 		kk, _ := p.Cluster.(*fake.Clientset)
@@ -154,8 +150,6 @@ func TestServiceScaleOverrideSet_TogglesOff(t *testing.T) {
 	data, _ := ev["data"].(map[string]any)
 	assert.Equal(t, "off", data["state"])
 }
-
-// ----- Test 9: NoOp_AlreadyOn -----
 
 func TestServiceScaleOverrideSet_NoOp_AlreadyOn(t *testing.T) {
 	events := captureMultiPayload(t, func(p *k8s.Provider) error {
@@ -179,8 +173,6 @@ func TestServiceScaleOverrideSet_NoOp_AlreadyOn(t *testing.T) {
 	require.Nil(t, findEventByAction(events, "app:scale-override:toggled"), "no event should emit on no-op")
 }
 
-// ----- Test 10: NoOp_AlreadyOff -----
-
 func TestServiceScaleOverrideSet_NoOp_AlreadyOff(t *testing.T) {
 	events := captureMultiPayload(t, func(p *k8s.Provider) error {
 		kk, _ := p.Cluster.(*fake.Clientset)
@@ -203,8 +195,6 @@ func TestServiceScaleOverrideSet_NoOp_AlreadyOff(t *testing.T) {
 	require.Nil(t, findEventByAction(events, "app:scale-override:toggled"))
 }
 
-// ----- Test 11: NotFound -----
-
 func TestServiceScaleOverrideSet_NotFound(t *testing.T) {
 	events := captureMultiPayload(t, func(p *k8s.Provider) error {
 		kk, _ := p.Cluster.(*fake.Clientset)
@@ -217,8 +207,6 @@ func TestServiceScaleOverrideSet_NotFound(t *testing.T) {
 
 	require.Nil(t, findEventByAction(events, "app:scale-override:toggled"), "no event on not-found")
 }
-
-// ----- Test 12: AckByOverride -----
 
 func TestServiceScaleOverrideSet_AckByOverride(t *testing.T) {
 	events := captureMultiPayload(t, func(p *k8s.Provider) error {
@@ -235,9 +223,8 @@ func TestServiceScaleOverrideSet_AckByOverride(t *testing.T) {
 	assert.Equal(t, "alice@example.com", data["actor"], "actor must equal ack_by per AppBudgetSet precedent")
 }
 
-// ----- Test 12b: SanitizesAckBy -----
-//
-// Verifies the provider-method sanitizes ackBy at entry: control
+// TestServiceScaleOverrideSet_SanitizesAckBy verifies the provider-method
+// sanitizes ackBy at entry: control
 // chars and a forged log-line tail must not survive into the
 // webhook payload (actor + ack_by) or the stdout log line. Mirrors
 // the budget_accumulator sanitization invariant — the provider is
@@ -272,8 +259,6 @@ func TestServiceScaleOverrideSet_SanitizesAckBy(t *testing.T) {
 	assert.Contains(t, out, "ack_by=\"alice@example.comINJECTION\"",
 		"stdout ack_by must use %%q quoting around sanitized value; got:\n%s", out)
 }
-
-// ----- Test 12a: ServiceList_PopulatesScaleOverrideActive -----
 
 func TestServiceList_PopulatesScaleOverrideActive(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
@@ -312,8 +297,6 @@ func TestServiceList_PopulatesScaleOverrideActive(t *testing.T) {
 	})
 }
 
-// ----- Test 12b-i: ServiceList never returns nil ScaleOverrideActive on 3.24.6 rack -----
-
 func TestServiceList_NeverReturnsNilScaleOverrideActive_On3246Rack(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
@@ -339,14 +322,9 @@ func TestServiceList_NeverReturnsNilScaleOverrideActive_On3246Rack(t *testing.T)
 	})
 }
 
-// ----- Test 12c: ServiceList_PopulatesAgentField -----
-//
-// Verifies the Agent bool field added in item-23 §I-2: services backed by
-// a Deployment report Agent=false (zero value) and services backed by a
-// DaemonSet (manifest agent: true) report Agent=true. Console3 uses the
-// field to hide per-service UI affordances that don't apply to agents
-// (e.g. the scale-override toggle, which the rack only patches on
-// Deployments).
+// TestServiceList_PopulatesAgentField verifies the Agent bool: services
+// backed by a Deployment report Agent=false and DaemonSet-backed services
+// (manifest agent: true) report Agent=true.
 func TestServiceList_PopulatesAgentField(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
@@ -408,14 +386,9 @@ func TestServiceList_PopulatesAgentField(t *testing.T) {
 	})
 }
 
-// ----- Test 12d: AdminRBAC_RequiresAdminRole -----
-//
-// The provider-method itself is RBAC-agnostic (the gate is at the API
-// controller layer per item-23 §4.3). The API-controller RBAC test lives
-// in pkg/api/service_test.go (test 13b). This test pins the shared
-// invariant: provider-method calls succeed regardless of role because
-// the controller is the gate. The negative case is asserted at the
-// HTTP-handler layer.
+// TestServiceScaleOverrideSet_AdminRBAC_AdminPermitted verifies the
+// provider-method is RBAC-agnostic (the gate is at the API controller
+// layer). The negative case is asserted in pkg/api/service_test.go.
 func TestServiceScaleOverrideSet_AdminRBAC_AdminPermitted(t *testing.T) {
 	// Provider-method admin check is delegated to the controller. We
 	// confirm that the provider-method itself executes correctly when
@@ -434,9 +407,8 @@ func TestServiceScaleOverrideSet_AdminRBAC_AdminPermitted(t *testing.T) {
 	})
 }
 
-// ----- Race test 21: Concurrent toggle + ServiceUpdate -----
-//
-// Spawn N goroutines toggling override while another goroutine repeatedly
+// TestServiceScaleOverride_RaceWith_ServiceUpdate spawns N goroutines toggling
+// override while another goroutine repeatedly
 // calls ServiceUpdate with empty opts — the no-mutation path still drives
 // the full budget-circuit-breaker → informer Get → Deployment Update
 // pipeline, which is the read+write surface that races the toggle's
@@ -500,19 +472,9 @@ func TestServiceScaleOverride_RaceWith_ServiceUpdate(t *testing.T) {
 	})
 }
 
-// ----- Race test 22: Cross-mutation toggle vs ReleasePromote — informer-cache annotation read race -----
-//
-// Spec §9.4 row 22 stresses ServiceScaleOverrideSet against the full
-// ReleasePromote path. Driving the full ReleasePromote requires Atom +
-// ConvoxCRD + Build fixtures and isn't available in the lean unit-test
-// scaffolding. This narrowed test covers only the in-process race that
-// matters for unit-level coverage: the toggle's annotation Patch vs an
-// informer-cached Get of the same Deployment metadata (the read shape
-// ReleasePromote uses to pick up the override flag). It does NOT
-// exercise the rest of the ReleasePromote pipeline (manifest re-render,
-// HPA reconcile, KEDA ScaledObject patch, deployment rollout). The
-// full ReleasePromote-path race is exercised in integration on a live
-// AWS rack.
+// TestServiceScaleOverride_CrossMutation_RaceWith_ReleasePromote covers the
+// in-process race between the toggle's annotation Patch and an informer-cached
+// Get of the same Deployment metadata.
 func TestServiceScaleOverride_CrossMutation_RaceWith_ReleasePromote(t *testing.T) {
 	if testing.Short() {
 		t.Skip("race test")

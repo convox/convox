@@ -535,7 +535,7 @@ func TestReconcileVarsWithModule_StripsMonitoringMetricsProvisioned_OnDowngrade(
 // TestReconcileVarsWithModule_StripsOrphanedPromVars_OnDowngrade is a
 // fixture-only future-proofing exercise. The 3.24.5 system/aws/variables.tf
 // STILL declares prometheus_gpu_metrics_chart_version + retention, and 3.24.6
-// KEEPS them per SPEC §3.8 for SystemRaw consumption — so neither version
+// KEEPS them for SystemRaw consumption — so neither version
 // actually triggers stripping in real downgrades. This test uses synthetic
 // moduleVars excluding both prom-params to exercise the reconciler in a
 // hypothetical future-removal path. Catches regressions in future minor-bump

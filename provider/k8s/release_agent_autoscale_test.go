@@ -90,7 +90,7 @@ func TestMain(m *testing.M) {
 // must trigger release:agent-autoscale-ignored with the four-key Data shape
 // {actor, app, service, release}. Locks the system-actor convention shared by
 // release:autoscale-disabled and release:prometheus-skipped (see
-// d3_call_site_actor_test.go).
+// call_site_actor_test.go).
 func TestRelease_AgentAutoscaleIgnored_FiresEvent(t *testing.T) {
 	_, events, err := runReleaseTemplateServicesEvents(t, setupAgentAutoscaleTest(t))
 	require.NoError(t, err, "release template render must succeed: %v", err)

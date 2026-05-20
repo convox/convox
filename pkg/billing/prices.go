@@ -1,73 +1,21 @@
-// Package billing embeds a static EC2 on-demand price table for rack-side
-// cost attribution. The table is maintained manually — pull the AWS public
-// pricing JSON for us-east-1, filter for the families enumerated in the
-// InstancePricing map, update OnDemandUsdPerHour values, and bump
-// pricingTableVersion to today. The CI drift check in prices_test.go
-// warns > 120 days and fails > 180 days.
-//
-// Source: https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/us-east-1/index.json
-// Region: us-east-1 (multi-region is v1.1).
-// Last refreshed: 2026-04-29
 package billing
 
-// InstancePrice is the on-demand us-east-1 hourly rate plus hardware
-// attributes needed by the dominant-resource attribution formula. The
-// SpotUsdPerHourFactor (zero-value → fallback to SpotDefaultFactor) is
-// the multiplier applied to the on-demand price when the node carries
-// a spot capacity-type signal. Adding the field is purely additive —
-// callers using PriceForInstance() and reading OnDemandUsdPerHour
-// continue to work unchanged.
 type InstancePrice struct {
 	OnDemandUsdPerHour   float64
-	SpotUsdPerHourFactor float64 // 0 → use SpotDefaultFactor; >0 → per-row override
+	SpotUsdPerHourFactor float64
 	GpuCount             int
 	GpuType              string
 	VcpuCount            int
 	MemGb                float64
 }
 
-// SpotDefaultFactor is the on-demand → spot multiplier applied when an
-// InstancePrice entry has SpotUsdPerHourFactor=0. 0.30 (= 70 % off the
-// list price) tracks the AWS spot historical average across stable
-// instance families. Conservative on the user-favorable side: the
-// average actual savings tend to exceed what the cost report shows,
-// which is the safer reporting direction.
-//
-// Spot factor adjustment policy (v1 LOCKED):
-//   - 0.30 is locked for 3.24.6.
-//   - The factor MAY adjust within ±10 % of 0.30 (range [0.27, 0.33]) in
-//     a future patch IF the AWS spot pricing public-feed shows >30 %
-//     deviation from the assumed historical 70 % discount. Source:
-//     https://aws.amazon.com/ec2/spot/pricing/ (us-east-1 instance-hour
-//     averages over a trailing 30-day window, computed by quarterly-
-//     refresh procedure).
-//   - For 3.24.6 (v1) the value is fixed at 0.30; any adjustment is
-//     post-3.24.6 design work with its own release-note bullet.
-//
-// Accumulator-tick cadence: SpotDefaultFactor is a static const read on
-// EVERY accumulator tick at provider/k8s/budget_accumulator.go via
-// EffectiveUsdPerHour. There is no runtime adjustment / no tick-cadence
-// learning loop / no exponential-moving-average within the rack.
-// Per-row InstancePrice.SpotUsdPerHourFactor (when set non-zero by a
-// future quarterly refresh) overrides the default for that family — the
-// per-row value is also static within a release.
+// SpotDefaultFactor approximates the ~70% spot discount across stable families.
 const SpotDefaultFactor = 0.30
 
 const pricingTableVersion = "2026-04-29"
 
-// PricingSourceStaticTable is the wire-stable token for the embedded
-// static AWS-on-demand price table. Surfaces on AppCost.PricingSource
-// (json: "pricing-source"). Downstream tooling (CLI, Console,
-// third-party SDK consumers) treats this token as a stable identifier
-// — do NOT change the literal without coordinating a wire-version
-// bump and a renderer update at pkg/cli/cost.go and the Console-side
-// label translator.
 const PricingSourceStaticTable = "on-demand-static-table"
 
-// InstancePricing is the canonical static table consumed by the rack's
-// budget accumulator. Keyed by EC2 instance type. All entries use keyed
-// struct literals so future field additions to InstancePrice (e.g. a
-// per-row spot override) do not silently shift positional values.
 var InstancePricing = map[string]InstancePrice{
 	// GPU — g4dn (T4)
 	"g4dn.xlarge":   {OnDemandUsdPerHour: 0.526, GpuCount: 1, GpuType: "T4", VcpuCount: 4, MemGb: 16},
@@ -294,23 +242,11 @@ var InstancePricing = map[string]InstancePrice{
 	"r4.16xlarge": {OnDemandUsdPerHour: 4.256, VcpuCount: 64, MemGb: 488},
 }
 
-// PriceForInstance looks up an instance type and returns (price, true) on hit,
-// (zero-value, false) otherwise. Callers should increment WarningCount and
-// skip cost attribution on false rather than erroring — keeps the accumulator
-// robust to instance families introduced between quarterly refreshes.
 func PriceForInstance(instanceType string) (InstancePrice, bool) {
 	p, ok := InstancePricing[instanceType]
 	return p, ok
 }
 
-// EffectiveUsdPerHour returns the hourly rate adjusted for spot vs
-// on-demand. Pass capacityType as the lower-cased value ("spot",
-// "on-demand", or ""). Empty / unknown / "on-demand" returns the
-// on-demand price; "spot" applies SpotUsdPerHourFactor (per-row
-// override) or SpotDefaultFactor (table-wide fallback) as the
-// multiplier. This is the canonical entry point for pricing reads
-// from the budget accumulator — direct OnDemandUsdPerHour reads
-// are now considered a no-spot-aware bug.
 func (p InstancePrice) EffectiveUsdPerHour(capacityType string) float64 {
 	if capacityType != "spot" {
 		return p.OnDemandUsdPerHour
@@ -322,8 +258,6 @@ func (p InstancePrice) EffectiveUsdPerHour(capacityType string) float64 {
 	return p.OnDemandUsdPerHour * factor
 }
 
-// PricingTableVersion returns the last refresh date string from the header
-// comment. Used to populate AppCost.PricingTableVersion.
 func PricingTableVersion() string {
 	return pricingTableVersion
 }

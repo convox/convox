@@ -86,8 +86,8 @@ func promServer(t *testing.T, byMetric map[string]string, requestCount *int64) *
 func int64Ptr(v int64) *int64 { return &v }
 
 // TestNewPrometheusClient_EmptyHostReturnsNil — the "no PROMETHEUS_URL
-// configured" path. Spec §"NewPrometheusClient returns nil when host is
-// empty — callers must nil-check the result."
+// configured" path. NewPrometheusClient returns nil when host is empty;
+// callers must nil-check the result.
 func TestNewPrometheusClient_EmptyHostReturnsNil(t *testing.T) {
 	pc, err := k8s.NewPrometheusClient("")
 	require.NoError(t, err)

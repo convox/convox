@@ -16,11 +16,11 @@ import (
 // middleware uses the header value as the audit actor identity instead of
 // the generic "rack-password" sentinel. The header value flows through
 // ContextActor() to EventSend's central injection, so every audit event
-// stamped during the request lands the user-truthful actor without
+// stamped during the request lands the caller-provided actor without
 // per-controller form-param plumbing.
 //
 // Trust model: anyone with the rack password can already do anything as
-// root; the header is a user-truthfulness override, not a security
+// root; the header is a caller-provided override, not a security
 // boundary. Forged identities through this header are no worse than
 // forged identities passed via the existing form-param `ack_by` path.
 func TestAuthenticate_BasicAuthWithConvoxActorHeader_SetsActor(t *testing.T) {
@@ -73,7 +73,7 @@ func TestAuthenticate_BasicAuthWithBothHeaders_CanonicalWins(t *testing.T) {
 }
 
 // TestAuthenticate_BasicAuthEmptyActorHeader_FallsBackToRackPassword —
-// degenerate case: header sent but value is empty. Must NOT poison the
+// edge case: header sent but value is empty. Must NOT poison the
 // audit record with empty-string; falls through to the literal
 // "rack-password" sentinel that pre-3.24.6 callers see.
 func TestAuthenticate_BasicAuthEmptyActorHeader_FallsBackToRackPassword(t *testing.T) {
@@ -107,8 +107,8 @@ func TestAuthenticate_BasicAuthWhitespaceActorHeader_FallsBackToRackPassword(t *
 		"whitespace-only Convox-Actor must fall back to the rack-password sentinel")
 }
 
-// TestAuthenticate_BasicAuthHostileActorHeader_Sanitized verifies the
-// defense-in-depth requirement: hostile header values containing C0/C1,
+// TestAuthenticate_BasicAuthHostileActorHeader_Sanitized verifies that
+// hostile header values containing C0/C1,
 // BiDi overrides, or zero-width characters are stripped before being
 // stamped into ConvoxJwtUserParam. The sanitization runs through the
 // shared pkg/audit.SanitizeActor helper which is the single canonical
@@ -168,7 +168,7 @@ func TestAuthenticate_JwtAuth_IgnoresActorHeader(t *testing.T) {
 // X-Convox-Actor header rather than silently null-routing the legitimate
 // legacy attribution by stamping "unknown".
 //
-// Without this guard, a hostile MITM / browser extension / buggy proxy
+// Without this guard, a malicious proxy / browser extension / buggy proxy
 // that injects e.g. "Convox-Actor: ‮‮‮" while leaving X-Convox-Actor
 // clean would suppress the real attribution.
 func TestAuthenticate_BasicAuthCanonicalHostileOnly_FallsBackToLegacy(t *testing.T) {

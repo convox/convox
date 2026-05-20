@@ -117,18 +117,7 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 		if ms.Scale.Autoscale.IsEnabled() {
 			s.Autoscale = buildServiceAutoscaleState(ms.Scale.Autoscale)
 		} else if classicHPA || triggersOverride {
-			// Classic HPA path: service has `count: 1-5` (or
-			// scale.min < scale.max) without an explicit autoscale
-			// block, so the manifest renders a native HPA. These
-			// services ARE autoscaled and must surface as such to
-			// Console consumers reading `autoscale.enabled`. Override
-			// case mirrors: a Console-driven autoscaler should look
-			// "enabled" to the same readers.
-			//
-			// Seed thresholds from scale.targets so that when the
-			// live CRD is absent (e.g. after override disable before
-			// redeploy) the API still returns the manifest-declared
-			// threshold values instead of nil.
+			// Surface classic HPA / triggers-override as autoscale-enabled for Console.
 			s.Autoscale = &structs.ServiceAutoscaleState{Enabled: true}
 			if ms.Scale.Targets.Cpu > 0 {
 				cpu := ms.Scale.Targets.Cpu
@@ -140,31 +129,18 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 			}
 		}
 
-		// Live-state bounds projection. The manifest values seeded
-		// above describe what convox.yml declared, but `convox scale
-		// --min --max`, Range mode in the Console, and the triggers-
-		// override Enable / threshold pencil all patch the LIVE HPA /
-		// SO instead of the manifest. The bounds card has to reflect
-		// the live state so users see the same numbers they just set.
-		// Fall back to manifest values if no autoscaler exists.
+		// Overlay live HPA/SO bounds so users see what they actually set.
 		p.overlayLiveCRDBounds(app, d.ObjectMeta.Name, &s)
 
 		p.populateLiveCRDThresholds(app, d.ObjectMeta.Name, s.Autoscale)
 
-		// Populate scale-override-active from the Deployment annotation.
-		// 3.24.6+ racks ALWAYS set the pointer (never nil); nil is reserved
-		// as the wire-signal for pre-3.24.6 racks the Console can detect.
-		// Match strict literal "true" — any other annotation value (empty,
-		// "false", "1", legacy markers) reads as override-off.
+		// 3.24.6+: always set pointer; nil = pre-3.24.6 rack (Console compat).
 		if d.Annotations != nil && d.Annotations[ServiceScaleOverrideAnnotation] == ServiceScaleOverrideValueOn {
 			s.ScaleOverrideActive = options.Bool(true)
 		} else {
 			s.ScaleOverrideActive = options.Bool(false)
 		}
 
-		// Triggers-override-active mirrors the scale-override pointer
-		// contract: 3.24.6+ ALWAYS populates so pre-3.24.6 nil signals
-		// "rack does not support the feature."
 		if triggersOverride {
 			s.TriggersOverrideActive = options.Bool(true)
 		} else {
@@ -189,13 +165,6 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 		}
 	}
 
-	// GPU runtime telemetry runs after BOTH deployment and (optional)
-	// daemonset population so agent / non-agent services are aggregated
-	// in one Prom round-trip. p.PromClient is nil on racks without
-	// PROMETHEUS_URL → enrichGpuTelemetry no-ops. ServiceList does not
-	// receive a caller ctx (interface contract); use Background as the
-	// parent — enrichGpuTelemetry applies its own internal timeout
-	// (5s) on the Prom round-trip so a stalled request cannot leak.
 	p.enrichGpuTelemetry(context.Background(), app, ss)
 
 	return ss, nil
@@ -246,20 +215,12 @@ func (p *Provider) serviceListAppendDaemonsets(app string, ss structs.Services, 
 		s.Min = &min
 		s.Max = &max
 
-		// Populate scale-override-active from the DaemonSet annotation.
-		// Agent services render as DaemonSets — same annotation contract
-		// as the Deployment path. 3.24.6+ rack ALWAYS sets the pointer
-		// (nil reserved for pre-3.24.6 wire signal).
 		if d.Annotations != nil && d.Annotations[ServiceScaleOverrideAnnotation] == ServiceScaleOverrideValueOn {
 			s.ScaleOverrideActive = options.Bool(true)
 		} else {
 			s.ScaleOverrideActive = options.Bool(false)
 		}
 
-		// Agents do not participate in the triggers-override surface
-		// (autoscale doesn't apply to DaemonSets); still emit a *false
-		// pointer so the wire shape stays uniform with Deployment-backed
-		// services.
 		s.TriggersOverrideActive = options.Bool(false)
 
 		s.Agent = true
@@ -270,29 +231,7 @@ func (p *Provider) serviceListAppendDaemonsets(app string, ss structs.Services, 
 	return ss, nil
 }
 
-// enrichGpuTelemetry fans out a single batched Prom query for the given
-// ServiceList result and aggregates the per-pod samples by the `service`
-// pod label, writing averaged GPU utilization and memory pointers onto
-// each Service entry where Gpu > 0. No-ops when PromClient is nil (the
-// default on any rack without PROMETHEUS_URL configured) or when no
-// service has Gpu > 0.
-//
-// Aggregation contract: per-metric average across pods bucketed by
-// gm.Service. Pods with no `service` label value are skipped (not
-// Convox-managed). For each pod-metric pair, only non-nil GpuMetrics
-// pointers contribute to that metric's sum AND its denominator —
-// pods that did NOT report a sample for a given metric are silently
-// excluded from THAT metric's average without pulling other metrics
-// toward zero. A service whose 4 pods all report Util but only 2 report
-// Tensor will publish Util as the 4-pod mean and Tensor as the 2-pod
-// mean. If no pod reports a metric, the service's pointer for that
-// metric stays nil, which decodes through the resolver as null and
-// renders as `—` in the UI.
-//
-// The ctx parameter is the caller's context — plumbed through for
-// idiomatic cancellation. QueryGPUMetrics still applies its own internal
-// 5s deadline so a missing or never-cancelled parent ctx cannot stall
-// the enrichment path.
+// enrichGpuTelemetry averages per-pod GPU metrics by service label onto ServiceList entries.
 func (p *Provider) enrichGpuTelemetry(ctx context.Context, app string, ss structs.Services) {
 	if p.PromClient == nil {
 		return
@@ -314,12 +253,7 @@ func (p *Provider) enrichGpuTelemetry(ctx context.Context, app string, ss struct
 		return
 	}
 
-	// Aggregate by service. Per-metric independent counters — a pod that
-	// reports Util but not Tensor lifts utilCount and not tensorCount, so
-	// missing samples can't pull a different metric's average toward zero.
-	// GpuMetrics.Service was populated in QueryGPUMetrics from
-	// sample.Metric["service"], so the reverse map is built from
-	// gm.Service directly — no second Prom round-trip.
+	// Per-metric independent counters so missing samples don't skew other metrics.
 	type accum struct {
 		util, memUsed, memTotal                float64
 		utilCount, memUsedCount, memTotalCount int
@@ -422,21 +356,7 @@ func (p *Provider) enrichGpuTelemetry(ctx context.Context, app string, ss struct
 	}
 }
 
-// ServiceMetrics returns time-range GPU + base metrics for a single
-// service in the app. Mirrors the V2 rack ServiceMetrics shape (one
-// row per metric, []MetricValue per row) so the console resolver can
-// pass through results from V2 or V3 racks unchanged for the cpu/memory
-// rows; V3 3.24.6+ adds the gpu-* wire-names.
-//
-// Bounds and name validation happen at the controller layer
-// (pkg/api/controllers.go::ServiceMetrics) — by the time we're here,
-// app/service have been validated against manifest.NameValidator and
-// the concurrency semaphore is held.
-//
-// V3 first ship: returns GPU dimensions only. CPU/memory rows are
-// dropped at this provider until the V3 cAdvisor/kubelet path lands —
-// the resolver's contract with the UI is "passthrough whatever rows
-// arrive", so a V3 rack that returns 8 GPU rows is correct.
+// ServiceMetrics returns time-range GPU metrics for a single service (V3: GPU only).
 func (p *Provider) ServiceMetrics(app, service string, opts structs.MetricsOptions) (structs.Metrics, error) {
 	if p.PromClient == nil {
 		return structs.Metrics{}, nil
@@ -452,11 +372,6 @@ func (p *Provider) ServiceMetrics(app, service string, opts structs.MetricsOptio
 		return nil, errors.WithStack(err)
 	}
 
-	// Project map[wire]map[service][]MetricValue → flat []Metric, one
-	// per wire-name in stable order. The single-service variant collapses
-	// per-service buckets into a single series — typically `byService` has
-	// at most one key matching `service`, but if the operator's PromQL
-	// emits multiple series under the same service label we concatenate.
 	names := GpuRangeWireNames()
 	metrics := make(structs.Metrics, 0, len(names))
 	for _, wire := range names {
@@ -549,30 +464,13 @@ func (p *Provider) ServiceUpdate(app, name string, opts structs.ServiceUpdateOpt
 			return err
 		}
 		if !handled {
-			// No KEDA ScaledObject owns this service. Two distinct
-			// causes — surface the actionable one:
-			//   - rack-level KEDA disabled: tell the user to enable
-			//     keda_enable, since their manifest may already
-			//     declare scale.autoscale.
-			//   - rack-level KEDA enabled but service has no
-			//     scale.autoscale block: tell the user to add the block.
-			// Patching only the deployment replica count would
-			// silently drop opts.Max and mislead the caller; an
-			// explicit error is the only honest outcome.
 			if opts.Max != nil {
-				// Branch the message on the actionable cause so the
-				// user sees the right fix for their rack/service state.
-				// In both branches, also point at Enable triggers as a
-				// Console-actionable alternative (3.24.6+).
 				if !p.IsKedaEnabled {
 					return fmt.Errorf("range scaling (min/max) requires KEDA on this rack; run `convox rack params set keda_enable=true` and re-deploy, click Enable triggers in the Console to configure one through the UI (CPU/Memory work without KEDA), or use --count for a fixed replica count")
 				}
 				return fmt.Errorf("range scaling (min/max) requires an autoscale block in convox.yml; set scale.autoscale and re-deploy, click Enable triggers in the Console to configure one through the UI, or use --count for a fixed replica count")
 			}
-			// --min-only fallback (no max requested): honor the floor by
-			// patching the Deployment's replica count to opts.Min so the
-			// long-standing `convox scale --min N` workflow continues to
-			// work for services without an autoscale block.
+			// --min-only: patch replicas directly (backward compat with `convox scale --min N`).
 			if opts.Min != nil {
 				c := int32(*opts.Min) //nolint:gosec // replica counts are user-validated and bounded
 				d.Spec.Replicas = &c
@@ -646,10 +544,7 @@ func (p *Provider) ServiceUpdate(app, name string, opts structs.ServiceUpdateOpt
 		}
 	}
 
-	// When only --count was supplied AND the ScaledObject claimed ownership,
-	// skip the Deployment Update. The informer-cached d.Spec.Replicas is
-	// likely stale, and writing it back would briefly fight KEDA's reconciler
-	// before KEDA converges on the patched minReplicaCount/maxReplicaCount.
+	// Skip Deployment write when KEDA owns replicas (avoids KEDA reconciler race).
 	countOnly := opts.Count != nil && opts.Cpu == nil && opts.Memory == nil && opts.Gpu == nil && opts.Min == nil && opts.Max == nil
 	if countOnly && countHandledByScaledObject {
 		return nil
@@ -717,23 +612,11 @@ func buildServiceAutoscaleState(a *manifest.ServiceAutoscale) *structs.ServiceAu
 	return st
 }
 
-// serviceUpdateScaledObject patches the KEDA ScaledObject CRD when one owns
-// the deployment. Returns handled=true in that case so the caller knows the
-// KEDA path took ownership of the request. Returns handled=false when no
-// ScaledObject exists (KEDA disabled OR no autoscale config in convox.yml),
-// letting the caller fall back to a direct Deployment.Spec.Replicas patch
-// using opts.Min as the floor — mirroring the serviceUpdateCount handled-flag
-// pattern.
+// serviceUpdateScaledObject patches the KEDA ScaledObject min/max; returns handled=true when SO exists.
 func (p *Provider) serviceUpdateScaledObject(app, name string, opts structs.ServiceUpdateOptions) (handled bool, err error) {
 	ns := p.AppNamespace(app)
 
-	// Console-driven triggers override claims priority on the
-	// min/max lookup. When the Deployment carries the
-	// triggers-override-active annotation, the paired
-	// triggers-override-crd annotation says which CRD owns the
-	// bounds. For the HPA path, patch the named HPA directly; for the
-	// KEDA path, fall through to the SO-detection logic below — the
-	// existing path already locates and patches the SO correctly.
+	// Triggers-override HPA path takes priority; KEDA path falls through below.
 	if d, derr := p.Cluster.AppsV1().Deployments(ns).Get(context.TODO(), name, am.GetOptions{}); derr == nil &&
 		d.Annotations[ServiceTriggersOverrideAnnotation] == ServiceTriggersOverrideValueOn &&
 		d.Annotations[ServiceTriggersOverrideCRDAnnotation] == TriggersCRDHPA {
@@ -745,16 +628,7 @@ func (p *Provider) serviceUpdateScaledObject(app, name string, opts structs.Serv
 
 	_, getErr := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Get(context.TODO(), name, am.GetOptions{})
 	hasScaledObject := getErr == nil
-	// Treat "ScaledObject CRD not registered" (KEDA never installed on
-	// this rack — keda_enable=false) the same as "ScaledObject not
-	// found" (KEDA installed but this service has no SO). Both mean
-	// the SO path can't take ownership; the caller falls through to
-	// the friendly "scale.autoscale required" error (range mode) or
-	// the min-only deployment-replica fallback. Without this branch
-	// the dynamic client surfaces a raw `meta.NoKindMatchError` ("no
-	// matches for kind \"ScaledObject\" in version \"keda.sh/v1alpha1\"")
-	// which is confusing for users who just see it in a CLI/Console
-	// toast.
+	// NoMatchError = KEDA CRD absent; treat same as not-found.
 	if getErr != nil && !kerr.IsNotFound(getErr) && !meta.IsNoMatchError(getErr) {
 		return false, errors.WithStack(getErr)
 	}
@@ -791,11 +665,7 @@ func (p *Provider) serviceUpdateScaledObject(app, name string, opts structs.Serv
 	return true, nil
 }
 
-// serviceUpdateCount patches the ScaledObject CRD when one owns the deployment;
-// returns handled=true in that case so the caller knows to skip the subsequent
-// deployment.Spec.Replicas write (which would race with KEDA's reconciler).
-// Returns handled=false when no ScaledObject exists, letting the caller fall
-// back to the normal Deployment patch path.
+// serviceUpdateCount patches the ScaledObject when SO owns replicas; returns handled=true.
 func (p *Provider) serviceUpdateCount(app, name string, count int) (handled bool, err error) {
 	ns := p.AppNamespace(app)
 
@@ -803,11 +673,7 @@ func (p *Provider) serviceUpdateCount(app, name string, count int) (handled bool
 	if kerr.IsNotFound(getErr) {
 		return false, nil
 	}
-	// "ScaledObject CRD not registered" (KEDA never installed —
-	// keda_enable=false) presents as meta.NoMatchError rather than
-	// IsNotFound. Treat it the same way the SO-not-found branch does
-	// so the caller falls back to a Deployment.Spec.Replicas patch
-	// instead of surfacing a raw `no matches for kind` error.
+	// NoMatchError = KEDA CRD absent; treat same as not-found.
 	if meta.IsNoMatchError(getErr) {
 		return false, nil
 	}

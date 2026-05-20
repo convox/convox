@@ -338,7 +338,7 @@ func TestSanitizeAckBy_DefenseInDepthStrips(t *testing.T) {
 		{"truthful_email", "alice@example.com", "alice@example.com"},
 
 		// Whitespace-only collapses to "unknown" — strings.TrimSpace
-		// gating catches pathological "   " inputs that would otherwise
+		// gating catches edge case "   " inputs that would otherwise
 		// stamp a misleading whitespace actor on the event.
 		{"whitespace_spaces", "   ", "unknown"},
 		{"whitespace_tabs", "\t\t", "unknown"},

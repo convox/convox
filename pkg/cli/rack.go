@@ -54,7 +54,7 @@ var awsKnownParams = map[string]bool{
 	"eks_api_server_public_access_cidrs":  true,
 	"eks_log_types":                       true,
 	"enable_private_access":               true,
-	"fluentd_disable":                    true, "fluentd_memory": true,
+	"fluentd_disable":                     true, "fluentd_memory": true,
 	"gpu_metrics_max_concurrent": true, "gpu_metrics_max_pods": true,
 	"gpu_observability_chart_version": true, "gpu_observability_enable": true,
 	"gpu_tag_enable":            true,
@@ -170,25 +170,8 @@ var managedParams = map[string]bool{
 	"eks_api_server_public_access_cidrs": true,
 }
 
-// boolParams lists rack parameters whose underlying Terraform variable is
-// declared as type=bool. Values, if non-empty, must parse via strconv.ParseBool;
-// otherwise the apply path silently coerces the value back to the prior
-// state (or hits a TF type error and reverts), making "convox rack params set
-// foo=invalid" a confusing no-op. Validation runs after the per-provider
-// KnownParams spellcheck, so entries scoped to one provider (e.g.
-// azure_files_enable) are auto-rejected on other providers' allowlists
-// before bool validation fires.
-//
-// Empty values pass — empty means "clear this setting" and is handled by
-// the empty-string clearing rules below.
-//
-// Maintenance: keep aligned with terraform/{system,rack}/<provider>/variables.tf
-// type=bool declarations. high_availability and nvidia_device_plugin_enable
-// are intentionally excluded — they are bool in azure but untyped (no
-// `type = bool` line) in aws, so adding them would force ParseBool semantics
-// on aws TF variables that historically accepted any string. karpenter_enabled
-// and karpenter_auth_mode are validated separately above with rack-state
-// migration rules.
+// boolParams lists type=bool TF variables that require ParseBool validation.
+// Maintain in sync with terraform/{system,rack}/<provider>/variables.tf.
 var boolParams = map[string]bool{
 	"azure_files_enable":              true,
 	"build_disable_convox_resolver":   true,
@@ -228,18 +211,14 @@ var boolParams = map[string]bool{
 // HttpProxy are v2-rack PascalCase keys included so v3 CLI against a
 // v2 rack masks the same values v2 CLI post-PR-3795 does; they never
 // appear in v3 rack Parameters responses (v3 uses snake_case).
-// webhook_signing_key added in 3.24.6 — HMAC-SHA256 secret for outbound
-// webhook signing. Cannot use Terraform `sensitive = true` because the
-// user base spans TF versions older than 0.14 where sensitive on
-// variable blocks is unsupported; CLI-display masking matches the
-// existing redaction approach for other secret params.
+// webhook_signing_key added in 3.24.6.
 var sensitiveParams = map[string]bool{
-	"docker_hub_password":               true,
-	"secret_key":                        true,
-	"token":                             true,
-	"access_id":                         true,
-	"private_eks_host":                  true,
-	"private_eks_user":                  true,
+	"docker_hub_password": true,
+	"secret_key":          true,
+	"token":               true,
+	"access_id":           true,
+	"private_eks_host":    true,
+	"private_eks_user":    true,
 	"private_eks_pass":    true,
 	"webhook_signing_key": true,
 	"Password":            true,
@@ -252,12 +231,12 @@ var sensitiveParams = map[string]bool{
 // surfaced by any group filter.
 var paramGroups = map[string]map[string]bool{
 	"cost": {
-		"cost_tracking_enable":          true,
-		"karpenter_capacity_types":      true, // dual-listed in karpenter
-		"karpenter_consolidate_after":   true, // dual-listed in karpenter
+		"cost_tracking_enable":            true,
+		"karpenter_capacity_types":        true, // dual-listed in karpenter
+		"karpenter_consolidate_after":     true, // dual-listed in karpenter
 		"karpenter_consolidation_enabled": true, // dual-listed in karpenter
-		"node_capacity_type":            true, // dual-listed in nodes
-		"tags":                          true,
+		"node_capacity_type":              true, // dual-listed in nodes
+		"tags":                            true,
 	},
 	"karpenter": {
 		"additional_karpenter_nodepools_config": true,
@@ -290,37 +269,37 @@ var paramGroups = map[string]map[string]bool{
 	"gpu": {
 		"additional_karpenter_nodepools_config": true, // dual-listed in karpenter
 		"additional_node_groups_config":         true, // dual-listed in nodes
-		"dcgm_scrape_interval":                 true,
-		"gpu_metrics_max_concurrent":           true,
-		"gpu_metrics_max_pods":                 true,
-		"gpu_observability_chart_version":      true,
-		"gpu_observability_enable":             true,
-		"gpu_tag_enable":                       true,
-		"nvidia_device_plugin_enable":          true,
-		"nvidia_device_time_slicing_replicas":  true,
-		"prometheus_gpu_metrics_chart_version": true,
-		"prometheus_gpu_metrics_retention":     true,
-		"prometheus_url":                       true,
+		"dcgm_scrape_interval":                  true,
+		"gpu_metrics_max_concurrent":            true,
+		"gpu_metrics_max_pods":                  true,
+		"gpu_observability_chart_version":       true,
+		"gpu_observability_enable":              true,
+		"gpu_tag_enable":                        true,
+		"nvidia_device_plugin_enable":           true,
+		"nvidia_device_time_slicing_replicas":   true,
+		"prometheus_gpu_metrics_chart_version":  true,
+		"prometheus_gpu_metrics_retention":      true,
+		"prometheus_url":                        true,
 	},
 	"network": {
 		// v3 native (snake_case)
-		"availability_zones":      true,
-		"cidr":                    true,
-		"deploy_extra_nlb":        true,
+		"availability_zones":                  true,
+		"cidr":                                true,
+		"deploy_extra_nlb":                    true,
 		"disable_convox_resolver":             true,
-		"disable_public_access":              true,
+		"disable_public_access":               true,
 		"eks_api_server_private_access_cidrs": true,
-		"eks_api_server_public_access_cidrs": true,
-		"enable_private_access":              true,
-		"internal_router":                    true,
-		"internet_gateway_id":                true,
-		"nlb_security_group":                 true,
-		"private_eks_host":                   true,
-		"private_subnets_ids":     true,
-		"proxy_protocol":          true,
-		"public_subnets_ids":      true,
-		"vpc_id":                  true,
-		"whitelist":               true,
+		"eks_api_server_public_access_cidrs":  true,
+		"enable_private_access":               true,
+		"internal_router":                     true,
+		"internet_gateway_id":                 true,
+		"nlb_security_group":                  true,
+		"private_eks_host":                    true,
+		"private_subnets_ids":                 true,
+		"proxy_protocol":                      true,
+		"public_subnets_ids":                  true,
+		"vpc_id":                              true,
+		"whitelist":                           true,
 		// v2 PascalCase (no-op on v3 racks; surfaced on v2 racks)
 		"AvailabilityZones":    true,
 		"ExistingVpc":          true,
@@ -341,32 +320,32 @@ var paramGroups = map[string]map[string]bool{
 	},
 	"security": {
 		// v3 native (snake_case)
-		"access_id":                          true,
-		"disable_public_access":              true,
-		"docker_hub_password":                true,
-		"ebs_volume_encryption_enabled":      true,
-		"ecr_scan_on_push_enable":            true,
+		"access_id":                           true,
+		"disable_public_access":               true,
+		"docker_hub_password":                 true,
+		"ebs_volume_encryption_enabled":       true,
+		"ecr_scan_on_push_enable":             true,
 		"eks_api_server_private_access_cidrs": true,
-		"eks_api_server_public_access_cidrs": true,
-		"eks_log_types":                      true,
-		"enable_private_access":              true,
-		"high_availability":                  true,
-		"imds_http_hop_limit":                true,
-		"imds_http_tokens":                   true,
-		"imds_tags_enable":                   true,
-		"key_pair_name":                      true,
-		"nlb_security_group":                 true,
-		"pod_identity_agent_enable":          true,
-		"private_eks_host":                   true,
-		"private_eks_pass":                   true,
-		"private_eks_user":                   true,
-		"secret_key":                         true,
-		"ssl_ciphers":                        true,
-		"ssl_protocols":                      true,
-		"tags":                               true, // dual-listed in cost
-		"token":                              true,
-		"webhook_signing_key":                true,
-		"whitelist":                          true,
+		"eks_api_server_public_access_cidrs":  true,
+		"eks_log_types":                       true,
+		"enable_private_access":               true,
+		"high_availability":                   true,
+		"imds_http_hop_limit":                 true,
+		"imds_http_tokens":                    true,
+		"imds_tags_enable":                    true,
+		"key_pair_name":                       true,
+		"nlb_security_group":                  true,
+		"pod_identity_agent_enable":           true,
+		"private_eks_host":                    true,
+		"private_eks_pass":                    true,
+		"private_eks_user":                    true,
+		"secret_key":                          true,
+		"ssl_ciphers":                         true,
+		"ssl_protocols":                       true,
+		"tags":                                true, // dual-listed in cost
+		"token":                               true,
+		"webhook_signing_key":                 true,
+		"whitelist":                           true,
 		// v2 PascalCase (no-op on v3 racks; surfaced on v2 racks)
 		"BuildInstancePolicy":                   true, // dual-listed in build
 		"BuildInstanceSecurityGroup":            true,
@@ -512,19 +491,19 @@ var paramGroups = map[string]map[string]bool{
 	},
 	"logging": {
 		// v3 native (snake_case)
-		"access_log_retention_in_days":  true,
-		"cost_tracking_enable":          true,
-		"eks_log_types":                 true,
-		"fluentd_disable":               true,
-		"fluentd_memory":                true,
-		"grafana_dashboard_var_app":      true,
+		"access_log_retention_in_days":    true,
+		"cost_tracking_enable":            true,
+		"eks_log_types":                   true,
+		"fluentd_disable":                 true,
+		"fluentd_memory":                  true,
+		"grafana_dashboard_var_app":       true,
 		"grafana_dashboard_var_namespace": true,
-		"grafana_dashboard_var_rack":     true,
-		"grafana_dashboard_var_service":  true,
-		"grafana_url":                   true,
-		"prometheus_url":                true,
-		"syslog":                        true,
-		"telemetry":                     true,
+		"grafana_dashboard_var_rack":      true,
+		"grafana_dashboard_var_service":   true,
+		"grafana_url":                     true,
+		"prometheus_url":                  true,
+		"syslog":                          true,
+		"telemetry":                       true,
 		// v2 PascalCase (no-op on v3 racks; surfaced on v2 racks)
 		"LogBucket":         true,
 		"LogDriver":         true,
@@ -566,22 +545,22 @@ var paramGroups = map[string]map[string]bool{
 		"EncryptEbs":                              true, // dual-listed in security
 	},
 	"retention": {
-		"access_log_retention_in_days":               true,
+		"access_log_retention_in_days":              true,
 		"release_watcher_gc_interval":               true,
 		"releases_to_retain_after_active":           true,
 		"releases_to_retain_task_run_interval_hour": true,
 	},
 	"versions": {
-		"aws_ebs_csi_driver_version":          true,
-		"coredns_version":                     true,
-		"efs_csi_driver_version":              true,
+		"aws_ebs_csi_driver_version":           true,
+		"coredns_version":                      true,
+		"efs_csi_driver_version":               true,
 		"gpu_observability_chart_version":      true,
-		"k8s_version":                         true,
-		"kube_proxy_version":                  true,
-		"nginx_image":                         true,
-		"pod_identity_agent_version":          true,
+		"k8s_version":                          true,
+		"kube_proxy_version":                   true,
+		"nginx_image":                          true,
+		"pod_identity_agent_version":           true,
 		"prometheus_gpu_metrics_chart_version": true,
-		"vpc_cni_version":                     true,
+		"vpc_cni_version":                      true,
 	},
 	// nlb is v2-only content (v3 has no CloudFormation NLB config params; v3's
 	// NLB-adjacent keys — nlb_security_group, deploy_extra_nlb — live in the
@@ -625,16 +604,8 @@ var groupDescriptions = map[string]string{
 	"cost":      "cost tracking and allocation tags",
 }
 
-// clearableParams enumerates the params that accept empty strings ("" means
-// "clear this setting"). All other params require explicit values; empty
-// strings on non-clearable params would cause TF type errors, silent default
-// reversion, or state divergence between what convox rack params shows and
-// what TF actually applies.
-//
-// MAINTENANCE: when adding a new TF variable where users should be able to
-// clear a previously-set value with param="", add it here AND to preserveEmpty
-// in pkg/rack/terraform.go. TestClearableMatchesPreserveEmpty asserts the two
-// sets stay in sync. Default is REJECT — only add if clearing makes sense.
+// clearableParams lists params that accept empty strings to clear their value.
+// Keep in sync with preserveEmpty in pkg/rack/terraform.go (TestClearableMatchesPreserveEmpty asserts).
 var clearableParams = map[string]bool{
 	// Labels/taints — clear means "remove all"
 	"karpenter_node_labels":       true,
@@ -717,11 +688,7 @@ var clearableParams = map[string]bool{
 	"grafana_dashboard_var_app":       true,
 }
 
-// removedIn3_24_6 enumerates rack params hard-removed in 3.24.6 with a
-// user-friendly rejection message keyed by param name. Validation in
-// validateAndMutateParams returns this message instead of the default
-// "unknown parameter" suggestion (Levenshtein distance from any remaining
-// awsKnownParams entry is too large for a useful suggestion).
+// removedIn3_24_6 maps removed params to user-friendly rejection messages.
 var removedIn3_24_6 = map[string]string{
 	"monitoring_metrics_provisioned": "removed in 3.24.6; monitoring is now Convox-Console-driven (Convox Console → Rack Settings → Dashboard Settings → Enable Metrics Agent)",
 }
@@ -1286,14 +1253,7 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 
 	known := providerKnownParams[provider]
 
-	// SECURITY NOTE: webhook_signing_key rotation has an admin-only gate via
-	// the Console GraphQL layer (api/resolver/mutation.go RackSetWebhookSigningKey,
-	// organization-Administrator check). The convox CLI path does NOT have an
-	// equivalent admin gate — any user with rack-write capability can rotate
-	// the key. This asymmetry is intentional: CLI is operator-tooling already
-	// trusted with rack mutations; the Console is multi-tenant and exposes
-	// webhook-signing rotation to non-admin org members unless gated. Do NOT
-	// "fix" by adding a CLI admin gate without consulting the spec.
+	// webhook_signing_key: CLI has no admin gate (intentional — Console gates via GraphQL admin check).
 	if !force {
 		// Managed params are set automatically by `convox rack update` (image, release,
 		// k8s_version, etc.). Block direct modification unless --force is used.
@@ -1336,11 +1296,7 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		}
 	}
 
-	// Normalize whitespace-only inputs to empty for clearable params, so
-	// preserveEmpty + TF coalesce guards see an actual empty string. Without
-	// this, a user typing `=" "` (quoted whitespace) would write " " to
-	// vars.json; helm_release would receive " " (non-empty), bypassing the
-	// coalesce fallback and crashing helm install.
+	// Normalize whitespace-only to empty for clearable params so TF coalesce guards work.
 	for k, v := range params {
 		if clearableParams[k] && strings.TrimSpace(v) == "" && v != "" {
 			params[k] = ""
@@ -1421,11 +1377,7 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		}
 	}
 
-	// gpu_observability_enable=true requires nvidia_device_plugin_enable=true —
-	// either already applied or being set in the same call. The DCGM exporter
-	// relies on the device plugin's /var/lib/kubelet/pod-resources/ socket for
-	// pod->GPU attribution; without the plugin the exporter pods schedule but
-	// emit metrics with no pod labels.
+	// gpu_observability_enable requires nvidia_device_plugin_enable (DCGM needs the device plugin socket).
 	if params["gpu_observability_enable"] == "true" && currentParams["gpu_observability_enable"] != "true" {
 		if currentParams["nvidia_device_plugin_enable"] != "true" && params["nvidia_device_plugin_enable"] != "true" {
 			return fmt.Errorf("gpu_observability_enable=true requires nvidia_device_plugin_enable=true.\n  Set both in the same `convox rack params set` invocation, or enable\n  the device plugin first.")
@@ -1491,12 +1443,7 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		if err != nil {
 			return fmt.Errorf("param '%s' must be 'true' or 'false' (got %q)", k, v)
 		}
-		// Canonicalize: ParseBool accepts "1", "0", "t", "T", "f", "F",
-		// "true", "True", "TRUE", "false", "False", "FALSE"; FormatBool
-		// produces canonical "true"/"false". Stored canonical form keeps
-		// vars.json + display output consistent. String-typed bool-likes
-		// (karpenter_auth_mode, karpenter_enabled, nvidia_device_plugin_enable,
-		// high_availability) are NOT in boolParams; pass through unchanged.
+		// Canonicalize to "true"/"false" for consistent vars.json storage.
 		params[k] = strconv.FormatBool(b)
 	}
 
@@ -1899,11 +1846,7 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		params[k] = base64.StdEncoding.EncodeToString(data)
 	}
 
-	// prometheus_url: SSRF-guarded validation. Rejects private, loopback,
-	// and link-local IP literals AND DNS hostnames whose resolved A/AAAA
-	// records land in the deny-set. Allowlists *.svc.cluster.local for
-	// the documented in-cluster Prometheus recipes (see
-	// docs/configuration/rack-parameters/aws/prometheus_url.md).
+	// prometheus_url: SSRF-guarded validation (rejects private/loopback, allows *.svc.cluster.local).
 	if v, has := params["prometheus_url"]; has && v != "" {
 		if err := validator.ValidateExternalURL(v, nil); err != nil {
 			return fmt.Errorf("prometheus_url: %s; see docs/configuration/rack-parameters/aws/prometheus_url.md for the in-cluster %s recipe", err, validator.InClusterSuffix)

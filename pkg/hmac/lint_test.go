@@ -6,7 +6,7 @@ package hmac_test
 // "helpfully" replaces hmac.Equal with bytes.Equal — that swap would
 // reintroduce the timing side-channel hmac.Equal exists to prevent.
 //
-// Spec ref: §8.1 "Constant-time compare (R1 + R2 BLOCK)"; R2 F-T-NEW-3.
+// Guards against accidental replacement of constant-time comparison.
 
 import (
 	"go/ast"
