@@ -168,15 +168,15 @@ func (p *Provider) ServiceTriggersEnable(app, service string, opts structs.Servi
 }
 
 func (p *Provider) applyTriggersHPA(ns, service string, opts structs.ServiceTriggersOptions) error {
-	min := int32(opts.Min)
-	max := int32(opts.Max)
+	min := int32(opts.Min) //nolint:gosec
+	max := int32(opts.Max) //nolint:gosec
 
 	metrics := make([]autoscalingv2.MetricSpec, 0, len(opts.Triggers))
 	for _, t := range opts.Triggers {
 		if t.Type != structs.TriggerTypeCPU && t.Type != structs.TriggerTypeMemory {
 			continue
 		}
-		threshold := int32(t.Threshold)
+		threshold := int32(t.Threshold) //nolint:gosec
 		metrics = append(metrics, autoscalingv2.MetricSpec{
 			Type: autoscalingv2.ResourceMetricSourceType,
 			Resource: &autoscalingv2.ResourceMetricSource{
@@ -401,11 +401,11 @@ func (p *Provider) patchHPABounds(ns, service string, opts structs.ServiceUpdate
 		return errors.WithStack(err)
 	}
 	if opts.Min != nil {
-		v := int32(*opts.Min)
+		v := int32(*opts.Min) //nolint:gosec
 		hpa.Spec.MinReplicas = &v
 	}
 	if opts.Max != nil {
-		hpa.Spec.MaxReplicas = int32(*opts.Max)
+		hpa.Spec.MaxReplicas = int32(*opts.Max) //nolint:gosec
 	}
 	delete(hpa.Labels, "atom")
 	if _, err := p.Cluster.AutoscalingV2().HorizontalPodAutoscalers(ns).Update(context.TODO(), hpa, am.UpdateOptions{}); err != nil {
@@ -520,8 +520,8 @@ func (p *Provider) reinstateKedaScaledObject(ns, app, service string, ms *manife
 	if p.DynamicClient == nil {
 		return
 	}
-	min := int32(ms.Scale.Count.Min)
-	max := int32(ms.Scale.Count.Max)
+	min := int32(ms.Scale.Count.Min) //nolint:gosec
+	max := int32(ms.Scale.Count.Max) //nolint:gosec
 
 	var triggers []kedav1alpha1.ScaleTriggers
 	if ms.Scale.Autoscale != nil && ms.Scale.Autoscale.IsEnabled() {
@@ -661,7 +661,7 @@ func (p *Provider) ServiceTriggersDisable(app, service, ackBy string) error {
 	var replicaTarget int32 = 1
 	if ms, msErr := p.serviceManifestService(app, service); msErr == nil && ms != nil {
 		if ms.Scale.Count.Min > 0 {
-			replicaTarget = int32(ms.Scale.Count.Min)
+			replicaTarget = int32(ms.Scale.Count.Min) //nolint:gosec
 		}
 		p.reinstateManifestAutoscaler(ns, app, service, ms)
 	}
@@ -754,13 +754,13 @@ func (p *Provider) patchHPAThreshold(ns, service, triggerType string, threshold 
 			continue
 		}
 		if string(m.Resource.Name) == triggerType {
-			v := int32(threshold)
+			v := int32(threshold) //nolint:gosec
 			hpa.Spec.Metrics[i].Resource.Target.AverageUtilization = &v
 			updated = true
 		}
 	}
 	if !updated {
-		v := int32(threshold)
+		v := int32(threshold) //nolint:gosec
 		hpa.Spec.Metrics = append(hpa.Spec.Metrics, autoscalingv2.MetricSpec{
 			Type: autoscalingv2.ResourceMetricSourceType,
 			Resource: &autoscalingv2.ResourceMetricSource{

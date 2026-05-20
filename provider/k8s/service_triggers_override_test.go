@@ -262,7 +262,7 @@ func TestServiceTriggersEnable_KedaPath_GPU(t *testing.T) {
 
 		obj, err := p.DynamicClient.Resource(testScaledObjectGVR).Namespace("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
 		require.NoError(t, err)
-		triggers, _, _ := unstructured.NestedSlice(obj.Object, "spec", "triggers")
+		triggers, _, _ := unstructured.NestedSlice(obj.Object, "spec", "triggers") //nolint:errcheck
 		require.Len(t, triggers, 1)
 		tr := triggers[0].(map[string]interface{})
 		require.Equal(t, "prometheus", tr["type"])
@@ -299,7 +299,7 @@ func TestServiceTriggersEnable_KedaPath_CPUOnKEDA(t *testing.T) {
 
 		obj, err := p.DynamicClient.Resource(testScaledObjectGVR).Namespace("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
 		require.NoError(t, err)
-		triggers, _, _ := unstructured.NestedSlice(obj.Object, "spec", "triggers")
+		triggers, _, _ := unstructured.NestedSlice(obj.Object, "spec", "triggers") //nolint:errcheck
 		require.Len(t, triggers, 2)
 
 		types := []string{
@@ -485,12 +485,12 @@ func TestServiceTriggersEnable_KEDAUpdate_PreservesAdvancedFields(t *testing.T) 
 					"labels":    map[string]interface{}{"custom-label": "keep-me"},
 				},
 				"spec": map[string]interface{}{
-					"scaleTargetRef":   map[string]interface{}{"name": "web"},
-					"minReplicaCount":  int64(1),
-					"maxReplicaCount":  int64(3),
-					"cooldownPeriod":   int64(120),
-					"pollingInterval":  int64(15),
-					"triggers":         []interface{}{},
+					"scaleTargetRef":  map[string]interface{}{"name": "web"},
+					"minReplicaCount": int64(1),
+					"maxReplicaCount": int64(3),
+					"cooldownPeriod":  int64(120),
+					"pollingInterval": int64(15),
+					"triggers":        []interface{}{},
 				},
 			},
 		}
@@ -503,11 +503,11 @@ func TestServiceTriggersEnable_KEDAUpdate_PreservesAdvancedFields(t *testing.T) 
 		require.NoError(t, p.ServiceTriggersEnable("app1", "web", opts, "alice"))
 
 		got, _ := p.DynamicClient.Resource(testScaledObjectGVR).Namespace("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
-		cooldown, _, _ := unstructured.NestedInt64(got.Object, "spec", "cooldownPeriod")
-		polling, _, _ := unstructured.NestedInt64(got.Object, "spec", "pollingInterval")
+		cooldown, _, _ := unstructured.NestedInt64(got.Object, "spec", "cooldownPeriod") //nolint:errcheck
+		polling, _, _ := unstructured.NestedInt64(got.Object, "spec", "pollingInterval") //nolint:errcheck
 		require.Equal(t, int64(120), cooldown, "cooldownPeriod must survive update")
 		require.Equal(t, int64(15), polling, "pollingInterval must survive update")
-		labels, _, _ := unstructured.NestedStringMap(got.Object, "metadata", "labels")
+		labels, _, _ := unstructured.NestedStringMap(got.Object, "metadata", "labels") //nolint:errcheck
 		require.Equal(t, "keep-me", labels["custom-label"], "user labels must survive update")
 	})
 }
@@ -821,8 +821,8 @@ func TestServiceTriggersEnable_ManifestSOOwnershipTransfer(t *testing.T) {
 		list, _ := p.DynamicClient.Resource(testScaledObjectGVR).Namespace("rack1-app1").List(context.TODO(), am.ListOptions{})
 		require.Len(t, list.Items, 1, "must not duplicate ScaledObject")
 		obj := list.Items[0]
-		min, _, _ := unstructured.NestedInt64(obj.Object, "spec", "minReplicaCount")
-		max, _, _ := unstructured.NestedInt64(obj.Object, "spec", "maxReplicaCount")
+		min, _, _ := unstructured.NestedInt64(obj.Object, "spec", "minReplicaCount") //nolint:errcheck
+		max, _, _ := unstructured.NestedInt64(obj.Object, "spec", "maxReplicaCount") //nolint:errcheck
 		require.Equal(t, int64(2), min)
 		require.Equal(t, int64(7), max)
 	})
@@ -906,7 +906,7 @@ func TestServiceTriggersThresholdSet_KEDA_GPU(t *testing.T) {
 		require.NoError(t, p.ServiceTriggersThresholdSet("app1", "web", "gpuUtilization", 90, "alice"))
 
 		obj, _ := p.DynamicClient.Resource(testScaledObjectGVR).Namespace("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
-		triggers, _, _ := unstructured.NestedSlice(obj.Object, "spec", "triggers")
+		triggers, _, _ := unstructured.NestedSlice(obj.Object, "spec", "triggers") //nolint:errcheck
 		tr := triggers[0].(map[string]interface{})
 		md := tr["metadata"].(map[string]interface{})
 		require.Equal(t, "90", md["threshold"])
@@ -1121,7 +1121,7 @@ func TestServiceTriggersDisable_ReinstatesManifestKEDA(t *testing.T) {
 		reinstated, err := p.DynamicClient.Resource(testScaledObjectGVR).Namespace("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
 		require.NoError(t, err, "manifest ScaledObject must be reinstated after disable")
 
-		maxReplica, _, _ := unstructured.NestedInt64(reinstated.Object, "spec", "maxReplicaCount")
+		maxReplica, _, _ := unstructured.NestedInt64(reinstated.Object, "spec", "maxReplicaCount") //nolint:errcheck
 		require.Equal(t, int64(6), maxReplica)
 
 		dep, err = kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
@@ -1375,8 +1375,8 @@ func TestServiceUpdateRange_TriggersOverrideKEDA_PatchesSOBounds(t *testing.T) {
 		}))
 
 		obj, _ := p.DynamicClient.Resource(testScaledObjectGVR).Namespace("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
-		min, _, _ := unstructured.NestedInt64(obj.Object, "spec", "minReplicaCount")
-		max, _, _ := unstructured.NestedInt64(obj.Object, "spec", "maxReplicaCount")
+		min, _, _ := unstructured.NestedInt64(obj.Object, "spec", "minReplicaCount") //nolint:errcheck
+		max, _, _ := unstructured.NestedInt64(obj.Object, "spec", "maxReplicaCount") //nolint:errcheck
 		require.Equal(t, int64(2), min)
 		require.Equal(t, int64(7), max)
 	})
@@ -1753,12 +1753,12 @@ func TestServiceTriggersDisable_ReinstatesAutoscaleCustom(t *testing.T) {
 		reinstated, err := p.DynamicClient.Resource(testScaledObjectGVR).Namespace("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
 		require.NoError(t, err, "autoscale.custom ScaledObject must be reinstated after disable")
 
-		minReplica, _, _ := unstructured.NestedInt64(reinstated.Object, "spec", "minReplicaCount")
-		maxReplica, _, _ := unstructured.NestedInt64(reinstated.Object, "spec", "maxReplicaCount")
+		minReplica, _, _ := unstructured.NestedInt64(reinstated.Object, "spec", "minReplicaCount") //nolint:errcheck
+		maxReplica, _, _ := unstructured.NestedInt64(reinstated.Object, "spec", "maxReplicaCount") //nolint:errcheck
 		require.Equal(t, int64(1), minReplica)
 		require.Equal(t, int64(5), maxReplica)
 
-		triggers, _, _ := unstructured.NestedSlice(reinstated.Object, "spec", "triggers")
+		triggers, _, _ := unstructured.NestedSlice(reinstated.Object, "spec", "triggers") //nolint:errcheck
 		require.Len(t, triggers, 1, "reinstated SO must carry the custom trigger")
 		tr := triggers[0].(map[string]interface{})
 		require.Equal(t, "aws-sqs-queue", tr["type"])
@@ -1818,12 +1818,12 @@ func TestServiceTriggersDisable_ReinstatesScaleKeda(t *testing.T) {
 		reinstated, err := p.DynamicClient.Resource(testScaledObjectGVR).Namespace("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
 		require.NoError(t, err, "scale.keda ScaledObject must be reinstated after disable")
 
-		minReplica, _, _ := unstructured.NestedInt64(reinstated.Object, "spec", "minReplicaCount")
-		maxReplica, _, _ := unstructured.NestedInt64(reinstated.Object, "spec", "maxReplicaCount")
+		minReplica, _, _ := unstructured.NestedInt64(reinstated.Object, "spec", "minReplicaCount") //nolint:errcheck
+		maxReplica, _, _ := unstructured.NestedInt64(reinstated.Object, "spec", "maxReplicaCount") //nolint:errcheck
 		require.Equal(t, int64(2), minReplica, "reinstated SO must use manifest min")
 		require.Equal(t, int64(8), maxReplica, "reinstated SO must use manifest max")
 
-		triggers, _, _ := unstructured.NestedSlice(reinstated.Object, "spec", "triggers")
+		triggers, _, _ := unstructured.NestedSlice(reinstated.Object, "spec", "triggers") //nolint:errcheck
 		require.Len(t, triggers, 1, "reinstated SO must carry the raw keda trigger")
 		tr := triggers[0].(map[string]interface{})
 		require.Equal(t, "prometheus", tr["type"])

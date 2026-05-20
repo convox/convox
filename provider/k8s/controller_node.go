@@ -339,7 +339,7 @@ func (c *NodeController) ReconcileGpuLabels() {
 		},
 	)
 	if err != nil {
-		c.logger.Errorf("gpu label reconcile: list nodes: %s", err)
+		_ = c.logger.Errorf("gpu label reconcile: list nodes: %s", err)
 		return
 	}
 
