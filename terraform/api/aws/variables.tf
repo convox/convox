@@ -73,6 +73,16 @@ variable "disable_image_manifest_cache" {
   default = false
 }
 
+variable "ecr_additional_policy_arn" {
+  type    = string
+  default = ""
+}
+
+variable "ecr_full_access" {
+  type    = bool
+  default = false
+}
+
 variable "ecr_scan_on_push_enable" {
   type    = bool
   default = false

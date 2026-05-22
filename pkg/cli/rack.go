@@ -48,7 +48,7 @@ var awsKnownParams = map[string]bool{
 	"disable_image_manifest_cache": true, "disable_public_access": true,
 	"dcgm_scrape_interval": true,
 	"docker_hub_password":  true, "docker_hub_username": true,
-	"ebs_volume_encryption_enabled": true, "ecr_docker_hub_cache": true, "ecr_scan_on_push_enable": true,
+	"ebs_volume_encryption_enabled": true, "ecr_additional_policy_arn": true, "ecr_docker_hub_cache": true, "ecr_full_access": true, "ecr_scan_on_push_enable": true,
 	"efs_csi_driver_enable": true, "efs_csi_driver_version": true,
 	"eks_api_server_private_access_cidrs": true,
 	"eks_api_server_public_access_cidrs":  true,
@@ -185,6 +185,7 @@ var boolParams = map[string]bool{
 	"disable_public_access":           true,
 	"ebs_volume_encryption_enabled":   true,
 	"ecr_docker_hub_cache":            true,
+	"ecr_full_access":                 true,
 	"ecr_scan_on_push_enable":         true,
 	"efs_csi_driver_enable":           true,
 	"enable_private_access":           true,
@@ -324,6 +325,8 @@ var paramGroups = map[string]map[string]bool{
 		"disable_public_access":               true,
 		"docker_hub_password":                 true,
 		"ebs_volume_encryption_enabled":       true,
+		"ecr_additional_policy_arn":           true,
+		"ecr_full_access":                     true,
 		"ecr_scan_on_push_enable":             true,
 		"eks_api_server_private_access_cidrs": true,
 		"eks_api_server_public_access_cidrs":  true,
@@ -486,7 +489,9 @@ var paramGroups = map[string]map[string]bool{
 		"disable_image_manifest_cache": true,
 		"docker_hub_password":          true,
 		"docker_hub_username":          true,
+		"ecr_additional_policy_arn":    true,
 		"ecr_docker_hub_cache":         true,
+		"ecr_full_access":              true,
 		"ecr_scan_on_push_enable":      true,
 	},
 	"logging": {
@@ -641,6 +646,8 @@ var clearableParams = map[string]bool{
 	// Custom launch scripts — clear means "remove"
 	"user_data":     true,
 	"user_data_url": true,
+	// ECR — clear means "detach custom policy"
+	"ecr_additional_policy_arn": true,
 	// Feature gates — clear means "disable all"
 	"api_feature_gates": true,
 	// Private EKS — cleared by console during mode changes
