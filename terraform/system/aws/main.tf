@@ -260,6 +260,8 @@ module "rack" {
   telemetry_map                             = local.telemetry_map
   telemetry_default_map                     = local.telemetry_default_map
   whitelist                                 = split(",", var.whitelist)
+  ecr_additional_policy_arn                  = var.ecr_additional_policy_arn
+  ecr_full_access                           = var.ecr_full_access
   ecr_scan_on_push_enable                   = var.ecr_scan_on_push_enable
   ecr_docker_hub_cache_prefix               = module.cluster.ecr_docker_hub_cache_prefix
   vpc_id                                    = module.cluster.vpc

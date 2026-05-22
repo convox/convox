@@ -225,6 +225,18 @@ resource "aws_iam_role_policy" "api_ecr" {
   policy = data.aws_iam_policy_document.ecr.json
 }
 
+resource "aws_iam_role_policy_attachment" "api_ecr_full_access" {
+  count      = var.ecr_full_access ? 1 : 0
+  role       = aws_iam_role.api.name
+  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "api_ecr_additional" {
+  count      = var.ecr_additional_policy_arn != "" ? 1 : 0
+  role       = aws_iam_role.api.name
+  policy_arn = var.ecr_additional_policy_arn
+}
+
 resource "aws_iam_role_policy" "api_ec2_key_pair" {
   name   = "ec2_key_pair"
   role   = aws_iam_role.api.name

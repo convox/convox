@@ -82,6 +82,7 @@ var preserveEmpty = map[string]bool{
 	"grafana_dashboard_var_namespace": true,
 	"grafana_dashboard_var_service":   true,
 	"grafana_dashboard_var_app":       true,
+	"ecr_additional_policy_arn":       true,
 }
 
 // PreserveEmptyParams returns a copy of the writeVars empty-preservation
