@@ -102,6 +102,7 @@ module "cluster" {
   imds_http_tokens                    = var.imds_http_tokens
   imds_http_hop_limit                 = var.imds_http_hop_limit
   imds_tags_enable                    = var.imds_tags_enable
+  eks_access_entries                   = var.eks_access_entries == "true"
   karpenter_auth_mode                 = var.karpenter_auth_mode == "true"
   karpenter_enabled                   = var.karpenter_enabled == "true"
   karpenter_instance_families         = var.karpenter_instance_families

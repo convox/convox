@@ -217,6 +217,11 @@ variable "internet_gateway_id" {
   default = ""
 }
 
+variable "eks_access_entries" {
+  type    = string
+  default = "false"
+}
+
 variable "karpenter_auth_mode" {
   type    = string
   default = "false"
