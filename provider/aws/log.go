@@ -218,7 +218,7 @@ func (p *Provider) streamLogs(ctx context.Context, w io.WriteCloser, group, stre
 			if err != nil {
 				switch awsErrorCode(err) {
 				case "ThrottlingException", "ResourceNotFoundException":
-					time.Sleep(1 * time.Second)
+					time.Sleep(3 * time.Second)
 					continue
 				default:
 					return err
@@ -245,6 +245,14 @@ func (p *Provider) streamLogs(ctx context.Context, w io.WriteCloser, group, stre
 			}
 
 			req.NextToken = res.NextToken
+
+			if res.NextToken != nil {
+				time.Sleep(2 * time.Second)
+			} else if len(es) == 0 {
+				time.Sleep(5 * time.Second)
+			} else {
+				time.Sleep(1 * time.Second)
+			}
 
 			if res.NextToken == nil {
 				if !follow {
