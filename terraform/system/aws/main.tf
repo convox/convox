@@ -168,6 +168,7 @@ module "cluster" {
   ecr_docker_hub_cache                = var.ecr_docker_hub_cache
   docker_hub_username                 = var.docker_hub_username
   docker_hub_password                 = var.docker_hub_password
+  router_type                         = var.router_type
 }
 
 resource "null_resource" "wait_for_cluster" {

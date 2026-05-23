@@ -429,6 +429,11 @@ variable "nginx_additional_config" {
   default     = ""
 }
 
+variable "router_type" {
+  type    = string
+  default = "nginx"
+}
+
 variable "nvidia_device_plugin_enable" {
   default = false
 }
