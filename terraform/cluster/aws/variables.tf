@@ -436,3 +436,8 @@ variable "docker_hub_password" {
   type    = string
   default = ""
 }
+
+variable "router_type" {
+  type    = string
+  default = "nginx"
+}

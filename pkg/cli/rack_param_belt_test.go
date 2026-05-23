@@ -362,6 +362,71 @@ func parseTFVariableDefaults(t *testing.T, path string) map[string]string {
 //   - multi-line with trailing comma:  `coalesce(\n  var.X,\n  "Y",\n)`
 //   - multi-line without trailing comma
 //
+func TestRouterTypeEnumValidation(t *testing.T) {
+	cases := []struct {
+		name    string
+		value   string
+		wantErr bool
+		wantVal string
+	}{
+		{"nginx", "nginx", false, "nginx"},
+		{"contour", "contour", false, "contour"},
+		{"uppercase", "CONTOUR", false, "contour"},
+		{"mixed-case", "Nginx", false, "nginx"},
+		{"invalid-istio", "istio", true, ""},
+		{"invalid-both", "both", true, ""},
+		{"empty-rejected", "", true, ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			params := map[string]string{"router_type": tc.value}
+			err := validateAndMutateParams(params, "aws", nil, false)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if tc.wantVal != "" && params["router_type"] != tc.wantVal {
+				t.Errorf("got %q, want %q", params["router_type"], tc.wantVal)
+			}
+		})
+	}
+}
+
+func TestRouterTypeRejectedOnGCP(t *testing.T) {
+	params := map[string]string{"router_type": "contour"}
+	err := validateAndMutateParams(params, "gcp", nil, false)
+	if err == nil {
+		t.Fatal("expected error for router_type on GCP, got nil")
+	}
+}
+
+func TestIsVersionLessThan(t *testing.T) {
+	cases := []struct {
+		a, b string
+		want bool
+	}{
+		{"3.25.0", "3.25.1", true},
+		{"3.25.1", "3.25.0", false},
+		{"3.25.0", "3.25.0", false},
+		{"3.25.0-rc1", "3.25.0", false},
+		{"3.24.6", "3.25.0", true},
+		{"invalid", "3.25.0", false},
+		{"3.25", "3.25.0", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.a+"_vs_"+tc.b, func(t *testing.T) {
+			if got := isVersionLessThan(tc.a, tc.b); got != tc.want {
+				t.Errorf("isVersionLessThan(%q, %q) = %v, want %v", tc.a, tc.b, got, tc.want)
+			}
+		})
+	}
+}
+
 // `(?s)` makes `\s` span newlines; the trailing `,?` accepts the optional
 // comma terraform fmt emits between the last argument and the close paren
 // in multi-line layouts. Reports false if no such site exists.

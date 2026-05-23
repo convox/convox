@@ -167,6 +167,18 @@ Groups:
         description: With this parameter enabled, the client source IP will be available
           in the request header &i x-forwarded-for &i key. This is not applicable
           for &i internal_router &i
+      - name: router_type
+        default: nginx
+        type: string
+        description: |
+          Ingress controller deployed alongside the rack. &l
+          &b nginx &b - Nginx ingress controller (default, current behavior) &l
+          &b contour &b - Deploys Contour (Envoy-based) ingress controller
+          alongside nginx. Traffic continues routing through nginx in this
+          version. Future versions will support routing through Contour. &l
+        allowedValues:
+          - nginx
+          - contour
       - name: build_disable_convox_resolver
         default: "false"
         type: boolean
