@@ -50,6 +50,7 @@ var awsKnownParams = map[string]bool{
 	"docker_hub_password":  true, "docker_hub_username": true,
 	"ebs_volume_encryption_enabled": true, "ecr_additional_policy_arn": true, "ecr_docker_hub_cache": true, "ecr_full_access": true, "ecr_scan_on_push_enable": true,
 	"efs_csi_driver_enable": true, "efs_csi_driver_version": true,
+	"eks_access_entries":                  true,
 	"eks_api_server_private_access_cidrs": true,
 	"eks_api_server_public_access_cidrs":  true,
 	"eks_log_types":                       true,
@@ -328,6 +329,7 @@ var paramGroups = map[string]map[string]bool{
 		"ecr_additional_policy_arn":           true,
 		"ecr_full_access":                     true,
 		"ecr_scan_on_push_enable":             true,
+		"eks_access_entries":                  true,
 		"eks_api_server_private_access_cidrs": true,
 		"eks_api_server_public_access_cidrs":  true,
 		"eks_log_types":                       true,
@@ -1365,13 +1367,16 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 
 	// karpenter_auth_mode and karpenter_enabled are type=string in TF (not bool).
 	// Reject junk values — only "true" or "false" are valid.
-	for _, boolishParam := range []string{"karpenter_auth_mode", "karpenter_enabled"} {
+	for _, boolishParam := range []string{"eks_access_entries", "karpenter_auth_mode", "karpenter_enabled"} {
 		if v, ok := params[boolishParam]; ok && v != "" && v != "true" && v != "false" {
 			return fmt.Errorf("param '%s' must be 'true' or 'false'", boolishParam)
 		}
 	}
 
-	// karpenter_auth_mode: one-way migration (cannot be disabled once enabled)
+	if params["eks_access_entries"] == "false" && currentParams["eks_access_entries"] == "true" {
+		return fmt.Errorf("eks_access_entries cannot be disabled once enabled (AWS EKS access config migration is one-way)")
+	}
+
 	if params["karpenter_auth_mode"] == "false" && currentParams["karpenter_auth_mode"] == "true" {
 		return fmt.Errorf("karpenter_auth_mode cannot be disabled once enabled (AWS EKS access config migration is one-way)")
 	}

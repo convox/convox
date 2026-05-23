@@ -34,6 +34,7 @@ locals {
     ecr_scan_on_push_enable = var.ecr_scan_on_push_enable
     efs_csi_driver_enable = var.efs_csi_driver_enable
     efs_csi_driver_version = var.efs_csi_driver_version
+    eks_access_entries = var.eks_access_entries
     eks_api_server_private_access_cidrs = var.eks_api_server_private_access_cidrs
     eks_api_server_public_access_cidrs = var.eks_api_server_public_access_cidrs
     eks_log_types = var.eks_log_types
@@ -169,6 +170,7 @@ locals {
     ecr_scan_on_push_enable = "false"
     efs_csi_driver_enable = "false"
     efs_csi_driver_version = "v2.3.0-eksbuild.2"
+    eks_access_entries = "false"
     eks_api_server_private_access_cidrs = ""
     eks_api_server_public_access_cidrs = "0.0.0.0/0"
     eks_log_types = ""

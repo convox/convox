@@ -27,7 +27,7 @@ func TestValidateAndMutateParams_BudgetRegex(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			params := map[string]string{
-				"karpenter_enabled":              "true",
+				"karpenter_enabled":                 "true",
 				"karpenter_disruption_budget_nodes": tt.value,
 			}
 			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"}, false)
@@ -60,7 +60,7 @@ func TestValidateAndMutateParams_TaintFormat(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			params := map[string]string{
-				"karpenter_enabled":    "true",
+				"karpenter_enabled":     "true",
 				"karpenter_node_taints": tt.value,
 			}
 			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"}, false)
@@ -761,7 +761,7 @@ func TestValidateAndMutateParams_BuildCpuLimit(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			params := map[string]string{
-				"karpenter_enabled":        "true",
+				"karpenter_enabled":         "true",
 				"karpenter_build_cpu_limit": tt.value,
 			}
 			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"}, false)
@@ -1440,6 +1440,88 @@ func TestValidateAndMutateParams_KarpenterAuthMode(t *testing.T) {
 	}
 }
 
+func TestValidateAndMutateParams_EksAccessEntries(t *testing.T) {
+	tests := []struct {
+		name          string
+		params        map[string]string
+		currentParams map[string]string
+		provider      string
+		wantErr       bool
+		errMsg        string
+	}{
+		{
+			"disabling eks_access_entries once enabled is rejected",
+			map[string]string{"eks_access_entries": "false"},
+			map[string]string{"eks_access_entries": "true"},
+			"aws",
+			true,
+			"eks_access_entries cannot be disabled once enabled",
+		},
+		{
+			"enabling eks_access_entries from false is allowed",
+			map[string]string{"eks_access_entries": "true"},
+			map[string]string{"eks_access_entries": "false"},
+			"aws",
+			false,
+			"",
+		},
+		{
+			"enabling eks_access_entries when not previously set is allowed",
+			map[string]string{"eks_access_entries": "true"},
+			map[string]string{},
+			"aws",
+			false,
+			"",
+		},
+		{
+			"eks_access_entries=true is idempotent",
+			map[string]string{"eks_access_entries": "true"},
+			map[string]string{"eks_access_entries": "true"},
+			"aws",
+			false,
+			"",
+		},
+		{
+			"empty eks_access_entries when enabled is blocked",
+			map[string]string{"eks_access_entries": ""},
+			map[string]string{"eks_access_entries": "true"},
+			"aws",
+			true,
+			"requires an explicit value",
+		},
+		{
+			"invalid eks_access_entries value is rejected",
+			map[string]string{"eks_access_entries": "banana"},
+			map[string]string{},
+			"aws",
+			true,
+			"must be 'true' or 'false'",
+		},
+		{
+			"eks_access_entries on non-AWS provider is rejected",
+			map[string]string{"eks_access_entries": "true"},
+			map[string]string{},
+			"gcp",
+			true,
+			"unknown parameter",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateAndMutateParams(tt.params, tt.provider, tt.currentParams, false)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("got err=%v, wantErr=%v", err, tt.wantErr)
+			}
+			if tt.wantErr && err != nil && tt.errMsg != "" {
+				if !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("error %q does not contain %q", err.Error(), tt.errMsg)
+				}
+			}
+		})
+	}
+}
+
 func TestValidateAndMutateParams_KarpenterNonDedicatedNodeGroups(t *testing.T) {
 	dedicatedTrue := `[{"type":"m5.large","dedicated":true,"label":"gpu"}]`
 	dedicatedFalse := `[{"type":"m5.large","dedicated":false}]`
@@ -1480,7 +1562,7 @@ func TestValidateAndMutateParams_KarpenterNonDedicatedNodeGroups(t *testing.T) {
 		{
 			"enabling karpenter with dedicated=true in new config succeeds",
 			map[string]string{
-				"karpenter_enabled":            "true",
+				"karpenter_enabled":             "true",
 				"additional_node_groups_config": dedicatedTrue,
 			},
 			map[string]string{"karpenter_auth_mode": "true"},
@@ -1490,7 +1572,7 @@ func TestValidateAndMutateParams_KarpenterNonDedicatedNodeGroups(t *testing.T) {
 		{
 			"enabling karpenter with dedicated=false in new config is an error",
 			map[string]string{
-				"karpenter_enabled":            "true",
+				"karpenter_enabled":             "true",
 				"additional_node_groups_config": dedicatedFalse,
 			},
 			map[string]string{"karpenter_auth_mode": "true"},
@@ -1500,7 +1582,7 @@ func TestValidateAndMutateParams_KarpenterNonDedicatedNodeGroups(t *testing.T) {
 		{
 			"new config overrides current params (new config has dedicated=true)",
 			map[string]string{
-				"karpenter_enabled":            "true",
+				"karpenter_enabled":             "true",
 				"additional_node_groups_config": dedicatedTrue,
 			},
 			map[string]string{"karpenter_auth_mode": "true", "additional_node_groups_config": noDedicatedFieldB64},

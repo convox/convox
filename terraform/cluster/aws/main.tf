@@ -342,7 +342,7 @@ resource "null_resource" "wait_k8s_cluster" {
 # back to http://localhost:80) because every provider reads host from
 # aws_eks_cluster.cluster.endpoint.
 resource "null_resource" "karpenter_access_config" {
-  count = var.karpenter_auth_mode ? 1 : 0
+  count = (var.karpenter_auth_mode || var.eks_access_entries) ? 1 : 0
 
   triggers = {
     cluster_name = aws_eks_cluster.cluster.name
@@ -392,6 +392,34 @@ resource "null_resource" "karpenter_access_config" {
     aws_eks_cluster.cluster,
     null_resource.wait_k8s_cluster,
   ]
+}
+
+data "aws_iam_session_context" "current" {
+  count = var.eks_access_entries ? 1 : 0
+  arn   = data.aws_caller_identity.current.arn
+}
+
+resource "aws_eks_access_entry" "terraform_caller" {
+  count = var.eks_access_entries ? 1 : 0
+
+  depends_on = [null_resource.karpenter_access_config]
+
+  cluster_name  = aws_eks_cluster.cluster.name
+  principal_arn = data.aws_iam_session_context.current[0].issuer_arn
+  type          = "STANDARD"
+  tags          = local.tags
+}
+
+resource "aws_eks_access_policy_association" "terraform_caller" {
+  count = var.eks_access_entries ? 1 : 0
+
+  cluster_name  = aws_eks_cluster.cluster.name
+  principal_arn = aws_eks_access_entry.terraform_caller[0].principal_arn
+  policy_arn    = "arn:${data.aws_partition.current.partition}:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+
+  access_scope {
+    type = "cluster"
+  }
 }
 
 # resource "local_file" "kubeconfig" {
