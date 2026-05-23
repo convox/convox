@@ -95,7 +95,7 @@ var awsKnownParams = map[string]bool{
 	"private_subnets_ids": true, "prometheus_gpu_metrics_chart_version": true,
 	"prometheus_gpu_metrics_retention": true, "prometheus_url": true,
 	"proxy_protocol":     true,
-	"public_subnets_ids": true, "rack_name": true,
+	"public_subnets_ids": true, "rack_name": true, "router_type": true,
 	"region": true, "release": true,
 	"release_watcher_gc_interval":     true,
 	"releases_to_retain_after_active": true, "releases_to_retain_task_run_interval_hour": true,
@@ -300,6 +300,7 @@ var paramGroups = map[string]map[string]bool{
 		"private_subnets_ids":                 true,
 		"proxy_protocol":                      true,
 		"public_subnets_ids":                  true,
+		"router_type":                         true,
 		"vpc_id":                              true,
 		"whitelist":                           true,
 		// v2 PascalCase (no-op on v3 racks; surfaced on v2 racks)
@@ -1348,6 +1349,14 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		if lower != "on_demand" && lower != "spot" && lower != "mixed" {
 			return fmt.Errorf("param 'node_capacity_type' must be 'on_demand', 'spot', or 'mixed'")
 		}
+	}
+
+	if v, has := params["router_type"]; has && v != "" {
+		lower := strings.ToLower(v)
+		if lower != "nginx" && lower != "contour" {
+			return fmt.Errorf("param 'router_type' must be 'nginx' or 'contour'")
+		}
+		params["router_type"] = lower
 	}
 
 	if v, has := params["access_log_retention_in_days"]; has && v != "" {
@@ -2545,6 +2554,7 @@ func RackUpdate(_ sdk.Interface, c *stdcli.Context) error {
 
 	currentVersion := s.Version
 	newVersion := c.Arg(0)
+	force, _ := c.Value("force").(bool)
 
 	// disable downgrabe from minor version for v3 rack
 	if strings.HasPrefix(currentVersion, "3.") && strings.HasPrefix(newVersion, "3.") &&
@@ -2563,16 +2573,47 @@ func RackUpdate(_ sdk.Interface, c *stdcli.Context) error {
 		}
 	}
 
+	if newVersion != "" && isVersionLessThan(newVersion, currentVersion) {
+		currentParams, pErr := r.Parameters()
+		if pErr == nil && currentParams["router_type"] == "contour" {
+			return fmt.Errorf(
+				"cannot downgrade to %s while router_type=contour is set.\n"+
+					"  Set router_type=nginx first: convox rack params set router_type=nginx",
+				newVersion)
+		}
+	}
+
 	if newVersion != "" {
 		c.Startf("Updating to <release>%s</release>", newVersion)
 	} else {
 		c.Startf("Updating")
 	}
 
-	force, _ := c.Value("force").(bool)
 	if err := r.UpdateVersion(newVersion, force); err != nil {
 		return err
 	}
 
 	return c.OK()
+}
+
+func isVersionLessThan(a, b string) bool {
+	partsA := strings.Split(strings.SplitN(a, "-", 2)[0], ".")
+	partsB := strings.Split(strings.SplitN(b, "-", 2)[0], ".")
+	if len(partsA) < 3 || len(partsB) < 3 {
+		return false
+	}
+	for i := 0; i < 3; i++ {
+		va, errA := strconv.Atoi(partsA[i])
+		vb, errB := strconv.Atoi(partsB[i])
+		if errA != nil || errB != nil {
+			return false
+		}
+		if va < vb {
+			return true
+		}
+		if va > vb {
+			return false
+		}
+	}
+	return false
 }
