@@ -208,9 +208,6 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		// ingress internal
 		rssInternal := m.Services.Routable().InternalRouter()
 		if len(rssInternal) > 0 {
-			if p.RouterType == "contour" {
-				return fmt.Errorf("internal services are not supported with router_type=contour; either remove internal: true from the service definition or switch to router_type=nginx with internal_router=true")
-			}
 			if p.DomainInternal == "" {
 				return structs.ErrBadRequest("please enable the rack's internal router first: convox rack params set internal_router=true")
 			}
@@ -574,6 +571,10 @@ func (p *Provider) releaseTemplateIngress(a *structs.App, ss manifest.Services, 
 }
 
 func (p *Provider) releaseTemplateIngressInternal(a *structs.App, ss manifest.Services, opts structs.ReleasePromoteOptions) ([]byte, error) {
+	if p.RouterType == "contour" {
+		return p.releaseTemplateHTTPProxyInternal(a, ss, opts)
+	}
+
 	idles, err := p.Engine.AppIdles(a.Name)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -640,6 +641,14 @@ func (p *Provider) releaseTemplateIngressInternal(a *structs.App, ss manifest.Se
 }
 
 func (p *Provider) releaseTemplateHTTPProxy(a *structs.App, ss manifest.Services, opts structs.ReleasePromoteOptions) ([]byte, error) {
+	return p.releaseTemplateHTTPProxyCore(a, ss, opts, p.ProxyProtocol)
+}
+
+func (p *Provider) releaseTemplateHTTPProxyInternal(a *structs.App, ss manifest.Services, opts structs.ReleasePromoteOptions) ([]byte, error) {
+	return p.releaseTemplateHTTPProxyCore(a, ss, opts, false)
+}
+
+func (p *Provider) releaseTemplateHTTPProxyCore(a *structs.App, ss manifest.Services, opts structs.ReleasePromoteOptions, proxyProtocol bool) ([]byte, error) {
 	idles, err := p.Engine.AppIdles(a.Name)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -698,7 +707,7 @@ func (p *Provider) releaseTemplateHTTPProxy(a *structs.App, ss manifest.Services
 			"Host":                       p.ServiceHost(a.Name, s),
 			"Idles":                      common.DefaultBool(opts.Idle, idles),
 			"Namespace":                  p.AppNamespace(a.Name),
-			"ProxyProtocol":              p.ProxyProtocol,
+			"ProxyProtocol":              proxyProtocol,
 			"Rack":                       p.Name,
 			"Service":                    s,
 			"WhitelistCIDRs":             whitelistCIDRs,

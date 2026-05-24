@@ -28,10 +28,22 @@ func TestIngressClass(t *testing.T) {
 }
 
 func TestIngressInternalClass(t *testing.T) {
-	testProvider(t, func(p *aws.Provider) {
-		p.Provider.RouterType = "contour"
-		require.Equal(t, "nginx-internal", p.IngressInternalClass())
-	})
+	cases := []struct {
+		routerType string
+		expected   string
+	}{
+		{"", "nginx-internal"},
+		{"nginx", "nginx-internal"},
+		{"contour", "contour"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.routerType, func(t *testing.T) {
+			testProvider(t, func(p *aws.Provider) {
+				p.Provider.RouterType = tc.routerType
+				require.Equal(t, tc.expected, p.IngressInternalClass())
+			})
+		})
+	}
 }
 
 func TestIngressAnnotations(t *testing.T) {
