@@ -21,6 +21,45 @@ provider "kubernetes" {
   password = var.private_eks_host != "" ? var.private_eks_pass : null
 }
 
+provider "helm" {
+  kubernetes {
+    cluster_ca_certificate = var.private_eks_host != "" ? null : module.cluster.ca
+    host                   = var.private_eks_host != "" ? var.private_eks_host : module.cluster.endpoint
+
+    dynamic "exec" {
+      for_each = var.private_eks_host != "" ? [] : [1]
+      content {
+        api_version = "client.authentication.k8s.io/v1beta1"
+        args        = ["eks", "get-token", "--cluster-name", local.name]
+        command     = "aws"
+      }
+    }
+
+    insecure = var.private_eks_host != "" ? true : false
+    username = var.private_eks_host != "" ? var.private_eks_user : null
+    password = var.private_eks_host != "" ? var.private_eks_pass : null
+  }
+}
+
+provider "kubectl" {
+  host                   = var.private_eks_host != "" ? var.private_eks_host : module.cluster.endpoint
+  cluster_ca_certificate = var.private_eks_host != "" ? null : module.cluster.ca
+  load_config_file       = false
+
+  dynamic "exec" {
+    for_each = var.private_eks_host != "" ? [] : [1]
+    content {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      args        = ["eks", "get-token", "--cluster-name", local.name]
+      command     = "aws"
+    }
+  }
+
+  insecure = var.private_eks_host != "" ? true : false
+  username = var.private_eks_host != "" ? var.private_eks_user : null
+  password = var.private_eks_host != "" ? var.private_eks_pass : null
+}
+
 data "aws_eks_cluster_auth" "cluster" {
   name = module.cluster.id
 }
@@ -169,7 +208,6 @@ module "cluster" {
   ecr_docker_hub_cache                = var.ecr_docker_hub_cache
   docker_hub_username                 = var.docker_hub_username
   docker_hub_password                 = var.docker_hub_password
-  router_type                         = var.router_type
 }
 
 resource "null_resource" "wait_for_cluster" {
@@ -212,6 +250,8 @@ module "rack" {
   providers = {
     aws        = aws
     kubernetes = kubernetes
+    helm       = helm
+    kubectl    = kubectl
   }
 
   depends_on = [
@@ -273,4 +313,6 @@ module "rack" {
   vpc_id                                    = module.cluster.vpc
   vpa_enable                                = var.vpa_enable
   webhook_signing_key                       = var.webhook_signing_key
+  router_type                               = var.router_type
+  cert_duration                             = var.cert_duration
 }

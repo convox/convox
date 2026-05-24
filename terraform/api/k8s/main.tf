@@ -475,6 +475,13 @@ resource "kubernetes_service" "api" {
   }
 }
 
+locals {
+  ingress_annotations = var.router_type == "contour" ? {
+    for k, v in var.annotations : k => v
+    if !startswith(k, "cert-manager.io/")
+  } : var.annotations
+}
+
 resource "kubernetes_ingress_v1" "api" {
   wait_for_load_balancer = true
 
@@ -487,7 +494,7 @@ resource "kubernetes_ingress_v1" "api" {
       "nginx.ingress.kubernetes.io/backend-protocol" : "https",
       "nginx.ingress.kubernetes.io/proxy-read-timeout" : "99999",
       "nginx.ingress.kubernetes.io/proxy-send-timeout" : "99999",
-    }, var.annotations)
+    }, local.ingress_annotations)
 
     labels = {
       system  = "convox"
@@ -530,7 +537,7 @@ resource "kubernetes_ingress_v1" "kubernetes" {
 
     annotations = merge({
       "nginx.ingress.kubernetes.io/use-regex" : "true",
-    }, var.annotations)
+    }, local.ingress_annotations)
 
     labels = {
       system  = "convox"
@@ -564,4 +571,67 @@ resource "kubernetes_ingress_v1" "kubernetes" {
       }
     }
   }
+}
+
+resource "kubectl_manifest" "api_httpproxy" {
+  count     = var.router_type == "contour" ? 1 : 0
+  yaml_body = <<-YAML
+    apiVersion: projectcontour.io/v1
+    kind: HTTPProxy
+    metadata:
+      name: api
+      namespace: ${var.namespace}
+    spec:
+      virtualhost:
+        fqdn: api.${var.domain}
+        tls:
+          secretName: api-certificate
+      routes:
+      - enableWebsockets: true
+        timeoutPolicy:
+          response: "infinity"
+          idle: "infinity"
+        services:
+          - name: api
+            port: 5443
+            protocol: tls
+      - conditions:
+          - prefix: /kubernetes/
+        enableWebsockets: true
+        timeoutPolicy:
+          response: "infinity"
+          idle: "infinity"
+        services:
+          - name: api
+            port: 8001
+  YAML
+}
+
+resource "kubectl_manifest" "api_certificate" {
+  count     = var.router_type == "contour" ? 1 : 0
+  yaml_body = <<-YAML
+    apiVersion: cert-manager.io/v1
+    kind: Certificate
+    metadata:
+      name: api-certificate
+      namespace: ${var.namespace}
+    spec:
+      secretName: api-certificate
+      secretTemplate:
+        labels:
+          system: convox
+          type: letsencrypt-certificate
+      issuerRef:
+        name: letsencrypt
+        kind: ClusterIssuer
+        group: cert-manager.io
+      usages:
+      - digital signature
+      - key encipherment
+      %{if var.cert_duration != ""}
+      duration: ${var.cert_duration}
+      %{endif}
+      dnsNames:
+      - api.${var.domain}
+  YAML
 }

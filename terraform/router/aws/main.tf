@@ -9,6 +9,13 @@ locals {
     for item in split(",", local.additional_config_str) :
     split("=", item)[0] => split("=", item)[1]
   } : {}
+
+  envoy_selector = {
+    "app.kubernetes.io/component" = "envoy"
+    "app.kubernetes.io/instance"  = "contour"
+    "app.kubernetes.io/name"      = "contour"
+  }
+  router_selector = var.router_type == "contour" ? local.envoy_selector : module.nginx.selector
 }
 
 data "aws_region" "current" {
@@ -125,7 +132,7 @@ resource "kubernetes_service" "router_extra" {
   }
 
   spec {
-    external_traffic_policy = "Cluster"
+    external_traffic_policy = var.router_type == "contour" && !var.proxy_protocol ? "Local" : "Cluster"
     type                    = "LoadBalancer"
 
     load_balancer_source_ranges = var.whitelist
@@ -134,20 +141,22 @@ resource "kubernetes_service" "router_extra" {
       name        = "http"
       port        = 80
       protocol    = "TCP"
-      target_port = 80
+      target_port = var.router_type == "contour" ? 8080 : 80
     }
 
     port {
       name        = "https"
       port        = 443
       protocol    = "TCP"
-      target_port = 443
+      target_port = var.router_type == "contour" ? 8443 : 443
     }
 
-    selector = module.nginx.selector
+    selector = local.router_selector
 
     load_balancer_class = "service.k8s.aws/nlb"
   }
+
+  depends_on = [helm_release.contour]
 
   lifecycle {
     ignore_changes = [spec[0].load_balancer_class]
@@ -174,7 +183,7 @@ resource "kubernetes_service" "router" {
   }
 
   spec {
-    external_traffic_policy = "Cluster"
+    external_traffic_policy = var.router_type == "contour" && !var.proxy_protocol ? "Local" : "Cluster"
     type                    = "LoadBalancer"
 
     load_balancer_source_ranges = var.whitelist
@@ -183,20 +192,22 @@ resource "kubernetes_service" "router" {
       name        = "http"
       port        = 80
       protocol    = "TCP"
-      target_port = 80
+      target_port = var.router_type == "contour" ? 8080 : 80
     }
 
     port {
       name        = "https"
       port        = 443
       protocol    = "TCP"
-      target_port = 443
+      target_port = var.router_type == "contour" ? 8443 : 443
     }
 
-    selector = module.nginx.selector
+    selector = local.router_selector
 
     load_balancer_class = "service.k8s.aws/nlb"
   }
+
+  depends_on = [helm_release.contour]
 
   lifecycle {
     ignore_changes = [spec[0].load_balancer_class]
@@ -248,6 +259,8 @@ resource "kubernetes_service" "router-internal" {
 
     load_balancer_class = "service.k8s.aws/nlb"
   }
+
+  depends_on = [helm_release.contour]
 
   lifecycle {
     ignore_changes = [spec[0].load_balancer_class]

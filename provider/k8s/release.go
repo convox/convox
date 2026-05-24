@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"os"
 	"sort"
@@ -26,6 +27,7 @@ import (
 	"golang.org/x/text/language"
 	v1 "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ktypes "k8s.io/apimachinery/pkg/types"
 )
@@ -204,11 +206,15 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		}
 
 		// ingress internal
-		if rss := m.Services.Routable().InternalRouter(); len(rss) > 0 {
+		rssInternal := m.Services.Routable().InternalRouter()
+		if len(rssInternal) > 0 {
+			if p.RouterType == "contour" {
+				return fmt.Errorf("internal services are not supported with router_type=contour; either remove internal: true from the service definition or switch to router_type=nginx with internal_router=true")
+			}
 			if p.DomainInternal == "" {
 				return structs.ErrBadRequest("please enable the rack's internal router first: convox rack params set internal_router=true")
 			}
-			data, err := p.releaseTemplateIngressInternal(a, rss, opts)
+			data, err := p.releaseTemplateIngressInternal(a, rssInternal, opts)
 			if err != nil {
 				return errors.WithStack(err)
 			}
@@ -499,6 +505,10 @@ func (p *Provider) releaseTemplateCA(a *structs.App, ca *v1.Secret) ([]byte, err
 }
 
 func (p *Provider) releaseTemplateIngress(a *structs.App, ss manifest.Services, opts structs.ReleasePromoteOptions) ([]byte, error) {
+	if p.RouterType == "contour" {
+		return p.releaseTemplateHTTPProxy(a, ss, opts)
+	}
+
 	idles, err := p.Engine.AppIdles(a.Name)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -623,6 +633,81 @@ func (p *Provider) releaseTemplateIngressInternal(a *structs.App, ss manifest.Se
 			return nil, errors.WithStack(err)
 		}
 
+		items = append(items, data)
+	}
+
+	return bytes.Join(items, []byte("---\n")), nil
+}
+
+func (p *Provider) releaseTemplateHTTPProxy(a *structs.App, ss manifest.Services, opts structs.ReleasePromoteOptions) ([]byte, error) {
+	idles, err := p.Engine.AppIdles(a.Name)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	_, err = p.DiscoveryClient.ServerResourcesForGroupVersion("projectcontour.io/v1")
+	if err != nil {
+		if meta.IsNoMatchError(err) {
+			return nil, fmt.Errorf("Contour is not yet installed. Wait for the rack update to complete before deploying.")
+		}
+		return nil, errors.WithStack(err)
+	}
+
+	items := [][]byte{}
+
+	for i := range ss {
+		s := ss[i]
+
+		if s.Certificate.Id != "" {
+			data, err := p.releaseTemplateCertSecret(a, s)
+			if err != nil {
+				return nil, err
+			}
+			items = append(items, data)
+		}
+
+		if s.Certificate.Id == "" && !p.ConvoxDomainTLSCertDisable {
+			certParams := map[string]interface{}{
+				"App":          a.Name,
+				"CertDuration": s.Certificate.Duration,
+				"HasDomains":   len(s.Domains) > 0,
+				"Host":         p.ServiceHost(a.Name, s),
+				"Namespace":    p.AppNamespace(a.Name),
+				"Service":      s,
+			}
+			data, err := p.RenderTemplate("app/certificate", certParams)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+			items = append(items, data)
+		}
+
+		customAns := s.IngressAnnotationsMap()
+		ans := httpProxyAnnotations(customAns, s.Name)
+
+		var whitelistCIDRs []string
+		if s.Whitelist != "" {
+			whitelistCIDRs = strings.Split(s.Whitelist, ",")
+		}
+
+		params := map[string]interface{}{
+			"Annotations":                ans,
+			"App":                        a.Name,
+			"BackendProtocol":            contourBackendProtocol(s.Port.Scheme),
+			"ConvoxDomainTLSCertDisable": !p.ConvoxDomainTLSCertDisable,
+			"Host":                       p.ServiceHost(a.Name, s),
+			"Idles":                      common.DefaultBool(opts.Idle, idles),
+			"Namespace":                  p.AppNamespace(a.Name),
+			"ProxyProtocol":              p.ProxyProtocol,
+			"Rack":                       p.Name,
+			"Service":                    s,
+			"WhitelistCIDRs":             whitelistCIDRs,
+		}
+
+		data, err := p.RenderTemplate("app/httpproxy", params)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
 		items = append(items, data)
 	}
 
@@ -1326,6 +1411,34 @@ func (p *Provider) reservedNginxAnnotations() map[string]bool {
 		"nginx.ingress.kubernetes.io/ssl-redirect":           true,
 		"nginx.ingress.kubernetes.io/whitelist-source-range": true,
 	}
+}
+
+func contourBackendProtocol(scheme string) string {
+	switch strings.ToUpper(scheme) {
+	case "HTTPS":
+		return "tls"
+	case "GRPC":
+		return "h2c"
+	case "GRPCS":
+		return "h2"
+	default:
+		return ""
+	}
+}
+
+func httpProxyAnnotations(annotations map[string]string, serviceName string) map[string]string {
+	filtered := map[string]string{}
+	for k, v := range annotations {
+		if strings.HasPrefix(k, "nginx.ingress.kubernetes.io/") {
+			log.Printf("WARNING: service %s has nginx-specific ingressAnnotation %q which has no effect with router_type=contour", serviceName, k)
+			continue
+		}
+		if strings.HasPrefix(k, "contour.heptio.com/") {
+			continue
+		}
+		filtered[k] = v
+	}
+	return filtered
 }
 
 func (p *Provider) releaseAppConfigs(app *structs.App, m *manifest.Manifest) error {

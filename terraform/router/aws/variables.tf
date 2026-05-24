@@ -97,3 +97,8 @@ variable "tags" {
 variable "whitelist" {
   default = ["0.0.0.0/0"]
 }
+
+variable "router_type" {
+  type    = string
+  default = "nginx"
+}

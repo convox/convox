@@ -1,0 +1,61 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: cert-{{.Service.Name}}
+  namespace: {{.Namespace}}
+  labels:
+    app: {{.App}}
+    service: {{.Service.Name}}
+    system: convox
+    type: service
+spec:
+  secretName: cert-{{.Service.Name}}
+  secretTemplate:
+    labels:
+      system: convox
+      type: letsencrypt-certificate
+  issuerRef:
+    name: letsencrypt
+    kind: ClusterIssuer
+    group: cert-manager.io
+  usages:
+  - digital signature
+  - key encipherment
+  {{- if .CertDuration}}
+  duration: {{.CertDuration}}
+  {{- end}}
+  dnsNames:
+  - {{ safe .Host }}
+{{- if .HasDomains}}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: cert-{{.Service.Name}}-domains
+  namespace: {{.Namespace}}
+  labels:
+    app: {{.App}}
+    service: {{.Service.Name}}
+    system: convox
+    type: service
+spec:
+  secretName: cert-{{.Service.Name}}-domains
+  secretTemplate:
+    labels:
+      system: convox
+      type: letsencrypt-certificate
+  issuerRef:
+    name: letsencrypt
+    kind: ClusterIssuer
+    group: cert-manager.io
+  usages:
+  - digital signature
+  - key encipherment
+  {{- if .CertDuration}}
+  duration: {{.CertDuration}}
+  {{- end}}
+  dnsNames:
+  {{- range .Service.Domains}}
+  - {{ safe . }}
+  {{- end}}
+{{- end}}

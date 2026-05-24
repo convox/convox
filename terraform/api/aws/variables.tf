@@ -213,3 +213,12 @@ variable "webhook_signing_key" {
   type    = string
   default = ""
 }
+
+variable "router_type" {
+  type    = string
+  default = "nginx"
+}
+
+variable "proxy_protocol" {
+  default = false
+}
