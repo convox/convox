@@ -16,7 +16,7 @@ spec:
    solvers:
    - http01:
        ingress:
-         class: nginx
+         class: {{.IngressClass}}
    {{ with .Config }}
    {{ range .Solvers }}
    - dns01:

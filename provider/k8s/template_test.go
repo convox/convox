@@ -20,6 +20,7 @@ func TestRenderTemplate(t *testing.T) {
 	p.templater = templater.New(template.TemplatesFS)
 
 	data, err := p.RenderTemplate(fmt.Sprintf("system/%s", "cert-manager-letsencrypt"), map[string]interface{}{
+		"IngressClass": "nginx",
 		"Config": structs.LetsEncryptConfig{
 			Solvers: []*structs.Dns01Solver{
 				{
@@ -47,6 +48,19 @@ func TestRenderTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 	fmt.Println(string(data))
+}
+
+func TestRenderTemplateCertManagerContour(t *testing.T) {
+	p := Provider{}
+	p.templater = templater.New(template.TemplatesFS)
+
+	data, err := p.RenderTemplate("system/cert-manager-letsencrypt", map[string]interface{}{
+		"IngressClass": "contour",
+		"Config":       structs.LetsEncryptConfig{},
+	})
+	require.NoError(t, err)
+	require.Contains(t, string(data), "class: contour")
+	require.NotContains(t, string(data), "class: nginx")
 }
 
 func TestRenderTemplateServiceSecurityContext(t *testing.T) {

@@ -134,3 +134,13 @@ variable "webhook_signing_key" {
   type    = string
   default = ""
 }
+
+variable "router_type" {
+  type    = string
+  default = "nginx"
+}
+
+variable "cert_duration" {
+  type    = string
+  default = ""
+}

@@ -13,6 +13,9 @@ func (p *Provider) IngressAnnotations(certDuration string) (map[string]string, e
 }
 
 func (p *Provider) IngressClass() string {
+	if p.RouterType == "contour" {
+		return "contour"
+	}
 	return "nginx"
 }
 

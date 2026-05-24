@@ -22,6 +22,7 @@ module "api" {
   providers = {
     aws        = aws
     kubernetes = kubernetes
+    kubectl    = kubectl
   }
 
   buildkit_enabled                          = var.buildkit_enabled
@@ -67,6 +68,9 @@ module "api" {
   vpa_enable                                = var.vpa_enable
   webhook_signing_key                       = var.webhook_signing_key
   api_feature_gates                         = var.api_feature_gates
+  router_type                               = var.router_type
+  cert_duration                             = var.cert_duration
+  proxy_protocol                            = var.proxy_protocol
 }
 
 module "metrics" {
@@ -103,6 +107,7 @@ module "router" {
   providers = {
     aws        = aws
     kubernetes = kubernetes
+    helm       = helm
   }
 
   convox_rack_domain        = var.convox_rack_domain
@@ -126,4 +131,5 @@ module "router" {
   tags                      = var.tags
   whitelist                 = var.whitelist
   lbc_helm_id               = var.lbc_helm_id
+  router_type               = var.router_type
 }

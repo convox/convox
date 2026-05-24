@@ -248,3 +248,13 @@ variable "webhook_signing_key" {
 variable "whitelist" {
   default = ["0.0.0.0/0"]
 }
+
+variable "router_type" {
+  type    = string
+  default = "nginx"
+}
+
+variable "cert_duration" {
+  type    = string
+  default = "2160h"
+}

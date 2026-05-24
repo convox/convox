@@ -9,8 +9,28 @@ import (
 )
 
 func TestIngressClass(t *testing.T) {
+	cases := []struct {
+		routerType string
+		expected   string
+	}{
+		{"", "nginx"},
+		{"nginx", "nginx"},
+		{"contour", "contour"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.routerType, func(t *testing.T) {
+			testProvider(t, func(p *aws.Provider) {
+				p.Provider.RouterType = tc.routerType
+				require.Equal(t, tc.expected, p.IngressClass())
+			})
+		})
+	}
+}
+
+func TestIngressInternalClass(t *testing.T) {
 	testProvider(t, func(p *aws.Provider) {
-		assert.Equal(t, "nginx", p.IngressClass())
+		p.Provider.RouterType = "contour"
+		require.Equal(t, "nginx-internal", p.IngressInternalClass())
 	})
 }
 

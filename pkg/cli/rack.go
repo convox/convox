@@ -1350,6 +1350,65 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		params["router_type"] = lower
 	}
 
+	effectiveRouterType := params["router_type"]
+	if effectiveRouterType == "" {
+		effectiveRouterType = currentParams["router_type"]
+	}
+	effectiveInternalRouter := params["internal_router"]
+	if effectiveInternalRouter == "" {
+		effectiveInternalRouter = currentParams["internal_router"]
+	}
+	if effectiveRouterType == "contour" && effectiveInternalRouter == "true" {
+		return fmt.Errorf("router_type=contour is not yet supported with internal_router=true")
+	}
+
+	if effectiveRouterType == "contour" && params["proxy_protocol"] != "" {
+		currentPP := currentParams["proxy_protocol"]
+		if currentPP == "" {
+			currentPP = "false"
+		}
+		if params["proxy_protocol"] != currentPP {
+			fmt.Fprintf(os.Stderr, "WARNING: Changing proxy_protocol while router_type=contour causes a traffic interruption of several minutes during the Envoy DaemonSet rollout. Plan this change during a maintenance window.\n")
+			fmt.Fprintf(os.Stderr, "All apps with IP whitelisting must be redeployed after the change.\n")
+		}
+	}
+
+	nginxAdditionalConfig := params["nginx_additional_config"]
+	if nginxAdditionalConfig == "" {
+		nginxAdditionalConfig = currentParams["nginx_additional_config"]
+	}
+	if effectiveRouterType == "contour" && nginxAdditionalConfig != "" && nginxAdditionalConfig != "null" {
+		fmt.Fprintf(os.Stderr, "WARNING: nginx_additional_config has no effect when router_type=contour\n")
+	}
+	if effectiveRouterType == "contour" {
+		sslCiphers := params["ssl_ciphers"]
+		if sslCiphers == "" {
+			sslCiphers = currentParams["ssl_ciphers"]
+		}
+		if sslCiphers != "" && sslCiphers != "null" {
+			fmt.Fprintf(os.Stderr, "WARNING: custom ssl_ciphers are not applied when router_type=contour. Envoy uses its built-in cipher suite.\n")
+		}
+		sslProtocols := params["ssl_protocols"]
+		if sslProtocols == "" {
+			sslProtocols = currentParams["ssl_protocols"]
+		}
+		if sslProtocols != "" && sslProtocols != "null" && sslProtocols != "TLSv1.2 TLSv1.3" {
+			fmt.Fprintf(os.Stderr, "WARNING: custom ssl_protocols are not applied when router_type=contour. Envoy uses TLS 1.2 minimum.\n")
+		}
+	}
+
+	currentRouterType := currentParams["router_type"]
+	if currentRouterType == "" || currentRouterType == "null" {
+		currentRouterType = "nginx"
+	}
+	if params["router_type"] != "" && params["router_type"] != currentRouterType {
+		fmt.Fprintf(os.Stderr, "WARNING: Changing router_type requires redeploying all apps.\n")
+		fmt.Fprintf(os.Stderr, "Apps will lose connectivity until their next deployment.\n")
+		if params["router_type"] == "contour" {
+			fmt.Fprintf(os.Stderr, "WARNING: Router access logs will use Envoy default format. The access_log_retention_in_days param will not apply until a follow-up fluentd update.\n")
+		}
+	}
+
 	if v, has := params["access_log_retention_in_days"]; has && v != "" {
 		if _, err := strconv.Atoi(v); err != nil {
 			return fmt.Errorf("param 'access_log_retention_in_days' must be an integer")
