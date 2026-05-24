@@ -13,6 +13,7 @@ module "k8s" {
 
   providers = {
     kubernetes = kubernetes
+    kubectl    = kubectl
   }
 
   buildkit_enabled                = var.buildkit_enabled
@@ -28,6 +29,8 @@ module "k8s" {
   disable_image_manifest_cache    = var.disable_image_manifest_cache
   image                           = var.image
   cost_tracking_enable            = var.cost_tracking_enable
+  router_type                     = var.router_type
+  cert_duration                   = var.cert_duration
   karpenter_enabled               = var.karpenter_enabled
   metrics_scraper_host            = var.metrics_scraper_host
   namespace                       = var.namespace
@@ -70,6 +73,8 @@ module "k8s" {
     KEDA_ENABLED                              = var.keda_enable
     VPA_ENABLED                               = var.vpa_enable
     FEATURE_GATES                             = var.api_feature_gates
+    ROUTER_TYPE                               = var.router_type
+    PROXY_PROTOCOL                            = var.proxy_protocol
   }
 }
 

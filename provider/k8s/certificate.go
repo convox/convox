@@ -348,7 +348,8 @@ func (p *Provider) LetsEncryptConfigApply(config structs.LetsEncryptConfig) erro
 	}
 
 	return p.applySystemTemplate("cert-manager-letsencrypt", map[string]interface{}{
-		"Config": config,
+		"Config":       config,
+		"IngressClass": p.Engine.IngressClass(),
 	})
 }
 

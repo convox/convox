@@ -91,6 +91,8 @@ type Provider struct {
 	BuildDisableResolver                bool
 	RestClient                          rest.Interface
 	Router                              string
+	RouterType                          string
+	ProxyProtocol                       bool
 	Socket                              string
 	Storage                             string
 	SubnetIDs                           string
@@ -220,6 +222,8 @@ func FromEnv() (*Provider, error) {
 		Resolver:                         os.Getenv("RESOLVER"),
 		RestClient:                       kc.RESTClient(),
 		Router:                           os.Getenv("ROUTER"),
+		RouterType:                       common.CoalesceString(os.Getenv("ROUTER_TYPE"), "nginx"),
+		ProxyProtocol:                    os.Getenv("PROXY_PROTOCOL") == "true",
 		Socket:                           common.CoalesceString(os.Getenv("SOCKET"), "/var/run/docker.sock"),
 		Storage:                          common.CoalesceString(os.Getenv("STORAGE"), "/var/storage"),
 		SubnetIDs:                        os.Getenv("SUBNET_IDS"),
@@ -620,7 +624,8 @@ func (p *Provider) installCertManagerConfig() {
 					fmt.Printf("installing cert manager letsencrypt config\n")
 
 					if err := p.applySystemTemplate("cert-manager-letsencrypt", map[string]interface{}{
-						"Config": config,
+						"Config":       config,
+						"IngressClass": p.Engine.IngressClass(),
 					}); err != nil {
 						fmt.Printf("could not install cert manager letsencrypt config: %s\n", err)
 						break

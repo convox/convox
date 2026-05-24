@@ -125,6 +125,7 @@ Groups:
           &b Advanced Configuration &b &l SSL ciphers to use for
           (Nginx)[https://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_ciphers]. &l
           &l They must be listed separated by colons. &l
+          Applies to nginx router only. Has no effect when router_type=contour. &l
       - name: ssl_protocols
         default: "null"
         sideNote: Nginx default unless set
@@ -134,6 +135,7 @@ Groups:
           &b Advanced Configuration &b &l SSL protocols to use for
           (Nginx)[https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_ssl_protocols] &l
           &l They must be listed separated by spaces. &i e.g. &i - TLSv1.2 TLSv1.3 &l
+          Applies to nginx router only. Has no effect when router_type=contour. &l
       - name: ecr_scan_on_push_enable
         default: "false"
         type: boolean
@@ -166,16 +168,19 @@ Groups:
         type: boolean
         description: With this parameter enabled, the client source IP will be available
           in the request header &i x-forwarded-for &i key. This is not applicable
-          for &i internal_router &i
+          for &i internal_router &i &l
+          When router_type=contour: if proxy_protocol=false, client IP is preserved
+          via externalTrafficPolicy:Local. If proxy_protocol=true, client IP is
+          preserved via PP2 headers populating X-Forwarded-For.
       - name: router_type
         default: nginx
         type: string
         description: |
-          Ingress controller deployed alongside the rack. &l
-          &b nginx &b - Nginx ingress controller (default, current behavior) &l
-          &b contour &b - Deploys Contour (Envoy-based) ingress controller
-          alongside nginx. Traffic continues routing through nginx in this
-          version. Future versions will support routing through Contour. &l
+          Ingress controller for the rack. &l
+          &b nginx &b - Nginx ingress controller (default) &l
+          &b contour &b - Contour (Envoy-based) ingress controller.
+          Replaces nginx for all traffic routing.
+          Existing apps must be redeployed after switching. &l
         allowedValues:
           - nginx
           - contour
@@ -323,7 +328,8 @@ Groups:
       - name: idle_timeout
         default: "3600"
         type: integer
-        description: Idle timeout value (in seconds) for the Rack Load Balancer
+        description: Idle timeout value (in seconds) for the Rack Load Balancer.
+          When router_type=contour, also configures Envoy connection idle timeout.
         allowedMinValue: 60
         allowedMaxValue: 4000
       - name: pdb_default_min_available_percentage
@@ -423,7 +429,9 @@ Groups:
         default: "7"
         type: integer
         description: Number of days to retain Nginx access logs in CloudWatch.
-          Set to -1 to disable retention limits.
+          Set to -1 to disable retention limits. When router_type=contour,
+          Envoy access logs use a different format and do not flow to the
+          dedicated nginx log stream until a future update.
         allowedMinValue: -1
       - name: syslog
         default: "null"
