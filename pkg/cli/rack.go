@@ -1363,13 +1363,6 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 	if effectiveRouterType == "" {
 		effectiveRouterType = currentParams["router_type"]
 	}
-	effectiveInternalRouter := params["internal_router"]
-	if effectiveInternalRouter == "" {
-		effectiveInternalRouter = currentParams["internal_router"]
-	}
-	if effectiveRouterType == "contour" && effectiveInternalRouter == "true" {
-		return fmt.Errorf("router_type=contour is not yet supported with internal_router=true")
-	}
 
 	if effectiveRouterType == "contour" && params["proxy_protocol"] != "" {
 		currentPP := currentParams["proxy_protocol"]

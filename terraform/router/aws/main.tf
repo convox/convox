@@ -15,7 +15,8 @@ locals {
     "app.kubernetes.io/instance"  = "contour"
     "app.kubernetes.io/name"      = "contour"
   }
-  router_selector = var.router_type == "contour" ? local.envoy_selector : module.nginx.selector
+  router_selector          = var.router_type == "contour" ? local.envoy_selector : module.nginx.selector
+  router_selector_internal = var.router_type == "contour" ? local.envoy_selector : module.nginx.selector-internal
 }
 
 data "aws_region" "current" {
@@ -245,17 +246,17 @@ resource "kubernetes_service" "router-internal" {
       name        = "http"
       port        = 80
       protocol    = "TCP"
-      target_port = 80
+      target_port = var.router_type == "contour" ? 8080 : 80
     }
 
     port {
       name        = "https"
       port        = 443
       protocol    = "TCP"
-      target_port = 443
+      target_port = var.router_type == "contour" ? 8443 : 443
     }
 
-    selector = module.nginx.selector-internal
+    selector = local.router_selector_internal
 
     load_balancer_class = "service.k8s.aws/nlb"
   }
