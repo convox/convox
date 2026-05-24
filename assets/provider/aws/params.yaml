@@ -166,11 +166,12 @@ Groups:
       - name: proxy_protocol
         default: "false"
         type: boolean
-        description: With this parameter enabled, the client source IP will be available
+        description: |
+          With this parameter enabled, the client source IP will be available
           in the request header &i x-forwarded-for &i key. This is not applicable
           for &i internal_router &i &l
-          When router_type=contour: if proxy_protocol=false, client IP is preserved
-          via externalTrafficPolicy:Local. If proxy_protocol=true, client IP is
+          When router_type=contour, if proxy_protocol=false, client IP is preserved
+          via externalTrafficPolicy Local. If proxy_protocol=true, client IP is
           preserved via PP2 headers populating X-Forwarded-For.
       - name: router_type
         default: nginx
