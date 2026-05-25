@@ -449,6 +449,21 @@ variable "router_type" {
   default = "nginx"
 }
 
+variable "contour_cpu_request" {
+  type    = string
+  default = "100m"
+}
+
+variable "envoy_cpu_request" {
+  type    = string
+  default = "100m"
+}
+
+variable "envoy_memory_request" {
+  type    = string
+  default = "256Mi"
+}
+
 variable "nvidia_device_plugin_enable" {
   default = false
 }

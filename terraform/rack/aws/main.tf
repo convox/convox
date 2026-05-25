@@ -134,4 +134,7 @@ module "router" {
   whitelist                 = var.whitelist
   lbc_helm_id               = var.lbc_helm_id
   router_type               = var.router_type
+  contour_cpu_request       = var.contour_cpu_request
+  envoy_cpu_request         = var.envoy_cpu_request
+  envoy_memory_request      = var.envoy_memory_request
 }

@@ -21,7 +21,7 @@ func (p *Provider) IngressClass() string {
 
 func (p *Provider) IngressInternalClass() string {
 	if p.RouterType == "contour" {
-		return "contour"
+		return "contour-internal"
 	}
 	return "nginx-internal"
 }

@@ -102,3 +102,18 @@ variable "router_type" {
   type    = string
   default = "nginx"
 }
+
+variable "contour_cpu_request" {
+  type    = string
+  default = "100m"
+}
+
+variable "envoy_cpu_request" {
+  type    = string
+  default = "100m"
+}
+
+variable "envoy_memory_request" {
+  type    = string
+  default = "256Mi"
+}

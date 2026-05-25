@@ -582,6 +582,7 @@ resource "kubectl_manifest" "api_httpproxy" {
       name: api
       namespace: ${var.namespace}
     spec:
+      ingressClassName: contour
       virtualhost:
         fqdn: api.${var.domain}
         tls:

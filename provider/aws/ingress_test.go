@@ -34,7 +34,7 @@ func TestIngressInternalClass(t *testing.T) {
 	}{
 		{"", "nginx-internal"},
 		{"nginx", "nginx-internal"},
-		{"contour", "contour"},
+		{"contour", "contour-internal"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.routerType, func(t *testing.T) {
