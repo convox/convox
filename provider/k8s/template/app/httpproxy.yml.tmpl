@@ -18,6 +18,7 @@ metadata:
     {{$k}}: {{ safe $v }}
     {{- end}}
 spec:
+  ingressClassName: {{.IngressClassName}}
   virtualhost:
     fqdn: {{ safe .Host }}
     {{- if .ConvoxDomainTLSCertDisable}}
@@ -46,8 +47,14 @@ spec:
       {{- end}}
     {{- if .Service.Timeout}}
     timeoutPolicy:
-      response: "{{.Service.Timeout}}s"
-      idle: "{{.Service.Timeout}}s"
+      response: "{{.TimeoutResponse}}"
+      idle: "{{.TimeoutIdle}}"
+    {{- end}}
+    {{- if .RateLimitRPS}}
+    rateLimitPolicy:
+      local:
+        requests: {{.RateLimitRPS}}
+        unit: second
     {{- end}}
     {{- if .Service.Sticky}}
     loadBalancerPolicy:
@@ -66,6 +73,7 @@ metadata:
     system: convox
     type: service
 spec:
+  ingressClassName: {{$.IngressClassName}}
   virtualhost:
     fqdn: {{ safe $d }}
     tls:
@@ -92,8 +100,14 @@ spec:
       {{- end}}
     {{- if $.Service.Timeout}}
     timeoutPolicy:
-      response: "{{$.Service.Timeout}}s"
-      idle: "{{$.Service.Timeout}}s"
+      response: "{{$.TimeoutResponse}}"
+      idle: "{{$.TimeoutIdle}}"
+    {{- end}}
+    {{- if $.RateLimitRPS}}
+    rateLimitPolicy:
+      local:
+        requests: {{$.RateLimitRPS}}
+        unit: second
     {{- end}}
     {{- if $.Service.Sticky}}
     loadBalancerPolicy:

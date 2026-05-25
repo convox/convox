@@ -54,7 +54,9 @@ var awsKnownParams = map[string]bool{
 	"eks_api_server_public_access_cidrs":  true,
 	"eks_log_types":                       true,
 	"enable_private_access":               true,
-	"fluentd_disable":                     true, "fluentd_memory": true,
+	"contour_cpu_request":                 true,
+	"envoy_cpu_request":                   true, "envoy_memory_request": true,
+	"fluentd_disable": true, "fluentd_memory": true,
 	"gpu_metrics_max_concurrent": true, "gpu_metrics_max_pods": true,
 	"gpu_observability_chart_version": true, "gpu_observability_enable": true,
 	"gpu_tag_enable":            true,
@@ -514,11 +516,15 @@ var paramGroups = map[string]map[string]bool{
 	},
 	"ingress": {
 		"cert_duration":           true,
+		"contour_cpu_request":     true,
+		"envoy_cpu_request":       true,
+		"envoy_memory_request":    true,
 		"idle_timeout":            true,
 		"internal_router":         true,
 		"nginx_additional_config": true,
 		"nginx_image":             true,
 		"proxy_protocol":          true,
+		"router_type":             true,
 		"ssl_ciphers":             true,
 		"ssl_protocols":           true,
 	},
@@ -597,7 +603,7 @@ var groupDescriptions = map[string]string{
 	"build":     "build node config, buildkit, additional build groups",
 	"registry":  "Docker Hub, ECR, image caching, storage buckets",
 	"logging":   "syslog, telemetry, fluentd, EKS audit logs, Grafana, Prometheus",
-	"ingress":   "NGINX, idle timeout, TLS cert duration",
+	"ingress":   "router type (NGINX/Contour), idle timeout, TLS cert duration, Envoy resources",
 	"domain":    "rack domain and TLS toggle",
 	"storage":   "CSI drivers, EBS/EFS/Azure Files, registry disk",
 	"retention": "release retention policy",
@@ -637,6 +643,8 @@ var clearableParams = map[string]bool{
 	"eks_log_types": true,
 	// Private API access — clear means "remove all private CIDR rules"
 	"eks_api_server_private_access_cidrs": true,
+	// Ingress resources: clear means "use Helm chart defaults"
+	"contour_cpu_request": true, "envoy_cpu_request": true, "envoy_memory_request": true,
 	// Domain — clear means "use auto-managed"
 	"convox_rack_domain": true,
 	// Custom launch scripts — clear means "remove"
@@ -1339,6 +1347,19 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		lower := strings.ToLower(v)
 		if lower != "on_demand" && lower != "spot" && lower != "mixed" {
 			return fmt.Errorf("param 'node_capacity_type' must be 'on_demand', 'spot', or 'mixed'")
+		}
+	}
+
+	k8sResourceParams := map[string]bool{
+		"contour_cpu_request": true, "envoy_cpu_request": true,
+		"envoy_memory_request": true, "fluentd_memory": true,
+	}
+	k8sResourceRe := regexp.MustCompile(`^\d+(\.\d+)?(m|Ki|Mi|Gi|Ti|Pi|Ei)?$`)
+	for k, v := range params {
+		if k8sResourceParams[k] && v != "" {
+			if !k8sResourceRe.MatchString(v) {
+				return fmt.Errorf("param '%s' must be a Kubernetes resource quantity (e.g., '100m', '256Mi', '1Gi')", k)
+			}
 		}
 	}
 
@@ -2570,7 +2591,9 @@ func RackUpdate(_ sdk.Interface, c *stdcli.Context) error {
 
 	if newVersion != "" && isVersionLessThan(newVersion, currentVersion) {
 		currentParams, pErr := r.Parameters()
-		if pErr == nil && currentParams["router_type"] == "contour" {
+		if pErr != nil {
+			fmt.Fprintf(os.Stderr, "WARNING: could not verify router_type before downgrade: %v\n", pErr)
+		} else if currentParams["router_type"] == "contour" {
 			return fmt.Errorf(
 				"cannot downgrade to %s while router_type=contour is set.\n"+
 					"  Set router_type=nginx first: convox rack params set router_type=nginx",

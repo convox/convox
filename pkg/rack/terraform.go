@@ -82,6 +82,9 @@ var preserveEmpty = map[string]bool{
 	"grafana_dashboard_var_namespace": true,
 	"grafana_dashboard_var_service":   true,
 	"grafana_dashboard_var_app":       true,
+	"contour_cpu_request":             true,
+	"envoy_cpu_request":               true,
+	"envoy_memory_request":            true,
 }
 
 // PreserveEmptyParams returns a copy of the writeVars empty-preservation
@@ -406,6 +409,13 @@ func (t Terraform) UpdateVersion(version string, force bool) error {
 		}
 		if err := isSkippingMinor(s.Version, version); err != nil {
 			return err
+		}
+
+		if versionLessThan(version, s.Version) {
+			vars, vErr := t.vars()
+			if vErr == nil && vars["router_type"] == "contour" {
+				return fmt.Errorf("cannot downgrade to %s while router_type=contour is set", version)
+			}
 		}
 	}
 
@@ -1086,4 +1096,23 @@ func terraformWriteTemplate(filename, version string, params map[string]interfac
 	}
 
 	return nil
+}
+
+func versionLessThan(a, b string) bool {
+	pa := strings.Split(strings.SplitN(a, "-", 2)[0], ".")
+	pb := strings.Split(strings.SplitN(b, "-", 2)[0], ".")
+	if len(pa) < 3 || len(pb) < 3 {
+		return false
+	}
+	for i := 0; i < 3; i++ {
+		va, _ := strconv.Atoi(pa[i])
+		vb, _ := strconv.Atoi(pb[i])
+		if va < vb {
+			return true
+		}
+		if va > vb {
+			return false
+		}
+	}
+	return false
 }

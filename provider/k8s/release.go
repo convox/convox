@@ -641,14 +641,19 @@ func (p *Provider) releaseTemplateIngressInternal(a *structs.App, ss manifest.Se
 }
 
 func (p *Provider) releaseTemplateHTTPProxy(a *structs.App, ss manifest.Services, opts structs.ReleasePromoteOptions) ([]byte, error) {
-	return p.releaseTemplateHTTPProxyCore(a, ss, opts, p.ProxyProtocol)
+	return p.releaseTemplateHTTPProxyCore(a, ss, opts, p.ProxyProtocol, p.Engine.IngressClass())
 }
 
 func (p *Provider) releaseTemplateHTTPProxyInternal(a *structs.App, ss manifest.Services, opts structs.ReleasePromoteOptions) ([]byte, error) {
-	return p.releaseTemplateHTTPProxyCore(a, ss, opts, false)
+	for i := range ss {
+		if len(ss[i].Domains) > 0 {
+			log.Printf("WARNING: service %q has custom domains on the internal router; HTTP01 certificate challenges require the domain to be publicly reachable", ss[i].Name)
+		}
+	}
+	return p.releaseTemplateHTTPProxyCore(a, ss, opts, false, p.Engine.IngressInternalClass())
 }
 
-func (p *Provider) releaseTemplateHTTPProxyCore(a *structs.App, ss manifest.Services, opts structs.ReleasePromoteOptions, proxyProtocol bool) ([]byte, error) {
+func (p *Provider) releaseTemplateHTTPProxyCore(a *structs.App, ss manifest.Services, opts structs.ReleasePromoteOptions, proxyProtocol bool, ingressClassName string) ([]byte, error) {
 	idles, err := p.Engine.AppIdles(a.Name)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -692,7 +697,27 @@ func (p *Provider) releaseTemplateHTTPProxyCore(a *structs.App, ss manifest.Serv
 		}
 
 		customAns := s.IngressAnnotationsMap()
-		ans := httpProxyAnnotations(customAns, s.Name)
+		translation := translateNginxAnnotations(customAns, s.Name)
+
+		if len(translation.IncompatibleWarnings) > 0 {
+			log.Printf("WARNING: service %q has nginx-specific annotations with no Contour equivalent:\n%s",
+				s.Name, strings.Join(translation.IncompatibleWarnings, "\n"))
+		}
+
+		timeoutResponse := fmt.Sprintf("%ds", s.Timeout)
+		timeoutIdle := fmt.Sprintf("%ds", s.Timeout)
+		if translation.TimeoutResponse != "" {
+			annotationSecs, _ := strconv.Atoi(strings.TrimSuffix(translation.TimeoutResponse, "s"))
+			if annotationSecs > s.Timeout {
+				timeoutResponse = translation.TimeoutResponse
+			}
+		}
+		if translation.TimeoutIdle != "" {
+			annotationSecs, _ := strconv.Atoi(strings.TrimSuffix(translation.TimeoutIdle, "s"))
+			if annotationSecs > s.Timeout {
+				timeoutIdle = translation.TimeoutIdle
+			}
+		}
 
 		var whitelistCIDRs []string
 		if s.Whitelist != "" {
@@ -700,16 +725,20 @@ func (p *Provider) releaseTemplateHTTPProxyCore(a *structs.App, ss manifest.Serv
 		}
 
 		params := map[string]interface{}{
-			"Annotations":                ans,
+			"Annotations":                translation.Annotations,
 			"App":                        a.Name,
 			"BackendProtocol":            contourBackendProtocol(s.Port.Scheme),
 			"ConvoxDomainTLSCertDisable": !p.ConvoxDomainTLSCertDisable,
 			"Host":                       p.ServiceHost(a.Name, s),
 			"Idles":                      common.DefaultBool(opts.Idle, idles),
+			"IngressClassName":           ingressClassName,
 			"Namespace":                  p.AppNamespace(a.Name),
 			"ProxyProtocol":              proxyProtocol,
 			"Rack":                       p.Name,
+			"RateLimitRPS":               translation.RateLimitRPS,
 			"Service":                    s,
+			"TimeoutResponse":            timeoutResponse,
+			"TimeoutIdle":                timeoutIdle,
 			"WhitelistCIDRs":             whitelistCIDRs,
 		}
 
@@ -1435,19 +1464,84 @@ func contourBackendProtocol(scheme string) string {
 	}
 }
 
-func httpProxyAnnotations(annotations map[string]string, serviceName string) map[string]string {
-	filtered := map[string]string{}
+type httpProxyTranslation struct {
+	Annotations          map[string]string
+	TimeoutResponse      string
+	TimeoutIdle          string
+	RateLimitRPS         int
+	IncompatibleWarnings []string
+}
+
+var nginxToContourTranslatable = map[string]bool{
+	"nginx.ingress.kubernetes.io/proxy-read-timeout":    true,
+	"nginx.ingress.kubernetes.io/proxy-send-timeout":    true,
+	"nginx.ingress.kubernetes.io/proxy-connect-timeout": true,
+	"nginx.ingress.kubernetes.io/limit-rps":             true,
+}
+
+var nginxUntranslatable = map[string]string{
+	"nginx.ingress.kubernetes.io/server-snippet":        "raw nginx config has no Contour equivalent",
+	"nginx.ingress.kubernetes.io/configuration-snippet": "raw nginx config has no Contour equivalent",
+	"nginx.ingress.kubernetes.io/proxy-body-size":       "Envoy body size is a global setting, not per-route",
+	"nginx.ingress.kubernetes.io/proxy-buffering":       "Envoy buffering is a listener setting, not per-route",
+	"nginx.ingress.kubernetes.io/rewrite-target":        "Contour only supports prefix rewrite, not regex",
+}
+
+func translateNginxAnnotations(annotations map[string]string, serviceName string) httpProxyTranslation {
+	result := httpProxyTranslation{
+		Annotations: map[string]string{},
+	}
+
 	for k, v := range annotations {
-		if strings.HasPrefix(k, "nginx.ingress.kubernetes.io/") {
-			log.Printf("WARNING: service %s has nginx-specific ingressAnnotation %q which has no effect with router_type=contour", serviceName, k)
-			continue
-		}
 		if strings.HasPrefix(k, "contour.heptio.com/") {
 			continue
 		}
-		filtered[k] = v
+
+		if !strings.HasPrefix(k, "nginx.ingress.kubernetes.io/") {
+			result.Annotations[k] = v
+			continue
+		}
+
+		if reason, blocked := nginxUntranslatable[k]; blocked {
+			result.IncompatibleWarnings = append(result.IncompatibleWarnings,
+				fmt.Sprintf("  - %s (%s)", k, reason))
+			continue
+		}
+
+		switch k {
+		case "nginx.ingress.kubernetes.io/proxy-read-timeout":
+			v = strings.TrimSuffix(v, "s")
+			if _, err := strconv.Atoi(v); err == nil {
+				result.TimeoutResponse = v + "s"
+			}
+		case "nginx.ingress.kubernetes.io/proxy-send-timeout",
+			"nginx.ingress.kubernetes.io/proxy-connect-timeout":
+			v = strings.TrimSuffix(v, "s")
+			if n, err := strconv.Atoi(v); err == nil {
+				if result.TimeoutIdle == "" {
+					result.TimeoutIdle = v + "s"
+				} else {
+					prev, _ := strconv.Atoi(strings.TrimSuffix(result.TimeoutIdle, "s"))
+					if n > prev {
+						result.TimeoutIdle = v + "s"
+					}
+				}
+			}
+		case "nginx.ingress.kubernetes.io/limit-rps":
+			if n, err := strconv.Atoi(v); err == nil && n > 0 {
+				result.RateLimitRPS = n
+			}
+		default:
+			if nginxToContourTranslatable[k] {
+				continue
+			}
+			result.IncompatibleWarnings = append(result.IncompatibleWarnings,
+				fmt.Sprintf("  - %s (no known Contour equivalent)", k))
+		}
 	}
-	return filtered
+
+	sort.Strings(result.IncompatibleWarnings)
+	return result
 }
 
 func (p *Provider) releaseAppConfigs(app *structs.App, m *manifest.Manifest) error {
