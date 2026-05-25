@@ -185,6 +185,24 @@ Groups:
         allowedValues:
           - nginx
           - contour
+      - name: contour_cpu_request
+        default: "100m"
+        type: string
+        description: |
+          CPU request for the Contour control plane pod.
+          Has no effect when router_type=nginx.
+      - name: envoy_cpu_request
+        default: "100m"
+        type: string
+        description: |
+          CPU request for each Envoy proxy pod.
+          Has no effect when router_type=nginx.
+      - name: envoy_memory_request
+        default: "256Mi"
+        type: string
+        description: |
+          Memory request for each Envoy proxy pod.
+          Has no effect when router_type=nginx.
       - name: build_disable_convox_resolver
         default: "false"
         type: boolean

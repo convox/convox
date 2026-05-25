@@ -2116,4 +2116,50 @@ func TestValidateAndMutateParams_InstallOnlyParams(t *testing.T) {
 	}
 }
 
+func TestValidateAndMutateParams_K8sResourceQuantity(t *testing.T) {
+	tests := []struct {
+		name    string
+		param   string
+		value   string
+		wantErr bool
+	}{
+		{"cpu millicores", "contour_cpu_request", "100m", false},
+		{"memory MiB", "envoy_memory_request", "256Mi", false},
+		{"memory GiB", "envoy_memory_request", "1Gi", false},
+		{"decimal cpu", "envoy_cpu_request", "0.5", false},
+		{"decimal with unit", "envoy_memory_request", "1.5Gi", false},
+		{"bare integer", "fluentd_memory", "512", false},
+		{"KiB", "envoy_memory_request", "100Ki", false},
+		{"TiB", "envoy_memory_request", "2Ti", false},
+
+		{"reject text", "contour_cpu_request", "abc", true},
+		{"reject lowercase unit", "envoy_memory_request", "256mi", true},
+		{"reject SI decimal", "envoy_memory_request", "1GB", true},
+		{"reject space", "envoy_cpu_request", "100 m", true},
+		{"reject unit only", "contour_cpu_request", "Mi", true},
+		{"reject negative", "envoy_cpu_request", "-1", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := map[string]string{tt.param: tt.value}
+			err := validateAndMutateParams(params, "aws", map[string]string{}, false)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("%s=%q: got err=%v, wantErr=%v", tt.param, tt.value, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateAndMutateParams_K8sResourceClearable(t *testing.T) {
+	clearable := []string{"contour_cpu_request", "envoy_cpu_request", "envoy_memory_request"}
+	for _, p := range clearable {
+		t.Run(p+"/empty_accepted", func(t *testing.T) {
+			err := validateAndMutateParams(map[string]string{p: ""}, "aws", map[string]string{}, false)
+			if err != nil {
+				t.Errorf("param %s=\"\" should be clearable, got: %v", p, err)
+			}
+		})
+	}
+}
+
 func boolPtr(b bool) *bool { return &b }

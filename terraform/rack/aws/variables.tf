@@ -268,3 +268,18 @@ variable "cert_duration" {
   type    = string
   default = "2160h"
 }
+
+variable "contour_cpu_request" {
+  type    = string
+  default = "100m"
+}
+
+variable "envoy_cpu_request" {
+  type    = string
+  default = "100m"
+}
+
+variable "envoy_memory_request" {
+  type    = string
+  default = "256Mi"
+}

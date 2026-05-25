@@ -15,8 +15,13 @@ locals {
     "app.kubernetes.io/instance"  = "contour"
     "app.kubernetes.io/name"      = "contour"
   }
+  envoy_selector_internal = {
+    "app.kubernetes.io/component" = "envoy"
+    "app.kubernetes.io/instance"  = "contour-internal"
+    "app.kubernetes.io/name"      = "contour"
+  }
   router_selector          = var.router_type == "contour" ? local.envoy_selector : module.nginx.selector
-  router_selector_internal = var.router_type == "contour" ? local.envoy_selector : module.nginx.selector-internal
+  router_selector_internal = var.router_type == "contour" ? local.envoy_selector_internal : module.nginx.selector-internal
 }
 
 data "aws_region" "current" {
@@ -261,7 +266,7 @@ resource "kubernetes_service" "router-internal" {
     load_balancer_class = "service.k8s.aws/nlb"
   }
 
-  depends_on = [helm_release.contour]
+  depends_on = [helm_release.contour, helm_release.contour_internal]
 
   lifecycle {
     ignore_changes = [spec[0].load_balancer_class]
